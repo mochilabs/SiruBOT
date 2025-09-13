@@ -9,13 +9,15 @@
         "lint:fix": "prettier --write \"src/**/*.ts\"",
         "typecheck": "tsc --noEmit",
         "build": "tsup",
-        "watch": "tsup --watch"
+        "watch": "tsup --watch",
+        "start": "node --enable-source-maps ."
     },
     "dependencies": {
         "@fastify/websocket": "^11.2.0",
         "@sirubot/shardclient": "*",
         "dotenv": "^17.2.2",
         "fastify": "^5.6.0",
+        "pino-pretty": "^13.1.1",
         "ws": "^8.18.3"
     },
     "devDependencies": {

@@ -49,7 +49,7 @@ export class RedisStoreManager {
 
 	private handleConnect() {
 		this.logger.info('Redis connected');
-		
+
 		this.queueStore.onConnect();
 		this.playerSaver.onConnect();
 	}

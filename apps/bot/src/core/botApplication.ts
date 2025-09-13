@@ -36,7 +36,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			nodes: nodes.map((node) => ({
 				...node,
 				sessionId: !node.id ? undefined : nodeSessions.get(node.id),
-				retryAmount: 10,
+				retryAmount: 10
 			})),
 			sendToShard: (guildId, payload) => this.guilds.cache.get(guildId)?.shard.send(payload),
 			client: {
