@@ -1,4 +1,3 @@
-import { Scraper } from '@sirubot/yt-related-scraper';
 import {
 	LavalinkManager,
 	Player,
@@ -9,19 +8,15 @@ import {
 	TrackStuckEvent,
 	UnresolvedTrack
 } from 'lavalink-client';
-import { BaseLavalinkHandler } from './base';
+import { BaseLavalinkHandler } from './base.ts';
 
+// TODO: 안쓰는거 정리, ts-ignore 제거
 // handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
 	private lavalinkManager: LavalinkManager | null;
-	private relatedScraper: Scraper | null;
 	constructor() {
 		super();
 		this.lavalinkManager = null;
-		this.relatedScraper = new Scraper({
-			log: this.logger,
-			timeout: 10000
-		});
 	}
 
 	public setup(lavalinkManager: LavalinkManager) {
@@ -53,23 +48,9 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.logger.info(`Track error: ${track?.info.title} by ${track?.info.author}`);
 	}
 
+	//@ts-ignore
 	private async handleQueueEnd(player: Player) {
 		this.logger.info(`Queue ended`);
-		console.log(player.queue.previous.map((e) => e.info.title));
-		if (player.repeatMode == 'off') {
-			// TODO: Experimental related track feature testing
-			console.log(player.queue.previous[0].info.title);
-			if (player.queue.previous[0].info.identifier) {
-				const relatedTracks = await this.relatedScraper?.scrape(player.queue.previous[0].info.identifier ?? '');
-				if (relatedTracks) {
-					console.log(relatedTracks);
-          const searchResult = await player.node.search("https://youtu.be/" + relatedTracks[relatedTracks.length - 1].videoId, player.queue.previous[0].requester);
-          if (searchResult.loadType === 'track') {
-            player.queue.add(searchResult.tracks[0]);
-          }
-				}
-			}
-		}
 	}
 
 	public cleanup() {
