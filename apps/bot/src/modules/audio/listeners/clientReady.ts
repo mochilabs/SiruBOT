@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
-import { LavalinkHandlerManager } from '../lavalink/handlers/handlerManager';
+import { LavalinkHandlerManager } from '../lavalink/handlers/handlerManager.ts';
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class ReadyEvent extends Listener {

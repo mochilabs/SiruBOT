@@ -1,7 +1,7 @@
 import { LavalinkManager } from 'lavalink-client';
-import { NodeHandler } from './nodeHandler';
-import { PlayerHandler } from './playerHandler';
-import { TrackHandler } from './trackHandler';
+import { NodeHandler } from './nodeHandler.ts';
+import { PlayerHandler } from './playerHandler.ts';
+import { TrackHandler } from './trackHandler.ts';
 
 // lavalinkHandlerManager.ts
 export class LavalinkHandlerManager {
