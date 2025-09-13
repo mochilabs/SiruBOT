@@ -1,38 +1,168 @@
 import { type RedisClientType } from '@redis/client';
+import { container } from '@sapphire/framework';
 import { Awaitable, QueueStoreManager, StoredQueue } from 'lavalink-client';
+import { MemoryCache } from '@sirubot/utils';
 
-export class RedisQueueStore implements QueueStoreManager {
-	constructor(private readonly redis: RedisClientType) {}
+export class CachedQueueStore implements QueueStoreManager {
+	private cache: MemoryCache<string, string>;
+	private isRedisConnected = true;
+	private pendingWrites: Map<string, string> = new Map();
+
+	constructor(private readonly redis: RedisClientType) {
+		this.cache = new MemoryCache<string, string>({
+			ttl: 30 * 60 * 1000,
+			maxSize: 1000
+		});
+	}
+
+	private get logger() {
+		return container.logger;
+	}
 
 	private getKey(guildId: string): string {
 		return `lavalink/queue/${guildId}`;
 	}
 
 	public async get(guildId: string): Promise<string> {
-		const rawQueue = await this.redis.get(this.getKey(guildId));
-		if (rawQueue === null)
-			return JSON.stringify({
-				current: null,
-				previous: [],
-				tracks: []
-			});
+		const key = this.getKey(guildId);
 
-		return rawQueue;
+		if (this.isRedisConnected) {
+			const rawQueue = await this.redis.get(key);
+			if (rawQueue !== null) {
+				// Redis에서 성공적으로 읽었으면 캐시에도 저장
+				this.cache.set(key, rawQueue);
+				this.logger.trace(`[CachedQueueStore/get] Retrieved from Redis for guild ${guildId}`);
+				return rawQueue;
+			}
+		}
+
+		const cachedData = this.cache.get(key);
+		if (cachedData) {
+			this.logger.trace(`[CachedQueueStore/get] Retrieved from cache for guild ${guildId}`);
+			return cachedData;
+		}
+
+		const defaultQueue = JSON.stringify({
+			current: null,
+			previous: [],
+			tracks: []
+		});
+
+		this.logger.trace(`[CachedQueueStore/get] No data found, returning default for guild ${guildId}`);
+		return defaultQueue;
 	}
 
 	public async set(guildId: string, value: StoredQueue | string): Promise<void | boolean> {
-		await this.redis.set(this.getKey(guildId), this.stringify(value) as string);
+		const key = this.getKey(guildId);
+		const stringValue = this.stringify(value) as string;
+
+		this.logger.trace(`[CachedQueueStore/set] Setting queue for guild ${guildId}`);
+
+		this.cache.set(key, stringValue);
+
+		try {
+			if (this.isRedisConnected) {
+				await this.redis.set(key, stringValue);
+				this.logger.trace(`[CachedQueueStore/set] Successfully set in Redis for guild ${guildId}`);
+			} else {
+				this.pendingWrites.set(key, stringValue);
+				this.logger.trace(`[CachedQueueStore/set] Added to pending writes for guild ${guildId}`);
+			}
+		} catch (error) {
+			this.logger.warn(`[CachedQueueStore/set] Redis error, added to pending writes: ${error}`);
+			this.isRedisConnected = false;
+			this.pendingWrites.set(key, stringValue);
+		}
 	}
 
 	public async delete(guildId: string): Promise<void | boolean> {
-		return (await this.redis.del(this.getKey(guildId))) > 0;
+		const key = this.getKey(guildId);
+
+		this.logger.trace(`[CachedQueueStore/delete] Deleting queue for guild ${guildId}`);
+
+		this.cache.delete(key);
+
+		try {
+			if (this.isRedisConnected) {
+				const result = await this.redis.del(key);
+				this.logger.trace(`[CachedQueueStore/delete] Successfully deleted from Redis for guild ${guildId}`);
+				return result > 0;
+			} else {
+				this.pendingWrites.delete(key);
+				this.logger.trace(`[CachedQueueStore/delete] Removed from pending writes for guild ${guildId}`);
+				return true;
+			}
+		} catch (error) {
+			this.logger.warn(`[CachedQueueStore/delete] Redis error: ${error}`);
+			this.isRedisConnected = false;
+			this.pendingWrites.delete(key);
+			return true;
+		}
 	}
 
 	public parse(value: StoredQueue | string): Partial<StoredQueue> {
+		this.logger.trace(`[CachedQueueStore/parse] Parsing queue`);
 		return typeof value === 'string' ? JSON.parse(value) : (value as StoredQueue);
 	}
 
 	public stringify(value: StoredQueue | string): Awaitable<StoredQueue | string> {
-		return JSON.stringify(value);
+		this.logger.trace(`[CachedQueueStore/stringify] Stringifying queue`);
+		return typeof value === 'string' ? value : JSON.stringify(value);
+	}
+
+	public onConnect(): void {
+		this.logger.info('[CachedQueueStore/onConnect] Redis connected, syncing pending writes...');
+		this.isRedisConnected = true;
+
+		this.syncPendingWrites();
+	}
+
+	public onDisconnect(): void {
+		this.logger.warn('[CachedQueueStore/onDisconnect] Redis disconnected, switching to cache-only mode');
+		this.isRedisConnected = false;
+	}
+
+	private async syncPendingWrites(): Promise<void> {
+		if (this.pendingWrites.size === 0) {
+			this.logger.debug('[CachedQueueStore/syncPendingWrites] No pending writes to sync');
+			return;
+		}
+
+		this.logger.info(`[CachedQueueStore/syncPendingWrites] Syncing ${this.pendingWrites.size} pending writes...`);
+
+		const promises: Promise<void>[] = [];
+
+		for (const [key, value] of this.pendingWrites.entries()) {
+			promises.push(
+				this.redis
+					.set(key, value)
+					.then(() => {
+						this.logger.trace(`[CachedQueueStore/syncPendingWrites] Synced ${key}`);
+					})
+					.catch((error) => {
+						this.logger.error(`[CachedQueueStore/syncPendingWrites] Failed to sync ${key}: ${error}`);
+					})
+			);
+		}
+
+		try {
+			await Promise.allSettled(promises);
+			this.pendingWrites.clear();
+			this.logger.info('[CachedQueueStore/syncPendingWrites] All pending writes synced successfully');
+		} catch (error) {
+			this.logger.error(`[CachedQueueStore/syncPendingWrites] Error during sync: ${error}`);
+		}
+	}
+
+	public getCacheStats() {
+		return {
+			...this.cache.getStats(),
+			pendingWrites: this.pendingWrites.size,
+			isRedisConnected: this.isRedisConnected
+		};
+	}
+
+	public cleanupCache(): number {
+		return this.cache.cleanup();
 	}
 }
