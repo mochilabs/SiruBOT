@@ -1,8 +1,9 @@
 export const BOT_NAME = "치노봇";
 
+// 기본 색상
 export const DEFAULT_COLOR = 0xffdaff;
-export const OK_COLOR = 0xbaffba;
-export const WARN_COLOR = 0xffd0d0;
+export const OK_COLOR = 0x4299e1;
+export const WARN_COLOR = 0xf56565;
 
 export const EMOJI_REPEAT: { [index: number]: string } = {
   0: "➡️",
