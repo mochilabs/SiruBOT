@@ -6,7 +6,6 @@ const baseOptions: Options = {
 	dts: true,
 	minify: false,
 	skipNodeModulesBundle: true,
-	sourcemap: true,
 	target: 'es2021',
 	tsconfig: 'tsconfig.json',
 	keepNames: true,
@@ -15,4 +14,6 @@ const baseOptions: Options = {
     format: 'cjs'
 };
 
-export default defineConfig({ ...baseOptions });
+export const createConfig = (options: Partial<Options>) => {
+    return defineConfig({ ...baseOptions, ...options });
+};

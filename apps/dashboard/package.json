@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint --ext .js,.ts,.tsx --max-warnings=0",
+    "lint:fix": "eslint --fix --ext .js,.ts,.tsx",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "15.5.2",
