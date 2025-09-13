@@ -28,6 +28,7 @@
     "@sentry/integrations": "7.114.0",
     "@sentry/node": "^10.11.0",
     "@sirubot/prisma": "*",
+    "@sirubot/shardclient": "*",
     "@sirubot/utils": "*",
     "@sirubot/yt-related-scraper": "^0.3.21",
     "@skyra/env-utilities": "^2.0.1",

@@ -1,5 +1,6 @@
 {
     "name": "@sirubot/prisma",
+    "private": true,
     "version": "0.1.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -8,10 +9,9 @@
         "migrate:dev": "prisma migrate dev"
     },
     "dependencies": {
-        "@prisma/client": "^5.0.0"
+        "@prisma/client": "^6.16.1"
     },
     "devDependencies": {
-        "prisma": "^5.0.0"
-    },
-    "packageManager": "yarn@4.6.0"
+        "prisma": "^6.16.1"
+    }
 }
