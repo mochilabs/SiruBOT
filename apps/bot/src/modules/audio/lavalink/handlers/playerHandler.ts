@@ -1,6 +1,7 @@
 import { DestroyReasonsType, LavalinkManager, Player } from 'lavalink-client';
-import { BaseLavalinkHandler } from './base';
+import { BaseLavalinkHandler } from './base.ts';
 
+// TODO: 안쓰는거 정리, ts-ignore 제거
 // handlers/playerHandler.ts
 export class PlayerHandler extends BaseLavalinkHandler {
 	private lavalinkManager: LavalinkManager | null;
@@ -15,16 +16,18 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		lavalinkManager.on('playerDestroy', this.handlePlayerDestroy.bind(this));
 		lavalinkManager.on('playerDisconnect', this.handlePlayerDisconnect.bind(this));
 		lavalinkManager.on('playerMove', this.handlePlayerMove.bind(this));
-    lavalinkManager.on('playerUpdate', this.handlePlayerUpdate.bind(this));
+		lavalinkManager.on('playerUpdate', this.wrapAsyncHandler(this.handlePlayerUpdate.bind(this), 'playerUpdate'));
 	}
 
 	//@ts-ignore
 	private handlePlayerCreate(player: Player) {
 		this.logger.info(`Player created: ${player.guildId}`);
+		this.container.redisStoreManager.getPlayerSaver().set(player);
 	}
 	//@ts-ignore
 	private handlePlayerDestroy(player: Player, reason: DestroyReasonsType | undefined) {
 		this.logger.info(`Player destroyed: ${player.guildId}`);
+		this.container.redisStoreManager.getPlayerSaver().delete(player.guildId);
 	}
 	//@ts-ignore
 	private handlePlayerDisconnect(player: Player, voiceChannelId: string) {
@@ -35,11 +38,11 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		this.logger.info(`Player moved: ${player.guildId}`);
 	}
 
-  //@ts-ignore
-  private handlePlayerUpdate(oldPlayerJson: PlayerJson, newPlayer: Player) {
-    this.logger.info(`Player updated: ${newPlayer.guildId}`);
-    this.container.redisStoreManager.getPlayerSaver().set(newPlayer)
-  }
+	//@ts-ignore
+	private async handlePlayerUpdate(oldPlayerJson: PlayerJson, newPlayer: Player) {
+		this.logger.trace(`Player updated: ${newPlayer.guildId}`);
+		await this.container.redisStoreManager.getPlayerSaver().set(newPlayer);
+	}
 
 	public cleanup() {
 		this.lavalinkManager?.off('playerCreate', this.handlePlayerCreate.bind(this));
