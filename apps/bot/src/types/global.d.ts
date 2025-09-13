@@ -1,9 +1,10 @@
-import { LogLevel, SapphireClient } from '@sapphire/framework';
+import { SapphireClient } from '@sapphire/framework';
 import { PrismaClient } from '@sirubot/prisma';
 import { ArrayString } from '@skyra/env-utilities';
 import { LavalinkManager } from 'lavalink-client';
-import { BotApplication } from '../core/botApplication';
-import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager';
+import { BotApplication } from '../core/botApplication.ts';
+import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
+import { SapphireInterfaceLogger } from '../core/logger.ts';
 
 declare module '@skyra/env-utilities' {
 	interface Env {
@@ -11,19 +12,18 @@ declare module '@skyra/env-utilities' {
 		LAVALINK_HOSTS: ArrayString;
 		DISCORD_TOKEN: string;
 		REDIS_URL: string;
-		LOGLEVEL: LogLevel;
-	}
-}
-
-declare module '@sapphire/pieces' {
-	interface Container {
-		audio: LavalinkManager;
-		prisma: PrismaClient;
-		redisStoreManager: RedisStoreManager;
+		LOGLEVEL: number;
 	}
 }
 
 declare module '@sapphire/framework' {
+	interface Container {
+		logger: SapphireInterfaceLogger;
+		audio: LavalinkManager;
+		prisma: PrismaClient;
+		redisStoreManager: RedisStoreManager;
+	}
+
 	interface Preconditions {
 		OwnerOnly: never;
 

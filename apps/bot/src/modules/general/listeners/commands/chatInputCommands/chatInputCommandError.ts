@@ -20,10 +20,12 @@ export class ChatInputCommandError extends Listener {
 			});
 		}
 
-		return interaction.reply({
+		await interaction.reply({
 			embeds: [embed],
 			allowedMentions: { users: [interaction.user.id], roles: [] },
 			flags: MessageFlags.Ephemeral
 		});
+
+		return;
 	}
 }

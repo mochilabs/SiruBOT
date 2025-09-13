@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import type { StoreRegistryValue } from '@sapphire/pieces';
-import { isDev } from '@sirubot/utils';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
+import { isDev } from '@sirubot/utils';
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class ReadyEvent extends Listener {
@@ -26,13 +26,14 @@ export class ReadyEvent extends Listener {
 		// Offset Pad
 		const pad = ' '.repeat(7);
 
-		this.container.logger.info(
-			String.raw`
+		String.raw`
 ${line01} ${pad}${isDev ? `` : ``}
 ${line02} ${pad}[${success}] Gateway
 ${line03}${isDev ? ` ${pad}${blc('<')}${llc('/')}${blc('>')} ${llc('DEVELOPMENT MODE')}` : ''}
-		`.trim()
-		);
+		`
+			.trim()
+			.split('\n')
+			.forEach((line) => this.container.logger.info(line));
 	}
 
 	private printStoreDebugInformation() {

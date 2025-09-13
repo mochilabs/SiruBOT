@@ -1,11 +1,29 @@
 import { envParseString } from '@skyra/env-utilities';
 import { GatewayIntentBits, Partials } from 'discord.js';
-import { BotApplication } from './botApplication';
+import { BotApplication } from './botApplication.ts';
+import { SapphireInterfaceLogger } from './logger.ts';
+import { container } from '@sapphire/framework';
 
-const main = async () => {
+export const main = async () => {
 	const client = new BotApplication({
 		logger: {
-			level: envParseString('LOGLEVEL')
+			instance: new SapphireInterfaceLogger({
+				minLevel: envParseString('LOGLEVEL'),
+				type: 'pretty',
+				prettyLogTemplate: '{{logLevelName}} [{{fileNameWithLine}}] ',
+				prettyLogStyles: {
+					logLevelName: {
+						'*': ['bold', 'black', 'bgWhiteBright', 'dim'],
+						SILLY: ['bold', 'white'],
+						TRACE: ['bold', 'whiteBright'],
+						DEBUG: ['bold', 'green'],
+						INFO: ['bold', 'blue'],
+						WARN: ['bold', 'yellow'],
+						ERROR: ['bold', 'red'],
+						FATAL: ['bold', 'redBright']
+					}
+				}
+			})
 		},
 		shards: 'auto',
 		intents: [
@@ -21,26 +39,26 @@ const main = async () => {
 	});
 
 	try {
-        // Audio -> General -> RedisStore -> Login -> Lavalink (After ready event)
+		client.logger.debug('Setting up logger...');
+		container.logger = client.logger;
+		// Audio -> General -> RedisStore -> Login -> Lavalink (After ready event)
 		client.setupStore('audio');
 		client.setupStore('general');
 
-		client.logger.info('BotApplication: Setting up Redis store manager...');
-		client.setupRedisStoreManager(envParseString('REDIS_URL'));
-        
-		client.logger.info('BotApplication: Logging in...');
+		client.logger.debug('Setting up redis store manager...');
+		await client.setupRedisStoreManager(envParseString('REDIS_URL'));
+
+		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
 
-		client.logger.info('BotApplication: Setting up Lavalink...');
-		client.setupAudio(JSON.parse(envParseString('LAVALINK_HOSTS')));
+		client.logger.debug('Setting up lavalink...');
+		await client.setupAudio(JSON.parse(envParseString('LAVALINK_HOSTS')));
 
-		client.logger.info('BotApplication: Logged in as ' + client.user!.tag);
+		client.logger.info('Logged in as ' + client.user!.tag);
 	} catch (error) {
-		client.logger.error('BotApplication: Error setting up application...');
+		client.logger.error('Error setting up application...');
 		client.logger.fatal(error);
 		await client.destroy();
 		process.exit(1);
 	}
 };
-
-void main();

@@ -1,3 +1,5 @@
-import './core/environment';
-import './core/setup';
-import './core/bootstrap';
+import { setup } from './core/setup.ts';
+import { main } from './core/bootstrap.ts';
+
+void setup();
+void main();
