@@ -2133,6 +2133,7 @@ __metadata:
     "@sentry/integrations": "npm:7.114.0"
     "@sentry/node": "npm:^10.11.0"
     "@sirubot/prisma": "npm:*"
+    "@sirubot/shardclient": "npm:*"
     "@sirubot/utils": "npm:*"
     "@sirubot/yt-related-scraper": "npm:^0.3.21"
     "@skyra/env-utilities": "npm:^2.0.1"

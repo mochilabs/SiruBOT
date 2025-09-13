@@ -29,7 +29,8 @@ class VersionInfo {
     this.gitBranch = getGitBranch();
     this.version = packageJson.version;
     this.name = packageJson.name;
-    this.lavalinkClientVersion = packageJson.dependencies["lavalink-client"] || "Unknown";
+    this.lavalinkClientVersion =
+      packageJson.dependencies["lavalink-client"] || "Unknown";
     this.djsVersion = packageJson.dependencies["discord.js"] || "Unknown";
   }
 
