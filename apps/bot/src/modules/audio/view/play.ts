@@ -1,15 +1,5 @@
-import { DEFAULT_COLOR, formatTrack, formatTime, formatTimeToKorean } from '@sirubot/utils';
-import {
-	ContainerBuilder,
-	SectionBuilder,
-	SeparatorBuilder,
-	SeparatorSpacingSize,
-	TextDisplayBuilder,
-	ThumbnailBuilder,
-	ActionRowBuilder,
-	ButtonBuilder,
-	ButtonStyle
-} from 'discord.js';
+import { addSeparator, createContainer, createThumbnail, formatTime, formatTimeToKorean, formatTrack, getRequesterText } from '@sirubot/utils';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, PlaylistInfo, Track } from 'lavalink-client';
 
 type playViewProps = {
@@ -19,20 +9,7 @@ type playViewProps = {
 	totalDuration?: number;
 };
 
-// 공통 유틸리티 함수들
-function createContainer(): ContainerBuilder {
-	const container = new ContainerBuilder();
-	container.setAccentColor(DEFAULT_COLOR);
-	return container;
-}
-
-function createThumbnail(url: string): ThumbnailBuilder {
-	const thumbnail = new ThumbnailBuilder();
-	thumbnail.setURL(url);
-	return thumbnail;
-}
-
-function addTextWithThumbnail(container: ContainerBuilder, textContent: string, thumbnailUrl: string | null): void {
+export function addTextWithThumbnail(container: ContainerBuilder, textContent: string, thumbnailUrl: string | null): void {
 	const textDisplay = new TextDisplayBuilder().setContent(textContent);
 
 	if (thumbnailUrl) {
@@ -43,21 +20,15 @@ function addTextWithThumbnail(container: ContainerBuilder, textContent: string, 
 	}
 }
 
-function addSeparator(container: ContainerBuilder): void {
-	container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
-}
-
-function getRequesterText(track: Track): string {
-	const requesterId = (track.requester as any).id;
-	return requesterId ? ` | 신청자: <@${requesterId}>` : '';
-}
-
 export function trackAdded({ track, queued, position, totalDuration }: playViewProps) {
 	const container = createContainer();
 
-	const firstContent = queued ? `🎵  노래를 대기열 ${position}번째에 추가했어요.` : `🎶  노래를 곧 재생할게요!`;
+	const firstContent = queued ? `🎵  노래를 대기열 ${position}번에 추가했어요.` : `🎶  노래를 곧 재생할게요!`;
 
-	const trackText = formatTrack(track, { showLength: true, withMarkdownURL: true });
+	const trackText = formatTrack(track, {
+		showLength: true,
+		withMarkdownURL: true
+	});
 	let artistText = `-# 아티스트: ${track.info.author}${getRequesterText(track)}`;
 
 	if (queued) {
@@ -103,7 +74,11 @@ export function playlistQueued({ playlist, tracks }: playlistQueuedViewProps) {
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
-	return addPlaylistPreviewSection({ playlist, tracks, containerComponent: container });
+	return addPlaylistPreviewSection({
+		playlist,
+		tracks,
+		containerComponent: container
+	});
 }
 
 type askPlaylistAddViewProps = {
@@ -154,5 +129,9 @@ export function playlistAddRemaining({ playlist, player, remainTracks, selectedT
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
-	return addPlaylistPreviewSection({ playlist, tracks: remainTracks, containerComponent: container });
+	return addPlaylistPreviewSection({
+		playlist,
+		tracks: remainTracks,
+		containerComponent: container
+	});
 }

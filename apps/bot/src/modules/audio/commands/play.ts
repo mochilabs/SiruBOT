@@ -1,19 +1,14 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import {
-	ApplicationIntegrationType,
-	ChatInputCommandInteraction,
-	MessageFlags,
-	AutocompleteInteraction,
-} from 'discord.js';
-import { SearchPlatform, Track } from 'lavalink-client';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
-import * as view from '../view/play';
+import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags } from 'discord.js';
+import { SearchPlatform, Track } from 'lavalink-client';
+import * as view from '../view/play.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
-	name: '재생',
-	description: '음성 채널에서 노래를 재생해요.',
+	name: 'play',
+	description: 'Play music in the voice channel.',
 	preconditions: ['NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'MemberListenable', 'ClientVoiceConnectable', 'ClientVoiceSpeakable']
 })
 export class PlayCommand extends Command {
@@ -21,26 +16,58 @@ export class PlayCommand extends Command {
 		registry.registerChatInputCommand((builder) => {
 			builder
 				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
-				.setName(this.name)
+				.setName('play')
+				.setNameLocalizations({
+					ko: '재생',
+					'en-US': 'play'
+				})
 				.setDescription(this.description)
+				.setDescriptionLocalizations({
+					ko: '음성 채널에서 노래를 재생해요.'
+				})
 				.addStringOption((option) =>
-					option.setName('검색어').setDescription('재생할 노래의 제목이나 주소를 입력해주세요.').setAutocomplete(true).setRequired(true)
+					option
+						.setName('query')
+						.setNameLocalizations({
+							ko: '검색어'
+						})
+						.setDescription('Enter the title or URL of the song you want to play.')
+						.setDescriptionLocalizations({
+							ko: '재생할 노래의 제목이나 주소를 입력해주세요.'
+						})
+						.setAutocomplete(true)
+						.setRequired(true)
 				)
 				.addStringOption((option) =>
 					option
-						.setName('플랫폼')
-						.setDescription('노래를 찾을 플랫폼을 선택해주세요.')
+						.setName('platform')
+						.setNameLocalizations({
+							ko: '플랫폼'
+						})
+						.setDescription('Select the platform to search for music.')
+						.setDescriptionLocalizations({
+							ko: '노래를 찾을 플랫폼을 선택해주세요.'
+						})
 						.addChoices([
 							{
-								name: '유튜브',
+								name: 'youtube',
+								name_localizations: {
+									ko: '유튜브'
+								},
 								value: 'ytsearch'
 							},
 							{
-								name: '사운드클라우드',
+								name: 'soundcloud',
+								name_localizations: {
+									ko: '사운드클라우드'
+								},
 								value: 'scsearch'
 							},
 							{
-								name: '스포티파이',
+								name: 'spotify',
+								name_localizations: {
+									ko: '스포티파이'
+								},
 								value: 'spsearch'
 							}
 						])
@@ -52,7 +79,7 @@ export class PlayCommand extends Command {
 	public override async autocompleteRun(interaction: AutocompleteInteraction) {
 		const focusedOption = interaction.options.getFocused(true);
 
-		if (focusedOption.name === '검색어') {
+		if (focusedOption.name === 'query') {
 			const query = focusedOption.value;
 
 			// 쿼리가 너무 짧으면 기본 추천어 제공
@@ -110,8 +137,16 @@ export class PlayCommand extends Command {
 
 		const voiceChannel = interaction.member.voice.channelId;
 
-		const query = interaction.options.getString('검색어', true);
-		const platform = (interaction.options.getString('플랫폼') || 'ytsearch') as SearchPlatform;
+		const query = interaction.options.getString('query', true);
+		const platform = (interaction.options.getString('platform') || 'ytsearch') as SearchPlatform;
+		const context = {
+			command: this.name,
+			query,
+			platform,
+			voiceChannelId: voiceChannel,
+			textChannelId: interaction.channelId,
+			guildId: interaction.guildId
+		};
 
 		const player =
 			this.container.audio.getPlayer(interaction.guildId) ||
@@ -130,15 +165,17 @@ export class PlayCommand extends Command {
 		switch (searchRes.loadType) {
 			case 'error': {
 				throw new UserError({
+					identifier: 'play_search_error',
 					message: '🛠️  음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
-					identifier: 'play_search_error'
+					context
 				});
 			}
 
 			case 'empty': {
 				throw new UserError({
+					identifier: 'play_search_empty',
 					message: '🔎  검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.',
-					identifier: 'play_search_empty'
+					context
 				});
 			}
 		}
@@ -152,13 +189,13 @@ export class PlayCommand extends Command {
 				this.container.logger.error(error);
 				throw new UserError({
 					message: '🛠️  음성 채널에 접속할 수 없어요. 음성 채널 권한을 확인해주세요.',
-					identifier: 'play_connect_error'
+					identifier: 'play_connect_error',
+					context
 				});
 			}
 		}
 		switch (searchRes.loadType) {
 			case 'playlist': {
-				// TODO: 나머지 곡 UI 개선하기
 				const playlist = searchRes.playlist!;
 				if (playlist.selectedTrack) {
 					await player.queue.add(playlist.selectedTrack);
@@ -169,7 +206,7 @@ export class PlayCommand extends Command {
 
 					if (remainingTracksCount > 0) {
 						// 나머지 곡들이 있으면 추가할지 묻기
-						await interaction.editReply({
+						const askReply = await interaction.editReply({
 							flags: MessageFlags.IsComponentsV2,
 							components: [
 								view.askPlaylistAdd({
@@ -182,21 +219,30 @@ export class PlayCommand extends Command {
 							allowedMentions: { users: [], roles: [] }
 						});
 
-						// 버튼 상호작용을 위한 collector 설정
-						const collector = interaction.channel?.createMessageComponentCollector({
-							filter: (i) => i.user.id === interaction.user.id && i.customId.includes('playlist_'),
-							time: 30000,
-							max: 1
+						const trackAdded = view.trackAdded({
+							track: playlist.selectedTrack as Track,
+							queued: player.queue.current !== null,
+							position: player.queue.tracks.length,
+							totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 						});
 
-						collector?.on('collect', async (buttonInteraction) => {
-							await buttonInteraction.deferUpdate();
+						// 버튼 상호작용을 위한 collector 설정
+						const buttonInteractionCollector = askReply.createMessageComponentCollector({
+							filter: (i) => i.user.id === interaction.user.id && i.customId.includes('playlist_'),
+							time: 30000,
+							componentType: ComponentType.Button
+						});
 
-							if (buttonInteraction.customId === 'playlist_add_remaining') {
+						// Collected
+						buttonInteractionCollector.on('collect', async (collectorInteraction) => {
+							await collectorInteraction.deferUpdate();
+							if (!player.connected) return;
+
+							if (collectorInteraction.customId === 'playlist_add_remaining') {
 								// 나머지 곡들을 대기열에 추가
 								await player.queue.add(remainingTracks);
 
-								await buttonInteraction.editReply({
+								await collectorInteraction.editReply({
 									flags: MessageFlags.IsComponentsV2,
 									components: [
 										view.playlistQueued({
@@ -206,40 +252,26 @@ export class PlayCommand extends Command {
 									],
 									allowedMentions: { users: [], roles: [] }
 								});
-							} else if (buttonInteraction.customId === 'playlist_skip_remaining') {
-								await buttonInteraction.editReply({
+
+								return;
+							} else if (collectorInteraction.customId === 'playlist_skip_remaining') {
+								await collectorInteraction.editReply({
 									flags: MessageFlags.IsComponentsV2,
-									components: [
-										view.trackAdded({
-											track: playlist.selectedTrack as Track,
-											queued: player.queue.current !== null,
-											position: player.queue.tracks.length,
-											totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
-										})
-									],
+									components: [trackAdded],
 									allowedMentions: { users: [], roles: [] }
 								});
+
+								return;
 							}
+							buttonInteractionCollector.stop();
 						});
 
-						collector?.on('end', (collected) => {
-							if (collected.size === 0) {
-								// 시간 초과 시 메시지 업데이트
-								interaction
-									.editReply({
-										flags: MessageFlags.IsComponentsV2,
-										components: [
-											view.trackAdded({
-												track: playlist.selectedTrack as Track,
-												queued: player.queue.current !== null,
-												position: player.queue.tracks.length,
-												totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
-											})
-										],
-										allowedMentions: { users: [], roles: [] }
-									})
-									.catch(() => {});
-							}
+						buttonInteractionCollector.on('end', async () => {
+							await interaction.editReply({
+								flags: MessageFlags.IsComponentsV2,
+								components: [trackAdded],
+								allowedMentions: { users: [], roles: [] }
+							});
 						});
 					} else {
 						// 나머지 곡이 없으면 일반적인 재생 메시지 표시

@@ -1,9 +1,18 @@
-import { DEFAULT_COLOR, isDev, chunkArray, emojiProgressBar, formatTrack, formatTime, formatTimeToKorean, versionInfo } from '@sirubot/utils';
+import {
+	chunkArray,
+	createContainer,
+	emojiProgressBar,
+	formatTime,
+	formatTimeToKorean,
+	formatTrack,
+	isDev,
+	versionInfo,
+	removeEmojis
+} from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
-	ContainerBuilder,
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
@@ -19,8 +28,7 @@ type controllerViewProps = {
 
 export function controllerView({ player }: controllerViewProps) {
 	// Container builder
-	const containerComponent = new ContainerBuilder();
-	containerComponent.setAccentColor(DEFAULT_COLOR);
+	const containerComponent = createContainer();
 
 	// Current track
 	const current = player.queue.current;
@@ -29,8 +37,8 @@ export function controllerView({ player }: controllerViewProps) {
 	const firstContent = !current
 		? `### 재생 중인 음악이 없어요.`
 		: `### 🎵 <#${player.voiceChannelId}> 에서 재생 중
-### **[${current.info.title}](${current.info.uri})**
-[${current.info.isStream ? durationText : `${formatTime(player.position / 1000)}/${formatTime(current.info.duration / 1000)}`}] ${emojiProgressBar(player.position / current.info.duration)}
+### **[${removeEmojis(current.info.title)}](${current.info.uri})**
+${emojiProgressBar(player.position / current.info.duration)} [${current.info.isStream ? durationText : `${formatTime(player.position / 1000)}/${formatTime(current.info.duration / 1000)}`}]
 -# 아티스트: ${current.info.author}${(current.requester as any).id ? ` | 신청자: <@${(current.requester as any).id}>` : ''}`;
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(firstContent);
 
@@ -85,7 +93,8 @@ export function controllerView({ player }: controllerViewProps) {
 				// page = 1 ~ end
 				return `\`\`#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE}\`\` - ${formatTrack(track as Track, {
 					showLength: true,
-					withMarkdownURL: true
+					withMarkdownURL: true,
+					cleanTitle: true
 				})}`;
 			})
 			.join('\n');
