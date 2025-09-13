@@ -4,23 +4,44 @@
   "version": "5.0.0",
   "license": "MIT",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "types": "dist/index.d.js",
+  "type": "module",
   "scripts": {
-    "lint": "prettier --write \"src/**/*.ts\"",
+    "lint": "prettier --check \"src/**/*.ts\"",
+    "lint:fix": "prettier --write \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "build": "tsup",
     "watch": "tsup --watch",
-    "start": "node dist/index.js"
+    "start": "node --experimental-specifier-resolution=node --enable-source-maps dist/"
   },
   "dependencies": {
+    "@sapphire/decorators": "^6.2.0",
+    "@sapphire/discord-utilities": "^3.5.0",
+    "@sapphire/discord.js-utilities": "^7.3.3",
+    "@sapphire/fetch": "^3.0.5",
+    "@sapphire/framework": "^5.3.6",
+    "@sapphire/plugin-api": "^8.3.1",
+    "@sapphire/plugin-subcommands": "^7.0.1",
+    "@sapphire/time-utilities": "^1.7.14",
+    "@sapphire/type": "^2.6.0",
+    "@sapphire/utilities": "^3.18.2",
+    "@sentry/integrations": "7.114.0",
+    "@sentry/node": "^10.11.0",
     "@sirubot/prisma": "*",
-    "@sirubot/utils": "*"
+    "@sirubot/utils": "*",
+    "@sirubot/yt-related-scraper": "^0.3.21",
+    "@skyra/env-utilities": "^2.0.1",
+    "chokidar": "^4.0.3",
+    "colorette": "^2.0.20",
+    "discord.js": "^14.22.1",
+    "lavalink-client": "^2.6.1",
+    "tslog": "^4.9.3",
+    "undici": "^7.16.0"
   },
   "packageManager": "yarn@4.6.0",
   "devDependencies": {
     "@sapphire/cli": "^1.9.3",
     "@sapphire/ts-config": "^5.0.1",
-    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "prettier": "^3.6.2"
   }
 }
