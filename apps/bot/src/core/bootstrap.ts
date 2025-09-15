@@ -1,8 +1,8 @@
 import { envParseString } from '@skyra/env-utilities';
+import { container } from '@sapphire/framework';
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
-import { container } from '@sapphire/framework';
 
 export const main = async () => {
 	const client = new BotApplication({

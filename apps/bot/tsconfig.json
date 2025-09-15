@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"noEmit": true,
 		"incremental": false,
-		"skipLibCheck": true,
+		"skipLibCheck": false,
 		"allowImportingTsExtensions": true,
 		"typeRoots": ["./src/types", "node_modules/@types"]
 	},

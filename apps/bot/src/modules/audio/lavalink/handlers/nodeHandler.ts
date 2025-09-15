@@ -98,7 +98,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 			const now = Date.now();
 			createdPlayer.lastPosition = lavalinkPlayer.state.position;
-
 			createdPlayer.lastPositionChange = now;
 			createdPlayer.ping.lavalink = lavalinkPlayer.state.ping;
 

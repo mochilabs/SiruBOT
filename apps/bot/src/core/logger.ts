@@ -1,4 +1,4 @@
-import { LogLevel } from '@sapphire/framework';
+import { ILogger, LogLevel } from '@sapphire/framework';
 import { Logger, ILogObj, ISettingsParam } from 'tslog';
 
 /**
@@ -33,7 +33,7 @@ const SAPPHIRE_TO_TSLOG_LEVEL_MAP: Record<LogLevel, number> = {
  * Custom logger implementation that bridges Sapphire's ILogger interface
  * with tslog's Logger functionality
  */
-export class SapphireInterfaceLogger extends Logger<ILogObj> {
+export class SapphireInterfaceLogger extends Logger<ILogObj> implements ILogger {
 	constructor(settings?: ISettingsParam<ILogObj>) {
 		super(settings);
 	}

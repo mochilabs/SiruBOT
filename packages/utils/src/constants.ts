@@ -21,14 +21,15 @@ export const EMOJI_PLAYLIST = "🗃️";
 export const EMOJI_X = "❌";
 export const EMOJI_INBOX_TRAY = "📥";
 export const AUTOCOMPLETE_MAX_RESULT = 25;
-export const EMOJI_VOLUME_SMALL = "🔉";
-export const EMOJI_VOLUME_LOUD = "🔊";
-export const EMOJI_VOLUME_MUTE = "🔇";
 export const EMOJI_STAR = "⭐";
 export const SKIP_EMOJI = "⏩";
 export const EMOJI_BACK = "◀️";
 export const EMOJI_TRASH = "🗑️";
 export const SPARKLES_EMOJI = "✨";
+export const EMOJI_VOLUME_MUTE = "🔇";
+export const EMOJI_VOLUME_SMALL = "🔉";
+export const EMOJI_VOLUME_MEDIUM = "🔊";
+export const EMOJI_VOLUME_LARGE = "🔊";
 
 export const PAGE_CHUNK_SIZE = 10;
 

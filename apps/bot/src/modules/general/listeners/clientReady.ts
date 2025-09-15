@@ -3,6 +3,7 @@ import { Listener } from '@sapphire/framework';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 import { isDev } from '@sirubot/utils';
+import { envParseString } from '@skyra/env-utilities';
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class ReadyEvent extends Listener {
@@ -11,6 +12,8 @@ export class ReadyEvent extends Listener {
 	public override run() {
 		this.printBanner();
 		this.printStoreDebugInformation();
+
+		this.container.client.user?.setActivity(envParseString('BOT_ACTIVITY'));
 	}
 
 	private printBanner() {

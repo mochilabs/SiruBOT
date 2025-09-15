@@ -5,13 +5,20 @@ import {
   ThumbnailBuilder,
   SeparatorSpacingSize,
   EmbedFooterOptions,
+  EmbedData,
+  APIEmbed,
 } from "discord.js";
 import { isDev } from "./index";
 import { versionInfo } from "./version";
 import { DEFAULT_COLOR, WARN_COLOR } from "./constants";
 
 export class ExtendedEmbedBuilder extends EmbedBuilder {
-  public override setFooter(options: EmbedFooterOptions | null) {
+  constructor(data?: EmbedData | APIEmbed) {
+    super(data);
+    this.setColor(DEFAULT_COLOR);
+  }
+
+  public override setFooter(options?: EmbedFooterOptions | null) {
     return super.setFooter({
       ...options,
       text: `${options?.text ? `${options?.text} • ` : ""}치노봇 ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`,

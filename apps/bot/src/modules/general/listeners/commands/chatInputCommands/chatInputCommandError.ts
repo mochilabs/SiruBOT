@@ -11,19 +11,21 @@ export class ChatInputCommandError extends Listener {
 		// Use cases for this are for example permissions error when running the `eval` command.
 		if (Reflect.get(Object(context), 'silent')) return;
 
-		const embed = buildErrorEmbed(content);
+		const embed = buildErrorEmbed(content.trim()).setFooter().setTimestamp().setTitle('> 명령어를 실행하는 도중 오류가 발생했어요');
 
 		if (interaction.deferred || interaction.replied) {
-			return interaction.editReply({
+			await interaction.editReply({
 				embeds: [embed],
 				allowedMentions: { users: [interaction.user.id], roles: [] }
 			});
+
+			return;
 		}
 
 		await interaction.reply({
 			embeds: [embed],
 			allowedMentions: { users: [interaction.user.id], roles: [] },
-			flags: MessageFlags.Ephemeral
+			flags: [MessageFlags.Ephemeral]
 		});
 
 		return;

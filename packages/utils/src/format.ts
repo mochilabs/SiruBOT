@@ -1,4 +1,8 @@
 import {
+  EMOJI_VOLUME_MUTE,
+  EMOJI_VOLUME_SMALL,
+  EMOJI_VOLUME_LARGE,
+  EMOJI_VOLUME_MEDIUM,
   PROGRESS_BAR_BLACK,
   PROGRESS_BAR_EMOJI_COUNT,
   PROGRESS_BAR_END_BLACK,
@@ -79,6 +83,18 @@ export function removeEmojis(str: string): string {
   }
 
   return result.trim();
+}
+
+export function volumeToEmoji(volume: number): string {
+  if (volume < 1) {
+    return EMOJI_VOLUME_MUTE;
+  } else if (volume < 33) {
+    return EMOJI_VOLUME_SMALL;
+  } else if (volume < 66) {
+    return EMOJI_VOLUME_MEDIUM;
+  } else {
+    return EMOJI_VOLUME_LARGE;
+  }
 }
 
 type FormatTrackOptions = {

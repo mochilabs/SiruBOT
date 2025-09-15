@@ -1,8 +1,6 @@
-import { SapphireClient } from '@sapphire/framework';
-import { PrismaClient } from '@sirubot/prisma';
 import { ArrayString } from '@skyra/env-utilities';
+import { PrismaClient } from '@sirubot/prisma';
 import { LavalinkManager } from 'lavalink-client';
-import { BotApplication } from '../core/botApplication.ts';
 import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
 import { SapphireInterfaceLogger } from '../core/logger.ts';
 
@@ -17,20 +15,15 @@ declare module '@skyra/env-utilities' {
 	}
 }
 
-interface CustomContainer {
-	logger: SapphireInterfaceLogger;
-	audio: LavalinkManager;
-	db: PrismaClient;
-	redisStoreManager: RedisStoreManager;
-}
-
-declare module "@sapphire/pieces" {
-	declare const container: CustomContainer;
+declare module '@sapphire/pieces' {
+	interface Container {
+		audio: LavalinkManager;
+		db: PrismaClient;
+		redisStoreManager: RedisStoreManager;
+	}
 }
 
 declare module '@sapphire/framework' {
-	interface Container extends CustomContainer {}
-
 	interface Preconditions {
 		OwnerOnly: never;
 

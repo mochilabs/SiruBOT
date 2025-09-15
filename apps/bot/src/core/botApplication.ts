@@ -1,11 +1,13 @@
 import { join } from 'node:path';
+import { PrismaClient } from '@sirubot/prisma';
 import { SapphireClient } from '@sapphire/framework';
 import { RootData, container, getRootData } from '@sapphire/pieces';
+
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
+
 import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
 import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
-import { PrismaClient } from '@sirubot/prisma';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();

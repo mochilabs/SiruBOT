@@ -6,7 +6,7 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "generate": "prisma generate --schema=src/schema.prisma",
-        "migrate:dev": "prisma migrate dev"
+        "migrate:dev": "prisma migrate dev --schema=src/schema.prisma"
     },
     "dependencies": {
         "@prisma/client": "^6.16.1"
