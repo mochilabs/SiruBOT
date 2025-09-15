@@ -17,13 +17,19 @@ declare module '@skyra/env-utilities' {
 	}
 }
 
+interface CustomContainer {
+	logger: SapphireInterfaceLogger;
+	audio: LavalinkManager;
+	db: PrismaClient;
+	redisStoreManager: RedisStoreManager;
+}
+
+declare module "@sapphire/pieces" {
+	declare const container: CustomContainer;
+}
+
 declare module '@sapphire/framework' {
-	interface Container {
-		logger: SapphireInterfaceLogger;
-		audio: LavalinkManager;
-		db: PrismaClient;
-		redisStoreManager: RedisStoreManager;
-	}
+	interface Container extends CustomContainer {}
 
 	interface Preconditions {
 		OwnerOnly: never;
