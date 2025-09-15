@@ -45,7 +45,10 @@ export const main = async () => {
 		client.setupStore('audio');
 		client.setupStore('general');
 
-		client.logger.debug('Setting up redis store manager...');
+		client.logger.debug('Setting up database...');
+		await client.setupDatabase();
+
+		client.logger.debug('Setting up redis store manager... (optional)');
 		await client.setupRedisStoreManager(envParseString('REDIS_URL'));
 
 		client.logger.info('Logging into discord...');
