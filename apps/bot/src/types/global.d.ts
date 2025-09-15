@@ -13,6 +13,7 @@ declare module '@skyra/env-utilities' {
 		DISCORD_TOKEN: string;
 		REDIS_URL: string;
 		LOGLEVEL: number;
+		BOT_ACTIVITY: string;
 	}
 }
 
@@ -20,7 +21,7 @@ declare module '@sapphire/framework' {
 	interface Container {
 		logger: SapphireInterfaceLogger;
 		audio: LavalinkManager;
-		prisma: PrismaClient;
+		db: PrismaClient;
 		redisStoreManager: RedisStoreManager;
 	}
 
