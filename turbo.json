@@ -34,9 +34,6 @@
       },
       "test": {
         "outputs": ["coverage/**"]
-      },
-      "migrate:dev": {
-        "cache": false
       }
     }
 }

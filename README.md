@@ -16,11 +16,12 @@ A modern Discord music bot built with Discord.js and Lavalink, featuring a monor
 sirubot/
 ├── apps/
 │   ├── bot/           # Discord bot application
-│   └── dashboard/     # Next.js web dashboard
-├── packages/
-│   ├── prisma/        # Database schema and client
-│   └── utils/         # Shared utility functions
-└── docker/            # Docker configuration for services
+│   ├── dashboard/     # Next.js web dashboard
+│   └── shardmanager/  # Shard management server
+└── packages/
+    ├── prisma/        # Database schema and client
+    ├── shardclient/   # Shard client library
+    └── utils/         # Shared utility functions
 ```
 
 ## 🚀 Getting Started
@@ -79,6 +80,7 @@ yarn watch        # Build and watch for changes
 # Building
 yarn build        # Build all packages and apps
 yarn generate     # Generate Prisma client
+yarn workspace @sirubot/prisma migrate:dev  # Run Prisma migrations
 
 # Testing & Linting
 yarn lint         # Lint all packages
