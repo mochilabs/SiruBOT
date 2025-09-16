@@ -2,7 +2,7 @@ import { ArrayString } from '@skyra/env-utilities';
 import { PrismaClient } from '@sirubot/prisma';
 import { LavalinkManager } from 'lavalink-client';
 import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
-import { SapphireInterfaceLogger } from '../core/logger.ts';
+import { GuildService } from '../services/guildService.ts';
 
 declare module '@skyra/env-utilities' {
 	interface Env {
@@ -20,6 +20,7 @@ declare module '@sapphire/pieces' {
 		audio: LavalinkManager;
 		db: PrismaClient;
 		redisStoreManager: RedisStoreManager;
+		guildService: GuildService;
 	}
 }
 

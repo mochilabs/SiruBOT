@@ -8,6 +8,7 @@ import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
 import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
 import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { GuildService } from '../services/guildService.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
@@ -36,27 +37,21 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	public async setupDatabase() {
 		const db = new PrismaClient({
 			log: [
-				{
-					level: 'error',
-					emit: 'stdout'
-				},
-				{
-					level: 'warn',
-					emit: 'stdout'
-				},
-				{
-					level: 'info',
-					emit: 'stdout'
-				},
-				{
-					level: 'query',
-					emit: 'stdout'
-				}
+				{ level: 'error', emit: 'stdout' },
+				{ level: 'warn', emit: 'stdout' },
+				{ level: 'info', emit: 'stdout' },
+				{ level: 'query', emit: 'stdout' }
 			]
 		});
+
 		await db.$connect();
 		container.db = db;
+
 		return db;
+	}
+
+	public setupServices() {
+		container.guildService = new GuildService();
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[]) {

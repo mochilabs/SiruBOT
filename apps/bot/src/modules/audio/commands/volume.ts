@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
-import { DEFAULT_COLOR, ExtendedEmbedBuilder, volumeToEmoji } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { Command, UserError } from '@sapphire/framework';
+import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
+import * as view from '../view/volume.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -43,33 +43,21 @@ export class VolumeCommand extends Command {
 		await interaction.deferReply();
 
 		const volume = interaction.options.getInteger('volume', true);
-
-		const queryRes = await this.container.db.guildSettings.upsert({
-			where: {
-				id: interaction.guildId
-			},
-			update: {
-				volume: volume
-			},
-			create: {
-				id: interaction.guildId,
-				volume: volume
-			}
-		});
-
-		const player = this.container.audio.getPlayer(interaction.guildId);
-
-		const volumeEmbed = new EmbedBuilder()
-			.setDescription(`${volumeToEmoji(queryRes.volume)} ${player ? '현재 ' : ''}볼륨을 **${queryRes.volume}%** 로 설정했어요.`)
-			.setColor(DEFAULT_COLOR);
-
-		if (player) {
-			player.setVolume(queryRes.volume);
-		} else {
-			volumeEmbed.setFooter({ text: '✨  설정된 볼륨은 다음 재생 시 적용돼요.' });
+		if (volume < 0 || volume > 150) {
+			throw new UserError({
+				identifier: 'volume_invalid',
+				message: '❌  볼륨은 **0**부터 **150**까지 설정할 수 있어요.',
+				context: {
+					volume
+				}
+			});
 		}
 
-		await interaction.editReply({ embeds: [volumeEmbed] });
+		const { volume: volumeUpdated } = await this.container.guildService.updateVolume(interaction.guildId, volume);
+		const player = this.container.audio.getPlayer(interaction.guildId);
+		if (player) player.setVolume(volumeUpdated);
+
+		await interaction.editReply({ embeds: [view.volumeUpdated({ volume: volumeUpdated, isPlaying: !!player })] });
 
 		return;
 	}
