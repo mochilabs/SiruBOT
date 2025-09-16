@@ -1,7 +1,7 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowflake } from 'discord.js';
 
-export class VoiceConnectedPrecondition extends AllFlowsPrecondition {
+export class VoiceConnected extends AllFlowsPrecondition {
 	#message = '🎵  이 명령어는 음성 채널에 접속한 사용자만 사용 가능해요.';
 
 	private checkVoiceConnected(channelId: Snowflake | null) {

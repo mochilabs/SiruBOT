@@ -51,6 +51,16 @@ export function trackRelatedSkipped({ track }: Omit<trackSkippedProps, 'requeste
 	return containerComponent;
 }
 
+export function trackSkippedTo({ track, to }: Omit<trackSkippedProps, 'requester'> & { to: number }) {
+	const containerComponent = createContainer();
+	addTextWithThumbnail(
+		containerComponent,
+		`### ⏭️ ${to}번째 곡으로 건너뛰었어요. \n### ${formatTrack(track, { showLength: true, withMarkdownURL: true, timeType: 'seconds', cleanTitle: true })}`,
+		track.info.artworkUrl
+	);
+	return containerComponent;
+}
+
 export function queueIsEmpty() {
 	const containerComponent = createContainer();
 

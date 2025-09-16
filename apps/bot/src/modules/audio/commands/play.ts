@@ -1,7 +1,14 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
-import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags } from 'discord.js';
+import {
+	ApplicationIntegrationType,
+	AutocompleteInteraction,
+	ButtonInteraction,
+	ChatInputCommandInteraction,
+	ComponentType,
+	MessageFlags
+} from 'discord.js';
 import { SearchPlatform, Track } from 'lavalink-client';
 import * as view from '../view/play.ts';
 
@@ -234,10 +241,19 @@ export class PlayCommand extends Command {
 							componentType: ComponentType.Button
 						});
 
-						// Collected
-						buttonInteractionCollector.on('collect', async (collectorInteraction) => {
+						const handleEndAction = async () => {
+							await interaction.editReply({
+								flags: MessageFlags.IsComponentsV2,
+								components: [trackAdded],
+								allowedMentions: { users: [], roles: [] }
+							});
+						};
+
+						const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>) => {
 							await collectorInteraction.deferUpdate();
 							if (!player.connected) return;
+							buttonInteractionCollector.off('collect', handleButtonAction);
+							buttonInteractionCollector.off('end', handleEndAction);
 
 							if (collectorInteraction.customId === 'playlist_add_remaining') {
 								// 나머지 곡들을 대기열에 추가
@@ -264,16 +280,10 @@ export class PlayCommand extends Command {
 
 								return;
 							}
-							buttonInteractionCollector.stop();
-						});
+						};
 
-						buttonInteractionCollector.on('end', async () => {
-							await interaction.editReply({
-								flags: MessageFlags.IsComponentsV2,
-								components: [trackAdded],
-								allowedMentions: { users: [], roles: [] }
-							});
-						});
+						buttonInteractionCollector.once('collect', handleButtonAction);
+						buttonInteractionCollector.once('end', handleEndAction);
 					} else {
 						// 나머지 곡이 없으면 일반적인 재생 메시지 표시
 						await interaction.editReply({

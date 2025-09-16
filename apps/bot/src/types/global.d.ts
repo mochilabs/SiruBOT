@@ -36,5 +36,7 @@ declare module '@sapphire/framework' {
 		MemberListenable: never;
 		ClientVoiceConnectable: never;
 		ClientVoiceSpeakable: never;
+
+		DJRole: never;
 	}
 }

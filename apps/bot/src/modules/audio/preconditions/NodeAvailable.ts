@@ -1,6 +1,6 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 
-export class NodeAvailablePrecondition extends AllFlowsPrecondition {
+export class NodeAvailable extends AllFlowsPrecondition {
 	#message = '💡  현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.';
 
 	public override chatInputRun() {

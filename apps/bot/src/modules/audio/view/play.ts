@@ -35,7 +35,7 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 		artistText += ` | ${position}개 남음 (${formatTime((totalDuration ?? 0) / 1000)})`;
 	}
 
-	const content = `### ${firstContent}\n### ${trackText}\n${artistText}`;
+	const content = `${firstContent}\n### ${trackText}\n${artistText}`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;

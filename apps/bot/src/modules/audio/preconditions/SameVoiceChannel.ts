@@ -1,7 +1,7 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowflake } from 'discord.js';
 
-export class SameVoiceChannelPrecondition extends AllFlowsPrecondition {
+export class SameVoiceChannel extends AllFlowsPrecondition {
 	#message = '🔗  이 명령어를 사용하려면 봇과 같은 음성 채널에 연결해야 해요.';
 
 	private checkSameVoiceChannel(userChannelId: Snowflake | null, botChannelId: Snowflake | null) {

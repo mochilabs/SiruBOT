@@ -2,7 +2,7 @@ import { AllFlowsPrecondition } from '@sapphire/framework';
 import { CommandInteraction, ContextMenuCommandInteraction, Guild, GuildMember, PermissionsBitField } from 'discord.js';
 import { Message } from 'discord.js';
 
-export class ClientVoiceConnectablePrecondition extends AllFlowsPrecondition {
+export class ClientVoiceConnectable extends AllFlowsPrecondition {
 	#message = '🎧  봇이 음성 채널에 접속할 수 없어요. 음성 채널 권한을 확인해주세요.';
 
 	private checkVoicePermissions(member: GuildMember | null, guild: Guild | null) {
