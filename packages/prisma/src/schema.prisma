@@ -13,14 +13,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model GuildSettings {
+model Guild {
   id            String   @id
   volume        Int      @default(20)
   textChannelId String?
   voiceChannelId String?
   djRoleId      String?
-  repeat        Int      @default(0)
+  repeat        String   @default("off")
   related       Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model Track {
+  id          String   @id // YouTube ID, Spotify ID, etc.
+  title       String
+  artist      String
+  duration    Int      // Duration in milliseconds
+  thumbnail   String?
+  url         String
+  source      String   // 'youtube', 'spotify', 'soundcloud', etc.
+  
+  // Statistics
+  totalPlays  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userFavorites UserFavorite[]
+}
+
+model User {
+  id          String          @id // Discord user ID
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  favorites   UserFavorite[]
+}
+
+model UserFavorite {
+  userId     String
+  trackId    String
+  createdAt  DateTime @default(now())
+
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([userId, trackId])
+  @@index([trackId])
 }
