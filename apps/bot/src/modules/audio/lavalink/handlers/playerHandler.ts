@@ -1,4 +1,4 @@
-import { DestroyReasonsType, LavalinkManager, Player } from 'lavalink-client';
+import { DestroyReasonsType, LavalinkManager, Player, RepeatMode } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 
 // TODO: 안쓰는거 정리, ts-ignore 제거
@@ -12,16 +12,21 @@ export class PlayerHandler extends BaseLavalinkHandler {
 
 	public setup(lavalinkManager: LavalinkManager) {
 		this.lavalinkManager = lavalinkManager;
-		lavalinkManager.on('playerCreate', this.handlePlayerCreate.bind(this));
+		lavalinkManager.on('playerCreate', this.wrapAsyncHandler(this.handlePlayerCreate.bind(this), 'playerCreate'));
 		lavalinkManager.on('playerDestroy', this.handlePlayerDestroy.bind(this));
 		lavalinkManager.on('playerDisconnect', this.handlePlayerDisconnect.bind(this));
 		lavalinkManager.on('playerMove', this.handlePlayerMove.bind(this));
 		lavalinkManager.on('playerUpdate', this.wrapAsyncHandler(this.handlePlayerUpdate.bind(this), 'playerUpdate'));
 	}
 
-	//@ts-ignore
-	private handlePlayerCreate(player: Player) {
+	private async handlePlayerCreate(player: Player) {
 		this.logger.info(`Player created: ${player.guildId}`);
+
+		this.logger.trace(`Setting volume and repeat mode for player: ${player.guildId}`);
+		const guildConfig = await this.container.guildService.getGuild(player.guildId);
+		await player.setVolume(guildConfig.volume);
+		await player.setRepeatMode(guildConfig.repeat as RepeatMode);
+		
 		this.container.redisStoreManager.getPlayerSaver().set(player);
 	}
 	//@ts-ignore

@@ -155,7 +155,6 @@ export class PlayCommand extends Command {
 			guildId: interaction.guildId
 		};
 
-		const savedVolume = await this.container.guildService.getVolume(interaction.guildId);
 		const player =
 			this.container.audio.getPlayer(interaction.guildId) ||
 			(await this.container.audio.createPlayer({
@@ -165,8 +164,7 @@ export class PlayCommand extends Command {
 				selfDeaf: true,
 				selfMute: false,
 				instaUpdateFiltersFix: true,
-				applyVolumeAsFilter: true,
-				volume: savedVolume
+				applyVolumeAsFilter: true
 			}));
 
 		const searchRes = await player.search({ query, source: platform }, interaction.user);
