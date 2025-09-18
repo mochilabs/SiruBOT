@@ -5,10 +5,11 @@ export const DEFAULT_COLOR = 0xffdaff;
 export const OK_COLOR = 0x4299e1;
 export const WARN_COLOR = 0xf56565;
 
-export const EMOJI_REPEAT: { [index: number]: string } = {
-  0: "➡️",
-  1: "🔁",
-  2: "🔂",
+type RepeatMode = "off" | "track" | "queue";
+export const EMOJI_REPEAT: Record<RepeatMode, string> = {
+  off: "➡️",
+  track: "🔁",
+  queue: "🔂",
 };
 
 export const EMOJI_PLAY_STATE: { [index: number]: string } = {
