@@ -1,5 +1,7 @@
 import { container } from '@sapphire/framework';
+import { GuildSettings } from '@sirubot/prisma';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
+import { RepeatMode } from 'lavalink-client';
 
 export class GuildService {
 	public async updateVolume(guildId: string, volume: number) {
@@ -49,9 +51,10 @@ export class GuildService {
 	}
 
 	public async setDJRole(guildId: string, djRoleId: string) {
-		const guild = await container.db.guildSettings.update({
+		const guild = await container.db.guildSettings.upsert({
 			where: { id: guildId },
-			data: { djRoleId }
+			create: { id: guildId, djRoleId },
+			update: { djRoleId }
 		});
 
 		return guild;
@@ -61,5 +64,55 @@ export class GuildService {
 		const djRoleId = await this.getDJRole(guildId);
 		if (djRoleId === null || member.permissions.has(PermissionFlagsBits.Administrator)) return true;
 		return member.roles.cache.has(djRoleId);
+	}
+
+	public async getRepeat(guildId: string): Promise<RepeatMode> {
+		const guild = await container.db.guildSettings.findUnique({
+			select: {
+				repeat: true
+			},
+			where: {
+				id: guildId
+			}
+		});
+
+		if (guild) {
+			return guild.repeat as RepeatMode;
+		}
+
+		const newGuild = await container.db.guildSettings.create({
+			data: { id: guildId, repeat: 'off' },
+			select: { repeat: true }
+		});
+
+		return newGuild.repeat as RepeatMode;
+	}
+
+	public async setRepeat(guildId: string, repeat: RepeatMode): Promise<RepeatMode> {
+		if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('Invalid repeat value');
+		const guild = await container.db.guildSettings.upsert({
+			where: { id: guildId },
+			create: { id: guildId, repeat },
+			update: { repeat },
+			select: { repeat: true }
+		});
+
+		return guild.repeat as RepeatMode;
+	}
+
+	public async getGuild(guildId: string): Promise<GuildSettings> {
+		const guild = await container.db.guildSettings.findUnique({
+			where: { id: guildId }
+		});
+
+		if (guild) {
+			return guild;
+		}
+
+		const newGuild = await container.db.guildSettings.create({
+			data: { id: guildId }
+		});
+
+		return newGuild;
 	}
 }
