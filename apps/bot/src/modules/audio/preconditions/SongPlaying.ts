@@ -2,7 +2,7 @@ import { AllFlowsPrecondition } from '@sapphire/framework';
 import { ChatInputCommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
 
 export class SongPlaying extends AllFlowsPrecondition {
-	#message = '🎵  이 명령어를 사용하려면 노래가 재생 중이어야 해요.';
+	#message = '🎵  이 명령어는 노래 재생 중에만 사용이 가능해요.';
 
 	public override chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (this.checkPlayerExists(interaction.guildId!)) {

@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import * as view from '../view/volume.ts';
 
 @ApplyOptions<Command.Options>({
@@ -46,7 +46,11 @@ export class VolumeCommand extends Command {
 		if (volume === null) {
 			const savedVolume = await this.container.guildService.getVolume(interaction.guildId);
 
-			await interaction.editReply({ embeds: [view.currentVolume({ volume: savedVolume })] });
+			await interaction.editReply({
+				components: [view.currentVolume({ volume: savedVolume })],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { users: [interaction.user.id], roles: [] }
+			});
 			return;
 		}
 
@@ -64,7 +68,11 @@ export class VolumeCommand extends Command {
 		const player = this.container.audio.getPlayer(interaction.guildId);
 		if (player) player.setVolume(volumeUpdated);
 
-		await interaction.editReply({ embeds: [view.volumeUpdated({ volume: volumeUpdated, isPlaying: !!player })] });
+		await interaction.editReply({
+			components: [view.volumeUpdated({ volume: volumeUpdated, isPlaying: !!player })],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { users: [interaction.user.id], roles: [] }
+		});
 
 		return;
 	}

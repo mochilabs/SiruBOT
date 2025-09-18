@@ -1,5 +1,5 @@
 import { DEFAULT_COLOR, EMOJI_REPEAT } from '@sirubot/utils';
-import { EmbedBuilder } from 'discord.js';
+import { ContainerBuilder } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
 type RepeatUpdatedProps = {
@@ -18,14 +18,14 @@ export const UPDATED_REPEAT_MODE_NAMES: Record<RepeatMode, string> = {
 	queue: '**전체 곡** 반복으로 설정했어요'
 } as const;
 
-function createRepeatEmbed(description: string) {
-	return new EmbedBuilder().setDescription(description).setColor(DEFAULT_COLOR);
-}
-
 export function repeatUpdated({ mode }: RepeatUpdatedProps) {
-	return createRepeatEmbed(`${EMOJI_REPEAT[mode]} 반복 모드를 ${UPDATED_REPEAT_MODE_NAMES[mode]}`);
+	return new ContainerBuilder()
+		.setAccentColor(DEFAULT_COLOR)
+		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`${EMOJI_REPEAT[mode]} 반복 모드를 ${UPDATED_REPEAT_MODE_NAMES[mode]}`));
 }
 
 export function repeatCurrent({ mode }: RepeatUpdatedProps) {
-	return createRepeatEmbed(`${EMOJI_REPEAT[mode]} 현재 반복 모드 **${REPEAT_MODE_NAMES[mode]}**`);
+	return new ContainerBuilder()
+		.setAccentColor(DEFAULT_COLOR)
+		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`${EMOJI_REPEAT[mode]} 현재 반복 모드 **${REPEAT_MODE_NAMES[mode]}**`));
 }

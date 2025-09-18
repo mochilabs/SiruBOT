@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import * as view from '../view/repeat.ts';
 import { RepeatMode } from 'lavalink-client';
 
@@ -56,7 +56,11 @@ export class RepeatCommand extends Command {
 
 		if (mode == null) {
 			const repeat = await this.container.guildService.getRepeat(interaction.guildId);
-			await interaction.reply({ embeds: [view.repeatCurrent({ mode: repeat })] });
+			await interaction.reply({
+				components: [view.repeatCurrent({ mode: repeat })],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { users: [interaction.user.id], roles: [] }
+			});
 			return;
 		}
 
@@ -71,6 +75,10 @@ export class RepeatCommand extends Command {
 		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, mode as RepeatMode);
 		await this.container.audio.getPlayer(interaction.guildId)?.setRepeatMode(repeatUpdated);
 
-		await interaction.reply({ embeds: [view.repeatUpdated({ mode: repeatUpdated })] });
+		await interaction.reply({
+			components: [view.repeatUpdated({ mode: repeatUpdated })],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { users: [interaction.user.id], roles: [] }
+		});
 	}
 }
