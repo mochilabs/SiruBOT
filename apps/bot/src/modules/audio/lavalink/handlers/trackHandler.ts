@@ -29,8 +29,12 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	//@ts-ignore
-	private handleTrackStart(player: Player, track: Track | null, payload: TrackStartEvent) {
+	private async handleTrackStart(player: Player, track: Track | null, payload: TrackStartEvent) {
 		this.logger.info(`Track started: ${track?.info.title} by ${track?.info.author}`);
+		if (track && !track.info.isStream) {
+			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
+			await this.container.trackService.increasePlays(track);
+		}
 	}
 
 	//@ts-ignore
