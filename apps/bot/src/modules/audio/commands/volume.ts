@@ -49,7 +49,7 @@ export class VolumeCommand extends Command {
 			await interaction.editReply({ embeds: [view.currentVolume({ volume: savedVolume })] });
 			return;
 		}
-		
+
 		if (volume < 0 || volume > 150) {
 			throw new UserError({
 				identifier: 'volume_invalid',

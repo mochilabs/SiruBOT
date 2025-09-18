@@ -26,7 +26,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		const guildConfig = await this.container.guildService.getGuild(player.guildId);
 		await player.setVolume(guildConfig.volume);
 		await player.setRepeatMode(guildConfig.repeat as RepeatMode);
-		
+
 		this.container.redisStoreManager.getPlayerSaver().set(player);
 	}
 	//@ts-ignore

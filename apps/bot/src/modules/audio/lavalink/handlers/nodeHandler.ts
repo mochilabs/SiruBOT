@@ -85,7 +85,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			await createdPlayer.connect();
 
 			// Set filters
-			createdPlayer.filterManager.data = lavalinkPlayer.filters;
+			createdPlayer.filterManager.data = savedPlayer.filters;
 			// Sync queue
 			await createdPlayer.queue.utils.sync(true, false).catch(this.logger.error.bind(this));
 

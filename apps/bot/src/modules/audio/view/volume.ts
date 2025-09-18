@@ -15,9 +15,7 @@ export function volumeUpdated({ volume, isPlaying }: volumeUpdatedProps) {
 }
 
 export function currentVolume({ volume }: { volume: number }) {
-	const embed = new EmbedBuilder()
-		.setDescription(`${volumeToEmoji(volume)} 현재 볼륨 **${volume}%**`)
-		.setColor(DEFAULT_COLOR);
+	const embed = new EmbedBuilder().setDescription(`${volumeToEmoji(volume)} 현재 볼륨 **${volume}%**`).setColor(DEFAULT_COLOR);
 
 	return embed;
 }

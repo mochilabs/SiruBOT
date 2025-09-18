@@ -16,16 +16,16 @@ export class ChatInputCommandError extends Listener {
 					embeds: [embed],
 					allowedMentions: { users: [interaction.user.id], roles: [] }
 				});
-	
+
 				return;
 			}
-	
+
 			await interaction.reply({
 				embeds: [embed],
 				allowedMentions: { users: [interaction.user.id], roles: [] },
 				flags: [MessageFlags.Ephemeral]
 			});
-		}
+		};
 
 		if (error instanceof UserError) {
 			await sendEmbed(new EmbedBuilder().setColor(DEFAULT_COLOR).setDescription(error.message));
