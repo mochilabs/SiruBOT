@@ -1,11 +1,11 @@
 import { container } from '@sapphire/framework';
-import { GuildSettings } from '@sirubot/prisma';
+import { Guild } from '@sirubot/prisma';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
 export class GuildService {
 	public async updateVolume(guildId: string, volume: number) {
-		const guild = await container.db.guildSettings.upsert({
+		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, volume },
 			update: { volume }
@@ -15,7 +15,7 @@ export class GuildService {
 	}
 
 	public async getVolume(guildId: string) {
-		const guild = await container.db.guildSettings.findUnique({
+		const guild = await container.db.guild.findUnique({
 			where: { id: guildId },
 			select: { volume: true }
 		});
@@ -24,7 +24,7 @@ export class GuildService {
 			return guild.volume;
 		}
 
-		const newGuild = await container.db.guildSettings.create({
+		const newGuild = await container.db.guild.create({
 			data: { id: guildId },
 			select: { volume: true }
 		});
@@ -33,7 +33,7 @@ export class GuildService {
 	}
 
 	public async getDJRole(guildId: string): Promise<string | null> {
-		const guild = await container.db.guildSettings.findUnique({
+		const guild = await container.db.guild.findUnique({
 			where: { id: guildId },
 			select: { djRoleId: true }
 		});
@@ -42,7 +42,7 @@ export class GuildService {
 			return guild.djRoleId;
 		}
 
-		const newGuild = await container.db.guildSettings.create({
+		const newGuild = await container.db.guild.create({
 			data: { id: guildId, djRoleId: null },
 			select: { djRoleId: true }
 		});
@@ -51,7 +51,7 @@ export class GuildService {
 	}
 
 	public async setDJRole(guildId: string, djRoleId: string) {
-		const guild = await container.db.guildSettings.upsert({
+		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, djRoleId },
 			update: { djRoleId }
@@ -67,7 +67,7 @@ export class GuildService {
 	}
 
 	public async getRepeat(guildId: string): Promise<RepeatMode> {
-		const guild = await container.db.guildSettings.findUnique({
+		const guild = await container.db.guild.findUnique({
 			select: {
 				repeat: true
 			},
@@ -80,7 +80,7 @@ export class GuildService {
 			return guild.repeat as RepeatMode;
 		}
 
-		const newGuild = await container.db.guildSettings.create({
+		const newGuild = await container.db.guild.create({
 			data: { id: guildId, repeat: 'off' },
 			select: { repeat: true }
 		});
@@ -90,7 +90,7 @@ export class GuildService {
 
 	public async setRepeat(guildId: string, repeat: RepeatMode): Promise<RepeatMode> {
 		if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('Invalid repeat value');
-		const guild = await container.db.guildSettings.upsert({
+		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, repeat },
 			update: { repeat },
@@ -100,8 +100,8 @@ export class GuildService {
 		return guild.repeat as RepeatMode;
 	}
 
-	public async getGuild(guildId: string): Promise<GuildSettings> {
-		const guild = await container.db.guildSettings.findUnique({
+	public async getGuild(guildId: string): Promise<Guild> {
+		const guild = await container.db.guild.findUnique({
 			where: { id: guildId }
 		});
 
@@ -109,7 +109,7 @@ export class GuildService {
 			return guild;
 		}
 
-		const newGuild = await container.db.guildSettings.create({
+		const newGuild = await container.db.guild.create({
 			data: { id: guildId }
 		});
 
