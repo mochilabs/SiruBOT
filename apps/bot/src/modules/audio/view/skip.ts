@@ -19,7 +19,7 @@ export function voteSkip({ requiredVotes, totalVotes, trackToSkip }: voteSkipPro
 		trackToSkip.info.artworkUrl
 	);
 
-	const voteSkipButton = new ButtonBuilder().setCustomId('voteSkip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary).setLabel('건너뛰기');
+	const voteSkipButton = new ButtonBuilder().setCustomId('skip_vote').setEmoji('⏭️').setStyle(ButtonStyle.Secondary).setLabel('건너뛰기');
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(voteSkipButton));
 
 	return containerComponent;
