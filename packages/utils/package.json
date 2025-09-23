@@ -4,6 +4,14 @@
     "version": "0.1.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "require": "./dist/index.js",
+            "browser": "./dist/browser.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
     "scripts": {
         "lint": "prettier --check \"src/**/*.ts\"",
         "lint:fix": "prettier --write \"src/**/*.ts\"",
