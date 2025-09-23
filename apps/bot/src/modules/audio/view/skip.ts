@@ -5,21 +5,27 @@ import { addTextWithThumbnail } from './play.ts';
 
 type voteSkipProps = {
 	requiredVotes: number;
-	totalVotes: number;
-	requester: User;
+	voteUsers: Set<string>;
 	trackToSkip: Track;
+	nextTrack?: Track;
 };
 
-export function voteSkip({ requiredVotes, totalVotes, trackToSkip }: voteSkipProps) {
-	const containerComponent = createContainer();
+const formatOptions = { showLength: true, withMarkdownURL: true, timeType: 'seconds', cleanTitle: true } as const;
 
+export function voteSkip({ requiredVotes, voteUsers, trackToSkip, nextTrack }: voteSkipProps) {
+	const containerComponent = createContainer();
+	const totalVotes = voteUsers.size;
 	addTextWithThumbnail(
 		containerComponent,
-		`### ⏭️ 투표로 건너뛸까요? ${totalVotes}/${requiredVotes}\n### ${formatTrack(trackToSkip, { showLength: true, withMarkdownURL: true, timeType: 'korean' })}`,
+		`⏭️ 투표로 노래를 건너뛸까요?\n### ${formatTrack(trackToSkip, { showLength: true, withMarkdownURL: true, timeType: 'seconds' })}${nextTrack ? '\n\nㄴ 다음 곡: ' + formatTrack(nextTrack, { showLength: true, withMarkdownURL: true, timeType: 'seconds' }) : ''}\n-# 투표는 **30초** 동안 진행돼요.`,
 		trackToSkip.info.artworkUrl
 	);
 
-	const voteSkipButton = new ButtonBuilder().setCustomId('skip_vote').setEmoji('⏭️').setStyle(ButtonStyle.Secondary).setLabel('건너뛰기');
+	const voteSkipButton = new ButtonBuilder()
+		.setCustomId('skip_vote')
+		.setEmoji('⏭️')
+		.setStyle(ButtonStyle.Secondary)
+		.setLabel(`건너뛰기 (${totalVotes}/${requiredVotes})`);
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(voteSkipButton));
 
 	return containerComponent;
@@ -33,37 +39,43 @@ type trackSkippedProps = {
 export function trackSkipped({ track }: trackSkippedProps) {
 	const containerComponent = createContainer();
 
-	addTextWithThumbnail(
-		containerComponent,
-		`### ⏭️ 노래를 건너뛰었어요. \n### ${formatTrack(track, { showLength: true, withMarkdownURL: true, timeType: 'seconds', cleanTitle: true })}`,
-		track.info.artworkUrl
-	);
+	addTextWithThumbnail(containerComponent, `⏭️ 노래를 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`, track.info.artworkUrl);
 	return containerComponent;
 }
 
 export function trackRelatedSkipped({ track }: Omit<trackSkippedProps, 'requester'>) {
 	const containerComponent = createContainer();
-	addTextWithThumbnail(
-		containerComponent,
-		`### ⏭️ 자동 재생 노래를 건너뛰었어요. \n### ${formatTrack(track, { showLength: true, withMarkdownURL: true, timeType: 'seconds', cleanTitle: true })}`,
-		track.info.artworkUrl
-	);
+	addTextWithThumbnail(containerComponent, `⏭️ 추천 곡을 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`, track.info.artworkUrl);
 	return containerComponent;
 }
 
 export function trackSkippedTo({ track, to }: Omit<trackSkippedProps, 'requester'> & { to: number }) {
 	const containerComponent = createContainer();
+	addTextWithThumbnail(containerComponent, `⏭️ ${to}번째 곡으로 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`, track.info.artworkUrl);
+	return containerComponent;
+}
+
+type trackSkippedByVoteProps = Omit<trackSkippedProps, 'requester'> & Pick<voteSkipProps, 'voteUsers'>;
+
+export function trackSkippedByVote({ track, voteUsers }: trackSkippedByVoteProps) {
+	const containerComponent = createContainer();
+
+	const totalVotes = voteUsers.size;
 	addTextWithThumbnail(
 		containerComponent,
-		`### ⏭️ ${to}번째 곡으로 건너뛰었어요. \n### ${formatTrack(track, { showLength: true, withMarkdownURL: true, timeType: 'seconds', cleanTitle: true })}`,
+		`⏭️ 투표로 노래를 건너뛰었어요. (${totalVotes}표) \n### ${formatTrack(track, formatOptions)}`,
 		track.info.artworkUrl
 	);
 	return containerComponent;
 }
 
-export function queueIsEmpty() {
-	const containerComponent = createContainer();
+export function alreadySkipped() {
+	return createContainer().addTextDisplayComponents((textDisplay) => textDisplay.setContent('⏭️ 이미 다음 곡이 재생 중이에요.'));
+}
 
-	addTextWithThumbnail(containerComponent, '🔍 건너뛸 곡이 없어요.', null);
-	return containerComponent;
+export function voteSkipTimeout({ requiredVotes, voteUsers }: Pick<voteSkipProps, 'requiredVotes' | 'voteUsers'>) {
+	const totalVotes = voteUsers.size;
+	return createContainer().addTextDisplayComponents((textDisplay) =>
+		textDisplay.setContent(`⏭️ 투표 시간이 종료되었어요.\n-# **${totalVotes}**표 / **${requiredVotes}**표 필요`)
+	);
 }

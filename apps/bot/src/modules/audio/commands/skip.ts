@@ -12,6 +12,7 @@ import {
 } from 'discord.js';
 import * as view from '../view/skip.ts';
 import { Player, Queue, Track } from 'lavalink-client';
+import { VoteSkip } from '../managers/VoteSkip.ts';
 
 interface SkipContext {
 	player: Player;
@@ -96,7 +97,7 @@ export class SkipCommand extends Command {
 		}
 
 		if (this.isTrackRequestedByBot(context.currentTrack)) {
-			await this.handleBotRecommendedTrack(context);
+			await this.handleRelatedTrackSkip(context);
 			return;
 		}
 
@@ -122,7 +123,9 @@ export class SkipCommand extends Command {
 		const voiceChannel = member?.voice.channel;
 		if (!voiceChannel) return null;
 
-		const voiceChannelMembers = voiceChannel.members.filter((member: GuildMember) => !member.user.bot);
+		const voiceChannelMembers = voiceChannel.members.filter(
+			(member: GuildMember) => !member.user.bot && (member.voice.selfDeaf === false || member.voice.serverDeaf === false)
+		);
 
 		return {
 			player,
@@ -147,7 +150,7 @@ export class SkipCommand extends Command {
 	}
 
 	private isUserAlone(context: SkipContext): boolean {
-		return context.voiceChannelMembers.size <= 1;
+		return Math.ceil(context.voiceChannelMembers.size / 2) <= 1;
 	}
 
 	private async handleEmptyQueue(context: SkipContext): Promise<void> {
@@ -159,9 +162,13 @@ export class SkipCommand extends Command {
 				content: '추천 곡 건너뛰기 테스트'
 			});
 		} else {
-			await interaction.reply({
-				components: [view.queueIsEmpty()],
-				flags: [MessageFlags.IsComponentsV2]
+			throw new UserError({
+				identifier: 'skip_no_more_tracks',
+				message: '🔍 건너뛸 노래가 없어요.',
+				context: {
+					...context,
+					ephemeral: true
+				}
 			});
 		}
 	}
@@ -181,7 +188,7 @@ export class SkipCommand extends Command {
 		});
 	}
 
-	private async handleBotRecommendedTrack(context: SkipContext): Promise<void> {
+	private async handleRelatedTrackSkip(context: SkipContext): Promise<void> {
 		const { player, currentTrack, interaction } = context;
 
 		await player.skip();
@@ -207,24 +214,15 @@ export class SkipCommand extends Command {
 	}
 
 	private async handleVoteSkip(context: SkipContext): Promise<void> {
-		// Todo: handle button actions
-		const { voiceChannelMembers, currentTrack, interaction } = context;
-
-		const voteUsers = new Set<string>([interaction.user.id]);
-		const requiredVotes = Math.ceil(voiceChannelMembers.size / 2);
-		const totalVotes = 1; // 요청자의 투표
-
-		const voteSkip = view.voteSkip({
-			requiredVotes,
-			totalVotes,
-			trackToSkip: currentTrack,
-			requester: interaction.user
+		const voteSkip = new VoteSkip({
+			player: context.player,
+			currentTrack: context.currentTrack,
+			nextTrack: context.queue.tracks[0] as Track,
+			voiceChannelMembers: context.voiceChannelMembers,
+			interaction: context.interaction
 		});
 
-		await interaction.reply({
-			components: [voteSkip],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		await voteSkip.execute();
 	}
 
 	private async checkDJRole(context: SkipContext): Promise<boolean> {
@@ -234,7 +232,7 @@ export class SkipCommand extends Command {
 		if (!hasPermission) {
 			throw new UserError({
 				identifier: 'forceskip_no_permission',
-				message: '노래를 강제로 건너뛸 권한이 없어요.'
+				message: '❌ 곡을 강제로 건너뛰려면 DJ 역할이나 관리자 권한이 필요해요.'
 			});
 		}
 
@@ -261,7 +259,7 @@ export class SkipCommand extends Command {
 		if (to > player.queue.tracks.length) {
 			throw new UserError({
 				identifier: 'skipto_invalid_index',
-				message: '건너뛸 곡이 대기열에 존재하지 않아요.'
+				message: '🎵 건너뛸 곡이 대기열에 존재하지 않아요.'
 			});
 		}
 
