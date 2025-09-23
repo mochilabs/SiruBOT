@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import * as view from '../view/skip.ts';
 import { Player, Queue, Track } from 'lavalink-client';
-import { VoteSkip } from '../managers/VoteSkip.ts';
+import { VoteSkip } from '../managers/voteSkip.ts';
 
 interface SkipContext {
 	player: Player;
