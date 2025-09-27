@@ -31,5 +31,5 @@
         "typecheck": "turbo typecheck",
         "test": "turbo test"
     },
-    "packageManager": "yarn@4.9.4"
+    "packageManager": "yarn@4.10.3"
 }
