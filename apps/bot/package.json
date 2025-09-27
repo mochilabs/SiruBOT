@@ -39,7 +39,6 @@
     "tslog": "^4.9.3",
     "undici": "^7.16.0"
   },
-  "packageManager": "yarn@4.6.0",
   "devDependencies": {
     "@sapphire/cli": "^1.9.3",
     "@sapphire/ts-config": "^5.0.1",
