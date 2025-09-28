@@ -4,6 +4,9 @@ import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 import { isDev } from '@sirubot/utils';
 import { envParseString } from '@skyra/env-utilities';
+import figlet from 'figlet';
+import { version as discordJsVersion } from 'discord.js';
+import { version as frameworkVersion } from '@sapphire/framework';
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class ReadyEvent extends Listener {
@@ -11,41 +14,43 @@ export class ReadyEvent extends Listener {
 
 	public override run() {
 		this.printBanner();
-		this.printStoreDebugInformation();
 
 		this.container.client.user?.setActivity(envParseString('BOT_ACTIVITY'));
 	}
 
-	private printBanner() {
+	private async printBanner() {
 		const success = green('+');
 
 		const llc = isDev ? magentaBright : white;
 		const blc = isDev ? magenta : blue;
 
-		const line01 = llc('');
-		const line02 = llc('');
-		const line03 = llc('');
+		const nodeVersion = process.version;
 
-		// Offset Pad
-		const pad = ' '.repeat(7);
+		// Create ASCII art banner
+		const title = figlet.textSync('SiruBOT', { font: 'Standard' });
+		const banner = `\n${title}
+=========================================
+Node.js:            ${nodeVersion}
+Discord.js:         ${magentaBright(discordJsVersion)}
+Sapphire Framework: ${magentaBright(frameworkVersion)}
+=========================================
+[${success}] Gateway
+${isDev ? `${blc('<')}${llc('/')}${blc('>')} ${llc('DEVELOPMENT MODE 🛠️')}` : ''}
+${this.getStoreDebugInformation()}`;
 
-		String.raw`
-${line01} ${pad}${isDev ? `` : ``}
-${line02} ${pad}[${success}] Gateway
-${line03}${isDev ? ` ${pad}${blc('<')}${llc('/')}${blc('>')} ${llc('DEVELOPMENT MODE')}` : ''}
-		`
-			.trim()
-			.split('\n')
-			.forEach((line) => this.container.logger.info(line));
+		this.container.logger.info(banner);
 	}
 
-	private printStoreDebugInformation() {
-		const { client, logger } = this.container;
+	private getStoreDebugInformation() {
+		const { client } = this.container;
 		const stores = [...client.stores.values()];
 		const last = stores.pop()!;
 
-		for (const store of stores) logger.info(this.styleStore(store, false));
-		logger.info(this.styleStore(last, true));
+		const storesInfo = [];
+		for (const store of stores) storesInfo.push(this.styleStore(store, false));
+		storesInfo.push(this.styleStore(last, true));
+
+		return storesInfo.join('\n');
 	}
 
 	private styleStore(store: StoreRegistryValue, last: boolean) {

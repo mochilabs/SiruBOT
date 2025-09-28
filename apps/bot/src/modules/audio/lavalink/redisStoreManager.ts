@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { type RedisClientType, createClient } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
+import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 
 type RedisClientOptionsType = Parameters<typeof createClient>[0];
 
@@ -28,7 +29,7 @@ export class RedisStoreManager {
 	}
 
 	private get logger() {
-		return container.logger;
+		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'redisStoreManager' });
 	}
 
 	public getQueueStore() {

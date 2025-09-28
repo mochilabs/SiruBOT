@@ -1,5 +1,4 @@
 import './environment.ts';
-import '@sapphire/plugin-api/register';
 import '@sapphire/plugin-subcommands/register';
 
 import { ApplicationCommandRegistries, RegisterBehavior } from '@sapphire/framework';
@@ -8,7 +7,9 @@ import { inspect } from 'util';
 
 export const setup = () => {
 	// Set default behavior to bulk overwrite
-	ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.BulkOverwrite);
+	ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(
+		process.env.REGISTER_COMMANDS ? RegisterBehavior.Overwrite : RegisterBehavior.LogToConsole
+	);
 
 	// Set default inspection depth
 	inspect.defaultOptions.depth = 1;

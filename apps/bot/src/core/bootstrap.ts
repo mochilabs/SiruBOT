@@ -8,21 +8,10 @@ export const main = async () => {
 	const client = new BotApplication({
 		logger: {
 			instance: new SapphireInterfaceLogger({
+				name: 'SiruBOT',
 				minLevel: envParseString('LOGLEVEL'),
 				type: 'pretty',
-				prettyLogTemplate: '{{logLevelName}} [{{fileNameWithLine}}] ',
-				prettyLogStyles: {
-					logLevelName: {
-						'*': ['bold', 'black', 'bgWhiteBright', 'dim'],
-						SILLY: ['bold', 'white'],
-						TRACE: ['bold', 'whiteBright'],
-						DEBUG: ['bold', 'green'],
-						INFO: ['bold', 'blue'],
-						WARN: ['bold', 'yellow'],
-						ERROR: ['bold', 'red'],
-						FATAL: ['bold', 'redBright']
-					}
-				}
+				hideLogPositionForProduction: process.env.NODE_ENV === 'production',
 			})
 		},
 		shards: 'auto',
@@ -39,8 +28,12 @@ export const main = async () => {
 	});
 
 	try {
+		// show pid and pid-name
+		client.logger.info(`Starting SiruBOT with PID: ${process.pid}`);
+		
 		client.logger.debug('Setting up logger...');
 		container.logger = client.logger;
+		
 		// Audio -> General -> RedisStore -> Login -> Lavalink (After ready event)
 		client.setupStore('audio');
 		client.setupStore('general');

@@ -10,6 +10,7 @@ import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.t
 import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
+import { SapphireInterfaceLogger } from './logger.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
@@ -20,7 +21,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public setupStore(name: string) {
-		this.logger.debug(`[setupStore] Setting up module store: ${name}`);
+		this.logger.debug(`Setting up module store: ${name}`);
 		this.stores.registerPath(join(this.rootData.root, 'modules', name));
 	}
 
@@ -38,12 +39,18 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	public async setupDatabase() {
 		const db = new PrismaClient({
 			log: [
-				{ level: 'error', emit: 'stdout' },
-				{ level: 'warn', emit: 'stdout' },
-				{ level: 'info', emit: 'stdout' },
-				{ level: 'query', emit: 'stdout' }
+				{ level: 'error', emit: 'event' },
+				{ level: 'warn', emit: 'event' },
+				{ level: 'info', emit: 'event' },
+				{ level: 'query', emit: 'event' }
 			]
 		});
+
+		const subLogger = (this.logger as SapphireInterfaceLogger).getSubLogger({ name: 'prisma' });
+		db.$on('query', (e) => subLogger.debug(e.query));
+		db.$on('info', (e) => subLogger.info(e.message));
+		db.$on('warn', (e) => subLogger.warn(e.message));
+		db.$on('error', (e) => subLogger.error(e.message));
 
 		await db.$connect();
 		container.db = db;

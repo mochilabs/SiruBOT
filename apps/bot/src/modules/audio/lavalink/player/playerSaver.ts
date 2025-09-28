@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
 import { Player, PlayerJson } from 'lavalink-client';
 import { MemoryCache } from '@sirubot/utils';
+import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 
 export class CachedPlayerSaver {
 	private cache: MemoryCache<string, string>;
@@ -17,7 +18,7 @@ export class CachedPlayerSaver {
 	}
 
 	private get logger() {
-		return container.logger;
+		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerSaver' });
 	}
 
 	private getKey(guildId: string): string {
@@ -28,20 +29,20 @@ export class CachedPlayerSaver {
 		const key = this.getKey(player.guildId);
 		const stringValue = this.stringify(player);
 
-		this.logger.trace(`[CachedPlayerSaver/set] Setting player for guild ${player.guildId}`);
+		this.logger.trace(`Setting player for guild ${player.guildId}`);
 
 		this.cache.set(key, stringValue);
 
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.set(key, stringValue);
-				this.logger.trace(`[CachedPlayerSaver/set] Successfully set in Redis for guild ${player.guildId}`);
+				this.logger.trace(`Successfully set in Redis for guild ${player.guildId}`);
 			} else {
 				this.pendingWrites.set(key, stringValue);
-				this.logger.trace(`[CachedPlayerSaver/set] Added to pending writes for guild ${player.guildId}`);
+				this.logger.trace(`Added to pending writes for guild ${player.guildId}`);
 			}
 		} catch (error) {
-			this.logger.warn(`[CachedPlayerSaver/set] Redis error, added to pending writes: ${error}`);
+			this.logger.warn(`Redis error, added to pending writes: ${error}`);
 			this.isRedisConnected = false;
 			this.pendingWrites.set(key, stringValue);
 		}
@@ -55,42 +56,42 @@ export class CachedPlayerSaver {
 				const playerData = await this.redis.get(key);
 				if (playerData !== null) {
 					this.cache.set(key, playerData);
-					this.logger.trace(`[CachedPlayerSaver/get] Retrieved from Redis for guild ${guildId}`);
+					this.logger.trace(`Retrieved from Redis for guild ${guildId}`);
 					return JSON.parse(playerData);
 				}
 			}
 		} catch (error) {
-			this.logger.warn(`[CachedPlayerSaver/get] Redis error, falling back to cache: ${error}`);
+			this.logger.warn(`Redis error, falling back to cache: ${error}`);
 			this.isRedisConnected = false;
 		}
 
 		const cachedData = this.cache.get(key);
 		if (cachedData) {
-			this.logger.trace(`[CachedPlayerSaver/get] Retrieved from cache for guild ${guildId}`);
+			this.logger.trace(`Retrieved from cache for guild ${guildId}`);
 			return JSON.parse(cachedData);
 		}
 
-		this.logger.trace(`[CachedPlayerSaver/get] No data found for guild ${guildId}`);
+		this.logger.trace(`No data found for guild ${guildId}`);
 		return null;
 	}
 
 	public async delete(guildId: string): Promise<void> {
 		const key = this.getKey(guildId);
 
-		this.logger.trace(`[CachedPlayerSaver/delete] Deleting player for guild ${guildId}`);
+		this.logger.trace(`Deleting player for guild ${guildId}`);
 
 		this.cache.delete(key);
 
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.del(key);
-				this.logger.trace(`[CachedPlayerSaver/delete] Successfully deleted from Redis for guild ${guildId}`);
+				this.logger.trace(`Successfully deleted from Redis for guild ${guildId}`);
 			} else {
 				this.pendingWrites.delete(key);
-				this.logger.trace(`[CachedPlayerSaver/delete] Removed from pending writes for guild ${guildId}`);
+				this.logger.trace(`Removed from pending writes for guild ${guildId}`);
 			}
 		} catch (error) {
-			this.logger.warn(`[CachedPlayerSaver/delete] Redis error: ${error}`);
+			this.logger.warn(`Redis error: ${error}`);
 			this.isRedisConnected = false;
 			this.pendingWrites.delete(key);
 		}
@@ -114,15 +115,15 @@ export class CachedPlayerSaver {
 
 				// 캐시 업데이트
 				this.nodeSessionsCache = data;
-				this.logger.trace(`[CachedPlayerSaver/getNodeSessions] Retrieved ${data.size} node sessions from Redis`);
+				this.logger.trace(`Retrieved ${data.size} node sessions from Redis`);
 				return data;
 			}
 		} catch (error) {
-			this.logger.warn(`[CachedPlayerSaver/getNodeSessions] Redis error, using cached sessions: ${error}`);
+			this.logger.warn(`Redis error, using cached sessions: ${error}`);
 			this.isRedisConnected = false;
 		}
 
-		this.logger.trace(`[CachedPlayerSaver/getNodeSessions] Using cached node sessions (${this.nodeSessionsCache.size} entries)`);
+		this.logger.trace(`Using cached node sessions (${this.nodeSessionsCache.size} entries)`);
 		return this.nodeSessionsCache;
 	}
 
@@ -132,23 +133,23 @@ export class CachedPlayerSaver {
 	}
 
 	public onConnect(): void {
-		this.logger.info('[CachedPlayerSaver/onConnect] Redis connected, syncing pending writes...');
+		this.logger.info('Redis connected, syncing pending writes...');
 		this.isRedisConnected = true;
 		this.syncPendingWrites();
 	}
 
 	public onDisconnect(): void {
-		this.logger.warn('[CachedPlayerSaver/onDisconnect] Redis disconnected, switching to cache-only mode');
+		this.logger.warn('Redis disconnected, switching to cache-only mode');
 		this.isRedisConnected = false;
 	}
 
 	private async syncPendingWrites(): Promise<void> {
 		if (this.pendingWrites.size === 0) {
-			this.logger.debug('[CachedPlayerSaver/syncPendingWrites] No pending writes to sync');
+			this.logger.debug('No pending writes to sync');
 			return;
 		}
 
-		this.logger.info(`[CachedPlayerSaver/syncPendingWrites] Syncing ${this.pendingWrites.size} pending writes...`);
+		this.logger.info(`Syncing ${this.pendingWrites.size} pending writes...`);
 
 		const promises: Promise<void>[] = [];
 
@@ -157,10 +158,10 @@ export class CachedPlayerSaver {
 				this.redis
 					.set(key, value)
 					.then(() => {
-						this.logger.trace(`[CachedPlayerSaver/syncPendingWrites] Synced ${key}`);
+						this.logger.trace(`Synced ${key}`);
 					})
 					.catch((error) => {
-						this.logger.error(`[CachedPlayerSaver/syncPendingWrites] Failed to sync ${key}: ${error}`);
+						this.logger.error(`Failed to sync ${key}: ${error}`);
 					})
 			);
 		}
@@ -168,9 +169,9 @@ export class CachedPlayerSaver {
 		try {
 			await Promise.allSettled(promises);
 			this.pendingWrites.clear();
-			this.logger.info('[CachedPlayerSaver/syncPendingWrites] All pending writes synced successfully');
+			this.logger.info('All pending writes synced successfully');
 		} catch (error) {
-			this.logger.error(`[CachedPlayerSaver/syncPendingWrites] Error during sync: ${error}`);
+			this.logger.error(`Error during sync: ${error}`);
 		}
 	}
 

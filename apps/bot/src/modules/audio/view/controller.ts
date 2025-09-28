@@ -26,6 +26,11 @@ type controllerViewProps = {
 	player: Player;
 };
 
+export const customIdPrefix = 'controller:';
+const warpPrefix = (customId: string) => {
+	return customIdPrefix + customId;
+};
+
 export function controllerView({ player }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
@@ -45,22 +50,30 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
-		.setCustomId('prev')
+		.setCustomId(warpPrefix('prev'))
 		.setEmoji('⏮️')
 		.setDisabled(player.queue.previous.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId('stop').setEmoji('⏹');
+	const stopButton = new ButtonBuilder().setCustomId(warpPrefix('stop')).setEmoji('⏹');
 
-	const pauseButton = new ButtonBuilder().setCustomId(player.paused ? 'resume' : 'pause').setEmoji(player.paused ? '▶️' : '⏸');
+	const pauseButton = new ButtonBuilder()
+		.setCustomId(player.paused ? warpPrefix('resume') : warpPrefix('pause'))
+		.setEmoji(player.paused ? '▶️' : '⏸');
 
 	const nextButton = new ButtonBuilder()
-		.setCustomId('next')
+		.setCustomId(warpPrefix('next'))
 		.setEmoji('⏭️')
 		.setDisabled(player.queue.tracks.length === 0);
 
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
-		.setCustomId(player.repeatMode === 'off' ? 'setrepeat_queue' : player.repeatMode === 'queue' ? 'setrepeat_track' : 'setrepeat_off')
+		.setCustomId(
+			player.repeatMode === 'off'
+				? warpPrefix('repeat:queue')
+				: player.repeatMode === 'queue'
+					? warpPrefix('repeat:track')
+					: warpPrefix('repeat:off')
+		)
 		.setEmoji(player.repeatMode === 'off' ? '🔁' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -103,7 +116,7 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 			`### 📄 대기열 목록\n${pageContent}\n-# 페이지 ${page}/${queueChunks.length} | ${formatTimeToKorean(player.queue.utils.totalDuration() / 1000)} 남음`
 		);
 
-		const selectMenu = new StringSelectMenuBuilder().setCustomId('qc-sel').setOptions(
+		const selectMenu = new StringSelectMenuBuilder().setCustomId(warpPrefix('queue:select')).setOptions(
 			queueChunks[page - 1].map((track, index) => {
 				return {
 					label: `#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE} ${formatTrack(track as Track, { showLength: true, withMarkdownURL: false })}`,
@@ -113,21 +126,21 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 			})
 		);
 
-		const removeButton = new ButtonBuilder().setCustomId('queuerm').setEmoji('🗑️').setStyle(ButtonStyle.Danger);
+		const removeButton = new ButtonBuilder().setCustomId(warpPrefix('queue:remove')).setEmoji('🗑️').setStyle(ButtonStyle.Danger);
 
 		const queuePrev = new ButtonBuilder()
-			.setCustomId('qprev')
+			.setCustomId(warpPrefix('queue:prev'))
 			.setEmoji('◀️')
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page === 1);
 
 		const queueNext = new ButtonBuilder()
-			.setCustomId('qnext')
+			.setCustomId(warpPrefix('queue:next'))
 			.setEmoji('▶️')
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page === queueChunks.length);
 
-		const jumpTo = new ButtonBuilder().setCustomId('qjumpto').setEmoji('↪️').setStyle(ButtonStyle.Secondary);
+		const jumpTo = new ButtonBuilder().setCustomId(warpPrefix('queue:jumpTo')).setEmoji('↪️').setStyle(ButtonStyle.Secondary);
 
 		const trackSelectActionRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 

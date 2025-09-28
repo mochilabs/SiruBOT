@@ -12,7 +12,9 @@ declare module '@skyra/env-utilities' {
 		DISCORD_TOKEN: string;
 		REDIS_URL: string;
 		LOGLEVEL: number;
+		REGISTER_COMMANDS?: unknown;
 		BOT_ACTIVITY: string;
+		DEV_GUILD_IDS: ArrayString;
 	}
 }
 

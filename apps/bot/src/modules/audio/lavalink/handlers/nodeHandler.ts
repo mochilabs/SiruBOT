@@ -43,16 +43,14 @@ export class NodeHandler extends BaseLavalinkHandler {
 		players: LavalinkPlayer[] | InvalidLavalinkRestRequest
 	) {
 		if (!Array.isArray(players)) {
-			throw new Error('[NodeHandler/handleNodeResumed] Resume players is not an array');
+			throw new Error('Resume players is not an array');
 		}
-		this.logger.debug(
-			`[NodeHandler/handleNodeResumed] Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`
-		);
+		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
 
 		const playerSaver = this.container.redisStoreManager.getPlayerSaver();
 		for (const lavalinkPlayer of players) {
 			if (!lavalinkPlayer.state.connected) {
-				this.logger.debug(`[NodeHandler/handleNodeResumed] Player at ${lavalinkPlayer.guildId} is already disconnected`);
+				this.logger.debug(`Player at ${lavalinkPlayer.guildId} is already disconnected`);
 
 				playerSaver.delete(lavalinkPlayer.guildId);
 				continue;
@@ -60,7 +58,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 			const savedPlayer = await playerSaver.get(lavalinkPlayer.guildId);
 			if (!savedPlayer) {
-				this.logger.debug(`[NodeHandler/handleNodeResumed] Saved player at ${lavalinkPlayer.guildId} is not found`);
+				this.logger.debug(`Saved player at ${lavalinkPlayer.guildId} is not found`);
 				continue;
 			}
 
@@ -105,7 +103,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			createdPlayer.paused = lavalinkPlayer.paused;
 			createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
-			this.logger.debug(`[NodeHandler/handleNodeResumed] Finished resuming player at ${lavalinkPlayer.guildId}`);
+			this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
 
 			// TODO: For debugging
 			if (createdPlayer.textChannelId) {

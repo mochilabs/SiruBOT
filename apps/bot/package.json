@@ -20,7 +20,6 @@
     "@sapphire/discord.js-utilities": "^7.3.3",
     "@sapphire/fetch": "^3.0.5",
     "@sapphire/framework": "^5.3.6",
-    "@sapphire/plugin-api": "^8.3.1",
     "@sapphire/plugin-subcommands": "^7.0.1",
     "@sapphire/time-utilities": "^1.7.14",
     "@sapphire/type": "^2.6.0",
@@ -35,6 +34,7 @@
     "chokidar": "^4.0.3",
     "colorette": "^2.0.20",
     "discord.js": "^14.22.1",
+    "figlet": "^1.9.3",
     "lavalink-client": "^2.6.1",
     "tslog": "^4.9.3",
     "undici": "^7.16.0"
