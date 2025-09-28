@@ -11,7 +11,7 @@ export const main = async () => {
 				name: 'SiruBOT',
 				minLevel: envParseString('LOGLEVEL'),
 				type: 'pretty',
-				hideLogPositionForProduction: process.env.NODE_ENV === 'production',
+				hideLogPositionForProduction: process.env.NODE_ENV === 'production'
 			})
 		},
 		shards: 'auto',
@@ -30,10 +30,10 @@ export const main = async () => {
 	try {
 		// show pid and pid-name
 		client.logger.info(`Starting SiruBOT with PID: ${process.pid}`);
-		
+
 		client.logger.debug('Setting up logger...');
 		container.logger = client.logger;
-		
+
 		// Audio -> General -> RedisStore -> Login -> Lavalink (After ready event)
 		client.setupStore('audio');
 		client.setupStore('general');
