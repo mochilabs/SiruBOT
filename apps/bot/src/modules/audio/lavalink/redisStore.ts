@@ -1,20 +1,21 @@
 import { container } from '@sapphire/framework';
-import { type RedisClientType, createClient } from '@redis/client';
+import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 
 type RedisClientOptionsType = Parameters<typeof createClient>[0];
 
-export class RedisStoreManager {
+export class RedisStore {
 	private redis: RedisClientType;
 	private queueStore: CachedQueueStore;
 	private playerSaver: CachedPlayerSaver;
 	private isReady = false;
 	private reconnectTryCount = 0;
 
-	constructor(options?: RedisClientOptionsType) {
+	constructor(options: RedisClientOptionsType) {
 		this.redis = createClient(options) as RedisClientType;
+
 		this.queueStore = new CachedQueueStore(this.redis);
 		this.playerSaver = new CachedPlayerSaver(this.redis);
 
@@ -29,7 +30,7 @@ export class RedisStoreManager {
 	}
 
 	private get logger() {
-		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'redisStoreManager' });
+		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'redisStore' });
 	}
 
 	public getQueueStore() {
@@ -59,7 +60,6 @@ export class RedisStoreManager {
 		this.reconnectTryCount++;
 		this.logger.info(`Redis reconnecting (${this.reconnectTryCount})`);
 
-		// 재연결 시도 시 연결이 끊어진 것으로 처리
 		if (this.isReady) {
 			this.isReady = false;
 			this.queueStore.onDisconnect();

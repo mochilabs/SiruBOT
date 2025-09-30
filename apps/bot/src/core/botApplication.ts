@@ -6,7 +6,7 @@ import { RootData, container, getRootData } from '@sapphire/pieces';
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
-import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
+import { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
 import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
@@ -25,8 +25,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		this.stores.registerPath(join(this.rootData.root, 'modules', name));
 	}
 
-	public async setupRedisStoreManager(url: string) {
-		const redisStore = new RedisStoreManager({
+	public async setupRedis(url: string) {
+		const redisStore = new RedisStore({
 			url
 		});
 		await redisStore.connect();

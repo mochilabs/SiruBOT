@@ -45,7 +45,7 @@ export const main = async () => {
 		client.setupServices();
 
 		client.logger.debug('Setting up redis store manager... (optional)');
-		await client.setupRedisStoreManager(envParseString('REDIS_URL'));
+		await client.setupRedis(envParseString('REDIS_URL'));
 
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
