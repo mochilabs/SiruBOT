@@ -3374,6 +3374,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sirubot/bot@workspace:apps/bot"
   dependencies:
+    "@redis/client": "npm:^5.8.2"
     "@sapphire/cli": "npm:^1.9.3"
     "@sapphire/decorators": "npm:^6.2.0"
     "@sapphire/discord-utilities": "npm:^3.5.0"
@@ -8970,7 +8971,6 @@ __metadata:
   resolution: "sirubot@workspace:."
   dependencies:
     "@prisma/client": "npm:^6.15.0"
-    "@redis/client": "npm:^5.8.2"
     "@swc/core": "npm:^1.13.5"
     "@types/node": "npm:^22.18.1"
     "@types/ws": "npm:^8.18.1"

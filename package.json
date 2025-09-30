@@ -7,7 +7,6 @@
     ],
     "dependencies": {
         "@prisma/client": "^6.15.0",
-        "@redis/client": "^5.8.2",
         "prisma": "^6.15.0"
     },
     "devDependencies": {
