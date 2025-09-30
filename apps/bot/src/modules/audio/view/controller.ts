@@ -7,7 +7,9 @@ import {
 	formatTrack,
 	isDev,
 	versionInfo,
-	removeEmojis
+	removeEmojis,
+	volumeToEmoji,
+	SPARKLES_EMOJI
 } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -24,14 +26,16 @@ import { Player, Track } from 'lavalink-client';
 
 type controllerViewProps = {
 	player: Player;
+	volume?: number;
+	related?: boolean;
 };
 
 export const customIdPrefix = 'controller:';
-const warpPrefix = (customId: string) => {
+const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
-export function controllerView({ player }: controllerViewProps) {
+export function controllerView({ player, volume, related }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
@@ -50,18 +54,18 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
-		.setCustomId(warpPrefix('prev'))
+		.setCustomId(wrapPrefix('prev'))
 		.setEmoji('⏮️')
 		.setDisabled(player.queue.previous.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId(warpPrefix('stop')).setEmoji('⏹');
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
 
 	const pauseButton = new ButtonBuilder()
-		.setCustomId(player.paused ? warpPrefix('resume') : warpPrefix('pause'))
+		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
 		.setEmoji(player.paused ? '▶️' : '⏸');
 
 	const nextButton = new ButtonBuilder()
-		.setCustomId(warpPrefix('next'))
+		.setCustomId(wrapPrefix('next'))
 		.setEmoji('⏭️')
 		.setDisabled(player.queue.tracks.length === 0);
 
@@ -69,10 +73,10 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
 			player.repeatMode === 'off'
-				? warpPrefix('repeat:queue')
+				? wrapPrefix('repeat:queue')
 				: player.repeatMode === 'queue'
-					? warpPrefix('repeat:track')
-					: warpPrefix('repeat:off')
+					? wrapPrefix('repeat:track')
+					: wrapPrefix('repeat:off')
 		)
 		.setEmoji(player.repeatMode === 'off' ? '🔁' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
@@ -116,7 +120,7 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 			`### 📄 대기열 목록\n${pageContent}\n-# 페이지 ${page}/${queueChunks.length} | ${formatTimeToKorean(player.queue.utils.totalDuration() / 1000)} 남음`
 		);
 
-		const selectMenu = new StringSelectMenuBuilder().setCustomId(warpPrefix('queue:select')).setOptions(
+		const selectMenu = new StringSelectMenuBuilder().setCustomId(wrapPrefix('queue:select')).setOptions(
 			queueChunks[page - 1].map((track, index) => {
 				return {
 					label: `#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE} ${formatTrack(track as Track, { showLength: true, withMarkdownURL: false })}`,
@@ -126,21 +130,21 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 			})
 		);
 
-		const removeButton = new ButtonBuilder().setCustomId(warpPrefix('queue:remove')).setEmoji('🗑️').setStyle(ButtonStyle.Danger);
+		const removeButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:remove')).setEmoji('🗑️').setStyle(ButtonStyle.Danger);
 
 		const queuePrev = new ButtonBuilder()
-			.setCustomId(warpPrefix('queue:prev'))
+			.setCustomId(wrapPrefix('queue:prev'))
 			.setEmoji('◀️')
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page === 1);
 
 		const queueNext = new ButtonBuilder()
-			.setCustomId(warpPrefix('queue:next'))
+			.setCustomId(wrapPrefix('queue:next'))
 			.setEmoji('▶️')
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page === queueChunks.length);
 
-		const jumpTo = new ButtonBuilder().setCustomId(warpPrefix('queue:jumpTo')).setEmoji('↪️').setStyle(ButtonStyle.Secondary);
+		const jumpTo = new ButtonBuilder().setCustomId(wrapPrefix('queue:jumpTo')).setEmoji('↪️').setStyle(ButtonStyle.Secondary);
 
 		const trackSelectActionRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
@@ -153,12 +157,17 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 	}
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
+	const segments = [];
+	segments.push(`-# 📡 재생 서버: ${player.node.id}`);
+	if (volume) segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
+	segments.push(`${SPARKLES_EMOJI} 추천 곡 재생: ${related ? '켜짐' : '꺼짐'}`);
+	segments.push(`치노봇 ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`);
 
 	containerComponent
 		.addSeparatorComponents(separatorSmall)
 		.addTextDisplayComponents(
 			new TextDisplayBuilder().setContent(
-				`-# 📡 재생 서버: ${player.node.id} | 치노봇 ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
+				segments.join(' | ')
 			)
 		);
 
