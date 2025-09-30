@@ -17,11 +17,6 @@ export class ChatInputCommandSuccess extends Listener {
 	public override run(payload: ChatInputCommandSuccessPayload) {
 		logSuccessCommand(payload as any);
 	}
-
-	public override onLoad() {
-		// this.enabled = (this.container.logger.).level <= LogLevel.Debug;
-		return super.onLoad();
-	}
 }
 
 export function logSuccessCommand(payload: ContextMenuCommandSuccessPayload | ChatInputCommandSuccessPayload | MessageCommandSuccessPayload): void {

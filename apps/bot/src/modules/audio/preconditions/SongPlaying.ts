@@ -3,13 +3,14 @@ import { ChatInputCommandInteraction, ContextMenuCommandInteraction, Message } f
 
 export class SongPlaying extends AllFlowsPrecondition {
 	#message = '🎵  이 명령어는 노래 재생 중에만 사용이 가능해요.';
+	#ephemeral = true;
 
 	public override chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (this.checkPlayerExists(interaction.guildId!)) {
 			return this.ok();
 		}
 
-		return this.error({ message: this.#message });
+		return this.createError();
 	}
 
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
@@ -17,7 +18,7 @@ export class SongPlaying extends AllFlowsPrecondition {
 			return this.ok();
 		}
 
-		return this.error({ message: this.#message });
+		return this.createError();
 	}
 
 	public override messageRun(message: Message) {
@@ -25,7 +26,7 @@ export class SongPlaying extends AllFlowsPrecondition {
 			return this.ok();
 		}
 
-		return this.error({ message: this.#message });
+		return this.createError();
 	}
 
 	private checkPlayerExists(guildId: string) {
@@ -34,5 +35,9 @@ export class SongPlaying extends AllFlowsPrecondition {
 		if (player.queue.current && !player.paused) return true;
 
 		return false;
+	}
+
+	private createError() {
+		return this.error({ message: this.#message, context: { ephemeral: this.#ephemeral } });
 	}
 }

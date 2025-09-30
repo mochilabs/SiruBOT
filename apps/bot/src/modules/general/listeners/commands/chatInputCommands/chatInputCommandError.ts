@@ -8,9 +8,6 @@ import { sendComponent } from './chatInputCommandDenied.ts';
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandError })
 export class ChatInputCommandError extends Listener {
 	public override async run(error: Error, { interaction }: ChatInputCommandErrorPayload) {
-		// `context: { silent: true }` should make UserError silent:
-		// Use cases for this are for example permissions error when running the `eval` command.
-		// if (Reflect.get(Object(error), 'silent')) return;
 		const userError = error instanceof UserError;
 		await sendComponent(
 			interaction,

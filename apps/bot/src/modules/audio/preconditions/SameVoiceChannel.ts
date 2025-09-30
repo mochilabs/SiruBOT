@@ -3,6 +3,7 @@ import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowfl
 
 export class SameVoiceChannel extends AllFlowsPrecondition {
 	#message = '🔗  이 명령어를 사용하려면 봇과 같은 음성 채널에 연결해야 해요.';
+	#ephemeral = true;
 
 	private checkSameVoiceChannel(userChannelId: Snowflake | null, botChannelId: Snowflake | null) {
 		// 봇이 음성 채널에 연결되어 있지 않으면 통과 (연결 전 상태)
@@ -12,41 +13,45 @@ export class SameVoiceChannel extends AllFlowsPrecondition {
 	}
 
 	public override chatInputRun(interaction: CommandInteraction) {
-		if (!interaction.inCachedGuild()) return this.error({ message: this.#message });
+		if (!interaction.inCachedGuild()) return this.createError();
 
 		const userChannelId = interaction.member.voice.channelId;
 		const botChannelId = interaction.guild?.members.me?.voice.channelId ?? null;
 
 		if (!this.checkSameVoiceChannel(userChannelId, botChannelId)) {
-			return this.error({ message: this.#message });
+			return this.createError();
 		}
 
 		return this.ok();
 	}
 
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
-		if (!interaction.inCachedGuild()) return this.error({ message: this.#message });
+		if (!interaction.inCachedGuild()) return this.createError();
 
 		const userChannelId = interaction.member.voice.channelId;
 		const botChannelId = interaction.guild?.members.me?.voice.channelId ?? null;
 
 		if (!this.checkSameVoiceChannel(userChannelId, botChannelId)) {
-			return this.error({ message: this.#message });
+			return this.createError();
 		}
 
 		return this.ok();
 	}
 
 	public override messageRun(message: Message) {
-		if (!message.inGuild()) return this.error({ message: this.#message });
+		if (!message.inGuild()) return this.createError();
 
 		const userChannelId = message.member?.voice.channelId ?? null;
 		const botChannelId = message.guild?.members.me?.voice.channelId ?? null;
 
 		if (!this.checkSameVoiceChannel(userChannelId, botChannelId)) {
-			return this.error({ message: this.#message });
+			return this.createError();
 		}
 
 		return this.ok();
+	}
+
+	private createError() {
+		return this.error({ message: this.#message, context: { ephemeral: this.#ephemeral } });
 	}
 }

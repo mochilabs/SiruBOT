@@ -20,6 +20,6 @@ export class OwnerOnlyPrecondition extends AllFlowsPrecondition {
 	}
 
 	private runCheck(userId: Snowflake) {
-		return OWNERS.includes(userId) ? this.ok() : this.error({ message: this.#message });
+		return OWNERS.includes(userId) ? this.ok() : this.error({ message: this.#message, context: { silent: true } });
 	}
 }
