@@ -9,7 +9,8 @@ import {
 	versionInfo,
 	removeEmojis,
 	volumeToEmoji,
-	SPARKLES_EMOJI
+	SPARKLES_EMOJI,
+	BOT_NAME
 } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -161,15 +162,11 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 	segments.push(`-# 📡 재생 서버: ${player.node.id}`);
 	if (volume) segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
 	segments.push(`${SPARKLES_EMOJI} 추천 곡 재생: ${related ? '켜짐' : '꺼짐'}`);
-	segments.push(`치노봇 ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`);
+	segments.push(
+		`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
+	);
 
-	containerComponent
-		.addSeparatorComponents(separatorSmall)
-		.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(
-				segments.join(' | ')
-			)
-		);
+	containerComponent.addSeparatorComponents(separatorSmall).addTextDisplayComponents(new TextDisplayBuilder().setContent(segments.join(' | ')));
 
 	return containerComponent;
 }

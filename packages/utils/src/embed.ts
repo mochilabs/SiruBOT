@@ -10,7 +10,7 @@ import {
 } from "discord.js";
 import { isDev } from "./index";
 import { versionInfo } from "./version";
-import { DEFAULT_COLOR, WARN_COLOR } from "./constants";
+import { BOT_NAME, DEFAULT_COLOR, WARN_COLOR } from "./constants";
 
 export class ExtendedEmbedBuilder extends EmbedBuilder {
   constructor(data?: EmbedData | APIEmbed) {
@@ -21,7 +21,7 @@ export class ExtendedEmbedBuilder extends EmbedBuilder {
   public override setFooter(options?: EmbedFooterOptions | null) {
     return super.setFooter({
       ...options,
-      text: `${options?.text ? `${options?.text} • ` : ""}치노봇 ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`,
+      text: `${options?.text ? `${options?.text} • ` : ""}${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`,
     });
   }
 }
