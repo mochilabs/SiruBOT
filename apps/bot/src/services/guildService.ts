@@ -100,6 +100,35 @@ export class GuildService {
 		return guild.repeat as RepeatMode;
 	}
 
+	public async getRelated(guildId: string): Promise<boolean> {
+		const guild = await container.db.guild.findUnique({
+			where: { id: guildId },
+			select: { related: true }
+		});
+
+		if (guild) {
+			return guild.related;
+		}
+
+		const newGuild = await container.db.guild.create({
+			data: { id: guildId, related: false },
+			select: { related: true }
+		});
+
+		return newGuild.related;
+	}
+
+	public async setRelated(guildId: string, related: boolean): Promise<boolean> {
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, related },
+			update: { related },
+			select: { related: true }
+		});
+
+		return guild.related;
+	}
+
 	public async getGuild(guildId: string): Promise<Guild> {
 		const guild = await container.db.guild.findUnique({
 			where: { id: guildId }
