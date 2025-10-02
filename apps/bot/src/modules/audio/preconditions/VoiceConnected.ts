@@ -11,7 +11,7 @@ export class VoiceConnected extends AllFlowsPrecondition {
 
 	public override chatInputRun(interaction: CommandInteraction) {
 		if (!interaction.inCachedGuild()) return this.createError();
-		
+
 		return this.check(interaction.member.voice.channelId) ? this.ok() : this.createError();
 	}
 
