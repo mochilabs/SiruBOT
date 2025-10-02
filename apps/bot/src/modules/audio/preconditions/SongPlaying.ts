@@ -6,17 +6,17 @@ export class SongPlaying extends AllFlowsPrecondition {
 	#ephemeral = true;
 
 	public override chatInputRun(interaction: ChatInputCommandInteraction) {
-		if (interaction.inGuild()) return this.createError();
+		if (!interaction.inGuild()) return this.createError();
 		return this.check(interaction.guildId!) ? this.ok() : this.createError();
 	}
 
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
-		if (interaction.inGuild()) return this.createError();
+		if (!interaction.inGuild()) return this.createError();
 		return this.check(interaction.guildId!) ? this.ok() : this.createError();
 	}
 
 	public override messageRun(message: Message) {
-		if (message.inGuild()) return this.createError();
+		if (!message.inGuild()) return this.createError();
 		return this.check(message.guildId!) ? this.ok() : this.createError();
 	}
 
