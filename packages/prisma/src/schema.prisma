@@ -15,9 +15,12 @@ datasource db {
 
 model Guild {
   id            String   @id
-  volume        Int      @default(20)
+  volume        Int      @default(10)
   textChannelId String?
   voiceChannelId String?
+  enableController Boolean @default(true)
+  enableSponsorBlock Boolean @default(false)
+  
   djRoleId      String?
   repeat        String   @default("off")
   related       Boolean  @default(false)

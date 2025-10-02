@@ -16,7 +16,7 @@ export function volumeUpdated({ volume, isPlaying }: volumeUpdatedProps) {
 		);
 }
 
-export function currentVolume({ volume }: { volume: number }) {
+export function volumeCurrent({ volume }: { volume: number }) {
 	return new ContainerBuilder()
 		.setAccentColor(DEFAULT_COLOR)
 		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`${volumeToEmoji(volume)} 현재 볼륨 **${volume}%**`));

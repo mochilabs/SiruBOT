@@ -47,7 +47,7 @@ export class VolumeCommand extends Command {
 			const savedVolume = await this.container.guildService.getVolume(interaction.guildId);
 
 			await interaction.editReply({
-				components: [view.currentVolume({ volume: savedVolume })],
+				components: [view.volumeCurrent({ volume: savedVolume })],
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { users: [interaction.user.id], roles: [] }
 			});

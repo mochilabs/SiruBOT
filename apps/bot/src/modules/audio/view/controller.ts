@@ -9,7 +9,7 @@ import {
 	versionInfo,
 	removeEmojis,
 	volumeToEmoji,
-	SPARKLES_EMOJI,
+	EMOJI_SPARKLE,
 	BOT_NAME
 } from '@sirubot/utils';
 import {
@@ -61,7 +61,7 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		requesterInfo.push(`-# 아티스트: ${current.info.author}`);
 		const requesterId = (current.requester as any)?.id;
 		if (requesterId) {
-			requesterInfo.push(requesterId === 'related_track' ? `추천 곡 재생 중 ${SPARKLES_EMOJI}` : `신청자: <@${requesterId}>`);
+			requesterInfo.push(requesterId === 'related_track' ? `추천 곡 재생 중 ${EMOJI_SPARKLE}` : `신청자: <@${requesterId}>`);
 		}
 		contents.push(requesterInfo.join(' | '));
 	}

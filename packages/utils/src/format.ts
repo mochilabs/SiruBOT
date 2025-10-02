@@ -40,7 +40,11 @@ export function emojiProgressBar(percent: number): string {
   for (let i = 1; i < PROGRESS_BAR_EMOJI_COUNT - 1; i++) {
     if (p > i) {
       progressParts.push(
-        p - 1 === i ? PROGRESS_BAR_END_MIDDLE_WHITE : PROGRESS_BAR_WHITE,
+        p - 1 === i
+          ? p === PROGRESS_BAR_EMOJI_COUNT - 1
+            ? PROGRESS_BAR_WHITE
+            : PROGRESS_BAR_END_MIDDLE_WHITE
+          : PROGRESS_BAR_WHITE,
       );
     } else {
       progressParts.push(PROGRESS_BAR_BLACK);
@@ -48,7 +52,7 @@ export function emojiProgressBar(percent: number): string {
   }
 
   // 끝 부분 처리
-  if (p >= PROGRESS_BAR_EMOJI_COUNT - 1) {
+  if (p >= PROGRESS_BAR_EMOJI_COUNT) {
     progressParts.push(PROGRESS_BAR_END_WHITE);
   } else {
     progressParts.push(PROGRESS_BAR_END_BLACK);

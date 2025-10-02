@@ -1,37 +1,53 @@
-import { readFileSync } from "fs";
 import { execSync } from "child_process";
-import { join } from "path";
+
+function tryExec(command: string, cwd?: string): string | null {
+  try {
+    return execSync(command, { cwd, stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return null;
+  }
+}
+
+function getRepoTopLevel(startCwd: string): string | null {
+  const top = tryExec("git rev-parse --show-toplevel", startCwd);
+  return top || null;
+}
+
+function isGitDirty(): boolean {
+  const top = getRepoTopLevel(process.cwd());
+  const dirty = top && tryExec("git status --porcelain", top);
+  return typeof dirty === "string" && dirty.length > 0;
+}
 
 function getGitHash(): string {
   if (process.env.GIT_HASH) return process.env.GIT_HASH;
-  else return execSync(`git log -1 --pretty=format:"%h"`).toString().trim();
+  if (process.env.npm_package_gitHead) return process.env.npm_package_gitHead;
+
+  const top = getRepoTopLevel(process.cwd());
+  const hash = top && tryExec('git log -1 --pretty=format:"%H"', top);
+  return hash || "unknown";
 }
 
 function getGitBranch(): string {
   if (process.env.GIT_BRANCH) return process.env.GIT_BRANCH;
-  else return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
+
+  const top = getRepoTopLevel(process.cwd());
+  const branch = top && tryExec("git rev-parse --abbrev-ref HEAD", top);
+  return branch || "unknown";
 }
 
 class VersionInfo {
   private static instance: VersionInfo;
-  private version: string;
   private gitHash: string;
   private gitBranch: string;
-  private lavalinkClientVersion: string;
-  private djsVersion: string;
-  private name: string;
+  private gitDirty: boolean;
 
   private constructor() {
-    const packageJsonPath = join(process.cwd(), "package.json");
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-
+    this.gitDirty = isGitDirty();
     this.gitHash = getGitHash();
     this.gitBranch = getGitBranch();
-    this.version = packageJson.version;
-    this.name = packageJson.name;
-    this.lavalinkClientVersion =
-      packageJson.dependencies["lavalink-client"] || "Unknown";
-    this.djsVersion = packageJson.dependencies["discord.js"] || "Unknown";
   }
 
   public static getInstance(): VersionInfo {
@@ -42,27 +58,23 @@ class VersionInfo {
   }
 
   public getVersion(): string {
-    return this.version;
+    return process.env.VERSION || "unknown";
   }
 
   public getGitHash(): string {
+    return this.gitHash.slice(0, 7);
+  }
+
+  public getGitFullHash(): string {
     return this.gitHash;
+  }
+
+  public isGitDirty(): boolean {
+    return this.gitDirty;
   }
 
   public getGitBranch(): string {
     return this.gitBranch;
-  }
-
-  public getLavalinkClientVersion(): string {
-    return this.lavalinkClientVersion;
-  }
-
-  public getDjsVersion(): string {
-    return this.djsVersion;
-  }
-
-  public getName(): string {
-    return this.name;
   }
 
   public getNodeVersion(): string {
