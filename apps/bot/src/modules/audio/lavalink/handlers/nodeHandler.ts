@@ -2,25 +2,18 @@ import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer, NodeManager }
 import { BaseLavalinkHandler } from './base.ts';
 import { TextChannel } from 'discord.js';
 
-// TODO: 안쓰는거 정리, ts-ignore 제거
+// TODO: Resume 부분 샤딩 대응해야함
 export class NodeHandler extends BaseLavalinkHandler {
-	private nodeManager: NodeManager | null;
-	constructor() {
-		super();
-		this.nodeManager = null;
-	}
+	constructor(private readonly nodeManager: NodeManager) {
+		super('nodeHandler');
 
-	public setup(nodeManager: NodeManager): void {
-		this.logger.info('Setup lavalink nodeHandler');
-		this.nodeManager = nodeManager;
-
-		nodeManager.on('create', this.handleNodeCreate.bind(this));
-		nodeManager.on('connect', this.handleNodeConnect.bind(this));
-		nodeManager.on('disconnect', this.handleNodeDisconnect.bind(this));
-		nodeManager.on('reconnecting', this.handleNodeReconnecting.bind(this));
-		nodeManager.on('destroy', this.handleNodeDestroy.bind(this));
-		nodeManager.on('error', this.handleNodeError.bind(this));
-		nodeManager.on('resumed', this.wrapAsyncHandler(this.handleNodeResumed.bind(this), 'handleNodeResumed'));
+		this.nodeManager.on('create', this.handleNodeCreate.bind(this));
+		this.nodeManager.on('connect', this.handleNodeConnect.bind(this));
+		this.nodeManager.on('disconnect', this.handleNodeDisconnect.bind(this));
+		this.nodeManager.on('reconnecting', this.handleNodeReconnecting.bind(this));
+		this.nodeManager.on('destroy', this.handleNodeDestroy.bind(this));
+		this.nodeManager.on('error', this.handleNodeError.bind(this));
+		this.nodeManager.on('resumed', this.wrapAsyncHandler(this.handleNodeResumed.bind(this), 'handleNodeResumed'));
 	}
 
 	private handleNodeCreate(node: LavalinkNode) {
@@ -47,7 +40,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 		}
 		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
 
-		const playerSaver = this.container.redisStoreManager.getPlayerSaver();
+		const playerSaver = this.container.redisStore.getPlayerSaver();
 		for (const lavalinkPlayer of players) {
 			if (!lavalinkPlayer.state.connected) {
 				this.logger.debug(`Player at ${lavalinkPlayer.guildId} is already disconnected`);
@@ -146,12 +139,12 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	public cleanup(): void {
 		this.logger.info('Cleanup lavalink nodeHandler');
-		this.nodeManager?.off('create', this.handleNodeCreate.bind(this));
-		this.nodeManager?.off('connect', this.handleNodeConnect.bind(this));
-		this.nodeManager?.off('disconnect', this.handleNodeDisconnect.bind(this));
-		this.nodeManager?.off('reconnecting', this.handleNodeReconnecting.bind(this));
-		this.nodeManager?.off('destroy', this.handleNodeDestroy.bind(this));
-		this.nodeManager?.off('error', this.handleNodeError.bind(this));
-		this.nodeManager?.off('resumed', this.handleNodeResumed.bind(this));
+		this.nodeManager?.removeAllListeners('create');
+		this.nodeManager?.removeAllListeners('connect');
+		this.nodeManager?.removeAllListeners('disconnect');
+		this.nodeManager?.removeAllListeners('reconnecting');
+		this.nodeManager?.removeAllListeners('destroy');
+		this.nodeManager?.removeAllListeners('error');
+		this.nodeManager?.removeAllListeners('resumed');
 	}
 }

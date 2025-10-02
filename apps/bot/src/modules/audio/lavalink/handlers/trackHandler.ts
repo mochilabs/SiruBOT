@@ -13,19 +13,14 @@ import { BaseLavalinkHandler } from './base.ts';
 // TODO: 안쓰는거 정리, ts-ignore 제거
 // handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
-	private lavalinkManager: LavalinkManager | null;
-	constructor() {
-		super();
-		this.lavalinkManager = null;
-	}
+	constructor(private readonly lavalinkManager: LavalinkManager) {
+		super('trackHandler');
 
-	public setup(lavalinkManager: LavalinkManager) {
-		this.lavalinkManager = lavalinkManager;
-		lavalinkManager.on('trackStart', this.wrapAsyncHandler(this.handleTrackStart.bind(this), 'trackStart'));
-		lavalinkManager.on('trackEnd', this.wrapAsyncHandler(this.handleTrackEnd.bind(this), 'trackEnd'));
-		lavalinkManager.on('trackStuck', this.wrapAsyncHandler(this.handleTrackStuck.bind(this), 'trackStuck'));
-		lavalinkManager.on('trackError', this.wrapAsyncHandler(this.handleTrackError.bind(this), 'trackError'));
-		lavalinkManager.on('queueEnd', this.wrapAsyncHandler(this.handleQueueEnd.bind(this), 'queueEnd'));
+		this.lavalinkManager.on('trackStart', this.wrapAsyncHandler(this.handleTrackStart.bind(this), 'trackStart'));
+		this.lavalinkManager.on('trackEnd', this.wrapAsyncHandler(this.handleTrackEnd.bind(this), 'trackEnd'));
+		this.lavalinkManager.on('trackStuck', this.wrapAsyncHandler(this.handleTrackStuck.bind(this), 'trackStuck'));
+		this.lavalinkManager.on('trackError', this.wrapAsyncHandler(this.handleTrackError.bind(this), 'trackError'));
+		this.lavalinkManager.on('queueEnd', this.wrapAsyncHandler(this.handleQueueEnd.bind(this), 'queueEnd'));
 	}
 
 	//@ts-ignore
@@ -35,6 +30,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			await this.container.trackService.increasePlays(track);
 		}
+
+		this.container.playerNotifier.onTrackStart(player);
 	}
 
 	//@ts-ignore
@@ -58,7 +55,6 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	public cleanup() {
-		// 핸들러 참조를 저장해야 cleanup에서 제거할 수 있음
 		this.lavalinkManager?.removeAllListeners('trackStart');
 		this.lavalinkManager?.removeAllListeners('trackEnd');
 		this.lavalinkManager?.removeAllListeners('trackStuck');

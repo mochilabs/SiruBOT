@@ -11,6 +11,7 @@ import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
+import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
@@ -31,7 +32,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 		await redisStore.connect();
 
-		container.redisStoreManager = redisStore;
+		container.redisStore = redisStore;
 
 		return redisStore;
 	}
@@ -64,7 +65,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[]) {
-		const nodeSessions = await container.redisStoreManager.getPlayerSaver().getNodeSessions();
+		const nodeSessions = await container.redisStore.getPlayerSaver().getNodeSessions();
 		const audio = new LavalinkManager({
 			nodes: nodes.map((node) => ({
 				...node,
@@ -86,10 +87,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				}
 			},
 			queueOptions: {
-				queueStore: container.redisStoreManager.getQueueStore()
+				queueStore: container.redisStore.getQueueStore()
 			}
 		});
 
+		container.playerNotifier = new PlayerNotifier();
 		container.audio = audio;
 
 		return audio;

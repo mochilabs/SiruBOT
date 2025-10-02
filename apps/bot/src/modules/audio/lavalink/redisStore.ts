@@ -3,6 +3,7 @@ import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
+import { Logger, ILogObj } from 'tslog';
 
 type RedisClientOptionsType = Parameters<typeof createClient>[0];
 
@@ -12,9 +13,11 @@ export class RedisStore {
 	private playerSaver: CachedPlayerSaver;
 	private isReady = false;
 	private reconnectTryCount = 0;
+	private logger: Logger<ILogObj>;
 
 	constructor(options: RedisClientOptionsType) {
 		this.redis = createClient(options) as RedisClientType;
+		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'redisStore' });
 
 		this.queueStore = new CachedQueueStore(this.redis);
 		this.playerSaver = new CachedPlayerSaver(this.redis);
@@ -29,10 +32,6 @@ export class RedisStore {
 		this.playerSaver.onDisconnect();
 	}
 
-	private get logger() {
-		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'redisStore' });
-	}
-
 	public getQueueStore() {
 		return this.queueStore;
 	}
@@ -42,7 +41,7 @@ export class RedisStore {
 	}
 
 	public async connect() {
-		this.redis.connect();
+		await this.redis.connect();
 	}
 
 	public get ready() {

@@ -1,10 +1,14 @@
 import { container } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
+import { ILogObj, Logger } from 'tslog';
 
 // handlers/base.ts
 export abstract class BaseLavalinkHandler {
-	protected get logger() {
-		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'lavalinkHandler' });
+	protected logger: Logger<ILogObj>;
+
+	constructor(name: string) {
+		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name });
+		this.logger.info(`Setup lavalink ${name}`);
 	}
 
 	protected get container() {
@@ -22,6 +26,4 @@ export abstract class BaseLavalinkHandler {
 			}
 		}) as T;
 	}
-
-	public abstract setup(...args: any[]): void;
 }

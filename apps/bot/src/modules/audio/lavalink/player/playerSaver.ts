@@ -3,22 +3,22 @@ import { type RedisClientType } from '@redis/client';
 import { Player, PlayerJson } from 'lavalink-client';
 import { MemoryCache } from '@sirubot/utils';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
+import { ILogObj, Logger } from 'tslog';
 
 export class CachedPlayerSaver {
 	private cache: MemoryCache<string, string>;
 	private isRedisConnected = true;
 	private pendingWrites: Map<string, string> = new Map();
 	private nodeSessionsCache: Map<string, string> = new Map();
+	private logger: Logger<ILogObj>;
 
 	constructor(private readonly redis: RedisClientType) {
 		this.cache = new MemoryCache<string, string>({
 			ttl: 30 * 60 * 1000, // 30분
 			maxSize: 500
 		});
-	}
 
-	private get logger() {
-		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerSaver' });
+		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerSaver' });
 	}
 
 	private getKey(guildId: string): string {

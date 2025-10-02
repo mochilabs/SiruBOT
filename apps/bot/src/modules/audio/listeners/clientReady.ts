@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
-import { LavalinkHandlerManager } from '../lavalink/handlers/handlerManager.ts';
+import { LavalinkHandler } from '../lavalink/handlers/lavalinkHandler.ts';
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class ReadyEvent extends Listener {
@@ -15,8 +15,7 @@ export class ReadyEvent extends Listener {
 				id: this.container!.client!.user!.id
 			});
 
-			const handler = new LavalinkHandlerManager();
-			handler.initializeAll(this.container.audio);
+			this.container.lavalinkHandler = new LavalinkHandler(this.container.audio);
 		} catch (error) {
 			this.container.logger.fatal('Failed to initialize lavalink client', error);
 		}
