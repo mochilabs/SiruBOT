@@ -6,7 +6,7 @@ export class ClientVoiceConnectable extends AllFlowsPrecondition {
 	#message = '🎧  봇이 음성 채널에 접속할 수 없어요. 음성 채널 권한을 확인해주세요.';
 	#ephemeral = false;
 
-	private checkVoicePermissions(member: GuildMember | null, guild: Guild | null) {
+	public check(member: GuildMember | null, guild: Guild | null) {
 		if (!member?.voice.channel) return false;
 		if (!guild?.members.me) return false;
 
@@ -17,7 +17,7 @@ export class ClientVoiceConnectable extends AllFlowsPrecondition {
 	public override chatInputRun(interaction: CommandInteraction) {
 		if (!interaction.inCachedGuild()) return this.createError();
 
-		if (!this.checkVoicePermissions(interaction.member, interaction.guild)) {
+		if (!this.check(interaction.member, interaction.guild)) {
 			return this.createError();
 		}
 
@@ -27,7 +27,7 @@ export class ClientVoiceConnectable extends AllFlowsPrecondition {
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
 		if (!interaction.inCachedGuild()) return this.createError();
 
-		if (!this.checkVoicePermissions(interaction.member, interaction.guild)) {
+		if (!this.check(interaction.member, interaction.guild)) {
 			return this.createError();
 		}
 
@@ -37,7 +37,7 @@ export class ClientVoiceConnectable extends AllFlowsPrecondition {
 	public override messageRun(message: Message) {
 		if (!message.inGuild()) return this.createError();
 
-		if (!this.checkVoicePermissions(message.member, message.guild)) {
+		if (!this.check(message.member, message.guild)) {
 			return this.createError();
 		}
 

@@ -5,18 +5,18 @@ export class NodeAvailable extends AllFlowsPrecondition {
 	#ephemeral = true;
 
 	public override chatInputRun() {
-		return this.runCheck();
+		return this.check();
 	}
 
 	public override contextMenuRun() {
-		return this.runCheck();
+		return this.check();
 	}
 
 	public override messageRun() {
-		return this.runCheck();
+		return this.check();
 	}
 
-	private runCheck() {
+	public check() {
 		return this.container.audio.nodeManager.nodes.filter((node) => node.connected).size > 0 ? this.ok() : this.createError();
 	}
 

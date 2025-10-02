@@ -5,7 +5,7 @@ export class SameVoiceChannel extends AllFlowsPrecondition {
 	#message = '🔗  이 명령어를 사용하려면 봇과 같은 음성 채널에 연결해야 해요.';
 	#ephemeral = true;
 
-	private checkSameVoiceChannel(userChannelId: Snowflake | null, botChannelId: Snowflake | null) {
+	public check(userChannelId: Snowflake | null, botChannelId: Snowflake | null) {
 		// 봇이 음성 채널에 연결되어 있지 않으면 통과 (연결 전 상태)
 		if (!botChannelId) return true;
 		// 사용자와 봇이 같은 채널에 있으면 통과
@@ -18,7 +18,7 @@ export class SameVoiceChannel extends AllFlowsPrecondition {
 		const userChannelId = interaction.member.voice.channelId;
 		const botChannelId = interaction.guild?.members.me?.voice.channelId ?? null;
 
-		if (!this.checkSameVoiceChannel(userChannelId, botChannelId)) {
+		if (!this.check(userChannelId, botChannelId)) {
 			return this.createError();
 		}
 
@@ -31,7 +31,7 @@ export class SameVoiceChannel extends AllFlowsPrecondition {
 		const userChannelId = interaction.member.voice.channelId;
 		const botChannelId = interaction.guild?.members.me?.voice.channelId ?? null;
 
-		if (!this.checkSameVoiceChannel(userChannelId, botChannelId)) {
+		if (!this.check(userChannelId, botChannelId)) {
 			return this.createError();
 		}
 
@@ -44,7 +44,7 @@ export class SameVoiceChannel extends AllFlowsPrecondition {
 		const userChannelId = message.member?.voice.channelId ?? null;
 		const botChannelId = message.guild?.members.me?.voice.channelId ?? null;
 
-		if (!this.checkSameVoiceChannel(userChannelId, botChannelId)) {
+		if (!this.check(userChannelId, botChannelId)) {
 			return this.createError();
 		}
 

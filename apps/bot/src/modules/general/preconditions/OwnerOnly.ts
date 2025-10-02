@@ -8,18 +8,18 @@ export class OwnerOnlyPrecondition extends AllFlowsPrecondition {
 	#message = '🚫  이 명령어는 봇 제작자만 사용 가능한 명령어에요.';
 
 	public override chatInputRun(interaction: CommandInteraction) {
-		return this.runCheck(interaction.user.id);
+		return this.check(interaction.user.id);
 	}
 
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
-		return this.runCheck(interaction.user.id);
+		return this.check(interaction.user.id);
 	}
 
 	public override messageRun(message: Message) {
-		return this.runCheck(message.author.id);
+		return this.check(message.author.id);
 	}
 
-	private runCheck(userId: Snowflake) {
+	public check(userId: Snowflake) {
 		return OWNERS.includes(userId) ? this.ok() : this.error({ message: this.#message, context: { silent: true } });
 	}
 }

@@ -6,30 +6,21 @@ export class SongPlaying extends AllFlowsPrecondition {
 	#ephemeral = true;
 
 	public override chatInputRun(interaction: ChatInputCommandInteraction) {
-		if (this.checkPlayerExists(interaction.guildId!)) {
-			return this.ok();
-		}
-
-		return this.createError();
+		if (interaction.inGuild()) return this.createError();
+		return this.check(interaction.guildId!) ? this.ok() : this.createError();
 	}
 
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
-		if (this.checkPlayerExists(interaction.guildId!)) {
-			return this.ok();
-		}
-
-		return this.createError();
+		if (interaction.inGuild()) return this.createError();
+		return this.check(interaction.guildId!) ? this.ok() : this.createError();
 	}
 
 	public override messageRun(message: Message) {
-		if (this.checkPlayerExists(message.guildId!)) {
-			return this.ok();
-		}
-
-		return this.createError();
+		if (message.inGuild()) return this.createError();
+		return this.check(message.guildId!) ? this.ok() : this.createError();
 	}
 
-	private checkPlayerExists(guildId: string) {
+	public check(guildId: string) {
 		const player = this.container.audio.getPlayer(guildId);
 		if (!player) return false;
 		if (player.queue.current && !player.paused) return true;

@@ -5,7 +5,7 @@ export class MemberListenable extends AllFlowsPrecondition {
 	#message = '🔇 음성 채널에서 듣기 상태가 꺼져있어요. 듣기 상태를 켜주세요.';
 	#ephemeral = true;
 
-	private checkListenable(member: GuildMember | null) {
+	public check(member: GuildMember | null) {
 		if (!member?.voice.channelId) return false;
 		return !member.voice.deaf;
 	}
@@ -13,7 +13,7 @@ export class MemberListenable extends AllFlowsPrecondition {
 	public override chatInputRun(interaction: CommandInteraction) {
 		if (!interaction.inCachedGuild()) return this.createError();
 
-		if (!this.checkListenable(interaction.member)) {
+		if (!this.check(interaction.member)) {
 			return this.createError();
 		}
 
@@ -23,7 +23,7 @@ export class MemberListenable extends AllFlowsPrecondition {
 	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
 		if (!interaction.inCachedGuild()) return this.createError();
 
-		if (!this.checkListenable(interaction.member)) {
+		if (!this.check(interaction.member)) {
 			return this.createError();
 		}
 
@@ -33,7 +33,7 @@ export class MemberListenable extends AllFlowsPrecondition {
 	public override messageRun(message: Message) {
 		if (!message.inGuild()) return this.createError();
 
-		if (!this.checkListenable(message.member)) {
+		if (!this.check(message.member)) {
 			return this.createError();
 		}
 
