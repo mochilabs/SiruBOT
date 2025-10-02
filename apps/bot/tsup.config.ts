@@ -2,7 +2,8 @@ import { createConfig } from '../../scripts/tsup.config.ts';
 
 export default createConfig({
     dts: true,
+    splitting: false,
     format: 'esm',
     target: 'es2021',
-    sourcemap: 'inline'
+    sourcemap: 'inline',
 });
