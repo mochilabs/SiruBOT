@@ -39,7 +39,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			throw new Error('Resume players is not an array');
 		}
 		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
-
+		const startTime = Date.now();
 		const playerSaver = this.container.redisStore.getPlayerSaver();
 		for (const lavalinkPlayer of players) {
 			if (!lavalinkPlayer.state.connected) {
@@ -72,9 +72,20 @@ export class NodeHandler extends BaseLavalinkHandler {
 				vcRegion: savedPlayer.options.vcRegion
 			});
 
+			if (savedPlayer.textChannelId && savedPlayer.messageId) {
+				this.logger.debug(`Setting cached controller message and message id for player at ${lavalinkPlayer.guildId}`);
+				const fetchedChannel = await this.container.client.channels.fetch(savedPlayer.textChannelId).catch(() => null);
+				if (fetchedChannel && fetchedChannel.isTextBased()) {
+					const message = await fetchedChannel.messages.fetch(savedPlayer.messageId).catch(() => null);
+					this.logger.debug(`Fetched controller message for player at ${lavalinkPlayer.guildId}`);
+					if (message?.editable) {
+						createdPlayer.setController(message);
+					}
+				}
+			}
+
 			// Reconnect player
 			await createdPlayer.connect();
-
 			// Set filters
 			createdPlayer.filterManager.data = savedPlayer.filters;
 			// Sync queue
@@ -88,7 +99,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 				);
 
 			const now = Date.now();
-			createdPlayer.lastPosition = lavalinkPlayer.state.position;
+			createdPlayer.lastPosition = lavalinkPlayer.state.position + (now - startTime);
 			createdPlayer.lastPositionChange = now;
 			createdPlayer.ping.lavalink = lavalinkPlayer.state.ping;
 
@@ -97,14 +108,6 @@ export class NodeHandler extends BaseLavalinkHandler {
 			createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
 			this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
-
-			// TODO: For debugging
-			if (createdPlayer.textChannelId) {
-				const textChannel = this.container.client.channels.cache.get(createdPlayer.textChannelId) as TextChannel;
-				if (textChannel && textChannel.isTextBased()) {
-					textChannel.send({ content: `Player at ${lavalinkPlayer.guildId} resumed` });
-				}
-			}
 		}
 	}
 

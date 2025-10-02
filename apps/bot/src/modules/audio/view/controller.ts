@@ -28,7 +28,6 @@ import { Player, Track } from 'lavalink-client';
 type controllerViewProps = {
 	player: Player;
 	volume?: number;
-	related?: boolean;
 };
 
 export const customIdPrefix = 'controller:';
@@ -36,7 +35,7 @@ const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
-export function controllerView({ player, volume, related }: controllerViewProps) {
+export function controllerView({ player, volume }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
@@ -44,13 +43,30 @@ export function controllerView({ player, volume, related }: controllerViewProps)
 	const current = player.queue.current;
 
 	const durationText = current ? (current.info.isStream ? 'LIVE' : formatTime(current?.info.duration / 1000)) : '';
-	const firstContent = !current
-		? `### 재생 중인 음악이 없어요.`
-		: `### 🎵 <#${player.voiceChannelId}> 에서 재생 중
-### **[${removeEmojis(current.info.title)}](${current.info.uri})**
-${emojiProgressBar(player.position / current.info.duration)} [${current.info.isStream ? durationText : `${formatTime(player.position / 1000)}/${formatTime(current.info.duration / 1000)}`}]
--# 아티스트: ${current.info.author}${(current.requester as any).id ? ` | 신청자: <@${(current.requester as any).id}>` : ''}`;
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(firstContent);
+	const contents = [];
+	if (!current) {
+		contents.push(`### 재생 중인 음악이 없어요.`);
+	} else {
+		contents.push(`### 🎵 <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
+		contents.push(`### **[${removeEmojis(current.info.title)}](${current.info.uri})**`);
+		if (current.info.isStream) {
+			contents.push(`[${durationText}] ${emojiProgressBar(0)} [실시간 스트리밍]`);
+		} else {
+			contents.push(
+				`[${formatTime(player.position / 1000)}] ${emojiProgressBar(player.position / current.info.duration)} [${formatTime(current.info.duration / 1000)}]`
+			);
+		}
+
+		const requesterInfo = [];
+		requesterInfo.push(`-# 아티스트: ${current.info.author}`);
+		const requesterId = (current.requester as any)?.id;
+		if (requesterId) {
+			requesterInfo.push(requesterId === 'related_track' ? `추천 곡 재생 중 ${SPARKLES_EMOJI}` : `신청자: <@${requesterId}>`);
+		}
+		contents.push(requesterInfo.join(' | '));
+	}
+
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(contents.join('\n'));
 
 	const thumbnail = new ThumbnailBuilder();
 
@@ -79,7 +95,7 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 					? wrapPrefix('repeat:track')
 					: wrapPrefix('repeat:off')
 		)
-		.setEmoji(player.repeatMode === 'off' ? '🔁' : player.repeatMode === 'track' ? '🔂' : '🔁');
+		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		[stopButton, prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
@@ -161,7 +177,6 @@ ${emojiProgressBar(player.position / current.info.duration)} [${current.info.isS
 	const segments = [];
 	segments.push(`-# 📡 재생 서버: ${player.node.id}`);
 	if (volume) segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
-	segments.push(`${SPARKLES_EMOJI} 추천 곡 재생: ${related ? '켜짐' : '꺼짐'}`);
 	segments.push(
 		`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
 	);

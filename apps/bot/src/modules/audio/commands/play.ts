@@ -167,7 +167,7 @@ export class PlayCommand extends Command {
 				applyVolumeAsFilter: true
 			}));
 
-		const searchRes = await player.search({ query, source: platform }, interaction.user);
+		const searchRes = await player.search({ query, source: platform }, { id: interaction.user.id, username: interaction.user.username });
 		switch (searchRes.loadType) {
 			case 'error': {
 				throw new UserError({

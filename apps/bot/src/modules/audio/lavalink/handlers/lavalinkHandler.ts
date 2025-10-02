@@ -3,6 +3,7 @@ import { NodeHandler } from './nodeHandler.ts';
 import { PlayerHandler } from './playerHandler.ts';
 import { TrackHandler } from './trackHandler.ts';
 import { SponsorBlockHandler } from './sponsorBlockHandler.ts';
+import { CustomPlayer } from '../player/customPlayer.ts';
 
 // lavalinkHandlerManager.ts
 export class LavalinkHandler {
@@ -11,7 +12,7 @@ export class LavalinkHandler {
 	private trackHandler: TrackHandler;
 	private sponsorBlockHandler: SponsorBlockHandler;
 
-	constructor(lavalinkManager: LavalinkManager) {
+	constructor(lavalinkManager: LavalinkManager<CustomPlayer>) {
 		this.nodeHandler = new NodeHandler(lavalinkManager.nodeManager);
 		this.playerHandler = new PlayerHandler(lavalinkManager);
 		this.trackHandler = new TrackHandler(lavalinkManager);
