@@ -1,9 +1,17 @@
+// General
 import { ArrayString } from '@skyra/env-utilities';
-import { PrismaClient } from '@sirubot/prisma';
+
+// Audio
 import { LavalinkManager } from 'lavalink-client';
-import { RedisStoreManager } from '../modules/audio/lavalink/redisStoreManager.ts';
+import { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
+import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
+
+// DB Services
+import { PrismaClient } from '@sirubot/prisma';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
+import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
+import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 declare module '@skyra/env-utilities' {
 	interface Env {
@@ -20,9 +28,11 @@ declare module '@skyra/env-utilities' {
 
 declare module '@sapphire/pieces' {
 	interface Container {
-		audio: LavalinkManager;
+		audio: LavalinkManager<CustomPlayer>;
+		lavalinkHandler: LavalinkHandler;
 		db: PrismaClient;
-		redisStoreManager: RedisStoreManager;
+		redisStore: RedisStore;
+		playerNotifier: PlayerNotifier;
 		guildService: GuildService;
 		trackService: TrackService;
 	}

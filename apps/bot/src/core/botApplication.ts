@@ -12,6 +12,7 @@ import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
+import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
@@ -86,6 +87,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 					autoPlayFunction: autoPlayRelated
 				}
 			},
+			playerClass: CustomPlayer,
 			queueOptions: {
 				queueStore: container.redisStore.getQueueStore()
 			}

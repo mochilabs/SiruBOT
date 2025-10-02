@@ -1,9 +1,9 @@
 import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
-import { Player, PlayerJson } from 'lavalink-client';
 import { MemoryCache } from '@sirubot/utils';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
+import { CustomPlayer, CustomPlayerJson } from './customPlayer.ts';
 
 export class CachedPlayerSaver {
 	private cache: MemoryCache<string, string>;
@@ -25,7 +25,7 @@ export class CachedPlayerSaver {
 		return `lavalink/player/${guildId}`;
 	}
 
-	public async set(player: Player): Promise<void> {
+	public async set(player: CustomPlayer): Promise<void> {
 		const key = this.getKey(player.guildId);
 		const stringValue = this.stringify(player);
 
@@ -48,7 +48,7 @@ export class CachedPlayerSaver {
 		}
 	}
 
-	public async get(guildId: string): Promise<Omit<PlayerJson, 'queue'> | null> {
+	public async get(guildId: string): Promise<Omit<CustomPlayerJson, 'queue'> | null> {
 		const key = this.getKey(guildId);
 
 		try {
@@ -127,8 +127,8 @@ export class CachedPlayerSaver {
 		return this.nodeSessionsCache;
 	}
 
-	private stringify(player: Player): string {
-		const { queue, ...playerData } = player.toJSON();
+	private stringify(player: CustomPlayer): string {
+		const { queue, ...playerData } = player.toJSON(); // queue 분리
 		return JSON.stringify(playerData);
 	}
 

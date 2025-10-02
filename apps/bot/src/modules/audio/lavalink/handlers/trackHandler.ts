@@ -1,19 +1,11 @@
-import {
-	LavalinkManager,
-	Player,
-	Track,
-	TrackEndEvent,
-	TrackExceptionEvent,
-	TrackStartEvent,
-	TrackStuckEvent,
-	UnresolvedTrack
-} from 'lavalink-client';
+import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
+import { CustomPlayer } from '../player/customPlayer.ts';
 
 // TODO: 안쓰는거 정리, ts-ignore 제거
 // handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
-	constructor(private readonly lavalinkManager: LavalinkManager) {
+	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
 		super('trackHandler');
 
 		this.lavalinkManager.on('trackStart', this.wrapAsyncHandler(this.handleTrackStart.bind(this), 'trackStart'));
@@ -24,33 +16,35 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	//@ts-ignore
-	private async handleTrackStart(player: Player, track: Track | null, payload: TrackStartEvent) {
+	private async handleTrackStart(player: CustomPlayer, track: Track | null, payload: TrackStartEvent) {
 		this.logger.info(`Track started: ${track?.info.title} by ${track?.info.author}`);
 		if (track && !track.info.isStream) {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			await this.container.trackService.increasePlays(track);
 		}
+		// Init chapters
+		player.setChapters([]);
 
-		this.container.playerNotifier.onTrackStart(player);
+		await this.container.playerNotifier.onTrackStart(player);
 	}
 
 	//@ts-ignore
-	private handleTrackEnd(player: Player, track: Track | null, payload: TrackEndEvent) {
+	private handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
 		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author}`);
 	}
 
 	//@ts-ignore
-	private handleTrackStuck(player: Player, track: Track | null, payload: TrackStuckEvent) {
+	private handleTrackStuck(player: CustomPlayer, track: Track | null, payload: TrackStuckEvent) {
 		this.logger.info(`Track stuck: ${track?.info.title} by ${track?.info.author}`);
 	}
 
 	//@ts-ignore
-	private handleTrackError(player: Player, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
+	private handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
 		this.logger.info(`Track error: ${track?.info.title} by ${track?.info.author}`);
 	}
 
 	//@ts-ignore
-	private async handleQueueEnd(player: Player) {
+	private async handleQueueEnd(player: CustomPlayer) {
 		this.logger.info(`Queue ended`);
 	}
 
