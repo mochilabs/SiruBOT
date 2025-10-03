@@ -1,36 +1,52 @@
 import { config } from "dotenv";
 import path from "path";
-import { ShardManagerServer } from "./server";
+import { ShardManagerServer } from "./server.ts";
+import { getLogger } from "./utils/logger.ts";
+import { getGatewayInfo } from "./utils/gateway.ts";
+import { validateEnv } from "./config/env.ts";
 
 config({ path: path.join(process.cwd(), ".env") });
 
+const logger = getLogger("bootstrap");
 async function main() {
-  console.log("🚀 Starting SiruBOT Shard Manager...");
+  logger.info("Starting SiruBOT Shard manager...");
 
-  const requiredEnvVars = ["PORT"];
-  const missingEnvVars = requiredEnvVars.filter(
-    (envVar) => !process.env[envVar],
-  );
-
-  if (missingEnvVars.length > 0) {
-    console.warn(
-      `⚠️  Missing environment variables: ${missingEnvVars.join(", ")}`,
-    );
-    process.exit(1);
-  }
+  // Validate environment variables
+  const env = validateEnv();
 
   try {
-    const shardManager = new ShardManagerServer();
+    let shardCount: number;
+
+    if (env.SHARD_COUNT === "auto") {
+      logger.info("SHARD_COUNT is set to 'auto', fetching from Discord API...");
+      const gatewayInfo = await getGatewayInfo();
+      if (!gatewayInfo) {
+        logger.fatal(
+          "Failed to get gateway info, please check your DISCORD_TOKEN",
+        );
+        process.exit(1);
+      }
+      logger.debug(`Gateway info: `, gatewayInfo);
+      logger.info(`Auto detected shard count: ${gatewayInfo.shards} shards`);
+      shardCount = gatewayInfo.shards;
+    } else {
+      shardCount = env.SHARD_COUNT;
+      logger.info(`Using configured shard count: ${shardCount} shards`);
+    }
+
+    const shardManager = new ShardManagerServer(shardCount);
+    logger.info("Setting up routes...");
+    await shardManager.setupRoutes();
 
     const gracefulShutdown = async (signal: string) => {
-      console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+      logger.warn(`Received ${signal}. Starting graceful shutdown...`);
 
       try {
         await shardManager.stop();
-        console.log("✅ Shard Manager Server stopped gracefully");
+        logger.info("Shard manager server stopped gracefully");
         process.exit(0);
       } catch (error) {
-        console.error("❌ Error during graceful shutdown:", error);
+        logger.error("Error during graceful shutdown:", error);
         process.exit(1);
       }
     };
@@ -39,22 +55,22 @@ async function main() {
     process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
     process.on("unhandledRejection", (reason, promise) => {
-      console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+      logger.error("Unhandled Rejection at:", promise, "reason:", reason);
     });
 
     process.on("uncaughtException", (error) => {
-      console.error("❌ Uncaught Exception:", error);
+      logger.fatal("Uncaught Exception:", error);
       process.exit(1);
     });
 
     await shardManager.start();
   } catch (error) {
-    console.error("❌ Failed to start Shard Manager:", error);
+    logger.fatal("Failed to start Shard manager:", error);
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error("❌ Fatal error in main:", error);
+  logger.fatal("Fatal error in main:", error);
   process.exit(1);
 });

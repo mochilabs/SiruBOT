@@ -1,52 +1,53 @@
-import Fastify from "fastify";
-import fastifyWebsocket from "@fastify/websocket";
-import shardsRoutes from "./routes/api/test";
+import Fastify, { FastifyInstance } from "fastify";
+import path from "path";
+import AutoLoad from "@fastify/autoload";
+import WebSocket from "@fastify/websocket";
+import { getLogger } from "./utils/logger.ts";
+import auth from "./plugins/auth.ts";
 
 export class ShardManagerServer {
-  private fastify;
+  private fastify: FastifyInstance;
+  private logger: ReturnType<typeof getLogger>;
   private port: number = parseInt(process.env.PORT || "3001");
+  private shardCount: number;
 
-  constructor() {
-    this.fastify = Fastify({
-      logger: {
-        level: "info",
-        // Pretty logging
-        transport: {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-          },
-        },
-      },
+  constructor(shardCount: number) {
+    this.fastify = Fastify({ logger: false });
+    this.logger = getLogger("server");
+    this.shardCount = shardCount;
+  }
+
+  public async setupRoutes() {
+    // Global error handler
+    this.fastify.setErrorHandler((error, request, reply) => {
+      this.logger.error(
+        { error, url: request.url, method: request.method },
+        "Request error",
+      );
+      reply.status(error.statusCode ?? 500).send({
+        error: error.message,
+        statusCode: error.statusCode ?? 500,
+      });
     });
 
-    this.setupRoutes();
-    this.setupWebSocket();
-  }
-
-  private setupRoutes() {
-    this.fastify.register(shardsRoutes);
-  }
-
-  private setupWebSocket() {
-    this.fastify.register(fastifyWebsocket);
-
-    this.fastify.register(async (fastify) => {
-      fastify.get("/ws", { websocket: true }, (connection) => {
-        connection.send("Hello world!");
-        this.fastify.log.info("새로운 WebSocket 연결이 생성되었습니다.");
-      });
+    await auth(this.fastify);
+    this.fastify.decorate("manager", this as any);
+    await this.fastify.register(WebSocket);
+    await this.fastify.register(AutoLoad, {
+      dir: path.join(import.meta.dirname, "routes"),
+      dirNameRoutePrefix: true,
+      forceESM: true,
     });
   }
 
   public async start() {
     try {
       await this.fastify.listen({ port: this.port, host: "0.0.0.0" });
-      this.fastify.log.info(`🚀 서버가 포트 ${this.port}에서 시작되었습니다!`);
-      this.fastify.log.info(`📡 HTTP: http://localhost:${this.port}`);
-      this.fastify.log.info(`🌐 WebSocket: ws://localhost:${this.port}/ws`);
+      this.logger.info(`🚀 서버가 포트 ${this.port}에서 시작되었습니다!`);
+      this.logger.info(`📡 HTTP: http://localhost:${this.port}`);
+      this.logger.info(`🌐 WebSocket: ws://localhost:${this.port}/ws`);
     } catch (error) {
-      this.fastify.log.error(error);
+      this.logger.error(error);
       process.exit(1);
     }
   }
@@ -54,9 +55,13 @@ export class ShardManagerServer {
   public async stop() {
     try {
       await this.fastify.close();
-      this.fastify.log.info("서버가 정상적으로 종료되었습니다.");
+      this.logger.info("Server stopped gracefully");
     } catch (error) {
-      this.fastify.log.error(error);
+      this.logger.error(error);
     }
+  }
+
+  public getShardCount() {
+    return this.shardCount;
   }
 }

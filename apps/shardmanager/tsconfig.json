@@ -3,6 +3,7 @@
 	"compilerOptions": {
 		"noEmit": true,
 		"incremental": false,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true
 	},
 }

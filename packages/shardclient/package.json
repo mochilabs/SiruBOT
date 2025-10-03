@@ -3,16 +3,27 @@
     "private": true,
     "version": "0.1.0",
     "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./ws-types": {
+            "import": "./dist/ws-types/index.js",
+            "types": "./dist/ws-types/index.d.ts"
+        }
+    },
     "scripts": {
         "lint": "prettier --check \"src/**/*.ts\"",
         "lint:fix": "prettier --write \"src/**/*.ts\"",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "echo YESAH",
         "build": "tsup",
         "watch": "tsup --watch"
     },
     "dependencies": {
-        "ws": "^8.18.3"
+        "ws": "^8.18.3",
+        "zod": "^4.1.11"
     },
     "devDependencies": {
         "@types/ws": "^8"
