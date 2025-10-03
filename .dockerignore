@@ -1,2 +1,49 @@
-./node_modules
-*.cpuprofile
+# Dependencies
+node_modules
+.yarn/cache
+.yarn/install-state.gz
+
+# Build outputs
+dist
+build
+.next
+out
+
+# Turbo
+.turbo
+
+# Development files
+.git
+.gitignore
+*.log
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+__tests__
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
