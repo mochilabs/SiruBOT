@@ -4,17 +4,22 @@ import AutoLoad from "@fastify/autoload";
 import WebSocket from "@fastify/websocket";
 import { getLogger } from "./utils/logger.ts";
 import auth from "./plugins/auth.ts";
+import { ShardRegistry } from "./core/shardRegistry.ts";
 
 export class ShardManagerServer {
   private fastify: FastifyInstance;
   private logger: ReturnType<typeof getLogger>;
   private port: number = parseInt(process.env.PORT || "3001");
   private shardCount: number;
+  private shardsPerProcess: number;
+  private registry: ShardRegistry;
 
-  constructor(shardCount: number) {
+  constructor(shardCount: number, shardsPerProcess: number = 5) {
     this.fastify = Fastify({ logger: false });
     this.logger = getLogger("server");
     this.shardCount = shardCount;
+    this.shardsPerProcess = shardsPerProcess;
+    this.registry = new ShardRegistry(shardCount, shardsPerProcess);
   }
 
   public async setupRoutes() {
@@ -46,6 +51,7 @@ export class ShardManagerServer {
       this.logger.info(`🚀 서버가 포트 ${this.port}에서 시작되었습니다!`);
       this.logger.info(`📡 HTTP: http://localhost:${this.port}`);
       this.logger.info(`🌐 WebSocket: ws://localhost:${this.port}/ws`);
+      this.logger.info(`🔢 샤드 수: ${this.shardCount}, 프로세스당: ${this.shardsPerProcess}`);
     } catch (error) {
       this.logger.error(error);
       process.exit(1);
@@ -54,6 +60,7 @@ export class ShardManagerServer {
 
   public async stop() {
     try {
+      this.registry.destroy();
       await this.fastify.close();
       this.logger.info("Server stopped gracefully");
     } catch (error) {
@@ -63,5 +70,9 @@ export class ShardManagerServer {
 
   public getShardCount() {
     return this.shardCount;
+  }
+
+  public getRegistry() {
+    return this.registry;
   }
 }

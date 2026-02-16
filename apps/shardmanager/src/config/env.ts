@@ -14,6 +14,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   DISCORD_TOKEN: z.string().min(1),
   SHARD_COUNT: shardCountSchema,
+  SHARDS_PER_PROCESS: z.coerce.number().int().positive().default(5),
   LOGLEVEL: z.string().default("info"),
   AUTH_KEY: z.string().optional(),
   NODE_ENV: z.enum(["development", "production"]).default("development"),

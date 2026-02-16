@@ -34,7 +34,7 @@ async function main() {
       logger.info(`Using configured shard count: ${shardCount} shards`);
     }
 
-    const shardManager = new ShardManagerServer(shardCount);
+    const shardManager = new ShardManagerServer(shardCount, env.SHARDS_PER_PROCESS);
     logger.info("Setting up routes...");
     await shardManager.setupRoutes();
 
