@@ -50,7 +50,7 @@ export class GuildService {
 		return newGuild.djRoleId;
 	}
 
-	public async setDJRole(guildId: string, djRoleId: string) {
+	public async setDJRole(guildId: string, djRoleId: string | null) {
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, djRoleId },
@@ -143,5 +143,86 @@ export class GuildService {
 		});
 
 		return newGuild;
+	}
+
+	public async setDefaultTextChannel(guildId: string, textChannelId: string | null) {
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, textChannelId },
+			update: { textChannelId }
+		});
+		return guild.textChannelId;
+	}
+
+	public async getDefaultTextChannel(guildId: string): Promise<string | null> {
+		const guild = await container.db.guild.findUnique({
+			where: { id: guildId },
+			select: { textChannelId: true }
+		});
+
+		if (guild) {
+			return guild.textChannelId;
+		}
+
+		const newGuild = await container.db.guild.create({
+			data: { id: guildId },
+			select: { textChannelId: true }
+		});
+
+		return newGuild.textChannelId;
+	}
+
+	public async setDefaultVoiceChannel(guildId: string, voiceChannelId: string | null) {
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, voiceChannelId },
+			update: { voiceChannelId }
+		});
+		return guild.voiceChannelId;
+	}
+
+	public async getDefaultVoiceChannel(guildId: string): Promise<string | null> {
+		const guild = await container.db.guild.findUnique({
+			where: { id: guildId },
+			select: { voiceChannelId: true }
+		});
+
+		if (guild) {
+			return guild.voiceChannelId;
+		}
+
+		const newGuild = await container.db.guild.create({
+			data: { id: guildId },
+			select: { voiceChannelId: true }
+		});
+
+		return newGuild.voiceChannelId;
+	}
+
+	public async getEnableController(guildId: string): Promise<boolean> {
+		const guild = await container.db.guild.findUnique({
+			where: { id: guildId },
+			select: { enableController: true }
+		});
+
+		if (guild) {
+			return guild.enableController;
+		}
+
+		const newGuild = await container.db.guild.create({
+			data: { id: guildId, enableController: true },
+			select: { enableController: true }
+		});
+
+		return newGuild.enableController;
+	}
+
+	public async setEnableController(guildId: string, enableController: boolean) {
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, enableController },
+			update: { enableController }
+		});
+		return guild.enableController;
 	}
 }
