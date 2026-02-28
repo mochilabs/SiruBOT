@@ -34,15 +34,14 @@
     "@skyra/env-utilities": "^2.0.1",
     "chokidar": "^4.0.3",
     "colorette": "^2.0.20",
-    "discord.js": "^14.22.1",
+    "discord.js": "^14.25.1",
     "figlet": "^1.9.3",
-    "lavalink-client": "^2.6.1",
+    "lavalink-client": "^2.9.6",
     "tslog": "^4.9.3",
     "undici": "^7.16.0"
   },
   "devDependencies": {
     "@sapphire/cli": "^1.9.3",
-    "@sapphire/ts-config": "^5.0.1",
-    "prettier": "^3.6.2"
+    "@sapphire/ts-config": "^5.0.1"
   }
 }

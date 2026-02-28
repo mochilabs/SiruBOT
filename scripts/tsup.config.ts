@@ -11,7 +11,8 @@ const baseOptions: Options = {
 	keepNames: true,
 	treeshake: true,
     outDir: 'dist',
-    format: 'cjs'
+    format: 'esm',
+    sourcemap: 'inline'
 };
 
 export const createConfig = (options: Partial<Options>) => {

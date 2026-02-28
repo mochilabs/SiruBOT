@@ -2,14 +2,15 @@
     "name": "@sirubot/utils",
     "private": true,
     "version": "0.1.0",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
+            "types": "./dist/index.d.ts",
             "import": "./dist/index.js",
-            "require": "./dist/index.js",
-            "browser": "./dist/browser.js",
-            "types": "./dist/index.d.ts"
+            "require": "./dist/index.cjs"
         }
     },
     "scripts": {
@@ -19,14 +20,15 @@
         "build": "tsup",
         "watch": "tsup --watch"
     },
-    "dependencies": {
-        "@prisma/client": "^5.0.0",
+    "peerDependencies": {
         "@sapphire/framework": "^5.3.6",
         "colorette": "^2.0.20",
-        "discord.js": "^14.22.1",
+        "discord.js": "^14.0.0",
+        "lavalink-client": "^2.0.0",
         "undici": "^7.16.0"
     },
     "devDependencies": {
-        "prisma": "^5.0.0"
+        "@sapphire/ts-config": "^5.0.1",
+        "@types/node": "^22.18.1"
     }
 }

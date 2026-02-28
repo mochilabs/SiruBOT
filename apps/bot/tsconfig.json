@@ -1,10 +1,6 @@
 {
-	"extends": ["@sapphire/ts-config", "@sapphire/ts-config/extra-strict", "@sapphire/ts-config/decorators"],
+	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"noEmit": true,
-		"incremental": false,
-		"skipLibCheck": false,
-		"allowImportingTsExtensions": true,
 		"typeRoots": ["./src/types", "node_modules/@types"]
 	},
 	"include": ["src/**/*", "src/types/**/*"]

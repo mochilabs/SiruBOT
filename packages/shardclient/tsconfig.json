@@ -1,11 +1,5 @@
 {
-	"extends": ["@sapphire/ts-config", "@sapphire/ts-config/extra-strict"],
-	"compilerOptions": {
-		"noEmit": true,
-		"incremental": false,
-		"skipLibCheck": true,
-		"allowImportingTsExtensions": true
-	},
+	"extends": "../../tsconfig.base.json",
 	"include": ["src"],
 	"exclude": ["node_modules", "dist"]
 }

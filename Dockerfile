@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable && corepack prepare yarn@4.10.3
+RUN corepack enable && corepack prepare yarn@4.12.0
 
 # Pruned monorepo (dependencies only)
 FROM base AS deps
@@ -47,9 +47,15 @@ COPY --from=deps /app/.yarnrc.yml ./.yarnrc.yml
 
 # Copy all source files
 COPY tsconfig.json ./
+COPY tsconfig.base.json ./
 COPY scripts ./scripts
 COPY apps ./apps
 COPY packages ./packages
+
+# Version info from build args
+ARG GIT_HASH=unknown
+ARG GIT_BRANCH=unknown
+ARG VERSION=unknown
 
 # Enable Turbo cache for Docker
 ENV TURBO_TELEMETRY_DISABLED=1
@@ -88,7 +94,14 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs sirubot
 
+ARG GIT_HASH=unknown
+ARG GIT_BRANCH=unknown
+ARG VERSION=unknown
+
 ENV NODE_ENV=production
+ENV GIT_HASH=$GIT_HASH
+ENV GIT_BRANCH=$GIT_BRANCH
+ENV VERSION=$VERSION
 
 # Copy built application
 COPY --from=builder-bot --chown=sirubot:nodejs /app/apps/bot/dist ./dist
@@ -120,8 +133,10 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs nextjs
 
+ARG VERSION=unknown
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV VERSION=$VERSION
 
 # Copy built Next.js application
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/.next/standalone ./
@@ -152,7 +167,13 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs sirubot
 
+ARG GIT_HASH=unknown
+ARG GIT_BRANCH=unknown
+ARG VERSION=unknown
 ENV NODE_ENV=production
+ENV GIT_HASH=$GIT_HASH
+ENV GIT_BRANCH=$GIT_BRANCH
+ENV VERSION=$VERSION
 
 # Copy built application
 COPY --from=builder-shardmanager --chown=sirubot:nodejs /app/apps/shardmanager/dist ./dist

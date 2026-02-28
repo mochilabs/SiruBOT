@@ -29,7 +29,8 @@
       },
       "typecheck": {
         "dependsOn": ["^generate"],
-        "outputs": []
+        "outputs": [],
+        "cache": true
       },
       "test": {
         "outputs": ["coverage/**"]
