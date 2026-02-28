@@ -8,7 +8,7 @@ import { inspect } from 'util';
 export const setup = () => {
 	// Set default behavior to bulk overwrite
 	ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(
-		process.env.REGISTER_COMMANDS ? RegisterBehavior.Overwrite : RegisterBehavior.LogToConsole
+		process.env.REGISTER_COMMANDS === 'true' ? RegisterBehavior.Overwrite : RegisterBehavior.LogToConsole
 	);
 
 	// Set default inspection depth

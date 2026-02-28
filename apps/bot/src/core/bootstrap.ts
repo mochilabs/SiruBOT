@@ -3,18 +3,52 @@ import { container } from '@sapphire/framework';
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
+import { LavalinkNodeOptions } from 'lavalink-client';
 
 export const main = async () => {
+	// 개발 모드: SHARD_MANAGER_URL 없으면 샤딩 없이 단독 실행
+	const shardManagerUrl = process.env.SHARD_MANAGER_URL;
+	const isDevMode = !shardManagerUrl;
+
+	let shardIds: number[] | 'auto' = 'auto';
+	let shardCount: number = 1;
+
+	if (!isDevMode) {
+		// 프로덕션: ShardClient로 매니저에서 샤드 ID 할당받기
+		const { ShardClient, NoShardsAvailableError } = await import('@sirubot/shardclient');
+		const shardClient = new ShardClient({
+			serverURL: shardManagerUrl,
+			authKey: process.env.AUTH_KEY ?? '',
+			logger: console
+		});
+
+		try {
+			const identity = await shardClient.identify();
+			shardIds = identity.shardIds;
+			shardCount = identity.shardCount;
+		} catch (error) {
+			if (error instanceof NoShardsAvailableError) {
+				console.error('No shards available from shard manager. Exiting...');
+				process.exit(1);
+			}
+			throw error;
+		}
+
+		// 컨테이너에 shardClient 저장 (stats 보고용)
+		container.shardClient = shardClient;
+	}
+
 	const client = new BotApplication({
 		logger: {
 			instance: new SapphireInterfaceLogger({
 				name: 'SiruBOT',
-				minLevel: envParseString('LOGLEVEL'),
+				minLevel: parseInt(process.env.LOGLEVEL ?? '3', 10),
 				type: 'pretty',
 				hideLogPositionForProduction: process.env.NODE_ENV === 'production'
 			})
 		},
-		shards: 'auto',
+		shards: shardIds,
+		shardCount,
 		intents: [
 			GatewayIntentBits.GuildModeration,
 			GatewayIntentBits.GuildMembers,
@@ -30,6 +64,7 @@ export const main = async () => {
 	try {
 		// show pid and pid-name
 		client.logger.info(`Starting SiruBOT with PID: ${process.pid}`);
+		client.logger.info(`Mode: ${isDevMode ? 'dev mode (standalone)' : `production (shards: [${shardIds}])`}`);
 
 		client.logger.debug('Setting up logger...');
 		container.logger = client.logger;
@@ -51,9 +86,39 @@ export const main = async () => {
 		await client.login(envParseString('DISCORD_TOKEN'));
 
 		client.logger.debug('Setting up lavalink...');
-		await client.setupAudio(JSON.parse(envParseString('LAVALINK_HOSTS')));
+		const lavalinkHosts = envParseString('LAVALINK_HOSTS')
+			.split(',')
+			.map((node) => {
+				const [id, host, port, password] = node.trim().split('_');
+				return { id, host, port: parseInt(port), authorization: password ?? 'youshallnotpass' };
+			}) as LavalinkNodeOptions[];
+		await client.setupAudio(lavalinkHosts);
 
 		client.logger.info('Logged in as ' + client.user!.tag);
+
+		// Health check HTTP server for Docker
+		const { createServer } = await import('node:http');
+		const healthPort = parseInt(process.env.HEALTH_PORT ?? '8080', 10);
+		const healthServer = createServer((_req, res) => {
+			// discord.js WebSocketStatus: 0 = READY
+			const isHealthy = client.ws.status === 0;
+			res.writeHead(isHealthy ? 200 : 503, { 'Content-Type': 'application/json' });
+			res.end(JSON.stringify({ ok: isHealthy, wsStatus: client.ws.status }));
+		});
+		healthServer.listen(healthPort, '0.0.0.0', () => {
+			client.logger.info(`Health check server listening on :${healthPort}`);
+		});
+
+		// Production: report ready status + collect stats
+		if (!isDevMode && container.shardClient) {
+			container.shardClient.reportStatus('ready');
+			container.shardClient.onStats(() => ({
+				guilds: client.guilds.cache.size,
+				players: container.audio?.players?.size ?? 0,
+				memoryUsage: process.memoryUsage().heapUsed,
+				uptime: process.uptime()
+			}));
+		}
 	} catch (error) {
 		client.logger.error('Error setting up application...');
 		client.logger.fatal(error);

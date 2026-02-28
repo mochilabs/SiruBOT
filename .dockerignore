@@ -9,6 +9,10 @@ build
 .next
 out
 
+# .env
+.env
+.env.*
+
 # Turbo
 .turbo
 

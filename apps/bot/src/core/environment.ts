@@ -7,9 +7,17 @@ setup({ path: join(process.cwd(), '.env') });
 process.env.NODE_ENV ??= 'development';
 
 process.on('unhandledRejection', (error) => {
-	container.logger.error('UnhandledPromiseRejectionWarning: ', error);
+	if (container.logger) {
+		container.logger.error('UnhandledPromiseRejectionWarning: ', error);
+	} else {
+		console.error('UnhandledPromiseRejectionWarning: ', error);
+	}
 });
 
 process.on('uncaughtException', (error) => {
-	container.logger.fatal('UncaughtException: ', error);
+	if (container.logger) {
+		container.logger.fatal('UncaughtException: ', error);
+	} else {
+		console.error('UncaughtException: ', error);
+	}
 });
