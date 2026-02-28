@@ -1,8 +1,6 @@
-import { createConfig } from '../../scripts/tsup.config.ts';
+import { createConfig } from '../../scripts/tsup.config.js';
 
 export default createConfig({
     dts: false,
-    sourcemap: 'inline',
-    format: 'esm',
     splitting: false,
 });
