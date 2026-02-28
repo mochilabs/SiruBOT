@@ -1,1 +1,2 @@
-export * from "./client.ts";
+export * from './client.ts';
+export { NoShardsAvailableError } from './errors/NoShardsAvailableError.ts';
