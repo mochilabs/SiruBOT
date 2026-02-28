@@ -19,7 +19,7 @@ model Guild {
   textChannelId String?
   voiceChannelId String?
   enableController Boolean @default(true)
-  enableSponsorBlock Boolean @default(false)
+  sponsorBlockSegments String[] @default([])
   
   djRoleId      String?
   repeat        String   @default("off")
