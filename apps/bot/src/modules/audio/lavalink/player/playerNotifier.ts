@@ -23,7 +23,7 @@ export class PlayerNotifier {
 
 	private readonly DEBOUNCE_MS = 300;
 	private readonly MESSAGE_THRESHOLD = 5;
-	private readonly MESSAGE_FETCH_LIMIT = 10;
+	private readonly MESSAGE_FETCH_LIMIT = 5;
 
 	constructor() {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerNotifier' });
@@ -56,7 +56,7 @@ export class PlayerNotifier {
 		this.isProcessing.delete(player.guildId);
 
 		// Delete controller message
-		const messageId = player.getMessageId();
+		const messageId = player.messageId;
 		if (messageId && player.textChannelId) {
 			const channel = this.container.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
@@ -153,7 +153,8 @@ export class PlayerNotifier {
 			// Create controller view
 			const components = view.controllerView({
 				player,
-				volume: options.volume
+				volume: options.volume,
+				page: player.queuePage
 			});
 
 			const payload = {
@@ -165,7 +166,8 @@ export class PlayerNotifier {
 			// Send or edit message
 			if (refreshResult.refresh) {
 				const message = await textChannel.send(payload);
-				player.setController(message);
+				player.messageId = message.id;
+				player.controller = message;
 				this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
 			} else if (refreshResult.message?.editable) {
 				await refreshResult.message.edit(payload);
@@ -177,7 +179,7 @@ export class PlayerNotifier {
 	}
 
 	private async shouldRefreshController(player: CustomPlayer, channel: Message['channel']): Promise<ShouldRefreshResult> {
-		const messageId = player.getMessageId();
+		const messageId = player.messageId;
 
 		// Create new message if none exists
 		if (!messageId) {
@@ -198,12 +200,10 @@ export class PlayerNotifier {
 				limit: this.MESSAGE_FETCH_LIMIT
 			});
 
-			const otherMessagesCount = recentMessages.filter((msg) => msg.author.id !== message.author.id).size;
-
-			const shouldRefresh = otherMessagesCount > this.MESSAGE_THRESHOLD;
+			const shouldRefresh = recentMessages.size >= this.MESSAGE_THRESHOLD;
 
 			if (shouldRefresh) {
-				this.logger.debug(`Controller buried by ${otherMessagesCount} messages, refreshing for guild: ${player.guildId}`);
+				this.logger.debug(`Controller buried by ${recentMessages.size} messages, refreshing for guild: ${player.guildId}`);
 			}
 
 			return { message, refresh: shouldRefresh };

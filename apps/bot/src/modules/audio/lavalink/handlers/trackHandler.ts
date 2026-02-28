@@ -1,8 +1,9 @@
 import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
+import { ContainerBuilder, MessageFlags } from 'discord.js';
+import { DEFAULT_COLOR } from '@sirubot/utils';
 
-// TODO: 안쓰는거 정리, ts-ignore 제거
 // handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -15,37 +16,69 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.lavalinkManager.on('queueEnd', this.wrapAsyncHandler(this.handleQueueEnd.bind(this), 'queueEnd'));
 	}
 
-	//@ts-ignore
-	private async handleTrackStart(player: CustomPlayer, track: Track | null, payload: TrackStartEvent) {
+	private async handleTrackStart(player: CustomPlayer, track: Track | null, _payload: TrackStartEvent) {
 		this.logger.info(`Track started: ${track?.info.title} by ${track?.info.author}`);
 		if (track && !track.info.isStream) {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			await this.container.trackService.increasePlays(track);
 		}
 		// Init chapters
-		player.setChapters([]);
+		player.chapters = [];
 
 		await this.container.playerNotifier.onTrackStart(player);
 	}
 
-	//@ts-ignore
-	private handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
+	private handleTrackEnd(_player: CustomPlayer, track: Track | null, _payload: TrackEndEvent) {
 		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author}`);
 	}
 
-	//@ts-ignore
-	private handleTrackStuck(player: CustomPlayer, track: Track | null, payload: TrackStuckEvent) {
-		this.logger.info(`Track stuck: ${track?.info.title} by ${track?.info.author}`);
+	private async handleTrackStuck(player: CustomPlayer, track: Track | null, _payload: TrackStuckEvent) {
+		this.logger.warn(`Track stuck: ${track?.info.title} by ${track?.info.author}`);
+		await this.sendNotification(player, `⚠️ **${track?.info.title ?? '알 수 없는 곡'}**이 응답하지 않아 건너뛰었어요.`);
+		if (player.queue.tracks.length > 0) {
+			await player.skip();
+		} else {
+			await player.stopPlaying();
+		}
 	}
 
-	//@ts-ignore
-	private handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
-		this.logger.info(`Track error: ${track?.info.title} by ${track?.info.author}`);
+	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
+		this.logger.error(`Track error: ${track?.info.title} by ${track?.info.author}`, payload.exception);
+		const errorMessage = payload.exception?.message ?? '알 수 없는 오류';
+		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.\n-# ${errorMessage}`);
+		if (player.queue.tracks.length > 0) {
+			await player.skip();
+		} else {
+			await player.stopPlaying();
+		}
 	}
 
-	//@ts-ignore
 	private async handleQueueEnd(player: CustomPlayer) {
-		this.logger.info(`Queue ended`);
+		this.logger.info(`Queue ended for guild: ${player.guildId}`);
+		if (player.get('stopByCommand')) {
+			player.set('stopByCommand', false);
+			return;
+		}
+		await this.sendNotification(player, '📭 대기열의 모든 곡을 재생했어요.');
+	}
+
+	private async sendNotification(player: CustomPlayer, message: string) {
+		if (!player.textChannelId) return;
+		try {
+			const channel = this.container.client.channels.cache.get(player.textChannelId);
+			if (channel?.isSendable()) {
+				await channel.send({
+					components: [
+						new ContainerBuilder()
+							.setAccentColor(DEFAULT_COLOR)
+							.addTextDisplayComponents((textDisplay) => textDisplay.setContent(message))
+					],
+					flags: [MessageFlags.IsComponentsV2]
+				});
+			}
+		} catch (error) {
+			this.logger.error(`Failed to send notification: ${error}`);
+		}
 	}
 
 	public cleanup() {

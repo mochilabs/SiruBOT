@@ -1,8 +1,7 @@
-import { DestroyReasonsType, LavalinkManager, LyricsLineEvent, RepeatMode, Track, UnresolvedTrack } from 'lavalink-client';
+import { DestroyReasonsType, LavalinkManager, RepeatMode, SponsorBlockSegment } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 
-// TODO: 안쓰는거 정리, ts-ignore 제거
 // handlers/playerHandler.ts
 export class PlayerHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -17,11 +16,14 @@ export class PlayerHandler extends BaseLavalinkHandler {
 
 	private async handlePlayerCreate(player: CustomPlayer) {
 		this.logger.info(`Player created: ${player.guildId}`);
-		// Experimental
-		// player.setSponsorBlock(['sponsor', 'selfpromo', 'interaction', 'outro', 'preview', 'filler', 'music_offtopic']);
 
 		this.logger.trace(`Setting volume and repeat mode for player: ${player.guildId}`);
 		const guildConfig = await this.container.guildService.getGuild(player.guildId);
+
+		// SponsorBlock 조건부 활성화
+		if (guildConfig.sponsorBlockSegments.length > 0) {
+			player.setSponsorBlock(guildConfig.sponsorBlockSegments as SponsorBlockSegment[]);
+		}
 
 		await Promise.all([
 			player.setVolume(guildConfig.volume),
@@ -29,23 +31,22 @@ export class PlayerHandler extends BaseLavalinkHandler {
 			this.container.redisStore.getPlayerSaver().set(player)
 		]);
 	}
-	//@ts-ignore
-	private async handlePlayerDestroy(player: CustomPlayer, reason: DestroyReasonsType | undefined) {
+
+	private async handlePlayerDestroy(player: CustomPlayer, _reason: DestroyReasonsType | undefined) {
 		this.logger.info(`Player destroyed: ${player.guildId}`);
 		this.container.redisStore.getPlayerSaver().delete(player.guildId);
 		await this.container.playerNotifier.onPlayerDestroy(player);
 	}
-	//@ts-ignore
-	private handlePlayerDisconnect(player: CustomPlayer, voiceChannelId: string) {
-		this.logger.info(`Player disconnected: ${player.guildId}`);
-	}
-	//@ts-ignore
-	private handlePlayerMove(player: CustomPlayer, oldChannelId: string, newChannelId: string) {
-		this.logger.info(`Player moved: ${player.guildId}`);
+
+	private handlePlayerDisconnect(_player: CustomPlayer, _voiceChannelId: string) {
+		this.logger.info(`Player disconnected: ${_player.guildId}`);
 	}
 
-	//@ts-ignore
-	private async handlePlayerUpdate(oldPlayerJson: PlayerJson, newPlayer: CustomPlayer) {
+	private handlePlayerMove(_player: CustomPlayer, _oldChannelId: string, _newChannelId: string) {
+		this.logger.info(`Player moved: ${_player.guildId}`);
+	}
+
+	private async handlePlayerUpdate(_oldPlayerJson: any, newPlayer: CustomPlayer) {
 		this.logger.info(`Player updated: ${newPlayer.guildId}`);
 		await this.container.redisStore.getPlayerSaver().set(newPlayer);
 		await this.container.playerNotifier.onPlayerUpdate(newPlayer);

@@ -1,8 +1,6 @@
 import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
-import { TextChannel } from 'discord.js';
 
-// TODO: Resume 부분 샤딩 대응해야함
 export class NodeHandler extends BaseLavalinkHandler {
 	constructor(private readonly nodeManager: NodeManager) {
 		super('nodeHandler');
@@ -45,7 +43,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 			if (!lavalinkPlayer.state.connected) {
 				this.logger.debug(`Player at ${lavalinkPlayer.guildId} is already disconnected`);
 
-				playerSaver.delete(lavalinkPlayer.guildId);
+				await playerSaver.delete(lavalinkPlayer.guildId);
+				continue;
+			}
+
+			// 현재 샤드가 담당하지 않는 길드는 건너뛰기
+			if (!this.container.client.guilds.cache.has(lavalinkPlayer.guildId)) {
+				this.logger.debug(`Skipping resume for guild ${lavalinkPlayer.guildId} (not in this shard's cache)`);
 				continue;
 			}
 
@@ -79,7 +83,8 @@ export class NodeHandler extends BaseLavalinkHandler {
 					const message = await fetchedChannel.messages.fetch(savedPlayer.messageId).catch(() => null);
 					this.logger.debug(`Fetched controller message for player at ${lavalinkPlayer.guildId}`);
 					if (message?.editable) {
-						createdPlayer.setController(message);
+						createdPlayer.messageId = message.id;
+						createdPlayer.controller = message;
 					}
 				}
 			}

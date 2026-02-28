@@ -116,6 +116,7 @@ export class CachedPlayerSaver {
 				// 캐시 업데이트
 				this.nodeSessionsCache = data;
 				this.logger.trace(`Retrieved ${data.size} node sessions from Redis`);
+				console.log(data);
 				return data;
 			}
 		} catch (error) {
