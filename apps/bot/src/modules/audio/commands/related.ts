@@ -6,8 +6,9 @@ import * as view from '../view/related.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'related',
-	description: 'Toggle autoplay of related/recommended tracks.',
-	preconditions: ['DJRole']
+	description: '추천곡 자동재생을 켜거나 꺼요.',
+	fullCategory: ['음악'],
+	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone']
 })
 export class RelatedCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

@@ -7,8 +7,9 @@ import { RepeatMode } from 'lavalink-client';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'repeat',
-	description: 'Set the repeat mode.',
-	preconditions: ['DJRole', 'NodeAvailable']
+	description: '반복 모드를 설정해요.',
+	fullCategory: ['음악'],
+	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone']
 })
 export class RepeatCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

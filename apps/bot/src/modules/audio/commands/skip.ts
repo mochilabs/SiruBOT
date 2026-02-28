@@ -26,8 +26,9 @@ interface SkipContext {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'skip',
-	description: 'Skip the current song.',
-	preconditions: ['NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'MemberListenable', 'SongPlaying']
+	description: '현재 재생 중인 곡을 건너뛰어요.',
+	fullCategory: ['음악'],
+	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'MemberListenable', 'SongPlaying', 'DJOrAlone']
 })
 export class SkipCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

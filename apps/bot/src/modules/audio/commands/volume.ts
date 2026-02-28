@@ -6,7 +6,9 @@ import * as view from '../view/volume.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'volume',
-	description: 'Set the volume of the player.'
+	description: '플레이어의 볼륨을 설정해요.',
+	fullCategory: ['음악'],
+	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone']
 })
 export class VolumeCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

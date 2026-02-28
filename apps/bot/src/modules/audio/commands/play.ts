@@ -15,8 +15,17 @@ import * as view from '../view/play.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'play',
-	description: 'Play music in the voice channel.',
-	preconditions: ['NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'MemberListenable', 'ClientVoiceConnectable', 'ClientVoiceSpeakable']
+	description: '음성 채널에서 노래를 재생해요.',
+	fullCategory: ['음악'],
+	preconditions: [
+		'TextChannelAllowed',
+		'NodeAvailable',
+		'VoiceConnected',
+		'SameVoiceChannel',
+		'MemberListenable',
+		'ClientVoiceConnectable',
+		'ClientVoiceSpeakable'
+	]
 })
 export class PlayCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
