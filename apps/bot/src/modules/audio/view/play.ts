@@ -29,7 +29,9 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 		showLength: true,
 		withMarkdownURL: true
 	});
-	let artistText = `-# 아티스트: ${track.info.author}${getRequesterText(track)}`;
+	let artistText = `-# 아티스트: ${track.info.author}`;
+
+	artistText += ' | ' + getRequesterText(track);
 
 	if (queued) {
 		artistText += ` | ${position}개 남음 (${formatTime((totalDuration ?? 0) / 1000)})`;

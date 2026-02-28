@@ -28,6 +28,7 @@ import { Player, Track } from 'lavalink-client';
 type controllerViewProps = {
 	player: Player;
 	volume?: number;
+	page?: number;
 };
 
 export const customIdPrefix = 'controller:';
@@ -35,47 +36,22 @@ const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
-export function controllerView({ player, volume }: controllerViewProps) {
+export function controllerView({ player, volume, page: requestedPage }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
-	// Current track
 	const current = player.queue.current;
 
-	const durationText = current ? (current.info.isStream ? 'LIVE' : formatTime(current?.info.duration / 1000)) : '';
-	const contents = [];
-	if (!current) {
-		contents.push(`### 재생 중인 음악이 없어요.`);
-	} else {
-		contents.push(`### 🎵 <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
-		contents.push(`### **[${removeEmojis(current.info.title)}](${current.info.uri})**`);
-		if (current.info.isStream) {
-			contents.push(`[${durationText}] ${emojiProgressBar(0)} [실시간 스트리밍]`);
-		} else {
-			contents.push(
-				`[${formatTime(player.position / 1000)}] ${emojiProgressBar(player.position / current.info.duration)} [${formatTime(current.info.duration / 1000)}]`
-			);
-		}
-
-		const requesterInfo = [];
-		requesterInfo.push(`-# 아티스트: ${current.info.author}`);
-		const requesterId = (current.requester as any)?.id;
-		if (requesterId) {
-			requesterInfo.push(requesterId === 'related_track' ? `추천 곡 재생 중 ${EMOJI_SPARKLE}` : `신청자: <@${requesterId}>`);
-		}
-		contents.push(requesterInfo.join(' | '));
-	}
-
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(contents.join('\n'));
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(buildTrackDisplay(player, current).join('\n'));
 
 	const thumbnail = new ThumbnailBuilder();
+
+	// const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
 
 	const prevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('prev'))
 		.setEmoji('⏮️')
 		.setDisabled(player.queue.previous.length === 0);
-
-	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
@@ -98,7 +74,7 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[stopButton, prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+		[prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
 
 	const separator = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large);
@@ -117,10 +93,10 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	// 큐 섹션
 	if (player.queue.tracks.length > 0) {
 		containerComponent.addSeparatorComponents(separator);
-		let page = 1; // TODO: 페이지 움직이게 해야함
-
 		const QUEUE_PAGE_CHUNK_SIZE = 5;
-		const queueChunks = chunkArray(player.queue.tracks, 5);
+		const queueChunks = chunkArray(player.queue.tracks, QUEUE_PAGE_CHUNK_SIZE);
+		const page = Math.max(1, Math.min(requestedPage ?? 1, queueChunks.length));
+
 		let pageContent: string = queueChunks[page - 1]
 			.map((track, index) => {
 				// index = 1 ~ 10
@@ -155,6 +131,12 @@ export function controllerView({ player, volume }: controllerViewProps) {
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page === 1);
 
+		// const pageIndicator = new ButtonBuilder()
+		// 	.setCustomId(wrapPrefix('queue:page:indicator'))
+		// 	.setLabel(`${page}/${queueChunks.length}`)
+		// 	.setStyle(ButtonStyle.Secondary)
+		// 	.setDisabled(true);
+
 		const queueNext = new ButtonBuilder()
 			.setCustomId(wrapPrefix('queue:next'))
 			.setEmoji('▶️')
@@ -174,14 +156,55 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	}
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
+
+	containerComponent
+		.addSeparatorComponents(separatorSmall)
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(buildFooterSegments(player, volume).join(' | ')));
+
+	return containerComponent;
+}
+
+export function buildTrackDisplay(player: Player, track: Track | null): string[] {
+	const contents = [];
+	if (!track) {
+		contents.push(`### 재생 중인 음악이 없어요.`);
+		return contents;
+	}
+
+	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
+
+	contents.push(`-# 🎵 <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
+	contents.push(`### **[${removeEmojis(track.info.title)}](${track.info.uri})**`);
+
+	if (track.info.isStream) {
+		contents.push(`[${durationText}][실시간 스트리밍]`);
+	} else {
+		contents.push(
+			`(${formatTime(player.position / 1000)} / ${formatTime(track.info.duration / 1000)}) ${emojiProgressBar(player.position / track.info.duration)}`
+		);
+	}
+
+	const requesterInfo = [];
+	requesterInfo.push(`-# 아티스트: ${track.info.author}`);
+	const requesterId = (track.requester as any)?.id;
+	if (requesterId) {
+		requesterInfo.push(requesterId === 'related_track' ? `추천 곡 ${EMOJI_SPARKLE}` : `신청자: <@${requesterId}>`);
+	}
+	contents.push(requesterInfo.join(' | '));
+
+	return contents;
+}
+
+export function buildFooterSegments(player: Player, volume?: number): string[] {
 	const segments = [];
 	segments.push(`-# 📡 재생 서버: ${player.node.id}`);
-	if (volume) segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
+	if (volume !== undefined) {
+		segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
+	} else if (player.volume !== undefined) {
+		segments.push(`${volumeToEmoji(player.volume)} 볼륨: ${player.volume}%`);
+	}
 	segments.push(
 		`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
 	);
-
-	containerComponent.addSeparatorComponents(separatorSmall).addTextDisplayComponents(new TextDisplayBuilder().setContent(segments.join(' | ')));
-
-	return containerComponent;
+	return segments;
 }
