@@ -19,6 +19,8 @@ const pretendard = localFont({
   variable: '--font-pretendard',
 })
 
+import { Providers } from "@/components/Providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,10 +29,12 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${pretendard.variable}`}>
       <body className={pretendard.className}>
+        <Providers>
           <Theme>
             <Navbar />
               {children}
           </Theme>
+        </Providers>
       </body>
     </html>
   );

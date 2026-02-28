@@ -1,3 +1,5 @@
+"use client";
+
 import * as NavigationMenu from "@radix-ui/react-navigation-menu";
 import Link from "next/link";
 
@@ -42,15 +44,61 @@ export function Navbar() {
 					<NavigationMenu.Item>
 						<NavigationMenu.Link asChild>
 							<Link 
-								href="/dashboard" 
+								href="/shards" 
 								className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
 							>
-								대시보드
+								샤드
+							</Link>
+						</NavigationMenu.Link>
+					</NavigationMenu.Item>
+
+					<NavigationMenu.Item>
+						<NavigationMenu.Link asChild>
+							<Link 
+								href="/servers" 
+								className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+							>
+								서버 목록
 							</Link>
 						</NavigationMenu.Link>
 					</NavigationMenu.Item>
 				</div>
+                
+                {/* Auth */}
+                <div className="flex items-center ml-4">
+                    <AuthButton />
+                </div>
 			</NavigationMenu.List>
 		</NavigationMenu.Root>
 	);
+}
+
+import { signIn, signOut, useSession } from "next-auth/react";
+
+function AuthButton() {
+    const { data: session, status } = useSession();
+
+    if (status === "loading") {
+        return <div className="px-4 py-2 text-sm text-gray-500">로딩중...</div>;
+    }
+
+    if (session) {
+        return (
+            <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+            >
+                로그아웃
+            </button>
+        );
+    }
+
+    return (
+        <button
+            onClick={() => signIn("discord", { callbackUrl: '/servers' })}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+        >
+            Discord 로그인
+        </button>
+    );
 }
