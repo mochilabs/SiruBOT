@@ -1,0 +1,77 @@
+services:
+  # Application services
+  bot:
+    image: sirubot/bot:latest
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - shardmanager
+    networks:
+      - sirubot-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        order: stop-first
+      placement:
+        constraints:
+          - node.role == manager
+
+  shardmanager:
+    image: sirubot/shardmanager:latest
+    env_file:
+      - .env
+    environment:
+      HOSTNAME: "0.0.0.0"
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - sirubot-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        order: stop-first
+      placement:
+        constraints:
+          - node.role == manager
+
+  dashboard:
+    image: sirubot/dashboard:latest
+    env_file:
+      - .env
+    environment:
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - sirubot-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  sirubot-network:
+    external: true
