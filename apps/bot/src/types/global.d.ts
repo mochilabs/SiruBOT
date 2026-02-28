@@ -15,14 +15,17 @@ import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 declare module '@skyra/env-utilities' {
 	interface Env {
-		OWNERS: ArrayString;
-		LAVALINK_HOSTS: ArrayString;
 		DISCORD_TOKEN: string;
-		REDIS_URL: string;
-		LOGLEVEL: number;
-		REGISTER_COMMANDS?: unknown;
+		OWNERS: ArrayString;
+		LAVALINK_HOSTS: string;
 		BOT_ACTIVITY: string;
+		LOGLEVEL: string;
+		REDIS_URL: string;
+		DATABASE_URL: string;
 		DEV_GUILD_IDS: ArrayString;
+		REGISTER_COMMANDS?: string;
+		SHARD_MANAGER_URL?: string;
+		AUTH_KEY?: string;
 	}
 }
 
@@ -35,22 +38,23 @@ declare module '@sapphire/pieces' {
 		playerNotifier: PlayerNotifier;
 		guildService: GuildService;
 		trackService: TrackService;
+		shardClient?: import('@sirubot/shardclient').ShardClient;
 	}
 }
 
 declare module '@sapphire/framework' {
 	interface Preconditions {
+		ManageGuild: never;
 		OwnerOnly: never;
 
-		VoiceConnected: never;
-		SameVoiceChannel: never;
-		NodeAvailable: never;
-		SongPlaying: never;
-
-		MemberListenable: never;
 		ClientVoiceConnectable: never;
 		ClientVoiceSpeakable: never;
-
-		DJRole: never;
+		DJOrAlone: never;
+		MemberListenable: never;
+		NodeAvailable: never;
+		SameVoiceChannel: never;
+		SongPlaying: never;
+		TextChannelAllowed: never;
+		VoiceConnected: never;
 	}
 }
