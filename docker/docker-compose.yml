@@ -1,40 +1,41 @@
 services:
   # Redis service
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - sirubot-network
-    restart: always
-    command: redis-server --save 60 1 --loglevel warning
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+  # redis:
+  #   image: redis:alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - sirubot-network
+  #   restart: always
+  #   command: redis-server --save 60 1 --loglevel warning
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
 
   # Postgres service
-  postgres:
-    image: postgres:latest
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: sirubot
-    networks:
-      - sirubot-network
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+  # postgres:
+  #   image: postgres:latest
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: sirubot
+  #     PGDATA: /var/lib/postgresql/data/pgdata
+  #   networks:
+  #     - sirubot-network
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
 
   # Lavalink service
   lavalink:
@@ -50,55 +51,53 @@ services:
     restart: always
 
   # Application services
-  bot:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      target: bot
-    image: sirubot/bot:latest
-    env_file:
-      - .production.env
-    depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - sirubot-network
+  # bot:
+  #   image: sirubot/bot:latest
+  #   build:
+  #     context: ..
+  #     dockerfile: Dockerfile
+  #     target: bot
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - redis
+  #     - postgres
+  #   restart: unless-stopped
+  #   networks:
+  #     - sirubot-network
 
-  shardmanager:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      target: shardmanager
-    image: sirubot/shardmanager:latest
-    ports:
-      - "3001:3001"
-    env_file:
-      - .production.env
-    environment:
-      - SHARD_COUNT=auto
-    restart: unless-stopped
-    networks:
-      - sirubot-network
+  # shardmanager:
+  #   image: sirubot/shardmanager:latest
+  #   build:
+  #     context: ..
+  #     dockerfile: Dockerfile
+  #     target: shardmanager
+  #   ports:
+  #     - "3001:3001"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - SHARD_COUNT=auto
+  #   restart: unless-stopped
+  #   networks:
+  #     - sirubot-network
 
-  dashboard:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      target: dashboard
-    image: sirubot/dashboard:latest
-    ports:
-      - "3000:3000"
-    env_file:
-      - .production.env
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - sirubot-network
+  # dashboard:
+  #   image: sirubot/dashboard:latest
+  #   build:
+  #     context: ..
+  #     dockerfile: Dockerfile
+  #     target: dashboard
+  #   ports:
+  #     - "3000:3000"
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   networks:
+  #     - sirubot-network
 
 networks:
   sirubot-network:

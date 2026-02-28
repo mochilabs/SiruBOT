@@ -5,13 +5,18 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
-	name: '핑',
+	name: 'ping',
 	description: '봇의 반응 속도를 보여드려요.'
 })
 export class PingCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
 		registry.registerChatInputCommand((builder) => {
-			builder.setIntegrationTypes(ApplicationIntegrationType.GuildInstall).setName(this.name).setDescription(this.description);
+			builder
+				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+				.setName(this.name)
+				.setDescription(this.description)
+				.setNameLocalizations({ ko: '핑' })
+				.setDescriptionLocalizations({ ko: '봇의 반응 속도를 보여드려요.' });
 		});
 	}
 
@@ -25,7 +30,7 @@ export class PingCommand extends Command {
 		await interaction.editReply({
 			embeds: [
 				{
-					description: `✌️ **${interaction.user.displayName}** 님의 명령어를 처리하는 데 ${replyTimeInSeconds}초\`\`(${deferReplyTime}ms)\`\` 가 걸렸어요, 봇과 디스코드간의 지연시간은 ${wsPingInSeconds}초\`\`(${this.container.client.ws.ping}ms)\`\` 예요.`,
+					description: `✌️ **${interaction.user.displayName}** 님의 명령어를 처리하는 데 \n**${replyTimeInSeconds}초**\`\`(${deferReplyTime}ms)\`\` 가 걸렸어요, 봇과 디스코드간의 지연시간은 \n**${wsPingInSeconds}초**\`\`(${this.container.client.ws.ping}ms)\`\` 예요.`,
 					color: DEFAULT_COLOR
 				}
 			]
