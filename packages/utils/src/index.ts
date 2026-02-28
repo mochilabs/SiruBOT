@@ -5,17 +5,17 @@
  * const randomEntry = pickRandom([1, 2, 3, 4]) // 1
  */
 export function pickRandom<T>(array: readonly T[]): T {
-  const { length } = array;
-  return array[Math.floor(Math.random() * length)];
+	const { length } = array;
+	return array[Math.floor(Math.random() * length)];
 }
 
-export const isDev = process.env.NODE_ENV !== "production";
+export const isDev = process.env.NODE_ENV !== 'production';
 
-export * from "./version";
-export * from "./constants";
-export * from "./format";
-export * from "./time";
-export * from "./youtube";
-export * from "./array";
-export * from "./embed";
-export * from "./memoryCache";
+export * from './version.js';
+export * from './constants.js';
+export * from './format.js';
+export * from './time.js';
+export * from './youtube.js';
+export * from './array.js';
+export * from './embed.js';
+export * from './memoryCache.js';

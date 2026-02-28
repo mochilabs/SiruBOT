@@ -1,8 +1,8 @@
-export * from "./version";
-export * from "./constants";
-export * from "./format";
-export * from "./time";
-export * from "./array";
-export * from "./memoryCache";
+export * from './version.js';
+export * from './constants.js';
+export * from './format.js';
+export * from './time.js';
+export * from './array.js';
+export * from './memoryCache.js';
 
-export { pickRandom, isDev } from "./index";
+export { pickRandom, isDev } from './index.js';
