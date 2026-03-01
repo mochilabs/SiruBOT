@@ -20,7 +20,6 @@ WORKDIR /app
 
 # Copy workspace configuration
 COPY package.json yarn.lock turbo.json .yarnrc.yml ./
-COPY .yarn ./.yarn
 
 # Copy all package.json files to establish workspace structure
 COPY apps/bot/package.json ./apps/bot/
