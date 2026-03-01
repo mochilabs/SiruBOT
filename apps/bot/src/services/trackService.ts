@@ -29,6 +29,14 @@ export class TrackService {
 			}
 		}
 
+		if (userId) {
+			await container.db.user.upsert({
+				where: { id: userId },
+				create: { id: userId },
+				update: {}
+			});
+		}
+
 		await container.db.guildTrackHistory.create({
 			data: {
 				guildId,
