@@ -4,7 +4,7 @@ SiruBOT GitHub Repository
 ![Node version](https://img.shields.io/badge/node-%3E%3D22.0-brightgreen)
 ![GitHub](https://img.shields.io/github/license/mochiLabs/SiruBOT)
 [![Run eslint](https://github.com/mochiLabs/SiruBOT/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/mochiLabs/SiruBOT/actions/workflows/lint.yml)
-[![Typescript build](https://github.com/mochiLabs/SiruBOT/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/mochiLabs/SiruBOT/actions/workflows/node.js.yml)
+[![Publish Docker Image](https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml)
 
 </h1>
 
