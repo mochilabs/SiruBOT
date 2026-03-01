@@ -43,8 +43,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
 		this.logger.error(`Track error: ${track?.info.title} by ${track?.info.author}`, payload.exception);
-		const errorMessage = payload.exception?.message ?? '알 수 없는 오류';
-		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.\n-# ${errorMessage}`);
+		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
 		} else {
