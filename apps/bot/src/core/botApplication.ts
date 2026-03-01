@@ -85,6 +85,10 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				onEmptyQueue: {
 					destroyAfterMs: 10000,
 					autoPlayFunction: autoPlayRelated
+				},
+				maxErrorsPerTime: {
+					maxAmount: 3,
+					threshold: 35000
 				}
 			},
 			playerClass: CustomPlayer,

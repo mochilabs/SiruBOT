@@ -8,7 +8,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
 		super(ctx, {
 			...options,
-			interactionHandlerType: InteractionHandlerTypes.SelectMenu | InteractionHandlerTypes.Button
+			interactionHandlerType: InteractionHandlerTypes.SelectMenu
 		});
 	}
 

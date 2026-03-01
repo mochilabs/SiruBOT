@@ -21,9 +21,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 		if (track && !track.info.isStream) {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			await this.container.trackService.increasePlays(track);
+			await this.container.trackService.addHistory(player.guildId, track);
 		}
-		// Init chapters
-		player.chapters = [];
 
 		await this.container.playerNotifier.onTrackStart(player);
 	}
@@ -55,6 +54,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	private async handleQueueEnd(player: CustomPlayer) {
 		this.logger.info(`Queue ended for guild: ${player.guildId}`);
+
+		// 대기열의 모든 곡이 끝났으므로 컨트롤러 메시지도 삭제합니다.
+		await this.container.playerNotifier.deleteController(player);
+
 		if (player.get('stopByCommand')) {
 			player.set('stopByCommand', false);
 			return;

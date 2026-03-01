@@ -26,6 +26,8 @@ model Guild {
   related       Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  history       GuildTrackHistory[]
 }
 
 model Track {
@@ -44,6 +46,7 @@ model Track {
 
   // Relations
   userFavorites UserFavorite[]
+  history       GuildTrackHistory[]
 }
 
 model User {
@@ -53,6 +56,21 @@ model User {
 
   // Relations
   favorites   UserFavorite[]
+  history     GuildTrackHistory[]
+}
+
+model GuildTrackHistory {
+  id        String   @id @default(uuid())
+  guildId   String
+  trackId   String
+  userId    String?  // Who requested the track
+  createdAt DateTime @default(now())
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([guildId, createdAt(sort: Desc)])
 }
 
 model UserFavorite {

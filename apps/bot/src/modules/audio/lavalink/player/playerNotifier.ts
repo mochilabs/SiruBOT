@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
-import { Message, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 import * as view from '../../view/controller.ts';
 import { CustomPlayer } from './customPlayer.ts';
@@ -10,20 +10,11 @@ interface ControllerOptions {
 	volume: number;
 }
 
-interface ShouldRefreshResult {
-	message: Message | null;
-	refresh: boolean;
-}
-
 export class PlayerNotifier {
 	private logger: Logger<ILogObj>;
-	private pendingUpdates: Map<string, CustomPlayer> = new Map();
-	private isProcessing: Map<string, boolean> = new Map();
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
 	private readonly DEBOUNCE_MS = 300;
-	private readonly MESSAGE_THRESHOLD = 5;
-	private readonly MESSAGE_FETCH_LIMIT = 5;
 
 	constructor() {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerNotifier' });
@@ -33,54 +24,92 @@ export class PlayerNotifier {
 		return container;
 	}
 
-	public onTrackStart(player: CustomPlayer): void {
-		this.logger.debug(`Track started in guild: ${player.guildId}`);
+	// Force send controller message
+	public async sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
+		this.logger.debug(`Sending new controller for guild: ${player.guildId}`);
 
-		this.debounceEnqueue(player);
-	}
-
-	public onPlayerUpdate(player: CustomPlayer): void {
-		this.logger.trace(`Player updated in guild: ${player.guildId}`);
-
-		// Ignore track loading
-		if (!player.queue.current && player.queue.tracks.length >= 0) return;
-		this.debounceEnqueue(player);
-	}
-
-	public async onPlayerDestroy(player: CustomPlayer): Promise<void> {
-		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
-
-		// Clear all pending operations
+		// 1. Clear ongoing debounce timer
 		this.clearDebounceTimer(player.guildId);
-		this.pendingUpdates.delete(player.guildId);
-		this.isProcessing.delete(player.guildId);
 
-		// Delete controller message
-		const messageId = player.messageId;
-		if (messageId && player.textChannelId) {
-			const channel = this.container.client.channels.cache.get(player.textChannelId);
-			if (channel?.isSendable()) {
-				const message = await channel.messages.fetch(messageId).catch(() => null);
-				if (message?.deletable) {
-					await message.delete().catch((error) => {
-						this.logger.warn(`Failed to delete controller message: ${error.message}`);
-					});
-				}
+		// 2. Delete existing controller message
+		await this.deleteController(player);
+
+		// 3. Build and send new controller message
+		try {
+			if (!interaction && !player.textChannelId) return;
+			const options = await this.getControllerOptions(player.guildId);
+			if (!options) return;
+
+			const components = view.controllerView({
+				player,
+				volume: options.volume,
+				page: player.queuePage
+			});
+
+			let message;
+			if (interaction) {
+				message = await interaction.reply({
+					components: [components],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { roles: [], users: [] },
+					fetchReply: true
+				});
+				player.textChannelId = interaction.channelId;
+			} else {
+				const textChannel = this.container.client.channels.cache.get(player.textChannelId!);
+				if (!textChannel?.isSendable()) return;
+				message = await textChannel.send({
+					components: [components],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { roles: [], users: [] }
+				});
 			}
+
+			player.messageId = message.id;
+			player.controller = message;
+			this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
+		} catch (error) {
+			this.logger.error(`Failed to send new controller for guild ${player.guildId}:`, error);
 		}
 	}
 
-	private debounceEnqueue(player: CustomPlayer): void {
+	// Update controller message (debounce)
+	public updateController(player: CustomPlayer): void {
 		this.clearDebounceTimer(player.guildId);
 
-		const timer = setTimeout(() => {
-			this.enqueueUpdate(player);
+		const timer = setTimeout(async () => {
 			this.debounceTimers.delete(player.guildId);
+			try {
+				if (!player.messageId || !player.controller) return;
+
+				const options = await this.getControllerOptions(player.guildId);
+				if (!options) return;
+
+				const components = view.controllerView({
+					player,
+					volume: options.volume,
+					page: player.queuePage
+				});
+
+				const payload = {
+					components: [components],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { roles: [], users: [] }
+				} as const;
+
+				if (player.controller.editable) {
+					await player.controller.edit(payload);
+					this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
+				}
+			} catch (error) {
+				this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
+			}
 		}, this.DEBOUNCE_MS);
 
 		this.debounceTimers.set(player.guildId, timer);
 	}
 
+	// Clear debounce timer
 	private clearDebounceTimer(guildId: string): void {
 		const timer = this.debounceTimers.get(guildId);
 		if (timer) {
@@ -89,129 +118,56 @@ export class PlayerNotifier {
 		}
 	}
 
-	private enqueueUpdate(player: CustomPlayer): void {
-		// Always store the latest player state
-		this.pendingUpdates.set(player.guildId, player);
+	// Delete controller message
+	public async deleteController(player: CustomPlayer): Promise<void> {
+		this.clearDebounceTimer(player.guildId);
 
-		// If already processing, skip (will be picked up after current update completes)
-		if (this.isProcessing.get(player.guildId)) {
-			this.logger.trace(`Update already in progress for guild: ${player.guildId}, queuing latest state`);
-			return;
-		}
-
-		// Start processing
-		this.processUpdate(player.guildId);
-	}
-
-	private async processUpdate(guildId: string): Promise<void> {
-		// Get and clear the pending update
-		const player = this.pendingUpdates.get(guildId);
-		if (!player) {
-			this.isProcessing.set(guildId, false);
-			return;
-		}
-
-		this.isProcessing.set(guildId, true);
-		this.pendingUpdates.delete(guildId);
-
-		try {
-			// Execute the update
-			await this.updateController(player);
-		} finally {
-			this.isProcessing.set(guildId, false);
-
-			// If a new update arrived while processing, handle it
-			if (this.pendingUpdates.has(guildId)) {
-				// Use setImmediate to avoid deep call stacks
-				setImmediate(() => this.processUpdate(guildId));
-			}
-		}
-	}
-
-	private async updateController(player: CustomPlayer): Promise<void> {
-		try {
-			if (!player.textChannelId) {
-				this.logger.trace(`No text channel set for guild: ${player.guildId}`);
-				return;
-			}
-
-			// Check options
-			const options = await this.getControllerOptions(player.guildId);
-			if (!options) {
-				return;
-			}
-
-			// Check channel
-			const textChannel = this.container.client.channels.cache.get(player.textChannelId);
-			if (!textChannel?.isSendable()) {
-				return;
-			}
-
-			// Check if the message should be refreshed
-			const refreshResult = await this.shouldRefreshController(player, textChannel);
-
-			// Create controller view
-			const components = view.controllerView({
-				player,
-				volume: options.volume,
-				page: player.queuePage
-			});
-
-			const payload = {
-				components: [components],
-				flags: [MessageFlags.IsComponentsV2],
-				allowedMentions: { roles: [], users: [] }
-			} as const;
-
-			// Send or edit message
-			if (refreshResult.refresh) {
-				const message = await textChannel.send(payload);
-				player.messageId = message.id;
-				player.controller = message;
-				this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
-			} else if (refreshResult.message?.editable) {
-				await refreshResult.message.edit(payload);
-				this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
-			}
-		} catch (error) {
-			this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
-		}
-	}
-
-	private async shouldRefreshController(player: CustomPlayer, channel: Message['channel']): Promise<ShouldRefreshResult> {
 		const messageId = player.messageId;
-
-		// Create new message if none exists
-		if (!messageId) {
-			return { message: null, refresh: true };
+		if (messageId && player.textChannelId) {
+			const channel = this.container.client.channels.cache.get(player.textChannelId);
+			if (channel?.isSendable()) {
+				const message = await channel.messages.fetch(messageId).catch(() => null);
+				if (message?.deletable) {
+					await message.delete().catch((error) => {
+						this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
+					});
+				}
+			}
 		}
 
-		try {
-			// Fetch the controller message
-			const message = await channel.messages.fetch(messageId).catch(() => null);
+		player.messageId = null;
+		player.controller = null;
+	}
 
-			if (!message) {
-				return { message: null, refresh: true };
+	// Event handlers
+	public async onTrackStart(player: CustomPlayer): Promise<void> {
+		this.logger.debug(`Track started in guild: ${player.guildId}`);
+		
+		if (player.textChannelId && player.messageId) {
+			const channel = this.container.client.channels.cache.get(player.textChannelId);
+			if (channel?.isSendable()) {
+				// 만약 컨트롤러가 이미 마지막 메시지라면 굳이 다시 보낼 필요 없이 업데이트만 진행
+				if (channel.lastMessageId === player.messageId) {
+					this.updateController(player);
+					return;
+				}
 			}
-
-			// Check if other messages have accumulated after the controller message
-			const recentMessages = await channel.messages.fetch({
-				after: message.id,
-				limit: this.MESSAGE_FETCH_LIMIT
-			});
-
-			const shouldRefresh = recentMessages.size >= this.MESSAGE_THRESHOLD;
-
-			if (shouldRefresh) {
-				this.logger.debug(`Controller buried by ${recentMessages.size} messages, refreshing for guild: ${player.guildId}`);
-			}
-
-			return { message, refresh: shouldRefresh };
-		} catch (error) {
-			this.logger.warn(`Failed to check controller refresh status: ${error}`);
-			// Create new message on error
-			return { message: null, refresh: true };
 		}
+
+		await this.sendController(player);
+	}
+
+	public onPlayerUpdate(player: CustomPlayer): void {
+		this.logger.trace(`Player updated in guild: ${player.guildId}`);
+
+		// Ignore track loading
+		if (!player.queue.current && player.queue.tracks.length >= 0) return;
+		this.updateController(player);
+	}
+
+	public async onPlayerDestroy(player: CustomPlayer): Promise<void> {
+		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
+		await this.deleteController(player);
 	}
 
 	private async getControllerOptions(guildId: string): Promise<ControllerOptions | null> {
