@@ -1,10 +1,6 @@
 name: Run lint
 
-on:
-  pull_request:
-    branches: [ main, beta ]
-  push:
-    branches: [ main, beta ]
+on: [push, pull_request]
 jobs:
   lint:
     runs-on: ubuntu-latest 
@@ -27,7 +23,7 @@ jobs:
       - name: Setup Node.js environment
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: 'yarn'
  
       - name: Install dependencies
