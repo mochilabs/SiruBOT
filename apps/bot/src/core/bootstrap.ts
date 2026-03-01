@@ -55,10 +55,9 @@ export const main = async () => {
 			GatewayIntentBits.GuildMessageReactions,
 			GatewayIntentBits.GuildMessages,
 			GatewayIntentBits.Guilds,
-			GatewayIntentBits.GuildVoiceStates,
-			GatewayIntentBits.MessageContent
+			GatewayIntentBits.GuildVoiceStates
 		],
-		partials: [Partials.Channel, Partials.GuildMember, Partials.Message]
+		partials: [Partials.Channel, Partials.GuildMember]
 	});
 
 	try {

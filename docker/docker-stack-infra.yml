@@ -44,19 +44,6 @@ services:
         constraints:
           - node.role == manager
 
-  # lavalink:
-  #   image: sirubot/lavalink:latest
-  #   ports:
-  #     - "5000:2333"
-  #   networks:
-  #     - sirubot-network
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 1
-  #     placement:
-  #       constraints:
-  #         - node.role == manager
-
 networks:
   sirubot-network:
     driver: overlay

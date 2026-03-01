@@ -1,9 +1,11 @@
 services:
   # Application services
   bot:
-    image: sirubot/bot:latest
+    image: ghcr.io/mochilabs/sirubot-bot:latest
     env_file:
       - .env
+    environment:
+      LOGLEVEL: 3
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:8080').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
@@ -24,7 +26,7 @@ services:
           - node.role == manager
 
   shardmanager:
-    image: sirubot/shardmanager:latest
+    image: ghcr.io/mochilabs/sirubot-shardmanager:latest
     env_file:
       - .env
     environment:
@@ -50,7 +52,7 @@ services:
           - node.role == manager
 
   dashboard:
-    image: sirubot/dashboard:latest
+    image: ghcr.io/mochilabs/sirubot-dashboard:latest
     env_file:
       - .env
     environment:
