@@ -118,10 +118,32 @@ export const main = async () => {
 				uptime: process.uptime()
 			}));
 		}
+
+		// Handle gracefull shutdown
+		const shutdown = async () => {
+			client.logger.info('Shutting down gracefully...');
+			if (healthServer) {
+				healthServer.close();
+			}
+			if (container.audio) {
+				container.audio.removeAllListeners();
+			}
+			if (container.shardClient) {
+				container.shardClient.destroy();
+			}
+			await client.destroy();
+			process.exit(0);
+		};
+
+		process.on('SIGINT', shutdown);
+		process.on('SIGTERM', shutdown);
 	} catch (error) {
 		client.logger.error('Error setting up application...');
 		client.logger.fatal(error);
 		await client.destroy();
+		if (container.shardClient) {
+			container.shardClient.destroy();
+		}
 		process.exit(1);
 	}
 };

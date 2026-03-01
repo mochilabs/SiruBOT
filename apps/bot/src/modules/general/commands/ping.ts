@@ -21,14 +21,16 @@ export class PingCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		const deferReply = await interaction.deferReply({
+		const startTime = Date.now();
+			await interaction.deferReply({
 			withResponse: true
 		});
+		const endTime = Date.now();
 
-		const replyTime = Math.round(deferReply.interaction.createdTimestamp - interaction.createdTimestamp);
+		const replyTime = endTime - startTime;
 		const replyTimeInSeconds = (replyTime / 1000).toFixed(2);
 		const wsPingInSeconds = (this.container.client.ws.ping / 1000).toFixed(2);
-
+		
 		await interaction.editReply({
 			content: null,
 			embeds: [

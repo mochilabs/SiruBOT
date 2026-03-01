@@ -46,7 +46,7 @@ export class ReadyEvent extends Listener {
 				.replace(/%guilds%/g, guilds.toString())
 				.replace(/%users%/g, users.toString())
 				.replace(/%players%/g, players.toString())
-				.replace(/%ping%/g, ping.toString())
+				.replace(/%ping%/g, Math.round(ping).toString())
 				.replace(/%uptime%/g, uptime)
 				.replace(/%version%/g, versionInfo.getVersion())
 				.replace(/%branch%/g, versionInfo.getGitBranch())

@@ -47,7 +47,6 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	}
 
 	private async handlePlayerUpdate(_oldPlayerJson: any, newPlayer: CustomPlayer) {
-		this.logger.info(`Player updated: ${newPlayer.guildId}`);
 		await this.container.redisStore.getPlayerSaver().set(newPlayer);
 		await this.container.playerNotifier.onPlayerUpdate(newPlayer);
 	}
