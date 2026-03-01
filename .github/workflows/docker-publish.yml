@@ -1,11 +1,8 @@
 name: Publish Docker Image
 
 on:
-  push:
-    branches: [ "main", "beta" ]
-    tags: [ 'v*.*.*' ]
-  pull_request:
-    branches: [ "main", "beta" ]
+  release:
+    types: [published]
 
 env:
   REGISTRY: ghcr.io
@@ -56,12 +53,12 @@ jobs:
         with:
           context: .
           target: ${{ matrix.app }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             GIT_HASH=${{ github.sha }}
             GIT_BRANCH=${{ github.ref_name }}
-            VERSION=${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+            VERSION=${{ github.event.release.tag_name }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
