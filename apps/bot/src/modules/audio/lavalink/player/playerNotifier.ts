@@ -142,7 +142,7 @@ export class PlayerNotifier {
 	// Event handlers
 	public async onTrackStart(player: CustomPlayer): Promise<void> {
 		this.logger.debug(`Track started in guild: ${player.guildId}`);
-		
+
 		if (player.textChannelId && player.messageId) {
 			const channel = this.container.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {

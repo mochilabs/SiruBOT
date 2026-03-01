@@ -8,7 +8,7 @@ import * as view from '../view/nowplaying.ts';
 	name: 'nowplaying',
 	description: '현재 재생 중인 곡의 정보를 보여줘요.',
 	fullCategory: ['음악'],
-	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying'],
+	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying']
 })
 export class NowPlayingCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

@@ -22,7 +22,7 @@ export class VoiceStateUpdateListener extends Listener {
 	public override async run(oldState: VoiceState, newState: VoiceState) {
 		const guildId = oldState.guild.id;
 		const player = this.container.audio.getPlayer(guildId);
-		
+
 		if (!player) return;
 
 		// Bot moved or disconnected
@@ -32,7 +32,7 @@ export class VoiceStateUpdateListener extends Listener {
 				this.clearTimer(guildId);
 				return;
 			}
-			
+
 			// Re-evaluate the new channel
 			this.checkEmptyChannel(newState.channel!, guildId, player);
 			return;
@@ -56,10 +56,10 @@ export class VoiceStateUpdateListener extends Listener {
 		if (listeningMembers.size === 0) {
 			// Channel is empty or everyone is deafened, start timer
 			this.logger.debug(`Channel ${channel.id} is empty (or everyone deafened). Starting 5 minute leave timer for guild ${guildId}.`);
-			
+
 			// Clear existing timer if there is one
 			this.clearTimer(guildId);
-			
+
 			const timer = setTimeout(async () => {
 				this.logger.info(`Leaving empty voice channel in guild ${guildId} after 5 minutes.`);
 				if (player.textChannelId) {
@@ -68,13 +68,13 @@ export class VoiceStateUpdateListener extends Listener {
 						await textChannel.send('💤 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.');
 					}
 				}
-                // 추가 메세지 표시 안하기
-                player.set("stopByCommand", true);
+				// 추가 메세지 표시 안하기
+				player.set('stopByCommand', true);
 				await player.destroy();
-                
+
 				this.leaveTimers.delete(guildId);
 			}, this.LEAVE_TIMEOUT_MS);
-			
+
 			this.leaveTimers.set(guildId, timer);
 		} else {
 			// Channel is not empty, clear timer
