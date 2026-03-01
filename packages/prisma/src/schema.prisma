@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+  output   = "../dist"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id            String   @id
+  volume        Int      @default(10)
+  textChannelId String?
+  voiceChannelId String?
+  enableController Boolean @default(true)
+  sponsorBlockSegments String[] @default([])
+  
+  djRoleId      String?
+  repeat        String   @default("off")
+  related       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  history       GuildTrackHistory[]
+}
+
+model Track {
+  id          String   @id // YouTube ID, Spotify ID, etc.
+  title       String
+  artist      String
+  duration    Int      // Duration in milliseconds
+  thumbnail   String?
+  url         String
+  source      String   // 'youtube', 'spotify', 'soundcloud', etc.
+  
+  // Statistics
+  totalPlays  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userFavorites UserFavorite[]
+  history       GuildTrackHistory[]
+}
+
+model User {
+  id          String          @id // Discord user ID
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  favorites   UserFavorite[]
+  history     GuildTrackHistory[]
+}
+
+model GuildTrackHistory {
+  id        String   @id @default(uuid())
+  guildId   String
+  trackId   String
+  userId    String?  // Who requested the track
+  createdAt DateTime @default(now())
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([guildId, createdAt(sort: Desc)])
+}
+
+model UserFavorite {
+  userId     String
+  trackId    String
+  createdAt  DateTime @default(now())
+
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([userId, trackId])
+  @@index([trackId])
+}

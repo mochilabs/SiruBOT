@@ -1,0 +1,47 @@
+import {
+	ContainerBuilder,
+	EmbedBuilder,
+	SeparatorBuilder,
+	ThumbnailBuilder,
+	SeparatorSpacingSize,
+	EmbedFooterOptions,
+	EmbedData,
+	APIEmbed
+} from 'discord.js';
+import { isDev } from './index.js';
+import { versionInfo } from './version.js';
+import { BOT_NAME, DEFAULT_COLOR, WARN_COLOR } from './constants.js';
+
+export class ExtendedEmbedBuilder extends EmbedBuilder {
+	constructor(data?: EmbedData | APIEmbed) {
+		super(data);
+		this.setColor(DEFAULT_COLOR);
+	}
+
+	public override setFooter(options?: EmbedFooterOptions | null) {
+		return super.setFooter({
+			...options,
+			text: `${options?.text ? `${options?.text} • ` : ''}${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
+		});
+	}
+}
+
+export function buildErrorEmbed(error: string) {
+	return new ExtendedEmbedBuilder().setColor(WARN_COLOR).setDescription(`**${error}**`);
+}
+
+export function addSeparator(container: ContainerBuilder): void {
+	container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+}
+
+export function createContainer(): ContainerBuilder {
+	const container = new ContainerBuilder();
+	container.setAccentColor(DEFAULT_COLOR);
+	return container;
+}
+
+export function createThumbnail(url: string): ThumbnailBuilder {
+	const thumbnail = new ThumbnailBuilder();
+	thumbnail.setURL(url);
+	return thumbnail;
+}

@@ -1,0 +1,39 @@
+{
+    "$schema": "https://turbo.build/schema.json",
+    "tasks": {
+      "build": {
+        "dependsOn": ["^lint:fix", "^typecheck", "^generate", "^build"],
+        "outputs": ["dist/**", ".next/**", "!dist/**/*.map"]
+      },
+      "generate": {
+        "outputs": ["dist/**"]
+      },
+      "dev": {
+        "cache": false,
+        "persistent": true
+      },
+      "watch": {
+        "outputs": ["dist/**"],
+        "cache": false,
+        "persistent": true
+      },
+      "start": {
+        "dependsOn": ["build"]
+      },
+      "lint": {
+        "outputs": []
+      },
+      "lint:fix": {
+        "cache": false,
+        "outputs": []
+      },
+      "typecheck": {
+        "dependsOn": ["^generate"],
+        "outputs": [],
+        "cache": true
+      },
+      "test": {
+        "outputs": ["coverage/**"]
+      }
+    }
+}
