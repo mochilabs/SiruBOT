@@ -122,6 +122,14 @@ export class DiscordNotifier {
 		});
 	}
 
+	async allShardsReady(shardCount: number): Promise<void> {
+		await this.send({
+			title: '🎉 모든 샤드 준비 완료',
+			description: `총 **${shardCount}**개의 샤드가 모두 성공적으로 연결되고 준비되었습니다.`,
+			color: Colors.GREEN
+		});
+	}
+
 	async shardDisconnected(wsId: string, shardIds: number[], hostname?: string): Promise<void> {
 		await this.send({
 			title: '⚠️ 샤드 연결 해제',

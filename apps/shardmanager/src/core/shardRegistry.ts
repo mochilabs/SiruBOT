@@ -28,6 +28,7 @@ export class ShardRegistry {
 	private shardsPerProcess: number;
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private notifier: DiscordNotifier;
+	private previouslyAllReady: boolean = false;
 
 	constructor(shardCount: number, shardsPerProcess: number = 5, notifier: DiscordNotifier) {
 		this.shardCount = shardCount;
@@ -111,6 +112,7 @@ export class ShardRegistry {
 		this.processes.delete(wsId);
 
 		logger.info(`Released process ${wsId}, freed shards [${released.join(', ')}]`);
+		this.checkAllShardsReady();
 		return released;
 	}
 
@@ -132,7 +134,24 @@ export class ShardRegistry {
 		if (process) {
 			process.status = status;
 			logger.info(`Process ${wsId} status: ${status}`);
+			this.checkAllShardsReady();
 		}
+	}
+
+	private checkAllShardsReady(): void {
+		let readyShards = 0;
+		for (const process of this.processes.values()) {
+			if (process.status === 'ready') {
+				readyShards += process.shardIds.length;
+			}
+		}
+		
+		const isAllReady = readyShards === this.shardCount;
+		if (isAllReady && !this.previouslyAllReady) {
+			logger.info(`All ${this.shardCount} shards are now ready!`);
+			this.notifier.allShardsReady(this.shardCount).catch(err => logger.error('Failed to notify all shards ready', err));
+		}
+		this.previouslyAllReady = isAllReady;
 	}
 
 	/**
