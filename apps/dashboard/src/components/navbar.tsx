@@ -55,6 +55,17 @@ export function Navbar() {
 					<NavigationMenu.Item>
 						<NavigationMenu.Link asChild>
 							<Link 
+								href="/favorites" 
+								className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+							>
+								즐겨찾기
+							</Link>
+						</NavigationMenu.Link>
+					</NavigationMenu.Item>
+
+					<NavigationMenu.Item>
+						<NavigationMenu.Link asChild>
+							<Link 
 								href="/servers" 
 								className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
 							>
