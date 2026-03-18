@@ -3,11 +3,13 @@ import { container } from '@sapphire/framework';
 import { Awaitable, QueueStoreManager, StoredQueue } from 'lavalink-client';
 import { MemoryCache } from '@sirubot/utils';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
+import { ILogObj, Logger } from 'tslog';
 
 export class CachedQueueStore implements QueueStoreManager {
 	private cache: MemoryCache<string, string>;
 	private isRedisConnected = true;
 	private pendingWrites: Map<string, string> = new Map();
+	private _logger: Logger<ILogObj> | null = null;
 
 	constructor(private readonly redis: RedisClientType) {
 		this.cache = new MemoryCache<string, string>({
@@ -17,7 +19,10 @@ export class CachedQueueStore implements QueueStoreManager {
 	}
 
 	private get logger() {
-		return (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'queueStore' });
+		if (!this._logger) {
+			this._logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'queueStore' });
+		}
+		return this._logger;
 	}
 
 	private getKey(guildId: string): string {

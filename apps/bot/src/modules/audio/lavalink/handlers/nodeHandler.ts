@@ -142,7 +142,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	//@ts-ignore
 	private handleNodeError(node: LavalinkNode, error: Error, payload: any) {
-		this.logger.info(`Node error: ${node.options.id}`);
+		this.logger.error(`Node error: ${node.options.id}`, error, payload);
 	}
 
 	public cleanup(): void {
