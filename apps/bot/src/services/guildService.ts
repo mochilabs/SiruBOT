@@ -1,9 +1,35 @@
 import { container } from '@sapphire/framework';
 import { Guild } from '@sirubot/prisma';
+import { MemoryCache } from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
 export class GuildService {
+	// Guild settings cache (60s TTL, max 500)
+	private cache = new MemoryCache<string, Guild>({ ttl: 60_000, maxSize: 500 });
+
+	/**
+	 * Get guild settings. If cached, return from cache, otherwise upsert from DB.
+	 */
+	public async getGuild(guildId: string): Promise<Guild> {
+		const cached = this.cache.get(guildId);
+		if (cached) return cached;
+
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId },
+			update: {}
+		});
+
+		this.cache.set(guildId, guild);
+		return guild;
+	}
+
+	/** Invalidate cache (used when setter is called) */
+	private invalidateCache(guildId: string) {
+		this.cache.delete(guildId);
+	}
+
 	public async updateVolume(guildId: string, volume: number) {
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
@@ -11,43 +37,18 @@ export class GuildService {
 			update: { volume }
 		});
 
+		this.invalidateCache(guildId);
 		return guild;
 	}
 
 	public async getVolume(guildId: string) {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { volume: true }
-		});
-
-		if (guild) {
-			return guild.volume;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId },
-			select: { volume: true }
-		});
-
-		return newGuild.volume;
+		const guild = await this.getGuild(guildId);
+		return guild.volume;
 	}
 
 	public async getDJRole(guildId: string): Promise<string | null> {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { djRoleId: true }
-		});
-
-		if (guild) {
-			return guild.djRoleId;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId, djRoleId: null },
-			select: { djRoleId: true }
-		});
-
-		return newGuild.djRoleId;
+		const guild = await this.getGuild(guildId);
+		return guild.djRoleId;
 	}
 
 	public async setDJRole(guildId: string, djRoleId: string | null) {
@@ -57,6 +58,7 @@ export class GuildService {
 			update: { djRoleId }
 		});
 
+		this.invalidateCache(guildId);
 		return guild;
 	}
 
@@ -67,25 +69,8 @@ export class GuildService {
 	}
 
 	public async getRepeat(guildId: string): Promise<RepeatMode> {
-		const guild = await container.db.guild.findUnique({
-			select: {
-				repeat: true
-			},
-			where: {
-				id: guildId
-			}
-		});
-
-		if (guild) {
-			return guild.repeat as RepeatMode;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId, repeat: 'off' },
-			select: { repeat: true }
-		});
-
-		return newGuild.repeat as RepeatMode;
+		const guild = await this.getGuild(guildId);
+		return guild.repeat as RepeatMode;
 	}
 
 	public async setRepeat(guildId: string, repeat: RepeatMode): Promise<RepeatMode> {
@@ -97,25 +82,13 @@ export class GuildService {
 			select: { repeat: true }
 		});
 
+		this.invalidateCache(guildId);
 		return guild.repeat as RepeatMode;
 	}
 
 	public async getRelated(guildId: string): Promise<boolean> {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { related: true }
-		});
-
-		if (guild) {
-			return guild.related;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId, related: false },
-			select: { related: true }
-		});
-
-		return newGuild.related;
+		const guild = await this.getGuild(guildId);
+		return guild.related;
 	}
 
 	public async setRelated(guildId: string, related: boolean): Promise<boolean> {
@@ -126,23 +99,8 @@ export class GuildService {
 			select: { related: true }
 		});
 
+		this.invalidateCache(guildId);
 		return guild.related;
-	}
-
-	public async getGuild(guildId: string): Promise<Guild> {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId }
-		});
-
-		if (guild) {
-			return guild;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId }
-		});
-
-		return newGuild;
 	}
 
 	public async setDefaultTextChannel(guildId: string, textChannelId: string | null) {
@@ -151,25 +109,14 @@ export class GuildService {
 			create: { id: guildId, textChannelId },
 			update: { textChannelId }
 		});
+
+		this.invalidateCache(guildId);
 		return guild.textChannelId;
 	}
 
 	public async getDefaultTextChannel(guildId: string): Promise<string | null> {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { textChannelId: true }
-		});
-
-		if (guild) {
-			return guild.textChannelId;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId },
-			select: { textChannelId: true }
-		});
-
-		return newGuild.textChannelId;
+		const guild = await this.getGuild(guildId);
+		return guild.textChannelId;
 	}
 
 	public async setDefaultVoiceChannel(guildId: string, voiceChannelId: string | null) {
@@ -178,43 +125,19 @@ export class GuildService {
 			create: { id: guildId, voiceChannelId },
 			update: { voiceChannelId }
 		});
+
+		this.invalidateCache(guildId);
 		return guild.voiceChannelId;
 	}
 
 	public async getDefaultVoiceChannel(guildId: string): Promise<string | null> {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { voiceChannelId: true }
-		});
-
-		if (guild) {
-			return guild.voiceChannelId;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId },
-			select: { voiceChannelId: true }
-		});
-
-		return newGuild.voiceChannelId;
+		const guild = await this.getGuild(guildId);
+		return guild.voiceChannelId;
 	}
 
 	public async getEnableController(guildId: string): Promise<boolean> {
-		const guild = await container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { enableController: true }
-		});
-
-		if (guild) {
-			return guild.enableController;
-		}
-
-		const newGuild = await container.db.guild.create({
-			data: { id: guildId, enableController: true },
-			select: { enableController: true }
-		});
-
-		return newGuild.enableController;
+		const guild = await this.getGuild(guildId);
+		return guild.enableController;
 	}
 
 	public async setEnableController(guildId: string, enableController: boolean) {
@@ -223,6 +146,8 @@ export class GuildService {
 			create: { id: guildId, enableController },
 			update: { enableController }
 		});
+
+		this.invalidateCache(guildId);
 		return guild.enableController;
 	}
 }
