@@ -103,20 +103,21 @@ export class CachedPlayerSaver {
 				const playerKeys = await this.redis.keys(this.getKey('*'));
 				const data = new Map<string, string>();
 
-				for (const key of playerKeys) {
-					const playerData = await this.redis.get(key);
-					if (playerData === null) continue;
+				if (playerKeys.length > 0) {
+					const values = await this.redis.mGet(playerKeys);
+					for (const value of values) {
+						if (value === null) continue;
 
-					const playerDataJson = JSON.parse(playerData);
-					if (playerDataJson.nodeId === null || playerDataJson.sessionId === null) continue;
+						const playerDataJson = JSON.parse(value);
+						if (playerDataJson.nodeId === null || playerDataJson.sessionId === null) continue;
 
-					data.set(playerDataJson.nodeId, playerDataJson.nodeSessionId);
+						data.set(playerDataJson.nodeId, playerDataJson.nodeSessionId);
+					}
 				}
 
 				// 캐시 업데이트
 				this.nodeSessionsCache = data;
 				this.logger.trace(`Retrieved ${data.size} node sessions from Redis`);
-				console.log(data);
 				return data;
 			}
 		} catch (error) {
