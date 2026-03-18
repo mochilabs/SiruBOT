@@ -4,9 +4,11 @@ import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { LavalinkNodeOptions } from 'lavalink-client';
+import { setSentryShardTags } from './sentry.ts';
+import * as Sentry from '@sentry/node';
 
 export const main = async () => {
-	// 개발 모드: SHARD_MANAGER_URL 없으면 샤딩 없이 단독 실행
+	// Dev mode: Run standalone without sharding if SHARD_MANAGER_URL is omitted
 	const shardManagerUrl = process.env.SHARD_MANAGER_URL;
 	const isDevMode = !shardManagerUrl;
 
@@ -14,7 +16,7 @@ export const main = async () => {
 	let shardCount: number = 1;
 
 	if (!isDevMode) {
-		// 프로덕션: ShardClient로 매니저에서 샤드 ID 할당받기
+		// Production: Get shard ID assigned from manager via ShardClient
 		const { ShardClient, NoShardsAvailableError } = await import('@sirubot/shardclient');
 		const shardClient = new ShardClient({
 			serverURL: shardManagerUrl,
@@ -34,9 +36,11 @@ export const main = async () => {
 			throw error;
 		}
 
-		// 컨테이너에 shardClient 저장 (stats 보고용)
+		// Store shardClient in container (for stats reporting)
 		container.shardClient = shardClient;
 	}
+
+	setSentryShardTags(shardIds);
 
 	const client = new BotApplication({
 		logger: {
@@ -131,6 +135,8 @@ export const main = async () => {
 			if (container.shardClient) {
 				container.shardClient.destroy();
 			}
+			// Flush unsent Sentry events
+			await Sentry.close(2000);
 			await client.destroy();
 			process.exit(0);
 		};

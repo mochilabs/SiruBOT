@@ -3,7 +3,8 @@
     "tasks": {
       "build": {
         "dependsOn": ["^lint:fix", "^typecheck", "^generate", "^build"],
-        "outputs": ["dist/**", ".next/**", "!dist/**/*.map"]
+        "outputs": ["dist/**", ".next/**", "!dist/**/*.map"],
+        "env": ["SENTRY_DSN", "SENTRY_RELEASE", "SENTRY_ENVIRONMENT", "NODE_ENV"]
       },
       "generate": {
         "outputs": ["dist/**"]

@@ -26,6 +26,7 @@ declare module '@skyra/env-utilities' {
 		REGISTER_COMMANDS?: string;
 		SHARD_MANAGER_URL?: string;
 		AUTH_KEY?: string;
+		SENTRY_DSN?: string;
 	}
 }
 
