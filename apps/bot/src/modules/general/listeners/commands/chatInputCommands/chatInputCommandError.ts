@@ -20,7 +20,7 @@ export class ChatInputCommandError extends Listener {
 				if (interaction.guild) {
 					scope.setTag('guild_id', interaction.guild.id);
 					scope.setContext('guild', {
-						id: interaction.guild.id,
+						id: interaction.guild.id
 					});
 				}
 				scope.setContext('interaction', {
