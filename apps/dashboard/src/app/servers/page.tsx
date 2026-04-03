@@ -2,111 +2,79 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import type { DiscordGuild } from "@/types/discord";
+import { ArrowRight, Building2 } from "lucide-react";
 
 async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
   const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch guilds");
-  }
-
+  if (!res.ok) throw new Error("Failed to fetch guilds");
   return res.json();
 }
 
 export default async function ServersPage() {
   const session = await auth();
-
-  if (!session) {
-    redirect("/api/auth/signin?callbackUrl=/servers");
-  }
+  if (!session) redirect("/api/auth/signin?callbackUrl=/servers");
 
   const guilds = await getUserGuilds(session.accessToken!);
-
-  // Filter guilds where user has MANAGE_GUILD (0x20) or ADMINISTRATOR (0x8)
   const manageableGuilds = guilds.filter((guild) => {
     const permissions = BigInt(guild.permissions);
-    const manageGuild = BigInt(0x20);
-    const administrator = BigInt(0x8);
-    return (permissions & manageGuild) === manageGuild || (permissions & administrator) === administrator;
+    return (permissions & BigInt(0x20)) === BigInt(0x20) || (permissions & BigInt(0x8)) === BigInt(0x8);
   });
 
-  // TODO: Check against the database if the bot is actually in the server
-
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">서버 선택</h1>
-          <p className="text-gray-600">설정할 서버를 선택해주세요.</p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">
+            <span className="gradient-text">서버 선택</span>
+          </h1>
+          <p className="text-[var(--color-text-secondary)]">설정할 서버를 선택해주세요</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">{session.user.name}</p>
-            <p className="text-xs text-gray-500">{session.user.email}</p>
-          </div>
+        <div className="flex items-center gap-3 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-card)] px-4 py-2">
           {session.user.image && (
-            <Image
-              src={session.user.image}
-              alt="User Avatar"
-              width={40}
-              height={40}
-              className="rounded-full"
-            />
+            <Image src={session.user.image} alt="" width={28} height={28} className="rounded-full ring-1 ring-[var(--color-border)]" />
           )}
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">{session.user.name}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {manageableGuilds.map((guild) => {
-          const iconUrl = guild.icon
-            ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
-            : null;
-
+          const iconUrl = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null;
           return (
-            <div
-              key={guild.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
-            >
-              <div className="p-6 flex-grow">
-                <div className="flex items-center gap-4 mb-4">
+            <a key={guild.id} href={`/servers/${guild.id}`} className="glass-card group flex flex-col overflow-hidden">
+              <div className="flex-1 p-5">
+                <div className="flex items-center gap-4">
                   {iconUrl ? (
-                    <Image
-                      src={iconUrl}
-                      alt={`${guild.name} icon`}
-                      width={48}
-                      height={48}
-                      className="rounded-full"
-                    />
+                    <Image src={iconUrl} alt={`${guild.name} icon`} width={48} height={48} className="shrink-0 rounded-xl ring-1 ring-[var(--color-border)]" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-lg">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent2-subtle)] border border-[var(--color-border)] text-lg font-semibold text-[var(--color-text-secondary)]">
                       {guild.name.charAt(0)}
                     </div>
                   )}
-                  <h3 className="font-semibold text-gray-900 line-clamp-2">
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)] line-clamp-2 transition-colors group-hover:text-[var(--color-accent)]">
                     {guild.name}
                   </h3>
                 </div>
               </div>
-              <div className="bg-gray-50 px-6 py-4 mt-auto border-t border-gray-100">
-                {/* For now we just show a placeholder manage button until we integrate bot detection */}
-                <a
-                  href={`/servers/${guild.id}`}
-                  className="block w-full text-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  관리하기
-                </a>
+              <div className="border-t border-[var(--color-border)] px-5 py-3">
+                <div className="flex items-center justify-between text-xs font-medium text-[var(--color-text-muted)] transition-colors group-hover:text-[var(--color-accent)]">
+                  <span>관리하기</span>
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </div>
               </div>
-            </div>
+            </a>
           );
         })}
 
         {manageableGuilds.length === 0 && (
-          <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
-            <p className="text-gray-500">관리할 수 있는 서버가 없습니다.</p>
+          <div className="col-span-full glass-panel p-16 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-accent-subtle)] border border-[var(--color-border)] mb-5">
+              <Building2 size={28} className="text-[var(--color-text-muted)]" />
+            </div>
+            <h2 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">관리할 수 있는 서버가 없습니다</h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">서버 관리 권한이 있는 서버가 여기에 표시됩니다</p>
           </div>
         )}
       </div>

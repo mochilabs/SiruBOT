@@ -1,38 +1,32 @@
 import { TrackList } from "@/components/track";
 import { db } from "@/lib/db";
 import { Suspense } from "react";
+import { Music } from "lucide-react";
 
-// Prerender ignore
 export const dynamic = "force-dynamic";
+
 async function getPopularTracks() {
-	const tracks = await db.track.findMany({
-		orderBy: {
-			totalPlays: 'desc'
-		},
-		take: 50 // 상위 50곡
-	});
-	
-	return tracks;
+	return db.track.findMany({ orderBy: { totalPlays: 'desc' }, take: 50 });
 }
 
 function TrackSkeleton() {
 	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">인기 곡 순위</h1>
-				<p className="text-gray-600">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
+		<div className="space-y-8">
+			<div className="space-y-2">
+				<div className="skeleton h-8 w-40" />
+				<div className="skeleton h-5 w-72" />
 			</div>
-			
-			<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-				<div className="space-y-4">
+			<div className="glass-panel p-2 sm:p-4">
+				<div className="space-y-1">
 					{Array.from({ length: 10 }).map((_, i) => (
-						<div key={i} className="flex items-center space-x-4 p-4">
-							<div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+						<div key={i} className="flex items-center gap-4 px-3 py-3 sm:px-4">
+							<div className="skeleton h-8 w-8 shrink-0 rounded-lg" />
+							<div className="skeleton h-11 w-11 shrink-0 rounded-lg" />
 							<div className="flex-1 space-y-2">
-								<div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-								<div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+								<div className="skeleton h-4 w-3/4" />
+								<div className="skeleton h-3 w-1/2" />
 							</div>
-							<div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
+							<div className="skeleton h-4 w-14" />
 						</div>
 					))}
 				</div>
@@ -45,21 +39,25 @@ async function TrackContent() {
 	const tracks = await getPopularTracks();
 
 	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">인기 곡 순위</h1>
-				<p className="text-gray-600">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
+		<div className="space-y-8">
+			<div className="space-y-2">
+				<h1 className="text-3xl font-bold tracking-tight">
+					<span className="gradient-text">인기 곡 순위</span>
+				</h1>
+				<p className="text-[var(--color-text-secondary)]">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
 			</div>
 
 			{tracks.length > 0 ? (
-				<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
+				<div className="glass-panel p-2 sm:p-4">
 					<TrackList tracks={tracks} />
 				</div>
 			) : (
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 sm:p-12 text-center">
-					<span className="text-6xl mb-4 block">🎵</span>
-					<h2 className="text-xl font-medium text-gray-900 mb-2">아직 재생된 곡이 없어요</h2>
-					<p className="text-gray-500">봇에서 음악을 재생하면 여기에 표시됩니다</p>
+				<div className="glass-panel p-16 text-center">
+					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-accent-subtle)] border border-[var(--color-border)] mb-5">
+						<Music size={28} className="text-[var(--color-text-muted)]" />
+					</div>
+					<h2 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">아직 재생된 곡이 없어요</h2>
+					<p className="text-sm text-[var(--color-text-secondary)]">봇에서 음악을 재생하면 여기에 표시됩니다</p>
 				</div>
 			)}
 		</div>

@@ -25,9 +25,9 @@ function formatMemory(bytes: number): string {
 
 export function ProcessCard({ process, index }: { process: ShardProcessInfo; index: number }) {
 	return (
-		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+		<div className="glass-card p-5">
 			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-sm font-semibold text-gray-900">
+				<h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
 					Process #{index + 1}
 				</h3>
 				<StatusBadge status={process.status} />
@@ -37,35 +37,30 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 				{process.shardIds.map((id) => (
 					<span
 						key={id}
-						className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200"
+						className="inline-flex items-center rounded-md bg-[var(--color-accent-subtle)] border border-[var(--color-border)] px-2 py-0.5 text-xs font-mono font-medium text-[var(--color-text-secondary)]"
 					>
 						Shard {id}
 					</span>
 				))}
 			</div>
 
-			<div className="grid grid-cols-2 gap-3 text-sm">
-				<div>
-					<span className="text-gray-500">서버</span>
-					<p className="font-medium text-gray-900">{process.guilds.toLocaleString()}</p>
-				</div>
-				<div>
-					<span className="text-gray-500">플레이어</span>
-					<p className="font-medium text-gray-900">{process.players.toLocaleString()}</p>
-				</div>
-				<div>
-					<span className="text-gray-500">메모리</span>
-					<p className="font-medium text-gray-900">{formatMemory(process.memoryUsage)}</p>
-				</div>
-				<div>
-					<span className="text-gray-500">업타임</span>
-					<p className="font-medium text-gray-900">{formatUptime(process.uptime)}</p>
-				</div>
+			<div className="grid grid-cols-2 gap-3">
+				{[
+					{ label: "서버", value: process.guilds.toLocaleString() },
+					{ label: "플레이어", value: process.players.toLocaleString() },
+					{ label: "메모리", value: formatMemory(process.memoryUsage) },
+					{ label: "업타임", value: formatUptime(process.uptime) },
+				].map((stat) => (
+					<div key={stat.label} className="rounded-lg bg-[var(--color-bg-elevated)] p-2.5">
+						<span className="text-xs text-[var(--color-text-muted)]">{stat.label}</span>
+						<p className="mt-0.5 text-sm font-semibold text-[var(--color-text-primary)] tabular-nums">{stat.value}</p>
+					</div>
+				))}
 			</div>
 
-			<div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs text-gray-400">
-				<span>마지막 하트비트: {formatRelativeTime(process.lastHeartbeat)}</span>
-				<span className="font-mono">{process.wsId.slice(0, 8)}</span>
+			<div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-text-muted)]">
+				<span>하트비트: {formatRelativeTime(process.lastHeartbeat)}</span>
+				<span className="font-mono opacity-60">{process.wsId.slice(0, 8)}</span>
 			</div>
 		</div>
 	);

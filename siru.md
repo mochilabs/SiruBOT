@@ -1,0 +1,5 @@
+# simple
+
+### Created with Turborepo Generators
+
+Read the docs at [turborepo.dev](https://turborepo.dev/docs/guides/generating-code).
