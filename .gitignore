@@ -21,6 +21,11 @@ config.ts
 *.heapsnapshot
 *.log
 
+# Lavalink
+lavalink/Lavalink.jar
+lavalink/plugins/*.jar
+lavalink/logs/
+
 # Ignore npm lockfiles file
 package-lock.json
 
