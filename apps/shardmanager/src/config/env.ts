@@ -27,23 +27,6 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	console.log('Loading environment variables...');
-
-	const sensitiveKeys = ['DISCORD_TOKEN', 'AUTH_KEY', 'DISCORD_WEBHOOK_URL'];
-	const envKeys = Object.keys(process.env)
-		.map((key) => (sensitiveKeys.includes(key) ? `${key} (masked)` : key))
-		.join(', ');
-
-	console.log('Current process.env keys:', envKeys);
-	console.log('Specific Env Check:', {
-		PORT: process.env.PORT,
-		SHARD_COUNT: process.env.SHARD_COUNT,
-		LOGLEVEL: process.env.LOGLEVEL,
-		SHARD_MANAGER_URL: process.env.SHARD_MANAGER_URL,
-		// Mask token
-		DISCORD_TOKEN: process.env.DISCORD_TOKEN ? '****' : undefined
-	});
-
 	const result = envSchema.safeParse(process.env);
 
 	if (!result.success) {
