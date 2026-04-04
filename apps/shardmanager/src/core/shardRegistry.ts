@@ -149,7 +149,7 @@ export class ShardRegistry {
 		const isAllReady = readyShards === this.shardCount;
 		if (isAllReady && !this.previouslyAllReady) {
 			logger.info(`All ${this.shardCount} shards are now ready!`);
-			this.notifier.allShardsReady(this.shardCount).catch((err) => logger.error('Failed to notify all shards ready', err));
+			this.notifier.allShardsReady(this.shardCount).catch(err => logger.error('Failed to notify all shards ready', err));
 		}
 		this.previouslyAllReady = isAllReady;
 	}
