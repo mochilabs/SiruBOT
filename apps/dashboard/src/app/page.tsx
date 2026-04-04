@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { Music, SlidersHorizontal, BarChart3, ArrowRight } from "lucide-react";
+import {
+  Music,
+  SlidersHorizontal,
+  BarChart3,
+  ArrowRight,
+  Zap,
+  Shield,
+  PlayCircle,
+} from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 
 export default async function Home() {
@@ -8,154 +16,195 @@ export default async function Home() {
 
   const features = [
     {
-      icon: <Music size={22} />,
-      title: "고음질 음악 재생",
+      icon: <Music className="text-[var(--color-accent)]" size={24} />,
+      title: "고음질 오디오 스트리밍",
       description:
-        "YouTube, Spotify, SoundCloud 등 다양한 소스에서 고음질 음악을 스트리밍합니다.",
+        "최적화된 Lavalink 노드를 통해 끊김 없는 고해상도 음악을 제공합니다. YouTube, Spotify 등 다양한 플랫폼 완벽 지원.",
       href: "/track",
     },
     {
-      icon: <SlidersHorizontal size={22} />,
-      title: "서버별 설정",
+      icon: (
+        <SlidersHorizontal className="text-[var(--color-accent2)]" size={24} />
+      ),
+      title: "서버 맞춤형 제어",
       description:
-        "볼륨, 반복, DJ 모드 등 서버마다 개별적인 음악 설정을 관리하세요.",
+        "서버별 기본 볼륨, 권한 설정, 24/7 모드 등 디테일한 설정을 웹 대시보드에서 클릭 몇 번으로 관리하세요.",
       href: "/servers",
     },
     {
-      icon: <BarChart3 size={22} />,
+      icon: <BarChart3 className="text-sky-400" size={24} />,
       title: "실시간 모니터링",
-      description: "샤드 상태, 서버 수, 메모리 사용량을 실시간으로 확인하세요.",
+      description:
+        "봇의 현재 상태, 샤드 핑, 메모리 점유율을 실시간 대시보드에서 투명하게 확인하고 제어할 수 있습니다.",
       href: "/shards",
+    },
+    {
+      icon: <Zap className="text-yellow-400" size={24} />,
+      title: "빠른 반응속도",
+      description:
+        "명령어 입력 즉시 반응하는 최적화된 아키텍처. 딜레이 없는 쾌적한 음악 제어를 경험하세요.",
+      href: "#",
+    },
+    {
+      icon: <Shield className="text-emerald-400" size={24} />,
+      title: "안정적인 인프라",
+      description:
+        "자동 복구 시스템과 로드 밸런싱을 통해 99.9%의 업타임을 보장합니다.",
+      href: "#",
+    },
+    {
+      icon: <PlayCircle className="text-rose-400" size={24} />,
+      title: "스마트 플레이리스트",
+      description:
+        "당신만의 플레이리스트를 저장하고 클릭 한 번으로 서버에 바로 재생하세요.",
+      href: "#",
     },
   ];
 
   return (
-    <div className="space-y-16 sm:space-y-24 lg:space-y-32">
-      {/* Hero */}
-      <section className="relative flex flex-col items-center justify-center py-28 text-center sm:py-36">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="orb orb-violet absolute left-1/2 top-1/3 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 animate-glow-pulse" />
-          <div
-            className="orb orb-lavender absolute -left-20 top-2/3 h-[400px] w-[400px] animate-glow-pulse"
-            style={{ animationDelay: "1.5s" }}
-          />
-          <div
-            className="orb orb-mixed absolute -right-20 top-1/4 h-[350px] w-[350px] animate-glow-pulse"
-            style={{ animationDelay: "3s" }}
-          />
+    <div className="space-y-20 sm:space-y-32 pb-20">
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
+        {/* Subtle Ambient Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center">
+          <div className="w-[800px] h-[800px] rounded-full bg-[var(--color-accent)]/5 blur-[120px] opacity-70" />
+          <div className="w-[600px] h-[600px] rounded-full bg-sky-500/5 blur-[100px] opacity-50 -ml-40" />
         </div>
 
-        <div className="relative z-10 space-y-10">
-          <div className="animate-fade-in-up space-y-6">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-[var(--color-accent-subtle)] border border-[var(--color-border-accent)] shadow-lg shadow-[var(--color-accent-glow)] animate-float">
-              <span className="text-5xl">🎵</span>
-            </div>
-            <h1 className="text-5xl font-extrabold tracking-tight text-balance sm:text-7xl lg:text-8xl">
-              <span className="gradient-text">유하리</span>
-            </h1>
-            <p className="mx-auto max-w-lg text-lg text-[var(--color-text-secondary)] sm:text-xl leading-relaxed">
-              디스코드에서 최고의 음악 경험을 제공하는
-              <br className="hidden sm:block" />
-              스마트 뮤직 봇
-            </p>
+        <div className="relative z-10 flex flex-col items-center text-center px-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-[var(--color-text-secondary)] mb-8 animate-fade-in-up">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            V2.0 대시보드 업데이트
           </div>
 
-          <div className="animate-fade-in-up stagger-2 flex flex-wrap items-center justify-center gap-4 opacity-0">
+          <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-balance leading-[1.1] mb-6 animate-fade-in-up stagger-1">
+            디스코드 음악의 <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent)] to-sky-400">
+              새로운 기준, 유하리
+            </span>
+          </h1>
+
+          <p className="max-w-2xl text-lg sm:text-xl text-[var(--color-text-secondary)] mb-10 leading-relaxed animate-fade-in-up stagger-2">
+            복잡한 명령어는 잊으세요. 강력한 웹 대시보드와 압도적인 음질로{" "}
+            <br className="hidden sm:block" />
+            당신의 디스코드 서버에 완벽한 음악 경험을 선사합니다.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up stagger-3">
+            <a
+              href="https://discord.com/oauth2/authorize?client_id=1457415706495946957&permissions=0&scope=bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-black font-semibold hover:bg-gray-100 transition-all duration-200"
+            >
+              <FaDiscord size={20} className="text-[#5865F2]" />
+              디스코드에 추가
+            </a>
             {session ? (
-              <Link href="/servers" className="btn-accent text-base">
-                서버 관리하기
+              <Link
+                href="/servers"
+                className="w-full sm:w-auto flex items-center justify-center px-8 py-4 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition-all duration-200"
+              >
+                대시보드 이동
               </Link>
             ) : (
-              <Link href="/login" className="btn-accent text-base">
-                시작하기
+              <Link
+                href="/login"
+                className="w-full sm:w-auto flex items-center justify-center px-8 py-4 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition-all duration-200"
+              >
+                대시보드 로그인
               </Link>
             )}
-            <Link href="/track" className="btn-ghost text-base">
-              인기 곡 보기
-            </Link>
           </div>
 
-          <div className="animate-fade-in-up stagger-3 opacity-0">
-            <div className="inline-flex items-center gap-6 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-card)] px-6 py-3 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)] animate-pulse" />
-                <span className="text-[var(--color-text-muted)]">온라인</span>
-              </div>
-              <div className="h-4 w-px bg-[var(--color-border)]" />
-              <span className="text-[var(--color-text-secondary)]">
-                YouTube · Spotify · SoundCloud
-              </span>
+          {/* Quick Stats */}
+          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 border-t border-white/10 pt-10 w-full max-w-4xl animate-fade-in-up stagger-4">
+            <div className="flex flex-col items-center">
+              <span className="text-3xl font-bold text-white">99.9%</span>
+              <span className="text-sm text-gray-400 mt-1">업타임 보장</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-3xl font-bold text-white">0ms</span>
+              <span className="text-sm text-gray-400 mt-1">오디오 딜레이</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-3xl font-bold text-white">24/7</span>
+              <span className="text-sm text-gray-400 mt-1">연중무휴 재생</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-3xl font-bold text-white">∞</span>
+              <span className="text-sm text-gray-400 mt-1">무제한 트랙</span>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="section-divider" />
-
-      {/* Features */}
-      <section className="space-y-16">
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-5xl">
-            <span className="gradient-text-subtle">필요한 모든 기능</span>
+      {/* Features Section */}
+      <section className="px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            서비스형 봇의 압도적인 차이
           </h2>
-          <p className="text-[var(--color-text-secondary)] max-w-lg mx-auto text-lg">
-            유하리는 음악 감상에 필요한 모든 것을 제공합니다.
+          <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+            단순히 음악을 트는 것을 넘어, 서버 관리자와 유저 모두가 만족할 수
+            있는 강력한 기능들을 제공합니다.
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, i) => (
             <Link
-              key={feature.href}
+              key={feature.title}
               href={feature.href}
-              className={`glass-card group relative overflow-hidden p-8 space-y-5 opacity-0 animate-fade-in-up stagger-${i + 1}`}
+              className={`group flex flex-col p-8 rounded-2xl bg-[#161618] border border-white/5 hover:border-[var(--color-accent)]/30 hover:bg-[#1c1c1f] transition-all duration-300 animate-fade-in-up stagger-${(i % 3) + 1}`}
             >
-              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--color-accent-glow)] blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-accent-subtle)] border border-[var(--color-border-accent)] text-[var(--color-accent)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-[var(--color-accent-glow)]">
+              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 {feature.icon}
               </div>
-              <h3 className="relative text-lg font-semibold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)] transition-colors duration-300">
+              <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-[var(--color-accent)] transition-colors duration-300">
                 {feature.title}
               </h3>
-              <p className="relative text-sm text-[var(--color-text-secondary)] leading-relaxed">
+              <p className="text-gray-400 leading-relaxed text-sm flex-grow">
                 {feature.description}
               </p>
-              <div className="relative flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)] transition-all duration-300 group-hover:text-[var(--color-accent)] group-hover:gap-2">
-                자세히 보기
-                <ArrowRight size={14} />
+              <div className="mt-6 flex items-center text-sm font-medium text-gray-500 group-hover:text-white transition-colors duration-300">
+                자세히 알아보기{" "}
+                <ArrowRight
+                  size={16}
+                  className="ml-2 group-hover:translate-x-1 transition-transform"
+                />
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      <div className="section-divider" />
+      {/* CTA Section */}
+      <section className="px-4 max-w-5xl mx-auto">
+        <div className="relative rounded-3xl bg-gradient-to-br from-[#1c1c1f] to-[#0f0f11] border border-white/10 p-12 text-center overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-accent)]/10 blur-[80px] rounded-full" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-500/10 blur-[80px] rounded-full" />
 
-      {/* Bottom CTA */}
-      <section className="relative overflow-hidden glass-panel p-12 text-center sm:p-20">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="orb orb-violet absolute -right-32 -top-32 h-80 w-80" />
-          <div className="orb orb-lavender absolute -bottom-32 -left-32 h-80 w-80" />
-        </div>
-        <div className="relative z-10 space-y-8">
-          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-5xl">
-            <span className="gradient-text">지금 시작하세요</span>
-          </h2>
-          <p className="mx-auto max-w-md text-[var(--color-text-secondary)] text-lg">
-            유하리를 서버에 추가하고
-            <br />
-            최고의 음악 경험을 시작하세요.
-          </p>
-          <a
-            href="https://discord.com/oauth2/authorize?client_id=1457415706495946957&permissions=0&scope=bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-accent inline-flex items-center gap-2 text-base"
-          >
-            <FaDiscord size={18} />
-            디스코드에 추가하기
-          </a>
+          <div className="relative z-10 space-y-6">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white">
+              서버의 격을 높일 시간입니다.
+            </h2>
+            <p className="text-gray-400 max-w-xl mx-auto text-lg">
+              수만 개의 서버가 이미 유하리와 함께하고 있습니다. 지금 바로
+              추가하고 프리미엄 음악 봇을 경험하세요.
+            </p>
+            <div className="pt-4">
+              <a
+                href="https://discord.com/oauth2/authorize?client_id=1457415706495946957&permissions=0&scope=bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[var(--color-accent)] text-white font-semibold hover:bg-[var(--color-accent-hover)] hover:-translate-y-1 transition-all duration-300 shadow-[0_0_30px_rgba(167,139,250,0.3)] hover:shadow-[0_0_40px_rgba(167,139,250,0.5)]"
+              >
+                <FaDiscord size={20} />
+                유하리 초대하기
+              </a>
+            </div>
+          </div>
         </div>
       </section>
     </div>

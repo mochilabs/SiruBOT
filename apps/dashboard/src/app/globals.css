@@ -1,67 +1,67 @@
 @import "tailwindcss";
-@import "@radix-ui/themes/styles.css";
 
-/* ============================================
-   유하리 Design System — Warm Dark / Violet
-   ============================================ */
+/*
+  Modern SaaS Dark Theme for SiruBot (유하리)
+  Inspired by premium services like Martine, Vercel, Linear.
+*/
 
 @theme {
   /* --- Background --- */
-  --color-bg-primary: #0f0f11;
-  --color-bg-secondary: #161618;
-  --color-bg-tertiary: #1c1c1f;
-  --color-bg-card: rgba(22, 22, 24, 0.7);
-  --color-bg-card-hover: rgba(30, 30, 34, 0.8);
-  --color-bg-elevated: rgba(28, 28, 32, 0.8);
+  --color-bg-primary: #09090b; /* Very dark zinc */
+  --color-bg-secondary: #121214;
+  --color-bg-tertiary: #18181b;
+  --color-bg-card: #121214;
+  --color-bg-card-hover: #18181b;
+  --color-bg-elevated: #1e1e22;
 
-  /* --- Accent (soft violet) --- */
-  --color-accent: #a78bfa;
-  --color-accent-hover: #8b5cf6;
-  --color-accent-glow: rgba(167, 139, 250, 0.12);
-  --color-accent-subtle: rgba(167, 139, 250, 0.06);
+  /* --- Accent (Primary: Light Purple) --- */
+  --color-accent: #b19cd9;
+  --color-accent-hover: #9b82c6;
+  --color-accent-glow: rgba(177, 156, 217, 0.15);
+  --color-accent-subtle: rgba(177, 156, 217, 0.08);
 
-  /* --- Secondary accent (warm lavender) --- */
-  --color-accent2: #c4b5fd;
-  --color-accent2-hover: #a78bfa;
-  --color-accent2-glow: rgba(196, 181, 253, 0.1);
-  --color-accent2-subtle: rgba(196, 181, 253, 0.05);
+  /* --- Secondary accent (Sky Blue) --- */
+  --color-accent2: #87ceeb;
+  --color-accent2-hover: #6ebde0;
+  --color-accent2-glow: rgba(135, 206, 235, 0.15);
+  --color-accent2-subtle: rgba(135, 206, 235, 0.08);
 
   /* --- Text --- */
-  --color-text-primary: #f0f0f0;
+  --color-text-primary: #fafafa;
   --color-text-secondary: #a1a1aa;
   --color-text-muted: #71717a;
 
   /* --- Border --- */
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-hover: rgba(255, 255, 255, 0.12);
-  --color-border-accent: rgba(167, 139, 250, 0.2);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+  --color-border-accent: rgba(177, 156, 217, 0.3);
 
   /* --- Status --- */
-  --color-success: #4ade80;
+  --color-success: #34d399;
   --color-warning: #fbbf24;
   --color-error: #f87171;
-  --color-info: #a78bfa;
+  --color-info: #87ceeb;
 
-  /* --- shadcn/ui --- */
-  --background: oklch(0.12 0.01 270);
-  --foreground: oklch(0.95 0.005 270);
-  --card: oklch(0.15 0.015 270);
-  --card-foreground: oklch(0.95 0.005 270);
-  --popover: oklch(0.15 0.015 270);
-  --popover-foreground: oklch(0.95 0.005 270);
-  --primary: oklch(0.72 0.18 260);
-  --primary-foreground: oklch(0.12 0.01 270);
-  --secondary: oklch(0.18 0.015 270);
-  --secondary-foreground: oklch(0.95 0.005 270);
-  --muted: oklch(0.22 0.01 270);
-  --muted-foreground: oklch(0.55 0.01 270);
-  --accent-shadcn: oklch(0.22 0.015 270);
-  --accent-shadcn-foreground: oklch(0.95 0.005 270);
-  --destructive: oklch(0.58 0.2 25);
-  --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.22 0.01 270);
-  --input: oklch(0.22 0.01 270);
-  --ring: oklch(0.72 0.18 260);
+  /* --- shadcn/ui overrides --- */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 260 40% 73%;
+  --primary-foreground: 240 5.9% 10%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent-shadcn: 240 3.7% 15.9%;
+  --accent-shadcn-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 260 40% 73%;
   --radius: 0.75rem;
 }
 
@@ -82,30 +82,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
-}
-
-/* --- Subtle noise --- */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  opacity: 0.015;
-  pointer-events: none;
-  z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Removed the heavy SVG noise for a cleaner solid look */
 }
 
 /* === Scrollbar === */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
@@ -113,8 +103,8 @@ body::before {
 
 /* === Selection === */
 ::selection {
-  background-color: var(--color-accent);
-  color: var(--color-bg-primary);
+  background-color: var(--color-accent-subtle);
+  color: var(--color-accent);
 }
 
 /* ============================================
@@ -123,7 +113,7 @@ body::before {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -138,135 +128,63 @@ body::before {
     opacity: 1;
   }
 }
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-@keyframes glow-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-.animate-slide-down {
-  animation: slideDown 0.3s ease-out forwards;
-}
-.animate-float {
-  animation: float 5s ease-in-out infinite;
-}
-.animate-glow-pulse {
-  animation: glow-pulse 4s ease-in-out infinite;
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
 .stagger-1 {
-  animation-delay: 0.08s;
+  animation-delay: 0.1s;
 }
 .stagger-2 {
-  animation-delay: 0.16s;
+  animation-delay: 0.2s;
 }
 .stagger-3 {
-  animation-delay: 0.24s;
+  animation-delay: 0.3s;
 }
 .stagger-4 {
-  animation-delay: 0.32s;
-}
-.stagger-5 {
   animation-delay: 0.4s;
-}
-.stagger-6 {
-  animation-delay: 0.48s;
 }
 
 /* ============================================
-   Component tokens
+   Component tokens (SaaS Style)
    ============================================ */
 
-/* --- Glass card --- */
-.glass-card {
+/* --- Clean Solid Card (replaces blurry glass-card) --- */
+.glass-card,
+.saas-card {
   background: var(--color-bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  transition:
-    background 0.3s ease,
-    border-color 0.3s ease,
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
-.glass-card:hover {
+.glass-card:hover,
+.saas-card:hover {
   background: var(--color-bg-card-hover);
   border-color: var(--color-border-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5);
 }
 
-/* --- Glass nav --- */
+/* --- Navigation --- */
 .glass-nav {
-  background: rgba(15, 15, 17, 0.85);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  background: rgba(9, 9, 11, 0.8);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
 }
 
-/* --- Glass panel --- */
+/* --- Panels --- */
 .glass-panel {
-  background: rgba(22, 22, 24, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: 20px;
 }
 
-/* --- Stat card --- */
-.stat-card {
-  background: var(--color-bg-card);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  transition:
-    background 0.3s ease,
-    border-color 0.3s ease;
-}
-.stat-card:hover {
-  border-color: var(--color-border-hover);
-  background: var(--color-bg-card-hover);
-}
-
-/* --- Gradient text (violet → lavender) --- */
+/* --- Gradient text --- */
 .gradient-text {
   background: linear-gradient(
     135deg,
@@ -277,175 +195,11 @@ body::before {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.gradient-text-subtle {
-  background: linear-gradient(
-    135deg,
-    var(--color-text-primary) 0%,
-    var(--color-text-secondary) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
 
-/* --- Buttons --- */
-.btn-accent {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent) 0%,
-    var(--color-accent2) 100%
-  );
-  color: var(--color-bg-primary);
-  font-weight: 600;
-  padding: 12px 24px;
-  border-radius: 14px;
-  border: none;
-  cursor: pointer;
-  transition:
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s ease;
-}
-.btn-accent:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 24px var(--color-accent-glow),
-    0 0 0 1px var(--color-border-accent);
-}
-.btn-accent:active {
-  transform: translateY(0);
-}
-
-.btn-ghost {
-  background: var(--color-accent-subtle);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  padding: 12px 24px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition:
-    background 0.3s ease,
-    border-color 0.3s ease,
-    color 0.3s ease;
-}
-.btn-ghost:hover {
-  background: var(--color-accent2-subtle);
-  border-color: var(--color-border-hover);
-  color: var(--color-text-primary);
-}
-
-/* --- Divider --- */
-.section-divider {
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--color-border-hover),
-    transparent
-  );
-}
-
-/* --- Orbs (violet / lavender) --- */
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  pointer-events: none;
-}
-.orb-violet {
-  background: radial-gradient(
-    circle,
-    rgba(167, 139, 250, 0.08) 0%,
-    transparent 70%
-  );
-}
-.orb-lavender {
-  background: radial-gradient(
-    circle,
-    rgba(196, 181, 253, 0.06) 0%,
-    transparent 70%
-  );
-}
-.orb-mixed {
-  background: radial-gradient(
-    circle,
-    rgba(181, 146, 226, 0.05) 0%,
-    transparent 70%
-  );
-}
-
-/* --- Skeleton --- */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-border) 25%,
-    var(--color-border-hover) 50%,
-    var(--color-border) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
-  border-radius: 8px;
-}
-
-/* --- Track row --- */
-.track-row {
-  transition: background 0.2s ease;
-  border-radius: 10px;
-}
-.track-row:hover {
-  background: var(--color-accent-subtle);
-}
-
-/* --- Rank badge --- */
-.rank-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-variant-numeric: tabular-nums;
-}
-.rank-badge.top-3 {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent-subtle),
-    var(--color-accent2-subtle)
-  );
-  color: var(--color-accent);
-  border-radius: 8px;
-  font-weight: 700;
-}
-
-/* ============================================
-   Accessibility
-   ============================================ */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  .glass-card:hover,
-  .btn-accent:hover {
-    transform: none;
-  }
-}
-
+/* --- Focus States --- */
 a:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-  border-radius: 8px;
-}
-
-/* ============================================
-   Radix overrides
-   ============================================ */
-.radix-themes {
-  --color-background: var(--color-bg-primary);
-  --color-panel-solid: var(--color-bg-secondary);
-  --color-panel-translucent: rgba(15, 15, 17, 0.9);
-  --color-surface: var(--color-bg-card);
-  --color-overlay: rgba(15, 15, 17, 0.85);
-  --color-background-overlay: rgba(15, 15, 17, 0.7);
+  border-radius: inherit;
 }
