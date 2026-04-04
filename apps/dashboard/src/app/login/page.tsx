@@ -45,6 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <button
               type="submit"
               className="group relative w-full flex justify-center items-center py-3.5 px-4 text-sm font-semibold rounded-xl text-white bg-[#5865F2] transition-all duration-300 hover:bg-[#4752C4] hover:shadow-lg hover:shadow-[#5865F2]/20 hover:-translate-y-0.5"
+              aria-label="Discord로 계속하기"
             >
               <FaDiscord size={18} className="mr-3" />
               Discord로 계속하기

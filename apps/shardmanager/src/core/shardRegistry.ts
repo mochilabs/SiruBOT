@@ -23,6 +23,7 @@ export interface ShardProcessInfo {
 
 export class ShardRegistry {
 	private processes: Map<string, ShardProcessInfo> = new Map(); // wsId -> info
+	private shardToWsId: Map<number, string> = new Map(); // shardId -> wsId
 	private allocatedShards: Set<number> = new Set();
 	private shardCount: number;
 	private shardsPerProcess: number;
@@ -87,6 +88,10 @@ export class ShardRegistry {
 			wsConnection: ws
 		});
 
+		for (const shardId of shardIds) {
+			this.shardToWsId.set(shardId, wsId);
+		}
+
 		logger.info(`Registered process ${wsId}${hostname ? ` (${hostname})` : ''} with shards [${shardIds.join(', ')}]`);
 	}
 
@@ -106,6 +111,7 @@ export class ShardRegistry {
 
 		for (const id of process.shardIds) {
 			this.allocatedShards.delete(id);
+			this.shardToWsId.delete(id);
 		}
 
 		const released = process.shardIds;
@@ -149,7 +155,7 @@ export class ShardRegistry {
 		const isAllReady = readyShards === this.shardCount;
 		if (isAllReady && !this.previouslyAllReady) {
 			logger.info(`All ${this.shardCount} shards are now ready!`);
-			this.notifier.allShardsReady(this.shardCount).catch(err => logger.error('Failed to notify all shards ready', err));
+			this.notifier.allShardsReady(this.shardCount).catch((err) => logger.error('Failed to notify all shards ready', err));
 		}
 		this.previouslyAllReady = isAllReady;
 	}
@@ -181,13 +187,14 @@ export class ShardRegistry {
 	 * Get a specific shard's process info
 	 */
 	public getProcessByShardId(shardId: number): (Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }) | null {
-		for (const [wsId, info] of this.processes.entries()) {
-			if (info.shardIds.includes(shardId)) {
-				const { wsConnection, ...rest } = info;
-				return { wsId, ...rest };
-			}
-		}
-		return null;
+		const wsId = this.shardToWsId.get(shardId);
+		if (!wsId) return null;
+
+		const info = this.processes.get(wsId);
+		if (!info) return null;
+
+		const { wsConnection, ...rest } = info;
+		return { wsId, ...rest };
 	}
 
 	/**

@@ -74,6 +74,7 @@ function TrackItem({ track, rank, isLast }: { track: TrackType; rank: number; is
 							rel="noopener noreferrer"
 							className="hidden rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-secondary)] sm:block"
 							title="원본 링크로 이동"
+							aria-label={`${track.title} 원본 링크로 이동`}
 						>
 							<ExternalLink size={16} />
 						</a>
