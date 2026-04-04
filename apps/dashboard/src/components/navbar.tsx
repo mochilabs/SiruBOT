@@ -166,6 +166,7 @@ function AuthButton({ mobile = false }: { mobile?: boolean }) {
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
               className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-error)]/20 hover:bg-[var(--color-error)]/6 hover:text-[var(--color-error)]"
+              aria-label="로그아웃"
             >
               <LogOut size={13} />
               로그아웃
@@ -182,6 +183,7 @@ function AuthButton({ mobile = false }: { mobile?: boolean }) {
     <button
       onClick={() => signIn("discord", { callbackUrl: "/servers" })}
       className={`group flex items-center justify-center gap-2 rounded-full border border-[var(--color-accent2)]/15 bg-gradient-to-r from-[var(--color-accent2)]/10 to-[var(--color-accent)]/10 py-2 text-sm font-medium text-[var(--color-accent2)] transition-all duration-300 hover:from-[var(--color-accent2)]/18 hover:to-[var(--color-accent)]/18 hover:text-[var(--color-accent2-hover)] hover:shadow-md hover:shadow-[var(--color-accent2-glow)] hover:border-[var(--color-accent2)]/25 ${mobile ? "w-full px-4" : "px-4"}`}
+      aria-label="Discord로 시작"
     >
       <FaDiscord
         size={16}
@@ -239,6 +241,8 @@ function UserDropdown({ session }: { session: Session }) {
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-card)] py-1 pl-1 pr-2.5 transition-all duration-200 hover:border-[var(--color-border-hover)]"
+        aria-label="사용자 메뉴 토글"
+        aria-expanded={open}
       >
         <UserAvatar
           image={session.user?.image}
@@ -281,6 +285,7 @@ function UserDropdown({ session }: { session: Session }) {
                   signOut({ callbackUrl: "/" });
                 }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-error)]/6 hover:text-[var(--color-error)]"
+                aria-label="로그아웃"
               >
                 <LogOut size={15} />
                 로그아웃
