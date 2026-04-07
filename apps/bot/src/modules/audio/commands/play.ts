@@ -163,11 +163,7 @@ export class PlayCommand extends Command {
 			guildId: interaction.guildId
 		};
 
-		const player = await this.container.audioService.getOrCreatePlayer(
-			interaction.guildId,
-			voiceChannel,
-			interaction.channelId
-		);
+		const player = await this.container.audioService.getOrCreatePlayer(interaction.guildId, voiceChannel, interaction.channelId);
 
 		const searchRes = await this.container.audioService.search(
 			player,

@@ -46,7 +46,13 @@ export class AudioService {
 	/**
 	 * Searches for a track or playlist
 	 */
-	public async search(player: Player, query: string, platform: SearchPlatform, user: { id: string; username: string }, context: any): Promise<SearchResult> {
+	public async search(
+		player: Player,
+		query: string,
+		platform: SearchPlatform,
+		user: { id: string; username: string },
+		context: any
+	): Promise<SearchResult> {
 		const searchRes = await player.search({ query, source: platform }, user);
 
 		if (searchRes.loadType === 'error') {
@@ -146,11 +152,13 @@ export class AudioService {
 		});
 
 		const handleEndAction = async () => {
-			await interaction.editReply({
-				flags: MessageFlags.IsComponentsV2,
-				components: [trackAdded],
-				allowedMentions: { users: [], roles: [] }
-			}).catch(() => null);
+			await interaction
+				.editReply({
+					flags: MessageFlags.IsComponentsV2,
+					components: [trackAdded],
+					allowedMentions: { users: [], roles: [] }
+				})
+				.catch(() => null);
 		};
 
 		const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>) => {
