@@ -5,10 +5,9 @@ import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 import * as view from '../../view/controller.ts';
 import { CustomPlayer } from './customPlayer.ts';
+import { Guild } from '@sirubot/prisma';
 
-interface ControllerOptions {
-	volume: number;
-}
+type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
 
 export class PlayerNotifier {
 	private logger: Logger<ILogObj>;
@@ -36,9 +35,12 @@ export class PlayerNotifier {
 
 		// 3. Build and send new controller message
 		try {
-			if (!interaction && !player.textChannelId) return;
+			// when interaction is noen and player has not textChannelId, throw error
+			if (!interaction && !player.textChannelId) throw new Error(`Player has not textChannelId ${player.guildId}`);
 			const options = await this.getControllerOptions(player.guildId);
-			if (!options) return;
+
+			// Check if options null and guild not using audio controller, and this method called automatically, ignore it
+			if (!options || (!options.enableController && !interaction)) return;
 
 			const components = view.controllerView({
 				player,
@@ -83,7 +85,7 @@ export class PlayerNotifier {
 				if (!player.messageId || !player.controller) return;
 
 				const options = await this.getControllerOptions(player.guildId);
-				if (!options) return;
+				if (!options || !options.enableController) return;
 
 				const components = view.controllerView({
 					player,
@@ -101,8 +103,12 @@ export class PlayerNotifier {
 					await player.controller.edit(payload);
 					this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
 				}
-			} catch (error) {
-				this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
+			} catch (error: any) {
+				if (error.code === 10008) {
+					this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
+				} else {
+					this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
+				}
 			}
 		}, this.DEBOUNCE_MS);
 
@@ -122,21 +128,37 @@ export class PlayerNotifier {
 	public async deleteController(player: CustomPlayer): Promise<void> {
 		this.clearDebounceTimer(player.guildId);
 
+		const controllerMessage = player.controller;
 		const messageId = player.messageId;
+
+		// 봇이 직접 삭제할 때, messageDeleted 이벤트가 발생했을 때 구별하기 위해 미리 null로 비워둡니다.
+		player.messageId = null;
+		player.controller = null;
+
+		// controller 객체가 이미 있으면 fetch 없이 바로 삭제
+		if (controllerMessage?.deletable) {
+			await controllerMessage.delete().catch((error: any) => {
+				if (error.code !== 10008) {
+					this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
+				}
+			});
+			return;
+		}
+
+		// controller 객체가 없지만 messageId가 남아있는 경우 (resume 등) fallback fetch
 		if (messageId && player.textChannelId) {
 			const channel = this.container.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
 				const message = await channel.messages.fetch(messageId).catch(() => null);
 				if (message?.deletable) {
-					await message.delete().catch((error) => {
-						this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
+					await message.delete().catch((error: any) => {
+						if (error.code !== 10008) {
+							this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
+						}
 					});
 				}
 			}
 		}
-
-		player.messageId = null;
-		player.controller = null;
 	}
 
 	// Event handlers
@@ -172,14 +194,9 @@ export class PlayerNotifier {
 
 	private async getControllerOptions(guildId: string): Promise<ControllerOptions | null> {
 		try {
-			const { enableController, volume } = await this.container.guildService.getGuild(guildId);
+			const data = await this.container.guildService.getGuild(guildId);
 
-			if (!enableController) {
-				this.logger.trace(`Controller disabled for guild: ${guildId}`);
-				return null;
-			}
-
-			return { volume };
+			return data;
 		} catch (error) {
 			this.logger.error(`Failed to get controller options for guild ${guildId}:`, error);
 			return null;

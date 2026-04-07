@@ -151,7 +151,7 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 
 				if (searchResult.loadType !== 'error' && searchResult.loadType !== 'empty') {
 					// Prevent race condition
-					const currentRequester = player.queue.current?.requester as any;
+					const currentRequester = player.queue.current?.requester as { id: string } | undefined;
 					if ((player.queue.current && currentRequester?.id !== 'related_track') || player.queue.tracks.length > 0) {
 						container.logger.debug('[autoPlayRelated] Prevent race condition: user added track');
 						return;

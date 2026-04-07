@@ -25,9 +25,9 @@ export class GuildService {
 		return guild;
 	}
 
-	/** Invalidate cache (used when setter is called) */
-	private invalidateCache(guildId: string) {
-		this.cache.delete(guildId);
+	/** Update cache with fresh data (used when setter is called) */
+	private updateCache(guild: Guild) {
+		this.cache.set(guild.id, guild);
 	}
 
 	public async updateVolume(guildId: string, volume: number) {
@@ -37,7 +37,7 @@ export class GuildService {
 			update: { volume }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild;
 	}
 
@@ -58,7 +58,7 @@ export class GuildService {
 			update: { djRoleId }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild;
 	}
 
@@ -78,11 +78,10 @@ export class GuildService {
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, repeat },
-			update: { repeat },
-			select: { repeat: true }
+			update: { repeat }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild.repeat as RepeatMode;
 	}
 
@@ -95,11 +94,10 @@ export class GuildService {
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, related },
-			update: { related },
-			select: { related: true }
+			update: { related }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild.related;
 	}
 
@@ -110,7 +108,7 @@ export class GuildService {
 			update: { textChannelId }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild.textChannelId;
 	}
 
@@ -126,7 +124,7 @@ export class GuildService {
 			update: { voiceChannelId }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild.voiceChannelId;
 	}
 
@@ -147,7 +145,7 @@ export class GuildService {
 			update: { enableController }
 		});
 
-		this.invalidateCache(guildId);
+		this.updateCache(guild);
 		return guild.enableController;
 	}
 }

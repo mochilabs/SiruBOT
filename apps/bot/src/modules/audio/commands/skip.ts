@@ -142,11 +142,11 @@ export class SkipCommand extends Command {
 		return context.queue.tracks.length <= 0;
 	}
 
-	private isTrackRequestedByUser(track: any, userId: string): boolean {
+	private isTrackRequestedByUser(track: Track, userId: string): boolean {
 		return typeof track.requester !== 'string' && (track.requester as APIUser).id === userId;
 	}
 
-	private isTrackRequestedByBot(track: any): boolean {
+	private isTrackRequestedByBot(track: Track): boolean {
 		return typeof track.requester !== 'string' && (track.requester as APIUser).id === this.container.client.user?.id;
 	}
 

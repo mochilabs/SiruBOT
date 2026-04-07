@@ -62,27 +62,31 @@ export class VoiceStateUpdateListener extends Listener {
 			this.clearTimer(guildId);
 
 			const timer = setTimeout(async () => {
-				this.logger.info(`Leaving empty voice channel in guild ${guildId} after 5 minutes.`);
-				if (player.textChannelId) {
-					const textChannel = this.container.client.channels.cache.get(player.textChannelId);
-					if (textChannel?.isSendable()) {
-						await textChannel.send({
-							components: [
-								new ContainerBuilder()
-									.setAccentColor(DEFAULT_COLOR)
-									.addTextDisplayComponents((textDisplay) =>
-										textDisplay.setContent('💤 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.')
-									)
-							],
-							flags: [MessageFlags.IsComponentsV2]
-						});
+				try {
+					this.logger.info(`Leaving empty voice channel in guild ${guildId} after 5 minutes.`);
+					if (player.textChannelId) {
+						const textChannel = this.container.client.channels.cache.get(player.textChannelId);
+						if (textChannel?.isSendable()) {
+							await textChannel.send({
+								components: [
+									new ContainerBuilder()
+										.setAccentColor(DEFAULT_COLOR)
+										.addTextDisplayComponents((textDisplay) =>
+											textDisplay.setContent('💤 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.')
+										)
+								],
+								flags: [MessageFlags.IsComponentsV2]
+							});
+						}
 					}
+					// Do not display additional message
+					player.setData('stopByCommand', true);
+					await player.destroy();
+				} catch (error) {
+					this.logger.error(`Failed to leave empty voice channel in guild ${guildId}:`, error);
+				} finally {
+					this.leaveTimers.delete(guildId);
 				}
-				// Do not display additional message
-				player.setData('stopByCommand', true);
-				await player.destroy();
-
-				this.leaveTimers.delete(guildId);
 			}, this.LEAVE_TIMEOUT_MS);
 
 			this.leaveTimers.set(guildId, timer);

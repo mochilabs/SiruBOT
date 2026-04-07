@@ -23,7 +23,7 @@ export class TrackService {
 		const data = this.extractTrackData(track);
 		let userId: string | null = null;
 		if (track.requester) {
-			const requesterId = (track.requester as any).id;
+			const requesterId = (track.requester as { id: string } | undefined)?.id;
 			if (requesterId && requesterId !== 'related_track') {
 				userId = requesterId;
 			}

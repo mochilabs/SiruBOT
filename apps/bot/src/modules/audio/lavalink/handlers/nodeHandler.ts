@@ -39,81 +39,112 @@ export class NodeHandler extends BaseLavalinkHandler {
 		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
 		const startTime = Date.now();
 		const playerSaver = this.container.redisStore.getPlayerSaver();
-		for (const lavalinkPlayer of players) {
+
+		// 5분 이상 경과한 플레이어는 stale로 간주하여 스킵
+		const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+		const BATCH_SIZE = 10;
+
+		// 유효한 플레이어만 필터링
+		const validPlayers = players.filter((lavalinkPlayer) => {
 			if (!lavalinkPlayer.state.connected) {
 				this.logger.debug(`Player at ${lavalinkPlayer.guildId} is already disconnected`);
-
-				await playerSaver.delete(lavalinkPlayer.guildId);
-				continue;
+				playerSaver.delete(lavalinkPlayer.guildId);
+				return false;
 			}
 
-			// 현재 샤드가 담당하지 않는 길드는 건너뛰기
 			if (!this.container.client.guilds.cache.has(lavalinkPlayer.guildId)) {
 				this.logger.debug(`Skipping resume for guild ${lavalinkPlayer.guildId} (not in this shard's cache)`);
-				continue;
+				return false;
 			}
 
-			const savedPlayer = await playerSaver.get(lavalinkPlayer.guildId);
-			if (!savedPlayer) {
-				this.logger.debug(`Saved player at ${lavalinkPlayer.guildId} is not found`);
-				continue;
+			// 마지막 상태 업데이트가 너무 오래됐으면 버리기
+			if (lavalinkPlayer.state.time && startTime - lavalinkPlayer.state.time > STALE_THRESHOLD_MS) {
+				this.logger.debug(
+					`Skipping stale player at ${lavalinkPlayer.guildId} (last update: ${Math.round((startTime - lavalinkPlayer.state.time) / 1000)}s ago)`
+				);
+				playerSaver.delete(lavalinkPlayer.guildId);
+				return false;
 			}
 
-			// Create player from saved player data
-			const createdPlayer = await this.container.audio.createPlayer({
-				guildId: lavalinkPlayer.guildId,
-				voiceChannelId: savedPlayer.voiceChannelId,
-				textChannelId: savedPlayer.textChannelId,
-				selfDeaf: savedPlayer.options.selfDeaf,
-				selfMute: savedPlayer.options.selfMute,
+			return true;
+		});
 
-				volume: this.container.audio.options.playerOptions?.volumeDecrementer
-					? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
-					: lavalinkPlayer.volume,
+		this.logger.debug(`Filtered ${players.length} -> ${validPlayers.length} valid players for resume`);
 
-				applyVolumeAsFilter: savedPlayer.options.applyVolumeAsFilter,
-				instaUpdateFiltersFix: savedPlayer.options.instaUpdateFiltersFix,
-				vcRegion: savedPlayer.options.vcRegion
-			});
+		// 배치 단위 병렬 처리
+		for (let i = 0; i < validPlayers.length; i += BATCH_SIZE) {
+			const batch = validPlayers.slice(i, i + BATCH_SIZE);
+			const results = await Promise.allSettled(batch.map((lavalinkPlayer) => this.resumeSinglePlayer(lavalinkPlayer, playerSaver, startTime)));
 
-			if (savedPlayer.textChannelId && savedPlayer.messageId) {
-				this.logger.debug(`Setting cached controller message and message id for player at ${lavalinkPlayer.guildId}`);
-				const fetchedChannel = await this.container.client.channels.fetch(savedPlayer.textChannelId).catch(() => null);
-				if (fetchedChannel && fetchedChannel.isTextBased()) {
-					const message = await fetchedChannel.messages.fetch(savedPlayer.messageId).catch(() => null);
-					this.logger.debug(`Fetched controller message for player at ${lavalinkPlayer.guildId}`);
-					if (message?.editable) {
-						createdPlayer.messageId = message.id;
-						createdPlayer.controller = message;
-					}
+			for (const result of results) {
+				if (result.status === 'rejected') {
+					this.logger.error(`Failed to resume a player:`, result.reason);
 				}
 			}
-
-			// Reconnect player
-			await createdPlayer.connect();
-			// Set filters
-			createdPlayer.filterManager.data = savedPlayer.filters;
-			// Sync queue
-			await createdPlayer.queue.utils.sync(true, false).catch(this.logger.error.bind(this));
-
-			// Override player current track
-			if (lavalinkPlayer.track)
-				createdPlayer.queue.current = this.container.audio.utils.buildTrack(
-					lavalinkPlayer.track,
-					createdPlayer.queue.current?.requester || this.container.client.user
-				);
-
-			const now = Date.now();
-			createdPlayer.lastPosition = lavalinkPlayer.state.position + (now - startTime);
-			createdPlayer.lastPositionChange = now;
-			createdPlayer.ping.lavalink = lavalinkPlayer.state.ping;
-
-			// Set player paused / playing state
-			createdPlayer.paused = lavalinkPlayer.paused;
-			createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
-
-			this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
 		}
+
+		this.logger.info(`Resume completed in ${Date.now() - startTime}ms (${validPlayers.length} players)`);
+	}
+
+	private async resumeSinglePlayer(
+		lavalinkPlayer: LavalinkPlayer,
+		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
+		startTime: number
+	) {
+		const savedPlayer = await playerSaver.get(lavalinkPlayer.guildId);
+		if (!savedPlayer) {
+			this.logger.debug(`Saved player at ${lavalinkPlayer.guildId} is not found`);
+			return;
+		}
+
+		const createdPlayer = await this.container.audio.createPlayer({
+			guildId: lavalinkPlayer.guildId,
+			voiceChannelId: savedPlayer.voiceChannelId,
+			textChannelId: savedPlayer.textChannelId,
+			selfDeaf: savedPlayer.options.selfDeaf,
+			selfMute: savedPlayer.options.selfMute,
+
+			volume: this.container.audio.options.playerOptions?.volumeDecrementer
+				? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
+				: lavalinkPlayer.volume,
+
+			applyVolumeAsFilter: savedPlayer.options.applyVolumeAsFilter,
+			instaUpdateFiltersFix: savedPlayer.options.instaUpdateFiltersFix,
+			vcRegion: savedPlayer.options.vcRegion
+		});
+
+		if (savedPlayer.textChannelId && savedPlayer.messageId) {
+			this.logger.debug(`Setting cached controller message and message id for player at ${lavalinkPlayer.guildId}`);
+			const fetchedChannel = await this.container.client.channels.fetch(savedPlayer.textChannelId).catch(() => null);
+			if (fetchedChannel && fetchedChannel.isTextBased()) {
+				const message = await fetchedChannel.messages.fetch(savedPlayer.messageId).catch(() => null);
+				this.logger.debug(`Fetched controller message for player at ${lavalinkPlayer.guildId}`);
+				if (message?.editable) {
+					createdPlayer.messageId = message.id;
+					createdPlayer.controller = message;
+				}
+			}
+		}
+
+		await createdPlayer.connect();
+		createdPlayer.filterManager.data = savedPlayer.filters;
+		await createdPlayer.queue.utils.sync(true, false).catch(this.logger.error.bind(this));
+
+		if (lavalinkPlayer.track)
+			createdPlayer.queue.current = this.container.audio.utils.buildTrack(
+				lavalinkPlayer.track,
+				createdPlayer.queue.current?.requester || this.container.client.user
+			);
+
+		const now = Date.now();
+		createdPlayer.lastPosition = lavalinkPlayer.state.position + (now - startTime);
+		createdPlayer.lastPositionChange = now;
+		createdPlayer.ping.lavalink = lavalinkPlayer.state.ping;
+
+		createdPlayer.paused = lavalinkPlayer.paused;
+		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
+
+		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
 	}
 
 	private handleNodeDisconnect(node: LavalinkNode, reason: { code?: number | undefined; reason?: string | undefined }) {

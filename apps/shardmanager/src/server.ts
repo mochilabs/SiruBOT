@@ -27,7 +27,7 @@ export class ShardManagerServer {
 
 	public async setupRoutes() {
 		// Global error handler
-		this.fastify.setErrorHandler((error, request, reply) => {
+		this.fastify.setErrorHandler((error: { message: string; statusCode?: number }, request, reply) => {
 			this.logger.error({ error, url: request.url, method: request.method }, 'Request error');
 			reply.status(error.statusCode ?? 500).send({
 				error: error.message,

@@ -63,13 +63,14 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 
 		// Music toggles
 		if (action === 'toggle:controller') {
-			const current = await this.container.guildService.getEnableController(interaction.guildId);
-			await this.container.guildService.setEnableController(interaction.guildId, !current);
+			const guild = await this.container.guildService.getGuild(interaction.guildId);
+			await this.container.guildService.setEnableController(interaction.guildId, !guild.enableController);
 		} else if (action === 'toggle:related') {
-			const current = await this.container.guildService.getRelated(interaction.guildId);
-			await this.container.guildService.setRelated(interaction.guildId, !current);
+			const guild = await this.container.guildService.getGuild(interaction.guildId);
+			await this.container.guildService.setRelated(interaction.guildId, !guild.related);
 		} else if (action === 'toggle:repeat') {
-			const current = await this.container.guildService.getRepeat(interaction.guildId);
+			const guild = await this.container.guildService.getGuild(interaction.guildId);
+			const current = guild.repeat as RepeatMode;
 			const next: RepeatMode = current === 'off' ? 'track' : current === 'track' ? 'queue' : 'off';
 			await this.container.guildService.setRepeat(interaction.guildId, next);
 

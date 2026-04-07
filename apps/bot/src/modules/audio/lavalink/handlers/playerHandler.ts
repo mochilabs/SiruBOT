@@ -1,4 +1,4 @@
-import { DestroyReasonsType, LavalinkManager, RepeatMode, SponsorBlockSegment } from 'lavalink-client';
+import { DestroyReasonsType, LavalinkManager, PlayerJson, RepeatMode, SponsorBlockSegment } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 
@@ -46,9 +46,11 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		this.logger.info(`Player moved: ${_player.guildId}`);
 	}
 
-	private async handlePlayerUpdate(_oldPlayerJson: any, newPlayer: CustomPlayer) {
-		await this.container.redisStore.getPlayerSaver().set(newPlayer);
-		await this.container.playerNotifier.onPlayerUpdate(newPlayer);
+	private async handlePlayerUpdate(_oldPlayerJson: PlayerJson, newPlayer: CustomPlayer) {
+		await Promise.all([
+			this.container.redisStore.getPlayerSaver().set(newPlayer),
+			this.container.playerNotifier.onPlayerUpdate(newPlayer)
+		]);
 	}
 
 	public cleanup() {
