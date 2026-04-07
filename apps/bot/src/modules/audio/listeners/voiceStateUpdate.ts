@@ -79,7 +79,7 @@ export class VoiceStateUpdateListener extends Listener {
 					}
 				}
 				// Do not display additional message
-				player.set('stopByCommand', true);
+				player.setData('stopByCommand', true);
 				await player.destroy();
 
 				this.leaveTimers.delete(guildId);

@@ -37,7 +37,7 @@ export class StopCommand extends Command {
 			components: [view.stop()],
 			flags: [MessageFlags.IsComponentsV2]
 		});
-		player.set('stopByCommand', true);
+		player.setData('stopByCommand', true);
 
 		await player.stopPlaying();
 		await player.disconnect();

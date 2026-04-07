@@ -338,6 +338,7 @@ export class PlayCommand extends Command {
 					],
 					allowedMentions: { users: [], roles: [] }
 				});
+				break;
 			}
 		}
 

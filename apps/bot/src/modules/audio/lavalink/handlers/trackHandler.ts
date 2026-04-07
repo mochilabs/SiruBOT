@@ -60,11 +60,11 @@ export class TrackHandler extends BaseLavalinkHandler {
 		// 대기열의 모든 곡이 끝났으므로 컨트롤러 메시지 삭제
 		await this.container.playerNotifier.deleteController(player);
 
-		if (player.get('stopByCommand')) {
-			player.set('stopByCommand', false);
-			return;
+		if (!player.getData('stopByCommand')) {
+			await this.sendNotification(player, '📭 대기열의 모든 곡을 재생했어요.');
 		}
-		await this.sendNotification(player, '📭 대기열의 모든 곡을 재생했어요.');
+
+		return;
 	}
 
 	private async sendNotification(player: CustomPlayer, message: string) {
