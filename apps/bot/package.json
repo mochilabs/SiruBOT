@@ -30,7 +30,6 @@
     "@sirubot/prisma": "*",
     "@sirubot/shardclient": "*",
     "@sirubot/utils": "*",
-    "@sirubot/yt-related-scraper": "^0.3.21",
     "@skyra/env-utilities": "^2.0.1",
     "chokidar": "^4.0.3",
     "colorette": "^2.0.20",
