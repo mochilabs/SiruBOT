@@ -96,13 +96,19 @@ export function trackSimilarity(trackA: Track, trackB: Track): number {
  * - Too different tracks → excluded
  * - Select the most appropriate track from the medium similarity range
  */
-export function pickBySimilarity(candidates: Track[], reference: Track): Track | null {
+export function pickBySimilarity(candidates: Track[], reference: Track, previousIds: string[] = []): Track | null {
 	if (candidates.length === 0) return null;
 
-	const scored = candidates.map((track) => ({
-		track,
-		similarity: trackSimilarity(reference, track)
-	}));
+	const scored = candidates.map((track) => {
+		let similarity = trackSimilarity(reference, track);
+
+		// Apply penalty if the track has been played previously to lower its priority
+		if (previousIds.includes(track.info.identifier)) {
+			similarity -= 0.4;
+		}
+
+		return { track, similarity };
+	});
 
 	// Filter medium similarity range: exclude tracks that are too similar or too different
 	const mediumRange = scored.filter((s) => s.similarity > LOW_SIMILARITY && s.similarity < HIGH_SIMILARITY);
@@ -154,10 +160,12 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 					const previous = player.queue.previous.map((e) => e.info.identifier);
 					if (player.queue.current) previous.push(player.queue.current.info.identifier);
 
-					const uniqueTracks = searchResult.tracks.filter((track) => !previous.includes(track.info.identifier));
+					// Instead of completely filtering out previous tracks, we just filter out the currently playing track.
+					// The previous tracks will be passed into pickBySimilarity and get heavily penalized.
+					const availableTracks = searchResult.tracks.filter((track) => track.info.identifier !== lastPlayedTrack.info.identifier);
 
-					if (uniqueTracks.length > 0) {
-						const selectedTrack = pickBySimilarity(uniqueTracks, lastPlayedTrack);
+					if (availableTracks.length > 0) {
+						const selectedTrack = pickBySimilarity(availableTracks, lastPlayedTrack, previous);
 						if (selectedTrack) {
 							player.queue.add(selectedTrack);
 							return;
