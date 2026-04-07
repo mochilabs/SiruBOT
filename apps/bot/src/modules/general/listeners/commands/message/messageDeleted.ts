@@ -48,7 +48,7 @@ export class MessageDeleteListener extends Listener {
 										)
 								]
 							});
-                            
+
 							await sleep(10000);
 							await tooltip.delete();
 						} catch (_) {}

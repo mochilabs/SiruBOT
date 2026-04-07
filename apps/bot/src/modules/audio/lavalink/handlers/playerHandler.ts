@@ -47,10 +47,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	}
 
 	private async handlePlayerUpdate(_oldPlayerJson: PlayerJson, newPlayer: CustomPlayer) {
-		await Promise.all([
-			this.container.redisStore.getPlayerSaver().set(newPlayer),
-			this.container.playerNotifier.onPlayerUpdate(newPlayer)
-		]);
+		await Promise.all([this.container.redisStore.getPlayerSaver().set(newPlayer), this.container.playerNotifier.onPlayerUpdate(newPlayer)]);
 	}
 
 	public cleanup() {
