@@ -25,7 +25,6 @@ export class ReloadCommand extends Command {
 
 		const res = await Promise.all(
 			this.container.stores.map((store) => {
-				console.log(require.cache);
 				const paths = [];
 				for (const piece of store.values()) {
 					if (piece.location.virtual) continue;
