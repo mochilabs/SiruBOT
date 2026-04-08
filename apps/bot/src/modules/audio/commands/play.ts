@@ -165,7 +165,6 @@ export class PlayCommand extends Command {
 			context
 		);
 
-		const playerConnectedBeforeSearch = player.connected;
 		await this.container.audioService.connectPlayer(player, context);
 
 		switch (searchRes.loadType) {
@@ -180,6 +179,6 @@ export class PlayCommand extends Command {
 			}
 		}
 
-		await this.container.audioService.ensurePlayback(player, playerConnectedBeforeSearch);
+		await this.container.audioService.ensurePlayback(player);
 	}
 }
