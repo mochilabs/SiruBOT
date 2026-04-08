@@ -3,7 +3,7 @@ export default function Home() {
     <div className="container mx-auto px-6 py-8">
       <div className="max-w-4xl mx-auto text-center">
         <div className="mb-8">
-          <span className="text-8xl mb-6 block">🎵</span>
+          <span className="text-8xl mb-6 block" aria-hidden="true">🎵</span>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             SiruBOT Dashboard
           </h1>
@@ -19,8 +19,9 @@ export default function Home() {
             <a 
               href="/track" 
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              aria-label="인기 곡 순위 보러가기"
             >
-              보러가기 →
+              보러가기 <span aria-hidden="true" className="ml-1">→</span>
             </a>
           </div>
 
@@ -30,8 +31,9 @@ export default function Home() {
             <a 
               href="/shards" 
               className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors"
+              aria-label="샤드 모니터링 보러가기"
             >
-              보러가기 →
+              보러가기 <span aria-hidden="true" className="ml-1">→</span>
             </a>
           </div>
 
@@ -41,8 +43,9 @@ export default function Home() {
             <a 
               href="/servers" 
               className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+              aria-label="로그인하고 서버 대시보드 관리하기"
             >
-              로그인하고 관리하기 →
+              로그인하고 관리하기 <span aria-hidden="true" className="ml-1">→</span>
             </a>
           </div>
         </div>
