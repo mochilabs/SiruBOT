@@ -103,20 +103,16 @@ type FormatTrackOptions = {
 	withMarkdownURL?: boolean;
 	timeType?: 'seconds' | 'korean';
 	cleanTitle?: boolean;
+	titleLength?: {
+		maxLength: number;
+		mask?: string;
+	};
 };
 
 const MAX_TRACK_URL_LENGTH = 70;
 export function formatTrack(track: Track, options?: FormatTrackOptions): string {
-	const {
-		title,
-		duration,
-		isStream
-	}: {
-		title?: string;
-		duration?: number;
-		isStream?: boolean;
-	} = track.info;
-	const { showLength, withMarkdownURL, streamString, timeType, cleanTitle } = {
+	const { title = 'Unknown Title', duration, isStream } = track.info;
+	const { showLength, withMarkdownURL, streamString, timeType, cleanTitle, titleLength } = {
 		showLength: true,
 		streamString: 'LIVE',
 		withMarkdownURL: false,
@@ -124,5 +120,41 @@ export function formatTrack(track: Track, options?: FormatTrackOptions): string 
 		cleanTitle: false,
 		...options
 	};
-	return `${withMarkdownURL && !(track.info.uri.length > MAX_TRACK_URL_LENGTH) ? '[' : ''}${cleanTitle ? removeEmojis(title.trim()) : title.trim()}${showLength ? `${duration ? (isStream ? streamString : ` [${timeType == 'seconds' ? formatTime(duration / 1000) : formatTimeToKorean(duration / 1000)}]`) : 'N/A'}` : ''}${withMarkdownURL && !(track.info.uri.length > MAX_TRACK_URL_LENGTH) ? ']' : ''}${withMarkdownURL ? `(${track.info.uri})` : ''}`;
+
+	let formattedTitle = cleanTitle ? removeEmojis(title.trim()) : title.trim();
+
+	// Truncate title if titleLength option is provided
+	if (titleLength && formattedTitle.length > titleLength.maxLength) {
+		const mask = titleLength.mask ?? '...';
+		formattedTitle = formattedTitle.substring(0, titleLength.maxLength - mask.length) + mask;
+	}
+
+	// Calculate length string
+	let lengthStr = '';
+	if (showLength) {
+		if (duration) {
+			if (isStream) {
+				lengthStr = ` [${streamString}]`;
+			} else {
+				const formattedTime = timeType === 'seconds' ? formatTime(duration / 1000) : formatTimeToKorean(duration / 1000);
+				lengthStr = ` [${formattedTime}]`;
+			}
+		} else {
+			lengthStr = ' [N/A]';
+		}
+	}
+
+	// Construct final string with/without markdown URL
+	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
+
+	if (withMarkdownURL) {
+		if (hasValidUrl) {
+			return `[${formattedTitle}${lengthStr}](${track.info.uri})`;
+		} else {
+			// fallback without link if url is too long or missing
+			return `${formattedTitle}${lengthStr}`;
+		}
+	}
+
+	return `${formattedTitle}${lengthStr}`;
 }

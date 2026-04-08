@@ -1,10 +1,15 @@
 import { PrismaClient } from "@sirubot/prisma";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 let client: PrismaClient | undefined;
 
 function getClient(): PrismaClient {
   if (!client) {
-    client = new PrismaClient();
+    client = new PrismaClient({
+        adapter: new PrismaPg({
+            connectionString: process.env.DATABASE_URL
+        })
+    });
   }
   return client;
 }

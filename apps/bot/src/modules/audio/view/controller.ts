@@ -115,8 +115,16 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 
 		const selectMenu = new StringSelectMenuBuilder().setCustomId(wrapPrefix('queue:select')).setOptions(
 			queueChunks[page - 1].map((track, index) => {
+				const label = formatTrack(track as Track, {
+					showLength: true,
+					withMarkdownURL: false,
+					titleLength: {
+						maxLength: 90
+					}
+				});
+
 				return {
-					label: `#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE} ${formatTrack(track as Track, { showLength: true, withMarkdownURL: false })}`,
+					label: `#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE} ${label}`,
 					value: (index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE).toString(),
 					default: index === 0
 				};

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
     "@radix-ui/themes": "^3.2.1",
     "next": "15.5.2",
     "next-auth": "^5.0.0-beta.30",
