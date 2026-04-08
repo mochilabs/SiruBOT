@@ -3567,7 +3567,7 @@ __metadata:
     colorette: "npm:^2.0.20"
     discord.js: "npm:^14.25.1"
     figlet: "npm:^1.9.3"
-    lavalink-client: "npm:^2.9.6"
+    lavalink-client: "npm:^2.10.0"
     tslog: "npm:^4.9.3"
     undici: "npm:^7.16.0"
   languageName: unknown
@@ -7153,13 +7153,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lavalink-client@npm:^2.9.6":
-  version: 2.9.9
-  resolution: "lavalink-client@npm:2.9.9"
+"lavalink-client@npm:^2.10.0":
+  version: 2.10.0
+  resolution: "lavalink-client@npm:2.10.0"
   dependencies:
     tslib: "npm:^2.8.1"
     ws: "npm:^8.19.0"
-  checksum: 10c0/349dd8a60f648b693762c9fe63d61e3c90c71c6017e5a92f9cca5e02c4cd740307b5a0e2e5dfaf490efb75bfad8ef4c698c31441a97c6aafd048c5274c0e4318
+  checksum: 10c0/3fd39eab39a62cac74a91381b4d32ed32fdbda3432122bfacf1e5005c21ea8e865b36d5defbd82615595d4143292ad4a538a6db0ff6aa94993106e532a9bdeac
   languageName: node
   linkType: hard
 
