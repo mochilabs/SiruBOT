@@ -1,16 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
+import { Command } from '@sapphire/framework';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
-import {
-	ApplicationIntegrationType,
-	AutocompleteInteraction,
-	ButtonInteraction,
-	ChatInputCommandInteraction,
-	ComponentType,
-	MessageFlags
-} from 'discord.js';
-import { SearchPlatform, Track } from 'lavalink-client';
-import * as view from '../view/play.ts';
+import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction } from 'discord.js';
+import { SearchPlatform } from 'lavalink-client';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,

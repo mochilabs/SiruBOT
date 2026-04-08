@@ -1,18 +1,14 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
+import { Command } from '@sapphire/framework';
 import {
-	APIUser,
 	ApplicationIntegrationType,
 	ChatInputCommandInteraction,
-	MessageFlags,
 	VoiceBasedChannel,
 	GuildMember,
 	Collection,
 	AutocompleteInteraction
 } from 'discord.js';
-import * as view from '../view/skip.ts';
 import { Player, Queue, Track } from 'lavalink-client';
-import { VoteSkip } from '../managers/voteSkip.ts';
 
 export interface SkipContext {
 	player: Player;
