@@ -3599,6 +3599,7 @@ __metadata:
     "@fastify/autoload": "npm:^6.3.1"
     "@fastify/websocket": "npm:^11.2.0"
     "@sirubot/shardclient": "npm:*"
+    "@sirubot/utils": "npm:*"
     dotenv: "npm:^17.2.2"
     fastify: "npm:^5.6.0"
     tslog: "npm:^4.10.2"
