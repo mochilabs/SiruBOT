@@ -8,15 +8,19 @@ import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
 
 export const main = async () => {
-	// Dev mode: Run standalone without sharding if SHARD_MANAGER_URL is omitted
-	const shardManagerUrl = process.env.SHARD_MANAGER_URL;
-	const isDevMode = !shardManagerUrl;
+	const isDevMode = process.env.NODE_ENV !== 'production';
 
-	let shardIds: number[] | 'auto' = 'auto';
+	let shardIds: number[] | 'auto' = isDevMode ? [0] : 'auto';
 	let shardCount: number = 1;
 
 	if (!isDevMode) {
 		// Production: Get shard ID assigned from manager via ShardClient
+		const shardManagerUrl = process.env.SHARD_MANAGER_URL;
+		if (!shardManagerUrl) {
+			console.error('SHARD_MANAGER_URL is required in production mode. Exiting...');
+			process.exit(1);
+		}
+
 		const { ShardClient, NoShardsAvailableError } = await import('@sirubot/shardclient');
 		const shardClient = new ShardClient({
 			serverURL: shardManagerUrl,

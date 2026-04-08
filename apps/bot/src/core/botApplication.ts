@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 import { PrismaClient } from '@sirubot/prisma';
+import { PrismaPg } from '@prisma/adapter-pg';
+
 import { SapphireClient } from '@sapphire/framework';
 import { RootData, container, getRootData } from '@sapphire/pieces';
 
@@ -38,8 +40,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		return redisStore;
 	}
 
-	public async setupDatabase() {
+	public async setupDatabase(): Promise<PrismaClient> {
 		const db = new PrismaClient({
+			adapter: new PrismaPg({
+				connectionString: process.env.DATABASE_URL
+			}),
 			log: [
 				{ level: 'error', emit: 'event' },
 				{ level: 'warn', emit: 'event' },
