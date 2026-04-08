@@ -77,9 +77,9 @@ export class FilterCommand extends Command {
 			const newFilters = activeFilters.filter((f) => f !== preset);
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
-			for (const filter of newFilters) {
-				await this.applyPreset(player, filter);
-			}
+
+			await Promise.all(newFilters.map((filter) => this.applyPreset(player, filter)));
+
 			player.activeFilters = newFilters;
 			await interaction.reply({
 				components: [view.filterApplied({ filters: newFilters })],

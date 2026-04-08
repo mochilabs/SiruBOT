@@ -57,9 +57,9 @@ export default class FilterInteractionHandler extends InteractionHandler {
 			// 전체 초기화 후 선택된 필터만 적용
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
-			for (const preset of selectedPresets) {
-				await this.applyPreset(player, preset);
-			}
+
+			await Promise.all(selectedPresets.map((preset) => this.applyPreset(player, preset)));
+
 			player.activeFilters = selectedPresets;
 
 			await selectInteraction.update({
