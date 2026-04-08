@@ -3637,6 +3637,7 @@ __metadata:
   dependencies:
     "@sapphire/ts-config": "npm:^5.0.1"
     "@types/node": "npm:^22.18.1"
+    tslog: "npm:^4.10.2"
   peerDependencies:
     "@sapphire/framework": ^5.3.6
     colorette: ^2.0.20

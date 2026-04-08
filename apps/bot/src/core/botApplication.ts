@@ -12,6 +12,7 @@ import { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
 import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
+import { AudioService } from '../services/audioService.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -68,6 +69,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	public setupServices() {
 		container.guildService = new GuildService();
 		container.trackService = new TrackService();
+		container.audioService = new AudioService();
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[]) {
