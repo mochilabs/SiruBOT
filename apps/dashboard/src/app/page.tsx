@@ -12,13 +12,24 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">뮤직 플레이어</h2>
+            <p className="text-gray-600 text-sm mb-4">실시간 음악 재생 프로토타입 확인하기</p>
+            <a
+              href="/player"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+            >
+              재생하기 →
+            </a>
+          </div>
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">인기 곡 순위</h2>
             <p className="text-gray-600 text-sm mb-4">재생 횟수가 많은 곡들을 확인하세요</p>
             <a 
               href="/track" 
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition-colors"
             >
               보러가기 →
             </a>
