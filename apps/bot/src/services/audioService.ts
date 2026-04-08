@@ -1,10 +1,10 @@
 import { container, UserError } from '@sapphire/framework';
-import { Player, SearchPlatform, Track, SearchResult } from 'lavalink-client';
-import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags } from 'discord.js';
-import * as view from '../modules/audio/view/play.ts';
-import * as skipView from '../modules/audio/view/skip.ts';
+import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
+import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { SkipContext } from '../modules/audio/commands/skip.ts';
 import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
+import * as view from '../modules/audio/view/play.ts';
+import * as skipView from '../modules/audio/view/skip.ts';
 
 export class AudioService {
 	/**
@@ -26,20 +26,51 @@ export class AudioService {
 	}
 
 	/**
-	 * Connects the player to the voice channel
+	 * Connects the player to the voice channel.
+	 * Checks Discord permissions before attempting connection.
 	 */
 	public async connectPlayer(player: Player, context: any): Promise<void> {
-		if (!player.connected) {
-			try {
-				await player.connect();
-			} catch (error) {
-				container.logger.error(error);
+		if (player.connected) return;
+
+		// Check if the bot can actually join the voice channel
+		const guild = container.client.guilds.cache.get(player.guildId);
+		const voiceChannel = guild?.channels.cache.get(player.voiceChannelId!);
+		if (!voiceChannel || !voiceChannel.isVoiceBased()) {
+			throw new UserError({
+				identifier: 'play_channel_not_found',
+				message: '🎧 음성 채널을 찾을 수 없어요.',
+				context
+			});
+		}
+
+		const me = guild?.members.me;
+		if (me) {
+			const permissions = voiceChannel.permissionsFor(me);
+			if (!permissions?.has(PermissionsBitField.Flags.Connect)) {
 				throw new UserError({
-					identifier: 'play_connect_error',
-					message: '🛠️  음성 채널에 접속할 수 없어요. 음성 채널 권한을 확인해주세요.',
+					identifier: 'play_no_connect_permission',
+					message: '🔒 봇이 음성 채널에 접속할 권한이 없어요.',
 					context
 				});
 			}
+			if (!permissions?.has(PermissionsBitField.Flags.Speak)) {
+				throw new UserError({
+					identifier: 'play_no_speak_permission',
+					message: '🔇 봇이 음성 채널에서 말할 권한이 없어요.',
+					context
+				});
+			}
+		}
+
+		try {
+			await player.connect();
+		} catch (error) {
+			container.logger.error(error);
+			throw new UserError({
+				identifier: 'play_connect_error',
+				message: '🛠️ 음성 채널에 접속할 수 없어요.',
+				context
+			});
 		}
 	}
 
@@ -52,7 +83,7 @@ export class AudioService {
 		platform: SearchPlatform,
 		user: { id: string; username: string },
 		context: any
-	): Promise<SearchResult> {
+	): Promise<SearchResult | UnresolvedSearchResult> {
 		const searchRes = await player.search({ query, source: platform }, user);
 
 		if (searchRes.loadType === 'error') {
@@ -77,7 +108,11 @@ export class AudioService {
 	/**
 	 * Handles adding a playlist to the queue, including interactive prompts if a specific track was selected
 	 */
-	public async handlePlaylistPlay(interaction: ChatInputCommandInteraction<'cached'>, player: Player, searchRes: SearchResult): Promise<void> {
+	public async handlePlaylistPlay(
+		interaction: ChatInputCommandInteraction<'cached'>,
+		player: Player,
+		searchRes: SearchResult | UnresolvedSearchResult
+	): Promise<void> {
 		const playlist = searchRes.playlist!;
 
 		if (playlist.selectedTrack) {
@@ -196,7 +231,11 @@ export class AudioService {
 	/**
 	 * Handles adding a single track or search result to the queue
 	 */
-	public async handleTrackPlay(interaction: ChatInputCommandInteraction<'cached'>, player: Player, searchRes: SearchResult): Promise<void> {
+	public async handleTrackPlay(
+		interaction: ChatInputCommandInteraction<'cached'>,
+		player: Player,
+		searchRes: SearchResult | UnresolvedSearchResult
+	): Promise<void> {
 		await player.queue.add(searchRes.tracks[0]);
 		await interaction.editReply({
 			flags: MessageFlags.IsComponentsV2,
@@ -215,9 +254,9 @@ export class AudioService {
 	/**
 	 * Starts playback if the player is not currently playing
 	 */
-	public async ensurePlayback(player: Player, playerConnectedBeforeSearch: boolean): Promise<void> {
+	public async ensurePlayback(player: Player): Promise<void> {
 		if (!player.playing) {
-			await player.play(playerConnectedBeforeSearch ? { paused: false } : undefined);
+			await player.play(player.paused ? { paused: false } : undefined);
 		}
 	}
 
