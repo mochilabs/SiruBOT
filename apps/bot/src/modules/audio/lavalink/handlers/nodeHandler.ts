@@ -6,7 +6,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 		super('nodeHandler');
 
 		this.nodeManager.on('create', this.handleNodeCreate.bind(this));
-		this.nodeManager.on('connect', this.handleNodeConnect.bind(this));
+		this.nodeManager.on('connect', this.wrapAsyncHandler(this.handleNodeConnect.bind(this), 'handleNodeConnect'));
 		this.nodeManager.on('disconnect', this.handleNodeDisconnect.bind(this));
 		this.nodeManager.on('reconnecting', this.handleNodeReconnecting.bind(this));
 		this.nodeManager.on('destroy', this.handleNodeDestroy.bind(this));
@@ -18,10 +18,10 @@ export class NodeHandler extends BaseLavalinkHandler {
 		this.logger.info(`Node created: ${node.options.id}`);
 	}
 
-	private handleNodeConnect(node: LavalinkNode) {
+	private async handleNodeConnect(node: LavalinkNode) {
 		this.logger.info(`Node connected: ${node.options.id}`);
 		// Enable resuming for 5 minutes
-		node.updateSession(true, 1000 * 60 * 5);
+		await node.updateSession(true, 1000 * 60 * 5);
 	}
 
 	private async handleNodeResumed(
@@ -74,7 +74,9 @@ export class NodeHandler extends BaseLavalinkHandler {
 		// 배치 단위 병렬 처리
 		for (let i = 0; i < validPlayers.length; i += BATCH_SIZE) {
 			const batch = validPlayers.slice(i, i + BATCH_SIZE);
-			const results = await Promise.allSettled(batch.map((lavalinkPlayer) => this.resumeSinglePlayer(lavalinkPlayer, playerSaver, startTime)));
+			const results = await Promise.allSettled(
+				batch.map((lavalinkPlayer) => this.resumeSinglePlayer(node, lavalinkPlayer, playerSaver, startTime))
+			);
 
 			for (const result of results) {
 				if (result.status === 'rejected') {
@@ -87,6 +89,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 	}
 
 	private async resumeSinglePlayer(
+		node: LavalinkNode,
 		lavalinkPlayer: LavalinkPlayer,
 		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
 		startTime: number
@@ -104,6 +107,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			selfDeaf: savedPlayer.options.selfDeaf,
 			selfMute: savedPlayer.options.selfMute,
 
+			node: node.id,
 			volume: this.container.audio.options.playerOptions?.volumeDecrementer
 				? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
 				: lavalinkPlayer.volume,

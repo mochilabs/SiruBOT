@@ -30,5 +30,8 @@
     "devDependencies": {
         "@sapphire/ts-config": "^5.0.1",
         "@types/node": "^22.18.1"
+    },
+    "dependencies": {
+        "tslog": "^4.10.2"
     }
 }

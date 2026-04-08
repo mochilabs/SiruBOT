@@ -1,5 +1,6 @@
 import { ILogger, LogLevel } from '@sapphire/framework';
 import { Logger, ILogObj, ISettingsParam } from 'tslog';
+import { getLoggerSettings } from '@sirubot/utils';
 
 /**
  * Log level mapping from string to numeric values
@@ -34,8 +35,8 @@ const SAPPHIRE_TO_TSLOG_LEVEL_MAP: Record<LogLevel, number> = {
  * with tslog's Logger functionality
  */
 export class SapphireInterfaceLogger extends Logger<ILogObj> implements ILogger {
-	constructor(settings?: ISettingsParam<ILogObj>) {
-		super(settings);
+	constructor(settings?: Partial<ISettingsParam<ILogObj>>) {
+		super(getLoggerSettings(settings?.name ?? 'Sapphire', settings));
 	}
 
 	has(level: LogLevel): boolean {

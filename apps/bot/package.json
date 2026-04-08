@@ -1,7 +1,7 @@
 {
   "name": "@sirubot/bot",
   "private": true,
-  "version": "5.1.0",
+  "version": "5.1.2",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.js",
@@ -15,6 +15,7 @@
     "start": "node --experimental-specifier-resolution=node --enable-source-maps dist/"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
     "@redis/client": "^5.8.2",
     "@sapphire/decorators": "^6.2.0",
     "@sapphire/discord-utilities": "^3.5.0",
@@ -35,7 +36,7 @@
     "colorette": "^2.0.20",
     "discord.js": "^14.25.1",
     "figlet": "^1.9.3",
-    "lavalink-client": "^2.9.6",
+    "lavalink-client": "^2.10.0",
     "tslog": "^4.9.3",
     "undici": "^7.16.0"
   },

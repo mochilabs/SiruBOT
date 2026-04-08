@@ -1,20 +1,16 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
+import { Command } from '@sapphire/framework';
 import {
-	APIUser,
 	ApplicationIntegrationType,
 	ChatInputCommandInteraction,
-	MessageFlags,
 	VoiceBasedChannel,
 	GuildMember,
 	Collection,
 	AutocompleteInteraction
 } from 'discord.js';
-import * as view from '../view/skip.ts';
 import { Player, Queue, Track } from 'lavalink-client';
-import { VoteSkip } from '../managers/voteSkip.ts';
 
-interface SkipContext {
+export interface SkipContext {
 	player: Player;
 	queue: Queue;
 	currentTrack: Track;
@@ -70,44 +66,10 @@ export class SkipCommand extends Command {
 		const context = await this.buildSkipContext(interaction);
 		if (!context) return;
 
-		// 강제 스킵 / Skip to 옵션 처리
 		const force = interaction.options.getBoolean('force') ?? false;
 		const to = interaction.options.getInteger('to') ?? 0;
-		if (force || to) {
-			await this.checkDJRole(context);
-			if (to) {
-				await this.handleSkipTo(context, to);
-				return;
-			} else if (this.isQueueEmpty(context)) {
-				await this.handleEmptyQueue(context);
-				return;
-			} else {
-				await this.handleForceSkip(context);
-				return;
-			}
-		}
 
-		if (this.isQueueEmpty(context)) {
-			await this.handleEmptyQueue(context);
-			return;
-		}
-
-		if (this.isTrackRequestedByUser(context.currentTrack, context.interaction.user.id)) {
-			await this.handleUserRequestedTrack(context);
-			return;
-		}
-
-		if (this.isTrackRequestedByBot(context.currentTrack)) {
-			await this.handleRelatedTrackSkip(context);
-			return;
-		}
-
-		if (this.isUserAlone(context)) {
-			await this.handleAloneSkip(context);
-			return;
-		}
-
-		await this.handleVoteSkip(context);
+		await this.container.audioService.handleSkip(context, force, to);
 	}
 
 	private async buildSkipContext(interaction: ChatInputCommandInteraction): Promise<SkipContext | null> {
@@ -136,146 +98,6 @@ export class SkipCommand extends Command {
 			voiceChannel,
 			voiceChannelMembers
 		};
-	}
-
-	private isQueueEmpty(context: SkipContext): boolean {
-		return context.queue.tracks.length <= 0;
-	}
-
-	private isTrackRequestedByUser(track: Track, userId: string): boolean {
-		return typeof track.requester !== 'string' && (track.requester as APIUser).id === userId;
-	}
-
-	private isTrackRequestedByBot(track: Track): boolean {
-		return typeof track.requester !== 'string' && (track.requester as APIUser).id === this.container.client.user?.id;
-	}
-
-	private isUserAlone(context: SkipContext): boolean {
-		return Math.ceil(context.voiceChannelMembers.size / 2) <= 1;
-	}
-
-	private async handleEmptyQueue(context: SkipContext): Promise<void> {
-		const { currentTrack, interaction, player } = context;
-
-		if (this.isTrackRequestedByBot(currentTrack)) {
-			await player.skip(0, false);
-			await interaction.reply({
-				content: '추천 곡 건너뛰기 테스트'
-			});
-		} else {
-			throw new UserError({
-				identifier: 'skip_no_more_tracks',
-				message: '🔍 건너뛸 노래가 없어요.',
-				context: {
-					...context,
-					ephemeral: true
-				}
-			});
-		}
-	}
-
-	private async handleUserRequestedTrack(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await player.skip();
-		await interaction.reply({
-			components: [
-				view.trackSkipped({
-					track: currentTrack,
-					requester: interaction.user
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-	}
-
-	private async handleRelatedTrackSkip(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await player.skip();
-		await interaction.reply({
-			components: [view.trackRelatedSkipped({ track: currentTrack })],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-	}
-
-	private async handleAloneSkip(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await player.skip();
-		await interaction.reply({
-			components: [
-				view.trackSkipped({
-					track: currentTrack,
-					requester: interaction.user
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-	}
-
-	private async handleVoteSkip(context: SkipContext): Promise<void> {
-		const voteSkip = new VoteSkip({
-			player: context.player,
-			currentTrack: context.currentTrack,
-			nextTrack: context.queue.tracks[0] as Track,
-			voiceChannelMembers: context.voiceChannelMembers,
-			interaction: context.interaction
-		});
-
-		await voteSkip.execute();
-	}
-
-	private async checkDJRole(context: SkipContext): Promise<boolean> {
-		const { interaction } = context;
-		const hasPermission = await this.container.guildService.hasDJRole(interaction.guildId, interaction.member);
-
-		if (!hasPermission) {
-			throw new UserError({
-				identifier: 'forceskip_no_permission',
-				message: '❌ 곡을 강제로 건너뛰려면 DJ 역할이나 관리자 권한이 필요해요.'
-			});
-		}
-
-		return true;
-	}
-
-	private async handleForceSkip(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await player.skip();
-		await interaction.reply({
-			components: [
-				view.trackSkipped({
-					track: currentTrack,
-					requester: interaction.user
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-	}
-
-	private async handleSkipTo(context: SkipContext, to: number): Promise<void> {
-		const { player, interaction } = context;
-		if (to > player.queue.tracks.length) {
-			throw new UserError({
-				identifier: 'skipto_invalid_index',
-				message: '🎵 건너뛸 곡이 대기열에 존재하지 않아요.'
-			});
-		}
-
-		const track = player.queue.tracks[to - 1] as Track;
-
-		await player.skip(to);
-		await interaction.reply({
-			components: [
-				view.trackSkippedTo({
-					track,
-					to
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
 	}
 
 	public override async autocompleteRun(interaction: AutocompleteInteraction) {
