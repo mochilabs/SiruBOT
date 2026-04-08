@@ -131,12 +131,6 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page === 1);
 
-		// const pageIndicator = new ButtonBuilder()
-		// 	.setCustomId(wrapPrefix('queue:page:indicator'))
-		// 	.setLabel(`${page}/${queueChunks.length}`)
-		// 	.setStyle(ButtonStyle.Secondary)
-		// 	.setDisabled(true);
-
 		const queueNext = new ButtonBuilder()
 			.setCustomId(wrapPrefix('queue:next'))
 			.setEmoji('▶️')
