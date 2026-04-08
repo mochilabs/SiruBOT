@@ -141,7 +141,6 @@ export const main = async () => {
 			}
 			// Flush unsent Sentry events
 			await Sentry.close(2000);
-			await client.destroy();
 			process.exit(0);
 		};
 
