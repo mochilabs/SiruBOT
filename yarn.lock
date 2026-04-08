@@ -1474,18 +1474,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prisma/client@npm:^6.16.1":
-  version: 6.19.2
-  resolution: "@prisma/client@npm:6.19.2"
+"@prisma/client-runtime-utils@npm:7.7.0":
+  version: 7.7.0
+  resolution: "@prisma/client-runtime-utils@npm:7.7.0"
+  checksum: 10c0/357cc0fc2a27c7facba40f6d7fae6d82165db7d30dd9d548059553c15e873187faa8352928d5179bc05c216d7aff9dc7925db6982556778ad1bb3496ba69bdeb
+  languageName: node
+  linkType: hard
+
+"@prisma/client@npm:^7.7.0":
+  version: 7.7.0
+  resolution: "@prisma/client@npm:7.7.0"
+  dependencies:
+    "@prisma/client-runtime-utils": "npm:7.7.0"
   peerDependencies:
     prisma: "*"
-    typescript: ">=5.1.0"
+    typescript: ">=5.4.0"
   peerDependenciesMeta:
     prisma:
       optional: true
     typescript:
       optional: true
-  checksum: 10c0/b1b81171af50627275f1f66ee44652363eb9b3e0fac60590f15a99e48ca434f0cbf8580c252f0b8f4268468be219ba4f18e338c6275a038f8473fad809a782f7
+  checksum: 10c0/07437c95c72b58e6e895cda5b51c2a6d88167bbd05f4c33d820d7e6ab8eadc69a9c46d6cec339a76e5fd1a9f08905ef8066e96742a65c4a50cc43ed0c1739c1a
   languageName: node
   linkType: hard
 
@@ -3569,7 +3578,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sirubot/prisma@workspace:packages/prisma"
   dependencies:
-    "@prisma/client": "npm:^6.16.1"
+    "@prisma/client": "npm:^7.7.0"
     prisma: "npm:^7.7.0"
   languageName: unknown
   linkType: soft
@@ -4952,9 +4961,9 @@ __metadata:
   linkType: hard
 
 "citty@npm:^0.2.0":
-  version: 0.2.1
-  resolution: "citty@npm:0.2.1"
-  checksum: 10c0/504ac5aeb076f750bf5f25d40c730083e8ed6112eac2f00dbe341a223c46ad16893ce73dfdb55b2d0da505100b9678968ee0443637c45b21917db48daa5a6977
+  version: 0.2.2
+  resolution: "citty@npm:0.2.2"
+  checksum: 10c0/c896c9dcd187d2a16685706d11428dcdec9eb59aa13fe50aff7b12e1d3521f1bf434d6a5316fe75a341f8ba5ce1d2beceb84f7f261d018985a73d3f6f2a793e3
   languageName: node
   linkType: hard
 
@@ -5197,9 +5206,9 @@ __metadata:
   linkType: hard
 
 "defu@npm:^6.1.4":
-  version: 6.1.4
-  resolution: "defu@npm:6.1.4"
-  checksum: 10c0/2d6cc366262dc0cb8096e429368e44052fdf43ed48e53ad84cc7c9407f890301aa5fcb80d0995abaaf842b3949f154d060be4160f7a46cb2bc2f7726c81526f5
+  version: 6.1.7
+  resolution: "defu@npm:6.1.7"
+  checksum: 10c0/e6635388103c8be3c574ac31302f6930e5e6eeedba32cb1b30cf993c7d9fb571aec2485446dfa23bfa63e55e66156fe109027a9695db82a50f931e91e8d4bedb
   languageName: node
   linkType: hard
 
@@ -9624,9 +9633,9 @@ __metadata:
   linkType: hard
 
 "tinyexec@npm:^1.0.2":
-  version: 1.0.4
-  resolution: "tinyexec@npm:1.0.4"
-  checksum: 10c0/d4a5bbcf6bdb23527a4b74c4aa566f41432167112fe76f420ec7e3a90a3ecfd3a7d944383e2719fc3987b69400f7b928daf08700d145fb527c2e80ec01e198bd
+  version: 1.1.1
+  resolution: "tinyexec@npm:1.1.1"
+  checksum: 10c0/48433cb32573a767e2b63bb92343cbbae4240d05a19a63f7869f9447491305e7bd82d11daccb79b2628b596ad703a25798226c50bfd1d8e63477fb42af6a5b35
   languageName: node
   linkType: hard
 
