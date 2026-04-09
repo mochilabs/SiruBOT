@@ -119,7 +119,7 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 					showLength: true,
 					withMarkdownURL: false,
 					titleLength: {
-						maxLength: 90
+						maxLength: 80
 					}
 				});
 
