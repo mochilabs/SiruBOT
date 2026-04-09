@@ -7,6 +7,8 @@ import { LavalinkNodeOptions } from 'lavalink-client';
 import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const main = async () => {
 	const isDevMode = process.env.NODE_ENV !== 'production';
 
@@ -28,16 +30,23 @@ export const main = async () => {
 			logger: console
 		});
 
-		try {
-			const identity = await shardClient.identify();
-			shardIds = identity.shardIds;
-			shardCount = identity.shardCount;
-		} catch (error) {
-			if (error instanceof NoShardsAvailableError) {
-				console.error('No shards available from shard manager. Exiting...');
-				process.exit(1);
+		const identifyRetryMs = Math.max(parseInt(process.env.SHARD_IDENTIFY_RETRY_MS ?? '5000', 10), 1000);
+		// During rolling updates, shard slots can be temporarily unavailable.
+		// Keep retrying instead of exiting so the new process can pick up shards once old process releases.
+		while (true) {
+			try {
+				const identity = await shardClient.identify();
+				shardIds = identity.shardIds;
+				shardCount = identity.shardCount;
+				break;
+			} catch (error) {
+				if (error instanceof NoShardsAvailableError) {
+					console.warn(`No shards available from shard manager. Retrying in ${identifyRetryMs}ms...`);
+					await sleep(identifyRetryMs);
+					continue;
+				}
+				throw error;
 			}
-			throw error;
 		}
 
 		// Store shardClient in container (for stats reporting)
