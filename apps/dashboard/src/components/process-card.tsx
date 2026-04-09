@@ -1,5 +1,6 @@
 import type { ShardProcessInfo } from '@/lib/shard-api';
 import { StatusBadge } from './status-badge';
+import { Card, Flex, Text, Heading } from '@radix-ui/themes';
 
 function formatUptime(ms: number): string {
 	const seconds = Math.floor(ms / 1000);
@@ -25,48 +26,56 @@ function formatMemory(bytes: number): string {
 
 export function ProcessCard({ process, index }: { process: ShardProcessInfo; index: number }) {
 	return (
-		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-sm font-semibold text-gray-900">
-					Process #{index + 1}
-				</h3>
+		<Card className="bg-siru-panel border-0 rounded-[1.5rem] p-6 shadow-sm hover:shadow-md transition-shadow">
+			<Flex justify="between" align="center" className="mb-5">
+				<Flex align="center" gap="2">
+					<div className="w-8 h-8 rounded-lg bg-siru-base flex items-center justify-center font-mono text-siru-primary font-bold text-sm">
+						#{index + 1}
+					</div>
+					<Heading size="4" className="text-siru-text">Process</Heading>
+				</Flex>
 				<StatusBadge status={process.status} />
-			</div>
+			</Flex>
 
-			<div className="flex flex-wrap gap-1.5 mb-4">
-				{process.shardIds.map((id) => (
+			<Flex wrap="wrap" gap="2" className="mb-6 bg-siru-base p-3 rounded-xl">
+				{process.shardIds.length > 0 ? process.shardIds.map((id) => (
 					<span
 						key={id}
-						className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200"
+						className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-siru-panel text-siru-text/80 shadow-sm"
 					>
 						Shard {id}
 					</span>
-				))}
+				)) : <span className="text-xs text-siru-text/40">No shards</span>}
+			</Flex>
+
+			<div className="grid grid-cols-2 gap-4 mb-6">
+				<div className="bg-siru-base/50 p-3 rounded-xl">
+					<Text size="1" className="text-siru-text/50 block mb-1">서버</Text>
+					<Text size="3" className="font-semibold text-siru-text">{process.guilds.toLocaleString()}</Text>
+				</div>
+				<div className="bg-siru-base/50 p-3 rounded-xl">
+					<Text size="1" className="text-siru-text/50 block mb-1">플레이어</Text>
+					<Text size="3" className="font-semibold text-siru-text">{process.players.toLocaleString()}</Text>
+				</div>
+				<div className="bg-siru-base/50 p-3 rounded-xl">
+					<Text size="1" className="text-siru-text/50 block mb-1">메모리</Text>
+					<Text size="3" className="font-semibold text-siru-text">{formatMemory(process.memoryUsage)}</Text>
+				</div>
+				<div className="bg-siru-base/50 p-3 rounded-xl">
+					<Text size="1" className="text-siru-text/50 block mb-1">업타임</Text>
+					<Text size="3" className="font-semibold text-siru-text">{formatUptime(process.uptime)}</Text>
+				</div>
 			</div>
 
-			<div className="grid grid-cols-2 gap-3 text-sm">
-				<div>
-					<span className="text-gray-500">서버</span>
-					<p className="font-medium text-gray-900">{process.guilds.toLocaleString()}</p>
-				</div>
-				<div>
-					<span className="text-gray-500">플레이어</span>
-					<p className="font-medium text-gray-900">{process.players.toLocaleString()}</p>
-				</div>
-				<div>
-					<span className="text-gray-500">메모리</span>
-					<p className="font-medium text-gray-900">{formatMemory(process.memoryUsage)}</p>
-				</div>
-				<div>
-					<span className="text-gray-500">업타임</span>
-					<p className="font-medium text-gray-900">{formatUptime(process.uptime)}</p>
-				</div>
-			</div>
-
-			<div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs text-gray-400">
-				<span>마지막 하트비트: {formatRelativeTime(process.lastHeartbeat)}</span>
-				<span className="font-mono">{process.wsId.slice(0, 8)}</span>
-			</div>
-		</div>
+			<Flex justify="between" align="center" className="pt-4 border-t border-siru-text/5">
+				<Flex align="center" gap="2">
+					<span className="w-2 h-2 rounded-full bg-siru-secondary animate-pulse"></span>
+					<Text size="1" className="text-siru-text/40">마지막 하트비트: {formatRelativeTime(process.lastHeartbeat)}</Text>
+				</Flex>
+				<Text size="1" className="font-mono text-siru-text/30 bg-siru-base px-2 py-0.5 rounded-md">
+					{process.wsId.slice(0, 8)}
+				</Text>
+			</Flex>
+		</Card>
 	);
 }

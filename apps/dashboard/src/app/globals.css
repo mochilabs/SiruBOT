@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "@radix-ui/themes/styles.css";
 
+@theme {
+  --color-siru-bg: #302328;
+  --color-siru-panel: #3A272D;
+  --color-siru-base: #2A2322;
+  --color-siru-primary: #FCD6E5;
+  --color-siru-secondary: #FCE6A3;
+  --color-siru-text: #F5F5F7;
+  --shadow-siru-glow: 0 0 20px rgba(252, 214, 229, 0.3);
+}
+
 .radix-themes {
     --default-font-family: var(--font-pretendard) !important; /* Or var(--font-inter) */
+}
+
+body {
+    background-color: var(--color-siru-bg);
+    color: var(--color-siru-text);
 }
