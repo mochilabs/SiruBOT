@@ -1,6 +1,243 @@
 @import "tailwindcss";
-@import "@radix-ui/themes/styles.css";
 
-.radix-themes {
-    --default-font-family: var(--font-pretendard) !important; /* Or var(--font-inter) */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	--font-pretendard: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+	--background: #fef5f9;
+	--foreground: #2d1b1e;
+	--card: #ffffff;
+	--card-foreground: #2d1b1e;
+	--popover: #ffffff;
+	--popover-foreground: #2d1b1e;
+	--primary: #ff85c1;
+	--primary-foreground: #ffffff;
+	--secondary: #d4a574;
+	--secondary-foreground: #ffffff;
+	--muted: #f9eff5;
+	--muted-foreground: #8b6d75;
+	--accent: #ffe4f0;
+	--accent-foreground: #d1608a;
+	--destructive: #d4183d;
+	--destructive-foreground: #ffffff;
+	--border: #f0d4e3;
+	--input: #f9eff5;
+	--ring: #ff85c1;
+	--radius: 1rem;
+
+	/* Discord Light Mode Approximate */
+	--discord-embed: #f2f3f5;
+	--discord-text: #313338;
+	--discord-text-muted: #5c5e66;
+	--discord-btn-active: #e3e5e8;
+	--discord-btn-hover: #d5d6d7;
+	--discord-bg: #ebedef;
+
+	--glass-overlay: rgba(45, 27, 30, 0.05);
+	--glass-border: rgba(45, 27, 30, 0.08);
+}
+
+.dark {
+	--background: #1a0e12;
+	--foreground: #fce7f3;
+	--card: #2d1b1e;
+	--card-foreground: #fce7f3;
+	--popover: #2d1b1e;
+	--popover-foreground: #fce7f3;
+	--primary: #ff85c1;
+	--primary-foreground: #ffffff;
+	--secondary: #d4a574;
+	--secondary-foreground: #ffffff;
+	--muted: #3d2328;
+	--muted-foreground: #c9a8b5;
+	--accent: #4d2a35;
+	--accent-foreground: #ffb3d9;
+	--destructive: #d4183d;
+	--destructive-foreground: #ffffff;
+	--border: #3d2328;
+	--input: #3d2328;
+	--ring: #ff85c1;
+
+	/* Discord Dark Mode Equivalent */
+	--discord-embed: #2b2d31;
+	--discord-text: #dbdee1;
+	--discord-text-muted: #949ba4;
+	--discord-btn-active: #4e5058;
+	--discord-btn-hover: #6d6f78;
+	--discord-bg: #35373c;
+
+	--glass-overlay: rgba(255, 255, 255, 0.05);
+	--glass-border: rgba(255, 255, 255, 0.1);
+}
+
+@theme {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-border: var(--border);
+	--color-ring: var(--ring);
+
+	--font-pretendard: var(--font-pretendard);
+
+	--radius-lg: var(--radius);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-sm: calc(var(--radius) - 4px);
+
+	--color-discord-embed: var(--discord-embed);
+	--color-discord-text: var(--discord-text);
+	--color-discord-text-muted: var(--discord-text-muted);
+	--color-discord-btn-active: var(--discord-btn-active);
+	--color-discord-btn-hover: var(--discord-btn-hover);
+	--color-discord-bg: var(--discord-bg);
+	--color-discord-primary: #5865F2;
+	--color-discord-blue: #00a8fc;
+	--color-discord-light: #949cf7;
+}
+
+@utility glass-panel {
+	background: color-mix(in srgb, var(--card) 60%, transparent);
+	backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid var(--glass-border);
+	border-radius: var(--radius);
+	box-shadow: 
+		0 10px 40px -10px rgba(0, 0, 0, 0.1),
+		inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+@utility glass-overlay {
+	background-color: var(--glass-overlay);
+	backdrop-filter: blur(12px);
+	border: 1px solid var(--glass-border);
+	box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+@utility text-title-gradient {
+	background-image: linear-gradient(to right, var(--primary), var(--secondary), #ffb3d9, var(--primary));
+	background-size: 300% auto;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+
+	body {
+		@apply bg-background text-foreground font-pretendard selection:bg-primary/30 transition-colors duration-700 ease-in-out;
+	}
+}
+
+@utility animate-shimmer-sweep {
+	animation: shimmer-sweep 2.5s infinite;
+}
+
+@utility animate-float-subtle {
+	animation: float-subtle 3s ease-in-out infinite;
+}
+
+@keyframes float {
+	0%,
+	100% {
+		transform: translateY(0px);
+	}
+
+	50% {
+		transform: translateY(-10px);
+	}
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: 0% 50%;
+	}
+
+	100% {
+		background-position: 300% 50%;
+	}
+}
+
+@keyframes gradient-shift {
+	0% {
+		background-position: 0% 50%;
+	}
+
+	50% {
+		background-position: 100% 50%;
+	}
+
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+@keyframes fade-in-up {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes shimmer-sweep {
+	from {
+		transform: translateX(-100%) skewX(-20deg);
+	}
+	to {
+		transform: translateX(200%) skewX(-20deg);
+	}
+}
+
+@keyframes float-subtle {
+	0%, 100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-5px);
+	}
+}
+
+/* View Transitions API - Smooth theme flip */
+::view-transition-old(root) {
+	animation: 500ms ease-in-out both fade-out;
+	mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+	animation: 500ms ease-in-out both fade-in;
+	mix-blend-mode: normal;
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
 }

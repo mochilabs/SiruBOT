@@ -1,75 +1,108 @@
-import { TrackList } from "@/components/track";
+import { InfiniteTrackList } from "@/components/infinite-track-list";
 import { db } from "@/lib/db";
-import { Suspense } from "react";
+import { Disc3, HelpCircle } from "lucide-react";
+import { InteractiveGlow } from "@/components/interactive-glow";
 
-// Prerender ignore
 export const dynamic = "force-dynamic";
-async function getPopularTracks() {
-	const tracks = await db.track.findMany({
-		orderBy: {
-			totalPlays: 'desc'
-		},
-		take: 50 // 상위 50곡
-	});
-	
-	return tracks;
-}
 
-function TrackSkeleton() {
-	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">인기 곡 순위</h1>
-				<p className="text-gray-600">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
-			</div>
-			
-			<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-				<div className="space-y-4">
-					{Array.from({ length: 10 }).map((_, i) => (
-						<div key={i} className="flex items-center space-x-4 p-4">
-							<div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
-							<div className="flex-1 space-y-2">
-								<div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-								<div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-							</div>
-							<div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
-						</div>
-					))}
-				</div>
-			</div>
-		</div>
-	);
-}
+const PAGE_SIZE = 20;
 
-async function TrackContent() {
-	const tracks = await getPopularTracks();
-
-	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">인기 곡 순위</h1>
-				<p className="text-gray-600">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
-			</div>
-
-			{tracks.length > 0 ? (
-				<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-					<TrackList tracks={tracks} />
-				</div>
-			) : (
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 sm:p-12 text-center">
-					<span className="text-6xl mb-4 block">🎵</span>
-					<h2 className="text-xl font-medium text-gray-900 mb-2">아직 재생된 곡이 없어요</h2>
-					<p className="text-gray-500">봇에서 음악을 재생하면 여기에 표시됩니다</p>
-				</div>
-			)}
-		</div>
-	);
-}
+const fixedTrackFilter = {
+	duration: {
+		gt: 60 * 1000,	
+		lt: 60 * 1000 * 60
+	},
+	totalPlays: {
+		gt: 10
+	}
+} as const;
 
 export default async function TrackPage() {
+	const [tracks, totalCount, totalPlaybacks] = await Promise.all([
+		db.track.findMany({
+			orderBy: [{ totalPlays: "desc" }, { updatedAt: "desc" }],
+			where: fixedTrackFilter,
+			take: PAGE_SIZE,
+			skip: 0,
+		}),
+		db.track.count({
+			where: fixedTrackFilter
+		}),
+		db.track.aggregate({
+			_sum: {
+				totalPlays: true
+			},
+			where: fixedTrackFilter
+		})
+	]);
+
 	return (
-		<Suspense fallback={<TrackSkeleton />}>
-			<TrackContent />
-		</Suspense>
+		<main className="min-h-screen pt-32 pb-20 relative overflow-hidden">
+			<InteractiveGlow />
+			
+			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+				<header className="mb-12 space-y-6">
+					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold">
+						<Disc3 size={16} />
+						<span>인기 차트</span>
+					</div>
+					
+					<div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+						<div className="space-y-4">
+							<h1 className="text-4xl md:text-5xl font-black tracking-tighter text-title-gradient leading-[0.9]">
+								인기 차트
+							</h1>
+							<p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
+								시루봇 사용자들에게 가장 사랑받는 <br className="hidden md:block"/> 
+								노래들을 집계합니다.
+							</p>
+						</div>
+						
+						<div className="flex gap-2">
+							<div className="group relative glass-panel px-6 py-4 flex flex-col items-center border-primary/20 cursor-help">
+								<div className="flex items-center gap-1.5 text-primary/60">
+									<span className="text-[12px] font-black tracking-widest uppercase">단일 곡 수</span>
+								</div>
+								<span className="text-3xl font-black text-foreground">{totalCount.toLocaleString()}</span>
+								
+								{/* Tooltip */}
+								<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-3 glass-panel border-primary/30 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+									<p className="text-[11px] font-bold text-foreground leading-relaxed">
+										• 1분 ~ 60분 사이의 곡<br />
+										• 10회 이상 재생된 트랙
+									</p>
+								</div>
+							</div>
+
+							<div className="group relative glass-panel px-6 py-4 flex flex-col items-center border-primary/20 cursor-help">
+								<div className="flex items-center gap-1.5 text-primary/60">
+									<span className="text-[12px] font-black tracking-widest uppercase">재생한 횟수</span>
+								</div>
+								<span className="text-3xl font-black text-foreground">{totalPlaybacks._sum.totalPlays?.toLocaleString()}</span>
+
+								{/* Tooltip */}
+								<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-3 glass-panel border-primary/30 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+									<p className="text-[11px] font-bold text-foreground leading-relaxed">
+										• 필터링된 트랙들의<br />
+										• 총 누적 재생 카운트
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</header>
+
+				<section className="space-y-6">
+					{tracks.length === 0 ? (
+						<div className="glass-panel p-20 text-center border-dashed border-white/10">
+							<p className="text-xl font-medium text-muted-foreground">차트 데이터를 집계 중입니다...</p>
+						</div>
+					) : (
+						<InfiniteTrackList initialTracks={tracks} rankOffset={0} />
+					)}
+				</section>
+			</div>
+		</main>
 	);
 }
+

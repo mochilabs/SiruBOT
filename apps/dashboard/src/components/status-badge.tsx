@@ -1,18 +1,47 @@
+"use client";
+
+import { motion } from "framer-motion";
+
 export function StatusBadge({ status }: { status: string }) {
-	status = status.toUpperCase();
-	const config: Record<string, { color: string; bg: string; dot: string }> = {
-		READY: { color: 'text-green-700', bg: 'bg-green-50 border-green-200', dot: 'bg-green-500' },
-		IDLE: { color: 'text-yellow-700', bg: 'bg-yellow-50 border-yellow-200', dot: 'bg-yellow-500' },
-		CONNECTING: { color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200', dot: 'bg-blue-500' },
-		DEAD: { color: 'text-red-700', bg: 'bg-red-50 border-red-200', dot: 'bg-red-500' },
+	const normalized = status.toUpperCase();
+	const config: Record<string, { text: string; bg: string; dot: string }> = {
+		READY: {
+			text: "text-emerald-200",
+			bg: "bg-[rgba(16,185,129,0.12)] border-[rgba(16,185,129,0.3)]",
+			dot: "bg-emerald-300",
+		},
+		IDLE: {
+			text: "text-amber-200",
+			bg: "bg-[rgba(245,158,11,0.14)] border-[rgba(245,158,11,0.3)]",
+			dot: "bg-amber-300",
+		},
+		CONNECTING: {
+			text: "text-sky-200",
+			bg: "bg-[rgba(59,130,246,0.14)] border-[rgba(59,130,246,0.3)]",
+			dot: "bg-sky-300",
+		},
+		DISCONNECTED: {
+			text: "text-rose-200",
+			bg: "bg-[rgba(244,63,94,0.14)] border-[rgba(244,63,94,0.3)]",
+			dot: "bg-rose-300",
+		},
+		ERRORED: {
+			text: "text-rose-200",
+			bg: "bg-[rgba(244,63,94,0.14)] border-[rgba(244,63,94,0.3)]",
+			dot: "bg-rose-300",
+		},
 	};
 
-	const c = config[status] ?? config.DEAD;
+	const c = config[normalized] ?? config.ERRORED;
 
 	return (
-		<span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${c.bg} ${c.color}`}>
-			<span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-			{status}
+		<span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${c.bg} ${c.text}`}>
+			<motion.span
+				className={`pulse-dot h-1.5 w-1.5 rounded-full ${c.dot}`}
+				animate={{ opacity: [0.45, 1, 0.45], scale: [0.88, 1.06, 0.88] }}
+				transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+			/>
+			{normalized}
 		</span>
 	);
 }
