@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useInView } from "react-intersection-observer";
 import { Track as TrackType } from "@sirubot/prisma";
 import { getTracksAction } from "@/app/actions/track-actions";
 import { TrackItem } from "./track";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
 interface InfiniteTrackListProps {
@@ -37,13 +37,7 @@ export function InfiniteTrackList({ initialTracks, rankOffset = 0 }: InfiniteTra
 		triggerOnce: false,
 	});
 
-	useEffect(() => {
-		if (inView && hasMore && !loading) {
-			loadMoreTracks();
-		}
-	}, [inView, hasMore, loading]);
-
-	const loadMoreTracks = async () => {
+	const loadMoreTracks = useCallback(async () => {
 		setLoading(true);
 		try {
 			const newTracks = await getTracksAction(page);
@@ -62,7 +56,13 @@ export function InfiniteTrackList({ initialTracks, rankOffset = 0 }: InfiniteTra
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [page]);
+
+	useEffect(() => {
+		if (inView && hasMore && !loading) {
+			loadMoreTracks();
+		}
+	}, [inView, hasMore, loading, loadMoreTracks]);
 
 	return (
 		<div className="w-full space-y-4 pb-20">

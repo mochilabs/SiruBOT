@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "*.sndcdn.com"
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com"
       }
     ],
   }
