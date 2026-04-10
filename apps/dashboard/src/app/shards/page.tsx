@@ -35,7 +35,7 @@ export default async function ShardsPage() {
 		<Container>
 			<InteractiveGlow />
 
-			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+			<div className="mx-auto w-full max-w-7xl sm:px-6 lg:px-0 relative z-10">
 				<header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
 					<div className="space-y-6">
 						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold animate-pulse">

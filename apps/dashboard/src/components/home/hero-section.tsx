@@ -15,7 +15,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ containerVariants, itemVariants }: HeroSectionProps) {
 	return (
-		<section className="relative flex items-center">
+		<section className="relative min-h-[calc(100dvh-10vh)] pt-[10vh] flex items-center">
 			<div className="max-w-7xl mx-auto w-full px-6 xl:px-6 2xl:px-0 relative">
 				<div className="grid lg:grid-cols-[3fr_4fr] gap-8 lg:gap-10 xl:gap-15 items-center">
 					{/* Left: Content */}
@@ -147,7 +147,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 
 			{/* Scroll Down Indicator */}
 			<motion.div 
-				className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-muted-foreground/30"
+				className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-muted-foreground/30"
 				initial={{ opacity: 0, y: -20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ delay: 2, duration: 1 }}

@@ -31,17 +31,16 @@ const itemVariants = {
 
 export default function Home() {
 	return (
-		<Container>
+		<div className="w-full relative min-h-screen">
 			<InteractiveGlow />
-			<div className="relative">
-				<HeroSection 
-					containerVariants={containerVariants} 
-					itemVariants={itemVariants} 
-				/>
+			
+			<HeroSection 
+				containerVariants={containerVariants} 
+				itemVariants={itemVariants} 
+			/>
 
-				<FeaturesSection />
-			</div>
-		</Container>
+			<FeaturesSection />
+		</div>
 	);
 }
 

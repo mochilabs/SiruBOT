@@ -3,7 +3,6 @@ import localFont from "next/font/local";
 
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
-import { PageTransition } from "@/components/page-transition";
 import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
 
@@ -58,7 +57,7 @@ export default function RootLayout({
 					<div className="min-h-screen flex flex-col">
 						<Navbar />
 						<div className="flex-1">
-							<PageTransition>{children}</PageTransition>
+							{children}
 						</div>
 						<Footer />
 						<ScrollToTop />

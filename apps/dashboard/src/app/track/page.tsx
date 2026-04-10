@@ -62,7 +62,7 @@ export default async function TrackPage({
 		<Container>
 			<InteractiveGlow />
 			
-			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+			<div className="mx-auto w-full max-w-7xl sm:px-6 lg:px-0 relative z-10">
 				<header className="mb-6 space-y-6">
 					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold">
 						<ListMusicIcon size={16} />

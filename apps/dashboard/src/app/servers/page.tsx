@@ -69,7 +69,7 @@ export default async function ServersPage() {
         <Container>
             <InteractiveGlow />
 
-            <div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+            <div className="mx-auto w-full max-w-7xl sm:px-6 lg:px-0 relative z-10">
                 <header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
                     <div className="space-y-6">
                         <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-title-gradient leading-[0.9]">
