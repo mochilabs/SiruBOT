@@ -7,10 +7,10 @@ import { ArrowRight, DollarSign,ListMusicIcon, Music, Shield, Sparkles, Users } 
 export function FeaturesSection() {
 	const features = [
 		{ icon: Music, title: "고품질 음악", desc: "고음질로 Spotify, YouTube 등 스트리밍을 지원해요.", gradient: "from-primary to-pink-400" },
-		{ icon: Sparkles, title: "추천 곡 재생", desc: "노래를 직접 추가하지 않아도 추천 곡 재생이 가능해요.", gradient: "from-secondary to-yellow-500" },
-		{ icon: ListMusicIcon, title: "나만의 재생목록", desc: "자주 듣는 곡들을 플레이리스트로 저장하고 언제든 다시 불러올 수 있어요.", gradient: "from-pink-500 to-rose-400" },
-		{ icon: Users, title: "쉬운 사용", desc: "직관적인 명령어와 대시보드 버튼으로 누구나 쉽게 제어할 수 있어요.", gradient: "from-primary to-purple-500" },
-		{ icon: Shield, title: "안정적 운영", desc: "24/7 가동으로 끊김 없는 서비스를 보장해요.", gradient: "from-secondary to-orange-500" },
+		{ icon: Sparkles, title: "추천 곡 재생", desc: "노래를 직접 고르지 않아도 시루봇이 추천해드려요.", gradient: "from-secondary to-yellow-500" },
+		{ icon: ListMusicIcon, title: "나만의 재생목록", desc: "자주 듣는 노래들을 저장하고 언제든 다시 불러올 수 있어요.", gradient: "from-pink-500 to-rose-400" },
+		{ icon: Users, title: "쉬운 사용", desc: "누구나 쉽게 쓸 수 있는 명령어와 대시보드를 준비했어요.", gradient: "from-primary to-purple-500" },
+		{ icon: Shield, title: "안정적 운영", desc: "언제 어디서나 끊김 없이 음악을 즐길 수 있어요.", gradient: "from-secondary to-orange-500" },
 		{ icon: DollarSign, title: "무료", desc: "대부분의 기능이 무료예요.", gradient: "from-secondary to-green-500" },
 	];
 
@@ -26,7 +26,7 @@ export function FeaturesSection() {
 				>
 					<div className="space-y-4">
 						<h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-title-gradient">왜 시루봇인가요?</h2>
-						<p className="text-lg sm:text-xl font-medium text-muted-foreground/80">수천 개의 서버가 선택한 이유를 확인해보세요</p>
+						<p className="text-lg sm:text-xl font-medium text-muted-foreground/80">왜 수천 개의 서버가 시루봇을 쓰는지 궁금하신가요?</p>
 					</div>
 					
 					<div className="flex justify-center">
@@ -34,7 +34,7 @@ export function FeaturesSection() {
 							href="/invite" 
 							className="inline-flex items-center gap-3 px-8 py-4 bg-primary/10 border border-primary/20 text-primary font-bold rounded-2xl hover:bg-primary/20 transition-all duration-300"
 						>
-							시루봇 추가하기
+							초대하기
 							<ArrowRight size={20} />
 						</Link>
 					</div>

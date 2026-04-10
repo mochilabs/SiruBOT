@@ -34,7 +34,7 @@ export default function NotFound() {
 						<span
 							className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl"
 						>
-							이 페이지는 존재하지 않아요.
+							찾으시는 페이지가 없는 것 같아요.
 							</span>
 					</div>
 
@@ -45,7 +45,7 @@ export default function NotFound() {
 						>
 							<div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]" />
 							<Home className="h-6 w-6" />
-							메인 페이지로 돌아가기
+							홈으로 가기
 						</Link>
 
 						<button 
@@ -53,7 +53,7 @@ export default function NotFound() {
 							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground/60 transition-all hover:text-primary"
 						>
 							<ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
-							이전 페이지로 돌아가기
+							이전으로 가기
 						</button>
 					</div>
 				</div>

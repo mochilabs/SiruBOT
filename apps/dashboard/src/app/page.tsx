@@ -1,5 +1,6 @@
 "use client";
 
+import Container from "@/components/container";
 import { FeaturesSection } from "@/components/home/features-section";
 import { HeroSection } from "@/components/home/hero-section";
 import { InteractiveGlow } from "@/components/interactive-glow";
@@ -30,7 +31,7 @@ const itemVariants = {
 
 export default function Home() {
 	return (
-		<div className="w-full relative bg-background min-h-screen">
+		<Container>
 			<InteractiveGlow />
 			<div className="relative">
 				<HeroSection 
@@ -40,7 +41,7 @@ export default function Home() {
 
 				<FeaturesSection />
 			</div>
-		</div>
+		</Container>
 	);
 }
 

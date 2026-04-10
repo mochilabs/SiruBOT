@@ -1,88 +1,67 @@
-import Link from "next/link";
-import { ExternalLink, Settings, ShieldCheck,Sparkles, UserPlus } from "lucide-react";
+"use client";
 
-import Container from "@/components/container";
+import Link from "next/link";
+import { CheckCircle2, ChevronRight, Home, Settings2, Sparkles } from "lucide-react";
 import { InteractiveGlow } from "@/components/interactive-glow";
 
-function buildInviteUrl() {
-	const clientId = process.env.AUTH_DISCORD_ID;
-	if (!clientId) return null;
-	return `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=274877910080&scope=bot%20applications.commands`;
-}
-
 export default function InviteRedirectPage() {
-	const inviteUrl = buildInviteUrl();
-
 	return (
-		<Container>
+		<main className="relative flex min-h-[100vh] w-full items-center justify-center overflow-hidden px-4">
+			{/* Dynamic Background Effect */}
 			<InteractiveGlow />
 
-			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
-					<div className="space-y-4">
-						<h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9]">
-							당신의 서버에 <Sparkles size={40} className="inline-block" /><br /> 시루봇을 초대하세요
-						</h1>
-						<p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
-							최고의 음악 경험을 제공하는 시루봇을 지금 바로 초대하고 <br className="hidden md:block"/> 
-							강력한 대시보드 기능을 무제한으로 이용해 보세요.
-						</p>
-					</div>
-					<div className="space-y-10 order-2 lg:order-1">
-						<div className="glass-panel p-10 space-y-8 border-primary/20">
-							<div className="space-y-4">
-								<h2 className="text-2xl font-black tracking-tighter text-foreground">간편하게 시작하기</h2>
-								<p className="text-muted-foreground leading-relaxed">
-									아래 버튼을 클릭하여 디스코드 서버에 시루봇을 추가할 수 있습니다. <br />
-									초대 완료 후 바로 대시보드에서 설정을 변경할 수 있습니다.
-								</p>
-							</div>
+			<div className="relative z-10 flex flex-col items-center text-center">
+				{/* Immersive Background Text */}
+				<div className="absolute inset-0 -z-10 flex items-center justify-center">
+					<span className="text-[12rem] sm:text-[20rem] md:text-[30rem] font-black text-primary/5 select-none tracking-tighter uppercase whitespace-nowrap">
+						고마워요
+					</span>
+				</div>
 
-							<div className="flex flex-col sm:flex-row gap-4">
-								{inviteUrl ? (
-									<a
-										href={inviteUrl}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="group flex flex-1 items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-primary to-secondary text-white text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
-									>
-										<UserPlus size={22} />
-										시루봇 초대하기
-										<ExternalLink size={20} className="opacity-60" />
-									</a>
-								) : (
-									<div className="flex-1 rounded-2xl border border-red-500/20 bg-red-500/5 px-6 py-4 text-center text-red-100/70 font-medium">
-										설정 오류: 클라이언트 ID를 찾을 수 없습니다.
-									</div>
-								)}
-								<Link 
-									href="/invite/redirect" 
-									className="flex items-center justify-center gap-2 px-8 py-5 bg-white/5 border border-white/10 text-foreground font-bold rounded-2xl hover:bg-white/10 transition-all duration-300"
-								>
-									<Settings size={20} />
-									초대 후 설정
-								</Link>
+				<div className="space-y-12">
+					<div className="flex flex-col items-center space-y-6">
+						{/* Success Symbol */}
+						<div className="relative">
+							<div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-tr from-green-500/20 via-green-500/5 to-primary/10 p-6 shadow-[0_0_50px_-10px_rgba(34,197,94,0.3)]">
+								<CheckCircle2 className="h-16 w-16 text-green-500 animate-bounce" />
+							</div>
+							<div className="absolute -top-4 -right-4 bg-primary text-white p-3 rounded-2xl shadow-xl animate-pulse">
+								<Sparkles size={24} />
 							</div>
 						</div>
 
-						{/* Trust Badges */}
-						<div className="grid grid-cols-2 gap-6">
-							{[
-								{ icon: ShieldCheck, title: "보안 인증", desc: "검증된 권한만 사용" },
-								{ icon: Sparkles, title: "고음질 지원", desc: "손실 없는 스트리밍" },
-							].map((item, i) => (
-								<div key={i} className="flex gap-4 items-start p-4 rounded-2xl bg-white/5 border border-white/5">
-									<div className="p-3 bg-primary/10 rounded-xl text-primary">
-										<item.icon size={20} />
-									</div>
-									<div>
-										<h4 className="font-bold text-foreground">{item.title}</h4>
-										<p className="text-sm text-muted-foreground/60">{item.desc}</p>
-									</div>
-								</div>
-							))}
+						<div className="space-y-4">
+							<h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl break-keep">
+								초대해 주셔서 고마워요!
+							</h1>
+							<p className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl max-w-xl break-keep">
+								이제 모든 준비가 끝났어요.<br />
+								나에게 딱 맞는 설정으로 대시보드를 꾸며볼까요?
+							</p>
 						</div>
 					</div>
+
+					<div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
+						<Link 
+							href="/servers"
+							className="group relative flex items-center justify-center gap-3 overflow-hidden rounded-full bg-primary px-10 py-5 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(255,133,193,0.5)] transition-all duration-300 hover:scale-105 hover:bg-primary/90 active:scale-95"
+						>
+							<div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]" />
+							<Settings2 className="h-6 w-6" />
+							설정하러 가기
+							<ChevronRight className="h-6 w-6 transition-transform group-hover:translate-x-1" />
+						</Link>
+
+						<Link 
+							href="/"
+							className="group flex items-center gap-2 text-lg font-semibold text-muted-foreground/60 transition-all hover:text-primary"
+						>
+							<Home className="h-5 w-5" />
+							홈으로 가기
+						</Link>
+					</div>
+				</div>
 			</div>
-		</Container>
+		</main>
 	);
 }

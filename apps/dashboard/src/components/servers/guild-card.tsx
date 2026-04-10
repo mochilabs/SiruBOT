@@ -16,7 +16,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					{iconUrl ? (
 						<Image src={iconUrl} alt={`${guild.name} icon`} width={56} height={56} className="rounded-full ring-4 ring-primary/10" />
 					) : (
-						<div className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-white/5 text-lg font-black text-foreground border border-white/10 group-hover:border-primary/40 transition-colors">
+						<div className="flex h-[56px] w-[56px] items-center justify-center rounded-full glass-overlay text-lg font-black text-foreground group-hover:border-primary/40 transition-colors">
 							{guild.name.charAt(0)}
 						</div>
 					)}
@@ -26,10 +26,10 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 							{guild.isInstalled ? (
 								<div className="flex items-center gap-1 text-[10px] font-bold text-primary/80 uppercase tracking-widest">
 									<ShieldCheck size={10} />
-									<span>봇이 설치되어 있어요.</span>
+									<span>이미 시루봇이 있어요</span>
 								</div>
 							) : (
-								<span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">봇이 설치되지 않았어요.</span>
+								<span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">아직 시루봇이 없어요</span>
 							)}
 						</div>
 					</div>
@@ -51,7 +51,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 							className="flex items-center w-full justify-center gap-2 rounded-xl bg-green-500/10 border border-green-500/20 py-3.5 text-sm font-bold text-green-400 hover:bg-green-500 hover:text-white transition-all duration-300 shadow-lg shadow-green-500/5"
 						>
 							<Play size={18} />
-							음악 컨트롤러
+							컨트롤러
 						</Link>
 					</div>
 				) : (
@@ -68,10 +68,10 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					href={inviteUrl || "#"}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="mt-auto flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 py-3.5 text-sm font-bold text-foreground hover:bg-white/10 transition-all duration-300"
+					className="mt-auto flex items-center justify-center gap-2 rounded-xl glass-overlay py-3.5 text-sm font-bold text-foreground hover:bg-foreground/5 hover:border-foreground/20 transition-all duration-300 shadow-xl shadow-black/5"
 				>
 					<UserPlus size={18} />
-					봇 초대하기
+					초대하기
 					<ExternalLink size={14} className="opacity-40" />
 				</a>
 			)}

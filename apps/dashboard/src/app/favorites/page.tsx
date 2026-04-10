@@ -42,10 +42,10 @@ export default async function FavoritesPage() {
 					<div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
 						<div className="space-y-4">
 							<h1 className="text-4xl md:text-5xl font-black tracking-tighter text-title-gradient leading-[0.9]">
-								내 즐겨찾기 목록
+								즐겨찾는 노래들
 							</h1>
 							<p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
-								당신이 아끼고 사랑하는 트랙들을 <br className="hidden md:block"/> 
+								즐겨찾기한 노래들을 <br className="hidden md:block"/> 
 								이곳에서 한눈에 모아보고 재생하세요.
 							</p>
 						</div>
@@ -59,8 +59,8 @@ export default async function FavoritesPage() {
 
 				<section className="space-y-6">
 					{tracks.length === 0 ? (
-						<div className="glass-panel p-20 text-center border-dashed border-white/10">
-							<p className="text-xl font-medium text-muted-foreground">즐겨찾는 트랙을 추가해보세요!</p>
+						<div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-xl">
+							<p className="text-xl font-medium text-muted-foreground">즐겨찾는 노래를 추가해보세요!</p>
 						</div>
 					) : (
 						<TrackList tracks={tracks} />

@@ -34,8 +34,8 @@
 	--discord-btn-hover: #d5d6d7;
 	--discord-bg: #ebedef;
 
-	--glass-overlay: rgba(45, 27, 30, 0.05);
-	--glass-border: rgba(45, 27, 30, 0.08);
+	--glass-overlay: rgba(45, 27, 30, 0.08);
+	--glass-border: rgba(45, 27, 30, 0.15);
 }
 
 .dark {
@@ -109,7 +109,7 @@
 	backdrop-filter: blur(20px) saturate(180%);
 	border: 1px solid var(--glass-border);
 	border-radius: var(--radius);
-	box-shadow: 
+	box-shadow:
 		0 10px 40px -10px rgba(0, 0, 0, 0.1),
 		inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -129,12 +129,8 @@
 }
 
 @layer base {
-	* {
-		@apply border-border;
-	}
-
 	body {
-		@apply bg-background text-foreground font-pretendard selection:bg-primary/30 transition-colors duration-700 ease-in-out;
+		background-color: var(--background);
 	}
 }
 
@@ -147,6 +143,7 @@
 }
 
 @keyframes float {
+
 	0%,
 	100% {
 		transform: translateY(0px);
@@ -197,25 +194,32 @@
 	from {
 		transform: translateX(-100%) skewX(-20deg);
 	}
+
 	to {
 		transform: translateX(200%) skewX(-20deg);
 	}
 }
 
 @keyframes float-subtle {
-	0%, 100% {
+
+	0%,
+	100% {
 		transform: translateY(0);
 	}
+
 	50% {
 		transform: translateY(-5px);
 	}
 }
 
 @keyframes pulse-soft {
-	0%, 100% {
+
+	0%,
+	100% {
 		opacity: 0.5;
 		transform: scale(0.95);
 	}
+
 	50% {
 		opacity: 1;
 		transform: scale(1.05);

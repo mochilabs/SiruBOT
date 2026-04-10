@@ -16,9 +16,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL!),
   title: "시루봇",
-  description: "시루봇과 함께 심심할 틈 없는 서버를 만들어보세요.",
+  description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
   openGraph: {
-    description: "시루봇과 함께 심심할 틈 없는 서버를 만들어보세요.",
+    description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
     url: process.env.NEXT_PUBLIC_APP_URL!,
     images: [
       {
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "시루봇",
-    description: "시루봇과 함께 심심할 틈 없는 서버를 만들어보세요.",
+    description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
     images: ["/images/og-image.png"],
   }
 };

@@ -7,7 +7,7 @@ import { Search, X } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
 export function SearchInput({ 
-	placeholder = "곡 제목 또는 아티스트 검색...",
+	placeholder = "어떤 노래를 찾아볼까요?",
 	className = "" 
 }: { 
 	placeholder?: string;
@@ -52,7 +52,7 @@ export function SearchInput({
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				placeholder={placeholder}
-				className="w-full h-14 pl-12 pr-12 bg-card/30 backdrop-blur-md border border-white/5 rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all text-lg font-medium shadow-xl shadow-black/5"
+				className="w-full h-14 pl-12 pr-12 bg-card/30 backdrop-blur-md border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all text-lg font-medium shadow-xl shadow-black/5"
 			/>
 
 			{value && (

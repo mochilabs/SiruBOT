@@ -76,7 +76,7 @@ export function Navbar() {
 									className={`px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-all duration-300 ${
 										pathname === link.href 
 											? "bg-primary/10 text-primary shadow-sm" 
-											: "text-foreground/70 hover:bg-white/5 hover:text-primary"
+											: "text-foreground/70 hover:bg-foreground/5 hover:text-primary"
 									} hover:scale-[1.05] active:scale-[0.95]`}
 								>
 									{link.label}
@@ -85,7 +85,7 @@ export function Navbar() {
 						</div>
 						
 						{/* divider */}
-						<div className="hidden md:block w-px h-6 bg-white/10"></div>
+						<div className="hidden md:block w-px h-6 bg-border"></div>
 						
 						{/* Action Buttons */}
 						<div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export function Navbar() {
 							
 							<div className="hidden md:flex items-center gap-2">
 								{status === "authenticated" ? (
-									<div className="flex items-center gap-1 pl-2 border-l border-white/10">
+									<div className="flex items-center gap-1 pl-2 border-l border-border">
 										<div className="flex items-center gap-2 px-1">
 											{session.user?.image && (
 												<Image
@@ -133,7 +133,7 @@ export function Navbar() {
 										<button 
 											onClick={() => signOut()}
 											className="flex items-center justify-center w-11 h-11 rounded-xl hover:bg-red-500/10 text-foreground/70 hover:text-red-500"
-											title="로그아웃"
+											title="로그아웃하기"
 										>
 											<LogOut size={18} />
 										</button>
@@ -143,7 +143,7 @@ export function Navbar() {
 										onClick={() => signIn("discord")}
 										className="h-11 px-6 flex items-center justify-center glass-overlay text-foreground/80 text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-scale duration-300"
 									>
-										디스코드로 로그인
+										대시보드 시작하기
 									</button>
 								)}
 							</div>

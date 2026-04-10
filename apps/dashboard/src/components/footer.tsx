@@ -18,7 +18,7 @@ export function Footer() {
 							</span>
 						</div>
 						<p className="text-muted-foreground font-medium leading-relaxed">
-							음악으로 하나되는 서버를 만드세요.
+							음악으로 하나되는 서버를 함께 만들어가요.
 						</p>
 					</div>
 
@@ -39,7 +39,7 @@ export function Footer() {
 						<div className="space-y-4">
 							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Community</h4>
 							<ul className="space-y-3">
-								<li><Link href={process.env.NEXT_PUBLIC_SUPPORT_SERVER || "#support_server"} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+								<li><Link href={process.env.NEXT_PUBLIC_SUPPORT_SERVER || "#"} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
 									<MessageSquare size={16} /> 공식 디스코드
 								</Link></li>
 								<li><Link href="https://github.com/mochiLabs/SiruBOT" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">

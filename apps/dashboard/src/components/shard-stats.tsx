@@ -31,13 +31,13 @@ export function ShardStats({ stats }: { stats: ShardAggregateStats }) {
 		<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 			<StatCard
 				icon={RadioTower}
-				label="할당된 샤드"
+				label="연결된 샤드"
 				value={`${stats.allocatedShards} / ${stats.shardCount}`}
-				sub={`${stats.processCount} 클러스터 활성화`}
+				sub={`${stats.processCount}개 프로세스 운영 중`}
 			/>
-			<StatCard icon={Server} label="연결된 서버" value={stats.totalGuilds.toLocaleString()} sub="서버에서 사용 중" />
-			<StatCard icon={Cpu} label="활성화된 플레이어" value={stats.totalPlayers.toLocaleString()} sub="플레이어에서 재생 중" />
-			<StatCard icon={HardDrive} label="클러스터 메모리" value={`${stats.totalMemoryMB} MB`} sub={`메모리 사용 중`} />
+			<StatCard icon={Server} label="함께하는 서버" value={stats.totalGuilds.toLocaleString()} sub="서버들과 함께하고 있어요" />
+			<StatCard icon={Cpu} label="재생 중인 노래" value={stats.totalPlayers.toLocaleString()} sub="노래를 들려주고 있어요" />
+			<StatCard icon={HardDrive} label="사용 중인 메모리" value={`${stats.totalMemoryMB} MB`} sub={`쾌적하게 관리하고 있어요`} />
 		</div>
 	);
 }

@@ -95,7 +95,7 @@ export function DiscordPlaybackCard() {
 					</div>
 					<div className="flex items-center gap-1 font-bold">
 						<span className="text-discord-light">라운지</span>
-						<span className="text-discord-text-muted font-medium tracking-tight">에서 재생 중</span>
+						<span className="text-discord-text-muted font-medium tracking-tight">에서 재생 중이에요</span>
 					</div>
 				</div>
 
@@ -129,7 +129,7 @@ export function DiscordPlaybackCard() {
 					</div>
 
 					{/* Thumbnail */}
-					<div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/5 shrink-0 shadow-lg">
+					<div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border shrink-0 shadow-lg">
 						<Image 
 							src={track.thumbnail} 
 							alt={track.title} 
@@ -166,7 +166,7 @@ export function DiscordPlaybackCard() {
 				<div className="flex items-center gap-4 text-discord-text-muted text-[10px] font-bold tracking-tight pt-1">
 					<div className="flex items-center gap-1.5">
 						<Globe size={12} />
-						재생 서버: {track.server}
+						{track.server} 에서 재생 중
 					</div>
 					<div className="flex items-center gap-1.5">
 						<Volume2 size={12} />

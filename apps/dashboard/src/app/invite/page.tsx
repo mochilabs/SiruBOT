@@ -45,19 +45,18 @@ export default function InvitePage() {
 
 						<div className="space-y-2">
 							<h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl">
-								시루봇과 함께하세요
+								시루봇과 함께해요
 							</h1>
-							<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-muted-foreground/60 w-[190px] justify-center tabular-nums">
+							<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-overlay text-xs font-bold text-muted-foreground/60 w-[200px] justify-center tabular-nums">
 								<Loader2 size={12} className="animate-spin" />
-								<span>{count}초 후 자동으로 이동합니다...</span>
+								<span>{count}초 뒤에 자동으로 이동할게요...</span>
 							</div>
 						</div>
 					</div>
 
 					<div className="max-w-md mx-auto mb-0">
 						<p className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl break-keep">
-							최고의 음악 경험을 제공하는 시루봇을 초대하고<br /> 
-							강력한 대시보드 기능을 무제한으로 이용해 보세요.
+							최고의 음악 경험을 전하는 시루봇을 초대해보세요.
 						</p>
 					</div>
 
@@ -70,7 +69,7 @@ export default function InvitePage() {
 						>
 							<div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]" />
 							<UserPlus className="h-6 w-6" />
-							디스코드에 추가하기
+							초대하기
 							<ExternalLink className="h-5 w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
 						</a>
 
@@ -79,7 +78,7 @@ export default function InvitePage() {
 							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground/60 transition-all hover:text-primary"
 						>
 							<Home className="h-5 w-5" />
-							메인 페이지로 돌아가기
+							홈으로 가기
 						</Link>
 					</div>
 				</div>

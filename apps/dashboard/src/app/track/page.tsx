@@ -78,7 +78,7 @@ export default async function TrackPage({
 								{query ? (
 									<>시루봇이 재생한 적 있는 노래의<br /> 검색 결과를 보여드려요.</>
 								) : (
-									<>시루봇 사용자들에게 가장 사랑받는 <br className="hidden md:block"/> 노래들을 집계합니다.</>
+									<>시루봇에서 가장 사랑받는 <br className="hidden md:block"/> 노래들을 모았어요.</>
 								)}
 							</p>
 						</div>
@@ -105,14 +105,14 @@ export default async function TrackPage({
 
 							<div className="group relative glass-panel h-14 px-5 flex flex-col justify-center items-center border-primary/20 cursor-help flex-1 md:flex-none md:min-w-[120px]">
 								<div className="flex items-center gap-1.5 text-primary/60">
-									<span className="text-[10px] font-black tracking-widest uppercase">재생한 횟수</span>
+									<span className="text-[10px] font-black tracking-widest uppercase">재생 횟수</span>
 								</div>
 								<span className="text-xl font-black text-foreground leading-[1.1]">{totalPlaybacks._sum.totalPlays?.toLocaleString() || 0}</span>
 
 								<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-3 glass-panel border-primary/30 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
 									<p className="text-[11px] font-bold text-foreground leading-relaxed">
 										• 필터링된 트랙들의<br />
-										• 총 누적 재생 카운트
+										• 총 누적 재생 횟수
 									</p>
 								</div>
 							</div>
@@ -122,9 +122,9 @@ export default async function TrackPage({
 
 				<section className="space-y-6">
 					{tracks.length === 0 ? (
-						<div className="glass-panel p-20 text-center border-dashed border-white/10">
+						<div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-xl">
 							<p className="text-xl font-medium text-muted-foreground">
-								{query ? "검색 결과가 없습니다." : "차트 데이터를 집계 중입니다..."}
+								{query ? "노래를 찾을 수 없어요." : "차트 데이터를 모으고 있어요..."}
 							</p>
 						</div>
 					) : (

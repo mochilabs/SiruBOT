@@ -40,7 +40,7 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 								<Music size={14} className="text-primary/40" />
 							</Link>
 						))}
-						<div className="pt-4 border-t border-white/10">
+						<div className="pt-4 border-t border-border">
 							{status === "authenticated" ? (
 								<button
 									onClick={() => signOut()}

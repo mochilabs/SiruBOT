@@ -15,9 +15,9 @@ interface HeroSectionProps {
 
 export function HeroSection({ containerVariants, itemVariants }: HeroSectionProps) {
 	return (
-		<section className="relative min-h-[calc(100dvh-10vh)] pt-[10vh] flex items-center">
+		<section className="relative flex items-center">
 			<div className="max-w-7xl mx-auto w-full px-6 xl:px-6 2xl:px-0 relative">
-				<div className="grid lg:grid-cols-[3fr_4fr] gap-8 lg:gap-12 xl:gap-24 items-center">
+				<div className="grid lg:grid-cols-[3fr_4fr] gap-8 lg:gap-10 xl:gap-15 items-center">
 					{/* Left: Content */}
 					<motion.div 
 						className="space-y-8 flex flex-col items-center lg:items-start text-center lg:text-left"
@@ -45,7 +45,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 								speed={100}
 							/>
 							<br />
-							<span>서버를 만들어보세요.</span>
+							<span>서버를 만들어봐요!</span>
 						</motion.h1>
 
 						<motion.p 
@@ -53,7 +53,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 							className="text-lg sm:text-xl lg:text-lg xl:text-xl [@media(max-height:800px)]:lg:text-base font-medium text-muted-foreground/80 leading-relaxed max-w-2xl break-keep"
 						>
 							시루봇과 함께 디스코드에서 고품질 음악을 즐겨보세요.<br />
-							간편한 명령어, 빠른 재생, 제한 없이 모든 기능을 사용해보세요.
+							간편한 명령어와 빠른 재생으로 모든 기능을 함께 즐겨보세요.
 						</motion.p>
 
 						<motion.div 
@@ -62,21 +62,21 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 						>
 							<Link 
 								href="/invite" 
-								className="group relative flex items-center justify-center gap-3 px-6 py-3 sm:px-10 sm:py-5 lg:px-8 lg:py-4 xl:px-10 xl:py-5 bg-gradient-to-r from-primary to-secondary text-white text-base lg:text-lg xl:text-xl font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 overflow-hidden"
+								className="group relative flex items-center justify-center gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-4 xl:px-10 xl:py-5 bg-gradient-to-r from-primary to-secondary text-white text-base lg:text-lg xl:text-xl font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 overflow-hidden whitespace-nowrap"
 							>
 								{/* Shimmer Effect */}
 								<div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer-sweep -z-0 pointer-events-none" />
 								
 								<span className="relative z-10 flex items-center gap-3">
-									디스코드에 추가하기
+									초대하기
 									<ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
 								</span>
 							</Link>
 							<Link 
 								href="/servers" 
-								className="px-6 py-3 sm:px-10 sm:py-5 lg:px-8 lg:py-4 xl:px-10 xl:py-5 glass-overlay text-foreground text-base lg:text-lg xl:text-xl font-bold rounded-2xl backdrop-blur-md hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-center"
+								className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-4 xl:px-10 xl:py-5 glass-overlay text-foreground text-base lg:text-lg xl:text-xl font-bold rounded-2xl backdrop-blur-md hover:bg-foreground/5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-center whitespace-nowrap"
 							>
-								대시보드 보기
+								둘러보기
 							</Link>
 						</motion.div>
 
