@@ -7,6 +7,7 @@ import { InteractiveGlow } from "@/components/interactive-glow";
 import { db } from "@/lib/db";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
+import Container from "@/components/container";
 
 async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
     const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
@@ -69,7 +70,7 @@ export default async function ServersPage() {
     });
 
     return (
-        <main className="min-h-screen pt-32 pb-20 relative overflow-hidden">
+        <Container>
             <InteractiveGlow />
 
             <div className="mx-auto w-full max-w-6xl px-6 relative z-10">
@@ -117,6 +118,6 @@ export default async function ServersPage() {
                     )}
                 </section>
             </div>
-        </main>
+        </Container>
     );
-}
+}

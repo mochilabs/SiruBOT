@@ -32,7 +32,6 @@ export default function Home() {
 	return (
 		<div className="w-full relative bg-background min-h-screen">
 			<InteractiveGlow />
-			
 			<div className="relative">
 				<HeroSection 
 					containerVariants={containerVariants} 

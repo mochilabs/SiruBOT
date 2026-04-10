@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Heart } from "lucide-react";
 import { InteractiveGlow } from "@/components/interactive-glow";
+import Container from "@/components/container";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function FavoritesPage() {
 	const tracks = await getFavorites(session.user.id);
 
 	return (
-		<main className="min-h-screen pt-32 pb-20 relative overflow-hidden">
+		<Container>
 			<InteractiveGlow />
 			
 			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
@@ -65,6 +66,6 @@ export default async function FavoritesPage() {
 					)}
 				</section>
 			</div>
-		</main>
+		</Container>
 	);
 }

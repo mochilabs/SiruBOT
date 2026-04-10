@@ -53,7 +53,7 @@ export function Navbar() {
 			}`}
 		>
 			<nav className="w-full h-[10vh] flex items-center shrink-0">
-			<div className="w-full max-w-7xl mx-auto px-6 lg:px-20 xl:px-6 2xl:px-0 items-center">
+			<div className="w-full max-w-7xl mx-auto px-6 lg:px-6 xl:px-6 2xl:px-0 items-center">
 				<div className="flex items-center justify-between">
 					{/* Logo */}
 					<Link href="/" className="flex items-center gap-3 group">
@@ -93,18 +93,18 @@ export function Navbar() {
 									onClick={toggleTheme}
 									className="relative flex items-center justify-center w-11 h-11 rounded-xl glass-overlay text-foreground/70 hover:text-primary hover:border-primary/30 transition-all duration-300 overflow-hidden group"
 								>
-									<AnimatePresence mode="wait" initial={false}>
+									<AnimatePresence mode="popLayout" initial={false}>
 										<motion.div
 											key={theme}
-											initial={{ y: 20, x: -10, rotate: -90, opacity: 0 }}
-											animate={{ y: 0, x: 0, rotate: 0, opacity: 1 }}
-											exit={{ y: -20, x: 10, rotate: 90, opacity: 0 }}
+											initial={{ y: 20, rotate: -90, opacity: 0 }}
+											animate={{ y: 0, rotate: 0, opacity: 1 }}
+											exit={{ y: -20, rotate: 90, opacity: 0 }}
 											transition={{ 
 												type: "spring", 
-												stiffness: 260, 
-												damping: 20 
+												stiffness: 300, 
+												damping: 25
 											}}
-											className="flex items-center justify-center pointer-events-none"
+											className="absolute flex items-center justify-center pointer-events-none"
 										>
 											{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
 										</motion.div>

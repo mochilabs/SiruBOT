@@ -14,12 +14,20 @@ const fixedTrackFilter = {
 	}
 } as const;
 
-export async function getTracksAction(page: number) {
+export async function getTracksAction(page: number, query?: string) {
 	const skip = (page - 1) * PAGE_SIZE;
+
+	const where = query ? {
+		...fixedTrackFilter,
+		OR: [
+			{ title: { contains: query, mode: "insensitive" as const } },
+			{ artist: { contains: query, mode: "insensitive" as const } }
+		]
+	} : fixedTrackFilter;
 
 	const tracks = await db.track.findMany({
 		orderBy: [{ totalPlays: "desc" }, { updatedAt: "desc" }],
-		where: fixedTrackFilter,
+		where,
 		take: PAGE_SIZE,
 		skip,
 	});

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 interface PaginationProps {
 	currentPage: number;
@@ -8,15 +11,23 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, basePath }: PaginationProps) {
+	const searchParams = useSearchParams();
+
 	if (totalPages <= 1) return null;
 
 	const prevPage = Math.max(1, currentPage - 1);
 	const nextPage = Math.min(totalPages, currentPage + 1);
 
+	const createPageUrl = (pageNumber: number) => {
+		const params = new URLSearchParams(searchParams.toString());
+		params.set("page", pageNumber.toString());
+		return `${basePath}?${params.toString()}`;
+	};
+
 	return (
 		<div className="mt-6 flex items-center justify-between gap-3">
 			<Link
-				href={`${basePath}?page=${prevPage}`}
+				href={createPageUrl(prevPage)}
 				aria-disabled={currentPage <= 1}
 				tabIndex={currentPage <= 1 ? -1 : undefined}
 				className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition-colors ${
@@ -34,7 +45,7 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 			</p>
 
 			<Link
-				href={`${basePath}?page=${nextPage}`}
+				href={createPageUrl(nextPage)}
 				aria-disabled={currentPage >= totalPages}
 				tabIndex={currentPage >= totalPages ? -1 : undefined}
 				className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition-colors ${

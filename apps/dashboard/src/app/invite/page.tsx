@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, Settings, UserPlus, Sparkles, ShieldCheck } from "lucide-react";
 import { InteractiveGlow } from "@/components/interactive-glow";
+import Container from "@/components/container";
 
 function buildInviteUrl() {
 	const clientId = process.env.AUTH_DISCORD_ID;
@@ -13,7 +14,7 @@ export default function InvitePage() {
 	const inviteUrl = buildInviteUrl();
 
 	return (
-		<main className="min-h-screen pt-32 pb-20 relative overflow-hidden">
+		<Container>
 			<InteractiveGlow />
 
 			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
@@ -82,6 +83,6 @@ export default function InvitePage() {
 						</div>
 					</div>
 			</div>
-		</main>
+		</Container>
 	);
 }

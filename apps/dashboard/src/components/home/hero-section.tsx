@@ -14,8 +14,8 @@ interface HeroSectionProps {
 
 export function HeroSection({ containerVariants, itemVariants }: HeroSectionProps) {
 	return (
-		<section className="relative min-h-screen flex items-center">
-			<div className="max-w-7xl mx-auto w-full px-6 lg:px-20 xl:px-6 2xl:px-0 relative">
+		<section className="relative min-h-[calc(100dvh-10vh)] pt-[10vh] flex items-center">
+			<div className="max-w-7xl mx-auto w-full px-6 xl:px-6 2xl:px-0 relative">
 				<div className="grid lg:grid-cols-[3fr_4fr] gap-8 lg:gap-12 xl:gap-24 items-center">
 					{/* Left: Content */}
 					<motion.div 
@@ -30,6 +30,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 						>
 							<Play size={14} fill="currentColor" />
 							<span>끊김 없는 고품질 사운드</span>
+							<div className="absolute -inset-10 bg-secondary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
 						</motion.div>
 
 						<motion.h1 

@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 interface InfiniteTrackListProps {
 	initialTracks: TrackType[];
 	rankOffset?: number;
+	query?: string;
 }
 
 const itemVariants = {
@@ -31,6 +32,7 @@ export function InfiniteTrackList({ initialTracks, rankOffset = 0 }: InfiniteTra
 	const [page, setPage] = useState(2); // Start from page 2
 	const [hasMore, setHasMore] = useState(initialTracks.length >= 10);
 	const [loading, setLoading] = useState(false);
+	const [ query , setQuery] = useState("");
 
 	const { ref, inView } = useInView({
 		threshold: 0.1,
@@ -40,7 +42,7 @@ export function InfiniteTrackList({ initialTracks, rankOffset = 0 }: InfiniteTra
 	const loadMoreTracks = useCallback(async () => {
 		setLoading(true);
 		try {
-			const newTracks = await getTracksAction(page);
+			const newTracks = await getTracksAction(page, query);
 			if (newTracks.length === 0) {
 				setHasMore(false);
 			} else {
@@ -56,7 +58,14 @@ export function InfiniteTrackList({ initialTracks, rankOffset = 0 }: InfiniteTra
 		} finally {
 			setLoading(false);
 		}
-	}, [page]);
+	}, [page, query]);
+
+	useEffect(() => {
+		setTracks(initialTracks);
+		setPage(2);
+		setHasMore(initialTracks.length >= 20);
+		setLoading(false);
+	}, [initialTracks]);
 
 	useEffect(() => {
 		if (inView && hasMore && !loading) {

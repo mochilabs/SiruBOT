@@ -4,6 +4,7 @@ import { ShardStats } from "@/components/shard-stats";
 import { fetchShards } from "@/lib/shard-api";
 import { AlertTriangle, RadioTower } from "lucide-react";
 import { InteractiveGlow } from "@/components/interactive-glow";
+import Container from "@/components/container";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,11 @@ export default async function ShardsPage() {
 	const { processes, stats } = data;
 
 	return (
-		<main className="min-h-screen pt-32 pb-20 relative overflow-hidden">
+		<Container>
 			<InteractiveGlow />
 
 			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
-				<header className="mb-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
+				<header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
 					<div className="space-y-6">
 						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold animate-pulse">
 							<RadioTower size={16} />
@@ -75,7 +76,7 @@ export default async function ShardsPage() {
 					</div>
 				</section>
 			</div>
-		</main>
+		</Container>
 	);
 }
 
