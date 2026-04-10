@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Music, GitBranch, MessageSquare, Activity, ShieldCheck, Mail } from "lucide-react";
+import { Music, GitBranch, MessageSquare, Activity, ShieldCheck } from "lucide-react";
 
 export function Footer() {
 	return (

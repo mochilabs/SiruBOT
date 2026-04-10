@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, Settings, UserPlus, Sparkles, ShieldCheck } from "lucide-react";
 import { InteractiveGlow } from "@/components/interactive-glow";

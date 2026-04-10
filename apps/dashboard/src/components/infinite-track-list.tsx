@@ -32,7 +32,7 @@ export function InfiniteTrackList({ initialTracks, rankOffset = 0 }: InfiniteTra
 	const [page, setPage] = useState(2); // Start from page 2
 	const [hasMore, setHasMore] = useState(initialTracks.length >= 10);
 	const [loading, setLoading] = useState(false);
-	const [ query , setQuery] = useState("");
+	const [ query , _setQuery] = useState("");
 
 	const { ref, inView } = useInView({
 		threshold: 0.1,
