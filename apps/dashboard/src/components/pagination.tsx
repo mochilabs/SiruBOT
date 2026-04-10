@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaginationProps {
 	currentPage: number;

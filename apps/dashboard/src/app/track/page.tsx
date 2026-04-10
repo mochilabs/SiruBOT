@@ -1,10 +1,11 @@
-import { TrackList } from "@/components/track";
-import { SearchInput } from "@/components/search-input";
-import { Pagination } from "@/components/pagination";
-import { db } from "@/lib/db";
 import { ListMusicIcon } from "lucide-react";
-import { InteractiveGlow } from "@/components/interactive-glow";
+
 import Container from "@/components/container";
+import { InteractiveGlow } from "@/components/interactive-glow";
+import { Pagination } from "@/components/pagination";
+import { SearchInput } from "@/components/search-input";
+import { TrackList } from "@/components/track";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 

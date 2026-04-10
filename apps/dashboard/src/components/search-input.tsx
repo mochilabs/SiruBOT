@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
+
 import { useDebounce } from "@/hooks/use-debounce";
 
 export function SearchInput({ 

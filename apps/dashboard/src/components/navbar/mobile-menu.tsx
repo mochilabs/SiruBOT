@@ -1,9 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Music } from "lucide-react";
 import { signIn, signOut } from "next-auth/react";
+import { AnimatePresence,motion } from "framer-motion";
+import { Music } from "lucide-react";
 
 interface NavLink {
 	label: string;

@@ -1,9 +1,10 @@
-import { signIn } from "@/lib/auth";
 import Link from "next/link";
-import { LogIn, ChevronLeft } from "lucide-react";
+import { ChevronLeft,LogIn } from "lucide-react";
+
+import Container from "@/components/container";
 import { InteractiveGlow } from "@/components/interactive-glow";
 import { TypingText } from "@/components/typing-text";
-import Container from "@/components/container";
+import { signIn } from "@/lib/auth";
 
 interface LoginPageProps {
 	searchParams: Promise<{ callbackUrl?: string }>;

@@ -1,45 +1,88 @@
-import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Settings2 } from "lucide-react";
+import { ExternalLink, Settings, ShieldCheck,Sparkles, UserPlus } from "lucide-react";
 
-export default function InviteRedirectPage() {
-	return (
-		<div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
-			<section className="dashboard-surface grid items-center gap-8 p-6 md:grid-cols-[0.9fr_1.1fr] md:p-8">
-				<div className="panel-glass flex justify-center p-5">
-					<Image
-						src="/images/siru-fullbody-sketch.png"
-						alt="시루봇 설정 안내"
-						width={420}
-						height={420}
-						className="h-auto w-full max-w-[300px] rounded-3xl object-cover"
-					/>
-				</div>
+import Container from "@/components/container";
+import { InteractiveGlow } from "@/components/interactive-glow";
 
-				<div>
-					<p className="inline-flex items-center gap-2 rounded-full border border-[rgba(252,214,229,0.2)] bg-[rgba(252,214,229,0.12)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[color:var(--primary)]">
-						<CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--secondary)]" />
-						Invite Complete
-					</p>
-					<h1 className="mt-3 text-2xl font-semibold text-[color:var(--text-main)] md:text-3xl">시루봇 초대 감사합니다</h1>
-					<p className="mt-3 text-sm leading-relaxed text-[rgba(245,245,247,0.72)] md:text-base">
-						시루봇 초대가 끝났다면 이제 서버 설정을 시작해볼까요? 권한, 채널, 기본 재생 옵션을 대시보드에서 빠르게 맞출 수 있습니다.
-					</p>
-					<div className="mt-6 flex flex-wrap gap-3">
-						<Link
-							href="/servers"
-							className="inline-flex items-center gap-2 rounded-2xl bg-[color:var(--discord)] px-4 py-2.5 text-sm font-semibold text-white transition-transform duration-200 hover:scale-[1.03]"
-						>
-							<Settings2 className="h-4 w-4" />
-							서버 설정하러 가기
-						</Link>
-						<Link href="/" className="btn-soft inline-flex items-center rounded-2xl px-4 py-2.5 text-sm font-medium">
-							대시보드로 이동
-						</Link>
-					</div>
-				</div>
-			</section>
-		</div>
-	);
+function buildInviteUrl() {
+	const clientId = process.env.AUTH_DISCORD_ID;
+	if (!clientId) return null;
+	return `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=274877910080&scope=bot%20applications.commands`;
 }
 
+export default function InviteRedirectPage() {
+	const inviteUrl = buildInviteUrl();
+
+	return (
+		<Container>
+			<InteractiveGlow />
+
+			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+					<div className="space-y-4">
+						<h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9]">
+							당신의 서버에 <Sparkles size={40} className="inline-block" /><br /> 시루봇을 초대하세요
+						</h1>
+						<p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
+							최고의 음악 경험을 제공하는 시루봇을 지금 바로 초대하고 <br className="hidden md:block"/> 
+							강력한 대시보드 기능을 무제한으로 이용해 보세요.
+						</p>
+					</div>
+					<div className="space-y-10 order-2 lg:order-1">
+						<div className="glass-panel p-10 space-y-8 border-primary/20">
+							<div className="space-y-4">
+								<h2 className="text-2xl font-black tracking-tighter text-foreground">간편하게 시작하기</h2>
+								<p className="text-muted-foreground leading-relaxed">
+									아래 버튼을 클릭하여 디스코드 서버에 시루봇을 추가할 수 있습니다. <br />
+									초대 완료 후 바로 대시보드에서 설정을 변경할 수 있습니다.
+								</p>
+							</div>
+
+							<div className="flex flex-col sm:flex-row gap-4">
+								{inviteUrl ? (
+									<a
+										href={inviteUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="group flex flex-1 items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-primary to-secondary text-white text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+									>
+										<UserPlus size={22} />
+										시루봇 초대하기
+										<ExternalLink size={20} className="opacity-60" />
+									</a>
+								) : (
+									<div className="flex-1 rounded-2xl border border-red-500/20 bg-red-500/5 px-6 py-4 text-center text-red-100/70 font-medium">
+										설정 오류: 클라이언트 ID를 찾을 수 없습니다.
+									</div>
+								)}
+								<Link 
+									href="/invite/redirect" 
+									className="flex items-center justify-center gap-2 px-8 py-5 bg-white/5 border border-white/10 text-foreground font-bold rounded-2xl hover:bg-white/10 transition-all duration-300"
+								>
+									<Settings size={20} />
+									초대 후 설정
+								</Link>
+							</div>
+						</div>
+
+						{/* Trust Badges */}
+						<div className="grid grid-cols-2 gap-6">
+							{[
+								{ icon: ShieldCheck, title: "보안 인증", desc: "검증된 권한만 사용" },
+								{ icon: Sparkles, title: "고음질 지원", desc: "손실 없는 스트리밍" },
+							].map((item, i) => (
+								<div key={i} className="flex gap-4 items-start p-4 rounded-2xl bg-white/5 border border-white/5">
+									<div className="p-3 bg-primary/10 rounded-xl text-primary">
+										<item.icon size={20} />
+									</div>
+									<div>
+										<h4 className="font-bold text-foreground">{item.title}</h4>
+										<p className="text-sm text-muted-foreground/60">{item.desc}</p>
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+			</div>
+		</Container>
+	);
+}

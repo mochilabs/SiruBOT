@@ -1,5 +1,6 @@
-import type { ShardAggregateStats } from "@/lib/shard-api";
 import { Cpu, HardDrive, RadioTower, Server } from "lucide-react";
+
+import type { ShardAggregateStats } from "@/lib/shard-api";
 
 interface StatCardProps {
 	label: string;

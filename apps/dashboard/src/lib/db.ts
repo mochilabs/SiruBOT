@@ -1,5 +1,5 @@
-import { PrismaClient } from "@sirubot/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@sirubot/prisma";
 
 let client: PrismaClient | undefined;
 

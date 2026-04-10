@@ -1,13 +1,14 @@
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect,useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Music, Sun, Moon, Menu, X, LogOut } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
+import { LogOut,Menu, Moon, Music, Sun, X } from "lucide-react";
+
 import { MobileMenu } from "./navbar/mobile-menu";
 
 export function Navbar() {
@@ -57,10 +58,10 @@ export function Navbar() {
 				<div className="flex items-center justify-between">
 					{/* Logo */}
 					<Link href="/" className="flex items-center gap-3 group">
-						<div className={`relative transition-all duration-300 ${scrolled ? "scale-90" : "scale-100"}`}>
+						<div className={`relative transition-all duration-300 scale-100`}>
 							<Music size={28} className="text-primary relative z-10" />
 						</div>
-						<span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+						<span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent bg-[length:200%_auto] transition-all duration-500 group-hover:bg-[position:100%_center]">
 							시루봇
 						</span>
 					</Link>

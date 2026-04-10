@@ -1,8 +1,8 @@
 "use client";
 
-import { InteractiveGlow } from "@/components/interactive-glow";
-import { HeroSection } from "@/components/home/hero-section";
 import { FeaturesSection } from "@/components/home/features-section";
+import { HeroSection } from "@/components/home/hero-section";
+import { InteractiveGlow } from "@/components/interactive-glow";
 
 const containerVariants = {
 	hidden: { opacity: 0 },

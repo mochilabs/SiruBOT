@@ -1,5 +1,7 @@
-import type { ShardProcessInfo } from "@/lib/shard-api";
 import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
+
+import type { ShardProcessInfo } from "@/lib/shard-api";
+
 import { StatusBadge } from "./status-badge";
 
 function formatUptime(secondsValue: number): string {

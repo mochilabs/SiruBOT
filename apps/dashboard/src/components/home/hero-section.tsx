@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, ArrowRight } from "lucide-react";
 import { motion, Variants } from "framer-motion";
+import { ArrowRight,Play } from "lucide-react";
+
 import { DiscordPlaybackCard } from "@/components/discord-playback-card";
 import { TypingText } from "@/components/typing-text";
 
@@ -30,7 +31,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 						>
 							<Play size={14} fill="currentColor" />
 							<span>끊김 없는 고품질 사운드</span>
-							<div className="absolute -inset-10 bg-secondary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
+							<div className="absolute -inset-10 bg-secondary/20 rounded-full blur-[80px] -z-10" />
 						</motion.div>
 
 						<motion.h1 
@@ -118,7 +119,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 								<div className="rounded-2xl shadow-2xl overflow-visible">
 									<DiscordPlaybackCard />
 								</div>
-								<div className="absolute -inset-10 bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
+								<div className="absolute -inset-10 bg-primary/20 rounded-full blur-[80px] -z-10" />
 							</div>
 						</motion.div>
 

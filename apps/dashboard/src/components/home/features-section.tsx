@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Music, Sparkles, ListMusicIcon, Users, Shield, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
+import { ArrowRight, DollarSign,ListMusicIcon, Music, Shield, Sparkles, Users } from "lucide-react";
 
 export function FeaturesSection() {
 	const features = [

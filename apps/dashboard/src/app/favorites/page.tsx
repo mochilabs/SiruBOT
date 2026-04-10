@@ -1,10 +1,11 @@
-import { TrackList } from "@/components/track";
-import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Heart } from "lucide-react";
-import { InteractiveGlow } from "@/components/interactive-glow";
+
 import Container from "@/components/container";
+import { InteractiveGlow } from "@/components/interactive-glow";
+import { TrackList } from "@/components/track";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 

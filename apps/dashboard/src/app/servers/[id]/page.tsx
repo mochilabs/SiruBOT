@@ -1,6 +1,7 @@
+import { redirect } from "next/navigation";
+
 import { auth } from "@/lib/auth";
 import { DiscordGuild } from "@/types/discord";
-import { redirect } from "next/navigation";
 
 async function getGuild(accessToken: string, guildId: string): Promise<DiscordGuild[]> {
 	const res = await fetch(`https://discord.com/api/v10/users/@me/guilds/${guildId}/member`, {

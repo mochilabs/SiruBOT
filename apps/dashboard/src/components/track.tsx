@@ -1,9 +1,9 @@
 "use client";
 
-import { Track as TrackType } from "@sirubot/prisma";
-import { Crown, ExternalLink, Music4 } from "lucide-react";
 import Image from "next/image";
+import { Track as TrackType } from "@sirubot/prisma";
 import { motion } from "framer-motion";
+import { Crown, ExternalLink, Music4 } from "lucide-react";
 
 interface TrackListProps {
 	tracks: TrackType[];

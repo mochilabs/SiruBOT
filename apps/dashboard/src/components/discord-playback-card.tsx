@@ -1,9 +1,9 @@
 "use client";
 
-import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Volume2, Globe, Sparkles } from "lucide-react";
-import * as motion from "framer-motion/client";
-import { useState, useEffect } from "react";
+import { useEffect,useState } from "react";
 import Image from "next/image";
+import * as motion from "framer-motion/client";
+import { Globe, Music, Pause, Play, Repeat, SkipBack, SkipForward, Sparkles,Volume2 } from "lucide-react";
 
 interface TrackInfo {
 	title: string;
@@ -108,7 +108,7 @@ export function DiscordPlaybackCard() {
 							</h3>
 							<p className="text-discord-text-muted text-[13px] leading-relaxed">
 								아티스트: <span className="text-discord-text">{track.artist}</span> | 추천 곡 
-								<Sparkles size={12} className="inline ml-1 text-yellow-400 animate-pulse" />
+								<Sparkles size={12} className="inline ml-1 text-yellow-400 animate-pulse-soft" />
 							</p>
 						</div>
 
@@ -134,6 +134,7 @@ export function DiscordPlaybackCard() {
 							src={track.thumbnail} 
 							alt={track.title} 
 							fill 
+							sizes="96px"
 							className="object-cover"
 						/>
 					</div>

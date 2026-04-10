@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Settings2, UserPlus, ExternalLink, ShieldCheck, Play } from "lucide-react";
+import { ExternalLink, Play,Settings2, ShieldCheck, UserPlus } from "lucide-react";
+
 import type { GuildCardProps } from "./guild-card.types";
 
 export function GuildCard({ guild, inviteUrl }: GuildCardProps) {

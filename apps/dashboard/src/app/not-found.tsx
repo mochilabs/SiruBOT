@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Home, ChevronLeft, Search } from "lucide-react";
+import { ChevronLeft, Home, Search } from "lucide-react";
+
 import { InteractiveGlow } from "@/components/interactive-glow";
 
 export default function NotFound() {

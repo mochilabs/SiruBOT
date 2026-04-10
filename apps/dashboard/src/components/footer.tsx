@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Music, GitBranch, MessageSquare, Activity, ShieldCheck } from "lucide-react";
+import { Activity, FileText,GitBranch, MessageSquare, Music, ShieldCheck, Sparkles } from "lucide-react";
 
 export function Footer() {
 	return (
@@ -27,8 +27,9 @@ export function Footer() {
 						<div className="space-y-4">
 							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Product</h4>
 							<ul className="space-y-3">
-								<li><Link href="/#features" className="text-muted-foreground hover:text-primary transition-colors font-medium">주요 기능</Link></li>
-								<li><Link href="/#pricing" className="text-muted-foreground hover:text-primary transition-colors font-medium">가격 정보</Link></li>
+								<li><Link href="/#features" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+									<Sparkles size={16} /> 주요 기능
+								</Link></li>
 								<li><Link href="/shards" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
 									<Activity size={16} /> 상태 페이지
 								</Link></li>
@@ -38,23 +39,23 @@ export function Footer() {
 						<div className="space-y-4">
 							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Community</h4>
 							<ul className="space-y-3">
-								<li><Link href="https://discord.gg/sirubot" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+								<li><Link href={process.env.NEXT_PUBLIC_SUPPORT_SERVER || "#support_server"} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
 									<MessageSquare size={16} /> 공식 디스코드
 								</Link></li>
 								<li><Link href="https://github.com/mochiLabs/SiruBOT" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
 									<GitBranch size={16} /> 깃허브
 								</Link></li>
-								<li><Link href="/#support" className="text-muted-foreground hover:text-primary transition-colors font-medium">고객지원</Link></li>
 							</ul>
 						</div>
 
 						<div className="space-y-4">
 							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Legal</h4>
 							<ul className="space-y-3">
-								<li><Link href="/tos" className="text-muted-foreground hover:text-primary transition-colors font-medium">이용약관</Link></li>
-								<li><Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors font-medium">개인정보처리방침</Link></li>
-								<li><Link href="/shards" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<ShieldCheck size={16} /> 서비스 보안
+								<li><Link href={process.env.NEXT_PUBLIC_TOS_URL || "#tos"} target="_blank" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+									<FileText size={16} /> 이용약관
+								</Link></li>
+								<li><Link href={process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL || "#privacypolicy"} target="_blank" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+									<ShieldCheck size={16} /> 개인정보처리방침
 								</Link></li>
 							</ul>
 						</div>

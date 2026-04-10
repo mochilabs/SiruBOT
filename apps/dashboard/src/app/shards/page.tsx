@@ -1,10 +1,11 @@
+import { AlertTriangle, RadioTower } from "lucide-react";
+
 import { AutoRefresh } from "@/components/auto-refresh";
+import Container from "@/components/container";
+import { InteractiveGlow } from "@/components/interactive-glow";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import { fetchShards } from "@/lib/shard-api";
-import { AlertTriangle, RadioTower } from "lucide-react";
-import { InteractiveGlow } from "@/components/interactive-glow";
-import Container from "@/components/container";
 
 export const dynamic = "force-dynamic";
 

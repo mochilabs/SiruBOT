@@ -1,13 +1,13 @@
-import "./globals.css";
-
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
-import { Providers } from "@/components/Providers";
-import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { Navbar } from "@/components/navbar";
 import { PageTransition } from "@/components/page-transition";
+import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
+
+import "./globals.css";
 
 export const viewport: Viewport = {
 	themeColor: "#FFDADA"

@@ -1,13 +1,15 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import type { DiscordGuild } from "@/types/discord";
+import { redirect } from "next/navigation";
+
+import Container from "@/components/container";
 import { InteractiveGlow } from "@/components/interactive-glow";
-import { db } from "@/lib/db";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
-import Container from "@/components/container";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import type { DiscordGuild } from "@/types/discord";
+import { buildInviteUrl } from "@/utils";
 
 async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
     const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
@@ -19,12 +21,6 @@ async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
     }
 
     return res.json();
-}
-
-function buildInviteUrl(guildId: string) {
-    const clientId = process.env.AUTH_DISCORD_ID;
-    if (!clientId) return null;
-    return `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=274877910080&scope=bot%20applications.commands&guild_id=${guildId}&disable_guild_select=true`;
 }
 
 export default async function ServersPage() {
@@ -111,7 +107,7 @@ export default async function ServersPage() {
                                 <GuildCard 
                                     key={guild.id} 
                                     guild={guild} 
-                                    inviteUrl={buildInviteUrl(guild.id)} 
+                                    inviteUrl={buildInviteUrl({ guildId: guild.id })} 
                                 />
                             ))}
                         </div>
