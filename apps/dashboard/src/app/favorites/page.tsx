@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { Heart } from "lucide-react";
 
 import Container from "@/components/container";
-import { InteractiveGlow } from "@/components/interactive-glow";
 import { TrackList } from "@/components/track";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -30,8 +29,6 @@ export default async function FavoritesPage() {
 
 	return (
 		<Container>
-			<InteractiveGlow />
-			
 			<div className="mx-auto w-full max-w-6xl px-6 relative z-10">
 				<header className="mb-12 space-y-6">
 					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold animate-pulse">

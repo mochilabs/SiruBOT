@@ -9,23 +9,30 @@ import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut,Menu, Moon, Music, Sun, X } from "lucide-react";
 
+import { useUIStore } from "@/store/use-ui-store";
+
 import { MobileMenu } from "./navbar/mobile-menu";
 
 export function Navbar() {
 	const { data: session, status } = useSession();
 	const pathname = usePathname();
 	const { theme, setTheme } = useTheme();
-	const [scrolled, setScrolled] = useState(false);
 	const [mounted, setMounted] = useState(false);
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+	const scrolled = useUIStore((s) => s.scrolled);
+	const mobileMenuOpen = useUIStore((s) => s.mobileMenuOpen);
+	const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
+	const toggleMobileMenu = useUIStore((s) => s.toggleMobileMenu);
+	const updateScrollState = useUIStore((s) => s.updateScrollState);
 
 	useEffect(() => setMounted(true), []);
 
 	useEffect(() => {
-		const handleScroll = () => setScrolled(window.scrollY > 20);
-		window.addEventListener("scroll", handleScroll);
+		const handleScroll = () => updateScrollState(window.scrollY);
+		handleScroll();
+		window.addEventListener("scroll", handleScroll, { passive: true });
 		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
+	}, [updateScrollState]);
 
 	const toggleTheme = () => {
 		if (!document.startViewTransition) {
@@ -149,7 +156,7 @@ export function Navbar() {
 
 							<button
 								className="md:hidden p-2.5 rounded-xl glass-overlay text-foreground/70"
-								onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+								onClick={toggleMobileMenu}
 							>
 								{mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
 							</button>
@@ -163,7 +170,7 @@ export function Navbar() {
 				isOpen={mobileMenuOpen} 
 				navLinks={navLinks} 
 				status={status} 
-				onClose={() => setMobileMenuOpen(false)} 
+				onClose={() => setMobileMenuOpen(false)}
 			/>
 		</div>
 	);

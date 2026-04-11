@@ -39,7 +39,7 @@ export function InteractiveGlow({
 			mouseY.set(e.clientY);
 		};
 
-		window.addEventListener("mousemove", handleMouseMove);
+		window.addEventListener("mousemove", handleMouseMove, { passive: true });
 		return () => window.removeEventListener("mousemove", handleMouseMove);
 	}, [mouseX, mouseY]);
 

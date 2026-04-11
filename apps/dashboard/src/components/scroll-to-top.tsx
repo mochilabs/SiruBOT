@@ -1,24 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AnimatePresence,motion } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 
+import { useUIStore } from "@/store/use-ui-store";
+
 export function ScrollToTop() {
-	const [isVisible, setIsVisible] = useState(false);
-
-	useEffect(() => {
-		const toggleVisibility = () => {
-			if (window.scrollY > 400) {
-				setIsVisible(true);
-			} else {
-				setIsVisible(false);
-			}
-		};
-
-		window.addEventListener("scroll", toggleVisibility);
-		return () => window.removeEventListener("scroll", toggleVisibility);
-	}, []);
+	const isVisible = useUIStore((s) => s.scrollTopVisible);
 
 	const scrollToTop = () => {
 		window.scrollTo({

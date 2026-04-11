@@ -1,26 +1,22 @@
 "use client";
 
 import useSWR from "swr";
-import { AlertTriangle, RadioTower, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, RadioTower, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import Container from "@/components/container";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
-
-const fetcher = (url: string) => fetch(url).then((res) => {
-    if (!res.ok) throw new Error("Network response was not ok");
-    return res.json();
-});
+import type { ShardsResponse } from "@/lib/shard-api";
 
 export default function ShardsPage() {
-    const { data, error, isLoading, mutate, isValidating } = useSWR("/api/shards", fetcher, {
+    const { data, error, isLoading, isValidating } = useSWR<ShardsResponse>("/api/shards", {
         refreshInterval: 11000,
         revalidateOnFocus: true,
         dedupingInterval: 2000,
     });
 
-    if (error || (data && data.error)) {
+    if (error || (data && "error" in data)) {
         return (
             <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 pt-32 pb-20">
                 <section className="glass-panel p-12 text-center max-w-xl mx-auto border-red-500/20">
@@ -32,16 +28,10 @@ export default function ShardsPage() {
                         <AlertTriangle className="h-8 w-8 text-red-400" />
                     </motion.div>
                     <h1 className="text-3xl font-black tracking-tighter text-foreground mb-4">앗, 연결에 실패했어요</h1>
-                    <p className="text-lg font-medium text-muted-foreground leading-relaxed mb-8">
+                    <p className="text-lg font-medium text-muted-foreground leading-relaxed">
                         샤드 매니저에 연결할 수 없어요. <br />
                         서버가 점검 중이거나 오프라인 상태일 수 있어요.
                     </p>
-                    <button 
-                        onClick={() => mutate()}
-                        className="px-8 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 font-bold transition-all active:scale-95"
-                    >
-                        다시 시도하기
-                    </button>
                 </section>
             </main>
         );
@@ -64,6 +54,7 @@ export default function ShardsPage() {
         );
     }
 
+    if (!data) return null;
     const { processes, stats } = data;
 
     return (
@@ -109,29 +100,6 @@ export default function ShardsPage() {
                                 </motion.p>
                             </div>
                         </div>
-
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            className="flex w-full lg:w-auto items-center justify-end"
-                        >
-                            <button 
-                                onClick={() => mutate()}
-                                disabled={isValidating}
-                                className="group relative flex items-center justify-center gap-3 px-6 py-3 rounded-2xl bg-card border border-border/80 text-foreground font-extrabold transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none w-full sm:w-auto"
-                            >
-                                <div className="relative">
-                                    <RefreshCw size={18} className={`${isValidating ? "animate-spin text-primary" : "group-hover:rotate-180 text-muted-foreground"} transition-all duration-500`} />
-                                    {isValidating && (
-                                        <div className="absolute inset-0 blur-sm bg-primary/30 animate-pulse" />
-                                    )}
-                                </div>
-                                <span className="tracking-tight">데이터 수동 갱신</span>
-                                
-                                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-primary/20 via-transparent to-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity -z-10 pointer-events-none" />
-                            </button>
-                        </motion.div>
                     </div>
                     
                     <div className="absolute top-0 right-0 -z-10 w-[500px] h-[300px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
@@ -179,7 +147,7 @@ export default function ShardsPage() {
                                 </motion.div>
                             ) : (
                                 <div className="grid gap-8 md:grid-cols-2">
-                                    {processes.map((process: any, index: number) => (
+                                    {processes.map((process, index) => (
                                         <motion.div
                                             key={process.wsId}
                                             layout

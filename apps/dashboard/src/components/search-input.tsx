@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 
 import { useDebounce } from "@/hooks/use-debounce";
+import { useSearchStore } from "@/store/use-search-store";
 
 export function SearchInput({ 
 	placeholder = "어떤 노래를 찾아볼까요?",
@@ -15,8 +16,16 @@ export function SearchInput({
 }) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const [value, setValue] = useState(searchParams.get("query") || "");
+	const { value, setValue, clear } = useSearchStore();
 	const debouncedValue = useDebounce<string>(value, 400);
+
+	useEffect(() => {
+		const urlQuery = searchParams.get("query") || "";
+		if (urlQuery !== value) {
+			setValue(urlQuery);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	useEffect(() => {
 		const currentQuery = searchParams.get("query") || "";
@@ -32,7 +41,6 @@ export function SearchInput({
 			params.delete("query");
 		}
 		
-		// Reset page when search term changes
 		params.delete("page"); 
 
 		const search = params.toString();
@@ -57,7 +65,7 @@ export function SearchInput({
 
 			{value && (
 				<button
-					onClick={() => setValue("")}
+					onClick={clear}
 					className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
 				>
 					<X className="h-4 w-4" />

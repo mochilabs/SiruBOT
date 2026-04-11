@@ -1,17 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-
-const PAGE_SIZE = 50;
-
-const fixedTrackFilter = {
-    duration: {
-        gt: 60 * 1000,
-        lt: 60 * 1000 * 60
-    },
-    totalPlays: {
-        gt: 10
-    }
-} as const;
+import { PAGE_SIZE, fixedTrackFilter } from "@/lib/track-constants";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);

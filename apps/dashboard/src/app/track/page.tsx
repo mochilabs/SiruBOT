@@ -9,13 +9,7 @@ import Container from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
-
-const fetcher = (url: string) => fetch(url).then((res) => {
-    if (!res.ok) throw new Error("Network response was not ok");
-    return res.json();
-});
-
-const PAGE_SIZE = 50;
+import { PAGE_SIZE } from "@/lib/track-constants";
 
 export default function TrackPage() {
     const searchParams = useSearchParams();
@@ -24,11 +18,6 @@ export default function TrackPage() {
 
     const { data, error, isLoading } = useSWR(
         `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`,
-        fetcher,
-        {
-            revalidateOnFocus: false,
-            dedupingInterval: 5000,
-        }
     );
 
     const tracks = data?.tracks || [];

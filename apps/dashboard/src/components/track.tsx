@@ -14,21 +14,16 @@ const listVariants = {
 	visible: {
 		opacity: 1,
 		transition: {
-			staggerChildren: 0.05, // Slightly faster stagger
+			staggerChildren: 0.02,
 		},
 	},
 } as const;
 
 const itemVariants = {
-	hidden: { opacity: 0, y: 10 }, // Reduced y distance
-	visible: { 
-		opacity: 1, 
-		y: 0,
-		transition: {
-			type: "spring",
-			stiffness: 120,
-			damping: 20
-		}
+	hidden: { opacity: 0 },
+	visible: {
+		opacity: 1,
+		transition: { duration: 0.2, ease: "easeOut" },
 	},
 } as const;
 
@@ -69,8 +64,7 @@ export const TrackList = memo(function TrackList({ tracks, rankOffset = 0 }: Tra
 			{tracks.map((track, index) => (
 				<motion.div 
 					key={track.id} 
-					variants={itemVariants} 
-					className="will-change-transform"
+					variants={itemVariants}
 				>
 					<TrackItem track={track} rank={rankOffset + index + 1} />
 				</motion.div>

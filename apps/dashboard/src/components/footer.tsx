@@ -18,7 +18,7 @@ export function Footer() {
 							</span>
 						</div>
 						<p className="text-muted-foreground font-medium leading-relaxed">
-							음악으로 하나되는 서버를 함께 만들어가요.
+							심심할 틈 없는 서버를 만들어봐요!
 						</p>
 					</div>
 
