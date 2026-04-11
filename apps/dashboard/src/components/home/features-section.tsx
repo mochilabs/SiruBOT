@@ -26,7 +26,7 @@ export function FeaturesSection() {
 				>
 					<div className="space-y-4">
 						<h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-title-gradient">왜 시루봇인가요?</h2>
-						<p className="text-lg sm:text-xl font-medium text-muted-foreground/80">왜 수천 개의 서버가 시루봇을 쓰는지 궁금하신가요?</p>
+						<p className="text-lg sm:text-xl font-medium text-muted-foreground/80">왜 수천 개 서버가 쓰는지 확인해 보세요.</p>
 					</div>
 					
 					<div className="flex justify-center">

@@ -1,31 +1,13 @@
 import React, { useState, memo } from "react";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";
-import { motion } from "framer-motion";
 import { Crown, ExternalLink, Music4 } from "lucide-react";
+import { useInView } from "react-intersection-observer";
 
 interface TrackListProps {
 	tracks: TrackType[];
 	rankOffset?: number;
 }
-
-const listVariants = {
-	hidden: { opacity: 0 },
-	visible: {
-		opacity: 1,
-		transition: {
-			staggerChildren: 0.02,
-		},
-	},
-} as const;
-
-const itemVariants = {
-	hidden: { opacity: 0 },
-	visible: {
-		opacity: 1,
-		transition: { duration: 0.2, ease: "easeOut" },
-	},
-} as const;
 
 export function formatTimeToKorean(seconds: number): string {
 	const hours = Math.floor(seconds / 3600);
@@ -53,23 +35,66 @@ function MockThumbnail({ className, title }: { className: string; title: string 
 	);
 }
 
+const BATCH_SIZE = 10;
+
 export const TrackList = memo(function TrackList({ tracks, rankOffset = 0 }: TrackListProps) {
+	const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+
+	const { ref: sentinelRef } = useInView({
+		onChange: (inView) => {
+			if (inView && visibleCount < tracks.length) {
+				setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, tracks.length));
+			}
+		},
+		rootMargin: "300px",
+	});
+
+	const visibleTracks = tracks.slice(0, visibleCount);
+
 	return (
-		<motion.div 
-			className="w-full space-y-2"
-			variants={listVariants}
-			initial="hidden"
-			animate="visible"
-		>
-			{tracks.map((track, index) => (
-				<motion.div 
-					key={track.id} 
-					variants={itemVariants}
-				>
-					<TrackItem track={track} rank={rankOffset + index + 1} />
-				</motion.div>
+		<div className="w-full space-y-2">
+			{visibleTracks.map((track, index) => (
+				<AnimatedTrackItem
+					key={track.id}
+					track={track}
+					rank={rankOffset + index + 1}
+					staggerIndex={index % BATCH_SIZE}
+				/>
 			))}
-		</motion.div>
+			{visibleCount < tracks.length && (
+				<div ref={sentinelRef} className="h-px" />
+			)}
+		</div>
+	);
+});
+
+const AnimatedTrackItem = memo(function AnimatedTrackItem({
+	track,
+	rank,
+	staggerIndex,
+}: {
+	track: TrackType;
+	rank: number;
+	staggerIndex: number;
+}) {
+	const { ref, inView } = useInView({
+		triggerOnce: true,
+		threshold: 0.05,
+	});
+
+	const delay = staggerIndex * 50;
+
+	return (
+		<div
+			ref={ref}
+			style={{
+				opacity: inView ? 1 : 0,
+				transform: inView ? "none" : "translateY(16px)",
+				transition: `opacity 0.3s ease-out ${delay}ms, transform 0.3s ease-out ${delay}ms`,
+			}}
+		>
+			<TrackItem track={track} rank={rank} />
+		</div>
 	);
 });
 

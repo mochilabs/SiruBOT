@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, Home, Search } from "lucide-react";
 
 export default function NotFound() {
+	const router = useRouter();
+
 	return (
 		<main className="relative flex h-[100vh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			<div className="relative z-10 flex flex-col items-center text-center">
@@ -21,7 +24,7 @@ export default function NotFound() {
 						</div>
 
 						<h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl">
-							길을 잃으셨나요?
+							앗, 잘못된 주소예요
 						</h1>
 					</div>
 
@@ -29,7 +32,7 @@ export default function NotFound() {
 						<span
 							className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl"
 						>
-							찾으시는 페이지가 없는 것 같아요.
+							찾는 페이지가 여기에 없어요. 입력한 주소가 맞는지 다시 한번 확인해 주세요.
 						</span>
 					</div>
 
@@ -44,7 +47,7 @@ export default function NotFound() {
 						</Link>
 
 						<button 
-							onClick={() => window.history.back()}
+							onClick={() => router.back()}
 							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground/60 transition-all hover:text-primary"
 						>
 							<ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />

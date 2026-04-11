@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Activity, FileText,GitBranch, MessageSquare, Music, ShieldCheck, Sparkles } from "lucide-react";
 
 export function Footer() {
+	const pathname = usePathname();
+	
 	return (
 		<footer className="border-t border-border bg-card/30 backdrop-blur-md pt-16 pb-12">
 			<div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -21,13 +24,13 @@ export function Footer() {
 							심심할 틈 없는 서버를 만들어봐요!
 						</p>
 					</div>
-
+ 
 					{/* Links Area */}
 					<div className="grid grid-cols-2 md:grid-cols-3 col-span-1 md:col-span-3 gap-8">
 						<div className="space-y-4">
 							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Product</h4>
 							<ul className="space-y-3">
-								<li><Link href="/#features" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+								<li><Link href={pathname === "/" ? "#features" : "/#features"} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
 									<Sparkles size={16} /> 주요 기능
 								</Link></li>
 								<li><Link href="/shards" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">

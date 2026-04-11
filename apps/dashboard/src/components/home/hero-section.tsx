@@ -52,8 +52,8 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 							variants={itemVariants}
 							className="text-lg sm:text-xl lg:text-lg xl:text-xl [@media(max-height:800px)]:lg:text-base font-medium text-muted-foreground/80 leading-relaxed max-w-2xl break-keep"
 						>
-							시루봇과 함께 디스코드에서 고품질 음악을 즐겨보세요.<br />
-							간편한 명령어와 빠른 재생으로 모든 기능을 함께 즐겨보세요.
+							시루봇으로 고품질 음악을 들어보세요.<br />
+							간편한 명령어와 빠른 재생으로 모든 기능을 즐겨봐요.
 						</motion.p>
 
 						<motion.div 

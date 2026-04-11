@@ -2,9 +2,10 @@
 
 import { useEffect,useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Home, Loader2,UserPlus } from "lucide-react";
+import { ExternalLink, Home, UserPlus } from "lucide-react";
 
 import { InteractiveGlow } from "@/components/interactive-glow";
+import Loader from "@/components/loader";
 import { buildInviteUrl } from "@/utils";
 
 export default function InvitePage() {
@@ -48,7 +49,7 @@ export default function InvitePage() {
 								시루봇과 함께해요
 							</h1>
 							<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-overlay text-xs font-bold text-muted-foreground/60 w-[200px] justify-center tabular-nums">
-								<Loader2 size={12} className="animate-spin" />
+								<Loader size="xs" iconOnly />
 								<span>{count}초 뒤에 자동으로 이동할게요...</span>
 							</div>
 						</div>

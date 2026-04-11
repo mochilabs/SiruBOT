@@ -33,10 +33,10 @@ export default function InviteRedirectPage() {
 
 						<div className="space-y-4">
 							<h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl break-keep">
-								초대해 주셔서 고마워요!
+								초대해줘서 고마워요!
 							</h1>
 							<p className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl max-w-xl break-keep">
-								이제 모든 준비가 끝났어요.<br />
+								이제 다 됐어요!<br />
 								나에게 딱 맞는 설정으로 대시보드를 꾸며볼까요?
 							</p>
 						</div>

@@ -1,13 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import useSWR from "swr";
-import { Loader2 } from "lucide-react";
 
 import Container from "@/components/container";
+import Loader from "@/components/loader";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton } from "@/components/servers/servers-page-skeleton";
@@ -23,9 +22,7 @@ export default function ServersPage() {
     if (status === "loading") {
         return (
             <Container>
-                <div className="flex flex-col h-[70vh] items-center justify-center gap-6">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
-                </div>
+                <Loader fullPage />
             </Container>
         );
     }
@@ -39,7 +36,7 @@ export default function ServersPage() {
 
     return (
         <Container>
-            <header className="mb-10 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 pb-8 border-b border-border/40 relative">
+            <header className="mb-8 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 pb-6 sm:pb-8 border-b border-border/40 relative">
                 <div className="space-y-6 flex-1">
                     <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm shadow-primary/5">
                         <span className="relative flex h-2 w-2">
@@ -53,7 +50,7 @@ export default function ServersPage() {
                             어떤 서버로 갈까요?
                         </h1>
                         <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
-                            시루봇의 설정과 통계를 볼 서버를 선택해주세요.
+                            어느 서버를 관리할까요?
                         </p>
                     </div>
                 </div>
@@ -83,7 +80,7 @@ export default function ServersPage() {
             ) : guilds.length === 0 ? (
                 <section className="space-y-12">
                     <div className="glass-panel border-dashed border-border/50 p-20 text-center shadow-xl">
-                        <p className="text-xl font-medium text-muted-foreground">관리할 수 있는 서버를 찾지 못했어요.</p>
+                        <p className="text-xl font-medium text-muted-foreground">관리할 수 있는 서버가 아직 없어요.</p>
                     </div>
                 </section>
             ) : (

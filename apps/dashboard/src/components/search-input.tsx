@@ -9,10 +9,12 @@ import { useSearchStore } from "@/store/use-search-store";
 
 export function SearchInput({ 
 	placeholder = "어떤 노래를 찾아볼까요?",
-	className = "" 
+	className = "",
+	basePath = "/track"
 }: { 
 	placeholder?: string;
 	className?: string;
+	basePath?: string;
 }) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -46,7 +48,7 @@ export function SearchInput({
 		const search = params.toString();
 		const queryStr = search ? `?${search}` : "";
 		
-		router.push(`/track${queryStr}`, { scroll: false });
+		router.push(`${basePath}${queryStr}`, { scroll: false });
 	}, [debouncedValue, router, searchParams]);
 
 	return (
@@ -60,7 +62,7 @@ export function SearchInput({
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				placeholder={placeholder}
-				className="w-full h-14 pl-12 pr-12 bg-card/30 backdrop-blur-md border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all text-lg font-medium shadow-xl shadow-black/5"
+				className="w-full h-12 sm:h-14 pl-12 pr-12 bg-card/30 backdrop-blur-md border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all text-base sm:text-lg font-medium shadow-xl shadow-black/5"
 			/>
 
 			{value && (

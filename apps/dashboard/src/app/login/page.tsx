@@ -35,13 +35,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
 						<div className="space-y-4">
 							<h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl">
-								시루봇 대시보드에<br />오신 걸 환영해요!
+								시루봇에 온 걸 환영해요!
 							</h1>
 							<div className="min-h-[1.5rem]">
 								<TypingText 
 									texts={[
 										"디스코드 계정으로 간편하게 시작해 볼까요?",
-										"시루봇의 모든 기능을 자유롭게 써보세요."
+										"시루봇의 모든 기능을 자유롭게 쓸 수 있어요."
 									]}
 									className="text-lg font-medium text-muted-foreground/80 md:text-xl"
 									speed={60}
