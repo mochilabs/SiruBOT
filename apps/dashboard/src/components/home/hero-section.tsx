@@ -15,8 +15,8 @@ interface HeroSectionProps {
 
 export function HeroSection({ containerVariants, itemVariants }: HeroSectionProps) {
 	return (
-		<section className="relative min-h-[calc(100dvh-10vh)] pt-[10vh] flex items-center">
-			<div className="max-w-7xl mx-auto w-full px-6 xl:px-6 2xl:px-0 relative">
+		<section className="relative flex min-h-[calc(100dvh-4rem)] items-center pt-16">
+			<div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="grid lg:grid-cols-[3fr_4fr] gap-8 lg:gap-10 xl:gap-15 items-center">
 					{/* Left: Content */}
 					<motion.div 

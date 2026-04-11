@@ -1,11 +1,12 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import Container from "@/components/container";
-import { InteractiveGlow } from "@/components/interactive-glow";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
+import { ServersGridSkeleton } from "@/components/servers/servers-page-skeleton";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { DiscordGuild } from "@/types/discord";
@@ -14,6 +15,7 @@ import { buildInviteUrl } from "@/utils";
 async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
     const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
         headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
     });
 
     if (!res.ok) {
@@ -23,6 +25,69 @@ async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
     return res.json();
 }
 
+async function getEnrichedGuilds(accessToken: string): Promise<EnrichedGuild[]> {
+    const guilds = await getUserGuilds(accessToken);
+    const allGuildIds = guilds.map((guild) => guild.id);
+
+    const installedGuilds = await db.guild.findMany({
+        where: { id: { in: allGuildIds } },
+        select: { id: true },
+    });
+    const installedSet = new Set(installedGuilds.map((guild) => guild.id));
+
+    return guilds
+        .map((guild) => {
+            const permissions = BigInt(guild.permissions);
+            const manageGuild = BigInt(0x20);
+            const administrator = BigInt(0x8);
+
+            const isManageable =
+                (permissions & manageGuild) === manageGuild ||
+                (permissions & administrator) === administrator;
+            const isInstalled = installedSet.has(guild.id);
+
+            return {
+                ...guild,
+                isManageable,
+                isInstalled,
+            };
+        })
+        .filter((guild) => guild.isManageable || guild.isInstalled)
+        .sort((a, b) => {
+            if (a.isInstalled !== b.isInstalled) return a.isInstalled ? -1 : 1;
+            if (a.isManageable !== b.isManageable) return a.isManageable ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+}
+
+async function ServersGrid({ accessToken }: { accessToken: string }) {
+    const enrichedGuilds = await getEnrichedGuilds(accessToken);
+
+    if (enrichedGuilds.length === 0) {
+        return (
+            <section className="space-y-12">
+                <div className="glass-panel border-dashed border-border/50 p-20 text-center shadow-xl">
+                    <p className="text-xl font-medium text-muted-foreground">No manageable servers were found.</p>
+                </div>
+            </section>
+        );
+    }
+
+    return (
+        <section className="space-y-12">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {enrichedGuilds.map((guild) => (
+                    <GuildCard
+                        key={guild.id}
+                        guild={guild}
+                        inviteUrl={buildInviteUrl({ guildId: guild.id })}
+                    />
+                ))}
+            </div>
+        </section>
+    );
+}
+
 export default async function ServersPage() {
     const session = await auth();
 
@@ -30,47 +95,9 @@ export default async function ServersPage() {
         redirect("/api/auth/signin?callbackUrl=/servers");
     }
 
-    // 1. 유저가 속한 모든 길드를 가져옵니다.
-    const guilds = await getUserGuilds(session.accessToken);
-
-    // 2. 유저의 모든 길드 ID를 기반으로 DB에 봇이 설치된 서버를 찾습니다.
-    const allGuildIds = guilds.map(g => g.id);
-    const installedGuilds = await db.guild.findMany({
-        where: { id: { in: allGuildIds } },
-        select: { id: true }
-    });
-    const installedSet = new Set(installedGuilds.map(g => g.id));
-
-    // 3. 권한 및 설치 여부를 판별하여 객체를 확장합니다.
-    const enrichedGuilds: EnrichedGuild[] = guilds.map((guild) => {
-        const permissions = BigInt(guild.permissions);
-        const manageGuild = BigInt(0x20);
-        const administrator = BigInt(0x8);
-        
-        const isManageable = (permissions & manageGuild) === manageGuild || (permissions & administrator) === administrator;
-        const isInstalled = installedSet.has(guild.id);
-
-        return {
-            ...guild,
-            isManageable,
-            isInstalled
-        };
-    })
-    // 4. 관리 가능하거나(||) 봇이 이미 설치된 서버만 필터링합니다.
-    .filter(guild => guild.isManageable || guild.isInstalled)
-    // 정렬
-    .sort((a, b) => {
-        if (a.isInstalled !== b.isInstalled) return a.isInstalled ? -1 : 1;
-        if (a.isManageable !== b.isManageable) return a.isManageable ? -1 : 1;
-        return a.name.localeCompare(b.name);
-    });
-
     return (
         <Container>
-            <InteractiveGlow />
-
-            <div className="mx-auto w-full max-w-7xl sm:px-6 lg:px-0 relative z-10">
-                <header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
+            <header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
                     <div className="space-y-6">
                         <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-title-gradient leading-[0.9]">
                             어떤 서버로 갈까요?
@@ -97,24 +124,9 @@ export default async function ServersPage() {
                     </div>
                 </header>
 
-                <section className="space-y-12">
-                    {enrichedGuilds.length === 0 ? (
-                        <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-xl">
-                            <p className="text-xl font-medium text-muted-foreground">아직 관리할 수 있는 서버가 없네요.</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {enrichedGuilds.map((guild) => (
-                                <GuildCard 
-                                    key={guild.id} 
-                                    guild={guild} 
-                                    inviteUrl={buildInviteUrl({ guildId: guild.id })} 
-                                />
-                            ))}
-                        </div>
-                    )}
-                </section>
-            </div>
+            <Suspense fallback={<ServersGridSkeleton />}>
+                <ServersGrid accessToken={session.accessToken} />
+            </Suspense>
         </Container>
     );
 }

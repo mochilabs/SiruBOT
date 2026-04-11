@@ -2,7 +2,6 @@ import { AlertTriangle, RadioTower } from "lucide-react";
 
 import { AutoRefresh } from "@/components/auto-refresh";
 import Container from "@/components/container";
-import { InteractiveGlow } from "@/components/interactive-glow";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import { fetchShards } from "@/lib/shard-api";
@@ -14,7 +13,7 @@ export default async function ShardsPage() {
 
 	if (!data) {
 		return (
-			<main className="min-h-screen pt-32 pb-20 relative overflow-hidden flex items-center justify-center">
+			<main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 pt-32 pb-20">
 				<section className="glass-panel p-12 text-center max-w-xl mx-auto border-red-500/20">
 					<div className="mx-auto mb-6 inline-flex rounded-2xl bg-red-500/10 p-4 border border-red-500/20">
 						<AlertTriangle className="h-8 w-8 text-red-400" />
@@ -33,9 +32,6 @@ export default async function ShardsPage() {
 
 	return (
 		<Container>
-			<InteractiveGlow />
-
-			<div className="mx-auto w-full max-w-7xl sm:px-6 lg:px-0 relative z-10">
 				<header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
 					<div className="space-y-6">
 						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold animate-pulse">
@@ -76,7 +72,6 @@ export default async function ShardsPage() {
 						)}
 					</div>
 				</section>
-			</div>
 		</Container>
 	);
 }

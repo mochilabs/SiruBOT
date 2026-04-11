@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronLeft, LogIn, Sparkles } from "lucide-react";
+
 import { InteractiveGlow } from "@/components/interactive-glow";
 import { TypingText } from "@/components/typing-text";
 import { signIn } from "@/lib/auth";
@@ -15,7 +16,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	const redirectTarget = callbackUrl || "/servers";
 
 	return (
-		<main className="relative flex min-h-[100vh] w-full items-center justify-center overflow-hidden px-4">
+		<main className="relative flex min-h-[100vh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* Dynamic Background Effect */}
 			<InteractiveGlow />
 

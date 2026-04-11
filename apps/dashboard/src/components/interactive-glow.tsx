@@ -46,7 +46,7 @@ export function InteractiveGlow({
     if (!mounted) return null;
 
 	return (
-		<div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+		<div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
 			<motion.div 
 				className="absolute bg-primary rounded-full blur-[120px]"
 				style={{

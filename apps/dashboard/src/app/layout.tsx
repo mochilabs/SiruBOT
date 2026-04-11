@@ -35,6 +35,9 @@ export const metadata: Metadata = {
     title: "시루봇",
     description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
     images: ["/images/og-image.png"],
+  },
+  icons: {
+    icon: "/images/siru-profile-hand.png",
   }
 };
 

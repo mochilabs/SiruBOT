@@ -59,7 +59,7 @@ export default async function FavoritesPage() {
 
 				<section className="space-y-6">
 					{tracks.length === 0 ? (
-						<div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-xl">
+						<div className="glass-panel p-20 text-center border-dashed border-white/10">
 							<p className="text-xl font-medium text-muted-foreground">즐겨찾는 노래를 추가해보세요!</p>
 						</div>
 					) : (

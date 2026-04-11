@@ -6,7 +6,7 @@ import { Activity, FileText,GitBranch, MessageSquare, Music, ShieldCheck, Sparkl
 export function Footer() {
 	return (
 		<footer className="border-t border-border bg-card/30 backdrop-blur-md pt-16 pb-12">
-			<div className="max-w-7xl mx-auto px-6">
+			<div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
 					
 					{/* Branding */}

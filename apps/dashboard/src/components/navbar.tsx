@@ -53,9 +53,8 @@ export function Navbar() {
 					: "bg-transparent border-transparent"
 			}`}
 		>
-			<nav className="w-full h-[10vh] flex items-center shrink-0">
-			<div className="w-full max-w-7xl mx-auto px-6 lg:px-6 xl:px-6 2xl:px-0 items-center">
-				<div className="flex items-center justify-between">
+			<nav className="h-20 w-full shrink-0">
+			 	 <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 					{/* Logo */}
 					<Link href="/" className="flex items-center gap-3 group">
 						<div className={`relative transition-all duration-300 scale-100`}>
@@ -157,7 +156,6 @@ export function Navbar() {
 						</div>
 					</div>
 				</div>
-			</div>
 		</nav>
 
 			{/* Mobile Menu */}

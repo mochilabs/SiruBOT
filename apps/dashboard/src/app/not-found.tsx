@@ -7,7 +7,7 @@ import { InteractiveGlow } from "@/components/interactive-glow";
 
 export default function NotFound() {
 	return (
-		<main className="relative flex h-[100vh] w-full items-center justify-center overflow-hidden px-4">
+		<main className="relative flex h-[100vh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* Dynamic Background Effect */}
 			<InteractiveGlow />
 

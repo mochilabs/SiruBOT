@@ -15,8 +15,8 @@ export function FeaturesSection() {
 	];
 
 	return (
-		<section id="features" className="py-24 sm:py-32 px-6 relative flex items-center">
-			<div className="max-w-7xl mx-auto space-y-16 sm:space-y-20">
+		<section id="features" className="relative flex items-center py-24 sm:py-32">
+			<div className="mx-auto w-full max-w-7xl space-y-16 px-4 sm:space-y-20 sm:px-6 lg:px-8">
 				<motion.div 
 					className="text-center space-y-6 sm:space-y-8"
 					initial={{ opacity: 0, y: 40 }}

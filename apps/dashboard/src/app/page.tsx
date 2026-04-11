@@ -1,6 +1,5 @@
 "use client";
 
-import Container from "@/components/container";
 import { FeaturesSection } from "@/components/home/features-section";
 import { HeroSection } from "@/components/home/hero-section";
 import { InteractiveGlow } from "@/components/interactive-glow";

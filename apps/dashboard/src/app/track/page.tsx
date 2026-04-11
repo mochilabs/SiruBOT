@@ -1,7 +1,6 @@
 import { ListMusicIcon } from "lucide-react";
 
 import Container from "@/components/container";
-import { InteractiveGlow } from "@/components/interactive-glow";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
@@ -60,9 +59,6 @@ export default async function TrackPage({
 
 	return (
 		<Container>
-			<InteractiveGlow />
-			
-			<div className="mx-auto w-full max-w-7xl sm:px-6 lg:px-0 relative z-10">
 				<header className="mb-6 space-y-6">
 					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold">
 						<ListMusicIcon size={16} />
@@ -138,7 +134,6 @@ export default async function TrackPage({
 						</>
 					)}
 				</section>
-			</div>
 		</Container>
 	);
 }
