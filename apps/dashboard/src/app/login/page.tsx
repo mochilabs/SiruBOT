@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ChevronLeft, LogIn, Sparkles } from "lucide-react";
 
-import { InteractiveGlow } from "@/components/interactive-glow";
 import { TypingText } from "@/components/typing-text";
 import { signIn } from "@/lib/auth";
 
@@ -18,7 +17,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	return (
 		<main className="relative flex min-h-[100vh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* Dynamic Background Effect */}
-			<InteractiveGlow />
 
 			<div className="relative z-10 flex flex-col items-center text-center">
 				{/* Immersive Background Text */}
@@ -33,9 +31,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 						{/* Hero Symbol */}
 						<div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-tr from-[#5865F2]/20 via-[#5865F2]/5 to-secondary/10 p-6 shadow-[0_0_50px_-10px_rgba(88,101,242,0.3)]">
 							<LogIn className="h-12 w-12 text-[#5865F2] animate-pulse-soft" />
-							<div className="absolute -top-2 -right-2 bg-primary text-white p-2 rounded-full shadow-lg">
-								<Sparkles size={16} />
-							</div>
 						</div>
 
 						<div className="space-y-4">

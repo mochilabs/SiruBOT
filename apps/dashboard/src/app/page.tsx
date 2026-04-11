@@ -31,8 +31,6 @@ const itemVariants = {
 export default function Home() {
 	return (
 		<div className="w-full relative min-h-screen">
-			<InteractiveGlow />
-			
 			<HeroSection 
 				containerVariants={containerVariants} 
 				itemVariants={itemVariants} 

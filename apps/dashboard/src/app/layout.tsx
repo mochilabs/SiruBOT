@@ -7,6 +7,7 @@ import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
 
 import "./globals.css";
+import { InteractiveGlow } from "@/components/interactive-glow";
 
 export const viewport: Viewport = {
 	themeColor: "#FFDADA"
@@ -57,9 +58,10 @@ export default function RootLayout({
 		<html lang="ko" className={pretendard.variable} suppressHydrationWarning>
 			<body className={pretendard.className}>
 				<Providers>
-					<div className="min-h-screen flex flex-col">
+					<div className="min-h-screen flex flex-col relative overflow-hidden">
+						<InteractiveGlow />
 						<Navbar />
-						<div className="flex-1">
+						<div className="flex-1 relative z-10">
 							{children}
 						</div>
 						<Footer />

@@ -23,7 +23,7 @@ export function InteractiveGlow({
 	const mouseY = useMotionValue(0);
 
 	// Smooth springs for a premium feel
-	const springConfig = { damping: 30, stiffness: 80 };
+	const springConfig = { damping: 40, stiffness: 60 }; // More damping, less stiffness for smoothness
 	const glowX = useSpring(mouseX, springConfig);
 	const glowY = useSpring(mouseY, springConfig);
 
@@ -46,7 +46,7 @@ export function InteractiveGlow({
     if (!mounted) return null;
 
 	return (
-		<div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+		<div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none">
 			<motion.div 
 				className="absolute bg-primary rounded-full blur-[120px]"
 				style={{
@@ -58,6 +58,7 @@ export function InteractiveGlow({
 					translateY: "-50%",
                     opacity: primaryOpacity,
 					willChange: "transform, opacity",
+                    transform: "translateZ(0)",
 				}}
 			/>
 			<motion.div 
@@ -71,6 +72,7 @@ export function InteractiveGlow({
 					translateY: "10%",
                     opacity: secondaryOpacity,
 					willChange: "transform, opacity",
+                    transform: "translateZ(0)",
 				}}
 			/>
 		</div>

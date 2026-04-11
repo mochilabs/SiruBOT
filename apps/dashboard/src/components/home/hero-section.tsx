@@ -76,7 +76,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 								href="/servers" 
 								className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-4 xl:px-10 xl:py-5 glass-overlay text-foreground text-base lg:text-lg xl:text-xl font-bold rounded-2xl backdrop-blur-md hover:bg-foreground/5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-center whitespace-nowrap"
 							>
-								둘러보기
+								대시보드 시작하기
 							</Link>
 						</motion.div>
 

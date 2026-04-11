@@ -11,7 +11,7 @@ interface StatCardProps {
 
 function StatCard({ label, value, sub, icon: Icon }: StatCardProps) {
 	return (
-		<div className="glass-panel p-6 space-y-4 hover:border-primary/40 transition-all group">
+		<div className="glass-panel p-4 sm:p-6 space-y-4 hover:border-primary/40 transition-all group">
 			<div className="flex items-center justify-between">
 				<div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 group-hover:rotate-3 transition-all">
 					<Icon className="h-6 w-6" />
@@ -28,7 +28,7 @@ function StatCard({ label, value, sub, icon: Icon }: StatCardProps) {
 
 export function ShardStats({ stats }: { stats: ShardAggregateStats }) {
 	return (
-		<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+		<div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
 			<StatCard
 				icon={RadioTower}
 				label="연결된 샤드"

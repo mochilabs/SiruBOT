@@ -3,14 +3,9 @@
 import Link from "next/link";
 import { ChevronLeft, Home, Search } from "lucide-react";
 
-import { InteractiveGlow } from "@/components/interactive-glow";
-
 export default function NotFound() {
 	return (
 		<main className="relative flex h-[100vh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-			{/* Dynamic Background Effect */}
-			<InteractiveGlow />
-
 			<div className="relative z-10 flex flex-col items-center text-center">
 				{/* Immersive 404 Background Text */}
 				<div className="absolute inset-0 -z-10 flex items-center justify-center">
@@ -35,7 +30,7 @@ export default function NotFound() {
 							className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl"
 						>
 							찾으시는 페이지가 없는 것 같아요.
-							</span>
+						</span>
 					</div>
 
 					<div className="flex flex-col items-center gap-6 pt-8">
@@ -61,4 +56,3 @@ export default function NotFound() {
 		</main>
 	);
 }
-

@@ -97,15 +97,23 @@ export default async function ServersPage() {
 
     return (
         <Container>
-            <header className="mb-6 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
-                    <div className="space-y-6">
-                        <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-title-gradient leading-[0.9]">
-                            어떤 서버로 갈까요?
-                        </h1>
-                        <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
-                            시루봇의 설정과 통계를 볼 수 있는 <br className="hidden md:block"/> 
-                            서버를 골라보세요.
-                        </p>
+            <header className="mb-10 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 pb-8 border-b border-border/40 relative">
+                    <div className="space-y-6 flex-1">
+                        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm shadow-primary/5">
+                            <span className="relative flex h-2 w-2">
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                            </span>
+                            <span className="tracking-tight">서버 선택</span>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1">
+                                어떤 서버로 갈까요?
+                            </h1>
+                            <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
+                                시루봇의 설정과 통계를 볼 서버를 선택해주세요.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3 glass-panel px-4 py-3 shadow-2xl relative overflow-hidden group">
