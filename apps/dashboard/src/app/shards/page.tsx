@@ -92,7 +92,7 @@ export default function ShardsPage() {
                             <h2 className="text-3xl font-black tracking-tighter text-foreground whitespace-nowrap">
                                 연동된 프로세스 <span className="text-primary/60 ml-1">({processes.length})</span>
                             </h2>
-                            <div className="h-px flex-1 bg-gradient-to-r from-border/80 to-transparent" />
+                            <div className="h-px flex-1 bg-linear-to-r from-border/80 to-transparent" />
                         </div>
 
                         {processes.length === 0 ? (
@@ -108,9 +108,10 @@ export default function ShardsPage() {
                                 {processes.map((process, index) => (
                                     <motion.div
                                         key={process.wsId}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ delay: index * 0.05, duration: 0.3 }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true, margin: "-50px" }}
+                                        transition={{ duration: 0.4, delay: index * 0.05 }}
                                     >
                                         <ProcessCard process={process} index={index} />
                                     </motion.div>

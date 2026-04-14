@@ -8,7 +8,7 @@ node_modules/
 .yarn/install-state.gz
 .yarn/build-state.yml
 .yarn
-.skills
+.agents
 
 # Environment variables
 .DS_Store

@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { Track as TrackType } from "@sirubot/prisma";
 import { Heart } from "lucide-react";
-import { motion } from "framer-motion";
 
 import Container from "@/components/container";
 import Loader from "@/components/loader";
@@ -69,34 +68,19 @@ export default function FavoritesPage() {
     <Container>
       <header className="mb-4 sm:mb-8 space-y-4 sm:space-y-4 pb-4 sm:pb-8 border-b border-border/40 relative">
         <div className="space-y-6">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm shadow-primary/5"
-          >
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm shadow-primary/5">
             <Heart size={16} />
             <span className="tracking-tight">즐겨찾기</span>
-          </motion.div>
+          </div>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-4">
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1"
-              >
+              <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1">
                 즐겨찾는 노래들
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl"
-              >
+              </h1>
+              <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
                 즐겨찾는 노래를 여기서 한눈에 모아보세요.
-              </motion.p>
+              </p>
             </div>
           </div>
         </div>
@@ -124,45 +108,21 @@ export default function FavoritesPage() {
 
       <section className="space-y-6 min-h-[500px] relative">
         {isLoading ? (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0"
-          >
-            <Loader text="즐겨찾기를 불러오는 중..." />
-          </motion.div>
+          <Loader text="즐겨찾기를 불러오는 중..." />
         ) : allTracks.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm"
-          >
+          <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm">
             <p className="text-xl font-medium text-muted-foreground">
               즐겨찾는 노래 추가하기
             </p>
-          </motion.div>
+          </div>
         ) : filteredTracks.length === 0 ? (
-          <motion.div
-            key="no-result"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm"
-          >
+          <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm">
             <p className="text-xl font-medium text-muted-foreground">
               &apos;{query}&apos;에 해당하는 노래를 찾을 수 없어요.
             </p>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div
-            key="list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <TrackList tracks={filteredTracks} />
-          </motion.div>
+          <TrackList tracks={filteredTracks} />
         )}
       </section>
     </Container>
