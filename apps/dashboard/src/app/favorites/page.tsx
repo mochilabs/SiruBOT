@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
@@ -33,6 +33,12 @@ export default function FavoritesPage() {
     );
   }, [allTracks, query]);
 
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/api/auth/signin?callbackUrl=/favorites");
+    }
+  }, [status, router]);
+
   if (status === "loading") {
     return (
       <Container>
@@ -42,7 +48,6 @@ export default function FavoritesPage() {
   }
 
   if (status === "unauthenticated") {
-    router.push("/api/auth/signin?callbackUrl=/favorites");
     return null;
   }
 

@@ -2,7 +2,7 @@
 
 import { useEffect,useState } from "react";
 import Image from "next/image";
-import * as motion from "framer-motion/client";
+import { m } from "framer-motion";
 import { Globe, Music, Pause, Play, Repeat, SkipBack, SkipForward, Sparkles,Volume2 } from "lucide-react";
 
 interface TrackInfo {
@@ -81,7 +81,7 @@ export function DiscordPlaybackCard() {
 	const progress = (currentTime / track.duration) * 100;
 
 	return (
-		<motion.div 
+		<m.div 
 			className="w-[450px] h-[250px] bg-gradient-to-r from-discord-embed via-discord-embed to-transparent rounded-md border-l-4 border-[#ffdaff] overflow-hidden shadow-2xl text-[14px] font-sans flex flex-col"
 			initial={{ opacity: 0, y: 30 }}
 			animate={{ opacity: 1, y: 0 }}
@@ -119,7 +119,7 @@ export function DiscordPlaybackCard() {
 								<span>{formatTime(track.duration)}</span>
 							</div>
 							<div className="h-1 bg-discord-btn-active rounded-full overflow-hidden relative">
-								<motion.div 
+								<m.div 
 									className="absolute top-0 left-0 h-full bg-white rounded-full"
 									animate={{ width: `${progress}%` }}
 									transition={{ duration: 1, ease: "linear" }}
@@ -174,6 +174,6 @@ export function DiscordPlaybackCard() {
 					</div>
 				</div>
 			</div>
-		</motion.div>
+		</m.div>
 	);
 }

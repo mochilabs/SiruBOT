@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
-import { AnimatePresence,motion } from "framer-motion";
+import { AnimatePresence,m } from "framer-motion";
 import { Music } from "lucide-react";
 
 interface NavLink {
 	label: string;
 	href: string;
+	requireAuth?: boolean;
 }
 
 interface MobileMenuProps {
@@ -18,10 +19,17 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProps) {
+	const getNavHref = (link: NavLink) => {
+		if (link.requireAuth && status !== "authenticated") {
+			return `/api/auth/signin?callbackUrl=${encodeURIComponent(link.href)}`;
+		}
+		return link.href;
+	};
+
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<motion.div
+				<m.div
 					initial={{ height: 0, opacity: 0 }}
 					animate={{ height: "auto", opacity: 1 }}
 					exit={{ height: 0, opacity: 0 }}
@@ -32,7 +40,7 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 						{navLinks.map((link) => (
 							<Link
 								key={link.label}
-								href={link.href}
+								href={getNavHref(link)}
 								onClick={onClose}
 								className="flex items-center justify-between py-3 text-lg font-bold text-foreground/80 hover:text-primary transition-all"
 							>
@@ -58,7 +66,7 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 							)}
 						</div>
 					</div>
-				</motion.div>
+				</m.div>
 			)}
 		</AnimatePresence>
 	);

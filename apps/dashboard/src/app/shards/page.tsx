@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { AlertTriangle, RadioTower } from "lucide-react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 import Container from "@/components/container";
 import Loader from "@/components/loader";
@@ -106,7 +106,7 @@ export default function ShardsPage() {
                         ) : (
                             <div className="grid gap-8 md:grid-cols-2">
                                 {processes.map((process, index) => (
-                                    <motion.div
+                                    <m.div
                                         key={process.wsId}
                                         initial={{ opacity: 0, y: 20 }}
                                         whileInView={{ opacity: 1, y: 0 }}
@@ -114,7 +114,7 @@ export default function ShardsPage() {
                                         transition={{ duration: 0.4, delay: index * 0.05 }}
                                     >
                                         <ProcessCard process={process} index={index} />
-                                    </motion.div>
+                                    </m.div>
                                 ))}
                             </div>
                         )}

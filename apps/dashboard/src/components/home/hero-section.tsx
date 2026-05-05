@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, Variants } from "framer-motion";
+import { m, Variants } from "framer-motion";
 import { ArrowRight,Play } from "lucide-react";
 
 import { DiscordPlaybackCard } from "@/components/discord-playback-card";
@@ -19,22 +19,22 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 			<div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="grid lg:grid-cols-[3fr_4fr] gap-8 lg:gap-10 xl:gap-15 items-center">
 					{/* Left: Content */}
-					<motion.div 
+					<m.div 
 						className="space-y-8 flex flex-col items-center lg:items-start text-center lg:text-left"
 						variants={containerVariants}
 						initial="hidden"
 						animate="visible"
 					>
-						<motion.div 
+						<m.div 
 							variants={itemVariants}
 							className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold backdrop-blur-md"
 						>
 							<Play size={14} fill="currentColor" />
 							<span>끊김 없는 고품질 사운드</span>
 							<div className="absolute -inset-10 bg-secondary/20 rounded-full blur-[80px] -z-10" />
-						</motion.div>
+						</m.div>
 
-						<motion.h1 
+						<m.h1 
 							variants={itemVariants}
 							className="text-4xl sm:text-6xl lg:text-6xl xl:text-6xl [@media(max-height:800px)]:lg:text-5xl font-black tracking-tighter leading-[1.2] lg:leading-[1] text-foreground break-keep h-[3em] lg:h-auto"
 						>
@@ -46,17 +46,17 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 							/>
 							<br />
 							<span>서버를 만들어봐요!</span>
-						</motion.h1>
+						</m.h1>
 
-						<motion.p 
+						<m.p 
 							variants={itemVariants}
 							className="text-lg sm:text-xl lg:text-lg xl:text-xl [@media(max-height:800px)]:lg:text-base font-medium text-muted-foreground/80 leading-relaxed max-w-2xl break-keep"
 						>
 							시루봇으로 고품질 음악을 들어보세요.<br />
 							간편한 명령어와 빠른 재생으로 모든 기능을 즐겨봐요.
-						</motion.p>
+						</m.p>
 
-						<motion.div 
+						<m.div 
 							variants={itemVariants}
 							className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 w-full sm:w-auto"
 						>
@@ -68,7 +68,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 								<div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer-sweep -z-0 pointer-events-none" />
 								
 								<span className="relative z-10 flex items-center gap-3">
-									초대하기
+									지금 초대하기
 									<ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
 								</span>
 							</Link>
@@ -78,9 +78,9 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 							>
 								대시보드 시작하기
 							</Link>
-						</motion.div>
+						</m.div>
 
-						<motion.div 
+						<m.div 
 							variants={itemVariants}
 							className="flex flex-wrap items-center justify-center lg:justify-start gap-6 sm:gap-12 pt-6 sm:pt-8"
 						>
@@ -89,7 +89,7 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 								{ value: "4K+", label: "사용자" },
 								{ value: "24/7", label: "연중무휴" },
 							].map((stat, i) => (
-								<motion.div 
+								<m.div 
 									key={i} 
 									className="space-y-1 group cursor-default"
 									whileHover={{ scale: 1.1 }}
@@ -101,15 +101,15 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 									<div className="text-xs sm:text-base text-muted-foreground font-bold tracking-tight">
 										{stat.label}
 									</div>
-								</motion.div>
+								</m.div>
 							))}
-						</motion.div>
-					</motion.div>
+						</m.div>
+					</m.div>
 
 					{/* Right: Visual Area */}
 					<div className="relative hidden lg:flex h-full items-center">
 						{/* Card */}
-						<motion.div 
+						<m.div 
 							className="relative z-10 mb-8"
 							initial={{ opacity: 0, scale: 0.9 }}
 							animate={{ opacity: 1, scale: 1 }}
@@ -121,11 +121,11 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 								</div>
 								<div className="absolute -inset-10 bg-primary/20 rounded-full blur-[80px] -z-10" />
 							</div>
-						</motion.div>
+						</m.div>
 
 						{/* Character - 카드 위에 겹침 */}
 						<div className="absolute right-0 bottom-0 top-10 h-full pointer-events-none">
-							<motion.div
+							<m.div
 								className="h-full flex items-end justify-end"
 								initial={{ opacity: 0, x: 30, y: 20 }}
 								animate={{ opacity: 1, x: 0, y: 0 }}
@@ -139,26 +139,26 @@ export function HeroSection({ containerVariants, itemVariants }: HeroSectionProp
 									className="h-[110%] w-auto object-contain object-right-bottom drop-shadow-[0_0_80px_rgba(255,133,193,0.3)] opacity-70"
 									priority
 								/>
-							</motion.div>
+							</m.div>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			{/* Scroll Down Indicator */}
-			<motion.div 
+			<m.div 
 				className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-muted-foreground/30"
 				initial={{ opacity: 0, y: -20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ delay: 2, duration: 1 }}
 			>
-				<motion.div
+				<m.div
 					animate={{ y: [0, 8, 0] }}
 					transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
 				>
 					<ArrowRight size={20} className="rotate-90" />
-				</motion.div>
-			</motion.div>
+				</m.div>
+			</m.div>
 		</section>
 	);
 }

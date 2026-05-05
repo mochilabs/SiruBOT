@@ -70,7 +70,7 @@ export default function InvitePage() {
 						>
 							<div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]" />
 							<UserPlus className="h-6 w-6" />
-							초대하기
+							지금 초대하기
 							<ExternalLink className="h-5 w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
 						</a>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect,useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 const CHOSEONG = [
 	"ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
@@ -89,7 +89,7 @@ export function TypingText({
 	return (
 		<span className={className}>
 			<span className={className + " inline-block"}>{displayText}</span>
-			<motion.span
+			<m.span
 				animate={{ opacity: [1, 0] }}
 				transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
 				className="inline-block w-[2px] h-[0.8em] bg-primary ml-1 align-middle"

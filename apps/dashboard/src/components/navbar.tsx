@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { LogOut, Menu, Moon, Music, Sun, X } from "lucide-react";
 
 import { useUIStore } from "@/store/use-ui-store";
@@ -49,8 +49,8 @@ export function Navbar() {
     // { label: "기능", href: "/#features" },
     { label: "상태", href: "/shards" },
     { label: "차트", href: "/track" },
-    { label: "즐겨찾기", href: "/favorites" },
-    { label: "대시보드", href: "/servers" },
+    { label: "즐겨찾기", href: "/favorites", requireAuth: true },
+    { label: "대시보드", href: "/servers", requireAuth: true },
   ];
 
   const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -69,6 +69,13 @@ export function Navbar() {
   useEffect(() => {
     updateIndicator();
   }, [updateIndicator]);
+
+  const getNavHref = (link: { href: string; requireAuth?: boolean }) => {
+    if (link.requireAuth && status !== "authenticated") {
+      return `/api/auth/signin?callbackUrl=${encodeURIComponent(link.href)}`;
+    }
+    return link.href;
+  };
 
   return (
     <div
@@ -94,7 +101,7 @@ export function Navbar() {
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-1 lg:gap-2 relative">
               {indicator && (
-                <motion.div
+                <m.div
                   className="absolute top-0 bottom-0 rounded-xl bg-primary/10 shadow-sm"
                   animate={{ left: indicator.left, width: indicator.width }}
                   transition={{
@@ -108,7 +115,7 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
-                  href={link.href}
+                  href={getNavHref(link)}
                   className={`relative px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-colors duration-200 ${
                     pathname === link.href
                       ? "text-primary"
@@ -131,7 +138,7 @@ export function Navbar() {
                   className="relative flex items-center justify-center w-11 h-11 rounded-xl glass-overlay text-foreground/70 hover:text-primary hover:border-primary/30 transition-all duration-300 overflow-hidden group"
                 >
                   <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.div
+                    <m.div
                       key={theme}
                       initial={{ y: 20, rotate: -90, opacity: 0 }}
                       animate={{ y: 0, rotate: 0, opacity: 1 }}
@@ -148,7 +155,7 @@ export function Navbar() {
                       ) : (
                         <Moon size={20} />
                       )}
-                    </motion.div>
+                    </m.div>
                   </AnimatePresence>
                 </button>
               )}

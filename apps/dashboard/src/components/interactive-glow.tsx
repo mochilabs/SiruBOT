@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { m, useMotionValue, useSpring } from "framer-motion";
 
 interface InteractiveGlowProps {
     primarySize?: number;
@@ -47,7 +47,7 @@ export function InteractiveGlow({
 
 	return (
 		<div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none">
-			<motion.div 
+			<m.div 
 				className="absolute bg-primary rounded-full blur-[120px]"
 				style={{
 					width: primarySize,
@@ -61,7 +61,7 @@ export function InteractiveGlow({
                     transform: "translateZ(0)",
 				}}
 			/>
-			<motion.div 
+			<m.div 
 				className="absolute bg-secondary rounded-full blur-[100px]"
 				style={{
 					width: secondarySize * 0.66,

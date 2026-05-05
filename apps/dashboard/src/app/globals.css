@@ -226,6 +226,22 @@
 	}
 }
 
+@keyframes page-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@utility animate-page-in {
+	animation: page-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @utility animate-pulse-soft {
 	animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	will-change: transform, opacity;

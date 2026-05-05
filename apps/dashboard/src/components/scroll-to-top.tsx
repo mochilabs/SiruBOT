@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 
 export function ScrollToTop() {
@@ -30,7 +30,7 @@ export function ScrollToTop() {
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.button
+        <m.button
           initial={{ opacity: 0, scale: 0.5, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.5, y: 20 }}
@@ -43,7 +43,7 @@ export function ScrollToTop() {
           <ArrowUp className="h-6 w-6" />
 
           <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl -z-10" />
-        </motion.button>
+        </m.button>
       )}
     </AnimatePresence>
   );

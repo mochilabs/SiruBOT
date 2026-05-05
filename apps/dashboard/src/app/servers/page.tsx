@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -19,6 +20,12 @@ export default function ServersPage() {
         status === "authenticated" ? "/api/servers" : null,
     );
 
+    useEffect(() => {
+        if (status === "unauthenticated") {
+            router.push("/api/auth/signin?callbackUrl=/servers");
+        }
+    }, [status, router]);
+
     if (status === "loading") {
         return (
             <Container>
@@ -28,7 +35,6 @@ export default function ServersPage() {
     }
 
     if (status === "unauthenticated") {
-        router.push("/api/auth/signin?callbackUrl=/servers");
         return null;
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
   ArrowRight,
   DollarSign,
@@ -58,7 +58,7 @@ export function FeaturesSection() {
       className="relative flex items-center py-24 sm:py-32"
     >
       <div className="mx-auto w-full max-w-7xl space-y-16 px-4 sm:space-y-20 sm:px-6 lg:px-8">
-        <motion.div
+        <m.div
           className="text-center space-y-6 sm:space-y-8"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -79,15 +79,15 @@ export function FeaturesSection() {
               href="/invite"
               className="inline-flex items-center gap-3 px-8 py-4 bg-primary/10 border border-primary/20 text-primary font-bold rounded-2xl hover:bg-primary/20 transition-all duration-300"
             >
-              초대하기
+              지금 초대하기
               <ArrowRight size={20} />
             </Link>
           </div>
-        </motion.div>
+        </m.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-4">
           {features.map((feature, i) => (
-            <motion.div
+            <m.div
               key={i}
               className="group glass-panel p-8 space-y-6"
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
@@ -109,7 +109,7 @@ export function FeaturesSection() {
                   {feature.desc}
                 </p>
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>
