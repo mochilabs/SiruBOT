@@ -6,6 +6,12 @@ import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
 import * as view from '../modules/audio/view/play.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 
+interface CommandErrorContext extends Record<string, unknown> {
+	interaction?: ChatInputCommandInteraction<'cached'> | ButtonInteraction<'cached'> | ChatInputCommandInteraction;
+	player?: Player;
+	ephemeral?: boolean;
+}
+
 export class AudioService {
 	/**
 	 * Gets an existing player or creates a new one for the guild
@@ -29,7 +35,7 @@ export class AudioService {
 	 * Connects the player to the voice channel.
 	 * Checks Discord permissions before attempting connection.
 	 */
-	public async connectPlayer(player: Player, context: any): Promise<void> {
+	public async connectPlayer(player: Player, context: CommandErrorContext): Promise<void> {
 		if (player.connected) return;
 
 		// Check if the bot can actually join the voice channel
@@ -82,7 +88,7 @@ export class AudioService {
 		query: string,
 		platform: SearchPlatform,
 		user: { id: string; username: string },
-		context: any
+		context: CommandErrorContext
 	): Promise<SearchResult | UnresolvedSearchResult> {
 		const searchRes = await player.search({ query, source: platform }, user);
 
@@ -156,7 +162,7 @@ export class AudioService {
 	private async promptRemainingPlaylist(
 		interaction: ChatInputCommandInteraction<'cached'>,
 		player: Player,
-		playlist: any,
+		playlist: NonNullable<SearchResult['playlist']>,
 		selectedTrack: Track,
 		remainingTracks: Track[]
 	): Promise<void> {
@@ -323,7 +329,8 @@ export class AudioService {
 		if (this.isTrackRequestedByBot(currentTrack)) {
 			await player.skip(0, false);
 			await interaction.reply({
-				content: '추천 곡 건너뛰기 테스트'
+				components: [skipView.trackRelatedSkipped({ track: currentTrack })],
+				flags: [MessageFlags.IsComponentsV2]
 			});
 		} else {
 			throw new UserError({

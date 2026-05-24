@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
 import { LogOut, Menu, Moon, Music, Sun, X } from "lucide-react";
@@ -186,13 +186,12 @@ export function Navbar() {
                     </button>
                   </div>
                 ) : (
-                  <></>
-                  // <button
-                  // 	onClick={() => signIn("discord")}
-                  // 	className="h-11 px-6 flex items-center justify-center glass-overlay text-foreground/80 text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-scale duration-300"
-                  // >
-                  // 	대시보드 시작하기
-                  // </button>
+                  <button
+                  	onClick={() => signIn("discord")}
+                  	className="h-11 px-6 flex items-center justify-center glass-overlay text-foreground/80 text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-300"
+                  >
+                  	대시보드 시작하기
+                  </button>
                 )}
               </div>
 

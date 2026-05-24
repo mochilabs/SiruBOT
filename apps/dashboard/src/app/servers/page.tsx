@@ -8,6 +8,7 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import Loader from "@/components/loader";
+import { ErrorPanel } from "@/components/error-panel";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton } from "@/components/servers/servers-page-skeleton";
@@ -16,7 +17,7 @@ import { buildInviteUrl } from "@/utils";
 export default function ServersPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const { data, error, isLoading } = useSWR<{ guilds: EnrichedGuild[] }>(
+    const { data, error, isLoading, mutate } = useSWR<{ guilds: EnrichedGuild[] }>(
         status === "authenticated" ? "/api/servers" : null,
     );
 
@@ -78,8 +79,12 @@ export default function ServersPage() {
             </header>
 
             {error ? (
-                <div className="glass-panel p-20 text-center border-red-500/20 shadow-xl">
-                    <p className="text-xl font-medium text-red-400">서버 목록을 불러오는데 실패했어요.</p>
+                <div className="py-12">
+                    <ErrorPanel 
+                        title="서버 목록 오류" 
+                        message="서버 목록을 불러오는데 실패했어요." 
+                        onRetry={() => mutate()} 
+                    />
                 </div>
             ) : isLoading ? (
                 <ServersGridSkeleton />

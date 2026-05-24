@@ -6,12 +6,13 @@ import { m } from "framer-motion";
 
 import Container from "@/components/container";
 import Loader from "@/components/loader";
+import { ErrorPanel } from "@/components/error-panel";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import type { ShardsResponse } from "@/lib/shard-api";
 
 export default function ShardsPage() {
-    const { data, error, isLoading, isValidating } = useSWR<ShardsResponse>("/api/shards", {
+    const { data, error, isLoading, isValidating, mutate } = useSWR<ShardsResponse>("/api/shards", {
         refreshInterval: 11000,
         revalidateOnFocus: true,
         dedupingInterval: 2000,
@@ -21,16 +22,11 @@ export default function ShardsPage() {
         return (
             <Container>
                 <div className="flex items-center justify-center min-h-[60vh]">
-                    <section className="glass-panel p-12 text-center max-w-xl mx-auto border-red-500/20">
-                        <div className="mx-auto mb-6 inline-flex rounded-2xl bg-red-500/10 p-4 border border-red-500/20">
-                            <AlertTriangle className="h-8 w-8 text-red-400" />
-                        </div>
-                        <h1 className="text-3xl font-black tracking-tighter text-foreground mb-4">앗, 연결에 실패했어요</h1>
-                        <p className="text-lg font-medium text-muted-foreground leading-relaxed">
-                            샤드 매니저와 연결하지 못했어요. <br />
-                            서버가 점검 중이거나 오프라인 상태일 수 있어요.
-                        </p>
-                    </section>
+                    <ErrorPanel 
+                        title="앗, 연결에 실패했어요" 
+                        message="샤드 매니저와 연결하지 못했어요. 서버가 점검 중이거나 오프라인 상태일 수 있어요." 
+                        onRetry={() => mutate()} 
+                    />
                 </div>
             </Container>
         );

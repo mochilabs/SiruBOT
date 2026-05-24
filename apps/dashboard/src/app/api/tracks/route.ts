@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { PAGE_SIZE, fixedTrackFilter } from "@/lib/track-constants";
+import { z } from "zod";
+
+const tracksQuerySchema = z.object({
+  query: z.string().max(200).default(""),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("query") || "";
-    const page = parseInt(searchParams.get("page") || "1");
-    const currentPage = Math.max(1, page);
+    
+    const parsed = tracksQuerySchema.safeParse({
+        query: searchParams.get("query") || "",
+        page: searchParams.get("page") || "1",
+    });
+
+    if (!parsed.success) {
+        return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
+
+    const { query, page: currentPage } = parsed.data;
 
     const where = query ? {
         ...fixedTrackFilter,

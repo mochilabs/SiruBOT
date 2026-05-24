@@ -1,22 +1,24 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { ListMusicIcon } from "lucide-react";
 
 import Container from "@/components/container";
 import Loader from "@/components/loader";
+import { ErrorPanel } from "@/components/error-panel";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
 import { PAGE_SIZE } from "@/lib/track-constants";
 
-export default function TrackPage() {
+function TrackContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
   const page = searchParams.get("page") || "1";
 
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`,
   );
 
@@ -30,16 +32,12 @@ export default function TrackPage() {
   if (error) {
     return (
       <Container>
-        <div className="glass-panel p-20 text-center border-red-500/20 shadow-xl">
-          <p className="text-xl font-medium text-red-400">
-            데이터를 불러오지 못했어요.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 text-primary font-bold"
-          >
-            새로고침
-          </button>
+        <div className="pt-20">
+          <ErrorPanel 
+            title="차트 오류" 
+            message="데이터를 불러오지 못했어요." 
+            onRetry={() => mutate()} 
+          />
         </div>
       </Container>
     );
@@ -124,5 +122,13 @@ export default function TrackPage() {
         )}
       </section>
     </Container>
+  );
+}
+
+export default function TrackPage() {
+  return (
+    <Suspense fallback={<Container><Loader fullPage /></Container>}>
+      <TrackContent />
+    </Suspense>
   );
 }

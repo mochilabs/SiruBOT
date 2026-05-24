@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
@@ -9,16 +9,17 @@ import { Heart } from "lucide-react";
 
 import Container from "@/components/container";
 import Loader from "@/components/loader";
+import { ErrorPanel } from "@/components/error-panel";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
 
-export default function FavoritesPage() {
+function FavoritesContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
 
-  const { data, error, isLoading } = useSWR<{ tracks: TrackType[] }>(
+  const { data, error, isLoading, mutate } = useSWR<{ tracks: TrackType[] }>(
     status === "authenticated" ? "/api/favorites" : null,
   );
 
@@ -54,16 +55,12 @@ export default function FavoritesPage() {
   if (error) {
     return (
       <Container>
-        <div className="glass-panel p-20 text-center border-red-500/20 shadow-xl">
-          <p className="text-xl font-medium text-red-400">
-            즐겨찾기를 불러오지 못했어요.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 text-primary font-bold"
-          >
-            새로고침
-          </button>
+        <div className="pt-20">
+          <ErrorPanel 
+            title="즐겨찾기 오류" 
+            message="즐겨찾기를 불러오지 못했어요." 
+            onRetry={() => mutate()} 
+          />
         </div>
       </Container>
     );
@@ -131,5 +128,13 @@ export default function FavoritesPage() {
         )}
       </section>
     </Container>
+  );
+}
+
+export default function FavoritesPage() {
+  return (
+    <Suspense fallback={<Container><Loader fullPage /></Container>}>
+      <FavoritesContent />
+    </Suspense>
   );
 }
