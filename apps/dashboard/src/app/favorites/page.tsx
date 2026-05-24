@@ -1,89 +1,140 @@
+"use client";
+
+import { Suspense, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import useSWR from "swr";
+import { Track as TrackType } from "@sirubot/prisma";
+import { Heart } from "lucide-react";
+
+import Container from "@/components/container";
+import Loader from "@/components/loader";
+import { ErrorPanel } from "@/components/error-panel";
+import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
-import { db } from "@/lib/db";
-import { Suspense } from "react";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
 
-// Prerender ignore
-export const dynamic = "force-dynamic";
+function FavoritesContent() {
+  const { status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query") || "";
 
-async function getFavorites(userId: string) {
-	const userFavorites = await db.userFavorite.findMany({
-		where: {
-			userId: userId
-		},
-		include: {
-			track: true
-		},
-		orderBy: {
-			createdAt: 'desc'
-		}
-	});
-	
-	return userFavorites.map(uf => uf.track);
-}
+  const { data, error, isLoading, mutate } = useSWR<{ tracks: TrackType[] }>(
+    status === "authenticated" ? "/api/favorites" : null,
+  );
 
-function FavoritesSkeleton() {
-	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">내 즐겨찾기</h1>
-				<p className="text-gray-600">내가 좋아하는 곡들을 확인해보세요</p>
-			</div>
-			
-			<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-				<div className="space-y-4">
-					{Array.from({ length: 10 }).map((_, i) => (
-						<div key={i} className="flex items-center space-x-4 p-4">
-							<div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
-							<div className="flex-1 space-y-2">
-								<div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-								<div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-							</div>
-							<div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
-						</div>
-					))}
-				</div>
-			</div>
-		</div>
-	);
-}
+  const allTracks = data?.tracks ?? [];
 
-async function FavoritesContent() {
-    const session = await auth();
-    
-    if (!session || !session.user || !session.user.id) {
-        redirect("/api/auth/signin?callbackUrl=/favorites");
+  const filteredTracks = useMemo(() => {
+    if (!query) return allTracks;
+    const q = query.toLowerCase();
+    return allTracks.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q),
+    );
+  }, [allTracks, query]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/api/auth/signin?callbackUrl=/favorites");
     }
+  }, [status, router]);
 
-	const tracks = await getFavorites(session.user.id);
+  if (status === "loading") {
+    return (
+      <Container>
+        <Loader fullPage />
+      </Container>
+    );
+  }
 
-	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">내 즐겨찾기</h1>
-				<p className="text-gray-600">내가 좋아하는 곡들을 확인해보세요</p>
-			</div>
+  if (status === "unauthenticated") {
+    return null;
+  }
 
-			{tracks.length > 0 ? (
-				<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-					<TrackList tracks={tracks} />
-				</div>
-			) : (
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 sm:p-12 text-center">
-					<span className="text-6xl mb-4 block">⭐</span>
-					<h2 className="text-xl font-medium text-gray-900 mb-2">아직 즐겨찾기한 곡이 없어요</h2>
-					<p className="text-gray-500">봇에서 음악을 즐겨찾기하면 여기에 표시됩니다</p>
-				</div>
-			)}
-		</div>
-	);
+  if (error) {
+    return (
+      <Container>
+        <div className="pt-20">
+          <ErrorPanel 
+            title="즐겨찾기 오류" 
+            message="즐겨찾기를 불러오지 못했어요." 
+            onRetry={() => mutate()} 
+          />
+        </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Container>
+      <header className="mb-4 sm:mb-8 space-y-4 sm:space-y-4 pb-4 sm:pb-8 border-b border-border/40 relative">
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm shadow-primary/5">
+            <Heart size={16} />
+            <span className="tracking-tight">즐겨찾기</span>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-4">
+              <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1">
+                즐겨찾는 노래들
+              </h1>
+              <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
+                즐겨찾는 노래를 여기서 한눈에 모아보세요.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-full flex sm:flex-row gap-4 sm:gap-6 lg:items-center">
+          <SearchInput
+            placeholder="즐겨찾기에서 검색..."
+            basePath="/favorites"
+            className="flex-1"
+          />
+          <div className="flex gap-2 sm:gap-3 justify-start md:justify-end h-12 sm:h-14">
+            <div className="group relative glass-panel h-full px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 md:flex-none md:min-w-[140px]">
+              <div className="flex items-center gap-1.5 text-primary/60">
+                <span className="text-[10px] font-black tracking-widest uppercase text-center">
+                  즐겨찾는 노래 수
+                </span>
+              </div>
+              <span className="text-xl font-black text-foreground leading-[1.1] tabular-nums">
+                {isLoading ? "---" : allTracks.length}
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section className="space-y-6 min-h-[500px] relative">
+        {isLoading ? (
+          <Loader text="즐겨찾기를 불러오는 중..." />
+        ) : allTracks.length === 0 ? (
+          <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm">
+            <p className="text-xl font-medium text-muted-foreground">
+              즐겨찾는 노래 추가하기
+            </p>
+          </div>
+        ) : filteredTracks.length === 0 ? (
+          <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm">
+            <p className="text-xl font-medium text-muted-foreground">
+              &apos;{query}&apos;에 해당하는 노래를 찾을 수 없어요.
+            </p>
+          </div>
+        ) : (
+          <TrackList tracks={filteredTracks} />
+        )}
+      </section>
+    </Container>
+  );
 }
 
-export default async function FavoritesPage() {
-	return (
-		<Suspense fallback={<FavoritesSkeleton />}>
-			<FavoritesContent />
-		</Suspense>
-	);
+export default function FavoritesPage() {
+  return (
+    <Suspense fallback={<Container><Loader fullPage /></Container>}>
+      <FavoritesContent />
+    </Suspense>
+  );
 }

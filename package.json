@@ -12,7 +12,7 @@
     "@types/ws": "^8.18.1",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
-    "turbo": "^2.9.5",
+    "turbo": "^2.9.6",
     "typescript": "^5.9.2"
   },
   "scripts": {

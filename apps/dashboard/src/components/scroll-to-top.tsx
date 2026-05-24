@@ -1,0 +1,50 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
+import { ArrowUp } from "lucide-react";
+
+export function ScrollToTop() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => {
+      if (window.scrollY > 400) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener("scroll", toggleVisibility);
+    return () => window.removeEventListener("scroll", toggleVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <m.button
+          initial={{ opacity: 0, scale: 0.5, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.5, y: 20 }}
+          whileHover={{ scale: 1.1, backgroundColor: "rgba(var(--primary-rgb, 255 133 193) / 0.3)" }}
+          whileTap={{ scale: 0.9 }}
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-100 p-4 bg-primary/20 backdrop-blur-xl border border-primary/30 text-primary rounded-2xl shadow-2xl shadow-primary/20"
+          aria-label="맨 위로 가기"
+        >
+          <ArrowUp className="h-6 w-6" />
+
+          <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl -z-10" />
+        </m.button>
+      )}
+    </AnimatePresence>
+  );
+}

@@ -1,75 +1,134 @@
-import { TrackList } from "@/components/track";
-import { db } from "@/lib/db";
+"use client";
+
 import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
+import { ListMusicIcon } from "lucide-react";
 
-// Prerender ignore
-export const dynamic = "force-dynamic";
-async function getPopularTracks() {
-	const tracks = await db.track.findMany({
-		orderBy: {
-			totalPlays: 'desc'
-		},
-		take: 50 // 상위 50곡
-	});
-	
-	return tracks;
+import Container from "@/components/container";
+import Loader from "@/components/loader";
+import { ErrorPanel } from "@/components/error-panel";
+import { Pagination } from "@/components/pagination";
+import { SearchInput } from "@/components/search-input";
+import { TrackList } from "@/components/track";
+import { PAGE_SIZE } from "@/lib/track-constants";
+
+function TrackContent() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query") || "";
+  const page = searchParams.get("page") || "1";
+
+  const { data, error, isLoading, mutate } = useSWR(
+    `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`,
+  );
+
+  const tracks = data?.tracks || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPlaybacks = data?.totalPlaybacks?._sum?.totalPlays || 0;
+  const totalPages = data?.totalPages || 0;
+  const currentPage = parseInt(page);
+  const rankOffset = (currentPage - 1) * PAGE_SIZE;
+
+  if (error) {
+    return (
+      <Container>
+        <div className="pt-20">
+          <ErrorPanel 
+            title="차트 오류" 
+            message="데이터를 불러오지 못했어요." 
+            onRetry={() => mutate()} 
+          />
+        </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Container>
+      <header className="mb-4 sm:mb-8 space-y-4 sm:space-y-4 pb-4 sm:pb-8 border-b border-border/40 relative">
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm">
+            <ListMusicIcon size={16} />
+            <span className="tracking-tight">
+              {query ? `'${query}' 검색 결과` : "실시간 뮤직 차트"}
+            </span>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-4">
+              <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1">
+                {query ? "검색 결과" : "재생 순위"}
+              </h1>
+
+              <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
+                {query ? (
+                  <>시루봇이 재생한 적 있는 노래의 검색 결과를 보여드려요.</>
+                ) : (
+                  <>시루봇에서 가장 사랑받는 노래들을 모았어요.</>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-full flex flex-col sm:flex-row gap-4 sm:gap-6 lg:items-center">
+          <SearchInput className="flex-1" />
+          <div className="flex gap-2 sm:gap-3 justify-start md:justify-end h-12 sm:h-14">
+            <div className="group relative glass-panel h-full px-4 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 md:flex-none md:min-w-[120px] sm:min-w-[140px]">
+              <div className="flex items-center gap-1.5 text-primary/60">
+                <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase">
+                  {query ? "검색 결과 수" : "단일 곡 수"}
+                </span>
+              </div>
+              <span className="text-lg sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
+                {isLoading ? "---" : totalCount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="group relative glass-panel h-full px-4 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 md:flex-none md:min-w-[120px] sm:min-w-[140px]">
+              <div className="flex items-center gap-1.5 text-primary/60">
+                <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase">
+                  재생 횟수
+                </span>
+              </div>
+              <span className="text-lg sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
+                {isLoading ? "---" : totalPlaybacks.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section className="space-y-6 min-h-[500px] relative">
+        {isLoading ? (
+          <Loader text="차트 정보를 불러오는 중..." />
+        ) : tracks.length === 0 ? (
+          <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm">
+            <p className="text-xl font-medium text-muted-foreground">
+              {query
+                ? "노래를 찾을 수 없어요."
+                : "차트 데이터를 모으고 있어요..."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-10">
+            <TrackList tracks={tracks} rankOffset={rankOffset} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              basePath="/track"
+            />
+          </div>
+        )}
+      </section>
+    </Container>
+  );
 }
 
-function TrackSkeleton() {
-	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">인기 곡 순위</h1>
-				<p className="text-gray-600">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
-			</div>
-			
-			<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-				<div className="space-y-4">
-					{Array.from({ length: 10 }).map((_, i) => (
-						<div key={i} className="flex items-center space-x-4 p-4">
-							<div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
-							<div className="flex-1 space-y-2">
-								<div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-								<div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-							</div>
-							<div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
-						</div>
-					))}
-				</div>
-			</div>
-		</div>
-	);
-}
-
-async function TrackContent() {
-	const tracks = await getPopularTracks();
-
-	return (
-		<div className="container mx-auto sm:px-6 py-6">
-			<div className="mb-4 sm:px-2 pl-8">
-				<h1 className="text-3xl font-bold text-gray-900 mb-2">인기 곡 순위</h1>
-				<p className="text-gray-600">재생 횟수 기준으로 정렬된 인기 곡들을 확인해보세요</p>
-			</div>
-
-			{tracks.length > 0 ? (
-				<div className="sm:bg-white sm:rounded-lg sm:shadow-sm sm:border border-gray-200 sm:p-6">
-					<TrackList tracks={tracks} />
-				</div>
-			) : (
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 sm:p-12 text-center">
-					<span className="text-6xl mb-4 block">🎵</span>
-					<h2 className="text-xl font-medium text-gray-900 mb-2">아직 재생된 곡이 없어요</h2>
-					<p className="text-gray-500">봇에서 음악을 재생하면 여기에 표시됩니다</p>
-				</div>
-			)}
-		</div>
-	);
-}
-
-export default async function TrackPage() {
-	return (
-		<Suspense fallback={<TrackSkeleton />}>
-			<TrackContent />
-		</Suspense>
-	);
+export default function TrackPage() {
+  return (
+    <Suspense fallback={<Container><Loader fullPage /></Container>}>
+      <TrackContent />
+    </Suspense>
+  );
 }

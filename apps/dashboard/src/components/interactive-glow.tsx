@@ -1,0 +1,80 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { m, useMotionValue, useSpring } from "framer-motion";
+
+interface InteractiveGlowProps {
+    primarySize?: number;
+    secondarySize?: number;
+    primaryOpacity?: number;
+    secondaryOpacity?: number;
+}
+
+export function InteractiveGlow({
+    primarySize = 600,
+    secondarySize = 400,
+    primaryOpacity = 0.15,
+    secondaryOpacity = 0.1,
+}: InteractiveGlowProps) {
+	const [mounted, setMounted] = useState(false);
+	
+	// Mouse tracking for interactive glow
+	const mouseX = useMotionValue(0);
+	const mouseY = useMotionValue(0);
+
+	// Smooth springs for a premium feel
+	const springConfig = { damping: 40, stiffness: 60 }; // More damping, less stiffness for smoothness
+	const glowX = useSpring(mouseX, springConfig);
+	const glowY = useSpring(mouseY, springConfig);
+
+	useEffect(() => {
+		setMounted(true);
+		
+        // Initialize position to center or some default
+        mouseX.set(window.innerWidth / 2);
+        mouseY.set(window.innerHeight / 2);
+
+		const handleMouseMove = (e: MouseEvent) => {
+			mouseX.set(e.clientX);
+			mouseY.set(e.clientY);
+		};
+
+		window.addEventListener("mousemove", handleMouseMove, { passive: true });
+		return () => window.removeEventListener("mousemove", handleMouseMove);
+	}, [mouseX, mouseY]);
+
+    if (!mounted) return null;
+
+	return (
+		<div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none">
+			<m.div 
+				className="absolute bg-primary rounded-full blur-[120px]"
+				style={{
+					width: primarySize,
+					height: primarySize,
+					x: glowX,
+					y: glowY,
+					translateX: "-50%",
+					translateY: "-50%",
+                    opacity: primaryOpacity,
+					willChange: "transform, opacity",
+                    transform: "translateZ(0)",
+				}}
+			/>
+			<m.div 
+				className="absolute bg-secondary rounded-full blur-[100px]"
+				style={{
+					width: secondarySize * 0.66,
+					height: secondarySize * 0.66,
+					x: glowX,
+					y: glowY,
+					translateX: "20%",
+					translateY: "10%",
+                    opacity: secondaryOpacity,
+					willChange: "transform, opacity",
+                    transform: "translateZ(0)",
+				}}
+			/>
+		</div>
+	);
+}
