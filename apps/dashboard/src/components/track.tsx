@@ -1,8 +1,8 @@
-import React, { useState, memo } from "react";
+import React, { memo,useState } from "react";
+import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";
 import { Crown, ExternalLink, Music4 } from "lucide-react";
-import { useInView } from "react-intersection-observer";
 
 interface TrackListProps {
 	tracks: TrackType[];
@@ -23,7 +23,7 @@ export function formatTimeToKorean(seconds: number): string {
 	return parts.join(" ");
 }
 
-function MockThumbnail({ className, title }: { className: string; title: string }) {
+function MockThumbnail({ className }: { className: string }) {
 	return (
 		<div className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}>
 			<div className="absolute inset-0 bg-foreground/5 backdrop-blur-sm" />
@@ -133,7 +133,7 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 						onError={() => setImgError(true)}
 					/>
 				) : (
-					<MockThumbnail className="h-full w-full" title={track.title} />
+					<MockThumbnail className="h-full w-full" />
 				)}
 			</div>
 
@@ -182,7 +182,7 @@ export function Track({ track }: { track: TrackType }) {
 						className="object-cover" 
 					/>
 				) : (
-					<MockThumbnail className="h-full w-full" title={track.title} />
+					<MockThumbnail className="h-full w-full" />
 				)}
 			</div>
 			<div className="min-w-0 flex-1">

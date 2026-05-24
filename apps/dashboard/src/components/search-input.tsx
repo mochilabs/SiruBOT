@@ -49,7 +49,7 @@ export function SearchInput({
 		const queryStr = search ? `?${search}` : "";
 		
 		router.push(`${basePath}${queryStr}`, { scroll: false });
-	}, [debouncedValue, router, searchParams]);
+	}, [debouncedValue, router, searchParams, basePath]);
 
 	return (
 		<div className={`relative group ${className}`}>

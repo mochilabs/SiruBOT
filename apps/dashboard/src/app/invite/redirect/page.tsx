@@ -5,8 +5,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Home,
-  Settings2,
-  Sparkles,
+  Settings2
 } from "lucide-react";
 
 import { InteractiveGlow } from "@/components/interactive-glow";

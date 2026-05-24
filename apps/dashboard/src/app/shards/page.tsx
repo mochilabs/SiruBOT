@@ -1,12 +1,12 @@
 "use client";
 
-import useSWR from "swr";
-import { AlertTriangle, RadioTower } from "lucide-react";
 import { m } from "framer-motion";
+import { RadioTower } from "lucide-react";
+import useSWR from "swr";
 
 import Container from "@/components/container";
-import Loader from "@/components/loader";
 import { ErrorPanel } from "@/components/error-panel";
+import Loader from "@/components/loader";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import type { ShardsResponse } from "@/lib/shard-api";

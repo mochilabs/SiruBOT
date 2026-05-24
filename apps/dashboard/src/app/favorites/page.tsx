@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import useSWR from "swr";
 import { Track as TrackType } from "@sirubot/prisma";
 import { Heart } from "lucide-react";
+import useSWR from "swr";
 
 import Container from "@/components/container";
-import Loader from "@/components/loader";
 import { ErrorPanel } from "@/components/error-panel";
+import Loader from "@/components/loader";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
 
@@ -23,7 +23,7 @@ function FavoritesContent() {
     status === "authenticated" ? "/api/favorites" : null,
   );
 
-  const allTracks = data?.tracks ?? [];
+  const allTracks = useMemo(() => data?.tracks ?? [], [data?.tracks]);
 
   const filteredTracks = useMemo(() => {
     if (!query) return allTracks;

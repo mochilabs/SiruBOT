@@ -7,8 +7,8 @@ import { signOut, useSession } from "next-auth/react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
-import Loader from "@/components/loader";
 import { ErrorPanel } from "@/components/error-panel";
+import Loader from "@/components/loader";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton } from "@/components/servers/servers-page-skeleton";

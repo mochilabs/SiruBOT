@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
 import { Footer } from "@/components/footer";
+import { InteractiveGlow } from "@/components/interactive-glow";
 import { Navbar } from "@/components/navbar";
 import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
 
 import "./globals.css";
-import { InteractiveGlow } from "@/components/interactive-glow";
 
 export const viewport: Viewport = {
 	themeColor: "#FFDADA"

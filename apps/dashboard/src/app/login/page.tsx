@@ -1,7 +1,7 @@
 
 
 import Link from "next/link";
-import { ChevronLeft, LogIn, Sparkles } from "lucide-react";
+import { ChevronLeft, LogIn } from "lucide-react";
 
 import { TypingText } from "@/components/typing-text";
 import { signIn } from "@/lib/auth";

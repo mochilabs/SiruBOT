@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { fetchShards } from "@/lib/shard-api";
 
 export async function GET() {

@@ -13,6 +13,14 @@ import { useUIStore } from "@/store/use-ui-store";
 
 import { MobileMenu } from "./navbar/mobile-menu";
 
+const navLinks = [
+  // { label: "기능", href: "/#features" },
+  { label: "상태", href: "/shards" },
+  { label: "차트", href: "/track" },
+  { label: "즐겨찾기", href: "/favorites", requireAuth: true },
+  { label: "대시보드", href: "/servers", requireAuth: true },
+];
+
 export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
@@ -45,13 +53,7 @@ export function Navbar() {
     });
   };
 
-  const navLinks = [
-    // { label: "기능", href: "/#features" },
-    { label: "상태", href: "/shards" },
-    { label: "차트", href: "/track" },
-    { label: "즐겨찾기", href: "/favorites", requireAuth: true },
-    { label: "대시보드", href: "/servers", requireAuth: true },
-  ];
+
 
   const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);

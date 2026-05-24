@@ -1,0 +1,20 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "plugins": ["simple-import-sort"],
+  "rules": {
+    "simple-import-sort/imports": [
+      "error",
+      {
+        "groups": [
+          ["^\\u0000"],
+          ["^react", "^next", "^@?\\w"],
+          ["^@(/.*|$)"],
+          ["^\\.\\.(?!/?$)", "^\\.\\./?$"],
+          ["^\\./(?=.*/)(?!/?$)", "^\\.(?!/?$)", "^\\./?$"],
+          ["^.+\\.css$"]
+        ]
+      }
+    ],
+    "simple-import-sort/exports": "error"
+  }
+}

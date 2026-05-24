@@ -2,7 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
-import { LazyMotion, domAnimation, MotionConfig } from "framer-motion";
+import { domAnimation, LazyMotion, MotionConfig } from "framer-motion";
 import { SWRConfig } from "swr";
 
 import { fetcher } from "@/lib/fetcher";

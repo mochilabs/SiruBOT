@@ -2,12 +2,12 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import useSWR from "swr";
 import { ListMusicIcon } from "lucide-react";
+import useSWR from "swr";
 
 import Container from "@/components/container";
-import Loader from "@/components/loader";
 import { ErrorPanel } from "@/components/error-panel";
+import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
