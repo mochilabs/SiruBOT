@@ -44,6 +44,12 @@ export class RedisStore {
 		await this.redis.connect();
 	}
 
+	public async disconnect() {
+		if (this.isReady) {
+			await this.redis.quit();
+		}
+	}
+
 	public get ready() {
 		return this.isReady;
 	}

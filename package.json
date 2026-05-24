@@ -12,13 +12,13 @@
     "@types/ws": "^8.18.1",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
-    "turbo": "^2.9.6",
+    "turbo": "^2.9.14",
     "typescript": "^5.9.2"
   },
   "scripts": {
     "build": "turbo build",
-    "generate": "turbo generate",
-    "migrate:dev": "turbo migrate:dev",
+    "generate": "turbo run generate",
+    "migrate:dev": "turbo run migrate:dev",
     "dev": "turbo dev",
     "watch": "turbo run watch",
     "start": "turbo start",

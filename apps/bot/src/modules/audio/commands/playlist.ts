@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
+import { Track } from 'lavalink-client';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -235,7 +236,7 @@ export class PlaylistCommand extends Command {
 		const track = result.tracks[0];
 
 		try {
-			await this.container.playlistService.addTrack(interaction.user.id, name, track);
+			await this.container.playlistService.addTrack(interaction.user.id, name, track as Track);
 			await interaction.editReply({
 				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`✅ **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
@@ -262,7 +263,7 @@ export class PlaylistCommand extends Command {
 		}
 
 		try {
-			await this.container.playlistService.addTrack(interaction.user.id, name, current);
+			await this.container.playlistService.addTrack(interaction.user.id, name, current as Track);
 			await interaction.reply({
 				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`✅ **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
