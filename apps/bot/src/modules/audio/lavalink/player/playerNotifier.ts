@@ -52,7 +52,7 @@ export class PlayerNotifier {
 			if (interaction) {
 				message = await interaction.reply({
 					components: [components],
-					flags: [MessageFlags.IsComponentsV2],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { roles: [], users: [] },
 					fetchReply: true
 				});
@@ -62,7 +62,7 @@ export class PlayerNotifier {
 				if (!textChannel?.isSendable()) return;
 				message = await textChannel.send({
 					components: [components],
-					flags: [MessageFlags.IsComponentsV2],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { roles: [], users: [] }
 				});
 			}

@@ -17,6 +17,7 @@ export class CustomPlayer extends Player {
 	public controller: Message | null = null;
 	public chapters: Chapter[] = [];
 	public queuePage: number = 1;
+	public queueSelectedIndex: number | null = null;
 	public activeFilters: string[] = [];
 
 	constructor(options: PlayerOptions, LavalinkManager: LavalinkManager, dontEmitPlayerCreateEvent?: boolean) {

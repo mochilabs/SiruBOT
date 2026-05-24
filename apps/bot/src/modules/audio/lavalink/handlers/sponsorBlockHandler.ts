@@ -44,7 +44,7 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 								)
 							)
 					],
-					flags: [MessageFlags.IsComponentsV2]
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications]
 				})
 				.then((m) => setTimeout(() => m.delete().catch(() => {}), 3000));
 		}

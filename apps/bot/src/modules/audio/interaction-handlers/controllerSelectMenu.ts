@@ -50,6 +50,8 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 			return;
 		}
 
+		player.queueSelectedIndex = trackIndex;
+
 		// Update the controller view to reflect the selection (no action taken on select, just UI update)
 		await interaction.update({
 			components: [controllerView({ player, volume: player.volume, page: player.queuePage })],

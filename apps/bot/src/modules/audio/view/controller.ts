@@ -24,9 +24,10 @@ import {
 	ThumbnailBuilder
 } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
+import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 type controllerViewProps = {
-	player: Player;
+	player: CustomPlayer;
 	volume?: number;
 	page?: number;
 };
@@ -123,10 +124,13 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 					}
 				});
 
+				const trackIndex = index + (page - 1) * QUEUE_PAGE_CHUNK_SIZE;
+				const isSelected = player.queueSelectedIndex !== null ? player.queueSelectedIndex === trackIndex : index === 0;
+
 				return {
-					label: `#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE} ${label}`,
-					value: (index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE).toString(),
-					default: index === 0
+					label: `#${trackIndex + 1} ${label}`,
+					value: (trackIndex + 1).toString(),
+					default: isSelected
 				};
 			})
 		);

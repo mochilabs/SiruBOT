@@ -3,7 +3,6 @@ import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { controllerView } from '../view/controller.ts';
 import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
-import { chunkArray } from '@sirubot/utils';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
@@ -199,6 +198,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 		player.queuePage = currentPage - 1;
+		player.queueSelectedIndex = null;
 		await interaction.update(this.buildControllerPayload(player));
 	}
 
@@ -213,18 +213,17 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 		player.queuePage = currentPage + 1;
+		player.queueSelectedIndex = null;
 		await interaction.update(this.buildControllerPayload(player));
 	}
 
 	private async handleQueueRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		// Remove is based on the currently selected track in the select menu
-		// The select menu state isn't accessible from a button click, so use first item on current page
-		const currentPage = player.queuePage;
 		const QUEUE_PAGE_CHUNK_SIZE = 5;
-		const queueChunks = chunkArray(player.queue.tracks, QUEUE_PAGE_CHUNK_SIZE);
-		const pageIndex = Math.min(currentPage - 1, queueChunks.length - 1);
+		const currentPage = player.queuePage;
+		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
+		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
 
-		if (pageIndex < 0 || player.queue.tracks.length === 0) {
+		if (trackIndex < 0 || trackIndex >= player.queue.tracks.length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView('❌ 제거할 곡이 없어요.')]
@@ -232,27 +231,25 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
-		// Remove the first track on the current page
-		const trackIndex = pageIndex * QUEUE_PAGE_CHUNK_SIZE;
-		const removed = player.queue.splice(trackIndex, 1);
-		if (removed.length > 0) {
-			// Adjust page if needed
-			const newTotalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_CHUNK_SIZE);
-			if (currentPage > newTotalPages && newTotalPages > 0) {
-				player.queuePage = newTotalPages;
-			}
+		player.queue.splice(trackIndex, 1);
+		player.queueSelectedIndex = null;
+
+		// Adjust page if needed
+		const newTotalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_CHUNK_SIZE);
+		if (currentPage > newTotalPages && newTotalPages > 0) {
+			player.queuePage = newTotalPages;
 		}
 
 		await interaction.update(this.buildControllerPayload(player));
 	}
 
 	private async handleQueueJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		// Jump to the first track on the current page
-		const currentPage = player.queuePage;
 		const QUEUE_PAGE_CHUNK_SIZE = 5;
-		const trackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
+		const currentPage = player.queuePage;
+		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
+		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
 
-		if (trackIndex >= player.queue.tracks.length) {
+		if (trackIndex < 0 || trackIndex >= player.queue.tracks.length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView('❌ 이동할 곡이 없어요.')]
@@ -263,6 +260,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		// Skip to the specified position (remove tracks before it and play it)
 		await player.skip(trackIndex + 1);
 		player.queuePage = 1;
+		player.queueSelectedIndex = null;
 		await interaction.update(this.buildControllerPayload(player));
 	}
 }
