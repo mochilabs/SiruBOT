@@ -115,14 +115,22 @@ export class PlaylistCommand extends Command {
 		const subcommand = interaction.options.getSubcommand(true);
 
 		switch (subcommand) {
-			case 'create': return this.handleCreate(interaction);
-			case 'delete': return this.handleDelete(interaction);
-			case 'list': return this.handleList(interaction);
-			case 'view': return this.handleView(interaction);
-			case 'add': return this.handleAdd(interaction);
-			case 'add-current': return this.handleAddCurrent(interaction);
-			case 'remove': return this.handleRemove(interaction);
-			case 'play': return this.handlePlay(interaction);
+			case 'create':
+				return this.handleCreate(interaction);
+			case 'delete':
+				return this.handleDelete(interaction);
+			case 'list':
+				return this.handleList(interaction);
+			case 'view':
+				return this.handleView(interaction);
+			case 'add':
+				return this.handleAdd(interaction);
+			case 'add-current':
+				return this.handleAddCurrent(interaction);
+			case 'remove':
+				return this.handleRemove(interaction);
+			case 'play':
+				return this.handlePlay(interaction);
 		}
 	}
 
@@ -188,7 +196,9 @@ export class PlaylistCommand extends Command {
 
 			if (tracks.length === 0) {
 				await interaction.reply({
-					components: [createContainer().addTextDisplayComponents((t) => t.setContent(`📭 **${playlist.name}** 플레이리스트가 비어있어요.`))],
+					components: [
+						createContainer().addTextDisplayComponents((t) => t.setContent(`📭 **${playlist.name}** 플레이리스트가 비어있어요.`))
+					],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 				return;
@@ -238,7 +248,11 @@ export class PlaylistCommand extends Command {
 		try {
 			await this.container.playlistService.addTrack(interaction.user.id, name, track as Track);
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`✅ **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`✅ **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: any) {
@@ -265,7 +279,11 @@ export class PlaylistCommand extends Command {
 		try {
 			await this.container.playlistService.addTrack(interaction.user.id, name, current as Track);
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`✅ **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`✅ **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: any) {
@@ -321,7 +339,9 @@ export class PlaylistCommand extends Command {
 
 			if (tracks.length === 0) {
 				await interaction.editReply({
-					components: [createContainer().addTextDisplayComponents((t) => t.setContent(`📭 **${playlist.name}** 플레이리스트가 비어있어요.`))],
+					components: [
+						createContainer().addTextDisplayComponents((t) => t.setContent(`📭 **${playlist.name}** 플레이리스트가 비어있어요.`))
+					],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 				return;
@@ -352,7 +372,11 @@ export class PlaylistCommand extends Command {
 			}
 
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`🎵 **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`🎵 **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: any) {

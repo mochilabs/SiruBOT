@@ -107,10 +107,7 @@ export const main = async () => {
 			.map((node, index) => {
 				const parts = node.trim().split('_');
 				if (parts.length < 3) {
-					throw new Error(
-						`Invalid LAVALINK_HOSTS format at index ${index}: "${node}". ` +
-						`Expected: "id_host_port[_password]"`
-					);
+					throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${node}". ` + `Expected: "id_host_port[_password]"`);
 				}
 				const [id, host, portStr, password] = parts;
 				const port = parseInt(portStr);
@@ -153,22 +150,22 @@ export const main = async () => {
 			if (healthServer) {
 				healthServer.close();
 			}
-			
+
 			// 1. Audio and players
 			if (container.audio) {
 				container.audio.removeAllListeners();
 			}
-			
+
 			// 2. Redis disconnect
 			if (container.redisStore) {
 				await container.redisStore.disconnect();
 			}
-			
+
 			// 3. Database disconnect
 			if (container.db) {
 				await container.db.$disconnect();
 			}
-			
+
 			// 4. ShardManager client
 			if (container.shardClient) {
 				container.shardClient.destroy();

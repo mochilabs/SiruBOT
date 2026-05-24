@@ -30,11 +30,7 @@ export class GuildService {
 		this.cache.set(guild.id, guild);
 	}
 
-	private async upsertField<K extends keyof Omit<Guild, "id">>(
-		guildId: string,
-		field: K,
-		value: Guild[K]
-	): Promise<Guild> {
+	private async upsertField<K extends keyof Omit<Guild, 'id'>>(guildId: string, field: K, value: Guild[K]): Promise<Guild> {
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, [field]: value } as any,
@@ -46,7 +42,7 @@ export class GuildService {
 	}
 
 	public async updateVolume(guildId: string, volume: number) {
-		const guild = await this.upsertField(guildId, "volume", volume);
+		const guild = await this.upsertField(guildId, 'volume', volume);
 		return guild;
 	}
 
@@ -61,7 +57,7 @@ export class GuildService {
 	}
 
 	public async setDJRole(guildId: string, djRoleId: string | null) {
-		const guild = await this.upsertField(guildId, "djRoleId", djRoleId);
+		const guild = await this.upsertField(guildId, 'djRoleId', djRoleId);
 		return guild;
 	}
 
@@ -78,7 +74,7 @@ export class GuildService {
 
 	public async setRepeat(guildId: string, repeat: RepeatMode): Promise<RepeatMode> {
 		if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('Invalid repeat value');
-		const guild = await this.upsertField(guildId, "repeat", repeat);
+		const guild = await this.upsertField(guildId, 'repeat', repeat);
 		return guild.repeat as RepeatMode;
 	}
 
@@ -88,12 +84,12 @@ export class GuildService {
 	}
 
 	public async setRelated(guildId: string, related: boolean): Promise<boolean> {
-		const guild = await this.upsertField(guildId, "related", related);
+		const guild = await this.upsertField(guildId, 'related', related);
 		return guild.related;
 	}
 
 	public async setDefaultTextChannel(guildId: string, textChannelId: string | null) {
-		const guild = await this.upsertField(guildId, "textChannelId", textChannelId);
+		const guild = await this.upsertField(guildId, 'textChannelId', textChannelId);
 		return guild.textChannelId;
 	}
 
@@ -103,7 +99,7 @@ export class GuildService {
 	}
 
 	public async setDefaultVoiceChannel(guildId: string, voiceChannelId: string | null) {
-		const guild = await this.upsertField(guildId, "voiceChannelId", voiceChannelId);
+		const guild = await this.upsertField(guildId, 'voiceChannelId', voiceChannelId);
 		return guild.voiceChannelId;
 	}
 
@@ -118,7 +114,7 @@ export class GuildService {
 	}
 
 	public async setEnableController(guildId: string, enableController: boolean) {
-		const guild = await this.upsertField(guildId, "enableController", enableController);
+		const guild = await this.upsertField(guildId, 'enableController', enableController);
 		return guild.enableController;
 	}
 }

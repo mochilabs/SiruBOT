@@ -38,7 +38,7 @@ export class PlaylistService {
 		}
 
 		const data = this.extractTrackData(track);
-		
+
 		// 1. Ensure Track exists
 		await container.db.track.upsert({
 			where: { id: data.id },
@@ -51,7 +51,7 @@ export class PlaylistService {
 			where: { playlistId: playlist.id },
 			_max: { position: true }
 		});
-		
+
 		const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
 
 		// 3. Add to PlaylistTrack
