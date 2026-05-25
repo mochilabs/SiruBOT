@@ -14,12 +14,12 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL!),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "시루봇",
   description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
   openGraph: {
     description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
-    url: process.env.NEXT_PUBLIC_APP_URL!,
+    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     images: [
       {
         url: "/images/og-image.png",

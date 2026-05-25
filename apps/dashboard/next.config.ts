@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@sirubot/prisma"],
   output: "standalone",
-  allowedDevOrigins: ['115.140.182.51'],
   images: {
     remotePatterns: [
       {
