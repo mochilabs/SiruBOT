@@ -109,7 +109,7 @@ export class CachedPlayerSaver {
 						if (value === null) continue;
 
 						const playerDataJson = JSON.parse(value);
-						if (playerDataJson.nodeId === null || playerDataJson.sessionId === null) continue;
+						if (!playerDataJson.nodeId || !playerDataJson.nodeSessionId) continue;
 
 						data.set(playerDataJson.nodeId, playerDataJson.nodeSessionId);
 					}

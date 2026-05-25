@@ -20,8 +20,8 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private async handleNodeConnect(node: LavalinkNode) {
 		this.logger.info(`Node connected: ${node.options.id}`);
-		// Enable resuming for 5 minutes
-		await node.updateSession(true, 1000 * 60 * 5);
+		// Enable resuming for 5 minutes (timeout is in seconds per Lavalink API)
+		await node.updateSession(true, 60 * 5);
 	}
 
 	private async handleNodeResumed(
