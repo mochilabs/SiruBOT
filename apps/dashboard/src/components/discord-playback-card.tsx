@@ -82,7 +82,7 @@ export function DiscordPlaybackCard() {
 
 	return (
 		<m.div 
-			className="w-[450px] h-[250px] bg-gradient-to-r from-discord-embed via-discord-embed to-transparent rounded-md border-l-4 border-[#ffdaff] overflow-hidden shadow-2xl text-[14px] font-sans flex flex-col"
+			className="w-full max-w-[450px] h-[250px] bg-gradient-to-r from-discord-embed via-discord-embed to-transparent rounded-md border-l-4 border-[#ffdaff] overflow-hidden shadow-2xl text-[14px] font-sans flex flex-col"
 			initial={{ opacity: 0, y: 30 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.6 }}
@@ -106,7 +106,7 @@ export function DiscordPlaybackCard() {
 							<h3 className="text-discord-blue text-[15px] font-bold leading-snug cursor-pointer hover:underline line-clamp-2">
 								{track.title}
 							</h3>
-							<p className="text-discord-text-muted text-[13px] leading-relaxed">
+							<p className="text-discord-text-muted text-sm leading-relaxed">
 								아티스트: <span className="text-discord-text">{track.artist}</span> | 추천 곡 
 								<Sparkles size={12} className="inline ml-1 text-yellow-400 animate-pulse-soft" />
 							</p>
@@ -114,7 +114,7 @@ export function DiscordPlaybackCard() {
 
 						{/* Progress Bar & Timer */}
 						<div className="space-y-1">
-							<div className="flex justify-between text-[11px] font-bold text-discord-text-muted tabular-nums">
+							<div className="flex justify-between text-xs font-bold text-discord-text-muted tabular-nums">
 								<span>{formatTime(currentTime)}</span>
 								<span>{formatTime(track.duration)}</span>
 							</div>
@@ -163,7 +163,7 @@ export function DiscordPlaybackCard() {
 				</div>
 
 				{/* Embed Footer */}
-				<div className="flex items-center gap-4 text-discord-text-muted text-[10px] font-bold tracking-tight pt-1">
+				<div className="flex items-center gap-4 text-discord-text-muted text-xs font-bold tracking-tight pt-1">
 					<div className="flex items-center gap-1.5">
 						<Globe size={12} />
 						{track.server} 에서 재생 중

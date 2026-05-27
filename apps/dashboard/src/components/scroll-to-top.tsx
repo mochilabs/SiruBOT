@@ -37,7 +37,7 @@ export function ScrollToTop() {
           whileHover={{ scale: 1.1, backgroundColor: "rgba(var(--primary-rgb, 255 133 193) / 0.3)" }}
           whileTap={{ scale: 0.9 }}
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-100 p-4 bg-primary/20 backdrop-blur-xl border border-primary/30 text-primary rounded-2xl shadow-2xl shadow-primary/20"
+          className="fixed bottom-8 right-8 z-40 p-4 bg-primary/20 backdrop-blur-xl border border-primary/30 text-primary rounded-2xl shadow-2xl shadow-primary/20"
           aria-label="맨 위로 가기"
         >
           <ArrowUp className="h-6 w-6" />

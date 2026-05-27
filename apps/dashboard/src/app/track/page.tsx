@@ -11,6 +11,7 @@ import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
+import { PageHeader } from "@/components/layout/page-header";
 import { PAGE_SIZE } from "@/lib/track-constants";
 
 function TrackContent() {
@@ -45,59 +46,47 @@ function TrackContent() {
 
   return (
     <Container>
-      <header className="mb-4 sm:mb-8 space-y-4 sm:space-y-4 pb-4 sm:pb-8 border-b border-border/40 relative">
-        <div className="space-y-6">
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm">
-            <ListMusicIcon size={16} />
-            <span className="tracking-tight">
-              {query ? `'${query}' 검색 결과` : "실시간 뮤직 차트"}
-            </span>
+      <PageHeader
+        badge={query ? `'${query}' 검색 결과` : "실시간 뮤직 차트"}
+        badgeIcon={<ListMusicIcon size={16} />}
+        title={query ? "검색 결과" : "재생 순위"}
+        description={
+          query ? (
+            <>시루봇이 재생한 적 있는 노래의 검색 결과를 보여드려요.</>
+          ) : (
+            <>시루봇에서 가장 사랑받는 노래들을 모았어요.</>
+          )
+        }
+      >
+        <div className="w-full flex flex-col sm:flex-row gap-3 sm:gap-6 lg:items-center">
+          <div className="w-full flex-1">
+            <SearchInput />
           </div>
-
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-4">
-              <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1">
-                {query ? "검색 결과" : "재생 순위"}
-              </h1>
-
-              <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
-                {query ? (
-                  <>시루봇이 재생한 적 있는 노래의 검색 결과를 보여드려요.</>
-                ) : (
-                  <>시루봇에서 가장 사랑받는 노래들을 모았어요.</>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-full flex flex-col sm:flex-row gap-4 sm:gap-6 lg:items-center">
-          <SearchInput className="flex-1" />
-          <div className="flex gap-2 sm:gap-3 justify-start md:justify-end h-12 sm:h-14">
-            <div className="group relative glass-panel h-full px-4 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 md:flex-none md:min-w-[120px] sm:min-w-[140px]">
+          <div className="flex w-full sm:w-auto gap-2 sm:gap-3 h-14 sm:h-14">
+            <div className="group relative glass-panel h-full px-3 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary/60">
-                <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase">
+                <span className="text-[10px] sm:text-xs font-black tracking-widest uppercase">
                   {query ? "검색 결과 수" : "단일 곡 수"}
                 </span>
               </div>
-              <span className="text-lg sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
+              <span className="text-base sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
                 {isLoading ? "---" : totalCount.toLocaleString()}
               </span>
             </div>
 
-            <div className="group relative glass-panel h-full px-4 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 md:flex-none md:min-w-[120px] sm:min-w-[140px]">
+            <div className="group relative glass-panel h-full px-3 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary/60">
-                <span className="text-[9px] sm:text-[10px] font-black tracking-widest uppercase">
+                <span className="text-[10px] sm:text-xs font-black tracking-widest uppercase">
                   재생 횟수
                 </span>
               </div>
-              <span className="text-lg sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
+              <span className="text-base sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
                 {isLoading ? "---" : totalPlaybacks.toLocaleString()}
               </span>
             </div>
           </div>
         </div>
-      </header>
+      </PageHeader>
 
       <section className="space-y-6 min-h-[500px] relative">
         {isLoading ? (

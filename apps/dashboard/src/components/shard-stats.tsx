@@ -1,3 +1,5 @@
+"use client";
+
 import { Cpu, HardDrive, RadioTower, Server } from "lucide-react";
 
 import type { ShardAggregateStats } from "@/lib/shard-api";
@@ -16,7 +18,7 @@ function StatCard({ label, value, sub, icon: Icon }: StatCardProps) {
 				<div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 group-hover:rotate-3 transition-all">
 					<Icon className="h-6 w-6" />
 				</div>
-				<p className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</p>
+				<p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</p>
 			</div>
 			<div className="space-y-1">
 				<p className="text-3xl font-black tracking-tighter text-foreground">{value}</p>

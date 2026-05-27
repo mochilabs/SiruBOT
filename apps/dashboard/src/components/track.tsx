@@ -1,3 +1,5 @@
+"use client";
+
 import React, { memo,useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
@@ -119,7 +121,7 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground/70"}`} />
 					) : (
-						<span className="text-[10px] font-black tracking-tighter text-white">{rank}</span>
+						<span className="text-xs font-black tracking-tighter text-white">{rank}</span>
 					)}
 				</div>
 
@@ -144,13 +146,13 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground/70" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="mt-1 text-[11px] sm:text-sm font-medium text-muted-foreground/40">{formatTimeToKorean(track.duration / 1000)}</p>
+				<p className="mt-1 text-xs sm:text-sm font-medium text-muted-foreground/40">{formatTimeToKorean(track.duration / 1000)}</p>
 			</div>
 
 			<div className="flex items-center gap-3 sm:gap-4 pr-1 sm:pr-2 shrink-0">
 				<div className="text-right">
 					<p className="text-base sm:text-lg font-black text-primary leading-none">{track.totalPlays.toLocaleString()}</p>
-					<p className="hidden sm:block mt-1 text-[10px] uppercase tracking-wider text-muted-foreground/40 font-bold">Total Plays</p>
+					<p className="hidden sm:block mt-1 text-xs uppercase tracking-wider text-muted-foreground/40 font-bold">Total Plays</p>
 				</div>
 
 				{track.url && (
@@ -192,7 +194,7 @@ export function Track({ track }: { track: TrackType }) {
 				<p className="truncate text-sm font-normal text-muted-foreground" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="text-[13px] font-medium text-primary/70">{track.totalPlays.toLocaleString()} plays</p>
+				<p className="text-sm font-medium text-primary/70">{track.totalPlays.toLocaleString()} plays</p>
 			</div>
 		</div>
 	);

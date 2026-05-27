@@ -2,18 +2,37 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { m, Variants } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowRight,Play } from "lucide-react";
 
 import { DiscordPlaybackCard } from "@/components/discord-playback-card";
 import { TypingText } from "@/components/typing-text";
 
-interface HeroSectionProps {
-	containerVariants: Variants;
-	itemVariants: Variants;
-}
+const containerVariants = {
+	hidden: { opacity: 0 },
+	visible: {
+		opacity: 1,
+		transition: {
+			staggerChildren: 0.15,
+			delayChildren: 0.2,
+		},
+	},
+} as const;
 
-export function HeroSection({ containerVariants, itemVariants }: HeroSectionProps) {
+const itemVariants = {
+	hidden: { opacity: 0, y: 30 },
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			type: "spring",
+			stiffness: 100,
+			damping: 20,
+		},
+	},
+} as const;
+
+export function HeroSection() {
 	return (
 		<section className="relative flex min-h-[calc(100dvh-4rem)] items-center pt-16">
 			<div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">

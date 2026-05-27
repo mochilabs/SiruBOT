@@ -58,7 +58,7 @@ export default function RootLayout({
 		<html lang="ko" className={pretendard.variable} suppressHydrationWarning>
 			<body className={pretendard.className}>
 				<Providers>
-					<div className="min-h-screen flex flex-col relative overflow-hidden">
+					<div className="min-h-screen flex flex-col relative overflow-x-clip">
 						<InteractiveGlow />
 						<Navbar />
 						<div className="flex-1 relative z-10">

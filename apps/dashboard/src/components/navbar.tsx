@@ -17,7 +17,7 @@ const navLinks = [
   // { label: "기능", href: "/#features" },
   { label: "상태", href: "/shards" },
   { label: "차트", href: "/track" },
-  { label: "즐겨찾기", href: "/favorites", requireAuth: true },
+  { label: "플레이리스트", href: "/playlists", requireAuth: true },
   { label: "대시보드", href: "/servers", requireAuth: true },
 ];
 
@@ -118,11 +118,11 @@ export function Navbar() {
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link)}
-                  className={`relative px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-colors duration-200 ${
+                  className={`relative px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-all duration-200 ${
                     pathname === link.href
                       ? "text-primary"
                       : "text-foreground/70 hover:text-primary"
-                  } hover:scale-[1.05] active:scale-[0.95] transition-transform`}
+                  } hover:scale-[1.05] active:scale-[0.95]`}
                 >
                   <span className="relative z-10">{link.label}</span>
                 </Link>
@@ -181,7 +181,7 @@ export function Navbar() {
                     </div>
                     <button
                       onClick={() => signOut()}
-                      className="flex items-center justify-center w-11 h-11 rounded-xl hover:bg-red-500/10 text-foreground/70 hover:text-red-500"
+                      className="flex items-center justify-center w-11 h-11 rounded-xl hover:bg-rose-500/10 text-foreground/70 hover:text-rose-500"
                       title="로그아웃하기"
                     >
                       <LogOut size={18} />

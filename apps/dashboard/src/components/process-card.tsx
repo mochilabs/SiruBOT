@@ -1,3 +1,5 @@
+"use client";
+
 import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
 
 import type { ShardProcessInfo } from "@/lib/shard-api";
@@ -36,7 +38,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					</div>
 					<div>
 						<h3 className="text-lg font-black tracking-tighter text-foreground">프로세스 #{index + 1}</h3>
-						<p className="text-[12px] font-mono text-muted-foreground/50 uppercase">{process.wsId.slice(0, 12)}</p>
+						<p className="text-xs font-mono text-muted-foreground/50 uppercase">{process.wsId.slice(0, 12)}</p>
 					</div>
 				</div>
 				<StatusBadge status={process.status} />
@@ -46,7 +48,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 				{process.shardIds.map((id) => (
 					<span
 						key={id}
-						className="inline-flex items-center rounded-lg glass-overlay px-2.5 py-1 text-[13px] font-bold text-muted-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
+						className="inline-flex items-center rounded-lg glass-overlay px-2.5 py-1 text-sm font-bold text-muted-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
 					>
 						샤드 {id}
 					</span>
@@ -61,7 +63,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					{ label: "운영 시간", value: formatUptime(process.uptime), icon: Clock3 },
 				].map((item, i) => (
 					<div key={i} className="glass-overlay rounded-xl p-4 space-y-2 group hover:bg-foreground/5 transition-colors">
-						<div className="flex items-center gap-2 text-muted-foreground/40 font-black text-[10px] tracking-widest">
+						<div className="flex items-center gap-2 text-muted-foreground/40 font-black text-xs tracking-widest">
 							<item.icon size={12} />
 							{item.label}
 						</div>
@@ -70,7 +72,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 				))}
 			</div>
 
-			<div className="pt-2 flex items-center justify-between text-[13px] font-medium text-muted-foreground/40 border-t border-border">
+			<div className="pt-2 flex items-center justify-between text-sm font-medium text-muted-foreground/40 border-t border-border">
 				<div className="flex items-center gap-2">
 					<span className="w-2 h-2 rounded-full bg-primary/40 animate-pulse" />
 					최근 업데이트: {formatRelativeTime(process.lastHeartbeat)}

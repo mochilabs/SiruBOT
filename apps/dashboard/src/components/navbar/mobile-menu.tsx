@@ -52,7 +52,7 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 							{status === "authenticated" ? (
 								<button
 									onClick={() => signOut()}
-									className="flex items-center justify-center gap-2 w-full py-4 bg-red-500/10 text-red-500 font-bold rounded-2xl"
+									className="flex items-center justify-center gap-2 w-full py-4 bg-rose-500/10 text-rose-500 font-bold rounded-2xl"
 								>
 									로그아웃
 								</button>

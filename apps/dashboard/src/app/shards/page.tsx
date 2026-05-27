@@ -10,6 +10,7 @@ import Loader from "@/components/loader";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import type { ShardsResponse } from "@/lib/shard-api";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function ShardsPage() {
     const { data, error, isLoading, isValidating, mutate } = useSWR<ShardsResponse>("/api/shards", {
@@ -52,30 +53,18 @@ export default function ShardsPage() {
     return (
         <Container>
             <div className="relative overflow-visible">
-                <header className="mb-8 space-y-4 sm:space-y-4 pb-6 sm:pb-8 border-b border-border/40 relative">
-                    <div className="flex flex-col mb-0 lg:flex-row items-start lg:items-end justify-between gap-8">
-                        <div className="space-y-6 flex-1">
-                            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-primary/5 dark:bg-primary/10 border border-primary/20 text-primary text-sm font-bold shadow-sm shadow-primary/5">
-                                <span className="relative flex h-2 w-2">
-                                    <span className={isValidating ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" : ""}></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                                </span>
-                                <span className="tracking-tight">{isValidating ? "동기화 중..." : "실시간 모니터링"}</span>
-                            </div>
-                            
-                            <div className="space-y-2">
-                                <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-title-gradient leading-[0.9] py-1">
-                                    시스템 상태
-                                </h1>
-                                <p className="text-xl font-medium text-muted-foreground/80 leading-relaxed max-w-2xl">
-                                    시루봇 서버의 상태를 확인할 수 있어요.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="absolute top-0 right-0 -z-10 w-[500px] h-[300px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
-                </header>
+                <PageHeader
+                    badge={isValidating ? "동기화 중..." : "실시간 모니터링"}
+                    badgeIcon={
+                        <span className="relative flex h-2 w-2">
+                            <span className={isValidating ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" : ""}></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                        </span>
+                    }
+                    title="시스템 상태"
+                    description="시루봇 서버의 상태를 확인할 수 있어요."
+                />
+                <div className="absolute top-0 right-0 -z-10 w-[500px] h-[300px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
 
                 <div className="grid gap-8">
                     <section>

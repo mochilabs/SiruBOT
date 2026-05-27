@@ -1,3 +1,5 @@
+"use client";
+
 import { AlertTriangle } from "lucide-react";
 
 interface ErrorPanelProps {
@@ -14,9 +16,9 @@ export function ErrorPanel({
   className = ""
 }: ErrorPanelProps) {
   return (
-    <div className={`glass-panel p-12 text-center border-red-500/20 shadow-xl max-w-xl mx-auto ${className}`}>
-      <div className="mx-auto mb-6 inline-flex rounded-2xl bg-red-500/10 p-4 border border-red-500/20">
-        <AlertTriangle className="h-8 w-8 text-red-400" />
+    <div className={`glass-panel p-12 text-center border-rose-500/20 shadow-xl max-w-xl mx-auto ${className}`}>
+      <div className="mx-auto mb-6 inline-flex rounded-2xl bg-rose-500/10 p-4 border border-rose-500/20">
+        <AlertTriangle className="h-8 w-8 text-rose-400" />
       </div>
       <h3 className="text-2xl font-black tracking-tighter text-foreground mb-4">
         {title}
