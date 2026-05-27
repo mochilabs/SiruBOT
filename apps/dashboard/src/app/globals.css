@@ -132,6 +132,37 @@
 	body {
 		background-color: var(--background);
 	}
+
+	/* Firefox scrollbar support */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--primary) 25%, transparent) transparent;
+	}
+
+	/* Chrome, Safari, and Edge scrollbar support */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: color-mix(in srgb, var(--primary) 20%, transparent);
+		border-radius: 9999px;
+		border: 2px solid transparent;
+		background-clip: padding-box;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background-color: color-mix(in srgb, var(--primary) 45%, transparent);
+	}
+
+	::-webkit-scrollbar-thumb:active {
+		background-color: color-mix(in srgb, var(--primary) 70%, transparent);
+	}
 }
 
 @utility animate-shimmer-sweep {
