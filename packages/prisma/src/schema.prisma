@@ -44,7 +44,6 @@ model Track {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  userFavorites UserFavorite[]
   history       GuildTrackHistory[]
   playlistTracks PlaylistTrack[]
 }
@@ -55,7 +54,6 @@ model User {
   updatedAt   DateTime        @updatedAt
 
   // Relations
-  favorites   UserFavorite[]
   history     GuildTrackHistory[]
   playlists   Playlist[]
 }
@@ -72,18 +70,6 @@ model GuildTrackHistory {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([guildId, createdAt(sort: Desc)])
-}
-
-model UserFavorite {
-  userId     String
-  trackId    String
-  createdAt  DateTime @default(now())
-
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
-
-  @@id([userId, trackId])
-  @@index([trackId])
 }
 
 model Playlist {
@@ -114,3 +100,4 @@ model PlaylistTrack {
   @@unique([playlistId, position])
   @@index([playlistId])
 }
+
