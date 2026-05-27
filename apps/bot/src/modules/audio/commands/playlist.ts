@@ -170,6 +170,9 @@ export class PlaylistCommand extends Command {
 	}
 
 	private async handleList(interaction: ChatInputCommandInteraction<'cached'>) {
+		// "즐겨찾기" 기본 플레이리스트의 항시 존재를 보장합니다.
+		await this.container.playlistService.getOrCreateFavoritesPlaylist(interaction.user.id);
+
 		const playlists = await this.container.playlistService.getUserPlaylists(interaction.user.id);
 
 		if (playlists.length === 0) {

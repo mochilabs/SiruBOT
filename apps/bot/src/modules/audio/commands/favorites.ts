@@ -92,52 +92,20 @@ export class FavoritesCommand extends Command {
 			return;
 		}
 
-		// Ensure user exists
-		await this.container.db.user.upsert({
-			where: { id: interaction.user.id },
-			create: { id: interaction.user.id },
-			update: {}
-		});
-
-		// Ensure track exists
-		const trackData = this.extractTrackData(current);
-		await this.container.db.track.upsert({
-			where: { id: trackData.id },
-			create: trackData,
-			update: {}
-		});
-
-		// Check if already favorited
-		const existing = await this.container.db.userFavorite.findUnique({
-			where: {
-				userId_trackId: {
-					userId: interaction.user.id,
-					trackId: trackData.id
-				}
-			}
-		});
-
-		if (existing) {
+		try {
+			await this.container.playlistService.addTrack(interaction.user.id, '즐겨찾기', current as Track);
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('⚠️ 이미 즐겨찾기에 추가된 곡이에요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`⭐ **${current.info.title}**을(를) 즐겨찾기에 추가했어요.`))
+				],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+		} catch (error: any) {
+			await interaction.reply({
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`⚠️ ${error.message}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
-			return;
 		}
-
-		await this.container.db.userFavorite.create({
-			data: {
-				userId: interaction.user.id,
-				trackId: trackData.id
-			}
-		});
-
-		await interaction.reply({
-			components: [
-				createContainer().addTextDisplayComponents((t) => t.setContent(`⭐ **${current.info.title}**을(를) 즐겨찾기에 추가했어요.`))
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
 	}
 
 	private async handleRemove(interaction: ChatInputCommandInteraction<'cached'>) {
@@ -155,14 +123,14 @@ export class FavoritesCommand extends Command {
 		const trackId = current.info.identifier;
 
 		try {
-			await this.container.db.userFavorite.delete({
-				where: {
-					userId_trackId: {
-						userId: interaction.user.id,
-						trackId
-					}
-				}
-			});
+			const { playlist, tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
+			const targetTrack = tracks.find((t) => t.trackId === trackId);
+
+			if (!targetTrack) {
+				throw new Error('즐겨찾기에 없는 곡이에요.');
+			}
+
+			await this.container.playlistService.removeTrack(interaction.user.id, '즐겨찾기', targetTrack.position);
 
 			await interaction.reply({
 				components: [
@@ -170,9 +138,9 @@ export class FavoritesCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch {
+		} catch (error: any) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 즐겨찾기에 없는 곡이에요.'))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -185,51 +153,60 @@ export class FavoritesCommand extends Command {
 		const pageSize = 10;
 		const skip = (page - 1) * pageSize;
 
-		const [favorites, total] = await Promise.all([
-			this.container.db.userFavorite.findMany({
-				where: { userId: interaction.user.id },
-				include: { track: true },
-				orderBy: { createdAt: 'desc' },
-				skip,
-				take: pageSize
-			}),
-			this.container.db.userFavorite.count({
-				where: { userId: interaction.user.id }
-			})
-		]);
+		try {
+			const playlist = await this.container.playlistService.getOrCreateFavoritesPlaylist(interaction.user.id);
 
-		if (favorites.length === 0) {
+			const [tracks, total] = await Promise.all([
+				this.container.db.playlistTrack.findMany({
+					where: { playlistId: playlist.id },
+					include: { track: true },
+					orderBy: { addedAt: 'desc' },
+					skip,
+					take: pageSize
+				}),
+				this.container.db.playlistTrack.count({
+					where: { playlistId: playlist.id }
+				})
+			]);
+
+			if (tracks.length === 0) {
+				await interaction.editReply({
+					components: [
+						createContainer().addTextDisplayComponents((t) =>
+							t.setContent(
+								total === 0
+									? '📭 즐겨찾기가 비어있어요.\n-# `/즐겨찾기 추가`로 현재 재생 중인 곡을 추가해보세요!'
+									: '❌ 해당 페이지에 곡이 없어요.'
+							)
+						)
+					],
+					flags: [MessageFlags.IsComponentsV2]
+				});
+				return;
+			}
+
+			const totalPages = Math.ceil(total / pageSize);
+			const list = tracks
+				.map((pt, index) => {
+					const track = pt.track;
+					return `\`#${skip + index + 1}\` **[${track.title}](${track.url})** - ${track.artist}`;
+				})
+				.join('\n');
+
 			await interaction.editReply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(
-							total === 0
-								? '📭 즐겨찾기가 비어있어요.\n-# `/즐겨찾기 추가`로 현재 재생 중인 곡을 추가해보세요!'
-								: '❌ 해당 페이지에 곡이 없어요.'
-						)
+						t.setContent(`### ⭐ 즐겨찾기 목록\n${list}\n-# 페이지 ${page}/${totalPages} | 총 ${total}곡`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-			return;
+		} catch (error: any) {
+			await interaction.editReply({
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				flags: [MessageFlags.IsComponentsV2]
+			});
 		}
-
-		const totalPages = Math.ceil(total / pageSize);
-		const list = favorites
-			.map((fav, index) => {
-				const track = fav.track;
-				return `\`#${skip + index + 1}\` **[${track.title}](${track.url})** - ${track.artist}`;
-			})
-			.join('\n');
-
-		await interaction.editReply({
-			components: [
-				createContainer().addTextDisplayComponents((t) =>
-					t.setContent(`### ⭐ 즐겨찾기 목록\n${list}\n-# 페이지 ${page}/${totalPages} | 총 ${total}곡`)
-				)
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
 	}
 
 	private async handlePlay(interaction: ChatInputCommandInteraction<'cached'>) {
@@ -246,69 +223,59 @@ export class FavoritesCommand extends Command {
 			return;
 		}
 
-		const favorites = await this.container.db.userFavorite.findMany({
-			where: { userId: interaction.user.id },
-			include: { track: true },
-			orderBy: { createdAt: 'asc' }
-		});
+		try {
+			const { playlist, tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
 
-		if (favorites.length === 0) {
+			if (tracks.length === 0) {
+				await interaction.editReply({
+					components: [createContainer().addTextDisplayComponents((t) => t.setContent('📭 즐겨찾기가 비어있어요.'))],
+					flags: [MessageFlags.IsComponentsV2]
+				});
+				return;
+			}
+
+			let player = this.container.audio.getPlayer(interaction.guildId);
+			if (!player) {
+				player = this.container.audio.createPlayer({
+					guildId: interaction.guildId,
+					voiceChannelId: voiceChannel.id,
+					textChannelId: interaction.channelId,
+					selfDeaf: true
+				});
+				await player.connect();
+			}
+
+			let addedCount = 0;
+			for (const pt of tracks) {
+				const result = await player.search(
+					{
+						query: pt.track.url,
+						source: pt.track.source as any
+					},
+					interaction.user
+				);
+
+				if (result.tracks.length > 0) {
+					await player.queue.add(result.tracks[0]);
+					addedCount++;
+				}
+			}
+
+			if (!player.playing && !player.paused) {
+				await player.play();
+			}
+
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('📭 즐겨찾기가 비어있어요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`⭐ 즐겨찾기에서 **${addedCount}곡**을 대기열에 추가했어요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-			return;
-		}
-
-		let player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player) {
-			player = this.container.audio.createPlayer({
-				guildId: interaction.guildId,
-				voiceChannelId: voiceChannel.id,
-				textChannelId: interaction.channelId,
-				selfDeaf: true
+		} catch (error: any) {
+			await interaction.editReply({
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				flags: [MessageFlags.IsComponentsV2]
 			});
-			await player.connect();
 		}
-
-		let addedCount = 0;
-		for (const fav of favorites) {
-			const result = await player.search(
-				{
-					query: fav.track.url,
-					source: fav.track.source as any
-				},
-				interaction.user
-			);
-
-			if (result.tracks.length > 0) {
-				await player.queue.add(result.tracks[0]);
-				addedCount++;
-			}
-		}
-
-		if (!player.playing && !player.paused) {
-			await player.play();
-		}
-
-		await interaction.editReply({
-			components: [
-				createContainer().addTextDisplayComponents((t) => t.setContent(`⭐ 즐겨찾기에서 **${addedCount}곡**을 대기열에 추가했어요.`))
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-	}
-
-	private extractTrackData(track: Track) {
-		const info = track.info;
-		const id = info.identifier;
-		const title = info.title ?? 'Unknown Title';
-		const artist = info.author ?? 'Unknown Artist';
-		const duration = info.duration ?? 0;
-		const url = info.uri ?? '';
-		const source = info.sourceName ?? 'unknown';
-		const thumbnail = info.artworkUrl ?? (source === 'youtube' && id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
-
-		return { id, title, artist, duration, url, source, thumbnail };
 	}
 }

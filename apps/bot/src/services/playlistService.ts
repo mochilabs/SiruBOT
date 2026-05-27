@@ -2,7 +2,36 @@ import { container } from '@sapphire/framework';
 import { Track } from 'lavalink-client';
 
 export class PlaylistService {
+	public async getOrCreateFavoritesPlaylist(userId: string) {
+		// Ensure user exists
+		await container.db.user.upsert({
+			where: { id: userId },
+			create: { id: userId },
+			update: {}
+		});
+
+		const playlist = await container.db.playlist.findFirst({
+			where: { userId, name: '즐겨찾기' }
+		});
+
+		if (playlist) {
+			return playlist;
+		}
+
+		return await container.db.playlist.create({
+			data: {
+				userId,
+				name: '즐겨찾기',
+				description: '즐겨찾기한 음악 목록입니다.'
+			}
+		});
+	}
+
 	public async createPlaylist(userId: string, name: string, description?: string) {
+		if (name === '즐겨찾기') {
+			throw new Error('이름으로 "즐겨찾기"는 사용할 수 없어요. 이는 기본 제공되는 플레이리스트입니다.');
+		}
+
 		const existing = await container.db.playlist.count({
 			where: { userId, name }
 		});
@@ -21,6 +50,10 @@ export class PlaylistService {
 	}
 
 	public async deletePlaylist(userId: string, name: string) {
+		if (name === '즐겨찾기') {
+			throw new Error('기본 플레이리스트인 "즐겨찾기"는 삭제할 수 없어요.');
+		}
+
 		const playlist = await this.getPlaylistByName(userId, name);
 		if (!playlist) {
 			throw new Error('플레이리스트를 찾을 수 없어요.');
@@ -32,12 +65,29 @@ export class PlaylistService {
 	}
 
 	public async addTrack(userId: string, playlistName: string, track: Track) {
-		const playlist = await this.getPlaylistByName(userId, playlistName);
+		let playlist = await this.getPlaylistByName(userId, playlistName);
 		if (!playlist) {
-			throw new Error('플레이리스트를 찾을 수 없어요.');
+			if (playlistName === '즐겨찾기') {
+				playlist = await this.getOrCreateFavoritesPlaylist(userId);
+			} else {
+				throw new Error('플레이리스트를 찾을 수 없어요.');
+			}
 		}
 
 		const data = this.extractTrackData(track);
+
+		if (playlist.name === '즐겨찾기') {
+			const existingTrack = await container.db.playlistTrack.count({
+				where: {
+					playlistId: playlist.id,
+					trackId: data.id
+				}
+			});
+
+			if (existingTrack > 0) {
+				throw new Error('이미 즐겨찾기에 추가된 곡이에요.');
+			}
+		}
 
 		// 1. Ensure Track exists
 		await container.db.track.upsert({
