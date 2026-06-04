@@ -21,13 +21,33 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		const guildConfig = await this.container.guildService.getGuild(player.guildId);
 
 		// SponsorBlock 조건부 활성화
+		const VALID_SPONSORBLOCK_SEGMENTS: SponsorBlockSegment[] = [
+			'sponsor',
+			'selfpromo',
+			'interaction',
+			'intro',
+			'outro',
+			'preview',
+			'music_offtopic',
+			'filler'
+		];
 		if (guildConfig.sponsorBlockSegments.length > 0) {
-			player.setSponsorBlock(guildConfig.sponsorBlockSegments as SponsorBlockSegment[]);
+			const validSegments = guildConfig.sponsorBlockSegments.filter((s): s is SponsorBlockSegment =>
+				VALID_SPONSORBLOCK_SEGMENTS.includes(s as SponsorBlockSegment)
+			);
+			if (validSegments.length > 0) {
+				player.setSponsorBlock(validSegments);
+			}
 		}
+
+		const VALID_REPEAT_MODES = ['off', 'track', 'queue'] as const;
+		const repeatMode: RepeatMode = VALID_REPEAT_MODES.includes(guildConfig.repeat as (typeof VALID_REPEAT_MODES)[number])
+			? (guildConfig.repeat as RepeatMode)
+			: 'off';
 
 		await Promise.all([
 			player.setVolume(guildConfig.volume),
-			player.setRepeatMode(guildConfig.repeat as RepeatMode),
+			player.setRepeatMode(repeatMode),
 			this.container.redisStore.getPlayerSaver().set(player)
 		]);
 	}

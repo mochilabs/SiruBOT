@@ -21,10 +21,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		if (track && !track.info.isStream) {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			// fire-and-forget
-			Promise.allSettled([
-				this.container.trackService.increasePlays(track),
-				this.container.trackService.addHistory(player.guildId, track)
-			]).catch((err) => this.logger.error('Track stats error:', err));
+			Promise.allSettled([this.container.trackService.increasePlays(track), this.container.trackService.addHistory(player.guildId, track)]);
 		}
 
 		await this.container.playerNotifier.onTrackStart(player);
