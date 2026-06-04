@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { Guild } from '@sirubot/prisma';
+import { Guild, Prisma } from '@sirubot/prisma';
 import { MemoryCache } from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
@@ -31,10 +31,11 @@ export class GuildService {
 	}
 
 	private async upsertField<K extends keyof Omit<Guild, 'id'>>(guildId: string, field: K, value: Guild[K]): Promise<Guild> {
+		const data = { [field]: value } as Prisma.GuildUpdateInput;
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
-			create: { id: guildId, [field]: value } as any,
-			update: { [field]: value } as any
+			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
+			update: data
 		});
 
 		this.updateCache(guild);

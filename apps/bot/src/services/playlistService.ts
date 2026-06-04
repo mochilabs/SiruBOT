@@ -1,5 +1,8 @@
 import { container } from '@sapphire/framework';
 import { Track } from 'lavalink-client';
+import { extractTrackData } from './trackData.ts';
+
+const FAVORITES_PLAYLIST_NAME = '즐겨찾기';
 
 export class PlaylistService {
 	public async getOrCreateFavoritesPlaylist(userId: string) {
@@ -21,14 +24,14 @@ export class PlaylistService {
 		return await container.db.playlist.create({
 			data: {
 				userId,
-				name: '즐겨찾기',
+				name: FAVORITES_PLAYLIST_NAME,
 				description: '즐겨찾기한 음악 목록입니다.'
 			}
 		});
 	}
 
 	public async createPlaylist(userId: string, name: string, description?: string) {
-		if (name === '즐겨찾기') {
+		if (name === FAVORITES_PLAYLIST_NAME) {
 			throw new Error('이름으로 "즐겨찾기"는 사용할 수 없어요. 이는 기본 제공되는 플레이리스트입니다.');
 		}
 
@@ -50,7 +53,7 @@ export class PlaylistService {
 	}
 
 	public async deletePlaylist(userId: string, name: string) {
-		if (name === '즐겨찾기') {
+		if (name === FAVORITES_PLAYLIST_NAME) {
 			throw new Error('기본 플레이리스트인 "즐겨찾기"는 삭제할 수 없어요.');
 		}
 
@@ -67,7 +70,7 @@ export class PlaylistService {
 	public async addTrack(userId: string, playlistName: string, track: Track) {
 		let playlist = await this.getPlaylistByName(userId, playlistName);
 		if (!playlist) {
-			if (playlistName === '즐겨찾기') {
+			if (playlistName === FAVORITES_PLAYLIST_NAME) {
 				playlist = await this.getOrCreateFavoritesPlaylist(userId);
 			} else {
 				throw new Error('플레이리스트를 찾을 수 없어요.');
@@ -76,7 +79,7 @@ export class PlaylistService {
 
 		const data = this.extractTrackData(track);
 
-		if (playlist.name === '즐겨찾기') {
+		if (playlist.name === FAVORITES_PLAYLIST_NAME) {
 			const existingTrack = await container.db.playlistTrack.count({
 				where: {
 					playlistId: playlist.id,
@@ -175,16 +178,5 @@ export class PlaylistService {
 		});
 	}
 
-	private extractTrackData(track: Track) {
-		const info = track.info;
-		const id: string = info.identifier;
-		const title: string = info.title ?? 'Unknown Title';
-		const artist: string = info.author ?? 'Unknown Artist';
-		const duration: number = info.duration ?? 0;
-		const url: string = info.uri ?? '';
-		const source: string = info.sourceName ?? 'unknown';
-		const thumbnail: string | null = info.artworkUrl ?? (source === 'youtube' && id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
-
-		return { id, title, artist, duration, url, source, thumbnail };
-	}
+	private extractTrackData = extractTrackData;
 }
