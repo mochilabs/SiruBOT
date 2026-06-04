@@ -58,7 +58,14 @@ export default class FilterInteractionHandler extends InteractionHandler {
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
 
-			await Promise.all(selectedPresets.map((preset) => this.applyPreset(player, preset)));
+			const results = await Promise.allSettled(selectedPresets.map((preset) => this.applyPreset(player, preset)));
+			const failed = results.filter((r) => r.status === 'rejected');
+			if (failed.length > 0) {
+				this.container.logger.error(
+					`Failed to apply ${failed.length} filter(s):`,
+					failed.map((r) => (r as PromiseRejectedResult).reason)
+				);
+			}
 
 			player.activeFilters = selectedPresets;
 
