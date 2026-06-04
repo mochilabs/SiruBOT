@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { X } from "lucide-react";
+
 import { Portal } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -114,11 +115,18 @@ export function Modal({ open, onClose, children, className = "" }: ModalProps) {
 
 	useEffect(() => {
 		if (!open) return;
+		
+		// 스크롤바 너비 계산하여 레이아웃 쉬프트(덜컹거림) 방지
+		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+		
 		document.addEventListener("keydown", handleEsc);
 		document.body.style.overflow = "hidden";
+		document.body.style.paddingRight = `${scrollbarWidth}px`;
+		
 		return () => {
 			document.removeEventListener("keydown", handleEsc);
 			document.body.style.overflow = "";
+			document.body.style.paddingRight = "";
 		};
 	}, [open, handleEsc]);
 
@@ -133,7 +141,7 @@ export function Modal({ open, onClose, children, className = "" }: ModalProps) {
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							transition={{ duration: 0.2 }}
-							className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+							className="absolute inset-0 bg-black/60"
 							onClick={onClose}
 							aria-hidden
 						/>

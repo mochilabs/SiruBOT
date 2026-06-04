@@ -8,13 +8,13 @@ import {
 	Calendar,
 	ChevronDown,
 	Command,
-	CreditCard,
 	Cpu,
+	CreditCard,
 	Globe,
 	Hash,
 	Home,
-	Layout,
 	Layers,
+	Layout,
 	List,
 	Mail,
 	MessageSquare,
@@ -37,37 +37,31 @@ import {
 } from "lucide-react";
 
 import Container from "@/components/container";
-import { PageHeader } from "@/components/layout/page-header";
-
-/* ── Import all components ── */
-import { Button } from "@/components/primitives/button";
-import { Badge } from "@/components/primitives/badge";
-import { Avatar } from "@/components/primitives/avatar";
-import { StatusDot } from "@/components/primitives/status-dot";
-import { Skeleton, SkeletonLine, SkeletonCircle, SkeletonCard } from "@/components/primitives/skeleton";
-import { Switch } from "@/components/primitives/switch";
-import { Slider } from "@/components/primitives/slider";
-
-import { ToastProvider, useToast } from "@/components/feedback/toast";
-import { NotificationStack, type NotificationItem } from "@/components/feedback/notification";
-
-import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/overlay/modal";
-import { Drawer } from "@/components/overlay/drawer";
-import { Dropdown } from "@/components/overlay/dropdown";
-import { Select } from "@/components/overlay/select";
-import { DatePicker } from "@/components/overlay/date-picker";
-import { CommandPalette } from "@/components/overlay/command-palette";
-
-import { Navigation } from "@/components/layout/navigation";
-
-import { DataTable, type Column } from "@/components/data/data-table";
+import { type Column,DataTable } from "@/components/data/data-table";
 import { StatCard } from "@/components/data/stat-card";
 import { TagInput } from "@/components/data/tag-input";
-
-import { EmbedPreview } from "@/components/discord/embed-preview";
 import { ChannelMessage } from "@/components/discord/channel-message";
-import { PermissionList, DISCORD_PERMISSIONS } from "@/components/discord/permission-list";
-import { RoleSelect, type DiscordRole } from "@/components/discord/role-select";
+import { EmbedPreview } from "@/components/discord/embed-preview";
+import { DISCORD_PERMISSIONS,PermissionList } from "@/components/discord/permission-list";
+import { type DiscordRole,RoleSelect } from "@/components/discord/role-select";
+import { type NotificationItem,NotificationStack } from "@/components/feedback/notification";
+import { ToastProvider, useToast } from "@/components/feedback/toast";
+import { Navigation } from "@/components/layout/navigation";
+import { PageHeader } from "@/components/layout/page-header";
+import { CommandPalette } from "@/components/overlay/command-palette";
+import { DatePicker } from "@/components/overlay/date-picker";
+import { Drawer } from "@/components/overlay/drawer";
+import { Dropdown } from "@/components/overlay/dropdown";
+import { Modal, ModalBody, ModalFooter,ModalHeader } from "@/components/overlay/modal";
+import { Select } from "@/components/overlay/select";
+import { Avatar } from "@/components/primitives/avatar";
+import { Badge } from "@/components/primitives/badge";
+/* ── Import all components ── */
+import { Button } from "@/components/primitives/button";
+import { Skeleton, SkeletonCard,SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
+import { Slider } from "@/components/primitives/slider";
+import { StatusDot } from "@/components/primitives/status-dot";
+import { Switch } from "@/components/primitives/switch";
 
 /* ═══════════════════════════════════════════════════════════
    Gallery sections
@@ -164,7 +158,7 @@ function ToastDemo() {
 /* ─── Notification demo ─── */
 function NotificationDemo() {
 	const [items, setItems] = useState<NotificationItem[]>([]);
-	let counter = useRef(0);
+	const counter = useRef(0);
 
 	const add = (variant: "success" | "error" | "info" | "warning") => {
 		const id = `notif-${++counter.current}`;
@@ -175,7 +169,7 @@ function NotificationDemo() {
 				variant,
 				title: variant === "success" ? "배포 완료" : variant === "error" ? "빌드 실패" : variant === "info" ? "새 버전" : "경고",
 				description: "상세 설명이 여기에 표시됩니다.",
-				action: { label: "자세히 보기", onClick: () => {} },
+				action: { label: "자세히 보기", onClick: () => { } },
 			},
 		]);
 		setTimeout(() => setItems((prev) => prev.filter((n) => n.id !== id)), 5000);
@@ -307,11 +301,11 @@ export default function ComponentsGalleryPage() {
 	];
 
 	const commandItems = [
-		{ id: "home", label: "홈으로 이동", icon: <Home size={16} />, group: "페이지", onSelect: () => {} },
-		{ id: "shards", label: "샤드 상태", icon: <Server size={16} />, group: "페이지", onSelect: () => {} },
-		{ id: "track", label: "재생 순위", icon: <RadioTower size={16} />, group: "페이지", onSelect: () => {} },
-		{ id: "settings", label: "설정 열기", icon: <Settings size={16} />, group: "명령어", shortcut: "⌘,", onSelect: () => {} },
-		{ id: "search", label: "검색", icon: <Search size={16} />, group: "명령어", shortcut: "⌘F", onSelect: () => {} },
+		{ id: "home", label: "홈으로 이동", icon: <Home size={16} />, group: "페이지", onSelect: () => { } },
+		{ id: "shards", label: "샤드 상태", icon: <Server size={16} />, group: "페이지", onSelect: () => { } },
+		{ id: "track", label: "재생 순위", icon: <RadioTower size={16} />, group: "페이지", onSelect: () => { } },
+		{ id: "settings", label: "설정 열기", icon: <Settings size={16} />, group: "명령어", shortcut: "⌘,", onSelect: () => { } },
+		{ id: "search", label: "검색", icon: <Search size={16} />, group: "명령어", shortcut: "⌘F", onSelect: () => { } },
 	];
 
 	return (
@@ -350,11 +344,10 @@ export default function ComponentsGalleryPage() {
 										key={s.id}
 										ref={(el) => { sidebarRefs.current[idx] = el; }}
 										href={`#${s.id}`}
-										className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-200 relative z-10 ${
-											isActive
-												? "text-primary font-bold"
-												: "text-muted-foreground hover:text-foreground hover:bg-accent/30"
-										}`}
+										className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-200 relative z-10 ${isActive
+											? "text-primary font-bold"
+											: "text-muted-foreground hover:text-foreground hover:bg-accent/30"
+											}`}
 									>
 										{s.icon}
 										{s.label}
@@ -406,7 +399,7 @@ export default function ComponentsGalleryPage() {
 							<ShowcaseRow label="Sizes & 기능">
 								<Badge size="sm" variant="primary">Small</Badge>
 								<Badge size="md" variant="primary">Medium</Badge>
-								<Badge variant="primary" dismissible onDismiss={() => {}}>제거 가능</Badge>
+								<Badge variant="primary" dismissible onDismiss={() => { }}>제거 가능</Badge>
 							</ShowcaseRow>
 						</Showcase>
 
@@ -465,9 +458,9 @@ export default function ComponentsGalleryPage() {
 								<Switch checked={!switchVal} onChange={(v) => setSwitchVal(!v)} label="자동 재생" />
 							</ShowcaseRow>
 							<ShowcaseRow label="States">
-								<Switch checked={true} onChange={() => {}} label="활성화" size="sm" />
-								<Switch checked={false} onChange={() => {}} label="비활성화" size="sm" />
-								<Switch checked={true} onChange={() => {}} label="비활성" disabled size="sm" />
+								<Switch checked={true} onChange={() => { }} label="활성화" size="sm" />
+								<Switch checked={false} onChange={() => { }} label="비활성화" size="sm" />
+								<Switch checked={true} onChange={() => { }} label="비활성" disabled size="sm" />
 							</ShowcaseRow>
 						</Showcase>
 
@@ -484,7 +477,7 @@ export default function ComponentsGalleryPage() {
 								/>
 								<Slider
 									value={30}
-									onChange={() => {}}
+									onChange={() => { }}
 									min={0}
 									max={60}
 									step={5}
@@ -492,7 +485,7 @@ export default function ComponentsGalleryPage() {
 									showValue
 									formatValue={(v) => `${v}초`}
 								/>
-								<Slider value={50} onChange={() => {}} disabled label="비활성" />
+								<Slider value={50} onChange={() => { }} disabled label="비활성" />
 							</div>
 						</Showcase>
 
@@ -537,9 +530,9 @@ export default function ComponentsGalleryPage() {
 							<Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="서버 설정">
 								<div className="space-y-4">
 									<p className="text-sm text-muted-foreground font-medium">서버 설정 내용이 여기에 표시됩니다.</p>
-									<Switch checked={true} onChange={() => {}} label="자동 DJ 모드" />
-									<Switch checked={false} onChange={() => {}} label="24시간 재생" />
-									<Slider value={80} onChange={() => {}} label="기본 볼륨" showValue formatValue={(v) => `${v}%`} />
+									<Switch checked={true} onChange={() => { }} label="자동 DJ 모드" />
+									<Switch checked={false} onChange={() => { }} label="24시간 재생" />
+									<Slider value={80} onChange={() => { }} label="기본 볼륨" showValue formatValue={(v) => `${v}%`} />
 								</div>
 							</Drawer>
 						</Showcase>
@@ -554,13 +547,13 @@ export default function ComponentsGalleryPage() {
 										{
 											label: "일반",
 											items: [
-												{ key: "settings", label: "서버 설정", icon: <Settings size={14} />, onClick: () => {} },
-												{ key: "members", label: "멤버 관리", icon: <Users size={14} />, onClick: () => {} },
+												{ key: "settings", label: "서버 설정", icon: <Settings size={14} />, onClick: () => { } },
+												{ key: "members", label: "멤버 관리", icon: <Users size={14} />, onClick: () => { } },
 											],
 										},
 										{
 											items: [
-												{ key: "delete", label: "서버 나가기", icon: <Trash2 size={14} />, danger: true, onClick: () => {} },
+												{ key: "delete", label: "서버 나가기", icon: <Trash2 size={14} />, danger: true, onClick: () => { } },
 											],
 										},
 									]}
@@ -696,7 +689,7 @@ export default function ComponentsGalleryPage() {
 							<EmbedPreview
 								embed={{
 									color: "#ff85c1",
-									author: { name: "시루봇" },
+									author: { name: "시루" },
 									title: "지금 재생 중",
 									titleUrl: "#",
 									description: "Blinding Lights — The Weeknd",
@@ -705,7 +698,7 @@ export default function ComponentsGalleryPage() {
 										{ name: "길이", value: "3:22", inline: true },
 										{ name: "대기열", value: "4곡", inline: true },
 									],
-									footer: { text: "시루봇 뮤직", timestamp: "오늘 오후 3:42" },
+									footer: { text: "시루 뮤직", timestamp: "오늘 오후 3:42" },
 								}}
 							/>
 						</Showcase>
@@ -715,7 +708,7 @@ export default function ComponentsGalleryPage() {
 						<Showcase>
 							<div className="bg-discord-bg rounded-xl overflow-hidden py-2">
 								<ChannelMessage
-									author={{ id: "bot", username: "시루봇", bot: true }}
+									author={{ id: "bot", username: "시루", bot: true }}
 									content="🎵 지금 재생 중: **Blinding Lights** — The Weeknd"
 									timestamp="오후 3:42"
 								>

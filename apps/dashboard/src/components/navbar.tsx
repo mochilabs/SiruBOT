@@ -26,6 +26,8 @@ export function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const scrolled = useUIStore((s) => s.scrolled);
   const mobileMenuOpen = useUIStore((s) => s.mobileMenuOpen);
@@ -41,6 +43,16 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [updateScrollState]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleTheme = () => {
     if (!document.startViewTransition) {
@@ -81,18 +93,22 @@ export function Navbar() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 flex flex-col transition-all duration-300 border-b ${
-        scrolled || mobileMenuOpen
+      className={`fixed top-0 left-0 right-0 z-50 flex flex-col transition-all duration-300 border-b ${scrolled || mobileMenuOpen
           ? "bg-background/40 backdrop-blur-3xl border-border shadow-lg"
           : "bg-transparent border-transparent"
-      }`}
+        }`}
     >
-      <nav className="h-20 w-full shrink-0">
+      <nav className="h-16 w-full shrink-0">
         <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className={`relative transition-all duration-300 scale-100`}>
-              <Music size={28} className="text-primary relative z-10" />
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-300">
+              <Image
+                src="/images/profile.png"
+                alt="시루봇"
+                fill
+                className="object-cover"
+              />
             </div>
             <span className="text-2xl font-black tracking-tighter bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent bg-[length:200%_auto] transition-all duration-500 group-hover:bg-[position:100%_center]">
               시루봇
@@ -118,11 +134,10 @@ export function Navbar() {
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link)}
-                  className={`relative px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-all duration-200 ${
-                    pathname === link.href
+                  className={`relative px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-all duration-200 ${pathname === link.href
                       ? "text-primary"
                       : "text-foreground/70 hover:text-primary"
-                  } hover:scale-[1.05] active:scale-[0.95]`}
+                    } hover:scale-[1.05] active:scale-[0.95]`}
                 >
                   <span className="relative z-10">{link.label}</span>
                 </Link>
@@ -134,38 +149,13 @@ export function Navbar() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              {mounted && (
-                <button
-                  onClick={toggleTheme}
-                  className="relative flex items-center justify-center w-11 h-11 rounded-xl glass-overlay text-foreground/70 hover:text-primary hover:border-primary/30 transition-all duration-300 overflow-hidden group"
-                >
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    <m.div
-                      key={theme}
-                      initial={{ y: 20, rotate: -90, opacity: 0 }}
-                      animate={{ y: 0, rotate: 0, opacity: 1 }}
-                      exit={{ y: -20, rotate: 90, opacity: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 25,
-                      }}
-                      className="absolute flex items-center justify-center pointer-events-none"
-                    >
-                      {theme === "dark" ? (
-                        <Sun size={20} />
-                      ) : (
-                        <Moon size={20} />
-                      )}
-                    </m.div>
-                  </AnimatePresence>
-                </button>
-              )}
-
               <div className="hidden md:flex items-center gap-2">
                 {status === "authenticated" ? (
-                  <div className="flex items-center gap-1 pl-2 border-l border-border">
-                    <div className="flex items-center gap-2 px-1">
+                  <div className="relative" ref={profileRef}>
+                    <button
+                      onClick={() => setProfileOpen(!profileOpen)}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-primary/5 transition-colors"
+                    >
                       {session.user?.image && (
                         <Image
                           width={32}
@@ -178,22 +168,66 @@ export function Navbar() {
                       <span className="hidden lg:block text-sm font-bold text-foreground/80 pl-1">
                         {session.user?.name}
                       </span>
-                    </div>
-                    <button
-                      onClick={() => signOut()}
-                      className="flex items-center justify-center w-11 h-11 rounded-xl hover:bg-rose-500/10 text-foreground/70 hover:text-rose-500"
-                      title="로그아웃하기"
-                    >
-                      <LogOut size={18} />
                     </button>
+
+                    <AnimatePresence>
+                      {profileOpen && (
+                        <m.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 mt-2 w-48 rounded-xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden py-1 z-50"
+                        >
+                          {mounted && (
+                            <button
+                              onClick={toggleTheme}
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary transition-colors"
+                            >
+                              <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
+                              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+                            </button>
+                          )}
+                          <div className="h-px bg-border/50 my-1 mx-2" />
+                          <button
+                            onClick={() => signOut()}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                          >
+                            <span>로그아웃</span>
+                            <LogOut size={16} />
+                          </button>
+                        </m.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 ) : (
-                  <button
-                  	onClick={() => signIn("discord")}
-                  	className="h-11 px-6 flex items-center justify-center glass-overlay text-foreground/80 text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-300"
-                  >
-                  	대시보드 시작하기
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {mounted && (
+                      <button
+                        onClick={toggleTheme}
+                        className="relative flex items-center justify-center w-11 h-11 rounded-xl glass-overlay text-foreground/70 hover:text-primary hover:border-primary/30 transition-all duration-300 overflow-hidden group"
+                      >
+                        <AnimatePresence mode="popLayout" initial={false}>
+                          <m.div
+                            key={theme}
+                            initial={{ y: 20, rotate: -90, opacity: 0 }}
+                            animate={{ y: 0, rotate: 0, opacity: 1 }}
+                            exit={{ y: -20, rotate: 90, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            className="absolute flex items-center justify-center pointer-events-none"
+                          >
+                            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                          </m.div>
+                        </AnimatePresence>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => signIn("discord")}
+                      className="h-11 px-6 flex items-center justify-center glass-overlay text-foreground/80 text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-300"
+                    >
+                      대시보드 시작하기
+                    </button>
+                  </div>
                 )}
               </div>
 

@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
-import { auth } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
+import { auth } from "@/lib/auth";
 
 interface GuildMember {
   nick: string | null;

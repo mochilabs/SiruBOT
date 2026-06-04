@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Home, UserPlus } from "lucide-react";
 
@@ -57,7 +57,7 @@ export default function InvitePage() {
 
 					<div className="max-w-md mx-auto mb-0">
 						<p className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl break-keep">
-							최고의 음악 경험을 전하는 시루봇을 초대해보세요.
+							최고의 음악 경험을 전하는 시루를 초대해보세요.
 						</p>
 					</div>
 
@@ -74,7 +74,7 @@ export default function InvitePage() {
 							<ExternalLink className="h-5 w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
 						</a>
 
-						<Link 
+						<Link
 							href="/"
 							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground/60 transition-all hover:text-primary"
 						>

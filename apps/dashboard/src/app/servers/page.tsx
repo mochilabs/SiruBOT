@@ -8,12 +8,12 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
+import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton } from "@/components/servers/servers-page-skeleton";
 import { buildInviteUrl } from "@/utils";
-import { PageHeader } from "@/components/layout/page-header";
 
 export default function ServersPage() {
     const { data: session, status } = useSession();

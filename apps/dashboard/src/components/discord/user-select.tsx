@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 
-import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";
 import { Select, type SelectOption } from "@/components/overlay/select";
+import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";
 
 /* ─────────────────────────── types ─────────────────────────── */
 

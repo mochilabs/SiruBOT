@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, ChevronsUpDown, PackageOpen } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, ChevronUp, PackageOpen } from "lucide-react";
 
 import { SkeletonLine } from "@/components/primitives/skeleton";
 

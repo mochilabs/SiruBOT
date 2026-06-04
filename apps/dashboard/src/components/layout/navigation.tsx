@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, useEffect } from "react";
+import { useEffect,useId, useRef, useState } from "react";
 import { m } from "framer-motion";
 
 /* ─────────────────────────── types ─────────────────────────── */

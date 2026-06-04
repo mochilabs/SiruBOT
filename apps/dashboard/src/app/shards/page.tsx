@@ -6,11 +6,11 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
+import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import type { ShardsResponse } from "@/lib/shard-api";
-import { PageHeader } from "@/components/layout/page-header";
 
 export default function ShardsPage() {
     const { data, error, isLoading, isValidating, mutate } = useSWR<ShardsResponse>("/api/shards", {

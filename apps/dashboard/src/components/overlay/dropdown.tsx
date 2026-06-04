@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
+
 import { Portal, usePopoverCoords } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */

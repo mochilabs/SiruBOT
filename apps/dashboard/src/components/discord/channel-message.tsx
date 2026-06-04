@@ -1,7 +1,7 @@
 import Image from "next/image";
 
-import { Badge } from "@/components/primitives/badge";
 import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";
+import { Badge } from "@/components/primitives/badge";
 
 /* ─────────────────────────── types ─────────────────────────── */
 

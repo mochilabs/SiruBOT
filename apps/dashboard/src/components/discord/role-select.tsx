@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search, X } from "lucide-react";
+
 import { Portal, usePopoverCoords } from "../overlay/portal";
 
 /* ─────────────────────────── types ─────────────────────────── */

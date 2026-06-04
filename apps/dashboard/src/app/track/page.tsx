@@ -7,11 +7,11 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
+import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
-import { PageHeader } from "@/components/layout/page-header";
 import { PAGE_SIZE } from "@/lib/track-constants";
 
 function TrackContent() {

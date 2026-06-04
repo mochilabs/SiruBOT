@@ -14,8 +14,7 @@ export function Footer() {
 					
 					{/* Branding */}
 					<div className="space-y-6 col-span-1 md:col-span-1">
-						<div className="flex items-center gap-3">
-							<Music size={28} className="text-primary" />
+						<div className="flex items-center">
 							<span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
 								시루봇
 							</span>

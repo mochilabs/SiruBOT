@@ -13,6 +13,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@sirubot/prisma": "*",
+    "@tanstack/react-virtual": "^3.13.26",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "next": "16",
