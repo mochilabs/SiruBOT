@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
@@ -57,15 +57,21 @@ export function Select(props: SelectProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const searchRef = useRef<HTMLInputElement>(null);
+	const listboxId = useId();
 
 	const coords = usePopoverCoords(triggerRef, open);
 
 	const isMulti = props.multiple === true;
-	const selectedValues = isMulti
-		? (props.value ?? [])
-		: props.value
-			? [props.value]
-			: [];
+	const selectedValues = useMemo(
+		() =>
+			isMulti
+				? (props.value ?? [])
+				: props.value
+					? [props.value]
+					: [],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[isMulti, props.value],
+	);
 
 	// Group options
 	const groups = useMemo(() => {
@@ -176,6 +182,7 @@ export function Select(props: SelectProps) {
 				type="button"
 				role="combobox"
 				aria-expanded={open}
+				aria-controls={listboxId}
 				aria-haspopup="listbox"
 				disabled={disabled}
 				onClick={() => (open ? close() : setOpen(true))}
@@ -231,6 +238,7 @@ export function Select(props: SelectProps) {
 							onClick={close}
 						/>
 						<m.div
+							id={listboxId}
 							role="listbox"
 							aria-multiselectable={isMulti}
 							initial={{ opacity: 0, scale: 0.95, y: -4 }}

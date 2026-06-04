@@ -181,6 +181,7 @@ export function PlaylistDetail({
 										<div className="flex-1 min-w-0 flex items-center gap-3 md:gap-4">
 											<div className="relative w-11 h-11 md:w-10 md:h-10 shrink-0 rounded-lg overflow-hidden bg-muted/30 border border-border/40">
 												{track.thumbnail ? (
+													// eslint-disable-next-line @next/next/no-img-element
 													<img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />
 												) : (
 													<div className="w-full h-full flex items-center justify-center">

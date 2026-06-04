@@ -421,6 +421,7 @@ export function DiscordCommandAnimation({
 			timers.forEach(clearTimeout);
 			intervals.forEach(clearInterval);
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeSlide, onComplete]);
 
 	// Input display parsing
