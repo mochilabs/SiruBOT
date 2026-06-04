@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { createContainer, BOT_NAME } from '@sirubot/utils';
-import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, MessageFlags, PermissionsBitField } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -24,7 +24,19 @@ export class InviteCommand extends Command {
 		const clientId = this.container.client.user?.id;
 		if (!clientId) return;
 
-		const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=3147776&scope=bot%20applications.commands`;
+		const permissions = new PermissionsBitField([
+			PermissionsBitField.Flags.Connect,
+			PermissionsBitField.Flags.Speak,
+			PermissionsBitField.Flags.UseVAD,
+			PermissionsBitField.Flags.ViewChannel,
+			PermissionsBitField.Flags.SendMessages,
+			PermissionsBitField.Flags.EmbedLinks,
+			PermissionsBitField.Flags.AttachFiles,
+			PermissionsBitField.Flags.ReadMessageHistory,
+			PermissionsBitField.Flags.AddReactions,
+			PermissionsBitField.Flags.UseExternalEmojis
+		]);
+		const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=${permissions.bitfield}&scope=bot%20applications.commands`;
 		const avatarUrl = this.container.client.user?.displayAvatarURL({ size: 256 }) ?? '';
 
 		const containerComponent = createContainer();
