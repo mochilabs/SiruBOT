@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { m } from "framer-motion";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -31,7 +31,6 @@ export function Navigation({
 	variant = "underline",
 	className = "",
 }: NavigationProps) {
-	const baseLayoutId = useId();
 	const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 	const [indicator, setIndicator] = useState<{ left: number; width: number; top: number; height: number } | null>(null);
 

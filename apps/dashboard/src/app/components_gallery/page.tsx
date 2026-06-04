@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { m } from "framer-motion";
 import {
 	Activity,
@@ -26,7 +26,6 @@ import {
 	Settings,
 	Shield,
 	Sliders,
-	SquareTerminal,
 	Table2,
 	Tags,
 	ToggleLeft,
@@ -58,7 +57,7 @@ import { Avatar } from "@/components/primitives/avatar";
 import { Badge } from "@/components/primitives/badge";
 /* ── Import all components ── */
 import { Button } from "@/components/primitives/button";
-import { Skeleton, SkeletonCard,SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
+import { SkeletonCard,SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
 import { Slider } from "@/components/primitives/slider";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Switch } from "@/components/primitives/switch";

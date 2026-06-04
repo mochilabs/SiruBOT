@@ -1,10 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import Link from "next/link";
 import { m } from "framer-motion";
-import { div } from "framer-motion/client";
 import { ArrowRight, Play } from "lucide-react";
 
 import {

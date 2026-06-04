@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, FileText,GitBranch, MessageSquare, Music, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, FileText,GitBranch, MessageSquare, ShieldCheck, Sparkles } from "lucide-react";
 
 export function Footer() {
 	const pathname = usePathname();

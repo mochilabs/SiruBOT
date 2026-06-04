@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { AnimatePresence,m } from "framer-motion";
+import { m } from "framer-motion";
 
 /* ─────────────────────────── types ─────────────────────────── */
 

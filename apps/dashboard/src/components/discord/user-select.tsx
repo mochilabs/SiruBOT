@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { Select, type SelectOption } from "@/components/overlay/select";
 import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";

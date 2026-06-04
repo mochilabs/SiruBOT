@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
-import { LogOut, Menu, Moon, Music, Sun, X } from "lucide-react";
+import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 
 import { useUIStore } from "@/store/use-ui-store";
 

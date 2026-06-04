@@ -10,7 +10,6 @@ import {
 	Music,
 	Pause,
 	Play,
-	Repeat,
 	SkipBack,
 	SkipForward,
 	Sparkles,
