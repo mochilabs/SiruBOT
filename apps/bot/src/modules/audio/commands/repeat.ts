@@ -65,7 +65,8 @@ export class RepeatCommand extends Command {
 			return;
 		}
 
-		if (mode !== 'off' && mode !== 'track' && mode !== 'queue') {
+		const VALID_REPEAT_MODES = ['off', 'track', 'queue'] as const;
+		if (!VALID_REPEAT_MODES.includes(mode as (typeof VALID_REPEAT_MODES)[number])) {
 			throw new UserError({
 				identifier: 'repeat_invalid',
 				message: '❌  잘못된 반복 모드 값이에요.',

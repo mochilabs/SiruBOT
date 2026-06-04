@@ -55,7 +55,8 @@ export class LyricsCommand extends Command {
 			// Use lrclib.net API (free, no key required)
 			const encoded = encodeURIComponent(query);
 			const response = await fetch(`https://lrclib.net/api/search?q=${encoded}`, {
-				headers: { 'User-Agent': 'SiruBOT/1.0' }
+				headers: { 'User-Agent': 'SiruBOT/1.0' },
+				signal: AbortSignal.timeout(10000)
 			});
 
 			if (!response.ok) {

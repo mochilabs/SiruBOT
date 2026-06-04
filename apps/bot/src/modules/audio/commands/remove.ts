@@ -2,7 +2,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
-import { Track } from 'lavalink-client';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -58,7 +57,7 @@ export class RemoveCommand extends Command {
 			return;
 		}
 
-		const track = removedTracks[0] as Track;
+		const track = removedTracks[0]!;
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
 			new TextDisplayBuilder().setContent(`🗑️ **#${position}** [${track.info.title}](${track.info.uri})을(를) 대기열에서 삭제했어요.`)

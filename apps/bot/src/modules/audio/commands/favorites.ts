@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
-import { Track } from 'lavalink-client';
+import { Track, SearchPlatform } from 'lavalink-client';
+import { getErrorMessage } from '../utils/error.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -100,9 +101,9 @@ export class FavoritesCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`⚠️ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`⚠️ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -123,7 +124,7 @@ export class FavoritesCommand extends Command {
 		const trackId = current.info.identifier;
 
 		try {
-			const { playlist, tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
+			const { tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
 			const targetTrack = tracks.find((t) => t.trackId === trackId);
 
 			if (!targetTrack) {
@@ -138,9 +139,9 @@ export class FavoritesCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -201,9 +202,9 @@ export class FavoritesCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
@@ -224,7 +225,7 @@ export class FavoritesCommand extends Command {
 		}
 
 		try {
-			const { playlist, tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
+			const { tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
 
 			if (tracks.length === 0) {
 				await interaction.editReply({
@@ -246,18 +247,27 @@ export class FavoritesCommand extends Command {
 			}
 
 			let addedCount = 0;
-			for (const pt of tracks) {
-				const result = await player.search(
-					{
-						query: pt.track.url,
-						source: pt.track.source as any
-					},
-					interaction.user
+			const SOURCE_MAP = { youtube: 'ytsearch', spotify: 'spsearch', soundcloud: 'scsearch' } as const;
+			const lookupSource = (source: string): SearchPlatform => SOURCE_MAP[source as keyof typeof SOURCE_MAP] ?? 'ytsearch';
+			const CONCURRENCY = 5;
+			for (let i = 0; i < tracks.length; i += CONCURRENCY) {
+				const batch = tracks.slice(i, i + CONCURRENCY);
+				const searchResults = await Promise.allSettled(
+					batch.map((pt) =>
+						player.search(
+							{
+								query: pt.track.url,
+								source: lookupSource(pt.track.source)
+							},
+							interaction.user
+						)
+					)
 				);
-
-				if (result.tracks.length > 0) {
-					await player.queue.add(result.tracks[0]);
-					addedCount++;
+				for (const result of searchResults) {
+					if (result.status === 'fulfilled' && result.value.tracks.length > 0) {
+						await player.queue.add(result.value.tracks[0]);
+						addedCount++;
+					}
 				}
 			}
 
@@ -271,9 +281,9 @@ export class FavoritesCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}

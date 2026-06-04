@@ -1,4 +1,12 @@
-import { ButtonInteraction, ChatInputCommandInteraction, Collection, ComponentType, GuildMember, MessageFlags } from 'discord.js';
+import {
+	ButtonInteraction,
+	ChatInputCommandInteraction,
+	Collection,
+	ComponentType,
+	GuildMember,
+	InteractionCollector,
+	MessageFlags
+} from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import * as view from '../view/skip.ts';
 import { createContainer } from '@sirubot/utils';
@@ -58,7 +66,7 @@ export class VoteSkip {
 		});
 	}
 
-	private async handleVoteButton(buttonInteraction: ButtonInteraction, collector: any): Promise<void> {
+	private async handleVoteButton(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
 		collector.resetTimer();
 
 		if (!this.options.player.connected) return;
@@ -101,7 +109,7 @@ export class VoteSkip {
 		return null;
 	}
 
-	private async updateToAlreadySkipped(collector: any): Promise<void> {
+	private async updateToAlreadySkipped(collector: InteractionCollector<ButtonInteraction>): Promise<void> {
 		await this.options.interaction.editReply({
 			components: [view.alreadySkipped()],
 			flags: [MessageFlags.IsComponentsV2]
@@ -110,7 +118,7 @@ export class VoteSkip {
 		collector.stop();
 	}
 
-	private async completeVoteSkip(buttonInteraction: ButtonInteraction, collector: any): Promise<void> {
+	private async completeVoteSkip(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
 		await this.options.player.skip();
 		await buttonInteraction.update({
 			components: [

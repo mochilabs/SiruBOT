@@ -3,7 +3,6 @@ import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
 import { errorView } from '../view/error.ts';
-import { Track } from 'lavalink-client';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -79,11 +78,11 @@ export class MoveCommand extends Command {
 			return;
 		}
 
-		player.queue.splice(to - 1, 0, track as Track);
+		player.queue.splice(to - 1, 0, track);
 
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(`↕️ **${(track as Track).info.title}**을(를) **#${from}** → **#${to}** 위치로 이동했어요.`)
+			new TextDisplayBuilder().setContent(`↕️ **${track.info.title}**을(를) **#${from}** → **#${to}** 위치로 이동했어요.`)
 		);
 
 		await interaction.reply({

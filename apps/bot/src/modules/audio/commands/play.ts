@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction } from 'discord.js';
 import { SearchPlatform } from 'lavalink-client';
@@ -139,13 +139,29 @@ export class PlayCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		if (!interaction.inCachedGuild()) return;
-		if (!interaction.member.voice.channelId) return;
+		if (!interaction.inCachedGuild()) {
+			throw new UserError({
+				identifier: 'play_not_in_guild',
+				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				context: { ephemeral: true }
+			});
+		}
+		if (!interaction.member.voice.channelId) {
+			throw new UserError({
+				identifier: 'play_not_in_voice',
+				message: '❌ 먼저 음성 채널에 접속해주세요.',
+				context: { ephemeral: true }
+			});
+		}
 		await interaction.deferReply();
 
+		const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 		const voiceChannel = interaction.member.voice.channelId;
 		const query = interaction.options.getString('query', true);
-		const platform = (interaction.options.getString('platform') || 'ytsearch') as SearchPlatform;
+		const platformInput = interaction.options.getString('platform') || 'ytsearch';
+		const platform: SearchPlatform = (VALID_PLATFORMS as readonly string[]).includes(platformInput)
+			? (platformInput as SearchPlatform)
+			: 'ytsearch';
 		const context = {
 			command: this.name,
 			query,
