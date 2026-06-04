@@ -40,7 +40,15 @@ export class AudioService {
 
 		// Check if the bot can actually join the voice channel
 		const guild = container.client.guilds.cache.get(player.guildId);
-		const voiceChannel = guild?.channels.cache.get(player.voiceChannelId!);
+		const voiceChannelId = player.voiceChannelId;
+		if (!voiceChannelId) {
+			throw new UserError({
+				identifier: 'play_voice_channel_not_found',
+				message: '🎧 음성 채널 정보를 찾을 수 없어요.',
+				context
+			});
+		}
+		const voiceChannel = guild?.channels.cache.get(voiceChannelId);
 		if (!voiceChannel || !voiceChannel.isVoiceBased()) {
 			throw new UserError({
 				identifier: 'play_channel_not_found',
@@ -119,7 +127,14 @@ export class AudioService {
 		player: Player,
 		searchRes: SearchResult | UnresolvedSearchResult
 	): Promise<void> {
-		const playlist = searchRes.playlist!;
+		const playlist = searchRes.playlist;
+		if (!playlist) {
+			await interaction.editReply({
+				content: '🛠️ 플레이리스트 정보를 불러올 수 없어요.',
+				flags: MessageFlags.IsComponentsV2
+			});
+			return;
+		}
 
 		if (playlist.selectedTrack) {
 			await player.queue.add(playlist.selectedTrack);
