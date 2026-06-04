@@ -2,7 +2,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import * as view from '../view/queue.ts';
-import { Track } from 'lavalink-client';
 
 const QUEUE_PAGE_SIZE = 10;
 
@@ -133,7 +132,7 @@ export class QueueCommand extends Command {
 		const page = Math.min(interaction.options.getInteger('page') ?? 1, totalPages);
 
 		await interaction.reply({
-			components: [view.queueList({ player, page, totalPages })],
+			components: [view.queueList({ player, page, totalPages, authorId: interaction.user.id })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -186,8 +185,15 @@ export class QueueCommand extends Command {
 
 		const removed = await player.queue.splice(position - 1, 1);
 		const removedTracks = Array.isArray(removed) ? removed : [removed];
+		const removedTrack = removedTracks[0];
+		if (!removedTrack) {
+			throw new UserError({
+				identifier: 'queue_track_not_found',
+				message: '❌ 해당 곡을 찾을 수 없어요.'
+			});
+		}
 		await interaction.reply({
-			components: [view.queueRemoved({ track: removedTracks[0] as Track, position })],
+			components: [view.queueRemoved({ track: removedTrack, position })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -216,10 +222,16 @@ export class QueueCommand extends Command {
 
 		const removed = await player.queue.splice(from - 1, 1);
 		const track = Array.isArray(removed) ? removed[0] : removed;
+		if (!track) {
+			throw new UserError({
+				identifier: 'queue_track_not_found',
+				message: '❌ 해당 곡을 찾을 수 없어요.'
+			});
+		}
 		await player.queue.splice(to - 1, 0, track);
 
 		await interaction.reply({
-			components: [view.queueMoved({ track: track as Track, from, to })],
+			components: [view.queueMoved({ track, from, to })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

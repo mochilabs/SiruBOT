@@ -17,14 +17,21 @@ export default class QueuePaginationHandler extends InteractionHandler {
 		// Ignore the disabled page indicator button
 		if (interaction.customId === 'queue:page:indicator') return this.none();
 
-		const pageStr = interaction.customId.replace(queueCustomIdPrefix, '');
-		const page = parseInt(pageStr, 10);
+		const suffix = interaction.customId.replace(queueCustomIdPrefix, '');
+		// Format: {authorId}:{pageNum}
+		const colonIndex = suffix.indexOf(':');
+		if (colonIndex === -1) return this.none();
+
+		const authorId = suffix.slice(0, colonIndex);
+		if (authorId !== interaction.user.id) return this.none(); // Only the original command user
+
+		const page = parseInt(suffix.slice(colonIndex + 1), 10);
 		if (isNaN(page)) return this.none();
 
-		return this.some({ page });
+		return this.some({ page, authorId });
 	}
 
-	public async run(interaction: ButtonInteraction<'cached'>, { page }: { page: number }) {
+	public async run(interaction: ButtonInteraction<'cached'>, { page, authorId }: { page: number; authorId: string }) {
 		const player = this.container.audio.getPlayer(interaction.guildId);
 		if (!player || player.queue.tracks.length === 0) {
 			await interaction.update({
@@ -38,7 +45,7 @@ export default class QueuePaginationHandler extends InteractionHandler {
 		const safePage = Math.max(1, Math.min(page, totalPages));
 
 		await interaction.update({
-			components: [queueList({ player, page: safePage, totalPages })],
+			components: [queueList({ player, page: safePage, totalPages, authorId })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

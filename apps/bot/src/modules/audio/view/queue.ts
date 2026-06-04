@@ -6,13 +6,14 @@ type QueueViewProps = {
 	player: Player;
 	page: number;
 	totalPages: number;
+	authorId: string;
 };
 
 const QUEUE_PAGE_SIZE = 10;
 
 export const queueCustomIdPrefix = 'queue:page:';
 
-export function queueList({ player, page, totalPages }: QueueViewProps) {
+export function queueList({ player, page, totalPages, authorId }: QueueViewProps) {
 	const containerComponent = createContainer();
 	const tracks = player.queue.tracks;
 	const start = (page - 1) * QUEUE_PAGE_SIZE;
@@ -37,13 +38,13 @@ export function queueList({ player, page, totalPages }: QueueViewProps) {
 	// Pagination buttons
 	if (totalPages > 1) {
 		const prevButton = new ButtonBuilder()
-			.setCustomId(`${queueCustomIdPrefix}${page - 1}`)
+			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page - 1}`)
 			.setEmoji('◀️')
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page <= 1);
 
 		const nextButton = new ButtonBuilder()
-			.setCustomId(`${queueCustomIdPrefix}${page + 1}`)
+			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page + 1}`)
 			.setEmoji('▶️')
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page >= totalPages);
