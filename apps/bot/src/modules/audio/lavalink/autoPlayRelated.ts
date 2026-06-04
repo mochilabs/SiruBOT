@@ -6,8 +6,8 @@ import { Player, Track } from 'lavalink-client';
 // ── Similarity Threshold Settings ──
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
-const HIGH_SIMILARITY = 0.75;
-const LOW_SIMILARITY = 0.2;
+const HIGH_SIMILARITY = Number(process.env.AUTOPLAY_HIGH_SIM) || 0.75;
+const LOW_SIMILARITY = Number(process.env.AUTOPLAY_LOW_SIM) || 0.2;
 
 // Similarity weights (sum = 1.0)
 const TITLE_WEIGHT = 0.6;
@@ -147,7 +147,7 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 					id: 'related_track',
 					username: null
 				});
-				container.logger.debug(`Search result: ${JSON.stringify(searchResult)}`);
+				container.logger.debug(`Search result loadType: ${searchResult.loadType}, tracks: ${searchResult.tracks.length}`);
 
 				if (searchResult.loadType !== 'error' && searchResult.loadType !== 'empty') {
 					// Prevent race condition

@@ -32,8 +32,8 @@ export class InteractionHandlerError extends Listener {
 				} else {
 					await interaction.reply(payload);
 				}
-			} catch {
-				// 응답 실패는 무시 (이미 시간 초과 등)
+			} catch (replyError) {
+				this.container.logger.debug(`Failed to send error response to interaction: ${replyError}`);
 			}
 		}
 	}

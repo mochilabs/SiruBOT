@@ -9,10 +9,11 @@ export class ChatInputCommandDenied extends Listener {
 	public override async run({ message: content, context }: UserError, { interaction }: ChatInputCommandDeniedPayload) {
 		if (typeof context === 'object' && context !== null && 'silent' in context && context.silent) return;
 
+		const ephemeral = typeof context === 'object' && context !== null && 'ephemeral' in context ? Boolean(context.ephemeral) : false;
 		await sendComponent(
 			interaction,
 			new ContainerBuilder().setAccentColor(DEFAULT_COLOR).addTextDisplayComponents((textDisplay) => textDisplay.setContent(content)),
-			{ ephemeral: typeof context === 'object' && context !== null && 'ephemeral' in context && (context.ephemeral as boolean) }
+			{ ephemeral }
 		);
 	}
 }

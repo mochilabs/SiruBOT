@@ -15,7 +15,11 @@ export class GuildDeleteListener extends Listener {
 			if (player) {
 				this.container.logger.debug(`Destroying audio player for deleted guild: ${guild.id}`);
 				player.setData('stopByCommand', true);
-				await player.destroy();
+				try {
+					await player.destroy();
+				} catch (error) {
+					this.container.logger.error(`Failed to destroy player for guild ${guild.id}:`, error);
+				}
 			}
 		}
 	}

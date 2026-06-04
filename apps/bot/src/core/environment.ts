@@ -9,8 +9,6 @@ initSentry();
 
 setup({ path: join(process.cwd(), '.env') });
 
-process.env.NODE_ENV ??= 'development';
-
 process.on('unhandledRejection', (error) => {
 	Sentry.captureException(error, { tags: { type: 'unhandledRejection' } });
 	if (container.logger) {

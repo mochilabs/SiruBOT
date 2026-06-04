@@ -13,7 +13,7 @@ export class PlayerNotifier {
 	private logger: Logger<ILogObj>;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
-	private readonly DEBOUNCE_MS = 300;
+	private readonly DEBOUNCE_MS = Number(process.env.NOTIFIER_DEBOUNCE_MS) || 300;
 
 	constructor() {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerNotifier' });
@@ -58,7 +58,8 @@ export class PlayerNotifier {
 				});
 				player.textChannelId = interaction.channelId;
 			} else {
-				const textChannel = this.container.client.channels.cache.get(player.textChannelId!);
+				if (!player.textChannelId) return;
+				const textChannel = this.container.client.channels.cache.get(player.textChannelId);
 				if (!textChannel?.isSendable()) return;
 				message = await textChannel.send({
 					components: [components],

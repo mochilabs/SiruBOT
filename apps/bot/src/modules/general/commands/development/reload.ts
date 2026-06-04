@@ -21,7 +21,6 @@ export class ReloadCommand extends Command {
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (!interaction.inCachedGuild()) return;
-		if (!interaction.member.voice.channelId) return;
 
 		const res = await Promise.all(
 			this.container.stores.map((store) => {

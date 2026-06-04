@@ -47,8 +47,6 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 
 	const thumbnail = new ThumbnailBuilder();
 
-	// const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
-
 	const prevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('prev'))
 		.setEmoji('⏮️')
@@ -192,7 +190,7 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 
 	const requesterInfo = [];
 	requesterInfo.push(`-# 아티스트: ${track.info.author}`);
-	const requesterId = (track.requester as any)?.id;
+	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	if (requesterId) {
 		requesterInfo.push(requesterId === 'related_track' ? `추천 곡 ${EMOJI_SPARKLE}` : `신청자: <@${requesterId}>`);
 	}

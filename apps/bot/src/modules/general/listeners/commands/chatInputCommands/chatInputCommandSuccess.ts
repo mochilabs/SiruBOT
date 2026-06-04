@@ -15,7 +15,7 @@ import { User } from 'discord.js';
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandSuccess })
 export class ChatInputCommandSuccess extends Listener {
 	public override run(payload: ChatInputCommandSuccessPayload) {
-		logSuccessCommand(payload as any);
+		logSuccessCommand(payload);
 	}
 }
 

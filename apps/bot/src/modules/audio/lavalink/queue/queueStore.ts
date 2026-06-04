@@ -108,7 +108,7 @@ export class CachedQueueStore implements QueueStoreManager {
 
 	public parse(value: StoredQueue | string): Partial<StoredQueue> {
 		this.logger.trace(`Parsing queue`);
-		return typeof value === 'string' ? JSON.parse(value) : (value as StoredQueue);
+		return typeof value === 'string' ? JSON.parse(value) : value;
 	}
 
 	public stringify(value: StoredQueue | string): Awaitable<StoredQueue | string> {

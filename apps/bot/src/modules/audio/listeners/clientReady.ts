@@ -4,8 +4,8 @@ import { LavalinkHandler } from '../lavalink/handlers/lavalinkHandler.ts';
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class ReadyEvent extends Listener {
-	public override run() {
-		this.initAudio();
+	public override async run() {
+		await this.initAudio().catch((error) => this.container.logger.fatal('Failed to initialize Lavalink client', error));
 	}
 
 	private async initAudio() {

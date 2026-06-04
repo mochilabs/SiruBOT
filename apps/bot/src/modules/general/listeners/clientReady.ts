@@ -15,8 +15,8 @@ import figlet from 'figlet';
 export class ReadyEvent extends Listener {
 	private readonly style = isDev ? yellow : blue;
 
-	public override run() {
-		this.printBanner();
+	public override async run() {
+		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
 
 		this.startActivityInterval();
 	}
@@ -98,7 +98,8 @@ ${this.getStoreDebugInformation()}`;
 	private getStoreDebugInformation() {
 		const { client } = this.container;
 		const stores = [...client.stores.values()];
-		const last = stores.pop()!;
+		const last = stores.pop();
+		if (!last) return '';
 
 		const storesInfo = [];
 		for (const store of stores) storesInfo.push(this.styleStore(store, false));

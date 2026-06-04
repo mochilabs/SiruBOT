@@ -34,7 +34,8 @@ export class HelpCommand extends Command {
 			if (cmd.fullCategory.includes('음악')) {
 				audioCommands.push(line);
 			} else {
-				const isOwnerOnly = (cmd.options.preconditions as string[] | undefined)?.includes('OwnerOnly');
+				const preconditions = cmd.options.preconditions;
+				const isOwnerOnly = Array.isArray(preconditions) && preconditions.includes('OwnerOnly');
 				if (!isOwnerOnly) {
 					generalCommands.push(line);
 				}

@@ -12,7 +12,7 @@ import { DEFAULT_COLOR } from '@sirubot/utils';
 })
 export class VoiceStateUpdateListener extends Listener {
 	private leaveTimers = new Map<string, NodeJS.Timeout>();
-	private readonly LEAVE_TIMEOUT_MS = 300000; // 5 minutes
+	private readonly LEAVE_TIMEOUT_MS = Number(process.env.LEAVE_TIMEOUT_MS) || 300000; // 5 minutes
 	private logger: Logger<ILogObj>;
 
 	public constructor(context: Listener.LoaderContext, options: Listener.Options) {
@@ -35,7 +35,8 @@ export class VoiceStateUpdateListener extends Listener {
 			}
 
 			// Re-evaluate the new channel
-			this.checkEmptyChannel(newState.channel!, guildId, player);
+			if (!newState.channel) return;
+			this.checkEmptyChannel(newState.channel, guildId, player);
 			return;
 		}
 
