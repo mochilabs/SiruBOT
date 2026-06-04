@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
-import { Track } from 'lavalink-client';
+import { Track, SearchPlatform } from 'lavalink-client';
+import { getErrorMessage } from '../utils/error.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -144,9 +145,9 @@ export class PlaylistCommand extends Command {
 				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`✅ 플레이리스트 **${name}**을(를) 생성했어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -161,9 +162,9 @@ export class PlaylistCommand extends Command {
 				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`🗑️ 플레이리스트 **${name}**을(를) 삭제했어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -213,15 +214,24 @@ export class PlaylistCommand extends Command {
 				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`### 📋 플레이리스트: ${playlist.name}\n${list}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
 	}
 
 	private async handleAdd(interaction: ChatInputCommandInteraction<'cached'>) {
+		const voiceChannelId = interaction.member.voice.channelId;
+		if (!voiceChannelId) {
+			await interaction.reply({
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 먼저 음성 채널에 접속해주세요.'))],
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
+			});
+			return;
+		}
+
 		await interaction.deferReply();
 
 		const name = interaction.options.getString('name', true);
@@ -231,7 +241,7 @@ export class PlaylistCommand extends Command {
 		if (!player) {
 			player = this.container.audio.createPlayer({
 				guildId: interaction.guildId,
-				voiceChannelId: interaction.member.voice.channelId ?? '',
+				voiceChannelId: voiceChannelId,
 				textChannelId: interaction.channelId,
 				selfDeaf: true
 			});
@@ -258,9 +268,9 @@ export class PlaylistCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
@@ -289,9 +299,9 @@ export class PlaylistCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -314,9 +324,9 @@ export class PlaylistCommand extends Command {
 				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`🗑️ **${name}** 플레이리스트에서 곡을 제거했어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -362,11 +372,19 @@ export class PlaylistCommand extends Command {
 			}
 
 			let addedCount = 0;
-			for (const t of tracks) {
-				const result = await player.search({ query: t.track.url, source: t.track.source as any }, interaction.user);
-				if (result.tracks.length > 0) {
-					await player.queue.add(result.tracks[0]);
-					addedCount++;
+			const SOURCE_MAP = { youtube: 'ytsearch', spotify: 'spsearch', soundcloud: 'scsearch' } as const;
+			const lookupSource = (source: string): SearchPlatform => SOURCE_MAP[source as keyof typeof SOURCE_MAP] ?? 'ytsearch';
+			const CONCURRENCY = 5;
+			for (let i = 0; i < tracks.length; i += CONCURRENCY) {
+				const batch = tracks.slice(i, i + CONCURRENCY);
+				const searchResults = await Promise.allSettled(
+					batch.map((t) => player.search({ query: t.track.url, source: lookupSource(t.track.source) }, interaction.user))
+				);
+				for (const result of searchResults) {
+					if (result.status === 'fulfilled' && result.value.tracks.length > 0) {
+						await player.queue.add(result.value.tracks[0]);
+						addedCount++;
+					}
 				}
 			}
 
@@ -382,9 +400,9 @@ export class PlaylistCommand extends Command {
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${error.message}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
