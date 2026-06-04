@@ -3,6 +3,7 @@ import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { controllerView } from '../view/controller.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { errorView } from '../view/error.ts';
+import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -29,6 +30,15 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView('🔇 봇과 같은 음성 채널에 있어야 사용할 수 있어요.')]
+			});
+			return;
+		}
+
+		// DJ/Alone 권한 체크
+		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('🔇 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.')]
 			});
 			return;
 		}
