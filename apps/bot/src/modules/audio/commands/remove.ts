@@ -48,8 +48,9 @@ export class RemoveCommand extends Command {
 			return;
 		}
 
-		const removed = player.queue.splice(position - 1, 1);
-		if (removed.length === 0) {
+		const removed = await player.queue.splice(position - 1, 1);
+		const removedTracks = Array.isArray(removed) ? removed : [removed];
+		if (removedTracks.length === 0) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral],
 				content: '❌ 곡을 삭제할 수 없었어요.'
@@ -57,7 +58,7 @@ export class RemoveCommand extends Command {
 			return;
 		}
 
-		const track = removed[0] as Track;
+		const track = removedTracks[0] as Track;
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
 			new TextDisplayBuilder().setContent(`🗑️ **#${position}** [${track.info.title}](${track.info.uri})을(를) 대기열에서 삭제했어요.`)

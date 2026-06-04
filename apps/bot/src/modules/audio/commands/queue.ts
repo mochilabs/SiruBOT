@@ -164,7 +164,7 @@ export class QueueCommand extends Command {
 		}
 
 		const count = player.queue.tracks.length;
-		player.queue.splice(0, count);
+		await player.queue.splice(0, count);
 
 		await interaction.reply({
 			components: [view.queueCleared({ count })],
@@ -184,9 +184,10 @@ export class QueueCommand extends Command {
 			});
 		}
 
-		const removed = player.queue.splice(position - 1, 1);
+		const removed = await player.queue.splice(position - 1, 1);
+		const removedTracks = Array.isArray(removed) ? removed : [removed];
 		await interaction.reply({
-			components: [view.queueRemoved({ track: removed[0] as Track, position })],
+			components: [view.queueRemoved({ track: removedTracks[0] as Track, position })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -213,8 +214,9 @@ export class QueueCommand extends Command {
 			});
 		}
 
-		const [track] = player.queue.splice(from - 1, 1);
-		player.queue.splice(to - 1, 0, track);
+		const removed = await player.queue.splice(from - 1, 1);
+		const track = Array.isArray(removed) ? removed[0] : removed;
+		await player.queue.splice(to - 1, 0, track);
 
 		await interaction.reply({
 			components: [view.queueMoved({ track: track as Track, from, to })],

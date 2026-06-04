@@ -231,7 +231,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
-		player.queue.splice(trackIndex, 1);
+		await player.queue.splice(trackIndex, 1);
 		player.queueSelectedIndex = null;
 
 		// Adjust page if needed
