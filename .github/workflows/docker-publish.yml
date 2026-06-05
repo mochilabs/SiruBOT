@@ -66,10 +66,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
-  # Beta: bot만 빌드 (main push 시)
+  # Beta: bot, dashboard, shardmanager 빌드 (main push 시)
   build-beta:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [bot, dashboard, shardmanager]
+      fail-fast: false
 
     permissions:
       contents: read
@@ -95,7 +99,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}-bot
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.app }}
           tags: |
             type=raw,value=beta
             type=sha,format=short
@@ -104,7 +108,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          target: bot
+          target: ${{ matrix.app }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -112,5 +116,5 @@ jobs:
             GIT_HASH=${{ github.sha }}
             GIT_BRANCH=${{ github.ref_name }}
             VERSION=beta-${{ github.sha }}
-          cache-from: type=gha,scope=bot
-          cache-to: type=gha,mode=max,scope=bot
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
