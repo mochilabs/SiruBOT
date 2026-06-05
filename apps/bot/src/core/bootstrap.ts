@@ -160,9 +160,7 @@ export const main = async () => {
 			// 1. Lavalink session을 Redis에 저장 (Redis 끊기 전!)
 			if (container.audio && container.redisStore) {
 				const sessionStore = container.redisStore.getNodeSessionStore();
-				const shardKey = NodeSessionStore.makeShardKey(
-					Array.isArray(shardIds) ? shardIds : [0]
-				);
+				const shardKey = NodeSessionStore.makeShardKey(Array.isArray(shardIds) ? shardIds : [0]);
 				for (const node of container.audio.nodeManager.nodes.values()) {
 					if (node.sessionId) {
 						await sessionStore.save(node.id, node.sessionId, shardKey);

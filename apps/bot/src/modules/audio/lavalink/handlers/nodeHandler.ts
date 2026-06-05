@@ -27,8 +27,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 		// 연결 시 sessionId를 Redis에 저장
 		if (node.sessionId && this.container.shardInfo) {
 			const shardKey = NodeSessionStore.makeShardKey(this.container.shardInfo.shardIds);
-			await this.container.redisStore.getNodeSessionStore()
-				.save(node.id, node.sessionId, shardKey);
+			await this.container.redisStore.getNodeSessionStore().save(node.id, node.sessionId, shardKey);
 		}
 	}
 
