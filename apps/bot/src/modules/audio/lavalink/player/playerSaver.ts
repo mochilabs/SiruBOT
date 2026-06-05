@@ -9,7 +9,6 @@ export class CachedPlayerSaver {
 	private cache: MemoryCache<string, string>;
 	private isRedisConnected = true;
 	private pendingWrites: Map<string, string> = new Map();
-	private nodeSessionsCache: Map<string, string> = new Map();
 	private logger: Logger<ILogObj>;
 
 	constructor(private readonly redis: RedisClientType) {
@@ -97,38 +96,6 @@ export class CachedPlayerSaver {
 		}
 	}
 
-	public async getNodeSessions(): Promise<Map<string, string>> {
-		try {
-			if (this.isRedisConnected) {
-				const playerKeys = await this.redis.keys(this.getKey('*'));
-				const data = new Map<string, string>();
-
-				if (playerKeys.length > 0) {
-					const values = await this.redis.mGet(playerKeys);
-					for (const value of values) {
-						if (value === null) continue;
-
-						const playerDataJson = JSON.parse(value);
-						if (!playerDataJson.nodeId || !playerDataJson.nodeSessionId) continue;
-
-						data.set(playerDataJson.nodeId, playerDataJson.nodeSessionId);
-					}
-				}
-
-				// 캐시 업데이트
-				this.nodeSessionsCache = data;
-				this.logger.trace(`Retrieved ${data.size} node sessions from Redis`);
-				return data;
-			}
-		} catch (error) {
-			this.logger.warn(`Redis error, using cached sessions: ${error}`);
-			this.isRedisConnected = false;
-		}
-
-		this.logger.trace(`Using cached node sessions (${this.nodeSessionsCache.size} entries)`);
-		return this.nodeSessionsCache;
-	}
-
 	private stringify(player: CustomPlayer): string {
 		const { queue, ...playerData } = player.toJSON(); // queue 분리
 		return JSON.stringify(playerData);
@@ -181,7 +148,6 @@ export class CachedPlayerSaver {
 		return {
 			...this.cache.getStats(),
 			pendingWrites: this.pendingWrites.size,
-			nodeSessionsCacheSize: this.nodeSessionsCache.size,
 			isRedisConnected: this.isRedisConnected
 		};
 	}

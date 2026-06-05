@@ -5,12 +5,97 @@ import { CachedQueueStore } from './queue/queueStore.ts';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 import { Logger, ILogObj } from 'tslog';
 
+/** Resume timeout과 동일 (5분 = 300초) */
+const SESSION_TTL_SECONDS = 60 * 5;
+
+/**
+ * Shard 기반 Lavalink node session 저장소.
+ * 각 bot replica가 자기 shard에 해당하는 sessionId를 독립적으로 관리합니다.
+ *
+ * Redis 키 형태: `lavalink/session/{nodeId}/shards:{0,1}`
+ */
+export class NodeSessionStore {
+	private isRedisConnected = true;
+	private logger: Logger<ILogObj>;
+
+	constructor(private readonly redis: RedisClientType) {
+		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'nodeSessionStore' });
+	}
+
+	/** shard ID 배열로부터 일관된 키 문자열 생성 (정렬) */
+	static makeShardKey(shardIds: number[]): string {
+		return [...shardIds].sort((a, b) => a - b).join(',');
+	}
+
+	private getKey(nodeId: string, shardKey: string): string {
+		return `lavalink/session/${nodeId}/shards:${shardKey}`;
+	}
+
+	/** 세션 저장 (TTL: resume timeout과 동일하게 5분) */
+	public async save(nodeId: string, sessionId: string, shardKey: string): Promise<void> {
+		const key = this.getKey(nodeId, shardKey);
+		this.logger.debug(`Saving session for node ${nodeId} shards [${shardKey}]: ${sessionId}`);
+
+		try {
+			if (this.isRedisConnected) {
+				await this.redis.set(key, sessionId, { EX: SESSION_TTL_SECONDS });
+				this.logger.trace(`Session saved to Redis: ${key}`);
+			}
+		} catch (error) {
+			this.logger.warn(`Failed to save session to Redis: ${error}`);
+			this.isRedisConnected = false;
+		}
+	}
+
+	/** 세션 조회 */
+	public async get(nodeId: string, shardKey: string): Promise<string | null> {
+		const key = this.getKey(nodeId, shardKey);
+
+		try {
+			if (this.isRedisConnected) {
+				const sessionId = await this.redis.get(key);
+				this.logger.debug(`Session lookup for ${key}: ${sessionId ?? '(not found)'}`);
+				return sessionId;
+			}
+		} catch (error) {
+			this.logger.warn(`Failed to get session from Redis: ${error}`);
+			this.isRedisConnected = false;
+		}
+
+		return null;
+	}
+
+	/** 세션 삭제 */
+	public async delete(nodeId: string, shardKey: string): Promise<void> {
+		const key = this.getKey(nodeId, shardKey);
+
+		try {
+			if (this.isRedisConnected) {
+				await this.redis.del(key);
+				this.logger.trace(`Session deleted: ${key}`);
+			}
+		} catch (error) {
+			this.logger.warn(`Failed to delete session from Redis: ${error}`);
+			this.isRedisConnected = false;
+		}
+	}
+
+	public onConnect(): void {
+		this.isRedisConnected = true;
+	}
+
+	public onDisconnect(): void {
+		this.isRedisConnected = false;
+	}
+}
+
 type RedisClientOptionsType = Parameters<typeof createClient>[0];
 
 export class RedisStore {
 	private redis: RedisClientType;
 	private queueStore: CachedQueueStore;
 	private playerSaver: CachedPlayerSaver;
+	private nodeSessionStore: NodeSessionStore;
 	private isReady = false;
 	private reconnectTryCount = 0;
 	private logger: Logger<ILogObj>;
@@ -21,6 +106,7 @@ export class RedisStore {
 
 		this.queueStore = new CachedQueueStore(this.redis);
 		this.playerSaver = new CachedPlayerSaver(this.redis);
+		this.nodeSessionStore = new NodeSessionStore(this.redis);
 
 		this.redis.on('error', this.handleError.bind(this));
 		this.redis.on('connect', this.handleConnect.bind(this));
@@ -30,6 +116,7 @@ export class RedisStore {
 
 		this.queueStore.onDisconnect();
 		this.playerSaver.onDisconnect();
+		this.nodeSessionStore.onDisconnect();
 	}
 
 	public getQueueStore() {
@@ -38,6 +125,10 @@ export class RedisStore {
 
 	public getPlayerSaver() {
 		return this.playerSaver;
+	}
+
+	public getNodeSessionStore() {
+		return this.nodeSessionStore;
 	}
 
 	public async connect() {
@@ -59,6 +150,7 @@ export class RedisStore {
 
 		this.queueStore.onConnect();
 		this.playerSaver.onConnect();
+		this.nodeSessionStore.onConnect();
 	}
 
 	private handleReconnecting() {
@@ -69,6 +161,7 @@ export class RedisStore {
 			this.isReady = false;
 			this.queueStore.onDisconnect();
 			this.playerSaver.onDisconnect();
+			this.nodeSessionStore.onDisconnect();
 		}
 	}
 
@@ -85,6 +178,7 @@ export class RedisStore {
 			this.isReady = false;
 			this.queueStore.onDisconnect();
 			this.playerSaver.onDisconnect();
+			this.nodeSessionStore.onDisconnect();
 		}
 	}
 
@@ -95,6 +189,7 @@ export class RedisStore {
 			this.isReady = false;
 			this.queueStore.onDisconnect();
 			this.playerSaver.onDisconnect();
+			this.nodeSessionStore.onDisconnect();
 		}
 	}
 

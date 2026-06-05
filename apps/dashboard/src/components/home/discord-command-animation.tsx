@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo,useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { AnimatePresence,m } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
 	Hash,
 	List,

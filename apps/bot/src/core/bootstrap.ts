@@ -4,6 +4,8 @@ import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { LavalinkNodeOptions } from 'lavalink-client';
+import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
+import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
 
@@ -116,7 +118,11 @@ export const main = async () => {
 				}
 				return { id, host, port, authorization: password ?? 'youshallnotpass' };
 			}) as LavalinkNodeOptions[];
-		await client.setupAudio(lavalinkHosts);
+		await client.setupAudio(lavalinkHosts, { shardIds: Array.isArray(shardIds) ? shardIds : [0], shardCount });
+
+		// Lavalink 핸들러 등록 및 노드 연결 (setupAudio 직후, 순서 보장)
+		container.lavalinkHandler = new LavalinkHandler(container.audio);
+		await container.audio.init({ id: client.user!.id });
 
 		client.logger.info('Logged in as ' + client.user!.tag);
 
@@ -151,22 +157,36 @@ export const main = async () => {
 				healthServer.close();
 			}
 
-			// 1. Audio and players
+			// 1. Lavalink session을 Redis에 저장 (Redis 끊기 전!)
+			if (container.audio && container.redisStore) {
+				const sessionStore = container.redisStore.getNodeSessionStore();
+				const shardKey = NodeSessionStore.makeShardKey(
+					Array.isArray(shardIds) ? shardIds : [0]
+				);
+				for (const node of container.audio.nodeManager.nodes.values()) {
+					if (node.sessionId) {
+						await sessionStore.save(node.id, node.sessionId, shardKey);
+						client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
+					}
+				}
+			}
+
+			// 2. Audio listeners 정리
 			if (container.audio) {
 				container.audio.removeAllListeners();
 			}
 
-			// 2. Redis disconnect
+			// 3. Redis disconnect (session 저장 후!)
 			if (container.redisStore) {
 				await container.redisStore.disconnect();
 			}
 
-			// 3. Database disconnect
+			// 4. Database disconnect
 			if (container.db) {
 				await container.db.$disconnect();
 			}
 
-			// 4. ShardManager client
+			// 5. ShardManager client
 			if (container.shardClient) {
 				container.shardClient.destroy();
 			}

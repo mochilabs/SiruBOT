@@ -42,6 +42,7 @@ declare module '@sapphire/pieces' {
 		playlistService: import('../services/playlistService.ts').PlaylistService;
 		audioService: import('../services/audioService.ts').AudioService;
 		shardClient?: import('@sirubot/shardclient').ShardClient;
+		shardInfo: { shardIds: number[]; shardCount: number };
 	}
 }
 

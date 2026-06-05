@@ -1,5 +1,6 @@
 import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
+import { NodeSessionStore } from '../redisStore.ts';
 
 export class NodeHandler extends BaseLavalinkHandler {
 	constructor(private readonly nodeManager: NodeManager) {
@@ -22,6 +23,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 		this.logger.info(`Node connected: ${node.options.id}`);
 		// Enable resuming for 5 minutes (timeout is in seconds per Lavalink API)
 		await node.updateSession(true, 60 * 5);
+
+		// 연결 시 sessionId를 Redis에 저장
+		if (node.sessionId && this.container.shardInfo) {
+			const shardKey = NodeSessionStore.makeShardKey(this.container.shardInfo.shardIds);
+			await this.container.redisStore.getNodeSessionStore()
+				.save(node.id, node.sessionId, shardKey);
+		}
 	}
 
 	private async handleNodeResumed(

@@ -3,19 +3,22 @@ name: Publish Docker Image
 on:
   release:
     types: [published]
+  push:
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Release: bot, dashboard, shardmanager 전부 빌드
   build-and-push-image:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     strategy:
       matrix:
         app: [bot, dashboard, shardmanager]
       fail-fast: false
     
-    # ghcr.io에 이미지를 푸시하기 위한 권한 설정
     permissions:
       contents: read
       packages: write
@@ -62,3 +65,52 @@ jobs:
             VERSION=${{ github.event.release.tag_name }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # Beta: bot만 빌드 (main push 시)
+  build-beta:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-bot
+          tags: |
+            type=raw,value=beta
+            type=sha,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: bot
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_HASH=${{ github.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
+            VERSION=beta-${{ github.sha }}
+          cache-from: type=gha,scope=bot
+          cache-to: type=gha,mode=max,scope=bot

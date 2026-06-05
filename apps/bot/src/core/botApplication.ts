@@ -8,7 +8,7 @@ import { RootData, container, getRootData } from '@sapphire/pieces';
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
-import { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
+import { RedisStore, NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
 import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
@@ -74,12 +74,25 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.audioService = new AudioService();
 	}
 
-	public async setupAudio(nodes: LavalinkNodeOptions[]) {
-		const nodeSessions = await container.redisStore.getPlayerSaver().getNodeSessions();
+	public async setupAudio(nodes: LavalinkNodeOptions[], shardInfo: { shardIds: number[]; shardCount: number }) {
+		const sessionStore = container.redisStore.getNodeSessionStore();
+		const shardKey = NodeSessionStore.makeShardKey(shardInfo.shardIds);
+
+		// 각 노드에 대해 이전 sessionId 조회
+		const nodeSessionMap = new Map<string, string>();
+		for (const node of nodes) {
+			if (node.id) {
+				const sessionId = await sessionStore.get(node.id, shardKey);
+				if (sessionId) {
+					nodeSessionMap.set(node.id, sessionId);
+				}
+			}
+		}
+
 		const audio = new LavalinkManager({
 			nodes: nodes.map((node) => ({
 				...node,
-				sessionId: !node.id ? undefined : nodeSessions.get(node.id),
+				sessionId: !node.id ? undefined : nodeSessionMap.get(node.id),
 				retryAmount: 10
 			})),
 			sendToShard: (guildId, payload) => this.guilds.cache.get(guildId)?.shard.send(payload),
@@ -106,6 +119,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			}
 		});
 
+		container.shardInfo = shardInfo;
 		container.playerNotifier = new PlayerNotifier();
 		container.audio = audio;
 
