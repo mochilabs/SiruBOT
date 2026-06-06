@@ -15,9 +15,9 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	}
 
 	private async handlePlayerCreate(player: CustomPlayer) {
-		this.logger.info(`Player created: ${player.guildId}`);
+		this.logger.info('audio.player.created', { guild_id: player.guildId });
 
-		this.logger.trace(`Setting volume and repeat mode for player: ${player.guildId}`);
+		this.logger.trace('audio.player.setting_volume', { guild_id: player.guildId });
 		const guildConfig = await this.container.guildService.getGuild(player.guildId);
 
 		// SponsorBlock 조건부 활성화
@@ -53,17 +53,17 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	}
 
 	private async handlePlayerDestroy(player: CustomPlayer, _reason: DestroyReasonsType | undefined) {
-		this.logger.info(`Player destroyed: ${player.guildId}`);
+		this.logger.info('audio.player.destroyed', { guild_id: player.guildId });
 		this.container.redisStore.getPlayerSaver().delete(player.guildId);
 		await this.container.playerNotifier.onPlayerDestroy(player);
 	}
 
 	private handlePlayerDisconnect(_player: CustomPlayer, _voiceChannelId: string) {
-		this.logger.info(`Player disconnected: ${_player.guildId}`);
+		this.logger.info('audio.player.disconnected', { guild_id: _player.guildId });
 	}
 
 	private handlePlayerMove(_player: CustomPlayer, _oldChannelId: string, _newChannelId: string) {
-		this.logger.info(`Player moved: ${_player.guildId}`);
+		this.logger.info('audio.player.moved', { guild_id: _player.guildId });
 	}
 
 	private async handlePlayerUpdate(_oldPlayerJson: PlayerJson, newPlayer: CustomPlayer) {

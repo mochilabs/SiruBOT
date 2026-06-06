@@ -27,7 +27,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public setupStore(name: string) {
-		this.logger.debug(`Setting up module store: ${name}`);
+		this.logger.debug('system.bot.setting_up_module_store', { name });
 		this.stores.registerPath(join(this.rootData.root, 'modules', name));
 	}
 

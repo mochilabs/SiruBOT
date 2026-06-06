@@ -7,6 +7,6 @@ import { CloseEvent } from 'discord.js';
 })
 export class ShardDisconnectEvent extends Listener {
 	public override run(event: CloseEvent, id: number) {
-		this.container.logger.warn(`Shard ${id} disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+		this.container.logger.warn('shard.lifecycle.disconnected', { shard_id: id, code: event.code, reason: event.reason });
 	}
 }

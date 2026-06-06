@@ -29,9 +29,9 @@ export class DiscordNotifier {
 		this.webhookUrl = webhookUrl ?? null;
 
 		if (this.webhookUrl) {
-			logger.info('Discord webhook notifications enabled');
+			logger.info('shard.notify.webhook_enabled');
 		} else {
-			logger.info('Discord webhook URL not set, notifications disabled');
+			logger.info('shard.notify.webhook_disabled');
 		}
 	}
 
@@ -59,10 +59,10 @@ export class DiscordNotifier {
 			});
 
 			if (!response.ok) {
-				logger.warn(`Webhook request failed: ${response.status} ${response.statusText}`);
+				logger.warn('shard.notify.webhook_failed', { status: response.status, statusText: response.statusText });
 			}
 		} catch (error) {
-			logger.warn('Failed to send webhook notification:', error);
+			logger.warn('shard.notify.webhook_failed', error);
 		}
 	}
 

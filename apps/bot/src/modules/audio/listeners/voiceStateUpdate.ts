@@ -3,7 +3,7 @@ import { Events, Listener } from '@sapphire/framework';
 import { ContainerBuilder, MessageFlags, VoiceState } from 'discord.js';
 import { container } from '@sapphire/pieces';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
-import { Logger, ILogObj } from 'tslog';
+
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { DEFAULT_COLOR } from '@sirubot/utils';
 
@@ -13,7 +13,7 @@ import { DEFAULT_COLOR } from '@sirubot/utils';
 export class VoiceStateUpdateListener extends Listener {
 	private leaveTimers = new Map<string, NodeJS.Timeout>();
 	private readonly LEAVE_TIMEOUT_MS = Number(process.env.LEAVE_TIMEOUT_MS) || 300000; // 5 minutes
-	private logger: Logger<ILogObj>;
+	private logger: SapphireInterfaceLogger;
 
 	public constructor(context: Listener.LoaderContext, options: Listener.Options) {
 		super(context, options);
@@ -57,14 +57,14 @@ export class VoiceStateUpdateListener extends Listener {
 
 		if (listeningMembers.size === 0) {
 			// Channel is empty or everyone is deafened, start timer
-			this.logger.debug(`Channel ${channel.id} is empty (or everyone deafened). Starting 5 minute leave timer for guild ${guildId}.`);
+			this.logger.debug('audio.voice.empty_timer_started', { channel_id: channel.id, guild_id: guildId });
 
 			// Clear existing timer if there is one
 			this.clearTimer(guildId);
 
 			const timer = setTimeout(async () => {
 				try {
-					this.logger.info(`Leaving empty voice channel in guild ${guildId} after 5 minutes.`);
+					this.logger.info('audio.voice.leave_timeout', { guild_id: guildId });
 					if (player.textChannelId) {
 						const textChannel = this.container.client.channels.cache.get(player.textChannelId);
 						if (textChannel?.isSendable()) {
@@ -84,7 +84,7 @@ export class VoiceStateUpdateListener extends Listener {
 					player.setData('stopByCommand', true);
 					await player.destroy();
 				} catch (error) {
-					this.logger.error(`Failed to leave empty voice channel in guild ${guildId}:`, error);
+					this.logger.error('audio.voice.leave_failed', { guild_id: guildId, error });
 				} finally {
 					this.leaveTimers.delete(guildId);
 				}
@@ -94,7 +94,7 @@ export class VoiceStateUpdateListener extends Listener {
 		} else {
 			// Channel is not empty, clear timer
 			if (this.leaveTimers.has(guildId)) {
-				this.logger.debug(`User joined channel ${channel.id}. Cancelling leave timer for guild ${guildId}.`);
+				this.logger.debug('audio.voice.empty_timer_cancelled', { channel_id: channel.id, guild_id: guildId });
 				this.clearTimer(guildId);
 			}
 		}

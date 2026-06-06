@@ -59,12 +59,7 @@ export const main = async () => {
 
 	const client = new BotApplication({
 		logger: {
-			instance: new SapphireInterfaceLogger({
-				name: 'SiruBOT',
-				minLevel: parseInt(process.env.LOGLEVEL ?? '3', 10),
-				type: 'pretty',
-				hideLogPositionForProduction: process.env.NODE_ENV === 'production'
-			})
+			instance: new SapphireInterfaceLogger('SiruBOT')
 		},
 		shards: shardIds,
 		shardCount,
@@ -81,29 +76,29 @@ export const main = async () => {
 
 	try {
 		// show pid and pid-name
-		client.logger.info(`Starting SiruBOT with PID: ${process.pid}`);
-		client.logger.info(`Mode: ${isDevMode ? 'dev mode (standalone)' : `production (shards: [${shardIds}])`}`);
+		client.logger.info('system.bootstrap.starting', { pid: process.pid });
+		client.logger.info('system.bootstrap.mode', { mode: isDevMode ? 'dev mode (standalone)' : 'production', shard_ids: isDevMode ? undefined : shardIds });
 
-		client.logger.debug('Setting up logger...');
+		client.logger.debug('system.bootstrap.setting_up_logger');
 		container.logger = client.logger;
 
 		// Audio -> General -> RedisStore -> Login -> Lavalink (After ready event)
 		client.setupStore('audio');
 		client.setupStore('general');
 
-		client.logger.debug('Setting up database...');
+		client.logger.debug('system.bootstrap.setting_up_database');
 		await client.setupDatabase();
 
-		client.logger.debug('Setting up services...');
+		client.logger.debug('system.bootstrap.setting_up_services');
 		client.setupServices();
 
-		client.logger.debug('Setting up redis store manager... (optional)');
+		client.logger.debug('system.bootstrap.setting_up_redis');
 		await client.setupRedis(envParseString('REDIS_URL'));
 
-		client.logger.info('Logging into discord...');
+		client.logger.info('system.bootstrap.logging_in');
 		await client.login(envParseString('DISCORD_TOKEN'));
 
-		client.logger.debug('Setting up lavalink...');
+		client.logger.debug('system.bootstrap.setting_up_lavalink');
 		const lavalinkHosts = envParseString('LAVALINK_HOSTS')
 			.split(',')
 			.map((node, index) => {
@@ -124,7 +119,7 @@ export const main = async () => {
 		container.lavalinkHandler = new LavalinkHandler(container.audio);
 		await container.audio.init({ id: client.user!.id });
 
-		client.logger.info('Logged in as ' + client.user!.tag);
+		client.logger.info('system.bootstrap.logged_in', { user: client.user!.tag });
 
 		// Health check HTTP server for Docker
 		const { createServer } = await import('node:http');
@@ -136,7 +131,7 @@ export const main = async () => {
 			res.end(JSON.stringify({ ok: isHealthy, wsStatus: client.ws.status }));
 		});
 		healthServer.listen(healthPort, '0.0.0.0', () => {
-			client.logger.info(`Health check server listening on :${healthPort}`);
+			client.logger.info('system.bootstrap.health_check_listening', { port: healthPort });
 		});
 
 		// Production: report ready status + collect stats
@@ -152,7 +147,7 @@ export const main = async () => {
 
 		// Handle gracefull shutdown
 		const shutdown = async () => {
-			client.logger.info('Shutting down gracefully...');
+			client.logger.info('system.bootstrap.shutting_down');
 			if (healthServer) {
 				healthServer.close();
 			}
@@ -164,7 +159,7 @@ export const main = async () => {
 				for (const node of container.audio.nodeManager.nodes.values()) {
 					if (node.sessionId) {
 						await sessionStore.save(node.id, node.sessionId, shardKey);
-						client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
+						client.logger.info('system.bootstrap.node_session_saved', { node_id: node.id, session_id: node.sessionId });
 					}
 				}
 			}
@@ -196,8 +191,8 @@ export const main = async () => {
 		process.on('SIGINT', shutdown);
 		process.on('SIGTERM', shutdown);
 	} catch (error) {
-		client.logger.error('Error setting up application...');
-		client.logger.fatal(error);
+		client.logger.error('system.bootstrap.setup_error');
+		client.logger.fatal('system.bootstrap.fatal_error', { error });
 		await client.destroy();
 		if (container.shardClient) {
 			container.shardClient.destroy();

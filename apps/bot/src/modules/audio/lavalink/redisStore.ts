@@ -3,7 +3,7 @@ import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
-import { Logger, ILogObj } from 'tslog';
+
 
 /** Resume timeout과 동일 (5분 = 300초) */
 const SESSION_TTL_SECONDS = 60 * 5;
@@ -16,7 +16,7 @@ const SESSION_TTL_SECONDS = 60 * 5;
  */
 export class NodeSessionStore {
 	private isRedisConnected = true;
-	private logger: Logger<ILogObj>;
+	private logger: SapphireInterfaceLogger;
 
 	constructor(private readonly redis: RedisClientType) {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'nodeSessionStore' });
@@ -34,15 +34,15 @@ export class NodeSessionStore {
 	/** 세션 저장 (TTL: resume timeout과 동일하게 5분) */
 	public async save(nodeId: string, sessionId: string, shardKey: string): Promise<void> {
 		const key = this.getKey(nodeId, shardKey);
-		this.logger.debug(`Saving session for node ${nodeId} shards [${shardKey}]: ${sessionId}`);
+		this.logger.debug('audio.node.session_saving', { node_id: nodeId, shard_key: shardKey, session_id: sessionId });
 
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.set(key, sessionId, { EX: SESSION_TTL_SECONDS });
-				this.logger.trace(`Session saved to Redis: ${key}`);
+				this.logger.trace('audio.node.session_saved', { key });
 			}
 		} catch (error) {
-			this.logger.warn(`Failed to save session to Redis: ${error}`);
+			this.logger.warn('audio.node.session_save_failed', { error });
 			this.isRedisConnected = false;
 		}
 	}
@@ -54,11 +54,11 @@ export class NodeSessionStore {
 		try {
 			if (this.isRedisConnected) {
 				const sessionId = await this.redis.get(key);
-				this.logger.debug(`Session lookup for ${key}: ${sessionId ?? '(not found)'}`);
+				this.logger.debug('audio.node.session_lookup', { key, session_id: sessionId });
 				return sessionId;
 			}
 		} catch (error) {
-			this.logger.warn(`Failed to get session from Redis: ${error}`);
+			this.logger.warn('audio.node.session_lookup_failed', { error });
 			this.isRedisConnected = false;
 		}
 
@@ -72,10 +72,10 @@ export class NodeSessionStore {
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.del(key);
-				this.logger.trace(`Session deleted: ${key}`);
+				this.logger.trace('audio.node.session_deleted', { key });
 			}
 		} catch (error) {
-			this.logger.warn(`Failed to delete session from Redis: ${error}`);
+			this.logger.warn('audio.node.session_delete_failed', { error });
 			this.isRedisConnected = false;
 		}
 	}
@@ -98,7 +98,7 @@ export class RedisStore {
 	private nodeSessionStore: NodeSessionStore;
 	private isReady = false;
 	private reconnectTryCount = 0;
-	private logger: Logger<ILogObj>;
+	private logger: SapphireInterfaceLogger;
 
 	constructor(options: RedisClientOptionsType) {
 		this.redis = createClient(options) as RedisClientType;
@@ -146,7 +146,7 @@ export class RedisStore {
 	}
 
 	private handleConnect() {
-		this.logger.info('Redis connected');
+		this.logger.info('system.redis.connected');
 
 		this.queueStore.onConnect();
 		this.playerSaver.onConnect();
@@ -155,7 +155,7 @@ export class RedisStore {
 
 	private handleReconnecting() {
 		this.reconnectTryCount++;
-		this.logger.info(`Redis reconnecting (${this.reconnectTryCount})`);
+		this.logger.warn('system.redis.reconnecting', { try_count: this.reconnectTryCount });
 
 		if (this.isReady) {
 			this.isReady = false;
@@ -167,12 +167,12 @@ export class RedisStore {
 
 	private handleReady() {
 		this.isReady = true;
-		this.logger.info('Redis ready!');
+		this.logger.info('system.redis.ready');
 		this.reconnectTryCount = 0;
 	}
 
 	private handleError(err: Error) {
-		this.logger.error(`Redis Error: ${err}`);
+		this.logger.error('system.redis.error', { error: err });
 
 		if (this.isReady) {
 			this.isReady = false;
@@ -183,7 +183,7 @@ export class RedisStore {
 	}
 
 	private handleEnd() {
-		this.logger.warn('Redis connection ended');
+		this.logger.warn('system.redis.disconnected');
 
 		if (this.isReady) {
 			this.isReady = false;

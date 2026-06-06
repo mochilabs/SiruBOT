@@ -1,14 +1,13 @@
 import { container } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
-import { ILogObj, Logger } from 'tslog';
 
 // handlers/base.ts
 export abstract class BaseLavalinkHandler {
-	protected logger: Logger<ILogObj>;
+	protected logger: SapphireInterfaceLogger;
 
 	constructor(name: string) {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name });
-		this.logger.info(`Setup lavalink ${name}`);
+		this.logger.info('audio.handler.setup', { name });
 	}
 
 	protected get container() {
@@ -22,7 +21,7 @@ export abstract class BaseLavalinkHandler {
 				return result;
 			} catch (error) {
 				const errorContext = context ? ` (${context})` : '';
-				this.logger.error(`${this.constructor.name} 오류 발생${errorContext}:`, error);
+				this.logger.error('audio.handler.error', { handler_name: this.constructor.name, context: errorContext, error });
 			}
 		}) as T;
 	}

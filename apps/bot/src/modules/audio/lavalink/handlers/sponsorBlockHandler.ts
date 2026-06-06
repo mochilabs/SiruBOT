@@ -13,12 +13,12 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleChaptersLoaded(player: CustomPlayer, _track: Track | UnresolvedTrack | null, payload: SponsorBlockChaptersLoaded) {
-		this.logger.debug(`Chapters loaded: ${player.guildId} ${payload.chapters.length}`);
+		this.logger.debug('audio.sponsorblock.chapters_loaded', { guild_id: player.guildId, count: payload.chapters.length });
 		player.chapters = payload.chapters;
 	}
 
 	private async handleSponsorBlock(player: CustomPlayer, _track: Track | UnresolvedTrack | null, payload: SponsorBlockSegmentSkipped) {
-		this.logger.info(`Sponsor block: ${player.guildId} ${payload.segment.category} ${payload.segment.start}`);
+		this.logger.info('audio.sponsorblock.segment_skipped', { guild_id: player.guildId, category: payload.segment.category, start: payload.segment.start });
 		const segments: Record<string, string> = {
 			sponsor: '프로모션',
 			selfpromo: '자사 홍보',

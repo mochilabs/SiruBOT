@@ -33,7 +33,7 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 
 			if (!channelExists) {
 				// 채널이 삭제되었거나 봇이 볼 수 없는 경우: 설정을 초기화하고 통과시킴
-				this.container.logger.info(`Configured text channel [${configuredChannelId}] is missing in guild [${guildId}]. Resetting config.`);
+				this.container.logger.info('audio.precondition.text_channel_missing', { channel_id: configuredChannelId, guild_id: guildId });
 				await this.container.db.guild.update({
 					where: { id: guildId },
 					data: { textChannelId: null }
@@ -50,7 +50,7 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 
 			return this.ok();
 		} catch (error) {
-			this.container.logger.error(`Error checking text channel for guild ${guildId}`, error);
+			this.container.logger.error('audio.precondition.check_error', { guild_id: guildId, error });
 			return this.ok(); // 에러 발생 시 일단 통과시켜서 명령어 사용 막히는 것 방지
 		}
 	}

@@ -2,14 +2,13 @@ import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
 import { MemoryCache } from '@sirubot/utils';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
-import { ILogObj, Logger } from 'tslog';
 import { CustomPlayer, CustomPlayerJson } from './customPlayer.ts';
 
 export class CachedPlayerSaver {
 	private cache: MemoryCache<string, string>;
 	private isRedisConnected = true;
 	private pendingWrites: Map<string, string> = new Map();
-	private logger: Logger<ILogObj>;
+	private logger: SapphireInterfaceLogger;
 
 	constructor(private readonly redis: RedisClientType) {
 		this.cache = new MemoryCache<string, string>({
@@ -28,20 +27,20 @@ export class CachedPlayerSaver {
 		const key = this.getKey(player.guildId);
 		const stringValue = this.stringify(player);
 
-		this.logger.trace(`Setting player for guild ${player.guildId}`);
+		this.logger.trace('audio.player.setting', { guild_id: player.guildId });
 
 		this.cache.set(key, stringValue);
 
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.set(key, stringValue);
-				this.logger.trace(`Successfully set in Redis for guild ${player.guildId}`);
+				this.logger.trace('audio.player.set_success', { guild_id: player.guildId });
 			} else {
 				this.pendingWrites.set(key, stringValue);
-				this.logger.trace(`Added to pending writes for guild ${player.guildId}`);
+				this.logger.trace('audio.player.added_to_pending', { guild_id: player.guildId });
 			}
 		} catch (error) {
-			this.logger.warn(`Redis error, added to pending writes: ${error}`);
+			this.logger.warn('audio.player.redis_error_pending', { guild_id: player.guildId, error });
 			this.isRedisConnected = false;
 			this.pendingWrites.set(key, stringValue);
 		}
@@ -55,42 +54,42 @@ export class CachedPlayerSaver {
 				const playerData = await this.redis.get(key);
 				if (playerData !== null) {
 					this.cache.set(key, playerData);
-					this.logger.trace(`Retrieved from Redis for guild ${guildId}`);
+					this.logger.trace('audio.player.redis_retrieved', { guild_id: guildId });
 					return JSON.parse(playerData);
 				}
 			}
 		} catch (error) {
-			this.logger.warn(`Redis error, falling back to cache: ${error}`);
+			this.logger.warn('audio.player.redis_error_cache_fallback', { guild_id: guildId, error });
 			this.isRedisConnected = false;
 		}
 
 		const cachedData = this.cache.get(key);
 		if (cachedData) {
-			this.logger.trace(`Retrieved from cache for guild ${guildId}`);
+			this.logger.trace('audio.player.cache_retrieved', { guild_id: guildId });
 			return JSON.parse(cachedData);
 		}
 
-		this.logger.trace(`No data found for guild ${guildId}`);
+		this.logger.trace('audio.player.not_found', { guild_id: guildId });
 		return null;
 	}
 
 	public async delete(guildId: string): Promise<void> {
 		const key = this.getKey(guildId);
 
-		this.logger.trace(`Deleting player for guild ${guildId}`);
+		this.logger.trace('audio.player.deleting', { guild_id: guildId });
 
 		this.cache.delete(key);
 
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.del(key);
-				this.logger.trace(`Successfully deleted from Redis for guild ${guildId}`);
+				this.logger.trace('audio.player.delete_success', { guild_id: guildId });
 			} else {
 				this.pendingWrites.delete(key);
-				this.logger.trace(`Removed from pending writes for guild ${guildId}`);
+				this.logger.trace('audio.player.removed_from_pending', { guild_id: guildId });
 			}
 		} catch (error) {
-			this.logger.warn(`Redis error: ${error}`);
+			this.logger.warn('audio.player.redis_error', { guild_id: guildId, error });
 			this.isRedisConnected = false;
 			this.pendingWrites.delete(key);
 		}
@@ -102,23 +101,23 @@ export class CachedPlayerSaver {
 	}
 
 	public onConnect(): void {
-		this.logger.info('Redis connected, syncing pending writes...');
+		this.logger.info('audio.player.sync_started');
 		this.isRedisConnected = true;
 		this.syncPendingWrites();
 	}
 
 	public onDisconnect(): void {
-		this.logger.warn('Redis disconnected, switching to cache-only mode');
+		this.logger.warn('audio.player.redis_disconnected');
 		this.isRedisConnected = false;
 	}
 
 	private async syncPendingWrites(): Promise<void> {
 		if (this.pendingWrites.size === 0) {
-			this.logger.debug('No pending writes to sync');
+			this.logger.debug('audio.player.no_pending_sync');
 			return;
 		}
 
-		this.logger.info(`Syncing ${this.pendingWrites.size} pending writes...`);
+		this.logger.info('audio.player.syncing', { pending_writes_count: this.pendingWrites.size });
 
 		const promises: Promise<void>[] = [];
 
@@ -127,10 +126,10 @@ export class CachedPlayerSaver {
 				this.redis
 					.set(key, value)
 					.then(() => {
-						this.logger.trace(`Synced ${key}`);
+						this.logger.trace('audio.player.synced', { key });
 					})
 					.catch((error) => {
-						this.logger.error(`Failed to sync ${key}: ${error}`);
+						this.logger.error('audio.player.sync_failed', { key, error });
 					})
 			);
 		}
@@ -138,9 +137,9 @@ export class CachedPlayerSaver {
 		try {
 			await Promise.allSettled(promises);
 			this.pendingWrites.clear();
-			this.logger.info('All pending writes synced successfully');
+			this.logger.info('audio.player.sync_completed');
 		} catch (error) {
-			this.logger.error(`Error during sync: ${error}`);
+			this.logger.error('audio.player.sync_error', { error });
 		}
 	}
 

@@ -34,7 +34,7 @@ export class ReloadCommand extends Command {
 							success: true
 						});
 					} catch (error) {
-						this.container.logger.error(error);
+						this.container.logger.error('system.command.reload_failed', error);
 						paths.push({
 							name: piece.location.name,
 							success: false

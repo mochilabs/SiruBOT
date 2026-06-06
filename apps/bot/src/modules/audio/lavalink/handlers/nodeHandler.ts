@@ -16,11 +16,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 	}
 
 	private handleNodeCreate(node: LavalinkNode) {
-		this.logger.info(`Node created: ${node.options.id}`);
+		this.logger.info('audio.node.created', { node_id: node.options.id });
 	}
 
 	private async handleNodeConnect(node: LavalinkNode) {
-		this.logger.info(`Node connected: ${node.options.id}`);
+		this.logger.info('audio.node.connected', { node_id: node.options.id });
 		// Enable resuming for 5 minutes (timeout is in seconds per Lavalink API)
 		await node.updateSession(true, 60 * 5);
 
@@ -43,7 +43,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 		if (!Array.isArray(players)) {
 			throw new Error('Resume players is not an array');
 		}
-		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
+		this.logger.debug('audio.node.resuming_players', { node_id: node.options.id, session_id: payload.sessionId, count: players.length });
 		const startTime = Date.now();
 		const playerSaver = this.container.redisStore.getPlayerSaver();
 
@@ -54,21 +54,22 @@ export class NodeHandler extends BaseLavalinkHandler {
 		// 유효한 플레이어만 필터링
 		const validPlayers = players.filter((lavalinkPlayer) => {
 			if (!lavalinkPlayer.state.connected) {
-				this.logger.debug(`Player at ${lavalinkPlayer.guildId} is already disconnected`);
+				this.logger.debug('audio.node.player_already_disconnected', { guild_id: lavalinkPlayer.guildId });
 				playerSaver.delete(lavalinkPlayer.guildId);
 				return false;
 			}
 
 			if (!this.container.client.guilds.cache.has(lavalinkPlayer.guildId)) {
-				this.logger.debug(`Skipping resume for guild ${lavalinkPlayer.guildId} (not in this shard's cache)`);
+				this.logger.debug('audio.node.skip_resume_not_in_shard', { guild_id: lavalinkPlayer.guildId });
 				return false;
 			}
 
 			// 마지막 상태 업데이트가 너무 오래됐으면 버리기
 			if (lavalinkPlayer.state.time && startTime - lavalinkPlayer.state.time > STALE_THRESHOLD_MS) {
-				this.logger.debug(
-					`Skipping stale player at ${lavalinkPlayer.guildId} (last update: ${Math.round((startTime - lavalinkPlayer.state.time) / 1000)}s ago)`
-				);
+				this.logger.debug('audio.node.skip_stale_player', { 
+                    guild_id: lavalinkPlayer.guildId, 
+                    seconds_ago: Math.round((startTime - lavalinkPlayer.state.time) / 1000) 
+                });
 				playerSaver.delete(lavalinkPlayer.guildId);
 				return false;
 			}
@@ -76,7 +77,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return true;
 		});
 
-		this.logger.debug(`Filtered ${players.length} -> ${validPlayers.length} valid players for resume`);
+		this.logger.debug('audio.node.resume_filtered', { original: players.length, valid: validPlayers.length });
 
 		// 배치 단위 병렬 처리
 		for (let i = 0; i < validPlayers.length; i += BATCH_SIZE) {
@@ -87,12 +88,12 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 			for (const result of results) {
 				if (result.status === 'rejected') {
-					this.logger.error(`Failed to resume a player:`, result.reason);
+					this.logger.error('audio.node.resume_failed', { error: result.reason });
 				}
 			}
 		}
 
-		this.logger.info(`Resume completed in ${Date.now() - startTime}ms (${validPlayers.length} players)`);
+		this.logger.info('audio.node.resume_completed', { duration_ms: Date.now() - startTime, count: validPlayers.length });
 	}
 
 	private async resumeSinglePlayer(
@@ -103,7 +104,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 	) {
 		const savedPlayer = await playerSaver.get(lavalinkPlayer.guildId);
 		if (!savedPlayer) {
-			this.logger.debug(`Saved player at ${lavalinkPlayer.guildId} is not found`);
+			this.logger.debug('audio.node.saved_player_not_found', { guild_id: lavalinkPlayer.guildId });
 			return;
 		}
 
@@ -125,11 +126,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 		});
 
 		if (savedPlayer.textChannelId && savedPlayer.messageId) {
-			this.logger.debug(`Setting cached controller message and message id for player at ${lavalinkPlayer.guildId}`);
+			this.logger.debug('audio.node.setting_cached_controller', { guild_id: lavalinkPlayer.guildId });
 			const fetchedChannel = await this.container.client.channels.fetch(savedPlayer.textChannelId).catch(() => null);
 			if (fetchedChannel && fetchedChannel.isTextBased()) {
 				const message = await fetchedChannel.messages.fetch(savedPlayer.messageId).catch(() => null);
-				this.logger.debug(`Fetched controller message for player at ${lavalinkPlayer.guildId}`);
+				this.logger.debug('audio.node.fetched_controller_message', { guild_id: lavalinkPlayer.guildId });
 				if (message?.editable) {
 					createdPlayer.messageId = message.id;
 					createdPlayer.controller = message;
@@ -139,7 +140,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 		await createdPlayer.connect();
 		createdPlayer.filterManager.data = savedPlayer.filters;
-		await createdPlayer.queue.utils.sync(true, false).catch(this.logger.error.bind(this));
+		await createdPlayer.queue.utils.sync(true, false).catch((err) => this.logger.error('audio.node.sync_failed', { error: err }));
 
 		if (lavalinkPlayer.track)
 			createdPlayer.queue.current = this.container.audio.utils.buildTrack(
@@ -155,11 +156,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 		createdPlayer.paused = lavalinkPlayer.paused;
 		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
-		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
+		this.logger.debug('audio.node.finished_resuming', { guild_id: lavalinkPlayer.guildId });
 	}
 
 	private handleNodeDisconnect(node: LavalinkNode, reason: { code?: number | undefined; reason?: string | undefined }) {
-		this.logger.info(`Node disconnected: ${node.options.id} | ${reason.reason}`);
+		this.logger.warn('audio.node.disconnected', { node_id: node.options.id, reason: reason.reason });
 		const orphanPlayers = this.container.audio.players
 			.filter((player) => player.node.id === node.options.id)
 			.values()
@@ -175,19 +176,19 @@ export class NodeHandler extends BaseLavalinkHandler {
 	}
 
 	private handleNodeReconnecting(node: LavalinkNode) {
-		this.logger.info(`Node reconnecting: ${node.options.id}`);
+		this.logger.warn('audio.node.reconnecting', { node_id: node.options.id });
 	}
 
 	private handleNodeDestroy(node: LavalinkNode) {
-		this.logger.info(`Node destroyed: ${node.options.id}`);
+		this.logger.info('audio.node.destroyed', { node_id: node.options.id });
 	}
 
 	private handleNodeError(node: LavalinkNode, error: Error, payload: unknown) {
-		this.logger.error(`Node error: ${node.options.id}`, error, payload);
+		this.logger.error('audio.node.error', { node_id: node.options.id, error, payload });
 	}
 
 	public cleanup(): void {
-		this.logger.info('Cleanup lavalink nodeHandler');
+		this.logger.info('audio.node.cleanup', {});
 		this.nodeManager?.removeAllListeners('create');
 		this.nodeManager?.removeAllListeners('connect');
 		this.nodeManager?.removeAllListeners('disconnect');

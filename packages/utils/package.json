@@ -32,6 +32,7 @@
         "@types/node": "^22.18.1"
     },
     "dependencies": {
-        "tslog": "^4.10.2"
+        "pino": "^10.3.1",
+        "pino-pretty": "^13.1.3"
     }
 }

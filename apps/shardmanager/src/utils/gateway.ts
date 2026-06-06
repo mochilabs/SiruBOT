@@ -23,14 +23,14 @@ export async function getGatewayInfo(): Promise<GatewayResponse | null> {
 		});
 
 		if (!response.ok) {
-			logger.error(`Discord API error: ${response.status} ${response.statusText}`);
+			logger.error('shard.manager.gateway_error', { status: response.status, statusText: response.statusText });
 			return null;
 		}
 
 		const data = (await response.json()) as GatewayResponse;
 		return data;
 	} catch (error) {
-		logger.error('Failed to fetch gateway info:', error);
+		logger.error('shard.manager.gateway_error', error);
 		return null;
 	}
 }

@@ -1,11 +1,14 @@
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import { createLogger } from '@sirubot/utils';
+
+const logger = createLogger('Sentry');
 
 export const initSentry = () => {
 	const dsn = process.env.SENTRY_DSN;
 
 	if (!dsn) {
-		console.info('[Sentry] SENTRY_DSN not set, Sentry is disabled.');
+		logger.info('system.sentry.disabled', { reason: 'SENTRY_DSN not set' });
 		return;
 	}
 
@@ -19,7 +22,7 @@ export const initSentry = () => {
 		maxBreadcrumbs: 50
 	});
 
-	console.info(`[Sentry] Initialized (env: ${process.env.NODE_ENV}, release: ${process.env.VERSION ?? 'unknown'})`);
+	logger.info('system.sentry.initialized', { env: process.env.NODE_ENV, release: process.env.VERSION ?? 'unknown' });
 };
 
 export const setSentryShardTags = (shardIds: number[] | 'auto') => {

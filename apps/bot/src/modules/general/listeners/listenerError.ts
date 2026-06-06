@@ -12,6 +12,6 @@ export class ListenerError extends Listener {
 			Sentry.captureException(error);
 		});
 
-		this.container.logger.error(`ListenerError in ${piece.name}:`, error);
+		this.container.logger.error('system.listener.error', { listener_name: piece.name, error });
 	}
 }

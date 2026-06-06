@@ -1,57 +1,93 @@
 import { ILogger, LogLevel } from '@sapphire/framework';
-import { Logger, ILogObj, ISettingsParam } from 'tslog';
-import { getLoggerSettings } from '@sirubot/utils';
+import { SiruLogger, createLogger, LogMeta } from '@sirubot/utils';
 
-/**
- * Log level mapping from string to numeric values
- * Maps environment log levels to tslog numeric levels
- */
-const LOG_LEVEL_MAP: Record<string, number> = {
-	silly: 0,
-	trace: 1,
-	debug: 2,
-	info: 3,
-	warn: 4,
-	error: 5,
-	fatal: 6
-} as const;
+export class SapphireInterfaceLogger implements ILogger {
+	public siruLogger: SiruLogger;
 
-/**
- * Sapphire LogLevel to tslog level mapping
- * Sapphire uses multiples of 10, tslog uses 0-6
- */
-const SAPPHIRE_TO_TSLOG_LEVEL_MAP: Record<LogLevel, number> = {
-	[LogLevel.Trace]: 1,
-	[LogLevel.Debug]: 2,
-	[LogLevel.Info]: 3,
-	[LogLevel.Warn]: 4,
-	[LogLevel.Error]: 5,
-	[LogLevel.Fatal]: 6,
-	[LogLevel.None]: 6
-} as const;
-
-/**
- * Custom logger implementation that bridges Sapphire's ILogger interface
- * with tslog's Logger functionality
- */
-export class SapphireInterfaceLogger extends Logger<ILogObj> implements ILogger {
-	constructor(settings?: Partial<ISettingsParam<ILogObj>>) {
-		super(getLoggerSettings(settings?.name ?? 'Sapphire', settings));
+	constructor(name: string = 'Sapphire') {
+		this.siruLogger = createLogger(name);
 	}
 
-	has(level: LogLevel): boolean {
-		const tslogLevel = SapphireInterfaceLogger.transformSapphireLevel(level);
-		return tslogLevel >= this.settings.minLevel;
+	public getSubLogger(settings: { name: string }): SapphireInterfaceLogger {
+		return new SapphireInterfaceLogger(settings.name);
 	}
 
-	write(level: LogLevel, ...values: readonly unknown[]): void {
-		const tslogLevel = SapphireInterfaceLogger.transformSapphireLevel(level);
-		const levelName = LogLevel[level] || 'UNKNOWN';
-
-		this.log(tslogLevel, `[${levelName}]`, ...values);
+	public has(level: LogLevel): boolean {
+		return level !== LogLevel.None;
 	}
 
-	public static transformSapphireLevel(level: LogLevel): number {
-		return SAPPHIRE_TO_TSLOG_LEVEL_MAP[level] ?? LOG_LEVEL_MAP.info;
+	public trace(...values: readonly unknown[]): void {
+		this.write(LogLevel.Trace, ...values);
+	}
+
+	public debug(...values: readonly unknown[]): void {
+		this.write(LogLevel.Debug, ...values);
+	}
+
+	public info(...values: readonly unknown[]): void {
+		this.write(LogLevel.Info, ...values);
+	}
+
+	public warn(...values: readonly unknown[]): void {
+		this.write(LogLevel.Warn, ...values);
+	}
+
+	public error(...values: readonly unknown[]): void {
+		this.write(LogLevel.Error, ...values);
+	}
+
+	public fatal(...values: readonly unknown[]): void {
+		this.write(LogLevel.Fatal, ...values);
+	}
+
+	public write(level: LogLevel, ...values: readonly unknown[]): void {
+		if (level === LogLevel.None) return;
+
+		const [first, second, ...rest] = values;
+		let methodName: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+		switch (level) {
+			case LogLevel.Trace: methodName = 'trace'; break;
+			case LogLevel.Debug: methodName = 'debug'; break;
+			case LogLevel.Info: methodName = 'info'; break;
+			case LogLevel.Warn: methodName = 'warn'; break;
+			case LogLevel.Error: methodName = 'error'; break;
+			case LogLevel.Fatal: methodName = 'fatal'; break;
+			default: methodName = 'info';
+		}
+
+		// Handle error cases specifically
+		if (methodName === 'error' || methodName === 'fatal') {
+			if (typeof first === 'string' && second instanceof Error) {
+				this.siruLogger[methodName](first, second);
+				return;
+			}
+			if (first instanceof Error) {
+				this.siruLogger[methodName]('sapphire.internal.error', first);
+				return;
+			}
+		}
+
+		// Handle standard structured logging: logger.info('domain.action', { meta: 'data' })
+		if (typeof first === 'string' && typeof second === 'object' && second !== null && !(second instanceof Error) && rest.length === 0) {
+			this.siruLogger[methodName](first, second as LogMeta);
+			return;
+		}
+
+		// Handle single string message: logger.info('something')
+		if (typeof first === 'string' && second === undefined && rest.length === 0) {
+			if (first.includes('.')) {
+				this.siruLogger[methodName](first, {});
+			} else {
+				this.siruLogger[methodName]('sapphire.internal', { message: first });
+			}
+			return;
+		}
+
+		// Handle legacy/unknown Sapphire formats
+		this.siruLogger[methodName]('sapphire.internal', { 
+			message: typeof first === 'string' ? first : 'Unknown log format', 
+			raw_values: values 
+		});
 	}
 }

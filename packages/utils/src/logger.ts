@@ -1,34 +1,69 @@
-import { Logger, ILogObj, ISettingsParam } from 'tslog';
+import pino from 'pino';
 
-const LOG_LEVEL_MAP: Record<string, number> = {
-	silly: 0,
-	trace: 1,
-	debug: 2,
-	info: 3,
-	warn: 4,
-	error: 5,
-	fatal: 6
-};
+export type LogMeta = Record<string, unknown>;
 
-function resolveMinLevel(): number {
-	if (typeof process === 'undefined' || !process.env) return 3; // Default to info if process.env is not available
-	const raw = process.env.LOGLEVEL;
-	if (!raw) return 3; // info
-	const asNumber = Number(raw);
-	if (!Number.isNaN(asNumber)) return asNumber;
-	return LOG_LEVEL_MAP[raw.toLowerCase()] ?? 3;
+export class SiruLogger {
+	private pinoLogger: pino.Logger;
+
+	constructor(name: string) {
+		const level = process.env.LOG_LEVEL || 'info';
+
+		const isDevelopment = process.env.NODE_ENV !== 'production' || process.stdout?.isTTY;
+
+		this.pinoLogger = pino({
+			name,
+			level,
+			transport: isDevelopment ? { target: 'pino-pretty', options: { colorize: true } } : undefined
+		});
+	}
+
+	public info(message: string, meta?: LogMeta): void {
+		this.pinoLogger.info(meta || {}, message);
+	}
+
+	public debug(message: string, meta?: LogMeta): void {
+		this.pinoLogger.debug(meta || {}, message);
+	}
+
+	public warn(message: string, meta?: LogMeta): void {
+		this.pinoLogger.warn(meta || {}, message);
+	}
+
+	public trace(message: string, meta?: LogMeta): void {
+		this.pinoLogger.trace(meta || {}, message);
+	}
+
+	public fatal(message: string, errOrMeta?: unknown): void {
+		let meta: LogMeta = {};
+		if (errOrMeta instanceof Error) {
+			meta = {
+				error_name: errOrMeta.name,
+				error_message: errOrMeta.message,
+				error_stack: errOrMeta.stack
+			};
+		} else if (typeof errOrMeta === 'object' && errOrMeta !== null) {
+			meta = errOrMeta as LogMeta;
+		}
+
+		this.pinoLogger.fatal(meta, message);
+	}
+
+	public error(message: string, errOrMeta?: unknown): void {
+		let meta: LogMeta = {};
+		if (errOrMeta instanceof Error) {
+			meta = {
+				error_name: errOrMeta.name,
+				error_message: errOrMeta.message,
+				error_stack: errOrMeta.stack
+			};
+		} else if (typeof errOrMeta === 'object' && errOrMeta !== null) {
+			meta = errOrMeta as LogMeta;
+		}
+
+		this.pinoLogger.error(meta, message);
+	}
 }
 
-export function getLoggerSettings(name: string, settings?: Partial<ISettingsParam<ILogObj>>): ISettingsParam<ILogObj> {
-	return {
-		name,
-		minLevel: resolveMinLevel(),
-		type: 'pretty',
-		hideLogPositionForProduction: typeof process !== 'undefined' && process.env?.NODE_ENV === 'production',
-		...settings
-	};
-}
-
-export function createLogger(name: string, settings?: Partial<ISettingsParam<ILogObj>>): Logger<ILogObj> {
-	return new Logger<ILogObj>(getLoggerSettings(name, settings));
+export function createLogger(name: string): SiruLogger {
+	return new SiruLogger(name);
 }

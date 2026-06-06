@@ -16,7 +16,7 @@ export class ReadyEvent extends Listener {
 	private readonly style = isDev ? yellow : blue;
 
 	public override async run() {
-		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
+		await this.printBanner().catch((error) => this.container.logger.error('system.bootstrap.banner_failed', error));
 
 		this.startActivityInterval();
 	}
@@ -92,7 +92,7 @@ ${Object.entries(versions)
 ${isDev ? `${blc('<')}${llc('/')}${blc('>')} ${llc('DEVELOPMENT MODE 🛠️')}` : `${blc('<')}${llc('/')}${blc('>')} ${llc('PRODUCTION MODE 🚀')}`}
 ${this.getStoreDebugInformation()}`;
 
-		this.container.logger.info(banner);
+		this.container.logger.info('system.bootstrap.banner', { banner });
 	}
 
 	private getStoreDebugInformation() {

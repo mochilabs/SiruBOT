@@ -6,6 +6,6 @@ import { Listener } from '@sapphire/framework';
 })
 export class ShardReconnectingEvent extends Listener {
 	public override run(id: number) {
-		this.container.logger.info(`Shard ${id} reconnecting...`);
+		this.container.logger.info('shard.lifecycle.reconnecting', { shard_id: id });
 	}
 }

@@ -119,7 +119,7 @@ export function pickBySimilarity(candidates: Track[], reference: Track, previous
 		const topN = mediumRange.slice(0, Math.min(3, mediumRange.length));
 		const pick = topN[Math.floor(Math.random() * topN.length)];
 
-		container.logger.debug(`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
+		container.logger.debug('audio.autoplay.picked_by_similarity', { title: pick.track.info.title, score: pick.similarity });
 		return pick.track;
 	}
 
@@ -127,7 +127,7 @@ export function pickBySimilarity(candidates: Track[], reference: Track, previous
 	const notTooSimilar = scored.filter((s) => s.similarity < HIGH_SIMILARITY);
 	if (notTooSimilar.length > 0) {
 		const pick = notTooSimilar[Math.floor(Math.random() * notTooSimilar.length)];
-		container.logger.debug(`[autoPlayRelated] Fallback pick: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
+		container.logger.debug('audio.autoplay.picked_fallback', { title: pick.track.info.title, score: pick.similarity });
 		return pick.track;
 	}
 
@@ -147,7 +147,7 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 					id: 'related_track',
 					username: null
 				});
-				container.logger.debug(`Search result loadType: ${searchResult.loadType}, tracks: ${searchResult.tracks.length}`);
+				container.logger.debug('audio.autoplay.search_result', { load_type: searchResult.loadType, track_count: searchResult.tracks.length });
 
 				if (searchResult.loadType !== 'error' && searchResult.loadType !== 'empty') {
 					// Prevent race condition
@@ -172,12 +172,12 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 						}
 					}
 
-					container.logger.debug(`No unique related tracks found for: ${lastPlayedTrack.info.identifier}`);
+					container.logger.debug('audio.autoplay.no_unique_related_tracks', { identifier: lastPlayedTrack.info.identifier });
 				} else {
-					container.logger.debug(`Related search failed (${searchResult.loadType}): ${lastPlayedTrack.info.identifier}`);
+					container.logger.debug('audio.autoplay.related_search_failed', { load_type: searchResult.loadType, identifier: lastPlayedTrack.info.identifier });
 				}
 			} catch (error) {
-				container.logger.error(`Error fetching related tracks: ${error}`);
+				container.logger.error('audio.autoplay.error_fetching_related', { error });
 			}
 
 			// If no recommended track is found: end playback + notify
@@ -199,6 +199,6 @@ async function sendEndNotification(player: Player, message: string) {
 			});
 		}
 	} catch (error) {
-		container.logger.error(`Failed to send autoplay notification: ${error}`);
+		container.logger.error('audio.autoplay.notification_failed', { error });
 	}
 }

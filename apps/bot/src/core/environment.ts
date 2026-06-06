@@ -12,7 +12,7 @@ setup({ path: join(process.cwd(), '.env') });
 process.on('unhandledRejection', (error) => {
 	Sentry.captureException(error, { tags: { type: 'unhandledRejection' } });
 	if (container.logger) {
-		container.logger.error('UnhandledPromiseRejectionWarning: ', error);
+		container.logger.error('system.environment.unhandled_promise_rejection', { error });
 	} else {
 		console.error('UnhandledPromiseRejectionWarning: ', error);
 	}
@@ -21,7 +21,7 @@ process.on('unhandledRejection', (error) => {
 process.on('uncaughtException', (error) => {
 	Sentry.captureException(error, { tags: { type: 'uncaughtException' } });
 	if (container.logger) {
-		container.logger.fatal('UncaughtException: ', error);
+		container.logger.fatal('system.environment.uncaught_exception', { error });
 	} else {
 		console.error('UncaughtException: ', error);
 	}

@@ -6,6 +6,6 @@ import { Listener } from '@sapphire/framework';
 })
 export class ShardResumeEvent extends Listener {
 	public override run(id: number, replayedEvents: number) {
-		this.container.logger.info(`Shard ${id} resumed. Replayed ${replayedEvents} events.`);
+		this.container.logger.info('shard.lifecycle.resumed', { shard_id: id, replayed_events: replayedEvents });
 	}
 }

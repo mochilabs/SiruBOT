@@ -17,9 +17,9 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleTrackStart(player: CustomPlayer, track: Track | null, _payload: TrackStartEvent) {
-		this.logger.info(`Track started: ${track?.info.title} by ${track?.info.author}`);
+		this.logger.info('audio.track.started', { title: track?.info.title, author: track?.info.author });
 		if (track && !track.info.isStream) {
-			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
+			this.logger.trace('audio.track.ensuring_plays', { title: track.info.title, author: track.info.author });
 			// fire-and-forget
 			Promise.allSettled([this.container.trackService.increasePlays(track), this.container.trackService.addHistory(player.guildId, track)]);
 		}
@@ -28,11 +28,11 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private handleTrackEnd(_player: CustomPlayer, track: Track | null, _payload: TrackEndEvent) {
-		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author}`);
+		this.logger.info('audio.track.ended', { title: track?.info.title, author: track?.info.author });
 	}
 
 	private async handleTrackStuck(player: CustomPlayer, track: Track | null, _payload: TrackStuckEvent) {
-		this.logger.warn(`Track stuck: ${track?.info.title} by ${track?.info.author}`);
+		this.logger.warn('audio.track.stuck', { title: track?.info.title, author: track?.info.author });
 		await this.sendNotification(player, `⚠️ **${track?.info.title ?? '알 수 없는 곡'}**이 응답하지 않아 건너뛰었어요.`);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
@@ -42,7 +42,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
-		this.logger.error(`Track error: ${track?.info.title} by ${track?.info.author}`, payload.exception);
+		this.logger.error('audio.track.error', { title: track?.info.title, author: track?.info.author, error: payload.exception });
 		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
@@ -52,7 +52,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleQueueEnd(player: CustomPlayer) {
-		this.logger.info(`Queue ended for guild: ${player.guildId}`);
+		this.logger.info('audio.queue.ended', { guild_id: player.guildId });
 
 		// 대기열의 모든 곡이 끝났으므로 컨트롤러 메시지 삭제
 		await this.container.playerNotifier.deleteController(player);
@@ -79,7 +79,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 				});
 			}
 		} catch (error) {
-			this.logger.error(`Failed to send notification: ${error}`);
+			this.logger.error('audio.track.notification_failed', { error });
 		}
 	}
 

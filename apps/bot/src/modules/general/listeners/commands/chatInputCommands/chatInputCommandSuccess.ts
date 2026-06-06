@@ -28,7 +28,7 @@ export function logSuccessCommand(payload: ContextMenuCommandSuccessPayload | Ch
 		successLoggerData = getSuccessLoggerData(payload.message.guild, payload.message.author, payload.command);
 	}
 
-	container.logger.debug(`${successLoggerData.shard} - ${successLoggerData.commandName} ${successLoggerData.author} ${successLoggerData.sentAt}`);
+	container.logger.debug('interaction.command.success', { ...successLoggerData });
 }
 
 export function getSuccessLoggerData(guild: Guild | null, user: User, command: Command) {

@@ -17,7 +17,7 @@ export class InteractionHandlerError extends Listener {
 			Sentry.captureException(error);
 		});
 
-		this.container.logger.error(`InteractionHandlerError in ${handler.name}:`, error);
+		this.container.logger.error('system.interaction_handler.error', { handler_name: handler.name, error });
 
 		// 사용자에게 에러 메시지 전달
 		if (interaction.isRepliable()) {
@@ -33,7 +33,7 @@ export class InteractionHandlerError extends Listener {
 					await interaction.reply(payload);
 				}
 			} catch (replyError) {
-				this.container.logger.debug(`Failed to send error response to interaction: ${replyError}`);
+				this.container.logger.debug('system.interaction_handler.reply_failed', { error: replyError });
 			}
 		}
 	}

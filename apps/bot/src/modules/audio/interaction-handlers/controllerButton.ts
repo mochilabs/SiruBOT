@@ -89,7 +89,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				await this.handleQueue(interaction, player, subcommand);
 				break;
 			default:
-				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
+				this.container.logger.warn('audio.controller.unknown_command', { command, subcommand });
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 					components: [errorView(`🛠️ 알 수 없는 버튼 명령어입니다. (${command})`)]

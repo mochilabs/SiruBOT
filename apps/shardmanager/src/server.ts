@@ -28,7 +28,7 @@ export class ShardManagerServer {
 	public async setupRoutes() {
 		// Global error handler
 		this.fastify.setErrorHandler((error: { message: string; statusCode?: number }, request, reply) => {
-			this.logger.error({ error, url: request.url, method: request.method }, 'Request error');
+			this.logger.error('system.server.request_error', { error, url: request.url, method: request.method });
 			reply.status(error.statusCode ?? 500).send({
 				error: error.message,
 				statusCode: error.statusCode ?? 500
@@ -49,15 +49,15 @@ export class ShardManagerServer {
 		try {
 			const host = process.env.HOSTNAME || 'localhost';
 			await this.fastify.listen({ port: this.port, host });
-			this.logger.info(`Shard Manager started`);
-			this.logger.info(`- Local:     http://localhost:${this.port}`);
+			this.logger.info('system.server.started');
+			this.logger.info('system.server.address', { local: `http://localhost:${this.port}` });
 			if (host !== 'localhost') {
-				this.logger.info(`- Network:   http://${host}:${this.port}`);
+				this.logger.info('system.server.address', { network: `http://${host}:${this.port}` });
 			}
-			this.logger.info(`- WebSocket: ws://${host}:${this.port}/ws`);
-			this.logger.info(`- Shards: ${this.shardCount}, per process: ${this.shardsPerProcess}`);
+			this.logger.info('system.server.address', { websocket: `ws://${host}:${this.port}/ws` });
+			this.logger.info('system.server.info', { shardCount: this.shardCount, shardsPerProcess: this.shardsPerProcess });
 		} catch (error) {
-			this.logger.error(error);
+			this.logger.error('system.server.error', error);
 			process.exit(1);
 		}
 	}
@@ -66,9 +66,9 @@ export class ShardManagerServer {
 		try {
 			this.registry.destroy();
 			await this.fastify.close();
-			this.logger.info('Server stopped gracefully');
+			this.logger.info('system.server.stopped');
 		} catch (error) {
-			this.logger.error(error);
+			this.logger.error('system.server.error', error);
 		}
 	}
 

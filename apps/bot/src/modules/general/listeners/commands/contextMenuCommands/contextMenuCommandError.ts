@@ -20,6 +20,6 @@ export class ContextMenuCommandError extends Listener {
 			Sentry.captureException(error);
 		});
 
-		this.container.logger.error(`ContextMenuCommandError in ${command.name}:`, error);
+		this.container.logger.error('system.command.context_menu_error', { command_name: command.name, error });
 	}
 }

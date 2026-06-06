@@ -1,6 +1,5 @@
 import { container } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
-import { ILogObj, Logger } from 'tslog';
 import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 import * as view from '../../view/controller.ts';
@@ -10,7 +9,7 @@ import { Guild } from '@sirubot/prisma';
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
 
 export class PlayerNotifier {
-	private logger: Logger<ILogObj>;
+	private logger: SapphireInterfaceLogger;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
 	private readonly DEBOUNCE_MS = Number(process.env.NOTIFIER_DEBOUNCE_MS) || 300;
@@ -25,7 +24,7 @@ export class PlayerNotifier {
 
 	// Force send controller message
 	public async sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
-		this.logger.debug(`Sending new controller for guild: ${player.guildId}`);
+		this.logger.debug('audio.controller.sending_new', { guild_id: player.guildId });
 
 		// 1. Clear ongoing debounce timer
 		this.clearDebounceTimer(player.guildId);
@@ -70,9 +69,9 @@ export class PlayerNotifier {
 
 			player.messageId = message.id;
 			player.controller = message;
-			this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
+			this.logger.debug('audio.controller.created', { guild_id: player.guildId, message_id: message.id });
 		} catch (error) {
-			this.logger.error(`Failed to send new controller for guild ${player.guildId}:`, error);
+			this.logger.error('audio.controller.send_failed', { guild_id: player.guildId, error });
 		}
 	}
 
@@ -102,13 +101,13 @@ export class PlayerNotifier {
 
 				if (player.controller.editable) {
 					await player.controller.edit(payload);
-					this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
+					this.logger.trace('audio.controller.updated', { guild_id: player.guildId });
 				}
 			} catch (error: any) {
 				if (error.code === 10008) {
-					this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
+					this.logger.debug('audio.controller.update_unknown_message', { guild_id: player.guildId });
 				} else {
-					this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
+					this.logger.error('audio.controller.update_failed', { guild_id: player.guildId, error });
 				}
 			}
 		}, this.DEBOUNCE_MS);
@@ -140,7 +139,7 @@ export class PlayerNotifier {
 		if (controllerMessage?.deletable) {
 			await controllerMessage.delete().catch((error: any) => {
 				if (error.code !== 10008) {
-					this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
+					this.logger.warn('audio.controller.delete_failed', { guild_id: player.guildId, error });
 				}
 			});
 			return;
@@ -154,7 +153,7 @@ export class PlayerNotifier {
 				if (message?.deletable) {
 					await message.delete().catch((error: any) => {
 						if (error.code !== 10008) {
-							this.logger.warn(`Failed to delete controller message for guild ${player.guildId}: ${error.message}`);
+							this.logger.warn('audio.controller.delete_failed', { guild_id: player.guildId, error });
 						}
 					});
 				}
@@ -164,7 +163,7 @@ export class PlayerNotifier {
 
 	// Event handlers
 	public async onTrackStart(player: CustomPlayer): Promise<void> {
-		this.logger.debug(`Track started in guild: ${player.guildId}`);
+		this.logger.debug('audio.controller.track_started', { guild_id: player.guildId });
 
 		if (player.textChannelId && player.messageId) {
 			const channel = this.container.client.channels.cache.get(player.textChannelId);
@@ -181,7 +180,7 @@ export class PlayerNotifier {
 	}
 
 	public onPlayerUpdate(player: CustomPlayer): void {
-		this.logger.trace(`Player updated in guild: ${player.guildId}`);
+		this.logger.trace('audio.controller.player_updated', { guild_id: player.guildId });
 
 		// Ignore track loading
 		if (!player.queue.current && player.queue.tracks.length >= 0) return;
@@ -189,7 +188,7 @@ export class PlayerNotifier {
 	}
 
 	public async onPlayerDestroy(player: CustomPlayer): Promise<void> {
-		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
+		this.logger.debug('audio.controller.player_destroyed', { guild_id: player.guildId });
 		await this.deleteController(player);
 	}
 
@@ -199,7 +198,7 @@ export class PlayerNotifier {
 
 			return data;
 		} catch (error) {
-			this.logger.error(`Failed to get controller options for guild ${guildId}:`, error);
+			this.logger.error('audio.controller.options_failed', { guild_id: guildId, error });
 			return null;
 		}
 	}
