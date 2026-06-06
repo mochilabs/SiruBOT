@@ -29,13 +29,14 @@ export class PingCommand extends Command {
 
 		const replyTime = endTime - startTime;
 		const replyTimeInSeconds = (replyTime / 1000).toFixed(2);
-		const wsPingInSeconds = (this.container.client.ws.ping / 1000).toFixed(2);
+		const wsPing = this.container.client.ws.ping
+		const wsPingInSeconds = (wsPing / 1000).toFixed(2);
 
 		await interaction.editReply({
 			content: null,
 			embeds: [
 				{
-					description: `✌️ **${interaction.user.displayName}** 님의 명령어를 처리하는 데 \n**${replyTimeInSeconds}초**\`\`(${replyTime}ms)\`\` 가 걸렸어요, 봇과 디스코드간의 지연시간은 \n**${wsPingInSeconds}초**\`\`(${this.container.client.ws.ping}ms)\`\` 예요.`,
+					description: `✌️ **${interaction.user.displayName}** 님의 명령어를 처리하는 데 \n**${replyTimeInSeconds}초**\`\`(${replyTime.toFixed(2)}ms)\`\` 가 걸렸어요, 봇과 디스코드간의 지연시간은 \n**${wsPingInSeconds}초**\`\`(${wsPing.toFixed(2)}ms)\`\` 예요.`,
 					color: DEFAULT_COLOR
 				}
 			]
