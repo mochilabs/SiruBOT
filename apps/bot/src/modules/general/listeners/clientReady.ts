@@ -1,4 +1,4 @@
-import { version as frameworkVersion, Listener } from '@sapphire/framework';
+import { Events, version as frameworkVersion, Listener } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { envParseString } from '@skyra/env-utilities';
@@ -11,11 +11,18 @@ import { join } from 'path';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 import figlet from 'figlet';
 
-@ApplyOptions<Listener.Options>({ once: true })
+@ApplyOptions<Listener.Options>({ event: Events.ClientReady })
 export class ReadyEvent extends Listener {
 	private readonly style = isDev ? yellow : blue;
 
 	public override async run() {
+		// Disable self after first run instead of using `once: true`.
+		// `once: true` triggers Piece.unload() which races with the
+		// framework's CoreReady listener (same `clientReady` event) and
+		// can cause UNLOADED_PIECE when the piece is already removed
+		// from the store by the other listener's unload().
+		this.enabled = false;
+
 		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
 
 		this.startActivityInterval();
