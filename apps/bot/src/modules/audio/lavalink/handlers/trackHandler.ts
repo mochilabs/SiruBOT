@@ -4,6 +4,8 @@ import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { DEFAULT_COLOR } from '@sirubot/utils';
 
+const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
+
 // handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -18,6 +20,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	private async handleTrackStart(player: CustomPlayer, track: Track | null, _payload: TrackStartEvent) {
 		this.logger.info(`Track started: ${track?.info.title} by ${track?.info.author}`);
+		player.consecutiveErrors = 0;
 		if (track && !track.info.isStream) {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			// fire-and-forget
@@ -32,8 +35,22 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleTrackStuck(player: CustomPlayer, track: Track | null, _payload: TrackStuckEvent) {
-		this.logger.warn(`Track stuck: ${track?.info.title} by ${track?.info.author}`);
-		await this.sendNotification(player, `⚠️ **${track?.info.title ?? '알 수 없는 곡'}**이 응답하지 않아 건너뛰었어요.`);
+		player.consecutiveErrors++;
+		this.logger.warn(`Track stuck (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
+
+		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
+			await this.sendNotification(
+				player,
+			`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
+		);
+		player.setData('stopByCommand', true);
+		await player.stopPlaying();
+		await player.disconnect();
+		return;
+	}
+
+	await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요. (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
 		} else {
@@ -41,9 +58,23 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 	}
 
-	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
-		this.logger.error(`Track error: ${track?.info.title} by ${track?.info.author}`, payload.exception);
-		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
+	private async handleTrackStuck(player: CustomPlayer, track: Track | null, _payload: TrackStuckEvent) {
+		player.consecutiveErrors++;
+		this.logger.warn(`Track stuck (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
+
+		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
+			await this.sendNotification(
+				player,
+				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
+			);
+			player.setData('stopByCommand', true);
+			await player.stopPlaying();
+			await player.disconnect();
+			return;
+		}
+
+		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요. (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
 		} else {

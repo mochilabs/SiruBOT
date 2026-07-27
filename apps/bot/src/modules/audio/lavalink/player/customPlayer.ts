@@ -19,6 +19,7 @@ export class CustomPlayer extends Player {
 	public queuePage: number = 1;
 	public queueSelectedIndex: number | null = null;
 	public activeFilters: string[] = [];
+	public consecutiveErrors: number = 0;
 
 	constructor(options: PlayerOptions, LavalinkManager: LavalinkManager, dontEmitPlayerCreateEvent?: boolean) {
 		super(options, LavalinkManager, dontEmitPlayerCreateEvent);
