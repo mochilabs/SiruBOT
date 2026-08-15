@@ -24,7 +24,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 		if (track && !track.info.isStream) {
 			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
 			// fire-and-forget
-			Promise.allSettled([this.container.trackService.increasePlays(track), this.container.trackService.addHistory(player.guildId, track)]);
+			this.container.trackService
+				.increasePlays(track)
+				.then(() => this.container.trackService.addHistory(player.guildId, track))
+				.catch((error) => this.logger.error(`Failed to record track history: ${error}`));
 		}
 
 		await this.container.playerNotifier.onTrackStart(player);
@@ -34,7 +37,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author}`);
 	}
 
-	private async handleTrackStuck(player: CustomPlayer, track: Track | null, _payload: TrackStuckEvent) {
+	private async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
 		player.consecutiveErrors++;
 		this.logger.warn(`Track stuck (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
 
@@ -58,7 +61,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 	}
 
-	private async handleTrackError(player: CustomPlayer, track: Track | null, _payload: TrackExceptionEvent) {
+	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackExceptionEvent) {
 		player.consecutiveErrors++;
 		this.logger.warn(`Track error (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
 
