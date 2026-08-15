@@ -53,7 +53,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 			return;
 		}
 
-		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요. (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+		await this.sendNotification(
+			player,
+			`❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요. (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`
+		);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
 		} else {
@@ -77,7 +80,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 			return;
 		}
 
-		await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요. (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+		await this.sendNotification(
+			player,
+			`❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요. (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`
+		);
 		if (player.queue.tracks.length > 0) {
 			await player.skip();
 		} else {
