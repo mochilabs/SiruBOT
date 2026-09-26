@@ -35,36 +35,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect changed apps
         id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            bot:
-              - 'apps/bot/**'
-              - 'packages/**'
-              - 'scripts/**'
-              - 'Dockerfile'
-              - 'package.json'
-              - 'yarn.lock'
-              - 'turbo.json'
-            dashboard:
-              - 'apps/dashboard/**'
-              - 'packages/**'
-              - 'scripts/**'
-              - 'Dockerfile'
-              - 'package.json'
-              - 'yarn.lock'
-              - 'turbo.json'
-            shardmanager:
-              - 'apps/shardmanager/**'
-              - 'packages/**'
-              - 'scripts/**'
-              - 'Dockerfile'
-              - 'package.json'
-              - 'yarn.lock'
-              - 'turbo.json'
+        run: |
+          BASE="${{ github.event.before }}"
+          HEAD="${{ github.sha }}"
+          if [[ "$BASE" == 0000000000000000000000000000000000000000* ]]; then
+            echo "First push to branch, building all apps"
+            echo "bot=true" >> "$GITHUB_OUTPUT"
+            echo "dashboard=true" >> "$GITHUB_OUTPUT"
+            echo "shardmanager=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          FILES=$(git diff --name-only "$BASE" "$HEAD")
+          echo "Changed files:"
+          echo "$FILES"
+          check() {
+            echo "$FILES" | grep -qE "$1"
+          }
+          SHARED='packages/|scripts/|Dockerfile|package\.json|yarn\.lock|turbo\.json'
+          if check "^(apps/bot/|$SHARED)"; then BOT=true; else BOT=false; fi
+          if check "^(apps/dashboard/|$SHARED)"; then DASHBOARD=true; else DASHBOARD=false; fi
+          if check "^(apps/shardmanager/|$SHARED)"; then SHARD=true; else SHARD=false; fi
+          echo "bot=$BOT" >> "$GITHUB_OUTPUT"
+          echo "dashboard=$DASHBOARD" >> "$GITHUB_OUTPUT"
+          echo "shardmanager=$SHARD" >> "$GITHUB_OUTPUT"
 
   build-beta:
     needs: changes
