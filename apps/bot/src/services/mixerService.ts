@@ -4,6 +4,8 @@ import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 const MIXER_FILTER_KEY = 'mixer';
 
+// beta 워크플로 스모크 테스트용 주석 (동작 확인 후 제거 예정)
+
 export interface MixerStateResponse {
 	guildId: string;
 	hasNext: boolean;
