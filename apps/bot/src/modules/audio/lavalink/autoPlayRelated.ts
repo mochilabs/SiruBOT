@@ -1,6 +1,4 @@
 import { container } from '@sapphire/framework';
-import { DEFAULT_COLOR } from '@sirubot/utils';
-import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 
 // ── Similarity Threshold Settings ──
@@ -180,25 +178,9 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 				container.logger.error(`Error fetching related tracks: ${error}`);
 			}
 
-			// If no recommended track is found: end playback + notify
-			await sendEndNotification(player, '📭 추천 곡을 찾지 못해 재생을 종료했어요.');
+			// 추천 곡을 찾지 못하면 조용히 종료한다.
+			// 종료 안내는 queueEnd 핸들러(handleQueueEnd)가 한 번만 보낸다. (2연타 방지)
+			return;
 		}
 	}
 };
-
-async function sendEndNotification(player: Player, message: string) {
-	if (!player.textChannelId) return;
-	try {
-		const channel = await container.client.channels.fetch(player.textChannelId);
-		if (channel?.isSendable()) {
-			await channel.send({
-				components: [
-					new ContainerBuilder().setAccentColor(DEFAULT_COLOR).addTextDisplayComponents((textDisplay) => textDisplay.setContent(message))
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		}
-	} catch (error) {
-		container.logger.error(`Failed to send autoplay notification: ${error}`);
-	}
-}

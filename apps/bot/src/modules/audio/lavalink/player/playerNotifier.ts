@@ -30,10 +30,6 @@ export class PlayerNotifier {
 		// 1. Clear ongoing debounce timer
 		this.clearDebounceTimer(player.guildId);
 
-		// 2. Delete existing controller message
-		await this.deleteController(player);
-
-		// 3. Build and send new controller message
 		try {
 			// when interaction is noen and player has not textChannelId, throw error
 			if (!interaction && !player.textChannelId) throw new Error(`Player has not textChannelId ${player.guildId}`);
@@ -42,10 +38,13 @@ export class PlayerNotifier {
 			// Check if options null and guild not using audio controller, and this method called automatically, ignore it
 			if (!options || (!options.enableController && !interaction)) return;
 
+			// 2. Delete existing controller message (only when a new one will actually be sent)
+			await this.deleteController(player);
+
+			// 3. Build and send new controller message
 			const components = view.controllerView({
 				player,
-				volume: options.volume,
-				page: player.queuePage
+				volume: options.volume
 			});
 
 			let message;
@@ -90,8 +89,7 @@ export class PlayerNotifier {
 
 				const components = view.controllerView({
 					player,
-					volume: options.volume,
-					page: player.queuePage
+					volume: options.volume
 				});
 
 				const payload = {
@@ -183,8 +181,8 @@ export class PlayerNotifier {
 	public onPlayerUpdate(player: CustomPlayer): void {
 		this.logger.trace(`Player updated in guild: ${player.guildId}`);
 
-		// Ignore track loading
-		if (!player.queue.current && player.queue.tracks.length >= 0) return;
+		// Ignore when nothing is playing (e.g. track loading / idle)
+		if (!player.queue.current) return;
 		this.updateController(player);
 	}
 

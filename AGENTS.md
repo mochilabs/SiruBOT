@@ -1,148 +1,38 @@
-# SiruBOT (시루봇) — Project Agent Instructions
+# SiruBOT — Agent Instructions
 
-## Project Overview
+Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
 
-SiruBOT is a production-grade Discord music bot for Korean-speaking communities, built as a TypeScript monorepo with Turborepo.
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Bot Framework | `@sapphire/framework` v5 + `discord.js` v14 |
-| Music/Audio | `lavalink-client` v2 + Lavalink server |
-| Database | PostgreSQL via `@prisma/client` v7 + `@prisma/adapter-pg` |
-| Cache/Queues | `@redis/client` v5 |
-| Dashboard | Next.js 16 (App Router) + React 19 + Tailwind CSS 4 |
-| Shard Manager | Fastify v5 + WebSocket |
-| Validation | `zod` v4 |
-| Logging | `tslog` |
-| Monitoring | `@sentry/node` + `@sentry/profiling-node` |
-| Build | `tsup` (SWC) + Turborepo |
-| Package Manager | Yarn v4 (Corepack, node-modules linker) |
-
-## Monorepo Structure
-
-```
-apps/
-  bot/           — Sapphire Discord bot (music + general commands)
-  dashboard/     — Next.js 16 web dashboard
-  shardmanager/  — Fastify WebSocket shard distributor
-packages/
-  prisma/        — Prisma schema + client
-  shardclient/   — WebSocket client for shard communication
-  utils/         — Shared utilities (constants, formatting, embeds)
-```
-
-## Code Conventions
-
-### TypeScript
-- Strict mode enabled (extends `@sapphire/ts-config` with extra-strict + decorators)
-- ESM modules (`"type": "module"`)
-- Node.js v22+
-- Use `.ts` extension in imports within the bot app
-- Use `@sapphire/decorators` `@ApplyOptions` for configuration
-
-### Commands
-- File: `apps/bot/src/modules/<module>/commands/<name>.ts`
-- Class: `NameCommand extends Command`
-- Use `registerApplicationCommands` for slash command registration
-- Localize with `ko` (primary) and `en-US` (fallback)
-- Always `deferReply()` before async operations
-- Throw `UserError` for user-facing errors
-
-### Preconditions
-- File: `apps/bot/src/modules/<module>/preconditions/<Name>.ts`
-- Extend `AllFlowsPrecondition`
-- Implement `chatInputRun`, `contextMenuRun`, `messageRun`
-- Return `this.ok()` or `this.error({ message, context: { ephemeral } })`
-
-### Listeners
-- File: `apps/bot/src/modules/<module>/listeners/<name>.ts`
-- Extend `Listener` with `@ApplyOptions<Listener.Options>({ event: Events.X })`
-
-### Interaction Handlers
-- File: `apps/bot/src/modules/<module>/interaction-handlers/<name>.ts`
-- Extend `InteractionHandler` with `InteractionHandlerTypes.Button` or `.SelectMenu`
-- Parse custom IDs in `parse()`, handle in `run()`
-
-### Services
-- `apps/bot/src/services/` — Business logic layer
-- Access via `this.container.<serviceName>`
-- Services: `audioService`, `guildService`, `trackService`, `playlistService`
-
-### Korean Language
-- All user-facing strings are in Korean
-- Command descriptions, error messages, embed text — all Korean
-- Use `setNameLocalizations({ ko: '...' })` and `setDescriptionLocalizations({ ko: '...' })`
-
-### Components
-- Use Discord Components V2: `MessageFlags.IsComponentsV2`
-- Build with `ContainerBuilder`, `TextDisplayBuilder`
-- Use `DEFAULT_COLOR` from `@sirubot/utils` for embed colors
-
-### Error Handling
-- User errors: throw `UserError` with `identifier`, `message`, `context: { ephemeral: true }`
-- Unexpected errors: caught by framework, reported to Sentry
-- Unhandled rejections: caught in `environment.ts`, sent to Sentry
-
-### Database
-- Schema: `packages/prisma/src/schema.prisma`
-- Models: Guild, Track, User, GuildTrackHistory, Playlist, PlaylistTrack
-- Access: `this.container.db` (PrismaClient instance)
-- Generate client: `yarn prisma generate` (in packages/prisma)
-
-### Redis
-- Session persistence for Lavalink nodes
-- Queue storage via `QueueStoreManager`
-- Access: `this.container.redisStore`
-
-### Lavalink
-- Manager: `this.container.audio` (LavalinkManager instance)
-- Custom player class: `apps/bot/src/modules/audio/lavalink/player/customPlayer.ts`
-- Redis store: `apps/bot/src/modules/audio/lavalink/redisStore.ts`
-- Auto-play: `apps/bot/src/modules/audio/lavalink/autoPlayRelated.ts`
-
-## Build & Dev
+## Commands
 
 ```bash
-yarn dev          # Run all apps in dev mode (Turborepo)
-yarn build        # Build all apps
-yarn lint         # Prettier check
-yarn lint:fix     # Prettier write
-yarn typecheck    # TypeScript type check (per app)
+yarn install                          # Corepack Yarn 4, node-modules linker, Node 22+
+yarn generate                         # REQUIRED before typecheck/build (Prisma client)
+yarn workspace @sirubot/prisma migrate:dev
+yarn dev                              # all apps; single: turbo dev --filter=@sirubot/bot
+yarn lint / yarn lint:fix             # turbo fan-out; pre-push hook runs lint:fix + typecheck
+yarn typecheck                        # turbo; dependsOn ^generate — don't run bare tsc first
 ```
 
-### Per-app commands (from apps/bot/):
-```bash
-yarn lint         # prettier --check "src/**/*.ts"
-yarn lint:fix     # prettier --write "src/**/*.ts"
-yarn typecheck    # tsc --noEmit
-yarn build        # tsup
-yarn watch        # tsup --watch
-```
+- Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
+- Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
+- CI (`lint.yml`) only runs `yarn install --immutable` + `yarn lint`. No test framework; `yarn test` is a stub.
+- Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
+- Turbo `build` depends on `^lint:fix ^typecheck ^generate ^build` — building one app rebuilds deps.
 
-## Important Files
+## Bot conventions (see skills first)
 
-- `apps/bot/src/core/botApplication.ts` — Bot client class, service/DB/Redis/audio setup
-- `apps/bot/src/core/setup.ts` — Plugin registration, command registry config
-- `apps/bot/src/core/environment.ts` — Env loading, Sentry init, error handlers
-- `apps/bot/src/core/logger.ts` — tslog configuration with sub-loggers
-- `packages/prisma/src/schema.prisma` — Database schema
-- `turbo.json` — Turborepo task pipeline
-- `Dockerfile` — Multi-stage build (bot, dashboard, shardmanager)
-- `docker/docker-stack.yml` — Production Docker Swarm stack
-- `docker/docker-stack-infra.yml` — Infrastructure stack (Redis + PostgreSQL)
+- Load the matching skill before writing bot code: `sapphire-command`, `sapphire-precondition` (in `.opencode/skills/`). Don't duplicate their templates here.
+- Modules are only `audio` and `general` — registered via `setupStore()` in `apps/bot/src/core/bootstrap.ts`. Place files under `apps/bot/src/modules/<audio|general>/{commands,preconditions,listeners,interaction-handlers}/`.
+- TS: `allowImportingTsExtensions` — **always use `.ts` extension in bot relative imports** (e.g. `./logger.ts`). ESM (`type: module`), strict + decorators.
+- Slash commands: `registerApplicationCommands` + `GuildInstall` integration, `ko` primary / `en-US` fallback localizations, `fullCategory: ['음악'|'일반'|'개발']`, `deferReply()` before async work, throw `UserError({ identifier, message, context: { ephemeral: true } })` for user errors. All user-facing strings in Korean.
+- Preconditions referenced by string name in `preconditions: [...]`; common audio set: `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel, MemberListenable, ClientVoiceConnectable, ClientVoiceSpeakable`.
+- Command registration behavior: `REGISTER_COMMANDS=true` → `Overwrite`, else `LogToConsole` (`core/setup.ts`). Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]` (guild defaults to `GUILD_ID`/`DEV_GUILD_IDS` env).
+- Container services (`core/botApplication.ts`): `container.db` (Prisma), `container.redisStore`, `container.audio` (LavalinkManager), `container.{audioService,guildService,trackService,playlistService}`, `container.lavalinkHandler/playerNotifier/shardClient`.
+- UI: Discord Components V2 (`MessageFlags.IsComponentsV2`, `ContainerBuilder`/`TextDisplayBuilder`), color via `DEFAULT_COLOR` from `@sirubot/utils`.
 
-## Security
+## Env / runtime gotchas
 
-- Never commit bot tokens, database URLs, Redis passwords, or Sentry DSN
-- Environment variables loaded via `@skyra/env-utilities` from `.env`
-- `.env` is gitignored
-- Owner-only commands use `OWNERS` env array
-- Sentry captures all unhandled errors
-
-## Testing
-
-- No test framework currently configured
-- CI runs `prettier --check` for linting
-- Type checking via `tsc --noEmit`
+- Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets — a `secret-blocker` plugin rewrites offending `bash` commands.
+- `LAVALINK_HOSTS` format (parsed in `bootstrap.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
+- Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → remove audio listeners → redis disconnect → db disconnect.
+- Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).

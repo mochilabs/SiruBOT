@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import {
 	ApplicationIntegrationType,
 	ChatInputCommandInteraction,
@@ -61,10 +61,22 @@ export class SkipCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		if (!interaction.inCachedGuild()) return;
+		if (!interaction.inCachedGuild()) {
+			throw new UserError({
+				identifier: 'skip_not_in_guild',
+				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		const context = await this.buildSkipContext(interaction);
-		if (!context) return;
+		if (!context) {
+			throw new UserError({
+				identifier: 'skip_no_player',
+				message: '❌ 재생 중인 곡이 없어요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		const force = interaction.options.getBoolean('force') ?? false;
 		const to = interaction.options.getInteger('to') ?? 0;

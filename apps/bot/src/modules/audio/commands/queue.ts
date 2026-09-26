@@ -142,7 +142,8 @@ export class QueueCommand extends Command {
 		if (!player || player.queue.tracks.length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
-				message: '📭 대기열이 비어있어요.'
+				message: '📭 대기열이 비어있어요.',
+				context: { ephemeral: true }
 			});
 		}
 
@@ -158,7 +159,8 @@ export class QueueCommand extends Command {
 		if (!player || player.queue.tracks.length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
-				message: '📭 대기열이 비어있어요.'
+				message: '📭 대기열이 비어있어요.',
+				context: { ephemeral: true }
 			});
 		}
 
@@ -179,7 +181,8 @@ export class QueueCommand extends Command {
 		if (position > player.queue.tracks.length) {
 			throw new UserError({
 				identifier: 'queue_invalid_position',
-				message: '❌ 해당 번호의 곡이 대기열에 없어요.'
+				message: '❌ 해당 번호의 곡이 대기열에 없어요.',
+				context: { ephemeral: true }
 			});
 		}
 
@@ -189,7 +192,8 @@ export class QueueCommand extends Command {
 		if (!removedTrack) {
 			throw new UserError({
 				identifier: 'queue_track_not_found',
-				message: '❌ 해당 곡을 찾을 수 없어요.'
+				message: '❌ 해당 곡을 찾을 수 없어요.',
+				context: { ephemeral: true }
 			});
 		}
 		await interaction.reply({
@@ -209,14 +213,16 @@ export class QueueCommand extends Command {
 		if (from > queueLength || to > queueLength) {
 			throw new UserError({
 				identifier: 'queue_invalid_position',
-				message: '❌ 해당 번호의 곡이 대기열에 없어요.'
+				message: '❌ 해당 번호의 곡이 대기열에 없어요.',
+				context: { ephemeral: true }
 			});
 		}
 
 		if (from === to) {
 			throw new UserError({
 				identifier: 'queue_same_position',
-				message: '❌ 같은 위치로는 이동할 수 없어요.'
+				message: '❌ 같은 위치로는 이동할 수 없어요.',
+				context: { ephemeral: true }
 			});
 		}
 
@@ -225,7 +231,8 @@ export class QueueCommand extends Command {
 		if (!track) {
 			throw new UserError({
 				identifier: 'queue_track_not_found',
-				message: '❌ 해당 곡을 찾을 수 없어요.'
+				message: '❌ 해당 곡을 찾을 수 없어요.',
+				context: { ephemeral: true }
 			});
 		}
 		await player.queue.splice(to - 1, 0, track);

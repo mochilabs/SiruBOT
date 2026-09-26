@@ -1,10 +1,8 @@
 import {
-	chunkArray,
 	createContainer,
 	emojiProgressBar,
 	formatTime,
 	formatTimeToKorean,
-	formatTrack,
 	isDev,
 	versionInfo,
 	removeEmojis,
@@ -19,7 +17,6 @@ import {
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
-	StringSelectMenuBuilder,
 	TextDisplayBuilder,
 	ThumbnailBuilder
 } from 'discord.js';
@@ -37,7 +34,7 @@ const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
-export function controllerView({ player, volume, page: requestedPage }: controllerViewProps) {
+export function controllerView({ player, volume }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
@@ -76,8 +73,6 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 		[prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
 
-	const separator = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large);
-
 	if (current?.info.artworkUrl) {
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
 		thumbnail.setURL(current?.info.artworkUrl ?? '');
@@ -89,74 +84,23 @@ export function controllerView({ player, volume, page: requestedPage }: controll
 
 	containerComponent.addActionRowComponents(controlActionRow);
 
-	// 큐 섹션
+	// 큐 섹션: 인라인 목록 대신 '대기열 보기' 버튼 하나로 축소.
+	// 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
 	if (player.queue.tracks.length > 0) {
-		containerComponent.addSeparatorComponents(separator);
-		const QUEUE_PAGE_CHUNK_SIZE = 5;
-		const queueChunks = chunkArray(player.queue.tracks, QUEUE_PAGE_CHUNK_SIZE);
-		const page = Math.max(1, Math.min(requestedPage ?? 1, queueChunks.length));
+		const queueCount = player.queue.tracks.length;
+		const remaining = formatTimeToKorean(player.queue.utils.totalDuration() / 1000);
 
-		let pageContent: string = queueChunks[page - 1]
-			.map((track, index) => {
-				// index = 1 ~ 10
-				// page = 1 ~ end
-				return `\`\`#${index + 1 + (page - 1) * QUEUE_PAGE_CHUNK_SIZE}\`\` - ${formatTrack(track as Track, {
-					showLength: true,
-					withMarkdownURL: true,
-					cleanTitle: true
-				})}`;
-			})
-			.join('\n');
+		const queueShowButton = new ButtonBuilder()
+			.setCustomId(wrapPrefix('queue:show'))
+			.setLabel(`대기열 ${queueCount}곡 보기`)
+			.setEmoji('📄')
+			.setStyle(ButtonStyle.Secondary);
 
-		const queueTextDisplay = new TextDisplayBuilder().setContent(
-			`### 📄 대기열 목록\n${pageContent}\n-# 페이지 ${page}/${queueChunks.length} | ${formatTimeToKorean(player.queue.utils.totalDuration() / 1000)} 남음`
-		);
-
-		const selectMenu = new StringSelectMenuBuilder().setCustomId(wrapPrefix('queue:select')).setOptions(
-			queueChunks[page - 1].map((track, index) => {
-				const label = formatTrack(track as Track, {
-					showLength: true,
-					withMarkdownURL: false,
-					titleLength: {
-						maxLength: 80
-					}
-				});
-
-				const trackIndex = index + (page - 1) * QUEUE_PAGE_CHUNK_SIZE;
-				const isSelected = player.queueSelectedIndex !== null ? player.queueSelectedIndex === trackIndex : index === 0;
-
-				return {
-					label: `#${trackIndex + 1} ${label}`,
-					value: (trackIndex + 1).toString(),
-					default: isSelected
-				};
-			})
-		);
-
-		const removeButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:remove')).setEmoji('🗑️').setStyle(ButtonStyle.Danger);
-
-		const queuePrev = new ButtonBuilder()
-			.setCustomId(wrapPrefix('queue:prev'))
-			.setEmoji('◀️')
-			.setStyle(ButtonStyle.Secondary)
-			.setDisabled(page === 1);
-
-		const queueNext = new ButtonBuilder()
-			.setCustomId(wrapPrefix('queue:next'))
-			.setEmoji('▶️')
-			.setStyle(ButtonStyle.Secondary)
-			.setDisabled(page === queueChunks.length);
-
-		const jumpTo = new ButtonBuilder().setCustomId(wrapPrefix('queue:jumpTo')).setEmoji('↪️').setStyle(ButtonStyle.Secondary);
-
-		const trackSelectActionRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
-
-		const queueActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents([queuePrev, queueNext, jumpTo, removeButton]);
+		const queueHint = new TextDisplayBuilder().setContent(`-# 대기열 ${queueCount}곡 | ${remaining} 남음`);
 
 		containerComponent
-			.addTextDisplayComponents(queueTextDisplay)
-			.addActionRowComponents(trackSelectActionRow)
-			.addActionRowComponents(queueActionRow);
+			.addTextDisplayComponents(queueHint)
+			.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(queueShowButton));
 	}
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);

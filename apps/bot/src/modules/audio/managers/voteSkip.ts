@@ -47,7 +47,7 @@ export class VoteSkip {
 		if (!this.options.interaction.channel) return;
 
 		const collector = this.options.interaction.channel.createMessageComponentCollector({
-			filter: (i) => i.customId === 'skip_vote',
+			filter: (i) => i.customId === 'skip_vote' && this.options.voiceChannelMembers.has(i.user.id),
 			componentType: ComponentType.Button,
 			time: 30_000
 		});
@@ -67,8 +67,6 @@ export class VoteSkip {
 	}
 
 	private async handleVoteButton(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
-		collector.resetTimer();
-
 		if (!this.options.player.connected) return;
 
 		if (this.hasTrackChanged()) {

@@ -137,6 +137,7 @@ export class AudioService {
 		}
 
 		if (playlist.selectedTrack) {
+			const wasIdle = player.queue.current === null && !player.playing;
 			await player.queue.add(playlist.selectedTrack);
 
 			const remainingTracks = searchRes.tracks.filter((track) => track.info.identifier !== playlist.selectedTrack!.info.identifier);
@@ -144,6 +145,9 @@ export class AudioService {
 
 			if (remainingTracksCount > 0) {
 				await this.promptRemainingPlaylist(interaction, player, playlist, playlist.selectedTrack, remainingTracks as Track[]);
+			} else if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
+				// 단일곡 + idle → 컨트롤러만 남기고 질문/trackAdded 생략 (P2와 동일)
+				await interaction.deleteReply().catch(() => null);
 			} else {
 				await interaction.editReply({
 					flags: MessageFlags.IsComponentsV2,
@@ -250,14 +254,24 @@ export class AudioService {
 	}
 
 	/**
-	 * Handles adding a single track or search result to the queue
+	 * Handles adding a single track or search result to the queue.
+	 * 플레이어가 idle 상태(곧바로 재생 시작 → 컨트롤러가 뒤따라 옴)이고
+	 * 컨트롤러가 켜져 있으면 trackAdded 메시지를 생략하고 컨트롤러만 남긴다.
+	 * (defer된 interaction은 deleteReply로 정리 → '/재생 추가 + 컨트롤러' 2연타 방지)
 	 */
 	public async handleTrackPlay(
 		interaction: ChatInputCommandInteraction<'cached'>,
 		player: Player,
 		searchRes: SearchResult | UnresolvedSearchResult
 	): Promise<void> {
+		const wasIdle = player.queue.current === null && !player.playing;
 		await player.queue.add(searchRes.tracks[0]);
+
+		if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
+			await interaction.deleteReply().catch(() => null);
+			return;
+		}
+
 		await interaction.editReply({
 			flags: MessageFlags.IsComponentsV2,
 			components: [
@@ -278,6 +292,15 @@ export class AudioService {
 	public async ensurePlayback(player: Player): Promise<void> {
 		if (!player.playing) {
 			await player.play(player.paused ? { paused: false } : undefined);
+		}
+	}
+
+	private async isControllerEnabled(guildId: string): Promise<boolean> {
+		try {
+			const guild = await container.guildService.getGuild(guildId);
+			return guild?.enableController !== false;
+		} catch {
+			return false;
 		}
 	}
 
@@ -418,7 +441,8 @@ export class AudioService {
 		if (!hasPermission) {
 			throw new UserError({
 				identifier: 'forceskip_no_permission',
-				message: '❌ 곡을 강제로 건너뛰려면 DJ 역할이나 관리자 권한이 필요해요.'
+				message: '❌ 곡을 강제로 건너뛰려면 DJ 역할이나 관리자 권한이 필요해요.',
+				context: { ephemeral: true }
 			});
 		}
 
@@ -445,7 +469,8 @@ export class AudioService {
 		if (to > player.queue.tracks.length) {
 			throw new UserError({
 				identifier: 'skipto_invalid_index',
-				message: '🎵 건너뛸 곡이 대기열에 존재하지 않아요.'
+				message: '🎵 건너뛸 곡이 대기열에 존재하지 않아요.',
+				context: { ephemeral: true }
 			});
 		}
 

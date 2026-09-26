@@ -1,6 +1,7 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { controllerView } from '../view/controller.ts';
+import { queueEmpty, queueList } from '../view/queue.ts';
 import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -100,35 +101,78 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private buildControllerPayload(player: CustomPlayer) {
 		return {
-			components: [controllerView({ player, volume: player.volume, page: player.queuePage })],
+			components: [controllerView({ player, volume: player.volume })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		} as const;
 	}
 
+	private async safeUpdate(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<boolean> {
+		try {
+			await interaction.update(this.buildControllerPayload(player));
+			return true;
+		} catch (error: any) {
+			// 컨트롤러가 삭제됐거나 만료된 경우: 조용히 무시하고 ephemeral 안내로 폴백
+			if (error.code === 10008 || error.code === 10062 || error.code === 40060) return false;
+			throw error;
+		}
+	}
+
 	private async handlePause(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		await player.pause();
-		await interaction.update(this.buildControllerPayload(player));
+		if (!(await this.safeUpdate(interaction, player))) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView('❌ 컨트롤러가 만료되었어요. `/현재곡`으로 새로 불러와주세요.')]
+				})
+				.catch(() => null);
+		}
 	}
 
 	private async handleResume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		await player.resume();
-		await interaction.update(this.buildControllerPayload(player));
+		if (!(await this.safeUpdate(interaction, player))) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView('❌ 컨트롤러가 만료되었어요. `/현재곡`으로 새로 불러와주세요.')]
+				})
+				.catch(() => null);
+		}
 	}
 
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
 		await player.setRepeatMode(toSet);
-		await interaction.update(this.buildControllerPayload(player));
+		if (!(await this.safeUpdate(interaction, player))) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView('❌ 컨트롤러가 만료되었어요. `/현재곡`으로 새로 불러와주세요.')]
+				})
+				.catch(() => null);
+		}
 	}
 
 	private async handleStop(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		await player.stopPlaying();
-		await player.disconnect();
-		await interaction.reply({
-			components: [stop()],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		player.setData('stopByCommand', true);
+		await this.container.playerNotifier.deleteController(player).catch(() => null);
+		try {
+			await interaction.update({
+				components: [stop()],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+		} catch {
+			await interaction
+				.reply({
+					components: [stop()],
+					flags: [MessageFlags.IsComponentsV2]
+				})
+				.catch(() => null);
+		}
+		await player.stopPlaying().catch(() => null);
+		await player.disconnect().catch(() => null);
 	}
 
 	private async handlePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -148,7 +192,8 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		player.queue.previous.pop();
 
 		player.queuePage = 1;
-		await interaction.update(this.buildControllerPayload(player));
+		// 곧 trackStart가 새 컨트롤러를 보내므로 defer만 하고 edit는 생략 (edit→삭제 churn 방지)
+		await interaction.deferUpdate().catch(() => null);
 	}
 
 	private async handleNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -160,13 +205,16 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
-		await player.skip();
+		await interaction.deferUpdate().catch(() => null);
 		player.queuePage = 1;
-		await interaction.update(this.buildControllerPayload(player));
+		await player.skip();
 	}
 
 	private async handleQueue(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
 		switch (subcommand) {
+			case 'show':
+				await this.handleQueueShow(interaction, player);
+				break;
 			case 'prev':
 				await this.handleQueuePrev(interaction, player);
 				break;
@@ -188,6 +236,27 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 	}
 
+	private async handleQueueShow(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
+		if (player.queue.tracks.length === 0) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [queueEmpty()]
+				})
+				.catch(() => null);
+			return;
+		}
+
+		const QUEUE_PAGE_SIZE = 10;
+		const totalPages = Math.max(1, Math.ceil(player.queue.tracks.length / QUEUE_PAGE_SIZE));
+		await interaction
+			.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [queueList({ player, page: 1, totalPages, authorId: interaction.user.id })]
+			})
+			.catch(() => null);
+	}
+
 	private async handleQueuePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		const currentPage = player.queuePage;
 		if (currentPage <= 1) {
@@ -199,7 +268,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 		player.queuePage = currentPage - 1;
 		player.queueSelectedIndex = null;
-		await interaction.update(this.buildControllerPayload(player));
+		await this.safeUpdate(interaction, player);
 	}
 
 	private async handleQueueNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -214,7 +283,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 		player.queuePage = currentPage + 1;
 		player.queueSelectedIndex = null;
-		await interaction.update(this.buildControllerPayload(player));
+		await this.safeUpdate(interaction, player);
 	}
 
 	private async handleQueueRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -240,7 +309,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			player.queuePage = newTotalPages;
 		}
 
-		await interaction.update(this.buildControllerPayload(player));
+		await this.safeUpdate(interaction, player);
 	}
 
 	private async handleQueueJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -258,9 +327,10 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		// Skip to the specified position (remove tracks before it and play it)
-		await player.skip(trackIndex + 1);
+		// 곧 trackStart가 새 컨트롤러를 보내므로 defer만 하고 edit는 생략
+		await interaction.deferUpdate().catch(() => null);
 		player.queuePage = 1;
 		player.queueSelectedIndex = null;
-		await interaction.update(this.buildControllerPayload(player));
+		await player.skip(trackIndex + 1);
 	}
 }

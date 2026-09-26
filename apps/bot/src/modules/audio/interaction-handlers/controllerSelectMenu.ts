@@ -55,7 +55,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 		if (isNaN(trackIndex) || trackIndex < 0 || trackIndex >= player.queue.tracks.length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('❌ 유효하지 않은 트랙 번호에요.')]
+				components: [errorView('❌ 해당 번호의 곡이 대기열에 없어요.')]
 			});
 			return;
 		}
@@ -64,7 +64,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 
 		// Update the controller view to reflect the selection (no action taken on select, just UI update)
 		await interaction.update({
-			components: [controllerView({ player, volume: player.volume, page: player.queuePage })],
+			components: [controllerView({ player, volume: player.volume })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});
