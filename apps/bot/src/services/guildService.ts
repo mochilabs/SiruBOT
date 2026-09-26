@@ -118,4 +118,34 @@ export class GuildService {
 		const guild = await this.upsertField(guildId, 'enableController', enableController);
 		return guild.enableController;
 	}
+
+	public async getMixerSettings(guildId: string): Promise<MixerSettings> {
+		const guild = await this.getGuild(guildId);
+		return {
+			gaplessEnabled: guild.gaplessEnabled,
+			crossfadeEnabled: guild.crossfadeEnabled,
+			crossfadeMs: guild.crossfadeMs
+		};
+	}
+
+	public async setGapless(guildId: string, enabled: boolean) {
+		const guild = await this.upsertField(guildId, 'gaplessEnabled', enabled);
+		return guild.gaplessEnabled;
+	}
+
+	public async setCrossfade(guildId: string, enabled: boolean, durationMs?: number) {
+		const clamped = durationMs === undefined ? undefined : Math.round(Math.min(30000, Math.max(500, durationMs)));
+		const guild = await this.getGuild(guildId);
+		const data: Prisma.GuildUpdateInput = { crossfadeEnabled: enabled };
+		if (clamped !== undefined) data.crossfadeMs = clamped;
+		const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+		this.updateCache(updated);
+		return { crossfadeEnabled: updated.crossfadeEnabled, crossfadeMs: updated.crossfadeMs };
+	}
+}
+
+export interface MixerSettings {
+	gaplessEnabled: boolean;
+	crossfadeEnabled: boolean;
+	crossfadeMs: number;
 }

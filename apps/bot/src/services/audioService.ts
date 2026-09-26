@@ -365,7 +365,7 @@ export class AudioService {
 		const { currentTrack, interaction, player } = context;
 
 		if (this.isTrackRequestedByBot(currentTrack)) {
-			await player.skip(0, false);
+			await container.mixerService.skip(player, 0);
 			await interaction.reply({
 				components: [skipView.trackRelatedSkipped({ track: currentTrack })],
 				flags: [MessageFlags.IsComponentsV2]
@@ -385,7 +385,7 @@ export class AudioService {
 	private async handleUserRequestedTrack(context: SkipContext): Promise<void> {
 		const { player, currentTrack, interaction } = context;
 
-		await player.skip();
+		await container.mixerService.skip(player);
 		await interaction.reply({
 			components: [
 				skipView.trackSkipped({
@@ -400,7 +400,7 @@ export class AudioService {
 	private async handleRelatedTrackSkip(context: SkipContext): Promise<void> {
 		const { player, currentTrack, interaction } = context;
 
-		await player.skip();
+		await container.mixerService.skip(player);
 		await interaction.reply({
 			components: [skipView.trackRelatedSkipped({ track: currentTrack })],
 			flags: [MessageFlags.IsComponentsV2]
@@ -410,7 +410,7 @@ export class AudioService {
 	private async handleAloneSkip(context: SkipContext): Promise<void> {
 		const { player, currentTrack, interaction } = context;
 
-		await player.skip();
+		await container.mixerService.skip(player);
 		await interaction.reply({
 			components: [
 				skipView.trackSkipped({
@@ -452,7 +452,7 @@ export class AudioService {
 	private async handleForceSkip(context: SkipContext): Promise<void> {
 		const { player, currentTrack, interaction } = context;
 
-		await player.skip();
+		await container.mixerService.skip(player);
 		await interaction.reply({
 			components: [
 				skipView.trackSkipped({
@@ -476,7 +476,7 @@ export class AudioService {
 
 		const track = player.queue.tracks[to - 1] as Track;
 
-		await player.skip(to);
+		await container.mixerService.skip(player, to);
 		await interaction.reply({
 			components: [
 				skipView.trackSkippedTo({

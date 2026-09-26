@@ -8,6 +8,7 @@ import {
 	MessageFlags
 } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
+import { container } from '@sapphire/framework';
 import * as view from '../view/skip.ts';
 import { createContainer } from '@sirubot/utils';
 
@@ -117,7 +118,8 @@ export class VoteSkip {
 	}
 
 	private async completeVoteSkip(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
-		await this.options.player.skip();
+		// mixer 예열 슬롯을 먼저 비워야 stale 곡이 다음 trackEnd 때 재생되지 않는다.
+		await container.mixerService.skip(this.options.player);
 		await buttonInteraction.update({
 			components: [
 				view.trackSkippedByVote({

@@ -145,6 +145,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
 		await player.setRepeatMode(toSet);
+		if (toSet !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
 				.reply({
@@ -157,6 +158,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handleStop(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		player.setData('stopByCommand', true);
+		await this.container.mixerService.clearNext(player).catch(() => null);
 		await this.container.playerNotifier.deleteController(player).catch(() => null);
 		try {
 			await interaction.update({
@@ -188,6 +190,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (player.queue.current) {
 			player.queue.tracks.unshift(player.queue.current);
 		}
+		await this.container.mixerService.clearNext(player).catch(() => null);
 		await player.play({ clientTrack: previousTrack });
 		player.queue.previous.pop();
 
@@ -207,7 +210,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 		await interaction.deferUpdate().catch(() => null);
 		player.queuePage = 1;
-		await player.skip();
+		await this.container.mixerService.skip(player);
 	}
 
 	private async handleQueue(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
@@ -331,6 +334,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await interaction.deferUpdate().catch(() => null);
 		player.queuePage = 1;
 		player.queueSelectedIndex = null;
-		await player.skip(trackIndex + 1);
+		await this.container.mixerService.skip(player, trackIndex + 1);
 	}
 }

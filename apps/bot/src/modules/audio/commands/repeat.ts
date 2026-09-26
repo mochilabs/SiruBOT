@@ -75,7 +75,10 @@ export class RepeatCommand extends Command {
 		}
 
 		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, mode as RepeatMode);
-		await this.container.audio.getPlayer(interaction.guildId)?.setRepeatMode(repeatUpdated);
+		const player = this.container.audio.getPlayer(interaction.guildId);
+		await player?.setRepeatMode(repeatUpdated);
+		// 반복 모드는 클라이언트가 전이를 소유하므로 mixer 예열 슬롯을 비운다.
+		if (player && repeatUpdated !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
 
 		await interaction.reply({
 			components: [view.repeatUpdated({ mode: repeatUpdated })],
