@@ -49,9 +49,10 @@ export class PlayerHandler extends BaseLavalinkHandler {
 			player.setVolume(guildConfig.volume),
 			player.setRepeatMode(repeatMode),
 			this.container.redisStore.getPlayerSaver().set(player),
-			// 첫 재생 전부터 mixer 필터와 DB 크로스페이드 설정을 반영한다.
-			this.container.mixerService.ensureMixerFilter(player).catch((error) => {
-				this.logger.warn(`[mixer] filter/config setup failed (guild ${player.guildId}): ${error}`);
+			// mixer 필터 적용은 trackStart에서 수행한다. applyVolumeAsFilter와 같은 시점에
+			// 필터 체인을 병렬 갱신하면 서로의 서버 필터 상태를 덮어쓸 수 있다.
+			this.container.mixerService.pushCrossfadeConfig(player).catch((error) => {
+				this.logger.warn(`[mixer] crossfade config push failed (guild ${player.guildId}): ${error}`);
 			})
 		]);
 	}
