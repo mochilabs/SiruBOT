@@ -46,7 +46,13 @@ export class MoveCommand extends Command {
 		if (!interaction.inCachedGuild()) return;
 
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player) return;
+		if (!player) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('❌ 재생 중인 곡이 없어요.')]
+			});
+			return;
+		}
 
 		const from = interaction.options.getInteger('from', true);
 		const to = interaction.options.getInteger('to', true);
@@ -69,7 +75,7 @@ export class MoveCommand extends Command {
 		}
 
 		// Remove from old position and insert at new position
-		const [track] = player.queue.splice(from - 1, 1);
+		const [track] = await player.queue.splice(from - 1, 1);
 		if (!track) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
@@ -78,7 +84,7 @@ export class MoveCommand extends Command {
 			return;
 		}
 
-		player.queue.splice(to - 1, 0, track);
+		await player.queue.splice(to - 1, 0, track);
 
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(

@@ -48,7 +48,11 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		await Promise.all([
 			player.setVolume(guildConfig.volume),
 			player.setRepeatMode(repeatMode),
-			this.container.redisStore.getPlayerSaver().set(player)
+			this.container.redisStore.getPlayerSaver().set(player),
+			// DB에 저장된 크로스페이드 설정을 다음 재생부터 반영 (mixer 플러그인 없으면 경고만)
+			this.container.mixerService.pushCrossfadeConfig(player).catch((error) => {
+				this.logger.warn(`[mixer] crossfade config push failed (guild ${player.guildId}): ${error}`);
+			})
 		]);
 	}
 

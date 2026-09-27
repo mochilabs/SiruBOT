@@ -5,4 +5,9 @@ export * from './time.js';
 export * from './array.js';
 export * from './memoryCache.js';
 
-export { pickRandom, isDev } from './index.js';
+export { isDev } from './env.js';
+
+export function pickRandom<T>(array: readonly T[]): T {
+	const { length } = array;
+	return array[Math.floor(Math.random() * length)];
+}

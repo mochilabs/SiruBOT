@@ -144,8 +144,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
-		await player.setRepeatMode(toSet);
-		if (toSet !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
+		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, toSet);
+		await player.setRepeatMode(repeatUpdated);
+		if (repeatUpdated !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
 				.reply({
@@ -275,7 +276,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const totalPages = Math.ceil(player.queue.tracks.length / 5);
+		const totalPages = Math.ceil(player.queue.tracks.length / 10);
 		const currentPage = player.queuePage;
 		if (currentPage >= totalPages) {
 			await interaction.reply({
@@ -290,7 +291,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const QUEUE_PAGE_CHUNK_SIZE = 5;
+		const QUEUE_PAGE_CHUNK_SIZE = 10;
 		const currentPage = player.queuePage;
 		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
 		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
@@ -316,7 +317,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const QUEUE_PAGE_CHUNK_SIZE = 5;
+		const QUEUE_PAGE_CHUNK_SIZE = 10;
 		const currentPage = player.queuePage;
 		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
 		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;

@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import * as view from '../view/stop.ts';
+import { errorView } from '../view/error.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -28,10 +29,22 @@ export class StopCommand extends Command {
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (!interaction.inCachedGuild()) return;
-		if (!interaction.member.voice.channelId) return;
+		if (!interaction.member.voice.channelId) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('🔇 음성 채널에 먼저 접속해주세요.')]
+			});
+			return;
+		}
 
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player) return;
+		if (!player) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('❌ 재생 중인 곡이 없어요.')]
+			});
+			return;
+		}
 
 		await interaction.reply({
 			components: [view.stop()],

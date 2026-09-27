@@ -8,7 +8,7 @@ import {
 	EmbedData,
 	APIEmbed
 } from 'discord.js';
-import { isDev } from './index.js';
+import { isDev } from './env.js';
 import { versionInfo } from './version.js';
 import { BOT_NAME, DEFAULT_COLOR, WARN_COLOR } from './constants.js';
 

@@ -29,7 +29,16 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 
 		try {
 			// 2. 설정된 텍스트 채널이 아직 존재하는지 캐시 또는 API로 확인
-			const channelExists = await this.container.client.channels.fetch(configuredChannelId).catch(() => null);
+			// fetch 실패를 모두 "채널 삭제"로 간주하지 않음: Unknown Channel(10003)일 때만 설정 초기화
+			const channelExists = await this.container.client.channels.fetch(configuredChannelId).catch((error: any) => {
+				if (error?.code === 10003 || error?.rawError?.code === 10003) return null;
+				this.container.logger.warn(
+					`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${error?.message ?? error}`
+				);
+				return 'transient' as const;
+			});
+
+			if (channelExists === 'transient') return this.ok();
 
 			if (!channelExists) {
 				// 채널이 삭제되었거나 봇이 볼 수 없는 경우: 설정을 초기화하고 통과시킴
