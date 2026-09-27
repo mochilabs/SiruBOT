@@ -8,7 +8,7 @@ export interface YouTubeChapter {
 }
 
 /** 장문 영상에서만 챕터가 의미 있으므로 이 미만은 조회하지 않는다. */
-export const CHAPTER_FETCH_MIN_DURATION_MS = 5 * 60 * 1000;
+export const CHAPTER_FETCH_MIN_DURATION_MS = 15 * 60 * 1000;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 /** 챕터가 없다는 결론은 일시적 조회 실패와 구분할 수 없으므로 짧게 캐시해 재시도한다. */
 const EMPTY_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -166,9 +166,17 @@ export async function fetchYouTubeChapters(videoId: string, durationMs: number):
 	return chapters;
 }
 
-/** 트랙에서 YouTube videoId를 얻는다. YouTube 소스의 identifier가 곧 videoId다. */
+/**
+ * 유튜브 계열 소스인지.
+ * 소스 플러그인은 base 이름 뒤에 접미사를 붙여 내려주므로 prefix로 판별한다.
+ */
+export function isYouTubeSource(sourceName: string | null | undefined): boolean {
+	return Boolean(sourceName?.startsWith('youtube'));
+}
+
+/** 트랙에서 YouTube videoId를 얻는다. 유튜브 소스의 identifier가 곧 videoId다. */
 export function resolveYouTubeVideoId(track: { info?: { sourceName?: string; identifier?: string } } | null | undefined): string | null {
-	if (!track?.info || track.info.sourceName !== 'youtube') return null;
+	if (!track?.info || !isYouTubeSource(track.info.sourceName)) return null;
 	const identifier = track.info.identifier;
 	return identifier && identifier.length > 0 ? identifier : null;
 }

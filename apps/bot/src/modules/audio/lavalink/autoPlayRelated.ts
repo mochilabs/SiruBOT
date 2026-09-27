@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { Player, Track } from 'lavalink-client';
 import { CustomPlayer } from './player/customPlayer.ts';
+import { isYouTubeSource } from './youtubeChapters.ts';
 
 // ── Similarity Threshold Settings ──
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
@@ -197,7 +198,7 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 	const operation = (async (): Promise<Track | null> => {
 		const relatedOn = await container.guildService.getRelated(player.guildId);
 		if (!relatedOn || player.repeatMode !== 'off') return null;
-		if (!currentTrack.info.identifier || currentTrack.info.sourceName !== 'youtube') return null;
+		if (!currentTrack.info.identifier || !isYouTubeSource(currentTrack.info.sourceName)) return null;
 
 		const settings = await container.guildService.getMixerSettings(gid);
 		if (!settings.gaplessEnabled) return null;
@@ -227,7 +228,7 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): Promise<void> => {
 	const relatedOn = await container.guildService.getRelated(player.guildId);
 	if (player.repeatMode == 'off' && relatedOn) {
-		if (lastPlayedTrack.info.identifier && lastPlayedTrack.info.sourceName == 'youtube') {
+		if (lastPlayedTrack.info.identifier && isYouTubeSource(lastPlayedTrack.info.sourceName)) {
 			// trackStart 선예열이 진행 중이면 이중 추가 방지 (선예열쪽이 재생을 이어준다)
 			if (relatedFetchInFlight.has(String(player.guildId))) {
 				container.logger.debug('[autoPlayRelated] Pre-add in flight, skipping fallback');

@@ -1,4 +1,5 @@
 import { Track } from 'lavalink-client';
+import { isYouTubeSource } from '../modules/audio/lavalink/youtubeChapters.ts';
 
 export function extractTrackData(track: Track) {
 	const info = track.info;
@@ -8,7 +9,8 @@ export function extractTrackData(track: Track) {
 	const duration: number = info.duration ?? 0;
 	const url: string = info.uri ?? '';
 	const source: string = info.sourceName ?? 'unknown';
-	const thumbnail: string | null = info.artworkUrl ?? (source === 'youtube' && id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
+	const thumbnail: string | null =
+		info.artworkUrl ?? (isYouTubeSource(info.sourceName) && id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
 
 	return { id, title, artist, duration, url, source, thumbnail };
 }
