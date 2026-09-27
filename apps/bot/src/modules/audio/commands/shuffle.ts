@@ -38,6 +38,7 @@ export class ShuffleCommand extends Command {
 		}
 
 		await player.queue.shuffle();
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`🔀 대기열 **${queueLength}곡**을 셔플했어요.`));

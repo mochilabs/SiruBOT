@@ -65,6 +65,7 @@ export class RemoveCommand extends Command {
 		}
 
 		const track = removedTracks[0]!;
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
 			new TextDisplayBuilder().setContent(`🗑️ **#${position}** [${track.info.title}](${track.info.uri})을(를) 대기열에서 삭제했어요.`)

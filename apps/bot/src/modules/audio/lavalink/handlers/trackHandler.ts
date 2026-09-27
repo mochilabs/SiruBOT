@@ -3,15 +3,20 @@ import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { DEFAULT_COLOR } from '@sirubot/utils';
+import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated.ts';
 
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 
 // handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
-	/** mixer가 다음 곡을 예열한 길드: trackEnd는 서버가 처리하므로 클라이언트는 관망한다. */
-	private readonly serverManaged = new Set<string>();
-	private readonly filterReady = new Set<string>();
+	/**
+	 * 전이 소유권: 서버 슬롯에 예열된 길드는 서버가 trackEnd를 처리하므로 관망하고,
+	 * 예열하지 않은 길드(갭리스 off / 반복 모드 / trackStart 이후 추가)는 클라이언트가
+	 * play로 진행한다. 예열 상태는 MixerService가 소유한다.
+	 */
 	private readonly watchdogs = new Map<string, ReturnType<typeof setTimeout>>();
+	/** 클라이언트가 직접 보낸 play가 queueEnd fallback과 중복되지 않도록 추적한다. */
+	private readonly clientAdvancePending = new Set<string>();
 	private readonly confirmTimeoutMs = Number(process.env.MIXER_CONFIRM_TIMEOUT_MS) || 5000;
 
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -25,16 +30,20 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.lavalinkManager.on('playerDestroy', this.wrapAsyncHandler(this.handlePlayerDestroy.bind(this), 'playerDestroy'));
 	}
 
-	private async handleTrackStart(player: CustomPlayer, track: Track | null, _payload: TrackStartEvent) {
-		this.logger.info(`Track started: ${track?.info.title} by ${track?.info.author}`);
+	private async handleTrackStart(player: CustomPlayer, track: Track | null, payload: TrackStartEvent) {
+		const startedTrack = this.resolveStartedTrack(track, payload);
+		this.syncQueueToNowPlaying(player, startedTrack);
+		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
 		player.consecutiveErrors = 0;
+		player.setData('stopByCommand', undefined);
+		this.clientAdvancePending.delete(player.guildId);
 		this.clearWatchdog(player.guildId);
-		if (track && !track.info.isStream) {
-			this.logger.trace(`Ensuring track and increasing plays: ${track.info.title} by ${track.info.author}`);
+		if (startedTrack && !startedTrack.info.isStream) {
+			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
 			// fire-and-forget
 			this.container.trackService
-				.increasePlays(track)
-				.then(() => this.container.trackService.addHistory(player.guildId, track))
+				.increasePlays(startedTrack)
+				.then(() => this.container.trackService.addHistory(player.guildId, startedTrack))
 				.catch((error) => this.logger.error(`Failed to record track history: ${error}`));
 		}
 
@@ -42,27 +51,48 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 		// mixer: 필터 보장 → 큐 동기화(서버가 이미 시작했으므로 play 금지) → 다음 곡 예열
 		try {
-			await this.ensureMixerFilter(player);
-			this.syncQueueToNowPlaying(player, track);
+			await this.container.mixerService.ensureMixerFilter(player).catch((error) => {
+				this.logger.warn(`[mixer] enableFilter failed for guild ${player.guildId}, will retry: ${error}`);
+			});
 			const preloaded = await this.container.mixerService.preloadUpcoming(player).catch((error) => {
 				this.logger.warn(`[mixer] preload failed (guild ${player.guildId}): ${error}`);
 				return false;
 			});
-			if (preloaded) this.serverManaged.add(player.guildId);
-			else this.serverManaged.delete(player.guildId);
+			// 대기열이 비어 있으면(현재 곡이 마지막) 추천곡을 미리 큐에 추가해
+			// 갭리스 자동재생 체인을 유지한다 (repeat/갭리스 off는 헬퍼가 거름)
+			if (!preloaded && startedTrack && player.queue.tracks.length === 0) {
+				await queueRelatedUpfront(player, startedTrack).catch((error) => {
+					this.logger.warn(`[mixer] related pre-add failed (guild ${player.guildId}): ${error}`);
+				});
+			}
 		} catch (error) {
 			this.logger.warn(`[mixer] trackStart wiring failed (guild ${player.guildId}): ${error}`);
-			this.serverManaged.delete(player.guildId);
+			this.container.mixerService.markUnmanaged(player.guildId);
 		}
 	}
 
-	private handleTrackEnd(player: CustomPlayer, track: Track | null, _payload: TrackEndEvent) {
+	private handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
 		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author}`);
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
-		if (this.serverManaged.delete(player.guildId)) this.armWatchdog(player);
+		if (this.container.mixerService.consumePreloaded(player.guildId)) {
+			this.armWatchdog(player);
+			return;
+		}
+		if (this.watchdogs.has(player.guildId)) return;
+
+		// 클라이언트 소유 전이: 서버가 예열하지 않은 길드(갭리스 off / 반복 모드 /
+		// trackStart 이후 추가된 곡). autoSkip: false라 아무도 진행하지 않으므로
+		// 클라이언트가 play로 진행한다. 'replaced'(이전곡 치환)와 'loadFailed'/'cleanup'
+		// (trackError/trackStuck 핸들러 소유)는 제외 — 이중 진행 방지.
+		if (payload.reason === 'finished' && player.queue.current) {
+			void this.startClientOwnedTrack(player).catch((error) =>
+				this.logger.error(`Failed to advance track (client-owned transition): ${error}`)
+			);
+		}
 	}
 
 	private async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
+		this.clientAdvancePending.delete(player.guildId);
 		player.consecutiveErrors++;
 		this.logger.warn(`Track stuck (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
 
@@ -73,7 +103,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
 			);
 			player.setData('stopByCommand', true);
-			this.serverManaged.delete(player.guildId);
+			this.container.mixerService.markUnmanaged(player.guildId);
 			this.clearWatchdog(player.guildId);
 			await player.stopPlaying();
 			await player.disconnect();
@@ -81,10 +111,11 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 
 		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
-		if (this.serverManaged.delete(player.guildId)) {
+		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			this.armWatchdog(player);
 			return;
 		}
+		if (this.watchdogs.has(player.guildId)) return;
 
 		// 중간 오류는 조용히 스킵하고, 마지막(남은 곡 없음)에만 한 번 알린다. (3연속 중단 알림은 위 abort 분기)
 		if (player.queue.tracks.length > 0) {
@@ -98,6 +129,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackExceptionEvent) {
+		this.clientAdvancePending.delete(player.guildId);
 		player.consecutiveErrors++;
 		this.logger.warn(`Track error (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
 
@@ -108,7 +140,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
 			);
 			player.setData('stopByCommand', true);
-			this.serverManaged.delete(player.guildId);
+			this.container.mixerService.markUnmanaged(player.guildId);
 			this.clearWatchdog(player.guildId);
 			await player.stopPlaying();
 			await player.disconnect();
@@ -116,7 +148,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 
 		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
-		if (this.serverManaged.delete(player.guildId)) {
+		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			this.armWatchdog(player);
 			return;
 		}
@@ -134,6 +166,23 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	private async handleQueueEnd(player: CustomPlayer) {
 		this.logger.info(`Queue ended for guild: ${player.guildId}`);
+		const inFlightRelated = getInFlightRelatedFetch(player.guildId);
+		if (inFlightRelated) {
+			const addedTrack = await inFlightRelated.catch(() => null);
+			if (addedTrack && !player.playing && (player.queue.current || player.queue.tracks.length > 0)) {
+				await this.startClientOwnedTrack(player).catch((error) => this.logger.error(`Failed to start pre-added autoplay track: ${error}`));
+				return;
+			}
+			if (addedTrack && (player.queue.current || player.playing)) return;
+		}
+
+		// autoPlayFunction은 곡을 current로 옮기지만 autoSkip: false에서는 재생을
+		// 시작하지 않는다. 이 경로는 서버 슬롯이 비어 있으므로 클라이언트 play가 맞다.
+		if (this.clientAdvancePending.has(player.guildId)) return;
+		if (player.queue.current && !player.playing) {
+			await this.startClientOwnedTrack(player).catch((error) => this.logger.error(`Failed to start autoplay track: ${error}`));
+			return;
+		}
 
 		// 대기열의 모든 곡이 끝났으므로 컨트롤러 메시지 삭제
 		await this.container.playerNotifier.deleteController(player);
@@ -164,25 +213,21 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 	}
 
-	private handlePlayerDestroy(player: CustomPlayer): void {
-		this.serverManaged.delete(player.guildId);
-		this.filterReady.delete(player.guildId);
+	private async handlePlayerDestroy(player: CustomPlayer): Promise<void> {
+		this.container.mixerService.markUnmanaged(player.guildId);
+		this.clientAdvancePending.delete(player.guildId);
 		this.clearWatchdog(player.guildId);
+		await this.container.mixerService.clearNext(player).catch(() => null);
 	}
 
 	// ── mixer helpers ──────────────────────────
 
-	private async ensureMixerFilter(player: CustomPlayer): Promise<void> {
-		if (this.filterReady.has(player.guildId)) return;
-		try {
-			await this.container.mixerService.enableMixerFilter(player);
-			await this.container.mixerService.pushCrossfadeConfig(player).catch((error) => {
-				this.logger.warn(`[mixer] static config failed for guild ${player.guildId}: ${error}`);
-			});
-			this.filterReady.add(player.guildId);
-		} catch (error) {
-			this.logger.warn(`[mixer] enableFilter failed for guild ${player.guildId}, will retry: ${error}`);
-		}
+	/** Lavalink payload가 실제 시작한 곡과 클라이언트 current가 다르면 payload를 우선한다. */
+	private resolveStartedTrack(track: Track | null, payload: TrackStartEvent): Track | null {
+		const payloadEncoded = payload.track?.encoded;
+		const currentEncoded = (track as { encoded?: unknown } | null)?.encoded;
+		if (!payloadEncoded || payloadEncoded === currentEncoded) return track;
+		return this.lavalinkManager.utils.buildTrack(payload.track, undefined);
 	}
 
 	/** 서버가 시작한 곡을 play 없이 클라이언트 큐에 동기화한다. */
@@ -220,13 +265,26 @@ export class TrackHandler extends BaseLavalinkHandler {
 			guildId,
 			setTimeout(() => {
 				this.watchdogs.delete(guildId);
-				this.serverManaged.delete(guildId);
+				this.container.mixerService.markUnmanaged(guildId);
 				// 서버가 자동 진행하지 않음 (예열 실패 등) → 수동 복구
 				Promise.resolve()
 					.then(() => player.skip())
 					.catch(() => null);
 			}, this.confirmTimeoutMs)
 		);
+	}
+
+	/** 서버 슬롯이 없는 전이에서만 호출: stale 슬롯을 비운 뒤 클라이언트가 다음 곡을 시작한다. */
+	private async startClientOwnedTrack(player: CustomPlayer): Promise<void> {
+		if (this.clientAdvancePending.has(player.guildId)) return;
+		this.clientAdvancePending.add(player.guildId);
+		try {
+			await this.container.mixerService.clearNext(player).catch(() => null);
+			await player.play({ noReplace: true });
+		} catch (error) {
+			this.clientAdvancePending.delete(player.guildId);
+			throw error;
+		}
 	}
 
 	private clearWatchdog(guildId: string): void {
@@ -240,8 +298,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	public cleanup() {
 		for (const timer of this.watchdogs.values()) clearTimeout(timer);
 		this.watchdogs.clear();
-		this.serverManaged.clear();
-		this.filterReady.clear();
+		this.clientAdvancePending.clear();
 		this.lavalinkManager?.removeAllListeners('trackStart');
 		this.lavalinkManager?.removeAllListeners('trackEnd');
 		this.lavalinkManager?.removeAllListeners('trackStuck');

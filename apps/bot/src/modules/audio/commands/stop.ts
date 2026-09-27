@@ -52,6 +52,7 @@ export class StopCommand extends Command {
 		});
 		player.setData('stopByCommand', true);
 
+		await this.container.mixerService.clearNext(player).catch(() => null);
 		await player.stopPlaying();
 		await player.disconnect();
 	}

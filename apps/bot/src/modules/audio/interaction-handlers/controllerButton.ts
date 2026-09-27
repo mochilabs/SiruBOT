@@ -305,6 +305,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		await player.queue.splice(trackIndex, 1);
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		player.queueSelectedIndex = null;
 
 		// Adjust page if needed

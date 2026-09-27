@@ -181,6 +181,9 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeReconnecting(node: LavalinkNode) {
 		this.logger.info(`Node reconnecting: ${node.options.id}`);
+		// Lavalink 재시작 뒤 플러그인 필터 상태가 사라질 수 있다. 예열 슬롯은
+		// session resume 시 여전히 유효할 수 있으므로 보존하고, 다음 trackStart에서만 필터를 재적용한다.
+		this.container.mixerService.resetFilterReadiness();
 	}
 
 	private handleNodeDestroy(node: LavalinkNode) {

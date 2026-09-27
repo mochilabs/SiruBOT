@@ -127,6 +127,7 @@ export class AudioService {
 		player: Player,
 		searchRes: SearchResult | UnresolvedSearchResult
 	): Promise<void> {
+		const wasIdle = player.queue.current === null && !player.playing;
 		const playlist = searchRes.playlist;
 		if (!playlist) {
 			await interaction.editReply({
@@ -137,8 +138,8 @@ export class AudioService {
 		}
 
 		if (playlist.selectedTrack) {
-			const wasIdle = player.queue.current === null && !player.playing;
 			await player.queue.add(playlist.selectedTrack);
+			if (!wasIdle) this.preloadAfterQueueChange(player);
 
 			const remainingTracks = searchRes.tracks.filter((track) => track.info.identifier !== playlist.selectedTrack!.info.identifier);
 			const remainingTracksCount = remainingTracks.length;
@@ -164,6 +165,7 @@ export class AudioService {
 			}
 		} else {
 			await player.queue.add(searchRes.tracks);
+			if (!wasIdle) this.preloadAfterQueueChange(player);
 
 			await interaction.editReply({
 				flags: MessageFlags.IsComponentsV2,
@@ -229,6 +231,7 @@ export class AudioService {
 
 			if (collectorInteraction.customId === 'playlist_add_remaining') {
 				await player.queue.add(remainingTracks);
+				this.preloadAfterQueueChange(player);
 
 				await collectorInteraction.editReply({
 					flags: MessageFlags.IsComponentsV2,
@@ -266,6 +269,7 @@ export class AudioService {
 	): Promise<void> {
 		const wasIdle = player.queue.current === null && !player.playing;
 		await player.queue.add(searchRes.tracks[0]);
+		if (!wasIdle) this.preloadAfterQueueChange(player);
 
 		if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
 			await interaction.deleteReply().catch(() => null);
@@ -302,6 +306,14 @@ export class AudioService {
 		} catch {
 			return false;
 		}
+	}
+
+	/** 재생 중 대기열 변경 직후 다음 첫 곡을 서버 슬롯에 다시 예열한다. */
+	private preloadAfterQueueChange(player: Player): void {
+		if (!player.queue.current || !player.playing) return;
+		void container.mixerService.preloadUpcoming(player).catch((error) => {
+			container.logger.warn(`[mixer] preload after queue change failed (guild ${player.guildId}): ${error}`);
+		});
 	}
 
 	/**

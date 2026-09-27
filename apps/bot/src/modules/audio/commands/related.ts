@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import * as view from '../view/related.ts';
+import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -46,6 +47,13 @@ export class RelatedCommand extends Command {
 		}
 
 		const updated = await this.container.guildService.setRelated(interaction.guildId, enabled);
+		const player = this.container.audio.getPlayer(interaction.guildId);
+		const currentTrack = player?.queue.current;
+		if (updated && player?.playing && currentTrack && player.queue.tracks.length === 0) {
+			void queueRelatedUpfront(player, currentTrack).catch((error) => {
+				this.container.logger.warn(`[mixer] related pre-add failed (guild ${interaction.guildId}): ${error}`);
+			});
+		}
 		await interaction.editReply({
 			components: [view.relatedUpdated(updated)],
 			flags: [MessageFlags.IsComponentsV2],

@@ -273,6 +273,8 @@ export class FavoritesCommand extends Command {
 
 			if (!player.playing && !player.paused) {
 				await player.play();
+			} else if (addedCount > 0) {
+				void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 			}
 
 			await interaction.editReply({

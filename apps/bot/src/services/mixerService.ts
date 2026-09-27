@@ -1,6 +1,5 @@
 import { container } from '@sapphire/framework';
 import { Player, Track } from 'lavalink-client';
-import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 const MIXER_FILTER_KEY = 'mixer';
 
@@ -28,8 +27,20 @@ interface MixerCallInit {
  * Lavalink mixer-plugin (`/mixer/*`) REST 래퍼.
  * `player.node.request()`는 `/v4/` prefix라 도달하지 못하므로 plain fetch를 쓴다.
  * fade-in / silence / announce(TTS)는 2단계 scope라 여기서는 다루지 않는다.
+ *
+ * 서버가 예열 슬롯을 쥔 길드(`preloaded`)는 서버가 content end에 자동 진행하므로
+ * 클라이언트는 trackEnd에서 관망해야 하고, 예열하지 않은 길드는 클라이언트가
+ * play로 진행한다(TrackHandler 참고). 예열 상태를 TrackHandler/audioService가
+ * 공유하므로 여기서 소유한다.
  */
 export class MixerService {
+	/** 서버 슬롯에 다음 곡을 예열한 길드 (trackEnd에서 consume) */
+	private readonly preloaded = new Set<string>();
+	/** mixer 필터를 체인에 넣은 길드 (노드 재접속 시 리셋) */
+	private readonly filterReady = new Set<string>();
+	/** 동일 길드의 POST/DELETE가 도착 순서와 다르게 서버 슬롯을 덮어쓰지 않도록 직렬화한다. */
+	private readonly slotOperations = new Map<string, Promise<void>>();
+
 	private nodeRest(player: Player): { base: string; auth: string } {
 		const o = (player.node?.options ?? {}) as { host?: string; port?: number; authorization?: string; secure?: boolean };
 		const proto = o.secure ? 'https' : 'http';
@@ -80,30 +91,79 @@ export class MixerService {
 	}
 
 	/**
-	 * 다음 곡 1개를 서버에 예열한다. repeat 중이거나 gapless가 꺼져 있거나
+	 * 다음 곡 1개를 서버에 예열한다. repeat 중이거나 갭리스가 꺼져 있거나
 	 * 대기열이 비어 있으면 아무 것도 하지 않고 false를 반환한다.
+	 * 대기열이 비면 서버 슬롯을 함께 비운다 — 플러그인은 player destroy 시
+	 * 상태를 정리하지 않으므로, 남은 stale 예열곡이 content end에 재생되는 것을 막는다.
 	 */
-	public async preloadUpcoming(player: CustomPlayer): Promise<boolean> {
-		if (player.repeatMode !== 'off') return false;
+	public async preloadUpcoming(player: Player): Promise<boolean> {
+		return this.enqueueSlotOperation(String(player.guildId), () => this.preloadUpcomingNow(player));
+	}
+
+	private async preloadUpcomingNow(player: Player): Promise<boolean> {
+		const gid = String(player.guildId);
+		if (player.repeatMode !== 'off') {
+			await this.clearNextNow(player).catch(() => null);
+			return false;
+		}
 		const settings = await container.guildService.getMixerSettings(player.guildId);
-		if (!settings.gaplessEnabled) return false;
+		if (!settings.gaplessEnabled) {
+			await this.clearNextNow(player).catch(() => null);
+			return false;
+		}
 		const next = player.queue?.tracks?.[0];
-		if (!next) return false;
+		if (!next) {
+			this.preloaded.delete(gid);
+			await this.clearNextNow(player).catch(() => null);
+			return false;
+		}
 		const ref = this.trackRef(next as Track);
 		if (!ref) {
+			this.preloaded.delete(gid);
+			await this.clearNextNow(player).catch(() => null);
 			container.logger.warn(`[mixer] cannot reference upcoming track, skipping preload (guild ${player.guildId})`);
 			return false;
 		}
 		await this.mixerCall(player, '/mixer/queue/next', {
 			method: 'POST',
-			body: JSON.stringify({ guildId: String(player.guildId), ...ref })
+			body: JSON.stringify({ guildId: gid, ...ref })
 		});
+		this.preloaded.add(gid);
 		return true;
 	}
 
+	/** trackEnd 전용: 예열 여부를 소비한다(삭제하고 반환). */
+	public consumePreloaded(guildId: string): boolean {
+		return this.preloaded.delete(String(guildId));
+	}
+
+	/** 예열이 이뤄지지 않은 길드로 표시한다(클라이언트가 전이를 소유). */
+	public markUnmanaged(guildId: string): void {
+		this.preloaded.delete(String(guildId));
+	}
+
 	public async clearNext(player: Player): Promise<void> {
+		await this.enqueueSlotOperation(String(player.guildId), () => this.clearNextNow(player));
+	}
+
+	private async clearNextNow(player: Player): Promise<void> {
+		this.preloaded.delete(String(player.guildId));
 		const gid = encodeURIComponent(String(player.guildId));
 		await this.mixerCall(player, `/mixer/queue/next?guildId=${gid}`, { method: 'DELETE' });
+	}
+
+	private async enqueueSlotOperation<T>(guildId: string, operation: () => Promise<T>): Promise<T> {
+		const previous = this.slotOperations.get(guildId) ?? Promise.resolve();
+		const result = previous.catch(() => undefined).then(operation);
+		const completed = result.then(
+			() => undefined,
+			() => undefined
+		);
+		this.slotOperations.set(guildId, completed);
+		void completed.finally(() => {
+			if (this.slotOperations.get(guildId) === completed) this.slotOperations.delete(guildId);
+		});
+		return result;
 	}
 
 	/** DB 설정을 서버에 반영한다 (playerCreate 시 1회). */
@@ -113,6 +173,24 @@ export class MixerService {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.crossfadeEnabled, durationMs: settings.crossfadeMs })
 		});
+	}
+
+	/**
+	 * 길드당 1회: mixer 필터 삽입 + DB 크로스페이드 설정 반영.
+	 * `resetFilters()`는 mixer 키를 지우므로 그 뒤엔 다시 호출해야 한다.
+	 * 실패 시(노드 미준비 등) trackStart에서 재시도된다.
+	 */
+	public async ensureMixerFilter(player: Player): Promise<void> {
+		const gid = String(player.guildId);
+		if (this.filterReady.has(gid)) return;
+		await this.enableMixerFilter(player);
+		await this.pushCrossfadeConfig(player);
+		this.filterReady.add(gid);
+	}
+
+	/** 노드 재접속 등 서버 상태가 사라졌을 수 있을 때 초기화 — 다음 trackStart에서 재동기화된다. */
+	public resetFilterReadiness(): void {
+		this.filterReady.clear();
 	}
 
 	public async setCrossfade(player: Player, enabled: boolean, durationMs?: number): Promise<MixerStateResponse> {

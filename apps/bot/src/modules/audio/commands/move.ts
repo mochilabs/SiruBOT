@@ -85,6 +85,7 @@ export class MoveCommand extends Command {
 		}
 
 		await player.queue.splice(to - 1, 0, track);
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(

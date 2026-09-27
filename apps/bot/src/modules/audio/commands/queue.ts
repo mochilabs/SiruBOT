@@ -148,6 +148,7 @@ export class QueueCommand extends Command {
 		}
 
 		await player.queue.shuffle();
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		await interaction.reply({
 			components: [view.queueShuffled({ count: player.queue.tracks.length })],
 			flags: [MessageFlags.IsComponentsV2]
@@ -166,6 +167,7 @@ export class QueueCommand extends Command {
 
 		const count = player.queue.tracks.length;
 		await player.queue.splice(0, count);
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 
 		await interaction.reply({
 			components: [view.queueCleared({ count })],
@@ -196,6 +198,7 @@ export class QueueCommand extends Command {
 				context: { ephemeral: true }
 			});
 		}
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		await interaction.reply({
 			components: [view.queueRemoved({ track: removedTrack, position })],
 			flags: [MessageFlags.IsComponentsV2]
@@ -236,6 +239,7 @@ export class QueueCommand extends Command {
 			});
 		}
 		await player.queue.splice(to - 1, 0, track);
+		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 
 		await interaction.reply({
 			components: [view.queueMoved({ track, from, to })],
