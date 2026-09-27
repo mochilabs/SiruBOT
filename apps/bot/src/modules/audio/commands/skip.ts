@@ -99,7 +99,7 @@ export class SkipCommand extends Command {
 		if (!voiceChannel) return null;
 
 		const voiceChannelMembers = voiceChannel.members.filter(
-			(member: GuildMember) => !member.user.bot && (member.voice.selfDeaf === false || member.voice.serverDeaf === false)
+			(member: GuildMember) => !member.user.bot && member.voice.selfDeaf === false && member.voice.serverDeaf === false
 		);
 
 		return {

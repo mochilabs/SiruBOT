@@ -99,21 +99,22 @@ export class PlaylistService {
 			update: {}
 		});
 
-		// 2. Get current max position
-		const maxPositionResult = await container.db.playlistTrack.aggregate({
-			where: { playlistId: playlist.id },
-			_max: { position: true }
-		});
+		// 2-3. max(position)+1 조회와 생성을 한 트랜잭션으로 묶어 동시 추가 시 unique 충돌 방지
+		await container.db.$transaction(async (tx) => {
+			const maxPositionResult = await tx.playlistTrack.aggregate({
+				where: { playlistId: playlist.id },
+				_max: { position: true }
+			});
 
-		const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
+			const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
 
-		// 3. Add to PlaylistTrack
-		await container.db.playlistTrack.create({
-			data: {
-				playlistId: playlist.id,
-				trackId: data.id,
-				position: nextPosition
-			}
+			return await tx.playlistTrack.create({
+				data: {
+					playlistId: playlist.id,
+					trackId: data.id,
+					position: nextPosition
+				}
+			});
 		});
 
 		return { playlist, track: data };

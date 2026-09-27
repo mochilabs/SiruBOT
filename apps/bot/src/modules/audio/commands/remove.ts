@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
+import { errorView } from '../view/error.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -36,7 +37,13 @@ export class RemoveCommand extends Command {
 		if (!interaction.inCachedGuild()) return;
 
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player) return;
+		if (!player) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('❌ 재생 중인 곡이 없어요.')]
+			});
+			return;
+		}
 
 		const position = interaction.options.getInteger('position', true);
 		if (position > player.queue.tracks.length) {

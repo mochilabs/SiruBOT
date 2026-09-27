@@ -354,7 +354,9 @@ export class AudioService {
 	}
 
 	private isTrackRequestedByBot(track: Track): boolean {
-		return typeof track.requester !== 'string' && (track.requester as APIUser).id === container.client.user?.id;
+		if (typeof track.requester === 'string') return false;
+		const requesterId = (track.requester as APIUser).id;
+		return requesterId === container.client.user?.id || requesterId === 'related_track';
 	}
 
 	private isUserAlone(context: SkipContext): boolean {

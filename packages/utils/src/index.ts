@@ -9,8 +9,7 @@ export function pickRandom<T>(array: readonly T[]): T {
 	return array[Math.floor(Math.random() * length)];
 }
 
-export const isDev = process.env.NODE_ENV !== 'production';
-
+export * from './env.js';
 export * from './version.js';
 export * from './constants.js';
 export * from './format.js';

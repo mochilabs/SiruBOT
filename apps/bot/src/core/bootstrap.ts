@@ -107,16 +107,21 @@ export const main = async () => {
 		const lavalinkHosts = envParseString('LAVALINK_HOSTS')
 			.split(',')
 			.map((node, index) => {
+				// 비밀번호에 '_'가 포함될 수 있으므로 앞에서부터 id/host/port를 취하고 나머지를 password로 join
 				const parts = node.trim().split('_');
 				if (parts.length < 3) {
 					throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${node}". ` + `Expected: "id_host_port[_password]"`);
 				}
-				const [id, host, portStr, password] = parts;
+				const [id, host, portStr, ...passwordParts] = parts;
+				if (!id || !host) {
+					throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${node}". id/host must not be empty.`);
+				}
 				const port = parseInt(portStr);
-				if (isNaN(port)) {
+				if (isNaN(port) || port <= 0 || port > 65535) {
 					throw new Error(`Invalid port "${portStr}" for node "${id}"`);
 				}
-				return { id, host, port, authorization: password ?? 'youshallnotpass' };
+				const password = passwordParts.length > 0 ? passwordParts.join('_') : 'youshallnotpass';
+				return { id, host, port, authorization: password };
 			}) as LavalinkNodeOptions[];
 		await client.setupAudio(lavalinkHosts, { shardIds: Array.isArray(shardIds) ? shardIds : [0], shardCount });
 

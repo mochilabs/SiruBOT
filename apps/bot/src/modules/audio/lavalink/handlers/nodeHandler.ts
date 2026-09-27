@@ -167,6 +167,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 		const leastUsedNode = this.container.audio.nodeManager.leastUsedNodes('playingPlayers');
 
+		if (leastUsedNode.length === 0) {
+			this.logger.warn(`Node disconnected: ${node.options.id} | no available nodes to move ${orphanPlayers.length} orphan players`);
+			return;
+		}
+
 		// Move orphan players to least used nodes with simple cycling
 		for (let idx = 0; idx < orphanPlayers.length; idx++) {
 			// Simple cycling through available nodes

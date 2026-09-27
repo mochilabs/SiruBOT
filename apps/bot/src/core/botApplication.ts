@@ -36,7 +36,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		const redisStore = new RedisStore({
 			url
 		});
-		await redisStore.connect();
+		try {
+			await redisStore.connect();
+		} catch (error) {
+			// Redis 없이도 메모리 폴백으로 부팅 계속 (큐/세션은 휘발). 연결 실패를 치명 오류로 취급하지 않음.
+			this.logger.warn(`Redis connection failed, continuing in memory-only mode: ${error}`);
+		}
 
 		container.redisStore = redisStore;
 

@@ -47,6 +47,7 @@ export class PreviousCommand extends Command {
 		if (player.queue.current) {
 			player.queue.tracks.unshift(player.queue.current);
 		}
+		await this.container.mixerService.clearNext(player).catch(() => null);
 		await player.play({ clientTrack: previousTrack });
 		player.queue.previous.pop();
 
