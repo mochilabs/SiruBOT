@@ -1,7 +1,7 @@
 services:
   # Application services
   bot:
-    image: ghcr.io/mochilabs/sirubot-bot:latest
+    image: ghcr.io/mochilabs/sirubot-bot:beta
     env_file:
       - .env
     environment:
@@ -26,7 +26,7 @@ services:
           - node.role == manager
 
   shardmanager:
-    image: ghcr.io/mochilabs/sirubot-shardmanager:latest
+    image: ghcr.io/mochilabs/sirubot-shardmanager:beta
     env_file:
       - .env
     environment:
@@ -52,7 +52,7 @@ services:
           - node.role == manager
 
   dashboard:
-    image: ghcr.io/mochilabs/sirubot-dashboard:latest
+    image: ghcr.io/mochilabs/sirubot-dashboard:beta
     env_file:
       - .env
     environment:
