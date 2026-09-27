@@ -57,7 +57,7 @@ export function playStarted({ track, userId }: playStartedViewProps) {
 		withMarkdownURL: true
 	});
 
-	const content = `🎬 <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# 아티스트: ${track.info.author}`;
+	const content = `🎵 <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# 아티스트: ${track.info.author}`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;

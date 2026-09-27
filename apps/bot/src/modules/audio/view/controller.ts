@@ -121,7 +121,8 @@ function buildEpisodeLine(player: Player): string | null {
 	const index = chapters.findIndex((chapter) => position >= chapter.start && position < chapter.end);
 	if (index < 0) return null;
 
-	return `-# 🎬 ${index + 1}/${chapters.length} · ${chapters[index].name}`;
+	const chapter = chapters[index];
+	return `-# ╰ [${chapter.name}] • (${formatTime(chapter.start / 1000)} / ${formatTime(chapter.end / 1000)})`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null): string[] {
