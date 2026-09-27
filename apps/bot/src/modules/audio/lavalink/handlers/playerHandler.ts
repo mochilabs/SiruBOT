@@ -49,8 +49,8 @@ export class PlayerHandler extends BaseLavalinkHandler {
 			player.setVolume(guildConfig.volume),
 			player.setRepeatMode(repeatMode),
 			this.container.redisStore.getPlayerSaver().set(player),
-			// mixer 필터 적용은 trackStart에서 수행한다. applyVolumeAsFilter와 같은 시점에
-			// 필터 체인을 병렬 갱신하면 서로의 서버 필터 상태를 덮어쓸 수 있다.
+			// mixer 필터 자체는 play 이전에 primeForPlay가 보낸다(트랙 시작 시 체인을 만드는 시점이
+			// play이므로 그 뒤의 필터 op는 현재 트랙에 반영되지 않는다). 여기서는 crossfade 설정만 밀어둔다.
 			this.container.mixerService.pushCrossfadeConfig(player).catch((error) => {
 				this.logger.warn(`[mixer] crossfade config push failed (guild ${player.guildId}): ${error}`);
 			})
@@ -60,6 +60,8 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	private async handlePlayerDestroy(player: CustomPlayer, _reason: DestroyReasonsType | undefined) {
 		this.logger.info(`Player destroyed: ${player.guildId}`);
 		this.container.redisStore.getPlayerSaver().delete(player.guildId);
+		// 파괴된 플레이어의 서버 필터 상태도 사라진다 — 다음 play 전에 다시 prime해야 한다.
+		this.container.mixerService.markFiltersStale(player.guildId);
 		await this.container.playerNotifier.onPlayerDestroy(player);
 	}
 

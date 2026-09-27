@@ -42,6 +42,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		if (action === 'reset') {
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
+			await this.container.mixerService.reapplyMixerFilter(player);
 			player.activeFilters = [];
 			await interaction.update({
 				components: [filterView({ activeFilters: [] })],
@@ -57,6 +58,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 			// 전체 초기화 후 선택된 필터만 적용
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
+			await this.container.mixerService.reapplyMixerFilter(player);
 
 			const results = await Promise.allSettled(selectedPresets.map((preset) => this.applyPreset(player, preset)));
 			const failed = results.filter((r) => r.status === 'rejected');

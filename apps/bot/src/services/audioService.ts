@@ -26,7 +26,10 @@ export class AudioService {
 				selfDeaf: true,
 				selfMute: false,
 				instaUpdateFiltersFix: true,
-				applyVolumeAsFilter: true
+				// volume을 filters로 보내면(부분 filters op) 서버의 필터 상태 전체를 덮어써
+				// mixer 플러그인 키가 지워진다. playerOptions.volume은 필터와 무관하므로
+				// 이쪽을 쓴다.
+				applyVolumeAsFilter: false
 			}))
 		);
 	}
@@ -147,8 +150,14 @@ export class AudioService {
 			if (remainingTracksCount > 0) {
 				await this.promptRemainingPlaylist(interaction, player, playlist, playlist.selectedTrack, remainingTracks as Track[]);
 			} else if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
-				// 단일곡 + idle → 컨트롤러만 남기고 질문/trackAdded 생략 (P2와 동일)
-				await interaction.deleteReply().catch(() => null);
+				// 단일곡 + idle → 컨트롤러가 뒤따라오지만 누가 시작했는지는 남긴다
+				await interaction
+					.editReply({
+						flags: MessageFlags.IsComponentsV2,
+						components: [view.playStarted({ track: playlist.selectedTrack as Track, userId: interaction.user.id })],
+						allowedMentions: { users: [], roles: [] }
+					})
+					.catch(() => null);
 			} else {
 				await interaction.editReply({
 					flags: MessageFlags.IsComponentsV2,
@@ -272,7 +281,14 @@ export class AudioService {
 		if (!wasIdle) this.preloadAfterQueueChange(player);
 
 		if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
-			await interaction.deleteReply().catch(() => null);
+			// 컨트롤러가 뒤따라 오지만, 누가 재생을 시작했는지는 채팅에도 남긴다.
+			await interaction
+				.editReply({
+					flags: MessageFlags.IsComponentsV2,
+					components: [view.playStarted({ track: searchRes.tracks[0] as Track, userId: interaction.user.id })],
+					allowedMentions: { users: [], roles: [] }
+				})
+				.catch(() => null);
 			return;
 		}
 
@@ -294,9 +310,10 @@ export class AudioService {
 	 * Starts playback if the player is not currently playing
 	 */
 	public async ensurePlayback(player: Player): Promise<void> {
-		if (!player.playing) {
-			await player.play(player.paused ? { paused: false } : undefined);
-		}
+		if (player.playing) return;
+		// mixer 필터는 play op보다 먼저 도착해야 트랙 시작 시의 필터 체인에 포함된다.
+		await container.mixerService.primeForPlay(player);
+		await player.play(player.paused ? { paused: false } : undefined);
 	}
 
 	private async isControllerEnabled(guildId: string): Promise<boolean> {

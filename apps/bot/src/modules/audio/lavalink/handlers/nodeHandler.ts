@@ -119,7 +119,9 @@ export class NodeHandler extends BaseLavalinkHandler {
 				? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
 				: lavalinkPlayer.volume,
 
-			applyVolumeAsFilter: savedPlayer.options.applyVolumeAsFilter,
+			// volume은 filters가 아니라 playerOptions로 보낸다(부분 filters op는 서버의 필터
+			// 상태 전체를 덮어써 mixer 플러그인 키를 지운다). 이전 세션의 true 값도 무시한다.
+			applyVolumeAsFilter: false,
 			instaUpdateFiltersFix: savedPlayer.options.instaUpdateFiltersFix,
 			vcRegion: savedPlayer.options.vcRegion
 		});
@@ -182,7 +184,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 	private handleNodeReconnecting(node: LavalinkNode) {
 		this.logger.info(`Node reconnecting: ${node.options.id}`);
 		// Lavalink 재시작 뒤 플러그인 필터 상태가 사라질 수 있다. 예열 슬롯은
-		// session resume 시 여전히 유효할 수 있으므로 보존하고, 다음 trackStart에서만 필터를 재적용한다.
+		// session resume 시 여전히 유효할 수 있으므로 보존하고, 다음 play 이전에만 필터를 재적용한다.
 		this.container.mixerService.resetFilterReadiness();
 	}
 

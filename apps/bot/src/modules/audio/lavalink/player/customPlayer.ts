@@ -16,6 +16,8 @@ export class CustomPlayer extends Player {
 	public messageId: string | null = null;
 	public controller: Message | null = null;
 	public chapters: Chapter[] = [];
+	/** `chapters`가 어느 트랙의 것인지 — 트랙이 바뀌면 이전 챕터를 버린다. */
+	public chaptersTrackIdentifier: string | null = null;
 	public queuePage: number = 1;
 	public queueSelectedIndex: number | null = null;
 	public activeFilters: string[] = [];

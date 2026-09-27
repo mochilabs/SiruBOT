@@ -389,6 +389,7 @@ export class PlaylistCommand extends Command {
 			}
 
 			if (!player.playing && !player.paused) {
+				await this.container.mixerService.primeForPlay(player);
 				await player.play();
 			} else if (addedCount > 0) {
 				void this.container.mixerService.preloadUpcoming(player).catch(() => null);

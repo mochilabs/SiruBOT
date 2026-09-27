@@ -61,7 +61,7 @@ export class FilterCommand extends Command {
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
 			// resetFilters()가 mixer 플러그인 키도 지우므로 다시 삽입
-			await this.container.mixerService.enableMixerFilter(player).catch(() => null);
+			await this.container.mixerService.reapplyMixerFilter(player);
 			player.activeFilters = [];
 			await interaction.reply({
 				components: [view.filterApplied({ filters: [] })],
@@ -79,7 +79,7 @@ export class FilterCommand extends Command {
 			const newFilters = activeFilters.filter((f) => f !== preset);
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
-			await this.container.mixerService.enableMixerFilter(player).catch(() => null);
+			await this.container.mixerService.reapplyMixerFilter(player);
 
 			await Promise.all(newFilters.map((filter) => this.applyPreset(player, filter)));
 

@@ -192,6 +192,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			player.queue.tracks.unshift(player.queue.current);
 		}
 		await this.container.mixerService.clearNext(player).catch(() => null);
+		await this.container.mixerService.primeForPlay(player);
 		await player.play({ clientTrack: previousTrack });
 		player.queue.previous.pop();
 

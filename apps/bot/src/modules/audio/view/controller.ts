@@ -112,6 +112,18 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	return containerComponent;
 }
 
+/** 현재 위치 기준으로 진행 중인 챕터 한 줄을 만든다. 챕터가 없으면 null. */
+function buildEpisodeLine(player: Player): string | null {
+	const chapters = (player as CustomPlayer).chapters;
+	if (!Array.isArray(chapters) || chapters.length === 0) return null;
+
+	const position = player.position ?? 0;
+	const index = chapters.findIndex((chapter) => position >= chapter.start && position < chapter.end);
+	if (index < 0) return null;
+
+	return `-# 🎬 ${index + 1}/${chapters.length} · ${chapters[index].name}`;
+}
+
 export function buildTrackDisplay(player: Player, track: Track | null): string[] {
 	const contents = [];
 	if (!track) {
@@ -131,6 +143,9 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 			`(${formatTime(player.position / 1000)} / ${formatTime(track.info.duration / 1000)}) ${emojiProgressBar(player.position / track.info.duration)}`
 		);
 	}
+
+	const episode = buildEpisodeLine(player);
+	if (episode) contents.push(episode);
 
 	const requesterInfo = [];
 	requesterInfo.push(`-# 아티스트: ${track.info.author}`);

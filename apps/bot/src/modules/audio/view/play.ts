@@ -43,6 +43,26 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 	return container;
 }
 
+type playStartedViewProps = {
+	track: Track;
+	userId: string;
+};
+
+/** idle 상태에서 재생이 곧바로 시작될 때 — 누가 시작했는지 남긴다. */
+export function playStarted({ track, userId }: playStartedViewProps) {
+	const container = createContainer();
+
+	const trackText = formatTrack(track, {
+		showLength: true,
+		withMarkdownURL: true
+	});
+
+	const content = `🎬 <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# 아티스트: ${track.info.author}`;
+	addTextWithThumbnail(container, content, track?.info.artworkUrl);
+
+	return container;
+}
+
 type playlistQueuedViewProps = {
 	playlist: PlaylistInfo;
 	tracks: Track[];

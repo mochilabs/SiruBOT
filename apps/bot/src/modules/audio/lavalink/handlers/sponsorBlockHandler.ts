@@ -3,6 +3,7 @@ import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { DEFAULT_COLOR } from '@sirubot/utils';
+import { resolveYouTubeVideoId } from '../youtubeChapters.ts';
 
 export class SponsorBlockHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -14,6 +15,9 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 
 	private async handleChaptersLoaded(player: CustomPlayer, _track: Track | UnresolvedTrack | null, payload: SponsorBlockChaptersLoaded) {
 		this.logger.debug(`Chapters loaded: ${player.guildId} ${payload.chapters.length}`);
+		// 어느 트랙의 챕터인지 기록해 trackStart의 REST 조회가 이를 덮어쓰지 않게 한다.
+		const videoId = resolveYouTubeVideoId(_track);
+		if (videoId) player.chaptersTrackIdentifier = videoId;
 		player.chapters = payload.chapters;
 	}
 

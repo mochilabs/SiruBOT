@@ -42,6 +42,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		if (action === 'reset') {
 			await player.filterManager.resetFilters();
 			await player.filterManager.clearEQ();
+			await this.container.mixerService.reapplyMixerFilter(player);
 			player.activeFilters = [];
 			await interaction.update({
 				components: [filterView({ activeFilters: [] })],
