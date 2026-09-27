@@ -9,7 +9,7 @@ import * as view from '../view/mixer.ts';
 	name: 'mixer',
 	description: '갭리스 재생과 크로스페이드를 설정해요.',
 	fullCategory: ['음악'],
-	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying']
+	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel']
 })
 export class MixerCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
@@ -73,9 +73,6 @@ export class MixerCommand extends Command {
 		await interaction.deferReply();
 
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
-		if (!player) {
-			throw new UserError({ identifier: 'mixer_no_player', message: '❌ 재생 중인 곡이 없어요.', context: { ephemeral: true } });
-		}
 
 		const subcommand = interaction.options.getSubcommand(true);
 		switch (subcommand) {
@@ -94,11 +91,11 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	private async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player: CustomPlayer) {
-		const settings = await this.container.guildService.getMixerSettings(player.guildId);
-		const state = await this.container.mixerService.getState(player).catch(() => null);
+	private async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+		const settings = await this.container.guildService.getMixerSettings(interaction.guildId);
+		const state = player ? await this.container.mixerService.getState(player).catch(() => null) : null;
 		await interaction.editReply({
-			components: [view.mixerStatus({ settings, state })],
+			components: [view.mixerStatus({ settings, state, noPlayer: !player })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});
@@ -115,39 +112,48 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	private async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player: CustomPlayer) {
+	private async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
-		await this.container.guildService.setGapless(player.guildId, enabled);
-		if (!enabled) await this.container.mixerService.clearNext(player).catch(() => null);
-		else await this.container.mixerService.preloadUpcoming(player).catch(() => null);
+		await this.container.guildService.setGapless(interaction.guildId, enabled);
+		if (player) {
+			if (!enabled) await this.container.mixerService.clearNext(player).catch(() => null);
+			else await this.container.mixerService.preloadUpcoming(player).catch(() => null);
+		}
+		let message: string;
+		if (player) {
+			if (enabled) message = '⏭️ 갭리스 재생을 켰어요. 다음 곡부터 끊김 없이 이어져요.';
+			else message = '⏭️ 갭리스 재생을 껐어요.';
+		} else if (enabled) message = '⏭️ 갭리스 재생을 켰어요. 다음에 재생할 때부터 끊김 없이 이어져요.';
+		else message = '⏭️ 갭리스 재생을 껐어요. 다음에 재생할 때부터 적용돼요.';
 		await interaction.editReply({
-			components: [
-				view.mixerUpdated({ message: enabled ? '⏭️ 갭리스 재생을 켰어요. 다음 곡부터 끊김 없이 이어져요.' : '⏭️ 갭리스 재생을 껐어요.' })
-			],
+			components: [view.mixerUpdated({ message })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});
 	}
 
-	private async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player: CustomPlayer) {
+	private async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		const duration = interaction.options.getInteger('duration') ?? undefined;
-		const saved = await this.container.guildService.setCrossfade(player.guildId, enabled, duration);
-		try {
-			await this.container.mixerService.setCrossfade(player, saved.crossfadeEnabled, saved.crossfadeMs);
-		} catch {
-			throw new UserError({
-				identifier: 'mixer_crossfade_failed',
-				message: '🛠️ 크로스페이드 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.',
-				context: { ephemeral: true }
-			});
+		const saved = await this.container.guildService.setCrossfade(interaction.guildId, enabled, duration);
+		if (player) {
+			try {
+				await this.container.mixerService.setCrossfade(player, saved.crossfadeEnabled, saved.crossfadeMs);
+			} catch {
+				throw new UserError({
+					identifier: 'mixer_crossfade_failed',
+					message: '🛠️ 크로스페이드 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.',
+					context: { ephemeral: true }
+				});
+			}
 		}
+		const base = saved.crossfadeEnabled ? `🔀 크로스페이드를 켰어요. (${saved.crossfadeMs}ms 겹치기)` : '🔀 크로스페이드를 껐어요.';
 		await interaction.editReply({
 			components: [
 				view.mixerUpdated({
-					message: saved.crossfadeEnabled ? `🔀 크로스페이드를 켰어요. (${saved.crossfadeMs}ms 겹치기)` : '🔀 크로스페이드를 껐어요.'
+					message: player ? base : `${base} 다음에 재생할 때부터 적용돼요.`
 				})
 			],
 			flags: [MessageFlags.IsComponentsV2],
