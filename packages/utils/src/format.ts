@@ -59,8 +59,12 @@ export function emojiProgressBar(percent: number): string {
 }
 
 export function getRequesterText(track: Track): string {
-	const requesterId = (track.requester as any).id;
-	return requesterId === 'related_track' ? `추천 곡 ${EMOJI_SPARKLE}` : `신청자: <@${requesterId}>`;
+	// controller.ts와 동일한 가드: requester가 없거나 문자열이면 .id 접근으로 터지지 않도록 한다.
+	const requester = track.requester;
+	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
+	if (requesterId === 'related_track') return `추천 곡 ${EMOJI_SPARKLE}`;
+	if (typeof requesterId === 'string' && requesterId.length > 0) return `신청자: <@${requesterId}>`;
+	return '';
 }
 
 export function removeEmojis(str: string): string {

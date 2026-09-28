@@ -31,7 +31,8 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 	});
 	let artistText = `-# 아티스트: ${track.info.author}`;
 
-	artistText += ' | ' + getRequesterText(track);
+	const requesterText = getRequesterText(track);
+	if (requesterText) artistText += ' | ' + requesterText;
 
 	if (queued) {
 		artistText += ` | ${position}개 남음 (${formatTime((totalDuration ?? 0) / 1000)})`;
