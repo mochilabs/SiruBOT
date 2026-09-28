@@ -27,7 +27,9 @@ export function queueList({ player, page, totalPages, authorId }: QueueViewProps
 		})}`;
 	});
 
-	const totalDuration = formatTimeToKorean(player.queue.utils.totalDuration() / 1000);
+	// 대기열 목록의 카운트가 대기열 곡만 세는 만큼, 남은 시간도 대기열 곡만 센다 (재생 중인 곡 제외).
+	const queuedDuration = player.queue.tracks.reduce((acc, track) => acc + (track.info.duration || 0), 0);
+	const totalDuration = formatTimeToKorean(queuedDuration / 1000);
 
 	const content = [`### 📄 대기열 목록`, ...lines, ``, `-# 페이지 ${page}/${totalPages} | 총 ${tracks.length}곡 | ${totalDuration} 남음`].join(
 		'\n'

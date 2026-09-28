@@ -68,6 +68,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		switch (command) {
+			case 'time':
+				await this.safeUpdate(interaction, player);
+				break;
 			case 'pause':
 				await this.handlePause(interaction, player);
 				break;

@@ -34,29 +34,54 @@ const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
+/**
+ * 지금부터 대기열이 끝날 때까지의 실제 남은 시간(ms).
+ * `totalDuration()`은 현재 곡의 전체 길이를 포함하므로 현재 위치만큼 빼고,
+ * 스트리밍은 끝나는 시점이 없어 position을 뺸다.
+ */
+function remainingUntilQueueEnd(player: Player): number {
+	const current = player.queue.current;
+	const elapsed = current && !current.info.isStream ? Math.min(player.position ?? 0, current.info.duration ?? 0) : 0;
+	return Math.max(0, player.queue.utils.totalDuration() - elapsed);
+}
+
 export function controllerView({ player, volume }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
 	const current = player.queue.current;
+	const queueCount = player.queue.tracks.length;
 
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(buildTrackDisplay(player, current).join('\n'));
+	// 대기열 안내를 별도 줄 대신 곡 정보 첫 줄(-# 🎵 ...)뒤에 병합해 세로 크기를 줄인다.
+	// 대기열이 비어 있으면 병합하지 않는다.
+	const trackLines = buildTrackDisplay(player, current, false);
+	if (queueCount > 0) {
+		trackLines[0] = `${trackLines[0]} • 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player) / 1000)} 남음`;
+	}
+
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(trackLines.join('\n'));
 
 	const thumbnail = new ThumbnailBuilder();
 
-	const prevButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('prev'))
-		.setEmoji('⏮️')
-		.setDisabled(player.queue.previous.length === 0);
+	// const prevButton = new ButtonBuilder()
+	// 	.setCustomId(wrapPrefix('prev'))
+	// 	.setEmoji('⏮️')
+	// 	.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
 		.setEmoji(player.paused ? '▶️' : '⏸');
 
-	const nextButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('next'))
-		.setEmoji('⏭️')
-		.setDisabled(player.queue.tracks.length === 0);
+	// const nextButton = new ButtonBuilder()
+	// 	.setCustomId(wrapPrefix('next'))
+	// 	.setEmoji('⏭️')
+	// 	.setDisabled(player.queue.tracks.length === 0);
+
+	const timeLabel = current?.info.isStream
+		? 'LIVE'
+		: `${formatTime((player.position ?? 0) / 1000)} / ${formatTime((current?.info.duration ?? 0) / 1000)}`;
+
+	const timeButton = new ButtonBuilder().setCustomId(wrapPrefix('time')).setLabel(timeLabel).setStyle(ButtonStyle.Secondary);
 
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
@@ -69,8 +94,12 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		)
 		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
+	// '대기열 보기' 버튼: 별도 ActionRow를 만들지 않고 메인 컨트롤러 행에 합친다(최대 4개, 상한 5개 이내).
+	// 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다. customId는 행 위치와 무관하다.
+	const queueShowButton = queueCount > 0 ? new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄') : null;
+
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+		[timeButton, pauseButton, repeatButton, ...(queueShowButton ? [queueShowButton] : [])].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
 
 	if (current?.info.artworkUrl) {
@@ -83,25 +112,6 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	}
 
 	containerComponent.addActionRowComponents(controlActionRow);
-
-	// 큐 섹션: 인라인 목록 대신 '대기열 보기' 버튼 하나로 축소.
-	// 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
-	if (player.queue.tracks.length > 0) {
-		const queueCount = player.queue.tracks.length;
-		const remaining = formatTimeToKorean(player.queue.utils.totalDuration() / 1000);
-
-		const queueShowButton = new ButtonBuilder()
-			.setCustomId(wrapPrefix('queue:show'))
-			.setLabel(`대기열 ${queueCount}곡 보기`)
-			.setEmoji('📄')
-			.setStyle(ButtonStyle.Secondary);
-
-		const queueHint = new TextDisplayBuilder().setContent(`-# 대기열 ${queueCount}곡 | ${remaining} 남음`);
-
-		containerComponent
-			.addTextDisplayComponents(queueHint)
-			.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(queueShowButton));
-	}
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
@@ -122,10 +132,10 @@ function buildEpisodeLine(player: Player): string | null {
 	if (index < 0) return null;
 
 	const chapter = chapters[index];
-	return `-# ╰ [${chapter.name}] • (${formatTime(chapter.start / 1000)} / ${formatTime(chapter.end / 1000)})`;
+	return `-# ╰ ${chapter.name} • (${formatTime(chapter.start / 1000)} - ${formatTime(chapter.end / 1000)})`;
 }
 
-export function buildTrackDisplay(player: Player, track: Track | null): string[] {
+export function buildTrackDisplay(player: Player, track: Track | null, showTimestamp = true): string[] {
 	const contents = [];
 	if (!track) {
 		contents.push(`### 재생 중인 음악이 없어요.`);
@@ -140,9 +150,8 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 	if (track.info.isStream) {
 		contents.push(`[${durationText}][실시간 스트리밍]`);
 	} else {
-		contents.push(
-			`(${formatTime(player.position / 1000)} / ${formatTime(track.info.duration / 1000)}) ${emojiProgressBar(player.position / track.info.duration)}`
-		);
+		const progressBar = emojiProgressBar(player.position / track.info.duration);
+		contents.push(showTimestamp ? `(${formatTime(player.position / 1000)} / ${durationText}) ${progressBar}` : progressBar);
 	}
 
 	const episode = buildEpisodeLine(player);
