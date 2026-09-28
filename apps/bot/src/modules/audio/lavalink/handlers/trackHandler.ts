@@ -205,6 +205,19 @@ export class TrackHandler extends BaseLavalinkHandler {
 			return;
 		}
 
+		// 선예열이 방금 끝나 in-flight 가드를 놓친 사이 queueEnd가 올 수 있다 —
+		// 큐에 추천곡이 남아 있는데 "모두 재생 완료"로 끝내면 곡이 영원히 재생되지 않는다.
+		if (!player.playing && player.queue.tracks.length > 0) {
+			if (!player.queue.current) {
+				const next = player.queue.tracks.shift();
+				if (next) player.queue.current = next as (typeof player.queue)['current'];
+			}
+			if (player.queue.current) {
+				await this.startClientOwnedTrack(player).catch((error) => this.logger.error(`Failed to start queued track after queueEnd: ${error}`));
+				return;
+			}
+		}
+
 		// 대기열의 모든 곡이 끝났으므로 컨트롤러 메시지 삭제
 		await this.container.playerNotifier.deleteController(player);
 

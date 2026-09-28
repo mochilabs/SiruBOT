@@ -3,6 +3,7 @@ import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult } f
 import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { SkipContext } from '../modules/audio/commands/skip.ts';
 import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
+import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import * as view from '../modules/audio/view/play.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 
@@ -142,6 +143,7 @@ export class AudioService {
 
 		if (playlist.selectedTrack) {
 			await player.queue.add(playlist.selectedTrack);
+			await removeStaleRelatedTracks(player);
 			if (!wasIdle) this.preloadAfterQueueChange(player);
 
 			const remainingTracks = searchRes.tracks.filter((track) => track.info.identifier !== playlist.selectedTrack!.info.identifier);
@@ -174,6 +176,7 @@ export class AudioService {
 			}
 		} else {
 			await player.queue.add(searchRes.tracks);
+			await removeStaleRelatedTracks(player);
 			if (!wasIdle) this.preloadAfterQueueChange(player);
 
 			await interaction.editReply({
@@ -240,6 +243,7 @@ export class AudioService {
 
 			if (collectorInteraction.customId === 'playlist_add_remaining') {
 				await player.queue.add(remainingTracks);
+				await removeStaleRelatedTracks(player);
 				this.preloadAfterQueueChange(player);
 
 				await collectorInteraction.editReply({
@@ -278,6 +282,7 @@ export class AudioService {
 	): Promise<void> {
 		const wasIdle = player.queue.current === null && !player.playing;
 		await player.queue.add(searchRes.tracks[0]);
+		await removeStaleRelatedTracks(player);
 		if (!wasIdle) this.preloadAfterQueueChange(player);
 
 		if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
@@ -325,9 +330,14 @@ export class AudioService {
 		}
 	}
 
-	/** 재생 중 대기열 변경 직후 다음 첫 곡을 서버 슬롯에 다시 예열한다. */
+	/**
+	 * 재생/일시정지 중 대기열 변경 직후 다음 첫 곡을 서버 슬롯에 다시 예열한다.
+	 * 일시정지 중에는 lavalink-client가 player.playing을 false로 두므로 paused도 함께 본다 —
+	 * 선예열 추천곡이 제거돼 head가 바뀌었는데 슬롯을 갱신하지 않으면 content end에
+	 * 큐에 없는 추천곡이 재생된다. 완전히 정지한 상태에서는 시작을 play()가 담당하므로 건너뛴다.
+	 */
 	private preloadAfterQueueChange(player: Player): void {
-		if (!player.queue.current || !player.playing) return;
+		if (!player.queue.current || (!player.playing && !player.paused)) return;
 		void container.mixerService.preloadUpcoming(player).catch((error) => {
 			container.logger.warn(`[mixer] preload after queue change failed (guild ${player.guildId}): ${error}`);
 		});

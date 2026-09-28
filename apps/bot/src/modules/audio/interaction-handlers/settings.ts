@@ -9,6 +9,7 @@ import {
 import { settingsView, SettingsMode } from '../view/settings.ts';
 import { RepeatMode } from 'lavalink-client';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
+import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
 
 export default class SettingsInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -67,7 +68,18 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			await this.container.guildService.setEnableController(interaction.guildId, !guild.enableController);
 		} else if (action === 'toggle:related') {
 			const guild = await this.container.guildService.getGuild(interaction.guildId);
-			await this.container.guildService.setRelated(interaction.guildId, !guild.related);
+			const next = !guild.related;
+			await this.container.guildService.setRelated(interaction.guildId, next);
+			// /추천곡 커맨드와 동일하게, 켰을 때는 현재 곡의 다음 추천을 미리 준비해 둔다.
+			if (next) {
+				const player = this.container.audio.getPlayer(interaction.guildId);
+				const currentTrack = player?.queue.current;
+				if (player?.playing && currentTrack && player.queue.tracks.length === 0) {
+					void queueRelatedUpfront(player, currentTrack).catch((error) => {
+						this.container.logger.warn(`[mixer] related pre-add failed (guild ${interaction.guildId}): ${error}`);
+					});
+				}
+			}
 		} else if (action === 'toggle:repeat') {
 			const guild = await this.container.guildService.getGuild(interaction.guildId);
 			const current = guild.repeat as RepeatMode;

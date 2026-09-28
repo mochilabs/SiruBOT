@@ -4,6 +4,7 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags }
 import { createContainer } from '@sirubot/utils';
 import { Track, SearchPlatform } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
+import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -266,6 +267,7 @@ export class FavoritesCommand extends Command {
 				for (const result of searchResults) {
 					if (result.status === 'fulfilled' && result.value.tracks.length > 0) {
 						await player.queue.add(result.value.tracks[0]);
+						await removeStaleRelatedTracks(player);
 						addedCount++;
 					}
 				}

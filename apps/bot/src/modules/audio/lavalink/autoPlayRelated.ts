@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { Player, Track } from 'lavalink-client';
+import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { CustomPlayer } from './player/customPlayer.ts';
 import { isYouTubeSource } from './youtubeChapters.ts';
 
@@ -13,6 +13,9 @@ const LOW_SIMILARITY = Number(process.env.AUTOPLAY_LOW_SIM) || 0.2;
 const TITLE_WEIGHT = 0.6;
 const DURATION_WEIGHT = 0.4;
 
+// 이미 재생했던 곡의 순위 강등량 — 밴드 판정이 아니라 랭킹에만 적용한다
+const PREVIOUS_PLAY_PENALTY = 0.4;
+
 // trackStart 선예열(queueRelatedUpfront)과 queueEnd fallback(autoPlayRelated)의
 // 이중 추가를 막는 길드별 in-flight 가드
 const relatedFetchInFlight = new Map<string, Promise<Track | null>>();
@@ -20,6 +23,38 @@ const relatedFetchInFlight = new Map<string, Promise<Track | null>>();
 /** 진행 중인 추천곡 프리페치를 반환한다 (handleQueueEnd가 완료를 기다릴 때 사용) */
 export function getInFlightRelatedFetch(guildId: string): Promise<Track | null> | undefined {
 	return relatedFetchInFlight.get(String(guildId));
+}
+
+/** 봇이 자동으로 넣은 추천곡인지 판별한다 (requester.id === 'related_track') */
+export function isRelatedTrack(track: Track | UnresolvedTrack): boolean {
+	const requester = (track as { requester?: unknown }).requester;
+	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
+	return requesterId === 'related_track';
+}
+
+/**
+ * 큐에 남아 있는 선예열 추천곡을 제거한다.
+ * 추천곡은 "큐가 비어 있을 때 현재 곡 기준"으로 만들어진 것이므로 그대로 두면
+ * 사용자가 추가한 곡보다 먼저 재생된다 — 사용자 곡이 그 자리를 잇도록 replace 한다.
+ * 반드시 `queue.add` "이후"에 부른다 (이전에 부르면 그 사이에 빈 큐를 본 선예열
+ * fetch가 다시 추가할 수 있다). 제거한 개수를 반환하며, 서버 예열 슬롯 갱신은
+ * 호출부의 preload가 담당한다.
+ */
+export async function removeStaleRelatedTracks(player: Player): Promise<number> {
+	const tracks = player.queue.tracks;
+	const relatedIndexes: number[] = [];
+	for (let i = 0; i < tracks.length; i++) {
+		if (isRelatedTrack(tracks[i])) relatedIndexes.push(i);
+	}
+	if (relatedIndexes.length === 0) return 0;
+
+	// 뒤에서부터 지워야 인덱스가 밀리지 않는다. queue.splice를 쓰면
+	// tracksRemoved 콜백과 utils.save()(큐 저장소 동기화)까지 함께 처리된다.
+	for (let i = relatedIndexes.length - 1; i >= 0; i--) {
+		await player.queue.splice(relatedIndexes[i], 1);
+	}
+	container.logger.debug(`[autoPlayRelated] Removed ${relatedIndexes.length} pre-added related track(s) for user add (guild ${player.guildId})`);
+	return relatedIndexes.length;
 }
 
 /**
@@ -54,6 +89,10 @@ export function titleSimilarity(titleA: string, titleB: string): number {
 	const a = normalizeTitle(titleA);
 	const b = normalizeTitle(titleB);
 
+	// 괄호/특수문자만 남아 정규화가 비어버린 제목은 비교 불가 — 0으로 두고
+	// (a === b === "")이 유사도 1.0이 되어 완전히 다른 곡들이 "너무 유사"로
+	// 전량 배제되는 일을 막는다.
+	if (a.length === 0 || b.length === 0) return 0;
 	if (a === b) return 1;
 	if (a.length < 2 || b.length < 2) return 0;
 
@@ -109,40 +148,32 @@ export function pickBySimilarity(candidates: Track[], reference: Track, previous
 	if (candidates.length === 0) return null;
 
 	const scored = candidates.map((track) => {
-		let similarity = trackSimilarity(reference, track);
-
-		// Apply penalty if the track has been played previously to lower its priority
-		if (previousIds.includes(track.info.identifier)) {
-			similarity -= 0.4;
-		}
-
-		return { track, similarity };
+		const similarity = trackSimilarity(reference, track);
+		// 이미 재생했던 곡은 순위를 낮춘다. 이 감점은 아래 밴드 판정에 쓰이지 않는다 —
+		// 감점을 밴드 필터 이전에 적용하면 "너무 유사"했던 곡이 감점으로 밴드 안에
+		// 들어오고, 적당했던 곡은 LOW 미만으로 떨어져 완전히 배제됐다.
+		const playedBefore = previousIds.includes(track.info.identifier);
+		return { track, similarity, rank: similarity - (playedBefore ? PREVIOUS_PLAY_PENALTY : 0) };
 	});
 
-	// Filter medium similarity range: exclude tracks that are too similar or too different
-	const mediumRange = scored.filter((s) => s.similarity > LOW_SIMILARITY && s.similarity < HIGH_SIMILARITY);
+	// 원점수 기준으로 중간 밴드만 후보로 삼는다 (너무 유사/너무 무관한 곡 배제)
+	let pool = scored.filter((s) => s.similarity > LOW_SIMILARITY && s.similarity < HIGH_SIMILARITY);
 
-	if (mediumRange.length > 0) {
-		// Sort by similarity within the medium range, then randomly select from the top 3 (to ensure variety)
-		mediumRange.sort((a, b) => b.similarity - a.similarity);
-		const topN = mediumRange.slice(0, Math.min(3, mediumRange.length));
-		const pick = topN[Math.floor(Math.random() * topN.length)];
+	// 밴드에 드는 곡이 없으면 하한만 완화한다 (커버·번역곡 배제는 유지)
+	if (pool.length === 0) pool = scored.filter((s) => s.similarity < HIGH_SIMILARITY);
 
-		container.logger.debug(`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
-		return pick.track;
-	}
+	// 전부 너무 유사하면 그래도 재생을 이어가기 위해 전체를 후보로 쓴다
+	if (pool.length === 0) pool = scored;
 
-	// If no tracks in medium range, exclude too similar ones and pick randomly from the rest
-	const notTooSimilar = scored.filter((s) => s.similarity < HIGH_SIMILARITY);
-	if (notTooSimilar.length > 0) {
-		const pick = notTooSimilar[Math.floor(Math.random() * notTooSimilar.length)];
-		container.logger.debug(`[autoPlayRelated] Fallback pick: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
-		return pick.track;
-	}
+	// 감점 반영 순위로 정렬한 뒤 상위 3개 중 랜덤 선택 (다양성 확보)
+	pool.sort((a, b) => b.rank - a.rank);
+	const topN = pool.slice(0, Math.min(3, pool.length));
+	const pick = topN[Math.floor(Math.random() * topN.length)];
 
-	// If all tracks are too similar (e.g., all translated versions/covers), just pick randomly
-	container.logger.debug('[autoPlayRelated] All candidates too similar, picking random');
-	return candidates[Math.floor(Math.random() * candidates.length)];
+	container.logger.debug(
+		`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)}, rank: ${pick.rank.toFixed(3)})`
+	);
+	return pick.track;
 }
 
 /**
