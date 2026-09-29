@@ -22,7 +22,7 @@ yarn typecheck                        # turbo; dependsOn ^generate — don't run
 ## Bot conventions (see skills first)
 
 - Load the matching skill before writing bot code: `sapphire-command`, `sapphire-precondition` (in `.opencode/skills/`). Don't duplicate their templates here.
-- Modules are only `audio` and `general` — registered via `setupStore()` in `apps/bot/src/core/bootstrap.ts`. Place files under `apps/bot/src/modules/<audio|general>/{commands,preconditions,listeners,interaction-handlers}/`.
+- Modules are `audio`, `general`, and `voice` — registered via `setupStore()` in `apps/bot/src/core/bootstrap.ts`. Place files under `apps/bot/src/modules/<audio|general|voice>/{commands,preconditions,listeners,interaction-handlers}/`.
 - TS: `allowImportingTsExtensions` — **always use `.ts` extension in bot relative imports** (e.g. `./logger.ts`). ESM (`type: module`), strict + decorators.
 - Slash commands: `registerApplicationCommands` + `GuildInstall` integration, `ko` primary / `en-US` fallback localizations, `fullCategory: ['음악'|'일반'|'개발']`, `deferReply()` before async work, throw `UserError({ identifier, message, context: { ephemeral: true } })` for user errors. All user-facing strings in Korean.
 - Preconditions referenced by string name in `preconditions: [...]`; common audio set: `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel, MemberListenable, ClientVoiceConnectable, ClientVoiceSpeakable`.

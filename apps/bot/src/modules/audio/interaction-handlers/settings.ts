@@ -1,6 +1,10 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import {
+	ActionRowBuilder,
 	MessageFlags,
+	ModalBuilder,
+	TextInputBuilder,
+	TextInputStyle,
 	type ButtonInteraction,
 	type StringSelectMenuInteraction,
 	type RoleSelectMenuInteraction,
@@ -41,13 +45,41 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			return;
 		}
 
+		const action = interaction.customId.replace('settings:', '');
+
+		// 방 이름 템플릿 모달은 응답 자체여야 하므로 deferUpdate 전에 연다.
+		if (action === 'jtctemplate') {
+			const settings = await this.container.guildService.getJtcSettings(interaction.guildId);
+			await interaction.showModal(
+				new ModalBuilder()
+					.setCustomId('settings:jtc-template')
+					.setTitle('방 이름 템플릿')
+					.addComponents(
+						new ActionRowBuilder<TextInputBuilder>().addComponents(
+							new TextInputBuilder()
+								.setCustomId('settings:jtc-template-input')
+								.setLabel('방 이름 템플릿')
+								.setPlaceholder('{user}의 방')
+								.setStyle(TextInputStyle.Short)
+								.setRequired(true)
+								.setMaxLength(100)
+								.setValue(settings.template)
+						)
+					)
+			);
+			return;
+		}
+
 		await interaction.deferUpdate();
 
-		const action = interaction.customId.replace('settings:', '');
 		let mode: SettingsMode = 'main';
 
 		// ── Navigation ───────────────────────────
-		if (action === 'music' || action.startsWith('toggle:')) mode = 'music';
+		if (action === 'navigate' && interaction.isStringSelectMenu()) {
+			const target = interaction.values[0];
+			mode = target === 'music' || target === 'sponsorblock' || target === 'dj' || target === 'channel' || target === 'jtc' ? target : 'main';
+		} else if (action === 'toggle:jtc' || action === 'select:jtccategory' || action === 'select:jtclimit') mode = 'jtc';
+		else if (action === 'music' || action.startsWith('toggle:')) mode = 'music';
 		else if (action === 'sponsorblock' || action === 'select:sponsorblock' || action === 'reset:sponsorblock') mode = 'sponsorblock';
 		else if (action === 'dj' || action === 'select:dj' || action === 'remove:dj') mode = 'dj';
 		else if (
@@ -125,6 +157,26 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		// 고정 채널 입력 동작 (play: 즉시 재생 / select: 5개 선택)
 		if (interaction.isStringSelectMenu() && action === 'select:pinmode') {
 			await this.container.guildService.setPinnedChannelMode(interaction.guildId, interaction.values[0] === 'select' ? 'select' : 'play');
+		}
+
+		// JTC actions
+		if (action === 'toggle:jtc') {
+			const settings = await this.container.guildService.getJtcSettings(interaction.guildId);
+			if (settings.enabled || settings.markerChannelId) {
+				await this.container.guildService.setJtcEnabled(interaction.guildId, !settings.enabled);
+			}
+		} else if (interaction.isChannelSelectMenu() && action === 'select:jtccategory') {
+			try {
+				await this.container.tempVoiceService.setupMarkerChannel(interaction.guildId, interaction.values[0]);
+			} catch (error) {
+				this.container.logger.error(`[tempVoice] marker setup failed (guild ${interaction.guildId}): ${error}`);
+				await interaction.followUp({
+					flags: [MessageFlags.Ephemeral],
+					content: '❌ 카테고리를 설정하지 못했어요. 봇에게 채널 관리 권한이 있는지 확인해 주세요.'
+				});
+			}
+		} else if (interaction.isStringSelectMenu() && action === 'select:jtclimit') {
+			await this.container.guildService.setJtcUserLimit(interaction.guildId, Number(interaction.values[0]));
 		}
 
 		// SponsorBlock actions

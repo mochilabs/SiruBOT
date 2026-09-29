@@ -14,7 +14,7 @@ import {
 import { Guild } from '@sirubot/prisma';
 import { createContainer } from '@sirubot/utils';
 
-export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock';
+export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock' | 'jtc';
 
 const prefix = 'settings:';
 const wrapPrefix = (id: string) => prefix + id;
@@ -58,6 +58,8 @@ export function settingsView(guild: Guild, mode: SettingsMode = 'main'): Contain
 			return buildDJView(container, guild);
 		case 'channel':
 			return buildChannelView(container, guild);
+		case 'jtc':
+			return buildJtcView(container, guild);
 		default:
 			return buildMainView(container, guild);
 	}
@@ -66,6 +68,14 @@ export function settingsView(guild: Guild, mode: SettingsMode = 'main'): Contain
 // ── 메인 대시보드 ──────────────────────────────────────
 function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const sponsorBlockStatus = guild.sponsorBlockSegments.length > 0 ? `켜짐 (${guild.sponsorBlockSegments.length}개 구간)` : '꺼짐';
+	const sponsorBlockDescription = guild.sponsorBlockSegments.length > 0 ? `현재 ${guild.sponsorBlockSegments.length}개 구간` : '꺼짐';
+	const channelDescription = guild.textChannelId
+		? guild.voiceChannelId
+			? '텍스트·음성 채널 설정됨'
+			: '텍스트 채널 설정됨'
+		: guild.voiceChannelId
+			? '음성 채널 설정됨'
+			: '채널 미설정';
 
 	const lines = [
 		`### ⚙️ 서버 설정`,
@@ -78,18 +88,27 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 		`💿 **DJ 역할**: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '없음 (모든 사용자)'}`,
 		`📄 **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
-		`📌 **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`
+		`📌 **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
+		`🔊 **임시 음성채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
 	container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
 
 	container.addActionRowComponents(
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('music')).setLabel('🎵 음악 설정').setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId(wrapPrefix('sponsorblock')).setLabel('⏩ 스폰서블록').setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId(wrapPrefix('dj')).setLabel('💿 DJ 설정').setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId(wrapPrefix('channel')).setLabel('📄 채널 설정').setStyle(ButtonStyle.Secondary)
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId(wrapPrefix('navigate'))
+				.setPlaceholder('설정할 기능을 선택하세요')
+				.setMinValues(1)
+				.setMaxValues(1)
+				.addOptions([
+					{ value: 'music', label: '🎵 음악 설정', description: '컨트롤러·추천곡·반복 모드' },
+					{ value: 'sponsorblock', label: '⏩ 스폰서블록', description: sponsorBlockDescription },
+					{ value: 'dj', label: '💿 DJ 설정', description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
+					{ value: 'channel', label: '📄 채널 설정', description: channelDescription },
+					{ value: 'jtc', label: '🔊 임시 음성', description: guild.jtcEnabled ? '켜짐' : '꺼짐' }
+				])
 		)
 	);
 
@@ -298,6 +317,77 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 				.setLabel('🗑 고정 채널 제거')
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.pinnedChannelId)
+		)
+	);
+
+	return container;
+}
+
+// ── 임시 음성채널 설정 ──────────────────────────────────
+function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
+	const lines = [
+		`### 🔊 임시 음성채널 설정`,
+		``,
+		`**상태**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`,
+		`**생성 위치**: ${guild.jtcCategoryId ? `<#${guild.jtcCategoryId}>` : '`미설정`'}`,
+		`**방 이름 템플릿**: \`${guild.jtcTemplate}\``,
+		`**인원 제한**: \`${guild.jtcUserLimit === 0 ? '무제한' : `${guild.jtcUserLimit}명`}\``
+	];
+
+	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
+	container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+
+	container.addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(
+			'-# 마커 채널에 들어오면 방이 만들어져요. 방장만 방 이름·인원을 바꿀 수 있고, 30초간 아무도 없으면 사라져요.'
+		)
+	);
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('toggle:jtc'))
+				.setLabel(guild.jtcEnabled ? '설정 끄기' : '설정 켜기')
+				.setStyle(guild.jtcEnabled ? ButtonStyle.Danger : ButtonStyle.Success)
+				.setDisabled(!guild.jtcMarkerChannelId && !guild.jtcEnabled)
+		)
+	);
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+			new ChannelSelectMenuBuilder()
+				.setCustomId(wrapPrefix('select:jtccategory'))
+				.setChannelTypes(ChannelType.GuildCategory)
+				.setPlaceholder('방을 만들 카테고리를 선택하세요')
+		)
+	);
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder().setCustomId(wrapPrefix('jtctemplate')).setLabel('🔔 방 이름 수정').setStyle(ButtonStyle.Secondary)
+		)
+	);
+
+	const limitOptions = [0, 1, 2, 3, 5, 10].map((value) => ({
+		label: value === 0 ? '무제한' : `${value}명`,
+		value: String(value),
+		default: guild.jtcUserLimit === value
+	}));
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId(wrapPrefix('select:jtclimit'))
+				.setPlaceholder('입장 인원 제한')
+				.setMinValues(1)
+				.setMaxValues(1)
+				.addOptions(limitOptions)
+		)
+	);
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary)
 		)
 	);
 

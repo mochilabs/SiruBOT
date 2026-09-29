@@ -132,6 +132,43 @@ export class GuildService {
 		return guild.pinnedChannelMode as PinnedChannelMode;
 	}
 
+	public async getJtcSettings(guildId: string) {
+		const guild = await this.getGuild(guildId);
+		return {
+			enabled: guild.jtcEnabled,
+			categoryId: guild.jtcCategoryId,
+			markerChannelId: guild.jtcMarkerChannelId,
+			template: guild.jtcTemplate,
+			userLimit: guild.jtcUserLimit
+		};
+	}
+
+	public async setJtcEnabled(guildId: string, enabled: boolean) {
+		const guild = await this.upsertField(guildId, 'jtcEnabled', enabled);
+		return guild.jtcEnabled;
+	}
+
+	public async setJtcCategory(guildId: string, categoryId: string | null, markerChannelId: string | null) {
+		const updated = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, jtcCategoryId: categoryId, jtcMarkerChannelId: markerChannelId },
+			update: { jtcCategoryId: categoryId, jtcMarkerChannelId: markerChannelId }
+		});
+		this.updateCache(updated);
+		return updated;
+	}
+
+	public async setJtcTemplate(guildId: string, template: string) {
+		const guild = await this.upsertField(guildId, 'jtcTemplate', template);
+		return guild.jtcTemplate;
+	}
+
+	public async setJtcUserLimit(guildId: string, userLimit: number) {
+		const clamped = Math.min(99, Math.max(0, Math.floor(userLimit)));
+		const guild = await this.upsertField(guildId, 'jtcUserLimit', clamped);
+		return guild.jtcUserLimit;
+	}
+
 	public async getEnableController(guildId: string): Promise<boolean> {
 		const guild = await this.getGuild(guildId);
 		return guild.enableController;
