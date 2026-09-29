@@ -24,6 +24,7 @@ export class HelpCommand extends Command {
 		const commands = this.container.stores.get('commands');
 
 		const audioCommands: string[] = [];
+		const gameCommands: string[] = [];
 		const generalCommands: string[] = [];
 
 		for (const [, cmd] of commands) {
@@ -33,6 +34,8 @@ export class HelpCommand extends Command {
 
 			if (cmd.fullCategory.includes('음악')) {
 				audioCommands.push(line);
+			} else if (cmd.fullCategory.includes('게임')) {
+				gameCommands.push(line);
 			} else {
 				const preconditions = cmd.options.preconditions;
 				const isOwnerOnly = Array.isArray(preconditions) && preconditions.includes('OwnerOnly');
@@ -42,7 +45,18 @@ export class HelpCommand extends Command {
 			}
 		}
 
-		const lines = ['### 📋 명령어 목록', '', '**🎵 오디오**', ...audioCommands, '', '**🛠️ 일반**', ...generalCommands];
+		const lines = [
+			'### 📋 명령어 목록',
+			'',
+			'**🎵 오디오**',
+			...audioCommands,
+			'',
+			'**🎮 게임**',
+			...gameCommands,
+			'',
+			'**🛠️ 일반**',
+			...generalCommands
+		];
 
 		const containerComponent = createContainer();
 		containerComponent.setAccentColor(DEFAULT_COLOR);
