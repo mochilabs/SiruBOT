@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -28,20 +28,23 @@ export class PreviousCommand extends Command {
 
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 		if (!player) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: '❌ 현재 재생 중인 플레이어가 없어요.'
+			throw new UserError({
+				identifier: 'PreviousCommandNoPlayer',
+				message: '현재 재생 중인 플레이어가 없어요.',
+				context: { ephemeral: true }
 			});
-			return;
 		}
 
 		if (player.queue.previous.length === 0) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: '❌ 이전에 재생한 곡이 없어요.'
+			throw new UserError({
+				identifier: 'PreviousCommandEmptyHistory',
+				message: '이전에 재생한 곡이 없어요.',
+				context: { ephemeral: true }
 			});
-			return;
 		}
+
+		// 복원/필터 준비는 Lavalink REST 왕복이므로 3초 응답 제한에 걸리기 전에 defer한다.
+		await interaction.deferReply();
 
 		const previousTrack = player.queue.previous[player.queue.previous.length - 1];
 		if (player.queue.current) {
@@ -57,7 +60,7 @@ export class PreviousCommand extends Command {
 			new TextDisplayBuilder().setContent(`⏮️ 이전곡 **${previousTrack.info.title}**을(를) 다시 재생해요.`)
 		);
 
-		await interaction.reply({
+		await interaction.editReply({
 			components: [containerComponent],
 			flags: [MessageFlags.IsComponentsV2]
 		});

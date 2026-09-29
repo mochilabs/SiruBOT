@@ -48,13 +48,31 @@ export async function removeStaleRelatedTracks(player: Player): Promise<number> 
 	}
 	if (relatedIndexes.length === 0) return 0;
 
-	// 뒤에서부터 지워야 인덱스가 밀리지 않는다. queue.splice를 쓰면
-	// tracksRemoved 콜백과 utils.save()(큐 저장소 동기화)까지 함께 처리된다.
-	for (let i = relatedIndexes.length - 1; i >= 0; i--) {
-		await player.queue.splice(relatedIndexes[i], 1);
+	// 추천곡은 대기열 끝에 연속으로 붙는다 — 연속 구간이면 splice 1회로 Redis 저장
+	// 동기화(round-trip)를 줄여 사용자 곡 추가 → 재예열까지의 전이 공백을 최소화한다.
+	const isContiguousTail =
+		relatedIndexes.every((value, i) => value === relatedIndexes[0] + i) && relatedIndexes[relatedIndexes.length - 1] === tracks.length - 1;
+	if (isContiguousTail) {
+		// queue.splice를 쓰면 tracksRemoved 콜백과 utils.save()(큐 저장소 동기화)까지 함께 처리된다.
+		await player.queue.splice(relatedIndexes[0], relatedIndexes.length);
+	} else {
+		// 뒤에서부터 지워야 인덱스가 밀리지 않는다.
+		for (let i = relatedIndexes.length - 1; i >= 0; i--) {
+			await player.queue.splice(relatedIndexes[i], 1);
+		}
 	}
-	container.logger.debug(`[autoPlayRelated] Removed ${relatedIndexes.length} pre-added related track(s) for user add (guild ${player.guildId})`);
+	container.logger.debug(`[autoPlayRelated] Removed ${relatedIndexes.length} pre-added related track(s) (guild ${player.guildId})`);
 	return relatedIndexes.length;
+}
+
+/**
+ * UI 표시·번호 지정의 기준이 되는 유저 대기열 — 선예열한 추천곡은 세지 않는다.
+ * 추천곡은 대기열 끝에만 붙고(사용자가 곡을 넣으면 removeStaleRelatedTracks로 제거되므로),
+ * 필터 결과의 인덱스는 원본 인덱스와 같다.
+ */
+export function getUserQueuedTracks(player: Player): Track[] {
+	// 타입 시그니처상 (Track | UnresolvedTrack)[]이지만, 필터 결과는 기존 코드들과 같이 Track로 본다
+	return player.queue.tracks.filter((track) => !isRelatedTrack(track)) as Track[];
 }
 
 /**
@@ -179,8 +197,9 @@ export function pickBySimilarity(candidates: Track[], reference: Track, previous
 /**
  * 현재 곡의 YouTube RD(Radio) 플레이리스트를 검색해 유사도 기반으로 추천곡을 고른다.
  * 순수 검색+선택만 담당하며 큐 상태 검사는 호출부에서 fetch 완료 후 한다. 실패 시 null.
+ * extraExcludes: 같은 요청에서 여러 곡을 연속으로 뽑을 때 이미 선택된 곡을 제외한다.
  */
-async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track): Promise<Track | null> {
+async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
 	const RD_PLAYLIST_ID = 'RD' + lastPlayedTrack.info.identifier;
 
 	try {
@@ -199,8 +218,11 @@ async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track): Pr
 		// The previous tracks will be passed into pickBySimilarity and get heavily penalized.
 		const previous = player.queue.previous.map((e) => e.info.identifier);
 		if (player.queue.current) previous.push(player.queue.current.info.identifier);
+		previous.push(...extraExcludes);
 
-		const availableTracks = searchResult.tracks.filter((track) => track.info.identifier !== lastPlayedTrack.info.identifier);
+		const availableTracks = searchResult.tracks.filter(
+			(track) => track.info.identifier !== lastPlayedTrack.info.identifier && !extraExcludes.includes(track.info.identifier)
+		);
 
 		if (availableTracks.length > 0) {
 			const selectedTrack = pickBySimilarity(availableTracks, lastPlayedTrack, previous);
@@ -253,6 +275,53 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 		return await operation;
 	} finally {
 		if (relatedFetchInFlight.get(gid) === operation) relatedFetchInFlight.delete(gid);
+	}
+};
+
+/**
+ * /추천 명령용 수동 추천 추가 — 현재 재생 곡을 기준으로 추천곡을 최대 count곡까지
+ * 대기열 끝에 추가한다. 자동 프리페치와 같은 in-flight 가드를 공유해 이중 추가를 막는다.
+ * 반환: 실제로 추가한 곡들 (지원하지 않는 소스/진행 중 충돌/후보 없음이면 빈 배열)
+ */
+export const addManualRecommendation = async (player: CustomPlayer, reference: Track, count: number): Promise<Track[]> => {
+	const gid = String(player.guildId);
+	if (relatedFetchInFlight.has(gid)) return [];
+
+	const referenceEncoded = (reference as { encoded?: unknown }).encoded;
+	const operation = async (): Promise<Track[]> => {
+		if (!reference.info.identifier || !isYouTubeSource(reference.info.sourceName)) return [];
+
+		const added: Track[] = [];
+		const pickedIds: string[] = [];
+		for (let i = 0; i < count; i++) {
+			const selected = await fetchRelatedCandidate(player, reference, pickedIds);
+			if (!selected) break;
+
+			// fetch 동안 정지/전이됐으면 이 기준의 추천을 더 넣지 않는다.
+			const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
+			if (player.getData('stopByCommand') || (player.queue.current && activeEncoded !== referenceEncoded)) break;
+
+			await player.queue.add(selected);
+			pickedIds.push(selected.info.identifier);
+			added.push(selected);
+		}
+
+		if (added.length > 0 && player.playing) {
+			// 다음 곡 슬롯을 다시 예열한다 (선두 예열 상태가 바뀐다)
+			await container.mixerService.preloadUpcoming(player).catch(() => null);
+		}
+		return added;
+	};
+
+	// in-flight 가드는 getInFlightRelatedFetch의 Promise<Track | null> 계약과 공유해야 한다
+	// (handleQueueEnd가 이 값을 await해 첫 추가곡을 확인한다).
+	const runs = operation();
+	const tracked: Promise<Track | null> = runs.then((tracks) => tracks[0] ?? null);
+	relatedFetchInFlight.set(gid, tracked);
+	try {
+		return await runs;
+	} finally {
+		if (relatedFetchInFlight.get(gid) === tracked) relatedFetchInFlight.delete(gid);
 	}
 };
 

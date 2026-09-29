@@ -1,6 +1,6 @@
 import { envParseString } from '@skyra/env-utilities';
 import { container } from '@sapphire/framework';
-import { GatewayIntentBits, Partials } from 'discord.js';
+import { Events, GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { LavalinkNodeOptions } from 'lavalink-client';
@@ -13,6 +13,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const main = async () => {
 	const isDevMode = process.env.NODE_ENV !== 'production';
+
+	// 시그널 핸들러용 상태 — 핸들러를 셋업 "이전"에 등록하기 위해 바깥에 둔다.
+	// (기존에는 try 블록 마지막에 등록해 셋업 실패/중단 구간에서 SIGTERM이 무시됐다.)
+	let shutdownStarted = false;
+	let healthServer: import('node:http').Server | null = null;
 
 	let shardIds: number[] | 'auto' = isDevMode ? [0] : 'auto';
 	let shardCount: number = 1;
@@ -79,6 +84,59 @@ export const main = async () => {
 		partials: [Partials.Channel, Partials.GuildMember]
 	});
 
+	// Handle graceful shutdown — 셋업 성공 여부와 무관하게 즉시 등록한다.
+	// 재진입 가드: SIGINT/SIGTERM 중복 도착이나 핸들러 이중 실행을 막는다.
+	const shutdown = async (signal: string) => {
+		if (shutdownStarted) return;
+		shutdownStarted = true;
+		client.logger.info(`${signal} received. Shutting down gracefully...`);
+		if (healthServer) {
+			healthServer.close();
+		}
+
+		// 1. Lavalink session을 Redis에 저장 (Redis 끊기 전!)
+		if (container.audio && container.redisStore) {
+			try {
+				const sessionStore = container.redisStore.getNodeSessionStore();
+				const shardKey = NodeSessionStore.makeShardKey(Array.isArray(shardIds) ? shardIds : [0]);
+				for (const node of container.audio.nodeManager.nodes.values()) {
+					if (node.sessionId) {
+						await sessionStore.save(node.id, node.sessionId, shardKey);
+						client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
+					}
+				}
+			} catch (error) {
+				client.logger.error(`Failed to save node sessions during shutdown: ${error}`);
+			}
+		}
+
+		// 2. Audio listeners 정리
+		if (container.audio) {
+			container.audio.removeAllListeners();
+		}
+
+		// 3. Redis disconnect (session 저장 후!)
+		if (container.redisStore) {
+			await container.redisStore.disconnect().catch(() => null);
+		}
+
+		// 4. Database disconnect
+		if (container.db) {
+			await container.db.$disconnect().catch(() => null);
+		}
+
+		// 5. ShardManager client
+		if (container.shardClient) {
+			container.shardClient.destroy();
+		}
+		// Flush unsent Sentry events
+		await Sentry.close(2000);
+		process.exit(0);
+	};
+
+	process.once('SIGINT', () => void shutdown('SIGINT'));
+	process.once('SIGTERM', () => void shutdown('SIGTERM'));
+
 	try {
 		// show pid and pid-name
 		client.logger.info(`Starting SiruBOT with PID: ${process.pid}`);
@@ -134,11 +192,26 @@ export const main = async () => {
 		// Health check HTTP server for Docker
 		const { createServer } = await import('node:http');
 		const healthPort = parseInt(process.env.HEALTH_PORT ?? '8080', 10);
-		const healthServer = createServer((_req, res) => {
-			// discord.js WebSocketStatus: 0 = READY
-			const isHealthy = client.ws.status === 0;
+		let everReady = false;
+		let unreadySince: number | null = null;
+		client.once(Events.ClientReady, () => {
+			everReady = true;
+			unreadySince = null;
+		});
+		healthServer = createServer((_req, res) => {
+			const ready = client.isReady();
+			if (ready) {
+				everReady = true;
+				unreadySince = null;
+			} else if (everReady && unreadySince === null) {
+				unreadySince = Date.now();
+			}
+			// 부팅 구간(READY 이전)은 503, 준비 완료 후의 일시 재연결은 200을 유지해
+			// 게이트웨이 재연결 중 restart가 증폭되는 것을 막는다. 2분 내 복구 실패 시 다시 503.
+			const reconnectingWithinGrace = everReady && unreadySince !== null && Date.now() - unreadySince < 120_000;
+			const isHealthy = ready || reconnectingWithinGrace;
 			res.writeHead(isHealthy ? 200 : 503, { 'Content-Type': 'application/json' });
-			res.end(JSON.stringify({ ok: isHealthy, wsStatus: client.ws.status }));
+			res.end(JSON.stringify({ ok: isHealthy, ready, everReady, wsStatus: client.ws.status }));
 		});
 		healthServer.listen(healthPort, '0.0.0.0', () => {
 			client.logger.info(`Health check server listening on :${healthPort}`);
@@ -154,52 +227,6 @@ export const main = async () => {
 				uptime: process.uptime()
 			}));
 		}
-
-		// Handle gracefull shutdown
-		const shutdown = async () => {
-			client.logger.info('Shutting down gracefully...');
-			if (healthServer) {
-				healthServer.close();
-			}
-
-			// 1. Lavalink session을 Redis에 저장 (Redis 끊기 전!)
-			if (container.audio && container.redisStore) {
-				const sessionStore = container.redisStore.getNodeSessionStore();
-				const shardKey = NodeSessionStore.makeShardKey(Array.isArray(shardIds) ? shardIds : [0]);
-				for (const node of container.audio.nodeManager.nodes.values()) {
-					if (node.sessionId) {
-						await sessionStore.save(node.id, node.sessionId, shardKey);
-						client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
-					}
-				}
-			}
-
-			// 2. Audio listeners 정리
-			if (container.audio) {
-				container.audio.removeAllListeners();
-			}
-
-			// 3. Redis disconnect (session 저장 후!)
-			if (container.redisStore) {
-				await container.redisStore.disconnect();
-			}
-
-			// 4. Database disconnect
-			if (container.db) {
-				await container.db.$disconnect();
-			}
-
-			// 5. ShardManager client
-			if (container.shardClient) {
-				container.shardClient.destroy();
-			}
-			// Flush unsent Sentry events
-			await Sentry.close(2000);
-			process.exit(0);
-		};
-
-		process.on('SIGINT', shutdown);
-		process.on('SIGTERM', shutdown);
 	} catch (error) {
 		client.logger.error('Error setting up application...');
 		client.logger.fatal(error);

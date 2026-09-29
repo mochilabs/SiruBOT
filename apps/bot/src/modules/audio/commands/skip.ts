@@ -9,6 +9,7 @@ import {
 	AutocompleteInteraction
 } from 'discord.js';
 import { Player, Queue, Track } from 'lavalink-client';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 
 export interface SkipContext {
 	player: Player;
@@ -125,10 +126,12 @@ export class SkipCommand extends Command {
 		if (!queue) return interaction.respond([]);
 
 		const toIndex = to - 1;
-		const data = queue.tracks.slice(toIndex, toIndex + 25).map((track, index) => ({
-			name: `#${toIndex + index + 1} ${track.info.title.slice(0, 100)}`,
-			value: toIndex + index + 1
-		}));
+		const data = getUserQueuedTracks(player)
+			.slice(toIndex, toIndex + 25)
+			.map((track, index) => ({
+				name: `#${toIndex + index + 1} ${track.info.title.slice(0, 100)}`,
+				value: toIndex + index + 1
+			}));
 
 		await interaction.respond(data);
 	}

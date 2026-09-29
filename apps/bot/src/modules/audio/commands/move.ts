@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { errorView } from '../view/error.ts';
 
 @ApplyOptions<Command.Options>({
@@ -56,7 +57,7 @@ export class MoveCommand extends Command {
 
 		const from = interaction.options.getInteger('from', true);
 		const to = interaction.options.getInteger('to', true);
-		const queueLength = player.queue.tracks.length;
+		const queueLength = getUserQueuedTracks(player).length;
 
 		if (from > queueLength || to > queueLength) {
 			await interaction.reply({
@@ -108,10 +109,12 @@ export class MoveCommand extends Command {
 		const startIndex = focused ? parseInt(focused) - 1 : 0;
 		const safeStart = Math.max(0, isNaN(startIndex) ? 0 : startIndex);
 
-		const data = player.queue.tracks.slice(safeStart, safeStart + 25).map((track, index) => ({
-			name: `#${safeStart + index + 1} ${track.info.title.slice(0, 90)}`,
-			value: safeStart + index + 1
-		}));
+		const data = getUserQueuedTracks(player)
+			.slice(safeStart, safeStart + 25)
+			.map((track, index) => ({
+				name: `#${safeStart + index + 1} ${track.info.title.slice(0, 90)}`,
+				value: safeStart + index + 1
+			}));
 
 		await interaction.respond(data);
 	}

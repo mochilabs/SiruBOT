@@ -1,6 +1,7 @@
 import { addSeparator, createContainer, createThumbnail, formatTime, formatTimeToKorean, formatTrack, getRequesterText } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, PlaylistInfo, Track } from 'lavalink-client';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 
 type playViewProps = {
 	track: Track;
@@ -115,8 +116,8 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 	const container = trackAdded({
 		track: selectedTrack,
 		queued: player.queue.current !== null,
-		position: player.queue.tracks.length,
-		totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
+		position: getUserQueuedTracks(player).length,
+		totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 	});
 
 	const askText = `### 📄 플레이리스트의 나머지 곡들도 추가하시겠어요?\n**${playlist.name || '플레이리스트'}**에 ${remainTracks.length}곡이 더 있어요.`;
@@ -144,8 +145,8 @@ export function playlistAddRemaining({ playlist, player, remainTracks, selectedT
 	const container = trackAdded({
 		track: selectedTrack,
 		queued: player.queue.current !== null,
-		position: player.queue.tracks.length,
-		totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
+		position: getUserQueuedTracks(player).length,
+		totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 	});
 
 	const content = `### 📝 재생목록의 노래 ${remainTracks.length}곡이 추가되었어요.\n-# **${playlist.name || '플레이리스트'}**`;

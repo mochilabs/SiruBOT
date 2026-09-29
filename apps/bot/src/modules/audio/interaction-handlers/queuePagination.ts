@@ -1,5 +1,6 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { type ButtonInteraction, MessageFlags } from 'discord.js';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { queueCustomIdPrefix, queueList, queueEmpty } from '../view/queue.ts';
 
 const QUEUE_PAGE_SIZE = 10;
@@ -33,7 +34,7 @@ export default class QueuePaginationHandler extends InteractionHandler {
 
 	public async run(interaction: ButtonInteraction<'cached'>, { page, authorId }: { page: number; authorId: string }) {
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player || player.queue.tracks.length === 0) {
+		if (!player || getUserQueuedTracks(player).length === 0) {
 			await interaction.update({
 				components: [queueEmpty()],
 				flags: [MessageFlags.IsComponentsV2]
@@ -41,7 +42,7 @@ export default class QueuePaginationHandler extends InteractionHandler {
 			return;
 		}
 
-		const totalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_SIZE);
+		const totalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE);
 		const safePage = Math.max(1, Math.min(page, totalPages));
 
 		await interaction.update({

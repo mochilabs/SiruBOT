@@ -4,6 +4,7 @@ import { controllerView } from '../view/controller.ts';
 import { queueEmpty, queueList } from '../view/queue.ts';
 import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
@@ -245,7 +246,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueShow(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		if (player.queue.tracks.length === 0) {
+		if (getUserQueuedTracks(player).length === 0) {
 			await interaction
 				.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
@@ -256,7 +257,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		const QUEUE_PAGE_SIZE = 10;
-		const totalPages = Math.max(1, Math.ceil(player.queue.tracks.length / QUEUE_PAGE_SIZE));
+		const totalPages = Math.max(1, Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE));
 		await interaction
 			.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
@@ -280,7 +281,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const totalPages = Math.ceil(player.queue.tracks.length / 10);
+		const totalPages = Math.ceil(getUserQueuedTracks(player).length / 10);
 		const currentPage = player.queuePage;
 		if (currentPage >= totalPages) {
 			await interaction.reply({
@@ -300,7 +301,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
 		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
 
-		if (trackIndex < 0 || trackIndex >= player.queue.tracks.length) {
+		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView('❌ 제거할 곡이 없어요.')]
@@ -313,7 +314,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		player.queueSelectedIndex = null;
 
 		// Adjust page if needed
-		const newTotalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_CHUNK_SIZE);
+		const newTotalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_CHUNK_SIZE);
 		if (currentPage > newTotalPages && newTotalPages > 0) {
 			player.queuePage = newTotalPages;
 		}
@@ -327,7 +328,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_CHUNK_SIZE;
 		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
 
-		if (trackIndex < 0 || trackIndex >= player.queue.tracks.length) {
+		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView('❌ 이동할 곡이 없어요.')]

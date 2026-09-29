@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/queue.ts';
 
 const QUEUE_PAGE_SIZE = 10;
@@ -120,7 +121,7 @@ export class QueueCommand extends Command {
 
 	private async handleList(interaction: ChatInputCommandInteraction<'cached'>) {
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player || player.queue.tracks.length === 0) {
+		if (!player || getUserQueuedTracks(player).length === 0) {
 			await interaction.reply({
 				components: [view.queueEmpty()],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
@@ -128,7 +129,7 @@ export class QueueCommand extends Command {
 			return;
 		}
 
-		const totalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_SIZE);
+		const totalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE);
 		const page = Math.min(interaction.options.getInteger('page') ?? 1, totalPages);
 
 		await interaction.reply({
@@ -139,7 +140,7 @@ export class QueueCommand extends Command {
 
 	private async handleShuffle(interaction: ChatInputCommandInteraction<'cached'>) {
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player || player.queue.tracks.length === 0) {
+		if (!player || getUserQueuedTracks(player).length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
 				message: '📭 대기열이 비어있어요.',
@@ -147,6 +148,9 @@ export class QueueCommand extends Command {
 			});
 		}
 
+		// 선예열한 추천곡은 셔플 대상이 아니다 — 제거 후 유저 곡만 섞는다
+		// (다음 트랙 시작 시 큐가 비어 있으면 다시 예열된다).
+		await removeStaleRelatedTracks(player);
 		await player.queue.shuffle();
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		await interaction.reply({
@@ -157,7 +161,7 @@ export class QueueCommand extends Command {
 
 	private async handleClear(interaction: ChatInputCommandInteraction<'cached'>) {
 		const player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player || player.queue.tracks.length === 0) {
+		if (!player || getUserQueuedTracks(player).length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
 				message: '📭 대기열이 비어있어요.',
@@ -165,7 +169,8 @@ export class QueueCommand extends Command {
 			});
 		}
 
-		const count = player.queue.tracks.length;
+		// 유저가 추가한 곡만 비운다 — 선예열한 추천곡은 대기열이 아니므로 남긴다.
+		const count = getUserQueuedTracks(player).length;
 		await player.queue.splice(0, count);
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 
@@ -180,7 +185,7 @@ export class QueueCommand extends Command {
 		if (!player) return;
 
 		const position = interaction.options.getInteger('position', true);
-		if (position > player.queue.tracks.length) {
+		if (position > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'queue_invalid_position',
 				message: '❌ 해당 번호의 곡이 대기열에 없어요.',
@@ -211,7 +216,7 @@ export class QueueCommand extends Command {
 
 		const from = interaction.options.getInteger('from', true);
 		const to = interaction.options.getInteger('to', true);
-		const queueLength = player.queue.tracks.length;
+		const queueLength = getUserQueuedTracks(player).length;
 
 		if (from > queueLength || to > queueLength) {
 			throw new UserError({

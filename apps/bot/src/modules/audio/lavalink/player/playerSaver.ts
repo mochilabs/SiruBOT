@@ -24,6 +24,9 @@ export class CachedPlayerSaver {
 		return `lavalink/player/${guildId}`;
 	}
 
+	/** Redis 키 TTL — 플레이어가 파괴되지 않은 채 남은 키(크래시 잔재)가 영구 누수되지 않도록 한다. */
+	private static readonly REDIS_TTL_SECONDS = 7 * 24 * 60 * 60;
+
 	public async set(player: CustomPlayer): Promise<void> {
 		const key = this.getKey(player.guildId);
 		const stringValue = this.stringify(player);
@@ -34,7 +37,7 @@ export class CachedPlayerSaver {
 
 		try {
 			if (this.isRedisConnected) {
-				await this.redis.set(key, stringValue);
+				await this.redis.set(key, stringValue, { EX: CachedPlayerSaver.REDIS_TTL_SECONDS });
 				this.logger.trace(`Successfully set in Redis for guild ${player.guildId}`);
 			} else {
 				this.pendingWrites.set(key, stringValue);
@@ -47,7 +50,8 @@ export class CachedPlayerSaver {
 		}
 	}
 
-	public async get(guildId: string): Promise<Omit<CustomPlayerJson, 'queue'> | null> {
+	/** 저장 시각(savedAt)은 재시작 복구의 신선도 판별에 쓰인다(구버전 잔재에는 없을 수 있다). */
+	public async get(guildId: string): Promise<(Omit<CustomPlayerJson, 'queue'> & { savedAt?: number }) | null> {
 		const key = this.getKey(guildId);
 
 		try {
@@ -98,7 +102,26 @@ export class CachedPlayerSaver {
 
 	private stringify(player: CustomPlayer): string {
 		const { queue, ...playerData } = player.toJSON(); // queue 분리
-		return JSON.stringify(playerData);
+		// 재시작 복구 판별용 시각 — 오래된 잔재는 복구하지 않고 정리한다.
+		return JSON.stringify({ ...playerData, savedAt: Date.now() });
+	}
+
+	/** 저장된 플레이어가 있는 길드 목록 — 세션이 새로 생겼을 때(크래시 재시작) 복구 대상 탐색용. */
+	public async listGuildIds(): Promise<string[]> {
+		const guildIds: string[] = [];
+		if (!this.isRedisConnected) {
+			this.logger.warn('Redis disconnected, cannot list saved players');
+			return guildIds;
+		}
+		try {
+			for await (const key of this.redis.scanIterator({ MATCH: 'lavalink/player/*', COUNT: 100 })) {
+				const guildId = String(key).slice('lavalink/player/'.length);
+				if (guildId) guildIds.push(guildId);
+			}
+		} catch (error) {
+			this.logger.warn(`Failed to list saved players: ${error}`);
+		}
+		return guildIds;
 	}
 
 	public onConnect(): void {
@@ -120,28 +143,22 @@ export class CachedPlayerSaver {
 
 		this.logger.info(`Syncing ${this.pendingWrites.size} pending writes...`);
 
-		const promises: Promise<void>[] = [];
-
-		for (const [key, value] of this.pendingWrites.entries()) {
-			promises.push(
-				this.redis
-					.set(key, value)
-					.then(() => {
-						this.logger.trace(`Synced ${key}`);
-					})
-					.catch((error) => {
-						this.logger.error(`Failed to sync ${key}: ${error}`);
-					})
-			);
+		// 실패한 쓰기는 지운다 하면 데이터가 영구 소실된다 — 성공한 키만 제거해 보존한다.
+		const entries = [...this.pendingWrites.entries()];
+		let synced = 0;
+		let failed = 0;
+		for (const [key, value] of entries) {
+			try {
+				await this.redis.set(key, value, { EX: CachedPlayerSaver.REDIS_TTL_SECONDS });
+				// 그 사이 같은 키에 더 최신 값이 들어왔다면 지우지 않는다.
+				if (this.pendingWrites.get(key) === value) this.pendingWrites.delete(key);
+				synced++;
+			} catch (error) {
+				failed++;
+				this.logger.error(`Failed to sync ${key}: ${error}`);
+			}
 		}
-
-		try {
-			await Promise.allSettled(promises);
-			this.pendingWrites.clear();
-			this.logger.info('All pending writes synced successfully');
-		} catch (error) {
-			this.logger.error(`Error during sync: ${error}`);
-		}
+		this.logger.info(`Pending writes sync done: ${synced} synced, ${failed} kept for retry`);
 	}
 
 	public getCacheStats() {

@@ -115,7 +115,8 @@ COPY --from=builder-bot --chown=sirubot:nodejs /app/node_modules ./node_modules
 USER sirubot
 
 # 스키마 변경이 있어도 기동 시점에 자동 반영 (수동 migrate 누락 방지)
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --config packages/prisma/prisma.config.ts && yarn start"]
+# exec로 PID1을 node로 교체 — SIGTERM이 sh가 아닌 봇 프로세스에 직접 전달되도록 한다.
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --config packages/prisma/prisma.config.ts && exec yarn start"]
 
 # ====================
 # Dashboard Production

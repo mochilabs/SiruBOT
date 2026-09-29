@@ -105,6 +105,12 @@ export class PlayerNotifier {
 			} catch (error: any) {
 				if (error.code === 10008) {
 					this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
+					// 고정 채널: 메시지가 지워졌으면 refs를 비우고 새 컨트롤러를 1회 다시 보내 이후부터 edit을 재개한다.
+					if (player.textChannelId && (await this.isPinnedChannel(player.guildId, player.textChannelId))) {
+						player.messageId = null;
+						player.controller = null;
+						await this.sendController(player);
+					}
 				} else {
 					this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
 				}
@@ -165,6 +171,11 @@ export class PlayerNotifier {
 		this.logger.debug(`Track started in guild: ${player.guildId}`);
 
 		if (player.textChannelId && player.messageId) {
+			// 고정 채널 모드: 채팅에 밀려도 항상 같은 메시지를 edit로 유지한다.
+			if (await this.isPinnedChannel(player.guildId, player.textChannelId)) {
+				this.updateController(player);
+				return;
+			}
 			const channel = this.container.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
 				// 만약 컨트롤러가 이미 마지막 메시지라면 굳이 다시 보낼 필요 없이 업데이트만 진행
@@ -182,7 +193,13 @@ export class PlayerNotifier {
 		this.logger.trace(`Player updated in guild: ${player.guildId}`);
 
 		// Ignore when nothing is playing (e.g. track loading / idle)
-		if (!player.queue.current) return;
+		if (!player.queue.current) {
+			// 재생 중인데 current가 비어 있으면 전이 리커널(trackHandler)이 복원할 때까지 기다린다.
+			if (player.playing) {
+				this.logger.debug(`onPlayerUpdate skipped: current is null while playing (guild ${player.guildId}), transition reconcile pending`);
+			}
+			return;
+		}
 		this.updateController(player);
 	}
 
@@ -199,6 +216,16 @@ export class PlayerNotifier {
 		} catch (error) {
 			this.logger.error(`Failed to get controller options for guild ${guildId}:`, error);
 			return null;
+		}
+	}
+
+	/** 컨트롤러가 떠 있는 채널이 길드의 고정 채널인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
+	private async isPinnedChannel(guildId: string, textChannelId: string): Promise<boolean> {
+		try {
+			const pinned = await this.container.guildService.getPinnedChannel(guildId);
+			return Boolean(pinned) && pinned === textChannelId;
+		} catch {
+			return false;
 		}
 	}
 }

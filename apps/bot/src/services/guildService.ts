@@ -4,6 +4,9 @@ import { MemoryCache } from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
+/** 고정 채널 입력 동작 — play: 첫 결과 즉시 재생 / select: 결과 5개 중 선택 */
+export type PinnedChannelMode = 'play' | 'select';
+
 export class GuildService {
 	// Guild settings cache (60s TTL, max 500)
 	private cache = new MemoryCache<string, Guild>({ ttl: 60_000, maxSize: 500 });
@@ -107,6 +110,26 @@ export class GuildService {
 	public async getDefaultVoiceChannel(guildId: string): Promise<string | null> {
 		const guild = await this.getGuild(guildId);
 		return guild.voiceChannelId;
+	}
+
+	public async getPinnedChannel(guildId: string): Promise<string | null> {
+		const guild = await this.getGuild(guildId);
+		return guild.pinnedChannelId;
+	}
+
+	public async setPinnedChannel(guildId: string, channelId: string | null) {
+		const guild = await this.upsertField(guildId, 'pinnedChannelId', channelId);
+		return guild.pinnedChannelId;
+	}
+
+	public async getPinnedChannelMode(guildId: string): Promise<PinnedChannelMode> {
+		const guild = await this.getGuild(guildId);
+		return guild.pinnedChannelMode === 'select' ? 'select' : 'play';
+	}
+
+	public async setPinnedChannelMode(guildId: string, mode: PinnedChannelMode) {
+		const guild = await this.upsertField(guildId, 'pinnedChannelMode', mode);
+		return guild.pinnedChannelMode as PinnedChannelMode;
 	}
 
 	public async getEnableController(guildId: string): Promise<boolean> {

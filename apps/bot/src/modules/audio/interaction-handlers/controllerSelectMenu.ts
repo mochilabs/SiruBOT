@@ -1,6 +1,7 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { controllerView } from '../view/controller.ts';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { errorView } from '../view/error.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
@@ -52,7 +53,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 		}
 
 		const trackIndex = parseInt(selectedValue, 10) - 1;
-		if (isNaN(trackIndex) || trackIndex < 0 || trackIndex >= player.queue.tracks.length) {
+		if (isNaN(trackIndex) || trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView('❌ 해당 번호의 곡이 대기열에 없어요.')]

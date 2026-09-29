@@ -16,6 +16,8 @@ services:
       - shardmanager
     networks:
       - sirubot-network
+    # SIGTERM 후 Lavalink 세션/대기열 저장 등 유예 시간 (shutdown 단계가 30s 이내)
+    stop_grace_period: 30s
     deploy:
       mode: replicated
       replicas: 1

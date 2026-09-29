@@ -77,7 +77,8 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 		`⏩ **SponsorBlock**: ${sponsorBlockStatus}`,
 		`💿 **DJ 역할**: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '없음 (모든 사용자)'}`,
 		`📄 **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
-		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`
+		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
+		`📌 **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -222,7 +223,9 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 		`기본 채널을 설정하면, 해당 채널에서만 명령어를 사용하거나 음악을 들을 수 있어요.`,
 		``,
 		`📄 **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
-		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`
+		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
+		`📌 **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
+		`📥 **고정 채널 입력 동작**: ${guild.pinnedChannelMode === 'select' ? '선택 재생 (5개 중 선택)' : '즉시 재생 (첫 결과)'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -246,6 +249,37 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 		)
 	);
 
+	container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+
+	container.addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(
+			'📌 **고정 채널**: 이 채널에 메시지를 입력하면 검색어로 재생해요. 권한 제한 없이 사용할 수 있으며, 재생 시 컨트롤러 메시지는 고정 유지돼요.'
+		)
+	);
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+			new ChannelSelectMenuBuilder()
+				.setCustomId(wrapPrefix('select:pin'))
+				.setPlaceholder('고정 채널을 선택하세요')
+				.setChannelTypes(ChannelType.GuildText)
+		)
+	);
+
+	container.addActionRowComponents(
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId(wrapPrefix('select:pinmode'))
+				.setPlaceholder('입력 동작 선택')
+				.setMinValues(1)
+				.setMaxValues(1)
+				.addOptions([
+					{ label: '▶️ 즉시 재생 (첫 결과 바로 재생)', value: 'play', default: guild.pinnedChannelMode !== 'select' },
+					{ label: '🗂 선택 재생 (5개 중 선택)', value: 'select', default: guild.pinnedChannelMode === 'select' }
+				])
+		)
+	);
+
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
@@ -258,7 +292,12 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 				.setCustomId(wrapPrefix('remove:voice'))
 				.setLabel('🗑 음성 채널 제거')
 				.setStyle(ButtonStyle.Danger)
-				.setDisabled(!guild.voiceChannelId)
+				.setDisabled(!guild.voiceChannelId),
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('remove:pin'))
+				.setLabel('🗑 고정 채널 제거')
+				.setStyle(ButtonStyle.Danger)
+				.setDisabled(!guild.pinnedChannelId)
 		)
 	);
 

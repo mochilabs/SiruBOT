@@ -21,6 +21,7 @@ import {
 	ThumbnailBuilder
 } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
+import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 type controllerViewProps = {
@@ -35,14 +36,15 @@ const wrapPrefix = (customId: string) => {
 };
 
 /**
- * 지금부터 대기열이 끝날 때까지의 실제 남은 시간(ms).
- * `totalDuration()`은 현재 곡의 전체 길이를 포함하므로 현재 위치만큼 빼고,
+ * 지금부터 유저 대기열이 끝날 때까지의 실제 남은 시간(ms).
+ * 현재 곡의 전체 길이에서 현재 위치만큼 빼고, 선예열한 추천곡은 대기열로 세지 않아 제외한다.
  * 스트리밍은 끝나는 시점이 없어 position을 뺸다.
  */
 function remainingUntilQueueEnd(player: Player): number {
 	const current = player.queue.current;
 	const elapsed = current && !current.info.isStream ? Math.min(player.position ?? 0, current.info.duration ?? 0) : 0;
-	return Math.max(0, player.queue.utils.totalDuration() - elapsed);
+	const queuedDuration = getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration || 0), 0);
+	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
 }
 
 export function controllerView({ player, volume }: controllerViewProps) {
@@ -50,7 +52,8 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	const current = player.queue.current;
-	const queueCount = player.queue.tracks.length;
+	// 선예열한 추천곡은 대기열이 아니므로 개수·남은 시간·버튼 노출에서 제외한다.
+	const queueCount = getUserQueuedTracks(player).length;
 
 	// 대기열 안내를 별도 줄 대신 곡 정보 첫 줄(-# 🎵 ...)뒤에 병합해 세로 크기를 줄인다.
 	// 대기열이 비어 있으면 병합하지 않는다.
@@ -63,19 +66,19 @@ export function controllerView({ player, volume }: controllerViewProps) {
 
 	const thumbnail = new ThumbnailBuilder();
 
-	// const prevButton = new ButtonBuilder()
-	// 	.setCustomId(wrapPrefix('prev'))
-	// 	.setEmoji('⏮️')
-	// 	.setDisabled(player.queue.previous.length === 0);
+	const prevButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('prev'))
+		.setEmoji('⏮️')
+		.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
 		.setEmoji(player.paused ? '▶️' : '⏸');
 
-	// const nextButton = new ButtonBuilder()
-	// 	.setCustomId(wrapPrefix('next'))
-	// 	.setEmoji('⏭️')
-	// 	.setDisabled(player.queue.tracks.length === 0);
+	const nextButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('next'))
+		.setEmoji('⏭️')
+		.setDisabled(player.queue.tracks.length === 0);
 
 	const timeLabel = current?.info.isStream
 		? 'LIVE'
@@ -94,12 +97,17 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		)
 		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
-	// '대기열 보기' 버튼: 별도 ActionRow를 만들지 않고 메인 컨트롤러 행에 합친다(최대 4개, 상한 5개 이내).
+	// '대기열 보기' 버튼: 시간 갱신 버튼과 같은 정보성 행에 합친다(대기열이 있을 때만 노출).
 	// 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다. customId는 행 위치와 무관하다.
 	const queueShowButton = queueCount > 0 ? new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄') : null;
 
+	// 컨트롤 버튼이 prev·next 포함 최대 6개로 늘어 ActionRow 상한(행당 5개)을 넘어 2행으로 분리했다.
+	// 1행 = 재생 제어(prev·pause·next·repeat), 2행 = 정보성(time·대기열) — 높이 증가는 1행뿐이다.
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[timeButton, pauseButton, repeatButton, ...(queueShowButton ? [queueShowButton] : [])].map((e) => e.setStyle(ButtonStyle.Secondary))
+		[prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+	);
+	const infoActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		[timeButton, ...(queueShowButton ? [queueShowButton] : [])].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
 
 	if (current?.info.artworkUrl) {
@@ -111,7 +119,7 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
 	}
 
-	containerComponent.addActionRowComponents(controlActionRow);
+	containerComponent.addActionRowComponents(controlActionRow).addActionRowComponents(infoActionRow);
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 

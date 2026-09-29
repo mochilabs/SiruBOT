@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
+import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -28,7 +29,9 @@ export class ShuffleCommand extends Command {
 		const player = this.container.audio.getPlayer(interaction.guildId);
 		if (!player) return;
 
-		const queueLength = player.queue.tracks.length;
+		// 선예열한 추천곡은 셔플 대상이 아니다 — 제거 후 유저 곡만 섞는다
+		// (다음 트랙 시작 시 큐가 비어 있으면 다시 예열된다).
+		const queueLength = getUserQueuedTracks(player).length;
 		if (queueLength < 2) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral],
@@ -37,6 +40,7 @@ export class ShuffleCommand extends Command {
 			return;
 		}
 
+		await removeStaleRelatedTracks(player);
 		await player.queue.shuffle();
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 

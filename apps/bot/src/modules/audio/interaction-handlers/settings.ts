@@ -55,7 +55,9 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			action.startsWith('select:text') ||
 			action.startsWith('select:voice') ||
 			action.startsWith('remove:text') ||
-			action.startsWith('remove:voice')
+			action.startsWith('remove:voice') ||
+			action.startsWith('select:pin') ||
+			action === 'remove:pin'
 		)
 			mode = 'channel';
 		else if (action === 'back') mode = 'main';
@@ -107,13 +109,22 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			await this.container.guildService.setDefaultTextChannel(interaction.guildId, null);
 		} else if (action === 'remove:voice') {
 			await this.container.guildService.setDefaultVoiceChannel(interaction.guildId, null);
+		} else if (action === 'remove:pin') {
+			await this.container.guildService.setPinnedChannel(interaction.guildId, null);
 		} else if (interaction.isChannelSelectMenu()) {
 			const channelId = interaction.values[0];
 			if (action === 'select:text') {
 				await this.container.guildService.setDefaultTextChannel(interaction.guildId, channelId);
 			} else if (action === 'select:voice') {
 				await this.container.guildService.setDefaultVoiceChannel(interaction.guildId, channelId);
+			} else if (action === 'select:pin') {
+				await this.container.guildService.setPinnedChannel(interaction.guildId, channelId);
 			}
+		}
+
+		// 고정 채널 입력 동작 (play: 즉시 재생 / select: 5개 선택)
+		if (interaction.isStringSelectMenu() && action === 'select:pinmode') {
+			await this.container.guildService.setPinnedChannelMode(interaction.guildId, interaction.values[0] === 'select' ? 'select' : 'play');
 		}
 
 		// SponsorBlock actions

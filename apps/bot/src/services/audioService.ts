@@ -1,9 +1,9 @@
 import { container, UserError } from '@sapphire/framework';
-import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
+import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { SkipContext } from '../modules/audio/commands/skip.ts';
 import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
-import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import * as view from '../modules/audio/view/play.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 
@@ -167,8 +167,8 @@ export class AudioService {
 						view.trackAdded({
 							track: playlist.selectedTrack as Track,
 							queued: player.queue.current !== null,
-							position: player.queue.tracks.length,
-							totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
+							position: getUserQueuedTracks(player).length,
+							totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 						})
 					],
 					allowedMentions: { users: [], roles: [] }
@@ -215,8 +215,8 @@ export class AudioService {
 		const trackAdded = view.trackAdded({
 			track: selectedTrack,
 			queued: player.queue.current !== null,
-			position: player.queue.tracks.length,
-			totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
+			position: getUserQueuedTracks(player).length,
+			totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 		});
 
 		const collector = askReply.createMessageComponentCollector({
@@ -303,8 +303,8 @@ export class AudioService {
 				view.trackAdded({
 					track: searchRes.tracks[0] as Track,
 					queued: player.queue.current !== null,
-					position: player.queue.tracks.length,
-					totalDuration: player.queue.tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
+					position: getUserQueuedTracks(player).length,
+					totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 				})
 			],
 			allowedMentions: { users: [], roles: [] }
@@ -321,7 +321,20 @@ export class AudioService {
 		await player.play(player.paused ? { paused: false } : undefined);
 	}
 
-	private async isControllerEnabled(guildId: string): Promise<boolean> {
+	/**
+	 * 곡 1개를 대기열에 넣는 공용 흐름 — 즉시 재생/선택 피드백 등 호출 지점이
+	 * 서로 달라도 추가·선예열 추천곡 제거·슬롯 재예열은 한 곳에서만 처리한다.
+	 * 반환: wasIdle(시작 전에 아무것도 재생 중이 아니었는지 → 피드백 문구 선택용)
+	 */
+	public async enqueueTrack(player: Player, track: Track | UnresolvedTrack): Promise<{ wasIdle: boolean }> {
+		const wasIdle = player.queue.current === null && !player.playing;
+		await player.queue.add(track);
+		await removeStaleRelatedTracks(player);
+		if (!wasIdle) this.preloadAfterQueueChange(player);
+		return { wasIdle };
+	}
+
+	public async isControllerEnabled(guildId: string): Promise<boolean> {
 		try {
 			const guild = await container.guildService.getGuild(guildId);
 			return guild?.enableController !== false;
@@ -507,7 +520,7 @@ export class AudioService {
 
 	private async handleSkipTo(context: SkipContext, to: number): Promise<void> {
 		const { player, interaction } = context;
-		if (to > player.queue.tracks.length) {
+		if (to > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'skipto_invalid_index',
 				message: '🎵 건너뛸 곡이 대기열에 존재하지 않아요.',
