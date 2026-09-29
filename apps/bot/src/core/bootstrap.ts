@@ -79,9 +79,11 @@ export const main = async () => {
 			GatewayIntentBits.GuildMessageReactions,
 			GatewayIntentBits.GuildMessages,
 			GatewayIntentBits.Guilds,
-			GatewayIntentBits.GuildVoiceStates
+			GatewayIntentBits.GuildVoiceStates,
+			// 고정 채널(commandChannel) 입력을 받으려면 메시지 본문이 필요 — 프리빌리지 인텐트, 개발자 포털에서도 활성화해야 함
+			GatewayIntentBits.MessageContent
 		],
-		partials: [Partials.Channel, Partials.GuildMember]
+		partials: [Partials.Channel, Partials.GuildMember, Partials.Message]
 	});
 
 	// Handle graceful shutdown — 셋업 성공 여부와 무관하게 즉시 등록한다.
