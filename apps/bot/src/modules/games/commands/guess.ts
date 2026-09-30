@@ -10,6 +10,7 @@ interface GuessSession {
 
 const MAX_ATTEMPTS = 6;
 const sessions = new Map<string, GuessSession>();
+const bestRecords = new Map<string, number>();
 
 function resultContainer(lines: string[]) {
 	const container = createContainer();
@@ -95,12 +96,23 @@ export class GuessCommand extends Command {
 		if (guess === session.target) {
 			const used = MAX_ATTEMPTS - session.attempts + 1;
 			sessions.delete(userId);
+
+			const prevBest = bestRecords.get(userId);
+			const isNewBest = prevBest === undefined || used < prevBest;
+			if (isNewBest) bestRecords.set(userId, used);
+
+			const recordLine = isNewBest
+				? `🏆 ${prevBest === undefined ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
+				: `-# 개인 최고 기록: ${prevBest}번`;
+
 			await interaction.reply({
 				components: [
 					resultContainer([
 						'### 🎉 정답!',
 						`**${interaction.user.displayName}** 님의 정답: **${guess}**`,
-						`**${used}번** 만에 맞혔어요${used === 1 ? ' — 한 번에?! 🤯' : '!'}`
+						`**${used}번** 만에 맞혔어요${used === 1 ? ' — 한 번에?! 🤯' : '!'}`,
+						'',
+						recordLine
 					])
 				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]

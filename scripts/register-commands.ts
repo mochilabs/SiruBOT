@@ -113,6 +113,8 @@ async function main() {
 	const botSrcPath = join(process.cwd(), 'apps', 'bot', 'src');
 	client.stores.registerPath(join(botSrcPath, 'modules', 'audio'));
 	client.stores.registerPath(join(botSrcPath, 'modules', 'general'));
+	client.stores.registerPath(join(botSrcPath, 'modules', 'voice'));
+	client.stores.registerPath(join(botSrcPath, 'modules', 'games'));
 
 	try {
 		// Sapphire Store 내장 로더를 수동으로 기동하여 명령어를 로드합니다.

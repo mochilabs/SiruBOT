@@ -94,6 +94,7 @@ export class PollCommand extends Command {
 			editMessage: async () => undefined,
 			question,
 			options,
+			creatorName: interaction.user.displayName,
 			votes: new Map(),
 			endsAt: seconds > 0 ? Date.now() + seconds * 1000 : null,
 			closed: false,

@@ -8,6 +8,7 @@ export interface PollState {
 	editMessage: (components: ContainerBuilder[]) => Promise<void>;
 	question: string;
 	options: string[];
+	creatorName: string;
 	votes: Map<string, number>;
 	endsAt: number | null;
 	closed: boolean;
@@ -17,17 +18,26 @@ export interface PollState {
 export const polls = new Map<string, PollState>();
 
 function pollLines(poll: PollState): string[] {
+	const counts = poll.options.map((_, index) => [...poll.votes.values()].filter((v) => v === index).length);
 	const total = poll.votes.size;
 	const lines = [`### 📊 ${poll.question}`, ''];
 
 	poll.options.forEach((option, index) => {
-		const count = [...poll.votes.values()].filter((v) => v === index).length;
+		const count = counts[index];
 		const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-		lines.push(`**${index + 1}.** ${option} — **${count}표** (${pct}%)`);
+		const filled = total > 0 ? Math.round(pct / 10) : 0;
+		const bar = '▓'.repeat(filled) + '░'.repeat(10 - filled);
+		lines.push(`**${index + 1}.** ${option}\n> ${bar} **${count}표** (${pct}%)`);
 	});
 
+	if (poll.closed && total > 0) {
+		const max = Math.max(...counts);
+		const winners = poll.options.filter((_, index) => counts[index] === max);
+		lines.push('', `🏆 **${winners.join('**, **')}** ${winners.length > 1 ? '공동 1위!' : '1위!'} (${max}표)`);
+	}
+
 	const status = poll.closed ? '🔒 마감됨' : poll.endsAt ? `⏱️ <t:${Math.floor(poll.endsAt / 1000)}:R> 마감` : '무기한';
-	lines.push('', `-# 총 **${total}명** 참여 · ${status}`);
+	lines.push('', `-# 총 **${total}명** 참여 · ${status} · 만든 사람: **${poll.creatorName}**`);
 	return lines;
 }
 
