@@ -1,11 +1,12 @@
 name: Beta Docker Image
 
-# beta 브랜치 push마다 빌드. 매 커밋 해시 태그(beta-<sha>) + 이동 태그(beta) 발행.
+# beta 및 feat/** 브랜치 push마다 빌드. 매 커밋 해시 태그 + 이동 태그 발행.
+#   beta : beta, beta-<sha> / feat 브랜치 : <branch-slug>, <branch-slug>-<sha>
 # 코드와 무관한 변경(문서 등)은 paths 필터에서 제외되어 빌드를 건너뛴다.
 # 변경된 앱의 이미지만 빌드한다 (공유 패키지/Dockerfile 변경 시 전체 빌드).
 on:
   push:
-    branches: [beta]
+    branches: [beta, 'feat/**']
     paths:
       - 'apps/**'
       - 'packages/**'
@@ -20,7 +21,7 @@ env:
   REGISTRY: ghcr.io
 
 concurrency:
-  group: beta-${{ github.ref }}
+  group: docker-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -83,6 +84,19 @@ jobs:
         if: needs.changes.outputs[matrix.app] == 'true'
         uses: actions/checkout@v4
 
+      - name: Resolve image tag prefix
+        if: needs.changes.outputs[matrix.app] == 'true'
+        id: tag
+        run: |
+          REF_NAME="${{ github.ref_name }}"
+          if [[ "$REF_NAME" == "beta" ]]; then
+            PREFIX="beta"
+          else
+            # Docker 태그에는 '/' 가 올 수 없으므로 브랜치 slug로 치환
+            PREFIX="$(echo "$REF_NAME" | tr '/' '-')"
+          fi
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         if: needs.changes.outputs[matrix.app] == 'true'
         uses: docker/setup-buildx-action@v3
@@ -102,8 +116,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.app }}
           tags: |
-            type=raw,value=beta
-            type=sha,prefix=beta-,format=short
+            type=raw,value=${{ steps.tag.outputs.prefix }}
+            type=sha,prefix=${{ steps.tag.outputs.prefix }}-,format=short
 
       - name: Build and push Docker image
         if: needs.changes.outputs[matrix.app] == 'true'
@@ -117,6 +131,6 @@ jobs:
           build-args: |
             GIT_HASH=${{ github.sha }}
             GIT_BRANCH=${{ github.ref_name }}
-            VERSION=beta-${{ github.sha }}
-          cache-from: type=gha,scope=beta-${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=beta-${{ matrix.app }}
+            VERSION=${{ steps.tag.outputs.prefix }}-${{ github.sha }}
+          cache-from: type=gha,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
