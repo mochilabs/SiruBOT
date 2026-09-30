@@ -1,7 +1,6 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction } from 'discord.js';
-import { closePoll, polls, renderPollContainer } from '../utils/pollStore.ts';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
 
 const RPS_ICONS = ['✊', '🖐', '✌️'];
@@ -72,12 +71,12 @@ export default class GamesInteractionHandler extends InteractionHandler {
 		});
 	}
 
-	public override parse(interaction: ButtonInteraction | StringSelectMenuInteraction) {
+	public override parse(interaction: ButtonInteraction) {
 		if (!interaction.customId.startsWith('game:')) return this.none();
 		return this.some();
 	}
 
-	public override async run(interaction: ButtonInteraction<'cached'> | StringSelectMenuInteraction<'cached'>) {
+	public override async run(interaction: ButtonInteraction<'cached'>) {
 		const [, kind, arg] = interaction.customId.split(':');
 
 		if (kind === 'rps') {
@@ -107,40 +106,6 @@ export default class GamesInteractionHandler extends InteractionHandler {
 				components: [rpsResultContainer(interaction.user.displayName, userPick, botPick, streakLine)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
-			return;
-		}
-
-		if (kind === 'poll') {
-			const pollId = arg ?? '';
-			const poll = polls.get(pollId);
-
-			await interaction.deferUpdate();
-
-			if (!poll || poll.closed) {
-				await interaction.editReply({
-					components: [noticeContainer('🔒 이 투표는 이미 마감됐어요.')],
-					flags: [MessageFlags.IsComponentsV2]
-				});
-				return;
-			}
-
-			if (!interaction.isStringSelectMenu()) return;
-			const choice = Number(interaction.values[0]);
-			if (!Number.isInteger(choice) || choice < 0 || choice >= poll.options.length) return;
-
-			poll.votes.set(interaction.user.id, choice);
-			try {
-				await poll.editMessage([renderPollContainer(poll, pollId)]);
-			} catch {
-				await closePoll(pollId);
-				return;
-			}
-			await interaction
-				.followUp({
-					content: `✅ **${poll.options[choice]}** (${choice + 1}번)에 투표했어요 — 선택을 바꾸면 바로 바뀌어요.`,
-					flags: [MessageFlags.Ephemeral]
-				})
-				.catch(() => null);
 			return;
 		}
 	}
