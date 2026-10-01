@@ -1,53 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import {
-	ChatServiceError,
-	clearChannelHistory,
-	getChannelHistory,
-	getChatConfig,
-	pushChannelHistory,
-	streamChatCompletion,
-	type ChatMessage,
-	type ChatConfig
-} from '../../../services/aiChatService.ts';
-
-const LIVE_TEXT_LIMIT = 3_800;
-const FINAL_SEGMENT_LIMIT = 3_800;
-const MAX_FINAL_SEGMENTS = 4;
-
-function chunkText(text: string): string[] {
-	if (text.length <= FINAL_SEGMENT_LIMIT) return [text];
-	const segments: string[] = [];
-	let remaining = text;
-	while (remaining.length > 0 && segments.length < MAX_FINAL_SEGMENTS) {
-		segments.push(remaining.slice(0, FINAL_SEGMENT_LIMIT));
-		remaining = remaining.slice(FINAL_SEGMENT_LIMIT);
-	}
-	if (remaining.length > 0) segments[MAX_FINAL_SEGMENTS - 1] = `${segments[MAX_FINAL_SEGMENTS - 1]}\n… (답장이 너무 길어 잘렸어요)`;
-	return segments;
-}
-
-function liveContainer(text: string, config: ChatConfig) {
-	const shown = text.length > LIVE_TEXT_LIMIT ? `${text.slice(0, LIVE_TEXT_LIMIT)}…` : text;
-	const container = createContainer();
-	container.addTextDisplayComponents((t) =>
-		t.setContent(['### 💬 시루', '', shown || '생각하는 중...', '', `-# ${config.model} · 답장 중...`].join('\n'))
-	);
-	return container;
-}
-
-function finalContainer(text: string, config: ChatConfig, turnCount: number) {
-	const segments = chunkText(text);
-	const container = createContainer();
-	container.addTextDisplayComponents((t) => t.setContent(['### 💬 시루', '', segments[0]].join('\n')));
-	for (const segment of segments.slice(1)) {
-		container.addTextDisplayComponents((t) => t.setContent(segment));
-	}
-	container.addTextDisplayComponents((t) => t.setContent(`-# ${config.model} · 대화 기록 ${turnCount}턴 · \`/채팅 리셋:true\`로 초기화`));
-	return container;
-}
+import { ChatServiceError, clearChannelHistory, getChatConfig, runChatTurn } from '../../../services/aiChatService.ts';
+import type { AiToolContext } from '../../../services/aiTools/index.ts';
+import { finalContainer, liveContainer } from '../utils/chatView.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -95,20 +51,30 @@ export class ChatCommand extends Command {
 
 		const prompt = interaction.options.getString('prompt', true);
 		const reset = interaction.options.getBoolean('reset') ?? false;
-		const channelId = interaction.channelId ?? interaction.user.id;
+		// 대화 기록은 항상 채널 단위로만 저장한다 (사용자별 키는 쓰지 않음)
+		const channelId = interaction.channelId;
+		if (!channelId) {
+			throw new UserError({
+				identifier: 'chat_no_channel',
+				message: '❌ 대화 기록을 저장할 채널이 없어요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		if (reset) clearChannelHistory(channelId);
 
-		const history = getChannelHistory(channelId);
-		const messages: ChatMessage[] = [...history, { role: 'user', content: prompt }];
+		const toolContext: AiToolContext = {
+			guildId: interaction.guildId,
+			channelId,
+			voiceChannelId: interaction.inCachedGuild() ? (interaction.member.voice?.channelId ?? null) : null,
+			userId: interaction.user.id,
+			username: interaction.user.username
+		};
 
 		await interaction.deferReply();
 
 		let lastEditAt = 0;
-		const onDelta = async (text: string) => {
-			const now = Date.now();
-			if (now - lastEditAt < config.streamUpdateMs || !text) return;
-			lastEditAt = now;
+		const editLive = async (text: string) => {
 			await interaction
 				.editReply({
 					components: [liveContainer(text, config)],
@@ -117,10 +83,29 @@ export class ChatCommand extends Command {
 				})
 				.catch(() => undefined);
 		};
+		const onDelta = async (text: string) => {
+			const now = Date.now();
+			if (now - lastEditAt < config.streamUpdateMs || !text) return;
+			lastEditAt = now;
+			await editLive(text);
+		};
+		const onStatus = async (status: string) => {
+			lastEditAt = Date.now();
+			await editLive(`🔧 ${status}`);
+		};
 
+		let turnCount: number;
 		let answer: string;
 		try {
-			answer = await streamChatCompletion({ messages, config, onDelta });
+			({ answer, turnCount } = await runChatTurn({
+				channelId,
+				prompt,
+				config,
+				toolContext,
+				author: interaction.inCachedGuild() ? interaction.member.displayName : interaction.user.displayName,
+				onDelta,
+				onStatus
+			}));
 		} catch (error) {
 			if (error instanceof ChatServiceError) {
 				throw new UserError({
@@ -131,17 +116,6 @@ export class ChatCommand extends Command {
 			}
 			throw error;
 		}
-
-		if (!answer) {
-			throw new UserError({
-				identifier: 'chat_empty_response',
-				message: '❌ AI가 빈 답장을 보냈어요. 잠시 후 다시 시도해 주세요.',
-				context: { ephemeral: true }
-			});
-		}
-
-		pushChannelHistory(channelId, { role: 'user', content: prompt }, { role: 'assistant', content: answer });
-		const turnCount = Math.ceil(getChannelHistory(channelId).length / 2);
 
 		await interaction.editReply({
 			components: [finalContainer(answer, config, turnCount)],

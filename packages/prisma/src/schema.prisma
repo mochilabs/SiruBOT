@@ -113,3 +113,10 @@ model PlaylistTrack {
   @@index([playlistId])
 }
 
+// AI 채팅 대화 기록 (채널별 영속화)
+model ChannelChatHistory {
+  channelId String   @id
+  messages  Json
+  updatedAt DateTime @updatedAt
+}
+
