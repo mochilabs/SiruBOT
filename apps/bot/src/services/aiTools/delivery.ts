@@ -16,6 +16,7 @@ export const deliveryTool: AiTool = {
 		}
 	},
 	required: ['tracking_number', 'carrier'],
+	status: '시루가 배송 상태를 확인하는 중..',
 	execute: async (args) => {
 		const trackingNumber = normalizeTrackingNumber(String(args.tracking_number ?? ''));
 		if (!trackingNumber) throw new Error('운송장 번호가 필요해요.');

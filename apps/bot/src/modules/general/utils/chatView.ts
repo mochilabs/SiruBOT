@@ -1,10 +1,12 @@
-import { MessageFlags, TextDisplayBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, MessageFlags, TextDisplayBuilder } from 'discord.js';
+import { createContainer } from '@sirubot/utils';
 
 const FINAL_SEGMENT_LIMIT = 3_900;
 const MAX_FINAL_SEGMENTS = 4;
+export const CHAT_CANCEL_PREFIX = 'chatcancel:';
 
 export interface ChatPayload {
-	components: TextDisplayBuilder[];
+	components: (TextDisplayBuilder | ContainerBuilder)[];
 	flags: MessageFlags.IsComponentsV2;
 	allowedMentions: { parse: [] };
 }
@@ -46,24 +48,45 @@ export function splitTextForDisplay(text: string): string[] {
 	return chunks.length > 0 ? chunks : ['…'];
 }
 
-function payload(components: TextDisplayBuilder[]): ChatPayload {
+function payload(components: (TextDisplayBuilder | ContainerBuilder)[]): ChatPayload {
 	const flags = (MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications) as MessageFlags.IsComponentsV2;
 	return { components, flags, allowedMentions: { parse: [] } };
 }
 
-/** 스트리밍 중 본문 — 서두가 비면 생각 중 표시 */
-export function livePayload(text: string): ChatPayload {
-	return payload([new TextDisplayBuilder().setContent(text.trim() || '⏳ 생각하는 중...')]);
+/** 중지 버튼이 붙은 컨테이너 — 생성 중 화면 전용 */
+function runningContainer(text: string, cancelKey: string): ContainerBuilder {
+	const stopButton = new ButtonBuilder()
+		.setCustomId(`${CHAT_CANCEL_PREFIX}${cancelKey}`)
+		.setLabel('중지')
+		.setStyle(ButtonStyle.Danger)
+		.setEmoji('⏹️');
+	return createContainer()
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
+		.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(stopButton));
 }
 
-/** 도구/작업 진행 상태 한 줄 */
-export function statusPayload(status: string): ChatPayload {
-	return payload([new TextDisplayBuilder().setContent(`-# ⏳ ${status}`)]);
+/** 스트리밍 중 본문 — 서두가 비면 생각 중 표시. cancelKey를 주면 중지 버튼을 붙여요 */
+export function livePayload(text: string, cancelKey?: string): ChatPayload {
+	const body = text.trim() || '⏳ 생각하는 중...';
+	return payload(cancelKey ? [runningContainer(body, cancelKey)] : [new TextDisplayBuilder().setContent(body)]);
 }
 
-/** 최종 답변 — 청크별 TextDisplay 나열 */
-export function finalPayload(text: string): ChatPayload {
-	return payload(splitTextForDisplay(text.trim() || '…').map((chunk) => new TextDisplayBuilder().setContent(chunk)));
+/** 도구/작업 진행 상태 한 줄 — cancelKey를 주면 중지 버튼을 붙여요 */
+export function statusPayload(status: string, cancelKey?: string): ChatPayload {
+	const body = `-# ⏳ ${status}`;
+	return payload(cancelKey ? [runningContainer(body, cancelKey)] : [new TextDisplayBuilder().setContent(body)]);
+}
+
+/** 사용자가 중지 버튼을 눌렀을 때 */
+export function stoppedPayload(): ChatPayload {
+	return payload([new TextDisplayBuilder().setContent('⏹️ 응답을 중지했어요.')]);
+}
+
+/** 최종 답변 — 청크별 TextDisplay 나열. memoryUpdated면 "(메모리 업데이트됨)" 각주를 붙여요 */
+export function finalPayload(text: string, options?: { memoryUpdated?: boolean }): ChatPayload {
+	const components = splitTextForDisplay(text.trim() || '…').map((chunk) => new TextDisplayBuilder().setContent(chunk));
+	if (options?.memoryUpdated) components.push(new TextDisplayBuilder().setContent('-# (메모리 업데이트됨)'));
+	return payload(components);
 }
 
 /** 오류 표시 */

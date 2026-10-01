@@ -35,6 +35,11 @@ model Guild {
   gaplessEnabled Boolean @default(true)
   crossfadeEnabled Boolean @default(true)
   crossfadeMs   Int      @default(5000)
+  // AI 채팅 설정: 서버 on/off, 모델/시스템 프롬프트 오버라이드(없으면 env 기본), 채널별 비활성화 목록
+  aiEnabled            Boolean  @default(true)
+  aiModel              String?
+  aiSystemPrompt       String?
+  aiDisabledChannelIds String[] @default([])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -113,10 +118,25 @@ model PlaylistTrack {
   @@index([playlistId])
 }
 
-// AI 채팅 대화 기록 (채널별 영속화)
+// AI 채팅 대화 기록 (채널별 영속화) — guildId는 대시보드 서버 단위 삭제용
 model ChannelChatHistory {
   channelId String   @id
+  guildId   String?
   messages  Json
+  updatedAt DateTime @updatedAt
+
+  @@index([guildId])
+}
+
+// 사용자 메모리 — 에이전트가 memory 도구로 자동 갱신하는 장기/단기 기억
+model UserMemory {
+  userId String @id
+  // 장기 기억: Muse식 MEMORY.md 마크다운 (# MEMORY.md + Facts/Preferences/Commitments 섹션)
+  longTerm  Json?
+  // 단기 기억: [{ q, a, at, channelId }] — 최근 대화 하이라이트 (최대 8개)
+  shortTerm Json?
+  // nightly pass(기억 정리 배치) 마지막 수행 시각
+  tidiedAt  DateTime?
   updatedAt DateTime @updatedAt
 }
 

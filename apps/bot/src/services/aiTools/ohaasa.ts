@@ -12,6 +12,7 @@ export const ohaasaTool: AiTool = {
 		}
 	},
 	required: [],
+	status: '시루가 오늘의 운세를 확인하는 중..',
 	execute: async (args) => {
 		const daily = await fetchOhaasa();
 		const zodiacArg = String(args.zodiac ?? '').trim();

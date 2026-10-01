@@ -19,6 +19,7 @@ export const weatherTool: AiTool = {
 		}
 	},
 	required: ['location'],
+	status: '시루가 날씨를 확인하는 중..',
 	execute: async (args) => {
 		const location = String(args.location ?? '').trim();
 		if (!location) throw new Error('지역명이 필요해요.');

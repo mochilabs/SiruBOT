@@ -14,6 +14,8 @@ export interface AiTool {
 	description: string;
 	properties: Record<string, unknown>;
 	required: string[];
+	/** 도구 실행 중 채널에 띄울 행동 멘트 (함수면 인자로 도구 인자를 받음, 미지정 시 `${name} 사용 중...`) */
+	status?: string | ((args: Record<string, unknown>) => string);
 	execute: (args: Record<string, unknown>, ctx: AiToolContext) => Promise<string>;
 }
 

@@ -1,9 +1,17 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
-import { ChatServiceError, clearChannelHistory, getChatConfig, runChatTurn } from '../../../services/aiChatService.ts';
+import {
+	ChatServiceError,
+	clearChannelHistory,
+	collectImageUrls,
+	getChatConfig,
+	registerChatAbort,
+	releaseChatAbort,
+	runChatTurn
+} from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
-import { finalPayload, livePayload, statusPayload } from '../utils/chatView.ts';
+import { finalPayload, livePayload, statusPayload, stoppedPayload } from '../utils/chatView.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -35,6 +43,13 @@ export class ChatCommand extends Command {
 						.setNameLocalizations({ ko: '리셋' })
 						.setDescription('Reset conversation history before sending')
 						.setDescriptionLocalizations({ ko: '보내기 전에 이 채널의 대화 기록을 초기화해요.' })
+				)
+				.addAttachmentOption((option) =>
+					option
+						.setName('image')
+						.setNameLocalizations({ ko: '이미지' })
+						.setDescription('Attach an image for the AI to look at')
+						.setDescriptionLocalizations({ ko: 'AI에게 보여줄 이미지를 첨부해요.' })
 				);
 		});
 	}
@@ -63,6 +78,16 @@ export class ChatCommand extends Command {
 
 		if (reset) clearChannelHistory(channelId);
 
+		const attachment = interaction.options.getAttachment('image');
+		const images = collectImageUrls(attachment ? [attachment] : []);
+		if (attachment && images.length === 0) {
+			throw new UserError({
+				identifier: 'chat_image_unsupported',
+				message: '❌ 이미지는 10MB 이하의 이미지 파일(PNG·JPG 등)만 보낼 수 있어요.',
+				context: { ephemeral: true }
+			});
+		}
+
 		const toolContext: AiToolContext = {
 			guildId: interaction.guildId,
 			channelId,
@@ -73,9 +98,10 @@ export class ChatCommand extends Command {
 
 		await interaction.deferReply();
 
+		const { key: cancelKey, controller } = registerChatAbort(interaction.user.id);
 		let lastEditAt = 0;
 		const editLive = async (text: string) => {
-			await interaction.editReply(livePayload(text)).catch(() => undefined);
+			await interaction.editReply(livePayload(text, cancelKey)).catch(() => undefined);
 		};
 		const onDelta = async (text: string) => {
 			const now = Date.now();
@@ -85,22 +111,34 @@ export class ChatCommand extends Command {
 		};
 		const onStatus = async (status: string) => {
 			lastEditAt = Date.now();
-			await interaction.editReply(statusPayload(status)).catch(() => undefined);
+			await interaction.editReply(statusPayload(status, cancelKey)).catch(() => undefined);
 		};
 
+		const liveMessage = await interaction.editReply(livePayload('', cancelKey));
+
 		let answer: string;
+		let memoryUpdated = false;
 		try {
-			answer = await runChatTurn({
+			const turn = await runChatTurn({
 				channelId,
 				prompt,
 				config,
 				toolContext,
+				images,
+				signal: controller.signal,
 				author: interaction.inCachedGuild() ? interaction.member.displayName : interaction.user.displayName,
+				assistantMessageId: liveMessage.id,
 				onDelta,
 				onStatus
 			});
+			answer = turn.answer;
+			memoryUpdated = turn.memoryUpdated;
 		} catch (error) {
 			if (error instanceof ChatServiceError) {
+				if (error.identifier === 'chat_cancelled') {
+					await interaction.editReply(stoppedPayload()).catch(() => undefined);
+					return;
+				}
 				throw new UserError({
 					identifier: error.identifier,
 					message: `❌ ${error.message}`,
@@ -108,8 +146,10 @@ export class ChatCommand extends Command {
 				});
 			}
 			throw error;
+		} finally {
+			releaseChatAbort(cancelKey);
 		}
 
-		await interaction.editReply(finalPayload(answer));
+		await interaction.editReply(finalPayload(answer, { memoryUpdated }));
 	}
 }

@@ -6,6 +6,7 @@ import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
+import { startMemoryTidySchedule } from '../../../services/aiChatService.ts';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
@@ -26,6 +27,10 @@ export class ReadyEvent extends Listener {
 		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
 
 		this.startActivityInterval();
+
+		// nightly pass — 자정 이후 장기 기억(MEMORY.md) 정리 배치. 프로세스 중복 실행 방지를 위해 셰드 0만.
+		const shard = this.container.client.shard;
+		if (!shard || shard.ids.includes(0)) startMemoryTidySchedule();
 	}
 
 	private startActivityInterval() {

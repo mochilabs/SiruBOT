@@ -12,7 +12,7 @@ function decodeEntities(text: string): string {
 		.replace(/&nbsp;/g, ' ');
 }
 
-function stripTags(html: string): string {
+export function stripTags(html: string): string {
 	return decodeEntities(html.replace(/<[^>]*>/g, ''))
 		.replace(/\s+/g, ' ')
 		.trim();
@@ -80,6 +80,7 @@ export const webSearchTool: AiTool = {
 		}
 	},
 	required: ['query'],
+	status: '시루가 인터넷 검색을 하는 중..',
 	execute: async (args) => {
 		const query = String(args.query ?? '').trim();
 		if (!query) throw new Error('검색어가 필요해요.');

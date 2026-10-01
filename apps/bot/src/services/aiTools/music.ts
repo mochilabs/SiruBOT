@@ -49,6 +49,7 @@ const musicPlayTool: AiTool = {
 		}
 	},
 	required: ['query'],
+	status: '시루가 음악을 찾는 중..',
 	execute: async (args, ctx) => {
 		const { guildId, voiceChannelId } = requireVoice(ctx);
 		const query = String(args.query ?? '').trim();
@@ -87,6 +88,7 @@ const musicPauseTool: AiTool = {
 	description: '현재 재생을 일시정지해요. 이미 일시정지 상태라면 재생을 이어 해요 (토글).',
 	properties: {},
 	required: [],
+	status: '시루가 재생 상태를 바꾸는 중..',
 	execute: async (_args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -104,6 +106,7 @@ const musicSkipTool: AiTool = {
 	description: '현재 재생 중인 곡을 건너뛰고 다음 곡을 재생해요.',
 	properties: {},
 	required: [],
+	status: '시루가 다음 곡으로 넘기는 중..',
 	execute: async (_args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -119,6 +122,7 @@ const musicStopTool: AiTool = {
 	description: '대기열을 비우고 재생을 중지한 뒤 음성 채널에서 봇이 나가요. 완전히 끄고 싶을 때만 쓰세요.',
 	properties: {},
 	required: [],
+	status: '시루가 재생을 멈추고 퇴장하는 중..',
 	execute: async (_args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -135,6 +139,7 @@ const musicQueueTool: AiTool = {
 	description: '현재 재생 중인 곡과 대기열(최대 15곡)을 확인해요. 사용자가 "무슨 노래 틀어줘 / 다음에 뭐야"라고 물으면 쓰세요.',
 	properties: {},
 	required: [],
+	status: '시루가 대기열을 확인하는 중..',
 	execute: async (_args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = container.audio.getPlayer(guildId);
@@ -208,6 +213,7 @@ const musicVolumeTool: AiTool = {
 		}
 	},
 	required: [],
+	status: (args) => (args.volume === undefined || args.volume === null ? '시루가 볼륨을 확인하는 중..' : '시루가 볼륨을 조절하는 중..'),
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		if (args.volume === undefined || args.volume === null) {
@@ -230,6 +236,7 @@ const musicSeekTool: AiTool = {
 		time: { type: 'string', description: '이동할 시간 (예: 90, 1:30)' }
 	},
 	required: ['time'],
+	status: '시루가 곡을 이동하는 중..',
 	execute: async (args, ctx) => {
 		const player = requirePlayer(requireGuild(ctx));
 		const current = player.queue.current;
@@ -248,6 +255,7 @@ const musicShuffleTool: AiTool = {
 	description: '대기열의 곡 순서를 랜덤으로 섞어요.',
 	properties: {},
 	required: [],
+	status: '시루가 대기열을 섞는 중..',
 	execute: async (_args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -267,6 +275,7 @@ const musicRepeatTool: AiTool = {
 		mode: { type: 'string', description: '반복 모드', enum: ['off', 'track', 'queue'] }
 	},
 	required: [],
+	status: (args) => (args.mode === undefined || args.mode === null ? '시루가 반복 모드를 확인하는 중..' : '시루가 반복 모드를 바꾸는 중..'),
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const mode = args.mode === undefined || args.mode === null ? null : String(args.mode);
@@ -288,6 +297,7 @@ const musicPreviousTool: AiTool = {
 	description: '이전에 재생한 곡을 다시 재생해요.',
 	properties: {},
 	required: [],
+	status: '시루가 이전 곡으로 돌아가는 중..',
 	execute: async (_args, ctx) => {
 		const player = requireCustomPlayer(requireGuild(ctx));
 		if (player.queue.previous.length === 0) throw new Error('이전에 재생한 곡이 없어요.');
@@ -308,6 +318,7 @@ const musicRemoveTool: AiTool = {
 		position: { type: 'integer', description: '삭제할 곡의 대기열 번호 (1부터)' }
 	},
 	required: ['position'],
+	status: '시루가 대기열에서 곡을 삭제하는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -331,6 +342,7 @@ const musicMoveTool: AiTool = {
 		to: { type: 'integer', description: '옮길 목표 위치 (1부터)' }
 	},
 	required: ['from', 'to'],
+	status: '시루가 대기열 순서를 바꾸는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -358,6 +370,7 @@ const musicFilterTool: AiTool = {
 		}
 	},
 	required: ['preset'],
+	status: '시루가 음질 필터를 적용하는 중..',
 	execute: async (args, ctx) => {
 		const player = requireCustomPlayer(requireGuild(ctx));
 		const preset = String(args.preset ?? '');
@@ -388,6 +401,7 @@ const musicLyricsTool: AiTool = {
 		query: { type: 'string', description: '가사 검색어 (곡 제목/아티스트). 생략 시 현재 재생 곡' }
 	},
 	required: [],
+	status: '시루가 가사를 찾는 중..',
 	execute: async (args, ctx) => {
 		let query = String(args.query ?? '').trim();
 		if (!query) {
@@ -423,6 +437,7 @@ const musicHistoryTool: AiTool = {
 		limit: { type: 'integer', description: '가져올 개수 (1~15, 기본 10)' }
 	},
 	required: [],
+	status: '시루가 재생 기록을 확인하는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const rawLimit = args.limit === undefined || args.limit === null ? 10 : Math.round(Number(args.limit));
@@ -454,6 +469,7 @@ const musicTtsTool: AiTool = {
 		text: { type: 'string', description: '음성으로 읽을 내용 (200자 이하, 한국어)' }
 	},
 	required: ['text'],
+	status: '시루가 음성으로 읽어주는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
@@ -477,6 +493,7 @@ const musicPlaylistTool: AiTool = {
 		name: { type: 'string', description: '플레이리스트 이름' }
 	},
 	required: ['name'],
+	status: '시루가 플레이리스트를 재생하는 중..',
 	execute: async (args, ctx) => {
 		const { guildId, voiceChannelId } = requireVoice(ctx);
 		const name = String(args.name ?? '').trim();

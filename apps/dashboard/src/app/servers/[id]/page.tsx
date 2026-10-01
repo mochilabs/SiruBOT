@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
+import { AiSettings } from "@/components/servers/ai-settings";
 import { auth } from "@/lib/auth";
 
 interface GuildMember {
@@ -55,8 +56,9 @@ export default async function ServerDashboardPage({
     <Container>
       <PageHeader
         title="서버 대시보드"
-        description="이 페이지는 아직 개발 중이에요."
+        description="서버의 AI 채팅 설정과 기록을 관리해요."
       />
+      <AiSettings guildId={id} />
     </Container>
   );
 }
