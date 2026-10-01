@@ -3,7 +3,7 @@ import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
 import { ChatServiceError, getChatConfig, runChatTurn, type ChatConfig } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
-import { errorContainer, finalContainer, liveContainer } from '../../utils/chatView.ts';
+import { errorPayload, finalPayload, livePayload, statusPayload } from '../../utils/chatView.ts';
 
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
@@ -29,6 +29,7 @@ export class MentionReplyListener extends Listener {
 			await message
 				.reply({
 					content: '-# 💡 질문을 멘션 뒤에 이어서 써 주세요. 예: `@시루 내일 날씨 어때?`',
+					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
 				.catch(() => undefined);
@@ -55,37 +56,23 @@ export class MentionReplyListener extends Listener {
 			username: message.author.username
 		};
 
-		const reply = await message.reply({
-			components: [liveContainer('', config)],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { parse: [] }
-		});
+		const reply = await message.reply(livePayload(''));
 
 		let lastEditAt = 0;
-		const editLive = async (text: string) => {
-			await reply
-				.edit({
-					components: [liveContainer(text, config)],
-					flags: [MessageFlags.IsComponentsV2],
-					allowedMentions: { parse: [] }
-				})
-				.catch(() => undefined);
-		};
 		const onDelta = async (text: string) => {
 			const now = Date.now();
 			if (now - lastEditAt < config.streamUpdateMs || !text) return;
 			lastEditAt = now;
-			await editLive(text);
+			await reply.edit(livePayload(text)).catch(() => undefined);
 		};
 		const onStatus = async (status: string) => {
 			lastEditAt = Date.now();
-			await editLive(`🔧 ${status}`);
+			await reply.edit(statusPayload(status)).catch(() => undefined);
 		};
 
 		let answer: string;
-		let turnCount: number;
 		try {
-			({ answer, turnCount } = await runChatTurn({
+			answer = await runChatTurn({
 				channelId,
 				prompt,
 				config,
@@ -94,25 +81,13 @@ export class MentionReplyListener extends Listener {
 				excludeMessageId: message.id,
 				onDelta,
 				onStatus
-			}));
+			});
 		} catch (error) {
 			const text = error instanceof ChatServiceError ? error.message : '알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
-			await reply
-				.edit({
-					components: [errorContainer(text, config)],
-					flags: [MessageFlags.IsComponentsV2],
-					allowedMentions: { parse: [] }
-				})
-				.catch(() => undefined);
+			await reply.edit(errorPayload(text)).catch(() => undefined);
 			return;
 		}
 
-		await reply
-			.edit({
-				components: [finalContainer(answer, config, turnCount)],
-				flags: [MessageFlags.IsComponentsV2],
-				allowedMentions: { parse: [] }
-			})
-			.catch(() => undefined);
+		await reply.edit(finalPayload(answer)).catch(() => undefined);
 	}
 }

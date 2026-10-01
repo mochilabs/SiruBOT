@@ -52,7 +52,7 @@ const SYSTEM_PROMPT = [
 	'## 도구 사용',
 	'- 날씨는 `weather_get`, 배송 조회는 `delivery_track`, 별자리 운세는 `get_ohaasa_horoscope` 전용 도구를 써요.',
 	'- 그 외 최신·실시간 사실이 필요하면 `web_search`를 먼저 사용하고, 검색 결과를 근거로 답해요.',
-	'- 사용자가 음악 요청(재생/일시정지/스킵/정지/대기열 확인)을 하면 `music_*` 도구를 사용해요. 음성 채널 미접속 오류는 자연스럽게 안내해요.',
+	'- 사용자가 음악 요청(재생/일시정지/스킵/정지/대기열/볼륨/이동·탐색/셔플/반복/이전곡/삭제·순서 변경/필터/가사/재생 기록/TTS/플레이리스트)을 하면 `music_*` 도구를 사용해요. 음성 채널 미접속 오류는 자연스럽게 안내해요.',
 	'- 도구 결과의 `error`가 오면 사과하고 사용자가 이해할 수 있는 한국어로 대신 전달해요.'
 ].join('\n');
 
@@ -405,7 +405,7 @@ export async function runChatTurn(options: {
 	excludeMessageId?: string;
 	onDelta?: (fullText: string) => void | Promise<void>;
 	onStatus?: (status: string) => void | Promise<void>;
-}): Promise<{ answer: string; turnCount: number }> {
+}): Promise<string> {
 	const { channelId, config } = options;
 	await loadChannelHistory(channelId);
 	const channelBlock = await buildRecentChannelBlock(channelId, options.excludeMessageId);
@@ -446,6 +446,5 @@ export async function runChatTurn(options: {
 		{ role: 'user', content: options.prompt, author: options.author ?? '사용자' },
 		{ role: 'assistant', content: answer }
 	);
-	const turnCount = Math.ceil(getChannelHistory(channelId).length / 2);
-	return { answer, turnCount };
+	return answer;
 }

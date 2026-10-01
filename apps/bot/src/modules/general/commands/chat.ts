@@ -1,9 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { ChatServiceError, clearChannelHistory, getChatConfig, runChatTurn } from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
-import { finalContainer, liveContainer } from '../utils/chatView.ts';
+import { finalPayload, livePayload, statusPayload } from '../utils/chatView.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -75,13 +75,7 @@ export class ChatCommand extends Command {
 
 		let lastEditAt = 0;
 		const editLive = async (text: string) => {
-			await interaction
-				.editReply({
-					components: [liveContainer(text, config)],
-					flags: [MessageFlags.IsComponentsV2],
-					allowedMentions: { parse: [] }
-				})
-				.catch(() => undefined);
+			await interaction.editReply(livePayload(text)).catch(() => undefined);
 		};
 		const onDelta = async (text: string) => {
 			const now = Date.now();
@@ -91,13 +85,12 @@ export class ChatCommand extends Command {
 		};
 		const onStatus = async (status: string) => {
 			lastEditAt = Date.now();
-			await editLive(`🔧 ${status}`);
+			await interaction.editReply(statusPayload(status)).catch(() => undefined);
 		};
 
-		let turnCount: number;
 		let answer: string;
 		try {
-			({ answer, turnCount } = await runChatTurn({
+			answer = await runChatTurn({
 				channelId,
 				prompt,
 				config,
@@ -105,7 +98,7 @@ export class ChatCommand extends Command {
 				author: interaction.inCachedGuild() ? interaction.member.displayName : interaction.user.displayName,
 				onDelta,
 				onStatus
-			}));
+			});
 		} catch (error) {
 			if (error instanceof ChatServiceError) {
 				throw new UserError({
@@ -117,10 +110,6 @@ export class ChatCommand extends Command {
 			throw error;
 		}
 
-		await interaction.editReply({
-			components: [finalContainer(answer, config, turnCount)],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { parse: [] }
-		});
+		await interaction.editReply(finalPayload(answer));
 	}
 }
