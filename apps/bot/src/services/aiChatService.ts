@@ -245,6 +245,18 @@ export function clearChannelHistory(channelId: string): number {
 	return length;
 }
 
+/** 채널 삭제 시 캐시·설정 지도와 DB 기록을 함께 비워요 (대시보드 집계에 고아 행이 남지 않게) */
+export function dropChannelHistory(channelId: string): void {
+	channelHistories.delete(channelId);
+	channelGuilds.delete(channelId);
+	emptyChannelIds.delete(channelId);
+	try {
+		void container.db.channelChatHistory.delete({ where: { channelId } }).catch(() => undefined);
+	} catch {
+		// client 미초기화 등은 무시
+	}
+}
+
 function persistChannelHistory(channelId: string): void {
 	const state = channelHistories.get(channelId);
 	if (!state) return;
