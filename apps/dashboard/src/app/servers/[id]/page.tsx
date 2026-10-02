@@ -4,6 +4,7 @@ import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { AiSettings } from "@/components/servers/ai-settings";
 import { auth } from "@/lib/auth";
+import { canManage } from "@/lib/guild-permissions";
 
 interface GuildMember {
   nick: string | null;
@@ -52,13 +53,22 @@ export default async function ServerDashboardPage({
     notFound();
   }
 
+  const manageable = await canManage(session.accessToken, id);
+
   return (
     <Container>
       <PageHeader
         title="서버 대시보드"
         description="서버의 AI 채팅 설정과 기록을 관리해요."
       />
-      <AiSettings guildId={id} />
+      {manageable ? (
+        <AiSettings guildId={id} />
+      ) : (
+        <section className="rounded-2xl border border-border/60 bg-muted/10 p-6 text-sm text-muted-foreground">
+          ⚠️ AI 설정은 서버 관리자만 변경할 수 있어요. (서버 관리자(Manage
+          Server) 권한이 필요해요.)
+        </section>
+      )}
     </Container>
   );
 }

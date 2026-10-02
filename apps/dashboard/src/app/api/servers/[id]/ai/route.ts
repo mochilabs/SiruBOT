@@ -2,34 +2,23 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { canManage } from "@/lib/guild-permissions";
 
-const MANAGE_GUILD = BigInt(0x20);
-const ADMINISTRATOR = BigInt(0x8);
 const MODEL_MAX = 100;
 const PROMPT_MAX = 1000;
 
-/** 사용자 토큰으로 관리 권한(Manage Guild/Administrator) 확인 */
-async function canManage(accessToken: string, guildId: string): Promise<boolean> {
-    try {
-        const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            cache: "no-store",
-        });
-        if (!res.ok) return false;
-        const guilds: Array<{ id: string; permissions: string | number }> = await res.json();
-        const guild = guilds.find((g) => g.id === guildId);
-        if (!guild) return false;
-        const permissions = BigInt(guild.permissions);
-        return (permissions & MANAGE_GUILD) === MANAGE_GUILD || (permissions & ADMINISTRATOR) === ADMINISTRATOR;
-    } catch {
-        return false;
-    }
+async function authorize(guildId: string): Promise<{ ok: true } | { ok: false; status: 401 | 403 }> {
+    const session = await auth();
+    if (!session?.accessToken) return { ok: false, status: 401 };
+    if (!(await canManage(session.accessToken, guildId))) return { ok: false, status: 403 };
+    return { ok: true };
 }
 
-async function authorize(guildId: string): Promise<boolean> {
-    const session = await auth();
-    if (!session?.accessToken) return false;
-    return canManage(session.accessToken, guildId);
+function denied(authz: { ok: false; status: 401 | 403 }) {
+    return NextResponse.json(
+        { error: authz.status === 401 ? "로그인이 필요해요." : "이 서버를 관리할 권한이 없어요." },
+        { status: authz.status }
+    );
 }
 
 async function readPolicy(guildId: string) {
@@ -51,9 +40,8 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    if (!(await authorize(id))) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const authz = await authorize(id);
+    if (!authz.ok) return denied(authz);
     try {
         return NextResponse.json(await readPolicy(id));
     } catch (error) {
@@ -67,9 +55,8 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    if (!(await authorize(id))) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const authz = await authorize(id);
+    if (!authz.ok) return denied(authz);
 
     try {
         const body = (await request.json().catch(() => null)) as {
@@ -79,6 +66,13 @@ export async function PUT(
         } | null;
         if (!body || typeof body !== "object") {
             return NextResponse.json({ error: "잘못된 요청이에요." }, { status: 400 });
+        }
+
+        // 미등록 필드(예: aiDisabledChannelIds)는 조용히 무시하지 말고 알려줘요
+        const allowedKeys = new Set(["enabled", "model", "systemPrompt"]);
+        const unknownKeys = Object.keys(body).filter((key) => !allowedKeys.has(key));
+        if (unknownKeys.length > 0) {
+            return NextResponse.json({ error: `지원하지 않는 필드예요: ${unknownKeys.join(", ")}` }, { status: 400 });
         }
 
         const data: { aiEnabled?: boolean; aiModel?: string | null; aiSystemPrompt?: string | null } = {};
@@ -98,7 +92,8 @@ export async function PUT(
                 if (model.length > MODEL_MAX) {
                     return NextResponse.json({ error: `모델 이름은 ${MODEL_MAX}자 이하여야 해요.` }, { status: 400 });
                 }
-                data.aiModel = model || null;
+                // 봇 /채팅설정과 동일하게 "기본"은 env 기본값으로 해석해요
+                data.aiModel = model === "기본" ? null : model || null;
             } else {
                 return NextResponse.json({ error: "model은 문자열이어야 해요." }, { status: 400 });
             }
@@ -112,7 +107,7 @@ export async function PUT(
                 if (prompt.length > PROMPT_MAX) {
                     return NextResponse.json({ error: `지침은 ${PROMPT_MAX}자 이하여야 해요.` }, { status: 400 });
                 }
-                data.aiSystemPrompt = prompt || null;
+                data.aiSystemPrompt = prompt === "기본" ? null : prompt || null;
             } else {
                 return NextResponse.json({ error: "systemPrompt는 문자열이어야 해요." }, { status: 400 });
             }
