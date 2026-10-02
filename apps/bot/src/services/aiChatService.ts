@@ -124,7 +124,8 @@ export function getChatConfig(): ChatConfig | null {
 		apiKey: (process.env.OPENAI_API_KEY ?? '').trim(),
 		model,
 		timeoutMs: Math.max(1000, parseInt(process.env.LLM_API_TIMEOUT_MS ?? '120000', 10) || 120_000),
-		streamUpdateMs: Math.max(200, parseInt(process.env.CHAT_STREAM_UPDATE_MS ?? '800', 10) || 800),
+		// help 커맨드의 타이핑 단계(420~560ms)와 맞춘 기본값 — webhook 편집 제한(5/2초) 여유 내
+		streamUpdateMs: Math.max(200, parseInt(process.env.CHAT_STREAM_UPDATE_MS ?? '450', 10) || 450),
 		thinkToken: (process.env.ENABLE_THINK_TOKEN ?? 'false').toLowerCase() === 'true'
 	};
 }
