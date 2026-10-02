@@ -7,6 +7,16 @@ import { RepeatMode } from 'lavalink-client';
 /** 고정 채널 입력 동작 — play: 첫 결과 즉시 재생 / select: 결과 5개 중 선택 */
 export type PinnedChannelMode = 'play' | 'select';
 
+/** AI 채팅 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기 */
+export type AiMode = 'all' | 'channels' | 'off';
+
+const AI_MODES: readonly string[] = ['all', 'channels', 'off'];
+
+/** DB에 잘못된 값이 들어와도 안전하게 기본값으로 되돌려요 */
+export function normalizeAiMode(value: string): AiMode {
+	return AI_MODES.includes(value) ? (value as AiMode) : 'all';
+}
+
 export class GuildService {
 	// Guild settings cache (60s TTL, max 500)
 	private cache = new MemoryCache<string, Guild>({ ttl: 60_000, maxSize: 500 });
@@ -208,16 +218,33 @@ export class GuildService {
 	public async getAiSettings(guildId: string) {
 		const guild = await this.getGuild(guildId);
 		return {
-			enabled: guild.aiEnabled,
+			mode: normalizeAiMode(guild.aiMode),
+			channelIds: guild.aiChannelIds,
 			model: guild.aiModel,
-			systemPrompt: guild.aiSystemPrompt,
-			disabledChannelIds: guild.aiDisabledChannelIds
+			systemPrompt: guild.aiSystemPrompt
 		};
 	}
 
-	public async setAiEnabled(guildId: string, enabled: boolean): Promise<boolean> {
-		const guild = await this.upsertField(guildId, 'aiEnabled', enabled);
-		return guild.aiEnabled;
+	public async setAiMode(guildId: string, mode: AiMode): Promise<AiMode> {
+		const guild = await this.upsertField(guildId, 'aiMode', mode);
+		return normalizeAiMode(guild.aiMode);
+	}
+
+	/** 허용 채널 목록을 교체해요 (중복 제거) */
+	public async setAiChannelIds(guildId: string, channelIds: string[]): Promise<string[]> {
+		const unique = [...new Set(channelIds)];
+		const guild = await this.upsertField(guildId, 'aiChannelIds', unique);
+		return guild.aiChannelIds;
+	}
+
+	/** 삭제된 채널을 허용 목록에서 제거해요 (모드는 그대로) */
+	public async removeAiChannel(guildId: string, channelId: string): Promise<void> {
+		const settings = await this.getAiSettings(guildId);
+		if (!settings.channelIds.includes(channelId)) return;
+		await this.setAiChannelIds(
+			guildId,
+			settings.channelIds.filter((id) => id !== channelId)
+		);
 	}
 
 	/** null이면 env 기본 모델로 되돌려요 */
@@ -232,14 +259,45 @@ export class GuildService {
 		return guild.aiSystemPrompt;
 	}
 
-	/** 현재 채널의 AI 채팅 on/off — false면 aiDisabledChannelIds에 추가 */
-	public async setChannelAiEnabled(guildId: string, channelId: string, enabled: boolean): Promise<string[]> {
-		const guild = await this.getGuild(guildId);
-		const disabled = new Set(guild.aiDisabledChannelIds);
-		if (enabled) disabled.delete(channelId);
-		else disabled.add(channelId);
-		const updated = await this.upsertField(guildId, 'aiDisabledChannelIds', [...disabled]);
-		return updated.aiDisabledChannelIds;
+	/**
+	 * 특정 채널의 AI 채팅 on/off — 모드와 허용 목록을 함께 계산해요.
+	 * - 켜기: off면 channels + [해당 채널], channels면 목록에 추가 (all은 이미 켜져 있어요)
+	 * - 끄기: channels면 목록에서 제거(비면 off), all이면 나머지 텍스트 채널을 목록으로 승계
+	 */
+	public async setChannelAiEnabled(
+		guildId: string,
+		channelId: string,
+		enabled: boolean,
+		allTextChannelIds: string[]
+	): Promise<{ mode: AiMode; channelIds: string[] }> {
+		const settings = await this.getAiSettings(guildId);
+		let mode = settings.mode;
+		let channelIds = settings.channelIds;
+
+		if (enabled) {
+			if (mode === 'all') return { mode, channelIds };
+			const base = mode === 'off' ? [] : channelIds;
+			channelIds = [...new Set([...base, channelId])];
+			mode = 'channels';
+		} else {
+			if (mode === 'off') return { mode, channelIds };
+			if (mode === 'all') {
+				channelIds = allTextChannelIds.filter((id) => id !== channelId);
+				mode = channelIds.length > 0 ? 'channels' : 'off';
+			} else {
+				channelIds = channelIds.filter((id) => id !== channelId);
+				if (channelIds.length === 0) mode = 'off';
+			}
+		}
+
+		const data: Prisma.GuildUpdateInput = { aiMode: mode, aiChannelIds: channelIds };
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
+			update: data
+		});
+		this.updateCache(guild);
+		return { mode: normalizeAiMode(guild.aiMode), channelIds: guild.aiChannelIds };
 	}
 }
 

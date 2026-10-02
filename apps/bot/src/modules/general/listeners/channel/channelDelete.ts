@@ -3,7 +3,7 @@ import { Events, Listener } from '@sapphire/framework';
 import { Channel } from 'discord.js';
 import { dropChannelHistory } from '../../../../services/aiChatService.ts';
 
-/** 채널 삭제 시 AI 채팅 기록과 aiDisabledChannelIds 항목을 함께 정리해요 */
+/** 채널 삭제 시 AI 채팅 기록과 허용 채널 목록의 항목을 함께 정리해요 */
 @ApplyOptions<Listener.Options>({
 	event: Events.ChannelDelete
 })
@@ -15,12 +15,9 @@ export class ChannelDeleteListener extends Listener {
 		dropChannelHistory(channel.id);
 
 		try {
-			const settings = await this.container.guildService.getAiSettings(guildId);
-			if (settings.disabledChannelIds.includes(channel.id)) {
-				await this.container.guildService.setChannelAiEnabled(guildId, channel.id, true);
-			}
+			await this.container.guildService.removeAiChannel(guildId, channel.id);
 		} catch (error) {
-			this.container.logger.error(`[channelDelete] failed to prune aiDisabledChannelIds for ${channel.id}:`, error);
+			this.container.logger.error(`[channelDelete] failed to prune aiChannelIds for ${channel.id}:`, error);
 		}
 	}
 }

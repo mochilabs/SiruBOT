@@ -24,7 +24,8 @@ export class MentionReplyListener extends Listener {
 	public override async run(message: Message) {
 		if (message.author.bot) return;
 		const client = this.container.client;
-		if (!client.user || !message.mentions.has(client.user)) return;
+		// @everyone/@here 멘션은 무시 — 봇이 직접 멘션된 경우에만 응답해요
+		if (!client.user || !message.mentions.has(client.user, { ignoreEveryone: true })) return;
 
 		const config = getChatConfig();
 		if (!config) return;
