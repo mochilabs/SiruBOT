@@ -667,6 +667,20 @@ export class ChatServiceError extends Error {
 // ── 응답 중지 레지스트리 ────────────────────────────────────────────────────
 const chatAborts = new Map<string, { controller: AbortController; userId: string }>();
 
+/** 채널별 동시 턴 잠금 — /채팅과 멘션 답변이 같은 채널 히스토리를 경쟁하지 않도록 해요 */
+const activeChannelTurns = new Set<string>();
+
+/** 채널 턴 점유 시도 — 이미 진행 중이면 false */
+export function acquireChannelTurn(channelId: string): boolean {
+	if (activeChannelTurns.has(channelId)) return false;
+	activeChannelTurns.add(channelId);
+	return true;
+}
+
+export function releaseChannelTurn(channelId: string): void {
+	activeChannelTurns.delete(channelId);
+}
+
 /** 턴 시작 시 중지 컨트롤러를 등록해요. key는 중지 버튼 customId에 쓰여요. */
 export function registerChatAbort(userId: string): { key: string; controller: AbortController } {
 	const key = crypto.randomUUID().replace(/-/g, '');
@@ -840,7 +854,14 @@ export async function streamChatCompletion(options: {
 		const contentType = res.headers.get('content-type') ?? '';
 
 		if (!contentType.includes('text/event-stream')) {
-			const payload: any = await res.json();
+			let payload: any;
+			try {
+				payload = await res.json();
+			} catch (e) {
+				// 읽는 도중 타임아웃/중지가 걸리면 사유를 구분해요
+				if (controller.signal.aborted) throw abortError();
+				throw new ChatServiceError('chat_http_error', `AI 응답을 읽지 못했어요. (${e instanceof Error ? e.message : String(e)})`);
+			}
 			const message = payload?.choices?.[0]?.message;
 			const fullText = String(message?.content ?? '');
 			const toolCalls = collectToolCallsFromMessage(message);
@@ -1014,6 +1035,8 @@ export async function runChatTurn(options: {
 	if (!answer) {
 		throw new ChatServiceError('chat_empty_response', 'AI가 빈 답장을 보냈어요. 잠시 후 다시 시도해 주세요.');
 	}
+	// 턴 저장 직전 중지 클릭도 반영해요 — 저장 후 취소가 무시되는 창을 닫아요
+	throwIfCancelled();
 
 	const imageCount = options.images?.length ?? 0;
 	const hasPrompt = Boolean(options.prompt.trim());

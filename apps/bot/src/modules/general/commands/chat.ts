@@ -1,17 +1,19 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import {
 	ChatServiceError,
+	acquireChannelTurn,
 	clearChannelHistory,
 	collectImageUrls,
 	getChatConfig,
 	registerChatAbort,
+	releaseChannelTurn,
 	releaseChatAbort,
 	runChatTurn
 } from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
-import { finalPayload, livePayload, statusPayload, stoppedPayload } from '../utils/chatView.ts';
+import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from '../utils/chatView.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -96,60 +98,77 @@ export class ChatCommand extends Command {
 			username: interaction.user.username
 		};
 
-		await interaction.deferReply();
-
-		const { key: cancelKey, controller } = registerChatAbort(interaction.user.id);
-		let lastEditAt = 0;
-		const editLive = async (text: string) => {
-			await interaction.editReply(livePayload(text, cancelKey)).catch(() => undefined);
-		};
-		const onDelta = async (text: string) => {
-			const now = Date.now();
-			if (now - lastEditAt < config.streamUpdateMs || !text) return;
-			lastEditAt = now;
-			await editLive(text);
-		};
-		const onStatus = async (status: string) => {
-			lastEditAt = Date.now();
-			await interaction.editReply(statusPayload(status, cancelKey)).catch(() => undefined);
-		};
-
-		const liveMessage = await interaction.editReply(livePayload('', cancelKey));
-
-		let answer: string;
-		let memoryUpdated = false;
-		try {
-			const turn = await runChatTurn({
-				channelId,
-				prompt,
-				config,
-				toolContext,
-				images,
-				signal: controller.signal,
-				author: interaction.inCachedGuild() ? interaction.member.displayName : interaction.user.displayName,
-				assistantMessageId: liveMessage.id,
-				onDelta,
-				onStatus
-			});
-			answer = turn.answer;
-			memoryUpdated = turn.memoryUpdated;
-		} catch (error) {
-			if (error instanceof ChatServiceError) {
-				if (error.identifier === 'chat_cancelled') {
-					await interaction.editReply(stoppedPayload()).catch(() => undefined);
-					return;
-				}
-				throw new UserError({
-					identifier: error.identifier,
-					message: `❌ ${error.message}`,
-					context: { ephemeral: true }
-				});
-			}
-			throw error;
-		} finally {
-			releaseChatAbort(cancelKey);
+		// 같은 채널에서 이미 턴이 돌고 있으면 겹쳐 쓰지 않아요 (멘션 답변과 히스토리 경쟁 방지)
+		if (!acquireChannelTurn(channelId)) {
+			await interaction
+				.reply({
+					...errorPayload('⏳ 이 채널에서 이미 답변하는 중이에요. 잠시 후 다시 시도해 주세요.'),
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
+				})
+				.catch(() => undefined);
+			return;
 		}
 
-		await interaction.editReply(finalPayload(answer, { memoryUpdated }));
+		const { key: cancelKey, controller } = registerChatAbort(interaction.user.id);
+		try {
+			await interaction.deferReply();
+
+			let lastEditAt = 0;
+			const editLive = async (text: string) => {
+				await interaction.editReply(livePayload(text, cancelKey)).catch(() => undefined);
+			};
+			const onDelta = async (text: string) => {
+				const now = Date.now();
+				if (now - lastEditAt < config.streamUpdateMs || !text) return;
+				lastEditAt = now;
+				await editLive(text);
+			};
+			const onStatus = async (status: string) => {
+				lastEditAt = Date.now();
+				await interaction.editReply(statusPayload(status, cancelKey)).catch(() => undefined);
+			};
+
+			const liveMessage = await interaction.editReply(livePayload('', cancelKey));
+
+			let answer: string;
+			let memoryUpdated = false;
+			try {
+				const turn = await runChatTurn({
+					channelId,
+					prompt,
+					config,
+					toolContext,
+					images,
+					signal: controller.signal,
+					author: interaction.inCachedGuild() ? interaction.member.displayName : interaction.user.displayName,
+					assistantMessageId: liveMessage.id,
+					onDelta,
+					onStatus
+				});
+				answer = turn.answer;
+				memoryUpdated = turn.memoryUpdated;
+			} catch (error) {
+				if (error instanceof ChatServiceError) {
+					// 중지든 오류든 라이브 메시지를 그 자리에서 교체해 "생각 중"이 남지 않게 해요
+					const stopped = error.identifier === 'chat_cancelled';
+					await interaction.editReply(stopped ? stoppedPayload() : errorPayload(error.message)).catch(() => undefined);
+					return;
+				}
+				await interaction.editReply(errorPayload('일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')).catch(() => undefined);
+				throw error;
+			}
+
+			// 턴 도중/직후 중지가 수락됐으면 최종 답변으로 덮지 않아요
+			if (controller.signal.aborted) {
+				await interaction.editReply(stoppedPayload()).catch(() => undefined);
+				return;
+			}
+
+			await interaction.editReply(finalPayload(answer, { memoryUpdated }));
+		} finally {
+			// 초기 편집이 실패해도 abort 키가 새지 않도록 여기서 보장해요
+			releaseChatAbort(cancelKey);
+			releaseChannelTurn(channelId);
+		}
 	}
 }
