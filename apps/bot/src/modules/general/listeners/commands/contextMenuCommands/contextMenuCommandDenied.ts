@@ -3,16 +3,16 @@ import { Listener, UserError } from '@sapphire/framework';
 import { MessageFlags } from 'discord.js';
 
 export class UserEvent extends Listener<typeof Events.ContextMenuCommandDenied> {
-	public override async run({ context, message: content }: UserError, { interaction }: ContextMenuCommandDeniedPayload) {
-		// `context: { silent: true }` should make UserError silent:
-		// Use cases for this are for example permissions error when running the `eval` command.
-		if (Reflect.get(Object(context), 'silent')) return;
-
+	public override async run({ message: content }: UserError, { interaction }: ContextMenuCommandDeniedPayload) {
+		// 조건 미충족(silent 포함)도 사용자에게 항상 ephemeral로 응답해요 (무응답 방지)
 		if (interaction.deferred || interaction.replied) {
-			return interaction.editReply({
-				content,
-				allowedMentions: { users: [interaction.user.id], roles: [] }
-			});
+			return interaction
+				.followUp({
+					content,
+					allowedMentions: { users: [interaction.user.id], roles: [] },
+					flags: MessageFlags.Ephemeral
+				})
+				.catch(() => undefined);
 		}
 
 		return interaction.reply({
