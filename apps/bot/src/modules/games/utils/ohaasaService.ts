@@ -61,6 +61,8 @@ export interface HoroscopeData {
 export interface DailyHoroscope {
 	date: string;
 	source: 'ohaasa' | 'tv-asahi';
+	/** content/lucky가 AI로 한국어 번역됐는지 (false면 일본어 원문) */
+	translated: boolean;
 	horoscopes: HoroscopeData[];
 }
 
@@ -209,7 +211,7 @@ export async function fetchOhaasa(): Promise<DailyHoroscope> {
 		source = 'tv-asahi';
 	}
 
-	const daily: DailyHoroscope = { date: dateStr, source, horoscopes: parsed };
+	const daily: DailyHoroscope = { date: dateStr, source, translated: false, horoscopes: parsed };
 	cachedDateStr = todayStr;
 	cachedHoroscope = daily;
 	return daily;

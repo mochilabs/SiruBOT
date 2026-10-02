@@ -1,4 +1,4 @@
-import { fetchOhaasa } from '../../modules/games/utils/ohaasaService.ts';
+import { fetchOhaasaKo } from '../ohaasaTranslate.ts';
 import type { AiTool } from './types.ts';
 
 export const ohaasaTool: AiTool = {
@@ -14,7 +14,7 @@ export const ohaasaTool: AiTool = {
 	required: [],
 	status: '시루가 오늘의 운세를 확인하는 중..',
 	execute: async (args) => {
-		const daily = await fetchOhaasa();
+		const daily = await fetchOhaasaKo();
 		const zodiacArg = String(args.zodiac ?? '').trim();
 		if (!zodiacArg) return JSON.stringify(daily);
 

@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchOhaasa, getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
+import { fetchOhaasaKo } from '../../../services/ohaasaTranslate.ts';
+import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
 
 function formatDate(raw: string): string {
 	const compact = raw.replace(/\//g, '');
@@ -18,7 +19,9 @@ function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[
 		target.content || '오늘의 운세 정보가 없어요.',
 		`🍀 ${target.lucky || '럭키 정보 없음'}`,
 		'',
-		`-# 출처: ${daily.source === 'ohaasa' ? '아사히 방송 오하아사' : 'TV 아사히'} · 일본어 원문이에요. \`/채팅\`으로 한국어로 물어보면 번역해 드려요.`
+		`-# 출처: ${daily.source === 'ohaasa' ? '아사히 방송 오하아사' : 'TV 아사히'} · ${
+			daily.translated ? 'AI 한국어 번역본이에요.' : '일본어 원문이에요. `/채팅`으로 한국어로 물어보면 번역해 드려요.'
+		}`
 	];
 }
 
@@ -85,7 +88,7 @@ export class OhaasaCommand extends Command {
 
 		let daily: DailyHoroscope;
 		try {
-			daily = await fetchOhaasa();
+			daily = await fetchOhaasaKo();
 		} catch (e) {
 			throw new UserError({
 				identifier: 'ohaasa_fetch_failed',

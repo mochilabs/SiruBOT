@@ -131,6 +131,39 @@ export class RedisStore {
 		return this.nodeSessionStore;
 	}
 
+	/** 범용 문자열 캐시 조회 — 미연결/오류 시 null (호출자가 자체 캐시로 대체) */
+	public async getCacheValue(key: string): Promise<string | null> {
+		try {
+			if (this.isReady) return await this.redis.get(key);
+		} catch (error) {
+			this.logger.warn(`Cache get failed (${key}): ${error}`);
+		}
+		return null;
+	}
+
+	/** 범용 문자열 캐시 저장 (TTL: 초) */
+	public async setCacheValue(key: string, value: string, ttlSeconds: number): Promise<void> {
+		try {
+			if (this.isReady) await this.redis.set(key, value, { EX: ttlSeconds });
+		} catch (error) {
+			this.logger.warn(`Cache set failed (${key}): ${error}`);
+		}
+	}
+
+	/**
+	 * SET NX EX — 프로세스 간 동시 작업 방지용 키 선점.
+	 * 선점 성공(또는 Redis 미연결이라 보호 불가)이면 true.
+	 */
+	public async setCacheValueNX(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+		try {
+			if (this.isReady) return (await this.redis.set(key, value, { EX: ttlSeconds, NX: true })) === 'OK';
+			return true;
+		} catch (error) {
+			this.logger.warn(`Cache setNX failed (${key}): ${error}`);
+			return true;
+		}
+	}
+
 	public async connect() {
 		await this.redis.connect();
 	}
