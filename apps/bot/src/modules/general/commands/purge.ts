@@ -16,6 +16,7 @@ export class PurgeCommand extends Command {
 		registry.registerChatInputCommand((builder) => {
 			builder
 				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+				.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
 				.setName(this.name)
 				.setNameLocalizations({ ko: '청소' })
 				.setDescription(this.description)
@@ -73,14 +74,12 @@ export class PurgeCommand extends Command {
 
 		try {
 			let deleted = 0;
-
-			if (target) {
-				const fetched = await channel.messages.fetch({ limit: amount });
-				const candidates = fetched.filter((m) => m.author.id === target.id && Date.now() - m.createdTimestamp < MAX_AGE_MS);
-				if (candidates.size > 0) deleted = (await channel.bulkDelete(candidates, true)).size;
-			} else {
-				deleted = (await channel.bulkDelete(amount, true)).size;
-			}
+			const fetched = await channel.messages.fetch({ limit: amount });
+			const ageFiltered = fetched.filter((m) => Date.now() - m.createdTimestamp < MAX_AGE_MS);
+			// 14일이 지난 메시지는 bulkDelete가 조용히 제외하므로 미리 센다
+			const ageSkipped = fetched.size - ageFiltered.size;
+			const candidates = target ? ageFiltered.filter((m) => m.author.id === target.id) : ageFiltered;
+			if (candidates.size > 0) deleted = (await channel.bulkDelete(candidates, true)).size;
 
 			if (deleted === 0) {
 				await interaction.editReply({
@@ -89,7 +88,8 @@ export class PurgeCommand extends Command {
 				return;
 			}
 
-			await interaction.editReply({ content: `🗑️ 메시지 **${deleted}개**를 삭제했어요.` });
+			const note = ageSkipped > 0 ? `\n-# 14일이 지난 메시지 ${ageSkipped}개는 건너떴어요.` : '';
+			await interaction.editReply({ content: `🗑️ 메시지 **${deleted}개**를 삭제했어요.${note}` });
 		} catch {
 			await interaction
 				.editReply({ content: '❌ 메시지를 삭제하지 못했어요. 봇의 메시지 관리 권한과 채널 상태를 확인해 주세요.' })
