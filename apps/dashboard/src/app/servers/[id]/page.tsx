@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
-import { AiSettings } from "@/components/servers/ai-settings";
+import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { auth } from "@/lib/auth";
 import { canManage } from "@/lib/guild-permissions";
 
@@ -59,16 +59,9 @@ export default async function ServerDashboardPage({
     <Container>
       <PageHeader
         title="서버 대시보드"
-        description="서버의 AI 채팅 설정과 기록을 관리해요."
+        description="AI 채팅·음악·채널·임시 음성 등 서버 설정을 한 곳에서 관리해요."
       />
-      {manageable ? (
-        <AiSettings guildId={id} />
-      ) : (
-        <section className="rounded-2xl border border-border/60 bg-muted/10 p-6 text-sm text-muted-foreground">
-          ⚠️ AI 설정은 서버 관리자만 변경할 수 있어요. (서버 관리자(Manage
-          Server) 권한이 필요해요.)
-        </section>
-      )}
+      <ServerDashboard guildId={id} manageable={manageable} />
     </Container>
   );
 }
