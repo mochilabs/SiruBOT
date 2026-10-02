@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { createContainer, DEFAULT_COLOR } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ContainerBuilder } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
+import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
 
 /** 조각 간 간격 — webhook 편집 제한(5/2초) 여유 있게 유지해요 */
 const TYPING_STEP_MIN_MS = 420;
@@ -51,7 +52,8 @@ export class HelpCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		const segments = splitForTyping(this.collectHelpLines());
+		const index = await fetchCommandIndex(interaction.guildId);
+		const segments = splitForTyping(this.collectHelpLines(index));
 
 		await interaction.reply({
 			components: [buildHelpContainer(segments[0] ?? '', true)],
@@ -67,10 +69,13 @@ export class HelpCommand extends Command {
 		}
 
 		await sleep(TYPING_STEP_MIN_MS);
-		await interaction.editReply({ components: [buildHelpContainer(shown, false)] }).catch(() => undefined);
+		// 마지막 커서 제거가 한 번 실패하면 화면에 커서가 영구히 남으니 1회 재시도해요
+		await interaction.editReply({ components: [buildHelpContainer(shown, false)] }).catch(async () => {
+			await interaction.editReply({ components: [buildHelpContainer(shown, false)] }).catch(() => undefined);
+		});
 	}
 
-	private collectHelpLines(): string[] {
+	private collectHelpLines(index: ReadonlyMap<string, ApplicationCommand>): string[] {
 		const commands = this.container.stores.get('commands');
 
 		const audioCommands: string[] = [];
@@ -78,7 +83,7 @@ export class HelpCommand extends Command {
 		const generalCommands: string[] = [];
 
 		for (const [, cmd] of commands) {
-			const mention = `</${cmd.name}:0>`;
+			const mention = commandMention(cmd.name, index);
 			const desc = cmd.description;
 			const line = `${mention} — ${desc}`;
 
