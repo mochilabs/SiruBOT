@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Search } from "lucide-react";
 
+import { SectionLabel } from "@/components/primitives/section-label";
+
 import { Portal } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -155,7 +157,7 @@ export function CommandPalette({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -8 }}
 							transition={{ type: "spring", stiffness: 500, damping: 35 }}
-							className="relative z-10 w-full max-w-xl glass-panel overflow-hidden shadow-2xl"
+							className="relative z-10 w-full max-w-xl overflow-hidden rounded-dialog border border-border bg-popover shadow-2xl"
 						>
 							{/* Search input */}
 							<div className="flex items-center gap-3 px-5 border-b border-border/40">
@@ -191,11 +193,7 @@ export function CommandPalette({
 
 								{Array.from(groups.entries()).map(([groupName, groupItems], gi) => (
 									<div key={groupName || gi}>
-										{groupName && (
-											<p className="px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground/40">
-												{groupName}
-											</p>
-										)}
+										{groupName && <SectionLabel as="p" className="px-3 py-2">{groupName}</SectionLabel>}
 										{groupItems.map((item) => {
 											flatIndex++;
 											const isActive = flatIndex === activeIndex;
@@ -210,7 +208,7 @@ export function CommandPalette({
 													onClick={() => select(item)}
 													onMouseEnter={() => setActiveIndex(flatIndex)}
 													className={`
-														w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer
+														w-full flex items-center gap-3 px-3 py-2.5 rounded-menu text-sm font-medium transition-colors cursor-pointer
 														${isActive ? "bg-accent/80" : "hover:bg-accent/50"}
 													`}
 												>

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Bot, Hash, Music, ShieldAlert, SlidersHorizontal, Volume2 } from "lucide-react";
 
 import { ToastProvider } from "@/components/feedback/toast";
-import { Navigation } from "@/components/layout/navigation";
+import { Card } from "@/components/primitives/card";
+import { Tabs } from "@/components/primitives/tabs";
 
 import { AiSettings } from "./ai-settings";
 import { ChannelSettings } from "./channel-settings";
@@ -24,12 +25,12 @@ type TabKey = (typeof TABS)[number]["key"];
 
 function NotManageable() {
 	return (
-		<section className="glass-panel p-6 text-sm text-muted-foreground space-y-2">
+		<Card padding="lg" className="text-sm text-muted-foreground space-y-2">
 			<p className="flex items-center gap-2 font-bold text-foreground">
-				<ShieldAlert size={16} className="text-amber-500" /> 설정은 서버 관리자만 변경할 수 있어요.
+				<ShieldAlert size={16} className="text-warning" /> 설정은 서버 관리자만 변경할 수 있어요.
 			</p>
 			<p>서버 관리자(Manage Server) 권한이 필요해요. 서버 설정에서 권한을 받은 뒤 다시 시도해 주세요.</p>
-		</section>
+		</Card>
 	);
 }
 
@@ -44,28 +45,33 @@ export function ServerDashboard({ guildId, manageable }: { guildId: string; mana
 
 	return (
 		<ToastProvider>
-			<div className="space-y-6 animate-page-in">
-				<Navigation
+			<div className="animate-page-in">
+				<Tabs
+					aria-label="서버 설정 패널"
 					items={TABS.map((item) => ({ key: item.key, label: item.label, icon: item.icon }))}
-					activeKey={tab}
-					onSelect={(key) => setTab(key as TabKey)}
-					variant="pill"
+					value={tab}
+					onChange={(key: string) => setTab(key as TabKey)}
+					panelClassName="pt-6"
+					renderPanel={() => (
+						<>
+							<div className={tab === "ai" ? "block" : "hidden"}>
+								<AiSettings guildId={guildId} />
+							</div>
+							<div className={tab === "music" ? "block" : "hidden"}>
+								<MusicSettings guildId={guildId} />
+							</div>
+							<div className={tab === "channels" ? "block" : "hidden"}>
+								<ChannelSettings guildId={guildId} />
+							</div>
+							<div className={tab === "jtc" ? "block" : "hidden"}>
+								<JtcSettings guildId={guildId} />
+							</div>
+							<div className={tab === "mixer" ? "block" : "hidden"}>
+								<MixerSettings guildId={guildId} />
+							</div>
+						</>
+					)}
 				/>
-				<div className={tab === "ai" ? "block" : "hidden"}>
-					<AiSettings guildId={guildId} />
-				</div>
-				<div className={tab === "music" ? "block" : "hidden"}>
-					<MusicSettings guildId={guildId} />
-				</div>
-				<div className={tab === "channels" ? "block" : "hidden"}>
-					<ChannelSettings guildId={guildId} />
-				</div>
-				<div className={tab === "jtc" ? "block" : "hidden"}>
-					<JtcSettings guildId={guildId} />
-				</div>
-				<div className={tab === "mixer" ? "block" : "hidden"}>
-					<MixerSettings guildId={guildId} />
-				</div>
 			</div>
 		</ToastProvider>
 	);

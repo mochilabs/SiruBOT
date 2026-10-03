@@ -5,6 +5,9 @@ import { Volume2 } from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
+import { Card } from "@/components/primitives/card";
+import { Field } from "@/components/primitives/field";
+import { Input } from "@/components/primitives/input";
 import { Slider } from "@/components/primitives/slider";
 import { Switch } from "@/components/primitives/switch";
 import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
@@ -12,7 +15,7 @@ import { toApiError, toError } from "@/lib/api-error";
 import { ChannelTypeValue } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
 
-import { Field, InfoBox, inputClass, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 /* ─────────────────────────── 폼 매핑 ─────────────────────────── */
 
@@ -89,7 +92,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 	const templatePreview = (form.jtcTemplate.trim() || "{user}의 방").replaceAll("{user}", "철수");
 
 	return (
-		<section className="glass-panel p-6 space-y-6">
+		<Card padding="lg" className="gap-6">
 			<PanelHeader
 				icon={<Volume2 className="h-5 w-5" />}
 				title="임시 음성채널 (JTC)"
@@ -118,7 +121,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 
 			<Field
 				label="생성 위치 (카테고리)"
-				hint="선택하면 카테고리 안에 '🔊 임시방 만들기' 마커 채널을 만들거나 옮겨요. (채널 관리 권한이 필요해요)"
+				description="선택하면 카테고리 안에 '🔊 임시방 만들기' 마커 채널을 만들거나 옮겨요. (채널 관리 권한이 필요해요)"
 			>
 				<Select
 					searchable
@@ -140,15 +143,15 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 			)}
 
 			<div className="grid gap-6 sm:grid-cols-2">
-				<Field label="방 이름 템플릿" hint="{user}는 들어온 멤버의 이름으로 바뀌어요.">
-					<input
+				<Field htmlFor="jtc-template" label="방 이름 템플릿" description="{user}는 들어온 멤버의 이름으로 바뀌어요.">
+					<Input
+						id="jtc-template"
 						type="text"
 						value={form.jtcTemplate}
 						maxLength={100}
 						disabled={saving}
 						onChange={(e) => patch({ jtcTemplate: e.target.value })}
 						placeholder="{user}의 방"
-						className={inputClass}
 					/>
 					<p className="pt-1 text-xs text-muted-foreground/70">
 						예시: <span className="font-semibold text-foreground">{templatePreview}</span>
@@ -174,7 +177,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving || setupLoading} onSave={handleSave} />
-		</section>
+		</Card>
 	);
 }
 

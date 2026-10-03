@@ -6,11 +6,14 @@ import { Bot, Check, Globe, Hash, Loader2, PowerOff, Trash2 } from "lucide-react
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
 import { Button } from "@/components/primitives/button";
+import { Card } from "@/components/primitives/card";
+import { Field } from "@/components/primitives/field";
+import { Input, Textarea } from "@/components/primitives/input";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
-import { Field, InfoBox, inputClass, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 /* ─────────────────────────── 모드 카드 ─────────────────────────── */
 
@@ -162,7 +165,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 	}
 
 	return (
-		<section className="glass-panel p-6 space-y-6">
+		<Card padding="lg" className="gap-6">
 			<PanelHeader
 				icon={<Bot className="h-5 w-5" />}
 				title="AI 채팅 설정"
@@ -193,11 +196,11 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 							aria-checked={active}
 							disabled={saving}
 							onClick={() => setMode(card.value)}
-							className={`relative rounded-xl border p-4 text-left transition-all ${
-								active
-									? "border-primary/60 bg-primary/10"
-									: "border-border/60 bg-muted/10 hover:border-border hover:bg-muted/20"
-							}`}
+						className={`relative rounded-card border p-4 text-left transition-colors duration-fast ${
+							active
+								? "border-primary/60 bg-primary/10"
+								: "border-border-subtle bg-surface-2 hover:border-border hover:bg-surface-3"
+						}`}
 						>
 							<span className="flex items-center gap-2 text-sm font-bold text-foreground">
 								<span className={active ? "text-primary" : "text-muted-foreground"}>{card.icon}</span>
@@ -219,7 +222,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 				<div className="space-y-3">
 					<Field
 						label="허용 채널"
-						hint="선택한 텍스트 채널에서만 AI가 답해요. 여러 개를 고를 수 있어요."
+						description="선택한 텍스트 채널에서만 AI가 답해요. 여러 개를 고를 수 있어요."
 					>
 						<Select
 							multiple
@@ -246,8 +249,8 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 				</div>
 			)}
 
-			<Field label="모델" hint="예: gpt-4o-mini · vision 모델을 써야 이미지 분석이 가능해요. 비워두면 env 기본값을 사용해요.">
-				<input
+			<Field htmlFor="ai-model" label="모델" description="예: gpt-4o-mini · vision 모델을 써야 이미지 분석이 가능해요. 비워두면 env 기본값을 사용해요.">
+				<Input
 					id="ai-model"
 					type="text"
 					value={model}
@@ -255,19 +258,18 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 					disabled={saving}
 					onChange={(e) => setModel(e.target.value)}
 					placeholder="env 기본값 사용"
-					className={inputClass}
 				/>
 			</Field>
 
-			<Field label="서버 추가 지침" hint="시루의 기본 페르소나에 덧붙여져요. 비워두면 제거돼요.">
-				<textarea
+			<Field htmlFor="ai-prompt" label="서버 추가 지침" description="시루의 기본 페르소나에 덧붙여져요. 비워두면 제거돼요.">
+				<Textarea
 					id="ai-prompt"
 					value={systemPrompt}
 					maxLength={1000}
 					disabled={saving}
 					onChange={(e) => setSystemPrompt(e.target.value)}
 					placeholder="이 서버에서만 적용할 추가 지침을 적어요 (최대 1000자)"
-					className={`${inputClass} min-h-[96px] resize-none`}
+					className="min-h-[96px] resize-none"
 				/>
 			</Field>
 
@@ -288,12 +290,12 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 					disabled={(policy?.historyCount ?? 0) === 0}
 					icon={deleting ? undefined : <Trash2 size={16} />}
 					onClick={handleDeleteHistory}
-					className={confirmDelete ? "ring-2 ring-rose-500/50" : ""}
+					className={confirmDelete ? "ring-2 ring-destructive/50" : ""}
 				>
 					{confirmDelete ? "정말 삭제할까요?" : "대화 기록 전체 삭제"}
 				</Button>
 			</SaveBar>
-		</section>
+		</Card>
 	);
 }
 

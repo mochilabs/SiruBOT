@@ -4,13 +4,15 @@ import { useCallback } from "react";
 import { SlidersHorizontal } from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
+import { Card } from "@/components/primitives/card";
+import { Field } from "@/components/primitives/field";
 import { Slider } from "@/components/primitives/slider";
 import { Switch } from "@/components/primitives/switch";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import type { GuildSettings } from "@/types/settings";
 
-import { Field, InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
+import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
 /* ─────────────────────────── 폼 매핑 ─────────────────────────── */
 
@@ -47,7 +49,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 	if (!form) return <PanelLoading label="오디오 엔진 설정 불러오는 중…" />;
 
 	return (
-		<section className="glass-panel p-6 space-y-6">
+		<Card padding="lg" className="gap-6">
 			<PanelHeader
 				icon={<SlidersHorizontal className="h-5 w-5" />}
 				title="오디오 엔진"
@@ -78,7 +80,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 				</div>
 			</div>
 
-			<Field label="크로스페이드 길이" hint="500ms ~ 30000ms. 길수록 두 곡이 더 오래 겹쳐요.">
+			<Field label="크로스페이드 길이" description="500ms ~ 30000ms. 길수록 두 곡이 더 오래 겹쳐요.">
 				<Slider
 					value={form.crossfadeMs}
 					onChange={(value) => patch({ crossfadeMs: value })}
@@ -97,7 +99,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-		</section>
+		</Card>
 	);
 }
 

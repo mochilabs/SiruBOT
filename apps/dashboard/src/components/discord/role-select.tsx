@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 import { Portal, usePopoverCoords } from "../overlay/portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -102,7 +104,7 @@ export function RoleSelect({
 				onClick={() => setOpen(!open)}
 				className={`
 					w-full min-h-[44px] px-4 py-2 flex items-center justify-between gap-2
-					glass-panel text-sm font-medium transition-all duration-300 cursor-pointer
+					rounded-control border border-border bg-input text-sm font-medium transition-all duration-base cursor-pointer
 					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary/30"}
 					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
 				`}
@@ -111,7 +113,7 @@ export function RoleSelect({
 					{value.length > 0 ? `${value.length}개 역할 선택됨` : placeholder}
 				</span>
 				<ChevronDown
-					className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+					className={`h-4 w-4 text-muted-foreground transition-transform duration-fast ${open ? "rotate-180" : ""}`}
 				/>
 			</button>
 
@@ -135,14 +137,15 @@ export function RoleSelect({
 									style={{ backgroundColor: hex ?? "var(--muted-foreground)" }}
 								/>
 								{role.name}
-								<button
-									type="button"
+								<Button
+									variant="icon"
+									size="sm"
 									onClick={() => toggle(role.id)}
-									className="p-0.5 rounded-full hover:opacity-70 transition-opacity cursor-pointer"
+									className="h-3.5 w-3.5 rounded-full border-transparent bg-transparent p-0.5 hover:opacity-70"
 									aria-label={`${role.name} 제거`}
 								>
 									<X className="h-2.5 w-2.5" />
-								</button>
+								</Button>
 							</span>
 						);
 					})}
@@ -166,7 +169,7 @@ export function RoleSelect({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}
 							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] mt-2 glass-panel p-1.5 shadow-2xl max-h-64 overflow-y-auto"
+							className="fixed z-[200] mt-2 rounded-menu border border-border bg-popover p-1.5 shadow-2xl max-h-64 overflow-y-auto"
 							style={{
 								top: coords.top,
 								left: coords.left,
@@ -197,7 +200,7 @@ export function RoleSelect({
 										type="button"
 										onClick={() => toggle(role.id)}
 										className={`
-											w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer
+											w-full flex items-center gap-3 px-3 py-2 rounded-menu text-sm font-medium transition-colors cursor-pointer
 											hover:bg-accent/50
 										`}
 									>

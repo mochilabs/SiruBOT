@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { Heart, Music, Plus, Search } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+import { Card } from "@/components/primitives/card";
+import { Input } from "@/components/primitives/input";
 import type { Playlist } from "@/types/playlist";
 
 interface PlaylistSidebarProps {
@@ -61,17 +64,17 @@ export function PlaylistSidebar({
 
 	return (
 		<div className="w-full lg:w-80 shrink-0 lg:sticky lg:top-24 lg:z-10">
-			<div className="glass-panel flex flex-col overflow-hidden max-h-[calc(100vh-8rem)] min-h-[400px]">
+			<Card padding="none" className="overflow-hidden max-h-[calc(100vh-8rem)] min-h-[400px]">
 				{playlists.length >= 5 && (
 					<div className="p-3 shrink-0">
 						<div className="relative">
 							<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-							<input
+							<Input
 								type="text"
 								placeholder="검색..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full pl-9 pr-4 py-2 bg-muted/40 border border-transparent hover:bg-muted/60 focus:bg-muted/60 rounded-xl text-sm focus:outline-hidden transition-all"
+								className="border-transparent bg-muted/40 py-2 pl-9 hover:bg-muted/60 focus:bg-muted/60"
 							/>
 						</div>
 					</div>
@@ -99,12 +102,12 @@ export function PlaylistSidebar({
 						return (
 							<div key={playlist.id} className="w-full flex flex-col">
 								{isDefault && idx === 0 && (
-									<div className="px-3 pt-2 pb-1.5 text-[10px] font-medium tracking-widest text-muted-foreground/60 uppercase relative z-10">
+									<div className="px-3 pt-2 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground/60 uppercase relative z-10">
 										즐겨찾기
 									</div>
 								)}
 								{(isFirstCustom || (idx === 0 && !isDefault)) && (
-									<div className="px-3 pt-3 pb-1.5 text-[10px] font-medium tracking-widest text-muted-foreground/60 uppercase relative z-10">
+									<div className="px-3 pt-3 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground/60 uppercase relative z-10">
 										내 목록
 									</div>
 								)}
@@ -116,7 +119,7 @@ export function PlaylistSidebar({
 										type="button"
 										onClick={() => onSelect(playlist.id)}
 										className={`
-											flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl text-left select-none cursor-pointer transition-colors duration-200
+											flex-1 flex items-center justify-between px-3 py-2.5 rounded-menu text-left select-none cursor-pointer transition-colors duration-fast
 											${isActive ? "text-primary font-bold bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-accent/10"}
 										`}
 									>
@@ -145,16 +148,18 @@ export function PlaylistSidebar({
 					)}
 
 					<div className="pt-2 mt-1">
-						<button
+						<Button
+							variant="ghost"
+							size="sm"
 							onClick={onCreateNew}
-							className="w-full py-2.5 text-xs font-medium text-muted-foreground/80 hover:text-foreground transition-colors flex items-center justify-center gap-1.5 rounded-lg hover:bg-muted/30"
+							className="h-auto w-full gap-1.5 rounded-lg px-0 py-2.5 text-xs font-medium text-muted-foreground/80 hover:bg-muted/30 hover:text-foreground"
 						>
 							<Plus size={14} />
 							새 플레이리스트
-						</button>
+						</Button>
 					</div>
 				</div>
-			</div>
+			</Card>
 		</div>
 	);
 }

@@ -10,7 +10,6 @@ import {
 	Command,
 	Cpu,
 	CreditCard,
-	Globe,
 	Hash,
 	Home,
 	Layers,
@@ -45,7 +44,6 @@ import { DISCORD_PERMISSIONS,PermissionList } from "@/components/discord/permiss
 import { type DiscordRole,RoleSelect } from "@/components/discord/role-select";
 import { type NotificationItem,NotificationStack } from "@/components/feedback/notification";
 import { ToastProvider, useToast } from "@/components/feedback/toast";
-import { Navigation } from "@/components/layout/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { CommandPalette } from "@/components/overlay/command-palette";
 import { DatePicker } from "@/components/overlay/date-picker";
@@ -54,13 +52,20 @@ import { Dropdown } from "@/components/overlay/dropdown";
 import { Modal, ModalBody, ModalFooter,ModalHeader } from "@/components/overlay/modal";
 import { Select } from "@/components/overlay/select";
 import { Avatar } from "@/components/primitives/avatar";
-import { Badge } from "@/components/primitives/badge";
+import { Badge, StatusBadge } from "@/components/primitives/badge";
+import { toneStyles } from "@/components/primitives/badge";
 /* ── Import all components ── */
 import { Button } from "@/components/primitives/button";
-import { SkeletonCard,SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/primitives/card";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { Field } from "@/components/primitives/field";
+import { Input, Textarea } from "@/components/primitives/input";
+import { SectionLabel } from "@/components/primitives/section-label";
+import { SkeletonCard, SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
 import { Slider } from "@/components/primitives/slider";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Switch } from "@/components/primitives/switch";
+import { Tabs } from "@/components/primitives/tabs";
 
 /* ═══════════════════════════════════════════════════════════
    Gallery sections
@@ -68,7 +73,13 @@ import { Switch } from "@/components/primitives/switch";
 
 const SECTIONS = [
 	{ id: "button", label: "Button", icon: <Zap size={14} /> },
+	{ id: "card", label: "Card", icon: <Layers size={14} /> },
+	{ id: "surface", label: "Surface", icon: <Layers size={14} /> },
+	{ id: "input", label: "Input", icon: <Mail size={14} /> },
+	{ id: "field", label: "Field", icon: <List size={14} /> },
 	{ id: "badge", label: "Badge", icon: <Tags size={14} /> },
+	{ id: "section-label", label: "SectionLabel", icon: <List size={14} /> },
+	{ id: "empty-state", label: "EmptyState", icon: <Palette size={14} /> },
 	{ id: "avatar", label: "Avatar", icon: <User size={14} /> },
 	{ id: "status-dot", label: "StatusDot", icon: <Activity size={14} /> },
 	{ id: "skeleton", label: "Skeleton", icon: <Layers size={14} /> },
@@ -82,7 +93,7 @@ const SECTIONS = [
 	{ id: "select", label: "Select", icon: <List size={14} /> },
 	{ id: "date-picker", label: "DatePicker", icon: <Calendar size={14} /> },
 	{ id: "command-palette", label: "CommandPalette", icon: <Command size={14} /> },
-	{ id: "navigation", label: "Navigation", icon: <Globe size={14} /> },
+	{ id: "tabs", label: "Tabs", icon: <List size={14} /> },
 	{ id: "data-table", label: "DataTable", icon: <Table2 size={14} /> },
 	{ id: "stat-card", label: "StatCard", icon: <CreditCard size={14} /> },
 	{ id: "tag-input", label: "TagInput", icon: <Hash size={14} /> },
@@ -111,9 +122,9 @@ function SectionHeader({ id, title, description }: { id: string; title: string; 
 /* ─── Showcase wrapper ─── */
 function Showcase({ children, className = "" }: { children: React.ReactNode; className?: string }) {
 	return (
-		<div className={`glass-panel p-6 space-y-6 mb-12 ${className}`}>
+		<Card className={`p-6 gap-6 mb-12 ${className}`}>
 			{children}
-		</div>
+		</Card>
 	);
 }
 
@@ -201,7 +212,6 @@ export default function ComponentsGalleryPage() {
 	const [selectVal, setSelectVal] = useState("");
 	const [multiSelectVal, setMultiSelectVal] = useState<string[]>([]);
 	const [dateVal, setDateVal] = useState<Date | null>(null);
-	const [navTab, setNavTab] = useState("overview");
 	const [tags, setTags] = useState(["음악", "봇"]);
 	const [permissions, setPermissions] = useState(0);
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -312,8 +322,6 @@ export default function ComponentsGalleryPage() {
 			<Container>
 				{/* ─── Page header ─── */}
 				<PageHeader
-					badge="컴포넌트 갤러리"
-					badgeIcon={<Palette size={16} />}
 					title="Components v2"
 					description="SiruBOT 대시보드 디자인 시스템의 모든 컴포넌트를 한 곳에서 확인하세요."
 				/>
@@ -343,7 +351,7 @@ export default function ComponentsGalleryPage() {
 										key={s.id}
 										ref={(el) => { sidebarRefs.current[idx] = el; }}
 										href={`#${s.id}`}
-										className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-200 relative z-10 ${isActive
+										className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-fast relative z-10 ${isActive
 											? "text-primary font-bold"
 											: "text-muted-foreground hover:text-foreground hover:bg-accent/30"
 											}`}
@@ -360,16 +368,17 @@ export default function ComponentsGalleryPage() {
 					<main className="flex-1 min-w-0 space-y-4">
 
 						{/* ════════════ BUTTON ════════════ */}
-						<SectionHeader id="button" title="Button" description="6가지 variant, 3가지 size, 로딩 상태를 지원하는 범용 버튼" />
+						<SectionHeader id="button" title="Button" description="7가지 variant, 3가지 size, 로딩/비활성 상태를 지원하는 범용 버튼" />
 						<Showcase>
 							<ShowcaseRow label="Variants">
 								<Button variant="primary">Primary</Button>
 								<Button variant="secondary">Secondary</Button>
 								<Button variant="ghost">Ghost</Button>
 								<Button variant="danger">Danger</Button>
-								<Button variant="icon" icon={<Settings size={18} />} />
+								<Button variant="icon" aria-label="설정" icon={<Settings size={18} />} />
 								<Button variant="state-toggle" active>Active</Button>
 								<Button variant="state-toggle">Inactive</Button>
+								<Button variant="cta">CTA</Button>
 							</ShowcaseRow>
 							<ShowcaseRow label="Sizes">
 								<Button size="sm">Small</Button>
@@ -381,6 +390,110 @@ export default function ComponentsGalleryPage() {
 								<Button disabled>비활성화</Button>
 								<Button variant="danger" icon={<Trash2 size={16} />}>삭제하기</Button>
 							</ShowcaseRow>
+						</Showcase>
+
+						{/* ════════════ CARD ════════════ */}
+						<SectionHeader id="card" title="Card" description="불투명 표면 + 토큰 보더의 기본 컨테이너 (variant 4종, padding 4종)" />
+						<Showcase>
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+								<Card variant="default">
+									<CardHeader>
+										<CardTitle>Default</CardTitle>
+										<CardDescription>기본 표면</CardDescription>
+									</CardHeader>
+									<CardContent className="text-sm text-muted-foreground">bg-card + border-border</CardContent>
+									<CardFooter>
+										<Button size="sm" variant="secondary">작업</Button>
+									</CardFooter>
+								</Card>
+								<Card variant="muted">
+									<CardHeader>
+										<CardTitle>Muted</CardTitle>
+										<CardDescription>한 단계 낮은 표면</CardDescription>
+									</CardHeader>
+									<CardContent className="text-sm text-muted-foreground">bg-muted</CardContent>
+								</Card>
+								<Card variant="raised">
+									<CardHeader>
+										<CardTitle>Raised</CardTitle>
+										<CardDescription>미세한 그림자</CardDescription>
+									</CardHeader>
+									<CardContent className="text-sm text-muted-foreground">shadow-sm</CardContent>
+								</Card>
+								<Card variant="interactive">
+									<CardHeader>
+										<CardTitle>Interactive</CardTitle>
+										<CardDescription>호버 강조</CardDescription>
+									</CardHeader>
+									<CardContent className="text-sm text-muted-foreground">hover:border-border-strong</CardContent>
+								</Card>
+							</div>
+						</Showcase>
+
+						{/* ════════════ SURFACE ════════════ */}
+						<SectionHeader id="surface" title="Surface" description="불투명 표면 위계 · 보더 · 반경 · 그림자 · 상태 톤 (glass/backdrop 없음)" />
+						<Showcase>
+							<ShowcaseRow label="표면 위계">
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border-subtle bg-background p-3 text-xs font-medium text-muted-foreground">background</div>
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border-subtle bg-surface-1 p-3 text-xs font-medium text-muted-foreground">surface-1</div>
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border-subtle bg-surface-2 p-3 text-xs font-medium text-muted-foreground">surface-2</div>
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border-subtle bg-surface-3 p-3 text-xs font-medium text-muted-foreground">surface-3</div>
+							</ShowcaseRow>
+							<ShowcaseRow label="보더">
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border-subtle bg-card p-3 text-xs font-medium text-muted-foreground">border-subtle</div>
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border-strong bg-card p-3 text-xs font-medium text-muted-foreground">border-strong</div>
+								<div className="h-16 min-w-[7rem] flex-1 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground">border</div>
+							</ShowcaseRow>
+							<ShowcaseRow label="반경">
+								<div className="h-16 w-32 rounded-control border border-border bg-surface-1 p-3 text-xs font-medium text-muted-foreground">control</div>
+								<div className="h-16 w-32 rounded-card border border-border bg-surface-1 p-3 text-xs font-medium text-muted-foreground">card</div>
+								<div className="h-16 w-32 rounded-menu border border-border bg-surface-1 p-3 text-xs font-medium text-muted-foreground">menu</div>
+								<div className="h-16 w-32 rounded-dialog border border-border bg-surface-1 p-3 text-xs font-medium text-muted-foreground">dialog</div>
+							</ShowcaseRow>
+							<ShowcaseRow label="그림자">
+								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-xs">elev-1</div>
+								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-md">elev-2</div>
+								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-lg">elev-3</div>
+								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-xl">elev-4</div>
+								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-2xl">elev-5</div>
+							</ShowcaseRow>
+							<ShowcaseRow label="상태 톤">
+								{(Object.keys(toneStyles) as (keyof typeof toneStyles)[]).map((tone) => (
+									<span key={tone} className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${toneStyles[tone].badge}`}>
+										{tone}
+									</span>
+								))}
+							</ShowcaseRow>
+						</Showcase>
+
+
+						{/* ════════════ INPUT ════════════ */}
+						<SectionHeader id="input" title="Input / Textarea" description="컨트롤 공용 스타일 (rounded-control, focus ring, aria-invalid)" />
+						<Showcase>
+							<ShowcaseRow label="기본">
+								<Input placeholder="텍스트 입력" className="max-w-xs" />
+								<Input placeholder="비활성화" disabled className="max-w-xs" />
+							</ShowcaseRow>
+							<ShowcaseRow label="오류">
+								<Input defaultValue="잘못된 값" aria-invalid className="max-w-xs" />
+								<Textarea placeholder="여러 줄 입력" className="max-w-md" />
+							</ShowcaseRow>
+						</Showcase>
+
+						{/* ════════════ FIELD ════════════ */}
+						<SectionHeader id="field" title="Field" description="라벨 + 입력 + 설명/오류를 묶는 폼 필드 (aria-describedby 연결)" />
+						<Showcase>
+							<div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+								<Field label="기본 필드" description="설명 문구가 아래에 표시돼요.">
+									{({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} placeholder="값 입력" />}
+								</Field>
+								<Field label="필수 필드" required>
+									{({ id, invalid }) => <Input id={id} aria-invalid={invalid || undefined} placeholder="반드시 입력" />}
+								</Field>
+								<Field label="오류 필드" error="값이 올바르지 않아요.">
+									{({ id, describedBy, invalid }) => <Input id={id} aria-describedby={describedBy} aria-invalid={invalid || undefined} defaultValue="오류" />}
+								</Field>
+							</div>
 						</Showcase>
 
 						{/* ════════════ BADGE ════════════ */}
@@ -400,6 +513,37 @@ export default function ComponentsGalleryPage() {
 								<Badge size="md" variant="primary">Medium</Badge>
 								<Badge variant="primary" dismissible onDismiss={() => { }}>제거 가능</Badge>
 							</ShowcaseRow>
+							<ShowcaseRow label="StatusBadge (프로세스 상태)">
+								<StatusBadge status="READY" />
+								<StatusBadge status="IDLE" />
+								<StatusBadge status="CONNECTING" />
+								<StatusBadge status="DISCONNECTED" />
+								<StatusBadge status="ERRORED" />
+							</ShowcaseRow>
+						</Showcase>
+
+						{/* ════════════ SECTION LABEL ════════════ */}
+						<SectionHeader id="section-label" title="SectionLabel" description="그룹/섹션 레이블 (조용한 스타일 — font-black, uppercase, tracking 제거)" />
+						<Showcase>
+							<SectionLabel as="p">최근 재생</SectionLabel>
+							<SectionLabel as="p">플레이리스트</SectionLabel>
+							<SectionLabel as="p" className="px-0">패딩 없는 variant</SectionLabel>
+						</Showcase>
+
+						{/* ════════════ EMPTY STATE ════════════ */}
+						<SectionHeader id="empty-state" title="EmptyState" description="데이터 없음·검색 결과 없음 표시 (아이콘/설명/액션 슬롯)" />
+						<Showcase>
+							<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+								<EmptyState title="아직 곡이 없어요." description="플레이리스트를 채워보세요." />
+								<EmptyState
+									size="sm"
+									icon={Search}
+									title="검색 결과가 없어요."
+									description="다른 키워드로 다시 검색해보세요."
+									action={<Button size="sm">다시 검색</Button>}
+									secondaryAction={<Button size="sm" variant="ghost">초기화</Button>}
+								/>
+							</div>
 						</Showcase>
 
 						{/* ════════════ AVATAR ════════════ */}
@@ -608,44 +752,23 @@ export default function ComponentsGalleryPage() {
 							<CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} items={commandItems} />
 						</Showcase>
 
-						{/* ════════════ NAVIGATION ════════════ */}
-						<SectionHeader id="navigation" title="Navigation" description="탭 네비게이션 (3가지 variant)" />
+						{/* ════════════ TABS ════════════ */}
+						<SectionHeader id="tabs" title="Tabs" description="role=tablist, 밑줄 인디케이터, 방향키 로빙 포커스" />
 						<Showcase>
-							<ShowcaseRow label="Underline">
-								<Navigation
-									items={[
-										{ key: "overview", label: "개요", icon: <Home size={14} /> },
-										{ key: "settings", label: "설정", icon: <Settings size={14} />, badge: 3 },
-										{ key: "logs", label: "로그" },
-									]}
-									activeKey={navTab}
-									onSelect={setNavTab}
-								/>
-							</ShowcaseRow>
-							<ShowcaseRow label="Pill">
-								<Navigation
-									items={[
-										{ key: "overview", label: "개요" },
-										{ key: "settings", label: "설정" },
-										{ key: "logs", label: "로그" },
-									]}
-									activeKey={navTab}
-									onSelect={setNavTab}
-									variant="pill"
-								/>
-							</ShowcaseRow>
-							<ShowcaseRow label="Segment">
-								<Navigation
-									items={[
-										{ key: "overview", label: "개요" },
-										{ key: "settings", label: "설정" },
-										{ key: "logs", label: "로그" },
-									]}
-									activeKey={navTab}
-									onSelect={setNavTab}
-									variant="segment"
-								/>
-							</ShowcaseRow>
+							<Tabs
+								aria-label="갤러리 탭 예시"
+								defaultValue="overview"
+								items={[
+									{ key: "overview", label: "개요", icon: <Home size={14} /> },
+									{ key: "settings", label: "설정", icon: <Settings size={14} /> },
+									{ key: "logs", label: "로그", badge: <Badge size="sm">3</Badge> },
+								]}
+								renderPanel={(key) => (
+									<p className="text-sm text-muted-foreground">
+										<code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">{key}</code> 패널 내용입니다. 방향키로 탭을 이동할 수 있어요.
+									</p>
+								)}
+							/>
 						</Showcase>
 
 						{/* ════════════ DATA TABLE ════════════ */}

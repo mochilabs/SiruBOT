@@ -3,6 +3,8 @@
 import { useCallback } from "react";
 import { AlertTriangle, Shield } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+import { Card } from "@/components/primitives/card";
 import { Switch } from "@/components/primitives/switch";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -120,7 +122,7 @@ export function PermissionList({
 	return (
 		<div className={`space-y-6 ${className}`}>
 			{categories.map((cat) => (
-				<div key={cat.label} className="glass-panel overflow-hidden">
+				<Card key={cat.label} padding="none" className="overflow-hidden">
 					{/* Category header */}
 					<div className="flex items-center justify-between px-5 py-3 bg-card/50 border-b border-border/40">
 						<div className="flex items-center gap-2">
@@ -129,14 +131,15 @@ export function PermissionList({
 								{cat.label}
 							</span>
 						</div>
-						<button
-							type="button"
+						<Button
+							variant="ghost"
+							size="sm"
 							disabled={disabled}
 							onClick={() => toggleCategory(cat.permissions)}
-							className="text-xs font-bold text-primary hover:text-primary/80 transition-colors cursor-pointer disabled:opacity-50"
+							className="h-auto px-0 text-xs font-bold text-primary hover:bg-transparent hover:text-primary/80"
 						>
 							{allInCategory(cat.permissions) ? "모두 거부" : "모두 허용"}
-						</button>
+						</Button>
 					</div>
 
 					{/* Permission items */}
@@ -151,11 +154,11 @@ export function PermissionList({
 								>
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
-											<span className={`text-sm font-bold ${perm.dangerous ? "text-red-500" : "text-foreground"}`}>
+											<span className={`text-sm font-bold ${perm.dangerous ? "text-destructive" : "text-foreground"}`}>
 												{perm.name}
 											</span>
 											{perm.dangerous && (
-												<AlertTriangle className="h-3.5 w-3.5 text-red-500/60" />
+												<AlertTriangle className="h-3.5 w-3.5 text-destructive/60" />
 											)}
 										</div>
 										<p className="text-xs text-muted-foreground/60 mt-0.5 font-medium">
@@ -173,7 +176,7 @@ export function PermissionList({
 							);
 						})}
 					</div>
-				</div>
+				</Card>
 			))}
 		</div>
 	);

@@ -7,43 +7,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import useSWR from "swr";
 
 import { useToast } from "@/components/feedback/toast";
-import type { Playlist, PlaylistDetailResponse, SearchTracksResponse, Track } from "@/types/playlist";
+import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
 
 /* ─────────────────────────── Constants ─────────────────────────── */
-
-const MOCK_PLAYLIST_ID = "mock-demo-playlist";
-
-const MOCK_PLAYLIST: Playlist = {
-	id: MOCK_PLAYLIST_ID,
-	name: "🔥 작업용 노동요 모음 (데모)",
-	description: "집중력을 200% 올려주는 코딩 필수 재생목록 (반응형 UI 데모 테스트용)",
-	isPublic: true,
-	createdAt: new Date().toISOString(),
-	_count: { tracks: 20 }
-};
-
-const MOCK_TRACKS: Track[] = [
-	{ id: "dQw4w9WgXcQ", title: "Never Gonna Give You Up", artist: "Rick Astley", duration: 212000, thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", url: "https://youtube.com/watch?v=dQw4w9WgXcQ", source: "youtube", playlistTrackId: "pt1", position: 0, addedAt: new Date().toISOString() },
-	{ id: "fJ9rUzIMcZQ", title: "Bohemian Rhapsody", artist: "Queen", duration: 354000, thumbnail: "https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg", url: "https://youtube.com/watch?v=fJ9rUzIMcZQ", source: "youtube", playlistTrackId: "pt2", position: 1, addedAt: new Date().toISOString() },
-	{ id: "kJQP7kiw5Fk", title: "Despacito", artist: "Luis Fonsi", duration: 288000, thumbnail: "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg", url: "https://youtube.com/watch?v=kJQP7kiw5Fk", source: "youtube", playlistTrackId: "pt3", position: 2, addedAt: new Date().toISOString() },
-	{ id: "JGwWNGJdvx8", title: "Shape of You", artist: "Ed Sheeran", duration: 233000, thumbnail: "https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg", url: "https://youtube.com/watch?v=JGwWNGJdvx8", source: "youtube", playlistTrackId: "pt4", position: 3, addedAt: new Date().toISOString() },
-	{ id: "OPf0YbXqDm0", title: "Uptown Funk", artist: "Mark Ronson", duration: 270000, thumbnail: "https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg", url: "https://youtube.com/watch?v=OPf0YbXqDm0", source: "youtube", playlistTrackId: "pt5", position: 4, addedAt: new Date().toISOString() },
-	{ id: "L_jWHffIx5E", title: "Smells Like Teen Spirit", artist: "Nirvana", duration: 278000, thumbnail: "https://i.ytimg.com/vi/L_jWHffIx5E/hqdefault.jpg", url: "https://youtube.com/watch?v=L_jWHffIx5E", source: "youtube", playlistTrackId: "pt6", position: 5, addedAt: new Date().toISOString() },
-	{ id: "fLexgOxsZu0", title: "Treasure", artist: "Bruno Mars", duration: 178000, thumbnail: "https://i.ytimg.com/vi/fLexgOxsZu0/hqdefault.jpg", url: "https://youtube.com/watch?v=fLexgOxsZu0", source: "youtube", playlistTrackId: "pt7", position: 6, addedAt: new Date().toISOString() },
-	{ id: "CevxZvSJLk8", title: "Roar", artist: "Katy Perry", duration: 223000, thumbnail: "https://i.ytimg.com/vi/CevxZvSJLk8/hqdefault.jpg", url: "https://youtube.com/watch?v=CevxZvSJLk8", source: "youtube", playlistTrackId: "pt8", position: 7, addedAt: new Date().toISOString() },
-	{ id: "pB-5XG-DbAA", title: "Counting Stars", artist: "OneRepublic", duration: 257000, thumbnail: "https://i.ytimg.com/vi/pB-5XG-DbAA/hqdefault.jpg", url: "https://youtube.com/watch?v=pB-5XG-DbAA", source: "youtube", playlistTrackId: "pt9", position: 8, addedAt: new Date().toISOString() },
-	{ id: "1G4isv_Fylg", title: "Paradise", artist: "Coldplay", duration: 278000, thumbnail: "https://i.ytimg.com/vi/1G4isv_Fylg/hqdefault.jpg", url: "https://youtube.com/watch?v=1G4isv_Fylg", source: "youtube", playlistTrackId: "pt10", position: 9, addedAt: new Date().toISOString() },
-	{ id: "YykjpeuMNEk", title: "Hymn For The Weekend", artist: "Coldplay", duration: 258000, thumbnail: "https://i.ytimg.com/vi/YykjpeuMNEk/hqdefault.jpg", url: "https://youtube.com/watch?v=YykjpeuMNEk", source: "youtube", playlistTrackId: "pt11", position: 10, addedAt: new Date().toISOString() },
-	{ id: "09R8_2nJtjg", title: "Sugar", artist: "Maroon 5", duration: 301000, thumbnail: "https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg", url: "https://youtube.com/watch?v=09R8_2nJtjg", source: "youtube", playlistTrackId: "pt12", position: 11, addedAt: new Date().toISOString() },
-	{ id: "kffacxfA7G4", title: "Baby", artist: "Justin Bieber", duration: 219000, thumbnail: "https://i.ytimg.com/vi/kffacxfA7G4/hqdefault.jpg", url: "https://youtube.com/watch?v=kffacxfA7G4", source: "youtube", playlistTrackId: "pt13", position: 12, addedAt: new Date().toISOString() },
-	{ id: "RBumgq5yVrA", title: "Let Her Go", artist: "Passenger", duration: 252000, thumbnail: "https://i.ytimg.com/vi/RBumgq5yVrA/hqdefault.jpg", url: "https://youtube.com/watch?v=RBumgq5yVrA", source: "youtube", playlistTrackId: "pt14", position: 13, addedAt: new Date().toISOString() },
-	{ id: "C_3d6GntKbk", title: "Hey Jude", artist: "The Beatles", duration: 431000, thumbnail: "https://i.ytimg.com/vi/C_3d6GntKbk/hqdefault.jpg", url: "https://youtube.com/watch?v=C_3d6GntKbk", source: "youtube", playlistTrackId: "pt15", position: 14, addedAt: new Date().toISOString() },
-	{ id: "hT_nvWreIhg", title: "Counting Stars (Live)", artist: "OneRepublic", duration: 260000, thumbnail: "https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg", url: "https://youtube.com/watch?v=hT_nvWreIhg", source: "youtube", playlistTrackId: "pt16", position: 15, addedAt: new Date().toISOString() },
-	{ id: "PT2_F-1esPk", title: "Closer", artist: "The Chainsmokers", duration: 244000, thumbnail: "https://i.ytimg.com/vi/PT2_F-1esPk/hqdefault.jpg", url: "https://youtube.com/watch?v=PT2_F-1esPk", source: "youtube", playlistTrackId: "pt17", position: 16, addedAt: new Date().toISOString() },
-	{ id: "R_VXUe7qS1I", title: "Wake Me Up", artist: "Avicii", duration: 272000, thumbnail: "https://i.ytimg.com/vi/R_VXUe7qS1I/hqdefault.jpg", url: "https://youtube.com/watch?v=R_VXUe7qS1I", source: "youtube", playlistTrackId: "pt18", position: 17, addedAt: new Date().toISOString() },
-	{ id: "uelHwf8o7_U", title: "Love The Way You Lie", artist: "Eminem", duration: 266000, thumbnail: "https://i.ytimg.com/vi/uelHwf8o7_U/hqdefault.jpg", url: "https://youtube.com/watch?v=uelHwf8o7_U", source: "youtube", playlistTrackId: "pt19", position: 18, addedAt: new Date().toISOString() },
-	{ id: "nfWlot6h_JM", title: "Shake It Off", artist: "Taylor Swift", duration: 241000, thumbnail: "https://i.ytimg.com/vi/nfWlot6h_JM/hqdefault.jpg", url: "https://youtube.com/watch?v=nfWlot6h_JM", source: "youtube", playlistTrackId: "pt20", position: 19, addedAt: new Date().toISOString() }
-];
 
 function formatDuration(ms: number): string {
 	if (!ms) return "0:00";
@@ -62,7 +28,7 @@ function formatTotalDuration(ms: number): string {
 	return `${hours}시간 ${mins}분`;
 }
 
-export { formatDuration, formatTotalDuration, MOCK_PLAYLIST_ID };
+export { formatDuration, formatTotalDuration };
 
 /* ─────────────────────────── Hook ─────────────────────────── */
 
@@ -83,11 +49,9 @@ export function usePlaylists() {
 
 	const playlists = useMemo(() => {
 		const list = listData?.playlists ?? [];
-		return [MOCK_PLAYLIST, ...list].sort((a, b) => {
+		return [...list].sort((a, b) => {
 			if (a.name === "즐겨찾기") return -1;
 			if (b.name === "즐겨찾기") return 1;
-			if (a.id === MOCK_PLAYLIST_ID) return -1;
-			if (b.id === MOCK_PLAYLIST_ID) return 1;
 			return 0;
 		});
 	}, [listData?.playlists]);
@@ -102,13 +66,12 @@ export function usePlaylists() {
 	}, [playlists, activePlaylistId]);
 
 	const { data: detailData, mutate: mutateDetail, isLoading: detailLoadingApi } = useSWR<PlaylistDetailResponse>(
-		activePlaylistId && activePlaylistId !== MOCK_PLAYLIST_ID ? `/api/playlists/${activePlaylistId}` : null
+		activePlaylistId ? `/api/playlists/${activePlaylistId}` : null
 	);
 
-	const isMock = activePlaylistId === MOCK_PLAYLIST_ID;
-	const activePlaylist = isMock ? MOCK_PLAYLIST : (detailData?.playlist ?? null);
-	const tracks = useMemo(() => isMock ? MOCK_TRACKS : (detailData?.tracks ?? []), [isMock, detailData?.tracks]);
-	const detailLoading = !isMock && detailLoadingApi;
+	const activePlaylist = detailData?.playlist ?? null;
+	const tracks = useMemo(() => detailData?.tracks ?? [], [detailData?.tracks]);
+	const detailLoading = detailLoadingApi;
 
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);

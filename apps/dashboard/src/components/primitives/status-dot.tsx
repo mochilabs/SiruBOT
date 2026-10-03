@@ -1,3 +1,6 @@
+import { type Tone,toneStyles } from "@/components/primitives/badge";
+import { cn } from "@/lib/utils";
+
 /* ─────────────────────────── types ─────────────────────────── */
 
 type DotStatus = "ready" | "idle" | "connecting" | "disconnected" | "errored";
@@ -13,12 +16,13 @@ interface StatusDotProps {
 
 /* ─────────────────────────── styles ─────────────────────────── */
 
-const statusColors: Record<DotStatus, string> = {
-	ready: "bg-emerald-500",
-	idle: "bg-amber-500",
-	connecting: "bg-sky-500",
-	disconnected: "bg-rose-500",
-	errored: "bg-rose-500",
+/** StatusBadge와 동일한 톤 매핑 (badge.tsx의 toneStyles 사용) */
+const statusTone: Record<DotStatus, Tone> = {
+	ready: "success",
+	idle: "warning",
+	connecting: "info",
+	disconnected: "destructive",
+	errored: "destructive",
 };
 
 const sizeClasses: Record<DotSize, string> = {
@@ -29,27 +33,11 @@ const sizeClasses: Record<DotSize, string> = {
 
 /* ─────────────────────────── component ─────────────────────────── */
 
-export function StatusDot({
-	status = "ready",
-	size = "md",
-	pulse = true,
-	label,
-	className = "",
-}: StatusDotProps) {
+export function StatusDot({ status = "ready", size = "md", pulse = true, label, className }: StatusDotProps) {
 	return (
-		<span
-			role="status"
-			aria-label={label ?? status}
-			className={`inline-flex items-center gap-2 ${className}`}
-		>
-			<span
-				className={`rounded-full shrink-0 ${sizeClasses[size]} ${statusColors[status]} ${pulse ? "animate-pulse-soft" : ""}`}
-			/>
-			{label && (
-				<span className="text-xs font-medium text-muted-foreground capitalize">
-					{label}
-				</span>
-			)}
+		<span role="status" aria-label={label ?? status} className={cn("inline-flex items-center gap-2", className)}>
+			<span aria-hidden className={cn("shrink-0 rounded-full", sizeClasses[size], toneStyles[statusTone[status]].dot, pulse && "animate-pulse-soft")} />
+			{label && <span className="text-xs font-medium text-muted-foreground">{label}</span>}
 		</span>
 	);
 }

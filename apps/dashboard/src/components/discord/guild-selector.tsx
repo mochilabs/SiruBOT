@@ -46,7 +46,7 @@ function GuildItem({
 
 	return (
 		<div
-			className={`glass-panel group transition-all duration-300 hover:border-primary/40 hover:translate-y-[-4px] ${isGrid ? "flex flex-col p-6" : "flex items-center gap-4 p-4"}`}
+			className={`rounded-card border border-border-subtle bg-surface-1 group transition-all duration-base hover:border-primary/40 hover:translate-y-[-4px] ${isGrid ? "flex flex-col p-6" : "flex items-center gap-4 p-4"}`}
 		>
 			{/* Avatar */}
 			<div className={`shrink-0 ${isGrid ? "mb-4" : ""}`}>
@@ -60,7 +60,7 @@ function GuildItem({
 					/>
 				) : (
 					<div
-						className={`flex items-center justify-center rounded-full glass-overlay font-black text-foreground group-hover:border-primary/40 transition-colors ${isGrid ? "h-14 w-14 text-lg" : "h-10 w-10 text-sm"}`}
+						className={`flex items-center justify-center rounded-full border border-border bg-surface-2 font-black text-foreground group-hover:border-primary/40 transition-colors ${isGrid ? "h-14 w-14 text-lg" : "h-10 w-10 text-sm"}`}
 					>
 						{guild.name.charAt(0)}
 					</div>
@@ -99,7 +99,7 @@ function GuildItem({
 							<button
 								type="button"
 								onClick={() => onManage?.(guild.id)}
-								className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-primary/10 border border-primary/20 py-2.5 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer"
+								className="flex-1 flex items-center justify-center gap-1.5 rounded-control border border-primary/20 bg-primary/10 py-2.5 text-xs font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors duration-base cursor-pointer"
 							>
 								<Settings2 size={14} />
 								관리
@@ -107,7 +107,7 @@ function GuildItem({
 							<button
 								type="button"
 								onClick={() => onController?.(guild.id)}
-								className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
+								className="flex-1 flex items-center justify-center gap-1.5 rounded-control border border-success/25 bg-success/10 py-2.5 text-xs font-bold text-success hover:bg-success hover:text-foreground transition-colors duration-base cursor-pointer"
 							>
 								<Play size={14} />
 								플레이어
@@ -117,7 +117,7 @@ function GuildItem({
 						<button
 							type="button"
 							onClick={() => onController?.(guild.id)}
-							className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
+							className="flex-1 flex items-center justify-center gap-1.5 rounded-control border border-success/25 bg-success/10 py-2.5 text-xs font-bold text-success hover:bg-success hover:text-foreground transition-colors duration-base cursor-pointer"
 						>
 							<Play size={14} />
 							컨트롤러
@@ -128,7 +128,7 @@ function GuildItem({
 						href={inviteUrl ?? "#"}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="flex-1 flex items-center justify-center gap-1.5 rounded-xl glass-overlay py-2.5 text-xs font-bold text-foreground hover:bg-foreground/5 transition-all duration-300 cursor-pointer"
+						className="flex-1 flex items-center justify-center gap-1.5 rounded-control border border-border-subtle bg-surface-1 py-2.5 text-xs font-bold text-foreground hover:bg-surface-2 transition-colors duration-base cursor-pointer"
 					>
 						<UserPlus size={14} />
 						초대

@@ -1,7 +1,15 @@
+/* =============================================================================
+   1. Tailwind & shadcn/ui integration
+   ============================================================================= */
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* =============================================================================
+   2. Light & dark semantic theme variables
+   ============================================================================= */
 :root {
 	--font-pretendard: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
@@ -13,20 +21,17 @@
 	--popover-foreground: #2d1b1e;
 	--primary: #ff85c1;
 	--primary-foreground: #ffffff;
+	--primary-rgb: 255 133 193;
 	--secondary: #d4a574;
 	--secondary-foreground: #ffffff;
 	--muted: #f9eff5;
 	--muted-foreground: #8b6d75;
 	--accent: #ffe4f0;
 	--accent-foreground: #d1608a;
-	--destructive: #d4183d;
-	--destructive-foreground: #ffffff;
 	--border: #f0d4e3;
 	--input: #f9eff5;
 	--ring: #ff85c1;
-	--radius: 1rem;
 
-	/* Discord Light Mode Approximate */
 	--discord-embed: #f2f3f5;
 	--discord-text: #313338;
 	--discord-text-muted: #5c5e66;
@@ -34,8 +39,6 @@
 	--discord-btn-hover: #d5d6d7;
 	--discord-bg: #ebedef;
 
-	--glass-overlay: rgba(45, 27, 30, 0.08);
-	--glass-border: rgba(45, 27, 30, 0.15);
 }
 
 .dark {
@@ -47,19 +50,17 @@
 	--popover-foreground: #fce7f3;
 	--primary: #ff85c1;
 	--primary-foreground: #ffffff;
+	--primary-rgb: 255 133 193;
 	--secondary: #d4a574;
 	--secondary-foreground: #ffffff;
 	--muted: #3d2328;
 	--muted-foreground: #c9a8b5;
 	--accent: #4d2a35;
 	--accent-foreground: #ffb3d9;
-	--destructive: #d4183d;
-	--destructive-foreground: #ffffff;
 	--border: #3d2328;
 	--input: #3d2328;
 	--ring: #ff85c1;
 
-	/* Discord Dark Mode Equivalent */
 	--discord-embed: #2b2d31;
 	--discord-text: #dbdee1;
 	--discord-text-muted: #949ba4;
@@ -67,15 +68,20 @@
 	--discord-btn-hover: #6d6f78;
 	--discord-bg: #35373c;
 
-	--glass-overlay: rgba(255, 255, 255, 0.05);
-	--glass-border: rgba(255, 255, 255, 0.1);
 }
 
-@theme {
+/* =============================================================================
+   3. Tailwind theme mappings
+   `@theme inline` resolves every utility to the runtime variable, so `.dark`
+   overrides on <html> take effect without a second generated rule set.
+   ============================================================================= */
+@theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
 	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
 	--color-secondary: var(--secondary);
@@ -84,14 +90,9 @@
 	--color-muted-foreground: var(--muted-foreground);
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
+	--color-input: var(--input);
 	--color-border: var(--border);
 	--color-ring: var(--ring);
-
-	--font-pretendard: var(--font-pretendard);
-
-	--radius-lg: var(--radius);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-sm: calc(var(--radius) - 4px);
 
 	--color-discord-embed: var(--discord-embed);
 	--color-discord-text: var(--discord-text);
@@ -99,33 +100,215 @@
 	--color-discord-btn-active: var(--discord-btn-active);
 	--color-discord-btn-hover: var(--discord-btn-hover);
 	--color-discord-bg: var(--discord-bg);
-	--color-discord-primary: #5865F2;
+	--color-discord-primary: #5865f2;
 	--color-discord-blue: #00a8fc;
 	--color-discord-light: #949cf7;
 }
 
-@utility glass-panel {
-	background: color-mix(in srgb, var(--card) 60%, transparent);
-	backdrop-filter: blur(20px) saturate(180%);
-	border: 1px solid var(--glass-border);
-	border-radius: var(--radius);
-	box-shadow:
-		0 10px 40px -10px rgba(0, 0, 0, 0.1),
-		inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+/* =============================================================================
+   4. Typography tokens
+   ============================================================================= */
+@theme inline {
+	--font-sans: var(--font-pretendard);
+
+	--text-2xs: 0.6875rem;
+	--text-2xs--line-height: 1rem;
 }
 
-@utility glass-overlay {
-	background-color: var(--glass-overlay);
-	backdrop-filter: blur(12px);
-	border: 1px solid var(--glass-border);
-	box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+/* =============================================================================
+   5. Radius & surface tokens
+   ============================================================================= */
+:root {
+	--radius: 1rem;
+
+	--r-control: 0.625rem;
+	--r-card: 1rem;
+	--r-menu: 0.75rem;
+	--r-dialog: 1rem;
+
+	--surface-1: #ffffff;
+	--surface-2: #f7f1f4;
+	--surface-3: #ffffff;
 }
 
+.dark {
+	--surface-1: #231317;
+	--surface-2: #2d1b1e;
+	--surface-3: #35212a;
+}
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-control: var(--r-control);
+	--radius-card: var(--r-card);
+	--radius-menu: var(--r-menu);
+	--radius-dialog: var(--r-dialog);
+
+	--color-surface-1: var(--surface-1);
+	--color-surface-2: var(--surface-2);
+	--color-surface-3: var(--surface-3);
+}
+
+/* =============================================================================
+   6. Border & shadow tokens
+   ============================================================================= */
+:root {
+	--border-subtle: #f8e6ef;
+	--border-strong: #d9aec6;
+
+	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.1), 0 1px 3px -1px rgb(0 0 0 / 0.06);
+	--elev-3: 0 6px 20px -8px rgb(0 0 0 / 0.16), 0 2px 6px -4px rgb(0 0 0 / 0.1);
+	--elev-4: 0 16px 40px -16px rgb(0 0 0 / 0.24), 0 4px 12px -8px rgb(0 0 0 / 0.14);
+	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.35), 0 8px 20px -12px rgb(0 0 0 / 0.2);
+}
+
+.dark {
+	--border-subtle: #2f1a1f;
+	--border-strong: #55323a;
+}
+
+@theme inline {
+	--color-border-subtle: var(--border-subtle);
+	--color-border-strong: var(--border-strong);
+
+	--shadow-xs: var(--elev-1);
+	--shadow-sm: var(--elev-1);
+	--shadow-md: var(--elev-2);
+	--shadow-lg: var(--elev-3);
+	--shadow-xl: var(--elev-4);
+	--shadow-2xl: var(--elev-5);
+}
+
+/* =============================================================================
+   7. Status colors
+   ============================================================================= */
+:root {
+	--destructive: #d4183d;
+	--destructive-foreground: #ffffff;
+	--success: #0f7a52;
+	--success-foreground: #ffffff;
+	--warning: #9a6100;
+	--warning-foreground: #ffffff;
+	--info: #0b6bb0;
+	--info-foreground: #ffffff;
+}
+
+.dark {
+	--destructive: #d4183d;
+	--destructive-foreground: #ffffff;
+	--success: #34d399;
+	--success-foreground: #052e16;
+	--warning: #fbbf24;
+	--warning-foreground: #451a03;
+	--info: #38bdf8;
+	--info-foreground: #082f49;
+}
+
+@theme inline {
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+}
+
+/* =============================================================================
+   8. Component-independent utilities
+   ============================================================================= */
+@utility panel {
+	background-color: var(--surface-1);
+	border: 1px solid var(--border);
+	border-radius: var(--r-card);
+}
+
+/* LEGACY — frozen. App 화면에서는 소비자 0. 남은 소비자(브랜딩/헤로 헤드라인 6곳)가
+   제거되면 이 유틸리티도 삭제한다. 새 코드에서는 쓰지 않는다. */
 @utility text-title-gradient {
 	background-image: linear-gradient(to right, var(--primary), var(--secondary), #ffb3d9, var(--primary));
 	background-size: 300% auto;
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
+}
+
+@utility duration-fast {
+	--tw-duration: var(--motion-fast);
+	transition-duration: var(--motion-fast);
+}
+
+@utility duration-base {
+	--tw-duration: var(--motion-base);
+	transition-duration: var(--motion-base);
+}
+
+@utility duration-slow {
+	--tw-duration: var(--motion-slow);
+	transition-duration: var(--motion-slow);
+}
+
+@utility animate-shimmer-sweep {
+	animation: shimmer-sweep 2.5s infinite;
+}
+
+@utility animate-page-in {
+	animation: page-in var(--motion-base) var(--ease-out-expo) both;
+}
+
+@utility animate-pulse-soft {
+	animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	will-change: transform, opacity;
+}
+
+@keyframes shimmer-sweep {
+	from {
+		transform: translateX(-100%) skewX(-20deg);
+	}
+
+	to {
+		transform: translateX(200%) skewX(-20deg);
+	}
+}
+
+@keyframes pulse-soft {
+	0%,
+	100% {
+		opacity: 0.5;
+		transform: scale(0.95);
+	}
+
+	50% {
+		opacity: 1;
+		transform: scale(1.05);
+	}
+}
+
+@keyframes page-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes cursor-blink {
+	0%,
+	49% {
+		opacity: 1;
+	}
+
+	50%,
+	100% {
+		opacity: 0;
+	}
 }
 
 @layer base {
@@ -165,120 +348,21 @@
 	}
 }
 
-@utility animate-shimmer-sweep {
-	animation: shimmer-sweep 2.5s infinite;
+/* =============================================================================
+   9. Motion tokens & accessibility preferences
+   ============================================================================= */
+:root {
+	--motion-fast: 200ms;
+	--motion-base: 300ms;
+	--motion-slow: 500ms;
+
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@utility animate-float-subtle {
-	animation: float-subtle 3s ease-in-out infinite;
+@theme inline {
+	--ease-standard: var(--ease-out-expo);
 }
 
-@keyframes float {
-
-	0%,
-	100% {
-		transform: translateY(0px);
-	}
-
-	50% {
-		transform: translateY(-10px);
-	}
-}
-
-@keyframes shimmer {
-	0% {
-		background-position: 0% 50%;
-	}
-
-	100% {
-		background-position: 300% 50%;
-	}
-}
-
-@keyframes gradient-shift {
-	0% {
-		background-position: 0% 50%;
-	}
-
-	50% {
-		background-position: 100% 50%;
-	}
-
-	100% {
-		background-position: 0% 50%;
-	}
-}
-
-@keyframes fade-in-up {
-	from {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@keyframes shimmer-sweep {
-	from {
-		transform: translateX(-100%) skewX(-20deg);
-	}
-
-	to {
-		transform: translateX(200%) skewX(-20deg);
-	}
-}
-
-@keyframes float-subtle {
-
-	0%,
-	100% {
-		transform: translateY(0);
-	}
-
-	50% {
-		transform: translateY(-5px);
-	}
-}
-
-@keyframes pulse-soft {
-
-	0%,
-	100% {
-		opacity: 0.5;
-		transform: scale(0.95);
-	}
-
-	50% {
-		opacity: 1;
-		transform: scale(1.05);
-	}
-}
-
-@keyframes page-in {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@utility animate-page-in {
-	animation: page-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@utility animate-pulse-soft {
-	animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	will-change: transform, opacity;
-}
-
-/* View Transitions API - Smooth theme flip */
 ::view-transition-old(root) {
 	animation: 500ms ease-in-out both fade-out;
 	mix-blend-mode: normal;
@@ -306,5 +390,16 @@
 
 	to {
 		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }

@@ -5,12 +5,14 @@ import { Hash } from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
+import { Card } from "@/components/primitives/card";
+import { Field } from "@/components/primitives/field";
 import { useGuildChannels, useGuildRoles, useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
 
-import { Field, InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 /* ─────────────────────────── 옵션 ─────────────────────────── */
 
@@ -101,7 +103,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 	const listUnavailable = channels === null;
 
 	return (
-		<section className="glass-panel p-6 space-y-6">
+		<Card padding="lg" className="gap-6">
 			<PanelHeader
 				icon={<Hash className="h-5 w-5" />}
 				title="채널·권한 설정"
@@ -125,7 +127,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 			)}
 
 			<div className="grid gap-6 sm:grid-cols-2">
-				<Field label="기본 텍스트 채널" hint="미설정이면 입력이 온 채널을 그대로 사용해요.">
+				<Field label="기본 텍스트 채널" description="미설정이면 입력이 온 채널을 그대로 사용해요.">
 					<Select
 						searchable
 						options={[NO_SELECTION, ...buildChannelOptions(channels, isText, form.textChannelId, "#")]}
@@ -136,7 +138,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 					/>
 				</Field>
 
-				<Field label="기본 음성 채널" hint="/재생 커맨드로 자동 입장하는 채널이에요.">
+				<Field label="기본 음성 채널" description="/재생 커맨드로 자동 입장하는 채널이에요.">
 					<Select
 						searchable
 						options={[NO_SELECTION, ...buildChannelOptions(channels, isVoice, form.voiceChannelId, "🔊")]}
@@ -150,7 +152,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
 			<Field
 				label="고정 채널"
-				hint="이 채널에 입력한 텍스트를 검색어로 재생해요. 전체 채널에서 고정 채널을 하나만 지정할 수 있어요."
+				description="이 채널에 입력한 텍스트를 검색어로 재생해요. 전체 채널에서 고정 채널을 하나만 지정할 수 있어요."
 			>
 				<Select
 					searchable
@@ -164,7 +166,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
 			<Field
 				label="고정 채널 입력 동작"
-				hint={form.pinnedChannelId ? undefined : "고정 채널을 지정하면 적용돼요."}
+				description={form.pinnedChannelId ? undefined : "고정 채널을 지정하면 적용돼요."}
 			>
 				<Select
 					options={PINNED_MODE_OPTIONS}
@@ -176,7 +178,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
 			<Field
 				label="DJ 역할"
-				hint="이 역할을 가진 멤버만 정지·스킵·볼륨 등 컨트롤 커맨드를 쓸 수 있어요. 관리자는 항상 가능해요."
+				description="이 역할을 가진 멤버만 정지·스킵·볼륨 등 컨트롤 커맨드를 쓸 수 있어요. 관리자는 항상 가능해요."
 			>
 				<Select
 					searchable
@@ -193,7 +195,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-		</section>
+		</Card>
 	);
 }
 

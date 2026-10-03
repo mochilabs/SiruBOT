@@ -8,7 +8,6 @@ interface LoaderProps {
     text?: string;
     description?: string;
     fullPage?: boolean;
-    withBlur?: boolean;
     iconOnly?: boolean;
 }
 
@@ -29,7 +28,6 @@ export default function Loader({
     text,
     description,
     fullPage = false,
-    withBlur = false,
     iconOnly = false,
 }: LoaderProps) {
     const sizeClass = sizeMap[size];
@@ -37,9 +35,6 @@ export default function Loader({
     const LoaderIcon = (
         <div className={iconOnly ? "" : "relative"}>
             <Loader2 className={`${sizeClass} animate-spin ${iconOnly ? "" : "text-primary/40"} ${className}`} />
-            {!iconOnly && withBlur && (
-                <div className={`absolute inset-0 blur-xl bg-primary/20 animate-pulse ${sizeClass}`} />
-            )}
         </div>
     );
 

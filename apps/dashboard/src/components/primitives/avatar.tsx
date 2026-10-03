@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 
+import { toneStyles } from "@/components/primitives/badge";
+
 /* ─────────────────────────── types ─────────────────────────── */
 
 type AvatarSize = "xs" | "sm" | "md" | "lg";
@@ -27,10 +29,11 @@ const sizeClasses: Record<AvatarSize, string> = {
 	lg: "h-20 w-20 text-2xl",
 };
 
+/** Discord presence → 공용 톤 (badge.tsx의 toneStyles) */
 const statusColors: Record<AvatarStatus, string> = {
-	online: "bg-emerald-500",
-	idle: "bg-amber-500",
-	dnd: "bg-rose-500",
+	online: toneStyles.success.dot,
+	idle: toneStyles.warning.dot,
+	dnd: toneStyles.destructive.dot,
 	offline: "bg-muted-foreground/40",
 };
 
@@ -83,7 +86,7 @@ export function Avatar({
 				/>
 			) : (
 				<span
-					className={`${sizeClasses[size]} rounded-full glass-overlay flex items-center justify-center font-black text-foreground ${ring ? "ring-4 ring-primary/10" : ""}`}
+					className={`${sizeClasses[size]} rounded-full flex items-center justify-center border border-border bg-surface-2 font-semibold text-foreground ${ring ? "ring-4 ring-primary/10" : ""}`}
 				>
 					{initial}
 				</span>

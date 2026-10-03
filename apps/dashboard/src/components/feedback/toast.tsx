@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 import { Portal } from "../overlay/portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -36,27 +38,27 @@ const variantConfig: Record<
 > = {
 	success: {
 		icon: CheckCircle2,
-		border: "border-emerald-500/30",
-		iconColor: "text-emerald-500",
-		bg: "bg-emerald-500/5",
+		border: "border-success/30",
+		iconColor: "text-success",
+		bg: "bg-success/5",
 	},
 	error: {
 		icon: XCircle,
-		border: "border-rose-500/30",
-		iconColor: "text-rose-500",
-		bg: "bg-rose-500/5",
+		border: "border-destructive/30",
+		iconColor: "text-destructive",
+		bg: "bg-destructive/5",
 	},
 	info: {
 		icon: Info,
-		border: "border-sky-500/30",
-		iconColor: "text-sky-500",
-		bg: "bg-sky-500/5",
+		border: "border-info/30",
+		iconColor: "text-info",
+		bg: "bg-info/5",
 	},
 	warning: {
 		icon: AlertTriangle,
-		border: "border-amber-500/30",
-		iconColor: "text-amber-500",
-		bg: "bg-amber-500/5",
+		border: "border-warning/30",
+		iconColor: "text-warning",
+		bg: "bg-warning/5",
 	},
 };
 
@@ -91,7 +93,7 @@ function Toast({
 			transition={{ type: "spring", stiffness: 400, damping: 30 }}
 			role="alert"
 			aria-live="polite"
-			className={`pointer-events-auto glass-panel ${config.bg} ${config.border} px-4 py-3 flex items-start gap-3 min-w-[320px] max-w-[420px] shadow-2xl`}
+			className={`pointer-events-auto rounded-card border border-border bg-popover ${config.border} px-4 py-3 flex items-start gap-3 min-w-[320px] max-w-[420px] shadow-2xl`}
 		>
 			<Icon className={`h-5 w-5 shrink-0 mt-0.5 ${config.iconColor}`} />
 
@@ -106,14 +108,15 @@ function Toast({
 				)}
 			</div>
 
-			<button
-				type="button"
+			<Button
+				variant="icon"
+				size="sm"
 				onClick={() => onRemove(toast.id)}
-				className="shrink-0 p-1 rounded-lg hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+				className="h-6 w-6 shrink-0 rounded-lg border-transparent bg-transparent p-1 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
 				aria-label="닫기"
 			>
 				<X className="h-3.5 w-3.5" />
-			</button>
+			</Button>
 		</m.div>
 	);
 }

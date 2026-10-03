@@ -1,71 +1,85 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Activity, FileText,GitBranch, MessageSquare, ShieldCheck, Sparkles } from "lucide-react";
+
+const footerLink = "text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground";
+
+interface FooterLink {
+	label: string;
+	href: string;
+	internal: boolean;
+}
+
+const featureLinks: FooterLink[] = [
+	{ label: '주요 기능', href: '/#features', internal: true },
+	{ label: '음악 차트', href: '/track', internal: true },
+	{ label: '플레이리스트', href: '/playlists', internal: true },
+];
+
+const serviceLinks: FooterLink[] = [
+	{ label: '서버 상태', href: '/shards', internal: true },
+	{ label: '서버 관리', href: '/servers', internal: true },
+	{ label: '봇 초대하기', href: '/invite', internal: true },
+];
+
+const supportLinks: FooterLink[] = [
+	{ label: 'GitHub', href: 'https://github.com/mochiLabs/SiruBOT', internal: false },
+	...(process.env.NEXT_PUBLIC_SUPPORT_SERVER ? [{ label: '공식 디스코드', href: process.env.NEXT_PUBLIC_SUPPORT_SERVER, internal: false }] : []),
+];
+
+const linkGroups = [
+	{ title: '기능', links: featureLinks },
+	{ title: '서비스', links: serviceLinks },
+	{ title: '지원', links: supportLinks },
+];
 
 export function Footer() {
-	const pathname = usePathname();
-	
 	return (
-		<footer className="border-t border-border bg-card/30 backdrop-blur-md pt-16 pb-12">
-			<div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-					
-					{/* Branding */}
-					<div className="space-y-6 col-span-1 md:col-span-1">
-						<div className="flex items-center">
-							<span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-								시루봇
+		<footer className="border-t border-border-subtle bg-surface-1">
+			<div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+				<div className="grid gap-10 md:grid-cols-5 md:gap-8">
+					{/* 브랜드 */}
+					<div className="space-y-3 md:col-span-2">
+						<Link href="/" className="flex items-center gap-2">
+							<span className="relative block h-8 w-8 overflow-hidden rounded-full">
+								<Image src="/images/profile.png" alt="시루봇" fill className="object-cover" sizes="32px" />
 							</span>
-						</div>
-						<p className="text-muted-foreground font-medium leading-relaxed">
-							심심할 틈 없는 서버를 만들어봐요!
+							<span className="text-lg font-black tracking-tighter text-foreground">시루봇</span>
+						</Link>
+						<p className="max-w-xs text-sm font-medium leading-relaxed text-muted-foreground/80">
+							Discord 음악·AI 채팅·서버 관리를 하나로 묶는 봇이에요. 초대하고 채널에서 바로 시작해보세요.
 						</p>
 					</div>
- 
-					{/* Links Area */}
-					<div className="grid grid-cols-2 md:grid-cols-3 col-span-1 md:col-span-3 gap-8">
-						<div className="space-y-4">
-							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Product</h4>
-							<ul className="space-y-3">
-								<li><Link href={pathname === "/" ? "#features" : "/#features"} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<Sparkles size={16} /> 주요 기능
-								</Link></li>
-								<li><Link href="/shards" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<Activity size={16} /> 상태 페이지
-								</Link></li>
-							</ul>
-						</div>
 
-						<div className="space-y-4">
-							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Community</h4>
+					{/* 링크 그룹 */}
+					{linkGroups.map((group) => (
+						<nav key={group.title} aria-label={group.title} className="space-y-4">
+							<h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{group.title}</h3>
 							<ul className="space-y-3">
-								<li><Link href={process.env.NEXT_PUBLIC_SUPPORT_SERVER || "#"} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<MessageSquare size={16} /> 공식 디스코드
-								</Link></li>
-								<li><Link href="https://github.com/mochiLabs/SiruBOT" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<GitBranch size={16} /> 깃허브
-								</Link></li>
+								{group.links.map((link) =>
+									link.internal ? (
+										<li key={link.label}>
+											<Link href={link.href} className={footerLink}>
+												{link.label}
+											</Link>
+										</li>
+									) : link.href ? (
+										<li key={link.label}>
+											<a href={link.href} target="_blank" rel="noopener noreferrer" className={footerLink}>
+												{link.label}
+											</a>
+										</li>
+									) : null,
+								)}
 							</ul>
-						</div>
-
-						<div className="space-y-4">
-							<h4 className="text-foreground font-bold text-lg uppercase tracking-wider">Legal</h4>
-							<ul className="space-y-3">
-								<li><Link href={process.env.NEXT_PUBLIC_TOS_URL || "#tos"} target="_blank" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<FileText size={16} /> 이용약관
-								</Link></li>
-								<li><Link href={process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL || "#privacypolicy"} target="_blank" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
-									<ShieldCheck size={16} /> 개인정보처리방침
-								</Link></li>
-							</ul>
-						</div>
-					</div>
+						</nav>
+					))}
 				</div>
 
-				<div className="border-t border-border/50 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-muted-foreground/60 text-sm font-bold">
-					<p>© 2026 시루봇 (mochiLabs). All rights reserved.</p>
+				<div className="mt-12 flex flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
+					<p className="text-xs font-medium text-muted-foreground/60">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
+					<p className="text-xs font-medium text-muted-foreground/40">28K+ 서버에서 사용 중</p>
 				</div>
 			</div>
 		</footer>

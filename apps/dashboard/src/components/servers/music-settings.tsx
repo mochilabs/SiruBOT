@@ -5,6 +5,8 @@ import { Music } from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
+import { Card } from "@/components/primitives/card";
+import { Field } from "@/components/primitives/field";
 import { Slider } from "@/components/primitives/slider";
 import { Switch } from "@/components/primitives/switch";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
@@ -12,7 +14,7 @@ import { toError } from "@/lib/api-error";
 import { SPONSORBLOCK_SEGMENTS } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
-import { Field, InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
+import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
 /* ─────────────────────────── 옵션 ─────────────────────────── */
 
@@ -77,7 +79,7 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 	if (!form) return <PanelLoading label="음악 설정 불러오는 중…" />;
 
 	return (
-		<section className="glass-panel p-6 space-y-6">
+		<Card padding="lg" className="gap-6">
 			<PanelHeader icon={<Music className="h-5 w-5" />} title="음악 설정" description="기본 볼륨·반복·관련곡·SponsorBlock을 관리해요." />
 
 			<Field label="기본 볼륨">
@@ -106,7 +108,7 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 
 			<Field
 				label="SponsorBlock 건너뛰기 구간"
-				hint="YouTube 영상에서 선택한 구간을 자동으로 건너겨요. 재생 중인 곡에는 다음 곡부터 반영돼요."
+				description="YouTube 영상에서 선택한 구간을 자동으로 건너겨요. 재생 중인 곡에는 다음 곡부터 반영돼요."
 			>
 				<Select
 					multiple
@@ -123,7 +125,7 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-		</section>
+		</Card>
 	);
 }
 

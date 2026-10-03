@@ -1,45 +1,35 @@
 "use client";
 
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { m } from "framer-motion";
 
-const CHOSEONG = [
-	"ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
-];
+import { decomposeHangul } from "@/lib/hangul";
 
-function decomposeHangul(char: string) {
-	const code = char.charCodeAt(0) - 0xac00;
-	if (code < 0 || code > 11171) return [char];
-
-	const jong = code % 28;
-	const jung = ((code - jong) / 28) % 21;
-	const cho = ((code - jong) / 28 - jung) / 21;
-
-	const states = [CHOSEONG[cho]];
-	states.push(String.fromCharCode(0xac00 + (cho * 21 + jung) * 28));
-	if (jong > 0) {
-		states.push(String.fromCharCode(0xac00 + (cho * 21 + jung) * 28 + jong));
-	}
-
-	return states;
-}
-
-export function TypingText({ 
-	texts, 
-	speed = 150, 
+/**
+ * 자소 분해 타이핑 애니메이션.
+ * `fit` — 보이지 않는 예약 레이어가 가장 긴 후보의 폭을 항상 차지해서
+ * 줄바꿈·레이아웃 점프를 막되, 실제 텍스트는 정렬 컨텍스트를 그대로 따라 자연스러워요.
+ */
+export function TypingText({
+	texts,
+	speed = 150,
 	delay = 2000,
-	className = "" 
-}: { 
-	texts: string[]; 
-	speed?: number; 
+	className = "",
+	fit = false,
+}: {
+	texts: string[];
+	speed?: number;
 	delay?: number;
 	className?: string;
+	fit?: boolean;
 }) {
 	const [displayText, setDisplayText] = useState("");
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [charIndex, setCharIndex] = useState(0);
 	const [stateIndex, setStateIndex] = useState(0);
+
+	const longest = texts.reduce((a, b) => (b.length > a.length ? b : a), "");
 
 	useEffect(() => {
 		let timeout: NodeJS.Timeout;
@@ -52,23 +42,19 @@ export function TypingText({
 					const states = decomposeHangul(char);
 
 					if (stateIndex < states.length) {
-						// Apply the current state of the char being composed
 						const baseText = currentFullText.slice(0, charIndex);
 						setDisplayText(baseText + states[stateIndex]);
 						setStateIndex(prev => prev + 1);
 						timeout = setTimeout(tick, speed / 2);
 					} else {
-						// Finished composing this char, move to next
 						setCharIndex(prev => prev + 1);
 						setStateIndex(0);
 						timeout = setTimeout(tick, speed);
 					}
 				} else {
-					// Finished the whole string
 					timeout = setTimeout(() => setIsDeleting(true), delay);
 				}
 			} else {
-				// Deleting
 				if (displayText.length > 0) {
 					setDisplayText(prev => prev.slice(0, -1));
 					timeout = setTimeout(tick, speed / 3);
@@ -86,14 +72,32 @@ export function TypingText({
 		return () => clearTimeout(timeout);
 	}, [displayText, isDeleting, currentIndex, charIndex, stateIndex, texts, speed, delay]);
 
-	return (
-		<span className={className}>
-			<span className={className + " inline-block"}>{displayText}</span>
+	const content = (
+		<>
+			{displayText}
 			<m.span
 				animate={{ opacity: [1, 0] }}
 				transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-				className="inline-block w-[2px] h-[0.8em] bg-primary ml-1 align-middle"
+				className="ml-1 inline-block h-[0.8em] w-[2px] bg-primary align-middle"
+				aria-hidden
 			/>
+		</>
+	);
+
+	return (
+		<span className={className}>
+			{fit ? (
+				<span className="relative inline-block whitespace-nowrap">
+					{/* 폭 예약 — 가장 긴 후보를 보이지 않게 렌더 */}
+					<span aria-hidden className="invisible">
+						{longest}
+					</span>
+					{/* 실제 텍스트 — 예약 레이어 위에 겹쳐 정렬은 컨텍스트를 따름 */}
+					<span className="absolute inset-0">{content}</span>
+				</span>
+			) : (
+				content
+			)}
 		</span>
 	);
 }

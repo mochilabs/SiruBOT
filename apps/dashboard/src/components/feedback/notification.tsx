@@ -3,6 +3,8 @@
 import { AnimatePresence, m } from "framer-motion";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 import { Portal } from "../overlay/portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -33,10 +35,10 @@ const variantConfig: Record<
 	NotificationVariant,
 	{ icon: React.ComponentType<{ className?: string }>; accentBorder: string; iconColor: string }
 > = {
-	success: { icon: CheckCircle2, accentBorder: "border-l-emerald-500", iconColor: "text-emerald-500" },
-	error: { icon: XCircle, accentBorder: "border-l-rose-500", iconColor: "text-rose-500" },
-	info: { icon: Info, accentBorder: "border-l-sky-500", iconColor: "text-sky-500" },
-	warning: { icon: AlertTriangle, accentBorder: "border-l-amber-500", iconColor: "text-amber-500" },
+	success: { icon: CheckCircle2, accentBorder: "border-l-success", iconColor: "text-success" },
+	error: { icon: XCircle, accentBorder: "border-l-destructive", iconColor: "text-destructive" },
+	info: { icon: Info, accentBorder: "border-l-info", iconColor: "text-info" },
+	warning: { icon: AlertTriangle, accentBorder: "border-l-warning", iconColor: "text-warning" },
 };
 
 /* ─────────────────────────── single notification ─────────────────────────── */
@@ -54,7 +56,7 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 			transition={{ type: "spring", stiffness: 400, damping: 30 }}
 			role="alert"
 			aria-live="polite"
-			className={`pointer-events-auto glass-panel border-l-4 ${config.accentBorder} p-4 w-[380px] shadow-2xl`}
+			className={`pointer-events-auto rounded-card border-l-4 bg-popover ${config.accentBorder} p-4 w-[380px] shadow-2xl`}
 		>
 			<div className="flex items-start gap-3">
 				<Icon className={`h-5 w-5 shrink-0 mt-0.5 ${config.iconColor}`} />
@@ -69,24 +71,26 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 						</p>
 					)}
 					{notification.action && (
-						<button
-							type="button"
+						<Button
+							variant="ghost"
+							size="sm"
 							onClick={notification.action.onClick}
-							className="mt-2 text-xs font-bold text-primary hover:text-primary/80 transition-colors cursor-pointer"
+							className="mt-2 h-auto px-0 text-xs font-bold text-primary hover:bg-transparent hover:text-primary/80"
 						>
 							{notification.action.label}
-						</button>
+						</Button>
 					)}
 				</div>
 
-				<button
-					type="button"
+				<Button
+					variant="icon"
+					size="sm"
 					onClick={() => onDismiss(notification.id)}
-					className="shrink-0 p-1 rounded-lg hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+					className="h-6 w-6 shrink-0 rounded-lg border-transparent bg-transparent p-1 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
 					aria-label="닫기"
 				>
 					<X className="h-3.5 w-3.5" />
-				</button>
+				</Button>
 			</div>
 		</m.div>
 	);

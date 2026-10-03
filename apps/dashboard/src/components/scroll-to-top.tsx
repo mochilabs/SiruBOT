@@ -5,46 +5,36 @@ import { AnimatePresence, m } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 
 export function ScrollToTop() {
-  const [isVisible, setIsVisible] = useState(false);
+	const [isVisible, setIsVisible] = useState(false);
 
-  useEffect(() => {
-    const toggleVisibility = () => {
-      if (window.scrollY > 400) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-      }
-    };
+	useEffect(() => {
+		const toggleVisibility = () => {
+			setIsVisible(window.scrollY > 400);
+		};
 
-    window.addEventListener("scroll", toggleVisibility);
-    return () => window.removeEventListener("scroll", toggleVisibility);
-  }, []);
+		window.addEventListener("scroll", toggleVisibility, { passive: true });
+		return () => window.removeEventListener("scroll", toggleVisibility);
+	}, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+	const scrollToTop = () => {
+		window.scrollTo({ top: 0, behavior: "smooth" });
+	};
 
-  return (
-    <AnimatePresence>
-      {isVisible && (
-        <m.button
-          initial={{ opacity: 0, scale: 0.5, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.5, y: 20 }}
-          whileHover={{ scale: 1.1, backgroundColor: "rgba(var(--primary-rgb, 255 133 193) / 0.3)" }}
-          whileTap={{ scale: 0.9 }}
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-40 p-4 bg-primary/20 backdrop-blur-xl border border-primary/30 text-primary rounded-2xl shadow-2xl shadow-primary/20"
-          aria-label="맨 위로 가기"
-        >
-          <ArrowUp className="h-6 w-6" />
-
-          <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl -z-10" />
-        </m.button>
-      )}
-    </AnimatePresence>
-  );
+	return (
+		<AnimatePresence>
+			{isVisible && (
+				<m.button
+					initial={{ opacity: 0, y: 12 }}
+					animate={{ opacity: 1, y: 0 }}
+					exit={{ opacity: 0, y: 12 }}
+					transition={{ duration: 0.2, ease: "easeOut" }}
+					onClick={scrollToTop}
+					className="fixed bottom-6 right-6 z-40 flex h-11 w-11 items-center justify-center rounded-control border border-border bg-background/70 text-foreground shadow-lg backdrop-blur-xl transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:bottom-8 sm:right-8"
+					aria-label="맨 위로 가기"
+				>
+					<ArrowUp className="h-5 w-5" aria-hidden />
+				</m.button>
+			)}
+		</AnimatePresence>
+	);
 }

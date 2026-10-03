@@ -74,7 +74,7 @@ export function Switch({
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
 			className={`
-				relative inline-flex shrink-0 items-center rounded-full transition-colors duration-300 cursor-pointer
+				relative inline-flex shrink-0 items-center rounded-full transition-colors duration-base cursor-pointer
 				${trackSizes[size]}
 				${(isOn ?? defaultChecked) ? "bg-primary" : "bg-muted"}
 				${disabled ? "opacity-50 cursor-not-allowed" : ""}

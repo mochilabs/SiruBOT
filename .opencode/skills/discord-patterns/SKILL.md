@@ -87,9 +87,9 @@ export interface GuildInfo {
 // props: guilds, onManage?, onController?, inviteUrl?, view?: "grid" | "list"
 ```
 
-- 아이콘 URL: `https://cdn.discordapp.com/icons/${id}/${icon}.webp?size=128` (직접 조립, 없으면 이름 첫 글자 + `glass-overlay`)
+- 아이콘 URL: `https://cdn.discordapp.com/icons/${id}/${icon}.webp?size=128` (직접 조립, 없으면 이름 첫 글자 + `bg-surface-2 border-border` 원)
 - 설치됨: `ShieldCheck` + `시루봇 활성`(primary), 미설치: `미설치` + 초대 링크
-- 액션: 관리(primary 계열) / 플레이어(emerald 계열) / 초대(`glass-overlay` + `ExternalLink`)
+- 액션: 관리(`bg-primary/10 text-primary`) / 플레이어(`bg-success/10 text-success`) / 초대(`bg-surface-1 border-border-subtle` + `ExternalLink`)
 - grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, list: `flex flex-col gap-3`
 
 ## 4. 셀렉터 3종

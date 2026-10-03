@@ -4,6 +4,9 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+import { SectionLabel } from "@/components/primitives/section-label";
+
 import { Portal, usePopoverCoords } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -189,8 +192,8 @@ export function Select(props: SelectProps) {
 				onKeyDown={handleKeyDown}
 				className={`
 					w-full h-11 px-4 flex items-center justify-between gap-2
-					glass-panel text-sm font-medium
-					transition-all duration-300 cursor-pointer
+					rounded-control border border-border bg-input text-sm font-medium
+					transition-all duration-base cursor-pointer
 					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary/30"}
 					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
 				`}
@@ -199,7 +202,7 @@ export function Select(props: SelectProps) {
 					{displayLabel ?? placeholder}
 				</span>
 				<ChevronDown
-					className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+					className={`h-4 w-4 text-muted-foreground transition-transform duration-fast ${open ? "rotate-180" : ""}`}
 				/>
 			</button>
 
@@ -214,14 +217,15 @@ export function Select(props: SelectProps) {
 								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary"
 							>
 								{opt?.label ?? v}
-								<button
-									type="button"
+								<Button
+									variant="icon"
+									size="sm"
 									onClick={() => toggleOption(v)}
-									className="p-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer"
+									className="h-3.5 w-3.5 rounded-full border-transparent bg-transparent p-0.5 hover:bg-primary/20"
 									aria-label={`${opt?.label ?? v} 제거`}
 								>
 									<X className="h-2.5 w-2.5" />
-								</button>
+								</Button>
 							</span>
 						);
 					})}
@@ -245,7 +249,7 @@ export function Select(props: SelectProps) {
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}
 							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] glass-panel p-1.5 shadow-2xl max-h-64 overflow-y-auto"
+							className="fixed z-[200] rounded-menu border border-border bg-popover p-1.5 shadow-2xl max-h-64 overflow-y-auto"
 							style={{
 								top: coords.top + 8,
 								left: coords.left,
@@ -274,11 +278,7 @@ export function Select(props: SelectProps) {
 							{/* Options */}
 							{Array.from(groups.entries()).map(([groupName, groupOptions], gi) => (
 								<div key={groupName || gi}>
-									{groupName && (
-										<p className="px-3 py-1.5 text-xs font-black uppercase tracking-widest text-muted-foreground/40">
-											{groupName}
-										</p>
-									)}
+									{groupName && <SectionLabel as="p">{groupName}</SectionLabel>}
 									{groupOptions.map((opt) => {
 										const isSelected = selectedValues.includes(opt.value);
 										const flatIdx = flatFiltered.indexOf(opt);
@@ -297,7 +297,7 @@ export function Select(props: SelectProps) {
 													if (!opt.disabled) setActiveIndex(flatIdx);
 												}}
 												className={`
-													w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer
+													w-full flex items-center gap-3 px-3 py-2 rounded-menu text-sm font-medium transition-colors cursor-pointer
 													${opt.disabled ? "opacity-40 pointer-events-none" : ""}
 													${isActive ? "bg-accent/80" : "hover:bg-accent/50"}
 												`}

@@ -1,15 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Loader2, RefreshCw, Save } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw, Save } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
+import { Card } from "@/components/primitives/card";
 import type { ApiError } from "@/lib/api-error";
-
-/* ─────────────────────────── 스타일 ─────────────────────────── */
-
-export const inputClass =
-	"w-full px-4 py-2.5 rounded-xl border border-border/80 bg-muted/20 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-foreground disabled:opacity-60";
 
 /* ─────────────────────────── 패널 헤더 ─────────────────────────── */
 
@@ -38,17 +34,7 @@ export function PanelHeader({
 	);
 }
 
-/* ─────────────────────────── 필드 ─────────────────────────── */
-
-export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
-	return (
-		<div className="space-y-2">
-			<span className="block text-sm font-semibold text-foreground">{label}</span>
-			{children}
-			{hint ? <p className="text-xs text-muted-foreground/70">{hint}</p> : null}
-		</div>
-	);
-}
+/* ─────────────────────────── 안내 박스 ─────────────────────────── */
 
 /** 토큰 기반 안내 박스 */
 export function InfoBox({ children }: { children: ReactNode }) {
@@ -58,7 +44,7 @@ export function InfoBox({ children }: { children: ReactNode }) {
 /** 경고 박스 (상태 색상 관례: amber) */
 export function WarningBox({ children }: { children: ReactNode }) {
 	return (
-		<div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-600 dark:text-amber-400">{children}</div>
+		<div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-xs text-warning">{children}</div>
 	);
 }
 
@@ -66,23 +52,26 @@ export function WarningBox({ children }: { children: ReactNode }) {
 
 export function PanelLoading({ label }: { label: string }) {
 	return (
-		<section className="glass-panel p-6 flex items-center gap-3 text-muted-foreground text-sm" role="status">
+		<Card padding="lg" className="flex items-center gap-3 text-muted-foreground text-sm" role="status">
 			<Loader2 className="h-4 w-4 animate-spin" />
 			{label}
-		</section>
+		</Card>
 	);
 }
 
 export function PanelError({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
 	return (
-		<section className="glass-panel p-6 space-y-3">
-			<p className="text-sm text-muted-foreground">❌ {error.message}</p>
+		<Card padding="lg" className="gap-3">
+			<p className="flex items-center gap-2 text-sm text-destructive">
+				<AlertCircle size={16} aria-hidden />
+				{error.message}
+			</p>
 			{error.retryable && (
 				<Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={onRetry}>
 					다시 시도
 				</Button>
 			)}
-		</section>
+		</Card>
 	);
 }
 

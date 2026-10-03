@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { X } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 import { Portal } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -76,14 +78,15 @@ export function ModalHeader({ children, onClose, className = "" }: ModalHeaderPr
 		<div className={`flex items-center justify-between px-6 py-4 border-b border-border/40 ${className}`}>
 			<h2 className="text-xl font-black tracking-tighter text-foreground">{children}</h2>
 			{onClose && (
-				<button
-					type="button"
+				<Button
+					variant="icon"
+					size="md"
 					onClick={onClose}
-					className="p-2 rounded-xl hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+					className="border-transparent bg-transparent p-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
 					aria-label="닫기"
 				>
 					<X className="h-5 w-5" />
-				</button>
+				</Button>
 			)}
 		</div>
 	);
@@ -155,7 +158,7 @@ export function Modal({ open, onClose, children, className = "" }: ModalProps) {
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: 8 }}
 							transition={{ type: "spring", stiffness: 400, damping: 30 }}
-							className={`relative z-10 glass-panel w-full max-w-lg overflow-hidden shadow-2xl ${className}`}
+							className={`relative z-10 w-full max-w-lg overflow-hidden rounded-dialog border border-border bg-popover shadow-2xl ${className}`}
 						>
 							{children}
 						</m.div>

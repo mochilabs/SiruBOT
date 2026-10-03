@@ -1,10 +1,6 @@
 import React from "react";
 
 export interface PageHeaderProps {
-	/** @deprecated 뱃지 UI 제거됨 */
-	badge?: string;
-	/** @deprecated 뱃지 UI 제거됨 */
-	badgeIcon?: React.ReactNode;
 	/** 메인 타이틀 */
 	title: React.ReactNode;
 	/** 타이틀 아래에 들어갈 설명 텍스트 */
@@ -25,7 +21,7 @@ export function PageHeader({
 		<header className={`mb-6 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/40 relative ${className}`}>
 			<div className="flex-1 min-w-0 max-w-full flex flex-col justify-center space-y-3">
 				<div className="space-y-1">
-					<h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-title-gradient truncate pb-1">
+					<h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-foreground truncate pb-1">
 						{title}
 					</h1>
 					{description && (
