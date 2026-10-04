@@ -3,7 +3,7 @@ import { createContainer } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
 
-const RPS_ICONS = ['✊', '🖐', '✌️'];
+const RPS_ICONS = ['✌️', '✊', '🖐'];
 
 interface RpsRecord {
 	streak: number;
