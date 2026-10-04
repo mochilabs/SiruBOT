@@ -4,7 +4,8 @@ import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { DEFAULT_COLOR } from '@sirubot/utils';
 import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated.ts';
-import { CHAPTER_FETCH_MIN_DURATION_MS, fetchYouTubeChapters, resolveYouTubeVideoId } from '../youtubeChapters.ts';
+import { CHAPTER_FETCH_MIN_DURATION_MS, resolveYouTubeVideoId } from '../youtubeChapters.ts';
+import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */

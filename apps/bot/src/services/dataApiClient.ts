@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import { fetchOhaasaKo as fetchOhaasaKoLegacy } from './ohaasaTranslate.ts';
+import { fetchYouTubeChapters as fetchChaptersLocal } from '../modules/audio/lavalink/youtubeChapters.ts';
 import { fetchWeather as fetchWeatherLocal, type WeatherResult, type WeatherScope } from '../modules/general/utils/weatherService.ts';
 import type { DailyHoroscope } from '../modules/games/utils/ohaasaService.ts';
 
@@ -11,6 +12,13 @@ export interface LyricsResult {
 	artistName: string;
 	plainLyrics: string | null;
 	syncedLyrics: string | null;
+}
+
+export interface YouTubeChapter {
+	name: string;
+	start: number;
+	end: number;
+	duration: number;
 }
 
 const GATEWAY_TIMEOUT_MS = 10_000;
@@ -65,6 +73,18 @@ export async function searchLyrics(query: string): Promise<LyricsResult[]> {
 	}
 }
 
+/** 유튜브 챕터 — 게이트웨이 우선, 실패 시 기존 직접 조회 */
+export async function fetchYouTubeChapters(videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
+	if (!videoId || durationMs <= 0) return [];
+	try {
+		const data = await gatewayGet<{ chapters: YouTubeChapter[] }>(`/v1/chapters?videoId=${encodeURIComponent(videoId)}&durationMs=${durationMs}`);
+		if (!Array.isArray(data.chapters)) throw new Error('invalid chapters response');
+		return data.chapters;
+	} catch (error) {
+		fallbackNote('chapters', error);
+		return fetchChaptersLocal(videoId, durationMs);
+	}
+}
 /** 날씨 — 게이트웨이 우선, 실패 시 기존 Open-Meteo 직접 경로 */
 export async function fetchWeather(location: string, scope: WeatherScope = 'now'): Promise<WeatherResult> {
 	try {
