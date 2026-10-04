@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   transpilePackages: ["@sirubot/prisma"],
   output: "standalone",
-  allowedDevOrigins: ['derisively-gnarliest-samson.ngrok-free.dev'],
+  allowedDevOrigins: ['derisively-gnarliest-samson.ngrok-free.dev', '*.local', '192.168.*.*', '10.*.*.*', '172.16.*.*'],
   images: {
     remotePatterns: [
       {

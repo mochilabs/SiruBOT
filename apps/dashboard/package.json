@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/next-run.mjs dev --webpack",
+    "dev": "node ../../scripts/next-run.mjs dev --webpack -H 0.0.0.0",
     "build": "node ../../scripts/next-run.mjs build --turbopack",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
