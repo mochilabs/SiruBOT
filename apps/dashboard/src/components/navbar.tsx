@@ -9,6 +9,7 @@ import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
 import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
 import { useUIStore } from "@/store/use-ui-store";
 
 import { MobileMenu } from "./navbar/mobile-menu";
@@ -93,8 +94,8 @@ export function Navbar() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 flex flex-col transition-all duration-300 border-b ${scrolled || mobileMenuOpen
-          ? "bg-background/40 backdrop-blur-3xl border-border shadow-lg"
+      className={`fixed top-0 left-0 right-0 z-50 flex flex-col transition-colors duration-base border-b ${scrolled || mobileMenuOpen
+          ? "bg-background/70 backdrop-blur-xl border-border shadow-sm"
           : "bg-transparent border-transparent"
         }`}
     >
@@ -102,7 +103,7 @@ export function Navbar() {
         <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 group-hover:scale-105 transition-transform duration-300">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0">
               <Image
                 src="/images/profile.png"
                 alt="시루봇"
@@ -110,9 +111,7 @@ export function Navbar() {
                 className="object-cover"
               />
             </div>
-            <span className="text-2xl font-black tracking-tighter bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent bg-[length:200%_auto] transition-all duration-500 group-hover:bg-[position:100%_center]">
-              시루봇
-            </span>
+            <span className="text-2xl font-black tracking-tighter text-foreground">시루봇</span>
           </Link>
 
           <div className="flex items-center gap-2 lg:gap-4">
@@ -120,7 +119,7 @@ export function Navbar() {
             <div className="hidden md:flex items-center gap-1 lg:gap-2 relative">
               {indicator && (
                 <m.div
-                  className="absolute top-0 bottom-0 rounded-xl bg-primary/10 shadow-sm"
+                  className="absolute top-0 bottom-0 rounded-menu bg-primary/10"
                   animate={{ left: indicator.left, width: indicator.width }}
                   transition={{
                     type: "spring",
@@ -134,10 +133,10 @@ export function Navbar() {
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link)}
-                  className={`relative px-4 py-2 rounded-xl text-sm lg:text-base font-medium transition-all duration-200 ${pathname === link.href
-                      ? "text-primary"
-                      : "text-foreground/70 hover:text-primary"
-                    } hover:scale-[1.05] active:scale-[0.95]`}
+                  className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground/70 hover:bg-primary/5 hover:text-primary"
+                    }`}
                 >
                   <span className="relative z-10">{link.label}</span>
                 </Link>
@@ -152,9 +151,10 @@ export function Navbar() {
               <div className="hidden md:flex items-center gap-2">
                 {status === "authenticated" ? (
                   <div className="relative" ref={profileRef}>
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => setProfileOpen(!profileOpen)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-primary/5 transition-colors"
+                      className="h-auto gap-2 px-2 py-1.5 hover:bg-primary/5"
                     >
                       {session.user?.image && (
                         <Image
@@ -168,7 +168,7 @@ export function Navbar() {
                       <span className="hidden lg:block text-sm font-bold text-foreground/80 pl-1">
                         {session.user?.name}
                       </span>
-                    </button>
+                    </Button>
 
                     <AnimatePresence>
                       {profileOpen && (
@@ -177,7 +177,7 @@ export function Navbar() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-48 rounded-xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden py-1 z-50"
+                          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu border border-border bg-popover py-1 shadow-2xl z-50"
                         >
                           {mounted && (
                             <button
@@ -191,7 +191,7 @@ export function Navbar() {
                           <div className="h-px bg-border/50 my-1 mx-2" />
                           <button
                             onClick={() => signOut()}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-colors"
                           >
                             <span>로그아웃</span>
                             <LogOut size={16} />
@@ -203,9 +203,11 @@ export function Navbar() {
                 ) : (
                   <div className="flex items-center gap-2">
                     {mounted && (
-                      <button
+                      <Button
+                        variant="icon"
+                        size="lg"
                         onClick={toggleTheme}
-                        className="relative flex items-center justify-center w-11 h-11 rounded-xl glass-overlay text-foreground/70 hover:text-primary hover:border-primary/30 transition-all duration-300 overflow-hidden group"
+                        className="relative w-11 h-11 overflow-hidden group border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary duration-base"
                       >
                         <AnimatePresence mode="popLayout" initial={false}>
                           <m.div
@@ -219,24 +221,27 @@ export function Navbar() {
                             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
                           </m.div>
                         </AnimatePresence>
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="secondary"
                       onClick={() => signIn("discord")}
-                      className="h-11 px-6 flex items-center justify-center glass-overlay text-foreground/80 text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-300"
+                      className="h-11 px-6 border-border-subtle bg-surface-1 font-bold text-foreground/80 hover:border-primary/30 hover:bg-primary/10 hover:text-primary duration-base"
                     >
                       대시보드 시작하기
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
 
-              <button
-                className="md:hidden p-2.5 rounded-xl glass-overlay text-foreground/70"
+              <Button
+                variant="icon"
+                size="md"
+                className="md:hidden h-11 w-11 border-border-subtle bg-surface-1 p-2.5"
                 onClick={toggleMobileMenu}
               >
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -3,6 +3,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { ChevronDown, ChevronsUpDown, ChevronUp, PackageOpen } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+import { Card } from "@/components/primitives/card";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { SkeletonLine } from "@/components/primitives/skeleton";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -26,7 +29,7 @@ interface DataTableProps<T> {
 	loadingRows?: number;
 	error?: string;
 	onRetry?: () => void;
-	emptyIcon?: React.ReactNode;
+	emptyIcon?: React.ComponentType<{ className?: string }>;
 	emptyMessage?: string;
 	emptyDescription?: string;
 	stickyHeader?: boolean;
@@ -44,7 +47,7 @@ export function DataTable<T>({
 	loadingRows = 5,
 	error,
 	onRetry,
-	emptyIcon,
+	emptyIcon = PackageOpen,
 	emptyMessage = "데이터가 없어요",
 	emptyDescription,
 	stickyHeader = true,
@@ -90,45 +93,25 @@ export function DataTable<T>({
 	/* ─── Error state ─── */
 	if (error) {
 		return (
-			<div className={`glass-panel p-12 text-center border-red-500/20 ${className}`}>
-				<p className="text-lg font-black tracking-tighter text-foreground mb-2">
-					오류가 발생했어요
-				</p>
+			<Card padding="none" className={`p-12 text-center border-destructive/25 ${className}`}>
+				<p className="text-lg font-semibold tracking-tight text-foreground mb-2">오류가 발생했어요</p>
 				<p className="text-sm text-muted-foreground mb-6">{error}</p>
 				{onRetry && (
-					<button
-						type="button"
-						onClick={onRetry}
-						className="px-5 py-2 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-sm font-bold transition-colors cursor-pointer"
-					>
+					<Button variant="secondary" size="sm" onClick={onRetry}>
 						다시 시도
-					</button>
+					</Button>
 				)}
-			</div>
+			</Card>
 		);
 	}
 
 	/* ─── Empty state ─── */
 	if (!loading && data.length === 0) {
-		return (
-			<div className={`glass-panel p-20 text-center border-dashed border-border/80 bg-muted/5 group ${className}`}>
-				<div className="mx-auto mb-6 w-16 h-16 rounded-3xl bg-muted flex items-center justify-center border border-border group-hover:scale-110 transition-transform duration-500">
-					{emptyIcon ?? <PackageOpen size={32} className="text-muted-foreground" />}
-				</div>
-				<p className="text-2xl font-black tracking-tight text-muted-foreground">
-					{emptyMessage}
-				</p>
-				{emptyDescription && (
-					<p className="mt-2 text-muted-foreground/60 font-medium">
-						{emptyDescription}
-					</p>
-				)}
-			</div>
-		);
+		return <EmptyState icon={emptyIcon} title={emptyMessage} description={emptyDescription} className={className} />;
 	}
 
 	return (
-		<div className={`glass-panel overflow-hidden ${className}`}>
+		<Card padding="none" className={`overflow-hidden ${className}`}>
 			<div className="overflow-x-auto">
 				<table className="w-full border-collapse">
 					{/* Header */}
@@ -136,7 +119,7 @@ export function DataTable<T>({
 						<tr
 							className={
 								stickyHeader
-									? "sticky top-0 z-10 bg-card/95 backdrop-blur-md"
+									? "sticky top-0 z-10 bg-card"
 									: ""
 							}
 						>
@@ -223,6 +206,6 @@ export function DataTable<T>({
 					</tbody>
 				</table>
 			</div>
-		</div>
+		</Card>
 	);
 }

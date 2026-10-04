@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ListMusicIcon } from "lucide-react";
+import { Search } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
@@ -10,6 +10,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
 import { PAGE_SIZE } from "@/lib/track-constants";
@@ -47,8 +48,6 @@ function TrackContent() {
   return (
     <Container>
       <PageHeader
-        badge={query ? `'${query}' 검색 결과` : "실시간 뮤직 차트"}
-        badgeIcon={<ListMusicIcon size={16} />}
         title={query ? "검색 결과" : "재생 순위"}
         description={
           query ? (
@@ -63,9 +62,9 @@ function TrackContent() {
             <SearchInput />
           </div>
           <div className="flex w-full sm:w-auto gap-2 sm:gap-3 h-14 sm:h-14">
-            <div className="group relative glass-panel h-full px-3 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
+            <div className="group relative bg-surface-1 border border-border-subtle rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary/60">
-                <span className="text-[10px] sm:text-xs font-black tracking-widest uppercase">
+                <span className="text-2xs sm:text-xs font-black tracking-widest uppercase">
                   {query ? "검색 결과 수" : "단일 곡 수"}
                 </span>
               </div>
@@ -74,9 +73,9 @@ function TrackContent() {
               </span>
             </div>
 
-            <div className="group relative glass-panel h-full px-3 sm:px-6 flex flex-col justify-center items-center border-border/50 hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
+            <div className="group relative bg-surface-1 border border-border-subtle rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary/60">
-                <span className="text-[10px] sm:text-xs font-black tracking-widest uppercase">
+                <span className="text-2xs sm:text-xs font-black tracking-widest uppercase">
                   재생 횟수
                 </span>
               </div>
@@ -92,13 +91,14 @@ function TrackContent() {
         {isLoading ? (
           <Loader text="차트 정보를 불러오는 중..." />
         ) : tracks.length === 0 ? (
-          <div className="glass-panel p-20 text-center border-dashed border-border/50 shadow-sm">
-            <p className="text-xl font-medium text-muted-foreground">
-              {query
+          <EmptyState
+            icon={Search}
+            title={
+              query
                 ? "노래를 찾을 수 없어요."
-                : "차트 데이터를 모으고 있어요..."}
-            </p>
-          </div>
+                : "차트 데이터를 모으고 있어요..."
+            }
+          />
         ) : (
           <div className="space-y-10">
             <TrackList tracks={tracks} rankOffset={rankOffset} />

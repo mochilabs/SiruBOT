@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import { X } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 /* ─────────────────────────── types ─────────────────────────── */
 
 interface TagInputProps {
@@ -64,8 +66,8 @@ export function TagInput({
 		<div
 			onClick={() => inputRef.current?.focus()}
 			className={`
-				glass-panel flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
-				transition-all duration-300 cursor-text
+				rounded-control border border-border bg-input flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
+				transition-all duration-base cursor-text
 				focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30
 				${disabled ? "opacity-50 pointer-events-none" : ""}
 				${className}
@@ -79,17 +81,18 @@ export function TagInput({
 				>
 					{tag}
 					{!disabled && (
-						<button
-							type="button"
+						<Button
+							variant="icon"
+							size="sm"
 							onClick={(e) => {
 								e.stopPropagation();
 								removeTag(i);
 							}}
-							className="p-0.5 rounded-full hover:bg-primary/20 transition-colors cursor-pointer"
+							className="h-3.5 w-3.5 rounded-full border-transparent bg-transparent p-0.5 hover:bg-primary/20"
 							aria-label={`${tag} 제거`}
 						>
 							<X className="h-2.5 w-2.5" />
-						</button>
+						</Button>
 					)}
 				</span>
 			))}

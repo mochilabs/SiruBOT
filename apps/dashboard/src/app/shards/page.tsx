@@ -8,6 +8,7 @@ import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import type { ShardsResponse } from "@/lib/shard-api";
@@ -39,7 +40,6 @@ export default function ShardsPage() {
                 <Loader 
                     fullPage 
                     size="xl" 
-                    withBlur 
                     text="샤드 정보 불러오는 중" 
                     description="네트워크 상태에 따라 지연될 수 있어요." 
                 />
@@ -54,18 +54,9 @@ export default function ShardsPage() {
         <Container>
             <div className="relative overflow-visible">
                 <PageHeader
-                    badge={isValidating ? "동기화 중..." : "실시간 모니터링"}
-                    badgeIcon={
-                        <span className="relative flex h-2 w-2">
-                            <span className={isValidating ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" : ""}></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                        </span>
-                    }
                     title="시스템 상태"
-                    description="시루봇 서버의 상태를 확인할 수 있어요."
+                    description={isValidating ? "샤드 정보를 동기화하는 중이에요." : "시루봇 서버의 상태를 실시간으로 확인할 수 있어요."}
                 />
-                <div className="absolute top-0 right-0 -z-10 w-[500px] h-[300px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
-
                 <div className="grid gap-8">
                     <section>
                         <ShardStats stats={stats} />
@@ -81,13 +72,12 @@ export default function ShardsPage() {
                         </div>
 
                         {processes.length === 0 ? (
-                            <div className="glass-panel p-24 text-center border-dashed border-border/80 bg-muted/5 group">
-                                <div className="mx-auto mb-6 w-16 h-16 rounded-3xl bg-muted flex items-center justify-center border border-border group-hover:scale-110 transition-transform duration-500">
-                                    <RadioTower size={32} className="text-muted-foreground" />
-                                </div>
-                                <p className="text-2xl font-black tracking-tight text-muted-foreground">지금은 활성화된 피드가 없어요.</p>
-                                <p className="mt-2 text-muted-foreground/60 font-medium">샤드 매니저로부터의 생존 신호를 기다리고 있어요.</p>
-                            </div>
+                            <EmptyState
+                                icon={RadioTower}
+                                title="지금은 활성화된 피드가 없어요."
+                                description="샤드 매니저로부터의 생존 신호를 기다리고 있어요."
+                                className="border-border/80"
+                            />
                         ) : (
                             <div className="grid gap-8 md:grid-cols-2">
                                 {processes.map((process, index) => (

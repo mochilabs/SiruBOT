@@ -6,6 +6,8 @@ import { Clock, Edit, ExternalLink, Heart, MoreHorizontal, Move, Music, Plus, Se
 import Loader from "@/components/loader";
 import { Dropdown } from "@/components/overlay/dropdown";
 import { Button } from "@/components/primitives/button";
+import { Card } from "@/components/primitives/card";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { formatDuration } from "@/hooks/use-playlists";
 import type { Playlist, Track } from "@/types/playlist";
 
@@ -48,25 +50,19 @@ export function PlaylistDetail({
 }: PlaylistDetailProps) {
 	if (detailLoading) {
 		return (
-			<div className="glass-panel p-20 flex flex-col items-center justify-center h-full">
+			<Card padding="none" className="h-full items-center justify-center p-20">
 				<Loader text="플레이리스트 정보를 불러오는 중..." />
-			</div>
+			</Card>
 		);
 	}
 
 	if (!activePlaylist) {
-		return (
-			<div className="glass-panel p-20 flex flex-col items-center justify-center min-h-[400px] border-dashed text-center">
-				<Music size={40} className="text-muted-foreground/30 mb-4 animate-float-subtle" />
-				<p className="text-xl font-bold text-muted-foreground">선택된 플레이리스트가 없습니다.</p>
-				<p className="text-sm text-muted-foreground/50 mt-1">좌측 목록에서 플레이리스트를 선택하거나 새로 만들어보세요.</p>
-			</div>
-		);
+		return <EmptyState icon={Music} title="선택된 플레이리스트가 없습니다." description="좌측 목록에서 플레이리스트를 선택하거나 새로 만들어보세요." className="min-h-[400px]" />;
 	}
 
 	return (
 		<div className="flex flex-col gap-6 h-full">
-			<div className="glass-panel p-6">
+			<Card padding="lg">
 				<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 					<div className="flex-1">
 						<div className="flex items-center gap-3">
@@ -117,29 +113,27 @@ export function PlaylistDetail({
 								]}
 							/>
 						)}
-						<Button variant="primary" onClick={onOpenAddTrack} className="h-10 px-5 font-bold shadow-md shadow-primary/20">
+						<Button variant="primary" onClick={onOpenAddTrack} className="h-10 px-5 font-bold">
 							<Plus size={16} className="mr-1.5" />
 							곡 추가
 						</Button>
 					</div>
 				</div>
-			</div>
+			</Card>
 
-			<div className="glass-panel flex-1 overflow-hidden flex flex-col min-h-[400px]" style={{ maxHeight: 'calc(100vh - 20rem)' }}>
+			<Card padding="none" className="flex-1 overflow-hidden min-h-[400px]" style={{ maxHeight: 'calc(100vh - 20rem)' }}>
 				{tracks.length === 0 ? (
-					<div className="flex-1 py-12 flex flex-col items-center justify-center text-center">
-						<div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6 border border-primary/10">
-							<Music size={32} className="text-primary/60" />
-						</div>
-						<h3 className="text-2xl font-black text-foreground tracking-tight mb-2">플레이리스트가 비어있어요</h3>
-						<p className="text-muted-foreground font-medium max-w-sm mb-8">
-							플레이리스트를 채워보세요!
-						</p>
-						<Button variant="primary" size="lg" className="rounded-full shadow-lg shadow-primary/20 px-8" onClick={onOpenAddTrack}>
-							<Plus size={18} className="mr-2" />
-							곡 추가하기
-						</Button>
-					</div>
+					<EmptyState
+						className="flex-1 border-none bg-transparent"
+						icon={Music}
+						title="플레이리스트가 비어있어요"
+						description="플레이리스트를 채워보세요!"
+						action={
+							<Button variant="primary" icon={<Plus size={16} />} onClick={onOpenAddTrack}>
+								곡 추가하기
+							</Button>
+						}
+					/>
 				) : (
 					<div ref={parentRef} className="overflow-auto flex-1 custom-scrollbar w-full">
 						<div className="hidden md:flex items-center px-4 py-3 bg-muted/30 border-b border-border/40 text-muted-foreground/70 font-medium uppercase tracking-wider text-xs sticky top-0 z-10">
@@ -198,7 +192,7 @@ export function PlaylistDetail({
 													<span>{formatDuration(track.duration)}</span>
 												</p>
 
-												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-[11px] text-primary hover:underline items-center gap-1">
+												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-2xs text-primary hover:underline items-center gap-1">
 													<ExternalLink size={10} />
 													YouTube
 												</a>
@@ -217,9 +211,13 @@ export function PlaylistDetail({
 											<Dropdown
 												align="right"
 												trigger={
-													<button type="button" className="p-2 -mr-2 md:mr-0 text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 rounded-lg transition-colors cursor-pointer outline-none">
+													<Button
+														variant="icon"
+														size="md"
+														className="-mr-2 rounded-lg border-transparent bg-transparent p-2 text-muted-foreground/50 hover:bg-muted/40 hover:text-foreground md:mr-0"
+													>
 														<MoreHorizontal size={16} />
-													</button>
+													</Button>
 												}
 												groups={[
 													{
@@ -240,18 +238,14 @@ export function PlaylistDetail({
 								<div className="text-[13px] font-medium mb-1.5 flex items-center gap-2">
 									<span>더이상 표시할 곡이 없어요</span>
 								</div>
-								<button
-									type="button"
-									onClick={onOpenAddTrack}
-									className="text-xs hover:text-foreground hover:opacity-80 transition-opacity cursor-pointer font-medium"
-								>
+								<Button variant="ghost" size="sm" onClick={onOpenAddTrack}>
 									곡 추가 버튼을 눌러 플레이리스트를 채워보세요!
-								</button>
+								</Button>
 							</div>
 						)}
 					</div>
 				)}
-			</div>
+			</Card>
 		</div>
 	);
 }

@@ -1,3 +1,6 @@
+import { Card } from "@/components/primitives/card";
+import { cn } from "@/lib/utils";
+
 /* ─────────────────────────── types ─────────────────────────── */
 
 interface SkeletonLineProps {
@@ -19,47 +22,21 @@ interface SkeletonCardProps {
 
 /* ─────────────────────────── base ─────────────────────────── */
 
-const pulseBase = "animate-pulse rounded-lg bg-foreground/10";
+const pulseBase = "animate-pulse rounded-md bg-muted";
 
 /* ─────────────────────────── components ─────────────────────────── */
 
-export function SkeletonLine({
-	width = "100%",
-	height = "h-4",
-	className = "",
-}: SkeletonLineProps) {
-	return (
-		<div
-			className={`${pulseBase} ${height} ${className}`}
-			style={{ width }}
-			aria-hidden
-		/>
-	);
+export function SkeletonLine({ width = "100%", height = "h-4", className }: SkeletonLineProps) {
+	return <div className={cn(pulseBase, height, className)} style={{ width }} aria-hidden />;
 }
 
-export function SkeletonCircle({
-	size = "h-10 w-10",
-	className = "",
-}: SkeletonCircleProps) {
-	return (
-		<div
-			className={`${pulseBase} rounded-full ${size} ${className}`}
-			aria-hidden
-		/>
-	);
+export function SkeletonCircle({ size = "h-10 w-10", className }: SkeletonCircleProps) {
+	return <div className={cn(pulseBase, "rounded-full", size, className)} aria-hidden />;
 }
 
-export function SkeletonCard({
-	lines = 3,
-	avatar = true,
-	className = "",
-}: SkeletonCardProps) {
+export function SkeletonCard({ lines = 3, avatar = true, className }: SkeletonCardProps) {
 	return (
-		<div
-			className={`glass-panel p-6 space-y-4 ${className}`}
-			role="status"
-			aria-label="로딩 중"
-		>
+		<Card role="status" aria-label="로딩 중" className={className}>
 			{avatar && (
 				<div className="flex items-center gap-4">
 					<SkeletonCircle size="h-12 w-12" />
@@ -71,14 +48,10 @@ export function SkeletonCard({
 			)}
 			<div className="space-y-3">
 				{Array.from({ length: lines }, (_, i) => (
-					<SkeletonLine
-						key={i}
-						width={i === lines - 1 ? "70%" : "100%"}
-						height="h-3"
-					/>
+					<SkeletonLine key={i} width={i === lines - 1 ? "70%" : "100%"} height="h-3" />
 				))}
 			</div>
-		</div>
+		</Card>
 	);
 }
 

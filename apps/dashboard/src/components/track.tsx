@@ -25,17 +25,16 @@ export function formatTimeToKorean(seconds: number): string {
 	return parts.join(" ");
 }
 
-function MockThumbnail({ className }: { className: string }) {
-	return (
-		<div className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}>
-			<div className="absolute inset-0 bg-foreground/5 backdrop-blur-sm" />
-			<Music4 className="h-1/3 w-1/3 text-primary/40 relative z-10" />
-			<span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
-				No Image
-			</span>
-		</div>
-	);
-}
+	function MockThumbnail({ className }: { className: string }) {
+		return (
+			<div className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}>
+				<Music4 className="h-1/3 w-1/3 text-primary/40 relative z-10" />
+				<span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
+					No Image
+				</span>
+			</div>
+		);
+	}
 
 const BATCH_SIZE = 10;
 
@@ -105,7 +104,7 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 	const isTopThree = rank <= 3;
 
 	return (
-		<div className="glass-panel group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:border-primary/30 transition-all duration-200">
+		<div className="bg-surface-1 border border-border-subtle rounded-card group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:border-primary/30 transition-colors duration-fast">
 			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 justify-center shrink-0">
 				{isTopThree ? (
@@ -117,11 +116,11 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 
 			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border border-border bg-muted/20">
 				{/* Mobile Rank Overlay */}
-				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-black/60 backdrop-blur-md rounded-br-lg border-r border-b border-white/20 px-1.5 shadow-lg">
+				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-surface-3 rounded-br-lg border-r border-b border-border px-1.5 shadow-sm">
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground/70"}`} />
 					) : (
-						<span className="text-xs font-black tracking-tighter text-white">{rank}</span>
+						<span className="text-xs font-black tracking-tighter text-foreground">{rank}</span>
 					)}
 				</div>
 
@@ -160,10 +159,10 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 						href={track.url}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl bg-primary/10 text-primary border border-primary/20 transition-all hover:bg-primary/20 hover:scale-105 active:scale-95"
+						className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control bg-primary/10 text-primary border border-primary/20 transition-colors duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
 						title="원본 보기"
 					>
-						<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" />
+						<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
 					</a>
 				)}
 			</div>
@@ -173,7 +172,7 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 
 export function Track({ track }: { track: TrackType }) {
 	return (
-		<div className="glass-panel flex items-center gap-3 p-3 hover:border-primary/20 transition-colors">
+		<div className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/20 transition-colors duration-fast">
 			<div className="relative h-14 w-14 overflow-hidden rounded-lg border border-border">
 				{track.thumbnail ? (
 					<Image 

@@ -1,13 +1,49 @@
 "use client";
 
+import { cva, type VariantProps } from "class-variance-authority";
+
+import { cn } from "@/lib/utils";
+
+/* ─────────────────────────── styles ─────────────────────────── */
+
+/** 디자인 토큰 기반 톤 — Badge·StatusDot·StatusBadge 공용 */
+export const toneStyles = {
+	neutral: { badge: "border border-border bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
+	primary: { badge: "border border-primary/20 bg-primary/10 text-primary", dot: "bg-primary", text: "text-primary" },
+	success: { badge: "border border-success/25 bg-success/10 text-success", dot: "bg-success", text: "text-success" },
+	warning: { badge: "border border-warning/25 bg-warning/10 text-warning", dot: "bg-warning", text: "text-warning" },
+	destructive: { badge: "border border-destructive/25 bg-destructive/10 text-destructive", dot: "bg-destructive", text: "text-destructive" },
+	info: { badge: "border border-info/25 bg-info/10 text-info", dot: "bg-info", text: "text-info" },
+	discord: { badge: "border border-discord-primary/20 bg-discord-primary/10 text-discord-primary", dot: "bg-discord-primary", text: "text-discord-primary" },
+} as const;
+
+export type Tone = keyof typeof toneStyles;
+
+const badgeVariants = cva("inline-flex select-none items-center gap-1.5 rounded-full font-semibold transition-colors", {
+	variants: {
+		variant: {
+			default: toneStyles.neutral.badge,
+			primary: toneStyles.primary.badge,
+			success: toneStyles.success.badge,
+			warning: toneStyles.warning.badge,
+			danger: toneStyles.destructive.badge,
+			destructive: toneStyles.destructive.badge,
+			info: toneStyles.info.badge,
+			discord: toneStyles.discord.badge,
+		},
+		size: {
+			sm: "px-2 py-0.5 text-xs",
+			md: "px-2.5 py-1 text-sm",
+		},
+	},
+	defaultVariants: { variant: "default", size: "md" },
+});
+
 /* ─────────────────────────── types ─────────────────────────── */
 
-type BadgeVariant = "default" | "primary" | "success" | "warning" | "danger" | "info" | "discord";
-type BadgeSize = "sm" | "md";
+type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
 
-interface BadgeProps {
-	variant?: BadgeVariant;
-	size?: BadgeSize;
+interface BadgeProps extends VariantProps<typeof badgeVariants> {
 	dot?: boolean;
 	dismissible?: boolean;
 	onDismiss?: () => void;
@@ -15,66 +51,13 @@ interface BadgeProps {
 	className?: string;
 }
 
-/* ─────────────────────────── styles ─────────────────────────── */
+/* ─────────────────────────── Badge ─────────────────────────── */
 
-const variantClasses: Record<BadgeVariant, { badge: string; dot: string }> = {
-	default: {
-		badge: "glass-overlay text-foreground/80",
-		dot: "bg-foreground/40",
-	},
-	primary: {
-		badge: "bg-primary/10 border border-primary/20 text-primary",
-		dot: "bg-primary",
-	},
-	success: {
-		badge: "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400",
-		dot: "bg-emerald-500",
-	},
-	warning: {
-		badge: "bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400",
-		dot: "bg-amber-500",
-	},
-	danger: {
-		badge: "bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400",
-		dot: "bg-rose-500",
-	},
-	info: {
-		badge: "bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400",
-		dot: "bg-sky-500",
-	},
-	discord: {
-		badge: "bg-discord-primary/10 border border-discord-primary/20 text-discord-primary",
-		dot: "bg-discord-primary",
-	},
-};
-
-const sizeClasses: Record<BadgeSize, string> = {
-	sm: "px-2 py-0.5 text-xs gap-1.5",
-	md: "px-2.5 py-1 text-sm gap-2",
-};
-
-/* ─────────────────────────── component ─────────────────────────── */
-
-export function Badge({
-	variant = "default",
-	size = "md",
-	dot = false,
-	dismissible = false,
-	onDismiss,
-	children,
-	className = "",
-}: BadgeProps) {
-	const v = variantClasses[variant];
-
+export function Badge({ variant = "default", size = "md", dot = false, dismissible = false, onDismiss, children, className }: BadgeProps) {
 	return (
-		<span
-			className={`inline-flex items-center rounded-full font-bold select-none transition-colors ${v.badge} ${sizeClasses[size]} ${className}`}
-		>
+		<span className={cn(badgeVariants({ variant, size }), className)}>
 			{dot && (
-				<span
-					aria-hidden
-					className={`animate-pulse-soft h-1.5 w-1.5 rounded-full shrink-0 ${v.dot}`}
-				/>
+				<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-soft", dotTone(variant))} />
 			)}
 			{children}
 			{dismissible && (
@@ -82,17 +65,9 @@ export function Badge({
 					type="button"
 					onClick={onDismiss}
 					aria-label="제거"
-					className="ml-0.5 -mr-0.5 inline-flex items-center justify-center rounded-full p-0.5 hover:bg-foreground/10 transition-colors cursor-pointer"
+					className="ml-0.5 -mr-0.5 inline-flex cursor-pointer items-center justify-center rounded-full p-0.5 transition-colors hover:bg-foreground/10"
 				>
-					<svg
-						aria-hidden
-						className="h-3 w-3"
-						viewBox="0 0 12 12"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth={2}
-						strokeLinecap="round"
-					>
+					<svg aria-hidden className="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
 						<path d="M3 3l6 6M9 3l-6 6" />
 					</svg>
 				</button>
@@ -100,3 +75,48 @@ export function Badge({
 		</span>
 	);
 }
+
+function dotTone(variant: BadgeVariant): string {
+	switch (variant) {
+		case "primary":
+			return toneStyles.primary.dot;
+		case "success":
+			return toneStyles.success.dot;
+		case "warning":
+			return toneStyles.warning.dot;
+		case "danger":
+		case "destructive":
+			return toneStyles.destructive.dot;
+		case "info":
+			return toneStyles.info.dot;
+		case "discord":
+			return toneStyles.discord.dot;
+		default:
+			return toneStyles.neutral.dot;
+	}
+}
+
+/* ─────────────────────────── StatusBadge ─────────────────────────── */
+
+const statusTone: Record<string, Tone> = {
+	READY: "success",
+	IDLE: "warning",
+	CONNECTING: "info",
+	DISCONNECTED: "destructive",
+	ERRORED: "destructive",
+};
+
+/** 프로세스/샤드 상태 배지. 임의의 status 문자열을 허용하되 미등록 값은 destructive. */
+export function StatusBadge({ status }: { status: string }) {
+	const normalized = status.toUpperCase();
+	const tone: Tone = statusTone[normalized] ?? "destructive";
+
+	return (
+		<span className={cn("inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold", toneStyles[tone].badge)}>
+			<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-soft", toneStyles[tone].dot)} />
+			{normalized}
+		</span>
+	);
+}
+
+export { badgeVariants };

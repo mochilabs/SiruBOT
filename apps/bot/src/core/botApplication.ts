@@ -16,6 +16,7 @@ import { PlaylistService } from '../services/playlistService.ts';
 import { AudioService } from '../services/audioService.ts';
 import { MixerService } from '../services/mixerService.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
+import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -81,6 +82,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
 		container.tempVoiceService = new TempVoiceService();
+		container.aiMemoryService = new AiMemoryService();
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[], shardInfo: { shardIds: number[]; shardCount: number }) {

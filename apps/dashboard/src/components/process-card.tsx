@@ -2,9 +2,9 @@
 
 import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
 
+import { StatusBadge } from "@/components/primitives/badge";
+import { Card } from "@/components/primitives/card";
 import type { ShardProcessInfo } from "@/lib/shard-api";
-
-import { StatusBadge } from "./status-badge";
 
 function formatUptime(secondsValue: number): string {
 	const seconds = Math.floor(secondsValue);
@@ -30,7 +30,7 @@ function formatMemory(bytes: number): string {
 
 export function ProcessCard({ process, index }: { process: ShardProcessInfo; index: number }) {
 	return (
-		<div className="glass-panel p-6 space-y-6 transition-all duration-300 hover:border-primary/30">
+		<Card padding="lg" className="gap-6 transition-all duration-base hover:border-primary/30">
 			<div className="flex items-center justify-between gap-4">
 				<div className="flex items-center gap-3">
 					<div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
@@ -48,7 +48,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 				{process.shardIds.map((id) => (
 					<span
 						key={id}
-						className="inline-flex items-center rounded-lg glass-overlay px-2.5 py-1 text-sm font-bold text-muted-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
+						className="inline-flex items-center rounded-lg border border-border bg-surface-2 px-2.5 py-1 text-sm font-bold text-muted-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
 					>
 						샤드 {id}
 					</span>
@@ -62,7 +62,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					{ label: "메모리", value: formatMemory(process.memoryUsage), icon: HardDrive },
 					{ label: "운영 시간", value: formatUptime(process.uptime), icon: Clock3 },
 				].map((item, i) => (
-					<div key={i} className="glass-overlay rounded-xl p-4 space-y-2 group hover:bg-foreground/5 transition-colors">
+					<div key={i} className="rounded-xl border border-border-subtle bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
 						<div className="flex items-center gap-2 text-muted-foreground/40 font-black text-xs tracking-widest">
 							<item.icon size={12} />
 							{item.label}
@@ -78,7 +78,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					최근 업데이트: {formatRelativeTime(process.lastHeartbeat)}
 				</div>
 			</div>
-		</div>
+		</Card>
 	);
 }
 

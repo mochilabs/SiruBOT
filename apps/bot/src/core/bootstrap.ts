@@ -147,10 +147,11 @@ export const main = async () => {
 		client.logger.debug('Setting up logger...');
 		container.logger = client.logger;
 
-		// Audio -> General -> Voice -> RedisStore -> Login -> Lavalink (After ready event)
+		// Audio -> General -> Voice -> Games -> RedisStore -> Login -> Lavalink (After ready event)
 		client.setupStore('audio');
 		client.setupStore('general');
 		client.setupStore('voice');
+		client.setupStore('games');
 
 		client.logger.debug('Setting up database...');
 		await client.setupDatabase();

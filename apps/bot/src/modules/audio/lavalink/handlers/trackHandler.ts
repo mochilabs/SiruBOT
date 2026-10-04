@@ -419,7 +419,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 				if (displaced && (displaced as { encoded?: unknown }).encoded !== encoded && Array.isArray(player.queue.tracks)) {
 					player.queue.tracks.unshift(displaced as (typeof player.queue.tracks)[number]);
 				}
-				void this.container.playerNotifier.onTrackStart(player).catch(() => null);
+				// 뷰 복원 전용: 곡은 이미 재생 중이므로 새 컨트롤러를 보내지 않고(edit/send 없이)
+				// 기존 메시지 컴포넌트만 다시 그린다. sendController를 부르면 정상 trackStart가
+				// 보낸 컨트롤러와 중복 발송 레이스가 생긴다.
+				this.container.playerNotifier.updateController(player);
 			}, TRANSITION_RECONCILE_MS)
 		);
 	}
@@ -431,7 +434,20 @@ export class TrackHandler extends BaseLavalinkHandler {
 		return typeof endedEncoded === 'string' && typeof lastStarted === 'string' && endedEncoded !== lastStarted;
 	}
 
-	private armWatchdog(player: CustomPlayer): void {
+	/** 서버에 실제로 트랙이 올라가 재생 중인지 REST로 확인한다 (클라 current와 무관). */
+	private async isServerTrackActive(player: CustomPlayer): Promise<boolean> {
+		try {
+			const serverPlayer = await player.node.fetchPlayer(String(player.guildId));
+			if (!serverPlayer || 'status' in serverPlayer) return false;
+			return Boolean(serverPlayer.track);
+		} catch (error) {
+			this.logger.debug(`[mixer] fetchPlayer failed (guild ${player.guildId}): ${error}`);
+			// 확인 불가 → 보수적으로 재생 중으로 본다 (play 무음 거부 방지)
+			return true;
+		}
+	}
+
+	private armWatchdog(player: CustomPlayer, serverActiveObserved: number = 0): void {
 		const guildId = player.guildId;
 		this.clearWatchdog(guildId);
 		this.watchdogs.set(
@@ -449,12 +465,23 @@ export class TrackHandler extends BaseLavalinkHandler {
 				// current에 남은 곡을 직접 재생하는 쪽을 먼저 시도한다.
 				// 복구 명령도 조용히 무시되면 다음 주기에 다시 시도한다
 				// (정상 시작이면 trackStart가 이 타이머를 지운다).
-				Promise.resolve()
-					.then(() => {
-						if (!player.playing && player.queue.current) {
+				void Promise.resolve()
+					.then(async () => {
+						if (player.playing) return;
+						if (player.queue.current) {
+							// 클라 play는 서버가 이미 트랙을 시작했으면 noReplace로 조용히 무시된다 —
+							// 그 상태로 play하면 클라 큐만 소비되어 NOWPLAYING과 출력이 어긋난다.
+							// 서버 트랙 존재를 먼저 확인하고, 살아 있으면 클라 상태가 뒤따를 때까지 관망한다.
+							// 단, fetchPlayer 실패로 보수적 판정이 반복되면 영원히 관망만 하게 되므로
+							// 일정 횟수 이후에는 play를 시도해 교착에서 빠져나온다.
+							if (serverActiveObserved < 4 && (await this.isServerTrackActive(player))) {
+								this.armWatchdog(player, serverActiveObserved + 1);
+								return;
+							}
 							return this.container.mixerService
-								.primeForPlay(player)
+								.clearNext(player)
 								.catch(() => null)
+								.then(() => this.container.mixerService.primeForPlay(player).catch(() => null))
 								.then(() => player.play({ noReplace: true }))
 								.then(() => this.armWatchdogUnlessStarted(player));
 						}
@@ -488,6 +515,18 @@ export class TrackHandler extends BaseLavalinkHandler {
 	private async startClientOwnedTrack(player: CustomPlayer): Promise<void> {
 		if (this.clientAdvancePending.has(player.guildId)) return;
 		const token = this.setAdvancePending(player.guildId);
+		// 서버가 이미 트랙을 시작했으면(슬롯 자동 진행이 경합에서 이김) play({noReplace:true})는
+		// 조용히 무시되고 클라 큐만 한 칸 소비된다 — NOWPLAYING과 출력이 어긋나는 원인.
+		// 진행 전 서버 트랙 존재를 확인해 살아 있으면 클라 상태 동기화와 관망으로 끝낸다.
+		if (await this.isServerTrackActive(player)) {
+			if (this.clientAdvancePending.get(player.guildId)?.token === token) this.clearAdvancePending(player.guildId);
+			this.container.mixerService.markUnmanaged(player.guildId);
+			this.setLastStarted(player, player.queue.current);
+			// 확인이 오탐이었을 수 있으니 복구 타이머를 유지한다 — 정상 trackStart가 지운다.
+			this.armWatchdog(player);
+			this.container.playerNotifier.updateController(player);
+			return;
+		}
 		try {
 			await this.container.mixerService.clearNext(player).catch(() => null);
 			// mixer 필터를 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다.

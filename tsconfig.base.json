@@ -6,6 +6,13 @@
 		"noEmit": true,
 		"incremental": false,
 		"skipLibCheck": true,
-		"allowImportingTsExtensions": true
+		"allowImportingTsExtensions": true,
+		"baseUrl": ".",
+		"paths": {
+			"@sirubot/utils": ["./packages/utils/src/index.ts"],
+			"@sirubot/shardclient": ["./packages/shardclient/src/index.ts"],
+			"@sirubot/shardclient/ws-types": ["./packages/shardclient/src/ws-types/index.ts"],
+			"@sirubot/prisma": ["./packages/prisma/dist/index.d.ts"]
+		}
 	}
 }

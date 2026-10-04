@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense } from "react";
-import { ListMusic } from "lucide-react";
 
 import Container from "@/components/container";
 import { ToastProvider } from "@/components/feedback/toast";
@@ -82,8 +81,6 @@ function PlaylistsContent() {
 	return (
 		<Container>
 			<PageHeader
-				badge="음악 관리"
-				badgeIcon={<ListMusic size={16} />}
 				title="플레이리스트"
 				description="내 플레이리스트를 만들고 트랙 순서를 편집해 관리해보세요."
 			/>

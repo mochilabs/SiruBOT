@@ -5,6 +5,8 @@ import { signIn, signOut } from "next-auth/react";
 import { AnimatePresence,m } from "framer-motion";
 import { Music } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 interface NavLink {
 	label: string;
 	href: string;
@@ -38,31 +40,33 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 				>
 					<div className="p-6 space-y-4">
 						{navLinks.map((link) => (
-							<Link
-								key={link.label}
-								href={getNavHref(link)}
-								onClick={onClose}
-								className="flex items-center justify-between py-3 text-lg font-bold text-foreground/80 hover:text-primary transition-all"
-							>
-								{link.label}
-								<Music size={14} className="text-primary/40" />
-							</Link>
+						<Link
+							key={link.label}
+							href={getNavHref(link)}
+							onClick={onClose}
+							className="flex items-center justify-between py-3 text-lg font-bold text-foreground/80 hover:text-primary transition-colors duration-fast"
+						>
+							{link.label}
+							<Music size={14} className="text-primary/40" aria-hidden />
+						</Link>
 						))}
 						<div className="pt-4 border-t border-border">
 							{status === "authenticated" ? (
-								<button
+								<Button
+									variant="danger"
 									onClick={() => signOut()}
-									className="flex items-center justify-center gap-2 w-full py-4 bg-rose-500/10 text-rose-500 font-bold rounded-2xl"
+									className="w-full py-3 font-bold"
 								>
 									로그아웃
-								</button>
+								</Button>
 							) : (
-								<button
+								<Button
+									variant="cta"
 									onClick={() => signIn("discord")}
-									className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-2xl shadow-lg shadow-primary/20"
+									className="w-full py-3 font-bold"
 								>
 									디스코드로 로그인
-								</button>
+								</Button>
 							)}
 						</div>
 					</div>

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 
+import { SectionLabel } from "@/components/primitives/section-label";
+
 import { Portal, usePopoverCoords } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -152,7 +154,7 @@ export function Dropdown({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}
 							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] mt-2 min-w-[200px] glass-panel p-1.5 shadow-2xl"
+							className="fixed z-[200] mt-2 min-w-[200px] rounded-menu border border-border bg-popover p-1.5 shadow-2xl"
 							style={{
 								top: coords.top,
 								left: align === "right" ? undefined : coords.left,
@@ -164,11 +166,7 @@ export function Dropdown({
 									{gi > 0 && (
 										<div className="my-1.5 h-px bg-border/40" role="separator" />
 									)}
-									{group.label && (
-										<p className="px-3 py-1.5 text-xs font-black uppercase tracking-widest text-muted-foreground/40">
-											{group.label}
-										</p>
-									)}
+									{group.label && <SectionLabel as="p">{group.label}</SectionLabel>}
 									{group.items.map((item) => {
 										const idx = item.disabled ? -1 : ++flatIndex;
 										const isActive = idx === activeIndex;
@@ -189,9 +187,9 @@ export function Dropdown({
 													if (!item.disabled) setActiveIndex(idx);
 												}}
 												className={`
-													w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer
+													w-full flex items-center gap-3 px-3 py-2 rounded-menu text-sm font-medium transition-colors cursor-pointer
 													${item.disabled ? "opacity-40 pointer-events-none" : ""}
-													${item.danger ? "text-red-500" : "text-foreground"}
+													${item.danger ? "text-destructive" : "text-foreground"}
 													${isActive && !item.disabled ? "bg-accent/80" : "hover:bg-accent/50"}
 												`}
 											>

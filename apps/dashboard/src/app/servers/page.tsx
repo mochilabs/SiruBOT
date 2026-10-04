@@ -4,15 +4,16 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { Server } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
-import Loader from "@/components/loader";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
-import { ServersGridSkeleton } from "@/components/servers/servers-page-skeleton";
+import { ServersGridSkeleton, ServersPageSkeleton } from "@/components/servers/servers-page-skeleton";
 import { buildInviteUrl } from "@/utils";
 
 export default function ServersPage() {
@@ -31,7 +32,7 @@ export default function ServersPage() {
     if (status === "loading") {
         return (
             <Container>
-                <Loader fullPage />
+                <ServersPageSkeleton />
             </Container>
         );
     }
@@ -45,16 +46,10 @@ export default function ServersPage() {
     return (
         <Container>
             <PageHeader
-                badge="서버 선택"
-                badgeIcon={
-                    <span className="relative flex h-2 w-2">
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                    </span>
-                }
                 title="어떤 서버로 갈까요?"
-                description="어느 서버를 관리할까요?"
+                description="관리할 서버를 선택하거나, 시루봇을 새로 초대해 주세요."
             >
-                <div className="flex items-center gap-3 glass-panel px-4 py-3 shadow-2xl relative overflow-hidden group">
+                <div className="flex items-center gap-3 bg-surface-1 border border-border-subtle rounded-card px-4 py-3 shadow-sm relative overflow-hidden group">
                     <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     {session?.user?.image ? (
                         <Image src={session.user.image} alt="User avatar" width={40} height={40} className="rounded-full ring-2 ring-primary/20 relative z-10" />
@@ -81,10 +76,23 @@ export default function ServersPage() {
             ) : isLoading ? (
                 <ServersGridSkeleton />
             ) : guilds.length === 0 ? (
-                <section className="space-y-12">
-                    <div className="glass-panel border-dashed border-border/50 p-20 text-center shadow-xl">
-                        <p className="text-xl font-medium text-muted-foreground">관리할 수 있는 서버가 아직 없어요.</p>
-                    </div>
+                <section className="py-12">
+                    <EmptyState
+                        icon={Server}
+                        title="관리할 수 있는 서버가 아직 없어요."
+                        description="시루봇을 서버에 초대하거나, 관리 권한이 있는 서버에서 다시 시도해 주세요."
+                        action={
+                            <a
+                                href={buildInviteUrl({})}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-10 items-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary transition-colors duration-fast hover:bg-primary hover:text-primary-foreground"
+                            >
+                                시루봇 초대하기
+                            </a>
+                        }
+                        className="border-border-subtle"
+                    />
                 </section>
             ) : (
                 <section className="space-y-12">

@@ -6,6 +6,8 @@ import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
+import { startMemoryTidySchedule } from '../../../services/aiChatService.ts';
+import { startOhaasaPrefetchSchedule } from '../../../services/ohaasaTranslate.ts';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
@@ -24,6 +26,16 @@ export class ReadyEvent extends Listener {
 		this.enabled = false;
 
 		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
+
+		// 야간 배치들 — BOT_ACTIVITY 파싱이 던져도 항상 시작되도록 활동 설정보다 먼저
+		// (프로세스 중복 실행 방지를 위해 셰드 0만)
+		const shard = this.container.client.shard;
+		if (!shard || shard.ids.includes(0)) {
+			// nightly pass — 자정 이후 장기 기억(MEMORY.md) 정리
+			startMemoryTidySchedule();
+			// 오하아사 — 매일 KST 06:50 한국어 번역본 프리패치
+			startOhaasaPrefetchSchedule();
+		}
 
 		this.startActivityInterval();
 	}

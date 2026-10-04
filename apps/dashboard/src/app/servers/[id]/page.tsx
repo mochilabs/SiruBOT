@@ -2,7 +2,9 @@ import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
+import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { auth } from "@/lib/auth";
+import { canManage } from "@/lib/guild-permissions";
 
 interface GuildMember {
   nick: string | null;
@@ -51,12 +53,15 @@ export default async function ServerDashboardPage({
     notFound();
   }
 
+  const manageable = await canManage(session.accessToken, id);
+
   return (
     <Container>
       <PageHeader
         title="서버 대시보드"
-        description="이 페이지는 아직 개발 중이에요."
+        description="AI 채팅·음악·채널·임시 음성 등 서버 설정을 한 곳에서 관리해요."
       />
+      <ServerDashboard guildId={id} manageable={manageable} />
     </Container>
   );
 }

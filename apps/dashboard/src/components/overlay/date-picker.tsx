@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 import { Portal, usePopoverCoords } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -126,8 +128,8 @@ export function DatePicker({
 				onClick={() => setOpen(!open)}
 				className={`
 					w-full h-11 px-4 flex items-center justify-between gap-2
-					glass-panel text-sm font-medium
-					transition-all duration-300 cursor-pointer
+					rounded-control border border-border bg-input text-sm font-medium
+					transition-all duration-base cursor-pointer
 					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary/30"}
 					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
 				`}
@@ -136,7 +138,7 @@ export function DatePicker({
 					{value ? formatDate(value) : placeholder}
 				</span>
 				<ChevronDown
-					className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+					className={`h-4 w-4 text-muted-foreground transition-transform duration-fast ${open ? "rotate-180" : ""}`}
 				/>
 			</button>
 
@@ -154,7 +156,7 @@ export function DatePicker({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}
 							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] mt-2 glass-panel p-4 shadow-2xl w-[300px]"
+							className="fixed z-[200] mt-2 w-[300px] rounded-menu border border-border bg-popover p-4 shadow-2xl"
 							style={{
 								top: coords.top,
 								left: coords.left,
@@ -162,25 +164,27 @@ export function DatePicker({
 						>
 							{/* Header */}
 							<div className="flex items-center justify-between mb-4">
-								<button
-									type="button"
+								<Button
+									variant="icon"
+									size="sm"
 									onClick={goToPrevMonth}
-									className="p-1.5 rounded-xl hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									className="border-transparent bg-transparent p-1.5 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
 									aria-label="이전 달"
 								>
 									<ChevronLeft className="h-4 w-4" />
-								</button>
+								</Button>
 								<span className="text-sm font-black tracking-tight text-foreground">
 									{viewYear}년 {MONTHS[viewMonth]}
 								</span>
-								<button
-									type="button"
+								<Button
+									variant="icon"
+									size="sm"
 									onClick={goToNextMonth}
-									className="p-1.5 rounded-xl hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									className="border-transparent bg-transparent p-1.5 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
 									aria-label="다음 달"
 								>
 									<ChevronRight className="h-4 w-4" />
-								</button>
+								</Button>
 							</div>
 
 							{/* Weekday headers */}
@@ -188,7 +192,7 @@ export function DatePicker({
 								{WEEKDAYS.map((d) => (
 									<span
 										key={d}
-										className="text-center text-xs font-black uppercase tracking-widest text-muted-foreground/40 py-1"
+										className="py-1 text-center text-xs font-medium text-muted-foreground"
 									>
 										{d}
 									</span>
@@ -219,7 +223,7 @@ export function DatePicker({
 												${isDisabled ? "opacity-30 pointer-events-none" : "hover:bg-accent/50"}
 												${isSelected ? "bg-primary text-white font-bold shadow-lg shadow-primary/20" : ""}
 												${isToday && !isSelected ? "ring-1 ring-primary/40 text-primary font-bold" : ""}
-												${isSunday && !isSelected ? "text-rose-500" : ""}
+												${isSunday && !isSelected ? "text-destructive" : ""}
 												${!isSelected && !isToday && !isSunday ? "text-foreground" : ""}
 											`}
 										>
@@ -231,18 +235,19 @@ export function DatePicker({
 
 							{/* Today shortcut */}
 							<div className="mt-3 pt-3 border-t border-border/40 flex justify-center">
-								<button
-									type="button"
+								<Button
+									variant="ghost"
+									size="sm"
 									onClick={() => {
 										setViewYear(today.getFullYear());
 										setViewMonth(today.getMonth());
 										onChange?.(today);
 										setOpen(false);
 									}}
-									className="text-xs font-bold text-primary hover:text-primary/80 transition-colors cursor-pointer"
+									className="h-auto px-0 text-xs font-bold text-primary hover:bg-transparent hover:text-primary/80"
 								>
 									오늘로 이동
-								</button>
+								</Button>
 							</div>
 						</m.div>
 					</Portal>

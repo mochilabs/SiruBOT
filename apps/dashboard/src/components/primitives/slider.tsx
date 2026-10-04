@@ -160,7 +160,7 @@ export function Slider({
 						absolute top-1/2 -translate-y-1/2 -translate-x-1/2
 						h-5 w-5 rounded-full bg-white border-2 border-primary
 						shadow-lg shadow-primary/20
-						transition-shadow duration-200
+						transition-shadow duration-fast
 						${disabled ? "" : "hover:shadow-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"}
 					`}
 					style={{ left: `${percent}%` }}

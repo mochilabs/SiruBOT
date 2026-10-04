@@ -4,6 +4,8 @@ import { useCallback, useEffect } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { X } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+
 import { Portal } from "./portal";
 
 /* ─────────────────────────── types ─────────────────────────── */
@@ -106,14 +108,15 @@ export function Drawer({
 									<h2 className="text-lg font-black tracking-tighter text-foreground">
 										{title}
 									</h2>
-									<button
-										type="button"
+									<Button
+										variant="icon"
+										size="md"
 										onClick={onClose}
-										className="p-2 rounded-xl hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+										className="border-transparent bg-transparent p-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
 										aria-label="닫기"
 									>
 										<X className="h-5 w-5" />
-									</button>
+									</Button>
 								</div>
 							)}
 

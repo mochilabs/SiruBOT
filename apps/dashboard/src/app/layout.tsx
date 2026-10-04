@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
+import { BackgroundShapes } from "@/components/background-shapes";
 import { Footer } from "@/components/footer";
-import { InteractiveGlow } from "@/components/interactive-glow";
 import { Navbar } from "@/components/navbar";
 import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -10,7 +10,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import "./globals.css";
 
 export const viewport: Viewport = {
-	themeColor: "#FFDADA"
+	themeColor: "#1a0e12"
 }
 
 export const metadata: Metadata = {
@@ -58,9 +58,9 @@ export default function RootLayout({
 		<html lang="ko" className={pretendard.variable} suppressHydrationWarning>
 			<body className={pretendard.className}>
 				<Providers>
-					<div className="min-h-screen flex flex-col relative overflow-x-clip">
-						<InteractiveGlow />
-						<Navbar />
+				<div className="min-h-screen flex flex-col relative overflow-x-clip">
+					<BackgroundShapes />
+					<Navbar />
 						<div className="flex-1 relative z-10">
 							{children}
 						</div>

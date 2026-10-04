@@ -4,6 +4,9 @@ import { createContext, useContext, useState } from "react";
 import { m } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { Button } from "@/components/primitives/button";
+import { SectionLabel } from "@/components/primitives/section-label";
+
 /* ─────────────────────────── types ─────────────────────────── */
 
 interface SidebarContextValue {
@@ -80,11 +83,7 @@ export function SidebarGroup({ label, children }: SidebarGroupProps) {
 
 	return (
 		<div className="space-y-1">
-			{label && !collapsed && (
-				<p className="px-3 py-1.5 text-xs font-black uppercase tracking-widest text-muted-foreground/40">
-					{label}
-				</p>
-			)}
+			{label && !collapsed && <SectionLabel as="p">{label}</SectionLabel>}
 			{label && collapsed && (
 				<div className="mx-auto my-2 h-px w-6 bg-border/40" />
 			)}
@@ -109,7 +108,7 @@ export function SidebarItem({
 			onClick={onClick}
 			title={collapsed ? label : undefined}
 			className={`
-				w-full flex items-center gap-3 rounded-xl transition-all duration-200 cursor-pointer relative
+				w-full flex items-center gap-3 rounded-xl transition-all duration-fast cursor-pointer relative
 				${collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"}
 				${active
 					? "bg-primary/10 text-primary font-bold"
@@ -151,14 +150,15 @@ export function SidebarToggle() {
 	const { collapsed, toggle } = useSidebar();
 
 	return (
-		<button
-			type="button"
+		<Button
+			variant="icon"
+			size="sm"
 			onClick={toggle}
-			className="p-2 rounded-xl hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+			className="border-transparent bg-transparent p-2 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
 			aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
 		>
 			{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-		</button>
+		</Button>
 	);
 }
 

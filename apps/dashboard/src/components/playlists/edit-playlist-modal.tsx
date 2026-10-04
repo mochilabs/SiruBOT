@@ -1,7 +1,9 @@
 "use client";
 
-import { Modal, ModalBody, ModalFooter,ModalHeader } from "@/components/overlay/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/overlay/modal";
 import { Button } from "@/components/primitives/button";
+import { Field } from "@/components/primitives/field";
+import { Input, Textarea } from "@/components/primitives/input";
 
 interface EditPlaylistModalProps {
 	open: boolean;
@@ -29,27 +31,24 @@ export function EditPlaylistModal({
 			<ModalHeader onClose={onClose}>플레이리스트 정보 수정</ModalHeader>
 			<ModalBody>
 				<div className="space-y-4 py-2">
-					<div className="space-y-1.5">
-						<label htmlFor="pe-name" className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">플레이리스트 이름</label>
-						<input
+					<Field htmlFor="pe-name" label="플레이리스트 이름">
+						<Input
 							id="pe-name"
 							type="text"
 							value={nameInput}
 							onChange={(e) => onNameChange(e.target.value)}
-							className="w-full px-4 py-2.5 rounded-xl border border-border/80 bg-muted/20 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
 							maxLength={50}
 						/>
-					</div>
-					<div className="space-y-1.5">
-						<label htmlFor="pe-desc" className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">설명</label>
-						<textarea
+					</Field>
+					<Field htmlFor="pe-desc" label="설명">
+						<Textarea
 							id="pe-desc"
 							value={descInput}
 							onChange={(e) => onDescChange(e.target.value)}
-							className="w-full px-4 py-2.5 rounded-xl border border-border/80 bg-muted/20 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[80px] text-foreground resize-none"
 							maxLength={200}
+							className="min-h-[80px] resize-none"
 						/>
-					</div>
+					</Field>
 				</div>
 			</ModalBody>
 			<ModalFooter>
