@@ -56,17 +56,13 @@ function payload(components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilde
 
 /** 중지 버튼 행 — 컨테이너 없이 TextDisplay 바로 아래 최상단 ActionRow로 붙여요 */
 function runningStopRow(cancelKey: string): ActionRowBuilder<ButtonBuilder> {
-	const stopButton = new ButtonBuilder()
-		.setCustomId(`${CHAT_CANCEL_PREFIX}${cancelKey}`)
-		.setLabel('중지')
-		.setStyle(ButtonStyle.Danger)
-		.setEmoji('⏹️');
+	const stopButton = new ButtonBuilder().setCustomId(`${CHAT_CANCEL_PREFIX}${cancelKey}`).setLabel('중지').setStyle(ButtonStyle.Secondary);
 	return new ActionRowBuilder<ButtonBuilder>().addComponents(stopButton);
 }
 
 /** 스트리밍 중 본문 — 서두가 비면 생각 중 표시. 커서로 타이핑 감각을 내고 cancelKey를 주면 중지 버튼을 붙여요 */
 export function livePayload(text: string, cancelKey?: string): ChatPayload {
-	let body = text.trim() || '⏳ 생각하는 중...';
+	let body = text.trim() || '-# 시루가 생각 중..';
 	// TextDisplay 상한(4000자)을 넘으면 라이브 화면은 첫 조각만 보여요 (최종본은 finalPayload가 청크 분할)
 	if (body.length > 3900) body = splitTextForDisplay(body)[0] ?? body.slice(0, 3_900);
 	const components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilder>)[] = [new TextDisplayBuilder().setContent(`${body}${TYPING_CURSOR}`)];
@@ -77,7 +73,7 @@ export function livePayload(text: string, cancelKey?: string): ChatPayload {
 /** 도구/작업 진행 상태 한 줄 — 커서를 붙여 진행 중임을 보여주고 cancelKey를 주면 중지 버튼을 붙여요 */
 export function statusPayload(status: string, cancelKey?: string): ChatPayload {
 	const components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilder>)[] = [
-		new TextDisplayBuilder().setContent(`-# ⏳ ${status}${TYPING_CURSOR}`)
+		new TextDisplayBuilder().setContent(`-# ${status}${TYPING_CURSOR}`)
 	];
 	if (cancelKey) components.push(runningStopRow(cancelKey));
 	return payload(components);
