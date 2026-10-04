@@ -111,7 +111,9 @@ const musicSkipTool: AiTool = {
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		if (!player.queue.current) throw new Error('건너뛸 곡이 없어요.');
-		await player.skip();
+		// /스킵 커맨드와 동일한 경로 — 스킵 전 mixer 예열 슬롯을 비워야
+		// stale 슬롯 관망(trackEnd consumePreloaded)으로 무음/공백이 생기지 않는다.
+		await container.mixerService.skip(player);
 		const next = player.queue.current;
 		return JSON.stringify({ status: 'ok', now_playing: next ? trackInfo(next) : null });
 	}

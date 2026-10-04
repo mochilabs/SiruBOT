@@ -1,6 +1,5 @@
 import {
 	createContainer,
-	emojiProgressBar,
 	formatTime,
 	formatTimeToKorean,
 	isDev,
@@ -80,34 +79,23 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		.setEmoji('⏭️')
 		.setDisabled(player.queue.tracks.length === 0);
 
-	const timeLabel = current?.info.isStream
-		? 'LIVE'
-		: `${formatTime((player.position ?? 0) / 1000)} / ${formatTime((current?.info.duration ?? 0) / 1000)}`;
-
-	const timeButton = new ButtonBuilder().setCustomId(wrapPrefix('time')).setLabel(timeLabel).setStyle(ButtonStyle.Secondary);
-
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
 			player.repeatMode === 'off'
 				? wrapPrefix('repeat:queue')
-				: player.repeatMode === 'queue'
+				: player.repeatMode === 'track'
 					? wrapPrefix('repeat:track')
 					: wrapPrefix('repeat:off')
 		)
 		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
-	// '대기열 보기' 버튼: 시간 갱신 버튼과 같은 정보성 행에 합친다(대기열이 있을 때만 노출).
-	// 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다. customId는 행 위치와 무관하다.
-	const queueShowButton = queueCount > 0 ? new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄') : null;
+	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
+	// 컨트롤 버튼 5개(prev·pause·next·repeat·대기열)를 한 줄에 배치한다.
+	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄');
 
-	// 컨트롤 버튼이 prev·next 포함 최대 6개로 늘어 ActionRow 상한(행당 5개)을 넘어 2행으로 분리했다.
-	// 1행 = 재생 제어(prev·pause·next·repeat), 2행 = 정보성(time·대기열) — 높이 증가는 1행뿐이다.
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
-	);
-	const infoActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[timeButton, ...(queueShowButton ? [queueShowButton] : [])].map((e) => e.setStyle(ButtonStyle.Secondary))
+		[prevButton, pauseButton, nextButton, repeatButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
 
 	if (current?.info.artworkUrl) {
@@ -119,7 +107,7 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
 	}
 
-	containerComponent.addActionRowComponents(controlActionRow).addActionRowComponents(infoActionRow);
+	containerComponent.addActionRowComponents(controlActionRow);
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
@@ -150,28 +138,29 @@ export function buildTrackDisplay(player: Player, track: Track | null, showTimes
 		return contents;
 	}
 
-	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
-
 	contents.push(`-# 🎵 <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
 	contents.push(`### **[${removeEmojis(track.info.title)}](${track.info.uri})**`);
 
-	if (track.info.isStream) {
-		contents.push(`[${durationText}][실시간 스트리밍]`);
-	} else {
-		const progressBar = emojiProgressBar(player.position / track.info.duration);
-		contents.push(showTimestamp ? `(${formatTime(player.position / 1000)} / ${durationText}) ${progressBar}` : progressBar);
-	}
-
+	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
 
-	const requesterInfo = [];
-	requesterInfo.push(`-# 아티스트: ${track.info.author}`);
+	// 아티스트와 신청자는 요청대로 각각 별도 줄로 분리한다.
+	contents.push(`-# 아티스트: ${track.info.author}`);
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	if (requesterId) {
-		requesterInfo.push(requesterId === 'related_track' ? `추천 곡 ${EMOJI_SPARKLE}` : `신청자: <@${requesterId}>`);
+		contents.push(requesterId === 'related_track' ? `-# 추천 곡 ${EMOJI_SPARKLE}` : `-# 신청자: <@${requesterId}>`);
 	}
-	contents.push(requesterInfo.join(' | '));
+
+	// 길이 표기 — 프로그레스바는 제거하고 (지금시간 / 길이) 짧은 줄만 남긴다.
+	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
+	if (track.info.isStream) {
+		contents.push(`(${durationText}) 실시간 스트리밍`);
+	} else if (showTimestamp) {
+		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText})`);
+	} else {
+		contents.push(`-# (${durationText})`);
+	}
 
 	return contents;
 }

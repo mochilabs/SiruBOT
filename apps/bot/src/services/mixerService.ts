@@ -160,9 +160,21 @@ export class MixerService {
 	}
 
 	private async clearNextNow(player: Player): Promise<void> {
-		this.preloaded.delete(String(player.guildId));
 		const gid = encodeURIComponent(String(player.guildId));
-		await this.mixerCall(player, `/mixer/queue/next?guildId=${gid}`, { method: 'DELETE' });
+		// REST가 성공해야 봇 Set도 정리한다 — 실패 시 서버 슬롯이 남는데 Set만 비우면
+		// trackEnd의 consumePreloaded()=false로 클라이언트 진행과 서버 자동 진행이
+		// 병행돼 두 곡이 연달아 소비된다(trackHandler 참고).
+		try {
+			await this.mixerCall(player, `/mixer/queue/next?guildId=${gid}`, { method: 'DELETE' });
+		} catch (error) {
+			// 404는 슬롯이 이미 없다는 뜻이므로 정리된 것으로 본다.
+			if (error instanceof MixerRequestError && error.status === 404) {
+				this.preloaded.delete(String(player.guildId));
+				return;
+			}
+			throw error;
+		}
+		this.preloaded.delete(String(player.guildId));
 	}
 
 	private async enqueueSlotOperation<T>(guildId: string, operation: () => Promise<T>): Promise<T> {
