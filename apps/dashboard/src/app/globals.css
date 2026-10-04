@@ -40,7 +40,6 @@
 	--discord-bg: #ebedef;
 
 }
-
 .dark {
 	--background: #1a0e12;
 	--foreground: #fce7f3;
@@ -63,7 +62,7 @@
 
 	--discord-embed: #2b2d31;
 	--discord-text: #dbdee1;
-	--discord-text-muted: #949ba4;
+	--discord-text-muted: #a3a9b2;
 	--discord-btn-active: #4e5058;
 	--discord-btn-hover: #6d6f78;
 	--discord-bg: #35373c;

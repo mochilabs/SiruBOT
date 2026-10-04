@@ -123,8 +123,8 @@ export function HeroSection() {
 							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">45개</dd>
 						</div>
 						<div>
-							<dt className="text-xs font-medium text-muted-foreground">음원 플랫폼</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">2종</dd>
+							<dt className="text-xs font-medium text-muted-foreground">기능 카테고리</dt>
+							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">4종</dd>
 						</div>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>

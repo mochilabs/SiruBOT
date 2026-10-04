@@ -55,28 +55,30 @@ export function Footer() {
 					</div>
 
 					{/* 링크 그룹 */}
-					{linkGroups.map((group) => (
-						<nav key={group.title} aria-label={group.title} className="space-y-4">
-							<h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{group.title}</h3>
-							<ul className="space-y-3">
-								{group.links.map((link) =>
-									link.internal ? (
-										<li key={link.label}>
-											<Link href={link.href} className={footerLink}>
-												{link.label}
-											</Link>
-										</li>
-									) : link.href ? (
-										<li key={link.label}>
-											<a href={link.href} target="_blank" rel="noopener noreferrer" className={footerLink}>
-												{link.label}
-											</a>
-										</li>
-									) : null,
-								)}
-							</ul>
-						</nav>
-					))}
+					<div className="grid grid-cols-3 gap-4 sm:gap-6 md:col-span-3">
+						{linkGroups.map((group) => (
+							<nav key={group.title} aria-label={group.title} className="space-y-3 md:space-y-4">
+								<h3 className="text-2xs font-black uppercase tracking-widest text-muted-foreground/60 md:text-xs">{group.title}</h3>
+								<ul className="space-y-2 md:space-y-3">
+									{group.links.map((link) =>
+										link.internal ? (
+											<li key={link.label}>
+												<Link href={link.href} className={footerLink}>
+													{link.label}
+												</Link>
+											</li>
+										) : link.href ? (
+											<li key={link.label}>
+												<a href={link.href} target="_blank" rel="noopener noreferrer" className={footerLink}>
+													{link.label}
+												</a>
+											</li>
+										) : null,
+									)}
+								</ul>
+							</nav>
+						))}
+					</div>
 				</div>
 
 				<div className="mt-12 flex flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">

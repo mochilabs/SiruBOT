@@ -358,11 +358,11 @@ export function FeaturesSection() {
 				transition={{ staggerChildren: 0.08 }}
 			>
 				{/* 1. AI 채팅 — 가장 중요 */}
-				<m.div variants={sectionVariants} className="lg:col-span-2">
-					<Card padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
-						<div className="flex min-w-0 flex-col gap-4">
-							<div className="flex items-center gap-2.5">
-								<Bot size={18} className="text-primary" aria-hidden />
+			<m.div variants={sectionVariants} className="lg:col-span-2 min-w-0">
+				<Card padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
+					<div className="flex min-w-0 flex-col gap-4">
+						<div className="flex items-center gap-2.5">
+							<Bot size={18} className="text-primary" aria-hidden />
 								<SectionLabel as="p" className="px-0 py-0 text-primary">
 									AI 채팅
 								</SectionLabel>
@@ -398,7 +398,7 @@ export function FeaturesSection() {
 			</m.div>
 
 			{/* 2. 명령어 소개 — 음악 재생 */}
-			<m.div variants={sectionVariants} className="lg:col-span-2">
+			<m.div variants={sectionVariants} className="lg:col-span-2 min-w-0">
 				<Card variant="raised" padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
@@ -475,7 +475,7 @@ export function FeaturesSection() {
 						</div>
 						{/* Separator + Footer — 실제 봇의 buildFooterSegments와 동일 */}
 						<div className="flex items-center justify-between border-t border-discord-btn-active pt-2">
-							<p className="text-2xs text-discord-text-muted">📡 재생 서버: main | 🔊 볼륨: 100%</p>
+							<p className="text-2xs text-discord-text-muted">📡 재생 서버: 시루-노드-01 | 🔊 볼륨: 100%</p>
 							<span className="rounded-sm bg-discord-primary/10 px-1.5 py-1 text-2xs font-semibold text-discord-light">0:43 / 4:40</span>
 						</div>
 					</div>
@@ -483,7 +483,7 @@ export function FeaturesSection() {
 			</m.div>
 
 			{/* 3. 내 음악 보관함 */}
-			<m.div variants={sectionVariants} className="flex flex-col">
+			<m.div variants={sectionVariants} className="flex flex-col min-w-0">
 				<Card padding="lg" className="h-full gap-5">
 					<div className="flex items-center gap-2.5">
 						<ListMusic size={18} className="text-primary" aria-hidden />
@@ -525,11 +525,11 @@ export function FeaturesSection() {
 										index === 0 ? "bg-primary/8" : "hover:bg-surface-1",
 									)}
 								>
-									<span className="w-3 shrink-0 text-2xs tabular-nums text-muted-foreground/70">{index + 1}</span>
+									<span className="w-3 shrink-0 text-2xs tabular-nums text-muted-foreground">{index + 1}</span>
 									<div className="min-w-0 flex-1">
 										<p className="truncate font-medium text-foreground">{track.title}</p>
 									</div>
-									<span className="shrink-0 text-2xs text-muted-foreground/70">{track.artist}</span>
+									<span className="shrink-0 text-2xs text-muted-foreground">{track.artist}</span>
 									{index === 0 ? (
 										<span className="flex shrink-0 items-end gap-[2px]" aria-hidden>
 											{[8, 12, 6, 10].map((h, i) => (
@@ -542,7 +542,7 @@ export function FeaturesSection() {
 											))}
 										</span>
 									) : (
-										<span className="shrink-0 text-2xs tabular-nums text-muted-foreground/70">{track.duration}</span>
+										<span className="shrink-0 text-2xs tabular-nums text-muted-foreground">{track.duration}</span>
 									)}
 								</div>
 							))}
@@ -556,7 +556,7 @@ export function FeaturesSection() {
 			</m.div>
 
 				{/* 4. 서버 대시보드 */}
-				<m.div variants={sectionVariants} className="flex flex-col">
+				<m.div variants={sectionVariants} className="flex flex-col min-w-0">
 					<Card padding="lg" className="h-full gap-5">
 						<div className="flex items-center gap-2.5">
 							<LayoutDashboard size={18} className="text-primary" aria-hidden />
@@ -571,7 +571,7 @@ export function FeaturesSection() {
 
 						{/* 설정 카드 — 좌측 패널 탭 + 우측 토글 애니메이션 */}
 						<div className="flex flex-1 flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row">
-							<div className="flex shrink-0 gap-2 overflow-x-auto sm:flex-col sm:overflow-visible" role="tablist" aria-label="설정 예시">
+							<div className="flex min-w-0 shrink-0 gap-2 overflow-x-auto sm:flex-col sm:overflow-visible" role="tablist" aria-label="설정 예시">
 								{dashboardSettingSlides.map((slide, index) => (
 									<button
 										key={slide.label}
@@ -620,33 +620,23 @@ export function FeaturesSection() {
 
 			{/* 마지막 CTA — 준비되셨나요? */}
 			<m.div
-				className="relative overflow-hidden rounded-card border border-border-subtle bg-surface-2 px-6 py-10 text-center sm:px-8 sm:py-14"
+				className="relative overflow-hidden rounded-card border border-primary/25 bg-gradient-to-br from-primary/15 via-surface-2 to-secondary/10 px-6 py-10 text-center sm:px-8 sm:py-14"
 				initial="hidden"
 				whileInView="visible"
 				viewport={{ once: true, margin: "-60px" }}
 				variants={sectionVariants}
 			>
-				{/* 배경 효과 — 중앙에서 퍼지는 브랜드 라디얼 + 얇은 링 2개 */}
+				{/* 배경 효과 — 중앙에서 퍼지는 브랜드 라디얼 */}
 				<div
 					aria-hidden
-					className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/8 blur-3xl"
-				/>
-				<m.div
-					aria-hidden
-					className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full border border-primary/15"
-					animate={{ rotate: 360 }}
-					transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-				/>
-				<m.div
-					aria-hidden
-					className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full border border-secondary/15"
-					animate={{ rotate: -360 }}
-					transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
+					className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/12 blur-3xl"
 				/>
 				<div className="relative mx-auto max-w-xl space-y-4">
 					<h2 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">준비되셨나요?</h2>
 					<p className="text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
-						지금 시루봇을 서버에 초대하면 음악·AI 채팅·서버 관리가 바로 시작돼요.
+						지금 시루봇을 서버에 초대하면
+						<br className="sm:hidden" />
+						음악·AI 채팅·서버 관리가 바로 시작돼요.
 					</p>
 					<div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
 						<Link
