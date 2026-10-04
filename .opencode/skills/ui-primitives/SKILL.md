@@ -258,6 +258,17 @@ import Container from "@/components/container";           // max-w-7xl 페이지
   `toast.success/error/info/warning(message, description?)` (갤러리 예시 기준 2인자도 허용)
 - Notification: `NotificationStack items={NotificationItem[]} onDismiss={(id) => void}`
 
+## 랜딩 페이지 목업 패턴 (primitives 아님 — 규약만 있음)
+
+`features-section.tsx` / `hero-section.tsx`의 "Discord처럼 보이는 프레임"은 primitives로 승격하지 않고,
+**discord-patterns 스킬의 §2.5 "Discord 채널 목업 프레임"** 클래스 조합 규약을 따라갑니다.
+
+- 메시지/타이핑 목업은 항상 **상단 정렬** (`items-center`, `items-end`로 중앙·하단 정렬 금지)
+- 커서 애니메이션(`TypingText`/`StreamingTypeText`)은 `-ml-px`로 이전 글자에 거의 붙여서, 다음 단어가
+  밀려나 정렬이 깨지는 일이 없게 한다
+- 카드 안에 또 `bg-discord-embed` 카드를 넣지 않는다 — 부가 패널은 `bg-surface-2`/`rounded-control`
+  등 대시보드 서피스 토큰 사용 (Discord 목업 프레임 한정으로만 `--discord-*` 배경 사용)
+
 ## 이렇게 쓰세요
 
 ```tsx

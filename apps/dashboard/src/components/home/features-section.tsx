@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, m } from "framer-motion";
-import { Bot, CloudSun, Gamepad2, LayoutDashboard, ListMusic, Music2, Pause, Repeat, SkipForward, SlidersHorizontal } from "lucide-react";
+import { Bot, CloudSun, Gamepad2, LayoutDashboard, ListMusic, Music2, Pause, Play, Repeat, SkipForward } from "lucide-react";
 
 import { buttonVariants } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
@@ -21,37 +21,40 @@ const TRACKS = [
 		title: 'I wish I had been midnight. "Justice" MV',
 		artist: "ずっと真夜中でいいのに。",
 		thumbnail: "https://i.ytimg.com/vi/7kUbX4DoZoc/hqdefault.jpg",
+		duration: "4:40",
 	},
-	{ title: "Gurenge", artist: "LiSA", thumbnail: "https://i.ytimg.com/vi/MpYy6wwqxoo/hqdefault.jpg" },
-	{ title: "아이돌 (Idol)", artist: "YOASOBI", thumbnail: "https://i.ytimg.com/vi/ZRtdQ81jPUQ/hqdefault.jpg" },
+	{ title: "Gurenge", artist: "LiSA", thumbnail: "https://i.ytimg.com/vi/MpYy6wwqxoo/hqdefault.jpg", duration: "3:58" },
+	{ title: "아이돌 (Idol)", artist: "YOASOBI", thumbnail: "https://i.ytimg.com/vi/ZRtdQ81jPUQ/hqdefault.jpg", duration: "3:33" },
+	{ title: "Night Dancer", artist: "imase", thumbnail: "https://i.ytimg.com/vi/kagoEGKHZvU/hqdefault.jpg", duration: "3:30" },
+	{ title: "Blinding Lights", artist: "The Weeknd", thumbnail: "https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg", duration: "3:22" },
 ] as const;
 
 const COMMAND_TOKEN = "rounded-sm bg-muted px-1.5 py-0.5 text-2xs font-bold text-foreground/70";
 
 const utilities = [
 	{
-		icon: SlidersHorizontal,
-		title: "재생 도구",
-		desc: "/필터 · /가사 · /믹서로 재생을 다듬어요.",
-		prompt: "이 노래 가사 보여줘",
-		status: "가사를 찾는 중",
-		reply: "2절 가사를 찾았어요. 화면에 이어서 띄워드릴게요.",
+		icon: Music2,
+		title: "음악 재생",
+		desc: "\"노래 틀어줘\" 한마디로 대기열에 추가해요.",
+		prompt: "즛토마요 노래 틀어줘",
+		status: "시루가 음악을 찾는 중..",
+		reply: "즛토마요 노래를 대기열에 추가했어요. 지금 음성 채널에서 재생 중이에요.",
 	},
 	{
 		icon: CloudSun,
 		title: "생활 정보",
-		desc: "/날씨 · /택배로 채널에서 바로 확인해요.",
+		desc: "/날씨 · /택배 · 오늘의 운세까지 챙겨드려요.",
 		prompt: "내일 아침 비 와?",
-		status: "날씨를 확인하는 중",
-		reply: "내일 아침까지 비 온 뒤 낮에 갠다네요. 우산 챙겨 나가세요.",
+		status: "시루가 날씨를 확인하는 중..",
+		reply: "내일 서울은 이슬비 소식이 있고, 강수확률이 92%로 매우 높아요!",
 	},
 	{
 		icon: Gamepad2,
-		title: "서버 게임",
-		desc: "/가위바위보 · /주사위 · /운세",
-		prompt: "가위바위보 한판 할래?",
-		status: "게임을 준비하는 중",
-		reply: "저는 바위! 아쉽네요, 다음엔 이길 수 있을 거예요.",
+		title: "장기 기억",
+		desc: "시루가 사용자님의 취향을 기억해요.",
+		prompt: "난 햄버거가 좋아 기억해줘",
+		status: "시루가 메모리를 업데이트 하는중",
+		reply: "알겠어! 햄버거 좋아하는구나? 딱 기억해둘게! 🍔",
 	},
 ];
 
@@ -60,7 +63,7 @@ const sectionVariants = {
 	visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
 } as const;
 
-const settingRow = "flex min-w-0 items-center justify-between gap-3 rounded-control bg-surface-2 px-3 py-2";
+const settingRow = "flex min-w-0 items-center justify-between gap-3 rounded-control bg-surface-1 px-3 py-2";
 const settingName = "truncate text-sm font-medium text-foreground";
 
 /**
@@ -106,11 +109,11 @@ const dashboardSettingSlides: SettingToggle[] = [
 		],
 	},
 	{
-		label: "오디오 엔진",
+		label: "오디오 필터",
 		rows: [
+			{ name: "프리셋", from: "표준", to: "베이스부스트" },
 			{ name: "갭리스 재생", from: "끄기", to: "켜기" },
 			{ name: "크로스페이드", from: "끄기", to: "4초" },
-			{ name: "음질", from: "표준", to: "무손실" },
 		],
 	},
 ];
@@ -121,15 +124,16 @@ function SettingToggleRow({ name, from, to, index }: { name: string; from: strin
 		<div className={settingRow}>
 			<span className={settingName}>{name}</span>
 			<span className="relative shrink-0 text-xs font-semibold">
-				{/* 새 값이 폭을 결정 — from은 위로 슝 사라짐 */}
+				{/* 새 값이 폭을 결정 — from은 위로 슝 사라짐 (등장 시엔 from 노출 없이 바로 from → to 전환) */}
 				<m.span className="text-primary" initial={{ y: 0, opacity: 1 }}>
 					{to}
 				</m.span>
 				<m.span
-					className="absolute right-0 top-0 text-muted-foreground/60"
-					initial={{ y: 0, opacity: 1 }}
+					className="absolute inset-0 text-right text-muted-foreground/60"
+					initial={{ y: 0, opacity: 0 }}
 					animate={{ y: -12, opacity: 0 }}
 					transition={{ delay: 0.4 + index * 0.3, duration: 0.35, ease: "easeOut" }}
+					style={{ opacity: 0 }}
 				>
 					{from}
 				</m.span>
@@ -154,36 +158,55 @@ function ChatPreview() {
 	const [activeTool, setActiveTool] = useState(0);
 	/** 0: 사용자 타이핑 중, 1: 봇 생각 중, 2: 답변 타이핑 */
 	const [phase, setPhase] = useState(0);
+	/** 다음 도구로 넘어가기 전 대기용 타이머 — 사용자가 탭 바꾸면 취소해야 함 */
+	const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const current = utilities[activeTool];
 
-	// 시퀀스: 사용자 타이핑(≈2s) → 생각 중(1.4s) → 답변(≈3s) → 다음 도구
+	const clearAdvanceTimer = () => {
+		if (advanceTimerRef.current) {
+			clearTimeout(advanceTimerRef.current);
+			advanceTimerRef.current = null;
+		}
+	};
+
+	useEffect(() => clearAdvanceTimer, []);
+
+	// 시퀀스: 사용자 타이핑 완료 → 생각 중 → 답변 타이핑 완료 → 다음 도구 (타이핑 종료 이벤트 기반)
 	useEffect(() => {
 		if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			setPhase(2);
 			return undefined;
 		}
-		let timer: ReturnType<typeof setTimeout>;
 		if (phase === 0) {
-			timer = setTimeout(() => setPhase(1), 2100);
-		} else if (phase === 1) {
-			timer = setTimeout(() => setPhase(2), 1400);
-		} else {
-			timer = setTimeout(() => {
-				setActiveTool((prev) => (prev + 1) % utilities.length);
-				setPhase(0);
-			}, 4200);
+			const timer = setTimeout(() => setPhase(1), 2100);
+			return () => clearTimeout(timer);
 		}
-		return () => clearTimeout(timer);
+		if (phase === 1) {
+			// 생각 중 표시 후 답변 타이핑으로 전환
+			const timer = setTimeout(() => setPhase(2), 1200);
+			return () => clearTimeout(timer);
+		}
+		return undefined;
 	}, [phase, activeTool]);
 
+	const advanceTool = () => {
+		// 답변이 다 쳐지고 나서 몇 초간 읽을 시간을 준 뒤 다음 도구로 넘어가요
+		clearAdvanceTimer();
+		advanceTimerRef.current = setTimeout(() => {
+			setActiveTool((prev) => (prev + 1) % utilities.length);
+			setPhase(0);
+		}, 2400);
+	};
+
 	const selectTool = (index: number) => {
+		clearAdvanceTimer();
 		setActiveTool(index);
 		setPhase(0);
 	};
 
 	return (
-		<div className="flex flex-col gap-3 rounded-card border border-border-subtle bg-discord-embed p-3 sm:p-4">
+		<div className="flex flex-col gap-3 p-3 sm:p-4">
 			{/* 도구 인디케이터 */}
 			<div className="flex items-center justify-between gap-2" role="tablist" aria-label="도구 예시">
 				<p className="text-2xs font-semibold uppercase tracking-widest text-discord-text-muted">도구 예시</p>
@@ -209,7 +232,7 @@ function ChatPreview() {
 				</div>
 			</div>
 
-			<div className="min-h-[150px]">
+			<div className="min-h-[150px] flex-1">
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={current.title}
@@ -275,7 +298,7 @@ function ChatPreview() {
 													{current.status} — 완료
 												</p>
 												<p className="text-sm leading-relaxed text-discord-text">
-													<StreamingTypeText key={`reply-${current.title}`} text={current.reply} speed={40} />
+													<StreamingTypeText key={`reply-${current.title}`} text={current.reply} speed={40} onComplete={advanceTool} />
 												</p>
 											</m.div>
 										)}
@@ -316,7 +339,7 @@ export function FeaturesSection() {
 					viewport={{ once: true, margin: "-80px" }}
 					variants={sectionVariants}
 				>
-					<SectionLabel as="p" className="px-0">
+					<SectionLabel as="p" className="px-0 py-0">
 						시루봇으로 할 수 있는 일
 					</SectionLabel>
 					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
@@ -337,16 +360,16 @@ export function FeaturesSection() {
 				{/* 1. AI 채팅 — 가장 중요 */}
 				<m.div variants={sectionVariants} className="lg:col-span-2">
 					<Card padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
-						<div className="flex min-w-0 flex-col justify-center gap-4">
+						<div className="flex min-w-0 flex-col gap-4">
 							<div className="flex items-center gap-2.5">
 								<Bot size={18} className="text-primary" aria-hidden />
-								<SectionLabel as="p" className="px-0 text-primary">
+								<SectionLabel as="p" className="px-0 py-0 text-primary">
 									AI 채팅
 								</SectionLabel>
 							</div>
-							<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">자연어로 도구를 불러요.</h3>
+							<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">명령어 대신 채팅으로 착.</h3>
 							<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
-								명령어를 외우지 않아도 돼요. 멘션으로 말 걸면 시루가 날씨·검색·음악 제어 같은 도구를 직접 골라 쓰고, 같은 채널에선 대화도 기억해요.
+								명령어를 외우지 않아도 돼요. 멘션으로 말 걸면 시루가 날씨·검색·음악 제어 같은 도구를 직접 골라 써요.
 							</p>
 							<div className="grid gap-4 border-t border-border-subtle pt-4 sm:grid-cols-3">
 								{utilities.map((utility) => (
@@ -360,124 +383,184 @@ export function FeaturesSection() {
 								))}
 							</div>
 						</div>
+					<div className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-discord-embed">
+						<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
+							<Bot size={14} className="text-discord-text-muted" aria-hidden />
+							<span className="text-xs font-semibold text-discord-text">ai-라운지</span>
+							<span className="ml-auto text-2xs text-discord-text-muted">시루 · 멘션 응답</span>
+						</div>
 						<ChatPreview />
-					</Card>
-				</m.div>
+						<p className="border-t border-discord-btn-active px-4 py-2 text-2xs text-discord-text-muted">
+							@시루 멘션으로 말 걸면 도구를 골라 써요.
+						</p>
+					</div>
+				</Card>
+			</m.div>
 
-				{/* 2. 명령어 소개 — 음악 재생 */}
-				<m.div variants={sectionVariants} className="lg:col-span-2">
-					<Card variant="raised" padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
-						<div className="flex min-w-0 flex-col justify-center gap-4">
-							<div className="flex items-center gap-2.5">
-								<Music2 size={18} className="text-primary" aria-hidden />
-								<SectionLabel as="p" className="px-0 text-primary">
-									음악 재생
-								</SectionLabel>
-							</div>
-							<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">원하는 곡을 바로 재생해요.</h3>
-							<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
-								/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.
-							</p>
-							<ul className="flex flex-wrap gap-2">
-								{["/재생", "/검색", "/현재곡", "/대기열"].map((command) => (
-									<li key={command} className={COMMAND_TOKEN}>
-										{command}
-									</li>
-								))}
-							</ul>
-						</div>
-						<div className="space-y-3 rounded-card border border-border-subtle bg-discord-embed p-3 sm:p-4">
-							<div className="flex gap-3">
-								<div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-discord-btn-active sm:h-[72px] sm:w-[72px]">
-									<Image src={TRACKS[0].thumbnail} alt="" fill className="object-cover" sizes="80px" unoptimized />
-								</div>
-								<div className="flex min-w-0 flex-1 flex-col justify-between gap-2 py-0.5">
-									<div className="min-w-0">
-										<p className="line-clamp-2 text-sm font-bold text-discord-text">{TRACKS[0].title}</p>
-										<p className="mt-0.5 truncate text-xs text-discord-text-muted">{TRACKS[0].artist}</p>
-									</div>
-									<div className="flex items-center gap-2 text-2xs tabular-nums text-discord-text-muted">
-										<span>0:43</span>
-										<div className="h-1 flex-1 overflow-hidden rounded-full bg-discord-btn-active">
-											<m.div
-												className="h-full rounded-full bg-discord-primary"
-												initial={{ width: "0%" }}
-												whileInView={{ width: "25%" }}
-												viewport={{ once: true }}
-												transition={{ duration: 1.2, ease: "linear" }}
-											/>
-										</div>
-										<span>4:40</span>
-									</div>
-								</div>
-							</div>
-							<div className="flex items-center gap-2">
-								<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text-muted" aria-hidden>
-									<SkipForward size={13} className="rotate-180" />
-								</span>
-								<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-primary text-primary-foreground" aria-hidden>
-									<Pause size={13} fill="currentColor" />
-								</span>
-								<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text-muted" aria-hidden>
-									<SkipForward size={13} />
-								</span>
-								<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text-muted" aria-hidden>
-									<Repeat size={13} />
-								</span>
-								<span className="ml-1.5 rounded-sm bg-discord-primary/10 px-1.5 py-1 text-2xs font-semibold text-discord-light">대기열 3곡</span>
-							</div>
-							<div className="space-y-2 border-t border-discord-btn-active pt-3 text-xs text-discord-text">
-								<p className="text-2xs font-semibold uppercase tracking-wide text-discord-text-muted">다음 곡</p>
-								{TRACKS.slice(1).map((track, index) => (
-									<div key={track.title} className="flex min-w-0 items-center gap-2">
-										<span className="w-3 shrink-0 tabular-nums text-discord-text-muted">{index + 1}</span>
-										<span className="truncate font-medium">{track.title}</span>
-										<span className="shrink-0 text-2xs text-discord-text-muted">{track.artist}</span>
-									</div>
-								))}
-							</div>
-						</div>
-					</Card>
-				</m.div>
-
-				{/* 3. 내 음악 보관함 */}
-				<m.div variants={sectionVariants}>
-					<Card padding="lg" className="gap-5">
+			{/* 2. 명령어 소개 — 음악 재생 */}
+			<m.div variants={sectionVariants} className="lg:col-span-2">
+				<Card variant="raised" padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
+					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
-							<ListMusic size={18} className="text-primary" aria-hidden />
-							<SectionLabel as="p" className="px-0 text-primary">
-								내 음악 보관함
+							<Music2 size={18} className="text-primary" aria-hidden />
+							<SectionLabel as="p" className="px-0 py-0 text-primary">
+								음악 재생
 							</SectionLabel>
 						</div>
-						<h3 className="text-xl font-black tracking-tighter text-foreground">자주 듣는 곡을 모아둬요.</h3>
-						<p className="text-sm font-medium leading-relaxed text-muted-foreground/80">
-							/플레이리스트와 /즐겨찾기로 곡을 저장하고, 불러온 목록을 채널에서 그대로 재생할 수 있어요.
+						<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">원하는 곡을 바로 재생해요.</h3>
+						<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
+							/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.
 						</p>
-						<div className="space-y-1.5 border-t border-border-subtle pt-4 text-sm">
+						<ul className="flex flex-wrap gap-2">
+							{["/재생", "/검색", "/현재곡", "/대기열", "/볼륨", "/셔플", "/일시정지", "/가사"].map((command) => (
+								<li key={command} className={COMMAND_TOKEN}>
+									{command}
+								</li>
+							))}
+						</ul>
+						<div className="mt-0 grid grid-cols-2 gap-3 border-t border-border-subtle">
+							<div>
+								<p className="text-2xs font-medium text-muted-foreground">지원 음원</p>
+								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">YouTube · Spotify</p>
+							</div>
+							<div>
+								<p className="text-2xs font-medium text-muted-foreground">오디오</p>
+								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">크로스페이드 지원</p>
+							</div>
+						</div>
+					</div>
+					<div className="flex flex-col gap-3 rounded-card border border-border-subtle bg-discord-embed p-3 sm:p-4">
+						{/* controllerView 본문 — Section(텍스트 + 우측 썸네일) 구조 그대로 */}
+						<div className="flex gap-3">
+							<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
+								<p className="text-2xs text-discord-text-muted">🎵 #음악-라운지 에서 재생 중 • 대기열 4곡 · 12:36 남음</p>
+								<p className="line-clamp-2 text-sm font-bold leading-snug text-discord-text underline decoration-discord-text/20 underline-offset-2">{TRACKS[0].title}</p>
+								<p className="truncate text-2xs text-discord-text-muted">아티스트: {TRACKS[0].artist}</p>
+								<p className="truncate text-2xs text-discord-text-muted">신청자: <span className="rounded-sm bg-discord-primary/20 px-1 text-discord-light">@사용자</span></p>
+								<div className="flex items-center gap-2 text-2xs tabular-nums text-discord-text-muted">
+									<span>0:43 / 4:40</span>
+									<div className="h-1 flex-1 overflow-hidden rounded-full bg-discord-btn-active">
+										<m.div
+											className="h-full rounded-full bg-discord-primary"
+											initial={{ width: "0%" }}
+											whileInView={{ width: "25%" }}
+											viewport={{ once: true }}
+											transition={{ duration: 1.2, ease: "linear" }}
+										/>
+									</div>
+								</div>
+							</div>
+							<div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-discord-btn-active sm:h-20 sm:w-20">
+								<Image src={TRACKS[0].thumbnail} alt="" fill className="object-cover" sizes="80px" unoptimized />
+							</div>
+						</div>
+						{/* ActionRow — ⏮ ⏸ ⏭ 🔂 📄 대기열 */}
+						<div className="flex items-center gap-2">
+							<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text" aria-hidden>
+								<SkipForward size={13} className="rotate-180" fill="currentColor" />
+							</span>
+							<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text" aria-hidden>
+								<Pause size={13} fill="currentColor" />
+							</span>
+							<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text-muted" aria-hidden>
+								<SkipForward size={13} fill="currentColor" />
+							</span>
+							<span className="flex h-8 w-10 items-center justify-center rounded-md bg-discord-btn-active text-discord-text" aria-hidden>
+								<Repeat size={13} />
+							</span>
+							<span className="flex h-8 items-center gap-1.5 rounded-md bg-discord-btn-active px-2.5 text-2xs font-semibold text-discord-text" aria-hidden>
+								<ListMusic size={12} />
+								대기열
+							</span>
+						</div>
+						{/* Separator + Footer — 실제 봇의 buildFooterSegments와 동일 */}
+						<div className="flex items-center justify-between border-t border-discord-btn-active pt-2">
+							<p className="text-2xs text-discord-text-muted">📡 재생 서버: main | 🔊 볼륨: 100%</p>
+							<span className="rounded-sm bg-discord-primary/10 px-1.5 py-1 text-2xs font-semibold text-discord-light">0:43 / 4:40</span>
+						</div>
+					</div>
+				</Card>
+			</m.div>
+
+			{/* 3. 내 음악 보관함 */}
+			<m.div variants={sectionVariants} className="flex flex-col">
+				<Card padding="lg" className="h-full gap-5">
+					<div className="flex items-center gap-2.5">
+						<ListMusic size={18} className="text-primary" aria-hidden />
+						<SectionLabel as="p" className="px-0 py-0 text-primary">
+							내 음악 보관함
+						</SectionLabel>
+					</div>
+					<h3 className="text-xl font-black tracking-tighter text-foreground">자주 듣는 곡을 모아둬요.</h3>
+					<p className="text-sm font-medium leading-relaxed text-muted-foreground/80">
+						/플레이리스트와 /즐겨찾기로 곡을 저장하고, 불러온 목록을 채널에서 그대로 재생할 수 있어요.
+					</p>
+
+					{/* 플레이리스트 카드 — 앨범아트 스택 + 트랙 리스트 */}
+					<div className="flex-1 space-y-3 rounded-card border border-border-subtle bg-surface-2 p-3">
+						<div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+							{/* 앨범아트 2×2 스택 */}
+							<div className="grid h-14 w-14 shrink-0 grid-cols-2 overflow-hidden rounded-md border border-border">
+								{TRACKS.slice(0, 4).map((track) => (
+									<div key={track.title} className="relative">
+										<Image src={track.thumbnail} alt="" fill className="object-cover" sizes="28px" unoptimized />
+									</div>
+								))}
+							</div>
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-bold text-foreground">내 노래모음</p>
+								<p className="truncate text-xs text-muted-foreground">5곡 · 17분</p>
+							</div>
+							<span className="flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-control bg-primary px-2 text-2xs font-bold text-primary-foreground transition-colors hover:bg-primary/90">
+								<Play size={11} fill="currentColor" aria-hidden />
+								재생
+							</span>
+						</div>
+						<div className="space-y-0.5">
 							{TRACKS.map((track, index) => (
-								<div key={track.title} className="flex min-w-0 items-center gap-2.5">
-									<span className="w-3 shrink-0 text-xs tabular-nums text-muted-foreground">{index + 1}</span>
-									<span className="truncate font-medium text-foreground">{track.title}</span>
+								<div
+									key={track.title}
+									className={cn(
+										"flex min-w-0 items-center gap-2.5 rounded-sm px-1.5 py-1 text-sm transition-colors",
+										index === 0 ? "bg-primary/8" : "hover:bg-surface-1",
+									)}
+								>
+									<span className="w-3 shrink-0 text-2xs tabular-nums text-muted-foreground/70">{index + 1}</span>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-medium text-foreground">{track.title}</p>
+									</div>
+									<span className="shrink-0 text-2xs text-muted-foreground/70">{track.artist}</span>
 									{index === 0 ? (
-										<span className="ml-auto shrink-0 text-xs font-semibold text-primary">재생 중</span>
+										<span className="flex shrink-0 items-end gap-[2px]" aria-hidden>
+											{[8, 12, 6, 10].map((h, i) => (
+												<m.span
+													key={i}
+													className="w-[2px] rounded-full bg-primary"
+													animate={{ height: [h, h + 4, h] }}
+													transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
+												/>
+											))}
+										</span>
 									) : (
-										<span className="ml-auto shrink-0 text-xs text-muted-foreground">{track.artist}</span>
+										<span className="shrink-0 text-2xs tabular-nums text-muted-foreground/70">{track.duration}</span>
 									)}
 								</div>
 							))}
 						</div>
-						<Link href="/playlists" className={secondaryLink}>
-							대시보드에서 보관함 관리
-						</Link>
-					</Card>
-				</m.div>
+					</div>
+
+					<Link href="/playlists" className={cn(secondaryLink, "mt-auto self-start")}>
+						대시보드에서 보관함 관리
+					</Link>
+				</Card>
+			</m.div>
 
 				{/* 4. 서버 대시보드 */}
-				<m.div variants={sectionVariants}>
-					<Card padding="lg" className="gap-5">
+				<m.div variants={sectionVariants} className="flex flex-col">
+					<Card padding="lg" className="h-full gap-5">
 						<div className="flex items-center gap-2.5">
 							<LayoutDashboard size={18} className="text-primary" aria-hidden />
-							<SectionLabel as="p" className="px-0 text-primary">
+							<SectionLabel as="p" className="px-0 py-0 text-primary">
 								서버 대시보드
 							</SectionLabel>
 						</div>
@@ -487,7 +570,7 @@ export function FeaturesSection() {
 						</p>
 
 						{/* 설정 카드 — 좌측 패널 탭 + 우측 토글 애니메이션 */}
-						<div className="flex flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row">
+						<div className="flex flex-1 flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row">
 							<div className="flex shrink-0 gap-2 overflow-x-auto sm:flex-col sm:overflow-visible" role="tablist" aria-label="설정 예시">
 								{dashboardSettingSlides.map((slide, index) => (
 									<button
@@ -513,7 +596,7 @@ export function FeaturesSection() {
 									</button>
 								))}
 							</div>
-							<div className="relative min-w-0 flex-1 overflow-hidden rounded-control border border-border-subtle bg-surface-2/50 p-3">
+							<div className="relative min-w-0 flex-1 overflow-hidden rounded-control border border-border-subtle bg-surface-2 p-3">
 								<AnimatePresence mode="popLayout" initial={false}>
 									<m.div
 										key={dashboardSettingSlides[activeSettingSlide].label}
@@ -528,7 +611,7 @@ export function FeaturesSection() {
 							</div>
 						</div>
 
-						<Link href="/servers" className={secondaryLink}>
+						<Link href="/servers" className={cn(secondaryLink, "mt-auto")}>
 							서버 관리 시작하기
 						</Link>
 					</Card>

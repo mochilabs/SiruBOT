@@ -14,16 +14,20 @@ export function StreamingTypeText({
 	className = "",
 	cursorClassName = "bg-discord-text",
 	showCursor = true,
+	onComplete,
 }: {
 	text: string;
 	speed?: number;
 	className?: string;
 	cursorClassName?: string;
 	showCursor?: boolean;
+	onComplete?: () => void;
 }) {
 	const [visibleCount, setVisibleCount] = useState(0);
 	const [composing, setComposing] = useState(0);
 	const finishedRef = useRef(false);
+	const onCompleteRef = useRef(onComplete);
+	onCompleteRef.current = onComplete;
 
 	useEffect(() => {
 		setVisibleCount(0);
@@ -35,6 +39,7 @@ export function StreamingTypeText({
 		if (finishedRef.current) return undefined;
 		if (visibleCount >= text.length) {
 			finishedRef.current = true;
+			onCompleteRef.current?.();
 			return undefined;
 		}
 
@@ -70,8 +75,8 @@ export function StreamingTypeText({
 			{rendered}
 			{showCursor && (
 				<span
-					className={`ml-0.5 inline-block h-[1em] w-[2px] align-middle ${cursorClassName}`}
-					style={{ animation: "cursor-blink 0.8s linear infinite" }}
+					className={`inline-block h-[0.9em] w-[2px] align-baseline ${cursorClassName}`}
+					style={{ animation: "cursor-blink 0.8s linear infinite", marginLeft: "1px" }}
 					aria-hidden
 				/>
 			)}

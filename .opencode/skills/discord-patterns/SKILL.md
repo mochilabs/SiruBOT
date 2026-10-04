@@ -77,6 +77,44 @@ React 텍스트 노드로 렌더링되므로 그대로 두고, 절대 `dangerous
 
 - `content`의 `**굵게**` 마크다운을 렌더링할 때도 HTML 변환 금지 → JSX 분해 또는 단순 정규식 치환 후 텍스트 노드로.
 
+## 2.5. Discord 채널 목업 프레임 (랜딩/온보딩 미리보기)
+
+`features-section.tsx`, `hero-section.tsx`에서 사용하는 "Discord 클라이언트처럼 보이는 프레임" 패턴.
+**컴포넌트가 아니라 클래스 조합 규약**으로 사용한다 (일회성 mock이라 primitives로 승격하지 않는다).
+
+```tsx
+<div className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-discord-embed">
+	{/* 채널 헤더 — 채널명 + 아이콘, 좌측 정렬 */}
+	<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
+		<Volume2 size={14} className="text-discord-text-muted" aria-hidden />
+		<span className="text-xs font-semibold text-discord-text">음악-라운지</span>
+		<span className="ml-auto text-2xs text-discord-text-muted">시루 · 멘션 응답</span>
+	</div>
+
+	{/* 메시지 영역 — 항상 상단 정렬. items-center / justify-center 금지 (중앙 정렬되면 어색함) */}
+	<div className="min-h-[150px] flex-1 p-3 sm:p-4">
+		{/* 메시지 버블들 (ChannelMessage 등) */}
+	</div>
+
+	{/* 입력창 자리 푸터 — 읽기 전용 안내문 */}
+	<p className="border-t border-discord-btn-active px-4 py-2 text-2xs text-discord-text-muted">
+		@시루 멘션으로 말 걸면 도구를 골라 써요.
+	</p>
+</div>
+```
+
+규칙:
+
+- **`bg-discord-embed`는 "Discord 목업 프레임" 한정으로만 쓴다.** 일반 카드 안의 부가 UI(설정 토글 리스트,
+  프리뷰 패널)에까지 이 배경을 씌우면 "카드 안에 또 카드"가 되어 이상하다 — 그럴 땐 `bg-surface-2` 등
+  대시보드 토큰으로 대체한다.
+- 메시지 버블은 `flex gap-2.5` + 좌측 36px 아바타 + 우측 본문 구조. 시간·"앱" 배지는
+  `text-2xs text-discord-text-muted` / `bg-discord-primary text-primary-foreground`.
+- **타이핑 커서**: 봇 응답(스트리밍)은 `StreamingTypeText`, 슬래시 타이핑은 `TypingText` 사용.
+  커서 클래스는 `-ml-px inline-block h-[0.9em] w-[2px] ... align-baseline` (좌측 여유 margin을 붙이면
+  다음 단어가 밀려나 정렬이 깨진다 — 항상 커서를 텍스트에 거의 붙인다).
+- 줄바꿈 정렬 깨짐 방지용 `TypingText fit` prop: 가장 긴 후보의 폭을 invisible로 예약해 layout jump 제거.
+
 ## 3. GuildSelector — `guild-selector.tsx`
 
 ```ts

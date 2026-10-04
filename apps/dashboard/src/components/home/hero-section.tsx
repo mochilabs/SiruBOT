@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { m } from "framer-motion";
-import { ArrowRight, LayoutDashboard } from "lucide-react";
+import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
 import { buttonVariants } from "@/components/primitives/button";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { TypingText } from "@/components/typing-text";
 import { cn } from "@/lib/utils";
+
+const SLIDE_INTERVAL = 7000;
 
 const containerVariants = {
 	hidden: { opacity: 0 },
@@ -60,7 +62,7 @@ export function HeroSection() {
 
 	useEffect(() => {
 		if (!autoPlay || !heroInView || reducedMotion.current) return undefined;
-		const timer = setInterval(() => setActiveSlide((prev) => (prev + 1) % slideConfigs.length), 7000);
+		const timer = setInterval(() => setActiveSlide((prev) => (prev + 1) % slideConfigs.length), SLIDE_INTERVAL);
 		return () => clearInterval(timer);
 	}, [autoPlay, heroInView]);
 
@@ -70,9 +72,9 @@ export function HeroSection() {
 	};
 
 	return (
-		<section id="hero-section" className="relative overflow-hidden border-b border-border-subtle">
+		<section id="hero-section" className="relative overflow-hidden">
 			<DotPattern />
-			<div className="relative mx-auto grid w-full max-w-7xl gap-10 px-4 pt-28 pb-12 sm:px-6 sm:pt-32 sm:pb-16 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-12 lg:px-8 lg:pt-36 lg:pb-20">
+			<div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36">
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
 					variants={containerVariants}
@@ -96,7 +98,9 @@ export function HeroSection() {
 						variants={itemVariants}
 						className="max-w-xl text-base font-medium leading-relaxed text-muted-foreground/80 break-keep sm:text-lg lg:mx-0"
 					>
-						채널에서 음악을 재생하고, 궁금한 건 물어보고, 서버 설정은 웹에서 손보는 Discord 봇이에요.
+						음악 재생부터 AI 채팅, 서버 관리까지.
+						<br className="hidden sm:block" />
+						채널 한 곳에서 끊김 없이 이어지는 Discord 봇이에요.
 					</m.p>
 
 					<m.div variants={itemVariants} className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:justify-start">
@@ -120,83 +124,94 @@ export function HeroSection() {
 						</div>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">음원 플랫폼</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">3종</dd>
+							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">2종</dd>
 						</div>
-					<div>
-						<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>
-						<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">28K+</dd>
-					</div>
+						<div>
+							<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>
+							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">28K+</dd>
+						</div>
 					</m.dl>
 				</m.div>
 
-			<div className="min-w-0 space-y-3 lg:max-w-xl lg:justify-self-end">
-				<m.div
-					className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-					initial={{ opacity: 0, y: 12 }}
-					whileInView={{ opacity: 1, y: 0 }}
-					viewport={{ once: true, margin: "-60px" }}
-					transition={{ delay: 0.35, duration: 0.4, ease: "easeOut" }}
-				>
-					<SectionLabel as="p" className="px-0">
-						Discord에서 이렇게 동작해요
-					</SectionLabel>
-					<div
-						className="flex flex-wrap gap-2"
-						role="group"
-						aria-label="명령어 예시 선택"
-						onMouseEnter={() => setAutoPlay(false)}
-						onMouseLeave={() => setAutoPlay(true)}
+				<div className="min-w-0 space-y-3 lg:w-[500px] lg:justify-self-end">
+					<m.div
+						className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+						initial={{ opacity: 0, y: 12 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-60px" }}
+						transition={{ delay: 0.35, duration: 0.4, ease: "easeOut" }}
 					>
-						{slideConfigs.map((slide, index) => (
-							<button
-								key={slide.command}
-								type="button"
-								onClick={() => handleSlideChange(index)}
-								aria-pressed={activeSlide === index}
-								className={cn(
-									"cursor-pointer rounded-control border px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
-									activeSlide === index
-										? "border-primary bg-primary text-primary-foreground"
-										: "border-border bg-surface-1 text-foreground/70 hover:bg-surface-2 hover:text-foreground",
-								)}
-							>
-								{slide.command}
-							</button>
-						))}
-					</div>
-				</m.div>
-				<m.div
-					className="flex flex-col-reverse gap-3 lg:flex-row"
-					initial={{ opacity: 0, y: 20 }}
-					whileInView={{ opacity: 1, y: 0 }}
-					viewport={{ once: true, margin: "-60px" }}
-					transition={{ delay: 0.45, duration: 0.5, ease: "easeOut" }}
-				>
-					<div className="flex items-center justify-center gap-1.5 py-2 lg:flex-col lg:py-4" role="tablist" aria-label="예시 위치">
-						{slideConfigs.map((slide, index) => (
-							<button
-								key={slide.command}
-								type="button"
-								role="tab"
-								aria-selected={activeSlide === index}
-								onClick={() => handleSlideChange(index)}
-								className="group flex h-5 w-5 cursor-pointer items-center justify-center"
-							>
-								<span
+						<SectionLabel as="p" className="px-0">
+							Discord에서 이렇게 동작해요
+						</SectionLabel>
+						<div
+							className="flex flex-wrap gap-2"
+							role="group"
+							aria-label="명령어 예시 선택"
+							onMouseEnter={() => setAutoPlay(false)}
+							onMouseLeave={() => setAutoPlay(true)}
+						>
+							{slideConfigs.map((slide, index) => (
+								<button
+									key={slide.command}
+									type="button"
+									onClick={() => handleSlideChange(index)}
+									aria-pressed={activeSlide === index}
 									className={cn(
-										"rounded-full transition-all duration-base",
-										activeSlide === index ? "h-2.5 w-2.5 bg-primary" : "h-1.5 w-1.5 bg-border group-hover:bg-muted-foreground/50",
+										"relative cursor-pointer overflow-hidden rounded-control border px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
+										activeSlide === index
+											? "border-primary bg-primary text-primary-foreground"
+											: "border-border bg-surface-1 text-foreground/70 hover:bg-surface-2 hover:text-foreground",
 									)}
-								/>
-							</button>
-						))}
-					</div>
+								>
+									{/* 자동 재생 진행률 — 활성 버튼이 7초에 걸쳐 차오르고, 차면 다음 예시로 넘어가요 */}
+									{activeSlide === index && autoPlay && heroInView ? (
+										<m.span
+											aria-hidden
+											className="absolute inset-0 bg-white/25"
+											initial={{ scaleX: 0 }}
+											animate={{ scaleX: 1 }}
+											transition={{ duration: SLIDE_INTERVAL / 1000, ease: "linear" }}
+											style={{ originX: 0, originY: 0.5 }}
+										/>
+									) : null}
+									<span className="relative z-10">{slide.command}</span>
+								</button>
+							))}
+						</div>
+					</m.div>
+					<m.div
+						className="flex flex-col-reverse gap-3 lg:flex-row"
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-60px" }}
+						transition={{ delay: 0.45, duration: 0.5, ease: "easeOut" }}
+					>
 					<div className="min-w-0 flex-1">
 						<DiscordCommandAnimation activeSlide={activeSlide} />
 					</div>
 				</m.div>
 			</div>
 			</div>
+
+			{/* 스크롤 유도 — 아래로 살짝 내리면 기능 섹션이에요 */}
+			<m.button
+				type="button"
+				onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+				aria-label="아래로 스크롤해서 기능 보기"
+				className="absolute bottom-6 left-1/2 z-10 flex h-9 w-9 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground/50 transition-colors duration-fast hover:text-primary"
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ delay: 1.2, duration: 0.6 }}
+			>
+				<m.span
+					animate={{ y: [0, 6, 0] }}
+					transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+					className="flex"
+				>
+					<ChevronDown size={18} aria-hidden />
+				</m.span>
+			</m.button>
 		</section>
 	);
 }

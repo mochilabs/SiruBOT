@@ -48,7 +48,9 @@ export function Footer() {
 							<span className="text-lg font-black tracking-tighter text-foreground">시루봇</span>
 						</Link>
 						<p className="max-w-xs text-sm font-medium leading-relaxed text-muted-foreground/80">
-							Discord 음악·AI 채팅·서버 관리를 하나로 묶는 봇이에요. 초대하고 채널에서 바로 시작해보세요.
+							음악·AI 채팅·서버 관리를 한 곳에서.
+							<br />
+							초대하고 바로 시작하세요.
 						</p>
 					</div>
 

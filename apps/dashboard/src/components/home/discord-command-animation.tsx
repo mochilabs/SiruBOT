@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
-import { ListMusic, Music2, Sparkles, Volume2 } from "lucide-react";
+import { Volume2 } from "lucide-react";
 
 import { Card } from "@/components/primitives/card";
 
@@ -63,127 +63,129 @@ const formatDuration = (seconds: number) => {
 	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
-function TrackThumbnail({ track, size }: { track: TrackInfo; size: string }) {
+/** 썸네일이 항상 우측에 붙는 Section 래퍼 — 실제 봇의 SectionBuilder + setThumbnailAccessory와 동일한 구조 */
+function Section({ children, thumbnail }: { children: ReactNode; thumbnail?: string }) {
 	return (
-		<div className={`relative shrink-0 overflow-hidden rounded-md border border-discord-btn-active ${size}`}>
-			<Image src={track.thumbnail} alt="" fill className="object-cover" sizes="80px" unoptimized />
+		<div className="flex items-start gap-3">
+			<div className="min-w-0 flex-1 space-y-1">{children}</div>
+			{thumbnail ? (
+				<div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-discord-btn-active">
+					<Image src={thumbnail} alt="" fill className="object-cover" sizes="56px" unoptimized />
+				</div>
+			) : null}
 		</div>
 	);
 }
 
-function MusicResult() {
+/** 실제 봇의 `-#` subtext 라인에 해당 (TextDisplayBuilder 의 작은 회색 텍스트) */
+function Subtext({ children }: { children: ReactNode }) {
+	return <p className="text-2xs leading-snug text-discord-text-muted">{children}</p>;
+}
+
+/** 실제 봇의 `###` 헤딩 라인 */
+function Heading({ children }: { children: ReactNode }) {
+	return <p className="text-sm font-bold leading-snug text-discord-text">{children}</p>;
+}
+
+/** 실제 봇 푸터: `-# 📡 재생 서버: main | 🔊 볼륨: 100% | 시루 x.x.x` */
+function Footer({ left, right }: { left: string; right?: string }) {
+	return (
+		<div className="mt-2 flex items-center justify-between border-t border-discord-btn-active pt-2 text-2xs text-discord-text-muted">
+			<span>{left}</span>
+			{right ? <span>{right}</span> : null}
+		</div>
+	);
+}
+
+/** /재생 — trackAdded (play.ts): "🎵 대기열 N번에 추가" + ### 제목(링크) + -# 아티스트·신청자·대기열 남은 시간 */
+function PlayResult() {
 	const track = TRACKS[0];
 
 	return (
-		<div className="space-y-2.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<div className="flex items-center gap-1.5 text-2xs font-semibold text-discord-text-muted">
-				<Music2 size={13} aria-hidden />
-				지금 재생 중인 곡
-			</div>
-			<div className="flex gap-3">
-				<div className="min-w-0 flex-1 space-y-1.5">
-					<p className="line-clamp-2 text-sm font-bold leading-snug text-discord-text">{track.title}</p>
-					<p className="truncate text-xs text-discord-text-muted">{track.artist}</p>
-					<div className="flex items-center gap-2 text-2xs tabular-nums text-discord-text-muted">
-						<span>0:43</span>
-						<div className="h-1 flex-1 overflow-hidden rounded-full bg-discord-btn-active">
-							<m.div
-								className="h-full rounded-full bg-discord-primary"
-								initial={{ width: "0%" }}
-								animate={{ width: "25%" }}
-								transition={{ duration: 2, ease: "linear" }}
-							/>
-						</div>
-						<span>{formatDuration(track.duration)}</span>
-					</div>
-				</div>
-				<TrackThumbnail track={track} size="h-14 w-14" />
-			</div>
-			<div className="flex items-center gap-3 border-t border-discord-btn-active pt-2.5" aria-hidden>
-				<div className="flex h-4 items-end gap-[3px]">
-					{[0.9, 0.55, 0.75, 0.4].map((height, bar) => (
-						<m.span
-							key={bar}
-							className="w-[3px] rounded-full bg-discord-primary"
-							animate={{ height: [`${height * 30}%`, "100%", `${height * 30}%`] }}
-							transition={{ duration: 1, repeat: Infinity, delay: bar * 0.15, ease: "easeInOut" }}
-						/>
+		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
+			<p className="text-2xs leading-snug text-discord-text">🎵 노래를 대기열 4번에 추가했어요.</p>
+			<Section thumbnail={track.thumbnail}>
+				<Heading>
+					<span className="underline decoration-discord-text/20 underline-offset-2">{track.title}</span>
+					<span className="ml-1.5 align-middle text-2xs font-medium tabular-nums text-discord-text-muted">({formatDuration(track.duration)})</span>
+				</Heading>
+				<Subtext>
+					아티스트: {track.artist} | 신청자: <span className={COMMAND_MENTION}>@사용자</span> | 3곡 남음 (12:36)
+				</Subtext>
+			</Section>
+		</div>
+	);
+}
+
+/** /추천 — recommend.ts: "✨ 추천곡 N곡을 대기열에 추가했어요." + 번호 리스트. 썸네일 없는 순수 텍스트 컨테이너 */
+function RecommendResult() {
+	return (
+		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
+			<p className="text-sm leading-snug text-discord-text">✨ 추천곡 <strong>3곡</strong>을 대기열에 추가했어요.</p>
+			<ol className="space-y-0.5 text-sm text-discord-text">
+				{TRACKS.slice(1, 4).map((track, index) => (
+					<li key={track.title} className="truncate">
+						{index + 1}. <strong className="font-semibold">{track.title}</strong>
+					</li>
+				))}
+			</ol>
+		</div>
+	);
+}
+
+/** /플레이리스트 재생 — playlistQueued (play.ts): "📝 N곡이 추가되었어요." + 부제 + separator + 미리보기 리스트 + 썸네일 우측 */
+function PlaylistResult() {
+	const preview = TRACKS.slice(0, 3);
+	const total = preview.reduce((acc, track) => acc + track.duration, 0);
+
+	return (
+		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
+			<Section thumbnail={preview[0].thumbnail}>
+				<Heading>📝 재생목록의 노래 3곡이 추가되었어요.</Heading>
+				<Subtext>
+					<strong className="font-semibold text-discord-text">내 노래모음</strong> ({formatDuration(total)})
+				</Subtext>
+				<div className="mt-1.5 space-y-0.5 border-t border-discord-btn-active/60 pt-1.5">
+					<Subtext>🎵 추가된 곡 미리보기</Subtext>
+					{preview.map((track, index) => (
+						<p key={track.title} className="truncate text-xs leading-snug text-discord-text">
+							<span className="mr-1 rounded-sm bg-discord-btn-active px-1 text-2xs tabular-nums text-discord-text-muted">#{index + 1}</span>
+							<span className="font-medium">{track.title}</span>
+							<span className="ml-1 text-2xs tabular-nums text-discord-text-muted">({formatDuration(track.duration)})</span>
+						</p>
 					))}
 				</div>
-				<span className="text-2xs font-semibold text-discord-light">음악 채널에서 재생 중</span>
-			</div>
+			</Section>
 		</div>
 	);
 }
 
-function RecommendResult() {
-	const track = TRACKS[1];
-
-	return (
-		<div className="space-y-2.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<div className="flex items-center gap-2 text-sm font-bold text-discord-text">
-				<Sparkles size={16} className="text-discord-light" aria-hidden />
-				시루봇이 골라서 이어 재생할게요
-			</div>
-			<div className="flex items-center gap-3">
-				<TrackThumbnail track={track} size="h-11 w-11" />
-				<div className="min-w-0">
-					<p className="truncate text-sm font-semibold text-discord-text">{track.title}</p>
-					<p className="truncate text-xs text-discord-text-muted">{track.artist}</p>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-function PlaylistResult() {
-	const playlistTracks = TRACKS.slice(0, 3);
-	const duration = playlistTracks.reduce((total, track) => total + track.duration, 0);
-
-	return (
-		<div className="space-y-2.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<div className="flex items-center gap-2 text-sm font-bold text-discord-text">
-				<ListMusic size={16} className="text-discord-light" aria-hidden />
-				내 노래모음
-			</div>
-			<div className="space-y-2">
-				{playlistTracks.map((track, index) => (
-					<div key={track.title} className="flex min-w-0 items-center gap-2 text-xs text-discord-text">
-						<span className="w-3 shrink-0 tabular-nums text-discord-text-muted">{index + 1}</span>
-						<span className="truncate font-medium">{track.title}</span>
-						<span className="shrink-0 tabular-nums text-discord-text-muted">{formatDuration(track.duration)}</span>
-					</div>
-				))}
-			</div>
-			<p className="border-t border-discord-btn-active pt-2 text-2xs text-discord-text-muted">3곡 · 총 {formatDuration(duration)}</p>
-		</div>
-	);
-}
-
+/** /현재곡 — nowplaying.ts: "-# 🎵 <#채널> 에서 재생 중" + ### 제목(링크) + 아티스트/신청자/길이 + footer */
 function NowPlayingResult() {
 	const track = TRACKS[0];
 
 	return (
-		<div className="space-y-2.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<div className="flex items-center gap-3">
-				<TrackThumbnail track={track} size="h-11 w-11" />
-				<div className="min-w-0 flex-1">
-					<p className="line-clamp-2 text-sm font-bold leading-snug text-discord-text">{track.title}</p>
-					<p className="truncate text-xs text-discord-text-muted">
-						{track.artist} · 신청자: <span className={COMMAND_MENTION}>@사용자</span>
-					</p>
-				</div>
-			</div>
-			<div className="flex items-center justify-between border-t border-discord-btn-active pt-2 text-2xs font-semibold text-discord-text-muted">
-				<span className="bg-discord-primary/10 rounded-sm px-1.5 py-0.5 text-discord-light">일시정지</span>
-				<span>대기열 3곡 · 볼륨 100%</span>
-			</div>
+		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
+			<Subtext>🎵 #음악-라운지 에서 재생 중</Subtext>
+			<Section thumbnail={track.thumbnail}>
+				<Heading>
+					<span className="underline decoration-discord-text/20 underline-offset-2">{track.title}</span>
+				</Heading>
+				<Subtext>아티스트: {track.artist}</Subtext>
+				<Subtext>
+					신청자: <span className={COMMAND_MENTION}>@사용자</span>
+				</Subtext>
+				<Subtext>(0:43 / {formatDuration(track.duration)})</Subtext>
+			</Section>
+			<Footer left="📡 재생 서버: main | 🔊 볼륨: 100%" />
 		</div>
 	);
 }
 
 function commandResult(slide: SlideConfig): ReactNode {
 	switch (slide.command) {
+		case "/재생":
+			return <PlayResult />;
 		case "/추천":
 			return <RecommendResult />;
 		case "/플레이리스트":
@@ -191,7 +193,7 @@ function commandResult(slide: SlideConfig): ReactNode {
 		case "/현재곡":
 			return <NowPlayingResult />;
 		default:
-			return <MusicResult />;
+			return <NowPlayingResult />;
 	}
 }
 
@@ -230,9 +232,9 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 									<span className="text-2xs text-discord-text-muted">오후 8:12</span>
 								</div>
 								<p className="mt-1 text-sm text-discord-text">
-								<span className={COMMAND_MENTION}>{currentSlide.command}</span>
-								{currentSlide.args && <span> {currentSlide.args}</span>}
-							</p>
+									<span className={COMMAND_MENTION}>{currentSlide.command}</span>
+									{currentSlide.args && <span> {currentSlide.args}</span>}
+								</p>
 							</div>
 						</m.div>
 						<m.div

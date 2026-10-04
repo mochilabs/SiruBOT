@@ -78,7 +78,7 @@ export function TypingText({
 			<m.span
 				animate={{ opacity: [1, 0] }}
 				transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-				className="ml-1 inline-block h-[0.8em] w-[2px] bg-primary align-middle"
+				className="-ml-px inline-block h-[0.9em] w-[2px] bg-primary align-baseline"
 				aria-hidden
 			/>
 		</>
