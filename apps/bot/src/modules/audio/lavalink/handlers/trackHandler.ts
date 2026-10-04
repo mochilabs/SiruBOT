@@ -419,7 +419,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 				if (displaced && (displaced as { encoded?: unknown }).encoded !== encoded && Array.isArray(player.queue.tracks)) {
 					player.queue.tracks.unshift(displaced as (typeof player.queue.tracks)[number]);
 				}
-				void this.container.playerNotifier.onTrackStart(player).catch(() => null);
+				// 뷰 복원 전용: 곡은 이미 재생 중이므로 새 컨트롤러를 보내지 않고(edit/send 없이)
+				// 기존 메시지 컴포넌트만 다시 그린다. sendController를 부르면 정상 trackStart가
+				// 보낸 컨트롤러와 중복 발송 레이스가 생긴다.
+				this.container.playerNotifier.updateController(player);
 			}, TRANSITION_RECONCILE_MS)
 		);
 	}

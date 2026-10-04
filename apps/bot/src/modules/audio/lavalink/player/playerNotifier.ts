@@ -12,6 +12,8 @@ type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
 export class PlayerNotifier {
 	private logger: Logger<ILogObj>;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+	/** 길드별 sendController 직렬화 — 동시 진입 시 오래된 전송이 새 전송의 메시지 ref를 덮어쓰는 레이스 방지 */
+	private readonly sendChains: Map<string, Promise<void>> = new Map();
 
 	private readonly DEBOUNCE_MS = Number(process.env.NOTIFIER_DEBOUNCE_MS) || 300;
 
@@ -24,7 +26,22 @@ export class PlayerNotifier {
 	}
 
 	// Force send controller message
-	public async sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
+	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
+		const guildId = player.guildId;
+		const previous = this.sendChains.get(guildId) ?? Promise.resolve();
+		const run = previous.catch(() => undefined).then(() => this.sendControllerNow(player, interaction));
+		const completed = run.then(
+			() => undefined,
+			() => undefined
+		);
+		this.sendChains.set(guildId, completed);
+		void completed.finally(() => {
+			if (this.sendChains.get(guildId) === completed) this.sendChains.delete(guildId);
+		});
+		return run;
+	}
+
+	private async sendControllerNow(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
 		this.logger.debug(`Sending new controller for guild: ${player.guildId}`);
 
 		// 1. Clear ongoing debounce timer

@@ -149,21 +149,42 @@ function SettingScroller({ slide }: { slide: SettingToggle }) {
 	);
 }
 
-/** /채팅 — 도구 3종을 순환: 사용자 타이핑 → 봇 답변 쌍이 6초마다 넘어가요 */
+/** /채팅 — 도구 3종을 순환: 사용자 타이핑 → 시루가 생각 중.. → 답변 타이핑 */
 function ChatPreview() {
 	const [activeTool, setActiveTool] = useState(0);
-
-	useEffect(() => {
-		if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-		const timer = setInterval(() => setActiveTool((prev) => (prev + 1) % utilities.length), 6000);
-		return () => clearInterval(timer);
-	}, [activeTool]);
+	/** 0: 사용자 타이핑 중, 1: 봇 생각 중, 2: 답변 타이핑 */
+	const [phase, setPhase] = useState(0);
 
 	const current = utilities[activeTool];
 
+	// 시퀀스: 사용자 타이핑(≈2s) → 생각 중(1.4s) → 답변(≈3s) → 다음 도구
+	useEffect(() => {
+		if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+			setPhase(2);
+			return undefined;
+		}
+		let timer: ReturnType<typeof setTimeout>;
+		if (phase === 0) {
+			timer = setTimeout(() => setPhase(1), 2100);
+		} else if (phase === 1) {
+			timer = setTimeout(() => setPhase(2), 1400);
+		} else {
+			timer = setTimeout(() => {
+				setActiveTool((prev) => (prev + 1) % utilities.length);
+				setPhase(0);
+			}, 4200);
+		}
+		return () => clearTimeout(timer);
+	}, [phase, activeTool]);
+
+	const selectTool = (index: number) => {
+		setActiveTool(index);
+		setPhase(0);
+	};
+
 	return (
 		<div className="flex flex-col gap-3 rounded-card border border-border-subtle bg-discord-embed p-3 sm:p-4">
-			{/* 도구 인디케이터 — 세로(m) / 가로(lg) */}
+			{/* 도구 인디케이터 */}
 			<div className="flex items-center justify-between gap-2" role="tablist" aria-label="도구 예시">
 				<p className="text-2xs font-semibold uppercase tracking-widest text-discord-text-muted">도구 예시</p>
 				<div className="flex items-center gap-1.5">
@@ -174,7 +195,7 @@ function ChatPreview() {
 							role="tab"
 							aria-selected={activeTool === index}
 							aria-label={utility.title}
-							onClick={() => setActiveTool(index)}
+							onClick={() => selectTool(index)}
 							className="group flex h-4 w-4 cursor-pointer items-center justify-center"
 						>
 							<span
@@ -188,7 +209,7 @@ function ChatPreview() {
 				</div>
 			</div>
 
-			<div className="min-h-[140px]">
+			<div className="min-h-[150px]">
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={current.title}
@@ -198,41 +219,70 @@ function ChatPreview() {
 						transition={{ duration: 0.25, ease: "easeOut" }}
 						className="space-y-3"
 					>
-						{/* 사용자 — 멘션 + 타이핑 */}
+						{/* 1단계 — 사용자: 멘션 + 프롬프트 타이핑 */}
 						<div className="flex gap-2.5">
 							<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-2xs font-bold text-discord-text">사</div>
 							<div className="flex min-w-0 flex-wrap items-center text-sm text-discord-text">
 								<span className="mr-1 shrink-0 rounded-sm bg-discord-primary/20 px-1 text-discord-light">@시루</span>
-								<TypingText key={current.title} texts={[current.prompt]} speed={70} className="min-w-0" />
+								{phase === 0 ? (
+									<TypingText key={`prompt-${current.title}`} texts={[current.prompt]} speed={70} className="min-w-0" />
+								) : (
+									<span className="min-w-0">{current.prompt}</span>
+								)}
 							</div>
 						</div>
-						{/* 봇 — 도구 상태 후 답변 */}
-						<m.div
-							initial={{ opacity: 0, y: 8 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 1.8, duration: 0.3, ease: "easeOut" }}
-							className="flex gap-2.5"
-						>
-							<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-primary text-2xs font-bold text-primary-foreground">시</div>
-							<div className="min-w-0 flex-1 space-y-2">
-								<p className="flex items-center gap-1.5 text-2xs font-medium text-discord-text-muted">
-									{current.status}
-									<span className="flex gap-0.5" aria-hidden>
-										{[0, 1, 2].map((dot) => (
-											<m.span
-												key={dot}
-												className="h-1 w-1 rounded-full bg-discord-text-muted"
-												animate={{ opacity: [0.3, 1, 0.3] }}
-												transition={{ duration: 1, repeat: Infinity, delay: dot * 0.2 }}
-											/>
-										))}
-									</span>
-								</p>
-								<p className="text-sm leading-relaxed text-discord-text">
-									<StreamingTypeText key={current.title} text={current.reply} speed={40} />
-								</p>
-							</div>
-						</m.div>
+
+						{/* 2·3단계 — 봇: 생각 중 → 답변 타이핑 */}
+						{phase > 0 && (
+							<m.div
+								initial={{ opacity: 0, y: 8 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.3, ease: "easeOut" }}
+								className="flex gap-2.5"
+							>
+								<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-primary text-2xs font-bold text-primary-foreground">시</div>
+								<div className="min-w-0 flex-1">
+									<AnimatePresence mode="wait" initial={false}>
+										{phase === 1 ? (
+											<m.p
+												key="thinking"
+												initial={{ opacity: 0 }}
+												animate={{ opacity: 1 }}
+												exit={{ opacity: 0 }}
+												transition={{ duration: 0.2 }}
+												className="flex items-center gap-1.5 text-2xs font-medium text-discord-text-muted"
+											>
+												시루가 생각 중
+												<span className="flex gap-0.5" aria-hidden>
+													{[0, 1, 2].map((dot) => (
+														<m.span
+															key={dot}
+															className="h-1 w-1 rounded-full bg-discord-text-muted"
+															animate={{ opacity: [0.3, 1, 0.3] }}
+															transition={{ duration: 1, repeat: Infinity, delay: dot * 0.2 }}
+														/>
+													))}
+												</span>
+											</m.p>
+										) : (
+											<m.div
+												key="reply"
+												initial={{ opacity: 0 }}
+												animate={{ opacity: 1 }}
+												transition={{ duration: 0.2 }}
+											>
+												<p className="mb-1 text-2xs font-medium text-discord-text-muted">
+													{current.status} — 완료
+												</p>
+												<p className="text-sm leading-relaxed text-discord-text">
+													<StreamingTypeText key={`reply-${current.title}`} text={current.reply} speed={40} />
+												</p>
+											</m.div>
+										)}
+									</AnimatePresence>
+								</div>
+							</m.div>
+						)}
 					</m.div>
 				</AnimatePresence>
 			</div>
