@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { createContainer } from '@sirubot/utils';
+import { searchLyrics } from '../../../services/dataApiClient.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -52,24 +53,8 @@ export class LyricsCommand extends Command {
 		}
 
 		try {
-			// Use lrclib.net API (free, no key required)
-			const encoded = encodeURIComponent(query);
-			const response = await fetch(`https://lrclib.net/api/search?q=${encoded}`, {
-				headers: { 'User-Agent': 'SiruBOT/1.0' },
-				signal: AbortSignal.timeout(10000)
-			});
-
-			if (!response.ok) {
-				await interaction.editReply({ content: '❌ 가사를 검색하는 중 오류가 발생했어요.' });
-				return;
-			}
-
-			const results = (await response.json()) as Array<{
-				trackName: string;
-				artistName: string;
-				plainLyrics: string | null;
-				syncedLyrics: string | null;
-			}>;
+			// 게이트웨이(data-api) 우선, 실패 시 lrclib 직접 호출로 폴백해요
+			const results = await searchLyrics(query);
 
 			if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
 				await interaction.editReply({ content: `❌ **${query}**에 대한 가사를 찾을 수 없었어요.` });

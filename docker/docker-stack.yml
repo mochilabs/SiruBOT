@@ -6,6 +6,8 @@ services:
       - .env
     environment:
       LOGLEVEL: 3
+      # 내부 데이터 게이트웨이 (미설정 시 봇이 외부 API를 직접 호출해요)
+      DATA_API_URL: http://data-api:3002
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:8080').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
@@ -14,6 +16,7 @@ services:
       start_period: 60s
     depends_on:
       - shardmanager
+      - data-api
     networks:
       - sirubot-network
     # SIGTERM 후 Lavalink 세션/대기열 저장 등 유예 시간 (shutdown 단계가 30s 이내)

@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchWeather, WeatherError, type WeatherResult, type WeatherScope } from '../utils/weatherService.ts';
+import { fetchWeather, WeatherError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
 
 const SCOPE_LABELS: Record<WeatherScope, string> = {
 	now: '지금 날씨',

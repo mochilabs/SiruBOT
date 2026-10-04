@@ -33,8 +33,8 @@ export class ReadyEvent extends Listener {
 		if (!shard || shard.ids.includes(0)) {
 			// nightly pass — 자정 이후 장기 기억(MEMORY.md) 정리
 			startMemoryTidySchedule();
-			// 오하아사 — 매일 KST 06:50 한국어 번역본 프리패치
-			startOhaasaPrefetchSchedule();
+			// 오하아사 — data-api가 있으면 게이트웨이가 갱신하므로 봇 프리패치는 스킵
+			if (!process.env.DATA_API_URL?.trim()) startOhaasaPrefetchSchedule();
 		}
 
 		this.startActivityInterval();
