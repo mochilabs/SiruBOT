@@ -92,6 +92,7 @@ export async function fetchYouTubeChapters(videoId: string, durationMs: number):
 		return fetchChaptersLocal(videoId, durationMs);
 	}
 }
+
 /** 택배 조회 — 게이트웨이 우선, 실패 시 기존 tracker.delivery 직접 경로 */
 export async function trackDelivery(carrierHint: string, trackingNumber: string): Promise<DeliveryTrackResult> {
 	try {

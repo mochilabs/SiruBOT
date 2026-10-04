@@ -29,7 +29,9 @@ export async function buildServer(env: Env) {
 		reply.header('x-request-id', request.id);
 	});
 
-	await fastify.register(auth);
+	// register()는 캡슐화 컨텍스트를 만들어 루트 레벨 라우트에 훅이 안 붙어요.
+	// shardmanager와 동일하게 플러그인을 직접 호출해요.
+	await auth(fastify);
 	await registerRoutes(fastify, { translationProvider });
 
 	const stopScheduler = startOhaasaScheduler(env, translationProvider);

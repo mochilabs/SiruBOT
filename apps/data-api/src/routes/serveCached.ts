@@ -54,7 +54,9 @@ export async function serveCached<T>(options: {
 		} catch (error) {
 			breaker.recordFailure(provider);
 			metrics.upstream(route, Date.now() - start, false);
+			// 도메인 에러(WeatherError/DeliveryError)는 라우트가 상태코드를 매핑하도록 그대로 전파해요.
 			if (error instanceof DataApiError) throw error;
+			if (error instanceof Error && error.name !== 'Error' && error.name !== 'TypeError' && error.name !== 'AbortError') throw error;
 			throw new DataApiError(502, 'upstream_failed', error instanceof Error ? error.message : '외부 API 호출에 실패했어요.');
 		}
 	});
