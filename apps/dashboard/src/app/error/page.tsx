@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, RefreshCw } from "lucide-react";
 
@@ -34,21 +33,8 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 				</span>
 			</div>
 
-			{/* 머터리얼 도형 배경 장식 */}
-			<div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-				<div className="absolute left-[8%] top-[16%] h-24 w-24 rounded-2xl bg-primary/5 rotate-12" />
-				<div className="absolute right-[10%] top-[24%] h-16 w-16 rounded-full bg-secondary/8" />
-				<div className="absolute left-[14%] bottom-[14%] h-14 w-14 rounded-xl bg-secondary/6 -rotate-6" />
-				<div className="absolute right-[8%] bottom-[20%] h-28 w-28 rounded-3xl bg-primary/5 rotate-45" />
-			</div>
-
 			<div className="relative z-10 flex flex-col items-center text-center">
 				<div className="space-y-8">
-					{/* 걱정하는 시루 */}
-					<div className="relative h-24 w-24 overflow-hidden rounded-full border border-border bg-surface-1 sm:h-32 sm:w-32">
-						<Image src="/images/profile.png" alt="시루" fill className="object-cover" sizes="128px" priority />
-					</div>
-
 					<div className="space-y-3">
 						<h1 className="text-4xl font-black tracking-tighter text-foreground break-keep sm:text-5xl md:text-6xl">
 							{content.title}
