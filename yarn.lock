@@ -2859,6 +2859,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@sirubot/data-api@workspace:apps/data-api":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/data-api@workspace:apps/data-api"
+  dependencies:
+    "@redis/client": "npm:^5.8.2"
+    "@sirubot/utils": "npm:*"
+    fastify: "npm:^5.6.0"
+    tslog: "npm:^4.10.2"
+    zod: "npm:^4.1.11"
+  languageName: unknown
+  linkType: soft
+
 "@sirubot/prisma@npm:*, @sirubot/prisma@workspace:packages/prisma":
   version: 0.0.0-use.local
   resolution: "@sirubot/prisma@workspace:packages/prisma"
