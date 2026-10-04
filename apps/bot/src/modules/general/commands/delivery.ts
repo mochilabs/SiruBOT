@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { DeliveryError, normalizeTrackingNumber, resolveCarrierId, trackViaRest, type DeliveryTrackResult } from '../utils/deliveryService.ts';
+import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '../utils/deliveryService.ts';
+import { trackDelivery } from '../../../services/dataApiClient.ts';
 
 const MAX_PROGRESS_LINES = 5;
 
@@ -83,8 +84,7 @@ export class DeliveryCommand extends Command {
 		await interaction.deferReply();
 
 		try {
-			const carrierId = await resolveCarrierId(carrierHint);
-			const result = await trackViaRest(carrierId, trackingNumber);
+			const result = await trackDelivery(carrierHint, trackingNumber);
 			await interaction.editReply({
 				components: [buildContainer(result, trackingNumber)],
 				flags: [MessageFlags.IsComponentsV2]

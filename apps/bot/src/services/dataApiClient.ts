@@ -1,11 +1,18 @@
 import { container } from '@sapphire/framework';
 import { fetchOhaasaKo as fetchOhaasaKoLegacy } from './ohaasaTranslate.ts';
 import { fetchYouTubeChapters as fetchChaptersLocal } from '../modules/audio/lavalink/youtubeChapters.ts';
+import {
+	resolveCarrierId as resolveCarrierIdLocal,
+	trackViaRest as trackViaRestLocal,
+	type DeliveryTrackResult
+} from '../modules/general/utils/deliveryService.ts';
 import { fetchWeather as fetchWeatherLocal, type WeatherResult, type WeatherScope } from '../modules/general/utils/weatherService.ts';
 import type { DailyHoroscope } from '../modules/games/utils/ohaasaService.ts';
 
 export { WeatherError } from '../modules/general/utils/weatherService.ts';
 export type { WeatherResult, WeatherScope } from '../modules/general/utils/weatherService.ts';
+export { DeliveryError } from '../modules/general/utils/deliveryService.ts';
+export type { DeliveryTrackResult } from '../modules/general/utils/deliveryService.ts';
 
 export interface LyricsResult {
 	trackName: string;
@@ -85,6 +92,19 @@ export async function fetchYouTubeChapters(videoId: string, durationMs: number):
 		return fetchChaptersLocal(videoId, durationMs);
 	}
 }
+/** 택배 조회 — 게이트웨이 우선, 실패 시 기존 tracker.delivery 직접 경로 */
+export async function trackDelivery(carrierHint: string, trackingNumber: string): Promise<DeliveryTrackResult> {
+	try {
+		return await gatewayGet<DeliveryTrackResult>(
+			`/v1/delivery/track?carrier=${encodeURIComponent(carrierHint)}&number=${encodeURIComponent(trackingNumber)}`
+		);
+	} catch (error) {
+		fallbackNote('delivery', error);
+		const carrierId = await resolveCarrierIdLocal(carrierHint);
+		return trackViaRestLocal(carrierId, trackingNumber);
+	}
+}
+
 /** 날씨 — 게이트웨이 우선, 실패 시 기존 Open-Meteo 직접 경로 */
 export async function fetchWeather(location: string, scope: WeatherScope = 'now'): Promise<WeatherResult> {
 	try {

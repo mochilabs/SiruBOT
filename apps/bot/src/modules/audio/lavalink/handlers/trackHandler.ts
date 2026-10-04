@@ -6,6 +6,7 @@ import { DEFAULT_COLOR } from '@sirubot/utils';
 import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated.ts';
 import { CHAPTER_FETCH_MIN_DURATION_MS, resolveYouTubeVideoId } from '../youtubeChapters.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
+import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
@@ -46,6 +47,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.syncQueueToNowPlaying(player, startedTrack);
 		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
 		player.consecutiveErrors = 0;
+		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
 		player.setData('stopByCommand', undefined);
 		this.setLastStarted(player, startedTrack);
 		this.clearAdvancePending(player.guildId);
@@ -94,6 +96,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	private handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
 		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author} (reason: ${payload.reason})`);
+		reportPlaybackEvent(player.guildId, 'track_end', track, { reason: payload.reason });
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			player.setData('preloadConsumedAt', Date.now());
@@ -125,9 +128,14 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.clearAdvancePending(player.guildId);
 		player.consecutiveErrors++;
 		this.logger.warn(`Track stuck (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
+		reportPlaybackEvent(player.guildId, 'track_stuck', track, { consecutiveErrors: player.consecutiveErrors });
 
 		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
 			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
+			reportPlaybackEvent(player.guildId, 'playback_abort', track, {
+				reason: 'max_consecutive_errors',
+				consecutiveErrors: player.consecutiveErrors
+			});
 			await this.sendNotification(
 				player,
 				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
@@ -165,9 +173,14 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.clearAdvancePending(player.guildId);
 		player.consecutiveErrors++;
 		this.logger.warn(`Track error (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
+		reportPlaybackEvent(player.guildId, 'track_error', track, { consecutiveErrors: player.consecutiveErrors });
 
 		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
 			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
+			reportPlaybackEvent(player.guildId, 'playback_abort', track, {
+				reason: 'max_consecutive_errors',
+				consecutiveErrors: player.consecutiveErrors
+			});
 			await this.sendNotification(
 				player,
 				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
@@ -206,6 +219,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		_payload: TrackEndEvent | TrackStuckEvent | TrackExceptionEvent
 	) {
 		this.logger.info(`Queue ended for guild: ${player.guildId}`);
+		reportPlaybackEvent(player.guildId, 'queue_end', track);
 
 		// 서버 예열 슬롯이 남아 있으면 서버가 content end에 자동 진행한다 —
 		// 이때 queueEnd를 처리하면 컨트롤러가 삭제되고 "큐 종료" 안내가 나가며,

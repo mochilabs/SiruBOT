@@ -1,4 +1,5 @@
-import { normalizeTrackingNumber, resolveCarrierId, trackViaRest } from '../../modules/general/utils/deliveryService.ts';
+import { normalizeTrackingNumber } from '../../modules/general/utils/deliveryService.ts';
+import { trackDelivery } from '../dataApiClient.ts';
 import type { AiTool } from './types.ts';
 
 export const deliveryTool: AiTool = {
@@ -22,8 +23,7 @@ export const deliveryTool: AiTool = {
 		if (!trackingNumber) throw new Error('운송장 번호가 필요해요.');
 		const carrierHint = String(args.carrier ?? '').trim();
 		if (!carrierHint) throw new Error('택배사 이름이 필요해요.');
-		const carrierId = await resolveCarrierId(carrierHint);
-		const result = await trackViaRest(carrierId, trackingNumber);
+		const result = await trackDelivery(carrierHint, trackingNumber);
 		return JSON.stringify(result);
 	}
 };

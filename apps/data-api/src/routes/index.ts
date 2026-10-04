@@ -7,10 +7,12 @@ import { metrics } from '../utils/metrics.ts';
 import { DataApiError, serveCached } from './serveCached.ts';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
+import { deliveryCarriersCacheKey, deliveryTrackCacheKey, listCarriers, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
 import { lastGoodDaily, ohaasaStatus, refreshOhaasaNow } from '../services/ohaasaScheduler.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
+import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
@@ -54,7 +56,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			provider: deps.translationProvider.name,
 			available: deps.translationProvider.available
 		},
-		ohaasa: ohaasaStatus()
+		ohaasa: ohaasaStatus(),
+		playback: playbackSnapshot()
 	}));
 
 	// ── 오하아사 (오늘 JST 키 단일화: 캐시는 항상 번역본) ──
@@ -143,6 +146,78 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 					error: e.identifier ?? 'weather_error',
 					message: error.message
 				});
+			}
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 재생 이벤트 수집 (봇 trackHandler → fire-and-forget) ──
+	const playbackEventSchema = z.object({
+		type: z.enum(['track_start', 'track_end', 'track_stuck', 'track_error', 'queue_end', 'playback_abort']),
+		guildId: z.string().trim().min(1).max(32),
+		shardId: z.number().int().min(0).nullable().default(null),
+		trackTitle: z.string().max(500).nullable().default(null),
+		trackAuthor: z.string().max(500).nullable().default(null),
+		trackId: z.string().max(200).nullable().default(null),
+		reason: z.string().max(200).nullable().default(null),
+		consecutiveErrors: z.number().int().min(0).max(100).default(0)
+	});
+	fastify.post('/v1/playback/events', async (request, reply) => {
+		try {
+			const body = playbackEventSchema.parse(request.body);
+			recordPlaybackEvent({ ...body, type: body.type as PlaybackEventType, at: Date.now() });
+			return reply.send({ ok: true });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	fastify.get('/v1/playback/recent', async (request, reply) => {
+		try {
+			const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) }).parse(request.query);
+			return reply.send({ events: recentPlaybackEvents(query.limit) });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 택배 조회 ──
+	fastify.get('/v1/delivery/carriers', async (_request, reply) => {
+		try {
+			const { data, cached } = await serveCached({
+				route: 'delivery-carriers',
+				key: deliveryCarriersCacheKey(),
+				ttlSeconds: 24 * 3600,
+				provider: 'tracker-delivery',
+				fetchFresh: () => listCarriers(),
+				validate: (d) => Array.isArray(d)
+			});
+			return reply.send({ carriers: data, _cached: cached });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	const deliveryTrackQuery = z.object({
+		carrier: z.string().trim().min(1).max(100),
+		number: z.string().trim().min(4).max(50)
+	});
+	fastify.get('/v1/delivery/track', async (request, reply) => {
+		try {
+			const { carrier, number } = deliveryTrackQuery.parse(request.query);
+			const trackingNumber = normalizeTrackingNumber(number);
+			const { data, cached } = await serveCached({
+				route: 'delivery-track',
+				key: deliveryTrackCacheKey(carrier.trim().toLowerCase(), trackingNumber),
+				ttlSeconds: 5 * 60,
+				provider: 'tracker-delivery',
+				fetchFresh: () => trackDelivery(carrier, trackingNumber)
+			});
+			return reply.send({ ...data, _cached: cached });
+		} catch (error) {
+			if (error instanceof Error && error.name === 'DeliveryError') {
+				const e = error as { identifier?: string };
+				return reply.code(400).send({ error: e.identifier ?? 'delivery_error', message: error.message });
 			}
 			return sendError(reply, error);
 		}

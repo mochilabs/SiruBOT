@@ -5,6 +5,7 @@ import { RadioTower } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
+import { DataApiSection } from "@/components/data-api-section";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
@@ -61,6 +62,8 @@ export default function ShardsPage() {
                     <section>
                         <ShardStats stats={stats} />
                     </section>
+
+                    <DataApiSection />
 
                     <section className="space-y-8">
                         <div className="flex items-center gap-6">
