@@ -5,8 +5,6 @@ export type AiMode = "all" | "channels" | "off";
 export interface AiPolicy {
 	mode: AiMode;
 	channelIds: string[];
-	model: string | null;
-	systemPrompt: string | null;
 	historyCount: number;
 }
 

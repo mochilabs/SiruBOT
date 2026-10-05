@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchWeather, WeatherError, type WeatherResult, type WeatherScope } from '../utils/weatherService.ts';
+import { fetchWeather, WeatherError, GatewayDomainError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
 
 const SCOPE_LABELS: Record<WeatherScope, string> = {
 	now: '지금 날씨',
@@ -162,7 +162,7 @@ export class WeatherCommand extends Command {
 		try {
 			result = await fetchWeather(location, scope);
 		} catch (error) {
-			if (error instanceof WeatherError) {
+			if (error instanceof WeatherError || error instanceof GatewayDomainError) {
 				throw new UserError({
 					identifier: error.identifier,
 					message: `❌ ${error.message}`,

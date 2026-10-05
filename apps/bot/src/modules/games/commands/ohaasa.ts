@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchOhaasaKo } from '../../../services/ohaasaTranslate.ts';
+import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
+import { getUserProfile } from '../../general/utils/userProfile.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
 
 function formatDate(raw: string): string {
@@ -31,7 +32,10 @@ function buildTopLines(daily: DailyHoroscope): string[] {
 	for (const item of top) {
 		lines.push(`**${item.rank}위 ${item.zodiac.ko}** — ${item.content || '정보 없음'}`);
 	}
-	lines.push('', '-# 생일이나 별자리를 지정하면 내 운세만 볼 수 있어요. 예: `/오하아사 별자리:양자리`');
+	lines.push(
+		'',
+		'-# 생일이나 별자리를 지정하면 내 운세만 볼 수 있어요. 예: `/오하아사 별자리:양자리` · `/프로필 생일설정`에 등록하면 지정 없이도 자동으로 보여줘요.'
+	);
 	return lines;
 }
 
@@ -98,6 +102,7 @@ export class OhaasaCommand extends Command {
 		}
 
 		let targetZodiacCode = zodiacOption;
+		let autoNote: string | null = null;
 		if (!targetZodiacCode && birthMonth != null && birthDay != null) {
 			targetZodiacCode = getZodiacFromDate(birthMonth, birthDay);
 			if (!targetZodiacCode) {
@@ -108,8 +113,20 @@ export class OhaasaCommand extends Command {
 				});
 			}
 		}
+		// 지정이 없으면 프로필에 저장된 생일로 자동 조회해요
+		if (!targetZodiacCode) {
+			const profile = await getUserProfile(interaction.user.id);
+			if (profile?.birthMonth != null && profile?.birthDay != null) {
+				const code = getZodiacFromDate(profile.birthMonth, profile.birthDay);
+				if (code) {
+					targetZodiacCode = code;
+					autoNote = `-# 📌 등록된 생일(${profile.birthMonth}/${profile.birthDay}) 기준 **${ZODIAC_MAP[code]?.ko ?? ''}** 운세예요.`;
+				}
+			}
+		}
 
 		const lines = targetZodiacCode ? buildSingleLines(daily, this.resolveTarget(daily, targetZodiacCode)) : buildTopLines(daily);
+		if (autoNote) lines.push('', autoNote);
 		const container = createContainer();
 		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 

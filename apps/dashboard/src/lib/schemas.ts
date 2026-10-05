@@ -25,8 +25,6 @@ const nullableSnowflake = snowflake.nullable();
 export const aiSettingsSchema = z.object({
 	mode: z.enum(AI_MODES, "모드는 all / channels / off만 가능해요.").optional(),
 	channelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
-	model: z.string().max(100, "모델 이름은 100자 이하여야 해요.").nullable().optional(),
-	systemPrompt: z.string().max(1000, "지침은 1000자 이하여야 해요.").nullable().optional(),
 });
 
 /** PUT /api/servers/[id]/settings */

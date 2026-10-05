@@ -33,6 +33,7 @@ jobs:
       bot: ${{ steps.filter.outputs.bot }}
       dashboard: ${{ steps.filter.outputs.dashboard }}
       shardmanager: ${{ steps.filter.outputs.shardmanager }}
+      data-api: ${{ steps.filter.outputs.data-api }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,6 +50,7 @@ jobs:
             echo "bot=true" >> "$GITHUB_OUTPUT"
             echo "dashboard=true" >> "$GITHUB_OUTPUT"
             echo "shardmanager=true" >> "$GITHUB_OUTPUT"
+            echo "data-api=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           FILES=$(git diff --name-only "$BASE" "$HEAD")
@@ -61,16 +63,18 @@ jobs:
           if check "^(apps/bot/|$SHARED)"; then BOT=true; else BOT=false; fi
           if check "^(apps/dashboard/|$SHARED)"; then DASHBOARD=true; else DASHBOARD=false; fi
           if check "^(apps/shardmanager/|$SHARED)"; then SHARD=true; else SHARD=false; fi
+          if check "^(apps/data-api/|$SHARED)"; then DATAAPI=true; else DATAAPI=false; fi
           echo "bot=$BOT" >> "$GITHUB_OUTPUT"
           echo "dashboard=$DASHBOARD" >> "$GITHUB_OUTPUT"
           echo "shardmanager=$SHARD" >> "$GITHUB_OUTPUT"
+          echo "data-api=$DATAAPI" >> "$GITHUB_OUTPUT"
 
   build-beta:
     needs: changes
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [bot, dashboard, shardmanager]
+        app: [bot, dashboard, shardmanager, data-api]
       fail-fast: false
 
     permissions:

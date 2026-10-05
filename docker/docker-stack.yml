@@ -6,6 +6,8 @@ services:
       - .env
     environment:
       LOGLEVEL: 3
+      # 내부 데이터 게이트웨이 (미설정 시 봇이 외부 API를 직접 호출해요)
+      DATA_API_URL: http://data-api:3002
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:8080').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
@@ -14,6 +16,7 @@ services:
       start_period: 60s
     depends_on:
       - shardmanager
+      - data-api
     networks:
       - sirubot-network
     # SIGTERM 후 Lavalink 세션/대기열 저장 등 유예 시간 (shutdown 단계가 30s 이내)
@@ -59,6 +62,8 @@ services:
       - .env
     environment:
       HOSTNAME: "0.0.0.0"
+      # 데이터 게이트웨이 관제 (/shards 페이지의 DataApiSection이 이 서버를 봐요)
+      DATA_API_URL: http://data-api:3002
     ports:
       - "3000:3000"
     healthcheck:
@@ -72,6 +77,38 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+  # 외부 데이터 게이트웨이 — ohaasa/가사/날씨/챕터/택배 캐시 + LLM 배치(번역·기억정리)
+  data-api:
+    image: ghcr.io/mochilabs/sirubot-data-api:beta
+    env_file:
+      - .env
+    environment:
+      HOSTNAME: "0.0.0.0"
+      PORT: 3002
+      # Redis 공유 캐시 (bot과 같은 인스턴스)
+      REDIS_URL: ${REDIS_URL:?REDIS_URL required}
+      # 번역·기억정리용 LLM (OPENAI_COMPATIBLE_API_URL/OPENAI_API_KEY는 .env에서)
+      # 메모리 정리 잡: DATABASE_URL이 있을 때만 활성화돼요 (.env에서)
+    ports:
+      # 대시보드/관제 접근용 — 외부 노출이 싫으면 "127.0.0.1:3002:3002"로 제한
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - sirubot-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        order: stop-first
       placement:
         constraints:
           - node.role == manager

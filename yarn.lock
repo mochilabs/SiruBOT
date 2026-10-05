@@ -2859,6 +2859,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@sirubot/data-api@workspace:apps/data-api":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/data-api@workspace:apps/data-api"
+  dependencies:
+    "@prisma/adapter-pg": "npm:^7.7.0"
+    "@redis/client": "npm:^5.8.2"
+    "@sirubot/prisma": "npm:*"
+    "@sirubot/utils": "npm:*"
+    fastify: "npm:^5.6.0"
+    skia-canvas: "npm:^3.0.8"
+    tslog: "npm:^4.10.2"
+    zod: "npm:^4.1.11"
+  languageName: unknown
+  linkType: soft
+
 "@sirubot/prisma@npm:*, @sirubot/prisma@workspace:packages/prisma":
   version: 0.0.0-use.local
   resolution: "@sirubot/prisma@workspace:packages/prisma"
@@ -3902,6 +3917,13 @@ __metadata:
   dependencies:
     debug: "npm:4"
   checksum: 10c0/dc4f757e40b5f3e3d674bc9beb4f1048f4ee83af189bae39be99f57bf1f48dde166a8b0a5342a84b5944ee8e6ed1e5a9d801858f4ad44764e84957122fe46261
+  languageName: node
+  linkType: hard
+
+"agent-base@npm:^7.1.2":
+  version: 7.1.4
+  resolution: "agent-base@npm:7.1.4"
+  checksum: 10c0/c2c9ab7599692d594b6a161559ada307b7a624fa4c7b03e3afdb5a5e31cd0e53269115b620fcab024c5ac6a6f37fa5eb2e004f076ad30f5f7e6b8b671f7b35fe
   languageName: node
   linkType: hard
 
@@ -4993,7 +5015,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"detect-libc@npm:^2.0.0, detect-libc@npm:^2.0.3, detect-libc@npm:^2.1.2":
+"detect-libc@npm:^2.0.0, detect-libc@npm:^2.0.3, detect-libc@npm:^2.1.1, detect-libc@npm:^2.1.2":
   version: 2.1.2
   resolution: "detect-libc@npm:2.1.2"
   checksum: 10c0/acc675c29a5649fa1fb6e255f993b8ee829e510b6b56b0910666949c80c364738833417d0edb5f90e4e46be17228b0f2b66a010513984e18b15deeeac49369c4
@@ -6201,6 +6223,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"follow-redirects@npm:^1.15.11":
+  version: 1.16.1
+  resolution: "follow-redirects@npm:1.16.1"
+  peerDependenciesMeta:
+    debug:
+      optional: true
+  checksum: 10c0/544e24ccb93b7afb5dd5a2199bd556e167b84de2af7c13b2ced08494239677359d7883bae56ae43a9ca98ac5451e75cf4834a5fadd6fa79053b9248fac5447a4
+  languageName: node
+  linkType: hard
+
 "for-each@npm:^0.3.3, for-each@npm:^0.3.5":
   version: 0.3.5
   resolution: "for-each@npm:0.3.5"
@@ -6687,6 +6719,16 @@ __metadata:
     agent-base: "npm:6"
     debug: "npm:4"
   checksum: 10c0/6dd639f03434003577c62b27cafdb864784ef19b2de430d8ae2a1d45e31c4fd60719e5637b44db1a88a046934307da7089e03d6089ec3ddacc1189d8de8897d1
+  languageName: node
+  linkType: hard
+
+"https-proxy-agent@npm:^7.0.6":
+  version: 7.0.6
+  resolution: "https-proxy-agent@npm:7.0.6"
+  dependencies:
+    agent-base: "npm:^7.1.2"
+    debug: "npm:4"
+  checksum: 10c0/f729219bc735edb621fa30e6e84e60ee5d00802b8247aac0d7b79b0bd6d4b3294737a337b93b86a0bd9e68099d031858a39260c976dc14cdbba238ba1f8779ac
   languageName: node
   linkType: hard
 
@@ -8693,6 +8735,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"parenthesis@npm:^3.1.5":
+  version: 3.1.8
+  resolution: "parenthesis@npm:3.1.8"
+  checksum: 10c0/1c0d5dd8b238b7c703db5ff1ca35f41952a7b2597c2e97cd0d32ab345179062611bc4f8a849787ed7f23508e91140d74fea7c0050b6978c56499f707ff54c99c
+  languageName: node
+  linkType: hard
+
 "parse-json@npm:^5.2.0":
   version: 5.2.0
   resolution: "parse-json@npm:5.2.0"
@@ -10198,6 +10247,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"skia-canvas@npm:^3.0.8":
+  version: 3.0.8
+  resolution: "skia-canvas@npm:3.0.8"
+  dependencies:
+    detect-libc: "npm:^2.1.1"
+    follow-redirects: "npm:^1.15.11"
+    https-proxy-agent: "npm:^7.0.6"
+    string-split-by: "npm:^1.0.0"
+  checksum: 10c0/19cfd4371426274c03e146eb68f8add3643a2706582a14d92f898062c4db54ed07d8d90b797c011476b7b1a866c663a3929626f7c48f9fc126814161ad8e2e03
+  languageName: node
+  linkType: hard
+
 "smart-buffer@npm:^4.2.0":
   version: 4.2.0
   resolution: "smart-buffer@npm:4.2.0"
@@ -10308,6 +10369,15 @@ __metadata:
   version: 1.0.3
   resolution: "stream-shift@npm:1.0.3"
   checksum: 10c0/939cd1051ca750d240a0625b106a2b988c45fb5a3be0cebe9a9858cb01bc1955e8c7b9fac17a9462976bea4a7b704e317c5c2200c70f0ca715a3363b9aa4fd3b
+  languageName: node
+  linkType: hard
+
+"string-split-by@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "string-split-by@npm:1.0.0"
+  dependencies:
+    parenthesis: "npm:^3.1.5"
+  checksum: 10c0/7feac22db5eb4fedc418818fe6c9277d2b2bbe8d200877ed4be629eeff6dafb686b04d87f3c49aa0b7ccaedaf5c576e31dd0e756ea82421cc48f362ece48b942
   languageName: node
   linkType: hard
 

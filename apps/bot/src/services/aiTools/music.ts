@@ -3,6 +3,7 @@ import type { RepeatMode, SearchPlatform } from 'lavalink-client';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import type { CustomPlayer } from '../../modules/audio/lavalink/player/customPlayer.ts';
 import type { AiTool, AiToolContext } from './types.ts';
+import { searchLyrics } from '../dataApiClient.ts';
 
 const PLATFORM_MAP: Record<string, SearchPlatform> = {
 	youtube: 'ytsearch',
@@ -412,17 +413,9 @@ const musicLyricsTool: AiTool = {
 			if (!current) throw new Error('검색어를 입력하거나 곡을 재생 중이어야 해요.');
 			query = `${current.info.author} ${current.info.title}`.replace(/\(.*?\)|\[.*?\]/g, '').trim();
 		}
-		const response = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(query)}`, {
-			headers: { 'User-Agent': 'SiruBOT/1.0' },
-			signal: AbortSignal.timeout(10000)
+		const results = await searchLyrics(query).catch(() => {
+			throw new Error('가사를 검색하는 중 오류가 발생했어요.');
 		});
-		if (!response.ok) throw new Error('가사를 검색하는 중 오류가 발생했어요.');
-		const results = (await response.json()) as Array<{
-			trackName: string;
-			artistName: string;
-			plainLyrics: string | null;
-			syncedLyrics: string | null;
-		}>;
 		if (!results.length || (!results[0]!.plainLyrics && !results[0]!.syncedLyrics))
 			throw new Error(`**${query}**에 대한 가사를 찾을 수 없었어요.`);
 		const result = results[0]!;

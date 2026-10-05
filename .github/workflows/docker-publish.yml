@@ -8,13 +8,13 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  # Release: bot, dashboard, shardmanager 전부 빌드
+  # Release: bot, dashboard, shardmanager, data-api 전부 빌드
   build-and-push-image:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [bot, dashboard, shardmanager]
+        app: [bot, dashboard, shardmanager, data-api]
       fail-fast: false
     
     permissions:

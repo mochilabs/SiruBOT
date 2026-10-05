@@ -25,6 +25,7 @@ COPY package.json yarn.lock turbo.json .yarnrc.yml ./
 COPY apps/bot/package.json ./apps/bot/
 COPY apps/dashboard/package.json ./apps/dashboard/
 COPY apps/shardmanager/package.json ./apps/shardmanager/
+COPY apps/data-api/package.json ./apps/data-api/
 COPY packages/prisma/package.json ./packages/prisma/
 COPY packages/shardclient/package.json ./packages/shardclient/
 COPY packages/utils/package.json ./packages/utils/
@@ -76,6 +77,11 @@ RUN --mount=type=cache,target=/app/.turbo \
 FROM builder AS builder-shardmanager
 RUN --mount=type=cache,target=/app/.turbo \
     yarn turbo run build --filter=@sirubot/shardmanager...
+
+# Build data-api
+FROM builder AS builder-data-api
+RUN --mount=type=cache,target=/app/.turbo \
+    yarn turbo run build --filter=@sirubot/data-api...
 
 # ====================
 # Bot Production
@@ -188,5 +194,44 @@ COPY --from=builder-shardmanager --chown=sirubot:nodejs /app/node_modules ./node
 
 USER sirubot
 EXPOSE 3001
+
+CMD ["yarn", "start"]
+
+# ====================
+# Data-api Production
+# ====================
+FROM node:22-slim AS data-api
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add non-root user
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs sirubot
+
+ARG GIT_HASH=unknown
+ARG GIT_BRANCH=unknown
+ARG VERSION=unknown
+ENV NODE_ENV=production
+ENV GIT_HASH=$GIT_HASH
+ENV GIT_BRANCH=$GIT_BRANCH
+ENV VERSION=$VERSION
+
+# Copy built application
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/dist ./dist
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/package.json ./package.json
+
+# Copy workspace packages
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/packages ./packages
+
+# Copy only production node_modules
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/node_modules ./node_modules
+
+USER sirubot
+EXPOSE 3002
 
 CMD ["yarn", "start"]
