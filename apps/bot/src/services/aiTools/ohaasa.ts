@@ -6,11 +6,11 @@ import type { AiTool } from './types.ts';
 export const ohaasaTool: AiTool = {
 	name: 'get_ohaasa_horoscope',
 	description:
-		'오하아사(아사히 방송)의 12별자리 운세를 조회해요. zodiac 별칭(병자, 염소자리 등)을 받으면 해당 별자리만 돌려주고, 없으면 프로필에 등록된 생일의 별자리를 자동으로 쓰고, 그것도 없으면 오늘 전체 운세를 돌려줘요. 점괘(rank, content, lucky)를 자연스럽게 한국어로 전달하세요.',
+		'오하아사(아사히 방송)의 12별자리 운세를 조회해요. 별자리 이름을 받으면 해당 별자리만 돌려주고, 없으면 프로필에 등록된 생일의 별자리를 자동으로 쓰고, 그것도 없으면 오늘 전체 운세를 돌려줘요. 점괘(rank, content, lucky)를 자연스럽게 한국어로 전달하세요.',
 	properties: {
 		zodiac: {
 			type: 'string',
-			description: '별자리 (선택). 예: 염소자리, 물병자리, 병자 — 생략하면 등록된 프로필 생일을 자동 사용해요'
+			description: '별자리 (선택). 예: 염소자리, 물병자리 — 생략하면 등록된 프로필 생일을 자동 사용해요'
 		}
 	},
 	required: [],
