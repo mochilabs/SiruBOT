@@ -36,9 +36,13 @@ function sendError(reply: { code: (n: number) => any }, error: unknown): any {
 			message: error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
 		});
 	}
+	const stack = error instanceof Error ? error.stack : undefined;
+	const detail = error instanceof Error ? error.message : String(error);
+	console.error(`[data-api] unhandled route error: ${detail}${stack ? `\n${stack}` : ''}`);
 	return reply.code(500).send({
 		error: 'internal_error',
-		message: '일시적인 오류예요. 잠시 후 다시 시도해 주세요.'
+		message: '일시적인 오류예요. 잠시 후 다시 시도해 주세요.',
+		detail
 	});
 }
 
