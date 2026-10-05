@@ -48,6 +48,14 @@ export class ProfileCommand extends Command {
 								.setDescriptionLocalizations({ ko: '프로필을 확인할 유저예요. 비우면 내 프로필을 보여줘요.' })
 								.setRequired(false)
 						)
+						.addBooleanOption((option) =>
+							option
+								.setName('private')
+								.setNameLocalizations({ ko: '나만보기' })
+								.setDescription('Show the response only to you.')
+								.setDescriptionLocalizations({ ko: '다른 사람에게 안 보이게 나만 보여줘요.' })
+								.setRequired(false)
+						)
 				)
 				.addSubcommand((sub) =>
 					sub
@@ -134,9 +142,10 @@ export class ProfileCommand extends Command {
 			return;
 		}
 
-		// view — 기본 공개 (생일은 여전히 본인 조회 때만 데이터에 실어요)
+		// view — 기본 공개. 나만보기(true)면 ephemeral. 생일은 여전히 본인 조회 때만 데이터에 실어요.
 		const target = interaction.options.getUser('user') ?? interaction.user;
-		await interaction.deferReply();
+		const showPrivate = interaction.options.getBoolean('private') ?? false;
+		await interaction.deferReply({ flags: showPrivate ? [MessageFlags.Ephemeral] : undefined });
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
 
@@ -175,8 +184,7 @@ export class ProfileCommand extends Command {
 			await interaction.editReply({
 				content: data.isSelf ? undefined : `-# 🔮 별자리만 공개돼요 · 생일은 본인에게만 보여요`,
 				files: [attachment],
-				components: [],
-				flags: []
+				components: []
 			});
 			return;
 		}
