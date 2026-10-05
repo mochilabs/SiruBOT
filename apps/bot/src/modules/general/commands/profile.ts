@@ -181,11 +181,17 @@ export class ProfileCommand extends Command {
 		if (cardPng) {
 			const { AttachmentBuilder } = await import('discord.js');
 			const attachment = new AttachmentBuilder(cardPng, { name: `profile-${target.id}.png` });
-			await interaction.editReply({
-				content: data.isSelf ? undefined : `-# 🔮 별자리만 공개돼요 · 생일은 본인에게만 보여요`,
-				files: [attachment],
-				components: []
-			});
+			if (showPrivate) {
+				await interaction.editReply({
+					files: [attachment],
+					flags: [MessageFlags.IsComponentsV2],
+					components: [createContainer()]
+				});
+			} else {
+				await interaction.editReply({
+					files: [attachment]
+				});
+			}
 			return;
 		}
 
