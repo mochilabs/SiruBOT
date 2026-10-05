@@ -247,7 +247,17 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		requestedCount: z.number().int().min(0).max(10_000_000).default(0),
 		listenText: z.string().trim().max(48).default('0초'),
 		accountCreated: z.string().trim().max(40).nullable().default(null),
-		guildJoinedAt: z.string().trim().max(40).nullable().default(null)
+		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
+		topTracks: z
+			.array(
+				z.object({
+					title: z.string().trim().max(120),
+					artist: z.string().trim().max(120),
+					thumbnailUrl: z.string().url().nullable().default(null)
+				})
+			)
+			.max(3)
+			.default([])
 	});
 	fastify.post('/v1/image/profile', async (request, reply) => {
 		try {
