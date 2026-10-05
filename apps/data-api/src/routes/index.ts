@@ -275,7 +275,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			const { data, cached } = await serveCached({
 				route: 'chapters',
 				key: chaptersCacheKey(videoId, durationMs),
-				ttlSeconds: 30 * 60,
+				ttlSeconds: 12 * 3600,
 				provider: 'youtube',
 				fetchFresh: () => fetchYouTubeChaptersFresh(videoId, durationMs),
 				validate: (d) => Array.isArray(d)
