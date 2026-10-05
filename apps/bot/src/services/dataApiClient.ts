@@ -120,6 +120,7 @@ export interface ProfileCardRequest {
 	listenText: string;
 	accountCreated: string | null;
 	guildJoinedAt: string | null;
+	topTracks: { title: string; artist: string; thumbnailUrl: string | null }[];
 }
 
 /**

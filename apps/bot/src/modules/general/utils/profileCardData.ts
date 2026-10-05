@@ -12,6 +12,7 @@ export interface ProfileTopTrack {
 	title: string;
 	artist: string;
 	count: number;
+	artworkUrl?: string | null;
 }
 
 /**
@@ -76,13 +77,14 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 	if (topGroups.length > 0) {
 		const tracks = await container.db.track.findMany({
 			where: { id: { in: topGroups.map((g) => g.trackId) } },
-			select: { id: true, title: true, artist: true }
+			select: { id: true, title: true, artist: true, thumbnail: true }
 		});
 		const meta = new Map(tracks.map((t) => [t.id, t]));
 		topTracks = topGroups.map((g) => ({
 			title: meta.get(g.trackId)?.title ?? '알 수 없음',
 			artist: meta.get(g.trackId)?.artist ?? '',
-			count: g._count.trackId
+			count: g._count.trackId,
+			artworkUrl: meta.get(g.trackId)?.thumbnail ?? null
 		}));
 	}
 

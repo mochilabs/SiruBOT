@@ -175,7 +175,12 @@ export class ProfileCommand extends Command {
 				? interaction.guild.members.cache.get(target.id)?.joinedTimestamp
 					? new Date(interaction.guild.members.cache.get(target.id)!.joinedTimestamp!).toISOString()
 					: null
-				: null
+				: null,
+			topTracks: data.topTracks.slice(0, 3).map((t) => ({
+				title: t.title,
+				artist: t.artist,
+				thumbnailUrl: t.artworkUrl ?? null
+			}))
 		}).catch(() => null);
 
 		if (cardPng) {
