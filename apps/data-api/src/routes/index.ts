@@ -5,8 +5,10 @@ import { breaker } from '../utils/breaker.ts';
 import { inflightCount } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError, serveCached } from './serveCached.ts';
+import { deduped } from '../utils/dedup.ts';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
+import { renderProfileCard } from '../renderers/profileCard.ts';
 import { deliveryCarriersCacheKey, deliveryTrackCacheKey, listCarriers, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
@@ -225,6 +227,35 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 				const e = error as { identifier?: string };
 				return reply.code(400).send({ error: e.identifier ?? 'delivery_error', message: error.message });
 			}
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 프로필 카드 이미지 ──
+	const profileCardSchema = z.object({
+		userId: z.string().trim().min(1).max(32),
+		displayName: z.string().trim().min(1).max(64),
+		username: z.string().trim().min(1).max(64),
+		avatarUrl: z.string().url().nullable().default(null),
+		bannerUrl: z.string().url().nullable().default(null),
+		zodiacCode: z.string().trim().max(4).nullable().default(null),
+		zodiacKo: z.string().trim().max(24),
+		zodiacJp: z.string().trim().max(24).nullable().default(null),
+		birthMonth: z.number().int().min(1).max(12).nullable().default(null),
+		birthDay: z.number().int().min(1).max(31).nullable().default(null),
+		playlistCount: z.number().int().min(0).max(1000).default(0),
+		requestedCount: z.number().int().min(0).max(10_000_000).default(0),
+		listenText: z.string().trim().max(48).default('0초'),
+		accountCreated: z.string().trim().max(40).nullable().default(null),
+		guildJoinedAt: z.string().trim().max(40).nullable().default(null)
+	});
+	fastify.post('/v1/image/profile', async (request, reply) => {
+		try {
+			const body = profileCardSchema.parse(request.body);
+			const buffer = await deduped(`img:card:${body.userId}`, () => renderProfileCard(body));
+			metrics.request('image-profile');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
 			return sendError(reply, error);
 		}
 	});
