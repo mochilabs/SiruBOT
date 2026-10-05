@@ -141,7 +141,7 @@ export async function renderProfileCard(data: ProfileCardRequest): Promise<Buffe
 		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
 		return Buffer.from(await res.arrayBuffer());
 	} catch (error) {
-		container.logger.debug(`[data-api] profile-card failed: ${error instanceof Error ? error.message : String(error)}`);
+		container.logger.warn(`[data-api] profile-card failed: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
 	}
 }

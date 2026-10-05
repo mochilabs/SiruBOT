@@ -134,14 +134,9 @@ export class ProfileCommand extends Command {
 			return;
 		}
 
-		// view — 본인은 ephemeral(생일 포함), 타인은 공개(별자리만)
+		// view — 기본 공개 (생일은 여전히 본인 조회 때만 데이터에 실어요)
 		const target = interaction.options.getUser('user') ?? interaction.user;
-		const isSelf = target.id === interaction.user.id;
-		if (isSelf) {
-			await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-		} else {
-			await interaction.deferReply();
-		}
+		await interaction.deferReply();
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
 
