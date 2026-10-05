@@ -51,6 +51,7 @@ COPY tsconfig.base.json ./
 COPY scripts ./scripts
 COPY apps ./apps
 COPY packages ./packages
+COPY resources ./resources
 
 # Version info from build args
 ARG GIT_HASH=unknown
