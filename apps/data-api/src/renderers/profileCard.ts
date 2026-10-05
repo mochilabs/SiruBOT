@@ -467,7 +467,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 		ctx.font = '500 18px "Noto Sans KR", sans-serif';
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'middle';
-		ctx.fillText(`🎂 ${input.birthMonth}월 ${input.birthDay}일`, badgeX + bw + 16, badgeY + 18);
+		ctx.fillText(`생일 ${input.birthMonth}월 ${input.birthDay}일`, badgeX + bw + 16, badgeY + 18);
 		ctx.restore();
 	}
 
