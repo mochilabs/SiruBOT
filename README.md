@@ -24,6 +24,7 @@ sirubot/
 ├── apps/
 │   ├── bot/           # Discord bot application
 │   ├── dashboard/     # Next.js web dashboard
+│   ├── data-api/      # External data gateway (cache + LLM batch jobs)
 │   └── shardmanager/  # Shard management server
 └── packages/
     ├── prisma/        # Database schema and client
@@ -37,6 +38,8 @@ sirubot/
 
 - **High-Quality Audio streaming**: Ultra-low latency music playback streamed seamlessly via Lavalink.
 - **Web Dashboard**: An immersive, real-time web control panel providing interactive music controls and shard status monitoring.
+- **Data API Gateway**: A centralized gateway that caches external API calls (weather, lyrics, horoscopes, delivery tracking, YouTube chapters) and runs scheduled LLM jobs — one shared instance instead of per-shard duplicate requests.
+- **Profile Card**: A rendered image card for user profiles — zodiac constellation background, user banner, avatar and music stats.
 - **Custom Playlists**: Create, manage, and load personalized music playlists directly from the bot or dashboard.
 - **Smart Auto-complete**: Real-time track search suggestions inside Discord slash commands.
 - **Advanced Queue Controls**: Refined music queue controls including looping, shuffling, skipping, and navigating directly to specific tracks.
@@ -69,6 +72,53 @@ LAVALINK_PASSWORD=youshallnotpass
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
+```
+
+#### 3. Data API (`apps/data-api/.env`)
+```env
+# Shared cache (falls back to in-memory when unset)
+REDIS_URL=redis://localhost:6379
+# Auth key — must match the bot's AUTH_KEY
+AUTH_KEY=shared_secret_here
+# Optional: translation provider for horoscope + memory tidy batch job
+OPENAI_COMPATIBLE_API_URL=http://127.0.0.1:8080/v1
+OPENAI_API_KEY=your_api_key_here
+TRANSLATION_MODEL=your_model_name
+# Optional: enables the nightly memory tidy batch job
+DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
+# Optional: point the bot at this gateway (set in apps/bot/.env instead)
+# DATA_API_URL=http://localhost:3002
+```
+
+---
+
+### Data API Gateway
+
+The gateway centralizes external API access so bot shards never call third-party services directly. All read endpoints are authenticated (except `/api/health`), share one Redis-backed cache with per-route TTLs, coalesce concurrent identical requests into a single upstream call, and are protected by per-provider circuit breakers.
+
+| Endpoint | Method | Description | Cache TTL |
+|---|---|---|---|
+| `/v1/ohaasa` | GET | Daily horoscope (Asahi Ohaasa / TV Asahi), LLM-translated to Korean | 7 days |
+| `/v1/lyrics?q=` | GET | Lyrics search (lrclib.net) | 30 days |
+| `/v1/weather?location=&scope=` | GET | Geocoding + forecast + air quality (Open-Meteo) | 15 min |
+| `/v1/chapters?videoId=&durationMs=` | GET | YouTube chapter markers for long videos | 12 h |
+| `/v1/delivery/track?carrier=&number=` | GET | Parcel tracking (tracker.delivery), carrier alias resolution server-side | 5 min |
+| `/v1/playback/events` | POST | Playback event ingestion from bot shards (start/end/stuck/error/abort) | — |
+| `/v1/playback/recent?limit=` | GET | Recent playback events, including errors | — |
+| `/v1/image/profile` | POST | Renders a profile card PNG (zodiac background, banner, avatar, stats) | — |
+| `/v1/ohaasa/refresh` | POST | Force-refresh the daily horoscope | — |
+| `/v1/status` | GET | Operational metrics (cache hit rate, upstream calls/errors, breakers) | — |
+| `/dashboard` | GET | Built-in monitoring dashboard (no third-party dependencies) | — |
+
+Background jobs (single instance, jittered schedule):
+- **Horoscope translation** — daily at KST 06:50, keeps Redis warm so shard requests never hit the LLM.
+- **Memory tidy (nightly pass)** — daily at midnight, compacts per-user long-term memory via LLM. Only active when both `DATABASE_URL` and the translation provider are configured.
+
+Running the bot with `DATA_API_URL` set makes it consume the gateway exclusively; unset, the bot falls back to direct calls, so dev environments work without the gateway.
+
+```bash
+# Run in development
+yarn dev --filter=@sirubot/data-api   # or: turbo dev --filter=@sirubot/data-api
 ```
 
 ---
