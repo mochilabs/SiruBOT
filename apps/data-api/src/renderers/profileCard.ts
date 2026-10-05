@@ -300,10 +300,11 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	try {
 		if (!FontLibrary.has('Noto Sans KR')) {
 			const { join } = await import('node:path');
-			FontLibrary.use('Noto Sans KR', [join(process.cwd(), 'resources/fonts/NotoSansKR.ttf')]);
+			const fontPath = join(process.cwd(), 'resources/fonts/NotoSansKR.ttf');
+			FontLibrary.use('Noto Sans KR', [fontPath]);
 		}
-	} catch {
-		// fallback to system
+	} catch (error) {
+		console.error(`[data-api] profile-card font load failed: ${error instanceof Error ? error.message : String(error)}`);
 	}
 
 	const theme = ZODIAC_THEMES[input.zodiacCode ?? '12'] ?? ZODIAC_THEMES['12'];

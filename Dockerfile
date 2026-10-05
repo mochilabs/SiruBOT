@@ -225,6 +225,9 @@ ENV VERSION=$VERSION
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/dist ./dist
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/package.json ./package.json
 
+# Korean font for profile card rendering
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/NotoSansKR.ttf ./resources/fonts/NotoSansKR.ttf
+
 # Copy workspace packages
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/packages ./packages
 
