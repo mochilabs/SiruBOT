@@ -12,7 +12,12 @@ const envSchema = z.object({
 	OPENAI_API_KEY: z.string().optional(),
 	TRANSLATION_MODEL: z.string().default('default'),
 	// 오하아사 일일 갱신 시각 (KST). '06:50' 형태
-	OHAASA_REFRESH_AT: z.string().default('06:50')
+	OHAASA_REFRESH_AT: z.string().default('06:50'),
+	// 메모리 정리(nightly pass) — DATABASE_URL이 있을 때만 활성화돼요
+	DATABASE_URL: z.string().optional(),
+	MEMORY_TIDY_ENABLED: z.coerce.boolean().default(true),
+	MEMORY_TIDY_AT: z.string().default('00:00'),
+	MEMORY_TIDY_BATCH_SIZE: z.coerce.number().int().positive().max(200).default(40)
 });
 
 export type Env = z.infer<typeof envSchema>;

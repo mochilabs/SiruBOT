@@ -31,10 +31,12 @@ export class ReadyEvent extends Listener {
 		// (프로세스 중복 실행 방지를 위해 셰드 0만)
 		const shard = this.container.client.shard;
 		if (!shard || shard.ids.includes(0)) {
-			// nightly pass — 자정 이후 장기 기억(MEMORY.md) 정리
-			startMemoryTidySchedule();
-			// 오하아사 — data-api가 있으면 게이트웨이가 갱신하므로 봇 프리패치는 스킵
-			if (!process.env.DATA_API_URL?.trim()) startOhaasaPrefetchSchedule();
+			// 메모리 정리(nightly pass)·오하아사 프리패치 — data-api 게이트웨이가 담당해요.
+			// 게이트웨이가 없으면(개발 등) 봇이 직접 스케줄을 돌려요.
+			if (!process.env.DATA_API_URL?.trim()) {
+				startMemoryTidySchedule();
+				startOhaasaPrefetchSchedule();
+			}
 		}
 
 		this.startActivityInterval();

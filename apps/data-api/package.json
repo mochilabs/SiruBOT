@@ -14,7 +14,9 @@
         "start": "node --enable-source-maps ."
     },
     "dependencies": {
+        "@prisma/adapter-pg": "^7.7.0",
         "@redis/client": "^5.8.2",
+        "@sirubot/prisma": "*",
         "@sirubot/utils": "*",
         "fastify": "^5.6.0",
         "tslog": "^4.10.2",

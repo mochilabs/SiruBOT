@@ -13,6 +13,8 @@ import { translateDaily } from '../providers/translate.ts';
 import { lastGoodDaily, ohaasaStatus, refreshOhaasaNow } from '../services/ohaasaScheduler.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
 import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
+import { memoryTidyStatus } from '../services/memoryTidy.ts';
+import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
@@ -45,6 +47,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		redis: sharedCache.connected
 	}));
 
+	// 자체 모니터링 대시보드 (서드파티 0) — auth 제외 대상에 추가
+	registerDashboard(fastify);
+
 	fastify.get('/v1/status', async () => ({
 		ok: true,
 		redis: sharedCache.connected,
@@ -57,7 +62,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			available: deps.translationProvider.available
 		},
 		ohaasa: ohaasaStatus(),
-		playback: playbackSnapshot()
+		playback: playbackSnapshot(),
+		memoryTidy: memoryTidyStatus()
 	}));
 
 	// ── 오하아사 (오늘 JST 키 단일화: 캐시는 항상 번역본) ──

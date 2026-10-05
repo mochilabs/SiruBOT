@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { getLogger } from '../utils/logger.ts';
 
 const logger = getLogger('auth');
-const excludedPrefixes = ['/api/health'];
+const excludedPrefixes = ['/api/health', '/dashboard'];
 
 export default async function auth(fastify: FastifyInstance): Promise<void> {
 	const authKey = process.env.AUTH_KEY;

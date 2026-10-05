@@ -2863,7 +2863,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sirubot/data-api@workspace:apps/data-api"
   dependencies:
+    "@prisma/adapter-pg": "npm:^7.7.0"
     "@redis/client": "npm:^5.8.2"
+    "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     fastify: "npm:^5.6.0"
     tslog: "npm:^4.10.2"

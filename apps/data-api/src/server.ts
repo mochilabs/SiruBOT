@@ -6,6 +6,8 @@ import { getLogger } from './utils/logger.ts';
 import { OpenAICompatTranslationProvider } from './providers/translate.ts';
 import { registerRoutes } from './routes/index.ts';
 import { startOhaasaScheduler } from './services/ohaasaScheduler.ts';
+import { connectDb, disconnectDb, getDb } from './services/db.ts';
+import { startMemoryTidyScheduler } from './services/memoryTidy.ts';
 
 export async function buildServer(env: Env) {
 	const logger = getLogger('server');
@@ -36,9 +38,20 @@ export async function buildServer(env: Env) {
 
 	const stopScheduler = startOhaasaScheduler(env, translationProvider);
 
+	// 메모리 정리(nightly pass) — 봇 샤드 각각이 돌리던 것을 게이트웨이로 이전.
+	// DB+프로바이더가 있을 때만 활성화돼요.
+	await connectDb(env.DATABASE_URL);
+	const stopTidy = startMemoryTidyScheduler(getDb(), translationProvider, {
+		enabled: env.MEMORY_TIDY_ENABLED,
+		at: env.MEMORY_TIDY_AT,
+		batchSize: env.MEMORY_TIDY_BATCH_SIZE
+	});
+
 	const close = async () => {
 		stopScheduler();
+		stopTidy();
 		await sharedCache.disconnect();
+		await disconnectDb();
 		await fastify.close();
 	};
 

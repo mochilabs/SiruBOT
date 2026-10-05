@@ -62,15 +62,15 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 	public readonly available: boolean;
 
 	public constructor(
-		private readonly apiUrl: string,
-		private readonly apiKey: string,
-		private readonly model: string
+		public readonly baseUrl: string,
+		public readonly apiKey: string,
+		public readonly model: string
 	) {
 		this.available = apiKey.length > 0;
 	}
 
 	public async translateHoroscope(items: TranslationItem[]): Promise<Map<string, TranslationItem>> {
-		const res = await fetch(`${this.apiUrl}/chat/completions`, {
+		const res = await fetch(`${this.baseUrl}/chat/completions`, {
 			method: 'POST',
 			headers: {
 				'content-type': 'application/json',
