@@ -6,7 +6,7 @@ import { canManage } from "@/lib/guild-permissions";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import { aiSettingsSchema, normalizeAiMode, unknownKeys, zodError } from "@/lib/schemas";
 
-const ALLOWED_KEYS = ["mode", "channelIds", "model", "systemPrompt"] as const;
+const ALLOWED_KEYS = ["mode", "channelIds"] as const;
 
 async function authorize(guildId: string): Promise<{ ok: true } | { ok: false; status: 401 | 403 }> {
 	const session = await auth();
@@ -30,8 +30,6 @@ async function readPolicy(guildId: string) {
 	return {
 		mode: normalizeAiMode(guild?.aiMode),
 		channelIds: guild?.aiChannelIds ?? [],
-		model: guild?.aiModel ?? null,
-		systemPrompt: guild?.aiSystemPrompt ?? null,
 		historyCount,
 	};
 }
@@ -82,8 +80,6 @@ export async function PUT(
 		const data: {
 			aiMode?: string;
 			aiChannelIds?: string[];
-			aiModel?: string | null;
-			aiSystemPrompt?: string | null;
 		} = {};
 		const input = parsed.data;
 
@@ -92,25 +88,6 @@ export async function PUT(
 		if (input.channelIds !== undefined) {
 			// 중복 제거 + 목록 보존 순서 유지
 			data.aiChannelIds = [...new Set(input.channelIds)];
-		}
-
-		if (input.model !== undefined) {
-			if (input.model === null) {
-				data.aiModel = null;
-			} else {
-				const model = input.model.trim();
-				// 봇 /채팅설정과 동일하게 "기본"은 env 기본값으로 해석해요
-				data.aiModel = model === "기본" ? null : model || null;
-			}
-		}
-
-		if (input.systemPrompt !== undefined) {
-			if (input.systemPrompt === null) {
-				data.aiSystemPrompt = null;
-			} else {
-				const prompt = input.systemPrompt.trim();
-				data.aiSystemPrompt = prompt === "기본" ? null : prompt || null;
-			}
 		}
 
 		if (Object.keys(data).length > 0) {

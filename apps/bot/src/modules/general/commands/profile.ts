@@ -12,6 +12,7 @@ import {
 import { getZodiacFromDate, ZODIAC_MAP } from '../../games/utils/ohaasaService.ts';
 import { clearUserBirthday, isValidBirthday, setUserBirthday } from '../utils/userProfile.ts';
 import { buildProfileCardData } from '../utils/profileCardData.ts';
+import { renderProfileCard } from '../../../services/dataApiClient.ts';
 
 function zodiacLabel(code: string): string {
 	const info = ZODIAC_MAP[code];
@@ -143,6 +144,49 @@ export class ProfileCommand extends Command {
 		}
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
+
+		// ── 이미지 카드 (기본). 게이트웨이 실패 시 아래 텍스트 카드로 폴백해요. ──
+		let bannerUrl: string | null = null;
+		try {
+			bannerUrl = (await target.fetch()).bannerURL({ size: 1024, extension: 'png' }) ?? null;
+		} catch {
+			// 배너 없음/조회 실패 → 별자리 배경으로 그려요
+		}
+		const cardPng = await renderProfileCard({
+			userId: target.id,
+			displayName: target.displayName ?? target.username,
+			username: target.username,
+			avatarUrl: target.displayAvatarURL({ size: 256, extension: 'png' }),
+			bannerUrl,
+			zodiacCode: data.zodiacCode,
+			zodiacKo: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.ko ?? '별자리 없음') : '별자리 없음',
+			zodiacJp: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.jp ?? null) : null,
+			birthMonth: data.birthMonth,
+			birthDay: data.birthDay,
+			playlistCount: data.playlistCount,
+			requestedCount: data.requestedCount,
+			listenText: formatTimeToKorean(Math.floor(data.listenMs / 1000)),
+			accountCreated: new Date(target.createdTimestamp).toISOString(),
+			guildJoinedAt: interaction.inCachedGuild()
+				? interaction.guild.members.cache.get(target.id)?.joinedTimestamp
+					? new Date(interaction.guild.members.cache.get(target.id)!.joinedTimestamp!).toISOString()
+					: null
+				: null
+		}).catch(() => null);
+
+		if (cardPng) {
+			const { AttachmentBuilder } = await import('discord.js');
+			const attachment = new AttachmentBuilder(cardPng, { name: `profile-${target.id}.png` });
+			await interaction.editReply({
+				content: data.isSelf ? undefined : `-# 🔮 별자리만 공개돼요 · 생일은 본인에게만 보여요`,
+				files: [attachment],
+				components: [],
+				flags: []
+			});
+			return;
+		}
+
+		// ── 텍스트 카드 (폴백) ──
 		const lines = [`### 👤 ${target.displayName ?? target.username} 님의 프로필`, ''];
 
 		// 생일·별자리 — 생일은 본인에게만

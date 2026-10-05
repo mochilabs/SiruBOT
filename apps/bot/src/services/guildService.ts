@@ -219,9 +219,7 @@ export class GuildService {
 		const guild = await this.getGuild(guildId);
 		return {
 			mode: normalizeAiMode(guild.aiMode),
-			channelIds: guild.aiChannelIds,
-			model: guild.aiModel,
-			systemPrompt: guild.aiSystemPrompt
+			channelIds: guild.aiChannelIds
 		};
 	}
 
@@ -245,18 +243,6 @@ export class GuildService {
 			guildId,
 			settings.channelIds.filter((id) => id !== channelId)
 		);
-	}
-
-	/** null이면 env 기본 모델로 되돌려요 */
-	public async setAiModel(guildId: string, model: string | null): Promise<string | null> {
-		const guild = await this.upsertField(guildId, 'aiModel', model);
-		return guild.aiModel;
-	}
-
-	/** null이면 고정 프롬프트를 제거해요 */
-	public async setAiSystemPrompt(guildId: string, prompt: string | null): Promise<string | null> {
-		const guild = await this.upsertField(guildId, 'aiSystemPrompt', prompt);
-		return guild.aiSystemPrompt;
 	}
 
 	/**

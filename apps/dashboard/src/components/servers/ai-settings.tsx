@@ -8,7 +8,6 @@ import { Select, type SelectOption } from "@/components/overlay/select";
 import { Button } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
-import { Input, Textarea } from "@/components/primitives/input";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { AiMode, AiPolicy } from "@/types/settings";
@@ -48,8 +47,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 	const [policy, setPolicy] = useState<AiPolicy | null>(null);
 	const [mode, setMode] = useState<AiMode>("all");
 	const [channelIds, setChannelIds] = useState<string[]>([]);
-	const [model, setModel] = useState("");
-	const [systemPrompt, setSystemPrompt] = useState("");
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [loadError, setLoadError] = useState<ApiError | null>(null);
 	const [retryToken, setRetryToken] = useState(0);
@@ -68,8 +65,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 		setPolicy(next);
 		setMode(next.mode);
 		setChannelIds(next.channelIds);
-		setModel(next.model ?? "");
-		setSystemPrompt(next.systemPrompt ?? "");
 	}, []);
 
 	useEffect(() => {
@@ -98,11 +93,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 	};
 
 	const dirty =
-		policy !== null &&
-		(mode !== policy.mode ||
-			JSON.stringify(channelIds) !== JSON.stringify(policy.channelIds) ||
-			model.trim() !== (policy.model ?? "") ||
-			systemPrompt.trim() !== (policy.systemPrompt ?? ""));
+		policy !== null && (mode !== policy.mode || JSON.stringify(channelIds) !== JSON.stringify(policy.channelIds));
 
 	const handleSave = async () => {
 		setSaving(true);
@@ -113,8 +104,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 				body: JSON.stringify({
 					mode,
 					channelIds,
-					model: model.trim() || null,
-					systemPrompt: systemPrompt.trim() || null,
 				}),
 			});
 			if (!res.ok) throw await toApiError(res, "저장에 실패했어요.");
@@ -169,7 +158,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 			<PanelHeader
 				icon={<Bot className="h-5 w-5" />}
 				title="AI 채팅 설정"
-				description="응답할 채널 범위와 모델·지침을 관리해요."
+				description="응답할 채널 범위와 지침을 관리해요."
 				action={
 					<Button
 						variant="icon"
@@ -248,30 +237,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 					)}
 				</div>
 			)}
-
-			<Field htmlFor="ai-model" label="모델" description="예: gpt-4o-mini · vision 모델을 써야 이미지 분석이 가능해요. 비워두면 env 기본값을 사용해요.">
-				<Input
-					id="ai-model"
-					type="text"
-					value={model}
-					maxLength={100}
-					disabled={saving}
-					onChange={(e) => setModel(e.target.value)}
-					placeholder="env 기본값 사용"
-				/>
-			</Field>
-
-			<Field htmlFor="ai-prompt" label="서버 추가 지침" description="시루의 기본 페르소나에 덧붙여져요. 비워두면 제거돼요.">
-				<Textarea
-					id="ai-prompt"
-					value={systemPrompt}
-					maxLength={1000}
-					disabled={saving}
-					onChange={(e) => setSystemPrompt(e.target.value)}
-					placeholder="이 서버에서만 적용할 추가 지침을 적어요 (최대 1000자)"
-					className="min-h-[96px] resize-none"
-				/>
-			</Field>
 
 			<InfoBox>
 				<p>

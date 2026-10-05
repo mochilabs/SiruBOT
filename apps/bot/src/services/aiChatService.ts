@@ -137,13 +137,11 @@ export interface AiChatPolicy {
 	mode: AiMode;
 	/** mode가 channels일 때만 사용하는 허용 채널 목록 */
 	channelIds: string[];
-	model: string | null;
-	systemPrompt: string | null;
 }
 
 /** 서버(Guild) 단위 AI 채팅 설정. 길드가 없으면(DM) 전부 기본값이에요. */
 export async function getAiChatPolicy(guildId: string | null): Promise<AiChatPolicy> {
-	const fallback: AiChatPolicy = { mode: 'all', channelIds: [], model: null, systemPrompt: null };
+	const fallback: AiChatPolicy = { mode: 'all', channelIds: [] };
 	if (!guildId) return fallback;
 	try {
 		return await container.guildService.getAiSettings(guildId);
@@ -444,14 +442,11 @@ export function buildSystemContent(
 	state: ChannelHistoryState,
 	channelBlock: string | null = null,
 	memoryBlock: string | null = null,
-	serverPrompt: string | null = null,
 	budget: number = getContextTokenBudget()
 ): string {
 	const head: string[] = [SYSTEM_PROMPT];
 	if (channelBlock) head.push('', channelBlock);
 	if (memoryBlock) head.push('', memoryBlock);
-	if (serverPrompt)
-		head.push('', '# 서버 추가 지침', '이 서버 관리자가 설정한 지시예요. 기본 페르소나와 어긋나지 않는 선에서 따라요.', serverPrompt);
 	if (state.summary) head.push('', '# 이전 대화 요약', '더 오래된 대화를 압축한 요약이에요. 사실과 기억의 근거로 참고해요.', state.summary);
 
 	let remaining = budget - estimateTokens(head.join('\n'));
@@ -1003,7 +998,7 @@ export async function runChatTurn(options: {
 
 	const policy = await getAiChatPolicy(options.toolContext.guildId);
 	assertChatEnabled(policy, channelId);
-	const config = policy.model ? { ...baseConfig, model: policy.model } : baseConfig;
+	const config = baseConfig;
 
 	setChannelGuild(channelId, options.toolContext.guildId);
 	await loadChannelHistory(channelId);
@@ -1014,7 +1009,7 @@ export async function runChatTurn(options: {
 	});
 
 	const messages: ChatMessage[] = [
-		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock, policy.systemPrompt) },
+		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock) },
 		{ role: 'user', content: buildUserContent(options.prompt, options.images) }
 	];
 

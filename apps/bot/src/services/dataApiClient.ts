@@ -115,3 +115,44 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
 		return fetchWeatherLocal(location, scope);
 	}
 }
+
+/** 프로필 카드 이미지 데이터 — data-api POST 바디와 동일한 형식이에요. */
+export interface ProfileCardRequest {
+	userId: string;
+	displayName: string;
+	username: string;
+	avatarUrl: string | null;
+	bannerUrl: string | null;
+	zodiacCode: string | null;
+	zodiacKo: string;
+	zodiacJp?: string | null;
+	birthMonth: number | null;
+	birthDay: number | null;
+	playlistCount: number;
+	requestedCount: number;
+	listenText: string;
+	accountCreated: string | null;
+	guildJoinedAt: string | null;
+}
+
+/** 프로필 카드 PNG 렌더 — 게이트웨이 우선. 실패 시 null (호출자가 텍스트 카드로 폴백해요). */
+export async function renderProfileCard(data: ProfileCardRequest): Promise<Buffer | null> {
+	const base = gatewayBaseUrl();
+	if (!base) return null;
+	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
+	try {
+		const res = await fetch(`${base}/v1/image/profile`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			body: JSON.stringify(data),
+			signal: AbortSignal.timeout(20_000)
+		});
+		if (!res.ok) throw new Error(`data-api ${res.status}`);
+		const type = res.headers.get('content-type') ?? '';
+		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
+		return Buffer.from(await res.arrayBuffer());
+	} catch (error) {
+		fallbackNote('profile-card', error);
+		return null;
+	}
+}
