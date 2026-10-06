@@ -136,6 +136,10 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
 	}
 
+	if (nextUpLines.length > 0) {
+		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
+	}
+
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
 	// N곡 · N 남음 안내는 하단 푸터 줄로 내린다.
