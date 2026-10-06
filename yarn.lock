@@ -2919,6 +2919,7 @@ __metadata:
     "@fastify/websocket": "npm:^11.2.0"
     "@sirubot/shardclient": "npm:*"
     "@sirubot/utils": "npm:*"
+    discord.js: "npm:^14.0.0"
     dotenv: "npm:^17.2.2"
     fastify: "npm:^5.6.0"
     tslog: "npm:^4.10.2"
