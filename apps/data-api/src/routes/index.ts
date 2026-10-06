@@ -237,7 +237,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
-	// ── 프로필 카드 이미지 (프리셋: classic=기존 배너형 / dark·ticket=RINE 스타일) ──
+	// ── 프로필 카드 이미지 (프리셋: dark=RINE 다크 퍼플 / ticket=RINE 멤버패스 티켓) ──
 	const topTracksSchema = z
 		.array(
 			z.object({
@@ -257,28 +257,29 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		.nullable()
 		.default(null);
 	const profileCardSchema = z.object({
-		preset: z.enum(['classic', 'dark', 'ticket']).default('classic'),
+		preset: z.enum(['dark', 'ticket']).default('dark'),
 		userId: z.string().trim().min(1).max(32),
 		displayName: z.string().trim().min(1).max(64),
 		username: z.string().trim().min(1).max(64),
 		avatarUrl: z.string().url().nullable().default(null),
-		bannerUrl: z.string().url().nullable().default(null),
-		zodiacCode: z.string().trim().max(4).nullable().default(null),
-		zodiacKo: z.string().trim().max(24),
-		zodiacJp: z.string().trim().max(24).nullable().default(null),
-		birthMonth: z.number().int().min(1).max(12).nullable().default(null),
-		birthDay: z.number().int().min(1).max(31).nullable().default(null),
-		playlistCount: z.number().int().min(0).max(1000).default(0),
-		requestedCount: z.number().int().min(0).max(10_000_000).default(0),
-		listenText: z.string().trim().max(48).default('0초'),
-		accountCreated: z.string().trim().max(40).nullable().default(null),
-		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
-		topTracks: topTracksSchema,
-		// dark/ticket 프리셋 확장 필드
 		status: z.enum(['online', 'idle', 'dnd', 'invisible']).default('online'),
 		statusLabel: z.string().trim().max(24).default(''),
 		intro: z.string().trim().max(120).default(''),
+		accountCreated: z.string().trim().max(40).nullable().default(null),
+		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
 		roleChips: z.array(z.string().trim().min(1).max(32)).max(4).default([]),
+		guildTag: z
+			.string()
+			.trim()
+			.min(1)
+			.max(8)
+			.regex(/^[A-Za-z0-9]+$/, '영문/숫자 4자리 태그만 지원해요')
+			.nullable()
+			.default(null),
+		guildTagBadgeUrl: z.string().url().nullable().default(null),
+		playlistCount: z.number().int().min(0).max(1000).default(0),
+		requestedCount: z.number().int().min(0).max(10_000_000).default(0),
+		topTracks: topTracksSchema,
 		nowPlaying: nowPlayingSchema
 	});
 	fastify.post('/v1/image/profile', async (request, reply) => {
@@ -292,63 +293,46 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			};
 			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
 			const buffer = await deduped(`img:card:${body.userId}`, () =>
-				renderProfileCardPreset(
-					body.preset,
-					{
+				renderProfileCardPreset(body.preset, {
+					dark: {
 						userId: body.userId,
+						profileId: body.username,
 						displayName: body.displayName,
-						username: body.username,
 						avatarUrl: body.avatarUrl,
-						bannerUrl: body.bannerUrl,
-						zodiacCode: body.zodiacCode,
-						zodiacKo: body.zodiacKo,
-						zodiacJp: body.zodiacJp,
-						birthMonth: body.birthMonth,
-						birthDay: body.birthDay,
-						playlistCount: body.playlistCount,
-						requestedCount: body.requestedCount,
-						listenText: body.listenText,
-						accountCreated: body.accountCreated,
-						guildJoinedAt: body.guildJoinedAt,
-						topTracks: body.topTracks
+						guildTag: body.guildTag,
+						guildTagBadgeUrl: body.guildTagBadgeUrl,
+						status: body.status,
+						onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+						statusColor: '#3ecf8e',
+						intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+						createdText: dateFmt(body.accountCreated),
+						joinedText: dateFmt(body.guildJoinedAt),
+						roleChips: body.roleChips,
+						topTracks: body.topTracks,
+						nowPlaying: body.nowPlaying
 					},
-					{
-						dark: {
-							userId: body.userId,
-							profileId: body.username,
-							displayName: body.displayName,
-							avatarUrl: body.avatarUrl,
-							status: body.status,
-							onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-							statusColor: '#3ecf8e',
-							intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
-							createdText: dateFmt(body.accountCreated),
-							joinedText: dateFmt(body.guildJoinedAt),
-							roleChips: body.roleChips,
-							topTracks: body.topTracks,
-							nowPlaying: body.nowPlaying
-						},
-						ticket: {
-							userId: body.userId,
-							profileId: body.username,
-							displayName: body.displayName,
-							avatarUrl: body.avatarUrl,
-							status: body.status,
-							onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-							statusColor: '#2f9e5f',
-							intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
-							createdText: dateFmt(body.accountCreated),
-							joinedText: dateFmt(body.guildJoinedAt),
-							roleChips: body.roleChips,
-							topTracks: body.topTracks,
-							nowPlaying: body.nowPlaying,
-							stats: [
-								{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
-								{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
-							]
-						}
+					ticket: {
+						userId: body.userId,
+						profileId: body.username,
+						displayName: body.displayName,
+						avatarUrl: body.avatarUrl,
+						guildTag: body.guildTag,
+						guildTagBadgeUrl: body.guildTagBadgeUrl,
+						status: body.status,
+						onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+						statusColor: '#2f9e5f',
+						intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+						createdText: dateFmt(body.accountCreated),
+						joinedText: dateFmt(body.guildJoinedAt),
+						roleChips: body.roleChips,
+						topTracks: body.topTracks,
+						nowPlaying: body.nowPlaying,
+						stats: [
+							{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
+							{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
+						]
 					}
-				)
+				})
 			);
 			metrics.request(`image-profile-${body.preset}`);
 			return reply.type('image/png').send(buffer);

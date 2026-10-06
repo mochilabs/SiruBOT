@@ -14,6 +14,10 @@ export interface ProfileCardDarkInput {
 	profileId: string;
 	displayName: string;
 	avatarUrl: string | null;
+	/** 디스코드 서버 태그(4자리) — 있으면 핸들 옆에 뱃지로 표시 */
+	guildTag?: string | null;
+	/** 서버 태그 뱃지 이미지 URL (guildTagBadgeURL) */
+	guildTagBadgeUrl?: string | null;
 	/** 'online' | 'idle' | 'dnd' | 'invisible' */
 	status: 'online' | 'idle' | 'dnd' | 'invisible';
 	/** 캡슐 라벨 — 기본 "온라인" */
@@ -128,10 +132,10 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 
 	// ── 레이아웃 산출 ──
 	const avatarCx = PAD + AVATAR_R;
-	const avatarCy = HEADER_H + 6; // 헤더 경계에 걸치게
+	const avatarCy = HEADER_H + 24; // 헤더 바로 아래에 온전히 배치 — 이름/핸들 블록과 수직 정렬
 	const nameX = PAD + AVATAR_R * 2 + 44;
-	const nameBase = avatarCy - 8;
-	const handleBase = nameBase + 46;
+	const nameBase = avatarCy - 10;
+	const handleBase = nameBase + 48;
 
 	const chipTop = handleBase + 58;
 	const chipH = 42;
@@ -208,20 +212,21 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	}
 	ctx.restore();
 
-	// ── 헤더 로고: ✦ RINE | PROFILE ──
+	// ── 헤더 로고: ✦ {HANDLE} | PROFILE ──
 	ctx.save();
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'middle';
+	const handleUpper = input.profileId.toUpperCase();
 	drawIcon(ctx, 'sparkle', PAD + 2, 27, 22, '#ffffff', { fill: true });
 	ctx.fillStyle = '#ffffff';
 	ctx.font = '800 27px "Noto Sans KR", sans-serif';
-	ctx.fillText('RINE', PAD + 36, 39);
-	const rinw = ctx.measureText('RINE').width;
+	ctx.fillText(truncate(ctx, handleUpper, W - PAD * 2 - 180), PAD + 36, 39);
+	const headW = ctx.measureText(handleUpper).width;
 	ctx.fillStyle = 'rgba(255,255,255,0.42)';
-	ctx.fillRect(PAD + 44 + rinw, 24, 2, 30);
+	ctx.fillRect(PAD + 44 + headW, 24, 2, 30);
 	ctx.fillStyle = 'rgba(255,255,255,0.8)';
 	ctx.font = '600 17px "Noto Sans KR", sans-serif';
-	ctx.fillText('PROFILE', PAD + 58 + rinw, 40);
+	ctx.fillText('PROFILE', PAD + 58 + headW, 40);
 	ctx.restore();
 
 	// ── 아바타: 헤더 경계에 걸치게 + 라이트 링 ──
@@ -252,15 +257,42 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 
 	ctx.fillStyle = PAL.textMuted;
 	ctx.font = '500 22px "Noto Sans KR", sans-serif';
-	ctx.fillText(`@${input.profileId}`, nameX, handleBase);
+	const handleText = `@${input.profileId}`;
+	ctx.fillText(handleText, nameX, handleBase);
+	const handleW = ctx.measureText(handleText).width;
 
-	// ── 온라인 상태 캡슐 (우측) ──
+	// ── 서버 태그 (guildTagBadge 이미지 + 태그 텍스트) ──
+	if (input.guildTag) {
+		const tagY = handleBase - 21;
+		let tagX = nameX + handleW + 14;
+		if (input.guildTagBadgeUrl) {
+			const badge = await loadImageAllowed(input.guildTagBadgeUrl).catch(() => null);
+			if (badge) {
+				ctx.save();
+				const BH = 22;
+				const bw = (badge as unknown as { width: number }).width;
+				const bh = (badge as unknown as { height: number }).height;
+				const s = BH / bh;
+				// 뱃지는 가로가 길어요 (2:3 근사) — 전체 그려요
+				ctx.drawImage(badge, tagX, tagY, bw * s, BH);
+				ctx.restore();
+				tagX += Math.floor(bw * s) + 8;
+			}
+		}
+		ctx.save();
+		ctx.font = '700 17px "Noto Sans KR", sans-serif';
+		ctx.fillStyle = PAL.accent;
+		ctx.fillText(input.guildTag, tagX, handleBase);
+		ctx.restore();
+	}
+
+	// ── 온라인 상태 캡슐 (우측, 핸들 라인에 정렬) ──
 	const stLabel = input.onlineLabel || '온라인';
 	ctx.save();
 	ctx.font = '600 19px "Noto Sans KR", sans-serif';
 	const stW = ctx.measureText(stLabel).width + 64;
 	const stX = W - PAD - stW;
-	const stY = handleBase - 46;
+	const stY = handleBase - 32;
 	ctx.beginPath();
 	ctx.roundRect(stX, stY, stW, 44, 22);
 	ctx.fillStyle = 'rgba(142, 231, 174, 0.08)';
@@ -320,13 +352,13 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const dateIconY = dateLabelTop;
 
 	const drawDateCol = (label: string, value: string, x: number, valueAlign: 'left' | 'right', valueX?: number): void => {
-		drawIcon(ctx, 'calendar', x, dateIconY, 20, PAL.accent);
+		drawIcon(ctx, 'calendar', x, dateIconY, 22, PAL.accent);
 		ctx.fillStyle = PAL.textMuted;
-		ctx.font = '500 18px "Noto Sans KR", sans-serif';
+		ctx.font = '500 21px "Noto Sans KR", sans-serif';
 		ctx.textAlign = 'left';
-		ctx.fillText(label, x + 30, dateIconY + 16);
+		ctx.fillText(label, x + 32, dateIconY + 18);
 		ctx.fillStyle = PAL.text;
-		ctx.font = '500 38px "Noto Sans KR", ui-sans-serif, sans-serif';
+		ctx.font = '500 40px "Noto Sans KR", ui-sans-serif, sans-serif';
 		if (valueAlign === 'right' && valueX != null) ctx.fillText(value, valueX, dateValueTop + 34);
 		else ctx.fillText(value, x, dateValueTop + 34);
 	};
@@ -352,11 +384,11 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.save();
 	ctx.fillStyle = PAL.textFaint;
 	ctx.textAlign = 'left';
-	drawIcon(ctx, 'sparkle', PAD, H - 30, 15, PAL.textFaint, { fill: true });
-	ctx.font = '500 15px "Noto Sans KR", sans-serif';
-	ctx.fillText(`${input.profileId} / profile`, PAD + 22, H - 17);
+	drawIcon(ctx, 'sparkle', PAD, H - 32, 16, PAL.textFaint, { fill: true });
+	ctx.font = '500 17px "Noto Sans KR", sans-serif';
+	ctx.fillText(`${input.profileId} / profile`, PAD + 24, H - 18);
 	ctx.textAlign = 'right';
-	ctx.fillText('샘플 프레임', W - PAD, H - 17);
+	ctx.fillText('샘플 프레임', W - PAD, H - 18);
 	ctx.restore();
 
 	return (await canvas.toBuffer('png')) as Buffer;

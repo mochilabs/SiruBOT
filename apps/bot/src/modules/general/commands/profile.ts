@@ -63,11 +63,7 @@ export class ProfileCommand extends Command {
 								.setNameLocalizations({ ko: '스타일' })
 								.setDescription('Profile card design.')
 								.setDescriptionLocalizations({ ko: '프로필 카드 디자인이에요. 기본은 다크 퍼플 카드예요.' })
-								.addChoices(
-									{ name: '다크 (기본)', value: 'dark' },
-									{ name: '멤버 패스 티켓', value: 'ticket' },
-									{ name: '클래식 (배너형)', value: 'classic' }
-								)
+								.addChoices({ name: '다크 (기본)', value: 'dark' }, { name: '멤버 패스 티켓', value: 'ticket' })
 								.setRequired(false)
 						)
 				)
@@ -159,7 +155,7 @@ export class ProfileCommand extends Command {
 		// view — 기본 공개. 나만보기(true)면 ephemeral. 생일은 여전히 본인 조회 때만 데이터에 실어요.
 		const target = interaction.options.getUser('user') ?? interaction.user;
 		const showPrivate = interaction.options.getBoolean('private') ?? false;
-		const preset = (interaction.options.getString('style') ?? 'dark') as 'classic' | 'dark' | 'ticket';
+		const preset = (interaction.options.getString('style') ?? 'dark') as 'dark' | 'ticket';
 		await interaction.deferReply({ flags: showPrivate ? [MessageFlags.Ephemeral] : undefined });
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
@@ -171,8 +167,17 @@ export class ProfileCommand extends Command {
 		const guildJoinedAt = member?.joinedTimestamp ? new Date(member.joinedTimestamp).toISOString() : null;
 
 		let bannerUrl: string | null = null;
+		let guildTag: string | null = null;
+		let guildTagBadgeUrl: string | null = null;
 		try {
-			bannerUrl = (await target.fetch()).bannerURL({ size: 1024, extension: 'png' }) ?? null;
+			const fetchedUser = await target.fetch();
+			bannerUrl = fetchedUser.bannerURL({ size: 1024, extension: 'png' }) ?? null;
+			// 서버 태그 (디스코드 길드 아이덴티티) — identityEnabled + 태그 있을 때만
+			const pg = fetchedUser.primaryGuild;
+			if (pg?.identityEnabled && pg.tag) {
+				guildTag = pg.tag;
+				guildTagBadgeUrl = fetchedUser.guildTagBadgeURL({ size: 64, extension: 'png' }) ?? null;
+			}
 		} catch {
 			// 배너 없음/조회 실패 → 별자리 배경으로 그려요
 		}
@@ -244,6 +249,8 @@ export class ProfileCommand extends Command {
 			statusLabel: '',
 			intro: '',
 			roleChips,
+			guildTag,
+			guildTagBadgeUrl,
 			nowPlaying
 		}).catch(() => null);
 

@@ -8,7 +8,7 @@ import { renderProfileCardTicket, type ProfileCardTicketInput } from './profileC
 export type { ProfileCardDarkInput, ProfileCardTicketInput };
 export { renderProfileCardDark, renderProfileCardTicket };
 
-export type ProfileCardPreset = 'classic' | 'dark' | 'ticket';
+export type ProfileCardPreset = 'dark' | 'ticket';
 
 /**
  * 프리셋 래퍼 — 라우트에서 한 번에 분기해요.
@@ -16,11 +16,8 @@ export type ProfileCardPreset = 'classic' | 'dark' | 'ticket';
  */
 export async function renderProfileCardPreset(
 	preset: ProfileCardPreset,
-	classic: Parameters<(typeof import('./profileCard.ts'))['renderProfileCard']>[0],
 	variant: { dark: ProfileCardDarkInput; ticket: ProfileCardTicketInput }
 ): Promise<Buffer> {
 	if (preset === 'dark') return renderProfileCardDark(variant.dark);
-	if (preset === 'ticket') return renderProfileCardTicket(variant.ticket);
-	const { renderProfileCard } = await import('./profileCard.ts');
-	return renderProfileCard(classic);
+	return renderProfileCardTicket(variant.ticket);
 }

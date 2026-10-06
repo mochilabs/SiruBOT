@@ -13,6 +13,9 @@ export interface ProfileCardTicketInput {
 	profileId: string;
 	displayName: string;
 	avatarUrl: string | null;
+	/** 디스코드 서버 태그(4자리) — 있으면 핸들 옆에 뱃지로 표시 */
+	guildTag?: string | null;
+	guildTagBadgeUrl?: string | null;
 	status: 'online' | 'idle' | 'dnd' | 'invisible';
 	onlineLabel: string;
 	statusColor: string;
@@ -223,17 +226,17 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	// ── 절취선 ──
 	drawPerforation(ctx, BODY_W, H2);
 
-	// ── 본문: RINE / MEMBER PASS 헤더 + 구분선 ──
+	// ── 본문: {ID} / MEMBER PASS 헤더 + 구분선 ──
 	ctx.save();
 	ctx.textAlign = 'left';
-	ctx.font = '600 15px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '600 17px "Noto Sans KR", ui-sans-serif, sans-serif';
 	ctx.fillStyle = 'rgba(169, 106, 100, 0.55)';
-	ctx.fillText(`${input.profileId.toUpperCase()} / MEMBER PASS`, PAD, 34);
+	ctx.fillText(`${input.profileId.toUpperCase()} / MEMBER PASS`, PAD, 36);
 	ctx.strokeStyle = 'rgba(63, 58, 53, 0.14)';
 	ctx.lineWidth = 1.5;
 	ctx.beginPath();
-	ctx.moveTo(PAD, 56);
-	ctx.lineTo(BODY_W - 40, 56);
+	ctx.moveTo(PAD, 58);
+	ctx.lineTo(BODY_W - 40, 58);
 	ctx.stroke();
 	ctx.restore();
 
@@ -251,15 +254,39 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 		else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR);
 	} else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR);
 
-	// ── 이름/핸들/온라인 ──
+	// ── 이름/핸들/서버태그/온라인 ──
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 	ctx.fillStyle = INK;
 	ctx.font = '800 46px "Noto Sans KR", sans-serif';
 	ctx.fillText(truncate(ctx, input.displayName, contentW - nameX + PAD + 40), nameX, nameBase + 12);
 	ctx.fillStyle = INK_MUTED;
-	ctx.font = '500 21px "Noto Sans KR", sans-serif';
-	ctx.fillText(`@${input.profileId}`, nameX, handleBase + 8);
+	ctx.font = '500 22px "Noto Sans KR", sans-serif';
+	const tkHandle = `@${input.profileId}`;
+	ctx.fillText(tkHandle, nameX, handleBase + 8);
+	const tkHandleW = ctx.measureText(tkHandle).width;
+
+	// 서버 태그 뱃지
+	if (input.guildTag) {
+		const tagY = handleBase + 8 - 21;
+		let tagX = nameX + tkHandleW + 14;
+		if (input.guildTagBadgeUrl) {
+			const badge = await loadImageAllowed(input.guildTagBadgeUrl).catch(() => null);
+			if (badge) {
+				const BH = 22;
+				const bw = (badge as unknown as { width: number }).width;
+				const bh = (badge as unknown as { height: number }).height;
+				const s = BH / bh;
+				ctx.drawImage(badge, tagX, tagY, bw * s, BH);
+				tagX += Math.floor(bw * s) + 8;
+			}
+		}
+		ctx.save();
+		ctx.font = '700 17px "Noto Sans KR", sans-serif';
+		ctx.fillStyle = SAGE_DEEP;
+		ctx.fillText(input.guildTag, tagX, handleBase + 8);
+		ctx.restore();
+	}
 
 	// 온라인 캡슐 (핸들 아래, 텍스트 좌측 정렬 시작에 붙임)
 	ctx.save();
@@ -341,11 +368,11 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 			ctx.strokeStyle = 'rgba(63, 58, 53, 0.10)';
 			ctx.lineWidth = 1.2;
 			ctx.stroke();
-			drawIcon(ctx, stats[i].icon, sx + 16, sy + 14, 16, '#a96a64');
+			drawIcon(ctx, stats[i].icon, sx + 16, sy + 13, 17, '#a96a64');
 			ctx.fillStyle = INK_MUTED;
-			ctx.font = '500 13px "Noto Sans KR", sans-serif';
+			ctx.font = '500 15px "Noto Sans KR", sans-serif';
 			ctx.textAlign = 'left';
-			ctx.fillText(stats[i].label, sx + 38, sy + 25);
+			ctx.fillText(stats[i].label, sx + 40, sy + 25);
 			ctx.fillStyle = INK;
 			ctx.font = '800 22px "Noto Sans KR", sans-serif';
 			ctx.fillText(stats[i].value, sx + 16, sy + 56);
@@ -361,12 +388,12 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	// ── 하단: {id} / profile  ...  샘플 프레임 ──
 	ctx.save();
 	ctx.textAlign = 'left';
-	ctx.font = '500 15px "Noto Sans KR", sans-serif';
+	ctx.font = '500 17px "Noto Sans KR", sans-serif';
 	ctx.fillStyle = 'rgba(169, 106, 100, 0.8)';
-	ctx.fillText(`${input.profileId} / profile`, PAD, H2 - 24);
+	ctx.fillText(`${input.profileId} / profile`, PAD, H2 - 22);
 	ctx.textAlign = 'right';
 	ctx.fillStyle = 'rgba(63, 58, 53, 0.5)';
-	ctx.fillText('샘플 프레임', BODY_W - 40, H2 - 24);
+	ctx.fillText('샘플 프레임', BODY_W - 40, H2 - 22);
 	ctx.restore();
 
 	ctx.restore(); // 티켓 라운드 클립 끝
@@ -393,13 +420,13 @@ const LIGHT_MUSIC_PAL = {
 };
 
 function drawDateColumn(ctx: CanvasRenderingContext2D, label: string, value: string, x: number, top: number, iconColor: string): void {
-	drawIcon(ctx, 'calendar', x, top, 20, iconColor);
+	drawIcon(ctx, 'calendar', x, top, 22, iconColor);
 	ctx.fillStyle = INK_MUTED;
-	ctx.font = '500 16px "Noto Sans KR", sans-serif';
+	ctx.font = '500 18px "Noto Sans KR", sans-serif';
 	ctx.textAlign = 'left';
-	ctx.fillText(label, x + 28, top + 16);
+	ctx.fillText(label, x + 30, top + 18);
 	ctx.fillStyle = INK;
-	ctx.font = '500 30px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '500 32px "Noto Sans KR", ui-sans-serif, sans-serif';
 	ctx.fillText(value, x, top + 60);
 }
 

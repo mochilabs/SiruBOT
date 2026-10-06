@@ -90,21 +90,21 @@ export async function drawMusicSection(
 		} else drawThumbFallback(ctx, x + 20, cy + 22, NP_THUMB, 12, pal);
 		// 라벨 + 음표 아이콘
 		const labelX = x + 20 + NP_THUMB + 20;
-		drawIcon(ctx, 'disc-3', labelX, cy + 26, 18, pal.accent);
+		drawIcon(ctx, 'disc-3', labelX, cy + 25, 18, pal.accent);
 		ctx.fillStyle = pal.accent;
-		ctx.font = '700 15px "Noto Sans KR", sans-serif';
+		ctx.font = '700 17px "Noto Sans KR", sans-serif';
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText('지금 재생 중', labelX + 25, cy + 41);
+		ctx.fillText('지금 재생 중', labelX + 26, cy + 41);
 		// 제목/아티스트
 		const textX = labelX;
 		const textW = x + contentW - textX - 24;
 		ctx.fillStyle = pal.text;
-		ctx.font = '700 19px "Noto Sans KR", sans-serif';
-		ctx.fillText(truncate(ctx, nowPlaying.title, textW), textX, cy + 72);
+		ctx.font = '700 20px "Noto Sans KR", sans-serif';
+		ctx.fillText(truncate(ctx, nowPlaying.title, textW), textX, cy + 74);
 		ctx.fillStyle = pal.textMuted;
-		ctx.font = '400 15px "Noto Sans KR", sans-serif';
-		ctx.fillText(truncate(ctx, nowPlaying.artist, textW), textX, cy + 96);
+		ctx.font = '400 17px "Noto Sans KR", sans-serif';
+		ctx.fillText(truncate(ctx, nowPlaying.artist, textW), textX, cy + 100);
 		ctx.restore();
 		cy += NP_H + 18;
 	}
@@ -124,12 +124,12 @@ export async function drawMusicSection(
 		ctx.restore();
 
 		// 패널 헤더: 트로피 아이콘 + '자주 신청한 곡'
-		drawIcon(ctx, 'trophy', x + PANEL_PAD_X, cy + 20, 19, pal.accent);
+		drawIcon(ctx, 'trophy', x + PANEL_PAD_X, cy + 19, 20, pal.accent);
 		ctx.fillStyle = pal.accent;
-		ctx.font = '800 16px "Noto Sans KR", sans-serif';
+		ctx.font = '800 18px "Noto Sans KR", sans-serif';
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText('자주 신청한 곡', x + PANEL_PAD_X + 27, cy + 34);
+		ctx.fillText('자주 신청한 곡', x + PANEL_PAD_X + 29, cy + 35);
 
 		const textX = x + PANEL_PAD_X + THUMB + 16;
 		const textW = x + contentW - textX - PANEL_PAD_X;
@@ -170,11 +170,11 @@ export async function drawMusicSection(
 			ctx.textBaseline = 'alphabetic';
 			// 제목/아티스트
 			ctx.fillStyle = pal.text;
-			ctx.font = '700 17px "Noto Sans KR", sans-serif';
-			ctx.fillText(truncate(ctx, t.title, textW), textX, ry + 20);
+			ctx.font = '700 18px "Noto Sans KR", sans-serif';
+			ctx.fillText(truncate(ctx, t.title, textW), textX, ry + 21);
 			ctx.fillStyle = pal.textMuted;
-			ctx.font = '400 14px "Noto Sans KR", sans-serif';
-			ctx.fillText(truncate(ctx, t.artist, textW), textX, ry + 42);
+			ctx.font = '400 16px "Noto Sans KR", sans-serif';
+			ctx.fillText(truncate(ctx, t.artist, textW), textX, ry + 44);
 		}
 	}
 }
