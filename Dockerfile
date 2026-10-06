@@ -69,6 +69,9 @@ FROM builder AS builder-bot
 RUN --mount=type=cache,target=/app/.turbo \
     yarn turbo run build --filter=@sirubot/bot...
 
+# devDependencies 제거 — 프로덕션 node_modules를 작게 유지
+RUN yarn workspaces focus @sirubot/bot --production
+
 # Build dashboard
 FROM builder AS builder-dashboard
 RUN --mount=type=cache,target=/app/.turbo \
@@ -79,10 +82,17 @@ FROM builder AS builder-shardmanager
 RUN --mount=type=cache,target=/app/.turbo \
     yarn turbo run build --filter=@sirubot/shardmanager...
 
+# devDependencies 제거 — 프로덕션 node_modules를 작게 유지
+RUN yarn workspaces focus @sirubot/shardmanager --production
+
 # Build data-api
 FROM builder AS builder-data-api
 RUN --mount=type=cache,target=/app/.turbo \
     yarn turbo run build --filter=@sirubot/data-api...
+
+# devDependencies 제거 — 프로덕션 node_modules를 작게 유지
+# (data-api도 Prisma를 쓰므로 migrate에 필요한 prisma CLI는 dependencies에 유지됨)
+RUN yarn workspaces focus @sirubot/data-api --production
 
 # ====================
 # Bot Production
@@ -121,6 +131,10 @@ COPY --from=builder-bot --chown=sirubot:nodejs /app/node_modules ./node_modules
 
 USER sirubot
 
+# 봇 프로세스 생존 확인 (HTTP 포트 없음 — node 프로세스 존재 여부로 판단)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+	CMD ["node", "-e", "const fs=require('fs');const alive=fs.readdirSync('/proc').some(p=>/^\\d+$/.test(p)&&(()=>{try{return fs.readFileSync('/proc/'+p+'/cmdline','utf8').includes('node')}catch(e){return false}})());process.exit(alive?0:1)"]
+
 # 스키마 변경이 있어도 기동 시점에 자동 반영 (수동 migrate 누락 방지)
 # exec로 PID1을 node로 교체 — SIGTERM이 sh가 아닌 봇 프로세스에 직접 전달되도록 한다.
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --config packages/prisma/prisma.config.ts && exec yarn start"]
@@ -156,6 +170,9 @@ COPY --from=builder-dashboard --chown=nextjs:nodejs /app/packages/prisma/dist ./
 
 USER nextjs
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+	CMD ["node", "-e", "require('net').connect(3000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
 
 CMD ["node", "apps/dashboard/server.js"]
 
@@ -195,6 +212,9 @@ COPY --from=builder-shardmanager --chown=sirubot:nodejs /app/node_modules ./node
 
 USER sirubot
 EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+	CMD ["node", "-e", "require('net').connect(3001,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
 
 CMD ["yarn", "start"]
 
@@ -237,5 +257,8 @@ COPY --from=builder-data-api --chown=sirubot:nodejs /app/node_modules ./node_mod
 
 USER sirubot
 EXPOSE 3002
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+	CMD ["node", "-e", "fetch('http://127.0.0.1:3002/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
 CMD ["yarn", "start"]

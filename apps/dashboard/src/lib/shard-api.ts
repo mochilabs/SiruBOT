@@ -26,14 +26,29 @@ export interface ShardsResponse {
 }
 
 const SHARD_MANAGER_URL = process.env.SHARD_MANAGER_URL || 'http://localhost:3001';
-const SHARD_MANAGER_AUTH_KEY = process.env.SHARD_MANAGER_AUTH_KEY || 'youshallnotpass';
+
+/** SHARD_MANAGER_AUTH_KEY가 없으면 에러 — 기본 키 폴백을 두지 않는다 */
+function getShardManagerAuthKey(): string {
+	const key = process.env.SHARD_MANAGER_AUTH_KEY;
+	if (!key) {
+		throw new Error('[shard-api] SHARD_MANAGER_AUTH_KEY 환경변수가 설정되지 않았습니다.');
+	}
+	return key;
+}
 
 export async function fetchShards(): Promise<ShardsResponse | null> {
+	let authKey: string;
+	try {
+		authKey = getShardManagerAuthKey();
+	} catch (error) {
+		console.error(error);
+		return null;
+	}
 	try {
 		const res = await fetch(`${SHARD_MANAGER_URL}/api/shards`, {
 			cache: 'no-store',
 			headers: {
-				Authorization: SHARD_MANAGER_AUTH_KEY,
+				Authorization: authKey,
 			},
 		});
 		if (!res.ok) return null;
