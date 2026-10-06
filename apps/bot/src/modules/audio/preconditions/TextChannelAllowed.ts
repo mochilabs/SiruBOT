@@ -17,36 +17,31 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 	private async checkChannel(guildId: string | null, channelId: string | null) {
 		if (!guildId || !channelId) return this.ok(); // DMs are handled by other preconditions if needed
 
-		const guildSettings = await this.container.db.guild.findUnique({
-			where: { id: guildId },
-			select: { textChannelId: true }
-		});
+		// 길드 설정은 GuildService의 60초 TTL 캐시를 재사용 — 매 명령어마다 DB 조회 방지
+		const configuredChannelId = await this.container.guildService.getDefaultTextChannel(guildId);
 
 		// 1. 설정된 텍스트 채널이 없으면 통과
-		if (!guildSettings?.textChannelId) return this.ok();
-
-		const configuredChannelId = guildSettings.textChannelId;
+		if (!configuredChannelId) return this.ok();
 
 		try {
-			// 2. 설정된 텍스트 채널이 아직 존재하는지 캐시 또는 API로 확인
+			// 2. 설정된 텍스트 채널이 아직 존재하는지 확인 — 캐시 먼저, 없으면 API로
 			// fetch 실패를 모두 "채널 삭제"로 간주하지 않음: Unknown Channel(10003)일 때만 설정 초기화
-			const channelExists = await this.container.client.channels.fetch(configuredChannelId).catch((error: any) => {
-				if (error?.code === 10003 || error?.rawError?.code === 10003) return null;
-				this.container.logger.warn(
-					`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${error?.message ?? error}`
-				);
-				return 'transient' as const;
-			});
+			const channelExists =
+				this.container.client.channels.cache.get(configuredChannelId) ??
+				(await this.container.client.channels.fetch(configuredChannelId).catch((error: any) => {
+					if (error?.code === 10003 || error?.rawError?.code === 10003) return null;
+					this.container.logger.warn(
+						`Transient failure fetching configured text channel [${configuredChannelId}] in guild [${guildId}]: ${error?.message ?? error}`
+					);
+					return 'transient' as const;
+				}));
 
 			if (channelExists === 'transient') return this.ok();
 
 			if (!channelExists) {
 				// 채널이 삭제되었거나 봇이 볼 수 없는 경우: 설정을 초기화하고 통과시킴
 				this.container.logger.info(`Configured text channel [${configuredChannelId}] is missing in guild [${guildId}]. Resetting config.`);
-				await this.container.db.guild.update({
-					where: { id: guildId },
-					data: { textChannelId: null }
-				});
+				await this.container.guildService.setDefaultTextChannel(guildId, null);
 				return this.ok();
 			}
 

@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { getGuessBest, recordGameResult } from '../utils/gameRecords.ts';
 
 interface GuessSession {
 	target: number;
@@ -10,7 +11,6 @@ interface GuessSession {
 
 const MAX_ATTEMPTS = 6;
 const sessions = new Map<string, GuessSession>();
-const bestRecords = new Map<string, number>();
 
 function resultContainer(lines: string[]) {
 	const container = createContainer();
@@ -97,12 +97,12 @@ export class GuessCommand extends Command {
 			const used = MAX_ATTEMPTS - session.attempts + 1;
 			sessions.delete(userId);
 
-			const prevBest = bestRecords.get(userId);
-			const isNewBest = prevBest === undefined || used < prevBest;
-			if (isNewBest) bestRecords.set(userId, used);
+			const prevBest = await getGuessBest(userId);
+			const isNewBest = prevBest == null || used < prevBest;
+			await recordGameResult(userId, 'guess', 'win', { attempts: used });
 
 			const recordLine = isNewBest
-				? `🏆 ${prevBest === undefined ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
+				? `🏆 ${prevBest == null ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
 				: `-# 개인 최고 기록: ${prevBest}번`;
 
 			await interaction.reply({
@@ -125,6 +125,7 @@ export class GuessCommand extends Command {
 
 		if (session.attempts <= 0) {
 			sessions.delete(userId);
+			await recordGameResult(userId, 'guess', 'loss', { target: session.target });
 			await interaction.reply({
 				components: [
 					resultContainer([

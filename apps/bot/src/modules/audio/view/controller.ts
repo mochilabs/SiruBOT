@@ -1,7 +1,9 @@
 import {
 	createContainer,
+	emojiProgressBar,
 	formatTime,
 	formatTimeToKorean,
+	formatTrack,
 	isDev,
 	versionInfo,
 	removeEmojis,
@@ -13,6 +15,8 @@ import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
+	MediaGalleryBuilder,
+	MediaGalleryItemBuilder,
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
@@ -27,6 +31,8 @@ type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
 	page?: number;
+	/** NowPlaying 카드 attachment URL (attachment://...) — 있으면 상단에 카드 이미지 표시 */
+	nowPlayingCardUrl?: string;
 };
 
 export const customIdPrefix = 'controller:';
@@ -46,20 +52,28 @@ function remainingUntilQueueEnd(player: Player): number {
 	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
 }
 
-export function controllerView({ player, volume }: controllerViewProps) {
+export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
 	const current = player.queue.current;
-	// 선예열한 추천곡은 대기열이 아니므로 개수·남은 시간·버튼 노출에서 제외한다.
-	const queueCount = getUserQueuedTracks(player).length;
+	// 선예열한 추천곡은 대기열이 아니므로 개수·남은 시간·다음 곡 안내에서 제외한다.
+	const queuedTracks = getUserQueuedTracks(player);
+	const queueCount = queuedTracks.length;
 
-	// 대기열 안내를 별도 줄 대신 곡 정보 첫 줄(-# 🎵 ...)뒤에 병합해 세로 크기를 줄인다.
-	// 대기열이 비어 있으면 병합하지 않는다.
-	const trackLines = buildTrackDisplay(player, current, false);
-	if (queueCount > 0) {
-		trackLines[0] = `${trackLines[0]} • 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player) / 1000)} 남음`;
-	}
+	// 다음 곡 3개를 타이틀로 표시한다 (대기열 보기 버튼 대신).
+	const NEXT_UP_COUNT = 3;
+	const nextUpLines = queuedTracks.slice(0, NEXT_UP_COUNT).map(
+		(track, index) =>
+			`-# \`${index + 1}\` ${formatTrack(track as Track, {
+				showLength: false,
+				withMarkdownURL: true,
+				cleanTitle: true,
+				titleLength: { maxLength: 80 }
+			})}`
+	);
+
+	const trackLines = buildTrackDisplay(player, current);
 
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(trackLines.join('\n'));
 
@@ -79,6 +93,8 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		.setEmoji('⏭️')
 		.setDisabled(player.queue.tracks.length === 0);
 
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
+
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
@@ -91,14 +107,20 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
-	// 컨트롤 버튼 5개(prev·pause·next·repeat·대기열)를 한 줄에 배치한다.
+	// 1행: 재생 제어(prev·pause·next·repeat·stop), 2행: 대기열 (Discord 한 행당 버튼 5개 제한)
 	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄');
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, repeatButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+		[prevButton, pauseButton, nextButton, repeatButton, stopButton].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
+	const queueActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents([queueShowButton.setStyle(ButtonStyle.Secondary)]);
 
-	if (current?.info.artworkUrl) {
+	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
+	if (nowPlayingCardUrl) {
+		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
+		containerComponent.addMediaGalleryComponents(gallery);
+		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
+	} else if (current?.info.artworkUrl) {
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
 		thumbnail.setURL(current?.info.artworkUrl ?? '');
 		titleSection.setThumbnailAccessory(thumbnail);
@@ -108,12 +130,21 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	}
 
 	containerComponent.addActionRowComponents(controlActionRow);
+	containerComponent.addActionRowComponents(queueActionRow);
+
+	if (nextUpLines.length > 0) {
+		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
+	}
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
-	containerComponent
-		.addSeparatorComponents(separatorSmall)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(buildFooterSegments(player, volume).join(' | ')));
+	// N곡 · N 남음 안내는 하단 푸터 줄로 내린다.
+	const footerLines = [...buildFooterSegments(player, volume)];
+	if (queueCount > 0) {
+		footerLines.unshift(`📄 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player) / 1000)} 남음`);
+	}
+
+	containerComponent.addSeparatorComponents(separatorSmall).addTextDisplayComponents(new TextDisplayBuilder().setContent(footerLines.join(' | ')));
 
 	return containerComponent;
 }
@@ -131,7 +162,7 @@ function buildEpisodeLine(player: Player): string | null {
 	return `-# ╰ ${chapter.name} • (${formatTime(chapter.start / 1000)} - ${formatTime(chapter.end / 1000)})`;
 }
 
-export function buildTrackDisplay(player: Player, track: Track | null, showTimestamp = true): string[] {
+export function buildTrackDisplay(player: Player, track: Track | null): string[] {
 	const contents = [];
 	if (!track) {
 		contents.push(`### 재생 중인 음악이 없어요.`);
@@ -152,14 +183,13 @@ export function buildTrackDisplay(player: Player, track: Track | null, showTimes
 		contents.push(requesterId === 'related_track' ? `-# 추천 곡 ${EMOJI_SPARKLE}` : `-# 신청자: <@${requesterId}>`);
 	}
 
-	// 길이 표기 — 프로그레스바는 제거하고 (지금시간 / 길이) 짧은 줄만 남긴다.
+	// 길이 표기 — 짧은 이모지 프로그레스바와 (지금시간 / 길이)을 함께 표시한다.
 	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
 	if (track.info.isStream) {
 		contents.push(`(${durationText}) 실시간 스트리밍`);
-	} else if (showTimestamp) {
-		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText})`);
 	} else {
-		contents.push(`-# (${durationText})`);
+		const progressBar = emojiProgressBar((player.position ?? 0) / (track.info.duration || 1));
+		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText}) ${progressBar}`);
 	}
 
 	return contents;
