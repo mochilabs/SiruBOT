@@ -16,6 +16,7 @@
     "scripts": {
         "lint": "prettier --check \"src/**/*.ts\"",
         "lint:fix": "prettier --write \"src/**/*.ts\"",
+        "test": "vitest run --passWithNoTests",
         "typecheck": "tsc --noEmit",
         "build": "tsup",
         "watch": "tsup --watch"
@@ -32,6 +33,9 @@
         "@types/node": "^22.18.1"
     },
     "dependencies": {
-        "tslog": "^4.10.2"
+        "@sentry/node": "^9.15.0",
+        "@sentry/profiling-node": "^9.15.0",
+        "tslog": "^4.10.2",
+        "zod": "^4.1.11"
     }
 }

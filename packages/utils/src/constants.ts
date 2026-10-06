@@ -50,4 +50,4 @@ export const PROGRESS_BAR_START_BLACK = '<:progress_start_black:9564912935325204
 export const PROGRESS_BAR_BLACK = '<:progress_bar_black:956491293507321896>';
 export const PROGRESS_BAR_END_BLACK = '<:progress_end_black:956491293448613908>';
 
-export const PROGRESS_BAR_EMOJI_COUNT = 9;
+export const PROGRESS_BAR_EMOJI_COUNT = 6;

@@ -5,6 +5,7 @@ import { sharedCache } from './utils/cache.ts';
 import { getLogger } from './utils/logger.ts';
 import { OpenAICompatTranslationProvider } from './providers/translate.ts';
 import { registerRoutes } from './routes/index.ts';
+import { ensureKoreanFont } from './renderers/canvasUtils.ts';
 import { startOhaasaScheduler } from './services/ohaasaScheduler.ts';
 import { connectDb, disconnectDb, getDb } from './services/db.ts';
 import { startMemoryTidyScheduler } from './services/memoryTidy.ts';
@@ -13,6 +14,10 @@ export async function buildServer(env: Env) {
 	const logger = getLogger('server');
 
 	await sharedCache.connect(env.REDIS_URL);
+
+	// 이미지 렌더 폰트는 부팅 시 1회 로드 — 첫 카드 요청이 폰트 로드에 막히지 않아요.
+	// (렌더러의 ensureKoreanFont() 호출은 안전망으로 남아 있어요)
+	await ensureKoreanFont();
 
 	const translationProvider = new OpenAICompatTranslationProvider(
 		env.OPENAI_COMPATIBLE_API_URL.replace(/\/+$/, ''),

@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { type ILogger } from '../types/logger.ts';
-import type { WsMessage } from '../ws-types/index.ts';
+import { type WsMessage, WsMessageSchema } from '../ws-types/index.ts';
 
 export type WebsocketOptions = {
 	logger: ILogger;
@@ -57,10 +57,13 @@ export class ShardWebSocket {
 
 				this.ws.on('message', (data) => {
 					try {
-						const message: WsMessage = JSON.parse(data.toString());
+						const parsed: unknown = JSON.parse(data.toString());
+						// manager와 동일하게 zod 스키마로 검증 — 깨진/악의적 payload가
+						// evalCallback 등 핸들러에 전달되지 않도록 한다.
+						const message = WsMessageSchema.parse(parsed);
 						this.emit(message.op, message);
 					} catch (error) {
-						this.logger.error('Failed to parse message:', error);
+						this.logger.error('Failed to parse/validate message:', error);
 					}
 				});
 

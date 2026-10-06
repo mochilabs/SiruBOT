@@ -74,6 +74,24 @@ model User {
   // Relations
   history     GuildTrackHistory[]
   playlists   Playlist[]
+  gameRecords GameRecord[]
+}
+
+// 게임 전적/기록 — 모든 미니게임의 영속 저장소 (인메모리 Map 대체).
+// game: 'rps' | 'guess' | 'dice' | 'attendance' | 'quiz'
+// result: 'win' | 'loss' | 'draw' | 'checkin'
+// meta 예시: rps {} / guess { attempts: 3 } / attendance { streak: 7, day: '2026-10-05' }
+model GameRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  game      String
+  result    String
+  meta      Json?
+  playedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, game, playedAt(sort: Desc)])
 }
 
 model GuildTrackHistory {

@@ -94,7 +94,8 @@ services:
       # 번역·기억정리용 LLM (OPENAI_COMPATIBLE_API_URL/OPENAI_API_KEY는 .env에서)
       # 메모리 정리 잡: DATABASE_URL이 있을 때만 활성화돼요 (.env에서)
     ports:
-      # 대시보드/관제 접근용 — 외부 노출이 싫으면 "127.0.0.1:3002:3002"로 제한
+      # 경고: data-api는 AUTH_KEY 헤더로 보호되지만, 외부에 직접 노출하면 무차별 대입/취약점 스캔에 노출된다.
+      # 관제 대시보드(/dashboard)도 AUTH_KEY가 필요하다. 외부 공개가 필요 없으면 "127.0.0.1:3002:3002"로 제한할 것.
       - "3002:3002"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3002/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]

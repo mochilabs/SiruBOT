@@ -1,9 +1,10 @@
 /**
  * 프로필 카드 렌더러 — skia-canvas로 유저 프로필을 현대적인 카드 이미지로 그려요.
  * 배너 기반 레이아웃: 배너 크기만큼 채우고, 아래 섹션에 아바타/태그/통계/자주 듣는 곡.
- * 생일 표기는 payload에 있을 때만 — 봇이 본인 조회 때만 넣어요.
+ * 컬러는 웹 대시보드 디자인 토큰(globals.css 다크 테마)과 동일한 팔레트를 써요.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import { ensureKoreanFont, hashString, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 export interface TopTrackSnippet {
 	title: string;
@@ -37,38 +38,51 @@ export interface ProfileCardInput {
 	topTracks: TopTrackSnippet[];
 }
 
-// ── 별자리 테마 (12별자리 컬러 팔레트) ─────────────────────────────────────
-interface ZodiacTheme {
+// ── 대시보드 디자인 토큰 (apps/dashboard/src/app/globals.css 다크 테마 기준) ──
+const TOKEN = {
+	/** --background (dark) */
+	page: '#1a0e12',
+	/** --card (dark) */
+	card: '#2d1b1e',
+	/** --surface-1 (dark): 패널 베이스 */
+	surface1: '#231317',
+	/** --surface-3 (dark): 플로팅 오버레이 */
+	surface3: '#35212a',
+	/** --primary: 브랜드 핑크 */
+	primary: '#ff85c1',
+	/** --secondary: 따뜻한 보조 톤 */
+	secondary: '#d4a574',
+	/** --foreground (dark) */
+	text: '#fce7f3',
+	/** --muted-foreground (dark) */
+	textMuted: '#c9a8b5',
+	/** --border (dark) */
+	border: '#3d2328',
+	/** --border-subtle (dark) */
+	borderSubtle: '#2f1a1f'
+} as const;
+
+// ── 별자리 테마 (12별자리 — 브랜드 팔레트와 조화된 컬러) ─────────────────────
+// ohaasaCard.ts에서도 재사용해요.
+export interface ZodiacTheme {
 	primary: string;
-	secondary: string;
-	glow: string;
+	soft: string;
 }
 
-const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
-	'01': { primary: '#ff6b6b', secondary: '#ff8a5c', glow: 'rgba(255,107,107,0.4)' }, // 양자리
-	'02': { primary: '#ffd166', secondary: '#f4a261', glow: 'rgba(255,209,102,0.4)' }, // 황소자리
-	'03': { primary: '#4cc9f0', secondary: '#7209b7', glow: 'rgba(76,201,240,0.4)' }, // 쌍둥이자리
-	'04': { primary: '#7bdff2', secondary: '#b388ff', glow: 'rgba(123,223,242,0.4)' }, // 게자리
-	'05': { primary: '#ffd700', secondary: '#ff9e00', glow: 'rgba(255,215,0,0.4)' }, // 사자자리
-	'06': { primary: '#8ac926', secondary: '#2a9d8f', glow: 'rgba(138,201,38,0.4)' }, // 처녀자리
-	'07': { primary: '#ff70a6', secondary: '#ff9770', glow: 'rgba(255,112,166,0.4)' }, // 천칭자리
-	'08': { primary: '#ff5d8f', secondary: '#8338ec', glow: 'rgba(255,93,143,0.4)' }, // 전갈자리
-	'09': { primary: '#ffa630', secondary: '#ff4e00', glow: 'rgba(255,166,48,0.4)' }, // 사수자리
-	'10': { primary: '#2ec4b6', secondary: '#011f4b', glow: 'rgba(46,196,182,0.4)' }, // 염소자리
-	'11': { primary: '#00b4d8', secondary: '#90e0ef', glow: 'rgba(0,180,216,0.4)' }, // 물병자리
-	'12': { primary: '#9d4edd', secondary: '#5a189a', glow: 'rgba(157,78,221,0.4)' } // 물고기자리
+export const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
+	'01': { primary: '#fb7185', soft: '#fda4af' }, // 양자리 — 로즈
+	'02': { primary: '#e8a87c', soft: '#f4c9a5' }, // 황소자리 — 살구
+	'03': { primary: '#f0abfc', soft: '#f5e0ff' }, // 쌍둥이자리 — 라일락
+	'04': { primary: '#93c5fd', soft: '#dbeafe' }, // 게자리 — 스카이
+	'05': { primary: '#fbbf24', soft: '#fde68a' }, // 사자자리 — 골드
+	'06': { primary: '#a3e635', soft: '#ecfccb' }, // 처녀자리 — 라임
+	'07': { primary: '#f9a8d4', soft: '#fce7f3' }, // 천칭자리 — 블룸(브랜드 톤)
+	'08': { primary: '#e879f9', soft: '#fae8ff' }, // 전갈자리 — 푸시아
+	'09': { primary: '#fb923c', soft: '#ffedd5' }, // 사수자리 — 오렌지
+	'10': { primary: '#d4a574', soft: '#f0e2cf' }, // 염소자리 — 세컨더리 톤
+	'11': { primary: '#67e8f9', soft: '#cffafe' }, // 물병자리 — 아쿠아
+	'12': { primary: '#c084fc', soft: '#f3e8ff' } // 물고기자리 — 바이올렛
 };
-
-function hexToRgba(hex: string, alpha: number): string {
-	const n = parseInt(hex.slice(1), 16);
-	return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
-}
-
-function hashString(s: string): number {
-	let h = 2166136261;
-	for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-	return h >>> 0;
-}
 
 function makeRng(seed: number): () => number {
 	let s = seed || 1;
@@ -228,18 +242,6 @@ const ZODIAC_SHAPES: Record<string, [number, number][]> = {
 	] // 물고기
 };
 
-async function loadImage(url: string): Promise<CanvasDrawable | null> {
-	try {
-		const { loadImage } = await import('skia-canvas');
-		const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-		if (!res.ok) return null;
-		const buf = Buffer.from(await res.arrayBuffer());
-		return (await loadImage(buf)) as unknown as CanvasDrawable;
-	} catch {
-		return null;
-	}
-}
-
 function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number): void {
 	ctx.save();
 	ctx.globalAlpha = alpha;
@@ -266,24 +268,27 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 }
 
 /** 원형 이미지 그리기 */
-function drawCircleImage(ctx: CanvasRenderingContext2D, img: CanvasDrawable, x: number, y: number, radius: number): void {
+function drawCircleImage(ctx: CanvasRenderingContext2D, img: CanvasDrawable, cx: number, cy: number, radius: number): void {
 	ctx.save();
 	ctx.beginPath();
-	ctx.arc(x + radius, y + radius, radius, 0, Math.PI * 2);
+	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
 	ctx.clip();
 	const iw = (img as { width: number }).width;
 	const ih = (img as { height: number }).height;
 	const scale = Math.max((radius * 2) / iw, (radius * 2) / ih);
-	ctx.drawImage(img, x + radius - (iw * scale) / 2, y + radius - (ih * scale) / 2, iw * scale, ih * scale);
+	ctx.drawImage(img, cx - (iw * scale) / 2, cy - (ih * scale) / 2, iw * scale, ih * scale);
 	ctx.restore();
 }
 
-/** 텍스트 생략 */
-function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
-	if (ctx.measureText(text).width <= maxWidth) return text;
-	let s = text;
-	while (s.length > 1 && ctx.measureText(s + '…').width > maxWidth) s = s.slice(0, -1);
-	return s + '…';
+/** 카드 본체 + 보더 (공용 모양) */
+function drawCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+	ctx.beginPath();
+	ctx.roundRect(x, y, w, h, r);
+	ctx.fillStyle = TOKEN.card;
+	ctx.fill();
+	ctx.strokeStyle = TOKEN.border;
+	ctx.lineWidth = 1.5;
+	ctx.stroke();
 }
 
 /** 총 청취 시간을 카드에 맞게 축약해요 */
@@ -296,72 +301,82 @@ function formatListenCompact(text: string): string {
 }
 
 export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer> {
-	const { Canvas, FontLibrary } = await import('skia-canvas');
-	try {
-		if (!FontLibrary.has('Noto Sans KR')) {
-			const { join } = await import('node:path');
-			const fontPath = join(process.cwd(), 'resources/fonts/NotoSansKR.ttf');
-			FontLibrary.use('Noto Sans KR', [fontPath]);
-		}
-	} catch (error) {
-		console.error(`[data-api] profile-card font load failed: ${error instanceof Error ? error.message : String(error)}`);
-	}
+	const { Canvas } = await import('skia-canvas');
+	await ensureKoreanFont();
 
-	const theme = ZODIAC_THEMES[input.zodiacCode ?? '12'] ?? ZODIAC_THEMES['12'];
+	const zodiacCode = input.zodiacCode ?? '12';
+	const theme = ZODIAC_THEMES[zodiacCode] ?? ZODIAC_THEMES['12'];
 	const rng = makeRng(hashString(input.userId));
 
-	// 크기: 920 × (배너 200 + 콘텐츠 ~420)
+	// ── 레이아웃 상수 (세로 높이는 콘텐츠에 맞춰 계산) ──
 	const W = 920;
-	const BANNER_H = input.bannerUrl ? 200 : 120;
-	const CONTENT_H = 420;
-	const H = BANNER_H + CONTENT_H;
+	const PAD = 40;
+	const BANNER_H = 176; // 배너/헤더 높이
+	const AVATAR_R = 56;
+	const AVATAR_CX = PAD + AVATAR_R; // 96
+	const AVATAR_CY = BANNER_H + 14; // 헤더 경계에 걸치게
 
-	// 배너 없으면 밝은 배경 → 어두운 텍스트
-	const lightMode = !input.bannerUrl;
-	const textPrimary = () => (lightMode ? '#2a3140' : '#ffffff');
-	const textMuted = () => (lightMode ? 'rgba(42,49,64,0.6)' : 'rgba(255,255,255,0.6)');
-	const textSubtle = () => (lightMode ? 'rgba(42,49,64,0.4)' : 'rgba(255,255,255,0.4)');
+	const statY = AVATAR_CY + AVATAR_R + 36;
+	const statH = 92;
+	const statR = 16;
+	const statGap = 14;
+	const statW = (W - PAD * 2 - statGap * 2) / 3;
+
+	const panelY = statY + statH + 18;
+	const rows = Math.min(3, input.topTracks.length);
+	const THUMB = 46;
+	const ROW_GAP = 12;
+	// 패널 헤더(48) + 행들 + 하단 여백(20), 비었으면 헤더+안내 문구
+	const panelH = rows > 0 ? 48 + rows * THUMB + (rows - 1) * ROW_GAP + 20 : 48 + 30 + 20;
+	const H = panelY + panelH + 44; // 하단 시그니처 여백
 
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
 
-	// ── 배경 ──
-	// 별자리 그라디언트 베이스
-	const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-	bgGrad.addColorStop(0, input.bannerUrl ? '#0a0c14' : hexToRgba(theme.secondary, 0.25));
-	bgGrad.addColorStop(1, '#0d1117');
-	ctx.fillStyle = bgGrad;
+	// ── 배경: page 토큰 단색 + 상단 헤더 틴트 ──
+	ctx.fillStyle = TOKEN.page;
 	ctx.fillRect(0, 0, W, H);
 
-	// 별채우기 (배너 없을 때만, 우측에 집중)
-	if (!input.bannerUrl) {
-		// 별자리 형태는 우측 "콘텐츠 위" 공간 — 통계/트랙 영역(좌측)과 분리
-		const mapX = (nx: number) => W * 0.58 + nx * W * 0.36;
-		const mapY = (ny: number) => H * 0.14 + ny * H * 0.28;
+	// 헤더 배경 (배너 없으면 별자리 틴트, 있으면 어두운 베이스)
+	const headGrad = ctx.createLinearGradient(0, 0, 0, BANNER_H + 30);
+	if (input.bannerUrl) {
+		headGrad.addColorStop(0, TOKEN.surface1);
+		headGrad.addColorStop(1, TOKEN.page);
+	} else {
+		headGrad.addColorStop(0, hexToRgba(theme.primary, 0.14));
+		headGrad.addColorStop(0.6, hexToRgba(theme.primary, 0.04));
+		headGrad.addColorStop(1, TOKEN.page);
+	}
+	ctx.fillStyle = headGrad;
+	ctx.fillRect(0, 0, W, BANNER_H + 30);
 
-		for (let i = 0; i < 55; i++) {
-			const x = W * 0.45 + rng() * W * 0.52;
-			const y = rng() * H;
-			drawStar(ctx, x, y, rng() * 2 + 0.3, 0.15 + rng() * 0.4);
+	// 배너 없을 때: 별자리 컨스텔레이션 (헤더 오른쪽 — 이름 영역과 분리)
+	if (!input.bannerUrl) {
+		const mapX = (nx: number) => W * 0.64 + nx * W * 0.27;
+		const mapY = (ny: number) => 32 + ny * 110;
+
+		for (let i = 0; i < 36; i++) {
+			const x = W * 0.58 + rng() * W * 0.4;
+			const y = rng() * (BANNER_H - 10);
+			drawStar(ctx, x, y, rng() * 1.5 + 0.3, 0.12 + rng() * 0.35);
 		}
-		// 별자리 실제 형태 — 크고 선명하게
-		const shape = ZODIAC_SHAPES[input.zodiacCode ?? '12'] ?? ZODIAC_SHAPES['12'];
+		const shape = ZODIAC_SHAPES[zodiacCode] ?? ZODIAC_SHAPES['12'];
 		ctx.save();
-		ctx.globalAlpha = 0.75;
-		ctx.strokeStyle = hexToRgba(theme.primary, 0.6);
-		ctx.lineWidth = 2;
-		ctx.setLineDash([7, 10]);
+		ctx.globalAlpha = 0.85;
+		ctx.strokeStyle = hexToRgba(theme.primary, 0.55);
+		ctx.lineWidth = 1.6;
+		ctx.setLineDash([5, 9]);
 		ctx.beginPath();
 		shape.forEach(([nx, ny], i) => (i === 0 ? ctx.moveTo(mapX(nx), mapY(ny)) : ctx.lineTo(mapX(nx), mapY(ny))));
 		ctx.stroke();
 		ctx.setLineDash([]);
-		shape.forEach(([nx, ny], i) => drawStar(ctx, mapX(nx), mapY(ny), i === 0 || i === shape.length - 1 ? 3.4 : 2.4, 0.9));
+		shape.forEach(([nx, ny], i) => drawStar(ctx, mapX(nx), mapY(ny), i === 0 || i === shape.length - 1 ? 2.6 : 1.9, 0.9));
 		ctx.restore();
 	}
 
-	// ── 배너 영역 ──
+	// ── 배너 이미지 (있을 때) ──
 	if (input.bannerUrl) {
-		const bannerImg = await loadImage(input.bannerUrl);
+		const bannerImg = await loadImageAllowed(input.bannerUrl);
 		if (bannerImg) {
 			const bw = (bannerImg as { width: number }).width;
 			const bh = (bannerImg as { height: number }).height;
@@ -369,217 +384,261 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 			const dw = bw * scale;
 			const dh = bh * scale;
 			ctx.save();
-			ctx.globalAlpha = 0.9;
-			ctx.drawImage(bannerImg, (W - dw) / 2, -(dh - BANNER_H) / 2, dw, dh);
+			ctx.beginPath();
+			ctx.rect(0, 0, W, BANNER_H);
+			ctx.clip();
+			ctx.drawImage(bannerImg, (W - dw) / 2, (BANNER_H - dh) / 2, dw, dh);
+			// 톤 정합: 배너 위 어두운 스크림
+			ctx.fillStyle = 'rgba(26,14,18,0.32)';
+			ctx.fillRect(0, 0, W, BANNER_H);
 			ctx.restore();
 		}
-		// 배너 하단 페이드 아웃
-		const fade = ctx.createLinearGradient(0, BANNER_H - 60, 0, BANNER_H);
-		fade.addColorStop(0, 'rgba(13,17,23,0)');
-		fade.addColorStop(1, '#0d1117');
+		// 헤더 하단 페이드 — page 배경으로 자연스럽게 녹아요
+		const fade = ctx.createLinearGradient(0, BANNER_H - 64, 0, BANNER_H + 26);
+		fade.addColorStop(0, 'rgba(26,14,18,0)');
+		fade.addColorStop(0.72, 'rgba(26,14,18,0.86)');
+		fade.addColorStop(1, TOKEN.page);
 		ctx.fillStyle = fade;
-		ctx.fillRect(0, BANNER_H - 80, W, 80);
+		ctx.fillRect(0, BANNER_H - 64, W, 90);
 	} else {
-		// 배너 없을 때 별자리 액센트 상단 바
+		// 배너 없을 때 브랜드 액센트 상단 바
+		const accent = ctx.createLinearGradient(0, 0, W, 0);
+		accent.addColorStop(0, TOKEN.primary);
+		accent.addColorStop(1, hexToRgba(TOKEN.secondary, 0.85));
+		ctx.fillStyle = accent;
+		ctx.fillRect(0, 0, W, 5);
+	}
+
+	// ── 아바타: 헤더 경계에 걸치게 + primary 링 ──
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(AVATAR_CX, AVATAR_CY, AVATAR_R + 5, 0, Math.PI * 2);
+	ctx.fillStyle = TOKEN.primary;
+	ctx.fill();
+	ctx.restore();
+
+	if (input.avatarUrl) {
+		const avImg = await loadImageAllowed(input.avatarUrl);
+		if (avImg) {
+			drawCircleImage(ctx, avImg, AVATAR_CX, AVATAR_CY, AVATAR_R);
+		} else {
+			ctx.save();
+			ctx.beginPath();
+			ctx.arc(AVATAR_CX, AVATAR_CY, AVATAR_R, 0, Math.PI * 2);
+			ctx.fillStyle = TOKEN.surface3;
+			ctx.fill();
+			ctx.restore();
+		}
+	} else {
 		ctx.save();
-		ctx.fillStyle = theme.primary;
-		ctx.globalAlpha = 0.3;
-		ctx.fillRect(0, 0, W, 4);
+		ctx.beginPath();
+		ctx.arc(AVATAR_CX, AVATAR_CY, AVATAR_R, 0, Math.PI * 2);
+		ctx.fillStyle = TOKEN.surface3;
+		ctx.fill();
+		// 플레이스홀더 뮤직 노트
+		ctx.fillStyle = hexToRgba(TOKEN.textMuted, 0.6);
+		ctx.font = '600 40px "Noto Sans KR", sans-serif';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText('♪', AVATAR_CX, AVATAR_CY + 4);
+		ctx.textBaseline = 'alphabetic';
 		ctx.restore();
 	}
 
-	// ── 아바타 (배너-콘텐츠 경계에 걸치게) + 글로우 링 ──
-	const avatarR = 60;
-	const avatarX = 50;
-	const avatarY = BANNER_H - avatarR + 10; // 배너 끝에서 살짝 아래로
-
-	// 글로우 라이트
-	const glowGrad = ctx.createRadialGradient(avatarX + avatarR, avatarY + avatarR, avatarR * 0.3, avatarX + avatarR, avatarY + avatarR, avatarR * 2);
-	glowGrad.addColorStop(0, theme.glow);
-	glowGrad.addColorStop(1, 'transparent');
-	ctx.fillStyle = glowGrad;
-	ctx.beginPath();
-	ctx.arc(avatarX + avatarR, avatarY + avatarR, avatarR * 2.5, 0, Math.PI * 2);
-	ctx.fill();
-
-	// 아바타 원
-	if (input.avatarUrl) {
-		const avImg = await loadImage(input.avatarUrl);
-		if (avImg) drawCircleImage(ctx, avImg, avatarX, avatarY, avatarR);
-		else {
-			ctx.fillStyle = '#262a38';
-			ctx.beginPath();
-			ctx.arc(avatarX + avatarR, avatarY + avatarR, avatarR, 0, Math.PI * 2);
-			ctx.fill();
-		}
-	} else {
-		ctx.fillStyle = '#262a38';
-		ctx.beginPath();
-		ctx.arc(avatarX + avatarR, avatarY + avatarR, avatarR, 0, Math.PI * 2);
-		ctx.fill();
-	}
-	// 링
-	ctx.strokeStyle = theme.primary;
-	ctx.lineWidth = 4;
-	ctx.beginPath();
-	ctx.arc(avatarX + avatarR, avatarY + avatarR, avatarR + 3, 0, Math.PI * 2);
-	ctx.stroke();
-
-	// ── 이름과 태그 ──
-	const nameY = avatarY + avatarR + 50;
+	// ── 이름/태그 (아바타 오른쪽) ──
+	const nameX = AVATAR_CX + AVATAR_R + 28;
+	const nameY = AVATAR_CY - 12;
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 
 	// 이름
-	ctx.fillStyle = textPrimary();
-	ctx.font = '700 42px "Noto Sans KR", sans-serif';
-	ctx.fillText(truncate(ctx, input.displayName, W - 520), 190, nameY);
+	ctx.fillStyle = TOKEN.text;
+	ctx.font = '800 40px "Noto Sans KR", sans-serif';
+	ctx.fillText(truncate(ctx, input.displayName, W - nameX - 330), nameX, nameY);
 
-	// 유저태그
-	ctx.fillStyle = textMuted();
-	ctx.font = '400 24px "Noto Sans KR", sans-serif';
-	ctx.fillText(`@${input.username}`, 190, nameY + 36);
+	// 유저태그 (이름 아래, muted-foreground 토큰)
+	ctx.fillStyle = TOKEN.textMuted;
+	ctx.font = '500 21px "Noto Sans KR", sans-serif';
+	ctx.fillText(`@${input.username}`, nameX, nameY + 38);
 
-	// 별자리 뱃지 — ko와 jp를 한 줄에 (일자 형태 보강)
-	const badgeX = 190;
-	const badgeY = nameY + 56;
+	// ── 별자리 뱃지 (이름 아래, accent 톤 배경) ──
+	const badgeY = nameY + 64;
 	const badgeText = input.zodiacJp ? `${input.zodiacKo} · ${input.zodiacJp}` : input.zodiacKo;
+	let badgeW = 0;
 	ctx.save();
 	ctx.font = '600 17px "Noto Sans KR", sans-serif';
-	const bw = ctx.measureText(badgeText).width + 36;
+	badgeW = ctx.measureText(badgeText).width + 32;
 	ctx.beginPath();
-	ctx.roundRect(badgeX, badgeY, bw, 34, 17);
-	ctx.fillStyle = hexToRgba(theme.primary, 0.18);
+	ctx.roundRect(nameX, badgeY, badgeW, 34, 17);
+	ctx.fillStyle = hexToRgba(theme.primary, 0.15);
 	ctx.fill();
-	ctx.strokeStyle = theme.primary;
+	ctx.strokeStyle = hexToRgba(theme.primary, 0.45);
 	ctx.lineWidth = 1.5;
 	ctx.stroke();
-	ctx.fillStyle = theme.primary;
+	ctx.fillStyle = theme.soft;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.fillText(badgeText, badgeX + bw / 2, badgeY + 18);
+	ctx.fillText(badgeText, nameX + badgeW / 2, badgeY + 18);
 	ctx.restore();
 
 	// 생일 (본인 조회일 때만) — 뱃지 옆
 	if (input.birthMonth && input.birthDay) {
 		ctx.save();
-		ctx.fillStyle = 'rgba(255,255,255,0.7)';
-		ctx.font = '500 18px "Noto Sans KR", sans-serif';
-		ctx.textAlign = 'left';
-		ctx.textBaseline = 'middle';
-		ctx.fillText(`생일 ${input.birthMonth}월 ${input.birthDay}일`, badgeX + bw + 16, badgeY + 18);
-		ctx.restore();
-	}
-
-	// ── 통계 카드들 ──
-	const statY = nameY + 110;
-	const statW = 180;
-	const statH = 80;
-	const stats = [
-		{ label: '플레이리스트', val: `${input.playlistCount}개` },
-		{ label: '신청한 곡', val: `${input.requestedCount}곡` },
-		{ label: '총 청취 시간', val: formatListenCompact(input.listenText) }
-	];
-
-	stats.forEach((st, i) => {
-		const x = 50 + i * (statW + 20);
-		ctx.save();
+		ctx.font = '600 17px "Noto Sans KR", sans-serif';
+		const birthText = `🎂 ${input.birthMonth}월 ${input.birthDay}일`;
+		const bw2 = ctx.measureText(birthText).width + 32;
 		ctx.beginPath();
-		ctx.roundRect(x, statY, statW, statH, 12);
-		ctx.fillStyle = 'rgba(255,255,255,0.06)';
+		ctx.roundRect(nameX + badgeW + 12, badgeY, bw2, 34, 17);
+		ctx.fillStyle = hexToRgba(TOKEN.secondary, 0.16);
 		ctx.fill();
-		ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-		ctx.lineWidth = 1;
+		ctx.strokeStyle = hexToRgba(TOKEN.secondary, 0.5);
+		ctx.lineWidth = 1.5;
 		ctx.stroke();
-		ctx.fillStyle = textSubtle();
-		ctx.font = '400 13px "Noto Sans KR", sans-serif';
+		ctx.fillStyle = TOKEN.secondary;
 		ctx.textAlign = 'center';
-		ctx.fillText(st.label, x + statW / 2, statY + 22);
-		ctx.fillStyle = '#ffffff';
-		ctx.font = '700 28px "Noto Sans KR", sans-serif';
-		ctx.fillText(st.val, x + statW / 2, statY + 56);
+		ctx.textBaseline = 'middle';
+		ctx.fillText(birthText, nameX + badgeW + 12 + bw2 / 2, badgeY + 18);
 		ctx.restore();
-	});
-
-	// ── 자주 듣는 곡 (썸네일) ──
-	if (input.topTracks.length > 0) {
-		const trackY = statY + statH + 28;
-		ctx.fillStyle = 'rgba(255,255,255,0.5)';
-		ctx.font = '600 15px "Noto Sans KR", sans-serif';
-		ctx.textAlign = 'left';
-		ctx.fillText('자주 신청한 곡', 50, trackY);
-
-		const thumbSize = 56;
-		for (let i = 0; i < Math.min(3, input.topTracks.length); i++) {
-			const track = input.topTracks[i];
-			const y = trackY + 12 + i * (thumbSize + 10);
-			// 썸네일
-			let thumbDrawn = false;
-			if (track.thumbnailUrl) {
-				const img = await loadImage(track.thumbnailUrl);
-				if (img) {
-					ctx.save();
-					ctx.beginPath();
-					ctx.roundRect(50, y, thumbSize, thumbSize, 8);
-					ctx.clip();
-					const iw = (img as { width: number }).width;
-					const ih = (img as { height: number }).height;
-					const s = Math.max(thumbSize / iw, thumbSize / ih);
-					ctx.drawImage(img, 50 + thumbSize / 2 - (iw * s) / 2, y + thumbSize / 2 - (ih * s) / 2, iw * s, ih * s);
-					ctx.restore();
-					// 순번 배지
-					ctx.fillStyle = hexToRgba(theme.primary, 0.9);
-					ctx.beginPath();
-					ctx.roundRect(50, y, 24, 24, 6);
-					ctx.fill();
-					ctx.fillStyle = '#0d1117';
-					ctx.font = '700 14px "Noto Sans KR", sans-serif';
-					ctx.textAlign = 'center';
-					ctx.fillText(String(i + 1), 50 + 12, y + 17);
-					thumbDrawn = true;
-				}
-			}
-			if (!thumbDrawn) {
-				ctx.save();
-				ctx.beginPath();
-				ctx.roundRect(50, y, thumbSize, thumbSize, 8);
-				ctx.fillStyle = hexToRgba(theme.primary, 0.15);
-				ctx.fill();
-				ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-				ctx.lineWidth = 1;
-				ctx.stroke();
-				ctx.fillStyle = theme.primary;
-				ctx.font = '700 20px "Noto Sans KR", sans-serif';
-				ctx.textAlign = 'center';
-				ctx.fillText(String(i + 1), 50 + thumbSize / 2, y + thumbSize / 2 + 7);
-				ctx.restore();
-			}
-			// 텍스트
-			ctx.textAlign = 'left';
-			ctx.fillStyle = '#ffffff';
-			ctx.font = '600 17px "Noto Sans KR", sans-serif';
-			ctx.fillText(truncate(ctx, track.title, 500), 50 + thumbSize + 14, y + 24);
-			ctx.fillStyle = 'rgba(255,255,255,0.5)';
-			ctx.font = '400 13px "Noto Sans KR", sans-serif';
-			ctx.fillText(truncate(ctx, track.artist, 500), 50 + thumbSize + 14, y + 46);
-		}
 	}
 
-	// ── 하단 정보 (계정/참가일) ──
-	const footerY = H - 28;
+	// ── 우측: 계정 정보 (헤더 안, 오른쪽 정렬) ──
 	ctx.textAlign = 'right';
-	ctx.fillStyle = textMuted();
-	ctx.font = '400 13px "Noto Sans KR", sans-serif';
+	ctx.fillStyle = TOKEN.textMuted;
+	ctx.font = '500 15px "Noto Sans KR", sans-serif';
 	const created = input.accountCreated
 		? new Date(input.accountCreated).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 		: '';
 	const joined = input.guildJoinedAt
 		? new Date(input.guildJoinedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 		: '';
-	ctx.fillText(created + (joined ? ` · 서버 참가 ${joined}` : ''), W - 50, footerY);
-	ctx.fillStyle = hexToRgba(theme.primary, 0.8);
-	ctx.font = '700 14px "Noto Sans KR", sans-serif';
-	ctx.fillText('SiruBOT', W - 50, footerY - 22);
+	if (created) ctx.fillText(`가입 ${created}`, W - PAD, BANNER_H - 30);
+	if (joined) ctx.fillText(`서버 참가 ${joined}`, W - PAD, BANNER_H - 8);
+
+	// ── 통계 카드 3개 — card 토큰 + border 토큰 + 별자리 액센트 ──
+	const statIcon = ['📁', '🎵', '⏱'];
+	const stats = [
+		{ label: '플레이리스트', val: `${input.playlistCount}개` },
+		{ label: '신청한 곡', val: `${input.requestedCount.toLocaleString('ko-KR')}곡` },
+		{ label: '총 청취 시간', val: formatListenCompact(input.listenText) }
+	];
+
+	stats.forEach((st, i) => {
+		const x = PAD + i * (statW + statGap);
+		ctx.save();
+		// 카드 본체 + 클립 (액센트 바를 라운드 안에 넣기 위해)
+		ctx.beginPath();
+		ctx.roundRect(x, statY, statW, statH, statR);
+		ctx.fillStyle = TOKEN.card;
+		ctx.fill();
+		ctx.save();
+		ctx.clip();
+		ctx.fillStyle = hexToRgba(theme.primary, 0.75);
+		ctx.fillRect(x, statY, statW, 3);
+		ctx.restore();
+		ctx.strokeStyle = TOKEN.border;
+		ctx.lineWidth = 1.5;
+		ctx.stroke();
+		// 라벨 (muted 토큰)
+		ctx.fillStyle = TOKEN.textMuted;
+		ctx.font = '500 14px "Noto Sans KR", sans-serif';
+		ctx.textAlign = 'left';
+		ctx.fillText(`${statIcon[i]} ${st.label}`, x + 20, statY + 34);
+		// 값 (foreground 강조)
+		ctx.fillStyle = TOKEN.text;
+		ctx.font = '800 27px "Noto Sans KR", sans-serif';
+		ctx.fillText(st.val, x + 20, statY + 72);
+		ctx.restore();
+	});
+
+	// ── 자주 신청한 곡 패널 — card 토큰 안에 리스트 ──
+	ctx.save();
+	drawCard(ctx, PAD, panelY, W - PAD * 2, panelH, statR);
+	ctx.restore();
+
+	// 패널 헤더
+	ctx.textAlign = 'left';
+	ctx.fillStyle = TOKEN.primary;
+	ctx.font = '800 16px "Noto Sans KR", sans-serif';
+	ctx.fillText('🏆 자주 신청한 곡', PAD + 24, panelY + 32);
+
+	if (rows === 0) {
+		ctx.fillStyle = TOKEN.textMuted;
+		ctx.font = '500 15px "Noto Sans KR", sans-serif';
+		ctx.fillText('아직 기록이 없어요. /재생으로 첫 곡을 신청해 보세요.', PAD + 24, panelY + 62);
+	}
+
+	const textX = PAD + 24 + THUMB + 16;
+	const textW = W - textX - PAD - 24;
+	for (let i = 0; i < rows; i++) {
+		const track = input.topTracks[i];
+		const y = panelY + 48 + i * (THUMB + ROW_GAP);
+		// 썸네일
+		let thumbDrawn = false;
+		if (track.thumbnailUrl) {
+			const img = await loadImageAllowed(track.thumbnailUrl);
+			if (img) {
+				ctx.save();
+				ctx.beginPath();
+				ctx.roundRect(PAD + 24, y, THUMB, THUMB, 10);
+				ctx.clip();
+				const iw = (img as { width: number }).width;
+				const ih = (img as { height: number }).height;
+				const s = Math.max(THUMB / iw, THUMB / ih);
+				ctx.drawImage(img, PAD + 24 + THUMB / 2 - (iw * s) / 2, y + THUMB / 2 - (ih * s) / 2, iw * s, ih * s);
+				ctx.restore();
+				thumbDrawn = true;
+			}
+		}
+		if (!thumbDrawn) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.roundRect(PAD + 24, y, THUMB, THUMB, 10);
+			ctx.fillStyle = TOKEN.surface3;
+			ctx.fill();
+			ctx.fillStyle = hexToRgba(TOKEN.textMuted, 0.7);
+			ctx.font = '600 20px "Noto Sans KR", sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText('♪', PAD + 24 + THUMB / 2, y + THUMB / 2 + 1);
+			ctx.restore();
+			ctx.textBaseline = 'alphabetic';
+		}
+		// 순번 배지 (썸네일 좌상단)
+		ctx.save();
+		ctx.beginPath();
+		ctx.roundRect(PAD + 24, y, 22, 22, 7);
+		ctx.fillStyle = TOKEN.primary;
+		ctx.fill();
+		ctx.fillStyle = TOKEN.page;
+		ctx.font = '800 12px "Noto Sans KR", sans-serif';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(String(i + 1), PAD + 24 + 11, y + 11.5);
+		ctx.restore();
+		ctx.textBaseline = 'alphabetic';
+		// 제목/아티스트
+		ctx.fillStyle = TOKEN.text;
+		ctx.font = '700 17px "Noto Sans KR", sans-serif';
+		ctx.fillText(truncate(ctx, track.title, textW), textX, y + 19);
+		ctx.fillStyle = TOKEN.textMuted;
+		ctx.font = '400 14px "Noto Sans KR", sans-serif';
+		ctx.fillText(truncate(ctx, track.artist, textW), textX, y + 41);
+	}
+
+	// ── 하단: 브랜드 시그니처 ──
+	ctx.textAlign = 'right';
+	ctx.fillStyle = TOKEN.textMuted;
+	ctx.font = '700 13px "Noto Sans KR", sans-serif';
+	const sigText = 'SiruBOT';
+	ctx.fillText(sigText, W - PAD, H - 18);
+	// 브랜드 핑크 로고 닷
+	const sigW = ctx.measureText(sigText).width;
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(W - PAD - sigW - 10, H - 23, 4, 0, Math.PI * 2);
+	ctx.fillStyle = TOKEN.primary;
+	ctx.fill();
+	ctx.restore();
 
 	return (await canvas.toBuffer('png')) as Buffer;
 }
