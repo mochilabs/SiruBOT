@@ -2,6 +2,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { type ButtonInteraction, MessageFlags } from 'discord.js';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { queueCustomIdPrefix, queueList, queueEmpty } from '../view/queue.ts';
+import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 const QUEUE_PAGE_SIZE = 10;
 
@@ -33,7 +34,7 @@ export default class QueuePaginationHandler extends InteractionHandler {
 	}
 
 	public async run(interaction: ButtonInteraction<'cached'>, { page, authorId }: { page: number; authorId: string }) {
-		const player = this.container.audio.getPlayer(interaction.guildId);
+		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 		if (!player || getUserQueuedTracks(player).length === 0) {
 			await interaction.update({
 				components: [queueEmpty()],
@@ -44,6 +45,9 @@ export default class QueuePaginationHandler extends InteractionHandler {
 
 		const totalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE);
 		const safePage = Math.max(1, Math.min(page, totalPages));
+		// 점프/삭제 버튼의 기본 인덱스((page-1)*10)와 동기화
+		player.queuePage = safePage;
+		player.queueSelectedIndex = null;
 
 		await interaction.update({
 			components: [queueList({ player, page: safePage, totalPages, authorId })],

@@ -1,10 +1,12 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
-import { controllerView } from '../view/controller.ts';
+import { queueList, queueSelectCustomId } from '../view/queue.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { errorView } from '../view/error.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
+
+const QUEUE_PAGE_SIZE = 10;
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -16,7 +18,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 
 	public override parse(interaction: StringSelectMenuInteraction) {
 		if (!interaction.inCachedGuild()) return this.none();
-		if (interaction.customId === 'controller:queue:select') {
+		if (interaction.customId === queueSelectCustomId) {
 			return this.some({ selectedValue: interaction.values[0] });
 		}
 		return this.none();
@@ -63,9 +65,15 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 
 		player.queueSelectedIndex = trackIndex;
 
-		// Update the controller view to reflect the selection (no action taken on select, just UI update)
+		// 셀렉트 메뉴가 있는 대기열 목록(ephemeral) 메시지를 선택 상태로 다시 렌더한다.
+		// 선택된 곡이 속한 페이지로 queuePage도 맞춰 둔다 (점프/삭제 버튼의 기본 인덱스 동기화).
+		const tracks = getUserQueuedTracks(player);
+		const totalPages = Math.max(1, Math.ceil(tracks.length / QUEUE_PAGE_SIZE));
+		const page = Math.min(Math.floor(trackIndex / QUEUE_PAGE_SIZE) + 1, totalPages);
+		player.queuePage = page;
+
 		await interaction.update({
-			components: [controllerView({ player, volume: player.volume })],
+			components: [queueList({ player, page, totalPages, authorId: interaction.user.id, selectedIndex: trackIndex })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});

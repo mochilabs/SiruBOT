@@ -1,26 +1,7 @@
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
-export const initSentry = () => {
-	const dsn = process.env.SENTRY_DSN;
-
-	if (!dsn) {
-		console.info('[Sentry] SENTRY_DSN not set, Sentry is disabled.');
-		return;
-	}
-
-	Sentry.init({
-		dsn,
-		environment: process.env.NODE_ENV ?? 'development',
-		release: process.env.VERSION ?? 'unknown',
-		integrations: [nodeProfilingIntegration()],
-		tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
-		profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
-		maxBreadcrumbs: 50
-	});
-
-	console.info(`[Sentry] Initialized (env: ${process.env.NODE_ENV}, release: ${process.env.VERSION ?? 'unknown'})`);
-};
+// Sentry 초기화는 공용 모듈로 이전 — 이 파일의 기존 import 경로는 그대로 유지된다.
+export { initSentry } from '@sirubot/utils';
 
 export const setSentryShardTags = (shardIds: number[] | 'auto') => {
 	if (shardIds === 'auto') {

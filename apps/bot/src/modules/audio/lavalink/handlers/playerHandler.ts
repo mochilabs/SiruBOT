@@ -60,6 +60,8 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	private async handlePlayerDestroy(player: CustomPlayer, _reason: DestroyReasonsType | undefined) {
 		this.logger.info(`Player destroyed: ${player.guildId}`);
 		this.container.redisStore.getPlayerSaver().delete(player.guildId);
+		// 큐 키도 함께 삭제 — TTL(7일)이 있어도 정상 종료 시에는 즉시 정리해 Redis 키 누수를 막는다.
+		this.container.redisStore.getQueueStore().delete(player.guildId);
 		// 파괴된 플레이어의 서버 필터 상태도 사라진다 — 다음 play 전에 다시 prime해야 한다.
 		this.container.mixerService.markFiltersStale(player.guildId);
 		await this.container.playerNotifier.onPlayerDestroy(player);

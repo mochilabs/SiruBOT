@@ -6,6 +6,7 @@ import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { resolveNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
 
@@ -69,9 +70,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		switch (command) {
-			case 'time':
-				await this.safeUpdate(interaction, player);
-				break;
 			case 'pause':
 				await this.handlePause(interaction, player);
 				break;
@@ -103,9 +101,12 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 	}
 
-	private buildControllerPayload(player: CustomPlayer) {
+	private async buildControllerPayload(player: CustomPlayer) {
+		// 카드가 새로 렌더됐을 때만 files에 첨부 (캐시된 건 메시지에 이미 있음)
+		const card = await resolveNowPlayingCard(player).catch(() => null);
 		return {
-			components: [controllerView({ player, volume: player.volume })],
+			components: [controllerView({ player, volume: player.volume, nowPlayingCardUrl: card?.url })],
+			files: card?.fresh ? [card.file] : [],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		} as const;
@@ -113,7 +114,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async safeUpdate(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<boolean> {
 		try {
-			await interaction.update(this.buildControllerPayload(player));
+			await interaction.update(await this.buildControllerPayload(player));
 			return true;
 		} catch (error: any) {
 			// 컨트롤러가 삭제됐거나 만료된 경우: 조용히 무시하고 ephemeral 안내로 폴백
@@ -258,6 +259,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 		const QUEUE_PAGE_SIZE = 10;
 		const totalPages = Math.max(1, Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE));
+		player.queuePage = 1;
 		await interaction
 			.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
@@ -314,12 +316,24 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		player.queueSelectedIndex = null;
 
 		// Adjust page if needed
-		const newTotalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_CHUNK_SIZE);
-		if (currentPage > newTotalPages && newTotalPages > 0) {
+		const remaining = getUserQueuedTracks(player);
+		const newTotalPages = Math.max(1, Math.ceil(remaining.length / QUEUE_PAGE_CHUNK_SIZE));
+		if (currentPage > newTotalPages) {
 			player.queuePage = newTotalPages;
 		}
 
-		await this.safeUpdate(interaction, player);
+		// 대기열 목록(ephemeral) 메시지를 갱신한다 (컨트롤러가 아님).
+		await interaction
+			.update({
+				components: [
+					remaining.length === 0
+						? queueEmpty()
+						: queueList({ player, page: player.queuePage, totalPages: newTotalPages, authorId: interaction.user.id })
+				],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { roles: [], users: [] }
+			})
+			.catch(() => null);
 	}
 
 	private async handleQueueJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -337,10 +351,21 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		// Skip to the specified position (remove tracks before it and play it)
-		// 곧 trackStart가 새 컨트롤러를 보내므로 defer만 하고 edit는 생략
+		// 새 곡의 trackStart가 컨트롤러를 새로 보내므로 컨트롤러 edit는 생략하고,
+		// 대기열 목록(ephemeral) 메시지만 새로고침한다.
 		await interaction.deferUpdate().catch(() => null);
 		player.queuePage = 1;
 		player.queueSelectedIndex = null;
 		await this.container.mixerService.skip(player, trackIndex + 1);
+
+		const remaining = getUserQueuedTracks(player);
+		const totalPages = Math.max(1, Math.ceil(remaining.length / QUEUE_PAGE_CHUNK_SIZE));
+		await interaction
+			.editReply({
+				components: [remaining.length === 0 ? queueEmpty() : queueList({ player, page: 1, totalPages, authorId: interaction.user.id })],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { roles: [], users: [] }
+			})
+			.catch(() => null);
 	}
 }
