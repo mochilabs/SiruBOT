@@ -8,7 +8,7 @@ import { DataApiError, serveCached } from './serveCached.ts';
 import { deduped } from '../utils/dedup.ts';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
-import { renderProfileCard } from '../renderers/profileCard.ts';
+import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { deliveryCarriersCacheKey, deliveryTrackCacheKey, listCarriers, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
@@ -237,8 +237,27 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
-	// ── 프로필 카드 이미지 ──
+	// ── 프로필 카드 이미지 (프리셋: classic=기존 배너형 / dark·ticket=RINE 스타일) ──
+	const topTracksSchema = z
+		.array(
+			z.object({
+				title: z.string().trim().max(120),
+				artist: z.string().trim().max(120),
+				thumbnailUrl: z.string().url().nullable().default(null)
+			})
+		)
+		.max(3)
+		.default([]);
+	const nowPlayingSchema = z
+		.object({
+			title: z.string().trim().min(1).max(200),
+			artist: z.string().trim().max(120).default(''),
+			thumbnailUrl: z.string().url().nullable().default(null)
+		})
+		.nullable()
+		.default(null);
 	const profileCardSchema = z.object({
+		preset: z.enum(['classic', 'dark', 'ticket']).default('classic'),
 		userId: z.string().trim().min(1).max(32),
 		displayName: z.string().trim().min(1).max(64),
 		username: z.string().trim().min(1).max(64),
@@ -254,22 +273,84 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		listenText: z.string().trim().max(48).default('0초'),
 		accountCreated: z.string().trim().max(40).nullable().default(null),
 		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
-		topTracks: z
-			.array(
-				z.object({
-					title: z.string().trim().max(120),
-					artist: z.string().trim().max(120),
-					thumbnailUrl: z.string().url().nullable().default(null)
-				})
-			)
-			.max(3)
-			.default([])
+		topTracks: topTracksSchema,
+		// dark/ticket 프리셋 확장 필드
+		status: z.enum(['online', 'idle', 'dnd', 'invisible']).default('online'),
+		statusLabel: z.string().trim().max(24).default(''),
+		intro: z.string().trim().max(120).default(''),
+		roleChips: z.array(z.string().trim().min(1).max(32)).max(4).default([]),
+		nowPlaying: nowPlayingSchema
 	});
 	fastify.post('/v1/image/profile', async (request, reply) => {
 		try {
 			const body = profileCardSchema.parse(request.body);
-			const buffer = await deduped(`img:card:${body.userId}`, () => renderProfileCard(body));
-			metrics.request('image-profile');
+			const dateFmt = (iso: string | null): string => {
+				if (!iso) return '';
+				const d = new Date(iso);
+				if (Number.isNaN(d.getTime())) return '';
+				return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
+			};
+			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
+			const buffer = await deduped(`img:card:${body.userId}`, () =>
+				renderProfileCardPreset(
+					body.preset,
+					{
+						userId: body.userId,
+						displayName: body.displayName,
+						username: body.username,
+						avatarUrl: body.avatarUrl,
+						bannerUrl: body.bannerUrl,
+						zodiacCode: body.zodiacCode,
+						zodiacKo: body.zodiacKo,
+						zodiacJp: body.zodiacJp,
+						birthMonth: body.birthMonth,
+						birthDay: body.birthDay,
+						playlistCount: body.playlistCount,
+						requestedCount: body.requestedCount,
+						listenText: body.listenText,
+						accountCreated: body.accountCreated,
+						guildJoinedAt: body.guildJoinedAt,
+						topTracks: body.topTracks
+					},
+					{
+						dark: {
+							userId: body.userId,
+							profileId: body.username,
+							displayName: body.displayName,
+							avatarUrl: body.avatarUrl,
+							status: body.status,
+							onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+							statusColor: '#3ecf8e',
+							intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+							createdText: dateFmt(body.accountCreated),
+							joinedText: dateFmt(body.guildJoinedAt),
+							roleChips: body.roleChips,
+							topTracks: body.topTracks,
+							nowPlaying: body.nowPlaying
+						},
+						ticket: {
+							userId: body.userId,
+							profileId: body.username,
+							displayName: body.displayName,
+							avatarUrl: body.avatarUrl,
+							status: body.status,
+							onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+							statusColor: '#2f9e5f',
+							intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+							createdText: dateFmt(body.accountCreated),
+							joinedText: dateFmt(body.guildJoinedAt),
+							roleChips: body.roleChips,
+							topTracks: body.topTracks,
+							nowPlaying: body.nowPlaying,
+							stats: [
+								{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
+								{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
+							]
+						}
+					}
+				)
+			);
+			metrics.request(`image-profile-${body.preset}`);
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
 			return sendError(reply, error);

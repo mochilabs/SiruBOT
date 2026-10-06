@@ -57,6 +57,19 @@ export class ProfileCommand extends Command {
 								.setDescriptionLocalizations({ ko: '다른 사람에게 안 보이게 나만 보여줘요.' })
 								.setRequired(false)
 						)
+						.addStringOption((option) =>
+							option
+								.setName('style')
+								.setNameLocalizations({ ko: '스타일' })
+								.setDescription('Profile card design.')
+								.setDescriptionLocalizations({ ko: '프로필 카드 디자인이에요. 기본은 다크 퍼플 카드예요.' })
+								.addChoices(
+									{ name: '다크 (기본)', value: 'dark' },
+									{ name: '멤버 패스 티켓', value: 'ticket' },
+									{ name: '클래식 (배너형)', value: 'classic' }
+								)
+								.setRequired(false)
+						)
 				)
 				.addSubcommand((sub) =>
 					sub
@@ -146,24 +159,65 @@ export class ProfileCommand extends Command {
 		// view — 기본 공개. 나만보기(true)면 ephemeral. 생일은 여전히 본인 조회 때만 데이터에 실어요.
 		const target = interaction.options.getUser('user') ?? interaction.user;
 		const showPrivate = interaction.options.getBoolean('private') ?? false;
+		const preset = (interaction.options.getString('style') ?? 'dark') as 'classic' | 'dark' | 'ticket';
 		await interaction.deferReply({ flags: showPrivate ? [MessageFlags.Ephemeral] : undefined });
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
 
-		// 멤버 조회는 한 번만 — 이미지 카드(참가일)와 텍스트 카드(역할/부스터)가 공유해요.
+		// 멤버 조회는 한 번만 — 이미지 카드(참가일/역할/상태)와 텍스트 카드가 공유해요.
 		const member = interaction.inCachedGuild()
 			? (interaction.guild.members.cache.get(target.id) ?? (await interaction.guild.members.fetch(target.id).catch(() => null)))
 			: null;
 		const guildJoinedAt = member?.joinedTimestamp ? new Date(member.joinedTimestamp).toISOString() : null;
 
-		// ── 이미지 카드 (기본). 게이트웨이 실패 시 아래 텍스트 카드로 폴백해요. ──
 		let bannerUrl: string | null = null;
 		try {
 			bannerUrl = (await target.fetch()).bannerURL({ size: 1024, extension: 'png' }) ?? null;
 		} catch {
 			// 배너 없음/조회 실패 → 별자리 배경으로 그려요
 		}
+
+		// 역할 캡슐 — 캐시 역할 순 상위 4개 (@everyone 제외)
+		const roleChips =
+			member && interaction.inCachedGuild()
+				? member.roles.cache
+						.filter((role) => role.id !== interaction.guildId)
+						.sort((a, b) => b.position - a.position)
+						.map((role) => role.name)
+						.slice(0, 4)
+				: [];
+
+		// 지금 재생 중 — 대상 유저가 요청자인 현재 트랙 (플레이어가 있을 때만)
+		let nowPlaying: { title: string; artist: string; thumbnailUrl: string | null } | null = null;
+		const player = interaction.guildId ? this.container.audio?.getPlayer(interaction.guildId) : undefined;
+		const current = player?.queue.current;
+		if (current) {
+			const requester = current.requester;
+			const requesterId = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
+			if (requesterId === target.id) {
+				nowPlaying = {
+					title: current.info.title,
+					artist: current.info.author,
+					thumbnailUrl: current.info.artworkUrl ?? null
+				};
+			} else {
+				const next = player?.queue.tracks.find(
+					(t) => (typeof t.requester === 'object' ? (t.requester as { id?: string }).id : undefined) === target.id
+				);
+				if (next) {
+					nowPlaying = {
+						title: next.info.title,
+						artist: next.info.author ?? '',
+						thumbnailUrl: next.info.artworkUrl ?? null
+					};
+				}
+			}
+		}
+
+		const derivedStatus = (member?.presence?.status ?? 'online') as 'online' | 'idle' | 'dnd' | 'invisible';
+
 		const cardPng = await renderProfileCard({
+			preset,
 			userId: target.id,
 			displayName: target.displayName ?? target.username,
 			username: target.username,
@@ -185,7 +239,12 @@ export class ProfileCommand extends Command {
 				thumbnailUrl: t.artworkUrl ?? null
 			})),
 			gameStats: data.gameStats,
-			checkinStreak: data.checkinStreak
+			checkinStreak: data.checkinStreak,
+			status: derivedStatus,
+			statusLabel: '',
+			intro: '',
+			roleChips,
+			nowPlaying
 		}).catch(() => null);
 
 		if (cardPng) {

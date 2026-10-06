@@ -103,8 +103,10 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
 
 /**
  * 프로필 카드 이미지 데이터 — data-api POST 바디와 동일한 형식이에요.
+ * preset: 'classic'(기존 배너형) | 'dark'(RINE 다크 퍼플) | 'ticket'(RINE 멤버패스 티켓)
  */
 export interface ProfileCardRequest {
+	preset?: 'classic' | 'dark' | 'ticket';
 	userId: string;
 	displayName: string;
 	username: string;
@@ -131,6 +133,13 @@ export interface ProfileCardRequest {
 	} | null;
 	/** 출석 스트릭 (연속 일수) */
 	checkinStreak?: number | null;
+	/** dark/ticket 프리셋 — 상태/상태라벨/소개/역할 캡슐 */
+	status?: 'online' | 'idle' | 'dnd' | 'invisible';
+	statusLabel?: string;
+	intro?: string;
+	roleChips?: string[];
+	/** 지금 재생 중인 곡 (프리셋 카드에 표시) */
+	nowPlaying?: { title: string; artist: string; thumbnailUrl: string | null } | null;
 }
 
 /**
