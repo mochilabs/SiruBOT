@@ -121,6 +121,86 @@ export interface ProfileCardRequest {
 	accountCreated: string | null;
 	guildJoinedAt: string | null;
 	topTracks: { title: string; artist: string; thumbnailUrl: string | null }[];
+	/** 게임 전적 — data-api 렌더러가 아직 지원하지 않으면 무시돼요 (forward-compatible) */
+	gameStats?: {
+		rpsWins: number;
+		rpsLosses: number;
+		rpsDraws: number;
+		rpsBestStreak: number;
+		guessBest: number | null;
+	} | null;
+	/** 출석 스트릭 (연속 일수) */
+	checkinStreak?: number | null;
+}
+
+/**
+ * NowPlaying 카드 이미지 데이터 — data-api POST /v1/image/nowplaying 바디와 동일한 형식이에요.
+ * positionMs는 렌더 시점에 박히고, 캐시 키(trackId)에서는 제외해요.
+ */
+export interface NowPlayingCardRequest {
+	trackId: string;
+	title: string;
+	artist: string;
+	artworkUrl: string | null;
+	positionMs: number;
+	durationMs: number;
+	isStream: boolean;
+	queueCount: number;
+	requesterName: string | null;
+}
+
+/**
+ * NowPlaying 카드 PNG 렌더. 실패/미설정 시 null (호출자가 기존 썸네일로 폴백해요).
+ */
+export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise<Buffer | null> {
+	const base = gatewayBaseUrl();
+	if (!base) return null;
+	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
+	try {
+		const res = await fetch(`${base}/v1/image/nowplaying`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			body: JSON.stringify(data),
+			signal: AbortSignal.timeout(20_000)
+		});
+		if (!res.ok) throw new Error(`data-api ${res.status}`);
+		const type = res.headers.get('content-type') ?? '';
+		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
+		return Buffer.from(await res.arrayBuffer());
+	} catch (error) {
+		container.logger.warn(`[data-api] nowplaying-card failed: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+}
+
+/**
+ * 운세 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
+ */
+export async function renderOhaasaCard(data: {
+	zodiacCode: string;
+	rank: number;
+	content: string;
+	lucky?: string;
+	date?: string;
+}): Promise<Buffer | null> {
+	const base = gatewayBaseUrl();
+	if (!base) return null;
+	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
+	try {
+		const res = await fetch(`${base}/v1/image/ohaasa`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			body: JSON.stringify(data),
+			signal: AbortSignal.timeout(20_000)
+		});
+		if (!res.ok) throw new Error(`data-api ${res.status}`);
+		const type = res.headers.get('content-type') ?? '';
+		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
+		return Buffer.from(await res.arrayBuffer());
+	} catch (error) {
+		container.logger.warn(`[data-api] ohaasa-card failed: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
 }
 
 /**
