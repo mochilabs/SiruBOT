@@ -96,10 +96,37 @@ export type IconName =
 	| 'history'
 	| 'cake'
 	| 'moon-star'
-	| 'radio';
+	| 'radio'
+	| 'skip-back'
+	| 'skip-forward'
+	| 'play'
+	| 'pause'
+	| 'square'
+	| 'arrow-right'
+	| 'repeat'
+	| 'repeat-1'
+	| 'list'
+	| 'corner-down-right'
+	| 'trash-2'
+	| 'list-plus'
+	| 'rotate-ccw'
+	| 'chevrons-left'
+	| 'chevron-left'
+	| 'chevron-right'
+	| 'chevrons-right'
+	| 'shuffle'
+	| 'volume-x'
+	| 'volume-1'
+	| 'volume-2'
+	| 'star'
+	| 'plus'
+	| 'x'
+	| 'bell'
+	| 'clock-4'
+	| 'arrow-left';
 
 interface IconDef {
-	subpaths: string[];
+	subpaths?: string[];
 	circles?: [number, number, number][];
 	rects?: [number, number, number, number, number][];
 }
@@ -189,6 +216,102 @@ const ICONS: Record<IconName, IconDef> = {
 			'M22 12a10 10 0 0 0-10-10 10 10 0 0 0-10 10 10 10 0 0 0 10 10 10 10 0 0 0 10-10',
 			'M16 12a4 4 0 0 0-4-4 4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4'
 		]
+	},
+	'skip-back': {
+		subpaths: ['M19 20 9 12l10-8z', 'M5 19V5']
+	},
+	'skip-forward': {
+		subpaths: ['M5 4l10 8-10 8z', 'M19 5v14']
+	},
+	play: {
+		subpaths: ['M6 3 20 12 6 21z']
+	},
+	pause: {
+		subpaths: ['M15 5v14', 'M9 5v14']
+	},
+	square: {
+		subpaths: ['M5 5h14v14H5z']
+	},
+	'arrow-right': {
+		subpaths: ['M5 12h14', 'M13 6l6 6-6 6']
+	},
+	'arrow-left': {
+		subpaths: ['M19 12H5', 'M11 18 5 12l6-6']
+	},
+	repeat: {
+		subpaths: ['M17 2l4 4-4 4', 'M3 11v-1a4 4 0 0 1 4-4h14', 'M7 22l-4-4 4-4', 'M21 13v1a4 4 0 0 1-4 4H3']
+	},
+	'repeat-1': {
+		subpaths: ['M17 2l4 4-4 4', 'M3 11v-1a4 4 0 0 1 4-4h14', 'M7 22l-4-4 4-4', 'M21 13v1a4 4 0 0 1-4 4H3', 'M11 10h1v4']
+	},
+	list: {
+		subpaths: ['M3 12h.01', 'M3 18h.01', 'M3 6h.01', 'M8 12h13', 'M8 18h13', 'M8 6h13']
+	},
+	'corner-down-right': {
+		subpaths: ['M4 4v7a4 4 0 0 0 4 4h12', 'M15 10l5 5-5 5']
+	},
+	'trash-2': {
+		subpaths: ['M3 6h18', 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6', 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', 'M10 11v6', 'M14 11v6']
+	},
+	'list-plus': {
+		subpaths: ['M3 5h.01', 'M8 5h13', 'M3 12h.01', 'M8 12h13', 'M3 19h.01', 'M8 19h13', 'M19 16v6', 'M16 19h6']
+	},
+	'rotate-ccw': {
+		subpaths: ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5']
+	},
+	'chevrons-left': {
+		subpaths: ['M11 17l-5-5 5-5', 'M18 17l-5-5 5-5']
+	},
+	'chevron-left': {
+		subpaths: ['M15 18l-6-6 6-6']
+	},
+	'chevron-right': {
+		subpaths: ['M9 18l6-6-6-6']
+	},
+	'chevrons-right': {
+		subpaths: ['M6 17l5-5-5-5', 'M13 17l5-5-5-5']
+	},
+	shuffle: {
+		subpaths: [
+			'M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.8-1.1 2-1.7 3.3-1.7H22',
+			'M18 2l4 4-4 4',
+			'M2 6h1.9c1.5 0 2.9.9 3.7 2.2',
+			'M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8',
+			'M18 14l4 4-4 4'
+		]
+	},
+	'volume-x': {
+		subpaths: ['M11 5 6 9H2v6h4l5 4z', 'M22 9l-6 6', 'M16 9l6 6']
+	},
+	'volume-1': {
+		subpaths: ['M11 5 6 9H2v6h4l5 4z', 'M15.5 8.5a5 5 0 0 1 0 7']
+	},
+	'volume-2': {
+		subpaths: ['M11 5 6 9H2v6h4l5 4z', 'M15.5 8.5a5 5 0 0 1 0 7', 'M19 5a9 9 0 0 1 0 14']
+	},
+	star: {
+		subpaths: [
+			'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.907l-3.797 3.696a2.123 2.123 0 0 0-.611 1.878l.894 5.195a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.08 21.33a.53.53 0 0 1-.77-.56l.894-5.195a2.122 2.122 0 0 0-.611-1.878L1.996 9.796a.53.53 0 0 1 .294-.906l5.166-.756a2.123 2.123 0 0 0 1.597-1.16z'
+		]
+	},
+	plus: {
+		subpaths: ['M5 12h14', 'M12 5v14']
+	},
+	x: {
+		subpaths: ['M18 6 6 18', 'M6 6l12 12']
+	},
+	bell: {
+		subpaths: [
+			'M10.268 21a2 2 0 0 0 3.464 0',
+			'M22 8c0-2.3-.8-4.3-2-6',
+			'M2 8c0-2.3.8-4.3 2-6',
+			'M9 3h6',
+			'M22 17H2c3 0 4-2 4-5V9a6 6 0 0 1 12 0v3c0 3 1 5 4 5z'
+		]
+	},
+	'clock-4': {
+		subpaths: ['M12 6v6l4 2'],
+		circles: [[12, 12, 10]]
 	}
 };
 
@@ -231,7 +354,7 @@ function drawIconInner(
 		}
 	if (options.fill) {
 		ctx.fillStyle = color;
-		for (const d of def.subpaths) {
+		for (const d of def.subpaths ?? []) {
 			if (pathCtor) ctx.fill(new pathCtor(d) as never);
 			else fillPathData(ctx, d);
 		}
@@ -246,7 +369,7 @@ function drawIconInner(
 		ctx.lineWidth = options.strokeWidth ?? 2;
 		ctx.lineCap = 'round';
 		ctx.lineJoin = 'round';
-		for (const d of def.subpaths) {
+		for (const d of def.subpaths ?? []) {
 			if (pathCtor) ctx.stroke(new pathCtor(d) as never);
 			else strokePathData(ctx, d);
 		}

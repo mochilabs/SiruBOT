@@ -41,3 +41,5 @@ dist/
 
 # prisma generated files
 packages/prisma/src/client/
+# 일회성 작업 스크립트/산출물 (커밋 금지)
+.tmp/
