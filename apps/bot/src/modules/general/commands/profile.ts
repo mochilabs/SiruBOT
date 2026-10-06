@@ -11,8 +11,9 @@ import {
 } from 'discord.js';
 import { getZodiacFromDate, ZODIAC_MAP } from '../../games/utils/ohaasaService.ts';
 import { clearUserBirthday, isValidBirthday, setUserBirthday } from '../utils/userProfile.ts';
-import { buildProfileCardData } from '../utils/profileCardData.ts';
+import { buildProfileCardData, formatGameStatsLines } from '../utils/profileCardData.ts';
 import { renderProfileCard } from '../../../services/dataApiClient.ts';
+import { streakBadge } from '../../games/utils/gameRecords.ts';
 
 function zodiacLabel(code: string): string {
 	const info = ZODIAC_MAP[code];
@@ -149,6 +150,12 @@ export class ProfileCommand extends Command {
 
 		const data = await buildProfileCardData(target.id, interaction.user.id, interaction.guildId);
 
+		// 멤버 조회는 한 번만 — 이미지 카드(참가일)와 텍스트 카드(역할/부스터)가 공유해요.
+		const member = interaction.inCachedGuild()
+			? (interaction.guild.members.cache.get(target.id) ?? (await interaction.guild.members.fetch(target.id).catch(() => null)))
+			: null;
+		const guildJoinedAt = member?.joinedTimestamp ? new Date(member.joinedTimestamp).toISOString() : null;
+
 		// ── 이미지 카드 (기본). 게이트웨이 실패 시 아래 텍스트 카드로 폴백해요. ──
 		let bannerUrl: string | null = null;
 		try {
@@ -171,16 +178,14 @@ export class ProfileCommand extends Command {
 			requestedCount: data.requestedCount,
 			listenText: formatTimeToKorean(Math.floor(data.listenMs / 1000)),
 			accountCreated: new Date(target.createdTimestamp).toISOString(),
-			guildJoinedAt: interaction.inCachedGuild()
-				? interaction.guild.members.cache.get(target.id)?.joinedTimestamp
-					? new Date(interaction.guild.members.cache.get(target.id)!.joinedTimestamp!).toISOString()
-					: null
-				: null,
+			guildJoinedAt,
 			topTracks: data.topTracks.slice(0, 3).map((t) => ({
 				title: t.title,
 				artist: t.artist,
 				thumbnailUrl: t.artworkUrl ?? null
-			}))
+			})),
+			gameStats: data.gameStats,
+			checkinStreak: data.checkinStreak
 		}).catch(() => null);
 
 		if (cardPng) {
@@ -216,9 +221,13 @@ export class ProfileCommand extends Command {
 			lines.push(`🔮 **별자리**: ${zodiacLabel(data.zodiacCode)}`);
 		}
 
+		// 출석 스트릭 뱃지
+		if (data.checkinStreak > 0) {
+			lines.push(`${streakBadge(data.checkinStreak)} **출석**: ${data.checkinStreak}일 연속`);
+		}
+
 		// 서버 정보 (길드 안에서만, 멤버를 찾을 수 있을 때)
 		if (interaction.inCachedGuild()) {
-			const member = interaction.guild.members.cache.get(target.id) ?? (await interaction.guild.members.fetch(target.id).catch(() => null));
 			const createdAt = Math.floor(target.createdTimestamp / 1000);
 			lines.push(`📅 **계정 생성일**: <t:${createdAt}:R>`);
 			if (member?.joinedTimestamp) {
@@ -263,6 +272,11 @@ export class ProfileCommand extends Command {
 				const at = Math.floor(t.playedAt.getTime() / 1000);
 				lines.push(`· ${t.title}${t.artist ? ` — ${t.artist}` : ''} (<t:${at}:R>)`);
 			}
+		}
+		const gameLines = formatGameStatsLines(data.gameStats);
+		if (gameLines) {
+			lines.push('');
+			lines.push(...gameLines);
 		}
 		if (data.requestedCount === 0) {
 			lines.push('-# `/재생`으로 첫 곡을 신청해 보세요.');

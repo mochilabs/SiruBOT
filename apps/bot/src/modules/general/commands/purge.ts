@@ -8,7 +8,7 @@ const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'purge',
-	description: 'Bulk-delete recent messages in this channel.',
+	description: '채널의 최근 메시지를 일괄 삭제해요. (14일 이내)',
 	fullCategory: ['일반']
 })
 export class PurgeCommand extends Command {
@@ -20,13 +20,13 @@ export class PurgeCommand extends Command {
 				.setName(this.name)
 				.setNameLocalizations({ ko: '청소' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '채널의 최근 메시지를 일괄 삭제해요. (14일 이내)' })
+				.setDescriptionLocalizations({ ko: this.description, 'en-US': 'Bulk-delete recent messages in this channel. (within 14 days)' })
 				.addIntegerOption((option) =>
 					option
 						.setName('amount')
 						.setNameLocalizations({ ko: '수량' })
-						.setDescription('Number of messages to delete (1-100).')
-						.setDescriptionLocalizations({ ko: '삭제할 메시지 수예요. (1~100)' })
+						.setDescription('삭제할 메시지 수예요. (1~100)')
+						.setDescriptionLocalizations({ ko: '삭제할 메시지 수예요. (1~100)', 'en-US': 'Number of messages to delete (1-100).' })
 						.setRequired(true)
 						.setMinValue(1)
 						.setMaxValue(100)
@@ -35,8 +35,8 @@ export class PurgeCommand extends Command {
 					option
 						.setName('user')
 						.setNameLocalizations({ ko: '대상' })
-						.setDescription('Only delete messages from this user.')
-						.setDescriptionLocalizations({ ko: '이 사용자의 메시지만 삭제해요. (선택)' })
+						.setDescription('이 사용자의 메시지만 삭제해요. (선택)')
+						.setDescriptionLocalizations({ ko: '이 사용자의 메시지만 삭제해요. (선택)', 'en-US': 'Only delete messages from this user.' })
 				);
 		});
 	}

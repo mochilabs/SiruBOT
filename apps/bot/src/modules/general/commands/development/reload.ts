@@ -6,14 +6,19 @@ import { envParseArray } from '@skyra/env-utilities';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
-	name: '리로드',
+	name: 'reload',
+	fullCategory: ['개발'],
 	preconditions: ['OwnerOnly']
 })
 export class ReloadCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
 		registry.registerChatInputCommand(
 			(builder) => {
-				builder.setIntegrationTypes(ApplicationIntegrationType.GuildInstall).setName(this.name).setDescription('명령어 리로드');
+				builder
+					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+					.setName(this.name)
+					.setNameLocalizations({ ko: '리로드' })
+					.setDescription('명령어 리로드');
 			},
 			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);

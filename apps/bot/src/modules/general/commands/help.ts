@@ -2,7 +2,9 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { createContainer, DEFAULT_COLOR } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
+import { MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
+import { INFO_SUBCOMMANDS } from './info.ts';
 
 /** 조각 간 간격 — webhook 편집 제한(5/2초) 여유 있게 유지해요 */
 const TYPING_STEP_MIN_MS = 420;
@@ -29,6 +31,12 @@ function buildHelpContainer(content: string, typing: boolean): ContainerBuilder 
 	container.setAccentColor(DEFAULT_COLOR);
 	container.addTextDisplayComponents((t) => t.setContent(typing ? `${content}${TYPING_CURSOR}` : content));
 	return container;
+}
+
+/** 서브커맨드 클릭 멘션 — </music play:ID> 형태. ID를 못 찾으면 인라인 코드로 대체해요 */
+function subcommandMention(commandName: string, subcommandName: string, index: ReadonlyMap<string, ApplicationCommand>): string {
+	const command = index.get(commandName);
+	return command ? `</${commandName} ${subcommandName}:${command.id}>` : `\`/${commandName} ${subcommandName}\``;
 }
 
 /** AI 섹션에 따로 적어 일반 목록에서는 제외하는 명령어들 */
@@ -89,6 +97,11 @@ export class HelpCommand extends Command {
 
 			if (cmd.fullCategory.includes('음악')) {
 				audioCommands.push(line);
+				if (cmd.name === 'music') {
+					for (const sub of MUSIC_SUBCOMMANDS) {
+						audioCommands.push(`　└ ${subcommandMention('music', sub.name, index)} — ${sub.description}`);
+					}
+				}
 			} else if (cmd.fullCategory.includes('게임')) {
 				gameCommands.push(line);
 			} else if (!AI_COMMAND_NAMES.has(cmd.name)) {
@@ -96,6 +109,11 @@ export class HelpCommand extends Command {
 				const isOwnerOnly = Array.isArray(preconditions) && preconditions.includes('OwnerOnly');
 				if (!isOwnerOnly) {
 					generalCommands.push(line);
+					if (cmd.name === 'info') {
+						for (const sub of INFO_SUBCOMMANDS) {
+							generalCommands.push(`　└ ${subcommandMention('info', sub.name, index)} — ${sub.description}`);
+						}
+					}
 				}
 			}
 		}
