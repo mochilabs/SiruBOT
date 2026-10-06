@@ -23,11 +23,10 @@ const EMOJI_COMPONENT_REGEX = /\p{Emoji_Component}/gu;
 const DIGIT_SYMBOL_REGEX = /[\d*#]/;
 
 export function emojiProgressBar(percent: number): string {
-	if (percent < 0 || percent > 1) {
-		throw new Error('Percent must be between 0 and 1');
-	}
+	if (Number.isNaN(percent)) percent = 0;
+	const clamped = Math.min(0.999, Math.max(0, percent));
 
-	const p = Math.floor(percent * PROGRESS_BAR_EMOJI_COUNT);
+	const p = Math.floor(clamped * PROGRESS_BAR_EMOJI_COUNT);
 	const progressParts: string[] = [];
 
 	if (p === 0) {
