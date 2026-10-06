@@ -1,13 +1,13 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { settingsView } from '../view/settings.ts';
+import { settingsView } from '../../audio/view/settings.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'settings',
 	description: '봇의 서버 설정을 관리해요.',
-	fullCategory: ['음악'],
+	fullCategory: ['일반'],
 	preconditions: ['ManageGuild']
 })
 export class SettingsCommand extends Command {

@@ -10,6 +10,7 @@ export function pickRandom<T>(array: readonly T[]): T {
 }
 
 export * from './env.js';
+export * from './sentry.js';
 export * from './version.js';
 export * from './constants.js';
 export * from './format.js';

@@ -15,6 +15,8 @@ import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
+	MediaGalleryBuilder,
+	MediaGalleryItemBuilder,
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
@@ -29,6 +31,8 @@ type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
 	page?: number;
+	/** NowPlaying 카드 attachment URL (attachment://...) — 있으면 상단에 카드 이미지 표시 */
+	nowPlayingCardUrl?: string;
 };
 
 export const customIdPrefix = 'controller:';
@@ -48,7 +52,7 @@ function remainingUntilQueueEnd(player: Player): number {
 	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
 }
 
-export function controllerView({ player, volume }: controllerViewProps) {
+export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
 	// Container builder
 	const containerComponent = createContainer();
 
@@ -89,6 +93,8 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		.setEmoji('⏭️')
 		.setDisabled(player.queue.tracks.length === 0);
 
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
+
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
@@ -100,11 +106,21 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		)
 		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
 
-	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, repeatButton].map((e) => e.setStyle(ButtonStyle.Secondary))
-	);
+	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
+	// 1행: 재생 제어(prev·pause·next·repeat·stop), 2행: 대기열 (Discord 한 행당 버튼 5개 제한)
+	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄');
 
-	if (current?.info.artworkUrl) {
+	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		[prevButton, pauseButton, nextButton, repeatButton, stopButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+	);
+	const queueActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents([queueShowButton.setStyle(ButtonStyle.Secondary)]);
+
+	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
+	if (nowPlayingCardUrl) {
+		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
+		containerComponent.addMediaGalleryComponents(gallery);
+		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
+	} else if (current?.info.artworkUrl) {
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
 		thumbnail.setURL(current?.info.artworkUrl ?? '');
 		titleSection.setThumbnailAccessory(thumbnail);
@@ -114,6 +130,11 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	}
 
 	containerComponent.addActionRowComponents(controlActionRow);
+	containerComponent.addActionRowComponents(queueActionRow);
+
+	if (nextUpLines.length > 0) {
+		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
+	}
 
 	if (nextUpLines.length > 0) {
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));

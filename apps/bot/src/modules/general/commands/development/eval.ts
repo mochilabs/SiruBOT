@@ -13,6 +13,7 @@ import { envParseArray } from '@skyra/env-utilities';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'eval',
+	fullCategory: ['개발'],
 	preconditions: ['OwnerOnly']
 })
 export class EvalCommand extends Command {

@@ -6,7 +6,8 @@ import { envParseArray } from '@skyra/env-utilities';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
-	name: '샤드',
+	name: 'shards',
+	fullCategory: ['개발'],
 	preconditions: ['OwnerOnly']
 })
 export class ShardsCommand extends Command {
@@ -16,6 +17,7 @@ export class ShardsCommand extends Command {
 				builder
 					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 					.setName(this.name)
+					.setNameLocalizations({ ko: '샤드' })
 					.setDescription('샤드 상태를 보여줘요. (봇 소유자 전용)');
 			},
 			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }

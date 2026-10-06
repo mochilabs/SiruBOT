@@ -1,5 +1,6 @@
 // import { config } from "dotenv";
 // import path from "path";
+import { captureSentryException, initSentry } from '@sirubot/utils';
 import { ShardManagerServer } from './server.ts';
 import { getLogger } from './utils/logger.ts';
 import { getGatewayInfo } from './utils/gateway.ts';
@@ -8,6 +9,8 @@ import { validateEnv } from './config/env.ts';
 // config({ path: path.join(process.cwd(), ".env") });
 
 const logger = getLogger('bootstrap');
+
+initSentry({ service: 'shardmanager' });
 async function main() {
 	logger.info('Starting SiruBOT Shard manager...');
 
@@ -54,10 +57,12 @@ async function main() {
 		process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 		process.on('unhandledRejection', (reason, promise) => {
+			captureSentryException(reason);
 			logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 		});
 
 		process.on('uncaughtException', (error) => {
+			captureSentryException(error);
 			logger.fatal('Uncaught Exception:', error);
 			process.exit(1);
 		});

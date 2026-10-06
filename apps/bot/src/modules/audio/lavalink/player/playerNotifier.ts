@@ -5,6 +5,7 @@ import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 import * as view from '../../view/controller.ts';
 import { CustomPlayer } from './customPlayer.ts';
+import { clearNowPlayingCard, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import { Guild } from '@sirubot/prisma';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -59,15 +60,20 @@ export class PlayerNotifier {
 			await this.deleteController(player);
 
 			// 3. Build and send new controller message
+			// NowPlaying 카드: 트랙당 1회 렌더 + 캐시. 실패 시 null → 기존 썸네일 폴백.
+			const card = await resolveNowPlayingCard(player).catch(() => null);
 			const components = view.controllerView({
 				player,
-				volume: options.volume
+				volume: options.volume,
+				nowPlayingCardUrl: card?.url
 			});
+			const files = card ? [card.file] : [];
 
 			let message;
 			if (interaction) {
 				message = await interaction.reply({
 					components: [components],
+					files,
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { roles: [], users: [] },
 					fetchReply: true
@@ -79,6 +85,7 @@ export class PlayerNotifier {
 				if (!textChannel?.isSendable()) return;
 				message = await textChannel.send({
 					components: [components],
+					files,
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { roles: [], users: [] }
 				});
@@ -104,13 +111,17 @@ export class PlayerNotifier {
 				const options = await this.getControllerOptions(player.guildId);
 				if (!options || !options.enableController) return;
 
+				// 카드가 새로 렌더됐을 때만 files에 첨부 (캐시된 건 메시지에 이미 있음)
+				const card = await resolveNowPlayingCard(player).catch(() => null);
 				const components = view.controllerView({
 					player,
-					volume: options.volume
+					volume: options.volume,
+					nowPlayingCardUrl: card?.url
 				});
 
 				const payload = {
 					components: [components],
+					files: card?.fresh ? [card.file] : [],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { roles: [], users: [] }
 				} as const;
@@ -222,6 +233,7 @@ export class PlayerNotifier {
 
 	public async onPlayerDestroy(player: CustomPlayer): Promise<void> {
 		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
+		clearNowPlayingCard(player.guildId);
 		await this.deleteController(player);
 	}
 

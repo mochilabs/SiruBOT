@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Player, Track } from 'lavalink-client';
+import { isYouTubeSource } from '../modules/audio/lavalink/youtubeChapters.ts';
 
 const MIXER_FILTER_KEY = 'mixer';
 
@@ -46,6 +47,8 @@ export class MixerRequestError extends Error {
 export class MixerService {
 	/** 서버 슬롯에 다음 곡을 예열한 길드 (trackEnd에서 consume) */
 	private readonly preloaded = new Set<string>();
+	/** 서버 슬롯에 예열한 트랙의 identifier — trackStart 때 서버 payload와 대조해 표시용 트랙을 확정한다. */
+	private readonly preloadedIdentifiers = new Map<string, string>();
 	/** mixer 필터를 체인에 넣은 길드 (노드 재접속 시 리셋) */
 	private readonly filterReady = new Set<string>();
 	/** 동일 길드의 POST/DELETE가 도착 순서와 다르게 서버 슬롯을 덮어쓰지 않도록 직렬화한다. */
@@ -91,9 +94,17 @@ export class MixerService {
 	public trackRef(track: Track): { encodedTrack?: string; identifier?: string } | null {
 		const encoded = (track as { encoded?: unknown }).encoded;
 		if (typeof encoded === 'string' && encoded.length > 0) return { encodedTrack: encoded };
-		const uri = track.info?.uri;
+		const info = track.info;
+		// YouTube는 identifier가 곧 videoId라 파일 캐시 키와 정확히 일치한다.
+		// URI에는 플레이리스트 파라미터(&list= 등)가 붙을 수 있어 서버 측 키 추출을 어긋나게 할 수 있으므로
+		// 유튜브 소스에서는 identifier를 우선한다.
+		if (isYouTubeSource(info?.sourceName)) {
+			const videoId = info?.identifier;
+			if (typeof videoId === 'string' && videoId.length > 0) return { identifier: videoId };
+		}
+		const uri = info?.uri;
 		if (typeof uri === 'string' && uri.length > 0) return { identifier: uri };
-		const id = track.info?.identifier;
+		const id = info?.identifier;
 		if (typeof id === 'string' && id.length > 0) return { identifier: id };
 		return null;
 	}
@@ -121,13 +132,13 @@ export class MixerService {
 		}
 		const next = player.queue?.tracks?.[0];
 		if (!next) {
-			this.preloaded.delete(gid);
+			this.clearPreloadedState(gid);
 			await this.clearNextNow(player).catch(() => null);
 			return false;
 		}
 		const ref = this.trackRef(next as Track);
 		if (!ref) {
-			this.preloaded.delete(gid);
+			this.clearPreloadedState(gid);
 			await this.clearNextNow(player).catch(() => null);
 			container.logger.warn(`[mixer] cannot reference upcoming track, skipping preload (guild ${player.guildId})`);
 			return false;
@@ -137,7 +148,33 @@ export class MixerService {
 			body: JSON.stringify({ guildId: gid, ...ref })
 		});
 		this.preloaded.add(gid);
+		// 예열한 트랙의 identifier를 기억해 둔다 — trackStart 때 서버가 시작한 트랙과
+		// 대조해 표시용 트랙을 확정한다 (파일 캐시 stale 메타데이터로 서버 payload의
+		// encoded가 달라져도 같은 영상이면 봇의 트랙 정보를 단일 source of truth로 쓴다).
+		const warmedIdentifier = (next as Track).info?.identifier;
+		if (typeof warmedIdentifier === 'string' && warmedIdentifier.length > 0) {
+			this.preloadedIdentifiers.set(gid, warmedIdentifier);
+		} else {
+			this.preloadedIdentifiers.delete(gid);
+		}
 		return true;
+	}
+
+	/** 예열 상태(preloaded + 예열 트랙 식별자)를 함께 비운다. */
+	private clearPreloadedState(gid: string): void {
+		this.preloaded.delete(gid);
+		this.preloadedIdentifiers.delete(gid);
+	}
+
+	/**
+	 * trackStart에서 소비하는 예열 트랙 식별자 — 반환 후 삭제한다.
+	 * 서버가 예열한 곡을 시작했는지 대조하는 진단용이다.
+	 */
+	public takePreloadedIdentifier(guildId: string): string | null {
+		const gid = String(guildId);
+		const identifier = this.preloadedIdentifiers.get(gid) ?? null;
+		this.preloadedIdentifiers.delete(gid);
+		return identifier;
 	}
 
 	/** trackEnd 전용: 예열 여부를 소비한다(삭제하고 반환). */
@@ -152,7 +189,7 @@ export class MixerService {
 
 	/** 예열이 이뤄지지 않은 길드로 표시한다(클라이언트가 전이를 소유). */
 	public markUnmanaged(guildId: string): void {
-		this.preloaded.delete(String(guildId));
+		this.clearPreloadedState(String(guildId));
 	}
 
 	public async clearNext(player: Player): Promise<void> {
@@ -169,12 +206,12 @@ export class MixerService {
 		} catch (error) {
 			// 404는 슬롯이 이미 없다는 뜻이므로 정리된 것으로 본다.
 			if (error instanceof MixerRequestError && error.status === 404) {
-				this.preloaded.delete(String(player.guildId));
+				this.clearPreloadedState(String(player.guildId));
 				return;
 			}
 			throw error;
 		}
-		this.preloaded.delete(String(player.guildId));
+		this.clearPreloadedState(String(player.guildId));
 	}
 
 	private async enqueueSlotOperation<T>(guildId: string, operation: () => Promise<T>): Promise<T> {

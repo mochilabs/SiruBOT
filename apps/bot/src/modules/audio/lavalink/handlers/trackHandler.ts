@@ -43,7 +43,9 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleTrackStart(player: CustomPlayer, track: Track | null, payload: TrackStartEvent) {
-		const startedTrack = this.resolveStartedTrack(track, payload);
+		// 예열 소비 후 이어지는 trackStart에서 서버가 시작한 트랙을 대조한다.
+		const preloadedIdentifier = this.container.mixerService.takePreloadedIdentifier(player.guildId);
+		const startedTrack = this.resolveStartedTrack(player, track, payload, preloadedIdentifier);
 		this.syncQueueToNowPlaying(player, startedTrack);
 		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
 		player.consecutiveErrors = 0;
@@ -337,11 +339,50 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	// ── mixer helpers ──────────────────────────
 
-	/** Lavalink payload가 실제 시작한 곡과 클라이언트 current가 다르면 payload를 우선한다. */
-	private resolveStartedTrack(track: Track | null, payload: TrackStartEvent): Track | null {
+	/**
+	 * Lavalink payload가 실제 시작한 곡과 클라이언트 current가 다르면 payload를 우선한다.
+	 *
+	 * 단, encoded만 다르고 identifier가 큐의 트랙과 같으면 서버가 같은 영상을 다른
+	 * 메타데이터로 재구성한 것으로 본다 (예: lavalink_file_cache의 stale 메타데이터로
+	 * trackStart payload가 만들어진 경우). 이때는 봇이 검색한 신선한 메타데이터를 가진
+	 * 큐의 트랙 객체를 단일 source of truth로 써서 표시와 실제 재생이 어긋나지 않게 한다.
+	 */
+	private resolveStartedTrack(
+		player: CustomPlayer,
+		track: Track | null,
+		payload: TrackStartEvent,
+		preloadedIdentifier: string | null
+	): Track | null {
 		const payloadEncoded = payload.track?.encoded;
 		const currentEncoded = (track as { encoded?: unknown } | null)?.encoded;
 		if (!payloadEncoded || payloadEncoded === currentEncoded) return track;
+
+		const payloadIdentifier = payload.track?.info?.identifier;
+		const currentIdentifier = (track as { info?: { identifier?: unknown } } | null)?.info?.identifier;
+		// 클라이언트 current 자체가 서버가 시작한 것과 같은 영상이면(클라이언트 소유 전이 등)
+		// 서버 메타데이터 대신 클라이언트 객체를 쓴다 — 표시의 단일 source of truth.
+		if (typeof payloadIdentifier === 'string' && payloadIdentifier.length > 0 && track && currentIdentifier === payloadIdentifier) {
+			return track;
+		}
+		if (typeof payloadIdentifier === 'string' && payloadIdentifier.length > 0 && Array.isArray(player.queue.tracks)) {
+			// 같은 identifier(같은 영상)의 큐 트랙이 있으면 그 객체를 쓴다.
+			const queued = player.queue.tracks.find(
+				(t: unknown) =>
+					(t as { encoded?: unknown })?.encoded != null &&
+					(t as { info?: { identifier?: unknown } })?.info?.identifier === payloadIdentifier
+			);
+			if (queued) {
+				this.logger.debug(`[transition] trackStart resolved by identifier (guild ${player.guildId}): using queued track for display`);
+				return queued as Track;
+			}
+			// 예열한 곡도 큐에 있는 곡도 아닌 트랙이 시작됐다 — 서버(믹서/파일 캐시)가
+			// 예상 밖의 트랙을 재생한 것이므로 경고로 남긴다.
+			if (preloadedIdentifier && preloadedIdentifier !== payloadIdentifier) {
+				this.logger.warn(
+					`[transition] unexpected track started (guild ${player.guildId}): preloaded=${preloadedIdentifier}, started=${payloadIdentifier}`
+				);
+			}
+		}
 		return this.lavalinkManager.utils.buildTrack(payload.track, undefined);
 	}
 

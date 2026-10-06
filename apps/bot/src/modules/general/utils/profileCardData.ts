@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import { getZodiacFromDate } from '../../games/utils/ohaasaService.ts';
+import { getCheckinState, getGuessBest, getRpsStats } from '../../games/utils/gameRecords.ts';
 import { getUserProfile } from './userProfile.ts';
 
 export interface ProfileRecentTrack {
@@ -13,6 +14,15 @@ export interface ProfileTopTrack {
 	artist: string;
 	count: number;
 	artworkUrl?: string | null;
+}
+
+export interface ProfileGameStats {
+	rpsWins: number;
+	rpsLosses: number;
+	rpsDraws: number;
+	rpsBestStreak: number;
+	/** 숫자맞히기 개인 최고 기록 (몇 번 만에 성공). 없으면 null */
+	guessBest: number | null;
 }
 
 /**
@@ -35,6 +45,10 @@ export interface ProfileCardData {
 	listenSampled: boolean;
 	recentTracks: ProfileRecentTrack[];
 	topTracks: ProfileTopTrack[];
+	/** 게임 전적 (GameRecord 기반) */
+	gameStats: ProfileGameStats;
+	/** 출석 스트릭 (연속 일수, 없으면 0) */
+	checkinStreak: number;
 }
 
 const LISTEN_SAMPLE_LIMIT = 500;
@@ -48,7 +62,7 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 
 	const historyWhere = { userId: targetUserId, ...(guildId ? { guildId } : {}) };
 
-	const [playlistCount, requestedCount, sample, topGroups] = await Promise.all([
+	const [playlistCount, requestedCount, sample, topGroups, rpsStats, guessBest, checkinState] = await Promise.all([
 		container.db.playlist.count({ where: { userId: targetUserId } }),
 		container.db.guildTrackHistory.count({ where: historyWhere }),
 		container.db.guildTrackHistory.findMany({
@@ -63,7 +77,10 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 			_count: { trackId: true },
 			orderBy: { _count: { trackId: 'desc' } },
 			take: 5
-		})
+		}),
+		getRpsStats(targetUserId),
+		getGuessBest(targetUserId),
+		getCheckinState(targetUserId)
 	]);
 
 	const listenMs = sample.reduce((acc, h) => acc + (h.track?.duration ?? 0), 0);
@@ -99,6 +116,29 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 		listenMs,
 		listenSampled: requestedCount > sample.length,
 		recentTracks,
-		topTracks
+		topTracks,
+		gameStats: {
+			rpsWins: rpsStats.wins,
+			rpsLosses: rpsStats.losses,
+			rpsDraws: rpsStats.draws,
+			rpsBestStreak: rpsStats.best,
+			guessBest
+		},
+		checkinStreak: checkinState.streak
 	};
+}
+
+/** 프로필 텍스트 카드용 게임 전적 2줄 요약. 전적이 하나도 없으면 null */
+export function formatGameStatsLines(gameStats: ProfileGameStats): string[] | null {
+	const { rpsWins, rpsLosses, rpsDraws, rpsBestStreak, guessBest } = gameStats;
+	const hasRps = rpsWins + rpsLosses + rpsDraws > 0;
+	if (!hasRps && guessBest == null) return null;
+
+	const lines = ['🎮 **게임 전적**'];
+	if (hasRps) {
+		const best = rpsBestStreak >= 2 ? ` (최고 ${rpsBestStreak}연승)` : '';
+		lines.push(`✊ 가위바위보 **${rpsWins}승 ${rpsLosses}패 ${rpsDraws}무**${best}`);
+	}
+	if (guessBest != null) lines.push(`🎲 숫자맞히기 최고 **${guessBest}번** 만에 성공`);
+	return lines;
 }

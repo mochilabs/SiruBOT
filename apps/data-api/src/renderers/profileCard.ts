@@ -4,6 +4,7 @@
  * 컬러는 웹 대시보드 디자인 토큰(globals.css 다크 테마)과 동일한 팔레트를 써요.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import { ensureKoreanFont, hashString, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 export interface TopTrackSnippet {
 	title: string;
@@ -62,12 +63,13 @@ const TOKEN = {
 } as const;
 
 // ── 별자리 테마 (12별자리 — 브랜드 팔레트와 조화된 컬러) ─────────────────────
-interface ZodiacTheme {
+// ohaasaCard.ts에서도 재사용해요.
+export interface ZodiacTheme {
 	primary: string;
 	soft: string;
 }
 
-const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
+export const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
 	'01': { primary: '#fb7185', soft: '#fda4af' }, // 양자리 — 로즈
 	'02': { primary: '#e8a87c', soft: '#f4c9a5' }, // 황소자리 — 살구
 	'03': { primary: '#f0abfc', soft: '#f5e0ff' }, // 쌍둥이자리 — 라일락
@@ -81,17 +83,6 @@ const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
 	'11': { primary: '#67e8f9', soft: '#cffafe' }, // 물병자리 — 아쿠아
 	'12': { primary: '#c084fc', soft: '#f3e8ff' } // 물고기자리 — 바이올렛
 };
-
-function hexToRgba(hex: string, alpha: number): string {
-	const n = parseInt(hex.slice(1), 16);
-	return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
-}
-
-function hashString(s: string): number {
-	let h = 2166136261;
-	for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-	return h >>> 0;
-}
 
 function makeRng(seed: number): () => number {
 	let s = seed || 1;
@@ -251,18 +242,6 @@ const ZODIAC_SHAPES: Record<string, [number, number][]> = {
 	] // 물고기
 };
 
-async function loadImage(url: string): Promise<CanvasDrawable | null> {
-	try {
-		const { loadImage } = await import('skia-canvas');
-		const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-		if (!res.ok) return null;
-		const buf = Buffer.from(await res.arrayBuffer());
-		return (await loadImage(buf)) as unknown as CanvasDrawable;
-	} catch {
-		return null;
-	}
-}
-
 function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number): void {
 	ctx.save();
 	ctx.globalAlpha = alpha;
@@ -312,14 +291,6 @@ function drawCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number
 	ctx.stroke();
 }
 
-/** 텍스트 생략 */
-function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
-	if (ctx.measureText(text).width <= maxWidth) return text;
-	let s = text;
-	while (s.length > 1 && ctx.measureText(s + '…').width > maxWidth) s = s.slice(0, -1);
-	return s + '…';
-}
-
 /** 총 청취 시간을 카드에 맞게 축약해요 */
 function formatListenCompact(text: string): string {
 	const match = text.match(/(\d+)시간/);
@@ -330,16 +301,8 @@ function formatListenCompact(text: string): string {
 }
 
 export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer> {
-	const { Canvas, FontLibrary } = await import('skia-canvas');
-	try {
-		if (!FontLibrary.has('Noto Sans KR')) {
-			const { join } = await import('node:path');
-			const fontPath = join(process.cwd(), 'resources/fonts/NotoSansKR.ttf');
-			FontLibrary.use('Noto Sans KR', [fontPath]);
-		}
-	} catch (error) {
-		console.error(`[data-api] profile-card font load failed: ${error instanceof Error ? error.message : String(error)}`);
-	}
+	const { Canvas } = await import('skia-canvas');
+	await ensureKoreanFont();
 
 	const zodiacCode = input.zodiacCode ?? '12';
 	const theme = ZODIAC_THEMES[zodiacCode] ?? ZODIAC_THEMES['12'];
@@ -413,7 +376,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 
 	// ── 배너 이미지 (있을 때) ──
 	if (input.bannerUrl) {
-		const bannerImg = await loadImage(input.bannerUrl);
+		const bannerImg = await loadImageAllowed(input.bannerUrl);
 		if (bannerImg) {
 			const bw = (bannerImg as { width: number }).width;
 			const bh = (bannerImg as { height: number }).height;
@@ -455,7 +418,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	ctx.restore();
 
 	if (input.avatarUrl) {
-		const avImg = await loadImage(input.avatarUrl);
+		const avImg = await loadImageAllowed(input.avatarUrl);
 		if (avImg) {
 			drawCircleImage(ctx, avImg, AVATAR_CX, AVATAR_CY, AVATAR_R);
 		} else {
@@ -612,7 +575,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 		// 썸네일
 		let thumbDrawn = false;
 		if (track.thumbnailUrl) {
-			const img = await loadImage(track.thumbnailUrl);
+			const img = await loadImageAllowed(track.thumbnailUrl);
 			if (img) {
 				ctx.save();
 				ctx.beginPath();

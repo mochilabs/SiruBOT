@@ -6,7 +6,8 @@ import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, M
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'invite',
-	description: '봇 초대 링크를 보여줘요.'
+	description: '봇 초대 링크를 보여줘요.',
+	fullCategory: ['일반']
 })
 export class InviteCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

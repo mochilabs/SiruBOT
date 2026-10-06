@@ -9,6 +9,8 @@ import { deduped } from '../utils/dedup.ts';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { renderProfileCard } from '../renderers/profileCard.ts';
+import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
+import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { deliveryCarriersCacheKey, deliveryTrackCacheKey, listCarriers, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
@@ -268,6 +270,61 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			const body = profileCardSchema.parse(request.body);
 			const buffer = await deduped(`img:card:${body.userId}`, () => renderProfileCard(body));
 			metrics.request('image-profile');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── NowPlaying 카드 이미지 ──
+	// position은 렌더 시점에 박히고 캐시 키(trackId)에서는 제외해요 — 봇이 트랙당 1회만 렌더해요.
+	const nowPlayingCardSchema = z.object({
+		trackId: z.string().trim().min(1).max(200),
+		title: z.string().trim().min(1).max(200),
+		artist: z.string().trim().min(1).max(200),
+		artworkUrl: z.string().url().nullable().default(null),
+		positionMs: z
+			.number()
+			.int()
+			.min(0)
+			.max(24 * 3600_000)
+			.default(0),
+		durationMs: z
+			.number()
+			.int()
+			.min(0)
+			.max(24 * 3600_000)
+			.default(0),
+		isStream: z.boolean().default(false),
+		queueCount: z.number().int().min(0).max(10_000).default(0),
+		requesterName: z.string().trim().min(1).max(64).nullable().default(null)
+	});
+	fastify.post('/v1/image/nowplaying', async (request, reply) => {
+		try {
+			const body = nowPlayingCardSchema.parse(request.body);
+			const buffer = await deduped(`img:nowplaying:${body.trackId}`, () => renderNowPlayingCard(body));
+			metrics.request('image-nowplaying');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 운세 카드 이미지 ──
+	// /v1/ohaasa 결과(horoscope 1건)를 그대로 POST하면 돼요 — 봇은 ohaasa.ts에서 추가해요.
+	// 캐시 키(날짜+별자리)에서는 운세 본문이 제외돼요 — 하루 12장만 렌더돼요.
+	const ohaasaCardSchema = z.object({
+		zodiacCode: z.string().regex(/^(0[1-9]|1[0-2])$/),
+		rank: z.number().int().min(1).max(12),
+		content: z.string().trim().min(1).max(2000),
+		lucky: z.string().trim().max(300).default(''),
+		date: z.string().trim().max(40).default('')
+	});
+	fastify.post('/v1/image/ohaasa', async (request, reply) => {
+		try {
+			const body = ohaasaCardSchema.parse(request.body);
+			const buffer = await deduped(`img:ohaasa:${body.date || 'nodate'}:${body.zodiacCode}`, () => renderOhaasaCard(body));
+			metrics.request('image-ohaasa');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
 			return sendError(reply, error);

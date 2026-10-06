@@ -11,6 +11,9 @@ export class CachedQueueStore implements QueueStoreManager {
 	private pendingWrites: Map<string, string> = new Map();
 	private _logger: Logger<ILogObj> | null = null;
 
+	/** Redis 키 TTL — 플레이어가 파괴되지 않은 채 남은 키(크래시 잔재)가 영구 누수되지 않도록 한다. (player 키와 동일하게 7일) */
+	private static readonly REDIS_TTL_SECONDS = 7 * 24 * 60 * 60;
+
 	constructor(private readonly redis: RedisClientType) {
 		this.cache = new MemoryCache<string, string>({
 			ttl: 30 * 60 * 1000,
@@ -68,7 +71,7 @@ export class CachedQueueStore implements QueueStoreManager {
 
 		try {
 			if (this.isRedisConnected) {
-				await this.redis.set(key, stringValue);
+				await this.redis.set(key, stringValue, { EX: CachedQueueStore.REDIS_TTL_SECONDS });
 				this.logger.trace(`Successfully set in Redis for guild ${guildId}`);
 			} else {
 				this.pendingWrites.set(key, stringValue);
@@ -141,7 +144,7 @@ export class CachedQueueStore implements QueueStoreManager {
 		for (const [key, value] of this.pendingWrites.entries()) {
 			promises.push(
 				this.redis
-					.set(key, value)
+					.set(key, value, { EX: CachedQueueStore.REDIS_TTL_SECONDS })
 					.then(() => {
 						this.logger.trace(`Synced ${key}`);
 					})

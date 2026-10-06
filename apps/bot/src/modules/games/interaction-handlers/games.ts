@@ -2,35 +2,26 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { createContainer } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
+import { getRpsStats, recordGameResult, type GameResult } from '../utils/gameRecords.ts';
 
 const RPS_ICONS = ['✌️', '✊', '🖐'];
 
-interface RpsRecord {
-	streak: number;
-	best: number;
-}
-
-const rpsRecords = new Map<string, RpsRecord>();
-
 /** outcome: 0 = 비김, 1 = 승, 2 = 패 — 표시할 연승 문구가 있으면 반환 */
-function updateStreak(userId: string, outcome: number): string | null {
-	let record = rpsRecords.get(userId);
-	if (!record) {
-		record = { streak: 0, best: 0 };
-		rpsRecords.set(userId, record);
-	}
+async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {
+	const before = await getRpsStats(userId);
+	const result: GameResult = outcome === 1 ? 'win' : outcome === 2 ? 'loss' : 'draw';
+	await recordGameResult(userId, 'rps', result);
 
 	if (outcome === 1) {
-		record.streak += 1;
-		if (record.streak > record.best) record.best = record.streak;
-		return record.streak >= 2 ? `🔥 **${record.streak}연승 중!** (최고 ${record.best}연승)` : null;
+		const streak = before.streak + 1;
+		const best = Math.max(before.best, streak);
+		return streak >= 2 ? `🔥 **${streak}연승 중!** (최고 ${best}연승)` : null;
 	}
 	if (outcome === 2) {
-		const broken = record.streak >= 2 ? `💔 ${record.streak}연승이 끊겼어요 (최고 ${record.best}연승)` : null;
-		record.streak = 0;
+		const broken = before.streak >= 2 ? `💔 ${before.streak}연승이 끊겼어요 (최고 ${before.best}연승)` : null;
 		return broken;
 	}
-	return record.streak >= 2 ? `🤝 ${record.streak}연승 유지 중 (최고 ${record.best}연승)` : null;
+	return before.streak >= 2 ? `🤝 ${before.streak}연승 유지 중 (최고 ${before.best}연승)` : null;
 }
 
 function noticeContainer(text: string) {
@@ -101,7 +92,7 @@ export default class GamesInteractionHandler extends InteractionHandler {
 
 			const botPick = Math.floor(Math.random() * 3);
 			const outcome = (userPick - botPick + 3) % 3;
-			const streakLine = updateStreak(interaction.user.id, outcome);
+			const streakLine = await resolveStreakLine(interaction.user.id, outcome);
 			await interaction.editReply({
 				components: [rpsResultContainer(interaction.user.displayName, userPick, botPick, streakLine)],
 				flags: [MessageFlags.IsComponentsV2]

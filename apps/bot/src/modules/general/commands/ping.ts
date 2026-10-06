@@ -6,7 +6,8 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'ping',
-	description: '봇의 반응 속도를 보여드려요.'
+	description: '봇의 반응 속도를 보여드려요.',
+	fullCategory: ['일반']
 })
 export class PingCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {

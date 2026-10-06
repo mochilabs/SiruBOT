@@ -1,8 +1,15 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
+import {
+	ApplicationIntegrationType,
+	AttachmentBuilder,
+	ChatInputCommandInteraction,
+	MediaGalleryBuilder,
+	MediaGalleryItemBuilder,
+	MessageFlags
+} from 'discord.js';
+import { fetchOhaasaKo, renderOhaasaCard } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
 
@@ -130,8 +137,29 @@ export class OhaasaCommand extends Command {
 		const container = createContainer();
 		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 
+		// 별자리 지정 시 운세 카드 이미지 첨부 (실패하면 텍스트만)
+		let files: AttachmentBuilder[] | undefined;
+		if (targetZodiacCode) {
+			const target = this.resolveTarget(daily, targetZodiacCode);
+			const png = await renderOhaasaCard({
+				zodiacCode: target.zodiacCode,
+				rank: target.rank,
+				content: target.content,
+				lucky: target.lucky ?? undefined,
+				date: formatDate(daily.date)
+			}).catch(() => null);
+			if (png) {
+				const filename = `ohaasa-${target.zodiacCode}.png`;
+				files = [new AttachmentBuilder(png, { name: filename })];
+				container.addMediaGalleryComponents(
+					new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${filename}`))
+				);
+			}
+		}
+
 		await interaction.editReply({
 			components: [container],
+			...(files ? { files } : {}),
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
-import { SkipContext } from '../modules/audio/commands/skip.ts';
+import { SkipContext } from '../modules/audio/subcommands/skip.ts';
 import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import * as view from '../modules/audio/view/play.ts';

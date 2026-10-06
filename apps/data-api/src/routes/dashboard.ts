@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 /**
  * 자체 모니터링 대시보드 — 서드파티 0, 의존성 0.
  * HTML 1파일이 5초마다 /v1/status를 폴링해 그려요.
- * AUTH_KEY가 있으면 페이지 진입 시 프롬프트로 받아 localStorage에 저장해요.
+ * 페이지 자체도 AUTH_KEY 인증이 필요해요 (authorization 헤더로 전송).
  * tsup이 dist를 clean하므로 HTML은 인라인(모듈 상수)로 박아요 — 빌드 산출물이 단일 디렉터리에 유지돼요.
  */
 export function registerDashboard(fastify: FastifyInstance): void {
