@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 import { settingsView } from '../../audio/view/settings.ts';
 
 @ApplyOptions<Command.Options>({
@@ -27,7 +28,7 @@ export class SettingsCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'settings_not_in_guild',
-				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				message: `${appEmoji('error', '❌')} 길드 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}

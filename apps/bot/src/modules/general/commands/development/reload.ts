@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, ContainerBuilder, MessageFlags } from 'discord.js';
-import { DEFAULT_COLOR } from '@sirubot/utils';
+import { appEmoji, DEFAULT_COLOR } from '@sirubot/utils';
 import { envParseArray } from '@skyra/env-utilities';
 
 @ApplyOptions<Command.Options>({
@@ -28,7 +28,7 @@ export class ReloadCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'reload_not_in_guild',
-				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				message: `${appEmoji('error', '❌')} 길드 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}

@@ -2,7 +2,7 @@ import { Events, version as frameworkVersion, Listener } from '@sapphire/framewo
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { envParseString } from '@skyra/env-utilities';
-import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
+import { versionInfo, isDev, BOT_NAME, formatTime, ensureAppEmojisLoaded } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
@@ -38,6 +38,10 @@ export class ReadyEvent extends Listener {
 				startOhaasaPrefetchSchedule();
 			}
 		}
+
+		// 앱 이모지 매핑 로드 — scripts/upload-emojis.ts가 만든 emoji-ids.json을 읽어요.
+		// 실패해도 appEmoji()가 유니코드 폴백으로 동작해서 기능은 그대로예요.
+		await ensureAppEmojisLoaded();
 
 		this.startActivityInterval();
 	}

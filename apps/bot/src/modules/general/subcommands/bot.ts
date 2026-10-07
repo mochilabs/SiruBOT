@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { BOT_NAME, createContainer, versionInfo } from '@sirubot/utils';
+import { appEmoji, BOT_NAME, createContainer, versionInfo } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 
 export const name = 'bot';
@@ -33,14 +33,14 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const shardInfo = client.shard ? `샤드 ${client.shard.ids.join(', ')} / 총 ${client.shard.count}개` : '샤딩 없음';
 
 	const lines = [
-		`### 🤖 ${BOT_NAME} 정보`,
+		`### ${appEmoji('robot', '🤖')} ${BOT_NAME} 정보`,
 		``,
-		`📊 **서버**: ${guilds.toLocaleString()}개 | **유저**: ${users.toLocaleString()}명`,
-		`🎵 **활성 플레이어**: ${players}개 | **채널**: ${channels.toLocaleString()}개`,
-		`💾 **메모리**: ${heapUsedMB}MB / ${heapTotalMB}MB`,
-		`⏱️ **업타임**: ${uptimeStr}`,
-		`🔗 **샤드**: ${shardInfo}`,
-		`📦 **버전**: ${versionInfo.getVersion()} (\`${versionInfo.getGitHash()}\`)`
+		`${appEmoji('chart', '📊')} **서버**: ${guilds.toLocaleString()}개 | **유저**: ${users.toLocaleString()}명`,
+		`${appEmoji('music_note', '🎵')} **활성 플레이어**: ${players}개 | **채널**: ${channels.toLocaleString()}개`,
+		`${appEmoji('disk', '💾')} **메모리**: ${heapUsedMB}MB / ${heapTotalMB}MB`,
+		`${appEmoji('clock', '⏱️')} **업타임**: ${uptimeStr}`,
+		`${appEmoji('link', '🔗')} **샤드**: ${shardInfo}`,
+		`${appEmoji('box', '📦')} **버전**: ${versionInfo.getVersion()} (\`${versionInfo.getGitHash()}\`)`
 	];
 
 	const containerComponent = createContainer();

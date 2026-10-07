@@ -1,9 +1,13 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import { CommandInteraction, ContextMenuCommandInteraction, Guild, GuildMember, PermissionsBitField } from 'discord.js';
 import { Message } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 
 export class ClientVoiceSpeakable extends AllFlowsPrecondition {
-	#message = '🔇 봇이 음성 채널에서 말할 수 없어요. 음성 채널 권한을 확인해주세요.';
+	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
+	get #message() {
+		return `${appEmoji('volume_muted', '🔇')} 봇이 음성 채널에서 말할 수 없어요. 음성 채널 권한을 확인해주세요.`;
+	}
 	#ephemeral = true;
 
 	public check(member: GuildMember | null, guild: Guild | null) {

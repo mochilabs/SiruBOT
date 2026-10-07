@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/filter.ts';
@@ -22,11 +23,11 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setDescriptionLocalizations({ ko: '적용할 필터 프리셋을 선택해요.' })
 				.addChoices(
 					...view.FILTER_PRESETS.map((preset) => ({
-						name: `${preset.emoji} ${preset.label}`,
-						name_localizations: { ko: `${preset.emoji} ${preset.label}` },
+						name: `${view.filterPresetEmoji(preset)} ${preset.label}`,
+						name_localizations: { ko: `${view.filterPresetEmoji(preset)} ${preset.label}` },
 						value: preset.name
 					})),
-					{ name: '🔄 초기화', name_localizations: { ko: '🔄 초기화' }, value: 'reset' }
+					{ name: `${appEmoji('refresh', '🔄')} 초기화`, name_localizations: { ko: `${appEmoji('refresh', '🔄')} 초기화` }, value: 'reset' }
 				)
 		);
 }

@@ -1,5 +1,5 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
 import { getRpsStats, recordGameResult, type GameResult } from '../utils/gameRecords.ts';
@@ -15,13 +15,13 @@ async function resolveStreakLine(userId: string, outcome: number): Promise<strin
 	if (outcome === 1) {
 		const streak = before.streak + 1;
 		const best = Math.max(before.best, streak);
-		return streak >= 2 ? `🔥 **${streak}연승 중!** (최고 ${best}연승)` : null;
+		return streak >= 2 ? `${appEmoji('fire', '🔥')} **${streak}연승 중!** (최고 ${best}연승)` : null;
 	}
 	if (outcome === 2) {
-		const broken = before.streak >= 2 ? `💔 ${before.streak}연승이 끊겼어요 (최고 ${before.best}연승)` : null;
+		const broken = before.streak >= 2 ? `${appEmoji('broken_heart', '💔')} ${before.streak}연승이 끊겼어요 (최고 ${before.best}연승)` : null;
 		return broken;
 	}
-	return before.streak >= 2 ? `🤝 ${before.streak}연승 유지 중 (최고 ${before.best}연승)` : null;
+	return before.streak >= 2 ? `${appEmoji('fist_bump', '🤝')} ${before.streak}연승 유지 중 (최고 ${before.best}연승)` : null;
 }
 
 function noticeContainer(text: string) {
@@ -32,11 +32,11 @@ function noticeContainer(text: string) {
 
 function rpsResultContainer(displayName: string, userPick: number, botPick: number, streakLine: string | null) {
 	const outcome = (userPick - botPick + 3) % 3;
-	const resultText = outcome === 0 ? '💿 비겼어요!' : outcome === 1 ? '🎉 이겼어요!' : '😭 졌어요!';
-	const resultEmoji = outcome === 0 ? '🤝' : outcome === 1 ? '😎' : '🫠';
+	const resultText = outcome === 0 ? `${appEmoji('cd', '💿')} 비겼어요!` : outcome === 1 ? `${appEmoji('party', '🎉')} 이겼어요!` : `😭 졌어요!`;
+	const resultEmoji = outcome === 0 ? appEmoji('fist_bump', '🤝') : outcome === 1 ? appEmoji('smile', '😎') : '🫠';
 
 	const lines = [
-		'### ✊ 가위바위보 결과',
+		`### ${appEmoji('fist', '✊')} 가위바위보 결과`,
 		`**${displayName}** 님: ${RPS_ICONS[userPick]} ${rpsLabels[userPick]}`,
 		`**봇**: ${RPS_ICONS[botPick]} ${rpsLabels[botPick]}`,
 		'',
@@ -48,7 +48,10 @@ function rpsResultContainer(displayName: string, userPick: number, botPick: numb
 	container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId('game:rps:again').setLabel('다시하기 🔄').setStyle(ButtonStyle.Secondary)
+			new ButtonBuilder()
+				.setCustomId('game:rps:again')
+				.setLabel(`다시하기 ${appEmoji('repeat', '🔄')}`)
+				.setStyle(ButtonStyle.Secondary)
 		)
 	);
 	return container;
@@ -84,7 +87,7 @@ export default class GamesInteractionHandler extends InteractionHandler {
 			const userPick = Number(arg);
 			if (!Number.isInteger(userPick) || userPick < 0 || userPick > 2) {
 				await interaction.editReply({
-					components: [noticeContainer('❌ 잘못된 가위바위보 선택이에요.')],
+					components: [noticeContainer(`${appEmoji('error', '❌')} 잘못된 가위바위보 선택이에요.`)],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 				return;

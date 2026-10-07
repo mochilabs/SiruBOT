@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { Track, SearchPlatform } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
@@ -88,7 +88,9 @@ export class FavoritesCommand extends Command {
 
 		if (!player || !current) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 현재 재생 중인 곡이 없어요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 현재 재생 중인 곡이 없어요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -98,13 +100,17 @@ export class FavoritesCommand extends Command {
 			await this.container.playlistService.addTrack(interaction.user.id, '즐겨찾기', current as Track);
 			await interaction.reply({
 				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`⭐ **${current.info.title}**을(를) 즐겨찾기에 추가했어요.`))
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`${appEmoji('star', '⭐')} **${current.info.title}**을(를) 즐겨찾기에 추가했어요.`)
+					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`⚠️ ${getErrorMessage(error)}`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('warning', '⚠️')} ${getErrorMessage(error)}`))
+				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -116,7 +122,9 @@ export class FavoritesCommand extends Command {
 
 		if (!player || !current) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 현재 재생 중인 곡이 없어요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 현재 재생 중인 곡이 없어요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -136,13 +144,15 @@ export class FavoritesCommand extends Command {
 
 			await interaction.reply({
 				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`🗑️ **${current.info.title}**을(를) 즐겨찾기에서 삭제했어요.`))
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`${appEmoji('trash', '🗑️')} **${current.info.title}**을(를) 즐겨찾기에서 삭제했어요.`)
+					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -177,8 +187,8 @@ export class FavoritesCommand extends Command {
 						createContainer().addTextDisplayComponents((t) =>
 							t.setContent(
 								total === 0
-									? '📭 즐겨찾기가 비어있어요.\n-# `/즐겨찾기 추가`로 현재 재생 중인 곡을 추가해보세요!'
-									: '❌ 해당 페이지에 곡이 없어요.'
+									? `${appEmoji('inbox_tray', '📭')} 즐겨찾기가 비어있어요.\n-# \`/즐겨찾기 추가\`로 현재 재생 중인 곡을 추가해보세요!`
+									: `${appEmoji('error', '❌')} 해당 페이지에 곡이 없어요.`
 							)
 						)
 					],
@@ -198,14 +208,14 @@ export class FavoritesCommand extends Command {
 			await interaction.editReply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`### ⭐ 즐겨찾기 목록\n${list}\n-# 페이지 ${page}/${totalPages} | 총 ${total}곡`)
+						t.setContent(`### ${appEmoji('star', '⭐')} 즐겨찾기 목록\n${list}\n-# 페이지 ${page}/${totalPages} | 총 ${total}곡`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
@@ -219,7 +229,9 @@ export class FavoritesCommand extends Command {
 
 		if (!voiceChannel) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 먼저 음성 채널에 접속해주세요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -230,7 +242,9 @@ export class FavoritesCommand extends Command {
 
 			if (tracks.length === 0) {
 				await interaction.editReply({
-					components: [createContainer().addTextDisplayComponents((t) => t.setContent('📭 즐겨찾기가 비어있어요.'))],
+					components: [
+						createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('inbox_tray', '📭')} 즐겨찾기가 비어있어요.`))
+					],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 				return;
@@ -282,13 +296,15 @@ export class FavoritesCommand extends Command {
 
 			await interaction.editReply({
 				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`⭐ 즐겨찾기에서 **${addedCount}곡**을 대기열에 추가했어요.`))
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`${appEmoji('star', '⭐')} 즐겨찾기에서 **${addedCount}곡**을 대기열에 추가했어요.`)
+					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}

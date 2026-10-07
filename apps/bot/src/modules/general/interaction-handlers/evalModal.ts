@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, ModalSubmitInteraction, TextDisplayBuilder } from 'discord.js';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { inspect } from 'node:util';
 import { envParseArray } from '@skyra/env-utilities';
 
@@ -49,7 +49,7 @@ export class EvalModalHandler extends InteractionHandler {
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
 			new TextDisplayBuilder().setContent(
-				`### ${success ? '✅' : '❌'} Eval\n**Input:**\n\`\`\`js\n${code}\n\`\`\`\n**Output:**\n\`\`\`js\n${result}\n\`\`\``
+				`### ${success ? appEmoji('success', '✅') : appEmoji('error', '❌')} Eval\n**Input:**\n\`\`\`js\n${code}\n\`\`\`\n**Output:**\n\`\`\`js\n${result}\n\`\`\``
 			)
 		);
 

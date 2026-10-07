@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 import { normalizeAiMode } from '../../../services/guildService.ts';
 
 @ApplyOptions<Command.Options>({
@@ -62,7 +63,7 @@ export class ChatSettingsCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'chat_settings_no_guild',
-				message: '❌ 서버 안에서만 사용할 수 있어요.',
+				message: `${appEmoji('error', '❌')} 서버 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -77,12 +78,12 @@ export class ChatSettingsCommand extends Command {
 			const current = await this.container.guildService.getAiSettings(guildId);
 			const content =
 				mode === 'all'
-					? '🤖 이 서버의 AI 채팅을 **모든 채널**에서 켰어요.'
+					? `${appEmoji('robot', '🤖')} 이 서버의 AI 채팅을 **모든 채널**에서 켰어요.`
 					: mode === 'off'
-						? '🤖 이 서버의 AI 채팅을 **껐어요**.'
+						? `${appEmoji('robot', '🤖')} 이 서버의 AI 채팅을 **껐어요**.`
 						: current.channelIds.length > 0
-							? `🤖 이 서버의 AI 채팅을 **특정 채널**에서만 켜기로 바꿨어요. (허용 채널 ${current.channelIds.length}개)`
-							: '🤖 **특정 채널** 모드로 바꿨어요. 아직 허용된 채널이 없어서 지금은 아무 데서도 안 써요. `/채팅설정 채널 켜기`로 켜 주세요.';
+							? `${appEmoji('robot', '🤖')} 이 서버의 AI 채팅을 **특정 채널**에서만 켜기로 바꿨어요. (허용 채널 ${current.channelIds.length}개)`
+							: `${appEmoji('robot', '🤖')} **특정 채널** 모드로 바꿨어요. 아직 허용된 채널이 없어서 지금은 아무 데서도 안 써요. \`/채팅설정 채널 켜기\`로 켜 주세요.`;
 			await interaction.editReply({ allowedMentions: { parse: [] }, content });
 			return;
 		}
@@ -99,10 +100,12 @@ export class ChatSettingsCommand extends Command {
 				.map((channel) => channel.id);
 			const result = await this.container.guildService.setChannelAiEnabled(guildId, interaction.channelId, enabled, otherTextChannelIds);
 			const content = enabled
-				? `💬 이 채널에서 AI 채팅을 **${result.mode === 'all' ? '켰어요 (서버 전체 켜짐)' : '켰어요'}**. (허용 채널 ${result.channelIds.length}개)`
+				? `${appEmoji('speech', '💬')} 이 채널에서 AI 채팅을 **${result.mode === 'all' ? '켰어요 (서버 전체 켜짐)' : '켰어요'}**. (허용 채널 ${
+						result.channelIds.length
+					}개)`
 				: result.mode === 'off'
-					? '💬 이 채널에서 AI 채팅을 껐고, 남은 허용 채널이 없어 **서버 전체를 껐어요**.'
-					: `💬 이 채널에서 AI 채팅을 **껐어요**. (남은 허용 채널 ${result.channelIds.length}개)`;
+					? `${appEmoji('speech', '💬')} 이 채널에서 AI 채팅을 껐고, 남은 허용 채널이 없어 **서버 전체를 껐어요**.`
+					: `${appEmoji('speech', '💬')} 이 채널에서 AI 채팅을 **껐어요**. (남은 허용 채널 ${result.channelIds.length}개)`;
 			await interaction.editReply({ allowedMentions: { parse: [] }, content });
 			return;
 		}

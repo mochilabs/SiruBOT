@@ -1,4 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, TextDisplayBuilder } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 
 const FINAL_SEGMENT_LIMIT = 3_900;
 const MAX_FINAL_SEGMENTS = 4;
@@ -81,7 +82,7 @@ export function statusPayload(status: string, cancelKey?: string): ChatPayload {
 
 /** 사용자가 중지 버튼을 눌렀을 때 */
 export function stoppedPayload(): ChatPayload {
-	return payload([new TextDisplayBuilder().setContent('⏹️ 응답을 중지했어요.')]);
+	return payload([new TextDisplayBuilder().setContent(`${appEmoji('scissors', '⏹️')} 응답을 중지했어요.`)]);
 }
 
 /** 최종 답변 — 청크별 TextDisplay 나열. memoryUpdated면 "(메모리 업데이트됨)" 각주를 붙여요 */
@@ -93,5 +94,5 @@ export function finalPayload(text: string, options?: { memoryUpdated?: boolean }
 
 /** 오류 표시 */
 export function errorPayload(message: string): ChatPayload {
-	return payload([new TextDisplayBuilder().setContent(`❌ ${message}`)]);
+	return payload([new TextDisplayBuilder().setContent(`${appEmoji('error', '❌')} ${message}`)]);
 }

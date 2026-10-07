@@ -3,7 +3,6 @@ import {
 	EMOJI_VOLUME_SMALL,
 	EMOJI_VOLUME_LARGE,
 	EMOJI_VOLUME_MEDIUM,
-	EMOJI_SPARKLE,
 	PROGRESS_BAR_BLACK,
 	PROGRESS_BAR_EMOJI_COUNT,
 	PROGRESS_BAR_END_BLACK,
@@ -15,6 +14,7 @@ import {
 	PROGRESS_BAR_WHITE
 } from './constants.js';
 import type { Track } from 'lavalink-client';
+import { appEmoji } from './appEmoji.js';
 import { formatTime, formatTimeToKorean } from './time.js';
 
 const EMOJI_KEYCAP_REGEX = /[\u0023-\u0039]\ufe0f?\u20e3/g;
@@ -61,7 +61,7 @@ export function getRequesterText(track: Track): string {
 	// controller.ts와 동일한 가드: requester가 없거나 문자열이면 .id 접근으로 터지지 않도록 한다.
 	const requester = track.requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
-	if (requesterId === 'related_track') return `추천 곡 ${EMOJI_SPARKLE}`;
+	if (requesterId === 'related_track') return `추천 곡 ${appEmoji('sparkle', '✨')}`;
 	if (typeof requesterId === 'string' && requesterId.length > 0) return `신청자: <@${requesterId}>`;
 	return '';
 }
@@ -91,13 +91,13 @@ export function removeEmojis(str: string): string {
 
 export function volumeToEmoji(volume: number): string {
 	if (volume < 1) {
-		return EMOJI_VOLUME_MUTE;
+		return appEmoji('volume_muted', EMOJI_VOLUME_MUTE);
 	} else if (volume < 33) {
-		return EMOJI_VOLUME_SMALL;
+		return appEmoji('volume_up', EMOJI_VOLUME_SMALL);
 	} else if (volume < 66) {
-		return EMOJI_VOLUME_MEDIUM;
+		return appEmoji('volume_up', EMOJI_VOLUME_MEDIUM);
 	} else {
-		return EMOJI_VOLUME_LARGE;
+		return appEmoji('volume_up', EMOJI_VOLUME_LARGE);
 	}
 }
 

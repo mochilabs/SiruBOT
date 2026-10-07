@@ -1,8 +1,12 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import { CommandInteraction, ContextMenuCommandInteraction, GuildMember, Message } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 
 export class MemberListenable extends AllFlowsPrecondition {
-	#message = '🔇 음성 채널에서 듣기 상태가 꺼져있어요. 듣기 상태를 켜주세요.';
+	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
+	get #message() {
+		return `${appEmoji('volume_muted', '🔇')} 음성 채널에서 듣기 상태가 꺼져있어요. 듣기 상태를 켜주세요.`;
+	}
 	#ephemeral = true;
 
 	public check(member: GuildMember | null) {

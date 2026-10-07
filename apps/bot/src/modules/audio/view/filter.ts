@@ -1,4 +1,4 @@
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -12,17 +12,21 @@ import {
 type FilterPreset = {
 	name: string;
 	label: string;
-	emoji: string;
+	unicode: string;
+	appEmojiName: string;
 	description: string;
 };
 
+// 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 appEmoji()로 평가한다.
 export const FILTER_PRESETS: FilterPreset[] = [
-	{ name: 'bassboost', label: '베이스부스트', emoji: '🔊', description: '저음을 강하게 부스트해요.' },
-	{ name: 'nightcore', label: '나이트코어', emoji: '🌙', description: '고속 + 고음으로 재생해요.' },
-	{ name: 'vaporwave', label: '베이퍼웨이브', emoji: '🌊', description: '저속 + 저음으로 재생해요.' },
-	{ name: '8d', label: '8D', emoji: '🎧', description: '입체감 있는 사운드로 재생해요.' },
-	{ name: 'karaoke', label: '노래방', emoji: '🎤', description: '보컬을 제거하고 재생해요.' }
+	{ name: 'bassboost', label: '베이스부스트', unicode: '🔊', appEmojiName: 'volume_up', description: '저음을 강하게 부스트해요.' },
+	{ name: 'nightcore', label: '나이트코어', unicode: '🌙', appEmojiName: 'sleep', description: '고속 + 고음으로 재생해요.' },
+	{ name: 'vaporwave', label: '베이퍼웨이브', unicode: '🌊', appEmojiName: 'wave', description: '저속 + 저음으로 재생해요.' },
+	{ name: '8d', label: '8D', unicode: '🎧', appEmojiName: 'headphone', description: '입체감 있는 사운드로 재생해요.' },
+	{ name: 'karaoke', label: '노래방', unicode: '🎤', appEmojiName: 'mic', description: '보컬을 제거하고 재생해요.' }
 ];
+
+export const filterPresetEmoji = (preset: FilterPreset) => appEmoji(preset.appEmojiName, preset.unicode);
 
 export const filterCustomIdPrefix = 'filter:';
 
@@ -35,13 +39,13 @@ export function filterView({ activeFilters }: FilterViewProps) {
 
 	// 현재 적용 필터 상태
 	const statusLines = [];
-	statusLines.push(`### 🎛️ 오디오 필터`);
+	statusLines.push(`### ${appEmoji('spectrum', '🎛️')} 오디오 필터`);
 
 	if (activeFilters.length > 0) {
 		const activeLabels = activeFilters
 			.map((name) => {
 				const preset = FILTER_PRESETS.find((p) => p.name === name);
-				return preset ? `${preset.emoji} ${preset.label}` : name;
+				return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
 			})
 			.join(', ');
 		statusLines.push(`현재 적용 중: **${activeLabels}**`);
@@ -61,7 +65,7 @@ export function filterView({ activeFilters }: FilterViewProps) {
 			FILTER_PRESETS.map((preset) => ({
 				label: preset.label,
 				value: preset.name,
-				emoji: preset.emoji,
+				emoji: filterPresetEmoji(preset),
 				description: preset.description,
 				default: activeFilters.includes(preset.name)
 			}))
@@ -76,7 +80,7 @@ export function filterView({ activeFilters }: FilterViewProps) {
 	const resetButton = new ButtonBuilder()
 		.setCustomId(filterCustomIdPrefix + 'reset')
 		.setLabel('필터 초기화')
-		.setEmoji('🔄')
+		.setEmoji(appEmoji('refresh', '🔄'))
 		.setStyle(ButtonStyle.Danger)
 		.setDisabled(activeFilters.length === 0);
 
@@ -88,15 +92,17 @@ export function filterView({ activeFilters }: FilterViewProps) {
 
 export function filterApplied({ filters }: { filters: string[] }) {
 	if (filters.length === 0) {
-		return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent('🔄 모든 필터를 해제했어요.'));
+		return createContainer().addTextDisplayComponents(
+			new TextDisplayBuilder().setContent(`${appEmoji('refresh', '🔄')} 모든 필터를 해제했어요.`)
+		);
 	}
 
 	const labels = filters
 		.map((name) => {
 			const preset = FILTER_PRESETS.find((p) => p.name === name);
-			return preset ? `${preset.emoji} ${preset.label}` : name;
+			return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
 		})
 		.join(', ');
 
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`🎛️ 필터 적용: **${labels}**`));
+	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${appEmoji('spectrum', '🎛️')} 필터 적용: **${labels}**`));
 }

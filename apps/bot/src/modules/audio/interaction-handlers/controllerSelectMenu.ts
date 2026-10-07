@@ -1,4 +1,5 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { queueList, queueSelectCustomId } from '../view/queue.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
@@ -32,7 +33,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 		if (!memberVoice || (player && memberVoice.id !== player.voiceChannelId)) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('🔇 봇과 같은 음성 채널에 있어야 사용할 수 있어요.')]
+				components: [errorView(`${appEmoji('volume_muted', '🔇')} 봇과 같은 음성 채널에 있어야 사용할 수 있어요.`)]
 			});
 			return;
 		}
@@ -41,7 +42,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('🔇 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.')]
+				components: [errorView(`${appEmoji('volume_muted', '🔇')} 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.`)]
 			});
 			return;
 		}
@@ -49,7 +50,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 		if (!player) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('❌ 현재 재생 중인 플레이어가 없어요.')]
+				components: [errorView(`${appEmoji('error', '❌')} 현재 재생 중인 플레이어가 없어요.`)]
 			});
 			return;
 		}
@@ -58,7 +59,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 		if (isNaN(trackIndex) || trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('❌ 해당 번호의 곡이 대기열에 없어요.')]
+				components: [errorView(`${appEmoji('error', '❌')} 해당 번호의 곡이 대기열에 없어요.`)]
 			});
 			return;
 		}

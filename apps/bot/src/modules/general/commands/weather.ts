@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchWeather, WeatherError, GatewayDomainError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
 
@@ -23,20 +23,20 @@ function buildNowLines(result: WeatherResult): string[] {
 	if (result.temperatureC != null) {
 		const feels =
 			result.feelsLikeC != null && Math.abs(result.feelsLikeC - result.temperatureC) >= 0.05 ? ` (체감 ${result.feelsLikeC.toFixed(1)}°C)` : '';
-		lines.push(`🌡️ 기온 **${result.temperatureC.toFixed(1)}°C**${feels}`);
+		lines.push(`${appEmoji('thermo', '🌡️')} 기온 **${result.temperatureC.toFixed(1)}°C**${feels}`);
 	}
 	const extra: string[] = [];
-	if (result.humidityPercent != null) extra.push(`💧 습도 ${Math.round(result.humidityPercent)}%`);
-	if (result.windSpeedKmh != null) extra.push(`🌬️ 풍속 ${result.windSpeedKmh.toFixed(1)} km/h`);
-	if (result.cloudCoverPercent != null) extra.push(`☁️ 구름 ${Math.round(result.cloudCoverPercent)}%`);
-	if (result.precipitationMm != null && result.precipitationMm > 0) extra.push(`🌧️ 강수 ${result.precipitationMm} mm`);
+	if (result.humidityPercent != null) extra.push(`${appEmoji('drop', '💧')} 습도 ${Math.round(result.humidityPercent)}%`);
+	if (result.windSpeedKmh != null) extra.push(`${appEmoji('windy', '🌬️')} 풍속 ${result.windSpeedKmh.toFixed(1)} km/h`);
+	if (result.cloudCoverPercent != null) extra.push(`${appEmoji('cloudy', '☁️')} 구름 ${Math.round(result.cloudCoverPercent)}%`);
+	if (result.precipitationMm != null && result.precipitationMm > 0) extra.push(`${appEmoji('rain', '🌧️')} 강수 ${result.precipitationMm} mm`);
 	if (extra.length > 0) lines.push(extra.join(' · '));
 
 	if (result.airQuality) {
 		const { pm25, pm25GradeKo, pm10GradeKo } = result.airQuality;
 		const pm25Part = pm25 != null ? `PM2.5 ${pm25.toFixed(1)}µg/m³ (${pm25GradeKo})` : 'PM2.5 정보 없음';
 		const pm10Part = result.airQuality.pm10 != null ? `PM10 ${result.airQuality.pm10.toFixed(1)}µg/m³ (${pm10GradeKo})` : null;
-		lines.push(`🏭 미세먼지 ${pm25Part}${pm10Part ? ` · ${pm10Part}` : ''}`);
+		lines.push(`${appEmoji('warning', '⚠️')} 미세먼지 ${pm25Part}${pm10Part ? ` · ${pm10Part}` : ''}`);
 	}
 	return lines;
 }
@@ -46,7 +46,8 @@ function buildForecastLines(result: WeatherResult): string[] {
 	if (!day) return ['예보 정보를 가져올 수 없어요.'];
 	const lines: string[] = [`**${day.weatherTextKo}** · ${formatTempRange(day)}`];
 	const extra: string[] = [];
-	if (day.precipitationProbabilityMaxPct != null) extra.push(`🌧️ 강수확률 ${Math.round(day.precipitationProbabilityMaxPct)}%`);
+	if (day.precipitationProbabilityMaxPct != null)
+		extra.push(`${appEmoji('rain', '🌧️')} 강수확률 ${Math.round(day.precipitationProbabilityMaxPct)}%`);
 	if (day.precipitationSumMm != null && day.precipitationSumMm > 0) extra.push(`강수량 ${day.precipitationSumMm} mm`);
 	if (day.windSpeedMaxKmh != null) extra.push(`최대풍속 ${day.windSpeedMaxKmh.toFixed(1)} km/h`);
 	if (extra.length > 0) lines.push(extra.join(' · '));
@@ -63,7 +64,7 @@ function buildWeekLines(result: WeatherResult): string[] {
 
 function buildContainer(result: WeatherResult) {
 	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
-	const lines = [`### 🌤️ ${locationLine} — ${SCOPE_LABELS[result.scope]}`, ''];
+	const lines = [`### ${appEmoji('sun_cloud', '🌤️')} ${locationLine} — ${SCOPE_LABELS[result.scope]}`, ''];
 	lines.push(...(result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result)));
 	lines.push('');
 	lines.push(`-# Open-Meteo 기준 · 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);
@@ -165,7 +166,7 @@ export class WeatherCommand extends Command {
 			if (error instanceof WeatherError || error instanceof GatewayDomainError) {
 				throw new UserError({
 					identifier: error.identifier,
-					message: `❌ ${error.message}`,
+					message: `${appEmoji('error', '❌')} ${error.message}`,
 					context: { ephemeral: true }
 				});
 			}

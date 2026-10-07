@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
+import { appEmoji, getSimpleYouTubeSuggestions } from '@sirubot/utils';
 import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
@@ -130,7 +130,7 @@ async function runSelection(
 			container.logger.error(`[search] failed to play selected track (guild ${interaction.guildId}): ${error}`);
 			await interaction
 				.editReply({
-					components: [errorView('❌ 선택한 곡을 재생하지 못했어요. 다시 /음악 검색 을 시도해 주세요.')],
+					components: [errorView(`${appEmoji('error', '❌')} 선택한 곡을 재생하지 못했어요. 다시 /음악 검색 을 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { users: [], roles: [] }
 				})
@@ -147,7 +147,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!voiceChannel) {
 		throw new UserError({
 			identifier: 'search_not_in_voice',
-			message: '❌ 먼저 음성 채널에 접속해주세요.',
+			message: `${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -179,7 +179,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const tracks = searchRes.tracks.slice(0, RESULT_LIMIT);
 	if (tracks.length === 0) {
 		await interaction.editReply({
-			components: [errorView('🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.')],
+			components: [errorView(`${appEmoji('mag', '🔎')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 		return;

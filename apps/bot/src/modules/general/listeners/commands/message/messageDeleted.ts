@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { ContainerBuilder, Message } from 'discord.js';
-import { DEFAULT_COLOR, MemoryCache } from '@sirubot/utils';
+import { appEmoji, DEFAULT_COLOR, MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sapphire/utilities';
 
 const deleteCountCache = new MemoryCache<string, number>({
@@ -43,7 +43,7 @@ export class MessageDeleteListener extends Listener {
 										.setAccentColor(DEFAULT_COLOR)
 										.addTextDisplayComponents((t) =>
 											t.setContent(
-												`-# 💡 봇의 노래 재생 메세지가 불편하시다면, /설정 명령어로 **[오디오 컨트롤러]** 옵션을 끌 수 있어요.`
+												`-# ${appEmoji('bulb', '💡')} 봇의 노래 재생 메세지가 불편하시다면, /설정 명령어로 **[오디오 컨트롤러]** 옵션을 끌 수 있어요.`
 											)
 										)
 								]

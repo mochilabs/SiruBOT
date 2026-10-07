@@ -12,7 +12,7 @@ import {
 	TextDisplayBuilder
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 
 export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock' | 'jtc';
 
@@ -23,20 +23,24 @@ const wrapPrefix = (id: string) => prefix + id;
 type SegmentType = {
 	name: string;
 	label: string;
-	emoji: string;
+	unicode: string;
+	appEmojiName: string;
 	description: string;
 };
 
+// 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 appEmoji()로 평가한다.
 export const SPONSORBLOCK_SEGMENTS: SegmentType[] = [
-	{ name: 'sponsor', label: '스폰서', emoji: '💰', description: '유료 홍보 및 광고 구간' },
-	{ name: 'selfpromo', label: '자기 홍보', emoji: '📢', description: '채널 홍보, 구독 요청 등' },
-	{ name: 'interaction', label: '상호작용', emoji: '💬', description: '좋아요, 댓글 요청 등' },
-	{ name: 'intro', label: '인트로', emoji: '🎬', description: '반복되는 인트로 영상' },
-	{ name: 'outro', label: '아웃트로', emoji: '🔚', description: '엔딩 카드, 크레딧 등' },
-	{ name: 'preview', label: '미리보기', emoji: '👀', description: '이전 영상 요약 또는 미리보기' },
-	{ name: 'music_offtopic', label: '음악 외 구간', emoji: '🎵', description: '음악 영상에서 음악이 아닌 부분' },
-	{ name: 'filler', label: '필러', emoji: '⏭️', description: '주제와 관련 없는 장면' }
+	{ name: 'sponsor', label: '스폰서', unicode: '💰', appEmojiName: 'money', description: '유료 홍보 및 광고 구간' },
+	{ name: 'selfpromo', label: '자기 홍보', unicode: '📢', appEmojiName: 'megaphone', description: '채널 홍보, 구독 요청 등' },
+	{ name: 'interaction', label: '상호작용', unicode: '💬', appEmojiName: 'speech', description: '좋아요, 댓글 요청 등' },
+	{ name: 'intro', label: '인트로', unicode: '🎬', appEmojiName: 'film', description: '반복되는 인트로 영상' },
+	{ name: 'outro', label: '아웃트로', unicode: '🔚', appEmojiName: 'end_flag', description: '엔딩 카드, 크레딧 등' },
+	{ name: 'preview', label: '미리보기', unicode: '👀', appEmojiName: 'eye', description: '이전 영상 요약 또는 미리보기' },
+	{ name: 'music_offtopic', label: '음악 외 구간', unicode: '🎵', appEmojiName: 'music_note', description: '음악 영상에서 음악이 아닌 부분' },
+	{ name: 'filler', label: '필러', unicode: '⏭️', appEmojiName: 'arrow_forward', description: '주제와 관련 없는 장면' }
 ];
+
+const sponsorBlockSegmentEmoji = (segment: SegmentType) => appEmoji(segment.appEmojiName, segment.unicode);
 
 const repeatLabels: Record<string, string> = {
 	off: '반복 없음',
@@ -78,18 +82,18 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 			: '채널 미설정';
 
 	const lines = [
-		`### ⚙️ 서버 설정`,
+		`### ${appEmoji('tools', '⚙️')} 서버 설정`,
 		``,
-		`🔊 **볼륨**: ${guild.volume}%`,
-		`🔁 **반복 모드**: ${repeatLabels[guild.repeat] ?? '반복 없음'}`,
-		`✨ **추천곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
-		`🎛️ **컨트롤러**: ${guild.enableController ? '켜짐' : '꺼짐'}`,
-		`⏩ **SponsorBlock**: ${sponsorBlockStatus}`,
-		`💿 **DJ 역할**: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '없음 (모든 사용자)'}`,
-		`📄 **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
-		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
-		`📌 **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
-		`🔊 **임시 음성채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`
+		`${appEmoji('volume_up', '🔊')} **볼륨**: ${guild.volume}%`,
+		`${appEmoji('repeat', '🔁')} **반복 모드**: ${repeatLabels[guild.repeat] ?? '반복 없음'}`,
+		`${appEmoji('sparkle', '✨')} **추천곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
+		`${appEmoji('spectrum', '🎛️')} **컨트롤러**: ${guild.enableController ? '켜짐' : '꺼짐'}`,
+		`${appEmoji('arrow_forward', '⏩')} **SponsorBlock**: ${sponsorBlockStatus}`,
+		`${appEmoji('cd', '💿')} **DJ 역할**: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '없음 (모든 사용자)'}`,
+		`${appEmoji('scroll', '📄')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
+		`${appEmoji('music_note', '🎵')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
+		`${appEmoji('pin', '📌')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
+		`${appEmoji('volume_up', '🔊')} **임시 음성채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -103,11 +107,11 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 				.setMinValues(1)
 				.setMaxValues(1)
 				.addOptions([
-					{ value: 'music', label: '🎵 음악 설정', description: '컨트롤러·추천곡·반복 모드' },
-					{ value: 'sponsorblock', label: '⏩ 스폰서블록', description: sponsorBlockDescription },
-					{ value: 'dj', label: '💿 DJ 설정', description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
-					{ value: 'channel', label: '📄 채널 설정', description: channelDescription },
-					{ value: 'jtc', label: '🔊 임시 음성', description: guild.jtcEnabled ? '켜짐' : '꺼짐' }
+					{ value: 'music', label: `${appEmoji('music_note', '🎵')} 음악 설정`, description: '컨트롤러·추천곡·반복 모드' },
+					{ value: 'sponsorblock', label: `${appEmoji('arrow_forward', '⏩')} 스폰서블록`, description: sponsorBlockDescription },
+					{ value: 'dj', label: `${appEmoji('cd', '💿')} DJ 설정`, description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
+					{ value: 'channel', label: `${appEmoji('scroll', '📄')} 채널 설정`, description: channelDescription },
+					{ value: 'jtc', label: `${appEmoji('volume_up', '🔊')} 임시 음성`, description: guild.jtcEnabled ? '켜짐' : '꺼짐' }
 				])
 		)
 	);
@@ -118,11 +122,11 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 // ── 음악 설정 ──────────────────────────────────────────
 function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
-		`### 🎵 음악 설정`,
+		`### ${appEmoji('music_note', '🎵')} 음악 설정`,
 		``,
-		`🎛️ **컨트롤러**: ${guild.enableController ? '켜짐' : '꺼짐'}`,
-		`✨ **추천곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
-		`🔁 **반복 모드**: ${repeatLabels[guild.repeat] ?? '반복 없음'}`
+		`${appEmoji('spectrum', '🎛️')} **컨트롤러**: ${guild.enableController ? '켜짐' : '꺼짐'}`,
+		`${appEmoji('sparkle', '✨')} **추천곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
+		`${appEmoji('repeat', '🔁')} **반복 모드**: ${repeatLabels[guild.repeat] ?? '반복 없음'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -134,13 +138,16 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('toggle:controller'))
-				.setLabel(guild.enableController ? '🎛️ 컨트롤러 끄기' : '🎛️ 컨트롤러 켜기')
+				.setLabel(guild.enableController ? `${appEmoji('spectrum', '🎛️')} 컨트롤러 끄기` : `${appEmoji('spectrum', '🎛️')} 컨트롤러 켜기`)
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('toggle:related'))
-				.setLabel(guild.related ? '✨ 추천곡 끄기' : '✨ 추천곡 켜기')
+				.setLabel(guild.related ? `${appEmoji('sparkle', '✨')} 추천곡 끄기` : `${appEmoji('sparkle', '✨')} 추천곡 켜기`)
 				.setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId(wrapPrefix('toggle:repeat')).setLabel(`🔁 ${repeatNextLabel}`).setStyle(ButtonStyle.Secondary)
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('toggle:repeat'))
+				.setLabel(`${appEmoji('repeat', '🔁')} ${repeatNextLabel}`)
+				.setStyle(ButtonStyle.Secondary)
 		)
 	);
 
@@ -157,12 +164,12 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const activeSegments = guild.sponsorBlockSegments;
 
-	const statusLines = [`### ⏩ SponsorBlock 설정`];
+	const statusLines = [`### ${appEmoji('arrow_forward', '⏩')} SponsorBlock 설정`];
 	if (activeSegments.length > 0) {
 		const activeLabels = activeSegments
 			.map((name) => {
 				const segment = SPONSORBLOCK_SEGMENTS.find((s) => s.name === name);
-				return segment ? `${segment.emoji} ${segment.label}` : name;
+				return segment ? `${sponsorBlockSegmentEmoji(segment)} ${segment.label}` : name;
 			})
 			.join(', ');
 		statusLines.push(`현재 건너뛰는 구간: **${activeLabels}**`);
@@ -182,7 +189,7 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 			SPONSORBLOCK_SEGMENTS.map((segment) => ({
 				label: segment.label,
 				value: segment.name,
-				emoji: segment.emoji,
+				emoji: sponsorBlockSegmentEmoji(segment),
 				description: segment.description,
 				default: activeSegments.includes(segment.name)
 			}))
@@ -194,7 +201,7 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('reset:sponsorblock'))
-				.setLabel('🔄 전체 해제')
+				.setLabel(`${appEmoji('refresh', '🔄')} 전체 해제`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(activeSegments.length === 0)
 		)
@@ -206,7 +213,7 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 // ── DJ 설정 ─────────────────────────────────────────────
 function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
-		`### 💿 DJ 설정`,
+		`### ${appEmoji('cd', '💿')} DJ 설정`,
 		`DJ 역할을 설정하면, 해당 역할이나 관리자만 노래 건너뛰기, 반복 모드 변경 등을 할 수 있어요.`,
 		``,
 		`현재 DJ 역할: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '**없음** (모든 사용자 허용)'}`
@@ -226,7 +233,7 @@ function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilde
 			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('remove:dj'))
-				.setLabel('🗑 DJ 역할 제거')
+				.setLabel(`${appEmoji('trash', '🗑')} DJ 역할 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.djRoleId)
 		)
@@ -238,13 +245,13 @@ function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilde
 // ── 채널 설정 ───────────────────────────────────────────
 function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
-		`### 📄 채널 설정`,
+		`### ${appEmoji('scroll', '📄')} 채널 설정`,
 		`기본 채널을 설정하면, 해당 채널에서만 명령어를 사용하거나 음악을 들을 수 있어요.`,
 		``,
-		`📄 **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
-		`🎵 **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
-		`📌 **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
-		`📥 **고정 채널 입력 동작**: ${guild.pinnedChannelMode === 'select' ? '선택 재생 (5개 중 선택)' : '즉시 재생 (첫 결과)'}`
+		`${appEmoji('scroll', '📄')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
+		`${appEmoji('music_note', '🎵')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
+		`${appEmoji('pin', '📌')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
+		`${appEmoji('inbox_tray', '📥')} **고정 채널 입력 동작**: ${guild.pinnedChannelMode === 'select' ? '선택 재생 (5개 중 선택)' : '즉시 재생 (첫 결과)'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -272,7 +279,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 
 	container.addTextDisplayComponents(
 		new TextDisplayBuilder().setContent(
-			'📌 **고정 채널**: 이 채널에 메시지를 입력하면 검색어로 재생해요. 권한 제한 없이 사용할 수 있으며, 재생 시 컨트롤러 메시지는 고정 유지돼요.'
+			`${appEmoji('pin', '📌')} **고정 채널**: 이 채널에 메시지를 입력하면 검색어로 재생해요. 권한 제한 없이 사용할 수 있으며, 재생 시 컨트롤러 메시지는 고정 유지돼요.`
 		)
 	);
 
@@ -293,8 +300,16 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 				.setMinValues(1)
 				.setMaxValues(1)
 				.addOptions([
-					{ label: '▶️ 즉시 재생 (첫 결과 바로 재생)', value: 'play', default: guild.pinnedChannelMode !== 'select' },
-					{ label: '🗂 선택 재생 (5개 중 선택)', value: 'select', default: guild.pinnedChannelMode === 'select' }
+					{
+						label: `${appEmoji('arrow_forward', '▶️')} 즉시 재생 (첫 결과 바로 재생)`,
+						value: 'play',
+						default: guild.pinnedChannelMode !== 'select'
+					},
+					{
+						label: `${appEmoji('clipboard', '🗂')} 선택 재생 (5개 중 선택)`,
+						value: 'select',
+						default: guild.pinnedChannelMode === 'select'
+					}
 				])
 		)
 	);
@@ -304,17 +319,17 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('remove:text'))
-				.setLabel('🗑 텍스트 채널 제거')
+				.setLabel(`${appEmoji('trash', '🗑')} 텍스트 채널 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.textChannelId),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('remove:voice'))
-				.setLabel('🗑 음성 채널 제거')
+				.setLabel(`${appEmoji('trash', '🗑')} 음성 채널 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.voiceChannelId),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('remove:pin'))
-				.setLabel('🗑 고정 채널 제거')
+				.setLabel(`${appEmoji('trash', '🗑')} 고정 채널 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.pinnedChannelId)
 		)
@@ -326,7 +341,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 // ── 임시 음성채널 설정 ──────────────────────────────────
 function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
-		`### 🔊 임시 음성채널 설정`,
+		`### ${appEmoji('volume_up', '🔊')} 임시 음성채널 설정`,
 		``,
 		`**상태**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`,
 		`**생성 위치**: ${guild.jtcCategoryId ? `<#${guild.jtcCategoryId}>` : '`미설정`'}`,
@@ -364,7 +379,10 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('jtctemplate')).setLabel('🔔 방 이름 수정').setStyle(ButtonStyle.Secondary)
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('jtctemplate'))
+				.setLabel(`${appEmoji('bell', '🔔')} 방 이름 수정`)
+				.setStyle(ButtonStyle.Secondary)
 		)
 	);
 

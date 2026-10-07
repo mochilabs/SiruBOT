@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import {
 	ApplicationIntegrationType,
 	AttachmentBuilder,
@@ -21,11 +21,11 @@ function formatDate(raw: string): string {
 
 function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[] {
 	return [
-		`### 🔮 오늘의 오하아사 — ${formatDate(daily.date)}`,
+		`### ${appEmoji('crystal_ball', '🔮')} 오늘의 오하아사 — ${formatDate(daily.date)}`,
 		'',
 		`**${target.rank}위 · ${target.zodiac.ko} (${target.zodiac.jp})**`,
 		target.content || '오늘의 운세 정보가 없어요.',
-		`🍀 ${target.lucky || '럭키 정보 없음'}`,
+		`${appEmoji('clover', '🍀')} ${target.lucky || '럭키 정보 없음'}`,
 		'',
 		`-# 출처: ${daily.source === 'ohaasa' ? '아사히 방송 오하아사' : 'TV 아사히'} · ${
 			daily.translated ? 'AI 한국어 번역본이에요.' : '일본어 원문이에요. `/채팅`으로 한국어로 물어보면 번역해 드려요.'
@@ -35,7 +35,7 @@ function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[
 
 function buildTopLines(daily: DailyHoroscope): string[] {
 	const top = daily.horoscopes.slice(0, 3);
-	const lines = [`### 🔮 오늘의 오하아사 TOP 3 — ${formatDate(daily.date)}`, ''];
+	const lines = [`### ${appEmoji('crystal_ball', '🔮')} 오늘의 오하아사 TOP 3 — ${formatDate(daily.date)}`, ''];
 	for (const item of top) {
 		lines.push(`**${item.rank}위 ${item.zodiac.ko}** — ${item.content || '정보 없음'}`);
 	}
@@ -103,7 +103,7 @@ export class OhaasaCommand extends Command {
 		} catch (e) {
 			throw new UserError({
 				identifier: 'ohaasa_fetch_failed',
-				message: `❌ 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
+				message: `${appEmoji('error', '❌')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
 				context: { ephemeral: true }
 			});
 		}
@@ -115,7 +115,7 @@ export class OhaasaCommand extends Command {
 			if (!targetZodiacCode) {
 				throw new UserError({
 					identifier: 'ohaasa_invalid_birthdate',
-					message: '❌ 해당 생일에 맞는 별자리를 찾을 수 없어요.',
+					message: `${appEmoji('error', '❌')} 해당 생일에 맞는 별자리를 찾을 수 없어요.`,
 					context: { ephemeral: true }
 				});
 			}
@@ -127,7 +127,7 @@ export class OhaasaCommand extends Command {
 				const code = getZodiacFromDate(profile.birthMonth, profile.birthDay);
 				if (code) {
 					targetZodiacCode = code;
-					autoNote = `-# 📌 등록된 생일(${profile.birthMonth}/${profile.birthDay}) 기준 **${ZODIAC_MAP[code]?.ko ?? ''}** 운세예요.`;
+					autoNote = `-# ${appEmoji('pin', '📌')} 등록된 생일(${profile.birthMonth}/${profile.birthDay}) 기준 **${ZODIAC_MAP[code]?.ko ?? ''}** 운세예요.`;
 				}
 			}
 		}
@@ -169,7 +169,7 @@ export class OhaasaCommand extends Command {
 		if (!target) {
 			throw new UserError({
 				identifier: 'ohaasa_horoscope_not_found',
-				message: `❌ ${ZODIAC_MAP[zodiacCode]?.ko ?? '해당 별자리'}의 오늘 운세를 찾을 수 없어요.`,
+				message: `${appEmoji('error', '❌')} ${ZODIAC_MAP[zodiacCode]?.ko ?? '해당 별자리'}의 오늘 운세를 찾을 수 없어요.`,
 				context: { ephemeral: true }
 			});
 		}

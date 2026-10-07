@@ -1,8 +1,12 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import { ChatInputCommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 
 export class SongPlaying extends AllFlowsPrecondition {
-	#message = '🎵  이 명령어는 노래 재생 중에만 사용이 가능해요.';
+	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
+	get #message() {
+		return `${appEmoji('music_note', '🎵')} 이 명령어는 노래 재생 중에만 사용이 가능해요.`;
+	}
 	#ephemeral = true;
 
 	public override chatInputRun(interaction: ChatInputCommandInteraction) {

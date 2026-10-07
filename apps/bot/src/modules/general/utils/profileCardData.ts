@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { getZodiacFromDate } from '../../games/utils/ohaasaService.ts';
 import { getCheckinState, getGuessBest, getRpsStats } from '../../games/utils/gameRecords.ts';
 import { getUserProfile } from './userProfile.ts';
@@ -134,11 +135,11 @@ export function formatGameStatsLines(gameStats: ProfileGameStats): string[] | nu
 	const hasRps = rpsWins + rpsLosses + rpsDraws > 0;
 	if (!hasRps && guessBest == null) return null;
 
-	const lines = ['🎮 **게임 전적**'];
+	const lines = [`${appEmoji('gamepad', '🎮')} **게임 전적**`];
 	if (hasRps) {
 		const best = rpsBestStreak >= 2 ? ` (최고 ${rpsBestStreak}연승)` : '';
-		lines.push(`✊ 가위바위보 **${rpsWins}승 ${rpsLosses}패 ${rpsDraws}무**${best}`);
+		lines.push(`${appEmoji('fist', '✊')} 가위바위보 **${rpsWins}승 ${rpsLosses}패 ${rpsDraws}무**${best}`);
 	}
-	if (guessBest != null) lines.push(`🎲 숫자맞히기 최고 **${guessBest}번** 만에 성공`);
+	if (guessBest != null) lines.push(`${appEmoji('dice', '🎲')} 숫자맞히기 최고 **${guessBest}번** 만에 성공`);
 	return lines;
 }

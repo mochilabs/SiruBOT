@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Prisma } from '@sirubot/prisma';
+import { appEmoji } from '@sirubot/utils';
 
 /** 지원하는 게임 ID */
 export const GAME_IDS = ['rps', 'guess', 'dice', 'attendance', 'quiz'] as const;
@@ -146,10 +147,10 @@ export async function doCheckin(userId: string): Promise<{ checkedIn: boolean; s
 
 /** 출석 스트릭 뱃지 이모지 */
 export function streakBadge(streak: number): string {
-	if (streak >= 365) return '💎';
-	if (streak >= 100) return '👑';
-	if (streak >= 30) return '⚡';
-	if (streak >= 7) return '🔥';
-	if (streak >= 1) return '🌱';
+	if (streak >= 365) return appEmoji('gem', '💎');
+	if (streak >= 100) return appEmoji('crown', '👑');
+	if (streak >= 30) return appEmoji('flash', '⚡');
+	if (streak >= 7) return appEmoji('fire', '🔥');
+	if (streak >= 1) return appEmoji('sprout', '🌱');
 	return '';
 }
