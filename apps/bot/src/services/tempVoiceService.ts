@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
-import { ChannelType, GuildMember, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
+import { WARN_COLOR } from '@sirubot/utils';
+import { ChannelType, ContainerBuilder, GuildMember, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
 
 interface RoomInfo {
 	guildId: string;
@@ -175,6 +176,24 @@ export class TempVoiceService {
 			return channel;
 		} catch (error) {
 			container.logger.error(`[tempVoice] failed to create room for guild ${guildId}: ${error}`);
+			// 마커 채널 진입자에게 실패 사실을 알려요 — 무응답 두면 "왜 안 만들어지지?" 상태가 돼요.
+			try {
+				const settings = await container.guildService.getJtcSettings(guildId);
+				const marker = settings.markerChannelId ? member.guild.channels.cache.get(settings.markerChannelId) : undefined;
+				if (marker?.isTextBased()) {
+					await marker.send({
+						components: [
+							new ContainerBuilder()
+								.setAccentColor(WARN_COLOR)
+								.addTextDisplayComponents((textDisplay) =>
+									textDisplay.setContent('❌ 임시 음성 채널을 만들지 못했어요. 잠시 후 다시 시도해 주세요.')
+								)
+						]
+					});
+				}
+			} catch (notifyError) {
+				container.logger.debug(`[tempVoice] failed to notify room create failure: ${notifyError}`);
+			}
 			return null;
 		} finally {
 			this.creating.delete(guildId);

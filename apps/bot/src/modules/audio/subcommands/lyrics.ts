@@ -1,7 +1,8 @@
-import { container } from '@sapphire/framework';
+import { container, UserError } from '@sapphire/framework';
 import { createContainer } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { searchLyrics } from '../../../services/dataApiClient.ts';
+import { errorView } from '../view/error.ts';
 
 export const name = 'lyrics';
 export const ko = '가사';
@@ -36,8 +37,11 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			const track = player.queue.current;
 			query = `${track.info.author} ${track.info.title}`.replace(/\(.*?\)|\[.*?\]/g, '').trim();
 		} else {
-			await interaction.editReply({ content: '❌ 검색어를 입력하거나 곡을 재생 중이어야 해요.' });
-			return;
+			throw new UserError({
+				identifier: 'lyrics_no_track',
+				message: '❌ 검색어를 입력하거나 곡을 재생 중이어야 해요.',
+				context: { ephemeral: true }
+			});
 		}
 	}
 
@@ -46,7 +50,10 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		const results = await searchLyrics(query);
 
 		if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
-			await interaction.editReply({ content: `❌ **${query}**에 대한 가사를 찾을 수 없었어요.` });
+			await interaction.editReply({
+				components: [errorView(`❌ **${query}**에 대한 가사를 찾을 수 없었어요.`)],
+				flags: [MessageFlags.IsComponentsV2]
+			});
 			return;
 		}
 
@@ -73,7 +80,12 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			components: [containerComponent],
 			flags: [MessageFlags.IsComponentsV2]
 		});
-	} catch {
-		await interaction.editReply({ content: '❌ 가사를 검색하는 중 오류가 발생했어요.' });
+	} catch (error) {
+		container.logger.error(`[lyrics] lyrics search failed (guild ${interaction.guildId}): ${error}`);
+		throw new UserError({
+			identifier: 'lyrics_search_failed',
+			message: '❌ 가사를 검색하는 중 오류가 발생했어요.',
+			context: { ephemeral: true }
+		});
 	}
 }

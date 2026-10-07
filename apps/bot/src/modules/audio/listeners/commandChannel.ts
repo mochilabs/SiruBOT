@@ -5,6 +5,7 @@ import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
+import { errorView } from '../view/error.ts';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;
@@ -29,6 +30,13 @@ export class CommandChannelListener extends Listener {
 			await this.handle(message);
 		} catch (error) {
 			this.container.logger.error(`[commandChannel] unhandled error (guild ${message.guildId}): ${error}`);
+			await message
+				.reply({
+					components: [errorView('🛠️ 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { repliedUser: false }
+				})
+				.catch(() => null);
 		}
 	}
 
@@ -45,7 +53,11 @@ export class CommandChannelListener extends Listener {
 
 		if (content.length > MAX_QUERY_LENGTH) {
 			await message
-				.reply({ content: `✂️ 검색어는 ${MAX_QUERY_LENGTH}자까지만 입력할 수 있어요.`, allowedMentions: { repliedUser: false } })
+				.reply({
+					components: [errorView(`✂️ 검색어는 ${MAX_QUERY_LENGTH}자까지만 입력할 수 있어요.`)],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { repliedUser: false }
+				})
 				.catch(() => null);
 			return;
 		}
@@ -54,14 +66,22 @@ export class CommandChannelListener extends Listener {
 		const voiceChannelId = message.member?.voice?.channelId;
 		if (!voiceChannelId) {
 			await message
-				.reply({ content: '💡 재생하려면 음성 채널에 접속한 상태에서 입력해 주세요.', allowedMentions: { repliedUser: false } })
+				.reply({
+					components: [errorView('💡 재생하려면 음성 채널에 접속한 상태에서 입력해 주세요.')],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { repliedUser: false }
+				})
 				.catch(() => null);
 			return;
 		}
 
 		if (this.container.audio.nodeManager.nodes.filter((node) => node.connected).size === 0) {
 			await message
-				.reply({ content: '💡 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.', allowedMentions: { repliedUser: false } })
+				.reply({
+					components: [errorView('💡 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.')],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { repliedUser: false }
+				})
 				.catch(() => null);
 			return;
 		}
@@ -70,7 +90,12 @@ export class CommandChannelListener extends Listener {
 		if (player?.voiceChannelId && player.voiceChannelId !== voiceChannelId) {
 			await message
 				.reply({
-					content: `🎧 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 /stop 으로 멈춘 뒤 입력해 주세요.`,
+					components: [
+						errorView(
+							`🎧 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 /stop 으로 멈춘 뒤 입력해 주세요.`
+						)
+					],
+					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
 				.catch(() => null);
@@ -114,7 +139,11 @@ export class CommandChannelListener extends Listener {
 			const tracks = searchRes.tracks.slice(0, 5);
 			if (tracks.length === 0) {
 				await message
-					.reply({ content: '🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.', allowedMentions: { repliedUser: false } })
+					.reply({
+						components: [errorView('🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.')],
+						flags: [MessageFlags.IsComponentsV2],
+						allowedMentions: { repliedUser: false }
+					})
 					.catch(() => null);
 				return;
 			}
@@ -127,7 +156,13 @@ export class CommandChannelListener extends Listener {
 			}
 		} catch (error) {
 			if (error instanceof UserError) {
-				await message.reply({ content: error.message, allowedMentions: { repliedUser: false } }).catch(() => null);
+				await message
+					.reply({
+						components: [errorView(error.message)],
+						flags: [MessageFlags.IsComponentsV2],
+						allowedMentions: { repliedUser: false }
+					})
+					.catch(() => null);
 				return;
 			}
 			throw error;
@@ -192,7 +227,11 @@ export class CommandChannelListener extends Listener {
 			} catch (error) {
 				this.container.logger.error(`[commandChannel] failed to play selected track (guild ${message.guildId}): ${error}`);
 				await selectInteraction
-					.editReply({ content: '❌ 선택한 곡을 재생하지 못했어요. 다시 입력해 주세요.', components: [] })
+					.editReply({
+						components: [errorView('❌ 선택한 곡을 재생하지 못했어요. 다시 입력해 주세요.')],
+						flags: [MessageFlags.IsComponentsV2],
+						allowedMentions: { users: [], roles: [] }
+					})
 					.catch(() => null);
 			}
 		};

@@ -159,7 +159,7 @@ export class AudioService {
 						components: [view.playStarted({ track: playlist.selectedTrack as Track, userId: interaction.user.id })],
 						allowedMentions: { users: [], roles: [] }
 					})
-					.catch(() => null);
+					.catch((error) => container.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
 			} else {
 				await interaction.editReply({
 					flags: MessageFlags.IsComponentsV2,
@@ -232,7 +232,7 @@ export class AudioService {
 					components: [trackAdded],
 					allowedMentions: { users: [], roles: [] }
 				})
-				.catch(() => null);
+				.catch((error) => container.logger.warn(`[audio] trackAdded edit failed (guild ${player.guildId}): ${error}`));
 		};
 
 		const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>) => {
@@ -293,7 +293,7 @@ export class AudioService {
 					components: [view.playStarted({ track: searchRes.tracks[0] as Track, userId: interaction.user.id })],
 					allowedMentions: { users: [], roles: [] }
 				})
-				.catch(() => null);
+				.catch((error) => container.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
 			return;
 		}
 

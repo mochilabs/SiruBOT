@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, RegisterBehavior } from '@sapphire/framework';
+import { Command, RegisterBehavior, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, ContainerBuilder, MessageFlags } from 'discord.js';
 import { DEFAULT_COLOR } from '@sirubot/utils';
 import { envParseArray } from '@skyra/env-utilities';
@@ -25,7 +25,13 @@ export class ReloadCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		if (!interaction.inCachedGuild()) return;
+		if (!interaction.inCachedGuild()) {
+			throw new UserError({
+				identifier: 'reload_not_in_guild',
+				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		const res = await Promise.all(
 			this.container.stores.map((store) => {

@@ -10,7 +10,8 @@ import {
 	registerChatAbort,
 	releaseChannelTurn,
 	releaseChatAbort,
-	runChatTurn
+	runChatTurn,
+	tryConsumeUserTurn
 } from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
 import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from '../utils/chatView.ts';
@@ -97,6 +98,15 @@ export class ChatCommand extends Command {
 			userId: interaction.user.id,
 			username: interaction.user.username
 		};
+
+		// 유저당 시간당 턴 상한 — 초과 시 안내 후 종료
+		if (!(await tryConsumeUserTurn(interaction.user.id))) {
+			throw new UserError({
+				identifier: 'chat_rate_limited',
+				message: '⏳ AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 시도해 주세요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		// 같은 채널에서 이미 턴이 돌고 있으면 겹쳐 쓰지 않아요 (멘션 답변과 히스토리 경쟁 방지)
 		if (!acquireChannelTurn(channelId)) {

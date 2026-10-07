@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { DEFAULT_COLOR } from '@sirubot/utils';
 import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { errorView } from '../view/error.ts';
 
 export const name = 'history';
 export const ko = '재생기록';
@@ -22,7 +23,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	});
 
 	if (history.length === 0) {
-		await interaction.editReply({ content: '❌ 최근 재생된 음악 기록이 없어요.' });
+		await interaction.editReply({ components: [errorView('❌ 최근 재생된 음악 기록이 없어요.')], flags: [MessageFlags.IsComponentsV2] });
 		return;
 	}
 

@@ -12,8 +12,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   pages: {
-    signIn: '/login',
-    error: '/error'
+    signIn: "/login",
+    error: "/error",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, account }) {
@@ -27,7 +31,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
       }
-      session.accessToken = token.accessToken as string;
       return session;
     },
   },

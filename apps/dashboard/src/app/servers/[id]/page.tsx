@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { auth } from "@/lib/auth";
 import { canManage } from "@/lib/guild-permissions";
+import { getSessionAccessToken } from "@/lib/session-token";
 
 interface GuildMember {
   nick: string | null;
@@ -43,17 +44,22 @@ export default async function ServerDashboardPage({
   const { id } = await params;
   const session = await auth();
 
-  if (!session?.accessToken) {
+  if (!session?.user?.id) {
     redirect(`/api/auth/signin?callbackUrl=/servers/${id}`);
   }
 
-  const member = await getGuildMember(session.accessToken, id);
+  const accessToken = await getSessionAccessToken();
+  if (!accessToken) {
+    redirect(`/api/auth/signin?callbackUrl=/servers/${id}`);
+  }
+
+  const member = await getGuildMember(accessToken, id);
 
   if (!member) {
     notFound();
   }
 
-  const manageable = await canManage(session.accessToken, id);
+  const manageable = await canManage(accessToken, id);
 
   return (
     <Container>

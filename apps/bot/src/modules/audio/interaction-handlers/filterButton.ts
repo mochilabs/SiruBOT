@@ -1,6 +1,7 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { filterCustomIdPrefix, filterView } from '../view/filter.ts';
+import { errorView } from '../view/error.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 
@@ -24,8 +25,8 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		// DJ/Alone 권한 체크
 		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
 			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: '🔇 필터 변경은 DJ 역할이 있거나 채널에 혼자 있을 때만 가능해요.'
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('🔇 필터 변경은 DJ 역할이 있거나 채널에 혼자 있을 때만 가능해요.')]
 			});
 			return;
 		}
@@ -33,8 +34,8 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 		if (!player) {
 			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: '❌ 현재 재생 중인 플레이어가 없어요.'
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('❌ 현재 재생 중인 플레이어가 없어요.')]
 			});
 			return;
 		}

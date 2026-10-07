@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { settingsView } from '../view/settings.ts';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
+import { errorView } from '../view/error.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.ModalSubmit
@@ -18,15 +19,18 @@ export class SettingsModalHandler extends InteractionHandler {
 
 		if (!checkManageGuild(interaction.member)) {
 			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: '⚙️ 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.'
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('⚙️ 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.')]
 			});
 			return;
 		}
 
 		const template = interaction.fields.getTextInputValue('settings:jtc-template-input').trim();
 		if (!template) {
-			await interaction.reply({ flags: [MessageFlags.Ephemeral], content: '❌ 방 이름 템플릿을 입력해 주세요.' });
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('❌ 방 이름 템플릿을 입력해 주세요.')]
+			});
 			return;
 		}
 

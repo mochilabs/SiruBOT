@@ -3,6 +3,7 @@ import { createContainer, EMOJI_SPARKLE } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { addManualRecommendation, getInFlightRelatedFetch } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { errorView } from '../view/error.ts';
 
 export const name = 'recommend';
 export const ko = '추천';
@@ -55,7 +56,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	if (added.length === 0) {
 		await interaction.editReply({
-			content: `❌ **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(Youtube) 곡일 때만 동작해요.`
+			components: [errorView(`❌ **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(Youtube) 곡일 때만 동작해요.`)],
+			flags: [MessageFlags.IsComponentsV2]
 		});
 		return;
 	}

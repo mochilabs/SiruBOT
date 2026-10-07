@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { createContainer, BOT_NAME } from '@sirubot/utils';
 import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, MessageFlags, PermissionsBitField } from 'discord.js';
 
@@ -23,7 +23,13 @@ export class InviteCommand extends Command {
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		const clientId = this.container.client.user?.id;
-		if (!clientId) return;
+		if (!clientId) {
+			throw new UserError({
+				identifier: 'invite_not_ready',
+				message: '❌ 봇이 아직 초기화 중이에요. 잠시 후 다시 시도해 주세요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		const permissions = new PermissionsBitField([
 			PermissionsBitField.Flags.Connect,

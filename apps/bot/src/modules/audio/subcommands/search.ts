@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 import { Player, SearchPlatform, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
 import * as view from '../view/search.ts';
+import { errorView } from '../view/error.ts';
 
 export const name = 'search';
 export const ko = '검색';
@@ -128,7 +129,11 @@ async function runSelection(
 		} catch (error) {
 			container.logger.error(`[search] failed to play selected track (guild ${interaction.guildId}): ${error}`);
 			await interaction
-				.editReply({ content: '❌ 선택한 곡을 재생하지 못했어요. 다시 /음악 검색 을 시도해 주세요.', components: [] })
+				.editReply({
+					components: [errorView('❌ 선택한 곡을 재생하지 못했어요. 다시 /음악 검색 을 시도해 주세요.')],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { users: [], roles: [] }
+				})
 				.catch(() => null);
 		}
 	};
@@ -173,7 +178,10 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const tracks = searchRes.tracks.slice(0, RESULT_LIMIT);
 	if (tracks.length === 0) {
-		await interaction.editReply({ content: '🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.' });
+		await interaction.editReply({
+			components: [errorView('🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.')],
+			flags: [MessageFlags.IsComponentsV2]
+		});
 		return;
 	}
 

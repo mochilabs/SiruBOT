@@ -14,6 +14,7 @@ import { settingsView, SettingsMode } from '../view/settings.ts';
 import { RepeatMode } from 'lavalink-client';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
+import { errorView } from '../view/error.ts';
 
 export default class SettingsInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -39,8 +40,8 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		// ManageGuild 권한 체크
 		if (!checkManageGuild(interaction.member)) {
 			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: '⚙️ 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.'
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView('⚙️ 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.')]
 			});
 			return;
 		}
@@ -171,8 +172,8 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			} catch (error) {
 				this.container.logger.error(`[tempVoice] marker setup failed (guild ${interaction.guildId}): ${error}`);
 				await interaction.followUp({
-					flags: [MessageFlags.Ephemeral],
-					content: '❌ 카테고리를 설정하지 못했어요. 봇에게 채널 관리 권한이 있는지 확인해 주세요.'
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView('❌ 카테고리를 설정하지 못했어요. 봇에게 채널 관리 권한이 있는지 확인해 주세요.')]
 				});
 			}
 		} else if (interaction.isStringSelectMenu() && action === 'select:jtclimit') {

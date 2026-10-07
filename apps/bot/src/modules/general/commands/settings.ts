@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { settingsView } from '../../audio/view/settings.ts';
 
@@ -24,7 +24,13 @@ export class SettingsCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		if (!interaction.inCachedGuild()) return;
+		if (!interaction.inCachedGuild()) {
+			throw new UserError({
+				identifier: 'settings_not_in_guild',
+				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				context: { ephemeral: true }
+			});
+		}
 
 		await interaction.deferReply();
 

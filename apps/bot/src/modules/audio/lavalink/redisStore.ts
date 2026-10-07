@@ -164,6 +164,22 @@ export class RedisStore {
 		}
 	}
 
+	/**
+	 * INCR 카운터 — 첫 증가 시 TTL을 설정해요 (윈도우 종료까지 자동 정리).
+	 * 현재 값(증가 후)을 반환하고, Redis 미연결/오류 시 보호 불가로 1을 반환해요.
+	 */
+	public async incrementCacheCounter(key: string, windowTtlSeconds: number): Promise<number> {
+		try {
+			if (!this.isReady) return 1;
+			const value = await this.redis.incr(key);
+			if (value === 1) await this.redis.expire(key, windowTtlSeconds);
+			return value;
+		} catch (error) {
+			this.logger.warn(`Cache incr failed (${key}): ${error}`);
+			return 1;
+		}
+	}
+
 	public async connect() {
 		await this.redis.connect();
 	}

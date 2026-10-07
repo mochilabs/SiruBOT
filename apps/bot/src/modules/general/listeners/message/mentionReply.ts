@@ -12,6 +12,7 @@ import {
 	releaseChannelTurn,
 	releaseChatAbort,
 	runChatTurn,
+	tryConsumeUserTurn,
 	type ChatConfig
 } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
@@ -50,6 +51,18 @@ export class MentionReplyListener extends Listener {
 			await message
 				.reply({
 					content: '-# 💡 질문을 멘션 뒤에 이어서 써 주세요. 예: `@시루 내일 날씨 어때?`',
+					flags: [MessageFlags.SuppressNotifications],
+					allowedMentions: { parse: [] }
+				})
+				.catch(() => undefined);
+			return;
+		}
+
+		// 유저당 시간당 턴 상한 — 초과 시 조용히 안내해요
+		if (!(await tryConsumeUserTurn(message.author.id))) {
+			await message
+				.reply({
+					content: '-# ⏳ AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 멘션해 주세요.',
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})

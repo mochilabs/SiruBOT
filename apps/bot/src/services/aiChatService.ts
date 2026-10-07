@@ -695,6 +695,26 @@ export function releaseChannelTurn(channelId: string): void {
 	activeChannelTurns.delete(channelId);
 }
 
+// ── 유저당 시간당 턴 상한 ───────────────────────────────────────────────────
+/** 윈도우(10분)당 유저별 최대 AI 턴 수 */
+const USER_TURN_WINDOW_SECONDS = 10 * 60;
+const USER_TURN_LIMIT = 20;
+/** Redis 키: ai/turns/{userId}/{윈도우시작시각} — 윈도우마다 자동 정리돼요 */
+const userTurnCounterTtl = USER_TURN_WINDOW_SECONDS;
+
+/**
+ * 유저 턴 소비 시도 — 시간당 상한(USER_TURN_LIMIT) 초과 시 false.
+ * Redis 카운터로 셰드 간 공유되며, Redis가 없으면 보호 없이 통과해요. (가용성 우선)
+ */
+export async function tryConsumeUserTurn(userId: string): Promise<boolean> {
+	const store = container.redisStore;
+	if (!store) return true;
+
+	const window = Math.floor(Date.now() / (USER_TURN_WINDOW_SECONDS * 1000));
+	const used = await store.incrementCacheCounter(`ai/turns/${userId}:${window}`, userTurnCounterTtl);
+	return used <= USER_TURN_LIMIT;
+}
+
 /** 턴 시작 시 중지 컨트롤러를 등록해요. key는 중지 버튼 customId에 쓰여요. */
 export function registerChatAbort(userId: string): { key: string; controller: AbortController } {
 	const key = crypto.randomUUID().replace(/-/g, '');
