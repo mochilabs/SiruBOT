@@ -20,3 +20,4 @@ export * from './array.js';
 export * from './embed.js';
 export * from './memoryCache.js';
 export * from './logger.js';
+export * from './appEmoji.js';
