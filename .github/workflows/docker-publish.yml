@@ -16,7 +16,7 @@ jobs:
       matrix:
         app: [bot, dashboard, shardmanager, data-api]
       fail-fast: false
-    
+
     permissions:
       contents: read
       packages: write
@@ -50,6 +50,7 @@ jobs:
             type=sha,format=long
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -63,3 +64,43 @@ jobs:
             VERSION=${{ github.event.release.tag_name }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Record image digest
+        env:
+          APP: ${{ matrix.app }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: node scripts/deployment-manifest.mjs image "$APP" "$DIGEST"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.app }}
+          path: .deploy/ci/${{ matrix.app }}.json
+          include-hidden-files: true
+          retention-days: 90
+          overwrite: true
+
+  deployment-manifest:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: .deploy/ci
+      - name: Assemble successful deployment
+        run: node scripts/deployment-manifest.mjs finalize
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployment-manifest
+          path: .deploy/ci/deployment-manifest.json
+          include-hidden-files: true
+          retention-days: 90
+          overwrite: true

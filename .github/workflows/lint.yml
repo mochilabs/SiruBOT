@@ -31,3 +31,6 @@ jobs:
  
       - name: Run prettier
         run: yarn lint
+
+      - name: Test deployment tools
+        run: node --test scripts/deploy.test.mjs scripts/deployment-manifest.test.mjs
