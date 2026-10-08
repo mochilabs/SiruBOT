@@ -95,13 +95,3 @@ export function appEmoji(name: string, fallback: string): string {
 	if (!/^[a-z0-9_]{2,32}$/.test(name)) return fallback;
 	return `<:${name}:${id}>`;
 }
-
-/** 매핑 파일의 이름 목록 (디버그/.help용) */
-export function availableAppEmojiNames(): string[] {
-	return cachedMap ? Object.keys(cachedMap) : [];
-}
-
-/** 로드된 매핑 크기 */
-export function appEmojiCount(): number {
-	return cachedMap ? Object.keys(cachedMap).length : 0;
-}

@@ -3,13 +3,13 @@ import { Prisma } from '@sirubot/prisma';
 import { appEmoji } from '@sirubot/utils';
 
 /** 지원하는 게임 ID */
-export const GAME_IDS = ['rps', 'guess', 'dice', 'attendance', 'quiz'] as const;
+const GAME_IDS = ['rps', 'guess', 'dice', 'attendance', 'quiz'] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
 /** 전적 결과 */
 export type GameResult = 'win' | 'loss' | 'draw' | 'checkin';
 
-export interface RpsStats {
+interface RpsStats {
 	wins: number;
 	losses: number;
 	draws: number;
@@ -19,7 +19,7 @@ export interface RpsStats {
 	best: number;
 }
 
-export interface CheckinState {
+interface CheckinState {
 	/** 오늘 이미 출석했는지 */
 	checkedIn: boolean;
 	/** 연속 출석 일수 (오늘 출석 전이면 어제까지의 스트릭) */
@@ -29,7 +29,7 @@ export interface CheckinState {
 }
 
 /** KST 기준 날짜 키 (YYYY-MM-DD) */
-export function kstDayKey(date: Date = new Date()): string {
+function kstDayKey(date: Date = new Date()): string {
 	const parts = new Intl.DateTimeFormat('en-CA', {
 		timeZone: 'Asia/Seoul',
 		year: 'numeric',

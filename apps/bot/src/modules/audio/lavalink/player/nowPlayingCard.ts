@@ -9,7 +9,7 @@ import { renderNowPlayingCard } from '../../../../services/dataApiClient.ts';
 import { getUserQueuedTracks } from '../autoPlayRelated.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 
-export interface NowPlayingCardAttachment {
+interface NowPlayingCardAttachment {
 	/** attachment:// 파일명 — MediaGallery에서 참조해요 */
 	url: string;
 	filename: string;

@@ -36,7 +36,7 @@ type controllerViewProps = {
 	nowPlayingCardUrl?: string;
 };
 
-export const customIdPrefix = 'controller:';
+const customIdPrefix = 'controller:';
 const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };

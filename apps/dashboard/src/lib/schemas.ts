@@ -2,9 +2,9 @@ import { z } from "zod";
 
 /* ─────────────────────────── 상수 ─────────────────────────── */
 
-export const AI_MODES = ["all", "channels", "off"] as const;
-export const REPEAT_MODES = ["off", "track", "queue"] as const;
-export const PINNED_MODES = ["play", "select"] as const;
+const AI_MODES = ["all", "channels", "off"] as const;
+const REPEAT_MODES = ["off", "track", "queue"] as const;
+const PINNED_MODES = ["play", "select"] as const;
 export const SPONSORBLOCK_SEGMENTS = [
 	"sponsor",
 	"selfpromo",

@@ -18,7 +18,7 @@ const buckets = new Map<string, number[]>();
 const MAX_BUCKETS = 10_000;
 
 /** 인메모리 슬라이딩 윈도우. 단일 프로세스(standalone) 배포 기준이에요. */
-export function rateLimit(
+function rateLimit(
   key: string,
   rule: RateRule,
 ): { ok: boolean; retryAfterMs: number } {

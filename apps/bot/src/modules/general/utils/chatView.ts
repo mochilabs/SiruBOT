@@ -7,14 +7,14 @@ const MAX_FINAL_SEGMENTS = 4;
 const TYPING_CURSOR = '▍';
 export const CHAT_CANCEL_PREFIX = 'chatcancel:';
 
-export interface ChatPayload {
+interface ChatPayload {
 	components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilder>)[];
 	flags: MessageFlags.IsComponentsV2;
 	allowedMentions: { parse: [] };
 }
 
 /** 코드블록/줄 경계를 피해 안전하게 문단을 잘라요 (siru_lambda safeSplitMarkdown 방식) */
-export function splitTextForDisplay(text: string): string[] {
+function splitTextForDisplay(text: string): string[] {
 	if (text.length <= FINAL_SEGMENT_LIMIT) return [text];
 	const chunks: string[] = [];
 	let remaining = text;

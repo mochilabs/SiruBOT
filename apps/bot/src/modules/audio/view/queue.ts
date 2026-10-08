@@ -19,8 +19,8 @@ export const queueCustomIdPrefix = 'queue:page:';
 /** 대기열 곡 선택 셀렉트 메뉴 — controllerSelectMenu 핸들러가 파싱한다. */
 export const queueSelectCustomId = 'controller:queue:select';
 /** 대기열 목록에서 쓰는 점프/삭제 버튼 — controllerButton 핸들러의 queue 서브커맨드와 같다. */
-export const queueJumpCustomId = 'controller:queue:jumpTo';
-export const queueRemoveCustomId = 'controller:queue:remove';
+const queueJumpCustomId = 'controller:queue:jumpTo';
+const queueRemoveCustomId = 'controller:queue:remove';
 
 /** 문자열을 max_length 이하로 줄이고 넘치는 부분은 …로 대체한다. (undefined도 안전하게) */
 function truncate(text: string | undefined, maxLength: number): string {
@@ -147,5 +147,3 @@ export function queueMoved({ track, from, to }: { track: Track; from: number; to
 		new TextDisplayBuilder().setContent(`${appEmoji('arrow_up', '↕️')} **${track.info.title}**을(를) \`#${from}\` → \`#${to}\`(으)로 이동했어요.`)
 	);
 }
-
-export const QUEUE_PAGE_SIZE_EXPORT = QUEUE_PAGE_SIZE;

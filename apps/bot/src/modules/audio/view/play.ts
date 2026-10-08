@@ -155,22 +155,3 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 
 	return container;
 }
-
-export function playlistAddRemaining({ playlist, player, remainTracks, selectedTrack }: askPlaylistAddViewProps) {
-	const container = trackAdded({
-		track: selectedTrack,
-		queued: player.queue.current !== null,
-		position: getUserQueuedTracks(player).length,
-		totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
-	});
-
-	const content = `### ${appEmoji('clipboard', '📝')} 재생목록의 노래 ${remainTracks.length}곡이 추가되었어요.\n-# **${playlist.name || '플레이리스트'}**`;
-
-	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
-
-	return addPlaylistPreviewSection({
-		playlist,
-		tracks: remainTracks,
-		containerComponent: container
-	});
-}
