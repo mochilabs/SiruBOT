@@ -24,9 +24,14 @@ type EmojiIdMap = Record<string, string>;
 let cachedMap: EmojiIdMap | null = null;
 let loadPromise: Promise<EmojiIdMap> | null = null;
 
-/** JSON 매핑 파일 후보 경로 (CWD 차이 방지 — apps/bot 기준) */
+/** JSON 매핑 파일 후보 경로 — 커밋된 canonical(레포 루트)과 런타임 각 CWD 기준 */
 function candidatePaths(): string[] {
-	return [join(process.cwd(), 'resources', 'emoji-ids.json'), join(process.cwd(), 'apps', 'bot', 'resources', 'emoji-ids.json')];
+	return [
+		join(process.cwd(), 'resources', 'emoji_replacement', 'emoji-ids.json'), // monorepo 루트 실행 / Docker builder
+		join(process.cwd(), 'resources', 'emoji-ids.json'), // apps/bot CWD (yarn workspace start)
+		join(process.cwd(), 'apps', 'bot', 'resources', 'emoji-ids.json'), // monorepo 루트에서 봇만 개별 실행
+		join('/app', 'resources', 'emoji_replacement', 'emoji-ids.json') // Docker 컨테이너 (/app=COPY resources)
+	];
 }
 
 async function loadEmojiIdMap(): Promise<EmojiIdMap> {
