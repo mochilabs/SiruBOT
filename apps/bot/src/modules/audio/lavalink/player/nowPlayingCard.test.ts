@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from 'lavalink-client';
 import type { CustomPlayer } from './customPlayer.ts';
-import { clearNowPlayingCard, resolveNowPlayingCard } from './nowPlayingCard.ts';
+import { clearNowPlayingCard, getCachedNowPlayingCard, resolveNowPlayingCard } from './nowPlayingCard.ts';
 
 const { render, sharedContainer } = vi.hoisted(() => ({ render: vi.fn(), sharedContainer: {} }));
 vi.mock('../../../../services/dataApiClient.ts', () => ({ renderNowPlayingCard: render }));
@@ -40,6 +40,9 @@ describe('now playing render sharing', () => {
 	beforeEach(() => {
 		clearNowPlayingCard('guild');
 		render.mockReset();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
 	});
 
 	it('renders once for concurrent callers and gives each a file to attach', async () => {
@@ -103,12 +106,39 @@ describe('now playing render sharing', () => {
 		expect(render).toHaveBeenCalledTimes(2);
 	});
 
-	it('retries after a failed render rather than caching failure', async () => {
+	it('backs off repeated failures, then retries after five seconds', async () => {
+		vi.useFakeTimers();
 		render.mockResolvedValueOnce(null).mockResolvedValueOnce(Buffer.from('retry'));
 		const current = player();
 		expect(await resolveNowPlayingCard(current)).toBeNull();
+		expect(await resolveNowPlayingCard(current)).toBeNull();
+		expect(render).toHaveBeenCalledTimes(1);
+		vi.setSystemTime(Date.now() + 5000);
 		expect((await resolveNowPlayingCard(current))?.fresh).toBe(true);
 		expect(render).toHaveBeenCalledTimes(2);
+	});
+
+	it('does not make a new track wait for the previous track failure backoff', async () => {
+		render.mockResolvedValueOnce(null).mockResolvedValueOnce(Buffer.from('next'));
+		const current = player();
+		await resolveNowPlayingCard(current);
+		current.queue.current = track('b');
+		expect((await resolveNowPlayingCard(current))?.fresh).toBe(true);
+		expect(render).toHaveBeenCalledTimes(2);
+	});
+
+	it('reads the cache without waiting for or starting a render', async () => {
+		const pending = pendingRender();
+		render.mockReturnValue(pending.promise);
+		const current = player();
+		expect(getCachedNowPlayingCard(current)).toBeNull();
+		expect(render).not.toHaveBeenCalled();
+		const result = resolveNowPlayingCard(current);
+		expect(getCachedNowPlayingCard(current)).toBeNull();
+		pending.resolve(Buffer.from('ready'));
+		await result;
+		expect(getCachedNowPlayingCard(current)?.file.attachment).toEqual(Buffer.from('ready'));
+		expect(render).toHaveBeenCalledTimes(1);
 	});
 
 	it('keeps a replacement player render when the old instance completes', async () => {

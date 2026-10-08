@@ -1,11 +1,11 @@
-import { container } from '@sapphire/framework';
+import { container, UserError } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
-import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord.js';
 
 import * as view from '../../view/controller.ts';
 import { CustomPlayer } from './customPlayer.ts';
-import { clearNowPlayingCard, resolveNowPlayingCard } from './nowPlayingCard.ts';
+import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import { Guild } from '@sirubot/prisma';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -13,8 +13,12 @@ type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
 export class PlayerNotifier {
 	private logger: Logger<ILogObj>;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
-	/** 길드별 sendController 직렬화 — 동시 진입 시 오래된 전송이 새 전송의 메시지 ref를 덮어쓰는 레이스 방지 */
+	/** 전송/수정은 길드별로 직렬화하고, 이미지 렌더는 이 체인 밖에서 수행한다. */
 	private readonly sendChains: Map<string, Promise<void>> = new Map();
+	private readonly cardRefreshes = new Map<string, { messageId: string; trackKey: string }>();
+	private readonly renderedSignatures = new WeakMap<Message, string>();
+	private readonly controllerVersions = new WeakMap<CustomPlayer, number>();
+	private readonly destroyedPlayers = new WeakSet<CustomPlayer>();
 
 	private readonly DEBOUNCE_MS = Number(process.env.NOTIFIER_DEBOUNCE_MS) || 300;
 
@@ -28,9 +32,13 @@ export class PlayerNotifier {
 
 	// Force send controller message
 	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
-		const guildId = player.guildId;
+		const version = this.controllerVersions.get(player) ?? 0;
+		return this.enqueueControllerOperation(player.guildId, () => this.sendControllerNow(player, interaction, version));
+	}
+
+	private enqueueControllerOperation(guildId: string, operation: () => Promise<void>): Promise<void> {
 		const previous = this.sendChains.get(guildId) ?? Promise.resolve();
-		const run = previous.catch(() => undefined).then(() => this.sendControllerNow(player, interaction));
+		const run = previous.catch(() => undefined).then(operation);
 		const completed = run.then(
 			() => undefined,
 			() => undefined
@@ -42,26 +50,48 @@ export class PlayerNotifier {
 		return run;
 	}
 
-	private async sendControllerNow(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
+	private canSend(player: CustomPlayer, version: number, interaction?: ChatInputCommandInteraction): boolean {
+		if (!this.destroyedPlayers.has(player) && (this.controllerVersions.get(player) ?? 0) === version) return true;
+		if (interaction) {
+			throw new UserError({
+				identifier: 'nowplaying_state_changed',
+				message: '🎵 재생 상태가 바뀌었어요. `/현재곡`으로 다시 확인해 주세요.',
+				context: { ephemeral: true }
+			});
+		}
+		return false;
+	}
+
+	private async sendControllerNow(
+		player: CustomPlayer,
+		interaction?: ChatInputCommandInteraction,
+		version = this.controllerVersions.get(player) ?? 0
+	): Promise<void> {
 		this.logger.debug(`Sending new controller for guild: ${player.guildId}`);
 
-		// 1. Clear ongoing debounce timer
-		this.clearDebounceTimer(player.guildId);
-
 		try {
+			if (!this.canSend(player, version, interaction)) return;
+			// 1. Clear ongoing debounce timer
+			this.clearDebounceTimer(player.guildId);
 			// when interaction is noen and player has not textChannelId, throw error
 			if (!interaction && !player.textChannelId) throw new Error(`Player has not textChannelId ${player.guildId}`);
 			const options = await this.getControllerOptions(player.guildId);
 
 			// Check if options null and guild not using audio controller, and this method called automatically, ignore it
-			if (!options || (!options.enableController && !interaction)) return;
+			if (!options) {
+				if (interaction) throw new Error(`Controller settings unavailable for guild ${player.guildId}`);
+				return;
+			}
+			if (!options.enableController && !interaction) return;
+			if (!this.canSend(player, version, interaction)) return;
 
 			// 2. Delete existing controller message (only when a new one will actually be sent)
-			await this.deleteController(player);
+			await this.removeController(player);
+			if (!this.canSend(player, version, interaction)) return;
 
 			// 3. Build and send new controller message
-			// NowPlaying 카드: 트랙당 1회 렌더 + 캐시. 실패 시 null → 기존 썸네일 폴백.
-			const card = await resolveNowPlayingCard(player).catch(() => null);
+			// 준비된 카드만 사용해 기본 화면을 먼저 보내고, 미완성 카드는 나중에 붙인다.
+			const card = getCachedNowPlayingCard(player);
 			const components = view.controllerView({
 				player,
 				volume: options.volume,
@@ -71,13 +101,22 @@ export class PlayerNotifier {
 
 			let message;
 			if (interaction) {
-				message = await interaction.reply({
+				const payload = {
 					components: [components],
 					files,
-					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
-					allowedMentions: { roles: [], users: [] },
-					fetchReply: true
-				});
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { roles: [], users: [] }
+				} as const;
+				if (interaction.deferred || interaction.replied) {
+					message = await interaction.editReply(payload);
+				} else {
+					const response = await interaction.reply({
+						...payload,
+						flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
+						withResponse: true
+					});
+					message = response.resource?.message ?? (await interaction.fetchReply());
+				}
 				player.textChannelId = interaction.channelId;
 			} else {
 				if (!player.textChannelId) return;
@@ -91,11 +130,22 @@ export class PlayerNotifier {
 				});
 			}
 
+			if (this.destroyedPlayers.has(player) || (this.controllerVersions.get(player) ?? 0) !== version) {
+				await (interaction ? interaction.deleteReply() : message.delete()).catch(() => null);
+				this.canSend(player, version, interaction);
+				return;
+			}
 			player.messageId = message.id;
 			player.controller = message;
+			this.renderedSignatures.set(message, JSON.stringify(components.toJSON()));
+			if (!card) this.startCardRefresh(player, message.id, Boolean(interaction));
 			this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
 		} catch (error) {
 			this.logger.error(`Failed to send new controller for guild ${player.guildId}:`, error);
+			if (interaction) {
+				if (interaction.deferred) await interaction.deleteReply().catch(() => null);
+				throw error;
+			}
 		}
 	}
 
@@ -103,49 +153,86 @@ export class PlayerNotifier {
 	public updateController(player: CustomPlayer): void {
 		this.clearDebounceTimer(player.guildId);
 
-		const timer = setTimeout(async () => {
+		const timer = setTimeout(() => {
 			this.debounceTimers.delete(player.guildId);
-			try {
-				if (!player.messageId || !player.controller) return;
-
-				const options = await this.getControllerOptions(player.guildId);
-				if (!options || !options.enableController) return;
-
-				// 카드가 새로 렌더됐을 때만 files에 첨부 (캐시된 건 메시지에 이미 있음)
-				const card = await resolveNowPlayingCard(player).catch(() => null);
-				const components = view.controllerView({
-					player,
-					volume: options.volume,
-					nowPlayingCardUrl: card?.url
-				});
-
-				const payload = {
-					components: [components],
-					files: card?.fresh ? [card.file] : [],
-					flags: [MessageFlags.IsComponentsV2],
-					allowedMentions: { roles: [], users: [] }
-				} as const;
-
-				if (player.controller.editable) {
-					await player.controller.edit(payload);
-					this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
-				}
-			} catch (error: any) {
-				if (error.code === 10008) {
-					this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
-					// 고정 채널: 메시지가 지워졌으면 refs를 비우고 새 컨트롤러를 1회 다시 보내 이후부터 edit을 재개한다.
-					if (player.textChannelId && (await this.isPinnedChannel(player.guildId, player.textChannelId))) {
-						player.messageId = null;
-						player.controller = null;
-						await this.sendController(player);
-					}
-				} else {
-					this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
-				}
-			}
+			void this.enqueueControllerOperation(player.guildId, () => this.updateControllerNow(player)).catch((error) => {
+				this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
+			});
 		}, this.DEBOUNCE_MS);
 
 		this.debounceTimers.set(player.guildId, timer);
+	}
+
+	private async updateControllerNow(player: CustomPlayer, allowDisabled = false): Promise<void> {
+		const message = player.controller;
+		const version = this.controllerVersions.get(player) ?? 0;
+		if (!message || player.messageId !== message.id || !this.canSend(player, version)) return;
+		try {
+			const options = await this.getControllerOptions(player.guildId);
+			if (!options || (!options.enableController && !allowDisabled)) return;
+			if (!this.canSend(player, version) || player.messageId !== message.id || player.controller?.id !== message.id) return;
+			const card = getCachedNowPlayingCard(player);
+			const components = view.controllerView({ player, volume: options.volume, nowPlayingCardUrl: card?.url });
+			// files: []도 attachments: []로 변환되므로 유지할 카드 ID를 명시한다.
+			const attachments = card ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [];
+			const files = card && !message.attachments.some((file) => file.name === card.filename) ? [card.file] : [];
+			const signature = JSON.stringify(components.toJSON());
+			if (files.length === 0 && this.renderedSignatures.get(message) === signature) {
+				if (!card) this.startCardRefresh(player, message.id, allowDisabled);
+				return;
+			}
+			if (message.editable) {
+				const edited = await message.edit({
+					components: [components],
+					attachments,
+					files,
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { roles: [], users: [] }
+				});
+				if (!this.canSend(player, version) || player.messageId !== message.id) return;
+				player.controller = edited;
+				this.renderedSignatures.set(edited, signature);
+				if (!card) this.startCardRefresh(player, message.id, allowDisabled);
+				this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
+			}
+		} catch (error: any) {
+			if (error.code !== 10008) throw error;
+			if (!this.canSend(player, version) || player.messageId !== message.id) return;
+			this.logger.debug(`Unknown message error ignored while updating controller for guild ${player.guildId}`);
+			if (
+				player.textChannelId &&
+				(await this.isPinnedChannel(player.guildId, player.textChannelId)) &&
+				this.canSend(player, version) &&
+				player.messageId === message.id
+			) {
+				player.messageId = null;
+				player.controller = null;
+				// 이미 직렬화 체인 안에 있으므로 다시 enqueue하지 않는다.
+				await this.sendControllerNow(player, undefined, version);
+			}
+		}
+	}
+
+	private startCardRefresh(player: CustomPlayer, messageId: string, allowDisabled: boolean): void {
+		const trackKey = getNowPlayingCardKey(player);
+		if (!trackKey) return;
+		const previous = this.cardRefreshes.get(player.guildId);
+		if (previous?.messageId === messageId && previous.trackKey === trackKey) return;
+		const request = { messageId, trackKey };
+		this.cardRefreshes.set(player.guildId, request);
+		void resolveNowPlayingCard(player)
+			.then((card) => {
+				if (!card) return;
+				return this.enqueueControllerOperation(player.guildId, async () => {
+					if (this.cardRefreshes.get(player.guildId) !== request || player.messageId !== messageId) return;
+					if (getNowPlayingCardKey(player) !== trackKey) return;
+					await this.updateControllerNow(player, allowDisabled);
+				});
+			})
+			.catch((error) => this.logger.warn(`Failed to attach controller card for guild ${player.guildId}:`, error))
+			.finally(() => {
+				if (this.cardRefreshes.get(player.guildId) === request) this.cardRefreshes.delete(player.guildId);
+			});
 	}
 
 	// Clear debounce timer
@@ -159,7 +246,13 @@ export class PlayerNotifier {
 
 	// Delete controller message
 	public async deleteController(player: CustomPlayer): Promise<void> {
+		this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
+		await this.removeController(player);
+	}
+
+	private async removeController(player: CustomPlayer): Promise<void> {
 		this.clearDebounceTimer(player.guildId);
+		this.cardRefreshes.delete(player.guildId);
 
 		const controllerMessage = player.controller;
 		const messageId = player.messageId;
@@ -233,6 +326,7 @@ export class PlayerNotifier {
 
 	public async onPlayerDestroy(player: CustomPlayer): Promise<void> {
 		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
+		this.destroyedPlayers.add(player);
 		clearNowPlayingCard(player.guildId);
 		await this.deleteController(player);
 	}
