@@ -1,5 +1,5 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	MessageFlags,
@@ -42,7 +42,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		if (!checkManageGuild(interaction.member)) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('tools', '⚙️')} 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.`)]
+				components: [errorView(`${emoji('tools')} 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.`)]
 			});
 			return;
 		}
@@ -174,7 +174,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 				this.container.logger.error(`[tempVoice] marker setup failed (guild ${interaction.guildId}): ${error}`);
 				await interaction.followUp({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('error', '❌')} 카테고리를 설정하지 못했어요. 봇에게 채널 관리 권한이 있는지 확인해 주세요.`)]
+					components: [errorView(`${emoji('error')} 카테고리를 설정하지 못했어요. 봇에게 채널 관리 권한이 있는지 확인해 주세요.`)]
 				});
 			}
 		} else if (interaction.isStringSelectMenu() && action === 'select:jtclimit') {

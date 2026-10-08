@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
@@ -106,7 +106,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!context) {
 		throw new UserError({
 			identifier: 'skip_no_player',
-			message: `${appEmoji('error', '❌')} 재생 중인 곡이 없어요.`,
+			message: `${emoji('error')} 재생 중인 곡이 없어요.`,
 			context: { ephemeral: true }
 		});
 	}

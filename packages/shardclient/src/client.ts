@@ -36,7 +36,7 @@ export class ShardClient {
 
 	constructor(options: ShardClientOptions) {
 		this.logger = options.logger;
-		this.authToken = options.authToken ?? '';
+		this.authToken = options.authToken ?? options.authKey ?? '';
 		this.ws = new ShardWebSocket({
 			logger: options.logger,
 			serverURL: options.serverURL,

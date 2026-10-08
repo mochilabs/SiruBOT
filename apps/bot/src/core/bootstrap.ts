@@ -166,6 +166,8 @@ export const main = async () => {
 		await client.login(envParseString('DISCORD_TOKEN'));
 
 		client.logger.debug('Setting up lavalink...');
+		// 비밀번호가 명시된 노드가 하나라도 있으면 기본값 폴백을 warn하지 않는다 (설정이 의도적이었을 수 있어요)
+		let fellBackToDefaultPassword = false;
 		const lavalinkHosts = envParseString('LAVALINK_HOSTS')
 			.split(',')
 			.map((node, index) => {
@@ -182,9 +184,16 @@ export const main = async () => {
 				if (isNaN(port) || port <= 0 || port > 65535) {
 					throw new Error(`Invalid port "${portStr}" for node "${id}"`);
 				}
-				const password = passwordParts.length > 0 ? passwordParts.join('_') : 'youshallnotpass';
+				const explicitPassword = passwordParts.length > 0 ? passwordParts.join('_') : envParseString('LAVALINK_DEFAULT_PASSWORD', '');
+				const password = explicitPassword || 'youshallnotpass';
+				if (!explicitPassword) fellBackToDefaultPassword = true;
 				return { id, host, port, authorization: password };
 			}) as LavalinkNodeOptions[];
+		if (fellBackToDefaultPassword) {
+			client.logger.warn(
+				'Some LAVALINK_HOSTS entries have no password; using the default "youshallnotpass". Set the node password explicitly or provide LAVALINK_DEFAULT_PASSWORD.'
+			);
+		}
 		await client.setupAudio(lavalinkHosts, { shardIds: Array.isArray(shardIds) ? shardIds : [0], shardCount });
 
 		// Lavalink 핸들러 등록 및 노드 연결 (setupAudio 직후, 순서 보장)

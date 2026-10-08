@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/filter.ts';
@@ -27,7 +27,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 						name_localizations: { ko: `${view.filterPresetEmoji(preset)} ${preset.label}` },
 						value: preset.name
 					})),
-					{ name: `${appEmoji('refresh', '🔄')} 초기화`, name_localizations: { ko: `${appEmoji('refresh', '🔄')} 초기화` }, value: 'reset' }
+					{ name: `${emoji('repeat')} 초기화`, name_localizations: { ko: `${emoji('repeat')} 초기화` }, value: 'reset' }
 				)
 		);
 }

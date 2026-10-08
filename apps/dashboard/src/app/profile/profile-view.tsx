@@ -1,0 +1,209 @@
+"use client";
+
+import Image from "next/image";
+import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send } from "lucide-react";
+
+import { StatCard } from "@/components/data/stat-card";
+import { PageHeader } from "@/components/layout/page-header";
+import { Avatar } from "@/components/primitives/avatar";
+import { Badge } from "@/components/primitives/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
+import { formatTotalDuration } from "@/hooks/use-playlists";
+import type {
+  ProfileAttendance,
+  ProfileBirthday,
+  ProfileGamesStats,
+  ProfileMusicStats,
+} from "@/lib/profile-stats";
+
+/* ─────────────────────────── types ─────────────────────────── */
+
+export interface ProfileViewProps {
+  user: { id: string; name: string; image: string | null };
+  birthday: ProfileBirthday;
+  music: ProfileMusicStats;
+  games: ProfileGamesStats;
+  attendance: ProfileAttendance;
+}
+
+/* ─────────────────────────── helpers ─────────────────────────── */
+
+function formatDay(playedAt: string): string {
+  const date = new Date(playedAt);
+  if (Number.isNaN(date.getTime())) return "";
+  const yy = String(date.getFullYear()).slice(2);
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yy}.${mm}.${dd}`;
+}
+
+function MockThumbnail({ className }: { className: string }) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}
+    >
+      <Music4 className="h-1/3 w-1/3 text-primary/40 relative z-10" aria-hidden />
+      <span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
+        No Image
+      </span>
+    </div>
+  );
+}
+
+/* ─────────────────────────── component ─────────────────────────── */
+
+export function ProfileView({ user, birthday, music, games, attendance }: ProfileViewProps) {
+  const hasBirthday = birthday.month != null && birthday.day != null;
+
+  return (
+    <>
+      <PageHeader title="내 프로필" description={user.name ? `${user.name}님의 프로필이에요.` : undefined}>
+        <Avatar src={user.image} alt={user.name} fallback={user.name} size="lg" ring />
+      </PageHeader>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* 생일 카드 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cake className="h-4 w-4 text-primary" aria-hidden />
+              생일
+            </CardTitle>
+            <CardDescription>
+              {hasBirthday
+                ? `${birthday.month}월 ${birthday.day}일 · ${birthday.zodiac?.ko ?? "별자리 없음"}`
+                : "봇 `/프로필 생일 등록` 커맨드로 등록할 수 있어요."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        {/* 출석 카드 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-primary" aria-hidden />
+              출석
+            </CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-4xl font-black tabular-nums text-foreground">
+                {attendance.streak}
+                <span className="ml-1 text-base font-bold text-muted-foreground">일 연속</span>
+              </p>
+              {attendance.checkedInToday ? (
+                <Badge variant="success">오늘 출석 완료</Badge>
+              ) : (
+                <Badge variant="warning">오늘 미출석 — 디스코드 `/출석` 으로 체크</Badge>
+              )}
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* 게임 전적 카드 */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gamepad2 className="h-4 w-4 text-primary" aria-hidden />
+              게임 전적
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {games.rps || games.guessBest != null ? (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-medium text-foreground/90">
+                <span>
+                  가위바위보{" "}
+                  <span className="font-black tabular-nums">
+                    {games.rps ? `${games.rps.wins}승 ${games.rps.losses}패 ${games.rps.draws}무` : "-"}
+                  </span>
+                  {games.rps && games.rps.bestStreak >= 2 && (
+                    <span className="ml-1 text-muted-foreground">(최고 {games.rps.bestStreak}연승)</span>
+                  )}
+                </span>
+                <span>
+                  숫자맞히기 최고 기록{" "}
+                  <span className="font-black tabular-nums">
+                    {games.guessBest != null ? `${games.guessBest}번` : "-"}
+                  </span>
+                </span>
+                <span className="text-xs text-muted-foreground/60">(최근 기록 기준)</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">-</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 음악 통계 */}
+      <div className="mt-6 space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+          <ListMusic className="h-5 w-5 text-primary" aria-hidden />
+          음악 통계
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard icon={ListMusic} label="플레이리스트 수" value={`${music.playlistCount.toLocaleString()}개`} />
+          <StatCard icon={Send} label="총 신청 곡" value={`${music.requestedCount.toLocaleString()}곡`} />
+          <StatCard
+            icon={Music4}
+            label="청취 시간"
+            value={formatTotalDuration(music.listenMs)}
+            sub={music.listenSampled ? "(최근 500곡 기준)" : undefined}
+          />
+        </div>
+
+        {/* TOP 5 트랙 */}
+        <Card className="mt-2">
+          <CardHeader>
+            <CardTitle>자주 들은 트랙 TOP 5</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {music.topTracks.length > 0 ? (
+              <ul className="space-y-2">
+                {music.topTracks.map((track, i) => (
+                  <li
+                    key={`${track.title}-${track.artist}-${i}`}
+                    className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/30 transition-colors duration-fast"
+                  >
+                    <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground/60">
+                      {i + 1}
+                    </span>
+                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/20">
+                      {track.thumbnail ? (
+                        <Image
+                          src={track.thumbnail}
+                          alt={track.title}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <MockThumbnail className="h-full w-full" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-foreground" title={track.title}>
+                        {track.title}
+                      </p>
+                      <p className="truncate text-xs font-bold text-muted-foreground/70" title={track.artist}>
+                        {track.artist}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-black tabular-nums text-primary">{track.count.toLocaleString()}회</p>
+                      <p className="text-xs font-medium text-muted-foreground/40">
+                        {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                아직 신청 기록이 없어요. 디스코드에서 음악을 신청해보세요!
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
+  );
+}

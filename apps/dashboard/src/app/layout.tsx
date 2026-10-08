@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { BackgroundShapes } from "@/components/background-shapes";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
+import { GlobalCommandPalette } from "@/components/overlay/global-command-palette";
 import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
 						</div>
 						<Footer />
 						<ScrollToTop />
+						<GlobalCommandPalette />
 					</div>
 				</Providers>
 			</body>

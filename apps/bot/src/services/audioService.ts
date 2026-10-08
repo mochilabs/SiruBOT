@@ -441,12 +441,7 @@ export class AudioService {
 
 		await container.mixerService.skip(player);
 		await interaction.reply({
-			components: [
-				skipView.trackSkipped({
-					track: currentTrack,
-					requester: interaction.user
-				})
-			],
+			components: [skipView.trackSkipped({ track: currentTrack })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -466,12 +461,7 @@ export class AudioService {
 
 		await container.mixerService.skip(player);
 		await interaction.reply({
-			components: [
-				skipView.trackSkipped({
-					track: currentTrack,
-					requester: interaction.user
-				})
-			],
+			components: [skipView.trackSkipped({ track: currentTrack })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -508,12 +498,7 @@ export class AudioService {
 
 		await container.mixerService.skip(player);
 		await interaction.reply({
-			components: [
-				skipView.trackSkipped({
-					track: currentTrack,
-					requester: interaction.user
-				})
-			],
+			components: [skipView.trackSkipped({ track: currentTrack })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

@@ -1,10 +1,10 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 
 export class NodeAvailable extends AllFlowsPrecondition {
 	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
-		return `${appEmoji('bulb', '💡')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`;
+		return `${emoji('bulb')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`;
 	}
 	#ephemeral = true;
 

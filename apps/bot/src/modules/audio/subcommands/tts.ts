@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { MixerRequestError } from '../../../services/mixerService.ts';
 
@@ -36,7 +36,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!text) {
 		throw new UserError({
 			identifier: 'tts_empty_text',
-			message: `${appEmoji('error', '❌')} 음성으로 읽을 내용을 입력해 주세요.`,
+			message: `${emoji('error')} 음성으로 읽을 내용을 입력해 주세요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -44,7 +44,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (text.length > MAX_TEXT_LENGTH) {
 		throw new UserError({
 			identifier: 'tts_text_too_long',
-			message: `${appEmoji('error', '❌')} 음성 안내 내용은 200자까지 입력할 수 있어요.`,
+			message: `${emoji('error')} 음성 안내 내용은 200자까지 입력할 수 있어요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -53,7 +53,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!player) {
 		throw new UserError({
 			identifier: 'tts_no_player',
-			message: `${appEmoji('error', '❌')} 재생 중인 곡이 없어요.`,
+			message: `${emoji('error')} 재생 중인 곡이 없어요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -67,8 +67,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			identifier: error instanceof MixerRequestError && error.status === 409 ? 'tts_mixer_busy' : 'tts_mixer_failed',
 			message:
 				error instanceof MixerRequestError && error.status === 409
-					? `${appEmoji('error', '❌')} 현재 다른 음성 효과가 진행 중이에요. 잠시 후 다시 시도해 주세요.`
-					: `${appEmoji('error', '❌')} 음성 안내를 재생하지 못했어요. 잠시 후 다시 시도해 주세요.`,
+					? `${emoji('error')} 현재 다른 음성 효과가 진행 중이에요. 잠시 후 다시 시도해 주세요.`
+					: `${emoji('error')} 음성 안내를 재생하지 못했어요. 잠시 후 다시 시도해 주세요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -76,7 +76,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	await interaction.editReply({
 		components: [
 			createContainer().addTextDisplayComponents((textDisplay) =>
-				textDisplay.setContent(`${appEmoji('volume_up', '🔊')} 입력한 내용을 음성으로 재생해요.`)
+				textDisplay.setContent(`${emoji('volume_up')} 입력한 내용을 음성으로 재생해요.`)
 			)
 		],
 		flags: [MessageFlags.IsComponentsV2],

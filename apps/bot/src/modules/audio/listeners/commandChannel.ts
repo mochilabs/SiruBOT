@@ -1,5 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { Events, Listener, UserError } from '@sapphire/framework';
 import { ChannelType, ComponentType, Message, MessageFlags, StringSelectMenuInteraction } from 'discord.js';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
@@ -33,7 +33,7 @@ export class CommandChannelListener extends Listener {
 			this.container.logger.error(`[commandChannel] unhandled error (guild ${message.guildId}): ${error}`);
 			await message
 				.reply({
-					components: [errorView(`${appEmoji('tools', '🛠️')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`)],
+					components: [errorView(`${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -55,7 +55,7 @@ export class CommandChannelListener extends Listener {
 		if (content.length > MAX_QUERY_LENGTH) {
 			await message
 				.reply({
-					components: [errorView(`${appEmoji('scissors', '✂️')} 검색어는 ${MAX_QUERY_LENGTH}자까지만 입력할 수 있어요.`)],
+					components: [errorView(`${emoji('scissors')} 검색어는 ${MAX_QUERY_LENGTH}자까지만 입력할 수 있어요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -68,7 +68,7 @@ export class CommandChannelListener extends Listener {
 		if (!voiceChannelId) {
 			await message
 				.reply({
-					components: [errorView(`${appEmoji('bulb', '💡')} 재생하려면 음성 채널에 접속한 상태에서 입력해 주세요.`)],
+					components: [errorView(`${emoji('bulb')} 재생하려면 음성 채널에 접속한 상태에서 입력해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -79,7 +79,7 @@ export class CommandChannelListener extends Listener {
 		if (this.container.audio.nodeManager.nodes.filter((node) => node.connected).size === 0) {
 			await message
 				.reply({
-					components: [errorView(`${appEmoji('bulb', '💡')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`)],
+					components: [errorView(`${emoji('bulb')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -93,7 +93,7 @@ export class CommandChannelListener extends Listener {
 				.reply({
 					components: [
 						errorView(
-							`${appEmoji('headphone', '🎧')} 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 /stop 으로 멈춘 뒤 입력해 주세요.`
+							`${emoji('headphone')} 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 /stop 으로 멈춘 뒤 입력해 주세요.`
 						)
 					],
 					flags: [MessageFlags.IsComponentsV2],
@@ -141,7 +141,7 @@ export class CommandChannelListener extends Listener {
 			if (tracks.length === 0) {
 				await message
 					.reply({
-						components: [errorView(`${appEmoji('mag', '🔎')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
+						components: [errorView(`${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
 						flags: [MessageFlags.IsComponentsV2],
 						allowedMentions: { repliedUser: false }
 					})
@@ -229,7 +229,7 @@ export class CommandChannelListener extends Listener {
 				this.container.logger.error(`[commandChannel] failed to play selected track (guild ${message.guildId}): ${error}`);
 				await selectInteraction
 					.editReply({
-						components: [errorView(`${appEmoji('error', '❌')} 선택한 곡을 재생하지 못했어요. 다시 입력해 주세요.`)],
+						components: [errorView(`${emoji('error')} 선택한 곡을 재생하지 못했어요. 다시 입력해 주세요.`)],
 						flags: [MessageFlags.IsComponentsV2],
 						allowedMentions: { users: [], roles: [] }
 					})

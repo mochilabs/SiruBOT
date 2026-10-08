@@ -2,11 +2,11 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 /**
- * 봇 전용 앱 이모지(application emoji) 참조 헬퍼.
+ * 앱 이모지 매니저 — 이름·폴백 관리를 한 곳에서 해요.
  *
  * 로드 순서:
  * 1. `scripts/upload-emojis.ts`가 미리 생성한
- *    `apps/bot/resources/emoji-ids.json` (이름→ID 매핑)을 읽어요.
+ *    `resources/emoji_replacement/emoji-ids.json` (이름→ID 매핑)을 읽어요.
  * 2. 파일이 없거나 부분적으로 비어 있으면 Discord API
  *    (`GET /applications/{app.id}/emojis`)에서 앱 이모지 목록을 직접
  *    가져와 메모리에 적재해요 — 이모지 유지는 application 소유라
@@ -15,11 +15,120 @@ import { join } from 'node:path';
  * - 앱 이모지는 봇이 보내는 메시지에서 USE_EXTERNAL_EMOJIS 없이 사용 가능
  * - API 조회도 실패하면(네트워크·권한) 유니코드 폴백 문자열을 반환
  *
- * 참고: Discord에서 이모지를 실제로 렌더하려면 id가 유효해야 하므로
- * 매핑에 등록된 이름은 앱 이모지로 실존하는 것만 넣어야 해요.
+ * 사용 규칙:
+ * - `e('name', fallback)` — 등록된 이름이면 `<:name:id>`, 아니면 폴백 유니코드.
+ *   같은 이름에 폴백이 여러 번 다르게 쓰이지 않게, 표준 폴백은 EMOTIONS 표 한 곳에서만
+ *   관리해요. 직접 폴백을 넣는 건 표에 없는 이름뿐이에요.
  */
 
 type EmojiIdMap = Record<string, string>;
+
+/**
+ * 유니코드 폴백 표 — 키 = resources/emoji_replacement/ png 파일명(=앱 이모지 이름).
+ * 폴백 문자열의 단일 진실 공급원. 새 이모지 추가 시 이 표에 한 줄만 넣으면
+ * `e('이름')` 어디서든 동일 폴백을 써요.
+ */
+export const APP_EMOJI_FALLBACKS = {
+	arrow_back: '⏮️',
+	arrow_down: '⬇️',
+	arrow_forward: '⏭️',
+	arrow_up: '⬆️',
+	bag: '👜',
+	bell: '🔔',
+	boom: '💥',
+	box: '📦',
+	pause: '⏸️',
+	broken_heart: '💔',
+	bulb: '💡',
+	cake: '🍰',
+	calendar: '📅',
+	cat: '🐱',
+	cd: '💿',
+	chart: '📊',
+	clipboard: '📋',
+	clock: '🕐',
+	cloudy: '☁️',
+	clover: '🍀',
+	coin: '🪙',
+	crown: '👑',
+	crystal_ball: '🔮',
+	dice: '🎲',
+	disk: '💾',
+	drop: '💧',
+	error: '❌',
+	eye: '👁️',
+	fire: '🔥',
+	fist: '✊',
+	fist_bump: '👊',
+	flash: '⚡',
+	folder: '📁',
+	frame: '🖼️',
+	gamepad: '🎮',
+	gem: '💎',
+	globe: '🌐',
+	headphone: '🎧',
+	hourglass: '⏳',
+	house: '🏠',
+	id: '🆔',
+	inbox_tray: '📥',
+	info: 'ℹ️',
+	key: '🔑',
+	link: '🔗',
+	lock: '🔒',
+	magnet: '🔎',
+	mask: '🎭',
+	music_note: '🎵',
+	music_notes: '🎶',
+	palette: '🎨',
+	party: '🎉',
+	people: '👥',
+	pin: '📌',
+	play: '▶️',
+	plus: '➕',
+	radio_wave: '📡',
+	rain: '🌧️',
+	repeat: '🔁',
+	repeat_one: '🔂',
+	robot: '🤖',
+	scissors: '✂️',
+	scroll: '📄',
+	shield: '🛡️',
+	shuffle: '🔀',
+	stop: '⏹️',
+	sleep: '😴',
+	smile: '😀',
+	sparkle: '✨',
+	spectrum: '📊',
+	speech: '💬',
+	sprout: '🌱',
+	star: '⭐',
+	success: '✅',
+	sun_cloud: '⛅',
+	thermo: '🌡️',
+	tools: '🛠️',
+	trash: '🗑️',
+	trophy: '🏆',
+	user: '👤',
+	volume_muted: '🔇',
+	volume_up: '🔊',
+	warning: '⚠️',
+	wave: '👋',
+	windy: '🌬️'
+} as const;
+
+export type AppEmojiFallbackKey = keyof typeof APP_EMOJI_FALLBACKS;
+
+/** 등록된 앱 이모지 `<:name:id>`, 없으면 표준 유니코드 폴백. 폴백 표에 없는 이름은 직접 폴백을 넣어요. */
+export function emoji(name: AppEmojiFallbackKey): string;
+export function emoji(name: string, fallback: string): string;
+export function emoji(name: string, fallback?: string): string {
+	const id = cachedMap?.[name];
+	const fallbackText = fallback ?? (name in APP_EMOJI_FALLBACKS ? APP_EMOJI_FALLBACKS[name as AppEmojiFallbackKey] : '❓');
+	if (!id) return fallbackText;
+	// 이름에 이모지 이름 규칙 외 문자가 들어간 매핑은 방어적으로 무시
+	if (!/^[a-z0-9_]{2,32}$/.test(name)) return fallbackText;
+	return `<:${name}:${id}>`;
+}
 
 let cachedMap: EmojiIdMap | null = null;
 let loadPromise: Promise<EmojiIdMap> | null = null;
@@ -76,22 +185,10 @@ export async function ensureAppEmojisLoaded(): Promise<void> {
 					return acc;
 				}, {});
 			} catch {
-				// API 조회 실패 — appEmoji()가 전부 유니코드 폴백으로 진행돼요
+				// API 조회 실패 — emoji()가 전부 유니코드 폴백으로 진행돼요
 			}
 		}
 		return map;
 	})();
 	cachedMap = await loadPromise;
-}
-
-/**
- * 앱 이모지 `<:name:id>` 문자열. 매핑에 없으면 fallback(유니코드 이모지) 반환.
- * 봇 코드에서 `${appEmoji('star', '⭐')}` 형태로 사용하세요.
- */
-export function appEmoji(name: string, fallback: string): string {
-	const id = cachedMap?.[name];
-	if (!id) return fallback;
-	// 이름에 이모지 이름 규칙 외 문자가 들어간 매핑은 방어적으로 무시
-	if (!/^[a-z0-9_]{2,32}$/.test(name)) return fallback;
-	return `<:${name}:${id}>`;
 }

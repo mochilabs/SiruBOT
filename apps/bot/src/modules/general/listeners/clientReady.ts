@@ -41,7 +41,7 @@ export class ReadyEvent extends Listener {
 
 		// 앱 이모지 매핑 로드 — emoji-ids.json이 없으면 Discord API에서
 		// 앱 이모지 목록을 직접 가져와 메모리에 적재해요. 둘 다 실패해도
-		// appEmoji()가 유니코드 폴백으로 동작해서 기능은 그대로예요.
+		// emoji()가 유니코드 폴백으로 동작해서 기능은 그대로예요.
 		configureAppEmojiFetcher(async () => {
 			const application = await this.container.client.application?.fetch();
 			return [...(application?.emojis.cache.values() ?? [])].map((emoji) => ({ id: emoji.id, name: emoji.name }));

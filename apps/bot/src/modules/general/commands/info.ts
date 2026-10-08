@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, PreconditionContainerArray, UserError, type SimplePreconditionKeys } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import * as avatar from '../subcommands/avatar.ts';
 import * as bot from '../subcommands/bot.ts';
 import * as server from '../subcommands/server.ts';
@@ -46,7 +46,7 @@ export class InfoCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'info_not_in_guild',
-				message: `${appEmoji('error', '❌')} 길드 안에서만 사용할 수 있어요.`,
+				message: `${emoji('error')} 길드 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -56,7 +56,7 @@ export class InfoCommand extends Command {
 		if (!subcommand) {
 			throw new UserError({
 				identifier: 'info_unknown_subcommand',
-				message: `${appEmoji('error', '❌')} 알 수 없는 하위 명령어예요.`,
+				message: `${emoji('error')} 알 수 없는 하위 명령어예요.`,
 				context: { ephemeral: true }
 			});
 		}

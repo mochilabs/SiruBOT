@@ -52,6 +52,38 @@ interface Entry {
 
 const states = new Map<string, Entry>();
 
+/** SSE 구독자 — 길드별 콜백 목록 */
+const sseSubscribers = new Map<string, Set<(payload: string) => void>>();
+
+/** 새 스냅샷을 SSE 구독자에게 그대로 전송 */
+export function notifySseSubscribers(guildId: string, payload: string): void {
+	const subs = sseSubscribers.get(guildId);
+	if (!subs) return;
+	for (const send of subs) {
+		try {
+			send(payload);
+		} catch {
+			// 끊긴 구독자 — close 훅에서 정리된다
+		}
+	}
+}
+
+/** SSE 구독 등록. 해제 함수 반환 */
+export function subscribeSse(guildId: string, send: (payload: string) => void): () => void {
+	let set = sseSubscribers.get(guildId);
+	if (!set) {
+		set = new Set();
+		sseSubscribers.set(guildId, set);
+	}
+	set.add(send);
+	return () => {
+		const current = sseSubscribers.get(guildId);
+		if (!current) return;
+		current.delete(send);
+		if (current.size === 0) sseSubscribers.delete(guildId);
+	};
+}
+
 /** 채널명에서 guildId를 뽑아요 — `sirubot:player:{guildId}` */
 export function guildIdFromChannel(channel: string): string | null {
 	const prefix = 'sirubot:player:';
@@ -73,6 +105,9 @@ function handleMessage(message: string, channel: string): void {
 		}
 
 		states.set(guildId, { state: parsed, lastUpdate: Date.now() });
+		// raw pub/sub 메시지를 그대로 relay하면 나이/stale이 빠진 형태라 대시보드 {player, hub} 계약이 깨져요 —
+		// 첫 프레임과 동일한 엔벨로프로 재조립해 내려요.
+		notifySseSubscribers(guildId, JSON.stringify({ player: getPlayerState(guildId), hub: playerHubStatus() }));
 	} catch (error) {
 		logger.debug(`Malformed player state from ${channel}: ${error instanceof Error ? error.message : String(error)}`);
 	}

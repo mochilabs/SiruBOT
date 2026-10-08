@@ -1,5 +1,5 @@
-import { appEmoji, createContainer, formatTrack } from '@sirubot/utils';
-import { ActionRowBuilder, APIUser, ButtonBuilder, ButtonStyle, User } from 'discord.js';
+import { emoji, createContainer, formatTrack } from '@sirubot/utils';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { Track } from 'lavalink-client';
 import { addTextWithThumbnail } from './play.ts';
 
@@ -17,13 +17,13 @@ export function voteSkip({ requiredVotes, voteUsers, trackToSkip, nextTrack }: v
 	const totalVotes = voteUsers.size;
 	addTextWithThumbnail(
 		containerComponent,
-		`${appEmoji('arrow_forward', '⏭️')} 투표로 노래를 건너뛸까요?\n### ${formatTrack(trackToSkip, { showLength: true, withMarkdownURL: true, timeType: 'seconds' })}${nextTrack ? '\n\nㄴ 다음 곡: ' + formatTrack(nextTrack, { showLength: true, withMarkdownURL: true, timeType: 'seconds' }) : ''}\n-# 투표는 **30초** 동안 진행돼요.`,
+		`${emoji('arrow_forward')} 투표로 노래를 건너뛸까요?\n### ${formatTrack(trackToSkip, { showLength: true, withMarkdownURL: true, timeType: 'seconds' })}${nextTrack ? '\n\nㄴ 다음 곡: ' + formatTrack(nextTrack, { showLength: true, withMarkdownURL: true, timeType: 'seconds' }) : ''}\n-# 투표는 **30초** 동안 진행돼요.`,
 		trackToSkip.info.artworkUrl
 	);
 
 	const voteSkipButton = new ButtonBuilder()
 		.setCustomId('skip_vote')
-		.setEmoji(appEmoji('arrow_forward', '⏭️'))
+		.setEmoji(emoji('arrow_forward'))
 		.setStyle(ButtonStyle.Secondary)
 		.setLabel(`건너뛰기 (${totalVotes}/${requiredVotes})`);
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(voteSkipButton));
@@ -33,7 +33,6 @@ export function voteSkip({ requiredVotes, voteUsers, trackToSkip, nextTrack }: v
 
 type trackSkippedProps = {
 	track: Track;
-	requester: User | APIUser;
 };
 
 export function trackSkipped({ track }: trackSkippedProps) {
@@ -41,33 +40,33 @@ export function trackSkipped({ track }: trackSkippedProps) {
 
 	addTextWithThumbnail(
 		containerComponent,
-		`${appEmoji('arrow_forward', '⏭️')} 노래를 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`,
+		`${emoji('arrow_forward')} 노래를 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`,
 		track.info.artworkUrl
 	);
 	return containerComponent;
 }
 
-export function trackRelatedSkipped({ track }: Omit<trackSkippedProps, 'requester'>) {
+export function trackRelatedSkipped({ track }: trackSkippedProps) {
 	const containerComponent = createContainer();
 	addTextWithThumbnail(
 		containerComponent,
-		`${appEmoji('arrow_forward', '⏭️')} 추천 곡을 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`,
+		`${emoji('arrow_forward')} 추천 곡을 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`,
 		track.info.artworkUrl
 	);
 	return containerComponent;
 }
 
-export function trackSkippedTo({ track, to }: Omit<trackSkippedProps, 'requester'> & { to: number }) {
+export function trackSkippedTo({ track, to }: trackSkippedProps & { to: number }) {
 	const containerComponent = createContainer();
 	addTextWithThumbnail(
 		containerComponent,
-		`${appEmoji('arrow_forward', '⏭️')} ${to}번째 곡으로 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`,
+		`${emoji('arrow_forward')} ${to}번째 곡으로 건너뛰었어요.\n### ${formatTrack(track, formatOptions)}`,
 		track.info.artworkUrl
 	);
 	return containerComponent;
 }
 
-type trackSkippedByVoteProps = Omit<trackSkippedProps, 'requester'> & Pick<voteSkipProps, 'voteUsers'>;
+type trackSkippedByVoteProps = trackSkippedProps & Pick<voteSkipProps, 'voteUsers'>;
 
 export function trackSkippedByVote({ track, voteUsers }: trackSkippedByVoteProps) {
 	const containerComponent = createContainer();
@@ -75,7 +74,7 @@ export function trackSkippedByVote({ track, voteUsers }: trackSkippedByVoteProps
 	const totalVotes = voteUsers.size;
 	addTextWithThumbnail(
 		containerComponent,
-		`${appEmoji('arrow_forward', '⏭️')} 투표로 노래를 건너뛰었어요. (${totalVotes}표) \n### ${formatTrack(track, formatOptions)}`,
+		`${emoji('arrow_forward')} 투표로 노래를 건너뛰었어요. (${totalVotes}표) \n### ${formatTrack(track, formatOptions)}`,
 		track.info.artworkUrl
 	);
 	return containerComponent;
@@ -83,13 +82,13 @@ export function trackSkippedByVote({ track, voteUsers }: trackSkippedByVoteProps
 
 export function alreadySkipped() {
 	return createContainer().addTextDisplayComponents((textDisplay) =>
-		textDisplay.setContent(`${appEmoji('arrow_forward', '⏭️')} 이미 다음 곡이 재생 중이에요.`)
+		textDisplay.setContent(`${emoji('arrow_forward')} 이미 다음 곡이 재생 중이에요.`)
 	);
 }
 
 export function voteSkipTimeout({ requiredVotes, voteUsers }: Pick<voteSkipProps, 'requiredVotes' | 'voteUsers'>) {
 	const totalVotes = voteUsers.size;
 	return createContainer().addTextDisplayComponents((textDisplay) =>
-		textDisplay.setContent(`${appEmoji('arrow_forward', '⏭️')} 투표 시간이 종료되었어요.\n-# **${totalVotes}**표 / **${requiredVotes}**표 필요`)
+		textDisplay.setContent(`${emoji('arrow_forward')} 투표 시간이 종료되었어요.\n-# **${totalVotes}**표 / **${requiredVotes}**표 필요`)
 	);
 }

@@ -5,7 +5,7 @@
  * 아래에 지금 재생 중 + 자주 신청한 곡. 이모지 대신 lucide 벡터 아이콘.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
-import { drawIcon, ensureKoreanFont, hashString, loadImageAllowed, truncate } from './canvasUtils.ts';
+import { drawCircleImage, drawIcon, ensureKoreanFont, hashString, loadImageAllowed, truncate } from './canvasUtils.ts';
 import { drawMusicSection, measureMusicSection, type CardPalette, type ProfileNowPlaying } from './profileWidgets.ts';
 
 export interface ProfileCardDarkInput {
@@ -88,18 +88,6 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 	ctx.quadraticCurveTo(-r * 0.4, -r * 0.4, 0, -r * spike);
 	ctx.closePath();
 	ctx.fill();
-	ctx.restore();
-}
-
-function drawCircleImage(ctx: CanvasRenderingContext2D, img: CanvasDrawable, cx: number, cy: number, radius: number): void {
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-	ctx.clip();
-	const iw = (img as { width: number }).width;
-	const ih = (img as { height: number }).height;
-	const scale = Math.max((radius * 2) / iw, (radius * 2) / ih);
-	ctx.drawImage(img, cx - (iw * scale) / 2, cy - (ih * scale) / 2, iw * scale, ih * scale);
 	ctx.restore();
 }
 

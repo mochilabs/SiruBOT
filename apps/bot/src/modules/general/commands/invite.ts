@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { appEmoji, createContainer, BOT_NAME } from '@sirubot/utils';
+import { emoji, createContainer, BOT_NAME } from '@sirubot/utils';
 import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, MessageFlags, PermissionsBitField } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
@@ -26,7 +26,7 @@ export class InviteCommand extends Command {
 		if (!clientId) {
 			throw new UserError({
 				identifier: 'invite_not_ready',
-				message: `${appEmoji('error', '❌')} 봇이 아직 초기화 중이에요. 잠시 후 다시 시도해 주세요.`,
+				message: `${emoji('error')} 봇이 아직 초기화 중이에요. 잠시 후 다시 시도해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -49,9 +49,7 @@ export class InviteCommand extends Command {
 		const containerComponent = createContainer();
 		containerComponent.addSectionComponents((s) =>
 			s
-				.addTextDisplayComponents((t) =>
-					t.setContent(`### ${appEmoji('link', '🔗')} ${BOT_NAME} 초대\n\n아래 버튼을 눌러 봇을 서버에 초대하세요!`)
-				)
+				.addTextDisplayComponents((t) => t.setContent(`### ${emoji('link')} ${BOT_NAME} 초대\n\n아래 버튼을 눌러 봇을 서버에 초대하세요!`))
 				.setThumbnailAccessory((t) => t.setURL(avatarUrl))
 				.setButtonAccessory((b) => b.setLabel('초대하기').setStyle(ButtonStyle.Link).setURL(inviteUrl))
 		);

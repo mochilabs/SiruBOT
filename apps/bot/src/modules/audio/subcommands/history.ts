@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { DEFAULT_COLOR, appEmoji } from '@sirubot/utils';
+import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { errorView } from '../view/error.ts';
 
@@ -24,7 +24,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	if (history.length === 0) {
 		await interaction.editReply({
-			components: [errorView(`${appEmoji('error', '❌')} 최근 재생된 음악 기록이 없어요.`)],
+			components: [errorView(`${emoji('error')} 최근 재생된 음악 기록이 없어요.`)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 		return;
@@ -45,7 +45,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const containerComponent = new ContainerBuilder()
 		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`### ${appEmoji('scroll', '📜')} 최근 재생 기록\n\n${lines.join('\n')}`));
+		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`### ${emoji('scroll')} 최근 재생 기록\n\n${lines.join('\n')}`));
 
 	await interaction.editReply({
 		components: [containerComponent],

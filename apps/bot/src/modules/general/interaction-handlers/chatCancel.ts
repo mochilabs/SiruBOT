@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { abortChatTurn } from '../../../services/aiChatService.ts';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { CHAT_CANCEL_PREFIX } from '../utils/chatView.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -21,8 +21,8 @@ export class ChatCancelHandler extends InteractionHandler {
 		if (result !== 'ok') {
 			const message =
 				result === 'forbidden'
-					? `${appEmoji('warning', '⚠️')} 이 답변은 다른 사용자의 대화예요.`
-					: `${appEmoji('warning', '⚠️')} 이미 완료되었거나 만료된 요청이에요.`;
+					? `${emoji('warning')} 이 답변은 다른 사용자의 대화예요.`
+					: `${emoji('warning')} 이미 완료되었거나 만료된 요청이에요.`;
 			await interaction.reply({ flags: [MessageFlags.Ephemeral], content: message }).catch(() => undefined);
 			return;
 		}

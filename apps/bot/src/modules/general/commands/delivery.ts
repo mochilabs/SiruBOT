@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '../utils/deliveryService.ts';
 import { GatewayDomainError } from '../../../services/dataApiClient.ts';
@@ -9,7 +9,7 @@ import { trackDelivery } from '../../../services/dataApiClient.ts';
 const MAX_PROGRESS_LINES = 5;
 
 function buildContainer(result: DeliveryTrackResult, trackingNumber: string) {
-	const lines: string[] = [`### ${appEmoji('box', '📦')} ${result.carrier.name || '택배사 정보 없음'} 배송 조회`, ''];
+	const lines: string[] = [`### ${emoji('box')} ${result.carrier.name || '택배사 정보 없음'} 배송 조회`, ''];
 	lines.push(`**상태**: ${result.stateText || '정보 없음'}`);
 
 	const route: string[] = [];
@@ -77,7 +77,7 @@ export class DeliveryCommand extends Command {
 		if (!trackingNumber) {
 			throw new UserError({
 				identifier: 'delivery_tracking_required',
-				message: `${appEmoji('error', '❌')} 운송장번호를 입력해 주세요.`,
+				message: `${emoji('error')} 운송장번호를 입력해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -94,7 +94,7 @@ export class DeliveryCommand extends Command {
 			if (error instanceof DeliveryError || error instanceof GatewayDomainError) {
 				throw new UserError({
 					identifier: error.identifier,
-					message: `${appEmoji('error', '❌')} ${error.message}`,
+					message: `${emoji('error')} ${error.message}`,
 					context: { ephemeral: true }
 				});
 			}

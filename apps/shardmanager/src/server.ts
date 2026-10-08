@@ -30,7 +30,7 @@ export class ShardManagerServer {
 		this.fastify.setErrorHandler((error: { message: string; statusCode?: number }, request, reply) => {
 			this.logger.error({ error, url: request.url, method: request.method }, 'Request error');
 			reply.status(error.statusCode ?? 500).send({
-				error: error.message,
+				error: 'Internal Server Error',
 				statusCode: error.statusCode ?? 500
 			});
 		});

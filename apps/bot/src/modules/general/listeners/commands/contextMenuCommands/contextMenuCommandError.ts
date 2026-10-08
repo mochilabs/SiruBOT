@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { ContextMenuCommandErrorPayload, Events, Listener, UserError } from '@sapphire/framework';
 import { InteractionReplyOptions, MessageFlags } from 'discord.js';
 import * as Sentry from '@sentry/node';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { errorView } from '../../../../audio/view/error.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.ContextMenuCommandError })
@@ -35,9 +35,7 @@ export class ContextMenuCommandError extends Listener {
 			try {
 				const context = userError ? error.context : undefined;
 				const ephemeral = typeof context === 'object' && context !== null && 'ephemeral' in context ? Boolean(context.ephemeral) : !userError;
-				const message = userError
-					? error.message
-					: `${appEmoji('tools', '🛠️')} 명령어를 실행하는 도중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`;
+				const message = userError ? error.message : `${emoji('tools')} 명령어를 실행하는 도중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`;
 
 				const payload = ephemeral
 					? ({

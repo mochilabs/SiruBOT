@@ -1,12 +1,15 @@
 /**
  * NowPlaying 카드 이미지 — 트랙당 1회 렌더 + 길드별 메모리 캐시.
- * data-api `POST /v1/image/nowplaying`으로 PNG를 받아와요. position은 렌더 시점에 박히고
- * 캐시 키(trackId)에서는 제외해요. 렌더 실패 시 null → 호출자가 기존 썸네일로 폴백해요.
+ * data-api `POST /v1/image/nowplaying`으로 PNG를 받아와요. 카드에는 진행바 없음 —
+ * 동적으로 바뀌는 진행율은 컨트롤러 텍스트 라인(이모지 프로그레스바)이 edit로 계속 갱신해요.
+ * 카드 갱신 트리거는 트랙 변경(캐시 키)뿐 — 렌더 실패 시 null → 호출자가 텍스트로 폴백해요.
  */
 import { container } from '@sapphire/framework';
 import { AttachmentBuilder } from 'discord.js';
+import { BOT_NAME, isDev, versionInfo } from '@sirubot/utils';
 import { renderNowPlayingCard } from '../../../../services/dataApiClient.ts';
-import { getUserQueuedTracks } from '../autoPlayRelated.ts';
+import { getUserQueuedTracks, remainingUntilQueueEnd } from '../autoPlayRelated.ts';
+import { requesterIdOf } from '../requester.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { Track } from 'lavalink-client';
 
@@ -39,7 +42,37 @@ function getStore(): NowPlayingCardStore {
 export function getNowPlayingCardKey(player: CustomPlayer): string | null {
 	const current = player.queue.current;
 	if (!current) return null;
-	return current.info.identifier || `${current.info.title}::${current.info.author}`;
+	// 카드 갱신 트리거는 트랙 변경 + 볼륨 변경 + 현재 챕터 변경 — position(진행율)은 카드에 박지 않아 제외한다.
+	const identity = current.info.identifier || `${current.info.title}::${current.info.author}`;
+	const chapterIndex = currentChapterIndex(player);
+	return `${identity}::v${player.volume ?? 0}::c${chapterIndex ?? 'none'}`;
+}
+
+/** 현재 위치 기준 재생 중인 챕터 인덱스 — 챕터가 없으면 null */
+export function currentChapterIndex(player: CustomPlayer): number | null {
+	const chapters = player.chapters;
+	if (!Array.isArray(chapters) || chapters.length === 0) return null;
+	if (typeof player.position !== 'number') return null;
+	const position = player.position;
+	const index = chapters.findIndex((chapter) => position >= chapter.start && position < chapter.end);
+	return index >= 0 ? index : null;
+}
+
+/** 현재 재생 중인 챕터 정보 — 카드에 박을 값 */
+function currentChapter(player: CustomPlayer): { name: string; startMs: number; endMs: number } | null {
+	const index = currentChapterIndex(player);
+	if (index === null) return null;
+	const chapter = player.chapters[index]!;
+	return { name: chapter.name, startMs: chapter.start, endMs: chapter.end };
+}
+
+/** 신청자 — 카드에 박을 이름+아바타. 멤버 캐시에 없으면 null (텍스트 라인 멘션이 폴백) */
+function requesterInfo(player: CustomPlayer): { name: string; avatarUrl: string | null } | null {
+	const id = requesterIdOf(player.queue.current ?? undefined);
+	if (!id) return null;
+	const member = container.client.guilds.cache.get(player.guildId)?.members.cache.get(id);
+	if (!member) return null;
+	return { name: member.displayName, avatarUrl: member.displayAvatarURL({ size: 128 }) };
 }
 
 function safeFilename(trackKey: string): string {
@@ -48,31 +81,29 @@ function safeFilename(trackKey: string): string {
 	return `nowplaying-${(h >>> 0).toString(36)}.png`;
 }
 
-/** 신청자 표시 이름 — 실패하면 null (카드에서 신청자 줄 생략) */
-async function resolveRequesterName(player: CustomPlayer): Promise<string | null> {
-	try {
-		const requester = player.queue.current?.requester;
-		const id = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
-		if (typeof id !== 'string' || !id || id === 'related_track') return null;
-		const guild = container.client.guilds.cache.get(player.guildId);
-		const member = await guild?.members.fetch(id).catch(() => null);
-		return member?.displayName ?? null;
-	} catch {
-		return null;
-	}
+/** 카드 하단 메타에 박을 브랜드 줄 — 봇 이름 + 버전/해시 */
+function brandLine(): string {
+	return `${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`;
 }
 
 async function renderCard(player: CustomPlayer, current: Track, trackKey: string): Promise<CachedCard | null> {
+	const queuedTracks = getUserQueuedTracks(player);
 	const buffer = await renderNowPlayingCard({
-		trackId: trackKey,
+		trackId: current.info.identifier || current.info.title,
 		title: current.info.title,
 		artist: current.info.author,
 		artworkUrl: current.info.artworkUrl ?? null,
-		positionMs: Math.max(0, player.position ?? 0),
+		positionMs: 0,
 		durationMs: current.info.duration ?? 0,
 		isStream: current.info.isStream ?? false,
-		queueCount: getUserQueuedTracks(player).length,
-		requesterName: await resolveRequesterName(player)
+		queueCount: queuedTracks.length,
+		queueRemainingMs: remainingUntilQueueEnd(player, queuedTracks),
+		volume: player.volume ?? null,
+		nodeId: player.node?.id ?? null,
+		brandLine: brandLine(),
+		chapter: currentChapter(player),
+		requester: requesterInfo(player),
+		trackUrl: current.info.uri ?? null
 	}).catch(() => null);
 	if (!buffer) return null;
 

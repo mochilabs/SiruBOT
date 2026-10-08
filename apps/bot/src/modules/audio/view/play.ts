@@ -1,13 +1,4 @@
-import {
-	addSeparator,
-	appEmoji,
-	createContainer,
-	createThumbnail,
-	formatTime,
-	formatTimeToKorean,
-	formatTrack,
-	getRequesterText
-} from '@sirubot/utils';
+import { addSeparator, emoji, createContainer, createThumbnail, formatTime, formatTimeToKorean, formatTrack, getRequesterText } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, PlaylistInfo, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
@@ -34,8 +25,8 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 	const container = createContainer();
 
 	const firstContent = queued
-		? `${appEmoji('music_note', '🎵')} 노래를 대기열 ${position}번에 추가했어요.`
-		: `${appEmoji('music_notes', '🎶')} 노래를 곧 재생할게요!`;
+		? `${emoji('music_note')} 노래를 대기열 ${position}번에 추가했어요.`
+		: `${emoji('music_notes')} 노래를 곧 재생할게요!`;
 
 	const trackText = formatTrack(track, {
 		showLength: true,
@@ -70,7 +61,7 @@ export function playStarted({ track, userId }: playStartedViewProps) {
 		withMarkdownURL: true
 	});
 
-	const content = `${appEmoji('music_note', '🎵')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# 아티스트: ${track.info.author}`;
+	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# 아티스트: ${track.info.author}`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;
@@ -92,7 +83,7 @@ function addPlaylistPreviewSection({ playlist, tracks, containerComponent }: pla
 		.join('\n');
 
 	const moreText = tracks.length > 5 ? `이후 ${tracks.length - 5}곡` : '';
-	const queueText = `-# ${appEmoji('music_note', '🎵')} 추가된 곡 미리보기\n${previewTracks}\n-# ${moreText}`;
+	const queueText = `-# ${emoji('music_note')} 추가된 곡 미리보기\n${previewTracks}\n-# ${moreText}`;
 
 	const thumbnailUrl = playlist.thumbnail || tracks[0].info.artworkUrl;
 	addTextWithThumbnail(containerComponent, queueText, thumbnailUrl);
@@ -105,7 +96,7 @@ export function playlistQueued({ playlist, tracks }: playlistQueuedViewProps) {
 
 	const playlistDuration = formatTimeToKorean(tracks.reduce((acc, track) => acc + (track.info.duration ?? 0), 0) / 1000);
 
-	const content = `### ${appEmoji('clipboard', '📝')} 재생목록의 노래 ${tracks.length}곡이 추가되었어요.\n-# **${playlist.name || '플레이리스트'}** (${playlistDuration})`;
+	const content = `### ${emoji('clipboard')} 재생목록의 노래 ${tracks.length}곡이 추가되었어요.\n-# **${playlist.name || '플레이리스트'}** (${playlistDuration})`;
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
@@ -131,7 +122,7 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 		totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
 	});
 
-	const askText = `### ${appEmoji('scroll', '📄')} 플레이리스트의 나머지 곡들도 추가하시겠어요?\n**${playlist.name || '플레이리스트'}**에 ${remainTracks.length}곡이 더 있어요.`;
+	const askText = `### ${emoji('scroll')} 플레이리스트의 나머지 곡들도 추가하시겠어요?\n**${playlist.name || '플레이리스트'}**에 ${remainTracks.length}곡이 더 있어요.`;
 
 	addSeparator(container);
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(askText));
@@ -142,12 +133,12 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 			.setLabel(`나머지 ${remainTracks.length}곡 추가`)
 			.setStyle(ButtonStyle.Success)
 			.setCustomId('playlist_add_remaining')
-			.setEmoji(appEmoji('plus', '➕')),
+			.setEmoji(emoji('plus')),
 		new ButtonBuilder()
 			.setLabel('현재 곡만 재생')
 			.setStyle(ButtonStyle.Secondary)
 			.setCustomId('playlist_skip_remaining')
-			.setEmoji(appEmoji('arrow_forward', '⏭️'))
+			.setEmoji(emoji('arrow_forward'))
 	];
 
 	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);

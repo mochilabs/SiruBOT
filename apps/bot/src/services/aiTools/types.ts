@@ -1,3 +1,5 @@
+import type { GuildMember } from 'discord.js';
+
 export interface AiToolContext {
 	/** 서버 ID (DM이면 null) */
 	guildId: string | null;
@@ -5,6 +7,8 @@ export interface AiToolContext {
 	channelId: string;
 	/** 명령을 호출한 사용자의 음성 채널 (없으면 null) */
 	voiceChannelId: string | null;
+	/** 명령을 호출한 사용자의 길드 멤버 (cached guild가 아니면 null) */
+	member: GuildMember | null;
 	userId: string;
 	username: string;
 }

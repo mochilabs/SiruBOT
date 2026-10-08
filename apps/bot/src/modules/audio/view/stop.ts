@@ -1,9 +1,9 @@
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { TextDisplayBuilder } from 'discord.js';
 
 export function stop() {
 	const containerComponent = createContainer();
-	const textDisplay = new TextDisplayBuilder().setContent(`${appEmoji('wave', '👋')} 대기열을 비우고 재생을 멈췄어요.`);
+	const textDisplay = new TextDisplayBuilder().setContent(`${emoji('wave')} 대기열을 비우고 재생을 멈췄어요.`);
 
 	containerComponent.addTextDisplayComponents(textDisplay);
 

@@ -19,6 +19,7 @@ const featureLinks: FooterLink[] = [
 
 const serviceLinks: FooterLink[] = [
 	{ label: '서버 상태', href: '/shards', internal: true },
+	{ label: '내 프로필', href: '/profile', internal: true },
 	{ label: '서버 관리', href: '/servers', internal: true },
 	{ label: '봇 초대하기', href: '/invite', internal: true },
 ];

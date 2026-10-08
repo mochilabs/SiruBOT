@@ -5,32 +5,25 @@ export const DEFAULT_COLOR = 0xffdaff;
 export const OK_COLOR = 0x4299e1;
 export const WARN_COLOR = 0xf56565;
 
-type RepeatMode = 'off' | 'track' | 'queue';
-export const EMOJI_REPEAT: Record<RepeatMode, string> = {
-	off: '➡️',
-	track: '🔁',
-	queue: '🔂'
-};
-
 export const AUTOCOMPLETE_MAX_RESULT = 25;
-/** 폴백용 — 사용처에서 appEmoji('sparkle', EMOJI_SPARKLE)로 감싸요 */
-export const EMOJI_SPARKLE = '✨';
-/** 폴백용 — volumeToEmoji에서 appEmoji와 함께 사용돼요 */
-export const EMOJI_VOLUME_MUTE = '🔇';
-export const EMOJI_VOLUME_SMALL = '🔉';
-export const EMOJI_VOLUME_MEDIUM = '🔊';
-export const EMOJI_VOLUME_LARGE = '🔊';
-
 export const PAGE_CHUNK_SIZE = 10;
 
-/** Emojis (Progress bars) */
-export const PROGRESS_BAR_START_SINGLE_WHITE = '<:progress_start_single:965594966028079244>';
-export const PROGRESS_BAR_START_WHITE = '<:progress_start_white:956493674609541140>';
-export const PROGRESS_BAR_WHITE = '<:progress_bar_white:956493673913270325>';
-export const PROGRESS_BAR_END_WHITE = '<:progress_end_white:956493674445934602>';
-export const PROGRESS_BAR_END_MIDDLE_WHITE = '<:progress_end_middle_white:965594965650583602>';
-export const PROGRESS_BAR_START_BLACK = '<:progress_start_black:956491293532520458>';
-export const PROGRESS_BAR_BLACK = '<:progress_bar_black:956491293507321896>';
-export const PROGRESS_BAR_END_BLACK = '<:progress_end_black:956491293448613908>';
+/**
+ * 진행바 앱 이모지 셀 (resources/emoji_replacement/pb_*.png → 앱 이모지).
+ * 한 바는 6셀: start + mid×4 + end. 셀당 2스텝(총 12스텝), half 셀이 중간 스텝을 담당해요.
+ */
+export const PROGRESS_BAR_EMOJI_NAMES = {
+	start_empty: 'pb_start_empty',
+	start_half: 'pb_start_half',
+	start_filled: 'pb_start_filled',
+	mid_empty: 'pb_mid_empty',
+	mid_half: 'pb_mid_half',
+	mid_filled: 'pb_mid_filled',
+	end_empty: 'pb_end_empty',
+	end_half: 'pb_end_half',
+	end_filled: 'pb_end_filled'
+} as const;
 
 export const PROGRESS_BAR_EMOJI_COUNT = 6;
+/** 셀당 스텝 수 — start/mid/end 각 half 셀 표현용 (총 6셀 × 2스텝 - 경계 1 = 진행 스텝 11단계) */
+export const PROGRESS_BAR_STEPS_PER_CELL = 2;

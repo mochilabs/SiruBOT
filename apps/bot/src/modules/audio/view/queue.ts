@@ -1,4 +1,4 @@
-import { appEmoji, createContainer, formatTrack, formatTimeToKorean, formatTime } from '@sirubot/utils';
+import { emoji, createContainer, formatTrack, formatTimeToKorean, formatTime } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
@@ -48,7 +48,7 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 	const totalDuration = formatTimeToKorean(queuedDuration / 1000);
 
 	const content = [
-		`### ${appEmoji('scroll', '📄')} 대기열 목록`,
+		`### ${emoji('scroll')} 대기열 목록`,
 		...lines,
 		``,
 		`-# 페이지 ${page}/${totalPages} | 총 ${tracks.length}곡 | ${totalDuration} 남음`
@@ -82,15 +82,11 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 	// 선택된 곡에 대한 액션 버튼 (controllerButton의 queue:jumpTo / queue:remove)
 	const jumpButton = new ButtonBuilder()
 		.setCustomId(queueJumpCustomId)
-		.setEmoji(appEmoji('arrow_forward', '↪️'))
+		.setEmoji(emoji('arrow_forward'))
 		.setLabel('점프')
 		.setStyle(ButtonStyle.Secondary);
 
-	const removeButton = new ButtonBuilder()
-		.setCustomId(queueRemoveCustomId)
-		.setEmoji(appEmoji('trash', '🗑️'))
-		.setLabel('삭제')
-		.setStyle(ButtonStyle.Danger);
+	const removeButton = new ButtonBuilder().setCustomId(queueRemoveCustomId).setEmoji(emoji('trash')).setLabel('삭제').setStyle(ButtonStyle.Danger);
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(jumpButton, removeButton));
 
@@ -98,13 +94,13 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 	if (totalPages > 1) {
 		const prevButton = new ButtonBuilder()
 			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page - 1}`)
-			.setEmoji(appEmoji('arrow_back', '◀️'))
+			.setEmoji(emoji('arrow_back'))
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page <= 1);
 
 		const nextButton = new ButtonBuilder()
 			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page + 1}`)
-			.setEmoji(appEmoji('arrow_forward', '▶️'))
+			.setEmoji(emoji('arrow_forward'))
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page >= totalPages);
 
@@ -121,29 +117,27 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 }
 
 export function queueEmpty() {
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${appEmoji('bag', '📭')} 대기열이 비어있어요.`));
+	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('bag')} 대기열이 비어있어요.`));
 }
 
 export function queueShuffled({ count }: { count: number }) {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('shuffle', '🔀')} 대기열의 **${count}곡**을 셔플했어요.`)
+		new TextDisplayBuilder().setContent(`${emoji('shuffle')} 대기열의 **${count}곡**을 셔플했어요.`)
 	);
 }
 
 export function queueCleared({ count }: { count: number }) {
-	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('trash', '🗑️')} 대기열의 **${count}곡**을 비웠어요.`)
-	);
+	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('trash')} 대기열의 **${count}곡**을 비웠어요.`));
 }
 
 export function queueRemoved({ track, position }: { track: Track; position: number }) {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('trash', '🗑️')} \`#${position}\` **${track.info.title}**을(를) 대기열에서 제거했어요.`)
+		new TextDisplayBuilder().setContent(`${emoji('trash')} \`#${position}\` **${track.info.title}**을(를) 대기열에서 제거했어요.`)
 	);
 }
 
 export function queueMoved({ track, from, to }: { track: Track; from: number; to: number }) {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('arrow_up', '↕️')} **${track.info.title}**을(를) \`#${from}\` → \`#${to}\`(으)로 이동했어요.`)
+		new TextDisplayBuilder().setContent(`${emoji('arrow_up')} **${track.info.title}**을(를) \`#${from}\` → \`#${to}\`(으)로 이동했어요.`)
 	);
 }

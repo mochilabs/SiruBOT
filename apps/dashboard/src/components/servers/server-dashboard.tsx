@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, Volume2 } from "lucide-react";
+import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, Volume2 } from "lucide-react";
 
 import { ToastProvider } from "@/components/feedback/toast";
 import { Card } from "@/components/primitives/card";
@@ -13,11 +13,13 @@ import { ChannelSettings } from "./channel-settings";
 import { JtcSettings } from "./jtc-settings";
 import { MixerSettings } from "./mixer-settings";
 import { MusicSettings } from "./music-settings";
+import ServerStatsTab from "./server-stats-tab";
 
 const TABS = [
 	{ key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
 	{ key: "music", label: "음악", icon: <Music size={14} /> },
 	{ key: "player-live", label: "라이브", icon: <Radio size={14} /> },
+	{ key: "stats", label: "통계", icon: <BarChart3 size={14} /> },
 	{ key: "channels", label: "채널·권한", icon: <Hash size={14} /> },
 	{ key: "jtc", label: "임시 음성", icon: <Volume2 size={14} /> },
 	{ key: "mixer", label: "오디오 엔진", icon: <SlidersHorizontal size={14} /> },
@@ -64,6 +66,9 @@ export function ServerDashboard({ guildId, manageable }: { guildId: string; mana
 							</div>
 							<div className={tab === "player-live" ? "block" : "hidden"}>
 								<PlayerLiveTab guildId={guildId} />
+							</div>
+							<div className={tab === "stats" ? "block" : "hidden"}>
+								<ServerStatsTab guildId={guildId} />
 							</div>
 							<div className={tab === "channels" ? "block" : "hidden"}>
 								<ChannelSettings guildId={guildId} />

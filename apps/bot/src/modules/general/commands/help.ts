@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { appEmoji, createContainer, DEFAULT_COLOR } from '@sirubot/utils';
+import { emoji, createContainer, DEFAULT_COLOR } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
 import { MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
@@ -119,24 +119,24 @@ export class HelpCommand extends Command {
 		}
 
 		return [
-			`안녕하세요, 시루예요! ${appEmoji('music_note', '🎵')}`,
+			`안녕하세요, 시루예요! ${emoji('music_note')}`,
 			'음악 재생부터 AI 대화까지 — 제가 할 수 있는 것들을 알려드릴게요.',
 			'',
-			`${appEmoji('robot', '🤖')} **AI로 이런 것들**`,
+			`${emoji('robot')} **AI로 이런 것들**`,
 			'- `/채팅`으로 질문·요약·번역 뭐든 시켜요. 사진을 함께 보내면 그것도 봐요.',
 			'- 채널에서 저를 멘션하면 어디서든 바로 답해줘요.',
 			'- 기억할 일은 알아서 남겼다가 다음에 또 말해요. "이거 기억해줘", "이거 잊어줘"로 직접 관리할 수 있고, `/채팅설정`에서 서버별로 켜고 끌 수 있어요.',
 			'- 답이 늘어지면 "중지" 버튼으로 바로 끊어요.',
 			'',
-			`${appEmoji('clipboard', '📋')} **명령어 목록**`,
+			`${emoji('clipboard')} **명령어 목록**`,
 			'',
-			`**${appEmoji('music_note', '🎵')} 오디오**`,
+			`**${emoji('music_note')} 오디오**`,
 			...audioCommands,
 			'',
-			`**${appEmoji('gamepad', '🎮')} 게임**`,
+			`**${emoji('gamepad')} 게임**`,
 			...gameCommands,
 			'',
-			`**${appEmoji('tools', '🛠️')} 일반**`,
+			`**${emoji('tools')} 일반**`,
 			...generalCommands
 		];
 	}
