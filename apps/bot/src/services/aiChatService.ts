@@ -231,11 +231,11 @@ export async function loadChannelHistory(channelId: string): Promise<void> {
 	}
 }
 
-export function getChannelHistory(channelId: string): ChatMessage[] {
+function getChannelHistory(channelId: string): ChatMessage[] {
 	return channelHistories.get(channelId)?.messages ?? [];
 }
 
-export function getChannelHistoryState(channelId: string): ChannelHistoryState {
+function getChannelHistoryState(channelId: string): ChannelHistoryState {
 	return channelHistories.get(channelId) ?? defaultHistoryState();
 }
 
@@ -313,7 +313,7 @@ function trimHistoryState(state: ChannelHistoryState): void {
 	}
 }
 
-export function pushChannelHistory(channelId: string, ...messages: ChatMessage[]): void {
+function pushChannelHistory(channelId: string, ...messages: ChatMessage[]): void {
 	const state = getOrCreateHistory(channelId);
 	state.messages.push(...messages);
 	trimHistoryState(state);
@@ -438,7 +438,7 @@ async function buildRecentChannelBlock(channelId: string, excludeMessageId?: str
  * budget(기본 CHAT_CONTEXT_TOKEN_BUDGET) 안에 다 넣지 못하면 오래된 것부터 잘라내요.
  * 우선순위: 페르소나·요약(고정) > 최신 대화 > 요약 대기 원문.
  */
-export function buildSystemContent(
+function buildSystemContent(
 	state: ChannelHistoryState,
 	channelBlock: string | null = null,
 	memoryBlock: string | null = null,
@@ -507,7 +507,7 @@ function buildSummaryPrompt(existing: string | null, batch: ChatMessage[]): stri
  * 요약 대기가 쌓이면 백그라운드에서 오래된 대화를 요약으로 압축해요.
  * 응답을 지연시키지 않도록 runChatTurn에서 fire-and-forget으로 호출해요.
  */
-export function scheduleSummary(channelId: string, config: ChatConfig): void {
+function scheduleSummary(channelId: string, config: ChatConfig): void {
 	if (summaryJobs.has(channelId)) return;
 	const state = channelHistories.get(channelId);
 	if (!state || state.pending.length < SUMMARY_MIN_BATCH) return;

@@ -1,4 +1,4 @@
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import {
 	ChatInputCommandInteraction,
 	MediaGalleryBuilder,
@@ -52,7 +52,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	const containerComponent = createContainer();
-	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### 🖼️ ${label}`));
+	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${appEmoji('frame', '🖼️')} ${label}`));
 
 	const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(avatarUrl));
 	containerComponent.addMediaGalleryComponents(gallery);

@@ -5,7 +5,7 @@
  * fail-open 규칙: env가 설정되지 않으면 모든 로그인 유저가 열람 가능 (기존 동작 유지),
  * 설정되면 allowlist에 포함된 유저만 통과해요.
  */
-export function getDashboardAdminIds(): string[] {
+function getDashboardAdminIds(): string[] {
   const raw = (process.env.DASHBOARD_ADMIN_IDS ?? "").trim();
   if (!raw) return [];
   return raw

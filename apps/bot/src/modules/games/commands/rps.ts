@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { ActionRowBuilder, ApplicationIntegrationType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 const RPS_LABELS = ['가위 ✌️', '바위 ✊', '보 🖐'];
@@ -8,7 +8,9 @@ const RPS_LABELS = ['가위 ✌️', '바위 ✊', '보 🖐'];
 function choiceContainer(displayName: string) {
 	const container = createContainer();
 	container.addTextDisplayComponents((t) =>
-		t.setContent(`### ✊ 가위바위보\n\n**${displayName}** 님, 무엇을 낼까요?\n\n-# 가위✌️ · 바위✊ · 보🖐 버튼을 눌러주세요. 결과는 나만 보여요.`)
+		t.setContent(
+			`### ${appEmoji('fist', '✊')} 가위바위보\n\n**${displayName}** 님, 무엇을 낼까요?\n\n-# 가위✌️ · 바위✊ · 보🖐 버튼을 눌러주세요. 결과는 나만 보여요.`
+		)
 	);
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(

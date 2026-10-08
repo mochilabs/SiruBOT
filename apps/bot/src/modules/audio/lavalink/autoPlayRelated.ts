@@ -26,7 +26,7 @@ export function getInFlightRelatedFetch(guildId: string): Promise<Track | null> 
 }
 
 /** 봇이 자동으로 넣은 추천곡인지 판별한다 (requester.id === 'related_track') */
-export function isRelatedTrack(track: Track | UnresolvedTrack): boolean {
+function isRelatedTrack(track: Track | UnresolvedTrack): boolean {
 	const requester = (track as { requester?: unknown }).requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
 	return requesterId === 'related_track';
@@ -78,7 +78,7 @@ export function getUserQueuedTracks(player: Player): Track[] {
 /**
  * Normalize title: convert to lowercase, remove bracketed content (feat., remix, etc.), remove special characters, trim whitespace
  */
-export function normalizeTitle(title: string): string {
+function normalizeTitle(title: string): string {
 	return title
 		.toLowerCase()
 		.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '') // Remove (Official MV), [Lyrics], {Remix}, etc.
@@ -103,7 +103,7 @@ function getBigrams(str: string): string[] {
  * Dice coefficient (Bigram similarity): 0 = completely different, 1 = identical
  * Measures how similar two tracks are based on their titles
  */
-export function titleSimilarity(titleA: string, titleB: string): number {
+function titleSimilarity(titleA: string, titleB: string): number {
 	const a = normalizeTitle(titleA);
 	const b = normalizeTitle(titleB);
 
@@ -138,7 +138,7 @@ export function titleSimilarity(titleA: string, titleB: string): number {
  * Duration similarity: Returns a value between 0 and 1 indicating how similar the lengths of two tracks are
  * 1 if identical, closer to 0 as the difference increases
  */
-export function durationSimilarity(durationA: number, durationB: number): number {
+function durationSimilarity(durationA: number, durationB: number): number {
 	if (durationA === 0 && durationB === 0) return 1;
 	const maxDuration = Math.max(durationA, durationB);
 	if (maxDuration === 0) return 1;
@@ -149,7 +149,7 @@ export function durationSimilarity(durationA: number, durationB: number): number
 /**
  * Overall similarity: Sum of title similarity (60%) and duration similarity (40%)
  */
-export function trackSimilarity(trackA: Track, trackB: Track): number {
+function trackSimilarity(trackA: Track, trackB: Track): number {
 	const titleSim = titleSimilarity(trackA.info.title, trackB.info.title);
 	const durationSim = durationSimilarity(trackA.info.duration, trackB.info.duration);
 
@@ -162,7 +162,7 @@ export function trackSimilarity(trackA: Track, trackB: Track): number {
  * - Too different tracks → excluded
  * - Select the most appropriate track from the medium similarity range
  */
-export function pickBySimilarity(candidates: Track[], reference: Track, previousIds: string[] = []): Track | null {
+function pickBySimilarity(candidates: Track[], reference: Track, previousIds: string[] = []): Track | null {
 	if (candidates.length === 0) return null;
 
 	const scored = candidates.map((track) => {

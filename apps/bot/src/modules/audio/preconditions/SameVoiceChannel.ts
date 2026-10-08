@@ -1,8 +1,12 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowflake } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 
 export class SameVoiceChannel extends AllFlowsPrecondition {
-	#message = '🔗  이 명령어를 사용하려면 봇과 같은 음성 채널에 연결해야 해요.';
+	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
+	get #message() {
+		return `${appEmoji('link', '🔗')} 이 명령어를 사용하려면 봇과 같은 음성 채널에 연결해야 해요.`;
+	}
 	#ephemeral = true;
 
 	public check(userChannelId: Snowflake | null, botChannelId: Snowflake | null) {

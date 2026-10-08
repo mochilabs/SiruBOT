@@ -207,16 +207,12 @@ async function main() {
     }
   }
 
-  // 매핑 파일 저장 — 코드에서 앱 이모지 참조(`<:name:id>`)를 만들 때 쓰여요
-  // 봇은 apps/bot CWD 기준 resources/emoji-ids.json을 읽어요 (@sirubot/utils appEmoji)
+  // 매핑 파일 저장 — canonical 위치( resources/emoji_replacement/emoji-ids.json )는
+  // 커밋 대상이라 Docker 이미지에 들어가요(앱 이모지 ID는 application 소유로 고정).
+  // 런타임용 apps/bot/resources/emoji-ids.json도 갱신해요 (로컬 개발 편의, 커밋 대상 아님).
   const mapPath = join(EMOJI_SOURCE_DIR, "emoji-ids.json");
   await writeFile(mapPath, `${JSON.stringify(emojiIdMap, null, 2)}\n`, "utf-8");
-  console.log(blue(`이모지 ID 매핑 저장: ${mapPath}`));
-  console.log(
-    gray(
-      "봇이 읽는 위치: apps/bot/resources/emoji-ids.json — 위 파일을 거기로 복사하거나 아래 자동 복사를 사용하세요.",
-    ),
-  );
+  console.log(green(`canonical 매핑 저장 (커밋 필요): ${mapPath}`));
   try {
     const botResourcesDir = join(process.cwd(), "apps", "bot", "resources");
     await mkdir(botResourcesDir, { recursive: true });
@@ -226,10 +222,10 @@ async function main() {
       "utf-8",
     );
     console.log(
-      green(`봇 매핑 동기화 완료: ${join(botResourcesDir, "emoji-ids.json")}`),
+      gray(`런타임 매핑 동기화: ${join(botResourcesDir, "emoji-ids.json")} (커밋 안 함)`),
     );
   } catch {
-    // 모노레포 루트가 아닌 위치에서 실행 시 무시 (위 안내 참고)
+    // 모노레포 루트가 아닌 위치에서 실행 시 무시
   }
 
   console.log("");

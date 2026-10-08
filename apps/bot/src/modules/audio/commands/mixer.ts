@@ -1,5 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
@@ -85,7 +86,7 @@ export class MixerCommand extends Command {
 			default:
 				throw new UserError({
 					identifier: 'mixer_unknown_subcommand',
-					message: '❌ 알 수 없는 하위 명령어예요.',
+					message: `${appEmoji('error', '❌')} 알 수 없는 하위 명령어예요.`,
 					context: { ephemeral: true }
 				});
 		}
@@ -106,7 +107,7 @@ export class MixerCommand extends Command {
 		if (!allowed) {
 			throw new UserError({
 				identifier: 'mixer_no_permission',
-				message: '❌ 믹서 설정을 바꾸려면 DJ 역할이나 관리자 권한이 필요해요.',
+				message: `${appEmoji('error', '❌')} 믹서 설정을 바꾸려면 DJ 역할이나 관리자 권한이 필요해요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -122,10 +123,10 @@ export class MixerCommand extends Command {
 		}
 		let message: string;
 		if (player) {
-			if (enabled) message = '⏭️ 갭리스 재생을 켰어요. 다음 곡부터 끊김 없이 이어져요.';
-			else message = '⏭️ 갭리스 재생을 껐어요.';
-		} else if (enabled) message = '⏭️ 갭리스 재생을 켰어요. 다음에 재생할 때부터 끊김 없이 이어져요.';
-		else message = '⏭️ 갭리스 재생을 껐어요. 다음에 재생할 때부터 적용돼요.';
+			if (enabled) message = `${appEmoji('arrow_forward', '⏭️')} 갭리스 재생을 켰어요. 다음 곡부터 끊김 없이 이어져요.`;
+			else message = `${appEmoji('arrow_forward', '⏭️')} 갭리스 재생을 껐어요.`;
+		} else if (enabled) message = `${appEmoji('arrow_forward', '⏭️')} 갭리스 재생을 켰어요. 다음에 재생할 때부터 끊김 없이 이어져요.`;
+		else message = `${appEmoji('arrow_forward', '⏭️')} 갭리스 재생을 껐어요. 다음에 재생할 때부터 적용돼요.`;
 		await interaction.editReply({
 			components: [view.mixerUpdated({ message })],
 			flags: [MessageFlags.IsComponentsV2],
@@ -144,12 +145,14 @@ export class MixerCommand extends Command {
 			} catch {
 				throw new UserError({
 					identifier: 'mixer_crossfade_failed',
-					message: '🛠️ 크로스페이드 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.',
+					message: `${appEmoji('tools', '🛠️')} 크로스페이드 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.`,
 					context: { ephemeral: true }
 				});
 			}
 		}
-		const base = saved.crossfadeEnabled ? `🔀 크로스페이드를 켰어요. (${saved.crossfadeMs}ms 겹치기)` : '🔀 크로스페이드를 껐어요.';
+		const base = saved.crossfadeEnabled
+			? `${appEmoji('shuffle', '🔀')} 크로스페이드를 켰어요. (${saved.crossfadeMs}ms 겹치기)`
+			: `${appEmoji('shuffle', '🔀')} 크로스페이드를 껐어요.`;
 		await interaction.editReply({
 			components: [
 				view.mixerUpdated({

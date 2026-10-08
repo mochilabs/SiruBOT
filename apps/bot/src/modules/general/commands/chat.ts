@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 import {
 	ChatServiceError,
 	acquireChannelTurn,
@@ -62,7 +63,7 @@ export class ChatCommand extends Command {
 		if (!config) {
 			throw new UserError({
 				identifier: 'chat_not_configured',
-				message: '❌ AI 서버가 설정되지 않았어요. `apps/bot/.env`에 `CHAT_MODEL`을(를) 설정해 주세요.',
+				message: `${appEmoji('error', '❌')} AI 서버가 설정되지 않았어요. \`apps/bot/.env\`에 \`CHAT_MODEL\`을(를) 설정해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -74,7 +75,7 @@ export class ChatCommand extends Command {
 		if (!channelId) {
 			throw new UserError({
 				identifier: 'chat_no_channel',
-				message: '❌ 대화 기록을 저장할 채널이 없어요.',
+				message: `${appEmoji('error', '❌')} 대화 기록을 저장할 채널이 없어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -86,7 +87,7 @@ export class ChatCommand extends Command {
 		if (attachment && images.length === 0) {
 			throw new UserError({
 				identifier: 'chat_image_unsupported',
-				message: '❌ 이미지는 10MB 이하의 이미지 파일(PNG·JPG 등)만 보낼 수 있어요.',
+				message: `${appEmoji('error', '❌')} 이미지는 10MB 이하의 이미지 파일(PNG·JPG 등)만 보낼 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -103,7 +104,7 @@ export class ChatCommand extends Command {
 		if (!(await tryConsumeUserTurn(interaction.user.id))) {
 			throw new UserError({
 				identifier: 'chat_rate_limited',
-				message: '⏳ AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 시도해 주세요.',
+				message: `${appEmoji('hourglass', '⏳')} AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 시도해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -112,7 +113,7 @@ export class ChatCommand extends Command {
 		if (!acquireChannelTurn(channelId)) {
 			await interaction
 				.reply({
-					...errorPayload('⏳ 이 채널에서 이미 답변하는 중이에요. 잠시 후 다시 시도해 주세요.'),
+					...errorPayload(`${appEmoji('hourglass', '⏳')} 이 채널에서 이미 답변하는 중이에요. 잠시 후 다시 시도해 주세요.`),
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 				})
 				.catch(() => undefined);

@@ -1,5 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, PreconditionContainerArray, UserError, type SimplePreconditionKeys } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction } from 'discord.js';
 import * as autoplay from '../subcommands/autoplay.ts';
 import * as filter from '../subcommands/filter.ts';
@@ -86,7 +87,7 @@ export class MusicCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'music_not_in_guild',
-				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				message: `${appEmoji('error', '❌')} 길드 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -96,7 +97,7 @@ export class MusicCommand extends Command {
 		if (!subcommand) {
 			throw new UserError({
 				identifier: 'music_unknown_subcommand',
-				message: '❌ 알 수 없는 하위 명령어예요.',
+				message: `${appEmoji('error', '❌')} 알 수 없는 하위 명령어예요.`,
 				context: { ephemeral: true }
 			});
 		}

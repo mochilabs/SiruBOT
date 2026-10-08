@@ -25,7 +25,7 @@ const MEMORY_TIDY_PROMPT = [
 	'- 불릿 외 다른 텍스트·설명·코드 펜스를 붙이지 않고 파일 본문만 출력해요.'
 ].join('\n');
 
-export interface MemoryTidyStats {
+interface MemoryTidyStats {
 	lastRunAt: number | null;
 	lastRunUsers: number;
 	lastRunOk: number;
@@ -166,7 +166,7 @@ async function findCandidates(db: PrismaClient, limit: number): Promise<string[]
 	return candidates.slice(0, limit).map((c) => c.userId);
 }
 
-export async function runMemoryTidy(db: PrismaClient, provider: OpenAICompatTranslationProvider, batchSize: number): Promise<MemoryTidyStats> {
+async function runMemoryTidy(db: PrismaClient, provider: OpenAICompatTranslationProvider, batchSize: number): Promise<MemoryTidyStats> {
 	if (stats.running) return memoryTidyStatus();
 	stats.running = true;
 	stats.lastRunAt = Date.now();

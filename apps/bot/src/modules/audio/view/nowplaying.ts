@@ -1,4 +1,4 @@
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { SectionBuilder, SeparatorBuilder, SeparatorSpacingSize, TextDisplayBuilder, ThumbnailBuilder } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import { buildFooterSegments, buildTrackDisplay } from './controller.ts';
@@ -32,5 +32,7 @@ export function nowplaying({ player, track }: NowPlayingViewProps) {
 }
 
 export function nowplayingEmpty() {
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent('🔇 현재 재생 중인 곡이 없어요.'));
+	return createContainer().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`${appEmoji('volume_muted', '🔇')} 현재 재생 중인 곡이 없어요.`)
+	);
 }

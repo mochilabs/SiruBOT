@@ -31,7 +31,7 @@ export function logSuccessCommand(payload: ContextMenuCommandSuccessPayload | Ch
 	container.logger.debug(`${successLoggerData.shard} - ${successLoggerData.commandName} ${successLoggerData.author} ${successLoggerData.sentAt}`);
 }
 
-export function getSuccessLoggerData(guild: Guild | null, user: User, command: Command) {
+function getSuccessLoggerData(guild: Guild | null, user: User, command: Command) {
 	const shard = getShardInfo(guild?.shardId ?? 0);
 	const commandName = getCommandInfo(command);
 	const author = getAuthorInfo(user);

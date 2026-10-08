@@ -1,22 +1,23 @@
 import { container } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { getZodiacFromDate } from '../../games/utils/ohaasaService.ts';
 import { getCheckinState, getGuessBest, getRpsStats } from '../../games/utils/gameRecords.ts';
 import { getUserProfile } from './userProfile.ts';
 
-export interface ProfileRecentTrack {
+interface ProfileRecentTrack {
 	title: string;
 	artist: string;
 	playedAt: Date;
 }
 
-export interface ProfileTopTrack {
+interface ProfileTopTrack {
 	title: string;
 	artist: string;
 	count: number;
 	artworkUrl?: string | null;
 }
 
-export interface ProfileGameStats {
+interface ProfileGameStats {
 	rpsWins: number;
 	rpsLosses: number;
 	rpsDraws: number;
@@ -30,7 +31,7 @@ export interface ProfileGameStats {
  * - 생일(월/일)은 본인 조회 때만 채워요. 타인에게는 null + 별자리 코드만.
  * - 음악 집계는 길드 안이면 해당 길드 기준, DM이면 전체 기준이에요.
  */
-export interface ProfileCardData {
+interface ProfileCardData {
 	isSelf: boolean;
 	inGuild: boolean;
 	/** 본인일 때만 값 있음. 타인은 null */
@@ -134,11 +135,11 @@ export function formatGameStatsLines(gameStats: ProfileGameStats): string[] | nu
 	const hasRps = rpsWins + rpsLosses + rpsDraws > 0;
 	if (!hasRps && guessBest == null) return null;
 
-	const lines = ['🎮 **게임 전적**'];
+	const lines = [`${appEmoji('gamepad', '🎮')} **게임 전적**`];
 	if (hasRps) {
 		const best = rpsBestStreak >= 2 ? ` (최고 ${rpsBestStreak}연승)` : '';
-		lines.push(`✊ 가위바위보 **${rpsWins}승 ${rpsLosses}패 ${rpsDraws}무**${best}`);
+		lines.push(`${appEmoji('fist', '✊')} 가위바위보 **${rpsWins}승 ${rpsLosses}패 ${rpsDraws}무**${best}`);
 	}
-	if (guessBest != null) lines.push(`🎲 숫자맞히기 최고 **${guessBest}번** 만에 성공`);
+	if (guessBest != null) lines.push(`${appEmoji('dice', '🎲')} 숫자맞히기 최고 **${guessBest}번** 만에 성공`);
 	return lines;
 }

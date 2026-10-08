@@ -1,4 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 import * as view from '../view/repeat.ts';
@@ -46,7 +47,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!(VALID_REPEAT_MODES as readonly string[]).includes(mode)) {
 		throw new UserError({
 			identifier: 'repeat_invalid',
-			message: '❌  잘못된 반복 모드 값이에요.',
+			message: `${appEmoji('error', '❌')} 잘못된 반복 모드 값이에요.`,
 			context: { mode }
 		});
 	}

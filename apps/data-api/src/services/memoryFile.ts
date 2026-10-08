@@ -1,7 +1,7 @@
 /** 장기 기억 파일(MEMORY.md) 파싱/렌더링 — 봇 `aiMemoryService.ts`와 동일한 형식이에요. */
 
 export type MemoryCategory = 'facts' | 'preferences' | 'commitments';
-export const CATEGORIES: MemoryCategory[] = ['facts', 'preferences', 'commitments'];
+const CATEGORIES: MemoryCategory[] = ['facts', 'preferences', 'commitments'];
 
 const SECTION_TITLES: Record<MemoryCategory, string> = {
 	facts: 'Facts',
@@ -15,7 +15,7 @@ const LONG_TERM_MAX = 40;
 
 export type MemorySections = Record<MemoryCategory, string[]>;
 
-export function emptySections(): MemorySections {
+function emptySections(): MemorySections {
 	return { facts: [], preferences: [], commitments: [] };
 }
 

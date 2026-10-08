@@ -8,7 +8,7 @@ const logger = getLogger('shardRegistry');
 const HEARTBEAT_TIMEOUT_MS = 60_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 
-export interface ShardProcessInfo {
+interface ShardProcessInfo {
 	shardIds: number[];
 	status: ShardStatus;
 	hostname?: string;
@@ -188,13 +188,6 @@ export class ShardRegistry {
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * Get all WebSocket connections for broadcasting
-	 */
-	public getAllConnections(): WebSocket[] {
-		return Array.from(this.processes.values()).map((p) => p.wsConnection);
 	}
 
 	/**

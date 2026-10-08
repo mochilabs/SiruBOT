@@ -1,4 +1,4 @@
-export interface DataApiPlaybackCounts {
+interface DataApiPlaybackCounts {
     track_start: number;
     track_end: number;
     track_stuck: number;
@@ -7,7 +7,7 @@ export interface DataApiPlaybackCounts {
     playback_abort: number;
 }
 
-export interface DataApiPlaybackError {
+interface DataApiPlaybackError {
     type: string;
     guildId: string;
     shardId: number | null;

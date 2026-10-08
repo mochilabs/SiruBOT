@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { getGuessBest, recordGameResult } from '../utils/gameRecords.ts';
 
@@ -48,7 +48,7 @@ export class GuessCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'guess_not_in_guild',
-				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				message: `${appEmoji('error', '❌')} 길드 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -62,7 +62,7 @@ export class GuessCommand extends Command {
 			await interaction.reply({
 				components: [
 					resultContainer([
-						'### 🎲 숫자맞히기 시작!',
+						`### ${appEmoji('dice', '🎲')} 숫자맞히기 시작!`,
 						'',
 						`**${interaction.user.displayName}** 님의 게임이 열렸어요.`,
 						`1~100 사이 숫자를 맞추면 돼요. 기회는 **${MAX_ATTEMPTS}번**.`,
@@ -79,7 +79,7 @@ export class GuessCommand extends Command {
 		if (!Number.isInteger(guess) || guess < 1 || guess > 100) {
 			throw new UserError({
 				identifier: 'guess_invalid_input',
-				message: '❌ `시작` 또는 1~100 사이 숫자를 입력해 주세요.',
+				message: `${appEmoji('error', '❌')} \`시작\` 또는 1~100 사이 숫자를 입력해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -88,7 +88,7 @@ export class GuessCommand extends Command {
 		if (!session) {
 			throw new UserError({
 				identifier: 'guess_no_session',
-				message: '❌ 진행 중인 게임이 없어요. `시작`으로 새로 시작해 주세요.',
+				message: `${appEmoji('error', '❌')} 진행 중인 게임이 없어요. \`시작\`으로 새로 시작해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -102,13 +102,13 @@ export class GuessCommand extends Command {
 			await recordGameResult(userId, 'guess', 'win', { attempts: used });
 
 			const recordLine = isNewBest
-				? `🏆 ${prevBest == null ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
+				? `${appEmoji('trophy', '🏆')} ${prevBest == null ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
 				: `-# 개인 최고 기록: ${prevBest}번`;
 
 			await interaction.reply({
 				components: [
 					resultContainer([
-						'### 🎉 정답!',
+						`### ${appEmoji('party', '🎉')} 정답!`,
 						`**${interaction.user.displayName}** 님의 정답: **${guess}**`,
 						`**${used}번** 만에 맞혔어요${used === 1 ? ' — 한 번에?! 🤯' : '!'}`,
 						'',
@@ -121,7 +121,7 @@ export class GuessCommand extends Command {
 		}
 
 		session.attempts -= 1;
-		const hint = guess < session.target ? '⬆️ 더 높아요' : '⬇️ 더 낮아요';
+		const hint = guess < session.target ? `${appEmoji('arrow_up', '⬆️')} 더 높아요` : `${appEmoji('arrow_down', '⬇️')} 더 낮아요`;
 
 		if (session.attempts <= 0) {
 			sessions.delete(userId);
@@ -129,7 +129,7 @@ export class GuessCommand extends Command {
 			await interaction.reply({
 				components: [
 					resultContainer([
-						'### 💥 게임 오버',
+						`### ${appEmoji('boom', '💥')} 게임 오버`,
 						`**${interaction.user.displayName}** 님의 추측: **${guess}**`,
 						`정답은 **${session.target}** 이었어요.`,
 						`기회 ${MAX_ATTEMPTS}번을 다 썼어요 — 다시 도전해 보세요!`
@@ -141,7 +141,9 @@ export class GuessCommand extends Command {
 		}
 
 		await interaction.reply({
-			components: [resultContainer(['### 🔍 힌트', `추측: **${guess}** → ${hint}`, `남은 기회: **${session.attempts}번**`])],
+			components: [
+				resultContainer([`### ${appEmoji('eye', '🔍')} 힌트`, `추측: **${guess}** → ${hint}`, `남은 기회: **${session.attempts}번**`])
+			],
 			flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 		});
 	}

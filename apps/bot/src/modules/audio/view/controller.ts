@@ -1,4 +1,5 @@
 import {
+	appEmoji,
 	createContainer,
 	emojiProgressBar,
 	formatTime,
@@ -35,7 +36,7 @@ type controllerViewProps = {
 	nowPlayingCardUrl?: string;
 };
 
-export const customIdPrefix = 'controller:';
+const customIdPrefix = 'controller:';
 const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
@@ -81,19 +82,19 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 
 	const prevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('prev'))
-		.setEmoji('⏮️')
+		.setEmoji(appEmoji('arrow_back', '⏮️'))
 		.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
-		.setEmoji(player.paused ? '▶️' : '⏸');
+		.setEmoji(player.paused ? appEmoji('arrow_forward', '▶️') : appEmoji('arrow_forward', '⏸'));
 
 	const nextButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('next'))
-		.setEmoji('⏭️')
+		.setEmoji(appEmoji('arrow_forward', '⏭️'))
 		.setDisabled(player.queue.tracks.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji('⏹');
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(appEmoji('box', '⏹'));
 
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
@@ -104,11 +105,17 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 					? wrapPrefix('repeat:track')
 					: wrapPrefix('repeat:off')
 		)
-		.setEmoji(player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'track' ? '🔂' : '🔁');
+		.setEmoji(
+			player.repeatMode === 'off'
+				? appEmoji('arrow_forward', '➡️')
+				: player.repeatMode === 'track'
+					? appEmoji('repeat_one', '🔂')
+					: appEmoji('repeat', '🔁')
+		);
 
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
 	// 1행: 재생 제어(prev·pause·next·repeat·stop), 2행: 대기열 (Discord 한 행당 버튼 5개 제한)
-	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji('📄');
+	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji(appEmoji('scroll', '📄'));
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		[prevButton, pauseButton, nextButton, repeatButton, stopButton].map((e) => e.setStyle(ButtonStyle.Secondary))
@@ -145,7 +152,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	// N곡 · N 남음 안내는 하단 푸터 줄로 내린다.
 	const footerLines = [...buildFooterSegments(player, volume)];
 	if (queueCount > 0) {
-		footerLines.unshift(`📄 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`);
+		footerLines.unshift(
+			`${appEmoji('scroll', '📄')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
+		);
 	}
 
 	containerComponent.addSeparatorComponents(separatorSmall).addTextDisplayComponents(new TextDisplayBuilder().setContent(footerLines.join(' | ')));
@@ -173,7 +182,7 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 		return contents;
 	}
 
-	contents.push(`-# 🎵 <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
+	contents.push(`-# ${appEmoji('music_note', '🎵')} <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
 	contents.push(`### **[${removeEmojis(track.info.title)}](${track.info.uri})**`);
 
 	// 챕터(에피소드) 표시
@@ -201,7 +210,7 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 
 export function buildFooterSegments(player: Player, volume?: number): string[] {
 	const segments = [];
-	segments.push(`-# 📡 재생 서버: ${player.node.id}`);
+	segments.push(`-# ${appEmoji('radio_wave', '📡')} 재생 서버: ${player.node.id}`);
 	if (volume !== undefined) {
 		segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
 	} else if (player.volume !== undefined) {

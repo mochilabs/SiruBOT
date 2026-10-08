@@ -1,4 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
+import { appEmoji } from '@sirubot/utils';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { settingsView } from '../view/settings.ts';
@@ -20,7 +21,7 @@ export class SettingsModalHandler extends InteractionHandler {
 		if (!checkManageGuild(interaction.member)) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('⚙️ 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.')]
+				components: [errorView(`${appEmoji('tools', '⚙️')} 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.`)]
 			});
 			return;
 		}
@@ -29,7 +30,7 @@ export class SettingsModalHandler extends InteractionHandler {
 		if (!template) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('❌ 방 이름 템플릿을 입력해 주세요.')]
+				components: [errorView(`${appEmoji('error', '❌')} 방 이름 템플릿을 입력해 주세요.`)]
 			});
 			return;
 		}

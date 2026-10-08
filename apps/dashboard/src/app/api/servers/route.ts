@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { hasManageablePermissions } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 import type { DiscordGuild } from "@/types/discord";
 
@@ -45,15 +46,9 @@ export async function GET() {
     });
     const installedSet = new Set(installedGuilds.map((g) => g.id));
 
-    const MANAGE_GUILD = BigInt(0x20);
-    const ADMINISTRATOR = BigInt(0x8);
-
     const enriched = guilds
       .map((guild) => {
-        const permissions = BigInt(guild.permissions);
-        const isManageable =
-          (permissions & MANAGE_GUILD) === MANAGE_GUILD ||
-          (permissions & ADMINISTRATOR) === ADMINISTRATOR;
+        const isManageable = hasManageablePermissions(guild.permissions);
         const isInstalled = installedSet.has(guild.id);
 
         return { ...guild, isManageable, isInstalled };

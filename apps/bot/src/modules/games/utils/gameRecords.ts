@@ -1,14 +1,15 @@
 import { container } from '@sapphire/framework';
 import { Prisma } from '@sirubot/prisma';
+import { appEmoji } from '@sirubot/utils';
 
 /** 지원하는 게임 ID */
-export const GAME_IDS = ['rps', 'guess', 'dice', 'attendance', 'quiz'] as const;
+const GAME_IDS = ['rps', 'guess', 'dice', 'attendance', 'quiz'] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
 /** 전적 결과 */
 export type GameResult = 'win' | 'loss' | 'draw' | 'checkin';
 
-export interface RpsStats {
+interface RpsStats {
 	wins: number;
 	losses: number;
 	draws: number;
@@ -18,7 +19,7 @@ export interface RpsStats {
 	best: number;
 }
 
-export interface CheckinState {
+interface CheckinState {
 	/** 오늘 이미 출석했는지 */
 	checkedIn: boolean;
 	/** 연속 출석 일수 (오늘 출석 전이면 어제까지의 스트릭) */
@@ -28,7 +29,7 @@ export interface CheckinState {
 }
 
 /** KST 기준 날짜 키 (YYYY-MM-DD) */
-export function kstDayKey(date: Date = new Date()): string {
+function kstDayKey(date: Date = new Date()): string {
 	const parts = new Intl.DateTimeFormat('en-CA', {
 		timeZone: 'Asia/Seoul',
 		year: 'numeric',
@@ -146,10 +147,10 @@ export async function doCheckin(userId: string): Promise<{ checkedIn: boolean; s
 
 /** 출석 스트릭 뱃지 이모지 */
 export function streakBadge(streak: number): string {
-	if (streak >= 365) return '💎';
-	if (streak >= 100) return '👑';
-	if (streak >= 30) return '⚡';
-	if (streak >= 7) return '🔥';
-	if (streak >= 1) return '🌱';
+	if (streak >= 365) return appEmoji('gem', '💎');
+	if (streak >= 100) return appEmoji('crown', '👑');
+	if (streak >= 30) return appEmoji('flash', '⚡');
+	if (streak >= 7) return appEmoji('fire', '🔥');
+	if (streak >= 1) return appEmoji('sprout', '🌱');
 	return '';
 }

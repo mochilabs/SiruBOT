@@ -6,13 +6,13 @@ type RepeatUpdatedProps = {
 	mode: RepeatMode;
 };
 
-export const REPEAT_MODE_NAMES: Record<RepeatMode, string> = {
+const REPEAT_MODE_NAMES: Record<RepeatMode, string> = {
 	off: '끄기',
 	track: '한 곡',
 	queue: '전체 곡'
 } as const;
 
-export const UPDATED_REPEAT_MODE_NAMES: Record<RepeatMode, string> = {
+const UPDATED_REPEAT_MODE_NAMES: Record<RepeatMode, string> = {
 	off: '껐어요.',
 	track: '**한 곡** 반복으로 설정했어요',
 	queue: '**전체 곡** 반복으로 설정했어요'

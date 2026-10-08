@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { ChatInputCommandErrorPayload, Events } from '@sapphire/framework';
 import { Listener, UserError } from '@sapphire/framework';
-import { DEFAULT_COLOR, WARN_COLOR } from '@sirubot/utils';
+import { appEmoji, DEFAULT_COLOR, WARN_COLOR } from '@sirubot/utils';
 import { ContainerBuilder } from 'discord.js';
 import { sendComponent } from './chatInputCommandDenied.ts';
 import * as Sentry from '@sentry/node';
@@ -40,7 +40,11 @@ export class ChatInputCommandError extends Listener {
 			new ContainerBuilder()
 				.setAccentColor(userError ? DEFAULT_COLOR : WARN_COLOR)
 				.addTextDisplayComponents((textDisplay) =>
-					textDisplay.setContent(!userError ? '🛠️ 명령어를 실행하는 도중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' : error.message)
+					textDisplay.setContent(
+						!userError
+							? `${appEmoji('tools', '🛠️')} 명령어를 실행하는 도중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`
+							: error.message
+					)
 				),
 			{ ephemeral }
 		);

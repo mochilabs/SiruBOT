@@ -1,9 +1,10 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { createContainer } from '@sirubot/utils';
-import { Track, SearchPlatform } from 'lavalink-client';
+import { appEmoji, createContainer } from '@sirubot/utils';
+import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
+import { lookupSource } from '../utils/source.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 
 @ApplyOptions<Command.Options>({
@@ -143,12 +144,16 @@ export class PlaylistCommand extends Command {
 		try {
 			await this.container.playlistService.createPlaylist(interaction.user.id, name, description ?? undefined);
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`✅ 플레이리스트 **${name}**을(를) 생성했어요.`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`${appEmoji('success', '✅')} 플레이리스트 **${name}**을(를) 생성했어요.`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -160,12 +165,16 @@ export class PlaylistCommand extends Command {
 		try {
 			await this.container.playlistService.deletePlaylist(interaction.user.id, name);
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`🗑️ 플레이리스트 **${name}**을(를) 삭제했어요.`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`${appEmoji('trash', '🗑️')} 플레이리스트 **${name}**을(를) 삭제했어요.`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -179,7 +188,9 @@ export class PlaylistCommand extends Command {
 
 		if (playlists.length === 0) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('📭 생성된 플레이리스트가 없어요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('inbox_tray', '📭')} 생성된 플레이리스트가 없어요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -188,7 +199,9 @@ export class PlaylistCommand extends Command {
 		const list = playlists.map((p) => `**${p.name}** - ${p._count.tracks}곡 ${p.description ? `\n-# ${p.description}` : ''}`).join('\n\n');
 
 		await interaction.reply({
-			components: [createContainer().addTextDisplayComponents((t) => t.setContent(`### 📁 나의 플레이리스트\n${list}`))],
+			components: [
+				createContainer().addTextDisplayComponents((t) => t.setContent(`### ${appEmoji('folder', '📁')} 나의 플레이리스트\n${list}`))
+			],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -202,7 +215,9 @@ export class PlaylistCommand extends Command {
 			if (tracks.length === 0) {
 				await interaction.reply({
 					components: [
-						createContainer().addTextDisplayComponents((t) => t.setContent(`📭 **${playlist.name}** 플레이리스트가 비어있어요.`))
+						createContainer().addTextDisplayComponents((t) =>
+							t.setContent(`${appEmoji('inbox_tray', '📭')} **${playlist.name}** 플레이리스트가 비어있어요.`)
+						)
 					],
 					flags: [MessageFlags.IsComponentsV2]
 				});
@@ -212,12 +227,16 @@ export class PlaylistCommand extends Command {
 			const list = tracks.map((t, index) => `\`#${index + 1}\` **[${t.track.title}](${t.track.url})** - ${t.track.artist}`).join('\n');
 
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`### 📋 플레이리스트: ${playlist.name}\n${list}`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`### ${appEmoji('clipboard', '📋')} 플레이리스트: ${playlist.name}\n${list}`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -227,7 +246,9 @@ export class PlaylistCommand extends Command {
 		const voiceChannelId = interaction.member.voice.channelId;
 		if (!voiceChannelId) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 먼저 음성 채널에 접속해주세요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -251,7 +272,7 @@ export class PlaylistCommand extends Command {
 		const result = await player.search({ query }, interaction.user);
 		if (result.tracks.length === 0) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 곡을 찾을 수 없어요.'))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 곡을 찾을 수 없어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -264,14 +285,14 @@ export class PlaylistCommand extends Command {
 			await interaction.editReply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`✅ **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
+						t.setContent(`${appEmoji('success', '✅')} **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
@@ -284,7 +305,9 @@ export class PlaylistCommand extends Command {
 
 		if (!player || !current) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 현재 재생 중인 곡이 없어요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 현재 재생 중인 곡이 없어요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -295,14 +318,14 @@ export class PlaylistCommand extends Command {
 			await interaction.reply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`✅ **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
+						t.setContent(`${appEmoji('success', '✅')} **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -322,12 +345,16 @@ export class PlaylistCommand extends Command {
 
 			await this.container.playlistService.removeTrack(interaction.user.id, name, target.position);
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`🗑️ **${name}** 플레이리스트에서 곡을 제거했어요.`))],
+				components: [
+					createContainer().addTextDisplayComponents((t) =>
+						t.setContent(`${appEmoji('trash', '🗑️')} **${name}** 플레이리스트에서 곡을 제거했어요.`)
+					)
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -342,7 +369,9 @@ export class PlaylistCommand extends Command {
 
 		if (!voiceChannel) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent('❌ 먼저 음성 채널에 접속해주세요.'))],
+				components: [
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`))
+				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -354,7 +383,9 @@ export class PlaylistCommand extends Command {
 			if (tracks.length === 0) {
 				await interaction.editReply({
 					components: [
-						createContainer().addTextDisplayComponents((t) => t.setContent(`📭 **${playlist.name}** 플레이리스트가 비어있어요.`))
+						createContainer().addTextDisplayComponents((t) =>
+							t.setContent(`${appEmoji('inbox_tray', '📭')} **${playlist.name}** 플레이리스트가 비어있어요.`)
+						)
 					],
 					flags: [MessageFlags.IsComponentsV2]
 				});
@@ -373,8 +404,6 @@ export class PlaylistCommand extends Command {
 			}
 
 			let addedCount = 0;
-			const SOURCE_MAP = { youtube: 'ytsearch', spotify: 'spsearch', soundcloud: 'scsearch' } as const;
-			const lookupSource = (source: string): SearchPlatform => SOURCE_MAP[source as keyof typeof SOURCE_MAP] ?? 'ytsearch';
 			const CONCURRENCY = 5;
 			for (let i = 0; i < tracks.length; i += CONCURRENCY) {
 				const batch = tracks.slice(i, i + CONCURRENCY);
@@ -400,14 +429,16 @@ export class PlaylistCommand extends Command {
 			await interaction.editReply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`🎵 **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`)
+						t.setContent(
+							`${appEmoji('music_note', '🎵')} **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`
+						)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`❌ ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}

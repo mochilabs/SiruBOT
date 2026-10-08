@@ -1,4 +1,4 @@
-import { DEFAULT_COLOR, volumeToEmoji } from '@sirubot/utils';
+import { DEFAULT_COLOR, appEmoji, volumeToEmoji } from '@sirubot/utils';
 import { ContainerBuilder } from 'discord.js';
 
 type volumeUpdatedProps = {
@@ -11,7 +11,7 @@ export function volumeUpdated({ volume, isPlaying }: volumeUpdatedProps) {
 		.setAccentColor(DEFAULT_COLOR)
 		.addTextDisplayComponents((textDisplay) =>
 			textDisplay.setContent(
-				`${volumeToEmoji(volume)} ${isPlaying ? '현재 ' : ''}볼륨을 **${volume}%** 로 설정했어요.${!isPlaying ? '\n-# ✨  설정된 볼륨은 다음 재생 시 적용돼요.' : ''}`
+				`${volumeToEmoji(volume)} ${isPlaying ? '현재 ' : ''}볼륨을 **${volume}%** 로 설정했어요.${!isPlaying ? `\n-# ${appEmoji('sparkle', '✨')} 설정된 볼륨은 다음 재생 시 적용돼요.` : ''}`
 			)
 		);
 }

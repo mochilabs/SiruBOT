@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { createHash } from 'node:crypto';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
@@ -17,7 +17,20 @@ const FORTUNES = [
 	'웃음이 행운을 부르는 날! 주변에 웃음꽃을 활짝 피워 보세요.'
 ];
 
-const GRADES = ['🌟 최고예요', '🙂 좋아요', '😐 무난해요', '🌧️ 조금 흐려요', '⚠️ 조심하세요'];
+// 모듈 평가 시점엔 이모지 매핑이 로드 전일 수 있어 렌더 시점 함수로 만든다
+function getGrades(): string[] {
+	return [
+		`${appEmoji('star', '🌟')} 최고예요`,
+		'🙂 좋아요',
+		'😐 무난해요',
+		`${appEmoji('rain', '🌧️')} 조금 흐려요`,
+		`${appEmoji('warning', '⚠️')} 조심하세요`
+	];
+}
+
+function getLuckyEmojis(): string[] {
+	return [appEmoji('clover', '🍀'), appEmoji('gamepad', '🎡'), appEmoji('dice', '🎲'), appEmoji('coin', '🪙'), appEmoji('cat', '🐈')];
+}
 
 const COLORS = ['🔴 빨강', '🟠 주황', '🟡 노랑', '🟢 초록', '🔵 파랑', '🟣 보라', '🩷 분홍'];
 
@@ -45,10 +58,10 @@ export class FortuneCommand extends Command {
 		const hash = createHash('sha256').update(`${interaction.user.id}:${dateKey}`).digest('hex');
 
 		const fortune = FORTUNES[parseInt(hash.slice(0, 8), 16) % FORTUNES.length];
-		const grade = GRADES[parseInt(hash.slice(8, 16), 16) % GRADES.length];
+		const grade = getGrades()[parseInt(hash.slice(8, 16), 16) % 5];
 		const color = COLORS[parseInt(hash.slice(16, 24), 16) % COLORS.length];
 		const luckyNumber = (parseInt(hash.slice(24, 32), 16) % 99) + 1;
-		const luckyEmoji = ['🍀', '🎡', '🎲', '🪙', '🐈'][parseInt(hash.slice(32, 40), 16) % 5];
+		const luckyEmoji = getLuckyEmojis()[parseInt(hash.slice(32, 40), 16) % 5];
 
 		await interaction.deferReply();
 
@@ -56,12 +69,12 @@ export class FortuneCommand extends Command {
 		container.addTextDisplayComponents((t) =>
 			t.setContent(
 				[
-					`### 🔮 ${interaction.user.displayName} 님의 오늘 운세`,
+					`### ${appEmoji('crystal_ball', '🔮')} ${interaction.user.displayName} 님의 오늘 운세`,
 					'',
 					`**${grade}**`,
 					fortune,
 					'',
-					`🍀 럭키 넘버: **${luckyNumber}** · 🎨 럭키 컬러: **${color}** · ${luckyEmoji}`,
+					`${appEmoji('clover', '🍀')} 럭키 넘버: **${luckyNumber}** · ${appEmoji('palette', '🎨')} 럭키 컬러: **${color}** · ${luckyEmoji}`,
 					`-# ${dateKey} 기준 — 내일 다시 오면 새로운 운세가 기다려요.`
 				].join('\n')
 			)

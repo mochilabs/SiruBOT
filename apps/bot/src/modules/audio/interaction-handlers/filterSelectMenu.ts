@@ -1,4 +1,5 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction, ComponentType } from 'discord.js';
 import { filterCustomIdPrefix, filterView } from '../view/filter.ts';
 import { errorView } from '../view/error.ts';
@@ -26,7 +27,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('🔇 필터 변경은 DJ 역할이 있거나 채널에 혼자 있을 때만 가능해요.')]
+				components: [errorView(`${appEmoji('volume_muted', '🔇')} 필터 변경은 DJ 역할이 있거나 채널에 혼자 있을 때만 가능해요.`)]
 			});
 			return;
 		}
@@ -35,7 +36,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		if (!player) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView('❌ 현재 재생 중인 플레이어가 없어요.')]
+				components: [errorView(`${appEmoji('error', '❌')} 현재 재생 중인 플레이어가 없어요.`)]
 			});
 			return;
 		}

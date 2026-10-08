@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { createContainer, EMOJI_SPARKLE } from '@sirubot/utils';
+import { appEmoji, createContainer, EMOJI_SPARKLE } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { addManualRecommendation, getInFlightRelatedFetch } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -56,7 +56,11 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	if (added.length === 0) {
 		await interaction.editReply({
-			components: [errorView(`❌ **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(Youtube) 곡일 때만 동작해요.`)],
+			components: [
+				errorView(
+					`${appEmoji('error', '❌')} **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(Youtube) 곡일 때만 동작해요.`
+				)
+			],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 		return;

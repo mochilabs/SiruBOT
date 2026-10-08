@@ -1,9 +1,13 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import { CommandInteraction, ContextMenuCommandInteraction, GuildMember, Message } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 
 export class DJOrAlone extends AllFlowsPrecondition {
-	#message = '🔇 이 명령어는 DJ 역할을 가지고 있거나, 채널에 혼자 있을 때만 사용 가능해요.';
+	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
+	get #message() {
+		return `${appEmoji('volume_muted', '🔇')} 이 명령어는 DJ 역할을 가지고 있거나, 채널에 혼자 있을 때만 사용 가능해요.`;
+	}
 	#ephemeral = true;
 
 	public async check(guildId: string, member: GuildMember) {

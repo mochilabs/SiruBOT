@@ -1,4 +1,4 @@
-import { createContainer, formatTrack, formatTimeToKorean, formatTime } from '@sirubot/utils';
+import { appEmoji, createContainer, formatTrack, formatTimeToKorean, formatTime } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
@@ -19,8 +19,8 @@ export const queueCustomIdPrefix = 'queue:page:';
 /** 대기열 곡 선택 셀렉트 메뉴 — controllerSelectMenu 핸들러가 파싱한다. */
 export const queueSelectCustomId = 'controller:queue:select';
 /** 대기열 목록에서 쓰는 점프/삭제 버튼 — controllerButton 핸들러의 queue 서브커맨드와 같다. */
-export const queueJumpCustomId = 'controller:queue:jumpTo';
-export const queueRemoveCustomId = 'controller:queue:remove';
+const queueJumpCustomId = 'controller:queue:jumpTo';
+const queueRemoveCustomId = 'controller:queue:remove';
 
 /** 문자열을 max_length 이하로 줄이고 넘치는 부분은 …로 대체한다. (undefined도 안전하게) */
 function truncate(text: string | undefined, maxLength: number): string {
@@ -47,9 +47,12 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 	const queuedDuration = tracks.reduce((acc, track) => acc + (track.info.duration || 0), 0);
 	const totalDuration = formatTimeToKorean(queuedDuration / 1000);
 
-	const content = [`### 📄 대기열 목록`, ...lines, ``, `-# 페이지 ${page}/${totalPages} | 총 ${tracks.length}곡 | ${totalDuration} 남음`].join(
-		'\n'
-	);
+	const content = [
+		`### ${appEmoji('scroll', '📄')} 대기열 목록`,
+		...lines,
+		``,
+		`-# 페이지 ${page}/${totalPages} | 총 ${tracks.length}곡 | ${totalDuration} 남음`
+	].join('\n');
 
 	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
@@ -77,9 +80,17 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
 
 	// 선택된 곡에 대한 액션 버튼 (controllerButton의 queue:jumpTo / queue:remove)
-	const jumpButton = new ButtonBuilder().setCustomId(queueJumpCustomId).setEmoji('↪️').setLabel('점프').setStyle(ButtonStyle.Secondary);
+	const jumpButton = new ButtonBuilder()
+		.setCustomId(queueJumpCustomId)
+		.setEmoji(appEmoji('arrow_forward', '↪️'))
+		.setLabel('점프')
+		.setStyle(ButtonStyle.Secondary);
 
-	const removeButton = new ButtonBuilder().setCustomId(queueRemoveCustomId).setEmoji('🗑️').setLabel('삭제').setStyle(ButtonStyle.Danger);
+	const removeButton = new ButtonBuilder()
+		.setCustomId(queueRemoveCustomId)
+		.setEmoji(appEmoji('trash', '🗑️'))
+		.setLabel('삭제')
+		.setStyle(ButtonStyle.Danger);
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(jumpButton, removeButton));
 
@@ -87,13 +98,13 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 	if (totalPages > 1) {
 		const prevButton = new ButtonBuilder()
 			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page - 1}`)
-			.setEmoji('◀️')
+			.setEmoji(appEmoji('arrow_back', '◀️'))
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page <= 1);
 
 		const nextButton = new ButtonBuilder()
 			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page + 1}`)
-			.setEmoji('▶️')
+			.setEmoji(appEmoji('arrow_forward', '▶️'))
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page >= totalPages);
 
@@ -110,27 +121,29 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 }
 
 export function queueEmpty() {
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent('📭 대기열이 비어있어요.'));
+	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${appEmoji('bag', '📭')} 대기열이 비어있어요.`));
 }
 
 export function queueShuffled({ count }: { count: number }) {
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`🔀 대기열의 **${count}곡**을 셔플했어요.`));
+	return createContainer().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`${appEmoji('shuffle', '🔀')} 대기열의 **${count}곡**을 셔플했어요.`)
+	);
 }
 
 export function queueCleared({ count }: { count: number }) {
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`🗑️ 대기열의 **${count}곡**을 비웠어요.`));
+	return createContainer().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`${appEmoji('trash', '🗑️')} 대기열의 **${count}곡**을 비웠어요.`)
+	);
 }
 
 export function queueRemoved({ track, position }: { track: Track; position: number }) {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`🗑️ \`#${position}\` **${track.info.title}**을(를) 대기열에서 제거했어요.`)
+		new TextDisplayBuilder().setContent(`${appEmoji('trash', '🗑️')} \`#${position}\` **${track.info.title}**을(를) 대기열에서 제거했어요.`)
 	);
 }
 
 export function queueMoved({ track, from, to }: { track: Track; from: number; to: number }) {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`↕️ **${track.info.title}**을(를) \`#${from}\` → \`#${to}\`(으)로 이동했어요.`)
+		new TextDisplayBuilder().setContent(`${appEmoji('arrow_up', '↕️')} **${track.info.title}**을(를) \`#${from}\` → \`#${to}\`(으)로 이동했어요.`)
 	);
 }
-
-export const QUEUE_PAGE_SIZE_EXPORT = QUEUE_PAGE_SIZE;

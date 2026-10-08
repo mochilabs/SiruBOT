@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { appEmoji } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/queue.ts';
 
@@ -143,7 +144,7 @@ export class QueueCommand extends Command {
 		if (!player || getUserQueuedTracks(player).length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
-				message: '📭 대기열이 비어있어요.',
+				message: `${appEmoji('inbox_tray', '📭')} 대기열이 비어있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -164,7 +165,7 @@ export class QueueCommand extends Command {
 		if (!player || getUserQueuedTracks(player).length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
-				message: '📭 대기열이 비어있어요.',
+				message: `${appEmoji('inbox_tray', '📭')} 대기열이 비어있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -188,7 +189,7 @@ export class QueueCommand extends Command {
 		if (position > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'queue_invalid_position',
-				message: '❌ 해당 번호의 곡이 대기열에 없어요.',
+				message: `${appEmoji('error', '❌')} 해당 번호의 곡이 대기열에 없어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -199,7 +200,7 @@ export class QueueCommand extends Command {
 		if (!removedTrack) {
 			throw new UserError({
 				identifier: 'queue_track_not_found',
-				message: '❌ 해당 곡을 찾을 수 없어요.',
+				message: `${appEmoji('error', '❌')} 해당 곡을 찾을 수 없어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -221,7 +222,7 @@ export class QueueCommand extends Command {
 		if (from > queueLength || to > queueLength) {
 			throw new UserError({
 				identifier: 'queue_invalid_position',
-				message: '❌ 해당 번호의 곡이 대기열에 없어요.',
+				message: `${appEmoji('error', '❌')} 해당 번호의 곡이 대기열에 없어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -229,7 +230,7 @@ export class QueueCommand extends Command {
 		if (from === to) {
 			throw new UserError({
 				identifier: 'queue_same_position',
-				message: '❌ 같은 위치로는 이동할 수 없어요.',
+				message: `${appEmoji('error', '❌')} 같은 위치로는 이동할 수 없어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -239,7 +240,7 @@ export class QueueCommand extends Command {
 		if (!track) {
 			throw new UserError({
 				identifier: 'queue_track_not_found',
-				message: '❌ 해당 곡을 찾을 수 없어요.',
+				message: `${appEmoji('error', '❌')} 해당 곡을 찾을 수 없어요.`,
 				context: { ephemeral: true }
 			});
 		}

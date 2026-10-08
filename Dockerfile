@@ -123,6 +123,9 @@ ENV VERSION=$VERSION
 COPY --from=builder-bot --chown=sirubot:nodejs /app/apps/bot/dist ./dist
 COPY --from=builder-bot --chown=sirubot:nodejs /app/apps/bot/package.json ./package.json
 
+# Copy app emoji ID mapping (canonical, committed) — appEmoji 로더가 부팅 시 읽어요
+COPY --from=builder-bot --chown=sirubot:nodejs /app/resources/emoji_replacement/emoji-ids.json ./resources/emoji_replacement/emoji-ids.json
+
 # Copy workspace packages
 COPY --from=builder-bot --chown=sirubot:nodejs /app/packages ./packages
 

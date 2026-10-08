@@ -1,4 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
+import { appEmoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/seek.ts';
 
@@ -58,7 +59,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (current.info.isStream) {
 		throw new UserError({
 			identifier: 'seek_live_stream',
-			message: '❌ 실시간 스트리밍에서는 탐색을 사용할 수 없어요.'
+			message: `${appEmoji('error', '❌')} 실시간 스트리밍에서는 탐색을 사용할 수 없어요.`
 		});
 	}
 
@@ -68,14 +69,14 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (positionMs === null || positionMs < 0) {
 		throw new UserError({
 			identifier: 'seek_invalid_time',
-			message: '❌ 올바른 시간 형식이 아니에요. (예: `1:30`, `90`, `0:45`)'
+			message: `${appEmoji('error', '❌')} 올바른 시간 형식이 아니에요. (예: \`1:30\`, \`90\`, \`0:45\`)`
 		});
 	}
 
 	if (positionMs > current.info.duration) {
 		throw new UserError({
 			identifier: 'seek_out_of_range',
-			message: '❌ 곡의 길이를 초과하는 시간이에요.'
+			message: `${appEmoji('error', '❌')} 곡의 길이를 초과하는 시간이에요.`
 		});
 	}
 

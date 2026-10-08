@@ -1,15 +1,18 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
+import { appEmoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { doCheckin, streakBadge } from '../utils/gameRecords.ts';
 
-const MILESTONES: Record<number, string> = {
-	7: '일주일 연속 출석! 꾸준함이 무기예요 🔥',
-	30: '한 달 연속 출석! 진짜 대단해요 ⚡',
-	100: '100일 연속 출석!! 전설이예요 👑',
-	365: '1년 연속 출석... 이건 인간이 아니에요 💎'
-};
+// 모듈 평가 시점엔 이모지 매핑이 로드 전일 수 있어 렌더 시점 함수로 만든다
+function getMilestones(): Record<number, string> {
+	return {
+		7: `일주일 연속 출석! 꾸준함이 무기예요 ${appEmoji('fire', '🔥')}`,
+		30: `한 달 연속 출석! 진짜 대단해요 ${appEmoji('flash', '⚡')}`,
+		100: `100일 연속 출석!! 전설이예요 ${appEmoji('crown', '👑')}`,
+		365: `1년 연속 출석... 이건 인간이 아니에요 ${appEmoji('gem', '💎')}`
+	};
+}
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -40,7 +43,7 @@ export class CheckinCommand extends Command {
 			container.addTextDisplayComponents((t) =>
 				t.setContent(
 					[
-						'### 📅 오늘은 이미 출석했어요',
+						`### ${appEmoji('calendar', '📅')} 오늘은 이미 출석했어요`,
 						'',
 						`**${interaction.user.displayName}** 님, ${badge} **${streak}일 연속** 출석 중이에요!`,
 						'',
@@ -52,8 +55,13 @@ export class CheckinCommand extends Command {
 			return;
 		}
 
-		const lines = ['### ✅ 출석 완료!', '', `**${interaction.user.displayName}** 님, ${badge} **${streak}일 연속** 출석 중이에요!`];
-		if (MILESTONES[streak]) lines.push('', `🎊 ${MILESTONES[streak]}`);
+		const lines = [
+			`### ${appEmoji('success', '✅')} 출석 완료!`,
+			'',
+			`**${interaction.user.displayName}** 님, ${badge} **${streak}일 연속** 출석 중이에요!`
+		];
+		const milestones = getMilestones();
+		if (milestones[streak]) lines.push('', `${appEmoji('party', '🎊')} ${milestones[streak]}`);
 		if (streak === 1) lines.push('', '-# 매일 출석해서 스트릭을 쌓아보세요. `/프로필 보기`에서 확인할 수 있어요.');
 
 		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
