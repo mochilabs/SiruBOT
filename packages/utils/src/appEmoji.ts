@@ -4,13 +4,19 @@ import { join } from 'node:path';
 /**
  * 봇 전용 앱 이모지(application emoji) 참조 헬퍼.
  *
- * `scripts/upload-emojis.ts`가 resources/emoji_replacement/ 의 PNG를
- * Discord 앱 이모지로 업로드하고, 생성된 이름→ID 매핑을
- * `apps/bot/resources/emoji-ids.json` 으로 저장해요. 봇 부팅 시 이 파일을
- * 읽어 `<:name:id>` 문자열을 만들어 주는 게 이 모듈의 역할이에요.
+ * 로드 순서:
+ * 1. `scripts/upload-emojis.ts`가 미리 생성한
+ *    `apps/bot/resources/emoji-ids.json` (이름→ID 매핑)을 읽어요.
+ * 2. 파일이 없거나 부분적으로 비어 있으면 Discord API
+ *    (`GET /applications/{app.id}/emojis`)에서 앱 이모지 목록을 직접
+ *    가져와 메모리에 적재해요 — 이모지 유지는 application 소유라
+ *    토큰·매핑 파일과 무관하게 언제든 재구성 가능해요.
  *
  * - 앱 이모지는 봇이 보내는 메시지에서 USE_EXTERNAL_EMOJIS 없이 사용 가능
- * - 매핑 파일이 없거나(개발 신규 환경) 해당 이름이 없으면 유니코드 폴백 문자열을 반환
+ * - API 조회도 실패하면(네트워크·권한) 유니코드 폴백 문자열을 반환
+ *
+ * 참고: Discord에서 이모지를 실제로 렌더하려면 id가 유효해야 하므로
+ * 매핑에 등록된 이름은 앱 이모지로 실존하는 것만 넣어야 해요.
  */
 
 type EmojiIdMap = Record<string, string>;
@@ -36,14 +42,41 @@ async function loadEmojiIdMap(): Promise<EmojiIdMap> {
 	return {};
 }
 
-/** 매핑 로드 (최초 1회, 이후 캐시) */
+/**
+ * 앱 이모지 ID 등록 방법 — discord.js 애플리케이션 이모지 매니저 또는
+ * REST. 패키지(utils)가 discord.js를 알 필요 없게 느슨한 인터페이스로 받아요.
+ * 매핑 파일 우선 실패 시에만 호출돼요 (네트워크 비용 최소화).
+ */
+export type AppEmojiFetcher = () => Promise<Array<{ id: string; name: string }>>;
+
+/**
+ * 봇 부팅 시 fetcher를 등록 — clientReady에서
+ * `configureAppEmojiFetcher(async () => [...client.application.emojis.fetch()...])` 형태로.
+ */
+let apiFetcher: AppEmojiFetcher | null = null;
+export function configureAppEmojiFetcher(fetcher: AppEmojiFetcher): void {
+	apiFetcher = fetcher;
+}
+
+/** 매핑 로드 (최초 1회, 이후 캐시). 파일 실패 시 Discord API fetch로 폴백. */
 export async function ensureAppEmojisLoaded(): Promise<void> {
 	if (cachedMap) return;
-	loadPromise ??= loadEmojiIdMap().then((map) => {
-		cachedMap = map;
+	loadPromise ??= (async () => {
+		let map = await loadEmojiIdMap();
+		if (!Object.keys(map).length && apiFetcher) {
+			try {
+				const emojis = await apiFetcher();
+				map = emojis.reduce<EmojiIdMap>((acc, e) => {
+					acc[e.name] = e.id;
+					return acc;
+				}, {});
+			} catch {
+				// API 조회 실패 — appEmoji()가 전부 유니코드 폴백으로 진행돼요
+			}
+		}
 		return map;
-	});
-	await loadPromise;
+	})();
+	cachedMap = await loadPromise;
 }
 
 /**

@@ -2,7 +2,7 @@ import { Events, version as frameworkVersion, Listener } from '@sapphire/framewo
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { envParseString } from '@skyra/env-utilities';
-import { versionInfo, isDev, BOT_NAME, formatTime, ensureAppEmojisLoaded } from '@sirubot/utils';
+import { versionInfo, isDev, BOT_NAME, formatTime, ensureAppEmojisLoaded, configureAppEmojiFetcher } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
@@ -39,8 +39,13 @@ export class ReadyEvent extends Listener {
 			}
 		}
 
-		// 앱 이모지 매핑 로드 — scripts/upload-emojis.ts가 만든 emoji-ids.json을 읽어요.
-		// 실패해도 appEmoji()가 유니코드 폴백으로 동작해서 기능은 그대로예요.
+		// 앱 이모지 매핑 로드 — emoji-ids.json이 없으면 Discord API에서
+		// 앱 이모지 목록을 직접 가져와 메모리에 적재해요. 둘 다 실패해도
+		// appEmoji()가 유니코드 폴백으로 동작해서 기능은 그대로예요.
+		configureAppEmojiFetcher(async () => {
+			const application = await this.container.client.application?.fetch();
+			return [...(application?.emojis.cache.values() ?? [])].map((emoji) => ({ id: emoji.id, name: emoji.name }));
+		});
 		await ensureAppEmojisLoaded();
 
 		this.startActivityInterval();
