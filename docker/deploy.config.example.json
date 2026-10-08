@@ -1,0 +1,13 @@
+{
+  "repository": "mochilabs/SiruBOT",
+  "branch": "beta",
+  "appStack": "sirubot",
+  "infraStack": "sirubot-infra",
+  "envFile": "../docker/.env",
+  "botShardManagerUrl": "ws://shardmanager:3001/ws",
+  "dashboardShardManagerUrl": "http://shardmanager:3001",
+  "dataApiUrl": "http://data-api:3002",
+  "timeoutSeconds": 600,
+  "pollSeconds": 5,
+  "stabilitySeconds": 30
+}
