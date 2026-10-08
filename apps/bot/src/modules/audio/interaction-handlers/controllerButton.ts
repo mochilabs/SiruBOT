@@ -1,13 +1,13 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { appEmoji } from '@sirubot/utils';
-import { MessageFlags, type ButtonInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
 import { controllerView } from '../view/controller.ts';
 import { queueEmpty, queueList } from '../view/queue.ts';
 import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { resolveNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
+import { getCachedNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
 
@@ -102,12 +102,12 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 	}
 
-	private async buildControllerPayload(player: CustomPlayer) {
-		// 카드가 새로 렌더됐을 때만 files에 첨부 (캐시된 건 메시지에 이미 있음)
-		const card = await resolveNowPlayingCard(player).catch(() => null);
+	private buildControllerPayload(player: CustomPlayer, message: Message) {
+		const card = getCachedNowPlayingCard(player);
 		return {
 			components: [controllerView({ player, volume: player.volume, nowPlayingCardUrl: card?.url })],
-			files: card?.fresh ? [card.file] : [],
+			attachments: card ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [],
+			files: card && !message.attachments.some((file) => file.name === card.filename) ? [card.file] : [],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		} as const;
@@ -115,7 +115,10 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async safeUpdate(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<boolean> {
 		try {
-			await interaction.update(await this.buildControllerPayload(player));
+			const response = await interaction.update({ ...this.buildControllerPayload(player, interaction.message), withResponse: true });
+			if (player.messageId === interaction.message.id && response.resource?.message) {
+				player.controller = response.resource.message;
+			}
 			return true;
 		} catch (error: any) {
 			// 컨트롤러가 삭제됐거나 만료된 경우: 조용히 무시하고 ephemeral 안내로 폴백

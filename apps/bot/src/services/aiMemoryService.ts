@@ -115,8 +115,11 @@ function legacyToMarkdown(facts: unknown[]): string {
 export class AiMemoryService {
 	/** 장기 기억 파일(MEMORY.md) 마크다운을 불러와요. 아직 없으면 빈 파일 형태 */
 	public async readFile(userId: string): Promise<string> {
-		const row = await container.db.userMemory.findUnique({ where: { userId } });
-		const stored = row?.longTerm;
+		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true } });
+		return this.storedFileToMarkdown(row?.longTerm);
+	}
+
+	private storedFileToMarkdown(stored: unknown): string {
 		if (typeof stored === 'string') {
 			// 이미 파일 형식이면 그대로, 옛 array 문자열이면 변환 시도
 			if (stored.includes('## Facts') || stored.includes('# MEMORY.md')) return stored;
@@ -204,7 +207,10 @@ export class AiMemoryService {
 
 	/** 저장된 장기 기억의 항목 수를 형태(파일/옛 배열) 상관없이 세어요 */
 	private countStoredEntries(stored: unknown): number {
-		if (typeof stored === 'string') return CATEGORIES.reduce((sum, c) => sum + parseMemoryMarkdown(stored)[c].length, 0);
+		if (typeof stored === 'string') {
+			const sections = parseMemoryMarkdown(stored);
+			return CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0);
+		}
 		if (Array.isArray(stored)) return stored.filter((f) => f && typeof (f as { text?: unknown }).text === 'string').length;
 		return 0;
 	}
@@ -236,7 +242,8 @@ export class AiMemoryService {
 
 	/** 시스템 프롬프트에 넣을 기억 블록 — MEMORY.md 파일 + 단기 기억. 둘 다 없으면 null. */
 	public async buildPromptBlock(userId: string): Promise<string | null> {
-		const [file, row] = await Promise.all([this.readFile(userId), container.db.userMemory.findUnique({ where: { userId } })]);
+		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true } });
+		const file = this.storedFileToMarkdown(row?.longTerm);
 		const sections = parseMemoryMarkdown(file);
 		const shortTerm = Array.isArray(row?.shortTerm) ? (row.shortTerm as MemoryTurn[]).filter((t) => t && typeof t.q === 'string') : [];
 

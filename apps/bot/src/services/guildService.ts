@@ -20,6 +20,7 @@ export function normalizeAiMode(value: string): AiMode {
 export class GuildService {
 	// Guild settings cache (60s TTL, max 500)
 	private cache = new MemoryCache<string, Guild>({ ttl: 60_000, maxSize: 500 });
+	private readonly pendingReads = new Map<string, Promise<Guild>>();
 
 	/**
 	 * Get guild settings. If cached, return from cache, otherwise upsert from DB.
@@ -28,13 +29,29 @@ export class GuildService {
 		const cached = this.cache.get(guildId);
 		if (cached) return cached;
 
+		const existing = this.pendingReads.get(guildId);
+		if (existing) return existing;
+
+		const pending = this.loadGuild(guildId);
+		this.pendingReads.set(guildId, pending);
+		try {
+			return await pending;
+		} finally {
+			if (this.pendingReads.get(guildId) === pending) this.pendingReads.delete(guildId);
+		}
+	}
+
+	private async loadGuild(guildId: string): Promise<Guild> {
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId },
 			update: {}
 		});
 
-		this.cache.set(guildId, guild);
+		// 조회 중 setter가 갱신한 설정을 오래된 조회 결과로 덮어쓰지 않는다.
+		const updated = this.cache.get(guildId);
+		if (updated) return updated;
+		this.updateCache(guild);
 		return guild;
 	}
 

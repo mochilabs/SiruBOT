@@ -46,10 +46,10 @@ const wrapPrefix = (customId: string) => {
  * 현재 곡의 전체 길이에서 현재 위치만큼 빼고, 선예열한 추천곡은 대기열로 세지 않아 제외한다.
  * 스트리밍은 끝나는 시점이 없어 position을 뺸다.
  */
-function remainingUntilQueueEnd(player: Player): number {
+function remainingUntilQueueEnd(player: Player, queuedTracks: Track[]): number {
 	const current = player.queue.current;
 	const elapsed = current && !current.info.isStream ? Math.min(player.position ?? 0, current.info.duration ?? 0) : 0;
-	const queuedDuration = getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration || 0), 0);
+	const queuedDuration = queuedTracks.reduce((acc, track) => acc + (track.info.duration || 0), 0);
 	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
 }
 
@@ -152,7 +152,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	// N곡 · N 남음 안내는 하단 푸터 줄로 내린다.
 	const footerLines = [...buildFooterSegments(player, volume)];
 	if (queueCount > 0) {
-		footerLines.unshift(`${appEmoji('scroll', '📄')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player) / 1000)} 남음`);
+		footerLines.unshift(
+			`${appEmoji('scroll', '📄')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
+		);
 	}
 
 	containerComponent.addSeparatorComponents(separatorSmall).addTextDisplayComponents(new TextDisplayBuilder().setContent(footerLines.join(' | ')));

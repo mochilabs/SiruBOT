@@ -36,6 +36,7 @@ export class NowPlayingCommand extends Command {
 			return;
 		}
 
+		await interaction.deferReply();
 		await this.container.playerNotifier.sendController(player, interaction);
 	}
 }

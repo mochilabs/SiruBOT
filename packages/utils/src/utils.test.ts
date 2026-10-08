@@ -97,4 +97,38 @@ describe('MemoryCache', () => {
 			vi.useRealTimers();
 		}
 	});
+
+	it('retains other cached values when updating an entry at capacity', () => {
+		vi.useFakeTimers();
+		try {
+			const cache = new MemoryCache<string, number>({ ttl: 1000, maxSize: 2 });
+			cache.set('a', 1);
+			vi.setSystemTime(Date.now() + 10);
+			cache.set('b', 2);
+			vi.setSystemTime(Date.now() + 10);
+			cache.get('a');
+			cache.set('a', 3);
+			expect(cache.size()).toBe(2);
+			expect(cache.get('b')).toBe(2);
+			expect(cache.get('a')).toBe(3);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('enforces capacity even when all writes have the same timestamp', () => {
+		vi.useFakeTimers();
+		try {
+			const cache = new MemoryCache<string, number>({ ttl: 1000, maxSize: 2 });
+			cache.set('a', 1);
+			cache.set('b', 2);
+			cache.set('c', 3);
+			expect(cache.size()).toBe(2);
+			expect(cache.get('a')).toBeUndefined();
+			expect(cache.get('b')).toBe(2);
+			expect(cache.get('c')).toBe(3);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
