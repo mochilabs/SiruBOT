@@ -46,9 +46,3 @@ packages/prisma/src/client/
 
 # Local codebase documentation
 /localdocs/
-
-# Local test files
-*.test.*
-*.spec.*
-**/__tests__/
-**/tests/
