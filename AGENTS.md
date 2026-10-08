@@ -14,6 +14,12 @@ Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music
 - When a task changes documented behavior, update the relevant notes and leave concise handoff context in `localdocs/08-working-memory.md` so the next session can resume without repeating the investigation. Supersede obsolete guidance clearly.
 - Keep `localdocs/` ignored and local unless the user explicitly requests that its contents be committed. Do not force-add it or change its ignore rule. Never put secrets, environment values, tokens, or private user data in these notes.
 
+## Commit organization
+
+- Split work into focused commits by feature, module, or validation unit; do not combine the entire task into one large commit.
+- Keep each commit independently reviewable. Commit a behavior change with its relevant tests, and separate unrelated changes.
+- For work spanning deployment tooling, CI, and documentation, commit each logical unit separately and keep dependent commits in order.
+
 ## Commands
 
 ```bash
