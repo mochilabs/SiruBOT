@@ -2,8 +2,9 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { appEmoji, createContainer } from '@sirubot/utils';
-import { Track, SearchPlatform } from 'lavalink-client';
+import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
+import { lookupSource } from '../utils/source.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 
 @ApplyOptions<Command.Options>({
@@ -262,8 +263,6 @@ export class FavoritesCommand extends Command {
 			}
 
 			let addedCount = 0;
-			const SOURCE_MAP = { youtube: 'ytsearch', spotify: 'spsearch', soundcloud: 'scsearch' } as const;
-			const lookupSource = (source: string): SearchPlatform => SOURCE_MAP[source as keyof typeof SOURCE_MAP] ?? 'ytsearch';
 			const CONCURRENCY = 5;
 			for (let i = 0; i < tracks.length; i += CONCURRENCY) {
 				const batch = tracks.slice(i, i + CONCURRENCY);

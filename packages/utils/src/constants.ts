@@ -12,33 +12,16 @@ export const EMOJI_REPEAT: Record<RepeatMode, string> = {
 	queue: '🔂'
 };
 
-export const EMOJI_PLAY_STATE: { [index: number]: string } = {
-	0: '▶️',
-	1: '⏹️',
-	2: '⏸️'
-};
-
-export const EMOJI_PLAYLIST = '🗃️';
-export const EMOJI_X = '❌';
-export const EMOJI_INBOX_TRAY = '📥';
 export const AUTOCOMPLETE_MAX_RESULT = 25;
-export const EMOJI_STAR = '⭐';
-export const EMOJI_SKIP = '⏩';
-export const EMOJI_BACK = '◀️';
-export const EMOJI_TRASH = '🗑️';
+/** 폴백용 — 사용처에서 appEmoji('sparkle', EMOJI_SPARKLE)로 감싸요 */
 export const EMOJI_SPARKLE = '✨';
+/** 폴백용 — volumeToEmoji에서 appEmoji와 함께 사용돼요 */
 export const EMOJI_VOLUME_MUTE = '🔇';
 export const EMOJI_VOLUME_SMALL = '🔉';
 export const EMOJI_VOLUME_MEDIUM = '🔊';
 export const EMOJI_VOLUME_LARGE = '🔊';
 
 export const PAGE_CHUNK_SIZE = 10;
-
-/** Emojis (Controls) */
-export const EMOJI_PREV = '<:btn_left:955803837095088128>';
-export const EMOJI_NEXT = '<:btn_right:955803837254488074>';
-export const EMOJI_STOP = '<:btn_stop:955804418815721472>';
-export const EMOJI_REFRESH = '<:refresh_btn:972106966346399804>';
 
 /** Emojis (Progress bars) */
 export const PROGRESS_BAR_START_SINGLE_WHITE = '<:progress_start_single:965594966028079244>';
