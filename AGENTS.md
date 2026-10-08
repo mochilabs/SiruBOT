@@ -33,9 +33,9 @@ yarn typecheck                        # turbo; dependsOn ^generate — don't run
 
 - Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) only runs `yarn install --immutable` + `yarn lint`. No test framework; `yarn test` is a stub.
+- CI (`lint.yml`) runs `yarn install --immutable`, `yarn lint`, and the deployment tools' Node tests. Workspace tests use Vitest through `yarn test`.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
-- Turbo `build` depends on `^lint:fix ^typecheck ^generate ^build` — building one app rebuilds deps.
+- Turbo `build` depends on `^typecheck ^generate ^build` — building one app rebuilds deps; it does not run `lint:fix`.
 
 ## Bot conventions (see skills first)
 

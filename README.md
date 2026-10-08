@@ -166,18 +166,26 @@ turbo build --filter=@sirubot/utils
 
 ## 🐳 Docker Deployment Guide
 
-Container configurations are provided to easily deploy the entire stack.
+Update the four existing applications on a multi-node Docker Swarm with one command.
+The manager needs Docker, Node 22+, and GitHub CLI; no Yarn installation or source build is required.
 
 ```bash
-# Build Docker image
-docker build -t sirubot:latest .
+# Configure the existing stack names and environment file
+mkdir -p .deploy
+cp docker/deploy.config.example.json .deploy/config.json
 
-# Run container
-docker run -d --name sirubot-container \
-  -e DISCORD_TOKEN="your_token" \
-  -e DATABASE_URL="your_db_url" \
-  sirubot:latest
+# Deploy the latest successful beta image manifest
+node scripts/deploy.mjs --dry-run
+node scripts/deploy.mjs
+
+# Optional infrastructure update, status, and application rollback
+node scripts/deploy.mjs --with-infra
+node scripts/deploy.mjs status
+node scripts/deploy.mjs rollback
 ```
+
+See the [Swarm deployment guide](docker/DEPLOYMENT.md) for authentication, CI initialization,
+configuration, data preservation, and rollback.
 
 ---
 

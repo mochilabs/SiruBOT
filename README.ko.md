@@ -166,18 +166,25 @@ turbo build --filter=@sirubot/utils
 
 ## 🐳 Docker 배포 가이드
 
-컨테이너 환경에서 전체 스택을 손쉽게 실행할 수 있도록 Docker 설정을 지원합니다.
+여러 노드의 Docker Swarm에서 기존 앱 4개를 한 명령으로 업데이트할 수 있습니다.
+서버에서는 Docker, Node 22+, GitHub CLI가 필요하며 소스 빌드나 Yarn 설치는 하지 않습니다.
 
 ```bash
-# Docker 이미지 빌드
-docker build -t sirubot:latest .
+# 최초 설정: 기존 stack 이름과 .env 경로를 설정 파일에 지정
+mkdir -p .deploy
+cp docker/deploy.config.example.json .deploy/config.json
 
-# 컨테이너 실행
-docker run -d --name sirubot-container \
-  -e DISCORD_TOKEN="your_token" \
-  -e DATABASE_URL="your_db_url" \
-  sirubot:latest
+# 성공한 beta 이미지 묶음으로 업데이트
+node scripts/deploy.mjs --dry-run
+node scripts/deploy.mjs
+
+# 선택적 인프라 적용 / 상태 확인 / 이전 앱 구성 복원
+node scripts/deploy.mjs --with-infra
+node scripts/deploy.mjs status
+node scripts/deploy.mjs rollback
 ```
+
+설정·인증·CI 초기화·인프라 데이터 보존과 복원은 [Swarm 배포 안내](docker/DEPLOYMENT.md)를 참고하세요.
 
 ---
 
