@@ -37,6 +37,7 @@ declare module '@sapphire/pieces' {
 		db: PrismaClient;
 		redisStore: RedisStore;
 		playerNotifier: PlayerNotifier;
+		nowPlayingCardStore?: import('../modules/audio/lavalink/player/nowPlayingCard.ts').NowPlayingCardStore;
 		guildService: GuildService;
 		trackService: TrackService;
 		playlistService: import('../services/playlistService.ts').PlaylistService;

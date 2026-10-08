@@ -18,14 +18,15 @@ export class MemoryCache<Key, Value> {
 	}
 
 	public set(key: Key, value: Value) {
-		if (this.cache.size >= this.memoryCacheOptions.maxSize) {
+		if (!this.cache.has(key) && this.cache.size >= this.memoryCacheOptions.maxSize) {
 			this.evictOldest();
 		}
 
+		const now = Date.now();
 		const entry: MemoryCacheEntry<Value> = {
 			data: value,
-			expiresAt: Date.now() + this.memoryCacheOptions.ttl,
-			lastUpdated: Date.now()
+			expiresAt: now + this.memoryCacheOptions.ttl,
+			lastUpdated: now
 		};
 		this.cache.set(key, entry);
 	}
@@ -69,7 +70,7 @@ export class MemoryCache<Key, Value> {
 
 	private evictOldest(): void {
 		let oldestKey: Key | undefined;
-		let oldestTime = Date.now();
+		let oldestTime = Number.POSITIVE_INFINITY;
 
 		for (const [key, entry] of this.cache.entries()) {
 			// 만료된 항목이 있으면 우선 제거

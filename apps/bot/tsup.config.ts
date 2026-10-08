@@ -1,6 +1,7 @@
 import { createConfig } from '../../scripts/tsup.config.js';
 
 export default createConfig({
+	entry: ['src/**/*.ts', '!src/**/*.test.ts', '!src/**/*.spec.ts'],
 	dts: false,
 	splitting: false,
 	// CJS로 번들링되는 workspace 패키지(예: @sirubot/prisma)가 ESM 안에서

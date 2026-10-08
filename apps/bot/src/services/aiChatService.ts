@@ -1021,12 +1021,15 @@ export async function runChatTurn(options: {
 	const config = baseConfig;
 
 	setChannelGuild(channelId, options.toolContext.guildId);
-	await loadChannelHistory(channelId);
-	const channelBlock = await buildRecentChannelBlock(channelId, options.excludeMessageId);
-	const memoryBlock = await container.aiMemoryService.buildPromptBlock(userId).catch((error) => {
-		container.logger.error('[aiChat] failed to load user memory:', error);
-		return null;
-	});
+	// 정책 확인 후, 서로 독립적인 맥락 조회를 함께 시작한다.
+	const [, channelBlock, memoryBlock] = await Promise.all([
+		loadChannelHistory(channelId),
+		buildRecentChannelBlock(channelId, options.excludeMessageId),
+		container.aiMemoryService.buildPromptBlock(userId).catch((error) => {
+			container.logger.error('[aiChat] failed to load user memory:', error);
+			return null;
+		})
+	]);
 
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock) },
