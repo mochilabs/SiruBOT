@@ -2,6 +2,17 @@
 
 Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
 
+## Local documentation (`localdocs/`)
+
+- Use the repository-root `localdocs/` directory as persistent codebase notes and working memory across sessions. Agents may read, search, create, and update Markdown files there as part of their work without separate approval.
+- At the start of a task, read `localdocs/README.md` (document index) and `localdocs/08-working-memory.md` when available, then read the documents relevant to the task and their referenced source files. If the directory or these files are missing, continue from the code and create useful notes as needed.
+- The directory is Git-ignored, so normal tracked-file searches may omit it. Discover documents with `rg --files --hidden --no-ignore localdocs -g '*.md'`; search their contents with `rg --hidden --no-ignore '<pattern>' localdocs`.
+- Verify the current branch, commit, and working tree before using old notes. Documentation may describe another branch or an earlier implementation; current source code and the user's instructions take precedence. Correct outdated notes after checking the code.
+- Keep documents focused by topic, use descriptive filenames consistent with the existing index, and add new documents to `localdocs/README.md`. Reference related documents and source files with relative Markdown links; avoid duplicating large code blocks.
+- Record the date and branch/commit baseline, architecture and behavior, relevant source paths, decisions and constraints, validation results, and unresolved questions or next steps. Distinguish verified behavior, hypotheses, proposed changes, and untested runtime behavior; never imply a test or measurement was performed when it was not.
+- When a task changes documented behavior, update the relevant notes and leave concise handoff context in `localdocs/08-working-memory.md` so the next session can resume without repeating the investigation. Supersede obsolete guidance clearly.
+- Keep `localdocs/` ignored and local unless the user explicitly requests that its contents be committed. Do not force-add it or change its ignore rule. Never put secrets, environment values, tokens, or private user data in these notes.
+
 ## Commands
 
 ```bash
