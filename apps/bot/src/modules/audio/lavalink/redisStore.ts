@@ -180,6 +180,28 @@ export class RedisStore {
 		}
 	}
 
+	/**
+	 * 플레이어 상태를 Redis Pub/Sub으로 퍼블리시해요 (채널: `sirubot:player:{guildId}`).
+	 * data-api의 playerHub가 구독해 대시보드 라이브 뷰에 서빙해요.
+	 * fire-and-forget — Redis 미연결/오류 시 조용히 스킵하고 재생 경로를 절대 블로킹하지 않아요.
+	 *
+	 * NOTE: incrementCacheCounter(aiChatService)와 마찬가지로 RedisStore 공용 헬퍼예요.
+	 * 제어(재생/정지)는 이 퍼블리시로 하지 않아요 — 제어는 bot RPC로 별도 구현 예정이에요.
+	 */
+	public publishRawPlayerState(guildId: string, payload: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug(`Player state publish skipped (redis not ready, guild ${guildId})`);
+				return;
+			}
+			void this.redis
+				.publish(`sirubot:player:${guildId}`, payload)
+				.catch((error) => this.logger.debug(`Player state publish failed (guild ${guildId}): ${error}`));
+		} catch (error) {
+			this.logger.debug(`Player state publish skipped (guild ${guildId}): ${error}`);
+		}
+	}
+
 	public async connect() {
 		await this.redis.connect();
 	}

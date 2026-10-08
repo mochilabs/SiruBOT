@@ -31,6 +31,29 @@ export interface DataApiStatus {
 const DATA_API_URL = process.env.DATA_API_URL || "http://localhost:3002";
 const DATA_API_AUTH_KEY = process.env.DATA_API_AUTH_KEY || process.env.AUTH_KEY || "";
 
+/**
+ * data-api GET 프록시 — AUTH_KEY는 서버 전용(env). 클라이언트 번들로 절대 노출하지 않아요.
+ * 키가 없으면(또는 공백뿐이면) 실패시키지 않고 null — 무인증 localhost 호출을 안 한다.
+ */
+export async function fetchDataApi<T>(path: string): Promise<T | null> {
+    const authKey = DATA_API_AUTH_KEY.trim();
+    if (!authKey) {
+        console.warn("[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.");
+        return null;
+    }
+
+    try {
+        const res = await fetch(`${DATA_API_URL}${path}`, {
+            cache: "no-store",
+            headers: { Authorization: authKey },
+        });
+        if (!res.ok) return null;
+        return (await res.json()) as T;
+    } catch {
+        return null;
+    }
+}
+
 export async function fetchDataApiStatus(): Promise<DataApiStatus | null> {
     // 폴백 체인(DATA_API_AUTH_KEY || AUTH_KEY)은 기존 방침을 유지한다.
     // 키가 없으면(또는 공백뿐이면) 실패시키지 않고 경고 후 스킵 — 무인증 localhost 호출을 안 한다.

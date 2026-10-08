@@ -7,6 +7,7 @@ import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated
 import { CHAPTER_FETCH_MIN_DURATION_MS, resolveYouTubeVideoId } from '../youtubeChapters.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
+import { clearPlayerStateTracker, publishPlayerState } from '../playerStatePublisher.ts';
 
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
@@ -50,6 +51,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
 		player.consecutiveErrors = 0;
 		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
+		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
+		publishPlayerState(player);
 		player.setData('stopByCommand', undefined);
 		this.setLastStarted(player, startedTrack);
 		this.clearAdvancePending(player.guildId);
@@ -99,6 +102,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 	private handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
 		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author} (reason: ${payload.reason})`);
 		reportPlaybackEvent(player.guildId, 'track_end', track, { reason: payload.reason });
+		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
+		publishPlayerState(player);
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			player.setData('preloadConsumedAt', Date.now());
@@ -222,6 +227,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 	) {
 		this.logger.info(`Queue ended for guild: ${player.guildId}`);
 		reportPlaybackEvent(player.guildId, 'queue_end', track);
+		// 대시보드 라이브 뷰 — 큐 종료 상태를 즉시 반영 (fire-and-forget)
+		publishPlayerState(player);
 
 		// 서버 예열 슬롯이 남아 있으면 서버가 content end에 자동 진행한다 —
 		// 이때 queueEnd를 처리하면 컨트롤러가 삭제되고 "큐 종료" 안내가 나가며,
@@ -334,6 +341,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.clearReconcile(player.guildId);
 		this.clearWatchdog(player.guildId);
 		player.setData('lastStartedEncoded', undefined);
+		// 대시보드 라이브 뷰 — 플레이어 소멸 상태 추적기 정리
+		clearPlayerStateTracker(player.guildId);
 		await this.container.mixerService.clearNext(player).catch(() => null);
 	}
 

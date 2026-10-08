@@ -1,6 +1,7 @@
 import { DestroyReasonsType, LavalinkManager, PlayerJson, RepeatMode, SponsorBlockSegment } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
+import { publishPlayerState } from '../playerStatePublisher.ts';
 
 // handlers/playerHandler.ts
 export class PlayerHandler extends BaseLavalinkHandler {
@@ -64,6 +65,8 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		this.container.redisStore.getQueueStore().delete(player.guildId);
 		// 파괴된 플레이어의 서버 필터 상태도 사라진다 — 다음 play 전에 다시 prime해야 한다.
 		this.container.mixerService.markFiltersStale(player.guildId);
+		// 대시보드 라이브 뷰 — 소멸 직후 마지막 상태를 한 번 더 퍼블리시 (fire-and-forget)
+		publishPlayerState(player);
 		await this.container.playerNotifier.onPlayerDestroy(player);
 	}
 
@@ -77,6 +80,8 @@ export class PlayerHandler extends BaseLavalinkHandler {
 
 	private async handlePlayerUpdate(_oldPlayerJson: PlayerJson, newPlayer: CustomPlayer) {
 		await Promise.all([this.container.redisStore.getPlayerSaver().set(newPlayer), this.container.playerNotifier.onPlayerUpdate(newPlayer)]);
+		// 대시보드 라이브 뷰 — playerUpdate는 볼륨/seek/큐 변경까지 커버해요 (fire-and-forget)
+		publishPlayerState(newPlayer);
 	}
 
 	public cleanup() {

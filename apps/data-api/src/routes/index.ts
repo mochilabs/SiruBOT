@@ -18,6 +18,7 @@ import { lastGoodDaily, ohaasaStatus, refreshOhaasaNow } from '../services/ohaas
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
 import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
 import { memoryTidyStatus } from '../services/memoryTidy.ts';
+import { getPlayerState, playerHubStatus } from '../services/playerHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -71,6 +72,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		},
 		ohaasa: ohaasaStatus(),
 		playback: playbackSnapshot(),
+		playerHub: playerHubStatus(),
 		memoryTidy: memoryTidyStatus()
 	}));
 
@@ -190,6 +192,20 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		try {
 			const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) }).parse(request.query);
 			return reply.send({ events: recentPlaybackEvents(query.limit) });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 라이브 플레이어 상태 (봇 Redis Pub/Sub → playerHub) ──
+	// 알 수 없는 길드/전송 중지 길드도 404 대신 player:null + hub 상태로 응답해요 — dashboard SWR 폴백이 안정적으로 동작하게.
+	fastify.get('/v1/player/:guildId', async (request, reply) => {
+		try {
+			const { guildId } = z.object({ guildId: z.string().trim().min(1).max(32) }).parse(request.params);
+			return reply.send({
+				player: getPlayerState(guildId),
+				hub: playerHubStatus()
+			});
 		} catch (error) {
 			return sendError(reply, error);
 		}

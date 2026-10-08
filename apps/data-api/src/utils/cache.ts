@@ -40,6 +40,11 @@ export class SharedCache {
 		return this.client?.isOpen === true;
 	}
 
+	/** Pub/Sub 등 전용 연결이 필요한 소비자를 위한 클라이언트 접근자 (duplicate해서 쓸 것) */
+	public getClient(): RedisClientType | null {
+		return this.client?.isOpen ? this.client : null;
+	}
+
 	public async get(key: string): Promise<string | null> {
 		if (this.client?.isOpen) {
 			try {

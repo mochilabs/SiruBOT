@@ -9,11 +9,13 @@ import { ensureKoreanFont } from './renderers/canvasUtils.ts';
 import { startOhaasaScheduler } from './services/ohaasaScheduler.ts';
 import { connectDb, disconnectDb, getDb } from './services/db.ts';
 import { startMemoryTidyScheduler } from './services/memoryTidy.ts';
+import { startPlayerHub, stopPlayerHub } from './services/playerHub.ts';
 
 export async function buildServer(env: Env) {
 	const logger = getLogger('server');
 
 	await sharedCache.connect(env.REDIS_URL);
+	await startPlayerHub(env.REDIS_URL);
 
 	// 이미지 렌더 폰트는 부팅 시 1회 로드 — 첫 카드 요청이 폰트 로드에 막히지 않아요.
 	// (렌더러의 ensureKoreanFont() 호출은 안전망으로 남아 있어요)
@@ -55,6 +57,7 @@ export async function buildServer(env: Env) {
 	const close = async () => {
 		stopScheduler();
 		stopTidy();
+		await stopPlayerHub();
 		await sharedCache.disconnect();
 		await disconnectDb();
 		await fastify.close();
