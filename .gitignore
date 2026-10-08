@@ -43,3 +43,5 @@ dist/
 packages/prisma/src/client/
 # 일회성 작업 스크립트/산출물 (커밋 금지)
 .tmp/
+# 앱 이모지 ID 매핑 — 운영 환경마다 다르게 생성됨 (scripts/upload-emojis.ts 산출물)
+apps/bot/resources/emoji-ids.json
