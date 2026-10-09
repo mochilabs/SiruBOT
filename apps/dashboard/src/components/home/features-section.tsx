@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, m, type MotionValue, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Bot, CloudSun, Gamepad2, LayoutDashboard, ListMusic, Music2, Pause, Play, Repeat, SkipForward } from "lucide-react";
 
 import { buttonVariants } from "@/components/primitives/button";
@@ -64,16 +64,6 @@ const sectionVariants = {
 } as const;
 
 /**
- * 기능 카드 전용 등장 variants (치트시트 06. Blur-in reveal) —
- * 블러가 흐릿하게 퍼진 상태에서 시간차(staggerChildren 0.08)로 선명해지는 브랜드 프리미엄 진입.
- * 성능: opacity·y(transform)·filter(blur)만 사용. 부모 그리드의 stagger 체계를 그대로 상속해요.
- */
-const cardVariants = {
-	hidden: { opacity: 0, y: 28, filter: "blur(8px)" },
-	visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: "easeOut" } },
-} as const;
-
-/**
  * 명령어 칩 전용 variants (치트시트 03 스태거 보강) —
  * 부모 카드의 whileInView 상태가 전파되어 칩들이 0.04초 간격으로 연쇄 등장해요. 서브 스태거라 가볍게.
  * reduced-motion에선 chipVariants 대신 chipFadeVariants(opacity만)를 쓰고, 부모 카드가
@@ -94,28 +84,7 @@ const chipsContainerVariants = {
 	visible: { opacity: 1, transition: { staggerChildren: 0.04 } },
 } as const;
 
-/** 섹션 헤딩 문장 — 단어별 스크롤 텍스트 필(치트시트 14)에 쓰는 고정 분해 배열. 모듈 수준에서 고정해 훅 룰을 보호해요 */
 const HEADING_TEXT = "채널에서 재생하고, 웹에서 관리해요.";
-const HEADING_TOKENS = HEADING_TEXT.split(" ").flatMap((word, index) => (index === 0 ? [word] : [" ", word]));
-
-/** 공백 토큰 여부 — 단어 span과 공백 span을 구분해 줄바꿈/간격을 자연스럽게 유지해요 */
-const isSpace = (token: string) => token.trim() === "";
-
-/**
- * 헤딩 단어 조각 — 치트시트 14. Text fill on scroll.
- * 부모의 scrollYProgress를 MotionValue로 주입받아 opacity만 스크롤 연동(리렌더 없음).
- * 단어 컴포넌트로 추출한 이유: .map 안에서 useTransform을 직접 호출하면 훅 룰을 위반하기 때문.
- */
-function HeadingWord({ progress, token }: { progress: MotionValue<number>; token: string }) {
-	// 스크롤 진행 0→1 동안 단어 opacity를 0.15→1로 채워나감. 색상은 text-foreground 그대로(칼라 오버레이 X).
-	// MotionValue는 m 컴포넌트의 style로만 전달해 리렌더 없이 바인딩해요.
-	const wordOpacity = useTransform(progress, [0, 1], [0.15, 1]);
-	return (
-		<m.span className="inline-block" style={{ opacity: wordOpacity }}>
-			{token}
-		</m.span>
-	);
-}
 
 const settingRow = "flex min-w-0 items-center justify-between gap-3 rounded-control bg-surface-1 px-3 py-2";
 const settingName = "truncate text-sm font-medium text-foreground";
@@ -372,17 +341,8 @@ export function FeaturesSection() {
 	const [activeSettingSlide, setActiveSettingSlide] = useState(0);
 	const [settingAutoPlay, setSettingAutoPlay] = useState(true);
 
-	// 치트시트 14. Text fill on scroll — 헤딩이 스크롤 진행에 따라 순차적으로 채워져요.
-	// 헤딩 블록을 스크롤 타깃으로 삼아, 위쪽 92% 지점에서 시작해 45% 지점에 도달할 때쯤 완성돼요.
-	const headingRef = useRef<HTMLHeadingElement>(null);
 	const shouldReduce = useReducedMotion();
-	const { scrollYProgress } = useScroll({
-		target: headingRef,
-		offset: ["start 0.92", "start 0.45"],
-	});
-
-	// 카드 4종 공용 등장 variants — reduced-motion에선 블러 없이 opacity+y 폴백
-	const cardEntry = shouldReduce ? sectionVariants : cardVariants;
+	const cardEntry = sectionVariants;
 
 	useEffect(() => {
 		if (!settingAutoPlay) return undefined;
@@ -409,19 +369,8 @@ export function FeaturesSection() {
 					<SectionLabel as="p" className="px-0 py-0">
 						시루봇으로 할 수 있는 일
 					</SectionLabel>
-					<h2 ref={headingRef} className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-						{shouldReduce ? (
-							HEADING_TEXT
-						) : (
-							HEADING_TOKENS.map((token, index) =>
-								isSpace(token) ? (
-									// 단어 사이 공백 — 인라인 흐름에서 자연스러운 띄어쓰기 간격을 유지해요
-									<span key={`space-${index}`}> </span>
-								) : (
-									<HeadingWord key={`${token}-${index}`} token={token} progress={scrollYProgress} />
-								)
-							)
-						)}
+					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
+						{HEADING_TEXT}
 					</h2>
 					<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
 						명령어 한 줄로 음악을 시작하고, 서버 설정과 재생목록은 대시보드에서 손봐요. 재생 흐름은 Discord 안에서 끊기지 않게 이어져요.
@@ -699,13 +648,12 @@ export function FeaturesSection() {
 			</m.div>
 
 			{/* 마지막 CTA — 준비되셨나요? */}
-			{/* 치트시트 05. Clip-path reveal — 커튼이 아래로 열리듯 위→아래로 드러나요 */}
 			<m.div
 				className="relative overflow-hidden rounded-card border border-primary/25 bg-gradient-to-br from-primary/15 via-surface-2 to-secondary/10 px-6 py-10 text-center sm:px-8 sm:py-14"
-				initial={shouldReduce ? { opacity: 0, y: 24 } : { clipPath: "inset(0 0 100% 0)" }}
-				whileInView={shouldReduce ? { opacity: 1, y: 0 } : { clipPath: "inset(0 0 0% 0)" }}
+				initial="hidden"
+				whileInView="visible"
 				viewport={{ once: true, margin: "-60px" }}
-				transition={shouldReduce ? sectionVariants.visible.transition : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+				variants={sectionVariants}
 			>
 				{/* 배경 효과 — 중앙에서 퍼지는 브랜드 라디얼 */}
 				<div
