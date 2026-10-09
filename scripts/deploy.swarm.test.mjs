@@ -52,6 +52,7 @@ test(
 			repository: 'mochilabs/SiruBOT',
 			branch: 'beta',
 			appStack,
+			stateDir: './state',
 			infraStack,
 			envFile: './.env',
 			timeoutSeconds: 100,

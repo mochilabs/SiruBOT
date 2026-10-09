@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 import {
 	options,
+	loadConfig,
 	environments,
 	composeService,
 	containerFingerprint,
@@ -291,6 +292,7 @@ function fixture() {
 			repository,
 			branch: 'beta',
 			appStack: 'test',
+			stateDir: './state',
 			envFile: './.env',
 			timeoutSeconds: 2,
 			pollSeconds: 0.001,
@@ -339,7 +341,8 @@ function fixture() {
 		if (args[0] === 'info')
 			return JSON.stringify({
 				ControlAvailable: true,
-				LocalNodeState: 'active'
+				LocalNodeState: 'active',
+				Cluster: { ID: 'test-cluster' }
 			});
 		if (args[0] === 'manifest') {
 			if (imageFailure) throw new Error('registry unavailable');
@@ -437,6 +440,137 @@ function addInfrastructure(f, pinStorage = false) {
 		f.items[app] = item;
 	}
 }
+test('default recovery paths are separated by app stack and explicit stateDir must be nonempty', () => {
+	const f = fixture();
+	try {
+		const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+		delete settings.stateDir;
+		writeFileSync(f.configPath, JSON.stringify(settings));
+		const other = join(f.dir, 'staging.json');
+		writeFileSync(other, JSON.stringify({ ...settings, appStack: 'staging' }));
+		assert.notEqual(loadConfig(f.configPath).stateDir, loadConfig(other).stateDir);
+		for (const stateDir of ['', null, 12]) {
+			writeFileSync(other, JSON.stringify({ ...settings, stateDir }));
+			assert.throws(() => loadConfig(other), /stateDir/);
+		}
+	} finally {
+		f.cleanup();
+	}
+});
+test('configs in the same directory retain independent default snapshots and rollback targets', async () => {
+	const f = fixture();
+	try {
+		const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+		delete settings.stateDir;
+		writeFileSync(f.configPath, JSON.stringify(settings));
+		await main(['--config', f.configPath], f.run, () => {});
+		const originalItems = { ...f.items };
+		const originalPath = join(loadConfig(f.configPath).stateDir, 'test-cluster', 'previous.json');
+		const original = readFileSync(originalPath, 'utf8');
+		const other = join(f.dir, 'staging.json');
+		writeFileSync(other, JSON.stringify({ ...settings, appStack: 'staging' }));
+		for (const app of APPS) f.items[app] = service(app, 'staging');
+		await main(['--config', other], f.run, () => {});
+		assert.equal(readFileSync(originalPath, 'utf8'), original);
+		assert.equal(JSON.parse(readFileSync(join(loadConfig(other).stateDir, 'test-cluster/previous.json'), 'utf8')).appStack, 'staging');
+		Object.assign(f.items, originalItems);
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(f.items.bot.Spec.TaskTemplate.ContainerSpec.Image, `ghcr.io/mochilabs/sirubot-bot:beta@${digest}`);
+	} finally {
+		f.cleanup();
+	}
+});
+for (const change of ['stack', 'cluster']) {
+	test(`an explicit shared stateDir rejects another ${change} before replacing its snapshot`, async () => {
+		const f = fixture();
+		try {
+			await main(['--config', f.configPath], f.run, () => {});
+			const original = readFileSync(join(f.dir, 'state/previous.json'), 'utf8');
+			const other = join(f.dir, 'staging.json');
+			writeFileSync(
+				other,
+				JSON.stringify({ ...JSON.parse(readFileSync(f.configPath, 'utf8')), ...(change === 'stack' ? { appStack: 'staging' } : {}) })
+			);
+			const run = (program, args, opts) =>
+				change === 'cluster' && args[0] === 'info'
+					? JSON.stringify({ ControlAvailable: true, LocalNodeState: 'active', Cluster: { ID: 'another-cluster' } })
+					: f.run(program, args, opts);
+			const count = f.calls.length;
+			await assert.rejects(
+				main(['--config', other], run, () => {}),
+				/다른 배포 대상/
+			);
+			assert.equal(readFileSync(join(f.dir, 'state/previous.json'), 'utf8'), original);
+			assert.equal(
+				f.calls.slice(count).some((c) => c.args[0] === 'stack' && c.args[1] === 'deploy'),
+				false
+			);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
+test('the default recovery path is also separated by the connected Swarm cluster', async () => {
+	const f = fixture();
+	try {
+		const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+		delete settings.stateDir;
+		writeFileSync(f.configPath, JSON.stringify(settings));
+		await main(['--config', f.configPath], f.run, () => {});
+		const base = loadConfig(f.configPath).stateDir;
+		const previous = readFileSync(join(base, 'test-cluster/previous.json'), 'utf8');
+		const run = (program, args, opts) =>
+			args[0] === 'info'
+				? JSON.stringify({ ControlAvailable: true, LocalNodeState: 'active', Cluster: { ID: 'another-cluster' } })
+				: f.run(program, args, opts);
+		await main(['--config', f.configPath], run, () => {});
+		assert.equal(readFileSync(join(base, 'test-cluster/previous.json'), 'utf8'), previous);
+		assert.equal(JSON.parse(readFileSync(join(base, 'another-cluster/target.json'), 'utf8')).clusterId, 'another-cluster');
+	} finally {
+		f.cleanup();
+	}
+});
+for (const file of ['target', 'previous', 'pending', 'current']) {
+	test(`malformed ${file}.json is rejected without overwriting recovery state`, async () => {
+		const f = fixture();
+		try {
+			await main(['--config', f.configPath], f.run, () => {});
+			const path = join(f.dir, 'state', `${file}.json`);
+			writeFileSync(path, '{broken');
+			const count = f.calls.length;
+			await assert.rejects(
+				main(['--config', f.configPath], f.run, () => {}),
+				/배포 상태를 읽을 수 없습니다/
+			);
+			assert.equal(readFileSync(path, 'utf8'), '{broken');
+			assert.equal(
+				f.calls.slice(count).some((c) => c.args[0] === 'stack' && c.args[1] === 'deploy'),
+				false
+			);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
+test('legacy app state can be rebound only for its original target without dry-run writes', async () => {
+	const f = fixture();
+	try {
+		await main(['--config', f.configPath], f.run, () => {});
+		rmSync(join(f.dir, 'state/target.json'));
+		for (const file of ['previous', 'current']) {
+			const path = join(f.dir, 'state', `${file}.json`);
+			const value = JSON.parse(readFileSync(path, 'utf8'));
+			delete value.target;
+			writeFileSync(path, JSON.stringify(value));
+		}
+		await main(['--config', f.configPath, '--dry-run'], f.run, () => {});
+		assert.equal(existsSync(join(f.dir, 'state/target.json')), false);
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(JSON.parse(readFileSync(join(f.dir, 'state/target.json'), 'utf8')).appStack, 'test');
+	} finally {
+		f.cleanup();
+	}
+});
 
 for (const [app, field, stale] of [
 	['postgres', 'image', (c) => (c.Image = `ghcr.io/example/postgres@sha256:${'d'.repeat(64)}`)],

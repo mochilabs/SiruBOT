@@ -53,6 +53,8 @@ export function loadConfig(path) {
 	if (config.infraStack && (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(config.infraStack) || config.infraStack === config.appStack)) {
 		throw new Error('infraStack은 앱과 구분된 기존 stack 이름이어야 합니다.');
 	}
+	if (config.stateDir !== undefined && (typeof config.stateDir !== 'string' || !config.stateDir.trim()))
+		throw new Error('stateDir는 비어 있지 않은 경로여야 합니다.');
 	for (const key of ['timeoutSeconds', 'pollSeconds', 'stabilitySeconds']) {
 		if (config[key] !== undefined && (!Number.isFinite(config[key]) || config[key] <= 0)) throw new Error(`${key}는 양수여야 합니다.`);
 	}
@@ -62,7 +64,8 @@ export function loadConfig(path) {
 		stabilitySeconds: 30,
 		...config,
 		envFile: resolve(dirname(path), config.envFile),
-		stateDir: resolve(dirname(path), config.stateDir ?? 'state')
+		stateDir: resolve(dirname(path), config.stateDir ?? join('state', config.appStack)),
+		stateDirExplicit: config.stateDir !== undefined
 	};
 }
 
@@ -401,6 +404,39 @@ function protectedWrite(path, object) {
 	renameSync(temporary, path);
 }
 
+function readRecoveryFile(directory, file) {
+	try {
+		const value = JSON.parse(readFileSync(join(directory, `${file}.json`), 'utf8'));
+		if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
+		return value;
+	} catch (error) {
+		if (error.code === 'ENOENT') return undefined;
+		throw new Error(`${file}.json 배포 상태를 읽을 수 없습니다. 원본 상태 파일을 확인하세요.`);
+	}
+}
+
+function recoveryState(config, target) {
+	const state = Object.fromEntries(['target', 'previous', 'pending', 'current'].map((file) => [file, readRecoveryFile(config.stateDir, file)]));
+	const foreign = () => {
+		throw new Error('stateDir가 다른 배포 대상의 상태를 포함합니다. 대상별 stateDir를 사용하세요.');
+	};
+	if (state.target && fingerprint(state.target) !== fingerprint(target)) foreign();
+	const records = [state.previous, state.pending, state.current].filter(Boolean);
+	for (const record of records) if (Object.hasOwn(record, 'target') && fingerprint(record.target) !== fingerprint(target)) foreign();
+	if (
+		state.previous &&
+		(typeof state.previous.repository !== 'string' ||
+			state.previous.repository.toLowerCase() !== target.repository ||
+			state.previous.appStack !== target.appStack)
+	)
+		foreign();
+	// Older state lacks a cluster identity. Adopt it only with a matching app
+	// snapshot when the operator explicitly points stateDir at the old location.
+	if (!state.target && records.length && !records.some((record) => Object.hasOwn(record, 'target')) && !state.previous)
+		throw new Error('기존 배포 상태의 대상을 확인할 수 없습니다. 원본 previous.json 또는 다른 stateDir를 사용하세요.');
+	return state;
+}
+
 export function acquireLock(directory) {
 	mkdirSync(directory, { recursive: true, mode: 0o700 });
 	const path = join(directory, 'lock');
@@ -690,12 +726,17 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		await showStatus(config, run, log);
 		return;
 	}
+	if (typeof swarm.Cluster?.ID !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(swarm.Cluster.ID))
+		throw new Error('현재 Swarm cluster ID를 확인할 수 없습니다. manager 연결을 확인하세요.');
+	if (!config.stateDirExplicit) config.stateDir = join(config.stateDir, swarm.Cluster.ID);
+	const target = { schemaVersion: 1, repository: config.repository.toLowerCase(), appStack: config.appStack, clusterId: swarm.Cluster.ID };
 	const releaseLock = opts.dryRun ? () => {} : acquireLock(config.stateDir);
 	const clusterLocks = [];
 	let diagnosticTarget;
 	let sensitive = [];
 	const redact = (message) => redactValues(message, sensitive);
 	try {
+		const state = recoveryState(config, target);
 		if (!opts.dryRun) {
 			const stacks = opts.withInfra ? [config.appStack, config.infraStack].filter(Boolean).sort() : [config.appStack];
 			for (const stack of stacks) {
@@ -720,12 +761,8 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		let manifest;
 		let savedPlatforms;
 		if (opts.action === 'rollback') {
-			let saved;
-			try {
-				saved = JSON.parse(readFileSync(join(config.stateDir, 'previous.json'), 'utf8'));
-			} catch {
-				throw new Error('복원할 이전 앱 배포가 없습니다.');
-			}
+			const saved = state.previous;
+			if (!saved) throw new Error('복원할 이전 앱 배포가 없습니다.');
 			if (saved.appStack !== config.appStack || saved.repository !== config.repository || saved.branch !== config.branch)
 				throw new Error('이전 배포의 stack·저장소·브랜치가 다릅니다.');
 			desired = saved.stack;
@@ -795,10 +832,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 				? Object.fromEntries(APPS.filter((app) => !changed.includes(app)).map((app) => [current[app].Spec.Name, fingerprint(current[app].Spec)]))
 				: {})
 		};
-		let pending;
-		try {
-			pending = JSON.parse(readFileSync(join(config.stateDir, 'pending.json'), 'utf8'));
-		} catch {}
+		const pending = state.pending;
 		if (opts.action === 'deploy' && pending && fingerprint(pending.desired) !== fingerprint(desired)) {
 			throw new Error('완료되지 않은 배포가 있습니다. 같은 --run으로 재시도하거나 rollback 후 새 배포를 실행하세요.');
 		}
@@ -811,8 +845,10 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			log('dry-run 완료. 서비스와 배포 상태 파일은 변경하지 않았습니다.');
 			return;
 		}
+		if (!state.target) protectedWrite(join(config.stateDir, 'target.json'), target);
 		if (changed.length && opts.action === 'deploy' && !pending) {
 			protectedWrite(join(config.stateDir, 'previous.json'), {
+				target,
 				repository: config.repository,
 				branch: config.branch,
 				appStack: config.appStack,
@@ -820,6 +856,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 				stack: before
 			});
 			protectedWrite(join(config.stateDir, 'pending.json'), {
+				target,
 				desired,
 				runId: manifest.runId
 			});
@@ -851,6 +888,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			rollbackTargets
 		);
 		protectedWrite(join(config.stateDir, 'current.json'), {
+			target,
 			manifest,
 			stack: desired,
 			appliedAt: new Date().toISOString()
