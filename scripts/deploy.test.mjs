@@ -646,3 +646,23 @@ test('platform-safe updates reject changes outside their supported flags or Dock
 	desired.environment.DOCKER_HOST = 'tcp://different-manager:2375';
 	assert.throws(() => platformUpdatePlan(before, desired, 'test_bot'), /CLI 환경/);
 });
+test('named endpoint ports stop deploy, dry-run and rollback before snapshots or updates', async () => {
+	for (const action of [[], ['--dry-run'], ['rollback']]) {
+		const f = fixture();
+		try {
+			f.items.bot.Spec.EndpointSpec = { Ports: [{ Name: 'http', TargetPort: 8080, Protocol: 'tcp', PublishMode: 'ingress' }] };
+			await assert.rejects(
+				main([...action, '--config', f.configPath], f.run, () => {}),
+				/EndpointSpec.Ports.*Name/
+			);
+			assert.equal(
+				f.calls.some((c) => (c.args[0] === 'stack' && c.args[1] === 'deploy') || (c.args[0] === 'service' && c.args[1] === 'update')),
+				false
+			);
+			assert.equal(existsSync(join(f.dir, 'state/previous.json')), false);
+			assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+		} finally {
+			f.cleanup();
+		}
+	}
+});

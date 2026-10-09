@@ -84,3 +84,18 @@ test('Compose conversion alone rejects platform filters unless retained through 
 	assert.throws(() => composeService(spec, references), /Platforms/);
 	assert.doesNotThrow(() => composeService(spec, references, { retainPlatforms: true }));
 });
+test('named endpoint ports are rejected while empty names retain supported port settings', () => {
+	const spec = service();
+	const port = { Name: 'http', TargetPort: 8080, PublishedPort: 18080, Protocol: 'tcp', PublishMode: 'ingress' };
+	spec.EndpointSpec = { Ports: [port] };
+	assert.throws(() => composeService(spec, references), /EndpointSpec.Ports.*Name/);
+	port.Name = '';
+	assert.deepEqual(composeService(spec, references).ports, [{ target: 8080, published: 18080, protocol: 'tcp', mode: 'ingress' }]);
+});
+test('Docker legacy stack schema cannot represent named endpoint ports', { skip: !dockerAvailable }, () => {
+	const compose = composeService(service(), references);
+	assert.throws(
+		() => dockerConfig({ ...compose, ports: [{ name: 'http', target: 8080, published: 18080, protocol: 'tcp', mode: 'ingress' }] }),
+		/additional property.*name/i
+	);
+});

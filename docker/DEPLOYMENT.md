@@ -127,6 +127,7 @@ docker config rm <app-stack>-deployment-lock
 예: replicated가 아닌 모드, 특수 컨테이너 권한, 익명/특수 볼륨, `ForceUpdate`가 설정된 서비스.
 legacy Compose에서 지원하지 않는 supplementary groups와 DNS options도 업데이트 전에 거부한다.
 tmpfs의 size/mode는 보존하지만 `TmpfsOptions.Options`의 `noexec`, `nosuid` 같은 플래그는 변환할 수 없어 적용 전에 거부한다.
+이름이 지정된 포트(`EndpointSpec.Ports[].Name`)도 legacy Compose에서 보존할 수 없어 적용 전에 거부한다. 이름이 없는 포트는 기존 설정을 유지한다.
 동일 hostname에 여러 IP가 지정된 매핑은 Compose 변환에서 보존할 수 없어 적용을 중단한다.
 배포 과정의 Docker/gh 출력에 설정 값이 포함될 수 있어 원문 stderr 대신 요약 오류를 표시한다.
 실패 시 task 상태와 오류를 민감한 값을 가린 상태로 출력한다.

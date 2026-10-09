@@ -277,6 +277,10 @@ export function composeService(spec, references, { retainPlatforms = false } = {
 			};
 		});
 	supported(spec.EndpointSpec, ['Mode', 'Ports'], 'endpoint');
+	for (const port of spec.EndpointSpec?.Ports ?? []) {
+		supported(port, ['Name', 'TargetPort', 'PublishedPort', 'Protocol', 'PublishMode'], `${spec.Name}/EndpointSpec.Ports`);
+		if (port.Name) throw new Error(`${spec.Name}: EndpointSpec.Ports의 Name은 legacy Compose에서 보존할 수 없습니다.`);
+	}
 	const labels = { ...spec.Labels };
 	delete labels['com.docker.stack.namespace'];
 	delete labels['com.docker.stack.image'];
