@@ -370,6 +370,13 @@ export const fingerprint = (value) =>
 	createHash('sha256')
 		.update(JSON.stringify(canonical(value)))
 		.digest('hex');
+export function containerFingerprint(value) {
+	const spec = { ...value };
+	const dns = Object.fromEntries(Object.entries(spec.DNSConfig ?? {}).filter(([, item]) => !empty(item)));
+	if (Object.keys(dns).length) spec.DNSConfig = dns;
+	else delete spec.DNSConfig;
+	return fingerprint(spec);
+}
 export function escapeInterpolation(value) {
 	if (Array.isArray(value)) return value.map(escapeInterpolation);
 	if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, escapeInterpolation(item)]));
@@ -442,7 +449,7 @@ export function taskSummary(service, tasks, rollbackTargets = {}) {
 		(task) =>
 			task.Status.State === 'running' &&
 			(restored
-				? fingerprint(task.Spec.ContainerSpec) === fingerprint(service.Spec.TaskTemplate.ContainerSpec)
+				? containerFingerprint(task.Spec.ContainerSpec) === containerFingerprint(service.Spec.TaskTemplate.ContainerSpec)
 				: task.Spec.ContainerSpec.Image === service.Spec.TaskTemplate.ContainerSpec.Image)
 	);
 	const expected = service.Spec.Mode.Replicated.Replicas;

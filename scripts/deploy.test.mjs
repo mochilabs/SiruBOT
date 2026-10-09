@@ -166,6 +166,11 @@ test('completed automatic rollback is accepted only for the matching saved spec 
 	assert.equal(taskSummary(item, tasks(item), targets).ready, true);
 	assert.equal(taskSummary(item, tasks(item), targets).failed, false);
 	assert.equal(taskSummary(item, tasks(item)).failed, true);
+	const normalizedDns = tasks(item);
+	normalizedDns[0].Spec.ContainerSpec.DNSConfig = { Nameservers: [], Search: [], Options: [] };
+	assert.equal(taskSummary(item, normalizedDns, targets).ready, true);
+	normalizedDns[0].Spec.ContainerSpec.DNSConfig.Nameservers = ['192.0.2.53'];
+	assert.equal(taskSummary(item, normalizedDns, targets).ready, false);
 	const stale = tasks(item);
 	stale[0].Spec.ContainerSpec.Env = ['KEEP=failed-update'];
 	assert.equal(taskSummary(item, stale, targets).ready, false);

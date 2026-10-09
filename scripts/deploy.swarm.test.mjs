@@ -4,17 +4,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { main, waitForServices } from './deploy.mjs';
+import { containerFingerprint, main, waitForServices } from './deploy.mjs';
 import { APPS } from './deployment-manifest.mjs';
 
 const manager = process.env.SIRUBOT_SWARM_TEST_MANAGER;
 const worker = process.env.SIRUBOT_SWARM_TEST_WORKER;
 
 test(
-	'two-node Swarm: scale, placement, literal secrets, no-op, rollback, storage identity',
+	'two-node Swarm: host mappings, scale, no-op, automatic recovery, rollback and storage identity',
 	{
 		skip: !manager || !worker,
 		timeout: 600_000
@@ -80,7 +80,7 @@ test(
 					entrypoint: ['node'],
 					command: [
 						'-e',
-						"const s=require('http').createServer((q,r)=>r.end('ok'));s.listen(8080,'0.0.0.0');process.once('SIGTERM',()=>s.close(()=>process.exit(0)))"
+						"if(process.env.FAIL_START==='true')process.exit(1);const s=require('http').createServer((q,r)=>r.end('ok'));s.listen(8080,'0.0.0.0');process.once('SIGTERM',()=>s.close(()=>process.exit(0)))"
 					],
 					environment: { KEEP: 'original', PORT: '8080' },
 					extra_hosts: ['upstream.test:192.0.2.1', 'ipv6.test:2001:db8::1'],
@@ -101,7 +101,7 @@ test(
 					deploy: {
 						replicas: app === 'bot' ? 2 : 1,
 						placement: { constraints: ['node.role == worker'] },
-						update_config: { order: 'stop-first', parallelism: 1, monitor: '2s', failure_action: 'pause' }
+						update_config: { order: 'stop-first', parallelism: 1, monitor: '2s', failure_action: 'rollback' }
 					}
 				}
 			])
@@ -203,6 +203,53 @@ test(
 			assert.deepEqual(restored.Spec.TaskTemplate.ContainerSpec.Env.sort(), ['KEEP=original', 'PORT=8080']);
 			assert.deepEqual([...restored.Spec.TaskTemplate.ContainerSpec.Hosts].sort(), ['192.0.2.1 upstream.test', '2001:db8::1 ipv6.test'].sort());
 			assert.equal(logs.join('\n').includes('literal $HOME'), false);
+			console.log('Host mappings and regular rollback verified; exercising Swarm automatic recovery');
+			const originalEnv = readFileSync(join(dir, '.env'), 'utf8');
+			writeFileSync(join(dir, '.env'), `${originalEnv}\nFAIL_START=true\n`);
+			await assert.rejects(
+				main(
+					['--config', configPath],
+					docker,
+					() => {},
+					() => manifest
+				),
+				/자동 rollback|시간 초과/
+			);
+			assert.equal(existsSync(join(dir, 'state/pending.json')), true);
+			const deadline = Date.now() + settings.timeoutSeconds * 1000;
+			let recovered;
+			while (Date.now() < deadline) {
+				recovered = JSON.parse(docker('docker', ['service', 'inspect', ...APPS.map((app) => `${appStack}_${app}`)]));
+				if (recovered.every((item) => item.UpdateStatus?.State === 'rollback_completed')) break;
+				await new Promise((done) => setTimeout(done, 500));
+			}
+			assert.ok(recovered.every((item) => item.UpdateStatus?.State === 'rollback_completed'));
+			for (const item of recovered) {
+				const taskIds = docker('docker', ['service', 'ps', '-q', '--filter', 'desired-state=running', item.ID]).split('\n').filter(Boolean);
+				const running = JSON.parse(docker('docker', ['inspect', '--type', 'task', ...taskIds]));
+				for (const task of running) {
+					const target = item.Spec.TaskTemplate.ContainerSpec;
+					const actual = task.Spec.ContainerSpec;
+					assert.equal(containerFingerprint(actual), containerFingerprint(target), `${item.Spec.Name}: restored task configuration must match`);
+				}
+			}
+			await main(['rollback', '--config', configPath], docker, () => {});
+			assert.equal(existsSync(join(dir, 'state/pending.json')), false);
+			const afterRecovery = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
+			assert.equal(afterRecovery.UpdateStatus.State, 'rollback_completed');
+			assert.deepEqual(afterRecovery.Spec.TaskTemplate.ContainerSpec.Env.sort(), ['KEEP=original', 'PORT=8080']);
+			writeFileSync(join(dir, '.env'), `${originalEnv}\nFAIL_START=false\n`);
+			manifest.runId = 2;
+			manifest.commit = 'b'.repeat(40);
+			await main(
+				['--config', configPath],
+				docker,
+				() => {},
+				() => manifest
+			);
+			assert.equal(existsSync(join(dir, 'state/pending.json')), false);
+			const deployed = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
+			assert.ok(deployed.Spec.TaskTemplate.ContainerSpec.Env.includes('FAIL_START=false'));
 		} finally {
 			for (const stack of [appStack, infraStack]) {
 				try {
