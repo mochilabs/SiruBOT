@@ -59,7 +59,7 @@ export default async function ServerDashboardPage({
     notFound();
   }
 
-  const manageable = await canManage(accessToken, id);
+  const manageable = await canManage(accessToken, session.user.id, id);
 
   return (
     <Container>

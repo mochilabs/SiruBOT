@@ -26,7 +26,7 @@ export default async function PlayerPage({
   }
 
   const accessToken = await getSessionAccessToken();
-  const manageable = accessToken ? await canManage(accessToken, id) : false;
+  const manageable = accessToken ? await canManage(accessToken, session.user.id, id) : false;
 
   if (!manageable) {
     return (
