@@ -179,11 +179,11 @@ function SettingToggleRow({ name, from, to, index }: { name: string; from: strin
 			<span className={settingName}>{name}</span>
 			<span className="relative shrink-0 text-xs font-semibold">
 				{/* 새 값이 폭을 결정 — from은 위로 슝 사라짐 (등장 시엔 from 노출 없이 바로 from → to 전환) */}
-				<m.span className="text-primary">
+				<m.span className="text-primary-text">
 					{to}
 				</m.span>
 				<m.span
-					className="absolute inset-0 text-right text-muted-foreground/60"
+					className="absolute inset-0 text-right text-muted-foreground"
 					initial={{ y: 0, opacity: 0 }}
 					animate={{ y: -12, opacity: 0 }}
 					transition={{ delay: 0.4 + index * 0.3, duration: 0.35, ease: "easeOut" }}
@@ -350,7 +350,7 @@ function ChatPreview() {
 												transition={{ duration: 0.2 }}
 											>
 												<p className="mb-1 text-2xs font-medium text-discord-text-muted">
-													{current.status} — 완료
+													{current.status} (완료)
 												</p>
 												<p className="text-sm leading-relaxed text-discord-text">
 													<StreamingTypeText key={`reply-${current.title}`} text={current.reply} speed={40} onComplete={advanceTool} />
@@ -423,7 +423,7 @@ export function FeaturesSection() {
 							)
 						)}
 					</h2>
-					<p className="text-base font-medium leading-relaxed text-muted-foreground/80 sm:text-lg">
+					<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
 						명령어 한 줄로 음악을 시작하고, 서버 설정과 재생목록은 대시보드에서 손봐요. 재생 흐름은 Discord 안에서 끊기지 않게 이어져요.
 					</p>
 				</m.div>
@@ -440,13 +440,13 @@ export function FeaturesSection() {
 				<Card padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
-							<Bot size={18} className="text-primary" aria-hidden />
-								<SectionLabel as="p" className="px-0 py-0 text-primary">
+							<Bot size={18} className="text-primary-text" aria-hidden />
+								<SectionLabel as="p" className="px-0 py-0 text-primary-text">
 									AI 채팅
 								</SectionLabel>
 							</div>
 							<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">명령어 대신 채팅으로 착.</h3>
-							<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
+							<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 								명령어를 외우지 않아도 돼요. 멘션으로 말 걸면 시루가 날씨·검색·음악 제어 같은 도구를 직접 골라 써요.
 							</p>
 							<div className="grid gap-4 border-t border-border-subtle pt-4 sm:grid-cols-3">
@@ -455,7 +455,7 @@ export function FeaturesSection() {
 										<utility.icon size={15} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden />
 										<div className="min-w-0 space-y-1">
 											<p className="text-sm font-black tracking-tighter text-foreground">{utility.title}</p>
-											<p className="text-xs font-medium leading-relaxed text-muted-foreground/80">{utility.desc}</p>
+											<p className="text-xs font-medium leading-relaxed text-muted-foreground">{utility.desc}</p>
 										</div>
 									</div>
 								))}
@@ -480,13 +480,13 @@ export function FeaturesSection() {
 				<Card variant="raised" padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
-							<Music2 size={18} className="text-primary" aria-hidden />
-							<SectionLabel as="p" className="px-0 py-0 text-primary">
+							<Music2 size={18} className="text-primary-text" aria-hidden />
+							<SectionLabel as="p" className="px-0 py-0 text-primary-text">
 								음악 재생
 							</SectionLabel>
 						</div>
 						<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">원하는 곡을 바로 재생해요.</h3>
-						<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
+						<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 							/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.
 						</p>
 						{/* 치트시트 03. 스태거 보강 — 명령어 칩들이 빠르게 연쇄 등장(0.04초 간격).
@@ -566,13 +566,13 @@ export function FeaturesSection() {
 			<m.div variants={cardEntry} className="flex flex-col min-w-0">
 				<Card padding="lg" className="h-full gap-5">
 					<div className="flex items-center gap-2.5">
-						<ListMusic size={18} className="text-primary" aria-hidden />
-						<SectionLabel as="p" className="px-0 py-0 text-primary">
+						<ListMusic size={18} className="text-primary-text" aria-hidden />
+						<SectionLabel as="p" className="px-0 py-0 text-primary-text">
 							내 음악 보관함
 						</SectionLabel>
 					</div>
 					<h3 className="text-xl font-black tracking-tighter text-foreground">자주 듣는 곡을 모아둬요.</h3>
-					<p className="text-sm font-medium leading-relaxed text-muted-foreground/80">
+					<p className="text-sm font-medium leading-relaxed text-muted-foreground">
 						/플레이리스트와 /즐겨찾기로 곡을 저장하고, 불러온 목록을 채널에서 그대로 재생할 수 있어요.
 					</p>
 
@@ -639,14 +639,14 @@ export function FeaturesSection() {
 				<m.div variants={cardEntry} className="flex flex-col min-w-0">
 					<Card padding="lg" className="h-full gap-5">
 						<div className="flex items-center gap-2.5">
-							<LayoutDashboard size={18} className="text-primary" aria-hidden />
-							<SectionLabel as="p" className="px-0 py-0 text-primary">
+							<LayoutDashboard size={18} className="text-primary-text" aria-hidden />
+							<SectionLabel as="p" className="px-0 py-0 text-primary-text">
 								서버 대시보드
 							</SectionLabel>
 						</div>
 						<h3 className="text-xl font-black tracking-tighter text-foreground">웹에서 슝 슝, 봇에 바로 반영.</h3>
-						<p className="text-sm font-medium leading-relaxed text-muted-foreground/80">
-							채널 지정부터 음악 기본값, 역할까지 — 웹에서 바꾸면 Discord 서버에 그대로 적용돼요.
+						<p className="text-sm font-medium leading-relaxed text-muted-foreground">
+							채널 지정부터 음악 기본값, 역할까지, 웹에서 바꾸면 Discord 서버에 그대로 적용돼요.
 						</p>
 
 						{/* 설정 카드 — 좌측 패널 탭 + 우측 토글 애니메이션 */}
@@ -662,8 +662,8 @@ export function FeaturesSection() {
 										className={cn(
 											"flex shrink-0 cursor-pointer items-center gap-2 rounded-control px-2.5 py-1.5 text-left text-xs font-bold transition-colors duration-fast",
 											activeSettingSlide === index
-												? "bg-primary/10 text-primary"
-												: "text-muted-foreground/70 hover:bg-surface-2 hover:text-foreground",
+												? "bg-primary/10 text-primary-text"
+												: "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
 										)}
 									>
 										<span
@@ -714,7 +714,7 @@ export function FeaturesSection() {
 				/>
 				<div className="relative mx-auto max-w-xl space-y-4">
 					<h2 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">준비되셨나요?</h2>
-					<p className="text-sm font-medium leading-relaxed text-muted-foreground/80 sm:text-base">
+					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 						지금 시루봇을 서버에 초대하면
 						<br className="sm:hidden" />
 						음악·AI 채팅·서버 관리가 바로 시작돼요.

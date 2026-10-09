@@ -198,7 +198,7 @@ export function Select(props: SelectProps) {
 					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
 				`}
 			>
-				<span className={displayLabel ? "text-foreground" : "text-muted-foreground/50"}>
+				<span className={displayLabel ? "text-foreground" : "text-muted-foreground"}>
 					{displayLabel ?? placeholder}
 				</span>
 				<ChevronDown
@@ -214,7 +214,7 @@ export function Select(props: SelectProps) {
 						return (
 							<span
 								key={v}
-								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary"
+								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary-text"
 							>
 								{opt?.label ?? v}
 								<Button
@@ -270,7 +270,7 @@ export function Select(props: SelectProps) {
 										}}
 										onKeyDown={handleKeyDown}
 										placeholder={searchPlaceholder}
-										className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+										className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
 									/>
 								</div>
 							)}
@@ -311,7 +311,7 @@ export function Select(props: SelectProps) {
 													{opt.label}
 												</span>
 												{isSelected && (
-													<Check className="h-4 w-4 text-primary shrink-0" />
+													<Check className="h-4 w-4 text-primary-text shrink-0" />
 												)}
 											</button>
 										);
@@ -320,7 +320,7 @@ export function Select(props: SelectProps) {
 							))}
 
 							{flatFiltered.length === 0 && (
-								<p className="py-6 text-center text-sm text-muted-foreground/60 font-medium">
+								<p className="py-6 text-center text-sm text-muted-foreground font-medium">
 									검색 결과가 없어요
 								</p>
 							)}

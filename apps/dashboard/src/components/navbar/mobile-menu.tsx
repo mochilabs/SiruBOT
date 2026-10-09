@@ -44,10 +44,10 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 							key={link.label}
 							href={getNavHref(link)}
 							onClick={onClose}
-							className="flex items-center justify-between py-3 text-lg font-bold text-foreground/80 hover:text-primary transition-colors duration-fast"
+							className="flex items-center justify-between py-3 text-lg font-bold text-foreground/80 hover:text-primary-text transition-colors duration-fast"
 						>
 							{link.label}
-							<Music size={14} className="text-primary/40" aria-hidden />
+							<Music size={14} className="text-primary-text" aria-hidden />
 						</Link>
 						))}
 						<div className="pt-4 border-t border-border">

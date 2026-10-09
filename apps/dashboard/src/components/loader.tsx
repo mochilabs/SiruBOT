@@ -34,7 +34,7 @@ export default function Loader({
     
     const LoaderIcon = (
         <div className={iconOnly ? "" : "relative"}>
-            <Loader2 className={`${sizeClass} animate-spin ${iconOnly ? "" : "text-primary/40"} ${className}`} />
+            <Loader2 className={`${sizeClass} animate-spin ${iconOnly ? "" : "text-primary-text"} ${className}`} />
         </div>
     );
 
@@ -68,7 +68,7 @@ export default function Loader({
         <div className="flex flex-col items-center justify-center gap-4 py-12">
             {LoaderIcon}
             {text && (
-                <p className="text-lg font-bold text-muted-foreground/60 animate-pulse tracking-tight">
+                <p className="text-lg font-bold text-muted-foreground animate-pulse tracking-tight">
                     {text}
                 </p>
             )}

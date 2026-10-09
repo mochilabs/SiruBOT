@@ -134,7 +134,7 @@ export function DatePicker({
 					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
 				`}
 			>
-				<span className={value ? "text-foreground" : "text-muted-foreground/50"}>
+				<span className={value ? "text-foreground" : "text-muted-foreground"}>
 					{value ? formatDate(value) : placeholder}
 				</span>
 				<ChevronDown
@@ -222,7 +222,7 @@ export function DatePicker({
 												h-9 w-full rounded-xl text-sm font-medium transition-all cursor-pointer
 												${isDisabled ? "opacity-30 pointer-events-none" : "hover:bg-accent/50"}
 												${isSelected ? "bg-primary text-white font-bold shadow-lg shadow-primary/20" : ""}
-												${isToday && !isSelected ? "ring-1 ring-primary/40 text-primary font-bold" : ""}
+												${isToday && !isSelected ? "ring-1 ring-primary/40 text-primary-text font-bold" : ""}
 												${isSunday && !isSelected ? "text-destructive" : ""}
 												${!isSelected && !isToday && !isSunday ? "text-foreground" : ""}
 											`}
@@ -244,7 +244,7 @@ export function DatePicker({
 										onChange?.(today);
 										setOpen(false);
 									}}
-									className="h-auto px-0 text-xs font-bold text-primary hover:bg-transparent hover:text-primary/80"
+									className="h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:text-primary/80"
 								>
 									오늘로 이동
 								</Button>

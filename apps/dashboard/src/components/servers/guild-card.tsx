@@ -26,12 +26,12 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<h3 className="line-clamp-1 text-lg font-black tracking-tight text-foreground">{guild.name}</h3>
 						<div className="flex items-center gap-1 mt-0.5">
 							{guild.isInstalled ? (
-								<div className="flex items-center gap-1 text-xs font-bold text-primary/80 uppercase tracking-widest">
+								<div className="flex items-center gap-1 text-xs font-bold text-primary-text uppercase tracking-widest">
 									<ShieldCheck size={10} />
 									<span>이미 시루봇이 있어요</span>
 								</div>
 							) : (
-								<span className="text-xs font-bold text-muted-foreground/30 uppercase tracking-widest">아직 시루봇이 없어요</span>
+								<span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">아직 시루봇이 없어요</span>
 							)}
 						</div>
 					</div>
@@ -43,7 +43,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<div className="flex w-full gap-2 mt-auto">
 						<Link
 							href={`/servers/${guild.id}`}
-							className="flex items-center w-full justify-center gap-2 rounded-control border border-primary/20 bg-primary/10 py-3.5 text-sm font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors duration-base"
+							className="flex items-center w-full justify-center gap-2 rounded-control border border-primary/20 bg-primary/10 py-3.5 text-sm font-bold text-primary-text hover:bg-primary hover:text-primary-foreground transition-colors duration-base"
 						>
 							<Settings2 size={18} />
 							관리하기

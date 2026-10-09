@@ -68,21 +68,21 @@ export function PlaylistDetail({
 						<div className="flex items-center gap-3">
 							<h1 className="text-2xl lg:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
 								{activePlaylist.name === "즐겨찾기" ? (
-									<Heart size={24} className="text-primary fill-primary shrink-0" />
+									<Heart size={24} className="text-primary-text fill-primary shrink-0" />
 								) : (
-									<Music size={24} className="text-primary shrink-0" />
+									<Music size={24} className="text-primary-text shrink-0" />
 								)}
 								{activePlaylist.name}
 							</h1>
 						</div>
-						<div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground/80 mt-2">
+						<div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground mt-2">
 							<div className="flex items-center gap-1.5 font-bold">
-								<Music size={14} className="text-primary" />
+								<Music size={14} className="text-primary-text" />
 								<span>{stats.count}곡</span>
 							</div>
 							<div className="w-1 h-1 rounded-full bg-border" />
 							<div className="flex items-center gap-1.5 font-bold">
-								<Clock size={14} className="text-primary" />
+								<Clock size={14} className="text-primary-text" />
 								<span>{formatTotalDuration(stats.duration)}</span>
 							</div>
 							{activePlaylist.description && (
@@ -136,7 +136,7 @@ export function PlaylistDetail({
 					/>
 				) : (
 					<div ref={parentRef} className="overflow-auto flex-1 custom-scrollbar w-full">
-						<div className="hidden md:flex items-center px-4 py-3 bg-muted/30 border-b border-border/40 text-muted-foreground/70 font-medium uppercase tracking-wider text-xs sticky top-0 z-10">
+						<div className="hidden md:flex items-center px-4 py-3 bg-muted/30 border-b border-border/40 text-muted-foreground font-medium uppercase tracking-wider text-xs sticky top-0 z-10">
 							<div className="w-12 text-center shrink-0">#</div>
 							<div className="flex-1 min-w-[240px]">곡 정보</div>
 							<div className="w-32 shrink-0 px-2">아티스트</div>
@@ -169,7 +169,7 @@ export function PlaylistDetail({
 											<span className="text-muted-foreground font-medium group-hover:hidden text-sm">
 												{idx + 1}
 											</span>
-											<Move size={14} className="text-muted-foreground/50 hidden group-hover:block cursor-grab active:cursor-grabbing" />
+											<Move size={14} className="text-muted-foreground hidden group-hover:block cursor-grab active:cursor-grabbing" />
 										</div>
 
 										<div className="flex-1 min-w-0 flex items-center gap-3 md:gap-4">
@@ -179,7 +179,7 @@ export function PlaylistDetail({
 													<img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />
 												) : (
 													<div className="w-full h-full flex items-center justify-center">
-														<Music size={16} className="text-muted-foreground/30" />
+														<Music size={16} className="text-muted-foreground" />
 													</div>
 												)}
 											</div>
@@ -192,7 +192,7 @@ export function PlaylistDetail({
 													<span>{formatDuration(track.duration)}</span>
 												</p>
 
-												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-2xs text-primary hover:underline items-center gap-1">
+												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-2xs text-primary-text hover:underline items-center gap-1">
 													<ExternalLink size={10} />
 													YouTube
 												</a>
@@ -214,7 +214,7 @@ export function PlaylistDetail({
 													<Button
 														variant="icon"
 														size="md"
-														className="-mr-2 rounded-lg border-transparent bg-transparent p-2 text-muted-foreground/50 hover:bg-muted/40 hover:text-foreground md:mr-0"
+														className="-mr-2 rounded-lg border-transparent bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
 													>
 														<MoreHorizontal size={16} />
 													</Button>

@@ -63,7 +63,7 @@ function TrackContent() {
           </div>
           <div className="flex w-full sm:w-auto gap-2 sm:gap-3 h-14 sm:h-14">
             <div className="group relative bg-surface-1 border border-border-subtle rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
-              <div className="flex items-center gap-1.5 text-primary/60">
+              <div className="flex items-center gap-1.5 text-primary-text">
                 <span className="text-2xs sm:text-xs font-black tracking-widest uppercase">
                   {query ? "검색 결과 수" : "단일 곡 수"}
                 </span>
@@ -74,7 +74,7 @@ function TrackContent() {
             </div>
 
             <div className="group relative bg-surface-1 border border-border-subtle rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
-              <div className="flex items-center gap-1.5 text-primary/60">
+              <div className="flex items-center gap-1.5 text-primary-text">
                 <span className="text-2xs sm:text-xs font-black tracking-widest uppercase">
                   재생 횟수
                 </span>

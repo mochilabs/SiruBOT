@@ -7,6 +7,7 @@ import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
 import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
+import { Switch } from "@/components/primitives/switch";
 import { useGuildChannels, useGuildRoles, useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
@@ -53,6 +54,7 @@ interface ChannelForm {
 	voiceChannelId: string | null;
 	pinnedChannelId: string | null;
 	pinnedChannelMode: GuildSettings["pinnedChannelMode"];
+	pinnedChannelDeleteInput: boolean;
 	djRoleId: string | null;
 }
 
@@ -61,6 +63,7 @@ const toChannelForm = (settings: GuildSettings): ChannelForm => ({
 	voiceChannelId: settings.voiceChannelId,
 	pinnedChannelId: settings.pinnedChannelId,
 	pinnedChannelMode: settings.pinnedChannelMode,
+	pinnedChannelDeleteInput: settings.pinnedChannelDeleteInput,
 	djRoleId: settings.djRoleId,
 });
 
@@ -114,7 +117,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 
 			{(channelsError || rolesError) && (
 				<WarningBox>
-					일부 목록을 불러오지 못했어요. — {channelsError?.message ?? rolesError?.message}{" "}
+					일부 목록을 불러오지 못했어요. ({channelsError?.message ?? rolesError?.message}){" "}
 					<button
 						type="button"
 						className="font-semibold underline"
@@ -174,6 +177,17 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 					options={PINNED_MODE_OPTIONS}
 					value={form.pinnedChannelMode}
 					onChange={(value) => patch({ pinnedChannelMode: value as ChannelForm["pinnedChannelMode"] })}
+					disabled={saving || !form.pinnedChannelId}
+				/>
+			</Field>
+
+			<Field
+				label="입력 메시지 자동 삭제"
+				description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 봇에게 메시지 관리 권한이 필요해요."
+			>
+				<Switch
+					checked={form.pinnedChannelDeleteInput}
+					onChange={(checked) => patch({ pinnedChannelDeleteInput: checked })}
 					disabled={saving || !form.pinnedChannelId}
 				/>
 			</Field>

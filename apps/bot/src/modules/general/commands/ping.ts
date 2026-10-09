@@ -18,7 +18,7 @@ function latencyEmoji(value: number): string {
 
 /** 한 줄 지표 — `항목      값` 정렬 */
 function metricLine(emoji: string, label: string, value: string): string {
-	return `${emoji} **${label}** — \`${value}\``;
+	return `${emoji} **${label}**: \`${value}\``;
 }
 
 @ApplyOptions<Command.Options>({

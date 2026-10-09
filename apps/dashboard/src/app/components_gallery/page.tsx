@@ -114,7 +114,7 @@ function SectionHeader({ id, title, description }: { id: string; title: string; 
 				</h2>
 				<div className="h-px flex-1 bg-gradient-to-r from-border/80 to-transparent" />
 			</div>
-			<p className="text-sm text-muted-foreground/60 font-medium ml-[72px]">{description}</p>
+			<p className="text-sm text-muted-foreground font-medium ml-[72px]">{description}</p>
 		</div>
 	);
 }
@@ -131,7 +131,7 @@ function Showcase({ children, className = "" }: { children: React.ReactNode; cla
 function ShowcaseRow({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
 		<div className="space-y-3">
-			<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground/40">
+			<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">
 				{label}
 			</p>
 			<div className="flex flex-wrap items-center gap-3">
@@ -298,7 +298,7 @@ export default function ComponentsGalleryPage() {
 		{ key: "id", header: "#", width: "60px", align: "center" },
 		{ key: "name", header: "트랙명", sortable: true },
 		{ key: "artist", header: "아티스트", sortable: true },
-		{ key: "plays", header: "재생 수", sortable: true, align: "right", render: (r) => <span className="text-primary font-black tabular-nums">{r.plays.toLocaleString()}</span> },
+		{ key: "plays", header: "재생 수", sortable: true, align: "right", render: (r) => <span className="text-primary-text font-black tabular-nums">{r.plays.toLocaleString()}</span> },
 		{ key: "duration", header: "길이", align: "right" },
 	];
 	const tableData: TableRow[] = [
@@ -352,7 +352,7 @@ export default function ComponentsGalleryPage() {
 										ref={(el) => { sidebarRefs.current[idx] = el; }}
 										href={`#${s.id}`}
 										className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-fast relative z-10 ${isActive
-											? "text-primary font-bold"
+											? "text-primary-text font-bold"
 											: "text-muted-foreground hover:text-foreground hover:bg-accent/30"
 											}`}
 									>
@@ -523,7 +523,7 @@ export default function ComponentsGalleryPage() {
 						</Showcase>
 
 						{/* ════════════ SECTION LABEL ════════════ */}
-						<SectionHeader id="section-label" title="SectionLabel" description="그룹/섹션 레이블 (조용한 스타일 — font-black, uppercase, tracking 제거)" />
+						<SectionHeader id="section-label" title="SectionLabel" description="그룹/섹션 레이블 (조용한 스타일, font-black/uppercase/tracking 제거)" />
 						<Showcase>
 							<SectionLabel as="p">최근 재생</SectionLabel>
 							<SectionLabel as="p">플레이리스트</SectionLabel>
@@ -709,7 +709,7 @@ export default function ComponentsGalleryPage() {
 						<Showcase>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="space-y-2">
-									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground/40">단일 선택</p>
+									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">단일 선택</p>
 									<Select
 										options={selectOptions}
 										value={selectVal}
@@ -719,7 +719,7 @@ export default function ComponentsGalleryPage() {
 									/>
 								</div>
 								<div className="space-y-2">
-									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground/40">다중 선택</p>
+									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">다중 선택</p>
 									<Select
 										options={selectOptions}
 										value={multiSelectVal}
@@ -747,7 +747,7 @@ export default function ComponentsGalleryPage() {
 								<Button variant="ghost" size="sm" onClick={() => setCmdOpen(true)} icon={<Command size={14} />}>
 									커맨드 팔레트 열기
 								</Button>
-								<span className="text-xs text-muted-foreground/40 font-medium">또는 Ctrl+K</span>
+								<span className="text-xs text-muted-foreground font-medium">또는 Ctrl+K</span>
 							</ShowcaseRow>
 							<CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} items={commandItems} />
 						</Showcase>
@@ -814,7 +814,7 @@ export default function ComponentsGalleryPage() {
 									author: { name: "시루" },
 									title: "지금 재생 중",
 									titleUrl: "#",
-									description: "Blinding Lights — The Weeknd",
+									description: "Blinding Lights · The Weeknd",
 									fields: [
 										{ name: "요청자", value: "User#1234", inline: true },
 										{ name: "길이", value: "3:22", inline: true },
@@ -831,7 +831,7 @@ export default function ComponentsGalleryPage() {
 							<div className="bg-discord-bg rounded-xl overflow-hidden py-2">
 								<ChannelMessage
 									author={{ id: "bot", username: "시루", bot: true }}
-									content="🎵 지금 재생 중: **Blinding Lights** — The Weeknd"
+									content="🎵 지금 재생 중: **Blinding Lights** · The Weeknd"
 									timestamp="오후 3:42"
 								>
 									<div className="mt-2">

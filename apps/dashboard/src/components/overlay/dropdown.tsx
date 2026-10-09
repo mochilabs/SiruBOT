@@ -200,7 +200,7 @@ export function Dropdown({
 												)}
 												<span className="flex-1 text-left truncate">{item.label}</span>
 												{item.shortcut && (
-													<kbd className="text-xs font-bold text-muted-foreground/50 tracking-wider">
+													<kbd className="text-xs font-bold text-muted-foreground tracking-wider">
 														{item.shortcut}
 													</kbd>
 												)}

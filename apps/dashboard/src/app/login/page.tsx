@@ -35,7 +35,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 							<h1 className="text-4xl font-black tracking-tighter text-foreground break-keep sm:text-5xl md:text-6xl">
 								로그인하고 서버를 관리해요
 							</h1>
-							<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground/80 break-keep sm:text-lg">
+							<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg">
 								Discord 계정으로 로그인하면 플레이리스트·서버 설정·음악 컨트롤러를 그대로 이어서 쓸 수 있어요.
 							</p>
 						</div>
@@ -60,7 +60,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
 						<Link
 							href="/"
-							className="group flex items-center gap-1.5 text-sm font-medium text-muted-foreground/60 transition-colors duration-fast hover:text-foreground"
+							className="group flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
 						>
 							<ChevronLeft className="h-4 w-4 transition-transform duration-fast group-hover:-translate-x-0.5" aria-hidden />
 							홈으로 돌아가기

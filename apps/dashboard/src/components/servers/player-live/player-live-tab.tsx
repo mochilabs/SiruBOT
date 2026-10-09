@@ -113,7 +113,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 						{mode === "stream" ? (connected ? "실시간" : "연결 중…") : "폴링 2초"}
 					</Badge>
 				</div>
-				<span className="text-2xs text-muted-foreground/60">
+				<span className="text-2xs text-muted-foreground">
 					{Math.floor(state.ageMs / 1000)}초 전 갱신
 				</span>
 			</div>
@@ -136,7 +136,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 					<p className="truncate text-lg font-bold text-foreground">
 						{state.trackTitle ?? "재생 중인 곡이 없어요"}
 					</p>
-					<p className="truncate text-sm text-muted-foreground/80">
+					<p className="truncate text-sm text-muted-foreground">
 						{state.trackAuthor ?? "—"}
 						{state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
 					</p>
@@ -151,7 +151,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 
 			<div className="space-y-1">
 				<ProgressBar state={state} receivedAt={receivedAt} />
-				<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground/80">
+				<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
 					<span>{state.isStream ? "스트리밍" : formatMs(positionMs)}</span>
 					<span>{state.isStream ? "" : formatMs(state.durationMs)}</span>
 				</div>
@@ -182,17 +182,17 @@ function QueueList({ state }: { state: LivePlayerState }) {
 							className="animate-page-in flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2 opacity-0"
 							style={{ animationDelay: `${Math.min(index, 9) * 40}ms`, animationFillMode: "forwards" }}
 						>
-							<span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
+							<span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
 								{index + 1}
 							</span>
 							<div className="min-w-0 flex-1">
 								<p className="truncate text-sm font-semibold text-foreground">{track.title}</p>
-								<p className="truncate text-xs text-muted-foreground/70">
+								<p className="truncate text-xs text-muted-foreground">
 									{track.author}
 									{track.requesterName ? ` · 신청: ${track.requesterName}` : ""}
 								</p>
 							</div>
-							<span className="shrink-0 text-xs tabular-nums text-muted-foreground/70">
+							<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
 								{track.isStream ? "스트림" : formatMs(track.durationMs)}
 							</span>
 						</li>
@@ -332,7 +332,7 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 				mode={mode}
 			/>
 			<QueueList state={data.player} />
-		<p className="text-xs text-muted-foreground/50">
+		<p className="text-xs text-muted-foreground">
 			재생 제어는 봇 컨트롤러/커맨드에서 할 수 있어요. 이 화면은 실시간 상태 표시 전용이에요.
 		</p>
 		</div>

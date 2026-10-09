@@ -77,7 +77,7 @@ export function TagInput({
 			{value.map((tag, i) => (
 				<span
 					key={`${tag}-${i}`}
-					className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary select-none"
+					className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary-text select-none"
 				>
 					{tag}
 					{!disabled && (
@@ -110,13 +110,13 @@ export function TagInput({
 					}}
 					placeholder={value.length === 0 ? placeholder : ""}
 					disabled={disabled}
-					className="flex-1 min-w-[80px] bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 font-medium focus:outline-none"
+					className="flex-1 min-w-[80px] bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-medium focus:outline-none"
 				/>
 			)}
 
 			{/* Count */}
 			{maxTags < Infinity && (
-				<span className="ml-auto text-xs font-bold text-muted-foreground/40 tabular-nums shrink-0">
+				<span className="ml-auto text-xs font-bold text-muted-foreground tabular-nums shrink-0">
 					{value.length}/{maxTags}
 				</span>
 			)}

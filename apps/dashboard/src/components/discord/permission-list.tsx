@@ -127,7 +127,7 @@ export function PermissionList({
 					<div className="flex items-center justify-between px-5 py-3 bg-card/50 border-b border-border/40">
 						<div className="flex items-center gap-2">
 							<Shield className="h-4 w-4 text-muted-foreground" />
-							<span className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
+							<span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
 								{cat.label}
 							</span>
 						</div>
@@ -136,7 +136,7 @@ export function PermissionList({
 							size="sm"
 							disabled={disabled}
 							onClick={() => toggleCategory(cat.permissions)}
-							className="h-auto px-0 text-xs font-bold text-primary hover:bg-transparent hover:text-primary/80"
+							className="h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:text-primary/80"
 						>
 							{allInCategory(cat.permissions) ? "모두 거부" : "모두 허용"}
 						</Button>
@@ -161,7 +161,7 @@ export function PermissionList({
 												<AlertTriangle className="h-3.5 w-3.5 text-destructive/60" />
 											)}
 										</div>
-										<p className="text-xs text-muted-foreground/60 mt-0.5 font-medium">
+										<p className="text-xs text-muted-foreground mt-0.5 font-medium">
 											{perm.description}
 										</p>
 									</div>

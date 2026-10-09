@@ -64,7 +64,7 @@ export class SharedCache {
 	private admissionGate(key: string): boolean {
 		const isNew = !this.keyCardinality.has(key);
 		if (isNew && this.keyCardinality.size >= MAX_KEYS) {
-			logger.warn('Cache key cardinality limit reached — refusing new cache keys');
+			logger.warn('Cache key cardinality limit reached: refusing new cache keys');
 			return false;
 		}
 		this.keyCardinality.add(key);

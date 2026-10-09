@@ -58,7 +58,7 @@ const formatRelativeTime = (iso: string) => {
 function SectionHeading({ icon, title }: { icon: React.ReactNode; title: string }) {
 	return (
 		<h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-			<span className="text-primary">{icon}</span>
+			<span className="text-primary-text">{icon}</span>
 			{title}
 		</h2>
 	);
@@ -82,11 +82,11 @@ function TrackRow({ index, track, meta }: { index: number; track: PlayerTrack; m
 					href={track.url}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary transition-colors duration-fast"
+					className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary-text transition-colors duration-fast"
 				>
 					{track.title}
 				</a>
-				<p className="truncate text-xs text-muted-foreground/80">{track.artist}</p>
+				<p className="truncate text-xs text-muted-foreground">{track.artist}</p>
 			</div>
 			<div className="shrink-0 text-xs tabular-nums text-muted-foreground">{meta}</div>
 		</div>

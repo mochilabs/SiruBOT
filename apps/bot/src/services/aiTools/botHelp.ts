@@ -41,7 +41,7 @@ export const botHelpTool: AiTool = {
 	properties: {
 		query: {
 			type: 'string',
-			description: '결과를 필터할 키워드 — 명령어 이름·설명·카테고리 일부 (예: "음악", "청소"). 생략하면 전체 목록이에요.'
+			description: '결과를 필터할 키워드: 명령어 이름·설명·카테고리 일부 (예: "음악", "청소"). 생략하면 전체 목록이에요.'
 		}
 	},
 	required: [],

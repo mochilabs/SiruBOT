@@ -43,7 +43,7 @@ export class NodesCommand extends Command {
 				const statusEmoji = node.connected ? '🟢' : '🔴';
 				const stats = node.stats;
 
-				lines.push(`${statusEmoji} **${id}** — \`${node.options.host}:${node.options.port}\``);
+				lines.push(`${statusEmoji} **${id}**: \`${node.options.host}:${node.options.port}\``);
 
 				if (stats) {
 					const cpuLoad = (stats.cpu?.lavalinkLoad * 100).toFixed(1);

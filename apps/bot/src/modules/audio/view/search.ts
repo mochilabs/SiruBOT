@@ -30,7 +30,7 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 	const listText = tracks
 		.map(
 			(track, index) =>
-				`${index + 1}. **${truncate(track.info.title ?? '(제목 없음)', 60)}** — ${truncate(track.info.author ?? '알 수 없음', 40)} · ${trackDurationText(track)}`
+				`${index + 1}. **${truncate(track.info.title ?? '(제목 없음)', 60)}** · ${truncate(track.info.author ?? '알 수 없음', 40)} · ${trackDurationText(track)}`
 		)
 		.join('\n');
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(listText));

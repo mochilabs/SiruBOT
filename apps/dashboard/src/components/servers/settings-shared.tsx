@@ -26,10 +26,10 @@ export function PanelHeader({
 	return (
 		<header className="flex items-start justify-between gap-4">
 			<div className="flex items-start gap-3">
-				<span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">{icon}</span>
+				<span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-text">{icon}</span>
 				<div>
 					<h2 className="text-lg font-bold text-foreground">{title}</h2>
-					<p className="text-sm text-muted-foreground/80">{description}</p>
+					<p className="text-sm text-muted-foreground">{description}</p>
 				</div>
 			</div>
 			{action}
@@ -41,7 +41,7 @@ export function PanelHeader({
 
 /** 토큰 기반 안내 박스 */
 export function InfoBox({ children }: { children: ReactNode }) {
-	return <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground/80 space-y-1">{children}</div>;
+	return <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground space-y-1">{children}</div>;
 }
 
 /** 경고 박스 (상태 색상 관례: amber) */

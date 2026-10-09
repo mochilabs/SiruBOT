@@ -110,7 +110,7 @@ export class GuessCommand extends Command {
 					resultContainer([
 						`### ${emoji('party')} 정답!`,
 						`**${interaction.user.displayName}** 님의 정답: **${guess}**`,
-						`**${used}번** 만에 맞혔어요${used === 1 ? ' — 한 번에?! 🤯' : '!'}`,
+						`**${used}번** 만에 맞혔어요${used === 1 ? ', 한 번에?! 🤯' : '!'}`,
 						'',
 						recordLine
 					])
@@ -132,7 +132,7 @@ export class GuessCommand extends Command {
 						`### ${emoji('boom')} 게임 오버`,
 						`**${interaction.user.displayName}** 님의 추측: **${guess}**`,
 						`정답은 **${session.target}** 이었어요.`,
-						`기회 ${MAX_ATTEMPTS}번을 다 썼어요 — 다시 도전해 보세요!`
+						`기회 ${MAX_ATTEMPTS}번을 다 썼어요. 다시 도전해 보세요!`
 					])
 				],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]

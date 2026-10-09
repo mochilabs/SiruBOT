@@ -57,13 +57,13 @@ function buildWeekLines(result: WeatherResult): string[] {
 	if (result.daily.length === 0) return ['예보 정보를 가져올 수 없어요.'];
 	return result.daily.map(
 		(day) =>
-			`${day.date.slice(5)} (${day.date.slice(0, 4)}) — ${day.weatherTextKo} · ${formatTempRange(day)}${day.precipitationProbabilityMaxPct != null ? ` · 강수 ${Math.round(day.precipitationProbabilityMaxPct)}%` : ''}`
+			`${day.date.slice(5)} (${day.date.slice(0, 4)}): ${day.weatherTextKo} · ${formatTempRange(day)}${day.precipitationProbabilityMaxPct != null ? ` · 강수 ${Math.round(day.precipitationProbabilityMaxPct)}%` : ''}`
 	);
 }
 
 function buildContainer(result: WeatherResult) {
 	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
-	const lines = [`### ${emoji('sun_cloud')} ${locationLine} — ${SCOPE_LABELS[result.scope]}`, ''];
+	const lines = [`### ${emoji('sun_cloud')} ${locationLine} · ${SCOPE_LABELS[result.scope]}`, ''];
 	lines.push(...(result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result)));
 	lines.push('');
 	lines.push(`-# Open-Meteo 기준 · 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);

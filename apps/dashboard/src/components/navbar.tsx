@@ -136,8 +136,8 @@ export function Navbar() {
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link)}
                   className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
-                      ? "bg-primary/10 text-primary"
-                      : "text-foreground/70 hover:bg-primary/5 hover:text-primary"
+                      ? "bg-primary/10 text-primary-text"
+                      : "text-foreground/70 hover:bg-primary/5 hover:text-primary-text"
                     }`}
                 >
                   <span className="relative z-10">{link.label}</span>
@@ -156,7 +156,7 @@ export function Navbar() {
                   onClick={() => setCommandPaletteOpen(true)}
                   title="명령 팔레트 (⌘K)"
                   aria-label="명령 팔레트 열기"
-                  className="h-9 w-9 border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary"
+                  className="h-9 w-9 border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary-text"
                 >
                   <Search size={18} />
                 </Button>
@@ -193,7 +193,7 @@ export function Navbar() {
                           <Link
                             href="/profile"
                             onClick={() => setProfileOpen(false)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary-text transition-colors"
                           >
                             <span>내 프로필</span>
                             <User size={16} />
@@ -202,7 +202,7 @@ export function Navbar() {
                           {mounted && (
                             <button
                               onClick={toggleTheme}
-                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary transition-colors"
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary-text transition-colors"
                             >
                               <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
                               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -227,7 +227,7 @@ export function Navbar() {
                         variant="icon"
                         size="lg"
                         onClick={toggleTheme}
-                        className="relative w-11 h-11 overflow-hidden group border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary duration-base"
+                        className="relative w-11 h-11 overflow-hidden group border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary-text duration-base"
                       >
                         <AnimatePresence mode="popLayout" initial={false}>
                           <m.div
@@ -246,7 +246,7 @@ export function Navbar() {
                     <Button
                       variant="secondary"
                       onClick={() => signIn("discord")}
-                      className="h-11 px-6 border-border-subtle bg-surface-1 font-bold text-foreground/80 hover:border-primary/30 hover:bg-primary/10 hover:text-primary duration-base"
+                      className="h-11 px-6 border-border-subtle bg-surface-1 font-bold text-foreground/80 hover:border-primary/30 hover:bg-primary/10 hover:text-primary-text duration-base"
                     >
                       대시보드 시작하기
                     </Button>

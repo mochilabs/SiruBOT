@@ -101,7 +101,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 
 			{channelsError && (
 				<WarningBox>
-					채널 목록을 불러오지 못했어요. — {channelsError.message}{" "}
+					채널 목록을 불러오지 못했어요. ({channelsError.message}){" "}
 					<button type="button" className="font-semibold underline" onClick={reloadChannels}>
 						다시 시도
 					</button>
@@ -116,14 +116,14 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 					label="임시 음성채널 사용"
 					labelPosition="left"
 				/>
-				{!form.jtcMarkerChannelId && <span className="text-xs text-muted-foreground/70">먼저 아래에서 카테고리를 설정해 주세요.</span>}
+				{!form.jtcMarkerChannelId && <span className="text-xs text-muted-foreground">먼저 아래에서 카테고리를 설정해 주세요.</span>}
 			</div>
 
 			<Field
 				label="생성 위치 (카테고리)"
 				description={
 					<>
-						선택하면 바로 반영돼요 — <code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">🔊 임시방 만들기</code> 마커
+						선택하면 바로 반영돼요: <code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">🔊 임시방 만들기</code> 마커
 						채널이 해당 카테고리로 만들어지거나 옮겨져요. (채널 관리 권한이 필요해요)
 					</>
 				}
@@ -141,7 +141,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 			{form.jtcMarkerChannelId && (
 				<InfoBox>
 					<p>
-						마커 채널: <span className="font-semibold text-foreground">{markerName}</span> — 멤버가 이 채널에 들어가면 임시방이
+						마커 채널: <span className="font-semibold text-foreground">{markerName}</span>. 멤버가 이 채널에 들어가면 임시방이
 						생겨요. 채널을 삭제해도 다음 설정 시 다시 만들어져요.
 					</p>
 					<p>마커 채널을 아예 제거하려면 Discord 서버에서 해당 채널을 삭제해 주세요.</p>
@@ -159,7 +159,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 						onChange={(e) => patch({ jtcTemplate: e.target.value })}
 						placeholder="{user}의 방"
 					/>
-					<p className="pt-1 text-xs text-muted-foreground/70">
+					<p className="pt-1 text-xs text-muted-foreground">
 						예시: <span className="font-semibold text-foreground">{templatePreview}</span>
 					</p>
 				</Field>

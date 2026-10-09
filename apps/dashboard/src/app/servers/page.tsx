@@ -55,13 +55,13 @@ export default function ServersPage() {
                     {session?.user?.image ? (
                         <Image src={session.user.image} alt="User avatar" width={40} height={40} className="rounded-full ring-2 ring-primary/20 relative z-10" />
                     ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary relative z-10">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary-text relative z-10">
                             {session?.user?.name?.charAt(0) || "U"}
                         </div>
                     )}
                     <div className="relative z-10">
                         <p className="text-sm font-black text-foreground">{session?.user?.name}</p>
-                        <p className="text-xs font-medium text-muted-foreground/60">내 계정이 아닌가요? <button onClick={() => signOut()} className="text-primary hover:underline cursor-pointer">로그아웃</button></p>
+                        <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button onClick={() => signOut()} className="text-primary-text hover:underline cursor-pointer">로그아웃</button></p>
                     </div>
                 </div>
             </PageHeader>
@@ -87,7 +87,7 @@ export default function ServersPage() {
                                 href={buildInviteUrl({})}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex h-10 items-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary transition-colors duration-fast hover:bg-primary hover:text-primary-foreground"
+                                className="inline-flex h-10 items-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary hover:text-primary-foreground"
                             >
                                 시루봇 초대하기
                             </a>

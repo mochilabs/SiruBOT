@@ -4,7 +4,7 @@
  * 이름/핸들, 온라인 캡슐, 역할 캡슐, 두 날짜(디스코드 가입/서버 합류),
  * 아래에 지금 재생 중 + 자주 신청한 곡. 이모지 대신 lucide 벡터 아이콘.
  */
-import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawCircleImage, drawIcon, ensureKoreanFont, hashString, loadImageAllowed, truncate } from './canvasUtils.ts';
 import { drawMusicSection, measureMusicSection, type CardPalette, type ProfileNowPlaying } from './profileWidgets.ts';
 

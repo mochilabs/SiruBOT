@@ -85,7 +85,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			// 그 안에 재시작됐을 때 서버 플레이어가 그대로 이어진다.
 			if (node.sessionId) void node.updateSession(true, 60 * 5).catch(() => null);
 			if (data.resumed === false) {
-				this.logger.info(`Node ${node.options.id} started a fresh session — restoring players from store`);
+				this.logger.info(`Node ${node.options.id} started a fresh session: restoring players from store`);
 				void this.restoreFreshSession(node).catch((error) => this.logger.error(`Fresh session restore failed: ${error}`));
 			}
 		}, 0);

@@ -4,7 +4,7 @@
  * 아바타/이름/핸들/온라인/소개/역할/두 날짜, 스텁엔 세로 대형 @{id},
  * 본문에 지금 재생 중 + 2x2 미니 스탯. 이모지 대신 lucide 벡터 아이콘.
  */
-import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawCircleImage, drawIcon, ensureKoreanFont, loadImageAllowed, truncate } from './canvasUtils.ts';
 import { drawMusicSection, measureMusicSection, type ProfileNowPlaying } from './profileWidgets.ts';
 

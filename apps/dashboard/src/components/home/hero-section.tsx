@@ -160,7 +160,7 @@ export function HeroSection() {
 							<>
 								시루봇과 함께
 								<br />
-								<span className="text-primary">
+								<span className="text-primary-text">
 									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
 								</span>{" "}
 								만들어봐요
@@ -173,7 +173,7 @@ export function HeroSection() {
 									</m.span>
 								))}
 								<br />
-								<m.span className="inline-block whitespace-pre text-primary" variants={headlineTypingVariants}>
+								<m.span className="inline-block whitespace-pre text-primary-text" variants={headlineTypingVariants}>
 									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
 								</m.span>{" "}
 								<m.span className="inline-block whitespace-pre" variants={headlineWordVariants}>
@@ -185,7 +185,7 @@ export function HeroSection() {
 
 					<m.p
 						variants={itemVariants}
-						className="max-w-xl text-base font-medium leading-relaxed text-muted-foreground/80 break-keep sm:text-lg lg:mx-0"
+						className="max-w-xl text-base font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg lg:mx-0"
 					>
 						음악 재생부터 AI 채팅, 서버 관리까지.
 						<br className="hidden sm:block" />
@@ -210,7 +210,8 @@ export function HeroSection() {
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">슬래시 명령어</dt>
 							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
-								<CountUpStat end={45} suffix="개" />
+								{/* 실측: 2026-10-09, 톱레벨 extends Command 23 + 서브커맨드 49(인라인 31 + 파일 18) */}
+								<CountUpStat end={72} suffix="개" />
 							</dd>
 						</div>
 						<div>
@@ -222,7 +223,8 @@ export function HeroSection() {
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>
 							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
-								<CountUpStat end={28} suffix="K+" />
+								{/* 실측 불가한 이전 "28K+" 통계 제거(R-17). 실제 서버 수는 로그인 후 /shards에서 확인 가능 */}
+								<span>서버 상태에서 확인</span>
 							</dd>
 						</div>
 					</m.dl>
@@ -310,7 +312,7 @@ export function HeroSection() {
 					type="button"
 					onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
 					aria-label="아래로 스크롤해서 기능 보기"
-					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground/50 transition-colors duration-fast hover:text-primary"
+					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.2, duration: 0.6 }}

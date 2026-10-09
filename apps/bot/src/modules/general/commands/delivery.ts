@@ -23,7 +23,7 @@ function buildContainer(result: DeliveryTrackResult, trackingNumber: string) {
 		lines.push('', '**최근 배송 내역**');
 		for (const progress of result.progresses.slice(0, MAX_PROGRESS_LINES)) {
 			const parts = [progress.time ?? '시각 미상', progress.statusText].filter(Boolean).join(' · ');
-			const location = progress.location ? ` — ${progress.location}` : '';
+			const location = progress.location ? ` · ${progress.location}` : '';
 			lines.push(`- ${parts}${location}`);
 		}
 		if (result.progresses.length > MAX_PROGRESS_LINES) lines.push(`- 그 외 ${result.progresses.length - MAX_PROGRESS_LINES}건 더 있어요.`);

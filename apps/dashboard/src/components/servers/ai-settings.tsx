@@ -192,10 +192,10 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 						}`}
 						>
 							<span className="flex items-center gap-2 text-sm font-bold text-foreground">
-								<span className={active ? "text-primary" : "text-muted-foreground"}>{card.icon}</span>
+								<span className={active ? "text-primary-text" : "text-muted-foreground"}>{card.icon}</span>
 								{card.label}
 							</span>
-							<span className="mt-1 block text-xs text-muted-foreground/80">{card.description}</span>
+							<span className="mt-1 block text-xs text-muted-foreground">{card.description}</span>
 							{active && (
 								<span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
 									<Check size={12} />
@@ -226,7 +226,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 					</Field>
 					{channelsError && (
 						<WarningBox>
-							채널 목록을 불러오지 못했어요. — {channelsError.message}{" "}
+							채널 목록을 불러오지 못했어요. ({channelsError.message}){" "}
 							<button type="button" className="font-semibold underline" onClick={reloadChannels}>
 								다시 시도
 							</button>

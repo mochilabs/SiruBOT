@@ -91,6 +91,19 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 never mapped into `@theme`, so `bg-destructive`, `bg-popover`, `border-input`
 did not exist. They do now.
 
+Text-contrast corrections (2026-10-09 audit):
+
+| Token | Light | Dark | 유틸리티 |
+| --- | --- | --- | --- |
+| `--muted-foreground` | `#7e5e6a` (was `#8b6d75` — 4.32:1 미달) | `#c9a8b5` (변경 없음) | `text-muted-foreground` |
+| `--primary-text` (신설) | `#a3416f` | `#ff85c1` | `text-primary-text` |
+
+규칙:
+
+- `--primary`(#ff85c1)는 배경 전용(버튼/배지/하이라이트). **라이트 모드에서 텍스트·아이콘 색으로 `text-primary`를 쓰면 2.09:1로 AA 미달**이므로 반드시 `text-primary-text`를 쓴다.
+- `text-muted-foreground/NN`, `text-foreground/NN` 불투명도 파생은 모두 AA 미달(`/90`조차 라이트 4.3) — **텍스트는 파생 불투명도 없이 풀 토큰**을 쓴다. 경계선: `text-foreground/75` 이상만 예외적으로 허용(실측 6.7+).
+- 대비 근거 수치는 각 토큰 주석(globals.css)에 기록.
+
 ### Surfaces (opaque, replaces glass for new work)
 
 | Token | Light | Dark | Utility |
@@ -172,6 +185,11 @@ remaining `emerald-500/10`-style colours belong to untouched components.
 | `--motion-slow` | `500ms` | `duration-slow` |
 | `--ease-out-expo` | `cubic-bezier(.16,1,.3,1)` | `ease-standard` |
 
+MOTION 다이얼: **2** (스크롤 리빌 + 전환). 기록된 사유 기반 예외:
+`animate-marquee`(슬래시 커맨드 문화 제시 identity motif, hover 일시정지 있음), `BackgroundShapes`(배경 identity
+모티프 — 도형 3개로 제한, `hidden md:block`, reduced-motion 시 정지). 두 장식은 R-19 사유가 코드 주석과 이 문서에
+기록되어 있으므로 허용되며, 새 무한 루프 장식을 추가하려면 같은 방식으로 사유를 기록해야 한다.
+
 `duration-200/300/500/700` still work (numeric scale untouched); new code
 should use the named durations so timings stay tokenised.
 
@@ -195,6 +213,10 @@ Adding a component:
 ```bash
 yarn workspace @sirubot/dashboard exec shadcn add <name>
 ```
+
+Lucide 아이콘 선택 사유(R-04 기록): 봇이 Discord Components V2로 렌더하는 것과 톤을 맞추기 위해 컨트롤/상태
+아이콘은 stroke 기반 단일 셋(lucide)으로 통일한다. 실제 봇 출력 재현용 이모지(Discord 미리보기)는 제외 — 그것은
+데이터다.
 
 Two follow-ups are required, because the registry output does not match this
 repo's conventions yet:
@@ -230,6 +252,12 @@ Do not reintroduce glass. When picking a surface, judge by role:
 | Menu / popover / toast / notification | `bg-popover border border-border rounded-menu` + `shadow-2xl` |
 | Dialog / command palette | `bg-popover border border-border rounded-dialog` + `shadow-2xl` |
 | Layout wrapper, nav container, table shell, toolbar | not a Card — a plain surface |
+
+`--secondary`(#d4a574)는 장식(배경 shape 등) 전용 토큰이다. 컨트롤 배경으로 쓰면 white 텍스트 대비 2.23:1로
+R-25 위반이 되므로 버튼·배지 용도로 확장하지 않는다.
+
+탭 타깃(R-03): `Button`은 `pointer-coarse:min-h-11`(아이콘 버튼 `pointer-coarse:w-11`)로 터치 기기에서
+44px 이상을 보장한다. 데스크탑 fine-pointer 크기(h-8/9/10)는 유지된다.
 
 `panel` is available for a bare `bg-surface-1 + border + rounded-card`, but
 prefer a `Card` whenever the element is a real content block.

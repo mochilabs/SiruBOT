@@ -18,7 +18,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>SiruBOT Data API — 모니터링</title>
+<title>SiruBOT Data API · 모니터링</title>
 <style>
 	:root {
 		--bg: #0f1116;
@@ -188,7 +188,7 @@ function render(d) {
 	document.getElementById('pb-errors').innerHTML = errs.length
 		? '<table><thead><tr><th>시각</th><th>유형</th><th>곡</th><th>길드</th><th>샤드</th><th class="num">연속</th></tr></thead><tbody>' +
 			errs.map((e) => '<tr><td>' + fmtTime(e.at) + '</td><td><span class="badge ' + (e.type === 'playback_abort' ? 'err' : 'warn') + '">' + esc(e.type) + '</span></td>' +
-			'<td>' + esc(e.trackTitle || '-') + (e.trackAuthor ? ' <span style="color:var(--muted)">— ' + esc(e.trackAuthor) + '</span>' : '') + '</td>' +
+			'<td>' + esc(e.trackTitle || '-') + (e.trackAuthor ? ' <span style="color:var(--muted)">· ' + esc(e.trackAuthor) + '</span>' : '') + '</td>' +
 			'<td>' + esc(e.guildId) + '</td><td>' + (e.shardId != null ? e.shardId : '-') + '</td><td class="num">' + e.consecutiveErrors + '</td></tr>').join('') + '</tbody></table>'
 		: '<div class="empty">재생 오류가 없어요 🎉</div>';
 
@@ -212,7 +212,7 @@ function render(d) {
 			breakers.map(([name, b]) => '<tr><td>' + esc(name) + '</td><td><span class="badge ' +
 			(b.state === 'closed' ? 'ok' : b.state === 'half-open' ? 'warn' : 'err') + '">' + b.state + '</span></td><td class="num">' + b.failures + '</td></tr>').join('') +
 			'</tbody></table>'
-		: '<div class="empty">열린 브레이커 없음 — 모든 프로바이더 정상</div>';
+		: '<div class="empty">열린 브레이커 없음: 모든 프로바이더 정상</div>';
 
 	document.getElementById('updated').textContent = '업데이트 ' + new Date().toLocaleTimeString('ko-KR');
 	conn.innerHTML = '<span class="live">● 연결됨</span>';
