@@ -135,7 +135,7 @@ export async function fetchOhaasaRaw(): Promise<DailyHoroscope> {
 			if (res.ok) {
 				const rawData = await res.json();
 				const item = Array.isArray(rawData) ? rawData[0] : rawData;
-				if (item?.onair_date === todayCompact && item.detail) {
+				if (item?.onair_date === todayCompact && Array.isArray(item.detail)) {
 					dateStr = item.onair_date;
 					parsed = (item.detail as any[])
 						.sort((a, b) => parseInt(a.ranking_no, 10) - parseInt(b.ranking_no, 10))
