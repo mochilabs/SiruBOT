@@ -132,6 +132,20 @@ function envObject(values = []) {
 		})
 	);
 }
+function extraHosts(values, context) {
+	if (values === undefined) return undefined;
+	const mappings = new Map();
+	for (const value of values ?? []) {
+		const [address, ...hostnames] = value.trim().split(/\s+/);
+		if (!address || !hostnames.length) throw new Error(`${context}: Hosts 매핑은 IP와 hostname을 포함해야 합니다.`);
+		for (const hostname of hostnames) {
+			if (mappings.has(hostname) && mappings.get(hostname) !== address)
+				throw new Error(`${context}: 같은 hostname의 여러 IP는 Compose에서 보존할 수 없습니다.`);
+			mappings.set(hostname, address);
+		}
+	}
+	return [...mappings].map(([hostname, address]) => `${hostname}:${address}`).sort();
+}
 function updatePolicy(policy) {
 	if (!policy) return undefined;
 	supported(policy, ['Parallelism', 'Delay', 'FailureAction', 'Monitor', 'MaxFailureRatio', 'Order'], 'update policy');
@@ -298,7 +312,7 @@ export function composeService(spec, references) {
 		networks,
 		secrets: files(c.Secrets, 'secret'),
 		configs: files(c.Configs, 'config'),
-		extra_hosts: c.Hosts,
+		extra_hosts: extraHosts(c.Hosts, spec.Name),
 		dns: c.DNSConfig?.Nameservers,
 		dns_search: c.DNSConfig?.Search,
 		dns_opt: c.DNSConfig?.Options,

@@ -83,6 +83,7 @@ test(
 						"const s=require('http').createServer((q,r)=>r.end('ok'));s.listen(8080,'0.0.0.0');process.once('SIGTERM',()=>s.close(()=>process.exit(0)))"
 					],
 					environment: { KEEP: 'original', PORT: '8080' },
+					extra_hosts: ['upstream.test:192.0.2.1', 'ipv6.test:2001:db8::1'],
 					networks: { shared: { aliases: [app] } },
 					healthcheck: {
 						test: [
@@ -163,6 +164,7 @@ test(
 			const bot = services.find((item) => item.Spec.Name.endsWith('_bot'));
 			assert.equal(bot.Spec.Mode.Replicated.Replicas, 2);
 			assert.deepEqual(bot.Spec.TaskTemplate.Placement.Constraints, ['node.role == worker']);
+			assert.deepEqual([...bot.Spec.TaskTemplate.ContainerSpec.Hosts].sort(), ['192.0.2.1 upstream.test', '2001:db8::1 ipv6.test'].sort());
 			assert.ok(bot.Spec.TaskTemplate.ContainerSpec.Env.includes('AUTH_KEY=literal $HOME $(do-not-run)'));
 			console.log('Application deployment converged; checking no-op and infrastructure');
 			const firstIds = ids();
@@ -199,6 +201,7 @@ test(
 			await main(['rollback', '--config', configPath], docker, () => {});
 			const restored = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
 			assert.deepEqual(restored.Spec.TaskTemplate.ContainerSpec.Env.sort(), ['KEEP=original', 'PORT=8080']);
+			assert.deepEqual([...restored.Spec.TaskTemplate.ContainerSpec.Hosts].sort(), ['192.0.2.1 upstream.test', '2001:db8::1 ipv6.test'].sort());
 			assert.equal(logs.join('\n').includes('literal $HOME'), false);
 		} finally {
 			for (const stack of [appStack, infraStack]) {

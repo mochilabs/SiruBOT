@@ -33,4 +33,4 @@ jobs:
         run: yarn lint
 
       - name: Test deployment tools
-        run: node --test scripts/deploy.test.mjs scripts/deployment-manifest.test.mjs
+        run: node --test scripts/deploy.test.mjs scripts/deployment-manifest.test.mjs scripts/deploy.compose.test.mjs
