@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useInView } from "react-intersection-observer";
 import { BarChart3, Music, Play, User } from "lucide-react";
 import useSWR from "swr";
 
@@ -38,9 +39,24 @@ function requesterLabel(userId: string): string {
   return `사용자 ${userId.slice(0, 6)}…`;
 }
 
+/** 리스트 항목 스태거 간격(ms) — 10개 항목 기준 마지막 딜레이 405ms */
+const STAGGER_STEP_MS = 45;
+/** 막대 미세 스태거 간격(ms) — 30개(30일) 기준 마지막 딜레이 348ms */
+const BAR_STAGGER_STEP_MS = 12;
+
+/**
+ * 뷰포트 진입(triggerOnce) + CSS 전환으로 등장시킨다 — track.tsx AnimatedTrackItem 패턴.
+ * framer-motion 개별 래퍼 대신 사용 — 요소 수가 적고(≤10/30개) JS 오버헤드가 낮다.
+ */
+function useReveal() {
+  return useInView({ triggerOnce: true, threshold: 0.05 });
+}
+
 /* ─────────────────────────── TOP 트랙 ─────────────────────────── */
 
 function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"] }) {
+  const { ref, inView } = useReveal();
+
   if (tracks.length === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">집계된 트랙이 없어요.</p>
@@ -48,11 +64,16 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
   }
 
   return (
-    <ol className="space-y-2">
+    <ol ref={ref} className="space-y-2">
       {tracks.map((track, index) => (
         <li
           key={track.trackId}
           className="flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2"
+          style={{
+            opacity: inView ? 1 : 0,
+            transform: inView ? "none" : "translateY(16px)",
+            transition: `opacity var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms, transform var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms`,
+          }}
         >
           <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
             {index + 1}
@@ -85,6 +106,8 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
 /* ─────────────────────────── 요청자 ─────────────────────────── */
 
 function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["topRequesters"] }) {
+  const { ref, inView } = useReveal();
+
   if (requesters.length === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">집계된 요청자가 없어요.</p>
@@ -92,11 +115,16 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
   }
 
   return (
-    <ol className="space-y-2">
+    <ol ref={ref} className="space-y-2">
       {requesters.map((requester, index) => (
         <li
           key={requester.userId}
           className="flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2"
+          style={{
+            opacity: inView ? 1 : 0,
+            transform: inView ? "none" : "translateY(16px)",
+            transition: `opacity var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms, transform var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms`,
+          }}
         >
           <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
             {index + 1}
@@ -117,6 +145,8 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
 /* ─────────────────────────── 일별 재생 막대 ─────────────────────────── */
 
 function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dailyCounts"] }) {
+  const { ref, inView } = useReveal();
+
   if (dailyCounts.length === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">일별 재생 기록이 없어요.</p>
@@ -127,13 +157,18 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
 
   return (
     <div className="space-y-2">
-      <div className="flex h-24 items-end gap-1">
-        {dailyCounts.map((entry) => (
+      {/* 컨테이너 1회 트리거 + 인덱스 기반 transitionDelay 미세 스태거 (막대 30개 → 개별 useInView는 비용 과다) */}
+      <div ref={ref} className="flex h-24 items-end gap-1">
+        {dailyCounts.map((entry, index) => (
           <div
             key={entry.date}
             title={`${formatDate(entry.date)} — ${entry.count}회`}
-            className="min-w-[0px] flex-1 rounded-t bg-primary/60"
-            style={{ height: `${max > 0 ? Math.max(4, (entry.count / max) * 100) : 4}%` }}
+            className="min-w-[0px] flex-1 origin-bottom rounded-t bg-primary/60"
+            style={{
+              height: `${max > 0 ? Math.max(4, (entry.count / max) * 100) : 4}%`,
+              transform: inView ? "scaleY(1)" : "scaleY(0)",
+              transition: `transform var(--motion-slow) var(--ease-out-expo) ${index * BAR_STAGGER_STEP_MS}ms`,
+            }}
           />
         ))}
       </div>
@@ -185,9 +220,9 @@ function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-page-in">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={Play} label="총 재생" value={data.totalPlays.toLocaleString("ko-KR")} />
+        <StatCard icon={Play} label="총 재생" value={data.totalPlays} />
         <StatCard
           icon={BarChart3}
           label="재생한 날"

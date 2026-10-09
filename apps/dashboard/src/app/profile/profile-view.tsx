@@ -5,9 +5,11 @@ import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send } from "lucide-r
 
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
+import { RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { Avatar } from "@/components/primitives/avatar";
 import { Badge } from "@/components/primitives/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
+import { useCountUp } from "@/hooks/use-count-up";
 import { formatTotalDuration } from "@/hooks/use-playlists";
 import type {
   ProfileAttendance,
@@ -50,6 +52,18 @@ function MockThumbnail({ className }: { className: string }) {
   );
 }
 
+/** 출석 연속 일수 — 뷰포트 진입 시 카운트업 */
+function StreakCount({ streak }: { streak: number }) {
+  const { ref, value } = useCountUp({ end: streak });
+
+  return (
+    <p className="text-4xl font-black tabular-nums text-foreground">
+      <span ref={ref}>{Math.round(value).toLocaleString("ko-KR")}</span>
+      <span className="ml-1 text-base font-bold text-muted-foreground">일 연속</span>
+    </p>
+  );
+}
+
 /* ─────────────────────────── component ─────────────────────────── */
 
 export function ProfileView({ user, birthday, music, games, attendance }: ProfileViewProps) {
@@ -61,45 +75,47 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
         <Avatar src={user.image} alt={user.name} fallback={user.name} size="lg" ring />
       </PageHeader>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <RevealGroup className="grid gap-4 md:grid-cols-2" stagger={0.1}>
         {/* 생일 카드 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Cake className="h-4 w-4 text-primary" aria-hidden />
-              생일
-            </CardTitle>
-            <CardDescription>
-              {hasBirthday
-                ? `${birthday.month}월 ${birthday.day}일 · ${birthday.zodiac?.ko ?? "별자리 없음"}`
-                : "봇 `/프로필 생일 등록` 커맨드로 등록할 수 있어요."}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <RevealItem>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cake className="h-4 w-4 text-primary" aria-hidden />
+                생일
+              </CardTitle>
+              <CardDescription>
+                {hasBirthday
+                  ? `${birthday.month}월 ${birthday.day}일 · ${birthday.zodiac?.ko ?? "별자리 없음"}`
+                  : "봇 `/프로필 생일 등록` 커맨드로 등록할 수 있어요."}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </RevealItem>
 
         {/* 출석 카드 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4 text-primary" aria-hidden />
-              출석
-            </CardTitle>
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-4xl font-black tabular-nums text-foreground">
-                {attendance.streak}
-                <span className="ml-1 text-base font-bold text-muted-foreground">일 연속</span>
-              </p>
-              {attendance.checkedInToday ? (
-                <Badge variant="success">오늘 출석 완료</Badge>
-              ) : (
-                <Badge variant="warning">오늘 미출석 — 디스코드 `/출석` 으로 체크</Badge>
-              )}
-            </div>
-          </CardHeader>
-        </Card>
+        <RevealItem>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarCheck className="h-4 w-4 text-primary" aria-hidden />
+                출석
+              </CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <StreakCount streak={attendance.streak} />
+                {attendance.checkedInToday ? (
+                  <Badge variant="success">오늘 출석 완료</Badge>
+                ) : (
+                  <Badge variant="warning">오늘 미출석 — 디스코드 `/출석` 으로 체크</Badge>
+                )}
+              </div>
+            </CardHeader>
+          </Card>
+        </RevealItem>
 
         {/* 게임 전적 카드 */}
-        <Card className="md:col-span-2">
+        <RevealItem className="md:col-span-2">
+          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gamepad2 className="h-4 w-4 text-primary" aria-hidden />
@@ -130,8 +146,9 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
               <p className="text-sm text-muted-foreground">-</p>
             )}
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </RevealItem>
+      </RevealGroup>
 
       {/* 음악 통계 */}
       <div className="mt-6 space-y-3">
@@ -139,16 +156,22 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
           <ListMusic className="h-5 w-5 text-primary" aria-hidden />
           음악 통계
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard icon={ListMusic} label="플레이리스트 수" value={`${music.playlistCount.toLocaleString()}개`} />
-          <StatCard icon={Send} label="총 신청 곡" value={`${music.requestedCount.toLocaleString()}곡`} />
-          <StatCard
-            icon={Music4}
-            label="청취 시간"
-            value={formatTotalDuration(music.listenMs)}
-            sub={music.listenSampled ? "(최근 500곡 기준)" : undefined}
-          />
-        </div>
+        <RevealGroup className="grid gap-4 sm:grid-cols-3">
+          <RevealItem>
+            <StatCard icon={ListMusic} label="플레이리스트 수" value={music.playlistCount} />
+          </RevealItem>
+          <RevealItem>
+            <StatCard icon={Send} label="총 신청 곡" value={music.requestedCount} />
+          </RevealItem>
+          <RevealItem>
+            <StatCard
+              icon={Music4}
+              label="청취 시간"
+              value={formatTotalDuration(music.listenMs)}
+              sub={music.listenSampled ? "(최근 500곡 기준)" : undefined}
+            />
+          </RevealItem>
+        </RevealGroup>
 
         {/* TOP 5 트랙 */}
         <Card className="mt-2">
@@ -157,45 +180,46 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
           </CardHeader>
           <CardContent>
             {music.topTracks.length > 0 ? (
-              <ul className="space-y-2">
+              <RevealGroup className="space-y-2">
                 {music.topTracks.map((track, i) => (
-                  <li
-                    key={`${track.title}-${track.artist}-${i}`}
-                    className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/30 transition-colors duration-fast"
-                  >
-                    <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground/60">
-                      {i + 1}
-                    </span>
-                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/20">
-                      {track.thumbnail ? (
-                        <Image
-                          src={track.thumbnail}
-                          alt={track.title}
-                          fill
-                          sizes="48px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <MockThumbnail className="h-full w-full" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black text-foreground" title={track.title}>
-                        {track.title}
-                      </p>
-                      <p className="truncate text-xs font-bold text-muted-foreground/70" title={track.artist}>
-                        {track.artist}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-black tabular-nums text-primary">{track.count.toLocaleString()}회</p>
-                      <p className="text-xs font-medium text-muted-foreground/40">
-                        {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
-                      </p>
-                    </div>
-                  </li>
+                  <RevealItem key={`${track.title}-${track.artist}-${i}`}>
+                    <li
+                      className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/30 transition-colors duration-fast"
+                    >
+                      <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground/60">
+                        {i + 1}
+                      </span>
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/20">
+                        {track.thumbnail ? (
+                          <Image
+                            src={track.thumbnail}
+                            alt={track.title}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <MockThumbnail className="h-full w-full" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-black text-foreground" title={track.title}>
+                          {track.title}
+                        </p>
+                        <p className="truncate text-xs font-bold text-muted-foreground/70" title={track.artist}>
+                          {track.artist}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black tabular-nums text-primary">{track.count.toLocaleString()}회</p>
+                        <p className="text-xs font-medium text-muted-foreground/40">
+                          {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
+                        </p>
+                      </div>
+                    </li>
+                  </RevealItem>
                 ))}
-              </ul>
+              </RevealGroup>
             ) : (
               <p className="py-6 text-center text-sm text-muted-foreground">
                 아직 신청 기록이 없어요. 디스코드에서 음악을 신청해보세요!
