@@ -72,6 +72,8 @@ Docker 연결·인증·실행 환경에 영향을 주는 변수 변경은 적용
 호스트 매핑은 Swarm의 `IP hostname`을 Compose 형식으로 변환하며 IPv6도 보존한다.
 기본 제한은 10분, 확인 주기는 5초, 안정성 확인 기간은 30초다. 설정 파일에서 조절할 수 있다.
 같은 이미지·설정은 다시 적용하지 않으므로 불필요한 재시작을 하지 않는다.
+부분 배포에서도 변경하지 않는 서비스는 적용에서 제외한다. 해당 서비스의 과거 `rollback_completed`는
+명령 시작 시의 설정·상태가 유지되고 실행 task가 현재 설정과 일치하면 정상으로 인정한다. 이번 배포에서 발생한 rollback은 실패로 처리한다.
 봇은 stop-first로 갱신하며 종료 유예는 기존 값과 30초 중 큰 값을 사용한다.
 봇 이미지의 Prisma migration·Lavalink 세션 저장/복구 동작은 그대로다.
 
@@ -88,7 +90,8 @@ node scripts/deploy.mjs --with-infra
 기본 배포는 기존 PostgreSQL/Redis/Lavalink를 건드리지 않는다.
 `--with-infra`는 기존 Redis/PostgreSQL stack을 현재 구성으로 재적용하고 저장 노드를 고정한다.
 인프라의 기존 환경 변수, 데이터 볼륨 이름, 실행 중인 이미지 digest를 사용한다. PostgreSQL major 버전을 올리지 않는다.
-데이터 서비스는 replica 1개와 실행 중인 task가 필요하며, task와 서비스의 mount가 일치해야 한다.
+데이터 서비스는 replica 1개와 실행 중인 task가 필요하며, task와 서비스의 mount 및 전체 컨테이너 설정이 일치해야 한다.
+이미지·PGDATA·시작 명령·인자·작업 디렉터리 등이 이전 task에 남아 있으면 앱과 인프라 모두 적용 전에 중단한다.
 PostgreSQL의 현재 `PGDATA`는 서비스 환경에 절대 경로로 명시되어 있어야 한다.
 Redis가 외부 `.conf` 파일을 사용하는 경우 데이터 경로를 자동 확인할 수 없어 인프라 적용을 중단한다.
 실제 사용 중인 볼륨과 저장 노드가 확정되지 않거나 이미지가 digest로 고정되지 않았으면 적용을 중단한다.
