@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,6 +8,13 @@ import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 
 /** 외부 noembed API 타임아웃 — 무응답 연결 고갈 방지 */
 const NOEMBED_TIMEOUT_MS = 10_000;
+
+const addTrackSchema = z
+  .object({
+    trackId: z.string().trim().min(1).max(64).optional(),
+    youtubeUrl: z.string().trim().min(1).optional(),
+  })
+  .refine((body) => body.trackId !== undefined || body.youtubeUrl !== undefined);
 
 export async function POST(
   request: Request,
@@ -53,8 +61,28 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
-    const { trackId, youtubeUrl } = body;
+    const parsed = addTrackSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "추가할 곡의 정보가 올바르지 않습니다." },
+        { status: 400 },
+      );
+    }
+
+    const { trackId, youtubeUrl } = parsed.data;
+
+    // URL 경유가 아니라 trackId 직접 지정이면 실제 존재하는 곡인지 확인해요 (favorites와 같은 방식)
+    if (trackId) {
+      const track = await db.track.findUnique({ where: { id: trackId } });
+      if (!track) {
+        return NextResponse.json(
+          { error: "곡을 찾을 수 없어요." },
+          { status: 404 },
+        );
+      }
+    }
 
     let finalTrackId = trackId;
 

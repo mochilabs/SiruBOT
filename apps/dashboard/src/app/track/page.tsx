@@ -1,8 +1,10 @@
 "use client";
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { LogIn, Search } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
@@ -10,6 +12,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
+import { buttonVariants } from "@/components/primitives/button";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
@@ -20,9 +23,14 @@ function TrackContent() {
   const query = searchParams.get("query") || "";
   const page = searchParams.get("page") || "1";
 
+  // /api/tracks는 로그인 필수라 비로그인이면 요청 자체를 막아요
+  const { status } = useSession();
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`,
+    status === "authenticated"
+      ? `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`
+      : null,
   );
+  const loading = status === "loading" || isLoading;
 
   const tracks = data?.tracks || [];
   const totalCount = data?.totalCount || 0;
@@ -30,6 +38,28 @@ function TrackContent() {
   const totalPages = data?.totalPages || 0;
   const currentPage = parseInt(page);
   const rankOffset = (currentPage - 1) * PAGE_SIZE;
+
+  if (status === "unauthenticated") {
+    return (
+      <Container>
+        <div className="pt-20">
+          <EmptyState
+            icon={LogIn}
+            title="로그인이 필요해요."
+            description="로그인하면 재생 순위와 곡 검색을 이용할 수 있어요."
+            action={
+              <Link
+                href="/api/auth/signin?callbackUrl=/track"
+                className={buttonVariants({ variant: "primary" })}
+              >
+                로그인하기
+              </Link>
+            }
+          />
+        </div>
+      </Container>
+    );
+  }
 
   if (error) {
     return (
@@ -69,7 +99,7 @@ function TrackContent() {
                 </span>
               </div>
               <span className="text-base sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
-                {isLoading ? "---" : totalCount.toLocaleString()}
+                {loading ? "---" : totalCount.toLocaleString()}
               </span>
             </div>
 
@@ -80,7 +110,7 @@ function TrackContent() {
                 </span>
               </div>
               <span className="text-base sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
-                {isLoading ? "---" : totalPlaybacks.toLocaleString()}
+                {loading ? "---" : totalPlaybacks.toLocaleString()}
               </span>
             </div>
           </div>
@@ -88,7 +118,7 @@ function TrackContent() {
       </PageHeader>
 
       <section className="space-y-6 min-h-[500px] relative">
-        {isLoading ? (
+        {loading ? (
           <Loader text="차트 정보를 불러오는 중..." />
         ) : tracks.length === 0 ? (
           <EmptyState

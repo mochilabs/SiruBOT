@@ -81,6 +81,15 @@ export async function POST(
       );
     }
 
+    // destinationIndex에 상한이 없으면 목록 끝을 넘긴 position으로 빈틈이 생겨요
+    const trackCount = await db.playlistTrack.count({ where: { playlistId } });
+    if (destinationIndex >= trackCount) {
+      return NextResponse.json(
+        { error: "이동 경로 정보가 유효하지 않습니다." },
+        { status: 400 },
+      );
+    }
+
     // Run reordering inside a transaction
     await db.$transaction(async (tx) => {
       // 1. Temporarily move the target track to a position outside the unique bounds (-1)

@@ -7,7 +7,7 @@ import {
   MAX_PLAYLIST_DESCRIPTION_LENGTH,
   MAX_PLAYLISTS_PER_USER,
 } from "@/lib/playlist-constants";
-import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { guardRateLimit, rateKey, READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 
 const createPlaylistSchema = z.object({
   name: z
@@ -56,6 +56,12 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limited = guardRateLimit(
+    rateKey("playlists-get", session.user.id),
+    READ_RATE,
+  );
+  if (limited) return limited;
 
   try {
     const userId = session.user.id;

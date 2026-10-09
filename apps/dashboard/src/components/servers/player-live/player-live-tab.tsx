@@ -110,7 +110,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 						size="sm"
 						variant={connected ? "success" : mode === "stream" ? "warning" : "default"}
 					>
-						{mode === "stream" ? (connected ? "실시간" : "연결 중…") : "폴링 2초"}
+						{mode === "stream" ? (connected ? "실시간" : "연결 중…") : `폴링 ${FALLBACK_POLL_INTERVAL_MS / 1000}초`}
 					</Badge>
 				</div>
 				<span className="text-2xs text-muted-foreground">
@@ -240,8 +240,11 @@ interface LivePayload {
 	hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
 
+/** 폴백 폴링 주기 — 2000ms면 READ_RATE(분당 30회) 경계에 딱 붙어 윈도우 지터로 429가 튀니 분당 24회로 낮춰요. */
+const FALLBACK_POLL_INTERVAL_MS = 2500;
+
 export default function PlayerLiveTab({ guildId }: { guildId: string }) {
-	/** SSE 실패(미지원/장애) 시 폴백하는 2초 폴링과 상태를 구분해요. */
+	/** SSE 실패(미지원/장애) 시 폴백하는 폴링 모드와 상태를 구분해요. */
 	const [mode, setMode] = useState<"stream" | "polling">("stream");
 	const [liveData, setLiveData] = useState<LivePayload | null>(null);
 	const [connected, setConnected] = useState(false);
@@ -250,7 +253,7 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 
 	// 폴링 폴백 + 초기 데이터 — 항상 구독해 키/훅 순서를 유지해요 (stream 모드에선 0초 폴링).
 	const { data: swrData, error, isLoading } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, {
-		refreshInterval: mode === "polling" ? 2000 : 0,
+		refreshInterval: mode === "polling" ? FALLBACK_POLL_INTERVAL_MS : 0,
 		keepPreviousData: true,
 	});
 
