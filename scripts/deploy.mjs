@@ -422,18 +422,23 @@ function makeStack(services, run) {
 	return JSON.parse(JSON.stringify(result));
 }
 
-export function taskSummary(service, tasks) {
+export function taskSummary(service, tasks, rollbackTargets = {}) {
+	const update = service.UpdateStatus?.State;
+	const restored = update === 'rollback_completed' && rollbackTargets[service.Spec.Name] === fingerprint(service.Spec);
 	const active = tasks.filter((task) => task.DesiredState === 'running');
 	const running = active.filter(
-		(task) => task.Status.State === 'running' && task.Spec.ContainerSpec.Image === service.Spec.TaskTemplate.ContainerSpec.Image
+		(task) =>
+			task.Status.State === 'running' &&
+			(restored
+				? fingerprint(task.Spec.ContainerSpec) === fingerprint(service.Spec.TaskTemplate.ContainerSpec)
+				: task.Spec.ContainerSpec.Image === service.Spec.TaskTemplate.ContainerSpec.Image)
 	);
 	const expected = service.Spec.Mode.Replicated.Replicas;
-	const update = service.UpdateStatus?.State;
 	return {
 		expected,
 		running: running.length,
-		ready: running.length === expected && active.length === expected && (!update || update === 'completed'),
-		failed: ['paused', 'rollback_paused', 'rollback_completed'].includes(update)
+		ready: running.length === expected && active.length === expected && (!update || update === 'completed' || restored),
+		failed: ['paused', 'rollback_paused'].includes(update) || (update === 'rollback_completed' && !restored)
 	};
 }
 
@@ -449,7 +454,7 @@ function tasksFor(service, run) {
 	return [];
 }
 
-export async function waitForServices(names, config, run = command, clock = Date.now, pause = sleep) {
+export async function waitForServices(names, config, run = command, clock = Date.now, pause = sleep, rollbackTargets = {}) {
 	const deadline = clock() + config.timeoutSeconds * 1000;
 	let stableSince;
 	let stableTasks;
@@ -459,7 +464,7 @@ export async function waitForServices(names, config, run = command, clock = Date
 		const taskIds = [];
 		for (const service of services) {
 			const tasks = tasksFor(service, run);
-			const status = taskSummary(service, tasks);
+			const status = taskSummary(service, tasks, rollbackTargets);
 			if (status.failed) throw new Error(`${service.Spec.Name}: Swarm 업데이트 중단 또는 자동 rollback이 감지됐습니다.`);
 			allReady &&= status.ready;
 			taskIds.push(...tasks.filter((task) => task.DesiredState === 'running').map((task) => task.ID));
@@ -645,6 +650,12 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			}
 		}
 		const changed = APPS.filter((app) => fingerprint(before.services[app]) !== fingerprint(desired.services[app]));
+		// Only a manual rollback whose saved target already matches the live spec may
+		// acknowledge a completed automatic rollback without updating the service again.
+		const rollbackTargets =
+			opts.action === 'rollback'
+				? Object.fromEntries(APPS.filter((app) => !changed.includes(app)).map((app) => [current[app].Spec.Name, fingerprint(current[app].Spec)]))
+				: {};
 		log(
 			`${opts.action === 'rollback' ? '복원' : '배포'} 대상: ${config.appStack}${manifest ? ` / CI ${manifest.runId} / ${manifest.commit.slice(0, 7)}` : ''}`
 		);
@@ -691,7 +702,10 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		await waitForServices(
 			APPS.map((app) => `${config.appStack}_${app}`),
 			config,
-			run
+			run,
+			Date.now,
+			sleep,
+			rollbackTargets
 		);
 		protectedWrite(join(config.stateDir, 'current.json'), {
 			manifest,

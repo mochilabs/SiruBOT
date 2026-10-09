@@ -159,6 +159,19 @@ test('convergence counts current tasks; paused update and auto rollback are fail
 	item.UpdateStatus = { State: 'rollback_completed' };
 	assert.equal(taskSummary(item, tasks(item)).failed, true);
 });
+test('completed automatic rollback is accepted only for the matching saved spec and task configuration', () => {
+	const item = service('bot');
+	item.UpdateStatus = { State: 'rollback_completed' };
+	const targets = { [item.Spec.Name]: fingerprint(item.Spec) };
+	assert.equal(taskSummary(item, tasks(item), targets).ready, true);
+	assert.equal(taskSummary(item, tasks(item), targets).failed, false);
+	assert.equal(taskSummary(item, tasks(item)).failed, true);
+	const stale = tasks(item);
+	stale[0].Spec.ContainerSpec.Env = ['KEEP=failed-update'];
+	assert.equal(taskSummary(item, stale, targets).ready, false);
+	item.Spec.TaskTemplate.ContainerSpec.Env = ['KEEP=different-target'];
+	assert.equal(taskSummary(item, tasks(item), targets).failed, true);
+});
 test('convergence has a bounded timeout and requires stable task IDs', async () => {
 	const item = service('bot');
 	let now = 0;
@@ -282,7 +295,7 @@ function fixture() {
 				return JSON.stringify({
 					workflow_runs: [
 						{
-							id: 11,
+							id: manifest.runId,
 							status: 'completed',
 							conclusion: 'success',
 							head_branch: 'beta',
@@ -318,6 +331,7 @@ function fixture() {
 				const c = stack.services[app];
 				items[app].Spec.TaskTemplate.ContainerSpec.Image = c.image;
 				items[app].Spec.TaskTemplate.ContainerSpec.Env = Object.entries(c.environment).map(([key, value]) => `${key}=${value.replaceAll('$$', '$')}`);
+				items[app].UpdateStatus = { State: 'completed' };
 			}
 			return '';
 		}
@@ -327,6 +341,7 @@ function fixture() {
 		dir,
 		configPath,
 		items,
+		manifest,
 		calls,
 		logs,
 		run,
@@ -402,6 +417,29 @@ test('failed deployment keeps original snapshot across retry', async () => {
 		await main(['--config', f.configPath], f.run, () => {});
 		assert.equal(readFileSync(join(f.dir, 'state/previous.json'), 'utf8'), previous);
 		assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+	} finally {
+		f.cleanup();
+	}
+});
+test('manual rollback after Swarm automatic recovery clears pending state and unblocks the next version', async () => {
+	const f = fixture();
+	try {
+		f.failDeploy(true);
+		await assert.rejects(main(['--config', f.configPath], f.run, () => {}));
+		assert.equal(existsSync(join(f.dir, 'state/pending.json')), true);
+		for (const item of Object.values(f.items)) item.UpdateStatus = { State: 'rollback_completed' };
+		f.failDeploy(false);
+		const applyCount = () => f.calls.filter((call) => call.args[0] === 'stack').length;
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(applyCount(), 1);
+		assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+		f.manifest.runId = 12;
+		f.manifest.commit = 'c'.repeat(40);
+		f.manifest.images.bot = `ghcr.io/mochilabs/sirubot-bot@sha256:${'c'.repeat(64)}`;
+		await main(['--config', f.configPath], f.run, () => {});
+		assert.equal(applyCount(), 2);
+		assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+		assert.equal(f.items.bot.Spec.TaskTemplate.ContainerSpec.Image, f.manifest.images.bot);
 	} finally {
 		f.cleanup();
 	}
