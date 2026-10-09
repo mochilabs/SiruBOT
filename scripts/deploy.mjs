@@ -179,7 +179,6 @@ export function composeService(spec, references) {
 			'Env',
 			'Dir',
 			'User',
-			'Groups',
 			'Privileges',
 			'TTY',
 			'OpenStdin',
@@ -201,6 +200,7 @@ export function composeService(spec, references) {
 		],
 		spec.Name
 	);
+	supported(c.DNSConfig, ['Nameservers', 'Search'], `${spec.Name}/DNSConfig`);
 	if (Object.values(c.Privileges ?? {}).some((value) => value !== false && !empty(value)))
 		throw new Error(`${spec.Name}: 특수 권한 설정을 자동 변환할 수 없습니다.`);
 	if (c.OpenStdin || (c.Isolation && c.Isolation !== 'default')) throw new Error(`${spec.Name}: stdin/isolation 설정을 자동 변환할 수 없습니다.`);
@@ -289,7 +289,6 @@ export function composeService(spec, references) {
 		environment: envObject(c.Env),
 		working_dir: c.Dir,
 		user: c.User,
-		group_add: c.Groups,
 		tty: c.TTY,
 		read_only: c.ReadOnly,
 		init: c.Init,
@@ -315,7 +314,6 @@ export function composeService(spec, references) {
 		extra_hosts: extraHosts(c.Hosts, spec.Name),
 		dns: c.DNSConfig?.Nameservers,
 		dns_search: c.DNSConfig?.Search,
-		dns_opt: c.DNSConfig?.Options,
 		sysctls: c.Sysctls,
 		cap_add: c.CapabilityAdd,
 		cap_drop: c.CapabilityDrop,
@@ -532,6 +530,16 @@ export function protectInfra(services, stack, run) {
 	return stack;
 }
 
+function validateStack(stack, name, run) {
+	try {
+		// Validate with the same legacy schema/interpolation used by stack deploy.
+		// Rendered stdout may contain credentials; capture and discard it.
+		run('docker', ['stack', 'config', '--compose-file', '-'], { input: JSON.stringify(escapeInterpolation(stack)) });
+	} catch {
+		throw new Error(`${name}: Swarm stack 설정 검증에 실패했습니다. 서비스는 업데이트하지 않았습니다.`);
+	}
+}
+
 function deployStack(stack, name, run) {
 	// JSON is valid YAML. Escaping '$' preserves literal passwords through Compose interpolation.
 	run('docker', ['stack', 'deploy', '--with-registry-auth', '--resolve-image', 'always', '--compose-file', '-', name], {
@@ -663,6 +671,9 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 				sensitive.push(...Object.values(service.environment));
 			}
 		}
+		// Check both stacks before dry-run success, snapshot writes, or any service update.
+		validateStack(desired, config.appStack, run);
+		if (infra) validateStack(infra, config.infraStack, run);
 		const changed = APPS.filter((app) => fingerprint(before.services[app]) !== fingerprint(desired.services[app]));
 		// Only a manual rollback whose saved target already matches the live spec may
 		// acknowledge a completed automatic rollback without updating the service again.

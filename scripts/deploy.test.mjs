@@ -288,6 +288,7 @@ function fixture() {
 	const logs = [];
 	let imageFailure = false;
 	let deploymentFailure = false;
+	let schemaFailure;
 	const run = (program, args, opts = {}) => {
 		calls.push({ program, args, opts });
 		if (program === 'gh') {
@@ -317,14 +318,22 @@ function fixture() {
 			return '{}';
 		}
 		if (args[0] === 'config') return 'cluster-lock';
+		if (args[0] === 'node') return JSON.stringify([{ Status: { State: 'ready' }, Spec: { Availability: 'active' } }]);
 		if (args[0] === 'network') return JSON.stringify([{ Name: 'existing-network' }]);
-		if (args[0] === 'service' && args[1] === 'inspect') return JSON.stringify(args.slice(2).map((name) => items[name.slice(5)]));
+		if (args[0] === 'service' && args[1] === 'inspect')
+			return JSON.stringify(args.slice(2).map((name) => Object.values(items).find((item) => item.Spec.Name === name)));
 		if (args[0] === 'service' && args[1] === 'ps') {
 			if (args.includes('--format')) return `task | failed | ${common.AUTH_KEY}`;
 			return args.at(-1);
 		}
 		if (args[0] === 'inspect') return JSON.stringify(tasks(Object.values(items).find((item) => item.ID === args.at(-1))));
-		if (args[0] === 'stack') {
+		if (args[0] === 'stack' && args[1] === 'config') {
+			const stack = JSON.parse(opts.input);
+			if ((schemaFailure === 'apps' && stack.services.bot) || (schemaFailure === 'infra' && stack.services.postgres))
+				throw new Error('schema failure with sensitive renderer output');
+			return opts.input;
+		}
+		if (args[0] === 'stack' && args[1] === 'deploy') {
 			if (deploymentFailure) throw new Error('update failed');
 			const stack = JSON.parse(opts.input);
 			for (const app of APPS) {
@@ -351,6 +360,9 @@ function fixture() {
 		failDeploy: (value) => {
 			deploymentFailure = value;
 		},
+		failSchema: (stack) => {
+			schemaFailure = stack;
+		},
 		cleanup: () => rmSync(dir, { recursive: true, force: true })
 	};
 }
@@ -360,10 +372,14 @@ test('dry-run reads real deployment inputs but changes no services or state', as
 	try {
 		await main(['--config', f.configPath, '--dry-run'], f.run, (line) => f.logs.push(line));
 		assert.equal(
-			f.calls.some((call) => call.args[0] === 'stack' || call.args[0] === 'config'),
+			f.calls.some((call) => (call.args[0] === 'stack' && call.args[1] === 'deploy') || call.args[0] === 'config'),
 			false
 		);
 		assert.equal(existsSync(join(f.dir, 'state')), false);
+		assert.equal(
+			f.calls.some((call) => call.args[0] === 'stack' && call.args[1] === 'config'),
+			true
+		);
 		assert.equal(f.logs.join('\n').includes(common.AUTH_KEY), false);
 	} finally {
 		f.cleanup();
@@ -373,7 +389,7 @@ test('deploy preserves scale, saves private snapshot, repeated deploy is a no-op
 	const f = fixture();
 	try {
 		await main(['--config', f.configPath], f.run, (line) => f.logs.push(line));
-		const stackCalls = () => f.calls.filter((call) => call.args[0] === 'stack');
+		const stackCalls = () => f.calls.filter((call) => call.args[0] === 'stack' && call.args[1] === 'deploy');
 		assert.equal(stackCalls().length, 1);
 		assert.ok(stackCalls()[0].args.includes('--with-registry-auth'));
 		assert.equal(JSON.parse(stackCalls()[0].opts.input).services.bot.deploy.replicas, 2);
@@ -398,7 +414,7 @@ test('image failure cannot update a stack or expose environment values', async (
 			/registry/
 		);
 		assert.equal(
-			f.calls.some((call) => call.args[0] === 'stack'),
+			f.calls.some((call) => call.args[0] === 'stack' && call.args[1] === 'deploy'),
 			false
 		);
 		assert.equal(f.logs.join('\n').includes(common.AUTH_KEY), false);
@@ -429,7 +445,7 @@ test('manual rollback after Swarm automatic recovery clears pending state and un
 		assert.equal(existsSync(join(f.dir, 'state/pending.json')), true);
 		for (const item of Object.values(f.items)) item.UpdateStatus = { State: 'rollback_completed' };
 		f.failDeploy(false);
-		const applyCount = () => f.calls.filter((call) => call.args[0] === 'stack').length;
+		const applyCount = () => f.calls.filter((call) => call.args[0] === 'stack' && call.args[1] === 'deploy').length;
 		await main(['rollback', '--config', f.configPath], f.run, () => {});
 		assert.equal(applyCount(), 1);
 		assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
@@ -442,5 +458,78 @@ test('manual rollback after Swarm automatic recovery clears pending state and un
 		assert.equal(f.items.bot.Spec.TaskTemplate.ContainerSpec.Image, f.manifest.images.bot);
 	} finally {
 		f.cleanup();
+	}
+});
+
+test('unsupported groups and DNS options stop before deployment or rollback snapshot writes', async () => {
+	for (const fields of [{ Groups: ['1001'] }, { DNSConfig: { Options: ['ndots:2'] } }]) {
+		const f = fixture();
+		try {
+			Object.assign(f.items.bot.Spec.TaskTemplate.ContainerSpec, fields);
+			await assert.rejects(
+				main(['--config', f.configPath], f.run, () => {}),
+				/Groups|Options/
+			);
+			assert.equal(
+				f.calls.some((call) => call.args[0] === 'stack' && call.args[1] === 'deploy'),
+				false
+			);
+			assert.equal(existsSync(join(f.dir, 'state/previous.json')), false);
+		} finally {
+			f.cleanup();
+		}
+	}
+});
+
+test('dry-run reports invalid generated stack instead of success', async () => {
+	const f = fixture();
+	try {
+		f.failSchema('apps');
+		await assert.rejects(
+			main(['--config', f.configPath, '--dry-run'], f.run, (line) => f.logs.push(line)),
+			/stack 설정 검증/
+		);
+		assert.equal(
+			f.calls.some((call) => call.args[0] === 'stack' && call.args[1] === 'deploy'),
+			false
+		);
+		assert.equal(
+			f.logs.some((line) => line.includes('dry-run 완료')),
+			false
+		);
+		assert.equal(existsSync(join(f.dir, 'state')), false);
+	} finally {
+		f.cleanup();
+	}
+});
+
+test('both app and infra schemas are checked before any update with --with-infra', async () => {
+	for (const failingStack of ['apps', 'infra']) {
+		const f = fixture();
+		try {
+			const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+			writeFileSync(f.configPath, JSON.stringify({ ...settings, infraStack: 'infra' }));
+			for (const app of ['redis', 'postgres']) {
+				const item = service(app, 'infra');
+				item.Spec.TaskTemplate.ContainerSpec.Mounts = [{ Type: 'volume', Source: `existing-${app}`, Target: '/data' }];
+				item.Spec.TaskTemplate.ContainerSpec.Env.push('PGDATA=/data');
+				f.items[app] = item;
+			}
+			f.failSchema(failingStack);
+			await assert.rejects(
+				main(['--config', f.configPath, '--with-infra'], f.run, () => {}),
+				/stack 설정 검증/
+			);
+			assert.equal(
+				f.calls.some((call) => call.args[0] === 'stack' && call.args[1] === 'deploy'),
+				false
+			);
+			assert.equal(existsSync(join(f.dir, 'state/previous.json')), false);
+			assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+			const validations = f.calls.filter((call) => call.args[0] === 'stack' && call.args[1] === 'config');
+			assert.equal(validations.length, failingStack === 'apps' ? 1 : 2);
+		} finally {
+			f.cleanup();
+		}
 	}
 });

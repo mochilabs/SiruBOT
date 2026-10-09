@@ -44,3 +44,26 @@ test('Docker legacy Compose parsing retains each converted host mapping', { skip
 	assert.match(rendered, /alias\.test:\s*192\.0\.2\.1/);
 	assert.match(rendered, /ipv6\.test:\s*["']?2001:db8::1/);
 });
+test('nonempty supplementary groups and DNS options are rejected while supported DNS settings remain', () => {
+	assert.throws(() => composeService(service({ Groups: ['1001'] }), references), /Groups/);
+	assert.throws(() => composeService(service({ DNSConfig: { Options: ['ndots:2'] } }), references), /Options/);
+	const compose = composeService(
+		service({ Groups: [], DNSConfig: { Nameservers: ['192.0.2.53'], Search: ['example.test'], Options: [] } }),
+		references
+	);
+	assert.equal(Object.hasOwn(compose, 'group_add'), false);
+	assert.equal(Object.hasOwn(compose, 'dns_opt'), false);
+	assert.deepEqual(compose.dns, ['192.0.2.53']);
+	assert.deepEqual(compose.dns_search, ['example.test']);
+});
+test('Docker legacy schema rejects the properties previously generated for Groups and DNS options', { skip: !dockerAvailable }, () => {
+	const compose = composeService(service(), references);
+	for (const field of [{ group_add: ['1001'] }, { dns_opt: ['ndots:2'] }]) {
+		assert.throws(() => dockerConfig({ ...compose, ...field }), /additional property/i);
+	}
+	assert.doesNotThrow(() =>
+		dockerConfig(
+			composeService(service({ Groups: [], DNSConfig: { Nameservers: ['192.0.2.53'], Search: ['example.test'], Options: [] } }), references)
+		)
+	);
+});
