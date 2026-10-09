@@ -634,20 +634,13 @@ async function showStatus(config, run, log) {
 	}
 }
 
-function diagnostics(config, run, log, redact) {
-	for (const app of APPS) {
+function diagnostics({ stack, apps }, run, log, redact) {
+	for (const app of apps) {
 		try {
-			const rows = run('docker', [
-				'service',
-				'ps',
-				'--no-trunc',
-				'--format',
-				'{{.Name}} | {{.CurrentState}} | {{.Error}}',
-				`${config.appStack}_${app}`
-			]);
+			const rows = run('docker', ['service', 'ps', '--no-trunc', '--format', '{{.Name}} | {{.CurrentState}} | {{.Error}}', `${stack}_${app}`]);
 			log(redact(rows));
 		} catch {
-			log(`${app}: task 상태를 읽지 못했습니다.`);
+			log(`${stack}_${app}: task 상태를 읽지 못했습니다.`);
 		}
 	}
 	log('복원: node scripts/deploy.mjs rollback (DB migration과 인프라는 복원하지 않습니다.)');
@@ -668,7 +661,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 	}
 	const releaseLock = opts.dryRun ? () => {} : acquireLock(config.stateDir);
 	const clusterLocks = [];
-	let updating = false;
+	let diagnosticTarget;
 	let sensitive = [];
 	const redact = (message) => sensitive.reduce((value, secret) => (secret.length >= 4 ? value.replaceAll(secret, '[redacted]') : value), message);
 	try {
@@ -796,8 +789,8 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			});
 		}
 		if (infra) {
+			diagnosticTarget = { stack: config.infraStack, apps: ['redis', 'postgres'] };
 			if (infraChanged) {
-				updating = true;
 				applyStack(infra, config.infraStack, infraPlans, run);
 			}
 			await waitForServices(
@@ -806,8 +799,8 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 				run
 			);
 		}
+		diagnosticTarget = { stack: config.appStack, apps: APPS };
 		if (changed.length) {
-			updating = true;
 			applyStack(desired, config.appStack, platformPlans, run);
 		}
 		await waitForServices(
@@ -826,7 +819,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		rmSync(join(config.stateDir, 'pending.json'), { force: true });
 		log('앱 서비스 수렴과 task 안정성 확인 완료.');
 	} catch (error) {
-		if (updating) diagnostics(config, run, log, redact);
+		if (diagnosticTarget) diagnostics(diagnosticTarget, run, log, redact);
 		throw error;
 	} finally {
 		try {

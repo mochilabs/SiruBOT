@@ -740,3 +740,51 @@ for (const restricted of [false, true]) {
 		}
 	});
 }
+for (const phase of ['infra-apply', 'infra-convergence', 'infra-noop', 'app-convergence']) {
+	test(`failure diagnostics identify the active stack and redact infrastructure secrets (${phase})`, async () => {
+		const f = fixture();
+		try {
+			const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+			writeFileSync(f.configPath, JSON.stringify({ ...settings, infraStack: 'infra' }));
+			const infraSecret = 'fake-infra-password';
+			for (const app of ['redis', 'postgres']) {
+				const item = service(app, 'infra');
+				item.Spec.TaskTemplate.ContainerSpec.Mounts = [{ Type: 'volume', Source: `existing-${app}`, Target: '/data' }];
+				item.Spec.TaskTemplate.ContainerSpec.Env.push('PGDATA=/data', `INFRA_PASSWORD=${infraSecret}`);
+				if (phase === 'infra-noop') item.Spec.TaskTemplate.Placement.Constraints.push('node.id == node-id');
+				f.items[app] = item;
+			}
+			if (phase === 'infra-noop') f.items.redis.UpdateStatus = { State: 'paused' };
+			const diagnosed = [];
+			const logs = [];
+			const run = (program, args, opts) => {
+				if (args[0] === 'service' && args[1] === 'ps' && args.includes('--format')) {
+					diagnosed.push(args.at(-1));
+					return `${args.at(-1)}.1 | Failed | ${infraSecret} ${common.AUTH_KEY}`;
+				}
+				const result = f.run(program, args, opts);
+				if (args[0] === 'stack' && args[1] === 'deploy') {
+					if (phase === 'infra-apply' && args.at(-1) === 'infra') throw new Error('infrastructure apply failed');
+					if (phase === 'infra-convergence' && args.at(-1) === 'infra') f.items.redis.UpdateStatus = { State: 'paused' };
+					if (phase === 'app-convergence' && args.at(-1) === 'test') f.items.bot.UpdateStatus = { State: 'paused' };
+				}
+				return result;
+			};
+			await assert.rejects(
+				main(['--config', f.configPath, '--with-infra'], run, (line) => logs.push(line)),
+				/업데이트 중단|apply failed/
+			);
+			assert.deepEqual(diagnosed, phase === 'app-convergence' ? APPS.map((app) => `test_${app}`) : ['infra_redis', 'infra_postgres']);
+			assert.equal(logs.join('\n').includes(infraSecret), false);
+			assert.equal(logs.join('\n').includes(common.AUTH_KEY), false);
+			assert.ok(logs.join('\n').includes('[redacted]'));
+			if (phase !== 'app-convergence')
+				assert.equal(
+					f.calls.some((c) => c.args[0] === 'stack' && c.args[1] === 'deploy' && c.args.at(-1) === 'test'),
+					false
+				);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
