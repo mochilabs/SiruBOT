@@ -62,7 +62,12 @@ node scripts/deploy.mjs --config /absolute/path/config.json
 ```
 
 배포 전 manager·필수 설정·이미지 접근을 검사한다. 현재 서비스 설정을 legacy Compose v3으로 변환해
-`docker stack deploy --with-registry-auth`로 적용하고 replica 수렴과 task ID가 안정적인지 확인한다.
+`docker stack deploy --with-registry-auth --resolve-image never`로 적용하고 replica 수렴과 task ID가 안정적인지 확인한다.
+이미 검증한 digest를 다시 조회하지 않아 기존의 빈 플랫폼 필터를 유지한다.
+`Placement.Platforms` 제한이 있는 서비스는 stack 적용에서 제외하고
+`docker service update --with-registry-auth --no-resolve-image`로 갱신해 플랫폼 목록을 그대로 보존한다.
+이 경로의 환경 변수 값은 명령 인자가 아닌 자식 프로세스 환경으로 전달한다.
+Docker 연결·인증·실행 환경에 영향을 주는 변수 변경은 적용 전에 거부한다.
 생성된 앱·인프라 stack을 모두 `docker stack config`로 검증한 뒤 업데이트한다. dry-run도 동일한 스키마 검사를 수행한다.
 호스트 매핑은 Swarm의 `IP hostname`을 Compose 형식으로 변환하며 IPv6도 보존한다.
 기본 제한은 10분, 확인 주기는 5초, 안정성 확인 기간은 30초다. 설정 파일에서 조절할 수 있다.
@@ -100,6 +105,9 @@ node scripts/deploy.mjs rollback
 ```
 
 업데이트 전에 기존 앱 이미지와 설정을 `previous.json`에 권한 0600으로 저장한다.
+서비스별 플랫폼 제한도 함께 저장한다. 이후 외부에서 플랫폼 제한이 바뀌었거나 이전 state에 제한 정보가 없으면 자동 복원을 중단한다.
+플랫폼 제한이 있는 서비스의 복원은 이미지·환경 변수·종료 유예·replica·배치 제약·업데이트 순서를 지원한다.
+포트나 mount 등 다른 설정이 저장 시점과 달라졌으면 일부만 복원하지 않고 적용 전에 중단한다.
 실패한 배포의 `pending.json`은 유지한다. 같은 `--run`과 설정으로 재시도하면 원래 복원 지점을 덮어쓰지 않는다.
 다른 버전으로 진행하려면 먼저 rollback한다. 복원은 앱 구성만 대상이며 DB migration·인프라·데이터는 되돌리지 않는다.
 Swarm이 이미 원래 설정으로 자동 복원했다면 수동 rollback은 해당 설정과 실행 task가 일치하는지 확인하고 실패 배포 상태를 정리한다.
@@ -118,6 +126,7 @@ docker config rm <app-stack>-deployment-lock
 지원하지 않는 특수 서비스 설정은 적용 전에 중단하며 조용히 삭제하지 않는다.
 예: replicated가 아닌 모드, 특수 컨테이너 권한, 익명/특수 볼륨, `ForceUpdate`가 설정된 서비스.
 legacy Compose에서 지원하지 않는 supplementary groups와 DNS options도 업데이트 전에 거부한다.
+tmpfs의 size/mode는 보존하지만 `TmpfsOptions.Options`의 `noexec`, `nosuid` 같은 플래그는 변환할 수 없어 적용 전에 거부한다.
 동일 hostname에 여러 IP가 지정된 매핑은 Compose 변환에서 보존할 수 없어 적용을 중단한다.
 배포 과정의 Docker/gh 출력에 설정 값이 포함될 수 있어 원문 stderr 대신 요약 오류를 표시한다.
 실패 시 task 상태와 오류를 민감한 값을 가린 상태로 출력한다.
