@@ -31,6 +31,9 @@
     "prepare": "husky"
   },
   "packageManager": "yarn@4.12.0",
+  "engines": {
+    "node": ">=22"
+  },
   "optionalDependencies": {
     "@swc/core-android-arm64": "1.3.11"
   }
