@@ -114,6 +114,9 @@ export const main = async () => {
 		}
 
 		// 2. Audio listeners 정리 (+ 설정 무효화 구독 해제 — redis disconnect 전에)
+		// lavalink 핸들러의 watchdog/reconcile/복구 타이머를 먼저 해제한다 — 남은 타이머가
+		// 종료 절차 중에 발화해 mixer REST/play를 시도하는 것을 막는다.
+		container.lavalinkHandler?.cleanup();
 		if (container.audio) {
 			container.audio.removeAllListeners();
 		}

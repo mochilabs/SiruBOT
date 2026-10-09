@@ -429,6 +429,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return;
 		}
 
+		// mixer 필터는 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다(lavaplayer는
+		// 트랙 시작 시점에만 필터를 읽음) — primeForPlay가 내부에서 실패를 삼키므로
+		// 필터 재적용에 실패해도 재생 복구 자체는 계속 진행된다.
+		await this.container.mixerService.primeForPlay(createdPlayer);
+
 		await createdPlayer.play({ noReplace: true });
 
 		// 위치·일시정지 상태를 되살린다.
