@@ -39,6 +39,7 @@ declare module '@sapphire/pieces' {
 		redisStore: RedisStore;
 		playerNotifier: PlayerNotifier;
 		nowPlayingCardStore?: import('../modules/audio/lavalink/player/nowPlayingCard.ts').NowPlayingCardStore;
+		playerStatePublishTracker?: Map<string, { at: number; fingerprint: string }>;
 		guildService: GuildService;
 		trackService: TrackService;
 		playlistService: import('../services/playlistService.ts').PlaylistService;
