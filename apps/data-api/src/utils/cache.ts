@@ -26,11 +26,23 @@ export class SharedCache {
 			return;
 		}
 		try {
-			this.client = createClient({ url });
-			this.client.on('error', (error) => logger.error('redis error, falling back to memory:', String(error)));
-			await this.client.connect();
-			this.startCardinalityTimer();
-			logger.info('Connected to Redis');
+			const client = createClient({ url });
+			client.on('error', (error) => logger.error('redis error, falling back to memory:', String(error)));
+			client.once('ready', () => {
+				// 종료(disconnect)와 경합해 클라이언트가 이미 교체됐다면 뒤늦게 상태를 올리지 않아요
+				if (this.client !== client) return;
+				this.startCardinalityTimer();
+				logger.info('Connected to Redis');
+			});
+			this.client = client;
+			// 최초 연결은 백그라운드로 돌아가요 — Redis가 data-api보다 늦게 떠도 부팅을 막지 않아요.
+			// 재시도는 클라이언트의 내장 무한 재시도(지수 백오프 상한 ~2초)에 맡기고, 준비(isReady) 전까지 소비자는 메모리 폴백으로 동작해요.
+			logger.info('Connecting to Redis in background (memory fallback until ready)');
+			void client.connect().catch((error) => {
+				// 내장 재시도 정책이 포기해야만 도달해요 (기본 정책은 무한 재시도) — 메모리 폴백 유지
+				logger.warn('Redis connect failed, using in-memory cache:', String(error));
+				if (this.client === client) this.client = null;
+			});
 		} catch (error) {
 			logger.warn('Redis connect failed, using in-memory cache:', String(error));
 			this.client = null;
@@ -41,8 +53,14 @@ export class SharedCache {
 		memory.clear();
 		this.stopCardinalityTimer();
 		if (this.client) {
-			await this.client.close().catch(() => null);
+			const client = this.client;
 			this.client = null;
+			if (client.isReady) {
+				await client.close().catch(() => null);
+			} else if (client.isOpen) {
+				// 연결 도중엔 close()가 멈출 수 있어 소켓을 즉시 파괴해요 (stopPlayerHub와 같은 논리)
+				client.destroy();
+			}
 		}
 	}
 
@@ -72,16 +90,17 @@ export class SharedCache {
 	}
 
 	public get connected(): boolean {
-		return this.client?.isOpen === true;
+		return this.client?.isReady === true;
 	}
 
 	/** Pub/Sub 등 전용 연결이 필요한 소비자를 위한 클라이언트 접근자 (duplicate해서 쓸 것) */
 	public getClient(): RedisClientType | null {
-		return this.client?.isOpen ? this.client : null;
+		return this.client?.isReady ? this.client : null;
 	}
 
 	public async get(key: string): Promise<string | null> {
-		if (this.client?.isOpen) {
+		// 가드는 isReady 기준이에요 — 연결 도중(isOpen만 true)에 명령을 내면 오프라인 큐에서 영원히 대기하므로, 준비 전엔 메모리 폴백으로 처리해요.
+		if (this.client?.isReady) {
 			try {
 				const value = await this.client.get(key);
 				if (value != null) this.redisHits++;
@@ -107,7 +126,7 @@ export class SharedCache {
 
 	public async set(key: string, value: string, ttlSeconds: number): Promise<void> {
 		if (!this.admissionGate(key)) return;
-		if (this.client?.isOpen) {
+		if (this.client?.isReady) {
 			try {
 				await this.client.set(key, value, { EX: ttlSeconds });
 				return;
@@ -132,7 +151,7 @@ export class SharedCache {
 
 	/** 분산 락 (번역 단일화용). Redis 없으면 항상 획득 성공. */
 	public async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
-		if (this.client?.isOpen) {
+		if (this.client?.isReady) {
 			try {
 				const result = await this.client.set(key, '1', {
 					NX: true,
