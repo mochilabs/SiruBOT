@@ -35,9 +35,10 @@ export function Tabs({ items, value, defaultValue, onChange, renderPanel, classN
 	const activeKey = controlled ? value : (defaultValue ?? items[0]?.key);
 	const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
+	/** roving tabindex + selection follows focus — 방향키 이동 시 포커스와 선택이 함께 움직여요 (controlled/비controlled 공통) */
 	const focusKey = (key: string) => {
 		refs.current[key]?.focus();
-		if (!controlled) onChange?.(key);
+		onChange?.(key);
 	};
 
 	const move = (dir: 1 | -1 | "home" | "end") => {

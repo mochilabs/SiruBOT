@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { db } from "@/lib/db";
-import { canManage } from "@/lib/guild-permissions";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
-import { getSessionAccessToken } from "@/lib/session-token";
 
 /* ─────────────────────────── 입력 검증 ─────────────────────────── */
 
@@ -15,32 +13,6 @@ import { getSessionAccessToken } from "@/lib/session-token";
  * 라우트에서 daysParam이 없으면 "7"로 채우므로 default는 없어요.
  */
 const daysSchema = z.coerce.number().int().min(1).max(90).safe();
-
-/* ─────────────────────────── 인증 ─────────────────────────── */
-
-async function authorize(
-  guildId: string,
-): Promise<{ ok: true; userId: string } | { ok: false; status: 401 | 403 }> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, status: 401 };
-  const accessToken = await getSessionAccessToken();
-  if (!accessToken) return { ok: false, status: 401 };
-  if (!(await canManage(accessToken, guildId)))
-    return { ok: false, status: 403 };
-  return { ok: true, userId: session.user.id };
-}
-
-function denied(authz: { ok: false; status: 401 | 403 }) {
-  return NextResponse.json(
-    {
-      error:
-        authz.status === 401
-          ? "로그인이 필요해요."
-          : "이 서버를 관리할 권한이 없어요.",
-    },
-    { status: authz.status },
-  );
-}
 
 /* ─────────────────────────── 응답 타입 ─────────────────────────── */
 
@@ -96,8 +68,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const authz = await authorize(id);
-  if (!authz.ok) return denied(authz);
+  const authz = await authorizeGuildManage(id);
+  if (!authz.ok) return deniedGuildManage(authz);
 
   const limited = guardRateLimit(
     rateKey("stats-get", authz.userId, id),

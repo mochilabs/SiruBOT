@@ -1,35 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { openDataApiStream } from "@/lib/data-api";
-import { canManage } from "@/lib/guild-permissions";
-import { getSessionAccessToken } from "@/lib/session-token";
-
-/* ─────────────────────────── 인증 ─────────────────────────── */
-
-async function authorize(
-  guildId: string,
-): Promise<{ ok: true; userId: string } | { ok: false; status: 401 | 403 }> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, status: 401 };
-  const accessToken = await getSessionAccessToken();
-  if (!accessToken) return { ok: false, status: 401 };
-  if (!(await canManage(accessToken, guildId)))
-    return { ok: false, status: 403 };
-  return { ok: true, userId: session.user.id };
-}
-
-function denied(authz: { ok: false; status: 401 | 403 }) {
-  return NextResponse.json(
-    {
-      error:
-        authz.status === 401
-          ? "로그인이 필요해요."
-          : "이 서버를 관리할 권한이 없어요.",
-    },
-    { status: authz.status },
-  );
-}
 
 /* ─────────────────────────── 라이브 플레이어 상태 SSE ─────────────────────────── */
 
@@ -44,8 +16,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const authz = await authorize(id);
-  if (!authz.ok) return denied(authz);
+  const authz = await authorizeGuildManage(id);
+  if (!authz.ok) return deniedGuildManage(authz);
 
   const upstream = await openDataApiStream(`/v1/player/${id}/stream`);
   if (!upstream) {

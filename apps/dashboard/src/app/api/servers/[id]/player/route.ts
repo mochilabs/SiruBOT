@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { db } from "@/lib/db";
-import { canManage } from "@/lib/guild-permissions";
-import { getSessionAccessToken } from "@/lib/session-token";
 
 interface PlayerTrack {
   id: string;
@@ -26,25 +24,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
-  }
-
-  const accessToken = await getSessionAccessToken();
-  if (!accessToken) {
-    return NextResponse.json(
-      { error: "세션이 만료됐어요. 다시 로그인해 주세요." },
-      { status: 401 },
-    );
-  }
-  if (!(await canManage(accessToken, id))) {
-    return NextResponse.json(
-      { error: "이 서버를 관리할 권한이 없어요." },
-      { status: 403 },
-    );
-  }
+  const authz = await authorizeGuildManage(id);
+  if (!authz.ok) return deniedGuildManage(authz);
 
   try {
     const [recent, topTracks, totalPlays] = await Promise.all([

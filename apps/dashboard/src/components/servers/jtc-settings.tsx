@@ -66,7 +66,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 				if (!res.ok) throw await toApiError(res, "마커 채널을 준비하지 못했어요.");
 				const data = (await res.json()) as { categoryId: string; markerChannelId: string };
 				patch({ jtcCategoryId: data.categoryId, jtcMarkerChannelId: data.markerChannelId });
-				toast.success("마커 채널을 준비했어요.", "카테고리에 '🔊 임시방 만들기' 채널이 생겼어요.");
+				toast.success("마커 채널을 준비했어요.", "해당 카테고리에 '🔊 임시방 만들기' 채널이 생기거나 옮겨졌어요.");
 			} catch (err) {
 				const apiError = toError(err, "마커 채널을 준비하지 못했어요.");
 				toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
@@ -121,7 +121,12 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 
 			<Field
 				label="생성 위치 (카테고리)"
-				description="선택하면 카테고리 안에 '🔊 임시방 만들기' 마커 채널을 만들거나 옮겨요. (채널 관리 권한이 필요해요)"
+				description={
+					<>
+						선택하면 바로 반영돼요 — <code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">🔊 임시방 만들기</code> 마커
+						채널이 해당 카테고리로 만들어지거나 옮겨져요. (채널 관리 권한이 필요해요)
+					</>
+				}
 			>
 				<Select
 					searchable
@@ -139,6 +144,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 						마커 채널: <span className="font-semibold text-foreground">{markerName}</span> — 멤버가 이 채널에 들어가면 임시방이
 						생겨요. 채널을 삭제해도 다음 설정 시 다시 만들어져요.
 					</p>
+					<p>마커 채널을 아예 제거하려면 Discord 서버에서 해당 채널을 삭제해 주세요.</p>
 				</InfoBox>
 			)}
 

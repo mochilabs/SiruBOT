@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { db } from "@/lib/db";
-import { canManage } from "@/lib/guild-permissions";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import { guildSettingsSchema, unknownKeys, zodError } from "@/lib/schemas";
-import { getSessionAccessToken } from "@/lib/session-token";
 import type { GuildSettings } from "@/types/settings";
 
 const ALLOWED_KEYS = [
@@ -100,37 +98,13 @@ function toSettings(
   };
 }
 
-async function authorize(
-  guildId: string,
-): Promise<{ ok: true } | { ok: false; status: 401 | 403 }> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, status: 401 };
-  const accessToken = await getSessionAccessToken();
-  if (!accessToken) return { ok: false, status: 401 };
-  if (!(await canManage(accessToken, guildId)))
-    return { ok: false, status: 403 };
-  return { ok: true };
-}
-
-function denied(authz: { ok: false; status: 401 | 403 }) {
-  return NextResponse.json(
-    {
-      error:
-        authz.status === 401
-          ? "로그인이 필요해요."
-          : "이 서버를 관리할 권한이 없어요.",
-    },
-    { status: authz.status },
-  );
-}
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const authz = await authorize(id);
-  if (!authz.ok) return denied(authz);
+  const authz = await authorizeGuildManage(id);
+  if (!authz.ok) return deniedGuildManage(authz);
   try {
     const guild = await db.guild.findUnique({ where: { id } });
     return NextResponse.json(toSettings(guild));
@@ -148,12 +122,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const authz = await authorize(id);
-  if (!authz.ok) return denied(authz);
+  const authz = await authorizeGuildManage(id);
+  if (!authz.ok) return deniedGuildManage(authz);
 
-  const session = await auth();
   const limited = guardRateLimit(
-    rateKey("settings-put", session?.user?.id, id),
+    rateKey("settings-put", authz.userId, id),
     WRITE_RATE,
   );
   if (limited) return limited;
