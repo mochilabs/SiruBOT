@@ -18,7 +18,10 @@ docker login ghcr.io
 `.deploy/config.json`의 `appStack`, `infraStack`을 **현재 사용 중인 stack 이름**으로 바꾼다.
 `envFile`은 이 JSON 파일을 기준으로 해석한다. 기본 예제 `../docker/.env`는 저장소의 `docker/.env`를 가리킨다.
 서비스·볼륨 이름, replica 수와 배치 제약은 Docker에서 읽으며 설정 예제로 덮어쓰지 않는다.
-state 파일은 기본 `.deploy/state/`에 저장한다. 이 폴더와 `.env`는 로컬에만 두며 Git/Docker 이미지에 포함하지 않는다.
+state 파일은 기본 `.deploy/state/<appStack>/<Swarm cluster ID>/`에 저장한다. 같은 디렉터리의 설정 파일도 대상 stack/cluster별로 분리한다.
+`stateDir`를 명시하면 설정 파일 기준의 해당 경로를 사용하며 다른 대상의 상태가 들어 있으면 적용 전에 중단한다.
+이 폴더와 `.env`는 로컬에만 두며 Git/Docker 이미지에 포함하지 않는다.
+이전 도구의 `.deploy/state/`를 계속 사용할 경우 `stateDir: "state"`를 명시한다. 기존 앱 복원 정보의 대상이 일치해야 하며 cluster 소유 정보는 첫 정상 실행에서 기록한다.
 
 공통 `.env`에는 기존 운영 설정과 다음 필수 항목이 필요하다. 값은 배포 출력에 표시하지 않는다.
 
@@ -111,7 +114,10 @@ node scripts/deploy.mjs rollback
 서비스별 플랫폼 제한도 함께 저장한다. 이후 외부에서 플랫폼 제한이 바뀌었거나 이전 state에 제한 정보가 없으면 자동 복원을 중단한다.
 플랫폼 제한이 있는 서비스의 복원은 이미지·환경 변수·종료 유예·replica·배치 제약·업데이트 순서를 지원한다.
 포트나 mount 등 다른 설정이 저장 시점과 달라졌으면 일부만 복원하지 않고 적용 전에 중단한다.
-실패한 배포의 `pending.json`은 유지한다. 같은 `--run`과 설정으로 재시도하면 원래 복원 지점을 덮어쓰지 않는다.
+실패한 배포의 `pending.json`은 유지한다. 같은 `--run`·설정·`--with-infra` 사용 여부로 재시도하면 원래 복원 지점을 덮어쓰지 않는다.
+인프라를 포함한 실패는 같은 인프라 stack과 이미지·환경·볼륨·저장 노드 설정으로 재시도해야 한다. 옵션을 빼거나 다른 인프라로 바꾸면 dry-run도 중단한다.
+앱 변경 없는 인프라 적용 실패도 pending에 남긴다. 이 경우 기존 앱 rollback 지점은 유지하고 실패 작업의 앱 구성은 별도 복원 정보로 보존한다.
+이전 버전의 pending에는 인프라 사용 정보가 없으므로 자동 재시도하지 않는다. 명시적 rollback으로 앱 구성을 확인하고 인프라는 별도로 점검한다.
 다른 버전으로 진행하려면 먼저 rollback한다. 복원은 앱 구성만 대상이며 DB migration·인프라·데이터는 되돌리지 않는다.
 Swarm이 이미 원래 설정으로 자동 복원했다면 수동 rollback은 해당 설정과 실행 task가 일치하는지 확인하고 실패 배포 상태를 정리한다.
 기존 설정 파일에 시크릿이 들어 있으므로 state 파일도 보호하고 같은 manager에서 배포 도구를 실행한다.
@@ -121,7 +127,7 @@ Swarm이 이미 원래 설정으로 자동 복원했다면 수동 rollback은 �
 정상 종료 시 해제한다. 강제 종료 후에는 실행 중인 배포가 없는지 확인한 다음 잠금을 해제한다.
 
 ```bash
-rm .deploy/state/lock
+rm <stateDir>/lock
 docker config rm <app-stack>-deployment-lock
 # --with-infra 실행이 중단됐으면 infra stack의 잠금도 확인한다.
 ```
