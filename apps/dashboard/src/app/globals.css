@@ -263,6 +263,11 @@
 	will-change: transform, opacity;
 }
 
+/* 슬래시 커맨드 마키 전용 — hover 일시정지는 트랙의 group-hover:[animation-play-state:paused]가 담당 */
+@utility animate-marquee {
+	animation: marquee 30s linear infinite;
+}
+
 @keyframes shimmer-sweep {
 	from {
 		transform: translateX(-100%) skewX(-20deg);
@@ -307,6 +312,17 @@
 	50%,
 	100% {
 		opacity: 0;
+	}
+}
+
+/* 2회 렌더된 리스트에서 -50% 이동 = 끊김 없는 1주기 */
+@keyframes marquee {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(-50%);
 	}
 }
 
@@ -360,6 +376,18 @@
 
 @theme inline {
 	--ease-standard: var(--ease-out-expo);
+}
+
+:root {
+	/* 스크롤 유도 버튼 기본 하단 여백 — 모바일/데스크탑 공통 값 (hero-section 스크롤 유도 버튼) */
+	--hero-scroll-hint-gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+	:root {
+		/* sm 이상에서의 하단 여백 (기존 sm:bottom-8 유지) */
+		--hero-scroll-hint-gap: 2rem;
+	}
 }
 
 ::view-transition-old(root) {

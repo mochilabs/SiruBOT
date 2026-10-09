@@ -1,21 +1,15 @@
 {
 	"$schema": "https://opencode.ai/config.json",
-	"permission": {
-		"edit": "allow",
-		"bash": "allow",
-		"webfetch": "allow",
-		"task": "allow",
-		"external_directory": "allow"
-	},
-	"agent": {
+	"permissions": [
+		{ "action": "*", "resource": "*", "effect": "allow" },
+		{ "action": "read", "resource": "*.env", "effect": "ask" },
+		{ "action": "read", "resource": "*.env.*", "effect": "ask" }
+	],
+	"agents": {
 		"*": {
-			"permission": {
-				"edit": "allow",
-				"bash": "allow",
-				"webfetch": "allow",
-				"task": "allow",
-				"external_directory": "allow"
-			}
+			"permissions": [
+				{ "action": "*", "resource": "*", "effect": "allow" }
+			]
 		}
 	}
 }
