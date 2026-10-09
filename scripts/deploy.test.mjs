@@ -8,6 +8,7 @@ import {
 	options,
 	environments,
 	composeService,
+	platformUpdatePlan,
 	fingerprint,
 	escapeInterpolation,
 	acquireLock,
@@ -332,6 +333,35 @@ function fixture() {
 			return args.at(-1);
 		}
 		if (args[0] === 'inspect') return JSON.stringify(tasks(Object.values(items).find((item) => item.ID === args.at(-1))));
+		if (args[0] === 'service' && args[1] === 'update') {
+			const item = Object.values(items).find((value) => value.Spec.Name === args.at(-1));
+			const c = item.Spec.TaskTemplate.ContainerSpec;
+			const env = Object.fromEntries(
+				c.Env.map((value) => {
+					const i = value.indexOf('=');
+					return [value.slice(0, i), value.slice(i + 1)];
+				})
+			);
+			for (let i = 2; i < args.length - 1; i++) {
+				const flag = args[i];
+				if (flag === '--env-add') {
+					const key = args[++i];
+					env[key] = opts.env[key];
+				} else if (flag === '--env-rm') delete env[args[++i]];
+				else if (flag === '--image') c.Image = args[++i];
+				else if (flag === '--stop-grace-period') c.StopGracePeriod = Number.parseInt(args[++i]);
+				else if (flag === '--replicas') item.Spec.Mode.Replicated.Replicas = Number(args[++i]);
+				else if (flag === '--constraint-add') item.Spec.TaskTemplate.Placement.Constraints.push(args[++i]);
+				else if (flag === '--constraint-rm') {
+					const value = args[++i];
+					item.Spec.TaskTemplate.Placement.Constraints = item.Spec.TaskTemplate.Placement.Constraints.filter((v) => v !== value);
+				} else if (flag === '--update-order') item.Spec.UpdateConfig.Order = args[++i];
+				else if (flag === '--label-add') i++;
+			}
+			c.Env = Object.entries(env).map(([key, value]) => `${key}=${value}`);
+			item.UpdateStatus = { State: 'completed' };
+			return item.ID;
+		}
 		if (args[0] === 'stack' && args[1] === 'config') {
 			const stack = JSON.parse(opts.input);
 			if ((schemaFailure === 'apps' && stack.services.bot) || (schemaFailure === 'infra' && stack.services.postgres))
@@ -341,7 +371,7 @@ function fixture() {
 		if (args[0] === 'stack' && args[1] === 'deploy') {
 			if (deploymentFailure) throw new Error('update failed');
 			const stack = JSON.parse(opts.input);
-			for (const app of APPS) {
+			for (const app of Object.keys(stack.services)) {
 				const c = stack.services[app];
 				items[app].Spec.TaskTemplate.ContainerSpec.Image = c.image;
 				items[app].Spec.TaskTemplate.ContainerSpec.Env = Object.entries(c.environment).map(([key, value]) => `${key}=${value.replaceAll('$$', '$')}`);
@@ -559,4 +589,60 @@ test('tmpfs security flags stop normal deploy and dry-run before snapshots or up
 			f.cleanup();
 		}
 	}
+});
+test('platform scheduling filters are retained across deployment, no-op and rollback', async () => {
+	const f = fixture();
+	try {
+		const platforms = [{ Architecture: 'arm64', OS: 'linux' }];
+		f.items.bot.Spec.TaskTemplate.Placement.Platforms = structuredClone(platforms);
+		await main(['--config', f.configPath], f.run, () => {});
+		assert.deepEqual(f.items.bot.Spec.TaskTemplate.Placement.Platforms, platforms);
+		const serviceCalls = () => f.calls.filter((c) => c.args[0] === 'service' && c.args[1] === 'update');
+		assert.equal(serviceCalls().length, 1);
+		assert.ok(serviceCalls()[0].args.includes('--no-resolve-image'));
+		assert.ok(serviceCalls()[0].args.includes('--with-registry-auth'));
+		assert.equal(
+			serviceCalls()[0].args.some((v) => v.includes(common.AUTH_KEY)),
+			false
+		);
+		assert.equal(serviceCalls()[0].opts.env.AUTH_KEY, common.AUTH_KEY);
+		const appStack = f.calls.find((c) => c.args[0] === 'stack' && c.args[1] === 'deploy');
+		assert.equal(Object.hasOwn(JSON.parse(appStack.opts.input).services, 'bot'), false);
+		await main(['--config', f.configPath], f.run, () => {});
+		assert.equal(serviceCalls().length, 1);
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(serviceCalls().length, 2);
+		assert.deepEqual(f.items.bot.Spec.TaskTemplate.ContainerSpec.Env, ['KEEP=original']);
+		assert.deepEqual(f.items.bot.Spec.TaskTemplate.Placement.Platforms, platforms);
+	} finally {
+		f.cleanup();
+	}
+});
+test('rollback refuses externally changed platform filters before applying any service update', async () => {
+	const f = fixture();
+	try {
+		f.items.bot.Spec.TaskTemplate.Placement.Platforms = [{ Architecture: 'arm64', OS: 'linux' }];
+		await main(['--config', f.configPath], f.run, () => {});
+		f.items.bot.Spec.TaskTemplate.Placement.Platforms = [{ Architecture: 'amd64', OS: 'linux' }];
+		const count = f.calls.length;
+		await assert.rejects(
+			main(['rollback', '--config', f.configPath], f.run, () => {}),
+			/Platforms/
+		);
+		assert.equal(
+			f.calls.slice(count).some((c) => (c.args[0] === 'stack' && c.args[1] === 'deploy') || (c.args[0] === 'service' && c.args[1] === 'update')),
+			false
+		);
+	} finally {
+		f.cleanup();
+	}
+});
+test('platform-safe updates reject changes outside their supported flags or Docker CLI environment', () => {
+	const before = composeService(service('bot').Spec, refs);
+	const desired = structuredClone(before);
+	desired.ports = [{ target: 8080, published: 18080 }];
+	assert.throws(() => platformUpdatePlan(before, desired, 'test_bot'), /Platforms/);
+	desired.ports = before.ports;
+	desired.environment.DOCKER_HOST = 'tcp://different-manager:2375';
+	assert.throws(() => platformUpdatePlan(before, desired, 'test_bot'), /CLI 환경/);
 });

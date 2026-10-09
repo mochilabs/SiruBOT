@@ -23,7 +23,9 @@ test(
 		const docker = (program, args, options = {}) => {
 			assert.equal(program, 'docker');
 			if (args[0] === 'manifest' && process.env.SIRUBOT_SWARM_TEST_INSECURE === 'true') args = [...args.slice(0, 2), '--insecure', ...args.slice(2)];
-			return execFileSync('docker', ['exec', '-i', manager, 'docker', ...args], {
+			const forwarded = [];
+			if (options.env) for (let i = 0; i < args.length; i++) if (args[i] === '--env-add') forwarded.push('--env', args[++i]);
+			return execFileSync('docker', ['exec', '-i', ...forwarded, manager, 'docker', ...args], {
 				encoding: 'utf8',
 				stdio: ['pipe', 'pipe', 'pipe'],
 				timeout: 60_000,
@@ -153,6 +155,29 @@ test(
 				settings,
 				docker
 			);
+			// Set an API scheduling filter that differs from registry-derived image
+			// platforms. A later stack/registry lookup must not replace this list.
+			const restricted = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
+			const platforms = [
+				{ Architecture: 'amd64', OS: 'linux' },
+				{ Architecture: 'arm64', OS: 'linux' }
+			];
+			restricted.Spec.TaskTemplate.Placement.Platforms = platforms;
+			execFileSync(
+				'docker',
+				[
+					'exec',
+					'-i',
+					manager,
+					'wget',
+					'-qO-',
+					'--header=Content-Type: application/json',
+					'--post-file=/dev/stdin',
+					`http://127.0.0.1:2375/services/${restricted.ID}/update?version=${restricted.Version.Index}&registryAuthFrom=spec`
+				],
+				{ input: JSON.stringify(restricted.Spec), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+			);
+			await waitForServices([`${appStack}_bot`], settings, docker);
 			const storageNode = JSON.parse(docker('docker', ['service', 'ps', '--format', '{{json .}}', `${infraStack}_postgres`]).split('\n')[0]).Node;
 			await main(
 				['--config', configPath],
@@ -163,6 +188,7 @@ test(
 			const services = JSON.parse(docker('docker', ['service', 'inspect', ...APPS.map((app) => `${appStack}_${app}`)]));
 			const bot = services.find((item) => item.Spec.Name.endsWith('_bot'));
 			assert.equal(bot.Spec.Mode.Replicated.Replicas, 2);
+			assert.deepEqual(bot.Spec.TaskTemplate.Placement.Platforms, platforms);
 			assert.deepEqual(bot.Spec.TaskTemplate.Placement.Constraints, ['node.role == worker']);
 			assert.deepEqual([...bot.Spec.TaskTemplate.ContainerSpec.Hosts].sort(), ['192.0.2.1 upstream.test', '2001:db8::1 ipv6.test'].sort());
 			assert.ok(bot.Spec.TaskTemplate.ContainerSpec.Env.includes('AUTH_KEY=literal $HOME $(do-not-run)'));
@@ -201,6 +227,7 @@ test(
 			await main(['rollback', '--config', configPath], docker, () => {});
 			const restored = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
 			assert.deepEqual(restored.Spec.TaskTemplate.ContainerSpec.Env.sort(), ['KEEP=original', 'PORT=8080']);
+			assert.deepEqual(restored.Spec.TaskTemplate.Placement.Platforms, platforms);
 			assert.deepEqual([...restored.Spec.TaskTemplate.ContainerSpec.Hosts].sort(), ['192.0.2.1 upstream.test', '2001:db8::1 ipv6.test'].sort());
 			assert.equal(logs.join('\n').includes('literal $HOME'), false);
 			console.log('Host mappings and regular rollback verified; exercising Swarm automatic recovery');
@@ -249,6 +276,7 @@ test(
 			);
 			assert.equal(existsSync(join(dir, 'state/pending.json')), false);
 			const deployed = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
+			assert.deepEqual(deployed.Spec.TaskTemplate.Placement.Platforms, platforms);
 			assert.ok(deployed.Spec.TaskTemplate.ContainerSpec.Env.includes('FAIL_START=false'));
 		} finally {
 			for (const stack of [appStack, infraStack]) {

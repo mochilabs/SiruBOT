@@ -161,7 +161,7 @@ function updatePolicy(policy) {
 
 // Export only settings represented by legacy Compose v3. Reject unsupported settings before any update.
 // The live services are the source of truth; repository defaults never reset an operator's placement or scale.
-export function composeService(spec, references) {
+export function composeService(spec, references, { retainPlatforms = false } = {}) {
 	supported(spec, ['Name', 'Labels', 'TaskTemplate', 'Mode', 'UpdateConfig', 'RollbackConfig', 'EndpointSpec'], spec.Name);
 	const task = spec.TaskTemplate;
 	supported(task, ['ContainerSpec', 'Resources', 'RestartPolicy', 'Placement', 'Networks', 'LogDriver', 'ForceUpdate', 'Runtime'], spec.Name);
@@ -206,6 +206,7 @@ export function composeService(spec, references) {
 	if (c.OpenStdin || (c.Isolation && c.Isolation !== 'default')) throw new Error(`${spec.Name}: stdin/isolation 설정을 자동 변환할 수 없습니다.`);
 	if (!spec.Mode?.Replicated) throw new Error(`${spec.Name}: replicated 서비스만 지원합니다.`);
 	supported(task.Placement, ['Constraints', 'Preferences', 'MaxReplicas', 'Platforms'], 'placement');
+	if (!empty(task.Placement?.Platforms) && !retainPlatforms) throw new Error(`${spec.Name}: Platforms는 Compose에서 보존할 수 없습니다.`);
 	supported(task.RestartPolicy, ['Condition', 'Delay', 'MaxAttempts', 'Window'], 'restart policy');
 	supported(task.Resources, ['Limits', 'Reservations'], 'resources');
 	const resources = {};
@@ -438,8 +439,72 @@ function makeStack(services, run) {
 		return key;
 	};
 	const references = Object.fromEntries(['network', 'volume', 'secret', 'config'].map((kind) => [kind, (id) => reference(kind, id)]));
-	for (const [app, service] of Object.entries(services)) result.services[app] = composeService(service.Spec, references);
+	// Platform-bearing services are never applied from this Compose representation:
+	// preparePlatformUpdates retains their original spec with service update instead.
+	for (const [app, service] of Object.entries(services)) result.services[app] = composeService(service.Spec, references, { retainPlatforms: true });
 	return JSON.parse(JSON.stringify(result));
+}
+
+export function platformUpdatePlan(before, desired, name) {
+	const fixedSettings = (service) => {
+		const fixed = structuredClone(service);
+		for (const key of ['image', 'environment', 'stop_grace_period']) delete fixed[key];
+		delete fixed.deploy.replicas;
+		delete fixed.deploy.placement.constraints;
+		if (fixed.deploy.update_config) delete fixed.deploy.update_config.order;
+		return fixed;
+	};
+	if (fingerprint(fixedSettings(before)) !== fingerprint(fixedSettings(desired)))
+		throw new Error(`${name}: Platforms를 유지하는 service update로 복원할 수 없는 설정입니다.`);
+	const args = ['service', 'update', '--detach', '--with-registry-auth', '--no-resolve-image'];
+	const env = {};
+	for (const [key, value] of Object.entries(desired.environment)) {
+		if (before.environment[key] === value) continue;
+		// Values travel in the child environment, never argv. Do not let application
+		// variables change Docker transport, executable lookup or credential helpers.
+		if (
+			/^(DOCKER_|LD_|DYLD_|LC_)|^(PATH|HOME|USERPROFILE|APPDATA|XDG_CONFIG_HOME|SSH_AUTH_SOCK|NODE_OPTIONS|LANG|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY)$/i.test(
+				key
+			)
+		)
+			throw new Error(`${name}: service update에서 CLI 환경과 충돌하는 변수 ${key}는 변경할 수 없습니다.`);
+		args.push('--env-add', key);
+		env[key] = value;
+	}
+	for (const key of Object.keys(before.environment)) if (!Object.hasOwn(desired.environment, key)) args.push('--env-rm', key);
+	if (fingerprint({ image: before.image }) !== fingerprint({ image: desired.image })) args.push('--image', desired.image);
+	if (before.stop_grace_period !== desired.stop_grace_period) args.push('--stop-grace-period', desired.stop_grace_period ?? '10s');
+	if (before.deploy.replicas !== desired.deploy.replicas) args.push('--replicas', String(desired.deploy.replicas));
+	const beforeConstraints = before.deploy.placement.constraints;
+	const afterConstraints = desired.deploy.placement.constraints;
+	for (const value of beforeConstraints) if (!afterConstraints.includes(value)) args.push('--constraint-rm', value);
+	for (const value of afterConstraints) if (!beforeConstraints.includes(value)) args.push('--constraint-add', value);
+	const beforeOrder = before.deploy.update_config?.order;
+	const afterOrder = desired.deploy.update_config?.order;
+	if (beforeOrder !== afterOrder) args.push('--update-order', afterOrder ?? 'stop-first');
+	args.push('--label-add', `com.docker.stack.image=${desired.image}`, name);
+	return { args, env };
+}
+
+function preparePlatformUpdates(current, before, desired, savedPlatforms) {
+	const plans = {};
+	for (const [app, service] of Object.entries(current)) {
+		const platforms = service.Spec.TaskTemplate.Placement?.Platforms ?? [];
+		if (savedPlatforms && fingerprint(platforms) !== fingerprint(savedPlatforms[app] ?? []))
+			throw new Error(`${service.Spec.Name}: 저장된 Platforms와 현재 제한이 달라 자동 복원할 수 없습니다.`);
+		if (!platforms.length) continue;
+		const plan = platformUpdatePlan(before.services[app], desired.services[app], service.Spec.Name);
+		if (fingerprint(before.services[app]) !== fingerprint(desired.services[app])) plans[app] = plan;
+		else plans[app] = null;
+	}
+	return plans;
+}
+
+function applyStack(stack, name, plans, run) {
+	const ordinary = structuredClone(stack);
+	for (const app of Object.keys(plans)) delete ordinary.services[app];
+	if (Object.keys(ordinary.services).length) deployStack(ordinary, name, run);
+	for (const plan of Object.values(plans)) if (plan) run('docker', plan.args, { env: { ...process.env, ...plan.env } });
 }
 
 export function taskSummary(service, tasks, rollbackTargets = {}) {
@@ -550,7 +615,9 @@ function validateStack(stack, name, run) {
 
 function deployStack(stack, name, run) {
 	// JSON is valid YAML. Escaping '$' preserves literal passwords through Compose interpolation.
-	run('docker', ['stack', 'deploy', '--with-registry-auth', '--resolve-image', 'always', '--compose-file', '-', name], {
+	// Digests are already pinned and checked. Resolving again can add a new platform
+	// filter to previously unrestricted services, so retain their empty filter too.
+	run('docker', ['stack', 'deploy', '--with-registry-auth', '--resolve-image', 'never', '--compose-file', '-', name], {
 		input: JSON.stringify(escapeInterpolation(stack))
 	});
 }
@@ -623,6 +690,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		sensitive = Object.values(before.services).flatMap((service) => Object.values(service.environment));
 		let desired;
 		let manifest;
+		let savedPlatforms;
 		if (opts.action === 'rollback') {
 			let saved;
 			try {
@@ -633,6 +701,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			if (saved.appStack !== config.appStack || saved.repository !== config.repository || saved.branch !== config.branch)
 				throw new Error('이전 배포의 stack·저장소·브랜치가 다릅니다.');
 			desired = saved.stack;
+			savedPlatforms = saved.platforms ?? {};
 		} else {
 			let common;
 			try {
@@ -666,19 +735,23 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			run('docker', ['manifest', 'inspect', image]);
 		}
 		let infra;
+		let infraPlans = {};
 		let infraChanged = false;
 		if (opts.withInfra) {
 			if (!config.infraStack) throw new Error('--with-infra에는 기존 infraStack 설정이 필요합니다.');
 			const existing = inspectServices(config, ['redis', 'postgres'], config.infraStack, run);
 			infra = makeStack(existing, run);
+			const beforeInfra = structuredClone(infra);
 			const originalHash = fingerprint(infra);
 			protectInfra(existing, infra, run);
 			infraChanged = fingerprint(infra) !== originalHash;
+			infraPlans = preparePlatformUpdates(existing, beforeInfra, infra);
 			for (const service of Object.values(infra.services)) {
 				run('docker', ['manifest', 'inspect', service.image]);
 				sensitive.push(...Object.values(service.environment));
 			}
 		}
+		const platformPlans = preparePlatformUpdates(current, before, desired, savedPlatforms);
 		// Check both stacks before dry-run success, snapshot writes, or any service update.
 		validateStack(desired, config.appStack, run);
 		if (infra) validateStack(infra, config.infraStack, run);
@@ -710,6 +783,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 				repository: config.repository,
 				branch: config.branch,
 				appStack: config.appStack,
+				platforms: Object.fromEntries(APPS.map((app) => [app, current[app].Spec.TaskTemplate.Placement?.Platforms ?? []])),
 				stack: before
 			});
 			protectedWrite(join(config.stateDir, 'pending.json'), {
@@ -720,7 +794,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		if (infra) {
 			if (infraChanged) {
 				updating = true;
-				deployStack(infra, config.infraStack, run);
+				applyStack(infra, config.infraStack, infraPlans, run);
 			}
 			await waitForServices(
 				['redis', 'postgres'].map((app) => `${config.infraStack}_${app}`),
@@ -730,7 +804,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		}
 		if (changed.length) {
 			updating = true;
-			deployStack(desired, config.appStack, run);
+			applyStack(desired, config.appStack, platformPlans, run);
 		}
 		await waitForServices(
 			APPS.map((app) => `${config.appStack}_${app}`),

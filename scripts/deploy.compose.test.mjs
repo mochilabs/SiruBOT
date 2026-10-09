@@ -78,3 +78,9 @@ test('tmpfs mount options cannot be silently discarded while size and mode remai
 	);
 	assert.deepEqual(compose.volumes[0].tmpfs, { size: 65536, mode: 0o700 });
 });
+test('Compose conversion alone rejects platform filters unless retained through a separate service update', () => {
+	const spec = service();
+	spec.TaskTemplate.Placement = { Platforms: [{ Architecture: 'arm64', OS: 'linux' }] };
+	assert.throws(() => composeService(spec, references), /Platforms/);
+	assert.doesNotThrow(() => composeService(spec, references, { retainPlatforms: true }));
+});
