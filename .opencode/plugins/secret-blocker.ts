@@ -1,70 +1,93 @@
 import type { Plugin } from '@opencode-ai/plugin';
 
-const SECRET_PATTERNS = [
+// Global flag required for matchAll()/replace() — every match is checked, not just the first.
+const SECRET_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
 	// Discord bot token
-	/[MN][A-Za-z\d]{23,}\.[\w-]{6}\.[\w-]{27,}/g,
-	// Generic token patterns
-	/(?:token|api[_-]?key|secret|password|passwd|pwd)\s*[:=]\s*["']?[A-Za-z0-9_\-\.]{20,}["']?/gi,
+	{ label: 'Discord bot token', pattern: /[MN][A-Za-z\d]{23,}\.[\w-]{6}\.[\w-]{27,}/g },
+	// Generic credential assignments
+	{ label: 'credential assignment (token/api key/secret/password)', pattern: /(?:token|api[_-]?key|secret|password|passwd|pwd)\s*[:=]\s*["']?[A-Za-z0-9_\-.]{20,}["']?/gi },
 	// Database URLs
-	/(?:postgres|postgresql|mysql|mongodb|redis):\/\/[^\s"']+/gi,
+	{ label: 'database connection URL', pattern: /(?:postgres|postgresql|mysql|mongodb|redis):\/\/[^\s"']+/gi },
 	// Sentry DSN
-	/https:\/\/[a-f0-9]+@[a-z0-9.\-]+\/[0-9]+/g,
+	{ label: 'Sentry DSN', pattern: /https:\/\/[a-f0-9]+@[a-z0-9.\-]+\/[0-9]+/g },
 	// AWS keys
-	/AKIA[0-9A-Z]{16}/g,
+	{ label: 'AWS access key', pattern: /AKIA[0-9A-Z]{16}/g },
 	// Private keys
-	/-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g,
+	{ label: 'private key', pattern: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g },
 	// Bearer tokens
-	/Bearer\s+[A-Za-z0-9_\-\.]+/g,
+	{ label: 'bearer token', pattern: /Bearer\s+[A-Za-z0-9_\-.]+/g },
 	// .env variable assignments with sensitive values
-	/(?:DISCORD_TOKEN|BOT_TOKEN|DATABASE_URL|REDIS_URL|SENTRY_DSN|OWNERS)\s*=\s*.+/gi
+	{ label: 'sensitive env assignment', pattern: /(?:DISCORD_TOKEN|BOT_TOKEN|DATABASE_URL|REDIS_URL|SENTRY_DSN|AUTH_KEY|OWNERS)\s*=\s*.+/gi }
 ];
 
+// Non-global on purpose: used with .test(), which is stateful (lastIndex) on /g regexes.
 const SAFE_PATTERNS = [
-	/process\.env\.\w+/g,
-	/['"](?:your-.*-here|placeholder|example|xxx|changeme)['"]/gi,
-	/\$\{[^}]+\}/g,
-	/process\.env\[(['"])\w+\1\]/g
+	/process\.env\.\w+/,
+	/process\.env\[(['"])\w+\1\]/,
+	/['"](?:your-.*-here|placeholder|example|xxx|changeme)['"]/i,
+	/\$\{[^}]+\}/,
+	/\$\w+/
 ];
 
-function containsSecret(text: string): { found: boolean; pattern?: string } {
-	for (const pattern of SECRET_PATTERNS) {
-		const match = text.match(pattern);
-		if (match) {
-			// Check if it's a false positive (safe pattern)
-			const isSafe = SAFE_PATTERNS.some((sp) => sp.test(match[0]));
-			if (!isSafe) {
-				return { found: true, pattern: match[0].slice(0, 30) + '...' };
+function isSafe(match: string): boolean {
+	return SAFE_PATTERNS.some((sp) => sp.test(match));
+}
+
+function findSecret(text: string): { label: string } | null {
+	for (const { label, pattern } of SECRET_PATTERNS) {
+		for (const match of text.matchAll(pattern)) {
+			if (!isSafe(match[0])) {
+				// Never return the matched text — it is the secret itself.
+				return { label };
 			}
 		}
 	}
-	return { found: false };
+	return null;
 }
+
+function redact(text: string): string {
+	let result = text;
+	for (const { pattern } of SECRET_PATTERNS) {
+		result = result.replace(pattern, (m) => (isSafe(m) ? m : '[REDACTED]'));
+	}
+	return result;
+}
+
+const WRITE_TOOLS = new Set(['write', 'edit', 'multiedit']);
 
 export const SecretBlocker: Plugin = async () => {
 	return {
-		'execute.after': async (input, output) => {
-			if (input.tool !== 'bash') return;
+		'tool.execute.before': async (input, output) => {
+			const args = output.args as Record<string, unknown>;
 
-			const command = input.args.command as string | undefined;
-			if (!command) return;
+			if (input.tool === 'bash') {
+				const command = args.command as string | undefined;
+				if (!command) return;
 
-			// Check for echo/cat/printing secrets
-			const result = containsSecret(command);
-			if (result.found) {
-				output.args.command = 'echo "⚠️ Secret detected in command — blocked by secret-blocker plugin."';
+				const hit = findSecret(command);
+				if (hit) {
+					args.command = `echo "⚠️ Blocked by secret-blocker plugin: ${hit.label} detected in command. Reference environment variables instead of literal secrets."`;
+				}
 				return;
+			}
+
+			if (WRITE_TOOLS.has(input.tool)) {
+				const content = (args.content ?? args.newString) as string | undefined;
+				if (!content) return;
+
+				const hit = findSecret(content);
+				if (hit) {
+					throw new Error(`secret-blocker: blocked ${input.tool} containing ${hit.label}. Write a placeholder or env var reference instead.`);
+				}
 			}
 		},
 
-		'file.write.after': async (input) => {
-			const content = input.args.content as string | undefined;
-			if (!content) return;
-
-			const result = containsSecret(content);
-			if (result.found) {
-				input.args.content =
-					content +
-					'\n\n// ⚠️ WARNING: Potential secret detected in this file by secret-blocker plugin. Review before committing.';
+		// Secrets most often leak via command output (e.g. `cat .env`) — redact them
+		// before the output lands in the session transcript.
+		'tool.execute.after': async (input, output) => {
+			if (input.tool !== 'bash') return;
+			if (typeof output.output === 'string' && findSecret(output.output)) {
+				output.output = redact(output.output);
 			}
 		}
 	};

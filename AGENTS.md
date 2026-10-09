@@ -32,7 +32,7 @@ yarn typecheck                        # turbo; dependsOn ^generate — don't run
 
 ## Env / runtime gotchas
 
-- Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets — a `secret-blocker` plugin rewrites offending `bash` commands.
+- Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets — a `secret-blocker` plugin (`.opencode/plugins/secret-blocker.ts`) rewrites offending `bash` commands, blocks `write`/`edit` containing literals, and redacts secrets from bash output.
 - `LAVALINK_HOSTS` format (parsed in `bootstrap.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
 - Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → remove audio listeners → redis disconnect → db disconnect.
 - Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
