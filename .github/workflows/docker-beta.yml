@@ -5,17 +5,27 @@ name: Beta Docker Image
 # 코드와 무관한 변경(문서 등)은 paths 필터에서 제외되어 빌드를 건너뛴다.
 # 변경된 앱의 이미지만 빌드한다 (공유 패키지/Dockerfile 변경 시 전체 빌드).
 on:
+  workflow_dispatch:
+    inputs:
+      full_build:
+        description: "Build all apps and initialize/reset the deployment manifest"
+        type: boolean
+        default: false
   push:
-    branches: [beta, 'feat/**']
+    branches: [beta, "feat/**"]
     paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'scripts/**'
-      - 'Dockerfile'
-      - 'package.json'
-      - 'yarn.lock'
-      - 'turbo.json'
-      - '.github/workflows/docker-beta.yml'
+      - "apps/**"
+      - "packages/**"
+      - "scripts/**"
+      - "Dockerfile"
+      - "package.json"
+      - "yarn.lock"
+      - "turbo.json"
+      - ".dockerignore"
+      - ".yarnrc.yml"
+      - "tsconfig*.json"
+      - "resources/**"
+      - ".github/workflows/docker-beta.yml"
 
 env:
   REGISTRY: ghcr.io
@@ -29,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     outputs:
       bot: ${{ steps.filter.outputs.bot }}
       dashboard: ${{ steps.filter.outputs.dashboard }}
@@ -40,34 +51,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # Compare with the last successful manifest, including changes from failed/cancelled runs.
       - name: Detect changed apps
         id: filter
-        run: |
-          BASE="${{ github.event.before }}"
-          HEAD="${{ github.sha }}"
-          if [[ "$BASE" == 0000000000000000000000000000000000000000* ]]; then
-            echo "First push to branch, building all apps"
-            echo "bot=true" >> "$GITHUB_OUTPUT"
-            echo "dashboard=true" >> "$GITHUB_OUTPUT"
-            echo "shardmanager=true" >> "$GITHUB_OUTPUT"
-            echo "data-api=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          FILES=$(git diff --name-only "$BASE" "$HEAD")
-          echo "Changed files:"
-          echo "$FILES"
-          check() {
-            echo "$FILES" | grep -qE "$1"
-          }
-          SHARED='packages/|scripts/|Dockerfile|package\.json|yarn\.lock|turbo\.json'
-          if check "^(apps/bot/|$SHARED)"; then BOT=true; else BOT=false; fi
-          if check "^(apps/dashboard/|$SHARED)"; then DASHBOARD=true; else DASHBOARD=false; fi
-          if check "^(apps/shardmanager/|$SHARED)"; then SHARD=true; else SHARD=false; fi
-          if check "^(apps/data-api/|$SHARED)"; then DATAAPI=true; else DATAAPI=false; fi
-          echo "bot=$BOT" >> "$GITHUB_OUTPUT"
-          echo "dashboard=$DASHBOARD" >> "$GITHUB_OUTPUT"
-          echo "shardmanager=$SHARD" >> "$GITHUB_OUTPUT"
-          echo "data-api=$DATAAPI" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_FULL_BUILD: ${{ inputs.full_build || false }}
+        run: node scripts/deployment-manifest.mjs prepare
+
+      - name: Save build plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-plan
+          path: .deploy/ci/plan.json
+          include-hidden-files: true
+          retention-days: 90
+          overwrite: true
 
   build-beta:
     needs: changes
@@ -124,6 +129,7 @@ jobs:
             type=sha,prefix=${{ steps.tag.outputs.prefix }}-,format=short
 
       - name: Build and push Docker image
+        id: build
         if: needs.changes.outputs[matrix.app] == 'true'
         uses: docker/build-push-action@v5
         with:
@@ -138,3 +144,58 @@ jobs:
             VERSION=${{ steps.tag.outputs.prefix }}-${{ github.sha }}
           cache-from: type=gha,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
+
+      - name: Set up Node.js for deployment tools
+        if: needs.changes.outputs[matrix.app] == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Record image digest
+        if: needs.changes.outputs[matrix.app] == 'true'
+        env:
+          APP: ${{ matrix.app }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: node scripts/deployment-manifest.mjs image "$APP" "$DIGEST"
+
+      - name: Save image digest
+        if: needs.changes.outputs[matrix.app] == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.app }}
+          path: .deploy/ci/${{ matrix.app }}.json
+          include-hidden-files: true
+          retention-days: 90
+          overwrite: true
+
+  deployment-manifest:
+    needs: [changes, build-beta]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: deployment-plan
+          path: .deploy/ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: .deploy/ci
+      - name: Assemble successful deployment
+        run: node scripts/deployment-manifest.mjs finalize
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployment-manifest
+          path: .deploy/ci/deployment-manifest.json
+          include-hidden-files: true
+          retention-days: 90
+          overwrite: true

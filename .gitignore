@@ -46,3 +46,6 @@ packages/prisma/src/client/
 
 # Local codebase documentation
 /localdocs/
+
+# Deployment configuration and protected rollback snapshots
+/.deploy/

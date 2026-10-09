@@ -31,3 +31,17 @@ jobs:
  
       - name: Run prettier
         run: yarn lint
+
+  deployment-tools:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node.js for deployment tools
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Test deployment tools
+        run: node --test scripts/deploy.test.mjs scripts/deployment-manifest.test.mjs scripts/deploy.compose.test.mjs
