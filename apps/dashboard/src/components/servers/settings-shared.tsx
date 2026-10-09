@@ -1,11 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle, Loader2, RefreshCw, Save } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { AlertCircle, Loader2, LogIn, RefreshCw, Save } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button, buttonVariants } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
 import type { ApiError } from "@/lib/api-error";
+import { cn } from "@/lib/utils";
 
 /* ─────────────────────────── 패널 헤더 ─────────────────────────── */
 
@@ -60,16 +63,29 @@ export function PanelLoading({ label }: { label: string }) {
 }
 
 export function PanelError({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
+	const pathname = usePathname();
+
 	return (
 		<Card padding="lg" className="gap-3">
 			<p className="flex items-center gap-2 text-sm text-destructive">
 				<AlertCircle size={16} aria-hidden />
 				{error.message}
 			</p>
-			{error.retryable && (
-				<Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={onRetry}>
-					다시 시도
-				</Button>
+			{error.status === 401 ? (
+				// 세션 만료 — 재시도 대신 로그인 페이지로 안내해요
+				<Link
+					href={`/api/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`}
+					className={cn(buttonVariants({ variant: "primary", size: "sm" }), "w-fit")}
+				>
+					<LogIn size={14} aria-hidden />
+					다시 로그인
+				</Link>
+			) : (
+				error.retryable && (
+					<Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={onRetry}>
+						다시 시도
+					</Button>
+				)
 			)}
 		</Card>
 	);

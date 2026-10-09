@@ -2,13 +2,10 @@ import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
-import { OhaasaWidget } from "@/components/servers/ohaasa-widget";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { canManage } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
-import { getZodiac } from "@/lib/zodiac";
 
 interface GuildMember {
   nick: string | null;
@@ -64,26 +61,12 @@ export default async function ServerDashboardPage({
 
   const manageable = await canManage(accessToken, id);
 
-  // 세션 유저 생일 → 별자리 코드 (운세 위젯 하이라이트용). 생일 없으면 null.
-  const profile = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { birthMonth: true, birthDay: true },
-  });
-  const zodiacCode =
-    profile?.birthMonth != null && profile?.birthDay != null
-      ? getZodiac(profile.birthMonth, profile.birthDay)?.code ?? null
-      : null;
-
   return (
     <Container>
       <PageHeader
         title="서버 대시보드"
         description="AI 채팅·음악·채널·임시 음성 등 서버 설정을 한 곳에서 관리해요."
       />
-      <div className="mb-6">
-        {/* 운세는 서버별 데이터가 아닌 전체 공용 데이터라 페이지 상단에 배치해요. */}
-        <OhaasaWidget zodiacCode={zodiacCode} />
-      </div>
       <ServerDashboard guildId={id} manageable={manageable} />
     </Container>
   );

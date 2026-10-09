@@ -1,7 +1,20 @@
 "use client";
 
 import { useCallback } from "react";
-import { Music } from "lucide-react";
+import {
+	CircleDollarSign,
+	Eye,
+	FastForward,
+	Film,
+	Megaphone,
+	MessageCircle,
+	Music,
+	Music2,
+	Repeat,
+	Repeat1,
+	Repeat2,
+	SkipForward,
+} from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
@@ -19,26 +32,23 @@ import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./setti
 /* ─────────────────────────── 옵션 ─────────────────────────── */
 
 const REPEAT_OPTIONS: SelectOption[] = [
-	{ value: "off", label: "🔁 반복 없음" },
-	{ value: "track", label: "🔂 한 곡 반복" },
-	{ value: "queue", label: "🔁 전체 반복" },
+	{ value: "off", label: "반복 없음", icon: <Repeat size={16} aria-hidden /> },
+	{ value: "track", label: "한 곡 반복", icon: <Repeat1 size={16} aria-hidden /> },
+	{ value: "queue", label: "전체 반복", icon: <Repeat2 size={16} aria-hidden /> },
 ];
 
-const SEGMENT_LABELS: Record<(typeof SPONSORBLOCK_SEGMENTS)[number], string> = {
-	sponsor: "💰 스폰서",
-	selfpromo: "📢 자기 홍보",
-	interaction: "💬 상호작용",
-	intro: "🎬 인트로",
-	outro: "🔚 아웃트로",
-	preview: "👀 미리보기",
-	music_offtopic: "🎵 음악 외 구간",
-	filler: "⏭️ 필러",
+const SEGMENT_OPTIONS_META: Record<(typeof SPONSORBLOCK_SEGMENTS)[number], { label: string; icon: React.ReactNode }> = {
+	sponsor: { label: "스폰서", icon: <CircleDollarSign size={16} aria-hidden /> },
+	selfpromo: { label: "자기 홍보", icon: <Megaphone size={16} aria-hidden /> },
+	interaction: { label: "상호작용", icon: <MessageCircle size={16} aria-hidden /> },
+	intro: { label: "인트로", icon: <Film size={16} aria-hidden /> },
+	outro: { label: "아웃트로", icon: <SkipForward size={16} aria-hidden /> },
+	preview: { label: "미리보기", icon: <Eye size={16} aria-hidden /> },
+	music_offtopic: { label: "음악 외 구간", icon: <Music2 size={16} aria-hidden /> },
+	filler: { label: "필러", icon: <FastForward size={16} aria-hidden /> },
 };
 
-const SEGMENT_OPTIONS: SelectOption[] = SPONSORBLOCK_SEGMENTS.map((segment) => ({
-	value: segment,
-	label: SEGMENT_LABELS[segment],
-}));
+const SEGMENT_OPTIONS: SelectOption[] = SPONSORBLOCK_SEGMENTS.map((segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }));
 
 /* ─────────────────────────── 폼 매핑 (모듈 수준 — 안정 참조) ─────────────────────────── */
 

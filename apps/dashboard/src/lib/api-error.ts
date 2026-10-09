@@ -3,6 +3,7 @@ export class ApiError extends Error {
 	constructor(
 		message: string,
 		readonly retryable: boolean,
+		readonly status?: number,
 	) {
 		super(message);
 	}
@@ -16,7 +17,7 @@ export async function toApiError(res: Response, fallback: string): Promise<ApiEr
 	} catch {
 		// JSON 본문이 없으면 기본 메시지 유지
 	}
-	return new ApiError(message, res.status !== 401 && res.status !== 403);
+	return new ApiError(message, res.status !== 401 && res.status !== 403, res.status);
 }
 
 export function toError(error: unknown, fallback: string): ApiError {

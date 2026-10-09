@@ -39,6 +39,8 @@ export function useGuildSettings(guildId: string) {
 	);
 
 	const reload = useCallback(() => {
+		// bound mutate()는 FETCH/PRELOAD 진행 요청 마커를 지우고 재검증해요 —
+		// dedupingInterval(SWRConfig 5000ms)로 실패 직후 "다시 시도"가 묵살되지 않게 해요.
 		void mutate();
 	}, [mutate]);
 
@@ -120,6 +122,7 @@ export function useGuildChannels(guildId: string, enabled = true) {
 		channels: data?.channels ?? null,
 		isLoading,
 		error: error ? toError(error, "채널 목록을 불러오지 못했어요.") : null,
+		// dedupingInterval 우회: mutate 재검증은 진행 요청 마커를 삭제해 즉시 재요청돼요 (위 useGuildSettings 주석 참고)
 		reload: () => void mutate(),
 	};
 }
@@ -134,6 +137,7 @@ export function useGuildRoles(guildId: string, enabled = true) {
 		roles: data?.roles ?? null,
 		isLoading,
 		error: error ? toError(error, "역할 목록을 불러오지 못했어요.") : null,
+		// dedupingInterval 우회: mutate 재검증은 진행 요청 마커를 삭제해 즉시 재요청돼요
 		reload: () => void mutate(),
 	};
 }
