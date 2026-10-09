@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { APPS, changedApps, assembleManifest, validateManifest, selectManifest } from './deployment-manifest.mjs';
+import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { APPS, changedApps, changedAppsSince, assembleManifest, validateManifest, selectManifest } from './deployment-manifest.mjs';
 
 const repository = 'mochilabs/SiruBOT';
 const branch = 'beta';
@@ -38,6 +40,38 @@ test('all shared Docker inputs invalidate all apps', () => {
 		assert.deepEqual(changedApps([file], true), APPS, file);
 	}
 });
+for (const [source, destination, expected] of [
+	['apps/bot/src/old.ts', 'apps/dashboard/src/new.ts', ['bot', 'dashboard']],
+	['apps/bot/src/old.ts', 'archive/old.ts', ['bot']],
+	['apps/bot/src/old.ts', 'apps/bot/src/new.ts', ['bot']],
+	['resources/old.ts', 'apps/bot/src/new.ts', APPS]
+]) {
+	test(`Git rename ${source} -> ${destination} rebuilds every affected app`, () => {
+		const dir = mkdtempSync(join(tmpdir(), 'sirubot-manifest-rename-'));
+		const run = (program, args) => execFileSync(program, args, { cwd: dir, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+		const commit = (message) => run('git', ['-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', message]);
+		try {
+			run('git', ['init', '--quiet']);
+			run('git', ['config', 'user.name', 'Manifest Test']);
+			run('git', ['config', 'user.email', 'manifest-test@example.invalid']);
+			run('git', ['config', 'diff.renames', 'true']);
+			mkdirSync(dirname(join(dir, source)), { recursive: true });
+			writeFileSync(join(dir, source), 'export const fixture = 42;\n');
+			run('git', ['add', '.']);
+			commit('initial file');
+			const before = run('git', ['rev-parse', 'HEAD']);
+			mkdirSync(dirname(join(dir, destination)), { recursive: true });
+			renameSync(join(dir, source), join(dir, destination));
+			run('git', ['add', '.']);
+			commit('move file');
+			const after = run('git', ['rev-parse', 'HEAD']);
+			assert.match(run('git', ['diff', '--name-status', before, after]), /^R100\s/);
+			assert.deepEqual(changedAppsSince(before, after, run), expected);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+}
 test('unchanged app digests come from the last successful manifest', () => {
 	const next = assembleManifest({
 		repository,

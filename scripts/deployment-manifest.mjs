@@ -45,6 +45,12 @@ export function changedApps(files, hasBaseline) {
 	return APPS.filter((app) => files.some((file) => file.startsWith(`apps/${app}/`)));
 }
 
+export function changedAppsSince(previousCommit, commit, run = command) {
+	// Treat renames as deletion + addition so both the source and destination count.
+	const files = run('git', ['diff', '--no-renames', '--name-only', previousCommit, commit]).split('\n');
+	return changedApps(files, true);
+}
+
 export function assembleManifest({ repository, branch, commit, runId, previous, changed, built }) {
 	if (previous) validateManifest(previous, repository, branch);
 	const images = { ...previous?.images };
@@ -157,7 +163,7 @@ function ciMain() {
 		let changed = [...APPS];
 		if (previous) {
 			try {
-				changed = changedApps(command('git', ['diff', '--name-only', previous.commit, commit]).split('\n'), true);
+				changed = changedAppsSince(previous.commit, commit);
 			} catch {
 				previous = undefined;
 			}
