@@ -59,11 +59,11 @@ export class MentionReplyListener extends Listener {
 			return;
 		}
 
-		// 유저당 시간당 턴 상한 — 초과 시 조용히 안내해요
+		// 유저당 턴 상한(10분 윈도우) — 초과 시 조용히 안내해요
 		if (!(await tryConsumeUserTurn(message.author.id))) {
 			await message
 				.reply({
-					content: `-# ${emoji('hourglass')} AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 멘션해 주세요.`,
+					content: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})

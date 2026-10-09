@@ -101,11 +101,11 @@ export class ChatCommand extends Command {
 			username: interaction.user.username
 		};
 
-		// 유저당 시간당 턴 상한 — 초과 시 안내 후 종료
+		// 유저당 턴 상한(10분 윈도우) — 초과 시 안내 후 종료
 		if (!(await tryConsumeUserTurn(interaction.user.id))) {
 			throw new UserError({
 				identifier: 'chat_rate_limited',
-				message: `${emoji('hourglass')} AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 시도해 주세요.`,
+				message: `${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 시도해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
