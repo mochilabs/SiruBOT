@@ -405,6 +405,74 @@ function fixture() {
 	};
 }
 
+function addInfrastructure(f, pinStorage = false) {
+	const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+	writeFileSync(f.configPath, JSON.stringify({ ...settings, infraStack: 'infra' }));
+	for (const app of ['redis', 'postgres']) {
+		const item = service(app, 'infra');
+		item.Spec.TaskTemplate.ContainerSpec.Mounts = [{ Type: 'volume', Source: `existing-${app}`, Target: '/data' }];
+		if (app === 'postgres') item.Spec.TaskTemplate.ContainerSpec.Env.push('PGDATA=/data');
+		if (pinStorage) item.Spec.TaskTemplate.Placement.Constraints.push('node.id == node-id');
+		f.items[app] = item;
+	}
+}
+
+for (const [app, field, stale] of [
+	['postgres', 'image', (c) => (c.Image = `ghcr.io/example/postgres@sha256:${'d'.repeat(64)}`)],
+	['postgres', 'PGDATA', (c) => (c.Env = c.Env.map((v) => (v.startsWith('PGDATA=') ? 'PGDATA=/data/old' : v)))],
+	['postgres', 'entrypoint', (c) => (c.Command = ['old-entrypoint'])],
+	['redis', 'arguments', (c) => (c.Args = ['redis-server', '--dir', '/data/old'])],
+	['redis', 'working directory', (c) => (c.Dir = '/data/old')],
+	['postgres', 'stop grace', (c) => (c.StopGracePeriod = 0)]
+]) {
+	test(`infra rejects a running task with stale ${field} before applying either stack`, async () => {
+		for (const dryRun of [false, true]) {
+			const f = fixture();
+			try {
+				addInfrastructure(f);
+				const run = (program, args, opts) => {
+					const result = f.run(program, args, opts);
+					if (args[0] !== 'inspect' || args.at(-1) !== f.items[app].ID) return result;
+					const running = JSON.parse(result);
+					for (const task of running) stale(task.Spec.ContainerSpec);
+					return JSON.stringify(running);
+				};
+				await assert.rejects(
+					main(['--config', f.configPath, '--with-infra', ...(dryRun ? ['--dry-run'] : [])], run, () => {}),
+					/컨테이너 설정/
+				);
+				assert.equal(
+					f.calls.some((c) => (c.args[0] === 'stack' && c.args[1] === 'deploy') || (c.args[0] === 'service' && c.args[1] === 'update')),
+					false
+				);
+				assert.equal(existsSync(join(f.dir, 'state/previous.json')), false);
+				assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+			} finally {
+				f.cleanup();
+			}
+		}
+	});
+}
+test('infra accepts full matching task configuration with equivalent digest tags and empty DNS defaults', async () => {
+	const f = fixture();
+	try {
+		addInfrastructure(f);
+		const run = (program, args, opts) => {
+			const result = f.run(program, args, opts);
+			if (args[0] !== 'inspect') return result;
+			const running = JSON.parse(result);
+			for (const task of running) {
+				task.Spec.ContainerSpec.DNSConfig = { Nameservers: [], Search: [], Options: [] };
+				task.Spec.ContainerSpec.Image = task.Spec.ContainerSpec.Image.replace(':beta@', '@');
+			}
+			return JSON.stringify(running);
+		};
+		await main(['--config', f.configPath, '--with-infra', '--dry-run'], run, () => {});
+	} finally {
+		f.cleanup();
+	}
+});
+
 test('dry-run reads real deployment inputs but changes no services or state', async () => {
 	const f = fixture();
 	try {

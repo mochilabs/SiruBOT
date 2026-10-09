@@ -592,6 +592,8 @@ export function protectInfra(services, stack, run) {
 			throw new Error(`${app}: 기존 데이터 볼륨을 확정할 수 없습니다.`);
 		if (fingerprint(mounts) !== fingerprint(task.Spec.ContainerSpec.Mounts ?? []))
 			throw new Error(`${app}: 실행 task와 서비스의 볼륨 설정이 다릅니다.`);
+		if (containerFingerprint(container) !== containerFingerprint(task.Spec.ContainerSpec))
+			throw new Error(`${app}: 실행 task와 서비스의 컨테이너 설정이 다릅니다. 인프라 적용을 중단합니다.`);
 		const node = JSON.parse(run('docker', ['node', 'inspect', task.NodeID]))[0];
 		if (node.Status.State !== 'ready' || node.Spec.Availability !== 'active') throw new Error(`${app}: 저장 노드가 ready/active 상태가 아닙니다.`);
 		// The running task proves the named mount is in use on this node. Do not probe by mounting:
