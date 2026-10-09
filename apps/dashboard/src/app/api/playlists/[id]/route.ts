@@ -176,10 +176,16 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const { id } = await params;
-    const userId = session.user.id;
+  const { id } = await params;
+  const userId = session.user.id;
 
+  const limited = guardRateLimit(
+    rateKey("playlist-delete", userId, id),
+    WRITE_RATE,
+  );
+  if (limited) return limited;
+
+  try {
     const playlist = await db.playlist.findFirst({
       where: { id, userId },
     });

@@ -28,7 +28,7 @@ const CACHE_MAX_ENTRIES = 1_000;
 /**
  * resolveCanManage 성공(ok) 결과 캐시 — 30초. 모듈 레벨 인메모리라 serverless
  * 콜드스타트마다 비어 있을 수 있어요(허용). unavailable/invalid-token은 일시적 상태라
- * 캐시하지 않아요. 토큰은 키에 넣지 않고 길이만 써서 노출을 줄여요.
+ * 캐시하지 않아요. 키는 userId:guildId 조합이라 사용자 간 판정이 섞이지 않아요.
  */
 const resolveCache = new Map<
   string,
@@ -61,9 +61,10 @@ function writeCache(cacheKey: string, result: CanManageResult): void {
  */
 export async function resolveCanManage(
   accessToken: string,
+  userId: string,
   guildId: string,
 ): Promise<CanManageResult> {
-  const cacheKey = `${accessToken.length}:${guildId}`;
+  const cacheKey = `${userId}:${guildId}`;
   const cached = readCache(cacheKey);
   if (cached) return cached;
 
@@ -104,8 +105,9 @@ export async function resolveCanManage(
 /** 사용자 토큰으로 서버 관리 권한(Manage Guild/Administrator) 확인 — 하위 호환 boolean 헬퍼 */
 export async function canManage(
   accessToken: string,
+  userId: string,
   guildId: string,
 ): Promise<boolean> {
-  const result = await resolveCanManage(accessToken, guildId);
+  const result = await resolveCanManage(accessToken, userId, guildId);
   return result.status === "ok" && result.manageable;
 }

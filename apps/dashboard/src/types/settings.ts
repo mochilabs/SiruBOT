@@ -20,6 +20,7 @@ export interface GuildSettings {
 	voiceChannelId: string | null;
 	pinnedChannelId: string | null;
 	pinnedChannelMode: "play" | "select";
+	pinnedChannelDeleteInput: boolean;
 	jtcEnabled: boolean;
 	jtcCategoryId: string | null;
 	jtcMarkerChannelId: string | null;

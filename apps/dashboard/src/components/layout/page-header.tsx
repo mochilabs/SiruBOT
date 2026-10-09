@@ -25,7 +25,7 @@ export function PageHeader({
 						{title}
 					</h1>
 					{description && (
-						<div className="text-sm sm:text-base font-medium text-muted-foreground/80 truncate">
+						<div className="text-sm sm:text-base font-medium text-muted-foreground truncate">
 							{description}
 						</div>
 					)}

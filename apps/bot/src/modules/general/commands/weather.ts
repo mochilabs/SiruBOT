@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchWeather, WeatherError, GatewayDomainError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
+import { fetchWeather, GatewayDomainError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
 
 const SCOPE_LABELS: Record<WeatherScope, string> = {
 	now: '지금 날씨',
@@ -57,13 +57,13 @@ function buildWeekLines(result: WeatherResult): string[] {
 	if (result.daily.length === 0) return ['예보 정보를 가져올 수 없어요.'];
 	return result.daily.map(
 		(day) =>
-			`${day.date.slice(5)} (${day.date.slice(0, 4)}) — ${day.weatherTextKo} · ${formatTempRange(day)}${day.precipitationProbabilityMaxPct != null ? ` · 강수 ${Math.round(day.precipitationProbabilityMaxPct)}%` : ''}`
+			`${day.date.slice(5)} (${day.date.slice(0, 4)}): ${day.weatherTextKo} · ${formatTempRange(day)}${day.precipitationProbabilityMaxPct != null ? ` · 강수 ${Math.round(day.precipitationProbabilityMaxPct)}%` : ''}`
 	);
 }
 
 function buildContainer(result: WeatherResult) {
 	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
-	const lines = [`### ${emoji('sun_cloud')} ${locationLine} — ${SCOPE_LABELS[result.scope]}`, ''];
+	const lines = [`### ${emoji('sun_cloud')} ${locationLine} · ${SCOPE_LABELS[result.scope]}`, ''];
 	lines.push(...(result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result)));
 	lines.push('');
 	lines.push(`-# Open-Meteo 기준 · 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);
@@ -162,7 +162,8 @@ export class WeatherCommand extends Command {
 		try {
 			result = await fetchWeather(location, scope);
 		} catch (error) {
-			if (error instanceof WeatherError || error instanceof GatewayDomainError) {
+			// 게이트웨이(data-api) 경유라 도메인 오류는 GatewayDomainError로 변환돼 도착해요
+			if (error instanceof GatewayDomainError) {
 				throw new UserError({
 					identifier: error.identifier,
 					message: `${emoji('error')} ${error.message}`,

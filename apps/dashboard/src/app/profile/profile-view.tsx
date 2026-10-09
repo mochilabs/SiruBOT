@@ -44,7 +44,7 @@ function MockThumbnail({ className }: { className: string }) {
     <div
       className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}
     >
-      <Music4 className="h-1/3 w-1/3 text-primary/40 relative z-10" aria-hidden />
+      <Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" aria-hidden />
       <span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
         No Image
       </span>
@@ -81,7 +81,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Cake className="h-4 w-4 text-primary" aria-hidden />
+                <Cake className="h-4 w-4 text-primary-text" aria-hidden />
                 생일
               </CardTitle>
               <CardDescription>
@@ -98,7 +98,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CalendarCheck className="h-4 w-4 text-primary" aria-hidden />
+                <CalendarCheck className="h-4 w-4 text-primary-text" aria-hidden />
                 출석
               </CardTitle>
               <div className="flex items-center justify-between gap-3">
@@ -106,7 +106,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
                 {attendance.checkedInToday ? (
                   <Badge variant="success">오늘 출석 완료</Badge>
                 ) : (
-                  <Badge variant="warning">오늘 미출석 — 디스코드 `/출석` 으로 체크</Badge>
+                  <Badge variant="warning">오늘 미출석: 디스코드 `/출석` 으로 체크</Badge>
                 )}
               </div>
             </CardHeader>
@@ -118,7 +118,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
           <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gamepad2 className="h-4 w-4 text-primary" aria-hidden />
+              <Gamepad2 className="h-4 w-4 text-primary-text" aria-hidden />
               게임 전적
             </CardTitle>
           </CardHeader>
@@ -140,7 +140,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
                     {games.guessBest != null ? `${games.guessBest}번` : "-"}
                   </span>
                 </span>
-                <span className="text-xs text-muted-foreground/60">(최근 기록 기준)</span>
+                <span className="text-xs text-muted-foreground">(최근 기록 기준)</span>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">-</p>
@@ -153,7 +153,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
       {/* 음악 통계 */}
       <div className="mt-6 space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
-          <ListMusic className="h-5 w-5 text-primary" aria-hidden />
+          <ListMusic className="h-5 w-5 text-primary-text" aria-hidden />
           음악 통계
         </h2>
         <RevealGroup className="grid gap-4 sm:grid-cols-3">
@@ -186,7 +186,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
                     <li
                       className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/30 transition-colors duration-fast"
                     >
-                      <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground/60">
+                      <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground">
                         {i + 1}
                       </span>
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/20">
@@ -206,13 +206,13 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
                         <p className="truncate text-sm font-black text-foreground" title={track.title}>
                           {track.title}
                         </p>
-                        <p className="truncate text-xs font-bold text-muted-foreground/70" title={track.artist}>
+                        <p className="truncate text-xs font-bold text-muted-foreground" title={track.artist}>
                           {track.artist}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-black tabular-nums text-primary">{track.count.toLocaleString()}회</p>
-                        <p className="text-xs font-medium text-muted-foreground/40">
+                        <p className="text-sm font-black tabular-nums text-primary-text">{track.count.toLocaleString()}회</p>
+                        <p className="text-xs font-medium text-muted-foreground">
                           {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
                         </p>
                       </div>

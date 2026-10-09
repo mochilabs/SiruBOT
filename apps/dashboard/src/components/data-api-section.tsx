@@ -1,5 +1,6 @@
 "use client";
 
+import { Ban, TriangleAlert } from "lucide-react";
 import useSWR from "swr";
 
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -62,9 +63,12 @@ export function DataApiSection() {
                     <div className="text-sm text-muted-foreground mb-2">최근 재생 오류</div>
                     <ul className="space-y-1 text-sm">
                         {errors.map((e, i) => (
-                            <li key={`${e.at}-${i}`}>
-                                {e.type === "playback_abort" ? "🚫" : "⚠️"} {e.trackTitle ?? "알 수 없는 곡"}
-                                {e.trackAuthor ? ` — ${e.trackAuthor}` : ""} ({e.reason ?? `오류 ${e.consecutiveErrors}회`})
+                            <li key={`${e.at}-${i}`} className="flex items-center gap-1.5">
+                                {e.type === "playback_abort" ? <Ban className="h-3.5 w-3.5 text-destructive shrink-0" aria-hidden /> : <TriangleAlert className="h-3.5 w-3.5 text-warning shrink-0" aria-hidden />}
+                                <span>
+                                    {e.trackTitle ?? "알 수 없는 곡"}
+                                    {e.trackAuthor ? ` · ${e.trackAuthor}` : ""} ({e.reason ?? `오류 ${e.consecutiveErrors}회`})
+                                </span>
                             </li>
                         ))}
                     </ul>

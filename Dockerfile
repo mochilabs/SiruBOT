@@ -134,9 +134,10 @@ COPY --from=builder-bot --chown=sirubot:nodejs /app/node_modules ./node_modules
 
 USER sirubot
 
-# 봇 프로세스 생존 확인 (HTTP 포트 없음 — node 프로세스 존재 여부로 판단)
+# 봇 헬스 서버 HTTP 상태 확인 (bootstrap.ts의 HEALTH_PORT, 기본 8080) — TCP 연결만으로는
+# 게이트웨이 장기 끊김(503)을 못 잡으므로 상태 코드까지 본다. 부팅 중 503은 start-period가 흡수.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
-	CMD ["node", "-e", "const fs=require('fs');const alive=fs.readdirSync('/proc').some(p=>/^\\d+$/.test(p)&&(()=>{try{return fs.readFileSync('/proc/'+p+'/cmdline','utf8').includes('node')}catch(e){return false}})());process.exit(alive?0:1)"]
+	CMD ["node", "-e", "require('http').get('http://127.0.0.1:'+(Number(process.env.HEALTH_PORT)||8080)+'/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
 
 # 스키마 변경이 있어도 기동 시점에 자동 반영 (수동 migrate 누락 방지)
 # exec로 PID1을 node로 교체 — SIGTERM이 sh가 아닌 봇 프로세스에 직접 전달되도록 한다.

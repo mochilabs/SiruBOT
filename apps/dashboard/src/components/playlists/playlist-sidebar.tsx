@@ -68,7 +68,7 @@ export function PlaylistSidebar({
 				{playlists.length >= 5 && (
 					<div className="p-3 shrink-0">
 						<div className="relative">
-							<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
+							<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
 							<Input
 								type="text"
 								placeholder="검색..."
@@ -102,12 +102,12 @@ export function PlaylistSidebar({
 						return (
 							<div key={playlist.id} className="w-full flex flex-col">
 								{isDefault && idx === 0 && (
-									<div className="px-3 pt-2 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground/60 uppercase relative z-10">
+									<div className="px-3 pt-2 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground uppercase relative z-10">
 										즐겨찾기
 									</div>
 								)}
 								{(isFirstCustom || (idx === 0 && !isDefault)) && (
-									<div className="px-3 pt-3 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground/60 uppercase relative z-10">
+									<div className="px-3 pt-3 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground uppercase relative z-10">
 										내 목록
 									</div>
 								)}
@@ -120,14 +120,14 @@ export function PlaylistSidebar({
 										onClick={() => onSelect(playlist.id)}
 										className={`
 											flex-1 flex items-center justify-between px-3 py-2.5 rounded-menu text-left select-none cursor-pointer transition-colors duration-fast
-											${isActive ? "text-primary font-bold bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-accent/10"}
+											${isActive ? "text-primary-text font-bold bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-accent/10"}
 										`}
 									>
 										<div className="flex items-center gap-2 min-w-0">
 											{isDefault ? (
-												<Heart size={14} className={`shrink-0 ${isActive ? "text-primary fill-primary" : "text-muted-foreground"}`} />
+												<Heart size={14} className={`shrink-0 ${isActive ? "text-primary-text fill-primary" : "text-muted-foreground"}`} />
 											) : (
-												<Music size={14} className={`shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+												<Music size={14} className={`shrink-0 ${isActive ? "text-primary-text" : "text-muted-foreground"}`} />
 											)}
 											<span className="truncate text-sm font-medium">{playlist.name}</span>
 										</div>
@@ -152,7 +152,7 @@ export function PlaylistSidebar({
 							variant="ghost"
 							size="sm"
 							onClick={onCreateNew}
-							className="h-auto w-full gap-1.5 rounded-lg px-0 py-2.5 text-xs font-medium text-muted-foreground/80 hover:bg-muted/30 hover:text-foreground"
+							className="h-auto w-full gap-1.5 rounded-lg px-0 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground"
 						>
 							<Plus size={14} />
 							새 플레이리스트

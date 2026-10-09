@@ -54,6 +54,9 @@ export class TrackHandler extends BaseLavalinkHandler {
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
 		publishPlayerState(player);
 		player.setData('stopByCommand', undefined);
+		// 예열 소비 확인 창(preloadConsumedAt)은 시작 확정과 함께 닫는다 — 남겨두면 창 안에
+		// 도착한 무관한 늦은 queueEnd를 defer해 실제 종료 처리(finishQueue)가 늦어진다.
+		player.setData('preloadConsumedAt', undefined);
 		this.setLastStarted(player, startedTrack);
 		this.clearAdvancePending(player.guildId);
 		this.clearWatchdog(player.guildId);
@@ -299,6 +302,26 @@ export class TrackHandler extends BaseLavalinkHandler {
 			}
 		}
 
+		// (e) queueEnd인데 서버는 아직 트랙을 재생 중 — 클라이언트 큐만 빈 β 순서 착시다
+		// (신곡 trackStart가 큐를 비운 뒤 구곡 trackEnd가 라이브러리 빈큐 단축분기로
+		// queueEnd를 직행시킨 경우). 라이브러리는 진입부에서 current=null, playing=false로
+		// 덮어쓰고 destroyAfterMs(10s) 타이머를 암 — 그 타이머는 발화 시점에 current가 있으면
+		// 스스로 취소되므로, 서버가 재생 중인 트랙을 current로 되살려 재생 중 파괴를 막고
+		// 종료 처리를 건너뛴다. 확인(REST)과 판정 사이에 서버 상태가 바뀌는 경합 창은 남는다:
+		// 완전 제거가 아니라 빈도 제거가 목표다. 조회 실패 시에는 서버 상태를 알 수 없으니
+		// 기존 종료 경로를 그대로 탄다.
+		const serverPlayer = await player.node.fetchPlayer(String(player.guildId)).catch(() => null);
+		if (serverPlayer && !('status' in serverPlayer) && serverPlayer.track) {
+			this.logger.warn(`[mixer] queueEnd deferred: server still has an active track (guild ${player.guildId}), restoring client state`);
+			const serverTrack = this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined);
+			player.queue.current = serverTrack as (typeof player.queue)['current'];
+			player.setData('lastStartedEncoded', serverTrack.encoded);
+			// queueEnd가 지운 playing 플래그도 되돌린다 — 일시정지 상태에서는 재생 중이 아니므로 둔다.
+			if (!serverPlayer.paused) player.playing = true;
+			this.armWatchdog(player);
+			return;
+		}
+
 		// 대기열의 모든 곡이 끝났다.
 		await this.finishQueue(player);
 	}
@@ -519,25 +542,30 @@ export class TrackHandler extends BaseLavalinkHandler {
 			guildId,
 			setTimeout(() => {
 				this.watchdogs.delete(guildId);
-				// 아직 재생 중이면(긴 크로스페이드/β 전이) 시스템은 살아 있으니 한 번 더 관망한다.
-				if (player.playing) {
-					this.armWatchdog(player);
-					return;
-				}
-				this.container.mixerService.markUnmanaged(guildId);
-				// 서버가 자동 진행하지 않음 (예열 실패 등) → 수동 복구.
-				// player.skip()은 대기열이 비어 있으면 RangeError를 던지므로
-				// current에 남은 곡을 직접 재생하는 쪽을 먼저 시도한다.
-				// 복구 명령도 조용히 무시되면 다음 주기에 다시 시도한다
-				// (정상 시작이면 trackStart가 이 타이머를 지운다).
 				void Promise.resolve()
 					.then(async () => {
-						if (player.playing) return;
+						// 아직 서버가 트랙을 재생 중이면(긴 크로스페이드/β 전이) 시스템은 살아 있으니 한 번 더 관망한다.
+						// 로컬 player.playing은 라이브러리가 일반 trackEnd에서 내리지 않는다(내리는 건 queueEnd와
+						// 노드 종료뿐) — 예열 소비 후 서버가 trackStart를 보내지 않는 실패에서는 플래그가 true로
+						// 남아 관망만 반복하고 아래 복구 분기에 영원히 도달하지 못한다(무음 교착). 그래서
+						// fetchPlayer로 서버의 실제 트랙 유무를 판정한다. fetch 실패는 isServerTrackActive가
+						// '활성'으로 보수 판정하므로, 관망 상한(serverActiveObserved)을 넘기면 복구로 내려보내
+						// 연속 fetch 실패의 교착도 깬다.
+						if (serverActiveObserved < 4 && (await this.isServerTrackActive(player))) {
+							this.armWatchdog(player, serverActiveObserved + 1);
+							return;
+						}
+						this.container.mixerService.markUnmanaged(guildId);
+						// 서버가 자동 진행하지 않음 (예열 실패 등) → 수동 복구.
+						// current에 남은 곡을 직접 재생하는 쪽을 먼저 시도한다.
+						// 복구 명령도 조용히 무시되면 다음 주기에 다시 시도한다
+						// (정상 시작이면 trackStart가 이 타이머를 지운다).
 						if (player.queue.current) {
 							// 클라 play는 서버가 이미 트랙을 시작했으면 noReplace로 조용히 무시된다 —
 							// 그 상태로 play하면 클라 큐만 소비되어 NOWPLAYING과 출력이 어긋난다.
-							// 서버 트랙 존재를 먼저 확인하고, 살아 있으면 클라 상태가 뒤따를 때까지 관망한다.
-							// 단, fetchPlayer 실패로 보수적 판정이 반복되면 영원히 관망만 하게 되므로
+							// 위 관망 판정(REST 왕복) 사이에 서버가 트랙을 시작했을 수 있으니 play 전에
+							// 한 번 더 확인하고, 살아 있으면 클라 상태가 뒤따를 때까지 관망한다.
+							// 단, 보수적 판정이 반복되면 영원히 관망만 하게 되므로
 							// 일정 횟수 이후에는 play를 시도해 교착에서 빠져나온다.
 							if (serverActiveObserved < 4 && (await this.isServerTrackActive(player))) {
 								this.armWatchdog(player, serverActiveObserved + 1);
@@ -551,10 +579,12 @@ export class TrackHandler extends BaseLavalinkHandler {
 								.then(() => this.armWatchdogUnlessStarted(player));
 						}
 						if (player.queue.tracks.length > 0) {
-							return this.container.mixerService
-								.skip(player)
-								.catch(() => player.skip())
-								.then(() => this.armWatchdogUnlessStarted(player));
+							// 라이브러리 skip()은 !playing && !current일 때 내부에서 play()를 floating
+							// 호출한다 — 이 경로에서는 그 rejection이 unhandled가 되므로, 다음 곡을
+							// current에 올려 클라이언트 주도 전이(clearNext → prime → play)로 보낸다.
+							const next = player.queue.tracks.shift();
+							if (next) player.queue.current = next as (typeof player.queue)['current'];
+							return this.startClientOwnedTrack(player);
 						}
 						// 재생할 곡이 없음 — 조기 queueEnd를 관망한 결과 실제 종료로 확정한다.
 						return this.finishQueue(player);

@@ -10,7 +10,7 @@ export const ohaasaTool: AiTool = {
 	properties: {
 		zodiac: {
 			type: 'string',
-			description: '별자리 (선택). 예: 염소자리, 물병자리 — 생략하면 등록된 프로필 생일을 자동 사용해요'
+			description: '별자리 (선택). 예: 염소자리, 물병자리 등. 생략하면 등록된 프로필 생일을 자동 사용해요'
 		}
 	},
 	required: [],

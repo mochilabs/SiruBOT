@@ -251,7 +251,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
 		`${emoji('pin')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
-		`${emoji('inbox_tray')} **고정 채널 입력 동작**: ${guild.pinnedChannelMode === 'select' ? '선택 재생 (5개 중 선택)' : '즉시 재생 (첫 결과)'}`
+		`${emoji('inbox_tray')} **고정 채널 입력 동작**: ${guild.pinnedChannelMode === 'select' ? '선택 재생 (5개 중 선택)' : '즉시 재생 (첫 결과)'} · **입력 메시지 삭제**: ${guild.pinnedChannelDeleteInput ? '삭제함' : '보존'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -317,6 +317,11 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('toggle:pindelete'))
+				.setLabel(guild.pinnedChannelDeleteInput ? '입력 메시지 보존' : '입력 메시지 삭제')
+				.setStyle(ButtonStyle.Secondary)
+				.setDisabled(!guild.pinnedChannelId),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('remove:text'))
 				.setLabel(`${emoji('trash')} 텍스트 채널 제거`)

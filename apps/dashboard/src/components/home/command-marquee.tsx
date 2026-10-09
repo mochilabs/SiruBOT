@@ -36,7 +36,7 @@ export function CommandMarquee() {
 				{LOOP_ITEMS.map((command, index) => (
 					<span
 						key={`${command}-${index}`}
-						className="flex shrink-0 items-center gap-2 pl-2 text-xs font-bold tracking-tight text-muted-foreground/70 sm:text-sm"
+						className="flex shrink-0 items-center gap-2 pl-2 text-xs font-bold tracking-tight text-muted-foreground sm:text-sm"
 					>
 						<code className="border-border-subtle bg-surface-1 rounded-control border px-2 py-1">{command}</code>
 						{/* 항목 사이 도트 구분자 — 다음 항목과의 간격 역할 (마지막 항목 뒤 도트가 루프 시작점 간격이 된다) */}

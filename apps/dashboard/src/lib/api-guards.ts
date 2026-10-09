@@ -22,7 +22,7 @@ export async function authorizeGuildManage(
   const accessToken = await getSessionAccessToken();
   if (!accessToken) return { ok: false, status: 401 };
 
-  const result = await resolveCanManage(accessToken, guildId);
+  const result = await resolveCanManage(accessToken, session.user.id, guildId);
   if (result.status === "invalid-token") return { ok: false, status: 401 };
   if (result.status === "unavailable")
     return { ok: false, status: 502 };

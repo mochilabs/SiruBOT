@@ -139,6 +139,7 @@ export class CommandChannelListener extends Listener {
 
 			const tracks = searchRes.tracks.slice(0, 5);
 			if (tracks.length === 0) {
+				await this.resolveInputMessage(message, guildId);
 				await message
 					.reply({
 						components: [errorView(`${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
@@ -172,9 +173,20 @@ export class CommandChannelListener extends Listener {
 		}
 	}
 
+	/** 고정 채널 입력 메시지 삭제 설정 — 켜져 있으면 봇이 처리를 마친 뒤 입력 메시지를 지운다 (Manage Messages 권한 필요). */
+	private async resolveInputMessage(message: Message, guildId: string): Promise<void> {
+		try {
+			if (!(await this.container.guildService.getPinnedChannelDeleteInput(guildId))) return;
+			if (message.deletable) await message.delete().catch(() => null);
+		} catch (error) {
+			this.container.logger.warn(`[commandChannel] failed to delete input message (guild ${guildId}): ${error}`);
+		}
+	}
+
 	/** play 모드 — 첫 결과를 바로 대기열에 넣고 피드백을 답장한다. */
 	private async playImmediate(message: Message, player: Player, track: Track | UnresolvedTrack): Promise<void> {
 		const { wasIdle } = await this.container.audioService.enqueueTrack(player, track);
+		await this.resolveInputMessage(message, player.guildId);
 		await message
 			.reply({
 				components: await this.buildFeedback(player, track, message.author.id, wasIdle),
@@ -187,11 +199,15 @@ export class CommandChannelListener extends Listener {
 
 	/** select 모드 — 5개 선택 뷰를 올리고 30초간 선택을 기다린다. */
 	private async runSelect(message: Message, player: Player, query: string, tracks: (Track | UnresolvedTrack)[]): Promise<void> {
-		const selectMessage = await message.reply({
-			components: [searchView.searchResults(query, tracks)],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { repliedUser: false, users: [], roles: [] }
-		});
+		// 선택 모드는 입력 메시지 위에 선택 UI를 reply로 다는 형태라, 원본 삭제는 선택 확정/만료 시점에 한다.
+		const selectMessage = await message
+			.reply({
+				components: [searchView.searchResults(query, tracks)],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { repliedUser: false, users: [], roles: [] }
+			})
+			.catch(() => null);
+		if (!selectMessage) return;
 
 		const collector = selectMessage.createMessageComponentCollector({
 			filter: (i) => i.user.id === message.author.id && i.customId === searchView.searchSelectCustomId,
@@ -201,6 +217,7 @@ export class CommandChannelListener extends Listener {
 
 		const handleTimeout = async () => {
 			await selectMessage.edit({ components: [searchView.searchTimeout()], flags: [MessageFlags.IsComponentsV2] }).catch(() => null);
+			await this.resolveInputMessage(message, player.guildId);
 		};
 
 		const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>) => {
@@ -217,6 +234,7 @@ export class CommandChannelListener extends Listener {
 
 			try {
 				const { wasIdle } = await this.container.audioService.enqueueTrack(player, selected);
+				await this.resolveInputMessage(message, player.guildId);
 				await selectInteraction
 					.editReply({
 						components: await this.buildFeedback(player, selected, message.author.id, wasIdle),

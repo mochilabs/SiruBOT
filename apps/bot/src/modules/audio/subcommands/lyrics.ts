@@ -73,7 +73,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(`### ${emoji('music_notes')} ${result.trackName} — ${result.artistName}\n\n${lyrics}`)
+			new TextDisplayBuilder().setContent(`### ${emoji('music_notes')} ${result.trackName} · ${result.artistName}\n\n${lyrics}`)
 		);
 
 		await interaction.editReply({

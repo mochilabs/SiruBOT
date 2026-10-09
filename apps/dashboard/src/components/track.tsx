@@ -31,7 +31,7 @@ export function formatTimeToKorean(seconds: number): string {
 	function MockThumbnail({ className }: { className: string }) {
 		return (
 			<div className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}>
-				<Music4 className="h-1/3 w-1/3 text-primary/40 relative z-10" />
+				<Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" />
 				<span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
 					No Image
 				</span>
@@ -184,8 +184,8 @@ function FavoriteButton({
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
 			className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
 				favorite
-					? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-					: "border-border bg-surface-2 text-muted-foreground/60 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+					? "border-primary/30 bg-primary/10 text-primary-text hover:bg-primary/20"
+					: "border-border bg-surface-2 text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-primary-text"
 			}`}
 		>
 			<Heart className="h-4 w-4 sm:h-5 sm:w-5" fill={favorite ? "currentColor" : "none"} aria-hidden />
@@ -213,9 +213,9 @@ export const TrackItem = memo(function TrackItem({
 			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 justify-center shrink-0">
 				{isTopThree ? (
-					<Crown className={`h-6 w-6 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground/70"}`} />
+					<Crown className={`h-6 w-6 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground"}`} />
 				) : (
-					<span className="text-base font-bold text-muted-foreground/60">{rank}</span>
+					<span className="text-base font-bold text-muted-foreground">{rank}</span>
 				)}
 			</div>
 
@@ -223,7 +223,7 @@ export const TrackItem = memo(function TrackItem({
 				{/* Mobile Rank Overlay */}
 				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-surface-3 rounded-br-lg border-r border-b border-border px-1.5 shadow-sm">
 					{isTopThree ? (
-						<Crown className={`h-3 w-3 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground/70"}`} />
+						<Crown className={`h-3 w-3 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground"}`} />
 					) : (
 						<span className="text-xs font-black tracking-tighter text-foreground">{rank}</span>
 					)}
@@ -247,16 +247,16 @@ export const TrackItem = memo(function TrackItem({
 				<h3 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={track.title}>
 					{track.title}
 				</h3>
-				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground/70" title={track.artist}>
+				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="mt-1 text-xs sm:text-sm font-medium text-muted-foreground/40">{formatTimeToKorean(track.duration / 1000)}</p>
+				<p className="mt-1 text-xs sm:text-sm font-medium text-muted-foreground">{formatTimeToKorean(track.duration / 1000)}</p>
 			</div>
 
 			<div className="flex items-center gap-3 sm:gap-4 pr-1 sm:pr-2 shrink-0">
 				<div className="text-right">
-					<p className="text-base sm:text-lg font-black text-primary leading-none">{track.totalPlays.toLocaleString()}</p>
-					<p className="hidden sm:block mt-1 text-xs uppercase tracking-wider text-muted-foreground/40 font-bold">Total Plays</p>
+					<p className="text-base sm:text-lg font-black text-primary-text leading-none">{track.totalPlays.toLocaleString()}</p>
+					<p className="hidden sm:block mt-1 text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Plays</p>
 				</div>
 
 				{onToggleFavorite && (
@@ -268,7 +268,7 @@ export const TrackItem = memo(function TrackItem({
 						href={track.url}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control bg-primary/10 text-primary border border-primary/20 transition-colors duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+						className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control bg-primary/10 text-primary-text border border-primary/20 transition-colors duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
 						title="원본 보기"
 					>
 						<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
@@ -302,7 +302,7 @@ export function Track({ track }: { track: TrackType }) {
 				<p className="truncate text-sm font-normal text-muted-foreground" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="text-sm font-medium text-primary/70">{track.totalPlays.toLocaleString()} plays</p>
+				<p className="text-sm font-medium text-primary-text">{track.totalPlays.toLocaleString()} plays</p>
 			</div>
 		</div>
 	);

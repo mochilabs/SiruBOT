@@ -39,11 +39,11 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 						<h1 className="text-4xl font-black tracking-tighter text-foreground break-keep sm:text-5xl md:text-6xl">
 							{content.title}
 						</h1>
-						<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground/80 break-keep sm:text-lg">
+						<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg">
 							{content.description}
 						</p>
 						{error && (
-							<p className="pt-1 font-mono text-2xs text-muted-foreground/40">
+							<p className="pt-1 font-mono text-2xs text-muted-foreground">
 								code: {error}
 							</p>
 						)}

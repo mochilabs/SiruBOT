@@ -93,13 +93,13 @@ export class HelpCommand extends Command {
 		for (const [, cmd] of commands) {
 			const mention = commandMention(cmd.name, index);
 			const desc = cmd.description;
-			const line = `${mention} — ${desc}`;
+			const line = `${mention} · ${desc}`;
 
 			if (cmd.fullCategory.includes('음악')) {
 				audioCommands.push(line);
 				if (cmd.name === 'music') {
 					for (const sub of MUSIC_SUBCOMMANDS) {
-						audioCommands.push(`　└ ${subcommandMention('music', sub.name, index)} — ${sub.description}`);
+						audioCommands.push(`　└ ${subcommandMention('music', sub.name, index)} · ${sub.description}`);
 					}
 				}
 			} else if (cmd.fullCategory.includes('게임')) {
@@ -111,7 +111,7 @@ export class HelpCommand extends Command {
 					generalCommands.push(line);
 					if (cmd.name === 'info') {
 						for (const sub of INFO_SUBCOMMANDS) {
-							generalCommands.push(`　└ ${subcommandMention('info', sub.name, index)} — ${sub.description}`);
+							generalCommands.push(`　└ ${subcommandMention('info', sub.name, index)} · ${sub.description}`);
 						}
 					}
 				}
@@ -120,7 +120,7 @@ export class HelpCommand extends Command {
 
 		return [
 			`안녕하세요, 시루예요! ${emoji('music_note')}`,
-			'음악 재생부터 AI 대화까지 — 제가 할 수 있는 것들을 알려드릴게요.',
+			'음악 재생부터 AI 대화까지, 제가 할 수 있는 것들을 알려드릴게요.',
 			'',
 			`${emoji('robot')} **AI로 이런 것들**`,
 			'- `/채팅`으로 질문·요약·번역 뭐든 시켜요. 사진을 함께 보내면 그것도 봐요.',

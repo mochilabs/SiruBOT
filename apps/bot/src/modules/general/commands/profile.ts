@@ -126,7 +126,7 @@ export class ProfileCommand extends Command {
 					[
 						`### ${emoji('cake')} 생일을 저장했어요`,
 						'',
-						`**${month}월 ${day}일** — 별자리는 **${zodiacCode ? zodiacLabel(zodiacCode) : '알 수 없음'}**예요.`,
+						`**${month}월 ${day}일**: 별자리는 **${zodiacCode ? zodiacLabel(zodiacCode) : '알 수 없음'}**예요.`,
 						'',
 						'-# 생일은 본인에게만 보여요. 다른 사람에게는 별자리만 공개돼요.',
 						'-# 이제 `/오하아사`에서 지정 없이도 내 운세를 바로 보여줘요.'
@@ -334,7 +334,7 @@ export class ProfileCommand extends Command {
 			lines.push('');
 			lines.push(`${emoji('trophy')} **자주 신청한 곡**`);
 			data.topTracks.forEach((t, i) => {
-				lines.push(`${i + 1}. ${t.title}${t.artist ? ` — ${t.artist}` : ''} (${t.count}회)`);
+				lines.push(`${i + 1}. ${t.title}${t.artist ? ` · ${t.artist}` : ''} (${t.count}회)`);
 			});
 		}
 		if (data.recentTracks.length > 0) {
@@ -342,7 +342,7 @@ export class ProfileCommand extends Command {
 			lines.push(`${emoji('clock')} **최근 신청한 곡**`);
 			for (const t of data.recentTracks) {
 				const at = Math.floor(t.playedAt.getTime() / 1000);
-				lines.push(`· ${t.title}${t.artist ? ` — ${t.artist}` : ''} (<t:${at}:R>)`);
+				lines.push(`· ${t.title}${t.artist ? ` · ${t.artist}` : ''} (<t:${at}:R>)`);
 			}
 		}
 		const gameLines = formatGameStatsLines(data.gameStats);

@@ -109,7 +109,7 @@ export function RoleSelect({
 					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
 				`}
 			>
-				<span className={value.length > 0 ? "text-foreground" : "text-muted-foreground/50"}>
+				<span className={value.length > 0 ? "text-foreground" : "text-muted-foreground"}>
 					{value.length > 0 ? `${value.length}개 역할 선택됨` : placeholder}
 				</span>
 				<ChevronDown
@@ -185,7 +185,7 @@ export function RoleSelect({
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
 									placeholder="역할 검색..."
-									className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+									className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
 								/>
 							</div>
 
@@ -211,13 +211,13 @@ export function RoleSelect({
 										<span className="flex-1 text-left text-foreground truncate">
 											{role.name}
 										</span>
-										{isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+										{isSelected && <Check className="h-4 w-4 text-primary-text shrink-0" />}
 									</button>
 								);
 							})}
 
 							{filtered.length === 0 && (
-								<p className="py-6 text-center text-sm text-muted-foreground/60 font-medium">
+								<p className="py-6 text-center text-sm text-muted-foreground font-medium">
 									역할을 찾을 수 없어요
 								</p>
 							)}

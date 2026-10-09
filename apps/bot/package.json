@@ -35,7 +35,7 @@
     "@skyra/env-utilities": "^2.0.1",
     "chokidar": "^4.0.3",
     "colorette": "^2.0.20",
-    "discord.js": "^14.25.1",
+    "discord.js": "^14.27.0",
     "figlet": "^1.9.3",
     "lavalink-client": "^2.10.0",
     "tslog": "^4.9.3",

@@ -85,7 +85,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			// 그 안에 재시작됐을 때 서버 플레이어가 그대로 이어진다.
 			if (node.sessionId) void node.updateSession(true, 60 * 5).catch(() => null);
 			if (data.resumed === false) {
-				this.logger.info(`Node ${node.options.id} started a fresh session — restoring players from store`);
+				this.logger.info(`Node ${node.options.id} started a fresh session: restoring players from store`);
 				void this.restoreFreshSession(node).catch((error) => this.logger.error(`Fresh session restore failed: ${error}`));
 			}
 		}, 0);
@@ -428,6 +428,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 			await this.discardSavedPlayer(guildId, saved, this.container.redisStore.getPlayerSaver());
 			return;
 		}
+
+		// mixer 필터는 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다(lavaplayer는
+		// 트랙 시작 시점에만 필터를 읽음) — primeForPlay가 내부에서 실패를 삼키므로
+		// 필터 재적용에 실패해도 재생 복구 자체는 계속 진행된다.
+		await this.container.mixerService.primeForPlay(createdPlayer);
 
 		await createdPlayer.play({ noReplace: true });
 

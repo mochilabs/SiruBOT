@@ -21,7 +21,7 @@ function formatDate(raw: string): string {
 
 function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[] {
 	return [
-		`### ${emoji('crystal_ball')} 오늘의 오하아사 — ${formatDate(daily.date)}`,
+		`### ${emoji('crystal_ball')} 오늘의 오하아사 (${formatDate(daily.date)})`,
 		'',
 		`**${target.rank}위 · ${target.zodiac.ko} (${target.zodiac.jp})**`,
 		target.content || '오늘의 운세 정보가 없어요.',
@@ -35,9 +35,9 @@ function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[
 
 function buildTopLines(daily: DailyHoroscope): string[] {
 	const top = daily.horoscopes.slice(0, 3);
-	const lines = [`### ${emoji('crystal_ball')} 오늘의 오하아사 TOP 3 — ${formatDate(daily.date)}`, ''];
+	const lines = [`### ${emoji('crystal_ball')} 오늘의 오하아사 TOP 3 (${formatDate(daily.date)})`, ''];
 	for (const item of top) {
-		lines.push(`**${item.rank}위 ${item.zodiac.ko}** — ${item.content || '정보 없음'}`);
+		lines.push(`**${item.rank}위 ${item.zodiac.ko}** · ${item.content || '정보 없음'}`);
 	}
 	lines.push(
 		'',
@@ -74,7 +74,7 @@ export class OhaasaCommand extends Command {
 						.setName('birth_month')
 						.setNameLocalizations({ ko: '생일월' })
 						.setDescription('Birth month')
-						.setDescriptionLocalizations({ ko: '생일 월 (1~12) — 별자리 지정 시 무시돼요.' })
+						.setDescriptionLocalizations({ ko: '생일 월 (1~12). 별자리 지정 시 무시돼요.' })
 						.setMinValue(1)
 						.setMaxValue(12)
 				)
@@ -83,7 +83,7 @@ export class OhaasaCommand extends Command {
 						.setName('birth_day')
 						.setNameLocalizations({ ko: '생일일' })
 						.setDescription('Birth day')
-						.setDescriptionLocalizations({ ko: '생일 일 (1~31) — 별자리 지정 시 무시돼요.' })
+						.setDescriptionLocalizations({ ko: '생일 일 (1~31). 별자리 지정 시 무시돼요.' })
 						.setMinValue(1)
 						.setMaxValue(31)
 				);

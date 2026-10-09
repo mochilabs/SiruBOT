@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import { guildSettingsSchema, unknownKeys, zodError } from "@/lib/schemas";
@@ -17,6 +18,7 @@ const ALLOWED_KEYS = [
   "voiceChannelId",
   "pinnedChannelId",
   "pinnedChannelMode",
+  "pinnedChannelDeleteInput",
   "jtcEnabled",
   "jtcCategoryId",
   "jtcMarkerChannelId",
@@ -40,6 +42,7 @@ function toSettings(
     voiceChannelId: string | null;
     pinnedChannelId: string | null;
     pinnedChannelMode: string;
+    pinnedChannelDeleteInput: boolean;
     jtcEnabled: boolean;
     jtcCategoryId: string | null;
     jtcMarkerChannelId: string | null;
@@ -62,6 +65,7 @@ function toSettings(
       voiceChannelId: null,
       pinnedChannelId: null,
       pinnedChannelMode: "play",
+      pinnedChannelDeleteInput: false,
       jtcEnabled: false,
       jtcCategoryId: null,
       jtcMarkerChannelId: null,
@@ -87,6 +91,7 @@ function toSettings(
     pinnedChannelMode: (["play", "select"].includes(guild.pinnedChannelMode)
       ? guild.pinnedChannelMode
       : "play") as GuildSettings["pinnedChannelMode"],
+    pinnedChannelDeleteInput: guild.pinnedChannelDeleteInput,
     jtcEnabled: guild.jtcEnabled,
     jtcCategoryId: guild.jtcCategoryId,
     jtcMarkerChannelId: guild.jtcMarkerChannelId,
@@ -166,6 +171,13 @@ export async function PUT(
     }
 
     const guild = await db.guild.findUnique({ where: { id } });
+
+    // 저장 성공 후 모든 봇 프로세스의 설정 캐시를 무효화해요 (fire-and-forget).
+    // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
+    notifyGuildSettingsChanged(id).catch((error) => {
+      console.warn(`Failed to notify guild settings change (guild ${id}):`, error);
+    });
+
     return NextResponse.json(toSettings(guild));
   } catch (error) {
     console.error("Failed to update guild settings:", error);

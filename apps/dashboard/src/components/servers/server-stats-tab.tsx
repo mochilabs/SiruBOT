@@ -75,7 +75,7 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
             transition: `opacity var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms, transform var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms`,
           }}
         >
-          <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
+          <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
             {index + 1}
           </span>
           {track.thumbnail ? (
@@ -92,7 +92,7 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground">{track.title}</p>
-            <p className="truncate text-xs text-muted-foreground/70">{track.artist}</p>
+            <p className="truncate text-xs text-muted-foreground">{track.artist}</p>
           </div>
           <Badge variant="primary" size="sm">
             {track.count}회
@@ -126,7 +126,7 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
             transition: `opacity var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms, transform var(--motion-base) var(--ease-out-expo) ${index * STAGGER_STEP_MS}ms`,
           }}
         >
-          <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
+          <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
             {index + 1}
           </span>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-muted-foreground">
@@ -162,7 +162,7 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
         {dailyCounts.map((entry, index) => (
           <div
             key={entry.date}
-            title={`${formatDate(entry.date)} — ${entry.count}회`}
+            title={`${formatDate(entry.date)} · ${entry.count}회`}
             className="min-w-[0px] flex-1 origin-bottom rounded-t bg-primary/60"
             style={{
               height: `${max > 0 ? Math.max(4, (entry.count / max) * 100) : 4}%`,
@@ -172,7 +172,7 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
           />
         ))}
       </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground/70">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{formatDate(dailyCounts[0].date)}</span>
         <span>{formatDate(dailyCounts[dailyCounts.length - 1].date)}</span>
       </div>

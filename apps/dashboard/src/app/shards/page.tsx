@@ -69,7 +69,7 @@ export default function ShardsPage() {
                         <div className="flex items-center gap-6">
                             <div className="h-[2px] w-12 bg-primary/40 rounded-full" />
                             <h2 className="text-3xl font-black tracking-tighter text-foreground whitespace-nowrap">
-                                연동된 프로세스 <span className="text-primary/60 ml-1">({processes.length})</span>
+                                연동된 프로세스 <span className="text-primary-text ml-1">({processes.length})</span>
                             </h2>
                             <div className="h-px flex-1 bg-linear-to-r from-border/80 to-transparent" />
                         </div>

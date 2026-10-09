@@ -172,9 +172,9 @@ export function CommandPalette({
 									}}
 									onKeyDown={handleKeyDown}
 									placeholder={placeholder}
-									className="flex-1 h-14 bg-transparent text-base text-foreground placeholder:text-muted-foreground/40 font-medium focus:outline-none"
+									className="flex-1 h-14 bg-transparent text-base text-foreground placeholder:text-muted-foreground font-medium focus:border-border-strong focus:outline-none"
 								/>
-								<kbd className="hidden sm:inline-flex px-2 py-1 rounded-lg bg-foreground/5 text-xs font-bold text-muted-foreground/50 tracking-wider border border-border/40">
+								<kbd className="hidden sm:inline-flex px-2 py-1 rounded-lg bg-foreground/5 text-xs font-bold text-muted-foreground tracking-wider border border-border/40">
 									ESC
 								</kbd>
 							</div>
@@ -186,7 +186,7 @@ export function CommandPalette({
 								className="max-h-80 overflow-y-auto p-2"
 							>
 								{filtered.length === 0 && (
-									<p className="py-8 text-center text-sm text-muted-foreground/60 font-medium">
+									<p className="py-8 text-center text-sm text-muted-foreground font-medium">
 										결과가 없어요
 									</p>
 								)}
@@ -219,7 +219,7 @@ export function CommandPalette({
 													)}
 													<span className="flex-1 text-left text-foreground">{item.label}</span>
 													{item.shortcut && (
-														<kbd className="text-xs font-bold text-muted-foreground/50 tracking-wider">
+														<kbd className="text-xs font-bold text-muted-foreground tracking-wider">
 															{item.shortcut}
 														</kbd>
 													)}
@@ -231,7 +231,7 @@ export function CommandPalette({
 							</div>
 
 							{/* Footer hint */}
-							<div className="px-4 py-2.5 border-t border-border/40 flex items-center gap-4 text-xs font-bold text-muted-foreground/40 tracking-wider">
+							<div className="px-4 py-2.5 border-t border-border/40 flex items-center gap-4 text-xs font-bold text-muted-foreground tracking-wider">
 								<span>↑↓ 이동</span>
 								<span>↵ 선택</span>
 								<span>ESC 닫기</span>

@@ -21,11 +21,16 @@
 	--popover-foreground: #2d1b1e;
 	--primary: #ff85c1;
 	--primary-foreground: #ffffff;
+	/* 배경용 --primary와 별개의 텍스트용 로즈 토큰 — 라이트 모드에서 #ff85c1은 배경 대비 2.09:1로 AA 미달.
+	   #a3416f는 (라이트) #fef5f9 5.54 / #ffffff 5.93 / #f7f1f4 5.32 / #ffe4f0 4.97, 다크에서는 --primary와 동일 값을 쓴다. */
+	--primary-text: #a3416f;
 	--primary-rgb: 255 133 193;
 	--secondary: #d4a574;
+	/* 장식 전용 토큰 — 배경 shape 등에만 사용. 버튼 등 컨트롤 배경으로 쓰면 white 대비 2.23:1 실패. */
 	--secondary-foreground: #ffffff;
 	--muted: #f9eff5;
-	--muted-foreground: #8b6d75;
+	/* 라이트 기준 #fef5f9 5.31 / #ffffff 5.68 / #f7f1f4 5.10. 다크(#c9a8b5)는 원래 통과로 유지. */
+	--muted-foreground: #7e5e6a;
 	--accent: #ffe4f0;
 	--accent-foreground: #d1608a;
 	--border: #f0d4e3;
@@ -49,6 +54,7 @@
 	--popover-foreground: #fce7f3;
 	--primary: #ff85c1;
 	--primary-foreground: #ffffff;
+	--primary-text: #ff85c1;
 	--primary-rgb: 255 133 193;
 	--secondary: #d4a574;
 	--secondary-foreground: #ffffff;
@@ -83,6 +89,7 @@
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
+	--color-primary-text: var(--primary-text);
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);
 	--color-muted: var(--muted);
@@ -263,7 +270,8 @@
 	will-change: transform, opacity;
 }
 
-/* 슬래시 커맨드 마키 전용 — hover 일시정지는 트랙의 group-hover:[animation-play-state:paused]가 담당 */
+/* 슬래시 커맨드 마키 전용 — hover 일시정지는 트랙의 group-hover:[animation-play-state:paused]가 담당.
+   사유(R-19): 슬래시 커맨드 문화를 텍스트보다 먼저 전달하는 identity motif. 30s로 느려 정보 방해가 아니다. */
 @utility animate-marquee {
 	animation: marquee 30s linear infinite;
 }

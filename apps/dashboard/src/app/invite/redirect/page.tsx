@@ -32,7 +32,7 @@ export default function InviteRedirectPage() {
               <h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl break-keep">
                 초대해줘서 고마워요!
               </h1>
-              <p className="text-lg font-medium leading-relaxed text-muted-foreground/80 md:text-xl max-w-xl break-keep">
+              <p className="text-lg font-medium leading-relaxed text-muted-foreground md:text-xl max-w-xl break-keep">
                 이제 다 됐어요!
                 <br />
                 나에게 딱 맞는 설정으로 대시보드를 꾸며볼까요?
@@ -52,7 +52,7 @@ export default function InviteRedirectPage() {
 
             <Link
               href="/"
-              className="group flex items-center gap-2 text-lg font-semibold text-muted-foreground/60 transition-colors hover:text-primary"
+              className="group flex items-center gap-2 text-lg font-semibold text-muted-foreground transition-colors hover:text-primary-text"
             >
               <Home className="h-5 w-5" />
               홈으로 가기

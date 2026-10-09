@@ -124,7 +124,7 @@ export function Slider({
 						</label>
 					)}
 					{showValue && (
-						<span className="text-sm font-black tracking-tight text-primary tabular-nums">
+						<span className="text-sm font-black tracking-tight text-primary-text tabular-nums">
 							{formatValue(current)}
 						</span>
 					)}
@@ -168,7 +168,7 @@ export function Slider({
 			</div>
 
 			{/* Min/Max labels */}
-			<div className="flex justify-between text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">
+			<div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest">
 				<span>{formatValue(min)}</span>
 				<span>{formatValue(max)}</span>
 			</div>

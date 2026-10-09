@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 /** 디자인 토큰 기반 톤 — Badge·StatusDot·StatusBadge 공용 */
 export const toneStyles = {
 	neutral: { badge: "border border-border bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
-	primary: { badge: "border border-primary/20 bg-primary/10 text-primary", dot: "bg-primary", text: "text-primary" },
+	primary: { badge: "border border-primary/20 bg-primary/10 text-primary-text", dot: "bg-primary", text: "text-primary-text" },
 	success: { badge: "border border-success/25 bg-success/10 text-success", dot: "bg-success", text: "text-success" },
 	warning: { badge: "border border-warning/25 bg-warning/10 text-warning", dot: "bg-warning", text: "text-warning" },
 	destructive: { badge: "border border-destructive/25 bg-destructive/10 text-destructive", dot: "bg-destructive", text: "text-destructive" },

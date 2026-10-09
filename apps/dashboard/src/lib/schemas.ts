@@ -39,6 +39,7 @@ export const guildSettingsSchema = z.object({
 	voiceChannelId: nullableSnowflake.optional(),
 	pinnedChannelId: nullableSnowflake.optional(),
 	pinnedChannelMode: z.enum(PINNED_MODES, "고정 채널 동작이 잘못됐어요.").optional(),
+	pinnedChannelDeleteInput: z.boolean().optional(),
 	jtcEnabled: z.boolean().optional(),
 	jtcCategoryId: nullableSnowflake.optional(),
 	jtcMarkerChannelId: nullableSnowflake.optional(),

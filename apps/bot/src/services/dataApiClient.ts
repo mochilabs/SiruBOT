@@ -33,7 +33,8 @@ export interface YouTubeChapter {
 	duration: number;
 }
 
-const GATEWAY_TIMEOUT_MS = 10_000;
+// 구 직접호출 체인과 같은 15초 — open-meteo가 느리게 답하는 요청을 성공으로 살려야 해요
+const GATEWAY_TIMEOUT_MS = 15_000;
 
 function gatewayBaseUrl(): string | null {
 	const raw = (process.env.DATA_API_URL ?? '').trim().replace(/\/+$/, '');

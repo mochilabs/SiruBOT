@@ -13,9 +13,6 @@ const LOW_SIMILARITY = Number(process.env.AUTOPLAY_LOW_SIM) || 0.2;
 const TITLE_WEIGHT = 0.6;
 const DURATION_WEIGHT = 0.4;
 
-// 이미 재생했던 곡의 순위 강등량 — 밴드 판정이 아니라 랭킹에만 적용한다
-const PREVIOUS_PLAY_PENALTY = 0.4;
-
 // trackStart 선예열(queueRelatedUpfront)과 queueEnd fallback(autoPlayRelated)의
 // 이중 추가를 막는 길드별 in-flight 가드
 const relatedFetchInFlight = new Map<string, Promise<Track | null>>();
@@ -173,20 +170,17 @@ function trackSimilarity(trackA: Track, trackB: Track): number {
  * - Too similar tracks (translated versions, covers) → excluded
  * - Too different tracks → excluded
  * - Select the most appropriate track from the medium similarity range
+ * 이미 재생했거나 대기 중인 곡은 fetchRelatedCandidate에서 하드 제외되므로 여기서 다루지 않는다.
  */
-function pickBySimilarity(candidates: Track[], reference: Track, previousIds: string[] = []): Track | null {
+function pickBySimilarity(candidates: Track[], reference: Track): Track | null {
 	if (candidates.length === 0) return null;
 
-	const scored = candidates.map((track) => {
-		const similarity = trackSimilarity(reference, track);
-		// 이미 재생했던 곡은 순위를 낮춘다. 이 감점은 아래 밴드 판정에 쓰이지 않는다 —
-		// 감점을 밴드 필터 이전에 적용하면 "너무 유사"했던 곡이 감점으로 밴드 안에
-		// 들어오고, 적당했던 곡은 LOW 미만으로 떨어져 완전히 배제됐다.
-		const playedBefore = previousIds.includes(track.info.identifier);
-		return { track, similarity, rank: similarity - (playedBefore ? PREVIOUS_PLAY_PENALTY : 0) };
-	});
+	const scored = candidates.map((track) => ({
+		track,
+		similarity: trackSimilarity(reference, track)
+	}));
 
-	// 원점수 기준으로 중간 밴드만 후보로 삼는다 (너무 유사/너무 무관한 곡 배제)
+	// 중간 밴드만 후보로 삼는다 (너무 유사/너무 무관한 곡 배제)
 	let pool = scored.filter((s) => s.similarity > LOW_SIMILARITY && s.similarity < HIGH_SIMILARITY);
 
 	// 밴드에 드는 곡이 없으면 하한만 완화한다 (커버·번역곡 배제는 유지)
@@ -195,21 +189,31 @@ function pickBySimilarity(candidates: Track[], reference: Track, previousIds: st
 	// 전부 너무 유사하면 그래도 재생을 이어가기 위해 전체를 후보로 쓴다
 	if (pool.length === 0) pool = scored;
 
-	// 감점 반영 순위로 정렬한 뒤 상위 3개 중 랜덤 선택 (다양성 확보)
-	pool.sort((a, b) => b.rank - a.rank);
+	// 유사도 순으로 정렬한 뒤 상위 3개 중 랜덤 선택 (다양성 확보)
+	pool.sort((a, b) => b.similarity - a.similarity);
 	const topN = pool.slice(0, Math.min(3, pool.length));
 	const pick = topN[Math.floor(Math.random() * topN.length)];
 
-	container.logger.debug(
-		`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)}, rank: ${pick.rank.toFixed(3)})`
-	);
+	container.logger.debug(`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
 	return pick.track;
+}
+
+/**
+ * 큐 트랙에서 식별자를 안전하게 추출한다.
+ * Queue.tracks는 (Track | UnresolvedTrack)[]이고 UnresolvedTrack.info는 Partial이라
+ * identifier가 없을 수 있다 — 그런 곡은 식별자로 제외할 수 없으므로 건너뛴다.
+ */
+function getTrackIdentifier(track: Track | UnresolvedTrack): string | null {
+	const identifier = (track as { info?: { identifier?: unknown } })?.info?.identifier;
+	return typeof identifier === 'string' && identifier.length > 0 ? identifier : null;
 }
 
 /**
  * 현재 곡의 YouTube RD(Radio) 플레이리스트를 검색해 유사도 기반으로 추천곡을 고른다.
  * 순수 검색+선택만 담당하며 큐 상태 검사는 호출부에서 fetch 완료 후 한다. 실패 시 null.
  * extraExcludes: 같은 요청에서 여러 곡을 연속으로 뽑을 때 이미 선택된 곡을 제외한다.
+ * 이미 재생했던 곡(previous + current)과 대기 중인 곡(queue.tracks)은 순위 감점이 아니라
+ * 하드 제외한다 — 감점만으로는 폴백 경로에서 다시 뽑혀 같은 곡이 반복되었다.
  */
 async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
 	const RD_PLAYLIST_ID = 'RD' + lastPlayedTrack.info.identifier;
@@ -226,22 +230,32 @@ async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, ext
 			return null;
 		}
 
-		// Instead of completely filtering out previous tracks, we just filter out the currently playing track.
-		// The previous tracks will be passed into pickBySimilarity and get heavily penalized.
-		const previous = player.queue.previous.map((e) => e.info.identifier);
-		if (player.queue.current) previous.push(player.queue.current.info.identifier);
-		previous.push(...extraExcludes);
+		// 하드 제외 대상: 마지막 재생 곡, 현재 재생 곡, 재생 이력, 대기열 전체(사용자 추가 + 선예열 추천곡), 연속 선출 제외
+		const excludedIdentifiers = new Set<string>(extraExcludes);
+		excludedIdentifiers.add(lastPlayedTrack.info.identifier);
+		if (player.queue.current) {
+			const currentIdentifier = getTrackIdentifier(player.queue.current);
+			if (currentIdentifier) excludedIdentifiers.add(currentIdentifier);
+		}
+		for (const track of player.queue.previous) {
+			const identifier = getTrackIdentifier(track);
+			if (identifier) excludedIdentifiers.add(identifier);
+		}
+		for (const track of player.queue.tracks) {
+			const identifier = getTrackIdentifier(track);
+			if (identifier) excludedIdentifiers.add(identifier);
+		}
 
-		const availableTracks = searchResult.tracks.filter(
-			(track) => track.info.identifier !== lastPlayedTrack.info.identifier && !extraExcludes.includes(track.info.identifier)
-		);
+		const availableTracks = searchResult.tracks.filter((track) => !excludedIdentifiers.has(track.info.identifier));
 
 		if (availableTracks.length > 0) {
-			const selectedTrack = pickBySimilarity(availableTracks, lastPlayedTrack, previous);
+			const selectedTrack = pickBySimilarity(availableTracks, lastPlayedTrack);
 			if (selectedTrack) return selectedTrack;
 		}
 
-		container.logger.debug(`No unique related tracks found for: ${lastPlayedTrack.info.identifier}`);
+		container.logger.debug(
+			`No eligible related tracks found for: ${lastPlayedTrack.info.identifier} (candidates: ${searchResult.tracks.length}, excluded: ${excludedIdentifiers.size})`
+		);
 		return null;
 	} catch (error) {
 		container.logger.error(`Error fetching related tracks: ${error}`);

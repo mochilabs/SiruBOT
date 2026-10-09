@@ -161,6 +161,12 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			await this.container.guildService.setPinnedChannelMode(interaction.guildId, interaction.values[0] === 'select' ? 'select' : 'play');
 		}
 
+		// 고정 채널 입력 메시지 삭제 토글
+		if (action === 'toggle:pindelete') {
+			const guild = await this.container.guildService.getGuild(interaction.guildId);
+			await this.container.guildService.setPinnedChannelDeleteInput(interaction.guildId, !guild.pinnedChannelDeleteInput);
+		}
+
 		// JTC actions
 		if (action === 'toggle:jtc') {
 			const settings = await this.container.guildService.getJtcSettings(interaction.guildId);

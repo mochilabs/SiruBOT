@@ -138,7 +138,7 @@ export function DataTable<T>({
 										aria-sort={ariaSort}
 										style={col.width ? { width: col.width } : undefined}
 										className={`
-											px-5 py-3.5 text-xs font-black uppercase tracking-[0.15em] text-muted-foreground/50 border-b border-border/40
+											px-5 py-3.5 text-xs font-black uppercase tracking-[0.15em] text-muted-foreground border-b border-border/40
 											${alignClass(col.align)}
 											${col.sortable ? "cursor-pointer select-none hover:text-foreground transition-colors" : ""}
 										`}

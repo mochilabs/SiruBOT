@@ -209,7 +209,8 @@ async function main() {
 
   // 매핑 파일 저장 — canonical 위치( resources/emoji_replacement/emoji-ids.json )는
   // 커밋 대상이라 Docker 이미지에 들어가요(앱 이모지 ID는 application 소유로 고정).
-  // 런타임용 apps/bot/resources/emoji-ids.json도 갱신해요 (로컬 개발 편의, 커밋 대상 아님).
+  // 런타임용 apps/bot/resources/emoji-ids.json도 갱신해요 — 로컬 dev CWD 기준 로드 경로라
+  // 커밋 대상이며, canonical과 함께 커밋해 두 사본을 같은 상태로 유지해요.
   const mapPath = join(EMOJI_SOURCE_DIR, "emoji-ids.json");
   await writeFile(mapPath, `${JSON.stringify(emojiIdMap, null, 2)}\n`, "utf-8");
   console.log(green(`canonical 매핑 저장 (커밋 필요): ${mapPath}`));
@@ -222,7 +223,7 @@ async function main() {
       "utf-8",
     );
     console.log(
-      gray(`런타임 매핑 동기화: ${join(botResourcesDir, "emoji-ids.json")} (커밋 안 함)`),
+      gray(`런타임 매핑 동기화 (canonical과 함께 커밋): ${join(botResourcesDir, "emoji-ids.json")}`),
     );
   } catch {
     // 모노레포 루트가 아닌 위치에서 실행 시 무시

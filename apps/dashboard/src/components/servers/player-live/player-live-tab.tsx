@@ -110,10 +110,10 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 						size="sm"
 						variant={connected ? "success" : mode === "stream" ? "warning" : "default"}
 					>
-						{mode === "stream" ? (connected ? "실시간" : "연결 중…") : "폴링 2초"}
+						{mode === "stream" ? (connected ? "실시간" : "연결 중…") : `폴링 ${FALLBACK_POLL_INTERVAL_MS / 1000}초`}
 					</Badge>
 				</div>
-				<span className="text-2xs text-muted-foreground/60">
+				<span className="text-2xs text-muted-foreground">
 					{Math.floor(state.ageMs / 1000)}초 전 갱신
 				</span>
 			</div>
@@ -136,7 +136,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 					<p className="truncate text-lg font-bold text-foreground">
 						{state.trackTitle ?? "재생 중인 곡이 없어요"}
 					</p>
-					<p className="truncate text-sm text-muted-foreground/80">
+					<p className="truncate text-sm text-muted-foreground">
 						{state.trackAuthor ?? "—"}
 						{state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
 					</p>
@@ -151,7 +151,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 
 			<div className="space-y-1">
 				<ProgressBar state={state} receivedAt={receivedAt} />
-				<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground/80">
+				<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
 					<span>{state.isStream ? "스트리밍" : formatMs(positionMs)}</span>
 					<span>{state.isStream ? "" : formatMs(state.durationMs)}</span>
 				</div>
@@ -182,17 +182,17 @@ function QueueList({ state }: { state: LivePlayerState }) {
 							className="animate-page-in flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2 opacity-0"
 							style={{ animationDelay: `${Math.min(index, 9) * 40}ms`, animationFillMode: "forwards" }}
 						>
-							<span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
+							<span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
 								{index + 1}
 							</span>
 							<div className="min-w-0 flex-1">
 								<p className="truncate text-sm font-semibold text-foreground">{track.title}</p>
-								<p className="truncate text-xs text-muted-foreground/70">
+								<p className="truncate text-xs text-muted-foreground">
 									{track.author}
 									{track.requesterName ? ` · 신청: ${track.requesterName}` : ""}
 								</p>
 							</div>
-							<span className="shrink-0 text-xs tabular-nums text-muted-foreground/70">
+							<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
 								{track.isStream ? "스트림" : formatMs(track.durationMs)}
 							</span>
 						</li>
@@ -240,8 +240,11 @@ interface LivePayload {
 	hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
 
+/** 폴백 폴링 주기 — 2000ms면 READ_RATE(분당 30회) 경계에 딱 붙어 윈도우 지터로 429가 튀니 분당 24회로 낮춰요. */
+const FALLBACK_POLL_INTERVAL_MS = 2500;
+
 export default function PlayerLiveTab({ guildId }: { guildId: string }) {
-	/** SSE 실패(미지원/장애) 시 폴백하는 2초 폴링과 상태를 구분해요. */
+	/** SSE 실패(미지원/장애) 시 폴백하는 폴링 모드와 상태를 구분해요. */
 	const [mode, setMode] = useState<"stream" | "polling">("stream");
 	const [liveData, setLiveData] = useState<LivePayload | null>(null);
 	const [connected, setConnected] = useState(false);
@@ -250,7 +253,7 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 
 	// 폴링 폴백 + 초기 데이터 — 항상 구독해 키/훅 순서를 유지해요 (stream 모드에선 0초 폴링).
 	const { data: swrData, error, isLoading } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, {
-		refreshInterval: mode === "polling" ? 2000 : 0,
+		refreshInterval: mode === "polling" ? FALLBACK_POLL_INTERVAL_MS : 0,
 		keepPreviousData: true,
 	});
 
@@ -332,7 +335,7 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 				mode={mode}
 			/>
 			<QueueList state={data.player} />
-		<p className="text-xs text-muted-foreground/50">
+		<p className="text-xs text-muted-foreground">
 			재생 제어는 봇 컨트롤러/커맨드에서 할 수 있어요. 이 화면은 실시간 상태 표시 전용이에요.
 		</p>
 		</div>

@@ -65,7 +65,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 						label="갭리스 재생"
 						labelPosition="left"
 					/>
-					<p className="text-xs text-muted-foreground/70">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
+					<p className="text-xs text-muted-foreground">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
 				</div>
 
 				<div className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-4">
@@ -76,7 +76,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 						label="크로스페이드"
 						labelPosition="left"
 					/>
-					<p className="text-xs text-muted-foreground/70">곡 끝과 다음 곡 시작을 겹쳐서 이어요. (Lavalink mixer 플러그인 필요)</p>
+					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요. (Lavalink mixer 플러그인 필요)</p>
 				</div>
 			</div>
 

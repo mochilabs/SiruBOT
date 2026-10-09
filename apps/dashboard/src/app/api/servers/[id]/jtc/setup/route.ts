@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { guardRateLimit, HEAVY_WRITE_RATE, rateKey } from "@/lib/rate-limit";
 import { jtcSetupSchema, zodError } from "@/lib/schemas";
@@ -183,6 +184,12 @@ export async function POST(
       where: { id },
       create: { id, jtcCategoryId: categoryId, jtcMarkerChannelId: markerId },
       update: { jtcCategoryId: categoryId, jtcMarkerChannelId: markerId },
+    });
+
+    // 저장 성공 후 모든 봇 프로세스의 설정 캐시를 무효화해요 (fire-and-forget).
+    // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
+    notifyGuildSettingsChanged(id).catch((error) => {
+      console.warn(`Failed to notify JTC setup change (guild ${id}):`, error);
     });
 
     return NextResponse.json({ categoryId, markerChannelId: markerId });

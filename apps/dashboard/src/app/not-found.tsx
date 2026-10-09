@@ -16,11 +16,11 @@ interface FloatingIcon {
 }
 
 const ICON_ITEMS: Array<{ Icon: LucideIcon; tone: string }> = [
-	{ Icon: Music2, tone: "text-primary/50" },
+	{ Icon: Music2, tone: "text-primary-text" },
 	{ Icon: Bot, tone: "text-secondary/60" },
-	{ Icon: ListMusic, tone: "text-primary/40" },
+	{ Icon: ListMusic, tone: "text-primary-text" },
 	{ Icon: CloudSun, tone: "text-secondary/50" },
-	{ Icon: Gamepad2, tone: "text-primary/50" },
+	{ Icon: Gamepad2, tone: "text-primary-text" },
 	{ Icon: Sparkles, tone: "text-secondary/60" },
 ];
 
@@ -121,9 +121,9 @@ export default function NotFound() {
 							<m.span key="counter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-baseline gap-1.5">
 								<span className="text-3xl font-black tracking-tighter text-foreground tabular-nums sm:text-4xl">
 									{fallen.length}
-									<span className="text-muted-foreground/40">/{icons.length}</span>
+									<span className="text-muted-foreground">/{icons.length}</span>
 								</span>
-								<span className="text-2xs font-bold uppercase tracking-widest text-muted-foreground/60">아이콘을 건드려요</span>
+								<span className="text-2xs font-bold uppercase tracking-widest text-muted-foreground">아이콘을 건드려요</span>
 							</m.span>
 						)}
 					</div>
@@ -132,7 +132,7 @@ export default function NotFound() {
 						<h1 className="text-4xl font-black tracking-tighter text-foreground break-keep sm:text-5xl md:text-6xl">
 							{droppedAll ? "전부 떨어뜨렸네요!" : "앗, 없는 주소예요"}
 						</h1>
-						<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground/80 break-keep sm:text-lg">
+						<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg">
 							{droppedAll
 								? "바닥도 깨끗해졌어요. 홈으로 데려다줄게요."
 								: "찾는 페이지가 여기에 없어요. 저기 떠 있는 아이콘들을 건드려보는 건 어때요?"}
@@ -154,7 +154,7 @@ export default function NotFound() {
 						<button
 							type="button"
 							onClick={() => window.history.back()}
-							className="group flex items-center gap-1.5 text-sm font-medium text-muted-foreground/60 transition-colors duration-fast hover:text-foreground"
+							className="group flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
 						>
 							<ChevronLeft className="h-4 w-4 transition-transform duration-fast group-hover:-translate-x-0.5" aria-hidden />
 							이전으로 가기

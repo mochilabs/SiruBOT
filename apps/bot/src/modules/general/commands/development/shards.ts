@@ -37,7 +37,7 @@ export class ShardsCommand extends Command {
 			for (const [id, shard] of client.ws.shards) {
 				const statusEmoji = shard.status === 0 ? '🟢' : shard.status === 5 ? '🔴' : '🟡';
 				const ping = shard.ping >= 0 ? `${shard.ping}ms` : 'N/A';
-				lines.push(`${statusEmoji} **Shard #${id}** — Ping: ${ping} | Status: ${shard.status}`);
+				lines.push(`${statusEmoji} **Shard #${id}**: Ping ${ping} | Status ${shard.status}`);
 			}
 		} else {
 			lines.push(`${emoji('chart')} **로컬 샤드**: 0 (싱글 프로세스)`);

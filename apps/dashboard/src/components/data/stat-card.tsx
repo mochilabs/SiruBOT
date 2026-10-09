@@ -54,7 +54,7 @@ export function StatCard({ icon: Icon, label, value, sub, trend, trendValue, cla
 		<Card className={cn("gap-3", className)}>
 			<div className="flex items-start justify-between gap-3">
 				<p className="text-xs font-medium text-muted-foreground">{label}</p>
-				{Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden />}
+				{Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
 			</div>
 			<div className="space-y-1">
 				<div className="flex items-baseline gap-2">

@@ -69,7 +69,7 @@ export class FortuneCommand extends Command {
 					fortune,
 					'',
 					`${emoji('clover')} 럭키 넘버: **${luckyNumber}** · ${emoji('palette')} 럭키 컬러: **${color}** · ${luckyEmoji}`,
-					`-# ${dateKey} 기준 — 내일 다시 오면 새로운 운세가 기다려요.`
+					`-# ${dateKey} 기준, 내일 다시 오면 새로운 운세가 기다려요.`
 				].join('\n')
 			)
 		);

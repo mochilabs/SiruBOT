@@ -75,7 +75,7 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 							variant="ghost"
 							size="sm"
 							onClick={notification.action.onClick}
-							className="mt-2 h-auto px-0 text-xs font-bold text-primary hover:bg-transparent hover:text-primary/80"
+							className="mt-2 h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:text-primary/80"
 						>
 							{notification.action.label}
 						</Button>

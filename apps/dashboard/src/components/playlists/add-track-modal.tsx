@@ -66,7 +66,7 @@ export function AddTrackModal({
 											onChange={(e) => onYoutubeUrlChange(e.target.value)}
 										/>
 									</Field>
-									<p className="text-xs text-muted-foreground/50 leading-relaxed">
+									<p className="text-xs text-muted-foreground leading-relaxed">
 										유튜브 영상 링크 또는 공유 주소를 복사해 입력하면 비디오 메타데이터를 파싱하여 플레이리스트에 즉시 삽입합니다.
 									</p>
 								</div>
@@ -80,7 +80,7 @@ export function AddTrackModal({
 											onChange={(e) => onTrackSearchQueryChange(e.target.value)}
 											className="pl-10"
 										/>
-										<Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
+										<Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
 									</div>
 
 									<div className="max-h-[220px] overflow-y-auto space-y-1.5 pr-1">
@@ -89,11 +89,11 @@ export function AddTrackModal({
 												<Loader text="곡 검색 중..." />
 											</div>
 										) : trackSearchQuery && searchedTracks.length === 0 ? (
-											<p className="text-sm font-medium text-muted-foreground/60 text-center py-8">
+											<p className="text-sm font-medium text-muted-foreground text-center py-8">
 												검색 결과가 없습니다.
 											</p>
 										) : !trackSearchQuery ? (
-											<p className="text-xs font-medium text-muted-foreground/40 text-center py-8 leading-relaxed">
+											<p className="text-xs font-medium text-muted-foreground text-center py-8 leading-relaxed">
 												키워드를 입력해 기존에 봇이 재생했던 이력의 노래들을 찾아보세요.
 											</p>
 										) : (

@@ -48,7 +48,7 @@ export function Footer() {
 							</span>
 							<span className="text-lg font-black tracking-tighter text-foreground">시루봇</span>
 						</Link>
-						<p className="max-w-xs text-sm font-medium leading-relaxed text-muted-foreground/80">
+						<p className="max-w-xs text-sm font-medium leading-relaxed text-muted-foreground">
 							음악·AI 채팅·서버 관리를 한 곳에서.
 							<br />
 							초대하고 바로 시작하세요.
@@ -59,7 +59,7 @@ export function Footer() {
 					<div className="grid grid-cols-3 gap-4 sm:gap-6 md:col-span-3">
 						{linkGroups.map((group) => (
 							<nav key={group.title} aria-label={group.title} className="space-y-3 md:space-y-4">
-								<h3 className="text-2xs font-black uppercase tracking-widest text-muted-foreground/60 md:text-xs">{group.title}</h3>
+								<h3 className="text-2xs font-black uppercase tracking-widest text-muted-foreground md:text-xs">{group.title}</h3>
 								<ul className="space-y-2 md:space-y-3">
 									{group.links.map((link) =>
 										link.internal ? (
@@ -83,8 +83,8 @@ export function Footer() {
 				</div>
 
 				<div className="mt-12 flex flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
-					<p className="text-xs font-medium text-muted-foreground/60">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
-					<p className="text-xs font-medium text-muted-foreground/40">28K+ 서버에서 사용 중</p>
+					<p className="text-xs font-medium text-muted-foreground">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
+					<p className="text-xs font-medium text-muted-foreground">28K+ 서버에서 사용 중</p>
 				</div>
 			</div>
 		</footer>

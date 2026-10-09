@@ -70,7 +70,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const boostLine =
 		nextThreshold === null
 			? `${emoji('sparkle')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 (최고 티어)`
-			: `${emoji('sparkle')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 — 다음 티어까지 ${Math.max(
+			: `${emoji('sparkle')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 · 다음 티어까지 ${Math.max(
 					0,
 					nextThreshold - boosts
 				)}개\n\`${boostBar(boosts, nextThreshold)}\``;
@@ -85,7 +85,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		``,
 		`**${emoji('people')} 구성**`,
 		`${emoji('people')} **멤버**: ${guild.memberCount.toLocaleString()}명`,
-		`${emoji('speech')} **채널**: 전체 ${channels.size}개 — 텍스트 ${textCount} · 음성 ${voiceCount} · 카테고리 ${categoryCount} · 스레드 ${threadCount}`,
+		`${emoji('speech')} **채널**: 전체 ${channels.size}개 (텍스트 ${textCount} · 음성 ${voiceCount} · 카테고리 ${categoryCount} · 스레드 ${threadCount})`,
 		`${emoji('mask')} **역할**: ${guild.roles.cache.size}개 · 최고 역할 <@&${guild.roles.highest.id}>`,
 		`${emoji('smile')} **이모지**: ${guild.emojis.cache.size}개 · **스티커**: ${guild.stickers.cache.size}개`,
 		``,

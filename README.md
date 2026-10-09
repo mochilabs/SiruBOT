@@ -36,13 +36,13 @@ sirubot/
 
 ## 🎵 Core Features
 
-- **High-Quality Audio streaming**: Ultra-low latency music playback streamed seamlessly via Lavalink.
+- **High-Quality Audio streaming**: Music playback streamed via Lavalink.
 - **Web Dashboard**: An immersive, real-time web control panel providing interactive music controls and shard status monitoring.
 - **Data API Gateway**: A centralized gateway that caches external API calls (weather, lyrics, horoscopes, delivery tracking, YouTube chapters) and runs scheduled LLM jobs — one shared instance instead of per-shard duplicate requests.
 - **Profile Card**: A rendered image card for user profiles — zodiac constellation background, user banner, avatar and music stats.
 - **Custom Playlists**: Create, manage, and load personalized music playlists directly from the bot or dashboard.
 - **Smart Auto-complete**: Real-time track search suggestions inside Discord slash commands.
-- **Advanced Queue Controls**: Refined music queue controls including looping, shuffling, skipping, and navigating directly to specific tracks.
+- **Queue Controls**: Music queue controls including looping, shuffling, skipping, and navigating directly to specific tracks.
 
 ---
 

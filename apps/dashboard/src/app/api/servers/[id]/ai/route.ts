@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import {
@@ -99,6 +100,12 @@ export async function PUT(
         where: { id },
         create: { id, ...data },
         update: data,
+      });
+
+      // 저장 성공 후 모든 봇 프로세스의 설정 캐시를 무효화해요 (fire-and-forget).
+      // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
+      notifyGuildSettingsChanged(id).catch((error) => {
+        console.warn(`Failed to notify AI settings change (guild ${id}):`, error);
       });
     }
 

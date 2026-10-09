@@ -695,7 +695,7 @@ export function releaseChannelTurn(channelId: string): void {
 	activeChannelTurns.delete(channelId);
 }
 
-// ── 유저당 시간당 턴 상한 ───────────────────────────────────────────────────
+// ── 유저당 턴 상한 (10분 윈도우) ──────────────────────────────────────────────
 /** 윈도우(10분)당 유저별 최대 AI 턴 수 */
 const USER_TURN_WINDOW_SECONDS = 10 * 60;
 const USER_TURN_LIMIT = 20;
@@ -703,7 +703,7 @@ const USER_TURN_LIMIT = 20;
 const userTurnCounterTtl = USER_TURN_WINDOW_SECONDS;
 
 /**
- * 유저 턴 소비 시도 — 시간당 상한(USER_TURN_LIMIT) 초과 시 false.
+ * 유저 턴 소비 시도 — 10분 윈도우당 상한(USER_TURN_LIMIT) 초과 시 false.
  * Redis 카운터로 셰드 간 공유되며, Redis가 없으면 보호 없이 통과해요. (가용성 우선)
  */
 export async function tryConsumeUserTurn(userId: string): Promise<boolean> {

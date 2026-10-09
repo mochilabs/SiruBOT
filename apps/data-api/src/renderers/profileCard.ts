@@ -3,7 +3,7 @@
  * 배너 기반 레이아웃: 배너 크기만큼 채우고, 아래 섹션에 아바타/태그/통계/자주 듣는 곡.
  * 컬러는 웹 대시보드 디자인 토큰(globals.css 다크 테마)과 동일한 팔레트를 써요.
  */
-import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawCircleImage, ensureKoreanFont, hashString, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 export interface TopTrackSnippet {

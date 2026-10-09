@@ -6,6 +6,7 @@ import { inflightCount } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError, serveCached } from './serveCached.ts';
 import { deduped } from '../utils/dedup.ts';
+import { GUILD_SETTINGS_INVALIDATE_CHANNEL } from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
@@ -478,6 +479,27 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			const buffer = await deduped(`img:ohaasa:${body.date || 'nodate'}:${body.zodiacCode}`, () => renderOhaasaCard(body));
 			metrics.request('image-ohaasa');
 			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 길드 설정 캐시 무효화 (대시보드 저장 후 봇 브로드캐스트) ──
+	// 대시보드가 Prisma로 길드 설정을 직접 upsert하므로, 저장 성공 후 호출해 모든 봇 프로세스의
+	// GuildService 캐시를 비워요. 봇은 채널(`sirubot:guild-settings:invalidate`)을 구독해 자기
+	// 캐시에서 해당 guildId를 지우고 다음 조회 때 DB에서 다시 읽어요.
+	const invalidateSchema = z.object({ guildId: z.string().trim().min(1).max(32) });
+	fastify.post('/v1/internal/guild-settings/invalidate', async (request, reply) => {
+		try {
+			const { guildId } = invalidateSchema.parse(request.body);
+			const client = sharedCache.getClient();
+			if (!client) {
+				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
+				return reply.code(503).send({ error: 'redis_unavailable', message: '무효화 브로드캐스트를 위해 Redis가 필요해요.' });
+			}
+			await client.publish(GUILD_SETTINGS_INVALIDATE_CHANNEL, JSON.stringify({ guildId }));
+			metrics.request('guild-settings-invalidate');
+			return reply.send({ ok: true });
 		} catch (error) {
 			return sendError(reply, error);
 		}

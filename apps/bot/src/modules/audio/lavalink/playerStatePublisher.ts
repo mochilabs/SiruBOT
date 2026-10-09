@@ -45,7 +45,12 @@ export interface PlayerStatePayload {
 }
 
 /** 길드별 마지막 퍼블리시 (주기 캐시 + 변경 감지 지문) */
-const lastPublish = new Map<string, { at: number; fingerprint: string }>();
+type PublishTracker = Map<string, { at: number; fingerprint: string }>;
+
+function getPublishTracker(): PublishTracker {
+	// tsup이 여러 entry에 이 모듈을 복제해도 trackHandler/playerHandler가 같은 스로틀 상태를 쓰게 컨테이너에 둬요
+	return (container.playerStatePublishTracker ??= new Map());
+}
 
 function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: string | null): QueuedTrackSummary | null {
 	if (!track) return null;
@@ -90,10 +95,13 @@ export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayloa
 
 /** 상태 지문 — 트랙/재생 상태/큐 구성이 바뀌면 즉시 퍼블리시하기 위한 키 */
 function statusFingerprint(state: PlayerStatePayload): string {
+	// 볼륨·반복모드도 지문에 포함 — positionMs처럼 매초 바뀌는 값이 아니라 바뀔 때만 즉시 반영돼요
 	return [
 		state.trackTitle ?? '',
 		state.playing ? '1' : '0',
 		state.paused ? '1' : '0',
+		state.repeatMode,
+		state.volume,
 		state.queueLength,
 		state.queue.map((t) => t.title).join('|')
 	].join('§');
@@ -109,16 +117,17 @@ export function publishPlayerState(player: CustomPlayer): void {
 
 	const payload = buildPlayerStatePayload(player);
 	const fingerprint = statusFingerprint(payload);
-	const previous = lastPublish.get(player.guildId);
+	const tracker = getPublishTracker();
+	const previous = tracker.get(player.guildId);
 	const now = Date.now();
 
 	if (previous && previous.fingerprint === fingerprint && now - previous.at < IMMEDIATE_INTERVAL_MS) return;
 
-	lastPublish.set(player.guildId, { at: now, fingerprint });
+	tracker.set(player.guildId, { at: now, fingerprint });
 	store.publishRawPlayerState(player.guildId, JSON.stringify(payload));
 }
 
 /** 플레이어 파괴 시 마지막 퍼블리시 상태 정리 */
 export function clearPlayerStateTracker(guildId: string): void {
-	lastPublish.delete(guildId);
+	getPublishTracker().delete(guildId);
 }
