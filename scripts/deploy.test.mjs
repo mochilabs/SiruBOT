@@ -474,6 +474,56 @@ test('failed deployment keeps original snapshot across retry', async () => {
 		f.cleanup();
 	}
 });
+for (const change of ['image', 'environment']) {
+	test(`dry-run rejects a pending deployment with a different ${change} without modifying state`, async () => {
+		const f = fixture();
+		try {
+			f.failDeploy(true);
+			await assert.rejects(main(['--config', f.configPath], f.run, () => {}));
+			const files = ['previous.json', 'pending.json'];
+			const original = files.map((file) => readFileSync(join(f.dir, 'state', file), 'utf8'));
+			if (change === 'image') {
+				f.manifest.runId = 12;
+				f.manifest.commit = 'c'.repeat(40);
+				for (const app of APPS) f.manifest.images[app] = `ghcr.io/${repository.toLowerCase()}-${app}@sha256:${'c'.repeat(64)}`;
+			} else writeFileSync(join(f.dir, '.env'), readFileSync(join(f.dir, '.env'), 'utf8') + '\nNEW_SETTING=changed\n');
+			const count = f.calls.length;
+			const logs = [];
+			await assert.rejects(
+				main(['--config', f.configPath, '--dry-run'], f.run, (line) => logs.push(line)),
+				/완료되지 않은 배포/
+			);
+			assert.equal(
+				logs.some((line) => line.includes('dry-run 완료')),
+				false
+			);
+			assert.equal(
+				f.calls.slice(count).some((c) => c.args[0] === 'config' || (c.args[0] === 'stack' && c.args[1] === 'deploy')),
+				false
+			);
+			assert.deepEqual(
+				files.map((file) => readFileSync(join(f.dir, 'state', file), 'utf8')),
+				original
+			);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
+test('dry-run accepts a matching pending target and rollback while leaving pending state intact', async () => {
+	const f = fixture();
+	try {
+		f.failDeploy(true);
+		await assert.rejects(main(['--config', f.configPath], f.run, () => {}));
+		const original = readFileSync(join(f.dir, 'state/pending.json'), 'utf8');
+		await main(['--config', f.configPath, '--dry-run'], f.run, () => {});
+		writeFileSync(join(f.dir, '.env'), readFileSync(join(f.dir, '.env'), 'utf8') + '\nNEW_SETTING=changed\n');
+		await main(['rollback', '--config', f.configPath, '--dry-run'], f.run, () => {});
+		assert.equal(readFileSync(join(f.dir, 'state/pending.json'), 'utf8'), original);
+	} finally {
+		f.cleanup();
+	}
+});
 test('manual rollback after Swarm automatic recovery clears pending state and unblocks the next version', async () => {
 	const f = fixture();
 	try {

@@ -766,6 +766,13 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			opts.action === 'rollback'
 				? Object.fromEntries(APPS.filter((app) => !changed.includes(app)).map((app) => [current[app].Spec.Name, fingerprint(current[app].Spec)]))
 				: {};
+		let pending;
+		try {
+			pending = JSON.parse(readFileSync(join(config.stateDir, 'pending.json'), 'utf8'));
+		} catch {}
+		if (opts.action === 'deploy' && pending && fingerprint(pending.desired) !== fingerprint(desired)) {
+			throw new Error('완료되지 않은 배포가 있습니다. 같은 --run으로 재시도하거나 rollback 후 새 배포를 실행하세요.');
+		}
 		log(
 			`${opts.action === 'rollback' ? '복원' : '배포'} 대상: ${config.appStack}${manifest ? ` / CI ${manifest.runId} / ${manifest.commit.slice(0, 7)}` : ''}`
 		);
@@ -774,13 +781,6 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		if (opts.dryRun) {
 			log('dry-run 완료. 서비스와 배포 상태 파일은 변경하지 않았습니다.');
 			return;
-		}
-		let pending;
-		try {
-			pending = JSON.parse(readFileSync(join(config.stateDir, 'pending.json'), 'utf8'));
-		} catch {}
-		if (opts.action === 'deploy' && pending && fingerprint(pending.desired) !== fingerprint(desired)) {
-			throw new Error('완료되지 않은 배포가 있습니다. 같은 --run으로 재시도하거나 rollback 후 새 배포를 실행하세요.');
 		}
 		if (changed.length && opts.action === 'deploy' && !pending) {
 			protectedWrite(join(config.stateDir, 'previous.json'), {
