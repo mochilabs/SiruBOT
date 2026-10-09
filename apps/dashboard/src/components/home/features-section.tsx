@@ -94,16 +94,9 @@ const chipsContainerVariants = {
 	visible: { opacity: 1, transition: { staggerChildren: 0.04 } },
 } as const;
 
-/** 섹션 헤딩 문장 — 단어별 스크롤 텍스트 필(치트시트 14)에 쓰는 고정 분해 배열 */
+/** 섹션 헤딩 문장 — 단어별 스크롤 텍스트 필(치트시트 14)에 쓰는 고정 분해 배열. 모듈 수준에서 고정해 훅 룰을 보호해요 */
 const HEADING_TEXT = "채널에서 재생하고, 웹에서 관리해요.";
-
-/** 문장을 공백 기준으로 분해 — 배열은 모듈 수준에서 고정해 훅 룰을 보호해요 */
-function splitOnSpaces(text: string): string[] {
-	const words = text.split(" ");
-	return words.flatMap((word, index) => (index === 0 ? [word] : [" ", word]));
-}
-
-const HEADING_TOKENS = splitOnSpaces(HEADING_TEXT);
+const HEADING_TOKENS = HEADING_TEXT.split(" ").flatMap((word, index) => (index === 0 ? [word] : [" ", word]));
 
 /** 공백 토큰 여부 — 단어 span과 공백 span을 구분해 줄바꿈/간격을 자연스럽게 유지해요 */
 const isSpace = (token: string) => token.trim() === "";
@@ -186,7 +179,7 @@ function SettingToggleRow({ name, from, to, index }: { name: string; from: strin
 			<span className={settingName}>{name}</span>
 			<span className="relative shrink-0 text-xs font-semibold">
 				{/* 새 값이 폭을 결정 — from은 위로 슝 사라짐 (등장 시엔 from 노출 없이 바로 from → to 전환) */}
-				<m.span className="text-primary" initial={{ y: 0, opacity: 1 }}>
+				<m.span className="text-primary">
 					{to}
 				</m.span>
 				<m.span
@@ -235,7 +228,8 @@ function ChatPreview() {
 
 	// 시퀀스: 사용자 타이핑 완료 → 생각 중 → 답변 타이핑 완료 → 다음 도구 (타이핑 종료 이벤트 기반)
 	useEffect(() => {
-		if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		// reduced-motion에선 정적 답변을 바로 보여요
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			setPhase(2);
 			return undefined;
 		}
@@ -387,9 +381,12 @@ export function FeaturesSection() {
 		offset: ["start 0.92", "start 0.45"],
 	});
 
+	// 카드 4종 공용 등장 variants — reduced-motion에선 블러 없이 opacity+y 폴백
+	const cardEntry = shouldReduce ? sectionVariants : cardVariants;
+
 	useEffect(() => {
 		if (!settingAutoPlay) return undefined;
-		if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 		const timer = setInterval(() => setActiveSettingSlide((prev) => (prev + 1) % dashboardSettingSlides.length), 7000);
 		return () => clearInterval(timer);
 	}, [settingAutoPlay, activeSettingSlide]);
@@ -413,7 +410,6 @@ export function FeaturesSection() {
 						시루봇으로 할 수 있는 일
 					</SectionLabel>
 					<h2 ref={headingRef} className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-						{/* 치트시트 14. 텍스트 필 — 스크롤 진행에 따라 단어가 순차적으로 채워져요 */}
 						{shouldReduce ? (
 							HEADING_TEXT
 						) : (
@@ -440,7 +436,7 @@ export function FeaturesSection() {
 				transition={{ staggerChildren: 0.08 }}
 			>
 				{/* 1. AI 채팅 — 가장 중요 */}
-			<m.div variants={shouldReduce ? sectionVariants : cardVariants} className="lg:col-span-2 min-w-0">
+			<m.div variants={cardEntry} className="lg:col-span-2 min-w-0">
 				<Card padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
@@ -480,7 +476,7 @@ export function FeaturesSection() {
 			</m.div>
 
 			{/* 2. 명령어 소개 — 음악 재생 */}
-			<m.div variants={shouldReduce ? sectionVariants : cardVariants} className="lg:col-span-2 min-w-0">
+			<m.div variants={cardEntry} className="lg:col-span-2 min-w-0">
 				<Card variant="raised" padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
@@ -567,7 +563,7 @@ export function FeaturesSection() {
 			</m.div>
 
 			{/* 3. 내 음악 보관함 */}
-			<m.div variants={shouldReduce ? sectionVariants : cardVariants} className="flex flex-col min-w-0">
+			<m.div variants={cardEntry} className="flex flex-col min-w-0">
 				<Card padding="lg" className="h-full gap-5">
 					<div className="flex items-center gap-2.5">
 						<ListMusic size={18} className="text-primary" aria-hidden />
@@ -640,7 +636,7 @@ export function FeaturesSection() {
 			</m.div>
 
 				{/* 4. 서버 대시보드 */}
-				<m.div variants={shouldReduce ? sectionVariants : cardVariants} className="flex flex-col min-w-0">
+				<m.div variants={cardEntry} className="flex flex-col min-w-0">
 					<Card padding="lg" className="h-full gap-5">
 						<div className="flex items-center gap-2.5">
 							<LayoutDashboard size={18} className="text-primary" aria-hidden />

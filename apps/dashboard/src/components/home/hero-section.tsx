@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { m, type MotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { m, type MotionValue, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
@@ -13,6 +13,10 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
+const TYPING_TEXTS = ['더 즐거운 서버를', '심심할 틈 없는 서버를', '활기찬 서버를'];
+const TYPING_SPEED = 90;
+// whileInView 진입 조건 — 세 무빙 블록(container/진행 버튼/디스코드 프레임)이 같은 조건을 공유
+const REVEAL_VIEWPORT = { once: true, margin: '-60px' } as const;
 
 // 리빌 단어 조각 — 단어 뒤 공백을 조각에 포함해(whitespace-pre) inline-block 스팬 간 간격을 유지하고
 // 스크린 리더에도 "시루봇과 함께"처럼 공백이 살아있게 해요. 하단 문장은 조각 하나라 문자열 상수로 충분해요.
@@ -89,9 +93,7 @@ function DotPattern({ y }: { y?: MotionValue<number> }) {
 export function HeroSection() {
 	const [activeSlide, setActiveSlide] = useState(0);
 	const [autoPlay, setAutoPlay] = useState(true);
-	const [heroInView, setHeroInView] = useState(false);
 	const heroRef = useRef<HTMLElement>(null);
-	const reducedMotion = useRef(false);
 
 	// 도트 패턴 스크롤 패럴랙스 — 섹션이 화면 위로 빠질 때까지 배경이 콘텐츠보다 천천히 따라와요.
 	// 성능: transform(y)만 사용해 렌더 비용을 최소화하고, reduced-motion 환경에선 정적 배경 유지.
@@ -115,28 +117,18 @@ export function HeroSection() {
 		setHintHidden(latest > 0.15);
 	});
 
-	useEffect(() => {
-		reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-	}, []);
+	// 히어로 진입 판정 — whileInView 마진과 같은 -60px 기준으로 20% 이상 보이면 활성화
+	const heroInView = useInView(heroRef, {
+		once: true,
+		amount: 0.2,
+		margin: "-60px"
+	});
 
 	useEffect(() => {
-		const el = document.getElementById("hero-section");
-		if (!el) return undefined;
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (entry.isIntersecting) setHeroInView(true);
-			},
-			{ threshold: 0.2 },
-		);
-		observer.observe(el);
-		return () => observer.disconnect();
-	}, []);
-
-	useEffect(() => {
-		if (!autoPlay || !heroInView || reducedMotion.current) return undefined;
+		if (!autoPlay || !heroInView || shouldReduce) return undefined;
 		const timer = setInterval(() => setActiveSlide((prev) => (prev + 1) % slideConfigs.length), SLIDE_INTERVAL);
 		return () => clearInterval(timer);
-	}, [autoPlay, heroInView]);
+	}, [autoPlay, heroInView, shouldReduce]);
 
 	const handleSlideChange = (index: number) => {
 		setAutoPlay(false);
@@ -157,41 +149,39 @@ export function HeroSection() {
 					variants={containerVariants}
 					initial="hidden"
 					whileInView="visible"
-					viewport={{ once: true, margin: "-60px" }}
+					viewport={REVEAL_VIEWPORT}
 				>
-				<m.h1
-					variants={shouldReduce ? itemVariants : headlineVariants}
-					className="text-4xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
-				>
-					{shouldReduce ? (
-						// 접근성 폴백 — reduced-motion 환경에선 단어 분해 없이 기존 단순 등장 유지
-						<>
-							시루봇과 함께
-							<br />
-							<span className="text-primary">
-								<TypingText texts={["더 즐거운 서버를", "심심할 틈 없는 서버를", "활기찬 서버를"]} speed={90} fit />
-							</span>{" "}
-							만들어봐요
-						</>
-					) : (
-						// 워드 리빌 — 정적 단어를 blur + 떠오름으로 분해해 스태거 등장(텍스트 리빌).
-						// TypingText는 자체 variants로 한 덩어리 등장(내부 타이핑 로직은 건드리지 않아요).
-						<>
-							{SPLIT_HEADLINE_TOP.map((word) => (
-								<m.span key={word} className="inline-block whitespace-pre" variants={headlineWordVariants}>
-									{word}
+					<m.h1
+						variants={shouldReduce ? itemVariants : headlineVariants}
+						className="text-4xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
+					>
+						{shouldReduce ? (
+							// 접근성 폴백 — reduced-motion 환경에선 단어 분해 없이 기존 단순 등장 유지
+							<>
+								시루봇과 함께
+								<br />
+								<span className="text-primary">
+									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
+								</span>{" "}
+								만들어봐요
+							</>
+						) : (
+							<>
+								{SPLIT_HEADLINE_TOP.map((word) => (
+									<m.span key={word} className="inline-block whitespace-pre" variants={headlineWordVariants}>
+										{word}
+									</m.span>
+								))}
+								<br />
+								<m.span className="inline-block whitespace-pre text-primary" variants={headlineTypingVariants}>
+									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
+								</m.span>{" "}
+								<m.span className="inline-block whitespace-pre" variants={headlineWordVariants}>
+									{SPLIT_HEADLINE_BOTTOM}
 								</m.span>
-							))}
-							<br />
-							<m.span className="inline-block whitespace-pre text-primary" variants={headlineTypingVariants}>
-								<TypingText texts={["더 즐거운 서버를", "심심할 틈 없는 서버를", "활기찬 서버를"]} speed={90} fit />
-							</m.span>{" "}
-							<m.span className="inline-block whitespace-pre" variants={headlineWordVariants}>
-								{SPLIT_HEADLINE_BOTTOM}
-							</m.span>
-						</>
-					)}
-				</m.h1>
+							</>
+						)}
+					</m.h1>
 
 					<m.p
 						variants={itemVariants}
@@ -243,7 +233,7 @@ export function HeroSection() {
 						className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
 						initial={{ opacity: 0, y: 12 }}
 						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true, margin: "-60px" }}
+						viewport={REVEAL_VIEWPORT}
 						transition={{ delay: 0.35, duration: 0.4, ease: "easeOut" }}
 					>
 						<SectionLabel as="p" className="px-0">
@@ -289,14 +279,14 @@ export function HeroSection() {
 						className="flex flex-col-reverse gap-3 lg:flex-row"
 						initial={{ opacity: 0, y: 20 }}
 						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true, margin: "-60px" }}
+						viewport={REVEAL_VIEWPORT}
 						transition={{ delay: 0.45, duration: 0.5, ease: "easeOut" }}
 					>
-					<div className="min-w-0 flex-1">
-						<DiscordCommandAnimation activeSlide={activeSlide} />
-					</div>
-				</m.div>
-			</div>
+						<div className="min-w-0 flex-1">
+							<DiscordCommandAnimation activeSlide={activeSlide} />
+						</div>
+					</m.div>
+				</div>
 			</m.div>
 
 			{/* 스크롤 유도 — 아래로 살짝 내리면 기능 섹션이에요 */}

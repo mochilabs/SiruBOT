@@ -263,8 +263,7 @@
 	will-change: transform, opacity;
 }
 
-/* 슬래시 커맨드 마키 — 2중 리스트 기반 무한 루프 (command-marquee.tsx 전용 장식).
-   hover 일시정지는 마키 트랙의 group-hover:[animation-play-state:paused]가 담당 */
+/* 슬래시 커맨드 마키 전용 — hover 일시정지는 트랙의 group-hover:[animation-play-state:paused]가 담당 */
 @utility animate-marquee {
 	animation: marquee 30s linear infinite;
 }
@@ -316,7 +315,7 @@
 	}
 }
 
-/* 마키 루프 — 리스트를 2회 렌더했으므로 전체 폭의 절반(-50%) 이동이 끊김 없는 1주기가 된다 */
+/* 2회 렌더된 리스트에서 -50% 이동 = 끊김 없는 1주기 */
 @keyframes marquee {
 	from {
 		transform: translateX(0);

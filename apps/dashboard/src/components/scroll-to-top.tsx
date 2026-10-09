@@ -24,8 +24,7 @@ export function ScrollToTop() {
 	};
 
 	return (
-		// FAB 모서리 여백 — 기본 1.5rem(6), sm 이상 2rem(8)에 iOS safe-area(env)를 더한다.
-		// env 값이 0인 데스크탑은 기존과 동일하게 렌더돼요
+		// FAB 모서리 여백 — 기본 1.5rem(6), sm 이상 2rem(8)에 iOS safe-area(env)를 더한다(env가 0인 데스크탑은 기존과 동일).
 		<AnimatePresence>
 			{isVisible && (
 				<m.button
@@ -39,7 +38,7 @@ export function ScrollToTop() {
 				>
 					<ArrowUp className="h-5 w-5" aria-hidden />
 
-					{/* 스크롤 진행률 링 — 버튼(44px)보다 살짝 큰 48px viewBox 원 2겹(트랙 + 진행).
+					{/* 스크롤 진행률 링 — 버튼(44px)보다 살짝 큰 50px 원 2겹(트랙 + 진행).
 					    위치 정보성 표시라 reduced-motion에서도 유지하며, pointer-events-none으로 클릭을 방해하지 않는다 */}
 					<svg viewBox="0 0 44 44" aria-hidden="true" className="pointer-events-none absolute -inset-[3px] -rotate-90">
 						{/* 트랙 원(정적) */}
