@@ -23,7 +23,13 @@ function context() {
 		update: vi.fn().mockResolvedValue({ resource: { message: updated } }),
 		reply: vi.fn().mockResolvedValue(undefined)
 	};
-	const player = { voiceChannelId: 'voice', messageId: original.id, controller: original, pause: vi.fn().mockResolvedValue(undefined) };
+	const player = {
+		voiceChannelId: 'voice',
+		messageId: original.id,
+		controller: original,
+		pause: vi.fn().mockResolvedValue(undefined),
+		resume: vi.fn().mockResolvedValue(undefined)
+	};
 	mocks.getPlayer.mockReturnValue(player);
 	const handler = new ControllerButtonHandler(
 		{} as ConstructorParameters<typeof ControllerButtonHandler>[0],
@@ -90,5 +96,41 @@ describe('controller button cached rendering', () => {
 		original.attachments.set('old', { id: 'old', name: 'old.png' });
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
 		expect(attachmentIds(interaction.update.mock.calls[0]![0])).toEqual(['0']);
+	});
+
+	it('handles resume button correctly', async () => {
+		const { updated, interaction, player, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'resume', subcommand: null });
+		expect(player.resume).toHaveBeenCalledTimes(1);
+		expect(interaction.update).toHaveBeenCalledTimes(1);
+		expect(player.controller).toBe(updated);
+	});
+
+	it('rejects button interaction when member is in a different voice channel', async () => {
+		const { interaction, player, handler } = context();
+		(interaction.member.voice.channel as any).id = 'other-voice';
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		expect(interaction.reply).toHaveBeenCalledTimes(1);
+		expect(player.pause).not.toHaveBeenCalled();
+	});
+
+	it('rejects button interaction when player does not exist', async () => {
+		const { interaction, handler } = context();
+		mocks.getPlayer.mockReturnValue(undefined);
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		expect(interaction.reply).toHaveBeenCalledTimes(1);
+	});
+
+	it('checks DJ permission for DJ commands (stop, next, prev, repeat)', async () => {
+		mocks.allowed.mockResolvedValue(false);
+		const { interaction, player, handler } = context();
+		for (const cmd of ['resume', 'stop', 'prev', 'next', 'repeat']) {
+			vi.clearAllMocks();
+			mocks.allowed.mockResolvedValue(false);
+			await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: cmd, subcommand: null });
+			expect(interaction.reply).toHaveBeenCalledTimes(1);
+			expect(player.pause).not.toHaveBeenCalled();
+			expect(player.resume).not.toHaveBeenCalled();
+		}
 	});
 });
