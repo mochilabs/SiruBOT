@@ -737,6 +737,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 	const redact = (message) => redactValues(message, sensitive);
 	try {
 		const state = recoveryState(config, target);
+		const pending = state.pending;
 		if (!opts.dryRun) {
 			const stacks = opts.withInfra ? [config.appStack, config.infraStack].filter(Boolean).sort() : [config.appStack];
 			for (const stack of stacks) {
@@ -761,8 +762,9 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		let manifest;
 		let savedPlatforms;
 		if (opts.action === 'rollback') {
-			const saved = state.previous;
+			const saved = pending?.recovery ?? state.previous;
 			if (!saved) throw new Error('복원할 이전 앱 배포가 없습니다.');
+			if (saved.target && fingerprint(saved.target) !== fingerprint(target)) throw new Error('이전 앱 구성의 배포 대상이 현재 연결과 다릅니다.');
 			if (saved.appStack !== config.appStack || saved.repository !== config.repository || saved.branch !== config.branch)
 				throw new Error('이전 배포의 stack·저장소·브랜치가 다릅니다.');
 			desired = saved.stack;
@@ -832,9 +834,20 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 				? Object.fromEntries(APPS.filter((app) => !changed.includes(app)).map((app) => [current[app].Spec.Name, fingerprint(current[app].Spec)]))
 				: {})
 		};
-		const pending = state.pending;
-		if (opts.action === 'deploy' && pending && fingerprint(pending.desired) !== fingerprint(desired)) {
-			throw new Error('완료되지 않은 배포가 있습니다. 같은 --run으로 재시도하거나 rollback 후 새 배포를 실행하세요.');
+		const pendingTarget = {
+			target,
+			branch: config.branch,
+			desired,
+			withInfra: opts.withInfra,
+			infraStack: opts.withInfra ? config.infraStack : undefined,
+			infra
+		};
+		if (
+			opts.action === 'deploy' &&
+			pending &&
+			fingerprint(Object.fromEntries(Object.keys(pendingTarget).map((key) => [key, pending[key]]))) !== fingerprint(pendingTarget)
+		) {
+			throw new Error('완료되지 않은 배포가 있습니다. 같은 --run·--with-infra·설정으로 재시도하거나 rollback 후 새 배포를 실행하세요.');
 		}
 		log(
 			`${opts.action === 'rollback' ? '복원' : '배포'} 대상: ${config.appStack}${manifest ? ` / CI ${manifest.runId} / ${manifest.commit.slice(0, 7)}` : ''}`
@@ -846,19 +859,20 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			return;
 		}
 		if (!state.target) protectedWrite(join(config.stateDir, 'target.json'), target);
-		if (changed.length && opts.action === 'deploy' && !pending) {
-			protectedWrite(join(config.stateDir, 'previous.json'), {
+		if ((changed.length || infraChanged) && opts.action === 'deploy' && !pending) {
+			const snapshot = {
 				target,
 				repository: config.repository,
 				branch: config.branch,
 				appStack: config.appStack,
 				platforms: Object.fromEntries(APPS.map((app) => [app, current[app].Spec.TaskTemplate.Placement?.Platforms ?? []])),
 				stack: before
-			});
+			};
+			if (changed.length) protectedWrite(join(config.stateDir, 'previous.json'), snapshot);
 			protectedWrite(join(config.stateDir, 'pending.json'), {
-				target,
-				desired,
-				runId: manifest.runId
+				...pendingTarget,
+				runId: manifest.runId,
+				...(!changed.length ? { recovery: snapshot } : {})
 			});
 		}
 		if (infra) {

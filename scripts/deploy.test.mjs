@@ -571,6 +571,157 @@ test('legacy app state can be rebound only for its original target without dry-r
 		f.cleanup();
 	}
 });
+async function failedInfra(f, phase = 'convergence', infraOnly = false) {
+	if (infraOnly) await main(['--config', f.configPath], f.run, () => {});
+	addInfrastructure(f);
+	const run = (program, args, opts) => {
+		const result = f.run(program, args, opts);
+		if (args[0] === 'stack' && args[1] === 'deploy' && args.at(-1) === 'infra') {
+			if (phase === 'apply') throw new Error('infra apply failed');
+			f.items.redis.UpdateStatus = { State: 'paused' };
+		}
+		return result;
+	};
+	await assert.rejects(
+		main(['--config', f.configPath, '--with-infra'], run, () => {}),
+		/apply failed|업데이트 중단/
+	);
+}
+for (const phase of ['apply', 'convergence']) {
+	test(`an infrastructure ${phase} failure cannot be retried without its infrastructure intent`, async () => {
+		const f = fixture();
+		try {
+			await failedInfra(f, phase);
+			const files = ['previous', 'pending'];
+			const original = files.map((name) => readFileSync(join(f.dir, 'state', `${name}.json`), 'utf8'));
+			const pending = JSON.parse(original[1]);
+			assert.equal(pending.withInfra, true);
+			assert.equal(pending.infraStack, 'infra');
+			assert.ok(pending.infra.services.postgres);
+			for (const dryRun of [false, true]) {
+				const count = f.calls.length;
+				await assert.rejects(
+					main(['--config', f.configPath, ...(dryRun ? ['--dry-run'] : [])], f.run, () => {}),
+					/완료되지 않은 배포/
+				);
+				assert.equal(
+					f.calls.slice(count).some((c) => c.args[0] === 'stack' && c.args[1] === 'deploy'),
+					false
+				);
+				assert.deepEqual(
+					files.map((name) => readFileSync(join(f.dir, 'state', `${name}.json`), 'utf8')),
+					original
+				);
+			}
+		} finally {
+			f.cleanup();
+		}
+	});
+}
+for (const change of ['infra stack', 'infra configuration', 'branch']) {
+	test(`a pending retry rejects a different ${change} before updates`, async () => {
+		const f = fixture();
+		try {
+			await failedInfra(f);
+			const original = readFileSync(join(f.dir, 'state/pending.json'), 'utf8');
+			const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
+			if (change === 'infra stack') {
+				settings.infraStack = 'other-infra';
+				for (const app of ['redis', 'postgres']) {
+					f.items[app].Spec.Name = `other-infra_${app}`;
+					f.items[app].Spec.Labels['com.docker.stack.namespace'] = 'other-infra';
+				}
+			} else if (change === 'infra configuration') f.items.postgres.Spec.TaskTemplate.ContainerSpec.Env.push('INFRA_SETTING=changed');
+			else settings.branch = 'release';
+			writeFileSync(f.configPath, JSON.stringify(settings));
+			const count = f.calls.length;
+			await assert.rejects(
+				main(
+					['--config', f.configPath, '--with-infra', '--dry-run'],
+					f.run,
+					() => {},
+					() => f.manifest
+				),
+				/완료되지 않은 배포/
+			);
+			assert.equal(
+				f.calls.slice(count).some((c) => c.args[0] === 'stack' && c.args[1] === 'deploy'),
+				false
+			);
+			assert.equal(readFileSync(join(f.dir, 'state/pending.json'), 'utf8'), original);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
+test('a basic pending deployment cannot acquire infrastructure work on a retry', async () => {
+	const f = fixture();
+	try {
+		f.failDeploy(true);
+		await assert.rejects(main(['--config', f.configPath], f.run, () => {}));
+		addInfrastructure(f);
+		await assert.rejects(
+			main(['--config', f.configPath, '--with-infra'], f.run, () => {}),
+			/완료되지 않은 배포/
+		);
+	} finally {
+		f.cleanup();
+	}
+});
+test('a matching infrastructure retry retains the original app snapshot and clears pending after convergence', async () => {
+	const f = fixture();
+	try {
+		await failedInfra(f);
+		const previous = readFileSync(join(f.dir, 'state/previous.json'), 'utf8');
+		f.items.redis.UpdateStatus = { State: 'completed' };
+		await main(['--config', f.configPath, '--with-infra'], f.run, () => {});
+		assert.equal(readFileSync(join(f.dir, 'state/previous.json'), 'utf8'), previous);
+		assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+	} finally {
+		f.cleanup();
+	}
+});
+test('an infrastructure-only failure has its own recovery point without replacing the last app rollback point', async () => {
+	const f = fixture();
+	try {
+		await failedInfra(f, 'convergence', true);
+		const previous = readFileSync(join(f.dir, 'state/previous.json'), 'utf8');
+		const pending = JSON.parse(readFileSync(join(f.dir, 'state/pending.json'), 'utf8'));
+		assert.equal(pending.recovery.stack.services.bot.image, f.manifest.images.bot);
+		await assert.rejects(
+			main(['--config', f.configPath], f.run, () => {}),
+			/완료되지 않은 배포/
+		);
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(f.items.bot.Spec.TaskTemplate.ContainerSpec.Image, f.manifest.images.bot);
+		assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+		assert.equal(readFileSync(join(f.dir, 'state/previous.json'), 'utf8'), previous);
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(f.items.bot.Spec.TaskTemplate.ContainerSpec.Image, `ghcr.io/mochilabs/sirubot-bot:beta@${digest}`);
+	} finally {
+		f.cleanup();
+	}
+});
+test('legacy pending state without infrastructure intent requires explicit rollback', async () => {
+	const f = fixture();
+	try {
+		f.failDeploy(true);
+		await assert.rejects(main(['--config', f.configPath], f.run, () => {}));
+		const path = join(f.dir, 'state/pending.json');
+		const pending = JSON.parse(readFileSync(path, 'utf8'));
+		delete pending.withInfra;
+		writeFileSync(path, JSON.stringify(pending));
+		f.failDeploy(false);
+		await assert.rejects(
+			main(['--config', f.configPath, '--dry-run'], f.run, () => {}),
+			/완료되지 않은 배포/
+		);
+		await main(['rollback', '--config', f.configPath], f.run, () => {});
+		assert.equal(existsSync(path), false);
+	} finally {
+		f.cleanup();
+	}
+});
 
 for (const [app, field, stale] of [
 	['postgres', 'image', (c) => (c.Image = `ghcr.io/example/postgres@sha256:${'d'.repeat(64)}`)],
