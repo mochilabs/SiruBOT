@@ -15,6 +15,7 @@ import {
 	taskSummary,
 	waitForServices,
 	protectInfra,
+	redactValues,
 	main
 } from './deploy.mjs';
 import { APPS, assembleManifest } from './deployment-manifest.mjs';
@@ -746,7 +747,7 @@ for (const phase of ['infra-apply', 'infra-convergence', 'infra-noop', 'app-conv
 		try {
 			const settings = JSON.parse(readFileSync(f.configPath, 'utf8'));
 			writeFileSync(f.configPath, JSON.stringify({ ...settings, infraStack: 'infra' }));
-			const infraSecret = 'fake-infra-password';
+			const infraSecret = 'q7!';
 			for (const app of ['redis', 'postgres']) {
 				const item = service(app, 'infra');
 				item.Spec.TaskTemplate.ContainerSpec.Mounts = [{ Type: 'volume', Source: `existing-${app}`, Target: '/data' }];
@@ -788,3 +789,57 @@ for (const phase of ['infra-apply', 'infra-convergence', 'infra-noop', 'app-conv
 		}
 	});
 }
+for (const credential of ['q', 'q7', 'q7!']) {
+	test(`failure diagnostics redact a ${credential.length}-character environment credential`, async () => {
+		const f = fixture();
+		try {
+			writeFileSync(join(f.dir, '.env'), readFileSync(join(f.dir, '.env'), 'utf8') + `\nAUTH_KEY=${credential}\n`);
+			f.failDeploy(true);
+			const logs = [];
+			const run = (program, args, opts) =>
+				args[0] === 'service' && args[1] === 'ps' && args.includes('--format')
+					? `${args.at(-1)}.1 | failed | credential=${credential}`
+					: f.run(program, args, opts);
+			await assert.rejects(
+				main(['--config', f.configPath], run, (line) => logs.push(line)),
+				/update failed/
+			);
+			assert.ok(logs.includes('test_bot.1 | failed | credential=[redacted]'));
+			assert.equal(logs.join('\n').includes(credential), false);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
+test('rollback failure diagnostics redact credentials present only in the saved configuration', async () => {
+	const f = fixture();
+	try {
+		f.items.bot.Spec.TaskTemplate.ContainerSpec.Env.push('AUTH_KEY=q7');
+		await main(['--config', f.configPath], f.run, () => {});
+		f.failDeploy(true);
+		const logs = [];
+		const run = (program, args, opts) =>
+			args[0] === 'service' && args[1] === 'ps' && args.includes('--format')
+				? `${args.at(-1)}.1 | failed | credential=q7`
+				: f.run(program, args, opts);
+		await assert.rejects(
+			main(['rollback', '--config', f.configPath], run, (line) => logs.push(line)),
+			/update failed/
+		);
+		assert.ok(logs.includes('test_bot.1 | failed | credential=[redacted]'));
+		assert.equal(logs.join('\n').includes('q7'), false);
+	} finally {
+		f.cleanup();
+	}
+});
+test('redaction covers short, overlapping and repeated values and treats regex syntax literally', () => {
+	assert.equal(redactValues('q q7 q7! q7! [a-z]+', ['', 'q', 'q7', 'q7!', '[a-z]+', 'q']), '[redacted] [redacted] [redacted] [redacted] [redacted]');
+	assert.equal(redactValues('a.b aXb', ['a.b']), '[redacted] aXb');
+});
+test('redaction never rewrites markers with later short sensitive values', () => {
+	assert.equal(redactValues('secret d', ['secret', 'd']), '[redacted] [redacted]');
+});
+test('redaction ignores empty values without changing ordinary output', () => {
+	assert.equal(redactValues('service ready', ['', '']), 'service ready');
+	assert.equal(redactValues('service ready', []), 'service ready');
+});

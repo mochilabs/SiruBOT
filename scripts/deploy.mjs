@@ -646,6 +646,15 @@ function diagnostics({ stack, apps }, run, log, redact) {
 	log('복원: node scripts/deploy.mjs rollback (DB migration과 인프라는 복원하지 않습니다.)');
 }
 
+export function redactValues(message, values) {
+	const secrets = [...new Set(values.filter((value) => value.length > 0))].sort((a, b) => b.length - a.length);
+	if (!secrets.length) return message;
+	const pattern = secrets.map((secret) => secret.replace(/[.*+?^{}$()|[\]\\]/g, '\\$&')).join('|');
+	// Replace once, longest match first, so overlaps cannot expose suffixes and
+	// later short values cannot rewrite an already inserted redaction marker.
+	return message.replace(new RegExp(pattern, 'g'), '[redacted]');
+}
+
 export async function main(argv = process.argv.slice(2), run = command, log = console.log, manifestProvider = selectManifest) {
 	const opts = options([...argv]);
 	if (opts.help) {
@@ -663,7 +672,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 	const clusterLocks = [];
 	let diagnosticTarget;
 	let sensitive = [];
-	const redact = (message) => sensitive.reduce((value, secret) => (secret.length >= 4 ? value.replaceAll(secret, '[redacted]') : value), message);
+	const redact = (message) => redactValues(message, sensitive);
 	try {
 		if (!opts.dryRun) {
 			const stacks = opts.withInfra ? [config.appStack, config.infraStack].filter(Boolean).sort() : [config.appStack];
@@ -728,6 +737,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			};
 			desired.services.bot.stop_grace_period = ns(Math.max(current.bot.Spec.TaskTemplate.ContainerSpec.StopGracePeriod ?? 0, 30e9));
 		}
+		sensitive.push(...Object.values(desired.services).flatMap((service) => Object.values(service.environment)));
 		for (const image of new Set(Object.values(desired.services).map((service) => service.image))) {
 			run('docker', ['manifest', 'inspect', image]);
 		}
