@@ -104,11 +104,6 @@ export function HeroSection() {
 	});
 	const dotY = useTransform(scrollYProgress, [0, 1], [0, 120]);
 
-	// 히어로 콘텐츠 이탈 — 스크롤 초반(0~40%)에 서서히 사라지고 살짝 축소돼요(스크롤 연동 + 스케일).
-	// y는 도트 패럴랙스와 겹치지 않게 넣지 않았어요. reduced-motion 환경에선 정적 유지.
-	const heroExitOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
-	const heroExitScale = useTransform(scrollYProgress, [0, 0.4], [1, 0.97]);
-
 	// 스크롤 유도 버튼 — 0~20% 구간에서 페이드아웃(useTransform, 리렌더 없음),
 	// 15%를 넘으면 visibility:hidden 토글로 버튼 클릭·포커스를 차단해요.
 	const hintOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -139,11 +134,7 @@ export function HeroSection() {
 		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
 			{/* 패럴랙스는 reduced-motion 환경에선 걸지 않고 정적 배경 유지 */}
 			<DotPattern y={shouldReduce ? undefined : dotY} />
-			{/* 히어로 콘텐츠 그리드 — 스크롤 이탈을 위해 m.div로 전환. 그리드 클래스·레이아웃은 유지 */}
-			<m.div
-				style={shouldReduce ? undefined : { opacity: heroExitOpacity, scale: heroExitScale }}
-				className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36"
-			>
+			<div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36">
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
 					variants={containerVariants}
@@ -289,7 +280,7 @@ export function HeroSection() {
 						</div>
 					</m.div>
 				</div>
-			</m.div>
+			</div>
 
 			{/* 스크롤 유도 — 아래로 살짝 내리면 기능 섹션이에요 */}
 			{/* 히어로가 h-screen 고정이 아닌 min-h(calc(100svh-4rem)) 기반이라 콘텐츠와 겹칠 일이 드물어
