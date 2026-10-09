@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { m } from "framer-motion";
+import { m, type MotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
@@ -13,6 +13,11 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
+
+// 리빌 단어 조각 — 단어 뒤 공백을 조각에 포함해(whitespace-pre) inline-block 스팬 간 간격을 유지하고
+// 스크린 리더에도 "시루봇과 함께"처럼 공백이 살아있게 해요. 하단 문장은 조각 하나라 문자열 상수로 충분해요.
+const SPLIT_HEADLINE_TOP = ['시루봇과 ', '함께'] as const;
+const SPLIT_HEADLINE_BOTTOM = '만들어봐요';
 
 /** 랜딩 히어로 통계 숫자 — 뷰포트 진입 시 카운트업 ("45개", "28K+" 같은 접미사 유지) */
 function CountUpStat({ end, suffix }: { end: number; suffix?: string }) {
@@ -36,17 +41,48 @@ const itemVariants = {
 	visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 90, damping: 18 } },
 } as const;
 
-/** hero 배경 — 브랜드 도트 그리드 패턴(마스크로 가장자리 페이드) */
-function DotPattern() {
+/**
+ * 헤드라인 전용 리빌 체계 — 정적 단어들은 blur + 떠오름으로 개별 등장(텍스트 리빌),
+ * TypingText 세그먼트는 variants로 한 덩어리 등장시켜 내부 타이핑 로직은 그대로 유지해요.
+ */
+const headlineVariants = {
+	hidden: {},
+	visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
+} as const;
+
+const headlineWordVariants = {
+	hidden: { opacity: 0, y: 22, filter: "blur(6px)" },
+	visible: {
+		opacity: 1,
+		y: 0,
+		filter: "blur(0px)",
+		transition: { type: "spring", stiffness: 120, damping: 20 }
+	},
+} as const;
+
+/** 타이핑 세그먼트 등장 — 워드 리빌 스태거 끝에 자연스럽게 붙도록 스프링 파라미터를 맞췄어요 */
+const headlineTypingVariants = {
+	hidden: { opacity: 0, y: 14 },
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: { type: "spring", stiffness: 120, damping: 20 }
+	},
+} as const;
+
+/** hero 배경 — 브랜드 도트 그리드 패턴(마스크로 가장자리 페이드). y가 주어지면 스크롤 패럴랙스 */
+function DotPattern({ y }: { y?: MotionValue<number> }) {
 	return (
-		<svg aria-hidden className="pointer-events-none absolute inset-0 -z-10 h-full w-full [mask-image:radial-gradient(ellipse_60%_70%_at_50%_35%,black,transparent)]">
-			<defs>
-				<pattern id="hero-dots" width="24" height="24" patternUnits="userSpaceOnUse">
-					<circle cx="2" cy="2" r="1.2" className="fill-primary/10" />
-				</pattern>
-			</defs>
-			<rect width="100%" height="100%" fill="url(#hero-dots)" />
-		</svg>
+		<m.div style={{ y }} className="pointer-events-none absolute inset-0 -z-10">
+			<svg aria-hidden className="h-full w-full [mask-image:radial-gradient(ellipse_60%_70%_at_50%_35%,black,transparent)]">
+				<defs>
+					<pattern id="hero-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+						<circle cx="2" cy="2" r="1.2" className="fill-primary/10" />
+					</pattern>
+				</defs>
+				<rect width="100%" height="100%" fill="url(#hero-dots)" />
+			</svg>
+		</m.div>
 	);
 }
 
@@ -54,7 +90,30 @@ export function HeroSection() {
 	const [activeSlide, setActiveSlide] = useState(0);
 	const [autoPlay, setAutoPlay] = useState(true);
 	const [heroInView, setHeroInView] = useState(false);
+	const heroRef = useRef<HTMLElement>(null);
 	const reducedMotion = useRef(false);
+
+	// 도트 패턴 스크롤 패럴랙스 — 섹션이 화면 위로 빠질 때까지 배경이 콘텐츠보다 천천히 따라와요.
+	// 성능: transform(y)만 사용해 렌더 비용을 최소화하고, reduced-motion 환경에선 정적 배경 유지.
+	const shouldReduce = useReducedMotion();
+	const { scrollYProgress } = useScroll({
+		target: heroRef,
+		offset: ["start start", "end start"]
+	});
+	const dotY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+
+	// 히어로 콘텐츠 이탈 — 스크롤 초반(0~40%)에 서서히 사라지고 살짝 축소돼요(스크롤 연동 + 스케일).
+	// y는 도트 패럴랙스와 겹치지 않게 넣지 않았어요. reduced-motion 환경에선 정적 유지.
+	const heroExitOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
+	const heroExitScale = useTransform(scrollYProgress, [0, 0.4], [1, 0.97]);
+
+	// 스크롤 유도 버튼 — 0~20% 구간에서 페이드아웃(useTransform, 리렌더 없음),
+	// 15%를 넘으면 visibility:hidden 토글로 버튼 클릭·포커스를 차단해요.
+	const hintOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+	const [hintHidden, setHintHidden] = useState(false);
+	useMotionValueEvent(scrollYProgress, "change", (latest) => {
+		setHintHidden(latest > 0.15);
+	});
 
 	useEffect(() => {
 		reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -85,9 +144,14 @@ export function HeroSection() {
 	};
 
 	return (
-		<section id="hero-section" className="relative overflow-hidden">
-			<DotPattern />
-			<div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36">
+		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
+			{/* 패럴랙스는 reduced-motion 환경에선 걸지 않고 정적 배경 유지 */}
+			<DotPattern y={shouldReduce ? undefined : dotY} />
+			{/* 히어로 콘텐츠 그리드 — 스크롤 이탈을 위해 m.div로 전환. 그리드 클래스·레이아웃은 유지 */}
+			<m.div
+				style={shouldReduce ? undefined : { opacity: heroExitOpacity, scale: heroExitScale }}
+				className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36"
+			>
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
 					variants={containerVariants}
@@ -96,15 +160,37 @@ export function HeroSection() {
 					viewport={{ once: true, margin: "-60px" }}
 				>
 				<m.h1
-					variants={itemVariants}
+					variants={shouldReduce ? itemVariants : headlineVariants}
 					className="text-4xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
 				>
-					시루봇과 함께
-					<br />
-					<span className="text-primary">
-						<TypingText texts={["더 즐거운 서버를", "심심할 틈 없는 서버를", "활기찬 서버를"]} speed={90} fit />
-					</span>{" "}
-					만들어봐요
+					{shouldReduce ? (
+						// 접근성 폴백 — reduced-motion 환경에선 단어 분해 없이 기존 단순 등장 유지
+						<>
+							시루봇과 함께
+							<br />
+							<span className="text-primary">
+								<TypingText texts={["더 즐거운 서버를", "심심할 틈 없는 서버를", "활기찬 서버를"]} speed={90} fit />
+							</span>{" "}
+							만들어봐요
+						</>
+					) : (
+						// 워드 리빌 — 정적 단어를 blur + 떠오름으로 분해해 스태거 등장(텍스트 리빌).
+						// TypingText는 자체 variants로 한 덩어리 등장(내부 타이핑 로직은 건드리지 않아요).
+						<>
+							{SPLIT_HEADLINE_TOP.map((word) => (
+								<m.span key={word} className="inline-block whitespace-pre" variants={headlineWordVariants}>
+									{word}
+								</m.span>
+							))}
+							<br />
+							<m.span className="inline-block whitespace-pre text-primary" variants={headlineTypingVariants}>
+								<TypingText texts={["더 즐거운 서버를", "심심할 틈 없는 서버를", "활기찬 서버를"]} speed={90} fit />
+							</m.span>{" "}
+							<m.span className="inline-block whitespace-pre" variants={headlineWordVariants}>
+								{SPLIT_HEADLINE_BOTTOM}
+							</m.span>
+						</>
+					)}
 				</m.h1>
 
 					<m.p
@@ -211,26 +297,43 @@ export function HeroSection() {
 					</div>
 				</m.div>
 			</div>
-			</div>
+			</m.div>
 
 			{/* 스크롤 유도 — 아래로 살짝 내리면 기능 섹션이에요 */}
-			<m.button
-				type="button"
-				onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
-				aria-label="아래로 스크롤해서 기능 보기"
-				className="absolute bottom-6 left-1/2 z-10 flex h-9 w-9 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground/50 transition-colors duration-fast hover:text-primary"
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ delay: 1.2, duration: 0.6 }}
+			{/* 히어로가 h-screen 고정이 아닌 min-h(calc(100svh-4rem)) 기반이라 콘텐츠와 겹칠 일이 드물어
+			    모바일에서도 버튼을 유지한다. 대신 홈 인디케이터(홈바) 기기를 위해 bottom 여백에
+			    safe-area를 더하고(--hero-scroll-hint-gap: 1.5rem, sm 이상 2rem), 아주 낮은 높이의
+			    가로 모드 등에선 콘텐츠 아래쪽과 붙지 않도록 gap 변수가 여유를 가진다 */}
+			{/* 스크롤 유도 래퍼 — 내려가면 opacity를 useTransform으로 페이드아웃(리렌더 없음)하고,
+			    15%를 넘으면 visibility:hidden 토글로 버튼 클릭·포커스를 완전히 차단해요.
+			    래퍼에 pointer-events-none을 두고 버튼에만 다시 허용해 배경 히트 영역은 비워둬요 */}
+			<m.div
+				className="pointer-events-none absolute inset-x-0 z-10 flex justify-center"
+				style={{
+					// 기본 1.5rem + iOS safe-area(env 값 0인 데스크탑은 기존과 동일), sm 이상 2rem + safe-area
+					opacity: hintOpacity,
+					visibility: hintHidden ? "hidden" : "visible",
+					bottom: "calc(var(--hero-scroll-hint-gap) + env(safe-area-inset-bottom))"
+				}}
 			>
-				<m.span
-					animate={{ y: [0, 6, 0] }}
-					transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-					className="flex"
+				<m.button
+					type="button"
+					onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+					aria-label="아래로 스크롤해서 기능 보기"
+					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground/50 transition-colors duration-fast hover:text-primary"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					transition={{ delay: 1.2, duration: 0.6 }}
 				>
-					<ChevronDown size={18} aria-hidden />
-				</m.span>
-			</m.button>
+					<m.span
+						animate={{ y: [0, 6, 0] }}
+						transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+						className="flex"
+					>
+						<ChevronDown size={18} aria-hidden />
+					</m.span>
+				</m.button>
+			</m.div>
 		</section>
 	);
 }

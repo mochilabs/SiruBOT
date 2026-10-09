@@ -11,7 +11,9 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import "./globals.css";
 
 export const viewport: Viewport = {
-	themeColor: "#1a0e12"
+	themeColor: "#1a0e12",
+	// iOS 노치·홈 인디케이터 safe-area를 CSS env()로 계산하기 위해 viewport-fit=cover 확장
+	viewportFit: "cover"
 }
 
 export const metadata: Metadata = {
