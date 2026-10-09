@@ -1,7 +1,7 @@
 # Swarm 배포
 
 기존 여러 노드 Swarm의 bot/dashboard/shardmanager/data-api를 한 명령으로 업데이트한다.
-서버에서 소스 빌드나 Yarn 설치는 필요하지 않다. Swarm manager에 연결된 Docker CLI, Node 22+, GitHub CLI가 필요하다.
+서버에서 소스 빌드나 Yarn 설치는 필요하지 않다. Swarm manager에 연결된 Docker CLI, Node 22+(권장: Node 24), GitHub CLI가 필요하다.
 기존 앱 stack에 서비스 4개가 있어야 한다. 새 클러스터를 만들거나 기존 stack 이름을 변경하는 도구는 아니다.
 
 ## 최초 설정
@@ -52,7 +52,8 @@ node scripts/deploy.mjs
 
 성공한 CI의 `deployment-manifest` artifact에서 앱 4개의 고정 digest를 가져온다.
 이동 태그 `:beta`를 직접 배포하지 않는다. 최신 **배포 가능한 성공 실행**을 선택하며 특정 실행도 지정할 수 있다.
-기존 beta/feat/release 이미지 태그는 계속 발행한다. release manifest를 선택할 때는 설정의 branch를 해당 실행의 ref에 맞춘다.
+새 manifest 처리 job과 배포 도구 테스트는 Node 24를 사용하고 패키지 매니저 자동 캐시를 비활성화한다.
+기존 앱 빌드/운영 이미지는 Node 22를 유지한다. 기존 beta/feat/release 이미지 태그는 계속 발행한다. release manifest를 선택할 때는 설정의 branch를 해당 실행의 ref에 맞춘다.
 
 ```bash
 node scripts/deploy.mjs --run 123456789
@@ -128,7 +129,7 @@ node --test scripts/deploy.test.mjs scripts/deployment-manifest.test.mjs scripts
 ```
 
 여러 노드의 실제 배포 검증은 별도 Docker-in-Docker manager/worker에서만 실행한다.
-두 데몬에 `node:22-alpine`을 준비하고 manager에 worker를 join한 뒤 다음을 실행한다.
+두 데몬에 `node:24-alpine`을 준비하고 manager에 worker를 join한 뒤 다음을 실행한다.
 호스트 Swarm이나 운영 데몬을 테스트 대상으로 사용하지 않는다.
 호스트의 bridge netfilter가 제공되지 않는 DinD 테스트 환경은 데몬에 `DOCKER_IGNORE_BR_NETFILTER_ERROR=1`을 설정한다.
 
@@ -140,6 +141,6 @@ node --test scripts/deploy.swarm.test.mjs
 
 테스트는 임시 stack/network/volume을 만들고 scale·배치·환경 값·재배포·복원·저장 볼륨을 확인한 뒤 정리한다.
 실제 봇 토큰이나 운영 DB 연결은 사용하지 않는다.
-Docker Hub 호출 제한을 피하려면 `SIRUBOT_SWARM_TEST_IMAGE`에 테스트 registry의 Node 22 이미지 digest를 지정한다.
+Docker Hub 호출 제한을 피하려면 `SIRUBOT_SWARM_TEST_IMAGE`에 테스트 registry의 Node 24 이미지 digest를 지정한다.
 테스트 registry가 HTTP라면 두 DinD 데몬에만 insecure registry를 설정하고 `SIRUBOT_SWARM_TEST_INSECURE=true`를 전달한다.
 운영 GHCR 배포에는 이 테스트 옵션을 사용하지 않는다.

@@ -70,7 +70,7 @@ test(
 				'AUTH_SECRET=test-session'
 			].join('\n')
 		);
-		const image = process.env.SIRUBOT_SWARM_TEST_IMAGE ?? JSON.parse(docker('docker', ['image', 'inspect', 'node:22-alpine']))[0].RepoDigests[0];
+		const image = process.env.SIRUBOT_SWARM_TEST_IMAGE ?? JSON.parse(docker('docker', ['image', 'inspect', 'node:24-alpine']))[0].RepoDigests[0];
 		const manifest = { runId: 1, commit: 'a'.repeat(40), images: Object.fromEntries(APPS.map((app) => [app, image])) };
 		const applications = Object.fromEntries(
 			APPS.map((app) => [

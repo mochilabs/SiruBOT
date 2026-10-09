@@ -14,7 +14,7 @@ function service(container = {}) {
 	return {
 		Name: 'test_app',
 		Labels: {},
-		TaskTemplate: { ContainerSpec: { Image: 'node:22-alpine', ...container } },
+		TaskTemplate: { ContainerSpec: { Image: 'node:24-alpine', ...container } },
 		Mode: { Replicated: { Replicas: 1 } }
 	};
 }
