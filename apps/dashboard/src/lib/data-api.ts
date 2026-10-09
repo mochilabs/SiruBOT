@@ -23,8 +23,6 @@ export interface DataApiStatus {
     redis: boolean;
     cache: { redisHits: number; memoryHits: number; misses: number };
     routes: Record<string, { requests: number; cacheHits: number; upstreamCalls: number; upstreamErrors: number }>;
-    translation: { provider: string; available: boolean };
-    ohaasa: { date: string | null; refreshedAt: number | null };
     playback: { counts: DataApiPlaybackCounts; recentErrors: DataApiPlaybackError[] };
 }
 

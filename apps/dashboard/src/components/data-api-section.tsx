@@ -40,7 +40,7 @@ export function DataApiSection() {
                 <div className="h-px flex-1 bg-linear-to-r from-border/80 to-transparent" />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-xl border border-border/80 p-4">
                     <div className="text-sm text-muted-foreground">상태</div>
                     <div className="text-xl font-bold">{data.redis ? "정상 가동 중" : "메모리 모드"}</div>
@@ -53,12 +53,6 @@ export function DataApiSection() {
                     <div className="text-sm text-muted-foreground">외부 호출 / 오류</div>
                     <div className="text-xl font-bold">
                         {totals.calls} / {totals.errors}
-                    </div>
-                </div>
-                <div className="rounded-xl border border-border/80 p-4">
-                    <div className="text-sm text-muted-foreground">운세 번역</div>
-                    <div className="text-xl font-bold">
-                        {data.translation.available ? `가능 (${data.ohaasa.date ?? "-"})` : "원문 제공 중"}
                     </div>
                 </div>
             </div>
