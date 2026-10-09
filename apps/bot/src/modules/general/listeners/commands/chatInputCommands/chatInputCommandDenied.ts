@@ -23,8 +23,21 @@ export async function sendComponent(
 	options: { ephemeral: boolean } = { ephemeral: false }
 ) {
 	if (interaction.deferred || interaction.replied) {
-		// defer 후 ephemeral 요청은 editReply로는 지울 수 없으니 followUp으로 보내요
+		// defer 후 ephemeral 요청:
+		// - 이미 ephemeral로 defer된 경우: editReply로 그대로 수정 가능해요
+		// - 공개 defer된 경우: editReply로는 ephemeral로 바꿀 수 없으므로 followUp으로 보내고 대기 중이던 공개 메시지를 삭제해요
 		if (options.ephemeral) {
+			if (interaction.ephemeral) {
+				await interaction
+					.editReply({
+						components: [component],
+						flags: [MessageFlags.IsComponentsV2],
+						allowedMentions: { users: [interaction.user.id], roles: [] }
+					})
+					.catch(() => undefined);
+				return;
+			}
+
 			await interaction
 				.followUp({
 					components: [component],
@@ -32,6 +45,7 @@ export async function sendComponent(
 					allowedMentions: { users: [interaction.user.id], roles: [] }
 				})
 				.catch(() => undefined);
+			await interaction.deleteReply().catch(() => undefined);
 			return;
 		}
 
