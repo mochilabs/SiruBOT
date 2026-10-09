@@ -301,7 +301,7 @@ export function composeService(spec, references, { retainPlatforms = false } = {
 		labels: c.Labels,
 		...(task.LogDriver ? { logging: { driver: task.LogDriver.Name, options: task.LogDriver.Options } } : {}),
 		stop_signal: c.StopSignal,
-		...(c.StopGracePeriod ? { stop_grace_period: ns(c.StopGracePeriod) } : {}),
+		...(c.StopGracePeriod != null ? { stop_grace_period: ns(c.StopGracePeriod) } : {}),
 		...(c.Healthcheck
 			? {
 					healthcheck: {

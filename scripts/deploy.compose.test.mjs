@@ -99,3 +99,15 @@ test('Docker legacy stack schema cannot represent named endpoint ports', { skip:
 		/additional property.*name/i
 	);
 });
+test('stop grace period preserves explicit zero and positive values while omitting nullish defaults', () => {
+	for (const value of [0, 1e9, 30e9]) {
+		assert.equal(composeService(service({ StopGracePeriod: value }), references).stop_grace_period, `${value}ns`);
+	}
+	for (const value of [undefined, null]) {
+		assert.equal(Object.hasOwn(composeService(service({ StopGracePeriod: value }), references), 'stop_grace_period'), false);
+	}
+});
+test('Docker legacy stack parsing preserves an explicit zero stop grace period', { skip: !dockerAvailable }, () => {
+	const rendered = dockerConfig(composeService(service({ StopGracePeriod: 0 }), references));
+	assert.match(rendered, /stop_grace_period:\s*0s/);
+});

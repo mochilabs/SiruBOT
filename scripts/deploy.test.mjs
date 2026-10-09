@@ -375,6 +375,8 @@ function fixture() {
 				const c = stack.services[app];
 				items[app].Spec.TaskTemplate.ContainerSpec.Image = c.image;
 				items[app].Spec.TaskTemplate.ContainerSpec.Env = Object.entries(c.environment).map(([key, value]) => `${key}=${value.replaceAll('$$', '$')}`);
+				items[app].Spec.TaskTemplate.ContainerSpec.StopGracePeriod =
+					c.stop_grace_period === undefined ? 10e9 : Number.parseInt(c.stop_grace_period, 10);
 				items[app].UpdateStatus = { State: 'completed' };
 			}
 			return '';
@@ -666,3 +668,25 @@ test('named endpoint ports stop deploy, dry-run and rollback before snapshots or
 		}
 	}
 });
+for (const restricted of [false, true]) {
+	test(`explicit zero stop grace survives deployment, no-op and rollback (platform filter: ${restricted})`, async () => {
+		const f = fixture();
+		try {
+			for (const app of APPS) f.items[app].Spec.TaskTemplate.ContainerSpec.StopGracePeriod = 0;
+			if (restricted) f.items.dashboard.Spec.TaskTemplate.Placement.Platforms = [{ Architecture: 'amd64', OS: 'linux' }];
+			const updates = () =>
+				f.calls.filter((c) => (c.args[0] === 'stack' && c.args[1] === 'deploy') || (c.args[0] === 'service' && c.args[1] === 'update'));
+			await main(['--config', f.configPath], f.run, () => {});
+			for (const app of APPS) assert.equal(f.items[app].Spec.TaskTemplate.ContainerSpec.StopGracePeriod, app === 'bot' ? 30e9 : 0);
+			const previous = JSON.parse(readFileSync(join(f.dir, 'state/previous.json'), 'utf8'));
+			for (const app of APPS) assert.equal(previous.stack.services[app].stop_grace_period, '0ns');
+			const count = updates().length;
+			await main(['--config', f.configPath], f.run, () => {});
+			assert.equal(updates().length, count);
+			await main(['rollback', '--config', f.configPath], f.run, () => {});
+			for (const app of APPS) assert.equal(f.items[app].Spec.TaskTemplate.ContainerSpec.StopGracePeriod, 0);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
