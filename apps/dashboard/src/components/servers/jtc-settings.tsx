@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Volume2 } from "lucide-react";
+import { Folder,Volume2 } from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
@@ -83,7 +83,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 
 	const categoryOptions: SelectOption[] = (channels ?? [])
 		.filter((channel) => channel.type === ChannelTypeValue.GuildCategory)
-		.map((channel) => ({ value: channel.id, label: `📁 ${channel.name}` }));
+		.map((channel) => ({ value: channel.id, label: channel.name, icon: <Folder size={16} aria-hidden /> }));
 	if (form.jtcCategoryId && !categoryOptions.some((option) => option.value === form.jtcCategoryId)) {
 		categoryOptions.push({ value: form.jtcCategoryId, label: `${form.jtcCategoryId} (삭제된 카테고리)` });
 	}

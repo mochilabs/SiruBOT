@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { Hash } from "lucide-react";
+import { Hash, ListChecks, Play, Volume2 } from "lucide-react";
 
 import { useToast } from "@/components/feedback/toast";
 import { Select, type SelectOption } from "@/components/overlay/select";
@@ -17,8 +17,8 @@ import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } f
 /* ─────────────────────────── 옵션 ─────────────────────────── */
 
 const PINNED_MODE_OPTIONS: SelectOption[] = [
-	{ value: "play", label: "▶️ 즉시 재생 (첫 결과 바로 재생)" },
-	{ value: "select", label: "🗂 선택 재생 (5개 중 선택)" },
+	{ value: "play", label: "즉시 재생 (첫 결과 바로 재생)", icon: <Play size={16} aria-hidden /> },
+	{ value: "select", label: "선택 재생 (5개 중 선택)", icon: <ListChecks size={16} aria-hidden /> },
 ];
 
 const NO_SELECTION = { value: "", label: "사용 안 함" };
@@ -27,15 +27,17 @@ function buildChannelOptions(
 	channels: DiscordChannelSummary[] | null,
 	predicate: (channel: DiscordChannelSummary) => boolean,
 	currentId: string | null,
-	prefix: string,
+	prefix: string | React.ReactNode,
 ): SelectOption[] {
 	const list = channels ?? [];
 	const categories = new Map(list.filter((c) => c.type === ChannelTypeValue.GuildCategory).map((c) => [c.id, c.name]));
+	const isTextPrefix = typeof prefix === "string";
 	const options: SelectOption[] = list
 		.filter((channel) => channel.type !== ChannelTypeValue.GuildCategory && predicate(channel))
 		.map((channel) => ({
 			value: channel.id,
-			label: `${prefix} ${channel.name}`,
+			label: isTextPrefix ? `${prefix} ${channel.name}` : channel.name,
+			icon: isTextPrefix ? undefined : prefix,
 			group: channel.parentId ? (categories.get(channel.parentId) ?? "기타") : "카테고리 없음",
 		}));
 	if (currentId && !options.some((option) => option.value === currentId)) {
@@ -141,7 +143,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 				<Field label="기본 음성 채널" description="/재생 커맨드로 자동 입장하는 채널이에요.">
 					<Select
 						searchable
-						options={[NO_SELECTION, ...buildChannelOptions(channels, isVoice, form.voiceChannelId, "🔊")]}
+						options={[NO_SELECTION, ...buildChannelOptions(channels, isVoice, form.voiceChannelId, <Volume2 size={16} aria-hidden />)]}
 						value={form.voiceChannelId ?? ""}
 						onChange={(value) => patch({ voiceChannelId: value || null })}
 						placeholder="사용 안 함"
