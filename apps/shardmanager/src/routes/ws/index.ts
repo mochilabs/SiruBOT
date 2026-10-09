@@ -50,6 +50,11 @@ export default async function routes(fastify: FastifyInstance) {
 				const parsed = JSON.parse(raw.toString());
 				const message = WsMessageSchema.parse(parsed);
 
+				if (message.op !== WsOp.IDENTIFY && !registry.getProcess(wsId)) {
+					logger.warn(`[${wsId}] Rejected op ${message.op}: socket is not identified`);
+					return;
+				}
+
 				switch (message.op) {
 					case WsOp.IDENTIFY:
 						handleIdentify(wsId, socket, message.payload as IdentifyPayload);
