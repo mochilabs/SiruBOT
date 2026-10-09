@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { m } from "framer-motion";
 import { Server } from "lucide-react";
 import useSWR from "swr";
 
@@ -97,12 +98,16 @@ export default function ServersPage() {
             ) : (
                 <section className="space-y-12">
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {guilds.map((guild) => (
-                            <GuildCard
+                        {guilds.map((guild, index) => (
+                            <m.div
                                 key={guild.id}
-                                guild={guild}
-                                inviteUrl={buildInviteUrl({ guildId: guild.id })}
-                            />
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                transition={{ duration: 0.4, delay: Math.min(index, 11) * 0.05 }}
+                            >
+                                <GuildCard guild={guild} inviteUrl={buildInviteUrl({ guildId: guild.id })} />
+                            </m.div>
                         ))}
                     </div>
                 </section>

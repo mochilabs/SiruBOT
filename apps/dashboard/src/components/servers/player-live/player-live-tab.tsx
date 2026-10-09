@@ -44,10 +44,11 @@ function ProgressBar({ state, receivedAt }: { state: LivePlayerState; receivedAt
 	const positionMs = interpolatedPositionMs(state, receivedAt);
 	const ratio = Math.min(1, Math.max(0, positionMs / state.durationMs));
 	// SSE 수신 사이 진행바 보간 — 일시정지면 마지막 위치에 고정해요.
+	// width 전환 토큰으로 좌우 흔들림 없이 부드럽게 이어져요.
 	return (
 		<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
 			<div
-				className="h-full rounded-full bg-primary"
+				className="h-full rounded-full bg-primary transition-[width] duration-slow ease-linear"
 				style={{ width: `${ratio * 100}%` }}
 			/>
 		</div>
@@ -176,7 +177,11 @@ function QueueList({ state }: { state: LivePlayerState }) {
 			) : (
 				<ol className="space-y-2">
 					{state.queue.map((track, index) => (
-						<li key={`${track.title}-${index}`} className="flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2">
+						<li
+							key={`${track.title}-${index}`}
+							className="animate-page-in flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2 opacity-0"
+							style={{ animationDelay: `${Math.min(index, 9) * 40}ms`, animationFillMode: "forwards" }}
+						>
 							<span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground/60">
 								{index + 1}
 							</span>

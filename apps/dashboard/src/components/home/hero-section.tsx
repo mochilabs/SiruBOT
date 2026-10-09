@@ -9,9 +9,22 @@ import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord
 import { buttonVariants } from "@/components/primitives/button";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { TypingText } from "@/components/typing-text";
+import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
+
+/** 랜딩 히어로 통계 숫자 — 뷰포트 진입 시 카운트업 ("45개", "28K+" 같은 접미사 유지) */
+function CountUpStat({ end, suffix }: { end: number; suffix?: string }) {
+	const { ref, value } = useCountUp({ end });
+
+	return (
+		<span ref={ref} className="tabular-nums">
+			{Math.round(value).toLocaleString("ko-KR")}
+			{suffix}
+		</span>
+	);
+}
 
 const containerVariants = {
 	hidden: { opacity: 0 },
@@ -120,15 +133,21 @@ export function HeroSection() {
 					>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">슬래시 명령어</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">45개</dd>
+							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
+								<CountUpStat end={45} suffix="개" />
+							</dd>
 						</div>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">기능 카테고리</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">4종</dd>
+							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
+								<CountUpStat end={4} suffix="종" />
+							</dd>
 						</div>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">28K+</dd>
+							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
+								<CountUpStat end={28} suffix="K+" />
+							</dd>
 						</div>
 					</m.dl>
 				</m.div>
