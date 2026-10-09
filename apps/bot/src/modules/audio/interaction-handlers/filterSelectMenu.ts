@@ -71,10 +71,23 @@ export default class FilterInteractionHandler extends InteractionHandler {
 				);
 			}
 
-			player.activeFilters = selectedPresets;
+			// nightcore/vaporwave는 timescale을 공유해 나중에 적용된 쪽만 살아남는다.
+			// 실패한 프리셋과 덮어써진 프리셋을 UI에 그대로 두면 실제 상태와 어긋난다.
+			const succeededPresets = selectedPresets.filter((_, i) => results[i].status === 'fulfilled');
+			let activePresets = succeededPresets;
+			if (succeededPresets.includes('nightcore') && succeededPresets.includes('vaporwave')) {
+				const lastWon =
+					selectedPresets.indexOf(succeededPresets[succeededPresets.length - 1]) >= 0
+						? succeededPresets[succeededPresets.length - 1]
+						: null;
+				const loser = lastWon === 'vaporwave' ? 'nightcore' : 'vaporwave';
+				activePresets = succeededPresets.filter((f) => f !== loser);
+			}
+
+			player.activeFilters = activePresets;
 
 			await selectInteraction.update({
-				components: [filterView({ activeFilters: selectedPresets })],
+				components: [filterView({ activeFilters: activePresets })],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}

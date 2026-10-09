@@ -113,7 +113,11 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	} else {
 		// 필터 적용
 		await applyPreset(player, preset);
-		const newFilters = [...activeFilters, preset];
+		let newFilters = [...activeFilters, preset];
+		// nightcore/vaporwave는 timescale을 공유해 하나를 켜면 Lavalink가 다른 쪽을 자동으로 끈다.
+		// 남은 쪽을 그대로 두면 응답 표시와 실제 플레이어 상태가 어긋난다.
+		if (preset === 'nightcore') newFilters = newFilters.filter((f) => f !== 'vaporwave');
+		if (preset === 'vaporwave') newFilters = newFilters.filter((f) => f !== 'nightcore');
 		player.activeFilters = newFilters;
 		await interaction.reply({
 			components: [view.filterApplied({ filters: newFilters })],
