@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchWeather, WeatherError, GatewayDomainError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
+import { fetchWeather, GatewayDomainError, type WeatherResult, type WeatherScope } from '../../../services/dataApiClient.ts';
 
 const SCOPE_LABELS: Record<WeatherScope, string> = {
 	now: '지금 날씨',
@@ -162,7 +162,8 @@ export class WeatherCommand extends Command {
 		try {
 			result = await fetchWeather(location, scope);
 		} catch (error) {
-			if (error instanceof WeatherError || error instanceof GatewayDomainError) {
+			// 게이트웨이(data-api) 경유라 도메인 오류는 GatewayDomainError로 변환돼 도착해요
+			if (error instanceof GatewayDomainError) {
 				throw new UserError({
 					identifier: error.identifier,
 					message: `${emoji('error')} ${error.message}`,
