@@ -1,20 +1,6 @@
-import {
-	EMOJI_VOLUME_MUTE,
-	EMOJI_VOLUME_SMALL,
-	EMOJI_VOLUME_LARGE,
-	EMOJI_VOLUME_MEDIUM,
-	PROGRESS_BAR_BLACK,
-	PROGRESS_BAR_EMOJI_COUNT,
-	PROGRESS_BAR_END_BLACK,
-	PROGRESS_BAR_END_MIDDLE_WHITE,
-	PROGRESS_BAR_END_WHITE,
-	PROGRESS_BAR_START_BLACK,
-	PROGRESS_BAR_START_SINGLE_WHITE,
-	PROGRESS_BAR_START_WHITE,
-	PROGRESS_BAR_WHITE
-} from './constants.js';
+import { PROGRESS_BAR_EMOJI_COUNT, PROGRESS_BAR_EMOJI_NAMES, PROGRESS_BAR_STEPS_PER_CELL } from './constants.js';
 import type { Track } from 'lavalink-client';
-import { appEmoji } from './appEmoji.js';
+import { emoji } from './appEmoji.js';
 import { formatTime, formatTimeToKorean } from './time.js';
 
 const EMOJI_KEYCAP_REGEX = /[\u0023-\u0039]\ufe0f?\u20e3/g;
@@ -22,46 +8,44 @@ const EMOJI_REGEX = /\p{Extended_Pictographic}/gu;
 const EMOJI_COMPONENT_REGEX = /\p{Emoji_Component}/gu;
 const DIGIT_SYMBOL_REGEX = /[\d*#]/;
 
+/**
+ * 앱 이모지 진행바 — 6셀(start + mid×4 + end), 셀당 filled/half/empty.
+ * 셀 png는 resources/emoji_replacement/pb_*.png (upload-emojis로 앱 이모지 등록).
+ * 매핑이 아직 없으면 셀이 유니코드 폴백('■'/'◐'/'□')으로 나와요.
+ */
 export function emojiProgressBar(percent: number): string {
 	if (Number.isNaN(percent)) percent = 0;
-	const clamped = Math.min(0.999, Math.max(0, percent));
+	const clamped = Math.min(1, Math.max(0, percent));
 
-	const p = Math.floor(clamped * PROGRESS_BAR_EMOJI_COUNT);
-	const progressParts: string[] = [];
+	const FILL_FALLBACK = '■';
+	const HALF_FALLBACK = '◐';
+	const EMPTY_FALLBACK = '□';
+	const cell = (name: string, state: 'filled' | 'half' | 'empty') =>
+		emoji(name, state === 'filled' ? FILL_FALLBACK : state === 'half' ? HALF_FALLBACK : EMPTY_FALLBACK);
 
-	if (p === 0) {
-		progressParts.push(PROGRESS_BAR_START_BLACK);
-	} else if (p === 1) {
-		progressParts.push(PROGRESS_BAR_START_SINGLE_WHITE);
-	} else {
-		progressParts.push(PROGRESS_BAR_START_WHITE);
+	// 전체 스텝 = 셀 수 × 셀당 스텝. 스텝 s가 속한 셀의 채움 상태로 변환해요.
+	const steps = PROGRESS_BAR_EMOJI_COUNT * PROGRESS_BAR_STEPS_PER_CELL;
+	const s = Math.round(clamped * steps);
+	const stateOf = (i: number): 'filled' | 'half' | 'empty' => {
+		const cellSteps = s - i * PROGRESS_BAR_STEPS_PER_CELL;
+		if (cellSteps >= PROGRESS_BAR_STEPS_PER_CELL) return 'filled';
+		if (cellSteps === PROGRESS_BAR_STEPS_PER_CELL - 1) return 'half';
+		return 'empty';
+	};
+
+	const parts: string[] = [];
+	for (let i = 0; i < PROGRESS_BAR_EMOJI_COUNT; i++) {
+		const kind = i === 0 ? 'start' : i === PROGRESS_BAR_EMOJI_COUNT - 1 ? 'end' : 'mid';
+		parts.push(cell(PROGRESS_BAR_EMOJI_NAMES[`${kind}_${stateOf(i)}` as keyof typeof PROGRESS_BAR_EMOJI_NAMES], stateOf(i)));
 	}
-
-	for (let i = 1; i < PROGRESS_BAR_EMOJI_COUNT - 1; i++) {
-		if (p > i) {
-			progressParts.push(
-				p - 1 === i ? (p === PROGRESS_BAR_EMOJI_COUNT - 1 ? PROGRESS_BAR_WHITE : PROGRESS_BAR_END_MIDDLE_WHITE) : PROGRESS_BAR_WHITE
-			);
-		} else {
-			progressParts.push(PROGRESS_BAR_BLACK);
-		}
-	}
-
-	// 끝 부분 처리
-	if (p >= PROGRESS_BAR_EMOJI_COUNT) {
-		progressParts.push(PROGRESS_BAR_END_WHITE);
-	} else {
-		progressParts.push(PROGRESS_BAR_END_BLACK);
-	}
-
-	return progressParts.join('');
+	return parts.join('');
 }
 
 export function getRequesterText(track: Track): string {
 	// controller.ts와 동일한 가드: requester가 없거나 문자열이면 .id 접근으로 터지지 않도록 한다.
 	const requester = track.requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
-	if (requesterId === 'related_track') return `추천 곡 ${appEmoji('sparkle', '✨')}`;
+	if (requesterId === 'related_track') return `추천 곡 ${emoji('sparkle')}`;
 	if (typeof requesterId === 'string' && requesterId.length > 0) return `신청자: <@${requesterId}>`;
 	return '';
 }
@@ -91,13 +75,13 @@ export function removeEmojis(str: string): string {
 
 export function volumeToEmoji(volume: number): string {
 	if (volume < 1) {
-		return appEmoji('volume_muted', EMOJI_VOLUME_MUTE);
+		return emoji('volume_muted');
 	} else if (volume < 33) {
-		return appEmoji('volume_up', EMOJI_VOLUME_SMALL);
+		return emoji('volume_up');
 	} else if (volume < 66) {
-		return appEmoji('volume_up', EMOJI_VOLUME_MEDIUM);
+		return emoji('volume_up');
 	} else {
-		return appEmoji('volume_up', EMOJI_VOLUME_LARGE);
+		return emoji('volume_up');
 	}
 }
 

@@ -12,8 +12,12 @@ import {
 	WsMessageSchema
 } from '@sirubot/shardclient/ws-types';
 import { getLogger } from '../../utils/logger.ts';
+import { safeEqual } from '../../plugins/auth.ts';
 
 const logger = getLogger('websocket');
+
+const WS_AUTH_KEY = process.env.AUTH_KEY ?? '';
+const BROADCAST_EVAL_ENABLED = process.env.ENABLE_BROADCAST_EVAL?.toLowerCase() === 'true';
 
 let wsIdCounter = 0;
 
@@ -92,6 +96,17 @@ export default async function routes(fastify: FastifyInstance) {
 		// --- Handlers ---
 
 		function handleIdentify(id: string, ws: WebSocket, payload: IdentifyPayload) {
+			// Authorization 헤더는 이미 검증됐지만, IDENTIFY payload의 토큰도 이중으로 검증해요.
+			if (!payload.token || !WS_AUTH_KEY || !safeEqual(payload.token, WS_AUTH_KEY)) {
+				logger.warn(`[${id}] IDENTIFY rejected: invalid identify token`);
+				send(ws, {
+					op: WsOp.IDENTIFY_ACK,
+					payload: { shardIds: [], shardCount: 0 }
+				});
+				ws.close(4008, 'Invalid identify token');
+				return;
+			}
+
 			let shardIds: number[] | null;
 
 			// Re-identification: bot sends its current shard IDs
@@ -159,6 +174,16 @@ export default async function routes(fastify: FastifyInstance) {
 		}
 
 		function handleBroadcastEval(_fromId: string, payload: BroadcastEvalPayload) {
+			// RCE 채널 게이트 — ENABLE_BROADCAST_EVAL=true로 명시 활성화 전까지 모두 거절해요.
+			if (!BROADCAST_EVAL_ENABLED) {
+				logger.warn(`[${_fromId}] BROADCASTEVAL dropped - disabled (set ENABLE_BROADCAST_EVAL=true to enable)`);
+				registry.broadcast({
+					op: WsOp.BROADCASTEVAL_RESULT,
+					payload: { id: payload.id, result: null, error: 'broadcast_eval_disabled' }
+				});
+				return;
+			}
+
 			// Forward to all connected processes
 			registry.broadcast({
 				op: WsOp.BROADCASTEVAL,

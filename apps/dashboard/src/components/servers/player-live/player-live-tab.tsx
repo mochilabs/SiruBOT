@@ -11,7 +11,6 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { SkeletonLine } from "@/components/primitives/skeleton";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { toError } from "@/lib/api-error";
-import { fetcher } from "@/lib/fetcher";
 
 /* ─────────────────────────── 시간 포맷 ─────────────────────────── */
 
@@ -22,16 +21,29 @@ function formatMs(ms: number): string {
 	return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+/* ─────────────────────────── 진행 보간 ─────────────────────────── */
+
+/**
+ * 마지막 스냅샷 이후 경과 보간 — 재생 중이면 position + 경과, 아니면 스냅샷 그대로.
+ */
+function interpolatedPositionMs(state: LivePlayerState, receivedAt: number): number {
+	if (state.isStream || state.durationMs <= 0) return state.positionMs;
+	if (!state.playing || state.paused) return state.positionMs;
+	const elapsed = Math.max(0, Date.now() - receivedAt);
+	return Math.min(state.durationMs, state.positionMs + elapsed);
+}
+
 /* ─────────────────────────── 진행 바 ─────────────────────────── */
 
-function ProgressBar({ state }: { state: LivePlayerState }) {
+function ProgressBar({ state, receivedAt }: { state: LivePlayerState; receivedAt: number }) {
 	// 라이브 스트림은 길이가 정해지지 않아 진행률을 그리지 않아요.
 	if (state.isStream || state.durationMs <= 0) {
 		return <div className="h-1.5 w-full rounded-full bg-muted" />;
 	}
 
-	const ratio = Math.min(1, Math.max(0, state.positionMs / state.durationMs));
-	// 폴링 사이 보간 — 일시정지면 마지막 위치에 고정해요.
+	const positionMs = interpolatedPositionMs(state, receivedAt);
+	const ratio = Math.min(1, Math.max(0, positionMs / state.durationMs));
+	// SSE 수신 사이 진행바 보간 — 일시정지면 마지막 위치에 고정해요.
 	return (
 		<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
 			<div
@@ -75,13 +87,30 @@ function StatusHeader({ state, staleMs }: { state: LivePlayerState; staleMs: num
 
 /* ─────────────────────────── Now Playing 패널 ─────────────────────────── */
 
-function NowPlaying({ state, hubStaleMs }: { state: LivePlayerState; hubStaleMs: number }) {
+interface NowPlayingProps {
+	state: LivePlayerState;
+	hubStaleMs: number;
+	receivedAt: number;
+	connected: boolean;
+	mode: "stream" | "polling";
+}
+
+function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayingProps) {
+	const positionMs = interpolatedPositionMs(state, receivedAt);
+
 	return (
 		<Card padding="lg" className="gap-4">
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex items-center gap-2">
 					<StatusDot status={state.playing && !state.paused ? "ready" : state.paused ? "idle" : "disconnected"} label="라이브" />
 					<StatusHeader state={state} staleMs={hubStaleMs} />
+					{/* 연결 방식 뱃지 — 실시간(SSE) / 연결 중 / 폴링 */}
+					<Badge
+						size="sm"
+						variant={connected ? "success" : mode === "stream" ? "warning" : "default"}
+					>
+						{mode === "stream" ? (connected ? "실시간" : "연결 중…") : "폴링 2초"}
+					</Badge>
 				</div>
 				<span className="text-2xs text-muted-foreground/60">
 					{Math.floor(state.ageMs / 1000)}초 전 갱신
@@ -120,9 +149,9 @@ function NowPlaying({ state, hubStaleMs }: { state: LivePlayerState; hubStaleMs:
 			</div>
 
 			<div className="space-y-1">
-				<ProgressBar state={state} />
+				<ProgressBar state={state} receivedAt={receivedAt} />
 				<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground/80">
-					<span>{state.isStream ? "스트리밍" : formatMs(state.positionMs)}</span>
+					<span>{state.isStream ? "스트리밍" : formatMs(positionMs)}</span>
 					<span>{state.isStream ? "" : formatMs(state.durationMs)}</span>
 				</div>
 			</div>
@@ -206,21 +235,67 @@ interface LivePayload {
 	hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
 
-function PlayerLivePanel({ guildId }: { guildId: string }) {
-	// SWR 폴백 폴링 — 2초. 실시간 푸시가 필요하면 추후 SSE/WS로 교체.
-	const { data, error, isLoading } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, fetcher, {
-		refreshInterval: 2000,
+export default function PlayerLiveTab({ guildId }: { guildId: string }) {
+	/** SSE 실패(미지원/장애) 시 폴백하는 2초 폴링과 상태를 구분해요. */
+	const [mode, setMode] = useState<"stream" | "polling">("stream");
+	const [liveData, setLiveData] = useState<LivePayload | null>(null);
+	const [connected, setConnected] = useState(false);
+	/** 마지막 상태 수신 시각 — 스냅샷 이후 경과를 보간하는 기준 */
+	const [receivedAt, setReceivedAt] = useState<number>(Date.now());
+
+	// 폴링 폴백 + 초기 데이터 — 항상 구독해 키/훅 순서를 유지해요 (stream 모드에선 0초 폴링).
+	const { data: swrData, error, isLoading } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, {
+		refreshInterval: mode === "polling" ? 2000 : 0,
 		keepPreviousData: true,
 	});
 
-	// 폴링 사이 progress 부드럽게 보간
+	// polling 모드의 snapshotAt도 receivedAt으로 통일 — swr 데이터가 바뀌면 수신 시각을 기록해요.
+	useEffect(() => {
+		if (swrData) setReceivedAt(Date.now());
+	}, [swrData]);
+
+	// 실시간 스트림 — data-api → dashboard 프록시를 거친 SSE를 구독해요.
+	useEffect(() => {
+		if (mode !== "stream" || !guildId) return;
+
+		const source = new EventSource(`/api/servers/${guildId}/live/stream`);
+		let gotData = false;
+
+		source.addEventListener("state", (e) => {
+			gotData = true;
+			try {
+				const payload = JSON.parse((e as MessageEvent).data) as LivePayload;
+				setReceivedAt(Date.now());
+				setLiveData(payload);
+				setConnected(true);
+			} catch {
+				// 잘못된 프레임 — 무시하고 다음 스냅샷을 기다려요.
+			}
+		});
+		source.onopen = () => setConnected(true);
+		source.onerror = () => {
+			// data를 한 번도 못 받은 error → 스트림 미지원(프록시 404 등)으로 판단하고 폴링 폴백
+			if (!gotData) {
+				setMode("polling");
+			} else {
+				setConnected(false); // EventSource 내장 재연결에 맡긴다
+			}
+		};
+
+		return () => source.close();
+	}, [mode, guildId]);
+
+	// 표시 데이터 — polling 모드에선 SWR 데이터를 사용해요.
+	const data = mode === "stream" ? liveData : swrData;
+
+	// 폴링 사이 progress 부드럽게 보간 (SSE 수신 사이 진행바 1초 보간)
 	const [, tickState] = useState(0);
 	useEffect(() => {
 		const timer = setInterval(() => tickState((v) => v + 1), 1000);
 		return () => clearInterval(timer);
 	}, []);
 
-	if (error) {
+	if (mode === "polling" && error) {
 		const apiError = toError(error, "라이브 상태를 불러오지 못했어요.");
 		return (
 			<Card padding="lg">
@@ -228,7 +303,7 @@ function PlayerLivePanel({ guildId }: { guildId: string }) {
 			</Card>
 		);
 	}
-	if (isLoading) return <LiveLoading />;
+	if (mode === "polling" && isLoading) return <LiveLoading />;
 	if (!data) return <LiveLoading />;
 	if (!data.player) {
 		return (
@@ -244,16 +319,17 @@ function PlayerLivePanel({ guildId }: { guildId: string }) {
 
 	return (
 		<div className="grid gap-6">
-			<NowPlaying state={data.player} hubStaleMs={data.hub.staleMs} />
+			<NowPlaying
+				state={data.player}
+				hubStaleMs={data.hub.staleMs}
+				receivedAt={receivedAt}
+				connected={connected}
+				mode={mode}
+			/>
 			<QueueList state={data.player} />
-			<p className="text-xs text-muted-foreground/50">
-				{/* 제어(일시정지/스킵/볼륨)는 보안상 봇 RPC 경로로 별도 구현 예정 — 이 화면은 view only */}
-				재생 제어는 봇 컨트롤러/커맨드에서 할 수 있어요. 이 화면은 실시간 상태 표시 전용이에요. 제어는 bot RPC로 별도 구현 예정이에요.
-			</p>
+		<p className="text-xs text-muted-foreground/50">
+			재생 제어는 봇 컨트롤러/커맨드에서 할 수 있어요. 이 화면은 실시간 상태 표시 전용이에요.
+		</p>
 		</div>
 	);
-}
-
-export default function PlayerLiveTab({ guildId }: { guildId: string }) {
-	return <PlayerLivePanel guildId={guildId} />;
 }

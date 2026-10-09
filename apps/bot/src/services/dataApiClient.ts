@@ -148,18 +148,30 @@ export interface ProfileCardRequest {
 
 /**
  * NowPlaying 카드 이미지 데이터 — data-api POST /v1/image/nowplaying 바디와 동일한 형식이에요.
- * positionMs는 렌더 시점에 박히고, 캐시 키(trackId)에서는 제외해요.
  */
 export interface NowPlayingCardRequest {
 	trackId: string;
 	title: string;
 	artist: string;
 	artworkUrl: string | null;
+	/** 카드에 진행바 없음 — 하위 호환용 입력 유지 (미사용) */
 	positionMs: number;
 	durationMs: number;
 	isStream: boolean;
 	queueCount: number;
-	requesterName: string | null;
+	/** 대기열 전체 남은 시간(ms) */
+	queueRemainingMs: number;
+	/** 볼륨(%) */
+	volume: number | null;
+	nodeId: string | null;
+	/** 브랜드 줄 (봇 이름 + 버전/해시) */
+	brandLine: string | null;
+	/** 현재 재생 중인 챕터 — 있으면 카드에 구간을 표시해요 */
+	chapter?: { name: string; startMs: number; endMs: number } | null;
+	/** 신청자 — 있으면 카드에 아바타 + 이름을 박아요 */
+	requester?: { name: string; avatarUrl: string | null } | null;
+	/** 곡 원본 URL — 카드 이미지는 클릭 불가라 참조용으로만 유지해요 */
+	trackUrl?: string | null;
 }
 
 /**

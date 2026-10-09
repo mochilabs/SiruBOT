@@ -1,5 +1,5 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
 import { controllerView } from '../view/controller.ts';
 import { queueEmpty, queueList } from '../view/queue.ts';
@@ -42,7 +42,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (!memberVoice || (player && memberVoice.id !== player.voiceChannelId)) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('volume_muted', '🔇')} 봇과 같은 음성 채널에 있어야 사용할 수 있어요.`)]
+				components: [errorView(`${emoji('volume_muted')} 봇과 같은 음성 채널에 있어야 사용할 수 있어요.`)]
 			});
 			return;
 		}
@@ -56,7 +56,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			if (!allowed) {
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('volume_muted', '🔇')} 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.`)]
+					components: [errorView(`${emoji('volume_muted')} 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.`)]
 				});
 				return;
 			}
@@ -65,7 +65,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (!player) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 현재 재생 중인 플레이어가 없어요.`)]
+				components: [errorView(`${emoji('error')} 현재 재생 중인 플레이어가 없어요.`)]
 			});
 			return;
 		}
@@ -96,7 +96,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('tools', '🛠️')} 알 수 없는 버튼 명령어입니다. (${command})`)]
+					components: [errorView(`${emoji('tools')} 알 수 없는 버튼 명령어입니다. (${command})`)]
 				});
 				break;
 		}
@@ -133,7 +133,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			await interaction
 				.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('error', '❌')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
+					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
 				.catch(() => null);
 		}
@@ -145,7 +145,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			await interaction
 				.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('error', '❌')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
+					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
 				.catch(() => null);
 		}
@@ -160,7 +160,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			await interaction
 				.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('error', '❌')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
+					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
 				.catch(() => null);
 		}
@@ -191,7 +191,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (player.queue.previous.length === 0) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 이전에 재생한 곡이 없어요.`)]
+				components: [errorView(`${emoji('error')} 이전에 재생한 곡이 없어요.`)]
 			});
 			return;
 		}
@@ -214,7 +214,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (player.queue.tracks.length === 0) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 대기열에 곡이 없어요.`)]
+				components: [errorView(`${emoji('error')} 대기열에 곡이 없어요.`)]
 			});
 			return;
 		}
@@ -244,7 +244,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			default:
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${appEmoji('error', '❌')} 알 수 없는 큐 명령어입니다.`)]
+					components: [errorView(`${emoji('error')} 알 수 없는 큐 명령어입니다.`)]
 				});
 				break;
 		}
@@ -277,7 +277,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (currentPage <= 1) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 이미 첫 번째 페이지에요.`)]
+				components: [errorView(`${emoji('error')} 이미 첫 번째 페이지에요.`)]
 			});
 			return;
 		}
@@ -292,7 +292,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (currentPage >= totalPages) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 이미 마지막 페이지에요.`)]
+				components: [errorView(`${emoji('error')} 이미 마지막 페이지에요.`)]
 			});
 			return;
 		}
@@ -310,7 +310,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 제거할 곡이 없어요.`)]
+				components: [errorView(`${emoji('error')} 제거할 곡이 없어요.`)]
 			});
 			return;
 		}
@@ -349,7 +349,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${appEmoji('error', '❌')} 이동할 곡이 없어요.`)]
+				components: [errorView(`${emoji('error')} 이동할 곡이 없어요.`)]
 			});
 			return;
 		}

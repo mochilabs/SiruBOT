@@ -1,4 +1,4 @@
-import { addSeparator, appEmoji, createContainer, formatTime } from '@sirubot/utils';
+import { addSeparator, emoji, createContainer, formatTime } from '@sirubot/utils';
 import { ActionRowBuilder, ContainerBuilder, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Track, UnresolvedTrack } from 'lavalink-client';
 
@@ -22,7 +22,7 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 	const container = createContainer();
 
 	container.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('mag', '🔎')} **${query}** 검색 결과예요. 재생할 곡을 선택해 주세요.`)
+		new TextDisplayBuilder().setContent(`${emoji('magnet')} **${query}** 검색 결과예요. 재생할 곡을 선택해 주세요.`)
 	);
 	addSeparator(container);
 
@@ -59,6 +59,6 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 /** 검색 시간 초과 안내 — 재생 컨트롤 정보가 없는 단순 안내 컨테이너. */
 export function searchTimeout(): ContainerBuilder {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('hourglass', '⏱️')} 시간이 지나 검색을 취소했어요. 다시 /검색 을 사용해 주세요.`)
+		new TextDisplayBuilder().setContent(`${emoji('hourglass')} 시간이 지나 검색을 취소했어요. 다시 /검색 을 사용해 주세요.`)
 	);
 }

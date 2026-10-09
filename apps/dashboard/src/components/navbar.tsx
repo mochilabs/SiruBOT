@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
-import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { LogOut, Menu, Moon, Search, Sun, User, X } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
 import { useUIStore } from "@/store/use-ui-store";
@@ -18,6 +18,7 @@ const navLinks = [
   // { label: "기능", href: "/#features" },
   { label: "상태", href: "/shards" },
   { label: "차트", href: "/track" },
+  { label: "프로필", href: "/profile", requireAuth: true },
   { label: "플레이리스트", href: "/playlists", requireAuth: true },
   { label: "대시보드", href: "/servers", requireAuth: true },
 ];
@@ -35,6 +36,7 @@ export function Navbar() {
   const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
   const toggleMobileMenu = useUIStore((s) => s.toggleMobileMenu);
   const updateScrollState = useUIStore((s) => s.updateScrollState);
+  const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
 
   useEffect(() => setMounted(true), []);
 
@@ -149,6 +151,15 @@ export function Navbar() {
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <div className="hidden md:flex items-center gap-2">
+                <Button
+                  variant="icon"
+                  onClick={() => setCommandPaletteOpen(true)}
+                  title="명령 팔레트 (⌘K)"
+                  aria-label="명령 팔레트 열기"
+                  className="h-9 w-9 border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary"
+                >
+                  <Search size={18} />
+                </Button>
                 {status === "authenticated" ? (
                   <div className="relative" ref={profileRef}>
                     <Button
@@ -179,6 +190,15 @@ export function Navbar() {
                           transition={{ duration: 0.15 }}
                           className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu border border-border bg-popover py-1 shadow-2xl z-50"
                         >
+                          <Link
+                            href="/profile"
+                            onClick={() => setProfileOpen(false)}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <span>내 프로필</span>
+                            <User size={16} />
+                          </Link>
+                          <div className="h-px bg-border/50 my-1 mx-2" />
                           {mounted && (
                             <button
                               onClick={toggleTheme}

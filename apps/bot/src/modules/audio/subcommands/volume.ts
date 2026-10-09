@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/volume.ts';
 
@@ -43,7 +43,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (volume < 0 || volume > 150) {
 		throw new UserError({
 			identifier: 'volume_invalid',
-			message: `${appEmoji('error', '❌')} 볼륨은 **0**부터 **150**까지 설정할 수 있어요.`,
+			message: `${emoji('error')} 볼륨은 **0**부터 **150**까지 설정할 수 있어요.`,
 			context: { volume }
 		});
 	}

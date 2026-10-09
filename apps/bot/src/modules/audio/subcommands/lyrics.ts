@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { searchLyrics } from '../../../services/dataApiClient.ts';
 import { errorView } from '../view/error.ts';
@@ -39,7 +39,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		} else {
 			throw new UserError({
 				identifier: 'lyrics_no_track',
-				message: `${appEmoji('error', '❌')} 검색어를 입력하거나 곡을 재생 중이어야 해요.`,
+				message: `${emoji('error')} 검색어를 입력하거나 곡을 재생 중이어야 해요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -51,7 +51,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		if (!results || results.length === 0 || (!results[0].plainLyrics && !results[0].syncedLyrics)) {
 			await interaction.editReply({
-				components: [errorView(`${appEmoji('error', '❌')} **${query}**에 대한 가사를 찾을 수 없었어요.`)],
+				components: [errorView(`${emoji('error')} **${query}**에 대한 가사를 찾을 수 없었어요.`)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -73,7 +73,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 		const containerComponent = createContainer();
 		containerComponent.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(`### ${appEmoji('music_notes', '🎶')} ${result.trackName} — ${result.artistName}\n\n${lyrics}`)
+			new TextDisplayBuilder().setContent(`### ${emoji('music_notes')} ${result.trackName} — ${result.artistName}\n\n${lyrics}`)
 		);
 
 		await interaction.editReply({
@@ -84,7 +84,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		container.logger.error(`[lyrics] lyrics search failed (guild ${interaction.guildId}): ${error}`);
 		throw new UserError({
 			identifier: 'lyrics_search_failed',
-			message: `${appEmoji('error', '❌')} 가사를 검색하는 중 오류가 발생했어요.`,
+			message: `${emoji('error')} 가사를 검색하는 중 오류가 발생했어요.`,
 			context: { ephemeral: true }
 		});
 	}

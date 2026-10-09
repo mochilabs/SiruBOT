@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 
 /** Discord bulk-delete API는 14일이 지난 메시지를 삭제할 수 없어요 */
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -46,7 +46,7 @@ export class PurgeCommand extends Command {
 		if (!interaction.inCachedGuild()) {
 			throw new UserError({
 				identifier: 'purge_not_in_guild',
-				message: `${appEmoji('error', '❌')} 서버 안에서만 사용할 수 있어요.`,
+				message: `${emoji('error')} 서버 안에서만 사용할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -54,7 +54,7 @@ export class PurgeCommand extends Command {
 		if (!(interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ?? false)) {
 			throw new UserError({
 				identifier: 'purge_no_permission',
-				message: `${appEmoji('error', '❌')} 메시지 관리(Manage Messages) 권한이 필요해요.`,
+				message: `${emoji('error')} 메시지 관리(Manage Messages) 권한이 필요해요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -63,7 +63,7 @@ export class PurgeCommand extends Command {
 		if (!channel || !('bulkDelete' in channel) || typeof channel.bulkDelete !== 'function') {
 			throw new UserError({
 				identifier: 'purge_unsupported_channel',
-				message: `${appEmoji('error', '❌')} 이 채널에서는 메시지를 일괄 삭제할 수 없어요.`,
+				message: `${emoji('error')} 이 채널에서는 메시지를 일괄 삭제할 수 없어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -84,16 +84,16 @@ export class PurgeCommand extends Command {
 
 			if (deleted === 0) {
 				await interaction.editReply({
-					content: `${appEmoji('trash', '🗑️')} 삭제할 메시지가 없어요.${target ? ' 대상의 최근 메시지가 없거나,' : ''} 14일이 지난 메시지는 삭제할 수 없어요.`
+					content: `${emoji('trash')} 삭제할 메시지가 없어요.${target ? ' 대상의 최근 메시지가 없거나,' : ''} 14일이 지난 메시지는 삭제할 수 없어요.`
 				});
 				return;
 			}
 
 			const note = ageSkipped > 0 ? `\n-# 14일이 지난 메시지 ${ageSkipped}개는 건너떴어요.` : '';
-			await interaction.editReply({ content: `${appEmoji('trash', '🗑️')} 메시지 **${deleted}개**를 삭제했어요.${note}` });
+			await interaction.editReply({ content: `${emoji('trash')} 메시지 **${deleted}개**를 삭제했어요.${note}` });
 		} catch {
 			await interaction
-				.editReply({ content: `${appEmoji('error', '❌')} 메시지를 삭제하지 못했어요. 봇의 메시지 관리 권한과 채널 상태를 확인해 주세요.` })
+				.editReply({ content: `${emoji('error')} 메시지를 삭제하지 못했어요. 봇의 메시지 관리 권한과 채널 상태를 확인해 주세요.` })
 				.catch(() => undefined);
 		}
 	}

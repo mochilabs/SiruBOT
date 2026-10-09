@@ -1,4 +1,4 @@
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import {
 	ChannelType,
 	ChatInputCommandInteraction,
@@ -69,34 +69,34 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const nextThreshold = TIER_NEXT_THRESHOLD[guild.premiumTier];
 	const boostLine =
 		nextThreshold === null
-			? `${appEmoji('sparkle', '✨')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 (최고 티어)`
-			: `${appEmoji('sparkle', '✨')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 — 다음 티어까지 ${Math.max(
+			? `${emoji('sparkle')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 (최고 티어)`
+			: `${emoji('sparkle')} **부스트**: ${PREMIUM_TIER_LABELS[guild.premiumTier]} · ${boosts}개 — 다음 티어까지 ${Math.max(
 					0,
 					nextThreshold - boosts
 				)}개\n\`${boostBar(boosts, nextThreshold)}\``;
 
 	const lines = [
-		`### ${appEmoji('house', '🏠')} ${guild.name}`,
+		`### ${emoji('house')} ${guild.name}`,
 		``,
-		`${appEmoji('crown', '👑')} **소유자**: ${owner.user.tag} (<@${guild.ownerId}>)`,
-		`${appEmoji('calendar', '📅')} **생성일**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
-		`${appEmoji('globe', '🌐')} **기본 언어**: \`${guild.preferredLocale}\``,
-		`${appEmoji('id', '🆔')} **서버 ID**: \`${guild.id}\``,
+		`${emoji('crown')} **소유자**: ${owner.user.tag} (<@${guild.ownerId}>)`,
+		`${emoji('calendar')} **생성일**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
+		`${emoji('globe')} **기본 언어**: \`${guild.preferredLocale}\``,
+		`${emoji('id')} **서버 ID**: \`${guild.id}\``,
 		``,
-		`**${appEmoji('people', '👥')} 구성**`,
-		`${appEmoji('people', '👥')} **멤버**: ${guild.memberCount.toLocaleString()}명`,
-		`${appEmoji('speech', '💬')} **채널**: 전체 ${channels.size}개 — 텍스트 ${textCount} · 음성 ${voiceCount} · 카테고리 ${categoryCount} · 스레드 ${threadCount}`,
-		`${appEmoji('mask', '🎭')} **역할**: ${guild.roles.cache.size}개 · 최고 역할 <@&${guild.roles.highest.id}>`,
-		`${appEmoji('smile', '😀')} **이모지**: ${guild.emojis.cache.size}개 · **스티커**: ${guild.stickers.cache.size}개`,
+		`**${emoji('people')} 구성**`,
+		`${emoji('people')} **멤버**: ${guild.memberCount.toLocaleString()}명`,
+		`${emoji('speech')} **채널**: 전체 ${channels.size}개 — 텍스트 ${textCount} · 음성 ${voiceCount} · 카테고리 ${categoryCount} · 스레드 ${threadCount}`,
+		`${emoji('mask')} **역할**: ${guild.roles.cache.size}개 · 최고 역할 <@&${guild.roles.highest.id}>`,
+		`${emoji('smile')} **이모지**: ${guild.emojis.cache.size}개 · **스티커**: ${guild.stickers.cache.size}개`,
 		``,
-		`**${appEmoji('sparkle', '✨')} 부스트 현황**`,
+		`**${emoji('sparkle')} 부스트 현황**`,
 		boostLine,
 		``,
-		`**${appEmoji('lock', '🔒')} 보호 설정**`,
-		`${appEmoji('shield', '🛡️')} **인증 수준**: ${VERIFICATION_LABELS[guild.verificationLevel] ?? guild.verificationLevel}`,
-		`${appEmoji('key', '🔐')} **2FA 관리자**: ${guild.mfaLevel === 1 ? '필수' : '필수 아님'}`,
-		`${appEmoji('frame', '🖼️')} **콘텐츠 필터**: ${CONTENT_FILTER_LABELS[guild.explicitContentFilter] ?? guild.explicitContentFilter}`,
-		`${appEmoji('sleep', '💤')} **AFK 채널**: ${guild.afkChannelId ? `<#${guild.afkChannelId}> · ${guild.afkTimeout / 60}분 후 이동` : '없음'}`
+		`**${emoji('lock')} 보호 설정**`,
+		`${emoji('shield')} **인증 수준**: ${VERIFICATION_LABELS[guild.verificationLevel] ?? guild.verificationLevel}`,
+		`${emoji('key')} **2FA 관리자**: ${guild.mfaLevel === 1 ? '필수' : '필수 아님'}`,
+		`${emoji('frame')} **콘텐츠 필터**: ${CONTENT_FILTER_LABELS[guild.explicitContentFilter] ?? guild.explicitContentFilter}`,
+		`${emoji('sleep')} **AFK 채널**: ${guild.afkChannelId ? `<#${guild.afkChannelId}> · ${guild.afkTimeout / 60}분 후 이동` : '없음'}`
 	];
 
 	const containerComponent = createContainer();

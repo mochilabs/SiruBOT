@@ -534,3 +534,16 @@ export function hexToRgba(hex: string, alpha: number): string {
 	const n = parseInt(hex.slice(1), 16);
 	return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
+
+/** 원형 클립 안에 이미지를 cover-fit으로 그려요 (아바타 등) */
+export function drawCircleImage(ctx: CanvasRenderingContext2D, img: CanvasDrawable, cx: number, cy: number, radius: number): void {
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+	ctx.clip();
+	const iw = (img as { width: number }).width;
+	const ih = (img as { height: number }).height;
+	const scale = Math.max((radius * 2) / iw, (radius * 2) / ih);
+	ctx.drawImage(img, cx - (iw * scale) / 2, cy - (ih * scale) / 2, iw * scale, ih * scale);
+	ctx.restore();
+}

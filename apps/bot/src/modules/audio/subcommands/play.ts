@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
 import { AutocompleteInteraction, ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 'discord.js';
 import { SearchPlatform } from 'lavalink-client';
@@ -80,7 +80,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!interaction.member.voice.channelId) {
 		throw new UserError({
 			identifier: 'play_not_in_voice',
-			message: `${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`,
+			message: `${emoji('error')} 먼저 음성 채널에 접속해주세요.`,
 			context: { ephemeral: true }
 		});
 	}

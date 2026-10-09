@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { envParseArray } from '@skyra/env-utilities';
 
 @ApplyOptions<Command.Options>({
@@ -29,18 +29,18 @@ export class NodesCommand extends Command {
 
 		const audio = this.container.audio;
 		if (!audio) {
-			await interaction.editReply({ content: `${appEmoji('error', '❌')} 오디오 시스템이 초기화되지 않았어요.` });
+			await interaction.editReply({ content: `${emoji('error')} 오디오 시스템이 초기화되지 않았어요.` });
 			return;
 		}
 
-		const lines = [`### ${appEmoji('spectrum', '🎛️')} Lavalink 노드 상태`, ''];
+		const lines = [`### ${emoji('spectrum')} Lavalink 노드 상태`, ''];
 
 		const nodes = audio.nodeManager.nodes;
 		if (nodes.size === 0) {
-			lines.push(`${appEmoji('error', '❌')} 연결된 노드가 없어요.`);
+			lines.push(`${emoji('error')} 연결된 노드가 없어요.`);
 		} else {
 			for (const [id, node] of nodes) {
-				const statusEmoji = node.connected ? appEmoji('green_dot', '🟢') : appEmoji('red_dot', '🔴');
+				const statusEmoji = node.connected ? '🟢' : '🔴';
 				const stats = node.stats;
 
 				lines.push(`${statusEmoji} **${id}** — \`${node.options.host}:${node.options.port}\``);
@@ -57,9 +57,9 @@ export class NodesCommand extends Command {
 					const hours = Math.floor((uptimeSeconds % 86400) / 3600);
 					const minutes = Math.floor((uptimeSeconds % 3600) / 60);
 
-					lines.push(`  ${appEmoji('chart', '📊')} 플레이어: ${playingPlayers}/${players} | CPU: ${cpuLoad}%`);
-					lines.push(`  ${appEmoji('disk', '💾')} 메모리: ${memUsed}MB / ${memTotal}MB`);
-					lines.push(`  ${appEmoji('clock', '⏱️')} 업타임: ${days}일 ${hours}시간 ${minutes}분`);
+					lines.push(`  ${emoji('chart')} 플레이어: ${playingPlayers}/${players} | CPU: ${cpuLoad}%`);
+					lines.push(`  ${emoji('disk')} 메모리: ${memUsed}MB / ${memTotal}MB`);
+					lines.push(`  ${emoji('clock')} 업타임: ${days}일 ${hours}시간 ${minutes}분`);
 				}
 
 				lines.push('');

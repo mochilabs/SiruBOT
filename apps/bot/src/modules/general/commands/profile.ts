@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { appEmoji, createContainer, formatTimeToKorean } from '@sirubot/utils';
+import { emoji, createContainer, formatTimeToKorean } from '@sirubot/utils';
 import {
 	ApplicationIntegrationType,
 	ChatInputCommandInteraction,
@@ -114,7 +114,7 @@ export class ProfileCommand extends Command {
 			if (!isValidBirthday(month, day)) {
 				throw new UserError({
 					identifier: 'profile_invalid_birthday',
-					message: `${appEmoji('error', '❌')} 존재하지 않는 날짜예요. 달에 맞는 날짜를 입력해 주세요.`,
+					message: `${emoji('error')} 존재하지 않는 날짜예요. 달에 맞는 날짜를 입력해 주세요.`,
 					context: { ephemeral: true }
 				});
 			}
@@ -124,7 +124,7 @@ export class ProfileCommand extends Command {
 			containerComponent.addTextDisplayComponents((t) =>
 				t.setContent(
 					[
-						`### ${appEmoji('cake', '🎂')} 생일을 저장했어요`,
+						`### ${emoji('cake')} 생일을 저장했어요`,
 						'',
 						`**${month}월 ${day}일** — 별자리는 **${zodiacCode ? zodiacLabel(zodiacCode) : '알 수 없음'}**예요.`,
 						'',
@@ -145,7 +145,7 @@ export class ProfileCommand extends Command {
 			const cleared = await clearUserBirthday(interaction.user.id);
 			const containerComponent = createContainer();
 			containerComponent.addTextDisplayComponents((t) =>
-				t.setContent(cleared ? `${appEmoji('trash', '🗑️')} 등록된 생일을 지웠어요.` : `${appEmoji('info', 'ℹ️')} 등록된 생일이 없어요.`)
+				t.setContent(cleared ? `${emoji('trash')} 등록된 생일을 지웠어요.` : `${emoji('info')} 등록된 생일이 없어요.`)
 			);
 			await interaction.editReply({
 				components: [containerComponent],
@@ -274,19 +274,19 @@ export class ProfileCommand extends Command {
 		}
 
 		// ── 텍스트 카드 (폴백) ──
-		const lines = [`### ${appEmoji('user', '👤')} ${target.displayName ?? target.username} 님의 프로필`, ''];
+		const lines = [`### ${emoji('user')} ${target.displayName ?? target.username} 님의 프로필`, ''];
 
 		// 생일·별자리 — 생일은 본인에게만
 		if (data.isSelf) {
 			if (data.birthMonth != null && data.birthDay != null) {
-				lines.push(`${appEmoji('cake', '🎂')} **생일**: ${data.birthMonth}월 ${data.birthDay}일`);
-				lines.push(`${appEmoji('crystal_ball', '🔮')} **별자리**: ${data.zodiacCode ? zodiacLabel(data.zodiacCode) : '알 수 없음'}`);
+				lines.push(`${emoji('cake')} **생일**: ${data.birthMonth}월 ${data.birthDay}일`);
+				lines.push(`${emoji('crystal_ball')} **별자리**: ${data.zodiacCode ? zodiacLabel(data.zodiacCode) : '알 수 없음'}`);
 			} else {
-				lines.push(`${appEmoji('cake', '🎂')} **생일**: 미등록`);
+				lines.push(`${emoji('cake')} **생일**: 미등록`);
 				lines.push('-# `/프로필 생일설정`으로 등록하면 오하아사가 내 운세를 자동으로 보여줘요.');
 			}
 		} else if (data.zodiacCode) {
-			lines.push(`${appEmoji('crystal_ball', '🔮')} **별자리**: ${zodiacLabel(data.zodiacCode)}`);
+			lines.push(`${emoji('crystal_ball')} **별자리**: ${zodiacLabel(data.zodiacCode)}`);
 		}
 
 		// 출석 스트릭 뱃지
@@ -297,10 +297,10 @@ export class ProfileCommand extends Command {
 		// 서버 정보 (길드 안에서만, 멤버를 찾을 수 있을 때)
 		if (interaction.inCachedGuild()) {
 			const createdAt = Math.floor(target.createdTimestamp / 1000);
-			lines.push(`${appEmoji('calendar', '📅')} **계정 생성일**: <t:${createdAt}:R>`);
+			lines.push(`${emoji('calendar')} **계정 생성일**: <t:${createdAt}:R>`);
 			if (member?.joinedTimestamp) {
 				const joinedAt = Math.floor(member.joinedTimestamp / 1000);
-				lines.push(`${appEmoji('inbox_tray', '📥')} **서버 참가일**: <t:${joinedAt}:R>`);
+				lines.push(`${emoji('inbox_tray')} **서버 참가일**: <t:${joinedAt}:R>`);
 				const roles = member.roles.cache
 					.filter((role) => role.id !== interaction.guildId)
 					.sort((a, b) => b.position - a.position)
@@ -309,11 +309,11 @@ export class ProfileCommand extends Command {
 				if (roles.length > 0) {
 					const totalRoles = member.roles.cache.size - 1; // @everyone 제외
 					lines.push(
-						`${appEmoji('mask', '🎭')} **역할** (${totalRoles}개): ${roles.join(', ')}${totalRoles > 10 ? ` 외 ${totalRoles - 10}개` : ''}`
+						`${emoji('mask')} **역할** (${totalRoles}개): ${roles.join(', ')}${totalRoles > 10 ? ` 외 ${totalRoles - 10}개` : ''}`
 					);
 				}
 				if (member.premiumSinceTimestamp) {
-					lines.push(`${appEmoji('sparkle', '✨')} **부스터**: <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:R>부터`);
+					lines.push(`${emoji('sparkle')} **부스터**: <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:R>부터`);
 				}
 			}
 		}
@@ -323,23 +323,23 @@ export class ProfileCommand extends Command {
 		if (data.requestedCount > 0) {
 			const listen = formatTimeToKorean(Math.floor(data.listenMs / 1000));
 			lines.push(
-				`${appEmoji('music_note', '🎵')} **플레이리스트**: ${data.playlistCount}개 · **신청한 곡**: ${data.requestedCount}곡 · **총 청취**: ${listen}${
+				`${emoji('music_note')} **플레이리스트**: ${data.playlistCount}개 · **신청한 곡**: ${data.requestedCount}곡 · **총 청취**: ${listen}${
 					data.listenSampled ? ' (최근 500건 기준)' : ''
 				}`
 			);
 		} else {
-			lines.push(`${appEmoji('music_note', '🎵')} **플레이리스트**: ${data.playlistCount}개 · **신청한 곡**: 아직 없어요`);
+			lines.push(`${emoji('music_note')} **플레이리스트**: ${data.playlistCount}개 · **신청한 곡**: 아직 없어요`);
 		}
 		if (data.topTracks.length > 0) {
 			lines.push('');
-			lines.push(`${appEmoji('trophy', '🏆')} **자주 신청한 곡**`);
+			lines.push(`${emoji('trophy')} **자주 신청한 곡**`);
 			data.topTracks.forEach((t, i) => {
 				lines.push(`${i + 1}. ${t.title}${t.artist ? ` — ${t.artist}` : ''} (${t.count}회)`);
 			});
 		}
 		if (data.recentTracks.length > 0) {
 			lines.push('');
-			lines.push(`${appEmoji('clock', '🕘')} **최근 신청한 곡**`);
+			lines.push(`${emoji('clock')} **최근 신청한 곡**`);
 			for (const t of data.recentTracks) {
 				const at = Math.floor(t.playedAt.getTime() / 1000);
 				lines.push(`· ${t.title}${t.artist ? ` — ${t.artist}` : ''} (<t:${at}:R>)`);

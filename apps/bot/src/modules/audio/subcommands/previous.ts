@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { createContainer } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -45,7 +45,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const containerComponent = createContainer();
 	containerComponent.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${appEmoji('arrow_back', '⏮️')} 이전곡 **${previousTrack.info.title}**을(를) 다시 재생해요.`)
+		new TextDisplayBuilder().setContent(`${emoji('arrow_back')} 이전곡 **${previousTrack.info.title}**을(를) 다시 재생해요.`)
 	);
 
 	await interaction.editReply({

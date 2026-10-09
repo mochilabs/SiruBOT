@@ -18,7 +18,7 @@ import { lastGoodDaily, ohaasaStatus, refreshOhaasaNow } from '../services/ohaas
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
 import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
 import { memoryTidyStatus } from '../services/memoryTidy.ts';
-import { getPlayerState, playerHubStatus } from '../services/playerHub.ts';
+import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -39,13 +39,13 @@ function sendError(reply: { code: (n: number) => any }, error: unknown): any {
 			message: error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
 		});
 	}
+	// 스택/detail은 콘솔 로그에만 남기고 500 응답 본문에는 일반 메시지만 내려요 (내부 정보 유출 방지).
 	const stack = error instanceof Error ? error.stack : undefined;
 	const detail = error instanceof Error ? error.message : String(error);
 	console.error(`[data-api] unhandled route error: ${detail}${stack ? `\n${stack}` : ''}`);
 	return reply.code(500).send({
 		error: 'internal_error',
-		message: '일시적인 오류예요. 잠시 후 다시 시도해 주세요.',
-		detail
+		message: '일시적인 오류예요. 잠시 후 다시 시도해 주세요.'
 	});
 }
 
@@ -168,6 +168,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 
 	// ── 재생 이벤트 수집 (봇 trackHandler → fire-and-forget) ──
+	const guildIdParams = z.object({ guildId: z.string().trim().min(1).max(32) });
 	const playbackEventSchema = z.object({
 		type: z.enum(['track_start', 'track_end', 'track_stuck', 'track_error', 'queue_end', 'playback_abort']),
 		guildId: z.string().trim().min(1).max(32),
@@ -201,7 +202,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// 알 수 없는 길드/전송 중지 길드도 404 대신 player:null + hub 상태로 응답해요 — dashboard SWR 폴백이 안정적으로 동작하게.
 	fastify.get('/v1/player/:guildId', async (request, reply) => {
 		try {
-			const { guildId } = z.object({ guildId: z.string().trim().min(1).max(32) }).parse(request.params);
+			const { guildId } = guildIdParams.parse(request.params);
 			return reply.send({
 				player: getPlayerState(guildId),
 				hub: playerHubStatus()
@@ -209,6 +210,43 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		} catch (error) {
 			return sendError(reply, error);
 		}
+	});
+
+	// ── 라이브 플레이어 상태 SSE — Redis Pub/Sub 구독을 즉시 relay해요 ──
+	fastify.get('/v1/player/:guildId/stream', async (request, reply) => {
+		const { guildId = '' } = guildIdParams.parse(request.params);
+		// SSE는 응답 수명을 직접 관리하므로 Fastify 라이프사이클(타임아웃/자동 종료)에서 분리해요.
+		reply.hijack();
+		const raw = reply.raw;
+		raw.writeHead(200, {
+			'content-type': 'text/event-stream',
+			'cache-control': 'no-cache, no-transform',
+			connection: 'keep-alive',
+			'x-accel-buffering': 'no'
+		});
+		raw.write('retry: 3000\n\n');
+
+		const send = (payload: string): void => {
+			raw.write(`event: state\ndata: ${payload}\n\n`);
+		};
+
+		// 현재 상태 1회 즉시 전송 (없으면 player:null)
+		send(JSON.stringify({ player: getPlayerState(guildId), hub: playerHubStatus() }));
+
+		const unsubscribe = subscribeSse(guildId, send);
+		// 킵얼라이브 — 프록시/방화벽 타임아웃 방지
+		const keepalive = setInterval(() => {
+			try {
+				raw.write(': keepalive\n\n');
+			} catch {
+				// noop
+			}
+		}, 15_000);
+
+		raw.once('close', () => {
+			clearInterval(keepalive);
+			unsubscribe();
+		});
 	});
 
 	// ── 택배 조회 ──
@@ -358,11 +396,12 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 
 	// ── NowPlaying 카드 이미지 ──
-	// position은 렌더 시점에 박히고 캐시 키(trackId)에서는 제외해요 — 봇이 트랙당 1회만 렌더해요.
+	// 카드는 트랙당 1회만 렌더(도미넌트 색 배경 + 제목 + 대기열/볼륨/노드/브랜드 메타).
+	// 진행바·신청자는 이미지에 박지 않아요 — 동적 갱신은 봇 텍스트 라인(이모지 프로그레스바) 담당.
 	const nowPlayingCardSchema = z.object({
 		trackId: z.string().trim().min(1).max(200),
 		title: z.string().trim().min(1).max(200),
-		artist: z.string().trim().min(1).max(200),
+		artist: z.string().trim().max(200).default(''),
 		artworkUrl: z.string().url().nullable().default(null),
 		positionMs: z
 			.number()
@@ -378,7 +417,39 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			.default(0),
 		isStream: z.boolean().default(false),
 		queueCount: z.number().int().min(0).max(10_000).default(0),
-		requesterName: z.string().trim().min(1).max(64).nullable().default(null)
+		queueRemainingMs: z
+			.number()
+			.int()
+			.min(0)
+			.max(24 * 3600_000)
+			.default(0),
+		volume: z.number().int().min(0).max(1000).nullable().default(null),
+		nodeId: z.string().trim().min(1).max(100).nullable().default(null),
+		brandLine: z.string().trim().min(1).max(120).nullable().default(null),
+		chapter: z
+			.object({
+				name: z.string().trim().min(1).max(120),
+				startMs: z
+					.number()
+					.int()
+					.min(0)
+					.max(24 * 3600_000),
+				endMs: z
+					.number()
+					.int()
+					.min(0)
+					.max(24 * 3600_000)
+			})
+			.nullable()
+			.default(null),
+		requester: z
+			.object({
+				name: z.string().trim().min(1).max(64),
+				avatarUrl: z.string().url().nullable().default(null)
+			})
+			.nullable()
+			.default(null),
+		trackUrl: z.string().url().nullable().default(null)
 	});
 	fastify.post('/v1/image/nowplaying', async (request, reply) => {
 		try {

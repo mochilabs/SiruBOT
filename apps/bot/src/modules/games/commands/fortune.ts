@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { createHash } from 'node:crypto';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
@@ -19,17 +19,11 @@ const FORTUNES = [
 
 // 모듈 평가 시점엔 이모지 매핑이 로드 전일 수 있어 렌더 시점 함수로 만든다
 function getGrades(): string[] {
-	return [
-		`${appEmoji('star', '🌟')} 최고예요`,
-		'🙂 좋아요',
-		'😐 무난해요',
-		`${appEmoji('rain', '🌧️')} 조금 흐려요`,
-		`${appEmoji('warning', '⚠️')} 조심하세요`
-	];
+	return [`${emoji('star')} 최고예요`, '🙂 좋아요', '😐 무난해요', `${emoji('rain')} 조금 흐려요`, `${emoji('warning')} 조심하세요`];
 }
 
 function getLuckyEmojis(): string[] {
-	return [appEmoji('clover', '🍀'), appEmoji('gamepad', '🎡'), appEmoji('dice', '🎲'), appEmoji('coin', '🪙'), appEmoji('cat', '🐈')];
+	return [emoji('clover'), emoji('gamepad'), emoji('dice'), emoji('coin'), emoji('cat')];
 }
 
 const COLORS = ['🔴 빨강', '🟠 주황', '🟡 노랑', '🟢 초록', '🔵 파랑', '🟣 보라', '🩷 분홍'];
@@ -69,12 +63,12 @@ export class FortuneCommand extends Command {
 		container.addTextDisplayComponents((t) =>
 			t.setContent(
 				[
-					`### ${appEmoji('crystal_ball', '🔮')} ${interaction.user.displayName} 님의 오늘 운세`,
+					`### ${emoji('crystal_ball')} ${interaction.user.displayName} 님의 오늘 운세`,
 					'',
 					`**${grade}**`,
 					fortune,
 					'',
-					`${appEmoji('clover', '🍀')} 럭키 넘버: **${luckyNumber}** · ${appEmoji('palette', '🎨')} 럭키 컬러: **${color}** · ${luckyEmoji}`,
+					`${emoji('clover')} 럭키 넘버: **${luckyNumber}** · ${emoji('palette')} 럭키 컬러: **${color}** · ${luckyEmoji}`,
 					`-# ${dateKey} 기준 — 내일 다시 오면 새로운 운세가 기다려요.`
 				].join('\n')
 			)

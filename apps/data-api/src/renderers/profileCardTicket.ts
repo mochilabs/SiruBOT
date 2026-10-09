@@ -5,7 +5,7 @@
  * 본문에 지금 재생 중 + 2x2 미니 스탯. 이모지 대신 lucide 벡터 아이콘.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
-import { drawIcon, ensureKoreanFont, loadImageAllowed, truncate } from './canvasUtils.ts';
+import { drawCircleImage, drawIcon, ensureKoreanFont, loadImageAllowed, truncate } from './canvasUtils.ts';
 import { drawMusicSection, measureMusicSection, type ProfileNowPlaying } from './profileWidgets.ts';
 
 export interface ProfileCardTicketInput {
@@ -56,18 +56,6 @@ const CHIP_PINK_TEXT = '#b97f7e';
 const CHIP_GREEN_BG = '#d6e4da';
 const CHIP_GREEN_TEXT = '#61826c';
 const ACCENT_ROSE = '#a96a64';
-
-function drawCircleImage(ctx: CanvasRenderingContext2D, img: CanvasDrawable, cx: number, cy: number, radius: number): void {
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-	ctx.clip();
-	const iw = (img as { width: number }).width;
-	const ih = (img as { height: number }).height;
-	const scale = Math.max((radius * 2) / iw, (radius * 2) / ih);
-	ctx.drawImage(img, cx - (iw * scale) / 2, cy - (ih * scale) / 2, iw * scale, ih * scale);
-	ctx.restore();
-}
 
 function drawChip(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, bg: string, color: string): number {
 	ctx.save();

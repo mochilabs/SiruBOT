@@ -54,6 +54,26 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
     }
 }
 
+/**
+ * data-api SSE 스트림 프록시 — 인증 헤더를 붙여 upstream Response를 그대로 돌려준다.
+ * 미설정이면 null (라우트에서 502 응답으로 변환).
+ */
+export async function openDataApiStream(path: string): Promise<Response | null> {
+    const authKey = DATA_API_AUTH_KEY.trim();
+    if (!authKey) return null;
+
+    try {
+        const upstream = await fetch(`${DATA_API_URL}${path}`, {
+            headers: { Authorization: authKey },
+            cache: "no-store",
+        });
+        if (!upstream.ok || !upstream.body) return null;
+        return upstream;
+    } catch {
+        return null;
+    }
+}
+
 export async function fetchDataApiStatus(): Promise<DataApiStatus | null> {
     // 폴백 체인(DATA_API_AUTH_KEY || AUTH_KEY)은 기존 방침을 유지한다.
     // 키가 없으면(또는 공백뿐이면) 실패시키지 않고 경고 후 스킵 — 무인증 localhost 호출을 안 한다.

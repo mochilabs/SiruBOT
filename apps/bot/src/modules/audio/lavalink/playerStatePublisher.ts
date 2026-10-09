@@ -8,7 +8,9 @@
  * - 제어(일시정지/스킵 등)는 이 퍼블리시로 하지 않는다 — 제어는 bot RPC로 별도 구현 예정.
  */
 import { container } from '@sapphire/framework';
+import type { Track } from 'lavalink-client';
 import { getUserQueuedTracks } from './autoPlayRelated.ts';
+import { requesterIdOf, resolveRequesterName } from './requester.ts';
 import type { CustomPlayer } from './player/customPlayer.ts';
 
 const IMMEDIATE_INTERVAL_MS = 5_000;
@@ -45,13 +47,6 @@ export interface PlayerStatePayload {
 /** 길드별 마지막 퍼블리시 (주기 캐시 + 변경 감지 지문) */
 const lastPublish = new Map<string, { at: number; fingerprint: string }>();
 
-function requesterNameOf(track: CustomPlayer['queue']['current']): string | null {
-	const requester = track?.requester;
-	const id = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
-	if (typeof id !== 'string' || !id || id === 'related_track') return null;
-	return id;
-}
-
 function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: string | null): QueuedTrackSummary | null {
 	if (!track) return null;
 	return {
@@ -65,17 +60,11 @@ function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: 
 }
 
 /** 유저 표시 이름 조회 — 캐시 미스 시 비동기 fetch지만 퍼블리시는 fire-and-forget이므로 무관해요 */
-function resolveRequesterName(player: CustomPlayer, requesterId: string | null): string | null {
-	if (!requesterId) return null;
-	const member = container.client.guilds.cache.get(player.guildId)?.members.cache.get(requesterId);
-	return member?.displayName ?? null;
-}
-
 /** 플레이어에서 상태 스냅샷을 만들어요 (동기 — 이벤트 훅에서 안전) */
 export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayload {
 	const current = player.queue.current;
 	const queued = getUserQueuedTracks(player);
-	const requesterId = requesterNameOf(current);
+	const requesterId = requesterIdOf(current ?? undefined);
 
 	return {
 		guildId: player.guildId,
@@ -88,8 +77,7 @@ export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayloa
 		artworkUrl: current?.info.artworkUrl ?? null,
 		isStream: current?.info.isStream ?? false,
 		queue: queued.slice(0, 5).map((track) => {
-			const id = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
-			return summarizeTrack(track as CustomPlayer['queue']['current'], resolveRequesterName(player, typeof id === 'string' ? id : null))!;
+			return summarizeTrack(track as CustomPlayer['queue']['current'], resolveRequesterName(player, requesterIdOf(track as Track)))!;
 		}),
 		queueLength: queued.length,
 		repeatMode: player.repeatMode,

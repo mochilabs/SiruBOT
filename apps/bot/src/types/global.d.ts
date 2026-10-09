@@ -18,6 +18,7 @@ declare module '@skyra/env-utilities' {
 		DISCORD_TOKEN: string;
 		OWNERS: ArrayString;
 		LAVALINK_HOSTS: string;
+		LAVALINK_DEFAULT_PASSWORD?: string;
 		BOT_ACTIVITY: string;
 		LOGLEVEL: string;
 		REDIS_URL: string;

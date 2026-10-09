@@ -5,7 +5,7 @@ import { container } from '@sapphire/pieces';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 import { Logger, ILogObj } from 'tslog';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { DEFAULT_COLOR, appEmoji } from '@sirubot/utils';
+import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
 
 @ApplyOptions<Listener.Options>({
 	event: Events.VoiceStateUpdate
@@ -73,9 +73,7 @@ export class VoiceStateUpdateListener extends Listener {
 									new ContainerBuilder()
 										.setAccentColor(DEFAULT_COLOR)
 										.addTextDisplayComponents((textDisplay) =>
-											textDisplay.setContent(
-												`${appEmoji('sleep', '💤')} 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.`
-											)
+											textDisplay.setContent(`${emoji('sleep')} 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.`)
 										)
 								],
 								flags: [MessageFlags.IsComponentsV2]

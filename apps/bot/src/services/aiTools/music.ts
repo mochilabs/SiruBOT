@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { RepeatMode, SearchPlatform } from 'lavalink-client';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../modules/audio/lavalink/autoPlayRelated.ts';
+import { checkDJOrAlone } from '../../modules/audio/utils/permissionCheck.ts';
 import type { CustomPlayer } from '../../modules/audio/lavalink/player/customPlayer.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { searchLyrics } from '../dataApiClient.ts';
@@ -22,6 +23,14 @@ function requireVoice(ctx: AiToolContext): { guildId: string; voiceChannelId: st
 	const guildId = requireGuild(ctx);
 	if (!ctx.voiceChannelId) throw new Error('먼저 음성 채널에 접속해 주세요.');
 	return { guildId, voiceChannelId: ctx.voiceChannelId };
+}
+
+/** 슬래시 커맨드의 DJOrAlone precondition과 동일한 검사 — 서버 컨텍스트 + member 필요 */
+async function requireDjOrAlone(ctx: AiToolContext): Promise<void> {
+	const guildId = requireGuild(ctx);
+	if (!ctx.member) throw new Error('DM에서는 음악을 제어할 수 없어요.');
+	const allowed = await checkDJOrAlone(guildId, ctx.member);
+	if (!allowed) throw new Error('이 작업은 DJ 역할을 가지고 있거나, 채널에 혼자 있을 때만 사용 가능해요.');
 }
 
 function requirePlayer(guildId: string) {
@@ -91,6 +100,7 @@ const musicPauseTool: AiTool = {
 	required: [],
 	status: '시루가 재생 상태를 바꾸는 중..',
 	execute: async (_args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		if (player.paused) {
@@ -109,6 +119,7 @@ const musicSkipTool: AiTool = {
 	required: [],
 	status: '시루가 다음 곡으로 넘기는 중..',
 	execute: async (_args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		if (!player.queue.current) throw new Error('건너뛸 곡이 없어요.');
@@ -127,6 +138,7 @@ const musicStopTool: AiTool = {
 	required: [],
 	status: '시루가 재생을 멈추고 퇴장하는 중..',
 	execute: async (_args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		player.setData('stopByCommand', true);
@@ -223,6 +235,7 @@ const musicVolumeTool: AiTool = {
 			const saved = await container.guildService.getVolume(guildId);
 			return JSON.stringify({ status: 'ok', volume: saved });
 		}
+		await requireDjOrAlone(ctx);
 		const volume = Math.round(Number(args.volume));
 		if (!Number.isFinite(volume) || volume < 0 || volume > 150) throw new Error('볼륨은 0~150 사이로 설정할 수 있어요.');
 		const { volume: updated } = await container.guildService.updateVolume(guildId, volume);
@@ -241,6 +254,7 @@ const musicSeekTool: AiTool = {
 	required: ['time'],
 	status: '시루가 곡을 이동하는 중..',
 	execute: async (args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const player = requirePlayer(requireGuild(ctx));
 		const current = player.queue.current;
 		if (!current) throw new Error('현재 재생 중인 곡이 없어요.');
@@ -260,6 +274,7 @@ const musicShuffleTool: AiTool = {
 	required: [],
 	status: '시루가 대기열을 섞는 중..',
 	execute: async (_args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		const queueLength = getUserQueuedTracks(player).length;
@@ -286,6 +301,7 @@ const musicRepeatTool: AiTool = {
 			const current = await container.guildService.getRepeat(guildId);
 			return JSON.stringify({ status: 'ok', mode: current });
 		}
+		await requireDjOrAlone(ctx);
 		if (!['off', 'track', 'queue'].includes(mode)) throw new Error('반복 모드는 off/track/queue 중 하나예요.');
 		const updated = await container.guildService.setRepeat(guildId, mode as RepeatMode);
 		const player = container.audio.getPlayer(guildId);
@@ -302,6 +318,7 @@ const musicPreviousTool: AiTool = {
 	required: [],
 	status: '시루가 이전 곡으로 돌아가는 중..',
 	execute: async (_args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const player = requireCustomPlayer(requireGuild(ctx));
 		if (player.queue.previous.length === 0) throw new Error('이전에 재생한 곡이 없어요.');
 		const previousTrack = player.queue.previous[player.queue.previous.length - 1];
@@ -323,6 +340,7 @@ const musicRemoveTool: AiTool = {
 	required: ['position'],
 	status: '시루가 대기열에서 곡을 삭제하는 중..',
 	execute: async (args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		const position = Math.round(Number(args.position));
@@ -347,6 +365,7 @@ const musicMoveTool: AiTool = {
 	required: ['from', 'to'],
 	status: '시루가 대기열 순서를 바꾸는 중..',
 	execute: async (args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		const from = Math.round(Number(args.from));
@@ -375,6 +394,7 @@ const musicFilterTool: AiTool = {
 	required: ['preset'],
 	status: '시루가 음질 필터를 적용하는 중..',
 	execute: async (args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const player = requireCustomPlayer(requireGuild(ctx));
 		const preset = String(args.preset ?? '');
 		if (!['bassboost', 'nightcore', 'vaporwave', '8d', 'karaoke', 'reset'].includes(preset)) throw new Error('알 수 없는 필터 프리셋이에요.');
@@ -466,6 +486,7 @@ const musicTtsTool: AiTool = {
 	required: ['text'],
 	status: '시루가 음성으로 읽어주는 중..',
 	execute: async (args, ctx) => {
+		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
 		const text = String(args.text ?? '').trim();

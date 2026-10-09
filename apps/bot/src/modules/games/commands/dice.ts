@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 const FORMULA_PATTERN = /^(\d{1,2})d(\d{1,3})(?:\s*([+-])\s*(\d{1,3}))?$/i;
@@ -38,7 +38,7 @@ export class DiceCommand extends Command {
 		if (!match) {
 			throw new UserError({
 				identifier: 'dice_invalid_formula',
-				message: `${appEmoji('error', '❌')} 주사위식을 이해하지 못했어요. \`2d20+3\`, \`1d6\` 같은 형식으로 입력해 주세요.`,
+				message: `${emoji('error')} 주사위식을 이해하지 못했어요. \`2d20+3\`, \`1d6\` 같은 형식으로 입력해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -50,7 +50,7 @@ export class DiceCommand extends Command {
 		if (count < 1 || count > 20 || sides < 2 || sides > 1000) {
 			throw new UserError({
 				identifier: 'dice_out_of_range',
-				message: `${appEmoji('error', '❌')} 주사위는 \`1~20\`개, 면은 \`2~1000\` 사이로 설정할 수 있어요.`,
+				message: `${emoji('error')} 주사위는 \`1~20\`개, 면은 \`2~1000\` 사이로 설정할 수 있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -71,7 +71,7 @@ export class DiceCommand extends Command {
 					container.addTextDisplayComponents((t) =>
 						t.setContent(
 							[
-								`### ${appEmoji('dice', '🎲')} 주사위 굴림`,
+								`### ${emoji('dice')} 주사위 굴림`,
 								`**${displayFormula}** → \`${rollsText}\`${modifierText} = **${total}**`,
 								`-# ${interaction.user.displayName} 님이 굴렸어요.`
 							].join('\n')

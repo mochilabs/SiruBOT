@@ -32,7 +32,7 @@ const options = {
 	channelId: 'channel',
 	prompt: '안녕',
 	config: { apiUrl: 'http://llm.invalid/v1', apiKey: '', model: 'test', timeoutMs: 1000, streamUpdateMs: 450, thinkToken: false },
-	toolContext: { guildId: 'guild', channelId: 'channel', voiceChannelId: null, userId: 'user', username: 'user' }
+	toolContext: { guildId: 'guild', channelId: 'channel', voiceChannelId: null, member: null, userId: 'user', username: 'user' }
 };
 
 describe('AI context preparation', () => {

@@ -4,7 +4,7 @@
  * 컬러는 웹 대시보드 디자인 토큰(globals.css 다크 테마)과 동일한 팔레트를 써요.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
-import { ensureKoreanFont, hashString, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
+import { drawCircleImage, ensureKoreanFont, hashString, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 export interface TopTrackSnippet {
 	title: string;
@@ -268,18 +268,6 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 }
 
 /** 원형 이미지 그리기 */
-function drawCircleImage(ctx: CanvasRenderingContext2D, img: CanvasDrawable, cx: number, cy: number, radius: number): void {
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-	ctx.clip();
-	const iw = (img as { width: number }).width;
-	const ih = (img as { height: number }).height;
-	const scale = Math.max((radius * 2) / iw, (radius * 2) / ih);
-	ctx.drawImage(img, cx - (iw * scale) / 2, cy - (ih * scale) / 2, iw * scale, ih * scale);
-	ctx.restore();
-}
-
 /** 카드 본체 + 보더 (공용 모양) */
 function drawCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
 	ctx.beginPath();

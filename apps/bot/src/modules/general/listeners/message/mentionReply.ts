@@ -16,7 +16,7 @@ import {
 	type ChatConfig
 } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
-import { appEmoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from '../../utils/chatView.ts';
 
 @ApplyOptions<Listener.Options>({
@@ -51,7 +51,7 @@ export class MentionReplyListener extends Listener {
 		if (!prompt && images.length === 0) {
 			await message
 				.reply({
-					content: `-# ${appEmoji('bulb', '💡')} 질문을 멘션 뒤에 이어서 써 주세요. 예: \`@시루 내일 날씨 어때?\``,
+					content: `-# ${emoji('bulb')} 질문을 멘션 뒤에 이어서 써 주세요. 예: \`@시루 내일 날씨 어때?\``,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -63,7 +63,7 @@ export class MentionReplyListener extends Listener {
 		if (!(await tryConsumeUserTurn(message.author.id))) {
 			await message
 				.reply({
-					content: `-# ${appEmoji('hourglass', '⏳')} AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 멘션해 주세요.`,
+					content: `-# ${emoji('hourglass')} AI 대화 시간당 사용량을 모두 썼어요. 잠시 후(10분 뒤) 다시 멘션해 주세요.`,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -75,7 +75,7 @@ export class MentionReplyListener extends Listener {
 		if (!acquireChannelTurn(channelId)) {
 			await message
 				.reply({
-					content: `-# ${appEmoji('hourglass', '⏳')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`,
+					content: `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -98,6 +98,7 @@ export class MentionReplyListener extends Listener {
 			guildId: message.guildId,
 			channelId,
 			voiceChannelId: message.member?.voice?.channelId ?? null,
+			member: message.inGuild() ? (message.member ?? null) : null,
 			userId: message.author.id,
 			username: message.author.username
 		};

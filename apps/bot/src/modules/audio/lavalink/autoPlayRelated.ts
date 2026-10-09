@@ -76,6 +76,18 @@ export function getUserQueuedTracks(player: Player): Track[] {
 }
 
 /**
+ * 지금부터 유저 대기열이 끝날 때까지의 실제 남은 시간(ms).
+ * 현재 곡의 전체 길이에서 현재 위치만큼 빼고, 선예열한 추천곡은 대기열로 세지 않아 제외한다.
+ * 스트리밍은 끝나는 시점이 없어 position을 뺸다.
+ */
+export function remainingUntilQueueEnd(player: Player, queuedTracks: Track[]): number {
+	const current = player.queue.current;
+	const elapsed = current && !current.info.isStream ? Math.min(player.position ?? 0, current.info.duration ?? 0) : 0;
+	const queuedDuration = queuedTracks.reduce((acc, track) => acc + (track.info.duration || 0), 0);
+	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
+}
+
+/**
  * Normalize title: convert to lowercase, remove bracketed content (feat., remix, etc.), remove special characters, trim whitespace
  */
 function normalizeTitle(title: string): string {

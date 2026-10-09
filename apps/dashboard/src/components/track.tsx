@@ -1,10 +1,13 @@
 "use client";
 
-import React, { memo,useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";
-import { Crown, ExternalLink, Music4 } from "lucide-react";
+import { Crown, ExternalLink, Heart, Music4 } from "lucide-react";
+import useSWR from "swr";
+
+import { useToast } from "@/components/feedback/toast";
 
 interface TrackListProps {
 	tracks: TrackType[];
@@ -40,6 +43,7 @@ const BATCH_SIZE = 10;
 
 export const TrackList = memo(function TrackList({ tracks, rankOffset = 0 }: TrackListProps) {
 	const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+	const { favoriteIds, toggle } = useFavoriteIds(tracks.slice(0, visibleCount).map((t) => t.id));
 
 	const { ref: sentinelRef } = useInView({
 		onChange: (inView) => {
@@ -60,6 +64,8 @@ export const TrackList = memo(function TrackList({ tracks, rankOffset = 0 }: Tra
 					track={track}
 					rank={rankOffset + index + 1}
 					staggerIndex={index % BATCH_SIZE}
+					favorite={favoriteIds.has(track.id)}
+					onToggleFavorite={toggle}
 				/>
 			))}
 			{visibleCount < tracks.length && (
@@ -73,10 +79,14 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
 	track,
 	rank,
 	staggerIndex,
+	favorite,
+	onToggleFavorite,
 }: {
 	track: TrackType;
 	rank: number;
 	staggerIndex: number;
+	favorite: boolean;
+	onToggleFavorite: (trackId: string) => Promise<void>;
 }) {
 	const { ref, inView } = useInView({
 		triggerOnce: true,
@@ -94,12 +104,107 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
 				transition: `opacity 0.3s ease-out ${delay}ms, transform 0.3s ease-out ${delay}ms`,
 			}}
 		>
-			<TrackItem track={track} rank={rank} />
+			<TrackItem track={track} rank={rank} favorite={favorite} onToggleFavorite={onToggleFavorite} />
 		</div>
 	);
 });
 
-export const TrackItem = memo(function TrackItem({ track, rank }: { track: TrackType; rank: number }) {
+/* ─────────────────────────── 즐겨찾기 (원클릭) ─────────────────────────── */
+
+/**
+ * 현재 사용자의 즐겨찾기 트랙 ID 집합 (페이지 로드 시 일괄 조회).
+ * 클릭 → 캐시 낙관 업데이트(revalidate: false) → POST/DELETE → finally 재검증 순서.
+ */
+function useFavoriteIds(trackIds: string[]) {
+	const key = trackIds.length > 0 ? `/api/favorites?trackIds=${encodeURIComponent(trackIds.join(","))}` : null;
+	const { data, mutate } = useSWR<{ trackIds: string[] }>(key);
+
+	const favoriteIds = useMemo(() => new Set(data?.trackIds ?? []), [data]);
+
+	const toggle = useCallback(
+		async (trackId: string) => {
+			const current = new Set(data?.trackIds ?? []);
+			const wasFavorite = current.has(trackId);
+			// 낙관적 업데이트 — 성공 여부와 무관하게 마지막에 재검증
+			current[wasFavorite ? "delete" : "add"](trackId);
+			await mutate({ trackIds: [...current] }, { revalidate: false });
+			try {
+				const res = await fetch(
+					wasFavorite ? `/api/favorites?trackId=${encodeURIComponent(trackId)}` : "/api/favorites",
+					wasFavorite
+						? { method: "DELETE" }
+						: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackId }) },
+				);
+				const json = (await res.json().catch(() => ({}))) as { error?: string; alreadyRemoved?: boolean };
+				if (!res.ok && res.status !== 409 && !(res.status === 404 && json.alreadyRemoved)) {
+					throw new Error(json.error || "요청을 처리하지 못했어요.");
+				}
+			} finally {
+				await mutate();
+			}
+		},
+		[data, mutate],
+	);
+
+	return { favoriteIds, toggle };
+}
+
+/** 트랙 아이템에 표시되는 하트 토글 — 클릭 한 번으로 즐겨찾기 추가/제거 */
+function FavoriteButton({
+	trackId,
+	favorite,
+	onToggle,
+}: {
+	trackId: string;
+	favorite: boolean;
+	onToggle: (trackId: string) => Promise<void>;
+}) {
+	const [pending, setPending] = useState(false);
+	const toast = useToast();
+
+	const handleClick = async (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (pending) return;
+		setPending(true);
+		try {
+			await onToggle(trackId);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "즐겨찾기 처리에 실패했어요.");
+		} finally {
+			setPending(false);
+		}
+	};
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			disabled={pending}
+			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
+			className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
+				favorite
+					? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+					: "border-border bg-surface-2 text-muted-foreground/60 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+			}`}
+		>
+			<Heart className="h-4 w-4 sm:h-5 sm:w-5" fill={favorite ? "currentColor" : "none"} aria-hidden />
+			<span className="sr-only">{favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}</span>
+		</button>
+	);
+}
+
+export const TrackItem = memo(function TrackItem({
+	track,
+	rank,
+	favorite,
+	onToggleFavorite,
+}: {
+	track: TrackType;
+	rank: number;
+	favorite: boolean;
+	onToggleFavorite: (trackId: string) => Promise<void>;
+}) {
 	const [imgError, setImgError] = useState(false);
 	const isTopThree = rank <= 3;
 
@@ -153,6 +258,10 @@ export const TrackItem = memo(function TrackItem({ track, rank }: { track: Track
 					<p className="text-base sm:text-lg font-black text-primary leading-none">{track.totalPlays.toLocaleString()}</p>
 					<p className="hidden sm:block mt-1 text-xs uppercase tracking-wider text-muted-foreground/40 font-bold">Total Plays</p>
 				</div>
+
+				{onToggleFavorite && (
+					<FavoriteButton trackId={track.id} favorite={favorite} onToggle={onToggleFavorite} />
+				)}
 
 				{track.url && (
 					<a

@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { appEmoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer } from '@sirubot/utils';
 import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
 import { lookupSource } from '../utils/source.ts';
@@ -145,15 +145,13 @@ export class PlaylistCommand extends Command {
 			await this.container.playlistService.createPlaylist(interaction.user.id, name, description ?? undefined);
 			await interaction.reply({
 				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${appEmoji('success', '✅')} 플레이리스트 **${name}**을(를) 생성했어요.`)
-					)
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('success')} 플레이리스트 **${name}**을(를) 생성했어요.`))
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -166,15 +164,13 @@ export class PlaylistCommand extends Command {
 			await this.container.playlistService.deletePlaylist(interaction.user.id, name);
 			await interaction.reply({
 				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${appEmoji('trash', '🗑️')} 플레이리스트 **${name}**을(를) 삭제했어요.`)
-					)
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('trash')} 플레이리스트 **${name}**을(를) 삭제했어요.`))
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -188,9 +184,7 @@ export class PlaylistCommand extends Command {
 
 		if (playlists.length === 0) {
 			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('inbox_tray', '📭')} 생성된 플레이리스트가 없어요.`))
-				],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('inbox_tray')} 생성된 플레이리스트가 없어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -199,9 +193,7 @@ export class PlaylistCommand extends Command {
 		const list = playlists.map((p) => `**${p.name}** - ${p._count.tracks}곡 ${p.description ? `\n-# ${p.description}` : ''}`).join('\n\n');
 
 		await interaction.reply({
-			components: [
-				createContainer().addTextDisplayComponents((t) => t.setContent(`### ${appEmoji('folder', '📁')} 나의 플레이리스트\n${list}`))
-			],
+			components: [createContainer().addTextDisplayComponents((t) => t.setContent(`### ${emoji('folder')} 나의 플레이리스트\n${list}`))],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -216,7 +208,7 @@ export class PlaylistCommand extends Command {
 				await interaction.reply({
 					components: [
 						createContainer().addTextDisplayComponents((t) =>
-							t.setContent(`${appEmoji('inbox_tray', '📭')} **${playlist.name}** 플레이리스트가 비어있어요.`)
+							t.setContent(`${emoji('inbox_tray')} **${playlist.name}** 플레이리스트가 비어있어요.`)
 						)
 					],
 					flags: [MessageFlags.IsComponentsV2]
@@ -229,14 +221,14 @@ export class PlaylistCommand extends Command {
 			await interaction.reply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`### ${appEmoji('clipboard', '📋')} 플레이리스트: ${playlist.name}\n${list}`)
+						t.setContent(`### ${emoji('clipboard')} 플레이리스트: ${playlist.name}\n${list}`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -246,9 +238,7 @@ export class PlaylistCommand extends Command {
 		const voiceChannelId = interaction.member.voice.channelId;
 		if (!voiceChannelId) {
 			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`))
-				],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 먼저 음성 채널에 접속해주세요.`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -272,7 +262,7 @@ export class PlaylistCommand extends Command {
 		const result = await player.search({ query }, interaction.user);
 		if (result.tracks.length === 0) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 곡을 찾을 수 없어요.`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 곡을 찾을 수 없어요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -285,14 +275,14 @@ export class PlaylistCommand extends Command {
 			await interaction.editReply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${appEmoji('success', '✅')} **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
+						t.setContent(`${emoji('success')} **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
@@ -305,9 +295,7 @@ export class PlaylistCommand extends Command {
 
 		if (!player || !current) {
 			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 현재 재생 중인 곡이 없어요.`))
-				],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 현재 재생 중인 곡이 없어요.`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -318,14 +306,14 @@ export class PlaylistCommand extends Command {
 			await interaction.reply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${appEmoji('success', '✅')} **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
+						t.setContent(`${emoji('success')} **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -346,15 +334,13 @@ export class PlaylistCommand extends Command {
 			await this.container.playlistService.removeTrack(interaction.user.id, name, target.position);
 			await interaction.reply({
 				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${appEmoji('trash', '🗑️')} **${name}** 플레이리스트에서 곡을 제거했어요.`)
-					)
+					createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('trash')} **${name}** 플레이리스트에서 곡을 제거했어요.`))
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -369,9 +355,7 @@ export class PlaylistCommand extends Command {
 
 		if (!voiceChannel) {
 			await interaction.editReply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} 먼저 음성 채널에 접속해주세요.`))
-				],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 먼저 음성 채널에 접속해주세요.`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -384,7 +368,7 @@ export class PlaylistCommand extends Command {
 				await interaction.editReply({
 					components: [
 						createContainer().addTextDisplayComponents((t) =>
-							t.setContent(`${appEmoji('inbox_tray', '📭')} **${playlist.name}** 플레이리스트가 비어있어요.`)
+							t.setContent(`${emoji('inbox_tray')} **${playlist.name}** 플레이리스트가 비어있어요.`)
 						)
 					],
 					flags: [MessageFlags.IsComponentsV2]
@@ -429,16 +413,14 @@ export class PlaylistCommand extends Command {
 			await interaction.editReply({
 				components: [
 					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(
-							`${appEmoji('music_note', '🎵')} **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`
-						)
+						t.setContent(`${emoji('music_note')} **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`)
 					)
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${appEmoji('error', '❌')} ${getErrorMessage(error)}`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}

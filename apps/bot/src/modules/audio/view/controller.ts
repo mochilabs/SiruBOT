@@ -1,7 +1,6 @@
 import {
-	appEmoji,
-	createContainer,
 	emojiProgressBar,
+	createContainer,
 	formatTime,
 	formatTimeToKorean,
 	formatTrack,
@@ -9,7 +8,6 @@ import {
 	versionInfo,
 	removeEmojis,
 	volumeToEmoji,
-	EMOJI_SPARKLE,
 	BOT_NAME
 } from '@sirubot/utils';
 import {
@@ -25,13 +23,13 @@ import {
 	ThumbnailBuilder
 } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPlayRelated.ts';
+import { repeatEmoji } from './repeat.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
-	page?: number;
 	/** NowPlaying 카드 attachment URL (attachment://...) — 있으면 상단에 카드 이미지 표시 */
 	nowPlayingCardUrl?: string;
 };
@@ -40,18 +38,6 @@ const customIdPrefix = 'controller:';
 const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
-
-/**
- * 지금부터 유저 대기열이 끝날 때까지의 실제 남은 시간(ms).
- * 현재 곡의 전체 길이에서 현재 위치만큼 빼고, 선예열한 추천곡은 대기열로 세지 않아 제외한다.
- * 스트리밍은 끝나는 시점이 없어 position을 뺸다.
- */
-function remainingUntilQueueEnd(player: Player, queuedTracks: Track[]): number {
-	const current = player.queue.current;
-	const elapsed = current && !current.info.isStream ? Math.min(player.position ?? 0, current.info.duration ?? 0) : 0;
-	const queuedDuration = queuedTracks.reduce((acc, track) => acc + (track.info.duration || 0), 0);
-	return Math.max(0, (current?.info.duration ?? 0) + queuedDuration - elapsed);
-}
 
 export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
 	// Container builder
@@ -82,19 +68,19 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 
 	const prevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('prev'))
-		.setEmoji(appEmoji('arrow_back', '⏮️'))
+		.setEmoji(emoji('arrow_back'))
 		.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
-		.setEmoji(player.paused ? appEmoji('arrow_forward', '▶️') : appEmoji('arrow_forward', '⏸'));
+		.setEmoji(player.paused ? emoji('play') : emoji('pause'));
 
 	const nextButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('next'))
-		.setEmoji(appEmoji('arrow_forward', '⏭️'))
+		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(player.queue.tracks.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(appEmoji('box', '⏹'));
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(emoji('stop'));
 
 	// Repeat state 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
@@ -105,17 +91,11 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 					? wrapPrefix('repeat:track')
 					: wrapPrefix('repeat:off')
 		)
-		.setEmoji(
-			player.repeatMode === 'off'
-				? appEmoji('arrow_forward', '➡️')
-				: player.repeatMode === 'track'
-					? appEmoji('repeat_one', '🔂')
-					: appEmoji('repeat', '🔁')
-		);
+		.setEmoji(repeatEmoji(player.repeatMode));
 
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
 	// 1행: 재생 제어(prev·pause·next·repeat·stop), 2행: 대기열 (Discord 한 행당 버튼 5개 제한)
-	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji(appEmoji('scroll', '📄'));
+	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji(emoji('scroll'));
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		[prevButton, pauseButton, nextButton, repeatButton, stopButton].map((e) => e.setStyle(ButtonStyle.Secondary))
@@ -143,17 +123,13 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
 	}
 
-	if (nextUpLines.length > 0) {
-		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
-	}
-
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
-	// N곡 · N 남음 안내는 하단 푸터 줄로 내린다.
-	const footerLines = [...buildFooterSegments(player, volume)];
+	// 하단 푸터 — 카드가 없을 때만 봇 이름/버전까지 표시 (카드가 있으면 브랜드는 이미지에 박혀 있다).
+	const footerLines = buildFooterSegments(player, volume, !nowPlayingCardUrl);
 	if (queueCount > 0) {
 		footerLines.unshift(
-			`${appEmoji('scroll', '📄')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
+			`${emoji('scroll')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
 		);
 	}
 
@@ -182,24 +158,24 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 		return contents;
 	}
 
-	contents.push(`-# ${appEmoji('music_note', '🎵')} <#${player.voiceChannelId}> 에서 ${player.paused ? '일시 정지' : '재생'} 중`);
-	contents.push(`### **[${removeEmojis(track.info.title)}](${track.info.uri})**`);
+	contents.push(`### **${removeEmojis(track.info.title)}**`);
+	contents.push(`-# 아티스트: ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
 
-	// 아티스트와 신청자는 요청대로 각각 별도 줄로 분리한다.
-	contents.push(`-# 아티스트: ${track.info.author}`);
+	// 신청자
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	if (requesterId) {
-		contents.push(requesterId === 'related_track' ? `-# 추천 곡 ${EMOJI_SPARKLE}` : `-# 신청자: <@${requesterId}>`);
+		contents.push(requesterId === 'related_track' ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
 	}
 
 	// 길이 표기 — 짧은 이모지 프로그레스바와 (지금시간 / 길이)을 함께 표시한다.
+	// 진행바는 카드 이미지에 박지 않아 이 라인이 playerUpdate마다 edit로 갱신되는 유일한 동적 라인이다.
 	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
 	if (track.info.isStream) {
-		contents.push(`(${durationText}) 실시간 스트리밍`);
+		contents.push(`-# (${durationText}) 실시간 스트리밍`);
 	} else {
 		const progressBar = emojiProgressBar((player.position ?? 0) / (track.info.duration || 1));
 		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText}) ${progressBar}`);
@@ -208,16 +184,25 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 	return contents;
 }
 
-export function buildFooterSegments(player: Player, volume?: number): string[] {
-	const segments = [];
-	segments.push(`-# ${appEmoji('radio_wave', '📡')} 재생 서버: ${player.node.id}`);
+/**
+ * 컨트롤러 하단 푸터 — 각 세그먼트가 `-#`(작은 글씨)로 시작해야 하나의 줄로 합쳐도
+ * 마크다운이 깨지지 않아요 (중간 세그먼트에만 `-#`를 넣으면 렌더가 깨져요).
+ * includeBrand=false면 브랜드(봇이름/버전)는 카드 이미지에 박혀 있으므로 생략해요.
+ */
+export function buildFooterSegments(player: Player, volume?: number, includeBrand = true): string[] {
+	const muted = (text: string) => `-# ${text}`;
+	const segments = [muted(`${emoji('radio_wave')} 재생 서버: ${player.node.id}`)];
 	if (volume !== undefined) {
-		segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
+		segments.push(muted(`${volumeToEmoji(volume)} 볼륨: ${volume}%`));
 	} else if (player.volume !== undefined) {
-		segments.push(`${volumeToEmoji(player.volume)} 볼륨: ${player.volume}%`);
+		segments.push(muted(`${volumeToEmoji(player.volume)} 볼륨: ${player.volume}%`));
 	}
-	segments.push(
-		`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
-	);
+	if (includeBrand) {
+		segments.push(
+			muted(
+				`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
+			)
+		);
+	}
 	return segments;
 }
