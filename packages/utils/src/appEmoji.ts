@@ -14,6 +14,8 @@ import { join } from 'node:path';
  *
  * - 앱 이모지는 봇이 보내는 메시지에서 USE_EXTERNAL_EMOJIS 없이 사용 가능
  * - API 조회도 실패하면(네트워크·권한) 유니코드 폴백 문자열을 반환
+ *   (빈 결과는 캐시하지 않아요 — 부팅 시점의 일시 장애가 프로세스 생애
+ *   전체를 폴백으로 고정하지 않게 다음 호출이 재시도하고, 30초 뒤 한 번만 예약 재시도해요)
  *
  * 사용 규칙:
  * - `e('name', fallback)` — 등록된 이름이면 `<:name:id>`, 아니면 폴백 유니코드.
@@ -132,6 +134,8 @@ export function emoji(name: string, fallback?: string): string {
 
 let cachedMap: EmojiIdMap | null = null;
 let loadPromise: Promise<EmojiIdMap> | null = null;
+/** 빈 결과일 때 30초 뒤 재시도를 한 번만 예약하기 위한 플래그 */
+let retryScheduled = false;
 
 /** JSON 매핑 파일 후보 경로 — 커밋된 canonical(레포 루트)과 런타임 각 CWD 기준 */
 function candidatePaths(): string[] {
@@ -172,7 +176,7 @@ export function configureAppEmojiFetcher(fetcher: AppEmojiFetcher): void {
 	apiFetcher = fetcher;
 }
 
-/** 매핑 로드 (최초 1회, 이후 캐시). 파일 실패 시 Discord API fetch로 폴백. */
+/** 매핑 로드 (성공 시 최초 1회, 이후 캐시). 파일 실패 시 Discord API fetch로 폴백. 빈 결과는 캐시하지 않고 30초 뒤 한 번만 재시도해요. */
 export async function ensureAppEmojisLoaded(): Promise<void> {
 	if (cachedMap) return;
 	loadPromise ??= (async () => {
@@ -190,5 +194,17 @@ export async function ensureAppEmojisLoaded(): Promise<void> {
 		}
 		return map;
 	})();
-	cachedMap = await loadPromise;
+
+	const map = await loadPromise;
+	if (Object.keys(map).length) {
+		cachedMap = map;
+		return;
+	}
+	// 빈 결과는 일시 장애일 수 있어 캐시하지 않아요 — 다음 호출이 재시도하게 loadPromise만 리셋
+	loadPromise = null;
+	// clientReady에서 사실상 1회만 호출돼 다음 호출이 없을 수 있으니, 30초 뒤 재시도를 한 번만 예약해요
+	if (!retryScheduled) {
+		retryScheduled = true;
+		setTimeout(() => void ensureAppEmojisLoaded(), 30_000).unref?.();
+	}
 }
