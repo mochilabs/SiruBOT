@@ -250,6 +250,7 @@ export function composeService(spec, references) {
 				throw new Error('특수 bind 설정은 지원하지 않습니다.');
 			result.bind = { propagation: mount.BindOptions.Propagation };
 		} else if (mount.Type === 'tmpfs' && mount.TmpfsOptions) {
+			supported(mount.TmpfsOptions, ['SizeBytes', 'Mode'], `${spec.Name}/TmpfsOptions`);
 			result.tmpfs = {
 				size: mount.TmpfsOptions.SizeBytes,
 				mode: mount.TmpfsOptions.Mode

@@ -538,3 +538,25 @@ test('both app and infra schemas are checked before any update with --with-infra
 		}
 	}
 });
+test('tmpfs security flags stop normal deploy and dry-run before snapshots or updates', async () => {
+	for (const dryRun of [false, true]) {
+		const f = fixture();
+		try {
+			f.items.bot.Spec.TaskTemplate.ContainerSpec.Mounts = [
+				{ Type: 'tmpfs', Target: '/scratch', TmpfsOptions: { Options: [['noexec'], ['nosuid']] } }
+			];
+			await assert.rejects(
+				main(['--config', f.configPath, ...(dryRun ? ['--dry-run'] : [])], f.run, () => {}),
+				/TmpfsOptions.*Options/
+			);
+			assert.equal(
+				f.calls.some((call) => call.args[0] === 'stack' && call.args[1] === 'deploy'),
+				false
+			);
+			assert.equal(existsSync(join(f.dir, 'state/previous.json')), false);
+			assert.equal(existsSync(join(f.dir, 'state/pending.json')), false);
+		} finally {
+			f.cleanup();
+		}
+	}
+});

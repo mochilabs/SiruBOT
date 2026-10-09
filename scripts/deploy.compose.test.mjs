@@ -67,3 +67,14 @@ test('Docker legacy schema rejects the properties previously generated for Group
 		)
 	);
 });
+test('tmpfs mount options cannot be silently discarded while size and mode remain supported', () => {
+	for (const options of [[['noexec']], [['nosuid']], [['size', '65536k']], [['noexec'], ['nosuid']]]) {
+		const spec = service({ Mounts: [{ Type: 'tmpfs', Target: '/scratch', TmpfsOptions: { SizeBytes: 65536, Mode: 0o700, Options: options } }] });
+		assert.throws(() => composeService(spec, references), /TmpfsOptions.*Options/);
+	}
+	const compose = composeService(
+		service({ Mounts: [{ Type: 'tmpfs', Target: '/scratch', TmpfsOptions: { SizeBytes: 65536, Mode: 0o700, Options: [] } }] }),
+		references
+	);
+	assert.deepEqual(compose.volumes[0].tmpfs, { size: 65536, mode: 0o700 });
+});
