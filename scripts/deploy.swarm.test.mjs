@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { containerFingerprint, main, waitForServices } from './deploy.mjs';
+import { containerFingerprint, fingerprint, main, waitForServices } from './deploy.mjs';
 import { APPS } from './deployment-manifest.mjs';
 
 const manager = process.env.SIRUBOT_SWARM_TEST_MANAGER;
@@ -119,6 +119,8 @@ test(
 						`const f=require('fs');if(!f.existsSync('/data/marker'))f.writeFileSync('/data/marker','original-${app}');setInterval(()=>{},1000);process.once('SIGTERM',()=>process.exit(0))`
 					],
 					environment: { PGDATA: '/data' },
+					// Keep the old task alive until a start-first replacement is healthy.
+					healthcheck: { test: ['CMD', 'node', '-e', 'process.exit(0)'], interval: '3s', timeout: '3s', start_period: '1s', retries: 3 },
 					volumes: [{ type: 'volume', source: app, target: '/data' }],
 					networks: ['shared'],
 					deploy: { replicas: 1, placement: { constraints: ['node.role == worker'] } }
@@ -129,6 +131,21 @@ test(
 			Object.fromEntries(
 				APPS.map((app) => [app, docker('docker', ['service', 'ps', '-q', '--filter', 'desired-state=running', `${appStack}_${app}`])])
 			);
+		const waitForState = async (name, state) => {
+			const deadline = Date.now() + settings.timeoutSeconds * 1000;
+			while (Date.now() < deadline) {
+				const service = JSON.parse(docker('docker', ['service', 'inspect', name]))[0];
+				if (service.UpdateStatus?.State === state) return service;
+				await new Promise((done) => setTimeout(done, 500));
+			}
+			assert.fail(`${name}: expected ${state}`);
+		};
+		const waitForRollback = async (name) => {
+			const service = await waitForState(name, 'rollback_completed');
+			await waitForServices([name], settings, docker, Date.now, (ms) => new Promise((done) => setTimeout(done, ms)), {
+				[name]: fingerprint(service.Spec)
+			});
+		};
 		const logs = [];
 		try {
 			docker('docker', ['network', 'create', '--driver', 'overlay', '--attachable', network]);
@@ -278,6 +295,80 @@ test(
 			const deployed = JSON.parse(docker('docker', ['service', 'inspect', `${appStack}_bot`]))[0];
 			assert.deepEqual(deployed.Spec.TaskTemplate.Placement.Platforms, platforms);
 			assert.ok(deployed.Spec.TaskTemplate.ContainerSpec.Env.includes('FAIL_START=false'));
+			console.log('Current-attempt rollback remains a failure; checking historical rollback and stale data-task preflight');
+			const dashboardName = `${appStack}_dashboard`;
+			docker('docker', ['service', 'update', '--detach', '--no-resolve-image', '--env-add', 'FAIL_START=true', dashboardName]);
+			await waitForRollback(dashboardName);
+			const historicalIds = ids();
+			await main(
+				['--config', configPath],
+				docker,
+				() => {},
+				() => manifest
+			);
+			assert.deepEqual(ids(), historicalIds);
+			writeFileSync(configPath, JSON.stringify({ ...settings, botShardManagerUrl: 'ws://shardmanager:3001/updated/ws' }));
+			await main(
+				['--config', configPath],
+				docker,
+				() => {},
+				() => manifest
+			);
+			assert.equal(ids().dashboard, historicalIds.dashboard);
+			assert.equal(JSON.parse(docker('docker', ['service', 'inspect', dashboardName]))[0].UpdateStatus.State, 'rollback_completed');
+			const redisName = `${infraStack}_redis`;
+			docker('docker', [
+				'service',
+				'update',
+				'--detach',
+				'--no-resolve-image',
+				'--update-order',
+				'start-first',
+				'--update-failure-action',
+				'pause',
+				'--update-monitor',
+				'5s',
+				'--env-add',
+				'PGDATA=/data/new',
+				'--args',
+				'-e process.exit(1)',
+				redisName
+			]);
+			await waitForState(redisName, 'paused');
+			const pausedService = JSON.parse(docker('docker', ['service', 'inspect', redisName]))[0];
+			const pausedIds = docker('docker', ['service', 'ps', '-q', '--filter', 'desired-state=running', pausedService.ID]).split('\n').filter(Boolean);
+			const oldTasks = JSON.parse(docker('docker', ['inspect', '--type', 'task', ...pausedIds])).filter((task) => task.Status.State === 'running');
+			assert.equal(oldTasks.length, 1, 'the start-first failure must retain the old running data task');
+			assert.ok(oldTasks[0].Spec.ContainerSpec.Env.includes('PGDATA=/data'));
+			assert.ok(pausedService.Spec.TaskTemplate.ContainerSpec.Env.includes('PGDATA=/data/new'));
+			await assert.rejects(
+				main(
+					['--config', configPath, '--with-infra', '--dry-run'],
+					docker,
+					() => {},
+					() => manifest
+				),
+				/컨테이너 설정/
+			);
+			docker('docker', ['service', 'rollback', '--detach', redisName]);
+			await waitForRollback(redisName);
+			const beforeInfraRetry = ids();
+			await main(
+				['--config', configPath, '--with-infra'],
+				docker,
+				() => {},
+				() => manifest
+			);
+			assert.deepEqual(ids(), beforeInfraRetry);
+			const redisContainer = execFileSync(
+				'docker',
+				['exec', worker, 'docker', 'ps', '-q', '--filter', `label=com.docker.swarm.service.name=${redisName}`],
+				{ encoding: 'utf8' }
+			).trim();
+			assert.equal(
+				execFileSync('docker', ['exec', worker, 'docker', 'exec', redisContainer, 'cat', '/data/marker'], { encoding: 'utf8' }).trim(),
+				'original-redis'
+			);
 		} finally {
 			for (const stack of [appStack, infraStack]) {
 				try {

@@ -8,6 +8,7 @@ import {
 	options,
 	environments,
 	composeService,
+	containerFingerprint,
 	platformUpdatePlan,
 	fingerprint,
 	escapeInterpolation,
@@ -143,6 +144,15 @@ test('unsupported settings fail before data can be lost', () => {
 test('tag with same digest and reordered keys compare equal', () => {
 	assert.equal(fingerprint({ image: `repo:beta@${digest}`, env: { A: 1, B: 2 } }), fingerprint({ env: { B: 2, A: 1 }, image: `repo@${digest}` }));
 });
+test('container matching normalizes only the omitted default grace timeout while preserving explicit zero', () => {
+	const original = service('postgres').Spec.TaskTemplate.ContainerSpec;
+	const missing = { ...original };
+	delete missing.StopGracePeriod;
+	assert.equal(containerFingerprint(missing), containerFingerprint({ ...missing, StopGracePeriod: 10e9 }));
+	assert.equal(containerFingerprint({ ...missing, StopGracePeriod: null }), containerFingerprint(missing));
+	assert.notEqual(containerFingerprint({ ...missing, StopGracePeriod: 0 }), containerFingerprint(missing));
+	assert.notEqual(containerFingerprint(original), containerFingerprint(missing));
+});
 test('local lock is exclusive and released', () => {
 	const dir = mkdtempSync(join(tmpdir(), 'sirubot-lock-test-'));
 	try {
@@ -177,6 +187,17 @@ test('completed automatic rollback is accepted only for the matching saved spec 
 	stale[0].Spec.ContainerSpec.Env = ['KEEP=failed-update'];
 	assert.equal(taskSummary(item, stale, targets).ready, false);
 	item.Spec.TaskTemplate.ContainerSpec.Env = ['KEEP=different-target'];
+	assert.equal(taskSummary(item, tasks(item), targets).failed, true);
+});
+test('a prior rollback target accepts only the original status and matching live container configuration', () => {
+	const item = service('bot');
+	item.UpdateStatus = { State: 'rollback_completed', CompletedAt: 'earlier' };
+	const targets = { [item.Spec.Name]: { spec: fingerprint(item.Spec), updateStatus: fingerprint(item.UpdateStatus) } };
+	assert.equal(taskSummary(item, tasks(item), targets).ready, true);
+	const stale = tasks(item);
+	stale[0].Spec.ContainerSpec.Env = ['KEEP=stale'];
+	assert.equal(taskSummary(item, stale, targets).ready, false);
+	item.UpdateStatus.CompletedAt = 'later';
 	assert.equal(taskSummary(item, tasks(item), targets).failed, true);
 });
 test('convergence has a bounded timeout and requires stable task IDs', async () => {
@@ -457,11 +478,13 @@ test('infra accepts full matching task configuration with equivalent digest tags
 	const f = fixture();
 	try {
 		addInfrastructure(f);
+		for (const app of ['redis', 'postgres']) f.items[app].Spec.TaskTemplate.ContainerSpec.StopGracePeriod = 10e9;
 		const run = (program, args, opts) => {
 			const result = f.run(program, args, opts);
 			if (args[0] !== 'inspect') return result;
 			const running = JSON.parse(result);
 			for (const task of running) {
+				delete task.Spec.ContainerSpec.StopGracePeriod;
 				task.Spec.ContainerSpec.DNSConfig = { Nameservers: [], Search: [], Options: [] };
 				task.Spec.ContainerSpec.Image = task.Spec.ContainerSpec.Image.replace(':beta@', '@');
 			}
@@ -616,6 +639,69 @@ test('manual rollback after Swarm automatic recovery clears pending state and un
 		f.cleanup();
 	}
 });
+test('normal no-op and partial deployment accept unchanged services with an older completed rollback', async () => {
+	for (const partial of [false, true]) {
+		const f = fixture();
+		try {
+			await main(['--config', f.configPath], f.run, () => {});
+			for (const app of ['dashboard', 'shardmanager']) f.items[app].UpdateStatus = { State: 'rollback_completed', CompletedAt: 'earlier' };
+			if (partial) f.manifest.images.bot = `ghcr.io/mochilabs/sirubot-bot@sha256:${'c'.repeat(64)}`;
+			const count = f.calls.length;
+			await main(['--config', f.configPath], f.run, () => {});
+			const applied = f.calls.slice(count).filter((c) => c.args[0] === 'stack' && c.args[1] === 'deploy');
+			assert.equal(applied.length, partial ? 1 : 0);
+			if (partial) assert.deepEqual(Object.keys(JSON.parse(applied[0].opts.input).services), ['bot']);
+			for (const app of ['dashboard', 'shardmanager']) assert.equal(f.items[app].UpdateStatus.State, 'rollback_completed');
+		} finally {
+			f.cleanup();
+		}
+	}
+});
+test('infra accepts an older rollback when unchanged or when only another data service needs pinning', async () => {
+	for (const pinPostgres of [false, true]) {
+		const f = fixture();
+		try {
+			await main(['--config', f.configPath], f.run, () => {});
+			addInfrastructure(f, true);
+			f.items.redis.UpdateStatus = { State: 'rollback_completed', CompletedAt: 'earlier' };
+			if (pinPostgres) f.items.postgres.Spec.TaskTemplate.Placement.Constraints.pop();
+			const count = f.calls.length;
+			await main(['--config', f.configPath, '--with-infra'], f.run, () => {});
+			const applied = f.calls.slice(count).filter((c) => c.args[0] === 'stack' && c.args[1] === 'deploy');
+			assert.equal(applied.length, pinPostgres ? 1 : 0);
+			if (pinPostgres) assert.deepEqual(Object.keys(JSON.parse(applied[0].opts.input).services), ['postgres']);
+			assert.equal(f.items.redis.UpdateStatus.State, 'rollback_completed');
+		} finally {
+			f.cleanup();
+		}
+	}
+});
+for (const infra of [false, true]) {
+	test(`a rollback caused by the current deployment is still rejected (infra: ${infra})`, async () => {
+		const f = fixture();
+		try {
+			if (infra) addInfrastructure(f);
+			const item = f.items[infra ? 'redis' : 'bot'];
+			item.UpdateStatus = { State: 'rollback_completed', CompletedAt: 'earlier' };
+			const original = structuredClone(item.Spec);
+			const run = (program, args, opts) => {
+				const result = f.run(program, args, opts);
+				if (args[0] === 'stack' && args[1] === 'deploy' && args.at(-1) === (infra ? 'infra' : 'test')) {
+					item.Spec = structuredClone(original);
+					item.UpdateStatus = { State: 'rollback_completed', CompletedAt: 'later' };
+				}
+				return result;
+			};
+			await assert.rejects(
+				main(['--config', f.configPath, ...(infra ? ['--with-infra'] : [])], run, () => {}),
+				/업데이트 중단/
+			);
+			assert.equal(existsSync(join(f.dir, 'state/pending.json')), true);
+		} finally {
+			f.cleanup();
+		}
+	});
+}
 
 test('unsupported groups and DNS options stop before deployment or rollback snapshot writes', async () => {
 	for (const fields of [{ Groups: ['1001'] }, { DNSConfig: { Options: ['ndots:2'] } }]) {

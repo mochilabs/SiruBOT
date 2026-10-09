@@ -378,6 +378,9 @@ export const fingerprint = (value) =>
 		.digest('hex');
 export function containerFingerprint(value) {
 	const spec = { ...value };
+	// Swarm may omit the default timeout from tasks while service inspect emits it.
+	// Explicit zero and other timeouts must remain distinct.
+	spec.StopGracePeriod ??= 10e9;
 	const dns = Object.fromEntries(Object.entries(spec.DNSConfig ?? {}).filter(([, item]) => !empty(item)));
 	if (Object.keys(dns).length) spec.DNSConfig = dns;
 	else delete spec.DNSConfig;
@@ -496,10 +499,12 @@ function preparePlatformUpdates(current, before, desired, savedPlatforms) {
 		const platforms = service.Spec.TaskTemplate.Placement?.Platforms ?? [];
 		if (savedPlatforms && fingerprint(platforms) !== fingerprint(savedPlatforms[app] ?? []))
 			throw new Error(`${service.Spec.Name}: 저장된 Platforms와 현재 제한이 달라 자동 복원할 수 없습니다.`);
+		if (fingerprint(before.services[app]) === fingerprint(desired.services[app])) {
+			plans[app] = null;
+			continue;
+		}
 		if (!platforms.length) continue;
-		const plan = platformUpdatePlan(before.services[app], desired.services[app], service.Spec.Name);
-		if (fingerprint(before.services[app]) !== fingerprint(desired.services[app])) plans[app] = plan;
-		else plans[app] = null;
+		plans[app] = platformUpdatePlan(before.services[app], desired.services[app], service.Spec.Name);
 	}
 	return plans;
 }
@@ -511,9 +516,24 @@ function applyStack(stack, name, plans, run) {
 	for (const plan of Object.values(plans)) if (plan) run('docker', plan.args, { env: { ...process.env, ...plan.env } });
 }
 
+function priorRollbackTargets(current, before, desired) {
+	return Object.fromEntries(
+		Object.entries(current)
+			.filter(
+				([app, service]) =>
+					service.UpdateStatus?.State === 'rollback_completed' && fingerprint(before.services[app]) === fingerprint(desired.services[app])
+			)
+			.map(([, service]) => [service.Spec.Name, { spec: fingerprint(service.Spec), updateStatus: fingerprint(service.UpdateStatus) }])
+	);
+}
+
 export function taskSummary(service, tasks, rollbackTargets = {}) {
 	const update = service.UpdateStatus?.State;
-	const restored = update === 'rollback_completed' && rollbackTargets[service.Spec.Name] === fingerprint(service.Spec);
+	const target = rollbackTargets[service.Spec.Name];
+	const restored =
+		update === 'rollback_completed' &&
+		(typeof target === 'string' ? target : target?.spec) === fingerprint(service.Spec) &&
+		(typeof target === 'string' || target?.updateStatus === fingerprint(service.UpdateStatus));
 	const active = tasks.filter((task) => task.DesiredState === 'running');
 	const running = active.filter(
 		(task) =>
@@ -745,6 +765,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		}
 		let infra;
 		let infraPlans = {};
+		let infraRollbackTargets = {};
 		let infraChanged = false;
 		if (opts.withInfra) {
 			if (!config.infraStack) throw new Error('--with-infra에는 기존 infraStack 설정이 필요합니다.');
@@ -755,6 +776,7 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			protectInfra(existing, infra, run);
 			infraChanged = fingerprint(infra) !== originalHash;
 			infraPlans = preparePlatformUpdates(existing, beforeInfra, infra);
+			infraRollbackTargets = priorRollbackTargets(existing, beforeInfra, infra);
 			for (const service of Object.values(infra.services)) {
 				run('docker', ['manifest', 'inspect', service.image]);
 				sensitive.push(...Object.values(service.environment));
@@ -765,12 +787,14 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 		validateStack(desired, config.appStack, run);
 		if (infra) validateStack(infra, config.infraStack, run);
 		const changed = APPS.filter((app) => fingerprint(before.services[app]) !== fingerprint(desired.services[app]));
-		// Only a manual rollback whose saved target already matches the live spec may
-		// acknowledge a completed automatic rollback without updating the service again.
-		const rollbackTargets =
-			opts.action === 'rollback'
+		// An unchanged historical rollback must retain its original spec and status.
+		// Manual rollback can also acknowledge the matching saved recovery target.
+		const rollbackTargets = {
+			...priorRollbackTargets(current, before, desired),
+			...(opts.action === 'rollback'
 				? Object.fromEntries(APPS.filter((app) => !changed.includes(app)).map((app) => [current[app].Spec.Name, fingerprint(current[app].Spec)]))
-				: {};
+				: {})
+		};
 		let pending;
 		try {
 			pending = JSON.parse(readFileSync(join(config.stateDir, 'pending.json'), 'utf8'));
@@ -808,7 +832,10 @@ export async function main(argv = process.argv.slice(2), run = command, log = co
 			await waitForServices(
 				['redis', 'postgres'].map((app) => `${config.infraStack}_${app}`),
 				config,
-				run
+				run,
+				Date.now,
+				sleep,
+				infraRollbackTargets
 			);
 		}
 		diagnosticTarget = { stack: config.appStack, apps: APPS };
