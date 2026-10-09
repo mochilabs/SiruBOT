@@ -8,6 +8,7 @@ import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
+import { guildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -112,10 +113,11 @@ export const main = async () => {
 			}
 		}
 
-		// 2. Audio listeners 정리
+		// 2. Audio listeners 정리 (+ 설정 무효화 구독 해제 — redis disconnect 전에)
 		if (container.audio) {
 			container.audio.removeAllListeners();
 		}
+		await guildSettingsInvalidator.stop().catch(() => null);
 
 		// 3. Redis disconnect (session 저장 후!)
 		if (container.redisStore) {
@@ -161,6 +163,10 @@ export const main = async () => {
 
 		client.logger.debug('Setting up redis store manager... (optional)');
 		await client.setupRedis(envParseString('REDIS_URL'));
+
+		// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
+		// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
+		await guildSettingsInvalidator.start(envParseString('REDIS_URL'), container.guildService);
 
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));

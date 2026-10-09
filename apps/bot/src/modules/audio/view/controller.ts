@@ -1,4 +1,5 @@
 import {
+	emoji,
 	emojiProgressBar,
 	createContainer,
 	formatTime,

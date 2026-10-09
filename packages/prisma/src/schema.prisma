@@ -26,6 +26,8 @@ model Guild {
   // 고정 채널: 이 채널의 입력 텍스트를 검색어로 재생. mode: "play"(즉시 재생) | "select"(5개 선택)
   pinnedChannelId   String?
   pinnedChannelMode String  @default("play")
+  // 고정 채널 입력 메시지를 봇이 처리한 뒤 삭제할지 (Manage Messages 권한 필요)
+  pinnedChannelDeleteInput Boolean @default(false)
   // 임시 음성채널(JTC): 마커 채널 입장 시 방 생성. template의 {user}는 방장 이름으로 치환
   jtcEnabled         Boolean @default(false)
   jtcCategoryId      String?
