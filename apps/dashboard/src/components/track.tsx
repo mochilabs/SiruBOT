@@ -256,7 +256,7 @@ export const TrackItem = memo(function TrackItem({
 			<div className="flex items-center gap-3 sm:gap-4 pr-1 sm:pr-2 shrink-0">
 				<div className="text-right">
 					<p className="text-base sm:text-lg font-black text-primary-text leading-none">{track.totalPlays.toLocaleString()}</p>
-					<p className="hidden sm:block mt-1 text-xs uppercase tracking-wider text-muted-foreground font-bold">Total Plays</p>
+					<p className="hidden sm:block mt-1 text-xs text-muted-foreground font-bold">총 재생</p>
 				</div>
 
 				{onToggleFavorite && (
@@ -302,7 +302,7 @@ export function Track({ track }: { track: TrackType }) {
 				<p className="truncate text-sm font-normal text-muted-foreground" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="text-sm font-medium text-primary-text">{track.totalPlays.toLocaleString()} plays</p>
+				<p className="text-sm font-medium text-primary-text">{track.totalPlays.toLocaleString()}회 재생</p>
 			</div>
 		</div>
 	);

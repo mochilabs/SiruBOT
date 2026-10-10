@@ -26,12 +26,12 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<h3 className="line-clamp-1 text-lg font-black tracking-tight text-foreground">{guild.name}</h3>
 						<div className="flex items-center gap-1 mt-0.5">
 							{guild.isInstalled ? (
-								<div className="flex items-center gap-1 text-xs font-bold text-primary-text uppercase tracking-widest">
+								<div className="flex items-center gap-1 text-xs font-bold text-primary-text">
 									<ShieldCheck size={10} />
 									<span>이미 시루봇이 있어요</span>
 								</div>
 							) : (
-								<span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">아직 시루봇이 없어요</span>
+								<span className="text-xs font-bold text-muted-foreground">아직 시루봇이 없어요</span>
 							)}
 						</div>
 					</div>
@@ -43,7 +43,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<div className="flex w-full gap-2 mt-auto">
 						<Link
 							href={`/servers/${guild.id}`}
-							className="flex items-center w-full justify-center gap-2 rounded-control border border-primary/20 bg-primary/10 py-3.5 text-sm font-bold text-primary-text hover:bg-primary hover:text-primary-foreground transition-colors duration-base"
+							className="flex items-center w-full justify-center gap-2 rounded-control border border-primary/20 bg-primary/10 py-3.5 text-sm font-bold text-primary-text hover:bg-primary-control hover:text-primary-foreground transition-colors duration-base"
 						>
 							<Settings2 size={18} />
 							관리하기
@@ -65,9 +65,9 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						음악 컨트롤러
 					</Link>
 				)
-			) : (
+			) : inviteUrl ? (
 				<a
-					href={inviteUrl || "#"}
+					href={inviteUrl}
 					target="_blank"
 					rel="noopener noreferrer"
 					className="mt-auto flex items-center justify-center gap-2 rounded-control border border-border bg-surface-2 py-3.5 text-sm font-bold text-foreground hover:bg-surface-3 hover:border-border-strong transition-colors duration-base"
@@ -76,6 +76,16 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					초대하기
 					<ExternalLink size={14} className="opacity-40" />
 				</a>
+			) : (
+				// 초대 링크를 만들 수 없는 서버(R-26) — "#" 데드 링크 대신 비활성 표시
+				<button
+					type="button"
+					disabled
+					className="mt-auto flex items-center justify-center gap-2 rounded-control border border-border bg-surface-2 py-3.5 text-sm font-bold text-muted-foreground cursor-not-allowed"
+				>
+					<UserPlus size={18} />
+					초대 링크가 없어요
+				</button>
 			)}
 		</Card>
 	);

@@ -25,7 +25,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 	const content = ERROR_MESSAGES[error ?? "default"] ?? ERROR_MESSAGES.default;
 
 	return (
-		<main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
+		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* 거대 배경 텍스트 */}
 			<div className="absolute inset-0 -z-10 flex items-center justify-center">
 				<span className="select-none whitespace-nowrap text-[10rem] font-black tracking-tighter text-destructive/5 sm:text-[16rem] md:text-[22rem]">
@@ -52,7 +52,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 					<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
 						<Link
 							href="/login"
-							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-primary px-6 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary/90 sm:w-auto"
+							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-primary-control px-6 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover sm:w-auto"
 						>
 							<RefreshCw className="h-4 w-4" aria-hidden />
 							다시 로그인하기

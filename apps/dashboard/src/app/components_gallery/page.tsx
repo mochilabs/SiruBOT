@@ -131,7 +131,7 @@ function Showcase({ children, className = "" }: { children: React.ReactNode; cla
 function ShowcaseRow({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
 		<div className="space-y-3">
-			<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">
+			<p className="text-xs font-black text-muted-foreground">
 				{label}
 			</p>
 			<div className="flex flex-wrap items-center gap-3">
@@ -709,7 +709,7 @@ export default function ComponentsGalleryPage() {
 						<Showcase>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="space-y-2">
-									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">단일 선택</p>
+									<p className="text-xs font-black text-muted-foreground">단일 선택</p>
 									<Select
 										options={selectOptions}
 										value={selectVal}
@@ -719,7 +719,7 @@ export default function ComponentsGalleryPage() {
 									/>
 								</div>
 								<div className="space-y-2">
-									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">다중 선택</p>
+									<p className="text-xs font-black text-muted-foreground">다중 선택</p>
 									<Select
 										options={selectOptions}
 										value={multiSelectVal}
@@ -782,8 +782,12 @@ export default function ComponentsGalleryPage() {
 						</Showcase>
 
 						{/* ════════════ STAT CARD ════════════ */}
-						<SectionHeader id="stat-card" title="StatCard" description="메트릭 카드 (아이콘, 값, 트렌드)" />
+						<SectionHeader id="stat-card" title="StatCard" description="메트릭 카드 (아이콘, 값, 트렌드) · 아래 값은 예시 데이터예요" />
 						<Showcase>
+							<div className="flex items-center gap-2 mb-4">
+								<Badge size="sm">예시</Badge>
+								<p className="text-xs font-medium text-muted-foreground">이 값들은 실제 측정이 아닌 컴포넌트 데모예요.</p>
+							</div>
 							<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 								<StatCard icon={Server} label="서버" value="1,234" sub="전체 서버 수" trend="up" trendValue="+12%" />
 								<StatCard icon={RadioTower} label="재생 중" value="89" sub="현재 재생" trend="down" trendValue="-3%" />
@@ -810,13 +814,13 @@ export default function ComponentsGalleryPage() {
 						<Showcase>
 							<EmbedPreview
 								embed={{
-									color: "#ff85c1",
+									color: "var(--primary)",
 									author: { name: "시루" },
 									title: "지금 재생 중",
 									titleUrl: "#",
 									description: "Blinding Lights · The Weeknd",
 									fields: [
-										{ name: "요청자", value: "User#1234", inline: true },
+										{ name: "요청자", value: "@음악러버", inline: true },
 										{ name: "길이", value: "3:22", inline: true },
 										{ name: "대기열", value: "4곡", inline: true },
 									],
@@ -837,7 +841,7 @@ export default function ComponentsGalleryPage() {
 									<div className="mt-2">
 										<EmbedPreview
 											embed={{
-												color: "#ff85c1",
+												color: "var(--primary)",
 												title: "Blinding Lights",
 												description: "The Weeknd · After Hours · 2020",
 												footer: { text: "3:22 · 대기열 4곡" },

@@ -10,14 +10,14 @@ const updatePlaylistSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "플레이리스트 이름을 입력해주세요.")
-    .max(50, "이름은 최대 50자까지 입력 가능합니다."),
+    .min(1, "플레이리스트 이름을 입력해 주세요.")
+    .max(50, "이름은 최대 50자까지 입력할 수 있어요."),
   description: z
     .string()
     .trim()
     .max(
       MAX_PLAYLIST_DESCRIPTION_LENGTH,
-      `설명은 최대 ${MAX_PLAYLIST_DESCRIPTION_LENGTH}자까지 입력 가능합니다.`,
+      `설명은 최대 ${MAX_PLAYLIST_DESCRIPTION_LENGTH}자까지 입력할 수 있어요.`,
     )
     .nullish()
     .transform((value) => (value ? value : null)),
@@ -43,7 +43,7 @@ export async function GET(
 
     if (!playlist) {
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없습니다." },
+        { error: "플레이리스트를 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -71,7 +71,7 @@ export async function GET(
   } catch (error) {
     console.error("Failed to fetch playlist details:", error);
     return NextResponse.json(
-      { error: "플레이리스트 정보를 불러오지 못했습니다." },
+      { error: "플레이리스트 정보를 불러오지 못했어요." },
       { status: 500 },
     );
   }
@@ -103,7 +103,7 @@ export async function PATCH(
 
     if (!playlist) {
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없습니다." },
+        { error: "플레이리스트를 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -111,7 +111,7 @@ export async function PATCH(
     if (playlist.name === "즐겨찾기") {
       return NextResponse.json(
         {
-          error: "기본 제공되는 '즐겨찾기' 플레이리스트는 수정할 수 없습니다.",
+          error: "기본 제공되는 '즐겨찾기' 플레이리스트는 수정할 수 없어요.",
         },
         { status: 400 },
       );
@@ -123,7 +123,7 @@ export async function PATCH(
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       return NextResponse.json(
-        { error: issue?.message ?? "잘못된 요청입니다." },
+        { error: issue?.message ?? "요청 형식이 올바르지 않아요." },
         { status: 400 },
       );
     }
@@ -133,7 +133,7 @@ export async function PATCH(
 
     if (name === "즐겨찾기") {
       return NextResponse.json(
-        { error: '"즐겨찾기"라는 이름의 플레이리스트는 사용할 수 없습니다.' },
+        { error: '"즐겨찾기"라는 이름의 플레이리스트는 사용할 수 없어요.' },
         { status: 400 },
       );
     }
@@ -145,7 +145,7 @@ export async function PATCH(
       });
       if (existing) {
         return NextResponse.json(
-          { error: "이미 동일한 이름의 플레이리스트가 존재합니다." },
+        { error: "이미 같은 이름의 플레이리스트가 있어요." },
           { status: 400 },
         );
       }
@@ -160,7 +160,7 @@ export async function PATCH(
   } catch (error) {
     console.error("Failed to update playlist:", error);
     return NextResponse.json(
-      { error: "플레이리스트 수정에 실패했습니다." },
+      { error: "플레이리스트 수정에 실패했어요." },
       { status: 500 },
     );
   }
@@ -192,7 +192,7 @@ export async function DELETE(
 
     if (!playlist) {
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없습니다." },
+        { error: "플레이리스트를 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -200,7 +200,7 @@ export async function DELETE(
     if (playlist.name === "즐겨찾기") {
       return NextResponse.json(
         {
-          error: "기본 제공되는 '즐겨찾기' 플레이리스트는 삭제할 수 없습니다.",
+          error: "기본 제공되는 '즐겨찾기' 플레이리스트는 삭제할 수 없어요.",
         },
         { status: 400 },
       );
@@ -214,7 +214,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Failed to delete playlist:", error);
     return NextResponse.json(
-      { error: "플레이리스트 삭제에 실패했습니다." },
+      { error: "플레이리스트 삭제에 실패했어요." },
       { status: 500 },
     );
   }

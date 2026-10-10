@@ -59,7 +59,7 @@ export function Footer() {
 					<div className="grid grid-cols-3 gap-4 sm:gap-6 md:col-span-3">
 						{linkGroups.map((group) => (
 							<nav key={group.title} aria-label={group.title} className="space-y-3 md:space-y-4">
-								<h3 className="text-2xs font-black uppercase tracking-widest text-muted-foreground md:text-xs">{group.title}</h3>
+								<h3 className="text-2xs font-black text-muted-foreground md:text-xs">{group.title}</h3>
 								<ul className="space-y-2 md:space-y-3">
 									{group.links.map((link) =>
 										link.internal ? (
@@ -84,7 +84,8 @@ export function Footer() {
 
 				<div className="mt-12 flex flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
 					<p className="text-xs font-medium text-muted-foreground">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
-					<p className="text-xs font-medium text-muted-foreground">28K+ 서버에서 사용 중</p>
+					{/* 실측 불가한 "28K+" 통계 제거(R-17) — 수치 대신 제공 범위를 안내 */}
+					<p className="text-xs font-medium text-muted-foreground">음악·AI 채팅·서버 관리를 한 곳에서 제공해요</p>
 				</div>
 			</div>
 		</footer>

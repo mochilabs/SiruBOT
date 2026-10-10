@@ -56,7 +56,7 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 			transition={{ type: "spring", stiffness: 400, damping: 30 }}
 			role="alert"
 			aria-live="polite"
-			className={`pointer-events-auto rounded-card border-l-4 bg-popover ${config.accentBorder} p-4 w-[380px] shadow-2xl`}
+			className={`pointer-events-auto rounded-card border-l-4 bg-popover ${config.accentBorder} p-4 w-[380px] max-w-[min(380px,calc(100vw-2rem))] shadow-2xl`}
 		>
 			<div className="flex items-start gap-3">
 				<Icon className={`h-5 w-5 shrink-0 mt-0.5 ${config.iconColor}`} />

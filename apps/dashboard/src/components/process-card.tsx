@@ -18,10 +18,10 @@ function formatUptime(secondsValue: number): string {
 
 function formatRelativeTime(timestamp: number): string {
 	const diff = Math.floor((Date.now() - timestamp) / 1000);
-	if (diff < 5) return "just now";
-	if (diff < 60) return `${diff}s ago`;
-	if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-	return `${Math.floor(diff / 3600)}h ago`;
+	if (diff < 5) return "방금 전";
+	if (diff < 60) return `${diff}초 전`;
+	if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+	return `${Math.floor(diff / 3600)}시간 전`;
 }
 
 function formatMemory(bytes: number): string {
@@ -63,7 +63,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					{ label: "운영 시간", value: formatUptime(process.uptime), icon: Clock3 },
 				].map((item, i) => (
 					<div key={i} className="rounded-xl border border-border-subtle bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
-						<div className="flex items-center gap-2 text-muted-foreground font-black text-xs tracking-widest">
+						<div className="flex items-center gap-2 text-muted-foreground font-black text-xs">
 							<item.icon size={12} />
 							{item.label}
 						</div>
@@ -74,7 +74,6 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 
 			<div className="pt-2 flex items-center justify-between text-sm font-medium text-muted-foreground border-t border-border">
 				<div className="flex items-center gap-2">
-					<span className="w-2 h-2 rounded-full bg-primary/40 animate-pulse" />
 					최근 업데이트: {formatRelativeTime(process.lastHeartbeat)}
 				</div>
 			</div>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Bot, CloudSun, Gamepad2, LayoutDashboard, ListMusic, Music2, Pause, Play, Repeat, SkipForward } from "lucide-react";
+import { Bot, Brain, CloudSun, LayoutDashboard, ListMusic, Music2, Pause, Play, Repeat, SkipForward } from "lucide-react";
 
 import { buttonVariants } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
@@ -14,7 +14,7 @@ import { TypingText } from "@/components/typing-text";
 import { cn } from "@/lib/utils";
 
 const secondaryLink =
-	"inline-flex h-8 cursor-pointer select-none items-center justify-center gap-2 self-start rounded-control border border-border-strong bg-surface-2 px-3 text-sm font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
+	"inline-flex h-8 pointer-coarse:min-h-11 cursor-pointer select-none items-center justify-center gap-2 self-start rounded-control border border-border-strong bg-surface-2 px-3 text-sm font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const TRACKS = [
 	{
@@ -49,7 +49,7 @@ const utilities = [
 		reply: "내일 서울은 이슬비 소식이 있고, 강수확률이 92%로 매우 높아요!",
 	},
 	{
-		icon: Gamepad2,
+		icon: Brain,
 		title: "장기 기억",
 		desc: "시루가 사용자님의 취향을 기억해요.",
 		prompt: "난 햄버거가 좋아 기억해줘",
@@ -540,7 +540,7 @@ export function FeaturesSection() {
 								<p className="truncate text-sm font-bold text-foreground">내 노래모음</p>
 								<p className="truncate text-xs text-muted-foreground">5곡 · 17분</p>
 							</div>
-							<span className="flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-control bg-primary px-2 text-2xs font-bold text-primary-foreground transition-colors hover:bg-primary/90">
+							<span className="flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-control bg-primary-control px-2 text-2xs font-bold text-primary-foreground transition-colors hover:bg-primary-control-hover">
 								<Play size={11} fill="currentColor" aria-hidden />
 								재생
 							</span>

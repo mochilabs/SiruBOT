@@ -43,7 +43,7 @@ export async function POST(
 
     if (!playlist) {
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없습니다." },
+        { error: "플레이리스트를 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -53,7 +53,7 @@ export async function POST(
     );
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "이동 경로 정보가 유효하지 않습니다." },
+        { error: "이동 경로 정보가 유효하지 않아요." },
         { status: 400 },
       );
     }
@@ -76,7 +76,7 @@ export async function POST(
 
     if (!targetTrack) {
       return NextResponse.json(
-        { error: "해당 위치의 곡을 찾을 수 없습니다." },
+        { error: "해당 위치의 곡을 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -85,7 +85,7 @@ export async function POST(
     const trackCount = await db.playlistTrack.count({ where: { playlistId } });
     if (destinationIndex >= trackCount) {
       return NextResponse.json(
-        { error: "이동 경로 정보가 유효하지 않습니다." },
+        { error: "이동 경로 정보가 유효하지 않아요." },
         { status: 400 },
       );
     }
@@ -130,7 +130,7 @@ export async function POST(
   } catch (error) {
     console.error("Failed to reorder tracks:", error);
     return NextResponse.json(
-      { error: "순서 변경에 실패했습니다." },
+      { error: "순서 변경에 실패했어요." },
       { status: 500 },
     );
   }

@@ -57,7 +57,7 @@ export function Badge({ variant = "default", size = "md", dot = false, dismissib
 	return (
 		<span className={cn(badgeVariants({ variant, size }), className)}>
 			{dot && (
-				<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-soft", dotTone(variant))} />
+				<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotTone(variant))} />
 			)}
 			{children}
 			{dismissible && (
@@ -110,10 +110,12 @@ const statusTone: Record<string, Tone> = {
 export function StatusBadge({ status }: { status: string }) {
 	const normalized = status.toUpperCase();
 	const tone: Tone = statusTone[normalized] ?? "destructive";
+	/* R-19: READY·IDLE·DISCONNECTED는 안정 상태라 정적. CONNECTING·ERRORED 같은 과도 상태만 깜빡여요. */
+	const isPulsing = normalized === "CONNECTING" || normalized === "ERRORED";
 
 	return (
-		<span className={cn("inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold", toneStyles[tone].badge)}>
-			<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-soft", toneStyles[tone].dot)} />
+		<span className={cn("inline-flex items-center gap-2 rounded-control px-2.5 py-1 text-xs font-semibold", toneStyles[tone].badge)}>
+			<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isPulsing && "animate-pulse-soft", toneStyles[tone].dot)} />
 			{normalized}
 		</span>
 	);

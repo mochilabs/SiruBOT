@@ -93,7 +93,7 @@ function Toast({
 			transition={{ type: "spring", stiffness: 400, damping: 30 }}
 			role="alert"
 			aria-live="polite"
-			className={`pointer-events-auto rounded-card border border-border bg-popover ${config.border} px-4 py-3 flex items-start gap-3 min-w-[320px] max-w-[420px] shadow-2xl`}
+			className={`pointer-events-auto rounded-card border border-border bg-popover ${config.border} px-4 py-3 flex items-start gap-3 min-w-[min(320px,calc(100vw-2rem))] max-w-[min(420px,calc(100vw-2rem))] shadow-2xl`}
 		>
 			<Icon className={`h-5 w-5 shrink-0 mt-0.5 ${config.iconColor}`} />
 

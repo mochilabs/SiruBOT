@@ -58,7 +58,7 @@ export default function NotFound() {
 	};
 
 	return (
-		<main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
+		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* 거대 배경 텍스트 */}
 			<div className="absolute inset-0 -z-10 flex items-center justify-center">
 				<span className="select-none text-[16rem] font-black tracking-tighter text-primary/5 sm:text-[24rem] md:text-[30rem]">
@@ -144,7 +144,7 @@ export default function NotFound() {
 							<m.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
 								<Link
 									href="/"
-									className="inline-flex h-11 items-center gap-3 rounded-control bg-primary px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary/90"
+									className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover"
 								>
 									<Home className="h-5 w-5" aria-hidden />
 									홈으로 가기

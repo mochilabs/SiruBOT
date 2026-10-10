@@ -98,7 +98,7 @@ export function Drawer({
 							transition={{ type: "spring", stiffness: 400, damping: 35 }}
 							className={`
 								relative ${side === "left" ? "mr-auto" : "ml-auto"} ${width}
-								h-full bg-card border-${side === "left" ? "r" : "l"} border-border
+								h-full bg-card ${side === "left" ? "border-r" : "border-l"} border-border
 								flex flex-col shadow-2xl ${className}
 							`}
 						>

@@ -127,7 +127,7 @@ export function PermissionList({
 					<div className="flex items-center justify-between px-5 py-3 bg-card/50 border-b border-border/40">
 						<div className="flex items-center gap-2">
 							<Shield className="h-4 w-4 text-muted-foreground" />
-							<span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+							<span className="text-xs font-black text-muted-foreground">
 								{cat.label}
 							</span>
 						</div>

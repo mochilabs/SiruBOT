@@ -197,7 +197,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 							</span>
 							<span className="mt-1 block text-xs text-muted-foreground">{card.description}</span>
 							{active && (
-								<span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+								<span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-foreground">
 									<Check size={12} />
 								</span>
 							)}

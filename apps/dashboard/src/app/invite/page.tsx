@@ -63,7 +63,7 @@ export default function InvitePage() {
 							href={inviteUrl}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="inline-flex h-11 items-center gap-3 rounded-control bg-primary px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary/90"
+							className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover"
 						>
 							<UserPlus className="h-5 w-5" />
 							지금 초대하기

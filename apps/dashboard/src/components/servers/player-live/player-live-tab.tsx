@@ -137,7 +137,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 						{state.trackTitle ?? "재생 중인 곡이 없어요"}
 					</p>
 					<p className="truncate text-sm text-muted-foreground">
-						{state.trackAuthor ?? "—"}
+						{state.trackAuthor ?? "값 없음"}
 						{state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
 					</p>
 					<div className="flex flex-wrap items-center gap-2 pt-1">

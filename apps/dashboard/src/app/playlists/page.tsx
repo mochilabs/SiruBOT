@@ -9,6 +9,7 @@ import Loader from "@/components/loader";
 import { AddTrackModal } from "@/components/playlists/add-track-modal";
 import { CreatePlaylistModal } from "@/components/playlists/create-playlist-modal";
 import { DeletePlaylistModal } from "@/components/playlists/delete-playlist-modal";
+import { DeleteTrackModal } from "@/components/playlists/delete-track-modal";
 import { EditPlaylistModal } from "@/components/playlists/edit-playlist-modal";
 import { PlaylistDetail } from "@/components/playlists/playlist-detail";
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
@@ -64,6 +65,8 @@ function PlaylistsContent() {
 		confirmDeletePlaylist,
 		handleAddTrack,
 		handleRemoveTrack,
+		removeTrackTarget,
+		confirmRemoveTrack,
 	} = usePlaylists();
 
 	if (status === "loading" || listLoading) {
@@ -157,6 +160,14 @@ function PlaylistsContent() {
 				playlistName={deletePlaylistTarget?.name ?? null}
 				onClose={closeModals}
 				onConfirm={confirmDeletePlaylist}
+				loading={loadingSubmit}
+			/>
+
+			<DeleteTrackModal
+				open={removeTrackTarget !== null}
+				trackTitle={removeTrackTarget?.title ?? null}
+				onClose={closeModals}
+				onConfirm={confirmRemoveTrack}
 				loading={loadingSubmit}
 			/>
 		</Container>

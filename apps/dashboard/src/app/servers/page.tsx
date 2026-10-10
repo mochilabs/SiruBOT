@@ -87,7 +87,7 @@ export default function ServersPage() {
                                 href={buildInviteUrl({})}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex h-10 items-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary hover:text-primary-foreground"
+                                className="inline-flex h-10 items-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary-control hover:text-primary-foreground"
                             >
                                 시루봇 초대하기
                             </a>

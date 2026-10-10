@@ -21,6 +21,11 @@
 	--popover-foreground: #2d1b1e;
 	--primary: #ff85c1;
 	--primary-foreground: #ffffff;
+	/* 화이트 텍스트를 얹는 단색 컨트롤 표면 전용 토큰 — #ff85c1 위 화이트는 2.24:1로 AA 미달(R-25).
+	   #c14377는 화이트 대비 4.84:1 통과(2026-10-10 소유자 승인). 라이트/다크 공통 값. */
+	--primary-control: #c14377;
+	/* primary-control hover 명도 전환 — 화이트 대비 5.90:1 유지 */
+	--primary-control-hover: #ad3968;
 	/* 배경용 --primary와 별개의 텍스트용 로즈 토큰 — 라이트 모드에서 #ff85c1은 배경 대비 2.09:1로 AA 미달.
 	   #a3416f는 (라이트) #fef5f9 5.54 / #ffffff 5.93 / #f7f1f4 5.32 / #ffe4f0 4.97, 다크에서는 --primary와 동일 값을 쓴다. */
 	--primary-text: #a3416f;
@@ -55,6 +60,8 @@
 	--popover-foreground: #fce7f3;
 	--primary: #ff85c1;
 	--primary-foreground: #ffffff;
+	--primary-control: #c14377;
+	--primary-control-hover: #ad3968;
 	--primary-text: #ff85c1;
 	--primary-rgb: 255 133 193;
 	--secondary: #d4a574;
@@ -90,6 +97,8 @@
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
+	--color-primary-control: var(--primary-control);
+	--color-primary-control-hover: var(--primary-control-hover);
 	--color-primary-text: var(--primary-text);
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);

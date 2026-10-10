@@ -47,7 +47,7 @@ export function EmbedPreview({ embed, className = "" }: EmbedPreviewProps) {
 			{/* Left color bar */}
 			<div
 				className="w-1 shrink-0 rounded-l-md"
-				style={{ backgroundColor: embed.color ?? "#5865F2" }}
+				style={{ backgroundColor: embed.color ?? "var(--color-discord-primary)" }}
 			/>
 
 			{/* Content */}
