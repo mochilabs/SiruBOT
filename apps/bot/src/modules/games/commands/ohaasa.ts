@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 import { fetchOhaasaKo, renderOhaasaCard } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
+import { buildOhaasaCardRequest } from '../utils/ohaasaCardPayload.ts';
 import { fetchOhaasa, getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
 
 function formatDate(raw: string): string {
@@ -136,22 +137,16 @@ export class OhaasaCommand extends Command {
 			}
 		}
 
-		const lines = targetZodiacCode ? buildSingleLines(daily, this.resolveTarget(daily, targetZodiacCode)) : buildTopLines(daily);
-		if (autoNote) lines.push('', autoNote);
+		// 이미지(갤러리)를 텍스트보다 먼저 넣어요 — Components V2는 컴포넌트 추가 순서로 렌더돼요.
 		const container = createContainer();
-		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 
-		// 별자리 지정 시 운세 카드 이미지 첨부 (실패하면 텍스트만)
+		// 별자리 지정 시 운세 카드 요약 이미지를 본문 위에 첨부해요 (실패하면 텍스트만).
+		// 카드는 별자리·순위·행운의 아이템/열쇠·날짜만 그려요 — 운세 설명과 럭키 컬러는 아래 본문 전용.
 		let files: AttachmentBuilder[] | undefined;
+		let target: HoroscopeData | null = null;
 		if (targetZodiacCode) {
-			const target = this.resolveTarget(daily, targetZodiacCode);
-			const png = await renderOhaasaCard({
-				zodiacCode: target.zodiacCode,
-				rank: target.rank,
-				content: target.content,
-				lucky: target.lucky ?? undefined,
-				date: formatDate(daily.date)
-			}).catch(() => null);
+			target = this.resolveTarget(daily, targetZodiacCode);
+			const png = await renderOhaasaCard(buildOhaasaCardRequest(target, formatDate(daily.date))).catch(() => null);
 			if (png) {
 				const filename = `ohaasa-${target.zodiacCode}.png`;
 				files = [new AttachmentBuilder(png, { name: filename })];
@@ -160,6 +155,11 @@ export class OhaasaCommand extends Command {
 				);
 			}
 		}
+
+		// 본문: 제목·날짜·별자리·순위·운세 설명·럭키 정보·출처/번역 안내 — 복사하기 쉬운 텍스트예요.
+		const lines = target ? buildSingleLines(daily, target) : buildTopLines(daily);
+		if (autoNote) lines.push('', autoNote);
+		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 
 		await interaction.editReply({
 			components: [container],

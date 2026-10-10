@@ -1,11 +1,12 @@
 /**
- * 오늘의 운세 카드 렌더러 — skia-canvas로 별자리 운세를 카드 이미지로 그려요.
+ * 오늘의 운세 카드 렌더러 — skia-canvas로 별자리 운세를 요약 카드 이미지로 그려요.
+ * 카드는 시각 요약(별자리·순위·행운의 아이템/열쇠·날짜)만 담아요. 운세 설명 전문과
+ * 럭키 컬러 같은 정보성 본문은 봇이 텍스트로 내려요 — 같은 /v1/ohaasa 한 건에서
+ * 이미지와 텍스트가 갈라져서 중복·불일치가 생기지 않아요.
  * 별자리 테마(12별자리 팔레트)는 profileCard.ts의 ZODIAC_THEMES를 그대로 재사용해요.
- * 데이터는 data-api의 ohaasa 프로바이더/스케줄러에서 이미 갖고 있어요 — 봇은
- * /v1/ohaasa 결과(horoscope 1건)를 그대로 POST하면 돼요. 실패하면 텍스트 카드로 폴백.
  */
 import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
-import { ensureKoreanFont, hexToRgba, truncate } from './canvasUtils.ts';
+import { drawIcon, ensureKoreanFont, hexToRgba, truncate } from './canvasUtils.ts';
 import { ZODIAC_THEMES } from './profileCard.ts';
 import { ZODIAC_MAP } from '../providers/types.ts';
 
@@ -14,47 +15,18 @@ export interface OhaasaCardInput {
 	zodiacCode: string;
 	/** 1~12위 */
 	rank: number;
-	/** 번역된 운세 본문 */
-	content: string;
-	/** 럭키 아이템/컬러 문자열 (없으면 빈 문자열) */
-	lucky: string;
+	/** 행운의 아이템 — 없으면 박스 생략. 럭키 컬러는 카드에 넣지 않아요(텍스트 본문 전용). */
+	luckyItem?: string;
+	/** 행운의 열쇠 — 없으면 박스 생략 */
+	luckyKey?: string;
 	/** "10월 5일" 같은 표시용 날짜 (없으면 생략) */
-	date: string;
+	date?: string;
 }
 
-/** 단어/문자 단위 줄바꿈 — 한국어 텍스트에 안전해요. */
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
-	const lines: string[] = [];
-	let current = '';
-	const push = (line: string) => {
-		if (lines.length < maxLines) lines.push(line);
-	};
-	for (const ch of text.replace(/\r/g, '')) {
-		if (ch === '\n') {
-			push(current);
-			current = '';
-			continue;
-		}
-		if (ctx.measureText(current + ch).width > maxWidth && current.length > 0) {
-			const lastSpace = current.lastIndexOf(' ');
-			if (lastSpace > 0) {
-				push(current.slice(0, lastSpace));
-				current = current.slice(lastSpace + 1) + ch;
-			} else {
-				push(current);
-				current = ch;
-			}
-			if (lines.length >= maxLines) break;
-		} else {
-			current += ch;
-		}
-	}
-	if (lines.length < maxLines && current.trim()) push(current);
-	// 마지막 줄이 잘렸으면 말줄임
-	if (lines.length === maxLines) {
-		lines[maxLines - 1] = truncate(ctx, lines[maxLines - 1].trimEnd(), maxWidth);
-	}
-	return lines;
+interface LuckyBox {
+	label: string;
+	value: string;
+	icon: 'sparkles' | 'star';
 }
 
 /** 밤하늘 별밭 — 시드 없이 매번 살짝 다르게 (카드별 개성용). */
@@ -64,7 +36,7 @@ function drawStarfield(ctx: CanvasRenderingContext2D, w: number, h: number, seed
 		s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
 		return s / 4294967296;
 	};
-	for (let i = 0; i < 70; i++) {
+	for (let i = 0; i < 84; i++) {
 		const x = rnd() * w;
 		const y = rnd() * h;
 		const r = 0.4 + rnd() * 1.6;
@@ -87,18 +59,18 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 
 	const W = 920;
 	const PAD = 48;
-
-	// ── 텍스트 먼저 래핑해서 높이 계산 ──
-	const meas = new Canvas(1, 1).getContext('2d');
-	meas.font = '400 24px "Noto Sans KR", sans-serif';
-	const textW = W - PAD * 2;
-	const lines = wrapText(meas, input.content, textW, 6);
-	const luckyLines = input.lucky ? wrapText(meas, input.lucky, textW, 2) : [];
-
 	const HEADER_H = 150;
-	const CONTENT_H = lines.length * 38 + 24;
-	const LUCKY_H = luckyLines.length > 0 ? luckyLines.length * 30 + 56 : 0;
-	const H = HEADER_H + CONTENT_H + LUCKY_H + 84;
+	const BOX_H = 118;
+
+	// ── 럭키 박스 구성 — 아이템/열쇠만, 컬러는 카드에서 뺐어요 ──
+	const item = (input.luckyItem ?? '').trim();
+	const key = (input.luckyKey ?? '').trim();
+	const boxes: LuckyBox[] = [];
+	if (item) boxes.push({ label: '행운의 아이템', value: item, icon: 'sparkles' });
+	if (key) boxes.push({ label: '행운의 열쇠', value: key, icon: 'star' });
+
+	const boxesTop = HEADER_H + 38;
+	const H = boxes.length > 0 ? boxesTop + BOX_H + 90 : 300;
 
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
@@ -112,7 +84,13 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	headGrad.addColorStop(1, 'rgba(26,14,18,0)');
 	ctx.fillStyle = headGrad;
 	ctx.fillRect(0, 0, W, HEADER_H + 40);
-	drawStarfield(ctx, W, HEADER_H + 40, Number(input.zodiacCode) * 7919);
+	// 하단 틴트 — 설명 본문이 빠진 자리를 헤더와 대칭으로 메워요
+	const footGrad = ctx.createLinearGradient(0, H, 0, H - 150);
+	footGrad.addColorStop(0, hexToRgba(theme.primary, 0.1));
+	footGrad.addColorStop(1, 'rgba(26,14,18,0)');
+	ctx.fillStyle = footGrad;
+	ctx.fillRect(0, H - 150, W, 150);
+	drawStarfield(ctx, W, H, Number(input.zodiacCode) * 7919);
 
 	// 상단 브랜드 액센트 바
 	const accent = ctx.createLinearGradient(0, 0, W, 0);
@@ -136,22 +114,22 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	}
 
 	// ── 별자리 이름 + 순위 뱃지 ──
-	const nameY = 118;
+	const nameY = 124;
 	ctx.fillStyle = theme.primary;
-	ctx.font = '800 44px "Noto Sans KR", sans-serif';
+	ctx.font = '800 50px "Noto Sans KR", sans-serif';
 	const zodiacText = zodiac.jp ? `${zodiac.ko} · ${zodiac.jp}` : zodiac.ko;
 	ctx.fillText(zodiacText, PAD, nameY);
 
-	// 순위 뱃지 (이름 오른쪽)
+	// 순위 뱃지 (이름 오른쪽, 이전보다 크게)
 	const nameW = ctx.measureText(zodiacText).width;
-	const rankText = `${input.rank}위`;
 	ctx.save();
-	ctx.font = '800 19px "Noto Sans KR", sans-serif';
-	const rw = ctx.measureText(rankText).width + 40;
+	ctx.font = '800 20px "Noto Sans KR", sans-serif';
+	const rankText = `${input.rank}위`;
+	const rw = ctx.measureText(rankText).width + 44;
 	const rx = PAD + nameW + 24;
-	const ry = nameY - 34;
+	const ry = nameY - 40;
 	ctx.beginPath();
-	ctx.roundRect(rx, ry, rw, 40, 20);
+	ctx.roundRect(rx, ry, rw, 46, 23);
 	ctx.fillStyle = hexToRgba(theme.primary, 0.18);
 	ctx.fill();
 	ctx.strokeStyle = hexToRgba(theme.primary, 0.6);
@@ -160,7 +138,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	ctx.fillStyle = theme.soft;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.fillText(rankText, rx + rw / 2, ry + 21);
+	ctx.fillText(rankText, rx + rw / 2, ry + 24);
 	ctx.restore();
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
@@ -173,30 +151,44 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	ctx.lineTo(W - PAD, HEADER_H - 8);
 	ctx.stroke();
 
-	// ── 운세 본문 ──
-	ctx.fillStyle = '#fce7f3';
-	ctx.font = '400 24px "Noto Sans KR", sans-serif';
-	lines.forEach((line, i) => {
-		ctx.fillText(line, PAD, HEADER_H + 36 + i * 38);
-	});
+	// ── 럭키 박스 (아이템/열쇠) — 2개면 나란히, 1개면 와이드 ──
+	if (boxes.length > 0) {
+		const gap = 20;
+		const boxW = boxes.length === 2 ? (W - PAD * 2 - gap) / 2 : W - PAD * 2;
+		for (const [i, box] of boxes.entries()) {
+			const bx = PAD + i * (boxW + gap);
 
-	// ── 럭키 아이템 ──
-	if (luckyLines.length > 0) {
-		const ly = HEADER_H + 36 + lines.length * 38 + 18;
-		ctx.fillStyle = hexToRgba(theme.primary, 0.12);
-		ctx.save();
-		ctx.beginPath();
-		ctx.roundRect(PAD, ly - 30, W - PAD * 2, luckyLines.length * 30 + 36, 14);
-		ctx.fill();
-		ctx.strokeStyle = hexToRgba(theme.primary, 0.35);
-		ctx.lineWidth = 1.5;
-		ctx.stroke();
-		ctx.restore();
-		ctx.fillStyle = theme.soft;
-		ctx.font = '600 20px "Noto Sans KR", sans-serif';
-		luckyLines.forEach((line, i) => {
-			ctx.fillText(`🍀 ${line}`, PAD + 24, ly + i * 30);
-		});
+			ctx.save();
+			ctx.beginPath();
+			ctx.roundRect(bx, boxesTop, boxW, BOX_H, 16);
+			ctx.fillStyle = hexToRgba(theme.primary, 0.12);
+			ctx.fill();
+			ctx.strokeStyle = hexToRgba(theme.primary, 0.35);
+			ctx.lineWidth = 1.5;
+			ctx.stroke();
+			ctx.restore();
+
+			// 라벨 + 벡터 아이콘 (이모지 폰트가 없어서 lucide 아이콘으로 그려요)
+			const iconSize = 16;
+			const innerX = bx + 24;
+			ctx.fillStyle = '#c9a8b5';
+			ctx.font = '600 15px "Noto Sans KR", sans-serif';
+			const labelY = boxesTop + 34;
+			drawIcon(ctx, box.icon, innerX, labelY - 5 - iconSize / 2, iconSize, theme.soft);
+			ctx.fillText(box.label, innerX + iconSize + 8, labelY);
+
+			ctx.fillStyle = theme.soft;
+			ctx.font = '700 26px "Noto Sans KR", sans-serif';
+			ctx.fillText(truncate(ctx, box.value, boxW - 48), innerX, boxesTop + 78);
+		}
+	} else {
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillStyle = '#c9a8b5';
+		ctx.font = '500 22px "Noto Sans KR", sans-serif';
+		ctx.fillText('오늘의 럭키 정보가 없어요', W / 2, (HEADER_H + H) / 2);
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
 	}
 
 	// ── 하단 시그니처 ──
