@@ -270,6 +270,7 @@ export function Select(props: SelectProps) {
 										}}
 										onKeyDown={handleKeyDown}
 										placeholder={searchPlaceholder}
+										aria-label={searchPlaceholder || "검색"}
 										className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
 									/>
 								</div>

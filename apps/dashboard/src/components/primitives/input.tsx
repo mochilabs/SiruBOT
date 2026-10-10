@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 
 const controlBase =
 	"w-full rounded-control border border-border bg-input text-sm text-foreground placeholder:text-muted-foreground transition-colors " +
-	"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring " +
+	"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring " +
 	"disabled:cursor-not-allowed disabled:opacity-50 " +
-	"aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/40";
+	"aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive";
 
 /* ─────────────────────────── Input ─────────────────────────── */
 
