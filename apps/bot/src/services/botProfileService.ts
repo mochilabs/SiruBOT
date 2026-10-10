@@ -17,8 +17,7 @@
  * - pending 키는 TTL(120초)이 있어 봇이 모두 무시해도 자동 정리돼요.
  */
 import { container } from '@sapphire/framework';
-import { BOT_PROFILE_SET_CHANNEL, botProfilePendingKey } from '@sirubot/utils';
-import { createClient, type RedisClientType } from '@redis/client';
+import { BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
 import { Guild, PermissionFlagsBits } from 'discord.js';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
@@ -52,71 +51,28 @@ interface PendingPayload {
 	avatar?: string | null;
 }
 
-const RECONNECT_DELAY_MS = 5_000;
-const RECONNECT_MAX_DELAY_MS = 60_000;
-
 export class BotProfileService {
-	private subscriber: RedisClientType | null = null;
-	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-	private reconnectAttempts = 0;
-	private stopped = false;
-	private redisUrl: string | null = null;
 	/** 길드별 마지막 적용 결과 — 멤버 업데이트 리스너가 상태를 다시 퍼블리시할 때도 유지해요 */
 	private readonly lastApplies = new Map<string, { ok: boolean; error: string | null; at: number }>();
 	private readonly maxLastApplies = 2_000;
+	private subscriber: ManagedRedisSubscriber | null = null;
 
 	public constructor(private readonly logger: ServiceLogger) {}
 
 	/** 구독을 시작해요. 실패해도 throw하지 않아요 — 재연결을 시도하고 기능만 비활성돼요. */
 	public async start(redisUrl: string | undefined): Promise<void> {
-		this.redisUrl = redisUrl?.trim() || null;
-		if (!this.redisUrl) {
+		const url = redisUrl?.trim() || null;
+		if (!url) {
 			this.logger.warn('REDIS_URL 미설정: 봇 프로필 적용 요청 구독 없이 동작해요 (상태 퍼블리시는 계속돼요)');
 			return;
 		}
-		await this.connectOnce();
-	}
-
-	private async connectOnce(): Promise<void> {
-		if (this.stopped || !this.redisUrl) return;
-		const previous = this.subscriber;
-		try {
-			const client = createClient({ url: this.redisUrl }) as RedisClientType;
-			client.on('error', (error) => this.logger.warn(`봇 프로필 구독 오류: ${error.message}`));
-			client.on('end', () => {
-				if (this.subscriber === client) {
-					this.subscriber = null;
-					void this.scheduleReconnect();
-				}
-			});
-
-			await client.connect();
-			await client.subscribe(BOT_PROFILE_SET_CHANNEL, (raw) => {
-				void this.handleSetMessage(raw);
-			});
-
-			this.subscriber = client;
-			this.reconnectAttempts = 0;
-			this.logger.info(`봇 프로필 적용 요청 구독 시작: ${BOT_PROFILE_SET_CHANNEL}`);
-		} catch (error) {
-			this.subscriber = this.subscriber === previous ? null : this.subscriber;
-			this.logger.warn(`봇 프로필 구독 실패, 재연결 예약: ${error instanceof Error ? error.message : String(error)}`);
-			await this.scheduleReconnect();
-		} finally {
-			if (previous && previous !== this.subscriber) {
-				await previous.quit().catch(() => undefined);
-			}
-		}
-	}
-
-	private scheduleReconnect(): void {
-		if (this.stopped || this.reconnectTimer) return;
-		const delay = Math.min(RECONNECT_DELAY_MS * 2 ** this.reconnectAttempts, RECONNECT_MAX_DELAY_MS);
-		this.reconnectAttempts++;
-		this.reconnectTimer = setTimeout(() => {
-			this.reconnectTimer = null;
-			void this.connectOnce();
-		}, delay);
+		this.subscriber = new ManagedRedisSubscriber({
+			name: '봇 프로필',
+			url,
+			logger: this.logger,
+			bindings: [{ channel: BOT_PROFILE_SET_CHANNEL, onMessage: (raw) => void this.handleSetMessage(raw) }]
+		});
+		await this.subscriber.start();
 	}
 
 	private async handleSetMessage(raw: string): Promise<void> {
@@ -253,23 +209,8 @@ export class BotProfileService {
 
 	/** 종료 — 구독 해제 후 연결을 닫아요. shutdown에서 redisStore.disconnect() 전에 불러야 해요. */
 	public async stop(): Promise<void> {
-		this.stopped = true;
-		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
-			this.reconnectTimer = null;
-		}
-		const client = this.subscriber;
+		const subscriber = this.subscriber;
 		this.subscriber = null;
-		if (!client) return;
-		await client.unsubscribe(BOT_PROFILE_SET_CHANNEL).catch(() => undefined);
-		await client.quit().catch(() => undefined);
+		await subscriber?.stop();
 	}
 }
-
-/** 프로세스 공용 인스턴스 — bootstrap에서 시작하고 shutdown에서 정리해요 */
-export const botProfileService = new BotProfileService({
-	info: (msg) => container.logger.info(msg),
-	warn: (msg) => container.logger.warn(msg),
-	error: (msg) => container.logger.error(msg),
-	debug: (msg) => container.logger.debug(msg)
-});

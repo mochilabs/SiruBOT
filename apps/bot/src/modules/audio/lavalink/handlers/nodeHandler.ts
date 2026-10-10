@@ -467,7 +467,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 		// Move orphan players to least used nodes with simple cycling
 		for (let idx = 0; idx < orphanPlayers.length; idx++) {
 			// Simple cycling through available nodes
-			orphanPlayers[idx].changeNode(leastUsedNode[idx % leastUsedNode.length]);
+			// changeNode 실패(레이스로 신노드에 플레이어 미존재 등)를 두면 unhandled rejection + 오펜 플레이어가 남는다.
+			const player = orphanPlayers[idx];
+			player
+				.changeNode(leastUsedNode[idx % leastUsedNode.length])
+				.catch((error) => this.logger.warn(`Node migration failed at guild ${player.guildId}: ${error}`));
 		}
 	}
 

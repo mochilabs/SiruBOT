@@ -1,8 +1,10 @@
 import { container } from '@sapphire/framework';
 import { Player, Track } from 'lavalink-client';
-import { isYouTubeSource } from '../modules/audio/lavalink/youtubeChapters.ts';
+import { isYouTubeSource } from '@sirubot/utils';
 
 const MIXER_FILTER_KEY = 'mixer';
+/** mixer REST 제한 시간(ms) — 타임아웃이 없으면 slot 직렬화 대기열이 응답 없는 노드에서 영원히 안 끝난다. */
+const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
 
 export interface MixerStateResponse {
 	guildId: string;
@@ -62,13 +64,26 @@ export class MixerService {
 
 	private async mixerCall(player: Player, path: string, init?: MixerCallInit): Promise<any> {
 		const { base, auth } = this.nodeRest(player);
-		const res = await fetch(`${base}${path}`, {
-			method: init?.method ?? 'GET',
-			body: init?.body,
-			headers: { Authorization: auth, 'Content-Type': 'application/json' }
-		});
+		let res: Response;
+		try {
+			res = await fetch(`${base}${path}`, {
+				method: init?.method ?? 'GET',
+				body: init?.body,
+				headers: { Authorization: auth, 'Content-Type': 'application/json' },
+				signal: AbortSignal.timeout(MIXER_CALL_TIMEOUT_MS)
+			});
+		} catch (error) {
+			// 네트워크 실패·타임아웃을 MixerRequestError로 정규화 — 원시 오류가 slot 직렬화 사슬을
+			// 잠그거나 슬래시 커맨드가 원시 에러로 죽는 일을 막는다.
+			throw new MixerRequestError(504, `mixer ${path} -> unreachable/timeout: ${error instanceof Error ? error.message : String(error)}`);
+		}
 		if (res.status === 204) return null;
-		const text = await res.text();
+		let text: string;
+		try {
+			text = await res.text();
+		} catch (error) {
+			throw new MixerRequestError(502, `mixer ${path} -> body read failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
 		let body: any = null;
 		try {
 			body = text ? JSON.parse(text) : null;

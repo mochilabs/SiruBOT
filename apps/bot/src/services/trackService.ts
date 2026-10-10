@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { Track } from 'lavalink-client';
 import { extractTrackData } from './trackData.ts';
+import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 
 export class TrackService {
 	public async increasePlays(track: Track) {
@@ -25,7 +26,7 @@ export class TrackService {
 		let userId: string | null = null;
 		if (track.requester) {
 			const requesterId = (track.requester as { id: string } | undefined)?.id;
-			if (requesterId && requesterId !== 'related_track') {
+			if (requesterId && requesterId !== RELATED_TRACK_REQUESTER_ID) {
 				userId = requesterId;
 			}
 		}

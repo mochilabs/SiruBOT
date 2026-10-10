@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { botProfileStateChannel, memberGreetingStateChannel } from '@sirubot/utils';
+import { botProfileStateChannel, memberGreetingStateChannel, playerStateChannel } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
@@ -32,19 +32,20 @@ export class NodeSessionStore {
 		return `lavalink/session/${nodeId}/shards:${shardKey}`;
 	}
 
-	/** 세션 저장 (TTL: resume timeout과 동일하게 5분) */
-	public async save(nodeId: string, sessionId: string, shardKey: string): Promise<void> {
+	/** 세션 저장 (TTL: resume timeout과 동일하게 5분) — 실제 기록 여부를 돌려준다(Redis 단절 중 거짓 성공 로그 방지). */
+	public async save(nodeId: string, sessionId: string, shardKey: string): Promise<boolean> {
 		const key = this.getKey(nodeId, shardKey);
 		this.logger.debug(`Saving session for node ${nodeId} shards [${shardKey}]: ${sessionId}`);
 
+		if (!this.isRedisConnected) return false;
 		try {
-			if (this.isRedisConnected) {
-				await this.redis.set(key, sessionId, { EX: SESSION_TTL_SECONDS });
-				this.logger.trace(`Session saved to Redis: ${key}`);
-			}
+			await this.redis.set(key, sessionId, { EX: SESSION_TTL_SECONDS });
+			this.logger.trace(`Session saved to Redis: ${key}`);
+			return true;
 		} catch (error) {
 			this.logger.warn(`Failed to save session to Redis: ${error}`);
 			this.isRedisConnected = false;
+			return false;
 		}
 	}
 
@@ -205,7 +206,7 @@ export class RedisStore {
 				return;
 			}
 			void this.redis
-				.publish(`sirubot:player:${guildId}`, payload)
+				.publish(playerStateChannel(guildId), payload)
 				.catch((error) => this.logger.debug(`Player state publish failed (guild ${guildId}): ${error}`));
 		} catch (error) {
 			this.logger.debug(`Player state publish skipped (guild ${guildId}): ${error}`);
@@ -260,6 +261,11 @@ export class RedisStore {
 		if (this.isReady) {
 			await this.redis.quit();
 		}
+	}
+
+	/** 종료 전 pending 저널 비우기 — Redis를 끊은 뒤에는 큐/플레이어 변경이 소실된다. */
+	public async flushPendingWrites(): Promise<void> {
+		await Promise.allSettled([this.queueStore.drainPendingWrites(), this.playerSaver.drainPendingWrites()]);
 	}
 
 	public get ready() {

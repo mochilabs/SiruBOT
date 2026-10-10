@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 
-import { botProfileService } from '../../../../services/botProfileService.ts';
+import { container } from '@sapphire/framework';
 
 /**
  * READY — 캐시한 모든 길드의 봇 프로필 상태를 퍼블리시해요.
@@ -14,7 +14,7 @@ export class BotProfileReadyListener extends Listener {
 	public override run() {
 		const guilds = [...this.container.client.guilds.cache.values()];
 		for (const guild of guilds) {
-			botProfileService.publishGuildProfileFromGuild(guild);
+			container.botProfileService.publishGuildProfileFromGuild(guild);
 		}
 		this.container.logger.debug(`봇 프로필 상태 초기 퍼블리시: ${guilds.length}개 길드`);
 	}

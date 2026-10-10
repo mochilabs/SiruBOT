@@ -3,14 +3,11 @@ import { container } from '@sapphire/framework';
 import { Events, GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
-import { LavalinkNodeOptions } from 'lavalink-client';
 import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { setSentryShardTags } from './sentry.ts';
+import { parseLavalinkHosts } from '@sirubot/utils';
 import * as Sentry from '@sentry/node';
-import { guildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
-import { botProfileService } from '../services/botProfileService.ts';
-import { memberGreetingService } from '../services/memberGreetingService.ts';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -106,8 +103,13 @@ export const main = async () => {
 				const shardKey = NodeSessionStore.makeShardKey(Array.isArray(shardIds) ? shardIds : [0]);
 				for (const node of container.audio.nodeManager.nodes.values()) {
 					if (node.sessionId) {
-						await sessionStore.save(node.id, node.sessionId, shardKey);
-						client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
+						// save는 Redis가 끊겨 있으면 실제로 기록하지 않는다 — 거짓 성공 로그를 내지 않는다.
+						const saved = await sessionStore.save(node.id, node.sessionId, shardKey);
+						if (saved) {
+							client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
+						} else {
+							client.logger.warn(`Session save skipped/failed for node ${node.id} (redis unavailable)`);
+						}
 					}
 				}
 			} catch (error) {
@@ -122,17 +124,23 @@ export const main = async () => {
 		if (container.audio) {
 			container.audio.removeAllListeners();
 		}
-		await guildSettingsInvalidator.stop().catch(() => null);
-		await botProfileService.stop().catch(() => null);
-		await memberGreetingService.stop().catch(() => null);
+		await container.guildSettingsInvalidator?.stop().catch(() => null);
+		await container.botProfileService?.stop().catch(() => null);
+		await container.memberGreetingService?.stop().catch(() => null);
 
+		// 종료 전에 저널을 비운다 — Redis를 끊은 뒤엔 pending 큐/플레이어 변경이 소실된다.
+		// 세션 저장(위)은 Redis 연결이 필요한 첫 단계고, 여기서 남은 저널을 마저 민 뒤 끊는다.
 		if (container.redisStore) {
+			await container.redisStore.flushPendingWrites().catch(() => null);
 			await container.redisStore.disconnect().catch(() => null);
 		}
 
 		if (container.db) {
 			await container.db.$disconnect().catch(() => null);
 		}
+
+		// 게이트웨이 정리 — 이 시점부터 새 이벤트가 유출되지 않는다.
+		await client.destroy().catch(() => null);
 
 		if (container.shardClient) {
 			container.shardClient.destroy();
@@ -170,42 +178,23 @@ export const main = async () => {
 
 		// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
 		// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
-		await guildSettingsInvalidator.start(envParseString('REDIS_URL'), container.guildService);
+		await container.guildSettingsInvalidator?.start(envParseString('REDIS_URL'), container.guildService);
 		// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
 		// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
-		await botProfileService.start(envParseString('REDIS_URL'));
+		await container.botProfileService?.start(envParseString('REDIS_URL'));
 		// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
 		// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
-		await memberGreetingService.start(envParseString('REDIS_URL'));
+		await container.memberGreetingService?.start(envParseString('REDIS_URL'));
 
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
 
 		client.logger.debug('Setting up lavalink...');
-		// 비밀번호가 명시된 노드가 하나라도 있으면 기본값 폴백을 warn하지 않는다 (설정이 의도적이었을 수 있어요)
-		let fellBackToDefaultPassword = false;
-		const lavalinkHosts = envParseString('LAVALINK_HOSTS')
-			.split(',')
-			.map((node, index) => {
-				// 비밀번호에 '_'가 포함될 수 있으므로 앞에서부터 id/host/port를 취하고 나머지를 password로 join
-				const parts = node.trim().split('_');
-				if (parts.length < 3) {
-					throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${node}". ` + `Expected: "id_host_port[_password]"`);
-				}
-				const [id, host, portStr, ...passwordParts] = parts;
-				if (!id || !host) {
-					throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${node}". id/host must not be empty.`);
-				}
-				const port = parseInt(portStr);
-				if (isNaN(port) || port <= 0 || port > 65535) {
-					throw new Error(`Invalid port "${portStr}" for node "${id}"`);
-				}
-				const explicitPassword = passwordParts.length > 0 ? passwordParts.join('_') : envParseString('LAVALINK_DEFAULT_PASSWORD', '');
-				const password = explicitPassword || 'youshallnotpass';
-				if (!explicitPassword) fellBackToDefaultPassword = true;
-				return { id, host, port, authorization: password };
-			}) as LavalinkNodeOptions[];
-		if (fellBackToDefaultPassword) {
+		const { hosts: lavalinkHosts, defaultPasswordUsed } = parseLavalinkHosts(
+			envParseString('LAVALINK_HOSTS'),
+			envParseString('LAVALINK_DEFAULT_PASSWORD', '')
+		);
+		if (defaultPasswordUsed) {
 			client.logger.warn(
 				'Some LAVALINK_HOSTS entries have no password; using the default "youshallnotpass". Set the node password explicitly or provide LAVALINK_DEFAULT_PASSWORD.'
 			);

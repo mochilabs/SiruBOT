@@ -6,11 +6,14 @@ import { container } from '@sapphire/framework';
 import type { CustomPlayer } from './player/customPlayer.ts';
 import type { Track } from 'lavalink-client';
 
+/** 자동 추천곡 센티널 — requester.id로 흐르는 값. 오타 리터럴 재발을 막으려면 이 상수만 사용. */
+export const RELATED_TRACK_REQUESTER_ID = 'related_track';
+
 /** requester 객체에서 userId를 뽑아요 — 문자열/related_track/비객체는 null */
 export function requesterIdOf(track: Track | undefined | null): string | null {
 	const requester = track?.requester;
 	const id = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
-	if (typeof id !== 'string' || !id || id === 'related_track') return null;
+	if (typeof id !== 'string' || !id || id === RELATED_TRACK_REQUESTER_ID) return null;
 	return id;
 }
 

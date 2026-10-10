@@ -167,7 +167,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleStop(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		player.setData('stopByCommand', true);
+		player.transitionState.stopByCommand = true;
 		await this.container.mixerService.clearNext(player).catch(() => null);
 		await this.container.playerNotifier.deleteController(player).catch(() => null);
 		try {

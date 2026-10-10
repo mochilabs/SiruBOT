@@ -219,16 +219,6 @@ export async function resolveCarrierId(carrierHint: string): Promise<string> {
 	return candidates[0]!.id;
 }
 
-/** 택배사 목록 조회 (공유 캐시용) */
-export async function listCarriers(): Promise<DeliveryCarrier[]> {
-	return getCarriersCached();
-}
-
-/** 택배사 목록 장기 캐시 (거의 안 바뀌어요) */
-export function deliveryCarriersCacheKey(): string {
-	return 'dataapi:v1:delivery:carriers';
-}
-
 /** 운송장 조회 단기 캐시 (배송 상태는 변해요) */
 export function deliveryTrackCacheKey(carrierId: string, trackingNumber: string): string {
 	return `dataapi:v1:delivery:track:${carrierId}:${trackingNumber}`;

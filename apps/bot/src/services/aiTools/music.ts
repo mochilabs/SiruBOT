@@ -142,7 +142,7 @@ const musicStopTool: AiTool = {
 		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
-		player.setData('stopByCommand', true);
+		player.transitionState.stopByCommand = true;
 		await container.mixerService.clearNext(player).catch(() => null);
 		await player.stopPlaying();
 		await player.disconnect();

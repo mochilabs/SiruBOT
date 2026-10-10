@@ -9,6 +9,13 @@
 import { createClient, type RedisClientType } from '@redis/client';
 import { getLogger } from '../utils/logger.ts';
 import { sharedCache } from '../utils/cache.ts';
+import {
+	PLAYER_STATE_CHANNEL_PATTERN,
+	guildIdFromPlayerStateChannel,
+	playerStateSchema,
+	type PlayerStatePayload,
+	type PlayerStateResponse
+} from '@sirubot/utils';
 
 const logger = getLogger('playerHub');
 
@@ -16,39 +23,9 @@ const logger = getLogger('playerHub');
 const STALE_MS = 60_000;
 /** 길드 상태 엔트리 최대 보관 수 (장기 비활성 길드 누수 방지) */
 const MAX_ENTRIES = 5_000;
-/** 구독 채널 패턴 — 봇 퍼블리셔(RedisStore.publishRawPlayerState)와 계약이에요 */
-const PLAYER_CHANNEL_PATTERN = 'sirubot:player:*';
 /** 최초 연결 실패 재시도 백오프 — 1초부터 2배씩, 상한 5초 */
 const RETRY_BASE_MS = 1_000;
 const RETRY_MAX_MS = 5_000;
-
-export interface QueuedTrackSummary {
-	title: string;
-	author: string;
-	durationMs: number;
-	artworkUrl: string | null;
-	isStream: boolean;
-	requesterName: string | null;
-}
-
-export interface PlayerStatePayload {
-	guildId: string;
-	playing: boolean;
-	paused: boolean;
-	positionMs: number;
-	durationMs: number;
-	trackTitle: string | null;
-	trackAuthor: string | null;
-	artworkUrl: string | null;
-	isStream: boolean;
-	queue: QueuedTrackSummary[];
-	queueLength: number;
-	repeatMode: 'off' | 'track' | 'queue';
-	volume: number;
-	requesterName: string | null;
-	sourceName: string | null;
-	updatedAt: number;
-}
 
 interface Entry {
 	state: PlayerStatePayload;
@@ -89,19 +66,18 @@ export function subscribeSse(guildId: string, send: (payload: string) => void): 
 	};
 }
 
-/** 채널명에서 guildId를 뽑아요 — `sirubot:player:{guildId}` */
-export function guildIdFromChannel(channel: string): string | null {
-	const prefix = 'sirubot:player:';
-	return channel.startsWith(prefix) ? channel.slice(prefix.length) : null;
-}
-
 function handleMessage(message: string, channel: string): void {
-	const guildId = guildIdFromChannel(channel);
+	const guildId = guildIdFromPlayerStateChannel(channel);
 	if (!guildId) return;
 
 	try {
-		const parsed = JSON.parse(message) as PlayerStatePayload;
-		if (typeof parsed !== 'object' || parsed === null || parsed.guildId !== guildId) return;
+		const result = playerStateSchema.safeParse(JSON.parse(message));
+		if (!result.success) {
+			logger.debug(`Malformed player state from ${channel}: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
+			return;
+		}
+		const parsed: PlayerStatePayload = result.data;
+		if (parsed.guildId !== guildId) return;
 
 		if (states.size >= MAX_ENTRIES && !states.has(guildId)) {
 			// 가장 오래된 엔트리를 하나 비워요 — 정확한 LRU는 아니지만 충분해요.
@@ -149,10 +125,10 @@ async function attemptConnect(redisUrl: string, attempt: number): Promise<void> 
 
 	try {
 		await client.connect();
-		await client.pSubscribe(PLAYER_CHANNEL_PATTERN, (message, channel) => handleMessage(message, channel));
+		await client.pSubscribe(PLAYER_STATE_CHANNEL_PATTERN, (message, channel) => handleMessage(message, channel));
 		subscribeIntent = true;
 		subscribed = true;
-		logger.info(`Player hub subscribed to ${PLAYER_CHANNEL_PATTERN}`);
+		logger.info(`Player hub subscribed to ${PLAYER_STATE_CHANNEL_PATTERN}`);
 	} catch (error) {
 		if (stopped) return;
 		subscribed = false;
@@ -194,19 +170,12 @@ export async function stopPlayerHub(): Promise<void> {
 	const client = subscriber;
 	subscriber = null;
 	if (client.isReady) {
-		await client.pUnsubscribe(PLAYER_CHANNEL_PATTERN).catch(() => undefined);
+		await client.pUnsubscribe(PLAYER_STATE_CHANNEL_PATTERN).catch(() => undefined);
 		await client.quit().catch(() => undefined);
 	} else if (client.isOpen) {
 		// 연결 도중엔 quit(QUIT 왕복 대기)이 멈출 수 있어 소켓을 즉시 파괴해요
 		client.destroy();
 	}
-}
-
-export interface PlayerStateResponse extends PlayerStatePayload {
-	/** 마지막 갱신 기준 밀리초 — 이 값이 STALE_MS를 넘으면 상태는 참고용이에요 */
-	ageMs: number;
-	/** 마지막 갱신이 60초보다 오래됐어요 (봇이 이 길드를 구독/퍼블리시하지 않는 상태) */
-	stale: boolean;
 }
 
 export function getPlayerState(guildId: string): PlayerStateResponse | null {

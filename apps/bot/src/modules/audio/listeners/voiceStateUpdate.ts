@@ -75,7 +75,7 @@ export class VoiceStateUpdateListener extends Listener {
 						}
 					}
 					// Do not display additional message
-					player.setData('stopByCommand', true);
+					player.transitionState.stopByCommand = true;
 					await player.destroy();
 				} catch (error) {
 					this.logger.error(`Failed to leave empty voice channel in guild ${guildId}:`, error);

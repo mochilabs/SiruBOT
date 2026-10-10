@@ -26,6 +26,7 @@ import {
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPlayRelated.ts';
 import { repeatEmoji } from './repeat.ts';
+import { RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 type controllerViewProps = {
@@ -168,7 +169,7 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 	// 신청자
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	if (requesterId) {
-		contents.push(requesterId === 'related_track' ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
+		contents.push(requesterId === RELATED_TRACK_REQUESTER_ID ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
 	}
 
 	// 길이 표기 — 짧은 이모지 프로그레스바와 (지금시간 / 길이)을 함께 표시한다.

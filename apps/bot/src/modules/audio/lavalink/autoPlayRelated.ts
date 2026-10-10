@@ -1,7 +1,8 @@
 import { container } from '@sapphire/framework';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { CustomPlayer } from './player/customPlayer.ts';
-import { isYouTubeSource } from './youtubeChapters.ts';
+import { isYouTubeSource } from '@sirubot/utils';
+import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
@@ -25,7 +26,7 @@ export function getInFlightRelatedFetch(guildId: string): Promise<Track | null> 
 function isRelatedTrack(track: Track | UnresolvedTrack): boolean {
 	const requester = (track as { requester?: unknown }).requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
-	return requesterId === 'related_track';
+	return requesterId === RELATED_TRACK_REQUESTER_ID;
 }
 
 /**
@@ -219,7 +220,7 @@ async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, ext
 
 	try {
 		const searchResult = await player.node.search('https://youtube.com/playlist?list=' + RD_PLAYLIST_ID, {
-			id: 'related_track',
+			id: RELATED_TRACK_REQUESTER_ID,
 			username: null
 		});
 		container.logger.debug(`Search result loadType: ${searchResult.loadType}, tracks: ${searchResult.tracks.length}`);
@@ -286,7 +287,8 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 
 		const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
 		// fetch 동안 정지하거나 다른 곡으로 전이됐으면 이전 곡 기준 추천을 추가하지 않는다.
-		if (player.getData('stopByCommand') || player.queue.tracks.length > 0 || (player.playing && activeEncoded !== currentEncoded)) return null;
+		if (player.transitionState.stopByCommand || player.queue.tracks.length > 0 || (player.playing && activeEncoded !== currentEncoded))
+			return null;
 
 		await player.queue.add(selectedTrack);
 		if (player.playing) {
@@ -324,7 +326,7 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 
 			// fetch 동안 정지/전이됐으면 이 기준의 추천을 더 넣지 않는다.
 			const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-			if (player.getData('stopByCommand') || (player.queue.current && activeEncoded !== referenceEncoded)) break;
+			if (player.transitionState.stopByCommand || (player.queue.current && activeEncoded !== referenceEncoded)) break;
 
 			await player.queue.add(selected);
 			pickedIds.push(selected.info.identifier);
@@ -361,8 +363,8 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 			}
 
 			// Prevent race condition
-			const currentRequester = player.queue.current?.requester as { id: string } | undefined;
-			if ((player.queue.current && currentRequester?.id !== 'related_track') || player.queue.tracks.length > 0) {
+			const currentRequesterId = requesterIdOf(player.queue.current ?? undefined);
+			if ((player.queue.current && currentRequesterId !== null) || player.queue.tracks.length > 0) {
 				container.logger.debug('[autoPlayRelated] Prevent race condition: user added track');
 				return;
 			}
@@ -375,8 +377,8 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 			}
 
 			// 검색 동안 상태가 변했는지 재확인 (사용자가 곡을 추가했으면 넘어간다)
-			const recheckRequester = player.queue.current?.requester as { id: string } | undefined;
-			if ((player.queue.current && recheckRequester?.id !== 'related_track') || player.queue.tracks.length > 0) {
+			const recheckRequesterId = requesterIdOf(player.queue.current ?? undefined);
+			if ((player.queue.current && recheckRequesterId !== null) || player.queue.tracks.length > 0) {
 				container.logger.debug('[autoPlayRelated] Prevent race condition after search: user added track');
 				return;
 			}

@@ -1,42 +1,16 @@
 import { NextResponse } from "next/server";
+import type { PlayerStateResponse } from "@sirubot/utils";
+import { playerStateResponseSchema } from "@sirubot/utils";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { fetchDataApi } from "@/lib/data-api";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
 
-export interface LiveQueueTrack {
-  title: string;
-  author: string;
-  durationMs: number;
-  artworkUrl: string | null;
-  isStream: boolean;
-  requesterName: string | null;
-}
-
-export interface LivePlayerState {
-  guildId: string;
-  playing: boolean;
-  paused: boolean;
-  positionMs: number;
-  durationMs: number;
-  trackTitle: string | null;
-  trackAuthor: string | null;
-  artworkUrl: string | null;
-  isStream: boolean;
-  queue: LiveQueueTrack[];
-  queueLength: number;
-  repeatMode: "off" | "track" | "queue";
-  volume: number;
-  requesterName: string | null;
-  sourceName: string | null;
-  updatedAt: number;
-  /** data-api 최종 갱신 기준 밀리초 — 60초 넘으면 stale */
-  ageMs: number;
-  stale: boolean;
-}
+// 스냅샷 계약은 @sirubot/utils에서 단일 정의 — 대시보드 별칭만 유지해요
+export type { PlayerStateResponse as LivePlayerState, QueuedTrackSummary as LiveQueueTrack } from "@sirubot/utils";
 
 interface DataApiLiveResponse {
-  player: LivePlayerState | null;
+  player: PlayerStateResponse | null;
   hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
 
@@ -65,6 +39,18 @@ export async function GET(
       { error: "라이브 상태를 불러오지 못했어요." },
       { status: 502 },
     );
+  }
+
+  // 프록시 응답도 스냅샷 계약으로 검증 — 셰이프가 어긋나면 라이브 없음(502)으로 취급해요.
+  if (data.player) {
+    const result = playerStateResponseSchema.safeParse(data.player);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "라이브 상태 형식이 올바르지 않아요." },
+        { status: 502 },
+      );
+    }
+    data.player = result.data;
   }
 
   return NextResponse.json(data);

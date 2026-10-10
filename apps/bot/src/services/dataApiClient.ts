@@ -4,11 +4,6 @@ import type { DailyHoroscope } from '../modules/games/utils/ohaasaService.ts';
 import type { DeliveryTrackResult } from '../modules/general/utils/deliveryService.ts';
 import type { WeatherResult, WeatherScope } from '../modules/general/utils/weatherService.ts';
 
-export type { WeatherResult, WeatherScope } from '../modules/general/utils/weatherService.ts';
-export { WeatherError } from '../modules/general/utils/weatherService.ts';
-export { DeliveryError } from '../modules/general/utils/deliveryService.ts';
-export type { DeliveryTrackResult } from '../modules/general/utils/deliveryService.ts';
-
 /** 게이트웨이 4xx 본문 — { error, message } 형태 (도메인 에러). 명령어에서 UserError로 변환해요. */
 export class GatewayDomainError extends Error {
 	public constructor(
