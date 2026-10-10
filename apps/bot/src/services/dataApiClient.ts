@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import type { GreetingConfig, GreetingKind } from '@sirubot/utils';
 import type { DailyHoroscope } from '../modules/games/utils/ohaasaService.ts';
 import type { DeliveryTrackResult } from '../modules/general/utils/deliveryService.ts';
 import type { WeatherResult, WeatherScope } from '../modules/general/utils/weatherService.ts';
@@ -249,6 +250,45 @@ export async function renderProfileCard(data: ProfileCardRequest): Promise<Buffe
 		return Buffer.from(await res.arrayBuffer());
 	} catch (error) {
 		container.logger.warn(`[data-api] profile-card failed: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+}
+
+/** 멤버 인사 카드 렌더에 박을 멤버/서버 컨텍스트 — 렌더러가 템플릿({유저이름} {서버} {멤버수}) 치환에 써요 */
+export interface MemberCardRenderContext {
+	userId: string;
+	username: string;
+	displayName: string;
+	guildName: string | null;
+	avatarUrl: string | null;
+	memberCount: number;
+}
+
+/**
+ * 멤버 인사(환영/작별) 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 메시지로 폴백해요).
+ */
+export async function renderMemberCard(
+	guildId: string,
+	kind: GreetingKind,
+	config: GreetingConfig,
+	context: MemberCardRenderContext
+): Promise<Buffer | null> {
+	const base = gatewayBaseUrl();
+	if (!base) return null;
+	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
+	try {
+		const res = await fetch(`${base}/v1/image/member-card`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			body: JSON.stringify({ guildId, kind, config, context }),
+			signal: AbortSignal.timeout(20_000)
+		});
+		if (!res.ok) throw new Error(`data-api ${res.status}`);
+		const type = res.headers.get('content-type') ?? '';
+		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
+		return Buffer.from(await res.arrayBuffer());
+	} catch (error) {
+		container.logger.warn(`[data-api] member-card failed: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
 	}
 }
