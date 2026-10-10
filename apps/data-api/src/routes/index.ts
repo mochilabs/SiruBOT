@@ -20,6 +20,7 @@ import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
 import { renderGreetingCard, normalizeGreetingBackground } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
+import { ohaasaCardSchema } from './ohaasaCardSchema.ts';
 import { deliveryTrackCacheKey, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
@@ -552,15 +553,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 
 	// ── 운세 카드 이미지 ──
-	// /v1/ohaasa 결과(horoscope 1건)를 그대로 POST하면 돼요 — 봇은 ohaasa.ts에서 추가해요.
-	// 캐시 키(날짜+별자리)에서는 운세 본문이 제외돼요 — 하루 12장만 렌더돼요.
-	const ohaasaCardSchema = z.object({
-		zodiacCode: z.string().regex(/^(0[1-9]|1[0-2])$/),
-		rank: z.number().int().min(1).max(12),
-		content: z.string().trim().min(1).max(2000),
-		lucky: z.string().trim().max(300).default(''),
-		date: z.string().trim().max(40).default('')
-	});
+	// 봇이 /v1/ohaasa 1건에서 요약 필드만 골라 POST해요 — 카드는 별자리·순위·럭키만 그려요.
+	// 운세 설명·럭키 컬러는 카드에 넣지 않아요(텍스트 본문 전용) — 스키마에 필드 자체가 없어요.
 	fastify.post('/v1/image/ohaasa', async (request, reply) => {
 		try {
 			const body = ohaasaCardSchema.parse(request.body);

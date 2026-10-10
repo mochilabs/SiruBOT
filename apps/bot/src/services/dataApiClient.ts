@@ -204,15 +204,22 @@ export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise
 }
 
 /**
- * 운세 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
+ * 운세 카드 이미지 데이터 — data-api POST /v1/image/ohaasa 바디와 동일한 형식이에요.
+ * 카드는 요약(별자리·순위·행운의 아이템/열쇠·날짜)만 그려요 — 운세 설명·럭키 컬러는
+ * 텍스트 본문 전용이라 전송하지 않아요 (같은 /v1/ohaasa 원본을 이미지와 텍스트가 나눠 써요).
  */
-export async function renderOhaasaCard(data: {
+export interface OhaasaCardRequest {
 	zodiacCode: string;
 	rank: number;
-	content: string;
-	lucky?: string;
+	luckyItem?: string;
+	luckyKey?: string;
 	date?: string;
-}): Promise<Buffer | null> {
+}
+
+/**
+ * 운세 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
+ */
+export async function renderOhaasaCard(data: OhaasaCardRequest): Promise<Buffer | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
 	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
