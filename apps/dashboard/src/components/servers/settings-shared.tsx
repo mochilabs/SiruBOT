@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertCircle, Loader2, LogIn, RefreshCw, Save } from "lucide-react";
+import { AlertCircle, Loader2, LogIn, Save, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
@@ -56,17 +57,46 @@ export function PanelLoading({ label }: { label: string }) {
 	);
 }
 
+/** 닫은 일시 장애 안내 기록 키 — 같은 페이지(같은 길드)·같은 상태 코드 단위로 세션 동안 유지돼요 */
+function noticeStorageKey(pathname: string, code: number): string {
+	return `siru:error-note:${pathname}:${code}`;
+}
+
+function readNoticeDismissed(key: string): boolean {
+	if (typeof window === "undefined") return false;
+	try {
+		return window.sessionStorage.getItem(key) === "1";
+	} catch {
+		return false;
+	}
+}
+
+function writeNoticeDismissed(key: string): void {
+	if (typeof window === "undefined") return;
+	try {
+		window.sessionStorage.setItem(key, "1");
+	} catch {
+		// 스토리지 차단 시 닫기가 세션에만 유지되지 않아요 — 기본 동작으로 계속해요
+	}
+}
+
 export function PanelError({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
 	const pathname = usePathname();
+	const [dismissed, setDismissed] = useState(false);
+	const storageKey = noticeStorageKey(pathname, error.status ?? 0);
 
-	return (
-		<Card padding="lg" className="gap-3">
-			<p className="flex items-center gap-2 text-sm text-destructive">
-				<AlertCircle size={16} aria-hidden />
-				{error.message}
-			</p>
-			{error.status === 401 ? (
-				// 세션 만료 — 재시도 대신 로그인 페이지로 안내해요
+	useEffect(() => {
+		setDismissed(readNoticeDismissed(storageKey));
+	}, [storageKey]);
+
+	if (error.status === 401) {
+		// 세션 만료 — 재시도 대신 로그인 페이지로 안내해요
+		return (
+			<Card padding="lg" className="gap-3">
+				<p className="flex items-center gap-2 text-sm text-destructive">
+					<AlertCircle size={16} aria-hidden />
+					{error.message}
+				</p>
 				<Link
 					href={`/api/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`}
 					className={cn(buttonVariants({ variant: "primary", size: "sm" }), "w-fit")}
@@ -74,13 +104,52 @@ export function PanelError({ error, onRetry }: { error: ApiError; onRetry: () =>
 					<LogIn size={14} aria-hidden />
 					다시 로그인
 				</Link>
-			) : (
-				error.retryable && (
-					<Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={onRetry}>
+			</Card>
+		);
+	}
+
+	const handleDismiss = () => {
+		writeNoticeDismissed(storageKey);
+		setDismissed(true);
+	};
+
+	if (error.retryable) {
+		if (dismissed) {
+			// 닫은 뒤에도 상태는 조용하게 남겨요 — 원인과 다음 행동을 숨기지 않아요
+			return (
+				<p className="text-xs text-muted-foreground">
+					{error.message}{" "}
+					<button type="button" className="font-semibold underline underline-offset-2" onClick={onRetry}>
 						다시 시도
-					</Button>
-				)
-			)}
+					</button>
+				</p>
+			);
+		}
+
+		// Discord 일시 장애 등 재시도 가능한 오류 — 화면을 가리는 배너 대신 닫을 수 있는 인라인 안내
+		return (
+			<div role="status" className="flex items-start gap-3 rounded-control border border-warning/30 bg-warning/5 px-4 py-3">
+				<div className="min-w-0 flex-1 space-y-1 text-xs text-warning">
+					<p className="flex items-center gap-1.5">
+						<AlertCircle size={14} aria-hidden className="shrink-0" />
+						{error.message}
+					</p>
+					<button type="button" className="font-semibold underline underline-offset-2" onClick={onRetry}>
+						다시 시도
+					</button>
+				</div>
+				<Button variant="ghost" size="sm" icon={<X size={14} aria-hidden />} onClick={handleDismiss} aria-label="오류 안내 닫기" />
+			</div>
+		);
+	}
+
+	// 권한 없음(403) 등 재시도로 해결되지 않는 안내 — 명확한 카드로 유지해요
+	return (
+		<Card padding="lg" className="gap-3">
+			<p className="flex items-center gap-2 text-sm text-destructive">
+				<AlertCircle size={16} aria-hidden />
+				{error.message}
+			</p>
 		</Card>
 	);
 }
