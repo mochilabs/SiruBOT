@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { botProfileStateChannel } from '@sirubot/utils';
+import { botProfileStateChannel, memberGreetingStateChannel } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
@@ -229,6 +229,26 @@ export class RedisStore {
 				.catch((error) => this.logger.debug(`Bot profile state publish failed (guild ${guildId}): ${error}`));
 		} catch (error) {
 			this.logger.debug(`Bot profile state publish skipped (guild ${guildId}): ${error}`);
+		}
+	}
+
+	/**
+	 * 멤버 인사 테스트 전송 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:member-greeting:state:{guildId}` — memberGreetingStateChannel 접두사).
+	 * data-api가 구독해 대시보드 환영/작별 설정 패널에 서빙해요.
+	 * fire-and-forget — publishBotProfileState와 같은 안전 규칙을 따라요.
+	 */
+	public publishMemberGreetingState(guildId: string, payload: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug(`Member greeting state publish skipped (redis not ready, guild ${guildId})`);
+				return;
+			}
+			void this.redis
+				.publish(memberGreetingStateChannel(guildId), payload)
+				.catch((error) => this.logger.debug(`Member greeting state publish failed (guild ${guildId}): ${error}`));
+		} catch (error) {
+			this.logger.debug(`Member greeting state publish skipped (guild ${guildId}): ${error}`);
 		}
 	}
 

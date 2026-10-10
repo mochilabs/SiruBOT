@@ -10,6 +10,7 @@ import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
 import { guildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { botProfileService } from '../services/botProfileService.ts';
+import { memberGreetingService } from '../services/memberGreetingService.ts';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -123,6 +124,7 @@ export const main = async () => {
 		}
 		await guildSettingsInvalidator.stop().catch(() => null);
 		await botProfileService.stop().catch(() => null);
+		await memberGreetingService.stop().catch(() => null);
 
 		if (container.redisStore) {
 			await container.redisStore.disconnect().catch(() => null);
@@ -172,6 +174,9 @@ export const main = async () => {
 		// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
 		// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
 		await botProfileService.start(envParseString('REDIS_URL'));
+		// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
+		// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
+		await memberGreetingService.start(envParseString('REDIS_URL'));
 
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
