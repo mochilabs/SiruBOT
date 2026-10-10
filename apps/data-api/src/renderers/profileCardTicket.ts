@@ -373,15 +373,12 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 		await drawMusicSection(ctx, input.topTracks, input.nowPlaying ?? null, LIGHT_MUSIC_PAL, PAD, musicTop, contentW);
 	}
 
-	// ── 하단: {id} / profile  ...  샘플 프레임 ──
+	// ── 하단: {id} / profile ──
 	ctx.save();
 	ctx.textAlign = 'left';
 	ctx.font = '500 17px "Noto Sans KR", sans-serif';
 	ctx.fillStyle = 'rgba(169, 106, 100, 0.8)';
 	ctx.fillText(`${input.profileId} / profile`, PAD, H2 - 22);
-	ctx.textAlign = 'right';
-	ctx.fillStyle = 'rgba(63, 58, 53, 0.5)';
-	ctx.fillText('샘플 프레임', BODY_W - 40, H2 - 22);
 	ctx.restore();
 
 	ctx.restore(); // 티켓 라운드 클립 끝

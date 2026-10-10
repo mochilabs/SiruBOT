@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import type { RepeatMode, SearchPlatform } from 'lavalink-client';
+import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { checkDJOrAlone } from '../../modules/audio/utils/permissionCheck.ts';
 import type { CustomPlayer } from '../../modules/audio/lavalink/player/customPlayer.ts';
@@ -21,7 +22,7 @@ function requireGuild(ctx: AiToolContext): string {
 
 function requireVoice(ctx: AiToolContext): { guildId: string; voiceChannelId: string } {
 	const guildId = requireGuild(ctx);
-	if (!ctx.voiceChannelId) throw new Error('먼저 음성 채널에 접속해 주세요.');
+	if (!ctx.voiceChannelId) throw new Error(VOICE_CHANNEL_REQUIRED_MESSAGE);
 	return { guildId, voiceChannelId: ctx.voiceChannelId };
 }
 

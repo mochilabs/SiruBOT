@@ -1,5 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
-import { emoji, getSimpleYouTubeSuggestions } from '@sirubot/utils';
+import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE, getSimpleYouTubeSuggestions } from '@sirubot/utils';
 import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
@@ -147,7 +147,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!voiceChannel) {
 		throw new UserError({
 			identifier: 'search_not_in_voice',
-			message: `${emoji('error')} 먼저 음성 채널에 접속해주세요.`,
+			message: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`,
 			context: { ephemeral: true }
 		});
 	}

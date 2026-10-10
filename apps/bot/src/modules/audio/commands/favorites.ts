@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
 import { lookupSource } from '../utils/source.ts';
@@ -224,7 +224,7 @@ export class FavoritesCommand extends Command {
 
 		if (!voiceChannel) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 먼저 음성 채널에 접속해주세요.`))],
+				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;

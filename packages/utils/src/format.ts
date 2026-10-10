@@ -98,7 +98,7 @@ type FormatTrackOptions = {
 
 const MAX_TRACK_URL_LENGTH = 70;
 export function formatTrack(track: Track, options?: FormatTrackOptions): string {
-	const { title = 'Unknown Title', duration, isStream } = track.info;
+	const { title = '(제목 없음)', duration, isStream } = track.info;
 	const { showLength, withMarkdownURL, streamString, timeType, cleanTitle, titleLength } = {
 		showLength: true,
 		streamString: 'LIVE',

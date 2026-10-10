@@ -13,6 +13,7 @@ import {
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
 import { emoji, createContainer } from '@sirubot/utils';
+import { jtcEmptyGraceText } from '../../../services/tempVoiceService.ts';
 
 export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock' | 'jtc';
 
@@ -359,7 +360,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 
 	container.addTextDisplayComponents(
 		new TextDisplayBuilder().setContent(
-			'-# 마커 채널에 들어오면 방이 만들어져요. 방장만 방 이름·인원을 바꿀 수 있고, 30초간 아무도 없으면 사라져요.'
+			`-# 마커 채널에 들어오면 방이 만들어져요. 방장만 방 이름·인원을 바꿀 수 있고, ${jtcEmptyGraceText()}간 아무도 없으면 사라져요.`
 		)
 	);
 
