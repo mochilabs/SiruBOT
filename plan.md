@@ -344,6 +344,8 @@ Why first: (a) it is a *validated, permanent data-loss* defect triggered by ordi
 
 ## 남은 항목 (최신)
 
+**2026-10-10 UI/출력 배치 — 완료(전부 beta 스쿼시 머지)**: #38 컨트롤러 UX(카드 진행바·다음 곡 목록 이미지화·5초 버킷 갱신·버튼 1행 재배치, d7030f6) / #39 오하아사 이미지→본문 순서(이미지엔 별자리·순위·아이템·열쇠·날짜만, 운세 설문·럭키 컬러는 복사 가능 본문으로 — 8f7f6c0 머지 180346e) / #40 플레이리스트 모바일 여백+디스코드 로그인 UX(4eb7148) / 랜딩 "이용 중인 서버 28K+" 카운트업 복원(이번 PR — 유저 지시로 R-17 예외). **후속 후보(조사만 함, 미구현)**: `/프로필` 이미지 성공 시 본문 부재, memberGreeting 인사 문구 이미지/본문 중복+텍스트가 이미지 위 렌더, nowplaying 카드·본문 제목/아티스트 부분 겹침. **이모지 12종 업로드는 여전히 운영자 작업 대기.**
+
 **조사·설계는 전부 확정됨. 남은 것은 프로브/측정/스테이징 게이트와 구현 컷뿐:**
 
 - **F-08+F-20 구현 컷** — 설계 확정(skipPendingUntil + decideRestore + TrackRef). 게이트 1건: 서버 TrackEnd `reason` 실측(/skip → WS 로그). 이후 5컷(pure/trackRef → restoreDecision → transitionDecision → watchdog/recovery → stateSync)으로 착수.
@@ -357,4 +359,4 @@ Why first: (a) it is a *validated, permanent data-loss* defect triggered by ordi
 - **COR-9c 후속 소규모 컷** — P1 2건(fetch 오판 코드판별·재클레임 무장)은 즉시 적용 가능, P2 3건(재입장 소유권 재부여·승계 실패 관측·후계자 소멸 폴백)은 승계 로직 재사용. READY reconcile은 Phase 2 그대로.
 - **소형 후속(이번 발견) — 완료**: changeNode 미catch 수정(bot), data-api 미문서화 `/v1/delivery/carriers` 제거(데드 export 동반), redis 플로팅 태그 고정(`redis:8-alpine`) · **잔여**: 컷 3 엣지 1건(`enqueueTrack→autoPlayRelated`) 수용 문서화만.
 - **이모지 후속(유제 발견)**: ① API 폴백 fetcher 수정 완료 — `ClientApplication.fetch()`(`GET /oauth2/applications/@me`)는 이모지 컬렉션을 채우지 않음을 discord.js 소스로 확인, `client.application.emojis.fetch()`(매니저 fetch)로 교체. ② **미업로드 12종 확정**: `play`/`pause`/`stop` + 진행바 `pb_*` 9종 — PNG는 커밋(`a3423bc`)이나 `emoji-ids.json`은 87종(99 PNG 중). 로컬 머신에 DISCORD_TOKEN 없음(배포 env 주입 구조) → **운영자 작업 대기**: 토큰이 있는 곳에서 `yarn dlx tsx scripts/upload-emojis.ts`(기존 87종 skip·12종만 업로드) → 재생성된 매핑(canonical + apps/bot/resources) 커밋. 업로드는 즉시 유효, 매핑 반영은 재부팅(파일 로드)부터.
-- **톰스톤 완료(미커밋)** — 작업 트리 4파일 수정+1 신규 테스트. 커밋 슬라이스 권장.
+- **톰스톤 완료** — 커밋·머지 완료(#36 스쿼시 bdf5985; queueStore·playerSaver·pendingWriteSync+테스트 포함).
