@@ -214,8 +214,8 @@ export function HeroSection() {
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>
 							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
-								{/* 실측 불가한 이전 "28K+" 통계 제거(R-17). 실제 서버 수는 로그인 후 /shards에서 확인 가능 */}
-								<span>서버 상태에서 확인</span>
+								{/* 28K+는 운영자 확정 표기(유저 지시) — 실시간 집계는 로그인 후 /shards에서 확인 가능 */}
+								<CountUpStat end={28} suffix="K+" />
 							</dd>
 						</div>
 					</m.dl>
