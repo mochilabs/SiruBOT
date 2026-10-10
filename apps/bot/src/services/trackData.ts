@@ -5,7 +5,7 @@ export function extractTrackData(track: Track) {
 	const info = track.info;
 	const id: string = info.identifier;
 	const title: string = info.title ?? '(제목 없음)';
-	const artist: string = info.author ?? 'Unknown Artist';
+	const artist: string = info.author ?? '(아티스트 정보 없음)';
 	const duration: number = info.duration ?? 0;
 	const url: string = info.uri ?? '';
 	const source: string = info.sourceName ?? 'unknown';
