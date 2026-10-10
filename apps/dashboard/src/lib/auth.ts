@@ -26,26 +26,55 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async jwt({ token, account }) {
+      // 로그인/재로그인 — 받은 토큰으로 새로 시작해요.
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
         token.id = account.providerAccountId;
         // expires_in 604800초 = 7일 (Discord 기본)
         token.accessTokenExpires = Date.now() + (account.expires_in ?? 604800) * 1000;
-      }
-      // 토큰 만료 임박(10분 전)이면 갱신 시도
-      const expires = typeof token.accessTokenExpires === "number" ? token.accessTokenExpires : 0;
-      if (Date.now() < expires - 10 * 60 * 1000) return token;
-      if (!token.refreshToken) return token;
-      const refreshed = await refreshDiscordToken(token.refreshToken);
-      if (!refreshed) {
-        // 갱신 실패 — refreshToken을 버려 재시도 핫루프를 막고, 라우트가 401 안내로 재로그인 UX를 유도해요
-        delete token.refreshToken;
+        delete token.refreshRetryAt;
         return token;
       }
-      token.accessToken = refreshed.access_token;
-      token.refreshToken = refreshed.refresh_token ?? token.refreshToken;
-      token.accessTokenExpires = Date.now() + refreshed.expires_in * 1000;
+
+      // 아직 충분히 유효하면 그대로 써요 (만료 10분 전부터 갱신 시도).
+      const expires = typeof token.accessTokenExpires === "number" ? token.accessTokenExpires : 0;
+      if (Date.now() < expires - 10 * 60 * 1000) return token;
+
+      // refreshToken이 없으면 갱신 불가 — accessToken도 지워 "재로그인 필요"로 정직하게 안내해요.
+      if (!token.refreshToken) {
+        delete token.accessToken;
+        delete token.accessTokenExpires;
+        return token;
+      }
+
+      // 일시적 실패(네트워크/429/5xx) 후의 재시도 쿨다운 — 토큰은 유지한 채 핫루프만 막아요.
+      if (typeof token.refreshRetryAt === "number" && Date.now() < token.refreshRetryAt) {
+        return token;
+      }
+
+      const result = await refreshDiscordToken(token.refreshToken);
+
+      if (result.status === "ok") {
+        token.accessToken = result.token.access_token;
+        token.refreshToken = result.token.refresh_token ?? token.refreshToken;
+        token.accessTokenExpires = Date.now() + (result.token.expires_in ?? 604800) * 1000;
+        delete token.refreshRetryAt;
+        return token;
+      }
+
+      if (result.status === "unavailable") {
+        // 일시 장애 — 토큰을 버리지 않고 쿨다운 뒤 다시 시도해요.
+        token.refreshRetryAt = Date.now() + 60 * 1000;
+        return token;
+      }
+
+      // invalid — refreshToken이 죽었어요. 죽은 accessToken을 남기면 "세션은 살아있는데
+      // 모든 API가 401"인 좀비가 되므로 함께 제거해, 로그인 페이지에서 재인증하도록 유도해요.
+      delete token.refreshToken;
+      delete token.accessToken;
+      delete token.accessTokenExpires;
+      delete token.refreshRetryAt;
       return token;
     },
     async session({ session, token }) {

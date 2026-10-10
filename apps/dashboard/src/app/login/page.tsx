@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
 import { auth, signIn } from "@/lib/auth";
+import { getSessionTokenState } from "@/lib/session-token";
 
 interface LoginPageProps {
 	searchParams: Promise<{ callbackUrl?: string }>;
@@ -13,10 +14,23 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	const { callbackUrl } = await searchParams;
 	const redirectTarget = callbackUrl || "/servers";
 
-	// 이미 로그인된 상태면 재인증 없이 목적지로 바로 보내요 (뒤로가기·북마크·stale 로그인 링크 진입 포함)
-	// redirectTarget은 상대 경로만 허용 — 쿼리 파라미터를 redirect()에 그대로 쓰면 오픈 리다이렉트가 돼요
+	// 이미 "실제로 쓸 수 있는" 세션이면 재인증 없이 목적지로 보내요.
+	// 세션 JWT만 유효하고 Discord 토큰이 없거나 만료된 좀비 상태에서 redirect하면
+	// 서버 페이지 → 401 → /api/auth/signin → /login → 다시 서버 페이지로 도는
+	// 무한 루프에 갇혀 로그인 버튼을 누를 수 없어요. 토큰 유효성까지 확인해야 해요.
 	const session = await auth();
-	if (session?.user?.id && redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")) {
+	const token = await getSessionTokenState();
+	const hasUsableToken =
+		!!token.accessToken &&
+		(token.expiresAt === null || token.expiresAt > Date.now() + 60 * 1000);
+
+	// redirectTarget은 상대 경로만 허용 — 쿼리 파라미터를 redirect()에 그대로 쓰면 오픈 리다이렉트가 돼요
+	if (
+		session?.user?.id &&
+		hasUsableToken &&
+		redirectTarget.startsWith("/") &&
+		!redirectTarget.startsWith("//")
+	) {
 		redirect(redirectTarget);
 	}
 

@@ -10,11 +10,29 @@ import type { GuildSettings } from "@/types/settings";
 
 /** 세션 만료(401) — 재시도로 해결되지 않으니 로그인 성공 후 원래 화면으로 돌아와요 */
 function loginHref(callbackUrl: string): string {
-	return `/api/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+	return `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+}
+
+/**
+ * 401이면 세션 엔드포인트(catch-all)로 refresh를 쿠키에 반영한 뒤 1회 재시도해요.
+ * 라우트 핸들러의 auth()는 refresh 결과를 Set-Cookie로 내보내지 못하므로,
+ * 실제 persist는 /api/auth/session이 담당해요(getSessionAccessToken이 방금 발급 토큰을 읽게).
+ */
+async function fetchWithSessionRetry(url: string, init?: RequestInit): Promise<Response> {
+	const res = await fetch(url, init);
+	if (res.status !== 401) return res;
+	try {
+		const sessionRes = await fetch("/api/auth/session", { cache: "no-store" });
+		const session = sessionRes.ok ? await sessionRes.json() : null;
+		if (!session?.user?.id) return res;
+	} catch {
+		return res;
+	}
+	return fetch(url, init);
 }
 
 async function settingsFetcher(url: string): Promise<GuildSettings> {
-	const res = await fetch(url, { cache: "no-store" });
+	const res = await fetchWithSessionRetry(url, { cache: "no-store" });
 	if (!res.ok) throw await toApiError(res, "설정을 불러오지 못했어요.");
 	return (await res.json()) as GuildSettings;
 }
@@ -126,7 +144,7 @@ export interface RolesPayload {
 }
 
 async function discordListFetcher<T>(url: string): Promise<T> {
-	const res = await fetch(url, { cache: "no-store" });
+	const res = await fetchWithSessionRetry(url, { cache: "no-store" });
 	if (!res.ok) throw await toApiError(res, "목록을 불러오지 못했어요.");
 	return (await res.json()) as T;
 }
