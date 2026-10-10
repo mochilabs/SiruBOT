@@ -14,9 +14,16 @@ const SESSION_COOKIE_NAMES = [
   "authjs.session-token",
 ] as const;
 
-export async function getSessionAccessToken(): Promise<string | null> {
+export interface SessionTokenState {
+  accessToken: string | null;
+  /** accessToken 만료 시각(epoch ms). 알 수 없으면 null. */
+  expiresAt: number | null;
+}
+
+/** 토큰과 만료 시각을 함께 읽어요 — 로그인 페이지가 "실제로 쓸 수 있는 세션"인지 판단할 때 써요. */
+export async function getSessionTokenState(): Promise<SessionTokenState> {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
-  if (!secret) return null;
+  if (!secret) return { accessToken: null, expiresAt: null };
 
   const reqHeaders = await headers();
   for (const cookieName of SESSION_COOKIE_NAMES) {
@@ -25,9 +32,21 @@ export async function getSessionAccessToken(): Promise<string | null> {
       cookieName,
       secret,
     });
-    const accessToken = token?.accessToken;
-    if (typeof accessToken === "string" && accessToken.length > 0)
-      return accessToken;
+    if (!token) continue;
+    const accessToken = token.accessToken;
+    if (typeof accessToken === "string" && accessToken.length > 0) {
+      return {
+        accessToken,
+        expiresAt:
+          typeof token.accessTokenExpires === "number"
+            ? token.accessTokenExpires
+            : null,
+      };
+    }
   }
-  return null;
+  return { accessToken: null, expiresAt: null };
+}
+
+export async function getSessionAccessToken(): Promise<string | null> {
+  return (await getSessionTokenState()).accessToken;
 }

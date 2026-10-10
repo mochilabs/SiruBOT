@@ -13,6 +13,7 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     refreshToken?: string;
     accessTokenExpires?: number; // epoch ms
+    refreshRetryAt?: number; // 일시적 갱신 실패 후 재시도 쿨다운 (epoch ms)
     id?: string;
   }
 }
