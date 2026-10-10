@@ -111,6 +111,10 @@ export class AudioService {
 		const searchRes = await player.search({ query, source: platform }, user);
 
 		if (searchRes.loadType === 'error') {
+			// 플랫폼 쪽 조회 실패 — 유저 메시지는 그대로, 인프라 원인은 Sentry로 (F-23)
+			Sentry.captureException(new Error(`search loadType error (${platform}): ${query}`), {
+				tags: { layer: 'player_search', guild_id: String(player.guildId) }
+			});
 			throw new UserError({
 				identifier: 'play_search_error',
 				message: '🛠️  음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',

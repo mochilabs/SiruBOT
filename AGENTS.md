@@ -1,6 +1,6 @@
 # SiruBOT — Agent Instructions
 
-Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
+Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
 
 ## Semantic code search (opencode index)
 
@@ -30,12 +30,12 @@ yarn generate                         # REQUIRED before typecheck/build (Prisma 
 yarn workspace @sirubot/prisma migrate:dev
 yarn dev                              # all apps; single: turbo dev --filter=@sirubot/bot
 yarn lint / yarn lint:fix             # turbo fan-out; pre-push hook runs lint:fix + typecheck
-yarn typecheck                        # turbo; dependsOn ^generate — don't run bare tsc first
+yarn typecheck                        # turbo; dependsOn ^build ^generate — don't run bare tsc first
 ```
 
 - Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) only runs `yarn install --immutable` + `yarn lint`. No test framework; `yarn test` is a stub.
+- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×9, data-api ×3, utils ×4, shardclient ×1 as of f90fd77); dashboard/shardmanager/prisma have no tests yet.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
 - Turbo `build` depends on `^lint:fix ^typecheck ^generate ^build` — building one app rebuilds deps.
 
@@ -53,8 +53,8 @@ yarn typecheck                        # turbo; dependsOn ^generate — don't run
 ## Env / runtime gotchas
 
 - Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets.
-- `LAVALINK_HOSTS` format (parsed in `bootstrap.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
-- Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → remove audio listeners → redis disconnect → db disconnect.
+- `LAVALINK_HOSTS` format (`parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
+- Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
 - Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
 
 <!-- antislop:start -->

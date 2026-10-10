@@ -316,5 +316,15 @@ Why first: (a) it is a *validated, permanent data-loss* defect triggered by ordi
   - **F-12 진행 (컷 1·2 완료)**: ① `dataApiClient`의 modules 재출력 4종(Weather*/Delivery*) 제거 — 소비자(`commands/weather.ts`, `aiTools/weather.ts`)가 modules/utils에서 타입을 직접 import. 게이트웨이 래퍼 함수들(fetchWeather/trackDelivery/fetchOhaasaKo)은 dataApiClient 소유로 유지. ② 순수 유틸 `youtubeChapters.ts`(3종: CHAPTER_FETCH_MIN_DURATION_MS/isYouTubeSource/resolveYouTubeVideoId)를 `packages/utils/src/lavalinkTrack.ts`로 이동 — mixer·trackData(services)가 modules를 위로 import하던 역방향 제거, 소비자 5파일 전환, 원본 삭제. ③ **컷 3 보류(근거)**: audioService의 스킵/플레이 오케스트레이션+뷰 렌더는 ~350줄의 명령 프레젠테이션 결합 — 별도 세션에서 UX 흐름 검증하며 이전해야 해서 plan에 그대로 남김.
   - **F-23 최소 절단**: `connectPlayer` 인프라 실패(`player.connect().catch`)에 `Sentry.captureException` + 태그(layer:player_connect, guild_id) 추가 — UX UserError 계약은 유지하되 인프라 원인은 잃지 않게 (search 절단부 동일 패턴 후속).
 - **F-15 진행 보류 (근거 기록)**: double-identify-loop은 실제로는 보완적 2-정책 분할(클라이언트: 연결/ACK 오류 무한 재시도, 봇: NoShardsAvailableError 처리)로 확인 — 단순 병합은 동작 변화를 일으킴. 'cap+알림', 'health 서버 조기 바인드'는 배포 동작(docker healthcheck/start_period/restart 정책)을 바꾸는 변경이라 스테이징 검증 필요 → Phase 0·실제 인프라 검증 대기로 plan상 유지.
-- **Phase 2 남음**: F-08(+F-20 — vendored lavalink-client 내부 조사(0.1)와 세트), F-12(services↔modules 경계), F-23(에러 분류). Phase 3 성능 항목은 측정 게이트(MONITOR/EXPLAIN) 미충족 상태.
+  - **F-23 추가 절단**: `search`의 loadType 'error'에도 `Sentry.captureException` 추가(layer: player_search). UI 메시지 전용 `.catch(() => null)`(컨트롤러 갱신류, 관찰상 무해)는 그대로 두기로 결정 — 회복 자체가 실패해 다음 사이클을 죽이는 것만(=F-03)이 치명이라 판단; 근거 plan 기록.
+  - **F-32 완료**: AGENTS.md 정정 — data-api를 앱 목록에 추가(책임 설명), "test는 stub" 스테레오 타이입 제거(vitest 분포·CI 스텝 반영), typecheck `^build ^generate`, LAVALINK_HOSTS 파서 위치(`packages/utils/src/lavalinkHosts.ts`), shutdown 순서 갱신(저널 플러시·구독자 stop·게이트웨이 destroy 포함).
+
+## 남은 항목 (최신)
+
+- **F-08 + F-20**: vendored lavalink-client 내부 조사(0.1) 선행 — 별도 세션 권장(큰 단위).
+- **F-06**: Redis 버전 확인(0.5) 후 GETDEL/Lua.
+  - **F-12 컷 3 (보류)**: audioService 스킵/플레이 오케스트레이션 이전 — Discord UX 흐름 검증 세션 필요.
+- **F-13**: 허브 분할(trackHandler/routes/index.ts/aiChatService). **F-18**: Prisma enum 마이그레이션(유지보수 시간 필요). **F-21**: 생명주기 판별 유니온 확산.
+- **Phase 3 (F-24~30)**: 측정 게이트(MONITOR/SLOWLOG/EXPLAIN) 확보가 선행 — 데이터 없는 착수 금지.
+- 남은 Phase 2 완료 이후 커밋 슬라이스 권장.
 - **톰스톤(delete 부활 방지)**은 F-07 계열 후속으로 유지.
