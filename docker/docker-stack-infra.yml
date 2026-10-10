@@ -1,6 +1,8 @@
 services:
   redis:
-    image: redis:alpine
+    # 태그 고정: 플로팅 alpine 배포마다 버전이 굴러가 F-06(GETDEL) 판정·호환성이 흔들리지 않게 메이저 고정
+    # 기존 컨테이너 실 버전은 redis-cli INFO server의 redis_version으로 확인 권장
+    image: redis:8-alpine
     volumes:
       - redis-data:/data
     ports:

@@ -20,7 +20,7 @@ import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
 import { renderGreetingCard, normalizeGreetingBackground } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
-import { deliveryCarriersCacheKey, deliveryTrackCacheKey, listCarriers, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
+import { deliveryTrackCacheKey, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
 import { lastGoodDaily, ohaasaStatus, refreshOhaasaNow } from '../services/ohaasaScheduler.ts';
@@ -275,22 +275,6 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 
 	// ── 택배 조회 ──
-	fastify.get('/v1/delivery/carriers', async (_request, reply) => {
-		try {
-			const { data, cached } = await serveCached({
-				route: 'delivery-carriers',
-				key: deliveryCarriersCacheKey(),
-				ttlSeconds: 24 * 3600,
-				provider: 'tracker-delivery',
-				fetchFresh: () => listCarriers(),
-				validate: (d) => Array.isArray(d)
-			});
-			return reply.send({ carriers: data, _cached: cached });
-		} catch (error) {
-			return sendError(reply, error);
-		}
-	});
-
 	const deliveryTrackQuery = z.object({
 		carrier: z.string().trim().min(1).max(100),
 		number: z.string().trim().min(4).max(50)
