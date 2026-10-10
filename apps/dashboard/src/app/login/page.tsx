@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
-import { signIn } from "@/lib/auth";
+import { auth, signIn } from "@/lib/auth";
 
 interface LoginPageProps {
 	searchParams: Promise<{ callbackUrl?: string }>;
@@ -11,6 +12,13 @@ interface LoginPageProps {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
 	const { callbackUrl } = await searchParams;
 	const redirectTarget = callbackUrl || "/servers";
+
+	// 이미 로그인된 상태면 재인증 없이 목적지로 바로 보내요 (뒤로가기·북마크·stale 로그인 링크 진입 포함)
+	// redirectTarget은 상대 경로만 허용 — 쿼리 파라미터를 redirect()에 그대로 쓰면 오픈 리다이렉트가 돼요
+	const session = await auth();
+	if (session?.user?.id && redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")) {
+		redirect(redirectTarget);
+	}
 
 	return (
 		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
