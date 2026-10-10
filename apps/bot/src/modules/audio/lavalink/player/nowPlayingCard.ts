@@ -9,7 +9,7 @@ import { AttachmentBuilder } from 'discord.js';
 import { BOT_NAME, isDev, versionInfo } from '@sirubot/utils';
 import { renderNowPlayingCard } from '../../../../services/dataApiClient.ts';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../autoPlayRelated.ts';
-import { requesterIdOf } from '../requester.ts';
+import { RELATED_TRACK_REQUESTER_ID, requesterIdOf } from '../requester.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { Track } from 'lavalink-client';
 
@@ -20,6 +20,8 @@ interface NowPlayingCardAttachment {
 	file: AttachmentBuilder;
 	/** 이번에 새로 렌더됨 — 메시지에 files로 첨부해야 해요 */
 	fresh: boolean;
+	/** 이 카드를 만들 때의 카드 키 — 메시지에 붙은 이미지가 몇 버킷인지 판별용 */
+	trackKey: string;
 }
 
 /** 길드별 1개 (현재 트랙 카드만 있으면 돼요) */
@@ -42,10 +44,19 @@ function getStore(): NowPlayingCardStore {
 export function getNowPlayingCardKey(player: CustomPlayer): string | null {
 	const current = player.queue.current;
 	if (!current) return null;
-	// 카드 갱신 트리거는 트랙 변경 + 볼륨 변경 + 현재 챕터 변경 — position(진행율)은 카드에 박지 않아 제외한다.
+	// 카드 갱신 트리거는 트랙 변경 + 볼륨 변경 + 현재 챕터 변경 + 5초 위치 버킷.
+	// 진행바가 이미지에 그려지므로 버킷이 바뀔 때(≈5초마다)만 다시 렌더하고,
+	// 일시정지 뱃지 반영을 위해 paused 상태도 키에 넣는다.
 	const identity = current.info.identifier || `${current.info.title}::${current.info.author}`;
 	const chapterIndex = currentChapterIndex(player);
-	return `${identity}::v${player.volume ?? 0}::c${chapterIndex ?? 'none'}`;
+	const stream = current.info.isStream ?? false;
+	const bucket = stream ? 'x' : Math.floor(Math.min(player.position ?? 0, current.info.duration || 0) / 5000);
+	return `${identity}::v${player.volume ?? 0}::c${chapterIndex ?? 'none'}::p${bucket}::r${player.repeatMode ?? 'off'}${player.paused ? ':paused' : ''}`;
+}
+
+/** 두 카드 키가 같은 곡(위치 버킷 등은 다를 수 있음)인지 — 5초 갱신 창에서 이전 이미지를 재사용하기 위한 판별 */
+export function sameNowPlayingTrackIdentity(a: string, b: string): boolean {
+	return a.split('::v')[0] === b.split('::v')[0];
 }
 
 /** 현재 위치 기준 재생 중인 챕터 인덱스 — 챕터가 없으면 null */
@@ -76,8 +87,10 @@ function requesterInfo(player: CustomPlayer): { name: string; avatarUrl: string 
 }
 
 function safeFilename(trackKey: string): string {
+	// 파일명은 곡 식별자 기준으로 고정 — 5초 버킷마다 다시 렌더돼도 같은 곡은 같은 파일명으로 교체돼요
 	let h = 2166136261;
-	for (let i = 0; i < trackKey.length; i++) h = Math.imul(h ^ trackKey.charCodeAt(i), 16777619);
+	const identity = trackKey.split('::v')[0];
+	for (let i = 0; i < identity.length; i++) h = Math.imul(h ^ identity.charCodeAt(i), 16777619);
 	return `nowplaying-${(h >>> 0).toString(36)}.png`;
 }
 
@@ -88,14 +101,19 @@ function brandLine(): string {
 
 async function renderCard(player: CustomPlayer, current: Track, trackKey: string): Promise<CachedCard | null> {
 	const queuedTracks = getUserQueuedTracks(player);
+	const requesterId = requesterIdOf(current ?? undefined);
 	const buffer = await renderNowPlayingCard({
 		trackId: current.info.identifier || current.info.title,
 		title: current.info.title,
 		artist: current.info.author,
 		artworkUrl: current.info.artworkUrl ?? null,
-		positionMs: 0,
+		positionMs: Math.min(player.position ?? 0, current.info.duration || 0),
 		durationMs: current.info.duration ?? 0,
 		isStream: current.info.isStream ?? false,
+		isPaused: player.paused ?? false,
+		repeatMode: player.repeatMode ?? 'off',
+		isRecommended: requesterId === RELATED_TRACK_REQUESTER_ID,
+		nextTracks: queuedTracks.slice(0, 3).map((track) => ({ title: track.info.title, artist: track.info.author || null })),
 		queueCount: queuedTracks.length,
 		queueRemainingMs: remainingUntilQueueEnd(player, queuedTracks),
 		volume: player.volume ?? null,
@@ -115,7 +133,8 @@ function attachment(card: CachedCard, fresh: boolean): NowPlayingCardAttachment 
 		url: `attachment://${card.filename}`,
 		filename: card.filename,
 		file: new AttachmentBuilder(card.buffer, { name: card.filename }),
-		fresh
+		fresh,
+		trackKey: card.trackKey
 	};
 }
 
@@ -166,6 +185,18 @@ export async function resolveNowPlayingCard(player: CustomPlayer): Promise<NowPl
 export function getCachedNowPlayingCard(player: CustomPlayer): NowPlayingCardAttachment | null {
 	const card = container.nowPlayingCardStore?.cache.get(player.guildId);
 	return card && card.trackKey === getNowPlayingCardKey(player) ? attachment(card, false) : null;
+}
+
+/**
+ * 메시지에 표시할 카드 — 최신 5초 버킷이 렌더 중인 동안 같은 곡의 이전 버킷 이미지를 대신 보여요.
+ * 새 렌더가 끝나면 notifier가 같은 파일명으로 교체 첨부해요. 트랙이 바뀌었으면 null(텍스트 폴백).
+ */
+export function getDisplayNowPlayingCard(player: CustomPlayer): NowPlayingCardAttachment | null {
+	const currentKey = getNowPlayingCardKey(player);
+	const card = container.nowPlayingCardStore?.cache.get(player.guildId);
+	if (!card || !currentKey) return null;
+	if (card.trackKey === currentKey) return attachment(card, false);
+	return sameNowPlayingTrackIdentity(card.trackKey, currentKey) ? attachment(card, false) : null;
 }
 
 /** 플레이어 종료 시 캐시 정리 */

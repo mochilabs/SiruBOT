@@ -10,7 +10,11 @@ vi.mock('@sapphire/framework', () => ({
 	InteractionHandlerTypes: { Button: 'button' }
 }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkDJOrAlone: mocks.allowed }));
-vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({ getCachedNowPlayingCard: mocks.cached, resolveNowPlayingCard: mocks.render }));
+vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({
+	getCachedNowPlayingCard: mocks.cached,
+	getDisplayNowPlayingCard: mocks.cached,
+	resolveNowPlayingCard: mocks.render
+}));
 vi.mock('../view/controller.ts', () => ({ controllerView: () => ({}) }));
 
 function context() {

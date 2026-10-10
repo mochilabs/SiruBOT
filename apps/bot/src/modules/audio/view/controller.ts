@@ -61,7 +61,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
-	const trackLines = buildTrackDisplay(player, current);
+	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(trackLines.join('\n'));
 
@@ -95,13 +95,18 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		.setEmoji(repeatEmoji(player.repeatMode));
 
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
-	// 1행: 재생 제어(prev·pause·next·repeat·stop), 2행: 대기열 (Discord 한 행당 버튼 5개 제한)
-	const queueShowButton = new ButtonBuilder().setCustomId(wrapPrefix('queue:show')).setLabel('대기열').setEmoji(emoji('scroll'));
+	// 1행: 재생 제어(prev·pause·next·stop·대기열), 2행: 반복 (Discord 한 행당 버튼 5개 제한)
+	// 대기열 버튼은 볼 대상(유저 대기열)이 비었으면 비활성화 — 핸들러의 빈 대기열 처리는 안전망으로 유지.
+	const queueShowButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('queue:show'))
+		.setLabel('대기열')
+		.setEmoji(emoji('scroll'))
+		.setDisabled(queuedTracks.length === 0);
 
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, repeatButton, stopButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+		[prevButton, pauseButton, nextButton, stopButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
-	const queueActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents([queueShowButton.setStyle(ButtonStyle.Secondary)]);
+	const utilityActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents([repeatButton.setStyle(ButtonStyle.Secondary)]);
 
 	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
 	if (nowPlayingCardUrl) {
@@ -118,9 +123,10 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	}
 
 	containerComponent.addActionRowComponents(controlActionRow);
-	containerComponent.addActionRowComponents(queueActionRow);
+	containerComponent.addActionRowComponents(utilityActionRow);
 
-	if (nextUpLines.length > 0) {
+	// 다음 곡 목록은 카드 이미지에 그려져요 — 카드가 있으면 텍스트 목록과 중복되지 않게 생략해요.
+	if (nextUpLines.length > 0 && !nowPlayingCardUrl) {
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
 	}
 
@@ -152,7 +158,7 @@ function buildEpisodeLine(player: Player): string | null {
 	return `-# ╰ ${chapter.name} • (${formatTime(chapter.start / 1000)} - ${formatTime(chapter.end / 1000)})`;
 }
 
-export function buildTrackDisplay(player: Player, track: Track | null): string[] {
+export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
 	const contents = [];
 	if (!track) {
 		contents.push(`### 재생 중인 음악이 없어요.`);
@@ -172,14 +178,14 @@ export function buildTrackDisplay(player: Player, track: Track | null): string[]
 		contents.push(requesterId === RELATED_TRACK_REQUESTER_ID ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
 	}
 
-	// 길이 표기 — 짧은 이모지 프로그레스바와 (지금시간 / 길이)을 함께 표시한다.
-	// 진행바는 카드 이미지에 박지 않아 이 라인이 playerUpdate마다 edit로 갱신되는 유일한 동적 라인이다.
+	// 길이 표기 — (지금시간 / 길이). 카드가 없을 때만 뒤에 이모지 프로그레스바를 붙인다
+	// (진행바는 카드 이미지에 그려지므로, 카드가 있으면 이 라인은 시간 텍스트만 갱신해요).
 	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
 	if (track.info.isStream) {
 		contents.push(`-# (${durationText}) 실시간 스트리밍`);
 	} else {
-		const progressBar = emojiProgressBar((player.position ?? 0) / (track.info.duration || 1));
-		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText}) ${progressBar}`);
+		const progressText = options.progressEmoji === false ? '' : ` ${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))}`;
+		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText})${progressText}`);
 	}
 
 	return contents;

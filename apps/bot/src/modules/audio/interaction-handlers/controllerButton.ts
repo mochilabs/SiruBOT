@@ -7,7 +7,7 @@ import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { getCachedNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
+import { getDisplayNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
 
@@ -103,7 +103,8 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private buildControllerPayload(player: CustomPlayer, message: Message) {
-		const card = getCachedNowPlayingCard(player);
+		// 같은 곡의 이전 5초 버킷 카드는 새 버킷 렌더가 끝날 때까지 유지해요(무플리커).
+		const card = getDisplayNowPlayingCard(player);
 		return {
 			components: [controllerView({ player, volume: player.volume, nowPlayingCardUrl: card?.url })],
 			attachments: card ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [],

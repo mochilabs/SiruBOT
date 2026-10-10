@@ -1,3 +1,4 @@
+core.*
 # Ignore a blackhole and the folder for development
 node_modules/
 .vs/
@@ -47,3 +48,4 @@ packages/prisma/src/client/
 # Local codebase documentation
 /localdocs/
 .opencode/index/
+core.*

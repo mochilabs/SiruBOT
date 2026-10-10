@@ -293,14 +293,21 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'pause', label: '일시정지', bg: 'rgba(255,255,255,0.13)' }) + 8;
 	}
 	if (input.isRecommended) {
-		badgeX = drawPill(ctx, {
-			x: badgeX,
-			y: 32,
-			icon: 'sparkle',
-			label: '봇 추천',
-			bg: `${accent.primary}2e`,
-			border: `${accent.primary}66`
-		}) + 8;
+		badgeX =
+			drawPill(ctx, {
+				x: badgeX,
+				y: 32,
+				icon: 'sparkle',
+				label: '봇 추천',
+				bg: `${accent.primary}2e`,
+				border: `${accent.primary}66`
+			}) + 8;
+	}
+	// 반복 상태도 뱃지로 — 하단 메타 폭이 좁으면 잘려서 안 보이므로 위쪽에 고정해요.
+	if (input.repeatMode === 'track') {
+		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'repeat-1', label: '반복: 현재 곡', bg: 'rgba(255,255,255,0.13)' }) + 8;
+	} else if (input.repeatMode === 'queue') {
+		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'repeat', label: '반복: 대기열', bg: 'rgba(255,255,255,0.13)' }) + 8;
 	}
 
 	// ── 신청자 pill — 상단 우측 (뱃지와 겹치면 생략, 텍스트 라인 멘션이 폴백) ──
@@ -344,39 +351,12 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		ctx.textBaseline = 'alphabetic';
 	}
 
-	// 제목 — 카드에는 곡 제목만 크게 (아티스트는 텍스트 라인 담당)
+	// 제목 — 카드에는 곡 제목만 크게 (전체 길이는 진행바 우측에 표기)
 	const titleSize = 37;
 	ctx.fillStyle = '#ffffff';
 	ctx.font = `700 ${titleSize}px "Noto Sans KR", sans-serif`;
-	const titleText = input.isStream ? truncate(ctx, input.title, textW) : truncate(ctx, input.title, textW - 110);
-	const titleW = ctx.measureText(titleText).width;
+	const titleText = truncate(ctx, input.title, textW);
 	ctx.fillText(titleText, tx, 104);
-
-	// 곡 길이 — 제목 오른쪽 작은 칩
-	if (!input.isStream && input.durationMs > 0) {
-		const lengthY = 104;
-		ctx.save();
-		ctx.font = '500 17px "Noto Sans KR", sans-serif';
-		const lengthText = formatClock(input.durationMs);
-		const lw = ctx.measureText(lengthText).width + 24;
-		const lx = tx + titleW + 18;
-		ctx.beginPath();
-		ctx.roundRect(lx, lengthY - 21, lw, 27, 13);
-		ctx.fillStyle = 'rgba(255,255,255,0.09)';
-		ctx.fill();
-		ctx.beginPath();
-		ctx.roundRect(lx, lengthY - 21, lw, 27, 13);
-		ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-		ctx.lineWidth = 1;
-		ctx.stroke();
-		ctx.fillStyle = 'rgba(255,255,255,0.62)';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
-		ctx.fillText(lengthText, lx + lw / 2, lengthY - 7);
-		ctx.restore();
-		ctx.textAlign = 'left';
-		ctx.textBaseline = 'alphabetic';
-	}
 
 	// ── 아티스트 / 챕터 ──
 	let cursorY = 104;
@@ -451,6 +431,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		const maxLines = Math.min(nextList.length, Math.max(0, Math.floor((H - 44 - headerBase) / 18)));
 		for (let i = 0; i < maxLines; i++) {
 			const lineY = headerBase + 24 + 18 * i;
+			cursorY = lineY;
 			const text = `${nextList[i]!.title}${nextList[i]!.artist ? ` · ${nextList[i]!.artist}` : ''}`;
 			ctx.font = '600 13px "Noto Sans KR", sans-serif';
 			ctx.fillStyle = `${accent.primary}cc`;
@@ -462,8 +443,9 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		}
 	}
 
-	// ── 하단 메타: 대기열 + 볼륨 + 반복 + 노드 — 우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략 ──
-	const metaY = H - 20;
+	// ── 하단 메타: 대기열 + 볼륨 + 노드 — 우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략 ──
+	// 메타 행은 콘텐츠 뒤에서 64px 떨어진 곳에서 하단까지 — 다음 곡이 없어 하단이 비지 않게.
+	const metaY = Math.min(H - 20, Math.max(cursorY + 64, artCursorY + 128));
 	type MetaSegment = { icon: IconName; text: string };
 	const metaSegments: MetaSegment[] = [];
 	if (input.queueCount > 0) {
@@ -473,8 +455,6 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	if (input.volume !== null) {
 		metaSegments.push({ icon: input.volume === 0 ? 'volume-x' : input.volume < 50 ? 'volume-1' : 'volume-2', text: `볼륨 ${input.volume}%` });
 	}
-	if (input.repeatMode === 'track') metaSegments.push({ icon: 'repeat-1', text: '반복: 현재 곡' });
-	else if (input.repeatMode === 'queue') metaSegments.push({ icon: 'repeat', text: '반복: 대기열' });
 	if (input.nodeId) metaSegments.push({ icon: 'radio', text: `노드 ${input.nodeId}` });
 
 	if (metaSegments.length > 0) {
@@ -500,7 +480,8 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 			ctx.fillText(segment.text, cx, metaY);
 			cx += ctx.measureText(segment.text).width + 26;
 		}
-	} else {
+	} else if (!input.brandLine) {
+		// 세그먼트가 없을 때의 폴백 라벨 — 브랜드가 이미 표기돼 있으면 생략해요(중복 제거).
 		ctx.fillStyle = 'rgba(255,255,255,0.5)';
 		ctx.font = '400 18px "Noto Sans KR", sans-serif';
 		ctx.fillText('SiruBOT', tx, metaY);
