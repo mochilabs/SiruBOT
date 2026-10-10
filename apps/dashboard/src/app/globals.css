@@ -35,7 +35,8 @@
 	--accent-foreground: #d1608a;
 	--border: #f0d4e3;
 	--input: #f9eff5;
-	--ring: #ff85c1;
+	/* 포커스 링 토큰 — 라이트 모드 기준 #a3416f는 #ffffff 대비 5.93:1, #fef5f9 대비 5.54:1로 WCAG 2.1 비텍스트 대비(3.0:1)를 만족 */
+	--ring: #a3416f;
 
 	--discord-embed: #f2f3f5;
 	--discord-text: #313338;
@@ -162,7 +163,8 @@
    ============================================================================= */
 :root {
 	--border-subtle: #f8e6ef;
-	--border-strong: #d9aec6;
+	/* 인터랙티브 컨트롤 경계선 — #b4779b는 #ffffff 대비 3.47:1, #fef5f9 대비 3.25:1로 3.0:1 통과 */
+	--border-strong: #b4779b;
 
 	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.08);
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.1), 0 1px 3px -1px rgb(0 0 0 / 0.06);
@@ -173,7 +175,8 @@
 
 .dark {
 	--border-subtle: #2f1a1f;
-	--border-strong: #55323a;
+	/* 다크 인터랙티브 컨트롤 경계선 — #8f5c69는 #1a0e12 대비 3.5:1, #2d1b1e 대비 3.03:1 통과 */
+	--border-strong: #8f5c69;
 }
 
 @theme inline {

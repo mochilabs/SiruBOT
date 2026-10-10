@@ -109,6 +109,7 @@ export function TagInput({
 						if (input.trim()) addTag(input);
 					}}
 					placeholder={value.length === 0 ? placeholder : ""}
+					aria-label={placeholder || "태그 입력"}
 					disabled={disabled}
 					className="flex-1 min-w-[80px] bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-medium focus:outline-none"
 				/>

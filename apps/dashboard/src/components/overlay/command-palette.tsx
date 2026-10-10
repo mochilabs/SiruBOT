@@ -160,7 +160,7 @@ export function CommandPalette({
 							className="relative z-10 w-full max-w-xl overflow-hidden rounded-dialog border border-border bg-popover shadow-2xl"
 						>
 							{/* Search input */}
-							<div className="flex items-center gap-3 px-5 border-b border-border/40">
+							<div className="flex items-center gap-3 px-5 border-b border-border/40 focus-within:border-border-strong transition-colors">
 								<Search className="h-5 w-5 text-muted-foreground shrink-0" />
 								<input
 									ref={inputRef}
@@ -172,7 +172,8 @@ export function CommandPalette({
 									}}
 									onKeyDown={handleKeyDown}
 									placeholder={placeholder}
-									className="flex-1 h-14 bg-transparent text-base text-foreground placeholder:text-muted-foreground font-medium focus:border-border-strong focus:outline-none"
+									aria-label="명령어 검색"
+									className="flex-1 h-14 bg-transparent text-base text-foreground placeholder:text-muted-foreground font-medium focus:outline-none"
 								/>
 								<kbd className="hidden sm:inline-flex px-2 py-1 rounded-lg bg-foreground/5 text-xs font-bold text-muted-foreground tracking-wider border border-border/40">
 									ESC

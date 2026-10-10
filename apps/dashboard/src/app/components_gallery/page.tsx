@@ -329,7 +329,7 @@ export default function ComponentsGalleryPage() {
 				<div className="flex gap-8">
 					{/* Sidebar nav */}
 					<nav className="hidden lg:block w-52 shrink-0">
-						<div className="sticky top-28 space-y-1 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 relative">
+						<div className="sticky top-28 space-y-1 max-h-[calc(100svh-8rem)] overflow-y-auto pr-2 relative">
 							{sidebarIndicator && (
 								<m.div
 									className="absolute left-0 right-0 bg-primary/10 rounded-xl -z-10 shadow-sm"

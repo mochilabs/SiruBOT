@@ -121,7 +121,7 @@ export function PlaylistDetail({
 				</div>
 			</Card>
 
-			<Card padding="none" className="flex-1 overflow-hidden min-h-[400px]" style={{ maxHeight: 'calc(100vh - 20rem)' }}>
+			<Card padding="none" className="flex-1 overflow-hidden min-h-[400px]" style={{ maxHeight: 'calc(100svh - 20rem)' }}>
 				{tracks.length === 0 ? (
 					<EmptyState
 						className="flex-1 border-none bg-transparent"

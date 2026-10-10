@@ -64,7 +64,7 @@ export function PlaylistSidebar({
 
 	return (
 		<div className="w-full lg:w-80 shrink-0 lg:sticky lg:top-24 lg:z-10">
-			<Card padding="none" className="overflow-hidden max-h-[calc(100vh-8rem)] min-h-[400px]">
+			<Card padding="none" className="overflow-hidden max-h-[calc(100svh-8rem)] min-h-[400px]">
 				{playlists.length >= 5 && (
 					<div className="p-3 shrink-0">
 						<div className="relative">
