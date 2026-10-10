@@ -85,9 +85,9 @@ function Toast({
 			transition={{ type: "spring", stiffness: 400, damping: 30 }}
 			role="alert"
 			aria-live="polite"
-			className={`pointer-events-auto rounded-card border border-border bg-popover ${config.border} px-4 py-3 flex items-start gap-3 min-w-[min(320px,calc(100vw-2rem))] max-w-[min(420px,calc(100vw-2rem))] shadow-2xl`}
+			className={`pointer-events-auto rounded-card border border-border bg-popover ${config.border} px-4 py-3 flex ${toast.description ? "items-start" : "items-center"} gap-3 w-[min(420px,calc(100vw-2rem))] shadow-2xl`}
 		>
-			<Icon className={`h-5 w-5 shrink-0 mt-0.5 ${config.iconColor}`} />
+			<Icon className={`h-5 w-5 shrink-0 ${toast.description ? "mt-0.5" : ""} ${config.iconColor}`} />
 
 			<div className="flex-1 min-w-0">
 				<p className="text-sm font-bold text-foreground leading-snug">

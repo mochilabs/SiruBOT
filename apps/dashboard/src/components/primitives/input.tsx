@@ -15,7 +15,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ c
 });
 
 export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+export type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea({ className, rows = 3, ...props }, ref) {
 	return <textarea ref={ref} rows={rows} className={cn(controlBase, "min-h-20 resize-y py-2 leading-relaxed", className)} {...props} />;
+});
+
+/** 네이티브 셀렉트 — 드롭다운 케럿은 소비자가 오버레이로 얹는다(appearance-none + 우측 여백 확보) */
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select({ className, children, ...props }, ref) {
+	return (
+		<select ref={ref} className={cn(controlBase, "h-11 cursor-pointer appearance-none pl-3 pr-9", className)} {...props}>
+			{children}
+		</select>
+	);
 });

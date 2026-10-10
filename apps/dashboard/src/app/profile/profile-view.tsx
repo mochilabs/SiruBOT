@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send } from "lucide-react";
+import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from "lucide-react";
 
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
-import { Avatar } from "@/components/primitives/avatar";
 import { Badge } from "@/components/primitives/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -15,12 +14,14 @@ import type {
   ProfileAttendance,
   ProfileBirthday,
   ProfileGamesStats,
+  ProfileHoroscope,
   ProfileMusicStats,
 } from "@/lib/profile-stats";
 
 export interface ProfileViewProps {
   user: { id: string; name: string; image: string | null };
   birthday: ProfileBirthday;
+  fortune: ProfileHoroscope | null;
   music: ProfileMusicStats;
   games: ProfileGamesStats;
   attendance: ProfileAttendance;
@@ -48,26 +49,24 @@ function MockThumbnail({ className }: { className: string }) {
   );
 }
 
-/** 출석 연속 일수 — 뷰포트 진입 시 카운트업 */
+/** 출석 연속 일수 — 뷰포트 진입 시 카운트업 (작고 조용한 스탯) */
 function StreakCount({ streak }: { streak: number }) {
   const { ref, value } = useCountUp({ end: streak });
 
   return (
-    <p className="text-4xl font-black tabular-nums text-foreground">
+    <p className="text-2xl font-black tabular-nums text-foreground">
       <span ref={ref}>{Math.round(value).toLocaleString("ko-KR")}</span>
-      <span className="ml-1 text-base font-bold text-muted-foreground">일 연속</span>
+      <span className="ml-1 text-sm font-bold text-muted-foreground">일 연속</span>
     </p>
   );
 }
 
-export function ProfileView({ user, birthday, music, games, attendance }: ProfileViewProps) {
+export function ProfileView({ user, birthday, fortune, music, games, attendance }: ProfileViewProps) {
   const hasBirthday = birthday.month != null && birthday.day != null;
 
   return (
     <>
-      <PageHeader title="내 프로필" description={user.name ? `${user.name}님의 프로필이에요.` : undefined}>
-        <Avatar src={user.image} alt={user.name} fallback={user.name} size="lg" ring />
-      </PageHeader>
+      <PageHeader title="내 프로필" description={user.name ? `${user.name}님의 프로필이에요.` : undefined} />
 
       <RevealGroup className="grid gap-4 md:grid-cols-2" stagger={0.1}>
         {/* 생일 카드 */}
@@ -87,7 +86,7 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
           </Card>
         </RevealItem>
 
-        {/* 출석 카드 */}
+        {/* 출석 카드 — 슬림하게 */}
         <RevealItem>
           <Card>
             <CardHeader>
@@ -100,10 +99,48 @@ export function ProfileView({ user, birthday, music, games, attendance }: Profil
                 {attendance.checkedInToday ? (
                   <Badge variant="success">오늘 출석 완료</Badge>
                 ) : (
-                  <Badge variant="warning">오늘 미출석: 디스코드 `/출석` 으로 체크</Badge>
+                  <Badge variant="warning">오늘 미출석 · `/출석`으로 체크</Badge>
                 )}
               </div>
             </CardHeader>
+          </Card>
+        </RevealItem>
+
+        {/* 오늘의 운세 — 생일 별자리의 오하아사 (data-api 일일 캐시와 동일 데이터) */}
+        <RevealItem className="md:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary-text" aria-hidden />
+                오늘의 운세
+              </CardTitle>
+              <CardDescription>
+                {hasBirthday && birthday.zodiac
+                  ? `${birthday.zodiac.ko} 오늘의 별자리 운세`
+                  : "봇 `/프로필 생일 등록` 커맨드로 등록하면 오늘의 운세가 표시돼요."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {hasBirthday && birthday.zodiac ? (
+                fortune && fortune.content ? (
+                  <p className="whitespace-pre-line text-sm font-medium leading-relaxed text-foreground/90">
+                    {fortune.content.replaceAll("\t", "\n")}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">지금은 운세를 불러오지 못했어요. 잠시 후 다시 방문해 주세요.</p>
+                )
+              ) : (
+                <p className="text-sm text-muted-foreground">-</p>
+              )}
+              {hasBirthday && birthday.zodiac && fortune && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3 text-xs font-medium text-muted-foreground">
+                  <Badge variant="default">{birthday.zodiac.ko}</Badge>
+                  {fortune.rank > 0 && <Badge variant="primary">{fortune.rank}위</Badge>}
+                  <span className="ml-auto tabular-nums">{fortune.date} 기준</span>
+                  {!fortune.translated && <span>( 번역 대기 · 일본어 원문 )</span>}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </RevealItem>
 
