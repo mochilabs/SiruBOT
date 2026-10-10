@@ -46,3 +46,4 @@ packages/prisma/src/client/
 
 # Local codebase documentation
 /localdocs/
+.opencode/index/
