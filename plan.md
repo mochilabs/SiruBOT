@@ -356,4 +356,5 @@ Why first: (a) it is a *validated, permanent data-loss* defect triggered by ordi
 - **F-21 구현 컷** — ConnState(journal 쌍둥이→RedisStore/NodeSession) 우선, Liveness는 스테이징 게이트, notifier는 F-08 세션 동행.
 - **COR-9c 후속 소규모 컷** — P1 2건(fetch 오판 코드판별·재클레임 무장)은 즉시 적용 가능, P2 3건(재입장 소유권 재부여·승계 실패 관측·후계자 소멸 폴백)은 승계 로직 재사용. READY reconcile은 Phase 2 그대로.
 - **소형 후속(이번 발견) — 완료**: changeNode 미catch 수정(bot), data-api 미문서화 `/v1/delivery/carriers` 제거(데드 export 동반), redis 플로팅 태그 고정(`redis:8-alpine`) · **잔여**: 컷 3 엣지 1건(`enqueueTrack→autoPlayRelated`) 수용 문서화만.
+- **이모지 후속(유제 발견)**: ① API 폴백 fetcher 수정 완료 — `ClientApplication.fetch()`(`GET /oauth2/applications/@me`)는 이모지 컬렉션을 채우지 않음을 discord.js 소스로 확인, `client.application.emojis.fetch()`(매니저 fetch)로 교체. ② **미업로드 12종 확정**: `play`/`pause`/`stop` + 진행바 `pb_*` 9종 — PNG는 커밋(`a3423bc`)이나 `emoji-ids.json`은 87종(99 PNG 중). 로컬 머신에 DISCORD_TOKEN 없음(배포 env 주입 구조) → **운영자 작업 대기**: 토큰이 있는 곳에서 `yarn dlx tsx scripts/upload-emojis.ts`(기존 87종 skip·12종만 업로드) → 재생성된 매핑(canonical + apps/bot/resources) 커밋. 업로드는 즉시 유효, 매핑 반영은 재부팅(파일 로드)부터.
 - **톰스톤 완료(미커밋)** — 작업 트리 4파일 수정+1 신규 테스트. 커밋 슬라이스 권장.
