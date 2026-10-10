@@ -1,3 +1,4 @@
+import { fetchDataApi } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { getZodiac, type ZodiacInfo } from "@/lib/zodiac";
 
@@ -5,6 +6,32 @@ export interface ProfileBirthday {
   month: number | null;
   day: number | null;
   zodiac: ZodiacInfo | null;
+}
+
+export interface ProfileHoroscope {
+  /** 운세 날짜 (data-api 제공, YYYY-MM-DD) */
+  date: string;
+  rank: number;
+  content: string;
+  ko: string;
+  translated: boolean;
+}
+
+interface OhaasaDailyResponse {
+  date: string;
+  translated: boolean;
+  horoscopes: Array<{ rank: number; zodiacCode: string; content: string }>;
+}
+
+/**
+ * 오늘의 운세 — data-api /v1/ohaasa(일일 캐시·한국어 번역본)에서 유저 별자리 행만 꺼내요.
+ * 실패는 null로 돌려 뷰의 안내 문장으로 흘려요 (봇 /v1 원본과 같은 데이터 원본).
+ */
+export async function fetchProfileHoroscope(zodiac: ZodiacInfo): Promise<ProfileHoroscope | null> {
+  const data = await fetchDataApi<OhaasaDailyResponse>("/v1/ohaasa");
+  const mine = data?.horoscopes?.find((h) => h.zodiacCode === zodiac.code);
+  if (!data || !mine) return null;
+  return { date: data.date, rank: mine.rank, content: mine.content, ko: zodiac.ko, translated: data.translated };
 }
 
 export interface ProfileRecentTrack {

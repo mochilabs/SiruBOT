@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { auth } from "@/lib/auth";
-import { getProfileStats } from "@/lib/profile-stats";
+import { fetchProfileHoroscope, getProfileStats } from "@/lib/profile-stats";
 
 import { ProfileView } from "./profile-view";
 
@@ -16,6 +16,7 @@ export default async function ProfilePage() {
   }
 
   const stats = await getProfileStats(session.user.id);
+  const fortune = stats.birthday.zodiac ? await fetchProfileHoroscope(stats.birthday.zodiac) : null;
 
   return (
     <Container>
@@ -26,6 +27,7 @@ export default async function ProfilePage() {
           image: session.user.image ?? null,
         }}
         birthday={stats.birthday}
+        fortune={fortune}
         music={stats.music}
         games={stats.games}
         attendance={stats.attendance}
