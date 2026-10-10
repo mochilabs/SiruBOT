@@ -2,6 +2,7 @@ import { type RedisClientType } from '@redis/client';
 import { container } from '@sapphire/framework';
 import { Awaitable, QueueStoreManager, StoredQueue } from 'lavalink-client';
 import { MemoryCache } from '@sirubot/utils';
+import { syncPendingWrites } from '../pendingWriteSync.ts';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
 
@@ -35,14 +36,21 @@ export class CachedQueueStore implements QueueStoreManager {
 	public async get(guildId: string): Promise<string> {
 		const key = this.getKey(guildId);
 
-		if (this.isRedisConnected) {
-			const rawQueue = await this.redis.get(key);
-			if (rawQueue !== null) {
-				// Redis에서 성공적으로 읽었으면 캐시에도 저장
-				this.cache.set(key, rawQueue);
-				this.logger.trace(`Retrieved from Redis for guild ${guildId}`);
-				return rawQueue;
+		// set/delete와 달리 get에서 reject하면 lavalink 라이브러리 큐 조작(queue.add/splice)까지
+		// 원시 오류로 터진다 — catch로 캐시 폴백을 보장한다.
+		try {
+			if (this.isRedisConnected) {
+				const rawQueue = await this.redis.get(key);
+				if (rawQueue !== null) {
+					// Redis에서 성공적으로 읽었으면 캐시에도 저장
+					this.cache.set(key, rawQueue);
+					this.logger.trace(`Retrieved from Redis for guild ${guildId}`);
+					return rawQueue;
+				}
 			}
+		} catch (error) {
+			this.logger.warn(`Redis get failed for guild ${guildId}, falling back to cache: ${error}`);
+			this.isRedisConnected = false;
 		}
 
 		const cachedData = this.cache.get(key);
@@ -72,6 +80,9 @@ export class CachedQueueStore implements QueueStoreManager {
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.set(key, stringValue, { EX: CachedQueueStore.REDIS_TTL_SECONDS });
+				// 직접 쓰기 성공 시 낡은 pending 값은 버린다 — 남아 있으면 다음 재연결 sync가
+				// 과거 값을 되살려 최신 큐를 덮어쓴다.
+				this.pendingWrites.delete(key);
 				this.logger.trace(`Successfully set in Redis for guild ${guildId}`);
 			} else {
 				this.pendingWrites.set(key, stringValue);
@@ -94,6 +105,8 @@ export class CachedQueueStore implements QueueStoreManager {
 		try {
 			if (this.isRedisConnected) {
 				const result = await this.redis.del(key);
+				// 직접 삭제 성공 시 낡은 pending 값도 버린다 — 다음 sync가 삭제된 큐를 되살린다.
+				this.pendingWrites.delete(key);
 				this.logger.trace(`Successfully deleted from Redis for guild ${guildId}`);
 				return result > 0;
 			} else {
@@ -121,9 +134,11 @@ export class CachedQueueStore implements QueueStoreManager {
 
 	public onConnect(): void {
 		this.logger.info('Redis connected, syncing pending writes...');
-		this.isRedisConnected = true;
-
-		this.syncPendingWrites();
+		// sync가 끝난 뒤에만 Redis를 원본으로 취급한다 — 먼저 flip하면 동기화 중 get()이
+		// Redis의 과거 값을 읽어 cache의 더 최신 pending 값을 덮어썼다(재연결 경합).
+		void this.drainPendingWrites().then(() => {
+			this.isRedisConnected = true;
+		});
 	}
 
 	public onDisconnect(): void {
@@ -131,35 +146,11 @@ export class CachedQueueStore implements QueueStoreManager {
 		this.isRedisConnected = false;
 	}
 
-	private async syncPendingWrites(): Promise<void> {
-		if (this.pendingWrites.size === 0) {
-			this.logger.debug('No pending writes to sync');
-			return;
-		}
-
-		this.logger.info(`Syncing ${this.pendingWrites.size} pending writes...`);
-
-		const promises: Promise<void>[] = [];
-
-		for (const [key, value] of this.pendingWrites.entries()) {
-			promises.push(
-				this.redis
-					.set(key, value, { EX: CachedQueueStore.REDIS_TTL_SECONDS })
-					.then(() => {
-						this.logger.trace(`Synced ${key}`);
-					})
-					.catch((error) => {
-						this.logger.error(`Failed to sync ${key}: ${error}`);
-					})
-			);
-		}
-
-		try {
-			await Promise.allSettled(promises);
-			this.pendingWrites.clear();
-			this.logger.info('All pending writes synced successfully');
-		} catch (error) {
-			this.logger.error(`Error during sync: ${error}`);
+	/** sync 1회 돌리고, 그 사이 새로 쌓인 pending이 남으면 한 번 더 민다. (shutdown 플러시와 onConnect에서 공용) */
+	public async drainPendingWrites(): Promise<void> {
+		await syncPendingWrites(this.redis, this.pendingWrites, CachedQueueStore.REDIS_TTL_SECONDS, this.logger);
+		if (this.pendingWrites.size > 0) {
+			await syncPendingWrites(this.redis, this.pendingWrites, CachedQueueStore.REDIS_TTL_SECONDS, this.logger);
 		}
 	}
 

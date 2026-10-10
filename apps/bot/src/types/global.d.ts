@@ -47,6 +47,9 @@ declare module '@sapphire/pieces' {
 		mixerService: import('../services/mixerService.ts').MixerService;
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
+		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
+		botProfileService: import('../services/botProfileService.ts').BotProfileService;
+		memberGreetingService: import('../services/memberGreetingService.ts').MemberGreetingService;
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };
 	}

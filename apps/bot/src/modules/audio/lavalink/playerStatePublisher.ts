@@ -8,41 +8,13 @@
  * - 제어(일시정지/스킵 등)는 이 퍼블리시로 하지 않는다 — 제어는 bot RPC로 별도 구현 예정.
  */
 import { container } from '@sapphire/framework';
+import type { PlayerStatePayload, QueuedTrackSummary } from '@sirubot/utils';
 import type { Track } from 'lavalink-client';
 import { getUserQueuedTracks } from './autoPlayRelated.ts';
 import { requesterIdOf, resolveRequesterName } from './requester.ts';
 import type { CustomPlayer } from './player/customPlayer.ts';
 
 const IMMEDIATE_INTERVAL_MS = 5_000;
-
-export interface QueuedTrackSummary {
-	title: string;
-	author: string;
-	durationMs: number;
-	artworkUrl: string | null;
-	isStream: boolean;
-	requesterName: string | null;
-}
-
-export interface PlayerStatePayload {
-	guildId: string;
-	playing: boolean;
-	paused: boolean;
-	positionMs: number;
-	durationMs: number;
-	trackTitle: string | null;
-	trackAuthor: string | null;
-	artworkUrl: string | null;
-	isStream: boolean;
-	/** 유저가 신청한 대기열 앞 5곡 요약 (추천곡 제외) */
-	queue: QueuedTrackSummary[];
-	queueLength: number;
-	repeatMode: 'off' | 'track' | 'queue';
-	volume: number;
-	requesterName: string | null;
-	sourceName: string | null;
-	updatedAt: number;
-}
 
 /** 길드별 마지막 퍼블리시 (주기 캐시 + 변경 감지 지문) */
 type PublishTracker = Map<string, { at: number; fingerprint: string }>;

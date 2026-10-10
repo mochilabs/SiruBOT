@@ -1,5 +1,5 @@
 import { Track } from 'lavalink-client';
-import { isYouTubeSource } from '../modules/audio/lavalink/youtubeChapters.ts';
+import { isYouTubeSource } from '@sirubot/utils';
 
 export function extractTrackData(track: Track) {
 	const info = track.info;

@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { GuildMember, PartialGuildMember } from 'discord.js';
 
-import { memberGreetingService } from '../../../../services/memberGreetingService.ts';
+import { container } from '@sapphire/framework';
 
 /**
  * 퇴장 — 작별 인사를 보내요. 떠난 멤버는 캐시에서 사라질 수 있으므로 표시 이름은
@@ -14,7 +14,7 @@ export class GuildMemberRemoveListener extends Listener {
 	public override async run(member: GuildMember | PartialGuildMember) {
 		const guild = member.guild;
 		try {
-			await memberGreetingService.dispatch(guild, 'goodbye', {
+			await container.memberGreetingService.dispatch(guild, 'goodbye', {
 				user: { id: member.id, username: member.user?.username ?? member.displayName },
 				displayName: member.displayName,
 				mention: member.toString(),

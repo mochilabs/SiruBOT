@@ -61,3 +61,22 @@ export const MEMBER_GREETING_STATE_CHANNEL_PREFIX = 'sirubot:member-greeting:sta
 export function memberGreetingStateChannel(guildId: string): string {
 	return `${MEMBER_GREETING_STATE_CHANNEL_PREFIX}${guildId}`;
 }
+
+/**
+ * 플레이어 실시간 상태 채널 접두사 — 봇이 `sirubot:player:{guildId}`로 스냅샷을 퍼블리시해요.
+ * 구독자는 data-api playerHub가 유일해요. (schema: playerState.ts)
+ */
+export const PLAYER_STATE_CHANNEL_PREFIX = 'sirubot:player:';
+
+/** 패턴 구독용 — `sirubot:player:*` */
+export const PLAYER_STATE_CHANNEL_PATTERN = `${PLAYER_STATE_CHANNEL_PREFIX}*`;
+
+/** 상태 퍼블리시 채널명 — `sirubot:player:{guildId}` */
+export function playerStateChannel(guildId: string): string {
+	return `${PLAYER_STATE_CHANNEL_PREFIX}${guildId}`;
+}
+
+/** 채널명에서 guildId를 뽑아요 — 이 채널 계열이 아니면 null */
+export function guildIdFromPlayerStateChannel(channel: string): string | null {
+	return channel.startsWith(PLAYER_STATE_CHANNEL_PREFIX) ? channel.slice(PLAYER_STATE_CHANNEL_PREFIX.length) : null;
+}

@@ -26,11 +26,11 @@ import {
 	GreetingConfig,
 	GreetingKind,
 	MEMBER_GREETING_SEND_CHANNEL,
+	ManagedRedisSubscriber,
 	memberGreetingPendingKey,
 	renderGreetingTemplate,
 	validateGreetingConfig
 } from '@sirubot/utils';
-import { createClient, type RedisClientType } from '@redis/client';
 import {
 	AttachmentBuilder,
 	Guild,
@@ -93,68 +93,25 @@ interface ServiceLogger {
 	debug(msg: string): void;
 }
 
-const RECONNECT_DELAY_MS = 5_000;
-const RECONNECT_MAX_DELAY_MS = 60_000;
-
 export class MemberGreetingService {
-	private subscriber: RedisClientType | null = null;
-	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-	private reconnectAttempts = 0;
-	private stopped = false;
-	private redisUrl: string | null = null;
+	private subscriber: ManagedRedisSubscriber | null = null;
 
 	public constructor(private readonly logger: ServiceLogger) {}
 
 	/** 구독을 시작해요. 실패해도 throw하지 않아요 — 재연결을 시도하고 테스트 전송만 비활성돼요. */
 	public async start(redisUrl: string | undefined): Promise<void> {
-		this.redisUrl = redisUrl?.trim() || null;
-		if (!this.redisUrl) {
+		const url = redisUrl?.trim() || null;
+		if (!url) {
 			this.logger.warn('REDIS_URL 미설정: 멤버 인사 테스트 전송 구독 없이 동작해요 (실제 입퇴장 인사는 계속돼요)');
 			return;
 		}
-		await this.connectOnce();
-	}
-
-	private async connectOnce(): Promise<void> {
-		if (this.stopped || !this.redisUrl) return;
-		const previous = this.subscriber;
-		try {
-			const client = createClient({ url: this.redisUrl }) as RedisClientType;
-			client.on('error', (error) => this.logger.warn(`멤버 인사 구독 오류: ${error.message}`));
-			client.on('end', () => {
-				if (this.subscriber === client) {
-					this.subscriber = null;
-					void this.scheduleReconnect();
-				}
-			});
-
-			await client.connect();
-			await client.subscribe(MEMBER_GREETING_SEND_CHANNEL, (raw) => {
-				void this.handleSendBroadcast(raw);
-			});
-
-			this.subscriber = client;
-			this.reconnectAttempts = 0;
-			this.logger.info(`멤버 인사 테스트 전송 구독 시작: ${MEMBER_GREETING_SEND_CHANNEL}`);
-		} catch (error) {
-			this.subscriber = this.subscriber === previous ? null : this.subscriber;
-			this.logger.warn(`멤버 인사 구독 실패, 재연결 예약: ${error instanceof Error ? error.message : String(error)}`);
-			await this.scheduleReconnect();
-		} finally {
-			if (previous && previous !== this.subscriber) {
-				await previous.quit().catch(() => undefined);
-			}
-		}
-	}
-
-	private scheduleReconnect(): void {
-		if (this.stopped || this.reconnectTimer) return;
-		const delay = Math.min(RECONNECT_DELAY_MS * 2 ** this.reconnectAttempts, RECONNECT_MAX_DELAY_MS);
-		this.reconnectAttempts++;
-		this.reconnectTimer = setTimeout(() => {
-			this.reconnectTimer = null;
-			void this.connectOnce();
-		}, delay);
+		this.subscriber = new ManagedRedisSubscriber({
+			name: '멤버 인사',
+			url,
+			logger: this.logger,
+			bindings: [{ channel: MEMBER_GREETING_SEND_CHANNEL, onMessage: (raw) => void this.handleSendBroadcast(raw) }]
+		});
+		await this.subscriber.start();
 	}
 
 	private async handleSendBroadcast(raw: string): Promise<void> {
@@ -413,23 +370,8 @@ export class MemberGreetingService {
 
 	/** 종료 — 구독 해제 후 연결을 닫아요. shutdown에서 redisStore.disconnect() 전에 불러야 해요. */
 	public async stop(): Promise<void> {
-		this.stopped = true;
-		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
-			this.reconnectTimer = null;
-		}
-		const client = this.subscriber;
+		const subscriber = this.subscriber;
 		this.subscriber = null;
-		if (!client) return;
-		await client.unsubscribe(MEMBER_GREETING_SEND_CHANNEL).catch(() => undefined);
-		await client.quit().catch(() => undefined);
+		await subscriber?.stop();
 	}
 }
-
-/** 프로세스 공용 인스턴스 — bootstrap에서 시작하고 shutdown에서 정리해요 */
-export const memberGreetingService = new MemberGreetingService({
-	info: (msg) => container.logger.info(msg),
-	warn: (msg) => container.logger.warn(msg),
-	error: (msg) => container.logger.error(msg),
-	debug: (msg) => container.logger.debug(msg)
-});

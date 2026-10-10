@@ -1,6 +1,6 @@
 /**
- * YouTube 관련 유틸 — 챕터 fetch/파싱은 data-api 게이트웨이(`apps/data-api/src/providers/chapters.ts`)가 담당해요.
- * 여기는 소스 판별·videoId 해석 등 봇이 쓰는 얇은 유틸만 남겨요.
+ * Lavalink 트랙 소스 유틸 — 봇 services·modules 양쪽이 쓰는 순수 헬퍼 위치 (services→modules 역방향 import 해소용).
+ * 챕터 fetch/파싱은 data-api 게이트웨이(apps/data-api/src/providers/chapters.ts)가 담당해요.
  */
 
 /** 장문 영상에서만 챕터가 의미 있으므로 이 미만은 조회하지 않는다. */

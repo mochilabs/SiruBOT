@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
 import { MemoryCache } from '@sirubot/utils';
+import { syncPendingWrites } from '../pendingWriteSync.ts';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
 import { CustomPlayer, CustomPlayerJson } from './customPlayer.ts';
@@ -38,6 +39,8 @@ export class CachedPlayerSaver {
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.set(key, stringValue, { EX: CachedPlayerSaver.REDIS_TTL_SECONDS });
+				// 직접 쓰기 성공 시 낡은 pending 값은 버린다 — 다음 재연결 sync가 과거 값을 되살리는 것을 막는다.
+				this.pendingWrites.delete(key);
 				this.logger.trace(`Successfully set in Redis for guild ${player.guildId}`);
 			} else {
 				this.pendingWrites.set(key, stringValue);
@@ -88,6 +91,8 @@ export class CachedPlayerSaver {
 		try {
 			if (this.isRedisConnected) {
 				await this.redis.del(key);
+				// 직접 삭제 성공 시 낡은 pending 값도 버린다 — 다음 sync가 삭제된 플레이어를 되살린다.
+				this.pendingWrites.delete(key);
 				this.logger.trace(`Successfully deleted from Redis for guild ${guildId}`);
 			} else {
 				this.pendingWrites.delete(key);
@@ -126,8 +131,11 @@ export class CachedPlayerSaver {
 
 	public onConnect(): void {
 		this.logger.info('Redis connected, syncing pending writes...');
-		this.isRedisConnected = true;
-		this.syncPendingWrites();
+		// sync가 끝난 뒤에만 Redis를 원본으로 취급한다 — 먼저 flip하면 동기화 중 get()이
+		// Redis의 과거 값을 읽어 cache의 더 최신 pending 값을 덮어썼다(재연결 경합).
+		void this.drainPendingWrites().then(() => {
+			this.isRedisConnected = true;
+		});
 	}
 
 	public onDisconnect(): void {
@@ -135,30 +143,12 @@ export class CachedPlayerSaver {
 		this.isRedisConnected = false;
 	}
 
-	private async syncPendingWrites(): Promise<void> {
-		if (this.pendingWrites.size === 0) {
-			this.logger.debug('No pending writes to sync');
-			return;
+	/** sync 1회 돌리고, 그 사이 새로 쌓인 pending이 남으면 한 번 더 민다. (shutdown 플러시와 onConnect에서 공용) */
+	public async drainPendingWrites(): Promise<void> {
+		await syncPendingWrites(this.redis, this.pendingWrites, CachedPlayerSaver.REDIS_TTL_SECONDS, this.logger);
+		if (this.pendingWrites.size > 0) {
+			await syncPendingWrites(this.redis, this.pendingWrites, CachedPlayerSaver.REDIS_TTL_SECONDS, this.logger);
 		}
-
-		this.logger.info(`Syncing ${this.pendingWrites.size} pending writes...`);
-
-		// 실패한 쓰기는 지운다 하면 데이터가 영구 소실된다 — 성공한 키만 제거해 보존한다.
-		const entries = [...this.pendingWrites.entries()];
-		let synced = 0;
-		let failed = 0;
-		for (const [key, value] of entries) {
-			try {
-				await this.redis.set(key, value, { EX: CachedPlayerSaver.REDIS_TTL_SECONDS });
-				// 그 사이 같은 키에 더 최신 값이 들어왔다면 지우지 않는다.
-				if (this.pendingWrites.get(key) === value) this.pendingWrites.delete(key);
-				synced++;
-			} catch (error) {
-				failed++;
-				this.logger.error(`Failed to sync ${key}: ${error}`);
-			}
-		}
-		this.logger.info(`Pending writes sync done: ${synced} synced, ${failed} kept for retry`);
 	}
 
 	public getCacheStats() {

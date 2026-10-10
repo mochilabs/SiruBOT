@@ -137,9 +137,12 @@ export class TempVoiceService {
 		}
 
 		if (this.emptyTimers.has(channelId)) return;
-		const timer = setTimeout(() => {
-			void this.deleteIfEmpty(channelId);
-		}, this.EMPTY_GRACE_MS);
+		this.scheduleEmptyCheck(channelId);
+	}
+
+	/** 유예 시간 후 빈방 확인(deleteIfEmpty)을 다시 건다 — 중복 타이머 없음. */
+	private scheduleEmptyCheck(channelId: string): void {
+		const timer = setTimeout(() => void this.deleteIfEmpty(channelId), this.EMPTY_GRACE_MS);
 		this.emptyTimers.set(channelId, timer);
 	}
 
@@ -147,24 +150,37 @@ export class TempVoiceService {
 		this.emptyTimers.delete(channelId);
 		if (!this.rooms.has(channelId)) return;
 
-		try {
-			const channel = await container.client.channels.fetch(channelId).catch(() => null);
-			if (!channel || !channel.isVoiceBased()) return;
-			const humans = channel.members.filter((m) => !m.user.bot);
-			if (humans.size > 0) return;
+		// 추적은 "채널이 실제로 사라졌거나, 확인 시점에 확실히 비어서 삭제된" 경우에만 끝낸다.
+		// 유예 시점에 사람이 있었는데 untrack해 버리면 그 방은 영구 고아가 된다(JTC 고아 채널 버그).
+		const channel = await container.client.channels.fetch(channelId).catch(() => null);
+		if (!channel || !channel.isVoiceBased()) {
+			this.rooms.delete(channelId);
+			return;
+		}
 
+		const humans = channel.members.filter((m) => !m.user.bot);
+		if (humans.size > 0) {
+			// 사람이 다시 있음 — 추적을 유지하고 다음 유예 확인을 다시 건다 (입장 시 checkEmpty도 타이머를 지운다).
+			this.scheduleEmptyCheck(channelId);
+			return;
+		}
+
+		try {
 			await channel.delete(`임시 음성채널: ${jtcEmptyGraceText()}간 비어 있음`);
+			this.rooms.delete(channelId);
 		} catch (error) {
 			container.logger.error(`[tempVoice] failed to delete empty room ${channelId}: ${error}`);
-		} finally {
-			this.rooms.delete(channelId);
-			this.clearEmptyTimer(channelId);
+			// 삭제 실패(권한 등) — 추적을 유지해 다음 유예마다 재시도한다.
+			this.scheduleEmptyCheck(channelId);
 		}
 	}
 
 	private async createRoom(member: GuildMember, settings: JtcSettings): Promise<VoiceBasedChannel | null> {
 		const guildId = member.guild.id;
-		if (this.creating.has(guildId)) return null;
+		// 같은 멤버의 중복 진입 이벤트만 막는다 — guild-wide 락이면 다른 멤버의 동시 생성이
+		// 응답 없음(null)으로 조용히 버려져 마커 채널에 발이 묶인다.
+		const createKey = `${guildId}:${member.id}`;
+		if (this.creating.has(createKey)) return null;
 
 		const owned = [...this.rooms.entries()].find(([, room]) => room.guildId === guildId && room.ownerId === member.id);
 		if (owned) {
@@ -177,7 +193,7 @@ export class TempVoiceService {
 			this.rooms.delete(owned[0]);
 		}
 
-		this.creating.add(guildId);
+		this.creating.add(createKey);
 		try {
 			const channel = await member.guild.channels.create({
 				name: this.renderName(settings.template, member.displayName),
@@ -187,7 +203,15 @@ export class TempVoiceService {
 				permissionOverwrites: [{ id: member.id, allow: [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers] }]
 			});
 			this.rooms.set(channel.id, { guildId, ownerId: member.id });
-			await member.voice.setChannel(channel);
+			try {
+				await member.voice.setChannel(channel);
+			} catch (moveError) {
+				// 방 생성·추적은 성공했고 이동만 실패한 상태 — 추적을 버리면 빈 방이 채널에 남고,
+				// 실패로 보고하면 방이 있는데 "못 만들었다"가 된다. 유예 확인을 걸어 빈 방이면 정리한다.
+				container.logger.warn(`[tempVoice] failed to move member into created room ${channel.id}: ${moveError}`);
+				this.scheduleEmptyCheck(channel.id);
+				return channel;
+			}
 			return channel;
 		} catch (error) {
 			container.logger.error(`[tempVoice] failed to create room for guild ${guildId}: ${error}`);
@@ -211,7 +235,7 @@ export class TempVoiceService {
 			}
 			return null;
 		} finally {
-			this.creating.delete(guildId);
+			this.creating.delete(createKey);
 		}
 	}
 

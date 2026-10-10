@@ -1,4 +1,5 @@
-import { fetchWeather, type WeatherScope } from '../dataApiClient.ts';
+import { fetchWeather } from '../dataApiClient.ts';
+import type { WeatherScope } from '../../modules/general/utils/weatherService.ts';
 import type { AiTool } from './types.ts';
 
 const VALID_SCOPES: WeatherScope[] = ['now', 'today', 'tomorrow', 'week'];

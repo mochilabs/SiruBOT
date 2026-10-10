@@ -2,8 +2,7 @@ import { LavalinkManager, SponsorBlockChaptersLoaded, SponsorBlockSegmentSkipped
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
-import { DEFAULT_COLOR } from '@sirubot/utils';
-import { resolveYouTubeVideoId } from '../youtubeChapters.ts';
+import { DEFAULT_COLOR, resolveYouTubeVideoId } from '@sirubot/utils';
 
 export class SponsorBlockHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {

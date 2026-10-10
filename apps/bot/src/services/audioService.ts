@@ -1,9 +1,11 @@
 import { container, UserError } from '@sapphire/framework';
 import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
+import * as Sentry from '@sentry/node';
 import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { SkipContext } from '../modules/audio/subcommands/skip.ts';
 import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import * as view from '../modules/audio/view/play.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 
@@ -84,6 +86,10 @@ export class AudioService {
 			await player.connect();
 		} catch (error) {
 			container.logger.error(error);
+			// 인프라 실패는 사용자 메시지(UserError)와 별개로 추적 가능해야 해요 — 원인을 Sentry로 남겨요.
+			Sentry.captureException(error, {
+				tags: { layer: 'player_connect', guild_id: String(player.guildId) }
+			});
 			throw new UserError({
 				identifier: 'play_connect_error',
 				message: '🛠️ 음성 채널에 접속할 수 없어요.',
@@ -408,7 +414,7 @@ export class AudioService {
 	private isTrackRequestedByBot(track: Track): boolean {
 		if (typeof track.requester === 'string') return false;
 		const requesterId = (track.requester as APIUser).id;
-		return requesterId === container.client.user?.id || requesterId === 'related_track';
+		return requesterId === container.client.user?.id || requesterId === RELATED_TRACK_REQUESTER_ID;
 	}
 
 	private isUserAlone(context: SkipContext): boolean {

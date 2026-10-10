@@ -2,12 +2,12 @@ import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStartE
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
-import { DEFAULT_COLOR } from '@sirubot/utils';
+import { CHAPTER_FETCH_MIN_DURATION_MS, DEFAULT_COLOR, resolveYouTubeVideoId } from '@sirubot/utils';
 import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated.ts';
-import { CHAPTER_FETCH_MIN_DURATION_MS, resolveYouTubeVideoId } from '../youtubeChapters.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { clearPlayerStateTracker, publishPlayerState } from '../playerStatePublisher.ts';
+import * as Sentry from '@sentry/node';
 
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
@@ -52,10 +52,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
 		publishPlayerState(player);
-		player.setData('stopByCommand', undefined);
+		player.transitionState.stopByCommand = false;
 		// 예열 소비 확인 창(preloadConsumedAt)은 시작 확정과 함께 닫는다 — 남겨두면 창 안에
 		// 도착한 무관한 늦은 queueEnd를 defer해 실제 종료 처리(finishQueue)가 늦어진다.
-		player.setData('preloadConsumedAt', undefined);
+		player.transitionState.preloadConsumedAt = null;
 		this.setLastStarted(player, startedTrack);
 		this.clearAdvancePending(player.guildId);
 		this.clearWatchdog(player.guildId);
@@ -108,7 +108,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		publishPlayerState(player);
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
-			player.setData('preloadConsumedAt', Date.now());
+			player.transitionState.preloadConsumedAt = Date.now();
 			// β 순서(시작 먼저): 이미 다음 곡이 시작된 상태라면 확인 타이머가 필요 없다.
 			// α 순서(종료 먼저): 마지막 시작곡이 방금 끝났으므로 전이 확인 타이머를 건다.
 			if (!this.isTransitionAlreadyStarted(player, track)) {
@@ -126,7 +126,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		//   autoSkip: false라 라이브러리가 다음 곡으로 넘기지 않으므로 여기서 진행해야 한다.
 		//   '/stop'은 큐를 비운 뒤 queueEnd로 가므로 도달하지 않는다.
 		// 'replaced'(이전곡 치환)와 'loadFailed'/'cleanup'(trackError/trackStuck 핸들러 소유)는 제외 — 이중 진행 방지.
-		if ((payload.reason === 'finished' || payload.reason === 'stopped') && player.queue.current && !player.getData('stopByCommand')) {
+		if ((payload.reason === 'finished' || payload.reason === 'stopped') && player.queue.current && !player.transitionState.stopByCommand) {
 			void this.startClientOwnedTrack(player).catch((error) =>
 				this.logger.error(`Failed to advance track (client-owned transition): ${error}`)
 			);
@@ -149,7 +149,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 				player,
 				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
 			);
-			player.setData('stopByCommand', true);
+			player.transitionState.stopByCommand = true;
 			this.container.mixerService.markUnmanaged(player.guildId);
 			this.clearWatchdog(player.guildId);
 			await player.stopPlaying();
@@ -159,7 +159,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
-			player.setData('preloadConsumedAt', Date.now());
+			player.transitionState.preloadConsumedAt = Date.now();
 			if (!this.isTransitionAlreadyStarted(player, track)) {
 				this.armWatchdog(player);
 			}
@@ -173,7 +173,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		} else {
 			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
-			player.setData('stopByCommand', true);
+			player.transitionState.stopByCommand = true;
 			await player.stopPlaying();
 		}
 	}
@@ -194,7 +194,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 				player,
 				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
 			);
-			player.setData('stopByCommand', true);
+			player.transitionState.stopByCommand = true;
 			this.container.mixerService.markUnmanaged(player.guildId);
 			this.clearWatchdog(player.guildId);
 			await player.stopPlaying();
@@ -204,7 +204,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
-			player.setData('preloadConsumedAt', Date.now());
+			player.transitionState.preloadConsumedAt = Date.now();
 			if (!this.isTransitionAlreadyStarted(player, track)) {
 				this.armWatchdog(player);
 			}
@@ -217,7 +217,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		} else {
 			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
-			player.setData('stopByCommand', true);
+			player.transitionState.stopByCommand = true;
 			await player.stopPlaying();
 		}
 	}
@@ -254,7 +254,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 
 		// (b) 방금 시작한 곡과 다른 트랙의 queueEnd — 과거/중복 이벤트로 보고 관망한다.
-		const lastStarted = player.getData('lastStartedEncoded');
+		const lastStarted = player.transitionState.lastStartedEncoded;
 		const endedEncoded = (track as { encoded?: unknown } | null)?.encoded;
 		if (typeof lastStarted === 'string' && typeof endedEncoded === 'string' && endedEncoded !== lastStarted) {
 			this.logger.debug(`[mixer] queueEnd deferred: stale event for ${endedEncoded} (guild ${player.guildId})`);
@@ -263,7 +263,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 
 		// (b) 예열 슬롯을 방금 소비했다(종료 먼저 온 α 순서) — 서버 전이가 곧 trackStart로 확인된다.
-		const consumedAt = player.getData('preloadConsumedAt') as number | undefined;
+		const consumedAt = player.transitionState.preloadConsumedAt;
 		if (consumedAt && Date.now() - consumedAt < this.confirmTimeoutMs) {
 			this.logger.debug(`[mixer] queueEnd deferred: preloaded slot consumed just now (guild ${player.guildId})`);
 			this.armWatchdog(player);
@@ -314,7 +314,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 			this.logger.warn(`[mixer] queueEnd deferred: server still has an active track (guild ${player.guildId}), restoring client state`);
 			const serverTrack = this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined);
 			player.queue.current = serverTrack as (typeof player.queue)['current'];
-			player.setData('lastStartedEncoded', serverTrack.encoded);
+			player.transitionState.lastStartedEncoded = typeof serverTrack.encoded === 'string' ? serverTrack.encoded : null;
 			// queueEnd가 지운 playing 플래그도 되돌린다 — 일시정지 상태에서는 재생 중이 아니므로 둔다.
 			if (!serverPlayer.paused) player.playing = true;
 			this.armWatchdog(player);
@@ -329,11 +329,11 @@ export class TrackHandler extends BaseLavalinkHandler {
 	private async finishQueue(player: CustomPlayer): Promise<void> {
 		this.clearWatchdog(player.guildId);
 		// 종료됐는데 지연 도착한 리커널이 current를 되살리지 않도록 기대치를 비운다.
-		player.setData('lastStartedEncoded', undefined);
-		player.setData('preloadConsumedAt', undefined);
+		player.transitionState.lastStartedEncoded = null;
+		player.transitionState.preloadConsumedAt = null;
 		await this.container.playerNotifier.deleteController(player);
 
-		if (!player.getData('stopByCommand')) {
+		if (!player.transitionState.stopByCommand) {
 			await this.sendNotification(player, '📭 대기열의 모든 곡을 재생했어요.');
 		}
 	}
@@ -362,7 +362,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.clearAdvancePending(player.guildId);
 		this.clearReconcile(player.guildId);
 		this.clearWatchdog(player.guildId);
-		player.setData('lastStartedEncoded', undefined);
+		player.transitionState.lastStartedEncoded = null;
 		// 대시보드 라이브 뷰 — 플레이어 소멸 상태 추적기 정리
 		clearPlayerStateTracker(player.guildId);
 		await this.container.mixerService.clearNext(player).catch(() => null);
@@ -478,7 +478,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	 */
 	private setLastStarted(player: CustomPlayer, track: Track | null): void {
 		const encoded = (track as { encoded?: unknown } | null)?.encoded;
-		player.setData('lastStartedEncoded', typeof encoded === 'string' ? encoded : undefined);
+		player.transitionState.lastStartedEncoded = typeof encoded === 'string' ? encoded : null;
 		if (!track || typeof encoded !== 'string') return;
 
 		const guildId = player.guildId;
@@ -488,8 +488,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 			setTimeout(() => {
 				this.reconcileTimers.delete(guildId);
 				// 그 사이에 다른 곡이 시작되었거나 큐가 종료되면 이 리커널은 무효다.
-				if (player.getData('lastStartedEncoded') !== encoded) return;
-				if (player.getData('stopByCommand')) return;
+				if (player.transitionState.lastStartedEncoded !== encoded) return;
+				if (player.transitionState.stopByCommand) return;
 				const currentEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
 				if (currentEncoded === encoded) return;
 				// 실제 재생 중이 아니고 대기열도 비었으면 정상 종료로 보고 복원하지 않는다.
@@ -513,7 +513,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	/** 종료된 트랙이 이미 시작된(=전이 완료된) 상태인지 — β/중복 이벤트 판별용. */
 	private isTransitionAlreadyStarted(player: CustomPlayer, ended: Track | UnresolvedTrack | null): boolean {
 		const endedEncoded = (ended as { encoded?: unknown } | null)?.encoded;
-		const lastStarted = player.getData('lastStartedEncoded');
+		const lastStarted = player.transitionState.lastStartedEncoded;
 		return typeof endedEncoded === 'string' && typeof lastStarted === 'string' && endedEncoded !== lastStarted;
 	}
 
@@ -584,7 +584,18 @@ export class TrackHandler extends BaseLavalinkHandler {
 						// 재생할 곡이 없음 — 조기 queueEnd를 관망한 결과 실제 종료로 확정한다.
 						return this.finishQueue(player);
 					})
-					.catch(() => null);
+					.catch((error) => {
+						// 복구 명령이 실패하면 이 타이머는 이미 만료됐다 — 실패를 조용히 삼키면
+						// 다음 관찰 사이클이 아예 사라져 길드가 무음으로 멈춘다. 실패를 기록하고
+						// 사이클을 다시 걸어 위 "다음 주기에 다시 시도" 주석이 실제로 성립하게 한다.
+						this.logger.error(`Watchdog recovery failed (guild ${player.guildId}), re-arming watchdog: ${error}`);
+						Sentry.withScope((scope) => {
+							scope.setTag('handler_context', 'watchdog_recovery');
+							scope.setTag('guild_id', player.guildId);
+							Sentry.captureException(error);
+						});
+						this.armWatchdog(player, serverActiveObserved + 1);
+					});
 			}, this.confirmTimeoutMs)
 		);
 	}
@@ -596,7 +607,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 	 */
 	private armWatchdogUnlessStarted(player: CustomPlayer): void {
 		const currentEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-		const started = typeof currentEncoded === 'string' && player.getData('lastStartedEncoded') === currentEncoded;
+		const started = typeof currentEncoded === 'string' && player.transitionState.lastStartedEncoded === currentEncoded;
 		if (started && player.playing) return;
 		this.armWatchdog(player);
 	}
