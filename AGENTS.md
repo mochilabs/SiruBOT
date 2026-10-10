@@ -2,6 +2,14 @@
 
 Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
 
+## Semantic code search (opencode index)
+
+The repo is indexed (4,673 chunks, auto-incrementing via `.opencode/index/codebase.db`). Prefer semantic tools before raw grepping when locating unfamiliar code:
+- `codebase_search` — natural-language chunk search (best first step)
+- `codebase_context` — repo-scale question with cited lines; `codebase_edit_context` — pre-edit context for a known symbol
+- `call_graph` / `call_graph_path` — callers/callees and connection paths between symbols
+- If index readiness is unknown, check `index_status` first. The watcher re-indexes automatically after ~10s; large changes may need `/index`.
+
 ## Local documentation (`localdocs/`)
 
 - These instructions apply only when the repository-root `localdocs/` directory exists. If it is absent, skip this section and work from the source code; do not create the directory unless the user explicitly requests it.
