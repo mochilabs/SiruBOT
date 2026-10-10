@@ -158,7 +158,6 @@ export async function fetchOhaasaKo(): Promise<DailyHoroscope> {
 	}
 }
 
-// ── 일일 프리패치 ───────────────────────────────────────────────────────────
 let prefetchScheduled = false;
 
 /** 매일 KST 06:50(+지터)에 한국어 번역본을 미리 만들어둬요. ready에서 셰드 0이 1회 호출. */

@@ -9,8 +9,6 @@ import useSWR from "swr";
 import { useToast } from "@/components/feedback/toast";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
 
-/* ─────────────────────────── Constants ─────────────────────────── */
-
 function formatDuration(ms: number): string {
 	if (!ms) return "0:00";
 	const totalSeconds = Math.floor(ms / 1000);
@@ -29,8 +27,6 @@ function formatTotalDuration(ms: number): string {
 }
 
 export { formatDuration, formatTotalDuration };
-
-/* ─────────────────────────── Hook ─────────────────────────── */
 
 export function usePlaylists() {
 	const router = useRouter();
@@ -77,6 +73,7 @@ export function usePlaylists() {
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [addTrackModalOpen, setAddTrackModalOpen] = useState(false);
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [removeTrackTarget, setRemoveTrackTarget] = useState<{ position: number; title: string } | null>(null);
 
 	const [nameInput, setNameInput] = useState("");
 	const [descInput, setDescInput] = useState("");
@@ -131,6 +128,7 @@ export function usePlaylists() {
 		setEditModalOpen(false);
 		setAddTrackModalOpen(false);
 		setDeleteModalOpen(false);
+		setRemoveTrackTarget(null);
 		setEditingPlaylist(null);
 		setNameInput("");
 		setDescInput("");
@@ -150,7 +148,7 @@ export function usePlaylists() {
 				body: JSON.stringify({ name: nameInput, description: descInput })
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Failed to create playlist");
+			if (!res.ok) throw new Error(data.error || "플레이리스트를 만들지 못했어요.");
 
 			toast.success("플레이리스트를 만들었어요.");
 			setNameInput("");
@@ -179,7 +177,7 @@ export function usePlaylists() {
 				body: JSON.stringify({ name: nameInput, description: descInput })
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Failed to update playlist");
+			if (!res.ok) throw new Error(data.error || "플레이리스트를 수정하지 못했어요.");
 
 			toast.success("플레이리스트 정보를 수정했어요.");
 			setEditModalOpen(false);
@@ -203,7 +201,7 @@ export function usePlaylists() {
 		try {
 			const res = await fetch(`/api/playlists/${deletePlaylistTarget.id}`, { method: "DELETE" });
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Failed to delete playlist");
+			if (!res.ok) throw new Error(data.error || "플레이리스트를 삭제하지 못했어요.");
 
 			toast.success("플레이리스트를 삭제했어요.");
 			setDeleteModalOpen(false);
@@ -233,7 +231,7 @@ export function usePlaylists() {
 				body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl })
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Failed to add track");
+			if (!res.ok) throw new Error(data.error || "곡을 추가하지 못했어요.");
 
 			toast.success("플레이리스트에 곡을 추가했어요.");
 			setYoutubeUrl("");
@@ -247,22 +245,31 @@ export function usePlaylists() {
 		}
 	};
 
-	const handleRemoveTrack = async (position: number, title: string) => {
+	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 delete-playlist-modal과 같은 모달 확인 패턴) */
+	const handleRemoveTrack = (position: number, title: string) => {
 		if (!activePlaylistId) return;
-		if (!confirm(`'${title}' 곡을 삭제할까요?`)) return;
+		setRemoveTrackTarget({ position, title });
+	};
 
+	const confirmRemoveTrack = async () => {
+		if (!activePlaylistId || !removeTrackTarget) return;
+		const { position } = removeTrackTarget;
+		setRemoveTrackTarget(null);
+		setLoadingSubmit(true);
 		try {
 			const res = await fetch(`/api/playlists/${activePlaylistId}/tracks?position=${position}`, {
 				method: "DELETE"
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Failed to delete track");
+			if (!res.ok) throw new Error(data.error || "곡을 삭제하지 못했어요.");
 
 			toast.success("곡을 삭제했어요.");
 			mutateDetail();
 			mutateList();
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
+		} finally {
+			setLoadingSubmit(false);
 		}
 	};
 
@@ -283,7 +290,7 @@ export function usePlaylists() {
 				body: JSON.stringify({ sourceIndex, destinationIndex })
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Failed to reorder");
+			if (!res.ok) throw new Error(data.error || "곡 순서를 바꾸지 못했어요.");
 
 			toast.success("곡 순서를 바꿨어요.");
 		} catch (err: unknown) {
@@ -363,5 +370,7 @@ export function usePlaylists() {
 		confirmDeletePlaylist,
 		handleAddTrack,
 		handleRemoveTrack,
+		removeTrackTarget,
+		confirmRemoveTrack,
 	};
 }

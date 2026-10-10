@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { botProfileStateChannel, memberGreetingStateChannel } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
@@ -150,6 +151,15 @@ export class RedisStore {
 		}
 	}
 
+	/** 범용 캐시 삭제 — pending 키 선점 소비(봇 프로필) 등에서 사용해요 */
+	public async deleteCacheValue(key: string): Promise<void> {
+		try {
+			if (this.isReady) await this.redis.del(key);
+		} catch (error) {
+			this.logger.warn(`Cache delete failed (${key}): ${error}`);
+		}
+	}
+
 	/**
 	 * SET NX EX — 프로세스 간 동시 작업 방지용 키 선점.
 	 * 선점 성공(또는 Redis 미연결이라 보호 불가)이면 true.
@@ -199,6 +209,46 @@ export class RedisStore {
 				.catch((error) => this.logger.debug(`Player state publish failed (guild ${guildId}): ${error}`));
 		} catch (error) {
 			this.logger.debug(`Player state publish skipped (guild ${guildId}): ${error}`);
+		}
+	}
+
+	/**
+	 * 봇 프로필 상태(길드 닉네임·아바타·변경 권한)를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:bot-profile:state:{guildId}` — botProfileStateChannel 접두사).
+	 * data-api의 botProfileHub가 구독해 대시보드 봇 프로필 패널에 서빙해요.
+	 * fire-and-forget — publishRawPlayerState와 같은 재생 경로 무관 안전 규칙을 따라요.
+	 */
+	public publishBotProfileState(guildId: string, payload: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug(`Bot profile state publish skipped (redis not ready, guild ${guildId})`);
+				return;
+			}
+			void this.redis
+				.publish(botProfileStateChannel(guildId), payload)
+				.catch((error) => this.logger.debug(`Bot profile state publish failed (guild ${guildId}): ${error}`));
+		} catch (error) {
+			this.logger.debug(`Bot profile state publish skipped (guild ${guildId}): ${error}`);
+		}
+	}
+
+	/**
+	 * 멤버 인사 테스트 전송 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:member-greeting:state:{guildId}` — memberGreetingStateChannel 접두사).
+	 * data-api가 구독해 대시보드 환영/작별 설정 패널에 서빙해요.
+	 * fire-and-forget — publishBotProfileState와 같은 안전 규칙을 따라요.
+	 */
+	public publishMemberGreetingState(guildId: string, payload: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug(`Member greeting state publish skipped (redis not ready, guild ${guildId})`);
+				return;
+			}
+			void this.redis
+				.publish(memberGreetingStateChannel(guildId), payload)
+				.catch((error) => this.logger.debug(`Member greeting state publish failed (guild ${guildId}): ${error}`));
+		} catch (error) {
+			this.logger.debug(`Member greeting state publish skipped (guild ${guildId}): ${error}`);
 		}
 	}
 

@@ -3,7 +3,6 @@ import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 
-// handlers/playerHandler.ts
 export class PlayerHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
 		super('playerHandler');

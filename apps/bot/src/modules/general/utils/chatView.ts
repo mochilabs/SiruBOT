@@ -57,7 +57,7 @@ function payload(components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilde
 
 /** 중지 버튼 행 — 컨테이너 없이 TextDisplay 바로 아래 최상단 ActionRow로 붙여요 */
 function runningStopRow(cancelKey: string): ActionRowBuilder<ButtonBuilder> {
-	const stopButton = new ButtonBuilder().setCustomId(`${CHAT_CANCEL_PREFIX}${cancelKey}`).setLabel('중지').setStyle(ButtonStyle.Secondary);
+	const stopButton = new ButtonBuilder().setCustomId(`${CHAT_CANCEL_PREFIX}${cancelKey}`).setLabel('생성 중지').setStyle(ButtonStyle.Secondary);
 	return new ActionRowBuilder<ButtonBuilder>().addComponents(stopButton);
 }
 

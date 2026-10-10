@@ -17,11 +17,26 @@ interface JtcSettings {
 
 const MARKER_CHANNEL_NAME = '🔊 임시방 만들기';
 
+/** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS 환경변수, 기본 30초 */
+export function jtcEmptyGraceMs(): number {
+	return Number(process.env.JTC_EMPTY_GRACE_MS) || 30_000;
+}
+
+/** 유예 시간을 한국어로 — '30초', '1분', '1분 30초' */
+export function jtcEmptyGraceText(): string {
+	const totalSeconds = Math.round(jtcEmptyGraceMs() / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	if (minutes === 0) return `${seconds}초`;
+	if (seconds === 0) return `${minutes}분`;
+	return `${minutes}분 ${seconds}초`;
+}
+
 export class TempVoiceService {
 	private readonly rooms = new Map<string, RoomInfo>();
 	private readonly emptyTimers = new Map<string, NodeJS.Timeout>();
 	private readonly creating = new Set<string>();
-	private readonly EMPTY_GRACE_MS = Number(process.env.JTC_EMPTY_GRACE_MS) || 30_000;
+	private readonly EMPTY_GRACE_MS = jtcEmptyGraceMs();
 
 	public async handleVoiceState(oldState: VoiceState, newState: VoiceState): Promise<void> {
 		try {
@@ -138,7 +153,7 @@ export class TempVoiceService {
 			const humans = channel.members.filter((m) => !m.user.bot);
 			if (humans.size > 0) return;
 
-			await channel.delete('임시 음성채널: 30초간 비어 있음');
+			await channel.delete(`임시 음성채널: ${jtcEmptyGraceText()}간 비어 있음`);
 		} catch (error) {
 			container.logger.error(`[tempVoice] failed to delete empty room ${channelId}: ${error}`);
 		} finally {

@@ -17,7 +17,6 @@ export class EvalModalHandler extends InteractionHandler {
 	}
 
 	public override async run(interaction: ModalSubmitInteraction) {
-		// Owner check
 		if (!OWNERS.includes(interaction.user.id)) {
 			await interaction.reply({ content: '봇 소유자만 사용할 수 있어요.', ephemeral: true });
 			return;
@@ -41,7 +40,6 @@ export class EvalModalHandler extends InteractionHandler {
 			result = error instanceof Error ? (error.stack ?? error.message) : String(error);
 		}
 
-		// Truncate result
 		if (result.length > 3800) {
 			result = result.substring(0, 3800) + '\n... (truncated)';
 		}

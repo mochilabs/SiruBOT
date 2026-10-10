@@ -1,5 +1,8 @@
 export const BOT_NAME = '시루봇';
 
+/** 음성 채널 미접속 안내 — 재생·검색·즐겨찾기·플레이리스트 커맨드와 AI 음악 도구가 공유해요 */
+export const VOICE_CHANNEL_REQUIRED_MESSAGE = '먼저 음성 채널에 접속해 주세요.';
+
 // 기본 색상
 export const DEFAULT_COLOR = 0xffdaff;
 export const OK_COLOR = 0x4299e1;

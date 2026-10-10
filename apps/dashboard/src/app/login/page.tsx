@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	const redirectTarget = callbackUrl || "/servers";
 
 	return (
-		<main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
+		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* 거대 배경 텍스트 */}
 			<div className="absolute inset-0 -z-10 flex items-center justify-center">
 				<span className="select-none whitespace-nowrap text-[10rem] font-black tracking-tighter text-primary/5 sm:text-[18rem] md:text-[26rem]">

@@ -1,8 +1,6 @@
 import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";
 import { Badge } from "@/components/primitives/badge";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface MessageAuthor {
 	id: string;
 	username: string;
@@ -25,8 +23,6 @@ interface ChannelMessageProps {
 	children?: React.ReactNode;
 }
 
-/* ─────────────────────────── component ─────────────────────────── */
-
 export function ChannelMessage({
 	author,
 	content,
@@ -43,7 +39,8 @@ export function ChannelMessage({
 	if (compact) {
 		return (
 			<div className={`group flex items-baseline gap-2 px-4 py-0.5 hover:bg-discord-bg/50 transition-colors ${className}`}>
-				<span className="text-xs text-discord-text-muted opacity-0 group-hover:opacity-100 transition-opacity tabular-nums shrink-0 w-10 text-right">
+				{/* 시간은 hover 전용이 아닌 focus-within·터치(coarse pointer)에서도 보여요 */}
+				<span className="text-xs text-discord-text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity tabular-nums shrink-0 w-10 text-right">
 					{timestamp}
 				</span>
 				<span className="text-sm font-semibold text-discord-text shrink-0">
@@ -60,7 +57,7 @@ export function ChannelMessage({
 	}
 
 	return (
-		<div className={`group flex gap-4 px-4 py-1 hover:bg-discord-bg/50 transition-colors ${className}`}>
+		<div className={`group relative flex gap-4 px-4 py-1 hover:bg-discord-bg/50 transition-colors ${className}`}>
 			{/* Reply indicator */}
 			{reply && (
 				<div className="absolute -top-4 left-14 flex items-center gap-1.5 text-xs text-discord-text-muted">

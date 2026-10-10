@@ -8,8 +8,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal, usePopoverCoords } from "../overlay/portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface DiscordRole {
 	id: string;
 	name: string;
@@ -26,14 +24,10 @@ interface RoleSelectProps {
 	className?: string;
 }
 
-/* ─────────────────────────── helpers ─────────────────────────── */
-
 function roleColorHex(color: number): string | null {
 	if (color === 0) return null;
 	return `#${color.toString(16).padStart(6, "0")}`;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function RoleSelect({
 	roles,
@@ -186,7 +180,7 @@ export function RoleSelect({
 									onChange={(e) => setSearch(e.target.value)}
 									placeholder="역할 검색..."
 									aria-label="역할 검색"
-									className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
+									className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 								/>
 							</div>
 

@@ -17,8 +17,6 @@ import type { GuildSettings } from "@/types/settings";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
-/* ─────────────────────────── 폼 매핑 ─────────────────────────── */
-
 interface JtcForm {
 	jtcEnabled: boolean;
 	jtcCategoryId: string | null;
@@ -34,8 +32,6 @@ const toJtcForm = (settings: GuildSettings): JtcForm => ({
 	jtcTemplate: settings.jtcTemplate,
 	jtcUserLimit: settings.jtcUserLimit,
 });
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 function JtcSettingsPanel({ guildId }: { guildId: string }) {
 	const toast = useToast();

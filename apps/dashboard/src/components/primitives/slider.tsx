@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useId, useRef, useState } from "react";
-
-/* ─────────────────────────── types ─────────────────────────── */
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 interface SliderProps {
 	value?: number;
@@ -18,8 +16,11 @@ interface SliderProps {
 	className?: string;
 }
 
-/* ─────────────────────────── component ─────────────────────────── */
-
+/**
+ * 네이티브 <input type="range"> 슬라이더 — 썸 위치를 브라우저가 직접 처리해서 터치
+ * 드래그 중에도 React 렌더를 기다리지 않아요. 채움·값 표시는 로컬 미러 상태로 그리고
+ * 상위 상태는 onChange로 통지해요. 방향키·Home/End 포커스 링은 네이티브 동작을 그대로 써요.
+ */
 export function Slider({
 	value,
 	defaultValue = 0,
@@ -34,84 +35,44 @@ export function Slider({
 	className = "",
 }: SliderProps) {
 	const id = useId();
-	const trackRef = useRef<HTMLDivElement>(null);
-	
-	// Support both controlled and uncontrolled states
-	const [localValue, setLocalValue] = useState(defaultValue);
-	const isControlled = value !== undefined;
-	const current = isControlled ? value : localValue;
-	const percent = ((current - min) / (max - min)) * 100;
-
+	const inputRef = useRef<HTMLInputElement>(null);
+	/** 사용자가 드래그 중일 때는 외부 value 동기화를 건너뛰어 썸이 한 박자 뒤로 튀지 않게 해요 */
+	const interactingRef = useRef(false);
 	const clamp = useCallback(
 		(v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step)),
 		[min, max, step],
 	);
+	const [current, setCurrent] = useState(() => clamp(value ?? defaultValue));
+	const isControlled = value !== undefined;
+	const percent = max > min ? ((current - min) / (max - min)) * 100 : 0;
 
-	const getValueFromPosition = useCallback(
-		(clientX: number) => {
-			const rect = trackRef.current?.getBoundingClientRect();
-			if (!rect) return current;
-			const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-			return clamp(min + ratio * (max - min));
-		},
-		[min, max, current, clamp],
-	);
+	// controlled prop 변화만 입력값에 반영해요 — 드래그 중엔 건드리지 않아요(놓을 때 회신)
+	useEffect(() => {
+		if (!isControlled || interactingRef.current) return;
+		const next = clamp(value);
+		const el = inputRef.current;
+		if (el && el.valueAsNumber !== next) el.value = String(next);
+		if (current !== next) setCurrent(next);
+		// current 포함 — 상위가 값을 반영하지 않아도(no-op onChange) 표기를 value로 되돌려요
+	}, [isControlled, clamp, value, current]);
 
-	const handleValueChange = (newValue: number) => {
-		if (!isControlled) {
-			setLocalValue(newValue);
-		}
-		onChange?.(newValue);
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const next = clamp(e.currentTarget.valueAsNumber);
+		setCurrent(next);
+		onChange?.(next);
 	};
 
-	const handlePointerDown = (e: React.PointerEvent) => {
-		if (disabled) return;
-		e.preventDefault();
-		const track = trackRef.current;
-		if (track) {
-			track.setPointerCapture(e.pointerId);
-			handleValueChange(getValueFromPosition(e.clientX));
+	const handlePointerEnd = () => {
+		if (!interactingRef.current) return;
+		interactingRef.current = false;
+		if (isControlled) {
+			const next = clamp(value);
+			const el = inputRef.current;
+			if (el && el.valueAsNumber !== next) {
+				el.value = String(next);
+				setCurrent(next);
+			}
 		}
-	};
-
-	const handlePointerMove = (e: React.PointerEvent) => {
-		if (disabled) return;
-		const track = trackRef.current;
-		if (track && track.hasPointerCapture(e.pointerId)) {
-			handleValueChange(getValueFromPosition(e.clientX));
-		}
-	};
-
-	const handlePointerUp = (e: React.PointerEvent) => {
-		const track = trackRef.current;
-		if (track && track.hasPointerCapture(e.pointerId)) {
-			track.releasePointerCapture(e.pointerId);
-		}
-	};
-
-	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (disabled) return;
-		let next = current;
-		switch (e.key) {
-			case "ArrowRight":
-			case "ArrowUp":
-				next = clamp(current + step);
-				break;
-			case "ArrowLeft":
-			case "ArrowDown":
-				next = clamp(current - step);
-				break;
-			case "Home":
-				next = min;
-				break;
-			case "End":
-				next = max;
-				break;
-			default:
-				return;
-		}
-		e.preventDefault();
-		handleValueChange(next);
 	};
 
 	return (
@@ -131,39 +92,37 @@ export function Slider({
 				</div>
 			)}
 
-			{/* Track */}
-			<div
-				ref={trackRef}
-				className={`relative h-2 w-full rounded-full bg-muted ${disabled ? "opacity-50" : "cursor-pointer"}`}
-				onPointerDown={handlePointerDown}
-				onPointerMove={handlePointerMove}
-				onPointerUp={handlePointerUp}
-			>
-				{/* Fill */}
+			<div className="relative flex items-center">
+				{/* Track + Fill — 채움 모서리는 썸이 항상 덮어 좌우로 떨어지지 않아요 */}
 				<div
-					className="absolute inset-y-0 left-0 rounded-full bg-primary"
-					style={{ width: `${percent}%` }}
-				/>
+					aria-hidden
+					className="pointer-events-none absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full bg-muted"
+				>
+					<div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+				</div>
 
-				{/* Thumb */}
-				<div
+				<input
+					ref={inputRef}
 					id={id}
-					role="slider"
-					tabIndex={disabled ? -1 : 0}
-					aria-valuemin={min}
-					aria-valuemax={max}
-					aria-valuenow={current}
+					type="range"
+					min={min}
+					max={max}
+					step={step}
+					defaultValue={clamp(value ?? defaultValue)}
+					onChange={handleChange}
+					onPointerDown={() => {
+						interactingRef.current = true;
+					}}
+					onPointerUp={handlePointerEnd}
+					onPointerCancel={handlePointerEnd}
+					disabled={disabled}
 					aria-label={label}
-					aria-disabled={disabled || undefined}
-					onKeyDown={handleKeyDown}
-					className={`
-						absolute top-1/2 -translate-y-1/2 -translate-x-1/2
-						h-5 w-5 rounded-full bg-white border-2 border-primary
-						shadow-lg shadow-primary/20
-						transition-shadow duration-fast
-						${disabled ? "" : "hover:shadow-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"}
+					aria-valuetext={formatValue(current)}
+					className={`relative z-10 h-6 w-full cursor-pointer appearance-none touch-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:h-11
+						[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-card [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-primary/20 [&:focus-visible::-webkit-slider-thumb]:ring-2 [&:focus-visible::-webkit-slider-thumb]:ring-ring [&:focus-visible::-webkit-slider-thumb]:ring-offset-2 [&:focus-visible::-webkit-slider-thumb]:ring-offset-background
+						[&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-card [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:shadow-primary/20 [&:focus-visible::-moz-range-thumb]:ring-2 [&:focus-visible::-moz-range-thumb]:ring-ring [&:focus-visible::-moz-range-thumb]:ring-offset-2 [&:focus-visible::-moz-range-thumb]:ring-offset-background
+						[&::-moz-range-track]:bg-transparent [&::-moz-range-progress]:bg-transparent
 					`}
-					style={{ left: `${percent}%` }}
 				/>
 			</div>
 

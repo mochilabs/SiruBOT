@@ -32,6 +32,7 @@ function noticeContainer(text: string) {
 
 function rpsResultContainer(displayName: string, userPick: number, botPick: number, streakLine: string | null) {
 	const outcome = (userPick - botPick + 3) % 3;
+	// 승·무는 앱 이모지를 쓰지만, 앱 이모지 표(emoji-ids.json)에 패배 계열 이모지가 없어 패만 유니코드를 유지해요
 	const resultText = outcome === 0 ? `${emoji('cd')} 비겼어요!` : outcome === 1 ? `${emoji('party')} 이겼어요!` : `😭 졌어요!`;
 	const resultEmoji = outcome === 0 ? emoji('fist_bump') : outcome === 1 ? emoji('smile') : '🫠';
 

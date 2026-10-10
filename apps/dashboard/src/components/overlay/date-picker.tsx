@@ -8,8 +8,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal, usePopoverCoords } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface DatePickerProps {
 	value?: Date | null;
 	onChange?: (date: Date | null) => void;
@@ -19,8 +17,6 @@ interface DatePickerProps {
 	maxDate?: Date;
 	className?: string;
 }
-
-/* ─────────────────────────── helpers ─────────────────────────── */
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTHS = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
@@ -43,8 +39,6 @@ function formatDate(date: Date): string {
 	const d = String(date.getDate()).padStart(2, "0");
 	return `${y}. ${m}. ${d}`;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function DatePicker({
 	value,
@@ -221,7 +215,7 @@ export function DatePicker({
 											className={`
 												h-9 w-full rounded-xl text-sm font-medium transition-all cursor-pointer
 												${isDisabled ? "opacity-30 pointer-events-none" : "hover:bg-accent/50"}
-												${isSelected ? "bg-primary text-white font-bold shadow-lg shadow-primary/20" : ""}
+												${isSelected ? "bg-primary-control text-primary-foreground font-bold shadow-lg shadow-primary/20" : ""}
 												${isToday && !isSelected ? "ring-1 ring-primary/40 text-primary-text font-bold" : ""}
 												${isSunday && !isSelected ? "text-destructive" : ""}
 												${!isSelected && !isToday && !isSunday ? "text-foreground" : ""}

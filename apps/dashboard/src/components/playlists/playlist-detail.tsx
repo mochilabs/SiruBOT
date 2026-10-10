@@ -57,7 +57,7 @@ export function PlaylistDetail({
 	}
 
 	if (!activePlaylist) {
-		return <EmptyState icon={Music} title="선택된 플레이리스트가 없습니다." description="좌측 목록에서 플레이리스트를 선택하거나 새로 만들어보세요." className="min-h-[400px]" />;
+		return <EmptyState icon={Music} title="선택된 플레이리스트가 없어요." description="좌측 목록에서 플레이리스트를 선택하거나 새로 만들 수 있어요." className="min-h-[400px]" />;
 	}
 
 	return (

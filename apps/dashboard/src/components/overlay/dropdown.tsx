@@ -7,8 +7,6 @@ import { SectionLabel } from "@/components/primitives/section-label";
 
 import { Portal, usePopoverCoords } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface DropdownItem {
 	key: string;
 	label: string;
@@ -30,8 +28,6 @@ interface DropdownProps {
 	align?: "left" | "right";
 	className?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Dropdown({
 	trigger,

@@ -1,32 +1,24 @@
 import { z } from 'zod';
 
-// WebSocket operation enum
 export enum WsOp {
-	// Connection lifecycle
 	HELLO = 'HELLO',
 	IDENTIFY = 'IDENTIFY',
 	IDENTIFY_ACK = 'IDENTIFY_ACK',
 
-	// Heartbeat
 	HEARTBEAT = 'HEARTBEAT',
 	HEARTBEAT_ACK = 'HEARTBEAT_ACK',
 
-	// Shard status
 	SHARD_STATUS = 'SHARD_STATUS',
 	SHARD_STATS = 'SHARD_STATS',
 
-	// Communication
 	BROADCASTEVAL = 'BROADCASTEVAL',
 	BROADCASTEVAL_RESULT = 'BROADCASTEVAL_RESULT'
 }
 
-// WebSocket message interface
 export interface WsMessage<T = unknown> {
 	op: WsOp;
 	payload: T;
 }
-
-// --- Payload types ---
 
 export interface HelloPayload {
 	shardCount: number;
@@ -78,8 +70,6 @@ export interface BroadcastEvalResultPayload {
 	result: unknown;
 	error?: string;
 }
-
-// --- Zod schemas ---
 
 export const HelloPayloadSchema = z.object({
 	shardCount: z.number(),

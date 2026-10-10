@@ -40,6 +40,9 @@ model Guild {
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
+  // 멤버 인사: 입장/퇴장 메시지 + 커스텀 카드 이미지 설정. 구조는 packages/utils/src/memberGreeting.ts 타입과 동기화.
+  welcome       Json?
+  goodbye       Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

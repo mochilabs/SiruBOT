@@ -13,6 +13,7 @@ import {
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
 import { emoji, createContainer } from '@sirubot/utils';
+import { jtcEmptyGraceText } from '../../../services/tempVoiceService.ts';
 
 export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock' | 'jtc';
 
@@ -69,7 +70,6 @@ export function settingsView(guild: Guild, mode: SettingsMode = 'main'): Contain
 	}
 }
 
-// ── 메인 대시보드 ──────────────────────────────────────
 function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const sponsorBlockStatus = guild.sponsorBlockSegments.length > 0 ? `켜짐 (${guild.sponsorBlockSegments.length}개 구간)` : '꺼짐';
 	const sponsorBlockDescription = guild.sponsorBlockSegments.length > 0 ? `현재 ${guild.sponsorBlockSegments.length}개 구간` : '꺼짐';
@@ -119,7 +119,6 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 	return container;
 }
 
-// ── 음악 설정 ──────────────────────────────────────────
 function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
 		`### ${emoji('music_note')} 음악 설정`,
@@ -160,7 +159,6 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 	return container;
 }
 
-// ── 스폰서블록 설정 ─────────────────────────────────────
 function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const activeSegments = guild.sponsorBlockSegments;
 
@@ -210,7 +208,6 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 	return container;
 }
 
-// ── DJ 설정 ─────────────────────────────────────────────
 function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
 		`### ${emoji('cd')} DJ 설정`,
@@ -242,7 +239,6 @@ function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilde
 	return container;
 }
 
-// ── 채널 설정 ───────────────────────────────────────────
 function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
 		`### ${emoji('scroll')} 채널 설정`,
@@ -343,7 +339,6 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	return container;
 }
 
-// ── 임시 음성채널 설정 ──────────────────────────────────
 function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
 		`### ${emoji('volume_up')} 임시 음성채널 설정`,
@@ -359,7 +354,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 
 	container.addTextDisplayComponents(
 		new TextDisplayBuilder().setContent(
-			'-# 마커 채널에 들어오면 방이 만들어져요. 방장만 방 이름·인원을 바꿀 수 있고, 30초간 아무도 없으면 사라져요.'
+			`-# 마커 채널에 들어오면 방이 만들어져요. 방장만 방 이름·인원을 바꿀 수 있고, ${jtcEmptyGraceText()}간 아무도 없으면 사라져요.`
 		)
 	);
 

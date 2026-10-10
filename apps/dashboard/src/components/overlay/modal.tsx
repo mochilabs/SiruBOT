@@ -8,8 +8,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface ModalProps {
 	open: boolean;
 	onClose: () => void;
@@ -27,8 +25,6 @@ interface ModalSectionProps {
 	children: React.ReactNode;
 	className?: string;
 }
-
-/* ─────────────────────────── focus trap ─────────────────────────── */
 
 function useFocusTrap(open: boolean) {
 	const ref = useRef<HTMLDivElement>(null);
@@ -71,8 +67,6 @@ function useFocusTrap(open: boolean) {
 	return ref;
 }
 
-/* ─────────────────────────── sub-components ─────────────────────────── */
-
 export function ModalHeader({ children, onClose, className = "" }: ModalHeaderProps) {
 	return (
 		<div className={`flex items-center justify-between px-6 py-4 border-b border-border/40 ${className}`}>
@@ -103,8 +97,6 @@ export function ModalFooter({ children, className = "" }: ModalSectionProps) {
 		</div>
 	);
 }
-
-/* ─────────────────────────── main component ─────────────────────────── */
 
 export function Modal({ open, onClose, children, className = "" }: ModalProps) {
 	const trapRef = useFocusTrap(open);
@@ -168,8 +160,6 @@ export function Modal({ open, onClose, children, className = "" }: ModalProps) {
 		</Portal>
 	);
 }
-
-/* ─────────────────────────── compound export ─────────────────────────── */
 
 Modal.Header = ModalHeader;
 Modal.Body = ModalBody;

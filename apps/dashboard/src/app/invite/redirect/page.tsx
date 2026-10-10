@@ -10,7 +10,7 @@ import {
 
 export default function InviteRedirectPage() {
   return (
-    <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
+    <main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
       <div className="relative z-10 flex flex-col items-center text-center">
         {/* Immersive Background Text */}
         <div className="absolute inset-0 -z-10 flex items-center justify-center">
@@ -43,7 +43,7 @@ export default function InviteRedirectPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
             <Link
               href="/servers"
-              className="inline-flex h-11 items-center justify-center gap-3 rounded-control bg-primary px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary/90"
+              className="inline-flex h-11 items-center justify-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover"
               >
               <Settings2 className="h-5 w-5" />
               설정하러 가기

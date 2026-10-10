@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, Volume2 } from "lucide-react";
+import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, UserPlus, UserRoundCog, Volume2 } from "lucide-react";
 
 import { ToastProvider } from "@/components/feedback/toast";
 import { Card } from "@/components/primitives/card";
@@ -9,20 +9,24 @@ import { Tabs } from "@/components/primitives/tabs";
 
 import PlayerLiveTab from "./player-live/player-live-tab";
 import { AiSettings } from "./ai-settings";
+import { BotProfileSettings } from "./bot-profile-settings";
 import { ChannelSettings } from "./channel-settings";
 import { JtcSettings } from "./jtc-settings";
+import { MemberGreetingSettings } from "./member-greeting-settings";
 import { MixerSettings } from "./mixer-settings";
 import { MusicSettings } from "./music-settings";
 import ServerStatsTab from "./server-stats-tab";
 
 const TABS = [
 	{ key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
+	{ key: "profile", label: "봇 프로필", icon: <UserRoundCog size={14} /> },
 	{ key: "music", label: "음악", icon: <Music size={14} /> },
 	{ key: "player-live", label: "라이브", icon: <Radio size={14} /> },
 	{ key: "stats", label: "통계", icon: <BarChart3 size={14} /> },
 	{ key: "channels", label: "채널·권한", icon: <Hash size={14} /> },
 	{ key: "jtc", label: "임시 음성", icon: <Volume2 size={14} /> },
 	{ key: "mixer", label: "오디오 엔진", icon: <SlidersHorizontal size={14} /> },
+	{ key: "greeting", label: "멤버", icon: <UserPlus size={14} /> },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -61,6 +65,9 @@ export function ServerDashboard({ guildId, manageable }: { guildId: string; mana
 							<div className={tab === "ai" ? "block" : "hidden"}>
 								<AiSettings guildId={guildId} />
 							</div>
+							<div className={tab === "profile" ? "block" : "hidden"}>
+								<BotProfileSettings guildId={guildId} />
+							</div>
 							<div className={tab === "music" ? "block" : "hidden"}>
 								<MusicSettings guildId={guildId} />
 							</div>
@@ -78,6 +85,9 @@ export function ServerDashboard({ guildId, manageable }: { guildId: string; mana
 							</div>
 							<div className={tab === "mixer" ? "block" : "hidden"}>
 								<MixerSettings guildId={guildId} />
+							</div>
+							<div className={tab === "greeting" ? "block" : "hidden"}>
+								<MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} />
 							</div>
 						</>
 					)}

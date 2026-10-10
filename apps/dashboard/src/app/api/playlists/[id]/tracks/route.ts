@@ -43,7 +43,7 @@ export async function POST(
 
     if (!playlist) {
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없습니다." },
+        { error: "플레이리스트를 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -66,7 +66,7 @@ export async function POST(
     );
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "추가할 곡의 정보가 올바르지 않습니다." },
+        { error: "추가할 곡의 정보가 올바르지 않아요." },
         { status: 400 },
       );
     }
@@ -97,7 +97,7 @@ export async function POST(
 
       if (!videoId) {
         return NextResponse.json(
-          { error: "올바르지 않은 유튜브 주소입니다." },
+          { error: "올바르지 않은 유튜브 주소예요." },
           { status: 400 },
         );
       }
@@ -154,7 +154,7 @@ export async function POST(
 
     if (!finalTrackId) {
       return NextResponse.json(
-        { error: "추가할 곡의 정보가 올바르지 않습니다." },
+        { error: "추가할 곡의 정보가 올바르지 않아요." },
         { status: 400 },
       );
     }
@@ -166,7 +166,7 @@ export async function POST(
       });
       if (existing) {
         return NextResponse.json(
-          { error: "이미 즐겨찾기에 추가된 곡입니다." },
+          { error: "이미 즐겨찾기에 추가된 곡이에요." },
           { status: 400 },
         );
       }
@@ -194,7 +194,7 @@ export async function POST(
   } catch (error) {
     console.error("Failed to add track:", error);
     return NextResponse.json(
-      { error: "곡을 플레이리스트에 추가하지 못했습니다." },
+      { error: "곡을 플레이리스트에 추가하지 못했어요." },
       { status: 500 },
     );
   }
@@ -224,7 +224,7 @@ export async function DELETE(
 
     if (positionStr === null) {
       return NextResponse.json(
-        { error: "삭제할 곡의 순서가 지정되지 않았습니다." },
+        { error: "삭제할 곡의 순서가 지정되지 않았어요." },
         { status: 400 },
       );
     }
@@ -233,7 +233,7 @@ export async function DELETE(
 
     if (!Number.isInteger(position) || position < 0) {
       return NextResponse.json(
-        { error: "삭제할 곡의 순서가 유효하지 않습니다." },
+        { error: "삭제할 곡의 순서가 유효하지 않아요." },
         { status: 400 },
       );
     }
@@ -245,7 +245,7 @@ export async function DELETE(
 
     if (!playlist) {
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없습니다." },
+        { error: "플레이리스트를 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -257,7 +257,7 @@ export async function DELETE(
 
     if (!playlistTrack) {
       return NextResponse.json(
-        { error: "해당 순서의 곡을 찾을 수 없습니다." },
+        { error: "해당 순서의 곡을 찾을 수 없어요." },
         { status: 404 },
       );
     }
@@ -282,7 +282,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Failed to delete track from playlist:", error);
     return NextResponse.json(
-      { error: "곡 삭제에 실패했습니다." },
+      { error: "곡 삭제에 실패했어요." },
       { status: 500 },
     );
   }

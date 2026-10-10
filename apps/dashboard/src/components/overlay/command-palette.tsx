@@ -8,8 +8,6 @@ import { SectionLabel } from "@/components/primitives/section-label";
 
 import { Portal } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface CommandItem {
 	id: string;
 	label: string;
@@ -25,8 +23,6 @@ interface CommandPaletteProps {
 	items: CommandItem[];
 	placeholder?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function CommandPalette({
 	open,
@@ -173,7 +169,7 @@ export function CommandPalette({
 									onKeyDown={handleKeyDown}
 									placeholder={placeholder}
 									aria-label="명령어 검색"
-									className="flex-1 h-14 bg-transparent text-base text-foreground placeholder:text-muted-foreground font-medium focus:outline-none"
+									className="flex-1 h-14 bg-transparent text-base text-foreground placeholder:text-muted-foreground font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 								/>
 								<kbd className="hidden sm:inline-flex px-2 py-1 rounded-lg bg-foreground/5 text-xs font-bold text-muted-foreground tracking-wider border border-border/40">
 									ESC

@@ -13,14 +13,14 @@ const createPlaylistSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "플레이리스트 이름을 입력해주세요.")
-    .max(50, "이름은 최대 50자까지 입력 가능합니다."),
+    .min(1, "플레이리스트 이름을 입력해 주세요.")
+    .max(50, "이름은 최대 50자까지 입력할 수 있어요."),
   description: z
     .string()
     .trim()
     .max(
       MAX_PLAYLIST_DESCRIPTION_LENGTH,
-      `설명은 최대 ${MAX_PLAYLIST_DESCRIPTION_LENGTH}자까지 입력 가능합니다.`,
+      `설명은 최대 ${MAX_PLAYLIST_DESCRIPTION_LENGTH}자까지 입력할 수 있어요.`,
     )
     .nullish()
     .transform((value) => (value ? value : null)),
@@ -81,7 +81,7 @@ export async function GET() {
   } catch (error) {
     console.error("Failed to fetch playlists:", error);
     return NextResponse.json(
-      { error: "Failed to fetch playlists" },
+      { error: "플레이리스트를 불러오지 못했어요." },
       { status: 500 },
     );
   }
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       return NextResponse.json(
-        { error: issue?.message ?? "잘못된 요청입니다." },
+        { error: issue?.message ?? "요청 형식이 올바르지 않아요." },
         { status: 400 },
       );
     }
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            '"즐겨찾기"라는 이름의 플레이리스트는 추가로 생성할 수 없습니다.',
+            '"즐겨찾기"라는 이름의 플레이리스트는 추가로 생성할 수 없어요.',
         },
         { status: 400 },
       );
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { error: "이미 동일한 이름의 플레이리스트가 존재합니다." },
+        { error: "이미 같은 이름의 플레이리스트가 있어요." },
         { status: 400 },
       );
     }
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Failed to create playlist:", error);
     return NextResponse.json(
-      { error: "플레이리스트 생성에 실패했습니다." },
+      { error: "플레이리스트 생성에 실패했어요." },
       { status: 500 },
     );
   }

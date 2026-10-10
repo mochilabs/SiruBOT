@@ -186,7 +186,7 @@ export function PlayerClient({ guildId }: { guildId: string }) {
 							aria-selected={tab === "top"}
 							onClick={() => setTab("top")}
 							className={`rounded-control px-3.5 py-1.5 text-sm font-bold transition-colors duration-fast ${
-								tab === "top" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+								tab === "top" ? "bg-primary-control text-primary-foreground" : "text-muted-foreground hover:text-foreground"
 							}`}
 						>
 							많이 듣는 곡
@@ -197,7 +197,7 @@ export function PlayerClient({ guildId }: { guildId: string }) {
 							aria-selected={tab === "recent"}
 							onClick={() => setTab("recent")}
 							className={`rounded-control px-3.5 py-1.5 text-sm font-bold transition-colors duration-fast ${
-								tab === "recent" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+								tab === "recent" ? "bg-primary-control text-primary-foreground" : "text-muted-foreground hover:text-foreground"
 							}`}
 						>
 							최근 재생

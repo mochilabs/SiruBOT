@@ -66,8 +66,6 @@ export class DiscordNotifier {
 		}
 	}
 
-	// ── Events ──────────────────────────────────────────
-
 	async managerStarted(shardCount: number, shardsPerProcess: number): Promise<void> {
 		await this.send({
 			title: '🟢 Shard Manager 시작',

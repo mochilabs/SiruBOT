@@ -90,7 +90,6 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(jumpButton, removeButton));
 
-	// Pagination buttons
 	if (totalPages > 1) {
 		const prevButton = new ButtonBuilder()
 			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page - 1}`)
@@ -117,7 +116,7 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 }
 
 export function queueEmpty() {
-	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('bag')} 대기열이 비어있어요.`));
+	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('inbox_tray')} 대기열이 비어있어요.`));
 }
 
 export function queueShuffled({ count }: { count: number }) {

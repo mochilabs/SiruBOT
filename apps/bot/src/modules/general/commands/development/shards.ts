@@ -32,12 +32,11 @@ export class ShardsCommand extends Command {
 
 		const lines = [`${emoji('radio_wave')} 샤드 정보`, ''];
 
-		// Local client shard info
 		if (client.ws.shards.size > 0) {
 			for (const [id, shard] of client.ws.shards) {
 				const statusEmoji = shard.status === 0 ? '🟢' : shard.status === 5 ? '🔴' : '🟡';
 				const ping = shard.ping >= 0 ? `${shard.ping}ms` : 'N/A';
-				lines.push(`${statusEmoji} **Shard #${id}**: Ping ${ping} | Status ${shard.status}`);
+				lines.push(`${statusEmoji} **샤드 #${id}**: 핑 ${ping} | 상태 ${shard.status}`);
 			}
 		} else {
 			lines.push(`${emoji('chart')} **로컬 샤드**: 0 (싱글 프로세스)`);
@@ -45,7 +44,6 @@ export class ShardsCommand extends Command {
 
 		lines.push('');
 
-		// Shard manager info
 		if (shardClient) {
 			lines.push(`${emoji('link')} **샤드 매니저 연결**: 활성`);
 			lines.push(`${emoji('box')} **할당된 샤드**: ${client.options.shards?.toString() ?? 'auto'}`);

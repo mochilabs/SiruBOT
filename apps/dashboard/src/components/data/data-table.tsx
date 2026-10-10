@@ -8,8 +8,6 @@ import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SkeletonLine } from "@/components/primitives/skeleton";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface Column<T> {
 	key: string;
 	header: string;
@@ -36,8 +34,6 @@ interface DataTableProps<T> {
 	onRowClick?: (row: T) => void;
 	className?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function DataTable<T>({
 	columns,
@@ -90,7 +86,6 @@ export function DataTable<T>({
 		return "text-left";
 	};
 
-	/* ─── Error state ─── */
 	if (error) {
 		return (
 			<Card padding="none" className={`p-12 text-center border-destructive/25 ${className}`}>
@@ -105,7 +100,6 @@ export function DataTable<T>({
 		);
 	}
 
-	/* ─── Empty state ─── */
 	if (!loading && data.length === 0) {
 		return <EmptyState icon={emptyIcon} title={emptyMessage} description={emptyDescription} className={className} />;
 	}
@@ -138,7 +132,7 @@ export function DataTable<T>({
 										aria-sort={ariaSort}
 										style={col.width ? { width: col.width } : undefined}
 										className={`
-											px-5 py-3.5 text-xs font-black uppercase tracking-[0.15em] text-muted-foreground border-b border-border/40
+											px-5 py-3.5 text-xs font-black text-muted-foreground border-b border-border/40
 											${alignClass(col.align)}
 											${col.sortable ? "cursor-pointer select-none hover:text-foreground transition-colors" : ""}
 										`}

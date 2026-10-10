@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { errorView } from '../view/error.ts';
 import * as view from '../view/stop.ts';
@@ -17,7 +17,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!interaction.member.voice.channelId) {
 		await interaction.reply({
 			flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-			components: [errorView(`${emoji('volume_muted')} 음성 채널에 먼저 접속해주세요.`)]
+			components: [errorView(`${emoji('volume_muted')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`)]
 		});
 		return;
 	}

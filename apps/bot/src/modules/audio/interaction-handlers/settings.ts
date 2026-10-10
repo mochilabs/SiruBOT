@@ -76,7 +76,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 
 		let mode: SettingsMode = 'main';
 
-		// ── Navigation ───────────────────────────
+		// Navigation
 		if (action === 'navigate' && interaction.isStringSelectMenu()) {
 			const target = interaction.values[0];
 			mode = target === 'music' || target === 'sponsorblock' || target === 'dj' || target === 'channel' || target === 'jtc' ? target : 'main';
@@ -96,7 +96,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			mode = 'channel';
 		else if (action === 'back') mode = 'main';
 
-		// ── Actions ──────────────────────────────
+		// Actions
 
 		// Music toggles
 		if (action === 'toggle:controller') {
@@ -203,7 +203,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			});
 		}
 
-		// ── Re-render ────────────────────────────
+		// Re-render
 		const guild = await this.container.guildService.getGuild(interaction.guildId);
 
 		await interaction.editReply({

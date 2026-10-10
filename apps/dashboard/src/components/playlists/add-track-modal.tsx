@@ -67,7 +67,7 @@ export function AddTrackModal({
 										/>
 									</Field>
 									<p className="text-xs text-muted-foreground leading-relaxed">
-										유튜브 영상 링크 또는 공유 주소를 복사해 입력하면 비디오 메타데이터를 파싱하여 플레이리스트에 즉시 삽입합니다.
+										유튜브 영상 링크 또는 공유 주소를 복사해 붙여넣으면 메타데이터를 확인해 바로 플레이리스트에 추가해요.
 									</p>
 								</div>
 						) : (
@@ -90,7 +90,7 @@ export function AddTrackModal({
 											</div>
 										) : trackSearchQuery && searchedTracks.length === 0 ? (
 											<p className="text-sm font-medium text-muted-foreground text-center py-8">
-												검색 결과가 없습니다.
+												검색 결과가 없어요.
 											</p>
 										) : !trackSearchQuery ? (
 											<p className="text-xs font-medium text-muted-foreground text-center py-8 leading-relaxed">

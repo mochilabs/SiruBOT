@@ -54,7 +54,6 @@ import { Select } from "@/components/overlay/select";
 import { Avatar } from "@/components/primitives/avatar";
 import { Badge, StatusBadge } from "@/components/primitives/badge";
 import { toneStyles } from "@/components/primitives/badge";
-/* ── Import all components ── */
 import { Button } from "@/components/primitives/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -67,9 +66,7 @@ import { StatusDot } from "@/components/primitives/status-dot";
 import { Switch } from "@/components/primitives/switch";
 import { Tabs } from "@/components/primitives/tabs";
 
-/* ═══════════════════════════════════════════════════════════
-   Gallery sections
-   ═══════════════════════════════════════════════════════════ */
+// Gallery sections
 
 const SECTIONS = [
 	{ id: "button", label: "Button", icon: <Zap size={14} /> },
@@ -103,7 +100,6 @@ const SECTIONS = [
 	{ id: "role-select", label: "RoleSelect", icon: <Users size={14} /> },
 ];
 
-/* ─── Section header ─── */
 function SectionHeader({ id, title, description }: { id: string; title: string; description: string }) {
 	return (
 		<div id={id} className="scroll-mt-28 space-y-2 mb-6">
@@ -119,7 +115,6 @@ function SectionHeader({ id, title, description }: { id: string; title: string; 
 	);
 }
 
-/* ─── Showcase wrapper ─── */
 function Showcase({ children, className = "" }: { children: React.ReactNode; className?: string }) {
 	return (
 		<Card className={`p-6 gap-6 mb-12 ${className}`}>
@@ -131,7 +126,7 @@ function Showcase({ children, className = "" }: { children: React.ReactNode; cla
 function ShowcaseRow({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
 		<div className="space-y-3">
-			<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">
+			<p className="text-xs font-black text-muted-foreground">
 				{label}
 			</p>
 			<div className="flex flex-wrap items-center gap-3">
@@ -141,9 +136,7 @@ function ShowcaseRow({ label, children }: { label: string; children: React.React
 	);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Demo sub-components (with state)
-   ═══════════════════════════════════════════════════════════ */
+// Demo sub-components (with state)
 
 function ToastDemo() {
 	const toast = useToast();
@@ -165,7 +158,6 @@ function ToastDemo() {
 	);
 }
 
-/* ─── Notification demo ─── */
 function NotificationDemo() {
 	const [items, setItems] = useState<NotificationItem[]>([]);
 	const counter = useRef(0);
@@ -198,12 +190,9 @@ function NotificationDemo() {
 	);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Main gallery page
-   ═══════════════════════════════════════════════════════════ */
+// Main gallery page
 
 export default function ComponentsGalleryPage() {
-	/* ── State ── */
 	const [switchVal, setSwitchVal] = useState(true);
 	const [sliderVal, setSliderVal] = useState(60);
 	const [modalOpen, setModalOpen] = useState(false);
@@ -217,7 +206,7 @@ export default function ComponentsGalleryPage() {
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 	const [activeSection, setActiveSection] = useState("button");
 
-	/* ── TOC Sidebar Indicator & Scroll Spy ── */
+	/* TOC Sidebar Indicator & Scroll Spy */
 	const sidebarRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 	const [sidebarIndicator, setSidebarIndicator] = useState<{ top: number; height: number } | null>(null);
 
@@ -276,7 +265,6 @@ export default function ComponentsGalleryPage() {
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
 
-	/* ── Sample data ── */
 	const selectOptions = [
 		{ value: "kr", label: "한국어", group: "아시아" },
 		{ value: "jp", label: "日本語", group: "아시아" },
@@ -320,12 +308,11 @@ export default function ComponentsGalleryPage() {
 	return (
 		<ToastProvider>
 			<Container>
-				{/* ─── Page header ─── */}
 				<PageHeader
 					title="Components v2"
 					description="SiruBOT 대시보드 디자인 시스템의 모든 컴포넌트를 한 곳에서 확인하세요."
 				/>
-				{/* ─── Layout: sidebar + content ─── */}
+				{/* Layout: sidebar + content */}
 				<div className="flex gap-8">
 					{/* Sidebar nav */}
 					<nav className="hidden lg:block w-52 shrink-0">
@@ -367,7 +354,6 @@ export default function ComponentsGalleryPage() {
 					{/* Main content */}
 					<main className="flex-1 min-w-0 space-y-4">
 
-						{/* ════════════ BUTTON ════════════ */}
 						<SectionHeader id="button" title="Button" description="7가지 variant, 3가지 size, 로딩/비활성 상태를 지원하는 범용 버튼" />
 						<Showcase>
 							<ShowcaseRow label="Variants">
@@ -392,7 +378,6 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ CARD ════════════ */}
 						<SectionHeader id="card" title="Card" description="불투명 표면 + 토큰 보더의 기본 컨테이너 (variant 4종, padding 4종)" />
 						<Showcase>
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -430,7 +415,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ SURFACE ════════════ */}
 						<SectionHeader id="surface" title="Surface" description="불투명 표면 위계 · 보더 · 반경 · 그림자 · 상태 톤 (glass/backdrop 없음)" />
 						<Showcase>
 							<ShowcaseRow label="표면 위계">
@@ -467,7 +451,6 @@ export default function ComponentsGalleryPage() {
 						</Showcase>
 
 
-						{/* ════════════ INPUT ════════════ */}
 						<SectionHeader id="input" title="Input / Textarea" description="컨트롤 공용 스타일 (rounded-control, focus ring, aria-invalid)" />
 						<Showcase>
 							<ShowcaseRow label="기본">
@@ -480,7 +463,6 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ FIELD ════════════ */}
 						<SectionHeader id="field" title="Field" description="라벨 + 입력 + 설명/오류를 묶는 폼 필드 (aria-describedby 연결)" />
 						<Showcase>
 							<div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -496,7 +478,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ BADGE ════════════ */}
 						<SectionHeader id="badge" title="Badge" description="상태, 카테고리, 역할 등을 표시하는 태그 pill" />
 						<Showcase>
 							<ShowcaseRow label="Variants">
@@ -522,7 +503,6 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ SECTION LABEL ════════════ */}
 						<SectionHeader id="section-label" title="SectionLabel" description="그룹/섹션 레이블 (조용한 스타일, font-black/uppercase/tracking 제거)" />
 						<Showcase>
 							<SectionLabel as="p">최근 재생</SectionLabel>
@@ -530,7 +510,6 @@ export default function ComponentsGalleryPage() {
 							<SectionLabel as="p" className="px-0">패딩 없는 variant</SectionLabel>
 						</Showcase>
 
-						{/* ════════════ EMPTY STATE ════════════ */}
 						<SectionHeader id="empty-state" title="EmptyState" description="데이터 없음·검색 결과 없음 표시 (아이콘/설명/액션 슬롯)" />
 						<Showcase>
 							<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -546,7 +525,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ AVATAR ════════════ */}
 						<SectionHeader id="avatar" title="Avatar" description="유저/서버 이미지, 폴백 이니셜, 상태 인디케이터" />
 						<Showcase>
 							<ShowcaseRow label="Sizes">
@@ -563,7 +541,6 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ STATUS DOT ════════════ */}
 						<SectionHeader id="status-dot" title="StatusDot" description="봇/샤드/API 연결 상태 표시 인디케이터" />
 						<Showcase>
 							<ShowcaseRow label="States">
@@ -580,7 +557,6 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ SKELETON ════════════ */}
 						<SectionHeader id="skeleton" title="Skeleton" description="비동기 데이터 로딩 플레이스홀더" />
 						<Showcase>
 							<ShowcaseRow label="Shapes">
@@ -593,7 +569,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ SWITCH ════════════ */}
 						<SectionHeader id="switch" title="Switch" description="On/Off 토글 스위치, 스프링 애니메이션" />
 						<Showcase>
 							<ShowcaseRow label="인터랙티브">
@@ -607,7 +582,6 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ SLIDER ════════════ */}
 						<SectionHeader id="slider" title="Slider" description="볼륨, 쿨다운, 듀레이션 등 레인지 슬라이더" />
 						<Showcase>
 							<div className="max-w-sm space-y-6">
@@ -632,19 +606,16 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ TOAST ════════════ */}
 						<SectionHeader id="toast" title="Toast" description="하단 알림 토스트 (5초 자동 닫힘)" />
 						<Showcase>
 							<ToastDemo />
 						</Showcase>
 
-						{/* ════════════ NOTIFICATION ════════════ */}
 						<SectionHeader id="notification" title="Notification" description="우상단 알림 패널 (아이콘, 타이틀, 액션)" />
 						<Showcase>
 							<NotificationDemo />
 						</Showcase>
 
-						{/* ════════════ MODAL ════════════ */}
 						<SectionHeader id="modal" title="Modal" description="센터 다이얼로그 (포커스 트랩, ESC 닫기)" />
 						<Showcase>
 							<ShowcaseRow label="인터랙티브">
@@ -664,7 +635,6 @@ export default function ComponentsGalleryPage() {
 							</Modal>
 						</Showcase>
 
-						{/* ════════════ DRAWER ════════════ */}
 						<SectionHeader id="drawer" title="Drawer" description="슬라이드인 사이드 패널" />
 						<Showcase>
 							<ShowcaseRow label="인터랙티브">
@@ -680,7 +650,6 @@ export default function ComponentsGalleryPage() {
 							</Drawer>
 						</Showcase>
 
-						{/* ════════════ DROPDOWN ════════════ */}
 						<SectionHeader id="dropdown" title="Dropdown" description="트리거 기반 드롭다운 메뉴" />
 						<Showcase>
 							<ShowcaseRow label="인터랙티브">
@@ -704,12 +673,11 @@ export default function ComponentsGalleryPage() {
 							</ShowcaseRow>
 						</Showcase>
 
-						{/* ════════════ SELECT ════════════ */}
 						<SectionHeader id="select" title="Select" description="단일/다중 선택 콤보박스" />
 						<Showcase>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="space-y-2">
-									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">단일 선택</p>
+									<p className="text-xs font-black text-muted-foreground">단일 선택</p>
 									<Select
 										options={selectOptions}
 										value={selectVal}
@@ -719,7 +687,7 @@ export default function ComponentsGalleryPage() {
 									/>
 								</div>
 								<div className="space-y-2">
-									<p className="text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">다중 선택</p>
+									<p className="text-xs font-black text-muted-foreground">다중 선택</p>
 									<Select
 										options={selectOptions}
 										value={multiSelectVal}
@@ -732,7 +700,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ DATEPICKER ════════════ */}
 						<SectionHeader id="date-picker" title="DatePicker" description="캘린더 기반 날짜 선택" />
 						<Showcase>
 							<div className="max-w-xs">
@@ -740,7 +707,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ COMMAND PALETTE ════════════ */}
 						<SectionHeader id="command-palette" title="CommandPalette" description="⌘K 커맨드 팔레트 (검색, 키보드 네비게이션)" />
 						<Showcase>
 							<ShowcaseRow label="인터랙티브">
@@ -752,7 +718,6 @@ export default function ComponentsGalleryPage() {
 							<CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} items={commandItems} />
 						</Showcase>
 
-						{/* ════════════ TABS ════════════ */}
 						<SectionHeader id="tabs" title="Tabs" description="role=tablist, 밑줄 인디케이터, 방향키 로빙 포커스" />
 						<Showcase>
 							<Tabs
@@ -771,7 +736,6 @@ export default function ComponentsGalleryPage() {
 							/>
 						</Showcase>
 
-						{/* ════════════ DATA TABLE ════════════ */}
 						<SectionHeader id="data-table" title="DataTable" description="정렬 가능한 데이터 테이블 (sticky header)" />
 						<Showcase>
 							<DataTable
@@ -781,9 +745,12 @@ export default function ComponentsGalleryPage() {
 							/>
 						</Showcase>
 
-						{/* ════════════ STAT CARD ════════════ */}
-						<SectionHeader id="stat-card" title="StatCard" description="메트릭 카드 (아이콘, 값, 트렌드)" />
+						<SectionHeader id="stat-card" title="StatCard" description="메트릭 카드 (아이콘, 값, 트렌드) · 아래 값은 예시 데이터예요" />
 						<Showcase>
+							<div className="flex items-center gap-2 mb-4">
+								<Badge size="sm">예시</Badge>
+								<p className="text-xs font-medium text-muted-foreground">이 값들은 실제 측정이 아닌 컴포넌트 데모예요.</p>
+							</div>
 							<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 								<StatCard icon={Server} label="서버" value="1,234" sub="전체 서버 수" trend="up" trendValue="+12%" />
 								<StatCard icon={RadioTower} label="재생 중" value="89" sub="현재 재생" trend="down" trendValue="-3%" />
@@ -792,7 +759,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ TAG INPUT ════════════ */}
 						<SectionHeader id="tag-input" title="TagInput" description="멀티 값 칩 입력 (블랙리스트, 키워드)" />
 						<Showcase>
 							<div className="max-w-md">
@@ -805,18 +771,17 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ EMBED PREVIEW ════════════ */}
 						<SectionHeader id="embed-preview" title="EmbedPreview" description="디스코드 임베드 메시지 프리뷰" />
 						<Showcase>
 							<EmbedPreview
 								embed={{
-									color: "#ff85c1",
+									color: "var(--primary)",
 									author: { name: "시루" },
 									title: "지금 재생 중",
 									titleUrl: "#",
 									description: "Blinding Lights · The Weeknd",
 									fields: [
-										{ name: "요청자", value: "User#1234", inline: true },
+										{ name: "요청자", value: "@음악러버", inline: true },
 										{ name: "길이", value: "3:22", inline: true },
 										{ name: "대기열", value: "4곡", inline: true },
 									],
@@ -825,7 +790,6 @@ export default function ComponentsGalleryPage() {
 							/>
 						</Showcase>
 
-						{/* ════════════ CHANNEL MESSAGE ════════════ */}
 						<SectionHeader id="channel-message" title="ChannelMessage" description="디스코드 메시지 레이아웃" />
 						<Showcase>
 							<div className="bg-discord-bg rounded-xl overflow-hidden py-2">
@@ -837,7 +801,7 @@ export default function ComponentsGalleryPage() {
 									<div className="mt-2">
 										<EmbedPreview
 											embed={{
-												color: "#ff85c1",
+												color: "var(--primary)",
 												title: "Blinding Lights",
 												description: "The Weeknd · After Hours · 2020",
 												footer: { text: "3:22 · 대기열 4곡" },
@@ -853,7 +817,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ PERMISSION LIST ════════════ */}
 						<SectionHeader id="permission-list" title="PermissionList" description="디스코드 권한 토글 (카테고리별 그룹)" />
 						<Showcase>
 							<div className="max-w-xl">
@@ -865,7 +828,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ════════════ ROLE SELECT ════════════ */}
 						<SectionHeader id="role-select" title="RoleSelect" description="디스코드 역할 선택 (색상 도트, 다중 선택)" />
 						<Showcase>
 							<div className="max-w-sm">
@@ -877,7 +839,6 @@ export default function ComponentsGalleryPage() {
 							</div>
 						</Showcase>
 
-						{/* ─── End spacer ─── */}
 						<div className="h-24" />
 					</main>
 				</div>

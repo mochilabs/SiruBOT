@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { openDataApiStream } from "@/lib/data-api";
 
-/* ─────────────────────────── 라이브 플레이어 상태 SSE ─────────────────────────── */
-
 /**
  * 실시간 상태 스트림 프록시 — data-api `GET /v1/player/:guildId/stream`(SSE)을
  * auth+canManage 뒤에서 그대로 relay해요. 인가가 끝난 뒤엔 파이프라인만 유지하면

@@ -368,15 +368,13 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 		await drawMusicSection(ctx, input.topTracks, input.nowPlaying ?? null, PAL, PAD, musicTop, W - PAD * 2);
 	}
 
-	// ── 하단: ✦ {id} / profile   ...   샘플 프레임 ──
+	// ── 하단: ✦ {id} / profile ──
 	ctx.save();
 	ctx.fillStyle = PAL.textFaint;
 	ctx.textAlign = 'left';
 	drawIcon(ctx, 'sparkle', PAD, H - 32, 16, PAL.textFaint, { fill: true });
 	ctx.font = '500 17px "Noto Sans KR", sans-serif';
 	ctx.fillText(`${input.profileId} / profile`, PAD + 24, H - 18);
-	ctx.textAlign = 'right';
-	ctx.fillText('샘플 프레임', W - PAD, H - 18);
 	ctx.restore();
 
 	return (await canvas.toBuffer('png')) as Buffer;

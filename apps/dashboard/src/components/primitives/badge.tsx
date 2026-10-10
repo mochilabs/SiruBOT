@@ -4,8 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── styles ─────────────────────────── */
-
 /** 디자인 토큰 기반 톤 — Badge·StatusDot·StatusBadge 공용 */
 export const toneStyles = {
 	neutral: { badge: "border border-border bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
@@ -39,8 +37,6 @@ const badgeVariants = cva("inline-flex select-none items-center gap-1.5 rounded-
 	defaultVariants: { variant: "default", size: "md" },
 });
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
 
 interface BadgeProps extends VariantProps<typeof badgeVariants> {
@@ -51,13 +47,11 @@ interface BadgeProps extends VariantProps<typeof badgeVariants> {
 	className?: string;
 }
 
-/* ─────────────────────────── Badge ─────────────────────────── */
-
 export function Badge({ variant = "default", size = "md", dot = false, dismissible = false, onDismiss, children, className }: BadgeProps) {
 	return (
 		<span className={cn(badgeVariants({ variant, size }), className)}>
 			{dot && (
-				<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-soft", dotTone(variant))} />
+				<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotTone(variant))} />
 			)}
 			{children}
 			{dismissible && (
@@ -96,8 +90,6 @@ function dotTone(variant: BadgeVariant): string {
 	}
 }
 
-/* ─────────────────────────── StatusBadge ─────────────────────────── */
-
 const statusTone: Record<string, Tone> = {
 	READY: "success",
 	IDLE: "warning",
@@ -110,10 +102,12 @@ const statusTone: Record<string, Tone> = {
 export function StatusBadge({ status }: { status: string }) {
 	const normalized = status.toUpperCase();
 	const tone: Tone = statusTone[normalized] ?? "destructive";
+	/* R-19: READY·IDLE·DISCONNECTED는 안정 상태라 정적. CONNECTING·ERRORED 같은 과도 상태만 깜빡여요. */
+	const isPulsing = normalized === "CONNECTING" || normalized === "ERRORED";
 
 	return (
-		<span className={cn("inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold", toneStyles[tone].badge)}>
-			<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-soft", toneStyles[tone].dot)} />
+		<span className={cn("inline-flex items-center gap-2 rounded-control px-2.5 py-1 text-xs font-semibold", toneStyles[tone].badge)}>
+			<span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isPulsing && "animate-pulse-soft", toneStyles[tone].dot)} />
 			{normalized}
 		</span>
 	);

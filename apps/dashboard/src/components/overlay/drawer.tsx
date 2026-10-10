@@ -8,8 +8,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface DrawerProps {
 	open: boolean;
 	onClose: () => void;
@@ -19,8 +17,6 @@ interface DrawerProps {
 	children: React.ReactNode;
 	className?: string;
 }
-
-/* ─────────────────────────── slide variants ─────────────────────────── */
 
 const slideVariants = {
 	left: {
@@ -34,8 +30,6 @@ const slideVariants = {
 		exit: { x: "100%" },
 	},
 };
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Drawer({
 	open,
@@ -98,7 +92,7 @@ export function Drawer({
 							transition={{ type: "spring", stiffness: 400, damping: 35 }}
 							className={`
 								relative ${side === "left" ? "mr-auto" : "ml-auto"} ${width}
-								h-full bg-card border-${side === "left" ? "r" : "l"} border-border
+								h-full bg-card ${side === "left" ? "border-r" : "border-l"} border-border
 								flex flex-col shadow-2xl ${className}
 							`}
 						>

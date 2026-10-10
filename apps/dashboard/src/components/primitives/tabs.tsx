@@ -4,8 +4,6 @@ import { useId, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface TabItem {
 	key: string;
 	label: React.ReactNode;
@@ -26,8 +24,6 @@ interface TabsProps {
 	panelClassName?: string;
 	"aria-label": string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Tabs({ items, value, defaultValue, onChange, renderPanel, className, listClassName, panelClassName, "aria-label": ariaLabel }: TabsProps) {
 	const baseId = useId();

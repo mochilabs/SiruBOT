@@ -1,8 +1,6 @@
 import { Card } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface SkeletonLineProps {
 	width?: string;
 	height?: string;
@@ -20,11 +18,7 @@ interface SkeletonCardProps {
 	className?: string;
 }
 
-/* ─────────────────────────── base ─────────────────────────── */
-
 const pulseBase = "animate-pulse rounded-md bg-muted";
-
-/* ─────────────────────────── components ─────────────────────────── */
 
 export function SkeletonLine({ width = "100%", height = "h-4", className }: SkeletonLineProps) {
 	return <div className={cn(pulseBase, height, className)} style={{ width }} aria-hidden />;

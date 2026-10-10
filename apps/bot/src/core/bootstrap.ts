@@ -9,6 +9,8 @@ import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHand
 import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
 import { guildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
+import { botProfileService } from '../services/botProfileService.ts';
+import { memberGreetingService } from '../services/memberGreetingService.ts';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -97,7 +99,7 @@ export const main = async () => {
 			healthServer.close();
 		}
 
-		// 1. Lavalink session을 Redis에 저장 (Redis 끊기 전!)
+		// 종료 순서: 세션 저장 → 리스너 정리 → Redis → DB → 샤드 클라이언트 (세션 저장은 Redis 끊기 전에)
 		if (container.audio && container.redisStore) {
 			try {
 				const sessionStore = container.redisStore.getNodeSessionStore();
@@ -113,7 +115,7 @@ export const main = async () => {
 			}
 		}
 
-		// 2. Audio listeners 정리 (+ 설정 무효화 구독 해제 — redis disconnect 전에)
+		// Audio listeners 정리 (+ 설정 무효화 구독 해제)
 		// lavalink 핸들러의 watchdog/reconcile/복구 타이머를 먼저 해제한다 — 남은 타이머가
 		// 종료 절차 중에 발화해 mixer REST/play를 시도하는 것을 막는다.
 		container.lavalinkHandler?.cleanup();
@@ -121,18 +123,17 @@ export const main = async () => {
 			container.audio.removeAllListeners();
 		}
 		await guildSettingsInvalidator.stop().catch(() => null);
+		await botProfileService.stop().catch(() => null);
+		await memberGreetingService.stop().catch(() => null);
 
-		// 3. Redis disconnect (session 저장 후!)
 		if (container.redisStore) {
 			await container.redisStore.disconnect().catch(() => null);
 		}
 
-		// 4. Database disconnect
 		if (container.db) {
 			await container.db.$disconnect().catch(() => null);
 		}
 
-		// 5. ShardManager client
 		if (container.shardClient) {
 			container.shardClient.destroy();
 		}
@@ -170,6 +171,12 @@ export const main = async () => {
 		// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
 		// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
 		await guildSettingsInvalidator.start(envParseString('REDIS_URL'), container.guildService);
+		// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
+		// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
+		await botProfileService.start(envParseString('REDIS_URL'));
+		// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
+		// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
+		await memberGreetingService.start(envParseString('REDIS_URL'));
 
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));

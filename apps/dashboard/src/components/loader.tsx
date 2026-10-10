@@ -44,7 +44,7 @@ export default function Loader({
 
     if (fullPage) {
         return (
-            <div className="flex flex-col h-[80vh] items-center justify-center gap-6">
+            <div className="flex flex-col h-[80svh] items-center justify-center gap-6">
                 {LoaderIcon}
                 {(text || description) && (
                     <div className="text-center space-y-2">

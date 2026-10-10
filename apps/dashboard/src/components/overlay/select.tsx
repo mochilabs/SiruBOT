@@ -9,8 +9,6 @@ import { SectionLabel } from "@/components/primitives/section-label";
 
 import { Portal, usePopoverCoords } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface SelectOption {
 	value: string;
 	label: string;
@@ -41,8 +39,6 @@ interface MultiSelectProps extends SelectBaseProps {
 }
 
 type SelectProps = SingleSelectProps | MultiSelectProps;
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Select(props: SelectProps) {
 	const {
@@ -214,14 +210,14 @@ export function Select(props: SelectProps) {
 						return (
 							<span
 								key={v}
-								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary-text"
+								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-control bg-primary/10 border border-primary/20 text-xs font-bold text-primary-text"
 							>
 								{opt?.label ?? v}
 								<Button
 									variant="icon"
 									size="sm"
 									onClick={() => toggleOption(v)}
-									className="h-3.5 w-3.5 rounded-full border-transparent bg-transparent p-0.5 hover:bg-primary/20"
+									className="h-3.5 w-3.5 rounded-control border-transparent bg-transparent p-0.5 hover:bg-primary/20"
 									aria-label={`${opt?.label ?? v} 제거`}
 								>
 									<X className="h-2.5 w-2.5" />
@@ -271,7 +267,7 @@ export function Select(props: SelectProps) {
 										onKeyDown={handleKeyDown}
 										placeholder={searchPlaceholder}
 										aria-label={searchPlaceholder || "검색"}
-										className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
+										className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									/>
 								</div>
 							)}

@@ -1,7 +1,5 @@
 import Image from "next/image";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface EmbedField {
 	name: string;
 	value: string;
@@ -37,8 +35,6 @@ interface EmbedPreviewProps {
 	className?: string;
 }
 
-/* ─────────────────────────── component ─────────────────────────── */
-
 export function EmbedPreview({ embed, className = "" }: EmbedPreviewProps) {
 	return (
 		<div
@@ -47,7 +43,7 @@ export function EmbedPreview({ embed, className = "" }: EmbedPreviewProps) {
 			{/* Left color bar */}
 			<div
 				className="w-1 shrink-0 rounded-l-md"
-				style={{ backgroundColor: embed.color ?? "#5865F2" }}
+				style={{ backgroundColor: embed.color ?? "var(--color-discord-primary)" }}
 			/>
 
 			{/* Content */}

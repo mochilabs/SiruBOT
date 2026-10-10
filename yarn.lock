@@ -2863,6 +2863,7 @@ __metadata:
     "@next/swc-wasm-nodejs": "npm:16.3.8"
     "@prisma/adapter-pg": "npm:^7.7.0"
     "@sirubot/prisma": "npm:*"
+    "@sirubot/utils": "npm:*"
     "@tailwindcss/postcss": "npm:^4.1.13"
     "@tanstack/react-virtual": "npm:^3.13.26"
     "@types/node": "npm:^22.18.1"

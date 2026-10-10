@@ -6,10 +6,18 @@ import { inflightCount } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError, serveCached } from './serveCached.ts';
 import { deduped } from '../utils/dedup.ts';
-import { GUILD_SETTINGS_INVALIDATE_CHANNEL } from '@sirubot/utils';
+import {
+	GUILD_SETTINGS_INVALIDATE_CHANNEL,
+	BOT_PROFILE_SET_CHANNEL,
+	MEMBER_GREETING_SEND_CHANNEL,
+	greetingConfigSchema,
+	botProfilePendingKey,
+	memberGreetingPendingKey
+} from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
+import { renderGreetingCard, normalizeGreetingBackground } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { deliveryCarriersCacheKey, deliveryTrackCacheKey, listCarriers, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
@@ -20,6 +28,8 @@ import type { OpenAICompatTranslationProvider } from '../providers/translate.ts'
 import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
 import { memoryTidyStatus } from '../services/memoryTidy.ts';
 import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
+import { getBotProfile, botProfileHubStatus } from '../services/botProfileHub.ts';
+import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -213,6 +223,20 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
+	// ── 봇 프로필 상태 (봇 Redis Pub/Sub → botProfileHub) ──
+	// 알 수 없는 길드도 404 대신 profile:null + hub 상태로 응답해요 — dashboard SWR 폴백이 안정적으로 동작하게.
+	fastify.get('/v1/bot-profile/:guildId', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			return reply.send({
+				profile: getBotProfile(guildId),
+				hub: botProfileHubStatus()
+			});
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
 	// ── 라이브 플레이어 상태 SSE — Redis Pub/Sub 구독을 즉시 relay해요 ──
 	fastify.get('/v1/player/:guildId/stream', async (request, reply) => {
 		const { guildId = '' } = guildIdParams.parse(request.params);
@@ -396,6 +420,71 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
+	// ── 멤버 인사 카드 이미지 (환영/작별) ──
+	// config는 @sirubot/utils 공용 계약 스키마로 검증해요 — bot 리스너·dashboard 에디터와 같은 구조.
+	const greetingContextSchema = z.object({
+		userId: z.string().trim().min(1).max(32),
+		username: z.string().trim().min(1).max(64),
+		displayName: z.string().trim().min(1).max(64),
+		// 이미지 텍스트의 {서버} 토큰용 — 호출자(봇)가 모르면 빈 문자열로 렌더해요
+		guildName: z.string().trim().max(64).nullable().default(null),
+		avatarUrl: z.string().url().nullable().default(null),
+		memberCount: z.number().int().min(0).max(100_000_000)
+	});
+	const memberCardSchema = z.object({
+		guildId: z.string().trim().min(1).max(32),
+		kind: z.enum(['welcome', 'goodbye']),
+		config: greetingConfigSchema,
+		context: greetingContextSchema
+	});
+	fastify.post('/v1/image/member-card', { bodyLimit: 4 * 1024 * 1024 }, async (request, reply) => {
+		try {
+			const body = memberCardSchema.parse(request.body);
+			const image = body.config.image;
+			if (!image) {
+				// 계약상 useImage:false 설정은 image:null — 이미지 경로는 렌더할 배경이 없어요
+				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요 — useImage를 켜고 배경을 지정해 주세요.');
+			}
+			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}`, () =>
+				renderGreetingCard(image, {
+					userId: body.context.userId,
+					displayName: body.context.displayName,
+					guildName: body.context.guildName ?? '',
+					memberCount: body.context.memberCount,
+					avatarUrl: body.context.avatarUrl
+				})
+			);
+			metrics.request(`image-member-card-${body.kind}`);
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 멤버 인사 배경 업로드 정규화 ──
+	// 브라우저에서 온 이미지를 저장 규격으로 맞춰요 (JPEG, 가장 긴 변 1600px, 인코딩 후 900KB 이하).
+	// dataURI를 Prisma Json 컬럼에 통째로 저장하는 관계로 이것이 저장 비용 상한이에요.
+	const greetingBackgroundSchema = z.object({
+		dataUri: z
+			.string()
+			.regex(/^data:image\/(png|jpeg|webp);base64,/, '지원 형식은 PNG·JPEG·WEBP예요.')
+			.max(12_000_000)
+	});
+	fastify.post('/v1/image/member-card/background', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+		try {
+			const body = greetingBackgroundSchema.parse(request.body);
+			const dataUri = await normalizeGreetingBackground(body.dataUri);
+			metrics.request('image-member-card-background');
+			return reply.send({ dataUri });
+		} catch (error) {
+			if (error instanceof Error && error.name === 'GreetingBackgroundError') {
+				const e = error as { identifier?: string };
+				return reply.code(400).send({ error: e.identifier ?? 'greeting_error', message: error.message });
+			}
+			return sendError(reply, error);
+		}
+	});
+
 	// ── NowPlaying 카드 이미지 ──
 	// 카드는 트랙당 1회만 렌더(도미넌트 색 배경 + 제목 + 대기열/볼륨/노드/브랜드 메타).
 	// 진행바·신청자는 이미지에 박지 않아요 — 동적 갱신은 봇 텍스트 라인(이모지 프로그레스바) 담당.
@@ -500,6 +589,88 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			await client.publish(GUILD_SETTINGS_INVALIDATE_CHANNEL, JSON.stringify({ guildId }));
 			metrics.request('guild-settings-invalidate');
 			return reply.send({ ok: true });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 봇 프로필(닉네임·아바타) 적용 요청 (대시보드 저장 후 봇 적용) ──
+	// 아바타는 data URI로 온다(3MiB 파일 → base64 ~4.2MB). Fastify 기본 bodyLimit(1MiB)을 넘으므로
+	// 이 라우트만 8MiB로 올려요. 본문은 Redis pending 키에 기록하고 set 채널로 guildId만 브로드캐스트해요 —
+	// 큰 본문이 레플리카 수만큼 복제되지 않아요. 봇은 소유 길드만 읽고 즉시 지워요 (TTL 120초).
+	const botProfileSetSchema = z
+		.object({
+			guildId: z.string().trim().min(1).max(32),
+			// undefined = 변경 없음 / string = 설정 / null = 기본값(사용자명 사용으로 초기화)
+			nickname: z.string().max(32).nullable().optional(),
+			avatar: z.union([z.string().startsWith('data:image/').max(5_500_000), z.null()]).optional()
+		})
+		.refine((body) => 'nickname' in body || 'avatar' in body, { message: '변경할 프로필 항목이 없어요.' });
+	const BOT_PROFILE_PENDING_TTL_SECONDS = 120;
+
+	fastify.post('/v1/internal/bot-profile/set', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+		try {
+			const body = botProfileSetSchema.parse(request.body);
+			const guildId = body.guildId;
+			const payload: Record<string, string | null> = {};
+			if ('nickname' in body && body.nickname !== undefined) {
+				const nickname = body.nickname === null ? null : body.nickname.trim();
+				payload.nickname = nickname !== null && nickname.length > 0 ? nickname : null;
+			}
+			if ('avatar' in body && body.avatar !== undefined) {
+				payload.avatar = body.avatar;
+			}
+
+			const client = sharedCache.getClient();
+			if (!client) {
+				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
+				return reply.code(503).send({ error: 'redis_unavailable', message: '봇 프로필 적용을 위해 Redis가 필요해요.' });
+			}
+			await client.set(botProfilePendingKey(guildId), JSON.stringify(payload), { EX: BOT_PROFILE_PENDING_TTL_SECONDS });
+			await client.publish(BOT_PROFILE_SET_CHANNEL, JSON.stringify({ guildId }));
+			metrics.request('bot-profile-set');
+			return reply.send({ ok: true });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 멤버 인사 테스트 전송 (대시보드 → 봇) ──
+	// bot-profile set과 같은 pending 키 + 브로드캐스트 패턴이에요. 본문({kind, userId, requestId})은
+	// pending 키에 기록해 소유 봇 프로세스만 읽게 하고, 채널로는 guildId·requestId만 실어요.
+	// 봇은 실제 멤버 정보로 카드를 렌더·전송하고 결과를 state 채널(memberGreetingStateChannel)로 알려요.
+	const greetingSendSchema = z.object({
+		guildId: z.string().trim().min(1).max(32),
+		kind: z.enum(['welcome', 'goodbye']),
+		userId: z.string().trim().min(1).max(32)
+	});
+	const GREETING_PENDING_TTL_SECONDS = 120;
+
+	fastify.post('/v1/internal/greeting/send', async (request, reply) => {
+		try {
+			const body = greetingSendSchema.parse(request.body);
+			const client = sharedCache.getClient();
+			if (!client) {
+				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
+				return reply.code(503).send({ error: 'redis_unavailable', message: '인사 테스트 전송을 위해 Redis가 필요해요.' });
+			}
+			const requestId = crypto.randomUUID();
+			await client.set(memberGreetingPendingKey(body.guildId), JSON.stringify({ kind: body.kind, userId: body.userId, requestId }), {
+				EX: GREETING_PENDING_TTL_SECONDS
+			});
+			await client.publish(MEMBER_GREETING_SEND_CHANNEL, JSON.stringify({ guildId: body.guildId, requestId }));
+			metrics.request('greeting-send');
+			return reply.send({ ok: true, requestId });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 멤버 인사 테스트 전송 결과 (대시보드 폴링 — bot-profile 상태 엔드포인트와 같은 패턴) ──
+	fastify.get('/v1/greeting/state/:guildId', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			return reply.send(getGreetingTestResult(guildId));
 		} catch (error) {
 			return sendError(reply, error);
 		}

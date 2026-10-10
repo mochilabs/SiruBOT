@@ -22,3 +22,4 @@ export * from './memoryCache.js';
 export * from './redisChannels.js';
 export * from './logger.js';
 export * from './appEmoji.js';
+export * from './memberGreeting.js';

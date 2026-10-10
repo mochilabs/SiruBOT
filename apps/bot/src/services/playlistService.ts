@@ -92,14 +92,13 @@ export class PlaylistService {
 			}
 		}
 
-		// 1. Ensure Track exists
 		await container.db.track.upsert({
 			where: { id: data.id },
 			create: { ...data },
 			update: {}
 		});
 
-		// 2-3. max(position)+1 조회와 생성을 한 트랜잭션으로 묶어 동시 추가 시 unique 충돌 방지
+		// max(position)+1 조회와 생성을 한 트랜잭션으로 묶어 동시 추가 시 unique 충돌 방지
 		await container.db.$transaction(async (tx) => {
 			const maxPositionResult = await tx.playlistTrack.aggregate({
 				where: { playlistId: playlist.id },
@@ -142,8 +141,6 @@ export class PlaylistService {
 		await container.db.playlistTrack.delete({
 			where: { id: track.id }
 		});
-
-		// 재정렬(Re-order)은 일단 생략하거나 나중에 필요시 추가
 	}
 
 	public async getUserPlaylists(userId: string) {
