@@ -9,7 +9,7 @@ import { ILogObj, Logger } from 'tslog';
 export class CachedQueueStore implements QueueStoreManager {
 	private cache: MemoryCache<string, string>;
 	private isRedisConnected = true;
-	private pendingWrites: Map<string, string> = new Map();
+	private pendingWrites: Map<string, string | null> = new Map();
 	private _logger: Logger<ILogObj> | null = null;
 
 	/** Redis 키 TTL — 플레이어가 파괴되지 않은 채 남은 키(크래시 잔재)가 영구 누수되지 않도록 한다. (player 키와 동일하게 7일) */
@@ -110,14 +110,16 @@ export class CachedQueueStore implements QueueStoreManager {
 				this.logger.trace(`Successfully deleted from Redis for guild ${guildId}`);
 				return result > 0;
 			} else {
-				this.pendingWrites.delete(key);
-				this.logger.trace(`Removed from pending writes for guild ${guildId}`);
+				// Redis에 잔존한 값이 재연결 sync 때 되살아나지 않도록 DEL을 저널에 남긴다(톰스톤).
+				this.pendingWrites.set(key, null);
+				this.logger.trace(`Tombstoned queue for guild ${guildId}`);
 				return true;
 			}
 		} catch (error) {
 			this.logger.warn(`Redis error: ${error}`);
 			this.isRedisConnected = false;
-			this.pendingWrites.delete(key);
+			// DEL이 실패했으므로 재연결 후 Redis 잔존 값을 지운다(톰스톤).
+			this.pendingWrites.set(key, null);
 			return true;
 		}
 	}

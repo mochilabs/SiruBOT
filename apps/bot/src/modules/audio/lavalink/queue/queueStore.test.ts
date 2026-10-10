@@ -114,4 +114,60 @@ describe('CachedQueueStore pending writes', () => {
 		expect(redis.set).toHaveBeenCalledWith('lavalink/queue/g2', 'V2', { EX: QUEUE_TTL_SECONDS });
 		expect(pendingCount(store)).toBe(0);
 	});
+
+	it('does not resurrect a deleted queue after reconnect', async () => {
+		let stored: string | null = 'STALE-OLD';
+		const { redis, handle } = makeRedis(async () => stored);
+		redis.set.mockImplementation(async (_key: string, value: string) => {
+			stored = value;
+		});
+		redis.del.mockImplementation(async () => {
+			stored = null;
+			return 1;
+		});
+		const store = new CachedQueueStore(handle);
+		store.onDisconnect();
+		await store.delete('g1');
+
+		store.onConnect();
+		await untilReady(store);
+
+		expect(redis.del).toHaveBeenCalledWith('lavalink/queue/g1');
+		expect(redis.set).not.toHaveBeenCalled();
+		expect(pendingCount(store)).toBe(0);
+
+		const emptyQueue = JSON.stringify({ current: null, previous: [], tracks: [] });
+		await expect(store.get('g1')).resolves.toBe(emptyQueue);
+	});
+
+	it('lets a delete during an outage override an earlier pending set', async () => {
+		const { redis, handle } = makeRedis();
+		const store = new CachedQueueStore(handle);
+		store.onDisconnect();
+		await store.set('g1', 'V1');
+		await store.delete('g1');
+		expect(pendingCount(store)).toBe(1);
+
+		store.onConnect();
+		await untilReady(store);
+
+		expect(redis.set).not.toHaveBeenCalled();
+		expect(redis.del).toHaveBeenCalledWith('lavalink/queue/g1');
+		expect(pendingCount(store)).toBe(0);
+	});
+
+	it('lets a newer set override an earlier tombstone', async () => {
+		const { redis, handle } = makeRedis();
+		const store = new CachedQueueStore(handle);
+		store.onDisconnect();
+		await store.delete('g1');
+		await store.set('g1', 'V2');
+
+		store.onConnect();
+		await untilReady(store);
+
+		expect(redis.del).not.toHaveBeenCalled();
+		expect(redis.set).toHaveBeenCalledWith('lavalink/queue/g1', 'V2', { EX: QUEUE_TTL_SECONDS });
+		expect(pendingCount(store)).toBe(0);
+	});
 });
