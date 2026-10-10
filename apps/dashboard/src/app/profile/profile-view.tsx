@@ -18,8 +18,6 @@ import type {
   ProfileMusicStats,
 } from "@/lib/profile-stats";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface ProfileViewProps {
   user: { id: string; name: string; image: string | null };
   birthday: ProfileBirthday;
@@ -27,8 +25,6 @@ export interface ProfileViewProps {
   games: ProfileGamesStats;
   attendance: ProfileAttendance;
 }
-
-/* ─────────────────────────── helpers ─────────────────────────── */
 
 function formatDay(playedAt: string): string {
   const date = new Date(playedAt);
@@ -63,8 +59,6 @@ function StreakCount({ streak }: { streak: number }) {
     </p>
   );
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function ProfileView({ user, birthday, music, games, attendance }: ProfileViewProps) {
   const hasBirthday = birthday.month != null && birthday.day != null;

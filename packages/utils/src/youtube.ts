@@ -1,17 +1,11 @@
 import { fetch } from 'undici';
 
-/**
- * Autocomplete API response type
- */
 export interface YouTubeSuggestion {
 	query: string;
 	type: number;
 	relevance?: number[];
 }
 
-/**
- * Autocomplete API full response type
- */
 export interface YouTubeSuggestionsResponse {
 	query: string;
 	suggestions: YouTubeSuggestion[];
@@ -22,13 +16,6 @@ export interface YouTubeSuggestionsResponse {
 	};
 }
 
-/**
- * Get suggestions
- * @param query Search query
- * @param locale Language setting (default: 'ko')
- * @param region Region setting (default: 'kr')
- * @returns Search suggestions
- */
 export async function getYouTubeSuggestions(query: string, locale: string = 'ko', region: string = 'kr'): Promise<YouTubeSuggestionsResponse> {
 	try {
 		const baseUrl = 'https://suggestqueries-clients6.youtube.com/complete/search';
@@ -86,17 +73,9 @@ export async function getYouTubeSuggestions(query: string, locale: string = 'ko'
 	}
 }
 
-/**
- * Filter and sort suggestions
- * @param suggestions Original suggestions
- * @param maxResults Maximum results (default: 10)
- * @param filterDuplicates Filter duplicates (default: true)
- * @returns Filtered suggestions array
- */
 export function filterYouTubeSuggestions(suggestions: YouTubeSuggestion[], maxResults: number = 10, filterDuplicates: boolean = true): string[] {
 	let filtered = suggestions;
 
-	// Remove duplicates
 	if (filterDuplicates) {
 		const seen = new Set<string>();
 		filtered = suggestions.filter((suggestion) => {
@@ -109,7 +88,6 @@ export function filterYouTubeSuggestions(suggestions: YouTubeSuggestion[], maxRe
 		});
 	}
 
-	// Sort by relevance if it exists
 	filtered.sort((a, b) => {
 		if (a.relevance && b.relevance && a.relevance[0] !== undefined && b.relevance[0] !== undefined) {
 			return b.relevance[0] - a.relevance[0];
@@ -120,12 +98,6 @@ export function filterYouTubeSuggestions(suggestions: YouTubeSuggestion[], maxRe
 	return filtered.slice(0, maxResults).map((s) => s.query);
 }
 
-/**
- * Get simple suggestions
- * @param query Search query
- * @param maxResults Maximum results (default: 10)
- * @returns Suggestions array
- */
 export async function getSimpleYouTubeSuggestions(query: string, maxResults: number = 10): Promise<string[]> {
 	try {
 		const response = await getYouTubeSuggestions(query);

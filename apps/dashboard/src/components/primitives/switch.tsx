@@ -3,8 +3,6 @@
 import { useId } from "react";
 import { m } from "framer-motion";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface SwitchProps {
 	checked?: boolean;
 	defaultChecked?: boolean;
@@ -15,8 +13,6 @@ interface SwitchProps {
 	size?: "sm" | "md";
 	className?: string;
 }
-
-/* ─────────────────────────── styles ─────────────────────────── */
 
 const trackSizes = {
 	sm: "h-5 w-9",
@@ -32,8 +28,6 @@ const thumbTravel = {
 	sm: 16,
 	md: 20,
 };
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Switch({
 	checked,

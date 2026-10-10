@@ -1,8 +1,6 @@
 import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";
 import { Badge } from "@/components/primitives/badge";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface MessageAuthor {
 	id: string;
 	username: string;
@@ -24,8 +22,6 @@ interface ChannelMessageProps {
 	className?: string;
 	children?: React.ReactNode;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function ChannelMessage({
 	author,

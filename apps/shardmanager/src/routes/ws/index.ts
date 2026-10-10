@@ -35,7 +35,6 @@ export default async function routes(fastify: FastifyInstance) {
 		const registry = fastify.manager.getRegistry();
 		const notifier = fastify.manager.getNotifier();
 
-		// Send HELLO
 		send(socket, {
 			op: WsOp.HELLO,
 			payload: {
@@ -98,8 +97,6 @@ export default async function routes(fastify: FastifyInstance) {
 			logger.error(`[${wsId}] WebSocket error:`, error);
 		});
 
-		// --- Handlers ---
-
 		function handleIdentify(id: string, ws: WebSocket, payload: IdentifyPayload) {
 			// Authorization 헤더는 이미 검증됐지만, IDENTIFY payload의 토큰도 이중으로 검증해요.
 			if (!payload.token || !WS_AUTH_KEY || !safeEqual(payload.token, WS_AUTH_KEY)) {
@@ -117,13 +114,11 @@ export default async function routes(fastify: FastifyInstance) {
 			// Re-identification: bot sends its current shard IDs
 			if (payload.shardIds && payload.shardIds.length > 0) {
 				logger.info(`[${id}] Re-identifying with existing shards [${payload.shardIds.join(', ')}]`);
-				// Mark these shards as allocated
 				for (const shardId of payload.shardIds) {
 					registry.forceAllocate(shardId);
 				}
 				shardIds = payload.shardIds;
 			} else {
-				// First-time identification: allocate new shards
 				shardIds = registry.allocateShardIds();
 			}
 

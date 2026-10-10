@@ -14,8 +14,6 @@ import type { GuildSettings } from "@/types/settings";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
-/* ─────────────────────────── 폼 매핑 ─────────────────────────── */
-
 interface MixerForm {
 	gaplessEnabled: boolean;
 	crossfadeEnabled: boolean;
@@ -27,8 +25,6 @@ const toMixerForm = (settings: GuildSettings): MixerForm => ({
 	crossfadeEnabled: settings.crossfadeEnabled,
 	crossfadeMs: settings.crossfadeMs,
 });
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 function MixerSettingsPanel({ guildId }: { guildId: string }) {
 	const toast = useToast();

@@ -2,8 +2,6 @@ import { Inbox } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface EmptyStateProps {
 	icon?: React.ComponentType<{ className?: string }>;
 	title: string;
@@ -14,8 +12,6 @@ interface EmptyStateProps {
 	size?: "sm" | "md";
 	className?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function EmptyState({ icon: Icon = Inbox, title, description, action, secondaryAction, size = "md", className }: EmptyStateProps) {
 	return (

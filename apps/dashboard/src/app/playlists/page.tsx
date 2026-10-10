@@ -15,8 +15,6 @@ import { PlaylistDetail } from "@/components/playlists/playlist-detail";
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
 import { usePlaylists } from "@/hooks/use-playlists";
 
-/* ─────────────────────────── Content ─────────────────────────── */
-
 function PlaylistsContent() {
 	const {
 		status,
@@ -173,8 +171,6 @@ function PlaylistsContent() {
 		</Container>
 	);
 }
-
-/* ─────────────────────────── Page ─────────────────────────── */
 
 export default function PlaylistsPage() {
 	return (

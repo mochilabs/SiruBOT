@@ -3,7 +3,6 @@ import * as Sentry from '@sentry/node';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
 
-// handlers/base.ts
 export abstract class BaseLavalinkHandler {
 	protected logger: Logger<ILogObj>;
 

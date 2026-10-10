@@ -96,8 +96,6 @@ export function useSettingsForm<T extends Partial<GuildSettings>>(
 	};
 }
 
-/* ─────────────────────────── 채널·역할 목록 ─────────────────────────── */
-
 export interface ChannelsPayload {
 	channels: DiscordChannelSummary[];
 }

@@ -131,7 +131,7 @@ export function getChatConfig(): ChatConfig | null {
 	};
 }
 
-// ── 서버/채널 AI 설정 ───────────────────────────────────────────────────────
+// 서버/채널 AI 설정
 export interface AiChatPolicy {
 	/** all: 모든 채널 / channels: 특정 채널만 / off: 끄기 */
 	mode: AiMode;
@@ -159,7 +159,7 @@ export function assertChatEnabled(policy: AiChatPolicy, channelId: string): void
 	}
 }
 
-// ── 채널별 대화 기록 (인메모리 캐시 + PostgreSQL 영속화) ─────────────────────
+// 채널별 대화 기록 (인메모리 캐시 + PostgreSQL 영속화)
 export interface ChannelHistoryState {
 	/** 최근 대화 (오래된 → 최신) */
 	messages: ChatMessage[];
@@ -320,7 +320,7 @@ function pushChannelHistory(channelId: string, ...messages: ChatMessage[]): void
 	persistChannelHistory(channelId);
 }
 
-// ── Discord 메시지 ↔ 기록 동기화 (삭제/편집 반영) ─────────────────────────────
+// Discord 메시지 ↔ 기록 동기화 (삭제/편집 반영)
 
 /**
  * Discord에서 삭제된 메시지(들)를 채널 기록에서 제거해요.
@@ -483,7 +483,7 @@ function buildSystemContent(
 	return head.join('\n');
 }
 
-// ── 롤링 요약 ────────────────────────────────────────────────────────────────
+// 롤링 요약
 const SUMMARY_SYSTEM_PROMPT = [
 	'당신은 대화 요약기예요. 주어진 기존 요약과 새 대화를 한국어 하나의 요약으로 통합해요.',
 	'규칙:',
@@ -548,7 +548,7 @@ async function runSummaryJob(channelId: string, config: ChatConfig): Promise<voi
 	}
 }
 
-// ── nightly pass (장기 기억 정리 배치) ──────────────────────────────────────
+// nightly pass (장기 기억 정리 배치)
 const TIDY_BATCH_SIZE = 40;
 const TIDY_USER_DELAY_MS = 1500;
 
@@ -667,7 +667,7 @@ async function runMemoryTidyBatch(): Promise<void> {
 	}
 }
 
-// ── 오류 ────────────────────────────────────────────────────────────────────
+// 오류
 export class ChatServiceError extends Error {
 	public constructor(
 		public readonly identifier: string,
@@ -678,7 +678,7 @@ export class ChatServiceError extends Error {
 	}
 }
 
-// ── 응답 중지 레지스트리 ────────────────────────────────────────────────────
+// 응답 중지 레지스트리
 const chatAborts = new Map<string, { controller: AbortController; userId: string }>();
 
 /** 채널별 동시 턴 잠금 — /채팅과 멘션 답변이 같은 채널 히스토리를 경쟁하지 않도록 해요 */
@@ -695,7 +695,7 @@ export function releaseChannelTurn(channelId: string): void {
 	activeChannelTurns.delete(channelId);
 }
 
-// ── 유저당 턴 상한 (10분 윈도우) ──────────────────────────────────────────────
+// 유저당 턴 상한 (10분 윈도우)
 /** 윈도우(10분)당 유저별 최대 AI 턴 수 */
 const USER_TURN_WINDOW_SECONDS = 10 * 60;
 const USER_TURN_LIMIT = 20;
@@ -738,7 +738,7 @@ export function abortChatTurn(key: string, requesterId: string): ChatAbortResult
 	return 'ok';
 }
 
-// ── 스트리밍 ────────────────────────────────────────────────────────────────
+// 스트리밍
 
 /** ``
 /** `<think>` 토큰을 쓰는 모델용 — 추론 부분을 본문에서 제거 */
@@ -789,7 +789,7 @@ function toApiMessage(message: ChatMessage) {
 	return { role: message.role, content: message.content };
 }
 
-// ── 멀티모달 이미지 ────────────────────────────────────────────────────────
+// 멀티모달 이미지
 const MAX_IMAGES_PER_MESSAGE = 3;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 

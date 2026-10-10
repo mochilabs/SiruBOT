@@ -71,7 +71,6 @@ export class PlayerNotifier {
 
 		try {
 			if (!this.canSend(player, version, interaction)) return;
-			// 1. Clear ongoing debounce timer
 			this.clearDebounceTimer(player.guildId);
 			// when interaction is noen and player has not textChannelId, throw error
 			if (!interaction && !player.textChannelId) throw new Error(`Player has not textChannelId ${player.guildId}`);
@@ -85,11 +84,10 @@ export class PlayerNotifier {
 			if (!options.enableController && !interaction) return;
 			if (!this.canSend(player, version, interaction)) return;
 
-			// 2. Delete existing controller message (only when a new one will actually be sent)
+			// Delete existing controller message (only when a new one will actually be sent)
 			await this.removeController(player);
 			if (!this.canSend(player, version, interaction)) return;
 
-			// 3. Build and send new controller message
 			// 준비된 카드만 사용해 기본 화면을 먼저 보내고, 미완성 카드는 나중에 붙인다.
 			const card = getCachedNowPlayingCard(player);
 			const components = view.controllerView({

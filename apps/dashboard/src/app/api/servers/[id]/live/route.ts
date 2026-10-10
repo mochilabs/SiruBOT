@@ -4,8 +4,6 @@ import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { fetchDataApi } from "@/lib/data-api";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
 
-/* ─────────────────────────── data-api 응답 타입 ─────────────────────────── */
-
 export interface LiveQueueTrack {
   title: string;
   author: string;
@@ -41,8 +39,6 @@ interface DataApiLiveResponse {
   player: LivePlayerState | null;
   hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
-
-/* ─────────────────────────── 라이브 플레이어 상태 (view only) ─────────────────────────── */
 
 /**
  * 라이브 재생 상태 프록시 — data-api `GET /v1/player/:guildId`(AUTH_KEY 인증)를

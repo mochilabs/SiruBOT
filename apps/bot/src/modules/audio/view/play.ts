@@ -127,7 +127,6 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 	addSeparator(container);
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(askText));
 
-	// 버튼 생성
 	const buttons = [
 		new ButtonBuilder()
 			.setLabel(`나머지 ${remainTracks.length}곡 추가`)

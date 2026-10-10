@@ -2,8 +2,6 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface SliderProps {
 	value?: number;
 	defaultValue?: number;
@@ -17,8 +15,6 @@ interface SliderProps {
 	formatValue?: (value: number) => string;
 	className?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Slider({
 	value,

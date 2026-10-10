@@ -110,13 +110,11 @@ export function formatTrack(track: Track, options?: FormatTrackOptions): string 
 
 	let formattedTitle = cleanTitle ? removeEmojis(title.trim()) : title.trim();
 
-	// Truncate title if titleLength option is provided
 	if (titleLength && formattedTitle.length > titleLength.maxLength) {
 		const mask = titleLength.mask ?? '...';
 		formattedTitle = formattedTitle.substring(0, titleLength.maxLength - mask.length) + mask;
 	}
 
-	// Calculate length string
 	let lengthStr = '';
 	if (showLength) {
 		if (duration) {
@@ -131,7 +129,6 @@ export function formatTrack(track: Track, options?: FormatTrackOptions): string 
 		}
 	}
 
-	// Construct final string with/without markdown URL
 	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
 
 	if (withMarkdownURL) {

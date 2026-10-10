@@ -1,12 +1,8 @@
-// import { config } from "dotenv";
-// import path from "path";
 import { captureSentryException, initSentry } from '@sirubot/utils';
 import { ShardManagerServer } from './server.ts';
 import { getLogger } from './utils/logger.ts';
 import { getGatewayInfo } from './utils/gateway.ts';
 import { validateEnv } from './config/env.ts';
-
-// config({ path: path.join(process.cwd(), ".env") });
 
 const logger = getLogger('bootstrap');
 

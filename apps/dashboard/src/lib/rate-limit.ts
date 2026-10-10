@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-/* ─────────────────────────── rate limit ─────────────────────────── */
-
 interface RateRule {
   limit: number;
   windowMs: number;

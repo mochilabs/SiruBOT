@@ -41,7 +41,6 @@ const wrapPrefix = (customId: string) => {
 };
 
 export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
-	// Container builder
 	const containerComponent = createContainer();
 
 	const current = player.queue.current;

@@ -26,21 +26,17 @@ export class VoiceStateUpdateListener extends Listener {
 
 		if (!player) return;
 
-		// Bot moved or disconnected
 		if (newState.member?.id === this.container.client.user?.id) {
 			if (!newState.channelId) {
-				// Bot disconnected, clear timer
 				this.clearTimer(guildId);
 				return;
 			}
 
-			// Re-evaluate the new channel
 			if (!newState.channel) return;
 			this.checkEmptyChannel(newState.channel, guildId, player);
 			return;
 		}
 
-		// User joined or left the bot's channel
 		if (oldState.channelId === player.voiceChannelId || newState.channelId === player.voiceChannelId) {
 			const channel = oldState.channelId === player.voiceChannelId ? oldState.channel : newState.channel;
 			if (channel) {
@@ -56,10 +52,8 @@ export class VoiceStateUpdateListener extends Listener {
 		const listeningMembers = channel.members.filter((m) => !m.user.bot && !m.voice.deaf);
 
 		if (listeningMembers.size === 0) {
-			// Channel is empty or everyone is deafened, start timer
 			this.logger.debug(`Channel ${channel.id} is empty (or everyone deafened). Starting 5 minute leave timer for guild ${guildId}.`);
 
-			// Clear existing timer if there is one
 			this.clearTimer(guildId);
 
 			const timer = setTimeout(async () => {
@@ -92,7 +86,6 @@ export class VoiceStateUpdateListener extends Listener {
 
 			this.leaveTimers.set(guildId, timer);
 		} else {
-			// Channel is not empty, clear timer
 			if (this.leaveTimers.has(guildId)) {
 				this.logger.debug(`User joined channel ${channel.id}. Cancelling leave timer for guild ${guildId}.`);
 				this.clearTimer(guildId);

@@ -273,7 +273,7 @@ export class ProfileCommand extends Command {
 			return;
 		}
 
-		// ── 텍스트 카드 (폴백) ──
+		// 텍스트 카드 (폴백)
 		const lines = [`### ${emoji('user')} ${target.displayName ?? target.username} 님의 프로필`, ''];
 
 		// 생일·별자리 — 생일은 본인에게만

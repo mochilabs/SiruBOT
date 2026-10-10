@@ -13,7 +13,6 @@ const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
 const TRANSITION_RECONCILE_MS = 800;
 
-// handlers/trackHandler.ts
 export class TrackHandler extends BaseLavalinkHandler {
 	/**
 	 * 전이 소유권: 서버 슬롯에 예열된 길드는 서버가 trackEnd를 처리하므로 관망하고,
@@ -369,8 +368,6 @@ export class TrackHandler extends BaseLavalinkHandler {
 		await this.container.mixerService.clearNext(player).catch(() => null);
 	}
 
-	// ── mixer helpers ──────────────────────────
-
 	/**
 	 * Lavalink payload가 실제 시작한 곡과 클라이언트 current가 다르면 payload를 우선한다.
 	 *
@@ -445,8 +442,6 @@ export class TrackHandler extends BaseLavalinkHandler {
 			queue.current = track as (typeof queue)['current'];
 		}
 	}
-
-	// ── youtube chapters ──────────────────────
 
 	/**
 	 * YouTube 챕터(에피소드)를 REST로 직접 조회해 `player.chapters`에 넣는다.

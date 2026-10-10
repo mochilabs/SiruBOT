@@ -2,8 +2,6 @@ import { useId } from "react";
 
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface FieldRenderProps {
 	id: string;
 	describedBy?: string;
@@ -19,8 +17,6 @@ interface FieldProps {
 	className?: string;
 	children: React.ReactNode | ((props: FieldRenderProps) => React.ReactNode);
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Field({ label, description, error, required = false, htmlFor, className, children }: FieldProps) {
 	const autoId = useId();

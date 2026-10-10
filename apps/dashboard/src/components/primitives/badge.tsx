@@ -4,8 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── styles ─────────────────────────── */
-
 /** 디자인 토큰 기반 톤 — Badge·StatusDot·StatusBadge 공용 */
 export const toneStyles = {
 	neutral: { badge: "border border-border bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
@@ -39,8 +37,6 @@ const badgeVariants = cva("inline-flex select-none items-center gap-1.5 rounded-
 	defaultVariants: { variant: "default", size: "md" },
 });
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
 
 interface BadgeProps extends VariantProps<typeof badgeVariants> {
@@ -50,8 +46,6 @@ interface BadgeProps extends VariantProps<typeof badgeVariants> {
 	children: React.ReactNode;
 	className?: string;
 }
-
-/* ─────────────────────────── Badge ─────────────────────────── */
 
 export function Badge({ variant = "default", size = "md", dot = false, dismissible = false, onDismiss, children, className }: BadgeProps) {
 	return (
@@ -95,8 +89,6 @@ function dotTone(variant: BadgeVariant): string {
 			return toneStyles.neutral.dot;
 	}
 }
-
-/* ─────────────────────────── StatusBadge ─────────────────────────── */
 
 const statusTone: Record<string, Tone> = {
 	READY: "success",

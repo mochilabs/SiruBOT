@@ -59,21 +59,19 @@ export class ShardClient {
 						reject(new Error('IDENTIFY_ACK timeout (10s)'));
 					}, 10_000);
 
-					// Wait for HELLO, then send IDENTIFY
 					this.ws.on(WsOp.HELLO, (msg) => {
 						const hello = msg.payload as HelloPayload;
 						this.logger.info(
 							`Received HELLO: ${hello.shardCount} shards, ${hello.shardsPerProcess}/process, heartbeat ${hello.heartbeatInterval}ms`
 						);
 
-						// Send IDENTIFY (first time, no shardIds)
+						// First identify sends no shardIds yet.
 						this.ws.send({
 							op: WsOp.IDENTIFY,
 							payload: { token: this.authToken, hostname: hostname() }
 						});
 					});
 
-					// Wait for IDENTIFY_ACK
 					this.ws.on(WsOp.IDENTIFY_ACK, (msg) => {
 						clearTimeout(timeout);
 						const ack = msg.payload as IdentifyAckPayload;
@@ -90,10 +88,8 @@ export class ShardClient {
 
 						this.logger.info(`Identified: shards [${ack.shardIds.join(', ')}] / ${ack.shardCount}`);
 
-						// Start heartbeat
 						this.startHeartbeat();
 
-						// Setup event handlers
 						this.setupEventHandlers();
 
 						// After successful identification, reconnect on disconnect
@@ -158,9 +154,7 @@ export class ShardClient {
 				reject(new Error('Re-IDENTIFY_ACK timeout (10s)'));
 			}, 10_000);
 
-			// Wait for HELLO
 			this.ws.on(WsOp.HELLO, () => {
-				// Send IDENTIFY with current shard IDs
 				this.ws.send({
 					op: WsOp.IDENTIFY,
 					payload: {
@@ -171,7 +165,6 @@ export class ShardClient {
 				});
 			});
 
-			// Wait for IDENTIFY_ACK
 			this.ws.on(WsOp.IDENTIFY_ACK, (msg) => {
 				clearTimeout(timeout);
 				const ack = msg.payload as IdentifyAckPayload;
@@ -183,10 +176,8 @@ export class ShardClient {
 
 				this.logger.info(`Re-identified: shards [${ack.shardIds.join(', ')}] / ${ack.shardCount}`);
 
-				// Restart heartbeat
 				this.startHeartbeat();
 
-				// Setup event handlers
 				this.setupEventHandlers();
 
 				// Re-register onClose for next disconnect
@@ -205,12 +196,10 @@ export class ShardClient {
 	 * Setup persistent event handlers (heartbeat ack, broadcast eval)
 	 */
 	private setupEventHandlers(): void {
-		// Handle HEARTBEAT_ACK
 		this.ws.on(WsOp.HEARTBEAT_ACK, () => {
 			// heartbeat acknowledged
 		});
 
-		// Handle BROADCASTEVAL
 		this.ws.on(WsOp.BROADCASTEVAL, async (msg) => {
 			const payload = msg.payload as BroadcastEvalPayload;
 			if (this.evalCallback) {

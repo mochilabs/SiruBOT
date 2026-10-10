@@ -171,8 +171,6 @@ const musicQueueTool: AiTool = {
 	}
 };
 
-// ── 재생 제어 확장 툴 ────────────────────────────────────────────────
-
 function requireCustomPlayer(guildId: string): CustomPlayer {
 	const player = container.audio.getPlayer(guildId);
 	if (!player) throw new Error('현재 재생 중인 곡이 없어요.');

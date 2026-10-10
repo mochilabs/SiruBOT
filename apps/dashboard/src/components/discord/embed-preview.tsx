@@ -1,7 +1,5 @@
 import Image from "next/image";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface EmbedField {
 	name: string;
 	value: string;
@@ -36,8 +34,6 @@ interface EmbedPreviewProps {
 	embed: EmbedData;
 	className?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function EmbedPreview({ embed, className = "" }: EmbedPreviewProps) {
 	return (

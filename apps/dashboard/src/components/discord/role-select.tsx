@@ -8,8 +8,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal, usePopoverCoords } from "../overlay/portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface DiscordRole {
 	id: string;
 	name: string;
@@ -26,14 +24,10 @@ interface RoleSelectProps {
 	className?: string;
 }
 
-/* ─────────────────────────── helpers ─────────────────────────── */
-
 function roleColorHex(color: number): string | null {
 	if (color === 0) return null;
 	return `#${color.toString(16).padStart(6, "0")}`;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function RoleSelect({
 	roles,

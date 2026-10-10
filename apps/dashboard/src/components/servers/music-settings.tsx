@@ -29,8 +29,6 @@ import type { GuildSettings } from "@/types/settings";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
-/* ─────────────────────────── 옵션 ─────────────────────────── */
-
 const REPEAT_OPTIONS: SelectOption[] = [
 	{ value: "off", label: "반복 없음", icon: <Repeat size={16} aria-hidden /> },
 	{ value: "track", label: "한 곡 반복", icon: <Repeat1 size={16} aria-hidden /> },
@@ -50,8 +48,6 @@ const SEGMENT_OPTIONS_META: Record<(typeof SPONSORBLOCK_SEGMENTS)[number], { lab
 
 const SEGMENT_OPTIONS: SelectOption[] = SPONSORBLOCK_SEGMENTS.map((segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }));
 
-/* ─────────────────────────── 폼 매핑 (모듈 수준 — 안정 참조) ─────────────────────────── */
-
 interface MusicForm {
 	volume: number;
 	repeat: GuildSettings["repeat"];
@@ -67,8 +63,6 @@ const toMusicForm = (settings: GuildSettings): MusicForm => ({
 	enableController: settings.enableController,
 	sponsorBlockSegments: settings.sponsorBlockSegments,
 });
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 function MusicSettingsPanel({ guildId }: { guildId: string }) {
 	const toast = useToast();

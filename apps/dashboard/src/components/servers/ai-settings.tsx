@@ -14,8 +14,6 @@ import type { AiMode, AiPolicy } from "@/types/settings";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
-/* ─────────────────────────── 모드 카드 ─────────────────────────── */
-
 const MODE_CARDS: Array<{ value: AiMode; label: string; description: string; icon: React.ReactNode }> = [
 	{
 		value: "all",
@@ -36,8 +34,6 @@ const MODE_CARDS: Array<{ value: AiMode; label: string; description: string; ico
 		icon: <PowerOff size={16} />,
 	},
 ];
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 function AiSettingsPanel({ guildId }: { guildId: string }) {
 	const toast = useToast();
@@ -263,8 +259,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 		</Card>
 	);
 }
-
-/* ─────────────────────────── export ─────────────────────────── */
 
 export function AiSettings({ guildId }: { guildId: string }) {
 	return <AiSettingsPanel guildId={guildId} />;

@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { getZodiac, type ZodiacInfo } from "@/lib/zodiac";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface ProfileBirthday {
   month: number | null;
   day: number | null;
@@ -56,10 +54,6 @@ export interface ProfileStats {
   attendance: ProfileAttendance;
 }
 
-/* ─────────────────────────── zodiac ─────────────────────────── */
-
-/* ─────────────────────────── kst day key ─────────────────────────── */
-
 /** KST 기준 날짜 키 (YYYY-MM-DD) */
 function kstDayKey(date: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -69,8 +63,6 @@ function kstDayKey(date: Date = new Date()): string {
     day: "2-digit",
   }).format(date);
 }
-
-/* ─────────────────────────── stats builder ─────────────────────────── */
 
 const LISTEN_SAMPLE_LIMIT = 500;
 const RPS_SAMPLE_LIMIT = 5000;

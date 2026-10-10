@@ -109,8 +109,6 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
 	);
 });
 
-/* ─────────────────────────── 즐겨찾기 (원클릭) ─────────────────────────── */
-
 /**
  * 현재 사용자의 즐겨찾기 트랙 ID 집합 (페이지 로드 시 일괄 조회).
  * 클릭 → 캐시 낙관 업데이트(revalidate: false) → POST/DELETE → finally 재검증 순서.

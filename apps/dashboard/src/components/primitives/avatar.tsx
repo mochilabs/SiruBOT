@@ -4,8 +4,6 @@ import Image from "next/image";
 
 import { toneStyles } from "@/components/primitives/badge";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type AvatarSize = "xs" | "sm" | "md" | "lg";
 type AvatarStatus = "online" | "idle" | "dnd" | "offline";
 
@@ -18,8 +16,6 @@ interface AvatarProps {
 	status?: AvatarStatus;
 	className?: string;
 }
-
-/* ─────────────────────────── styles ─────────────────────────── */
 
 const sizePx: Record<AvatarSize, number> = { xs: 32, sm: 40, md: 56, lg: 80 };
 const sizeClasses: Record<AvatarSize, string> = {
@@ -44,8 +40,6 @@ const statusDotSizes: Record<AvatarSize, string> = {
 	lg: "h-5 w-5 border-[3px]",
 };
 
-/* ─────────────────────── helpers ─────────────────────── */
-
 /** Build Discord CDN avatar URL */
 export function discordAvatarUrl(userId: string, avatarHash: string, size = 128): string {
 	return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${avatarHash.startsWith("a_") ? "gif" : "webp"}?size=${size}`;
@@ -55,8 +49,6 @@ export function discordAvatarUrl(userId: string, avatarHash: string, size = 128)
 export function discordGuildIconUrl(guildId: string, iconHash: string, size = 128): string {
 	return `https://cdn.discordapp.com/icons/${guildId}/${iconHash}.webp?size=${size}`;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Avatar({
 	src,

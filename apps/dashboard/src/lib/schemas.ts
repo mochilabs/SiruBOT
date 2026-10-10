@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-/* ─────────────────────────── 상수 ─────────────────────────── */
-
 const AI_MODES = ["all", "channels", "off"] as const;
 const REPEAT_MODES = ["off", "track", "queue"] as const;
 const PINNED_MODES = ["play", "select"] as const;
@@ -15,8 +13,6 @@ export const SPONSORBLOCK_SEGMENTS = [
 	"music_offtopic",
 	"filler",
 ] as const;
-
-/* ─────────────────────────── 스키마 ─────────────────────────── */
 
 const snowflake = z.string().regex(/^\d{17,20}$/, "올바른 ID 형식이 아니에요.");
 const nullableSnowflake = snowflake.nullable();
@@ -59,8 +55,6 @@ export const guildSettingsSchema = z.object({
 export const jtcSetupSchema = z.object({
 	categoryId: snowflake,
 });
-
-/* ─────────────────────────── 헬퍼 ─────────────────────────── */
 
 /** 미등록 필드를 조용히 무시하지 말고 알려줘요 (기존 AI 라우트의 동작 유지) */
 export function unknownKeys(body: unknown, allowed: readonly string[]): string[] {

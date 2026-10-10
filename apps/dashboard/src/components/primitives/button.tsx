@@ -6,8 +6,6 @@ import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── styles ─────────────────────────── */
-
 const buttonVariants = cva(
 	"relative inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors duration-fast cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none pointer-coarse:min-h-11",
 	{
@@ -36,16 +34,12 @@ const buttonVariants = cva(
 	},
 );
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
 	loading?: boolean;
 	active?: boolean;
 	icon?: React.ReactNode;
 	children?: React.ReactNode;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 	{ variant = "primary", size = "md", loading = false, active = false, icon, children, className, disabled, type = "button", ...props },
