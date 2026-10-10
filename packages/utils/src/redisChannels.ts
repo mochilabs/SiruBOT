@@ -38,3 +38,26 @@ export function botProfilePendingKey(guildId: string): string {
 export function botProfileStateChannel(guildId: string): string {
 	return `${BOT_PROFILE_STATE_CHANNEL_PREFIX}${guildId}`;
 }
+
+/**
+ * 멤버 인사 테스트 전송 요청 브로드캐스트.
+ * 대시보드 테스트 버튼 → data-api가 pending 키에 요청 본문({kind, userId, requestId})을
+ * 기록하고 이 채널로 guildId를 퍼블리시하면, 해당 길드를 보유한 봇 프로세스만 읽어
+ * 실제 멤버 정보로 카드를 렌더링해 대상 채널에 전송해요.
+ *
+ * 페이로드: {"guildId":"<길드 ID>","requestId":"<요청 식별자>"} — 본문은 memberGreetingPendingKey(guildId)
+ */
+export const MEMBER_GREETING_SEND_CHANNEL = 'sirubot:member-greeting:send';
+
+/** 멤버 인사 테스트 전송 대기 키 — data-api가 본문({kind, userId, requestId})을 기록, 봇이 읽고 즉시 지워요 */
+export function memberGreetingPendingKey(guildId: string): string {
+	return `sirubot:member-greeting:pending:${guildId}`;
+}
+
+/** 멤버 인사 테스트 전송 결과 상태 채널 접두사 — 봇이 `sirubot:member-greeting:state:{guildId}`로 결과를 알려요 */
+export const MEMBER_GREETING_STATE_CHANNEL_PREFIX = 'sirubot:member-greeting:state:';
+
+/** 인사 테스트 결과 상태 채널명 — `sirubot:member-greeting:state:{guildId}` */
+export function memberGreetingStateChannel(guildId: string): string {
+	return `${MEMBER_GREETING_STATE_CHANNEL_PREFIX}${guildId}`;
+}
