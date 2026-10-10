@@ -150,7 +150,9 @@ function candidatePaths(): string[] {
 async function loadEmojiIdMap(): Promise<EmojiIdMap> {
 	for (const path of candidatePaths()) {
 		try {
-			const raw = await readFile(path, 'utf-8');
+			// turbopackIgnore — 런타임 CWD 의존 경로라 빌드 트레이싱에서 제외해요
+			// (트레이싱되면 이 import를 거친 서버 산출물에 프로젝트 전체가 포함돼요)
+			const raw = await readFile(/* turbopackIgnore: true */ path, 'utf-8');
 			const parsed = JSON.parse(raw) as EmojiIdMap;
 			if (parsed && typeof parsed === 'object') return parsed;
 		} catch {
