@@ -10,8 +10,6 @@ import { Card } from "@/components/primitives/card";
 import type { ApiError } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── 패널 헤더 ─────────────────────────── */
-
 export function PanelHeader({
 	icon,
 	title,
@@ -37,8 +35,6 @@ export function PanelHeader({
 	);
 }
 
-/* ─────────────────────────── 안내 박스 ─────────────────────────── */
-
 /** 토큰 기반 안내 박스 */
 export function InfoBox({ children }: { children: ReactNode }) {
 	return <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground space-y-1">{children}</div>;
@@ -50,8 +46,6 @@ export function WarningBox({ children }: { children: ReactNode }) {
 		<div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-xs text-warning">{children}</div>
 	);
 }
-
-/* ─────────────────────────── 로딩·오류 ─────────────────────────── */
 
 export function PanelLoading({ label }: { label: string }) {
 	return (
@@ -90,8 +84,6 @@ export function PanelError({ error, onRetry }: { error: ApiError; onRetry: () =>
 		</Card>
 	);
 }
-
-/* ─────────────────────────── 저장 바 ─────────────────────────── */
 
 export function SaveBar({
 	dirty,

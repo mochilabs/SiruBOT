@@ -1,8 +1,6 @@
 import { type Tone,toneStyles } from "@/components/primitives/badge";
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type DotStatus = "ready" | "idle" | "connecting" | "disconnected" | "errored";
 type DotSize = "sm" | "md" | "lg";
 
@@ -13,8 +11,6 @@ interface StatusDotProps {
 	label?: string;
 	className?: string;
 }
-
-/* ─────────────────────────── styles ─────────────────────────── */
 
 /** StatusBadge와 동일한 톤 매핑 (badge.tsx의 toneStyles 사용) */
 const statusTone: Record<DotStatus, Tone> = {
@@ -30,8 +26,6 @@ const sizeClasses: Record<DotSize, string> = {
 	md: "h-2 w-2",
 	lg: "h-3 w-3",
 };
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function StatusDot({ status = "ready", size = "md", pulse, label, className }: StatusDotProps) {
 	/* R-19: READY·IDLE 같은 안정 상태는 정적으로 보여요. pulse를 명시하지 않으면 연결 중·오류 같은 과도 상태만 깜빡여요. */

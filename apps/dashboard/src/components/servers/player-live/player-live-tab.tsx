@@ -12,16 +12,12 @@ import { SkeletonLine } from "@/components/primitives/skeleton";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { toError } from "@/lib/api-error";
 
-/* ─────────────────────────── 시간 포맷 ─────────────────────────── */
-
 function formatMs(ms: number): string {
 	const totalSeconds = Math.floor(ms / 1000);
 	const minutes = Math.floor(totalSeconds / 60);
 	const seconds = totalSeconds % 60;
 	return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
-
-/* ─────────────────────────── 진행 보간 ─────────────────────────── */
 
 /**
  * 마지막 스냅샷 이후 경과 보간 — 재생 중이면 position + 경과, 아니면 스냅샷 그대로.
@@ -32,8 +28,6 @@ function interpolatedPositionMs(state: LivePlayerState, receivedAt: number): num
 	const elapsed = Math.max(0, Date.now() - receivedAt);
 	return Math.min(state.durationMs, state.positionMs + elapsed);
 }
-
-/* ─────────────────────────── 진행 바 ─────────────────────────── */
 
 function ProgressBar({ state, receivedAt }: { state: LivePlayerState; receivedAt: number }) {
 	// 라이브 스트림은 길이가 정해지지 않아 진행률을 그리지 않아요.
@@ -54,8 +48,6 @@ function ProgressBar({ state, receivedAt }: { state: LivePlayerState; receivedAt
 		</div>
 	);
 }
-
-/* ─────────────────────────── 상태 헤더 ─────────────────────────── */
 
 function StatusHeader({ state, staleMs }: { state: LivePlayerState; staleMs: number }) {
 	if (state.stale) {
@@ -85,8 +77,6 @@ function StatusHeader({ state, staleMs }: { state: LivePlayerState; staleMs: num
 		</Badge>
 	);
 }
-
-/* ─────────────────────────── Now Playing 패널 ─────────────────────────── */
 
 interface NowPlayingProps {
 	state: LivePlayerState;
@@ -160,8 +150,6 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 	);
 }
 
-/* ─────────────────────────── 큐 패널 ─────────────────────────── */
-
 function QueueList({ state }: { state: LivePlayerState }) {
 	return (
 		<Card padding="lg" className="gap-4">
@@ -203,8 +191,6 @@ function QueueList({ state }: { state: LivePlayerState }) {
 	);
 }
 
-/* ─────────────────────────── 로딩/오류 ─────────────────────────── */
-
 function LiveLoading() {
 	return (
 		<Card padding="lg" className="gap-4">
@@ -232,8 +218,6 @@ function LiveEmpty({ detail }: { detail?: string }) {
 		</Card>
 	);
 }
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 interface LivePayload {
 	player: LivePlayerState | null;

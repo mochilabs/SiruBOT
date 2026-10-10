@@ -90,7 +90,6 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(jumpButton, removeButton));
 
-	// Pagination buttons
 	if (totalPages > 1) {
 		const prevButton = new ButtonBuilder()
 			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page - 1}`)

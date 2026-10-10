@@ -3,7 +3,6 @@ import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { CustomPlayer } from './player/customPlayer.ts';
 import { isYouTubeSource } from './youtubeChapters.ts';
 
-// ── Similarity Threshold Settings ──
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
 const HIGH_SIMILARITY = Number(process.env.AUTOPLAY_HIGH_SIM) || 0.75;

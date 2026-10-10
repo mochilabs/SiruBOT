@@ -5,8 +5,6 @@ import { X } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 interface TagInputProps {
 	value?: string[];
 	onChange?: (tags: string[]) => void;
@@ -17,8 +15,6 @@ interface TagInputProps {
 	validate?: (tag: string) => boolean;
 	className?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function TagInput({
 	value = [],

@@ -8,8 +8,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal } from "../overlay/portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type ToastVariant = "success" | "error" | "info" | "warning";
 
 interface ToastItem {
@@ -29,8 +27,6 @@ interface ToastContextValue {
 	info: (message: string, description?: string) => string;
 	warning: (message: string, description?: string) => string;
 }
-
-/* ─────────────────────────── styles ─────────────────────────── */
 
 const variantConfig: Record<
 	ToastVariant,
@@ -62,8 +58,6 @@ const variantConfig: Record<
 	},
 };
 
-/* ─────────────────────────── context ─────────────────────────── */
-
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function useToast(): ToastContextValue {
@@ -71,8 +65,6 @@ export function useToast(): ToastContextValue {
 	if (!ctx) throw new Error("useToast must be used within <ToastProvider>");
 	return ctx;
 }
-
-/* ─────────────────────────── single toast ─────────────────────────── */
 
 function Toast({
 	toast,
@@ -120,8 +112,6 @@ function Toast({
 		</m.div>
 	);
 }
-
-/* ─────────────────────────── provider ─────────────────────────── */
 
 let _counter = 0;
 function uid() {

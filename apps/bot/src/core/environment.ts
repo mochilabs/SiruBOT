@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import * as Sentry from '@sentry/node';
 import { initSentry } from './sentry.ts';
 
-// Init sentry
 initSentry();
 
 setup({ path: join(process.cwd(), '.env') });

@@ -7,8 +7,6 @@ import { Button } from "@/components/primitives/button";
 
 import { Portal } from "../overlay/portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type NotificationVariant = "success" | "error" | "info" | "warning";
 
 export interface NotificationItem {
@@ -29,8 +27,6 @@ interface NotificationStackProps {
 	onDismiss: (id: string) => void;
 }
 
-/* ─────────────────────────── styles ─────────────────────────── */
-
 const variantConfig: Record<
 	NotificationVariant,
 	{ icon: React.ComponentType<{ className?: string }>; accentBorder: string; iconColor: string }
@@ -40,8 +36,6 @@ const variantConfig: Record<
 	info: { icon: Info, accentBorder: "border-l-info", iconColor: "text-info" },
 	warning: { icon: AlertTriangle, accentBorder: "border-l-warning", iconColor: "text-warning" },
 };
-
-/* ─────────────────────────── single notification ─────────────────────────── */
 
 function Notification({ notification, onDismiss }: NotificationProps) {
 	const config = variantConfig[notification.variant];
@@ -95,8 +89,6 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 		</m.div>
 	);
 }
-
-/* ─────────────────────────── stack container ─────────────────────────── */
 
 export function NotificationStack({ items, onDismiss }: NotificationStackProps) {
 	return (

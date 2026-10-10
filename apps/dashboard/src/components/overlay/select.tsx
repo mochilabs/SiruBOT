@@ -9,8 +9,6 @@ import { SectionLabel } from "@/components/primitives/section-label";
 
 import { Portal, usePopoverCoords } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface SelectOption {
 	value: string;
 	label: string;
@@ -41,8 +39,6 @@ interface MultiSelectProps extends SelectBaseProps {
 }
 
 type SelectProps = SingleSelectProps | MultiSelectProps;
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function Select(props: SelectProps) {
 	const {

@@ -263,8 +263,6 @@ export class GuildService {
 		return { crossfadeEnabled: updated.crossfadeEnabled, crossfadeMs: updated.crossfadeMs };
 	}
 
-	// ── AI 채팅 설정 ────────────────────────────────────────────────
-
 	public async getAiSettings(guildId: string) {
 		const guild = await this.getGuild(guildId);
 		return {

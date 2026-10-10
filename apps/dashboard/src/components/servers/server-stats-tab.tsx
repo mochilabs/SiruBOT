@@ -14,8 +14,6 @@ import { SkeletonCard } from "@/components/primitives/skeleton";
 import { Tabs } from "@/components/primitives/tabs";
 import { toError } from "@/lib/api-error";
 
-/* ─────────────────────────── 기간 필터 ─────────────────────────── */
-
 const RANGE_TABS = [
   { key: "1", label: "24시간" },
   { key: "7", label: "7일" },
@@ -28,8 +26,6 @@ type RangeKey = (typeof RANGE_TABS)[number]["key"];
 function rangeLabel(range: RangeKey): string {
   return RANGE_TABS.find((item) => item.key === range)?.label ?? range;
 }
-
-/* ─────────────────────────── 보조 ─────────────────────────── */
 
 function formatDate(iso: string): string {
   return iso.slice(0, 10).replaceAll("-", ".");
@@ -51,8 +47,6 @@ const BAR_STAGGER_STEP_MS = 12;
 function useReveal() {
   return useInView({ triggerOnce: true, threshold: 0.05 });
 }
-
-/* ─────────────────────────── TOP 트랙 ─────────────────────────── */
 
 function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"] }) {
   const { ref, inView } = useReveal();
@@ -103,8 +97,6 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
   );
 }
 
-/* ─────────────────────────── 요청자 ─────────────────────────── */
-
 function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["topRequesters"] }) {
   const { ref, inView } = useReveal();
 
@@ -142,8 +134,6 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
   );
 }
 
-/* ─────────────────────────── 일별 재생 막대 ─────────────────────────── */
-
 function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dailyCounts"] }) {
   const { ref, inView } = useReveal();
 
@@ -179,8 +169,6 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
     </div>
   );
 }
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey }) {
   const { data, error, isLoading } = useSWR<StatsServerStatsResponse>(
@@ -255,8 +243,6 @@ function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey
     </div>
   );
 }
-
-/* ─────────────────────────── 탭 ─────────────────────────── */
 
 export default function ServerStatsTab({ guildId }: { guildId: string }) {
   const [range, setRange] = useState<RangeKey>("7");

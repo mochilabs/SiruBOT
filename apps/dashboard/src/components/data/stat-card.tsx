@@ -5,8 +5,6 @@ import { Card } from "@/components/primitives/card";
 import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 type Trend = "up" | "down" | "neutral";
 
 interface StatCardProps {
@@ -20,15 +18,11 @@ interface StatCardProps {
 	className?: string;
 }
 
-/* ─────────────────────────── styles ─────────────────────────── */
-
 const trendConfig: Record<Trend, { color: string; Icon: React.ComponentType<{ className?: string }> }> = {
 	up: { color: toneStyles.success.text, Icon: ArrowUp },
 	down: { color: toneStyles.destructive.text, Icon: ArrowDown },
 	neutral: { color: "text-muted-foreground", Icon: Minus },
 };
-
-/* ─────────────────────────── 숫자 카운트업 ─────────────────────────── */
 
 /**
  * 숫자 값이면 뷰포트 진입 시 카운트업. 문자열(예: "28K+", "7일")은 그대로 렌더한다.
@@ -44,8 +38,6 @@ function StatValue({ value }: { value: string | number }) {
 		</span>
 	);
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function StatCard({ icon: Icon, label, value, sub, trend, trendValue, className }: StatCardProps) {
 	const t = trend ? trendConfig[trend] : null;

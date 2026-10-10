@@ -5,16 +5,12 @@ import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
 
-/* ─────────────────────────── 입력 검증 ─────────────────────────── */
-
 /**
  * days 파라미터 — "safe"(전체 기간) 또는 1~90 정수.
  * safe는 zod에서 파싱할 수 없어 사전에 분기하고, 나머지는 coerce로 검증해요.
  * 라우트에서 daysParam이 없으면 "7"로 채우므로 default는 없어요.
  */
 const daysSchema = z.coerce.number().int().min(1).max(90).safe();
-
-/* ─────────────────────────── 응답 타입 ─────────────────────────── */
 
 export interface StatsTopTrack {
   trackId: string;
@@ -41,8 +37,6 @@ export interface StatsServerStatsResponse {
   period: { first: string | null; last: string | null };
 }
 
-/* ─────────────────────────── KST 날짜 그룹핑 ─────────────────────────── */
-
 /**
  * createdAt을 Asia/Seoul 기준 YYYY-MM-DD로 변환해요.
  * 일별 재생 막대 차트는 KST 하루 단위로 묶는 게 기대 동작이에요.
@@ -55,8 +49,6 @@ function toKstDateString(date: Date): string {
     day: "2-digit",
   }).format(date);
 }
-
-/* ─────────────────────────── 서버 통계 (view only) ─────────────────────────── */
 
 /**
  * 길드 재생 기록 통계 — GuildTrackHistory를 Prisma groupBy로 집계해요.

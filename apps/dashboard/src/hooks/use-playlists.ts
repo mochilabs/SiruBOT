@@ -9,8 +9,6 @@ import useSWR from "swr";
 import { useToast } from "@/components/feedback/toast";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
 
-/* ─────────────────────────── Constants ─────────────────────────── */
-
 function formatDuration(ms: number): string {
 	if (!ms) return "0:00";
 	const totalSeconds = Math.floor(ms / 1000);
@@ -29,8 +27,6 @@ function formatTotalDuration(ms: number): string {
 }
 
 export { formatDuration, formatTotalDuration };
-
-/* ─────────────────────────── Hook ─────────────────────────── */
 
 export function usePlaylists() {
 	const router = useRouter();

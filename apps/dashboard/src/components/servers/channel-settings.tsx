@@ -15,8 +15,6 @@ import type { GuildSettings } from "@/types/settings";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
-/* ─────────────────────────── 옵션 ─────────────────────────── */
-
 const PINNED_MODE_OPTIONS: SelectOption[] = [
 	{ value: "play", label: "즉시 재생 (첫 결과 바로 재생)", icon: <Play size={16} aria-hidden /> },
 	{ value: "select", label: "선택 재생 (5개 중 선택)", icon: <ListChecks size={16} aria-hidden /> },
@@ -47,8 +45,6 @@ function buildChannelOptions(
 	return options;
 }
 
-/* ─────────────────────────── 폼 매핑 ─────────────────────────── */
-
 interface ChannelForm {
 	textChannelId: string | null;
 	voiceChannelId: string | null;
@@ -66,8 +62,6 @@ const toChannelForm = (settings: GuildSettings): ChannelForm => ({
 	pinnedChannelDeleteInput: settings.pinnedChannelDeleteInput,
 	djRoleId: settings.djRoleId,
 });
-
-/* ─────────────────────────── 패널 ─────────────────────────── */
 
 function ChannelSettingsPanel({ guildId }: { guildId: string }) {
 	const toast = useToast();

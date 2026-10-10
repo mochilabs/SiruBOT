@@ -7,8 +7,6 @@ import { Button } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
 import { Switch } from "@/components/primitives/switch";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface Permission {
 	flag: number;
 	name: string;
@@ -28,8 +26,6 @@ interface PermissionListProps {
 	disabled?: boolean;
 	className?: string;
 }
-
-/* ─────────────────────────── default permission data ─────────────────────────── */
 
 export const DISCORD_PERMISSIONS: PermissionCategory[] = [
 	{
@@ -72,8 +68,6 @@ export const DISCORD_PERMISSIONS: PermissionCategory[] = [
 		],
 	},
 ];
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function PermissionList({
 	categories,

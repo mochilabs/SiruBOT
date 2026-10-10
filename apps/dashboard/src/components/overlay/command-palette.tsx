@@ -8,8 +8,6 @@ import { SectionLabel } from "@/components/primitives/section-label";
 
 import { Portal } from "./portal";
 
-/* ─────────────────────────── types ─────────────────────────── */
-
 export interface CommandItem {
 	id: string;
 	label: string;
@@ -25,8 +23,6 @@ interface CommandPaletteProps {
 	items: CommandItem[];
 	placeholder?: string;
 }
-
-/* ─────────────────────────── component ─────────────────────────── */
 
 export function CommandPalette({
 	open,

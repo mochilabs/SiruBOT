@@ -49,11 +49,9 @@ export class PingCommand extends Command {
 		const client = this.container.client;
 		const lines: string[] = ['### 📡 핑 (Ping)', ''];
 
-		// ── 명령어 API ──
 		lines.push(metricLine('⚡', '명령어 처리', ms(apiRoundTrip + deferOverhead)));
 		lines.push('');
 
-		// ── 게이트웨이 (Discord WS) ──
 		const shards = [...client.ws.shards.values()];
 		if (shards.length > 0) {
 			const pings = shards.map((shard) => shard.ping).filter((ping) => ping >= 0);
@@ -68,7 +66,6 @@ export class PingCommand extends Command {
 		}
 		lines.push('');
 
-		// ── 샤드 매니저 ──
 		const shardClient = this.container.shardClient;
 		if (shardClient?.getIdentity()) {
 			// heartbeat ACK 기반 RTT는 별도 노출이 없어 상태만 표시
@@ -79,7 +76,6 @@ export class PingCommand extends Command {
 		}
 		lines.push('');
 
-		// ── Lavalink 노드 ──
 		const audio = this.container.audio;
 		if (audio) {
 			const nodes = [...audio.nodeManager.nodes.values()];
@@ -98,7 +94,6 @@ export class PingCommand extends Command {
 		}
 		lines.push('');
 
-		// ── Redis ──
 		const redis = this.container.redisStore;
 		lines.push(metricLine(redis.ready ? '🟢' : '🔴', 'Redis', redis.ready ? '정상' : '미연결'));
 

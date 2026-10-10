@@ -97,7 +97,7 @@ export const main = async () => {
 			healthServer.close();
 		}
 
-		// 1. Lavalink session을 Redis에 저장 (Redis 끊기 전!)
+		// 종료 순서: 세션 저장 → 리스너 정리 → Redis → DB → 샤드 클라이언트 (세션 저장은 Redis 끊기 전에)
 		if (container.audio && container.redisStore) {
 			try {
 				const sessionStore = container.redisStore.getNodeSessionStore();
@@ -113,7 +113,7 @@ export const main = async () => {
 			}
 		}
 
-		// 2. Audio listeners 정리 (+ 설정 무효화 구독 해제 — redis disconnect 전에)
+		// Audio listeners 정리 (+ 설정 무효화 구독 해제)
 		// lavalink 핸들러의 watchdog/reconcile/복구 타이머를 먼저 해제한다 — 남은 타이머가
 		// 종료 절차 중에 발화해 mixer REST/play를 시도하는 것을 막는다.
 		container.lavalinkHandler?.cleanup();
@@ -122,17 +122,14 @@ export const main = async () => {
 		}
 		await guildSettingsInvalidator.stop().catch(() => null);
 
-		// 3. Redis disconnect (session 저장 후!)
 		if (container.redisStore) {
 			await container.redisStore.disconnect().catch(() => null);
 		}
 
-		// 4. Database disconnect
 		if (container.db) {
 			await container.db.$disconnect().catch(() => null);
 		}
 
-		// 5. ShardManager client
 		if (container.shardClient) {
 			container.shardClient.destroy();
 		}
