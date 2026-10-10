@@ -12,6 +12,7 @@ import { DeletePlaylistModal } from "@/components/playlists/delete-playlist-moda
 import { DeleteTrackModal } from "@/components/playlists/delete-track-modal";
 import { EditPlaylistModal } from "@/components/playlists/edit-playlist-modal";
 import { PlaylistDetail } from "@/components/playlists/playlist-detail";
+import { PlaylistSelectMobile } from "@/components/playlists/playlist-select-mobile";
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
 import { usePlaylists } from "@/hooks/use-playlists";
 
@@ -86,7 +87,7 @@ function PlaylistsContent() {
 				description="내 플레이리스트를 만들고 트랙 순서를 편집해 관리해보세요."
 			/>
 
-			<div className="flex flex-col lg:flex-row gap-8 items-start">
+			<div className="flex flex-col lg:flex-row gap-4 items-start lg:gap-8">
 				<PlaylistSidebar
 					playlists={playlists}
 					activePlaylistId={activePlaylistId}
@@ -94,7 +95,13 @@ function PlaylistsContent() {
 					onCreateNew={openCreateModal}
 				/>
 
-				<div className="flex-1 w-full flex flex-col lg:min-h-[500px]">
+				<div className="flex-1 w-full flex flex-col gap-4 lg:min-h-[500px]">
+					<PlaylistSelectMobile
+						playlists={playlists}
+						activePlaylistId={activePlaylistId}
+						onSelect={setActivePlaylistId}
+						onCreateNew={openCreateModal}
+						/>
 					<PlaylistDetail
 						activePlaylist={activePlaylist}
 						tracks={tracks}
