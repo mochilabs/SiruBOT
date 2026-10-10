@@ -94,7 +94,7 @@ function PlaylistsContent() {
 					onCreateNew={openCreateModal}
 				/>
 
-				<div className="flex-1 w-full flex flex-col min-h-[500px]">
+				<div className="flex-1 w-full flex flex-col lg:min-h-[500px]">
 					<PlaylistDetail
 						activePlaylist={activePlaylist}
 						tracks={tracks}

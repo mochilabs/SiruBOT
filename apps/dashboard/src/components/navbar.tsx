@@ -10,6 +10,7 @@ import { AnimatePresence, m } from "framer-motion";
 import { LogOut, Menu, Moon, Search, Sun, User, X } from "lucide-react";
 
 import { Button } from "@/components/primitives/button";
+import { Skeleton } from "@/components/primitives/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
 
 import { MobileMenu } from "./navbar/mobile-menu";
@@ -220,6 +221,9 @@ export function Navbar() {
                       )}
                     </AnimatePresence>
                   </div>
+                ) : status === "loading" ? (
+                  // 세션 확인 중 우측 클러스터 자리를 고정해, 로딩 후 로그인 버튼→아바타 교체 시 레이아웃 튐을 막아요
+                  <Skeleton.Line width="6rem" height="h-11" className="shrink-0" />
                 ) : (
                   <div className="flex items-center gap-2">
                     {mounted && (
