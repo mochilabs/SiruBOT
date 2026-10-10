@@ -5,7 +5,13 @@ import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord
 
 import * as view from '../../view/controller.ts';
 import { CustomPlayer } from './customPlayer.ts';
-import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
+import {
+	clearNowPlayingCard,
+	getCachedNowPlayingCard,
+	getDisplayNowPlayingCard,
+	getNowPlayingCardKey,
+	resolveNowPlayingCard
+} from './nowPlayingCard.ts';
 import { Guild } from '@sirubot/prisma';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -17,10 +23,15 @@ export class PlayerNotifier {
 	private readonly sendChains: Map<string, Promise<void>> = new Map();
 	private readonly cardRefreshes = new Map<string, { messageId: string; trackKey: string }>();
 	private readonly renderedSignatures = new WeakMap<Message, string>();
+	/** 메시지에 붙어 있는 카드의 키(버킷) — 새 버킷 렌더가 끝나면 같은 파일명으로 교체 첨부한다. */
+	private readonly cardTrackKeys = new WeakMap<Message, string>();
+	/** 재생 중 컨트롤러의 5초 갱신 틱 — playerUpdate가 멈춰도 진행바가 흐르게 하는 안전말. */
+	private readonly progressTicks = new Map<string, NodeJS.Timeout>();
 	private readonly controllerVersions = new WeakMap<CustomPlayer, number>();
 	private readonly destroyedPlayers = new WeakSet<CustomPlayer>();
 
 	private readonly DEBOUNCE_MS = Number(process.env.NOTIFIER_DEBOUNCE_MS) || 300;
+	private readonly PROGRESS_TICK_MS = Number(process.env.NOTIFIER_PROGRESS_TICK_MS) || 5000;
 
 	constructor() {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerNotifier' });
@@ -89,7 +100,8 @@ export class PlayerNotifier {
 			if (!this.canSend(player, version, interaction)) return;
 
 			// 준비된 카드만 사용해 기본 화면을 먼저 보내고, 미완성 카드는 나중에 붙인다.
-			const card = getCachedNowPlayingCard(player);
+			// 같은 곡을 다시 띄운 경우(5초 버킷 렌더 중) 이전 버킷 이미지를 재사용한다.
+			const card = getDisplayNowPlayingCard(player);
 			const components = view.controllerView({
 				player,
 				volume: options.volume,
@@ -136,7 +148,9 @@ export class PlayerNotifier {
 			player.messageId = message.id;
 			player.controller = message;
 			this.renderedSignatures.set(message, JSON.stringify(components.toJSON()));
-			if (!card) this.startCardRefresh(player, message.id, Boolean(interaction));
+			this.cardTrackKeys.set(message, card ? card.trackKey : '');
+			if (!getCachedNowPlayingCard(player)) this.startCardRefresh(player, message.id, Boolean(interaction));
+			this.ensureProgressTick(player);
 			this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
 		} catch (error) {
 			this.logger.error(`Failed to send new controller for guild ${player.guildId}:`, error);
@@ -169,14 +183,21 @@ export class PlayerNotifier {
 			const options = await this.getControllerOptions(player.guildId);
 			if (!options || (!options.enableController && !allowDisabled)) return;
 			if (!this.canSend(player, version) || player.messageId !== message.id || player.controller?.id !== message.id) return;
-			const card = getCachedNowPlayingCard(player);
+			// 같은 곡의 이전 5초 버킷 이미지는 새 버킷 렌더가 끝날 때까지 유지해요(무플리커).
+			const card = getDisplayNowPlayingCard(player);
+			// 최신 버킷 카드가 아직 캐시에 없으면 그 렌더를 걸어둔다(진행 중이면 dedup).
+			const missingCurrent = getCachedNowPlayingCard(player) === null;
+			// 메시지에 붙은 카드 버킷과 다르면 같은 파일명으로 바이트를 교체 첨부해요.
+			const cardNeedsUpload = card !== null && this.cardTrackKeys.get(message) !== card.trackKey;
 			const components = view.controllerView({ player, volume: options.volume, nowPlayingCardUrl: card?.url });
-			// files: []도 attachments: []로 변환되므로 유지할 카드 ID를 명시한다.
-			const attachments = card ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [];
-			const files = card && !message.attachments.some((file) => file.name === card.filename) ? [card.file] : [];
+			// files: []도 attachments: []로 변환되므로 유지할 카드 ID를 명시한다. 교체 첨부 시엔 기존 첨부를 전부 치운다.
+			const attachments =
+				card && !cardNeedsUpload ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [];
+			const files = card && (cardNeedsUpload || !message.attachments.some((file) => file.name === card.filename)) ? [card.file] : [];
 			const signature = JSON.stringify(components.toJSON());
 			if (files.length === 0 && this.renderedSignatures.get(message) === signature) {
-				if (!card) this.startCardRefresh(player, message.id, allowDisabled);
+				if (missingCurrent) this.startCardRefresh(player, message.id, allowDisabled);
+				this.ensureProgressTick(player);
 				return;
 			}
 			if (message.editable) {
@@ -190,7 +211,9 @@ export class PlayerNotifier {
 				if (!this.canSend(player, version) || player.messageId !== message.id) return;
 				player.controller = edited;
 				this.renderedSignatures.set(edited, signature);
-				if (!card) this.startCardRefresh(player, message.id, allowDisabled);
+				this.cardTrackKeys.set(edited, card ? card.trackKey : '');
+				if (missingCurrent) this.startCardRefresh(player, message.id, allowDisabled);
+				this.ensureProgressTick(player);
 				this.logger.trace(`Updated controller message for guild: ${player.guildId}`);
 			}
 		} catch (error: any) {
@@ -242,6 +265,33 @@ export class PlayerNotifier {
 		}
 	}
 
+	/**
+	 * 재생 중 컨트롤러의 진행 갱신 틱(≈5초) — playerUpdate만으로 진행바가 멈추는 것을 막는 안전말.
+	 * 일시정지·곡 없음·스트림에서는 버킷이 움직이지 않아 틱이 updateController를 불러도
+	 * 시그니처 비교로 no-op으로 끝나요(불필요한 재렌더 없음).
+	 */
+	private ensureProgressTick(player: CustomPlayer): void {
+		if (this.progressTicks.has(player.guildId)) return;
+		if (player.queue.current?.info.isStream === true) return;
+		const timer = setInterval(() => {
+			if (!player.queue.current || this.destroyedPlayers.has(player)) {
+				this.stopProgressTick(player.guildId);
+				return;
+			}
+			if (!player.paused) this.updateController(player);
+		}, this.PROGRESS_TICK_MS);
+		timer.unref?.();
+		this.progressTicks.set(player.guildId, timer);
+	}
+
+	private stopProgressTick(guildId: string): void {
+		const timer = this.progressTicks.get(guildId);
+		if (timer) {
+			clearInterval(timer);
+			this.progressTicks.delete(guildId);
+		}
+	}
+
 	// Delete controller message
 	public async deleteController(player: CustomPlayer): Promise<void> {
 		this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
@@ -251,6 +301,7 @@ export class PlayerNotifier {
 	private async removeController(player: CustomPlayer): Promise<void> {
 		this.clearDebounceTimer(player.guildId);
 		this.cardRefreshes.delete(player.guildId);
+		this.stopProgressTick(player.guildId);
 
 		const controllerMessage = player.controller;
 		const messageId = player.messageId;

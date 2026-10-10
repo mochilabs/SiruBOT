@@ -28,6 +28,7 @@ vi.mock('@sapphire/framework', () => ({
 }));
 vi.mock('./nowPlayingCard.ts', () => ({
 	getCachedNowPlayingCard: mocks.cached,
+	getDisplayNowPlayingCard: mocks.cached,
 	getNowPlayingCardKey: (player: CustomPlayer) => player.queue.current?.info.identifier ?? null,
 	resolveNowPlayingCard: mocks.render,
 	clearNowPlayingCard: mocks.clear
@@ -104,11 +105,12 @@ function pending<T>() {
 	return { promise, resolve };
 }
 
-function card() {
+function card(trackKey = 'a::p0') {
 	return {
 		filename: 'card.png',
 		url: 'attachment://card.png',
 		fresh: false,
+		trackKey,
 		file: new AttachmentBuilder(Buffer.from('card'), { name: 'card.png' })
 	};
 }
@@ -221,7 +223,7 @@ describe('non-blocking player notifications', () => {
 		await notifier.sendController(current);
 		current.queue.current!.info.identifier = 'b';
 		mocks.cached.mockReturnValue({
-			...card(),
+			...card('b::p0'),
 			filename: 'next.png',
 			url: 'attachment://next.png',
 			file: new AttachmentBuilder(Buffer.from('next'), { name: 'next.png' })
@@ -230,6 +232,30 @@ describe('non-blocking player notifications', () => {
 		await vi.advanceTimersByTimeAsync(300);
 		expect(current.controller?.attachments.size).toBe(1);
 		expect(current.controller?.attachments.first()?.name).toBe('next.png');
+	});
+
+	it('replaces the attachment bytes in place when a new five-second bucket renders', async () => {
+		vi.useFakeTimers();
+		const notifier = new PlayerNotifier();
+		const current = player();
+		await notifier.sendController(current);
+		mocks.cached.mockReturnValue(card('a::p0'));
+		notifier.updateController(current);
+		await vi.advanceTimersByTimeAsync(300);
+		expect(mocks.edits).toHaveBeenCalledTimes(1);
+		mocks.cached.mockReturnValue(card('a::p1'));
+		notifier.updateController(current);
+		await vi.advanceTimersByTimeAsync(300);
+		const payload = mocks.edits.mock.calls[1]![1];
+		// 같은 파일명으로 바이트를 교체 첨부 — 기존 첨부는 전부 치운다(누적 방지).
+		expect(payload.files).toHaveLength(1);
+		expect(payload.attachments).toEqual([]);
+		expect(current.controller?.attachments.size).toBe(1);
+		expect(current.controller?.attachments.first()?.name).toBe('card.png');
+		// 같은 버킷을 다시 그려도 no-op이다.
+		notifier.updateController(current);
+		await vi.advanceTimersByTimeAsync(300);
+		expect(mocks.edits).toHaveBeenCalledTimes(2);
 	});
 
 	it('does not restore a deleted controller when its old card finishes', async () => {

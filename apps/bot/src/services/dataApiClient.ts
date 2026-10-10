@@ -151,10 +151,18 @@ export interface NowPlayingCardRequest {
 	title: string;
 	artist: string;
 	artworkUrl: string | null;
-	/** 카드에 진행바 없음 — 하위 호환용 입력 유지 (미사용) */
+	/** 재생 위치(ms) — 카드의 진행바로 그려져요. 카드는 5초 버킷마다 갱신돼요 */
 	positionMs: number;
 	durationMs: number;
 	isStream: boolean;
+	/** 일시정지 상태 — 카드에 일시정지 뱃지를 박아요 */
+	isPaused?: boolean;
+	/** 반복 모드 — off가 아니면 메타에 상태를 표기해요 */
+	repeatMode?: 'off' | 'track' | 'queue';
+	/** 현재 곡이 봇 추천(related) 곡인지 — 카드에 봇 추천 뱃지를 박아요 */
+	isRecommended?: boolean;
+	/** 다음 곡 목록(유저 대기열 기준, 최대 3) — 있으면 카드에 목록으로 그려요 */
+	nextTracks?: Array<{ title: string; artist: string | null }>;
 	queueCount: number;
 	/** 대기열 전체 남은 시간(ms) */
 	queueRemainingMs: number;

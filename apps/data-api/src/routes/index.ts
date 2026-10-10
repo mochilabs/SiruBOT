@@ -470,8 +470,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 
 	// ── NowPlaying 카드 이미지 ──
-	// 카드는 트랙당 1회만 렌더(도미넌트 색 배경 + 제목 + 대기열/볼륨/노드/브랜드 메타).
-	// 진행바·신청자는 이미지에 박지 않아요 — 동적 갱신은 봇 텍스트 라인(이모지 프로그레스바) 담당.
+	// 카드는 트랙 식별자 + 볼륨/챕터 + 5초 위치 버킷마다 다시 렌더돼요
+	// (도미넌트 색 배경 + 제목 + 진행바 + 다음 곡 목록 + 대기열/볼륨/반복/노드/브랜드 메타).
+	// 신청자·추천/일시정지 뱃지도 이미지에 박아요 — 텍스트 동적 라인은 봇이 담당.
 	const nowPlayingCardSchema = z.object({
 		trackId: z.string().trim().min(1).max(200),
 		title: z.string().trim().min(1).max(200),
@@ -490,6 +491,18 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			.max(24 * 3600_000)
 			.default(0),
 		isStream: z.boolean().default(false),
+		isPaused: z.boolean().default(false),
+		repeatMode: z.enum(['off', 'track', 'queue']).default('off'),
+		isRecommended: z.boolean().default(false),
+		nextTracks: z
+			.array(
+				z.object({
+					title: z.string().trim().min(1).max(200),
+					artist: z.string().trim().max(200).nullable().default(null)
+				})
+			)
+			.max(3)
+			.default([]),
 		queueCount: z.number().int().min(0).max(10_000).default(0),
 		queueRemainingMs: z
 			.number()
@@ -528,7 +541,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	fastify.post('/v1/image/nowplaying', async (request, reply) => {
 		try {
 			const body = nowPlayingCardSchema.parse(request.body);
-			const buffer = await deduped(`img:nowplaying:${body.trackId}`, () => renderNowPlayingCard(body));
+			// 위치 버킷을 키에 넣어 같은 트랙, 다른 진행율의 동시 요청이 첫 응답으로 합쳐지지 않게 한다.
+			const positionBucket = Math.floor(body.positionMs / 5000);
+			const buffer = await deduped(`img:nowplaying:${body.trackId}:p${positionBucket}`, () => renderNowPlayingCard(body));
 			metrics.request('image-nowplaying');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
