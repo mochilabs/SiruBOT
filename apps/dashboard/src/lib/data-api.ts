@@ -99,6 +99,87 @@ export interface GuildSettingsInvalidateResult {
     ok: boolean;
 }
 
+/** data-api 호출 결과의 성공 형태 — JSON 응답이에요 */
+export interface DataApiForwardOk<T> {
+    ok: true;
+    data: T;
+}
+
+/** data-api 호출 실패 — status와 4xx 본문의 message(한국어)를 그대로 전달해요 */
+export interface DataApiForwardFail {
+    ok: false;
+    status: number;
+    message: string | null;
+}
+
+export type DataApiForwardResult<T> = DataApiForwardOk<T> | DataApiForwardFail;
+
+/**
+ * data-api POST 프록시(JSON) — postDataApi와 달리 실패 상태와 본문 message를 파기하지 않아요.
+ * 인사 카드 이미지 라우트처럼 data-api의 형식·용량 안내(400)를 사용자에게 그대로 보여줘야 하는 곳에서 써요.
+ */
+export async function forwardDataApiPost<T>(path: string, body: unknown): Promise<DataApiForwardResult<T>> {
+    const authKey = DATA_API_AUTH_KEY.trim();
+    if (!authKey) {
+        console.warn("[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.");
+        return { ok: false, status: 503, message: null };
+    }
+    try {
+        const res = await fetch(`${DATA_API_URL}${path}`, {
+            method: "POST",
+            cache: "no-store",
+            headers: { Authorization: authKey, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+            const payload = (await res.json().catch(() => null)) as { message?: unknown } | null;
+            return {
+                ok: false,
+                status: res.status,
+                message: typeof payload?.message === "string" && payload.message.trim() ? payload.message : null,
+            };
+        }
+        return { ok: true, data: (await res.json()) as T };
+    } catch {
+        return { ok: false, status: 502, message: null };
+    }
+}
+
+export type DataApiImageResult = { ok: true; buffer: ArrayBuffer; contentType: string } | DataApiForwardFail;
+
+/**
+ * data-api POST 프록시(이미지) — PNG 등 binary 본문을 ArrayBuffer로 돌려줘요.
+ * 응답이 image/*가 아니면 실패로 본다.
+ */
+export async function forwardDataApiImage(path: string, body: unknown): Promise<DataApiImageResult> {
+    const authKey = DATA_API_AUTH_KEY.trim();
+    if (!authKey) {
+        console.warn("[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.");
+        return { ok: false, status: 503, message: null };
+    }
+    try {
+        const res = await fetch(`${DATA_API_URL}${path}`, {
+            method: "POST",
+            cache: "no-store",
+            headers: { Authorization: authKey, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+            const payload = (await res.json().catch(() => null)) as { message?: unknown } | null;
+            return {
+                ok: false,
+                status: res.status,
+                message: typeof payload?.message === "string" && payload.message.trim() ? payload.message : null,
+            };
+        }
+        const contentType = res.headers.get("content-type") ?? "";
+        if (!contentType.startsWith("image/")) return { ok: false, status: 502, message: null };
+        return { ok: true, buffer: await res.arrayBuffer(), contentType };
+    } catch {
+        return { ok: false, status: 502, message: null };
+    }
+}
+
 /**
  * 길드 설정 변경을 모든 봇 프로세스에 브로드캐스트 — 대시보드 PUT 성공 직후 호출해요.
  * data-api가 Redis 채널로 publish하고 각 봇이 자기 GuildService 캐시를 비워요.
