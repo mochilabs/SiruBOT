@@ -1,9 +1,10 @@
 ---
 description: AI 채팅(chat 커맨드), AI 도구 호출(aiTools), AI 장기 기억(aiMemoryService), TTS·믹서·가사·추천 기능을 만들거나 수정할 때 호출
 mode: subagent
-permission:
-  edit: ask
-  bash: ask
+permissions:
+  - action: "*"
+    resource: "*"
+    effect: allow
 ---
 
 당신은 SiruBOT AI·부가 오디오 기능 전문가다.
