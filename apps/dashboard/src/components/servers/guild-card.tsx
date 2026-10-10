@@ -8,61 +8,65 @@ import { Card } from "@/components/primitives/card";
 
 import type { GuildCardProps } from "./guild-card.types";
 
+/**
+ * PC(md 이상)는 그리드 카드, 모바일은 한 행 리스트 — 같은 마크업을 반응형 클래스만으로
+ * 바꿔요. 모바일에서 진입 동작은 44px(pointer-coarse:min-h-11) 터치 영역을 가져요.
+ */
 export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 	const iconUrl = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null;
 
 	return (
-		<Card padding="lg" className="group gap-6 transition-colors duration-base hover:border-primary/40">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					{iconUrl ? (
-						<Image src={iconUrl} alt={`${guild.name} icon`} width={56} height={56} className="rounded-full ring-4 ring-primary/10" />
-					) : (
-						<div className="flex h-[56px] w-[56px] items-center justify-center rounded-full border border-border bg-surface-2 text-lg font-black text-foreground transition-colors group-hover:border-primary/40">
-							{guild.name.charAt(0)}
-						</div>
-					)}
-					<div>
-						<h3 className="line-clamp-1 text-lg font-black tracking-tight text-foreground">{guild.name}</h3>
-						<div className="flex items-center gap-1 mt-0.5">
-							{guild.isInstalled ? (
-								<div className="flex items-center gap-1 text-xs font-bold text-primary-text">
-									<ShieldCheck size={10} />
-									<span>이미 시루봇이 있어요</span>
-								</div>
-							) : (
-								<span className="text-xs font-bold text-muted-foreground">아직 시루봇이 없어요</span>
-							)}
-						</div>
+		<Card padding="none" className="group flex-row items-center gap-3 p-4 transition-colors duration-base hover:border-primary/40 md:flex-col md:items-stretch md:gap-6 md:p-6">
+			<div className="flex min-w-0 flex-1 items-center gap-3 md:w-full md:flex-none md:gap-4">
+				{iconUrl ? (
+					<Image src={iconUrl} alt={`${guild.name} icon`} width={56} height={56} className="h-10 w-10 shrink-0 rounded-full ring-4 ring-primary/10 md:h-14 md:w-14" />
+				) : (
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-base font-black text-foreground transition-colors group-hover:border-primary/40 md:h-14 md:w-14 md:text-lg">
+						{guild.name.charAt(0)}
+					</div>
+				)}
+				<div className="min-w-0">
+					<h3 className="line-clamp-1 text-base font-black tracking-tight text-foreground md:text-lg">{guild.name}</h3>
+					<div className="mt-0.5 flex items-center gap-1">
+						{guild.isInstalled ? (
+							<div className="flex items-center gap-1 text-xs font-bold text-primary-text">
+								<ShieldCheck size={10} />
+								<span>이미 시루봇이 있어요</span>
+							</div>
+						) : (
+							<span className="text-xs font-bold text-muted-foreground">아직 시루봇이 없어요</span>
+						)}
 					</div>
 				</div>
 			</div>
 
 			{guild.isInstalled ? (
 				guild.isManageable ? (
-					<div className="flex w-full gap-2 mt-auto">
+					<div className="flex shrink-0 items-center gap-2 md:mt-auto md:w-full">
 						<Link
 							href={`/servers/${guild.id}`}
-							className="flex items-center w-full justify-center gap-2 rounded-control border border-primary/20 bg-primary/10 py-3.5 text-sm font-bold text-primary-text hover:bg-primary-control hover:text-primary-foreground transition-colors duration-base"
+							className="flex h-11 items-center justify-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-3.5 text-sm font-bold text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-foreground md:h-auto md:flex-1 md:py-3.5"
 						>
 							<Settings2 size={18} />
 							관리하기
 						</Link>
 						<Link
 							href={`/player/${guild.id}`}
-							className="flex items-center w-full justify-center gap-2 rounded-control border border-success/25 bg-success/10 py-3.5 text-sm font-bold text-success hover:bg-success hover:text-foreground transition-colors duration-base"
+							aria-label="음악 컨트롤러"
+							className="flex h-11 w-11 items-center justify-center rounded-control border border-success/25 bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:h-auto md:w-auto md:flex-1 md:px-4 md:py-3.5"
 						>
 							<Play size={18} />
-							컨트롤러
+							<span className="hidden md:inline">컨트롤러</span>
 						</Link>
 					</div>
 				) : (
 					<Link
 						href={`/player/${guild.id}`}
-						className="mt-auto flex items-center justify-center gap-2 rounded-control border border-success/25 bg-success/10 py-3.5 text-sm font-bold text-success hover:bg-success hover:text-foreground transition-colors duration-base"
+						aria-label="음악 컨트롤러"
+						className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-control border border-success/25 bg-success/10 px-3.5 text-sm font-bold text-success transition-colors duration-base hover:bg-success hover:text-foreground md:h-auto md:w-full md:py-3.5"
 					>
 						<Play size={18} />
-						음악 컨트롤러
+						<span className="hidden md:inline">음악 컨트롤러</span>
 					</Link>
 				)
 			) : inviteUrl ? (
@@ -70,21 +74,24 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					href={inviteUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="mt-auto flex items-center justify-center gap-2 rounded-control border border-border bg-surface-2 py-3.5 text-sm font-bold text-foreground hover:bg-surface-3 hover:border-border-strong transition-colors duration-base"
+					className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-control border border-border bg-surface-2 px-3.5 text-sm font-bold text-foreground transition-colors duration-base hover:bg-surface-3 hover:border-border-strong md:h-auto md:w-full md:py-3.5"
 				>
 					<UserPlus size={18} />
 					초대하기
-					<ExternalLink size={14} className="opacity-40" />
+					<ExternalLink size={14} className="hidden opacity-40 md:inline" />
 				</a>
 			) : (
 				// 초대 링크를 만들 수 없는 서버(R-26) — "#" 데드 링크 대신 비활성 표시
 				<button
 					type="button"
 					disabled
-					className="mt-auto flex items-center justify-center gap-2 rounded-control border border-border bg-surface-2 py-3.5 text-sm font-bold text-muted-foreground cursor-not-allowed"
+					title="초대 링크가 없어요"
+					aria-label="초대 링크가 없어요"
+					className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-control border border-border bg-surface-2 px-3.5 text-sm font-bold text-muted-foreground cursor-not-allowed md:h-auto md:w-full md:py-3.5"
 				>
 					<UserPlus size={18} />
-					초대 링크가 없어요
+					<span className="hidden md:inline">초대 링크가 없어요</span>
+					<span className="md:hidden">초대 불가</span>
 				</button>
 			)}
 		</Card>
