@@ -6,7 +6,7 @@ import { inflightCount } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError, serveCached } from './serveCached.ts';
 import { deduped } from '../utils/dedup.ts';
-import { GUILD_SETTINGS_INVALIDATE_CHANNEL } from '@sirubot/utils';
+import { GUILD_SETTINGS_INVALIDATE_CHANNEL, BOT_PROFILE_SET_CHANNEL, botProfilePendingKey } from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
@@ -20,6 +20,7 @@ import type { OpenAICompatTranslationProvider } from '../providers/translate.ts'
 import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
 import { memoryTidyStatus } from '../services/memoryTidy.ts';
 import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
+import { getBotProfile, botProfileHubStatus } from '../services/botProfileHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -207,6 +208,20 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			return reply.send({
 				player: getPlayerState(guildId),
 				hub: playerHubStatus()
+			});
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 봇 프로필 상태 (봇 Redis Pub/Sub → botProfileHub) ──
+	// 알 수 없는 길드도 404 대신 profile:null + hub 상태로 응답해요 — dashboard SWR 폴백이 안정적으로 동작하게.
+	fastify.get('/v1/bot-profile/:guildId', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			return reply.send({
+				profile: getBotProfile(guildId),
+				hub: botProfileHubStatus()
 			});
 		} catch (error) {
 			return sendError(reply, error);
@@ -499,6 +514,47 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			}
 			await client.publish(GUILD_SETTINGS_INVALIDATE_CHANNEL, JSON.stringify({ guildId }));
 			metrics.request('guild-settings-invalidate');
+			return reply.send({ ok: true });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 봇 프로필(닉네임·아바타) 적용 요청 (대시보드 저장 후 봇 적용) ──
+	// 아바타는 data URI로 온다(3MiB 파일 → base64 ~4.2MB). Fastify 기본 bodyLimit(1MiB)을 넘으므로
+	// 이 라우트만 8MiB로 올려요. 본문은 Redis pending 키에 기록하고 set 채널로 guildId만 브로드캐스트해요 —
+	// 큰 본문이 레플리카 수만큼 복제되지 않아요. 봇은 소유 길드만 읽고 즉시 지워요 (TTL 120초).
+	const botProfileSetSchema = z
+		.object({
+			guildId: z.string().trim().min(1).max(32),
+			// undefined = 변경 없음 / string = 설정 / null = 기본값(사용자명 사용으로 초기화)
+			nickname: z.string().max(32).nullable().optional(),
+			avatar: z.union([z.string().startsWith('data:image/').max(5_500_000), z.null()]).optional()
+		})
+		.refine((body) => 'nickname' in body || 'avatar' in body, { message: '변경할 프로필 항목이 없어요.' });
+	const BOT_PROFILE_PENDING_TTL_SECONDS = 120;
+
+	fastify.post('/v1/internal/bot-profile/set', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+		try {
+			const body = botProfileSetSchema.parse(request.body);
+			const guildId = body.guildId;
+			const payload: Record<string, string | null> = {};
+			if ('nickname' in body && body.nickname !== undefined) {
+				const nickname = body.nickname === null ? null : body.nickname.trim();
+				payload.nickname = nickname !== null && nickname.length > 0 ? nickname : null;
+			}
+			if ('avatar' in body && body.avatar !== undefined) {
+				payload.avatar = body.avatar;
+			}
+
+			const client = sharedCache.getClient();
+			if (!client) {
+				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
+				return reply.code(503).send({ error: 'redis_unavailable', message: '봇 프로필 적용을 위해 Redis가 필요해요.' });
+			}
+			await client.set(botProfilePendingKey(guildId), JSON.stringify(payload), { EX: BOT_PROFILE_PENDING_TTL_SECONDS });
+			await client.publish(BOT_PROFILE_SET_CHANNEL, JSON.stringify({ guildId }));
+			metrics.request('bot-profile-set');
 			return reply.send({ ok: true });
 		} catch (error) {
 			return sendError(reply, error);
