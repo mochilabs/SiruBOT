@@ -11,6 +11,8 @@ export const WRITE_RATE: RateRule = { limit: 12, windowMs: 60_000 };
 export const READ_RATE: RateRule = { limit: 30, windowMs: 60_000 };
 /** 무거운 쓰기(Discord 채널 생성): 분당 5회 */
 export const HEAVY_WRITE_RATE: RateRule = { limit: 5, windowMs: 60_000 };
+/** 이미지 미리보기 렌더: 분당 60회 — 드래그 편집이 400ms 디바운스로 잦은 재요청을 만들어요 */
+export const RENDER_RATE: RateRule = { limit: 60, windowMs: 60_000 };
 
 const buckets = new Map<string, number[]>();
 const MAX_BUCKETS = 10_000;
