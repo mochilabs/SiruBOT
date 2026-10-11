@@ -30,7 +30,7 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 				href={createPageUrl(prevPage)}
 				aria-disabled={currentPage <= 1}
 				tabIndex={currentPage <= 1 ? -1 : undefined}
-			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 text-sm transition-colors ${
+			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 pointer-coarse:min-h-11 text-sm transition-colors ${
 				currentPage <= 1
 					? "pointer-events-none border border-border/30 text-muted-foreground"
 					: "hover:bg-primary/10 hover:text-primary-text border border-border/50 bg-background/50"
@@ -48,7 +48,7 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 				href={createPageUrl(nextPage)}
 				aria-disabled={currentPage >= totalPages}
 				tabIndex={currentPage >= totalPages ? -1 : undefined}
-			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 text-sm transition-colors ${
+			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 pointer-coarse:min-h-11 text-sm transition-colors ${
 				currentPage >= totalPages
 					? "pointer-events-none border border-border/30 text-muted-foreground"
 					: "hover:bg-primary/10 hover:text-primary-text border border-border/50 bg-background/50"

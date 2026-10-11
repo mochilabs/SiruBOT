@@ -14,10 +14,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	const { callbackUrl } = await searchParams;
 	const redirectTarget = callbackUrl || "/servers";
 
-	// 이미 "실제로 쓸 수 있는" 세션이면 재인증 없이 목적지로 보내요.
-	// 세션 JWT만 유효하고 Discord 토큰이 없거나 만료된 좀비 상태에서 redirect하면
-	// 서버 페이지 → 401 → /api/auth/signin → /login → 다시 서버 페이지로 도는
-	// 무한 루프에 갇혀 로그인 버튼을 누를 수 없어요. 토큰 유효성까지 확인해야 해요.
+	// 실제로 쓸 수 있는 세션(토큰 유효)일 때만 redirect해요 — 토큰 없는 좀비 세션을 redirect하면
+	// 서버 페이지 → 401 → /api/auth/signin → /login 무한 루프에 갇혀요.
 	const session = await auth();
 	const token = await getSessionTokenState();
 	const hasUsableToken =

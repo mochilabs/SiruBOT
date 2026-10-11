@@ -9,6 +9,7 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
+import { ToastProvider } from "@/components/feedback/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
@@ -146,8 +147,10 @@ function TrackContent() {
 
 export default function TrackPage() {
   return (
-    <Suspense fallback={<Container><Loader fullPage /></Container>}>
-      <TrackContent />
-    </Suspense>
+    <ToastProvider>
+      <Suspense fallback={<Container><Loader fullPage /></Container>}>
+        <TrackContent />
+      </Suspense>
+    </ToastProvider>
   );
 }

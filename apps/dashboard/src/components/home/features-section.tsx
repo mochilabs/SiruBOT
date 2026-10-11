@@ -29,7 +29,7 @@ const TRACKS = [
 	{ title: "Blinding Lights", artist: "The Weeknd", thumbnail: "https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg", duration: "3:22" },
 ] as const;
 
-const COMMAND_TOKEN = "rounded-sm bg-muted px-1.5 py-0.5 text-2xs font-bold text-foreground/70";
+const COMMAND_TOKEN = "rounded-sm bg-muted px-1.5 py-0.5 text-2xs font-bold text-muted-foreground";
 
 const utilities = [
 	{
@@ -64,10 +64,8 @@ const sectionVariants = {
 } as const;
 
 /**
- * 명령어 칩 전용 variants (치트시트 03 스태거 보강) —
- * 부모 카드의 whileInView 상태가 전파되어 칩들이 0.04초 간격으로 연쇄 등장해요. 서브 스태거라 가볍게.
- * reduced-motion에선 chipVariants 대신 chipFadeVariants(opacity만)를 쓰고, 부모 카드가
- * sectionVariants(opacity+y 위치 애니)로 폴백되면 위치 속성은 프레임워크가 자동 중립해요.
+ * 명령어 칩 스태거 variants — whileInView가 전파돼 칩들이 0.04초 간격으로 연쇄 등장.
+ * reduced-motion에선 chipFadeVariants(opacity만)로 폴백해요.
  */
 const chipVariants = {
 	hidden: { opacity: 0, y: 6 },
@@ -89,10 +87,7 @@ const HEADING_TEXT = "채널에서 재생하고, 웹에서 관리해요.";
 const settingRow = "flex min-w-0 items-center justify-between gap-3 rounded-control bg-surface-1 px-3 py-2";
 const settingName = "truncate text-sm font-medium text-foreground";
 
-/**
- * 대시보드 설정 프리뷰 — 스크롤 스크롤 넘어가며 값이 토글되는 추상 설정 리스트.
- * 각 행이 "이전 값 → 새 값"으로 슥 바뀌고, 리스트가 세로로 슝 넘어가요.
- */
+/** 대시보드 설정 프리뷰 — 각 행이 "이전 값 → 새 값"으로 바뀌는 추상 설정 리스트. */
 interface SettingToggle {
 	label: string;
 	rows: Array<{ name: string; from: string; to: string }>;
@@ -655,7 +650,7 @@ export function FeaturesSection() {
 				viewport={{ once: true, margin: "-60px" }}
 				variants={sectionVariants}
 			>
-				{/* 배경 효과 — 중앙에서 퍼지는 브랜드 라디얼 */}
+				{/* 배경 — 브랜드 라디얼·그라디언트(R-01/R-13 사유: 최종 CTA의 단일 포커스 액센트, 저불투명도 1개로 제한. DESIGN §7 페이지 리디자인 보류 항목) */}
 				<div
 					aria-hidden
 					className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/12 blur-3xl"

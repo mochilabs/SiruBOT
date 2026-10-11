@@ -20,14 +20,7 @@ interface RevealProps {
 }
 
 /**
- * 자식들을 시간차(스태거)로 등장시키는 컨테이너.
- * 자식은 반드시 `RevealItem`만 사용한다.
- *
- * ```tsx
- * <RevealGroup className="grid gap-4 sm:grid-cols-3">
- * 	{cards.map((c) => <RevealItem key={c.id}>{...}</RevealItem>)}
- * </RevealGroup>
- * ```
+ * 자식들을 시간차(스태거)로 등장시키는 컨테이너. 자식은 반드시 `RevealItem`만 사용한다.
  */
 export function RevealGroup({ stagger = 0.08, className, children }: RevealProps) {
 	return (

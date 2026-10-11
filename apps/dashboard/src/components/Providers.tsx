@@ -9,7 +9,7 @@ import { fetcher } from "@/lib/fetcher";
 
 export function Providers({ children }: { children: React.ReactNode }) {
 	return (
-		<SWRConfig value={{ fetcher, revalidateOnFocus: false, dedupingInterval: 5000 }}>
+		<SWRConfig value={{ fetcher, revalidateOnFocus: false, dedupingInterval: 5000, errorRetryCount: 3 }}>
 			<ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
 				<LazyMotion features={domAnimation}>
 					<MotionConfig reducedMotion="user">

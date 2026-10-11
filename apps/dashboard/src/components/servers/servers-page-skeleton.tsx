@@ -8,7 +8,7 @@ import { SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
 export function ServersGridSkeleton({ count = 9 }: { count?: number }) {
     return (
         <section className="space-y-12" aria-busy="true" aria-live="polite">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+            <div className="grid gap-3 md:gap-6 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
                 {Array.from({ length: count }).map((_, index) => (
                     <Card key={index} padding="none" className="flex-row items-center gap-3 p-4 md:flex-col md:items-stretch md:gap-6 md:p-6">
                         <div className="flex flex-1 items-center gap-3 md:w-full md:flex-none md:gap-4">
