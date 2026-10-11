@@ -3,15 +3,39 @@
  */
 import type { CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 
-/** 한글 폰트 1회 등록 (data-api Dockerfile에 resources/fonts 포함). + lucide Path2D 워밍업. */
+/** 카드 폰트(한·영·일 Pretendard JP + 색 이모지 Twemoji) 1회 등록 (Dockerfile에 resources/fonts 포함). + lucide Path2D 워밍업. */
 export async function ensureKoreanFont(): Promise<void> {
 	const { FontLibrary, Path2D } = await import('skia-canvas');
 	pathCtorRef = Path2D as unknown as new (d: string) => unknown;
 	try {
-		if (!FontLibrary.has('Noto Sans KR')) {
+		if (!FontLibrary.has('Pretendard JP')) {
+			const { existsSync } = await import('node:fs');
 			const { join } = await import('node:path');
-			const fontPath = join(process.cwd(), 'resources/fonts/NotoSansKR.ttf');
-			FontLibrary.use('Noto Sans KR', [fontPath]);
+			// 런타임 CWD는 프로덕션(/app)·dev(apps/data-api)로 달라요 — repo 루트 resources도 후보로 탐색해요.
+			const fontDirs = [join(process.cwd(), 'resources/fonts'), join(process.cwd(), '../../resources/fonts')];
+			const resolveFontFile = (fileName: string): string | null => {
+				for (const dir of fontDirs) {
+					const fontPath = join(dir, fileName);
+					if (existsSync(fontPath)) return fontPath;
+				}
+				return null;
+			};
+
+			// 한·영·일본어 — 가변 가중치(45~920). Pretendard 본체에는 일본어 한자가 없어 JP 변형이 맞아요.
+			const pretendardPath = resolveFontFile('PretendardJPVariable.ttf');
+			if (pretendardPath) {
+				FontLibrary.use('Pretendard JP', [pretendardPath]);
+			} else {
+				console.warn('[data-api] PretendardJPVariable.ttf를 찾지 못했어요 — 카드 텍스트가 시스템 폰트로 폴백해요.');
+			}
+
+			// 색 이모지(COLR/CPAL) — 곡 제목·닉네임의 이모지를 카드에 렌더 (CC-BY 4.0, 대시보드 /licenses에 고지)
+			const twemojiPath = resolveFontFile('TwemojiMozilla.ttf');
+			if (twemojiPath) {
+				FontLibrary.use('Twemoji Mozilla', [twemojiPath]);
+			} else {
+				console.warn('[data-api] TwemojiMozilla.ttf를 찾지 못했어요 — 카드 이모지가 tofu로 그려질 수 있어요.');
+			}
 		}
 	} catch (error) {
 		console.error(`[data-api] font load failed: ${error instanceof Error ? error.message : String(error)}`);

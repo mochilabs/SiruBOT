@@ -207,13 +207,13 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const handleUpper = input.profileId.toUpperCase();
 	drawIcon(ctx, 'sparkle', PAD + 2, 27, 22, '#ffffff', { fill: true });
 	ctx.fillStyle = '#ffffff';
-	ctx.font = '800 27px "Noto Sans KR", sans-serif';
+	ctx.font = '800 27px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(truncate(ctx, handleUpper, W - PAD * 2 - 180), PAD + 36, 39);
 	const headW = ctx.measureText(handleUpper).width;
 	ctx.fillStyle = 'rgba(255,255,255,0.42)';
 	ctx.fillRect(PAD + 44 + headW, 24, 2, 30);
 	ctx.fillStyle = 'rgba(255,255,255,0.8)';
-	ctx.font = '600 17px "Noto Sans KR", sans-serif';
+	ctx.font = '600 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText('PROFILE', PAD + 58 + headW, 40);
 	ctx.restore();
 
@@ -238,13 +238,13 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.textBaseline = 'alphabetic';
 	const nameText = truncate(ctx, input.displayName, W - nameX - 240);
 	ctx.fillStyle = PAL.text;
-	ctx.font = '800 44px "Noto Sans KR", sans-serif';
+	ctx.font = '800 44px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(nameText, nameX, nameBase);
 	const nameW = ctx.measureText(nameText).width;
 	drawIcon(ctx, 'sparkle', nameX + nameW + 16, nameBase - 24, 20, PAL.accent, { fill: true });
 
 	ctx.fillStyle = PAL.textMuted;
-	ctx.font = '500 22px "Noto Sans KR", sans-serif';
+	ctx.font = '500 22px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const handleText = `@${input.profileId}`;
 	ctx.fillText(handleText, nameX, handleBase);
 	const handleW = ctx.measureText(handleText).width;
@@ -268,7 +268,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 			}
 		}
 		ctx.save();
-		ctx.font = '700 17px "Noto Sans KR", sans-serif';
+		ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillStyle = PAL.accent;
 		ctx.fillText(input.guildTag, tagX, handleBase);
 		ctx.restore();
@@ -277,7 +277,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	// ── 온라인 상태 캡슐 (우측, 핸들 라인에 정렬) ──
 	const stLabel = input.onlineLabel || '온라인';
 	ctx.save();
-	ctx.font = '600 19px "Noto Sans KR", sans-serif';
+	ctx.font = '600 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const stW = ctx.measureText(stLabel).width + 64;
 	const stX = W - PAD - stW;
 	const stY = handleBase - 32;
@@ -299,7 +299,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	if (hasChips) {
 		let chipX = nameX;
 		ctx.save();
-		ctx.font = '500 18px "Noto Sans KR", sans-serif';
+		ctx.font = '500 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillStyle = PAL.textMuted;
 		ctx.fillText('역할', chipX, chipTop + 27);
 		chipX += ctx.measureText('역할').width + 20;
@@ -307,7 +307,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 		for (const label of input.roleChips.slice(0, 4)) {
 			// 칩 배경/텍스트
 			ctx.save();
-			ctx.font = '500 17px "Noto Sans KR", sans-serif';
+			ctx.font = '500 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			const w = ctx.measureText(label).width + 40;
 			ctx.beginPath();
 			ctx.roundRect(chipX, chipTop, w, chipH, chipH / 2);
@@ -325,7 +325,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	// ── 소개 문구 ──
 	if (hasIntro) {
 		ctx.fillStyle = 'rgba(246, 241, 250, 0.9)';
-		ctx.font = '500 21px "Noto Sans KR", sans-serif';
+		ctx.font = '500 21px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, input.intro.trim(), W - PAD * 2 - 40), PAD, introBase);
 	}
 
@@ -342,11 +342,11 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const drawDateCol = (label: string, value: string, x: number, valueAlign: 'left' | 'right', valueX?: number): void => {
 		drawIcon(ctx, 'calendar', x, dateIconY, 22, PAL.accent);
 		ctx.fillStyle = PAL.textMuted;
-		ctx.font = '500 21px "Noto Sans KR", sans-serif';
+		ctx.font = '500 21px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.textAlign = 'left';
 		ctx.fillText(label, x + 32, dateIconY + 18);
 		ctx.fillStyle = PAL.text;
-		ctx.font = '500 40px "Noto Sans KR", ui-sans-serif, sans-serif';
+		ctx.font = '500 40px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 		if (valueAlign === 'right' && valueX != null) ctx.fillText(value, valueX, dateValueTop + 34);
 		else ctx.fillText(value, x, dateValueTop + 34);
 	};
@@ -373,7 +373,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.fillStyle = PAL.textFaint;
 	ctx.textAlign = 'left';
 	drawIcon(ctx, 'sparkle', PAD, H - 32, 16, PAL.textFaint, { fill: true });
-	ctx.font = '500 17px "Noto Sans KR", sans-serif';
+	ctx.font = '500 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(`${input.profileId} / profile`, PAD + 24, H - 18);
 	ctx.restore();
 

@@ -425,7 +425,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 		ctx.fill();
 		// 플레이스홀더 뮤직 노트
 		ctx.fillStyle = hexToRgba(TOKEN.textMuted, 0.6);
-		ctx.font = '600 40px "Noto Sans KR", sans-serif';
+		ctx.font = '600 40px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.fillText('♪', AVATAR_CX, AVATAR_CY + 4);
@@ -441,12 +441,12 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 
 	// 이름
 	ctx.fillStyle = TOKEN.text;
-	ctx.font = '800 40px "Noto Sans KR", sans-serif';
+	ctx.font = '800 40px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(truncate(ctx, input.displayName, W - nameX - 330), nameX, nameY);
 
 	// 유저태그 (이름 아래, muted-foreground 토큰)
 	ctx.fillStyle = TOKEN.textMuted;
-	ctx.font = '500 21px "Noto Sans KR", sans-serif';
+	ctx.font = '500 21px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(`@${input.username}`, nameX, nameY + 38);
 
 	// ── 별자리 뱃지 (이름 아래, accent 톤 배경) ──
@@ -454,7 +454,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	const badgeText = input.zodiacJp ? `${input.zodiacKo} · ${input.zodiacJp}` : input.zodiacKo;
 	let badgeW = 0;
 	ctx.save();
-	ctx.font = '600 17px "Noto Sans KR", sans-serif';
+	ctx.font = '600 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	badgeW = ctx.measureText(badgeText).width + 32;
 	ctx.beginPath();
 	ctx.roundRect(nameX, badgeY, badgeW, 34, 17);
@@ -472,7 +472,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	// 생일 (본인 조회일 때만) — 뱃지 옆
 	if (input.birthMonth && input.birthDay) {
 		ctx.save();
-		ctx.font = '600 17px "Noto Sans KR", sans-serif';
+		ctx.font = '600 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		const birthText = `🎂 ${input.birthMonth}월 ${input.birthDay}일`;
 		const bw2 = ctx.measureText(birthText).width + 32;
 		ctx.beginPath();
@@ -492,7 +492,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	// ── 우측: 계정 정보 (헤더 안, 오른쪽 정렬) ──
 	ctx.textAlign = 'right';
 	ctx.fillStyle = TOKEN.textMuted;
-	ctx.font = '500 15px "Noto Sans KR", sans-serif';
+	ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const created = input.accountCreated
 		? new Date(input.accountCreated).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 		: '';
@@ -528,12 +528,12 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 		ctx.stroke();
 		// 라벨 (muted 토큰)
 		ctx.fillStyle = TOKEN.textMuted;
-		ctx.font = '500 14px "Noto Sans KR", sans-serif';
+		ctx.font = '500 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.textAlign = 'left';
 		ctx.fillText(`${statIcon[i]} ${st.label}`, x + 20, statY + 34);
 		// 값 (foreground 강조)
 		ctx.fillStyle = TOKEN.text;
-		ctx.font = '800 27px "Noto Sans KR", sans-serif';
+		ctx.font = '800 27px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(st.val, x + 20, statY + 72);
 		ctx.restore();
 	});
@@ -546,12 +546,12 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 	// 패널 헤더
 	ctx.textAlign = 'left';
 	ctx.fillStyle = TOKEN.primary;
-	ctx.font = '800 16px "Noto Sans KR", sans-serif';
+	ctx.font = '800 16px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText('🏆 자주 신청한 곡', PAD + 24, panelY + 32);
 
 	if (rows === 0) {
 		ctx.fillStyle = TOKEN.textMuted;
-		ctx.font = '500 15px "Noto Sans KR", sans-serif';
+		ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText('아직 기록이 없어요. /재생으로 첫 곡을 신청해 보세요.', PAD + 24, panelY + 62);
 	}
 
@@ -584,7 +584,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 			ctx.fillStyle = TOKEN.surface3;
 			ctx.fill();
 			ctx.fillStyle = hexToRgba(TOKEN.textMuted, 0.7);
-			ctx.font = '600 20px "Noto Sans KR", sans-serif';
+			ctx.font = '600 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
 			ctx.fillText('♪', PAD + 24 + THUMB / 2, y + THUMB / 2 + 1);
@@ -598,7 +598,7 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 		ctx.fillStyle = TOKEN.primary;
 		ctx.fill();
 		ctx.fillStyle = TOKEN.page;
-		ctx.font = '800 12px "Noto Sans KR", sans-serif';
+		ctx.font = '800 12px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.fillText(String(i + 1), PAD + 24 + 11, y + 11.5);
@@ -606,17 +606,17 @@ export async function renderProfileCard(input: ProfileCardInput): Promise<Buffer
 		ctx.textBaseline = 'alphabetic';
 		// 제목/아티스트
 		ctx.fillStyle = TOKEN.text;
-		ctx.font = '700 17px "Noto Sans KR", sans-serif';
+		ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, track.title, textW), textX, y + 19);
 		ctx.fillStyle = TOKEN.textMuted;
-		ctx.font = '400 14px "Noto Sans KR", sans-serif';
+		ctx.font = '400 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, track.artist, textW), textX, y + 41);
 	}
 
 	// ── 하단: 브랜드 시그니처 ──
 	ctx.textAlign = 'right';
 	ctx.fillStyle = TOKEN.textMuted;
-	ctx.font = '700 13px "Noto Sans KR", sans-serif';
+	ctx.font = '700 13px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const sigText = 'SiruBOT';
 	ctx.fillText(sigText, W - PAD, H - 18);
 	// 브랜드 핑크 로고 닷
