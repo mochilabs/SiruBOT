@@ -44,8 +44,8 @@ async function doRefresh(refreshToken: string): Promise<RefreshResult> {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.AUTH_DISCORD_ID ?? "",
-        client_secret: process.env.AUTH_DISCORD_SECRET ?? "",
+        client_id: process.env.DISCORD_CLIENT_ID ?? "",
+        client_secret: process.env.DISCORD_CLIENT_SECRET ?? "",
         grant_type: "refresh_token",
         refresh_token: refreshToken,
       }),

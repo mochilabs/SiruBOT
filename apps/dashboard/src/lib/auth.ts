@@ -6,8 +6,8 @@ import { refreshDiscordToken } from "./discord-token";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     DiscordProvider({
-      clientId: process.env.AUTH_DISCORD_ID,
-      clientSecret: process.env.AUTH_DISCORD_SECRET,
+      clientId: process.env.DISCORD_CLIENT_ID,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
       // Discord가 토큰/ID 토큰 응답에 iss를 보내기 시작해 auth.js의 issuer 검증이 필요함
       // (미설정 시 콜백에서 unexpected "iss" → Configuration 에러. next-auth#12687)
       issuer: "https://discord.com",
