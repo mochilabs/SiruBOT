@@ -1,10 +1,12 @@
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
+import { discordGuildIconUrl } from "@/components/primitives/avatar";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { auth } from "@/lib/auth";
-import { canManage } from "@/lib/guild-permissions";
+import { resolveCanManage, resolveGuildMeta } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 
 interface GuildMember {
@@ -71,15 +73,36 @@ export default async function ServerDashboardPage({
     notFound();
   }
 
-  const manageable = await canManage(accessToken, session.user.id, id);
+  const [manageable, guildMeta] = await Promise.all([
+    resolveCanManage(accessToken, session.user.id, id),
+    resolveGuildMeta(accessToken, session.user.id, id),
+  ]);
+  const manageableResolved = manageable.status === "ok" && manageable.manageable;
 
   return (
     <Container>
       <PageHeader
-        title="서버 대시보드"
+        title={
+          <span className="flex items-center gap-3 min-w-0">
+            {guildMeta?.icon ? (
+              <Image
+                src={discordGuildIconUrl(id, guildMeta.icon, 64)}
+                alt=""
+                width={48}
+                height={48}
+                className="h-12 w-12 shrink-0 rounded-full border border-border object-cover"
+              />
+            ) : (
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-lg font-black text-muted-foreground">
+                {(guildMeta?.name ?? "서버").slice(0, 1)}
+              </span>
+            )}
+            <span className="truncate">{guildMeta?.name || "서버 대시보드"}</span>
+          </span>
+        }
         description="AI 채팅·음악·채널·임시 음성 등 서버 설정을 한 곳에서 관리해요."
       />
-      <ServerDashboard guildId={id} manageable={manageable} />
+      <ServerDashboard guildId={id} manageable={manageableResolved} />
     </Container>
   );
 }

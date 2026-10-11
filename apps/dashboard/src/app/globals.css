@@ -346,6 +346,16 @@
 	}
 }
 
+/* 수평 스크롤 컨테이너용 스크롤바 숨김 — 탭 행의 스크롤바 인디케이터가 아래 border와 겹치지 않게 해요 */
+@utility scrollbar-none {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @layer base {
 	body {
 		background-color: var(--background);

@@ -34,7 +34,7 @@ const DISCORD_TIMEOUT_MS = 8_000;
  */
 const resolveCache = new Map<
   string,
-  { expires: number; result: CanManageResult }
+  { expires: number; result: CanManageResult; meta: GuildMeta | null }
 >();
 
 /**
@@ -42,19 +42,19 @@ const resolveCache = new Map<
  * 설정 화면이 패널마다 /users/@me/guilds를 병렬 호출해 같은 유저 토큰을 순간 폭주시키면
  * 429를 유발해 502로 번지므로, 단일 비행으로 요청 수를 줄여요.
  */
-const inflight = new Map<string, Promise<CanManageResult>>();
+const inflight = new Map<string, Promise<{ result: CanManageResult; meta: GuildMeta | null }>>();
 
-function readCache(cacheKey: string): CanManageResult | null {
+function readEntry(cacheKey: string): { expires: number; result: CanManageResult; meta: GuildMeta | null } | null {
   const cached = resolveCache.get(cacheKey);
   if (!cached) return null;
   if (cached.expires <= Date.now()) {
     resolveCache.delete(cacheKey);
     return null;
   }
-  return cached.result;
+  return cached;
 }
 
-function writeCache(cacheKey: string, result: CanManageResult): void {
+function writeCache(cacheKey: string, result: CanManageResult, meta: GuildMeta | null): void {
   const ttl =
     result.status === "ok"
       ? OK_CACHE_TTL_MS
@@ -66,20 +66,29 @@ function writeCache(cacheKey: string, result: CanManageResult): void {
   if (resolveCache.size >= CACHE_MAX_ENTRIES) {
     const now = Date.now();
     for (const [key, entry] of resolveCache) {
-      if (entry.expires <= now) resolveCache.delete(key);
-      if (resolveCache.size < CACHE_MAX_ENTRIES) break;
+      if (entry.expires <= now) {
+        resolveCache.delete(key);
+      }
+      if (resolveCache.size >= CACHE_MAX_ENTRIES) break;
     }
   }
-  resolveCache.set(cacheKey, { expires: Date.now() + ttl, result });
+  resolveCache.set(cacheKey, { expires: Date.now() + ttl, result, meta });
 }
 
-/** 1회 시도 — 결과와 "즉시 재시도 가치가 있는지"를 함께 돌려줘요. */
+/** 같은 요청에서 얻은 서버 표시 정보 — /users/@me/guilds 응답의 name·icon이에요 */
+export interface GuildMeta {
+  name: string;
+  icon: string | null;
+}
+
+/** 1회 시도 — 결과, 서버 메타, "즉시 재시도 가치가 있는지"를 함께 돌려줘요. */
 async function fetchGuildsOnce(
   accessToken: string,
   guildId: string,
 ): Promise<{
   result: CanManageResult;
   retryable: boolean;
+  meta: GuildMeta | null;
 }> {
   try {
     const res = await fetch("https://discord.com/api/v10/users/@me/guilds", {
@@ -88,24 +97,22 @@ async function fetchGuildsOnce(
       signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS),
     });
     if (res.status === 401) {
-      return { result: { status: "invalid-token" }, retryable: false };
+      return { result: { status: "invalid-token" }, retryable: false, meta: null };
     }
     if (res.status === 429) {
       // 레이트리밋 — 즉시 재시도해도 소용없어요(오히려 악화).
-      return { result: { status: "unavailable" }, retryable: false };
+      return { result: { status: "unavailable" }, retryable: false, meta: null };
     }
     if (res.status >= 500) {
-      return { result: { status: "unavailable" }, retryable: true };
+      return { result: { status: "unavailable" }, retryable: true, meta: null };
     }
     if (!res.ok) {
       // 기타 비정상 응답 — 권한 여부를 알 수 없으니 보수적으로 false예요
-      return { result: { status: "ok", manageable: false }, retryable: false };
+      return { result: { status: "ok", manageable: false }, retryable: false, meta: null };
     }
-    const guilds: Array<{ id: string; permissions: string | number }> =
+    const guilds: Array<{ id: string; name?: string; icon?: string | null; permissions: string | number }> =
       await res.json();
-    const guild = Array.isArray(guilds)
-      ? guilds.find((g) => g.id === guildId)
-      : undefined;
+    const guild = Array.isArray(guilds) ? guilds.find((g) => g.id === guildId) : undefined;
     return {
       result: {
         status: "ok",
@@ -114,10 +121,14 @@ async function fetchGuildsOnce(
           : false,
       },
       retryable: false,
+      meta:
+        guild !== undefined
+          ? { name: guild.name ?? "", icon: guild.icon ?? null }
+          : null,
     };
   } catch {
     // 네트워크 오류/타임아웃 — 일시적일 수 있어 한 번은 더 시도해요.
-    return { result: { status: "unavailable" }, retryable: true };
+    return { result: { status: "unavailable" }, retryable: true, meta: null };
   }
 }
 
@@ -132,28 +143,52 @@ export async function resolveCanManage(
   userId: string,
   guildId: string,
 ): Promise<CanManageResult> {
+  return (await resolveGuildsInfo(accessToken, userId, guildId)).result;
+}
+
+/**
+ * 권한 확인과 서버 표시 정보를 같은 Discord 호출로 해결해요 — 패널이 권한과 메타를
+ * 따로 물어도 Discord 요청은 단일 비행 + 캐시 한 번이에요.
+ */
+async function resolveGuildsInfo(
+  accessToken: string,
+  userId: string,
+  guildId: string,
+): Promise<{ result: CanManageResult; meta: GuildMeta | null }> {
   const cacheKey = `${userId}:${guildId}`;
-  const cached = readCache(cacheKey);
-  if (cached) return cached;
+  const cached = readEntry(cacheKey);
+  if (cached) return { result: cached.result, meta: cached.meta };
 
   const existing = inflight.get(cacheKey);
   if (existing) return existing;
 
-  const pending = (async (): Promise<CanManageResult> => {
+  const pending = (async (): Promise<{ result: CanManageResult; meta: GuildMeta | null }> => {
     const first = await fetchGuildsOnce(accessToken, guildId);
-    let result = first.result;
+    let attempt = first;
     if (first.retryable) {
       // 5xx/네트워크는 다음 요청이 아니라 여기서 1회만 더 시도해요.
-      result = (await fetchGuildsOnce(accessToken, guildId)).result;
+      attempt = await fetchGuildsOnce(accessToken, guildId);
     }
-    writeCache(cacheKey, result);
-    return result;
+    writeCache(cacheKey, attempt.result, attempt.meta);
+    return { result: attempt.result, meta: attempt.meta };
   })().finally(() => {
     if (inflight.get(cacheKey) === pending) inflight.delete(cacheKey);
   });
 
   inflight.set(cacheKey, pending);
   return pending;
+}
+
+/**
+ * 대시보드 헤더용 서버 표시 정보(이름·아이콘). 권한 확인과 동일한 캐시/단일 비행을 공유해요 —
+ * 별도의 Discord 호출을 만들지 않아요. meta가 없으면(멤버 아님/장애) null이에요.
+ */
+export async function resolveGuildMeta(
+  accessToken: string,
+  userId: string,
+  guildId: string,
+): Promise<GuildMeta | null> {
+  return (await resolveGuildsInfo(accessToken, userId, guildId)).meta;
 }
 
 /** 사용자 토큰으로 서버 관리 권한(Manage Guild/Administrator) 확인 — 하위 호환 boolean 헬퍼 */

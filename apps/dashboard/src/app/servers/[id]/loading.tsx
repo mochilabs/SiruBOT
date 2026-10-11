@@ -1,4 +1,5 @@
 import Container from "@/components/container";
+import { Card } from "@/components/primitives/card";
 import { Skeleton, SkeletonCircle } from "@/components/primitives/skeleton";
 
 /**
@@ -9,11 +10,14 @@ export default function ServerDashboardLoading() {
   return (
     <Container>
       <section aria-busy="true" aria-label="서버 대시보드" className="space-y-6">
-        {/* PageHeader 모양 (서버 대시보드 제목 + 설명 + 경계선) */}
+        {/* PageHeader 모양 (서버 아이콘+이름과 설명, 경계선) */}
         <header className="relative mb-6 flex flex-col gap-6 pb-6 border-b border-border/40">
-          <div className="min-w-0 max-w-full space-y-1">
-            <Skeleton.Line width="16rem" height="h-10 sm:h-12" />
-            <Skeleton.Line width="55%" height="h-5" />
+          <div className="flex min-w-0 items-center gap-3">
+            <SkeletonCircle size="h-12 w-12" />
+            <div className="min-w-0 space-y-1">
+              <Skeleton.Line width="14rem" height="h-10 sm:h-12" />
+              <Skeleton.Line width="55%" height="h-5" />
+            </div>
           </div>
         </header>
 
@@ -22,7 +26,7 @@ export default function ServerDashboardLoading() {
         </span>
 
         {/* Tabs 모양 — 같은 border-b 라인 위에 아이콘+라벨 자리 */}
-        <div role="presentation" className="-mb-px flex items-center gap-1 overflow-x-auto border-b border-border">
+        <div role="presentation" className="-mb-px flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-border">
           {[4.5, 3, 3.5, 3, 4.5, 3, 3.5].map((width, index) => (
             <div
               key={index}
@@ -36,8 +40,31 @@ export default function ServerDashboardLoading() {
           ))}
         </div>
 
-        {/* 활성 패널 — 패널 카드(헤더 아이콘+필드 자리) */}
-        <Skeleton.Card lines={4} />
+        {/* 활성 패널 — 설정 패널 카드와 같은 모양 (아이콘+제목 헤더, 두 단 필드, 저장 바) */}
+        <Card aria-hidden>
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <SkeletonCircle size="h-10 w-10" />
+              <div className="min-w-0 space-y-2">
+                <Skeleton.Line width="10rem" height="h-5" />
+                <Skeleton.Line width="16rem" height="h-3" />
+              </div>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {[0, 1, 2, 3].map((field) => (
+                <div key={field} className="space-y-2">
+                  <Skeleton.Line width="5rem" height="h-3.5" />
+                  <Skeleton.Line width="85%" height="h-9" />
+                  <Skeleton.Line width="60%" height="h-3" />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+              <Skeleton.Line width="4.5rem" height="h-9" />
+              <Skeleton.Line width="6rem" height="h-9" />
+            </div>
+          </div>
+        </Card>
       </section>
     </Container>
   );

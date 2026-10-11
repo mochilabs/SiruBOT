@@ -69,7 +69,7 @@ export function Tabs({ items, value, defaultValue, onChange, renderPanel, classN
 
 	return (
 		<div className={className}>
-			<div role="tablist" aria-label={ariaLabel} className={cn("-mb-px flex items-center gap-1 overflow-x-auto border-b border-border", listClassName)}>
+			<div role="tablist" aria-label={ariaLabel} className={cn("-mb-px flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-border", listClassName)}>
 				{items.map((item) => {
 					const selected = item.key === activeKey;
 					return (
