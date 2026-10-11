@@ -18,7 +18,7 @@ import {
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
-import { renderGreetingCard, normalizeGreetingBackground } from '../renderers/memberGreetingCard.ts';
+import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { ohaasaCardSchema } from './ohaasaCardSchema.ts';
@@ -479,6 +479,23 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			const body = greetingBackgroundSchema.parse(request.body);
 			const dataUri = await normalizeGreetingBackground(body.dataUri);
 			metrics.request('image-member-card-background');
+			return reply.send({ dataUri });
+		} catch (error) {
+			if (error instanceof Error && error.name === 'GreetingBackgroundError') {
+				const e = error as { identifier?: string };
+				return reply.code(400).send({ error: e.identifier ?? 'greeting_error', message: error.message });
+			}
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 멤버 인사 이미지 레이어 업로드 정규화 (투명도 보존) ──
+	// 스티커/로고 레이어는 알파를 살려야 해서 배경(JPEG)과 달리 PNG로 정규화해요.
+	fastify.post('/v1/image/member-card/layer-image', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+		try {
+			const body = greetingBackgroundSchema.parse(request.body);
+			const dataUri = await normalizeGreetingLayerImage(body.dataUri);
+			metrics.request('image-member-card-layer-image');
 			return reply.send({ dataUri });
 		} catch (error) {
 			if (error instanceof Error && error.name === 'GreetingBackgroundError') {

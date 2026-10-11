@@ -1,25 +1,91 @@
 import { z } from 'zod';
 
 /**
- * 멤버 인사(환영/작별) 공용 계약 — bot 리스너, data-api 렌더러, dashboard 에디터가 함께 쓴다.
+ * 멤버 인사(환영/작별) 공용 계약 v2 — bot 리스너, data-api 렌더러, dashboard 에디터가 함께 쓴다.
  * Prisma Guild.welcome / goodbye 컬럼(Json?)에 이 구조 그대로 저장한다.
+ *
+ * v2 변경점: 고정 레이아웃(배경+아바타+제목/부제) → 자유 레이어 배열(image.layers)로 진화.
+ * 아바타·제목·부제는 이제 각각 레이어 한 개이고, 텍스트/아바타/이미지/도형을 순서대로 쌓는다.
  * 템플릿 변수: {유저} {유저이름} {서버} {멤버수} — GREETING_TEMPLATE_VARIABLES 참고.
  */
 
-/** 인사 카드에 그릴 텍스트 1개. x/y는 카드 기준 % 좌표(0~100), size는 px. */
-export type GreetingText = { text: string; x: number; y: number; size: number; color: string; bold: boolean };
+// --- 공용 상수 ---
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const SNOWFLAKE = /^\d{17,20}$/;
+// jpeg 표기 허용 (image/jpeg). base64 본문은 URL-safe가 아닌 표준 알파벳만 허용.
+const DATA_URI = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const DATA_URI_MAX_LENGTH = 1_500_000; // prefix 포함 문자 길이 ≈ 1.1MB 바이너리 상한
 
-/** 인사 카드 이미지 설정 — 배경(프리셋 또는 업로드 dataURI) + 멤버 아바타 + 제목/부제 */
+/**
+ * 카드 기준 좌표계 — 렌더러/에디터 미러 공용 계약.
+ * x/y는 카드 너비·높이 대비 %(0~100), **중앙 앵커**(요소 중심이 그 점에 놓인다).
+ * size/width/height는 카드 실좌표(1200×675) 기준 px.
+ */
+
+/** 텍스트 레이어 — 템플릿 변수를 포함할 수 있는 문자열 1개 */
+export type GreetingTextLayer = {
+	id: string;
+	type: 'text';
+	x: number;
+	y: number;
+	size: number; // 폰트 px
+	color: string;
+	bold: boolean;
+	align: 'left' | 'center' | 'right';
+	text: string;
+	/** 숨김 레이어 — 렌더러가 건너뛴다 (에디터 보임/숨김 토글이 저장돼요) */
+	hidden?: boolean;
+};
+
+/** 아바타 레이어 — 멤버 아바타(원형 + 링) */
+export type GreetingAvatarLayer = {
+	id: string;
+	type: 'avatar';
+	x: number;
+	y: number;
+	size: number; // 지름 px
+	ringColor: string;
+	hidden?: boolean;
+};
+
+/** 이미지 레이어 — 사용자 업로드 스티커/로고 (dataURI) */
+export type GreetingImageLayer = {
+	id: string;
+	type: 'image';
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	dataUri: string;
+	opacity: number; // 0~1
+	hidden?: boolean;
+};
+
+/** 도형 레이어 — 장식용 사각형/원 */
+export type GreetingShapeLayer = {
+	id: string;
+	type: 'shape';
+	shape: 'rect' | 'circle';
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	color: string;
+	opacity: number; // 0~1
+	hidden?: boolean;
+};
+
+export type GreetingLayer = GreetingTextLayer | GreetingAvatarLayer | GreetingImageLayer | GreetingShapeLayer;
+
+/** 인사 카드 이미지 설정 — 배경(프리셋 또는 업로드) + 위에 쌓는 레이어 배열(순서 = z-order) */
 export type GreetingImage = {
 	background: { presetId: string | null; dataUri: string | null };
-	showAvatar: boolean;
-	title: GreetingText;
-	subtitle: GreetingText;
+	layers: GreetingLayer[];
 };
 
 /** Guild.welcome / goodbye에 저장되는 값. version은 스키마 진화용 리터럴. */
 export type GreetingConfig = {
-	version: 1;
+	version: 2;
 	enabled: boolean;
 	channelId: string | null; // 대상 텍스트 채널
 	template: string; // 봇 메시지 본문. 변수: {유저} {유저이름} {서버} {멤버수}
@@ -30,23 +96,57 @@ export type GreetingConfig = {
 /** 인사 종류 — Guild 컬럼 이름(welcome/goodbye)과 렌더러 분기에 모두 쓴다 */
 export type GreetingKind = 'welcome' | 'goodbye';
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
-const SNOWFLAKE = /^\d{17,20}$/;
-// jpeg 표기 허용 (image/jpeg). base64 본문은 URL-safe가 아닌 표준 알파벳만 허용.
-const DATA_URI = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
-const DATA_URI_MAX_LENGTH = 1_500_000; // prefix 포함 문자 길이 ≈ 1.1MB 바이너리 상한
+// --- zod 스키마 ---
+const position = { x: z.number().min(0).max(100), y: z.number().min(0).max(100) };
 
-export const greetingTextSchema = z.object({
-	text: z.string(),
-	x: z.number().min(0).max(100),
-	y: z.number().min(0).max(100),
-	size: z.number().min(12).max(72),
+const textLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal('text'),
+	...position,
+	size: z.number().min(12).max(160),
 	color: z.string().regex(HEX_COLOR),
-	bold: z.boolean()
+	bold: z.boolean(),
+	align: z.enum(['left', 'center', 'right']),
+	text: z.string().max(500),
+	hidden: z.boolean().optional()
 });
 
+const avatarLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal('avatar'),
+	...position,
+	size: z.number().min(40).max(600),
+	ringColor: z.string().regex(HEX_COLOR),
+	hidden: z.boolean().optional()
+});
+
+const imageLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal('image'),
+	...position,
+	width: z.number().min(1).max(1200),
+	height: z.number().min(1).max(675),
+	dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH),
+	opacity: z.number().min(0).max(1),
+	hidden: z.boolean().optional()
+});
+
+const shapeLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal('shape'),
+	shape: z.enum(['rect', 'circle']),
+	...position,
+	width: z.number().min(1).max(1200),
+	height: z.number().min(1).max(675),
+	color: z.string().regex(HEX_COLOR),
+	opacity: z.number().min(0).max(1),
+	hidden: z.boolean().optional()
+});
+
+const greetingLayerSchema = z.discriminatedUnion('type', [textLayerSchema, avatarLayerSchema, imageLayerSchema, shapeLayerSchema]);
+
 // presetId는 프리셋 목록(id + 이름) 안에서만 유효 — 렌더러가 프리셋을 코드로 직접 그리기 때문.
-export const greetingImageSchema = z.object({
+const greetingImageSchema = z.object({
 	background: z.strictObject({
 		presetId: z
 			.string()
@@ -54,14 +154,12 @@ export const greetingImageSchema = z.object({
 			.nullable(),
 		dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH).nullable()
 	}),
-	showAvatar: z.boolean(),
-	title: greetingTextSchema,
-	subtitle: greetingTextSchema
+	layers: z.array(greetingLayerSchema).max(50)
 });
 
 export const greetingConfigSchema = z
 	.object({
-		version: z.literal(1),
+		version: z.literal(2),
 		enabled: z.boolean(),
 		channelId: z.string().regex(SNOWFLAKE).nullable(),
 		template: z.string().max(500),
@@ -78,31 +176,46 @@ export function validateGreetingConfig(value: unknown): GreetingConfig | null {
 	return result.success ? result.data : null;
 }
 
+// --- 기본값 (v2) ---
 export const DEFAULT_WELCOME_GREETING: GreetingConfig = {
-	version: 1,
+	version: 2,
 	enabled: false,
 	channelId: null,
 	template: '{유저}님이 입장했어요. 반가워요!',
 	useImage: true,
 	image: {
 		background: { presetId: 'rose', dataUri: null },
-		showAvatar: true,
-		title: { text: '{유저이름} 님 반가워요!', x: 50, y: 38, size: 44, color: '#ffffff', bold: true },
-		subtitle: { text: '{서버}의 {멤버수}번째 멤버', x: 50, y: 58, size: 24, color: '#ffffff', bold: false }
+		layers: [
+			{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
+			{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
+			{
+				id: 'subtitle',
+				type: 'text',
+				x: 50,
+				y: 60,
+				size: 24,
+				color: '#ffffff',
+				bold: false,
+				align: 'center',
+				text: '{서버}의 {멤버수}번째 멤버'
+			}
+		]
 	}
 };
 
 export const DEFAULT_GOODBYE_GREETING: GreetingConfig = {
-	version: 1,
+	version: 2,
 	enabled: false,
 	channelId: null,
 	template: '{유저이름}님이 서버를 떠났어요.',
 	useImage: true,
 	image: {
 		background: { presetId: 'rose', dataUri: null },
-		showAvatar: true,
-		title: { text: '잘 가요, {유저이름}', x: 50, y: 38, size: 44, color: '#ffffff', bold: true },
-		subtitle: { text: '다음에 또 만나요', x: 50, y: 58, size: 24, color: '#ffffff', bold: false }
+		layers: [
+			{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
+			{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '잘 가요, {유저이름}' },
+			{ id: 'subtitle', type: 'text', x: 50, y: 60, size: 24, color: '#ffffff', bold: false, align: 'center', text: '다음에 또 만나요' }
+		]
 	}
 };
 
@@ -111,6 +224,85 @@ export const DEFAULT_GREETINGS: Record<GreetingKind, GreetingConfig> = {
 	goodbye: DEFAULT_GOODBYE_GREETING
 };
 
+// --- 카드 템플릿 (프리셋 레이아웃) ---
+/** 완성형 카드 디자인 프리셋 — 에디터가 골라 시작한 뒤 자유 수정한다. */
+export type GreetingTemplate = {
+	id: string;
+	name: string;
+	image: GreetingImage;
+};
+
+export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
+	{
+		id: 'classic-center',
+		name: '클래식 중앙',
+		image: {
+			background: { presetId: 'rose', dataUri: null },
+			layers: [
+				{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
+				{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 50,
+					y: 60,
+					size: 24,
+					color: '#ffffff',
+					bold: false,
+					align: 'center',
+					text: '{서버}의 {멤버수}번째 멤버'
+				}
+			]
+		}
+	},
+	{
+		id: 'side-avatar',
+		name: '좌측 아바타',
+		image: {
+			background: { presetId: 'plum', dataUri: null },
+			layers: [
+				{ id: 'avatar', type: 'avatar', x: 22, y: 50, size: 240, ringColor: '#ffb3d9' },
+				{ id: 'title', type: 'text', x: 62, y: 40, size: 48, color: '#ffffff', bold: true, align: 'left', text: '{유저이름} 님 환영해요!' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 62,
+					y: 58,
+					size: 26,
+					color: '#f0e2cf',
+					bold: false,
+					align: 'left',
+					text: '{서버}의 {멤버수}번째 멤버'
+				}
+			]
+		}
+	},
+	{
+		id: 'minimal-band',
+		name: '미니멀 밴드',
+		image: {
+			background: { presetId: 'gold', dataUri: null },
+			layers: [
+				{ id: 'band', type: 'shape', shape: 'rect', x: 50, y: 50, width: 1200, height: 220, color: '#231a10', opacity: 0.55 },
+				{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 150, ringColor: '#d4a574' },
+				{ id: 'title', type: 'text', x: 50, y: 52, size: 40, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 환영해요!' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 50,
+					y: 66,
+					size: 22,
+					color: '#f0e2cf',
+					bold: false,
+					align: 'center',
+					text: '{서버} · {멤버수}번째 멤버'
+				}
+			]
+		}
+	}
+];
+
+// --- 템플릿 변수 ---
 /** 템플릿 변수 메타데이터 — dashboard 에디터의 변수 삽입 칩과 bot 치환기가 함께 참조 */
 export type GreetingTemplateVariable = { token: string; description: string; usableInImage: boolean };
 

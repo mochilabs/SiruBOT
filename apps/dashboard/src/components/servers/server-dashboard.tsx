@@ -50,7 +50,7 @@ function NotManageable() {
  * 데스크톱에서는 탭 스트립만 숨기고(listClassName) 사이드바를 띄워요.
  * 모든 패널이 토큰 프리미티브와 같은 토스트 컨텍스트를 공유해요.
  */
-export function ServerDashboard({ guildId, manageable }: { guildId: string; manageable: boolean }) {
+export function ServerDashboard({ guildId, manageable, guildName }: { guildId: string; manageable: boolean; guildName: string | null }) {
 	const [tab, setTab] = useState<TabKey>("ai");
 
 	if (!manageable) return <NotManageable />;
@@ -100,7 +100,7 @@ export function ServerDashboard({ guildId, manageable }: { guildId: string; mana
 										<MixerSettings guildId={guildId} />
 									</div>
 									<div className={tab === "greeting" ? "block" : "hidden"}>
-										<MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} />
+										<MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} guildName={guildName} />
 									</div>
 								</>
 							)}
