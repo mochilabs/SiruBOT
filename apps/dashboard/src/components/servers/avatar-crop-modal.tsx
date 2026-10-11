@@ -8,25 +8,65 @@ import { Modal } from "@/components/overlay/modal";
 import { Button } from "@/components/primitives/button";
 import { Slider } from "@/components/primitives/slider";
 
-const VIEWPORT = 256; // 크로프 뷰포트 크기(CSS px)
-const OUTPUT = 512; // 저장 이미지 크기(px) — 80px 아바타에 충분한 여윳값
 const MAX_ZOOM = 3;
 
-/** 이미지 좌표를 뷰포트 안으로 고정 — 이미지 언저리가 보이면 안 돼요 */
-function clampOffset(displayed: number, offset: number): number {
-	if (displayed <= VIEWPORT) return (VIEWPORT - displayed) / 2;
-	return Math.min(0, Math.max(VIEWPORT - displayed, offset));
+interface ShapeSpec {
+	viewportWidth: number; // 크로프 뷰포트 크기(CSS px)
+	viewportHeight: number;
+	outputWidth: number; // 저장 이미지 크기(px)
+	outputHeight: number;
+	/** 뷰포트 자리 마스크 클래스 — 아바타는 원형, 배너는 둥근 사각형이에요 */
+	maskClass: string;
+	/** 뷰포트 자리 클래스 */
+	viewportClass: string;
+	title: string;
+	outputName: string;
+}
+
+const SHAPES: Record<CropShape, ShapeSpec> = {
+	avatar: {
+		viewportWidth: 256,
+		viewportHeight: 256,
+		outputWidth: 512,
+		outputHeight: 512,
+		maskClass: "rounded-full",
+		viewportClass: "h-[256px] w-[256px] rounded-full",
+		title: "프로필 사진 자르기",
+		outputName: "avatar.png",
+	},
+	banner: {
+		// Discord 멤버 배너 비율 16:5 — 뷰포트 480×150, 저장 960×300이에요
+		viewportWidth: 480,
+		viewportHeight: 150,
+		outputWidth: 960,
+		outputHeight: 300,
+		maskClass: "rounded-control",
+		viewportClass: "h-[150px] w-[480px] rounded-control",
+		title: "배너 자르기",
+		outputName: "banner.png",
+	},
+};
+
+export type CropShape = "avatar" | "banner";
+
+/** 뷰포트 안으로 고정 — 이미지 언저리가 보이면 안 돼요 */
+function clampOffset(viewport: number, displayed: number, offset: number): number {
+	if (displayed <= viewport) return (viewport - displayed) / 2;
+	return Math.min(0, Math.max(viewport - displayed, offset));
 }
 
 interface AvatarCropModalProps {
 	source: File | null;
+	/** 아바타(정사각형·원형 마스크) 또는 배너(16:5) — 배너는 뷰포트가 좁은 화면에서 가로로 꽉 차요 */
+	shape: CropShape;
 	onClose: () => void;
 	onApply: (file: File) => void;
 }
 
-/** 봇 프로필 사진 선택 후 크롭하는 모달 — 원형 아바타처럼 보이는 정사각형 크로프예요 */
-export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalProps) {
+/** 봇 프로필 이미지 선택 후 크롭하는 모달 — 아바타는 원형, 배너는 16:5 사각형 마스크예요 */
+export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropModalProps) {
 	const toast = useToast();
+	const spec = SHAPES[shape];
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const viewportRef = useRef<HTMLDivElement>(null);
 	const imageRef = useRef<HTMLImageElement | null>(null);
@@ -52,14 +92,19 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 		const image = new Image();
 		image.onload = () => {
 			imageRef.current = image;
-			const cover = Math.max(VIEWPORT / image.width, VIEWPORT / image.height);
+			const cover = Math.max(spec.viewportWidth / image.width, spec.viewportHeight / image.height);
 			setFitScale(cover);
 			setZoom(1);
-			setOffset({ x: (VIEWPORT - image.width * cover) / 2, y: (VIEWPORT - image.height * cover) / 2 });
+			setOffset({
+				x: (spec.viewportWidth - image.width * cover) / 2,
+				y: (spec.viewportHeight - image.height * cover) / 2,
+			});
 		};
 		image.onerror = () => toast.error("이미지를 불러오지 못했어요.", "다른 이미지로 시도해 주세요.");
 		image.src = url;
 		return () => URL.revokeObjectURL(url);
+		// spec은 shape에 따라 고정이에요 — source가 바뀔 때만 다시 적재해요.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [source, toast]);
 
 	// 그리기 — 캔버스에 표시 배율·오프셋 그대로 그려요 (DPR로 선명하게).
@@ -68,15 +113,15 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 		const image = imageRef.current;
 		if (!canvas || !image || !crop) return;
 		const dpr = Math.min(window.devicePixelRatio || 1, 2);
-		canvas.width = VIEWPORT * dpr;
-		canvas.height = VIEWPORT * dpr;
+		canvas.width = spec.viewportWidth * dpr;
+		canvas.height = spec.viewportHeight * dpr;
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-		ctx.clearRect(0, 0, VIEWPORT, VIEWPORT);
+		ctx.clearRect(0, 0, spec.viewportWidth, spec.viewportHeight);
 		ctx.imageSmoothingQuality = "high";
 		ctx.drawImage(image, offset.x, offset.y, crop.displayed.width, crop.displayed.height);
-	}, [offset, crop, fitScale, zoom]);
+	}, [offset, crop, fitScale, zoom, spec]);
 
 	const handleWheel = useCallback(
 		(event: WheelEvent) => {
@@ -93,12 +138,12 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 			const width = image.width * fitScale * nextZoom;
 			const height = image.height * fitScale * nextZoom;
 			setOffset({
-				x: clampOffset(width, cursorX - (cursorX - offset.x) * ratio),
-				y: clampOffset(height, cursorY - (cursorY - offset.y) * ratio),
+				x: clampOffset(spec.viewportWidth, width, cursorX - (cursorX - offset.x) * ratio),
+				y: clampOffset(spec.viewportHeight, height, cursorY - (cursorY - offset.y) * ratio),
 			});
 			setZoom(nextZoom);
 		},
-		[zoom, fitScale, offset],
+		[zoom, fitScale, offset, spec],
 	);
 
 	// 휠은 preventDefault가 필요해 passive 리스너도 등록해요.
@@ -120,8 +165,8 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 		const drag = dragRef.current;
 		if (!drag || drag.pointerId !== event.pointerId || !crop) return;
 		setOffset({
-			x: clampOffset(crop.displayed.width, offset.x + (event.clientX - drag.lastX)),
-			y: clampOffset(crop.displayed.height, offset.y + (event.clientY - drag.lastY)),
+			x: clampOffset(spec.viewportWidth, crop.displayed.width, offset.x + (event.clientX - drag.lastX)),
+			y: clampOffset(spec.viewportHeight, crop.displayed.height, offset.y + (event.clientY - drag.lastY)),
 		});
 		drag.lastX = event.clientX;
 		drag.lastY = event.clientY;
@@ -140,8 +185,8 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 		if (!move) return;
 		event.preventDefault();
 		setOffset({
-			x: clampOffset(crop.displayed.width, offset.x + move[0]),
-			y: clampOffset(crop.displayed.height, offset.y + move[1]),
+			x: clampOffset(spec.viewportWidth, crop.displayed.width, offset.x + move[0]),
+			y: clampOffset(spec.viewportHeight, crop.displayed.height, offset.y + move[1]),
 		});
 	};
 
@@ -149,8 +194,8 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 		const image = imageRef.current;
 		if (!image || !crop) return;
 		const out = document.createElement("canvas");
-		out.width = OUTPUT;
-		out.height = OUTPUT;
+		out.width = spec.outputWidth;
+		out.height = spec.outputHeight;
 		const ctx = out.getContext("2d");
 		if (!ctx) {
 			toast.error("이미지를 잘라내지 못했어요.", "잠시 후 다시 시도해 주세요.");
@@ -159,30 +204,43 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 		// CSS px → 원본 px 비율 — 뷰포트 영역만 원본에서 골라내요.
 		const ratio = 1 / crop.scale;
 		ctx.imageSmoothingQuality = "high";
-		ctx.drawImage(image, -offset.x * ratio, -offset.y * ratio, VIEWPORT * ratio, VIEWPORT * ratio, 0, 0, OUTPUT, OUTPUT);
+		ctx.drawImage(
+			image,
+			-offset.x * ratio,
+			-offset.y * ratio,
+			spec.viewportWidth * ratio,
+			spec.viewportHeight * ratio,
+			0,
+			0,
+			spec.outputWidth,
+			spec.outputHeight,
+		);
 		out.toBlob(
 			(blob) => {
 				if (!blob) {
 					toast.error("이미지를 잘라내지 못했어요.", "잠시 후 다시 시도해 주세요.");
 					return;
 				}
-				onApply(new File([blob], "avatar.png", { type: "image/png" }));
+				onApply(new File([blob], spec.outputName, { type: "image/png" }));
 			},
 			"image/png",
 		);
-	}, [crop, offset, onApply, toast]);
+	}, [crop, offset, onApply, spec, toast]);
 
 	const handleReset = () => {
 		const image = imageRef.current;
 		if (!image) return;
-		const cover = Math.max(VIEWPORT / image.width, VIEWPORT / image.height);
+		const cover = Math.max(spec.viewportWidth / image.width, spec.viewportHeight / image.height);
 		setZoom(1);
-		setOffset({ x: (VIEWPORT - image.width * cover) / 2, y: (VIEWPORT - image.height * cover) / 2 });
+		setOffset({
+			x: (spec.viewportWidth - image.width * cover) / 2,
+			y: (spec.viewportHeight - image.height * cover) / 2,
+		});
 	};
 
 	return (
 		<Modal open={source !== null} onClose={onClose}>
-			<Modal.Header onClose={onClose}>프로필 사진 자르기</Modal.Header>
+			<Modal.Header onClose={onClose}>{spec.title}</Modal.Header>
 			<Modal.Body className="space-y-4">
 				<div className="flex justify-center">
 					<div
@@ -195,14 +253,21 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 						onPointerUp={handlePointerUp}
 						onPointerCancel={handlePointerUp}
 						onKeyDown={handleKeyDown}
-						className={`relative h-[256px] w-[256px] touch-none select-none overflow-hidden rounded-control border border-border bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+						className={`relative max-w-full touch-none select-none overflow-hidden border border-border bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${spec.viewportClass} ${
 							dragging ? "cursor-grabbing" : "cursor-grab"
 						}`}
 					>
-						<canvas ref={canvasRef} className="h-[256px] w-[256px]" />
-						{/* 원형 아바타 모양 마스크 — 바깥 어둡게, 안이 저장되는 영역이에요 */}
+						<canvas
+							ref={canvasRef}
+							style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
+							className="block max-w-full"
+						/>
+						{/* 아바타 원형(또는 배너 사각) 마스크 — 바깥 어둡게, 안이 저장되는 영역이에요 */}
 						<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-							<div className="h-[256px] w-[256px] rounded-full shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10" />
+							<div
+								className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`}
+								style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
+							/>
 						</div>
 					</div>
 				</div>
@@ -216,8 +281,8 @@ export function AvatarCropModal({ source, onClose, onApply }: AvatarCropModalPro
 						setZoom(value);
 						const ratio = value / zoom;
 						setOffset((prev) => ({
-							x: clampOffset((crop?.displayed.width ?? 0) * ratio, prev.x * ratio),
-							y: clampOffset((crop?.displayed.height ?? 0) * ratio, prev.y * ratio),
+							x: clampOffset(spec.viewportWidth, (crop?.displayed.width ?? 0) * ratio, prev.x * ratio),
+							y: clampOffset(spec.viewportHeight, (crop?.displayed.height ?? 0) * ratio, prev.y * ratio),
 						}));
 					}}
 					showValue

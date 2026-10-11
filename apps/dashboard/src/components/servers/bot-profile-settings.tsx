@@ -35,8 +35,12 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarReset, setAvatarReset] = useState(false);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
-  const [cropSource, setCropSource] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerReset, setBannerReset] = useState(false);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<{ file: File; shape: "avatar" | "banner" } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // 서버 값이 도착하면 입력값을 채워요 — 사용자가 건드리기 전까지만 동기화해요.
   useEffect(() => {
@@ -53,6 +57,16 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     setAvatarPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [avatarFile]);
+
+  useEffect(() => {
+    if (!bannerFile) {
+      setBannerPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(bannerFile);
+    setBannerPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [bannerFile]);
 
   const handleAvatarPick = useCallback(
     (file: File | null) => {
@@ -71,24 +85,52 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         setAvatarReset(false);
         return;
       }
-      setCropSource(file);
+      setCropSource({ file, shape: "avatar" });
+    },
+    [toast],
+  );
+
+  const handleBannerPick = useCallback(
+    (file: File | null) => {
+      if (!file) return;
+      if (file.size > MAX_AVATAR_BYTES) {
+        toast.error("이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요.");
+        return;
+      }
+      if (!ACCEPTED_IMAGE_TYPES.split(",").includes(file.type)) {
+        toast.error("PNG, JPEG, GIF, WebP 이미지만 지원해요.");
+        return;
+      }
+      if (shouldSkipCrop(file)) {
+        setBannerFile(file);
+        setBannerReset(false);
+        return;
+      }
+      setCropSource({ file, shape: "banner" });
     },
     [toast],
   );
 
   const handleCropApply = useCallback(
     (file: File) => {
-      setAvatarFile(file);
-      setAvatarReset(false);
+      if (cropSource?.shape === "banner") {
+        setBannerFile(file);
+        setBannerReset(false);
+      } else {
+        setAvatarFile(file);
+        setAvatarReset(false);
+      }
       setCropSource(null);
     },
-    [],
+    [cropSource],
   );
 
   const handleSave = useCallback(async () => {
     const form = new FormData();
     if (avatarFile) form.append("avatar", avatarFile);
     else if (avatarReset) form.append("avatarReset", "1");
+    if (bannerFile) form.append("banner", bannerFile);
+    else if (bannerReset) form.append("bannerReset", "1");
     if (nicknameTouched && nickname.trim() !== (profile?.nickname ?? "")) {
       form.append("nickname", nickname.trim());
     }
@@ -99,12 +141,14 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
       setNicknameTouched(false);
       setAvatarFile(null);
       setAvatarReset(false);
+      setBannerFile(null);
+      setBannerReset(false);
       toast.success("봇 프로필을 저장했어요.", "봇이 Discord에 곧 적용해요.");
     } catch (err) {
       const apiError = toError(err, "저장에 실패했어요.");
       toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
     }
-  }, [avatarFile, avatarReset, nickname, nicknameTouched, profile?.nickname, save, toast]);
+  }, [avatarFile, avatarReset, bannerFile, bannerReset, nickname, nicknameTouched, profile?.nickname, save, toast]);
 
   // 로드 실패/초기 로딩부터는 조기 반환해요 — 모든 훅은 위에서 호출됐어요.
   if (error) return <PanelError error={error} onRetry={reload} />;
@@ -130,7 +174,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const nicknameDisabled = !profile.canChangeNickname;
   const originalNickname = profile.nickname ?? "";
   const nicknameDirty = nicknameTouched && nickname.trim() !== originalNickname;
-  const dirty = nicknameDirty || avatarFile !== null || avatarReset;
+  const dirty = nicknameDirty || avatarFile !== null || avatarReset || bannerFile !== null || bannerReset;
   // 미리보기: 새 파일 → 초기화 요청이면 전역 아바타 → 현재 길드 아바타 → 전역 아바타 순이에요.
   const previewUrl =
     avatarPreviewUrl ?? (avatarReset ? profile.globalAvatarUrl : null) ?? profile.guildAvatarUrl ?? profile.globalAvatarUrl;
@@ -141,6 +185,14 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
       : profile.guildAvatarUrl
         ? "이 서버 전용 아바타를 사용 중이에요."
         : "전역(앱) 아바타를 그대로 사용 중이에요. 이 서버에만 다른 사진을 넣을 수 있어요.";
+  const bannerPreview = bannerPreviewUrl ?? (bannerReset ? null : profile.guildBannerUrl);
+  const bannerCaption = bannerPreviewUrl
+    ? "새 배너 미리보기예요. 16:5 비율로 잘려요. 저장하면 이 서버에서만 보여요."
+    : bannerReset
+      ? "배너를 제거하고 있어요."
+      : profile.guildBannerUrl
+        ? "이 서버 전용 배너를 사용 중이에요."
+        : "배너 없음. 이 서버 전용 배너를 설정할 수 있어요.";
   const lastApplyError =
     profile.lastApply && !profile.lastApply.ok && profile.lastApply.error
       ? describeApplyError(profile.lastApply.error)
@@ -161,6 +213,8 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     setNickname(originalNickname);
     setAvatarFile(null);
     setAvatarReset(false);
+    setBannerFile(null);
+    setBannerReset(false);
     setCropSource(null);
   };
 
@@ -190,6 +244,61 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           </button>
         </WarningBox>
       )}
+
+      <Field label="배너" description={bannerCaption}>
+        <div className="space-y-2">
+          <div className="relative h-[150px] max-w-lg overflow-hidden rounded-card border border-border bg-surface-2">
+            {bannerPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bannerPreview} alt="봇 배너 미리보기" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                <ImagePlus className="h-5 w-5" aria-hidden />
+                <span className="text-xs">배너 없음 — 공개 서버 목록 등에 떠요</span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-start gap-2">
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept={ACCEPTED_IMAGE_TYPES}
+              className="sr-only"
+              onChange={(event) => {
+                handleBannerPick(event.target.files?.[0] ?? null);
+                event.target.value = "";
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<ImagePlus size={14} />}
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={saving}
+                className="pointer-coarse:h-11"
+              >
+                배너 선택
+              </Button>
+              {profile.guildBannerUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<RotateCcw size={14} />}
+                  onClick={() => {
+                    setBannerFile(null);
+                    setBannerReset(true);
+                  }}
+                  disabled={saving}
+                  className="pointer-coarse:h-11"
+                >
+                  배너 제거
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Field>
 
       <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
         <Field label="프로필 사진" description={previewCaption}>
@@ -291,7 +400,12 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         )}
       </SaveBar>
 
-      <AvatarCropModal source={cropSource} onClose={() => setCropSource(null)} onApply={handleCropApply} />
+      <AvatarCropModal
+        source={cropSource?.file ?? null}
+        shape={cropSource?.shape ?? "avatar"}
+        onClose={() => setCropSource(null)}
+        onApply={handleCropApply}
+      />
     </Card>
   );
 }

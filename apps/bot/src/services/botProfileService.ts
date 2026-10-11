@@ -11,7 +11,7 @@
  *
  * Discord 권한 계약 (discord.js v14.27 / Discord API `PATCH /guilds/{id}/members/@me`):
  * - nick: CHANGE_NICKNAME 필요 (자기 닉네임 — MANAGE_NICKNAMES도 허용으로 봐요)
- * - avatar: 권한 불요 (길드 멤버 프로필 이미지 — 이 프로세스에서 검증하지 않아요)
+ * - avatar·banner: 권한 불요 (길드 멤버 프로필 이미지·배너 — 이 프로세스에서 검증하지 않아요)
  *
  * - 구독/적용은 실패해도 프로세스를 크래시시키지 않아요 — 상태 퍼블리시에 실패 사유를 담아요.
  * - pending 키는 TTL(120초)이 있어 봇이 모두 무시해도 자동 정리돼요.
@@ -29,6 +29,8 @@ export interface BotProfileState {
 	username: string;
 	/** 길드 전용 아바타 URL — 설정 안 됐으면 null (패널은 전역 아바타를 보여줘요) */
 	guildAvatarUrl: string | null;
+	/** 길드 전용 배너 URL — 설정 안 됐으면 null */
+	guildBannerUrl: string | null;
 	/** 전역(앱) 아바타 URL */
 	globalAvatarUrl: string | null;
 	/** 닉네임 변경 가능 여부 — CHANGE_NICKNAME 또는 MANAGE_NICKNAMES */
@@ -49,6 +51,7 @@ interface ServiceLogger {
 interface PendingPayload {
 	nickname?: string | null;
 	avatar?: string | null;
+	banner?: string | null;
 }
 
 export class BotProfileService {
@@ -130,15 +133,17 @@ export class BotProfileService {
 
 		const hasNickname = 'nickname' in payload;
 		const hasAvatar = 'avatar' in payload;
-		if (!hasNickname && !hasAvatar) {
+		const hasBanner = 'banner' in payload;
+		if (!hasNickname && !hasAvatar && !hasBanner) {
 			this.logger.debug(`봇 프로필 pending 변경점 없음 (guild ${guildId})`);
 			return;
 		}
 
 		const startedAt = Date.now();
-		const updates: { nick?: string | null; avatar?: string | null } = {};
+		const updates: { nick?: string | null; avatar?: string | null; banner?: string | null } = {};
 		if (hasNickname) updates.nick = typeof payload.nickname === 'string' ? payload.nickname : null;
 		if (hasAvatar) updates.avatar = typeof payload.avatar === 'string' ? payload.avatar : null;
+		if (hasBanner) updates.banner = typeof payload.banner === 'string' ? payload.banner : null;
 
 		try {
 			const me = guild.members.me ?? (await guild.members.fetchMe());
@@ -147,7 +152,7 @@ export class BotProfileService {
 			} else {
 				await guild.members.editMe(updates);
 				this.recordLastApply(guildId, { ok: true, error: null, at: startedAt });
-				this.logger.info(`봇 프로필 적용 완료: ${guildId} (nickname: ${hasNickname}, avatar: ${hasAvatar})`);
+				this.logger.info(`봇 프로필 적용 완료: ${guildId} (nickname: ${hasNickname}, avatar: ${hasAvatar}, banner: ${hasBanner})`);
 			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -195,6 +200,7 @@ export class BotProfileService {
 				nickname: me.nickname,
 				username: me.user?.username ?? container.client.user?.username ?? '',
 				guildAvatarUrl: me.avatarURL({ extension: 'png', size: 512 }),
+				guildBannerUrl: me.bannerURL({ extension: 'png', size: 1024 }),
 				globalAvatarUrl: me.user?.displayAvatarURL({ extension: 'png', size: 512 }) ?? null,
 				canChangeNickname: me.permissions.has(PermissionFlagsBits.ChangeNickname) || me.permissions.has(PermissionFlagsBits.ManageNicknames),
 				lastApply: this.lastApplies.get(guild.id) ?? null,

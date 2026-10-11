@@ -642,9 +642,10 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			guildId: z.string().trim().min(1).max(32),
 			// undefined = 변경 없음 / string = 설정 / null = 기본값(사용자명 사용으로 초기화)
 			nickname: z.string().max(32).nullable().optional(),
-			avatar: z.union([z.string().startsWith('data:image/').max(5_500_000), z.null()]).optional()
+			avatar: z.union([z.string().startsWith('data:image/').max(5_500_000), z.null()]).optional(),
+			banner: z.union([z.string().startsWith('data:image/').max(5_500_000), z.null()]).optional()
 		})
-		.refine((body) => 'nickname' in body || 'avatar' in body, { message: '변경할 프로필 항목이 없어요.' });
+		.refine((body) => 'nickname' in body || 'avatar' in body || 'banner' in body, { message: '변경할 프로필 항목이 없어요.' });
 	const BOT_PROFILE_PENDING_TTL_SECONDS = 120;
 
 	fastify.post('/v1/internal/bot-profile/set', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
@@ -658,6 +659,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			}
 			if ('avatar' in body && body.avatar !== undefined) {
 				payload.avatar = body.avatar;
+			}
+			if ('banner' in body && body.banner !== undefined) {
+				payload.banner = body.banner;
 			}
 
 			const client = sharedCache.getClient();

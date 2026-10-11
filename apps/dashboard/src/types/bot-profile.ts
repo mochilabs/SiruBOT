@@ -7,6 +7,8 @@ export interface BotProfileState {
   username: string;
   /** 길드 전용 아바타 URL — 설정 안 됐으면 null이에요 */
   guildAvatarUrl: string | null;
+  /** 길드 전용 배너 URL — 설정 안 됐으면 null이에요 */
+  guildBannerUrl: string | null;
   /** 전역(앱) 아바타 URL이에요 */
   globalAvatarUrl: string | null;
   /** 닉네임 변경 권한(CHANGE_NICKNAME 또는 MANAGE_NICKNAMES) 보유여부예요 */
@@ -31,4 +33,6 @@ export interface BotProfilePatch {
   nickname?: string | null;
   /** data URI (data:image/*;base64,...) 또는 null = 길드 아바타 초기화 */
   avatar?: string | null;
+  /** data URI (data:image/*;base64,...) 또는 null = 길드 배너 초기화 — 16:5 비율이에요 */
+  banner?: string | null;
 }

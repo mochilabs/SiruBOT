@@ -86,7 +86,22 @@ export async function PATCH(
     patchBody.avatar = null;
   }
 
-  if (!("nickname" in patchBody) && !("avatar" in patchBody)) {
+  const bannerFile = form.get("banner");
+  const bannerReset = form.get("bannerReset");
+  if (bannerFile instanceof File && bannerFile.size > 0) {
+    if (bannerFile.size > MAX_AVATAR_BYTES) {
+      return NextResponse.json({ error: "이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요." }, { status: 400 });
+    }
+    if (!ALLOWED_IMAGE_TYPES.has(bannerFile.type)) {
+      return NextResponse.json({ error: "PNG, JPEG, GIF, WebP 이미지만 지원해요." }, { status: 400 });
+    }
+    const bytes = Buffer.from(await bannerFile.arrayBuffer());
+    patchBody.banner = `data:${bannerFile.type};base64,${bytes.toString("base64")}`;
+  } else if (bannerReset === "1") {
+    patchBody.banner = null;
+  }
+
+  if (!("nickname" in patchBody) && !("avatar" in patchBody) && !("banner" in patchBody)) {
     return NextResponse.json({ error: "변경할 내용이 없어요." }, { status: 400 });
   }
 

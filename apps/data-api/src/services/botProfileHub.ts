@@ -30,6 +30,7 @@ export interface BotProfileStatePayload {
 	nickname: string | null;
 	username: string;
 	guildAvatarUrl: string | null;
+	guildBannerUrl: string | null;
 	globalAvatarUrl: string | null;
 	canChangeNickname: boolean;
 	lastApply: { ok: boolean; error: string | null; at: number } | null;
@@ -53,7 +54,8 @@ function parsePayload(message: string, guildId: string): BotProfileStatePayload 
 		const parsed = JSON.parse(message) as Partial<BotProfileStatePayload>;
 		if (typeof parsed !== 'object' || parsed === null || parsed.guildId !== guildId) return null;
 		if (!isNullableString(parsed.nickname) || typeof parsed.username !== 'string') return null;
-		if (!isNullableString(parsed.guildAvatarUrl) || !isNullableString(parsed.globalAvatarUrl)) return null;
+		if (!isNullableString(parsed.guildAvatarUrl) || !isNullableString(parsed.guildBannerUrl) || !isNullableString(parsed.globalAvatarUrl))
+			return null;
 		if (typeof parsed.canChangeNickname !== 'boolean' || typeof parsed.updatedAt !== 'number') return null;
 
 		let lastApply: BotProfileStatePayload['lastApply'] = null;
@@ -69,6 +71,7 @@ function parsePayload(message: string, guildId: string): BotProfileStatePayload 
 			nickname: parsed.nickname,
 			username: parsed.username,
 			guildAvatarUrl: parsed.guildAvatarUrl,
+			guildBannerUrl: parsed.guildBannerUrl,
 			globalAvatarUrl: parsed.globalAvatarUrl,
 			canChangeNickname: parsed.canChangeNickname,
 			lastApply,
