@@ -126,6 +126,7 @@ export const main = async () => {
 		}
 		await container.guildSettingsInvalidator?.stop().catch(() => null);
 		await container.playerWebResponder?.stop().catch(() => null);
+		await container.jtcSetupResponder?.stop().catch(() => null);
 		await container.botProfileService?.stop().catch(() => null);
 		await container.memberGreetingService?.stop().catch(() => null);
 		await container.guildDataResponder?.stop().catch(() => null);
@@ -184,6 +185,9 @@ export const main = async () => {
 		// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
 		// 실패해도 부팅은 계속돼요 — 대시보드 플레이어 요청이 타임아웃 폴백으로 끝나요.
 		await container.playerWebResponder?.start(envParseString('REDIS_URL'));
+		// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
+		// 실패해도 부팅은 계속돼요 — 대시보드 설정 요청만 타임아웃 폴백해요.
+		await container.jtcSetupResponder?.start(envParseString('REDIS_URL'));
 		// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
 		// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
 		await container.botProfileService?.start(envParseString('REDIS_URL'));

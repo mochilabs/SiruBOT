@@ -34,6 +34,7 @@ import { getBotProfile, botProfileHubStatus } from '../services/botProfileHub.ts
 import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
 import { requestGuildData, guildDataHubStatus, type GuildDataFailureReason } from '../services/guildDataHub.ts';
 import { requestPlayerWeb, type PlayerWebResult } from '../services/playerWebHub.ts';
+import { requestJtcSetup, type JtcSetupResult } from '../services/jtcSetupHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -718,6 +719,56 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			});
 			metrics.request('player-web-voice-context');
 			return replyPlayerWebResult(reply, result);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── JTC 마커 채널 셋업 (대시보드 설정 → 봇 tempVoiceService 수행) ──
+	// 마커 채널 생성·이동은 봇 토큰으로만 가능해요 (유저 OAuth 토큰에는 길드 채널 관리 권한이 없어요).
+	// 봇이 tempVoiceService.setupMarkerChannel로 카테고리 검증 → 마커 재사용(이동)·생성 → DB 저장까지
+	// 수행하고 응답해요. Redis 없으면 503, 봇이 응답하지 않으면 502, 봇이 검증 실패 사유를 실어 보내면 400.
+	const jtcSetupRequestBody = z.object({
+		guildId: z.string().trim().min(1).max(32),
+		userId: playerUserIdSchema,
+		categoryId: z.string().trim().min(1).max(32)
+	});
+
+	/** JtcSetupResult를 HTTP로 매핑 — 성공은 markerChannelId, 실패는 사유별 코드와 한국어 안내로 내려줘요 */
+	function replyJtcSetupResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: JtcSetupResult): any {
+		if (result.ok) {
+			return reply.send({ ok: true, markerChannelId: result.markerChannelId ?? null });
+		}
+		if (result.reason === 'redis_unavailable') {
+			return reply.code(503).send({
+				error: 'redis_unavailable',
+				message: 'Redis가 연결되어 있지 않아요. 잠시 후 다시 시도해 주세요.'
+			});
+		}
+		if (result.reason === 'timeout') {
+			return reply.code(502).send({
+				error: 'bot_timeout',
+				message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
+			});
+		}
+		// 봇이 검증 실패(카테고리 아님·권한 부족 등)를 실어 보낸 경우 — 사용자가 고칠 수 있는 행동이므로 400
+		return reply.code(400).send({
+			error: 'jtc_setup_rejected',
+			message: result.message ?? '임시 방 마커 채널을 준비하지 못했어요.'
+		});
+	}
+
+	fastify.post('/v1/internal/jtc/setup', async (request, reply) => {
+		try {
+			const { guildId, userId, categoryId } = jtcSetupRequestBody.parse(request.body);
+			const result = await requestJtcSetup({
+				requestId: crypto.randomUUID(),
+				guildId,
+				userId,
+				categoryId
+			});
+			metrics.request('jtc-setup');
+			return replyJtcSetupResult(reply, result);
 		} catch (error) {
 			return sendError(reply, error);
 		}

@@ -110,3 +110,15 @@ export const GUILD_DATA_RESPONSE_CHANNEL = 'sirubot:guild-data:response';
  */
 export const PLAYER_WEB_REQUEST_CHANNEL = 'sirubot:player-web:request';
 export const PLAYER_WEB_RESPONSE_CHANNEL = 'sirubot:player-web:response';
+
+/**
+ * 임시 방(JTC) 마커 채널 셋업 request/reply 브로드캐스트 — 대시보드 설정 화면의 마커 채널 생성·이동.
+ * 채널 생성·이동은 유저 OAuth 토큰으로 불가(Discord 규격상 봇 토큰 필요) — 대시보드가 data-api
+ * `/v1/internal/jtc/setup`에 요청하면 data-api가 REQUEST 채널로 퍼블리시하고, 해당 길드를 보유한
+ * 봇 프로세스가 tempVoiceService.setupMarkerChannel로 수행한 뒤 RESPONSE 채널로 응답해요.
+ * data-api jtcSetupHub가 requestId로 상관(타임아웃 포함)해 대시보드에 내려줘요.
+ *
+ * 페이로드: jtcSetupRequestSchema / jtcSetupResponseSchema (jtcSetup.ts)
+ */
+export const JTC_SETUP_REQUEST_CHANNEL = 'sirubot:jtc-setup:request';
+export const JTC_SETUP_RESPONSE_CHANNEL = 'sirubot:jtc-setup:response';
