@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_GREETINGS, type GreetingImage } from '@sirubot/utils';
-import { decodeDataUri, GreetingBackgroundError, normalizeGreetingBackground, renderGreetingCard } from './memberGreetingCard.ts';
+import { DEFAULT_GREETINGS, GREETING_TEMPLATES, type GreetingImage } from '@sirubot/utils';
+import {
+	decodeDataUri,
+	GreetingBackgroundError,
+	type GreetingCardContext,
+	normalizeGreetingBackground,
+	renderGreetingCard
+} from './memberGreetingCard.ts';
 
 /** 카드 렌더 스모크 — 1200×675 PNG 시그니처와 배경 경로(프리셋/업로드)를 검증해요. */
 
@@ -18,6 +24,10 @@ function makeImage(overrides: Partial<GreetingImage> = {}): GreetingImage {
 	return { ...DEFAULT_GREETINGS.welcome.image!, ...overrides };
 }
 
+function makeContext(overrides: Partial<GreetingCardContext> = {}): GreetingCardContext {
+	return { userId: '123', displayName: '시루', guildName: '시루봇', memberCount: 42, avatarUrl: null, ...overrides };
+}
+
 function expectPngSize(buffer: Buffer, width: number, height: number): void {
 	expect([buffer[0], buffer[1], buffer[2], buffer[3]]).toEqual([137, 80, 78, 71]);
 	// IHDR — PNG 헤더의 너비/높이는 각각 16/20 바이트 오프셋 big-endian
@@ -27,41 +37,73 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 
 describe('renderGreetingCard', () => {
 	it('renders a 1200x675 PNG from a preset background', async () => {
-		const buffer = await renderGreetingCard(makeImage(), {
-			userId: '123',
-			displayName: '시루',
-			guildName: '시루봇',
-			memberCount: 42,
-			avatarUrl: null
-		});
+		const buffer = await renderGreetingCard(makeImage(), makeContext());
 		expectPngSize(buffer, 1200, 675);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
 	it('renders from an uploaded dataUri background', async () => {
 		const dataUri = await solidImage(320, 180);
-		const buffer = await renderGreetingCard(makeImage({ background: { presetId: null, dataUri } }), {
-			userId: '123',
-			displayName: '시루',
-			guildName: '시루봇',
-			memberCount: 42,
-			avatarUrl: null
-		});
+		const buffer = await renderGreetingCard(makeImage({ background: { presetId: null, dataUri } }), makeContext());
 		expectPngSize(buffer, 1200, 675);
 	});
 
 	it('falls back to a preset when the dataUri is undecodable', async () => {
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
-			const buffer = await renderGreetingCard(makedecodableBrokenImage(), {
-				userId: '123',
-				displayName: '시루',
-				guildName: '시루봇',
-				memberCount: 42,
-				avatarUrl: null
-			});
+			const buffer = await renderGreetingCard(makedecodableBrokenImage(), makeContext());
 			expectPngSize(buffer, 1200, 675);
 			expect(consoleError).toHaveBeenCalled();
+		} finally {
+			consoleError.mockRestore();
+		}
+	});
+
+	it('renders avatar + text layers from the default greeting', async () => {
+		// 기본 인사는 avatar·title·subtitle(텍스트 2) 레이어로 이뤄져 있어요.
+		const buffer = await renderGreetingCard(makeImage(), makeContext());
+		expectPngSize(buffer, 1200, 675);
+	});
+
+	it('renders a shape layer (rect) via the minimal-band template', async () => {
+		const minimal = GREETING_TEMPLATES.find((template) => template.id === 'minimal-band')!;
+		const buffer = await renderGreetingCard(minimal.image, makeContext());
+		expectPngSize(buffer, 1200, 675);
+	});
+
+	it('renders an uploaded image layer (sticker) at its size', async () => {
+		const sticker = await solidImage(64, 64);
+		const buffer = await renderGreetingCard(
+			makeImage({
+				layers: [{ id: 'sticker', type: 'image', x: 20, y: 20, width: 128, height: 128, dataUri: sticker, opacity: 1 }]
+			}),
+			makeContext()
+		);
+		expectPngSize(buffer, 1200, 675);
+	});
+
+	it('renders a circle shape layer', async () => {
+		const buffer = await renderGreetingCard(
+			makeImage({
+				layers: [{ id: 'dot', type: 'shape', shape: 'circle', x: 80, y: 30, width: 120, height: 120, color: '#ff85c1', opacity: 0.6 }]
+			}),
+			makeContext()
+		);
+		expectPngSize(buffer, 1200, 675);
+	});
+
+	it('skips an undecodable image layer without failing the card', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const buffer = await renderGreetingCard(
+				makeImage({
+					layers: [
+						{ id: 'broken', type: 'image', x: 50, y: 50, width: 100, height: 100, dataUri: 'data:image/png;base64,notbase64', opacity: 1 }
+					]
+				}),
+				makeContext()
+			);
+			expectPngSize(buffer, 1200, 675);
 		} finally {
 			consoleError.mockRestore();
 		}

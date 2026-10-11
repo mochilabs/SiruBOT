@@ -1,18 +1,23 @@
 /**
  * 멤버 인사 카드 렌더러 — 환영/작별 카드 1종 1200×675(16:9).
  * 배경은 브랜드 프리셋(코드로 그린 그라디언트)이나 업로드 dataURI(cover-fit)를 깔고
- * 그 위에 멤버 아바타(원형+링)와 제목·부제(템플릿 치환 결과)를 그려요.
- * 레이아웃 수치는 bot 리스너·dashboard 에디터 미리보기와 고정 계약이에요.
+ * 그 위에 image.layers를 순서대로(z-order) 쌓아 그려요 — 텍스트/아바타/이미지/도형.
+ * 좌표·수치는 bot 리스너·dashboard 에디터 미리보기와 공용 계약이에요 (packages/utils memberGreeting).
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
-import { renderGreetingTemplate, type GreetingImage, type GreetingText } from '@sirubot/utils';
+import {
+	renderGreetingTemplate,
+	type GreetingAvatarLayer,
+	type GreetingImage,
+	type GreetingImageLayer,
+	type GreetingLayer,
+	type GreetingShapeLayer,
+	type GreetingTextLayer
+} from '@sirubot/utils';
 import { drawCircleImage, ensureKoreanFont, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 const CARD_W = 1200;
 const CARD_H = 675;
-// 아바타 — 카드 중앙 x, 상단 20% 지점에 반지름 90px (카드/에디터 공용 계약값)
-const AVATAR_RADIUS = 90;
-const AVATAR_CY = Math.round(CARD_H * 0.2);
 /** 텍스트 좌우 여백 — 카드 가장자리에 붙지 않게 */
 const TEXT_MARGIN = 64;
 
@@ -63,11 +68,10 @@ export async function renderGreetingCard(image: GreetingImage, context: Greeting
 	const ctx = canvas.getContext('2d');
 
 	await drawGreetingBackground(ctx, image.background);
-	if (image.showAvatar) {
-		await drawGreetingAvatar(ctx, context);
+	for (const layer of image.layers) {
+		if (layer.hidden) continue; // 숨김 레이어는 렌더에서 건너뛰어요
+		await drawLayer(ctx, layer, context);
 	}
-	drawGreetingText(ctx, image.title, context);
-	drawGreetingText(ctx, image.subtitle, context);
 
 	return (await canvas.toBuffer('png')) as Buffer;
 }
@@ -121,57 +125,115 @@ async function drawUploadedBackground(ctx: CanvasRenderingContext2D, dataUri: st
 	}
 }
 
-/** 멤버 아바타 — 중앙 상단, 프로필 카드와 같은 브랜드 primary 링 */
-async function drawGreetingAvatar(ctx: CanvasRenderingContext2D, context: GreetingCardContext): Promise<void> {
-	const cx = CARD_W / 2;
+/** 레이어 한 장 — type에 따라 텍스트/아바타/이미지/도형을 순서대로 그려요 (z-order는 layers 배열 순서). */
+async function drawLayer(ctx: CanvasRenderingContext2D, layer: GreetingLayer, context: GreetingCardContext): Promise<void> {
+	switch (layer.type) {
+		case 'text':
+			drawTextLayer(ctx, layer, context);
+			break;
+		case 'avatar':
+			await drawAvatarLayer(ctx, layer, context);
+			break;
+		case 'image':
+			await drawImageLayer(ctx, layer);
+			break;
+		case 'shape':
+			drawShapeLayer(ctx, layer);
+			break;
+	}
+}
+
+/** 텍스트 — 템플릿 치환 후 % 좌표(중앙 기준)에 그리고, 배경 대비 은은한 드롭 섀도. */
+function drawTextLayer(ctx: CanvasRenderingContext2D, layer: GreetingTextLayer, context: GreetingCardContext): void {
+	// 이미지 카드에는 멘션을 못 그려요 — {유저}는 표시 이름으로 폴백해요 (renderGreetingTemplate 계약)
+	const rendered = renderGreetingTemplate(layer.text, {
+		displayName: context.displayName,
+		guildName: context.guildName,
+		memberCount: context.memberCount
+	});
+	const x = (CARD_W * layer.x) / 100;
+	const y = (CARD_H * layer.y) / 100;
+	// x가 가장자리에 가까울 때 잘리지 않게 — 가까운 가장자리까지의 폭으로 제한
+	const maxW = Math.max(120, 2 * Math.min(x, CARD_W - x) - TEXT_MARGIN);
+	ctx.save();
+	ctx.font = `${layer.bold ? 700 : 500} ${layer.size}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
+	ctx.textAlign = layer.align;
+	ctx.textBaseline = 'middle';
+	ctx.fillStyle = layer.color;
+	ctx.shadowColor = 'rgba(0,0,0,0.45)';
+	ctx.shadowBlur = Math.max(6, layer.size / 4);
+	ctx.shadowOffsetY = 2;
+	ctx.fillText(truncate(ctx, rendered, maxW), x, y);
+	ctx.restore();
+}
+
+/** 아바타 — 원형 이미지(반지름 = size/2) + 링(반지름 = size/2 + 6). 로드 실패 시 '♪' 플레이스홀더. */
+async function drawAvatarLayer(ctx: CanvasRenderingContext2D, layer: GreetingAvatarLayer, context: GreetingCardContext): Promise<void> {
+	const cx = (CARD_W * layer.x) / 100;
+	const cy = (CARD_H * layer.y) / 100;
+	const radius = layer.size / 2;
 	ctx.save();
 	ctx.beginPath();
-	ctx.arc(cx, AVATAR_CY, AVATAR_RADIUS + 6, 0, Math.PI * 2);
-	ctx.fillStyle = '#ff85c1';
+	ctx.arc(cx, cy, radius + 6, 0, Math.PI * 2);
+	ctx.fillStyle = layer.ringColor;
 	ctx.fill();
 	ctx.restore();
 
 	const img = context.avatarUrl ? await loadImageAllowed(context.avatarUrl) : null;
 	if (img) {
-		drawCircleImage(ctx, img, cx, AVATAR_CY, AVATAR_RADIUS);
+		drawCircleImage(ctx, img, cx, cy, radius);
 		return;
 	}
 	// 플레이스홀더 — 프로필 카드 폴백과 같은 톤
 	ctx.save();
 	ctx.beginPath();
-	ctx.arc(cx, AVATAR_CY, AVATAR_RADIUS, 0, Math.PI * 2);
+	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
 	ctx.fillStyle = '#35212a';
 	ctx.fill();
 	ctx.fillStyle = 'rgba(201,168,181,0.6)';
-	ctx.font = '600 64px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+	ctx.font = `600 ${Math.round(radius * 0.72)}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.fillText('♪', cx, AVATAR_CY + 4);
+	ctx.fillText('♪', cx, cy + 4);
 	ctx.restore();
 	ctx.textBaseline = 'alphabetic';
 }
 
-/** 제목/부제 — 카드 % 좌표(중앙 기준)에 그리고, 배경 대비를 위한 은은한 드롭 섀도 */
-function drawGreetingText(ctx: CanvasRenderingContext2D, text: GreetingText, context: GreetingCardContext): void {
-	// 이미지 카드에는 멘션을 못 그려요 — {유저}는 표시 이름으로 폴백해요 (renderGreetingTemplate 계약)
-	const rendered = renderGreetingTemplate(text.text, {
-		displayName: context.displayName,
-		guildName: context.guildName,
-		memberCount: context.memberCount
-	});
-	const x = (CARD_W * text.x) / 100;
-	const y = (CARD_H * text.y) / 100;
-	// x가 가장자리에 가까울 때 잘리지 않게 — 가까운 가장자리까지의 폭으로 제한
-	const maxW = Math.max(120, 2 * Math.min(x, CARD_W - x) - TEXT_MARGIN);
+/** 이미지 — 업로드 스티커/로고 dataURI를 width/height 크기로. 로드 실패 시 그 레이어만 조용히 건너뛰어요. */
+async function drawImageLayer(ctx: CanvasRenderingContext2D, layer: GreetingImageLayer): Promise<void> {
+	const buffer = decodeDataUri(layer.dataUri);
+	if (!buffer) return;
+	try {
+		const { loadImage } = await import('skia-canvas');
+		const img = (await loadImage(buffer)) as unknown as CanvasDrawable;
+		const iw = (img as { width: number }).width;
+		const ih = (img as { height: number }).height;
+		if (!iw || !ih) return;
+		const cx = (CARD_W * layer.x) / 100;
+		const cy = (CARD_H * layer.y) / 100;
+		ctx.save();
+		ctx.globalAlpha = layer.opacity;
+		ctx.drawImage(img, cx - layer.width / 2, cy - layer.height / 2, layer.width, layer.height);
+		ctx.restore();
+	} catch (error) {
+		console.error(`[data-api] greeting image layer decode failed: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
+/** 도형 — 장식용 사각형(fillRect) 또는 원(arc), 중심 기준. */
+function drawShapeLayer(ctx: CanvasRenderingContext2D, layer: GreetingShapeLayer): void {
+	const cx = (CARD_W * layer.x) / 100;
+	const cy = (CARD_H * layer.y) / 100;
 	ctx.save();
-	ctx.font = `${text.bold ? 700 : 500} ${text.size}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
-	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
-	ctx.fillStyle = text.color;
-	ctx.shadowColor = 'rgba(0,0,0,0.45)';
-	ctx.shadowBlur = Math.max(6, text.size / 4);
-	ctx.shadowOffsetY = 2;
-	ctx.fillText(truncate(ctx, rendered, maxW), x, y);
+	ctx.globalAlpha = layer.opacity;
+	ctx.fillStyle = layer.color;
+	ctx.beginPath();
+	if (layer.shape === 'rect') {
+		ctx.fillRect(cx - layer.width / 2, cy - layer.height / 2, layer.width, layer.height);
+	} else {
+		ctx.arc(cx, cy, layer.width / 2, 0, Math.PI * 2);
+		ctx.fill();
+	}
 	ctx.restore();
 }
 

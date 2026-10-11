@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { GreetingConfig, PresetBackground } from "@/types/member-greeting";
 
 /**
- * 멤버 인사 설정의 zod 검증 — packages/utils/src/memberGreeting.ts의 복제본이에요.
+ * 멤버 인사 설정의 zod 검증 (v2) — packages/utils/src/memberGreeting.ts의 복제본이에요.
  * utils 배럴을 런타임에서 임포트하면 @sentry/node 같은 노드 의존이 번들 경로에 끼어 터보팩 빌드가
  * 실패해요 (discordjs/ws module-not-found). 그래서 대시보드 라우트는 이 복제본으로 검증하고,
  * 계약이 바뀌면 원본과 여기는 같이 업데이트해요.
@@ -20,14 +20,58 @@ const PRESET_BACKGROUND_IDS = ["rose", "plum", "gold"] as const satisfies readon
 	string
 >[];
 
-export const greetingTextSchema = z.object({
-	text: z.string(),
-	x: z.number().min(0).max(100),
-	y: z.number().min(0).max(100),
-	size: z.number().min(12).max(72),
+const position = { x: z.number().min(0).max(100), y: z.number().min(0).max(100) };
+
+const textLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal("text"),
+	...position,
+	size: z.number().min(12).max(160),
 	color: z.string().regex(HEX_COLOR),
 	bold: z.boolean(),
+	align: z.enum(["left", "center", "right"]),
+	text: z.string().max(500),
+	hidden: z.boolean().optional(),
 });
+
+const avatarLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal("avatar"),
+	...position,
+	size: z.number().min(40).max(600),
+	ringColor: z.string().regex(HEX_COLOR),
+	hidden: z.boolean().optional(),
+});
+
+const imageLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal("image"),
+	...position,
+	width: z.number().min(1).max(1200),
+	height: z.number().min(1).max(675),
+	dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH),
+	opacity: z.number().min(0).max(1),
+	hidden: z.boolean().optional(),
+});
+
+const shapeLayerSchema = z.object({
+	id: z.string().min(1).max(64),
+	type: z.literal("shape"),
+	shape: z.enum(["rect", "circle"]),
+	...position,
+	width: z.number().min(1).max(1200),
+	height: z.number().min(1).max(675),
+	color: z.string().regex(HEX_COLOR),
+	opacity: z.number().min(0).max(1),
+	hidden: z.boolean().optional(),
+});
+
+const greetingLayerSchema = z.discriminatedUnion("type", [
+	textLayerSchema,
+	avatarLayerSchema,
+	imageLayerSchema,
+	shapeLayerSchema,
+]);
 
 export const greetingImageSchema = z.object({
 	background: z.strictObject({
@@ -39,14 +83,12 @@ export const greetingImageSchema = z.object({
 			.nullable(),
 		dataUri: z.string().regex(DATA_URI).max(DATA_URI_MAX_LENGTH).nullable(),
 	}),
-	showAvatar: z.boolean(),
-	title: greetingTextSchema,
-	subtitle: greetingTextSchema,
+	layers: z.array(greetingLayerSchema).max(50),
 });
 
 export const greetingConfigSchema = z
 	.object({
-		version: z.literal(1),
+		version: z.literal(2),
 		enabled: z.boolean(),
 		channelId: z.string().regex(SNOWFLAKE).nullable(),
 		template: z.string().max(500),
