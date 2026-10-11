@@ -26,6 +26,7 @@
     "start": "turbo start",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
+    "licenses:generate": "yarn node scripts/generate-licenses.mjs",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "prepare": "husky"
