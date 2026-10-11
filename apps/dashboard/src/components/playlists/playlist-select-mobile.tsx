@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
+import type { SelectOption } from "@/components/overlay/select";
+import { Select } from "@/components/overlay/select";
 import { Button } from "@/components/primitives/button";
-import { Select } from "@/components/primitives/input";
 import type { Playlist } from "@/types/playlist";
 
 interface PlaylistSelectMobileProps {
@@ -15,45 +16,27 @@ interface PlaylistSelectMobileProps {
 
 /**
  * 모바일(<lg)용 플레이리스트 선택 — 세로로 큰 카드 목록 대신 select 메뉴 하나로.
- * 즐겨찾기/내 목록 그룹은 optgroup으로, 곡수는 라벨에 붙여요.
+ * 즐겨찾기/내 목록 그룹은 option group으로, 곡수는 라벨에 붙여요.
  */
 export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, onCreateNew }: PlaylistSelectMobileProps) {
 	const favorited = playlists[0]?.name === "즐겨찾기" ? playlists.slice(0, 1) : [];
 	const customs = favorited.length ? playlists.slice(1) : playlists;
 	const label = (playlist: Playlist) => `${playlist.name} · ${playlist._count?.tracks ?? 0}곡`;
 
+	const options: SelectOption[] = [
+		...favorited.map((playlist) => ({ value: playlist.id, label: label(playlist), group: "즐겨찾기" })),
+		...customs.map((playlist) => ({ value: playlist.id, label: label(playlist), group: "내 목록" })),
+	];
+
 	return (
 		<div className="flex w-full items-center gap-2">
-			<div className="relative min-w-0 flex-1">
-				<Select
-					aria-label="플레이리스트 선택"
-					value={activePlaylistId ?? ""}
-					onChange={(e) => {
-						if (e.target.value) onSelect(e.target.value);
-					}}
-				>
-					{!activePlaylistId && <option value="">플레이리스트 선택...</option>}
-					{favorited.length > 0 && (
-						<optgroup label="즐겨찾기">
-							{favorited.map((playlist) => (
-								<option key={playlist.id} value={playlist.id}>
-									{label(playlist)}
-								</option>
-							))}
-						</optgroup>
-					)}
-					{customs.length > 0 && (
-						<optgroup label="내 목록">
-							{customs.map((playlist) => (
-								<option key={playlist.id} value={playlist.id}>
-									{label(playlist)}
-								</option>
-							))}
-						</optgroup>
-					)}
-				</Select>
-				<ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden />
-			</div>
+			<Select
+				className="min-w-0 flex-1"
+				options={options}
+				value={activePlaylistId ?? undefined}
+				onChange={onSelect}
+				placeholder="플레이리스트 선택..."
+			/>
 			<Button
 				variant="icon"
 				size="sm"
