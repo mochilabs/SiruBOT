@@ -8,6 +8,7 @@ import { Button } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
 import { Input } from "@/components/primitives/input";
+import { AvatarCropModal, shouldSkipCrop } from "@/components/servers/avatar-crop-modal";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { toError } from "@/lib/api-error";
 
@@ -34,6 +35,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarReset, setAvatarReset] = useState(false);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 서버 값이 도착하면 입력값을 채워요 — 사용자가 건드리기 전까지만 동기화해요.
@@ -63,10 +65,24 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         toast.error("PNG, JPEG, GIF, WebP 이미지만 지원해요.");
         return;
       }
-      setAvatarFile(file);
-      setAvatarReset(false);
+      // GIF는 애니메이션이 살아있어야 해서 자르지 않고 그대로 써요. 나머지는 크롭 모달로.
+      if (shouldSkipCrop(file)) {
+        setAvatarFile(file);
+        setAvatarReset(false);
+        return;
+      }
+      setCropSource(file);
     },
     [toast],
+  );
+
+  const handleCropApply = useCallback(
+    (file: File) => {
+      setAvatarFile(file);
+      setAvatarReset(false);
+      setCropSource(null);
+    },
+    [],
   );
 
   const handleSave = useCallback(async () => {
@@ -145,6 +161,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     setNickname(originalNickname);
     setAvatarFile(null);
     setAvatarReset(false);
+    setCropSource(null);
   };
 
   return (
@@ -166,7 +183,8 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
 
       {profile.stale && (
         <WarningBox>
-          표시 중인 상태가 오래됐어요.{" "}
+          봇이 상태를 최근 60초 안에 갱신하지 않았어요 — 봇이 접속 중이 아니거나 상태 전송이 일시 끊겼을 수 있어요. 표시
+          중인 닉네임·사진은 마지막에 받은 값이에요.{" "}
           <button type="button" className="font-semibold underline" onClick={reload}>
             다시 시도
           </button>
@@ -272,6 +290,8 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           </Button>
         )}
       </SaveBar>
+
+      <AvatarCropModal source={cropSource} onClose={() => setCropSource(null)} onApply={handleCropApply} />
     </Card>
   );
 }
