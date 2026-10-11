@@ -68,7 +68,6 @@ export function Select(props: SelectProps) {
 				: props.value
 					? [props.value]
 					: [],
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[isMulti, props.value],
 	);
 
