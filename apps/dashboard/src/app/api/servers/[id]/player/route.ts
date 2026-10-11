@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { authorizeGuildMember, deniedGuildMember } from "@/lib/api-guards";
 import { db } from "@/lib/db";
 
 interface PlayerTrack {
@@ -24,8 +24,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const authz = await authorizeGuildManage(id);
-  if (!authz.ok) return deniedGuildManage(authz);
+  const authz = await authorizeGuildMember(id);
+  if (!authz.ok) return deniedGuildMember(authz);
 
   try {
     const [recent, topTracks, totalPlays] = await Promise.all([

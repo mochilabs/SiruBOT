@@ -169,9 +169,6 @@ COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/.next/st
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/public ./apps/dashboard/public
 
-# Twemoji Mozilla 이모지 웹폰트(시스템 이모지 폰트 없는 리눅스 클라이언트용) — 출처 고지는 /licenses
-COPY --from=builder-dashboard --chown=nextjs:nodejs /app/resources/fonts/TwemojiMozilla.ttf ./apps/dashboard/public/fonts/TwemojiMozilla.ttf
-
 # Copy Prisma client
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/packages/prisma/dist ./packages/prisma/dist
 

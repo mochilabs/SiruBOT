@@ -25,7 +25,7 @@ interface LicenseListProps {
 const rowClass =
 	"flex min-w-0 items-center gap-2 rounded-control bg-surface-2 px-3 py-1.5 text-sm";
 
-/** 검색으로 패키지를 걸러고, 라이선스별 그룹으로 고지해요 — 데이터는 스크립트로 생성돼요(커밋된 JSON). */
+/** 검색으로 패키지를 거르고, 라이선스별 그룹으로 고지해요 — 데이터는 스크립트로 생성돼요(커밋된 JSON). */
 export function LicenseList({ entries, summary, total }: LicenseListProps) {
 	const [query, setQuery] = useState("");
 	const trimmed = query.trim().toLowerCase();

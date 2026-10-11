@@ -103,7 +103,7 @@ function TrackRow({
 				<button
 					type="button"
 					onClick={() => onPlay(track)}
-					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-border-strong bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-text"
+					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-border-strong bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-text"
 					aria-label={`${track.title} 다시 재생`}
 				>
 					<Play size={13} aria-hidden />

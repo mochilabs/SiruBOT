@@ -13,7 +13,7 @@
  *   data-api가 그대로 400으로 전달해 대시보드에서 안내해요.
  * - 어떤 경우에도 절대 throw하지 않아요 — 처리 실패는 대시보드의 타임아웃 폴백으로 이어져요.
  */
-import { container } from '@sapphire/framework';
+import { container, UserError } from '@sapphire/framework';
 import {
 	emoji,
 	ManagedRedisSubscriber,
@@ -294,6 +294,13 @@ export class PlayerWebResponder {
 
 			await container.audioService.ensurePlayback(player);
 			this.respond({ requestId: request.requestId, guildId, kind: 'play' });
+		} catch (error) {
+			// audioService가 던지는 UserError(검색 결과 없음·음성 접속 불가 등)는 검증 실패예요 — 안내 문구를 그대로 전달해요.
+			if (error instanceof UserError) {
+				this.respond({ requestId: request.requestId, guildId, kind: 'play', error: error.message });
+				return;
+			}
+			throw error;
 		} finally {
 			this.inFlight.delete(guildId);
 		}
