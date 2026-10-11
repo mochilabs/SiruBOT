@@ -4,10 +4,10 @@ import { useState } from "react";
 import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, UserPlus, UserRoundCog, Volume2 } from "lucide-react";
 
 import { ToastProvider } from "@/components/feedback/toast";
+import PlayerLiveTab from "@/components/player/player-live-tab";
 import { Card } from "@/components/primitives/card";
 import { Tabs } from "@/components/primitives/tabs";
 
-import PlayerLiveTab from "./player-live/player-live-tab";
 import { AiSettings } from "./ai-settings";
 import { BotProfileSettings } from "./bot-profile-settings";
 import { ChannelSettings } from "./channel-settings";

@@ -3,14 +3,14 @@
 import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Clock, History, Music2, Trophy } from "lucide-react";
+import { ArrowLeft, Clock, History, Music2, Play, Trophy } from "lucide-react";
 import useSWR from "swr";
 
 import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SkeletonLine } from "@/components/primitives/skeleton";
 
-interface PlayerTrack {
+export interface PlayerTrack {
 	id: string;
 	title: string;
 	artist: string;
@@ -64,7 +64,17 @@ function SectionHeading({ icon, title }: { icon: React.ReactNode; title: string 
 	);
 }
 
-function TrackRow({ index, track, meta }: { index: number; track: PlayerTrack; meta: React.ReactNode }) {
+function TrackRow({
+	index,
+	track,
+	meta,
+	onPlay,
+}: {
+	index: number;
+	track: PlayerTrack;
+	meta: React.ReactNode;
+	onPlay?: (track: PlayerTrack) => void;
+}) {
 	return (
 		<div className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
@@ -89,6 +99,16 @@ function TrackRow({ index, track, meta }: { index: number; track: PlayerTrack; m
 				<p className="truncate text-xs text-muted-foreground">{track.artist}</p>
 			</div>
 			<div className="shrink-0 text-xs tabular-nums text-muted-foreground">{meta}</div>
+			{onPlay && (
+				<button
+					type="button"
+					onClick={() => onPlay(track)}
+					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-border-strong bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-text"
+					aria-label={`${track.title} 다시 재생`}
+				>
+					<Play size={13} aria-hidden />
+				</button>
+			)}
 		</div>
 	);
 }
@@ -108,7 +128,7 @@ function StatsSkeleton() {
 	);
 }
 
-export function PlayerClient({ guildId }: { guildId: string }) {
+export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (track: PlayerTrack) => void }) {
 	const [tab, setTab] = useState<"top" | "recent">("top");
 	const { data, error, isLoading, mutate } = useSWR<PlayerStats>(`/api/servers/${guildId}/player`);
 
@@ -149,7 +169,7 @@ export function PlayerClient({ guildId }: { guildId: string }) {
 				<EmptyState
 					icon={Music2}
 					title="아직 재생 기록이 없어요."
-					description="Discord 채널에서 /재생으로 곡을 틀면 기록이 쌓여요."
+					description="위에서 곡을 검색해 재생하거나 Discord에서 /재생을 사용하면 기록이 쌓여요."
 				/>
 				<p className="mt-6">
 					<Link
@@ -210,7 +230,13 @@ export function PlayerClient({ guildId }: { guildId: string }) {
 					top.length > 0 ? (
 						<div className="space-y-2">
 							{top.map((track, index) => (
-								<TrackRow key={track.id} index={index} track={track} meta={`${track.playCount.toLocaleString()}회 · ${formatDuration(track.duration)}`} />
+								<TrackRow
+									key={track.id}
+									index={index}
+									track={track}
+									meta={`${track.playCount.toLocaleString()}회 · ${formatDuration(track.duration)}`}
+									onPlay={onPlay}
+								/>
 							))}
 						</div>
 					) : (
@@ -229,6 +255,7 @@ export function PlayerClient({ guildId }: { guildId: string }) {
 										{formatRelativeTime(track.playedAt)}
 									</span>
 								}
+								onPlay={onPlay}
 							/>
 						))}
 					</div>
