@@ -222,6 +222,28 @@ export async function notifyGuildSettingsChanged(guildId: string): Promise<boole
     return result?.ok === true;
 }
 
+/** 라이브 탭 컨트롤러 명령 — 봇이 활성 플레이어에 즉시 적용해요 */
+export type PlayerCommandAction = "volume" | "pause" | "resume" | "skip";
+
+export interface PlayerCommandResult {
+    ok: boolean;
+}
+
+/**
+ * 플레이어 실시간 제어를 모든 봇 프로세스에 브로드캐스트 — 대시보드 라이브 탭에서 호출해요.
+ * Redis 미설정·data-api 장애 시 false — 호출자가 낙관적 UI를 되돌려요.
+ */
+export async function notifyPlayerCommand(
+    guildId: string,
+    command: { action: PlayerCommandAction; value?: number },
+): Promise<boolean> {
+    const result = await postDataApi<PlayerCommandResult>("/v1/internal/player/command", {
+        guildId,
+        ...command,
+    });
+    return result?.ok === true;
+}
+
 /**
  * data-api 상태 조회 — 관제 페이지(/api/data-api)용. 폴백 체인(DATA_API_AUTH_KEY || AUTH_KEY)은
  * 기존 방침을 유지한다. 키가 없으면(또는 공백뿐이면) 실패시키지 않고 경고 후 스킵.

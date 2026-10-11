@@ -97,3 +97,13 @@ export const GUILD_DATA_REQUEST_CHANNEL = 'sirubot:guild-data:request';
  * 페이로드: guildDataResponseSchema (guildData.ts) — 요청한 kind의 배열 또는 error를 실어요.
  */
 export const GUILD_DATA_RESPONSE_CHANNEL = 'sirubot:guild-data:response';
+
+/**
+ * 플레이어 실시간 제어 브로드캐스트 — 대시보드 라이브 탭 컨트롤러(볼륨·일시정지·재생·스킵).
+ * 대시보드가 data-api `/v1/internal/player/command`에 요청하면 data-api가 이 채널로 퍼블리시하고,
+ * 각 봇 프로세스는 자기 소유 플레이어에만 즉시 적용해요. 플레이어가 없으면(재생 중 아님) 조용히 무시해요.
+ *
+ * 페이로드: {"guildId":"<길드 ID>","action":"volume"|"pause"|"resume"|"skip","value"?:<0~150 정수>}
+ * - volume은 value 필수 — 봇이 guildService.updateVolume으로 저장한 뒤 활성 플레이어에 setVolume해요.
+ */
+export const PLAYER_COMMAND_CHANNEL = 'sirubot:player-command';

@@ -8,6 +8,7 @@ import { DataApiError, serveCached } from './serveCached.ts';
 import { deduped } from '../utils/dedup.ts';
 import {
 	GUILD_SETTINGS_INVALIDATE_CHANNEL,
+	PLAYER_COMMAND_CHANNEL,
 	BOT_PROFILE_SET_CHANNEL,
 	MEMBER_GREETING_SEND_CHANNEL,
 	greetingConfigSchema,
@@ -597,6 +598,35 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			}
 			await client.publish(GUILD_SETTINGS_INVALIDATE_CHANNEL, JSON.stringify({ guildId }));
 			metrics.request('guild-settings-invalidate');
+			return reply.send({ ok: true });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 플레이어 실시간 제어 (대시보드 라이브 탭 컨트롤러 → 봇 브로드캐스트) ──
+	// 대시보드 컨트롤러(볼륨·일시정지·재생·스킵)를 각 봇 프로세스에 브로드캐스트해요.
+	// 봇은 자기 플레이어에만 적용하고, 플레이어가 없으면(재생 중 아님) 조용히 무시해요.
+	// 설정 저장과 달리 즉시 적용이 목적이라 pending 키 없이 채널로만 전달해요.
+	const playerCommandSchema = z
+		.object({
+			guildId: z.string().trim().min(1).max(32),
+			action: z.enum(['volume', 'pause', 'resume', 'skip']),
+			value: z.number().int().min(0).max(150).optional()
+		})
+		.refine((body) => body.action !== 'volume' || typeof body.value === 'number', {
+			message: 'volume 명령에는 value(0~150)가 필요해요.'
+		});
+	fastify.post('/v1/internal/player/command', async (request, reply) => {
+		try {
+			const command = playerCommandSchema.parse(request.body);
+			const client = sharedCache.getClient();
+			if (!client) {
+				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
+				return reply.code(503).send({ error: 'redis_unavailable', message: '플레이어 제어를 위해 Redis가 필요해요.' });
+			}
+			await client.publish(PLAYER_COMMAND_CHANNEL, JSON.stringify(command));
+			metrics.request('player-command');
 			return reply.send({ ok: true });
 		} catch (error) {
 			return sendError(reply, error);

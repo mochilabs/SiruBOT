@@ -125,6 +125,7 @@ export const main = async () => {
 			container.audio.removeAllListeners();
 		}
 		await container.guildSettingsInvalidator?.stop().catch(() => null);
+		await container.playerCommandService?.stop().catch(() => null);
 		await container.botProfileService?.stop().catch(() => null);
 		await container.memberGreetingService?.stop().catch(() => null);
 		await container.guildDataResponder?.stop().catch(() => null);
@@ -180,6 +181,13 @@ export const main = async () => {
 		// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
 		// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
 		await container.guildSettingsInvalidator?.start(envParseString('REDIS_URL'), container.guildService);
+		// 대시보드 라이브 탭 컨트롤러(볼륨·일시정지·재생·스킵) → data-api → Redis → 봇 적용.
+		// 실패해도 부팅은 계속돼요 — 대시보드 컨트롤러 실패 화면으로 이어지고 Discord 명령은 정상이에요.
+		await container.playerCommandService?.start(envParseString('REDIS_URL'), {
+			audio: container.audio,
+			guildService: container.guildService,
+			mixerService: container.mixerService
+		});
 		// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
 		// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
 		await container.botProfileService?.start(envParseString('REDIS_URL'));

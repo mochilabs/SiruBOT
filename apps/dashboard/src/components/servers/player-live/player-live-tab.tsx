@@ -1,16 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ListMusic, Radio } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ListMusic, Pause, Play, Radio, SkipForward, Volume2 } from "lucide-react";
 import useSWR from "swr";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
+import { useToast } from "@/components/feedback/toast";
 import { Badge } from "@/components/primitives/badge";
+import { Button } from "@/components/primitives/button";
 import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SkeletonLine } from "@/components/primitives/skeleton";
+import { Slider } from "@/components/primitives/slider";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { toError } from "@/lib/api-error";
+
+/** 라이브 탭 컨트롤러 볼륨 상한 — 봇 /volume 명령 계약(0~150)과 같아요 */
+const LIVE_VOLUME_MAX = 150;
+/** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
+const VOLUME_SEND_DEBOUNCE_MS = 400;
+
+async function sendPlayerCommand(
+  guildId: string,
+  action: "volume" | "pause" | "resume" | "skip",
+  value?: number,
+): Promise<boolean> {
+  const res = await fetch(`/api/servers/${guildId}/player/command`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ...(value !== undefined ? { value } : {}) }),
+  });
+  return res.ok;
+}
 
 function formatMs(ms: number): string {
 	const totalSeconds = Math.floor(ms / 1000);
@@ -84,10 +105,69 @@ interface NowPlayingProps {
 	receivedAt: number;
 	connected: boolean;
 	mode: "stream" | "polling";
+	guildId: string;
 }
 
-function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayingProps) {
+function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode, guildId }: NowPlayingProps) {
+	const toast = useToast();
 	const positionMs = interpolatedPositionMs(state, receivedAt);
+
+	// 낙관적 상태 — 명령 전송 중엔 의도 값으로 보여요. 봇이 같은 값으로 상태 퍼블리시하면 해제해요.
+	const [pausedOverride, setPausedOverride] = useState<boolean | null>(null);
+	const [pendingAction, setPendingAction] = useState<"pause" | "resume" | "skip" | null>(null);
+	const [volumeOverride, setVolumeOverride] = useState<number | null>(null);
+	const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	// 봇 상태가 낙관적 값과 같으면 오버라이드를 해제해 "실제 상태 표시"로 복귀해요.
+	useEffect(() => {
+		if (pausedOverride !== null && state.paused === pausedOverride) setPausedOverride(null);
+	}, [pausedOverride, state.paused]);
+	useEffect(() => {
+		if (volumeOverride !== null && Math.round(state.volume) === volumeOverride) setVolumeOverride(null);
+	}, [volumeOverride, state.volume]);
+	useEffect(() => {
+		return () => {
+			if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
+		};
+	}, []);
+
+	const displayedPaused = pausedOverride ?? state.paused;
+	const displayedVolume = volumeOverride ?? Math.round(state.volume);
+
+	const failCommand = useCallback((fallbackMessage: string) => {
+		setPausedOverride(null);
+		setVolumeOverride(null);
+		setPendingAction(null);
+		toast.error(fallbackMessage, "봇이 접속 중인지 확인해 주세요.");
+	}, [toast]);
+
+	const handleTogglePause = useCallback(async () => {
+		const action = displayedPaused ? "resume" : "pause";
+		setPendingAction(action);
+		setPausedOverride(!displayedPaused);
+		const sent = await sendPlayerCommand(guildId, action);
+		if (!sent) failCommand("명령을 전달하지 못했어요.");
+		else setPendingAction(null);
+	}, [displayedPaused, failCommand, guildId]);
+
+	const handleSkip = useCallback(async () => {
+		setPendingAction("skip");
+		const sent = await sendPlayerCommand(guildId, "skip");
+		if (!sent) failCommand("명령을 전달하지 못했어요.");
+		else setPendingAction(null);
+	}, [failCommand, guildId]);
+
+	const handleVolumeChange = useCallback(
+		(volume: number) => {
+			setVolumeOverride(volume);
+			if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
+			volumeTimerRef.current = setTimeout(async () => {
+				const sent = await sendPlayerCommand(guildId, "volume", volume);
+				if (!sent) failCommand("볼륨을 적용하지 못했어요.");
+			}, VOLUME_SEND_DEBOUNCE_MS);
+		},
+		[failCommand, guildId],
+	);
 
 	return (
 		<Card padding="lg" className="gap-4">
@@ -134,16 +214,56 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode }: NowPlayi
 						{state.isStream && <Badge variant="destructive" size="sm">라이브 스트림</Badge>}
 						{state.sourceName && <Badge size="sm">{state.sourceName}</Badge>}
 						<Badge size="sm">반복: {state.repeatMode === "off" ? "없음" : state.repeatMode === "track" ? "한 곡" : "전체"}</Badge>
-						<Badge size="sm">볼륨 {state.volume}%</Badge>
 					</div>
 				</div>
 			</div>
 
-			<div className="space-y-1">
-				<ProgressBar state={state} receivedAt={receivedAt} />
-				<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
-					<span>{state.isStream ? "스트리밍" : formatMs(positionMs)}</span>
-					<span>{state.isStream ? "" : formatMs(state.durationMs)}</span>
+			<div className="space-y-3">
+				<div className="space-y-1">
+					<ProgressBar state={state} receivedAt={receivedAt} />
+					<div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
+						<span>{state.isStream ? "스트리밍" : formatMs(positionMs)}</span>
+						<span>{state.isStream ? "" : formatMs(state.durationMs)}</span>
+					</div>
+				</div>
+
+				{/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
+				<div className="flex items-center gap-2 border-t border-border-subtle pt-3">
+					<Button
+						variant="secondary"
+						size="sm"
+						icon={displayedPaused ? <Play size={14} /> : <Pause size={14} />}
+						onClick={handleTogglePause}
+						loading={pendingAction === "pause" || pendingAction === "resume"}
+						disabled={pendingAction !== null && pendingAction !== "pause" && pendingAction !== "resume"}
+						aria-label={displayedPaused ? "재생" : "일시정지"}
+					>
+						{displayedPaused ? "재생" : "일시정지"}
+					</Button>
+					<Button
+						variant="secondary"
+						size="sm"
+						icon={<SkipForward size={14} />}
+						onClick={handleSkip}
+						loading={pendingAction === "skip"}
+						disabled={pendingAction !== null && pendingAction !== "skip"}
+						aria-label="다음 곡"
+					>
+						스킵
+					</Button>
+					<div className="ml-auto flex min-w-0 flex-1 items-center gap-2 md:flex-none md:w-56">
+						<Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+						<Slider
+							value={displayedVolume}
+							min={0}
+							max={LIVE_VOLUME_MAX}
+							step={1}
+							onChange={handleVolumeChange}
+							showValue
+							formatValue={(value) => `${value}%`}
+							aria-label="볼륨"
+						/>
+					</div>
 				</div>
 			</div>
 		</Card>
@@ -311,16 +431,10 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 
 	return (
 		<div className="grid gap-6">
-			<NowPlaying
-				state={data.player}
-				hubStaleMs={data.hub.staleMs}
-				receivedAt={receivedAt}
-				connected={connected}
-				mode={mode}
-			/>
+			<NowPlaying state={data.player} hubStaleMs={data.hub.staleMs} receivedAt={receivedAt} connected={connected} mode={mode} guildId={guildId} />
 			<QueueList state={data.player} />
 		<p className="text-xs text-muted-foreground">
-			재생 제어는 봇 컨트롤러/커맨드에서 할 수 있어요. 이 화면은 실시간 상태 표시 전용이에요.
+			컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요.
 		</p>
 		</div>
 	);
