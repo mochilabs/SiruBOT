@@ -8,12 +8,12 @@ import { DataApiError, serveCached } from './serveCached.ts';
 import { deduped } from '../utils/dedup.ts';
 import {
 	GUILD_SETTINGS_INVALIDATE_CHANNEL,
-	PLAYER_COMMAND_CHANNEL,
 	BOT_PROFILE_SET_CHANNEL,
 	MEMBER_GREETING_SEND_CHANNEL,
 	greetingConfigSchema,
 	botProfilePendingKey,
-	memberGreetingPendingKey
+	memberGreetingPendingKey,
+	playerWebControlActionSchema
 } from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
@@ -33,6 +33,7 @@ import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playe
 import { getBotProfile, botProfileHubStatus } from '../services/botProfileHub.ts';
 import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
 import { requestGuildData, guildDataHubStatus, type GuildDataFailureReason } from '../services/guildDataHub.ts';
+import { requestPlayerWeb, type PlayerWebResult } from '../services/playerWebHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -604,30 +605,119 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
-	// ── 플레이어 실시간 제어 (대시보드 라이브 탭 컨트롤러 → 봇 브로드캐스트) ──
-	// 대시보드 컨트롤러(볼륨·일시정지·재생·스킵)를 각 봇 프로세스에 브로드캐스트해요.
-	// 봇은 자기 플레이어에만 적용하고, 플레이어가 없으면(재생 중 아님) 조용히 무시해요.
-	// 설정 저장과 달리 즉시 적용이 목적이라 pending 키 없이 채널로만 전달해요.
-	const playerCommandSchema = z
-		.object({
-			guildId: z.string().trim().min(1).max(32),
-			action: z.enum(['volume', 'pause', 'resume', 'skip']),
-			value: z.number().int().min(0).max(150).optional()
-		})
-		.refine((body) => body.action !== 'volume' || typeof body.value === 'number', {
-			message: 'volume 명령에는 value(0~150)가 필요해요.'
+	// ── 웹 플레이어 request/reply (대시보드 검색·재생·제어·음성 상태 → 봇 → 응답 상관) ──
+	// 요청자의 음성 채널과 관리자/DJ 권한은 봇 캐시로만 해석할 수 있으므로 userId까지 전달해요.
+	// REQUEST 채널로 퍼블리시한 뒤 kind별 대기 시간(playerWebHub KIND_TIMEOUT_MS) 안에 RESPONSE 채널 응답을
+	// 상관해 내려줘요. Redis 없으면 503, 봇이 시간 안에 응답하지 않으면(봇 미보유·미연결 포함) 502,
+	// 봇이 검증 실패 사유(음성 미접속·권한 없음·노드 없음 등)를 실어 보내면 400으로 그 문구를 그대로 전달해요.
+	const playerUserIdSchema = z.string().trim().min(1).max(32).regex(/^\d+$/, 'userId는 Discord 유저 ID 형식이어야 해요.');
+	const playerWebSearchSchema = z.object({
+		guildId: z.string().trim().min(1).max(32),
+		userId: playerUserIdSchema,
+		query: z.string().trim().min(1).max(200)
+	});
+	const playerWebPlaySchema = z.object({
+		guildId: z.string().trim().min(1).max(32),
+		userId: playerUserIdSchema,
+		uri: z.string().url().max(500)
+	});
+	const playerWebControlSchema = z.object({
+		guildId: z.string().trim().min(1).max(32),
+		userId: playerUserIdSchema,
+		action: playerWebControlActionSchema,
+		value: z.number().int().min(0).max(150).optional()
+	});
+	const playerVoiceContextQuery = z.object({ userId: playerUserIdSchema });
+
+	/** PlayerWebResult를 HTTP로 매핑 — 성공은 필드를 그대로, 실패는 사유별 코드와 한국어 안내로 내려줘요 */
+	function replyPlayerWebResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: PlayerWebResult): any {
+		if (result.ok) {
+			return reply.send({ ok: true, tracks: result.tracks ?? null, voice: result.voice ?? null });
+		}
+		if (result.reason === 'redis_unavailable') {
+			return reply.code(503).send({
+				error: 'redis_unavailable',
+				message: 'Redis가 연결되어 있지 않아요. 잠시 후 다시 시도해 주세요.'
+			});
+		}
+		if (result.reason === 'timeout') {
+			return reply.code(502).send({
+				error: 'bot_timeout',
+				message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
+			});
+		}
+		// 봇이 검증 실패(음성 미접속·권한 없음 등)를 실어 보낸 경우 — 사용자가 고칠 수 있는 행동이므로 400
+		return reply.code(400).send({
+			error: 'web_player_rejected',
+			message: result.message ?? '요청을 처리하지 못했어요.'
 		});
-	fastify.post('/v1/internal/player/command', async (request, reply) => {
+	}
+
+	fastify.post('/v1/internal/player/search', async (request, reply) => {
 		try {
-			const command = playerCommandSchema.parse(request.body);
-			const client = sharedCache.getClient();
-			if (!client) {
-				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
-				return reply.code(503).send({ error: 'redis_unavailable', message: '플레이어 제어를 위해 Redis가 필요해요.' });
-			}
-			await client.publish(PLAYER_COMMAND_CHANNEL, JSON.stringify(command));
-			metrics.request('player-command');
-			return reply.send({ ok: true });
+			const { guildId, userId, query } = playerWebSearchSchema.parse(request.body);
+			const result = await requestPlayerWeb({
+				requestId: crypto.randomUUID(),
+				guildId,
+				userId,
+				kind: 'search',
+				query
+			});
+			metrics.request('player-web-search');
+			return replyPlayerWebResult(reply, result);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	fastify.post('/v1/internal/player/play', async (request, reply) => {
+		try {
+			const { guildId, userId, uri } = playerWebPlaySchema.parse(request.body);
+			const result = await requestPlayerWeb({
+				requestId: crypto.randomUUID(),
+				guildId,
+				userId,
+				kind: 'play',
+				uri
+			});
+			metrics.request('player-web-play');
+			return replyPlayerWebResult(reply, result);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	fastify.post('/v1/internal/player/control', async (request, reply) => {
+		try {
+			const { guildId, userId, action, value } = playerWebControlSchema.parse(request.body);
+			const result = await requestPlayerWeb({
+				requestId: crypto.randomUUID(),
+				guildId,
+				userId,
+				kind: 'control',
+				action,
+				...(value !== undefined ? { value } : {})
+			});
+			metrics.request('player-web-control');
+			return replyPlayerWebResult(reply, result);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 요청자 음성·권한 상태 조회 (player 페이지 배지) ──
+	fastify.get('/v1/player/:guildId/voice-context', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			const { userId } = playerVoiceContextQuery.parse(request.query);
+			const result = await requestPlayerWeb({
+				requestId: crypto.randomUUID(),
+				guildId,
+				userId,
+				kind: 'voice-context'
+			});
+			metrics.request('player-web-voice-context');
+			return replyPlayerWebResult(reply, result);
 		} catch (error) {
 			return sendError(reply, error);
 		}

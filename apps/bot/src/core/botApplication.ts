@@ -18,7 +18,7 @@ import { MixerService } from '../services/mixerService.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
-import { PlayerCommandService } from '../services/playerCommandService.ts';
+import { PlayerWebResponder } from '../services/playerWebResponder.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../services/memberGreetingService.ts';
 import { GuildDataResponder } from '../services/guildDataResponder.ts';
@@ -102,7 +102,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			debug: (msg: string) => container.logger.debug(msg)
 		};
 		container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger);
-		container.playerCommandService = new PlayerCommandService(subscriberLogger);
+		container.playerWebResponder = new PlayerWebResponder(subscriberLogger);
 		container.botProfileService = new BotProfileService(subscriberLogger);
 		container.memberGreetingService = new MemberGreetingService(subscriberLogger);
 		container.guildDataResponder = new GuildDataResponder(subscriberLogger);
