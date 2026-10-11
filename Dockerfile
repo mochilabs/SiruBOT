@@ -169,6 +169,9 @@ COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/.next/st
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/apps/dashboard/public ./apps/dashboard/public
 
+# Twemoji Mozilla 이모지 웹폰트(시스템 이모지 폰트 없는 리눅스 클라이언트용) — 출처 고지는 /licenses
+COPY --from=builder-dashboard --chown=nextjs:nodejs /app/resources/fonts/TwemojiMozilla.ttf ./apps/dashboard/public/fonts/TwemojiMozilla.ttf
+
 # Copy Prisma client
 COPY --from=builder-dashboard --chown=nextjs:nodejs /app/packages/prisma/dist ./packages/prisma/dist
 
@@ -250,8 +253,9 @@ ENV VERSION=$VERSION
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/dist ./dist
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/package.json ./package.json
 
-# Korean font for profile card rendering
-COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/NotoSansKR.ttf ./resources/fonts/NotoSansKR.ttf
+# Card fonts: Pretendard JP (한·영·일 variable) + Twemoji Mozilla (색 이모지 COLR) — 라이선스 고지: 대시보드 /licenses
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/PretendardJPVariable.ttf ./resources/fonts/PretendardJPVariable.ttf
+COPY --from=builder-data-api --chown=sirubot:nodejs /app/resources/fonts/TwemojiMozilla.ttf ./resources/fonts/TwemojiMozilla.ttf
 
 # Copy workspace packages
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/packages ./packages

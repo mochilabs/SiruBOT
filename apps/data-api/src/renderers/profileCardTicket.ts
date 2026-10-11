@@ -59,7 +59,7 @@ const ACCENT_ROSE = '#a96a64';
 
 function drawChip(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, bg: string, color: string): number {
 	ctx.save();
-	ctx.font = '500 16px "Noto Sans KR", sans-serif';
+	ctx.font = '500 16px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const w = ctx.measureText(label).width + 36;
 	ctx.beginPath();
 	ctx.roundRect(x, y, w, 36, 18);
@@ -163,7 +163,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.save();
 	ctx.textAlign = 'center';
 	ctx.fillStyle = SAGE_DEEP;
-	ctx.font = '700 19px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '700 19px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.fillText('MEMBER PASS', stubCx, 58);
 
 	// 스파클 (4point)
@@ -187,7 +187,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.rect(BODY_W + 16, 170, STUB_W - 32, H2 - 246);
 	ctx.clip();
 	ctx.fillStyle = SAGE_DEEP;
-	ctx.font = '700 62px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '700 62px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.translate(stubCx, (170 + (H2 - 246) / 2 + 82) / 1);
@@ -198,7 +198,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	let vSize = 62;
 	if (nameW90 > maxVertH) {
 		vSize = Math.max(30, Math.floor((62 * (maxVertH - 20)) / nameW90));
-		ctx.font = `700 ${vSize}px "Noto Sans KR", ui-sans-serif, sans-serif`;
+		ctx.font = `700 ${vSize}px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif`;
 	}
 	ctx.rotate(-Math.PI / 2);
 	ctx.fillText(verticalName, 0, 0);
@@ -207,7 +207,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 
 	ctx.textAlign = 'center';
 	ctx.fillStyle = 'rgba(79, 106, 88, 0.75)';
-	ctx.font = '600 15px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '600 15px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.fillText('PERSONAL PROFILE', stubCx, H2 - 40);
 	ctx.restore();
 
@@ -217,7 +217,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	// ── 본문: {ID} / MEMBER PASS 헤더 + 구분선 ──
 	ctx.save();
 	ctx.textAlign = 'left';
-	ctx.font = '600 17px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '600 17px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.fillStyle = 'rgba(169, 106, 100, 0.55)';
 	ctx.fillText(`${input.profileId.toUpperCase()} / MEMBER PASS`, PAD, 36);
 	ctx.strokeStyle = 'rgba(63, 58, 53, 0.14)';
@@ -246,10 +246,10 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 	ctx.fillStyle = INK;
-	ctx.font = '800 46px "Noto Sans KR", sans-serif';
+	ctx.font = '800 46px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(truncate(ctx, input.displayName, contentW - nameX + PAD + 40), nameX, nameBase + 12);
 	ctx.fillStyle = INK_MUTED;
-	ctx.font = '500 22px "Noto Sans KR", sans-serif';
+	ctx.font = '500 22px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const tkHandle = `@${input.profileId}`;
 	ctx.fillText(tkHandle, nameX, handleBase + 8);
 	const tkHandleW = ctx.measureText(tkHandle).width;
@@ -270,7 +270,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 			}
 		}
 		ctx.save();
-		ctx.font = '700 17px "Noto Sans KR", sans-serif';
+		ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillStyle = SAGE_DEEP;
 		ctx.fillText(input.guildTag, tagX, handleBase + 8);
 		ctx.restore();
@@ -278,7 +278,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 
 	// 온라인 캡슐 (핸들 아래, 텍스트 좌측 정렬 시작에 붙임)
 	ctx.save();
-	ctx.font = '600 16px "Noto Sans KR", sans-serif';
+	ctx.font = '600 16px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const stW = ctx.measureText(input.onlineLabel).width + 60;
 	ctx.beginPath();
 	ctx.roundRect(nameX, statusY - 22, stW, 40, 20);
@@ -298,7 +298,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	if (hasChips) {
 		let chipX = PAD;
 		ctx.save();
-		ctx.font = '500 17px "Noto Sans KR", sans-serif';
+		ctx.font = '500 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillStyle = INK;
 		ctx.fillText('역할', PAD, chipTop + 19);
 		const labelW = ctx.measureText('역할').width;
@@ -314,7 +314,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	// ── 소개 ──
 	if (hasIntro) {
 		ctx.fillStyle = 'rgba(63, 58, 53, 0.86)';
-		ctx.font = '500 19px "Noto Sans KR", sans-serif';
+		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, input.intro.trim(), contentW), PAD, introBase);
 	}
 
@@ -358,11 +358,11 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 			ctx.stroke();
 			drawIcon(ctx, stats[i].icon, sx + 16, sy + 13, 17, '#a96a64');
 			ctx.fillStyle = INK_MUTED;
-			ctx.font = '500 15px "Noto Sans KR", sans-serif';
+			ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.textAlign = 'left';
 			ctx.fillText(stats[i].label, sx + 40, sy + 25);
 			ctx.fillStyle = INK;
-			ctx.font = '800 22px "Noto Sans KR", sans-serif';
+			ctx.font = '800 22px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillText(stats[i].value, sx + 16, sy + 56);
 			ctx.restore();
 		}
@@ -376,7 +376,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	// ── 하단: {id} / profile ──
 	ctx.save();
 	ctx.textAlign = 'left';
-	ctx.font = '500 17px "Noto Sans KR", sans-serif';
+	ctx.font = '500 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillStyle = 'rgba(169, 106, 100, 0.8)';
 	ctx.fillText(`${input.profileId} / profile`, PAD, H2 - 22);
 	ctx.restore();
@@ -407,11 +407,11 @@ const LIGHT_MUSIC_PAL = {
 function drawDateColumn(ctx: CanvasRenderingContext2D, label: string, value: string, x: number, top: number, iconColor: string): void {
 	drawIcon(ctx, 'calendar', x, top, 22, iconColor);
 	ctx.fillStyle = INK_MUTED;
-	ctx.font = '500 18px "Noto Sans KR", sans-serif';
+	ctx.font = '500 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.textAlign = 'left';
 	ctx.fillText(label, x + 30, top + 18);
 	ctx.fillStyle = INK;
-	ctx.font = '500 32px "Noto Sans KR", ui-sans-serif, sans-serif';
+	ctx.font = '500 32px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.fillText(value, x, top + 60);
 }
 

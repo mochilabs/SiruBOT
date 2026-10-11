@@ -222,26 +222,89 @@ export async function notifyGuildSettingsChanged(guildId: string): Promise<boole
     return result?.ok === true;
 }
 
-/** 라이브 탭 컨트롤러 명령 — 봇이 활성 플레이어에 즉시 적용해요 */
-export type PlayerCommandAction = "volume" | "pause" | "resume" | "skip";
+/** 라이브 탭 컨트롤러 볼륨 상한 — 봇 /volume 명령 계약(0~150)과 같아요 */
+export const PLAYER_VOLUME_MAX = 150;
 
-export interface PlayerCommandResult {
+/** 웹 플레이어 검색 결과 요약 — 봇이 Lavalink 검색 결과에서 추출해 내려줘요 */
+export interface PlayerWebTrackSummary {
+    title: string;
+    author: string;
+    durationMs: number;
+    artworkUrl: string | null;
+    uri: string;
+    sourceName: string | null;
+    isStream: boolean;
+}
+
+/** 요청자 음성·권한 상태 — 봇이 음성 채널·DJ 권한을 해석해서 내려줘요 */
+export interface PlayerVoiceContextData {
+    inVoice: boolean;
+    voiceChannelName: string | null;
+    canControl: boolean;
+}
+
+export interface PlayerWebApiResult {
     ok: boolean;
+    /** 검색 결과 — search 성공 시에만 있어요 */
+    tracks: PlayerWebTrackSummary[] | null;
+    /** 요청자 음성·권한 상태 — voice-context 성공 시에만 있어요 */
+    voice: PlayerVoiceContextData | null;
+    /** 실패 사유 — 봇이 실은 한국어 안내를 그대로 전달해요 */
+    error: string | null;
+    /** data-api 실패 상태 코드 — 라우트가 이 상태로 응답해요 */
+    status: number;
 }
 
 /**
- * 플레이어 실시간 제어를 모든 봇 프로세스에 브로드캐스트 — 대시보드 라이브 탭에서 호출해요.
- * Redis 미설정·data-api 장애 시 false — 호출자가 낙관적 UI를 되돌려요.
+ * 웹 플레이어 request/reply — 요청자(userId)를 봇에 전달해 음성 채널·권한을 봇이 판정해요.
+ * forwardDataApiPost 계약 위에서 실패 상태와 한국어 message를 그대로 보존해요.
  */
-export async function notifyPlayerCommand(
+async function requestPlayerWeb(path: string, body: unknown): Promise<PlayerWebApiResult> {
+    const result = await forwardDataApiPost<{
+        ok: true;
+        tracks: PlayerWebTrackSummary[] | null;
+        voice: PlayerVoiceContextData | null;
+    }>(path, body);
+    if (!result.ok) {
+        return { ok: false, tracks: null, voice: null, error: result.message ?? null, status: result.status };
+    }
+    return { ok: true, tracks: result.data.tracks ?? null, voice: result.data.voice ?? null, error: null, status: 200 };
+}
+
+/** 곡 검색 — 검증(권한·음성 접속)까지 봇에서 수행돼요. 실패 시 error에 안내가 실려요 */
+export function requestPlayerSearch(guildId: string, userId: string, query: string): Promise<PlayerWebApiResult> {
+    return requestPlayerWeb("/v1/internal/player/search", { guildId, userId, query });
+}
+
+/** 재생 시작 — 검색 결과의 uri(또는 플레이리스트·다시 재생 URL)를 봇이 검색해 큐잉·접속·재생해요 */
+export function requestPlayerPlay(guildId: string, userId: string, uri: string): Promise<PlayerWebApiResult> {
+    return requestPlayerWeb("/v1/internal/player/play", { guildId, userId, uri });
+}
+
+/** 라이브 제어 — volume·pause·resume·skip·stop (볼륨은 value 필수) */
+export function requestPlayerControl(
     guildId: string,
-    command: { action: PlayerCommandAction; value?: number },
-): Promise<boolean> {
-    const result = await postDataApi<PlayerCommandResult>("/v1/internal/player/command", {
+    userId: string,
+    action: "volume" | "pause" | "resume" | "skip" | "stop",
+    value?: number,
+): Promise<PlayerWebApiResult> {
+    return requestPlayerWeb("/v1/internal/player/control", {
         guildId,
-        ...command,
+        userId,
+        action,
+        ...(value !== undefined ? { value } : {})
     });
-    return result?.ok === true;
+}
+
+/** 요청자 음성·권한 상태 조회 — player 페이지 배지와 재생 UI 활성화에 써요 */
+export async function fetchPlayerVoiceContext(guildId: string, userId: string): Promise<PlayerWebApiResult> {
+    const result = await forwardDataApiGet<{ ok: true; voice: PlayerVoiceContextData | null }>(
+        `/v1/player/${guildId}/voice-context?userId=${encodeURIComponent(userId)}`,
+    );
+    if (!result.ok) {
+        return { ok: false, tracks: null, voice: null, error: result.message ?? null, status: result.status };
+    }
+    return { ok: true, tracks: null, voice: result.data.voice ?? null, error: null, status: 200 };
 }
 
 /**

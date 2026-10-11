@@ -146,6 +146,29 @@ export async function resolveCanManage(
   return (await resolveGuildsInfo(accessToken, userId, guildId)).result;
 }
 
+/** resolveGuildMembership 결과 — 권한 확인과 같은 3상태로 멤버십만 판정해요 */
+export type GuildMembershipResult =
+  | { status: "ok"; isMember: boolean }
+  | { status: "unavailable" }
+  | { status: "invalid-token" };
+
+/**
+ * 사용자 토큰으로 길드 멤버십만 확인해요 — @me/guilds 응답에 길드가 있으면 멤버예요.
+ * 관리 권한(Manage Guild)과 무관하므로, 제어 권한(DJ) 판정이 필요한 player 페이지가 이걸 써요.
+ * resolveCanManage와 같은 캐시/단일 비행을 공유해 별도의 Discord 호출을 만들지 않아요.
+ */
+export async function resolveGuildMembership(
+  accessToken: string,
+  userId: string,
+  guildId: string,
+): Promise<GuildMembershipResult> {
+  const { result, meta } = await resolveGuildsInfo(accessToken, userId, guildId);
+  if (result.status === "unavailable" || result.status === "invalid-token") {
+    return { status: result.status };
+  }
+  return { status: "ok", isMember: meta !== null };
+}
+
 /**
  * 권한 확인과 서버 표시 정보를 같은 Discord 호출로 해결해요 — 패널이 권한과 메타를
  * 따로 물어도 Discord 요청은 단일 비행 + 캐시 한 번이에요.

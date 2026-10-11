@@ -210,7 +210,7 @@ function drawPill(
 	const { x, y, icon, label, bg } = options;
 	const H = 28;
 	ctx.save();
-	ctx.font = '500 14px "Noto Sans KR", sans-serif';
+	ctx.font = '500 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const labelW = ctx.measureText(label).width;
 	const w = 12 + 16 + 5 + labelW + 12;
 	ctx.beginPath();
@@ -283,7 +283,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 
 	// NOW PLAYING 라벨 + 상태 뱃지들 (LIVE · 일시정지 · 봇 추천)
 	ctx.fillStyle = accent.primary;
-	ctx.font = '700 17px "Noto Sans KR", sans-serif';
+	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText('NOW PLAYING', tx, 52);
 	let badgeX = tx + ctx.measureText('NOW PLAYING').width + 14;
 	if (input.isStream) {
@@ -314,7 +314,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	const reqImg = input.requester?.avatarUrl ? await loadImageAllowed(input.requester.avatarUrl) : null;
 	if (input.requester?.name) {
 		ctx.save();
-		ctx.font = '500 15px "Noto Sans KR", sans-serif';
+		ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		const nameText = truncate(ctx, input.requester.name, 150);
 		const nameW = ctx.measureText(nameText).width;
 		const AV = 22;
@@ -341,7 +341,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 				ctx.fill();
 				drawIcon(ctx, 'users', pillX + 10 + AV / 2 - 7, pillY + pillH / 2 - 7, 14, 'rgba(255,255,255,0.55)');
 			}
-			ctx.font = '500 15px "Noto Sans KR", sans-serif';
+			ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillStyle = 'rgba(255,255,255,0.72)';
 			ctx.textBaseline = 'middle';
 			ctx.fillText(nameText, pillX + 10 + AV + 8, pillY + pillH / 2 + 0.5);
@@ -354,7 +354,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	// 제목 — 카드에는 곡 제목만 크게 (전체 길이는 진행바 우측에 표기)
 	const titleSize = 37;
 	ctx.fillStyle = '#ffffff';
-	ctx.font = `700 ${titleSize}px "Noto Sans KR", sans-serif`;
+	ctx.font = `700 ${titleSize}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
 	const titleText = truncate(ctx, input.title, textW);
 	ctx.fillText(titleText, tx, 104);
 
@@ -366,7 +366,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	if (input.artist) {
 		const artistY = 104 + 36;
 		ctx.fillStyle = 'rgba(255,255,255,0.55)';
-		ctx.font = '500 20px "Noto Sans KR", sans-serif';
+		ctx.font = '500 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, input.artist, textW - 40), tx, artistY);
 		artCursorY = artistY;
 	}
@@ -376,7 +376,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		// lucide 챕터 표시용 아이콘 (`corner-down-right`)
 		drawIcon(ctx, 'corner-down-right', tx, chapterY - 15, 16, accent.primary);
 		ctx.fillStyle = 'rgba(255,255,255,0.78)';
-		ctx.font = '500 20px "Noto Sans KR", sans-serif';
+		ctx.font = '500 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		const iconPad = 24;
 		const rangeText = `${truncate(ctx, input.chapter.name, textW - iconPad - 150)} (${formatClock(input.chapter.startMs)} - ${formatClock(input.chapter.endMs)})`;
 		ctx.fillText(rangeText, tx + iconPad, chapterY);
@@ -412,7 +412,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		ctx.stroke();
 		// 시간 — 좌측 현재 위치, 우측 전체 길이
 		ctx.fillStyle = 'rgba(255,255,255,0.55)';
-		ctx.font = '500 15px "Noto Sans KR", sans-serif';
+		ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(formatClock(Math.min(input.positionMs, input.durationMs)), tx, barTop + barH + 22);
 		ctx.textAlign = 'right';
 		ctx.fillText(formatClock(input.durationMs), right, barTop + barH + 22);
@@ -426,18 +426,18 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		const headerBase = (showProgress ? cursorY : artCursorY) + 38;
 		drawIcon(ctx, 'list-music', tx, headerBase - 13, 16, 'rgba(255,255,255,0.5)');
 		ctx.fillStyle = 'rgba(255,255,255,0.62)';
-		ctx.font = '700 15px "Noto Sans KR", sans-serif';
+		ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText('다음 곡', tx + 22, headerBase);
 		const maxLines = Math.min(nextList.length, Math.max(0, Math.floor((H - 44 - headerBase) / 18)));
 		for (let i = 0; i < maxLines; i++) {
 			const lineY = headerBase + 24 + 18 * i;
 			cursorY = lineY;
 			const text = `${nextList[i]!.title}${nextList[i]!.artist ? ` · ${nextList[i]!.artist}` : ''}`;
-			ctx.font = '600 13px "Noto Sans KR", sans-serif';
+			ctx.font = '600 13px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillStyle = `${accent.primary}cc`;
 			ctx.fillText(`${i + 1}.`, tx, lineY);
 			const numW = ctx.measureText(`${i + 1}.`).width;
-			ctx.font = '400 15px "Noto Sans KR", sans-serif';
+			ctx.font = '400 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillStyle = 'rgba(255,255,255,0.72)';
 			ctx.fillText(truncate(ctx, text, right - (tx + numW + 8)), tx + numW + 8, lineY);
 		}
@@ -458,14 +458,14 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	if (input.nodeId) metaSegments.push({ icon: 'radio', text: `노드 ${input.nodeId}` });
 
 	if (metaSegments.length > 0) {
-		ctx.font = '700 15px "Noto Sans KR", sans-serif';
+		ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		const brandText = input.brandLine ?? '시루봇';
 		const brandW = ctx.measureText(brandText).width;
 		const metaMaxW = right - brandW - 36 - tx;
 		// 우선순위 뒤(노드)부터 잘라요 — 최소 1세그먼트는 남긴다
 		while (metaSegments.length > 1) {
 			const total = metaSegments.reduce((acc, seg) => {
-				ctx.font = '400 18px "Noto Sans KR", sans-serif';
+				ctx.font = '400 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 				return acc + 25 + ctx.measureText(seg.text).width + 26;
 			}, 0);
 			if (total <= metaMaxW) break;
@@ -476,21 +476,21 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 			drawIcon(ctx, segment.icon, cx, metaY - 15, 17, 'rgba(255,255,255,0.5)');
 			cx += 25;
 			ctx.fillStyle = 'rgba(255,255,255,0.5)';
-			ctx.font = '400 18px "Noto Sans KR", sans-serif';
+			ctx.font = '400 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillText(segment.text, cx, metaY);
 			cx += ctx.measureText(segment.text).width + 26;
 		}
 	} else if (!input.brandLine) {
 		// 세그먼트가 없을 때의 폴백 라벨 — 브랜드가 이미 표기돼 있으면 생략해요(중복 제거).
 		ctx.fillStyle = 'rgba(255,255,255,0.5)';
-		ctx.font = '400 18px "Noto Sans KR", sans-serif';
+		ctx.font = '400 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText('SiruBOT', tx, metaY);
 	}
 
 	// ── 푸터 브랜드: 봇 이름 + 버전/해시 (이미지에 박는다) ──
 	ctx.textAlign = 'right';
 	ctx.fillStyle = `${accent.primary}bf`;
-	ctx.font = '700 15px "Noto Sans KR", sans-serif';
+	ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText(input.brandLine ?? '시루봇', right, H - 20);
 
 	return (await canvas.toBuffer('png')) as Buffer;

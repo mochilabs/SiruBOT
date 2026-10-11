@@ -52,14 +52,24 @@ const pretendard = localFont({
 	variable: "--font-pretendard",
 });
 
+// 일본어 한자 폴백 — Pretendard 본체(한·영)에 없는 일본식 한자만 담당해요.
+// 스택 매칭 시에만 로드되게 preload를 꺼요(woff2 5.3MB, unicode-range 조합 불가라 next/font 한계).
+const pretendardJP = localFont({
+	src: "../../public/PretendardJPVariable.woff2",
+	display: "swap",
+	weight: "45 920",
+	variable: "--font-pretendard-jp",
+	preload: false,
+});
+
 export default function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="ko" className={pretendard.variable} suppressHydrationWarning>
-			<body className={pretendard.className}>
+		<html lang="ko" className={`${pretendard.variable} ${pretendardJP.variable}`} suppressHydrationWarning>
+			<body>
 				<Providers>
 				<div className="min-h-svh flex flex-col relative overflow-x-clip">
 					<BackgroundShapes />

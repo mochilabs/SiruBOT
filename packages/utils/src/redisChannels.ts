@@ -99,11 +99,14 @@ export const GUILD_DATA_REQUEST_CHANNEL = 'sirubot:guild-data:request';
 export const GUILD_DATA_RESPONSE_CHANNEL = 'sirubot:guild-data:response';
 
 /**
- * 플레이어 실시간 제어 브로드캐스트 — 대시보드 라이브 탭 컨트롤러(볼륨·일시정지·재생·스킵).
- * 대시보드가 data-api `/v1/internal/player/command`에 요청하면 data-api가 이 채널로 퍼블리시하고,
- * 각 봇 프로세스는 자기 소유 플레이어에만 즉시 적용해요. 플레이어가 없으면(재생 중 아님) 조용히 무시해요.
+ * 웹 플레이어 request/reply 브로드캐스트 — 대시보드의 곡 검색·재생·라이브 제어·음성 상태 조회.
+ * 요청자의 음성 채널과 관리자/DJ 권한은 봇 캐시로만 해석할 수 있으므로 guildData 조회와 같은
+ * request/reply로 우회해요: 대시보드가 data-api `/v1/internal/player/*`에 요청하면 data-api가
+ * REQUEST 채널로 퍼블리시하고, 해당 길드를 보유한 봇 프로세스만 RESPONSE 채널로 응답해요.
+ * data-api playerWebHub가 requestId로 상관(타임아웃 포함)해 대시보드에 내려줘요.
  *
- * 페이로드: {"guildId":"<길드 ID>","action":"volume"|"pause"|"resume"|"skip","value"?:<0~150 정수>}
- * - volume은 value 필수 — 봇이 guildService.updateVolume으로 저장한 뒤 활성 플레이어에 setVolume해요.
+ * 페이로드: playerWebRequestSchema / playerWebResponseSchema (playerWeb.ts)
+ * kind: 'search' | 'play' | 'control' | 'voice-context'
  */
-export const PLAYER_COMMAND_CHANNEL = 'sirubot:player-command';
+export const PLAYER_WEB_REQUEST_CHANNEL = 'sirubot:player-web:request';
+export const PLAYER_WEB_RESPONSE_CHANNEL = 'sirubot:player-web:response';

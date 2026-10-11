@@ -19,13 +19,13 @@ export class AudioService {
 	/**
 	 * Gets an existing player or creates a new one for the guild
 	 */
-	public async getOrCreatePlayer(guildId: string, voiceChannelId: string, textChannelId: string): Promise<Player> {
+	public async getOrCreatePlayer(guildId: string, voiceChannelId: string, textChannelId: string | null): Promise<Player> {
 		return (
 			container.audio.getPlayer(guildId) ||
 			(await container.audio.createPlayer({
 				guildId,
 				voiceChannelId,
-				textChannelId,
+				textChannelId: textChannelId ?? undefined,
 				selfDeaf: true,
 				selfMute: false,
 				instaUpdateFiltersFix: true,

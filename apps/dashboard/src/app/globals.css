@@ -10,8 +10,20 @@
 /* =============================================================================
    2. Light & dark semantic theme variables
    ============================================================================= */
+/* 이모지 폴백 웹폰트 — 시스템 이모지 폰트가 없는 클라이언트(리눅스 등)만 로드해요(unicode-range lazy load).
+   Twemoji by Twitter, Inc and other contributors — CC-BY 4.0, 고지는 /licenses 페이지에 있어요. */
+@font-face {
+	font-family: "Twemoji Mozilla";
+	src: url("/fonts/TwemojiMozilla.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+00A9, U+00AE, U+203C, U+2049, U+2122, U+2139, U+2194-2199, U+21A9-21AA, U+231A-231B, U+23CF, U+23E9-23FA, U+24C2, U+25AA-25FE, U+2600-27BF, U+2934-2935, U+2B00-2B5F, U+3030, U+303D, U+3297, U+3299, U+FE0F, U+20E3, U+1F000-1FAFF, U+1FB00-1FBFF;
+}
+
 :root {
-	--font-pretendard: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	/* Pretendard(next/font) → Pretendard JP(일본어 한자) → Twemoji(이모지) → 네이티브 이모지 → 시스템 폴백 */
+	--font-stack: var(--font-pretendard), var(--font-pretendard-jp), "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
 	--background: #fef5f9;
 	--foreground: #2d1b1e;
@@ -125,7 +137,7 @@
    4. Typography tokens
    ============================================================================= */
 @theme inline {
-	--font-sans: var(--font-pretendard);
+	--font-sans: var(--font-stack);
 
 	--text-2xs: 0.6875rem;
 	--text-2xs--line-height: 1rem;
@@ -358,6 +370,7 @@
 
 @layer base {
 	body {
+		font-family: var(--font-stack);
 		background-color: var(--background);
 	}
 

@@ -1,5 +1,11 @@
 import { container } from '@sapphire/framework';
-import { botProfileStateChannel, GUILD_DATA_RESPONSE_CHANNEL, memberGreetingStateChannel, playerStateChannel } from '@sirubot/utils';
+import {
+	botProfileStateChannel,
+	GUILD_DATA_RESPONSE_CHANNEL,
+	memberGreetingStateChannel,
+	PLAYER_WEB_RESPONSE_CHANNEL,
+	playerStateChannel
+} from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
@@ -270,6 +276,26 @@ export class RedisStore {
 				.catch((error) => this.logger.debug(`Guild data response publish failed: ${error}`));
 		} catch (error) {
 			this.logger.debug(`Guild data response publish skipped: ${error}`);
+		}
+	}
+
+	/**
+	 * 웹 플레이어(검색·재생·제어·음성 상태) 응답을 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:player-web:response` — guildId 접두사 없는 고정 채널이에요).
+	 * data-api의 playerWebHub가 requestId 상관으로 구독해 대시보드 player 페이지에 서빙해요.
+	 * fire-and-forget — publishGuildDataResponse와 같은 안전 규칙을 따라요.
+	 */
+	public publishPlayerWebResponse(payload: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug('Player web response publish skipped (redis not ready)');
+				return;
+			}
+			void this.redis
+				.publish(PLAYER_WEB_RESPONSE_CHANNEL, payload)
+				.catch((error) => this.logger.debug(`Player web response publish failed: ${error}`));
+		} catch (error) {
+			this.logger.debug(`Player web response publish skipped: ${error}`);
 		}
 	}
 

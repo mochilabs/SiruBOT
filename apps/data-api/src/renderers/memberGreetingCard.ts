@@ -143,7 +143,7 @@ async function drawGreetingAvatar(ctx: CanvasRenderingContext2D, context: Greeti
 	ctx.fillStyle = '#35212a';
 	ctx.fill();
 	ctx.fillStyle = 'rgba(201,168,181,0.6)';
-	ctx.font = '600 64px "Noto Sans KR", sans-serif';
+	ctx.font = '600 64px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.fillText('♪', cx, AVATAR_CY + 4);
@@ -164,7 +164,7 @@ function drawGreetingText(ctx: CanvasRenderingContext2D, text: GreetingText, con
 	// x가 가장자리에 가까울 때 잘리지 않게 — 가까운 가장자리까지의 폭으로 제한
 	const maxW = Math.max(120, 2 * Math.min(x, CARD_W - x) - TEXT_MARGIN);
 	ctx.save();
-	ctx.font = `${text.bold ? 700 : 500} ${text.size}px "Noto Sans KR", sans-serif`;
+	ctx.font = `${text.bold ? 700 : 500} ${text.size}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.fillStyle = text.color;

@@ -103,12 +103,12 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 	ctx.fillStyle = '#fce7f3';
-	ctx.font = '800 26px "Noto Sans KR", sans-serif';
+	ctx.font = '800 26px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText('오늘의 운세', PAD, 58);
 	if (input.date) {
 		ctx.textAlign = 'right';
 		ctx.fillStyle = '#c9a8b5';
-		ctx.font = '500 19px "Noto Sans KR", sans-serif';
+		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(input.date, W - PAD, 56);
 		ctx.textAlign = 'left';
 	}
@@ -116,14 +116,14 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	// ── 별자리 이름 + 순위 뱃지 ──
 	const nameY = 124;
 	ctx.fillStyle = theme.primary;
-	ctx.font = '800 50px "Noto Sans KR", sans-serif';
+	ctx.font = '800 50px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const zodiacText = zodiac.jp ? `${zodiac.ko} · ${zodiac.jp}` : zodiac.ko;
 	ctx.fillText(zodiacText, PAD, nameY);
 
 	// 순위 뱃지 (이름 오른쪽, 이전보다 크게)
 	const nameW = ctx.measureText(zodiacText).width;
 	ctx.save();
-	ctx.font = '800 20px "Noto Sans KR", sans-serif';
+	ctx.font = '800 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	const rankText = `${input.rank}위`;
 	const rw = ctx.measureText(rankText).width + 44;
 	const rx = PAD + nameW + 24;
@@ -172,20 +172,20 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 			const iconSize = 16;
 			const innerX = bx + 24;
 			ctx.fillStyle = '#c9a8b5';
-			ctx.font = '600 15px "Noto Sans KR", sans-serif';
+			ctx.font = '600 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			const labelY = boxesTop + 34;
 			drawIcon(ctx, box.icon, innerX, labelY - 5 - iconSize / 2, iconSize, theme.soft);
 			ctx.fillText(box.label, innerX + iconSize + 8, labelY);
 
 			ctx.fillStyle = theme.soft;
-			ctx.font = '700 26px "Noto Sans KR", sans-serif';
+			ctx.font = '700 26px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillText(truncate(ctx, box.value, boxW - 48), innerX, boxesTop + 78);
 		}
 	} else {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.fillStyle = '#c9a8b5';
-		ctx.font = '500 22px "Noto Sans KR", sans-serif';
+		ctx.font = '500 22px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText('오늘의 럭키 정보가 없어요', W / 2, (HEADER_H + H) / 2);
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'alphabetic';
@@ -194,7 +194,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	// ── 하단 시그니처 ──
 	ctx.textAlign = 'right';
 	ctx.fillStyle = '#c9a8b5';
-	ctx.font = '700 14px "Noto Sans KR", sans-serif';
+	ctx.font = '700 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText('SiruBOT', W - PAD, H - 24);
 	const sigW = ctx.measureText('SiruBOT').width;
 	ctx.save();
