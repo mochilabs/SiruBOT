@@ -307,6 +307,36 @@ export async function fetchPlayerVoiceContext(guildId: string, userId: string): 
     return { ok: true, tracks: null, voice: result.data.voice ?? null, error: null, status: 200 };
 }
 
+/** 임시 방(JTC) 마커 채널 셋업 결과 — 봇 tempVoiceService가 수행한 결과예요 */
+export interface JtcSetupApiResult {
+    ok: boolean;
+    /** 마커 채널 ID — 성공 시에만 있어요 */
+    markerChannelId: string | null;
+    /** 실패 사유 — 봇이 실은 한국어 안내를 그대로 전달해요 */
+    error: string | null;
+    /** data-api 실패 상태 코드 — 라우트가 이 상태로 응답해요 */
+    status: number;
+}
+
+/**
+ * JTC 마커 채널 셋업을 봇에 위임해요 — 채널 생성·이동은 Discord 규격상 봇 토큰으로만 가능하고,
+ * 유저 OAuth 토큰으로는 403이 나요. 검증 실패 시 error에 안내가 실려요.
+ */
+export async function requestJtcSetup(
+    guildId: string,
+    userId: string,
+    categoryId: string,
+): Promise<JtcSetupApiResult> {
+    const result = await forwardDataApiPost<{ ok: true; markerChannelId: string | null }>(
+        "/v1/internal/jtc/setup",
+        { guildId, userId, categoryId },
+    );
+    if (!result.ok) {
+        return { ok: false, markerChannelId: null, error: result.message ?? null, status: result.status };
+    }
+    return { ok: true, markerChannelId: result.data.markerChannelId ?? null, error: null, status: 200 };
+}
+
 /**
  * data-api 상태 조회 — 관제 페이지(/api/data-api)용. 폴백 체인(DATA_API_AUTH_KEY || AUTH_KEY)은
  * 기존 방침을 유지한다. 키가 없으면(또는 공백뿐이면) 실패시키지 않고 경고 후 스킵.

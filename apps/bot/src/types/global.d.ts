@@ -49,6 +49,7 @@ declare module '@sapphire/pieces' {
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
 		playerWebResponder?: import('../services/playerWebResponder.ts').PlayerWebResponder;
+		jtcSetupResponder?: import('../services/jtcSetupResponder.ts').JtcSetupResponder;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../services/memberGreetingService.ts').MemberGreetingService;
 		guildDataResponder?: import('../services/guildDataResponder.ts').GuildDataResponder;

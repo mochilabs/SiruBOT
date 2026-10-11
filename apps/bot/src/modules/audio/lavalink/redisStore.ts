@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import {
 	botProfileStateChannel,
 	GUILD_DATA_RESPONSE_CHANNEL,
+	JTC_SETUP_RESPONSE_CHANNEL,
 	memberGreetingStateChannel,
 	PLAYER_WEB_RESPONSE_CHANNEL,
 	playerStateChannel
@@ -296,6 +297,26 @@ export class RedisStore {
 				.catch((error) => this.logger.debug(`Player web response publish failed: ${error}`));
 		} catch (error) {
 			this.logger.debug(`Player web response publish skipped: ${error}`);
+		}
+	}
+
+	/**
+	 * JTC 마커 채널 셋업 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:jtc-setup:response` — guildId 접두사 없는 고정 채널이에요).
+	 * data-api의 jtcSetupHub가 requestId 상관으로 구독해 대시보드 설정 화면에 서빙해요.
+	 * fire-and-forget — publishPlayerWebResponse와 같은 안전 규칙을 따라요.
+	 */
+	public publishJtcSetupResponse(payload: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug('JTC setup response publish skipped (redis not ready)');
+				return;
+			}
+			void this.redis
+				.publish(JTC_SETUP_RESPONSE_CHANNEL, payload)
+				.catch((error) => this.logger.debug(`JTC setup response publish failed: ${error}`));
+		} catch (error) {
+			this.logger.debug(`JTC setup response publish skipped: ${error}`);
 		}
 	}
 
