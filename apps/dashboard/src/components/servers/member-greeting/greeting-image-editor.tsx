@@ -38,6 +38,7 @@ const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp";
 
 interface GreetingImageEditorProps {
 	guildId: string;
+	guildName: string | null;
 	kind: GreetingKind;
 	config: GreetingConfig;
 	image: GreetingImage;
@@ -48,7 +49,7 @@ interface GreetingImageEditorProps {
 }
 
 /** 레이어 기반 드래그 이미지 편집기 — 브라우저 canvas 실시간 미리보기 + 레이어/속성 패널 */
-export function GreetingImageEditor({ guildId, config, image, saving, active, onPatch }: GreetingImageEditorProps) {
+export function GreetingImageEditor({ guildId, guildName, config, image, saving, active, onPatch }: GreetingImageEditorProps) {
 	const toast = useToast();
 	const { data: session } = useSession();
 	const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,11 +86,11 @@ export function GreetingImageEditor({ guildId, config, image, saving, active, on
 		const ctx = canvas?.getContext("2d");
 		if (!canvas || !ctx) return;
 		let cancelled = false;
-		void drawGreetingPreview(ctx, image, { selectedId, avatarSrc, guildName: "" }, () => cancelled);
+		void drawGreetingPreview(ctx, image, { selectedId, avatarSrc, guildName: guildName ?? "" }, () => cancelled);
 		return () => {
 			cancelled = true;
 		};
-	}, [active, image, selectedId, avatarSrc]);
+	}, [active, image, selectedId, avatarSrc, guildName]);
 
 	// ── 드래그 이동 (pointer capture + rAF 스로틀) ──
 	const dragRef = useRef<{ layerId: string; pointerId: number } | null>(null);
@@ -218,7 +219,7 @@ export function GreetingImageEditor({ guildId, config, image, saving, active, on
 
 	// ── 업로드 (이미지 레이어 / 커스텀 배경) — POST /background로 dataURI 정규화를 재사용해요 ──
 	const uploadFile = useCallback(
-		async (file: File | null): Promise<string | null> => {
+		async (file: File | null, mode: "layer" | "background"): Promise<string | null> => {
 			if (!file) return null;
 			if (file.size > MAX_UPLOAD_BYTES) {
 				toast.error("이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요.");
@@ -230,7 +231,8 @@ export function GreetingImageEditor({ guildId, config, image, saving, active, on
 			}
 			const form = new FormData();
 			form.append("file", file);
-			const res = await fetch(`/api/servers/${guildId}/greeting/background`, { method: "POST", body: form });
+			const endpoint = mode === "layer" ? "layer-image" : "background";
+			const res = await fetch(`/api/servers/${guildId}/greeting/${endpoint}`, { method: "POST", body: form });
 			if (!res.ok) throw await toApiError(res, "이미지를 준비하지 못했어요.");
 			const body = (await res.json()) as { dataUri?: unknown };
 			if (typeof body.dataUri !== "string" || !body.dataUri.startsWith("data:image/")) {
@@ -245,7 +247,7 @@ export function GreetingImageEditor({ guildId, config, image, saving, active, on
 		async (file: File | null) => {
 			setUploading(true);
 			try {
-				const dataUri = await uploadFile(file);
+				const dataUri = await uploadFile(file, "layer");
 				if (!dataUri) return;
 				const img = await loadImage(dataUri);
 				let width = 400;
@@ -270,7 +272,7 @@ export function GreetingImageEditor({ guildId, config, image, saving, active, on
 		async (file: File | null) => {
 			setBackgroundUploading(true);
 			try {
-				const dataUri = await uploadFile(file);
+				const dataUri = await uploadFile(file, "background");
 				if (!dataUri) return;
 				patchImage({ ...image, background: { presetId: null, dataUri } });
 				toast.success("배경 이미지를 넣었어요.", "인사 설정을 저장하면 모든 카드에 적용돼요.");

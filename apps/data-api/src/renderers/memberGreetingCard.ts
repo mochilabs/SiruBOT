@@ -288,3 +288,55 @@ export async function normalizeGreetingBackground(dataUri: string): Promise<stri
 		scale = scale * (nextLongest / longest);
 	}
 }
+
+// ── 이미지 레이어 업로드 정규화 — 투명도(알파)를 보존해요 ──
+// 스티커/로고 레이어는 투명 배경이 필요해서 JPEG(배경)와 달리 PNG로 저장해요.
+// 저장 비용 상한은 배경과 같게 두고, 무손실 PNG 인코딩 기준으로 판정해요.
+const LAYER_MAX_SIDE = 1200;
+const LAYER_MAX_BYTES = 900_000;
+const LAYER_STEP_PX = 200;
+const LAYER_MIN_SIDE = 200;
+
+/**
+ * 업로드 이미지 레이어 축소·재인코딩 — 투명도를 보존하기 위해 PNG로 저장해요.
+ * 가장 긴 변 1200px, PNG 인코딩 900KB 넘으면 200px씩 더 줄여요.
+ * 리턴은 data:image/png;base64,…
+ */
+export async function normalizeGreetingLayerImage(dataUri: string): Promise<string> {
+	const raw = decodeDataUri(dataUri);
+	if (!raw) {
+		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
+	}
+	const { Canvas, loadImage } = await import('skia-canvas');
+	let source: CanvasDrawable;
+	try {
+		source = (await loadImage(raw)) as unknown as CanvasDrawable;
+	} catch {
+		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
+	}
+	const iw = (source as { width: number }).width;
+	const ih = (source as { height: number }).height;
+	if (!iw || !ih) {
+		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
+	}
+
+	// 첫 목표 — 가장 긴 변 1200px 이하
+	let scale = Math.min(1, LAYER_MAX_SIDE / Math.max(iw, ih));
+	for (;;) {
+		const w = Math.max(1, Math.round(iw * scale));
+		const h = Math.max(1, Math.round(ih * scale));
+		const canvas: Canvas = new Canvas(w, h);
+		const drawCtx = canvas.getContext('2d');
+		drawCtx.drawImage(source, 0, 0, w, h);
+		const encoded = await canvas.toBuffer('png');
+		if (encoded.length <= LAYER_MAX_BYTES) {
+			return `data:image/png;base64,${encoded.toString('base64')}`;
+		}
+		const longest = Math.max(w, h);
+		const nextLongest = longest - LAYER_STEP_PX;
+		if (nextLongest < LAYER_MIN_SIDE) {
+			throw new GreetingBackgroundError('image_too_large', '이미지를 충분히 줄일 수 없어요 — 더 작은 이미지로 시도해 주세요.');
+		}
+		scale = scale * (nextLongest / longest);
+	}
+}

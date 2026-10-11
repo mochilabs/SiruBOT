@@ -36,11 +36,11 @@ function sampleTemplate(template: string): string {
 		.replaceAll("{멤버수}", "123");
 }
 
-export function MemberGreetingSettings({ guildId, visible }: { guildId: string; visible: boolean }) {
-	return <MemberGreetingPanel guildId={guildId} visible={visible} />;
+export function MemberGreetingSettings({ guildId, visible, guildName }: { guildId: string; visible: boolean; guildName: string | null }) {
+	return <MemberGreetingPanel guildId={guildId} visible={visible} guildName={guildName} />;
 }
 
-function MemberGreetingPanel({ guildId, visible }: { guildId: string; visible: boolean }) {
+function MemberGreetingPanel({ guildId, visible, guildName }: { guildId: string; visible: boolean; guildName: string | null }) {
 	const toast = useToast();
 	const { pair, drafts, error, isLoading, saving, save, patchKind, testPending, testResults, startTest, reload } =
 		useMemberGreeting(guildId);
@@ -102,6 +102,7 @@ function MemberGreetingPanel({ guildId, visible }: { guildId: string; visible: b
 					kind="welcome"
 					guildId={guildId}
 					visible={visible}
+					guildName={guildName}
 					draft={drafts.welcome}
 					saved={savedOr("welcome")}
 					dirty={dirtyWelcome}
@@ -117,6 +118,7 @@ function MemberGreetingPanel({ guildId, visible }: { guildId: string; visible: b
 					kind="goodbye"
 					guildId={guildId}
 					visible={visible}
+					guildName={guildName}
 					draft={drafts.goodbye}
 					saved={savedOr("goodbye")}
 					dirty={dirtyGoodbye}
@@ -138,6 +140,7 @@ function MemberGreetingPanel({ guildId, visible }: { guildId: string; visible: b
 interface GreetingSectionProps {
 	guildId: string;
 	visible: boolean;
+	guildName: string | null;
 	kind: GreetingKind;
 	draft: GreetingConfig;
 	saved: GreetingConfig;
@@ -154,6 +157,7 @@ interface GreetingSectionProps {
 function GreetingSection({
 	guildId,
 	visible,
+	guildName,
 	kind,
 	draft,
 	saved,
@@ -303,7 +307,7 @@ function GreetingSection({
 			</Field>
 
 			{draft.useImage && draft.image && (
-				<GreetingImageEditor guildId={guildId} kind={kind} config={draft} image={draft.image} saving={saving} active={visible} onPatch={onPatch} />
+				<GreetingImageEditor guildId={guildId} kind={kind} config={draft} image={draft.image} saving={saving} active={visible} guildName={guildName} onPatch={onPatch} />
 			)}
 
 			<div className="space-y-2 rounded-card border border-border-subtle bg-surface-2 p-4">

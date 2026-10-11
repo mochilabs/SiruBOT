@@ -102,7 +102,7 @@ export default async function ServerDashboardPage({
         }
         description="AI 채팅·음악·채널·임시 음성 등 서버 설정을 한 곳에서 관리해요."
       />
-      <ServerDashboard guildId={id} manageable={manageableResolved} />
+      <ServerDashboard guildId={id} manageable={manageableResolved} guildName={guildMeta?.name ?? null} />
     </Container>
   );
 }
