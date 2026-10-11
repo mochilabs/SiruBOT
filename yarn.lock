@@ -2954,11 +2954,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sirubot/utils@workspace:packages/utils"
   dependencies:
+    "@redis/client": "npm:^5.8.2"
     "@sapphire/ts-config": "npm:^5.0.1"
     "@sentry/node": "npm:^9.15.0"
     "@sentry/profiling-node": "npm:^9.15.0"
     "@types/node": "npm:^22.18.1"
+    discord.js: "npm:^14.0.0"
     tslog: "npm:^4.10.2"
+    undici: "npm:^7.16.0"
     zod: "npm:^4.1.11"
   peerDependencies:
     "@sapphire/framework": ^5.3.6
