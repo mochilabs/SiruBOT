@@ -7,7 +7,7 @@ import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { getDisplayNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
+import { getDisplayNowPlayingCard, currentChapterIndex } from '../lavalink/player/nowPlayingCard.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
 
@@ -31,7 +31,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		return this.none();
 	}
 
-	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat']);
+	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter']);
 	private static readonly DJ_QUEUE_SUBS = new Set(['remove', 'jumpTo']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
@@ -91,6 +91,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				break;
 			case 'queue':
 				await this.handleQueue(interaction, player, subcommand);
+				break;
+			case 'chapter':
+				await this.handleChapter(interaction, player, subcommand);
 				break;
 			default:
 				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
@@ -157,6 +160,56 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, toSet);
 		await player.setRepeatMode(repeatUpdated);
 		if (repeatUpdated !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
+		if (!(await this.safeUpdate(interaction, player))) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
+				})
+				.catch(() => null);
+		}
+	}
+
+	/**
+	 * 챕터 건너뛰기 — 현재 위치 기준으로 이전·다음 챕터 시작으로 seek해요.
+	 * '이전'은 현재 챕터를 5초 이상 들었으면 그 챕터 처음으로 되돌려요 (Discord 건너뛰기 관습).
+	 */
+	private async handleChapter(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
+		const chapters = player.chapters ?? [];
+		const index = currentChapterIndex(player);
+		if (chapters.length === 0) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView(`${emoji('cd')} 이 곡에는 챕터가 없어요.`)]
+			});
+			return;
+		}
+
+		const position = player.position ?? 0;
+		let target: number | null = null;
+		if (subcommand === 'prev') {
+			if (index !== null && position - chapters[index]!.start > 5_000) {
+				target = chapters[index]!.start;
+			} else if (index !== null && index > 0) {
+				target = chapters[index - 1]!.start;
+			} else if (index === null) {
+				// 챕터 경계 밖(보간 지연 등) — 위치보다 앞선 마지막 챕터로 되돌려요.
+				target = [...chapters].reverse().find((chapter) => chapter.start < position)?.start ?? chapters[0]!.start;
+			}
+		} else if (subcommand === 'next') {
+			// 현재 챕터 다음 또는 경계 밖이면 위치보다 뒤인 첫 챕터로 건너뛰어요.
+			target = chapters.find((chapter) => chapter.start > position)?.start ?? null;
+		}
+
+		if (target === null) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [errorView(`${emoji('cd')} 건너뛸 챕터가 더 없어요.`)]
+			});
+			return;
+		}
+
+		await player.seek(target);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
 				.reply({

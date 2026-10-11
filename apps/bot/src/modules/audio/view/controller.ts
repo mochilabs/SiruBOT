@@ -28,6 +28,7 @@ import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPla
 import { repeatEmoji } from './repeat.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { currentChapterIndex } from '../lavalink/player/nowPlayingCard.ts';
 
 type controllerViewProps = {
 	player: CustomPlayer;
@@ -94,6 +95,20 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		)
 		.setEmoji(repeatEmoji(player.repeatMode));
 
+	// 챕터 건너뛰기 버튼 — 챕터가 있는 영상(장문 YouTube)에만 노출해요.
+	// 현재 챕터 시작에서 5초 이상 지났으면 '이전 챕터'가 현재 챕터로 되돌려요.
+	const chapters = player.chapters ?? [];
+	const chapterIndex = chapters.length > 0 ? currentChapterIndex(player) : null;
+	const atChapterStart = chapterIndex !== null && (player.position ?? 0) - chapters[chapterIndex]!.start < 5_000;
+	const chapterPrevButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('chapter:prev'))
+		.setEmoji(emoji('chapters_prev', '⏪'))
+		.setDisabled(chapterIndex === null || (chapterIndex === 0 && atChapterStart));
+	const chapterNextButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('chapter:next'))
+		.setEmoji(emoji('chapters_next', '⏩'))
+		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
+
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
 	// 1행: 재생 제어(prev·pause·next·stop·대기열), 2행: 반복 (Discord 한 행당 버튼 5개 제한)
 	// 대기열 버튼은 볼 대상(유저 대기열)이 비었으면 비활성화 — 핸들러의 빈 대기열 처리는 안전망으로 유지.
@@ -106,7 +121,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		[prevButton, pauseButton, nextButton, stopButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
 	);
-	const utilityActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents([repeatButton.setStyle(ButtonStyle.Secondary)]);
+	// 챕터가 있을 때만 버튼 행에 끼워 넣어요 — 없으면 기존처럼 반복 버튼만.
+	const utilityComponents = chapters.length > 0 ? [chapterPrevButton, chapterNextButton, repeatButton] : [repeatButton];
+	const utilityActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.map((e) => e.setStyle(ButtonStyle.Secondary)));
 
 	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
 	if (nowPlayingCardUrl) {
