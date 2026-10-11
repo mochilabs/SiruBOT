@@ -20,6 +20,7 @@ import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../services/memberGreetingService.ts';
+import { GuildDataResponder } from '../services/guildDataResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -92,7 +93,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.tempVoiceService = new TempVoiceService();
 		container.aiMemoryService = new AiMemoryService();
 
-		// Redis 구독 3형제 — bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
+		// Redis 구독 4형제 — bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
 		const subscriberLogger = {
 			info: (msg: string) => container.logger.info(msg),
 			warn: (msg: string) => container.logger.warn(msg),
@@ -102,6 +103,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger);
 		container.botProfileService = new BotProfileService(subscriberLogger);
 		container.memberGreetingService = new MemberGreetingService(subscriberLogger);
+		container.guildDataResponder = new GuildDataResponder(subscriberLogger);
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[], shardInfo: { shardIds: number[]; shardCount: number }) {

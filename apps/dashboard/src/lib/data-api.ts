@@ -145,6 +145,35 @@ export async function forwardDataApiPost<T>(path: string, body: unknown): Promis
     }
 }
 
+/**
+ * data-api GET 프록시 — forwardDataApiPost와 동일한 계약으로 실패 상태와 본문 message(한국어)를 파기하지 않아요.
+ * 채널·역할 목록처럼 data-api의 실패 안내(502 봇 무응답·503 Redis 장애)를 사용자에게 그대로 보여줘야 하는 곳에서 써요.
+ */
+export async function forwardDataApiGet<T>(path: string): Promise<DataApiForwardResult<T>> {
+    const authKey = DATA_API_AUTH_KEY.trim();
+    if (!authKey) {
+        console.warn("[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.");
+        return { ok: false, status: 503, message: null };
+    }
+    try {
+        const res = await fetch(`${DATA_API_URL}${path}`, {
+            cache: "no-store",
+            headers: { Authorization: authKey },
+        });
+        if (!res.ok) {
+            const payload = (await res.json().catch(() => null)) as { message?: unknown } | null;
+            return {
+                ok: false,
+                status: res.status,
+                message: typeof payload?.message === "string" && payload.message.trim() ? payload.message : null,
+            };
+        }
+        return { ok: true, data: (await res.json()) as T };
+    } catch {
+        return { ok: false, status: 502, message: null };
+    }
+}
+
 export type DataApiImageResult = { ok: true; buffer: ArrayBuffer; contentType: string } | DataApiForwardFail;
 
 /**

@@ -127,6 +127,7 @@ export const main = async () => {
 		await container.guildSettingsInvalidator?.stop().catch(() => null);
 		await container.botProfileService?.stop().catch(() => null);
 		await container.memberGreetingService?.stop().catch(() => null);
+		await container.guildDataResponder?.stop().catch(() => null);
 
 		// 종료 전에 저널을 비운다 — Redis를 끊은 뒤엔 pending 큐/플레이어 변경이 소실된다.
 		// 세션 저장(위)은 Redis 연결이 필요한 첫 단계고, 여기서 남은 저널을 마저 민 뒤 끊는다.
@@ -185,6 +186,9 @@ export const main = async () => {
 		// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
 		// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
 		await container.memberGreetingService?.start(envParseString('REDIS_URL'));
+		// 대시보드 채널/역할 목록 요청 → data-api → Redis → 봇 응답.
+		// 실패해도 부팅은 계속돼요 — 대시보드 패널 조회만 타임아웃 폴백으로 끝나요.
+		await container.guildDataResponder?.start(envParseString('REDIS_URL'));
 
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));

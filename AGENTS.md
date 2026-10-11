@@ -1,6 +1,17 @@
 # SiruBOT — Agent Instructions
 
-Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
+Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
+
+## Skills
+
+Load the matching skill (`.opencode/skills/<id>/SKILL.md`) before starting work in its domain — don't recreate its templates inline:
+
+- `codebase-search` — semantic search / orienting in the repo before editing unfamiliar code
+- `sapphire-command` — bot slash commands; `sapphire-precondition` — command guards (both under `apps/bot/src/modules/`)
+- `dashboard-conventions` — Next.js dashboard code (SWR/fetcher, zustand, API routes + zod, next-auth, security)
+- `design-tokens` — dashboard color/type/spacing/radius/dark-mode tokens; `ui-primitives` — primitives/overlay/layout components; `discord-patterns` — Discord-style UI
+- `scroll-effects` — dashboard scroll/motion effects
+- `ai-slop-cleaner` — deletion-first cleanup of duplicated/dead/over-abstracted code
 
 ## Semantic code search (opencode index)
 
@@ -9,6 +20,8 @@ The repo is indexed (4,673 chunks, auto-incrementing via `.opencode/index/codeba
 - `codebase_context` — repo-scale question with cited lines; `codebase_edit_context` — pre-edit context for a known symbol
 - `call_graph` / `call_graph_path` — callers/callees and connection paths between symbols
 - If index readiness is unknown, check `index_status` first. The watcher re-indexes automatically after ~10s; large changes may need `/index`.
+
+**Rule: if you are unfamiliar with this codebase (or the area you are about to touch), search it before you edit.** Orient with the semantic tools, read the relevant source, then change code — never guess file/function locations from memory. See the `codebase-search` skill (`.opencode/skills/codebase-search/SKILL.md`) for the full tool guide and configuration reference (open-codebase-index docs: https://github.com/Helweg/open-codebase-index/blob/main/docs/configuration.md).
 
 ## Local documentation (`localdocs/`)
 
@@ -35,7 +48,7 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 
 - Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×9, data-api ×3, utils ×4, shardclient ×1 as of f90fd77); dashboard/shardmanager/prisma have no tests yet.
+- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×11, data-api ×6, utils ×4, shardclient ×1 as of 2026-10-11, src 기준 — data-api는 `dist/` 빌드 산출물 테스트까지 함께 매칭되어 중복 실행됨); dashboard/shardmanager/prisma have no tests yet.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
 - Turbo `build` depends on `^lint:fix ^typecheck ^generate ^build` — building one app rebuilds deps.
 
@@ -54,7 +67,7 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 
 - Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets.
 - `LAVALINK_HOSTS` format (`parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
-- Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
+- Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop (guildSettingsInvalidator·botProfileService·memberGreetingService·guildDataResponder) → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
 - Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
 
 <!-- antislop:start -->

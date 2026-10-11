@@ -31,6 +31,7 @@ import { memoryTidyStatus } from '../services/memoryTidy.ts';
 import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
 import { getBotProfile, botProfileHubStatus } from '../services/botProfileHub.ts';
 import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
+import { requestGuildData, guildDataHubStatus, type GuildDataFailureReason } from '../services/guildDataHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 
@@ -61,6 +62,20 @@ function sendError(reply: { code: (n: number) => any }, error: unknown): any {
 	});
 }
 
+/** 길드 데이터 요청 실패 이유를 HTTP 응답으로 매핑해요 — redis_unavailable=503, timeout(봇 미응답)=502 */
+function replyGuildDataFailure(reply: { code: (n: number) => any }, reason: GuildDataFailureReason): any {
+	if (reason === 'redis_unavailable') {
+		return reply.code(503).send({
+			error: 'redis_unavailable',
+			message: 'Redis가 연결되어 있지 않아요. 잠시 후 다시 시도해 주세요.'
+		});
+	}
+	return reply.code(502).send({
+		error: 'bot_timeout',
+		message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
+	});
+}
+
 export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps): Promise<void> {
 	fastify.get('/api/health', async () => ({
 		ok: true,
@@ -85,6 +100,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		ohaasa: ohaasaStatus(),
 		playback: playbackSnapshot(),
 		playerHub: playerHubStatus(),
+		guildDataHub: guildDataHubStatus(),
 		memoryTidy: memoryTidyStatus()
 	}));
 
@@ -664,6 +680,36 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		try {
 			const { guildId } = guildIdParams.parse(request.params);
 			return reply.send(getGreetingTestResult(guildId));
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 길드 데이터 (대시보드 → Redis request → 봇 캐시 → requestId 상관 응답) ──
+	// 대시보드는 사용자 토큰으로 Discord API를 직접 호출하면 401이 나서 봇 권한으로 우회해요.
+	// data-api가 request 채널(sirubot:guild-data:request)로 요청을 퍼블리시하면 해당 길드를 보유한
+	// 봇 프로세스가 자기 캐시에서 목록을 응답 채널(sirubot:guild-data:response)로 돌려주고,
+	// guildDataHub가 requestId로 요청과 응답을 상관해 내려줘요. Redis가 없으면 503,
+	// 봇이 3초 안에 응답하지 않으면(봇 미보유·미연결 포함) 502로 실패해요.
+	fastify.get('/v1/guilds/:guildId/channels', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			const result = await requestGuildData(guildId, 'channels');
+			if (!result.ok) return replyGuildDataFailure(reply, result.reason);
+			metrics.request('guild-data-channels');
+			return reply.send({ channels: result.channels ?? [] });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	fastify.get('/v1/guilds/:guildId/roles', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			const result = await requestGuildData(guildId, 'roles');
+			if (!result.ok) return replyGuildDataFailure(reply, result.reason);
+			metrics.request('guild-data-roles');
+			return reply.send({ roles: result.roles ?? [] });
 		} catch (error) {
 			return sendError(reply, error);
 		}

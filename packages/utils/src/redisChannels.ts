@@ -80,3 +80,20 @@ export function playerStateChannel(guildId: string): string {
 export function guildIdFromPlayerStateChannel(channel: string): string | null {
 	return channel.startsWith(PLAYER_STATE_CHANNEL_PREFIX) ? channel.slice(PLAYER_STATE_CHANNEL_PREFIX.length) : null;
 }
+
+/**
+ * 길드 데이터(채널/역할 목록) 조회 요청 브로드캐스트.
+ * 대시보드가 사용자 토큰으로 Discord API를 직접 호출하면 401이 나므로 data-api가 이 채널로
+ * 요청을 퍼블리시하고, 모든 봇 프로세스가 구독해 자기 길드를 보유한 프로세스만 응답해요.
+ *
+ * 페이로드: guildDataRequestSchema (guildData.ts) — {"requestId":..,"guildId":..,"kind":"channels"|"roles"}
+ */
+export const GUILD_DATA_REQUEST_CHANNEL = 'sirubot:guild-data:request';
+
+/**
+ * 길드 데이터 조회 응답 채널 — 해당 길드를 보유한 봇만 퍼블리시하고,
+ * data-api guildDataHub가 requestId 상관(correlation)으로 이 채널을 구독해요.
+ *
+ * 페이로드: guildDataResponseSchema (guildData.ts) — 요청한 kind의 배열 또는 error를 실어요.
+ */
+export const GUILD_DATA_RESPONSE_CHANNEL = 'sirubot:guild-data:response';
