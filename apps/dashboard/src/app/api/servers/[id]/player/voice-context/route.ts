@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const authz = await authorizeGuildMember(id);
   if (!authz.ok) return deniedGuildMember(authz);
 
-  const limited = guardRateLimit(rateKey("voice-context", authz.userId, id), READ_RATE);
+  const limited = await guardRateLimit(rateKey("voice-context", authz.userId, id), READ_RATE);
   if (limited) return limited;
 
   const result = await fetchPlayerVoiceContext(id, authz.userId);

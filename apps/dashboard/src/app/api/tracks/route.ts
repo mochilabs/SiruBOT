@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("tracks-get", session.user.id),
     READ_RATE,
   );

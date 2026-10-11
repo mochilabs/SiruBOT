@@ -80,6 +80,19 @@ model User {
   history     GuildTrackHistory[]
   playlists   Playlist[]
   gameRecords GameRecord[]
+  userToken   UserToken?
+}
+
+// 대시보드 Discord OAuth 토큰 — refresh/access 토큰의 서버측 단일 원본 (저장 전 AES-256-GCM 암호화).
+model UserToken {
+  userId               String   @id // = User.id (Discord 사용자 ID)
+  refreshToken         String   // 암호화된 refresh token
+  accessToken          String   // 암호화된 access token
+  accessTokenExpiresAt DateTime // access token 만료 시각
+  version              Int      @default(1)
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // 게임 전적/기록 — 모든 미니게임의 영속 저장소 (인메모리 Map 대체).

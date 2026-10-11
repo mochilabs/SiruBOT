@@ -90,7 +90,7 @@ export async function PATCH(
   const { id } = await params;
   const userId = session.user.id;
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("playlist-patch", userId, id),
     WRITE_RATE,
   );
@@ -179,7 +179,7 @@ export async function DELETE(
   const { id } = await params;
   const userId = session.user.id;
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("playlist-delete", userId, id),
     WRITE_RATE,
   );

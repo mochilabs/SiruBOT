@@ -26,7 +26,7 @@ export async function GET(
   const authz = await authorizeGuildManage(id);
   if (!authz.ok) return deniedGuildManage(authz);
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("live-get", authz.userId, id),
     READ_RATE,
   );

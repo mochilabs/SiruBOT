@@ -51,7 +51,7 @@ export async function PUT(
   const authz = await authorizeGuildManage(id);
   if (!authz.ok) return deniedGuildManage(authz);
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("ai-put", authz.userId, id),
     WRITE_RATE,
   );

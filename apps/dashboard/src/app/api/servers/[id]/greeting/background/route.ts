@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 	const authz = await authorizeGuildManage(id);
 	if (!authz.ok) return deniedGuildManage(authz);
 
-	const limited = guardRateLimit(rateKey("greeting-background", authz.userId, id), HEAVY_WRITE_RATE);
+	const limited = await guardRateLimit(rateKey("greeting-background", authz.userId, id), HEAVY_WRITE_RATE);
 	if (limited) return limited;
 
 	const form = await request.formData().catch(() => null);

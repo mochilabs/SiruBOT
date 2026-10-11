@@ -57,7 +57,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("playlists-get", session.user.id),
     READ_RATE,
   );
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("playlists-post", session.user.id),
     WRITE_RATE,
   );

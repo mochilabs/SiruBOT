@@ -1,3 +1,5 @@
+import { isRedisEnabled, redisGet, redisSet } from "@/lib/redis";
+
 const MANAGE_GUILD = BigInt(0x20);
 const ADMINISTRATOR = BigInt(0x8);
 
@@ -73,6 +75,61 @@ function writeCache(cacheKey: string, result: CanManageResult, meta: GuildMeta |
     }
   }
   resolveCache.set(cacheKey, { expires: Date.now() + ttl, result, meta });
+}
+
+/**
+ * Redis 캐시 키 — redis.ts가 `sirubot:dashboard:` 접두사를 자동으로 붙여요.
+ * 인스턴스 간에 권한 확인 결과를 공유해 Discord 호출 폭주(429→502 도미노)를 줄여요.
+ */
+function redisKey(userId: string, guildId: string): string {
+  return `guild-perm:${userId}:${guildId}`;
+}
+
+/** 결과별 캐시 TTL — invalid-token은 0(캐시 안 함), 인메모리 writeCache와 동일해요. */
+function cacheTtlMs(result: CanManageResult): number {
+  return result.status === "ok"
+    ? OK_CACHE_TTL_MS
+    : result.status === "unavailable"
+      ? UNAVAILABLE_CACHE_TTL_MS
+      : 0;
+}
+
+/** Redis에서 캐시된 권한 결과를 읽어요 — 미사용/장애/파싱 실패 시 조용히 null(미스)로. */
+async function readRedisCache(
+  userId: string,
+  guildId: string,
+): Promise<{ result: CanManageResult; meta: GuildMeta | null } | null> {
+  if (!isRedisEnabled()) return null;
+  let raw: string | null;
+  try {
+    raw = await redisGet(redisKey(userId, guildId));
+  } catch {
+    return null;
+  }
+  if (raw === null) return null;
+  try {
+    const parsed = JSON.parse(raw) as { result: CanManageResult; meta: GuildMeta | null };
+    return parsed;
+  } catch {
+    // 손상/형식 불일치 값은 미스로 취급해 새로 조회해요.
+    return null;
+  }
+}
+
+/** Redis에 권한 결과를 기록해요 — TTL 0(invalid-token)이거나 장애 시 조용히 건너뛰어요. */
+async function writeRedisCache(
+  userId: string,
+  guildId: string,
+  result: CanManageResult,
+  meta: GuildMeta | null,
+): Promise<void> {
+  const ttl = cacheTtlMs(result);
+  if (ttl === 0 || !isRedisEnabled()) return;
+  try {
+    await redisSet(redisKey(userId, guildId), JSON.stringify({ result, meta }), ttl);
+  } catch {
+    // Redis 장애는 인메모리 캐시로 폴백 — 예외를 전파하지 않아요.
+  }
 }
 
 /** 같은 요청에서 얻은 서버 표시 정보 — /users/@me/guilds 응답의 name·icon이에요 */
@@ -182,6 +239,10 @@ async function resolveGuildsInfo(
   const cached = readEntry(cacheKey);
   if (cached) return { result: cached.result, meta: cached.meta };
 
+  // 인스턴스 간 공유 캐시 — 다른 인스턴스가 이미 확인했다면 Discord 호출 없이 돌려줘요.
+  const redisCached = await readRedisCache(userId, guildId);
+  if (redisCached) return redisCached;
+
   const existing = inflight.get(cacheKey);
   if (existing) return existing;
 
@@ -193,6 +254,7 @@ async function resolveGuildsInfo(
       attempt = await fetchGuildsOnce(accessToken, guildId);
     }
     writeCache(cacheKey, attempt.result, attempt.meta);
+    await writeRedisCache(userId, guildId, attempt.result, attempt.meta);
     return { result: attempt.result, meta: attempt.meta };
   })().finally(() => {
     if (inflight.get(cacheKey) === pending) inflight.delete(cacheKey);

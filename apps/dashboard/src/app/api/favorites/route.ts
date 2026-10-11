@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("favorites-post", session.user.id),
     WRITE_RATE,
   );
@@ -119,7 +119,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("favorites-delete", session.user.id),
     WRITE_RATE,
   );
