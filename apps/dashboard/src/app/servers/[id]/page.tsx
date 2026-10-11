@@ -27,11 +27,23 @@ async function getGuildMember(
     {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
     },
   );
 
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Discord API error: ${res.status}`);
+  console.error(
+    `[diag] Discord /users/@me/guilds/${guildId}/member -> ${res.status} ${res.ok ? "" : await res.clone().text().then((t) => t.slice(0, 200)).catch(() => "")}`,
+  );
+
+  // 멤버가 아니거나(404) 접근 권한이 없으면(403) 보여줄 대시보드가 없어요.
+  if (res.status === 404 || res.status === 403) return null;
+  // 토큰 만료(401) — 500 대신 재로그인으로 안내해요.
+  if (res.status === 401) {
+    redirect(`/api/auth/signin?callbackUrl=/servers/${guildId}`);
+  }
+  // 429(레이트리밋)/5xx/네트워크 오류 — 일시 장애. 500 폭주 대신 notFound로 우아하게 처리해요
+  // (레이트리밋 윈도우가 길어 여기서 재시도해도 소용없고, SWR 계층이 따로 재시도해요).
+  if (!res.ok) return null;
 
   return res.json();
 }

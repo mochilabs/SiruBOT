@@ -88,7 +88,7 @@ export function useMemberGreeting(guildId: string) {
 		}
 	}, [drafts, guildId, mutate, redirectToLogin]);
 
-	// ── 테스트 전송: 종류별 진행 티켓(requestId) → 결과 상태 폴링 → requestId 매칭으로 정리 ──
+	// 테스트 전송: 종류별 진행 티켓(requestId) → 결과 상태 폴링 → requestId 매칭으로 정리
 	const [tickets, setTickets] = useState<TestTicket[]>([]);
 	const [testResults, setTestResults] = useState<Record<GreetingKind, GreetingTestResult | null>>({
 		welcome: null,

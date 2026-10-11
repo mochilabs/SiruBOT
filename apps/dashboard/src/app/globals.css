@@ -440,6 +440,17 @@
 	}
 }
 
+/* 고정 헤더(navbar.tsx: fixed top-0, nav h-16 = 4rem) 아래로 in-page 앵커가 가려지지 않도록 */
+html {
+	scroll-padding-block-start: 4rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

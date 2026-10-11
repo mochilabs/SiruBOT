@@ -46,8 +46,7 @@ const itemVariants = {
 } as const;
 
 /**
- * 헤드라인 전용 리빌 체계 — 정적 단어들은 blur + 떠오름으로 개별 등장(텍스트 리빌),
- * TypingText 세그먼트는 variants로 한 덩어리 등장시켜 내부 타이핑 로직은 그대로 유지해요.
+ * 헤드라인 리빌 — 정적 단어는 blur+떠오름으로 개별 등장, TypingText 세그먼트는 variants로 한 덩어리 등장.
  */
 const headlineVariants = {
 	hidden: {},
@@ -74,7 +73,8 @@ const headlineTypingVariants = {
 	},
 } as const;
 
-/** hero 배경 — 브랜드 도트 그리드 패턴(마스크로 가장자리 페이드). y가 주어지면 스크롤 패럴랙스 */
+/** hero 배경 — 브랜드 도트 그리드 패턴(마스크로 가장자리 페이드). y가 주어지면 스크롤 패럴랙스.
+ *  R-07 사유: 음악 봇의 '리듬·비트' 정체성 텍스처 — 저불투명도 질감으로만 쓰고 장식 강조는 하지 않는다. */
 function DotPattern({ y }: { y?: MotionValue<number> }) {
 	return (
 		<m.div style={{ y }} className="pointer-events-none absolute inset-0 -z-10">
@@ -196,7 +196,7 @@ export function HeroSection() {
 
 					<m.dl
 						variants={itemVariants}
-						className="grid w-full grid-cols-3 gap-4 border-t border-border-subtle pt-5 sm:max-w-lg lg:max-w-none"
+						className="grid w-full grid-cols-2 gap-4 border-t border-border-subtle pt-5 sm:max-w-lg lg:max-w-none"
 					>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">슬래시 명령어</dt>
@@ -209,13 +209,6 @@ export function HeroSection() {
 							<dt className="text-xs font-medium text-muted-foreground">기능 카테고리</dt>
 							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
 								<CountUpStat end={4} suffix="종" />
-							</dd>
-						</div>
-						<div>
-							<dt className="text-xs font-medium text-muted-foreground">이용 중인 서버</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter text-foreground sm:text-xl">
-								{/* 28K+는 운영자 확정 표기(유저 지시) — 실시간 집계는 로그인 후 /shards에서 확인 가능 */}
-								<CountUpStat end={28} suffix="K+" />
 							</dd>
 						</div>
 					</m.dl>
@@ -249,7 +242,7 @@ export function HeroSection() {
 										"relative cursor-pointer overflow-hidden rounded-control border px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
 											? "border-primary-control bg-primary-control text-primary-foreground"
-											: "border-border bg-surface-1 text-foreground/70 hover:bg-surface-2 hover:text-foreground",
+											: "border-border bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
 									)}
 								>
 									{/* 자동 재생 진행률 — 활성 버튼이 7초에 걸쳐 차오르고, 차면 다음 예시로 넘어가요 */}
@@ -282,14 +275,8 @@ export function HeroSection() {
 				</div>
 			</div>
 
-			{/* 스크롤 유도 — 아래로 살짝 내리면 기능 섹션이에요 */}
-			{/* 히어로가 h-screen 고정이 아닌 min-h(calc(100svh-4rem)) 기반이라 콘텐츠와 겹칠 일이 드물어
-			    모바일에서도 버튼을 유지한다. 대신 홈 인디케이터(홈바) 기기를 위해 bottom 여백에
-			    safe-area를 더하고(--hero-scroll-hint-gap: 1.5rem, sm 이상 2rem), 아주 낮은 높이의
-			    가로 모드 등에선 콘텐츠 아래쪽과 붙지 않도록 gap 변수가 여유를 가진다 */}
-			{/* 스크롤 유도 래퍼 — 내려가면 opacity를 useTransform으로 페이드아웃(리렌더 없음)하고,
-			    15%를 넘으면 visibility:hidden 토글로 버튼 클릭·포커스를 완전히 차단해요.
-			    래퍼에 pointer-events-none을 두고 버튼에만 다시 허용해 배경 히트 영역은 비워둬요 */}
+			{/* 스크롤 유도 — 스크롤 시 페이드아웃(15% 지나면 visibility:hidden으로 클릭·포커스 차단), min-h 기반이라 모바일에도 유지.
+			    pointer-events-none 래퍼(버튼만 auto)로 배경 히트 영역을 비우고, safe-area 여백은 아래 style에서 처리해요. */}
 			<m.div
 				className="pointer-events-none absolute inset-x-0 z-10 flex justify-center"
 				style={{
@@ -303,7 +290,7 @@ export function HeroSection() {
 					type="button"
 					onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
 					aria-label="아래로 스크롤해서 기능 보기"
-					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+					className="pointer-events-auto flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.2, duration: 0.6 }}

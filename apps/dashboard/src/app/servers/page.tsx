@@ -97,7 +97,7 @@ export default function ServersPage() {
                 </section>
             ) : (
                 <section className="space-y-12">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                    <div className="grid gap-3 md:gap-6 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
                         {guilds.map((guild, index) => (
                             <m.div
                                 key={guild.id}

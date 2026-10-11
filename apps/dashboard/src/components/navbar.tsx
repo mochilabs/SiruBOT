@@ -138,7 +138,7 @@ export function Navbar() {
                   href={getNavHref(link)}
                   className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
                       ? "bg-primary/10 text-primary-text"
-                      : "text-foreground/70 hover:bg-primary/5 hover:text-primary-text"
+                      : "text-muted-foreground hover:bg-primary/5 hover:text-primary-text"
                     }`}
                 >
                   <span className="relative z-10">{link.label}</span>

@@ -180,7 +180,7 @@ function FavoriteButton({
 			onClick={handleClick}
 			disabled={pending}
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
-			className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
+			className={`flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
 				favorite
 					? "border-primary/30 bg-primary/10 text-primary-text hover:bg-primary/20"
 					: "border-border bg-surface-2 text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-primary-text"
@@ -266,7 +266,7 @@ export const TrackItem = memo(function TrackItem({
 						href={track.url}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control bg-primary/10 text-primary-text border border-primary/20 transition-colors duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+						className="flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text border border-primary/20 transition-colors duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
 						title="원본 보기"
 					>
 						<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />

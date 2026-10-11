@@ -27,13 +27,25 @@ export async function GET() {
       {
         headers: { Authorization: `Bearer ${accessToken}` },
         cache: "no-store",
+        signal: AbortSignal.timeout(8_000),
       },
     );
 
-    if (!guildsRes.ok) {
+    console.error(
+      `[diag] Discord /users/@me/guilds -> ${guildsRes.status} ${guildsRes.ok ? "" : await guildsRes.clone().text().then((t) => t.slice(0, 200)).catch(() => "")}`,
+    );
+
+    if (guildsRes.status === 401) {
       return NextResponse.json(
-        { error: "Failed to fetch guilds" },
-        { status: guildsRes.status },
+        { error: "세션이 만료됐어요. 다시 로그인해 주세요." },
+        { status: 401 },
+      );
+    }
+    if (!guildsRes.ok) {
+      // 429/5xx — 일시 장애. 401이 아니라 502로 구분해 재시도 가능으로 안내해요.
+      return NextResponse.json(
+        { error: "Discord 서버를 잠시 확인하지 못했어요." },
+        { status: 502 },
       );
     }
 

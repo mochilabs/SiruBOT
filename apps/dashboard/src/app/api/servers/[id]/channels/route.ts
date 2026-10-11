@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { forwardDataApiGet } from "@/lib/data-api";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
 import {
   type DiscordChannelSummary,
   SELECTABLE_CHANNEL_TYPES,
 } from "@/types/discord";
 
-/** 사용자 토큰으로 Discord에서 채널 목록을 받아요 — 쓰레드 제외, 열려 있는 채널만 옵니다. */
+/** data-api의 채널 한 항목(GET /v1/guilds/:id/channels 계약) — 봇이 Redis에 올려둔 채널 스냅샷이에요 */
+interface DataApiGuildChannel {
+  id: string;
+  name: string;
+  type: number;
+  parentId: string | null;
+  position: number;
+}
+
+/** data-api 응답 래퍼 */
+interface DataApiGuildChannelsResponse {
+  channels: DataApiGuildChannel[];
+}
+
+/** data-api가 본문을 못 주면(봇 무응답·Redis 장애·네트워크 실패) 돌려주는 기본 안내 */
+const CHANNELS_FALLBACK = "봇에서 채널 목록을 불러오지 못했어요.";
+
+/** data-api(봇 Redis 캐시)에서 채널 목록을 받아요 — 쓰레드 제외, 선택 가능한 채널만 내려가요. */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -22,72 +40,38 @@ export async function GET(
   );
   if (limited) return limited;
 
-  try {
-    const res = await fetch(
-      `https://discord.com/api/v10/guilds/${id}/channels`,
-      {
-        headers: { Authorization: `Bearer ${authz.token}` },
-        cache: "no-store",
-      },
-    );
-
-    if (res.status === 401) {
-      return NextResponse.json(
-        { error: "세션이 만료됐어요. 다시 로그인해 주세요." },
-        { status: 401 },
-      );
-    }
-    if (res.status === 403) {
-      return NextResponse.json(
-        { error: "Discord에서 채널 목록 접근을 거부했어요." },
-        { status: 502 },
-      );
-    }
-    if (!res.ok) {
-      console.error(`Discord channels fetch failed: ${res.status}`);
-      return NextResponse.json(
-        { error: "Discord에서 채널 목록을 불러오지 못했어요." },
-        { status: 502 },
-      );
-    }
-
-    const raw: unknown = await res.json();
-    if (!Array.isArray(raw)) {
-      return NextResponse.json(
-        { error: "Discord 응답을 처리하지 못했어요." },
-        { status: 502 },
-      );
-    }
-
-    const allowed = new Set<number>(SELECTABLE_CHANNEL_TYPES);
-    const channels: DiscordChannelSummary[] = raw
-      .filter(
-        (channel): channel is Record<string, unknown> =>
-          typeof channel === "object" && channel !== null,
-      )
-      .filter(
-        (channel) =>
-          typeof channel.id === "string" &&
-          typeof channel.type === "number" &&
-          allowed.has(channel.type),
-      )
-      .map((channel) => ({
-        id: channel.id as string,
-        name:
-          typeof channel.name === "string" ? channel.name : "이름 없는 채널",
-        type: channel.type as number,
-        parentId:
-          typeof channel.parent_id === "string" ? channel.parent_id : null,
-        position: typeof channel.position === "number" ? channel.position : 0,
-      }))
-      .sort((a, b) => a.position - b.position);
-
-    return NextResponse.json({ channels });
-  } catch (error) {
-    console.error("Failed to load channels:", error);
+  const result = await forwardDataApiGet<DataApiGuildChannelsResponse>(
+    `/v1/guilds/${id}/channels`,
+  );
+  if (!result.ok) {
+    // data-api의 한국어 안내는 upstream 상태와 함께 그대로 전달해요 — 본문이 비었으면 502로 감싸요.
     return NextResponse.json(
-      { error: "요청을 처리하지 못했어요." },
-      { status: 500 },
+      { error: result.message ?? CHANNELS_FALLBACK },
+      { status: result.message ? result.status : 502 },
     );
   }
+
+  const payload = result.data;
+  if (!payload || !Array.isArray(payload.channels)) {
+    return NextResponse.json({ error: CHANNELS_FALLBACK }, { status: 502 });
+  }
+
+  const allowed = new Set<number>(SELECTABLE_CHANNEL_TYPES);
+  const channels: DiscordChannelSummary[] = payload.channels
+    .filter(
+      (channel): channel is DataApiGuildChannel =>
+        typeof channel === "object" &&
+        channel !== null &&
+        allowed.has(channel.type),
+    )
+    .map((channel) => ({
+      id: channel.id,
+      name: channel.name || "이름 없는 채널",
+      type: channel.type,
+      parentId: channel.parentId,
+      position: channel.position,
+    }))
+    .sort((a, b) => a.position - b.position);
+
+  return NextResponse.json({ channels });
 }

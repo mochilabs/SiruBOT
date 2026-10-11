@@ -213,7 +213,7 @@ export function DatePicker({
 											disabled={isDisabled}
 											onClick={() => selectDate(day)}
 											className={`
-												h-9 w-full rounded-xl text-sm font-medium transition-all cursor-pointer
+												h-9 w-full pointer-coarse:min-h-11 rounded-xl text-sm font-medium transition-all cursor-pointer
 												${isDisabled ? "opacity-30 pointer-events-none" : "hover:bg-accent/50"}
 												${isSelected ? "bg-primary-control text-primary-foreground font-bold shadow-lg shadow-primary/20" : ""}
 												${isToday && !isSelected ? "ring-1 ring-primary/40 text-primary-text font-bold" : ""}

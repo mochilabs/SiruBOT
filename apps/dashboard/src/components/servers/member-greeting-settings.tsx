@@ -404,7 +404,7 @@ function GreetingImageEditor({ guildId, kind, config, image, saving, active, onP
 	const [uploading, setUploading] = useState(false);
 	const lastPresetRef = useRef<string>(PRESET_BACKGROUNDS[0].id);
 
-	// ── 라이브 프리뷰: draft 전체를 400ms 디바운스로 미리보기 라우트에 그려요 ──
+	// 라이브 프리뷰: draft 전체를 400ms 디바운스로 미리보기 라우트에 그려요
 	const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 	const [previewPending, setPreviewPending] = useState(false);
 	const [previewFailedMessage, setPreviewFailedMessage] = useState<string | null>(null);
@@ -447,7 +447,7 @@ function GreetingImageEditor({ guildId, kind, config, image, saving, active, onP
 		};
 	}, [active, debouncedConfig, kind, guildId]);
 
-	// ── 배경 프리셋 썸네일 — 에디터가 열릴 때 한 번씩만 그려요 (선택 안 한 프리셋의 실제 모습) ──
+	// 배경 프리셋 썸네일: 에디터가 열릴 때 한 번씩만 그려요 (선택 안 한 프리셋의 실제 모습)
 	const [thumbs, setThumbs] = useState<Partial<Record<string, string | null>>>({});
 	const thumbUrlsRef = useRef<string[]>([]);
 	const thumbsRequestedRef = useRef(false);
@@ -513,7 +513,7 @@ function GreetingImageEditor({ guildId, kind, config, image, saving, active, onP
 
 	const text = image[target];
 
-	// ── 배경 업로드 — 클라이언트에서 형식·용량을 먼저 확인하고 라우트가 정규화를 맡겨요 ──
+	// 배경 업로드: 클라이언트에서 형식·용량을 먼저 확인하고 라우트가 정규화를 맡겨요
 	const handleBackgroundPick = useCallback(
 		async (file: File | null) => {
 			if (!file) return;

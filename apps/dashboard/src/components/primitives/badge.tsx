@@ -59,7 +59,7 @@ export function Badge({ variant = "default", size = "md", dot = false, dismissib
 					type="button"
 					onClick={onDismiss}
 					aria-label="제거"
-					className="ml-0.5 -mr-0.5 inline-flex cursor-pointer items-center justify-center rounded-full p-0.5 transition-colors hover:bg-foreground/10"
+					className="relative ml-0.5 -mr-0.5 inline-flex cursor-pointer items-center justify-center rounded-full p-0.5 transition-colors hover:bg-foreground/10 after:absolute after:content-[''] after:inset-[min(0px,calc((100%-44px)/2))]"
 				>
 					<svg aria-hidden className="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
 						<path d="M3 3l6 6M9 3l-6 6" />
