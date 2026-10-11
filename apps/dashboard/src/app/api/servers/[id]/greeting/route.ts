@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 	const authz = await authorizeGuildManage(id);
 	if (!authz.ok) return deniedGuildManage(authz);
 
-	const limited = guardRateLimit(rateKey("greeting-patch", authz.userId, id), WRITE_RATE);
+	const limited = await guardRateLimit(rateKey("greeting-patch", authz.userId, id), WRITE_RATE);
 	if (limited) return limited;
 
 	try {

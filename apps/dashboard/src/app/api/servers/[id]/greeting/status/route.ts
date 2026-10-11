@@ -14,7 +14,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 	const authz = await authorizeGuildManage(id);
 	if (!authz.ok) return deniedGuildManage(authz);
 
-	const limited = guardRateLimit(rateKey("greeting-status", authz.userId, id), READ_RATE);
+	const limited = await guardRateLimit(rateKey("greeting-status", authz.userId, id), READ_RATE);
 	if (limited) return limited;
 
 	const state = await fetchDataApi<unknown>(`/v1/greeting/state/${id}`);

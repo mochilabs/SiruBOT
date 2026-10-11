@@ -26,7 +26,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("playlist-tracks-post", session.user.id),
     WRITE_RATE,
   );
@@ -210,7 +210,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const limited = guardRateLimit(
+  const limited = await guardRateLimit(
     rateKey("playlist-tracks-delete", session.user.id),
     WRITE_RATE,
   );

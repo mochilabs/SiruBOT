@@ -2205,6 +2205,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@redis/client@npm:^6.3.0":
+  version: 6.3.0
+  resolution: "@redis/client@npm:6.3.0"
+  peerDependencies:
+    "@node-rs/xxhash": ^1.1.0
+    "@opentelemetry/api": ">=1 <2"
+  peerDependenciesMeta:
+    "@node-rs/xxhash":
+      optional: true
+    "@opentelemetry/api":
+      optional: true
+  checksum: 10c0/e194a221d29785e581250d9ec212891c5bb133599cab98db7b985afbc06809c85b6e717b10f86e46033ae5e9bb08d034642484cd87b5e01e538575bbf0956217
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-android-arm-eabi@npm:1.2.11":
   version: 1.2.11
   resolution: "@rolldown/binding-android-arm-eabi@npm:1.2.11"
@@ -2929,6 +2944,7 @@ __metadata:
     "@eslint/eslintrc": "npm:^3"
     "@next/swc-wasm-nodejs": "npm:16.3.8"
     "@prisma/adapter-pg": "npm:^7.7.0"
+    "@redis/client": "npm:^6.3.0"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     "@tailwindcss/postcss": "npm:^4.1.13"

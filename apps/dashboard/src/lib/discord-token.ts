@@ -16,29 +16,14 @@ export type RefreshResult =
   | { status: "invalid" }
   | { status: "unavailable" };
 
-const REFRESH_TIMEOUT_MS = 8_000;
+// 뮤텍스 TTL(12초) 안에 Discord 호출이 끝나야 하므로 넉넉히 여유를 둬요.
+const REFRESH_TIMEOUT_MS = 7_000;
 
 /**
- * 같은 refreshToken으로 동시에 들어온 갱신을 하나의 요청으로 합쳐요.
- * Discord refreshToken은 일회용 로테이션이라, 병렬 갱신이 겹치면 늦은 쪽이 400을 받아
- * 세션을 깨뜨려요(레이스). 단일 비행으로 그 창을 없애요.
+ * Discord에 refreshToken을 직접 보내 새 토큰을 받아요.
+ * 동시성·단일 비행·레이스 제어는 호출부(token-store)가 담당하고, 여기서는 raw 호출만 해요.
  */
-const inflightRefreshes = new Map<string, Promise<RefreshResult>>();
-
-export function refreshDiscordToken(refreshToken: string): Promise<RefreshResult> {
-  const existing = inflightRefreshes.get(refreshToken);
-  if (existing) return existing;
-
-  const pending = doRefresh(refreshToken).finally(() => {
-    if (inflightRefreshes.get(refreshToken) === pending) {
-      inflightRefreshes.delete(refreshToken);
-    }
-  });
-  inflightRefreshes.set(refreshToken, pending);
-  return pending;
-}
-
-async function doRefresh(refreshToken: string): Promise<RefreshResult> {
+export async function requestDiscordToken(refreshToken: string): Promise<RefreshResult> {
   try {
     const res = await fetch("https://discord.com/api/v10/oauth2/token", {
       method: "POST",

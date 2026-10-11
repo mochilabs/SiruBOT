@@ -23,7 +23,7 @@ export async function GET(
   const authz = await authorizeGuildManage(id);
   if (!authz.ok) return deniedGuildManage(authz);
 
-  const limited = guardRateLimit(rateKey("bot-profile-get", authz.userId, id), READ_RATE);
+  const limited = await guardRateLimit(rateKey("bot-profile-get", authz.userId, id), READ_RATE);
   if (limited) return limited;
 
   const data = await fetchDataApi<BotProfileResponse>(`/v1/bot-profile/${id}`);
@@ -48,7 +48,7 @@ export async function PATCH(
   const authz = await authorizeGuildManage(id);
   if (!authz.ok) return deniedGuildManage(authz);
 
-  const limited = guardRateLimit(rateKey("bot-profile-patch", authz.userId, id), WRITE_RATE);
+  const limited = await guardRateLimit(rateKey("bot-profile-patch", authz.userId, id), WRITE_RATE);
   if (limited) return limited;
 
   const form = await request.formData().catch(() => null);

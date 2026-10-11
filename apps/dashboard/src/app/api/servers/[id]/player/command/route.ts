@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const authz = await authorizeGuildMember(id);
   if (!authz.ok) return deniedGuildMember(authz);
 
-  const limited = guardRateLimit(rateKey("player-command", authz.userId, id), WRITE_RATE);
+  const limited = await guardRateLimit(rateKey("player-command", authz.userId, id), WRITE_RATE);
   if (limited) return limited;
 
   const parsed = commandSchema.safeParse(await request.json().catch(() => null));

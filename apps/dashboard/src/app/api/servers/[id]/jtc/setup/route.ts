@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const authz = await authorizeGuildManage(id);
   if (!authz.ok) return deniedGuildManage(authz);
 
-  const limited = guardRateLimit(rateKey("jtc-setup", authz.userId, id), HEAVY_WRITE_RATE);
+  const limited = await guardRateLimit(rateKey("jtc-setup", authz.userId, id), HEAVY_WRITE_RATE);
   if (limited) return limited;
 
   try {
