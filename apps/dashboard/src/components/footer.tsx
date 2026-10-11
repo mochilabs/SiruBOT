@@ -22,6 +22,7 @@ const serviceLinks: FooterLink[] = [
 	{ label: '내 프로필', href: '/profile', internal: true },
 	{ label: '서버 관리', href: '/servers', internal: true },
 	{ label: '봇 초대하기', href: '/invite', internal: true },
+	{ label: '오픈소스 라이선스', href: '/licenses', internal: true },
 ];
 
 const supportLinks: FooterLink[] = [
