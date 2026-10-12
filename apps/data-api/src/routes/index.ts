@@ -508,7 +508,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 
 	// ── NowPlaying 카드 이미지 ──
 	// 카드는 트랙 식별자 + 볼륨/챕터 + 5초 위치 버킷마다 다시 렌더돼요
-	// (도미넌트 색 배경 + 제목 + 진행바 + 다음 곡 목록 + 대기열/볼륨/반복/노드/브랜드 메타).
+	// (도미넌트 색 배경 + 제목 + 다음 곡 목록 + 대기열/볼륨/반복/노드/브랜드 메타).
 	// 신청자·추천/일시정지 뱃지도 이미지에 박아요 — 텍스트 동적 라인은 봇이 담당.
 	const nowPlayingCardSchema = z.object({
 		trackId: z.string().trim().min(1).max(200),

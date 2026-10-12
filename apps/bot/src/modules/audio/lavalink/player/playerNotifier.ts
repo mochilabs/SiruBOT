@@ -23,9 +23,13 @@ export class PlayerNotifier {
 	private readonly sendChains: Map<string, Promise<void>> = new Map();
 	private readonly cardRefreshes = new Map<string, { messageId: string; trackKey: string }>();
 	private readonly renderedSignatures = new WeakMap<Message, string>();
-	/** 메시지에 붙어 있는 카드의 키(버킷) — 새 버킷 렌더가 끝나면 같은 파일명으로 교체 첨부한다. */
+	/** 메시지에 붙어 있는 카드의 키 — 새 카드(볼륨/챕터/일시정지 상태)로 바뀌면 같은 파일명으로 교체 첨부한다. */
 	private readonly cardTrackKeys = new WeakMap<Message, string>();
-	/** 재생 중 컨트롤러의 5초 갱신 틱 — playerUpdate가 멈춰도 진행바가 흐르게 하는 안전말. */
+	/**
+	 * 재생 중 컨트롤러의 주기 갱신 틱 — 챕터 경계를 넘었는지 확인해 챕터 줄·종료 시각을 갱신한다.
+	 * 종료 시각은 디스코드 타임스탬프(<t:unix:R>)라 진행률 자체는 클라이언트가 갱신하므로,
+	 * 시그니처가 그대로면(경계 미도달) updateController가 no-op으로 끝난다.
+	 */
 	private readonly progressTicks = new Map<string, NodeJS.Timeout>();
 	private readonly controllerVersions = new WeakMap<CustomPlayer, number>();
 	private readonly destroyedPlayers = new WeakSet<CustomPlayer>();
@@ -83,7 +87,7 @@ export class PlayerNotifier {
 		try {
 			if (!this.canSend(player, version, interaction)) return;
 			this.clearDebounceTimer(player.guildId);
-			// when interaction is noen and player has not textChannelId, throw error
+			// when interaction is none and player has not textChannelId, throw error
 			if (!interaction && !player.textChannelId) throw new Error(`Player has not textChannelId ${player.guildId}`);
 			const options = await this.getControllerOptions(player.guildId);
 
@@ -100,7 +104,7 @@ export class PlayerNotifier {
 			if (!this.canSend(player, version, interaction)) return;
 
 			// 준비된 카드만 사용해 기본 화면을 먼저 보내고, 미완성 카드는 나중에 붙인다.
-			// 같은 곡을 다시 띄운 경우(5초 버킷 렌더 중) 이전 버킷 이미지를 재사용한다.
+			// 카드 키가 같은 곡(트랙 변경 전)이라면 이전 상태 카드를 재사용한다.
 			const card = getDisplayNowPlayingCard(player);
 			const components = view.controllerView({
 				player,
@@ -183,14 +187,10 @@ export class PlayerNotifier {
 			const options = await this.getControllerOptions(player.guildId);
 			if (!options || (!options.enableController && !allowDisabled)) return;
 			if (!this.canSend(player, version) || player.messageId !== message.id || player.controller?.id !== message.id) return;
-			// 같은 곡의 이전 5초 버킷 이미지는 새 버킷 렌더가 끝날 때까지 유지해요(무플리커).
 			const card = getDisplayNowPlayingCard(player);
-			// 최신 버킷 카드가 아직 캐시에 없으면 그 렌더를 걸어둔다(진행 중이면 dedup).
 			const missingCurrent = getCachedNowPlayingCard(player) === null;
-			// 메시지에 붙은 카드 버킷과 다르면 같은 파일명으로 바이트를 교체 첨부해요.
 			const cardNeedsUpload = card !== null && this.cardTrackKeys.get(message) !== card.trackKey;
 			const components = view.controllerView({ player, volume: options.volume, nowPlayingCardUrl: card?.url });
-			// files: []도 attachments: []로 변환되므로 유지할 카드 ID를 명시한다. 교체 첨부 시엔 기존 첨부를 전부 치운다.
 			const attachments =
 				card && !cardNeedsUpload ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [];
 			const files = card && (cardNeedsUpload || !message.attachments.some((file) => file.name === card.filename)) ? [card.file] : [];
@@ -266,9 +266,9 @@ export class PlayerNotifier {
 	}
 
 	/**
-	 * 재생 중 컨트롤러의 진행 갱신 틱(≈5초) — playerUpdate만으로 진행바가 멈추는 것을 막는 안전말.
-	 * 일시정지·곡 없음·스트림에서는 버킷이 움직이지 않아 틱이 updateController를 불러도
-	 * 시그니처 비교로 no-op으로 끝나요(불필요한 재렌더 없음).
+	 * 재생 중 컨트롤러의 주기 갱신 틱(≈5초) — 챕터 경계를 넘어 챕터 줄·종료 시각이 바뀌었는지 확인한다.
+	 * 종료 시각은 디스코드 타임스탬프라 진행률 갱신은 클라이언트 몫이므로,
+	 * 경계 미도달이면 updateController가 시그니처 비교로 no-op으로 끝난다.
 	 */
 	private ensureProgressTick(player: CustomPlayer): void {
 		if (this.progressTicks.has(player.guildId)) return;

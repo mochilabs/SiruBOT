@@ -1,6 +1,6 @@
 /**
  * track.requester 공용 파서 — 봇이 요청자를 user 객체로 넣어요 (related_track은 추천 곡 센티널).
- * nowPlayingCard / playerStatePublisher가 함께 써요.
+ * playerStatePublisher / autoPlayRelated / controller 등이 함께 써요.
  */
 import { container } from '@sapphire/framework';
 import type { CustomPlayer } from './player/customPlayer.ts';

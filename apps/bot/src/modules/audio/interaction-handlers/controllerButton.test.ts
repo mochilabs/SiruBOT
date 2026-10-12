@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AttachmentBuilder, Collection, MessagePayload, type ButtonInteraction, type InteractionUpdateOptions, type Message } from 'discord.js';
 import ControllerButtonHandler from './controllerButton.ts';
 
-const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), cached: vi.fn(), render: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), cached: vi.fn(), render: vi.fn(), updateVolume: vi.fn() }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
-		container = { audio: { getPlayer: mocks.getPlayer } };
+		container = {
+			audio: { getPlayer: mocks.getPlayer },
+			guildService: { updateVolume: mocks.updateVolume }
+		};
 	},
 	InteractionHandlerTypes: { Button: 'button' }
 }));
@@ -31,8 +34,10 @@ function context() {
 		voiceChannelId: 'voice',
 		messageId: original.id,
 		controller: original,
+		volume: 40,
 		pause: vi.fn().mockResolvedValue(undefined),
-		resume: vi.fn().mockResolvedValue(undefined)
+		resume: vi.fn().mockResolvedValue(undefined),
+		setVolume: vi.fn()
 	};
 	mocks.getPlayer.mockReturnValue(player);
 	const handler = new ControllerButtonHandler(
@@ -45,7 +50,7 @@ function context() {
 function attachmentIds(payload: InteractionUpdateOptions) {
 	const target = { client: { options: { jsonTransformer: (value: unknown) => value } } } as unknown as Message;
 	const body = new MessagePayload(target, payload).resolveBody().body;
-	return body && 'attachments' in body ? body.attachments?.map((file) => file.id) : [];
+	return body && 'attachments' in body ? body.attachments?.map((file: any) => file.id) : [];
 }
 
 describe('controller button cached rendering', () => {
@@ -56,6 +61,7 @@ describe('controller button cached rendering', () => {
 		mocks.render.mockImplementation(() => {
 			throw new Error('button must not request an image');
 		});
+		mocks.updateVolume.mockImplementation(async (_guildId: string, volume: number) => ({ volume }));
 	});
 
 	it('updates a pause button without starting or waiting for image rendering', async () => {
@@ -125,16 +131,42 @@ describe('controller button cached rendering', () => {
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
-	it('checks DJ permission for DJ commands (stop, next, prev, repeat)', async () => {
+	it('checks DJ permission for DJ commands (stop, next, prev, repeat, volume)', async () => {
 		mocks.allowed.mockResolvedValue(false);
 		const { interaction, player, handler } = context();
-		for (const cmd of ['resume', 'stop', 'prev', 'next', 'repeat']) {
+		for (const cmd of ['resume', 'stop', 'prev', 'next', 'repeat', 'volume']) {
 			vi.clearAllMocks();
 			mocks.allowed.mockResolvedValue(false);
 			await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: cmd, subcommand: null });
 			expect(interaction.reply).toHaveBeenCalledTimes(1);
 			expect(player.pause).not.toHaveBeenCalled();
 			expect(player.resume).not.toHaveBeenCalled();
+			expect(player.setVolume).not.toHaveBeenCalled();
 		}
+	});
+
+	it('raises volume by the step and applies it', async () => {
+		const { interaction, player, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
+		expect(mocks.updateVolume).toHaveBeenCalledWith('guild', 50);
+		expect(player.setVolume).toHaveBeenCalledWith(50);
+		expect(interaction.update).toHaveBeenCalledTimes(1);
+	});
+
+	it('lowers volume by the step and applies it', async () => {
+		const { interaction, player, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
+		expect(mocks.updateVolume).toHaveBeenCalledWith('guild', 30);
+		expect(player.setVolume).toHaveBeenCalledWith(30);
+		expect(interaction.update).toHaveBeenCalledTimes(1);
+	});
+
+	it('clamps volume at the lower bound without applying a change', async () => {
+		const { interaction, player, handler } = context();
+		player.volume = 0;
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
+		expect(mocks.updateVolume).not.toHaveBeenCalled();
+		expect(player.setVolume).not.toHaveBeenCalled();
+		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 });

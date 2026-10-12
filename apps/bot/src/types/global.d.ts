@@ -53,6 +53,7 @@ declare module '@sapphire/pieces' {
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../services/memberGreetingService.ts').MemberGreetingService;
 		guildDataResponder?: import('../services/guildDataResponder.ts').GuildDataResponder;
+		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };
 	}

@@ -7,7 +7,8 @@ import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { getDisplayNowPlayingCard, currentChapterIndex } from '../lavalink/player/nowPlayingCard.ts';
+import { getDisplayNowPlayingCard } from '../lavalink/player/nowPlayingCard.ts';
+import { currentChapterIndex } from '../lavalink/player/chapters.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../view/error.ts';
 
@@ -31,7 +32,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		return this.none();
 	}
 
-	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter']);
+	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	private static readonly DJ_QUEUE_SUBS = new Set(['remove', 'jumpTo']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
@@ -95,6 +96,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			case 'chapter':
 				await this.handleChapter(interaction, player, subcommand);
 				break;
+			case 'volume':
+				await this.handleVolume(interaction, player, subcommand);
+				break;
 			default:
 				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
 				await interaction.reply({
@@ -106,7 +110,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private buildControllerPayload(player: CustomPlayer, message: Message) {
-		// 같은 곡의 이전 5초 버킷 카드는 새 버킷 렌더가 끝날 때까지 유지해요(무플리커).
+		// 같은 곡의 이전 카드는 새 카드(볼륨/챕터/일시정지 상태)로 교체될 때까지 유지해요(무플리커).
 		const card = getDisplayNowPlayingCard(player);
 		return {
 			components: [controllerView({ player, volume: player.volume, nowPlayingCardUrl: card?.url })],
@@ -210,6 +214,32 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		await player.seek(target);
+		if (!(await this.safeUpdate(interaction, player))) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
+				})
+				.catch(() => null);
+		}
+	}
+
+	private async handleVolume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: string | null) {
+		const VOLUME_STEP = 10;
+		const current = player.volume ?? 0;
+		const next = Math.max(0, Math.min(150, current + (direction === 'up' ? VOLUME_STEP : -VOLUME_STEP)));
+		if (next === current) {
+			await interaction
+				.reply({
+					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+					components: [errorView(`${emoji('volume_muted')} 볼륨은 **0**부터 **150**까지 설정할 수 있어요.`)]
+				})
+				.catch(() => null);
+			return;
+		}
+
+		const { volume: updated } = await this.container.guildService.updateVolume(interaction.guildId, next);
+		player.setVolume(updated);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
 				.reply({

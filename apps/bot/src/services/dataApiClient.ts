@@ -151,7 +151,7 @@ export interface NowPlayingCardRequest {
 	title: string;
 	artist: string;
 	artworkUrl: string | null;
-	/** 재생 위치(ms) — 카드의 진행바로 그려져요. 카드는 5초 버킷마다 갱신돼요 */
+	/** 재생 위치(ms) — 카드의 진행바로 그려졌으나, 이제는 정적 카드로 쓰지 않아요 (호환용). */
 	positionMs: number;
 	durationMs: number;
 	isStream: boolean;

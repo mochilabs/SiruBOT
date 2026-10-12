@@ -112,6 +112,7 @@ export const APP_EMOJI_FALLBACKS = {
 	trophy: '🏆',
 	user: '👤',
 	volume_muted: '🔇',
+	volume_down: '🔉',
 	volume_up: '🔊',
 	warning: '⚠️',
 	wave: '👋',
@@ -176,6 +177,14 @@ export type AppEmojiFetcher = () => Promise<Array<{ id: string; name: string }>>
 let apiFetcher: AppEmojiFetcher | null = null;
 export function configureAppEmojiFetcher(fetcher: AppEmojiFetcher): void {
 	apiFetcher = fetcher;
+}
+
+/**
+ * 외부(봇 AppEmojiManager)에서 이미 확정된 이름→ID 매핑을 주입한다.
+ * 매니저가 부팅 시 API 조회 + 미등록 PNG 업로드를 마친 뒤 최종 맵을 넣어요.
+ */
+export function setAppEmojiIdMap(map: EmojiIdMap): void {
+	if (map && Object.keys(map).length) cachedMap = map;
 }
 
 /** 매핑 로드 (성공 시 최초 1회, 이후 캐시). 파일 실패 시 Discord API fetch로 폴백. 빈 결과는 캐시하지 않고 30초 뒤 한 번만 재시도해요. */

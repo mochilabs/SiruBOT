@@ -160,47 +160,29 @@ describe('now playing render sharing', () => {
 		expect((await resolveNowPlayingCard(replacement))?.file.attachment).toEqual(Buffer.from('replacement'));
 	});
 
-	it('buckets the card key every five seconds and on pause changes', () => {
+	it('does not bucket by position, but reacts to volume/chapter/pause/repeat', () => {
 		const current = player();
 		current.queue.current!.info.duration = 60_000;
 		const k0 = getNowPlayingCardKey(current!);
-		expect(k0).toContain('::p0');
 		expect(k0).toContain('::roff');
-		Object.defineProperty(current, 'position', { value: 4999 });
-		expect(getNowPlayingCardKey(current!)!).toBe(k0);
+		expect(k0).not.toContain('::p');
 		Object.defineProperty(current, 'position', { value: 5000 });
-		expect(getNowPlayingCardKey(current!)!).not.toBe(k0);
-		expect(getNowPlayingCardKey(current!)!).toContain('::p1');
+		expect(getNowPlayingCardKey(current!)!).toBe(k0);
 		current.paused = true;
-		expect(getNowPlayingCardKey(current!)!).toContain(':paused');
-		current.queue.current!.info.isStream = true;
-		expect(getNowPlayingCardKey(current!)!).toContain('::px');
+		const kPaused = getNowPlayingCardKey(current!)!;
+		expect(kPaused).toContain(':paused');
+		current.paused = false;
+		current.volume = 50;
+		const kVol = getNowPlayingCardKey(current!)!;
+		expect(kVol).toContain('::v50');
 	});
 
 	it('treats only same-track keys as the same identity', () => {
-		const a = 'video-1::v100::cnone::p0::r off';
-		const aLater = 'video-1::v100::cnone::p1::r off';
-		const b = 'video-2::v100::cnone::p0::r off';
+		const a = 'video-1::v100::cnone::r off';
+		const aLater = 'video-1::v100::c1::r off';
+		const b = 'video-2::v100::cnone::r off';
 		expect(sameNowPlayingTrackIdentity(a, aLater)).toBe(true);
 		expect(sameNowPlayingTrackIdentity(a, b)).toBe(false);
-	});
-
-	it('serves the previous bucket card while the next five-second bucket is rendering', async () => {
-		render.mockResolvedValueOnce(Buffer.from('bucket-0')).mockResolvedValueOnce(Buffer.from('bucket-1'));
-		const current = player();
-		current.queue.current!.info.duration = 60_000;
-		const first = await resolveNowPlayingCard(current);
-		expect(first?.trackKey).toContain('::p0');
-		Object.defineProperty(current, 'position', { value: 5000 });
-		// 최신 버킷은 아직 렌더 전 — strict 캐시는 비지만 표시용으로는 이전 버킷을 준다.
-		expect(getCachedNowPlayingCard(current)).toBeNull();
-		const displayed = getDisplayNowPlayingCard(current);
-		expect(displayed?.trackKey).toBe(first?.trackKey);
-		const second = await resolveNowPlayingCard(current);
-		expect(second?.fresh).toBe(true);
-		expect(second?.filename).toBe(first?.filename); // 같은 곡은 같은 파일명 — 메시지 첨부 교체용
-		expect(second?.trackKey).not.toBe(first?.trackKey);
-		expect(displayed?.trackKey).toBe(first?.trackKey);
 	});
 
 	it('stops reusing the displayed card once the track changes', async () => {
