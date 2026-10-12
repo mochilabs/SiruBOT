@@ -130,7 +130,7 @@ export function PermissionList({
 							size="sm"
 							disabled={disabled}
 							onClick={() => toggleCategory(cat.permissions)}
-							className="h-auto px-0 text-xs font-bold text-primary-control hover:bg-transparent hover:text-primary-control-hover"
+							className="h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:underline"
 						>
 							{allInCategory(cat.permissions) ? "모두 거부" : "모두 허용"}
 						</Button>

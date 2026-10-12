@@ -5,12 +5,13 @@ Single source of truth for the dashboard's visual foundation. The stylesheet
 extend it, and what must happen in later phases.
 
 Status: **Phase 1 (tokens), Phase 2 (core primitives), Phase 3A (opaque
-surface migration) and Phase 3B (navigation / interaction primitives)
-complete.** Pages kept their layout and behaviour; only
-surface/border/elevation/radius expressions changed. `.glass-panel` and
-`.glass-overlay` are gone; `.text-title-gradient` survives on brand hero
-headlines only. `layout/navigation.tsx` is gone — in-page tab panels use
-`Tabs`.
+surface migration), Phase 3B (navigation / interaction primitives) and
+Phase 3C (contrast/affordance hardening) complete.** Pages kept their
+layout and behaviour; surface/border/elevation/radius expressions and the
+primary palette were corrected to pass WCAG 2.1 while keeping the brand
+identity. `.glass-panel` and `.glass-overlay` are gone; `.text-title-gradient`
+survives on brand hero headlines only. `layout/navigation.tsx` is gone —
+in-page tab panels use `Tabs`.
 
 ---
 
@@ -50,7 +51,8 @@ The stylesheet is divided into nine numbered sections. Keep them in this order.
 3. **Tailwind theme mappings** — `@theme inline { --color-*: var(...) }`.
 4. **Typography tokens** — `--font-sans`, `--text-2xs`.
 5. **Radius & surface tokens** — `--radius*`, `--r-*`, `--surface-*`.
-6. **Border & shadow tokens** — `--border-subtle/strong`, `--elev-1..5`.
+6. **Border & shadow tokens** — `--border-subtle/strong`, `--elev-1..5`,
+   `--control-boundary` / `--shadow-control-boundary`.
 7. **Status colors** — `--success/warning/info` (+ `-foreground`), `--destructive`.
 8. **Component-independent utilities** — `@utility` definitions, `@layer base`
    scrollbar, retained legacy utilities, keyframes.
@@ -71,41 +73,33 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 
 ## 3. Token reference
 
-### Semantic color (unchanged values)
+### Semantic color (Pink Beret Music Bot palette — base `#ffdada`)
 
 | Token | Light | Dark | Utility |
 | --- | --- | --- | --- |
-| `--background` | `#ffffff` | `#191919` | `bg-background` |
-| `--foreground` | `#191919` | `#fafafa` | `text-foreground` |
-| `--card` / `--card-foreground` | `#fafafa` / `#191919` | `#252525` / `#fafafa` | `bg-card` |
-| `--popover` / `--popover-foreground` | `#fafafa` / `#191919` | `#252525` / `#fafafa` | `bg-popover` |
-| `--primary` / `--primary-foreground` | `#ffdada` / `#751919` | same | `bg-primary`, `text-primary` |
-| `--primary-control` / `--primary-control-text` | `#d93636` / `#ffffff` | same | `bg-primary-control`, `text-primary-control-text` |
-| `--primary-control-hover` | `#b32626` | same | `bg-primary-control-hover` |
-| `--primary-text` | `#751919` | same | `text-primary-text` |
-| `--secondary` / `--secondary-foreground` | `#dcdcdc` / `#191919` | `#484848` / `#fafafa` | `bg-secondary` |
-| `--muted` / `--muted-foreground` | `#f5f5f5` / `#636363` | `#252525` / `#c4c4c4` | `bg-muted`, `text-muted-foreground` |
-| `--accent` / `--accent-foreground` | `#ffdada` / `#751919` | same | `bg-accent` |
-| `--border` / `--input` | `#ebebeb` / `#f5f5f5` | `#484848` / `#252525` | `border-border`, `border-input` |
-| `--ring` | `#d93636` | same | `ring-ring` |
+| `--background` | `#fff9f9` | `#1f1618` | `bg-background` |
+| `--foreground` | `#3a2c30` | `#fbeeee` | `text-foreground` |
+| `--card` / `--card-foreground` | `#ffffff` / `#3a2c30` | `#2b2023` / `#fbeeee` | `bg-card` |
+| `--popover` / `--popover-foreground` | `#ffffff` / `#3a2c30` | `#2b2023` / `#fbeeee` | `bg-popover` |
+| `--primary` / `--primary-foreground` | `#ffdada` / `#4f1c2a` | `#ffdada` / `#3a1a22` | `bg-primary text-primary-foreground` |
+| `--brand` | `#ee6f8b` | `#f98aa0` | 액션·포커스 링 포인트 핑크 (`bg-brand`) |
+| `--primary-control` / `--primary-control-text` / `--primary-control-hover` | `var(--brand)` / `var(--primary-foreground)` / `#f27c96` | `var(--brand)` / `var(--primary-foreground)` / `#f27890` | solid on-state/CTA fills |
+| `--primary-text` | `var(--accent-foreground)` (`#4f1c2a`) | `var(--accent-foreground)` (`#ffdada`) | accent text on neutral surfaces |
+| `--secondary` / `--secondary-foreground` | `#fff0f0` / `#3a2c30` | `#3a2c30` / `#fbeeee` | `bg-secondary` |
+| `--muted` / `--muted-foreground` | `#fff0f0` / `#7d686d` | `#3a2c30` / `#b9a4a9` | `bg-muted`, `text-muted-foreground` |
+| `--accent` / `--accent-foreground` | `#ffc3c9` / `#4f1c2a` | `#4d3b40` / `#ffdada` | `bg-accent` |
+| `--border` / `--input` | `#f3d3d6` / `#f3d3d6` | `#4d3b40` / `#4d3b40` | `border-border`, `border-input` |
+| `--border-subtle` / `--border-strong` | `#f8e1e4` / `#b4779b` | `#3a2c30` / `#a37d89` | `border-border-subtle`, `border-border-strong` |
+| `--ring` | `var(--brand)` (`#ee6f8b`) | `var(--brand)` (`#f98aa0`) | `ring-ring` |
 | `--primary-rgb` | `255 218 218` | same | space triplet for `rgba(var(--primary-rgb) / …)` |
-
-Rules:
-
-- `--primary`(#ffdada) is a brand surface for cards/panels/highlights. It is never placed directly on `--background`.
-- `--primary-control`(#d93636) is the fill for solid interactive controls (buttons, switch checked track, slider thumb/range).
-- `--primary-text`(#751919) is used only for text on `--primary`/`--accent` brand surfaces.
-- `--secondary` fill alone is below 3:1 against cards, so neutral controls must pair it with `shadow-control-boundary`.
-- `text-muted-foreground/NN`, `text-foreground/NN` opacity derivatives are all below AA — **use full tokens for text**. Exception: `text-foreground/75` and above (measured 6.7+).
-- Contrast evidence is recorded in `globals.css` token comments.
 
 ### Surfaces (opaque, replaces glass for new work)
 
 | Token | Light | Dark | Utility |
 | --- | --- | --- | --- |
-| `--surface-1` | `#ffffff` | `#191919` | `bg-surface-1` — base panel |
-| `--surface-2` | `#fafafa` | `#252525` | `bg-surface-2` — nested / inset area |
-| `--surface-3` | `#f5f5f5` | `#484848` | `bg-surface-3` — hover/pressed state |
+| `--surface-1` | `#ffffff` | `#2b2023` | `bg-surface-1` — base panel |
+| `--surface-2` | `#fff0f0` | `#3a2c30` | `bg-surface-2` — nested / inset area |
+| `--surface-3` | `#ffffff` | `#3a2c30` | `bg-surface-3` — floating overlay |
 
 Or use the `panel` utility for the common case (opaque fill + `--r-card`).
 
@@ -126,13 +120,17 @@ Role tokens (new, for new code):
 
 Do not introduce new `rounded-xl/2xl/3xl` usages; pick a role token instead.
 
-### Borders
+### Control boundaries
 
-| Token | Light | Dark | Utility |
-| --- | --- | --- | --- |
-| `--border` | `#ebebeb` | `#484848` | `border-border` |
-| `--border-subtle` | `#f5f5f5` | `#252525` | `border-border-subtle` — quiet dividers |
-| `--border-strong` | `#828282` | `#c4c4c4` | `border-border-strong` — input boundaries (3:1+ vs card) |
+Neutral and outline controls use an **inset 1px boundary** rather than a
+visible fill to satisfy SC 1.4.11 without losing the light neutral surface.
+
+| Token | Value | Utility |
+| --- | --- | --- |
+| `--control-boundary` | `inset 0 0 0 1px var(--border-strong)` | mapped to `shadow-control-boundary` |
+| `--control-boundary-invalid` | `inset 0 0 0 1px var(--destructive)` | mapped to `shadow-control-boundary-invalid` |
+
+Light/dark resolve `--border-strong` to the theme-appropriate rose-grey.
 
 ### Shadows
 
@@ -145,8 +143,6 @@ Five intentional elevation steps replace Tailwind's defaults:
 | `shadow-lg` | `--elev-3` | raised cards, headers |
 | `shadow-xl` | `--elev-4` | menus, popovers |
 | `shadow-2xl` | `--elev-5` | modals, drawers |
-| `shadow-control-boundary` | `--control-boundary` | paint-only 1px inset boundary for neutral controls/inputs |
-| `shadow-control-boundary-invalid` | `--control-boundary-invalid` | paint-only 1px inset boundary for invalid inputs |
 
 Shadows express elevation only — never decoration.
 
@@ -154,10 +150,10 @@ Shadows express elevation only — never decoration.
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--success` / `-foreground` | `#1b8045` / `#ffffff` | `#8ae3a9` / `#191919` |
-| `--warning` / `-foreground` | `#bd530b` / `#ffffff` | `#ffb65c` / `#191919` |
-| `--info` / `-foreground` | `#245fb0` / `#ffffff` | `#70aeff` / `#191919` |
-| `--destructive` / `-foreground` | `#d93636` / `#ffffff` | same |
+| `--success` / `-foreground` | `#0f7a52` / `#ffffff` | `#34d399` / `#052e16` |
+| `--warning` / `-foreground` | `#9a6100` / `#ffffff` | `#fbbf24` / `#451a03` |
+| `--info` / `-foreground` | `#0b6bb0` / `#ffffff` | `#38bdf8` / `#082f49` |
+| `--destructive` / `-foreground` | `#d4183d` / `#ffffff` | `#ff7b8a` / `#2b1018` |
 
 Utilities: `bg-success`, `text-warning`, `bg-destructive`, … `Badge`,
 `StatusDot` and `StatusBadge` were migrated to these tokens in Phase 2; any
@@ -195,175 +191,82 @@ framer-motion separately.
 
 ---
 
-## 4. shadcn/ui
+## 4. Contrast rules
 
-`components.json` is hand-authored (not generated by `shadcn init`, which would
-have overwritten `layout.tsx` and replaced Pretendard with Geist):
+All text must meet WCAG 2.1 AA:
 
-- `style: "base-nova"` — registry components use Base UI primitives.
-- `tailwind.css: "src/app/globals.css"` — already structured the way the CLI expects.
-- `aliases.utils: "@/lib/utils"` — points at our `cn()`.
+- Normal text: 4.5:1 minimum.
+- Large text (18px+): 3:1 minimum.
+- Control boundaries (non-text): 3:1 minimum (SC 1.4.11).
 
-Adding a component:
+Primary palette decisions (Phase 3C — Pink Beret base `#ffdada`):
 
-```bash
-yarn workspace @sirubot/dashboard exec shadcn add <name>
+- `--primary` (`#ffdada`) is the brand **surface**. Default/primary buttons are
+  `bg-primary text-primary-foreground` (maroon-on-pink, 10.64:1 light /
+  12.06:1 dark). Hover는 `bg-primary/70`.
+- `--brand` (`#ee6f8b` light / `#f98aa0` dark) is the 포인트 핑크. It drives
+  `--ring` and `--primary-control` (on-state/CTA fills). Labels on it use
+  `text-primary-control-text` (= `--primary-foreground`, 4.75:1 light /
+  6.79:1 dark). Brand fill vs card (2.88:1 light) is an expected non-text
+  fail — 컨트롤은 AA 라벨 텍스트로 식별한다.
+- `--primary-text` = `--accent-foreground` (`#4f1c2a` light / `#ffdada`
+  dark) is the accent text color for neutral surfaces (13:1+ against both
+  backgrounds). `text-primary` (light pink) must never be used for text.
+- `--secondary` is a tinted neutral surface. It is too low-contrast against
+  cards on its own, so neutral controls pair it with
+  `shadow-control-boundary`.
+- Status colors keep the previous saturated values — current components use
+  `text-success` on `bg-success/10` tints, which pastel palette values would
+  break in light mode. A solid-badge status style per the palette preview is
+  a separate migration if desired.
+
+Run `python3 scripts/wcag-contrast-audit.py` after any token change. The script
+should report `Unexpected failures: 0`.
+
+---
+
+## 5. How to use the tokens
+
+```tsx
+// Contents block → Card; simple grouping → surface
+<Card padding="lg" className="gap-6">
+  <h2 className="text-2xl font-black tracking-tighter text-foreground">{title}</h2>
+  <p className="text-sm font-medium text-muted-foreground/80">{description}</p>
+</Card>
+
+<div className="rounded-card border border-border-subtle bg-surface-2 p-6"> ... </div>
+
+// Forms, overlays
+<input className="rounded-control border-0 bg-input shadow-control-boundary ..." />
+<div className="rounded-menu border border-border bg-popover p-1.5 shadow-2xl" />
 ```
 
-Lucide 아이콘 선택 사유(R-04 기록): 봇이 Discord Components V2로 렌더하는 것과 톤을 맞추기 위해 컨트롤/상태
-아이콘은 stroke 기반 단일 셋(lucide)으로 통일한다. 실제 봇 출력 재현용 이모지(Discord 미리보기)는 제외 — 그것은
-데이터다.
+```tsx
+<Badge variant="success" dot>온라인</Badge>
+<div className="bg-success/10 border border-success/20 text-success">온라인</div>
+<div className="bg-primary/10 border border-primary/20 text-primary-text">브랜드 강조</div>
+```
 
-Two follow-ups are required, because the registry output does not match this
-repo's conventions yet:
+## 6. What not to do
 
-1. **Rewrite `import { cn } from "cn"` → `import { cn } from "@/lib/utils"`.**
-   The registry hardcodes the `cn` package; we implement `cn` with
-   `clsx` + `tailwind-merge` instead, and do not install a second combiner.
-2. **Install `@base-ui/react`** if the component imports a Base UI primitive —
-   `shadcn add` does not install it.
+```tsx
+// ✗ Hard-coded hex / arbitrary palette
+<div className="bg-[#ff85c1] text-[#2d1b1e]" />
+<div className="bg-pink-400" />
 
-Never run `shadcn init` in this repo.
+// ✗ Light/dark split in components
+<div className="bg-white dark:bg-[#1a0e12]" /> // → bg-background
 
----
+// ✗ text-primary on a neutral surface
+<span className="text-primary">강조</span> // → text-primary-text or text-primary-control
+```
 
-## 5. Legacy utilities
-
-`glass-panel` and `glass-overlay` were removed from `globals.css` in Phase 3A
-after every call site migrated. `--glass-overlay` / `--glass-border` are gone
-with them. The only surviving legacy utility is:
-
-| Utility | Consumer files | Decision |
-| --- | --- | --- |
-| `text-title-gradient` | 6 (`login`, `invite`, `invite/redirect`, `not-found`, `home/hero-section` ×2) | brand/hero headline treatment — kept on purpose |
-
-Do not reintroduce glass. When picking a surface, judge by role:
-
-| Role | Use |
-| --- | --- |
-| Independent content block | `Card` (`variant` by emphasis) — no border, use surface color + spacing + shadow for separation |
-| Secondary / inset block | `Card variant="muted"` — no border |
-| Simple inner grouping | `bg-surface-2 rounded-card` — use spacing and surface color, no border |
-| Form control | `bg-input shadow-control-boundary rounded-control` |
-| Menu / popover / toast / notification | `bg-popover rounded-menu` + `shadow-2xl` — no border |
-| Dialog / command palette | `bg-popover rounded-dialog` + `shadow-2xl` — no border |
-| Layout wrapper, nav container, table shell, toolbar | not a Card — a plain surface |
-
-`--secondary` is a neutral surface token. Because it does not reach 3:1 against cards by itself, it is paired with `shadow-control-boundary` for buttons, icon buttons, and switch tracks.
-
-탭 타깃(R-03): `Button`은 `pointer-coarse:min-h-11`(아이콘 버튼 `pointer-coarse:w-11`)로 터치 기기에서
-44px 이상을 보장한다. 데스크탑 fine-pointer 크기(h-8/9/10)는 유지된다.
-
-`panel` is available for a bare `bg-surface-1 + rounded-card`, but prefer a
-`Card` whenever the element is a real content block.
-
-The global `InteractiveGlow` was removed from the root layout in Phase 1; the
-component file remains and is still used by `/invite` and `/invite/redirect`.
+- Exceptions: Discord brand (`#5865F2`), `EmbedPreview` embed color (user input),
+  avatar/role colors from Discord.
 
 ---
 
-## 6. Phase 2 primitives
+## 7. Related documents
 
-All in `src/components/primitives/`, all built on `cn()` + `cva` + tokens.
-Public API is documented in `.opencode/skills/ui-primitives/SKILL.md`.
-
-| Component | File | Notes |
-| --- | --- | --- |
-| `Button` | `button.tsx` | `cva` variants `primary/secondary/ghost/danger/icon/state-toggle/cta`, sizes `sm/md/lg` (`h-8/h-9/h-10`, `rounded-control`), `loading`, `active`, `icon`, default `type="button"`. `secondary` and `icon` use `shadow-control-boundary`. |
-| `Card` + `CardHeader/Title/Description/Content/Footer` | `card.tsx` | `variant: default/muted/raised/interactive`, `padding: none/sm/md/lg`, `rounded-card` |
-| `Input`, `Textarea` | `input.tsx` | shared `controlBase` (`rounded-control`, `bg-input`, focus ring, `aria-invalid` styling) |
-| `Field` | `field.tsx` | `label/description/error/required/htmlFor`; children may be a render prop receiving `{ id, describedBy, invalid }` for real label wiring; `role="alert"` on error |
-| `Badge`, `StatusBadge` | `badge.tsx` | `toneStyles` map (`neutral/primary/success/warning/destructive/info/discord`) shared with `StatusDot`; `StatusBadge` moved here from `components/status-badge.tsx` (deleted) |
-| `StatusDot` | `status-dot.tsx` | same tone map as `Badge` |
-| `EmptyState` | `empty-state.tsx` | `icon/title/description/action/secondaryAction`, `size: sm/md` |
-| `Skeleton` | `skeleton.tsx` | `bg-muted` + `animate-pulse`; `SkeletonCard` renders a `Card` |
-| `SectionLabel` | `section-label.tsx` | quiet group label (`text-xs font-medium`, no uppercase/tracking) |
-| `Tabs` | `tabs.tsx` | `role="tablist"`, underline indicator, arrow-key roving focus, optional `renderPanel` |
-
-`StatCard` (`src/components/data/stat-card.tsx`) now renders a `Card`;
-`shard-stats.tsx` uses it instead of a private duplicate.
-
-Migrated off duplicated ad-hoc markup in Phase 2: the five
-`servers/*-settings.tsx` files and three playlist modals now use
-`Field` + `Input`/`Textarea` (the `inputClass` export and the settings-local
-`Field` are gone); `data-table.tsx`, `shards`, `servers`, `track`,
-`playlist-detail` use `EmptyState`; sidebar/dropdown/select/command-palette use
-`SectionLabel`; `servers-page-skeleton.tsx` uses `Skeleton*`; `error-panel` and
-`data-table` retry buttons use `Button`.
-
-### Phase 3B — navigation & interaction primitives
-
-**Tabs is the only in-page tab primitive.** `layout/navigation.tsx`
-(`underline`/`pill`/`segment`) had zero real consumers after migration and was
-deleted; the gallery documents `Tabs` alone. Two candidates moved over:
-
-| Before | After | Behaviour kept |
-| --- | --- | --- |
-| `Navigation variant="pill"` in `servers/server-dashboard.tsx` | `Tabs` + `renderPanel` | all five settings panels stay mounted (`block`/`hidden`), so in-progress edits survive a tab switch |
-| `Navigation variant="segment"` in `playlists/add-track-modal.tsx` | `Tabs` + `renderPanel` | URL / 검색 panels are controlled by props, so unmounting is safe |
-
-Raw `<button>` was classified before touching anything (A action · B icon ·
-C toggle · D selector/menu/option · E link/navigation · F mock/marketing).
-25 of 50 became `Button`; the other 25 are **intentionally** raw — see §7.
-Same for raw `<input>`: only `search-input.tsx` was API-compatible with
-`Input`; the four popover/palette/chip fields keep their bespoke markup.
-
-Token pass: `duration-200/300/500` → `duration-fast/base/slow` (value-identical)
-and `text-[11px]` → `text-2xs` (value-identical) are done. `rounded-xl` on
-dropdown/listbox rows → `rounded-menu` (identical 12px); the `rounded-xl`
-overrides on newly-migrated `Button`s were dropped so they inherit
-`rounded-control`.
-
-## 7. Phase 3+ checklist
-
-- [x] Migrate `glass-panel` / `glass-overlay` call sites (Phase 3A — 41/12 → 0/0)
-- [x] `Navigation` → `Tabs` (Phase 3B: `/servers/[id]`, `add-track-modal`; component
-      deleted, gallery documents `Tabs` only)
-- [x] Migrate `duration-200/300/500` → `duration-fast/base/slow` (Phase 3B — 28 → 0)
-- [x] `text-[11px]` → `text-2xs` (Phase 3B — 4 → 0, identical size)
-- [ ] Remaining hero/marketing decoration: `text-title-gradient` ×6, `blur-[…]`
-      glow blobs on `/`, `shadow-[…]` CTA glows on `/login`, `/invite`,
-      `/not-found` — leave until the page-redesign phase
-- [ ] Raw `rounded-xl` 29 → 18 / `rounded-2xl` 11 → 11. Converted only where the
-      role and the value both matched (dropdown/listbox rows → `rounded-menu`,
-      12px unchanged; `Button` radius overrides dropped → `rounded-control`).
-      The 18 left are nav pills, decorative indicators, icon tiles, callouts and
-      the Discord/gallery mocks — swapping them would change size or meaning.
-- [ ] `text-[10px]` ×11: **no matching token** (`--text-2xs` is 11px), so they
-      were not grown to `text-2xs`. Decide whether to add a 10px token or restyle
-      the micro-labels in the page-redesign phase.
-- [ ] Inline `StatCard` duplicate in `src/app/track/page.tsx`
-- [ ] Raw `<input>` 5 → 4. Migrated: `search-input` (plain controlled text input,
-      API-compatible). Retained: `tag-input` (chip field + Enter/Backspace chip
-      handling), `role-select` / `select` (popover search, underline style),
-      `command-palette` (palette search + activeIndex key handling).
-- [ ] Raw `<button>` 50 → 25 in 15 files, classified before touching anything:
-      **24 migrated** (14 `icon`, 6 `ghost`, 1 `secondary`, 1 `danger`, 2 `cta`);
-      **1 removed** with `layout/navigation.tsx`; **25 retained** on purpose —
-      5 inline/route links, 12 selector/menu/option/combobox rows, 7 Discord mocks
-      (`guild-selector` has zero consumers), 1 custom carousel indicator.
-- [ ] Remove `tailwind.config.ts` (dead under Tailwind v4)
-- [ ] Delete `text-title-gradient` once its 6 brand headlines are decided
-
-## 8. Hard rules
-
-- No hard-coded hex/rgb in components. Use tokens.
-- No new `dark:` branches for palette colors — redefine tokens in `.dark`.
-- No arbitrary values for sizes that have a token (`text-[11px]`, `bg-[#…]`).
-- Disclosed exceptions: Discord brand `#5865F2`, user-supplied embed colors,
-  Discord role/avatar colors.
-- `@layer base` scrollbar styling and `providers.tsx` are out of scope for
-  styling changes.
-- Never bulk-replace `<button>` → `<Button>` or `<input>` → `<Input>` (whole
-  file, whole project, or regex). Classify first; a raw control that carries
-  `role="option"` / `role="combobox"` / `role="menuitem"` / routing / mock
-  semantics stays raw, and the report must say why.
-- Never reintroduce `layout/navigation.tsx` — `Tabs` owns in-page tab panels.
-  Route navigation, filters, segmented option pickers and mobile menus are
-  **not** Tabs.
-- `Button` variants are limited to
-  `primary | secondary | ghost | danger | icon | state-toggle | cta`. Do not add
-  `premium` / `success` / `glass` / `gradient` / `floating` variants, and do not
-  create new button or input primitives.
-- Keep token changes in `:root`/`.dark`; never introduce per-component `dark:`
-  palette branches.
+- `apps/dashboard/MEMO.md` — past redesign notes; may be stale; code wins.
+- Project root `AGENTS.md` — build commands and repo conventions.

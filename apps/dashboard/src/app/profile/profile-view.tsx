@@ -74,7 +74,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Cake className="h-4 w-4 text-primary-control" aria-hidden />
+                <Cake className="h-4 w-4 text-primary-text" aria-hidden />
                 생일
               </CardTitle>
               <CardDescription>
@@ -91,7 +91,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CalendarCheck className="h-4 w-4 text-primary-control" aria-hidden />
+                <CalendarCheck className="h-4 w-4 text-primary-text" aria-hidden />
                 출석
               </CardTitle>
               <div className="flex items-center justify-between gap-3">
@@ -111,7 +111,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary-control" aria-hidden />
+                <Sparkles className="h-4 w-4 text-primary-text" aria-hidden />
                 오늘의 운세
               </CardTitle>
               <CardDescription>
@@ -149,7 +149,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gamepad2 className="h-4 w-4 text-primary-control" aria-hidden />
+              <Gamepad2 className="h-4 w-4 text-primary-text" aria-hidden />
               게임 전적
             </CardTitle>
           </CardHeader>
@@ -184,7 +184,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
       {/* 음악 통계 */}
       <div className="mt-6 space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
-          <ListMusic className="h-5 w-5 text-primary-control" aria-hidden />
+          <ListMusic className="h-5 w-5 text-primary-text" aria-hidden />
           음악 통계
         </h2>
         <RevealGroup className="grid gap-4 sm:grid-cols-3">
@@ -242,7 +242,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-black tabular-nums text-primary-control">{track.count.toLocaleString()}회</p>
+                        <p className="text-sm font-black tabular-nums text-primary-text">{track.count.toLocaleString()}회</p>
                         <p className="text-xs font-medium text-muted-foreground">
                           {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
                         </p>

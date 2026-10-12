@@ -31,11 +31,19 @@ export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, on
 	const label = (playlist: Playlist) => `${playlist.name} · ${playlist._count?.tracks ?? 0}곡`;
 
 	return (
-		<div className="flex w-full items-center gap-2">
+		<div className="flex w-full items-center gap-2 lg:hidden">
 			<div className="min-w-0 flex-1">
 				<Select value={activePlaylistId ?? ""} onValueChange={(value: string | null) => { if (value) onSelect(value); }}>
 					<SelectTrigger className="w-full">
-						<SelectValue placeholder="플레이리스트 선택..." />
+						{/* Base UI Select.Value는 items 없이 children 함수도 없으면 raw value(UUID)를 그대로 표시해요.
+						    선택된 id로 목록에서 찾아 `이름 · N곡` 라벨을 보여 주고, 미선택 시 placeholder 문구를 반환해요. */}
+						<SelectValue placeholder="플레이리스트 선택...">
+							{(value: string) => {
+								if (!value) return "플레이리스트 선택...";
+								const selected = playlists.find((p) => p.id === value);
+								return selected ? label(selected) : value;
+							}}
+						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						{favorited.length > 0 && (
@@ -57,13 +65,7 @@ export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, on
 					</SelectContent>
 				</Select>
 			</div>
-			<Button
-				variant="icon"
-				size="sm"
-				onClick={onCreateNew}
-				aria-label="새 플레이리스트"
-				className="h-11 w-11 shrink-0 rounded-control bg-surface-1 p-3 text-muted-foreground hover:bg-surface-2 hover:text-primary-control"
-			>
+			<Button variant="icon" size="icon" onClick={onCreateNew} aria-label="새 플레이리스트">
 				<Plus size={16} />
 			</Button>
 		</div>

@@ -61,7 +61,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 				{process.shardIds.map((id) => (
 					<span
 						key={id}
-						className="inline-flex items-center rounded-lg bg-surface-2 px-2.5 py-1 text-sm font-bold text-muted-foreground transition-colors hover:text-primary-control"
+						className="inline-flex items-center rounded-lg bg-surface-2 px-2.5 py-1 text-sm font-bold text-muted-foreground transition-colors hover:text-primary-text"
 					>
 						샤드 {id}
 					</span>

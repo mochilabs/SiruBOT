@@ -16,11 +16,11 @@ interface FloatingIcon {
 }
 
 const ICON_ITEMS: Array<{ Icon: LucideIcon; tone: string }> = [
-	{ Icon: Music2, tone: "text-primary-control" },
+	{ Icon: Music2, tone: "text-primary-text" },
 	{ Icon: Bot, tone: "text-secondary/60" },
-	{ Icon: ListMusic, tone: "text-primary-control" },
+	{ Icon: ListMusic, tone: "text-primary-text" },
 	{ Icon: CloudSun, tone: "text-secondary/50" },
-	{ Icon: Gamepad2, tone: "text-primary-control" },
+	{ Icon: Gamepad2, tone: "text-primary-text" },
 	{ Icon: Sparkles, tone: "text-secondary/60" },
 ];
 

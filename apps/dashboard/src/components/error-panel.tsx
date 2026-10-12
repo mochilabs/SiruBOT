@@ -18,15 +18,16 @@ export function ErrorPanel({
   onRetry,
   className = ""
 }: ErrorPanelProps) {
+  // EmptyState와 같은 형태 언어: rounded 컨테이너 + rounded-menu 아이콘 칩 + sm 타이포 + secondary 재시도
   return (
-    <Card padding="none" className={`p-12 text-center max-w-xl mx-auto ${className}`}>
-      <div className="mx-auto mb-6 inline-flex rounded-card p-4 bg-destructive/10 text-destructive">
-        <AlertTriangle className="h-8 w-8" />
-      </div>
-      <h3 className="text-2xl font-semibold tracking-tight text-foreground mb-4">{title}</h3>
-      <p className="text-lg font-medium text-muted-foreground leading-relaxed">{message}</p>
+    <Card padding="none" className={`flex flex-col items-center justify-center gap-3 p-12 text-center max-w-xl mx-auto ${className}`}>
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-menu bg-destructive/10 text-destructive">
+        <AlertTriangle className="h-5 w-5" aria-hidden />
+      </span>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
       {onRetry && (
-        <div className="mt-8 flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
           <Button variant="secondary" onClick={onRetry}>
             다시 시도하기
           </Button>

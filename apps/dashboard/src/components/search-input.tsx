@@ -57,7 +57,7 @@ export function SearchInput({
 		<div className={`relative group ${className}`}>
 			<div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-slow" />
 			
-			<Search className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary-control" />
+			<Search className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary-text" />
 			
 			<Input
 				type="text"
@@ -68,12 +68,12 @@ export function SearchInput({
 			/>
 
 			{value && (
+				// ghost variant — icon variant의 shadow-control-boundary가 덮어쓰기에도 남아서 링처럼 보였어요
 				<Button
-					variant="icon"
-					size="sm"
+					variant="ghost"
 					onClick={clear}
 					aria-label="검색어 지우기"
-					className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-transparent p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+					className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-primary-control/10 hover:text-primary-text"
 				>
 					<X className="h-4 w-4" />
 				</Button>

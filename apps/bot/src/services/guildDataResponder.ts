@@ -41,7 +41,9 @@ export class GuildDataResponder {
 	public async start(redisUrl: string | undefined): Promise<void> {
 		const url = redisUrl?.trim() || null;
 		if (!url) {
-			this.logger.warn('REDIS_URL 미설정: 길드 데이터 요청 구독 없이 동작해요 (대시보드 채널/역할 조회는 타임아웃 폴백해요)');
+			this.logger.warn(
+				'REDIS_URL 미설정: 길드 데이터 요청 구독 없이 동작해요. 대시보드 연동(채널/역할 조회, 웹 플레이어, JTC 셋업, 인사, 봇 프로필)은 전부 응답 불가 상태예요.'
+			);
 			return;
 		}
 		// start 자체는 실패를 던지지 않는다 — connect만 여기서 시도하고 나머지는 비동기 재시도.

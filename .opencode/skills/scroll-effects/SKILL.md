@@ -76,7 +76,11 @@ import { m } from "framer-motion";
 
 ### 03. 스태거 (Stagger)
 
-부모에 `staggerChildren`, 자식은 자동 순차 시작. **레퍼런스: `features-section.tsx`** (`sectionVariants`).
+부모에 `staggerChildren`, 자식은 자동 순차 시작.
+
+- **이 프로젝트 전용 래퍼가 이미 있다**: `components/motion/reveal.tsx`의 `RevealGroup`(기본 stagger 0.08) +
+  `RevealItem` — 새 섹션은 이 조합을 쓴다. 자식은 반드시 `RevealItem`만 사용.
+- 수동으로 만들 때의 레퍼런스: `features-section.tsx` (`sectionVariants`).
 
 ```tsx
 const container = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } } as const;
@@ -158,7 +162,16 @@ import { TypingText } from "@/components/typing-text";
 
 ### 08. 카운트업 (Count-up)
 
-`react-intersection-observer` + `requestAnimationFrame`. framer-motion의 `animate()`도 가능.
+**이미 훅이 있다: `src/hooks/use-count-up.ts`** — `useCountUp({ end, start?, durationMs? })`가
+`{ ref, value, inView }`를 반환하고 내부에서 `useInView` + rAF를 처리한다.
+사용처: `components/data/stat-card.tsx`, `home/hero-section.tsx`, `app/profile/profile-view.tsx`.
+직접 rAF를 구현하지 말고 이 훅을 쓴다.
+
+```tsx
+const { ref, value } = useCountUp({ end: streak });
+```
+
+아래는 `react-intersection-observer`를 직접 쓰는 방식의 예시 (훅으로 대체 가능).
 
 ```tsx
 "use client";
@@ -312,10 +325,13 @@ const bg = useTransform(scrollYProgress, [0, 0.5, 1], ["#fef5f9", "#ffe4f0", "#f
 
 CSS keyframe으로 무한 흐름 + `scrollYProgress`로 속도 조절은 복잡하므로, 보통 **CSS 무한 marquee만** 구현한다.
 
+**이미 구현돼 있다**: `globals.css`의 `@utility animate-marquee` + `@keyframes marquee`(무한 반복 구문은
+`animation-play-state`로 hover 일시정지 — 트랙의 `group-hover:[animation-play-state:paused]` 담당).
+사용처: `components/home/command-marquee.tsx`.
+
 ```tsx
-// globals.css에 @keyframes marquee 등록해도 되고, tailwind 인라인도 가능.
 <div className="overflow-hidden">
-	<div className="flex gap-8 animate-[marquee_20s_linear_infinite]">
+	<div className="flex gap-8 animate-marquee">
 		{[...items, ...items].map((it, i) => <span key={i} className="text-foreground/60">{it}</span>)}
 	</div>
 </div>
@@ -338,7 +354,7 @@ CSS-only. 대시보드 섹션이 많은 페이지에서 유용.
 </section>
 ```
 
-- `top-24` = navbar(16 = 4rem) 아래에 붙게 조정. `scroll-mt-*`로 섹션 진입 위치도 맞춘다 (갤러리 사용 예시: `scroll-mt-28`).
+- `top-24` = navbar(16 = 4rem) 아래에 붙게 조정. `scroll-mt-*`로 섹션 진입 위치도 맞춘다 (`/design` 사용 예시: `scroll-mt-28`).
 
 ### 18. 핀 고정 + 스크럽 (Pin + scrub)
 
@@ -416,7 +432,7 @@ const CARD_HEIGHT = "calc(100vh - 8rem)";
 CSS-only. 대시보드 전페이지보다는 **캐러셀/갤러리**에 적합.
 
 ```tsx
-<div className="flex snap-x snap-mandatory overflow-x-auto custom-scrollbar">
+<div className="flex snap-x snap-mandatory overflow-x-auto scrollbar-none">
 	{items.map((it) => (
 		<div key={it.id} className="snap-start shrink-0 w-[80vw] sm:w-[420px]">
 			…
@@ -424,6 +440,10 @@ CSS-only. 대시보드 전페이지보다는 **캐러셀/갤러리**에 적합.
 	))}
 </div>
 ```
+
+> **`custom-scrollbar` 클래스는 정의돼 있지 않은 no-op** — 쓰지 말 것. 스크롤바를 감추려면 `scrollbar-none`
+> (`globals.css` `@utility`)을, 스타일을 바꾸려면 전역 `::-webkit-scrollbar`/`scrollbar-width: thin` 블록을 건드린다.
+> (참고: `playlist-detail.tsx`, `playlist-sidebar.tsx`에 아직 잔존하는 동일 클래스는 정리 대상.)
 
 > 페이지 전체 `snap-y snap-mandatory`는 navbar와 모바일에서 사용성이 떨어지므로 신중히 적용.
 
@@ -489,8 +509,9 @@ function HideOnScrollHeader() {
 
 ### 24. 스크롤스파이 (Scrollspy)
 
-**이미 구현됨: `apps/dashboard/src/app/components_gallery/page.tsx`** (L256–L277).
+**이미 구현됨: `apps/dashboard/src/app/design/page.tsx`** (핸들러 L279–297, 활성 판정 `rect.top <= 160`은 L288).
 `getBoundingClientRect().top <= offset` 패턴으로 활성 섹션 계산. 재사용할 경우 그대로 복사.
+(구 `components_gallery/page.tsx`는 2026-10-12 shadcn 마이그레이션에서 삭제됐다.)
 
 ```tsx
 useEffect(() => {

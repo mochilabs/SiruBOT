@@ -62,9 +62,9 @@ export function TagInput({
 		<div
 			onClick={() => inputRef.current?.focus()}
 			className={`
-				rounded-control border border-border bg-input flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
-				transition-all duration-base cursor-text
-				focus-within:ring-2 focus-within:ring-ring focus-within:border-primary-control
+				rounded-control border-0 bg-input shadow-control-boundary flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
+				transition-[color,background-color,box-shadow] duration-base cursor-text
+				focus-within:ring-2 focus-within:ring-ring
 				${disabled ? "opacity-50 pointer-events-none" : ""}
 				${className}
 			`}
@@ -73,18 +73,18 @@ export function TagInput({
 			{value.map((tag, i) => (
 				<span
 					key={`${tag}-${i}`}
-					className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary-text select-none"
+					className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-control/10 border border-primary-control/20 text-xs font-bold text-primary-text select-none"
 				>
 					{tag}
 					{!disabled && (
 						<Button
-							variant="icon"
+							variant="ghost"
 							size="sm"
 							onClick={(e) => {
 								e.stopPropagation();
 								removeTag(i);
 							}}
-							className="h-3.5 w-3.5 rounded-full border-transparent bg-transparent p-0.5 hover:bg-primary/20"
+							className="h-3.5 w-3.5 rounded-full p-0.5 hover:bg-primary-control/20 hover:text-primary-text"
 							aria-label={`${tag} 제거`}
 						>
 							<X className="h-2.5 w-2.5" />

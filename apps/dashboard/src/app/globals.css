@@ -25,36 +25,39 @@
 	/* Pretendard(next/font) → Pretendard JP(일본어 한자) → Twemoji(이모지) → 네이티브 이모지 → 시스템 폴백 */
 	--font-stack: var(--font-pretendard), var(--font-pretendard-jp), "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-	--background: #ffffff;
-	--foreground: #191919;
-	--card: #fafafa;
-	--card-foreground: #191919;
-	--popover: #fafafa;
-	--popover-foreground: #191919;
+	/* ============ Pink Beret Music Bot palette (shadcn, base #ffdada) ============
+	   포커스 링·브랜드 액션(--brand)은 포인트 핑크, 본체(--primary)는 라이트 핑크 서피스.
+	   텍스트는 primary-foreground(마룬) / accent-foreground 계열로 AA를 맞춘다. */
+	--background: #fff9f9;
+	--foreground: #3a2c30;
+	--card: #ffffff;
+	--card-foreground: #3a2c30;
+	--popover: #ffffff;
+	--popover-foreground: #3a2c30;
 	--primary: #ffdada;
-	--primary-foreground: #751919;
-	/* Solid interactive control fill. #d93636 on #ffffff 5.31:1, on #fafafa 5.16:1 (WCAG 1.4.11 pass).
-	   White text on #d93636 5.31:1 (SC 1.4.3 pass). */
-	--primary-control: #d93636;
-	/* Hover state for primary-control. */
-	--primary-control-hover: #b32626;
-	/* Text color for primary-control solid surfaces. */
-	--primary-control-text: #ffffff;
-	/* Text on primary brand surfaces (#ffdada). #751919 on #ffdada 7.38:1. */
-	--primary-text: #751919;
+	--primary-foreground: #4f1c2a;
+	/* 브랜드 액션 핑크 — 포커스 링·on 상태·액션 컨트롤에 사용 */
+	--brand: #ee6f8b;
+	/* 단색 액션 컨트롤 채움 — #4f1c2a 텍스트 대비 4.75:1 (AA) */
+	--primary-control: var(--brand);
+	/* hover는 명도를 올려 텍스트 대비를 유지 (#4f1c2a on #f27c96 5.29:1) */
+	--primary-control-hover: #f27c96;
+	/* primary-control 위 텍스트 — primary-foreground와 동일 */
+	--primary-control-text: var(--primary-foreground);
+	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
+	--switch-thumb: #ffffff;
+	/* 중립 서피스 위 핑크 계열 accent 텍스트 — accent-foreground와 동일 (배경 대비 13:1+) */
+	--primary-text: var(--accent-foreground);
 	--primary-rgb: 255 218 218;
-	--secondary: #dcdcdc;
-	--secondary-foreground: #191919;
-	--muted: #f5f5f5;
-	/* #636363 on #ffffff 6.55:1, on #fafafa 6.29:1, on #f5f5f5 5.91:1. */
-	--muted-foreground: #636363;
-	--accent: #ffdada;
-	--accent-foreground: #751919;
-	/* Subtle dividers. #ebebeb on #ffffff 1.12:1, on #fafafa 1.08:1 — decorative only. */
-	--border: #ebebeb;
-	--input: #f5f5f5;
-	/* Focus ring: #d93636 on #ffffff 5.31:1, on #fafafa 5.16:1. */
-	--ring: #d93636;
+	--secondary: #fff0f0;
+	--secondary-foreground: #3a2c30;
+	--muted: #fff0f0;
+	--muted-foreground: #7d686d;
+	--accent: #ffc3c9;
+	--accent-foreground: #4f1c2a;
+	--border: #f3d3d6;
+	--input: #f3d3d6;
+	--ring: var(--brand);
 
 	--discord-embed: #f2f3f5;
 	--discord-text: #313338;
@@ -65,33 +68,36 @@
 
 }
 .dark {
-	--background: #191919;
-	--foreground: #fafafa;
-	--card: #252525;
-	--card-foreground: #fafafa;
-	--popover: #252525;
-	--popover-foreground: #fafafa;
+	--background: #1f1618;
+	--foreground: #fbeeee;
+	--card: #2b2023;
+	--card-foreground: #fbeeee;
+	--popover: #2b2023;
+	--popover-foreground: #fbeeee;
 	--primary: #ffdada;
-	--primary-foreground: #751919;
-	--primary-control: #d93636;
-	--primary-control-hover: #b32626;
-	--primary-control-text: #ffffff;
-	--primary-text: #751919;
+	--primary-foreground: #3a1a22;
+	--brand: #f98aa0;
+	--primary-control: var(--brand);
+	/* hover — #3a1a22 텍스트 대비 5.82:1 */
+	--primary-control-hover: #f27890;
+	--primary-control-text: var(--primary-foreground);
+	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
+	--switch-thumb: #ffffff;
+	--primary-text: var(--accent-foreground);
 	--primary-rgb: 255 218 218;
-	--secondary: #484848;
-	--secondary-foreground: #fafafa;
-	--muted: #252525;
-	/* #c4c4c4 on #191919 9.75:1, on #252525 8.27:1, on #484848 4.55:1. */
-	--muted-foreground: #c4c4c4;
-	--accent: #ffdada;
-	--accent-foreground: #751919;
-	--border: #484848;
-	--input: #252525;
-	--ring: #d93636;
+	--secondary: #3a2c30;
+	--secondary-foreground: #fbeeee;
+	--muted: #3a2c30;
+	--muted-foreground: #b9a4a9;
+	--accent: #4d3b40;
+	--accent-foreground: #ffdada;
+	--border: #4d3b40;
+	--input: #4d3b40;
+	--ring: var(--brand);
 
 	--discord-embed: #2b2d31;
 	--discord-text: #dbdee1;
-	--discord-text-muted: #a3a9b2;
+	--discord-text-muted: #949ba4;
 	--discord-btn-active: #4e5058;
 	--discord-btn-hover: #6d6f78;
 	--discord-bg: #35373c;
@@ -112,9 +118,11 @@
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
+	--color-brand: var(--brand);
 	--color-primary-control: var(--primary-control);
 	--color-primary-control-hover: var(--primary-control-hover);
 	--color-primary-control-text: var(--primary-control-text);
+	--color-switch-thumb: var(--switch-thumb);
 	--color-primary-text: var(--primary-text);
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);
@@ -159,14 +167,14 @@
 	--r-dialog: 1rem;
 
 	--surface-1: #ffffff;
-	--surface-2: #fafafa;
-	--surface-3: #f5f5f5;
+	--surface-2: #fff0f0;
+	--surface-3: #ffffff;
 }
 
 .dark {
-	--surface-1: #191919;
-	--surface-2: #252525;
-	--surface-3: #484848;
+	--surface-1: #2b2023;
+	--surface-2: #3a2c30;
+	--surface-3: #3a2c30;
 }
 
 @theme inline {
@@ -187,9 +195,9 @@
    6. Border & shadow tokens
    ============================================================================= */
 :root {
-	--border-subtle: #f5f5f5;
-	/* Interactive control boundary for inputs. #828282 on #ffffff 4.47:1, on #fafafa 4.30:1 (WCAG 1.4.11 pass). */
-	--border-strong: #828282;
+	--border-subtle: #f8e1e4;
+	/* 인터랙티브 컨트롤 경계선 — #b4779b는 #ffffff 대비 3.47:1, #fff9f9 대비 3.36:1로 3.0:1 통과 */
+	--border-strong: #b4779b;
 
 	/* Paint-only 1px boundary for inputs. */
 	--control-boundary: inset 0 0 0 1px var(--border-strong);
@@ -203,9 +211,9 @@
 }
 
 .dark {
-	--border-subtle: #252525;
-	/* Dark input boundary. #c4c4c4 on #191919 9.75:1, on #252525 8.27:1, on #484848 4.55:1. */
-	--border-strong: #c4c4c4;
+	--border-subtle: #3a2c30;
+	/* 다크 인터랙티브 컨트롤 경계선 — #a37d89는 #1f1618 대비 6.2:1, #2b2023 대비 4.39:1 통과 */
+	--border-strong: #a37d89;
 
 	/* Same inset boundary token, dark theme value resolves via --border-strong. */
 	--control-boundary: inset 0 0 0 1px var(--border-strong);
@@ -229,26 +237,29 @@
 /* =============================================================================
    7. Status colors
    ============================================================================= */
+/* 상태색은 기존 대비가 통과하는 값 유지 (text-success를 bg-success/10 tint 위에 쓰는
+   현재 컴포넌트 규칙과 호환). 팔레트의 파스텔 상태색은 solid 배지 전용 스타일로 별도 전환 필요. */
 :root {
-	--destructive: #d93636;
+	--destructive: #d4183d;
 	--destructive-foreground: #ffffff;
-	--success: #1b8045;
+	--success: #0f7a52;
 	--success-foreground: #ffffff;
-	--warning: #bd530b;
+	--warning: #9a6100;
 	--warning-foreground: #ffffff;
-	--info: #245fb0;
+	--info: #0b6bb0;
 	--info-foreground: #ffffff;
 }
 
 .dark {
-	--destructive: #d93636;
-	--destructive-foreground: #ffffff;
-	--success: #8ae3a9;
-	--success-foreground: #191919;
-	--warning: #ffb65c;
-	--warning-foreground: #191919;
-	--info: #70aeff;
-	--info-foreground: #191919;
+	/* 다크에서는 팔레트 pastel destructive — #2b2023 카드 대비 6.34:1 (R-25) */
+	--destructive: #ff7b8a;
+	--destructive-foreground: #2b1018;
+	--success: #34d399;
+	--success-foreground: #052e16;
+	--warning: #fbbf24;
+	--warning-foreground: #451a03;
+	--info: #38bdf8;
+	--info-foreground: #082f49;
 }
 
 @theme inline {
@@ -273,7 +284,7 @@
 /* LEGACY — frozen. App 화면에서는 소비자 0. 남은 소비자(브랜딩/헤로 헤드라인 6곳)가
    제거되면 이 유틸리티도 삭제한다. 새 코드에서는 쓰지 않는다. */
 @utility text-title-gradient {
-	background-image: linear-gradient(to right, var(--primary), var(--secondary), #ffb3d9, var(--primary));
+	background-image: linear-gradient(to right, var(--primary-text), var(--brand), var(--primary-text));
 	background-size: 300% auto;
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;

@@ -34,7 +34,7 @@ export default function Loader({
     
     const LoaderIcon = (
         <div className={iconOnly ? "" : "relative"}>
-            <Loader2 className={`${sizeClass} animate-spin ${iconOnly ? "" : "text-primary-control"} ${className}`} />
+            <Loader2 className={`${sizeClass} animate-spin ${iconOnly ? "" : "text-primary-text"} ${className}`} />
         </div>
     );
 

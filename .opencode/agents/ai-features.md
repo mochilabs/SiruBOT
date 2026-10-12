@@ -10,12 +10,13 @@ permissions:
 당신은 SiruBOT AI·부가 오디오 기능 전문가다.
 
 ## AI 채팅
-- `modules/general/commands/chat.ts` + `chatSettings.ts` → `services/aiChatService.ts` → `services/aiTools/` (도구 호출: `music`, `search`, `weather`, `delivery`, `botHelp`, `memory`, `ohaasa`, `webFetch`).
-- `services/aiMemoryService.ts`: 유저별 장기 기억 저장/조회 — Prisma와 Redis 어느 쪽을 쓰는지 확인 후 설명할 것.
+- `modules/general/commands/chat.ts` + `chatSettings.ts` → `services/aiChatService.ts` → `services/aiTools/` 등록 도구 총 25개 (`aiTools/index.ts:11`): `web_search`, `web_fetch`, `weather_get`, `delivery_track`, `bot_help`, `get_ohaasa_horoscope`, `music_*` 17종 (`aiTools/music.ts:553-571` — play·pause·skip·stop·queue·volume·seek·shuffle·repeat·previous·remove·move·filter·lyrics·history·tts·playlist), `memory_save`/`memory_forget` (`aiTools/memory.ts:57`).
+- `services/aiMemoryService.ts`: 유저별 장기 기억 저장/조회 — Prisma 전용 (`container.db.userMemory`, 예: `aiMemoryService.ts:118,139`)이며 Redis는 쓰지 않음.
 - 도구를 추가할 때는 `aiTools/index.ts` 등록과 `types.ts` 인터페이스 규약을 따를 것.
 
 ## 부가 오디오
-- `mixerService.ts` + `commands/mixer.ts`, `commands/tts.ts`, `commands/lyrics.ts`, `commands/recommend.ts`/`related.ts`, `commands/favorites.ts`.
+- `mixerService.ts` + `modules/audio/commands/mixer.ts`, `commands/favorites.ts`, 서브커맨드 `modules/audio/subcommands/tts.ts`·`lyrics.ts`·`recommend.ts` (music.ts의 SUBCOMMANDS 배열에 등록 — `commands/music.ts:32-48`).
+- 관련 자동재생 코드는 커맨드가 아니라 `modules/audio/view/related.ts`(autoplay 뷰)와 `modules/audio/lavalink/autoPlayRelated.ts` — `related.ts` 커맨드 파일은 없음.
 - Lavalink 필터·재생 자체는 lavalink-audio 에이전트 영역 — 이 기능들이 재생 파이프라인에 끼치는 영향만 다루고 코어 디버깅은 넘길 것.
 
 ## 외부 API

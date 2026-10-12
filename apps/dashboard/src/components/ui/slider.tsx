@@ -41,7 +41,7 @@ function Slider({
 			{(label || showValue) && (
 				<div className="flex items-center justify-between">
 					{label && <span className="text-sm font-medium text-foreground">{label}</span>}
-					{showValue && <span className="text-sm font-medium tracking-tight text-primary-control tabular-nums">{formatValue(currentValue)}</span>}
+					{showValue && <span className="text-sm font-medium tracking-tight text-primary-text tabular-nums">{formatValue(currentValue)}</span>}
 				</div>
 			)}
 

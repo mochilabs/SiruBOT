@@ -30,7 +30,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<h3 className="line-clamp-1 text-base font-black tracking-tight text-foreground md:text-lg">{guild.name}</h3>
 					<div className="mt-0.5 hidden items-center gap-1 md:flex">
 						{guild.isInstalled ? (
-							<div className="flex items-center gap-1 text-xs font-bold text-primary-control">
+							<div className="flex items-center gap-1 text-xs font-bold text-primary-text">
 								<ShieldCheck size={10} />
 								<span>이미 시루봇이 있어요</span>
 							</div>

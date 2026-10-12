@@ -58,7 +58,7 @@ const formatRelativeTime = (iso: string) => {
 function SectionHeading({ icon, title }: { icon: React.ReactNode; title: string }) {
 	return (
 		<h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-			<span className="text-primary-control">{icon}</span>
+			<span className="text-primary-text">{icon}</span>
 			{title}
 		</h2>
 	);
@@ -92,7 +92,7 @@ function TrackRow({
 					href={track.url}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary-control transition-colors duration-fast"
+					className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary-text transition-colors duration-fast"
 				>
 					{track.title}
 				</a>

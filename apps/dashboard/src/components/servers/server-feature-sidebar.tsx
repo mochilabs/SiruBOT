@@ -93,11 +93,11 @@ export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureS
 								className={cn(
 									"relative z-10 flex w-full items-center gap-2.5 rounded-menu border-0 px-3 py-2.5 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/40",
 									isActive
-										? "font-bold text-primary-control"
+										? "font-bold text-primary-text"
 										: "font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground",
 								)}
 							>
-								<span aria-hidden className={isActive ? "text-primary-control" : "text-muted-foreground"}>
+								<span aria-hidden className={isActive ? "text-primary-text" : "text-muted-foreground"}>
 									{item.icon}
 								</span>
 								<span className="truncate">{item.label}</span>

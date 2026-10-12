@@ -36,7 +36,7 @@ export default function InvitePage() {
 				<div className="space-y-8">
 					<div className="flex flex-col items-center space-y-4">
 						<div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-surface-1 p-6">
-							<UserPlus className="h-12 w-12 text-primary-control" />
+							<UserPlus className="h-12 w-12 text-primary-text" />
 						</div>
 
 						<div className="space-y-2">
@@ -70,7 +70,7 @@ export default function InvitePage() {
 
 						<Link
 							href="/"
-							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground transition-colors duration-fast hover:text-primary-control"
+							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground transition-colors duration-fast hover:text-primary-text"
 						>
 							<Home className="h-5 w-5" />
 							홈으로 가기

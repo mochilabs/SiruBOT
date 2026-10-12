@@ -206,7 +206,7 @@ export function RoleSelect({
 										<span className="flex-1 text-left text-foreground truncate">
 											{role.name}
 										</span>
-										{isSelected && <Check className="h-4 w-4 text-primary-control shrink-0" />}
+										{isSelected && <Check className="h-4 w-4 text-primary-text shrink-0" />}
 									</button>
 								);
 							})}

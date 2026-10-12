@@ -20,7 +20,7 @@ Load the matching skill (`.opencode/skills/<id>/SKILL.md`) before starting work 
 
 ## Semantic code search (opencode index)
 
-The repo is indexed (4,673 chunks, auto-incrementing via `.opencode/index/codebase.db`). Prefer semantic tools before raw grepping when locating unfamiliar code:
+The repo is indexed (7,348 chunks total / 5,434 on the current branch, auto-incrementing via `.opencode/index/codebase.db`). Prefer semantic tools before raw grepping when locating unfamiliar code:
 - `codebase_search` — natural-language chunk search (best first step)
 - `codebase_context` — repo-scale question with cited lines; `codebase_edit_context` — pre-edit context for a known symbol
 - `call_graph` / `call_graph_path` — callers/callees and connection paths between symbols
@@ -53,9 +53,9 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 
 - Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×11, data-api ×6, utils ×4, shardclient ×1 as of 2026-10-11, src 기준 — data-api는 `dist/` 빌드 산출물 테스트까지 함께 매칭되어 중복 실행됨); dashboard/shardmanager/prisma have no tests yet.
+- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×11, data-api ×8, utils ×6, shardclient ×1, dashboard ×1 as of 2026-10-12, src 기준 — data-api는 `dist/` 빌드 산출물 테스트까지 함께 매칭되어 중복 실행됨); shardmanager/prisma have no tests yet.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
-- Turbo `build` depends on `^lint:fix ^typecheck ^generate ^build` — building one app rebuilds deps.
+- Turbo `build` depends on `^typecheck ^generate ^build` (not `^lint:fix`) — building one app rebuilds deps.
 
 ## Bot conventions (see skills first)
 
@@ -65,13 +65,14 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 - Slash commands: `registerApplicationCommands` + `GuildInstall` integration, `ko` primary / `en-US` fallback localizations, `fullCategory: ['음악'|'일반'|'개발'|'게임']`, `deferReply()` before async work, throw `UserError({ identifier, message, context: { ephemeral: true } })` for user errors. All user-facing strings in Korean.
 - Preconditions referenced by string name in `preconditions: [...]`; common audio set: `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel, MemberListenable, ClientVoiceConnectable, ClientVoiceSpeakable`.
 - Command registration behavior: `REGISTER_COMMANDS=true` → `Overwrite`, else `LogToConsole` (`core/setup.ts`). Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]` (guild defaults to `GUILD_ID`/`DEV_GUILD_IDS` env).
-- Container services (`core/botApplication.ts`): `container.db` (Prisma), `container.redisStore`, `container.audio` (LavalinkManager), `container.{audioService,guildService,trackService,playlistService}`, `container.lavalinkHandler/playerNotifier/shardClient`.
+- Container services: `container.db` (Prisma), `container.redisStore`, `container.audio` (LavalinkManager), `container.logger`, `container.shardInfo`, `container.{guildService,trackService,playlistService,audioService,mixerService,tempVoiceService,aiMemoryService}`, `container.{playerNotifier,playerWebResponder,guildDataResponder,guildSettingsInvalidator,jtcSetupResponder,appEmojiManager,botProfileService,memberGreetingService}` — 대부분 `core/botApplication.ts`에서 할당, `container.lavalinkHandler`·`container.shardClient`는 `core/bootstrap.ts`에서.
 - UI: Discord Components V2 (`MessageFlags.IsComponentsV2`, `ContainerBuilder`/`TextDisplayBuilder`), color via `DEFAULT_COLOR` from `@sirubot/utils`.
 
 ## Env / runtime gotchas
 
 - Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets.
 - `LAVALINK_HOSTS` format (`parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
+- data-api 키 계약: data-api는 `DATA_API_AUTH_KEY ?? AUTH_KEY`가 없으면 **기동 거부(fail-closed)**, 인증 면제는 `/api/health`뿐. 대시보드는 `DATA_API_URL`(기본 `http://localhost:3002`) + 같은 폴백 체인의 키로 호출하며, 키 미설정 시 호출 전면 스킵 → 길드 채널/역할/플레이어 연동이 전부 502처럼 보인다. `Authorization` 헤더는 `Bearer` 없이 **키 원문 그대로**. 대시보드/봇/data-api 세 앱이 같은 키를 공유해야 하고, `apps/dashboard/.env.example`에는 아직 이 키들이 문서화돼 있지 않다.
 - Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop (guildSettingsInvalidator·botProfileService·memberGreetingService·guildDataResponder) → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
 - Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
 

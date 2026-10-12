@@ -83,12 +83,12 @@ export function PlaylistDetail({
 						</div>
 						<div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground mt-2">
 							<div className="flex items-center gap-1.5 font-bold">
-								<Music size={14} className="text-primary-control" />
+								<Music size={14} className="text-primary-text" />
 								<span>{stats.count}곡</span>
 							</div>
 							<div className="w-1 h-1 rounded-full bg-border" />
 							<div className="flex items-center gap-1.5 font-bold">
-								<Clock size={14} className="text-primary-control" />
+								<Clock size={14} className="text-primary-text" />
 								<span>{formatTotalDuration(stats.duration)}</span>
 							</div>
 							{activePlaylist.description && (
@@ -203,7 +203,7 @@ export function PlaylistDetail({
 													<span>{formatDuration(track.duration)}</span>
 												</p>
 
-												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-2xs text-primary-control hover:underline items-center gap-1">
+												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-2xs text-primary-text hover:underline items-center gap-1">
 													<ExternalLink size={10} />
 													YouTube
 												</a>
