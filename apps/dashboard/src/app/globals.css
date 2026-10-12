@@ -25,35 +25,36 @@
 	/* Pretendard(next/font) → Pretendard JP(일본어 한자) → Twemoji(이모지) → 네이티브 이모지 → 시스템 폴백 */
 	--font-stack: var(--font-pretendard), var(--font-pretendard-jp), "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-	--background: #fef5f9;
-	--foreground: #2d1b1e;
-	--card: #ffffff;
-	--card-foreground: #2d1b1e;
-	--popover: #ffffff;
-	--popover-foreground: #2d1b1e;
-	--primary: #ff85c1;
-	--primary-foreground: #ffffff;
-	/* 화이트 텍스트를 얹는 단색 컨트롤 표면 전용 토큰 — #ff85c1 위 화이트는 2.24:1로 AA 미달(R-25).
-	   #c14377는 화이트 대비 4.84:1 통과(2026-10-10 소유자 승인). 라이트/다크 공통 값. */
-	--primary-control: #c14377;
-	/* primary-control hover 명도 전환 — 화이트 대비 5.90:1 유지 */
-	--primary-control-hover: #ad3968;
-	/* 배경용 --primary와 별개의 텍스트용 로즈 토큰 — 라이트 모드에서 #ff85c1은 배경 대비 2.09:1로 AA 미달.
-	   #a3416f는 (라이트) #fef5f9 5.54 / #ffffff 5.93 / #f7f1f4 5.32 / #ffe4f0 4.97, 다크에서는 --primary와 동일 값을 쓴다. */
-	--primary-text: #a3416f;
-	--primary-rgb: 255 133 193;
-	--secondary: #d4a574;
-	/* 장식 전용 토큰 — 배경 shape 등에만 사용. 버튼 등 컨트롤 배경으로 쓰면 white 대비 2.23:1 실패. */
-	--secondary-foreground: #ffffff;
-	--muted: #f9eff5;
-	/* 라이트 기준 #fef5f9 5.31 / #ffffff 5.68 / #f7f1f4 5.10. 다크(#c9a8b5)는 원래 통과로 유지. */
-	--muted-foreground: #7e5e6a;
-	--accent: #ffe4f0;
-	--accent-foreground: #d1608a;
-	--border: #f0d4e3;
-	--input: #f9eff5;
-	/* 포커스 링 토큰 — 라이트 모드 기준 #a3416f는 #ffffff 대비 5.93:1, #fef5f9 대비 5.54:1로 WCAG 2.1 비텍스트 대비(3.0:1)를 만족 */
-	--ring: #a3416f;
+	--background: #ffffff;
+	--foreground: #191919;
+	--card: #fafafa;
+	--card-foreground: #191919;
+	--popover: #fafafa;
+	--popover-foreground: #191919;
+	--primary: #ffdada;
+	--primary-foreground: #751919;
+	/* Solid interactive control fill. #d93636 on #ffffff 5.31:1, on #fafafa 5.16:1 (WCAG 1.4.11 pass).
+	   White text on #d93636 5.31:1 (SC 1.4.3 pass). */
+	--primary-control: #d93636;
+	/* Hover state for primary-control. */
+	--primary-control-hover: #b32626;
+	/* Text color for primary-control solid surfaces. */
+	--primary-control-text: #ffffff;
+	/* Text on primary brand surfaces (#ffdada). #751919 on #ffdada 7.38:1. */
+	--primary-text: #751919;
+	--primary-rgb: 255 218 218;
+	--secondary: #dcdcdc;
+	--secondary-foreground: #191919;
+	--muted: #f5f5f5;
+	/* #636363 on #ffffff 6.55:1, on #fafafa 6.29:1, on #f5f5f5 5.91:1. */
+	--muted-foreground: #636363;
+	--accent: #ffdada;
+	--accent-foreground: #751919;
+	/* Subtle dividers. #ebebeb on #ffffff 1.12:1, on #fafafa 1.08:1 — decorative only. */
+	--border: #ebebeb;
+	--input: #f5f5f5;
+	/* Focus ring: #d93636 on #ffffff 5.31:1, on #fafafa 5.16:1. */
+	--ring: #d93636;
 
 	--discord-embed: #f2f3f5;
 	--discord-text: #313338;
@@ -64,27 +65,29 @@
 
 }
 .dark {
-	--background: #1a0e12;
-	--foreground: #fce7f3;
-	--card: #2d1b1e;
-	--card-foreground: #fce7f3;
-	--popover: #2d1b1e;
-	--popover-foreground: #fce7f3;
-	--primary: #ff85c1;
-	--primary-foreground: #ffffff;
-	--primary-control: #c14377;
-	--primary-control-hover: #ad3968;
-	--primary-text: #ff85c1;
-	--primary-rgb: 255 133 193;
-	--secondary: #d4a574;
-	--secondary-foreground: #ffffff;
-	--muted: #3d2328;
-	--muted-foreground: #c9a8b5;
-	--accent: #4d2a35;
-	--accent-foreground: #ffb3d9;
-	--border: #3d2328;
-	--input: #3d2328;
-	--ring: #ff85c1;
+	--background: #191919;
+	--foreground: #fafafa;
+	--card: #252525;
+	--card-foreground: #fafafa;
+	--popover: #252525;
+	--popover-foreground: #fafafa;
+	--primary: #ffdada;
+	--primary-foreground: #751919;
+	--primary-control: #d93636;
+	--primary-control-hover: #b32626;
+	--primary-control-text: #ffffff;
+	--primary-text: #751919;
+	--primary-rgb: 255 218 218;
+	--secondary: #484848;
+	--secondary-foreground: #fafafa;
+	--muted: #252525;
+	/* #c4c4c4 on #191919 9.75:1, on #252525 8.27:1, on #484848 4.55:1. */
+	--muted-foreground: #c4c4c4;
+	--accent: #ffdada;
+	--accent-foreground: #751919;
+	--border: #484848;
+	--input: #252525;
+	--ring: #d93636;
 
 	--discord-embed: #2b2d31;
 	--discord-text: #dbdee1;
@@ -111,6 +114,7 @@
 	--color-primary-foreground: var(--primary-foreground);
 	--color-primary-control: var(--primary-control);
 	--color-primary-control-hover: var(--primary-control-hover);
+	--color-primary-control-text: var(--primary-control-text);
 	--color-primary-text: var(--primary-text);
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);
@@ -155,14 +159,14 @@
 	--r-dialog: 1rem;
 
 	--surface-1: #ffffff;
-	--surface-2: #f7f1f4;
-	--surface-3: #ffffff;
+	--surface-2: #fafafa;
+	--surface-3: #f5f5f5;
 }
 
 .dark {
-	--surface-1: #231317;
-	--surface-2: #2d1b1e;
-	--surface-3: #35212a;
+	--surface-1: #191919;
+	--surface-2: #252525;
+	--surface-3: #484848;
 }
 
 @theme inline {
@@ -183,9 +187,13 @@
    6. Border & shadow tokens
    ============================================================================= */
 :root {
-	--border-subtle: #f8e6ef;
-	/* 인터랙티브 컨트롤 경계선 — #b4779b는 #ffffff 대비 3.47:1, #fef5f9 대비 3.25:1로 3.0:1 통과 */
-	--border-strong: #b4779b;
+	--border-subtle: #f5f5f5;
+	/* Interactive control boundary for inputs. #828282 on #ffffff 4.47:1, on #fafafa 4.30:1 (WCAG 1.4.11 pass). */
+	--border-strong: #828282;
+
+	/* Paint-only 1px boundary for inputs. */
+	--control-boundary: inset 0 0 0 1px var(--border-strong);
+	--control-boundary-invalid: inset 0 0 0 1px var(--destructive);
 
 	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.08);
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.1), 0 1px 3px -1px rgb(0 0 0 / 0.06);
@@ -195,14 +203,20 @@
 }
 
 .dark {
-	--border-subtle: #2f1a1f;
-	/* 다크 인터랙티브 컨트롤 경계선 — #8f5c69는 #1a0e12 대비 3.5:1, #2d1b1e 대비 3.03:1 통과 */
-	--border-strong: #8f5c69;
+	--border-subtle: #252525;
+	/* Dark input boundary. #c4c4c4 on #191919 9.75:1, on #252525 8.27:1, on #484848 4.55:1. */
+	--border-strong: #c4c4c4;
+
+	/* Same inset boundary token, dark theme value resolves via --border-strong. */
+	--control-boundary: inset 0 0 0 1px var(--border-strong);
+	--control-boundary-invalid: inset 0 0 0 1px var(--destructive);
 }
 
 @theme inline {
 	--color-border-subtle: var(--border-subtle);
 	--color-border-strong: var(--border-strong);
+	--shadow-control-boundary: var(--control-boundary);
+	--shadow-control-boundary-invalid: var(--control-boundary-invalid);
 
 	--shadow-xs: var(--elev-1);
 	--shadow-sm: var(--elev-1);
@@ -216,25 +230,25 @@
    7. Status colors
    ============================================================================= */
 :root {
-	--destructive: #d4183d;
+	--destructive: #d93636;
 	--destructive-foreground: #ffffff;
-	--success: #0f7a52;
+	--success: #1b8045;
 	--success-foreground: #ffffff;
-	--warning: #9a6100;
+	--warning: #bd530b;
 	--warning-foreground: #ffffff;
-	--info: #0b6bb0;
+	--info: #245fb0;
 	--info-foreground: #ffffff;
 }
 
 .dark {
-	--destructive: #d4183d;
+	--destructive: #d93636;
 	--destructive-foreground: #ffffff;
-	--success: #34d399;
-	--success-foreground: #052e16;
-	--warning: #fbbf24;
-	--warning-foreground: #451a03;
-	--info: #38bdf8;
-	--info-foreground: #082f49;
+	--success: #8ae3a9;
+	--success-foreground: #191919;
+	--warning: #ffb65c;
+	--warning-foreground: #191919;
+	--info: #70aeff;
+	--info-foreground: #191919;
 }
 
 @theme inline {

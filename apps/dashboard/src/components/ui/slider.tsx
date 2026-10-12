@@ -41,7 +41,7 @@ function Slider({
 			{(label || showValue) && (
 				<div className="flex items-center justify-between">
 					{label && <span className="text-sm font-medium text-foreground">{label}</span>}
-					{showValue && <span className="text-sm font-black tracking-tight text-primary-text tabular-nums">{formatValue(currentValue)}</span>}
+					{showValue && <span className="text-sm font-medium tracking-tight text-primary-control tabular-nums">{formatValue(currentValue)}</span>}
 				</div>
 			)}
 
@@ -64,20 +64,20 @@ function Slider({
 					>
 						<SliderPrimitive.Indicator
 							data-slot="slider-range"
-							className="bg-primary select-none data-horizontal:h-full"
+							className="bg-primary-control select-none data-horizontal:h-full"
 						/>
 					</SliderPrimitive.Track>
 					{Array.from({ length: 1 }, (_, index) => (
 						<SliderPrimitive.Thumb
 							data-slot="slider-thumb"
 							key={index}
-							className="relative block size-4 shrink-0 rounded-full border-0 bg-primary shadow-sm transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+							className="relative block size-4 shrink-0 rounded-full border-0 bg-primary-control shadow-sm transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-2 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 						/>
 					))}
 				</SliderPrimitive.Control>
 			</SliderPrimitive.Root>
 
-			<div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
+			<div className="flex justify-between text-xs text-muted-foreground">
 				<span>{formatValue(min)}</span>
 				<span>{formatValue(max)}</span>
 			</div>

@@ -31,7 +31,7 @@ export default function ServerDashboardLoading() {
             <div
               key={index}
               className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 ${
-                index === 0 ? "border-primary" : "border-transparent"
+                index === 0 ? "border-primary-control" : "border-transparent"
               }`}
             >
               <SkeletonCircle size="h-3.5 w-3.5" />

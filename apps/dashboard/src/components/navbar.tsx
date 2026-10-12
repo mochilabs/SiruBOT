@@ -157,7 +157,7 @@ export function Navbar() {
                   onClick={() => setCommandPaletteOpen(true)}
                   title="명령 팔레트 (⌘K)"
                   aria-label="명령 팔레트 열기"
-                  className="h-9 w-9 bg-surface-1 hover:bg-surface-1 hover:text-primary-text"
+                  className="h-9 w-9 bg-surface-1 hover:bg-surface-1 hover:text-primary-control"
                 >
                   <Search size={18} />
                 </Button>
@@ -231,7 +231,7 @@ export function Navbar() {
                         variant="icon"
                         size="lg"
                         onClick={toggleTheme}
-                        className="relative w-11 h-11 overflow-hidden group bg-surface-1 hover:bg-surface-1 hover:text-primary-text duration-base"
+                        className="relative w-11 h-11 overflow-hidden group bg-surface-1 hover:bg-surface-1 hover:text-primary-control duration-base"
                       >
                         <AnimatePresence mode="popLayout" initial={false}>
                           <m.div

@@ -36,7 +36,7 @@ export default function InvitePage() {
 				<div className="space-y-8">
 					<div className="flex flex-col items-center space-y-4">
 						<div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-surface-1 p-6">
-							<UserPlus className="h-12 w-12 text-primary-text" />
+							<UserPlus className="h-12 w-12 text-primary-control" />
 						</div>
 
 						<div className="space-y-2">
@@ -61,7 +61,7 @@ export default function InvitePage() {
 							href={inviteUrl}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover"
+							className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover"
 						>
 							<UserPlus className="h-5 w-5" />
 							지금 초대하기
@@ -70,7 +70,7 @@ export default function InvitePage() {
 
 						<Link
 							href="/"
-							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground transition-colors duration-fast hover:text-primary-control"
 						>
 							<Home className="h-5 w-5" />
 							홈으로 가기

@@ -91,7 +91,7 @@ export default function LicensesPage() {
               href={entry.source}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center text-sm font-semibold text-primary-text hover:underline"
+              className="inline-flex items-center text-sm font-semibold text-primary-control hover:underline"
             >
               {entry.sourceLabel}
             </a>
@@ -108,7 +108,7 @@ export default function LicensesPage() {
           의존성 목록은 커밋된 생성 데이터예요. 패키지를 추가·제거하면{" "}
           <code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">yarn licenses:generate</code>로 갱신해요.
           저장소:{" "}
-          <Link href="https://github.com/mochiLabs/SiruBOT" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-text hover:underline">
+          <Link href="https://github.com/mochiLabs/SiruBOT" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-control hover:underline">
             mochiLabs/SiruBOT
           </Link>
         </p>

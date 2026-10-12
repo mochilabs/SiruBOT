@@ -143,7 +143,7 @@ function SettingToggleRow({ name, from, to, index }: { name: string; from: strin
 			<span className={settingName}>{name}</span>
 			<span className="relative shrink-0 text-xs font-semibold">
 				{/* 새 값이 폭을 결정 — from은 위로 슝 사라짐 (등장 시엔 from 노출 없이 바로 from → to 전환) */}
-				<m.span className="text-primary-text">
+				<m.span className="text-primary-control">
 					{to}
 				</m.span>
 				<m.span
@@ -243,7 +243,7 @@ function ChatPreview() {
 							<span
 								className={cn(
 									"rounded-full transition-all duration-base",
-									activeTool === index ? "h-2 w-2 bg-discord-primary" : "h-1.5 w-1.5 bg-discord-btn-active group-hover:bg-discord-text-muted",
+									activeTool === index ? "h-2 w-2 bg-primary-control" : "h-1.5 w-1.5 bg-discord-btn-active group-hover:bg-discord-text-muted",
 								)}
 							/>
 						</button>
@@ -282,7 +282,7 @@ function ChatPreview() {
 								transition={{ duration: 0.3, ease: "easeOut" }}
 								className="flex gap-2.5"
 							>
-								<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-primary text-2xs font-bold text-primary-foreground">시</div>
+								<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-primary text-2xs font-bold text-primary-control-text">시</div>
 								<div className="min-w-0 flex-1">
 									<AnimatePresence mode="wait" initial={false}>
 										{phase === 1 ? (
@@ -384,8 +384,8 @@ export function FeaturesSection() {
 				<Card padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
-							<Bot size={18} className="text-primary-text" aria-hidden />
-								<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+							<Bot size={18} className="text-primary-control" aria-hidden />
+								<SectionLabel as="p" className="px-0 py-0 text-primary-control">
 									AI 채팅
 								</SectionLabel>
 							</div>
@@ -424,8 +424,8 @@ export function FeaturesSection() {
 				<Card variant="raised" padding="lg" className="gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
 					<div className="flex min-w-0 flex-col gap-4">
 						<div className="flex items-center gap-2.5">
-							<Music2 size={18} className="text-primary-text" aria-hidden />
-							<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+							<Music2 size={18} className="text-primary-control" aria-hidden />
+							<SectionLabel as="p" className="px-0 py-0 text-primary-control">
 								음악 재생
 							</SectionLabel>
 						</div>
@@ -465,7 +465,7 @@ export function FeaturesSection() {
 									<span>0:43 / 4:40</span>
 									<div className="h-1 flex-1 overflow-hidden rounded-full bg-discord-btn-active">
 										<m.div
-											className="h-full rounded-full bg-discord-primary"
+											className="h-full rounded-full bg-primary-control"
 											initial={{ width: "0%" }}
 											whileInView={{ width: "25%" }}
 											viewport={{ once: true }}
@@ -510,8 +510,8 @@ export function FeaturesSection() {
 			<m.div variants={cardEntry} className="flex flex-col min-w-0">
 				<Card padding="lg" className="h-full gap-5">
 					<div className="flex items-center gap-2.5">
-						<ListMusic size={18} className="text-primary-text" aria-hidden />
-						<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+						<ListMusic size={18} className="text-primary-control" aria-hidden />
+						<SectionLabel as="p" className="px-0 py-0 text-primary-control">
 							내 음악 보관함
 						</SectionLabel>
 					</div>
@@ -535,7 +535,7 @@ export function FeaturesSection() {
 								<p className="truncate text-sm font-bold text-foreground">내 노래모음</p>
 								<p className="truncate text-xs text-muted-foreground">5곡 · 17분</p>
 							</div>
-							<span className="flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-control bg-primary-control px-2 text-2xs font-bold text-primary-foreground transition-colors hover:bg-primary-control-hover">
+							<span className="flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-control bg-primary-control px-2 text-2xs font-bold text-primary-control-text transition-colors hover:bg-primary-control-hover">
 								<Play size={11} fill="currentColor" aria-hidden />
 								재생
 							</span>
@@ -559,7 +559,7 @@ export function FeaturesSection() {
 											{[8, 12, 6, 10].map((h, i) => (
 												<m.span
 													key={i}
-													className="w-[2px] rounded-full bg-primary"
+													className="w-[2px] rounded-full bg-primary-control"
 													animate={{ height: [h, h + 4, h] }}
 													transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
 												/>
@@ -583,8 +583,8 @@ export function FeaturesSection() {
 				<m.div variants={cardEntry} className="flex flex-col min-w-0">
 					<Card padding="lg" className="h-full gap-5">
 						<div className="flex items-center gap-2.5">
-							<LayoutDashboard size={18} className="text-primary-text" aria-hidden />
-							<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+							<LayoutDashboard size={18} className="text-primary-control" aria-hidden />
+							<SectionLabel as="p" className="px-0 py-0 text-primary-control">
 								서버 대시보드
 							</SectionLabel>
 						</div>
@@ -613,7 +613,7 @@ export function FeaturesSection() {
 										<span
 											className={cn(
 												"rounded-full transition-all duration-base",
-												activeSettingSlide === index ? "h-2 w-2 bg-primary" : "h-1.5 w-1.5 bg-border",
+												activeSettingSlide === index ? "h-2 w-2 bg-primary-control" : "h-1.5 w-1.5 bg-border",
 											)}
 										/>
 										{slide.label}

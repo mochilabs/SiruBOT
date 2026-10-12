@@ -153,7 +153,7 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
           <div
             key={entry.date}
             title={`${formatDate(entry.date)} · ${entry.count}회`}
-            className="min-w-[0px] flex-1 origin-bottom rounded-t bg-primary/60"
+            className="min-w-[0px] flex-1 origin-bottom rounded-t bg-primary-control/60"
             style={{
               height: `${max > 0 ? Math.max(4, (entry.count / max) * 100) : 4}%`,
               transform: inView ? "scaleY(1)" : "scaleY(0)",
