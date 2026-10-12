@@ -95,9 +95,12 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		.setEmoji(emoji('scroll'))
 		.setDisabled(queuedTracks.length === 0);
 
-	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, stopButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
-	);
+	// 1행: 이전/재생/다음/정지 + (대기열 있을 때만) 대기열 보기. Discord 한 행당 버튼 5개 제한.
+	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton];
+	if (queuedTracks.length > 0) {
+		primaryComponents.push(queueShowButton);
+	}
+	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(primaryComponents.map((e) => e.setStyle(ButtonStyle.Secondary)));
 
 	// 반복 상태 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
@@ -110,8 +113,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		)
 		.setEmoji(repeatEmoji(player.repeatMode));
 
-	// 볼륨 조절 버튼 — 하한/상한 도달 시 비활성화.
+	// 볼륨 조절 버튼 — 볼륨 조절이 의미 있을 때만 표시 (하한≠상한일 때).
 	const currentVolume = volume ?? player.volume ?? 0;
+	const showVolume = VOLUME_MAX > VOLUME_MIN + 1;
 	const volumeDownButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('volume:down'))
 		.setEmoji(emoji('volume_down'))
@@ -135,12 +139,27 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		.setEmoji(emoji('chapters_next', '⏩'))
 		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
 
-	// 2행: 챕터(있을 때만) + 반복 + 볼륨. Discord 한 행당 버튼 5개 제한.
-	const utilityComponents =
-		chapters.length > 0
-			? [chapterPrevButton, chapterNextButton, repeatButton, volumeDownButton, volumeUpButton]
-			: [repeatButton, volumeDownButton, volumeUpButton];
-	const utilityActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.map((e) => e.setStyle(ButtonStyle.Secondary)));
+	// 2행: (챕터 있을 때만) 이전/다음 챕터 + 반복 + (볼륨 가능할 때만) 볼륨. Discord 한 행당 버튼 5개 제한.
+	const utilityComponents: ButtonBuilder[] = [];
+	if (chapters.length > 0) {
+		utilityComponents.push(chapterPrevButton, chapterNextButton);
+	}
+	utilityComponents.push(repeatButton);
+	if (showVolume) {
+		utilityComponents.push(volumeDownButton, volumeUpButton);
+	}
+
+	const utilityRows: ActionRowBuilder<ButtonBuilder>[] = [];
+	if (utilityComponents.length <= 5) {
+		utilityRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.map((e) => e.setStyle(ButtonStyle.Secondary))));
+	} else {
+		utilityRows.push(
+			new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.slice(0, 5).map((e) => e.setStyle(ButtonStyle.Secondary)))
+		);
+		utilityRows.push(
+			new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.slice(5).map((e) => e.setStyle(ButtonStyle.Secondary)))
+		);
+	}
 
 	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
 	if (nowPlayingCardUrl) {
@@ -157,7 +176,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	}
 
 	containerComponent.addActionRowComponents(controlActionRow);
-	containerComponent.addActionRowComponents(utilityActionRow);
+	for (const utilityRow of utilityRows) {
+		containerComponent.addActionRowComponents(utilityRow);
+	}
 
 	// 다음 곡 목록은 카드 이미지에 그려져요 — 카드가 있으면 텍스트 목록과 중복되지 않게 생략해요.
 	if (nextUpLines.length > 0 && !nowPlayingCardUrl) {
