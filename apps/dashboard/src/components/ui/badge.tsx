@@ -21,7 +21,7 @@ const badgeVariants = cva(
 				secondary: "bg-secondary/10 text-secondary-foreground",
 				outline: "border border-border bg-background text-foreground",
 				ghost: "hover:bg-muted hover:text-muted-foreground",
-				link: "text-primary underline-offset-4 hover:underline",
+				link: "text-primary-control underline-offset-4 hover:underline",
 			},
 			size: {
 				sm: "px-2 py-0.5 text-xs",
@@ -37,7 +37,7 @@ const badgeVariants = cva(
 
 const dotVariants: Record<NonNullable<VariantProps<typeof badgeVariants>["variant"]>, string> = {
 	default: "bg-muted-foreground",
-	primary: "bg-primary",
+	primary: "bg-primary-control",
 	success: "bg-success",
 	warning: "bg-warning",
 	danger: "bg-destructive",
@@ -47,7 +47,7 @@ const dotVariants: Record<NonNullable<VariantProps<typeof badgeVariants>["varian
 	secondary: "bg-secondary",
 	outline: "bg-muted-foreground",
 	ghost: "bg-muted-foreground",
-	link: "bg-primary",
+	link: "bg-primary-control",
 };
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {

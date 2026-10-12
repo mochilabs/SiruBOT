@@ -102,7 +102,7 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 												target="_blank"
 												rel="noopener noreferrer"
 												aria-label={`${entry.name} 원본 저장소`}
-												className="shrink-0 text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+												className="shrink-0 text-muted-foreground transition-colors duration-fast hover:text-primary-control"
 											>
 												<ExternalLink size={13} aria-hidden />
 											</a>

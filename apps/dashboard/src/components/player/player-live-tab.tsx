@@ -68,7 +68,7 @@ function ProgressBar({ state, receivedAt }: { state: LivePlayerState; receivedAt
 	return (
 		<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
 			<div
-				className="h-full rounded-full bg-primary transition-[width] duration-slow ease-linear"
+				className="h-full rounded-full bg-primary-control transition-[width] duration-slow ease-linear"
 				style={{ width: `${ratio * 100}%` }}
 			/>
 		</div>
@@ -458,7 +458,7 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 			<QueueList state={data.player} />
 			<p className="text-xs text-muted-foreground">
 				컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요. 검색·재생 · 기록은{" "}
-				<Link href={`/player/${guildId}`} className="font-semibold text-primary-text hover:underline">
+				<Link href={`/player/${guildId}`} className="font-semibold text-primary-control hover:underline">
 					음악 플레이어 페이지
 				</Link>
 				에서 할 수 있어요.

@@ -215,7 +215,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 			<Card padding="lg" className="gap-5">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-						<span className="text-primary-text">
+						<span className="text-primary-control">
 							<Search size={15} aria-hidden />
 						</span>
 						곡 검색 · 바로 재생

@@ -249,7 +249,7 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 							<div className="min-w-0 flex-1">
 								<div className="mb-2 flex items-center gap-2">
 									<span className="text-sm font-semibold text-discord-text">시루</span>
-									<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-foreground">앱</span>
+									<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-control-text">앱</span>
 									<span className="text-2xs text-discord-text-muted">오후 8:12</span>
 								</div>
 								{commandResult(currentSlide)}

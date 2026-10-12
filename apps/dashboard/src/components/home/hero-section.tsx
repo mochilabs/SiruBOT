@@ -151,7 +151,7 @@ export function HeroSection() {
 							<>
 								시루봇과 함께
 								<br />
-								<span className="text-primary-text">
+								<span className="text-primary-control">
 									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
 								</span>{" "}
 								만들어봐요
@@ -164,7 +164,7 @@ export function HeroSection() {
 									</m.span>
 								))}
 								<br />
-								<m.span className="inline-block whitespace-pre text-primary-text" variants={headlineTypingVariants}>
+								<m.span className="inline-block whitespace-pre text-primary-control" variants={headlineTypingVariants}>
 									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
 								</m.span>{" "}
 								<m.span className="inline-block whitespace-pre" variants={headlineWordVariants}>
@@ -241,7 +241,7 @@ export function HeroSection() {
 									className={cn(
 										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
-											? "bg-primary-control text-primary-foreground"
+											? "bg-primary-control text-primary-control-text"
 											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
 									)}
 								>
@@ -290,7 +290,7 @@ export function HeroSection() {
 					type="button"
 					onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
 					aria-label="아래로 스크롤해서 기능 보기"
-					className="pointer-events-auto flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+					className="pointer-events-auto flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-control"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.2, duration: 0.6 }}

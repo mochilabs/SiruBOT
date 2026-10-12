@@ -62,7 +62,7 @@ export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, on
 				size="sm"
 				onClick={onCreateNew}
 				aria-label="새 플레이리스트"
-				className="h-11 w-11 shrink-0 rounded-control bg-surface-1 p-3 text-muted-foreground hover:bg-surface-2 hover:text-primary-text"
+				className="h-11 w-11 shrink-0 rounded-control bg-surface-1 p-3 text-muted-foreground hover:bg-surface-2 hover:text-primary-control"
 			>
 				<Plus size={16} />
 			</Button>

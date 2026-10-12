@@ -70,7 +70,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 							<Button
 								type="submit"
 								variant="cta"
-								className="mx-auto h-11 w-full max-w-sm gap-2.5 bg-discord-primary px-8 text-base font-bold text-primary-foreground hover:bg-discord-primary/90"
+								className="mx-auto h-11 w-full max-w-sm gap-2.5 bg-discord-primary px-8 text-base font-bold text-white hover:bg-discord-primary/90"
 							>
 								디스코드로 계속하기
 							</Button>

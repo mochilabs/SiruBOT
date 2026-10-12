@@ -75,42 +75,37 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 
 | Token | Light | Dark | Utility |
 | --- | --- | --- | --- |
-| `--background` | `#fef5f9` | `#1a0e12` | `bg-background` |
-| `--foreground` | `#2d1b1e` | `#fce7f3` | `text-foreground` |
-| `--card` / `--card-foreground` | `#ffffff` / `#2d1b1e` | `#2d1b1e` / `#fce7f3` | `bg-card` |
-| `--popover` / `--popover-foreground` | `#ffffff` / `#2d1b1e` | `#2d1b1e` / `#fce7f3` | `bg-popover` |
-| `--primary` / `--primary-foreground` | `#ff85c1` / `#ffffff` | same | `bg-primary`, `text-primary` |
-| `--secondary` / `--secondary-foreground` | `#d4a574` / `#ffffff` | same | `bg-secondary` |
-| `--muted` / `--muted-foreground` | `#f9eff5` / `#8b6d75` | `#3d2328` / `#c9a8b5` | `bg-muted`, `text-muted-foreground` |
-| `--accent` / `--accent-foreground` | `#ffe4f0` / `#d1608a` | `#4d2a35` / `#ffb3d9` | `bg-accent` |
-| `--border` / `--input` | `#f0d4e3` / `#f9eff5` | `#3d2328` / `#3d2328` | `border-border`, `border-input` |
-| `--ring` | `#ff85c1` | same | `ring-ring` |
-| `--primary-rgb` | `255 133 193` | same | space triplet for `rgba(var(--primary-rgb) / …)` |
+| `--background` | `#ffffff` | `#191919` | `bg-background` |
+| `--foreground` | `#191919` | `#fafafa` | `text-foreground` |
+| `--card` / `--card-foreground` | `#fafafa` / `#191919` | `#252525` / `#fafafa` | `bg-card` |
+| `--popover` / `--popover-foreground` | `#fafafa` / `#191919` | `#252525` / `#fafafa` | `bg-popover` |
+| `--primary` / `--primary-foreground` | `#ffdada` / `#751919` | same | `bg-primary`, `text-primary` |
+| `--primary-control` / `--primary-control-text` | `#d93636` / `#ffffff` | same | `bg-primary-control`, `text-primary-control-text` |
+| `--primary-control-hover` | `#b32626` | same | `bg-primary-control-hover` |
+| `--primary-text` | `#751919` | same | `text-primary-text` |
+| `--secondary` / `--secondary-foreground` | `#dcdcdc` / `#191919` | `#484848` / `#fafafa` | `bg-secondary` |
+| `--muted` / `--muted-foreground` | `#f5f5f5` / `#636363` | `#252525` / `#c4c4c4` | `bg-muted`, `text-muted-foreground` |
+| `--accent` / `--accent-foreground` | `#ffdada` / `#751919` | same | `bg-accent` |
+| `--border` / `--input` | `#ebebeb` / `#f5f5f5` | `#484848` / `#252525` | `border-border`, `border-input` |
+| `--ring` | `#d93636` | same | `ring-ring` |
+| `--primary-rgb` | `255 218 218` | same | space triplet for `rgba(var(--primary-rgb) / …)` |
 
-`--destructive`, `--color-popover`, `--color-input` were previously defined but
-never mapped into `@theme`, so `bg-destructive`, `bg-popover`, `border-input`
-did not exist. They do now.
+Rules:
 
-Text-contrast corrections (2026-10-09 audit):
-
-| Token | Light | Dark | 유틸리티 |
-| --- | --- | --- | --- |
-| `--muted-foreground` | `#7e5e6a` (was `#8b6d75` — 4.32:1 미달) | `#c9a8b5` (변경 없음) | `text-muted-foreground` |
-| `--primary-text` (신설) | `#a3416f` | `#ff85c1` | `text-primary-text` |
-
-규칙:
-
-- `--primary`(#ff85c1)는 배경 전용(버튼/배지/하이라이트). **라이트 모드에서 텍스트·아이콘 색으로 `text-primary`를 쓰면 2.09:1로 AA 미달**이므로 반드시 `text-primary-text`를 쓴다.
-- `text-muted-foreground/NN`, `text-foreground/NN` 불투명도 파생은 모두 AA 미달(`/90`조차 라이트 4.3) — **텍스트는 파생 불투명도 없이 풀 토큰**을 쓴다. 경계선: `text-foreground/75` 이상만 예외적으로 허용(실측 6.7+).
-- 대비 근거 수치는 각 토큰 주석(globals.css)에 기록.
+- `--primary`(#ffdada) is a brand surface for cards/panels/highlights. It is never placed directly on `--background`.
+- `--primary-control`(#d93636) is the fill for solid interactive controls (buttons, switch checked track, slider thumb/range).
+- `--primary-text`(#751919) is used only for text on `--primary`/`--accent` brand surfaces.
+- `--secondary` fill alone is below 3:1 against cards, so neutral controls must pair it with `shadow-control-boundary`.
+- `text-muted-foreground/NN`, `text-foreground/NN` opacity derivatives are all below AA — **use full tokens for text**. Exception: `text-foreground/75` and above (measured 6.7+).
+- Contrast evidence is recorded in `globals.css` token comments.
 
 ### Surfaces (opaque, replaces glass for new work)
 
 | Token | Light | Dark | Utility |
 | --- | --- | --- | --- |
-| `--surface-1` | `#ffffff` | `#231317` | `bg-surface-1` — base panel |
-| `--surface-2` | `#f7f1f4` | `#2d1b1e` | `bg-surface-2` — nested / inset area |
-| `--surface-3` | `#ffffff` | `#35212a` | `bg-surface-3` — floating overlay |
+| `--surface-1` | `#ffffff` | `#191919` | `bg-surface-1` — base panel |
+| `--surface-2` | `#fafafa` | `#252525` | `bg-surface-2` — nested / inset area |
+| `--surface-3` | `#f5f5f5` | `#484848` | `bg-surface-3` — hover/pressed state |
 
 Or use the `panel` utility for the common case (opaque fill + `--r-card`).
 
@@ -135,9 +130,9 @@ Do not introduce new `rounded-xl/2xl/3xl` usages; pick a role token instead.
 
 | Token | Light | Dark | Utility |
 | --- | --- | --- | --- |
-| `--border` | `#f0d4e3` | `#3d2328` | `border-border` |
-| `--border-subtle` | `#f8e6ef` | `#2f1a1f` | `border-border-subtle` — quiet dividers |
-| `--border-strong` | `#d9aec6` | `#55323a` | `border-border-strong` — inputs, emphasis |
+| `--border` | `#ebebeb` | `#484848` | `border-border` |
+| `--border-subtle` | `#f5f5f5` | `#252525` | `border-border-subtle` — quiet dividers |
+| `--border-strong` | `#828282` | `#c4c4c4` | `border-border-strong` — input boundaries (3:1+ vs card) |
 
 ### Shadows
 
@@ -150,6 +145,8 @@ Five intentional elevation steps replace Tailwind's defaults:
 | `shadow-lg` | `--elev-3` | raised cards, headers |
 | `shadow-xl` | `--elev-4` | menus, popovers |
 | `shadow-2xl` | `--elev-5` | modals, drawers |
+| `shadow-control-boundary` | `--control-boundary` | paint-only 1px inset boundary for neutral controls/inputs |
+| `shadow-control-boundary-invalid` | `--control-boundary-invalid` | paint-only 1px inset boundary for invalid inputs |
 
 Shadows express elevation only — never decoration.
 
@@ -157,10 +154,10 @@ Shadows express elevation only — never decoration.
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--success` / `-foreground` | `#0f7a52` / `#ffffff` | `#34d399` / `#052e16` |
-| `--warning` / `-foreground` | `#9a6100` / `#ffffff` | `#fbbf24` / `#451a03` |
-| `--info` / `-foreground` | `#0b6bb0` / `#ffffff` | `#38bdf8` / `#082f49` |
-| `--destructive` / `-foreground` | `#d4183d` / `#ffffff` | same |
+| `--success` / `-foreground` | `#1b8045` / `#ffffff` | `#8ae3a9` / `#191919` |
+| `--warning` / `-foreground` | `#bd530b` / `#ffffff` | `#ffb65c` / `#191919` |
+| `--info` / `-foreground` | `#245fb0` / `#ffffff` | `#70aeff` / `#191919` |
+| `--destructive` / `-foreground` | `#d93636` / `#ffffff` | same |
 
 Utilities: `bg-success`, `text-warning`, `bg-destructive`, … `Badge`,
 `StatusDot` and `StatusBadge` were migrated to these tokens in Phase 2; any
@@ -247,13 +244,12 @@ Do not reintroduce glass. When picking a surface, judge by role:
 | Independent content block | `Card` (`variant` by emphasis) — no border, use surface color + spacing + shadow for separation |
 | Secondary / inset block | `Card variant="muted"` — no border |
 | Simple inner grouping | `bg-surface-2 rounded-card` — use spacing and surface color, no border |
-| Form control | `bg-input border border-border rounded-control` |
+| Form control | `bg-input shadow-control-boundary rounded-control` |
 | Menu / popover / toast / notification | `bg-popover rounded-menu` + `shadow-2xl` — no border |
 | Dialog / command palette | `bg-popover rounded-dialog` + `shadow-2xl` — no border |
 | Layout wrapper, nav container, table shell, toolbar | not a Card — a plain surface |
 
-`--secondary`(#d4a574)는 장식(배경 shape 등) 전용 토큰이다. 컨트롤 배경으로 쓰면 white 텍스트 대비 2.23:1로
-R-25 위반이 되므로 버튼·배지 용도로 확장하지 않는다.
+`--secondary` is a neutral surface token. Because it does not reach 3:1 against cards by itself, it is paired with `shadow-control-boundary` for buttons, icon buttons, and switch tracks.
 
 탭 타깃(R-03): `Button`은 `pointer-coarse:min-h-11`(아이콘 버튼 `pointer-coarse:w-11`)로 터치 기기에서
 44px 이상을 보장한다. 데스크탑 fine-pointer 크기(h-8/9/10)는 유지된다.
@@ -273,7 +269,7 @@ Public API is documented in `.opencode/skills/ui-primitives/SKILL.md`.
 
 | Component | File | Notes |
 | --- | --- | --- |
-| `Button` | `button.tsx` | `cva` variants `primary/secondary/ghost/danger/icon/state-toggle/cta`, sizes `sm/md/lg` (`h-8/h-9/h-10`, `rounded-control`), `loading`, `active`, `icon`, default `type="button"` |
+| `Button` | `button.tsx` | `cva` variants `primary/secondary/ghost/danger/icon/state-toggle/cta`, sizes `sm/md/lg` (`h-8/h-9/h-10`, `rounded-control`), `loading`, `active`, `icon`, default `type="button"`. `secondary` and `icon` use `shadow-control-boundary`. |
 | `Card` + `CardHeader/Title/Description/Content/Footer` | `card.tsx` | `variant: default/muted/raised/interactive`, `padding: none/sm/md/lg`, `rounded-card` |
 | `Input`, `Textarea` | `input.tsx` | shared `controlBase` (`rounded-control`, `bg-input`, focus ring, `aria-invalid` styling) |
 | `Field` | `field.tsx` | `label/description/error/required/htmlFor`; children may be a render prop receiving `{ id, describedBy, invalid }` for real label wiring; `role="alert"` on error |
@@ -369,3 +365,5 @@ overrides on newly-migrated `Button`s were dropped so they inherit
   `primary | secondary | ghost | danger | icon | state-toggle | cta`. Do not add
   `premium` / `success` / `glass` / `gradient` / `floating` variants, and do not
   create new button or input primitives.
+- Keep token changes in `:root`/`.dark`; never introduce per-component `dark:`
+  palette branches.

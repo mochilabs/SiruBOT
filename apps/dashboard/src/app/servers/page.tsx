@@ -61,7 +61,7 @@ export default function ServersPage() {
                     )}
                     <div className="relative z-10">
                         <p className="text-sm font-black text-foreground">{session?.user?.name}</p>
-                        <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button onClick={() => signOut()} className="text-primary-text hover:underline cursor-pointer">로그아웃</button></p>
+                        <p className="text-xs font-medium text-muted-foreground">내 계정이 아닌가요? <button onClick={() => signOut()} className="text-primary-control hover:underline cursor-pointer">로그아웃</button></p>
                     </div>
                 </div>
             </PageHeader>
@@ -87,7 +87,7 @@ export default function ServersPage() {
                                 href={buildInviteUrl({})}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex h-10 items-center gap-2 rounded-control bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary-control hover:text-primary-foreground"
+                                className="inline-flex h-10 items-center gap-2 rounded-control bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary-control hover:text-primary-control-text"
                             >
                                 시루봇 초대하기
                             </a>

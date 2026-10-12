@@ -8,23 +8,26 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-fast outline-none select-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 text-sm font-medium whitespace-nowrap transition-[color,background-color,box-shadow] duration-fast outline-none select-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
-				default: "bg-primary-control text-primary-foreground hover:bg-primary-control-hover",
-				primary: "bg-primary-control text-primary-foreground hover:bg-primary-control-hover",
-				secondary: "bg-surface-2 text-foreground hover:bg-surface-3",
+				default: "bg-primary-control text-primary-control-text hover:bg-primary-control-hover",
+				primary: "bg-primary-control text-primary-control-text hover:bg-primary-control-hover",
+				// The secondary fill alone is too subtle against cards, so an inset
+				// boundary is used. This keeps the surface visually light while
+				// meeting SC 1.4.11.
+				secondary: "bg-secondary text-secondary-foreground shadow-control-boundary hover:bg-surface-3",
 				ghost: "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
-				danger: "bg-destructive/10 text-destructive hover:bg-destructive/15",
-				icon: "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground",
+				danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+				icon: "bg-secondary text-secondary-foreground shadow-control-boundary hover:bg-surface-3 hover:text-foreground",
 				"state-toggle":
-					"bg-primary/10 text-primary-text hover:bg-primary/20 data-[active=true]:bg-primary-control data-[active=true]:text-primary-foreground",
-				cta: "bg-primary-control font-semibold text-primary-foreground shadow-sm hover:bg-primary-control-hover",
-				destructive: "bg-destructive/10 text-destructive hover:bg-destructive/15",
+					"bg-primary/10 text-primary-text hover:bg-primary/20 data-[active=true]:bg-primary-control data-[active=true]:text-primary-control-text",
+				cta: "bg-primary-control font-semibold text-primary-control-text shadow-sm hover:bg-primary-control-hover",
+				destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
 				outline:
-					"border border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-				link: "text-primary underline-offset-4 hover:underline",
+					"border border-border-strong bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30 dark:hover:bg-input/50",
+				link: "text-primary-control underline-offset-4 hover:underline",
 			},
 			size: {
 				default: "h-9 px-4",

@@ -182,7 +182,7 @@ function FavoriteButton({
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
 			className={`flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
 				favorite
-					? "border-primary/30 bg-primary/10 text-primary-text hover:bg-primary/20"
+					? "border-transparent bg-primary-control text-primary-control-text hover:bg-primary-control-hover"
 					: "border-border bg-surface-2 text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-primary-text"
 			}`}
 		>
@@ -253,7 +253,7 @@ export const TrackItem = memo(function TrackItem({
 
 			<div className="flex items-center gap-3 sm:gap-4 pr-1 sm:pr-2 shrink-0">
 				<div className="text-right">
-					<p className="text-base sm:text-lg font-black text-primary-text leading-none">{track.totalPlays.toLocaleString()}</p>
+					<p className="text-base sm:text-lg font-black text-primary-control leading-none">{track.totalPlays.toLocaleString()}</p>
 					<p className="hidden sm:block mt-1 text-xs text-muted-foreground font-bold">총 재생</p>
 				</div>
 
@@ -300,7 +300,7 @@ export function Track({ track }: { track: TrackType }) {
 				<p className="truncate text-sm font-normal text-muted-foreground" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="text-sm font-medium text-primary-text">{track.totalPlays.toLocaleString()}회 재생</p>
+				<p className="text-sm font-medium text-primary-control">{track.totalPlays.toLocaleString()}회 재생</p>
 			</div>
 		</div>
 	);

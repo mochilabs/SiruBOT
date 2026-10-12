@@ -321,7 +321,7 @@ export default function DesignPage() {
 			header: "재생 수",
 			sortable: true,
 			align: "right",
-			render: (r) => <span className="text-primary-text font-black tabular-nums">{r.plays.toLocaleString()}</span>,
+			render: (r) => <span className="text-primary-control font-black tabular-nums">{r.plays.toLocaleString()}</span>,
 		},
 		{ key: "duration", header: "길이", align: "right" },
 	];
@@ -374,7 +374,7 @@ export default function DesignPage() {
 										className={cn(
 											"flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-fast",
 											isActive
-												? "text-primary-text font-bold bg-primary/10"
+												? "text-primary-text font-bold bg-primary"
 												: "text-muted-foreground hover:text-foreground hover:bg-accent/30",
 										)}
 									>
@@ -444,7 +444,7 @@ export default function DesignPage() {
 									<p className="text-2xl text-foreground">text-2xl</p>
 									<p className="text-3xl text-foreground">text-3xl</p>
 									<p className="text-4xl text-foreground">text-4xl</p>
-									<p className="text-4xl font-black tracking-tighter text-primary-text">Title Sample</p>
+									<p className="text-4xl font-black tracking-tighter text-primary-control">Title Sample</p>
 								</div>
 							</ShowcaseRow>
 
