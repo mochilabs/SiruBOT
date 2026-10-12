@@ -142,7 +142,7 @@ export default function NotFound() {
 							<m.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
 								<Link
 									href="/"
-									className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover"
+									className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover"
 								>
 									<Home className="h-5 w-5" aria-hidden />
 									홈으로 가기

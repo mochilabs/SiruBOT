@@ -47,7 +47,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<Link
 							href={`/servers/${guild.id}`}
 							aria-label="관리하기"
-							className="flex h-11 w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-foreground md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
+							className="flex h-11 w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-control-text md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
 						>
 							<Settings2 size={18} />
 							<span className="hidden text-sm font-bold md:inline">관리하기</span>

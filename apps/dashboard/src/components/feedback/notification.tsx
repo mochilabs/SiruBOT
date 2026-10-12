@@ -70,7 +70,7 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 								variant="link"
 								size="sm"
 								onClick={notification.action.onClick}
-								className="mt-2 h-auto px-0 text-xs font-semibold text-primary"
+								className="mt-2 h-auto px-0 text-xs font-semibold text-primary-text"
 							>
 								{notification.action.label}
 							</Button>

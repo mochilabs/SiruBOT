@@ -68,7 +68,7 @@ export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureS
 				<div className="relative flex flex-col gap-0.5 p-2">
 					{indicator && (
 						<m.div
-							className="absolute rounded-menu border-0 bg-primary/10 z-0"
+							className="absolute rounded-menu border-0 bg-primary-control/10 z-0"
 							animate={{
 								top: indicator.top,
 								left: indicator.left,

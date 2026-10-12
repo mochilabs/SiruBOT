@@ -103,7 +103,7 @@ function TrackRow({
 				<button
 					type="button"
 					onClick={() => onPlay(track)}
-					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-text"
+					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-control"
 					aria-label={`${track.title} 다시 재생`}
 				>
 					<Play size={13} aria-hidden />
@@ -206,7 +206,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 							aria-selected={tab === "top"}
 							onClick={() => setTab("top")}
 							className={`rounded-control px-3.5 py-1.5 text-sm font-bold transition-colors duration-fast ${
-								tab === "top" ? "bg-primary-control text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+								tab === "top" ? "bg-primary-control text-primary-control-text" : "text-muted-foreground hover:text-foreground"
 							}`}
 						>
 							많이 듣는 곡
@@ -217,7 +217,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 							aria-selected={tab === "recent"}
 							onClick={() => setTab("recent")}
 							className={`rounded-control px-3.5 py-1.5 text-sm font-bold transition-colors duration-fast ${
-								tab === "recent" ? "bg-primary-control text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+								tab === "recent" ? "bg-primary-control text-primary-control-text" : "text-muted-foreground hover:text-foreground"
 							}`}
 						>
 							최근 재생

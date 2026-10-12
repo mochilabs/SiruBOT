@@ -11,12 +11,12 @@ const Input = forwardRef<HTMLInputElement, React.ComponentProps<"input">>(functi
 			type={type}
 			data-slot="input"
 			className={cn(
-				"h-9 w-full min-w-0 rounded-control border-0 bg-input px-3 py-1 text-sm text-foreground transition-colors duration-fast outline-none",
+				"h-9 w-full min-w-0 rounded-control border-0 bg-input px-3 py-1 text-sm text-foreground shadow-control-boundary transition-[color,background-color,box-shadow] duration-fast outline-none",
 				"file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
 				"placeholder:text-muted-foreground",
 				"focus-visible:ring-2 focus-visible:ring-ring",
 				"disabled:cursor-not-allowed disabled:opacity-50",
-				"aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive",
+				"aria-invalid:shadow-control-boundary-invalid aria-invalid:focus-visible:ring-destructive",
 				className,
 			)}
 			{...props}

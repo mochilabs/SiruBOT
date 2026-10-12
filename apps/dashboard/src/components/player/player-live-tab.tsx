@@ -68,7 +68,7 @@ function ProgressBar({ state, receivedAt }: { state: LivePlayerState; receivedAt
 	return (
 		<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
 			<div
-				className="h-full rounded-full bg-primary transition-[width] duration-slow ease-linear"
+				className="h-full rounded-full bg-primary-control transition-[width] duration-slow ease-linear"
 				style={{ width: `${ratio * 100}%` }}
 			/>
 		</div>

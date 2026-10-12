@@ -99,8 +99,8 @@ export function RoleSelect({
 				className={`
 					w-full min-h-[44px] px-4 py-2 flex items-center justify-between gap-2
 					rounded-control border border-border bg-input text-sm font-medium transition-all duration-base cursor-pointer
-					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary/30"}
-					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
+					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary-control"}
+					${open ? "ring-2 ring-ring border-primary-control" : ""}
 				`}
 			>
 				<span className={value.length > 0 ? "text-foreground" : "text-muted-foreground"}>

@@ -374,7 +374,7 @@ export default function DesignPage() {
 										className={cn(
 											"flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-fast",
 											isActive
-												? "text-primary-text font-bold bg-primary/10"
+												? "text-primary-text font-bold bg-primary"
 												: "text-muted-foreground hover:text-foreground hover:bg-accent/30",
 										)}
 									>

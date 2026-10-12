@@ -182,7 +182,7 @@ function FavoriteButton({
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
 			className={`flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
 				favorite
-					? "border-primary/30 bg-primary/10 text-primary-text hover:bg-primary/20"
+					? "border-transparent bg-primary-control text-primary-control-text hover:bg-primary-control-hover"
 					: "border-border bg-surface-2 text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-primary-text"
 			}`}
 		>

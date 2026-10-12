@@ -64,7 +64,7 @@ export function TagInput({
 			className={`
 				rounded-control border border-border bg-input flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
 				transition-all duration-base cursor-text
-				focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30
+				focus-within:ring-2 focus-within:ring-ring focus-within:border-primary-control
 				${disabled ? "opacity-50 pointer-events-none" : ""}
 				${className}
 			`}

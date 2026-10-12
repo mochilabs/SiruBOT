@@ -41,7 +41,7 @@ export default function InviteRedirectPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
             <Link
               href="/servers"
-              className="inline-flex h-11 items-center justify-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover"
+              className="inline-flex h-11 items-center justify-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover"
               >
               <Settings2 className="h-5 w-5" />
               설정하러 가기

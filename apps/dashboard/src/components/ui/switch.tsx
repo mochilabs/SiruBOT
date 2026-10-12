@@ -14,6 +14,10 @@ interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange"
 	className?: string;
 }
 
+// Track internal geometry:
+//   md: track 44x24 px, thumb 16x16 px, 2px padding each side -> travel 24px (1.5rem)
+//   sm: track 36x20 px, thumb 14x14 px, 2px padding each side -> travel 18px (1.125rem)
+// Thumb stays 2px smaller than track height so it never clips the rounded caps.
 const trackSizes = {
 	sm: "h-5 w-9",
 	md: "h-6 w-11",
@@ -21,8 +25,17 @@ const trackSizes = {
 
 const thumbSizes = {
 	sm: "h-3.5 w-3.5",
-	md: "h-5 w-5",
+	md: "h-4 w-4",
 };
+
+// Unchecked track: secondary fill is too subtle against cards, so it pairs with
+// an inset boundary. Checked track uses primary-control (#c14377, 4.84:1 vs white)
+// for clear on-state contrast.
+const trackBase =
+	"rounded-full border-0 bg-secondary shadow-control-boundary transition-colors duration-fast outline-none data-checked:bg-primary-control data-checked:shadow-none";
+
+const thumbBase =
+	"pointer-events-none block rounded-full border-0 bg-card shadow-md transition-transform duration-fast ease-out";
 
 function Switch({
 	checked,
@@ -44,7 +57,8 @@ function Switch({
 			onCheckedChange={onChange}
 			disabled={disabled}
 			className={cn(
-				"peer group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full border-0 bg-muted transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-checked:bg-primary",
+				"peer group/switch relative inline-flex shrink-0 cursor-pointer items-center focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+				trackBase,
 				trackSizes[size],
 				className,
 			)}
@@ -53,10 +67,11 @@ function Switch({
 			<SwitchPrimitive.Thumb
 				data-slot="switch-thumb"
 				className={cn(
-					"pointer-events-none block rounded-full bg-background shadow-sm transition-transform duration-fast",
+					thumbBase,
 					thumbSizes[size],
-					"group-data-[size=sm]/switch:translate-x-0.5 group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)]",
-					"group-data-[size=md]/switch:translate-x-0.5 group-data-[size=md]/switch:data-checked:translate-x-[calc(100%-2px)]",
+					// 2px inset from left cap.
+					"group-data-[size=sm]/switch:translate-x-0.5 group-data-[size=sm]/switch:data-checked:translate-x-[1.125rem]",
+					"group-data-[size=md]/switch:translate-x-0.5 group-data-[size=md]/switch:data-checked:translate-x-[1.5rem]",
 				)}
 			/>
 		</SwitchPrimitive.Root>

@@ -241,7 +241,7 @@ export function HeroSection() {
 									className={cn(
 										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
-											? "bg-primary-control text-primary-foreground"
+											? "bg-primary-control text-primary-control-text"
 											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
 									)}
 								>

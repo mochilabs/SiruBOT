@@ -52,7 +52,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 					<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
 						<Link
 							href="/login"
-							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-primary-control px-6 text-base font-bold text-primary-foreground transition-colors duration-fast hover:bg-primary-control-hover sm:w-auto"
+							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-primary-control px-6 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover sm:w-auto"
 						>
 							<RefreshCw className="h-4 w-4" aria-hidden />
 							다시 로그인하기
