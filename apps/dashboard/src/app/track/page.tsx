@@ -16,7 +16,6 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
 import { buttonVariants } from "@/components/ui/button";
-import { ToastProvider } from "@/components/ui/toast";
 import { PAGE_SIZE } from "@/lib/track-constants";
 
 function TrackContent() {
@@ -147,10 +146,8 @@ function TrackContent() {
 
 export default function TrackPage() {
   return (
-    <ToastProvider>
-      <Suspense fallback={<Container><Loader fullPage /></Container>}>
-        <TrackContent />
-      </Suspense>
-    </ToastProvider>
+    <Suspense fallback={<Container><Loader fullPage /></Container>}>
+      <TrackContent />
+    </Suspense>
   );
 }

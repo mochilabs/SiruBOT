@@ -91,7 +91,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Toaster, useToast } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [
@@ -349,7 +349,7 @@ export default function DesignPage() {
 	];
 
 	return (
-		<Toaster>
+		<>
 			<div className="container mx-auto max-w-7xl px-4 py-8">
 				<div className="flex items-start justify-between gap-4 mb-8">
 					<div>
@@ -911,6 +911,6 @@ export default function DesignPage() {
 					</main>
 				</div>
 			</div>
-		</Toaster>
+		</>
 	);
 }

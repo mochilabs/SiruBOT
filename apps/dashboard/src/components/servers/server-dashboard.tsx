@@ -6,7 +6,6 @@ import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, Use
 import PlayerLiveTab from "@/components/player/player-live-tab";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ToastProvider } from "@/components/ui/toast";
 
 import { AiSettings } from "./ai-settings";
 import { BotProfileSettings } from "./bot-profile-settings";
@@ -48,7 +47,7 @@ function NotManageable() {
  * 탭/사이드바는 패널을 숨기기만 해(언마운트하지 않아) 편집 중인 입력값이 보존되고,
  * 패널은 Tabs 안에서 한 번만 렌더돼 두 내비게이션이 같은 상태를 공유해요(중복 마운트·중복 요청 방지).
  * 데스크톱에서는 탭 스트립만 숨기고(listClassName) 사이드바를 띄워요.
- * 모든 패널이 같은 토스트 컨텍스트를 공유해요.
+ * 토스트는 root layout의 전역 <Toaster />가 렌더해요 — 페이지별 Provider 두지 않아요.
  */
 export function ServerDashboard({ guildId, manageable, guildName }: { guildId: string; manageable: boolean; guildName: string | null }) {
 	const [tab, setTab] = useState<TabKey>("ai");
@@ -56,42 +55,40 @@ export function ServerDashboard({ guildId, manageable, guildName }: { guildId: s
 	if (!manageable) return <NotManageable />;
 
 	return (
-		<ToastProvider>
-			<div className="animate-page-in">
-				<div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-					<ServerFeatureSidebar
-						items={TABS}
-						active={tab}
-						onSelect={(key) => setTab(key as TabKey)}
-					/>
+		<div className="animate-page-in">
+			<div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
+				<ServerFeatureSidebar
+					items={TABS}
+					active={tab}
+					onSelect={(key) => setTab(key as TabKey)}
+				/>
 
-					<div className="w-full min-w-0 flex-1">
-						<Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="w-full" aria-label="서버 설정 패널">
-							<TabsList className="w-full lg:hidden">
-								{TABS.map((item) => (
-									<TabsTrigger key={item.key} value={item.key} className="gap-1.5">
-										{item.icon}
-										{item.label}
-									</TabsTrigger>
-								))}
-							</TabsList>
+				<div className="w-full min-w-0 flex-1">
+					<Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="w-full" aria-label="서버 설정 패널">
+						<TabsList className="w-full lg:hidden">
 							{TABS.map((item) => (
-								<TabsContent key={item.key} value={item.key} className="pt-4 lg:pt-0" keepMounted>
-									{item.key === "ai" && <AiSettings guildId={guildId} />}
-									{item.key === "profile" && <BotProfileSettings guildId={guildId} />}
-									{item.key === "music" && <MusicSettings guildId={guildId} />}
-									{item.key === "player-live" && <PlayerLiveTab guildId={guildId} />}
-									{item.key === "stats" && <ServerStatsTab guildId={guildId} />}
-									{item.key === "channels" && <ChannelSettings guildId={guildId} />}
-									{item.key === "jtc" && <JtcSettings guildId={guildId} />}
-									{item.key === "mixer" && <MixerSettings guildId={guildId} />}
-									{item.key === "greeting" && <MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} guildName={guildName} />}
-								</TabsContent>
+								<TabsTrigger key={item.key} value={item.key} className="gap-1.5">
+									{item.icon}
+									{item.label}
+								</TabsTrigger>
 							))}
-						</Tabs>
-					</div>
+						</TabsList>
+						{TABS.map((item) => (
+							<TabsContent key={item.key} value={item.key} className="pt-4 lg:pt-0" keepMounted>
+								{item.key === "ai" && <AiSettings guildId={guildId} />}
+								{item.key === "profile" && <BotProfileSettings guildId={guildId} />}
+								{item.key === "music" && <MusicSettings guildId={guildId} />}
+								{item.key === "player-live" && <PlayerLiveTab guildId={guildId} />}
+								{item.key === "stats" && <ServerStatsTab guildId={guildId} />}
+								{item.key === "channels" && <ChannelSettings guildId={guildId} />}
+								{item.key === "jtc" && <JtcSettings guildId={guildId} />}
+								{item.key === "mixer" && <MixerSettings guildId={guildId} />}
+								{item.key === "greeting" && <MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} guildName={guildName} />}
+							</TabsContent>
+						))}
+					</Tabs>
 				</div>
 			</div>
-		</ToastProvider>
+		</div>
 	);
 }

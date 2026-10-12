@@ -13,7 +13,6 @@ import { EditPlaylistModal } from "@/components/playlists/edit-playlist-modal";
 import { PlaylistDetail } from "@/components/playlists/playlist-detail";
 import { PlaylistSelectMobile } from "@/components/playlists/playlist-select-mobile";
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
-import { ToastProvider } from "@/components/ui/toast";
 import { usePlaylists } from "@/hooks/use-playlists";
 
 function PlaylistsContent() {
@@ -181,10 +180,8 @@ function PlaylistsContent() {
 
 export default function PlaylistsPage() {
 	return (
-		<ToastProvider>
-			<Suspense fallback={<Container><Loader fullPage /></Container>}>
-				<PlaylistsContent />
-			</Suspense>
-		</ToastProvider>
+		<Suspense fallback={<Container><Loader fullPage /></Container>}>
+			<PlaylistsContent />
+		</Suspense>
 	);
 }
