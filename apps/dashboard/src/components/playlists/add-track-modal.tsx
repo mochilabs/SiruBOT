@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 
 import Loader from "@/components/loader";
@@ -23,8 +24,9 @@ interface AddTrackModalProps {
 	onTrackInputChange: (v: string) => void;
 	loading: boolean;
 	searchLoading: boolean;
+	searchError?: Error;
 	searchedTracks: SearchedTrack[];
-	onAddTrack: (trackId?: string) => void;
+	onAddTrack: (trackId?: string, youtubeUrl?: string) => void;
 }
 
 /**
@@ -39,18 +41,43 @@ export function AddTrackModal({
 	onTrackInputChange,
 	loading,
 	searchLoading,
+	searchError,
 	searchedTracks,
 	onAddTrack,
 }: AddTrackModalProps) {
 	const isUrl = isYoutubeUrl(trackInput);
+	const [viewport, setViewport] = useState({ top: "50%", maxHeight: "calc(100dvh - 2rem)", resultsHeight: "380px" });
+
+	useEffect(() => {
+		if (!open) return;
+
+		const visualViewport = window.visualViewport;
+		const updateViewport = () => {
+			if (!visualViewport) return;
+			const availableHeight = Math.max(220, visualViewport.height - 24);
+			setViewport({
+				top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
+				maxHeight: `${availableHeight}px`,
+				resultsHeight: `${Math.max(96, Math.min(380, availableHeight - 176))}px`,
+			});
+		};
+
+		updateViewport();
+		visualViewport?.addEventListener("resize", updateViewport);
+		visualViewport?.addEventListener("scroll", updateViewport);
+		return () => {
+			visualViewport?.removeEventListener("resize", updateViewport);
+			visualViewport?.removeEventListener("scroll", updateViewport);
+		};
+	}, [open]);
 
 	return (
 		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
-			<DialogContent>
+			<DialogContent className="overflow-y-auto" style={{ top: viewport.top, maxHeight: viewport.maxHeight }}>
 				<DialogHeader>
 					<DialogTitle>플레이리스트에 곡 추가</DialogTitle>
 				</DialogHeader>
-				<div className="flex h-[380px] flex-col gap-3 py-2">
+				<div className="flex min-h-0 flex-col gap-3 py-2" style={{ height: viewport.resultsHeight }}>
 					<div className="relative">
 						<Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
 						<Input
@@ -74,10 +101,14 @@ export function AddTrackModal({
 							<div className="flex h-full items-center justify-center">
 								<Loader text="곡 검색 중..." />
 							</div>
+						) : searchError ? (
+							<div className="flex h-full items-center justify-center px-4 text-center">
+								<p className="text-sm text-destructive">YouTube 검색을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+							</div>
 						) : !trackInput.trim() ? (
 							<div className="flex h-full items-center justify-center px-4 text-center">
 								<p className="text-xs font-medium text-muted-foreground leading-relaxed">
-									유튜브 링크를 붙여넣거나, 키워드를 입력해 기존에 봇이 재생했던 노래들을 찾아보세요.
+								유튜브 링크를 붙여넣거나 곡 제목·아티스트를 검색해 보세요.
 								</p>
 							</div>
 						) : searchedTracks.length === 0 ? (
@@ -109,7 +140,7 @@ export function AddTrackModal({
 											variant="secondary"
 											size="sm"
 											className="shrink-0"
-											onClick={() => onAddTrack(track.id)}
+											onClick={() => onAddTrack(track.youtubeUrl ? undefined : track.id, track.youtubeUrl)}
 										>
 											추가
 										</Button>

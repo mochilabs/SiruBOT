@@ -17,7 +17,10 @@ const envSchema = z.object({
 	DATABASE_URL: z.string().optional(),
 	MEMORY_TIDY_ENABLED: z.coerce.boolean().default(true),
 	MEMORY_TIDY_AT: z.string().default('00:00'),
-	MEMORY_TIDY_BATCH_SIZE: z.coerce.number().int().positive().max(200).default(40)
+	MEMORY_TIDY_BATCH_SIZE: z.coerce.number().int().positive().max(200).default(40),
+	// YouTube 검색에 사용할 Lavalink REST 주소와 비밀번호 — data-api 서버에서만 사용해요
+	LAVALINK_REST_URL: z.string().url().optional(),
+	LAVALINK_PASSWORD: z.string().optional()
 });
 
 export type Env = z.infer<typeof envSchema>;
