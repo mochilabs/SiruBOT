@@ -1,10 +1,11 @@
 /**
  * NowPlaying 카드 렌더러 — skia-canvas로 현재 재생 곡을 카드 이미지로 그려요.
- * 아트워크 + 제목 + 아티스트 + 챕터/신청자/추천·일시정지 뱃지 + 진행바 + 다음 곡 목록 +
- * 하단 메타(대기열/볼륨/반복/노드) + 브랜드(봇이름/버전). 배경 액센트는 아트워크의 도미넌트 컬러.
+ * 아트워크(16:9 블러 배경 + 썸네일) + 제목 + 아티스트 + 챕터/신청자/추천·일시정지 뱃지 +
+ * 다음 곡 목록 + 하단 메타(대기열/볼륨/반복/노드) + 브랜드(봇이름/버전).
+ * 배경 액센트는 아트워크의 도미넌트 컬러.
  *
- * 갱신 주기 — 봇이 카드 키에 5초 위치 버킷을 넣어요: 트랙 변경/볼륨/챕터/버킷이 바뀔 때만
- * 다시 렌더하고, 그 전에는 이전 버킷 이미지가 그대로 보여요. 매초 재렌더는 하지 않아요.
+ * 카드는 정적 — 진행바가 이미지에 들어가지 않아요. 동적 시간은 디스코드 타임스탬프로
+ * 커버돼요. 갱신 주기는 봇이 트랙/볼륨/챕터/일시정지/반복 변경을 감지해 다시 렌더.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawCircleImage, drawIcon, ensureKoreanFont, formatClock, hashString, loadImageAllowed, truncate, type IconName } from './canvasUtils.ts';
@@ -17,8 +18,9 @@ export interface NowPlayingCardInput {
 	artist: string;
 	/** 아트워크 URL — data-api가 fetch해요. 실패하면 폴백 아트워크를 그려요 */
 	artworkUrl: string | null;
-	/** 재생 위치(ms) — 진행바 진행율로 그려져요 */
+	/** 재생 위치(ms) — 이미지에는 표시하지 않고 스키마 호환용으로 유지해요 */
 	positionMs: number;
+	/** 전체 길이(ms) — 스트림·챕터 여부 판별용 */
 	durationMs: number;
 	isStream: boolean;
 	/** 일시정지 상태 — 일시정지 뱃지를 박아요 */
@@ -148,16 +150,30 @@ function fallbackAccent(trackId: string): { primary: string } {
 	return { primary: FALLBACK_ACCENTS[hashString(trackId) % FALLBACK_ACCENTS.length]! };
 }
 
-/** 아트워크를 둥근 사각형에 cover-fit으로 그려요 — 1:1이면 슬롯에 딱 맞게 crop돼요 (비율 유지) */
-function drawCoverFit(ctx: CanvasRenderingContext2D, img: CanvasDrawable, x: number, y: number, size: number, radius: number): void {
+/** 아트워크를 주어진 완전한 영역에 16:9 비율로 cover-fit */
+function drawCoverFitWide(ctx: CanvasRenderingContext2D, img: CanvasDrawable, x: number, y: number, w: number, h: number, radius: number): void {
 	ctx.save();
 	ctx.beginPath();
-	ctx.roundRect(x, y, size, size, radius);
+	ctx.roundRect(x, y, w, h, radius);
 	ctx.clip();
 	const iw = (img as { width: number }).width;
 	const ih = (img as { height: number }).height;
-	const scale = Math.max(size / iw, size / ih);
-	ctx.drawImage(img, x + size / 2 - (iw * scale) / 2, y + size / 2 - (ih * scale) / 2, iw * scale, ih * scale);
+	const scale = Math.max(w / iw, h / ih);
+	ctx.drawImage(img, x + w / 2 - (iw * scale) / 2, y + h / 2 - (ih * scale) / 2, iw * scale, ih * scale);
+	ctx.restore();
+}
+
+/** 카드 전체 배경용 블러 cover */
+function drawBackgroundCover(ctx: CanvasRenderingContext2D, img: CanvasDrawable, x: number, y: number, w: number, h: number): void {
+	ctx.save();
+	const iw = (img as { width: number }).width;
+	const ih = (img as { height: number }).height;
+	const scale = Math.max(w / iw, h / ih);
+	const dw = iw * scale;
+	const dh = ih * scale;
+	ctx.globalAlpha = 0.18;
+	ctx.filter = 'blur(36px)';
+	ctx.drawImage(img, x + w / 2 - dw / 2, y + h / 2 - dh / 2, dw, dh);
 	ctx.restore();
 }
 
@@ -233,12 +249,46 @@ function drawPill(
 	return x + w;
 }
 
+/** 텍스트를 최대 maxLines 줄로 줄바꿈 — 마지막 줄이 넘치면 말줄임표로 잘라요 */
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
+	if (maxLines <= 0 || !text) return [];
+	if (ctx.measureText(text).width <= maxWidth || maxLines === 1) {
+		return [maxLines === 1 && ctx.measureText(text).width > maxWidth ? truncate(ctx, text, maxWidth) : text];
+	}
+	const lines: string[] = [];
+	let current = '';
+	let lineCount = 1;
+	for (let i = 0; i < text.length; i++) {
+		const char = text[i]!;
+		const test = current + char;
+		if (ctx.measureText(test).width > maxWidth && current.length > 0) {
+			lines.push(current);
+			current = char;
+			lineCount++;
+			if (lineCount >= maxLines) {
+				const remaining = text.slice(i + 1);
+				current += remaining;
+				break;
+			}
+		} else {
+			current = test;
+		}
+	}
+	if (current) {
+		if (ctx.measureText(current).width > maxWidth) {
+			current = truncate(ctx, current, maxWidth);
+		}
+		lines.push(current);
+	}
+	return lines.slice(0, maxLines);
+}
+
 export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<Buffer> {
 	const { Canvas } = await import('skia-canvas');
 	await ensureKoreanFont();
 
 	const W = 960;
-	const H = 372;
+	const H = 400;
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
 
@@ -252,12 +302,13 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		accent = fallbackAccent(input.trackId);
 	}
 
-	// ── 배경: 아트워크 기반 딤 그라디언트 ──
+	// ── 배경: 아트워크 기반 블러 + 딤 그라디언트 ──
 	const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
 	bgGrad.addColorStop(0, '#141a26');
 	bgGrad.addColorStop(1, '#0d1117');
 	ctx.fillStyle = bgGrad;
 	ctx.fillRect(0, 0, W, H);
+	if (artImg) drawBackgroundCover(ctx, artImg, 0, 0, W, H);
 
 	// 액센트 글로우 (우상단)
 	const glow = ctx.createRadialGradient(W - 120, 40, 10, W - 120, 40, 420);
@@ -266,15 +317,16 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	ctx.fillStyle = glow;
 	ctx.fillRect(0, 0, W, H);
 
-	// ── 아트워크 ──
-	const ART = 244;
+	// ── 아트워크 — 16:9 비율, 높이 기준 180px ──
+	const THUMB_H = 180;
+	const THUMB_W = Math.round(THUMB_H * (16 / 9)); // 320
 	const artX = 28;
-	const artY = (H - ART) / 2;
-	if (artImg) drawCoverFit(ctx, artImg, artX, artY, ART, 20);
-	else drawArtworkFallback(ctx, accent, artX, artY, ART, 20);
+	const artY = (H - THUMB_H) / 2;
+	if (artImg) drawCoverFitWide(ctx, artImg, artX, artY, THUMB_W, THUMB_H, 20);
+	else drawArtworkFallback(ctx, accent, artX, artY, THUMB_H, 20);
 
 	// ── 텍스트 영역 ──
-	const tx = artX + ART + 28;
+	const tx = artX + THUMB_W + 28;
 	const right = W - 32;
 	const textW = right - tx;
 
@@ -283,8 +335,8 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 
 	// NOW PLAYING 라벨 + 상태 뱃지들 (LIVE · 일시정지 · 봇 추천)
 	ctx.fillStyle = accent.primary;
-	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillText('NOW PLAYING', tx, 52);
+	ctx.font = '700 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+	ctx.fillText('NOW PLAYING', tx, 56);
 	let badgeX = tx + ctx.measureText('NOW PLAYING').width + 14;
 	if (input.isStream) {
 		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'radio', label: 'LIVE', bg: '#ff3b5c', fg: '#ffffff' }) + 8;
@@ -314,138 +366,105 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	const reqImg = input.requester?.avatarUrl ? await loadImageAllowed(input.requester.avatarUrl) : null;
 	if (input.requester?.name) {
 		ctx.save();
-		ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		const nameText = truncate(ctx, input.requester.name, 150);
+		ctx.font = '600 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+		const nameText = input.requester.name;
 		const nameW = ctx.measureText(nameText).width;
-		const AV = 22;
-		const pillH = 30;
-		const pillW = 10 + AV + 8 + nameW + 14;
+		const AV = 26;
+		const pillH = 36;
+		const pillW = 12 + AV + 8 + nameW + 14;
 		const pillX = right - pillW;
 		if (pillX > badgeX + 20) {
-			const pillY = 31;
+			const pillY = 35;
 			ctx.beginPath();
 			ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-			ctx.fillStyle = 'rgba(255,255,255,0.07)';
+			ctx.fillStyle = 'rgba(255,255,255,0.10)';
 			ctx.fill();
 			ctx.beginPath();
 			ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-			ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+			ctx.strokeStyle = 'rgba(255,255,255,0.18)';
 			ctx.lineWidth = 1;
 			ctx.stroke();
 			if (reqImg) {
-				drawCircleImage(ctx, reqImg, pillX + 10 + AV / 2, pillY + pillH / 2, AV / 2);
+				drawCircleImage(ctx, reqImg, pillX + 12 + AV / 2, pillY + pillH / 2, AV / 2);
 			} else {
 				ctx.beginPath();
-				ctx.arc(pillX + 10 + AV / 2, pillY + pillH / 2, AV / 2, 0, Math.PI * 2);
-				ctx.fillStyle = 'rgba(255,255,255,0.1)';
+				ctx.arc(pillX + 12 + AV / 2, pillY + pillH / 2, AV / 2, 0, Math.PI * 2);
+				ctx.fillStyle = 'rgba(255,255,255,0.12)';
 				ctx.fill();
-				drawIcon(ctx, 'users', pillX + 10 + AV / 2 - 7, pillY + pillH / 2 - 7, 14, 'rgba(255,255,255,0.55)');
+				drawIcon(ctx, 'users', pillX + 12 + AV / 2 - 7, pillY + pillH / 2 - 7, 14, 'rgba(255,255,255,0.55)');
 			}
-			ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-			ctx.fillStyle = 'rgba(255,255,255,0.72)';
+			ctx.font = '600 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+			ctx.fillStyle = 'rgba(255,255,255,0.82)';
 			ctx.textBaseline = 'middle';
-			ctx.fillText(nameText, pillX + 10 + AV + 8, pillY + pillH / 2 + 0.5);
+			ctx.fillText(nameText, pillX + 12 + AV + 8, pillY + pillH / 2 + 0.5);
 		}
 		ctx.restore();
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'alphabetic';
 	}
 
-	// 제목 — 카드에는 곡 제목만 크게 (전체 길이는 진행바 우측에 표기)
-	const titleSize = 37;
+	// 제목 — 카드에는 곡 제목 크게, 말줄임 없이 전체 제목을 그려요 (줄 바꿈 없이)
+	const titleSize = 40;
 	ctx.fillStyle = '#ffffff';
 	ctx.font = `700 ${titleSize}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
-	const titleText = truncate(ctx, input.title, textW);
-	ctx.fillText(titleText, tx, 104);
+	const titleLines = wrapText(ctx, input.title, textW, 2);
+	let titleY = 112;
+	for (const line of titleLines) {
+		ctx.fillText(line, tx, titleY);
+		titleY += 46;
+	}
 
 	// ── 아티스트 / 챕터 ──
-	let cursorY = 104;
+	const titleBottom = titleY;
+	let cursorY = titleBottom;
 
-	// 아티스트 — 제목 아래 작게 (없으면 생략)
+	// 아티스트 — 제목 아래 (없으면 생략)
 	let artCursorY = cursorY;
 	if (input.artist) {
-		const artistY = 104 + 36;
-		ctx.fillStyle = 'rgba(255,255,255,0.55)';
-		ctx.font = '500 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText(truncate(ctx, input.artist, textW - 40), tx, artistY);
+		const artistY = titleBottom + 36;
+		ctx.fillStyle = 'rgba(255,255,255,0.62)';
+		ctx.font = '600 23px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+		ctx.fillText(input.artist, tx, artistY);
 		artCursorY = artistY;
 	}
 
 	if (input.chapter) {
-		const chapterY = artCursorY + 38;
+		const chapterY = artCursorY + 42;
 		// lucide 챕터 표시용 아이콘 (`corner-down-right`)
-		drawIcon(ctx, 'corner-down-right', tx, chapterY - 15, 16, accent.primary);
-		ctx.fillStyle = 'rgba(255,255,255,0.78)';
-		ctx.font = '500 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		const iconPad = 24;
-		const rangeText = `${truncate(ctx, input.chapter.name, textW - iconPad - 150)} (${formatClock(input.chapter.startMs)} - ${formatClock(input.chapter.endMs)})`;
+		drawIcon(ctx, 'corner-down-right', tx, chapterY - 16, 18, accent.primary);
+		ctx.fillStyle = 'rgba(255,255,255,0.85)';
+		ctx.font = '600 23px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+		const iconPad = 28;
+		const rangeText = `${input.chapter.name} (${formatClock(input.chapter.startMs)} - ${formatClock(input.chapter.endMs)})`;
 		ctx.fillText(rangeText, tx + iconPad, chapterY);
 		artCursorY = chapterY;
-	}
-
-	// ── 진행바 — 위치/전체 길이 (스트림은 생략) ──
-	const showProgress = !input.isStream && input.durationMs > 0;
-	if (showProgress) {
-		const barTop = artCursorY + 44;
-		const barH = 10;
-		const barW = right - tx;
-		const ratio = Math.max(0, Math.min(1, input.positionMs / input.durationMs));
-		ctx.beginPath();
-		ctx.roundRect(tx, barTop, barW, barH, barH / 2);
-		ctx.fillStyle = 'rgba(255,255,255,0.12)';
-		ctx.fill();
-		if (ratio > 0) {
-			ctx.beginPath();
-			ctx.roundRect(tx, barTop, Math.max(barH, Math.round(barW * ratio)), barH, barH / 2);
-			ctx.fillStyle = accent.primary;
-			ctx.fill();
-		}
-		const headX = tx + Math.round(barW * Math.min(1, Math.max(0.02, ratio)));
-		ctx.beginPath();
-		ctx.arc(headX, barTop + barH / 2, 8, 0, Math.PI * 2);
-		ctx.fillStyle = accent.primary;
-		ctx.fill();
-		ctx.beginPath();
-		ctx.arc(headX, barTop + barH / 2, 8, 0, Math.PI * 2);
-		ctx.strokeStyle = 'rgba(13,17,23,0.85)';
-		ctx.lineWidth = 2;
-		ctx.stroke();
-		// 시간 — 좌측 현재 위치, 우측 전체 길이
-		ctx.fillStyle = 'rgba(255,255,255,0.55)';
-		ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText(formatClock(Math.min(input.positionMs, input.durationMs)), tx, barTop + barH + 22);
-		ctx.textAlign = 'right';
-		ctx.fillText(formatClock(input.durationMs), right, barTop + barH + 22);
-		ctx.textAlign = 'left';
-		cursorY = barTop + barH + 22;
 	}
 
 	// ── 다음 곡 목록 — 유저 대기열 기준, 공간이 허용되는 만큼(최대 3) ──
 	const nextList = (input.nextTracks ?? []).slice(0, 3);
 	if (nextList.length > 0) {
-		const headerBase = (showProgress ? cursorY : artCursorY) + 38;
-		drawIcon(ctx, 'list-music', tx, headerBase - 13, 16, 'rgba(255,255,255,0.5)');
-		ctx.fillStyle = 'rgba(255,255,255,0.62)';
-		ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText('다음 곡', tx + 22, headerBase);
-		const maxLines = Math.min(nextList.length, Math.max(0, Math.floor((H - 44 - headerBase) / 18)));
+		const headerBase = artCursorY + 44;
+		drawIcon(ctx, 'list-music', tx, headerBase - 15, 18, 'rgba(255,255,255,0.6)');
+		ctx.fillStyle = 'rgba(255,255,255,0.72)';
+		ctx.font = '800 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+		ctx.fillText('다음 곡', tx + 26, headerBase);
+		const maxLines = Math.min(nextList.length, Math.max(0, Math.floor((H - 52 - headerBase) / 22)));
 		for (let i = 0; i < maxLines; i++) {
-			const lineY = headerBase + 24 + 18 * i;
+			const lineY = headerBase + 28 + 22 * i;
 			cursorY = lineY;
 			const text = `${nextList[i]!.title}${nextList[i]!.artist ? ` · ${nextList[i]!.artist}` : ''}`;
-			ctx.font = '600 13px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+			ctx.font = '600 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillStyle = `${accent.primary}cc`;
 			ctx.fillText(`${i + 1}.`, tx, lineY);
 			const numW = ctx.measureText(`${i + 1}.`).width;
-			ctx.font = '400 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-			ctx.fillStyle = 'rgba(255,255,255,0.72)';
-			ctx.fillText(truncate(ctx, text, right - (tx + numW + 8)), tx + numW + 8, lineY);
+			ctx.font = '500 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+			ctx.fillStyle = 'rgba(255,255,255,0.78)';
+			ctx.fillText(truncate(ctx, text, right - (tx + numW + 10)), tx + numW + 10, lineY);
 		}
 	}
 
-	// ── 하단 메타: 대기열 + 볼륨 + 노드 — 우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략 ──
-	// 메타 행은 콘텐츠 뒤에서 64px 떨어진 곳에서 하단까지 — 다음 곡이 없어 하단이 비지 않게.
-	const metaY = Math.min(H - 20, Math.max(cursorY + 64, artCursorY + 128));
+	// ── 하단 메타: 대기열 + 볼륨 + 반복 + 노드 — 우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략 ──
+	const metaY = Math.min(H - 24, Math.max(cursorY + 64, artCursorY + 128));
 	type MetaSegment = { icon: IconName; text: string };
 	const metaSegments: MetaSegment[] = [];
 	if (input.queueCount > 0) {
@@ -454,6 +473,12 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	}
 	if (input.volume !== null) {
 		metaSegments.push({ icon: input.volume === 0 ? 'volume-x' : input.volume < 50 ? 'volume-1' : 'volume-2', text: `볼륨 ${input.volume}%` });
+	}
+	if (input.repeatMode && input.repeatMode !== 'off') {
+		metaSegments.push({
+			icon: input.repeatMode === 'track' ? 'repeat-1' : 'repeat',
+			text: input.repeatMode === 'track' ? '반복: 현재 곡' : '반복: 대기열'
+		});
 	}
 	if (input.nodeId) metaSegments.push({ icon: 'radio', text: `노드 ${input.nodeId}` });
 
@@ -465,7 +490,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		// 우선순위 뒤(노드)부터 잘라요 — 최소 1세그먼트는 남긴다
 		while (metaSegments.length > 1) {
 			const total = metaSegments.reduce((acc, seg) => {
-				ctx.font = '400 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+				ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 				return acc + 25 + ctx.measureText(seg.text).width + 26;
 			}, 0);
 			if (total <= metaMaxW) break;
@@ -473,25 +498,24 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		}
 		let cx = tx;
 		for (const segment of metaSegments) {
-			drawIcon(ctx, segment.icon, cx, metaY - 15, 17, 'rgba(255,255,255,0.5)');
+			drawIcon(ctx, segment.icon, cx, metaY - 15, 18, 'rgba(255,255,255,0.55)');
 			cx += 25;
-			ctx.fillStyle = 'rgba(255,255,255,0.5)';
-			ctx.font = '400 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+			ctx.fillStyle = 'rgba(255,255,255,0.55)';
+			ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.fillText(segment.text, cx, metaY);
 			cx += ctx.measureText(segment.text).width + 26;
 		}
 	} else if (!input.brandLine) {
-		// 세그먼트가 없을 때의 폴백 라벨 — 브랜드가 이미 표기돼 있으면 생략해요(중복 제거).
-		ctx.fillStyle = 'rgba(255,255,255,0.5)';
-		ctx.font = '400 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+		ctx.fillStyle = 'rgba(255,255,255,0.55)';
+		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText('SiruBOT', tx, metaY);
 	}
 
 	// ── 푸터 브랜드: 봇 이름 + 버전/해시 (이미지에 박는다) ──
 	ctx.textAlign = 'right';
 	ctx.fillStyle = `${accent.primary}bf`;
-	ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillText(input.brandLine ?? '시루봇', right, H - 20);
+	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+	ctx.fillText(input.brandLine ?? '시루봇', right, H - 22);
 
 	return (await canvas.toBuffer('png')) as Buffer;
 }

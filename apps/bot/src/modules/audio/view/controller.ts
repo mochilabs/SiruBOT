@@ -5,11 +5,11 @@ import {
 	formatTime,
 	formatTimeToKorean,
 	formatTrack,
-	isDev,
-	versionInfo,
 	removeEmojis,
 	volumeToEmoji,
-	BOT_NAME
+	BOT_NAME,
+	versionInfo,
+	isDev
 } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -28,7 +28,7 @@ import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPla
 import { repeatEmoji } from './repeat.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { currentChapterIndex } from '../lavalink/player/nowPlayingCard.ts';
+import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters.ts';
 
 type controllerViewProps = {
 	player: CustomPlayer;
@@ -41,6 +41,10 @@ const customIdPrefix = 'controller:';
 const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
+
+/** 볼륨 조절 범위(%) */
+const VOLUME_MIN = 0;
+const VOLUME_MAX = 150;
 
 export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
 	const containerComponent = createContainer();
@@ -84,7 +88,18 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 
 	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(emoji('stop'));
 
-	// Repeat state 아이콘 바꾸기
+	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
+	const queueShowButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('queue:show'))
+		.setLabel('대기열')
+		.setEmoji(emoji('scroll'))
+		.setDisabled(queuedTracks.length === 0);
+
+	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		[prevButton, pauseButton, nextButton, stopButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
+	);
+
+	// 반복 상태 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
 			player.repeatMode === 'off'
@@ -94,6 +109,17 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 					: wrapPrefix('repeat:off')
 		)
 		.setEmoji(repeatEmoji(player.repeatMode));
+
+	// 볼륨 조절 버튼 — 하한/상한 도달 시 비활성화.
+	const currentVolume = volume ?? player.volume ?? 0;
+	const volumeDownButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('volume:down'))
+		.setEmoji(emoji('volume_down'))
+		.setDisabled(currentVolume <= VOLUME_MIN);
+	const volumeUpButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('volume:up'))
+		.setEmoji(emoji('volume_up'))
+		.setDisabled(currentVolume >= VOLUME_MAX);
 
 	// 챕터 건너뛰기 버튼 — 챕터가 있는 영상(장문 YouTube)에만 노출해요.
 	// 현재 챕터 시작에서 5초 이상 지났으면 '이전 챕터'가 현재 챕터로 되돌려요.
@@ -109,20 +135,11 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		.setEmoji(emoji('chapters_next', '⏩'))
 		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
 
-	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
-	// 1행: 재생 제어(prev·pause·next·stop·대기열), 2행: 반복 (Discord 한 행당 버튼 5개 제한)
-	// 대기열 버튼은 볼 대상(유저 대기열)이 비었으면 비활성화 — 핸들러의 빈 대기열 처리는 안전망으로 유지.
-	const queueShowButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('queue:show'))
-		.setLabel('대기열')
-		.setEmoji(emoji('scroll'))
-		.setDisabled(queuedTracks.length === 0);
-
-	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		[prevButton, pauseButton, nextButton, stopButton, queueShowButton].map((e) => e.setStyle(ButtonStyle.Secondary))
-	);
-	// 챕터가 있을 때만 버튼 행에 끼워 넣어요 — 없으면 기존처럼 반복 버튼만.
-	const utilityComponents = chapters.length > 0 ? [chapterPrevButton, chapterNextButton, repeatButton] : [repeatButton];
+	// 2행: 챕터(있을 때만) + 반복 + 볼륨. Discord 한 행당 버튼 5개 제한.
+	const utilityComponents =
+		chapters.length > 0
+			? [chapterPrevButton, chapterNextButton, repeatButton, volumeDownButton, volumeUpButton]
+			: [repeatButton, volumeDownButton, volumeUpButton];
 	const utilityActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.map((e) => e.setStyle(ButtonStyle.Secondary)));
 
 	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
@@ -150,29 +167,33 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
 	// 하단 푸터 — 카드가 없을 때만 봇 이름/버전까지 표시 (카드가 있으면 브랜드는 이미지에 박혀 있다).
-	const footerLines = buildFooterSegments(player, volume, !nowPlayingCardUrl);
+	const footerSegments = buildFooterSegments(player, volume, !nowPlayingCardUrl);
 	if (queueCount > 0) {
-		footerLines.unshift(
+		footerSegments.unshift(
 			`${emoji('scroll')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
 		);
 	}
 
-	containerComponent.addSeparatorComponents(separatorSmall).addTextDisplayComponents(new TextDisplayBuilder().setContent(footerLines.join(' | ')));
+	// `-#`(작은 글씨)는 줄 맨 앞에서만 적용되므로 하나의 줄로 합친 뒤 맨 앞에 한 번만 붙인다.
+	containerComponent
+		.addSeparatorComponents(separatorSmall)
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' | ')}`));
 
 	return containerComponent;
 }
 
-/** 현재 위치 기준으로 진행 중인 챕터 한 줄을 만든다. 챕터가 없으면 null. */
+/**
+ * 현재 위치 기준 재생 중인 챕터 한 줄을 만든다. 챕터가 없으면 null.
+ * 구간은 챕터의 시작~끝 + 챕터 자체 길이(전체 영상 길이가 아니라)를 보여준다.
+ */
 function buildEpisodeLine(player: Player): string | null {
-	const chapters = (player as CustomPlayer).chapters;
-	if (!Array.isArray(chapters) || chapters.length === 0) return null;
+	const chapter = currentChapter(player as CustomPlayer);
+	if (!chapter) return null;
 
-	const position = player.position ?? 0;
-	const index = chapters.findIndex((chapter) => position >= chapter.start && position < chapter.end);
-	if (index < 0) return null;
-
-	const chapter = chapters[index];
-	return `-# ╰ ${chapter.name} • (${formatTime(chapter.start / 1000)} - ${formatTime(chapter.end / 1000)})`;
+	const start = formatTime(chapter.start / 1000);
+	const end = formatTime(chapter.end / 1000);
+	const length = formatTime(chapter.duration / 1000);
+	return `-# ╰ ${chapter.name} • ${start}~${end} (${length})`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
@@ -195,37 +216,51 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 		contents.push(requesterId === RELATED_TRACK_REQUESTER_ID ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
 	}
 
-	// 길이 표기 — (지금시간 / 길이). 카드가 없을 때만 뒤에 이모지 프로그레스바를 붙인다
-	// (진행바는 카드 이미지에 그려지므로, 카드가 있으면 이 라인은 시간 텍스트만 갱신해요).
-	const durationText = track.info.isStream ? 'LIVE' : formatTime(track.info.duration / 1000);
+	// 종료 안내 — 카드가 없을 때만 이모지 프로그레스바를 보여주고,
+	// 카드가 있으면 정적인 종료 시각 타임스탬프(<t:unix:R>)로 대체한다.
 	if (track.info.isStream) {
-		contents.push(`-# (${durationText}) 실시간 스트리밍`);
+		contents.push(`-# ${emoji('radio_wave')} 실시간 스트리밍`);
+	} else if (player.paused) {
+		contents.push(`-# ${emoji('pause')} 일시정지됨`);
+	} else if (options.progressEmoji) {
+		const progressText = ` ${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))}`;
+		contents.push(`-# (${formatTime(player.position / 1000)} / ${formatTime(track.info.duration / 1000)})${progressText}`);
 	} else {
-		const progressText = options.progressEmoji === false ? '' : ` ${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))}`;
-		contents.push(`-# (${formatTime(player.position / 1000)} / ${durationText})${progressText}`);
+		contents.push(`-# ${emoji('hourglass')} ${endTimestamp(player as CustomPlayer, track)} 후 종료`);
 	}
 
 	return contents;
 }
 
 /**
- * 컨트롤러 하단 푸터 — 각 세그먼트가 `-#`(작은 글씨)로 시작해야 하나의 줄로 합쳐도
- * 마크다운이 깨지지 않아요 (중간 세그먼트에만 `-#`를 넣으면 렌더가 깨져요).
- * includeBrand=false면 브랜드(봇이름/버전)는 카드 이미지에 박혀 있으므로 생략해요.
+ * 종료 시각 타임스탬프 — 디스코드 <t:unix:R>로 "3분 후 종료"처럼 클라이언트가 자동 갱신한다.
+ * 챕터가 있으면 챕터 끝, 없으면 곡 끝을 기준으로 한다. 5초 단위로 반올림해
+ * 재생 중 position이 흘러도 문자열이 바뀌지 않게 한다(불필요한 메시지 편집 방지).
+ */
+function endTimestamp(player: CustomPlayer, track: Track): string {
+	const chapter = currentChapter(player);
+	const endMs = chapter ? chapter.end : track.info.duration;
+	const positionMs = Math.min(player.position ?? 0, endMs);
+	const remainingMs = Math.max(0, endMs - positionMs);
+	const endUnix = Math.round((Date.now() + remainingMs) / 5000) * 5;
+	return `<t:${endUnix}:R>`;
+}
+
+/**
+ * 컨트롤러 하단 푸터 세그먼트 — 재생 서버·볼륨·브랜드(봇 이름/버전) 순.
+ * `-#`(작은 글씨)는 줄 맨 앞에서만 적용되므로, 여기선 세그먼트를 평문으로 돌려주고
+ * 호출자가 한 줄로 합친 뒤 맨 앞에 `-# `를 한 번만 붙인다(중간 `-#`가 그대로 노출되는 버그 방지).
  */
 export function buildFooterSegments(player: Player, volume?: number, includeBrand = true): string[] {
-	const muted = (text: string) => `-# ${text}`;
-	const segments = [muted(`${emoji('radio_wave')} 재생 서버: ${player.node.id}`)];
+	const segments = [`${emoji('radio_wave')} 재생 서버: ${player.node.id}`];
 	if (volume !== undefined) {
-		segments.push(muted(`${volumeToEmoji(volume)} 볼륨: ${volume}%`));
+		segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
 	} else if (player.volume !== undefined) {
-		segments.push(muted(`${volumeToEmoji(player.volume)} 볼륨: ${player.volume}%`));
+		segments.push(`${volumeToEmoji(player.volume)} 볼륨: ${player.volume}%`);
 	}
 	if (includeBrand) {
 		segments.push(
-			muted(
-				`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
-			)
+			`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
 		);
 	}
 	return segments;

@@ -23,6 +23,7 @@ import { JtcSetupResponder } from '../services/jtcSetupResponder.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../services/memberGreetingService.ts';
 import { GuildDataResponder } from '../services/guildDataResponder.ts';
+import { AppEmojiManager } from '../services/appEmojiManager.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -108,6 +109,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.botProfileService = new BotProfileService(subscriberLogger);
 		container.memberGreetingService = new MemberGreetingService(subscriberLogger);
 		container.guildDataResponder = new GuildDataResponder(subscriberLogger);
+		container.appEmojiManager = new AppEmojiManager();
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[], shardInfo: { shardIds: number[]; shardCount: number }) {

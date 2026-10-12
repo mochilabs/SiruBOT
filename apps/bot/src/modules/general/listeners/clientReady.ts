@@ -2,7 +2,7 @@ import { Events, version as frameworkVersion, Listener } from '@sapphire/framewo
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { envParseString } from '@skyra/env-utilities';
-import { versionInfo, isDev, BOT_NAME, formatTime, ensureAppEmojisLoaded, configureAppEmojiFetcher } from '@sirubot/utils';
+import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
@@ -39,16 +39,11 @@ export class ReadyEvent extends Listener {
 			}
 		}
 
-		// 앱 이모지 매핑 로드 — emoji-ids.json이 없으면 Discord API에서
-		// 앱 이모지 목록을 직접 가져와 메모리에 적재해요. 둘 다 실패해도
-		// emoji()가 유니코드 폴백으로 동작해서 기능은 그대로예요.
-		// Application.fetch()(GET /oauth2/applications/@me)는 이모지 컬렉션을
-		// 채우지 않으므로, 매니저 fetch(GET /applications/{id}/emojis)로 목록을 읽어야 해요.
-		configureAppEmojiFetcher(async () => {
-			const emojis = await this.container.client.application?.emojis.fetch();
-			return [...(emojis?.values() ?? [])].map((appEmoji) => ({ id: appEmoji.id, name: appEmoji.name }));
-		});
-		await ensureAppEmojisLoaded();
+		// 앱 이모지 동기화 — shard 0만 미등록 PNG를 업로드하고, 모든 프로세스가
+		// 조회 결과를 `emoji()` 캐시에 주입한다. 실패해도 emoji()가 유니코드 폴백으로
+		// 동작해서 기능은 그대로다.
+		const shouldUpload = !shard || shard.ids.includes(0);
+		await this.container.appEmojiManager?.sync(shouldUpload);
 
 		this.startActivityInterval();
 	}

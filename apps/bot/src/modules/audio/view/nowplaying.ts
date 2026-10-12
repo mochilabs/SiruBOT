@@ -11,7 +11,7 @@ type NowPlayingViewProps = {
 export function nowplaying({ player, track }: NowPlayingViewProps) {
 	const containerComponent = createContainer();
 
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(buildTrackDisplay(player, track).join('\n'));
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(buildTrackDisplay(player, track, { progressEmoji: true }).join('\n'));
 
 	if (track.info.artworkUrl) {
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
@@ -27,7 +27,7 @@ export function nowplaying({ player, track }: NowPlayingViewProps) {
 	// 카드 이미지 없는 텍스트 뷰 — 브랜드(봇 이름/버전)까지 텍스트로 표시한다.
 	containerComponent
 		.addSeparatorComponents(separatorSmall)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(buildFooterSegments(player, undefined, true).join(' | ')));
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${buildFooterSegments(player).join(' | ')}`));
 
 	return containerComponent;
 }

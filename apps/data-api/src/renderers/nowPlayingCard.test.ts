@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderNowPlayingCard } from './nowPlayingCard.ts';
 
-/** 카드 렌더 스모크 — 960×372 PNG 시그니처와 진행바 픽셀(채워진/빈 구간)을 검증해요. */
+/** NowPlaying 카드 렌더 스모크 — 정적 카드(진행바 없음) 크기/타이틀/브랜드를 검증해요. */
 
 function fullInput() {
 	return {
@@ -37,30 +37,46 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 	expect(buffer.readUInt32BE(20)).toBe(height);
 }
 
+const luma = ([r, g, b]: number[]) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+
 describe('renderNowPlayingCard', () => {
-	it('renders a 960x372 PNG', async () => {
+	it('renders a 960x400 PNG', async () => {
 		const buffer = await renderNowPlayingCard(fullInput());
-		expectPngSize(buffer, 960, 372);
+		expectPngSize(buffer, 960, 400);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
-	it('draws the progress bar at the payload ratio', async () => {
+	it('renders the title and brand on the card', async () => {
 		const buffer = await renderNowPlayingCard(fullInput());
-		const { loadImage } = await import('skia-canvas');
+		const { loadImage, Canvas } = await import('skia-canvas');
 		const img = await loadImage(buffer);
-		const { Canvas } = await import('skia-canvas');
-		const canvas = new Canvas(960, 372);
+		const canvas = new Canvas(960, 400);
 		const ctx = canvas.getContext('2d');
 		ctx.drawImage(img, 0, 0);
-		// 카드 기준 진행바: artCursorY(140)+44 = 184행, 바 두께 10 → y=189
-		// position 92s/213s ≈ 0.432 → 채워진 구간(x=400)과 빈 구간(x=850)의 색이 달라야 해요.
-		const filled = Array.from(ctx.getImageData(400, 189, 1, 1).data.slice(0, 3));
-		const empty = Array.from(ctx.getImageData(850, 189, 1, 1).data.slice(0, 3));
-		// 채워진 구간은 어두운 배경(#141a26±)보다 밝은 액센트색이어야 해요.
-		// 빈 구간은 흐린 트랙 배경(rgba(255,255,255,0.12) luma≈0.23) — 배경보다 살짝 밝고 액센트보다 확실히 어두워요.
-		const luma = ([r, g, b]: number[]) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-		expect(luma(filled as never)).toBeGreaterThan(luma(empty as never));
-		expect(luma(empty as never)).toBeLessThan(0.3);
+		// 제목은 썸네일(28+320+28=376) 오른쪽, 상단 112px 기준선에 흰색으로 그려져요.
+		// 단일 픽셀은 안티앨리어싱 때문에 회색일 수 있어 40×40 영역 평균 밝기로 검증한다.
+		const titleRegion = ctx.getImageData(380, 75, 40, 40);
+		const titleLumas = Array.from({ length: titleRegion.data.length / 4 }, (_, i) =>
+			luma([titleRegion.data[i * 4]!, titleRegion.data[i * 4 + 1]!, titleRegion.data[i * 4 + 2]!])
+		);
+		const avgTitleLuma = titleLumas.reduce((a, b) => a + b, 0) / titleLumas.length;
+		expect(avgTitleLuma).toBeGreaterThan(0.25);
+		// 브랜드는 우측 하단 22px 위치에 액센트 색으로 그려져요.
+		const brandPixel = Array.from(ctx.getImageData(900, 375, 1, 1).data.slice(0, 3));
+		expect(luma(brandPixel as never)).toBeGreaterThan(0.25);
+	});
+
+	it('does not draw a progress bar for non-stream tracks', async () => {
+		const buffer = await renderNowPlayingCard(fullInput());
+		const { loadImage, Canvas } = await import('skia-canvas');
+		const img = await loadImage(buffer);
+		const canvas = new Canvas(960, 400);
+		const ctx = canvas.getContext('2d');
+		ctx.drawImage(img, 0, 0);
+		// 예전 진행바가 있던 영역(artCursorY+44 ≈ 184)은 이제 배경/다음 곡 텍스트만 있어야 해요.
+		// 어두운 배경과 텍스트 외에는 밝은 액센트 막대가 없어야 한다 — 밝기가 0.3 이하여야 해요.
+		const barArea = Array.from(ctx.getImageData(400, 184, 1, 1).data.slice(0, 3));
+		expect(luma(barArea as never)).toBeLessThan(0.3);
 	});
 
 	it('renders the stream card without a progress bar', async () => {
@@ -69,6 +85,6 @@ describe('renderNowPlayingCard', () => {
 		input.positionMs = 0;
 		input.durationMs = 0;
 		const buffer = await renderNowPlayingCard(input);
-		expectPngSize(buffer, 960, 372);
+		expectPngSize(buffer, 960, 400);
 	});
 });
