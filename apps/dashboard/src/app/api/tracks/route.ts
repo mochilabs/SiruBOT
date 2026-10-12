@@ -17,14 +17,16 @@ function escapeLikeWildcard(value: string): string {
 }
 
 export async function GET(request: Request) {
+  // 공개 차트 엔드포인트 — 읽기 전용 공개 메타데이터라 로그인 없이 허용해요.
+  // 비로그인 요청은 IP 기준으로 같은 READ_RATE 한도를 적용해 남용을 막아요.
   const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
-  }
+  const subject =
+    session?.user?.id ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "anonymous";
 
   const limited = await guardRateLimit(
-    rateKey("tracks-get", session.user.id),
+    rateKey("tracks-get", subject),
     READ_RATE,
   );
   if (limited) return limited;

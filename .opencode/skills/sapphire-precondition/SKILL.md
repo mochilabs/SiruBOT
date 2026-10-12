@@ -23,7 +23,10 @@ import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
 
 export class PreconditionName extends AllFlowsPrecondition {
-	#message = '🚫  Korean error message shown to user.';
+	// getter — 클래스 필드로 초기화하면 앱 이모지 매핑 로드 전에 평가된다 (VoiceConnected.ts:7-9 관례)
+	get #message() {
+		return '🚫  Korean error message shown to user.';
+	}
 	#ephemeral = true; // whether error is ephemeral
 
 	public override chatInputRun(interaction: CommandInteraction) {
@@ -45,11 +48,14 @@ export class PreconditionName extends AllFlowsPrecondition {
 }
 ```
 
+Notes:
+- Every precondition with a message field uses the `get #message()` getter pattern (10 of 11 existing files; `TextChannelAllowed` builds its messages inline). `createError()` is likewise a private method redefined per class (`NodeAvailable.ts:27-29`) — or omitted when the class calls `this.error(...)` directly (e.g. `OwnerOnly` with `silent: true`).
+
 ## Key Patterns
 
 ### Naming
 - File name: `PreconditionName.ts` (PascalCase)
-- Class name: matches file name exactly
+- Sapphire resolves the `preconditions` array by the **piece name = file name** (without `.ts`), not the class name — counter-examples: `OwnerOnly.ts` exports `OwnerOnlyPrecondition`, `ManageGuild.ts` exports `ManageGuildPrecondition`, yet both are referenced as `'OwnerOnly'` / `'ManageGuild'`
 - Sapphire auto-resolves from the `preconditions` array in command options
 
 ### Return Values
@@ -101,6 +107,8 @@ private async checkChannel(guildId: string | null, channelId: string | null) {
 }
 ```
 
+Note: this example is valid TypeScript, but the real `TextChannelAllowed` does not query Prisma directly — it reuses `this.container.guildService.getDefaultTextChannel(guildId)` (guildService's 60-second TTL cache) to avoid a DB hit per command (`TextChannelAllowed.ts:20-21`).
+
 **Environment variable check:**
 ```ts
 import { envParseArray } from '@skyra/env-utilities';
@@ -134,7 +142,22 @@ public check(userId: Snowflake) {
 
 ## Attaching to Commands
 
-In `@ApplyOptions<Command.Options>`:
+**Main real-world path — subcommand-level `export const preconditions`:** most music commands route through `music.ts`, which runs each subcommand's own array via `PreconditionContainerArray` (`music.ts:107-115`). The subcommand module exports it directly, e.g. `modules/audio/subcommands/play.ts:10-18`:
+
+```ts
+export const preconditions = [
+	'TextChannelAllowed',
+	'NodeAvailable',
+	'VoiceConnected',
+	'SameVoiceChannel',
+	'MemberListenable',
+	'ClientVoiceConnectable',
+	'ClientVoiceSpeakable'
+];
+```
+
+**Command-level `preconditions` in `@ApplyOptions<Command.Options>`** — used by some commands only (e.g. `audio/commands/mixer.ts:13`, `queue.ts:15`, `playlist.ts`, `favorites.ts`, `nowplaying.ts`):
+
 ```ts
 preconditions: [
 	'TextChannelAllowed',

@@ -44,6 +44,8 @@
 	--primary-control-hover: #f27c96;
 	/* primary-control 위 텍스트 — primary-foreground와 동일 */
 	--primary-control-text: var(--primary-foreground);
+	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
+	--switch-thumb: #ffffff;
 	/* 중립 서피스 위 핑크 계열 accent 텍스트 — accent-foreground와 동일 (배경 대비 13:1+) */
 	--primary-text: var(--accent-foreground);
 	--primary-rgb: 255 218 218;
@@ -79,6 +81,8 @@
 	/* hover — #3a1a22 텍스트 대비 5.82:1 */
 	--primary-control-hover: #f27890;
 	--primary-control-text: var(--primary-foreground);
+	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
+	--switch-thumb: #ffffff;
 	--primary-text: var(--accent-foreground);
 	--primary-rgb: 255 218 218;
 	--secondary: #3a2c30;
@@ -118,6 +122,7 @@
 	--color-primary-control: var(--primary-control);
 	--color-primary-control-hover: var(--primary-control-hover);
 	--color-primary-control-text: var(--primary-control-text);
+	--color-switch-thumb: var(--switch-thumb);
 	--color-primary-text: var(--primary-text);
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);

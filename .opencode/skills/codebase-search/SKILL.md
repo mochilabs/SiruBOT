@@ -29,8 +29,14 @@ edit blind.
 - **`codebase_edit_context`** — compact pre-edit context for a **known symbol**: target source,
   direct callers/callees. Call before editing a specific function/class.
 - **`codebase_peek`** — metadata-only lookup (file, line, name, type) without code content.
+- **`implementation_lookup`** / **`find_similar`** — resolve a symbol to its definition, or find
+  code resembling a snippet you already have.
+- **`architecture_context`** — repository-scale subsystem map; use before deep retrieval when the
+  area is completely unfamiliar.
+- **`pr_impact`** — what a change set touches (call sites, routes, tests).
 - **`call_graph`** / **`call_graph_path`** — callers/callees and the connection path between two symbols.
 - **`index_status`** / **`index_health_check`** — verify the index is ready/stale before relying on results.
+- **`index_metrics` / `index_logs` / `index_visualize`** — index health diagnostics when results look off.
 - **`code_communities`** — discover natural module boundaries and hub symbols.
 - **`add_knowledge_base` / `list_knowledge_bases` / `remove_knowledge_base`** — index additional dirs.
 
@@ -50,10 +56,14 @@ exact-string or structural lookups the index does not cover.
 ## Configuration
 
 The index config lives at `.opencode/codebase-index.json` (project) and, when absent, falls
-back to defaults. Current project config is minimal:
+back to defaults. Current project config:
 
 ```json
-{ "indexing": { "autoIndex": true } }
+{
+	"embeddingProvider": "ollama",
+	"embeddingModel": "nomic-embed-text",
+	"indexing": { "autoIndex": true }
+}
 ```
 
 Full configuration reference (providers, scope, knowledge bases, include/exclude patterns,

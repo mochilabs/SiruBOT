@@ -275,9 +275,14 @@ export default function DesignPage() {
 	const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
 
 	const tocRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+	// 클릭으로 시작된 smooth 스크롤이 끝날 때까지 스크롤 핸들러의 활성 섹션 재계산을 잠가요.
+	// 잠그지 않으면 스크롤 비행 중간 위치 샘플로 이전 섹션이 다시 활성화돼 "클릭한 것의 하나 위"가 선택돼 보여요.
+	const clickTargetRef = useRef<string | null>(null);
+	const clickLockTimerRef = useRef<number>(undefined);
 
 	useEffect(() => {
 		const handleScroll = () => {
+			if (clickTargetRef.current) return;
 			const sectionElements = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
 			let activeId = SECTIONS[0].id;
 
@@ -295,6 +300,16 @@ export default function DesignPage() {
 		setTimeout(handleScroll, 100);
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
+
+	const handleTocClick = (id: string) => {
+		clickTargetRef.current = id;
+		setActiveSection(id);
+		// 앵커 이동은 기본 동작(href)에 맡기고, smooth 스크롤 완료 여유(1s) 후 잠금 해제
+		window.clearTimeout(clickLockTimerRef.current);
+		clickLockTimerRef.current = window.setTimeout(() => {
+			clickTargetRef.current = null;
+		}, 1000);
+	};
 
 	const sampleRoles: DiscordRole[] = [
 		{ id: "1", name: "관리자", color: 0xe74c3c, position: 10 },
@@ -350,7 +365,8 @@ export default function DesignPage() {
 
 	return (
 		<>
-			<div className="container mx-auto max-w-7xl px-4 py-8">
+			{/* 고정 navbar(h-16) 클리어런스는 Container 컨벤션(pt-16 lg:pt-24)과 동일하게 — 겹침 방지 */}
+			<div className="container mx-auto max-w-7xl px-4 pb-8 pt-16 lg:pt-24">
 				<div className="flex items-start justify-between gap-4 mb-8">
 					<div>
 						<h1 className="text-3xl font-black tracking-tighter text-foreground">Design System</h1>
@@ -371,10 +387,11 @@ export default function DesignPage() {
 											tocRefs.current[idx] = el;
 										}}
 										href={`#${s.id}`}
+										onClick={() => handleTocClick(s.id)}
 										className={cn(
 											"flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-fast",
 											isActive
-												? "text-primary-text font-bold bg-primary"
+												? "text-primary-text font-bold bg-primary-control/10"
 												: "text-muted-foreground hover:text-foreground hover:bg-accent/30",
 										)}
 									>

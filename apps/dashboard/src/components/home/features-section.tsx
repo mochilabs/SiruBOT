@@ -264,17 +264,23 @@ function ChatPreview() {
 						{/* 1단계 — 사용자: 멘션 + 프롬프트 타이핑 */}
 						<div className="flex gap-2.5">
 							<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-2xs font-bold text-discord-text">사</div>
-							<div className="flex min-w-0 flex-wrap items-center text-sm text-discord-text">
-								<span className="mr-1 shrink-0 rounded-sm bg-discord-primary/20 px-1 text-discord-light">@시루</span>
-								{phase === 0 ? (
-									<TypingText key={`prompt-${current.title}`} texts={[current.prompt]} speed={70} className="min-w-0" />
-								) : (
-									<span className="min-w-0">{current.prompt}</span>
-								)}
+							<div className="min-w-0 flex-1">
+								<div className="flex items-baseline gap-2">
+									<span className="text-sm font-semibold text-discord-text">사용자</span>
+									<span className="text-2xs text-discord-text-muted">오후 8:11</span>
+								</div>
+								<p className="mt-1 flex flex-wrap items-center text-sm text-discord-text">
+									<span className="mr-1 shrink-0 rounded-sm bg-discord-primary/20 px-1 text-discord-light">@시루</span>
+									{phase === 0 ? (
+										<TypingText key={`prompt-${current.title}`} texts={[current.prompt]} speed={70} className="min-w-0" />
+									) : (
+										<span className="min-w-0">{current.prompt}</span>
+									)}
+								</p>
 							</div>
 						</div>
 
-						{/* 2·3단계 — 봇: 생각 중 → 답변 타이핑 */}
+						{/* 2·3단계 — 봇: 시루 프로필 + 이름/앱 배지/시간 → 생각 중 → 답변 타이핑 (히어로 카드와 같은 Discord 메시지 구조) */}
 						{phase > 0 && (
 							<m.div
 								initial={{ opacity: 0, y: 8 }}
@@ -282,8 +288,15 @@ function ChatPreview() {
 								transition={{ duration: 0.3, ease: "easeOut" }}
 								className="flex gap-2.5"
 							>
-								<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-discord-primary text-2xs font-bold text-primary-control-text">시</div>
-								<div className="min-w-0 flex-1">
+								<div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
+									<Image src="/images/profile.png" alt="시루" fill className="object-cover" sizes="32px" />
+								</div>
+								<div className="flex min-w-0 flex-1 flex-col gap-1">
+									<div className="flex items-center gap-2">
+										<span className="text-sm font-semibold text-discord-text">시루</span>
+										<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-control-text">앱</span>
+										<span className="text-2xs text-discord-text-muted">오후 8:12</span>
+									</div>
 									<AnimatePresence mode="wait" initial={false}>
 										{phase === 1 ? (
 											<m.p

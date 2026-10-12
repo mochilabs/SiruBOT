@@ -15,27 +15,28 @@ interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange"
 }
 
 // Track internal geometry:
-//   md: track 44x24 px, thumb 16x16 px, 2px padding each side -> travel 24px (1.5rem)
-//   sm: track 36x20 px, thumb 14x14 px, 2px padding each side -> travel 18px (1.125rem)
-// Thumb stays 2px smaller than track height so it never clips the rounded caps.
+//   md: track 44x24 px, thumb 20x20 px, 2px padding each side -> travel 20px (1.25rem)
+//   sm: track 36x20 px, thumb 16x16 px, 2px padding each side -> travel 16px (1rem)
+// Thumb is inset 2px from the top/bottom caps (4px smaller than track height) so it never clips the rounded caps.
 const trackSizes = {
 	sm: "h-5 w-9",
 	md: "h-6 w-11",
 };
 
 const thumbSizes = {
-	sm: "h-3.5 w-3.5",
-	md: "h-4 w-4",
+	sm: "h-4 w-4",
+	md: "h-5 w-5",
 };
 
 // Unchecked track: secondary fill is too subtle against cards, so it pairs with
-// an inset boundary. Checked track uses primary-control (#c14377, 4.84:1 vs white)
-// for clear on-state contrast.
+// an inset boundary. Checked track uses primary-control (= var(--brand) — light
+// #ee6f8b / dark #f98aa0) for a clear on-state fill.
+// Thumb is always solid white via --switch-thumb (iOS/Discord convention).
 const trackBase =
 	"rounded-full border-0 bg-secondary shadow-control-boundary transition-colors duration-fast outline-none data-checked:bg-primary-control data-checked:shadow-none";
 
 const thumbBase =
-	"pointer-events-none block rounded-full border-0 bg-card shadow-md transition-transform duration-fast ease-out";
+	"pointer-events-none block rounded-full border-0 bg-switch-thumb shadow-md transition-transform duration-fast ease-out";
 
 function Switch({
 	checked,
@@ -70,8 +71,8 @@ function Switch({
 					thumbBase,
 					thumbSizes[size],
 					// 2px inset from left cap.
-					"group-data-[size=sm]/switch:translate-x-0.5 group-data-[size=sm]/switch:data-checked:translate-x-[1.125rem]",
-					"group-data-[size=md]/switch:translate-x-0.5 group-data-[size=md]/switch:data-checked:translate-x-[1.5rem]",
+					"group-data-[size=sm]/switch:translate-x-0.5 group-data-[size=sm]/switch:data-checked:translate-x-[1rem]",
+					"group-data-[size=md]/switch:translate-x-0.5 group-data-[size=md]/switch:data-checked:translate-x-[1.25rem]",
 				)}
 			/>
 		</SwitchPrimitive.Root>

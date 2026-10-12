@@ -19,15 +19,22 @@ description: >
 ## 1. 디렉토리 구조
 
 ```
-src/app/                    # 라우트 (page.tsx, api/**/route.ts)
-src/components/{primitives,overlay,discord,layout,data,feedback}/
-src/hooks/                  # use-playlists.ts, use-debounce.ts
-src/lib/                    # auth.ts, fetcher.ts, db.ts, shard-api.ts, guild-permissions.ts
+src/app/                    # 라우트 (page.tsx, api/**/route.ts) + /design 컴포넌트 쇼케이스
+src/components/
+  ui/                       # shadcn 커스텀 컨트롤·오버레이 (button/select/dialog/sheet/toast …)
+  primitives/               # empty-state, field, section-label, status-dot
+  overlay/                  # portal(Portal/usePopoverCoords), global-command-palette
+  discord/ layout/ data/ feedback/   # 도메인 뷰 조각
+  servers/ player/ playlists/ home/ navbar/ …  # 화면별 컴포넌트
+src/hooks/                  # use-playlists, use-guild-settings, use-debounce, use-bot-profile, use-member-greeting, use-count-up
+src/lib/                    # auth, fetcher, api-guards, rate-limit, data-api, session-token, admin-ids,
+                            # guild-permissions, shard-api, schemas, discord-cdn, redis, db … (23개)
 src/store/                  # zustand (use-ui-store.ts, use-search-store.ts)
 src/types/                  # 공용 타입
 ```
 
-상대 import는 `@/` 별칭 (`@/components/...`, `@/lib/...`).
+- 컴포넌트 계층/props는 **`ui-primitives` 스킬**을, 토큰은 **`design-tokens` 스킬**을 따른다.
+- 상대 import는 `@/` 별칭 (`@/components/...`, `@/lib/...`).
 
 ## 2. 데이터 페칭 — fetcher + SWR
 
@@ -44,8 +51,11 @@ export async function fetcher<T = unknown>(url: string): Promise<T> {
 전역 설정은 `src/components/Providers.tsx`에 있다 — **키를 두 번 지정하지 말 것**:
 
 ```ts
-<SWRConfig value={{ fetcher, revalidateOnFocus: false, dedupingInterval: 5000 }}>
+<SWRConfig value={{ fetcher, revalidateOnFocus: false, dedupingInterval: 5000, errorRetryCount: 3 }}>
 ```
+
+- 같은 파일(`Providers.tsx`)에 단일 `<Toaster />`가 마운트돼 있다 — **페이지별 ToastProvider/Toaster를 추가하지 말 것.**
+- 피드백은 `toast.success/error/info/warning(...)` (`@/components/ui/toast`)로.
 
 사용 예시:
 
@@ -101,35 +111,35 @@ export const useUIStore = create<UIState>((set) => ({ scrolled: false, setScroll
 ```ts
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+// ① 공용 게이트 (길드 권한) — 직접 canManage/auth()를 호출하지 않는다
+import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+// ② rate limit — 진입점에서 바로 반환
+import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 
-// ① 스키마 (zod v4)
+// ③ 스키마 (zod v4). 공용 스키마는 @/lib/schemas
 const bodySchema = z.object({
 	volume: z.number().int().min(0).max(100),
 });
 
-export async function POST(request: Request) {
-	// ② 세션 검증 (진입점에서)
-	const session = await auth();
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 
-	// ③ 길드 권한 검증 (해당 서버 관리자/DJ 여부)
-	//    → src/lib/guild-permissions.ts canManage(accessToken, guildId) 또는
-	//      (BigInt(permissions) & ADMINISTRATOR) 패턴
-	if (!(await canManage(session.accessToken!, guildId))) {
-		return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
-	}
+	// ④ 권한: 세션 → accessToken → Discord 판정의 3상태 분기 (401 / 403 / 502)
+	const authz = await authorizeGuildManage(id);
+	if (!authz.ok) return deniedGuildManage(authz);   // 멤버 전용 라우트는 authorizeGuildMember + deniedGuildMember
 
-	// ④ 입력 검증
+	// ⑤ rate limit: 한도 초과면 429, 아니면 null
+	const limited = await guardRateLimit(rateKey("settings-put", authz.userId, id), WRITE_RATE);
+	if (limited) return limited;
+
+	// ⑥ 입력 검증
 	const parsed = bodySchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) {
 		return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
 	}
 
 	try {
-		// ⑤ 비즈니스 로직
+		// ⑦ 비즈니스 로직
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		console.error("...", error);                       // 서버 로그에만
@@ -138,30 +148,68 @@ export async function POST(request: Request) {
 }
 ```
 
+### 공용 게이트 — `src/lib/api-guards.ts`
+
+- `authorizeGuildManage(guildId)` / `authorizeGuildMember(guildId)` → `{ ok: true, token, userId } | { ok: false, status: 401|403|502 }`
+  - 관리자 게이트는 DJ/제어 권한이 아니라 **길드 관리권**만 본다. 실제 제어 권한(DJ)은 봇이 판정한다.
+  - `502` = Discord 확인 불가(429/5xx/네트워크) — 장애를 403으로 위장하지 않는다.
+- `deniedGuildManage(authz)` / `deniedGuildMember(authz)`가 상태별 한국어 응답을 돌려준다 — 라우트에서 메시지를 다시 만들지 말 것.
+- `authz.userId`는 rate limit 키에 쓴다. 세션·토큰 처리가 필요하면 `getSessionAccessToken()` (`src/lib/session-token.ts`)을 **서버에서만**.
+
+### Rate limit — `src/lib/rate-limit.ts`
+
+`guardRateLimit(rateKey(...), RULE)`이 표준 진입점 (31개 라우트 중 25개 사용).
+
+| 규칙 | 한도 | 용도 |
+| --- | --- | --- |
+| `WRITE_RATE` | 12/min | 설정 변경 |
+| `READ_RATE` | 30/min | Discord/data-api 읽기 |
+| `HEAVY_WRITE_RATE` | 5/min | 무거운 쓰기(채널 생성 등) |
+| `RENDER_RATE` | 60/min | 이미지 미리보기 렌더 |
+
+- 구현: Redis 슬라이딩 윈도우(Lua) + `REDIS_URL` 미설정 시 인메모리 폴백, Redis 장애 시 **fail-open**.
+
+### data-api 프록시 — `src/lib/data-api.ts`
+
+Discord·봇에 직접 가는 대신 **data-api(Fastify) 경유**가 기본이다.
+
+- env 계약: `DATA_API_URL` (기본 `http://localhost:3002`) + **`DATA_API_AUTH_KEY` 없으면 `AUTH_KEY` 폴백**. 대시보드 측 키가 없으면 호출 전면 스킵(null/503)이고, data-api는 키가 없으면 아예 기동을 거부(fail-closed)한다. `Authorization` 헤더는 `Bearer` 스킴 없이 **키 원문 그대로** 전송 (sha256 + timingSafeEqual 비교, `apps/data-api/src/plugins/auth.ts`).
+- HTTP: `fetchDataApi` / `postDataApi` / `forwardDataApiGet` / `forwardDataApiPost` / `forwardDataApiImage` / `openDataApiStream` (`DATA_API_URL` + `DATA_API_AUTH_KEY`)
+- request/reply 허브: `requestPlayerSearch` / `requestPlayerPlay` / `requestPlayerControl` / `fetchPlayerVoiceContext` / `requestJtcSetup`
+- 캐시 무효화: `notifyGuildSettingsChanged`
+- 채널·역할 조회(`/v1/guilds/:id/channels`, `/roles`)는 **Redis request/reply**다: data-api가 `sirubot:guild-data:request`를 발행하면 해당 길드를 보유한 봇 프로세스가 discord.js 캐시에서 읽어 `sirubot:guild-data:response`로 회신 (**3초 타임아웃**, 무응답 = 502 `bot_timeout`). 봇이 `REDIS_URL` 없이 memory-only로 부팅되거나 그 길드에 봇이 없으면 무조건 타임아웃이다. 사용자 토큰으로 Discord를 직접 호출하지 않는다.
+- dashboard→data-api fetch 타임아웃: JSON 계열 10초, 이미지 렌더(`forwardDataApiImage`) 30초 (data-api 캔버스 렌더가 최대 ~20초라 여유분 포함). **SSE(`openDataApiStream`)에는 걸지 않는다** — AbortSignal.timeout이 장기 연결 스트림 전체를 끊기 때문. 신규 호출부를 추가할 때도 이 계약을 따른다.
+- 실패 시 data-api의 한국어 메시지를 그대로 전달하고, 본문이 없으면 502로 감싼다.
+
 실제 레퍼런스:
 
-- 인증 + DB: `src/app/api/playlists/route.ts`
-- Discord API + 권한 비트(`MANAGE_GUILD 0x20`, `ADMINISTRATOR 0x8`): `src/app/api/servers/route.ts`
+- 권한 게이트 + rate limit + data-api: `src/app/api/servers/[id]/channels/route.ts`
+- 권한 게이트 + DB + PUT: `src/app/api/servers/[id]/settings/route.ts`
 - zod 쿼리 검증(`z.coerce.number().int().min(1)`): `src/app/api/tracks/route.ts`
+- 운영자 전용 인프라 API: `src/app/api/shards/route.ts` (`isDashboardAdmin` — `DASHBOARD_ADMIN_IDS` **fail-closed**, 미설정 시 전원 차단)
 - 외부 서비스 토큰 전달: `src/lib/shard-api.ts` (`SHARD_MANAGER_URL` + `Authorization` 헤더, **서버 전용**)
 
 컨벤션:
 
-- 상태 변경은 **POST/PATCH/DELETE만**, GET은 읽기 전용.
-- 에러 메시지는 한국어, 클라이언트에 내부 스택/에러 객체 전달 금지.
-- 401(미인증) / 403(권한 없음) / 400(검증 실패) / 500을 구분.
+- 상태 변경은 **POST/PUT/PATCH/DELETE**, GET은 읽기 전용.
+- 에러 메시지는 한국어(`{ error: string }`), 클라이언트에 내부 스택/에러 객체 전달 금지.
+- 상태 코드: **401**(미인증) / **403**(권한 없음) / **400**(검증 실패) / **429**(rate limit) / **502**(Discord·봇·data-api 장애) / **500**.
+- 클라이언트는 401을 받으면 `router.push("/api/auth/signin?callbackUrl=...")` (무한 리다이렉트 루프 금지 — `login/page.tsx` 주석 참고).
 
 ## 5. 인증 — next-auth v5 (`src/lib/auth.ts`)
 
 ```ts
 export const { handlers, auth, signIn, signOut } = NextAuth({
 	providers: [DiscordProvider({
-		clientId: process.env.AUTH_DISCORD_ID,
-		clientSecret: process.env.AUTH_DISCORD_SECRET,
+		clientId: process.env.DISCORD_CLIENT_ID,          // 구 AUTH_DISCORD_ID 아님
+		clientSecret: process.env.DISCORD_CLIENT_SECRET,  // 구 AUTH_DISCORD_SECRET 아님
+		issuer: "https://discord.com",                    // 미설정 시 콜백이 Configuration 에러
 		authorization: { params: { scope: "identify guilds" } },
 	})],
 	pages: { signIn: "/login", error: "/error" },
-	// callbacks: jwt에 accessToken 저장 → session.accessToken에 노출
+	session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
+	// callbacks: jwt에 accessToken/refreshToken 미러 저장 + DB 원본 갱신·재시도 쿨다운,
+	//           session 콜백은 session.user.id만 노출
 });
 ```
 
@@ -170,14 +218,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 - 미인증 리다이렉트: `router.push("/api/auth/signin?callbackUrl=/playlists")` 또는 링크 href를 그대로 지정 (`navbar.tsx`)
 - 로그인/아웃: `signIn("discord")`, `signOut()`
 
-### ⚠️ 보안 — 세션의 accessToken
+### ⚠️ 보안 — Discord accessToken은 서버 전용
 
-현재 `session.accessToken`은 Discord 토큰을 담고 있다.
+`session.accessToken`은 **노출되지 않는다** (session 콜백이 `user.id`만 설정). 코드에 `session.accessToken` / `data.accessToken` 사용처도 없다.
 
-- **클라이언트 컴포넌트에 전달/렌더링하지 않는다.** `useSession().data.accessToken`을 JSX·props·`console.log`에 쓰지 말 것.
-- 토큰이 필요한 외부 Discord API 호출은 **Route Handler 또는 Server Component 안에서만** 수행.
+- 토큰이 필요하면 **서버에서만** `getSessionAccessToken()` (`src/lib/session-token.ts`)으로 읽는다.
+  쿠키 2종(`__Secure-authjs.session-token` / `authjs.session-token`)을 시도하고 `AUTH_SECRET`을 쓴다.
+- **클라이언트 컴포넌트에 전달/렌더링하지 않는다.** 토큰으로 Discord API를 호출하는 코드를 클라이언트에 두지 말 것.
+- 토큰 수명·갱신(`token-store.ts`의 `ensureFreshToken`/`replaceTokenSet`)은 서버 콜백이 처리한다 — 클라이언트에서 만료를 재시도하지 않는다.
 - 프로필 이미지·이름 등 필요한 데이터는 필요한 만큼만 클라이언트로 내려보낸다.
-- 시크릿(`AUTH_*`, `SHARD_MANAGER_AUTH_KEY`, DB/Lavalink 비밀번호)은 항상 `process.env`로만 참조하며
+- 시크릿(`AUTH_SECRET`, `SHARD_MANAGER_AUTH_KEY`, `DATA_API_AUTH_KEY`, DB/Lavalink 비밀번호)은 항상 `process.env`로만 참조하며
   코드·클라이언트 번들(`NEXT_PUBLIC_` 제외)·로그에 남기지 않는다.
 
 ## 6. 클라이언트/서버 경계
@@ -189,18 +239,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 ## 7. 보안 체크리스트 (PR 전 확인)
 
-- [ ] 모든 Route Handler가 진입점에서 `auth()` 세션 검증
-- [ ] 길드 경로(`/api/servers/[id]/...`)는 길드 권한(관리자/DJ) 재검증
+- [ ] 모든 Route Handler가 진입점에서 `authorizeGuildManage` / `authorizeGuildMember` 게이트 통과
+- [ ] rate limit 진입점(`guardRateLimit`) 적용 — 쓰기 `WRITE_RATE`, 읽기 `READ_RATE`
+- [ ] 인프라 노출 API(`/api/shards`, `/api/data-api`)에 `isDashboardAdmin` (fail-closed) 확인
 - [ ] 클라이언트 번들에 시크릿·내부 주소·accessToken 없음 (`grep`으로 확인)
-- [ ] 상태 변경 API는 POST + zod 검증 + 범위 재검증(볼륨 0–100, URL 형식 등)
-- [ ] 컨트롤 API에 rate limit
+- [ ] 상태 변경 API는 메서드(POST/PUT/PATCH/DELETE) + zod 검증 + 범위 재검증(볼륨 0–100, URL 형식 등)
+- [ ] Discord·봇 호출이 data-api 프록시(`@/lib/data-api`) 경유인지, 직접 호출이 아닌지
 - [ ] 외부 응답(가사 등)·사용자 입력은 HTML이 아닌 텍스트로 렌더 (`dangerouslySetInnerHTML` 금지)
 
 ## 이렇게 하지 마세요 (금지)
 
 ```tsx
-// ✗ 클라이언트에서 토큰 꺼내기
-const { data } = useSession();
+// ✗ 클라이언트에서 토큰 꺼내기 (session.accessToken은 노출되지도 않는다)
+//    → 서버에서 getSessionAccessToken()으로만
 fetch("https://discord.com/api/v10/users/@me", { headers: { Authorization: `Bearer ${data.accessToken}` } });
 
 // ✗ 서버 URL 하드코딩
@@ -208,6 +259,8 @@ fetch("http://10.0.0.5:3001/api/shards");   // → lib/*.ts로 캡슐화 + proce
 
 // ✗ 검증 없는 body 사용
 const { volume } = await request.json();     // → zod safeParse
+
+// ✗ 직접 auth()/canManage() 호출로 권한 검증 흉내 내기 (api-guards 패턴 무시)
 
 // ✗ 미인증 라우트 방치 / 클라이언트 권한 체크만으로 끝내기
 

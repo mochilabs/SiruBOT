@@ -7,6 +7,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import useSWR from "swr";
 
 import { useToast } from "@/components/ui/toast";
+import { useDebounce } from "@/hooks/use-debounce";
+import { isYoutubeUrl } from "@/lib/youtube-url";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
 
 function formatDuration(ms: number): string {
@@ -81,15 +83,21 @@ export function usePlaylists() {
 	const [deletePlaylistTarget, setDeletePlaylistTarget] = useState<{ id: string, name: string } | null>(null);
 	const [loadingSubmit, setLoadingSubmit] = useState(false);
 
-	const [addTrackTab, setAddTrackTab] = useState<"url" | "search">("url");
-	const [youtubeUrl, setYoutubeUrl] = useState("");
-	const [trackSearchQuery, setTrackSearchQuery] = useState("");
+	const [trackInput, setTrackInput] = useState("");
 	const [loadingAddTrack, setLoadingAddTrack] = useState(false);
 
-	const { data: searchData, isLoading: searchLoading } = useSWR<SearchTracksResponse>(
-		addTrackTab === "search" && trackSearchQuery ? `/api/tracks?query=${encodeURIComponent(trackSearchQuery)}` : null
+	// 키 입력 1회당 요청이 나가지 않도록 400ms 디바운스 (search-input.tsx와 같은 패턴)
+	const debouncedTrackInput = useDebounce(trackInput.trim(), 400);
+
+	const { data: searchData, isLoading: searchLoadingApi } = useSWR<SearchTracksResponse>(
+		addTrackModalOpen && debouncedTrackInput && !isYoutubeUrl(debouncedTrackInput)
+			? `/api/tracks?query=${encodeURIComponent(debouncedTrackInput)}`
+			: null,
+		{ keepPreviousData: true }
 	);
 	const searchedTracks = useMemo(() => searchData?.tracks ?? [], [searchData?.tracks]);
+	// 디바운스가 아직 따라오지 못한 타이핑 중에도 로딩으로 표시해요
+	const searchLoading = searchLoadingApi || trackInput.trim() !== debouncedTrackInput;
 
 	const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
 
@@ -132,7 +140,7 @@ export function usePlaylists() {
 		setEditingPlaylist(null);
 		setNameInput("");
 		setDescInput("");
-		setYoutubeUrl("");
+		setTrackInput("");
 	}, []);
 
 	const handleCreatePlaylist = async () => {
@@ -218,8 +226,9 @@ export function usePlaylists() {
 
 	const handleAddTrack = async (targetTrackId?: string) => {
 		if (!activePlaylistId) return;
-		if (!targetTrackId && !youtubeUrl.trim()) {
-			toast.error("유튜브 주소를 입력해 주세요.");
+		const trimmedInput = trackInput.trim();
+		if (!targetTrackId && !isYoutubeUrl(trimmedInput)) {
+			toast.error("유튜브 링크를 붙여넣거나 검색 결과에서 곡을 골라 주세요.");
 			return;
 		}
 
@@ -228,13 +237,13 @@ export function usePlaylists() {
 			const res = await fetch(`/api/playlists/${activePlaylistId}/tracks`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl })
+				body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl: trimmedInput })
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "곡을 추가하지 못했어요.");
 
 			toast.success("플레이리스트에 곡을 추가했어요.");
-			setYoutubeUrl("");
+			setTrackInput("");
 			setAddTrackModalOpen(false);
 			mutateDetail();
 			mutateList();
@@ -349,12 +358,8 @@ export function usePlaylists() {
 		editingPlaylist,
 		deletePlaylistTarget,
 		loadingSubmit,
-		addTrackTab,
-		setAddTrackTab,
-		youtubeUrl,
-		setYoutubeUrl,
-		trackSearchQuery,
-		setTrackSearchQuery,
+		trackInput,
+		setTrackInput,
 		loadingAddTrack,
 		searchedTracks,
 		searchLoading,

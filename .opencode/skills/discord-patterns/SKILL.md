@@ -1,8 +1,8 @@
 ---
 name: discord-patterns
 description: >
-  SiruBOT 대시보드의 Discord 스타일 UI(임베드 미리보기, 채널 메시지, 길드/채널/유저/역할 셀렉터,
-  권한 토글 리스트)를 재현·확장할 때 사용. Discord 색상 토큰과 CDN URL 규칙을 지킨다.
+  SiruBOT 대시보드의 Discord 스타일 UI(임베드 미리보기, 채널 메시지, 길드 카드, 검색형 셀렉터,
+  역할 선택, 권한 토글 리스트)를 재현·확장할 때 사용. Discord 색상 토큰과 CDN URL 규칙을 지킨다.
 ---
 
 # Discord Patterns Skill
@@ -13,7 +13,9 @@ Discord UI 근사 컴포넌트는 `src/components/discord/`에 모여 있다. �
 
 1. Discord 색상은 **`--discord-*` 토큰만** 사용 (라이트/다크 자동 전환).
 2. 실제 Discord API 데이터 형태(`permissions` 비트마스크, 역할 `color` 정수 등)를 그대로 받는다.
-3. 이미지는 `next/image` + `next.config.ts`에 등록된 `cdn.discordapp.com`만 허용.
+3. 이미지는 `next/image` + `next.config.ts` `remotePatterns` 등록 호스트만 허용
+   (`cdn.discordapp.com`, `i.ytimg.com`, `i.scdn.co`, `*.sndcdn.com`, `api.dicebear.com` — §6 참조).
+4. Discord CDN URL 빌더는 `@/lib/discord-cdn`(순수 함수) — 서버 컴포넌트에서도 안전하다.
 
 ## 1. EmbedPreview — `embed-preview.tsx`
 
@@ -77,24 +79,27 @@ React 텍스트 노드로 렌더링되므로 그대로 두고, 절대 `dangerous
 
 - `content`의 `**굵게**` 마크다운을 렌더링할 때도 HTML 변환 금지 → JSX 분해 또는 단순 정규식 치환 후 텍스트 노드로.
 
+컴포넌트 import는 전부 **`@/components/ui/*`**(shadcn 커스텀) 계열이다 — `<Badge>`, `<Button>`, `<Card>`,
+`<Avatar>`, `<Switch>`를 `components/primitives/`에서 찾지 말 것 (primitives는 4종만 남음, `ui-primitives` 스킬 참조).
+실전 사용 예시는 **`src/app/design/page.tsx`**(`/design`).
+
 ## 2.5. Discord 채널 목업 프레임 (랜딩/온보딩 미리보기)
 
-`features-section.tsx`, `hero-section.tsx`에서 사용하는 "Discord 클라이언트처럼 보이는 프레임" 패턴.
+**현재 사용처는 `home/features-section.tsx`뿐** (프레임 원형이 여기 있다). `hero-section.tsx`는 목업 프레임 대신
+`DiscordCommandAnimation`(`home/discord-command-animation.tsx`)을 다른 형식으로 쓴다.
 **컴포넌트가 아니라 클래스 조합 규약**으로 사용한다 (일회성 mock이라 primitives로 승격하지 않는다).
 
 ```tsx
 <div className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-discord-embed">
 	{/* 채널 헤더 — 채널명 + 아이콘, 좌측 정렬 */}
 	<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
-		<Volume2 size={14} className="text-discord-text-muted" aria-hidden />
-		<span className="text-xs font-semibold text-discord-text">음악-라운지</span>
+		<Bot size={14} className="text-discord-text-muted" aria-hidden />
+		<span className="text-xs font-semibold text-discord-text">ai-라운지</span>
 		<span className="ml-auto text-2xs text-discord-text-muted">시루 · 멘션 응답</span>
 	</div>
 
-	{/* 메시지 영역 — 항상 상단 정렬. items-center / justify-center 금지 (중앙 정렬되면 어색함) */}
-	<div className="min-h-[150px] flex-1 p-3 sm:p-4">
-		{/* 메시지 버블들 (ChannelMessage 등) */}
-	</div>
+	{/* 메시지 영역 — 실전에서는 <ChatPreview /> 같은 내부 컴포넌트가 min-h-[150px] flex-1 을 채운다.
+	    항상 상단 정렬. items-center / justify-center 금지 (중앙 정렬되면 어색함) */}
 
 	{/* 입력창 자리 푸터 — 읽기 전용 안내문 */}
 	<p className="border-t border-discord-btn-active px-4 py-2 text-2xs text-discord-text-muted">
@@ -111,40 +116,40 @@ React 텍스트 노드로 렌더링되므로 그대로 두고, 절대 `dangerous
 - 메시지 버블은 `flex gap-2.5` + 좌측 36px 아바타 + 우측 본문 구조. 시간·"앱" 배지는
   `text-2xs text-discord-text-muted` / `bg-discord-primary text-primary-foreground`.
 - **타이핑 커서**: 봇 응답(스트리밍)은 `StreamingTypeText`, 슬래시 타이핑은 `TypingText` 사용.
-  커서 클래스는 `-ml-px inline-block h-[0.9em] w-[2px] ... align-baseline` (좌측 여유 margin을 붙이면
-  다음 단어가 밀려나 정렬이 깨진다 — 항상 커서를 텍스트에 거의 붙인다).
+  커서는 `inline-block h-[0.9em] w-[2px] ... align-baseline`에 **거의 0에 가까운 좌측 여백**을 준다
+  (`TypingText`는 클래스 `-ml-px`, `StreamingTypeText`는 인라인 `marginLeft: "1px"`). 여유 margin을 크게
+  주면 다음 단어가 밀려나 정렬이 깨진다.
 - 줄바꿈 정렬 깨짐 방지용 `TypingText fit` prop: 가장 긴 후보의 폭을 invisible로 예약해 layout jump 제거.
 
-## 3. GuildSelector — `guild-selector.tsx`
+## 3. GuildCard — `servers/guild-card.tsx` (+ `guild-card.types.ts`)
+
+구 `guild-selector.tsx`는 삭제됐다. 현행은 서버 선택 카드 하나뿐.
 
 ```ts
-export interface GuildInfo {
-	id: string; name: string; icon?: string | null;
-	memberCount?: number; isInstalled: boolean; isManageable?: boolean;
-}
-// props: guilds, onManage?, onController?, inviteUrl?, view?: "grid" | "list"
+export interface EnrichedGuild extends DiscordGuild { isManageable: boolean; isInstalled: boolean }
+export interface GuildCardProps { guild: EnrichedGuild; inviteUrl: string | null }
 ```
 
-- 아이콘 URL: `https://cdn.discordapp.com/icons/${id}/${icon}.webp?size=128` (직접 조립, 없으면 이름 첫 글자 + `bg-surface-2 border-border` 원)
-- 설치됨: `ShieldCheck` + `시루봇 활성`(primary), 미설치: `미설치` + 초대 링크
-- 액션: 관리(`bg-primary/10 text-primary`) / 플레이어(`bg-success/10 text-success`) / 초대(`bg-surface-1 border-border-subtle` + `ExternalLink`)
-- grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, list: `flex flex-col gap-3`
+- 아이콘 URL: `` `https://cdn.discordapp.com/icons/${id}/${icon}.png` `` (size 파라미터 없음), 없으면 이름 첫 글자 + `bg-surface-2` 원
+- 설치 표시: `ShieldCheck` + `이미 시루봇이 있어요`(primary-text) / `아직 시루봇이 없어요`(muted) — 모바일에서는 숨김
+- 액션: 관리(`Settings2`) / 재생(`Play`) / 초대·멤버 초대(`ExternalLink`, `UserPlus`) — `guild.isInstalled` / `isManageable` 분기
+- 레이아웃: PC는 `md:` 그리드 카드, 모바일은 한 행 리스트 — 같은 마크업에 반응형 클래스만 (터치 타깃 `pointer-coarse:min-h-11`)
 
-## 4. 셀렉터 3종
+## 4. 셀렉터
 
-### ChannelSelect / UserSelect — `overlay/select` 래퍼
+### SearchableSelect — `servers/searchable-select.tsx` (설정 폼 공용)
 
-`Select`(`src/components/overlay/select.tsx`)의 `SelectOption`으로 데이터를 변환해서 쓴다.
+구 `overlay/select.tsx`(ChannelSelect/UserSelect/SelectOption)는 삭제됐다. 채널·유저·JTC·음악·인사 설정 폼이
+이 컴포넌트를 쓴다 (Base UI `Select` + 검색 입력).
 
-```tsx
-<ChannelSelect channels={channels} value={channelId} onChange={setChannelId}
-	filterTypes={["text"]} searchable placeholder="채널을 선택해 주세요" />
-<UserSelect users={users} value={userId} onChange={setUserId} />
+```ts
+export interface SearchableOption { value: string; label: string; icon?: ReactNode; group?: string; disabled?: boolean }
+// props: options, value, onChange, multiple?, searchable?, placeholder, searchPlaceholder, disabled
 ```
 
-- 채널: `type`별 아이콘(text `Hash`, voice `Volume2`, announcement `Megaphone`, thread `MessageSquare`),
-  `category`는 제외, `position` 정렬, `parentName`을 그룹으로.
-- 유저: `discordAvatarUrl(id, avatar, 32)` + `fallback=username`.
+- 단일/다중 겸용 (`multiple`에 따라 `value: string` vs `string[]`), `group`은 optgroup으로 묶인다.
+- 채널 옵션은 `buildChannelOptions`가 카테고리 제외·`SELECTABLE_CHANNEL_TYPES` 필터·`parentName` 그룹핑 수행.
+- 유저 아바타는 `discordAvatarUrl(id, avatar, 32)` (`@/lib/discord-cdn`) + `fallback=username`.
 
 ### RoleSelect — `role-select.tsx` (다중, Portal 기반)
 
@@ -171,7 +176,7 @@ const [perms, setPerms] = useState(0);
 ```
 
 - 판정: `(value & flag) === flag`, 토글: `value | flag` / `value & ~flag`
-- 카테고리 일괄 토글, `dangerous` 권한은 빨간 텍스트 + `AlertTriangle`
+- 카테고리 일괄 토글, `dangerous` 권한은 `text-destructive` + `AlertTriangle`
 - 서버 측에서도 동일한 비트 로직으로 검증한다 (BigInt 사용 — `src/lib/guild-permissions.ts` 참고).
 
 ## 6. 색상·CDN 규칙

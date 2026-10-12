@@ -26,7 +26,7 @@ import {
 const logger = getLogger('guildDataHub');
 
 /** 봇 응답 대기 타임아웃 — 봇 미보유·미연결과 응답 없음은 같은 실패로 매핑해요 */
-const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 5_000;
 /** 동시 대기 요청 상한 — 응답을 못 받는 요청이 pending map에 쌓이는 누수를 방지해요 */
 const PENDING_LIMIT = 200;
 /** 최초 연결 실패 재시도 백오프 — 1초부터 2배씩, 상한 5초 (playerHub와 같음) */
@@ -215,7 +215,7 @@ export async function stopGuildDataHub(): Promise<void> {
 
 /**
  * 길드 데이터를 봇에 요청해요. Redis 클라이언트가 없으면 즉시 redis_unavailable, REQUEST 채널을
- * 퍼블리시하고 `timeoutMs`(기본 3초) 안에 응답이 없으면 timeout으로 실패해요.
+ * 퍼블리시하고 `timeoutMs`(기본 5초) 안에 응답이 없으면 timeout으로 실패해요.
  * 봇은 보유 길드에만 응답하므로 응답 없음은 봇 미보유·미연결과 같은 실패로 매핑돼요.
  */
 export async function requestGuildData(guildId: string, kind: GuildDataKind, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS): Promise<GuildDataResult> {

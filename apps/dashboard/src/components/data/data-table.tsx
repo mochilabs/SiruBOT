@@ -3,8 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { ChevronDown, ChevronsUpDown, ChevronUp, PackageOpen } from "lucide-react";
 
+import { ErrorPanel } from "@/components/error-panel";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -89,17 +89,8 @@ export function DataTable<T>({
 	};
 
 	if (error) {
-		return (
-			<Card className={cn("rounded-card border-0 bg-surface-1 p-12 text-center ring-0", className)}>
-				<p className="text-lg font-semibold tracking-tight text-foreground mb-2">오류가 발생했어요</p>
-				<p className="text-sm text-muted-foreground mb-6">{error}</p>
-				{onRetry && (
-					<Button variant="secondary" size="sm" onClick={onRetry}>
-						다시 시도
-					</Button>
-				)}
-			</Card>
-		);
+		// 에러 피드백은 ErrorPanel로 통일 (EmptyState·ErrorPanel과 같은 형태 언어)
+		return <ErrorPanel title="오류가 발생했어요" message={error} onRetry={onRetry} className={className} />;
 	}
 
 	if (!loading && data.length === 0) {
@@ -112,7 +103,8 @@ export function DataTable<T>({
 				<TableHeader>
 					<TableRow
 						className={cn(
-							"border-0 hover:bg-transparent",
+							// 헤더-본문 구분선 — 행과 같은 border-border-subtle 톤 (border-0으로 지우면 카드 안에서 경계가 사라져요)
+							"hover:bg-transparent",
 							stickyHeader && "sticky top-0 z-10",
 						)}
 					>

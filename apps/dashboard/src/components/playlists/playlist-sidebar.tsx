@@ -80,10 +80,10 @@ export function PlaylistSidebar({
 					</div>
 				)}
 
-				<div className={`flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-0.5 relative ${playlists.length < 5 ? 'pt-2' : ''}`}>
+				<div className={`flex-1 overflow-y-auto p-2 flex flex-col gap-0.5 relative ${playlists.length < 5 ? 'pt-2' : ''}`}>
 					{indicator && (
 						<m.div
-							className="absolute bg-primary/10 rounded-xl z-0 shadow-sm"
+							className="absolute bg-primary-control/10 rounded-menu z-0"
 							animate={{
 								top: indicator.top,
 								left: indicator.left,
@@ -102,12 +102,12 @@ export function PlaylistSidebar({
 						return (
 							<div key={playlist.id} className="w-full flex flex-col">
 								{isDefault && idx === 0 && (
-									<div className="px-3 pt-2 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground uppercase relative z-10">
+									<div className="px-3 pt-2 pb-1.5 text-xs font-medium text-muted-foreground relative z-10">
 										즐겨찾기
 									</div>
 								)}
 								{(isFirstCustom || (idx === 0 && !isDefault)) && (
-									<div className="px-3 pt-3 pb-1.5 text-2xs font-medium tracking-widest text-muted-foreground uppercase relative z-10">
+									<div className="px-3 pt-3 pb-1.5 text-xs font-medium text-muted-foreground relative z-10">
 										내 목록
 									</div>
 								)}
@@ -120,7 +120,7 @@ export function PlaylistSidebar({
 										onClick={() => onSelect(playlist.id)}
 										className={`
 											flex-1 flex items-center justify-between px-3 py-2.5 rounded-menu text-left select-none cursor-pointer transition-colors duration-fast
-											${isActive ? "text-primary-text font-bold bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-accent/10"}
+											${isActive ? "text-primary-text font-bold" : "text-muted-foreground hover:text-foreground hover:bg-accent/10"}
 										`}
 									>
 										<div className="flex items-center gap-2 min-w-0">
