@@ -44,6 +44,7 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
         const res = await fetch(`${DATA_API_URL}${path}`, {
             cache: "no-store",
             headers: { Authorization: authKey },
+            signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) return null;
         return (await res.json()) as T;
@@ -55,6 +56,7 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
 /**
  * data-api SSE 스트림 프록시 — 인증 헤더를 붙여 upstream Response를 그대로 돌려준다.
  * 미설정이면 null (라우트에서 502 응답으로 변환).
+ * SSE는 장기 연결이라 여기엔 AbortSignal.timeout을 걸지 않는다 — 타임아웃이 연결 전체를 잘라버리기 때문.
  */
 export async function openDataApiStream(path: string): Promise<Response | null> {
     const authKey = DATA_API_AUTH_KEY.trim();
@@ -86,6 +88,7 @@ export async function postDataApi<T>(path: string, body: unknown): Promise<T | n
             cache: "no-store",
             headers: { Authorization: authKey, "Content-Type": "application/json" },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) return null;
         return (await res.json()) as T;
@@ -130,6 +133,7 @@ export async function forwardDataApiPost<T>(path: string, body: unknown): Promis
             cache: "no-store",
             headers: { Authorization: authKey, "Content-Type": "application/json" },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) {
             const payload = (await res.json().catch(() => null)) as { message?: unknown } | null;
@@ -159,6 +163,7 @@ export async function forwardDataApiGet<T>(path: string): Promise<DataApiForward
         const res = await fetch(`${DATA_API_URL}${path}`, {
             cache: "no-store",
             headers: { Authorization: authKey },
+            signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) {
             const payload = (await res.json().catch(() => null)) as { message?: unknown } | null;
@@ -187,11 +192,13 @@ export async function forwardDataApiImage(path: string, body: unknown): Promise<
         return { ok: false, status: 503, message: null };
     }
     try {
+        // 이미지 렌더는 data-api에서 최대 ~20초까지 걸릴 수 있어요 (봇 dataApiClient 기준) — 여유 있게 30초.
         const res = await fetch(`${DATA_API_URL}${path}`, {
             method: "POST",
             cache: "no-store",
             headers: { Authorization: authKey, "Content-Type": "application/json" },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(30_000),
         });
         if (!res.ok) {
             const payload = (await res.json().catch(() => null)) as { message?: unknown } | null;
