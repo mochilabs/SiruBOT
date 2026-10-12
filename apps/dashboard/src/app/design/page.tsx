@@ -365,7 +365,8 @@ export default function DesignPage() {
 
 	return (
 		<>
-			<div className="container mx-auto max-w-7xl px-4 py-8">
+			{/* 고정 navbar(h-16) 클리어런스는 Container 컨벤션(pt-16 lg:pt-24)과 동일하게 — 겹침 방지 */}
+			<div className="container mx-auto max-w-7xl px-4 pb-8 pt-16 lg:pt-24">
 				<div className="flex items-start justify-between gap-4 mb-8">
 					<div>
 						<h1 className="text-3xl font-black tracking-tighter text-foreground">Design System</h1>
