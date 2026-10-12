@@ -13,38 +13,63 @@ description: >
 (`@import "tailwindcss"`, **`@theme inline`**, `@utility`, `@custom-variant`) 기반이며, 다크/라이트는 CSS 변수 재정의로 전환된다.
 새 코드는 **반드시 토큰 유틸리티**(`bg-primary`, `text-muted-foreground`, `border-border` …)만 사용한다.
 
-- 소스: `apps/dashboard/src/app/globals.css` — **9개 섹션 번호 구조** (1 통합 / 2 라이트·다크 변수 / 3 `@theme inline` 매핑 /
-  4 타이포 / 5 반경·서피스 / 6 보더·섀도 / 7 상태색 / 8 유틸리티 / 9 모션·접근성). 순서를 지킬 것.
-- 해설 문서: `apps/dashboard/DESIGN.md` (토큰 표·마이그레이션 규칙 — 코드와 일치함)
-- shadcn/ui 펀데이션: `apps/dashboard/components.json` + `src/lib/utils.ts`의 `cn()`
+- 소스: `apps/dashboard/src/app/globals.css` — **9개 섹션 번호 구조** (1 Tailwind & shadcn/ui integration /
+  2 Light & dark semantic theme variables / 3 Tailwind theme mappings / 4 Typography / 5 Radius & surface /
+  6 Border & shadow / 7 Status colors / 8 Component-independent utilities / 9 Motion & accessibility). 순서를 지킬 것.
+- 해설 문서: `apps/dashboard/DESIGN.md` (토큰 표·대비 규칙·컨트롤 경계 — **수치의 기준은 여기와 코드**)
+- shadcn/ui 펀데이션: `apps/dashboard/components.json` (`style: "base-nova"`) + `src/lib/utils.ts`의 `cn()`
   (`clsx` + `tailwind-merge`). **`cn` npm 패키지는 설치하지 않는다.**
-- 적용 예시: `apps/dashboard/src/app/components_gallery/page.tsx`
-- 폰트: Pretendard Variable (`next/font/local` → `--font-pretendard`), `apps/dashboard/src/app/layout.tsx`
+- 적용 예시: `apps/dashboard/src/app/design/page.tsx` (`/design` 쇼케이스 — 구 `components_gallery`는 삭제됨)
+- 폰트: `--font-stack` = Pretendard → **Pretendard JP**(일본어 한자) → **Twemoji Mozilla**(이모지, unicode-range lazy load)
+  → 시스템 이모지 → 시스템 폰트. `--font-sans: var(--font-stack)` (`src/app/layout.tsx`의 next/font variables).
 
 **`@theme inline`을 쓴다.** 유틸리티가 `var(--background)`를 런타임에 참조하므로 `.dark` 재정의가 그대로 먹히고,
 shadcn/ui v4가 기대하는 구조와도 같다. 결과적으로 `--color-*`는 `:root`에 출력되지 않는다 — 원값은 `:root`/`.dark` 블록에 있다.
 
 ## 1. 컬러 토큰
 
-`:root`(라이트) / `.dark`(다크)에 정의, `@theme inline`에서 Tailwind 유틸리티로 노출.
+**:root**(라이트) / **.dark**(다크)에 정의, `@theme inline`에서 Tailwind 유틸리티로 노출.
+현재 팔레트는 **Pink Beret Music Bot (base `#ffdada`)**.
 
-Phase 1에서 매핑이 누락되어 있던 `--popover`, `--input`, `--destructive`가 추가되어
-`bg-popover`, `border-input`, `bg-destructive`가 이제 사용 가능하다.
 새 토큰도 아래와 같이 `:root`/`.dark`에 값 + `@theme inline`에 `--color-*` 매핑을 추가한다.
 
 | 토큰 | 라이트 | 다크 | 용도 |
 | --- | --- | --- | --- |
-| `--background` | `#fef5f9` | `#1a0e12` | 페이지 배경 → `bg-background` |
-| `--foreground` | `#2d1b1e` | `#fce7f3` | 기본 텍스트 → `text-foreground` |
-| `--card` / `--card-foreground` | `#ffffff` / `#2d1b1e` | `#2d1b1e` / `#fce7f3` | 카드·패널 → `bg-card` |
-| `--primary` | `#ff85c1` (양쪽 동일) | `#ff85c1` | 브랜드 핑크 → `bg-primary`, `text-primary` |
-| `--primary-foreground` | `#ffffff` | `#ffffff` | primary 위 텍스트 |
-| `--secondary` | `#d4a574` | `#d4a574` | 보조(따뜻한 톤), 그라데이션용 |
-| `--muted` / `--muted-foreground` | `#f9eff5` / `#8b6d75` | `#3d2328` / `#c9a8b5` | 비활성·설명 텍스트 |
-| `--accent` / `--accent-foreground` | `#ffe4f0` / `#d1608a` | `#4d2a35` / `#ffb3d9` | hover 배경(`bg-accent/50`) |
-| `--destructive` | `#d4183d` | `#d4183d` | 삭제·오류 |
-| `--border` / `--input` | `#f0d4e3` / `#f9eff5` | `#3d2328` / `#3d2328` | 테두리·입력 배경 |
-| `--ring` | `#ff85c1` | `#ff85c1` | focus ring |
+| `--background` | `#fff9f9` | `#1f1618` | 페이지 배경 → `bg-background` |
+| `--foreground` | `#3a2c30` | `#fbeeee` | 기본 텍스트 → `text-foreground` |
+| `--card` / `--card-foreground` | `#ffffff` / `#3a2c30` | `#2b2023` / `#fbeeee` | 카드·패널 → `bg-card` |
+| `--primary` / `--primary-foreground` | `#ffdada` / `#4f1c2a` | `#ffdada` / `#3a1a22` | 브랜드 **서피스**(연핑크) → `bg-primary` |
+| `--brand` | `#ee6f8b` | `#f98aa0` | 포인트 핑크 — 액션·포커스 링 (`bg-brand`, `--ring`의 원본) |
+| `--primary-control` (+ `-hover`, `-text`) | `var(--brand)` / `#f27c96` / maroon | `var(--brand)` / `#f27890` | **단색 on-state·CTA 채움** (`cta`, `state-toggle` on) |
+| `--primary-text` | `#4f1c2a` (accent-foreground) | `#ffdada` | 중립 서피스 위 강조 **텍스트** → `text-primary-text` |
+| `--switch-thumb` | `#ffffff` | `#ffffff` | 스위치 thumb 전용(fill) → `bg-switch-thumb` — Switch 컴포넌트 내부에서만 사용 |
+| `--secondary` / `--secondary-foreground` | `#fff0f0` / `#3a2c30` | `#3a2c30` / `#fbeeee` | 틴티드 중립 서피스 |
+| `--muted` / `--muted-foreground` | `#fff0f0` / `#7d686d` | `#3a2c30` / `#b9a4a9` | 비활성·설명 텍스트 |
+| `--accent` / `--accent-foreground` | `#ffc3c9` / `#4f1c2a` | `#4d3b40` / `#ffdada` | hover 배경 |
+| `--popover` | `#ffffff` | `#2b2023` | 메뉴·팝오버 → `bg-popover` |
+| `--border` / `--input` | `#f3d3d6` | `#4d3b40` | 기본 구분선·입력 배경 |
+| `--ring` | `var(--brand)` | `var(--brand)` | focus ring |
+
+**텍스트/서피스 사용 규칙 (중요)**
+
+- `text-primary`는 **밝은 핑크라 중립 배경에서 읽히지 않는다** — 절대 텍스트에 쓰지 말 것. 강조 텍스트는 `text-primary-text`.
+- `--brand`(`bg-brand`, `bg-primary-control`)는 액션·on-state 채움 전용. 라벨은 `text-primary-control-text`.
+- 중립 컨트롤(`secondary` 계열)은 채움만으로 경계가 안 보이므로 **`shadow-control-boundary`**를 짝지어 쓴다.
+
+### 상태·경계 토큰
+
+| 토큰 | 라이트 | 다크 |
+| --- | --- | --- |
+| `--destructive` / `-foreground` | `#d4183d` / `#ffffff` | `#ff7b8a` / `#2b1018` |
+| `--success` / `-foreground` | `#0f7a52` / `#ffffff` | `#34d399` / `#052e16` |
+| `--warning` / `-foreground` | `#9a6100` / `#ffffff` | `#fbbf24` / `#451a03` |
+| `--info` / `-foreground` | `#0b6bb0` / `#ffffff` | `#38bdf8` / `#082f49` |
+| `--border-subtle` / `--border-strong` | `#f8e1e4` / `#b4779b` | `#3a2c30` / `#a37d89` |
+
+- 상태색은 **라이트에서 채도 높은 값을 유지**한다 — 현재 컴포넌트가 `text-success`를 `bg-success/10` 틴트 위에
+  쓰는 방식이 팔레트의 파스텔 값으로는 대비가 무너진다(솔리드 배지 전환은 별도 마이그레이션).
+- `border-border-strong`는 컨트롤 비텍스트 경계(SC 1.4.11, 3:1)용. 텍스트에 쓰지 말 것.
+- 토큰을 바꾸면 **`python3 scripts/wcag-contrast-audit.py`**를 실행해 `Unexpected failures: 0`을 확인한다.
 
 ### Discord 전용 토큰 (`--discord-*` → `text-discord-*` 등)
 
@@ -58,20 +83,13 @@ Phase 1에서 매핑이 누락되어 있던 `--popover`, `--input`, `--destructi
 | `--color-discord-primary` | `#5865F2` (고정) | 동일 |
 | `--color-discord-blue` / `--color-discord-light` | `#00a8fc` / `#949cf7` | 동일 |
 
-### 상태 색상 토큰 (Phase 1 신규)
-
-`--success` / `--warning` / `--info` / `--destructive` (+ 각 `-foreground`)가 `:root`/`.dark`에 정의되고
-`bg-success`, `text-warning`, `bg-info`, `bg-destructive`로 노출된다. 테마다 색이 갈린다.
-
-기존 배지의 `emerald-500/10` 관례는 아직 유지된다. 해당 컴포넌트를 손댈 때 토큰으로 옮길 것.
-
 ### 서피스 토큰 (불투명 — glass 대체)
 
 | 토큰 | 라이트 | 다크 | 용도 |
 | --- | --- | --- | --- |
-| `--surface-1` | `#ffffff` | `#231317` | 기본 패널 → `bg-surface-1` |
-| `--surface-2` | `#f7f1f4` | `#2d1b1e` | 중첩/인셋 영역 → `bg-surface-2` |
-| `--surface-3` | `#ffffff` | `#35212a` | 플로팅 오버레이 → `bg-surface-3` |
+| `--surface-1` | `#ffffff` | `#2b2023` | 기본 패널 → `bg-surface-1` |
+| `--surface-2` | `#fff0f0` | `#3a2c30` | 중첩/인셋 영역 → `bg-surface-2` |
+| `--surface-3` | `#ffffff` | `#3a2c30` | 플로팅 오버레이 → `bg-surface-3` |
 
 또는 `panel` 유틸리티(불투명 + `--border` + `--r-card`)로 한 번에 쓴다.
 
@@ -97,51 +115,51 @@ Phase 1에서 매핑이 누락되어 있던 `--popover`, `--input`, `--destructi
 
 ## 3. 타이포그래피
 
-- 본문: Pretendard. `--font-sans`가 `var(--font-pretendard)`를 가리키므로 `font-sans`와
-  Tailwind 기본 폰트 패밀리가 모두 Pretendard다.
+- 본문: `--font-sans`가 `var(--font-stack)`을 가리키므로 `font-sans`는 Pretendard → Pretendard JP → Twemoji → 시스템 순.
 - `text-2xs` (`0.6875rem` = **11px** / 라인하이트 `1rem`) — `text-[11px]` 임의값을 대체한다.
-  `text-[10px]`(10px)은 값이 다르므로 `text-2xs`로 바꾸지 않는다. 10px는 토큰이 없으므로
-  현재도 `text-[10px]`이 남아 있고, 페이지 리디자인 단계에서 결정한다.
-- 타이틀: `font-black tracking-tighter` + 그라데이션 `text-title-gradient`
-  (`PageHeader`의 `text-4xl sm:text-5xl ... truncate`)
-- 섹션 라벨/캡션: `text-xs font-black uppercase tracking-widest text-muted-foreground/40` (또는 `/60`)
-- 숫자 강조: `font-black tabular-nums text-primary`
+  `text-[10px]`(10px)은 값이 다르므로 `text-2xs`로 바꾸지 않는다.
+- 페이지 타이틀: `PageHeader`의 `text-4xl sm:text-5xl font-black tracking-tighter text-foreground truncate`
+  (그라데이션 없음 — `text-title-gradient`는 소비자 0인 미사 유틸).
+- 섹션 라벨: **`SectionLabel`(`primitives/section-label`)의 `text-xs font-medium text-muted-foreground`** —
+  `font-black` / `uppercase` / `tracking-widest` 금지.
+- 숫자 강조: `font-black tabular-nums text-primary-text` (`text-primary`는 밝은 핑크라 텍스트로 못 씀).
 - 설명 텍스트: `text-sm font-medium text-muted-foreground/80`
 
 ## 4. 유틸리티 (`@utility` — 클래스 그대로 사용)
 
 | 클래스 | 동작 |
 | --- | --- |
-| `panel` | **신규** 불투명 서피스 (`bg-surface-1` + `--border` + `--r-card`) |
-| `duration-fast` / `duration-base` / `duration-slow` | **신규** 토큰 기반 트랜지션 시간 (`200/300/500ms`) |
-| `text-title-gradient` | primary→secondary→`#ffb3d9`→primary 300% 그라데이션 텍스트 |
-| `animate-shimmer-sweep` / `animate-page-in` / `animate-pulse-soft` | 애니메이션 |
+| `panel` | 불투명 서피스 래퍼 유틸리티 — 소비자 8곳 |
+| `duration-fast` / `duration-base` / `duration-slow` | 토큰 기반 트랜지션 시간 (`200/300/500ms`) |
+| `animate-page-in` / `animate-pulse-soft` / `animate-marquee` / `scrollbar-none` | 애니메이션·유틸리티 |
 
-**Phase 3A에서 `glass-panel`·`glass-overlay`·`--glass-overlay`·`--glass-border`는 삭제됨** (소비자 41/12 → 0/0).
-blur/backdrop-filter/반투명 표면은 대시보드 어디에서도 쓰지 않는다.
-남은 레거시는 `text-title-gradient` 6파일뿐 (`login`, `invite`, `invite/redirect`, `not-found`, `home/hero-section` ×2) —
-브랜딩/헤드라인 전용이므로 그대로 두고, 일반 제목에는 쓰지 않는다.
+**`glass-panel`·`glass-overlay`·`InteractiveGlow`는 파일 자체가 삭제됨.**
+`text-title-gradient`·`animate-shimmer-sweep`는 `globals.css`에 정의만 남은 미사 유틸(소비자 0)이다.
+blur/backdrop-filter/반투명 표면과 그라데이션 타이틀은 대시보드 어디에서도 쓰지 않는다. **유일한 예외**는 dialog/sheet의 모달 백드롭(`bg-black/60 backdrop-blur-sm`)이며, 다른 컴포넌트에는 여전히 금지다. 다시 만들지 말 것.
 
-- `animate-page-in`: 페이지 전환 (`src/components/page-transition.tsx`)
+- `animate-page-in`: 페이지 전환 (`src/components/page-transition.tsx`, `app/template.tsx`)
+- `scrollbar-none`: 스크롤바 숨김 — **`custom-scrollbar` 같은 클래스는 `@theme inline`에 정의가 없어 무시된다.**
 - 스크롤바: 전역 핑크 얇은 스크롤바 (`@layer base`에 정의, 손대지 말 것)
 - 테마 전환: View Transitions API (`::view-transition-old/new(root)`) — `navbar.tsx`의 `toggleTheme`이 `document.startViewTransition` 사용.
-- 루트 레이아웃의 전역 `InteractiveGlow`는 Phase 1에서 제거됨. 컴포넌트 파일은 남아 있고 `/invite` 계열에서만 사용.
 
 ## 5. 토큰: 보더 · 섀도 · 모션
 
-- 보더: `border-border`(기본), `border-border-subtle`(조용한 구분선), `border-border-strong`(입력·강조)
+- 보더: `border-border`(기본), `border-border-subtle`(조용한 구분선), `border-border-strong`(입력 강조색)
+- 컨트롤 경계: **보더리스 원칙** — 입력·버튼은 굵은 border 대신 `shadow-control-boundary`
+  (`inset 0 0 0 1px var(--border-strong)`)로 경계를 표현한다. 새 컴포넌트도 이 방식을 따른다.
 - 섀도: `--elev-1..5` 다섯 단계 → `shadow-xs/sm`(hairline), `shadow-md`(카드), `shadow-lg`(부유 카드),
   `shadow-xl`(메뉴), `shadow-2xl`(모달). **장식이 아니라 높이(elevation)만 표현한다.**
 - 모션: `duration-fast`(`200ms`), `duration-base`(`300ms`), `duration-slow`(`500ms`),
-  `ease-standard`(`cubic-bezier(.16,1,.3,1)`). **숫자형 `duration-200/300/500`은 금지** —
-  Phase 3B에서 대시보드 전체를 이름형으로 옮겼고(28 → 0) 값이 1:1로 같다.
-  (`duration-700` 등 토큰에 없는 값은 임의값으로 보고 별도 판단.)
+  `ease-standard`(`--ease-out-expo`). **숫자형 `duration-200/300/500`은 금지** —
+  이름형과 값이 1:1로 같다. (`duration-700` 등 토큰에 없는 값은 임의값으로 보고 별도 판단.)
 - 접근성: `prefers-reduced-motion: reduce` 블록이 전역 애니메이션/트랜지션을 0으로 만든다.
   framer-motion은 `MotionConfig reducedMotion="user"`로 별도 처리.
 
 ## 6. shadcn/ui
 
 - `apps/dashboard/components.json`이 펀데이션 (`style: "base-nova"`, `tailwind.css` = `src/app/globals.css`).
+- 프리미티브는 Radix가 아닌 **`@base-ui/react`** 기반이다. 인터랙션 로직은 `ui/` 컴포넌트에 위임하고,
+  **이미 커스텀된 `ui/` 컴포넌트를 스킬스런 className으로 덮어쓰지 말 것** (variant 시스템이 무력화된다).
 - `cn()`은 `src/lib/utils.ts`의 `clsx` + `tailwind-merge`. **`cn` npm 패키지 금지 (중복 의존성).**
 - `shadcn add` 후 반드시: `import { cn } from "cn"` → `"@/lib/utils"` 치환,
   Base UI 프리미티브를 쓰면 `@base-ui/react` 수동 설치 (`add`가 자동 설치하지 않음).
@@ -164,15 +182,15 @@ blur/backdrop-filter/반투명 표면은 대시보드 어디에서도 쓰지 않
 
 <div className="rounded-card border border-border-subtle bg-surface-2 p-6"> ... </div>
 
-// 폼 컨트롤 · 오버레이
-<input className="rounded-control border border-border bg-input ..." />
+// 폼 컨트롤 · 오버레이 — 보더리스: 굵은 border 대신 inset 경계 토큰
+<input className="rounded-control border-0 bg-input shadow-control-boundary ..." />
 <div className="rounded-menu border border-border bg-popover p-1.5 shadow-2xl" />
 ```
 
 ```tsx
 <Badge variant="success" dot>온라인</Badge>   {/* emerald 관례 유지 */}
-<div className="bg-success/10 border border-success/20 text-success">온라인</div>   {/* 신규 상태 토큰 */}
-<div className="bg-primary/10 border border-primary/20 text-primary"> ... </div>  {/* primary 변형 관례 */}
+<div className="bg-success/10 border border-success/20 text-success">온라인</div>   {/* 상태 토큰 틴트 */}
+<div className="bg-primary-control/10 border border-primary-control/20 text-primary-text"> ... </div>  {/* 브랜드 강조 관례 */}
 ```
 
 ## 이렇게 하지 마세요 (금지)
@@ -181,7 +199,7 @@ blur/backdrop-filter/반투명 표면은 대시보드 어디에서도 쓰지 않
 // ✗ 하드코딩 hex / rgb / 임의 팔레트
 <div style={{ backgroundColor: "#ff85c1" }} />
 <div className="bg-[#ff85c1] text-[#2d1b1e]" />
-<div className="bg-pink-400" />          // 브랜드 핑크는 bg-primary
+<div className="bg-pink-400" />          // 브랜드 핑크는 bg-brand (채움) · 강조 텍스트는 text-primary-text
 
 // ✗ 새 CSS 변수를 @theme inline 매핑 없이 컴포넌트에 직접 사용
 <span style={{ color: "var(--my-new-color)" }} />
@@ -201,5 +219,3 @@ blur/backdrop-filter/반투명 표면은 대시보드 어디에서도 쓰지 않
 - `apps/dashboard/DESIGN.md` — 토큰 표·shadcn 규칙·Phase 3 체크리스트. 코드와 일치해야 한다.
 - 본 스킬 — 작업 규칙과 금지 사항.
 - `apps/dashboard/MEMO.md` — 과거 개편 메모. 현행과 다르면 코드가 기준.
-- `SOUL.md`의 방향성(불투명 패널·틴티드 글로우·프리미엄 다크)은 Phase 1 `panel`/`--surface-*` 토큰으로,
-  불투명 표면 전환은 Phase 3A에서 완료됨.
