@@ -42,12 +42,8 @@ function PlaylistsContent() {
 		setDescInput,
 		deletePlaylistTarget,
 		loadingSubmit,
-		addTrackTab,
-		setAddTrackTab,
-		youtubeUrl,
-		setYoutubeUrl,
-		trackSearchQuery,
-		setTrackSearchQuery,
+		trackInput,
+		setTrackInput,
 		loadingAddTrack,
 		searchedTracks,
 		searchLoading,
@@ -147,12 +143,8 @@ function PlaylistsContent() {
 			<AddTrackModal
 				open={addTrackModalOpen}
 				onClose={closeModals}
-				tab={addTrackTab}
-				onTabChange={(tab) => setAddTrackTab(tab as "url" | "search")}
-				youtubeUrl={youtubeUrl}
-				onYoutubeUrlChange={setYoutubeUrl}
-				trackSearchQuery={trackSearchQuery}
-				onTrackSearchQueryChange={setTrackSearchQuery}
+				trackInput={trackInput}
+				onTrackInputChange={setTrackInput}
 				loading={loadingAddTrack}
 				searchLoading={searchLoading}
 				searchedTracks={searchedTracks}

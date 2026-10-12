@@ -24,7 +24,7 @@ function EmptyStateAction({ action }: { action: React.ReactNode }) {
 
 export function EmptyState({ icon: Icon = Inbox, title, description, action, secondaryAction, size = "md", className }: EmptyStateProps) {
 	return (
-		<div className={cn("flex flex-col items-center justify-center gap-3 bg-surface-2 text-center", size === "md" ? "p-12 sm:p-16" : "p-8", className)}>
+		<div className={cn("flex flex-col items-center justify-center gap-3 rounded-card bg-surface-2 text-center", size === "md" ? "p-12 sm:p-16" : "p-8", className)}>
 			<span className="inline-flex h-11 w-11 items-center justify-center rounded-menu bg-surface-1 text-muted-foreground">
 				<Icon className="h-5 w-5" aria-hidden />
 			</span>

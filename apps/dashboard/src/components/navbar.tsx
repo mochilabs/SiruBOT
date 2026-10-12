@@ -122,7 +122,7 @@ export function Navbar() {
             <div className="hidden md:flex items-center gap-1 lg:gap-2 relative">
               {indicator && (
                 <m.div
-                  className="absolute top-0 bottom-0 rounded-menu bg-primary/10"
+                  className="absolute top-0 bottom-0 rounded-menu bg-primary-control/10"
                   animate={{ left: indicator.left, width: indicator.width }}
                   transition={{
                     type: "spring",
@@ -137,8 +137,8 @@ export function Navbar() {
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link)}
                   className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
-                      ? "bg-primary/10 text-primary-text"
-                      : "text-muted-foreground hover:bg-primary/5 hover:text-primary-text"
+                      ? "bg-primary-control/10 text-primary-text"
+                      : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
                     }`}
                 >
                   <span className="relative z-10">{link.label}</span>
@@ -152,21 +152,51 @@ export function Navbar() {
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <div className="hidden md:flex items-center gap-2">
-                <Button
-                  variant="icon"
-                  onClick={() => setCommandPaletteOpen(true)}
-                  title="명령 팔레트 (⌘K)"
-                  aria-label="명령 팔레트 열기"
-                  className="h-9 w-9 bg-surface-1 hover:bg-surface-1 hover:text-primary-text"
-                >
-                  <Search size={18} />
-                </Button>
+                {/* 검색+테마 토글을 하나의 세그먼트 pill로 묶어요 — 공유 표면/경계로 한 덩어리,
+                    CTA만 분리해 헤더에서 유일한 액센트가 되게 해요. 전부 h-11(44px) 정렬. */}
+                <div className="flex h-11 items-center overflow-hidden rounded-control bg-surface-1 shadow-control-boundary">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCommandPaletteOpen(true)}
+                    title="명령 팔레트 (⌘K)"
+                    aria-label="명령 팔레트 열기"
+                    className="h-full gap-2 rounded-none rounded-l-control px-3 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                  >
+                    <Search size={16} />
+                    <span className="hidden lg:inline text-sm">검색</span>
+                    <kbd className="hidden lg:inline-flex h-5 items-center rounded-md bg-foreground/5 px-1.5 text-2xs font-medium text-muted-foreground">
+                      ⌘K
+                    </kbd>
+                  </Button>
+                  <div aria-hidden className="h-5 w-px bg-border/70" />
+                  {mounted && (
+                    <Button
+                      variant="ghost"
+                      onClick={toggleTheme}
+                      aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+                      className="relative h-full w-11 overflow-hidden rounded-none rounded-r-control px-0 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                    >
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        <m.span
+                          key={theme}
+                          initial={{ y: 20, rotate: -90, opacity: 0 }}
+                          animate={{ y: 0, rotate: 0, opacity: 1 }}
+                          exit={{ y: -20, rotate: 90, opacity: 0 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                        >
+                          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                        </m.span>
+                      </AnimatePresence>
+                    </Button>
+                  )}
+                </div>
                 {status === "authenticated" ? (
                   <div className="relative" ref={profileRef}>
                     <Button
                       variant="ghost"
                       onClick={() => setProfileOpen(!profileOpen)}
-                      className="h-auto gap-2 px-2 py-1.5 hover:bg-primary/5"
+                      className="h-auto gap-2 px-2 py-1.5 hover:bg-primary-control/5"
                     >
                       {session.user?.image && (
                         <Image
@@ -194,21 +224,11 @@ export function Navbar() {
                           <Link
                             href="/profile"
                             onClick={() => setProfileOpen(false)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary-text transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text transition-colors"
                           >
                             <span>내 프로필</span>
                             <User size={16} />
                           </Link>
-                          <div className="h-px bg-border/50 my-1 mx-2" />
-                          {mounted && (
-                            <button
-                              onClick={toggleTheme}
-                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary-text transition-colors"
-                            >
-                              <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
-                              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-                            </button>
-                          )}
                           <div className="h-px bg-border/50 my-1 mx-2" />
                           <button
                             onClick={() => signOut()}
@@ -226,33 +246,13 @@ export function Navbar() {
                   <Skeleton.Line width="6rem" height="h-11" className="shrink-0" />
                 ) : (
                   <div className="flex items-center gap-2">
-                    {mounted && (
-                      <Button
-                        variant="icon"
-                        size="lg"
-                        onClick={toggleTheme}
-                        className="relative w-11 h-11 overflow-hidden group bg-surface-1 hover:bg-surface-1 hover:text-primary-text duration-base"
-                      >
-                        <AnimatePresence mode="popLayout" initial={false}>
-                          <m.div
-                            key={theme}
-                            initial={{ y: 20, rotate: -90, opacity: 0 }}
-                            animate={{ y: 0, rotate: 0, opacity: 1 }}
-                            exit={{ y: -20, rotate: 90, opacity: 0 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="absolute flex items-center justify-center pointer-events-none"
-                          >
-                            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-                          </m.div>
-                        </AnimatePresence>
-                      </Button>
-                    )}
+                    {/* 네비 링크 "대시보드"와의 이중 표기 방지 — CTA는 시작 동사만 남겨요 */}
                     <Button
                       variant="secondary"
                       onClick={() => signIn("discord")}
-                      className="h-11 px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary/10 hover:text-primary-text duration-base"
+                      className="h-11 px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text duration-base"
                     >
-                      대시보드 시작하기
+                      시작하기
                     </Button>
                   </div>
                 )}

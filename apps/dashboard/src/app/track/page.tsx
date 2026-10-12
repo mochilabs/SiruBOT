@@ -1,10 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { LogIn, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
@@ -15,7 +13,6 @@ import { Pagination } from "@/components/pagination";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
-import { buttonVariants } from "@/components/ui/button";
 import { PAGE_SIZE } from "@/lib/track-constants";
 
 function TrackContent() {
@@ -23,14 +20,11 @@ function TrackContent() {
   const query = searchParams.get("query") || "";
   const page = searchParams.get("page") || "1";
 
-  // /api/tracks는 로그인 필수라 비로그인이면 요청 자체를 막아요
-  const { status } = useSession();
+  // 차트는 로그인 없이 열려 있어요 — /api/tracks가 공개 읽기 전용이라 상태 게이트를 두지 않아요
   const { data, error, isLoading, mutate } = useSWR(
-    status === "authenticated"
-      ? `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`
-      : null,
+    `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`,
   );
-  const loading = status === "loading" || isLoading;
+  const loading = isLoading;
 
   const tracks = data?.tracks || [];
   const totalCount = data?.totalCount || 0;
@@ -38,28 +32,6 @@ function TrackContent() {
   const totalPages = data?.totalPages || 0;
   const currentPage = parseInt(page);
   const rankOffset = (currentPage - 1) * PAGE_SIZE;
-
-  if (status === "unauthenticated") {
-    return (
-      <Container>
-        <div className="pt-20">
-          <EmptyState
-            icon={LogIn}
-            title="로그인이 필요해요."
-            description="로그인하면 재생 순위와 곡 검색을 이용할 수 있어요."
-            action={
-              <Link
-                href="/api/auth/signin?callbackUrl=/track"
-                className={buttonVariants({ variant: "primary" })}
-              >
-                로그인하기
-              </Link>
-            }
-          />
-        </div>
-      </Container>
-    );
-  }
 
   if (error) {
     return (

@@ -2,19 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { m, type MotionValue, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, m, type MotionValue, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
 import { SectionLabel } from "@/components/primitives/section-label";
-import { TypingText } from "@/components/typing-text";
 import { buttonVariants } from "@/components/ui/button";
 import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
-const TYPING_TEXTS = ['더 즐거운 서버를', '심심할 틈 없는 서버를', '활기찬 서버를'];
-const TYPING_SPEED = 90;
+// 헤드라인 회전 단어 — "시루봇과 함께 ___ 만들어봐요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
+const ROTATING_WORDS = ['더 즐거운 서버를', '심심할 틈 없는 서버를', '활기찬 서버를'] as const;
+const ROTATE_INTERVAL_MS = 2600;
 // whileInView 진입 조건 — 세 무빙 블록(container/진행 버튼/디스코드 프레임)이 같은 조건을 공유
 const REVEAL_VIEWPORT = { once: true, margin: '-60px' } as const;
 
@@ -46,7 +46,7 @@ const itemVariants = {
 } as const;
 
 /**
- * 헤드라인 리빌 — 정적 단어는 blur+떠오름으로 개별 등장, TypingText 세그먼트는 variants로 한 덩어리 등장.
+ * 헤드라인 리빌 — 정적 단어는 blur+떠오름으로 개별 등장, 회전 단어 세그먼트는 variants로 한 덩어리 등장.
  */
 const headlineVariants = {
 	hidden: {},
@@ -63,8 +63,8 @@ const headlineWordVariants = {
 	},
 } as const;
 
-/** 타이핑 세그먼트 등장 — 워드 리빌 스태거 끝에 자연스럽게 붙도록 스프링 파라미터를 맞췄어요 */
-const headlineTypingVariants = {
+/** 회전 단어 세그먼트 등장 — 워드 리빌 스태거 끝에 자연스럽게 붙도록 스프링 파라미터를 맞췄어요 */
+const headlineRotatorVariants = {
 	hidden: { opacity: 0, y: 14 },
 	visible: {
 		opacity: 1,
@@ -72,6 +72,45 @@ const headlineTypingVariants = {
 		transition: { type: "spring", stiffness: 120, damping: 20 }
 	},
 } as const;
+
+/**
+ * 헤드라인 단어 회전기 — 현재 단어가 위로 빠지면서 다음 단어가 아래에서 올라와요.
+ * 폭은 "정착 완료된" 단어 기준 sizer가 잡아요: 교체 애니메이션 중에는 이전 폭을 유지해
+ * 뒤따르는 "만들어봐요"가 애니메이션 도중 점프하지 않고, 완료와 함께 한 번만 이동해요.
+ * reduced-motion 환경에선 MotionConfig가 슬라이드를 자동으로 페이드로 낮춰요.
+ * 마스크 하단 패딩은 자모 받침 클리핑 방지용이에요.
+ */
+function WordRotator() {
+	const [index, setIndex] = useState(0);
+	const [settledIndex, setSettledIndex] = useState(0);
+
+	useEffect(() => {
+		const timer = setInterval(() => setIndex((prev) => (prev + 1) % ROTATING_WORDS.length), ROTATE_INTERVAL_MS);
+		return () => clearInterval(timer);
+	}, []);
+
+	return (
+		<span className="relative inline-block overflow-hidden whitespace-pre pb-[0.12em] -mb-[0.12em] align-bottom">
+			{/* 폭 sizer — 보이지 않지만 레이아웃을 잡아요 (교체 중에는 이전 단어 폭 유지) */}
+			<span className="invisible" aria-hidden>
+				{ROTATING_WORDS[settledIndex]}
+			</span>
+			<AnimatePresence initial={false}>
+				<m.span
+					key={ROTATING_WORDS[index]}
+					className="absolute inset-0 flex justify-center lg:justify-start"
+					initial={{ y: "110%", opacity: 0 }}
+					animate={{ y: "0%", opacity: 1 }}
+					exit={{ y: "-110%", opacity: 0 }}
+					transition={{ type: "spring", stiffness: 260, damping: 32 }}
+					onAnimationComplete={() => setSettledIndex(index)}
+				>
+					{ROTATING_WORDS[index]}
+				</m.span>
+			</AnimatePresence>
+		</span>
+	);
+}
 
 /** hero 배경 — 브랜드 도트 그리드 패턴(마스크로 가장자리 페이드). y가 주어지면 스크롤 패럴랙스.
  *  R-07 사유: 음악 봇의 '리듬·비트' 정체성 텍스처 — 저불투명도 질감으로만 쓰고 장식 강조는 하지 않는다. */
@@ -147,13 +186,12 @@ export function HeroSection() {
 						className="text-4xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
 					>
 						{shouldReduce ? (
-							// 접근성 폴백 — reduced-motion 환경에선 단어 분해 없이 기존 단순 등장 유지
+							// 접근성 폴백 — reduced-motion 환경에선 단어 분해·회전 없이 정적 헤드라인으로 표시해요
 							<>
 								시루봇과 함께
 								<br />
-								<span className="text-primary-text">
-									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
-								</span>{" "}
+								<span className="text-primary-text">{ROTATING_WORDS[0]}</span>
+								<br />
 								만들어봐요
 							</>
 						) : (
@@ -163,10 +201,13 @@ export function HeroSection() {
 										{word}
 									</m.span>
 								))}
+								{/* 회전 단어와 "만들어봐요"를 각각 고정한 줄로 둬요 — 단어 길이에 따라
+								    만들어봐요가 줄을 오가며 레이아웃이 출렁이는 걸 막기 위한 3줄 고정 구조예요. */}
 								<br />
-								<m.span className="inline-block whitespace-pre text-primary-text" variants={headlineTypingVariants}>
-									<TypingText texts={TYPING_TEXTS} speed={TYPING_SPEED} fit />
-								</m.span>{" "}
+								<m.span className="inline-block whitespace-pre text-primary-text" variants={headlineRotatorVariants}>
+									<WordRotator />
+								</m.span>
+								<br />
 								<m.span className="inline-block whitespace-pre" variants={headlineWordVariants}>
 									{SPLIT_HEADLINE_BOTTOM}
 								</m.span>
