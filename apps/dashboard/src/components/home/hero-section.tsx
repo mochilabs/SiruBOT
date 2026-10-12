@@ -196,7 +196,7 @@ export function HeroSection() {
 
 					<m.dl
 						variants={itemVariants}
-						className="grid w-full grid-cols-2 gap-4 border-t border-border-subtle pt-5 sm:max-w-lg lg:max-w-none"
+						className="grid w-full grid-cols-2 gap-4 pt-2 sm:max-w-lg lg:max-w-none"
 					>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">슬래시 명령어</dt>
