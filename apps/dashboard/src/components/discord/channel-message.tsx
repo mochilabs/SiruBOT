@@ -1,5 +1,6 @@
-import { Avatar, discordAvatarUrl } from "@/components/primitives/avatar";
+import { Avatar } from "@/components/primitives/avatar";
 import { Badge } from "@/components/primitives/badge";
+import { discordAvatarUrl } from "@/lib/discord-cdn";
 
 export interface MessageAuthor {
 	id: string;

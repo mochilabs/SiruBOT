@@ -3,9 +3,9 @@ import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
-import { discordGuildIconUrl } from "@/components/primitives/avatar";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { auth } from "@/lib/auth";
+import { discordGuildIconUrl } from "@/lib/discord-cdn";
 import { resolveCanManage, resolveGuildMeta } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 
