@@ -23,6 +23,7 @@ const serviceLinks: FooterLink[] = [
 	{ label: '서버 관리', href: '/servers', internal: true },
 	{ label: '봇 초대하기', href: '/invite', internal: true },
 	{ label: '오픈소스 라이선스', href: '/licenses', internal: true },
+	{ label: '디자인 시스템', href: '/design', internal: true },
 ];
 
 const supportLinks: FooterLink[] = [

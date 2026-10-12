@@ -24,7 +24,7 @@ headlines only. `layout/navigation.tsx` is gone — in-page tab panels use
 | Font (Pretendard) + root layout | `src/app/layout.tsx` |
 | Theme provider (`next-themes`) | `src/components/Providers.tsx` |
 | Reusable primitives | `src/components/primitives/*` |
-| Primitive showcase | `src/app/components_gallery/page.tsx` |
+| Primitive showcase | `src/app/design/page.tsx` |
 
 ### Dependencies added (Phase 1)
 
