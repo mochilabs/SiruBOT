@@ -28,6 +28,7 @@ interface AddTrackModalProps {
 	onTrackSearchQueryChange: (v: string) => void;
 	loading: boolean;
 	searchLoading: boolean;
+	searchError?: boolean;
 	searchedTracks: SearchedTrack[];
 	onAddTrack: (trackId?: string) => void;
 }
@@ -43,6 +44,7 @@ export function AddTrackModal({
 	onTrackSearchQueryChange,
 	loading,
 	searchLoading,
+	searchError,
 	searchedTracks,
 	onAddTrack,
 }: AddTrackModalProps) {
@@ -98,6 +100,10 @@ export function AddTrackModal({
 										<div className="py-8 flex justify-center">
 											<Loader text="곡 검색 중..." />
 										</div>
+									) : searchError ? (
+										<p className="text-sm font-medium text-muted-foreground text-center py-8">
+											검색에 실패했어요. 잠시 후 다시 시도해 주세요.
+										</p>
 									) : trackSearchQuery && searchedTracks.length === 0 ? (
 										<p className="text-sm font-medium text-muted-foreground text-center py-8">
 											검색 결과가 없어요.
@@ -129,6 +135,7 @@ export function AddTrackModal({
 													size="sm"
 													className="h-8 py-0 px-3 shrink-0 rounded-lg text-xs"
 													onClick={() => onAddTrack(track.id)}
+													disabled={loading}
 												>
 													추가
 												</Button>

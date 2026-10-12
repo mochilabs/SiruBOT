@@ -47,22 +47,31 @@ export function sampleGreetingText(text: string, guildName = ""): string {
 		.replaceAll("{멤버수}", "1");
 }
 
-/** dataURI/URL 이미지 로드 캐시 — 편집마다 재디코딩하지 않게 모듈 단위로 유지해요 */
-const imageCache = new Map<string, HTMLImageElement | null>();
+/** Image decode cache — module-scoped so edits do not re-decode, but bounded
+ * with LRU eviction so long editing sessions cannot accumulate bitmaps. */
+const IMAGE_CACHE_LIMIT = 12;
+const imageCache = new Map<string, HTMLImageElement>();
 
 export function loadImage(src: string): Promise<HTMLImageElement | null> {
 	const cached = imageCache.get(src);
-	if (cached !== undefined) return Promise.resolve(cached);
+	if (cached) {
+		// Move to the back: refresh LRU order on access.
+		imageCache.delete(src);
+		imageCache.set(src, cached);
+		return Promise.resolve(cached);
+	}
 	return new Promise((resolve) => {
 		const img = new Image();
 		img.onload = () => {
+			if (imageCache.size >= IMAGE_CACHE_LIMIT) {
+				const oldest = imageCache.keys().next().value;
+				if (oldest !== undefined) imageCache.delete(oldest);
+			}
 			imageCache.set(src, img);
 			resolve(img);
 		};
-		img.onerror = () => {
-			imageCache.set(src, null);
-			resolve(null);
-		};
+		// Transient decode failures are not cached: a retry must be able to succeed.
+		img.onerror = () => resolve(null);
 		img.src = src;
 	});
 }

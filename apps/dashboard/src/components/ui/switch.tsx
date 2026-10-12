@@ -4,7 +4,7 @@ import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
 
 import { cn } from "@/lib/utils";
 
-interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange" & "checked" & "defaultChecked"> {
+interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange" | "checked" | "defaultChecked"> {
 	checked?: boolean;
 	defaultChecked?: boolean;
 	onChange?: (checked: boolean) => void;

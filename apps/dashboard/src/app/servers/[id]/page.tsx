@@ -33,10 +33,6 @@ async function getGuildMember(
     },
   );
 
-  console.error(
-    `[diag] Discord /users/@me/guilds/${guildId}/member -> ${res.status} ${res.ok ? "" : await res.clone().text().then((t) => t.slice(0, 200)).catch(() => "")}`,
-  );
-
   // 멤버가 아니거나(404) 접근 권한이 없으면(403) 보여줄 대시보드가 없어요.
   if (res.status === 404 || res.status === 403) return null;
   // 토큰 만료(401) — 500 대신 재로그인으로 안내해요.

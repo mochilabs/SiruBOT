@@ -44,14 +44,16 @@ export function GlobalCommandPalette() {
 	// ⌘K / Ctrl+K 토글 ( 열기와 닫기 모두 여기서 처리해요 )
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
-			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+			if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
 				e.preventDefault();
-				setOpen(!open);
+				// Read state at event time so the listener binds exactly once, not on every toggle
+				const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore.getState();
+				setCommandPaletteOpen(!commandPaletteOpen);
 			}
 		};
 		document.addEventListener("keydown", handler);
 		return () => document.removeEventListener("keydown", handler);
-	}, [open, setOpen]);
+	}, []);
 
 	const items = useMemo<CommandItemData[]>(() => {
 		const authenticated = status === "authenticated";

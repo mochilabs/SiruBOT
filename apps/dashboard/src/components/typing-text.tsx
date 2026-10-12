@@ -28,12 +28,31 @@ export function TypingText({
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [charIndex, setCharIndex] = useState(0);
 	const [stateIndex, setStateIndex] = useState(0);
+	
+		const [reduceMotion, setReduceMotion] = useState(false);
+	
+		useEffect(() => {
+			const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+			setReduceMotion(mq.matches);
+			const onChange = () => setReduceMotion(mq.matches);
+			mq.addEventListener("change", onChange);
+			return () => mq.removeEventListener("change", onChange);
+		}, []);
 
 	const longest = texts.reduce((a, b) => (b.length > a.length ? b : a), "");
 
 	useEffect(() => {
 		let timeout: NodeJS.Timeout;
 		const currentFullText = texts[currentIndex % texts.length];
+		
+				// Reduced motion: render the full candidate without the typing machine.
+				if (reduceMotion) {
+					setDisplayText(currentFullText);
+					setIsDeleting(false);
+					setCharIndex(currentFullText.length);
+					setStateIndex(0);
+					return undefined;
+				}
 
 		const tick = () => {
 			if (!isDeleting) {
@@ -70,13 +89,13 @@ export function TypingText({
 
 		timeout = setTimeout(tick, speed);
 		return () => clearTimeout(timeout);
-	}, [displayText, isDeleting, currentIndex, charIndex, stateIndex, texts, speed, delay]);
+	}, [displayText, isDeleting, currentIndex, charIndex, stateIndex, texts, speed, delay, reduceMotion]);
 
 	const content = (
 		<>
 			{displayText}
 			<m.span
-				animate={{ opacity: [1, 0] }}
+				animate={reduceMotion ? undefined : { opacity: [1, 0] }}
 				transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
 				className="-ml-px inline-block h-[0.9em] w-[2px] bg-primary align-baseline"
 				aria-hidden

@@ -96,7 +96,7 @@ export function useMemberGreeting(guildId: string) {
 	});
 
 	const polling = tickets.length > 0;
-	const { data: status, mutate: mutateStatus } = useSWR<GreetingTestStatus>(
+	const { data: status, error: statusError, mutate: mutateStatus } = useSWR<GreetingTestStatus>(
 		polling ? `/api/servers/${guildId}/greeting/status` : null,
 		statusFetcher,
 		{ refreshInterval: 1_000 },
@@ -130,7 +130,9 @@ export function useMemberGreeting(guildId: string) {
 			}
 			remove(expired);
 		}
-	}, [polling, status, tickets]);
+		// Expiry must also advance while /greeting/status keeps failing during a
+		// data-api outage; otherwise tickets never drain and the 1s poll runs forever.
+	}, [polling, status, statusError, tickets]);
 
 	const startTest = useCallback(
 		async (kind: GreetingKind): Promise<void> => {

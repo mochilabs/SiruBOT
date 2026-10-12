@@ -125,7 +125,12 @@ export function HeroSection() {
 		return () => clearInterval(timer);
 	}, [autoPlay, heroInView, shouldReduce]);
 
+		// Manual selection stops autoplay permanently; hover-pause may still
+		// resume on mouse leave, but never after an explicit user selection.
+		const manualStopRef = useRef(false);
+	
 	const handleSlideChange = (index: number) => {
+		manualStopRef.current = true;
 		setAutoPlay(false);
 		setActiveSlide(index);
 	};
@@ -230,7 +235,7 @@ export function HeroSection() {
 							role="group"
 							aria-label="명령어 예시 선택"
 							onMouseEnter={() => setAutoPlay(false)}
-							onMouseLeave={() => setAutoPlay(true)}
+							onMouseLeave={() => { if (!manualStopRef.current) setAutoPlay(true); }}
 						>
 							{slideConfigs.map((slide, index) => (
 								<button
@@ -296,7 +301,7 @@ export function HeroSection() {
 					transition={{ delay: 1.2, duration: 0.6 }}
 				>
 					<m.span
-						animate={{ y: [0, 6, 0] }}
+						animate={shouldReduce ? undefined : { y: [0, 6, 0] }}
 						transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
 						className="flex"
 					>

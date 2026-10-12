@@ -1,6 +1,5 @@
 import { Inbox } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
@@ -16,9 +15,6 @@ interface EmptyStateProps {
 
 function EmptyStateAction({ action }: { action: React.ReactNode }) {
 	if (!action) return null;
-	if (typeof action === "string") {
-		return <Button>{action}</Button>;
-	}
 	return <>{action}</>;
 }
 

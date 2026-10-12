@@ -53,7 +53,7 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 
 - Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×11, data-api ×6, utils ×4, shardclient ×1 as of 2026-10-11, src 기준 — data-api는 `dist/` 빌드 산출물 테스트까지 함께 매칭되어 중복 실행됨); dashboard/shardmanager/prisma have no tests yet.
+- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the repo root config: per-workspace `vitest run --passWithNoTests` (bot ×11, data-api ×6, utils ×4, shardclient ×1 as of 2026-10-11, src 기준 — data-api는 `dist/` 빌드 산출물 테스트까지 함께 매칭되어 중복 실행됨). dashboard has its own config at `apps/dashboard/vitest.config.ts` (toast contract suite in `src/components/ui/toast.test.tsx`); shardmanager/prisma have no tests yet.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
 - Turbo `build` depends on `^lint:fix ^typecheck ^generate ^build` — building one app rebuilds deps.
 

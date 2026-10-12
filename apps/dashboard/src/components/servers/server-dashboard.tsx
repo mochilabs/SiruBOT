@@ -46,7 +46,7 @@ function NotManageable() {
  * 서버 대시보드 셸 — PC(lg+)는 기능 사이드바 + 설정 패널, 모바일은 기존 가로 탭을 유지해요.
  * 탭/사이드바는 패널을 숨기기만 해(언마운트하지 않아) 편집 중인 입력값이 보존되고,
  * 패널은 Tabs 안에서 한 번만 렌더돼 두 내비게이션이 같은 상태를 공유해요(중복 마운트·중복 요청 방지).
- * 데스크톱에서는 탭 스트립만 숨기고(listClassName) 사이드바를 띄워요.
+ * 데스크톱에서는 탭 리스트를 CSS로 감추고(TabsList lg:hidden) 사이드바를 띄워요.
  * 토스트는 root layout의 전역 <Toaster />가 렌더해요 — 페이지별 Provider 두지 않아요.
  */
 export function ServerDashboard({ guildId, manageable, guildName }: { guildId: string; manageable: boolean; guildName: string | null }) {

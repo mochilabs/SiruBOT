@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-fast outline-none select-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-fast outline-none select-none cursor-pointer pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
@@ -39,9 +39,13 @@ const buttonVariants = cva(
 			},
 		},
 		compoundVariants: [
-			{ variant: "icon", size: "sm", class: "w-8 px-0" },
-			{ variant: "icon", size: "md", class: "w-9 px-0" },
-			{ variant: "icon", size: "lg", class: "w-10 px-0" },
+			{ variant: "icon", size: "sm", class: "w-8 px-0 pointer-coarse:w-11" },
+			{ variant: "icon", size: "md", class: "w-9 px-0 pointer-coarse:w-11" },
+			{ variant: "icon", size: "lg", class: "w-10 px-0 pointer-coarse:w-11" },
+			// Coarse pointers get a 44px square target on the primary icon sizes;
+			// compact variants (icon-xs/icon-sm) stay compact for tight chrome.
+			{ size: "icon", class: "pointer-coarse:size-11" },
+			{ size: "icon-lg", class: "pointer-coarse:size-11" },
 		],
 		defaultVariants: {
 			variant: "default",

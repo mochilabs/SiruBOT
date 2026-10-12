@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Play,Settings2, ShieldCheck, UserPlus } from "lucide-react";
+import { ExternalLink, Play, Settings2, ShieldCheck, UserPlus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 

@@ -16,6 +16,8 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
 
 const MAX_ZOOM = 3;
+// Decoded bitmap memory is width*height*4 bytes, not file bytes — a 3MB PNG can still decode to gigabytes
+const MAX_IMAGE_PIXELS = 4096 * 4096;
 
 interface ShapeSpec {
 	viewportWidth: number; // 크로프 뷰포트 크기(CSS px)
@@ -105,6 +107,13 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 		const url = URL.createObjectURL(source);
 		const image = new Image();
 		image.onload = () => {
+			// Reject pixel-bomb uploads before pinning the decoded bitmap in memory
+			if (image.width * image.height > MAX_IMAGE_PIXELS) {
+				toast.error("이미지 해상도가 너무 커요.", "4096×4096 이하 이미지를 사용해 주세요.");
+					// Leave the modal instead of stranding the user on a dead canvas.
+					onClose();
+				return;
+			}
 			imageRef.current = image;
 			const cover = Math.max(spec.viewportWidth / image.width, spec.viewportHeight / image.height);
 			setFitScale(cover);

@@ -102,11 +102,11 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 			<div className="grid gap-6 sm:grid-cols-2">
 				<Field label="반복 모드">
 					<SearchableSelect
-					options={REPEAT_OPTIONS}
-					value={form.repeat}
-					onChange={(value: string) => patch({ repeat: value as MusicForm["repeat"] })}
-					disabled={saving}
-				/>
+						options={REPEAT_OPTIONS}
+						value={form.repeat}
+						onChange={(value: string) => patch({ repeat: value as MusicForm["repeat"] })}
+						disabled={saving}
+					/>
 				</Field>
 
 				<div className="space-y-4">

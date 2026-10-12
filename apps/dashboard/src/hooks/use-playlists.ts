@@ -69,6 +69,15 @@ export function usePlaylists() {
 	const tracks = useMemo(() => detailData?.tracks ?? [], [detailData?.tracks]);
 	const detailLoading = detailLoadingApi;
 
+	// Best-effort revalidation: a failed revalidate must neither reject unhandled
+	// nor masquerade as a failure of an action that already succeeded.
+	const safeMutateList = useCallback(() => {
+		void mutateList().catch(() => undefined);
+	}, [mutateList]);
+	const safeMutateDetail = useCallback(() => {
+		void mutateDetail().catch(() => undefined);
+	}, [mutateDetail]);
+
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [addTrackModalOpen, setAddTrackModalOpen] = useState(false);
@@ -86,8 +95,16 @@ export function usePlaylists() {
 	const [trackSearchQuery, setTrackSearchQuery] = useState("");
 	const [loadingAddTrack, setLoadingAddTrack] = useState(false);
 
-	const { data: searchData, isLoading: searchLoading } = useSWR<SearchTracksResponse>(
-		addTrackTab === "search" && trackSearchQuery ? `/api/tracks?query=${encodeURIComponent(trackSearchQuery)}` : null
+	// The tracks API is rate-limited (30 req/min): a request per keystroke burns
+	// the budget mid-word and the remaining chars resolve as silent failures.
+	const [debouncedSearch, setDebouncedSearch] = useState("");
+	useEffect(() => {
+		const id = window.setTimeout(() => setDebouncedSearch(trackSearchQuery), 300);
+		return () => window.clearTimeout(id);
+	}, [trackSearchQuery]);
+
+	const { data: searchData, isLoading: searchLoading, error: searchError } = useSWR<SearchTracksResponse>(
+		addTrackTab === "search" && debouncedSearch ? `/api/tracks?query=${encodeURIComponent(debouncedSearch)}` : null
 	);
 	const searchedTracks = useMemo(() => searchData?.tracks ?? [], [searchData?.tracks]);
 
@@ -154,7 +171,7 @@ export function usePlaylists() {
 			setNameInput("");
 			setDescInput("");
 			setCreateModalOpen(false);
-			await mutateList();
+			await mutateList().catch(() => undefined);
 			setActivePlaylistId(data.playlist.id);
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
@@ -184,9 +201,9 @@ export function usePlaylists() {
 			setEditingPlaylist(null);
 			setNameInput("");
 			setDescInput("");
-			mutateList();
+			safeMutateList();
 			if (activePlaylistId === editingPlaylist.id) {
-				mutateDetail();
+				safeMutateDetail();
 			}
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
@@ -208,7 +225,7 @@ export function usePlaylists() {
 			if (activePlaylistId === deletePlaylistTarget.id) {
 				setActivePlaylistId(null);
 			}
-			mutateList();
+			safeMutateList();
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
 		} finally {
@@ -217,7 +234,7 @@ export function usePlaylists() {
 	};
 
 	const handleAddTrack = async (targetTrackId?: string) => {
-		if (!activePlaylistId) return;
+		if (!activePlaylistId || loadingAddTrack) return;
 		if (!targetTrackId && !youtubeUrl.trim()) {
 			toast.error("유튜브 주소를 입력해 주세요.");
 			return;
@@ -236,8 +253,8 @@ export function usePlaylists() {
 			toast.success("플레이리스트에 곡을 추가했어요.");
 			setYoutubeUrl("");
 			setAddTrackModalOpen(false);
-			mutateDetail();
-			mutateList();
+			safeMutateDetail();
+			safeMutateList();
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
 		} finally {
@@ -247,14 +264,17 @@ export function usePlaylists() {
 
 	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 delete-playlist-modal과 같은 모달 확인 패턴) */
 	const handleRemoveTrack = (position: number, title: string) => {
-		if (!activePlaylistId) return;
+		// Position-based deletes are racy by nature; serialize them client-side
+		// until the server contract moves to trackId-keyed deletion.
+		if (!activePlaylistId || loadingSubmit) return;
 		setRemoveTrackTarget({ position, title });
 	};
 
 	const confirmRemoveTrack = async () => {
-		if (!activePlaylistId || !removeTrackTarget) return;
+		if (!activePlaylistId || !removeTrackTarget || loadingSubmit) return;
 		const { position } = removeTrackTarget;
-		setRemoveTrackTarget(null);
+		// Keep the confirm modal open while the request is in flight: closing it
+		// early hides the pending state that invites stale-position double deletes.
 		setLoadingSubmit(true);
 		try {
 			const res = await fetch(`/api/playlists/${activePlaylistId}/tracks?position=${position}`, {
@@ -264,8 +284,9 @@ export function usePlaylists() {
 			if (!res.ok) throw new Error(data.error || "곡을 삭제하지 못했어요.");
 
 			toast.success("곡을 삭제했어요.");
-			mutateDetail();
-			mutateList();
+			setRemoveTrackTarget(null);
+			safeMutateDetail();
+			safeMutateList();
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
 		} finally {
@@ -281,7 +302,7 @@ export function usePlaylists() {
 		updatedTracks.splice(destinationIndex, 0, moved);
 		const reindexed = updatedTracks.map((t, idx) => ({ ...t, position: idx }));
 
-		mutateDetail({ playlist: activePlaylist!, tracks: reindexed }, { revalidate: false });
+		mutateDetail({ playlist: activePlaylist!, tracks: reindexed }, { revalidate: false }).catch(() => undefined);
 
 		try {
 			const res = await fetch(`/api/playlists/${activePlaylistId}/reorder`, {
@@ -296,7 +317,7 @@ export function usePlaylists() {
 		} catch (err: unknown) {
 			toast.error(err instanceof Error ? err.message : "곡 순서를 바꾸지 못했어요.");
 		} finally {
-			mutateDetail();
+			safeMutateDetail();
 		}
 	};
 
@@ -358,6 +379,7 @@ export function usePlaylists() {
 		loadingAddTrack,
 		searchedTracks,
 		searchLoading,
+		searchError: Boolean(searchError),
 		draggedIdx,
 		handleDragStart,
 		handleDragOver,

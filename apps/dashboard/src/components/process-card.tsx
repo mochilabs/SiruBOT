@@ -15,7 +15,9 @@ function ProcessStatusBadge({ status }: { status: string }) {
 		disconnected: { variant: "destructive", label: "연결 끊김" },
 		errored: { variant: "destructive", label: "오류" },
 	};
-	const { variant, label } = config[normalized] ?? { variant: "default", label: status };
+	// Unknown statuses must fail loud: a neutral badge would silently mask
+	// new failure states introduced by the shard manager.
+	const { variant, label } = config[normalized] ?? { variant: "destructive", label: status };
 	return <Badge variant={variant}>{label}</Badge>;
 }
 

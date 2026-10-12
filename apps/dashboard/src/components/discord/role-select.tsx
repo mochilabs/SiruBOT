@@ -40,6 +40,7 @@ export function RoleSelect({
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const containerRef = useRef<HTMLDivElement>(null);
+	const menuRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const searchRef = useRef<HTMLInputElement>(null);
 
@@ -68,11 +69,13 @@ export function RoleSelect({
 		[value, onChange],
 	);
 
-	// Click outside
+	// Click outside — the menu renders through a Portal, so the check must cover
+	// both the inline trigger subtree and the portal-rendered menu subtree.
 	useEffect(() => {
 		if (!open) return;
 		const handler = (e: MouseEvent) => {
-			if (!containerRef.current?.contains(e.target as Node)) {
+			const target = e.target as Node;
+			if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
 				setOpen(false);
 				setSearch("");
 			}
@@ -83,7 +86,9 @@ export function RoleSelect({
 
 	// Focus search
 	useEffect(() => {
-		if (open) setTimeout(() => searchRef.current?.focus(), 50);
+		if (!open) return undefined;
+		const id = window.setTimeout(() => searchRef.current?.focus(), 50);
+		return () => window.clearTimeout(id);
 	}, [open]);
 
 	const selectedRoles = sorted.filter((r) => value.includes(r.id));
@@ -159,6 +164,7 @@ export function RoleSelect({
 							}}
 						/>
 						<m.div
+						ref={menuRef}
 							initial={{ opacity: 0, scale: 0.95, y: -4 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}

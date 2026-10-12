@@ -28,6 +28,16 @@ export function StreamingTypeText({
 	const finishedRef = useRef(false);
 	const onCompleteRef = useRef(onComplete);
 	onCompleteRef.current = onComplete;
+	
+		const [reduceMotion, setReduceMotion] = useState(false);
+	
+		useEffect(() => {
+			const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+			setReduceMotion(mq.matches);
+			const onChange = () => setReduceMotion(mq.matches);
+			mq.addEventListener("change", onChange);
+			return () => mq.removeEventListener("change", onChange);
+		}, []);
 
 	useEffect(() => {
 		setVisibleCount(0);
@@ -36,6 +46,14 @@ export function StreamingTypeText({
 	}, [text]);
 
 	useEffect(() => {
+				if (reduceMotion) {
+					// Reduced motion: show the complete text without typing or blinking.
+					setVisibleCount(text.length);
+					setComposing(0);
+					finishedRef.current = true;
+					return undefined;
+				}
+		
 		if (finishedRef.current) return undefined;
 		if (visibleCount >= text.length) {
 			finishedRef.current = true;
@@ -59,7 +77,7 @@ export function StreamingTypeText({
 		);
 
 		return () => clearTimeout(timer);
-	}, [visibleCount, composing, text, speed]);
+	}, [visibleCount, composing, text, speed, reduceMotion]);
 
 	// 렌더: 완성된 글자들 + 현재 조합 중인 글자의 중간 상태
 	let rendered = text.slice(0, visibleCount);
@@ -76,7 +94,7 @@ export function StreamingTypeText({
 			{showCursor && (
 				<span
 					className={`inline-block h-[0.9em] w-[2px] align-baseline ${cursorClassName}`}
-					style={{ animation: "cursor-blink 0.8s linear infinite", marginLeft: "1px" }}
+					style={{ animation: reduceMotion ? undefined : "cursor-blink 0.8s linear infinite", marginLeft: "1px" }}
 					aria-hidden
 				/>
 			)}

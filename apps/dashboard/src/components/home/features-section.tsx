@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useInView, useReducedMotion } from "framer-motion";
 import { Bot, Brain, CloudSun, LayoutDashboard, ListMusic, Music2, Pause, Play, Repeat, SkipForward } from "lucide-react";
 
 import { SectionLabel } from "@/components/primitives/section-label";
@@ -178,6 +178,8 @@ function ChatPreview() {
 	const [phase, setPhase] = useState(0);
 	/** 다음 도구로 넘어가기 전 대기용 타이머 — 사용자가 탭 바꾸면 취소해야 함 */
 	const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+		const previewRef = useRef<HTMLDivElement>(null);
+		const inView = useInView(previewRef, { amount: 0.3 });
 
 	const current = utilities[activeTool];
 
@@ -193,6 +195,11 @@ function ChatPreview() {
 	// 시퀀스: 사용자 타이핑 완료 → 생각 중 → 답변 타이핑 완료 → 다음 도구 (타이핑 종료 이벤트 기반)
 	useEffect(() => {
 		// reduced-motion에선 정적 답변을 바로 보여요
+				// Idle while off-screen: no timers, no cycling until the demo is visible.
+				if (!inView) {
+					clearAdvanceTimer();
+					return undefined;
+				}
 		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			setPhase(2);
 			return undefined;
@@ -207,9 +214,10 @@ function ChatPreview() {
 			return () => clearTimeout(timer);
 		}
 		return undefined;
-	}, [phase, activeTool]);
+	}, [phase, activeTool, inView]);
 
 	const advanceTool = () => {
+			if (!inView) return;
 		// 답변이 다 쳐지고 나서 몇 초간 읽을 시간을 준 뒤 다음 도구로 넘어가요
 		clearAdvanceTimer();
 		advanceTimerRef.current = setTimeout(() => {
@@ -225,7 +233,7 @@ function ChatPreview() {
 	};
 
 	return (
-		<div className="flex flex-col gap-3 p-3 sm:p-4">
+		<div ref={previewRef} className="flex flex-col gap-3 p-3 sm:p-4">
 			{/* 도구 인디케이터 */}
 			<div className="flex items-center justify-between gap-2" role="tablist" aria-label="도구 예시">
 				<p className="text-2xs font-semibold uppercase tracking-widest text-discord-text-muted">도구 예시</p>
@@ -337,14 +345,17 @@ export function FeaturesSection() {
 	const [settingAutoPlay, setSettingAutoPlay] = useState(true);
 
 	const shouldReduce = useReducedMotion();
+		const sectionRef = useRef<HTMLElement>(null);
+		const sectionInView = useInView(sectionRef, { amount: 0.15 });
 	const cardEntry = sectionVariants;
 
 	useEffect(() => {
-		if (!settingAutoPlay) return undefined;
-		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+		// Cycle only while the section is on screen; reduced-motion users get
+		// the static slide instead of an auto-advancing carousel.
+		if (!settingAutoPlay || !sectionInView || shouldReduce) return undefined;
 		const timer = setInterval(() => setActiveSettingSlide((prev) => (prev + 1) % dashboardSettingSlides.length), 7000);
 		return () => clearInterval(timer);
-	}, [settingAutoPlay, activeSettingSlide]);
+	}, [settingAutoPlay, sectionInView, shouldReduce, activeSettingSlide]);
 
 	const handleSettingSelect = (index: number) => {
 		setSettingAutoPlay(false);
@@ -352,7 +363,7 @@ export function FeaturesSection() {
 	};
 
 	return (
-		<section id="features" className="py-14 sm:py-20 lg:py-24">
+		<section id="features" ref={sectionRef} className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl space-y-8 px-4 sm:space-y-10 sm:px-6 lg:px-8">
 				<m.div
 					className="max-w-2xl space-y-3"
@@ -560,7 +571,8 @@ export function FeaturesSection() {
 												<m.span
 													key={i}
 													className="w-[2px] rounded-full bg-primary"
-													animate={{ height: [h, h + 4, h] }}
+													animate={shouldReduce ? undefined : { height: [h, h + 4, h] }}
+													style={shouldReduce ? { height: h } : undefined}
 													transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
 												/>
 											))}

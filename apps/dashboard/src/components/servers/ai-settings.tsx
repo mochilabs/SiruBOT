@@ -11,7 +11,7 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
-import { type SearchableOption,SearchableSelect } from "./searchable-select";
+import { type SearchableOption, SearchableSelect } from "./searchable-select";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 const MODE_CARDS: Array<{ value: AiMode; label: string; description: string; icon: React.ReactNode }> = [

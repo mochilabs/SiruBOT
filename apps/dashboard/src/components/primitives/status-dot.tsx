@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export const toneStyles = {
+const toneStyles = {
 	neutral: { badge: "border-0 bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
 	primary: { badge: "border-0 bg-primary/10 text-primary-text", dot: "bg-primary", text: "text-primary-text" },
 	success: { badge: "border-0 bg-success/10 text-success", dot: "bg-success", text: "text-success" },
@@ -10,7 +10,7 @@ export const toneStyles = {
 	discord: { badge: "border-0 bg-discord-primary/10 text-discord-primary", dot: "bg-discord-primary", text: "text-discord-primary" },
 } as const;
 
-export type Tone = keyof typeof toneStyles;
+type Tone = keyof typeof toneStyles;
 
 type DotStatus = "ready" | "idle" | "connecting" | "disconnected" | "errored";
 type DotSize = "sm" | "md" | "lg";
@@ -23,7 +23,7 @@ interface StatusDotProps {
 	className?: string;
 }
 
-/** StatusBadge와 동일한 톤 매핑 */
+/** Maps each status code to a tone; mirrors the badge palette in ui/badge. */
 const statusTone: Record<DotStatus, Tone> = {
 	ready: "success",
 	idle: "warning",

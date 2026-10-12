@@ -207,7 +207,7 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 				<Volume2 size={15} className="text-discord-text-muted" aria-hidden />
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
 			</div>
-			<div className="min-h-[340px] p-4 sm:p-5" aria-live="polite">
+			<div className="min-h-[340px] p-4 sm:p-5">
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={`${currentSlide.command}-${currentSlide.args}`}

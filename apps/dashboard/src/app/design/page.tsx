@@ -32,7 +32,6 @@ import { ChannelMessage } from "@/components/discord/channel-message";
 import { EmbedPreview } from "@/components/discord/embed-preview";
 import { DISCORD_PERMISSIONS, PermissionList } from "@/components/discord/permission-list";
 import { type DiscordRole, RoleSelect } from "@/components/discord/role-select";
-import { type NotificationItem, NotificationStack } from "@/components/feedback/notification";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Field } from "@/components/primitives/field";
 import { SectionLabel } from "@/components/primitives/section-label";
@@ -219,46 +218,6 @@ function ToastDemo() {
 				경고
 			</Button>
 		</ShowcaseRow>
-	);
-}
-
-function NotificationDemo() {
-	const [items, setItems] = useState<NotificationItem[]>([]);
-	const counter = useRef(0);
-
-	const add = (variant: "success" | "error" | "info" | "warning") => {
-		const id = `notif-${++counter.current}`;
-		setItems((prev) => [
-			...prev,
-			{
-				id,
-				variant,
-				title: variant === "success" ? "배포 완료" : variant === "error" ? "빌드 실패" : variant === "info" ? "새 버전" : "경고",
-				description: "상세 설명이 여기에 표시됩니다.",
-				action: { label: "자세히 보기", onClick: () => {} },
-			},
-		]);
-		setTimeout(() => setItems((prev) => prev.filter((n) => n.id !== id)), 5000);
-	};
-
-	return (
-		<>
-			<ShowcaseRow label="알림 트리거">
-				<Button variant="ghost" size="sm" onClick={() => add("success")}>
-					성공
-				</Button>
-				<Button variant="ghost" size="sm" onClick={() => add("error")}>
-					에러
-				</Button>
-				<Button variant="ghost" size="sm" onClick={() => add("info")}>
-					정보
-				</Button>
-				<Button variant="ghost" size="sm" onClick={() => add("warning")}>
-					경고
-				</Button>
-			</ShowcaseRow>
-			<NotificationStack items={items} onDismiss={(id) => setItems((p) => p.filter((n) => n.id !== id))} />
-		</>
 	);
 }
 
@@ -840,8 +799,6 @@ export default function DesignPage() {
 								</ShowcaseRow>
 
 							<ToastDemo />
-
-							<NotificationDemo />
 						</Showcase>
 
 						<SectionHeader

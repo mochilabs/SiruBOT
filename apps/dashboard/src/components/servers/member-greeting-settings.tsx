@@ -17,7 +17,7 @@ import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
 import { DEFAULT_GREETINGS, GREETING_TEMPLATE_VARIABLES, type GreetingConfig, type GreetingKind, type GreetingTestResult } from "@/types/member-greeting";
 
 import { GreetingImageEditor } from "./member-greeting/greeting-image-editor";
-import { type SearchableOption,SearchableSelect } from "./searchable-select";
+import { type SearchableOption, SearchableSelect } from "./searchable-select";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 const TEMPLATE_MAX = 500;

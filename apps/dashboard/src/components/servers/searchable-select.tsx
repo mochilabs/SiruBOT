@@ -107,13 +107,15 @@ export function SearchableSelect(props: SearchableSelectProps) {
 			return `${selectedValues.length}개 선택됨`;
 		}
 		const selected = options.find((option) => option.value === selectedValues[0]);
+		// An empty-string value means "nothing selected" — fall back to null so
+		// the trigger renders the placeholder instead of a blank span.
 		return selected ? (
 			<span className="inline-flex items-center gap-1.5">
 				{selected.icon}
 				{selected.label}
 			</span>
 		) : (
-			selectedValues[0]
+			selectedValues[0] || null
 		);
 	}, [selectedValues, options, isMultiple]);
 
@@ -152,6 +154,14 @@ export function SearchableSelect(props: SearchableSelectProps) {
 									ref={searchRef}
 									value={search}
 									onChange={(event) => setSearch(event.target.value)}
+									onKeyDown={(event) => {
+										// Base UI's typeahead on the popup preventDefaults every printable key,
+										// so typing never reaches this field. Stop exactly those keys here;
+										// navigation keys (arrows/Enter/Escape) and IME composition pass through.
+										if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+											event.stopPropagation();
+										}
+									}}
 									placeholder={searchPlaceholder}
 									className="h-8 bg-input/50"
 									aria-label="검색"

@@ -26,6 +26,17 @@ function describeApplyError(error: string): string {
   return error;
 }
 
+/** Returns the error message when the file fails validation, null when it is safe to use */
+function validateImageFile(file: File): string | null {
+  if (file.size > MAX_AVATAR_BYTES) {
+    return "이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요.";
+  }
+  if (!ACCEPTED_IMAGE_TYPES.split(",").includes(file.type)) {
+    return "PNG, JPEG, GIF, WebP 이미지만 지원해요.";
+  }
+  return null;
+}
+
 function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const toast = useToast();
   const { profile, isLoading, error, saving, save, reload } = useBotProfile(guildId);
@@ -71,12 +82,9 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const handleAvatarPick = useCallback(
     (file: File | null) => {
       if (!file) return;
-      if (file.size > MAX_AVATAR_BYTES) {
-        toast.error("이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요.");
-        return;
-      }
-      if (!ACCEPTED_IMAGE_TYPES.split(",").includes(file.type)) {
-        toast.error("PNG, JPEG, GIF, WebP 이미지만 지원해요.");
+      const errorMessage = validateImageFile(file);
+      if (errorMessage) {
+        toast.error(errorMessage);
         return;
       }
       // GIF는 애니메이션이 살아있어야 해서 자르지 않고 그대로 써요. 나머지는 크롭 모달로.
@@ -93,12 +101,9 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const handleBannerPick = useCallback(
     (file: File | null) => {
       if (!file) return;
-      if (file.size > MAX_AVATAR_BYTES) {
-        toast.error("이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요.");
-        return;
-      }
-      if (!ACCEPTED_IMAGE_TYPES.split(",").includes(file.type)) {
-        toast.error("PNG, JPEG, GIF, WebP 이미지만 지원해요.");
+      const errorMessage = validateImageFile(file);
+      if (errorMessage) {
+        toast.error(errorMessage);
         return;
       }
       if (shouldSkipCrop(file)) {
