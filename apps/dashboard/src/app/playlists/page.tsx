@@ -47,6 +47,7 @@ function PlaylistsContent() {
 		loadingAddTrack,
 		searchedTracks,
 		searchLoading,
+		searchError,
 		draggedIdx,
 		handleDragStart,
 		handleDragOver,
@@ -147,6 +148,7 @@ function PlaylistsContent() {
 				onTrackInputChange={setTrackInput}
 				loading={loadingAddTrack}
 				searchLoading={searchLoading}
+				searchError={searchError}
 				searchedTracks={searchedTracks}
 				onAddTrack={handleAddTrack}
 			/>

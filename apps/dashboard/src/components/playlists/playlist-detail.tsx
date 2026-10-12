@@ -68,11 +68,11 @@ export function PlaylistDetail({
 
 	return (
 		<div className="flex flex-col gap-6 h-full">
-			<Card padding="lg">
-				<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+			<Card padding="md">
+				<div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
 					<div className="flex-1">
 						<div className="flex items-center gap-3">
-							<h1 className="text-2xl lg:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
+							<h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
 								{activePlaylist.name === "즐겨찾기" ? (
 									<Heart size={24} className="text-primary-text fill-primary shrink-0" />
 								) : (
@@ -81,7 +81,7 @@ export function PlaylistDetail({
 								{activePlaylist.name}
 							</h1>
 						</div>
-						<div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground mt-2">
+						<div className="flex flex-wrap items-center gap-2.5 text-xs font-medium text-muted-foreground mt-1.5">
 							<div className="flex items-center gap-1.5 font-bold">
 								<Music size={14} className="text-primary-text" />
 								<span>{stats.count}곡</span>
@@ -99,7 +99,7 @@ export function PlaylistDetail({
 							)}
 						</div>
 					</div>
-					<div className="shrink-0 flex items-center justify-end w-full md:w-auto gap-2 mt-4 md:mt-0">
+					<div className="shrink-0 flex items-center justify-end w-full md:w-auto gap-2 mt-2 md:mt-0">
 						{activePlaylist.name !== "즐겨찾기" && (
 							<DropdownMenu>
 								<DropdownMenuTrigger
@@ -124,7 +124,7 @@ export function PlaylistDetail({
 								</DropdownMenuContent>
 							</DropdownMenu>
 						)}
-						<Button variant="primary" onClick={onOpenAddTrack} className="h-10 px-5 font-bold">
+						<Button variant="primary" size="sm" onClick={onOpenAddTrack} className="px-4 font-bold">
 							<Plus size={16} className="mr-1.5" />
 							곡 추가
 						</Button>
@@ -132,7 +132,7 @@ export function PlaylistDetail({
 				</div>
 			</Card>
 
-			<Card padding="none" className="flex-1 overflow-hidden min-h-[400px]" style={{ maxHeight: 'calc(100svh - 20rem)' }}>
+			<Card padding="none" className="flex-1 overflow-hidden min-h-[320px]" style={{ maxHeight: 'calc(100svh - 17rem)' }}>
 				{tracks.length === 0 ? (
 					<EmptyState
 						className="flex-1 border-none bg-transparent"
@@ -165,7 +165,7 @@ export function PlaylistDetail({
 								return (
 									<div
 										key={track.id}
-										className={`absolute top-0 left-0 w-full flex items-center px-4 py-2 border-b border-border/10 group transition-colors hover:bg-muted/10 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
+										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border/10 group transition-colors hover:bg-muted/10 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
 										style={{
 											height: `${virtualRow.size}px`,
 											transform: `translateY(${virtualRow.start}px)`,
@@ -176,15 +176,18 @@ export function PlaylistDetail({
 										onDrop={(e) => onDrop(e, idx)}
 										onDragEnd={onDragEnd}
 									>
-										<div className="hidden md:flex w-12 shrink-0 items-center justify-center">
-											<span className="text-muted-foreground font-medium group-hover:hidden text-sm">
+										<div className="hidden md:flex w-10 shrink-0 items-center justify-center">
+											<span className="text-muted-foreground font-medium group-hover:hidden text-xs tabular-nums">
 												{idx + 1}
 											</span>
 											<Move size={14} className="text-muted-foreground hidden group-hover:block cursor-grab active:cursor-grabbing" />
 										</div>
+										<span className="md:hidden w-5 shrink-0 text-right text-2xs tabular-nums text-muted-foreground">
+											{idx + 1}
+										</span>
 
-										<div className="flex-1 min-w-0 flex items-center gap-3 md:gap-4">
-											<div className="relative w-11 h-11 md:w-10 md:h-10 shrink-0 rounded-lg overflow-hidden bg-muted/30 border border-border/40">
+										<div className="flex-1 min-w-0 flex items-center gap-2.5 md:gap-3">
+											<div className="relative w-9 h-9 md:w-10 md:h-10 shrink-0 rounded-lg overflow-hidden bg-muted/30 border border-border/40">
 												{track.thumbnail ? (
 													// eslint-disable-next-line @next/next/no-img-element
 													<img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />

@@ -89,9 +89,9 @@ export function usePlaylists() {
 	// 키 입력 1회당 요청이 나가지 않도록 400ms 디바운스 (search-input.tsx와 같은 패턴)
 	const debouncedTrackInput = useDebounce(trackInput.trim(), 400);
 
-	const { data: searchData, isLoading: searchLoadingApi } = useSWR<SearchTracksResponse>(
+	const { data: searchData, error: searchError, isLoading: searchLoadingApi } = useSWR<SearchTracksResponse>(
 		addTrackModalOpen && debouncedTrackInput && !isYoutubeUrl(debouncedTrackInput)
-			? `/api/tracks?query=${encodeURIComponent(debouncedTrackInput)}`
+			? `/api/playlists/search?query=${encodeURIComponent(debouncedTrackInput)}`
 			: null,
 		{ keepPreviousData: true }
 	);
@@ -105,7 +105,7 @@ export function usePlaylists() {
 	const rowVirtualizer = useVirtualizer({
 		count: tracks.length,
 		getScrollElement: () => parentRef.current,
-		estimateSize: () => 64,
+		estimateSize: () => 56,
 		overscan: 5,
 	});
 
@@ -224,10 +224,11 @@ export function usePlaylists() {
 		}
 	};
 
-	const handleAddTrack = async (targetTrackId?: string) => {
+	const handleAddTrack = async (targetTrackId?: string, targetYoutubeUrl?: string) => {
 		if (!activePlaylistId) return;
 		const trimmedInput = trackInput.trim();
-		if (!targetTrackId && !isYoutubeUrl(trimmedInput)) {
+		const youtubeUrl = targetYoutubeUrl ?? (!targetTrackId && isYoutubeUrl(trimmedInput) ? trimmedInput : undefined);
+		if (!targetTrackId && !youtubeUrl) {
 			toast.error("유튜브 링크를 붙여넣거나 검색 결과에서 곡을 골라 주세요.");
 			return;
 		}
@@ -237,7 +238,7 @@ export function usePlaylists() {
 			const res = await fetch(`/api/playlists/${activePlaylistId}/tracks`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl: trimmedInput })
+				body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl })
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "곡을 추가하지 못했어요.");
@@ -363,6 +364,7 @@ export function usePlaylists() {
 		loadingAddTrack,
 		searchedTracks,
 		searchLoading,
+		searchError,
 		draggedIdx,
 		handleDragStart,
 		handleDragOver,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, UserPlus, UserRoundCog, Volume2 } from "lucide-react";
 
 import PlayerLiveTab from "@/components/player/player-live-tab";
@@ -51,6 +51,21 @@ function NotManageable() {
  */
 export function ServerDashboard({ guildId, manageable, guildName }: { guildId: string; manageable: boolean; guildName: string | null }) {
 	const [tab, setTab] = useState<TabKey>("ai");
+	const mobileTabsRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const container = mobileTabsRef.current;
+		const item = container?.querySelector<HTMLElement>(`[data-mobile-tab="${tab}"]`);
+		if (!container || !item) return;
+
+		const containerRect = container.getBoundingClientRect();
+		const itemRect = item.getBoundingClientRect();
+		if (itemRect.left < containerRect.left) {
+			container.scrollBy({ left: itemRect.left - containerRect.left - 8, behavior: "smooth" });
+		} else if (itemRect.right > containerRect.right) {
+			container.scrollBy({ left: itemRect.right - containerRect.right + 8, behavior: "smooth" });
+		}
+	}, [tab]);
 
 	if (!manageable) return <NotManageable />;
 
@@ -65,14 +80,21 @@ export function ServerDashboard({ guildId, manageable, guildName }: { guildId: s
 
 				<div className="w-full min-w-0 flex-1">
 					<Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="w-full" aria-label="서버 설정 패널">
-						<TabsList className="w-full lg:hidden">
-							{TABS.map((item) => (
-								<TabsTrigger key={item.key} value={item.key} className="gap-1.5">
-									{item.icon}
-									{item.label}
-								</TabsTrigger>
-							))}
-						</TabsList>
+						<div ref={mobileTabsRef} className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-none lg:hidden">
+							<TabsList className="w-max min-w-full justify-start whitespace-nowrap">
+								{TABS.map((item) => (
+									<TabsTrigger
+										key={item.key}
+										value={item.key}
+										data-mobile-tab={item.key}
+										className="min-w-max flex-none gap-1.5 px-3 after:bottom-0"
+									>
+										{item.icon}
+										{item.label}
+									</TabsTrigger>
+								))}
+							</TabsList>
+						</div>
 						{TABS.map((item) => (
 							<TabsContent key={item.key} value={item.key} className="pt-4 lg:pt-0" keepMounted>
 								{item.key === "ai" && <AiSettings guildId={guildId} />}

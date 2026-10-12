@@ -37,12 +37,15 @@ import { requestPlayerWeb, type PlayerWebResult } from '../services/playerWebHub
 import { requestJtcSetup, type JtcSetupResult } from '../services/jtcSetupHub.ts';
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
+import { searchLavalinkYoutube } from '../providers/lavalinkSearch.ts';
 
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
 const WEATHER_TTL_SECONDS = 15 * 60;
 
 export interface RouteDeps {
 	translationProvider: OpenAICompatTranslationProvider;
+	lavalinkRestUrl?: string;
+	lavalinkPassword?: string;
 }
 
 function sendError(reply: { code: (n: number) => any }, error: unknown): any {
@@ -106,6 +109,24 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		guildDataHub: guildDataHubStatus(),
 		memoryTidy: memoryTidyStatus()
 	}));
+
+	fastify.get('/v1/youtube/search', async (request, reply) => {
+		const parsed = z.object({ query: z.string().trim().min(1).max(200) }).safeParse(request.query);
+		if (!parsed.success) return reply.code(400).send({ error: 'invalid_query', message: '검색어는 1~200자까지 입력해 주세요.' });
+		if (!deps.lavalinkRestUrl || !deps.lavalinkPassword) {
+			return reply.code(503).send({ error: 'lavalink_not_configured', message: 'YouTube 검색이 아직 설정되지 않았어요.' });
+		}
+
+		try {
+			const tracks = await searchLavalinkYoutube(deps.lavalinkRestUrl, deps.lavalinkPassword, parsed.data.query);
+			return { tracks };
+		} catch {
+			return reply.code(502).send({
+				error: 'lavalink_search_failed',
+				message: 'YouTube 검색을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.'
+			});
+		}
+	});
 
 	// ── 오하아사 (오늘 JST 키 단일화: 캐시는 항상 번역본) ──
 	fastify.get('/v1/ohaasa', async (_request, reply) => {

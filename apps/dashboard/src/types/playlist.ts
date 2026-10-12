@@ -35,6 +35,7 @@ export interface SearchedTrack {
 	thumbnail: string | null;
 	url: string;
 	source: string;
+	youtubeUrl?: string;
 }
 
 export interface SearchTracksResponse {
