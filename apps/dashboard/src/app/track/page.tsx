@@ -20,9 +20,11 @@ function TrackContent() {
   const query = searchParams.get("query") || "";
   const page = searchParams.get("page") || "1";
 
-  // 차트는 로그인 없이 열려 있어요 — /api/tracks가 공개 읽기 전용이라 상태 게이트를 두지 않아요
+  // 차트는 로그인 없이 열려 있어요 — /api/tracks가 공개 읽기 전용이라 상태 게이트를 두지 않아요.
+  // keepPreviousData: 재검색 동안 이전 목록을 유지해 로딩 스피너로 배경이 번쩍이는 걸 막아요.
   const { data, error, isLoading, mutate } = useSWR(
     `/api/tracks?query=${encodeURIComponent(query)}&page=${page}`,
+    { keepPreviousData: true },
   );
   const loading = isLoading;
 
