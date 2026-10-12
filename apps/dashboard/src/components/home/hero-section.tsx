@@ -255,7 +255,8 @@ export function HeroSection() {
 					</m.dl>
 				</m.div>
 
-				<div className="min-w-0 space-y-3 lg:w-[500px] lg:justify-self-end">
+				{/* 우측 목업 컬럼 — self-stretch으로 그리드 행 높이를 가득 채우고, xl 이상에서 폭도 넓혀 대형 헤드라인과 균형을 맞춰요 */}
+				<div className="flex min-w-0 flex-col gap-3 lg:w-[500px] lg:self-stretch lg:justify-self-end xl:w-[560px]">
 					<m.div
 						className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
 						initial={{ opacity: 0, y: 12 }}
@@ -303,13 +304,13 @@ export function HeroSection() {
 						</div>
 					</m.div>
 					<m.div
-						className="flex flex-col-reverse gap-3 lg:flex-row"
+						className="flex min-h-0 min-w-0 flex-1 flex-col"
 						initial={{ opacity: 0, y: 20 }}
 						whileInView={{ opacity: 1, y: 0 }}
 						viewport={REVEAL_VIEWPORT}
 						transition={{ delay: 0.45, duration: 0.5, ease: "easeOut" }}
 					>
-						<div className="min-w-0 flex-1">
+						<div className="h-full min-w-0">
 							<DiscordCommandAnimation activeSlide={activeSlide} />
 						</div>
 					</m.div>
