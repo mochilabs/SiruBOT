@@ -202,12 +202,13 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 	const currentSlide = slideConfigs[safeIndex];
 
 	return (
-		<Card variant="raised" padding="none" className="gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
+		<Card variant="raised" padding="none" className="h-full gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
 			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-3">
 				<Volume2 size={15} className="text-discord-text-muted" aria-hidden />
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
 			</div>
-			<div className="min-h-[340px] p-4 sm:p-5" aria-live="polite">
+			{/* 히어로 그리드 행 높이를 채우도록 flex-1 — min-h는 모바일 스택 시 하한 */}
+			<div className="min-h-[340px] flex-1 p-4 sm:p-5" aria-live="polite">
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={`${currentSlide.command}-${currentSlide.args}`}
