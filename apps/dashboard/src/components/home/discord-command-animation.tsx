@@ -258,9 +258,6 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 					</m.div>
 				</AnimatePresence>
 			</div>
-			<p className="border-t border-discord-btn-active px-4 py-2.5 text-2xs text-discord-text-muted">
-				채널에 명령어를 입력하면 시루봇이 바로 응답해요.
-			</p>
 		</Card>
 	);
 }
