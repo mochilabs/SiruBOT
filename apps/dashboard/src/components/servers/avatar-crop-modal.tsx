@@ -110,9 +110,9 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 		image.onerror = () => toast.error("이미지를 불러오지 못했어요.", "다른 이미지로 시도해 주세요.");
 		image.src = url;
 		return () => URL.revokeObjectURL(url);
-		// spec은 shape에 따라 고정이에요 — source가 바뀔 때만 다시 적재해요.
+		// spec은 shape에 따라 고정이에요 — source가 바뀔 때만 다시 적재해요. toast는 정숫값이라 deps에 안 돼요.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [source, toast]);
+	}, [source]);
 
 	// 그리기 — 캔버스에 표시 배율·오프셋 그대로 그려요 (DPR로 선명하게).
 	useEffect(() => {
@@ -247,7 +247,7 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 
 	return (
 		<Dialog open={source !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-			<DialogContent className="max-w-lg">
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>{spec.title}</DialogTitle>
 					<DialogDescription>
@@ -279,7 +279,7 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 							<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
 								<div
 									className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`}
-									style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
+									style={{ width: spec.viewportWidth, height: spec.viewportHeight, maxWidth: "100%" }}
 								/>
 							</div>
 						</div>

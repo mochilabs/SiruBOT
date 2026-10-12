@@ -94,7 +94,7 @@ export function GlobalCommandPalette() {
 					<CommandEmpty>결과가 없어요.</CommandEmpty>
 					<CommandGroup heading="이동">
 						{items.map((item) => (
-							<CommandItem key={item.id} value={item.id} onSelect={handleSelect}>
+							<CommandItem key={item.id} value={item.id} keywords={[item.label]} onSelect={handleSelect}>
 								{item.icon}
 								{item.label}
 							</CommandItem>

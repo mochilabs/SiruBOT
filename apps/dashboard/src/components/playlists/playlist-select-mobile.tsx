@@ -33,7 +33,7 @@ export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, on
 	return (
 		<div className="flex w-full items-center gap-2">
 			<div className="min-w-0 flex-1">
-				<Select value={activePlaylistId ?? undefined} onValueChange={(value: string | null) => { if (value) onSelect(value); }}>
+				<Select value={activePlaylistId ?? ""} onValueChange={(value: string | null) => { if (value) onSelect(value); }}>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="플레이리스트 선택..." />
 					</SelectTrigger>
