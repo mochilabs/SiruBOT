@@ -71,7 +71,7 @@ export default function ShardsPage() {
                             <h2 className="text-3xl font-black tracking-tighter text-foreground whitespace-nowrap">
                                 연동된 프로세스 <span className="text-primary-text ml-1">({processes.length})</span>
                             </h2>
-                            <div className="h-px flex-1 bg-linear-to-r from-border/80 to-transparent" />
+                            <div className="h-px flex-1 bg-border-subtle" />
                         </div>
 
                         {processes.length === 0 ? (
@@ -79,7 +79,7 @@ export default function ShardsPage() {
                                 icon={RadioTower}
                                 title="지금은 활성화된 피드가 없어요."
                                 description="샤드 매니저로부터의 생존 신호를 기다리고 있어요."
-                                className="border-border/80"
+                                className=""
                             />
                         ) : (
                             <div className="grid gap-8 md:grid-cols-2">

@@ -28,24 +28,22 @@ export default function InvitePage() {
 		<main className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 
 			<div className="relative z-10 flex flex-col items-center text-center">
-				{/* Immersive Background Text - Optimized for Mobile */}
+				{/* 배경 블러 */}
 				<div className="absolute inset-0 -z-10 flex items-center justify-center">
-					<span className="text-[10rem] sm:text-[18rem] md:text-[28rem] font-black text-primary/5 select-none tracking-tighter uppercase whitespace-nowrap">
-						초대하기
-					</span>
+					<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
 				</div>
 
 				<div className="space-y-8">
 					<div className="flex flex-col items-center space-y-4">
-						<div className="relative flex h-32 w-32 items-center justify-center rounded-full border border-border bg-surface-1 p-6">
+						<div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-surface-1 p-6">
 							<UserPlus className="h-12 w-12 text-primary-text" />
 						</div>
 
 						<div className="space-y-2">
-							<h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl">
+							<h1 className="text-5xl font-extrabold tracking-tighter text-foreground md:text-7xl">
 								시루봇과 함께해요
 							</h1>
-							<div className="inline-flex items-center gap-2 rounded-menu border border-border-subtle bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground w-[200px] justify-center tabular-nums">
+							<div className="inline-flex items-center gap-2 rounded-menu bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground w-[200px] justify-center tabular-nums">
 								<Loader size="xs" iconOnly />
 								<span>{count}초 뒤에 자동으로 이동할게요...</span>
 							</div>

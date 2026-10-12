@@ -112,8 +112,7 @@ Text-contrast corrections (2026-10-09 audit):
 | `--surface-2` | `#f7f1f4` | `#2d1b1e` | `bg-surface-2` — nested / inset area |
 | `--surface-3` | `#ffffff` | `#35212a` | `bg-surface-3` — floating overlay |
 
-Or use the `panel` utility for the common case (opaque fill + `--border` +
-`--r-card`).
+Or use the `panel` utility for the common case (opaque fill + `--r-card`).
 
 ### Radius
 
@@ -245,12 +244,12 @@ Do not reintroduce glass. When picking a surface, judge by role:
 
 | Role | Use |
 | --- | --- |
-| Independent content block | `Card` (`variant` by emphasis) |
-| Secondary / inset block | `Card variant="muted"` |
-| Simple inner grouping | `bg-surface-2 border border-border-subtle rounded-card` |
+| Independent content block | `Card` (`variant` by emphasis) — no border, use surface color + spacing + shadow for separation |
+| Secondary / inset block | `Card variant="muted"` — no border |
+| Simple inner grouping | `bg-surface-2 rounded-card` — use spacing and surface color, no border |
 | Form control | `bg-input border border-border rounded-control` |
-| Menu / popover / toast / notification | `bg-popover border border-border rounded-menu` + `shadow-2xl` |
-| Dialog / command palette | `bg-popover border border-border rounded-dialog` + `shadow-2xl` |
+| Menu / popover / toast / notification | `bg-popover rounded-menu` + `shadow-2xl` — no border |
+| Dialog / command palette | `bg-popover rounded-dialog` + `shadow-2xl` — no border |
 | Layout wrapper, nav container, table shell, toolbar | not a Card — a plain surface |
 
 `--secondary`(#d4a574)는 장식(배경 shape 등) 전용 토큰이다. 컨트롤 배경으로 쓰면 white 텍스트 대비 2.23:1로
@@ -259,8 +258,8 @@ R-25 위반이 되므로 버튼·배지 용도로 확장하지 않는다.
 탭 타깃(R-03): `Button`은 `pointer-coarse:min-h-11`(아이콘 버튼 `pointer-coarse:w-11`)로 터치 기기에서
 44px 이상을 보장한다. 데스크탑 fine-pointer 크기(h-8/9/10)는 유지된다.
 
-`panel` is available for a bare `bg-surface-1 + border + rounded-card`, but
-prefer a `Card` whenever the element is a real content block.
+`panel` is available for a bare `bg-surface-1 + rounded-card`, but prefer a
+`Card` whenever the element is a real content block.
 
 The global `InteractiveGlow` was removed from the root layout in Phase 1; the
 component file remains and is still used by `/invite` and `/invite/redirect`.

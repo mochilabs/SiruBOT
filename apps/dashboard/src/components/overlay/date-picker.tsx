@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button } from "@/components/ui/button";
 
 import { Portal, usePopoverCoords } from "./portal";
 
@@ -122,10 +122,10 @@ export function DatePicker({
 				onClick={() => setOpen(!open)}
 				className={`
 					w-full h-11 px-4 flex items-center justify-between gap-2
-					rounded-control border border-border bg-input text-sm font-medium
+					rounded-control border-0 bg-input text-sm font-medium
 					transition-all duration-base cursor-pointer
-					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary/30"}
-					${open ? "ring-2 ring-primary/20 border-primary/30" : ""}
+					${disabled ? "opacity-50 pointer-events-none" : "hover:ring-1 hover:ring-primary/30"}
+					${open ? "ring-2 ring-primary/20" : ""}
 				`}
 			>
 				<span className={value ? "text-foreground" : "text-muted-foreground"}>
@@ -150,7 +150,7 @@ export function DatePicker({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}
 							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] mt-2 w-[300px] rounded-menu border border-border bg-popover p-4 shadow-2xl"
+							className="fixed z-[200] mt-2 w-[300px] rounded-menu border-0 bg-popover p-4 shadow-2xl"
 							style={{
 								top: coords.top,
 								left: coords.left,
@@ -159,10 +159,10 @@ export function DatePicker({
 							{/* Header */}
 							<div className="flex items-center justify-between mb-4">
 								<Button
-									variant="icon"
-									size="sm"
+									variant="ghost"
+									size="icon-sm"
 									onClick={goToPrevMonth}
-									className="border-transparent bg-transparent p-1.5 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+									className="text-muted-foreground hover:bg-accent/50 hover:text-foreground"
 									aria-label="이전 달"
 								>
 									<ChevronLeft className="h-4 w-4" />
@@ -171,10 +171,10 @@ export function DatePicker({
 									{viewYear}년 {MONTHS[viewMonth]}
 								</span>
 								<Button
-									variant="icon"
-									size="sm"
+									variant="ghost"
+									size="icon-sm"
 									onClick={goToNextMonth}
-									className="border-transparent bg-transparent p-1.5 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+									className="text-muted-foreground hover:bg-accent/50 hover:text-foreground"
 									aria-label="다음 달"
 								>
 									<ChevronRight className="h-4 w-4" />
@@ -238,7 +238,7 @@ export function DatePicker({
 										onChange?.(today);
 										setOpen(false);
 									}}
-									className="h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:text-primary/80"
+									className="h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:text-primary/80 border-0"
 								>
 									오늘로 이동
 								</Button>

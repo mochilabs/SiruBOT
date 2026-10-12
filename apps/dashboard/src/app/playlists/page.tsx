@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 
 import Container from "@/components/container";
-import { ToastProvider } from "@/components/feedback/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { AddTrackModal } from "@/components/playlists/add-track-modal";
@@ -14,6 +13,7 @@ import { EditPlaylistModal } from "@/components/playlists/edit-playlist-modal";
 import { PlaylistDetail } from "@/components/playlists/playlist-detail";
 import { PlaylistSelectMobile } from "@/components/playlists/playlist-select-mobile";
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
+import { ToastProvider } from "@/components/ui/toast";
 import { usePlaylists } from "@/hooks/use-playlists";
 
 function PlaylistsContent() {

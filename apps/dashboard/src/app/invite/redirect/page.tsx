@@ -12,24 +12,22 @@ export default function InviteRedirectPage() {
   return (
     <main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
       <div className="relative z-10 flex flex-col items-center text-center">
-        {/* Immersive Background Text */}
-        <div className="absolute inset-0 -z-10 flex items-center justify-center">
-          <span className="text-[12rem] sm:text-[20rem] md:text-[30rem] font-black text-primary/5 select-none tracking-tighter uppercase whitespace-nowrap">
-            고마워요
-          </span>
+        {/* 배경 블러 */}
+        <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
+          <div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
         </div>
 
         <div className="space-y-12">
           <div className="flex flex-col items-center space-y-6">
             {/* Success Symbol */}
             <div className="relative">
-              <div className="flex h-32 w-32 items-center justify-center rounded-full border border-border bg-surface-1 p-6">
+              <div className="flex h-32 w-32 items-center justify-center rounded-full bg-surface-1 p-6">
                 <CheckCircle2 className="h-16 w-16 text-success" />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h1 className="text-title-gradient text-5xl font-extrabold tracking-tighter md:text-7xl break-keep">
+              <h1 className="text-5xl font-extrabold tracking-tighter text-foreground md:text-7xl break-keep">
                 초대해줘서 고마워요!
               </h1>
               <p className="text-lg font-medium leading-relaxed text-muted-foreground md:text-xl max-w-xl break-keep">

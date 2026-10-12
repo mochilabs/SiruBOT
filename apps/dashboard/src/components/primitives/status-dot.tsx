@@ -1,5 +1,16 @@
-import { type Tone,toneStyles } from "@/components/primitives/badge";
 import { cn } from "@/lib/utils";
+
+export const toneStyles = {
+	neutral: { badge: "border-0 bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
+	primary: { badge: "border-0 bg-primary/10 text-primary-text", dot: "bg-primary", text: "text-primary-text" },
+	success: { badge: "border-0 bg-success/10 text-success", dot: "bg-success", text: "text-success" },
+	warning: { badge: "border-0 bg-warning/10 text-warning", dot: "bg-warning", text: "text-warning" },
+	destructive: { badge: "border-0 bg-destructive/10 text-destructive", dot: "bg-destructive", text: "text-destructive" },
+	info: { badge: "border-0 bg-info/10 text-info", dot: "bg-info", text: "text-info" },
+	discord: { badge: "border-0 bg-discord-primary/10 text-discord-primary", dot: "bg-discord-primary", text: "text-discord-primary" },
+} as const;
+
+export type Tone = keyof typeof toneStyles;
 
 type DotStatus = "ready" | "idle" | "connecting" | "disconnected" | "errored";
 type DotSize = "sm" | "md" | "lg";
@@ -12,7 +23,7 @@ interface StatusDotProps {
 	className?: string;
 }
 
-/** StatusBadge와 동일한 톤 매핑 (badge.tsx의 toneStyles 사용) */
+/** StatusBadge와 동일한 톤 매핑 */
 const statusTone: Record<DotStatus, Tone> = {
 	ready: "success",
 	idle: "warning",
@@ -32,7 +43,10 @@ export function StatusDot({ status = "ready", size = "md", pulse, label, classNa
 	const isPulsing = pulse ?? (status === "connecting" || status === "errored");
 	return (
 		<span role="status" aria-label={label ?? status} className={cn("inline-flex items-center gap-2", className)}>
-			<span aria-hidden className={cn("shrink-0 rounded-full", sizeClasses[size], toneStyles[statusTone[status]].dot, isPulsing && "animate-pulse-soft")} />
+			<span
+				aria-hidden
+				className={cn("shrink-0 rounded-full", sizeClasses[size], toneStyles[statusTone[status]].dot, isPulsing && "animate-pulse-soft")}
+			/>
 			{label && <span className="text-xs font-medium text-muted-foreground">{label}</span>}
 		</span>
 	);

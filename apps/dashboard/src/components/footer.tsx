@@ -38,7 +38,7 @@ const linkGroups = [
 
 export function Footer() {
 	return (
-		<footer className="border-t border-border-subtle bg-surface-1">
+		<footer className="bg-surface-1">
 			<div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 				<div className="grid gap-10 md:grid-cols-5 md:gap-8">
 					{/* 브랜드 */}
@@ -83,7 +83,7 @@ export function Footer() {
 					</div>
 				</div>
 
-				<div className="mt-12 flex flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
+				<div className="mt-12 flex flex-col gap-2 pt-6 sm:flex-row sm:items-center sm:justify-between">
 					<p className="text-xs font-medium text-muted-foreground">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
 					{/* 실측 불가한 "28K+" 통계 제거(R-17) — 수치 대신 제공 범위를 안내 */}
 					<p className="text-xs font-medium text-muted-foreground">음악·AI 채팅·서버 관리를 한 곳에서 제공해요</p>

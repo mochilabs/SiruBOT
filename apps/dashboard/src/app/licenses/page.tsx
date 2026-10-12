@@ -3,8 +3,8 @@ import Link from "next/link";
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { LicenseList } from "@/components/licenses/license-list";
-import { Badge } from "@/components/primitives/badge";
-import { Card } from "@/components/primitives/card";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import licenseData from "@/generated/open-source-licenses.json";
 
 export const metadata = {
@@ -83,7 +83,7 @@ export default function LicensesPage() {
               {entry.version} · 사용처: {entry.usage}
             </p>
             {entry.note && (
-              <p className="rounded-card border border-border-subtle bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
+              <p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
                 {entry.note}
               </p>
             )}

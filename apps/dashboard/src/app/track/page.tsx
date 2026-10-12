@@ -9,14 +9,14 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
-import { ToastProvider } from "@/components/feedback/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
-import { buttonVariants } from "@/components/primitives/button";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SearchInput } from "@/components/search-input";
 import { TrackList } from "@/components/track";
+import { buttonVariants } from "@/components/ui/button";
+import { ToastProvider } from "@/components/ui/toast";
 import { PAGE_SIZE } from "@/lib/track-constants";
 
 function TrackContent() {
@@ -93,7 +93,7 @@ function TrackContent() {
             <SearchInput />
           </div>
           <div className="flex w-full sm:w-auto gap-2 sm:gap-3 h-14 sm:h-14">
-            <div className="group relative bg-surface-1 border border-border-subtle rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
+            <div className="group relative bg-surface-1 rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary-text">
                 <span className="text-2xs sm:text-xs font-black">
                   {query ? "검색 결과 수" : "단일 곡 수"}
@@ -104,7 +104,7 @@ function TrackContent() {
               </span>
             </div>
 
-            <div className="group relative bg-surface-1 border border-border-subtle rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center hover:border-primary/20 transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
+            <div className="group relative bg-surface-1 rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center transition-colors cursor-help flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary-text">
                 <span className="text-2xs sm:text-xs font-black">
                   재생 횟수

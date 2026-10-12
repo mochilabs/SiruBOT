@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { BarChart3, Bot, Hash, Music, Radio, ShieldAlert, SlidersHorizontal, UserPlus, UserRoundCog, Volume2 } from "lucide-react";
 
-import { ToastProvider } from "@/components/feedback/toast";
 import PlayerLiveTab from "@/components/player/player-live-tab";
-import { Card } from "@/components/primitives/card";
-import { Tabs } from "@/components/primitives/tabs";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToastProvider } from "@/components/ui/toast";
 
 import { AiSettings } from "./ai-settings";
 import { BotProfileSettings } from "./bot-profile-settings";
@@ -34,7 +34,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 function NotManageable() {
 	return (
-		<Card padding="lg" className="text-sm text-muted-foreground space-y-2">
+		<Card padding="lg" className="text-sm text-muted-foreground space-y-2 border-0">
 			<p className="flex items-center gap-2 font-bold text-foreground">
 				<ShieldAlert size={16} className="text-warning" /> 설정은 서버 관리자만 변경할 수 있어요.
 			</p>
@@ -48,7 +48,7 @@ function NotManageable() {
  * 탭/사이드바는 패널을 숨기기만 해(언마운트하지 않아) 편집 중인 입력값이 보존되고,
  * 패널은 Tabs 안에서 한 번만 렌더돼 두 내비게이션이 같은 상태를 공유해요(중복 마운트·중복 요청 방지).
  * 데스크톱에서는 탭 스트립만 숨기고(listClassName) 사이드바를 띄워요.
- * 모든 패널이 토큰 프리미티브와 같은 토스트 컨텍스트를 공유해요.
+ * 모든 패널이 같은 토스트 컨텍스트를 공유해요.
  */
 export function ServerDashboard({ guildId, manageable, guildName }: { guildId: string; manageable: boolean; guildName: string | null }) {
 	const [tab, setTab] = useState<TabKey>("ai");
@@ -66,45 +66,29 @@ export function ServerDashboard({ guildId, manageable, guildName }: { guildId: s
 					/>
 
 					<div className="w-full min-w-0 flex-1">
-						<Tabs
-							aria-label="서버 설정 패널"
-							items={TABS.map((item) => ({ key: item.key, label: item.label, icon: item.icon }))}
-							value={tab}
-							onChange={(key: string) => setTab(key as TabKey)}
-							listClassName="lg:hidden"
-							panelClassName="pt-4 lg:pt-0"
-							renderPanel={() => (
-								<>
-									<div className={tab === "ai" ? "block" : "hidden"}>
-										<AiSettings guildId={guildId} />
-									</div>
-									<div className={tab === "profile" ? "block" : "hidden"}>
-										<BotProfileSettings guildId={guildId} />
-									</div>
-									<div className={tab === "music" ? "block" : "hidden"}>
-										<MusicSettings guildId={guildId} />
-									</div>
-									<div className={tab === "player-live" ? "block" : "hidden"}>
-										<PlayerLiveTab guildId={guildId} />
-									</div>
-									<div className={tab === "stats" ? "block" : "hidden"}>
-										<ServerStatsTab guildId={guildId} />
-									</div>
-									<div className={tab === "channels" ? "block" : "hidden"}>
-										<ChannelSettings guildId={guildId} />
-									</div>
-									<div className={tab === "jtc" ? "block" : "hidden"}>
-										<JtcSettings guildId={guildId} />
-									</div>
-									<div className={tab === "mixer" ? "block" : "hidden"}>
-										<MixerSettings guildId={guildId} />
-									</div>
-									<div className={tab === "greeting" ? "block" : "hidden"}>
-										<MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} guildName={guildName} />
-									</div>
-								</>
-							)}
-						/>
+						<Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="w-full" aria-label="서버 설정 패널">
+							<TabsList className="w-full lg:hidden">
+								{TABS.map((item) => (
+									<TabsTrigger key={item.key} value={item.key} className="gap-1.5">
+										{item.icon}
+										{item.label}
+									</TabsTrigger>
+								))}
+							</TabsList>
+							{TABS.map((item) => (
+								<TabsContent key={item.key} value={item.key} className="pt-4 lg:pt-0" keepMounted>
+									{item.key === "ai" && <AiSettings guildId={guildId} />}
+									{item.key === "profile" && <BotProfileSettings guildId={guildId} />}
+									{item.key === "music" && <MusicSettings guildId={guildId} />}
+									{item.key === "player-live" && <PlayerLiveTab guildId={guildId} />}
+									{item.key === "stats" && <ServerStatsTab guildId={guildId} />}
+									{item.key === "channels" && <ChannelSettings guildId={guildId} />}
+									{item.key === "jtc" && <JtcSettings guildId={guildId} />}
+									{item.key === "mixer" && <MixerSettings guildId={guildId} />}
+									{item.key === "greeting" && <MemberGreetingSettings guildId={guildId} visible={tab === "greeting"} guildName={guildName} />}
+								</TabsContent>
+							))}
+						</Tabs>
 					</div>
 				</div>
 			</div>

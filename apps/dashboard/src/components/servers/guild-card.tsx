@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, Play,Settings2, ShieldCheck, UserPlus } from "lucide-react";
 
-import { Card } from "@/components/primitives/card";
+import { Card } from "@/components/ui/card";
 
 import type { GuildCardProps } from "./guild-card.types";
 
@@ -16,12 +16,12 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 	const iconUrl = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null;
 
 	return (
-		<Card padding="none" className="group flex-row items-center gap-3 p-4 transition-colors duration-base hover:border-primary/40 md:flex-col md:items-stretch md:gap-6 md:p-6">
+		<Card padding="none" className="group flex-row items-center gap-3 p-4 transition-colors duration-base md:flex-col md:items-stretch md:gap-6 md:p-6">
 			<div className="flex min-w-0 flex-1 items-center gap-3 md:w-full md:flex-none md:gap-4">
 				{iconUrl ? (
 					<Image src={iconUrl} alt={`${guild.name} icon`} width={56} height={56} className="h-10 w-10 shrink-0 rounded-full ring-4 ring-primary/10 md:h-14 md:w-14" />
 				) : (
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-base font-black text-foreground transition-colors group-hover:border-primary/40 md:h-14 md:w-14 md:text-lg">
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-base font-black text-foreground transition-colors md:h-14 md:w-14 md:text-lg">
 						{guild.name.charAt(0)}
 					</div>
 				)}
@@ -47,7 +47,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<Link
 							href={`/servers/${guild.id}`}
 							aria-label="관리하기"
-							className="flex h-11 w-11 items-center justify-center rounded-control border border-primary/20 bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-foreground md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
+							className="flex h-11 w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-foreground md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
 						>
 							<Settings2 size={18} />
 							<span className="hidden text-sm font-bold md:inline">관리하기</span>
@@ -55,7 +55,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<Link
 							href={`/player/${guild.id}`}
 							aria-label="음악 컨트롤러"
-							className="flex h-11 w-11 items-center justify-center rounded-control border border-success/25 bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
+							className="flex h-11 w-11 items-center justify-center rounded-control bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
 						>
 							<Play size={18} />
 							<span className="hidden text-sm font-bold md:inline">컨트롤러</span>
@@ -65,7 +65,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<Link
 						href={`/player/${guild.id}`}
 						aria-label="음악 컨트롤러"
-						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-success/25 bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:w-full md:gap-2 md:px-3.5 md:py-3.5"
+						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:w-full md:gap-2 md:px-3.5 md:py-3.5"
 					>
 						<Play size={18} />
 						<span className="hidden md:inline">음악 컨트롤러</span>
@@ -77,7 +77,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					target="_blank"
 					rel="noopener noreferrer"
 					aria-label="시루봇 초대하기"
-					className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-border bg-surface-2 text-foreground transition-colors duration-base hover:bg-surface-3 hover:border-border-strong md:w-full md:gap-2 md:px-3.5 md:py-3.5"
+					className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-surface-2 text-foreground transition-colors duration-base hover:bg-surface-3 md:w-full md:gap-2 md:px-3.5 md:py-3.5"
 				>
 					<UserPlus size={18} />
 					<span className="hidden text-sm font-bold md:inline">초대하기</span>
@@ -90,7 +90,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					disabled
 					title="초대 링크가 없어요"
 					aria-label="초대 링크가 없어요"
-					className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-border bg-surface-2 text-muted-foreground cursor-not-allowed md:w-full"
+					className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground cursor-not-allowed md:w-full"
 				>
 					<UserPlus size={18} />
 					<span className="hidden text-sm font-bold md:inline">초대 링크가 없어요</span>

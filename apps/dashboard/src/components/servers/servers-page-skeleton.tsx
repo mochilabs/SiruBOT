@@ -1,5 +1,5 @@
-import { Card } from "@/components/primitives/card";
-import { SkeletonCircle, SkeletonLine } from "@/components/primitives/skeleton";
+import { Card } from "@/components/ui/card";
+import { SkeletonCircle, SkeletonLine } from "@/components/ui/skeleton";
 
 /**
  * 로드된 UI와 같은 모양을 미리 그리는 스켈레톤 — 모바일은 행 리스트,
@@ -32,7 +32,7 @@ export function ServersPageSkeleton() {
     return (
         <>
             {/* PageHeader와 같은 구조 — pb-6·경계선·간격을 그대로 맞춰요 */}
-            <header aria-busy="true" className="relative mb-6 flex flex-col justify-between gap-6 pb-6 border-b border-border/40 md:flex-row md:items-end">
+            <header aria-busy="true" className="relative mb-6 flex flex-col justify-between gap-6 pb-6 md:flex-row md:items-end">
                 <div className="min-w-0 flex-1 space-y-1">
                     <SkeletonLine width="18rem" height="h-10 sm:h-12" className="max-w-full" />
                     <SkeletonLine height="h-5" />

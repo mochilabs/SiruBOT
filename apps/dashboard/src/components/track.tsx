@@ -7,7 +7,7 @@ import { Track as TrackType } from "@sirubot/prisma";
 import { Crown, ExternalLink, Heart, Music4 } from "lucide-react";
 import useSWR from "swr";
 
-import { useToast } from "@/components/feedback/toast";
+import { useToast } from "@/components/ui/toast";
 
 interface TrackListProps {
 	tracks: TrackType[];
@@ -207,7 +207,7 @@ export const TrackItem = memo(function TrackItem({
 	const isTopThree = rank <= 3;
 
 	return (
-		<div className="bg-surface-1 border border-border-subtle rounded-card group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:border-primary/30 transition-colors duration-fast">
+		<div className="bg-surface-1 rounded-card group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
 			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 justify-center shrink-0">
 				{isTopThree ? (
@@ -217,9 +217,9 @@ export const TrackItem = memo(function TrackItem({
 				)}
 			</div>
 
-			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border border-border bg-muted/20">
+			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg sm:rounded-xl bg-muted/20">
 				{/* Mobile Rank Overlay */}
-				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-surface-3 rounded-br-lg border-r border-b border-border px-1.5 shadow-sm">
+				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-surface-3 rounded-br-lg px-1.5 shadow-sm">
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground"}`} />
 					) : (
@@ -279,8 +279,8 @@ export const TrackItem = memo(function TrackItem({
 
 export function Track({ track }: { track: TrackType }) {
 	return (
-		<div className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/20 transition-colors duration-fast">
-			<div className="relative h-14 w-14 overflow-hidden rounded-lg border border-border">
+		<div className="bg-surface-1 rounded-card flex items-center gap-3 p-3 transition-colors duration-fast">
+			<div className="relative h-14 w-14 overflow-hidden rounded-lg">
 				{track.thumbnail ? (
 					<Image 
 						src={track.thumbnail} 

@@ -3,9 +3,9 @@
 import { useCallback } from "react";
 import { AlertTriangle, Shield } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
-import { Switch } from "@/components/primitives/switch";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 export interface Permission {
 	flag: number;

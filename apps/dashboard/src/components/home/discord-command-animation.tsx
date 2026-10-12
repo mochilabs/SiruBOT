@@ -5,7 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import { Volume2 } from "lucide-react";
 
-import { Card } from "@/components/primitives/card";
+import { Card } from "@/components/ui/card";
 
 const BOT_AVATAR = "/images/profile.png";
 
@@ -69,7 +69,7 @@ function Section({ children, thumbnail }: { children: ReactNode; thumbnail?: str
 		<div className="flex items-start gap-3">
 			<div className="min-w-0 flex-1 space-y-1">{children}</div>
 			{thumbnail ? (
-				<div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-discord-btn-active">
+				<div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
 					<Image src={thumbnail} alt="" fill className="object-cover" sizes="56px" unoptimized />
 				</div>
 			) : null}
@@ -202,7 +202,7 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 	const currentSlide = slideConfigs[safeIndex];
 
 	return (
-		<Card variant="raised" padding="none" className="gap-0 overflow-hidden bg-discord-bg font-sans">
+		<Card variant="raised" padding="none" className="gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
 			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-3">
 				<Volume2 size={15} className="text-discord-text-muted" aria-hidden />
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
@@ -243,7 +243,7 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 							transition={{ duration: 0.3, ease: "easeOut", delay: 0.2 }}
 							className="flex gap-3"
 						>
-							<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-discord-btn-active">
+							<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
 								<Image src={BOT_AVATAR} alt="시루" fill className="object-cover" sizes="36px" />
 							</div>
 							<div className="min-w-0 flex-1">

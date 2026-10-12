@@ -2,9 +2,8 @@
 
 import { AlertTriangle } from "lucide-react";
 
-import { toneStyles } from "@/components/primitives/badge";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface ErrorPanelProps {
   title?: string;
@@ -20,8 +19,8 @@ export function ErrorPanel({
   className = ""
 }: ErrorPanelProps) {
   return (
-    <Card padding="none" className={`p-12 text-center border-destructive/25 max-w-xl mx-auto ${className}`}>
-      <div className={`mx-auto mb-6 inline-flex rounded-card border p-4 ${toneStyles.destructive.badge}`}>
+    <Card padding="none" className={`p-12 text-center max-w-xl mx-auto ${className}`}>
+      <div className="mx-auto mb-6 inline-flex rounded-card p-4 bg-destructive/10 text-destructive">
         <AlertTriangle className="h-8 w-8" />
       </div>
       <h3 className="text-2xl font-semibold tracking-tight text-foreground mb-4">{title}</h3>

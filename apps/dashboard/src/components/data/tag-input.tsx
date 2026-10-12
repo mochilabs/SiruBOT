@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { X } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button } from "@/components/ui/button";
 
 interface TagInputProps {
 	value?: string[];

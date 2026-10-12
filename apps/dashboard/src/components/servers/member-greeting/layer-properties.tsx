@@ -2,10 +2,10 @@
 
 import { Bold } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
 import { Field } from "@/components/primitives/field";
-import { Input } from "@/components/primitives/input";
-import { Slider } from "@/components/primitives/slider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import type { GreetingLayer } from "@/types/member-greeting";
 
@@ -89,7 +89,7 @@ export function LayerProperties({ layer, saving, onPatchLayer }: LayerProperties
 						<Button variant="state-toggle" active={layer.bold} icon={<Bold size={14} />} onClick={() => patch({ bold: !layer.bold })} disabled={saving} className="pointer-coarse:h-11">
 							굵게
 						</Button>
-						<div role="radiogroup" aria-label="정렬" className="inline-flex rounded-control border border-border bg-input p-0.5">
+						<div role="radiogroup" aria-label="정렬" className="inline-flex rounded-control bg-input p-0.5">
 							{ALIGN_OPTIONS.map((option) => (
 								<button
 									key={option.value}
@@ -148,7 +148,7 @@ export function LayerProperties({ layer, saving, onPatchLayer }: LayerProperties
 				<div className="space-y-4">
 					{positionFields}
 					<Field label="도형">
-						<div role="radiogroup" aria-label="도형 종류" className="inline-flex rounded-control border border-border bg-input p-0.5">
+						<div role="radiogroup" aria-label="도형 종류" className="inline-flex rounded-control bg-input p-0.5">
 							{SHAPE_OPTIONS.map((option) => (
 								<button
 									key={option.value}

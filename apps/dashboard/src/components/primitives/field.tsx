@@ -1,5 +1,6 @@
 import { useId } from "react";
 
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 export interface FieldRenderProps {
@@ -31,14 +32,14 @@ export function Field({ label, description, error, required = false, htmlFor, cl
 
 	return (
 		<div className={cn("space-y-2", className)}>
-			<label htmlFor={labelFor} className="block text-sm font-semibold text-foreground">
+			<Label htmlFor={labelFor} className="block text-sm font-semibold text-foreground">
 				{label}
 				{required && (
 					<span aria-hidden className="ml-1 text-destructive">
 						*
 					</span>
 				)}
-			</label>
+			</Label>
 			{isRenderProp ? (children as (props: FieldRenderProps) => React.ReactNode)({ id, describedBy, invalid }) : children}
 			{description && (
 				<p id={descriptionId} className="text-xs text-muted-foreground">

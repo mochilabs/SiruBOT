@@ -7,11 +7,11 @@ import useSWR from "swr";
 
 import type { StatsServerStatsResponse } from "@/app/api/servers/[id]/stats/route";
 import { StatCard } from "@/components/data/stat-card";
-import { Badge } from "@/components/primitives/badge";
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { SkeletonCard } from "@/components/primitives/skeleton";
-import { Tabs } from "@/components/primitives/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { SkeletonCard } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toError } from "@/lib/api-error";
 
 const RANGE_TABS = [
@@ -249,14 +249,18 @@ export default function ServerStatsTab({ guildId }: { guildId: string }) {
 
   return (
     <div className="space-y-2">
-      <Tabs
-        aria-label="통계 기간 필터"
-        className="mb-4"
-        items={RANGE_TABS.map((item) => ({ key: item.key, label: item.label }))}
-        value={range}
-        onChange={(key) => setRange(key as RangeKey)}
-      />
-      <ServerStatsPanel guildId={guildId} range={range} />
+      <Tabs value={range} onValueChange={(key) => setRange(key as RangeKey)} aria-label="통계 기간 필터" className="mb-4">
+        <TabsList>
+          {RANGE_TABS.map((item) => (
+            <TabsTrigger key={item.key} value={item.key}>
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <div role="tabpanel" className="outline-none">
+        <ServerStatsPanel guildId={guildId} range={range} />
+      </div>
     </div>
   );
 }

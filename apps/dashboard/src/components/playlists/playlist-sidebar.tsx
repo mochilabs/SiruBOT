@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { Heart, Music, Plus, Search } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
-import { Input } from "@/components/primitives/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import type { Playlist } from "@/types/playlist";
 
 interface PlaylistSidebarProps {
@@ -73,8 +73,8 @@ export function PlaylistSidebar({
 								type="text"
 								placeholder="검색..."
 								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								className="border-transparent bg-muted/40 py-2 pl-9 hover:bg-muted/60 focus:bg-muted/60"
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+								className="bg-muted/40 py-2 pl-9 hover:bg-muted/60 focus:bg-muted/60"
 							/>
 						</div>
 					</div>
@@ -83,7 +83,7 @@ export function PlaylistSidebar({
 				<div className={`flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-0.5 relative ${playlists.length < 5 ? 'pt-2' : ''}`}>
 					{indicator && (
 						<m.div
-							className="absolute bg-primary/10 rounded-xl z-0 shadow-sm border border-primary/20"
+							className="absolute bg-primary/10 rounded-xl z-0 shadow-sm"
 							animate={{
 								top: indicator.top,
 								left: indicator.left,

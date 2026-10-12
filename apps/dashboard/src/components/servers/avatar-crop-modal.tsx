@@ -3,10 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Modal } from "@/components/overlay/modal";
-import { Button } from "@/components/primitives/button";
-import { Slider } from "@/components/primitives/slider";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/components/ui/toast";
 
 const MAX_ZOOM = 3;
 
@@ -239,72 +246,76 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 	};
 
 	return (
-		<Modal open={source !== null} onClose={onClose}>
-			<Modal.Header onClose={onClose}>{spec.title}</Modal.Header>
-			<Modal.Body className="space-y-4">
-				<div className="flex justify-center">
-					<div
-						ref={viewportRef}
-						role="application"
-						aria-label="크롭 영역 — 드래그로 위치를 옮기고 방향키도 쓸 수 있어요"
-						tabIndex={0}
-						onPointerDown={handlePointerDown}
-						onPointerMove={handlePointerMove}
-						onPointerUp={handlePointerUp}
-						onPointerCancel={handlePointerUp}
-						onKeyDown={handleKeyDown}
-						className={`relative max-w-full touch-none select-none overflow-hidden border border-border bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${spec.viewportClass} ${
-							dragging ? "cursor-grabbing" : "cursor-grab"
-						}`}
-					>
-						<canvas
-							ref={canvasRef}
-							style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
-							className="block max-w-full"
-						/>
-						{/* 아바타 원형(또는 배너 사각) 마스크 — 바깥 어둡게, 안이 저장되는 영역이에요 */}
-						<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-							<div
-								className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`}
+		<Dialog open={source !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+			<DialogContent className="max-w-lg">
+				<DialogHeader>
+					<DialogTitle>{spec.title}</DialogTitle>
+					<DialogDescription>
+						드래그로 위치를 옮기고, 휠·슬라이더로 크기를 조절해요. GIF는 자르지 않고 그대로 저장돼요.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4">
+					<div className="flex justify-center">
+						<div
+							ref={viewportRef}
+							role="application"
+							aria-label="크롭 영역 — 드래그로 위치를 옮기고 방향키도 쓸 수 있어요"
+							tabIndex={0}
+							onPointerDown={handlePointerDown}
+							onPointerMove={handlePointerMove}
+							onPointerUp={handlePointerUp}
+							onPointerCancel={handlePointerUp}
+							onKeyDown={handleKeyDown}
+							className={`relative max-w-full touch-none select-none overflow-hidden bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${spec.viewportClass} ${
+								dragging ? "cursor-grabbing" : "cursor-grab"
+							}`}
+						>
+							<canvas
+								ref={canvasRef}
 								style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
+								className="block max-w-full"
 							/>
+							{/* 아바타 원형(또는 배너 사각) 마스크 — 바깥 어둡게, 안이 저장되는 영역이에요 */}
+							<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+								<div
+									className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`}
+									style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
+								/>
+							</div>
 						</div>
 					</div>
+					<Slider
+						label="크기"
+						min={1}
+						max={MAX_ZOOM}
+						step={0.01}
+						value={zoom}
+						onChange={(value) => {
+							setZoom(value);
+							const ratio = value / zoom;
+							setOffset((prev) => ({
+								x: clampOffset(spec.viewportWidth, (crop?.displayed.width ?? 0) * ratio, prev.x * ratio),
+								y: clampOffset(spec.viewportHeight, (crop?.displayed.height ?? 0) * ratio, prev.y * ratio),
+							}));
+						}}
+						showValue
+						formatValue={(value) => `${Math.round(value * 100)}%`}
+						disabled={!crop}
+					/>
 				</div>
-				<Slider
-					label="크기"
-					min={1}
-					max={MAX_ZOOM}
-					step={0.01}
-					value={zoom}
-					onChange={(value) => {
-						setZoom(value);
-						const ratio = value / zoom;
-						setOffset((prev) => ({
-							x: clampOffset(spec.viewportWidth, (crop?.displayed.width ?? 0) * ratio, prev.x * ratio),
-							y: clampOffset(spec.viewportHeight, (crop?.displayed.height ?? 0) * ratio, prev.y * ratio),
-						}));
-					}}
-					showValue
-					formatValue={(value) => `${Math.round(value * 100)}%`}
-					disabled={!crop}
-				/>
-				<p className="text-center text-xs text-muted-foreground">
-					드래그로 위치를 옮기고, 휠·슬라이더로 크기를 조절해요. GIF는 자르지 않고 그대로 저장돼요.
-				</p>
-			</Modal.Body>
-			<Modal.Footer>
-				<Button variant="ghost" size="md" icon={<RotateCcw size={14} />} onClick={handleReset} disabled={!crop}>
-					원래대로
-				</Button>
-				<Button variant="secondary" size="md" onClick={onClose}>
-					취소
-				</Button>
-				<Button variant="primary" size="md" onClick={handleApply} disabled={!crop}>
-					적용
-				</Button>
-			</Modal.Footer>
-		</Modal>
+				<DialogFooter>
+					<Button variant="ghost" size="md" icon={<RotateCcw size={14} />} onClick={handleReset} disabled={!crop}>
+						원래대로
+					</Button>
+					<Button variant="secondary" size="md" onClick={onClose}>
+						취소
+					</Button>
+					<Button variant="primary" size="md" onClick={handleApply} disabled={!crop}>
+						적용
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 

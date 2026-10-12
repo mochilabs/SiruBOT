@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ImagePlus, LayoutTemplate, Shapes, Type, UserRound } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Button } from "@/components/primitives/button";
 import { SectionLabel } from "@/components/primitives/section-label";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { toApiError, toError } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 import {
@@ -289,13 +289,13 @@ export function GreetingImageEditor({ guildId, guildName, config, image, saving,
 	const selectedLayer = selectedId ? (image.layers.find((layer) => layer.id === selectedId) ?? null) : null;
 
 	return (
-		<div className="space-y-5 rounded-card border border-border-subtle bg-surface-2 p-4">
+		<div className="space-y-5 rounded-card bg-surface-2 p-4">
 			<SectionLabel>미리보기</SectionLabel>
 			<canvas
 				ref={canvasRef}
 				width={CARD_W}
 				height={CARD_H}
-				className="block w-full cursor-crosshair touch-none rounded-card border border-border bg-muted"
+				className="block w-full cursor-crosshair touch-none rounded-card bg-muted"
 				style={{ aspectRatio: "1200 / 675" }}
 				role="img"
 				aria-label="인사 카드 미리보기 — 레이어를 클릭해 선택하고 드래그로 옮겨요"
@@ -318,8 +318,8 @@ export function GreetingImageEditor({ guildId, guildName, config, image, saving,
 							disabled={saving}
 							onClick={() => patchImage({ ...image, background: { presetId: preset.id, dataUri: null } })}
 							className={cn(
-								"pointer-coarse:h-11 w-fit cursor-pointer rounded-control border p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-								selected ? "border-primary ring-2 ring-ring/40" : "border-border hover:border-border-strong"
+								"pointer-coarse:h-11 w-fit cursor-pointer rounded-control p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+								selected && "ring-2 ring-ring/40"
 							)}
 						>
 							<PresetSwatch id={preset.id} />

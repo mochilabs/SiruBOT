@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bot, Check, Globe, Hash, Loader2, PowerOff, Trash2 } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Select, type SelectOption } from "@/components/overlay/select";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
+import { type SearchableOption,SearchableSelect } from "./searchable-select";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 const MODE_CARDS: Array<{ value: AiMode; label: string; description: string; icon: React.ReactNode }> = [
@@ -138,7 +138,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 
 	const categories = new Map((channels ?? []).filter((c) => c.type === 4).map((c) => [c.id, c.name]));
 	const textChannels = (channels ?? []).filter((c) => c.type === 0 || c.type === 5);
-	const channelOptions: SelectOption[] = textChannels.map((c) => ({
+	const channelOptions: SearchableOption[] = textChannels.map((c) => ({
 		value: c.id,
 		label: `# ${c.name}`,
 		group: c.parentId ? (categories.get(c.parentId) ?? "기타") : "카테고리 없음",
@@ -181,10 +181,10 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 							aria-checked={active}
 							disabled={saving}
 							onClick={() => setMode(card.value)}
-						className={`relative rounded-card border p-4 text-left transition-colors duration-fast ${
+						className={`relative rounded-card p-4 text-left transition-colors duration-fast ${
 							active
-								? "border-primary/60 bg-primary/10"
-								: "border-border-subtle bg-surface-2 hover:border-border hover:bg-surface-3"
+								? "bg-primary/10 ring-2 ring-ring/40"
+								: "bg-surface-2 hover:bg-surface-3"
 						}`}
 						>
 							<span className="flex items-center gap-2 text-sm font-bold text-foreground">
@@ -209,7 +209,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
 						label="허용 채널"
 						description="선택한 텍스트 채널에서만 AI가 답해요. 여러 개를 고를 수 있어요."
 					>
-						<Select
+						<SearchableSelect
 							multiple
 							searchable
 							searchPlaceholder="채널 검색…"

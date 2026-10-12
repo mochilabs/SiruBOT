@@ -6,14 +6,14 @@ import { ListMusic, Pause, Play, Radio, SkipForward, Square, Volume2 } from "luc
 import useSWR from "swr";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
-import { useToast } from "@/components/feedback/toast";
-import { Badge } from "@/components/primitives/badge";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { SkeletonLine } from "@/components/primitives/skeleton";
-import { Slider } from "@/components/primitives/slider";
 import { StatusDot } from "@/components/primitives/status-dot";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { SkeletonLine } from "@/components/ui/skeleton";
+import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/components/ui/toast";
 import { toError } from "@/lib/api-error";
 import { PLAYER_VOLUME_MAX } from "@/lib/data-api";
 
@@ -207,10 +207,10 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode, guildId }:
 					<img
 						src={state.artworkUrl}
 						alt=""
-						className="h-20 w-20 shrink-0 rounded-card border border-border object-cover"
+						className="h-20 w-20 shrink-0 rounded-card object-cover"
 					/>
 				) : (
-					<div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-card border border-border bg-surface-2 text-muted-foreground">
+					<div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-card bg-surface-2 text-muted-foreground">
 						<ListMusic size={24} />
 					</div>
 				)}
@@ -240,7 +240,7 @@ function NowPlaying({ state, hubStaleMs, receivedAt, connected, mode, guildId }:
 				</div>
 
 				{/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
-				<div className="flex items-center gap-2 border-t border-border-subtle pt-3">
+				<div className="flex items-center gap-2 pt-3">
 					<Button
 						variant="secondary"
 						size="sm"
@@ -310,7 +310,7 @@ function QueueList({ state }: { state: LivePlayerState }) {
 					{state.queue.map((track, index) => (
 						<li
 							key={`${track.title}-${index}`}
-							className="animate-page-in flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2 opacity-0"
+							className="animate-page-in flex items-center gap-3 rounded-card bg-surface-2 px-3 py-2 opacity-0"
 							style={{ animationDelay: `${Math.min(index, 9) * 40}ms`, animationFillMode: "forwards" }}
 						>
 							<span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">

@@ -6,9 +6,9 @@ import Link from "next/link";
 import { ArrowLeft, Clock, History, Music2, Play, Trophy } from "lucide-react";
 import useSWR from "swr";
 
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { SkeletonLine } from "@/components/primitives/skeleton";
+import { Card } from "@/components/ui/card";
+import { SkeletonLine } from "@/components/ui/skeleton";
 
 export interface PlayerTrack {
 	id: string;
@@ -79,11 +79,11 @@ function TrackRow({
 		<div className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
 			{track.thumbnail ? (
-				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border-subtle">
+				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
 					<Image src={track.thumbnail} alt="" fill className="object-cover" sizes="40px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface-3 text-muted-foreground">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-3 text-muted-foreground">
 					<Music2 size={14} aria-hidden />
 				</div>
 			)}
@@ -103,7 +103,7 @@ function TrackRow({
 				<button
 					type="button"
 					onClick={() => onPlay(track)}
-					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-border-strong bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-text"
+					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-text"
 					aria-label={`${track.title} 다시 재생`}
 				>
 					<Play size={13} aria-hidden />
@@ -199,7 +199,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 
 			<Card padding="lg" className="gap-5">
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div className="flex items-center gap-1 rounded-control border border-border bg-surface-2 p-1" role="tablist" aria-label="재생 기록 뷰">
+					<div className="flex items-center gap-1 rounded-control bg-surface-2 p-1" role="tablist" aria-label="재생 기록 뷰">
 						<button
 							type="button"
 							role="tab"

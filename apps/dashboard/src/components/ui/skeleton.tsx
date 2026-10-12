@@ -1,4 +1,3 @@
-import { Card } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
 
 interface SkeletonLineProps {
@@ -20,17 +19,21 @@ interface SkeletonCardProps {
 
 const pulseBase = "animate-pulse rounded-md bg-muted";
 
-export function SkeletonLine({ width = "100%", height = "h-4", className }: SkeletonLineProps) {
+function SkeletonLine({ width = "100%", height = "h-4", className }: SkeletonLineProps) {
 	return <div className={cn(pulseBase, height, className)} style={{ width }} aria-hidden />;
 }
 
-export function SkeletonCircle({ size = "h-10 w-10", className }: SkeletonCircleProps) {
+function SkeletonCircle({ size = "h-10 w-10", className }: SkeletonCircleProps) {
 	return <div className={cn(pulseBase, "rounded-full", size, className)} aria-hidden />;
 }
 
-export function SkeletonCard({ lines = 3, avatar = true, className }: SkeletonCardProps) {
+function SkeletonCard({ lines = 3, avatar = true, className }: SkeletonCardProps) {
 	return (
-		<Card role="status" aria-label="로딩 중" className={className}>
+		<div
+			role="status"
+			aria-label="로딩 중"
+			className={cn("relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card p-6", className)}
+		>
 			{avatar && (
 				<div className="flex items-center gap-4">
 					<SkeletonCircle size="h-12 w-12" />
@@ -45,13 +48,16 @@ export function SkeletonCard({ lines = 3, avatar = true, className }: SkeletonCa
 					<SkeletonLine key={i} width={i === lines - 1 ? "70%" : "100%"} height="h-3" />
 				))}
 			</div>
-		</Card>
+		</div>
 	);
 }
 
-/** Convenience namespace */
-export const Skeleton = {
-	Line: SkeletonLine,
-	Circle: SkeletonCircle,
-	Card: SkeletonCard,
-};
+function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+	return <div data-slot="skeleton" className={cn("animate-pulse rounded-md bg-muted", className)} {...props} />;
+}
+
+Skeleton.Line = SkeletonLine;
+Skeleton.Circle = SkeletonCircle;
+Skeleton.Card = SkeletonCard;
+
+export { Skeleton, SkeletonCard, SkeletonCircle, SkeletonLine };

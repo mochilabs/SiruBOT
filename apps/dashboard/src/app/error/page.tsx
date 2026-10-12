@@ -59,7 +59,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 						</Link>
 						<Link
 							href="/"
-							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control border border-border-strong bg-surface-2 px-6 text-base font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 sm:w-auto"
+							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-surface-2 px-6 text-base font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 sm:w-auto"
 						>
 							<ChevronLeft className="h-4 w-4" aria-hidden />
 							홈으로 가기

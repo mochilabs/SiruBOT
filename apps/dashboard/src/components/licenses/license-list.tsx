@@ -3,10 +3,10 @@
 import { useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 
-import { Badge } from "@/components/primitives/badge";
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { Input } from "@/components/primitives/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export interface LicenseEntry {
 	name: string;
@@ -81,14 +81,14 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 				<div className="space-y-2">
 					{groups.map(({ license, items }) => (
 						// 검색 중엔 매칭 그룹을 펼쳐요(비어 있으면 기본 접힘 — 카운트만으로 훑을 수 있게)
-						<details key={license} open={trimmed ? true : undefined} className="group rounded-card border border-border-subtle">
+						<details key={license} open={trimmed ? true : undefined} className="group rounded-card">
 							<summary className="flex cursor-pointer select-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-bold text-foreground hover:bg-surface-2 transition-colors duration-fast">
 								<span className="min-w-0 truncate">{license}</span>
 								<Badge size="sm" variant="default">
 									{items.length.toLocaleString()}개
 								</Badge>
 							</summary>
-							<ol className="space-y-1 border-t border-border-subtle px-3 pb-3 pt-2">
+							<ol className="space-y-1 px-3 pb-3 pt-2">
 								{items.map((entry) => (
 									<li key={`${entry.name}@${entry.version}`} className={rowClass}>
 										<span className="min-w-0 flex-1 truncate">

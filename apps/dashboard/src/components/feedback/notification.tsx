@@ -3,7 +3,9 @@
 import { AnimatePresence, m } from "framer-motion";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 import { Portal } from "../overlay/portal";
 
@@ -29,17 +31,16 @@ interface NotificationStackProps {
 
 const variantConfig: Record<
 	NotificationVariant,
-	{ icon: React.ComponentType<{ className?: string }>; accentBorder: string; iconColor: string }
+	{ icon: React.ComponentType<{ className?: string }>; dot: string }
 > = {
-	success: { icon: CheckCircle2, accentBorder: "border-l-success", iconColor: "text-success" },
-	error: { icon: XCircle, accentBorder: "border-l-destructive", iconColor: "text-destructive" },
-	info: { icon: Info, accentBorder: "border-l-info", iconColor: "text-info" },
-	warning: { icon: AlertTriangle, accentBorder: "border-l-warning", iconColor: "text-warning" },
+	success: { icon: CheckCircle2, dot: "bg-success" },
+	error: { icon: XCircle, dot: "bg-destructive" },
+	info: { icon: Info, dot: "bg-info" },
+	warning: { icon: AlertTriangle, dot: "bg-warning" },
 };
 
 function Notification({ notification, onDismiss }: NotificationProps) {
-	const config = variantConfig[notification.variant];
-	const Icon = config.icon;
+	const { icon: Icon, dot } = variantConfig[notification.variant];
 
 	return (
 		<m.div
@@ -50,42 +51,43 @@ function Notification({ notification, onDismiss }: NotificationProps) {
 			transition={{ type: "spring", stiffness: 400, damping: 30 }}
 			role="alert"
 			aria-live="polite"
-			className={`pointer-events-auto rounded-card border-l-4 bg-popover ${config.accentBorder} p-4 w-[380px] max-w-[min(380px,calc(100vw-2rem))] shadow-2xl`}
+			className="pointer-events-auto w-[380px] max-w-[min(380px,calc(100vw-2rem))]"
 		>
-			<div className="flex items-start gap-3">
-				<Icon className={`h-5 w-5 shrink-0 mt-0.5 ${config.iconColor}`} />
+			<Card className="rounded-card border-0 bg-surface-3 p-0 shadow-2xl ring-0">
+				<div className="flex items-start gap-3 p-4">
+					<span className={cn("mt-2 h-2 w-2 shrink-0 rounded-full", dot)} aria-hidden="true" />
+					<Icon className="mt-0.5 h-5 w-5 shrink-0 text-foreground" aria-hidden="true" />
 
-				<div className="flex-1 min-w-0 space-y-1">
-					<p className="text-sm font-black tracking-tight text-foreground leading-snug">
-						{notification.title}
-					</p>
-					{notification.description && (
-						<p className="text-xs font-medium text-muted-foreground leading-relaxed">
-							{notification.description}
-						</p>
-					)}
-					{notification.action && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={notification.action.onClick}
-							className="mt-2 h-auto px-0 text-xs font-bold text-primary-text hover:bg-transparent hover:text-primary/80"
-						>
-							{notification.action.label}
-						</Button>
-					)}
+					<div className="flex-1 min-w-0 space-y-1">
+						<p className="text-sm font-bold text-foreground leading-snug">{notification.title}</p>
+						{notification.description && (
+							<p className="text-xs font-medium text-muted-foreground leading-relaxed">
+								{notification.description}
+							</p>
+						)}
+						{notification.action && (
+							<Button
+								variant="link"
+								size="sm"
+								onClick={notification.action.onClick}
+								className="mt-2 h-auto px-0 text-xs font-semibold text-primary"
+							>
+								{notification.action.label}
+							</Button>
+						)}
+					</div>
+
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						onClick={() => onDismiss(notification.id)}
+						aria-label="닫기"
+						className="shrink-0 text-muted-foreground hover:text-foreground"
+					>
+						<X className="h-4 w-4" />
+					</Button>
 				</div>
-
-				<Button
-					variant="icon"
-					size="sm"
-					onClick={() => onDismiss(notification.id)}
-					className="h-6 w-6 shrink-0 rounded-lg border-transparent bg-transparent p-1 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-					aria-label="닫기"
-				>
-					<X className="h-3.5 w-3.5" />
-				</Button>
-			</div>
+			</Card>
 		</m.div>
 	);
 }

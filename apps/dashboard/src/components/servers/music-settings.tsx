@@ -16,12 +16,12 @@ import {
 	SkipForward,
 } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Select, type SelectOption } from "@/components/overlay/select";
-import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
-import { Slider } from "@/components/primitives/slider";
-import { Switch } from "@/components/primitives/switch";
+import { type SearchableOption, SearchableSelect } from "@/components/servers/searchable-select";
+import { Card } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/toast";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import { SPONSORBLOCK_SEGMENTS } from "@/lib/schemas";
@@ -29,7 +29,7 @@ import type { GuildSettings } from "@/types/settings";
 
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
-const REPEAT_OPTIONS: SelectOption[] = [
+const REPEAT_OPTIONS: SearchableOption[] = [
 	{ value: "off", label: "반복 없음", icon: <Repeat size={16} aria-hidden /> },
 	{ value: "track", label: "한 곡 반복", icon: <Repeat1 size={16} aria-hidden /> },
 	{ value: "queue", label: "전체 반복", icon: <Repeat2 size={16} aria-hidden /> },
@@ -46,7 +46,7 @@ const SEGMENT_OPTIONS_META: Record<(typeof SPONSORBLOCK_SEGMENTS)[number], { lab
 	filler: { label: "필러", icon: <FastForward size={16} aria-hidden /> },
 };
 
-const SEGMENT_OPTIONS: SelectOption[] = SPONSORBLOCK_SEGMENTS.map((segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }));
+const SEGMENT_OPTIONS: SearchableOption[] = SPONSORBLOCK_SEGMENTS.map((segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }));
 
 interface MusicForm {
 	volume: number;
@@ -83,13 +83,13 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 	if (!form) return <PanelLoading label="음악 설정 불러오는 중…" />;
 
 	return (
-		<Card padding="lg" className="gap-6">
+		<Card padding="lg" className="gap-6 border-0">
 			<PanelHeader icon={<Music className="h-5 w-5" />} title="음악 설정" description="기본 볼륨·반복·관련곡·SponsorBlock을 관리해요." />
 
 			<Field label="기본 볼륨">
 				<Slider
 					value={form.volume}
-					onChange={(value) => patch({ volume: value })}
+					onChange={(value: number) => patch({ volume: value })}
 					min={0}
 					max={150}
 					label="서버 기본 볼륨"
@@ -101,12 +101,17 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 
 			<div className="grid gap-6 sm:grid-cols-2">
 				<Field label="반복 모드">
-					<Select options={REPEAT_OPTIONS} value={form.repeat} onChange={(value) => patch({ repeat: value as MusicForm["repeat"] })} disabled={saving} />
+					<SearchableSelect
+					options={REPEAT_OPTIONS}
+					value={form.repeat}
+					onChange={(value: string) => patch({ repeat: value as MusicForm["repeat"] })}
+					disabled={saving}
+				/>
 				</Field>
 
 				<div className="space-y-4">
-					<Switch checked={form.enableController} onChange={(checked) => patch({ enableController: checked })} disabled={saving} label="재생 컨트롤러 메시지" labelPosition="left" />
-					<Switch checked={form.related} onChange={(checked) => patch({ related: checked })} disabled={saving} label="관련곡 자동 추천" labelPosition="left" />
+					<Switch checked={form.enableController} onChange={(checked: boolean) => patch({ enableController: checked })} disabled={saving} label="재생 컨트롤러 메시지" labelPosition="left" />
+					<Switch checked={form.related} onChange={(checked: boolean) => patch({ related: checked })} disabled={saving} label="관련곡 자동 추천" labelPosition="left" />
 				</div>
 			</div>
 
@@ -114,11 +119,11 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
 				label="SponsorBlock 건너뛰기 구간"
 				description="YouTube 영상에서 선택한 구간을 자동으로 건너겨요. 재생 중인 곡에는 다음 곡부터 반영돼요."
 			>
-				<Select
+				<SearchableSelect
 					multiple
 					options={SEGMENT_OPTIONS}
 					value={form.sponsorBlockSegments}
-					onChange={(value) => patch({ sponsorBlockSegments: value })}
+					onChange={(value: string[]) => patch({ sponsorBlockSegments: value })}
 					placeholder="구간을 선택하지 않으면 건너뛰지 않아요"
 					disabled={saving}
 				/>

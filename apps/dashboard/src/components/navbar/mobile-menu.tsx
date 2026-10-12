@@ -5,7 +5,7 @@ import { signIn, signOut } from "next-auth/react";
 import { AnimatePresence,m } from "framer-motion";
 import { Music } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button } from "@/components/ui/button";
 
 interface NavLink {
 	label: string;
