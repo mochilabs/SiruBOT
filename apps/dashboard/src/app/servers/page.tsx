@@ -50,7 +50,7 @@ export default function ServersPage() {
                 title="어떤 서버로 갈까요?"
                 description="관리할 서버를 선택하거나, 시루봇을 새로 초대해 주세요."
             >
-                <div className="flex items-center gap-3 bg-surface-1 border border-border-subtle rounded-card px-4 py-3 shadow-sm relative overflow-hidden group">
+                <div className="flex items-center gap-3 bg-surface-1 rounded-card px-4 py-3 shadow-sm relative overflow-hidden group">
                     <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     {session?.user?.image ? (
                         <Image src={session.user.image} alt="User avatar" width={40} height={40} className="rounded-full ring-2 ring-primary/20 relative z-10" />
@@ -87,12 +87,11 @@ export default function ServersPage() {
                                 href={buildInviteUrl({})}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex h-10 items-center gap-2 rounded-control border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary-control hover:text-primary-foreground"
+                                className="inline-flex h-10 items-center gap-2 rounded-control bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary-control hover:text-primary-foreground"
                             >
                                 시루봇 초대하기
                             </a>
                         }
-                        className="border-border-subtle"
                     />
                 </section>
             ) : (

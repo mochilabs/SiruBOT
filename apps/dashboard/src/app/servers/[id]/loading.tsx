@@ -1,6 +1,6 @@
 import Container from "@/components/container";
-import { Card } from "@/components/primitives/card";
-import { Skeleton, SkeletonCircle } from "@/components/primitives/skeleton";
+import { Card } from "@/components/ui/card";
+import { Skeleton, SkeletonCircle } from "@/components/ui/skeleton";
 
 /**
  * 서버 대시보드 로딩 중 — 실제 화면과 같은 Container(네비바 여백·최대 폭) 안에
@@ -11,7 +11,7 @@ export default function ServerDashboardLoading() {
     <Container>
       <section aria-busy="true" aria-label="서버 대시보드" className="space-y-6">
         {/* PageHeader 모양 (서버 아이콘+이름과 설명, 경계선) */}
-        <header className="relative mb-6 flex flex-col gap-6 pb-6 border-b border-border/40">
+        <header className="relative mb-6 flex flex-col gap-6 pb-6">
           <div className="flex min-w-0 items-center gap-3">
             <SkeletonCircle size="h-12 w-12" />
             <div className="min-w-0 space-y-1">
@@ -26,7 +26,7 @@ export default function ServerDashboardLoading() {
         </span>
 
         {/* Tabs 모양 — 같은 border-b 라인 위에 아이콘+라벨 자리 */}
-        <div role="presentation" className="-mb-px flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-border">
+        <div role="presentation" className="-mb-px flex items-center gap-1 overflow-x-auto scrollbar-none">
           {[4.5, 3, 3.5, 3, 4.5, 3, 3.5].map((width, index) => (
             <div
               key={index}
@@ -59,7 +59,7 @@ export default function ServerDashboardLoading() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+            <div className="flex items-center justify-end gap-2 pt-4">
               <Skeleton.Line width="4.5rem" height="h-9" />
               <Skeleton.Line width="6rem" height="h-9" />
             </div>

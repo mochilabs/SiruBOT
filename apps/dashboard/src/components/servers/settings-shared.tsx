@@ -6,8 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AlertCircle, Loader2, LogIn, Save, X } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { ApiError } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ export function PanelHeader({
 
 /** 토큰 기반 안내 박스 */
 export function InfoBox({ children }: { children: ReactNode }) {
-	return <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground space-y-1">{children}</div>;
+	return <div className="rounded-xl bg-muted/20 px-4 py-3 text-xs text-muted-foreground space-y-1">{children}</div>;
 }
 
 /** 경고 박스 (상태 색상 관례: amber) */

@@ -4,10 +4,16 @@ import { type Virtualizer } from "@tanstack/react-virtual";
 import { Clock, Edit, ExternalLink, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
 
 import Loader from "@/components/loader";
-import { Dropdown } from "@/components/overlay/dropdown";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDuration } from "@/hooks/use-playlists";
 import type { Playlist, Track } from "@/types/playlist";
 
@@ -95,23 +101,28 @@ export function PlaylistDetail({
 					</div>
 					<div className="shrink-0 flex items-center justify-end w-full md:w-auto gap-2 mt-4 md:mt-0">
 						{activePlaylist.name !== "즐겨찾기" && (
-							<Dropdown
-								align="right"
-								trigger={
-									<Button variant="ghost" className="h-10 px-4 font-bold border border-border/40 hover:bg-muted/50">
-										<Settings size={16} className="mr-2 opacity-70" />
-										설정
-									</Button>
-								}
-								groups={[
-									{
-										items: [
-											{ key: "edit", label: "정보 수정", icon: <Edit size={14} />, onClick: () => onOpenEdit(activePlaylist) },
-											{ key: "delete", label: "플레이리스트 삭제", icon: <Trash2 size={14} />, danger: true, onClick: () => onOpenDelete(activePlaylist.id, activePlaylist.name) },
-										]
+							<DropdownMenu>
+								<DropdownMenuTrigger
+									render={
+										<Button variant="ghost" className="h-10 px-4 font-bold hover:bg-muted/50">
+											<Settings size={16} className="mr-2 opacity-70" />
+											설정
+										</Button>
 									}
-								]}
-							/>
+								/>
+								<DropdownMenuContent align="end">
+									<DropdownMenuGroup>
+										<DropdownMenuItem onClick={() => onOpenEdit(activePlaylist)}>
+											<Edit size={14} />
+											정보 수정
+										</DropdownMenuItem>
+										<DropdownMenuItem variant="destructive" onClick={() => onOpenDelete(activePlaylist.id, activePlaylist.name)}>
+											<Trash2 size={14} />
+											플레이리스트 삭제
+										</DropdownMenuItem>
+									</DropdownMenuGroup>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						)}
 						<Button variant="primary" onClick={onOpenAddTrack} className="h-10 px-5 font-bold">
 							<Plus size={16} className="mr-1.5" />
@@ -208,25 +219,27 @@ export function PlaylistDetail({
 										</div>
 
 										<div className="shrink-0 ml-3 md:ml-4 flex items-center justify-center md:w-14">
-											<Dropdown
-												align="right"
-												trigger={
-													<Button
-														variant="icon"
-														size="md"
-														className="-mr-2 rounded-lg border-transparent bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
-													>
-														<MoreHorizontal size={16} />
-													</Button>
-												}
-												groups={[
-													{
-														items: [
-															{ key: "delete", label: "트랙 삭제", icon: <Trash2 size={14} />, onClick: () => onRemoveTrack(track.position, track.title), danger: true },
-														]
+											<DropdownMenu>
+												<DropdownMenuTrigger
+													render={
+														<Button
+															variant="icon"
+															size="md"
+															className="-mr-2 rounded-lg bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
+														>
+															<MoreHorizontal size={16} />
+														</Button>
 													}
-												]}
-											/>
+												/>
+												<DropdownMenuContent align="end">
+													<DropdownMenuGroup>
+														<DropdownMenuItem variant="destructive" onClick={() => onRemoveTrack(track.position, track.title)}>
+															<Trash2 size={14} />
+															트랙 삭제
+														</DropdownMenuItem>
+													</DropdownMenuGroup>
+												</DropdownMenuContent>
+											</DropdownMenu>
 										</div>
 									</div>
 								);

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ImagePlus, RotateCcw, UserRoundCog } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
-import { Input } from "@/components/primitives/input";
 import { AvatarCropModal, shouldSkipCrop } from "@/components/servers/avatar-crop-modal";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { toError } from "@/lib/api-error";
 
@@ -247,7 +247,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
 
       <Field label="배너" description={bannerCaption}>
         <div className="space-y-2">
-          <div className="relative h-[150px] max-w-lg overflow-hidden rounded-card border border-border bg-surface-2">
+          <div className="relative h-[150px] max-w-lg overflow-hidden rounded-card bg-surface-2">
             {bannerPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={bannerPreview} alt="봇 배너 미리보기" className="h-full w-full object-cover" />
@@ -303,7 +303,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
       <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
         <Field label="프로필 사진" description={previewCaption}>
           <div className="flex items-center gap-3">
-            <span className="relative inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-full border border-border bg-surface-2">
+            <span className="relative inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-full bg-surface-2">
               {previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={previewUrl} alt="봇 아바타 미리보기" className="h-full w-full object-cover" />

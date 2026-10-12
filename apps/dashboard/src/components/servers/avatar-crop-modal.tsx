@@ -3,10 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Modal } from "@/components/overlay/modal";
-import { Button } from "@/components/primitives/button";
-import { Slider } from "@/components/primitives/slider";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/components/ui/toast";
 
 const MAX_ZOOM = 3;
 
@@ -35,13 +42,14 @@ const SHAPES: Record<CropShape, ShapeSpec> = {
 		outputName: "avatar.png",
 	},
 	banner: {
-		// Discord 멤버 배너 비율 16:5 — 뷰포트 480×150, 저장 960×300이에요
+		// Discord 멤버 배너 비율 16:5 — 논리 뷰포트 480×150, 저장 960×300이에요.
+		// 뷰포트는 aspect로 잠가 좁은 화면에서도 종횡비가 유지돼요 (포인터 좌표는 displayScale로 환산).
 		viewportWidth: 480,
 		viewportHeight: 150,
 		outputWidth: 960,
 		outputHeight: 300,
 		maskClass: "rounded-control",
-		viewportClass: "h-[150px] w-[480px] rounded-control",
+		viewportClass: "w-full max-w-[480px] aspect-[16/5] rounded-control",
 		title: "배너 자르기",
 		outputName: "banner.png",
 	},
@@ -85,6 +93,12 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 		return { scale, offset, displayed };
 	}, [fitScale, zoom, offset]);
 
+	/** 표시 배율 — 뷰포트가 max-w로 축소된 폭 ÷ 논리 폭. 포인터 좌표를 논리 px로 되돌릴 때 써요. */
+	const displayScale = useCallback(() => {
+		const rect = viewportRef.current?.getBoundingClientRect();
+		return rect && rect.width > 0 ? rect.width / spec.viewportWidth : 1;
+	}, [spec]);
+
 	// 파일을 img로 적재해요 — 로드 실패 시 모달 오류로 끝내요.
 	useEffect(() => {
 		if (!source) return;
@@ -103,9 +117,9 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 		image.onerror = () => toast.error("이미지를 불러오지 못했어요.", "다른 이미지로 시도해 주세요.");
 		image.src = url;
 		return () => URL.revokeObjectURL(url);
-		// spec은 shape에 따라 고정이에요 — source가 바뀔 때만 다시 적재해요.
+		// spec은 shape에 따라 고정이에요 — source가 바뀔 때만 다시 적재해요. toast는 정숫값이라 deps에 안 돼요.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [source, toast]);
+	}, [source]);
 
 	// 그리기 — 캔버스에 표시 배율·오프셋 그대로 그려요 (DPR로 선명하게).
 	useEffect(() => {
@@ -131,9 +145,10 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 			if (!image || !rect) return;
 			const nextZoom = Math.min(MAX_ZOOM, Math.max(1, zoom * (event.deltaY < 0 ? 1.1 : 0.9)));
 			if (nextZoom === zoom) return;
-			// 커서 지점의 이미지 좌표가 그대로 머무는 앵커 줌
-			const cursorX = event.clientX - rect.left;
-			const cursorY = event.clientY - rect.top;
+			// 커서 지점의 이미지 좌표가 그대로 머무는 앵커 줌 (표시 좌표 → 논리 좌표 환산)
+			const scale = rect.width > 0 ? rect.width / spec.viewportWidth : 1;
+			const cursorX = (event.clientX - rect.left) / scale;
+			const cursorY = (event.clientY - rect.top) / scale;
 			const ratio = zoom / nextZoom;
 			const width = image.width * fitScale * nextZoom;
 			const height = image.height * fitScale * nextZoom;
@@ -164,9 +179,11 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 	const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
 		const drag = dragRef.current;
 		if (!drag || drag.pointerId !== event.pointerId || !crop) return;
+		// 화면 배율로 드래그 변위를 논리 px로 환산해요 — 축소된 뷰포트에서도 잡은 지점이 손에 붙어요.
+		const scale = displayScale();
 		setOffset({
-			x: clampOffset(spec.viewportWidth, crop.displayed.width, offset.x + (event.clientX - drag.lastX)),
-			y: clampOffset(spec.viewportHeight, crop.displayed.height, offset.y + (event.clientY - drag.lastY)),
+			x: clampOffset(spec.viewportWidth, crop.displayed.width, offset.x + (event.clientX - drag.lastX) / scale),
+			y: clampOffset(spec.viewportHeight, crop.displayed.height, offset.y + (event.clientY - drag.lastY) / scale),
 		});
 		drag.lastX = event.clientX;
 		drag.lastY = event.clientY;
@@ -239,72 +256,72 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 	};
 
 	return (
-		<Modal open={source !== null} onClose={onClose}>
-			<Modal.Header onClose={onClose}>{spec.title}</Modal.Header>
-			<Modal.Body className="space-y-4">
-				<div className="flex justify-center">
-					<div
-						ref={viewportRef}
-						role="application"
-						aria-label="크롭 영역 — 드래그로 위치를 옮기고 방향키도 쓸 수 있어요"
-						tabIndex={0}
-						onPointerDown={handlePointerDown}
-						onPointerMove={handlePointerMove}
-						onPointerUp={handlePointerUp}
-						onPointerCancel={handlePointerUp}
-						onKeyDown={handleKeyDown}
-						className={`relative max-w-full touch-none select-none overflow-hidden border border-border bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${spec.viewportClass} ${
-							dragging ? "cursor-grabbing" : "cursor-grab"
-						}`}
-					>
-						<canvas
-							ref={canvasRef}
-							style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
-							className="block max-w-full"
-						/>
-						{/* 아바타 원형(또는 배너 사각) 마스크 — 바깥 어둡게, 안이 저장되는 영역이에요 */}
-						<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-							<div
-								className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`}
-								style={{ width: spec.viewportWidth, height: spec.viewportHeight }}
+		<Dialog open={source !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+			<DialogContent className="sm:max-w-lg">
+				<DialogHeader>
+					<DialogTitle>{spec.title}</DialogTitle>
+					<DialogDescription>
+						드래그로 위치를 옮기고, 휠·슬라이더로 크기를 조절해요. GIF는 자르지 않고 그대로 저장돼요.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4">
+					<div className="flex justify-center">
+						<div
+							ref={viewportRef}
+							role="application"
+							aria-label="크롭 영역 — 드래그로 위치를 옮기고 방향키도 쓸 수 있어요"
+							tabIndex={0}
+							onPointerDown={handlePointerDown}
+							onPointerMove={handlePointerMove}
+							onPointerUp={handlePointerUp}
+							onPointerCancel={handlePointerUp}
+							onKeyDown={handleKeyDown}
+							className={`relative max-w-full touch-none select-none overflow-hidden bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${spec.viewportClass} ${
+								dragging ? "cursor-grabbing" : "cursor-grab"
+							}`}
+						>
+							<canvas
+								ref={canvasRef}
+								className="block w-full h-full"
 							/>
+							{/* 아바타 원형(또는 배너 사각) 마스크 — 뷰포트에 딱 맞춘 inset-0, 축소돼도 어긋나지 않아요 */}
+							<div className="pointer-events-none absolute inset-0">
+								<div className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`} />
+							</div>
 						</div>
 					</div>
+					<Slider
+						label="크기"
+						min={1}
+						max={MAX_ZOOM}
+						step={0.01}
+						value={zoom}
+						onChange={(value) => {
+							setZoom(value);
+							const ratio = value / zoom;
+							setOffset((prev) => ({
+								x: clampOffset(spec.viewportWidth, (crop?.displayed.width ?? 0) * ratio, prev.x * ratio),
+								y: clampOffset(spec.viewportHeight, (crop?.displayed.height ?? 0) * ratio, prev.y * ratio),
+							}));
+						}}
+						showValue
+						formatValue={(value) => `${Math.round(value * 100)}%`}
+						disabled={!crop}
+					/>
 				</div>
-				<Slider
-					label="크기"
-					min={1}
-					max={MAX_ZOOM}
-					step={0.01}
-					value={zoom}
-					onChange={(value) => {
-						setZoom(value);
-						const ratio = value / zoom;
-						setOffset((prev) => ({
-							x: clampOffset(spec.viewportWidth, (crop?.displayed.width ?? 0) * ratio, prev.x * ratio),
-							y: clampOffset(spec.viewportHeight, (crop?.displayed.height ?? 0) * ratio, prev.y * ratio),
-						}));
-					}}
-					showValue
-					formatValue={(value) => `${Math.round(value * 100)}%`}
-					disabled={!crop}
-				/>
-				<p className="text-center text-xs text-muted-foreground">
-					드래그로 위치를 옮기고, 휠·슬라이더로 크기를 조절해요. GIF는 자르지 않고 그대로 저장돼요.
-				</p>
-			</Modal.Body>
-			<Modal.Footer>
-				<Button variant="ghost" size="md" icon={<RotateCcw size={14} />} onClick={handleReset} disabled={!crop}>
-					원래대로
-				</Button>
-				<Button variant="secondary" size="md" onClick={onClose}>
-					취소
-				</Button>
-				<Button variant="primary" size="md" onClick={handleApply} disabled={!crop}>
-					적용
-				</Button>
-			</Modal.Footer>
-		</Modal>
+				<DialogFooter>
+					<Button variant="ghost" size="md" icon={<RotateCcw size={14} />} onClick={handleReset} disabled={!crop}>
+						원래대로
+					</Button>
+					<Button variant="secondary" size="md" onClick={onClose}>
+						취소
+					</Button>
+					<Button variant="primary" size="md" onClick={handleApply} disabled={!crop}>
+						적용
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 

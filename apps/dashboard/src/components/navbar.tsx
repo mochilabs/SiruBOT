@@ -9,8 +9,8 @@ import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
 import { LogOut, Menu, Moon, Search, Sun, User, X } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
-import { Skeleton } from "@/components/primitives/skeleton";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
 
 import { MobileMenu } from "./navbar/mobile-menu";
@@ -97,9 +97,9 @@ export function Navbar() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 flex flex-col transition-colors duration-base border-b ${scrolled || mobileMenuOpen
-          ? "bg-background/70 backdrop-blur-xl border-border shadow-sm"
-          : "bg-transparent border-transparent"
+      className={`fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled || mobileMenuOpen
+          ? "bg-background/95 shadow-sm"
+          : "bg-transparent"
         }`}
     >
       <nav className="h-16 w-full shrink-0">
@@ -147,7 +147,7 @@ export function Navbar() {
             </div>
 
             {/* divider */}
-            <div className="hidden md:block w-px h-6 bg-border"></div>
+            <div className="hidden md:block w-px h-6 bg-border/40"></div>
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export function Navbar() {
                   onClick={() => setCommandPaletteOpen(true)}
                   title="명령 팔레트 (⌘K)"
                   aria-label="명령 팔레트 열기"
-                  className="h-9 w-9 border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary-text"
+                  className="h-9 w-9 bg-surface-1 hover:bg-surface-1 hover:text-primary-text"
                 >
                   <Search size={18} />
                 </Button>
@@ -174,7 +174,7 @@ export function Navbar() {
                           height={32}
                           src={session.user.image}
                           alt={session.user.name || "User"}
-                          className="w-8 h-8 rounded-full border border-primary/20"
+                          className="w-8 h-8 rounded-full"
                         />
                       )}
                       <span className="hidden lg:block text-sm font-bold text-foreground/80 pl-1">
@@ -189,7 +189,7 @@ export function Navbar() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu border border-border bg-popover py-1 shadow-2xl z-50"
+                          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu bg-popover py-1 shadow-2xl z-50"
                         >
                           <Link
                             href="/profile"
@@ -231,7 +231,7 @@ export function Navbar() {
                         variant="icon"
                         size="lg"
                         onClick={toggleTheme}
-                        className="relative w-11 h-11 overflow-hidden group border-border-subtle bg-surface-1 hover:border-primary/30 hover:bg-surface-1 hover:text-primary-text duration-base"
+                        className="relative w-11 h-11 overflow-hidden group bg-surface-1 hover:bg-surface-1 hover:text-primary-text duration-base"
                       >
                         <AnimatePresence mode="popLayout" initial={false}>
                           <m.div
@@ -250,7 +250,7 @@ export function Navbar() {
                     <Button
                       variant="secondary"
                       onClick={() => signIn("discord")}
-                      className="h-11 px-6 border-border-subtle bg-surface-1 font-bold text-foreground/80 hover:border-primary/30 hover:bg-primary/10 hover:text-primary-text duration-base"
+                      className="h-11 px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary/10 hover:text-primary-text duration-base"
                     >
                       대시보드 시작하기
                     </Button>
@@ -261,7 +261,7 @@ export function Navbar() {
               <Button
                 variant="icon"
                 size="md"
-                className="md:hidden h-11 w-11 border-border-subtle bg-surface-1 p-2.5"
+                className="md:hidden h-11 w-11 bg-surface-1 p-2.5"
                 onClick={toggleMobileMenu}
               >
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}

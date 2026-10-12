@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 
 import Container from "@/components/container";
-import { ToastProvider } from "@/components/feedback/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { AddTrackModal } from "@/components/playlists/add-track-modal";
@@ -181,10 +180,8 @@ function PlaylistsContent() {
 
 export default function PlaylistsPage() {
 	return (
-		<ToastProvider>
-			<Suspense fallback={<Container><Loader fullPage /></Container>}>
-				<PlaylistsContent />
-			</Suspense>
-		</ToastProvider>
+		<Suspense fallback={<Container><Loader fullPage /></Container>}>
+			<PlaylistsContent />
+		</Suspense>
 	);
 }

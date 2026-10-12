@@ -32,8 +32,8 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 				tabIndex={currentPage <= 1 ? -1 : undefined}
 			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 pointer-coarse:min-h-11 text-sm transition-colors ${
 				currentPage <= 1
-					? "pointer-events-none border border-border/30 text-muted-foreground"
-					: "hover:bg-primary/10 hover:text-primary-text border border-border/50 bg-background/50"
+					? "pointer-events-none text-muted-foreground"
+					: "hover:bg-primary/10 hover:text-primary-text bg-background/50"
 			}`}
 		>
 			<ChevronLeft className="h-4 w-4" aria-hidden />
@@ -50,8 +50,8 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 				tabIndex={currentPage >= totalPages ? -1 : undefined}
 			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 pointer-coarse:min-h-11 text-sm transition-colors ${
 				currentPage >= totalPages
-					? "pointer-events-none border border-border/30 text-muted-foreground"
-					: "hover:bg-primary/10 hover:text-primary-text border border-border/50 bg-background/50"
+					? "pointer-events-none text-muted-foreground"
+					: "hover:bg-primary/10 hover:text-primary-text bg-background/50"
 			}`}
 		>
 			다음

@@ -29,7 +29,7 @@ export function CommandMarquee() {
 		// 장식 요소 — 스크린 리더에 노출하지 않는다. hover 시 애니메이션만 일시정지(드래그 등 인터랙션 없음)
 		<div
 			aria-hidden="true"
-			className="group overflow-hidden border-y border-border-subtle bg-surface-2 py-3 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] sm:py-4"
+			className="group overflow-hidden bg-surface-2 py-3 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] sm:py-4"
 		>
 			{/* hover 정지는 wrapper(group) hover를 트랙 애니메이션에 전달하기 위해 group-hover로 연결한다 */}
 			<div className="animate-marquee group-hover:[animation-play-state:paused] flex w-max">
@@ -38,7 +38,7 @@ export function CommandMarquee() {
 						key={`${command}-${index}`}
 						className="flex shrink-0 items-center gap-2 pl-2 text-xs font-bold tracking-tight text-muted-foreground sm:text-sm"
 					>
-						<code className="border-border-subtle bg-surface-1 rounded-control border px-2 py-1">{command}</code>
+						<code className="bg-surface-1 rounded-control px-2 py-1">{command}</code>
 						{/* 항목 사이 도트 구분자 — 다음 항목과의 간격 역할 (마지막 항목 뒤 도트가 루프 시작점 간격이 된다) */}
 						<span className="bg-primary/50 h-1 w-1 shrink-0 rounded-full" />
 					</span>

@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
-import { Input } from "@/components/primitives/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useSearchStore } from "@/store/use-search-store";
 
@@ -62,9 +62,9 @@ export function SearchInput({
 			<Input
 				type="text"
 				value={value}
-				onChange={(e) => setValue(e.target.value)}
+				onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
 				placeholder={placeholder}
-				className="h-12 w-full rounded-card border-border bg-card pl-12 pr-12 text-base font-medium shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary/30 focus:ring-2 focus:ring-primary/20 focus-visible:border-primary/30 focus-visible:ring-primary/20 sm:h-14 sm:text-lg"
+				className="h-12 w-full rounded-card bg-card pl-12 pr-12 text-base font-medium shadow-sm transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus-visible:ring-primary/20 sm:h-14 sm:text-lg"
 			/>
 
 			{value && (
@@ -73,7 +73,7 @@ export function SearchInput({
 					size="sm"
 					onClick={clear}
 					aria-label="검색어 지우기"
-					className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-transparent bg-transparent p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+					className="absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-transparent p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					<X className="h-4 w-4" />
 				</Button>

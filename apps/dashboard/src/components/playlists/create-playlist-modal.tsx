@@ -1,9 +1,16 @@
 "use client";
 
-import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/overlay/modal";
-import { Button } from "@/components/primitives/button";
 import { Field } from "@/components/primitives/field";
-import { Input, Textarea } from "@/components/primitives/input";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CreatePlaylistModalProps {
 	open: boolean;
@@ -27,9 +34,11 @@ export function CreatePlaylistModal({
 	loading,
 }: CreatePlaylistModalProps) {
 	return (
-		<Modal open={open} onClose={onClose}>
-			<ModalHeader onClose={onClose}>새 플레이리스트 생성</ModalHeader>
-			<ModalBody>
+		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>새 플레이리스트 생성</DialogTitle>
+				</DialogHeader>
 				<div className="space-y-4 py-2">
 					<Field htmlFor="p-name" label="플레이리스트 이름">
 						<Input
@@ -37,7 +46,7 @@ export function CreatePlaylistModal({
 							type="text"
 							placeholder="이름 입력 (예: 코딩할 때 듣는 노동요)"
 							value={nameInput}
-							onChange={(e) => onNameChange(e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNameChange(e.target.value)}
 							maxLength={50}
 						/>
 					</Field>
@@ -46,21 +55,21 @@ export function CreatePlaylistModal({
 							id="p-desc"
 							placeholder="플레이리스트에 대한 간단한 설명을 입력하세요."
 							value={descInput}
-							onChange={(e) => onDescChange(e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onDescChange(e.target.value)}
 							maxLength={200}
 							className="min-h-[80px] resize-none"
 						/>
 					</Field>
 				</div>
-			</ModalBody>
-			<ModalFooter>
-				<Button variant="secondary" size="sm" onClick={onClose}>
-					취소
-				</Button>
-				<Button variant="primary" size="sm" loading={loading} onClick={onSubmit}>
-					생성하기
-				</Button>
-			</ModalFooter>
-		</Modal>
+				<DialogFooter>
+					<Button variant="secondary" size="sm" onClick={onClose}>
+						취소
+					</Button>
+					<Button variant="primary" size="sm" loading={loading} onClick={onSubmit}>
+						생성하기
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }

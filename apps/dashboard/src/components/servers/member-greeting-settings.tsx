@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Hash, RotateCcw, Send, UserPlus } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Select, type SelectOption } from "@/components/overlay/select";
-import { Badge } from "@/components/primitives/badge";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
-import { Textarea } from "@/components/primitives/input";
-import { Switch } from "@/components/primitives/switch";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useMemberGreeting } from "@/hooks/use-member-greeting";
 import { toError } from "@/lib/api-error";
@@ -18,6 +17,7 @@ import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
 import { DEFAULT_GREETINGS, GREETING_TEMPLATE_VARIABLES, type GreetingConfig, type GreetingKind, type GreetingTestResult } from "@/types/member-greeting";
 
 import { GreetingImageEditor } from "./member-greeting/greeting-image-editor";
+import { type SearchableOption,SearchableSelect } from "./searchable-select";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 const TEMPLATE_MAX = 500;
@@ -187,8 +187,8 @@ function GreetingSection({
 		}
 	}, [onTest, toast]);
 
-	const channelOptions = useMemo<SelectOption[]>(() => {
-		const options: SelectOption[] = (channels ?? [])
+	const channelOptions = useMemo<SearchableOption[]>(() => {
+		const options: SearchableOption[] = (channels ?? [])
 			.filter((channel) => channel.type === ChannelTypeValue.GuildText || channel.type === ChannelTypeValue.GuildAnnouncement)
 			.map((channel) => ({ value: channel.id, label: channel.name, icon: <Hash size={16} aria-hidden /> }));
 		if (draft.channelId) {
@@ -265,7 +265,7 @@ function GreetingSection({
 			</div>
 
 			<Field label="메시지 채널" description="입장·퇴장 메시지와 카드 이미지가 보내질 텍스트 채널이에요.">
-				<Select
+				<SearchableSelect
 					searchable
 					options={channelOptions}
 					value={draft.channelId ?? ""}

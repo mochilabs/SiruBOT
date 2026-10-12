@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import useSWR from "swr";
 
-import { useToast } from "@/components/feedback/toast";
+import { useToast } from "@/components/ui/toast";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
 
 function formatDuration(ms: number): string {

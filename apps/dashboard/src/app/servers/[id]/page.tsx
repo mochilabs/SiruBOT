@@ -90,10 +90,10 @@ export default async function ServerDashboardPage({
                 alt=""
                 width={48}
                 height={48}
-                className="h-12 w-12 shrink-0 rounded-full border border-border object-cover"
+                className="h-12 w-12 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-lg font-black text-muted-foreground">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg font-black text-muted-foreground">
                 {(guildMeta?.name ?? "서버").slice(0, 1)}
               </span>
             )}

@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@prisma/adapter-pg": "^7.7.0",
     "@redis/client": "^6.3.0",
     "@sirubot/prisma": "*",
@@ -19,6 +20,7 @@
     "@tanstack/react-virtual": "^3.13.26",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "next": "16.4.0",

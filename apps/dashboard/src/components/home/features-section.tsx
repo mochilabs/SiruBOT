@@ -6,11 +6,11 @@ import Link from "next/link";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Bot, Brain, CloudSun, LayoutDashboard, ListMusic, Music2, Pause, Play, Repeat, SkipForward } from "lucide-react";
 
-import { buttonVariants } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { StreamingTypeText } from "@/components/streaming-type-text";
 import { TypingText } from "@/components/typing-text";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const secondaryLink =
@@ -393,7 +393,7 @@ export function FeaturesSection() {
 							<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 								명령어를 외우지 않아도 돼요. 멘션으로 말 걸면 시루가 날씨·검색·음악 제어 같은 도구를 직접 골라 써요.
 							</p>
-							<div className="grid gap-4 border-t border-border-subtle pt-4 sm:grid-cols-3">
+							<div className="grid gap-4 pt-4 sm:grid-cols-3">
 								{utilities.map((utility) => (
 									<div key={utility.title} className="flex gap-2.5">
 										<utility.icon size={15} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -442,7 +442,7 @@ export function FeaturesSection() {
 								</m.li>
 							))}
 						</m.ul>
-						<div className="mt-0 grid grid-cols-2 gap-3 border-t border-border-subtle">
+						<div className="mt-0 grid grid-cols-2 gap-3">
 							<div>
 								<p className="text-2xs font-medium text-muted-foreground">지원 음원</p>
 								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">YouTube · Spotify</p>
@@ -522,7 +522,7 @@ export function FeaturesSection() {
 
 					{/* 플레이리스트 카드 — 앨범아트 스택 + 트랙 리스트 */}
 					<div className="flex-1 space-y-3 rounded-card border border-border-subtle bg-surface-2 p-3">
-						<div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+						<div className="flex items-center gap-3 pb-3">
 							{/* 앨범아트 2×2 스택 */}
 							<div className="grid h-14 w-14 shrink-0 grid-cols-2 overflow-hidden rounded-md border border-border">
 								{TRACKS.slice(0, 4).map((track) => (
@@ -594,7 +594,7 @@ export function FeaturesSection() {
 						</p>
 
 						{/* 설정 카드 — 좌측 패널 탭 + 우측 토글 애니메이션 */}
-						<div className="flex flex-1 flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row">
+						<div className="flex flex-1 flex-col gap-3 pt-4 sm:flex-row">
 							<div className="flex min-w-0 shrink-0 gap-2 overflow-x-auto sm:flex-col sm:overflow-visible" role="tablist" aria-label="설정 예시">
 								{dashboardSettingSlides.map((slide, index) => (
 									<button
@@ -644,17 +644,13 @@ export function FeaturesSection() {
 
 			{/* 마지막 CTA — 준비되셨나요? */}
 			<m.div
-				className="relative overflow-hidden rounded-card border border-primary/25 bg-gradient-to-br from-primary/15 via-surface-2 to-secondary/10 px-6 py-10 text-center sm:px-8 sm:py-14"
+				className="relative overflow-hidden rounded-card bg-surface-2 px-6 py-10 text-center sm:px-8 sm:py-14"
 				initial="hidden"
 				whileInView="visible"
 				viewport={{ once: true, margin: "-60px" }}
 				variants={sectionVariants}
 			>
-				{/* 배경 — 브랜드 라디얼·그라디언트(R-01/R-13 사유: 최종 CTA의 단일 포커스 액센트, 저불투명도 1개로 제한. DESIGN §7 페이지 리디자인 보류 항목) */}
-				<div
-					aria-hidden
-					className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/12 blur-3xl"
-				/>
+
 				<div className="relative mx-auto max-w-xl space-y-4">
 					<h2 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">준비되셨나요?</h2>
 					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">

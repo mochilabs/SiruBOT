@@ -1,10 +1,10 @@
 import Container from "@/components/container";
-import { SkeletonCard, SkeletonLine } from "@/components/primitives/skeleton";
+import { SkeletonCard, SkeletonLine } from "@/components/ui/skeleton";
 
 export default function ProfileLoading() {
   return (
     <Container>
-      <div className="mb-6 space-y-3 border-b border-border/40 pb-6">
+      <div className="mb-6 space-y-3 pb-6">
         <SkeletonLine width="220px" height="h-12" />
         <SkeletonLine width="180px" height="h-5" />
       </div>

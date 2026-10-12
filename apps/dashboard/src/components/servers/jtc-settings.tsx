@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Folder,Volume2 } from "lucide-react";
+import { Folder, Volume2 } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Select, type SelectOption } from "@/components/overlay/select";
-import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
-import { Input } from "@/components/primitives/input";
-import { Slider } from "@/components/primitives/slider";
-import { Switch } from "@/components/primitives/switch";
+import { type SearchableOption, SearchableSelect } from "@/components/servers/searchable-select";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/toast";
 import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
 import { toApiError, toError } from "@/lib/api-error";
 import { ChannelTypeValue } from "@/types/discord";
@@ -77,7 +77,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 	if (error) return <PanelError error={error} onRetry={reload} />;
 	if (!form) return <PanelLoading label="임시 음성 설정 불러오는 중…" />;
 
-	const categoryOptions: SelectOption[] = (channels ?? [])
+	const categoryOptions: SearchableOption[] = (channels ?? [])
 		.filter((channel) => channel.type === ChannelTypeValue.GuildCategory)
 		.map((channel) => ({ value: channel.id, label: channel.name, icon: <Folder size={16} aria-hidden /> }));
 	if (form.jtcCategoryId && !categoryOptions.some((option) => option.value === form.jtcCategoryId)) {
@@ -88,7 +88,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 	const templatePreview = (form.jtcTemplate.trim() || "{user}의 방").replaceAll("{user}", "철수");
 
 	return (
-		<Card padding="lg" className="gap-6">
+		<Card padding="lg" className="gap-6 border-0">
 			<PanelHeader
 				icon={<Volume2 className="h-5 w-5" />}
 				title="임시 음성채널 (JTC)"
@@ -107,7 +107,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 			<div className="flex items-center justify-between gap-4">
 				<Switch
 					checked={form.jtcEnabled}
-					onChange={(checked) => patch({ jtcEnabled: checked })}
+					onChange={(checked: boolean) => patch({ jtcEnabled: checked })}
 					disabled={saving || !form.jtcMarkerChannelId}
 					label="임시 음성채널 사용"
 					labelPosition="left"
@@ -124,11 +124,11 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 					</>
 				}
 			>
-				<Select
+				<SearchableSelect
 					searchable
 					options={categoryOptions}
 					value={form.jtcCategoryId ?? ""}
-					onChange={(value) => void handleCategoryChange(value)}
+					onChange={(value: string) => void handleCategoryChange(value)}
 					placeholder="카테고리 선택"
 					disabled={saving || setupLoading || channels === null}
 				/>
@@ -152,7 +152,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 						value={form.jtcTemplate}
 						maxLength={100}
 						disabled={saving}
-						onChange={(e) => patch({ jtcTemplate: e.target.value })}
+						onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ jtcTemplate: e.target.value })}
 						placeholder="{user}의 방"
 					/>
 					<p className="pt-1 text-xs text-muted-foreground">
@@ -163,7 +163,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
 				<Field label="인원 제한">
 					<Slider
 						value={form.jtcUserLimit}
-						onChange={(value) => patch({ jtcUserLimit: value })}
+						onChange={(value: number) => patch({ jtcUserLimit: value })}
 						min={0}
 						max={99}
 						label="임시방 인원 제한"

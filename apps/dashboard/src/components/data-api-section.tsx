@@ -42,15 +42,15 @@ export function DataApiSection() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-border/80 p-4">
+                <div className="rounded-xl p-4">
                     <div className="text-sm text-muted-foreground">상태</div>
                     <div className="text-xl font-bold">{data.redis ? "정상 가동 중" : "메모리 모드"}</div>
                 </div>
-                <div className="rounded-xl border border-border/80 p-4">
+                <div className="rounded-xl p-4">
                     <div className="text-sm text-muted-foreground">캐시 적중률</div>
                     <div className="text-xl font-bold">{hitRate(data)}</div>
                 </div>
-                <div className="rounded-xl border border-border/80 p-4">
+                <div className="rounded-xl p-4">
                     <div className="text-sm text-muted-foreground">외부 호출 / 오류</div>
                     <div className="text-xl font-bold">
                         {totals.calls} / {totals.errors}
@@ -79,7 +79,7 @@ export function DataApiSection() {
                 <EmptyState
                     title="재생 오류가 없어요."
                     description="재생 중 끊김이나 예외가 발생하면 여기에 표시돼요."
-                    className="border-border/80"
+                    className=""
                 />
             )}
         </section>

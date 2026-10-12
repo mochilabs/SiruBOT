@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Image as ImageIcon, Shapes, Trash2, Type, UserRound } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { GreetingLayer } from "@/types/member-greeting";
 
@@ -49,8 +49,8 @@ export function LayerPanel({ layers, selectedId, saving, onSelect, onToggleHidde
 					<li
 						key={layer.id}
 						className={cn(
-							"flex items-center gap-1 rounded-control border bg-surface-1 p-1",
-							selected ? "border-primary ring-2 ring-ring/40" : "border-border"
+							"flex items-center gap-1 rounded-control bg-surface-1 p-1",
+							selected && "ring-2 ring-ring/40"
 						)}
 					>
 						<button

@@ -6,8 +6,8 @@ import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
-import { Badge } from "@/components/primitives/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/primitives/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCountUp } from "@/hooks/use-count-up";
 import { formatTotalDuration } from "@/hooks/use-playlists";
 import type {
@@ -133,7 +133,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 <p className="text-sm text-muted-foreground">-</p>
               )}
               {hasBirthday && birthday.zodiac && fortune && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3 text-xs font-medium text-muted-foreground">
+                <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 text-xs font-medium text-muted-foreground">
                   <Badge variant="default">{birthday.zodiac.ko}</Badge>
                   {fortune.rank > 0 && <Badge variant="primary">{fortune.rank}위</Badge>}
                   <span className="ml-auto tabular-nums">{fortune.date} 기준</span>
@@ -215,12 +215,12 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 {music.topTracks.map((track, i) => (
                   <RevealItem key={`${track.title}-${track.artist}-${i}`}>
                     <li
-                      className="bg-surface-1 border border-border-subtle rounded-card flex items-center gap-3 p-3 hover:border-primary/30 transition-colors duration-fast"
+                      className="bg-surface-1 rounded-card flex items-center gap-3 p-3 transition-colors duration-fast"
                     >
                       <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground">
                         {i + 1}
                       </span>
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/20">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted/20">
                         {track.thumbnail ? (
                           <Image
                             src={track.thumbnail}

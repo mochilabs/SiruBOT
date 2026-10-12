@@ -59,11 +59,9 @@ export default function NotFound() {
 
 	return (
 		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-			{/* 거대 배경 텍스트 */}
-			<div className="absolute inset-0 -z-10 flex items-center justify-center">
-				<span className="select-none text-[16rem] font-black tracking-tighter text-primary/5 sm:text-[24rem] md:text-[30rem]">
-					404
-				</span>
+			{/* 배경 블러 */}
+			<div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
+				<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
 			</div>
 
 			{/* 떠 있는 아이콘 — 클릭하면 중력에 떨어져요 */}

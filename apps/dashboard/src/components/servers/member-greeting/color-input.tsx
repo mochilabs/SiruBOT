@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Input } from "@/components/primitives/input";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
@@ -56,7 +56,7 @@ export function ColorField({
 						onKeyDown={radioArrowKeyDown(COLOR_PRESETS, value, (key) => onChange(key))}
 						onClick={() => onChange(preset)}
 						className={cn(
-							"pointer-coarse:h-11 pointer-coarse:w-11 h-7 w-7 cursor-pointer rounded-full border border-border shadow-xs transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+							"pointer-coarse:h-11 pointer-coarse:w-11 h-7 w-7 cursor-pointer rounded-full shadow-xs transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 							value === preset && "ring-2 ring-ring"
 						)}
 						style={{ backgroundColor: preset }}

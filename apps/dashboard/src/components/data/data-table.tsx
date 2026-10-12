@@ -3,10 +3,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { ChevronDown, ChevronsUpDown, ChevronUp, PackageOpen } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { SkeletonLine } from "@/components/primitives/skeleton";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { SkeletonLine } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export interface Column<T> {
 	key: string;
@@ -19,7 +21,7 @@ export interface Column<T> {
 
 type SortDir = "asc" | "desc" | null;
 
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
 	columns: Column<T>[];
 	data: T[];
 	keyExtractor: (row: T) => string;
@@ -88,7 +90,7 @@ export function DataTable<T>({
 
 	if (error) {
 		return (
-			<Card padding="none" className={`p-12 text-center border-destructive/25 ${className}`}>
+			<Card className={cn("rounded-card border-0 bg-surface-1 p-12 text-center ring-0", className)}>
 				<p className="text-lg font-semibold tracking-tight text-foreground mb-2">오류가 발생했어요</p>
 				<p className="text-sm text-muted-foreground mb-6">{error}</p>
 				{onRetry && (
@@ -105,101 +107,96 @@ export function DataTable<T>({
 	}
 
 	return (
-		<Card padding="none" className={`overflow-hidden ${className}`}>
-			<div className="overflow-x-auto">
-				<table className="w-full border-collapse">
-					{/* Header */}
-					<thead>
-						<tr
-							className={
-								stickyHeader
-									? "sticky top-0 z-10 bg-card"
-									: ""
-							}
-						>
-							{columns.map((col) => {
-								const isSorted = sortKey === col.key;
-								const ariaSort = isSorted
-									? sortDir === "asc"
-										? ("ascending" as const)
-										: ("descending" as const)
-									: undefined;
+		<Card className={cn("overflow-hidden rounded-card border-0 bg-surface-1 p-0 ring-0", className)}>
+			<Table>
+				<TableHeader>
+					<TableRow
+						className={cn(
+							"border-0 hover:bg-transparent",
+							stickyHeader && "sticky top-0 z-10",
+						)}
+					>
+						{columns.map((col) => {
+							const isSorted = sortKey === col.key;
+							const ariaSort = isSorted
+								? sortDir === "asc"
+									? ("ascending" as const)
+									: ("descending" as const)
+								: undefined;
 
-								return (
-									<th
-										key={col.key}
-										scope="col"
-										aria-sort={ariaSort}
-										style={col.width ? { width: col.width } : undefined}
-										className={`
-											px-5 py-3.5 text-xs font-black text-muted-foreground border-b border-border/40
-											${alignClass(col.align)}
-											${col.sortable ? "cursor-pointer select-none hover:text-foreground transition-colors" : ""}
-										`}
-										onClick={col.sortable ? () => handleSort(col.key) : undefined}
-									>
-										<span className="inline-flex items-center gap-1.5">
-											{col.header}
-											{col.sortable && (
-												<span className="inline-flex flex-col">
-													{isSorted ? (
-														sortDir === "asc" ? (
-															<ChevronUp className="h-3 w-3" />
-														) : (
-															<ChevronDown className="h-3 w-3" />
-														)
+							return (
+								<TableHead
+									key={col.key}
+									scope="col"
+									aria-sort={ariaSort}
+									style={col.width ? { width: col.width } : undefined}
+									className={cn(
+										"px-5 py-3.5 text-xs font-black text-muted-foreground",
+										alignClass(col.align),
+										col.sortable && "cursor-pointer select-none hover:text-foreground transition-colors",
+										stickyHeader && "bg-surface-2",
+									)}
+									onClick={col.sortable ? () => handleSort(col.key) : undefined}
+								>
+									<span className="inline-flex items-center gap-1.5">
+										{col.header}
+										{col.sortable && (
+											<span className="inline-flex flex-col">
+												{isSorted ? (
+													sortDir === "asc" ? (
+														<ChevronUp className="h-3 w-3" />
 													) : (
-														<ChevronsUpDown className="h-3 w-3 opacity-30" />
-													)}
-												</span>
-											)}
-										</span>
-									</th>
-								);
-							})}
-						</tr>
-					</thead>
+														<ChevronDown className="h-3 w-3" />
+													)
+												) : (
+													<ChevronsUpDown className="h-3 w-3 opacity-30" />
+												)}
+											</span>
+										)}
+									</span>
+								</TableHead>
+							);
+						})}
+					</TableRow>
+				</TableHeader>
 
-					{/* Body */}
-					<tbody>
-						{loading
-							? Array.from({ length: loadingRows }, (_, i) => (
-									<tr key={`skel-${i}`}>
-										{columns.map((col) => (
-											<td key={col.key} className="px-5 py-3.5">
-												<SkeletonLine
-													width={col.key === columns[0].key ? "70%" : "50%"}
-													height="h-4"
-												/>
-											</td>
-										))}
-									</tr>
-								))
-							: sorted.map((row, ri) => (
-									<tr
-										key={keyExtractor(row)}
-										onClick={onRowClick ? () => onRowClick(row) : undefined}
-										className={`
-											border-b border-border/20 last:border-b-0 transition-colors
-											${onRowClick ? "cursor-pointer" : ""}
-											hover:bg-accent/30
-										`}
-									>
-										{columns.map((col) => (
-											<td
-												key={col.key}
-												className={`px-5 py-3.5 text-sm font-medium text-foreground ${alignClass(col.align)}`}
-											>
-												{col.render
-													? col.render(row, ri)
-													: String((row as Record<string, unknown>)[col.key] ?? "")}
-											</td>
-										))}
-									</tr>
-								))}
-					</tbody>
-				</table>
-			</div>
+				<TableBody>
+					{loading
+						? Array.from({ length: loadingRows }, (_, i) => (
+								<TableRow key={`skel-${i}`}>
+									{columns.map((col) => (
+										<TableCell key={col.key} className="px-5 py-3.5">
+											<SkeletonLine
+												width={col.key === columns[0].key ? "70%" : "50%"}
+												height="h-4"
+											/>
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						: sorted.map((row, ri) => (
+								<TableRow
+									key={keyExtractor(row)}
+									onClick={onRowClick ? () => onRowClick(row) : undefined}
+									className={cn(onRowClick && "cursor-pointer")}
+								>
+									{columns.map((col) => (
+										<TableCell
+											key={col.key}
+											className={cn(
+												"px-5 py-3.5 text-sm font-medium text-foreground",
+												alignClass(col.align),
+											)}
+										>
+											{col.render
+												? col.render(row, ri)
+												: String((row as Record<string, unknown>)[col.key] ?? "")}
+										</TableCell>
+									))}
+								</TableRow>
+							))}
+				</TableBody>
+			</Table>
 		</Card>
 	);
 }

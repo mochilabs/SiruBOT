@@ -3,11 +3,11 @@
 import { useCallback } from "react";
 import { SlidersHorizontal } from "lucide-react";
 
-import { useToast } from "@/components/feedback/toast";
-import { Card } from "@/components/primitives/card";
 import { Field } from "@/components/primitives/field";
-import { Slider } from "@/components/primitives/slider";
-import { Switch } from "@/components/primitives/switch";
+import { Card } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/toast";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import type { GuildSettings } from "@/types/settings";
@@ -53,7 +53,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 			/>
 
 			<div className="grid gap-6 sm:grid-cols-2">
-				<div className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-4">
+				<div className="space-y-4 rounded-xl bg-muted/10 p-4">
 					<Switch
 						checked={form.gaplessEnabled}
 						onChange={(checked) => patch({ gaplessEnabled: checked })}
@@ -64,7 +64,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 					<p className="text-xs text-muted-foreground">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
 				</div>
 
-				<div className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-4">
+				<div className="space-y-4 rounded-xl bg-muted/10 p-4">
 					<Switch
 						checked={form.crossfadeEnabled}
 						onChange={(checked) => patch({ crossfadeEnabled: checked })}

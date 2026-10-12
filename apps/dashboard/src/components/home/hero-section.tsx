@@ -6,9 +6,9 @@ import { m, type MotionValue, useInView, useMotionValueEvent, useReducedMotion, 
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
-import { buttonVariants } from "@/components/primitives/button";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { TypingText } from "@/components/typing-text";
+import { buttonVariants } from "@/components/ui/button";
 import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
@@ -196,7 +196,7 @@ export function HeroSection() {
 
 					<m.dl
 						variants={itemVariants}
-						className="grid w-full grid-cols-2 gap-4 border-t border-border-subtle pt-5 sm:max-w-lg lg:max-w-none"
+						className="grid w-full grid-cols-2 gap-4 pt-2 sm:max-w-lg lg:max-w-none"
 					>
 						<div>
 							<dt className="text-xs font-medium text-muted-foreground">슬래시 명령어</dt>
@@ -239,10 +239,10 @@ export function HeroSection() {
 									onClick={() => handleSlideChange(index)}
 									aria-pressed={activeSlide === index}
 									className={cn(
-										"relative cursor-pointer overflow-hidden rounded-control border px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
+										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
-											? "border-primary-control bg-primary-control text-primary-foreground"
-											: "border-border bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+											? "bg-primary-control text-primary-foreground"
+											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
 									)}
 								>
 									{/* 자동 재생 진행률 — 활성 버튼이 7초에 걸쳐 차오르고, 차면 다음 예시로 넘어가요 */}

@@ -2,6 +2,11 @@
 
 Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
 
+## Branch & index rules
+
+- **Branch rule**: Every code change must start on a feature/fix/refactor branch created from `beta` (or `main`). Never commit directly to `beta`/`main`.
+- **Index rule**: Before modifying unfamiliar code, always use the OpenCode semantic index (`codebase_search`, `codebase_context`, `call_graph`) instead of raw grepping. Check `index_status` if unsure.
+
 ## Skills
 
 Load the matching skill (`.opencode/skills/<id>/SKILL.md`) before starting work in its domain — don't recreate its templates inline:

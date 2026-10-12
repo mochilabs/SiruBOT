@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
+import { Button } from "@/components/ui/button";
 
 import { Portal, usePopoverCoords } from "../overlay/portal";
 

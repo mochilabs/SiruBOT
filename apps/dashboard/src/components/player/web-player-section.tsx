@@ -6,14 +6,14 @@ import { ListMusic, Play, Search } from "lucide-react";
 import useSWR from "swr";
 
 import { PlayerClient, type PlayerTrack } from "@/app/player/[id]/player-client";
-import { useToast } from "@/components/feedback/toast";
 import PlayerLiveTab from "@/components/player/player-live-tab";
-import { Badge } from "@/components/primitives/badge";
-import { Button } from "@/components/primitives/button";
-import { Card } from "@/components/primitives/card";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { Input } from "@/components/primitives/input";
-import { SkeletonLine } from "@/components/primitives/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SkeletonLine } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 
 interface VoiceContext {
 	inVoice: boolean;
@@ -89,11 +89,11 @@ function SearchResultRow({
 		<div className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
 			{track.artworkUrl ? (
-				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border-subtle">
+				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
 					<Image src={track.artworkUrl} alt="" fill className="object-cover" sizes="40px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface-3 text-muted-foreground">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-3 text-muted-foreground">
 					<ListMusic size={14} aria-hidden />
 				</div>
 			)}
@@ -238,7 +238,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				</form>
 
 				{!inVoice && (
-					<p className="rounded-card border border-border-subtle bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
+					<p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
 						음성 채널에 접속한 상태라면 검색 결과에서 바로 재생할 수 있어요.
 					</p>
 				)}

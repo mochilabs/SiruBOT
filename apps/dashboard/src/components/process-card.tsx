@@ -2,9 +2,22 @@
 
 import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
 
-import { StatusBadge } from "@/components/primitives/badge";
-import { Card } from "@/components/primitives/card";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import type { ShardProcessInfo } from "@/lib/shard-api";
+
+function ProcessStatusBadge({ status }: { status: string }) {
+	const normalized = status.toLowerCase();
+	const config: Record<string, { variant: "success" | "warning" | "info" | "destructive" | "default"; label: string }> = {
+		ready: { variant: "success", label: "정상" },
+		idle: { variant: "warning", label: "대기" },
+		connecting: { variant: "info", label: "연결 중" },
+		disconnected: { variant: "destructive", label: "연결 끊김" },
+		errored: { variant: "destructive", label: "오류" },
+	};
+	const { variant, label } = config[normalized] ?? { variant: "default", label: status };
+	return <Badge variant={variant}>{label}</Badge>;
+}
 
 function formatUptime(secondsValue: number): string {
 	const seconds = Math.floor(secondsValue);
@@ -30,10 +43,10 @@ function formatMemory(bytes: number): string {
 
 export function ProcessCard({ process, index }: { process: ShardProcessInfo; index: number }) {
 	return (
-		<Card padding="lg" className="gap-6 transition-all duration-base hover:border-primary/30">
+		<Card padding="lg" className="gap-6 transition-all duration-base">
 			<div className="flex items-center justify-between gap-4">
 				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary-text border border-primary/20">
+					<div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary-text">
 						<Server size={20} />
 					</div>
 					<div>
@@ -41,14 +54,14 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 						<p className="text-xs font-mono text-muted-foreground uppercase">{process.wsId.slice(0, 12)}</p>
 					</div>
 				</div>
-				<StatusBadge status={process.status} />
+				<ProcessStatusBadge status={process.status} />
 			</div>
 
 			<div className="flex flex-wrap gap-2">
 				{process.shardIds.map((id) => (
 					<span
 						key={id}
-						className="inline-flex items-center rounded-lg border border-border bg-surface-2 px-2.5 py-1 text-sm font-bold text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary-text"
+						className="inline-flex items-center rounded-lg bg-surface-2 px-2.5 py-1 text-sm font-bold text-muted-foreground transition-colors hover:text-primary-text"
 					>
 						샤드 {id}
 					</span>
@@ -62,7 +75,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					{ label: "메모리", value: formatMemory(process.memoryUsage), icon: HardDrive },
 					{ label: "운영 시간", value: formatUptime(process.uptime), icon: Clock3 },
 				].map((item, i) => (
-					<div key={i} className="rounded-xl border border-border-subtle bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
+					<div key={i} className="rounded-xl bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
 						<div className="flex items-center gap-2 text-muted-foreground font-black text-xs">
 							<item.icon size={12} />
 							{item.label}
@@ -72,7 +85,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 				))}
 			</div>
 
-			<div className="pt-2 flex items-center justify-between text-sm font-medium text-muted-foreground border-t border-border">
+			<div className="pt-2 flex items-center justify-between text-sm font-medium text-muted-foreground">
 				<div className="flex items-center gap-2">
 					최근 업데이트: {formatRelativeTime(process.lastHeartbeat)}
 				</div>
