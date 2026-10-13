@@ -142,6 +142,7 @@ let retryScheduled = false;
 function candidatePaths(): string[] {
 	return [
 		join(process.cwd(), 'resources', 'emoji_replacement', 'emoji-ids.json'), // monorepo 루트 실행 / Docker builder
+		join(process.cwd(), '..', '..', 'resources', 'emoji_replacement', 'emoji-ids.json'), // apps/bot CWD
 		join(process.cwd(), 'resources', 'emoji-ids.json'), // apps/bot CWD (yarn workspace start)
 		join(process.cwd(), 'apps', 'bot', 'resources', 'emoji-ids.json'), // monorepo 루트에서 봇만 개별 실행
 		join('/app', 'resources', 'emoji_replacement', 'emoji-ids.json') // Docker 컨테이너 (/app=COPY resources)
