@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import Loader from "@/components/loader";
+import { TrackListenLink } from "@/components/track-listen-link";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -148,6 +149,7 @@ export function AddTrackModal({
 												<p className="text-xs text-muted-foreground truncate">{track.artist}</p>
 											</div>
 										</div>
+										{track.youtubeUrl && <TrackListenLink url={track.youtubeUrl} title={track.title} compact />}
 										<Button
 											variant="secondary"
 											size="sm"

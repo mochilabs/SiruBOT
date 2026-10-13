@@ -45,6 +45,7 @@ export interface ProfileTopTrack {
   artist: string;
   count: number;
   thumbnail: string | null;
+  url: string | null;
 }
 
 export interface ProfileMusicStats {
@@ -155,7 +156,7 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
   if (topGroups.length > 0) {
     const tracks = await db.track.findMany({
       where: { id: { in: topGroups.map((g) => g.trackId) } },
-      select: { id: true, title: true, artist: true, thumbnail: true },
+      select: { id: true, title: true, artist: true, thumbnail: true, url: true },
     });
     const meta = new Map(tracks.map((t) => [t.id, t]));
     topTracks = topGroups.map((g) => ({
@@ -163,6 +164,7 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
       artist: meta.get(g.trackId)?.artist ?? "",
       count: g._count.trackId,
       thumbnail: meta.get(g.trackId)?.thumbnail ?? null,
+      url: meta.get(g.trackId)?.url ?? null,
     }));
   }
 
