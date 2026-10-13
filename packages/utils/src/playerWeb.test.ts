@@ -52,11 +52,12 @@ describe('playerWeb request contracts', () => {
 	});
 
 	it('accepts every control action and requires value only for volume', () => {
-		for (const action of ['volume' as const, 'pause' as const, 'resume' as const, 'skip' as const, 'stop' as const]) {
+		for (const action of ['volume' as const, 'pause' as const, 'resume' as const, 'skip' as const, 'stop' as const, 'repeat' as const]) {
 			expect(playerWebControlActionSchema.safeParse(action).success).toBe(true);
 		}
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume', value: 80 }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'pause' }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'repeat' }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume' }).success).toBe(false);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume', value: 151 }).success).toBe(false);
 	});

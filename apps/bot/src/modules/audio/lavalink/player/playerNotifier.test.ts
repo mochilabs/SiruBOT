@@ -134,6 +134,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('sends the basic controller while the image is still pending, then attaches it', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
 		const current = player();
@@ -153,6 +154,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('finishes a deferred slash reply without waiting for the card or fetching the reply again', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		mocks.render.mockReturnValue(pending().promise);
 		const editReply = vi.fn().mockResolvedValue(message('slash'));
 		const interaction = { deferred: true, replied: false, editReply, reply: vi.fn(), fetchReply: vi.fn(), channelId: 'channel' };
@@ -171,13 +173,22 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('attaches a prepared card to a new message without starting another render', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		mocks.cached.mockReturnValue(card());
 		await new PlayerNotifier().sendController(player());
 		expect(mocks.send.mock.calls[0]![0].files).toHaveLength(1);
 		expect(mocks.render).not.toHaveBeenCalled();
 	});
 
+	it('does not render a card for controllers outside the configured channel', async () => {
+		mocks.render.mockReturnValue(pending<ReturnType<typeof card> | null>().promise);
+		await new PlayerNotifier().sendController(player());
+		expect(mocks.render).not.toHaveBeenCalled();
+		expect(mocks.send.mock.calls[0]![0].files).toEqual([]);
+	});
+
 	it('skips unchanged updates while sharing one pending image refresh', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();
 		mocks.render.mockReturnValue(pending().promise);
 		const notifier = new PlayerNotifier();
@@ -199,6 +210,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('does not re-upload a cached attachment on every update', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();
 		const notifier = new PlayerNotifier();
 		const current = player();
@@ -216,6 +228,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('replaces the previous track attachment instead of accumulating cards in a pinned message', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();
 		mocks.cached.mockReturnValue(card());
 		const notifier = new PlayerNotifier();
@@ -235,6 +248,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('does not restore a deleted controller when its old card finishes', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
 		const notifier = new PlayerNotifier();
@@ -335,6 +349,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('does not attach an old card after the current track changes', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
 		const current = player();
@@ -347,6 +362,7 @@ describe('non-blocking player notifications', () => {
 	});
 
 	it('hydrates an explicitly requested controller even when automatic controllers are disabled', async () => {
+		mocks.pinned.mockResolvedValue('channel');
 		mocks.guild.mockResolvedValue({ enableController: false, volume: 10 });
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);

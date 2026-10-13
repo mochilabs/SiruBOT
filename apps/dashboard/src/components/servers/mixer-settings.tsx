@@ -16,20 +16,21 @@ import { MixerInfoTip } from "./mixer-info";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
 interface MixerForm {
-	gaplessEnabled: boolean;
-	crossfadeEnabled: boolean;
-	crossfadeMs: number;
+  gaplessEnabled: boolean;
+  crossfadeEnabled: boolean;
+  crossfadeMs: number;
 }
 
 const toMixerForm = (settings: GuildSettings): MixerForm => ({
-	gaplessEnabled: settings.gaplessEnabled,
-	crossfadeEnabled: settings.crossfadeEnabled,
-	crossfadeMs: settings.crossfadeMs,
+  gaplessEnabled: settings.gaplessEnabled,
+  crossfadeEnabled: settings.crossfadeEnabled,
+  crossfadeMs: settings.crossfadeMs,
 });
 
 function MixerSettingsPanel({ guildId }: { guildId: string }) {
-	const toast = useToast();
-	const { form, isLoading, error, saving, dirty, patch, submit, reload } = useSettingsForm(guildId, toMixerForm);
+  const toast = useToast();
+  const { form, isLoading, error, saving, dirty, patch, submit, reload } =
+    useSettingsForm(guildId, toMixerForm);
 
 	const handleSave = useCallback(async () => {
 		try {
@@ -41,61 +42,68 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 		}
 	}, [submit, toast]);
 
-	if (isLoading) return <PanelLoading label="오디오 엔진 설정 불러오는 중…" />;
-	if (error) return <PanelError error={error} onRetry={reload} />;
-	if (!form) return <PanelLoading label="오디오 엔진 설정 불러오는 중…" />;
+  if (isLoading) return <PanelLoading label="오디오 엔진 설정 불러오는 중…" />;
+  if (error) return <PanelError error={error} onRetry={reload} />;
+  if (!form) return <PanelLoading label="오디오 엔진 설정 불러오는 중…" />;
 
-	return (
-		<Card padding="lg" className="gap-6">
-			<PanelHeader
-				icon={<SlidersHorizontal className="h-5 w-5" />}
-				title="오디오 엔진"
-				description="갭리스 재생과 크로스페이드로 재생 끊김을 조정해요."
-			/>
+  return (
+    <Card padding="lg" className="gap-6 overflow-visible">
+      <PanelHeader
+        icon={<SlidersHorizontal className="h-5 w-5" />}
+        title="오디오 엔진"
+        description="갭리스 재생과 크로스페이드로 재생 끊김을 조정해요."
+      />
 
-			<div className="grid gap-6 sm:grid-cols-2">
-				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
-					<div className="flex items-center justify-between gap-2">
-						<Switch
-							checked={form.gaplessEnabled}
-							onChange={(checked) => patch({ gaplessEnabled: checked })}
-							disabled={saving}
-							label="갭리스 재생"
-							labelPosition="left"
-						/>
-						<MixerInfoTip kind="gapless" />
-					</div>
-					<p className="text-xs text-muted-foreground">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
-				</div>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Switch
+              checked={form.gaplessEnabled}
+              onChange={(checked) => patch({ gaplessEnabled: checked })}
+              disabled={saving}
+              label="갭리스 재생"
+              labelPosition="left"
+            />
+            <MixerInfoTip kind="gapless" />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            다음 곡을 미리 받아 재생 사이의 끊김을 없애요.
+          </p>
+        </div>
 
-				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
-					<div className="flex items-center justify-between gap-2">
-						<Switch
-							checked={form.crossfadeEnabled}
-							onChange={(checked) => patch({ crossfadeEnabled: checked })}
-							disabled={saving}
-							label="크로스페이드"
-							labelPosition="left"
-						/>
-						<MixerInfoTip kind="crossfade" />
-					</div>
-					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요.</p>
-				</div>
-			</div>
+        <div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Switch
+              checked={form.crossfadeEnabled}
+              onChange={(checked) => patch({ crossfadeEnabled: checked })}
+              disabled={saving}
+              label="크로스페이드"
+              labelPosition="left"
+            />
+            <MixerInfoTip kind="crossfade" />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            곡 끝과 다음 곡 시작을 겹쳐서 이어요.
+          </p>
+        </div>
+      </div>
 
-			<Field label="크로스페이드 길이" description="500ms ~ 30000ms. 길수록 두 곡이 더 오래 겹쳐요.">
-				<Slider
-					value={form.crossfadeMs}
-					onChange={(value) => patch({ crossfadeMs: value })}
-					min={500}
-					max={30000}
-					step={100}
-					label="겹치기 길이"
-					showValue
-					formatValue={(v) => `${(v / 1000).toFixed(1)}초`}
-					disabled={saving || !form.crossfadeEnabled}
-				/>
-			</Field>
+      <Field
+        label="크로스페이드 길이"
+        description="500ms ~ 30000ms. 길수록 두 곡이 더 오래 겹쳐요."
+      >
+        <Slider
+          value={form.crossfadeMs}
+          onChange={(value) => patch({ crossfadeMs: value })}
+          min={500}
+          max={30000}
+          step={100}
+          label="겹치기 길이"
+          showValue
+          formatValue={(v) => `${(v / 1000).toFixed(1)}초`}
+          disabled={saving || !form.crossfadeEnabled}
+        />
+      </Field>
 
 			<InfoBox>
 				<p>저장하면 재생 중인 플레이어에도 바로 적용돼요. 봇이 재생 중이 아니면 다음 재생부터 반영돼요.</p>
@@ -107,5 +115,5 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 }
 
 export function MixerSettings({ guildId }: { guildId: string }) {
-	return <MixerSettingsPanel guildId={guildId} />;
+  return <MixerSettingsPanel guildId={guildId} />;
 }

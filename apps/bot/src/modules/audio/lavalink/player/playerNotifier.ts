@@ -103,12 +103,14 @@ export class PlayerNotifier {
 			await this.removeController(player);
 			if (!this.canSend(player, version, interaction)) return;
 
-			// 준비된 카드만 사용해 기본 화면을 먼저 보내고, 미완성 카드는 나중에 붙인다.
-			// 카드 키가 같은 곡(트랙 변경 전)이라면 이전 상태 카드를 재사용한다.
-			const card = getDisplayNowPlayingCard(player);
+			const textChannelId = interaction?.channelId ?? player.textChannelId;
+			const pinnedChannel = textChannelId ? await this.isPinnedChannel(player.guildId, textChannelId) : false;
+			// 큰 카드 이미지는 고정 채널 컨트롤러에서만 사용한다.
+			const card = pinnedChannel ? getDisplayNowPlayingCard(player) : null;
 			const components = view.controllerView({
 				player,
 				volume: options.volume,
+				textChannelId: textChannelId ?? undefined,
 				nowPlayingCardUrl: card?.url
 			});
 			const files = card ? [card.file] : [];
@@ -153,7 +155,7 @@ export class PlayerNotifier {
 			player.controller = message;
 			this.renderedSignatures.set(message, JSON.stringify(components.toJSON()));
 			this.cardTrackKeys.set(message, card ? card.trackKey : '');
-			if (!getCachedNowPlayingCard(player)) this.startCardRefresh(player, message.id, Boolean(interaction));
+			if (pinnedChannel && !getCachedNowPlayingCard(player)) this.startCardRefresh(player, message.id, Boolean(interaction));
 			this.ensureProgressTick(player);
 			this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
 		} catch (error) {
@@ -187,10 +189,17 @@ export class PlayerNotifier {
 			const options = await this.getControllerOptions(player.guildId);
 			if (!options || (!options.enableController && !allowDisabled)) return;
 			if (!this.canSend(player, version) || player.messageId !== message.id || player.controller?.id !== message.id) return;
-			const card = getDisplayNowPlayingCard(player);
-			const missingCurrent = getCachedNowPlayingCard(player) === null;
+			const textChannelId = player.textChannelId;
+			const pinnedChannel = textChannelId ? await this.isPinnedChannel(player.guildId, textChannelId) : false;
+			const card = pinnedChannel ? getDisplayNowPlayingCard(player) : null;
+			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(player) === null;
 			const cardNeedsUpload = card !== null && this.cardTrackKeys.get(message) !== card.trackKey;
-			const components = view.controllerView({ player, volume: options.volume, nowPlayingCardUrl: card?.url });
+			const components = view.controllerView({
+				player,
+				volume: options.volume,
+				textChannelId: textChannelId ?? undefined,
+				nowPlayingCardUrl: card?.url
+			});
 			const attachments =
 				card && !cardNeedsUpload ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [];
 			const files = card && (cardNeedsUpload || !message.attachments.some((file) => file.name === card.filename)) ? [card.file] : [];

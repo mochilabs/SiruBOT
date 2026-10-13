@@ -1,11 +1,10 @@
-import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
+import { ServerSwitcher } from "@/components/servers/server-switcher";
 import { auth } from "@/lib/auth";
-import { discordGuildIconUrl } from "@/lib/discord-cdn";
 import { resolveCanManage, resolveGuildMeta } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 
@@ -34,7 +33,15 @@ async function getGuildMember(
   );
 
   console.error(
-    `[diag] Discord /users/@me/guilds/${guildId}/member -> ${res.status} ${res.ok ? "" : await res.clone().text().then((t) => t.slice(0, 200)).catch(() => "")}`,
+    `[diag] Discord /users/@me/guilds/${guildId}/member -> ${res.status} ${
+      res.ok
+        ? ""
+        : await res
+            .clone()
+            .text()
+            .then((t) => t.slice(0, 200))
+            .catch(() => "")
+    }`,
   );
 
   // 멤버가 아니거나(404) 접근 권한이 없으면(403) 보여줄 대시보드가 없어요.
@@ -77,32 +84,25 @@ export default async function ServerDashboardPage({
     resolveCanManage(accessToken, session.user.id, id),
     resolveGuildMeta(accessToken, session.user.id, id),
   ]);
-  const manageableResolved = manageable.status === "ok" && manageable.manageable;
+  const manageableResolved =
+    manageable.status === "ok" && manageable.manageable;
 
   return (
     <Container>
       <PageHeader
         title={
-          <span className="flex items-center gap-3 min-w-0">
-            {guildMeta?.icon ? (
-              <Image
-                src={discordGuildIconUrl(id, guildMeta.icon, 64)}
-                alt=""
-                width={48}
-                height={48}
-                className="h-12 w-12 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg font-black text-muted-foreground">
-                {(guildMeta?.name ?? "서버").slice(0, 1)}
-              </span>
-            )}
-            <span className="truncate">{guildMeta?.name || "서버 대시보드"}</span>
-          </span>
+          <ServerSwitcher
+            guildId={id}
+            guildName={guildMeta?.name || "서버 대시보드"}
+            icon={guildMeta?.icon ?? null}
+          />
         }
-        description="AI 채팅·음악·채널·임시 음성 등 서버 설정을 한 곳에서 관리해요."
       />
-      <ServerDashboard guildId={id} manageable={manageableResolved} guildName={guildMeta?.name ?? null} />
+      <ServerDashboard
+        guildId={id}
+        manageable={manageableResolved}
+        guildName={guildMeta?.name ?? null}
+      />
     </Container>
   );
 }

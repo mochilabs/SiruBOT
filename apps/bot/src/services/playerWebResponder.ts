@@ -306,32 +306,27 @@ export class PlayerWebResponder {
 		}
 	}
 
-	// ── kind: control ── 볼륨·일시정지·재생·스킵·정지 — 봇 슬래시 커맨드 가드를 웹에 맞게 단순화해요
+	// ── kind: control ── 볼륨·일시정지·재생·스킵·정지·반복 — 봇 슬래시 커맨드 가드를 웹에 맞게 단순화해요
 	//   volume: 관리자/DJ 권한만 (기존 대시보드 라이브 탭 컨트롤러와 같은 동작 — 저장 길드 설정 반영)
 	//   pause/resume: 활성 플레이어 필요 (Discord /pause의 DJOrAlone·SongPlaying에 대응)
 	//   skip: 활성 플레이어 + 봇과 같은 음성 채널 (Discord /skip의 SameVoiceChannel에 대응)
 	//   stop: 활성 플레이어 + 음성 채널 접속 (Discord /stop과 같은 조건)
 	private async handleControl(guild: Guild, request: PlayerWebControlRequest): Promise<void> {
 		const { guildId } = request;
-		const member = await this.fetchMember(guild, request.userId);
-		if (!member) {
-			this.respond({ requestId: request.requestId, guildId, kind: 'control', error: '서버에서 회원님을 찾을 수 없어요.' });
-			return;
-		}
-		if (!(await this.hasControlPermission(guildId, member))) {
-			this.respond({
-				requestId: request.requestId,
-				guildId,
-				kind: 'control',
-				error: `${emoji('error')} 재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.`
-			});
-			return;
-		}
-
-		const player = container.audio.getPlayer(guildId);
-		const voiceChannelId = member.voice?.channelId ?? null;
-
 		try {
+			const member = await this.fetchMember(guild, request.userId);
+			if (!member) {
+				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: '서버에서 회원님을 찾을 수 없어요.' });
+				return;
+			}
+			if (!(await this.hasControlPermission(guildId, member))) {
+				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: '재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.' });
+				return;
+			}
+
+			const player = container.audio.getPlayer(guildId);
+			const voiceChannelId = member.voice?.channelId ?? null;
+
 			// 볼륨은 플레이어 유무와 무관하게 저장 길드 설정에 반영 — 기존 라이브 컨트롤러와 같은 동작이에요.
 			if (request.action === 'volume') {
 				if (typeof request.value !== 'number') throw new Error(`control volume: value 누락 (guild ${guildId})`);
@@ -342,7 +337,16 @@ export class PlayerWebResponder {
 			}
 
 			if (!player) {
-				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: `${emoji('error')} 재생 중인 곡이 없어요.` });
+				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: '재생 중인 곡이 없어요.' });
+				return;
+			}
+
+			if (request.action === 'repeat') {
+				const nextMode = player.repeatMode === 'off' ? 'track' : player.repeatMode === 'track' ? 'queue' : 'off';
+				const repeatMode = await container.guildService.setRepeat(guildId, nextMode);
+				await player.setRepeatMode(repeatMode);
+				if (repeatMode !== 'off') await container.mixerService.clearNext(player).catch(() => null);
+				this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 				return;
 			}
 
@@ -382,7 +386,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId,
 				kind: 'control',
-				error: `${emoji('error')} 제어를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.`
+				error: '제어를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.'
 			});
 		}
 	}

@@ -109,11 +109,11 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 	}
 
-	private buildControllerPayload(player: CustomPlayer, message: Message) {
-		// 같은 곡의 이전 카드는 새 카드(볼륨/챕터/일시정지 상태)로 교체될 때까지 유지해요(무플리커).
-		const card = getDisplayNowPlayingCard(player);
+	private async buildControllerPayload(player: CustomPlayer, message: Message) {
+		const pinnedChannel = await this.container.guildService.getPinnedChannel(player.guildId).catch(() => null);
+		const card = pinnedChannel === message.channelId ? getDisplayNowPlayingCard(player) : null;
 		return {
-			components: [controllerView({ player, volume: player.volume, nowPlayingCardUrl: card?.url })],
+			components: [controllerView({ player, volume: player.volume, textChannelId: message.channelId, nowPlayingCardUrl: card?.url })],
 			attachments: card ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [],
 			files: card && !message.attachments.some((file) => file.name === card.filename) ? [card.file] : [],
 			flags: [MessageFlags.IsComponentsV2],
@@ -123,23 +123,27 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async safeUpdate(interaction: ButtonInteraction<'cached'>, player: CustomPlayer): Promise<boolean> {
 		try {
-			const response = await interaction.update({ ...this.buildControllerPayload(player, interaction.message), withResponse: true });
-			if (player.messageId === interaction.message.id && response.resource?.message) {
-				player.controller = response.resource.message;
+			// 채널 설정 조회가 끝나기 전에 interaction을 ACK해 Discord의 3초 제한을 피한다.
+			if (!interaction.deferred) await interaction.deferUpdate();
+			const payload = await this.buildControllerPayload(player, interaction.message);
+			const updated = await interaction.message.edit(payload);
+			if (player.messageId === interaction.message.id) {
+				player.controller = updated;
 			}
 			return true;
 		} catch (error: any) {
-			// 컨트롤러가 삭제됐거나 만료된 경우: 조용히 무시하고 ephemeral 안내로 폴백
+			// 컨트롤러가 삭제됐거나 interaction이 만료된 경우: 호출부에서 안내한다.
 			if (error.code === 10008 || error.code === 10062 || error.code === 40060) return false;
 			throw error;
 		}
 	}
 
 	private async handlePause(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
+		await interaction.deferUpdate();
 		await player.pause();
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
-				.reply({
+				.followUp({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
@@ -148,10 +152,11 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleResume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
+		await interaction.deferUpdate();
 		await player.resume();
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
-				.reply({
+				.followUp({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
@@ -160,13 +165,14 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
+		await interaction.deferUpdate();
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
 		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, toSet);
 		await player.setRepeatMode(repeatUpdated);
 		if (repeatUpdated !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
-				.reply({
+				.followUp({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
@@ -213,10 +219,11 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
+		await interaction.deferUpdate();
 		await player.seek(target);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
-				.reply({
+				.followUp({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
@@ -238,11 +245,12 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
+		await interaction.deferUpdate();
 		const { volume: updated } = await this.container.guildService.updateVolume(interaction.guildId, next);
 		player.setVolume(updated);
 		if (!(await this.safeUpdate(interaction, player))) {
 			await interaction
-				.reply({
+				.followUp({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 					components: [errorView(`${emoji('error')} 컨트롤러가 만료되었어요. \`/현재곡\`으로 새로 불러와주세요.`)]
 				})
@@ -251,17 +259,18 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleStop(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
+		await interaction.deferUpdate();
 		player.transitionState.stopByCommand = true;
 		await this.container.mixerService.clearNext(player).catch(() => null);
 		await this.container.playerNotifier.deleteController(player).catch(() => null);
 		try {
-			await interaction.update({
+			await interaction.message.edit({
 				components: [stop()],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch {
 			await interaction
-				.reply({
+				.followUp({
 					components: [stop()],
 					flags: [MessageFlags.IsComponentsV2]
 				})
@@ -280,6 +289,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
+		await interaction.deferUpdate();
 		const previousTrack = player.queue.previous[player.queue.previous.length - 1];
 		if (player.queue.current) {
 			player.queue.tracks.unshift(player.queue.current);
@@ -290,8 +300,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		player.queue.previous.pop();
 
 		player.queuePage = 1;
-		// 곧 trackStart가 새 컨트롤러를 보내므로 defer만 하고 edit는 생략 (edit→삭제 churn 방지)
-		await interaction.deferUpdate().catch(() => null);
+		// 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략 (edit→삭제 churn 방지)
 	}
 
 	private async handleNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
@@ -303,7 +312,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
-		await interaction.deferUpdate().catch(() => null);
+		await interaction.deferUpdate();
 		player.queuePage = 1;
 		await this.container.mixerService.skip(player);
 	}
@@ -399,6 +408,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
+		await interaction.deferUpdate();
 		await player.queue.splice(trackIndex, 1);
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		player.queueSelectedIndex = null;
@@ -412,7 +422,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 		// 대기열 목록(ephemeral) 메시지를 갱신한다 (컨트롤러가 아님).
 		await interaction
-			.update({
+			.editReply({
 				components: [
 					remaining.length === 0
 						? queueEmpty()
@@ -441,7 +451,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		// Skip to the specified position (remove tracks before it and play it)
 		// 새 곡의 trackStart가 컨트롤러를 새로 보내므로 컨트롤러 edit는 생략하고,
 		// 대기열 목록(ephemeral) 메시지만 새로고침한다.
-		await interaction.deferUpdate().catch(() => null);
+		await interaction.deferUpdate();
 		player.queuePage = 1;
 		player.queueSelectedIndex = null;
 		await this.container.mixerService.skip(player, trackIndex + 1);
