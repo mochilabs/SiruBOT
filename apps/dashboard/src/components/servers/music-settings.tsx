@@ -2,22 +2,25 @@
 
 import { useCallback } from "react";
 import {
-	CircleDollarSign,
-	Eye,
-	FastForward,
-	Film,
-	Megaphone,
-	MessageCircle,
-	Music,
-	Music2,
-	Repeat,
-	Repeat1,
-	Repeat2,
-	SkipForward,
+  CircleDollarSign,
+  Eye,
+  FastForward,
+  Film,
+  Megaphone,
+  MessageCircle,
+  Music,
+  Music2,
+  Repeat,
+  Repeat1,
+  Repeat2,
+  SkipForward,
 } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
-import { type SearchableOption, SearchableSelect } from "@/components/servers/searchable-select";
+import {
+  type SearchableOption,
+  SearchableSelect,
+} from "@/components/servers/searchable-select";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -27,117 +30,172 @@ import { toError } from "@/lib/api-error";
 import { SPONSORBLOCK_SEGMENTS } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
-import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
+import {
+  InfoBox,
+  PanelError,
+  PanelHeader,
+  PanelLoading,
+  SaveBar,
+} from "./settings-shared";
 
 const REPEAT_OPTIONS: SearchableOption[] = [
-	{ value: "off", label: "반복 없음", icon: <Repeat size={16} aria-hidden /> },
-	{ value: "track", label: "한 곡 반복", icon: <Repeat1 size={16} aria-hidden /> },
-	{ value: "queue", label: "전체 반복", icon: <Repeat2 size={16} aria-hidden /> },
+  { value: "off", label: "반복 없음", icon: <Repeat size={16} aria-hidden /> },
+  {
+    value: "track",
+    label: "한 곡 반복",
+    icon: <Repeat1 size={16} aria-hidden />,
+  },
+  {
+    value: "queue",
+    label: "전체 반복",
+    icon: <Repeat2 size={16} aria-hidden />,
+  },
 ];
 
-const SEGMENT_OPTIONS_META: Record<(typeof SPONSORBLOCK_SEGMENTS)[number], { label: string; icon: React.ReactNode }> = {
-	sponsor: { label: "스폰서", icon: <CircleDollarSign size={16} aria-hidden /> },
-	selfpromo: { label: "자기 홍보", icon: <Megaphone size={16} aria-hidden /> },
-	interaction: { label: "상호작용", icon: <MessageCircle size={16} aria-hidden /> },
-	intro: { label: "인트로", icon: <Film size={16} aria-hidden /> },
-	outro: { label: "아웃트로", icon: <SkipForward size={16} aria-hidden /> },
-	preview: { label: "미리보기", icon: <Eye size={16} aria-hidden /> },
-	music_offtopic: { label: "음악 외 구간", icon: <Music2 size={16} aria-hidden /> },
-	filler: { label: "필러", icon: <FastForward size={16} aria-hidden /> },
+const SEGMENT_OPTIONS_META: Record<
+  (typeof SPONSORBLOCK_SEGMENTS)[number],
+  { label: string; icon: React.ReactNode }
+> = {
+  sponsor: {
+    label: "스폰서",
+    icon: <CircleDollarSign size={16} aria-hidden />,
+  },
+  selfpromo: { label: "자기 홍보", icon: <Megaphone size={16} aria-hidden /> },
+  interaction: {
+    label: "상호작용",
+    icon: <MessageCircle size={16} aria-hidden />,
+  },
+  intro: { label: "인트로", icon: <Film size={16} aria-hidden /> },
+  outro: { label: "아웃트로", icon: <SkipForward size={16} aria-hidden /> },
+  preview: { label: "미리보기", icon: <Eye size={16} aria-hidden /> },
+  music_offtopic: {
+    label: "음악 외 구간",
+    icon: <Music2 size={16} aria-hidden />,
+  },
+  filler: { label: "필러", icon: <FastForward size={16} aria-hidden /> },
 };
 
-const SEGMENT_OPTIONS: SearchableOption[] = SPONSORBLOCK_SEGMENTS.map((segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }));
+const SEGMENT_OPTIONS: SearchableOption[] = SPONSORBLOCK_SEGMENTS.map(
+  (segment) => ({ value: segment, ...SEGMENT_OPTIONS_META[segment] }),
+);
 
 interface MusicForm {
-	volume: number;
-	repeat: GuildSettings["repeat"];
-	related: boolean;
-	enableController: boolean;
-	sponsorBlockSegments: string[];
+  volume: number;
+  repeat: GuildSettings["repeat"];
+  related: boolean;
+  enableController: boolean;
+  sponsorBlockSegments: string[];
 }
 
 const toMusicForm = (settings: GuildSettings): MusicForm => ({
-	volume: settings.volume,
-	repeat: settings.repeat,
-	related: settings.related,
-	enableController: settings.enableController,
-	sponsorBlockSegments: settings.sponsorBlockSegments,
+  volume: settings.volume,
+  repeat: settings.repeat,
+  related: settings.related,
+  enableController: settings.enableController,
+  sponsorBlockSegments: settings.sponsorBlockSegments,
 });
 
 function MusicSettingsPanel({ guildId }: { guildId: string }) {
-	const toast = useToast();
-	const { form, isLoading, error, saving, dirty, patch, submit, reload } = useSettingsForm(guildId, toMusicForm);
+  const toast = useToast();
+  const { form, isLoading, error, saving, dirty, patch, submit, reload } =
+    useSettingsForm(guildId, toMusicForm);
 
-	const handleSave = useCallback(async () => {
-		try {
-			await submit();
-			toast.success("음악 설정을 저장했어요.", "봇이 곧 새 설정을 적용해요.");
-		} catch (err) {
-			const apiError = toError(err, "저장에 실패했어요.");
-			toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
-		}
-	}, [submit, toast]);
+  const handleSave = useCallback(async () => {
+    try {
+      await submit();
+      toast.success("음악 설정을 저장했어요.", "봇이 곧 새 설정을 적용해요.");
+    } catch (err) {
+      const apiError = toError(err, "저장에 실패했어요.");
+      toast.error(
+        apiError.message,
+        apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
+      );
+    }
+  }, [submit, toast]);
 
-	if (isLoading) return <PanelLoading label="음악 설정 불러오는 중…" />;
-	if (error) return <PanelError error={error} onRetry={reload} />;
-	if (!form) return <PanelLoading label="음악 설정 불러오는 중…" />;
+  if (isLoading) return <PanelLoading label="음악 설정 불러오는 중…" />;
+  if (error) return <PanelError error={error} onRetry={reload} />;
+  if (!form) return <PanelLoading label="음악 설정 불러오는 중…" />;
 
-	return (
-		<Card padding="lg" className="gap-6 border-0">
-			<PanelHeader icon={<Music className="h-5 w-5" />} title="음악 설정" description="기본 볼륨·반복·관련곡·SponsorBlock을 관리해요." />
+  return (
+    <Card padding="lg" className="gap-6 border-0 overflow-visible">
+      <PanelHeader
+        icon={<Music className="h-5 w-5" />}
+        title="음악 설정"
+        description="기본 볼륨·반복·관련곡·SponsorBlock을 관리해요."
+      />
 
-			<Field label="기본 볼륨">
-				<Slider
-					value={form.volume}
-					onChange={(value: number) => patch({ volume: value })}
-					min={0}
-					max={150}
-					label="서버 기본 볼륨"
-					showValue
-					formatValue={(v) => `${v}%`}
-					disabled={saving}
-				/>
-			</Field>
+      <Field label="기본 볼륨">
+        <Slider
+          value={form.volume}
+          onChange={(value: number) => patch({ volume: value })}
+          min={0}
+          max={150}
+          label="서버 기본 볼륨"
+          showValue
+          formatValue={(v) => `${v}%`}
+          disabled={saving}
+        />
+      </Field>
 
-			<div className="grid gap-6 sm:grid-cols-2">
-				<Field label="반복 모드">
-					<SearchableSelect
-					options={REPEAT_OPTIONS}
-					value={form.repeat}
-					onChange={(value: string) => patch({ repeat: value as MusicForm["repeat"] })}
-					disabled={saving}
-				/>
-				</Field>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Field label="반복 모드">
+          <SearchableSelect
+            options={REPEAT_OPTIONS}
+            value={form.repeat}
+            onChange={(value: string) =>
+              patch({ repeat: value as MusicForm["repeat"] })
+            }
+            disabled={saving}
+          />
+        </Field>
 
-				<div className="space-y-4">
-					<Switch checked={form.enableController} onChange={(checked: boolean) => patch({ enableController: checked })} disabled={saving} label="재생 컨트롤러 메시지" labelPosition="left" />
-					<Switch checked={form.related} onChange={(checked: boolean) => patch({ related: checked })} disabled={saving} label="관련곡 자동 추천" labelPosition="left" />
-				</div>
-			</div>
+        <div className="space-y-4">
+          <Switch
+            checked={form.enableController}
+            onChange={(checked: boolean) =>
+              patch({ enableController: checked })
+            }
+            disabled={saving}
+            label="재생 컨트롤러 메시지"
+            labelPosition="left"
+          />
+          <Switch
+            checked={form.related}
+            onChange={(checked: boolean) => patch({ related: checked })}
+            disabled={saving}
+            label="관련곡 자동 추천"
+            labelPosition="left"
+          />
+        </div>
+      </div>
 
-			<Field
-				label="SponsorBlock 건너뛰기 구간"
-				description="YouTube 영상에서 선택한 구간을 자동으로 건너겨요. 재생 중인 곡에는 다음 곡부터 반영돼요."
-			>
-				<SearchableSelect
-					multiple
-					options={SEGMENT_OPTIONS}
-					value={form.sponsorBlockSegments}
-					onChange={(value: string[]) => patch({ sponsorBlockSegments: value })}
-					placeholder="구간을 선택하지 않으면 건너뛰지 않아요"
-					disabled={saving}
-				/>
-			</Field>
+      <Field
+        label="SponsorBlock 건너뛰기 구간"
+        description="YouTube 영상에서 선택한 구간을 자동으로 건너겨요. 재생 중인 곡에는 다음 곡부터 반영돼요."
+      >
+        <SearchableSelect
+          multiple
+          options={SEGMENT_OPTIONS}
+          value={form.sponsorBlockSegments}
+          onChange={(value: string[]) => patch({ sponsorBlockSegments: value })}
+          placeholder="구간을 선택하지 않으면 건너뛰지 않아요"
+          disabled={saving}
+        />
+      </Field>
 
-			<InfoBox>
-				<p>변경 사항은 다음 곡부터 적용돼요. 지금 재생 중인 곡의 볼륨은 /볼륨 커맨드로 바로 바꿀 수 있어요.</p>
-			</InfoBox>
+      <InfoBox>
+        <p>
+          변경 사항은 다음 곡부터 적용돼요. 지금 재생 중인 곡의 볼륨은 /볼륨
+          커맨드로 바로 바꿀 수 있어요.
+        </p>
+      </InfoBox>
 
-			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-		</Card>
-	);
+      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
+    </Card>
+  );
 }
 
 export function MusicSettings({ guildId }: { guildId: string }) {
-	return <MusicSettingsPanel guildId={guildId} />;
+  return <MusicSettingsPanel guildId={guildId} />;
 }

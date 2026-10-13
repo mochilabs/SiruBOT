@@ -15,6 +15,8 @@ import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
+	MediaGalleryBuilder,
+	MediaGalleryItemBuilder,
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
@@ -31,7 +33,7 @@ import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters
 type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
-	/** 이전 카드 업로드 경로와의 호환용. 메시지 레이아웃에는 쓰지 않아요. */
+	textChannelId?: string;
 	nowPlayingCardUrl?: string;
 };
 
@@ -44,7 +46,7 @@ const wrapPrefix = (customId: string) => {
 const VOLUME_MIN = 0;
 const VOLUME_MAX = 150;
 
-export function controllerView({ player, volume }: controllerViewProps) {
+export function controllerView({ player, volume, textChannelId, nowPlayingCardUrl }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	const current = player.queue.current;
@@ -64,9 +66,10 @@ export function controllerView({ player, volume }: controllerViewProps) {
 			})}`
 	);
 
-	const trackLines = buildTrackDisplay(player, current, { progressEmoji: true });
+	const playbackLabel = current && textChannelId ? `-# <#${textChannelId}>에서 재생 중` : null;
+	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([`-# 지금 재생`, ...trackLines].join('\n'));
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
 
 	const thumbnail = new ThumbnailBuilder();
 
@@ -166,8 +169,12 @@ export function controllerView({ player, volume }: controllerViewProps) {
 	}
 	utilityRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(settingComponents.map((button) => button.setStyle(ButtonStyle.Secondary))));
 
-	// 원본 앨범 아트만 작은 썸네일로 보여 카드 이미지의 중복 정보와 과한 높이를 없앤다.
-	if (current?.info.artworkUrl) {
+	if (nowPlayingCardUrl) {
+		if (playbackLabel) containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(playbackLabel));
+		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
+		containerComponent.addMediaGalleryComponents(gallery);
+	} else if (current?.info.artworkUrl) {
+		// 일반 컨트롤러는 카드 대신 원본 앨범 아트만 작은 썸네일로 보여줘요.
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
 		thumbnail.setURL(current.info.artworkUrl);
 		titleSection.setThumbnailAccessory(thumbnail);
@@ -181,26 +188,26 @@ export function controllerView({ player, volume }: controllerViewProps) {
 		containerComponent.addActionRowComponents(utilityRow);
 	}
 
-	if (nextUpLines.length > 0) {
+	if (nextUpLines.length > 0 && !nowPlayingCardUrl) {
 		containerComponent
 			.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
 			.addTextDisplayComponents(new TextDisplayBuilder().setContent([`### 다음 곡`, ...nextUpLines].join('\n')));
 	}
 
-	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
+	if (!nowPlayingCardUrl) {
+		// 작은 컨트롤러는 서버·볼륨 상태를 텍스트로 요약한다.
+		const footerSegments = buildFooterSegments(player, volume);
+		if (queueCount > 0) {
+			footerSegments.unshift(
+				`${emoji('scroll')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
+			);
+		}
 
-	// 하단 푸터는 서버·볼륨 상태를 요약한다.
-	const footerSegments = buildFooterSegments(player, volume);
-	if (queueCount > 0) {
-		footerSegments.unshift(
-			`${emoji('scroll')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
-		);
+		// `-#`는 줄 맨 앞에서만 적용되므로 메타데이터를 한 줄에 합친다.
+		containerComponent
+			.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+			.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' | ')}`));
 	}
-
-	// `-#`는 줄 맨 앞에서만 적용되므로 메타데이터를 한 줄에 합친다.
-	containerComponent
-		.addSeparatorComponents(separatorSmall)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' | ')}`));
 
 	return containerComponent;
 }
@@ -239,34 +246,17 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 		contents.push(requesterId === RELATED_TRACK_REQUESTER_ID ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
 	}
 
-	// 종료 안내 — 카드가 없을 때만 이모지 프로그레스바를 보여주고,
-	// 카드가 있으면 정적인 종료 시각 타임스탬프(<t:unix:R>)로 대체한다.
+	// 상대 타임스탬프는 종료 직후 "0초 전"으로 남으므로, 양쪽 레이아웃에서 경과/전체 시간만 표시한다.
 	if (track.info.isStream) {
 		contents.push(`-# ${emoji('radio_wave')} 실시간 스트리밍`);
 	} else if (player.paused) {
 		contents.push(`-# ${emoji('pause')} 일시정지됨`);
-	} else if (options.progressEmoji) {
-		const progressText = ` ${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))}`;
-		contents.push(`-# (${formatTime(player.position / 1000)} / ${formatTime(track.info.duration / 1000)})${progressText}`);
 	} else {
-		contents.push(`-# ${emoji('hourglass')} ${endTimestamp(player as CustomPlayer, track)} 후 종료`);
+		const progressText = options.progressEmoji ? ` ${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))}` : '';
+		contents.push(`-# (${formatTime((player.position ?? 0) / 1000)} / ${formatTime(track.info.duration / 1000)})${progressText}`);
 	}
 
 	return contents;
-}
-
-/**
- * 종료 시각 타임스탬프 — 디스코드 <t:unix:R>로 "3분 후 종료"처럼 클라이언트가 자동 갱신한다.
- * 챕터가 있으면 챕터 끝, 없으면 곡 끝을 기준으로 한다. 5초 단위로 반올림해
- * 재생 중 position이 흘러도 문자열이 바뀌지 않게 한다(불필요한 메시지 편집 방지).
- */
-function endTimestamp(player: CustomPlayer, track: Track): string {
-	const chapter = currentChapter(player);
-	const endMs = chapter ? chapter.end : track.info.duration;
-	const positionMs = Math.min(player.position ?? 0, endMs);
-	const remainingMs = Math.max(0, endMs - positionMs);
-	const endUnix = Math.round((Date.now() + remainingMs) / 5000) * 5;
-	return `<t:${endUnix}:R>`;
 }
 
 /**

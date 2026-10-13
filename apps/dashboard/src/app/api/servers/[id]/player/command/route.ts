@@ -12,30 +12,53 @@ import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
  */
 const commandSchema = z
   .object({
-    action: z.enum(["volume", "pause", "resume", "skip", "stop"]),
+    action: z.enum(["volume", "pause", "resume", "skip", "stop", "repeat"]),
     value: z.number().int().min(0).max(150).optional(),
   })
-  .refine((body) => body.action !== "volume" || typeof body.value === "number", {
-    message: "volume 제어에는 value(0~150)가 필요해요.",
-  });
+  .refine(
+    (body) => body.action !== "volume" || typeof body.value === "number",
+    {
+      message: "volume 제어에는 value(0~150)가 필요해요.",
+    },
+  );
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const authz = await authorizeGuildMember(id);
   if (!authz.ok) return deniedGuildMember(authz);
 
-  const limited = await guardRateLimit(rateKey("player-command", authz.userId, id), WRITE_RATE);
+  const limited = await guardRateLimit(
+    rateKey("player-command", authz.userId, id),
+    WRITE_RATE,
+  );
   if (limited) return limited;
 
-  const parsed = commandSchema.safeParse(await request.json().catch(() => null));
+  const parsed = commandSchema.safeParse(
+    await request.json().catch(() => null),
+  );
   if (!parsed.success) {
-    return NextResponse.json({ error: "명령 형식이 올바르지 않아요." }, { status: 400 });
+    return NextResponse.json(
+      { error: "명령 형식이 올바르지 않아요." },
+      { status: 400 },
+    );
   }
 
-  const result = await requestPlayerControl(id, authz.userId, parsed.data.action, parsed.data.value);
+  const result = await requestPlayerControl(
+    id,
+    authz.userId,
+    parsed.data.action,
+    parsed.data.value,
+  );
   if (!result.ok) {
     return NextResponse.json(
-      { error: result.error ?? "명령을 전달하지 못했어요. 잠시 후 다시 시도해 주세요." },
+      {
+        error:
+          result.error ??
+          "명령을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      },
       { status: result.status },
     );
   }
