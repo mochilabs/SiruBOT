@@ -54,26 +54,25 @@ function Slider({
 				step={step}
 				onValueChange={handleValueChange}
 				disabled={disabled}
-				thumbAlignment="edge"
+				thumbAlignment="center"
 				{...props}
 			>
 				<SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50">
 					<SliderPrimitive.Track
 						data-slot="slider-track"
-						className="relative grow overflow-hidden rounded-full bg-muted select-none data-horizontal:h-1.5 data-horizontal:w-full"
+						className="relative grow rounded-full bg-muted select-none data-horizontal:h-1.5 data-horizontal:w-full"
 					>
 						<SliderPrimitive.Indicator
 							data-slot="slider-range"
 							className="bg-primary-control select-none data-horizontal:h-full"
 						/>
-					</SliderPrimitive.Track>
-					{Array.from({ length: 1 }, (_, index) => (
 						<SliderPrimitive.Thumb
 							data-slot="slider-thumb"
-							key={index}
+							index={0}
+							aria-label={label}
 							className="relative block size-4 shrink-0 rounded-full border-0 bg-primary-control shadow-sm transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-2 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 						/>
-					))}
+					</SliderPrimitive.Track>
 				</SliderPrimitive.Control>
 			</SliderPrimitive.Root>
 

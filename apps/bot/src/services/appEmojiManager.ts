@@ -101,6 +101,7 @@ export class AppEmojiManager {
 	private async sourceDir(): Promise<string | null> {
 		const candidates = [
 			join(process.cwd(), 'resources', 'emoji_replacement'), // repo 루트 / Docker(/app)
+			join(process.cwd(), '..', '..', 'resources', 'emoji_replacement'), // apps/bot CWD
 			join(process.cwd(), 'apps', 'bot', 'resources', 'emoji_replacement'), // repo 루트에서 봇 리소스
 			join('/app', 'resources', 'emoji_replacement') // Docker 절대 경로 (방어)
 		];

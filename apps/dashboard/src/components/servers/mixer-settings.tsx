@@ -13,7 +13,7 @@ import { toError } from "@/lib/api-error";
 import type { GuildSettings } from "@/types/settings";
 
 import { MixerInfoTip } from "./mixer-info";
-import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
+import { PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
 interface MixerForm {
 	gaplessEnabled: boolean;
@@ -34,7 +34,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 	const handleSave = useCallback(async () => {
 		try {
 			await submit();
-			toast.success("오디오 엔진 설정을 저장했어요.", "재생 중이면 봇이 바로 적용해요.");
+			toast.success("오디오 엔진 설정을 저장했어요.");
 		} catch (err) {
 			const apiError = toError(err, "저장에 실패했어요.");
 			toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
@@ -96,10 +96,6 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 					disabled={saving || !form.crossfadeEnabled}
 				/>
 			</Field>
-
-			<InfoBox>
-				<p>저장하면 재생 중인 플레이어에도 바로 적용돼요. 봇이 재생 중이 아니면 다음 재생부터 반영돼요.</p>
-			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
 		</Card>
