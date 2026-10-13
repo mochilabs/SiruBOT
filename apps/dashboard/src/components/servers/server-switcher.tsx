@@ -110,23 +110,28 @@ export function ServerSwitcher({
     </DropdownMenuItem>
   ));
 
-  return (
-    <div className="flex min-w-0 items-center gap-2">
+  const switcherContent = (
+    <>
       {currentIcon}
-      <span className="truncate">{guildName}</span>
+      <span className="min-w-0 flex-1 truncate">{guildName}</span>
+      <ChevronDown size={18} className="shrink-0 text-muted-foreground" aria-hidden />
+    </>
+  );
+
+  return (
+    <div className="min-w-0">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button
               variant="ghost"
-              size="icon-sm"
-              aria-label="서버 바꾸기"
-              className="hidden shrink-0 sm:inline-flex"
-            />
+              aria-label={`${guildName} 서버 선택`}
+              className="hidden h-auto max-w-full min-w-0 justify-start gap-3 rounded-control px-0 py-0 text-inherit font-[inherit] tracking-[inherit] hover:bg-transparent sm:inline-flex"
+            >
+              {switcherContent}
+            </Button>
           }
-        >
-          <ChevronDown size={18} aria-hidden />
-        </DropdownMenuTrigger>
+        />
         <DropdownMenuContent
           align="start"
           className="hidden max-h-[min(70dvh,32rem)] w-80 sm:block"
@@ -165,11 +170,10 @@ export function ServerSwitcher({
           render={
             <Button
               variant="ghost"
-              size="sm"
-              icon={<ChevronDown size={16} />}
-              className="sm:hidden"
+              aria-label={`${guildName} 서버 선택`}
+              className="h-auto max-w-full min-w-0 justify-start gap-3 rounded-control px-0 py-0 text-inherit font-[inherit] tracking-[inherit] hover:bg-transparent sm:hidden"
             >
-              서버
+              {switcherContent}
             </Button>
           }
         />
