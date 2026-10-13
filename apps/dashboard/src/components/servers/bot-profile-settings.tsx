@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { toError } from "@/lib/api-error";
 
-import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 const MAX_NICKNAME_LENGTH = 32;
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
@@ -381,13 +381,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           </div>
         </Field>
       </div>
-
-      <InfoBox>
-        <p>
-          서버 닉네임은 봇에게 닉네임 변경 권한(CHANGE_NICKNAME 또는 MANAGE_NICKNAMES)이 필요해요. 프로필 사진은 권한 없이
-          적용되는 길드 전용 프로필이에요. 저장하면 봇이 Discord에 직접 반영해요.
-        </p>
-      </InfoBox>
 
       <SaveBar dirty={dirty} saving={saving} onSave={handleSave}>
         {dirty && (
