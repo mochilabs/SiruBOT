@@ -53,6 +53,7 @@ export function useBotProfile(guildId: string) {
   return {
     profile: data?.profile ?? null,
     hub: data?.hub ?? null,
+    refreshFailed: data?.refreshFailed ?? false,
     isLoading,
     error: error ? toError(error, "봇 프로필 상태를 불러오지 못했어요.") : null,
     saving,

@@ -28,7 +28,7 @@ function describeApplyError(error: string): string {
 
 function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
   const toast = useToast();
-  const { profile, isLoading, error, saving, save, reload } = useBotProfile(guildId);
+  const { profile, refreshFailed, isLoading, error, saving, save, reload } = useBotProfile(guildId);
 
   const [nickname, setNickname] = useState("");
   const [nicknameTouched, setNicknameTouched] = useState(false);
@@ -162,7 +162,9 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           description="봇이 이 서버에서 보여질 이름과 프로필 사진을 관리해요."
         />
         <WarningBox>
-          봇이 이 서버의 프로필 상태를 아직 보내지 않았어요. 봇 접속 상태를 확인하고 잠시 후 시도해 주세요.{" "}
+          {refreshFailed
+            ? "봇에서 최신 프로필 상태를 받지 못했어요. 봇이 서버에 접속해 있는지 확인하고 다시 시도해 주세요."
+            : "봇이 이 서버의 프로필 상태를 아직 보내지 않았어요. 봇 접속 상태를 확인하고 잠시 후 시도해 주세요."}{" "}
           <button type="button" className="font-semibold underline" onClick={reload}>
             다시 시도
           </button>
@@ -228,10 +230,9 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
 
       {lastApplyError && <WarningBox>봇이 마지막 프로필 적용에 실패했어요: {lastApplyError}</WarningBox>}
 
-      {profile.stale && (
+      {refreshFailed && (
         <WarningBox>
-          봇이 상태를 최근 60초 안에 갱신하지 않았어요 — 봇이 접속 중이 아니거나 상태 전송이 일시 끊겼을 수 있어요. 표시
-          중인 닉네임·사진은 마지막에 받은 값이에요.{" "}
+          봇에서 최신 상태를 받지 못해 마지막으로 확인한 닉네임·사진을 표시하고 있어요.{" "}
           <button type="button" className="font-semibold underline" onClick={reload}>
             다시 시도
           </button>

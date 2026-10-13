@@ -23,6 +23,9 @@ export const GUILD_SETTINGS_INVALIDATE_CHANNEL = 'sirubot:guild-settings:invalid
  */
 export const BOT_PROFILE_SET_CHANNEL = 'sirubot:bot-profile:set';
 
+/** 봇 프로필 최신 상태 요청 — data-api가 화면 조회/재시도 시 요청하고 해당 길드 봇만 현재 상태를 퍼블리시해요. */
+export const BOT_PROFILE_REFRESH_CHANNEL = 'sirubot:bot-profile:refresh';
+
 /** 봇 프로필 상태 퍼블리시 채널 접두사 — 봇이 `sirubot:bot-profile:state:{guildId}`로 현재 상태를 알려요 */
 export const BOT_PROFILE_STATE_CHANNEL_PREFIX = 'sirubot:bot-profile:state:';
 
