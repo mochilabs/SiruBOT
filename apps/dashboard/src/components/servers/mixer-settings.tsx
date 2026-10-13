@@ -12,6 +12,7 @@ import { useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import type { GuildSettings } from "@/types/settings";
 
+import { MixerInfoTip } from "./mixer-info";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
 interface MixerForm {
@@ -54,24 +55,30 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 
 			<div className="grid gap-6 sm:grid-cols-2">
 				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
-					<Switch
-						checked={form.gaplessEnabled}
-						onChange={(checked) => patch({ gaplessEnabled: checked })}
-						disabled={saving}
-						label="갭리스 재생"
-						labelPosition="left"
-					/>
+					<div className="flex items-center justify-between gap-2">
+						<Switch
+							checked={form.gaplessEnabled}
+							onChange={(checked) => patch({ gaplessEnabled: checked })}
+							disabled={saving}
+							label="갭리스 재생"
+							labelPosition="left"
+						/>
+						<MixerInfoTip kind="gapless" />
+					</div>
 					<p className="text-xs text-muted-foreground">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
 				</div>
 
 				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
-					<Switch
-						checked={form.crossfadeEnabled}
-						onChange={(checked) => patch({ crossfadeEnabled: checked })}
-						disabled={saving}
-						label="크로스페이드"
-						labelPosition="left"
-					/>
+					<div className="flex items-center justify-between gap-2">
+						<Switch
+							checked={form.crossfadeEnabled}
+							onChange={(checked) => patch({ crossfadeEnabled: checked })}
+							disabled={saving}
+							label="크로스페이드"
+							labelPosition="left"
+						/>
+						<MixerInfoTip kind="crossfade" />
+					</div>
 					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요.</p>
 				</div>
 			</div>
