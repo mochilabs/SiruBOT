@@ -286,7 +286,9 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 							/>
 							{/* 아바타 원형(또는 배너 사각) 마스크 — 뷰포트에 딱 맞춘 inset-0, 축소돼도 어긋나지 않아요 */}
 							<div className="pointer-events-none absolute inset-0">
-								<div className={`shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`} />
+								{/* 마스크 div 자체는 w-full h-full이어야 9999px 확산 shadow가 뷰포트 "바깥"만 덮어요 —
+								    크기가 0이면 shadow가 크롭 영역까지 전부 덮어 이미지가 어둡게 보여요. */}
+								<div className={`h-full w-full shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${spec.maskClass}`} />
 							</div>
 						</div>
 					</div>

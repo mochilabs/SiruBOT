@@ -33,7 +33,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 	const handleSave = useCallback(async () => {
 		try {
 			await submit();
-			toast.success("오디오 엔진 설정을 저장했어요.", "봇이 곧 새 설정을 적용해요.");
+			toast.success("오디오 엔진 설정을 저장했어요.", "재생 중이면 봇이 바로 적용해요.");
 		} catch (err) {
 			const apiError = toError(err, "저장에 실패했어요.");
 			toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
@@ -72,7 +72,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 						label="크로스페이드"
 						labelPosition="left"
 					/>
-					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요. (Lavalink mixer 플러그인 필요)</p>
+					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요.</p>
 				</div>
 			</div>
 
@@ -91,7 +91,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 			</Field>
 
 			<InfoBox>
-				<p>설정은 다음 곡부터 적용돼요. /믹서 커맨드로 재생 중인 플레이어에 바로 밀어 넣을 수 있어요.</p>
+				<p>저장하면 재생 중인 플레이어에도 바로 적용돼요. 봇이 재생 중이 아니면 다음 재생부터 반영돼요.</p>
 			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />

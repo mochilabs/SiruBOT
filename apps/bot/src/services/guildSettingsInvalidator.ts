@@ -5,20 +5,24 @@
  * data-api의 내부 엔드포인트가 Redis 채널(`sirubot:guild-settings:invalidate`)로
  * guildId를 브로드캐스트하면, 각 봇 프로세스(샤드 replica마다 1개)가 이 서비스로
  * 구독해 자기 캐시만 무효화해요. 무효화는 guildId만 전달하고 봇이 DB에서 다시 읽어요.
+ * 대시보드에서 믹서(갭리스·크로스페이드)를 저장하면 reason: 'mixer'가 함께 와서,
+ * 이 길드를 보유한 봇이 재생 중인 플레이어에 설정을 바로 밀어 넣어요 (/믹서 커맨드와 같은 동작).
  *
  * - 구독은 RedisStore 공용 연결을 못 쓰므로(구독 모드는 일반 명령 불가) 전용 연결을 만들어요.
  * - 연결 실패/끊김 시에도 봇은 정상 동작해요 — TTL(60초) 폴백이 있고, 재연결을 시도해요.
  * - 절대 프로세스를 크래시시키지 않아요.
  */
 import { GUILD_SETTINGS_INVALIDATE_CHANNEL, ManagedRedisSubscriber } from '@sirubot/utils';
+import { container } from '@sapphire/framework';
 
 import { GuildService } from './guildService.ts';
 
 interface InvalidationPayload {
 	guildId?: unknown;
+	reason?: unknown;
 }
 
-/** 페이로드 검증 — {"guildId":"<길드 ID>"} 형태만 무효화해요 */
+/** 페이로드 검증 — {"guildId":"<길드 ID>", "reason":"mixer"?} 형태만 받아요 */
 function parseGuildId(raw: string): string | null {
 	try {
 		const parsed = JSON.parse(raw) as InvalidationPayload;
@@ -29,6 +33,16 @@ function parseGuildId(raw: string): string | null {
 		// 형식 불일치 — 조용히 무시 (로그는 호출부에서 남겨요)
 	}
 	return null;
+}
+
+/** 무효화 사유 — 'mixer'면 재생 중인 플레이어에 설정을 바로 밀어 넣어요 */
+function parseReason(raw: string): 'mixer' | null {
+	try {
+		const parsed = JSON.parse(raw) as InvalidationPayload;
+		return parsed?.reason === 'mixer' ? 'mixer' : null;
+	} catch {
+		return null;
+	}
 }
 
 export class GuildSettingsInvalidator {
@@ -68,6 +82,29 @@ export class GuildSettingsInvalidator {
 		}
 		this.guildService?.invalidate(guildId);
 		this.logger.debug(`길드 설정 캐시 무효화: ${guildId}`);
+		if (parseReason(raw) === 'mixer') void this.applyMixerToPlayer(guildId);
+	}
+
+	/**
+	 * 믹서(갭리스·크로스페이드) 저장의 라이브 적용 — /믹서 커맨드와 같은 동작이에요.
+	 * 이 길드를 보유한 레플리카만 getPlayer가 잡아요. 재생 중이 아니면 다음 재생 때
+	 * DB 설정이 적용되므로, 노드 장애(플러그인 없음 등)는 경고로만 넘어가요.
+	 */
+	private async applyMixerToPlayer(guildId: string): Promise<void> {
+		try {
+			const player = container.audio.getPlayer(guildId);
+			if (!player) return;
+			const settings = await container.guildService.getMixerSettings(guildId);
+			await container.mixerService.setCrossfade(player, settings.crossfadeEnabled, settings.crossfadeMs);
+			if (settings.gaplessEnabled) {
+				await container.mixerService.preloadUpcoming(player).catch(() => null);
+			} else {
+				await container.mixerService.clearNext(player).catch(() => null);
+			}
+			this.logger.debug(`믹서 설정을 재생 중 플레이어에 적용: ${guildId}`);
+		} catch (error) {
+			this.logger.warn(`믹서 라이브 적용 실패 (guild ${guildId}): ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	/** 종료 — 구독 해제 후 연결을 닫아요. 호출자(shutdown)는 redisStore.disconnect() 전에 불러야 해요. */

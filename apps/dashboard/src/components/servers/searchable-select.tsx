@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -103,9 +103,8 @@ export function SearchableSelect(props: SearchableSelectProps) {
 
 	const displayLabel = useMemo(() => {
 		if (selectedValues.length === 0) return null;
-		if (isMultiple) {
-			return `${selectedValues.length}개 선택됨`;
-		}
+		// 다중 선택은 트리거에 개수를 세지 않고 아래 태그 칩으로 실제 선택을 보여줘요
+		if (isMultiple) return null;
 		const selected = options.find((option) => option.value === selectedValues[0]);
 		return selected ? (
 			<span className="inline-flex items-center gap-1.5">
@@ -139,6 +138,34 @@ export function SearchableSelect(props: SearchableSelectProps) {
 				<span className={displayLabel ? "text-foreground" : "text-muted-foreground"}>{displayLabel ?? placeholder}</span>
 				<SelectPrimitive.Icon render={<ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-fast", open && "rotate-180")} />} />
 			</SelectPrimitive.Trigger>
+
+			{/* 다중 선택 태그 — 트리거 아래에 실제 선택된 항목을 칩으로 보여줘요 (role-select의 선택 칩과 같은 언어) */}
+			{isMultiple && selectedValues.length > 0 && (
+				<div className="mt-2 flex flex-wrap gap-1.5">
+					{selectedValues.map((value) => {
+						const option = options.find((item) => item.value === value);
+						if (!option) return null;
+						return (
+							<span
+								key={value}
+								className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2 py-1 text-xs font-bold text-foreground"
+							>
+								{option.icon}
+								<span className="max-w-[12rem] truncate">{option.label}</span>
+								<button
+									type="button"
+									onClick={() => handleValueChange(selectedValues.filter((item) => item !== value))}
+									className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+									aria-label={`${option.label} 제거`}
+									disabled={disabled}
+								>
+									<X className="h-3 w-3" aria-hidden />
+								</button>
+							</span>
+						);
+					})}
+				</div>
+			)}
 
 			<SelectPrimitive.Portal>
 				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={4} className="z-50">
