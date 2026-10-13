@@ -30,7 +30,7 @@ import type { OpenAICompatTranslationProvider } from '../providers/translate.ts'
 import { recordPlaybackEvent, recentPlaybackEvents, playbackSnapshot, type PlaybackEventType } from '../services/playbackStore.ts';
 import { memoryTidyStatus } from '../services/memoryTidy.ts';
 import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
-import { getBotProfile, botProfileHubStatus } from '../services/botProfileHub.ts';
+import { getBotProfile, botProfileHubStatus, refreshBotProfile } from '../services/botProfileHub.ts';
 import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
 import { requestGuildData, guildDataHubStatus, type GuildDataFailureReason } from '../services/guildDataHub.ts';
 import { requestPlayerWeb, type PlayerWebResult } from '../services/playerWebHub.ts';
@@ -264,14 +264,15 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
-	// ── 봇 프로필 상태 (봇 Redis Pub/Sub → botProfileHub) ──
-	// 알 수 없는 길드도 404 대신 profile:null + hub 상태로 응답해요 — dashboard SWR 폴백이 안정적으로 동작하게.
+	// ── 봇 프로필 상태 (화면 조회 시 봇에 최신 상태를 요청하고 캐시를 폴백으로 사용) ──
 	fastify.get('/v1/bot-profile/:guildId', async (request, reply) => {
 		try {
 			const { guildId } = guildIdParams.parse(request.params);
+			const refreshed = await refreshBotProfile(guildId);
 			return reply.send({
 				profile: getBotProfile(guildId),
-				hub: botProfileHubStatus()
+				hub: botProfileHubStatus(),
+				refreshFailed: !refreshed
 			});
 		} catch (error) {
 			return sendError(reply, error);

@@ -17,7 +17,7 @@
  * - pending 키는 TTL(120초)이 있어 봇이 모두 무시해도 자동 정리돼요.
  */
 import { container } from '@sapphire/framework';
-import { BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
+import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
 import { Guild, PermissionFlagsBits } from 'discord.js';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
@@ -66,16 +66,39 @@ export class BotProfileService {
 	public async start(redisUrl: string | undefined): Promise<void> {
 		const url = redisUrl?.trim() || null;
 		if (!url) {
-			this.logger.warn('REDIS_URL 미설정: 봇 프로필 적용 요청 구독 없이 동작해요 (상태 퍼블리시는 계속돼요)');
+			this.logger.warn('REDIS_URL 미설정: 봇 프로필 적용/최신 상태 요청을 구독하지 못해요 (상태 퍼블리시는 계속돼요)');
 			return;
 		}
 		this.subscriber = new ManagedRedisSubscriber({
 			name: '봇 프로필',
 			url,
 			logger: this.logger,
-			bindings: [{ channel: BOT_PROFILE_SET_CHANNEL, onMessage: (raw) => void this.handleSetMessage(raw) }]
+			bindings: [
+				{ channel: BOT_PROFILE_SET_CHANNEL, onMessage: (raw) => void this.handleSetMessage(raw) },
+				{ channel: BOT_PROFILE_REFRESH_CHANNEL, onMessage: (raw) => void this.handleRefreshMessage(raw) }
+			]
 		});
 		await this.subscriber.start();
+	}
+
+	private async handleRefreshMessage(raw: string): Promise<void> {
+		let guildId: string;
+		try {
+			const parsed = JSON.parse(raw) as { guildId?: unknown };
+			if (typeof parsed.guildId !== 'string' || parsed.guildId.length === 0 || parsed.guildId.length > 32) return;
+			guildId = parsed.guildId;
+		} catch {
+			return;
+		}
+
+		const guild = container.client.guilds.cache.get(guildId);
+		if (!guild) return;
+		try {
+			await guild.members.fetchMe({ force: true });
+			this.publishGuildProfileFromGuild(guild);
+		} catch (error) {
+			this.logger.warn(`봇 프로필 최신 상태 조회 실패 (guild ${guildId}): ${error}`);
+		}
 	}
 
 	private async handleSetMessage(raw: string): Promise<void> {

@@ -16,14 +16,12 @@ export interface BotProfileState {
   /** 봇의 마지막 적용 시도 결과이에요 */
   lastApply: { ok: boolean; error: string | null; at: number } | null;
   updatedAt: number;
-  /** data-api 최종 갱신 기준 밀리초 — 60초 넘으면 stale */
-  ageMs: number;
-  stale: boolean;
 }
 
 export interface BotProfileResponse {
   profile: BotProfileState | null;
-  hub: { guilds: number; subscribed: boolean; staleMs: number };
+  hub: { guilds: number; subscribed: boolean };
+  refreshFailed: boolean;
 }
 
 /** 패치 요청 페이로드 — 대시보드 route가 data-api로 전달해요 */
