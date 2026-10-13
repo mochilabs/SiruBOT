@@ -55,9 +55,9 @@ function StreakCount({ streak }: { streak: number }) {
   const { ref, value } = useCountUp({ end: streak });
 
   return (
-    <p className="text-2xl font-black tabular-nums text-foreground">
+    <p className="text-xl font-black tabular-nums text-foreground">
       <span ref={ref}>{Math.round(value).toLocaleString("ko-KR")}</span>
-      <span className="ml-1 text-sm font-bold text-muted-foreground">일 연속</span>
+      <span className="ml-1 text-xs font-bold text-muted-foreground">일 연속</span>
     </p>
   );
 }
@@ -72,13 +72,13 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
       <RevealGroup className="grid gap-4 md:grid-cols-2" stagger={0.1}>
         {/* 생일 카드 */}
         <RevealItem className="h-full">
-          <Card className="h-full min-h-36">
+          <Card padding="sm" className="h-full min-h-24">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Cake className="h-4 w-4 text-primary-text" aria-hidden />
                 생일
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs leading-tight">
                 {hasBirthday
                   ? `${birthday.month}월 ${birthday.day}일 · ${birthday.zodiac?.ko ?? "별자리 없음"}`
                   : "봇 `/프로필 생일 등록` 커맨드로 등록할 수 있어요."}
@@ -89,7 +89,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
 
         {/* 출석 카드 — 슬림하게 */}
         <RevealItem className="h-full">
-          <Card className="h-full min-h-36">
+          <Card padding="sm" className="h-full min-h-24">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarCheck className="h-4 w-4 text-primary-text" aria-hidden />
@@ -98,9 +98,9 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               <div className="flex items-center justify-between gap-3">
                 <StreakCount streak={attendance.streak} />
                 {attendance.checkedInToday ? (
-                  <Badge variant="success">오늘 출석 완료</Badge>
+                  <Badge variant="success" size="sm">오늘 출석 완료</Badge>
                 ) : (
-                  <Badge variant="warning">오늘 미출석 · `/출석`으로 체크</Badge>
+                  <Badge variant="warning" size="sm">오늘 미출석 · `/출석`</Badge>
                 )}
               </div>
             </CardHeader>
