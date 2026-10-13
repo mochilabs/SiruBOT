@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Search, Server } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import useSWR from "swr";
 
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
@@ -30,6 +30,29 @@ import { hasUnsavedSettings } from "./settings-shared";
 
 interface ServerListResponse {
   guilds: EnrichedGuild[];
+}
+
+function GuildIcon({ guild }: { guild: EnrichedGuild }) {
+  if (guild.icon) {
+    return (
+      <Image
+        src={discordGuildIconUrl(guild.id, guild.icon, 64)}
+        alt=""
+        width={32}
+        height={32}
+        className="h-8 w-8 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-bold text-muted-foreground"
+      aria-hidden
+    >
+      {guild.name.slice(0, 1)}
+    </span>
+  );
 }
 
 export function ServerSwitcher({
@@ -100,6 +123,7 @@ export function ServerSwitcher({
       onClick={() => selectGuild(guild)}
       className="min-h-11 gap-2"
     >
+      <GuildIcon guild={guild} />
       <span className="min-w-0 flex-1 truncate">{guild.name}</span>
       {guild.id === guildId ? (
         <span className="text-xs text-muted-foreground">현재</span>
@@ -213,11 +237,7 @@ export function ServerSwitcher({
                   onClick={() => selectGuild(guild)}
                   className="flex min-h-12 w-full items-center gap-3 rounded-control px-3 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <Server
-                    size={16}
-                    className="shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
+                  <GuildIcon guild={guild} />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {guild.name}
                   </span>
