@@ -21,6 +21,8 @@ const MAX_PNG_BYTES = 256 * 1024;
  * - 업로드는 이름 기준으로 idempotent — 이미 있으면 건너뛰어 멀티 인스턴스 재시작에도 안전.
  */
 export class AppEmojiManager {
+	private refreshScheduled = false;
+
 	/**
 	 * 앱 이모지를 동기화한다.
 	 * @param upload true면 미등록 PNG를 업로드한다 (shard 0만). false면 조회·캐시만.
@@ -40,6 +42,7 @@ export class AppEmojiManager {
 		} catch (error) {
 			// API 실패 — 커밋 매핑은 이미 반영됐으니 업로드 없이 종료.
 			container.logger.warn(`[appEmoji] 앱 이모지 조회 실패 (${this.describe(error)}) — 커밋 매핑으로 진행`);
+			if (!upload) this.scheduleRefresh();
 			return;
 		}
 
@@ -52,6 +55,14 @@ export class AppEmojiManager {
 		if (Object.keys(map).length) {
 			setAppEmojiIdMap(map);
 		}
+		// 다른 샤드는 shard 0의 신규 이모지 업로드보다 먼저 조회할 수 있어 한 번 더 동기화한다.
+		if (!upload) this.scheduleRefresh();
+	}
+
+	private scheduleRefresh(): void {
+		if (this.refreshScheduled) return;
+		this.refreshScheduled = true;
+		setTimeout(() => void this.sync(false), 30_000).unref?.();
 	}
 
 	private async uploadMissing(application: ClientApplication, map: Record<string, string>): Promise<void> {

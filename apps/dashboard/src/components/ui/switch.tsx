@@ -38,7 +38,7 @@ const trackBase =
 	"rounded-full border-0 bg-secondary shadow-control-boundary transition-colors duration-fast outline-none data-checked:bg-primary-control data-checked:shadow-none";
 
 const thumbBase =
-	"pointer-events-none block rounded-full border-0 bg-switch-thumb transition-transform duration-fast ease-out";
+	"pointer-events-none block -translate-y-[0.25px] rounded-full border-0 bg-switch-thumb transition-transform duration-fast ease-out";
 
 function Switch({
 	checked,
