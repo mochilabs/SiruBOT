@@ -13,7 +13,7 @@ SiruBOT
   <b>English</b> | <a href="README.ko.md">한국어</a>
 </p>
 
-A modern Discord music bot built with Discord.js and Lavalink, featuring a highly-scalable monorepo architecture powered by Turbo and Yarn workspaces.
+A Discord music bot built with Discord.js and Lavalink. The repository also contains a Next.js dashboard, a data API, and a shard manager, organized as a Yarn workspaces monorepo.
 
 ---
 
@@ -36,10 +36,10 @@ sirubot/
 
 ## 🎵 Core Features
 
-- **High-Quality Audio streaming**: Music playback streamed via Lavalink.
-- **Web Dashboard**: An immersive, real-time web control panel providing interactive music controls and shard status monitoring.
-- **Data API Gateway**: A centralized gateway that caches external API calls (weather, lyrics, horoscopes, delivery tracking, YouTube chapters) and runs scheduled LLM jobs — one shared instance instead of per-shard duplicate requests.
-- **Profile Card**: A rendered image card for user profiles — zodiac constellation background, user banner, avatar and music stats.
+- **Music playback**: Audio playback through Lavalink.
+- **Web Dashboard**: Music controls, server settings, and shard status monitoring.
+- **Data API Gateway**: Caches external API calls (weather, lyrics, horoscopes, delivery tracking, YouTube chapters) and runs scheduled LLM jobs for the bot services.
+- **Profile Card**: A rendered image card for user profiles with a zodiac constellation background, banner, avatar, and music stats.
 - **Custom Playlists**: Create, manage, and load personalized music playlists directly from the bot or dashboard.
 - **Smart Auto-complete**: Real-time track search suggestions inside Discord slash commands.
 - **Queue Controls**: Music queue controls including looping, shuffling, skipping, and navigating directly to specific tracks.
@@ -51,44 +51,59 @@ sirubot/
 ### Prerequisites
 
 - **Node.js**: v22 or higher
-- **Yarn**: v4.6.0 or higher (with Corepack enabled)
+- **Yarn**: v4.12.0 (managed with Corepack)
 - **Database**: PostgreSQL (connected via Prisma ORM)
 - A Discord Bot Token and an active Lavalink server instance
 
 ### Environment Setup (`.env`)
 
-To run the applications, configure the environment variables in `.env` files within their respective application directories.
+Create an `.env` file in each app directory from its `.env.example`. The examples below show the minimum local setup. Keep secrets out of version control.
 
 #### 1. Discord Bot (`apps/bot/.env`)
 ```env
 DISCORD_TOKEN=your_discord_bot_token_here
-CLIENT_ID=your_discord_client_id_here
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
-LAVALINK_URL=localhost:2333
-LAVALINK_PASSWORD=youshallnotpass
+DATABASE_URL=postgresql://user:password@localhost:5432/sirubot
+REDIS_URL=redis://localhost:6379
+LAVALINK_HOSTS=main_localhost_2333_youshallnotpass
+# Optional: enable bot features served by the data API
+DATA_API_URL=http://localhost:3002
+DATA_API_AUTH_KEY=replace_with_data_api_key
+# Required for production shard-manager connection. Omit for standalone local development.
+# SHARD_MANAGER_URL=ws://localhost:3001/ws
+# AUTH_KEY=replace_with_a_shared_secret
 ```
 
 #### 2. Web Dashboard (`apps/dashboard/.env`)
 ```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
+DISCORD_CLIENT_ID=your_discord_application_client_id
+DISCORD_CLIENT_SECRET=your_discord_application_client_secret
+AUTH_SECRET=generate_a_random_secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+# Keep these keys and URLs aligned with the corresponding services.
+SHARD_MANAGER_URL=http://localhost:3001
+SHARD_MANAGER_AUTH_KEY=replace_with_shard_manager_key
+DATA_API_URL=http://localhost:3002
+DATA_API_AUTH_KEY=replace_with_data_api_key
 ```
 
 #### 3. Data API (`apps/data-api/.env`)
 ```env
-# Shared cache (falls back to in-memory when unset)
+# Required: data-api refuses to start without one of these shared authentication keys.
+DATA_API_AUTH_KEY=replace_with_data_api_key
+# Or use AUTH_KEY instead. The bot and dashboard must send the same key.
+# AUTH_KEY=replace_with_data_api_key
+# Optional shared cache and request hub (in-memory fallback when unset)
 REDIS_URL=redis://localhost:6379
-# Auth key — must match the bot's AUTH_KEY
-AUTH_KEY=shared_secret_here
-# Optional: translation provider for horoscope + memory tidy batch job
+# Optional translation provider for horoscope translation and memory tidy jobs
 OPENAI_COMPATIBLE_API_URL=http://127.0.0.1:8080/v1
 OPENAI_API_KEY=your_api_key_here
 TRANSLATION_MODEL=your_model_name
-# Optional: enables the nightly memory tidy batch job
+# Optional: memory tidy requires DATABASE_URL and a configured translation provider
 DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
-# Optional: point the bot at this gateway (set in apps/bot/.env instead)
-# DATA_API_URL=http://localhost:3002
 ```
+
+The bot uses the gateway only when `DATA_API_URL` is set in `apps/bot/.env`. The dashboard defaults to `http://localhost:3002`. Set `DATA_API_AUTH_KEY` or `AUTH_KEY` to the same value in the data API, bot, and dashboard environments. Requests send the key as the raw `Authorization` header value, without a `Bearer` prefix. Only `/api/health` is unauthenticated.
 
 ---
 
@@ -103,22 +118,24 @@ The gateway centralizes external API access so bot shards never call third-party
 | `/v1/weather?location=&scope=` | GET | Geocoding + forecast + air quality (Open-Meteo) | 15 min |
 | `/v1/chapters?videoId=&durationMs=` | GET | YouTube chapter markers for long videos | 12 h |
 | `/v1/delivery/track?carrier=&number=` | GET | Parcel tracking (tracker.delivery), carrier alias resolution server-side | 5 min |
-| `/v1/playback/events` | POST | Playback event ingestion from bot shards (start/end/stuck/error/abort) | — |
-| `/v1/playback/recent?limit=` | GET | Recent playback events, including errors | — |
-| `/v1/image/profile` | POST | Renders a profile card PNG (zodiac background, banner, avatar, stats) | — |
-| `/v1/ohaasa/refresh` | POST | Force-refresh the daily horoscope | — |
-| `/v1/status` | GET | Operational metrics (cache hit rate, upstream calls/errors, breakers) | — |
-| `/dashboard` | GET | Built-in monitoring dashboard (no third-party dependencies) | — |
+| `/v1/playback/events` | POST | Playback event ingestion from bot shards (start/end/stuck/error/abort) | N/A |
+| `/v1/playback/recent?limit=` | GET | Recent playback events, including errors | N/A |
+| `/v1/image/profile` | POST | Renders a profile card PNG (zodiac background, banner, avatar, stats) | N/A |
+| `/v1/ohaasa/refresh` | POST | Force-refresh the daily horoscope | N/A |
+| `/v1/status` | GET | Operational metrics (cache hit rate, upstream calls/errors, breakers) | N/A |
+| `/dashboard` | GET | Built-in monitoring dashboard (no third-party dependencies) | N/A |
 
 Background jobs (single instance, jittered schedule):
-- **Horoscope translation** — daily at KST 06:50, keeps Redis warm so shard requests never hit the LLM.
-- **Memory tidy (nightly pass)** — daily at midnight, compacts per-user long-term memory via LLM. Only active when both `DATABASE_URL` and the translation provider are configured.
+- **Horoscope translation**: daily at KST 06:50. It keeps Redis warm so shard requests do not need to call the LLM.
+- **Memory tidy (nightly pass)**: daily at midnight, compacts per-user long-term memory via LLM. It runs only when both `DATABASE_URL` and the translation provider are configured.
 
-Running the bot with `DATA_API_URL` set makes it consume the gateway exclusively; unset, the bot falls back to direct calls, so dev environments work without the gateway.
+The gateway listens on port `3002` by default. When `DATA_API_URL` is not set in the bot environment, the bot uses its direct provider integrations instead.
 
 ```bash
-# Run in development
-yarn dev --filter=@sirubot/data-api   # or: turbo dev --filter=@sirubot/data-api
+# Build dependencies, then run the data API
+yarn generate
+yarn workspace @sirubot/data-api build
+yarn workspace @sirubot/data-api start
 ```
 
 ---
@@ -131,21 +148,26 @@ Manage the entire monorepo from the root directory using the scripts below:
 # Install dependencies
 yarn install
 
-# Run all apps in development mode concurrently
-yarn dev
-
 # Generate Prisma client files
 yarn generate
 
-# Run Prisma database migrations
+# Run all configured apps in development mode concurrently
+yarn dev
+
+# Apply database migrations in development
 yarn workspace @sirubot/prisma migrate:dev
+
+# Lint the repository
+yarn lint
+
+# Run tests
+yarn test
 
 # Build all packages and applications for production
 yarn build
-
-# Lint and format code across the repository
-yarn lint
 ```
+
+For local development, create the per-app environment files described above, then run `yarn dev`. Generate the Prisma client with `yarn generate` before typechecking or building.
 
 ### Filtering Specific Projects (Turbo Filter)
 
@@ -166,18 +188,16 @@ turbo build --filter=@sirubot/utils
 
 ## 🐳 Docker Deployment Guide
 
-Container configurations are provided to easily deploy the entire stack.
+The root Dockerfile builds separate images for the bot, dashboard, shard manager, and data API. Select a target with `--target` and provide that service's environment variables at runtime. The checked-in Compose file is a partial example: the application services and Redis/PostgreSQL services are commented out.
 
 ```bash
-# Build Docker image
-docker build -t sirubot:latest .
+# Build the bot image
+docker build --target bot -t sirubot-bot:latest .
 
-# Run container
-docker run -d --name sirubot-container \
-  -e DISCORD_TOKEN="your_token" \
-  -e DATABASE_URL="your_db_url" \
-  sirubot:latest
+# Other targets: dashboard, shardmanager, data-api
 ```
+
+Configure PostgreSQL, Redis, Lavalink, and the required service credentials before starting the containers. The bot image runs Prisma migrations on startup.
 
 ---
 
