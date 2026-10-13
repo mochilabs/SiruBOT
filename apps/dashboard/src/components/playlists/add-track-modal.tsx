@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import Loader from "@/components/loader";
@@ -29,11 +29,6 @@ interface AddTrackModalProps {
 	onAddTrack: (trackId?: string, youtubeUrl?: string) => void;
 }
 
-/**
- * 곡 추가 모달 — 입력창 하나로 유튜브 링크 붙여넣기와 기존 재생 곡 검색을 모두 받아요
- * (서버 라우트가 {youtubeUrl}/{trackId}를 모두 지원). 본문은 고정 높이(h-[380px])라
- * 로딩/결과 전환 때 모달 높이가 점프하지 않아요. 상태 문구는 항상 같은 결과 영역 중앙에 표시해요.
- */
 export function AddTrackModal({
 	open,
 	onClose,
@@ -46,20 +41,33 @@ export function AddTrackModal({
 	onAddTrack,
 }: AddTrackModalProps) {
 	const isUrl = isYoutubeUrl(trackInput);
-	const [viewport, setViewport] = useState({ top: "50%", maxHeight: "calc(100dvh - 2rem)", resultsHeight: "380px" });
+	const [keyboardLayout, setKeyboardLayout] = useState<{ top: number; height: number } | null>(null);
+	const initialViewportHeight = useRef<number | null>(null);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			initialViewportHeight.current = null;
+			setKeyboardLayout(null);
+			return;
+		}
 
 		const visualViewport = window.visualViewport;
+		if (!visualViewport) return;
+		initialViewportHeight.current = visualViewport.height;
+
 		const updateViewport = () => {
-			if (!visualViewport) return;
-			const availableHeight = Math.max(220, visualViewport.height - 24);
-			setViewport({
-				top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
-				maxHeight: `${availableHeight}px`,
-				resultsHeight: `${Math.max(96, Math.min(380, availableHeight - 176))}px`,
-			});
+			const initialHeight = initialViewportHeight.current ?? visualViewport.height;
+			const keyboardOpen = initialHeight - visualViewport.height > 100;
+			if (!keyboardOpen) {
+				setKeyboardLayout(null);
+				return;
+			}
+
+			const nextLayout = {
+				top: Math.max(0, Math.round(visualViewport.offsetTop + 12)),
+				height: Math.max(1, Math.min(280, Math.round(visualViewport.height - 24))),
+			};
+			setKeyboardLayout((current) => current?.top === nextLayout.top && current.height === nextLayout.height ? current : nextLayout);
 		};
 
 		updateViewport();
@@ -73,11 +81,14 @@ export function AddTrackModal({
 
 	return (
 		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
-			<DialogContent className="overflow-y-auto" style={{ top: viewport.top, maxHeight: viewport.maxHeight }}>
+			<DialogContent
+				className={`grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden ${keyboardLayout ? "-translate-y-0" : ""}`}
+				style={keyboardLayout ? { top: `${keyboardLayout.top}px`, height: `${keyboardLayout.height}px`, maxHeight: `${keyboardLayout.height}px` } : undefined}
+			>
 				<DialogHeader>
 					<DialogTitle>플레이리스트에 곡 추가</DialogTitle>
 				</DialogHeader>
-				<div className="flex min-h-0 flex-col gap-3 py-2" style={{ height: viewport.resultsHeight }}>
+				<div className={`flex min-h-0 flex-col gap-3 py-2 ${keyboardLayout ? "" : "h-[380px]"}`}>
 					<div className="relative">
 						<Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
 						<Input
@@ -98,8 +109,9 @@ export function AddTrackModal({
 								</p>
 							</div>
 						) : searchLoading ? (
-							<div className="flex h-full items-center justify-center">
-								<Loader text="곡 검색 중..." />
+							<div className="flex h-full items-center justify-center gap-2">
+								<Loader iconOnly size="sm" />
+								<span className="text-sm text-muted-foreground">곡 검색 중...</span>
 							</div>
 						) : searchError ? (
 							<div className="flex h-full items-center justify-center px-4 text-center">
