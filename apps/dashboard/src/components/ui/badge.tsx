@@ -36,7 +36,7 @@ const badgeVariants = cva(
 );
 
 const dotVariants: Record<NonNullable<VariantProps<typeof badgeVariants>["variant"]>, string> = {
-	default: "bg-muted-foreground",
+	default: "bg-dot-neutral",
 	primary: "bg-primary-control",
 	success: "bg-success",
 	warning: "bg-warning",
@@ -45,9 +45,9 @@ const dotVariants: Record<NonNullable<VariantProps<typeof badgeVariants>["varian
 	info: "bg-info",
 	discord: "bg-discord-primary",
 	secondary: "bg-secondary",
-	outline: "bg-muted-foreground",
-	ghost: "bg-muted-foreground",
-	link: "bg-primary-text",
+	outline: "bg-dot-neutral",
+	ghost: "bg-dot-neutral",
+	link: "bg-primary-control",
 };
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {

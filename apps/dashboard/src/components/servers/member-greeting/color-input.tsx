@@ -56,7 +56,7 @@ export function ColorField({
 						onKeyDown={radioArrowKeyDown(COLOR_PRESETS, value, (key) => onChange(key))}
 						onClick={() => onChange(preset)}
 						className={cn(
-							"pointer-coarse:h-11 pointer-coarse:w-11 h-7 w-7 cursor-pointer rounded-full shadow-xs transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+							"pointer-coarse:h-11 pointer-coarse:w-11 h-7 w-7 cursor-pointer rounded-full shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 							value === preset && "ring-2 ring-ring"
 						)}
 						style={{ backgroundColor: preset }}

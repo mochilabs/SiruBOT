@@ -27,12 +27,13 @@
 
 	/* ============ Pink Beret Music Bot palette (shadcn, base #ffdada) ============
 	   포커스 링·브랜드 액션(--brand)은 포인트 핑크, 본체(--primary)는 라이트 핑크 서피스.
-	   텍스트는 primary-foreground(마룬) / accent-foreground 계열로 AA를 맞춘다. */
+	   텍스트는 primary-foreground(마룬) / accent-foreground 계열로 AA를 맞춘다.
+	   서피스 슬롯(card·popover·secondary·muted)은 §5의 --surface-* 단일 소스를 참조한다. */
 	--background: #fff9f9;
 	--foreground: #3a2c30;
-	--card: #ffffff;
+	--card: var(--surface-1);
 	--card-foreground: #3a2c30;
-	--popover: #ffffff;
+	--popover: var(--surface-1);
 	--popover-foreground: #3a2c30;
 	--primary: #ffdada;
 	--primary-foreground: #4f1c2a;
@@ -48,15 +49,14 @@
 	--switch-thumb: #ffffff;
 	/* 중립 서피스 위 핑크 계열 accent 텍스트 — accent-foreground와 동일 (배경 대비 13:1+) */
 	--primary-text: var(--accent-foreground);
-	--primary-rgb: 255 218 218;
-	--secondary: #fff0f0;
+	--secondary: var(--surface-2);
 	--secondary-foreground: #3a2c30;
-	--muted: #fff0f0;
+	--muted: var(--surface-2);
 	--muted-foreground: #7d686d;
 	--accent: #ffc3c9;
 	--accent-foreground: #4f1c2a;
 	--border: #f3d3d6;
-	--input: #f3d3d6;
+	--input: var(--border);
 	--ring: var(--brand);
 
 	--discord-embed: #f2f3f5;
@@ -70,9 +70,9 @@
 .dark {
 	--background: #1f1618;
 	--foreground: #fbeeee;
-	--card: #2b2023;
+	--card: var(--surface-1);
 	--card-foreground: #fbeeee;
-	--popover: #2b2023;
+	--popover: var(--surface-1);
 	--popover-foreground: #fbeeee;
 	--primary: #ffdada;
 	--primary-foreground: #3a1a22;
@@ -84,15 +84,14 @@
 	/* 스위치 thumb — 항상 단색 흰색 (iOS/Discord 관례), bg-switch-thumb로 소비 */
 	--switch-thumb: #ffffff;
 	--primary-text: var(--accent-foreground);
-	--primary-rgb: 255 218 218;
-	--secondary: #3a2c30;
+	--secondary: var(--surface-2);
 	--secondary-foreground: #fbeeee;
-	--muted: #3a2c30;
+	--muted: var(--surface-2);
 	--muted-foreground: #b9a4a9;
 	--accent: #4d3b40;
 	--accent-foreground: #ffdada;
 	--border: #4d3b40;
-	--input: #4d3b40;
+	--input: var(--border);
 	--ring: var(--brand);
 
 	--discord-embed: #2b2d31;
@@ -118,7 +117,6 @@
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
-	--color-brand: var(--brand);
 	--color-primary-control: var(--primary-control);
 	--color-primary-control-hover: var(--primary-control-hover);
 	--color-primary-control-text: var(--primary-control-text);
@@ -153,11 +151,17 @@
 
 	--text-2xs: 0.6875rem;
 	--text-2xs--line-height: 1rem;
+
+	--text-3xs: 0.5rem;
+	--text-3xs--line-height: 0.75rem;
 }
 
 /* =============================================================================
    5. Radius & surface tokens
    ============================================================================= */
+/* --surface-3의 역할은 '플로팅 오버레이'가 원본이지만, 중립 컨트롤(secondary·icon 버튼)의
+   hover 단계로 쓰는 관례(bg-secondary → hover:bg-surface-3)가 9+ 파일에 정착했다 — 공식 관례로 승격.
+   라이트에서 #ffffff로 밝아지고 다크에서 #3a2c30으로 한 단계 밝아지는 elevation hover를 만든다. */
 :root {
 	--radius: 1rem;
 
@@ -199,14 +203,13 @@
 	/* 인터랙티브 컨트롤 경계선 — #b4779b는 #ffffff 대비 3.47:1, #fff9f9 대비 3.36:1로 3.0:1 통과 */
 	--border-strong: #b4779b;
 
-	/* Paint-only 1px boundary for inputs. */
+	/* Paint-only 1px boundary for inputs. (.dark에서 값이 같아 재정의하지 않는다) */
 	--control-boundary: inset 0 0 0 1px var(--border-strong);
 	--control-boundary-invalid: inset 0 0 0 1px var(--destructive);
 
 	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.08);
 	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.1), 0 1px 3px -1px rgb(0 0 0 / 0.06);
 	--elev-3: 0 6px 20px -8px rgb(0 0 0 / 0.16), 0 2px 6px -4px rgb(0 0 0 / 0.1);
-	--elev-4: 0 16px 40px -16px rgb(0 0 0 / 0.24), 0 4px 12px -8px rgb(0 0 0 / 0.14);
 	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.35), 0 8px 20px -12px rgb(0 0 0 / 0.2);
 }
 
@@ -214,10 +217,6 @@
 	--border-subtle: #3a2c30;
 	/* 다크 인터랙티브 컨트롤 경계선 — #a37d89는 #1f1618 대비 6.2:1, #2b2023 대비 4.39:1 통과 */
 	--border-strong: #a37d89;
-
-	/* Same inset boundary token, dark theme value resolves via --border-strong. */
-	--control-boundary: inset 0 0 0 1px var(--border-strong);
-	--control-boundary-invalid: inset 0 0 0 1px var(--destructive);
 }
 
 @theme inline {
@@ -226,11 +225,9 @@
 	--shadow-control-boundary: var(--control-boundary);
 	--shadow-control-boundary-invalid: var(--control-boundary-invalid);
 
-	--shadow-xs: var(--elev-1);
 	--shadow-sm: var(--elev-1);
 	--shadow-md: var(--elev-2);
 	--shadow-lg: var(--elev-3);
-	--shadow-xl: var(--elev-4);
 	--shadow-2xl: var(--elev-5);
 }
 
@@ -238,7 +235,8 @@
    7. Status colors
    ============================================================================= */
 /* 상태색은 기존 대비가 통과하는 값 유지 (text-success를 bg-success/10 tint 위에 쓰는
-   현재 컴포넌트 규칙과 호환). 팔레트의 파스텔 상태색은 solid 배지 전용 스타일로 별도 전환 필요. */
+   현재 컴포넌트 규칙과 호환). 팔레트의 파스텔 상태색은 solid 배지 전용 스타일로 별도 전환 필요.
+   상태 *-foreground 4종은 현재 소비자 0 — solid 배지 마이그레이션 때 쓰도록 삭제를 보류한다. */
 :root {
 	--destructive: #d4183d;
 	--destructive-foreground: #ffffff;
@@ -273,21 +271,37 @@
 	--color-info-foreground: var(--info-foreground);
 }
 
+/* 랭킹 메달(금·은·동 왕관) — 장식 아이콘이라 비텍스트 3:1만 맞춘다.
+   라이트는 채도를 낮춰 흰 서피스 위 가독을 확보, 다크는 표준 메달 톤. */
+:root {
+	--rank-1: #b47716;
+	--rank-2: #8f8f8f;
+	--rank-3: #b0743a;
+
+	/* 중립 상태 점·배지 dot 채움 — 텍스트 토큰(muted-foreground)을 fill로 직접 쓰지 않는다 */
+	--dot-neutral: var(--muted-foreground);
+}
+
+.dark {
+	--rank-1: #f0b232;
+	--rank-2: #b9bbbe;
+	--rank-3: #cd7f32;
+}
+
+@theme inline {
+	--color-rank-1: var(--rank-1);
+	--color-rank-2: var(--rank-2);
+	--color-rank-3: var(--rank-3);
+	--color-dot-neutral: var(--dot-neutral);
+}
+
 /* =============================================================================
    8. Component-independent utilities
    ============================================================================= */
-@utility panel {
-	background-color: var(--surface-1);
-	border-radius: var(--r-card);
-}
-
-/* LEGACY — frozen. App 화면에서는 소비자 0. 남은 소비자(브랜딩/헤로 헤드라인 6곳)가
-   제거되면 이 유틸리티도 삭제한다. 새 코드에서는 쓰지 않는다. */
-@utility text-title-gradient {
-	background-image: linear-gradient(to right, var(--primary-text), var(--brand), var(--primary-text));
-	background-size: 300% auto;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
+@utility transition-control {
+	transition-property: color, background-color, box-shadow;
+	transition-timing-function: var(--tw-ease, var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1)));
+	transition-duration: var(--tw-duration, var(--default-transition-duration, 150ms));
 }
 
 @utility duration-fast {
@@ -305,10 +319,6 @@
 	transition-duration: var(--motion-slow);
 }
 
-@utility animate-shimmer-sweep {
-	animation: shimmer-sweep 2.5s infinite;
-}
-
 @utility animate-page-in {
 	animation: page-in var(--motion-base) var(--ease-out-expo) both;
 }
@@ -322,16 +332,6 @@
    사유(R-19): 슬래시 커맨드 문화를 텍스트보다 먼저 전달하는 identity motif. 30s로 느려 정보 방해가 아니다. */
 @utility animate-marquee {
 	animation: marquee 30s linear infinite;
-}
-
-@keyframes shimmer-sweep {
-	from {
-		transform: translateX(-100%) skewX(-20deg);
-	}
-
-	to {
-		transform: translateX(200%) skewX(-20deg);
-	}
 }
 
 @keyframes pulse-soft {

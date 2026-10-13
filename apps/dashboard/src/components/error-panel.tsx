@@ -18,10 +18,10 @@ export function ErrorPanel({
   onRetry,
   className = ""
 }: ErrorPanelProps) {
-  // EmptyState와 같은 형태 언어: rounded 컨테이너 + rounded-menu 아이콘 칩 + sm 타이포 + secondary 재시도
+  // EmptyState와 같은 형태 언어: rounded 컨테이너 + rounded-control 아이콘 칩 + sm 타이포 + secondary 재시도
   return (
     <Card padding="none" className={`flex flex-col items-center justify-center gap-3 p-12 text-center max-w-xl mx-auto ${className}`}>
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-menu bg-destructive/10 text-destructive">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-control bg-destructive/10 text-destructive">
         <AlertTriangle className="h-5 w-5" aria-hidden />
       </span>
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>

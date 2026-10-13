@@ -53,7 +53,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 			/>
 
 			<div className="grid gap-6 sm:grid-cols-2">
-				<div className="space-y-4 rounded-xl bg-muted/10 p-4">
+				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
 					<Switch
 						checked={form.gaplessEnabled}
 						onChange={(checked) => patch({ gaplessEnabled: checked })}
@@ -64,7 +64,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 					<p className="text-xs text-muted-foreground">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
 				</div>
 
-				<div className="space-y-4 rounded-xl bg-muted/10 p-4">
+				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
 					<Switch
 						checked={form.crossfadeEnabled}
 						onChange={(checked) => patch({ crossfadeEnabled: checked })}

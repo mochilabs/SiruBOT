@@ -568,11 +568,11 @@ export function FeaturesSection() {
 									</div>
 									<span className="shrink-0 text-2xs text-muted-foreground">{track.artist}</span>
 									{index === 0 ? (
-										<span className="flex shrink-0 items-end gap-[2px]" aria-hidden>
+										<span className="flex shrink-0 items-end gap-0.5" aria-hidden>
 											{[8, 12, 6, 10].map((h, i) => (
 												<m.span
 													key={i}
-													className="w-[2px] rounded-full bg-primary-control"
+													className="w-0.5 rounded-full bg-primary-control"
 													animate={{ height: [h, h + 4, h] }}
 													transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
 												/>

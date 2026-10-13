@@ -74,7 +74,7 @@ export function PlaylistDetail({
 						<div className="flex items-center gap-3">
 							<h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
 								{activePlaylist.name === "즐겨찾기" ? (
-									<Heart size={24} className="text-primary-text fill-primary shrink-0" />
+									<Heart size={24} className="text-primary-text fill-primary-control shrink-0" />
 								) : (
 									<Music size={24} className="text-primary-text shrink-0" />
 								)}
@@ -147,7 +147,7 @@ export function PlaylistDetail({
 					/>
 				) : (
 					<div ref={parentRef} className="overflow-auto flex-1 custom-scrollbar w-full">
-						<div className="hidden md:flex items-center px-4 py-3 bg-muted/30 border-b border-border/40 text-muted-foreground font-medium uppercase tracking-wider text-xs sticky top-0 z-10">
+						<div className="hidden md:flex items-center px-4 py-3 border-b border-border-subtle text-xs font-black text-muted-foreground sticky top-0 z-10">
 							<div className="w-12 text-center shrink-0">#</div>
 							<div className="flex-1 min-w-[240px]">곡 정보</div>
 							<div className="w-32 shrink-0 px-2">아티스트</div>
@@ -165,7 +165,7 @@ export function PlaylistDetail({
 								return (
 									<div
 										key={track.id}
-										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border/10 group transition-colors hover:bg-muted/10 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
+										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border-subtle group transition-colors hover:bg-surface-2/50 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
 										style={{
 											height: `${virtualRow.size}px`,
 											transform: `translateY(${virtualRow.start}px)`,
@@ -187,7 +187,7 @@ export function PlaylistDetail({
 										</span>
 
 										<div className="flex-1 min-w-0 flex items-center gap-2.5 md:gap-3">
-											<div className="relative w-9 h-9 md:w-10 md:h-10 shrink-0 rounded-lg overflow-hidden bg-muted/30 border border-border/40">
+											<div className="relative w-9 h-9 md:w-10 md:h-10 shrink-0 rounded-card overflow-hidden bg-muted/30 border border-border/40">
 												{track.thumbnail ? (
 													// eslint-disable-next-line @next/next/no-img-element
 													<img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />
@@ -228,7 +228,7 @@ export function PlaylistDetail({
 														<Button
 															variant="icon"
 															size="md"
-															className="-mr-2 rounded-lg bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
+															className="-mr-2 bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
 														>
 															<MoreHorizontal size={16} />
 														</Button>
@@ -251,7 +251,7 @@ export function PlaylistDetail({
 
 						{tracks.length > 0 && (
 							<div className="flex flex-col items-center justify-center py-12 mt-4 text-center opacity-40 select-none border-t border-border/10">
-								<div className="text-[13px] font-medium mb-1.5 flex items-center gap-2">
+								<div className="text-xs font-medium mb-1.5 flex items-center gap-2">
 									<span>더이상 표시할 곡이 없어요</span>
 								</div>
 								<Button variant="ghost" size="sm" onClick={onOpenAddTrack}>

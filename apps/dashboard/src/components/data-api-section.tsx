@@ -78,7 +78,7 @@ export function DataApiSection() {
 
             {errors.length > 0 && (
                 <Card padding="md" className="gap-3">
-                    <h3 className="text-sm font-semibold text-foreground">최근 재생 오류</h3>
+                    <h3 className="text-sm font-bold text-foreground">최근 재생 오류</h3>
                     <ul className="space-y-2 text-sm">
                         {errors.map((e, i) => (
                             <li key={`${e.at}-${i}`} className="flex min-w-0 items-start gap-2">

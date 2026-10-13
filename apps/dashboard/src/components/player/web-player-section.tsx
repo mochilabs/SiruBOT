@@ -86,14 +86,14 @@ function SearchResultRow({
 	onPlay: (uri: string) => void;
 }) {
 	return (
-		<div className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 px-3 py-2.5">
+		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
 			{track.artworkUrl ? (
 				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
 					<Image src={track.artworkUrl} alt="" fill className="object-cover" sizes="40px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-3 text-muted-foreground">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-1 text-muted-foreground">
 					<ListMusic size={14} aria-hidden />
 				</div>
 			)}

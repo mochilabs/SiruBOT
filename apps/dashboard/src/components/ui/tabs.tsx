@@ -18,11 +18,11 @@ function Tabs({ className, orientation = "horizontal", "aria-label": ariaLabel, 
 }
 
 const tabsListVariants = cva(
-	"group/tabs-list inline-flex w-fit items-center justify-center border-0 p-[3px] text-muted-foreground",
+	"group/tabs-list inline-flex w-fit items-center justify-center border-0 p-0.5 text-muted-foreground",
 	{
 		variants: {
 			variant: {
-				default: "bg-muted rounded-lg",
+				default: "bg-muted rounded-control",
 				line: "gap-1 bg-transparent rounded-none",
 			},
 		},

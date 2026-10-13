@@ -28,7 +28,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* 거대 배경 텍스트 */}
 			<div className="absolute inset-0 -z-10 flex items-center justify-center">
-				<span className="select-none whitespace-nowrap text-[10rem] font-black tracking-tighter text-destructive/5 sm:text-[16rem] md:text-[22rem]">
+				<span className="select-none whitespace-nowrap text-[10rem] font-black tracking-tighter text-foreground/5 sm:text-[16rem] md:text-[22rem]">
 					ERROR
 				</span>
 			</div>

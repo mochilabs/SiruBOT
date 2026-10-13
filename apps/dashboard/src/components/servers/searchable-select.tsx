@@ -131,7 +131,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 			<SelectPrimitive.Trigger
 				aria-controls={listboxId}
 				className={cn(
-					"flex h-11 w-full items-center justify-between gap-2 rounded-control border-0 bg-input px-3 text-left text-sm font-medium outline-none transition-colors",
+					"flex h-11 w-full items-center justify-between gap-2 rounded-control border-0 bg-input shadow-control-boundary px-3 text-left text-sm font-medium outline-none transition-colors",
 					"focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
 					className,
 				)}
@@ -165,7 +165,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 							{grouped.map(([groupName, items]) => (
 								<SelectPrimitive.Group key={groupName}>
 									{groupName && (
-										<SelectPrimitive.GroupLabel className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+										<SelectPrimitive.GroupLabel className="px-2 py-1 text-xs font-medium text-muted-foreground">
 											{groupName}
 										</SelectPrimitive.GroupLabel>
 									)}

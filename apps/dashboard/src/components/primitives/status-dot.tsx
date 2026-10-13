@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 export const toneStyles = {
-	neutral: { badge: "border-0 bg-surface-2 text-foreground/80", dot: "bg-muted-foreground", text: "text-foreground/80" },
+	neutral: { badge: "border-0 bg-surface-2 text-foreground/80", dot: "bg-dot-neutral", text: "text-foreground/80" },
 	primary: { badge: "border-0 bg-primary/10 text-primary-text", dot: "bg-primary-control", text: "text-primary-text" },
 	success: { badge: "border-0 bg-success/10 text-success", dot: "bg-success", text: "text-success" },
 	warning: { badge: "border-0 bg-warning/10 text-warning", dot: "bg-warning", text: "text-warning" },

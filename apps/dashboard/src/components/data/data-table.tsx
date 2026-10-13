@@ -98,7 +98,7 @@ export function DataTable<T>({
 	}
 
 	return (
-		<Card className={cn("overflow-hidden rounded-card border-0 bg-surface-1 p-0 ring-0", className)}>
+		<Card className={cn("overflow-hidden rounded-card border-0 p-0 ring-0", className)}>
 			<Table>
 				<TableHeader>
 					<TableRow
