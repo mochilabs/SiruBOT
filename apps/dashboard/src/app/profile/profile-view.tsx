@@ -70,8 +70,8 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
 
       <RevealGroup className="grid gap-4 md:grid-cols-2" stagger={0.1}>
         {/* 생일 카드 */}
-        <RevealItem>
-          <Card>
+        <RevealItem className="h-full">
+          <Card className="h-full min-h-36">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Cake className="h-4 w-4 text-primary-text" aria-hidden />
@@ -87,8 +87,8 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
         </RevealItem>
 
         {/* 출석 카드 — 슬림하게 */}
-        <RevealItem>
-          <Card>
+        <RevealItem className="h-full">
+          <Card className="h-full min-h-36">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarCheck className="h-4 w-4 text-primary-text" aria-hidden />
