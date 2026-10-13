@@ -12,6 +12,7 @@ import { useSettingsForm } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
 import type { GuildSettings } from "@/types/settings";
 
+import { MixerInfoTip } from "./mixer-info";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-shared";
 
 interface MixerForm {
@@ -33,7 +34,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 	const handleSave = useCallback(async () => {
 		try {
 			await submit();
-			toast.success("오디오 엔진 설정을 저장했어요.", "봇이 곧 새 설정을 적용해요.");
+			toast.success("오디오 엔진 설정을 저장했어요.", "재생 중이면 봇이 바로 적용해요.");
 		} catch (err) {
 			const apiError = toError(err, "저장에 실패했어요.");
 			toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
@@ -53,26 +54,32 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 			/>
 
 			<div className="grid gap-6 sm:grid-cols-2">
-				<div className="space-y-4 rounded-xl bg-muted/10 p-4">
-					<Switch
-						checked={form.gaplessEnabled}
-						onChange={(checked) => patch({ gaplessEnabled: checked })}
-						disabled={saving}
-						label="갭리스 재생"
-						labelPosition="left"
-					/>
+				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
+					<div className="flex items-center justify-between gap-2">
+						<Switch
+							checked={form.gaplessEnabled}
+							onChange={(checked) => patch({ gaplessEnabled: checked })}
+							disabled={saving}
+							label="갭리스 재생"
+							labelPosition="left"
+						/>
+						<MixerInfoTip kind="gapless" />
+					</div>
 					<p className="text-xs text-muted-foreground">다음 곡을 미리 받아 재생 사이의 끊김을 없애요.</p>
 				</div>
 
-				<div className="space-y-4 rounded-xl bg-muted/10 p-4">
-					<Switch
-						checked={form.crossfadeEnabled}
-						onChange={(checked) => patch({ crossfadeEnabled: checked })}
-						disabled={saving}
-						label="크로스페이드"
-						labelPosition="left"
-					/>
-					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요. (Lavalink mixer 플러그인 필요)</p>
+				<div className="space-y-4 rounded-card border border-border-subtle bg-surface-2 p-4">
+					<div className="flex items-center justify-between gap-2">
+						<Switch
+							checked={form.crossfadeEnabled}
+							onChange={(checked) => patch({ crossfadeEnabled: checked })}
+							disabled={saving}
+							label="크로스페이드"
+							labelPosition="left"
+						/>
+						<MixerInfoTip kind="crossfade" />
+					</div>
+					<p className="text-xs text-muted-foreground">곡 끝과 다음 곡 시작을 겹쳐서 이어요.</p>
 				</div>
 			</div>
 
@@ -91,7 +98,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 			</Field>
 
 			<InfoBox>
-				<p>설정은 다음 곡부터 적용돼요. /믹서 커맨드로 재생 중인 플레이어에 바로 밀어 넣을 수 있어요.</p>
+				<p>저장하면 재생 중인 플레이어에도 바로 적용돼요. 봇이 재생 중이 아니면 다음 재생부터 반영돼요.</p>
 			</InfoBox>
 
 			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />

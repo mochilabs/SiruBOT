@@ -147,7 +147,7 @@ export function Navbar() {
             </div>
 
             {/* divider */}
-            <div className="hidden md:block w-px h-6 bg-border/40"></div>
+            <div className="hidden md:block w-px h-6 bg-border"></div>
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
@@ -164,11 +164,11 @@ export function Navbar() {
                   >
                     <Search size={16} />
                     <span className="hidden lg:inline text-sm">검색</span>
-                    <kbd className="hidden lg:inline-flex h-5 items-center rounded-md bg-foreground/5 px-1.5 text-2xs font-medium text-muted-foreground">
+                    <kbd className="hidden lg:inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-2xs font-medium text-muted-foreground">
                       ⌘K
                     </kbd>
                   </Button>
-                  <div aria-hidden className="h-5 w-px bg-border/70" />
+                  <div aria-hidden className="h-5 w-px bg-border" />
                   {mounted && (
                     <Button
                       variant="ghost"
@@ -224,12 +224,12 @@ export function Navbar() {
                           <Link
                             href="/profile"
                             onClick={() => setProfileOpen(false)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-accent-foreground transition-colors"
                           >
                             <span>내 프로필</span>
                             <User size={16} />
                           </Link>
-                          <div className="h-px bg-border/50 my-1 mx-2" />
+                          <div className="h-px bg-border my-1 mx-2" />
                           <button
                             onClick={() => signOut()}
                             className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-colors"

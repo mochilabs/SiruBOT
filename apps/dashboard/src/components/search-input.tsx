@@ -64,7 +64,7 @@ export function SearchInput({
 				value={value}
 				onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
 				placeholder={placeholder}
-				className="h-12 w-full rounded-card bg-card pl-12 pr-12 text-base font-medium shadow-sm transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus-visible:ring-primary/20 sm:h-14 sm:text-lg"
+				className="h-12 w-full rounded-card bg-card pl-12 pr-12 text-base font-medium shadow-sm transition-all placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring sm:h-14 sm:text-lg"
 			/>
 
 			{value && (

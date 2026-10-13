@@ -9,6 +9,7 @@ import useSWR from "swr";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface PlayerTrack {
 	id: string;
@@ -76,14 +77,14 @@ function TrackRow({
 	onPlay?: (track: PlayerTrack) => void;
 }) {
 	return (
-		<div className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 px-3 py-2.5">
+		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 px-3 py-2.5">
 			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
 			{track.thumbnail ? (
 				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
 					<Image src={track.thumbnail} alt="" fill className="object-cover" sizes="40px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-3 text-muted-foreground">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-1 text-muted-foreground">
 					<Music2 size={14} aria-hidden />
 				</div>
 			)}
@@ -199,30 +200,12 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 
 			<Card padding="lg" className="gap-5">
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div className="flex items-center gap-1 rounded-control bg-surface-2 p-1" role="tablist" aria-label="재생 기록 뷰">
-						<button
-							type="button"
-							role="tab"
-							aria-selected={tab === "top"}
-							onClick={() => setTab("top")}
-							className={`rounded-control px-3.5 py-1.5 text-sm font-bold transition-colors duration-fast ${
-								tab === "top" ? "bg-primary-control text-primary-control-text" : "text-muted-foreground hover:text-foreground"
-							}`}
-						>
-							많이 듣는 곡
-						</button>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={tab === "recent"}
-							onClick={() => setTab("recent")}
-							className={`rounded-control px-3.5 py-1.5 text-sm font-bold transition-colors duration-fast ${
-								tab === "recent" ? "bg-primary-control text-primary-control-text" : "text-muted-foreground hover:text-foreground"
-							}`}
-						>
-							최근 재생
-						</button>
-					</div>
+					<Tabs value={tab} onValueChange={(key) => setTab(key as "top" | "recent")} aria-label="재생 기록 뷰">
+						<TabsList>
+							<TabsTrigger value="top">많이 듣는 곡</TabsTrigger>
+							<TabsTrigger value="recent">최근 재생</TabsTrigger>
+						</TabsList>
+					</Tabs>
 					<SectionHeading icon={tab === "top" ? <Trophy size={15} /> : <History size={15} />} title={tab === "top" ? "서버 인기 트랙" : "최근에 재생한 곡"} />
 				</div>
 

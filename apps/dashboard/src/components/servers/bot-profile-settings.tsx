@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { toError } from "@/lib/api-error";
 
-import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 const MAX_NICKNAME_LENGTH = 32;
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
@@ -226,13 +226,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         description="봇이 이 서버에서 보여질 이름과 프로필 사진을 관리해요. 다른 서버에는 영향이 없어요."
       />
 
-      {nicknameDisabled && (
-        <WarningBox>
-          봇에게 닉네임 변경 권한(CHANGE_NICKNAME 또는 MANAGE_NICKNAMES)이 없어요. 서버 역할 설정에서 봇 역할에 해당 권한을
-          추가해 주세요.
-        </WarningBox>
-      )}
-
       {lastApplyError && <WarningBox>봇이 마지막 프로필 적용에 실패했어요: {lastApplyError}</WarningBox>}
 
       {profile.stale && (
@@ -353,7 +346,11 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
 
         <Field
           label="서버 닉네임"
-          description={nicknameDisabled ? "닉네임 변경 권한이 없어 변경할 수 없어요." : "빈 칸으로 저장하면 봇 사용자명으로 표시돼요."}
+          description={
+            nicknameDisabled
+              ? "봇에게 닉네임 변경 권한(CHANGE_NICKNAME)이 없어 변경할 수 없어요. 서버 역할 설정에서 권한을 추가하면 쓸 수 있어요."
+              : "빈 칸으로 저장하면 봇 사용자명으로 표시돼요."
+          }
         >
           <div className="space-y-2">
             <Input
@@ -384,13 +381,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           </div>
         </Field>
       </div>
-
-      <InfoBox>
-        <p>
-          서버 닉네임은 봇에게 닉네임 변경 권한(CHANGE_NICKNAME 또는 MANAGE_NICKNAMES)이 필요해요. 프로필 사진은 권한 없이
-          적용되는 길드 전용 프로필이에요. 저장하면 봇이 Discord에 직접 반영해요.
-        </p>
-      </InfoBox>
 
       <SaveBar dirty={dirty} saving={saving} onSave={handleSave}>
         {dirty && (

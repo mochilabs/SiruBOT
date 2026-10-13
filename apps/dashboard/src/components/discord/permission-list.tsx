@@ -118,7 +118,7 @@ export function PermissionList({
 			{categories.map((cat) => (
 				<Card key={cat.label} padding="none" className="overflow-hidden">
 					{/* Category header */}
-					<div className="flex items-center justify-between px-5 py-3 bg-card/50 border-b border-border/40">
+					<div className="flex items-center justify-between px-5 py-3 bg-surface-2 border-b border-border-subtle">
 						<div className="flex items-center gap-2">
 							<Shield className="h-4 w-4 text-muted-foreground" />
 							<span className="text-xs font-black text-muted-foreground">
@@ -137,7 +137,7 @@ export function PermissionList({
 					</div>
 
 					{/* Permission items */}
-					<div className="divide-y divide-border/20">
+					<div className="divide-y divide-border-subtle">
 						{cat.permissions.map((perm) => {
 							const isOn = hasPermission(perm.flag);
 

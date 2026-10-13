@@ -220,11 +220,14 @@ export async function forwardDataApiImage(path: string, body: unknown): Promise<
  * 길드 설정 변경을 모든 봇 프로세스에 브로드캐스트 — 대시보드 PUT 성공 직후 호출해요.
  * data-api가 Redis 채널로 publish하고 각 봇이 자기 GuildService 캐시를 비워요.
  * 실패(null)여도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으니 조용히 넘어가요.
+ *
+ * `reason: "mixer"` — 믹서(갭리스·크로스페이드) 저장이면 봇이 재생 중인 플레이어에
+ * 설정을 바로 밀어 넣어요 (다음 곡까지 기다리지 않아요).
  */
-export async function notifyGuildSettingsChanged(guildId: string): Promise<boolean> {
+export async function notifyGuildSettingsChanged(guildId: string, reason?: "mixer"): Promise<boolean> {
     const result = await postDataApi<GuildSettingsInvalidateResult>(
         "/v1/internal/guild-settings/invalidate",
-        { guildId },
+        reason ? { guildId, reason } : { guildId },
     );
     return result?.ok === true;
 }

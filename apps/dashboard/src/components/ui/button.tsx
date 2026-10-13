@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 text-sm font-medium whitespace-nowrap transition-[color,background-color,box-shadow] duration-fast outline-none select-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-control border-0 text-sm font-medium whitespace-nowrap transition-control duration-fast outline-none select-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
@@ -35,10 +35,10 @@ const buttonVariants = cva(
 				sm: "h-8 px-3 text-sm",
 				md: "h-9 px-4 text-sm",
 				lg: "h-10 px-5 text-sm",
-				xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs",
+				xs: "h-6 gap-1 rounded-control px-2 text-xs",
 				icon: "size-9 px-0",
-				"icon-xs": "size-6 rounded-[min(var(--radius-md),10px)] px-0 [&_svg:not([class*='size-'])]:size-3",
-				"icon-sm": "size-7 rounded-[min(var(--radius-md),12px)] px-0",
+				"icon-xs": "size-6 rounded-control px-0 [&_svg:not([class*='size-'])]:size-3",
+				"icon-sm": "size-7 rounded-control px-0",
 				"icon-lg": "size-10 px-0",
 			},
 		},

@@ -174,7 +174,9 @@ export async function PUT(
 
     // 저장 성공 후 모든 봇 프로세스의 설정 캐시를 무효화해요 (fire-and-forget).
     // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
-    notifyGuildSettingsChanged(id).catch((error) => {
+    // 믹서(갭리스·크로스페이드) 저장이면 reason을 실어 봇이 재생 중인 플레이어에 바로 적용하게 해요.
+    const touchesMixer = ["gaplessEnabled", "crossfadeEnabled", "crossfadeMs"].some((key) => key in data);
+    notifyGuildSettingsChanged(id, touchesMixer ? "mixer" : undefined).catch((error) => {
       console.warn(`Failed to notify guild settings change (guild ${id}):`, error);
     });
 

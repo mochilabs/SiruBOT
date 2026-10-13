@@ -63,7 +63,7 @@ export function TagInput({
 			onClick={() => inputRef.current?.focus()}
 			className={`
 				rounded-control border-0 bg-input shadow-control-boundary flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
-				transition-[color,background-color,box-shadow] duration-base cursor-text
+				transition-control duration-base cursor-text
 				focus-within:ring-2 focus-within:ring-ring
 				${disabled ? "opacity-50 pointer-events-none" : ""}
 				${className}

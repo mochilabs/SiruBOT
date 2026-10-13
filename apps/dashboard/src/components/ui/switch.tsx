@@ -32,11 +32,13 @@ const thumbSizes = {
 // an inset boundary. Checked track uses primary-control (= var(--brand) — light
 // #ee6f8b / dark #f98aa0) for a clear on-state fill.
 // Thumb is always solid white via --switch-thumb (iOS/Discord convention).
+// knob에 elevation shadow를 얹지 않는다 — 핑크 on-state 트랙 위에서 그림자가
+// 흰 dot 아래로 번져 knob이 몇 픽셀 낮게 보이는 착시를 만들어요.
 const trackBase =
 	"rounded-full border-0 bg-secondary shadow-control-boundary transition-colors duration-fast outline-none data-checked:bg-primary-control data-checked:shadow-none";
 
 const thumbBase =
-	"pointer-events-none block rounded-full border-0 bg-switch-thumb shadow-md transition-transform duration-fast ease-out";
+	"pointer-events-none block rounded-full border-0 bg-switch-thumb transition-transform duration-fast ease-out";
 
 function Switch({
 	checked,

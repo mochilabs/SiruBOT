@@ -43,7 +43,7 @@ export default function InvitePage() {
 							<h1 className="text-5xl font-extrabold tracking-tighter text-foreground md:text-7xl">
 								시루봇과 함께해요
 							</h1>
-							<div className="inline-flex items-center gap-2 rounded-menu bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground w-[200px] justify-center tabular-nums">
+							<div className="inline-flex items-center gap-2 rounded-control bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground w-[200px] justify-center tabular-nums">
 								<Loader size="xs" iconOnly />
 								<span>{count}초 뒤에 자동으로 이동할게요...</span>
 							</div>

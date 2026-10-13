@@ -129,7 +129,7 @@ export function AddTrackModal({
 												src={track.thumbnail || ""}
 												fallback="M"
 												size="xs"
-												className="rounded-lg shrink-0"
+												className="rounded-card shrink-0"
 											/>
 											<div className="min-w-0">
 												<p className="text-xs font-medium text-foreground truncate">{track.title}</p>

@@ -98,9 +98,9 @@ export function RoleSelect({
 				onClick={() => setOpen(!open)}
 				className={`
 					w-full min-h-[44px] px-4 py-2 flex items-center justify-between gap-2
-					rounded-control border border-border bg-input text-sm font-medium transition-all duration-base cursor-pointer
-					${disabled ? "opacity-50 pointer-events-none" : "hover:border-primary-control"}
-					${open ? "ring-2 ring-ring border-primary-control" : ""}
+					rounded-control border-0 bg-input shadow-control-boundary text-sm font-medium transition-all duration-base cursor-pointer
+					${disabled ? "opacity-50 pointer-events-none" : ""}
+					${open ? "ring-2 ring-ring" : ""}
 				`}
 			>
 				<span className={value.length > 0 ? "text-foreground" : "text-muted-foreground"}>
@@ -163,7 +163,7 @@ export function RoleSelect({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: -4 }}
 							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] mt-2 rounded-menu border border-border bg-popover p-1.5 shadow-2xl max-h-64 overflow-y-auto"
+							className="fixed z-[200] mt-2 rounded-menu border-0 bg-popover p-1.5 shadow-2xl max-h-64 overflow-y-auto"
 							style={{
 								top: coords.top,
 								left: coords.left,
@@ -180,7 +180,7 @@ export function RoleSelect({
 									onChange={(e) => setSearch(e.target.value)}
 									placeholder="역할 검색..."
 									aria-label="역할 검색"
-									className="w-full h-9 pl-9 pr-3 bg-transparent border-b border-border/40 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+									className="w-full h-9 rounded-control border-0 bg-input pl-9 pr-3 text-sm text-foreground shadow-control-boundary transition-[color,background-color,box-shadow] duration-fast outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
 								/>
 							</div>
 
@@ -196,7 +196,7 @@ export function RoleSelect({
 										onClick={() => toggle(role.id)}
 										className={`
 											w-full flex items-center gap-3 px-3 py-2 rounded-menu text-sm font-medium transition-colors cursor-pointer
-											hover:bg-accent/50
+											hover:bg-accent
 										`}
 									>
 										<span

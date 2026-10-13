@@ -74,7 +74,7 @@ export function PlaylistSidebar({
 								placeholder="검색..."
 								value={searchQuery}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-								className="bg-muted/40 py-2 pl-9 hover:bg-muted/60 focus:bg-muted/60"
+								className="bg-input/50 py-2 pl-9 hover:bg-input/60 focus:bg-input/60"
 							/>
 						</div>
 					</div>
@@ -125,7 +125,7 @@ export function PlaylistSidebar({
 									>
 										<div className="flex items-center gap-2 min-w-0">
 											{isDefault ? (
-												<Heart size={14} className={`shrink-0 ${isActive ? "text-primary-text fill-primary" : "text-muted-foreground"}`} />
+												<Heart size={14} className={`shrink-0 ${isActive ? "text-primary-text fill-primary-control" : "text-muted-foreground"}`} />
 											) : (
 												<Music size={14} className={`shrink-0 ${isActive ? "text-primary-text" : "text-muted-foreground"}`} />
 											)}
@@ -152,7 +152,7 @@ export function PlaylistSidebar({
 							variant="ghost"
 							size="sm"
 							onClick={onCreateNew}
-							className="h-auto w-full gap-1.5 rounded-lg px-0 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+							className="h-auto w-full gap-1.5 rounded-menu px-0 py-2.5 text-xs font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground"
 						>
 							<Plus size={14} />
 							새 플레이리스트

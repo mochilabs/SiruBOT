@@ -42,7 +42,7 @@ function MockThumbnail({ className }: { className: string }) {
       className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}
     >
       <Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" aria-hidden />
-      <span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
+      <span className="absolute bottom-1 right-1 text-3xs font-black text-primary-text uppercase tracking-tighter select-none z-10">
         No Image
       </span>
     </div>
@@ -220,7 +220,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                       <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground">
                         {i + 1}
                       </span>
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted/20">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-card bg-muted/20">
                         {track.thumbnail ? (
                           <Image
                             src={track.thumbnail}

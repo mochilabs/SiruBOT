@@ -162,7 +162,7 @@ function ColorSwatch({ token }: { token: string }) {
 		<div className="flex items-center gap-2">
 			<div
 				className={cn(
-					"h-8 w-8 shrink-0 rounded-menu border border-border shadow-xs",
+					"h-8 w-8 shrink-0 rounded-menu border border-border shadow-sm",
 					token === "foreground" || token.endsWith("-foreground") || token === "discord-text"
 						? `bg-${token}`
 						: `bg-${token}`,
@@ -473,11 +473,9 @@ export default function DesignPage() {
 							</ShowcaseRow>
 
 							<ShowcaseRow label="Shadows">
-								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-xs">shadow-xs</div>
 								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-sm">shadow-sm</div>
 								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-md">shadow-md</div>
 								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-lg">shadow-lg</div>
-								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-xl">shadow-xl</div>
 								<div className="h-16 w-32 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground shadow-2xl">shadow-2xl</div>
 							</ShowcaseRow>
 

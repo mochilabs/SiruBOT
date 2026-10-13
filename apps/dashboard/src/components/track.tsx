@@ -32,7 +32,7 @@ export function formatTimeToKorean(seconds: number): string {
 		return (
 			<div className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}>
 				<Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" />
-				<span className="absolute bottom-1 right-1 text-[8px] font-black text-primary/20 uppercase tracking-tighter select-none z-10">
+				<span className="absolute bottom-1 right-1 text-3xs font-black text-primary-text uppercase tracking-tighter select-none z-10">
 					No Image
 				</span>
 			</div>
@@ -180,10 +180,10 @@ function FavoriteButton({
 			onClick={handleClick}
 			disabled={pending}
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
-			className={`flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control border transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
+			className={`flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control transition-colors duration-fast shadow-control-boundary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
 				favorite
-					? "border-transparent bg-primary-control text-primary-control-text hover:bg-primary-control-hover"
-					: "border-border bg-surface-2 text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-primary-text"
+					? "bg-primary-control text-primary-control-text hover:bg-primary-control-hover"
+					: "bg-secondary text-muted-foreground hover:bg-surface-3 hover:text-foreground"
 			}`}
 		>
 			<Heart className="h-4 w-4 sm:h-5 sm:w-5" fill={favorite ? "currentColor" : "none"} aria-hidden />
@@ -211,17 +211,17 @@ export const TrackItem = memo(function TrackItem({
 			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 justify-center shrink-0">
 				{isTopThree ? (
-					<Crown className={`h-6 w-6 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground"}`} />
+					<Crown className={`h-6 w-6 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
 				) : (
 					<span className="text-base font-bold text-muted-foreground">{rank}</span>
 				)}
 			</div>
 
-			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-lg sm:rounded-xl bg-muted/20">
+			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-card sm:rounded-xl bg-muted/20">
 				{/* Mobile Rank Overlay */}
 				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-surface-3 rounded-br-lg px-1.5 shadow-sm">
 					{isTopThree ? (
-						<Crown className={`h-3 w-3 ${rank === 1 ? "text-secondary" : rank === 2 ? "text-discord-btn-hover/90" : "text-muted-foreground"}`} />
+						<Crown className={`h-3 w-3 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
 					) : (
 						<span className="text-xs font-black tracking-tighter text-foreground">{rank}</span>
 					)}
@@ -280,7 +280,7 @@ export const TrackItem = memo(function TrackItem({
 export function Track({ track }: { track: TrackType }) {
 	return (
 		<div className="bg-surface-1 rounded-card flex items-center gap-3 p-3 transition-colors duration-fast">
-			<div className="relative h-14 w-14 overflow-hidden rounded-lg">
+			<div className="relative h-14 w-14 overflow-hidden rounded-card">
 				{track.thumbnail ? (
 					<Image 
 						src={track.thumbnail} 

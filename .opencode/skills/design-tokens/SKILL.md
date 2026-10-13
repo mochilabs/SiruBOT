@@ -37,23 +37,28 @@ shadcn/ui v4가 기대하는 구조와도 같다. 결과적으로 `--color-*`는
 | --- | --- | --- | --- |
 | `--background` | `#fff9f9` | `#1f1618` | 페이지 배경 → `bg-background` |
 | `--foreground` | `#3a2c30` | `#fbeeee` | 기본 텍스트 → `text-foreground` |
-| `--card` / `--card-foreground` | `#ffffff` / `#3a2c30` | `#2b2023` / `#fbeeee` | 카드·패널 → `bg-card` |
+| `--card` / `--card-foreground` | `var(--surface-1)` / `#3a2c30` | `var(--surface-1)` / `#fbeeee` | 카드·패널 → `bg-card` |
 | `--primary` / `--primary-foreground` | `#ffdada` / `#4f1c2a` | `#ffdada` / `#3a1a22` | 브랜드 **서피스**(연핑크) → `bg-primary` |
-| `--brand` | `#ee6f8b` | `#f98aa0` | 포인트 핑크 — 액션·포커스 링 (`bg-brand`, `--ring`의 원본) |
+| `--brand` | `#ee6f8b` | `#f98aa0` | 포인트 핑크 원본 — `--ring`·`--primary-control`의 소스(유틸리티 없음, 소비는 `bg-primary-control`) |
 | `--primary-control` (+ `-hover`, `-text`) | `var(--brand)` / `#f27c96` / maroon | `var(--brand)` / `#f27890` | **단색 on-state·CTA 채움** (`cta`, `state-toggle` on) |
 | `--primary-text` | `#4f1c2a` (accent-foreground) | `#ffdada` | 중립 서피스 위 강조 **텍스트** → `text-primary-text` |
 | `--switch-thumb` | `#ffffff` | `#ffffff` | 스위치 thumb 전용(fill) → `bg-switch-thumb` — Switch 컴포넌트 내부에서만 사용 |
-| `--secondary` / `--secondary-foreground` | `#fff0f0` / `#3a2c30` | `#3a2c30` / `#fbeeee` | 틴티드 중립 서피스 |
-| `--muted` / `--muted-foreground` | `#fff0f0` / `#7d686d` | `#3a2c30` / `#b9a4a9` | 비활성·설명 텍스트 |
+| `--secondary` / `--secondary-foreground` | `var(--surface-2)` / `#3a2c30` | `var(--surface-2)` / `#fbeeee` | 틴티드 중립 서피스 |
+| `--muted` / `--muted-foreground` | `var(--surface-2)` / `#7d686d` | `var(--surface-2)` / `#b9a4a9` | 비활성·설명 텍스트 |
 | `--accent` / `--accent-foreground` | `#ffc3c9` / `#4f1c2a` | `#4d3b40` / `#ffdada` | hover 배경 |
-| `--popover` | `#ffffff` | `#2b2023` | 메뉴·팝오버 → `bg-popover` |
-| `--border` / `--input` | `#f3d3d6` | `#4d3b40` | 기본 구분선·입력 배경 |
+| `--popover` | `var(--surface-1)` | `var(--surface-1)` | 메뉴·팝오버 → `bg-popover` |
+| `--border` / `--input` | `#f3d3d6` / `var(--border)` | `#4d3b40` / `var(--border)` | 기본 구분선·입력 배경 |
+| `--dot-neutral` | `var(--muted-foreground)` | 동일 | 중립 상태 점·배지 dot 채움 → `bg-dot-neutral` (텍스트 토큰을 fill로 쓰지 않는다) |
+| `--rank-1` / `--rank-2` / `--rank-3` | `#b47716` / `#8f8f8f` / `#b0743a` | `#f0b232` / `#b9bbbe` / `#cd7f32` | 랭킹 왕관(금·은·동) → `text-rank-*` |
+
+서피스 슬롯(`--card`·`--popover`·`--secondary`·`--muted`)과 `--input`은 §서피스 토큰의
+**별칭**이다 — 같은 값을 두 이름으로 재정의하지 말고 원본(`--surface-*`/`--border`)만 고친다.
 | `--ring` | `var(--brand)` | `var(--brand)` | focus ring |
 
 **텍스트/서피스 사용 규칙 (중요)**
 
 - `text-primary`는 **밝은 핑크라 중립 배경에서 읽히지 않는다** — 절대 텍스트에 쓰지 말 것. 강조 텍스트는 `text-primary-text`.
-- `--brand`(`bg-brand`, `bg-primary-control`)는 액션·on-state 채움 전용. 라벨은 `text-primary-control-text`.
+- `--brand`는 액션·on-state 채움의 원본 — 소비는 `bg-primary-control`(`bg-brand` 유틸리티는 폐기됐다). 라벨은 `text-primary-control-text`.
 - 중립 컨트롤(`secondary` 계열)은 채움만으로 경계가 안 보이므로 **`shadow-control-boundary`**를 짝지어 쓴다.
 
 ### 상태·경계 토큰
@@ -89,9 +94,11 @@ shadcn/ui v4가 기대하는 구조와도 같다. 결과적으로 `--color-*`는
 | --- | --- | --- | --- |
 | `--surface-1` | `#ffffff` | `#2b2023` | 기본 패널 → `bg-surface-1` |
 | `--surface-2` | `#fff0f0` | `#3a2c30` | 중첩/인셋 영역 → `bg-surface-2` |
-| `--surface-3` | `#ffffff` | `#3a2c30` | 플로팅 오버레이 → `bg-surface-3` |
+| `--surface-3` | `#ffffff` | `#3a2c30` | 플로팅 오버레이 → `bg-surface-3` · 중립 컨트롤 hover 단계(공식 관례) |
 
-또는 `panel` 유틸리티(불투명 + `--border` + `--r-card`)로 한 번에 쓴다.
+`--surface-3`의 원본 역할은 플로팅 오버레이지만 `bg-secondary → hover:bg-surface-3`
+관례(secondary·icon 버튼 hover, 9+ 파일)가 정착해 승격됐다. 장식 아바타 헤일로는
+`ring-4 ring-primary/10`(작게는 `ring-2 ring-primary/20`) 관례를 쓴다 — 포커스 링 아님.
 
 ## 2. 반경 · 갼격
 
@@ -108,8 +115,9 @@ shadcn/ui v4가 기대하는 구조와도 같다. 결과적으로 `--color-*`는
 
 - 새 코드는 역할 토큰만 쓴다. 기존 `rounded-xl`/`rounded-2xl`은 **역할과 값이 모두 맞을 때만**
   치환한다 (예: `rounded-xl` `0.75rem` = `rounded-menu`, 메뉴/리스트박스 행).
-  값이 달라지거나 역할이 없으면 바꾸지 않는다 — 이 프로젝트에서 `rounded-xl` 18건·`rounded-2xl`
-  11건이 남아 있는 이유다.
+  값이 달라지거나 역할이 없으면 바꾸지 않는다 — 이 프로젝트에서 `rounded-xl` 8건·`rounded-2xl`
+  0건이 남아 있는 이유다. `rounded-lg`(1rem) 소비처는 `rounded-card` 등 역할 토큰으로 이전 완료 —
+  새 코드에서 `rounded-lg`를 쓰지 않는다.
 - 간격은 Tailwind 기본 스케일만 사용. 커스텀 간격 토큰 없음.
 - 컨테이너 폭 고정값: `mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8` (`src/components/container.tsx`)
 
@@ -117,9 +125,10 @@ shadcn/ui v4가 기대하는 구조와도 같다. 결과적으로 `--color-*`는
 
 - 본문: `--font-sans`가 `var(--font-stack)`을 가리키므로 `font-sans`는 Pretendard → Pretendard JP → Twemoji → 시스템 순.
 - `text-2xs` (`0.6875rem` = **11px** / 라인하이트 `1rem`) — `text-[11px]` 임의값을 대체한다.
-  `text-[10px]`(10px)은 값이 다르므로 `text-2xs`로 바꾸지 않는다.
+  `text-[10px]`(10px)은 값이 다르므로 `text-2xs`로 바꾸지 않는다. `text-3xs`(8px / 0.75rem)는
+  썸네일 워터마크 같은 8px 마이크로 라벨 전용 — `text-[8px]` 임의값을 대체한다.
 - 페이지 타이틀: `PageHeader`의 `text-4xl sm:text-5xl font-black tracking-tighter text-foreground truncate`
-  (그라데이션 없음 — `text-title-gradient`는 소비자 0인 미사 유틸).
+  (그라데이션 없음 — `text-title-gradient` 유틸은 삭제됨).
 - 섹션 라벨: **`SectionLabel`(`primitives/section-label`)의 `text-xs font-medium text-muted-foreground`** —
   `font-black` / `uppercase` / `tracking-widest` 금지.
 - 숫자 강조: `font-black tabular-nums text-primary-text` (`text-primary`는 밝은 핑크라 텍스트로 못 씀).
@@ -129,12 +138,12 @@ shadcn/ui v4가 기대하는 구조와도 같다. 결과적으로 `--color-*`는
 
 | 클래스 | 동작 |
 | --- | --- |
-| `panel` | 불투명 서피스 래퍼 유틸리티 — 소비자 8곳 |
+| `transition-control` | 컨트롤 공통 트랜지션(color / background-color / box-shadow) — button·input·textarea·tag-input이 씀 |
 | `duration-fast` / `duration-base` / `duration-slow` | 토큰 기반 트랜지션 시간 (`200/300/500ms`) |
 | `animate-page-in` / `animate-pulse-soft` / `animate-marquee` / `scrollbar-none` | 애니메이션·유틸리티 |
 
-**`glass-panel`·`glass-overlay`·`InteractiveGlow`는 파일 자체가 삭제됨.**
-`text-title-gradient`·`animate-shimmer-sweep`는 `globals.css`에 정의만 남은 미사 유틸(소비자 0)이다.
+**`glass-panel`·`glass-overlay`·`InteractiveGlow`·`panel`·`text-title-gradient`·`animate-shimmer-sweep`는
+모두 삭제됐다(소비자 0).**
 blur/backdrop-filter/반투명 표면과 그라데이션 타이틀은 대시보드 어디에서도 쓰지 않는다. **유일한 예외**는 dialog/sheet의 모달 백드롭(`bg-black/60 backdrop-blur-sm`)이며, 다른 컴포넌트에는 여전히 금지다. 다시 만들지 말 것.
 
 - `animate-page-in`: 페이지 전환 (`src/components/page-transition.tsx`, `app/template.tsx`)
@@ -147,8 +156,9 @@ blur/backdrop-filter/반투명 표면과 그라데이션 타이틀은 대시보�
 - 보더: `border-border`(기본), `border-border-subtle`(조용한 구분선), `border-border-strong`(입력 강조색)
 - 컨트롤 경계: **보더리스 원칙** — 입력·버튼은 굵은 border 대신 `shadow-control-boundary`
   (`inset 0 0 0 1px var(--border-strong)`)로 경계를 표현한다. 새 컴포넌트도 이 방식을 따른다.
-- 섀도: `--elev-1..5` 다섯 단계 → `shadow-xs/sm`(hairline), `shadow-md`(카드), `shadow-lg`(부유 카드),
-  `shadow-xl`(메뉴), `shadow-2xl`(모달). **장식이 아니라 높이(elevation)만 표현한다.**
+- 섀도: `--elev-1..3` + `--elev-5` 네 단계 → `shadow-sm`(hairline), `shadow-md`(카드), `shadow-lg`(부유 카드),
+  `shadow-2xl`(메뉴·모달). `shadow-xs`·`shadow-xl`·`--elev-4`는 소비자 0으로 삭제됐다.
+  **장식이 아니라 높이(elevation)만 표현한다.**
 - 모션: `duration-fast`(`200ms`), `duration-base`(`300ms`), `duration-slow`(`500ms`),
   `ease-standard`(`--ease-out-expo`). **숫자형 `duration-200/300/500`은 금지** —
   이름형과 값이 1:1로 같다. (`duration-700` 등 토큰에 없는 값은 임의값으로 보고 별도 판단.)
@@ -160,7 +170,7 @@ blur/backdrop-filter/반투명 표면과 그라데이션 타이틀은 대시보�
 - `apps/dashboard/components.json`이 펀데이션 (`style: "base-nova"`, `tailwind.css` = `src/app/globals.css`).
 - 프리미티브는 Radix가 아닌 **`@base-ui/react`** 기반이다. 인터랙션 로직은 `ui/` 컴포넌트에 위임하고,
   **이미 커스텀된 `ui/` 컴포넌트를 스킬스런 className으로 덮어쓰지 말 것** (variant 시스템이 무력화된다).
-- `cn()`은 `src/lib/utils.ts`의 `clsx` + `tailwind-merge`. **`cn` npm 패키지 금지 (중복 의존성).**
+- `cn()`은 `src/lib/utils.ts`의 `clsx` + `tailwind-merge`(커스텀 토큰 그룹 등록: `shadow-control-boundary`, `rounded-control/menu/card/dialog`, `duration-fast/base/slow`, `text-2xs/3xs`, `transition-control`, `ease-standard`). **`cn` npm 패키지 금지 (중복 의존성).**
 - `shadcn add` 후 반드시: `import { cn } from "cn"` → `"@/lib/utils"` 치환,
   Base UI 프리미티브를 쓰면 `@base-ui/react` 수동 설치 (`add`가 자동 설치하지 않음).
 - **`shadcn init`은 절대 실행 금지** — `layout.tsx`를 덮어써 Pretendard가 Geist로 바뀐다.
@@ -199,7 +209,7 @@ blur/backdrop-filter/반투명 표면과 그라데이션 타이틀은 대시보�
 // ✗ 하드코딩 hex / rgb / 임의 팔레트
 <div style={{ backgroundColor: "#ff85c1" }} />
 <div className="bg-[#ff85c1] text-[#2d1b1e]" />
-<div className="bg-pink-400" />          // 브랜드 핑크는 bg-brand (채움) · 강조 텍스트는 text-primary-text
+<div className="bg-pink-400" />          // 브랜드 핑크 채움은 bg-primary-control · 강조 텍스트는 text-primary-text
 
 // ✗ 새 CSS 변수를 @theme inline 매핑 없이 컴포넌트에 직접 사용
 <span style={{ color: "var(--my-new-color)" }} />

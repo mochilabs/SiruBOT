@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Play,Settings2, ShieldCheck, UserPlus } from "lucide-react";
+import { ExternalLink, Play, Settings2, ShieldCheck, UserPlus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 
@@ -47,7 +47,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<Link
 							href={`/servers/${guild.id}`}
 							aria-label="관리하기"
-							className="flex h-11 w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-control-text md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
+							className="flex h-11 w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-control-text md:h-auto md:w-auto md:flex-1 md:gap-2 md:px-3.5 md:py-3.5"
 						>
 							<Settings2 size={18} />
 							<span className="hidden text-sm font-bold md:inline">관리하기</span>
@@ -55,7 +55,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						<Link
 							href={`/player/${guild.id}`}
 							aria-label="음악 컨트롤러"
-							className="flex h-11 w-11 items-center justify-center rounded-control bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:h-auto md:w-auto md:flex-1 md:px-3.5 md:py-3.5"
+							className="flex h-11 w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-control-text md:h-auto md:w-auto md:flex-1 md:gap-2 md:px-3.5 md:py-3.5"
 						>
 							<Play size={18} />
 							<span className="hidden text-sm font-bold md:inline">컨트롤러</span>
@@ -65,7 +65,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<Link
 						href={`/player/${guild.id}`}
 						aria-label="음악 컨트롤러"
-						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-success/10 text-success transition-colors duration-base hover:bg-success hover:text-foreground md:w-full md:gap-2 md:px-3.5 md:py-3.5"
+						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text transition-colors duration-base hover:bg-primary-control hover:text-primary-control-text md:w-full md:gap-2 md:px-3.5 md:py-3.5"
 					>
 						<Play size={18} />
 						<span className="hidden md:inline">음악 컨트롤러</span>

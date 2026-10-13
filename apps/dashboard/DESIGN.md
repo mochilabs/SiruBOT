@@ -10,7 +10,7 @@ Phase 3C (contrast/affordance hardening) complete.** Pages kept their
 layout and behaviour; surface/border/elevation/radius expressions and the
 primary palette were corrected to pass WCAG 2.1 while keeping the brand
 identity. `.glass-panel` and `.glass-overlay` are gone; `.text-title-gradient`
-survives on brand hero headlines only. `layout/navigation.tsx` is gone —
+is deleted (zero consumers). `layout/navigation.tsx` is gone —
 in-page tab panels use `Tabs`.
 
 ---
@@ -51,7 +51,7 @@ The stylesheet is divided into nine numbered sections. Keep them in this order.
 3. **Tailwind theme mappings** — `@theme inline { --color-*: var(...) }`.
 4. **Typography tokens** — `--font-sans`, `--text-2xs`.
 5. **Radius & surface tokens** — `--radius*`, `--r-*`, `--surface-*`.
-6. **Border & shadow tokens** — `--border-subtle/strong`, `--elev-1..5`,
+6. **Border & shadow tokens** — `--border-subtle/strong`, `--elev-1..3` + `--elev-5`,
    `--control-boundary` / `--shadow-control-boundary`.
 7. **Status colors** — `--success/warning/info` (+ `-foreground`), `--destructive`.
 8. **Component-independent utilities** — `@utility` definitions, `@layer base`
@@ -79,19 +79,23 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 | --- | --- | --- | --- |
 | `--background` | `#fff9f9` | `#1f1618` | `bg-background` |
 | `--foreground` | `#3a2c30` | `#fbeeee` | `text-foreground` |
-| `--card` / `--card-foreground` | `#ffffff` / `#3a2c30` | `#2b2023` / `#fbeeee` | `bg-card` |
-| `--popover` / `--popover-foreground` | `#ffffff` / `#3a2c30` | `#2b2023` / `#fbeeee` | `bg-popover` |
+| `--card` / `--card-foreground` | `var(--surface-1)` / `#3a2c30` | `var(--surface-1)` / `#fbeeee` | `bg-card` |
+| `--popover` / `--popover-foreground` | `var(--surface-1)` / `#3a2c30` | `var(--surface-1)` / `#fbeeee` | `bg-popover` |
 | `--primary` / `--primary-foreground` | `#ffdada` / `#4f1c2a` | `#ffdada` / `#3a1a22` | `bg-primary text-primary-foreground` |
-| `--brand` | `#ee6f8b` | `#f98aa0` | 액션·포커스 링 포인트 핑크 (`bg-brand`) |
+| `--brand` | `#ee6f8b` | `#f98aa0` | 포인트 핑크 원본 — `--ring`·`--primary-control`의 소스 (유틸리티 없음) |
 | `--primary-control` / `--primary-control-text` / `--primary-control-hover` | `var(--brand)` / `var(--primary-foreground)` / `#f27c96` | `var(--brand)` / `var(--primary-foreground)` / `#f27890` | solid on-state/CTA fills |
 | `--primary-text` | `var(--accent-foreground)` (`#4f1c2a`) | `var(--accent-foreground)` (`#ffdada`) | accent text on neutral surfaces |
-| `--secondary` / `--secondary-foreground` | `#fff0f0` / `#3a2c30` | `#3a2c30` / `#fbeeee` | `bg-secondary` |
-| `--muted` / `--muted-foreground` | `#fff0f0` / `#7d686d` | `#3a2c30` / `#b9a4a9` | `bg-muted`, `text-muted-foreground` |
+| `--secondary` / `--secondary-foreground` | `var(--surface-2)` / `#3a2c30` | `var(--surface-2)` / `#fbeeee` | `bg-secondary` |
+| `--muted` / `--muted-foreground` | `var(--surface-2)` / `#7d686d` | `var(--surface-2)` / `#b9a4a9` | `bg-muted`, `text-muted-foreground` |
 | `--accent` / `--accent-foreground` | `#ffc3c9` / `#4f1c2a` | `#4d3b40` / `#ffdada` | `bg-accent` |
-| `--border` / `--input` | `#f3d3d6` / `#f3d3d6` | `#4d3b40` / `#4d3b40` | `border-border`, `border-input` |
+| `--border` / `--input` | `#f3d3d6` / `var(--border)` | `#4d3b40` / `var(--border)` | `border-border`, `border-input` |
 | `--border-subtle` / `--border-strong` | `#f8e1e4` / `#b4779b` | `#3a2c30` / `#a37d89` | `border-border-subtle`, `border-border-strong` |
 | `--ring` | `var(--brand)` (`#ee6f8b`) | `var(--brand)` (`#f98aa0`) | `ring-ring` |
-| `--primary-rgb` | `255 218 218` | same | space triplet for `rgba(var(--primary-rgb) / …)` |
+| `--dot-neutral` | `var(--muted-foreground)` | 동일 | `bg-dot-neutral` — 중립 상태 점·배지 dot 채움 |
+| `--rank-1` / `--rank-2` / `--rank-3` | `#b47716` / `#8f8f8f` / `#b0743a` | `#f0b232` / `#b9bbbe` / `#cd7f32` | `text-rank-*` — 랭킹 왕관(금·은·동, 값은 제안) |
+
+서피스 슬롯(`--card`·`--popover`·`--secondary`·`--muted`)과 `--input`은 `--surface-*` / `--border`
+단일 소스의 별칭이다 — 값 중복 정의를 만들지 말고 원본을 고칠 것.
 
 ### Surfaces (opaque, replaces glass for new work)
 
@@ -99,15 +103,20 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 | --- | --- | --- | --- |
 | `--surface-1` | `#ffffff` | `#2b2023` | `bg-surface-1` — base panel |
 | `--surface-2` | `#fff0f0` | `#3a2c30` | `bg-surface-2` — nested / inset area |
-| `--surface-3` | `#ffffff` | `#3a2c30` | `bg-surface-3` — floating overlay |
+| `--surface-3` | `#ffffff` | `#3a2c30` | `bg-surface-3` — floating overlay · 중립 컨트롤 hover 단계 |
 
-Or use the `panel` utility for the common case (opaque fill + `--r-card`).
+`--surface-3`의 원래 역할은 플로팅 오버레이지만, `bg-secondary → hover:bg-surface-3`
+관례(secondary·icon 버튼의 hover)가 정착해 공식 관례로 승격됐다.
+
+장식 아바타 헤일로는 `ring-4 ring-primary/10`(작은 아바타는 `ring-2 ring-primary/20`) 관례를
+그대로 쓴다 — 포커스 링이 아니므로 `ring-ring` 계열과 섞지 않는다.
 
 ### Radius
 
 `--radius: 1rem` is the base. `rounded-sm / md / lg` keep their exact previous
 formulas, so existing markup is visually unchanged. `rounded-xl / 2xl / 3xl`
-are untouched Tailwind defaults.
+are untouched Tailwind defaults — `rounded-lg` 소비처는 역할 토큰
+(`rounded-card` 등)으로 이전했으므로 새 코드에서 `rounded-lg`를 쓰지 않는다.
 
 Role tokens (new, for new code):
 
@@ -134,16 +143,16 @@ Light/dark resolve `--border-strong` to the theme-appropriate rose-grey.
 
 ### Shadows
 
-Five intentional elevation steps replace Tailwind's defaults:
+Elevation steps replace Tailwind's defaults:
 
 | Utility | Token | Use |
 | --- | --- | --- |
-| `shadow-xs`, `shadow-sm` | `--elev-1` | hairline separation |
+| `shadow-sm` | `--elev-1` | hairline separation |
 | `shadow-md` | `--elev-2` | resting cards |
 | `shadow-lg` | `--elev-3` | raised cards, headers |
-| `shadow-xl` | `--elev-4` | menus, popovers |
-| `shadow-2xl` | `--elev-5` | modals, drawers |
+| `shadow-2xl` | `--elev-5` | menus, popovers, modals |
 
+`shadow-xs` / `shadow-xl`은 소비자 0으로 삭제됐다 — 대응 `--elev-4`도 함께 정리했다.
 Shadows express elevation only — never decoration.
 
 ### Status colors
@@ -167,6 +176,8 @@ remaining `emerald-500/10`-style colours belong to untouched components.
   `text-[11px]` arbitrary value (identical size) — done in Phase 3B.
   `text-[10px]` has **no** matching token (2xs is 11px), so those 11 dense
   micro-labels were left alone rather than silently grown.
+- `--text-3xs` = `0.5rem` / `0.75rem` line-height → `text-3xs` (8px). 썸네일
+  워터마크 등 8px 마이크로 라벨 전용. `text-[8px]` 임의값을 대체한다.
 
 ### Motion
 
@@ -176,6 +187,9 @@ remaining `emerald-500/10`-style colours belong to untouched components.
 | `--motion-base` | `300ms` | `duration-base`, `animate-page-in` |
 | `--motion-slow` | `500ms` | `duration-slow` |
 | `--ease-out-expo` | `cubic-bezier(.16,1,.3,1)` | `ease-standard` |
+
+컨트롤 공통 트랜지션은 `transition-control` 유틸리티(color / background-color /
+box-shadow)를 쓴다 — button·input·textarea·tag-input이 같은 임의값을 쓰던 자리다.
 
 MOTION 다이얼: **2** (스크롤 리빌 + 전환). 기록된 사유 기반 예외:
 `animate-marquee`(슬래시 커맨드 문화 제시 identity motif, hover 일시정지 있음), `BackgroundShapes`(배경 identity

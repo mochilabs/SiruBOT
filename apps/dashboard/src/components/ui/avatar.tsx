@@ -29,7 +29,7 @@ const statusColors: Record<AvatarStatus, string> = {
 	online: "bg-success",
 	idle: "bg-warning",
 	dnd: "bg-destructive",
-	offline: "bg-muted-foreground/40",
+	offline: "bg-dot-neutral/40",
 };
 
 const statusDotSizes: Record<AvatarSize, string> = {
