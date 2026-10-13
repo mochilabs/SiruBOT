@@ -6,6 +6,7 @@ import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -247,6 +248,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                           {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
                         </p>
                       </div>
+                      <TrackListenLink url={track.url} title={track.title} compact />
                     </li>
                   </RevealItem>
                 ))}

@@ -1,10 +1,11 @@
 "use client";
 
 import { type Virtualizer } from "@tanstack/react-virtual";
-import { Clock, Edit, ExternalLink, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
+import { Clock, Edit, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
 
 import Loader from "@/components/loader";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { TrackListenLink } from "@/components/track-listen-link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -206,10 +207,6 @@ export function PlaylistDetail({
 													<span>{formatDuration(track.duration)}</span>
 												</p>
 
-												<a href={track.url} target="_blank" rel="noreferrer" className="hidden md:inline-flex text-2xs text-primary-text hover:underline items-center gap-1">
-													<ExternalLink size={10} />
-													YouTube
-												</a>
 											</div>
 										</div>
 
@@ -221,7 +218,8 @@ export function PlaylistDetail({
 											{formatDuration(track.duration)}
 										</div>
 
-										<div className="shrink-0 ml-3 md:ml-4 flex items-center justify-center md:w-14">
+										<div className="shrink-0 ml-3 md:ml-4 flex items-center justify-center gap-2">
+											<TrackListenLink url={track.url} title={track.title} compact />
 											<DropdownMenu>
 												<DropdownMenuTrigger
 													render={

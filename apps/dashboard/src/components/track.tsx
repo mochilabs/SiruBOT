@@ -4,9 +4,10 @@ import React, { memo, useCallback, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";
-import { Crown, ExternalLink, Heart, Music4 } from "lucide-react";
+import { Crown, Heart, Music4 } from "lucide-react";
 import useSWR from "swr";
 
+import { TrackListenLink } from "@/components/track-listen-link";
 import { useToast } from "@/components/ui/toast";
 
 interface TrackListProps {
@@ -261,17 +262,7 @@ export const TrackItem = memo(function TrackItem({
 					<FavoriteButton trackId={track.id} favorite={favorite} onToggle={onToggleFavorite} />
 				)}
 
-				{track.url && (
-					<a
-						href={track.url}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control bg-primary/10 text-primary-text border border-primary/20 transition-colors duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-						title="원본 보기"
-					>
-						<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
-					</a>
-				)}
+				<TrackListenLink url={track.url} title={track.title} compact />
 			</div>
 		</div>
 	);

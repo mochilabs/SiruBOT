@@ -8,6 +8,7 @@ import useSWR from "swr";
 import type { StatsServerStatsResponse } from "@/app/api/servers/[id]/stats/route";
 import { StatCard } from "@/components/data/stat-card";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SkeletonCard } from "@/components/ui/skeleton";
@@ -91,6 +92,7 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
           <Badge variant="primary" size="sm">
             {track.count}회
           </Badge>
+          <TrackListenLink url={track.url} title={track.title} compact />
         </li>
       ))}
     </ol>
