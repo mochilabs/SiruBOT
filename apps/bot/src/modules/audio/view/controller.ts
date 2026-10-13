@@ -15,8 +15,6 @@ import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
 	SectionBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
@@ -33,7 +31,7 @@ import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters
 type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
-	/** NowPlaying 카드 attachment URL (attachment://...) — 있으면 상단에 카드 이미지 표시 */
+	/** 이전 카드 업로드 경로와의 호환용. 메시지 레이아웃에는 쓰지 않아요. */
 	nowPlayingCardUrl?: string;
 };
 
@@ -46,7 +44,7 @@ const wrapPrefix = (customId: string) => {
 const VOLUME_MIN = 0;
 const VOLUME_MAX = 150;
 
-export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
+export function controllerView({ player, volume }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	const current = player.queue.current;
@@ -54,11 +52,11 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const queuedTracks = getUserQueuedTracks(player);
 	const queueCount = queuedTracks.length;
 
-	// 다음 곡 3개를 타이틀로 표시한다 (대기열 보기 버튼 대신).
+	// 메시지에서 재생 상태를 먼저 읽고, 다음 곡은 보조 영역으로 분리한다.
 	const NEXT_UP_COUNT = 3;
 	const nextUpLines = queuedTracks.slice(0, NEXT_UP_COUNT).map(
 		(track, index) =>
-			`-# \`${index + 1}\` ${formatTrack(track as Track, {
+			`${index + 1}. ${formatTrack(track as Track, {
 				showLength: false,
 				withMarkdownURL: true,
 				cleanTitle: true,
@@ -66,41 +64,47 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
-	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
+	const trackLines = buildTrackDisplay(player, current, { progressEmoji: true });
 
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(trackLines.join('\n'));
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([`-# 지금 재생`, ...trackLines].join('\n'));
 
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('prev'))
+		.setLabel('이전')
 		.setEmoji(emoji('arrow_back'))
 		.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
+		.setLabel(player.paused ? '이어 듣기' : '일시정지')
 		.setEmoji(player.paused ? emoji('play') : emoji('pause'));
 
 	const nextButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('next'))
+		.setLabel('다음')
 		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(player.queue.tracks.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(emoji('stop'));
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setLabel('정지').setEmoji(emoji('stop'));
 
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
 	const queueShowButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('queue:show'))
-		.setLabel('대기열')
+		.setLabel(`대기열 ${queueCount}곡`)
 		.setEmoji(emoji('scroll'))
 		.setDisabled(queuedTracks.length === 0);
 
-	// 1행: 이전/재생/다음/정지 + (대기열 있을 때만) 대기열 보기. Discord 한 행당 버튼 5개 제한.
+	// 핵심 조작만 한 행에 둬 모바일에서도 버튼 라벨이 눌리지 않게 한다.
 	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton];
-	if (queuedTracks.length > 0) {
-		primaryComponents.push(queueShowButton);
-	}
-	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(primaryComponents.map((e) => e.setStyle(ButtonStyle.Secondary)));
+	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		primaryComponents.map((button) => {
+			if (button === pauseButton) return button.setStyle(ButtonStyle.Primary);
+			if (button === stopButton) return button.setStyle(ButtonStyle.Danger);
+			return button.setStyle(ButtonStyle.Secondary);
+		})
+	);
 
 	// 반복 상태 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
@@ -111,6 +115,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 					? wrapPrefix('repeat:track')
 					: wrapPrefix('repeat:off')
 		)
+		.setLabel(player.repeatMode === 'off' ? '반복: 끔' : player.repeatMode === 'track' ? '반복: 한 곡' : '반복: 대기열')
 		.setEmoji(repeatEmoji(player.repeatMode));
 
 	// 볼륨 조절 버튼 — 볼륨 조절이 의미 있을 때만 표시 (하한≠상한일 때).
@@ -118,10 +123,12 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const showVolume = VOLUME_MAX > VOLUME_MIN + 1;
 	const volumeDownButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('volume:down'))
+		.setLabel('볼륨 낮추기')
 		.setEmoji(emoji('volume_down'))
 		.setDisabled(currentVolume <= VOLUME_MIN);
 	const volumeUpButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('volume:up'))
+		.setLabel('볼륨 높이기')
 		.setEmoji(emoji('volume_up'))
 		.setDisabled(currentVolume >= VOLUME_MAX);
 
@@ -132,43 +139,37 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const atChapterStart = chapterIndex !== null && (player.position ?? 0) - chapters[chapterIndex]!.start < 5_000;
 	const chapterPrevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('chapter:prev'))
+		.setLabel('이전 챕터')
 		.setEmoji(emoji('chapters_prev', '⏪'))
 		.setDisabled(chapterIndex === null || (chapterIndex === 0 && atChapterStart));
 	const chapterNextButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('chapter:next'))
+		.setLabel('다음 챕터')
 		.setEmoji(emoji('chapters_next', '⏩'))
 		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
 
-	// 2행: (챕터 있을 때만) 이전/다음 챕터 + 반복 + (볼륨 가능할 때만) 볼륨. Discord 한 행당 버튼 5개 제한.
-	const utilityComponents: ButtonBuilder[] = [];
-	if (chapters.length > 0) {
-		utilityComponents.push(chapterPrevButton, chapterNextButton);
-	}
-	utilityComponents.push(repeatButton);
-	if (showVolume) {
-		utilityComponents.push(volumeDownButton, volumeUpButton);
-	}
-
+	// 부가 조작은 챕터 이동과 재생 설정으로 나눠 한 행에 과밀하게 몰리지 않게 한다.
 	const utilityRows: ActionRowBuilder<ButtonBuilder>[] = [];
-	if (utilityComponents.length <= 5) {
-		utilityRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.map((e) => e.setStyle(ButtonStyle.Secondary))));
-	} else {
+	if (chapters.length > 0) {
 		utilityRows.push(
-			new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.slice(0, 5).map((e) => e.setStyle(ButtonStyle.Secondary)))
-		);
-		utilityRows.push(
-			new ActionRowBuilder<ButtonBuilder>().addComponents(utilityComponents.slice(5).map((e) => e.setStyle(ButtonStyle.Secondary)))
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				[chapterPrevButton, chapterNextButton].map((button) => button.setStyle(ButtonStyle.Secondary))
+			)
 		);
 	}
+	const settingComponents: ButtonBuilder[] = [repeatButton];
+	if (showVolume) {
+		settingComponents.push(volumeDownButton, volumeUpButton);
+	}
+	if (queuedTracks.length > 0) {
+		settingComponents.push(queueShowButton);
+	}
+	utilityRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(settingComponents.map((button) => button.setStyle(ButtonStyle.Secondary))));
 
-	// NowPlaying 카드가 있으면 상단에 크게 보여주고, 썸네일은 중복되니 생략한다.
-	if (nowPlayingCardUrl) {
-		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
-		containerComponent.addMediaGalleryComponents(gallery);
-		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
-	} else if (current?.info.artworkUrl) {
+	// 원본 앨범 아트만 작은 썸네일로 보여 카드 이미지의 중복 정보와 과한 높이를 없앤다.
+	if (current?.info.artworkUrl) {
 		const titleSection = new SectionBuilder().addTextDisplayComponents(nowplayingTextDisplay);
-		thumbnail.setURL(current?.info.artworkUrl ?? '');
+		thumbnail.setURL(current.info.artworkUrl);
 		titleSection.setThumbnailAccessory(thumbnail);
 		containerComponent.addSectionComponents(titleSection);
 	} else {
@@ -180,22 +181,23 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		containerComponent.addActionRowComponents(utilityRow);
 	}
 
-	// 다음 곡 목록은 카드 이미지에 그려져요 — 카드가 있으면 텍스트 목록과 중복되지 않게 생략해요.
-	if (nextUpLines.length > 0 && !nowPlayingCardUrl) {
-		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent([`-# **다음 곡**`, ...nextUpLines].join('\n')));
+	if (nextUpLines.length > 0) {
+		containerComponent
+			.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+			.addTextDisplayComponents(new TextDisplayBuilder().setContent([`### 다음 곡`, ...nextUpLines].join('\n')));
 	}
 
 	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
 
-	// 하단 푸터 — 카드가 없을 때만 봇 이름/버전까지 표시 (카드가 있으면 브랜드는 이미지에 박혀 있다).
-	const footerSegments = buildFooterSegments(player, volume, !nowPlayingCardUrl);
+	// 하단 푸터는 서버·볼륨 상태를 요약한다.
+	const footerSegments = buildFooterSegments(player, volume);
 	if (queueCount > 0) {
 		footerSegments.unshift(
 			`${emoji('scroll')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
 		);
 	}
 
-	// `-#`(작은 글씨)는 줄 맨 앞에서만 적용되므로 하나의 줄로 합친 뒤 맨 앞에 한 번만 붙인다.
+	// `-#`는 줄 맨 앞에서만 적용되므로 메타데이터를 한 줄에 합친다.
 	containerComponent
 		.addSeparatorComponents(separatorSmall)
 		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' | ')}`));

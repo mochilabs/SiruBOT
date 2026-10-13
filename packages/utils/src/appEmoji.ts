@@ -180,11 +180,11 @@ export function configureAppEmojiFetcher(fetcher: AppEmojiFetcher): void {
 }
 
 /**
- * 외부(봇 AppEmojiManager)에서 이미 확정된 이름→ID 매핑을 주입한다.
- * 매니저가 부팅 시 API 조회 + 미등록 PNG 업로드를 마친 뒤 최종 맵을 넣어요.
+ * 외부(봇 AppEmojiManager)에서 조회한 이름→ID 매핑을 주입한다.
+ * API 응답이 부분적이어도 기존 ID를 보존하고, 새로 확인한 ID는 우선 적용해요.
  */
 export function setAppEmojiIdMap(map: EmojiIdMap): void {
-	if (map && Object.keys(map).length) cachedMap = map;
+	if (map && Object.keys(map).length) cachedMap = { ...cachedMap, ...map };
 }
 
 /** 매핑 로드 (성공 시 최초 1회, 이후 캐시). 파일 실패 시 Discord API fetch로 폴백. 빈 결과는 캐시하지 않고 30초 뒤 한 번만 재시도해요. */
