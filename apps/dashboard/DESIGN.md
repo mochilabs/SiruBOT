@@ -289,7 +289,19 @@ should report `Unexpected failures: 0`.
 - `apps/dashboard/MEMO.md` — past redesign notes; may be stale; code wins.
 - Project root `AGENTS.md` — build commands and repo conventions.
 
-## 8. Responsive UX and floating save bar (planned)
+## 8. Responsive UX and floating save bar
+
+Implementation update (2026-10-14): the shared header/panel guidance now wraps,
+four shared settings forms compare an editable saved baseline and serialize
+submits, and the live player isolates guild state and exposes recovery. See
+the [bounded audit and validation record](../../docs/dashboard-ui-ux-audit-2026-10-14.md).
+The floating save bar now appears only for dirty/pending active panels through
+the existing portal. Inactive drafts remain registered. AI history deletion
+remains in the form; profile revert remains alongside save. Mobile uses 16px
+viewport insets; desktop uses a centered, maximum 760px island within the panel
+column. The rendered bar height reserves form clearance. Toasts use a separate
+top viewport with readable non-overlapping notices. Full authenticated and
+real-device keyboard acceptance remains unverified.
 
 ### Scope and direction
 
@@ -405,6 +417,6 @@ No page-level horizontal overflow; locally scrollable tabs/tables remain
 contained and discoverable. Check normal text at 4.5:1 and required non-text
 indicators at 3:1, including actual opacity composites and focus rings.
 
-Current delivery evidence is source inspection and documentation checks only.
-Runtime click-through, screenshots, contrast measurements and implementation
-tests remain execution gates, not completed results.
+The original plan's full acceptance matrix remains pending. The bounded
+reliability/header patch has automated and controlled-browser evidence in the
+audit record linked above; it does not establish full dashboard acceptance.

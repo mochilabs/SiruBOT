@@ -28,6 +28,7 @@ import { MixerSettings } from "./mixer-settings";
 import { MusicSettings } from "./music-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import ServerStatsTab from "./server-stats-tab";
+import { SettingsPanelActive } from "./settings-shared";
 
 const TABS = [
   { key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
@@ -108,15 +109,16 @@ export function ServerDashboard({
 
     const containerRect = container.getBoundingClientRect();
     const itemRect = item.getBoundingClientRect();
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
     if (itemRect.left < containerRect.left) {
       container.scrollBy({
         left: itemRect.left - containerRect.left - 8,
-        behavior: "smooth",
+        behavior,
       });
     } else if (itemRect.right > containerRect.right) {
       container.scrollBy({
         left: itemRect.right - containerRect.right + 8,
-        behavior: "smooth",
+        behavior,
       });
     }
   }, [tab]);
@@ -145,7 +147,7 @@ export function ServerDashboard({
                     key={item.key}
                     value={item.key}
                     data-mobile-tab={item.key}
-                    className="min-w-max flex-none gap-1.5 px-3 after:bottom-0"
+                    className="min-h-11 min-w-max flex-none gap-1.5 px-3 after:bottom-0"
                   >
                     {item.icon}
                     {item.label}
@@ -160,6 +162,7 @@ export function ServerDashboard({
                 className="pt-4 lg:pt-0"
                 keepMounted
               >
+                <SettingsPanelActive.Provider value={tab === item.key}>
                 {item.key === "ai" && <AiSettings guildId={guildId} />}
                 {item.key === "profile" && (
                   <BotProfileSettings guildId={guildId} />
@@ -181,6 +184,7 @@ export function ServerDashboard({
                     guildName={guildName}
                   />
                 )}
+                </SettingsPanelActive.Provider>
               </TabsContent>
             ))}
           </Tabs>

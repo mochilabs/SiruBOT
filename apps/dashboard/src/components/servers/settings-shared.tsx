@@ -1,11 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useId, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AlertCircle, Loader2, LogIn, Save, X } from "lucide-react";
 
+import { Portal } from "@/components/overlay/portal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { ApiError } from "@/lib/api-error";
@@ -23,17 +24,17 @@ export function PanelHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex items-start justify-between gap-4">
-      <div className="flex items-start gap-3">
+    <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+      <div className="flex min-w-0 items-start gap-3">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-text">
           {icon}
         </span>
-        <div>
+        <div className="min-w-0 break-words">
           <h2 className="text-lg font-bold text-foreground">{title}</h2>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
-      {action}
+      {action && <div className="flex max-w-full flex-wrap gap-2 sm:shrink-0">{action}</div>}
     </header>
   );
 }
@@ -41,7 +42,7 @@ export function PanelHeader({
 /** 토큰 기반 안내 박스 */
 export function InfoBox({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl bg-muted/20 px-4 py-3 text-xs text-muted-foreground space-y-1">
+    <div className="rounded-menu bg-muted/20 px-4 py-3 text-sm text-muted-foreground space-y-1 break-words">
       {children}
     </div>
   );
@@ -50,7 +51,7 @@ export function InfoBox({ children }: { children: ReactNode }) {
 /** 경고 박스 (상태 색상 관례: amber) */
 export function WarningBox({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-xs text-warning">
+    <div className="rounded-menu border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning break-words">
       {children}
     </div>
   );
@@ -193,6 +194,7 @@ export function PanelError({
 }
 
 const dirtySaveBars = new Map<string, boolean>();
+export const SettingsPanelActive = createContext(true);
 
 export function hasUnsavedSettings(): boolean {
   return [...dirtySaveBars.values()].some(Boolean);
@@ -203,38 +205,118 @@ export function SaveBar({
   saving,
   onSave,
   children,
+  active: activeProp,
 }: {
   dirty: boolean;
   saving: boolean;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   children?: ReactNode;
+  active?: boolean;
 }) {
   const id = useId();
+  const panelActive = useContext(SettingsPanelActive);
+  const active = activeProp ?? panelActive;
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const islandRef = useRef<HTMLDivElement>(null);
+  const islandHadFocusRef = useRef(false);
+  const [islandNode, setIslandNode] = useState<HTMLDivElement | null>(null);
+  const setIslandRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node && islandHadFocusRef.current) {
+      const heading = anchorRef.current?.parentElement?.querySelector<HTMLElement>("h2");
+      if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+      islandHadFocusRef.current = false;
+    }
+    islandRef.current = node;
+    setIslandNode(node);
+  }, []);
+  const savingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [geometry, setGeometry] = useState({ left: 16, width: 0, height: 0 });
+  const visible = active && (dirty || saving || submitting);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const update = () => {
+      const anchor = anchorRef.current;
+      const island = islandRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const available = Math.max(0, Math.min(rect.width, window.innerWidth - Math.max(16, rect.left) - 16));
+      const width = Math.min(available, 760);
+      const left = Math.max(16, rect.left) + (available - width) / 2;
+      const height = island?.getBoundingClientRect().height ?? 0;
+      setGeometry((previous) => previous.left === left && previous.width === width && previous.height === height
+        ? previous : { left, width, height });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    if (anchorRef.current) observer.observe(anchorRef.current);
+    if (islandRef.current) observer.observe(islandRef.current);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [visible]);
 
   useEffect(() => {
-    dirtySaveBars.set(id, dirty);
+    if (!visible || !islandNode) return;
+    const island = islandNode;
+    const observer = new ResizeObserver(() => {
+      const height = island.getBoundingClientRect().height;
+      setGeometry((value) => value.height === height ? value : { ...value, height });
+    });
+    observer.observe(island);
+    const height = island.getBoundingClientRect().height;
+    setGeometry((value) => value.height === height ? value : { ...value, height });
+    return () => observer.disconnect();
+  }, [visible, islandNode]);
+
+  const handleSave = async () => {
+    if (saving || savingRef.current) return;
+    savingRef.current = true;
+    setSubmitting(true);
+    try { await onSave(); }
+    finally { savingRef.current = false; setSubmitting(false); }
+  };
+
+  useEffect(() => {
+    dirtySaveBars.set(id, dirty || saving || submitting);
     return () => {
       dirtySaveBars.delete(id);
     };
-  }, [dirty, id]);
+  }, [dirty, saving, submitting, id]);
 
   return (
-    <div className="sticky bottom-0 z-20 -mx-6 -mb-6 mt-4 flex flex-wrap items-center gap-3 border-t border-border-subtle bg-card px-6 py-4">
+    <div ref={anchorRef} style={{ height: visible ? geometry.height + 48 : 0 }}>
+      {visible && <Portal>
+        <div ref={setIslandRef} data-slot="settings-save-island"
+          onFocusCapture={() => { islandHadFocusRef.current = true; }}
+          onBlurCapture={(event) => {
+            if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) islandHadFocusRef.current = false;
+          }}
+          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-3 rounded-card bg-surface-3 p-4 text-foreground shadow-lg sm:left-[var(--island-left)] sm:right-auto sm:w-[var(--island-width)] sm:flex-row sm:items-center sm:justify-between"
+          style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
+          <p role="status" className="min-w-0 text-sm font-medium">
+            {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항"}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {children}
       <Button
-        variant="primary"
-        loading={saving}
+        variant="cta"
+        className="min-h-11"
+        loading={saving || submitting}
         disabled={!dirty}
         icon={saving ? undefined : <Save size={16} />}
-        onClick={onSave}
+        onClick={handleSave}
       >
-        {saving ? "저장 중…" : "저장"}
+        {saving || submitting ? "저장 중…" : "변경 사항 저장"}
       </Button>
-      {dirty && (
-        <span className="text-xs text-muted-foreground">
-          저장하지 않은 변경 사항
-        </span>
-      )}
-      {children}
+          </div>
+        </div>
+      </Portal>}
     </div>
   );
 }

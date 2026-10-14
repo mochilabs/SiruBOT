@@ -100,6 +100,7 @@ export default async function ServerDashboardPage({
         }
       />
       <ServerDashboard
+        key={id}
         guildId={id}
         manageable={manageableResolved}
         guildName={guildMeta?.name ?? null}

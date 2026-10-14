@@ -17,15 +17,17 @@ import useSWR from "swr";
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { StatusDot } from "@/components/primitives/status-dot";
+import { PanelError } from "@/components/servers/settings-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
-import { toError } from "@/lib/api-error";
+import { toApiError, toError } from "@/lib/api-error";
 import { formatDuration } from "@/lib/format";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
+import { playerErrorMessage } from "@/lib/player-error";
 
 /** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
 const VOLUME_SEND_DEBOUNCE_MS = 400;
@@ -49,11 +51,7 @@ async function sendPlayerCommand(
     const body = (await res.json().catch(() => null)) as {
       error?: string;
     } | null;
-    const message = body?.error
-      ?.replace(/<a?:[a-zA-Z0-9_]{2,32}:\d+>/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-    return { ok: false, message: message || "명령을 전달하지 못했어요." };
+    return { ok: false, message: playerErrorMessage(body?.error, "명령을 전달하지 못했어요.") };
   } catch {
     return {
       ok: false,
@@ -70,7 +68,7 @@ function interpolatedPositionMs(
   receivedAt: number,
 ): number {
   if (state.isStream || state.durationMs <= 0) return state.positionMs;
-  if (!state.playing || state.paused) return state.positionMs;
+  if (state.stale || !state.playing || state.paused) return state.positionMs;
   const elapsed = Math.max(0, Date.now() - receivedAt);
   return Math.min(state.durationMs, state.positionMs + elapsed);
 }
@@ -147,105 +145,102 @@ function NowPlaying({
   guildId,
 }: NowPlayingProps) {
   const toast = useToast();
-  const positionMs = interpolatedPositionMs(state, receivedAt);
-
-  // 낙관적 상태 — 명령 전송 중엔 의도 값으로 보여요. 봇이 같은 값으로 상태 퍼블리시하면 해제해요.
-  const [pausedOverride, setPausedOverride] = useState<boolean | null>(null);
-  const [repeatOverride, setRepeatOverride] = useState<
-    LivePlayerState["repeatMode"] | null
-  >(null);
+  const unavailable = state.stale || (mode === "stream" && !connected);
+  const positionMs = unavailable ? state.positionMs : interpolatedPositionMs(state, receivedAt);
   const [pendingAction, setPendingAction] = useState<
     "pause" | "resume" | "skip" | "stop" | "repeat" | null
   >(null);
   const [volumeOverride, setVolumeOverride] = useState<number | null>(null);
   const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commandPendingRef = useRef(false);
+  const volumePendingRef = useRef(false);
+  const [volumePending, setVolumePending] = useState(false);
+  const controlsDisabled = unavailable || volumePending || volumeOverride !== null;
 
-  // 봇 상태가 낙관적 값과 같으면 오버라이드를 해제해 "실제 상태 표시"로 복귀해요.
   useEffect(() => {
-    if (pausedOverride !== null && state.paused === pausedOverride)
-      setPausedOverride(null);
-  }, [pausedOverride, state.paused]);
-  useEffect(() => {
-    if (volumeOverride !== null && Math.round(state.volume) === volumeOverride)
+    if (unavailable) {
+      if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
       setVolumeOverride(null);
-  }, [volumeOverride, state.volume]);
-  useEffect(() => {
-    if (repeatOverride !== null && state.repeatMode === repeatOverride)
-      setRepeatOverride(null);
-  }, [repeatOverride, state.repeatMode]);
+    }
+  }, [unavailable]);
   useEffect(() => {
     return () => {
       if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
     };
   }, []);
 
-  const displayedPaused = pausedOverride ?? state.paused;
-  const displayedRepeat = repeatOverride ?? state.repeatMode;
+  const displayedPaused = state.paused;
+  const displayedRepeat = state.repeatMode;
   const displayedVolume = volumeOverride ?? Math.round(state.volume);
   const hasCurrentTrack =
     state.playing || state.paused || state.trackTitle !== null;
 
   const failCommand = useCallback(
     (result: { ok: boolean; message?: string }, fallbackMessage: string) => {
-      setPausedOverride(null);
-      setRepeatOverride(null);
-      setVolumeOverride(null);
-      setPendingAction(null);
       toast.error(
         result.ok ? fallbackMessage : result.message || fallbackMessage,
-        "봇이 접속 중인지 확인해 주세요.",
       );
     },
     [toast],
   );
 
   const handleTogglePause = useCallback(async () => {
+    if (commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
     const action = displayedPaused ? "resume" : "pause";
     setPendingAction(action);
-    setPausedOverride(!displayedPaused);
     const result = await sendPlayerCommand(guildId, action);
     if (!result.ok) failCommand(result, "명령을 전달하지 못했어요.");
-    else setPendingAction(null);
-  }, [displayedPaused, failCommand, guildId]);
+    setPendingAction(null);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, displayedPaused, failCommand, guildId]);
 
   const handleSkip = useCallback(async () => {
+    if (commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
     setPendingAction("skip");
     const result = await sendPlayerCommand(guildId, "skip");
     if (!result.ok) failCommand(result, "명령을 전달하지 못했어요.");
-    else setPendingAction(null);
-  }, [failCommand, guildId]);
+    setPendingAction(null);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId]);
 
   const handleStop = useCallback(async () => {
+    if (commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
     setPendingAction("stop");
     const result = await sendPlayerCommand(guildId, "stop");
     if (!result.ok) failCommand(result, "정지하지 못했어요.");
-    else setPendingAction(null);
-  }, [failCommand, guildId]);
+    setPendingAction(null);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId]);
 
   const handleRepeat = useCallback(async () => {
-    const next =
-      displayedRepeat === "off"
-        ? "track"
-        : displayedRepeat === "track"
-          ? "queue"
-          : "off";
+    if (commandPendingRef.current || controlsDisabled) return;
+    commandPendingRef.current = true;
     setPendingAction("repeat");
-    setRepeatOverride(next);
     const result = await sendPlayerCommand(guildId, "repeat");
     if (!result.ok) failCommand(result, "반복 설정을 바꾸지 못했어요.");
-    else setPendingAction(null);
-  }, [displayedRepeat, failCommand, guildId]);
+    setPendingAction(null);
+    commandPendingRef.current = false;
+  }, [controlsDisabled, failCommand, guildId]);
 
   const handleVolumeChange = useCallback(
     (volume: number) => {
+      if (unavailable || volumePendingRef.current || commandPendingRef.current) return;
       setVolumeOverride(volume);
       if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
       volumeTimerRef.current = setTimeout(async () => {
+        volumePendingRef.current = true;
+        setVolumePending(true);
         const result = await sendPlayerCommand(guildId, "volume", volume);
         if (!result.ok) failCommand(result, "볼륨을 적용하지 못했어요.");
+        setVolumeOverride(null);
+        volumePendingRef.current = false;
+        setVolumePending(false);
       }, VOLUME_SEND_DEBOUNCE_MS);
     },
-    [failCommand, guildId],
+    [failCommand, guildId, unavailable],
   );
 
   return (
@@ -288,11 +283,11 @@ function NowPlaying({
           </div>
         )}
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="truncate text-lg font-bold text-foreground">
+          <p className="break-words text-lg font-bold text-foreground">
             {state.trackTitle ?? "재생 중인 곡이 없어요"}
           </p>
-          <p className="truncate text-sm text-muted-foreground">
-            {state.trackAuthor ?? "값 없음"}
+          <p className="break-words text-sm text-muted-foreground">
+            {state.trackAuthor ?? "아티스트 정보 없음"}
             {state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
@@ -309,7 +304,7 @@ function NowPlaying({
 
       <div className="space-y-3">
         <div className="space-y-1">
-          <ProgressBar state={state} receivedAt={receivedAt} />
+            <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
           <div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
             <span>
               {state.isStream
@@ -327,11 +322,12 @@ function NowPlaying({
           <Button
             variant="secondary"
             size="sm"
+            className="min-h-11"
             icon={displayedPaused ? <Play size={14} /> : <Pause size={14} />}
             onClick={handleTogglePause}
             loading={pendingAction === "pause" || pendingAction === "resume"}
             disabled={
-              !hasCurrentTrack ||
+              controlsDisabled || !hasCurrentTrack ||
               (pendingAction !== null &&
                 pendingAction !== "pause" &&
                 pendingAction !== "resume")
@@ -343,11 +339,12 @@ function NowPlaying({
           <Button
             variant="secondary"
             size="sm"
+            className="min-h-11"
             icon={<SkipForward size={14} />}
             onClick={handleSkip}
             loading={pendingAction === "skip"}
             disabled={
-              !hasCurrentTrack ||
+              controlsDisabled || !hasCurrentTrack ||
               state.queueLength === 0 ||
               (pendingAction !== null && pendingAction !== "skip")
             }
@@ -358,11 +355,12 @@ function NowPlaying({
           <Button
             variant="secondary"
             size="sm"
+            className="min-h-11"
             icon={<Square size={14} />}
             onClick={handleStop}
             loading={pendingAction === "stop"}
             disabled={
-              !hasCurrentTrack ||
+              controlsDisabled || !hasCurrentTrack ||
               (pendingAction !== null && pendingAction !== "stop")
             }
             aria-label="정지"
@@ -372,12 +370,13 @@ function NowPlaying({
           <Button
             variant="state-toggle"
             size="sm"
+            className="min-h-11"
             active={displayedRepeat !== "off"}
             icon={<Repeat size={14} />}
             onClick={handleRepeat}
             loading={pendingAction === "repeat"}
             disabled={
-              !hasCurrentTrack ||
+              controlsDisabled || !hasCurrentTrack ||
               (pendingAction !== null && pendingAction !== "repeat")
             }
             aria-label={`반복 설정: ${displayedRepeat === "off" ? "없음" : displayedRepeat === "track" ? "한 곡" : "대기열"}`}
@@ -388,21 +387,23 @@ function NowPlaying({
                 ? "한 곡 반복"
                 : "대기열 반복"}
           </Button>
-          <div className="ml-auto flex min-w-0 flex-1 items-center gap-2 md:flex-none md:w-56">
+          <div className="flex w-full min-w-0 items-center gap-2 pt-2 md:ml-auto md:w-56 md:pt-0">
             <Volume2
               size={16}
               className="shrink-0 text-muted-foreground"
               aria-hidden
             />
             <Slider
+              className="min-w-0 flex-1"
               value={displayedVolume}
               min={0}
               max={PLAYER_VOLUME_MAX}
               step={1}
               onChange={handleVolumeChange}
+              disabled={unavailable || volumePending || pendingAction !== null || !hasCurrentTrack}
               showValue
               formatValue={(value) => `${value}%`}
-              aria-label="볼륨"
+              label="볼륨"
             />
           </div>
         </div>
@@ -498,10 +499,20 @@ interface LivePayload {
   hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
 
+async function liveFetcher(url: string): Promise<LivePayload> {
+  const response = await fetch(url);
+  if (!response.ok) throw await toApiError(response, "라이브 상태를 불러오지 못했어요.");
+  return response.json();
+}
+
 /** 폴백 폴링 주기 — 2000ms면 READ_RATE(분당 30회) 경계에 딱 붙어 윈도우 지터로 429가 튀니 분당 24회로 낮춰요. */
 const FALLBACK_POLL_INTERVAL_MS = 2500;
 
 export default function PlayerLiveTab({ guildId }: { guildId: string }) {
+  return <LivePlayerSession key={guildId} guildId={guildId} />;
+}
+
+function LivePlayerSession({ guildId }: { guildId: string }) {
   /** SSE 실패(미지원/장애) 시 폴백하는 폴링 모드와 상태를 구분해요. */
   const [mode, setMode] = useState<"stream" | "polling">("stream");
   const [liveData, setLiveData] = useState<LivePayload | null>(null);
@@ -514,9 +525,9 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
     data: swrData,
     error,
     isLoading,
-  } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, {
+    mutate,
+  } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, liveFetcher, {
     refreshInterval: mode === "polling" ? FALLBACK_POLL_INTERVAL_MS : 0,
-    keepPreviousData: true,
   });
 
   // polling 모드의 snapshotAt도 receivedAt으로 통일 — swr 데이터가 바뀌면 수신 시각을 기록해요.
@@ -530,11 +541,13 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 
     const source = new EventSource(`/api/servers/${guildId}/live/stream`);
     let gotData = false;
+    let closed = false;
 
     source.addEventListener("state", (e) => {
-      gotData = true;
+      if (closed) return;
       try {
         const payload = JSON.parse((e as MessageEvent).data) as LivePayload;
+        gotData = true;
         setReceivedAt(Date.now());
         setLiveData(payload);
         setConnected(true);
@@ -542,8 +555,8 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
         // 잘못된 프레임 — 무시하고 다음 스냅샷을 기다려요.
       }
     });
-    source.onopen = () => setConnected(true);
     source.onerror = () => {
+      if (closed) return;
       // data를 한 번도 못 받은 error → 스트림 미지원(프록시 404 등)으로 판단하고 폴링 폴백
       if (!gotData) {
         setMode("polling");
@@ -552,11 +565,11 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
       }
     };
 
-    return () => source.close();
+    return () => { closed = true; source.close(); };
   }, [mode, guildId]);
 
   // 표시 데이터 — polling 모드에선 SWR 데이터를 사용해요.
-  const data = mode === "stream" ? liveData : swrData;
+  const data = mode === "stream" ? liveData ?? swrData : swrData;
 
   // 폴링 사이 progress 부드럽게 보간 (SSE 수신 사이 진행바 1초 보간)
   const [, tickState] = useState(0);
@@ -565,17 +578,9 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
     return () => clearInterval(timer);
   }, []);
 
-  if (mode === "polling" && error) {
+  if (error && (mode === "polling" || !liveData)) {
     const apiError = toError(error, "라이브 상태를 불러오지 못했어요.");
-    return (
-      <Card padding="lg">
-        <EmptyState
-          icon={Radio}
-          title="라이브 상태를 불러오지 못했어요"
-          description={apiError.message}
-        />
-      </Card>
-    );
+    return <PanelError error={apiError} onRetry={() => { void mutate(); }} />;
   }
   if (mode === "polling" && isLoading) return <LiveLoading />;
   if (!data) return <LiveLoading />;
@@ -593,6 +598,11 @@ export default function PlayerLiveTab({ guildId }: { guildId: string }) {
 
   return (
     <div className="grid gap-6">
+      {(data.player.stale || (mode === "stream" && !connected)) && (
+        <p role="status" className="rounded-control bg-warning/5 px-4 py-3 text-sm text-warning">
+          마지막으로 확인한 재생 정보예요. 연결을 확인하는 동안 재생 제어는 사용할 수 없어요.
+        </p>
+      )}
       <NowPlaying
         state={data.player}
         receivedAt={receivedAt}

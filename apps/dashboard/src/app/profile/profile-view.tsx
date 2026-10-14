@@ -100,7 +100,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 {attendance.checkedInToday ? (
                   <Badge variant="success" size="sm">오늘 출석 완료</Badge>
                 ) : (
-                  <Badge variant="warning" size="sm">오늘 미출석 · `/출석`</Badge>
+                  <Badge variant="warning" size="sm">오늘 미출석 · /출석</Badge>
                 )}
               </div>
             </CardHeader>
@@ -137,7 +137,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 text-xs font-medium text-muted-foreground">
                   <Badge variant="default">{birthday.zodiac.ko}</Badge>
                   {fortune.rank > 0 && <Badge variant="primary">{fortune.rank}위</Badge>}
-                  <span className="ml-auto tabular-nums">{fortune.date} 기준</span>
+                  <span className="ml-auto tabular-nums">
+                    {fortune.date.replace(/^(\d{4})-?(\d{2})-?(\d{2})$/, (_, year: string, month: string, day: string) =>
+                      `${year}년 ${Number(month)}월 ${Number(day)}일`
+                    )} 기준
+                  </span>
                   {!fortune.translated && <span>( 번역 대기 · 일본어 원문 )</span>}
                 </div>
               )}

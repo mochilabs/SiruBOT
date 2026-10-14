@@ -271,6 +271,8 @@ export function Navbar() {
                 size="md"
                 className="md:hidden h-11 w-11 bg-surface-1 p-2.5"
                 onClick={toggleMobileMenu}
+                aria-label={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
+                aria-expanded={mobileMenuOpen}
               >
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </Button>

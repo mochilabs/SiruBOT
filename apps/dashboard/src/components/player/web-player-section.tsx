@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { ListMusic, Play, Search } from "lucide-react";
 import useSWR from "swr";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { formatDuration } from "@/lib/format";
+import { playerErrorMessage } from "@/lib/player-error";
 
 interface VoiceContext {
 	inVoice: boolean;
@@ -123,23 +124,26 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const [results, setResults] = useState<TrackSummary[] | null>(null);
 	/** 클릭한 트랙 uri — 재생 대기 중 표시. 봇이 상태를 퍼블리시하면 라이브 카드가 이을 거예요 */
 	const [playingUri, setPlayingUri] = useState<string | null>(null);
+	const playPendingRef = useRef(false);
 	const { data: voiceData } = useSWR<{ voice: VoiceContext | null }>(`/api/servers/${guildId}/player/voice-context`);
 	const canControl = voiceData?.voice?.canControl ?? true;
 	const inVoice = voiceData?.voice?.inVoice ?? true;
 
 	const showToastError = useCallback(
 		(message: string | null | undefined, fallback: string) => {
-			toast.error(message && message.length > 0 ? message : fallback, "봇이 접속 중인지 확인해 주세요.");
+			toast.error(playerErrorMessage(message, fallback));
 		},
 		[toast],
 	);
 
 	const playTrack = useCallback(
 		async (uri: string) => {
+			if (playPendingRef.current) return;
 			if (!canControl) {
 				showToastError("재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.", "재생 제어 권한이 없어요.");
 				return;
 			}
+			playPendingRef.current = true;
 			setPlayingUri(uri);
 			try {
 				const res = await fetch(`/api/servers/${guildId}/player/play`, {
@@ -156,6 +160,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 			} catch {
 				showToastError(null, "재생을 시작하지 못했어요.");
 			} finally {
+				playPendingRef.current = false;
 				setPlayingUri(null);
 			}
 		},
@@ -226,7 +231,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 						maxLength={200}
 						className="min-w-0 flex-1"
 					/>
-					<Button type="submit" loading={searching} disabled={searching}>
+					<Button type="submit" loading={searching || playingUri !== null} disabled={searching || playingUri !== null}>
 						{isPlayableUrl(query) ? "바로 재생" : "검색"}
 					</Button>
 				</form>
@@ -257,7 +262,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 									key={`${track.uri}-${index}`}
 									index={index}
 									track={track}
-									playing={playingUri === track.uri}
+									playing={playingUri !== null}
 									onPlay={playTrack}
 								/>
 							))

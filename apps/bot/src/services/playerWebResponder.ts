@@ -431,8 +431,8 @@ export class PlayerWebResponder {
 
 	/** 재생 제어 권한 — Manage Guild/Administrator 또는 DJ 역할 (봇 캐시가 유일한 판정 근거예요) */
 	private async hasControlPermission(guildId: string, member: GuildMember): Promise<boolean> {
-		const { has } = member.permissions;
-		if (has(PermissionsBitField.Flags.ManageGuild) || has(PermissionsBitField.Flags.Administrator)) return true;
+		if (member.permissions.has(PermissionsBitField.Flags.ManageGuild) || member.permissions.has(PermissionsBitField.Flags.Administrator))
+			return true;
 		return container.guildService.hasDJRole(guildId, member);
 	}
 
