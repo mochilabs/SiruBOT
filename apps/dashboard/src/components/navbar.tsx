@@ -113,9 +113,12 @@ export function Navbar() {
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-1 lg:gap-2 relative">
               {indicator && (
+                // transform x로만 이동해요 — left/width를 애니메이션하면 backdrop-blur 레이어가
+                // 매 프레임 재계산되며 텍스트가 세로로 겹쳐 보이는 잔상이 생겨요
                 <m.div
-                  className="absolute top-0 bottom-0 rounded-menu bg-primary-control/10"
-                  animate={{ left: indicator.left, width: indicator.width }}
+                  className="absolute top-0 bottom-0 left-0 rounded-menu bg-primary-control/10 will-change-transform"
+                  initial={false}
+                  animate={{ x: indicator.left, width: indicator.width }}
                   transition={{
                     type: "spring",
                     stiffness: 400,
@@ -129,7 +132,7 @@ export function Navbar() {
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link, status)}
                   className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
-                      ? "bg-primary-control/10 text-primary-text"
+                      ? "text-primary-text"
                       : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
                     }`}
                 >
