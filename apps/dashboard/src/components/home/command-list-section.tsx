@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { m } from "framer-motion";
-import { Gamepad2, type LucideIcon,MessageCircle, Music2, Wrench } from "lucide-react";
+import { Gamepad2, type LucideIcon, MessageCircle, Music2, Terminal, Wrench } from "lucide-react";
 
 import { sectionVariants } from "@/components/home/section-variants";
 import { SectionLabel } from "@/components/primitives/section-label";
@@ -89,7 +89,12 @@ export function CommandListSection() {
 		<section id="commands" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
 				<m.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-80px" }} variants={sectionVariants} className="max-w-2xl space-y-3">
-					<SectionLabel as="p">슬래시 커맨드</SectionLabel>
+					<div className="flex items-center gap-2.5">
+						<Terminal size={18} className="shrink-0 text-primary-text" aria-hidden />
+						<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+							슬래시 커맨드
+						</SectionLabel>
+					</div>
 					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl">명령어는 많은데, 배울 건 없어요.</h2>
 					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 						음악·AI 채팅·게임·유틸까지 — 필요한 순간에 골라 쓰면 끝이에요.
