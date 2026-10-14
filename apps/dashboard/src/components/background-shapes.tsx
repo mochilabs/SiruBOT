@@ -3,9 +3,11 @@
 import { m } from "framer-motion";
 
 /**
- * 페이지 전체 배경 장식 shape — 브랜드 아이덴티티 모티프(분홍/카멜 부유 블록).
+ * 페이지 전체 배경 장식 shape — 브랜드 아이덴티티 모티프(분홍/카멜 부유 블록 + M3 스퀄클 외곽선).
  * 사유(R-01/R-19): 브랜드 팔레트 인용의 배경 아이덴티티 모티프로, 콘텐츠 없는 여백의 재질감을 준다.
- * 용량 한도: 도형 3개로 제한(9 → 3), 모바일(md 미만)에선 렌더하지 않는다.
+ * 용량 한도: 부유 도형 3개로 제한(9 → 3), 모바일(md 미만)에선 렌더하지 않는다.
+ * 스퀄클 외곽선 2개는 요청(2026-10-15)으로 추가한 정적 도형 — 모션·루프 없어 컴포지터 비용 0이고,
+ * 같은 md 미만 비렌더 정책을 따른다.
  * 모션: 매우 느린 부유 루프(duration 16~22s)로 화면을 복잡하게 하지 않는 강도이며,
  * reduced-motion 환경에서는 Providers의 MotionConfig(reducedMotion="user")가 애니메이션을 정지시킨다.
  */
@@ -18,6 +20,8 @@ export function BackgroundShapes() {
 
 	return (
 		<div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+			<div className="absolute right-[4%] top-[22%] hidden h-52 w-52 rotate-12 rounded-[3.5rem] border border-primary/12 md:block" />
+			<div className="absolute bottom-[18%] left-[7%] hidden h-36 w-36 -rotate-6 rounded-[2.5rem] border border-secondary/25 md:block" />
 			{shapes.map((shape, index) => (
 				<m.div
 					key={index}
