@@ -1,0 +1,114 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
+import Image from "next/image";
+import { AnimatePresence, m } from "framer-motion";
+import { Bot, CornerDownRight } from "lucide-react";
+
+/**
+ * 입장 인사 프리뷰 — 실제 기능은 봇의 memberGreetingService: 멤버가 들어오면 설정한 채널로
+ * {유저}·{서버}·{멤버수} 변수가 치환된 템플릿 인사 메시지를 보내요. 이미지 카드 옵션을 켜면
+ * data-api가 렌더한 인사 카드가 첨부돼요. 여기선 참여 알림 → 시루 인사 → 인사 카드 순서로 재생해요.
+ */
+export function MemberGreetingPreview() {
+	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
+	const [runId, setRunId] = useState(0);
+	/** 0: 대기, 1: 참여 시스템 메시지, 2: 시루 인사 + 인사 카드 */
+	const [phase, setPhase] = useState(0);
+
+	// 테스트 전송(다시 재생)을 누르면 runId만 올려 시퀀스를 처음부터 재생해요
+	useEffect(() => {
+		if (!inView) return undefined;
+		setPhase(0);
+		// reduced-motion에선 인사 카드까지 펼친 정지 화면을 바로 보여줘요
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+			setPhase(2);
+			return undefined;
+		}
+		const joinTimer = setTimeout(() => setPhase(1), 300);
+		const greetTimer = setTimeout(() => setPhase(2), 900);
+		return () => {
+			clearTimeout(joinTimer);
+			clearTimeout(greetTimer);
+		};
+	}, [inView, runId]);
+
+	const replay = () => setRunId((prev) => prev + 1);
+
+	return (
+		<div ref={ref} className="flex flex-col overflow-hidden rounded-card bg-discord-embed">
+			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
+				<Bot size={14} className="text-discord-text-muted" aria-hidden />
+				<span className="text-xs font-semibold text-discord-text">가입-알림</span>
+				<span className="ml-auto text-2xs text-discord-text-muted">시루 · 입장 인사</span>
+			</div>
+			<div className="min-h-[290px] space-y-3 p-3.5">
+				<AnimatePresence mode="wait" initial={false}>
+					<m.div
+						key={runId}
+						className="space-y-3"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.2, ease: "easeOut" }}
+					>
+						{phase >= 1 && (
+							// Discord 참여 시스템 메시지 — 이름은 서버 권한 컬러처럼 보이는 초록
+							<m.p
+								className="flex items-center gap-1.5 text-2xs text-discord-text-muted"
+								initial={{ opacity: 0, y: 6 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.3, ease: "easeOut" }}
+							>
+								<CornerDownRight size={12} className="shrink-0 text-success" aria-hidden />
+								<span>
+									<span className="font-bold text-success">서름</span>님이 서버에 참여했어요
+								</span>
+								<span className="ml-auto">오후 3:21</span>
+							</m.p>
+						)}
+						{phase >= 2 && (
+							<m.div
+								className="flex gap-2.5"
+								initial={{ opacity: 0, y: 8 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.3, ease: "easeOut" }}
+							>
+								<div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
+									<Image src="/images/profile.png" alt="시루" fill className="object-cover" sizes="32px" />
+								</div>
+								<div className="flex min-w-0 flex-1 flex-col gap-1">
+									<div className="flex items-center gap-2">
+										<span className="text-sm font-semibold text-discord-text">시루</span>
+										<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-control-text">앱</span>
+										<span className="text-2xs text-discord-text-muted">오후 3:21</span>
+									</div>
+									<p className="text-sm leading-relaxed text-discord-text">서름님, 시루봇 테스트 서버에 오신 걸 환영해요!</p>
+									{/* 인사 카드 mock — 실제로는 data-api가 1200×675 PNG로 렌더해 첨부해요 */}
+									<div className="relative aspect-[16/9] w-full max-w-md overflow-hidden rounded-lg bg-gradient-to-br from-primary/60 via-primary-control/40 to-primary/60">
+										<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
+											<div className="flex h-12 w-12 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text ring-2 ring-background/40 ring-offset-2 ring-offset-transparent">서름</div>
+											<p className="text-base font-black tracking-tighter text-foreground">서름님을 환영해요</p>
+											<p className="text-2xs font-medium text-foreground/70">1,234번째 멤버</p>
+										</div>
+									</div>
+								</div>
+							</m.div>
+						)}
+					</m.div>
+				</AnimatePresence>
+			</div>
+			<div className="flex items-center justify-between gap-2 border-t border-discord-btn-active px-4 py-2">
+				<button
+					type="button"
+					onClick={replay}
+					className="cursor-pointer rounded-control bg-surface-1 px-3 py-1.5 text-2xs font-bold text-foreground transition-colors duration-fast hover:bg-surface-3"
+				>
+					테스트 전송
+				</button>
+				<p className="text-2xs text-discord-text-muted">템플릿·채널은 대시보드에서 정해요.</p>
+			</div>
+		</div>
+	);
+}
