@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
 // 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
-const ROTATING_WORDS = ['서버에 필요한 모든 걸', 'Discord 안에서, 웹에서', '심심할 틈 없이'] as const;
+const ROTATING_WORDS = ['서버에 필요한 모든 걸', 'Discord 안에서, 웹에서', '게임부터 서버 꾸미기까지'] as const;
 const ROTATE_INTERVAL_MS = 2600;
 // whileInView 진입 조건 — 세 무빙 블록(container/진행 버튼/디스코드 프레임)이 같은 조건을 공유
 const REVEAL_VIEWPORT = { once: true, margin: '-60px' } as const;

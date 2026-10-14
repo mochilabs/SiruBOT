@@ -210,7 +210,7 @@ export function FeaturesSection() {
 					<SectionLabel as="p" className="px-0 py-0">
 						시루봇으로 할 수 있는 일
 					</SectionLabel>
-					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
+					<h2 className="break-keep text-3xl font-black tracking-tighter text-foreground sm:text-4xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
 					<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
 						명령어로 바로 실행하고, 웹 대시보드에서 내 서버에 맞게 설정하세요.
 					</p>
