@@ -89,17 +89,17 @@ export function CommandListSection() {
 		<section id="commands" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
 				<m.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-80px" }} variants={sectionVariants} className="max-w-2xl space-y-3">
-					<div className="flex items-center gap-2.5">
-						<Terminal size={18} className="shrink-0 text-primary-text" aria-hidden />
-						<SectionLabel as="p" className="px-0 py-0 text-primary-text">
-							슬래시 커맨드
-						</SectionLabel>
-					</div>
-					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl">명령어는 많은데, 배울 건 없어요.</h2>
+				<div className="flex items-center gap-2.5">
+					<Terminal size={18} className="shrink-0 text-primary-text" aria-hidden />
+					<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+						슬래시 커맨드
+					</SectionLabel>
+				</div>
+				<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl">필요한 기능, 슬래시 한 번이면 충분해요.</h2>
 					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-						음악·AI 채팅·게임·유틸까지 — 필요한 순간에 골라 쓰면 끝이에요.
+						음악 재생부터 AI 대화, 게임, 각종 편의 기능까지. 직관적인 슬래시 커맨드로 간편하게 이용하세요.
 					</p>
-					<p className="text-2xs font-medium text-muted-foreground mt-1">실제 슬래시 커맨드 40개 · 전부 무료예요</p>
+					<p className="text-2xs font-medium text-muted-foreground mt-1">실제 슬래시 커맨드 40개 · 모든 기능 무료</p>
 				</m.div>
 
 				{/* 카테고리 탭 — 이 섹션의 유일한 인터랙션. 가로 넘침은 스크롤로 흘려보내요 */}
