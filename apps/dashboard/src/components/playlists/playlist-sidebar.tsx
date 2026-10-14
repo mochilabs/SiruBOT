@@ -126,7 +126,7 @@ export function PlaylistSidebar({
 									>
 										<div className="flex items-center gap-2 min-w-0">
 											{isDefault ? (
-												<Heart size={14} className={`shrink-0 ${isActive ? "text-primary-text fill-primary-control" : "text-muted-foreground"}`} />
+												<Heart size={14} className={`shrink-0 ${isActive ? "text-primary-text" : "text-muted-foreground"}`} />
 											) : (
 												<Music size={14} className={`shrink-0 ${isActive ? "text-primary-text" : "text-muted-foreground"}`} />
 											)}
