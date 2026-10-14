@@ -30,8 +30,10 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
+      // backdrop-blur 레이어에는 opacity 애니메이션을 걸지 않아요 — 애니메이션 중 매 프레임
+      // 뷰포트 전체 블러가 재계산돼 열 때 렉이 났어요. 배경은 즉시, 패널만 페이드/줌으로 움직여요.
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/60 backdrop-blur-sm duration-fast data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/60 backdrop-blur-sm",
         className
       )}
       {...props}

@@ -13,15 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
 
+import { getNavHref, navLinks } from "./navbar/links";
 import { MobileMenu } from "./navbar/mobile-menu";
-
-const navLinks = [
-  { label: "상태", href: "/shards" },
-  { label: "차트", href: "/track" },
-  { label: "프로필", href: "/profile", requireAuth: true },
-  { label: "플레이리스트", href: "/playlists", requireAuth: true },
-  { label: "대시보드", href: "/servers", requireAuth: true },
-];
+import { MobileTabBar } from "./navbar/mobile-tab-bar";
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -96,17 +90,11 @@ export function Navbar() {
     updateIndicator();
   }, [updateIndicator]);
 
-  const getNavHref = (link: { href: string; requireAuth?: boolean }) => {
-    if (link.requireAuth && status !== "authenticated") {
-      return `/api/auth/signin?callbackUrl=${encodeURIComponent(link.href)}`;
-    }
-    return link.href;
-  };
-
   return (
+    <>
     <div
       className={`fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled || mobileMenuOpen
-          ? "bg-background/95 shadow-sm"
+          ? "bg-background/70 backdrop-blur-xl border-border-subtle shadow-sm"
           : "bg-transparent"
         }`}
     >
@@ -143,7 +131,7 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
-                  href={getNavHref(link)}
+                  href={getNavHref(link, status)}
                   className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
                       ? "bg-primary-control/10 text-primary-text"
                       : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
@@ -289,5 +277,9 @@ export function Navbar() {
         onClose={() => setMobileMenuOpen(false)}
       />
     </div>
+
+    {/* 모바일 하단 탭바 — md 이상에서 숨겨져요 */}
+    <MobileTabBar status={status} />
+    </>
   );
 }

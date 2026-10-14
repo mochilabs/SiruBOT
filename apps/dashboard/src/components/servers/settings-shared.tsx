@@ -297,7 +297,7 @@ export function SaveBar({
           onBlurCapture={(event) => {
             if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) islandHadFocusRef.current = false;
           }}
-          className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-2.5 rounded-card bg-surface-3 px-4 py-2.5 text-foreground shadow-lg sm:left-[var(--island-left)] sm:right-auto sm:w-[var(--island-width)] sm:flex-row sm:items-center sm:justify-between"
+          className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-2.5 rounded-card bg-surface-3 px-4 py-2.5 text-foreground shadow-lg md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)] md:flex-row md:items-center md:justify-between"
           style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
           <p role="status" className="min-w-0 text-sm font-medium">
             {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}

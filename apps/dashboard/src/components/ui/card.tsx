@@ -4,13 +4,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card text-sm text-card-foreground",
+	// 보더리스 규칙에 따라 경계선 대신 elevation로 표면 위계를 구분해요 (elev-1은 page background 위에서 자연스러운 분리를 만듦)
+	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card text-sm text-card-foreground shadow-sm",
 	{
 		variants: {
 			variant: {
 				default: "",
 				muted: "bg-muted",
-				raised: "shadow-sm",
+				raised: "shadow-md",
 				interactive: "cursor-pointer hover:bg-muted",
 			},
 			padding: {
