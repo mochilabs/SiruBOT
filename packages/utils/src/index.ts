@@ -30,3 +30,4 @@ export * from './memberGreeting.js';
 export * from './guildData.js';
 export * from './jtcSetup.js';
 export * from './playerWeb.js';
+export * from './operationQueue.js';

@@ -11,6 +11,11 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js",
             "require": "./dist/index.cjs"
+        },
+        "./time": {
+            "types": "./dist/time.d.ts",
+            "import": "./dist/time.js",
+            "require": "./dist/time.cjs"
         }
     },
     "scripts": {
