@@ -59,6 +59,7 @@ describe("floating save actions", () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
     const animate = vi.fn();
+    const originalAnimate = Element.prototype.animate;
     Object.assign(Element.prototype, { animate });
     const host = document.createElement("div");
     document.body.append(host);
@@ -73,6 +74,7 @@ describe("floating save actions", () => {
     await act(async () => { root.unmount(); });
     await act(async () => { nudgeSaveBar(); });
     expect(animate).toHaveBeenCalledOnce();
+    if (originalAnimate) Element.prototype.animate = originalAnimate;
     host.remove();
   });
 });

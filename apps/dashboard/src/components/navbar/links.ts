@@ -4,7 +4,7 @@ export interface NavLink {
 	requireAuth?: boolean;
 }
 
-/** 데스크톱 네비·모바일 햄버거 메뉴·하단 탭바가 공유하는 메인 링크예요. */
+/** 데스크톱 네비·모바일 하단 탭바가 공유하는 메인 링크예요. */
 export const navLinks: NavLink[] = [
 	{ label: "상태", href: "/shards" },
 	{ label: "차트", href: "/track" },

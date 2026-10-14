@@ -90,6 +90,11 @@ export function ServerDashboard({
   const nudgeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // 뒤로가기 등으로 URL이 바뀌면 대기 중이던 nudge 전환 타이머가 오래된 탭을 덮어쓰지 않도록 취소해요
+    if (nudgeTimerRef.current) {
+      window.clearTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = null;
+    }
     setTab(tabFromUrl(searchParams.get("tab")));
   }, [searchParams]);
 
