@@ -4,8 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-	// 보더리스 규칙에 따라 경계선 대신 elevation로 표면 위계를 구분해요 (elev-1은 page background 위에서 자연스러운 분리를 만듦)
-	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card text-sm text-card-foreground shadow-sm",
+	// 구분감 두 겹: border-subtle 미세 경계선 + elevation(다크에서는 강한 --elev-1). 라이트는
+	// 그림자만으로도 충분히 떠 보여요 — 다크에서 검은 그림자는 배경에 파묻히기 때문이에요
+	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border border-border-subtle bg-card text-sm text-card-foreground shadow-sm",
 	{
 		variants: {
 			variant: {
