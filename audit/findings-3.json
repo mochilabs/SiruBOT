@@ -1,0 +1,145 @@
+[
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 33,
+		"current_token": "--card",
+		"issue": "--popover(L35), --surface-1(L169)와 라이트(#ffffff)·다크(#2b2023) 모두 동일 값. 소비자 분산: bg-card 15곳(7 파일) vs bg-popover 13곳(9 파일) vs bg-surface-1 34곳(19 파일). 동일 값 하나에 3개 이름이 공존하며 소비자가 이미 갈려 있음. 참고: --surface-3(L171)도 라이트는 #ffffff이지만 다크 #3a2c30로 분기해 의도된 분리(플로팅 오버레이)로 보임. 통합 방향(어느 이름을 값 소스로 둘지, 소비처를 어디로 몰지)이 불명확해 제안 수준.",
+		"evidence": "\t--card: #ffffff;",
+		"recommended_token": "--surface-1 (--card/--popover는 var(--surface-1) 별칭화 또는 소비처 통합)",
+		"severity": "high",
+		"confidence": "mid"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 35,
+		"current_token": "--popover",
+		"issue": "--card(L33), --surface-1(L169)와 라이트(#ffffff)·다크(#2b2023) 모두 동일 값. 소비자 분산: bg-popover 13곳(9 파일) vs bg-card 15곳(7 파일) vs bg-surface-1 34곳(19 파일). popover는 '메뉴·팝오버 배경'이라 개념상 surface-3(플로팅 오버레이)에 가깝지만 실제 값은 surface-1과 동일 — 역할과 값이 어긋난 상태로 소비자가 3방향으로 확산 중.",
+		"evidence": "\t--popover: #ffffff;",
+		"recommended_token": "--surface-1 (또는 역할 정합성 기준 --surface-3 — 방향 불명확)",
+		"severity": "high",
+		"confidence": "mid"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 54,
+		"current_token": "--muted",
+		"issue": "--secondary(L52), --surface-2(L170)와 라이트(#fff0f0)·다크(#3a2c30) 모두 동일 값. 소비자 분산: bg-muted 37곳(21 파일) vs bg-surface-2 47곳(27 파일) vs bg-secondary 7곳(4 파일) — 동일 값에 양쪽 다 대량 소비자가 분산해 혼란 확산 중. 슬롯 간 용도 차이(비활성 서피스 vs 중첩/인셋 vs 중립 컨트롤 채움)는 문서화됐으나 값 소스는 하나로 묶는 편이 안전.",
+		"evidence": "\t--muted: #fff0f0;",
+		"recommended_token": "--surface-2 (--muted/--secondary는 var(--surface-2) 별칭화)",
+		"severity": "high",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 52,
+		"current_token": "--secondary",
+		"issue": "--muted(L54), --surface-2(L170)와 라이트(#fff0f0)·다크(#3a2c30) 모두 동일 값. 소비자: bg-secondary 7곳(4 파일)으로 그룹 내 최소. DESIGN.md는 --secondary를 'tinted neutral surface로 shadow-control-boundary와 조합하는 중립 컨트롤 채움'으로 역할 구분해 둠(의도된 슬롯 분리 요소 있음) — 소비자 소수라 관리 가능하지만 값 소스 통합 시 함께 정리 필요.",
+		"evidence": "\t--secondary: #fff0f0;",
+		"recommended_token": "--surface-2",
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 229,
+		"current_token": "--shadow-xs",
+		"issue": "--shadow-sm(L230)과 동일하게 var(--elev-1) 고정 — @theme 수준에서 두 유틸리티가 영구 동일 값이라 갈라질 여지가 없는 완전 중복. 소비자: shadow-xs 4곳(2 파일: design/page.tsx ×2, color-input.tsx ×1 등) vs shadow-sm 12곳(9 파일). DESIGN.md에 'shadow-xs, shadow-sm → --elev-1 (hairline separation)'로 나란히 문서화돼 있으나 소비자는 갈린 상태. shadow-sm으로 통합하고 shadow-xs 매핑 및 4곳 소비처 정리 검토.",
+		"evidence": "\t--shadow-xs: var(--elev-1);",
+		"recommended_token": "--shadow-sm",
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 183,
+		"current_token": "--radius-lg (rounded-lg)",
+		"issue": "raw 값 1rem이 3곳에 리터럴 중복: --radius: 1rem(L162), --r-card: 1rem(L165), --r-dialog: 1rem(L167) — 별칭이 아니라 값 복사라 한쪽 변경 시 어긋남. 결과적으로 rounded-lg(=var(--radius))/rounded-card/rounded-dialog 셋 다 1rem으로 해석됨. 소비자: rounded-lg 10곳(8 파일) vs rounded-card 54곳(26 파일) vs rounded-dialog 5곳(3 파일). card/dialog 역할 분리 자체는 DESIGN.md 의도(값이 추후 갈라질 수 있는 역할 토큰)이지만 rounded-lg(기본 스케일)은 역할 구분 없는 무의미 중복. DESIGN.md 'rounded-xl/2xl/3xl 신규 금지, 역할 토큰 사용' 규칙과 맞춰 rounded-lg 소비처 10곳을 rounded-card/rounded-dialog로 이전 검토.",
+		"evidence": "\t--radius-lg: var(--radius);",
+		"recommended_token": "rounded-card / rounded-dialog (rounded-lg는 스케일 호환 매핑으로만 유지)",
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 59,
+		"current_token": "--input",
+		"issue": "--border와 라이트(#f3d3d6, L58)·다크(#4d3b40, L94/L95) 모두 동일 값. 소비자: border-border 38곳 + bg-border 10곳 vs bg-input 17곳 + border-input 1곳. DESIGN.md 토큰 표에서 --border/--input을 같은 행으로 문서화(--border=기본 구분선, --input=입력 컨트롤 배경)하고 inventory 규칙도 경계선 vs 입력 배경으로 용도를 구분 — shadcn 슬롯의 의도된 semantic 분리로 동일 값 허용. 굳이 단일화한다면 --input: var(--border) 순수 별칭 수준이면 충분(현재는 양쪽 리터럴 복사).",
+		"evidence": "\t--input: #f3d3d6;",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 92,
+		"current_token": "--accent (다크)",
+		"issue": "다크 한정 값 충돌: --accent(#4d3b40, L92) = --border(#4d3b40, L94) = --input(#4d3b40, L95). 라이트는 각각 #ffc3c9/#f3d3d6/#f3d3d6으로 달라 토큰 통합 불가. hover 배경과 경계선이 다크에서 같은 색이 되는 우연한 수렴이며 슬롯(용도) 분리는 의도된 것으로 판단. 소비자: bg-accent 13곳(8 파일). 참고: --border-subtle 다크값 #3a2c30(L214)도 다크에서 --muted/--secondary/--surface-2와 동일 값. 조치 불요.",
+		"evidence": "\t--accent: #4d3b40;",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 38,
+		"current_token": "--primary-foreground",
+		"issue": "라이트 #4f1c2a 수렴: --primary-foreground(L38) = --accent-foreground(L57), 여기에 별칭 --primary-control-text=var(--primary-foreground)(L46), --primary-text=var(--accent-foreground)(L50)까지 라이트에서 전부 #4f1c2a. 다크는 #3a1a22 vs #ffdada로 갈려 통합 불가. 또한 다크에서 --accent-foreground(#ffdada, L93) = --primary(#ffdada, L77) = --primary-text 해석값. 소비자: text-primary-foreground 2곳 vs text-accent-foreground 14곳(3 파일) vs text-primary-text 87곳(37 파일, 별칭 경유) vs text-primary-control-text 16곳(13 파일). 테마별 의도된 수렴+슬롯 분리로 판단, 정본 명시만 필요.",
+		"evidence": "\t--primary-foreground: #4f1c2a;",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 34,
+		"current_token": "--card-foreground",
+		"issue": "--foreground(L32)와 --card-foreground(L34), --popover-foreground(L36), --secondary-foreground(L53)가 라이트(#3a2c30)·다크(#fbeeee) 모두 동일 값. 소비자: text-foreground 167곳(67 파일)이 압도적, text-card-foreground 2곳, text-popover-foreground 7곳(6 파일), text-secondary-foreground 3곳(2 파일). shadcn 슬롯별 의도된 semantic 분리(각 서피스 위 텍스트)로 동일 값 허용. 소비자 편중이 극심해 향후 정리 시 text-foreground 쪽이 정본 후보.",
+		"evidence": "\t--card-foreground: #3a2c30;",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 246,
+		"current_token": "--success-foreground (--warning-foreground, --info-foreground 포함)",
+		"issue": "라이트에서 상태 -foreground 4개 전부 #ffffff: --destructive-foreground(L244), --success-foreground(L246), --warning-foreground(L248), --info-foreground(L250). 다크는 전부 다른 값(#2b1018/#052e16/#451a03/#082f49)으로 갈림. 4개 슬롯 모두 text-*-foreground 소비자 0곳 — 상태 슬롯의 의도된 semantic 분리 + 미사용 상태. 소비자 부재 정리는 dead-code 감사 영역.",
+		"evidence": "\t--success-foreground: #ffffff;",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 50,
+		"current_token": "--primary-text",
+		"issue": "별칭 체인 3홉: --color-primary-text(@theme inline L126) → var(--primary-text) → var(--accent-foreground)(L50) → #4f1c2a(라이트)/#ffdada(다크). 주석으로 'accent-foreground와 동일'(L49) 문서화됨. 소비자: text-primary-text 87곳(37 파일) vs text-accent-foreground 14곳(3 파일) — 이름 양쪽 모두 소비 중이나 naming rule(text-primary-text가 강조 텍스트 정본)과 정의 방향(정본은 accent-foreground)이 역전돼 읽는 사람에게 혼란. 동작상 문제없는 순수 별칭 수준.",
+		"evidence": "\t--primary-text: var(--accent-foreground);",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "duplicate-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 203,
+		"current_token": "--control-boundary (.dark 재정의)",
+		"issue": "별칭 체인 3홉: --shadow-control-boundary(@theme inline L226) → var(--control-boundary) → var(--border-strong) → 테마 값. :root(L203)와 .dark(L219)의 정의가 바이트 단위로 동일('inset 0 0 0 1px var(--border-strong)') — var(--border-strong)은 사용 시점에 테마별 해석되므로 .dark 재정의는 불필요한 완전 중복(invalid 버전 L204/L220도 동일). 소비자: shadow-control-boundary 8곳(7 파일), shadow-control-boundary-invalid 2곳(2 파일). .dark 재정의 블록 삭제로 :root 단일 정의만 유지 가능.",
+		"evidence": "\t--control-boundary: inset 0 0 0 1px var(--border-strong);",
+		"recommended_token": ".dark 재정의(L219-220) 삭제, :root 단일 정의 유지",
+		"severity": "low",
+		"confidence": "high"
+	}
+]
