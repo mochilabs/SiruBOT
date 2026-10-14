@@ -335,11 +335,7 @@
 	will-change: transform, opacity;
 }
 
-/* 슬래시 커맨드 마키 전용 — hover 일시정지는 트랙의 group-hover:[animation-play-state:paused]가 담당.
-   사유(R-19): 슬래시 커맨드 문화를 텍스트보다 먼저 전달하는 identity motif. 30s로 느려 정보 방해가 아니다. */
-@utility animate-marquee {
-	animation: marquee 30s linear infinite;
-}
+
 
 @keyframes pulse-soft {
 	0%,
@@ -375,17 +371,6 @@
 	50%,
 	100% {
 		opacity: 0;
-	}
-}
-
-/* 2회 렌더된 리스트에서 -50% 이동 = 끊김 없는 1주기 */
-@keyframes marquee {
-	from {
-		transform: translateX(0);
-	}
-
-	to {
-		transform: translateX(-50%);
 	}
 }
 

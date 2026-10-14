@@ -1,4 +1,4 @@
-import { CommandMarquee } from "@/components/home/command-marquee";
+import { CommandWallSection } from "@/components/home/command-wall-section";
 import { FeaturesSection } from "@/components/home/features-section";
 import { HeroSection } from "@/components/home/hero-section";
 
@@ -7,7 +7,7 @@ export default function Home() {
 		<div className="w-full relative min-h-svh">
 			<HeroSection />
 
-			<CommandMarquee />
+			<CommandWallSection />
 
 			<FeaturesSection />
 		</div>
