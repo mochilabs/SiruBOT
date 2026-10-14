@@ -311,10 +311,6 @@ function stripNoise(s: string): string {
 		.trim();
 }
 
-function hasHangul(text: string): boolean {
-	return /[가-힣]/.test(text);
-}
-
 /**
  * 사용자 입력(한글 지명 등)을 Open-Meteo 지오코딩용 영문 검색어로 바꿉니다.
  * 매핑에 없으면 원문을 그대로 둡니다(해외 도시 등).
@@ -322,43 +318,30 @@ function hasHangul(text: string): boolean {
 export function normalizeWeatherLocationQuery(raw: string): {
 	geocodeQuery: string;
 	originalQuery: string;
-	mappedFromKorean: boolean;
 } {
 	const originalQuery = stripNoise(raw);
 	if (!originalQuery) {
-		return { geocodeQuery: '', originalQuery: '', mappedFromKorean: false };
+		return { geocodeQuery: '', originalQuery: '' };
 	}
 
 	const direct = KR_TO_EN_QUERY[originalQuery];
 	if (direct) {
-		return { geocodeQuery: direct, originalQuery, mappedFromKorean: true };
+		return { geocodeQuery: direct, originalQuery };
 	}
 
 	// "서울 강남구" 같이 짧게 붙인 경우
 	const compact = originalQuery.replace(/\s+/g, '');
 	const compactHit = KR_TO_EN_QUERY[compact];
 	if (compactHit) {
-		return { geocodeQuery: compactHit, originalQuery, mappedFromKorean: true };
+		return { geocodeQuery: compactHit, originalQuery };
 	}
 
 	// 접미사만 다른 경우 (특별시/광역시/특별자치시/특별자치도/시/군/구/도)
 	const noMetroSuffix = originalQuery.replace(/(특별시|광역시|특별자치시|특별자치도|시|군|구|도)$/, '');
 	const hit2 = KR_TO_EN_QUERY[stripNoise(noMetroSuffix)];
 	if (hit2) {
-		return { geocodeQuery: hit2, originalQuery, mappedFromKorean: true };
+		return { geocodeQuery: hit2, originalQuery };
 	}
 
-	if (hasHangul(originalQuery)) {
-		return {
-			geocodeQuery: originalQuery,
-			originalQuery,
-			mappedFromKorean: false
-		};
-	}
-
-	return {
-		geocodeQuery: originalQuery,
-		originalQuery,
-		mappedFromKorean: false
-	};
+	return { geocodeQuery: originalQuery, originalQuery };
 }

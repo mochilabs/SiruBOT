@@ -3,11 +3,11 @@ import type { LyricsResult } from './types.ts';
 const LRCLIB_BASE = 'https://lrclib.net/api/search';
 const TIMEOUT_MS = 10_000;
 
+/** 괄호·대괄호로 묶인 보컬/버전 표기 제거 — normalizeQuery와 fetchLyrics가 같은 규칙을 써요. */
+const STRIP_PARENS = /\(.*?\)|\[.*?\]/g;
+
 function normalizeQuery(query: string): string {
-	return query
-		.replace(/\(.*?\)|\[.*?\]/g, '')
-		.trim()
-		.toLowerCase();
+	return query.replace(STRIP_PARENS, '').trim().toLowerCase();
 }
 
 /** 가사 검색 — 결과 불변이라 장기 캐시해요. */

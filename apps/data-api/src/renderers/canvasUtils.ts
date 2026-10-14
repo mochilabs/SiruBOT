@@ -1,5 +1,5 @@
 /**
- * skia-canvas 공용 헬퍼 — profileCard / nowPlayingCard / greetingCard / ohaasaCard에서 함께 써요.
+ * skia-canvas 공용 헬퍼 — nowPlayingCard / greetingCard / ohaasaCard / 프로필 카드 프리셋(dark·ticket)에서 함께 써요.
  */
 import type { CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 

@@ -1,6 +1,5 @@
 /**
- * 프로필 카드 렌더러 — 프리셋 선택 지원.
- * preset 'classic'은 기존 배너형 카드(profileCard.ts), 'dark'·'ticket'은 RINE 스타일 2종이에요.
+ * 프로필 카드 렌더러 — 프리셋 선택 지원. 'dark'·'ticket' RINE 스타일 2종이에요.
  */
 import { renderProfileCardDark, type ProfileCardDarkInput } from './profileCardDark.ts';
 import { renderProfileCardTicket, type ProfileCardTicketInput } from './profileCardTicket.ts';

@@ -3,12 +3,31 @@
  * 카드는 시각 요약(별자리·순위·행운의 아이템/열쇠·날짜)만 담아요. 운세 설명 전문과
  * 럭키 컬러 같은 정보성 본문은 봇이 텍스트로 내려요 — 같은 /v1/ohaasa 한 건에서
  * 이미지와 텍스트가 갈라져서 중복·불일치가 생기지 않아요.
- * 별자리 테마(12별자리 팔레트)는 profileCard.ts의 ZODIAC_THEMES를 그대로 재사용해요.
+ * 별자리 테마(12별자리 팔레트) ZODIAC_THEMES는 이 파일이 소유해요(구 profileCard.ts에서 이전).
  */
 import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawIcon, ensureKoreanFont, hexToRgba, truncate } from './canvasUtils.ts';
-import { ZODIAC_THEMES } from './profileCard.ts';
 import { ZODIAC_MAP } from '../providers/types.ts';
+
+export interface ZodiacTheme {
+	primary: string;
+	soft: string;
+}
+
+export const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
+	'01': { primary: '#fb7185', soft: '#fda4af' }, // 양자리 — 로즈
+	'02': { primary: '#e8a87c', soft: '#f4c9a5' }, // 황소자리 — 살구
+	'03': { primary: '#f0abfc', soft: '#f5e0ff' }, // 쌍둥이자리 — 라일락
+	'04': { primary: '#93c5fd', soft: '#dbeafe' }, // 게자리 — 스카이
+	'05': { primary: '#fbbf24', soft: '#fde68a' }, // 사자자리 — 골드
+	'06': { primary: '#a3e635', soft: '#ecfccb' }, // 처녀자리 — 라임
+	'07': { primary: '#f9a8d4', soft: '#fce7f3' }, // 천칭자리 — 블룸(브랜드 톤)
+	'08': { primary: '#e879f9', soft: '#fae8ff' }, // 전갈자리 — 푸시아
+	'09': { primary: '#fb923c', soft: '#ffedd5' }, // 사수자리 — 오렌지
+	'10': { primary: '#d4a574', soft: '#f0e2cf' }, // 염소자리 — 세컨더리 톤
+	'11': { primary: '#67e8f9', soft: '#cffafe' }, // 물병자리 — 아쿠아
+	'12': { primary: '#c084fc', soft: '#f3e8ff' } // 물고기자리 — 바이올렛
+};
 
 export interface OhaasaCardInput {
 	/** '01'~'12' — ZODIAC_MAP 코드 */
