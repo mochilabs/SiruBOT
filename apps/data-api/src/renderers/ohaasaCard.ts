@@ -6,7 +6,7 @@
  * 별자리 테마(12별자리 팔레트) ZODIAC_THEMES는 이 파일이 소유해요(구 profileCard.ts에서 이전).
  */
 import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
-import { drawIcon, ensureKoreanFont, hexToRgba, truncate } from './canvasUtils.ts';
+import { drawIcon, ensureKoreanFont, hexToRgba, makeRng, truncate } from './canvasUtils.ts';
 import { ZODIAC_MAP } from '../providers/types.ts';
 
 export interface ZodiacTheme {
@@ -50,11 +50,7 @@ interface LuckyBox {
 
 /** 밤하늘 별밭 — 시드 없이 매번 살짝 다르게 (카드별 개성용). */
 function drawStarfield(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number): void {
-	let s = seed || 7;
-	const rnd = () => {
-		s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-		return s / 4294967296;
-	};
+	const rnd = makeRng(seed);
 	for (let i = 0; i < 84; i++) {
 		const x = rnd() * w;
 		const y = rnd() * h;

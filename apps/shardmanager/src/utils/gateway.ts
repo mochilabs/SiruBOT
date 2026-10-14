@@ -14,11 +14,11 @@ export interface GatewayResponse {
 	};
 }
 
-export async function getGatewayInfo(): Promise<GatewayResponse | null> {
+export async function getGatewayInfo(discordToken: string): Promise<GatewayResponse | null> {
 	try {
 		const response = await fetch(`https://discord.com/api/v10/gateway/bot`, {
 			headers: {
-				Authorization: `Bot ${process.env.DISCORD_TOKEN}`
+				Authorization: `Bot ${discordToken}`
 			}
 		});
 

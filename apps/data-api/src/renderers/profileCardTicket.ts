@@ -6,7 +6,7 @@
  */
 import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawCircleImage, drawIcon, ensureKoreanFont, loadImageAllowed, truncate } from './canvasUtils.ts';
-import { drawMusicSection, measureMusicSection, type ProfileNowPlaying } from './profileWidgets.ts';
+import { drawAvatarFallback, drawGuildTag, drawMusicSection, measureMusicSection, type ProfileNowPlaying } from './profileWidgets.ts';
 
 export interface ProfileCardTicketInput {
 	userId: string;
@@ -51,6 +51,8 @@ const SAGE_DEEP = '#4f6a58';
 const SAGE_MID = '#5d7a66';
 const INK = '#3f3a35';
 const INK_MUTED = 'rgba(63, 58, 53, 0.62)';
+/** 아바타 폴백 테마 — 로즈 원 + 음표 */
+const AVATAR_FALLBACK = { bg: '#d8c7cd', icon: 'rgba(63, 58, 53, 0.45)', iconSize: 28 };
 const CHIP_PINK_BG = '#e8d4d2';
 const CHIP_PINK_TEXT = '#b97f7e';
 const CHIP_GREEN_BG = '#d6e4da';
@@ -239,8 +241,8 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	if (input.avatarUrl) {
 		const img = await loadImageAllowed(input.avatarUrl).catch(() => null);
 		if (img) drawCircleImage(ctx, img, avatarCx, avatarCy, avatarR);
-		else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR);
-	} else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR);
+		else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR, AVATAR_FALLBACK);
+	} else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR, AVATAR_FALLBACK);
 
 	// ── 이름/핸들/서버태그/온라인 ──
 	ctx.textAlign = 'left';
@@ -255,26 +257,13 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	const tkHandleW = ctx.measureText(tkHandle).width;
 
 	// 서버 태그 뱃지
-	if (input.guildTag) {
-		const tagY = handleBase + 8 - 21;
-		let tagX = nameX + tkHandleW + 14;
-		if (input.guildTagBadgeUrl) {
-			const badge = await loadImageAllowed(input.guildTagBadgeUrl).catch(() => null);
-			if (badge) {
-				const BH = 22;
-				const bw = (badge as unknown as { width: number }).width;
-				const bh = (badge as unknown as { height: number }).height;
-				const s = BH / bh;
-				ctx.drawImage(badge, tagX, tagY, bw * s, BH);
-				tagX += Math.floor(bw * s) + 8;
-			}
-		}
-		ctx.save();
-		ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillStyle = SAGE_DEEP;
-		ctx.fillText(input.guildTag, tagX, handleBase + 8);
-		ctx.restore();
-	}
+	await drawGuildTag(ctx, {
+		tag: input.guildTag,
+		badgeUrl: input.guildTagBadgeUrl,
+		x: nameX + tkHandleW + 14,
+		baselineY: handleBase + 8,
+		color: SAGE_DEEP
+	});
 
 	// 온라인 캡슐 (핸들 아래, 텍스트 좌측 정렬 시작에 붙임)
 	ctx.save();
@@ -413,14 +402,4 @@ function drawDateColumn(ctx: CanvasRenderingContext2D, label: string, value: str
 	ctx.fillStyle = INK;
 	ctx.font = '500 32px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.fillText(value, x, top + 60);
-}
-
-function drawAvatarFallback(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number): void {
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-	ctx.fillStyle = '#d8c7cd';
-	ctx.fill();
-	drawIcon(ctx, 'music-2', cx - 14, cy - 14, 28, 'rgba(63, 58, 53, 0.45)');
-	ctx.restore();
 }

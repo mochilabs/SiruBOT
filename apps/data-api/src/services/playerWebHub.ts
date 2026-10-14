@@ -11,9 +11,9 @@
  * - REQUEST 퍼블리시는 sharedCache 클라이언트로 해요 (guildData와 같은 방식).
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 guildDataHub와 같은 연결 라이프사이클을 따라요.
  */
-import { createClient, type RedisClientType } from '@redis/client';
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
+import { HubSubscriber } from '../utils/hubSubscriber.ts';
 import {
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
@@ -41,9 +41,6 @@ const KIND_TIMEOUT_MS: Record<PlayerWebKind, number> = {
 };
 /** 동시 대기 요청 상한 — 응답을 못 받는 요청이 pending map에 쌓이는 누수를 방지해요 */
 const PENDING_LIMIT = 200;
-/** 최초 연결 실패 재시도 백오프 — 1초부터 2배씩, 상한 5초 (guildDataHub와 같음) */
-const RETRY_BASE_MS = 1_000;
-const RETRY_MAX_MS = 5_000;
 
 export type PlayerWebFailureReason = 'redis_unavailable' | 'timeout' | 'bot_error';
 export type PlayerWebResult =
@@ -145,55 +142,16 @@ export class PlayerWebPendingRequests {
 
 const pending = new PlayerWebPendingRequests(PENDING_LIMIT);
 
-let subscriber: RedisClientType | null = null;
-/** subscribe가 한 번이라도 완료됐는가 — 재연결 시 클라이언트가 자동 재구독하는 대상이 되는 기준 (guildDataHub와 같은 래치) */
-let subscribeIntent = false;
-/** 실제 구독 중 — 소켓 isOpen이 아니라 subscribe/재구독 완료 기준이에요 */
-let subscribed = false;
-/** stopPlayerWebHub 이후 백그라운드 재시도 루프가 다시 돌지 않게 하는 래치 */
-let stopped = false;
-let retryTimer: ReturnType<typeof setTimeout> | null = null;
+/** Pub/Sub 구독자 — 공용 라이프사이클(HubSubscriber)에 연결·구독·재시도·종료를 위임해요. */
+const subscriber = new HubSubscriber({
+	name: 'player web hub',
+	channel: PLAYER_WEB_RESPONSE_CHANNEL,
+	onMessage: (message) => pending.handleRaw(message),
+	logger
+});
 
 /**
- * 연결 + 구독 1회 시도. 실패 시 지연 재시도해요 — 최초 연결 실패로 영구 미구독(재시작 필요) 상태가 되지 않게 해요.
- * (guildDataHub와 같은 연결 라이프사이클 — @redis/client v5 자동 재연결 + resubscribe 위임)
- */
-async function attemptConnect(redisUrl: string, attempt: number): Promise<void> {
-	if (stopped) return;
-	const base = sharedCache.getClient();
-	const client = (base ? base.duplicate() : createClient({ url: redisUrl })) as RedisClientType;
-	subscriber = client;
-	client.on('error', (error) => {
-		subscribed = false;
-		logger.error(`player web hub subscriber error: ${error}`);
-	});
-	client.on('reconnecting', () => (subscribed = false));
-	client.on('end', () => (subscribed = false));
-	client.on('ready', () => (subscribed = subscribeIntent));
-
-	try {
-		await client.connect();
-		await client.subscribe(PLAYER_WEB_RESPONSE_CHANNEL, (message) => pending.handleRaw(message));
-		subscribeIntent = true;
-		subscribed = true;
-		logger.info(`Player web hub subscribed to ${PLAYER_WEB_RESPONSE_CHANNEL}`);
-	} catch (error) {
-		if (stopped) return;
-		subscribed = false;
-		subscribeIntent = false;
-		subscriber = null;
-		if (client.isOpen) client.destroy();
-		const delay = Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS);
-		logger.warn(`Player web hub subscription failed (attempt ${attempt + 1}), retrying in ${delay}ms: ${error}`);
-		retryTimer = setTimeout(() => {
-			retryTimer = null;
-			void attemptConnect(redisUrl, attempt + 1);
-		}, delay);
-	}
-}
-
-/**
- * RESPONSE 채널 구독자 연결을 시작해요. sharedCache 클라이언트를 duplicate해요 (RESP2 전용 연결 필요).
+ * RESPONSE 채널 구독자 연결을 시작해요.
  * REDIS_URL이 없으면 구독 없이 시작해요 — 요청은 redis_unavailable로 즉시 실패해요 (guildDataHub 선례).
  */
 export async function startPlayerWebHub(redisUrl: string | undefined): Promise<void> {
@@ -201,28 +159,11 @@ export async function startPlayerWebHub(redisUrl: string | undefined): Promise<v
 		logger.warn('REDIS_URL is not set, player web hub will not receive responses (all requests fail as redis_unavailable)');
 		return;
 	}
-	stopped = false;
-	void attemptConnect(redisUrl, 0);
+	await subscriber.start(redisUrl);
 }
 
 export async function stopPlayerWebHub(): Promise<void> {
-	stopped = true;
-	if (retryTimer) {
-		clearTimeout(retryTimer);
-		retryTimer = null;
-	}
-	subscribeIntent = false;
-	subscribed = false;
-	if (!subscriber) return;
-	const client = subscriber;
-	subscriber = null;
-	if (client.isReady) {
-		await client.unsubscribe(PLAYER_WEB_RESPONSE_CHANNEL).catch(() => undefined);
-		await client.quit().catch(() => undefined);
-	} else if (client.isOpen) {
-		// 연결 도중엔 quit(QUIT 왕복 대기)이 멈출 수 있어 소켓을 즉시 파괴해요
-		client.destroy();
-	}
+	await subscriber.stop();
 }
 
 /**
@@ -249,5 +190,5 @@ export async function requestPlayerWeb(payload: PlayerWebAnyRequest): Promise<Pl
 
 /** 관제용 — 대기 중 요청 수와 실제 구독 상태 (소켓이 아니라 subscribe/재구독 완료 기준) */
 export function playerWebHubStatus(): { pending: number; subscribed: boolean } {
-	return { pending: pending.size, subscribed };
+	return { pending: pending.size, subscribed: subscriber.isSubscribed };
 }

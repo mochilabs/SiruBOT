@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { getLogger } from '../utils/logger.ts';
+import { parseClock } from '../utils/parseClock.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
 import {
 	capMemorySections,
@@ -99,26 +100,8 @@ async function tidyUser(db: PrismaClient, provider: OpenAICompatTranslationProvi
 			return 'ok';
 		}
 
-		// 번역 프로바이더와 동일한 OpenAI 호환 호출 경로를 재사용해요
-		const res = await fetch(`${provider.baseUrl}/chat/completions`, {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				...(provider.apiKey ? { authorization: `Bearer ${provider.apiKey}` } : {})
-			},
-			body: JSON.stringify({
-				model: provider.model,
-				messages: [
-					{ role: 'system', content: MEMORY_TIDY_PROMPT },
-					{ role: 'user', content: original }
-				],
-				stream: false
-			}),
-			signal: AbortSignal.timeout(60_000)
-		});
-		if (!res.ok) throw new Error(`tidy provider failed: ${res.status}`);
-		const body = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-		const output = stripCodeFences(body.choices?.[0]?.message?.content ?? '');
+		// 번역 프로바이더와 같은 OpenAI 호환 호출 경로(chatCompletion)를 재사용해요
+		const output = stripCodeFences(await provider.chatCompletion(MEMORY_TIDY_PROMPT, original, 'tidy provider'));
 
 		if (tidyOutputValid(original, output)) {
 			const sections = parseMemoryMarkdown(output);
@@ -194,16 +177,10 @@ async function runMemoryTidy(db: PrismaClient, provider: OpenAICompatTranslation
 	return memoryTidyStatus();
 }
 
-function parseAt(value: string): { hour: number; minute: number } {
-	const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-	const hour = match ? Number(match[1]) : 0;
-	const minute = match ? Number(match[2]) : 0;
-	return { hour: Math.min(23, Math.max(0, hour)), minute: Math.min(59, Math.max(0, minute)) };
-}
-
 function msUntilNext(at: string, jitterMaxMs = 30 * 60_000): number {
+	// 서버 로컬 시각 기준이에요 — ohaasaScheduler.msUntilNextRefresh는 KST 보정 UTC 대상이라 병합하면 안 돼요.
 	const now = Date.now();
-	const { hour, minute } = parseAt(at);
+	const { hour, minute } = parseClock(at, { hour: 0, minute: 0 });
 	const next = new Date(now);
 	next.setHours(hour, minute, 0, 0);
 	const jitter = Math.floor(Math.random() * jitterMaxMs);

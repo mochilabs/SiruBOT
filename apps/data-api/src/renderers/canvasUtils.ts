@@ -92,6 +92,15 @@ export function hashString(s: string): number {
 	return h >>> 0;
 }
 
+/** 시드 고정 LCG — 재현 가능한 장식용 난수. hashString으로 시드를 만들어 써요. */
+export function makeRng(seed: number): () => number {
+	let s = seed || 1;
+	return () => {
+		s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+		return s / 4294967296;
+	};
+}
+
 /** ms → "m:ss" / "h:mm:ss". */
 export function formatClock(ms: number): string {
 	const totalSec = Math.max(0, Math.floor(ms / 1000));

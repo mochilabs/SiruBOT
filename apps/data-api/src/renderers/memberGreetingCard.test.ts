@@ -5,6 +5,7 @@ import {
 	GreetingBackgroundError,
 	type GreetingCardContext,
 	normalizeGreetingBackground,
+	normalizeGreetingLayerImage,
 	renderGreetingCard
 } from './memberGreetingCard.ts';
 
@@ -138,5 +139,27 @@ describe('normalizeGreetingBackground', () => {
 
 	it('rejects a missing comma', () => {
 		expect(decodeDataUri('data:image/png;base64')).toBeNull();
+	});
+});
+
+describe('normalizeGreetingLayerImage', () => {
+	it('downscales to png within the storage cap, preserving the layer format', async () => {
+		const dataUri = await solidImage(2000, 1000);
+		const normalized = await normalizeGreetingLayerImage(dataUri);
+		expect(normalized.startsWith('data:image/png;base64,')).toBe(true);
+		const decoded = decodeDataUri(normalized);
+		expect(decoded?.length ?? 0).toBeLessThanOrEqual(900_000);
+
+		const { loadImage } = await import('skia-canvas');
+		const img = await loadImage(decoded!);
+		expect(Math.max(img.width, img.height)).toBeLessThanOrEqual(1200);
+	});
+
+	it('rejects undecodable input with a structured error', async () => {
+		const error = await normalizeGreetingLayerImage('data:image/png;base64,notbase64').catch(
+			(error: unknown) => error as GreetingBackgroundError
+		);
+		expect(error).toBeInstanceOf(GreetingBackgroundError);
+		expect((error as GreetingBackgroundError).identifier).toBe('invalid_image');
 	});
 });

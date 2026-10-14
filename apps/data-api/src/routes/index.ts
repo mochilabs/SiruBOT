@@ -17,7 +17,8 @@ import {
 } from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
-import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
+import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
+import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
@@ -414,48 +415,36 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 				return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
 			};
 			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
-			const buffer = await deduped(`img:card:${body.userId}`, () =>
-				renderProfileCardPreset(body.preset, {
-					dark: {
-						userId: body.userId,
-						profileId: body.username,
-						displayName: body.displayName,
-						avatarUrl: body.avatarUrl,
-						guildTag: body.guildTag,
-						guildTagBadgeUrl: body.guildTagBadgeUrl,
-						status: body.status,
-						onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-						statusColor: '#3ecf8e',
-						intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
-						createdText: dateFmt(body.accountCreated),
-						joinedText: dateFmt(body.guildJoinedAt),
-						roleChips: body.roleChips,
-						topTracks: body.topTracks,
-						nowPlaying: body.nowPlaying
-					},
-					ticket: {
-						userId: body.userId,
-						profileId: body.username,
-						displayName: body.displayName,
-						avatarUrl: body.avatarUrl,
-						guildTag: body.guildTag,
-						guildTagBadgeUrl: body.guildTagBadgeUrl,
-						status: body.status,
-						onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-						statusColor: '#2f9e5f',
-						intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
-						createdText: dateFmt(body.accountCreated),
-						joinedText: dateFmt(body.guildJoinedAt),
-						roleChips: body.roleChips,
-						topTracks: body.topTracks,
-						nowPlaying: body.nowPlaying,
-						stats: [
-							{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
-							{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
-						]
-					}
-				})
-			);
+			const buffer = await deduped(`img:card:${body.userId}`, () => {
+				// dark/ticket 공통 필드 — 선택된 프리셋 입력만 조립해요.
+				const base = {
+					userId: body.userId,
+					profileId: body.username,
+					displayName: body.displayName,
+					avatarUrl: body.avatarUrl,
+					guildTag: body.guildTag,
+					guildTagBadgeUrl: body.guildTagBadgeUrl,
+					status: body.status,
+					onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+					intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+					createdText: dateFmt(body.accountCreated),
+					joinedText: dateFmt(body.guildJoinedAt),
+					roleChips: body.roleChips,
+					topTracks: body.topTracks,
+					nowPlaying: body.nowPlaying
+				};
+				if (body.preset === 'dark') {
+					return renderProfileCardDark({ ...base, statusColor: '#3ecf8e' });
+				}
+				return renderProfileCardTicket({
+					...base,
+					statusColor: '#2f9e5f',
+					stats: [
+						{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
+						{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
+					]
+				});
+			});
 			metrics.request(`image-profile-${body.preset}`);
 			return reply.type('image/png').send(buffer);
 		} catch (error) {

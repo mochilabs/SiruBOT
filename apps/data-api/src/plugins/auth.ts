@@ -14,10 +14,8 @@ function safeEqual(a: string, b: string): boolean {
 	return timingSafeEqual(da, db);
 }
 
-export default async function auth(fastify: FastifyInstance): Promise<void> {
-	// data-api는 자체 키(DATA_API_AUTH_KEY)를 우선 사용하고, 없으면 봇과 공유하는 AUTH_KEY로 폴백해요.
+export default async function auth(fastify: FastifyInstance, dataApiAuthKey: string | undefined): Promise<void> {
 	// 키가 없으면 auth 비활성화 대신 fail-closed — 기동 자체를 거절해요.
-	const dataApiAuthKey = process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY;
 	if (!dataApiAuthKey) {
 		logger.error('AUTH_KEY is not set - refusing to start (fail-closed)');
 		process.exit(1);

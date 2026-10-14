@@ -12,9 +12,9 @@
  * - REQUEST 퍼블리시는 sharedCache 클라이언트로 해요 (guildData·playerWeb과 같은 방식).
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 guildDataHub와 같은 연결 라이프사이클을 따라요.
  */
-import { createClient, type RedisClientType } from '@redis/client';
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
+import { HubSubscriber } from '../utils/hubSubscriber.ts';
 import { JTC_SETUP_REQUEST_CHANNEL, JTC_SETUP_RESPONSE_CHANNEL, jtcSetupResponseSchema } from '@sirubot/utils';
 
 const logger = getLogger('jtcSetupHub');
@@ -23,9 +23,6 @@ const logger = getLogger('jtcSetupHub');
 const SETUP_TIMEOUT_MS = 10_000;
 /** 동시 대기 요청 상한 — 응답을 못 받는 요청이 pending map에 쌓이는 누수를 방지해요 */
 const PENDING_LIMIT = 50;
-/** 최초 연결 실패 재시도 백오프 — 1초부터 2배씩, 상한 5초 (guildDataHub와 같음) */
-const RETRY_BASE_MS = 1_000;
-const RETRY_MAX_MS = 5_000;
 
 export type JtcSetupFailureReason = 'redis_unavailable' | 'timeout' | 'bot_error';
 export type JtcSetupResult = { ok: true; markerChannelId?: string } | { ok: false; reason: JtcSetupFailureReason; message: string | null };
@@ -123,43 +120,16 @@ export class JtcSetupPendingRequests {
 
 const pending = new JtcSetupPendingRequests(PENDING_LIMIT);
 
-let subscriber: RedisClientType | null = null;
-/** stopJtcSetupHub 이후 백그라운드 재시도 루프가 다시 돌지 않게 하는 래치 */
-let stopped = false;
-let retryTimer: ReturnType<typeof setTimeout> | null = null;
+/** Pub/Sub 구독자 — 공용 라이프사이클(HubSubscriber)에 연결·구독·재시도·종료를 위임해요. */
+const subscriber = new HubSubscriber({
+	name: 'jtc setup hub',
+	channel: JTC_SETUP_RESPONSE_CHANNEL,
+	onMessage: (message) => pending.handleRaw(message),
+	logger
+});
 
 /**
- * 연결 + 구독 1회 시도. 실패 시 지연 재시도해요 — 최초 연결 실패로 영구 미구독(재시작 필요) 상태가 되지 않게 해요.
- * (guildDataHub와 같은 연결 라이프사이클 — @redis/client v5 자동 재연결 + resubscribe 위임)
- */
-async function attemptConnect(redisUrl: string, attempt: number): Promise<void> {
-	if (stopped) return;
-	const base = sharedCache.getClient();
-	const client = (base ? base.duplicate() : createClient({ url: redisUrl })) as RedisClientType;
-	subscriber = client;
-	client.on('error', (error) => {
-		logger.error(`jtc setup hub subscriber error: ${error}`);
-	});
-
-	try {
-		await client.connect();
-		await client.subscribe(JTC_SETUP_RESPONSE_CHANNEL, (message) => pending.handleRaw(message));
-		logger.info(`JTC setup hub subscribed to ${JTC_SETUP_RESPONSE_CHANNEL}`);
-	} catch (error) {
-		if (stopped) return;
-		subscriber = null;
-		if (client.isOpen) client.destroy();
-		const delay = Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS);
-		logger.warn(`JTC setup hub subscription failed (attempt ${attempt + 1}), retrying in ${delay}ms: ${error}`);
-		retryTimer = setTimeout(() => {
-			retryTimer = null;
-			void attemptConnect(redisUrl, attempt + 1);
-		}, delay);
-	}
-}
-
-/**
- * RESPONSE 채널 구독자 연결을 시작해요. sharedCache 클라이언트를 duplicate해요 (RESP2 전용 연결 필요).
+ * RESPONSE 채널 구독자 연결을 시작해요.
  * REDIS_URL이 없으면 구독 없이 시작해요 — 요청은 redis_unavailable로 즉시 실패해요 (guildDataHub 선례).
  */
 export async function startJtcSetupHub(redisUrl: string | undefined): Promise<void> {
@@ -167,26 +137,11 @@ export async function startJtcSetupHub(redisUrl: string | undefined): Promise<vo
 		logger.warn('REDIS_URL is not set, jtc setup hub will not receive responses (all requests fail as redis_unavailable)');
 		return;
 	}
-	stopped = false;
-	void attemptConnect(redisUrl, 0);
+	await subscriber.start(redisUrl);
 }
 
 export async function stopJtcSetupHub(): Promise<void> {
-	stopped = true;
-	if (retryTimer) {
-		clearTimeout(retryTimer);
-		retryTimer = null;
-	}
-	if (!subscriber) return;
-	const client = subscriber;
-	subscriber = null;
-	if (client.isReady) {
-		await client.unsubscribe(JTC_SETUP_RESPONSE_CHANNEL).catch(() => undefined);
-		await client.quit().catch(() => undefined);
-	} else if (client.isOpen) {
-		// 연결 도중엔 quit(QUIT 왕복 대기)이 멈출 수 있어 소켓을 즉시 파괴해요
-		client.destroy();
-	}
+	await subscriber.stop();
 }
 
 /**

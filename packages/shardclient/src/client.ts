@@ -2,14 +2,7 @@ import { hostname } from 'node:os';
 import { ILogger } from './types/logger.ts';
 import { ShardWebSocket } from './core/ws.ts';
 import { NoShardsAvailableError } from './errors/NoShardsAvailableError.ts';
-import {
-	WsOp,
-	type HelloPayload,
-	type IdentifyAckPayload,
-	type ShardStatsPayload,
-	type ShardStatusPayload,
-	type BroadcastEvalPayload
-} from './ws-types/index.ts';
+import { WsOp, type HelloPayload, type IdentifyAckPayload, type ShardStatsPayload, type ShardStatusPayload } from './ws-types/index.ts';
 
 export type ShardClientOptions = {
 	logger: ILogger;
@@ -31,7 +24,6 @@ export class ShardClient {
 	private statsInterval: ReturnType<typeof setInterval> | null = null;
 	private identity: ShardIdentity | null = null;
 	private statsCallback: (() => Omit<ShardStatsPayload, 'shardIds'>) | null = null;
-	private evalCallback: ((script: string) => Promise<unknown>) | null = null;
 	private isReconnecting = false;
 
 	constructor(options: ShardClientOptions) {
@@ -54,54 +46,7 @@ export class ShardClient {
 				this.ws.removeAllListeners();
 				await this.ws.connect();
 
-				return await new Promise<ShardIdentity>((resolve, reject) => {
-					const timeout = setTimeout(() => {
-						reject(new Error('IDENTIFY_ACK timeout (10s)'));
-					}, 10_000);
-
-					this.ws.on(WsOp.HELLO, (msg) => {
-						const hello = msg.payload as HelloPayload;
-						this.logger.info(
-							`Received HELLO: ${hello.shardCount} shards, ${hello.shardsPerProcess}/process, heartbeat ${hello.heartbeatInterval}ms`
-						);
-
-						// First identify sends no shardIds yet.
-						this.ws.send({
-							op: WsOp.IDENTIFY,
-							payload: { token: this.authToken, hostname: hostname() }
-						});
-					});
-
-					this.ws.on(WsOp.IDENTIFY_ACK, (msg) => {
-						clearTimeout(timeout);
-						const ack = msg.payload as IdentifyAckPayload;
-
-						if (ack.shardIds.length === 0) {
-							reject(new NoShardsAvailableError());
-							return;
-						}
-
-						this.identity = {
-							shardIds: ack.shardIds,
-							shardCount: ack.shardCount
-						};
-
-						this.logger.info(`Identified: shards [${ack.shardIds.join(', ')}] / ${ack.shardCount}`);
-
-						this.startHeartbeat();
-
-						this.setupEventHandlers();
-
-						// After successful identification, reconnect on disconnect
-						this.ws.onClose((_code, reason) => {
-							this.logger.warn(`Shard manager disconnected (${reason}). Will reconnect...`);
-							this.stopHeartbeat();
-							this.reconnect();
-						});
-
-						resolve(this.identity);
-					});
-				});
+				return await this.sendIdentify({ withShardIds: false });
 			} catch (error) {
 				// Fatal: no shards available — do not retry, let the process exit
 				if (error instanceof NoShardsAvailableError) {
@@ -149,19 +94,30 @@ export class ShardClient {
 	 * Re-identify with shard manager, sending current shard IDs
 	 */
 	private reidentify(): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
+		return this.sendIdentify({ withShardIds: true }).then(() => undefined);
+	}
+
+	/**
+	 * Shared IDENTIFY handshake: wait for HELLO, send IDENTIFY (optionally with
+	 * the current shard IDs for re-identification), then await IDENTIFY_ACK.
+	 */
+	private sendIdentify(options: { withShardIds: boolean }): Promise<ShardIdentity> {
+		return new Promise<ShardIdentity>((resolve, reject) => {
 			const timeout = setTimeout(() => {
-				reject(new Error('Re-IDENTIFY_ACK timeout (10s)'));
+				reject(new Error('IDENTIFY_ACK timeout (10s)'));
 			}, 10_000);
 
-			this.ws.on(WsOp.HELLO, () => {
+			this.ws.on(WsOp.HELLO, (msg) => {
+				const hello = msg.payload as HelloPayload;
+				this.logger.info(
+					`Received HELLO: ${hello.shardCount} shards, ${hello.shardsPerProcess}/process, heartbeat ${hello.heartbeatInterval}ms`
+				);
+
 				this.ws.send({
 					op: WsOp.IDENTIFY,
-					payload: {
-						token: this.authToken,
-						shardIds: this.identity?.shardIds,
-						hostname: hostname()
-					}
+					payload: options.withShardIds
+						? { token: this.authToken, shardIds: this.identity?.shardIds, hostname: hostname() }
+						: { token: this.authToken, hostname: hostname() }
 				});
 			});
 
@@ -170,56 +126,39 @@ export class ShardClient {
 				const ack = msg.payload as IdentifyAckPayload;
 
 				if (ack.shardIds.length === 0) {
-					reject(new Error('Re-identification failed: no shards assigned'));
+					reject(new NoShardsAvailableError());
 					return;
 				}
 
-				this.logger.info(`Re-identified: shards [${ack.shardIds.join(', ')}] / ${ack.shardCount}`);
+				this.identity = {
+					shardIds: ack.shardIds,
+					shardCount: ack.shardCount
+				};
+
+				this.logger.info(`${options.withShardIds ? 'Re-identified' : 'Identified'}: shards [${ack.shardIds.join(', ')}] / ${ack.shardCount}`);
 
 				this.startHeartbeat();
 
 				this.setupEventHandlers();
 
-				// Re-register onClose for next disconnect
+				// After successful identification, reconnect on disconnect
 				this.ws.onClose((_code, reason) => {
-					this.logger.warn(`Shard manager disconnected again (${reason}). Will reconnect...`);
+					this.logger.warn(`Shard manager disconnected (${reason}). Will reconnect...`);
 					this.stopHeartbeat();
 					this.reconnect();
 				});
 
-				resolve();
+				resolve(this.identity);
 			});
 		});
 	}
 
 	/**
-	 * Setup persistent event handlers (heartbeat ack, broadcast eval)
+	 * Setup persistent event handlers (heartbeat ack)
 	 */
 	private setupEventHandlers(): void {
 		this.ws.on(WsOp.HEARTBEAT_ACK, () => {
 			// heartbeat acknowledged
-		});
-
-		this.ws.on(WsOp.BROADCASTEVAL, async (msg) => {
-			const payload = msg.payload as BroadcastEvalPayload;
-			if (this.evalCallback) {
-				try {
-					const result = await this.evalCallback(payload.script);
-					this.ws.send({
-						op: WsOp.BROADCASTEVAL_RESULT,
-						payload: { id: payload.id, result }
-					});
-				} catch (error) {
-					this.ws.send({
-						op: WsOp.BROADCASTEVAL_RESULT,
-						payload: {
-							id: payload.id,
-							result: null,
-							error: error instanceof Error ? error.message : String(error)
-						}
-					});
-				}
-			}
 		});
 	}
 
@@ -244,13 +183,6 @@ export class ShardClient {
 	public onStats(callback: () => Omit<ShardStatsPayload, 'shardIds'>): void {
 		this.statsCallback = callback;
 		this.startStatsReporter();
-	}
-
-	/**
-	 * Set callback for broadcastEval
-	 */
-	public onEval(callback: (script: string) => Promise<unknown>): void {
-		this.evalCallback = callback;
 	}
 
 	public getIdentity(): ShardIdentity | null {

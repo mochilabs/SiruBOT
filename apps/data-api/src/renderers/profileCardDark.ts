@@ -5,8 +5,15 @@
  * 아래에 지금 재생 중 + 자주 신청한 곡. 이모지 대신 lucide 벡터 아이콘.
  */
 import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
-import { drawCircleImage, drawIcon, ensureKoreanFont, hashString, loadImageAllowed, truncate } from './canvasUtils.ts';
-import { drawMusicSection, measureMusicSection, type CardPalette, type ProfileNowPlaying } from './profileWidgets.ts';
+import { drawCircleImage, drawIcon, ensureKoreanFont, hashString, loadImageAllowed, makeRng, truncate } from './canvasUtils.ts';
+import {
+	drawAvatarFallback,
+	drawMusicSection,
+	drawGuildTag,
+	measureMusicSection,
+	type CardPalette,
+	type ProfileNowPlaying
+} from './profileWidgets.ts';
 
 export interface ProfileCardDarkInput {
 	userId: string;
@@ -58,6 +65,8 @@ const W = 920;
 const PAD = 44;
 const HEADER_H = 208; // 그라디언트 헤더 높이
 const AVATAR_R = 62;
+/** 아바타 폴백 테마 — 라벤더 원 + 음표 */
+const AVATAR_FALLBACK = { bg: '#b7a3d6', icon: '#5c4a78', iconSize: 32 };
 
 const STATUS_COLORS: Record<string, string> = {
 	online: '#3ecf8e',
@@ -89,14 +98,6 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 	ctx.closePath();
 	ctx.fill();
 	ctx.restore();
-}
-
-function makeRng(seed: number): () => number {
-	let s = seed || 1;
-	return () => {
-		s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-		return s / 4294967296;
-	};
 }
 
 function fmtStatusDot(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string): void {
@@ -227,9 +228,9 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	if (input.avatarUrl) {
 		const img = await loadImageAllowed(input.avatarUrl);
 		if (img) drawCircleImage(ctx, img, avatarCx, avatarCy, AVATAR_R);
-		else drawAvatarFallback(ctx, avatarCx, avatarCy, AVATAR_R);
+		else drawAvatarFallback(ctx, avatarCx, avatarCy, AVATAR_R, AVATAR_FALLBACK);
 	} else {
-		drawAvatarFallback(ctx, avatarCx, avatarCy, AVATAR_R);
+		drawAvatarFallback(ctx, avatarCx, avatarCy, AVATAR_R, AVATAR_FALLBACK);
 	}
 	fmtStatusDot(ctx, avatarCx + AVATAR_R * 0.76, avatarCy + AVATAR_R * 0.76, 11, dotColor);
 
@@ -250,29 +251,13 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const handleW = ctx.measureText(handleText).width;
 
 	// ── 서버 태그 (guildTagBadge 이미지 + 태그 텍스트) ──
-	if (input.guildTag) {
-		const tagY = handleBase - 21;
-		let tagX = nameX + handleW + 14;
-		if (input.guildTagBadgeUrl) {
-			const badge = await loadImageAllowed(input.guildTagBadgeUrl).catch(() => null);
-			if (badge) {
-				ctx.save();
-				const BH = 22;
-				const bw = (badge as unknown as { width: number }).width;
-				const bh = (badge as unknown as { height: number }).height;
-				const s = BH / bh;
-				// 뱃지는 가로가 길어요 (2:3 근사) — 전체 그려요
-				ctx.drawImage(badge, tagX, tagY, bw * s, BH);
-				ctx.restore();
-				tagX += Math.floor(bw * s) + 8;
-			}
-		}
-		ctx.save();
-		ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillStyle = PAL.accent;
-		ctx.fillText(input.guildTag, tagX, handleBase);
-		ctx.restore();
-	}
+	await drawGuildTag(ctx, {
+		tag: input.guildTag,
+		badgeUrl: input.guildTagBadgeUrl,
+		x: nameX + handleW + 14,
+		baselineY: handleBase,
+		color: PAL.accent
+	});
 
 	// ── 온라인 상태 캡슐 (우측, 핸들 라인에 정렬) ──
 	const stLabel = input.onlineLabel || '온라인';
@@ -378,14 +363,4 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.restore();
 
 	return (await canvas.toBuffer('png')) as Buffer;
-}
-
-function drawAvatarFallback(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number): void {
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-	ctx.fillStyle = '#b7a3d6';
-	ctx.fill();
-	drawIcon(ctx, 'music-2', cx - 16, cy - 16, 32, '#5c4a78');
-	ctx.restore();
 }

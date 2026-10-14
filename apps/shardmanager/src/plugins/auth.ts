@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getLogger } from '../utils/logger.ts';
+import type { Env } from '../config/env.ts';
 
 const excludedRoutes = ['/api/health'];
 
@@ -11,9 +12,9 @@ export function safeEqual(a: string, b: string): boolean {
 	return timingSafeEqual(ha, hb);
 }
 
-export default async function auth(fastify: FastifyInstance) {
+export default async function auth(fastify: FastifyInstance, env: Env) {
 	const logger = getLogger('auth');
-	const authKey = process.env.AUTH_KEY;
+	const authKey = env.AUTH_KEY;
 
 	if (!authKey) {
 		logger.error('AUTH_KEY is not set - refusing to start (fail-closed)');
