@@ -21,7 +21,7 @@
         "@sirubot/utils": "*",
         "discord.js": "^14.0.0",
         "dotenv": "^17.2.2",
-        "fastify": "^5.6.0",
+        "fastify": "^5.12.7",
         "tslog": "^4.10.2",
         "undici": "^7.16.0",
         "ws": "^8.18.3",
