@@ -6,14 +6,41 @@ import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import { Bot, CornerDownRight } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
+/** 인사 카드 프리셋 — 에디터가 완성형 디자인을 먼저 고르고, 위에 자유 레이어를 덧칠하는 실제 흐름을 딴 것 */
+const CARD_PRESETS = [
+	{
+		label: "기본",
+		className: "bg-gradient-to-br from-primary/60 via-primary-control/40 to-primary/60",
+		title: "서름님을 환영해요",
+		sub: "1,234번째 멤버"
+	},
+	{
+		label: "파티",
+		className: "bg-gradient-to-tr from-primary-control/60 via-primary/40 to-primary-control/30",
+		title: "다들 박수!",
+		sub: "서름님이 새 친구로 합류했어요"
+	},
+	{
+		label: "따뜻",
+		className: "bg-gradient-to-b from-primary/50 to-primary-control/50",
+		title: "오늘의 첫 방문예요",
+		sub: "서름님이 문을 두드렸어요"
+	}
+];
+
 /**
  * 입장 인사 프리뷰 — 실제 기능은 봇의 memberGreetingService: 멤버가 들어오면 설정한 채널로
  * {유저}·{서버}·{멤버수} 변수가 치환된 템플릿 인사 메시지를 보내요. 이미지 카드 옵션을 켜면
- * data-api가 렌더한 인사 카드가 첨부돼요. 여기선 참여 알림 → 시루 인사 → 인사 카드 순서로 재생해요.
+ * data-api가 렌더한 인사 카드가 첨부돼요. 참여 알림 → 시루 인사 → 인사 카드 순서로 재생하고,
+ * 카드 프리셋을 골라 바꿔 보면 꾸미기가 자유롭다는 게 바로 보여요.
  */
 export function MemberGreetingPreview() {
 	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
 	const [runId, setRunId] = useState(0);
+	const [presetIndex, setPresetIndex] = useState(0);
+	const preset = CARD_PRESETS[presetIndex];
 	/** 0: 대기, 1: 참여 시스템 메시지, 2: 시루 인사 + 인사 카드 */
 	const [phase, setPhase] = useState(0);
 
@@ -86,12 +113,46 @@ export function MemberGreetingPreview() {
 									</div>
 									<p className="text-sm leading-relaxed text-discord-text">서름님, 시루봇 테스트 서버에 오신 걸 환영해요!</p>
 									{/* 인사 카드 mock — 실제로는 data-api가 1200×675 PNG로 렌더해 첨부해요 */}
-									<div className="relative aspect-[16/9] w-full max-w-md overflow-hidden rounded-lg bg-gradient-to-br from-primary/60 via-primary-control/40 to-primary/60">
+									<div
+										key={preset.label}
+										className={`relative aspect-[16/9] w-full max-w-md overflow-hidden rounded-lg ${preset.className}`}
+									>
 										<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
 											<div className="flex h-12 w-12 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text ring-2 ring-background/40 ring-offset-2 ring-offset-transparent">서름</div>
-											<p className="text-base font-black tracking-tighter text-foreground">서름님을 환영해요</p>
-											<p className="text-2xs font-medium text-foreground/70">1,234번째 멤버</p>
+											<p className="text-base font-black tracking-tighter text-foreground">{preset.title}</p>
+											<AnimatePresence mode="wait" initial={false}>
+												<m.p
+													key={preset.sub}
+													className="text-2xs font-medium text-foreground/70"
+													initial={{ opacity: 0, y: 4 }}
+													animate={{ opacity: 1, y: 0 }}
+													exit={{ opacity: 0, y: -4 }}
+													transition={{ duration: 0.2, ease: "easeOut" }}
+												>
+													{preset.sub}
+												</m.p>
+											</AnimatePresence>
 										</div>
+									</div>
+									{/* 카드 프리셋 — 실제 에디터의 완성형 프리셋 흐름 */}
+									<div className="flex items-center gap-1.5">
+										<p className="text-2xs font-medium text-discord-text-muted">카드 프리셋</p>
+										{CARD_PRESETS.map((candidate, index) => (
+											<button
+												key={candidate.label}
+												type="button"
+												aria-pressed={presetIndex === index}
+												onClick={() => setPresetIndex(index)}
+												className={cn(
+													"cursor-pointer rounded-sm px-1.5 py-0.5 text-2xs font-bold transition-colors duration-fast",
+													presetIndex === index
+														? "bg-discord-primary text-primary-control-text"
+														: "bg-discord-btn-active text-discord-text-muted hover:text-discord-text"
+												)}
+											>
+												{candidate.label}
+											</button>
+										))}
 									</div>
 								</div>
 							</m.div>
