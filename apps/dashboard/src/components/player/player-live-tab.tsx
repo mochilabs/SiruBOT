@@ -28,6 +28,7 @@ import { toApiError, toError } from "@/lib/api-error";
 import { formatDuration } from "@/lib/format";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 import { playerErrorMessage } from "@/lib/player-error";
+import { prettySourceName } from "@/utils";
 
 /** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
 const VOLUME_SEND_DEBOUNCE_MS = 400;
@@ -295,7 +296,7 @@ function NowPlaying({
             {state.sourceName && (
               <span>
                 {state.isStream ? "· " : ""}
-                {state.sourceName}
+                {prettySourceName(state.sourceName)}
               </span>
             )}
           </div>

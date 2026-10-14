@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { formatDuration } from "@/lib/format";
 import { playerErrorMessage } from "@/lib/player-error";
+import { prettySourceName } from "@/utils";
 
 interface VoiceContext {
 	inVoice: boolean;
@@ -97,7 +98,7 @@ function SearchResultRow({
 				<p className="line-clamp-1 text-sm font-semibold text-foreground">{track.title}</p>
 				<p className="truncate text-xs text-muted-foreground">
 					{track.author}
-					{track.sourceName ? ` · ${track.sourceName}` : ""}
+					{track.sourceName ? ` · ${prettySourceName(track.sourceName)}` : ""}
 				</p>
 			</div>
 			<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
