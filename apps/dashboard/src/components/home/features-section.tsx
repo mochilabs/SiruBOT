@@ -49,7 +49,6 @@ interface FeatureBlock {
 	title: string;
 	desc: string;
 	Preview: ComponentType;
-	free?: boolean;
 	secondary?: { href: string; label: string };
 }
 
@@ -78,7 +77,6 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		title: "새 멤버를 시루가 먼저 맞아요.",
 		desc: "입장·퇴장마다 템플릿 메시지와 인사 카드를 채워 보내줘요. 채널·템플릿은 대시보드에서 정하고, 카드는 봇이 그대로 그려요. 전부 무료예요.",
 		Preview: MemberGreetingPreview,
-		free: true,
 		secondary: { href: "/servers", label: "인사 설정하기" },
 	},
 	{
@@ -88,7 +86,6 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		title: "서버마다 다른 모습의 시루.",
 		desc: "길드 전용 닉네임·아바타·배너로 서버 분위기에 맞춰 봇을 바꿔요. 저장하면 즉시 봇에 반영돼요. 전부 무료예요.",
 		Preview: BotProfilePreview,
-		free: true,
 		secondary: { href: "/servers", label: "프로필 바꾸기" },
 	},
 	{
@@ -153,9 +150,6 @@ export function FeaturesSection() {
 									<SectionLabel as="p" className="px-0 py-0 text-primary-text">
 										{block.label}
 									</SectionLabel>
-									{block.free && (
-										<span className="rounded-sm border border-success/20 bg-success/10 px-1.5 py-0.5 text-2xs font-bold text-success">무료</span>
-									)}
 								</div>
 								<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">{block.title}</h3>
 								<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">{block.desc}</p>

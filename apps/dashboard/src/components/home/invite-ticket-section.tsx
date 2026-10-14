@@ -32,11 +32,8 @@ export function InviteTicketSection() {
 						</div>
 						{/* 본문 */}
 						<div className="flex min-w-0 flex-col gap-3 p-6 sm:p-8">
-							<div className="flex flex-wrap items-center justify-between gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								<span className="text-2xs font-medium text-muted-foreground">초대 티켓</span>
-								<span className="rounded-sm border border-success/20 bg-success/10 px-1.5 py-0.5 text-2xs font-bold text-success">
-									모든 기능 무료 · 구독 없음
-								</span>
 							</div>
 							<h2 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">서버에 시루를 초대해요</h2>
 							<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">

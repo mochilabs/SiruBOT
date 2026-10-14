@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import { AnimatePresence, m } from "framer-motion";
-import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,49 +15,13 @@ const AVATAR_PRESETS = [
 	{ src: "/images/siru-profile-hand.png", label: "손인사" }
 ];
 
-/** 봇 프로필 프리뷰 — 닉네임·아바타를 바꾸면 저장 토스트("봇에 바로 반영")로 즉시 반영을 보여줘요 */
+/** 봇 프로필 프리뷰 — 프리셋을 골라 프로필 카드가 그대로 바뀌는 모습을 보여줘요. 바뀐 값 자체가 저장 결과예요 */
 export function BotProfilePreview() {
 	const [nickname, setNickname] = useState("시루봇");
 	const [avatar, setAvatar] = useState(AVATAR_PRESETS[0].src);
-	/** 토스트 키 — 이미 열려 있어도 클릭마다 키를 갱신해 다시 띄워요 */
-	const [applyCount, setApplyCount] = useState(0);
-	const [toastVisible, setToastVisible] = useState(false);
-	const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	// 언마운트 시 닫힘 타이머 정리
-	useEffect(
-		() => () => {
-			if (hideTimerRef.current) {
-				clearTimeout(hideTimerRef.current);
-				hideTimerRef.current = null;
-			}
-		},
-		[],
-	);
-
-	// 토스트를 띄우고 2초 뒤에 닫아요 — 이미 열려 있어도 표시 시간을 다시 셌요
-	const raiseToast = () => {
-		setApplyCount((count) => count + 1);
-		setToastVisible(true);
-		if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-		hideTimerRef.current = setTimeout(() => {
-			setToastVisible(false);
-			hideTimerRef.current = null;
-		}, 2000);
-	};
-
-	const applyName = (name: string) => {
-		setNickname(name);
-		raiseToast();
-	};
-
-	const applyAvatar = (src: string) => {
-		setAvatar(src);
-		raiseToast();
-	};
 
 	return (
-		<div className="relative pb-10 pr-2">
+		<div className="relative pr-2">
 			<div className="overflow-hidden rounded-card bg-surface-1 shadow-md">
 				<div className="h-16 bg-gradient-to-r from-primary/50 via-primary-control/40 to-primary/50" />
 				<div className="relative ml-4 -mt-7 h-14 w-14 overflow-hidden rounded-full ring-4 ring-surface-1">
@@ -83,7 +45,7 @@ export function BotProfilePreview() {
 						<button
 							key={name}
 							type="button"
-							onClick={() => applyName(name)}
+							onClick={() => setNickname(name)}
 							className={cn(
 								"cursor-pointer rounded-control px-2.5 py-1.5 text-xs font-bold transition-colors duration-fast",
 								nickname === name
@@ -103,7 +65,7 @@ export function BotProfilePreview() {
 							type="button"
 							title={preset.label}
 							aria-label={`길드 아바타: ${preset.label}`}
-							onClick={() => applyAvatar(preset.src)}
+							onClick={() => setAvatar(preset.src)}
 							className={cn(
 								"relative h-9 w-9 overflow-hidden rounded-full transition-all duration-fast",
 								avatar === preset.src
@@ -116,21 +78,6 @@ export function BotProfilePreview() {
 					))}
 				</div>
 			</div>
-			<AnimatePresence>
-				{toastVisible && (
-					<m.div
-						key={applyCount}
-						className="absolute bottom-0 right-3 flex items-center gap-1.5 rounded-card border border-success/20 bg-success/10 px-3 py-2 text-xs font-bold text-success shadow-lg"
-						initial={{ opacity: 0, y: 8 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.25, ease: "easeOut" }}
-					>
-						<Check size={13} className="shrink-0" aria-hidden />
-						저장됨 · 봇에 바로 반영
-					</m.div>
-				)}
-			</AnimatePresence>
 		</div>
 	);
 }

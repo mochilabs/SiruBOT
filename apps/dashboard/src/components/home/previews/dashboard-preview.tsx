@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { AnimatePresence, m } from "framer-motion";
-import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -155,17 +154,6 @@ export function DashboardPreview() {
 							<SettingScroller slide={dashboardSettingSlides[activeSlide]} />
 						</m.div>
 					</AnimatePresence>
-				</div>
-			</div>
-			{/* 실제 동작 — 웹 저장은 봇에 바로 반영돼요 */}
-			<div
-				aria-hidden
-				className="absolute bottom-0 right-3 flex w-48 rotate-2 items-center gap-2 rounded-card bg-surface-1 p-3 shadow-lg sm:right-5"
-			>
-				<Check size={13} className="shrink-0 text-success" aria-hidden />
-				<div className="min-w-0">
-					<p className="text-xs font-bold text-foreground">변경사항 저장됨</p>
-					<p className="text-2xs text-muted-foreground">봇에 바로 반영</p>
 				</div>
 			</div>
 		</div>
