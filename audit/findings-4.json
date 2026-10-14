@@ -1,0 +1,145 @@
+[
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 244,
+		"current_token": "--destructive-foreground",
+		"issue": "완전 고아. (bg|text|border|ring|from|via|to|fill|stroke|divide|outline|caret|decoration|placeholder|accent)-destructive-foreground 패턴과 var(--destructive-foreground) raw 참조 모두 0건. design/page.tsx 쇼케이스(COLOR_TOKENS 목록)에도 없음. .dark 정의(globals.css:256)와 @theme 매핑(--color-destructive-foreground, globals.css:267)까지 연쇄로 미사용. 상태 배지 관례가 text-{status} + bg-{status}/10 라서 solid *-foreground 쌍이 한 번도 쓰이지 않은 것으로 확인.",
+		"evidence": "\t--destructive-foreground: #ffffff;",
+		"recommended_token": null,
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 246,
+		"current_token": "--success-foreground",
+		"issue": "완전 고아. success-foreground 유틸리티·raw var() 참조 0건, 쇼케이스 미포함. .dark 정의(globals.css:258)·@theme 매핑(globals.css:269)도 연쇄 미사용. --success 자체는 9개 파일에서 사용 중이나 foreground 쌍은 소비자 없음.",
+		"evidence": "\t--success-foreground: #ffffff;",
+		"recommended_token": null,
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 248,
+		"current_token": "--warning-foreground",
+		"issue": "완전 고아. warning-foreground 유틸리티·raw var() 참조 0건, 쇼케이스 미포함. .dark 정의(globals.css:260)·@theme 매핑(globals.css:271)도 연쇄 미사용.",
+		"evidence": "\t--warning-foreground: #ffffff;",
+		"recommended_token": null,
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 250,
+		"current_token": "--info-foreground",
+		"issue": "완전 고아. info-foreground 유틸리티·raw var() 참조 0건, 쇼케이스 미포함. .dark 정의(globals.css:262)·@theme 매핑(globals.css:273)도 연쇄 미사용.",
+		"evidence": "\t--info-foreground: #ffffff;",
+		"recommended_token": null,
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 233,
+		"current_token": "--shadow-xl",
+		"issue": "쇼케이스 전용. shadow-xl 유틸리티 참조가 apps/dashboard/src/app/design/page.tsx(토큰 갤러리 Shadows 행의 라벨 표기용)뿐이고 실소비자 0. shadow-xs(color-input.tsx), shadow-sm(button/card 등), shadow-md(switch.tsx), shadow-lg(scroll-to-top.tsx), shadow-2xl(dialog·menu 등)는 실사용이 있으나 xl만 0건.",
+		"evidence": "\t--shadow-xl: var(--elev-4);",
+		"recommended_token": "shadow-2xl (부유 카드는 shadow-lg=--elev-3, 모달은 shadow-2xl=--elev-5로 이미 수렴)",
+		"severity": "mid",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 209,
+		"current_token": "--elev-4",
+		"issue": "raw var(--elev-4) 참조 0건. 유일한 소비 경로가 @theme 매핑 --shadow-xl: var(--elev-4)(globals.css:233)인데 shadow-xl이 쇼케이스 전용이라 실소비로 이어지지 않음. elev-1/2/3/5는 shadow-xs·sm/md/lg/2xl을 통해 실소비되나 4단만 사슬이 끊김.",
+		"evidence": "\t--elev-4: 0 16px 40px -16px rgb(0 0 0 / 0.24), 0 4px 12px -8px rgb(0 0 0 / 0.14);",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 121,
+		"current_token": "--color-brand",
+		"issue": "bg-brand/text-brand/ring-brand/border-brand/fill-brand 등 brand 유틸리티 클래스와 var(--brand) raw 참조가 모두 0건(src 전체에서 --brand 언급은 switch.tsx:32 주석뿐). 쇼케이스(COLOR_TOKENS 목록)에도 없음. 단 변수 --brand(:root/:dark 정의) 자체는 --primary-control과 --ring의 소스로 globals.css 내부에서 소비되므로 살아있음 — 미사용인 것은 유틸리티를 생성하는 @theme 매핑(--color-brand) 한 줄뿐.",
+		"evidence": "\t--color-brand: var(--brand);",
+		"recommended_token": "bg-primary-control / ring-ring (--brand 값은 이 경로로 간접 소비되고 있음)",
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 445,
+		"current_token": "--ease-standard",
+		"issue": "완전 고아 매핑. ease-standard 클래스 참조 0건(쇼케이스 포함). 소스 변수 --ease-out-expo는 animate-page-in(globals.css:313)과 server-stats-tab.tsx의 raw var()로 소비되지만, Tailwind v4가 --ease-*에서 생성하는 ease-standard 유틸은 한 번도 쓰이지 않음.",
+		"evidence": "\t--ease-standard: var(--ease-out-expo);",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 51,
+		"current_token": "--primary-rgb",
+		"issue": "완전 고아. var(--primary-rgb)/--primary-rgb 언급이 globals.css 정의(:root 51, .dark 87) 외 src 전체에서 0건. inventory의 의도(스크롤바 color-mix)와 달리 globals.css:404·418·425·429 스크롤바는 var(--primary)를 직접 사용해 RGB 트리플릿이 필요하지 않음.",
+		"evidence": "\t--primary-rgb: 255 218 218;",
+		"recommended_token": null,
+		"severity": "low",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 286,
+		"current_token": "text-title-gradient",
+		"issue": "완전 고아 @utility. text-title-gradient(및 title-gradient 조각) 참조가 src 전체에서 0건 — globals.css:284-285 주석이 말하는 '브랜딩/헤로 헤드라인 6곳' 소비자는 현재 소스에 존재하지 않음(hero-section 포함 전 파일 확인). 주석이 제거 조건으로 명시한 소비자가 이미 0이므로 삭제 예정 조건 충족 상태. gradient 정의(-webkit-background-clip 등 6줄)가 시스템 복잡도로만 남아 있음. 쇼케이스도 미참조.",
+		"evidence": "@utility text-title-gradient {",
+		"recommended_token": null,
+		"severity": "high",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 308,
+		"current_token": "animate-shimmer-sweep",
+		"issue": "완전 고아 @utility. animate-shimmer-sweep 참조 0건, 키프레임명 shimmer-sweep도 이 유틸리티 정의 외 참조 0건. design-tokens 문서상으로도 '소비자 0 미사용'으로 표기된 상태 유지 확인.",
+		"evidence": "@utility animate-shimmer-sweep {",
+		"recommended_token": null,
+		"severity": "high",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/src/app/globals.css",
+		"line": 327,
+		"current_token": "@keyframes shimmer-sweep",
+		"issue": "고아 키프레임. animation 속성으로 cursor-blink는 streaming-type-text.tsx:79에서 쓰이나, shimmer-sweep는 유일한 참조처 @utility animate-shimmer-sweep(globals.css:309) 자체가 미사용이라 사슬 전체가 고아.",
+		"evidence": "@keyframes shimmer-sweep {",
+		"recommended_token": null,
+		"severity": "high",
+		"confidence": "high"
+	},
+	{
+		"type": "unused-token",
+		"file": "apps/dashboard/tailwind.config.ts",
+		"line": 12,
+		"current_token": "font-pretendard (tailwind.config.ts fontFamily)",
+		"issue": "완전 고아 유틸리티 정의. class `font-pretendard` 소비 0건(src의 font-pretendard 매치는 layout.tsx의 next/font 변수명 '--font-pretendard'뿐이며 클래스가 아님). 게다가 src 내 어떤 CSS에도 @config 지시문이 없어 Tailwind v4는 이 tailwind.config.ts를 로드하지 않음(전역 스택은 globals.css의 --font-stack/--font-sans로 이동 완료) — 정의가 생성되지도 사용되지도 않는 죽은 설정 블록.",
+		"evidence": "      pretendard: ['var(--font-pretendard)'],",
+		"recommended_token": "font-sans (--font-sans → --font-stack 체인, globals.css:152)",
+		"severity": "high",
+		"confidence": "high"
+	}
+]
