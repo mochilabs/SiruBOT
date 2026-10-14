@@ -3,12 +3,13 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
-import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, UserPlus } from "lucide-react";
+import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, UserPlus } from "lucide-react";
 
 import { AiChatPreview } from "@/components/home/previews/ai-chat-preview";
 import { BotProfilePreview } from "@/components/home/previews/bot-profile-preview";
 import { DashboardPreview } from "@/components/home/previews/dashboard-preview";
 import { MemberGreetingPreview } from "@/components/home/previews/member-greeting-preview";
+import { PlaybackDetailPreview } from "@/components/home/previews/playback-detail-preview";
 import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
 import { sectionVariants } from "@/components/home/section-variants";
@@ -61,6 +62,14 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		desc: "/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.",
 		Preview: PlayerPreview,
 		secondary: { href: "#commands", label: "사용 중인 명령어 보기" },
+	},
+	{
+		key: "playback",
+		icon: SlidersHorizontal,
+		label: "재생 디테일",
+		title: "광고는 걷어내고, 곡은 끊기지 않게.",
+		desc: "스폰서 구간은 자동으로 건너뛰고, 15분이 넘는 곡은 챕터로 바로 이동해요. 갭리스와 크로스페이드로 곡 이음새를 지우고, 재생 중엔 TTS로 말을 얹을 수도 있어요.",
+		Preview: PlaybackDetailPreview,
 	},
 	{
 		key: "chat",
