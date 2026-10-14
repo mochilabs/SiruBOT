@@ -1,15 +1,16 @@
 "use client";
 
 import type { ComponentType } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
-import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, UserPlus } from "lucide-react";
+import { AudioLines, Bot, FastForward, Infinity as InfinityIcon, LayoutDashboard, ListMusic, ListOrdered, type LucideIcon, Mic, MonitorPlay, Music2, Palette, SlidersHorizontal, UserPlus } from "lucide-react";
 
 import { AiChatPreview } from "@/components/home/previews/ai-chat-preview";
 import { BotProfilePreview } from "@/components/home/previews/bot-profile-preview";
 import { DashboardPreview } from "@/components/home/previews/dashboard-preview";
 import { MemberGreetingPreview } from "@/components/home/previews/member-greeting-preview";
-import { PlaybackDetailPreview } from "@/components/home/previews/playback-detail-preview";
 import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
 import { sectionVariants } from "@/components/home/section-variants";
@@ -64,14 +65,6 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		secondary: { href: "#commands", label: "사용 중인 명령어 보기" },
 	},
 	{
-		key: "playback",
-		icon: SlidersHorizontal,
-		label: "재생 디테일",
-		title: "광고는 걷어내고, 곡은 끊기지 않게.",
-		desc: "스폰서 구간은 자동으로 건너뛰고, 15분이 넘는 곡은 챕터로 바로 이동해요. 갭리스와 크로스페이드로 곡 이음새를 지우고, 재생 중엔 TTS로 말을 얹을 수도 있어요.",
-		Preview: PlaybackDetailPreview,
-	},
-	{
 		key: "chat",
 		icon: Bot,
 		label: "AI 채팅",
@@ -117,6 +110,149 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 	},
 ];
 
+/** 기능 블록 하나 — 텍스트와 데모가 교차해서 등장해요. */
+function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock; index: number; shouldReduce: boolean | null }) {
+	return (
+		<m.div
+			key={block.key}
+			initial="hidden"
+			whileInView="visible"
+			viewport={{ once: true, margin: "-80px" }}
+			variants={sectionVariants}
+			className="grid items-center gap-6 lg:grid-cols-2 lg:gap-12"
+		>
+			{/* 텍스트 — 홀수 인덱스(0 기준 1,3,5)에서 lg:order-2로 오른쪽 */}
+			<div className={cn("min-w-0 space-y-3", index % 2 === 1 && "lg:order-2")}>
+				<div className="flex items-center gap-2.5">
+					<block.icon size={18} className="text-primary-text" aria-hidden />
+					<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+						{block.label}
+					</SectionLabel>
+				</div>
+				<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">{block.title}</h3>
+				<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">{block.desc}</p>
+				{/* 음악 블록만 — 명령어 칩 스태거 + 2단 스펙 */}
+				{block.key === "music" && (
+					<div className="space-y-4 pt-1">
+						{/* 치트시트 03. 스태거 — 칩들이 0.04초 간격으로 연쇄 등장.
+							reduced-motion에선 이동 없이 페이드만(선례: hero-section 조건부 variants) */}
+						<m.ul
+							variants={chipsContainerVariants}
+							initial="hidden"
+							whileInView="visible"
+							viewport={{ once: true, margin: "-40px" }}
+							className="flex flex-wrap gap-2"
+						>
+							{["/재생", "/검색", "/현재곡", "/대기열", "/볼륨", "/셔플", "/일시정지", "/가사"].map((command) => (
+								<m.li key={command} variants={shouldReduce ? chipFadeVariants : chipVariants} className={COMMAND_TOKEN}>
+									{command}
+								</m.li>
+							))}
+						</m.ul>
+						<div className="grid grid-cols-2 gap-3">
+							<div>
+								<p className="text-2xs font-medium text-muted-foreground">지원 음원</p>
+								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">YouTube · Spotify</p>
+							</div>
+							<div>
+								<p className="text-2xs font-medium text-muted-foreground">오디오</p>
+								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">크로스페이드 지원</p>
+							</div>
+						</div>
+					</div>
+				)}
+				{/* 초대 CTA는 티켓 한 곳만 — 블록엔 각자 정체가 있는 동작만 남겨요 */}
+				{block.secondary && (
+					<Link href={block.secondary.href} className={cn(secondaryLink, "mt-6")}>
+						{block.secondary.label}
+					</Link>
+				)}
+			</div>
+			{/* 데모 */}
+			<div className={cn("min-w-0", index % 2 === 1 && "lg:order-1")}>
+				<block.Preview />
+			</div>
+		</m.div>
+	);
+}
+
+/** 음악 엔진의 기능 카드 — 뮤직봇의 재생 디테일을 기능별로 훑는 가로 스트립 */
+const ENGINE_FEATURES = [
+	{ icon: FastForward, name: "스폰서 스킵", desc: "스폰서 구간을 찾아 자동으로 건너뛰어요." },
+	{ icon: ListOrdered, name: "챕터", desc: "노래가 길면 챕터 목록에서 바로 이동해요." },
+	{ icon: InfinityIcon, name: "갭리스 · 크로스페이드", desc: "곡과 곡이 자연스럽게 이어져요." },
+	{ icon: AudioLines, name: "오디오 필터", desc: "베이스부스트·나이트코어·베이퍼웨이브·8D·노래방(보컬 제거)까지 즉석에서 켜고 꺼요." },
+	{ icon: Mic, name: "TTS 겹침", desc: "노래 위에 입력한 말을 그대로 얹어 전해요." },
+	{ icon: MonitorPlay, name: "대시보드에서 바로 재생", desc: "웹 플레이어에서 검색해 곧장 대기열에 넣어요." }
+];
+
+/** 가로 카드 스트립 — 카드를 옆으로 넘기며 기능별로 훑어요 (스크롤바는 숨기고 스냅으로 걸어요) */
+function PlaybackEngineStrip() {
+	const stripRef = useRef<HTMLDivElement>(null);
+	/** 드래그 스크롤 상태 — 마우스로 잡아 당긴 만큼 scrollLeft를 밀어요(터치는 기본 스와이프) */
+	const drag = useRef({ isDragging: false, startX: 0, startScrollLeft: 0 });
+
+	const handleStripPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+		if (event.pointerType !== "mouse") return;
+		const strip = stripRef.current;
+		if (!strip) return;
+		drag.current = { isDragging: true, startX: event.clientX, startScrollLeft: strip.scrollLeft };
+		strip.setPointerCapture(event.pointerId);
+	};
+
+	const handleStripPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+		if (!drag.current.isDragging) return;
+		const strip = stripRef.current;
+		if (strip) strip.scrollLeft = drag.current.startScrollLeft - (event.clientX - drag.current.startX);
+	};
+
+	const endStripDrag = () => {
+		drag.current.isDragging = false;
+	};
+
+	return (
+		<m.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-80px" }} variants={sectionVariants} className="space-y-4">
+			<div className="max-w-2xl space-y-3">
+				<div className="flex items-center gap-2.5">
+					<SlidersHorizontal size={18} className="text-primary-text" aria-hidden />
+					<SectionLabel as="p" className="px-0 py-0 text-primary-text">
+						음악 엔진
+					</SectionLabel>
+				</div>
+				<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">광고는 걷어내고, 곡은 끊기지 않게.</h3>
+				<p className="max-w-xl text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
+					곡과 곡 사이, 광고 구간, 소리 자체까지 재생의 모든 디테일을 제어해요. 카드를 옆으로 넘겨보세요.
+				</p>
+			</div>
+			{/* 컨테이너 여백을 상쇄해 스트립이 뷰포트 끝까지 이어져요 — 잘린 카드가 넘침을 말해줘요 */}
+			<div className="-mx-4 sm:-mx-6 lg:-mx-8">
+				{/* 치트시트 03. 스태거 — 카드들이 0.04초 간격으로 연쇄 등장 (칩 variants 재사용).
+				    마우스는 잡아 당기면 넘어가요(pointer captured), 터치는 기본 스와이프 */}
+				<m.div
+					ref={stripRef}
+					onPointerDown={handleStripPointerDown}
+					onPointerMove={handleStripPointerMove}
+					onPointerUp={endStripDrag}
+					onPointerCancel={endStripDrag}
+					variants={chipsContainerVariants}
+					initial="hidden"
+					whileInView="visible"
+					viewport={{ once: true, margin: "-40px" }}
+					className="flex cursor-grab select-none snap-x gap-3 overflow-x-auto px-4 pb-2 active:cursor-grabbing sm:px-6 lg:gap-4 lg:px-8"
+				>
+				{ENGINE_FEATURES.map((feature) => (
+					<m.div key={feature.name} variants={chipVariants} className="w-[13.5rem] shrink-0 snap-start space-y-2 rounded-card bg-surface-2 p-4 sm:w-[15rem]">
+						<feature.icon size={16} className="text-primary-text" aria-hidden />
+						<p className="text-sm font-black tracking-tighter text-foreground">{feature.name}</p>
+						<p className="text-xs font-medium leading-relaxed text-muted-foreground sm:text-sm">{feature.desc}</p>
+					</m.div>
+				))}
+				</m.div>
+			</div>
+		</m.div>
+	);
+}
+
 export function FeaturesSection() {
 	/** 칩 스태거 reduced-motion 폴백 선택용 */
 	const shouldReduce = useReducedMotion();
@@ -141,69 +277,12 @@ export function FeaturesSection() {
 					</p>
 				</m.div>
 
-				{/* 6개 기능 블록 — 위아래로 교차(짝수 블록은 데모 좌측) */}
+				{/* 음악 재생 블록 → 음악 엔진 스트립 → 나머지 교차 블록. 홀수 인덱스에서 텍스트가 오른쪽으로 가요 */}
 				<div className="mt-16 space-y-16 sm:mt-24 sm:space-y-24">
-					{FEATURE_BLOCKS.map((block, index) => (
-						<m.div
-							key={block.key}
-							initial="hidden"
-							whileInView="visible"
-							viewport={{ once: true, margin: "-80px" }}
-							variants={sectionVariants}
-							className="grid items-center gap-6 lg:grid-cols-2 lg:gap-12"
-						>
-							{/* 텍스트 — 홀수 인덱스(0 기준 1,3,5)에서 lg:order-2로 오른쪽 */}
-							<div className={cn("min-w-0 space-y-3", index % 2 === 1 && "lg:order-2")}>
-								<div className="flex items-center gap-2.5">
-									<block.icon size={18} className="text-primary-text" aria-hidden />
-									<SectionLabel as="p" className="px-0 py-0 text-primary-text">
-										{block.label}
-									</SectionLabel>
-								</div>
-								<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">{block.title}</h3>
-								<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">{block.desc}</p>
-								{/* 음악 블록만 — 명령어 칩 스태거 + 2단 스펙 */}
-								{block.key === "music" && (
-									<div className="space-y-4 pt-1">
-										{/* 치트시트 03. 스태거 — 칩들이 0.04초 간격으로 연쇄 등장.
-											reduced-motion에선 이동 없이 페이드만(선례: hero-section 조건부 variants) */}
-										<m.ul
-											variants={chipsContainerVariants}
-											initial="hidden"
-											whileInView="visible"
-											viewport={{ once: true, margin: "-40px" }}
-											className="flex flex-wrap gap-2"
-										>
-											{["/재생", "/검색", "/현재곡", "/대기열", "/볼륨", "/셔플", "/일시정지", "/가사"].map((command) => (
-												<m.li key={command} variants={shouldReduce ? chipFadeVariants : chipVariants} className={COMMAND_TOKEN}>
-													{command}
-												</m.li>
-											))}
-										</m.ul>
-										<div className="grid grid-cols-2 gap-3">
-											<div>
-												<p className="text-2xs font-medium text-muted-foreground">지원 음원</p>
-												<p className="mt-1 text-sm font-black tracking-tighter text-foreground">YouTube · Spotify</p>
-											</div>
-											<div>
-												<p className="text-2xs font-medium text-muted-foreground">오디오</p>
-												<p className="mt-1 text-sm font-black tracking-tighter text-foreground">크로스페이드 지원</p>
-											</div>
-										</div>
-									</div>
-								)}
-								{/* 초대 CTA는 티켓 한 곳만 — 블록엔 각자 정체가 있는 동작만 남겨요 */}
-								{block.secondary && (
-									<Link href={block.secondary.href} className={cn(secondaryLink, "mt-6")}>
-										{block.secondary.label}
-									</Link>
-								)}
-							</div>
-							{/* 데모 */}
-							<div className={cn("min-w-0", index % 2 === 1 && "lg:order-1")}>
-								<block.Preview />
-							</div>
-						</m.div>
+					<FeatureBlockItem block={FEATURE_BLOCKS[0]} index={0} shouldReduce={shouldReduce} />
+					<PlaybackEngineStrip />
+					{FEATURE_BLOCKS.slice(1).map((block, index) => (
+						<FeatureBlockItem key={block.key} block={block} index={index + 1} shouldReduce={shouldReduce} />
 					))}
 				</div>
 			</div>

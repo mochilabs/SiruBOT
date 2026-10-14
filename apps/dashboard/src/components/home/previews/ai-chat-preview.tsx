@@ -37,7 +37,12 @@ const utilities = [
 	},
 ];
 
-/** /채팅 — 도구 3종을 순환: 사용자 타이핑 → 시루가 생각 중.. → 답변 타이핑 */
+/**
+ * /채팅 — 도구 3종을 순환: 사용자 타이핑 → 시루가 생각 중.. → 답변 타이핑
+ *
+ * 시퀀스는 절대 배치 레이어에 담아 본문 높이를 고정하고, 단계 전환은 이동 없는 페이드만으로
+ * 처리해요 — 도구가 바뀌거나 답변이 길어져도 푸터·아래 레이아웃이 밀리지 않아요.
+ */
 function ChatPreview() {
 	const [activeTool, setActiveTool] = useState(0);
 	/** 0: 사용자 타이핑 중, 1: 봇 생각 중, 2: 답변 타이핑 */
@@ -117,15 +122,16 @@ function ChatPreview() {
 				</div>
 			</div>
 
-			<div className="min-h-[150px] flex-1">
+			{/* 본문 높이는 이 컨테이너의 고정값 — 봇 메시지가 절대 배치라 도구가 바뀌어도 아래가 밀리지 않아요 */}
+			<div className="relative min-h-[150px] flex-1 overflow-hidden">
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={current.title}
-						initial={{ opacity: 0, y: 8 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: -8 }}
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
 						transition={{ duration: 0.25, ease: "easeOut" }}
-						className="space-y-3"
+						className="absolute inset-x-0 top-2 space-y-3"
 					>
 						{/* 1단계 — 사용자: 멘션 + 프롬프트 타이핑 */}
 						<div className="flex gap-2.5">
@@ -149,8 +155,8 @@ function ChatPreview() {
 						{/* 2·3단계 — 봇: 시루 프로필 + 이름/앱 배지/시간 → 생각 중 → 답변 타이핑 (히어로 카드와 같은 Discord 메시지 구조) */}
 						{phase > 0 && (
 							<m.div
-								initial={{ opacity: 0, y: 8 }}
-								animate={{ opacity: 1, y: 0 }}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
 								transition={{ duration: 0.3, ease: "easeOut" }}
 								className="flex gap-2.5"
 							>

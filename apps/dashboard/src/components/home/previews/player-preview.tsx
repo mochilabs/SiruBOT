@@ -15,6 +15,9 @@ import { fmtTime, PLAYLIST_TRACKS, PREVIEW_TAIL_SECONDS, toSeconds } from "./tra
  * 초 단위 시계가 진행 바·시간 배지를 밀고, 곡이 끝나면 건너뛰기 버튼이 반응한 뒤
  * 다음 곡 제목·썸네일로 크로스페이드해요. reduced-motion에선 시계를 멈춘 정지 화면을 보여줘요.
  * 화면에 보일 때만 시계가 흘러요(useInView).
+ *
+ * 곡이 넘어갈 때 제목 블록은 높이가 고정(line-clamp-2)이라 제자리 크로스페이드만으로
+ * 넘어가요 — 이동이 섞이면 컨테이너 전체가 출렁여요.
  */
 export function PlayerPreview() {
 	const shouldReduce = useReducedMotion();
@@ -51,12 +54,13 @@ export function PlayerPreview() {
 				<div className="flex gap-3">
 					<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
 						<p className="text-2xs text-discord-text-muted">🎵 #음악-라운지 에서 재생 중 • 대기열 4곡 · 12:36 남음</p>
+						{/* 곡 제목·아티스트 — 높이가 고정된 블록이라 건너뛰기 없이 제자리 페이드만으로 넘어가요 */}
 						<AnimatePresence mode="wait" initial={false}>
 							<m.div
 								key={track.title}
-								initial={{ opacity: 0, y: 6 }}
-								animate={{ opacity: 1, y: 0 }}
-								exit={{ opacity: 0, y: -6 }}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
 								transition={{ duration: 0.25, ease: "easeOut" }}
 							>
 								<p className="line-clamp-2 text-sm font-bold leading-snug text-discord-text underline decoration-discord-text/20 underline-offset-2">
@@ -145,8 +149,8 @@ export function PlayerPreview() {
 					<span className="ml-auto shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-2xs font-bold text-primary-text">+1곡</span>
 				</div>
 			</div>
-			<div aria-hidden className="absolute -top-3 right-3 rotate-2 rounded-card bg-surface-1 p-2.5 shadow-lg sm:-top-4 sm:right-5">
-				<span className="rounded-sm bg-muted px-1.5 py-0.5 text-2xs font-bold text-muted-foreground">/음악 재생</span>
+			<div aria-hidden className="absolute -top-4 right-3 rotate-2 rounded-card bg-surface-1 p-2.5 shadow-lg sm:right-5">
+				<span className="text-xs font-bold text-primary-text sm:text-sm">/음악 재생</span>
 			</div>
 		</div>
 	);
