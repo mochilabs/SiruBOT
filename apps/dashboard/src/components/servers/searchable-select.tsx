@@ -116,6 +116,19 @@ export function SearchableSelect(props: SearchableSelectProps) {
 		);
 	}, [selectedValues, options, isMultiple]);
 
+	const selectedOptions = useMemo(
+		() =>
+			selectedValues
+				.map((value) => options.find((item) => item.value === value))
+				.filter((item): item is SearchableOption => item !== undefined),
+		[selectedValues, options],
+	);
+
+	const removeSelectedValue = (valueToRemove: string) => {
+		if (disabled) return;
+		handleValueChange(selectedValues.filter((item) => item !== valueToRemove));
+	};
+
 	const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
 
 	return (
@@ -130,42 +143,57 @@ export function SearchableSelect(props: SearchableSelectProps) {
 			<SelectPrimitive.Trigger
 				aria-controls={listboxId}
 				className={cn(
-					"flex h-11 w-full items-center justify-between gap-2 rounded-control border-0 bg-input shadow-control-boundary px-3 text-left text-sm font-medium outline-none transition-colors",
+					"flex min-h-9 h-auto w-full items-center justify-between gap-2 rounded-control border-0 bg-input shadow-control-boundary px-3 py-1.5 text-left text-sm font-medium outline-none transition-colors",
 					"focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
 					className,
 				)}
 			>
-				<span className={displayLabel ? "text-foreground" : "text-muted-foreground"}>{displayLabel ?? placeholder}</span>
-				<SelectPrimitive.Icon render={<ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-fast", open && "rotate-180")} />} />
-			</SelectPrimitive.Trigger>
-
-			{/* 다중 선택 태그 — 트리거 아래에 실제 선택된 항목을 칩으로 보여줘요 (role-select의 선택 칩과 같은 언어) */}
-			{isMultiple && selectedValues.length > 0 && (
-				<div className="mt-2 flex flex-wrap gap-1.5">
-					{selectedValues.map((value) => {
-						const option = options.find((item) => item.value === value);
-						if (!option) return null;
-						return (
-							<span
-								key={value}
-								className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2 py-1 text-xs font-bold text-foreground"
-							>
-								{option.icon}
-								<span className="max-w-[12rem] truncate">{option.label}</span>
-								<button
-									type="button"
-									onClick={() => handleValueChange(selectedValues.filter((item) => item !== value))}
-									className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-									aria-label={`${option.label} 제거`}
-									disabled={disabled}
+				{isMultiple ? (
+					selectedOptions.length > 0 ? (
+						<span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-0.5">
+							{selectedOptions.map((option) => (
+								<span
+									key={option.value}
+									className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary-control/20 bg-primary-control/10 px-2.5 py-0.5 text-xs font-bold text-primary-text"
 								>
-									<X className="h-3 w-3" aria-hidden />
-								</button>
-							</span>
-						);
-					})}
-				</div>
-			)}
+									{option.icon}
+									<span className="max-w-[12rem] truncate">{option.label}</span>
+									<span
+										role="button"
+										tabIndex={disabled ? -1 : 0}
+										onPointerDown={(event) => {
+											event.stopPropagation();
+										}}
+										onClick={(event) => {
+											event.stopPropagation();
+											event.preventDefault();
+											removeSelectedValue(option.value);
+										}}
+										onKeyDown={(event) => {
+											if (event.key === "Enter" || event.key === " ") {
+												event.stopPropagation();
+												event.preventDefault();
+												removeSelectedValue(option.value);
+											}
+										}}
+										className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-primary-control/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+										aria-label={`${option.label} 제거`}
+									>
+										<X className="h-2.5 w-2.5" aria-hidden />
+									</span>
+								</span>
+							))}
+						</span>
+					) : (
+						<span className="text-muted-foreground">{placeholder}</span>
+					)
+				) : (
+					<span className={cn("min-w-0 flex-1 truncate", displayLabel ? "text-foreground" : "text-muted-foreground")}>
+						{displayLabel ?? placeholder}
+					</span>
+				)}
+				<SelectPrimitive.Icon render={<ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-fast", open && "rotate-180")} />} />
+			</SelectPrimitive.Trigger>
 
 			<SelectPrimitive.Portal>
 				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={4} className="z-50">

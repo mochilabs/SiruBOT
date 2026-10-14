@@ -74,7 +74,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex items-start gap-3 p-4",
+        "flex items-center gap-3 p-4",
         className
       )}
       {...props}
@@ -166,11 +166,16 @@ function ToastList() {
 
   return toasts.map((toastItem) => (
     <Toast key={toastItem.id} toast={toastItem}>
-      <ToastContent className="h-auto break-words rounded-card">
+      <ToastContent
+        className={cn(
+          "h-auto break-words rounded-card",
+          toastItem.description ? "items-start" : "items-center"
+        )}
+      >
         <ToastIcon type={toastItem.type} />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <ToastTitle />
-          <ToastDescription />
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+          <ToastTitle className="leading-snug" />
+          {toastItem.description && <ToastDescription className="leading-snug" />}
         </div>
         {toastItem.actionProps && <ToastAction />}
         <ToastClose />

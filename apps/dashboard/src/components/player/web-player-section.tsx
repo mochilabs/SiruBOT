@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ListMusic, Play, Search } from "lucide-react";
+import { ListMusic, Loader2, Play, Search, X } from "lucide-react";
 import useSWR from "swr";
 
 import { PlayerClient, type PlayerTrack } from "@/app/player/[id]/player-client";
@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { formatDuration } from "@/lib/format";
 import { playerErrorMessage } from "@/lib/player-error";
 
@@ -120,11 +121,16 @@ function SearchResultRow({
 export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const toast = useToast();
 	const [query, setQuery] = useState("");
+	const trimmedQuery = query.trim();
+	const debouncedQuery = useDebounce(trimmedQuery, 400);
 	const [searching, setSearching] = useState(false);
 	const [results, setResults] = useState<TrackSummary[] | null>(null);
+	const [searchNotice, setSearchNotice] = useState<string | null>(null);
 	/** 클릭한 트랙 uri — 재생 대기 중 표시. 봇이 상태를 퍼블리시하면 라이브 카드가 이을 거예요 */
 	const [playingUri, setPlayingUri] = useState<string | null>(null);
 	const playPendingRef = useRef(false);
+	const searchAbortRef = useRef<AbortController | null>(null);
+	const lastSearchedRef = useRef<string>("");
 	const { data: voiceData } = useSWR<{ voice: VoiceContext | null }>(`/api/servers/${guildId}/player/voice-context`);
 	const canControl = voiceData?.voice?.canControl ?? true;
 	const inVoice = voiceData?.voice?.inVoice ?? true;
@@ -167,39 +173,95 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 		[canControl, guildId, showToastError, toast],
 	);
 
-	const handleSearch = useCallback(
-		async (event: React.FormEvent) => {
-			event.preventDefault();
-			const trimmed = query.trim();
-			if (!trimmed || searching) return;
+	const runSearch = useCallback(
+		async (targetQuery: string, options?: { notifyOnError?: boolean }) => {
+			const trimmed = targetQuery.trim();
+			if (!trimmed || isPlayableUrl(trimmed)) return;
 
-			// URL이면 검색 없이 바로 재생 — 다시 재생 링크·유튜브 링크를 붙여넣는 가장 빠른 경로예요
-			if (isPlayableUrl(trimmed)) {
-				await playTrack(trimmed);
-				return;
-			}
-
+			searchAbortRef.current?.abort();
+			const controller = new AbortController();
+			searchAbortRef.current = controller;
+			lastSearchedRef.current = trimmed;
 			setSearching(true);
-			setResults(null);
+			setSearchNotice(null);
+
 			try {
 				const res = await fetch(`/api/servers/${guildId}/player/search`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ query: trimmed }),
+					signal: controller.signal,
 				});
 				const body = (await res.json().catch(() => null)) as { tracks?: TrackSummary[]; error?: string } | null;
+				if (controller.signal.aborted) return;
+
 				if (!res.ok) {
-					showToastError(body?.error, "검색을 처리하지 못했어요.");
+					const cleaned = playerErrorMessage(body?.error, "검색을 처리하지 못했어요.");
+					if (cleaned.includes("검색 결과가 없어요")) {
+						setResults([]);
+						return;
+					}
+					setResults(null);
+					setSearchNotice(cleaned);
+					if (options?.notifyOnError) {
+						toast.error(cleaned);
+					}
 					return;
 				}
 				setResults(body?.tracks ?? []);
-			} catch {
-				showToastError(null, "검색을 처리하지 못했어요.");
+			} catch (err) {
+				if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) return;
+				const fallback = "검색을 처리하지 못했어요.";
+				setSearchNotice(fallback);
+				if (options?.notifyOnError) {
+					showToastError(null, fallback);
+				}
 			} finally {
-				setSearching(false);
+				if (searchAbortRef.current === controller) {
+					setSearching(false);
+				}
 			}
 		},
-		[guildId, playTrack, query, searching, showToastError],
+		[guildId, showToastError, toast],
+	);
+
+	// 타이핑 시 400ms 디바운스 자동 검색 (링크 입력이거나 비어 있으면 초기화)
+	useEffect(() => {
+		if (!trimmedQuery || isPlayableUrl(trimmedQuery)) {
+			searchAbortRef.current?.abort();
+			lastSearchedRef.current = "";
+			setSearching(false);
+			setResults(null);
+			setSearchNotice(null);
+			return;
+		}
+		if (!debouncedQuery || isPlayableUrl(debouncedQuery)) return;
+		if (!inVoice || !canControl) return;
+		if (lastSearchedRef.current === debouncedQuery) return;
+
+		void runSearch(debouncedQuery, { notifyOnError: false });
+	}, [canControl, debouncedQuery, inVoice, runSearch, trimmedQuery]);
+
+	useEffect(() => {
+		return () => {
+			searchAbortRef.current?.abort();
+		};
+	}, []);
+
+	const handleSubmit = useCallback(
+		async (event: React.FormEvent) => {
+			event.preventDefault();
+			if (!trimmedQuery) return;
+
+			// URL이면 검색 없이 바로 재생 — 다시 재생 링크·유튜브 링크를 붙여넣는 가장 빠른 경로예요
+			if (isPlayableUrl(trimmedQuery)) {
+				await playTrack(trimmedQuery);
+				return;
+			}
+
+			await runSearch(trimmedQuery, { notifyOnError: true });
+		},
+		[playTrack, runSearch, trimmedQuery],
 	);
 
 	const handleHistoryPlay = useCallback(
@@ -208,6 +270,10 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 		},
 		[playTrack],
 	);
+
+	const isUrl = isPlayableUrl(trimmedQuery);
+	const isTypingDebounce = Boolean(trimmedQuery && !isUrl && inVoice && canControl && trimmedQuery !== debouncedQuery);
+	const showLoading = searching || isTypingDebounce;
 
 	return (
 		<div className="space-y-8">
@@ -222,18 +288,43 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 					<VoiceStatusBadge guildId={guildId} />
 				</div>
 
-				<form onSubmit={handleSearch} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-					<Input
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						placeholder="검색어 또는 유튜브 링크"
-						aria-label="재생할 곡 검색어"
-						maxLength={200}
-						className="min-w-0 flex-1"
-					/>
-					<Button type="submit" loading={searching || playingUri !== null} disabled={searching || playingUri !== null}>
-						{isPlayableUrl(query) ? "바로 재생" : "검색"}
-					</Button>
+				<form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+					<div className="relative min-w-0 flex-1">
+						<Search
+							size={15}
+							className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+							aria-hidden
+						/>
+						<Input
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder="곡 제목·아티스트를 입력하면 자동으로 검색돼요 (또는 유튜브 링크)"
+							aria-label="재생할 곡 검색어"
+							maxLength={200}
+							className="pl-9 pr-9"
+						/>
+						{showLoading ? (
+							<Loader2
+								size={15}
+								className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
+								aria-label="검색 중"
+							/>
+						) : query ? (
+							<button
+								type="button"
+								onClick={() => setQuery("")}
+								className="absolute right-2.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								aria-label="검색어 지우기"
+							>
+								<X size={13} aria-hidden />
+							</button>
+						) : null}
+					</div>
+					{isUrl && (
+						<Button type="submit" loading={playingUri !== null} disabled={playingUri !== null}>
+							바로 재생
+						</Button>
+					)}
 				</form>
 
 				{!inVoice && (
@@ -244,6 +335,11 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				{!canControl && (
 					<p className="rounded-card border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
 						재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.
+					</p>
+				)}
+				{searchNotice && (
+					<p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground" role="status">
+						{searchNotice}
 					</p>
 				)}
 
