@@ -35,6 +35,9 @@ const CARD_PRESETS = [
  * {유저}·{서버}·{멤버수} 변수가 치환된 템플릿 인사 메시지를 보내요. 이미지 카드 옵션을 켜면
  * data-api가 렌더한 인사 카드가 첨부돼요. 참여 알림 → 시루 인사 → 인사 카드 순서로 재생하고,
  * 카드 프리셋을 골라 바꿔 보면 꾸미기가 자유롭다는 게 바로 보여요.
+ *
+ * 본문은 높이를 고정(absolue 레이어)해 단계가 진행돼도 아래 레이아웃이 밀리지 않아요 —
+ * 등장 애니메이션도 이동 없는 페이드만으로 제한해요.
  */
 export function MemberGreetingPreview() {
 	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
@@ -61,6 +64,7 @@ export function MemberGreetingPreview() {
 		};
 	}, [inView, runId]);
 
+	/** 테스트 전송 버튼 — 실제 대시보드의 테스트 전송 기능을 딴 리플레이 */
 	const replay = () => setRunId((prev) => prev + 1);
 
 	return (
@@ -70,22 +74,16 @@ export function MemberGreetingPreview() {
 				<span className="text-xs font-semibold text-discord-text">가입-알림</span>
 				<span className="ml-auto text-2xs text-discord-text-muted">시루 · 입장 인사</span>
 			</div>
-			<div className="min-h-[290px] space-y-3 p-3.5">
+			{/* 내용이 절대 배치라 컨테이너 높이는 항상 이 고정값 — 아래 섹션이 밀리지 않아요 */}
+			<div className="relative h-[360px] overflow-hidden sm:h-[440px]">
 				<AnimatePresence mode="wait" initial={false}>
-					<m.div
-						key={runId}
-						className="space-y-3"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.2, ease: "easeOut" }}
-					>
+					<m.div key={runId} className="absolute inset-x-3.5 top-3.5 space-y-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: "easeOut" }}>
 						{phase >= 1 && (
 							// Discord 참여 시스템 메시지 — 이름은 서버 권한 컬러처럼 보이는 초록
 							<m.p
 								className="flex items-center gap-1.5 text-2xs text-discord-text-muted"
-								initial={{ opacity: 0, y: 6 }}
-								animate={{ opacity: 1, y: 0 }}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
 								transition={{ duration: 0.3, ease: "easeOut" }}
 							>
 								<CornerDownRight size={12} className="shrink-0 text-success" aria-hidden />
@@ -98,8 +96,8 @@ export function MemberGreetingPreview() {
 						{phase >= 2 && (
 							<m.div
 								className="flex gap-2.5"
-								initial={{ opacity: 0, y: 8 }}
-								animate={{ opacity: 1, y: 0 }}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
 								transition={{ duration: 0.3, ease: "easeOut" }}
 							>
 								<div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
@@ -124,9 +122,9 @@ export function MemberGreetingPreview() {
 												<m.p
 													key={preset.sub}
 													className="text-2xs font-medium text-foreground/70"
-													initial={{ opacity: 0, y: 4 }}
-													animate={{ opacity: 1, y: 0 }}
-													exit={{ opacity: 0, y: -4 }}
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
 													transition={{ duration: 0.2, ease: "easeOut" }}
 												>
 													{preset.sub}
