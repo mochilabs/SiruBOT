@@ -161,10 +161,9 @@ export default async function routes(fastify: FastifyInstance) {
 			registry.updateStatus(id, payload.status);
 
 			if (payload.status === 'ready') {
-				const allProcesses = registry.getAllProcesses();
-				const matched = allProcesses.find((p: { wsId: string; shardIds: number[] }) => p.wsId === id);
-				if (matched) {
-					notifier.shardReady(id, matched.shardIds, matched.hostname);
+				const process = registry.getProcess(id);
+				if (process) {
+					notifier.shardReady(id, process.shardIds, process.hostname);
 				}
 			}
 		}
