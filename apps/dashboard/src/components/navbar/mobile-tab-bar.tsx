@@ -46,7 +46,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	return (
 		<nav
 			aria-label="모바일 탭 바로가기"
-			className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pt-2 pb-[env(safe-area-inset-bottom)] md:hidden"
+			className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] md:hidden"
 		>
 			<div className="pointer-events-auto relative flex w-full max-w-[26rem] rounded-full border border-border-subtle bg-background/60 p-1.5 shadow-lg backdrop-blur-xl">
 				{pill && (
