@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { LicenseList } from "@/components/licenses/license-list";
@@ -15,7 +13,6 @@ export const metadata = {
 interface LicenseEntry {
   name: string;
   license: string;
-  version: string;
   source: string;
   sourceLabel: string;
   usage: string;
@@ -27,7 +24,6 @@ const bundledAssets: LicenseEntry[] = [
   {
     name: "Pretendard Variable",
     license: "SIL Open Font License 1.1",
-    version: "v1.3.9 (Pretendard Variable woff2)",
     source: "https://github.com/orioncactus/pretendard",
     sourceLabel: "orioncactus/pretendard",
     usage: "대시보드 UI 폰트 (한 · 영)",
@@ -35,7 +31,6 @@ const bundledAssets: LicenseEntry[] = [
   {
     name: "Pretendard JP Variable",
     license: "SIL Open Font License 1.1",
-    version: "v1.3.9 (woff2 · ttf)",
     source: "https://github.com/orioncactus/pretendard",
     sourceLabel: "orioncactus/pretendard",
     usage: "일본어 한자 폴백 폰트 (대시보드 폴백 · 카드 렌더 공용)",
@@ -43,7 +38,6 @@ const bundledAssets: LicenseEntry[] = [
   {
     name: "Twemoji",
     license: "CC-BY 4.0",
-    version: "Twemoji v14 아트",
     source: "https://github.com/jdecked/twemoji",
     sourceLabel: "jdecked/twemoji",
     usage: "이모지 아트 (대시보드 이모지 폴백 · 카드 렌더)",
@@ -52,7 +46,6 @@ const bundledAssets: LicenseEntry[] = [
   {
     name: "twemoji-colr",
     license: "Apache License 2.0 (+ 아트는 CC-BY 4.0)",
-    version: "v0.7.0",
     source: "https://github.com/mozilla/twemoji-colr",
     sourceLabel: "mozilla/twemoji-colr",
     usage: "Twemoji를 COLR/CPAL 컬러 폰트로 변환한 빌드 (TwemojiMozilla.ttf)",
@@ -80,7 +73,7 @@ export default function LicensesPage() {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {entry.version} · 사용처: {entry.usage}
+              사용처: {entry.usage}
             </p>
             {entry.note && (
               <p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
@@ -103,15 +96,6 @@ export default function LicensesPage() {
           summary={licenseData.groupSummary}
           total={licenseData.total}
         />
-
-        <p className="px-1 text-xs text-muted-foreground">
-          의존성 목록은 커밋된 생성 데이터예요. 패키지를 추가·제거하면{" "}
-          <code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">yarn licenses:generate</code>로 갱신해요.
-          저장소:{" "}
-          <Link href="https://github.com/mochiLabs/SiruBOT" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-text hover:underline">
-            mochiLabs/SiruBOT
-          </Link>
-        </p>
       </div>
     </Container>
   );

@@ -145,21 +145,18 @@ for (const manifestPath of collectManifestPaths()) {
     skippedSelf++;
     continue;
   }
-  const key = `${manifest.name}@${manifest.version ?? "?"}`;
+  const key = manifest.name;
   if (seen.has(key)) continue;
   const license = licenseOf(manifest);
   seen.set(key, {
     name: manifest.name,
-    version: manifest.version ?? "?",
     license,
     group: licenseGroupKey(license),
     url: urlOf(manifest),
   });
 }
 
-const entries = [...seen.values()].sort(
-  (a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version),
-);
+const entries = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
 
 /** 그룹 요약 — 큰 그룹(대부분 MIT)이 먼저 오게 정렬해요 */
 const groups = new Map();
