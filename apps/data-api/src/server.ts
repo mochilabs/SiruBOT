@@ -39,6 +39,12 @@ export async function buildServer(env: Env) {
 	if (!translationProvider.available) {
 		logger.warn('Translation provider not configured, serving raw horoscopes (translated:false)');
 	}
+	// 커스텀 명령어 초안 생성 — 같은 엔드포인트에 모델만 바꿔 써요 (미설정 시 TRANSLATION_MODEL)
+	const draftProvider = new OpenAICompatTranslationProvider(
+		env.OPENAI_COMPATIBLE_API_URL.replace(/\/+$/, ''),
+		(env.OPENAI_API_KEY ?? '').trim(),
+		env.CUSTOM_COMMAND_DRAFT_MODEL ?? env.TRANSLATION_MODEL
+	);
 
 	const fastify = Fastify({
 		logger: false,
@@ -53,6 +59,7 @@ export async function buildServer(env: Env) {
 	await auth(fastify, env.dataApiAuthKey);
 	await registerRoutes(fastify, {
 		translationProvider,
+		draftProvider,
 		lavalinkRestUrl: env.LAVALINK_REST_URL,
 		lavalinkPassword: env.LAVALINK_PASSWORD
 	});

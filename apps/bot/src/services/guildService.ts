@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Guild, Prisma } from '@sirubot/prisma';
-import { MemoryCache } from '@sirubot/utils';
+import { MemoryCache, normalizeCustomCommandPrefix } from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
@@ -275,6 +275,12 @@ export class GuildService {
 			mode: normalizeAiMode(guild.aiMode),
 			channelIds: guild.aiChannelIds
 		};
+	}
+
+	/** 커스텀 명령어 접두사 — DB에 옛/깨린 값이 있어도 안전한 기본값('!')으로 되돌려요 */
+	public async getCustomCommandPrefix(guildId: string): Promise<string> {
+		const guild = await this.getGuild(guildId);
+		return normalizeCustomCommandPrefix(guild.customCommandPrefix);
 	}
 
 	public async setAiMode(guildId: string, mode: AiMode): Promise<AiMode> {
