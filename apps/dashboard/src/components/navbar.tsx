@@ -7,14 +7,13 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
-import { LogOut, Menu, Moon, Search, Sun, User, X } from "lucide-react";
+import { LogOut, Moon, Search, Sun, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
 
 import { getNavHref, navLinks } from "./navbar/links";
-import { MobileMenu } from "./navbar/mobile-menu";
 import { MobileTabBar } from "./navbar/mobile-tab-bar";
 
 export function Navbar() {
@@ -26,9 +25,6 @@ export function Navbar() {
   const profileRef = useRef<HTMLDivElement>(null);
 
   const scrolled = useUIStore((s) => s.scrolled);
-  const mobileMenuOpen = useUIStore((s) => s.mobileMenuOpen);
-  const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
-  const toggleMobileMenu = useUIStore((s) => s.toggleMobileMenu);
   const updateScrollState = useUIStore((s) => s.updateScrollState);
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
 
@@ -93,7 +89,7 @@ export function Navbar() {
   return (
     <>
     <div
-      className={`fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled || mobileMenuOpen
+      className={`fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
           ? "bg-background/70 backdrop-blur-xl border-border-subtle shadow-sm"
           : "bg-transparent"
         }`}
@@ -145,9 +141,9 @@ export function Navbar() {
             {/* divider */}
             <div className="hidden md:block w-px h-6 bg-border"></div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons — 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
             <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 {/* 검색+테마 토글을 하나의 세그먼트 pill로 묶어요 — 공유 표면/경계로 한 덩어리,
                     CTA만 분리해 헤더에서 유일한 액센트가 되게 해요. 전부 h-11(44px) 정렬. */}
                 <div className="flex h-11 items-center overflow-hidden rounded-control bg-surface-1 shadow-control-boundary">
@@ -246,36 +242,17 @@ export function Navbar() {
                     <Button
                       variant="secondary"
                       onClick={() => signIn("discord")}
-                      className="h-11 px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text duration-base"
+                      className="h-11 px-4 sm:px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text duration-base"
                     >
                       시작하기
                     </Button>
                   </div>
                 )}
               </div>
-
-              <Button
-                variant="icon"
-                size="md"
-                className="md:hidden h-11 w-11 bg-surface-1 p-2.5"
-                onClick={toggleMobileMenu}
-                aria-label={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
-                aria-expanded={mobileMenuOpen}
-              >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </Button>
             </div>
           </div>
         </div>
       </nav>
-
-      {/* Mobile Menu */}
-      <MobileMenu
-        isOpen={mobileMenuOpen}
-        navLinks={navLinks}
-        status={status}
-        onClose={() => setMobileMenuOpen(false)}
-      />
     </div>
 
     {/* 모바일 하단 탭바 — md 이상에서 숨겨져요 */}
