@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, m, type MotionValue, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
@@ -112,30 +112,18 @@ function WordRotator() {
 	);
 }
 
-/** hero 배경 — 소프트 글로우 블룸(방사형 2겹). 마스크 없이 흐르게 번지고, y가 주어지면 스크롤 패럴랙스.
- *  R-07 사유: 저불투명도 질감으로만 쓰고 장식 강조는 하지 않아요. */
-function HeroGlow({ y }: { y?: MotionValue<number> }) {
-	return (
-		<m.div style={{ y }} className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-			<div aria-hidden className="absolute left-1/2 top-[36%] h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
-			<div aria-hidden className="absolute right-[6%] top-[62%] h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
-		</m.div>
-	);
-}
-
 export function HeroSection() {
 	const [activeSlide, setActiveSlide] = useState(0);
 	const [autoPlay, setAutoPlay] = useState(true);
 	const heroRef = useRef<HTMLElement>(null);
 
-	// 도트 패턴 스크롤 패럴랙스 — 섹션이 화면 위로 빠질 때까지 배경이 콘텐츠보다 천천히 따라와요.
-	// 성능: transform(y)만 사용해 렌더 비용을 최소화하고, reduced-motion 환경에선 정적 배경 유지.
+	// 히어로 스크롤 진행도 — 스크롤 유도 힌트의 페이드아웃/비활성에 써요.
+	// 성능: transform 기반으로 리렌더 없이 동작하고, reduced-motion 환경에선 정지 유지.
 	const shouldReduce = useReducedMotion();
 	const { scrollYProgress } = useScroll({
 		target: heroRef,
 		offset: ["start start", "end start"]
 	});
-	const glowY = useTransform(scrollYProgress, [0, 1], [0, 120]);
 
 	// 스크롤 유도 버튼 — 0~20% 구간에서 페이드아웃(useTransform, 리렌더 없음),
 	// 15%를 넘으면 visibility:hidden 토글로 버튼 클릭·포커스를 차단해요.
@@ -165,8 +153,6 @@ export function HeroSection() {
 
 	return (
 		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
-			{/* 패럴랙스는 reduced-motion 환경에선 걸지 않고 정적 배경 유지 */}
-			<HeroGlow y={shouldReduce ? undefined : glowY} />
 			<div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36">
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
