@@ -11,17 +11,12 @@ import { DashboardPreview } from "@/components/home/previews/dashboard-preview";
 import { MemberGreetingPreview } from "@/components/home/previews/member-greeting-preview";
 import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
+import { sectionVariants } from "@/components/home/section-variants";
 import { SectionLabel } from "@/components/primitives/section-label";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const secondaryLink =
 	"inline-flex h-8 pointer-coarse:min-h-11 cursor-pointer select-none items-center justify-center gap-2 self-start rounded-control border border-border-strong bg-surface-2 px-3 text-sm font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
-
-const sectionVariants = {
-	hidden: { opacity: 0, y: 24 },
-	visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-} as const;
 
 /**
  * 명령어 칩 — 살짝 아래에서 올라오며 등장해요.
@@ -66,6 +61,7 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		title: "원하는 곡을 바로 재생해요.",
 		desc: "/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.",
 		Preview: PlayerPreview,
+		secondary: { href: "#commands", label: "사용 중인 명령어 보기" },
 	},
 	{
 		key: "chat",
@@ -193,16 +189,12 @@ export function FeaturesSection() {
 										</div>
 									</div>
 								)}
-								<div className="flex flex-wrap items-center gap-2.5 pt-1">
-									<Link href="/invite" className={buttonVariants({ variant: "cta" })}>
-										시루봇 초대하기
+								{/* 초대 CTA는 티켓 한 곳만 — 블록엔 각자 정체가 있는 동작만 남겨요 */}
+								{block.secondary && (
+									<Link href={block.secondary.href} className={cn(secondaryLink, "mt-6")}>
+										{block.secondary.label}
 									</Link>
-									{block.secondary && (
-										<Link href={block.secondary.href} className={secondaryLink}>
-											{block.secondary.label}
-										</Link>
-									)}
-								</div>
+								)}
 							</div>
 							{/* 데모 */}
 							<div className={cn("min-w-0", index % 2 === 1 && "lg:order-1")}>

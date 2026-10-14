@@ -4,15 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { m } from "framer-motion";
 
+import { sectionVariants } from "@/components/home/section-variants";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const sectionVariants = {
-	hidden: { opacity: 0, y: 24 },
-	visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-} as const;
-
-/** 마지막 CTA — 푸터 앞 초대 티켓. 뒤에 겹친 두 번째 티켓과 퍼포레이션 노치로 티켓 모티프를 만들어요. */
+/** 마지막 CTA — 푸터 앞 초대 티켓. 퍼포레이션 노치로 티켓 모티프를 만들어요. */
 export function InviteTicketSection() {
 	return (
 		<section className="pb-16 sm:pb-24">
@@ -24,8 +20,6 @@ export function InviteTicketSection() {
 					viewport={{ once: true, margin: "-60px" }}
 					variants={sectionVariants}
 				>
-					{/* 뒤에 살짝 겹치는 두 번째 티켓 — depth */}
-					<div aria-hidden className="absolute inset-x-5 -bottom-4 -top-2 rounded-card bg-surface-2 -rotate-1 sm:-rotate-2" />
 					{/* 티켓 본체 */}
 					<div className="relative grid overflow-hidden rounded-card bg-surface-1 shadow-lg transition-transform duration-base hover:-rotate-[0.4deg] sm:grid-cols-[7.5rem_1fr]">
 						{/* 스텁 — 데스크톱만 */}

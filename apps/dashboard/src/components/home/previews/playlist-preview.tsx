@@ -7,6 +7,22 @@ import { cn } from "@/lib/utils";
 
 import { PLAYLIST_TRACKS } from "./tracks";
 
+/** 재생 중 이퀄라이저 — 트랩 행 표시와 부유 카드에서 같은 모티프로 써요 */
+function Equalizer() {
+	return (
+		<span className="flex shrink-0 items-end gap-0.5" aria-hidden>
+			{[8, 12, 6, 10].map((h, i) => (
+				<m.span
+					key={i}
+					className="w-0.5 rounded-full bg-primary-control"
+					animate={{ height: [h, h + 4, h] }}
+					transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
+				/>
+			))}
+		</span>
+	);
+}
+
 /** 보관함 프리뷰 — 앨범아트 스택 + 트랙 목록. 행들이 스태거로 등장해요 */
 export function PlaylistPreview() {
 	return (
@@ -49,16 +65,7 @@ export function PlaylistPreview() {
 							</div>
 							<span className="shrink-0 text-2xs text-muted-foreground">{track.artist}</span>
 							{index === 0 ? (
-								<span className="flex shrink-0 items-end gap-0.5" aria-hidden>
-									{[8, 12, 6, 10].map((h, i) => (
-										<m.span
-											key={i}
-											className="w-0.5 rounded-full bg-primary-control"
-											animate={{ height: [h, h + 4, h] }}
-											transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
-										/>
-									))}
-								</span>
+								<Equalizer />
 							) : (
 								<span className="shrink-0 text-2xs tabular-nums text-muted-foreground">{track.duration}</span>
 							)}
@@ -71,16 +78,7 @@ export function PlaylistPreview() {
 				aria-hidden
 				className="absolute bottom-0 left-2 flex w-52 -rotate-2 items-center gap-2.5 rounded-card bg-surface-1 p-3 shadow-lg sm:left-8"
 			>
-				<span className="flex shrink-0 items-end gap-0.5">
-					{[8, 12, 6, 10].map((h, i) => (
-						<m.span
-							key={i}
-							className="w-0.5 rounded-full bg-primary-control"
-							animate={{ height: [h, h + 4, h] }}
-							transition={{ duration: 1, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
-						/>
-					))}
-				</span>
+				<Equalizer />
 				<div className="min-w-0">
 					<p className="truncate text-2xs font-bold text-foreground">내 노래모음 재생 중</p>
 					<p className="text-2xs text-muted-foreground">채널에서 이어서 재생</p>

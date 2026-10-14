@@ -8,9 +8,9 @@ export default function Home() {
 		<div className="w-full relative min-h-[calc(100svh-var(--navbar-h))]">
 			<HeroSection />
 
-			<CommandListSection />
-
 			<FeaturesSection />
+
+			<CommandListSection />
 
 			<InviteTicketSection />
 		</div>

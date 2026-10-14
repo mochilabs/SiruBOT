@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { m } from "framer-motion";
+import { Gamepad2, type LucideIcon,MessageCircle, Music2, Wrench } from "lucide-react";
 
+import { sectionVariants } from "@/components/home/section-variants";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { cn } from "@/lib/utils";
 
@@ -71,17 +73,12 @@ const GAME_COMMANDS: CommandCard[] = [
 
 type CategoryKey = "music" | "life" | "utility" | "games";
 
-const CATEGORIES: Array<{ key: CategoryKey; label: string; commands: CommandCard[] }> = [
-	{ key: "music", label: "음악", commands: MUSIC_COMMANDS },
-	{ key: "life", label: "채팅·생활", commands: LIFE_COMMANDS },
-	{ key: "utility", label: "유틸리티", commands: UTILITY_COMMANDS },
-	{ key: "games", label: "게임", commands: GAME_COMMANDS }
+const CATEGORIES: Array<{ key: CategoryKey; label: string; icon: LucideIcon; commands: CommandCard[] }> = [
+	{ key: "music", label: "음악", icon: Music2, commands: MUSIC_COMMANDS },
+	{ key: "life", label: "채팅·생활", icon: MessageCircle, commands: LIFE_COMMANDS },
+	{ key: "utility", label: "유틸리티", icon: Wrench, commands: UTILITY_COMMANDS },
+	{ key: "games", label: "게임", icon: Gamepad2, commands: GAME_COMMANDS }
 ];
-
-const sectionVariants = {
-	hidden: { opacity: 0, y: 24 },
-	visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
-} as const;
 
 export function CommandListSection() {
 	const [activeCategory, setActiveCategory] = useState<CategoryKey>("music");
@@ -89,7 +86,7 @@ export function CommandListSection() {
 	const active = CATEGORIES.find((category) => category.key === activeCategory) ?? CATEGORIES[0];
 
 	return (
-		<section className="py-14 sm:py-20 lg:py-24">
+		<section id="commands" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
 				<m.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-80px" }} variants={sectionVariants} className="max-w-2xl space-y-3">
 					<SectionLabel as="p">슬래시 커맨드</SectionLabel>
@@ -112,10 +109,11 @@ export function CommandListSection() {
 								aria-selected={isActive}
 								onClick={() => setActiveCategory(category.key)}
 								className={cn(
-									"shrink-0 cursor-pointer rounded-control px-3 py-2 text-sm font-bold transition-colors duration-fast",
+									"flex shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-3 py-2 text-sm font-bold transition-colors duration-fast",
 									isActive ? "bg-primary/10 text-primary-text" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
 								)}
 							>
+								<category.icon size={14} className="shrink-0 opacity-60" aria-hidden />
 								{category.label}
 							</button>
 						);
@@ -127,10 +125,10 @@ export function CommandListSection() {
 				    자연 높이로 흐르게 둬요 */}
 				<div role="tabpanel" aria-label={active.label} className="grid grid-cols-1 gap-px rounded-card border border-border-subtle bg-border-subtle sm:grid-cols-2">
 					{active.commands.map((command) => (
-						<div key={command.cmd} className="flex flex-col gap-1 bg-surface-2 px-3.5 py-3 transition-colors hover:bg-surface-1">
+						<div key={command.cmd} className="flex flex-col gap-1 bg-surface-2 px-3.5 py-3.5 transition-colors hover:bg-surface-1">
 							{/* 명령어 텍스트는 code가 아닌 Pretendard 그대로 — 한글이 mono 스택으로 폴백하지 않게 해요 */}
-							<p className="text-sm font-bold text-primary-text">{command.cmd}</p>
-							<p className="text-xs font-medium leading-relaxed text-muted-foreground">{command.desc}</p>
+							<p className="text-base font-bold text-primary-text sm:text-lg">{command.cmd}</p>
+							<p className="text-xs font-medium leading-relaxed text-muted-foreground sm:text-sm">{command.desc}</p>
 						</div>
 					))}
 				</div>
