@@ -3,10 +3,11 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
-import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, UserPlus } from "lucide-react";
+import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, Speech, UserPlus } from "lucide-react";
 
 import { AiChatPreview } from "@/components/home/previews/ai-chat-preview";
 import { BotProfilePreview } from "@/components/home/previews/bot-profile-preview";
+import { ChatTtsPreview } from "@/components/home/previews/chat-tts-preview";
 import { DashboardPreview } from "@/components/home/previews/dashboard-preview";
 import { MemberGreetingPreview } from "@/components/home/previews/member-greeting-preview";
 import { MixerPreview } from "@/components/home/previews/mixer-preview";
@@ -70,6 +71,14 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		title: "광고는 걷어내고, 곡은 끊기지 않게.",
 		desc: "곡과 곡 사이, 광고 구간, 소리 자체까지 재생의 모든 디테일을 제어해요.",
 		Preview: MixerPreview,
+	},
+	{
+		key: "chat-tts",
+		icon: Speech,
+		label: "채팅 TTS",
+		title: "채팅이 그대로 목소리가 돼요.",
+		desc: "음성 채널의 채팅을 시루가 목소리로 읽어줘요. 노래를 재생하면서 함께 켜둘 수 있어요. 곧 만나요.",
+		Preview: ChatTtsPreview,
 	},
 	{
 		key: "chat",
