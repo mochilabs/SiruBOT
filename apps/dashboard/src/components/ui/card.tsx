@@ -4,9 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-	// 구분감 두 겹: border-subtle 미세 경계선 + elevation(다크에서는 강한 --elev-1). 라이트는
-	// 그림자만으로도 충분히 떠 보여요 — 다크에서 검은 그림자는 배경에 파묻히기 때문이에요
-	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border border-border-subtle bg-card text-sm text-card-foreground shadow-sm",
+	// 보더리스 규칙 — 서피스 대비 + elevation(다크에서는 강한 --elev-1)만으로 카드를 띄워요.
+	// 아웃라인 대신 그림자가 구분감을 만들고, 라이트는 그림자만으로도 충분히 떠 보여요
+	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card text-sm text-card-foreground shadow-sm",
 	{
 		variants: {
 			variant: {

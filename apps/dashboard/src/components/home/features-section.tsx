@@ -418,7 +418,7 @@ export function FeaturesSection() {
 								))}
 							</div>
 						</div>
-					<div className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border-subtle bg-discord-embed">
+					<div className="flex min-w-0 flex-col overflow-hidden rounded-card bg-discord-embed">
 						<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-2.5">
 							<Bot size={14} className="text-discord-text-muted" aria-hidden />
 							<span className="text-xs font-semibold text-discord-text">ai-라운지</span>
@@ -466,7 +466,7 @@ export function FeaturesSection() {
 							</div>
 						</div>
 					</div>
-					<div className="flex flex-col gap-3 rounded-card border border-border-subtle bg-discord-embed p-3 sm:p-4">
+					<div className="flex flex-col gap-3 rounded-card bg-discord-embed p-3 sm:p-4">
 						{/* controllerView 본문 — Section(텍스트 + 우측 썸네일) 구조 그대로 */}
 						<div className="flex gap-3">
 							<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
@@ -534,7 +534,7 @@ export function FeaturesSection() {
 					</p>
 
 					{/* 플레이리스트 카드 — 앨범아트 스택 + 트랙 리스트 */}
-					<div className="flex-1 space-y-3 rounded-card border border-border-subtle bg-surface-2 p-3">
+					<div className="flex-1 space-y-3 rounded-card bg-surface-2 p-3">
 						<div className="flex items-center gap-3 pb-3">
 							{/* 앨범아트 2×2 스택 */}
 							<div className="grid h-14 w-14 shrink-0 grid-cols-2 overflow-hidden rounded-md border border-border">
@@ -633,7 +633,7 @@ export function FeaturesSection() {
 									</button>
 								))}
 							</div>
-							<div className="relative min-w-0 flex-1 overflow-hidden rounded-control border border-border-subtle bg-surface-2 p-3">
+							<div className="relative min-w-0 flex-1 overflow-hidden rounded-control bg-surface-2 p-3">
 								<AnimatePresence mode="popLayout" initial={false}>
 									<m.div
 										key={dashboardSettingSlides[activeSettingSlide].label}

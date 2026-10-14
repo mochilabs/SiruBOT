@@ -498,7 +498,7 @@ function GreetingSection({
           </div>
         )}
 
-        <div className="space-y-2 rounded-card border border-border-subtle bg-surface-2 p-4">
+        <div className="space-y-2 rounded-card bg-surface-2 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"

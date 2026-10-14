@@ -63,7 +63,7 @@ function TopTrackList({ tracks }: { tracks: StatsServerStatsResponse["topTracks"
       {tracks.map((track, index) => (
         <li
           key={track.trackId}
-          className="flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2"
+          className="flex items-center gap-3 rounded-card bg-surface-2 px-3 py-2"
           style={{
             opacity: inView ? 1 : 0,
             transform: inView ? "none" : "translateY(16px)",
@@ -113,7 +113,7 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
       {requesters.map((requester, index) => (
         <li
           key={requester.userId}
-          className="flex items-center gap-3 rounded-card border border-border-subtle bg-surface-2 px-3 py-2"
+          className="flex items-center gap-3 rounded-card bg-surface-2 px-3 py-2"
           style={{
             opacity: inView ? 1 : 0,
             transform: inView ? "none" : "translateY(16px)",
