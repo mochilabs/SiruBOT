@@ -1,18 +1,17 @@
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { m, useReducedMotion, useScroll, useTransform } from "framer-motion";
 
 import { SectionLabel } from "@/components/primitives/section-label";
 import { Card } from "@/components/ui/card";
 
 /**
- * 명령어 카드 월 — 실제 슬래시 커맨드(이름/설명)를 카드로 채운 세로 열이 스크롤에 맞춰
- * 흘러내려요. 열마다 속도가 달라 카드가 끝없이 쏟아지는 것처럼 보이고, 창(window) +
- * 마스크로 위아래가 잘려 무한 피드 느낌을 줘요 (R-19: 명령어 문화를 볼륨으로 전달).
- * 봇 소스의 실제 name/description만 쓰고, reduced-motion에서는 창을 풀고 정적으로
- * 전부 보여줘요 (MotionConfig가 transform 애니메이션을 줄이지만, 창에 잘리는 콘텐츠는
- * 별도로 전부 노출해야 하기 때문이에요).
+ * 명령어 카드 월 — 실제 슬래시 커맨드(이름/설명)를 카드로 채운 세로 3열을, 긴 스크롤
+ * 영역 위에 스티키로 고정해서 흘려보여요. 열의 이동 거리를(창−열 높이) 실측해 딱 한 번
+ * 끝까지 내려가므로, 카드 전체를 다 보고 나야 다음 Features 섹션으로 넘어가요
+ * (R-19: 명령어 문화를 볼륨으로 전달). 봇 소스의 실제 name/description만 쓰고,
+ * reduced-motion에서는 긴 영역·고정을 풀어 카드 전체를 정적으로 보여줘요.
  */
 
 interface CommandCard {
@@ -81,14 +80,39 @@ function CommandTile({ command }: { command: CommandCard }) {
 }
 
 export function CommandWallSection() {
-	const wallRef = useRef<HTMLDivElement>(null);
+	const scrollAreaRef = useRef<HTMLDivElement>(null);
+	const windowRef = useRef<HTMLDivElement>(null);
+	const columnRefs = useRef<Array<HTMLDivElement | null>>([]);
 	const shouldReduce = useReducedMotion();
-	const { scrollYProgress } = useScroll({ target: wallRef, offset: ["start end", "end start"] });
-	// 훅은 조건/반복 없이 고정 개수로 호출해요 (rules-of-hooks).
-	// 시작 오프셋을 음수로 잡아야 열이 창 위를 항상 덮어요 — 그래야 아래로 흘러내려도 빈 곳이 없어요.
-	const y1 = useTransform(scrollYProgress, [0, 1], ["-48%", "0%"]);
-	const y2 = useTransform(scrollYProgress, [0, 1], ["-40%", "0%"]);
-	const y3 = useTransform(scrollYProgress, [0, 1], ["-44%", "0%"]);
+
+	// 핀 고정 동안의 진행도 — start start(고정 시작) ~ end end(고정 해제)
+	const { scrollYProgress } = useScroll({ target: scrollAreaRef, offset: ["start start", "end end"] });
+
+	// 이동 거리 실측: 창 높이 − 열 높이(음수). 열 전체가 창을 타고 끝까지 내려가
+	// 카드 한 장이 빠짐없이 지나가고, 빈 공간이 생기지 않아요.
+	const [travel, setTravel] = useState<[number, number, number]>([0, 0, 0]);
+	useLayoutEffect(() => {
+		const measure = () => {
+			const windowBox = windowRef.current;
+			if (!windowBox) return;
+			const windowHeight = windowBox.clientHeight;
+			setTravel((previous) => {
+				const next = columnRefs.current.map((column) =>
+					column ? Math.min(0, windowHeight - column.clientHeight) : 0
+				) as [number, number, number];
+				return previous[0] === next[0] && previous[1] === next[1] && previous[2] === next[2]
+					? previous
+					: next;
+			});
+		};
+		measure();
+		window.addEventListener("resize", measure);
+		return () => window.removeEventListener("resize", measure);
+	}, []);
+
+	const y1 = useTransform(scrollYProgress, [0, 1], [travel[0], 0]);
+	const y2 = useTransform(scrollYProgress, [0, 1], [travel[1], 0]);
+	const y3 = useTransform(scrollYProgress, [0, 1], [travel[2], 0]);
 	const columnY = [y1, y2, y3];
 
 	return (
@@ -98,30 +122,36 @@ export function CommandWallSection() {
 				명령어는 많은데, 배울 건 없어요.
 			</h2>
 			<p className="mt-3 max-w-xl text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-				음악·AI 채팅·게임·유틸까지 — 필요한 순간에 골라 쓰면 끝이에요. 스크롤할수록 계속 쏟아져요.
+				음악·AI 채팅·게임·유틸까지 — 필요한 순간에 골라 쓰면 끝이에요.
 			</p>
 
-			{/* 창 + 마스크: 열이 창을 타고 흘러내려 카드가 끝없이 이어지는 것처럼 보여요 */}
-			<div
-				ref={wallRef}
-				className={
-					shouldReduce
-						? "relative mt-10"
-						: "relative mt-10 h-[58vh] min-h-[420px] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_5%,black_95%,transparent)]"
-				}
-			>
-				<div className="flex items-start gap-3 sm:gap-4">
-					{COLUMNS.map((column, index) => (
-						<m.div
-							key={index}
-							style={shouldReduce ? undefined : { y: columnY[index] }}
-							className={`flex-1 space-y-3 sm:space-y-4 ${index === 2 ? "hidden lg:block" : ""}`}
-						>
-							{column.map((command) => (
-								<CommandTile key={command.cmd} command={command} />
-							))}
-						</m.div>
-					))}
+			{/* 긴 스크롤 영역 + 스티키 창: 카드 열이 끝까지 흘러가야 Features 섹션으로 넘어가요.
+			    h-[260vh]는 리터럴로 — 템플릿 문자열은 Tailwind가 스캔하지 못해요 */}
+			<div ref={scrollAreaRef} className={shouldReduce ? "relative mt-10" : "relative mt-10 h-[260vh]"}>
+				<div
+					ref={windowRef}
+					className={
+						shouldReduce
+							? "relative"
+							: "sticky top-16 h-[calc(100vh-4rem)] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_4%,black_96%,transparent)]"
+					}
+				>
+					<div className="flex items-start gap-3 sm:gap-4">
+						{COLUMNS.map((column, index) => (
+							<m.div
+								key={index}
+								ref={(element) => {
+									columnRefs.current[index] = element;
+								}}
+								style={shouldReduce ? undefined : { y: columnY[index] }}
+								className={`flex-1 space-y-3 sm:space-y-4 ${index === 2 ? "hidden lg:block" : ""}`}
+							>
+								{column.map((command) => (
+									<CommandTile key={command.cmd} command={command} />
+								))}
+							</m.div>
+						))}
+					</div>
 				</div>
 			</div>
 		</section>
