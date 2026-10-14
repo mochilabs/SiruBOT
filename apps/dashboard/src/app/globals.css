@@ -389,6 +389,83 @@
 	}
 }
 
+/* 팝업 등장 모션 — 밋밋한 on/off 대신 살짝 오버슈트하는 스프링 느낌.
+   Base UI 팝업의 data-open(열림 상태)에만 붙어 열릴 때만 재생해요. */
+@keyframes pop-in {
+	from {
+		opacity: 0;
+		transform: translateY(-8px) scale(0.97);
+	}
+
+	60% {
+		opacity: 1;
+		transform: translateY(1px) scale(1.004);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.pop-in[data-open] {
+	animation: pop-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 드롭다운 행 스태거 — 팝업이 열리면 행이 위에서 순차적으로 떠올라요.
+   fill을 backwards만 쓰는 이유: 애니메이션이 끝난 뒤에도 transform을 계속
+   지배하지 않게(호버 transform 보존), 재생 전에만 시작 상태를 잡아줘요. */
+@keyframes stagger-rise {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+[data-stagger] > * {
+	animation: stagger-rise 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+[data-stagger] > *:nth-child(1) {
+	animation-delay: 30ms;
+}
+
+[data-stagger] > *:nth-child(2) {
+	animation-delay: 58ms;
+}
+
+[data-stagger] > *:nth-child(3) {
+	animation-delay: 86ms;
+}
+
+[data-stagger] > *:nth-child(4) {
+	animation-delay: 114ms;
+}
+
+[data-stagger] > *:nth-child(5) {
+	animation-delay: 142ms;
+}
+
+[data-stagger] > *:nth-child(6) {
+	animation-delay: 170ms;
+}
+
+[data-stagger] > *:nth-child(n + 7) {
+	animation-delay: 198ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pop-in[data-open],
+	[data-stagger] > * {
+		animation: none;
+	}
+}
+
 /* 수평 스크롤 컨테이너용 스크롤바 숨김 — 탭 행의 스크롤바 인디케이터가 아래 border와 겹치지 않게 해요 */
 @utility scrollbar-none {
 	scrollbar-width: none;

@@ -39,8 +39,13 @@ const linkGroups = [
 
 export function Footer() {
 	return (
-		<footer className="bg-surface-1">
-			<div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+		<footer className="relative overflow-hidden bg-surface-1">
+			{/* 기하학적 배경 도형 — 브랜드 모티프(모서리 둥근 사각형·반원)를 크게 흘려 보내요 (모바일 생략) */}
+			<div aria-hidden className="pointer-events-none absolute inset-0">
+				<div className="absolute -top-20 right-[6%] hidden h-64 w-64 rotate-12 rounded-[3rem] border border-primary/15 md:block" />
+				<div className="absolute -left-16 bottom-4 hidden h-44 w-44 rounded-full bg-primary/8 md:block" />
+			</div>
+			<div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 				<div className="grid gap-10 md:grid-cols-5 md:gap-8">
 					{/* 브랜드 */}
 					<div className="space-y-3 md:col-span-2">
@@ -84,7 +89,23 @@ export function Footer() {
 					</div>
 				</div>
 
-				<div className="mt-12 flex flex-col gap-2 pt-6 sm:flex-row sm:items-center sm:justify-between">
+				{/* 형태 밴드 — 원·정사각형·반원이 리듬적으로 이어지는 기하학적 구분선 (가장자리는 마스크로 사라져요).
+			    색은 primary(액센트)와 foreground(중성)만 써요 — secondary는 서피스 토큰이라 배경에 묻혀요 */}
+			<div className="mt-10 h-10 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+				<svg aria-hidden className="h-full w-full">
+					<defs>
+						<pattern id="footer-shape-band" width="104" height="40" patternUnits="userSpaceOnUse">
+							<circle cx="12" cy="20" r="6" className="fill-primary/25" />
+							<rect x="34" y="13" width="14" height="14" rx="4" className="fill-foreground/12" />
+							<path d="M 64 27 a 8 8 0 0 1 16 0 Z" className="fill-primary/20" />
+							<circle cx="94" cy="20" r="3.5" className="fill-foreground/20" />
+						</pattern>
+					</defs>
+					<rect width="100%" height="100%" fill="url(#footer-shape-band)" />
+				</svg>
+			</div>
+
+			<div className="mt-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<p className="text-xs font-medium text-muted-foreground">© 2026 mochiLabs. 시루봇은 Discord와 무관한 커뮤니티 프로젝트예요.</p>
 					{/* 실측 불가한 "28K+" 통계 제거(R-17) — 수치 대신 제공 범위를 안내 */}
 					<p className="text-xs font-medium text-muted-foreground">음악·AI 채팅·서버 관리를 한 곳에서 제공해요</p>

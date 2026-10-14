@@ -200,7 +200,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={4} className="z-50">
 					<SelectPrimitive.Popup
 						id={listboxId}
-						className="max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-hidden rounded-menu border-0 bg-popover text-popover-foreground shadow-2xl duration-fast data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+						className="pop-in max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-hidden rounded-menu border-0 bg-popover text-popover-foreground shadow-2xl data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
 					>
 						{searchable && (
 							<div className="border-b border-border p-2">
