@@ -95,9 +95,9 @@ export function Navbar() {
         }`}
     >
       <nav className="h-16 w-full shrink-0">
-        <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex shrink-0 items-center gap-2 group">
             <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0">
               <Image
                 src="/images/profile.png"
@@ -109,9 +109,9 @@ export function Navbar() {
             <span className="text-2xl font-black tracking-tighter text-foreground">시루봇</span>
           </Link>
 
-          <div className="flex items-center gap-2 lg:gap-4">
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-1 lg:gap-2 relative">
+          <div className="flex flex-1 items-center gap-2 lg:gap-4">
+            {/* Desktop Menu — 브랜드 옆에 붙여 왼쪽에 모아요 (가운데는 여백, 액션은 우측 밀착) */}
+            <div className="relative ml-6 hidden md:flex items-center gap-1 lg:ml-8 lg:gap-2">
               {indicator && (
                 // transform x로만 이동해요 — left/width를 애니메이션하면 backdrop-blur 레이어가
                 // 매 프레임 재계산되며 텍스트가 세로로 겹쳐 보이는 잔상이 생겨요
@@ -131,7 +131,7 @@ export function Navbar() {
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link, status)}
-                  className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
+                  className={`relative px-3.5 py-2 rounded-menu text-sm font-medium transition-colors duration-fast ${pathname === link.href
                       ? "text-primary-text"
                       : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
                     }`}
@@ -141,11 +141,8 @@ export function Navbar() {
               ))}
             </div>
 
-            {/* divider */}
-            <div className="hidden md:block w-px h-6 bg-border"></div>
-
-            {/* Action Buttons — 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
-            <div className="flex items-center gap-2">
+            {/* Action Buttons — 우측 끝에 밀착. 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
+            <div className="ml-auto flex items-center gap-2">
               <div className="flex items-center gap-2">
                 {/* 검색+테마 토글을 하나의 세그먼트 pill로 묶어요 — 공유 표면/경계로 한 덩어리,
                     CTA만 분리해 헤더에서 유일한 액센트가 되게 해요. 전부 h-11(44px) 정렬. */}
