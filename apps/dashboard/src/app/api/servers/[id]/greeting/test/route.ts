@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
-import { forwardDataApiPost } from "@/lib/data-api";
+import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import { zodError } from "@/lib/schemas";
 
@@ -37,10 +37,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 			userId: authz.userId,
 		});
 		if (!result.ok) {
-			const status = result.status < 500 ? result.status : 502;
-			const fallback =
-				result.status < 500 ? "테스트 전송 요청이 거부됐어요." : "봇에 테스트 전송을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.";
-			return NextResponse.json({ error: result.message ?? fallback }, { status });
+			return dataApiFailResponse(
+				result,
+				result.status < 500
+					? "테스트 전송 요청이 거부됐어요."
+					: "봇에 테스트 전송을 전달하지 못했어요. 잠시 후 다시 시도해 주세요.",
+			);
 		}
 
 		const requestId = result.data?.requestId;

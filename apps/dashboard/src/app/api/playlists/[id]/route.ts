@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { db } from "@/lib/db";
-import { MAX_PLAYLIST_DESCRIPTION_LENGTH } from "@/lib/playlist-constants";
+import {
+  FAVORITES_PLAYLIST_NAME,
+  MAX_PLAYLIST_DESCRIPTION_LENGTH,
+} from "@/lib/playlist-constants";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { zodError } from "@/lib/schemas";
 
 const updatePlaylistSchema = z.object({
   name: z
@@ -27,15 +31,12 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   try {
     const { id } = await params;
-    const userId = session.user.id;
+    const userId = authz.userId;
 
     const playlist = await db.playlist.findFirst({
       where: { id, userId },
@@ -81,14 +82,11 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const { id } = await params;
-  const userId = session.user.id;
+  const userId = authz.userId;
 
   const limited = await guardRateLimit(
     rateKey("playlist-patch", userId, id),
@@ -108,7 +106,7 @@ export async function PATCH(
       );
     }
 
-    if (playlist.name === "즐겨찾기") {
+    if (playlist.name === FAVORITES_PLAYLIST_NAME) {
       return NextResponse.json(
         {
           error: "기본 제공되는 '즐겨찾기' 플레이리스트는 수정할 수 없어요.",
@@ -121,9 +119,8 @@ export async function PATCH(
       await request.json().catch(() => null),
     );
     if (!parsed.success) {
-      const issue = parsed.error.issues[0];
       return NextResponse.json(
-        { error: issue?.message ?? "요청 형식이 올바르지 않아요." },
+        { error: zodError(parsed.error) },
         { status: 400 },
       );
     }
@@ -131,7 +128,7 @@ export async function PATCH(
     const name = parsed.data.name;
     const description = parsed.data.description;
 
-    if (name === "즐겨찾기") {
+    if (name === FAVORITES_PLAYLIST_NAME) {
       return NextResponse.json(
         { error: '"즐겨찾기"라는 이름의 플레이리스트는 사용할 수 없어요.' },
         { status: 400 },
@@ -170,14 +167,11 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const { id } = await params;
-  const userId = session.user.id;
+  const userId = authz.userId;
 
   const limited = await guardRateLimit(
     rateKey("playlist-delete", userId, id),
@@ -197,7 +191,7 @@ export async function DELETE(
       );
     }
 
-    if (playlist.name === "즐겨찾기") {
+    if (playlist.name === FAVORITES_PLAYLIST_NAME) {
       return NextResponse.json(
         {
           error: "기본 제공되는 '즐겨찾기' 플레이리스트는 삭제할 수 없어요.",

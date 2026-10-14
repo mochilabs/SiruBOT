@@ -15,7 +15,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDuration } from "@/hooks/use-playlists";
+import { formatDuration } from "@/lib/format";
+import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist, Track } from "@/types/playlist";
 
 interface PlaylistDetailProps {
@@ -74,7 +75,7 @@ export function PlaylistDetail({
 					<div className="flex-1">
 						<div className="flex items-center gap-3">
 							<h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-								{activePlaylist.name === "즐겨찾기" ? (
+								{activePlaylist.name === FAVORITES_PLAYLIST_NAME ? (
 									<Heart size={24} className="text-primary-text fill-primary-control shrink-0" />
 								) : (
 									<Music size={24} className="text-primary-text shrink-0" />
@@ -101,7 +102,7 @@ export function PlaylistDetail({
 						</div>
 					</div>
 					<div className="shrink-0 flex items-center justify-end w-full md:w-auto gap-2 mt-2 md:mt-0">
-						{activePlaylist.name !== "즐겨찾기" && (
+						{activePlaylist.name !== FAVORITES_PLAYLIST_NAME && (
 							<DropdownMenu>
 								<DropdownMenuTrigger
 									render={

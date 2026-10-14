@@ -225,30 +225,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return;
 		}
 
-		const createdPlayer = await this.container.audio.createPlayer({
-			guildId: lavalinkPlayer.guildId,
-			voiceChannelId: savedPlayer.voiceChannelId,
-			textChannelId: savedPlayer.textChannelId,
-			selfDeaf: savedPlayer.options.selfDeaf,
-			selfMute: savedPlayer.options.selfMute,
-
-			node: node.id,
+		const createdPlayer = await this.recreateSavedPlayer(node, lavalinkPlayer.guildId, savedPlayer, {
 			volume: this.container.audio.options.playerOptions?.volumeDecrementer
 				? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
 				: lavalinkPlayer.volume,
-
-			// volume은 filters가 아니라 playerOptions로 보낸다(부분 filters op는 서버의 필터
-			// 상태 전체를 덮어써 mixer 플러그인 키를 지운다). 이전 세션의 true 값도 무시한다.
-			applyVolumeAsFilter: false,
-			instaUpdateFiltersFix: savedPlayer.options.instaUpdateFiltersFix,
-			vcRegion: savedPlayer.options.vcRegion
+			restoreFilters: true,
+			silentSync: true
 		});
-
-		await this.restoreControllerRef(createdPlayer, savedPlayer.textChannelId, savedPlayer.messageId, `guild ${lavalinkPlayer.guildId}`);
-
-		await createdPlayer.connect();
-		createdPlayer.filterManager.data = savedPlayer.filters;
-		await createdPlayer.queue.utils.sync(true, false).catch(this.logger.error.bind(this));
 
 		if (lavalinkPlayer.track)
 			createdPlayer.queue.current = this.container.audio.utils.buildTrack(
@@ -265,6 +248,47 @@ export class NodeHandler extends BaseLavalinkHandler {
 		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
 		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
+	}
+
+	/**
+	 * 저장된 플레이어 기록으로 클라이언트 플레이어를 재생성하고 컨트롤러 참조·음성 연결·큐를 복원한다.
+	 * session resume(resumeSinglePlayer)과 fresh 복구(restoreFreshPlayer)가 공유한다.
+	 * - volume: resume만 복원된 서버 볼륨을 넘긴다 (fresh는 기본 볼륨으로 시작).
+	 * - restoreFilters: resume은 서버 필터가 살아 있으므로 이전 상태를 이어붙인다.
+	 * - silentSync: resume은 큐 sync 실패를 로그로 삼키고 이어서 current를 복원한다.
+	 *   fresh는 실패가 상위로 전파되어 저장 기록을 다음 재시작까지 남긴다.
+	 */
+	private async recreateSavedPlayer(
+		node: LavalinkNode,
+		guildId: string,
+		saved: SavedPlayer,
+		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean } = {}
+	): Promise<CustomPlayer> {
+		const createdPlayer = await this.container.audio.createPlayer({
+			guildId,
+			voiceChannelId: saved.voiceChannelId,
+			textChannelId: saved.textChannelId,
+			selfDeaf: saved.options.selfDeaf,
+			selfMute: saved.options.selfMute,
+
+			node: node.id,
+			...(options.volume !== undefined ? { volume: options.volume } : {}),
+
+			// volume은 filters가 아니라 playerOptions로 보낸다(부분 filters op는 서버의 필터
+			// 상태 전체를 덮어써 mixer 플러그인 키를 지운다). 이전 세션의 true 값도 무시한다.
+			applyVolumeAsFilter: false,
+			instaUpdateFiltersFix: saved.options.instaUpdateFiltersFix,
+			vcRegion: saved.options.vcRegion
+		});
+
+		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId}`);
+
+		await createdPlayer.connect();
+		if (options.restoreFilters) createdPlayer.filterManager.data = saved.filters;
+		const sync = createdPlayer.queue.utils.sync(true, false);
+		await (options.silentSync ? sync.catch(this.logger.error.bind(this)) : sync);
+
+		return createdPlayer;
 	}
 
 	/** 이전 세션의 컨트롤러 메시지(채널+메시지 id)를 다시 붙인다 — 실패해도 다음 trackStart가 새 메시지를 보낸다. */
@@ -400,26 +424,12 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	/** fresh 세션에서 단일 플레이어를 재구성하고 재생을 재개한다. */
 	private async restoreFreshPlayer(node: LavalinkNode, guildId: string, saved: SavedPlayer): Promise<void> {
-		const createdPlayer = await this.container.audio.createPlayer({
-			guildId,
-			voiceChannelId: saved.voiceChannelId,
-			textChannelId: saved.textChannelId,
-			selfDeaf: saved.options.selfDeaf,
-			selfMute: saved.options.selfMute,
-			node: node.id,
-			applyVolumeAsFilter: false,
-			instaUpdateFiltersFix: saved.options.instaUpdateFiltersFix,
-			vcRegion: saved.options.vcRegion
-		});
-
-		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId} (fresh)`);
-		await createdPlayer.connect();
+		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved);
 
 		// 새 세션에는 이전 필터/예열 슬롯이 없다 — 다음 play에서 다시 prime 하도록 표시한다.
 		this.container.mixerService.markFiltersStale(guildId);
 
-		// 큐(current/대기열/이전곡)를 Redis 큐 저장소에서 되살린다.
-		await createdPlayer.queue.utils.sync(true, false);
+		// 큐(current/대기열/이전곡)은 recreateSavedPlayer가 Redis 큐 저장소에서 되살렸다.
 
 		if (!createdPlayer.queue.current) {
 			// 복구할 재생 상태가 없음 → 기록과 컨트롤러를 정리한다.

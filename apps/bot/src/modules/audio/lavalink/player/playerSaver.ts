@@ -1,110 +1,37 @@
-import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
-import { MemoryCache } from '@sirubot/utils';
-import { syncPendingWrites } from '../pendingWriteSync.ts';
-import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
-import { ILogObj, Logger } from 'tslog';
+import { PendingWriteStore } from '../pendingWriteStore.ts';
 import { CustomPlayer, CustomPlayerJson } from './customPlayer.ts';
 
-export class CachedPlayerSaver {
-	private cache: MemoryCache<string, string>;
-	private isRedisConnected = true;
-	private pendingWrites: Map<string, string | null> = new Map();
-	private logger: Logger<ILogObj>;
-
-	constructor(private readonly redis: RedisClientType) {
-		this.cache = new MemoryCache<string, string>({
+export class CachedPlayerSaver extends PendingWriteStore {
+	constructor(redis: RedisClientType) {
+		super(redis, 'playerSaver', {
 			ttl: 30 * 60 * 1000, // 30분
 			maxSize: 500
 		});
-
-		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerSaver' });
 	}
 
-	private getKey(guildId: string): string {
+	protected getKey(guildId: string): string {
 		return `lavalink/player/${guildId}`;
 	}
 
-	/** Redis 키 TTL — 플레이어가 파괴되지 않은 채 남은 키(크래시 잔재)가 영구 누수되지 않도록 한다. */
-	private static readonly REDIS_TTL_SECONDS = 7 * 24 * 60 * 60;
-
 	public async set(player: CustomPlayer): Promise<void> {
-		const key = this.getKey(player.guildId);
-		const stringValue = this.stringify(player);
-
 		this.logger.trace(`Setting player for guild ${player.guildId}`);
-
-		this.cache.set(key, stringValue);
-
-		try {
-			if (this.isRedisConnected) {
-				await this.redis.set(key, stringValue, { EX: CachedPlayerSaver.REDIS_TTL_SECONDS });
-				// 직접 쓰기 성공 시 낡은 pending 값은 버린다 — 다음 재연결 sync가 과거 값을 되살리는 것을 막는다.
-				this.pendingWrites.delete(key);
-				this.logger.trace(`Successfully set in Redis for guild ${player.guildId}`);
-			} else {
-				this.pendingWrites.set(key, stringValue);
-				this.logger.trace(`Added to pending writes for guild ${player.guildId}`);
-			}
-		} catch (error) {
-			this.logger.warn(`Redis error, added to pending writes: ${error}`);
-			this.isRedisConnected = false;
-			this.pendingWrites.set(key, stringValue);
-		}
+		await this.writeRaw(player.guildId, this.stringify(player));
 	}
 
 	/** 저장 시각(savedAt)은 재시작 복구의 신선도 판별에 쓰인다(구버전 잔재에는 없을 수 있다). */
 	public async get(guildId: string): Promise<(Omit<CustomPlayerJson, 'queue'> & { savedAt?: number }) | null> {
-		const key = this.getKey(guildId);
-
-		try {
-			if (this.isRedisConnected) {
-				const playerData = await this.redis.get(key);
-				if (playerData !== null) {
-					this.cache.set(key, playerData);
-					this.logger.trace(`Retrieved from Redis for guild ${guildId}`);
-					return JSON.parse(playerData);
-				}
-			}
-		} catch (error) {
-			this.logger.warn(`Redis error, falling back to cache: ${error}`);
-			this.isRedisConnected = false;
+		const raw = await this.getRaw(guildId);
+		if (raw === null) {
+			this.logger.trace(`No data found for guild ${guildId}`);
+			return null;
 		}
-
-		const cachedData = this.cache.get(key);
-		if (cachedData) {
-			this.logger.trace(`Retrieved from cache for guild ${guildId}`);
-			return JSON.parse(cachedData);
-		}
-
-		this.logger.trace(`No data found for guild ${guildId}`);
-		return null;
+		return JSON.parse(raw);
 	}
 
 	public async delete(guildId: string): Promise<void> {
-		const key = this.getKey(guildId);
-
 		this.logger.trace(`Deleting player for guild ${guildId}`);
-
-		this.cache.delete(key);
-
-		try {
-			if (this.isRedisConnected) {
-				await this.redis.del(key);
-				// 직접 삭제 성공 시 낡은 pending 값도 버린다 — 다음 sync가 삭제된 플레이어를 되살린다.
-				this.pendingWrites.delete(key);
-				this.logger.trace(`Successfully deleted from Redis for guild ${guildId}`);
-			} else {
-				// Redis에 잔존한 값이 재연결 sync 때 되살아나지 않도록 DEL을 저널에 남긴다(톰스톤).
-				this.pendingWrites.set(key, null);
-				this.logger.trace(`Tombstoned player for guild ${guildId}`);
-			}
-		} catch (error) {
-			this.logger.warn(`Redis error: ${error}`);
-			this.isRedisConnected = false;
-			// DEL이 실패했으므로 재연결 후 Redis 잔존 값을 지운다(톰스톤).
-			this.pendingWrites.set(key, null);
-		}
+		await this.deleteRaw(guildId);
 	}
 
 	private stringify(player: CustomPlayer): string {
@@ -129,39 +56,5 @@ export class CachedPlayerSaver {
 			this.logger.warn(`Failed to list saved players: ${error}`);
 		}
 		return guildIds;
-	}
-
-	public onConnect(): void {
-		this.logger.info('Redis connected, syncing pending writes...');
-		// sync가 끝난 뒤에만 Redis를 원본으로 취급한다 — 먼저 flip하면 동기화 중 get()이
-		// Redis의 과거 값을 읽어 cache의 더 최신 pending 값을 덮어썼다(재연결 경합).
-		void this.drainPendingWrites().then(() => {
-			this.isRedisConnected = true;
-		});
-	}
-
-	public onDisconnect(): void {
-		this.logger.warn('Redis disconnected, switching to cache-only mode');
-		this.isRedisConnected = false;
-	}
-
-	/** sync 1회 돌리고, 그 사이 새로 쌓인 pending이 남으면 한 번 더 민다. (shutdown 플러시와 onConnect에서 공용) */
-	public async drainPendingWrites(): Promise<void> {
-		await syncPendingWrites(this.redis, this.pendingWrites, CachedPlayerSaver.REDIS_TTL_SECONDS, this.logger);
-		if (this.pendingWrites.size > 0) {
-			await syncPendingWrites(this.redis, this.pendingWrites, CachedPlayerSaver.REDIS_TTL_SECONDS, this.logger);
-		}
-	}
-
-	public getCacheStats() {
-		return {
-			...this.cache.getStats(),
-			pendingWrites: this.pendingWrites.size,
-			isRedisConnected: this.isRedisConnected
-		};
-	}
-
-	public cleanupCache(): number {
-		return this.cache.cleanup();
 	}
 }

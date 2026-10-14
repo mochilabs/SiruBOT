@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { auth } from "@/lib/auth";
-import { type DataApiForwardFail,forwardDataApiImage } from "@/lib/data-api";
+import { dataApiFailResponse, forwardDataApiImage } from "@/lib/data-api";
 import { greetingConfigSchema } from "@/lib/greeting-schema";
 import { guardRateLimit, rateKey, RENDER_RATE } from "@/lib/rate-limit";
 import { zodError } from "@/lib/schemas";
@@ -67,12 +67,6 @@ async function getGuildMeta(accessToken: string, id: string): Promise<GuildMeta>
 	return meta;
 }
 
-/** 4xx의 한국어 message를 그대로, 나머지는 내성 있는 fallback으로 응답해요 */
-function forwardFailResponse(status: number, fail: DataApiForwardFail, fallback: string): NextResponse {
-	const mapped = fail.status < 500 ? fail.status : status;
-	return NextResponse.json({ error: fail.message ?? fallback }, { status: mapped });
-}
-
 /**
  * 인사 카드 이미지 미리보기 — data-api /v1/image/member-card를 프록시해 PNG로 돌려줘요.
  * context는 실제로 파악할 수 있는 값만 써요: 로그인 세션의 Discord id·이름·아바타와
@@ -112,8 +106,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 			},
 		});
 		if (!result.ok) {
-			return forwardFailResponse(
-				502,
+			return dataApiFailResponse(
 				result,
 				"미리보기를 그리지 못했어요. 이미지 서버 상태를 확인해 주세요.",
 			);

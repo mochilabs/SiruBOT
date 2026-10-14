@@ -23,8 +23,8 @@ describe('WsMessageSchema', () => {
 		expect(() => WsMessageSchema.parse({ payload: {} })).toThrow();
 	});
 
-	it('rejects a BROADCASTEVAL with a non-string script (malicious payload guard)', () => {
-		expect(() => WsMessageSchema.parse({ op: 'BROADCASTEVAL', payload: { id: '1', script: 12_345 } })).toThrow();
+	it('rejects a removed BROADCASTEVAL op (deleted eval pipeline must not come back)', () => {
+		expect(() => WsMessageSchema.parse({ op: 'BROADCASTEVAL', payload: { id: '1', script: '1+1' } })).toThrow();
 	});
 
 	it('rejects non-object input', () => {

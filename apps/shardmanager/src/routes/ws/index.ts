@@ -6,8 +6,6 @@ import {
 	type HeartbeatPayload,
 	type ShardStatusPayload,
 	type ShardStatsPayload,
-	type BroadcastEvalPayload,
-	type BroadcastEvalResultPayload,
 	WsOp,
 	WsMessageSchema
 } from '@sirubot/shardclient/ws-types';
@@ -15,9 +13,6 @@ import { getLogger } from '../../utils/logger.ts';
 import { safeEqual } from '../../plugins/auth.ts';
 
 const logger = getLogger('websocket');
-
-const WS_AUTH_KEY = process.env.AUTH_KEY ?? '';
-const BROADCAST_EVAL_ENABLED = process.env.ENABLE_BROADCAST_EVAL?.toLowerCase() === 'true';
 
 let wsIdCounter = 0;
 
@@ -34,6 +29,7 @@ export default async function routes(fastify: FastifyInstance) {
 
 		const registry = fastify.manager.getRegistry();
 		const notifier = fastify.manager.getNotifier();
+		const wsAuthKey = fastify.manager.getAuthKey() ?? '';
 
 		send(socket, {
 			op: WsOp.HELLO,
@@ -67,12 +63,6 @@ export default async function routes(fastify: FastifyInstance) {
 					case WsOp.SHARD_STATS:
 						handleShardStats(wsId, message.payload as ShardStatsPayload);
 						break;
-					case WsOp.BROADCASTEVAL:
-						handleBroadcastEval(wsId, message.payload as BroadcastEvalPayload);
-						break;
-					case WsOp.BROADCASTEVAL_RESULT:
-						handleBroadcastEvalResult(message.payload as BroadcastEvalResultPayload);
-						break;
 					default:
 						logger.warn(`[${wsId}] Unknown op: ${(message as any).op}`);
 				}
@@ -99,7 +89,7 @@ export default async function routes(fastify: FastifyInstance) {
 
 		function handleIdentify(id: string, ws: WebSocket, payload: IdentifyPayload) {
 			// Authorization 헤더는 이미 검증됐지만, IDENTIFY payload의 토큰도 이중으로 검증해요.
-			if (!payload.token || !WS_AUTH_KEY || !safeEqual(payload.token, WS_AUTH_KEY)) {
+			if (!payload.token || !wsAuthKey || !safeEqual(payload.token, wsAuthKey)) {
 				logger.warn(`[${id}] IDENTIFY rejected: invalid identify token`);
 				send(ws, {
 					op: WsOp.IDENTIFY_ACK,
@@ -161,42 +151,15 @@ export default async function routes(fastify: FastifyInstance) {
 			registry.updateStatus(id, payload.status);
 
 			if (payload.status === 'ready') {
-				const allProcesses = registry.getAllProcesses();
-				const matched = allProcesses.find((p: { wsId: string; shardIds: number[] }) => p.wsId === id);
-				if (matched) {
-					notifier.shardReady(id, matched.shardIds, matched.hostname);
+				const process = registry.getProcess(id);
+				if (process) {
+					notifier.shardReady(id, process.shardIds, process.hostname);
 				}
 			}
 		}
 
 		function handleShardStats(id: string, payload: ShardStatsPayload) {
 			registry.updateStats(id, payload);
-		}
-
-		function handleBroadcastEval(_fromId: string, payload: BroadcastEvalPayload) {
-			// RCE 채널 게이트 — ENABLE_BROADCAST_EVAL=true로 명시 활성화 전까지 모두 거절해요.
-			if (!BROADCAST_EVAL_ENABLED) {
-				logger.warn(`[${_fromId}] BROADCASTEVAL dropped - disabled (set ENABLE_BROADCAST_EVAL=true to enable)`);
-				registry.broadcast({
-					op: WsOp.BROADCASTEVAL_RESULT,
-					payload: { id: payload.id, result: null, error: 'broadcast_eval_disabled' }
-				});
-				return;
-			}
-
-			// Forward to all connected processes
-			registry.broadcast({
-				op: WsOp.BROADCASTEVAL,
-				payload
-			});
-		}
-
-		function handleBroadcastEvalResult(payload: BroadcastEvalResultPayload) {
-			// Forward result back to all (the requester will match by id)
-			registry.broadcast({
-				op: WsOp.BROADCASTEVAL_RESULT,
-				payload
-			});
 		}
 	});
 }

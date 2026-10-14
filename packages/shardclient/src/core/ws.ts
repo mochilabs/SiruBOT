@@ -59,7 +59,7 @@ export class ShardWebSocket {
 					try {
 						const parsed: unknown = JSON.parse(data.toString());
 						// manager와 동일하게 zod 스키마로 검증 — 깨진/악의적 payload가
-						// evalCallback 등 핸들러에 전달되지 않도록 한다.
+						// 핸들러에 전달되지 않도록 한다.
 						const message = WsMessageSchema.parse(parsed);
 						this.emit(message.op, message);
 					} catch (error) {

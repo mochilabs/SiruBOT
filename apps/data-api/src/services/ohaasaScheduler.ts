@@ -1,6 +1,7 @@
 import type { Env } from '../config/env.ts';
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
+import { parseClock } from '../utils/parseClock.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily, type TranslationProvider } from '../providers/translate.ts';
 import type { DailyHoroscope } from '../providers/types.ts';
@@ -10,16 +11,6 @@ const logger = getLogger('ohaasa-scheduler');
 const REDIS_TTL_SECONDS = 7 * 24 * 3600;
 const LOCK_TTL_SECONDS = 90;
 const JITTER_MAX_MS = 20 * 60_000;
-
-function parseTime(value: string): { hour: number; minute: number } {
-	const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-	const hour = match ? Number(match[1]) : 6;
-	const minute = match ? Number(match[2]) : 50;
-	return {
-		hour: Math.min(23, Math.max(0, hour)),
-		minute: Math.min(59, Math.max(0, minute))
-	};
-}
 
 /** 마지막 성공 본 (upstream 전멸 시 stale 폴백용) */
 let lastGood: DailyHoroscope | null = null;
@@ -76,9 +67,10 @@ async function refreshOnce(provider: TranslationProvider | null): Promise<DailyH
 	}
 }
 
+// KST 보정 UTC 대상이에요 — memoryTidy.msUntilNext는 서버 로컬 시각 기준이라 타임존 의미가 달라요.
 function msUntilNextRefresh(refreshAt: string): number {
 	const KST_OFFSET_MS = 9 * 3600_000;
-	const { hour, minute } = parseTime(refreshAt);
+	const { hour, minute } = parseClock(refreshAt, { hour: 6, minute: 50 });
 	const now = Date.now();
 	const seoul = new Date(now + KST_OFFSET_MS);
 	const jitter = Math.floor(Math.random() * JITTER_MAX_MS);

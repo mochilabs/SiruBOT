@@ -263,6 +263,12 @@ export class GuildService {
 		return { crossfadeEnabled: updated.crossfadeEnabled, crossfadeMs: updated.crossfadeMs };
 	}
 
+	/** SponsorBlock 카테고리 목록 — playerHandler가 세그먼트를 다시 계산할 때 즉시 최신 값을 읽도록 캐시도 함께 갱신해요. */
+	public async setSponsorBlockSegments(guildId: string, segments: string[]): Promise<string[]> {
+		const guild = await this.upsertField(guildId, 'sponsorBlockSegments', segments);
+		return guild.sponsorBlockSegments;
+	}
+
 	public async getAiSettings(guildId: string) {
 		const guild = await this.getGuild(guildId);
 		return {

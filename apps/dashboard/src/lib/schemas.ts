@@ -1,4 +1,7 @@
+import { NextResponse } from "next/server";
 import { z } from "zod";
+
+import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 
 const AI_MODES = ["all", "channels", "off"] as const;
 const REPEAT_MODES = ["off", "track", "queue"] as const;
@@ -25,7 +28,7 @@ export const aiSettingsSchema = z.object({
 
 /** PUT /api/servers/[id]/settings */
 export const guildSettingsSchema = z.object({
-	volume: z.number().int("볼륨은 정수여야 해요.").min(0, "볼륨은 0 이상이에요.").max(150, "볼륨은 150 이하여야 해요.").optional(),
+	volume: z.number().int("볼륨은 정수여야 해요.").min(0, "볼륨은 0 이상이에요.").max(PLAYER_VOLUME_MAX, `볼륨은 ${PLAYER_VOLUME_MAX} 이하여야 해요.`).optional(),
 	repeat: z.enum(REPEAT_MODES, "반복 모드가 잘못됐어요.").optional(),
 	related: z.boolean().optional(),
 	enableController: z.boolean().optional(),
@@ -68,6 +71,40 @@ export function zodError(error: z.ZodError): string {
 	if (!issue) return "잘못된 요청이에요.";
 	const path = issue.path.join(".");
 	return path ? `${path}: ${issue.message}` : issue.message;
+}
+
+export type SettingBodyResult<T> = { ok: true; data: T } | { ok: false; response: NextResponse };
+
+/**
+ * 설정 라우트(PUT/PATCH) 본문 검증 공통 흐름 — JSON 파싱·객체 형태·미등록 필드·스키마를
+ * 한 번에 검사하고 실패 시 그에 맞는 400 응답을 돌려줘요. 라우트는 결과의 ok만 보면 돼요.
+ */
+export async function parseSettingBody<S extends z.ZodTypeAny>(
+	request: Request,
+	schema: S,
+	allowedKeys: readonly string[],
+): Promise<SettingBodyResult<z.infer<S>>> {
+	const body: unknown = await request.json().catch(() => null);
+	if (!body || typeof body !== "object" || Array.isArray(body)) {
+		return { ok: false, response: NextResponse.json({ error: "잘못된 요청이에요." }, { status: 400 }) };
+	}
+
+	const unknown = unknownKeys(body, allowedKeys);
+	if (unknown.length > 0) {
+		return {
+			ok: false,
+			response: NextResponse.json(
+				{ error: `지원하지 않는 필드예요: ${unknown.join(", ")}` },
+				{ status: 400 },
+			),
+		};
+	}
+
+	const parsed = schema.safeParse(body);
+	if (!parsed.success) {
+		return { ok: false, response: NextResponse.json({ error: zodError(parsed.error) }, { status: 400 }) };
+	}
+	return { ok: true, data: parsed.data };
 }
 
 /** DB에 저장된 모드 값을 안전하게 정규화해요 */

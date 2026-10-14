@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { db } from "@/lib/db";
-import { MAX_TRACKS_PER_PLAYLIST } from "@/lib/playlist-constants";
+import {
+  FAVORITES_PLAYLIST_NAME,
+  MAX_TRACKS_PER_PLAYLIST,
+} from "@/lib/playlist-constants";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { extractYoutubeVideoId } from "@/lib/youtube-url";
 
 /** 외부 noembed API 타임아웃 — 무응답 연결 고갈 방지 */
 const NOEMBED_TIMEOUT_MS = 10_000;
@@ -20,21 +24,18 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("playlist-tracks-post", session.user.id),
+    rateKey("playlist-tracks-post", authz.userId),
     WRITE_RATE,
   );
   if (limited) return limited;
 
   try {
     const { id } = await params;
-    const userId = session.user.id;
+    const userId = authz.userId;
 
     // Verify playlist belongs to user
     const playlist = await db.playlist.findFirst({
@@ -87,13 +88,7 @@ export async function POST(
     let finalTrackId = trackId;
 
     if (!finalTrackId && youtubeUrl) {
-      // Parse Youtube Video ID
-      const match = youtubeUrl
-        .trim()
-        .match(
-          /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/,
-        );
-      const videoId = match ? match[1] : null;
+      const videoId = extractYoutubeVideoId(youtubeUrl);
 
       if (!videoId) {
         return NextResponse.json(
@@ -160,7 +155,7 @@ export async function POST(
     }
 
     // Check if track is already in this playlist (especially for "즐겨찾기" playlist)
-    if (playlist.name === "즐겨찾기") {
+    if (playlist.name === FAVORITES_PLAYLIST_NAME) {
       const existing = await db.playlistTrack.findFirst({
         where: { playlistId: id, trackId: finalTrackId },
       });
@@ -204,21 +199,18 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("playlist-tracks-delete", session.user.id),
+    rateKey("playlist-tracks-delete", authz.userId),
     WRITE_RATE,
   );
   if (limited) return limited;
 
   try {
     const { id } = await params;
-    const userId = session.user.id;
+    const userId = authz.userId;
     const { searchParams } = new URL(request.url);
     const positionStr = searchParams.get("position");
 

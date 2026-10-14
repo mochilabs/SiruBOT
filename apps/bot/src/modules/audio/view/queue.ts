@@ -12,7 +12,7 @@ type QueueViewProps = {
 	selectedIndex?: number | null;
 };
 
-const QUEUE_PAGE_SIZE = 10;
+export const QUEUE_PAGE_SIZE = 10;
 
 export const queueCustomIdPrefix = 'queue:page:';
 

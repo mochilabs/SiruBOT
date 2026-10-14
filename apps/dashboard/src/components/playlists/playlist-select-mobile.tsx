@@ -12,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist } from "@/types/playlist";
 
 interface PlaylistSelectMobileProps {
@@ -26,7 +27,7 @@ interface PlaylistSelectMobileProps {
  * 즐겨찾기/내 목록 그룹은 option group으로, 곡수는 라벨에 붙여요.
  */
 export function PlaylistSelectMobile({ playlists, activePlaylistId, onSelect, onCreateNew }: PlaylistSelectMobileProps) {
-	const favorited = playlists[0]?.name === "즐겨찾기" ? playlists.slice(0, 1) : [];
+	const favorited = playlists[0]?.name === FAVORITES_PLAYLIST_NAME ? playlists.slice(0, 1) : [];
 	const customs = favorited.length ? playlists.slice(1) : playlists;
 	const label = (playlist: Playlist) => `${playlist.name} · ${playlist._count?.tracks ?? 0}곡`;
 

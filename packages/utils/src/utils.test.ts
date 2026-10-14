@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { formatTime, formatTimeToKorean } from './time.ts';
-import { chunkArray } from './array.ts';
 import { MemoryCache } from './memoryCache.ts';
 
 describe('formatTime', () => {
@@ -27,19 +26,6 @@ describe('formatTimeToKorean', () => {
 		expect(formatTimeToKorean(65)).toBe('1분 5초');
 		expect(formatTimeToKorean(3600)).toBe('1시간 0분');
 		expect(formatTimeToKorean(3723)).toBe('1시간 2분 3초');
-	});
-});
-
-describe('chunkArray', () => {
-	it('divides arrays into chunks', () => {
-		expect(chunkArray([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
-		expect(chunkArray([1, 2], 5)).toEqual([[1, 2]]);
-		expect(chunkArray([], 3)).toEqual([]);
-	});
-
-	it('throws on non-positive chunk size', () => {
-		expect(() => chunkArray([1], 0)).toThrow();
-		expect(() => chunkArray([1], -1)).toThrow();
 	});
 });
 

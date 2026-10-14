@@ -4,6 +4,7 @@ import React, { memo, useCallback, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";
+import { formatTimeToKorean } from "@sirubot/utils/time";
 import { Crown, Heart, Music4 } from "lucide-react";
 import useSWR from "swr";
 
@@ -13,20 +14,6 @@ import { useToast } from "@/components/ui/toast";
 interface TrackListProps {
 	tracks: TrackType[];
 	rankOffset?: number;
-}
-
-export function formatTimeToKorean(seconds: number): string {
-	const hours = Math.floor(seconds / 3600);
-	const minutes = Math.floor((seconds % 3600) / 60);
-	const secs = Math.floor(seconds % 60);
-
-	const parts: string[] = [];
-
-	if (hours > 0) parts.push(`${hours}시간`);
-	if (minutes > 0 || hours > 0) parts.push(`${minutes}분`);
-	if (secs > 0 || (hours === 0 && minutes === 0)) parts.push(`${secs}초`);
-
-	return parts.join(" ");
 }
 
 	function MockThumbnail({ className }: { className: string }) {

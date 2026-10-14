@@ -1,5 +1,5 @@
 /**
- * skia-canvas 공용 헬퍼 — profileCard / nowPlayingCard / greetingCard / ohaasaCard에서 함께 써요.
+ * skia-canvas 공용 헬퍼 — nowPlayingCard / greetingCard / ohaasaCard / 프로필 카드 프리셋(dark·ticket)에서 함께 써요.
  */
 import type { CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 
@@ -90,6 +90,15 @@ export function hashString(s: string): number {
 	let h = 2166136261;
 	for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
 	return h >>> 0;
+}
+
+/** 시드 고정 LCG — 재현 가능한 장식용 난수. hashString으로 시드를 만들어 써요. */
+export function makeRng(seed: number): () => number {
+	let s = seed || 1;
+	return () => {
+		s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+		return s / 4294967296;
+	};
 }
 
 /** ms → "m:ss" / "h:mm:ss". */

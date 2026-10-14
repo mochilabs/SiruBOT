@@ -1,11 +1,21 @@
 import { container, UserError } from '@sapphire/framework';
-import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
+import { Player, Queue, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import * as Sentry from '@sentry/node';
-import { APIUser, ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
-import { SkipContext } from '../modules/audio/subcommands/skip.ts';
-import { VoteSkip } from '../modules/audio/managers/voteSkip.ts';
+import {
+	APIUser,
+	ButtonInteraction,
+	ChatInputCommandInteraction,
+	Collection,
+	ComponentType,
+	GuildMember,
+	MessageFlags,
+	PermissionsBitField,
+	VoiceBasedChannel
+} from 'discord.js';
+import { VoteSkip, requiredSkipVotes } from '../modules/audio/managers/voteSkip.ts';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
+import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import * as view from '../modules/audio/view/play.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 
@@ -13,6 +23,16 @@ interface CommandErrorContext extends Record<string, unknown> {
 	interaction?: ChatInputCommandInteraction<'cached'> | ButtonInteraction<'cached'> | ChatInputCommandInteraction;
 	player?: Player;
 	ephemeral?: boolean;
+}
+
+/** 스킵 판정 컨텍스트 — /건너뛰기와 그 하위 흐름(투표·강제·곡 지정)이 공유하는 재생 상태 스냅샷 */
+export interface SkipContext {
+	player: Player;
+	queue: Queue;
+	currentTrack: Track;
+	interaction: ChatInputCommandInteraction<'cached'>;
+	voiceChannel: VoiceBasedChannel;
+	voiceChannelMembers: Collection<string, GuildMember>;
 }
 
 export class AudioService {
@@ -141,7 +161,6 @@ export class AudioService {
 		player: Player,
 		searchRes: SearchResult | UnresolvedSearchResult
 	): Promise<void> {
-		const wasIdle = player.queue.current === null && !player.playing;
 		const playlist = searchRes.playlist;
 		if (!playlist) {
 			await interaction.editReply({
@@ -152,9 +171,7 @@ export class AudioService {
 		}
 
 		if (playlist.selectedTrack) {
-			await player.queue.add(playlist.selectedTrack);
-			await removeStaleRelatedTracks(player);
-			if (!wasIdle) this.preloadAfterQueueChange(player);
+			const { wasIdle } = await this.enqueueTrack(player, playlist.selectedTrack);
 
 			const remainingTracks = searchRes.tracks.filter((track) => track.info.identifier !== playlist.selectedTrack!.info.identifier);
 			const remainingTracksCount = remainingTracks.length;
@@ -173,21 +190,12 @@ export class AudioService {
 			} else {
 				await interaction.editReply({
 					flags: MessageFlags.IsComponentsV2,
-					components: [
-						view.trackAdded({
-							track: playlist.selectedTrack as Track,
-							queued: player.queue.current !== null,
-							position: getUserQueuedTracks(player).length,
-							totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
-						})
-					],
+					components: [view.trackAdded(view.trackAddedProps(player, playlist.selectedTrack as Track))],
 					allowedMentions: { users: [], roles: [] }
 				});
 			}
 		} else {
-			await player.queue.add(searchRes.tracks);
-			await removeStaleRelatedTracks(player);
-			if (!wasIdle) this.preloadAfterQueueChange(player);
+			await this.enqueueTrack(player, searchRes.tracks);
 
 			await interaction.editReply({
 				flags: MessageFlags.IsComponentsV2,
@@ -222,12 +230,7 @@ export class AudioService {
 			allowedMentions: { users: [], roles: [] }
 		});
 
-		const trackAdded = view.trackAdded({
-			track: selectedTrack,
-			queued: player.queue.current !== null,
-			position: getUserQueuedTracks(player).length,
-			totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
-		});
+		const trackAdded = view.trackAdded(view.trackAddedProps(player, selectedTrack));
 
 		const collector = askReply.createMessageComponentCollector({
 			filter: (i) => i.user.id === interaction.user.id && i.customId.includes('playlist_'),
@@ -252,9 +255,7 @@ export class AudioService {
 			collector.off('end', handleEndAction);
 
 			if (collectorInteraction.customId === 'playlist_add_remaining') {
-				await player.queue.add(remainingTracks);
-				await removeStaleRelatedTracks(player);
-				this.preloadAfterQueueChange(player);
+				await this.enqueueTrack(player, remainingTracks);
 
 				await collectorInteraction.editReply({
 					flags: MessageFlags.IsComponentsV2,
@@ -290,10 +291,7 @@ export class AudioService {
 		player: Player,
 		searchRes: SearchResult | UnresolvedSearchResult
 	): Promise<void> {
-		const wasIdle = player.queue.current === null && !player.playing;
-		await player.queue.add(searchRes.tracks[0]);
-		await removeStaleRelatedTracks(player);
-		if (!wasIdle) this.preloadAfterQueueChange(player);
+		const { wasIdle } = await this.enqueueTrack(player, searchRes.tracks[0]);
 
 		if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
 			// 컨트롤러가 뒤따라 오지만, 누가 재생을 시작했는지는 채팅에도 남긴다.
@@ -309,14 +307,7 @@ export class AudioService {
 
 		await interaction.editReply({
 			flags: MessageFlags.IsComponentsV2,
-			components: [
-				view.trackAdded({
-					track: searchRes.tracks[0] as Track,
-					queued: player.queue.current !== null,
-					position: getUserQueuedTracks(player).length,
-					totalDuration: getUserQueuedTracks(player).reduce((acc, track) => acc + (track.info.duration ?? 0), 0)
-				})
-			],
+			components: [view.trackAdded(view.trackAddedProps(player, searchRes.tracks[0] as Track))],
 			allowedMentions: { users: [], roles: [] }
 		});
 	}
@@ -332,11 +323,38 @@ export class AudioService {
 	}
 
 	/**
-	 * 곡 1개를 대기열에 넣는 공용 흐름 — 즉시 재생/선택 피드백 등 호출 지점이
+	 * 이전곡 재생 공용 흐름 — 현재곡을 큐 선두로 되돌리고 mixer 슬롯을 재준비한 뒤
+	 * 마지막 previous 항목을 시작한다. (/이전곡 커맨드와 컨트롤러 prev 버튼이 공유)
+	 */
+	public async playPrevious(player: CustomPlayer): Promise<Track | UnresolvedTrack> {
+		const previousTrack = player.queue.previous[player.queue.previous.length - 1];
+		if (player.queue.current) {
+			player.queue.tracks.unshift(player.queue.current);
+		}
+		await container.mixerService.clearNext(player).catch(() => null);
+		await container.mixerService.primeForPlay(player);
+		await player.play({ clientTrack: previousTrack });
+		player.queue.previous.pop();
+		return previousTrack;
+	}
+
+	/**
+	 * 정지 공용 흐름 — queueEnd 종료 안내를 억제하고 mixer 슬롯을 정리한 뒤 재생을 끊는다.
+	 * (/정지 커맨드와 컨트롤러 stop 버튼이 공유)
+	 */
+	public async stopPlayback(player: CustomPlayer): Promise<void> {
+		player.transitionState.stopByCommand = true;
+		await container.mixerService.clearNext(player).catch(() => null);
+		await player.stopPlaying().catch(() => null);
+		await player.disconnect().catch(() => null);
+	}
+
+	/**
+	 * 곡 1개(또는 플레이리스트 전체)를 대기열에 넣는 공용 흐름 — 즉시 재생/선택 피드백 등 호출 지점이
 	 * 서로 달라도 추가·선예열 추천곡 제거·슬롯 재예열은 한 곳에서만 처리한다.
 	 * 반환: wasIdle(시작 전에 아무것도 재생 중이 아니었는지 → 피드백 문구 선택용)
 	 */
-	public async enqueueTrack(player: Player, track: Track | UnresolvedTrack): Promise<{ wasIdle: boolean }> {
+	public async enqueueTrack(player: Player, track: Track | UnresolvedTrack | (Track | UnresolvedTrack)[]): Promise<{ wasIdle: boolean }> {
 		const wasIdle = player.queue.current === null && !player.playing;
 		await player.queue.add(track);
 		await removeStaleRelatedTracks(player);
@@ -422,7 +440,7 @@ export class AudioService {
 	}
 
 	private isUserAlone(context: SkipContext): boolean {
-		return Math.ceil(context.voiceChannelMembers.size / 2) <= 1;
+		return requiredSkipVotes(context.voiceChannelMembers) <= 1;
 	}
 
 	private async handleEmptyQueue(context: SkipContext): Promise<void> {
@@ -447,31 +465,23 @@ export class AudioService {
 	}
 
 	private async handleUserRequestedTrack(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await container.mixerService.skip(player);
-		await interaction.reply({
-			components: [skipView.trackSkipped({ track: currentTrack })],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		await this.skipAndReply(context, skipView.trackSkipped({ track: context.currentTrack }));
 	}
 
 	private async handleRelatedTrackSkip(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await container.mixerService.skip(player);
-		await interaction.reply({
-			components: [skipView.trackRelatedSkipped({ track: currentTrack })],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		await this.skipAndReply(context, skipView.trackRelatedSkipped({ track: context.currentTrack }));
 	}
 
 	private async handleAloneSkip(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
+		await this.skipAndReply(context, skipView.trackSkipped({ track: context.currentTrack }));
+	}
 
+	/** 공용 스킵 피드백 — 스킵 실행 후 지정된 뷰로 즉시 응답한다 (요청자/추천곡/단독/강제 스킵이 공유). */
+	private async skipAndReply(context: SkipContext, components: ReturnType<typeof skipView.trackSkipped>): Promise<void> {
+		const { player, interaction } = context;
 		await container.mixerService.skip(player);
 		await interaction.reply({
-			components: [skipView.trackSkipped({ track: currentTrack })],
+			components: [components],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
@@ -504,13 +514,7 @@ export class AudioService {
 	}
 
 	private async handleForceSkip(context: SkipContext): Promise<void> {
-		const { player, currentTrack, interaction } = context;
-
-		await container.mixerService.skip(player);
-		await interaction.reply({
-			components: [skipView.trackSkipped({ track: currentTrack })],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		await this.skipAndReply(context, skipView.trackSkipped({ track: context.currentTrack }));
 	}
 
 	private async handleSkipTo(context: SkipContext, to: number): Promise<void> {

@@ -69,7 +69,12 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 		this.available = apiKey.length > 0;
 	}
 
-	public async translateHoroscope(items: TranslationItem[]): Promise<Map<string, TranslationItem>> {
+	/**
+	 * OpenAI 호환 chat/completions 공용 호출 — 이 프로바이더를 쓰는 모든 호출부
+	 * (운세 번역·장기 기억 정리)가 같은 경로를 공유해요. 60초 타임아웃, 스트림 비활성.
+	 * providerLabel은 실패 시 에러 메시지에 쓰여요 (예: 'translation provider').
+	 */
+	public async chatCompletion(systemPrompt: string, userContent: string, providerLabel: string): Promise<string> {
 		const res = await fetch(`${this.baseUrl}/chat/completions`, {
 			method: 'POST',
 			headers: {
@@ -79,18 +84,22 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 			body: JSON.stringify({
 				model: this.model,
 				messages: [
-					{ role: 'system', content: TRANSLATE_SYSTEM_PROMPT },
-					{ role: 'user', content: JSON.stringify(items) }
+					{ role: 'system', content: systemPrompt },
+					{ role: 'user', content: userContent }
 				],
 				stream: false
 			}),
 			signal: AbortSignal.timeout(60_000)
 		});
-		if (!res.ok) throw new Error(`translation provider failed: ${res.status}`);
+		if (!res.ok) throw new Error(`${providerLabel} failed: ${res.status}`);
 		const body = (await res.json()) as {
 			choices?: Array<{ message?: { content?: string } }>;
 		};
-		const content = body.choices?.[0]?.message?.content ?? '';
+		return body.choices?.[0]?.message?.content ?? '';
+	}
+
+	public async translateHoroscope(items: TranslationItem[]): Promise<Map<string, TranslationItem>> {
+		const content = await this.chatCompletion(TRANSLATE_SYSTEM_PROMPT, JSON.stringify(items), 'translation provider');
 		const map = parseTranslation(content);
 		if (!map) throw new Error('translation output is not valid JSON');
 		return map;

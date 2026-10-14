@@ -5,8 +5,6 @@ import { emoji } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/queue.ts';
 
-const QUEUE_PAGE_SIZE = 10;
-
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'queue',
@@ -130,7 +128,7 @@ export class QueueCommand extends Command {
 			return;
 		}
 
-		const totalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE);
+		const totalPages = Math.ceil(getUserQueuedTracks(player).length / view.QUEUE_PAGE_SIZE);
 		const page = Math.min(interaction.options.getInteger('page') ?? 1, totalPages);
 
 		await interaction.reply({

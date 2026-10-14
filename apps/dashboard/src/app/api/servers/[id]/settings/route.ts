@@ -4,7 +4,7 @@ import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
-import { guildSettingsSchema, unknownKeys, zodError } from "@/lib/schemas";
+import { guildSettingsSchema, parseSettingBody } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
 const ALLOWED_KEYS = [
@@ -137,31 +137,10 @@ export async function PUT(
   if (limited) return limited;
 
   try {
-    const body: unknown = await request.json().catch(() => null);
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      return NextResponse.json(
-        { error: "잘못된 요청이에요." },
-        { status: 400 },
-      );
-    }
+    const body = await parseSettingBody(request, guildSettingsSchema, ALLOWED_KEYS);
+    if (!body.ok) return body.response;
 
-    const unknown = unknownKeys(body, ALLOWED_KEYS);
-    if (unknown.length > 0) {
-      return NextResponse.json(
-        { error: `지원하지 않는 필드예요: ${unknown.join(", ")}` },
-        { status: 400 },
-      );
-    }
-
-    const parsed = guildSettingsSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: zodError(parsed.error) },
-        { status: 400 },
-      );
-    }
-
-    const data = parsed.data;
+    const data = body.data;
     if (Object.keys(data).length > 0) {
       await db.guild.upsert({
         where: { id },

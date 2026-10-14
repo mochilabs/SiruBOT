@@ -18,7 +18,7 @@ async function main() {
 
 		if (env.SHARD_COUNT === 'auto') {
 			logger.info("SHARD_COUNT is set to 'auto', fetching from Discord API...");
-			const gatewayInfo = await getGatewayInfo();
+			const gatewayInfo = await getGatewayInfo(env.DISCORD_TOKEN);
 			if (!gatewayInfo) {
 				logger.fatal('Failed to get gateway info, please check your DISCORD_TOKEN');
 				process.exit(1);
@@ -31,7 +31,7 @@ async function main() {
 			logger.info(`Using configured shard count: ${shardCount} shards`);
 		}
 
-		const shardManager = new ShardManagerServer(shardCount, env.SHARDS_PER_PROCESS, env.DISCORD_WEBHOOK_URL);
+		const shardManager = new ShardManagerServer(shardCount, env.SHARDS_PER_PROCESS, env);
 		logger.info('Setting up routes...');
 		await shardManager.setupRoutes();
 

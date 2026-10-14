@@ -6,22 +6,26 @@ import { getLogger } from './utils/logger.ts';
 import auth from './plugins/auth.ts';
 import { ShardRegistry } from './core/shardRegistry.ts';
 import { DiscordNotifier } from './utils/discordNotifier.ts';
+import type { Env } from './config/env.ts';
 
 export class ShardManagerServer {
 	private fastify: FastifyInstance;
 	private logger: ReturnType<typeof getLogger>;
-	private port: number = parseInt(process.env.PORT || '3001');
+	private env: Env;
+	private port: number;
 	private shardCount: number;
 	private shardsPerProcess: number;
 	private registry: ShardRegistry;
 	private notifier: DiscordNotifier;
 
-	constructor(shardCount: number, shardsPerProcess: number = 5, webhookUrl?: string) {
+	constructor(shardCount: number, shardsPerProcess: number, env: Env) {
 		this.fastify = Fastify({ logger: false });
 		this.logger = getLogger('server');
+		this.env = env;
+		this.port = env.PORT;
 		this.shardCount = shardCount;
 		this.shardsPerProcess = shardsPerProcess;
-		this.notifier = new DiscordNotifier(webhookUrl);
+		this.notifier = new DiscordNotifier(env.DISCORD_WEBHOOK_URL);
 		this.registry = new ShardRegistry(shardCount, shardsPerProcess, this.notifier);
 	}
 
@@ -35,7 +39,7 @@ export class ShardManagerServer {
 			});
 		});
 
-		await auth(this.fastify);
+		await auth(this.fastify, this.env);
 		this.fastify.decorate('manager', this as any);
 		await this.fastify.register(WebSocket);
 		await this.fastify.register(AutoLoad, {
@@ -47,7 +51,7 @@ export class ShardManagerServer {
 
 	public async start() {
 		try {
-			const host = process.env.HOSTNAME || 'localhost';
+			const host = this.env.HOSTNAME || 'localhost';
 			await this.fastify.listen({ port: this.port, host });
 			this.logger.info(`Shard Manager started`);
 			this.logger.info(`- Local:     http://localhost:${this.port}`);
@@ -82,5 +86,9 @@ export class ShardManagerServer {
 
 	public getNotifier() {
 		return this.notifier;
+	}
+
+	public getAuthKey(): string | undefined {
+		return this.env.AUTH_KEY;
 	}
 }

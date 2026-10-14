@@ -35,9 +35,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		components: [view.stop()],
 		flags: [MessageFlags.IsComponentsV2]
 	});
-	player.transitionState.stopByCommand = true;
 
-	await container.mixerService.clearNext(player).catch(() => null);
-	await player.stopPlaying();
-	await player.disconnect();
+	await container.audioService.stopPlayback(player);
 }

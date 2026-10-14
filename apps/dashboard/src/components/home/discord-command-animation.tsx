@@ -57,6 +57,8 @@ const TRACKS: TrackInfo[] = [
 
 const COMMAND_MENTION = "bg-discord-primary/20 px-1 rounded-sm text-discord-light";
 
+// 데모용 더미 트랙은 duration을 "초"로 담아요 — lib/format formatDuration(밀리초 입력)과
+// 단위가 달라 여기서만 로컬 포매터를 써요.
 const formatDuration = (seconds: number) => {
 	const minutes = Math.floor(seconds / 60);
 	const remainingSeconds = seconds % 60;

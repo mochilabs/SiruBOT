@@ -189,3 +189,47 @@ function drawThumbFallback(ctx: CanvasRenderingContext2D, x: number, y: number, 
 	drawIcon(ctx, 'music-2', x + size / 2 - 11, y + size / 2 - 11, 22, pal.textMuted);
 	ctx.restore();
 }
+
+/** 서버 태그(길드 뱃지 이미지 + 태그 텍스트) — 핸들 옆에 이어서 그려요. 뱃지 로드 실패 시 텍스트만. */
+export async function drawGuildTag(
+	ctx: CanvasRenderingContext2D,
+	options: { tag: string | null | undefined; badgeUrl: string | null | undefined; x: number; baselineY: number; color: string }
+): Promise<void> {
+	if (!options.tag) return;
+	const tagY = options.baselineY - 21;
+	let tagX = options.x;
+	if (options.badgeUrl) {
+		const badge = await loadImageAllowed(options.badgeUrl).catch(() => null);
+		if (badge) {
+			const BH = 22;
+			const bw = (badge as unknown as { width: number }).width;
+			const bh = (badge as unknown as { height: number }).height;
+			const s = BH / bh;
+			// 뱃지는 가로가 길어요 (2:3 근사) — 전체 그려요
+			ctx.drawImage(badge, tagX, tagY, bw * s, BH);
+			tagX += Math.floor(bw * s) + 8;
+		}
+	}
+	ctx.save();
+	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+	ctx.fillStyle = options.color;
+	ctx.fillText(options.tag, tagX, options.baselineY);
+	ctx.restore();
+}
+
+/** 아바타 로드 실패/없음 폴백 — 원 + 음표 아이콘 (프리셋별 색·아이콘 크기) */
+export function drawAvatarFallback(
+	ctx: CanvasRenderingContext2D,
+	cx: number,
+	cy: number,
+	radius: number,
+	theme: { bg: string; icon: string; iconSize: number }
+): void {
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+	ctx.fillStyle = theme.bg;
+	ctx.fill();
+	drawIcon(ctx, 'music-2', cx - theme.iconSize / 2, cy - theme.iconSize / 2, theme.iconSize, theme.icon);
+	ctx.restore();
+}

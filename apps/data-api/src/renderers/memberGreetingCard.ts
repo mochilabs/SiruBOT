@@ -237,20 +237,35 @@ function drawShapeLayer(ctx: CanvasRenderingContext2D, layer: GreetingShapeLayer
 	ctx.restore();
 }
 
-// ── 배경 업로드 정규화 — 대시보드 업로드를 저장 규격으로 맞춰요 ──
+// ── 업로드 이미지 정규화 — 대시보드 업로드를 저장 규격으로 맞춰요 ──
 // dataURI를 Prisma Json 컬럼에 통째로 저장하는 관계로, 저장 비용 상한이 필요해요.
 // 문자 길이가 아니라 재인코딩 결과 바이너리 기준으로 판정해요.
+// 배경(1600px·JPEG)과 레이어(1200px·PNG)는 상수·포맷만 달라요.
+const IMAGE_MAX_BYTES = 900_000;
+const IMAGE_STEP_PX = 200;
 const BG_MAX_SIDE = 1600;
-const BG_MAX_BYTES = 900_000;
-const BG_STEP_PX = 200;
 const BG_MIN_SIDE = 320;
 const BG_QUALITY = 0.82;
+const LAYER_MAX_SIDE = 1200;
+const LAYER_MIN_SIDE = 200;
+
+interface NormalizeUploadedImageOptions {
+	/** 첫 목표 — 가장 긴 변을 이 값 이하로 줄여요 */
+	maxSide: number;
+	/** 바이트 상한을 못 넘겼을 때의 하한 — 이보다 작아지면 image_too_large로 실패해요 */
+	minSide: number;
+}
 
 /**
- * 업로드 배경 축소·재인코딩 — 가장 긴 변 1600px, JPEG q0.82, 900KB 넘으면 200px씩 더 줄여요.
- * 리턴은 data:image/jpeg;base64,…
+ * 업로드 이미지 축소·재인코딩 공용 파이프라인 — decode → load → 첫 축소 →
+ * 재인코딩 결과가 상한을 넘으면 가장 긴 변을 200px씩 더 줄여요.
+ * 리턴은 data:image/jpeg;base64,… (배경) 또는 data:image/png;base64,… (레이어).
  */
-export async function normalizeGreetingBackground(dataUri: string): Promise<string> {
+async function normalizeUploadedImage(
+	dataUri: string,
+	options: NormalizeUploadedImageOptions,
+	encode: { format: 'jpeg'; quality: number } | { format: 'png' }
+): Promise<string> {
 	const raw = decodeDataUri(dataUri);
 	if (!raw) {
 		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
@@ -268,34 +283,34 @@ export async function normalizeGreetingBackground(dataUri: string): Promise<stri
 		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
 	}
 
-	// 첫 목표 — 가장 긴 변 1600px 이하
-	let scale = Math.min(1, BG_MAX_SIDE / Math.max(iw, ih));
+	// 첫 목표 — 가장 긴 변 maxSide 이하
+	let scale = Math.min(1, options.maxSide / Math.max(iw, ih));
 	for (;;) {
 		const w = Math.max(1, Math.round(iw * scale));
 		const h = Math.max(1, Math.round(ih * scale));
 		const canvas: Canvas = new Canvas(w, h);
 		const drawCtx = canvas.getContext('2d');
 		drawCtx.drawImage(source, 0, 0, w, h);
-		const encoded = await canvas.toBuffer('jpeg', { quality: BG_QUALITY });
-		if (encoded.length <= BG_MAX_BYTES) {
-			return `data:image/jpeg;base64,${encoded.toString('base64')}`;
+		const encoded = encode.format === 'jpeg' ? await canvas.toBuffer('jpeg', { quality: encode.quality }) : await canvas.toBuffer('png');
+		if (encoded.length <= IMAGE_MAX_BYTES) {
+			return `data:image/${encode.format};base64,${encoded.toString('base64')}`;
 		}
 		const longest = Math.max(w, h);
-		const nextLongest = longest - BG_STEP_PX;
-		if (nextLongest < BG_MIN_SIDE) {
+		const nextLongest = longest - IMAGE_STEP_PX;
+		if (nextLongest < options.minSide) {
 			throw new GreetingBackgroundError('image_too_large', '이미지를 충분히 줄일 수 없어요 — 더 작은 이미지로 시도해 주세요.');
 		}
 		scale = scale * (nextLongest / longest);
 	}
 }
 
-// ── 이미지 레이어 업로드 정규화 — 투명도(알파)를 보존해요 ──
-// 스티커/로고 레이어는 투명 배경이 필요해서 JPEG(배경)와 달리 PNG로 저장해요.
-// 저장 비용 상한은 배경과 같게 두고, 무손실 PNG 인코딩 기준으로 판정해요.
-const LAYER_MAX_SIDE = 1200;
-const LAYER_MAX_BYTES = 900_000;
-const LAYER_STEP_PX = 200;
-const LAYER_MIN_SIDE = 200;
+/**
+ * 업로드 배경 축소·재인코딩 — 가장 긴 변 1600px, JPEG q0.82, 900KB 넘으면 200px씩 더 줄여요.
+ * 리턴은 data:image/jpeg;base64,…
+ */
+export async function normalizeGreetingBackground(dataUri: string): Promise<string> {
+	return normalizeUploadedImage(dataUri, { maxSide: BG_MAX_SIDE, minSide: BG_MIN_SIDE }, { format: 'jpeg', quality: BG_QUALITY });
+}
 
 /**
  * 업로드 이미지 레이어 축소·재인코딩 — 투명도를 보존하기 위해 PNG로 저장해요.
@@ -303,40 +318,5 @@ const LAYER_MIN_SIDE = 200;
  * 리턴은 data:image/png;base64,…
  */
 export async function normalizeGreetingLayerImage(dataUri: string): Promise<string> {
-	const raw = decodeDataUri(dataUri);
-	if (!raw) {
-		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
-	}
-	const { Canvas, loadImage } = await import('skia-canvas');
-	let source: CanvasDrawable;
-	try {
-		source = (await loadImage(raw)) as unknown as CanvasDrawable;
-	} catch {
-		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
-	}
-	const iw = (source as { width: number }).width;
-	const ih = (source as { height: number }).height;
-	if (!iw || !ih) {
-		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
-	}
-
-	// 첫 목표 — 가장 긴 변 1200px 이하
-	let scale = Math.min(1, LAYER_MAX_SIDE / Math.max(iw, ih));
-	for (;;) {
-		const w = Math.max(1, Math.round(iw * scale));
-		const h = Math.max(1, Math.round(ih * scale));
-		const canvas: Canvas = new Canvas(w, h);
-		const drawCtx = canvas.getContext('2d');
-		drawCtx.drawImage(source, 0, 0, w, h);
-		const encoded = await canvas.toBuffer('png');
-		if (encoded.length <= LAYER_MAX_BYTES) {
-			return `data:image/png;base64,${encoded.toString('base64')}`;
-		}
-		const longest = Math.max(w, h);
-		const nextLongest = longest - LAYER_STEP_PX;
-		if (nextLongest < LAYER_MIN_SIDE) {
-			throw new GreetingBackgroundError('image_too_large', '이미지를 충분히 줄일 수 없어요 — 더 작은 이미지로 시도해 주세요.');
-		}
-		scale = scale * (nextLongest / longest);
-	}
+	return normalizeUploadedImage(dataUri, { maxSide: LAYER_MAX_SIDE, minSide: LAYER_MIN_SIDE }, { format: 'png' });
 }

@@ -75,7 +75,7 @@ export function StreamingTypeText({
 			{rendered}
 			{showCursor && (
 				<span
-					className={`inline-block h-[0.9em] w-[2px] align-baseline ${cursorClassName}`}
+					className={`inline-block h-[0.9em] w-0.5 align-baseline ${cursorClassName}`}
 					style={{ animation: "cursor-blink 0.8s linear infinite", marginLeft: "1px" }}
 					aria-hidden
 				/>

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AttachmentBuilder, Collection, MessagePayload, type ButtonInteraction, type InteractionUpdateOptions, type Message } from 'discord.js';
 import ControllerButtonHandler from './controllerButton.ts';
 
-const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), cached: vi.fn(), render: vi.fn(), updateVolume: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), cached: vi.fn(), render: vi.fn(), updateVolume: vi.fn(), pinned: vi.fn() }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
 		container = {
@@ -10,7 +10,9 @@ vi.mock('@sapphire/framework', () => ({
 			guildService: { updateVolume: mocks.updateVolume }
 		};
 	},
-	InteractionHandlerTypes: { Button: 'button' }
+	InteractionHandlerTypes: { Button: 'button' },
+	// controllerPayload 빌더가 직접 import하는 전역 container — pinned 조회만 필요하다.
+	container: { guildService: { getPinnedChannel: mocks.pinned } }
 }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkDJOrAlone: mocks.allowed }));
 vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({
@@ -21,14 +23,17 @@ vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({
 vi.mock('../view/controller.ts', () => ({ controllerView: () => ({}) }));
 
 function context() {
-	const original = { id: 'controller', attachments: new Collection<string, { id: string; name: string }>() };
+	const original = { id: 'controller', channelId: 'controller-channel', attachments: new Collection<string, { id: string; name: string }>() };
 	const updated = { ...original };
+	const edit = vi.fn().mockResolvedValue(updated);
 	const interaction = {
 		guildId: 'guild',
 		member: { voice: { channel: { id: 'voice' } } },
-		message: original,
-		update: vi.fn().mockResolvedValue({ resource: { message: updated } }),
-		reply: vi.fn().mockResolvedValue(undefined)
+		deferred: true,
+		message: { ...original, edit },
+		deferUpdate: vi.fn().mockResolvedValue(undefined),
+		reply: vi.fn().mockResolvedValue(undefined),
+		followUp: vi.fn().mockResolvedValue(undefined)
 	};
 	const player = {
 		voiceChannelId: 'voice',
@@ -44,7 +49,7 @@ function context() {
 		{} as ConstructorParameters<typeof ControllerButtonHandler>[0],
 		{} as ConstructorParameters<typeof ControllerButtonHandler>[1]
 	);
-	return { original, updated, interaction, player, handler };
+	return { original, updated, edit, interaction, player, handler };
 }
 
 function attachmentIds(payload: InteractionUpdateOptions) {
@@ -58,6 +63,7 @@ describe('controller button cached rendering', () => {
 		vi.resetAllMocks();
 		mocks.allowed.mockResolvedValue(true);
 		mocks.cached.mockReturnValue(null);
+		mocks.pinned.mockResolvedValue(null);
 		mocks.render.mockImplementation(() => {
 			throw new Error('button must not request an image');
 		});
@@ -65,11 +71,11 @@ describe('controller button cached rendering', () => {
 	});
 
 	it('updates a pause button without starting or waiting for image rendering', async () => {
-		const { updated, interaction, player, handler } = context();
+		const { edit, updated, interaction, player, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
 		expect(player.pause).toHaveBeenCalledTimes(1);
-		expect(interaction.update).toHaveBeenCalledTimes(1);
-		expect(interaction.update.mock.calls[0]![0].files).toEqual([]);
+		expect(edit).toHaveBeenCalledTimes(1);
+		expect(edit.mock.calls[0]![0].files).toEqual([]);
 		expect(player.controller).toBe(updated);
 		expect(mocks.render).not.toHaveBeenCalled();
 	});
@@ -85,34 +91,40 @@ describe('controller button cached rendering', () => {
 
 	it('keeps an existing cached image without uploading it again', async () => {
 		mocks.cached.mockReturnValue({ url: 'attachment://card.png', filename: 'card.png', file: new AttachmentBuilder(Buffer.from('card')) });
-		const { original, interaction, handler } = context();
+		// 컨트롤러가 떠 있는 채널이 길드의 고정 채널이어야 카드가 붙는다.
+		mocks.pinned.mockResolvedValue('controller-channel');
+		const { edit, interaction, handler } = context();
+		const original = (interaction as unknown as { message: { attachments: Collection<string, { id: string; name: string }> } }).message;
 		original.attachments.set('attachment', { id: 'attachment', name: 'card.png' });
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
-		expect(interaction.update.mock.calls[0]![0].files).toEqual([]);
-		expect(attachmentIds(interaction.update.mock.calls[0]![0])).toEqual(['attachment']);
+		expect(edit.mock.calls[0]![0].files).toEqual([]);
+		expect(attachmentIds(edit.mock.calls[0]![0])).toEqual(['attachment']);
 		expect(mocks.render).not.toHaveBeenCalled();
 	});
 
 	it('uploads a prepared image when this message does not have it yet', async () => {
 		mocks.cached.mockReturnValue({ url: 'attachment://card.png', filename: 'card.png', file: new AttachmentBuilder(Buffer.from('card')) });
-		const { interaction, handler } = context();
+		mocks.pinned.mockResolvedValue('controller-channel');
+		const { edit, interaction, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
-		expect(interaction.update.mock.calls[0]![0].files).toHaveLength(1);
+		expect(edit.mock.calls[0]![0].files).toHaveLength(1);
 	});
 
 	it('drops a previous track attachment when uploading the prepared current card', async () => {
 		mocks.cached.mockReturnValue({ url: 'attachment://card.png', filename: 'card.png', file: new AttachmentBuilder(Buffer.from('card')) });
-		const { original, interaction, handler } = context();
+		mocks.pinned.mockResolvedValue('controller-channel');
+		const { edit, interaction, handler } = context();
+		const original = (interaction as unknown as { message: { attachments: Collection<string, { id: string; name: string }> } }).message;
 		original.attachments.set('old', { id: 'old', name: 'old.png' });
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
-		expect(attachmentIds(interaction.update.mock.calls[0]![0])).toEqual(['0']);
+		expect(attachmentIds(edit.mock.calls[0]![0])).toEqual(['0']);
 	});
 
 	it('handles resume button correctly', async () => {
-		const { updated, interaction, player, handler } = context();
+		const { edit, updated, interaction, player, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'resume', subcommand: null });
 		expect(player.resume).toHaveBeenCalledTimes(1);
-		expect(interaction.update).toHaveBeenCalledTimes(1);
+		expect(edit).toHaveBeenCalledTimes(1);
 		expect(player.controller).toBe(updated);
 	});
 
@@ -146,19 +158,19 @@ describe('controller button cached rendering', () => {
 	});
 
 	it('raises volume by the step and applies it', async () => {
-		const { interaction, player, handler } = context();
+		const { edit, interaction, player, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
 		expect(mocks.updateVolume).toHaveBeenCalledWith('guild', 50);
 		expect(player.setVolume).toHaveBeenCalledWith(50);
-		expect(interaction.update).toHaveBeenCalledTimes(1);
+		expect(edit).toHaveBeenCalledTimes(1);
 	});
 
 	it('lowers volume by the step and applies it', async () => {
-		const { interaction, player, handler } = context();
+		const { edit, interaction, player, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
 		expect(mocks.updateVolume).toHaveBeenCalledWith('guild', 30);
 		expect(player.setVolume).toHaveBeenCalledWith(30);
-		expect(interaction.update).toHaveBeenCalledTimes(1);
+		expect(edit).toHaveBeenCalledTimes(1);
 	});
 
 	it('clamps volume at the lower bound without applying a change', async () => {

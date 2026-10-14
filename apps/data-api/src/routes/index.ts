@@ -17,7 +17,8 @@ import {
 } from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
-import { renderProfileCardPreset } from '../renderers/profileCardPresets.ts';
+import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
+import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
@@ -68,18 +69,35 @@ function sendError(reply: { code: (n: number) => any }, error: unknown): any {
 	});
 }
 
-/** 길드 데이터 요청 실패 이유를 HTTP 응답으로 매핑해요 — redis_unavailable=503, timeout(봇 미응답)=502 */
-function replyGuildDataFailure(reply: { code: (n: number) => any }, reason: GuildDataFailureReason): any {
+/** 봇 릴레이 실패 사유를 HTTP로 매핑하는 공통부 — redis_unavailable=503, timeout(봇 미응답)=502,
+ *  그 외(봇이 실어 보낸 검증 거부·오류)=400. 세 릴레이 흐름(길드 데이터·플레이어 웹·JTC 셋업)이 같은 규칙을 써요. */
+function replyBotRelayFailure(
+	reply: { code: (n: number) => any },
+	reason: 'redis_unavailable' | 'timeout' | 'bot_error',
+	rejected: { code: string; message: string | null | undefined; fallback: string }
+): any {
 	if (reason === 'redis_unavailable') {
 		return reply.code(503).send({
 			error: 'redis_unavailable',
 			message: 'Redis가 연결되어 있지 않아요. 잠시 후 다시 시도해 주세요.'
 		});
 	}
-	return reply.code(502).send({
-		error: 'bot_timeout',
-		message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
+	if (reason === 'timeout') {
+		return reply.code(502).send({
+			error: 'bot_timeout',
+			message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
+		});
+	}
+	return reply.code(400).send({
+		error: rejected.code,
+		message: rejected.message ?? rejected.fallback
 	});
+}
+
+/** 길드 데이터 요청 실패 이유를 HTTP 응답으로 매핑해요 — redis_unavailable=503, timeout(봇 미응답)=502.
+ *  이 흐름에는 봇 검증 거부(bot_error) 사유가 없어서 공통부의 400 분기는 도달하지 않아요. */
+function replyGuildDataFailure(reply: { code: (n: number) => any }, reason: GuildDataFailureReason): any {
+	return replyBotRelayFailure(reply, reason, { code: 'guild_data_rejected', message: null, fallback: '' });
 }
 
 export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps): Promise<void> {
@@ -397,48 +415,36 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 				return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
 			};
 			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
-			const buffer = await deduped(`img:card:${body.userId}`, () =>
-				renderProfileCardPreset(body.preset, {
-					dark: {
-						userId: body.userId,
-						profileId: body.username,
-						displayName: body.displayName,
-						avatarUrl: body.avatarUrl,
-						guildTag: body.guildTag,
-						guildTagBadgeUrl: body.guildTagBadgeUrl,
-						status: body.status,
-						onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-						statusColor: '#3ecf8e',
-						intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
-						createdText: dateFmt(body.accountCreated),
-						joinedText: dateFmt(body.guildJoinedAt),
-						roleChips: body.roleChips,
-						topTracks: body.topTracks,
-						nowPlaying: body.nowPlaying
-					},
-					ticket: {
-						userId: body.userId,
-						profileId: body.username,
-						displayName: body.displayName,
-						avatarUrl: body.avatarUrl,
-						guildTag: body.guildTag,
-						guildTagBadgeUrl: body.guildTagBadgeUrl,
-						status: body.status,
-						onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-						statusColor: '#2f9e5f',
-						intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
-						createdText: dateFmt(body.accountCreated),
-						joinedText: dateFmt(body.guildJoinedAt),
-						roleChips: body.roleChips,
-						topTracks: body.topTracks,
-						nowPlaying: body.nowPlaying,
-						stats: [
-							{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
-							{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
-						]
-					}
-				})
-			);
+			const buffer = await deduped(`img:card:${body.userId}`, () => {
+				// dark/ticket 공통 필드 — 선택된 프리셋 입력만 조립해요.
+				const base = {
+					userId: body.userId,
+					profileId: body.username,
+					displayName: body.displayName,
+					avatarUrl: body.avatarUrl,
+					guildTag: body.guildTag,
+					guildTagBadgeUrl: body.guildTagBadgeUrl,
+					status: body.status,
+					onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
+					intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+					createdText: dateFmt(body.accountCreated),
+					joinedText: dateFmt(body.guildJoinedAt),
+					roleChips: body.roleChips,
+					topTracks: body.topTracks,
+					nowPlaying: body.nowPlaying
+				};
+				if (body.preset === 'dark') {
+					return renderProfileCardDark({ ...base, statusColor: '#3ecf8e' });
+				}
+				return renderProfileCardTicket({
+					...base,
+					statusColor: '#2f9e5f',
+					stats: [
+						{ label: '플레이리스트', value: `${body.playlistCount}개`, icon: 'list-music' },
+						{ label: '신청한 곡', value: `${body.requestedCount.toLocaleString('ko-KR')}곡`, icon: 'music' }
+					]
+				});
+			});
 			metrics.request(`image-profile-${body.preset}`);
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
@@ -487,8 +493,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
-	// ── 멤버 인사 배경 업로드 정규화 ──
-	// 브라우저에서 온 이미지를 저장 규격으로 맞춰요 (JPEG, 가장 긴 변 1600px, 인코딩 후 900KB 이하).
+	// ── 멤버 인사 배경/레이어 업로드 정규화 ──
+	// 브라우저에서 온 이미지를 저장 규격으로 맞춰요. 배경은 JPEG(가장 긴 변 1600px, 인코딩 후 900KB 이하),
+	// 스티커/로고 레이어는 알파를 살려야 해서 PNG로 정규화해요.
 	// dataURI를 Prisma Json 컬럼에 통째로 저장하는 관계로 이것이 저장 비용 상한이에요.
 	const greetingBackgroundSchema = z.object({
 		dataUri: z
@@ -496,37 +503,24 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			.regex(/^data:image\/(png|jpeg|webp);base64,/, '지원 형식은 PNG·JPEG·WEBP예요.')
 			.max(12_000_000)
 	});
-	fastify.post('/v1/image/member-card/background', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
-		try {
-			const body = greetingBackgroundSchema.parse(request.body);
-			const dataUri = await normalizeGreetingBackground(body.dataUri);
-			metrics.request('image-member-card-background');
-			return reply.send({ dataUri });
-		} catch (error) {
-			if (error instanceof Error && error.name === 'GreetingBackgroundError') {
-				const e = error as { identifier?: string };
-				return reply.code(400).send({ error: e.identifier ?? 'greeting_error', message: error.message });
+	const registerGreetingImageNormalizeRoute = (path: string, metric: string, normalize: (dataUri: string) => Promise<string>) => {
+		fastify.post(path, { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+			try {
+				const body = greetingBackgroundSchema.parse(request.body);
+				const dataUri = await normalize(body.dataUri);
+				metrics.request(metric);
+				return reply.send({ dataUri });
+			} catch (error) {
+				if (error instanceof Error && error.name === 'GreetingBackgroundError') {
+					const e = error as { identifier?: string };
+					return reply.code(400).send({ error: e.identifier ?? 'greeting_error', message: error.message });
+				}
+				return sendError(reply, error);
 			}
-			return sendError(reply, error);
-		}
-	});
-
-	// ── 멤버 인사 이미지 레이어 업로드 정규화 (투명도 보존) ──
-	// 스티커/로고 레이어는 알파를 살려야 해서 배경(JPEG)과 달리 PNG로 정규화해요.
-	fastify.post('/v1/image/member-card/layer-image', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
-		try {
-			const body = greetingBackgroundSchema.parse(request.body);
-			const dataUri = await normalizeGreetingLayerImage(body.dataUri);
-			metrics.request('image-member-card-layer-image');
-			return reply.send({ dataUri });
-		} catch (error) {
-			if (error instanceof Error && error.name === 'GreetingBackgroundError') {
-				const e = error as { identifier?: string };
-				return reply.code(400).send({ error: e.identifier ?? 'greeting_error', message: error.message });
-			}
-			return sendError(reply, error);
-		}
-	});
+		});
+	};
+	registerGreetingImageNormalizeRoute('/v1/image/member-card/background', 'image-member-card-background', normalizeGreetingBackground);
+	registerGreetingImageNormalizeRoute('/v1/image/member-card/layer-image', 'image-member-card-layer-image', normalizeGreetingLayerImage);
 
 	// ── NowPlaying 카드 이미지 ──
 	// 카드는 트랙 식별자 + 볼륨/챕터 + 5초 위치 버킷마다 다시 렌더돼요
@@ -673,27 +667,16 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 	const playerVoiceContextQuery = z.object({ userId: playerUserIdSchema });
 
-	/** PlayerWebResult를 HTTP로 매핑 — 성공은 필드를 그대로, 실패는 사유별 코드와 한국어 안내로 내려줘요 */
+	/** PlayerWebResult를 HTTP로 매핑 — 성공은 필드를 그대로, 실패는 공통부(replyBotRelayFailure)로 내려줘요 */
 	function replyPlayerWebResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: PlayerWebResult): any {
 		if (result.ok) {
 			return reply.send({ ok: true, tracks: result.tracks ?? null, voice: result.voice ?? null });
 		}
-		if (result.reason === 'redis_unavailable') {
-			return reply.code(503).send({
-				error: 'redis_unavailable',
-				message: 'Redis가 연결되어 있지 않아요. 잠시 후 다시 시도해 주세요.'
-			});
-		}
-		if (result.reason === 'timeout') {
-			return reply.code(502).send({
-				error: 'bot_timeout',
-				message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
-			});
-		}
 		// 봇이 검증 실패(음성 미접속·권한 없음 등)를 실어 보낸 경우 — 사용자가 고칠 수 있는 행동이므로 400
-		return reply.code(400).send({
-			error: 'web_player_rejected',
-			message: result.message ?? '요청을 처리하지 못했어요.'
+		return replyBotRelayFailure(reply, result.reason, {
+			code: 'web_player_rejected',
+			message: result.message,
+			fallback: '요청을 처리하지 못했어요.'
 		});
 	}
 
@@ -777,27 +760,16 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		categoryId: z.string().trim().min(1).max(32)
 	});
 
-	/** JtcSetupResult를 HTTP로 매핑 — 성공은 markerChannelId, 실패는 사유별 코드와 한국어 안내로 내려줘요 */
+	/** JtcSetupResult를 HTTP로 매핑 — 성공은 markerChannelId, 실패는 공통부(replyBotRelayFailure)로 내려줘요 */
 	function replyJtcSetupResult(reply: { code: (n: number) => any; send: (body: unknown) => any }, result: JtcSetupResult): any {
 		if (result.ok) {
 			return reply.send({ ok: true, markerChannelId: result.markerChannelId ?? null });
 		}
-		if (result.reason === 'redis_unavailable') {
-			return reply.code(503).send({
-				error: 'redis_unavailable',
-				message: 'Redis가 연결되어 있지 않아요. 잠시 후 다시 시도해 주세요.'
-			});
-		}
-		if (result.reason === 'timeout') {
-			return reply.code(502).send({
-				error: 'bot_timeout',
-				message: '봇이 이 서버에 없거나 아직 연결되지 않았어요. 잠시 후 다시 시도해 주세요.'
-			});
-		}
 		// 봇이 검증 실패(카테고리 아님·권한 부족 등)를 실어 보낸 경우 — 사용자가 고칠 수 있는 행동이므로 400
-		return reply.code(400).send({
-			error: 'jtc_setup_rejected',
-			message: result.message ?? '임시 방 마커 채널을 준비하지 못했어요.'
+		return replyBotRelayFailure(reply, result.reason, {
+			code: 'jtc_setup_rejected',
+			message: result.message,
+			fallback: '임시 방 마커 채널을 준비하지 못했어요.'
 		});
 	}
 

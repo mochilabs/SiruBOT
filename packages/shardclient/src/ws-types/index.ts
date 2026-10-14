@@ -9,10 +9,7 @@ export enum WsOp {
 	HEARTBEAT_ACK = 'HEARTBEAT_ACK',
 
 	SHARD_STATUS = 'SHARD_STATUS',
-	SHARD_STATS = 'SHARD_STATS',
-
-	BROADCASTEVAL = 'BROADCASTEVAL',
-	BROADCASTEVAL_RESULT = 'BROADCASTEVAL_RESULT'
+	SHARD_STATS = 'SHARD_STATS'
 }
 
 export interface WsMessage<T = unknown> {
@@ -60,17 +57,6 @@ export interface ShardStatsPayload {
 	uptime: number;
 }
 
-export interface BroadcastEvalPayload {
-	id: string; // Unique request ID
-	script: string;
-}
-
-export interface BroadcastEvalResultPayload {
-	id: string;
-	result: unknown;
-	error?: string;
-}
-
 export const HelloPayloadSchema = z.object({
 	shardCount: z.number(),
 	shardsPerProcess: z.number(),
@@ -105,17 +91,6 @@ export const ShardStatsPayloadSchema = z.object({
 	uptime: z.number()
 });
 
-export const BroadcastEvalPayloadSchema = z.object({
-	id: z.string(),
-	script: z.string()
-});
-
-export const BroadcastEvalResultPayloadSchema = z.object({
-	id: z.string(),
-	result: z.unknown(),
-	error: z.string().optional()
-});
-
 export const WsMessageSchema = z.discriminatedUnion('op', [
 	z.object({ op: z.literal(WsOp.HELLO), payload: HelloPayloadSchema }),
 	z.object({ op: z.literal(WsOp.IDENTIFY), payload: IdentifyPayloadSchema }),
@@ -135,13 +110,5 @@ export const WsMessageSchema = z.discriminatedUnion('op', [
 	z.object({
 		op: z.literal(WsOp.SHARD_STATS),
 		payload: ShardStatsPayloadSchema
-	}),
-	z.object({
-		op: z.literal(WsOp.BROADCASTEVAL),
-		payload: BroadcastEvalPayloadSchema
-	}),
-	z.object({
-		op: z.literal(WsOp.BROADCASTEVAL_RESULT),
-		payload: BroadcastEvalResultPayloadSchema
 	})
 ]);

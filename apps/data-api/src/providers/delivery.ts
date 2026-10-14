@@ -1,5 +1,5 @@
-export const DELIVERY_REST_BASE_URL = 'https://apis.tracker.delivery';
-export const DELIVERY_TIMEOUT_MS = 15_000;
+const DELIVERY_REST_BASE_URL = 'https://apis.tracker.delivery';
+const DELIVERY_TIMEOUT_MS = 15_000;
 
 export class DeliveryError extends Error {
 	public constructor(
@@ -98,13 +98,12 @@ export const CARRIER_ALIASES: Record<string, string> = {
 	사가와: 'jp.sagawa'
 };
 
-export function normalizeCarrierInput(raw: string): string {
+function normalizeCarrierInput(raw: string): string {
 	const trimmed = raw.trim();
 	if (!trimmed) return trimmed;
 	const lower = trimmed.toLowerCase();
 	if (CARRIER_ALIASES[lower]) return CARRIER_ALIASES[lower]!;
 	if (CARRIER_ALIASES[trimmed]) return CARRIER_ALIASES[trimmed]!;
-	if (/^[a-z]{2}\.[a-z0-9._-]+$/i.test(trimmed)) return trimmed;
 	return trimmed;
 }
 
@@ -143,7 +142,7 @@ function normalizeLegacyResponse(data: LegacyRestResponse): DeliveryTrackResult 
 }
 
 /** Legacy v1 REST 조회 (API 키 불필요) */
-export async function trackViaRest(carrierId: string, trackingNumber: string): Promise<DeliveryTrackResult> {
+async function trackViaRest(carrierId: string, trackingNumber: string): Promise<DeliveryTrackResult> {
 	const url = `${DELIVERY_REST_BASE_URL}/carriers/${encodeURIComponent(carrierId)}/tracks/${encodeURIComponent(trackingNumber)}`;
 	let res: Response;
 	try {
@@ -188,7 +187,7 @@ async function getCarriersCached(): Promise<DeliveryCarrier[]> {
 	return carriers;
 }
 
-export function searchCarriersLocal(carriers: DeliveryCarrier[], query: string, limit = 5): DeliveryCarrier[] {
+function searchCarriersLocal(carriers: DeliveryCarrier[], query: string, limit = 5): DeliveryCarrier[] {
 	const q = query.trim().toLowerCase();
 	if (!q) return carriers.slice(0, limit);
 	const scored = carriers
@@ -208,7 +207,7 @@ export function searchCarriersLocal(carriers: DeliveryCarrier[], query: string, 
 }
 
 /** 별칭이 아닌 입력을 택배사 목록에서 검색해 carrier id로 해석 */
-export async function resolveCarrierId(carrierHint: string): Promise<string> {
+async function resolveCarrierId(carrierHint: string): Promise<string> {
 	const normalized = normalizeCarrierInput(carrierHint);
 	if (/^[a-z]{2}\.[a-z0-9._-]+$/i.test(normalized)) return normalized;
 	const carriers = await getCarriersCached();

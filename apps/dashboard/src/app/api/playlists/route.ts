@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { db } from "@/lib/db";
 import {
+  FAVORITES_PLAYLIST_NAME,
   MAX_PLAYLIST_DESCRIPTION_LENGTH,
   MAX_PLAYLISTS_PER_USER,
 } from "@/lib/playlist-constants";
+import { ensureUserAndFavorites } from "@/lib/playlist-favorites";
 import { guardRateLimit, rateKey, READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
+import { zodError } from "@/lib/schemas";
 
 const createPlaylistSchema = z.object({
   name: z
@@ -26,45 +29,18 @@ const createPlaylistSchema = z.object({
     .transform((value) => (value ? value : null)),
 });
 
-async function ensureUserAndFavorites(userId: string) {
-  // 1. Ensure User record exists
-  await db.user.upsert({
-    where: { id: userId },
-    create: { id: userId },
-    update: {},
-  });
-
-  // 2. Ensure default "즐겨찾기" playlist exists
-  const favorites = await db.playlist.findFirst({
-    where: { userId, name: "즐겨찾기" },
-  });
-
-  if (!favorites) {
-    await db.playlist.create({
-      data: {
-        userId,
-        name: "즐겨찾기",
-        description: "즐겨찾기한 음악 목록입니다.",
-      },
-    });
-  }
-}
-
 export async function GET() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("playlists-get", session.user.id),
+    rateKey("playlists-get", authz.userId),
     READ_RATE,
   );
   if (limited) return limited;
 
   try {
-    const userId = session.user.id;
+    const userId = authz.userId;
     await ensureUserAndFavorites(userId);
 
     const playlists = await db.playlist.findMany({
@@ -88,29 +64,25 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("playlists-post", session.user.id),
+    rateKey("playlists-post", authz.userId),
     WRITE_RATE,
   );
   if (limited) return limited;
 
   try {
-    const userId = session.user.id;
+    const userId = authz.userId;
     await ensureUserAndFavorites(userId);
 
     const parsed = createPlaylistSchema.safeParse(
       await request.json().catch(() => null),
     );
     if (!parsed.success) {
-      const issue = parsed.error.issues[0];
       return NextResponse.json(
-        { error: issue?.message ?? "요청 형식이 올바르지 않아요." },
+        { error: zodError(parsed.error) },
         { status: 400 },
       );
     }
@@ -118,7 +90,7 @@ export async function POST(request: Request) {
     const name = parsed.data.name;
     const description = parsed.data.description;
 
-    if (name === "즐겨찾기") {
+    if (name === FAVORITES_PLAYLIST_NAME) {
       return NextResponse.json(
         {
           error:

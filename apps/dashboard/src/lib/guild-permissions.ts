@@ -18,7 +18,7 @@ export function hasManageablePermissions(
   }
 }
 
-/** canManage 확인 결과 — 401(세션 만료)과 Discord 장애(429/5xx/네트워크)를 구분해요 */
+/** 권한 확인 결과 — 401(세션 만료)과 Discord 장애(429/5xx/네트워크)를 구분해요 */
 export type CanManageResult =
   | { status: "ok"; manageable: boolean }
   | { status: "unavailable" }
@@ -274,14 +274,4 @@ export async function resolveGuildMeta(
   guildId: string,
 ): Promise<GuildMeta | null> {
   return (await resolveGuildsInfo(accessToken, userId, guildId)).meta;
-}
-
-/** 사용자 토큰으로 서버 관리 권한(Manage Guild/Administrator) 확인 — 하위 호환 boolean 헬퍼 */
-export async function canManage(
-  accessToken: string,
-  userId: string,
-  guildId: string,
-): Promise<boolean> {
-  const result = await resolveCanManage(accessToken, userId, guildId);
-  return result.status === "ok" && result.manageable;
 }

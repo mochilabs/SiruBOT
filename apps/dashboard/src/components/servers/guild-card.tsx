@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExternalLink, Play, Settings2, ShieldCheck, UserPlus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
+import { discordGuildIconUrl } from "@/lib/discord-cdn";
 
 import type { GuildCardProps } from "./guild-card.types";
 
@@ -13,7 +14,7 @@ import type { GuildCardProps } from "./guild-card.types";
  * 바꿔요. 모바일에서 진입 동작은 44px(pointer-coarse:min-h-11) 터치 영역을 가져요.
  */
 export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
-	const iconUrl = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null;
+	const iconUrl = guild.icon ? discordGuildIconUrl(guild.id, guild.icon) : null;
 
 	return (
 		<Card padding="none" className="group flex-row items-center gap-3 p-4 transition-colors duration-base md:flex-col md:items-stretch md:gap-6 md:p-6">

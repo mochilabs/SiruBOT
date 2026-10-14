@@ -12,6 +12,7 @@ const shardCountSchema = z.preprocess(
 
 const envSchema = z.object({
 	PORT: z.coerce.number().default(3001),
+	HOSTNAME: z.string().optional(),
 	DISCORD_TOKEN: z
 		.string()
 		.min(1)

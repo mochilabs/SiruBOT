@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { db } from "@/lib/db";
+import { kstDateString } from "@/lib/kst-date";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
 
 /**
@@ -35,19 +36,6 @@ export interface StatsServerStatsResponse {
   topRequesters: StatsTopRequester[];
   dailyCounts: { date: string; count: number }[];
   period: { first: string | null; last: string | null };
-}
-
-/**
- * createdAt을 Asia/Seoul 기준 YYYY-MM-DD로 변환해요.
- * 일별 재생 막대 차트는 KST 하루 단위로 묶는 게 기대 동작이에요.
- */
-function toKstDateString(date: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
 }
 
 /**
@@ -174,7 +162,7 @@ export async function GET(
     // 날짜별 재생 수 — KST 하루 단위로 그룹핑 후 오름차순 정렬해요.
     const dailyMap = new Map<string, number>();
     for (const row of historyRows) {
-      const dateKey = toKstDateString(row.createdAt);
+      const dateKey = kstDateString(row.createdAt);
       dailyMap.set(dateKey, (dailyMap.get(dateKey) ?? 0) + 1);
     }
     const dailyCounts = [...dailyMap.entries()]

@@ -180,7 +180,7 @@ export function RoleSelect({
 									onChange={(e) => setSearch(e.target.value)}
 									placeholder="역할 검색..."
 									aria-label="역할 검색"
-									className="w-full h-9 rounded-control border-0 bg-input pl-9 pr-3 text-sm text-foreground shadow-control-boundary transition-[color,background-color,box-shadow] duration-fast outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+									className="w-full h-9 rounded-control border-0 bg-input pl-9 pr-3 text-sm text-foreground shadow-control-boundary transition-control duration-fast outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
 								/>
 							</div>
 

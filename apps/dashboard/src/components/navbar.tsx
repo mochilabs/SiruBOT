@@ -16,7 +16,6 @@ import { useUIStore } from "@/store/use-ui-store";
 import { MobileMenu } from "./navbar/mobile-menu";
 
 const navLinks = [
-  // { label: "기능", href: "/#features" },
   { label: "상태", href: "/shards" },
   { label: "차트", href: "/track" },
   { label: "프로필", href: "/profile", requireAuth: true },
@@ -56,6 +55,15 @@ export function Navbar() {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // R-32: 열린 프로필 메뉴는 Escape로도 닫혀요 (외부 클릭과 같은 경로).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProfileOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const toggleTheme = () => {
