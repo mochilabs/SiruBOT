@@ -1,11 +1,11 @@
-import type { CustomCommandSpec } from "@sirubot/utils";
+import type { CustomCommandSpec } from "@sirubot/utils/customCommand";
 import {
   CUSTOM_COMMAND_MAX_PER_GUILD,
   customCommandSpecSchema,
   normalizeCustomCommandName,
   normalizeCustomCommandPrefix,
   validateCustomCommandName,
-} from "@sirubot/utils";
+} from "@sirubot/utils/customCommand";
 
 import { db } from "@/lib/db";
 

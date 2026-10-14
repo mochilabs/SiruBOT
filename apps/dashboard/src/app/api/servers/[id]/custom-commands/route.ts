@@ -3,7 +3,7 @@ import {
   customCommandPayloadSchema,
   validateCustomCommandName,
   validateCustomCommandPrefix,
-} from "@sirubot/utils";
+} from "@sirubot/utils/customCommand";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";

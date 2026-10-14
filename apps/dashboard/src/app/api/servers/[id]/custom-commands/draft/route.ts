@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { customCommandPayloadSchema } from "@sirubot/utils";
+import { customCommandPayloadSchema } from "@sirubot/utils/customCommand";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";

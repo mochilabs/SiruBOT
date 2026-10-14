@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   customCommandPayloadSchema,
   validateCustomCommandName,
-} from "@sirubot/utils";
+} from "@sirubot/utils/customCommand";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { normalizedCommandName, readCustomCommandsState } from "@/lib/custom-commands";

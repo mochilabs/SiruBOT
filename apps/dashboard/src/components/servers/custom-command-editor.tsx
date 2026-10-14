@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { CustomCommandSpec, CustomCommandStep } from "@sirubot/utils";
+import type { CustomCommandSpec, CustomCommandStep } from "@sirubot/utils/customCommand";
 import {
   CUSTOM_COMMAND_MAX_STEP_DELAY_SECONDS,
   CUSTOM_COMMAND_MAX_STEPS,
   CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS,
   customCommandSpecSchema,
   validateCustomCommandName,
-} from "@sirubot/utils";
+} from "@sirubot/utils/customCommand";
 import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";

@@ -1,4 +1,4 @@
-import { captureSentryException, initSentry } from '@sirubot/utils';
+import { captureSentryException, initSentry } from '@sirubot/utils/sentry';
 import { ShardManagerServer } from './server.ts';
 import { getLogger } from './utils/logger.ts';
 import { getGatewayInfo } from './utils/gateway.ts';

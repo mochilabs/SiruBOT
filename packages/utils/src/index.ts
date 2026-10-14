@@ -1,5 +1,6 @@
 export * from './env.js';
-export * from './sentry.js';
+// sentry.js는 루트에서 export하지 않아요 — @sentry/node(노드 전용)가 클라이언트 번들로
+// 함께 들어가는 것을 막기 위해 '@sirubot/utils/sentry' 서브패스로만 써요.
 export * from './version.js';
 export * from './constants.js';
 export * from './format.js';

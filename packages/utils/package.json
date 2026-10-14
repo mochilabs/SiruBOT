@@ -16,6 +16,31 @@
             "types": "./dist/time.d.ts",
             "import": "./dist/time.js",
             "require": "./dist/time.cjs"
+        },
+        "./sentry": {
+            "types": "./dist/sentry.d.ts",
+            "import": "./dist/sentry.js",
+            "require": "./dist/sentry.cjs"
+        },
+        "./customCommand": {
+            "types": "./dist/customCommand.d.ts",
+            "import": "./dist/customCommand.js",
+            "require": "./dist/customCommand.cjs"
+        },
+        "./playerState": {
+            "types": "./dist/playerState.d.ts",
+            "import": "./dist/playerState.js",
+            "require": "./dist/playerState.cjs"
+        },
+        "./guildData": {
+            "types": "./dist/guildData.d.ts",
+            "import": "./dist/guildData.js",
+            "require": "./dist/guildData.cjs"
+        },
+        "./memberGreeting": {
+            "types": "./dist/memberGreeting.d.ts",
+            "import": "./dist/memberGreeting.js",
+            "require": "./dist/memberGreeting.cjs"
         }
     },
     "scripts": {

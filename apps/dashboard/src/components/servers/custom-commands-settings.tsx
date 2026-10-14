@@ -5,7 +5,7 @@ import {
   CUSTOM_COMMAND_MAX_PER_GUILD,
   CUSTOM_COMMAND_PREFIX_DEFAULT,
   validateCustomCommandPrefix,
-} from "@sirubot/utils";
+} from "@sirubot/utils/customCommand";
 import { Loader2, Pencil, Plus, SquareSlash, Trash2 } from "lucide-react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
