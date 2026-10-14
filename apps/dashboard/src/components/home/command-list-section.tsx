@@ -123,7 +123,7 @@ export function CommandListSection() {
 				{/* 명령어 보드 — 카드가 아니라 헤어라인으로 나뉜 메뉴판. gap-px + 보드 배경(border-subtle)이
 				    셀 사이 1px 줄이 되고, 셀만 surface-2를 채워요. 카테고리 셀 수가 달라도 min 높이 없이
 				    자연 높이로 흐르게 둬요 */}
-				<div role="tabpanel" aria-label={active.label} className="grid grid-cols-1 gap-px rounded-card border border-border-subtle bg-border-subtle sm:grid-cols-2">
+				<div role="tabpanel" aria-label={active.label} className="grid grid-cols-1 overflow-hidden gap-px rounded-card border border-border-subtle bg-border-subtle sm:grid-cols-2">
 					{active.commands.map((command) => (
 						<div key={command.cmd} className="flex flex-col gap-1 bg-surface-2 px-3.5 py-3.5 transition-colors hover:bg-surface-1">
 							{/* 명령어 텍스트는 code가 아닌 Pretendard 그대로 — 한글이 mono 스택으로 폴백하지 않게 해요 */}
