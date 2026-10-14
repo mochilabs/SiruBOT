@@ -49,3 +49,6 @@ packages/prisma/src/client/
 /localdocs/
 .opencode/index/
 core.*
+
+# Playwright MCP 스냅샷 산출물
+.playwright-mcp/
