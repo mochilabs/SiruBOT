@@ -290,14 +290,14 @@ export function SaveBar({
   }, [dirty, saving, submitting, id]);
 
   return (
-    <div ref={anchorRef} style={{ height: visible ? geometry.height + 48 : 0 }}>
+    <div ref={anchorRef} style={{ height: visible ? geometry.height + 36 : 0 }}>
       {visible && <Portal>
         <div ref={setIslandRef} data-slot="settings-save-island"
           onFocusCapture={() => { islandHadFocusRef.current = true; }}
           onBlurCapture={(event) => {
             if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) islandHadFocusRef.current = false;
           }}
-          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-3 rounded-card bg-surface-3 p-4 text-foreground shadow-lg sm:left-[var(--island-left)] sm:right-auto sm:w-[var(--island-width)] sm:flex-row sm:items-center sm:justify-between"
+          className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-2.5 rounded-card bg-surface-3 px-4 py-2.5 text-foreground shadow-lg sm:left-[var(--island-left)] sm:right-auto sm:w-[var(--island-width)] sm:flex-row sm:items-center sm:justify-between"
           style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
           <p role="status" className="min-w-0 text-sm font-medium">
             {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항"}
@@ -306,10 +306,11 @@ export function SaveBar({
             {children}
       <Button
         variant="cta"
-        className="min-h-11"
+        size="sm"
+        className="h-8 px-3.5"
         loading={saving || submitting}
         disabled={!dirty}
-        icon={saving ? undefined : <Save size={16} />}
+        icon={saving ? undefined : <Save size={15} />}
         onClick={handleSave}
       >
         {saving || submitting ? "저장 중…" : "변경 사항 저장"}

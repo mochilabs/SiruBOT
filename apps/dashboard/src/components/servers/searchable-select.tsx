@@ -68,8 +68,9 @@ export function SearchableSelect(props: SearchableSelectProps) {
 	} = props;
 
 	const isMultiple = isMulti(props);
+	// 빈 문자열은 "선택 안 됨"으로 취급해요 — ""가 그대로 선택값이 되면 트리거에 placeholder 대신 빈 라벨이 렌더링돼요
 	const selectedValues = useMemo(
-		() => (isMultiple ? (props.value ?? []) : props.value !== undefined ? [props.value] : []),
+		() => (isMultiple ? (props.value ?? []) : props.value ? [props.value] : []),
 		[isMultiple, props.value],
 	);
 

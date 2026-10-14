@@ -36,6 +36,8 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { Field } from "@/components/primitives/field";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { StatusDot } from "@/components/primitives/status-dot";
+import { SearchableSelect } from "@/components/servers/searchable-select";
+import { SaveBar } from "@/components/servers/settings-shared";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,26 +149,47 @@ function Showcase({ children, className = "" }: { children: React.ReactNode; cla
 	);
 }
 
-function ShowcaseRow({ label, children }: { label: string; children: React.ReactNode }) {
+function ShowcaseRow({ label, children, block = false }: { label: string; children: React.ReactNode; block?: boolean }) {
 	return (
 		<div className="space-y-3">
-			<p className="text-xs font-black text-muted-foreground">{label}</p>
-			<div className="flex flex-wrap items-center gap-3">{children}</div>
+			<p className="text-xs font-medium text-muted-foreground">{label}</p>
+			{block ? (
+				<div className="space-y-4">{children}</div>
+			) : (
+				<div className="flex flex-wrap items-center gap-3">{children}</div>
+			)}
 		</div>
 	);
 }
 
+// Tailwind v4는 `bg-${token}` 같은 동적 클래스 문자열을 CSS에 포함시키지 않아요 — 토큰별 명시적 맵을 써요
+const COLOR_TOKEN_BG: Record<string, string> = {
+	background: "bg-background",
+	foreground: "bg-foreground",
+	card: "bg-card",
+	popover: "bg-popover",
+	primary: "bg-primary",
+	"primary-control": "bg-primary-control",
+	"primary-text": "bg-primary-text",
+	secondary: "bg-secondary",
+	muted: "bg-muted",
+	accent: "bg-accent",
+	destructive: "bg-destructive",
+	success: "bg-success",
+	warning: "bg-warning",
+	info: "bg-info",
+	border: "bg-border",
+	"surface-1": "bg-surface-1",
+	"surface-2": "bg-surface-2",
+	"surface-3": "bg-surface-3",
+	"discord-embed": "bg-discord-embed",
+	"discord-text": "bg-discord-text",
+};
+
 function ColorSwatch({ token }: { token: string }) {
 	return (
 		<div className="flex items-center gap-2">
-			<div
-				className={cn(
-					"h-8 w-8 shrink-0 rounded-menu border border-border shadow-sm",
-					token === "foreground" || token.endsWith("-foreground") || token === "discord-text"
-						? `bg-${token}`
-						: `bg-${token}`,
-				)}
-			/>
+			<div className={cn("h-8 w-8 shrink-0 rounded-menu border border-border shadow-sm", COLOR_TOKEN_BG[token])} />
 			<span className="text-xs font-medium text-muted-foreground">{token}</span>
 		</div>
 	);
@@ -231,6 +254,9 @@ export default function DesignPage() {
 	const [tags, setTags] = useState(["음악", "봇"]);
 	const [permissions, setPermissions] = useState(0);
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+	const [searchableValue, setSearchableValue] = useState<string>("");
+	const [selectedChannels, setSelectedChannels] = useState<string[]>(["general", "music"]);
+	const [saveBarDemo, setSaveBarDemo] = useState(false);
 	const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
 
 	const tocRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -451,15 +477,17 @@ export default function DesignPage() {
 							description="배경과 표면 위계"
 						/>
 						<Showcase>
-							<ShowcaseRow label="Surface layers">
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-background p-3 text-xs font-medium text-muted-foreground">bg-background</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground">bg-card</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-surface-1 p-3 text-xs font-medium text-muted-foreground">bg-surface-1</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-surface-2 p-3 text-xs font-medium text-muted-foreground">bg-surface-2</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-surface-3 p-3 text-xs font-medium text-muted-foreground">bg-surface-3</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-popover p-3 text-xs font-medium text-muted-foreground">bg-popover</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-input p-3 text-xs font-medium text-muted-foreground">bg-input</div>
-								<div className="h-24 flex-1 min-w-[7rem] rounded-card border border-border bg-muted p-3 text-xs font-medium text-muted-foreground">bg-muted</div>
+							<ShowcaseRow label="Surface layers" block>
+								<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+									<div className="h-24 rounded-card border border-border bg-background p-3 text-xs font-medium text-muted-foreground">bg-background</div>
+									<div className="h-24 rounded-card border border-border bg-card p-3 text-xs font-medium text-muted-foreground">bg-card</div>
+									<div className="h-24 rounded-card border border-border bg-surface-1 p-3 text-xs font-medium text-muted-foreground">bg-surface-1</div>
+									<div className="h-24 rounded-card border border-border bg-surface-2 p-3 text-xs font-medium text-muted-foreground">bg-surface-2</div>
+									<div className="h-24 rounded-card border border-border bg-surface-3 p-3 text-xs font-medium text-muted-foreground">bg-surface-3</div>
+									<div className="h-24 rounded-card border border-border bg-popover p-3 text-xs font-medium text-muted-foreground">bg-popover</div>
+									<div className="h-24 rounded-card border border-border bg-input p-3 text-xs font-medium text-muted-foreground">bg-input</div>
+									<div className="h-24 rounded-card border border-border bg-muted p-3 text-xs font-medium text-muted-foreground">bg-muted</div>
+								</div>
 							</ShowcaseRow>
 						</Showcase>
 
@@ -490,35 +518,38 @@ export default function DesignPage() {
 								<Button size="lg">lg</Button>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="Card">
-								<Card className="max-w-xs">
-									<CardHeader>
-										<CardTitle>Card title</CardTitle>
-										<CardDescription>Card description</CardDescription>
-									</CardHeader>
-									<CardContent>
-										<p className="text-sm text-muted-foreground">카드 콘텐츠 영역</p>
-									</CardContent>
-									<CardFooter>
-										<Button size="sm">확인</Button>
-									</CardFooter>
-								</Card>
-								<Card variant="muted" className="max-w-xs">
-									<CardHeader>
-										<CardTitle>Muted</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-sm text-muted-foreground">bg-muted</p>
-									</CardContent>
-								</Card>
-								<Card variant="raised" className="max-w-xs">
-									<CardHeader>
-										<CardTitle>Raised</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-sm text-muted-foreground">shadow-sm</p>
-									</CardContent>
-								</Card>
+							<ShowcaseRow label="Card" block>
+								{/* 카드는 실제 페이지처럼 page background 위에서 보여줘요 — 쇼케이스 카드와 같은 색이면 경계가 안 보여요 */}
+								<div className="flex flex-wrap items-start gap-4 rounded-card bg-background p-4">
+									<Card className="max-w-xs">
+										<CardHeader>
+											<CardTitle>Card title</CardTitle>
+											<CardDescription>Card description</CardDescription>
+										</CardHeader>
+										<CardContent>
+											<p className="text-sm text-muted-foreground">카드 콘텐츠 영역</p>
+										</CardContent>
+										<CardFooter>
+											<Button size="sm">확인</Button>
+										</CardFooter>
+									</Card>
+									<Card variant="muted" className="max-w-xs">
+										<CardHeader>
+											<CardTitle>Muted</CardTitle>
+										</CardHeader>
+										<CardContent>
+											<p className="text-sm text-muted-foreground">bg-muted</p>
+										</CardContent>
+									</Card>
+									<Card variant="raised" className="max-w-xs">
+										<CardHeader>
+											<CardTitle>Raised</CardTitle>
+										</CardHeader>
+										<CardContent>
+											<p className="text-sm text-muted-foreground">shadow-sm</p>
+										</CardContent>
+									</Card>
+								</div>
 							</ShowcaseRow>
 
 							<ShowcaseRow label="Input / Textarea">
@@ -528,18 +559,21 @@ export default function DesignPage() {
 								<Textarea placeholder="여러 줄 입력" className="max-w-md" />
 							</ShowcaseRow>
 
-							<ShowcaseRow label="Field">
-								<Field label="기본 필드" description="설명 문구가 아래에 표시돼요.">
-									{({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} placeholder="값 입력" />}
-								</Field>
-								<Field label="필수 필드" required>
-									{({ id, invalid }) => <Input id={id} aria-invalid={invalid || undefined} placeholder="반드시 입력" />}
-								</Field>
-								<Field label="오류 필드" error="값이 올바르지 않아요.">
-									{({ id, describedBy, invalid }) => (
-										<Input id={id} aria-describedby={describedBy} aria-invalid={invalid || undefined} defaultValue="오류" />
-									)}
-								</Field>
+							<ShowcaseRow label="Field" block>
+								{/* 설명/오류 문구가 달라도 인풋 라인이 일직선이 되도록 위 정렬 */}
+								<div className="grid items-start gap-4 sm:grid-cols-3">
+									<Field label="기본 필드" description="설명 문구가 아래에 표시돼요.">
+										{({ id, describedBy }) => <Input id={id} aria-describedby={describedBy} placeholder="값 입력" />}
+									</Field>
+									<Field label="필수 필드" required>
+										{({ id, invalid }) => <Input id={id} aria-invalid={invalid || undefined} placeholder="반드시 입력" />}
+									</Field>
+									<Field label="오류 필드" error="값이 올바르지 않아요.">
+										{({ id, describedBy, invalid }) => (
+											<Input id={id} aria-describedby={describedBy} aria-invalid={invalid || undefined} defaultValue="오류" />
+										)}
+									</Field>
+								</div>
 							</ShowcaseRow>
 
 							<ShowcaseRow label="Badge">
@@ -582,16 +616,18 @@ export default function DesignPage() {
 								</SectionLabel>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="EmptyState">
-								<EmptyState title="아직 곡이 없어요." description="플레이리스트를 채워보세요." />
-								<EmptyState
-									size="sm"
-									icon={Search}
-									title="검색 결과가 없어요."
-									description="다른 키워드로 다시 검색해보세요."
-									action={<Button size="sm">다시 검색</Button>}
-									secondaryAction={<Button size="sm" variant="ghost">초기화</Button>}
-								/>
+							<ShowcaseRow label="EmptyState" block>
+								<div className="grid items-start gap-4 md:grid-cols-2">
+									<EmptyState title="아직 곡이 없어요." description="플레이리스트를 채워보세요." />
+									<EmptyState
+										size="sm"
+										icon={Search}
+										title="검색 결과가 없어요."
+										description="다른 키워드로 다시 검색해보세요."
+										action={<Button size="sm">다시 검색</Button>}
+										secondaryAction={<Button size="sm" variant="ghost">초기화</Button>}
+									/>
+								</div>
 							</ShowcaseRow>
 
 							<ShowcaseRow label="Avatar">
@@ -605,12 +641,17 @@ export default function DesignPage() {
 								<Avatar fallback="D" size="md" status="offline" />
 							</ShowcaseRow>
 
-							<ShowcaseRow label="Skeleton">
-								<SkeletonLine width="200px" />
-								<SkeletonCircle size="h-12 w-12" />
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<SkeletonCard lines={3} avatar />
-									<SkeletonCard lines={2} avatar={false} />
+							<ShowcaseRow label="Skeleton" block>
+								{/* 스켈레톤은 실제 페이지처럼 page background 위에서 — 쇼케이스 표면과 같은 색이면 대비가 없어요 */}
+								<div className="rounded-card bg-background p-4">
+									<div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+										<SkeletonCard lines={3} avatar />
+										<SkeletonCard lines={2} avatar={false} />
+									</div>
+									<div className="mt-4 flex items-center gap-3">
+										<SkeletonLine width="200px" />
+										<SkeletonCircle size="h-12 w-12" />
+									</div>
 								</div>
 							</ShowcaseRow>
 
@@ -639,8 +680,8 @@ export default function DesignPage() {
 								</Tabs>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="Slider">
-								<div className="max-w-sm space-y-6">
+							<ShowcaseRow label="Slider" block>
+								<div className="w-full max-w-sm space-y-6">
 									<Slider value={sliderVal} onChange={setSliderVal} label="볼륨" showValue formatValue={(v) => `${v}%`} />
 									<Slider value={30} onChange={() => {}} min={0} max={60} step={5} label="쿨다운" showValue formatValue={(v) => `${v}초`} />
 									<Slider value={50} onChange={() => {}} disabled label="비활성" />
@@ -661,17 +702,17 @@ export default function DesignPage() {
 							description="데이터 표시와 입력 컴포넌트"
 						/>
 						<Showcase className="space-y-8">
-							<ShowcaseRow label="DataTable">
+							<ShowcaseRow label="DataTable" block>
 								<DataTable columns={tableColumns} data={tableData} keyExtractor={(r) => r.id} />
 							</ShowcaseRow>
 
-							<ShowcaseRow label="TagInput">
-								<div className="max-w-md">
+							<ShowcaseRow label="TagInput" block>
+								<div className="w-full max-w-md">
 									<TagInput value={tags} onChange={setTags} placeholder="태그 입력 후 Enter" maxTags={8} />
 								</div>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="StatCard">
+							<ShowcaseRow label="StatCard" block>
 								<div className="flex items-center gap-2 mb-4">
 									<Badge size="sm">예시</Badge>
 									<p className="text-xs font-medium text-muted-foreground">이 값들은 실제 측정이 아닌 컴포넌트 데모예요.</p>
@@ -813,6 +854,23 @@ export default function DesignPage() {
 									</CommandDialog>
 								</ShowcaseRow>
 
+							<ShowcaseRow label="SaveBar (설정 저장 바)" block>
+								<div className="space-y-3">
+									<div className="flex gap-2">
+										<Button variant="secondary" size="sm" onClick={() => setSaveBarDemo(true)}>
+											저장 바 보기
+										</Button>
+										<Button variant="ghost" size="sm" onClick={() => setSaveBarDemo(false)}>
+											숨기기
+										</Button>
+									</div>
+									<p className="text-xs text-muted-foreground">
+										실제 설정 페이지에서는 저장하지 않은 변경이 있을 때 화면 하단에 플로팅으로 떠요.
+									</p>
+								</div>
+								<SaveBar dirty={saveBarDemo} saving={false} onSave={() => setSaveBarDemo(false)} />
+							</ShowcaseRow>
+
 							<ToastDemo />
 						</Showcase>
 
@@ -840,8 +898,8 @@ export default function DesignPage() {
 								/>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="ChannelMessage">
-								<div className="bg-discord-bg rounded-xl overflow-hidden py-2">
+							<ShowcaseRow label="ChannelMessage" block>
+								<div className="w-full max-w-xl overflow-hidden rounded-xl bg-discord-bg py-2">
 									<ChannelMessage
 										author={{ id: "bot", username: "시루", bot: true }}
 										content="🎵 지금 재생 중: **Blinding Lights** · The Weeknd"
@@ -866,15 +924,44 @@ export default function DesignPage() {
 								</div>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="PermissionList">
-								<div className="max-w-xl">
+							<ShowcaseRow label="PermissionList" block>
+								<div className="w-full max-w-xl">
 									<PermissionList categories={DISCORD_PERMISSIONS.slice(0, 2)} value={permissions} onChange={setPermissions} />
 								</div>
 							</ShowcaseRow>
 
-							<ShowcaseRow label="RoleSelect">
-								<div className="max-w-sm">
+							<ShowcaseRow label="RoleSelect" block>
+								<div className="w-full max-w-sm">
 									<RoleSelect roles={sampleRoles} value={selectedRoles} onChange={setSelectedRoles} />
+								</div>
+							</ShowcaseRow>
+
+							<ShowcaseRow label="SearchableSelect" block>
+								<div className="w-full max-w-sm space-y-3">
+									<SearchableSelect
+										options={[
+											{ value: "kr", label: "한국어", group: "아시아" },
+											{ value: "jp", label: "日本語", group: "아시아" },
+											{ value: "en", label: "English", group: "유럽" },
+											{ value: "de", label: "Deutsch", group: "유럽" },
+										]}
+										value={searchableValue}
+										onChange={(value) => setSearchableValue(value)}
+										placeholder="언어 선택 (검색 가능)"
+									/>
+									<SearchableSelect
+										multiple
+										options={[
+											{ value: "general", label: "일반", group: "텍스트 채널" },
+											{ value: "music", label: "음악", group: "텍스트 채널" },
+											{ value: "notice", label: "공지", group: "텍스트 채널" },
+											{ value: "voice", label: "기본 음성", group: "음성 채널" },
+											{ value: "lounge", label: "라운지", group: "음성 채널" },
+										]}
+										value={selectedChannels}
+										onChange={setSelectedChannels}
+										placeholder="채널 선택 (다중 · 태그가 트리거 안쪽에 들어가요)"
+									/>
 								</div>
 							</ShowcaseRow>
 						</Showcase>
