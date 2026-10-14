@@ -134,10 +134,21 @@ export class TrackHandler extends BaseLavalinkHandler {
 	}
 
 	private async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
+		await this.handleTrackFailure(player, track, 'stuck');
+	}
+
+	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackExceptionEvent) {
+		await this.handleTrackFailure(player, track, 'error');
+	}
+
+	/**
+	 * trackStuck/trackError 공통 복구 — 연속 오류 중단, 예열 관망, 조용한 스킵/마지막 곡 안내를 공유한다.
+	 */
+	private async handleTrackFailure(player: CustomPlayer, track: Track | UnresolvedTrack | null, kind: 'stuck' | 'error') {
 		this.clearAdvancePending(player.guildId);
 		player.consecutiveErrors++;
-		this.logger.warn(`Track stuck (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
-		reportPlaybackEvent(player.guildId, 'track_stuck', track, { consecutiveErrors: player.consecutiveErrors });
+		this.logger.warn(`Track ${kind} (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
+		reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, { consecutiveErrors: player.consecutiveErrors });
 
 		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
 			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
@@ -166,50 +177,6 @@ export class TrackHandler extends BaseLavalinkHandler {
 			return;
 		}
 		if (this.watchdogs.has(player.guildId)) return;
-
-		// 중간 오류는 조용히 스킵하고, 마지막(남은 곡 없음)에만 한 번 알린다. (3연속 중단 알림은 위 abort 분기)
-		if (player.queue.tracks.length > 0) {
-			await this.container.mixerService.skip(player).catch(() => player.skip());
-		} else {
-			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
-			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
-			player.transitionState.stopByCommand = true;
-			await player.stopPlaying();
-		}
-	}
-
-	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackExceptionEvent) {
-		this.clearAdvancePending(player.guildId);
-		player.consecutiveErrors++;
-		this.logger.warn(`Track error (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
-		reportPlaybackEvent(player.guildId, 'track_error', track, { consecutiveErrors: player.consecutiveErrors });
-
-		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
-			reportPlaybackEvent(player.guildId, 'playback_abort', track, {
-				reason: 'max_consecutive_errors',
-				consecutiveErrors: player.consecutiveErrors
-			});
-			await this.sendNotification(
-				player,
-				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
-			);
-			player.transitionState.stopByCommand = true;
-			this.container.mixerService.markUnmanaged(player.guildId);
-			this.clearWatchdog(player.guildId);
-			await player.stopPlaying();
-			await player.disconnect();
-			return;
-		}
-
-		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
-		if (this.container.mixerService.consumePreloaded(player.guildId)) {
-			player.transitionState.preloadConsumedAt = Date.now();
-			if (!this.isTransitionAlreadyStarted(player, track)) {
-				this.armWatchdog(player);
-			}
-			return;
-		}
 
 		// 중간 오류는 조용히 스킵하고, 마지막(남은 곡 없음)에만 한 번 알린다. (3연속 중단 알림은 위 abort 분기)
 		if (player.queue.tracks.length > 0) {

@@ -3,7 +3,6 @@ import { emoji } from '@sirubot/utils';
 import { Events, Listener, UserError } from '@sapphire/framework';
 import { ChannelType, ComponentType, Message, MessageFlags, StringSelectMenuInteraction } from 'discord.js';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
 import { errorView } from '../view/error.ts';
@@ -264,14 +263,7 @@ export class CommandChannelListener extends Listener {
 		if (wasIdle && (await this.container.audioService.isControllerEnabled(player.guildId))) {
 			return [playView.playStarted({ track: track as Track, userId })];
 		}
-		return [
-			playView.trackAdded({
-				track: track as Track,
-				queued: player.queue.current !== null,
-				position: getUserQueuedTracks(player).length,
-				totalDuration: getUserQueuedTracks(player).reduce((acc, t) => acc + (t.info.duration ?? 0), 0)
-			})
-		];
+		return [playView.trackAdded(playView.trackAddedProps(player, track as Track))];
 	}
 
 	/** 쿨다운 맵이 커지는 것을 막는다 — 10초 지난 항목은 버린다. */

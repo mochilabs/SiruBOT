@@ -1,6 +1,6 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction, ComponentType } from 'discord.js';
+import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { filterCustomIdPrefix, filterView } from '../view/filter.ts';
 import { errorView } from '../view/error.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -14,7 +14,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		});
 	}
 
-	public override parse(interaction: StringSelectMenuInteraction | ButtonInteraction) {
+	public override parse(interaction: StringSelectMenuInteraction) {
 		if (!interaction.inCachedGuild()) return this.none();
 		if (!interaction.customId.startsWith(filterCustomIdPrefix)) return this.none();
 
@@ -22,7 +22,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 		return this.some({ action });
 	}
 
-	public async run(interaction: StringSelectMenuInteraction<'cached'> | ButtonInteraction<'cached'>, { action }: { action: string }) {
+	public async run(interaction: StringSelectMenuInteraction<'cached'>, { action }: { action: string }) {
 		// DJ/Alone 권한 체크
 		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
 			await interaction.reply({
@@ -41,21 +41,8 @@ export default class FilterInteractionHandler extends InteractionHandler {
 			return;
 		}
 
-		if (action === 'reset') {
-			await player.filterManager.resetFilters();
-			await player.filterManager.clearEQ();
-			await this.container.mixerService.reapplyMixerFilter(player);
-			player.activeFilters = [];
-			await interaction.update({
-				components: [filterView({ activeFilters: [] })],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-			return;
-		}
-
-		if (action === 'select' && interaction.componentType === ComponentType.StringSelect) {
-			const selectInteraction = interaction as StringSelectMenuInteraction<'cached'>;
-			const selectedPresets = selectInteraction.values;
+		if (action === 'select') {
+			const selectedPresets = interaction.values;
 
 			// 전체 초기화 후 선택된 필터만 적용
 			await player.filterManager.resetFilters();
@@ -86,7 +73,7 @@ export default class FilterInteractionHandler extends InteractionHandler {
 
 			player.activeFilters = activePresets;
 
-			await selectInteraction.update({
+			await interaction.update({
 				components: [filterView({ activeFilters: activePresets })],
 				flags: [MessageFlags.IsComponentsV2]
 			});

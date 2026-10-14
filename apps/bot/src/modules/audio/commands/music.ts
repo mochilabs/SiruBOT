@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, PreconditionContainerArray, UserError, type SimplePreconditionKeys } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction } from 'discord.js';
+import { runSubcommandPreconditions, subcommandSummaries, type SubcommandModule } from '../../../lib/subcommandDispatcher.ts';
 import * as autoplay from '../subcommands/autoplay.ts';
 import * as filter from '../subcommands/filter.ts';
 import * as history from '../subcommands/history.ts';
@@ -18,18 +19,7 @@ import * as stop from '../subcommands/stop.ts';
 import * as tts from '../subcommands/tts.ts';
 import * as volume from '../subcommands/volume.ts';
 
-/** 서브커맨드 모듈들의 공통 형태 */
-interface MusicSubcommandModule {
-	name: string;
-	ko: string;
-	description: string;
-	preconditions: string[];
-	build(sub: Parameters<typeof play.build>[0]): ReturnType<typeof play.build>;
-	run(interaction: ChatInputCommandInteraction<'cached'>): Promise<unknown>;
-	autocomplete?(interaction: AutocompleteInteraction): Promise<unknown>;
-}
-
-const SUBCOMMANDS: MusicSubcommandModule[] = [
+const SUBCOMMANDS: SubcommandModule[] = [
 	play,
 	pause,
 	skip,
@@ -48,7 +38,7 @@ const SUBCOMMANDS: MusicSubcommandModule[] = [
 ];
 
 /** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
-export const MUSIC_SUBCOMMANDS = SUBCOMMANDS.map(({ name, ko, description }) => ({ name, ko, description }));
+export const MUSIC_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -104,14 +94,8 @@ export class MusicCommand extends Command {
 
 		// 기존에는 명령어마다 달랐던 precondition을 서브커맨드별로 실행해요.
 		// (하나의 명령어에 합치면서 union으로 걸면 /음악 가사 같은 가벼운 명령어까지 음성채널을 요구하게 돼요)
-		await this.runSubcommandPreconditions(interaction, subcommand);
+		await runSubcommandPreconditions(this, interaction, subcommand.preconditions);
 
 		await subcommand.run(interaction);
-	}
-
-	private async runSubcommandPreconditions(interaction: ChatInputCommandInteraction<'cached'>, subcommand: MusicSubcommandModule): Promise<void> {
-		// 프레임워크와 같은 방식으로 실행 — 없는 precondition/핸들러도 표준 에러로 처리돼요
-		const result = await new PreconditionContainerArray(subcommand.preconditions as SimplePreconditionKeys[]).chatInputRun(interaction, this);
-		if (result.isErr()) throw result.unwrapErr();
 	}
 }

@@ -87,7 +87,7 @@ export function remainingUntilQueueEnd(player: Player, queuedTracks: Track[]): n
 /**
  * Normalize title: convert to lowercase, remove bracketed content (feat., remix, etc.), remove special characters, trim whitespace
  */
-function normalizeTitle(title: string): string {
+export function normalizeTitle(title: string): string {
 	return title
 		.toLowerCase()
 		.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '') // Remove (Official MV), [Lyrics], {Remix}, etc.
@@ -112,7 +112,7 @@ function getBigrams(str: string): string[] {
  * Dice coefficient (Bigram similarity): 0 = completely different, 1 = identical
  * Measures how similar two tracks are based on their titles
  */
-function titleSimilarity(titleA: string, titleB: string): number {
+export function titleSimilarity(titleA: string, titleB: string): number {
 	const a = normalizeTitle(titleA);
 	const b = normalizeTitle(titleB);
 
@@ -172,7 +172,7 @@ function trackSimilarity(trackA: Track, trackB: Track): number {
  * - Select the most appropriate track from the medium similarity range
  * 이미 재생했거나 대기 중인 곡은 fetchRelatedCandidate에서 하드 제외되므로 여기서 다루지 않는다.
  */
-function pickBySimilarity(candidates: Track[], reference: Track): Track | null {
+export function pickBySimilarity(candidates: Track[], reference: Track): Track | null {
 	if (candidates.length === 0) return null;
 
 	const scored = candidates.map((track) => ({
@@ -215,7 +215,7 @@ function getTrackIdentifier(track: Track | UnresolvedTrack): string | null {
  * 이미 재생했던 곡(previous + current)과 대기 중인 곡(queue.tracks)은 순위 감점이 아니라
  * 하드 제외한다 — 감점만으로는 폴백 경로에서 다시 뽑혀 같은 곡이 반복되었다.
  */
-async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
+export async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
 	const RD_PLAYLIST_ID = 'RD' + lastPlayedTrack.info.identifier;
 
 	try {

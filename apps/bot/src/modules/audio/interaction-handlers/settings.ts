@@ -189,18 +189,9 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 
 		// SponsorBlock actions
 		if (interaction.isStringSelectMenu() && action === 'select:sponsorblock') {
-			const selectedSegments = interaction.values;
-			await this.container.db.guild.upsert({
-				where: { id: interaction.guildId },
-				create: { id: interaction.guildId, sponsorBlockSegments: selectedSegments },
-				update: { sponsorBlockSegments: selectedSegments }
-			});
+			await this.container.guildService.setSponsorBlockSegments(interaction.guildId, interaction.values);
 		} else if (action === 'reset:sponsorblock') {
-			await this.container.db.guild.upsert({
-				where: { id: interaction.guildId },
-				create: { id: interaction.guildId, sponsorBlockSegments: [] },
-				update: { sponsorBlockSegments: [] }
-			});
+			await this.container.guildService.setSponsorBlockSegments(interaction.guildId, []);
 		}
 
 		// Re-render

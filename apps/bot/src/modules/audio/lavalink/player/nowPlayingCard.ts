@@ -14,7 +14,7 @@ import { currentChapterIndex, currentChapter } from './chapters.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { Track } from 'lavalink-client';
 
-interface NowPlayingCardAttachment {
+export interface NowPlayingCardAttachment {
 	/** attachment:// 파일명 — MediaGallery에서 참조해요 */
 	url: string;
 	filename: string;

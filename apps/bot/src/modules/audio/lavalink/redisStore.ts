@@ -199,125 +199,75 @@ export class RedisStore {
 	}
 
 	/**
+	 * isReady 가드 + fire-and-forget 퍼블리시 공용 헬퍼 — Redis 미연결/오류 시 조용히 스킵하고
+	 * 재생 경로를 절대 블로킹하지 않아요. label은 스킵/실패 로그 구분에만 쓰여요.
+	 */
+	private publish(channel: string, payload: string, label: string): void {
+		try {
+			if (!this.isReady) {
+				this.logger.debug(`${label} publish skipped (redis not ready)`);
+				return;
+			}
+			void this.redis.publish(channel, payload).catch((error) => this.logger.debug(`${label} publish failed: ${error}`));
+		} catch (error) {
+			this.logger.debug(`${label} publish skipped: ${error}`);
+		}
+	}
+
+	/**
 	 * 플레이어 상태를 Redis Pub/Sub으로 퍼블리시해요 (채널: `sirubot:player:{guildId}`).
 	 * data-api의 playerHub가 구독해 대시보드 라이브 뷰에 서빙해요.
-	 * fire-and-forget — Redis 미연결/오류 시 조용히 스킵하고 재생 경로를 절대 블로킹하지 않아요.
 	 *
 	 * NOTE: incrementCacheCounter(aiChatService)와 마찬가지로 RedisStore 공용 헬퍼예요.
 	 * 제어(재생/정지)는 이 퍼블리시로 하지 않아요 — 제어는 bot RPC로 별도 구현 예정이에요.
 	 */
 	public publishRawPlayerState(guildId: string, payload: string): void {
-		try {
-			if (!this.isReady) {
-				this.logger.debug(`Player state publish skipped (redis not ready, guild ${guildId})`);
-				return;
-			}
-			void this.redis
-				.publish(playerStateChannel(guildId), payload)
-				.catch((error) => this.logger.debug(`Player state publish failed (guild ${guildId}): ${error}`));
-		} catch (error) {
-			this.logger.debug(`Player state publish skipped (guild ${guildId}): ${error}`);
-		}
+		this.publish(playerStateChannel(guildId), payload, `Player state (guild ${guildId})`);
 	}
 
 	/**
 	 * 봇 프로필 상태(길드 닉네임·아바타·변경 권한)를 Redis Pub/Sub으로 퍼블리시해요
 	 * (채널: `sirubot:bot-profile:state:{guildId}` — botProfileStateChannel 접두사).
 	 * data-api의 botProfileHub가 구독해 대시보드 봇 프로필 패널에 서빙해요.
-	 * fire-and-forget — publishRawPlayerState와 같은 재생 경로 무관 안전 규칙을 따라요.
 	 */
 	public publishBotProfileState(guildId: string, payload: string): void {
-		try {
-			if (!this.isReady) {
-				this.logger.debug(`Bot profile state publish skipped (redis not ready, guild ${guildId})`);
-				return;
-			}
-			void this.redis
-				.publish(botProfileStateChannel(guildId), payload)
-				.catch((error) => this.logger.debug(`Bot profile state publish failed (guild ${guildId}): ${error}`));
-		} catch (error) {
-			this.logger.debug(`Bot profile state publish skipped (guild ${guildId}): ${error}`);
-		}
+		this.publish(botProfileStateChannel(guildId), payload, `Bot profile state (guild ${guildId})`);
 	}
 
 	/**
 	 * 멤버 인사 테스트 전송 결과를 Redis Pub/Sub으로 퍼블리시해요
 	 * (채널: `sirubot:member-greeting:state:{guildId}` — memberGreetingStateChannel 접두사).
 	 * data-api가 구독해 대시보드 환영/작별 설정 패널에 서빙해요.
-	 * fire-and-forget — publishBotProfileState와 같은 안전 규칙을 따라요.
 	 */
 	public publishMemberGreetingState(guildId: string, payload: string): void {
-		try {
-			if (!this.isReady) {
-				this.logger.debug(`Member greeting state publish skipped (redis not ready, guild ${guildId})`);
-				return;
-			}
-			void this.redis
-				.publish(memberGreetingStateChannel(guildId), payload)
-				.catch((error) => this.logger.debug(`Member greeting state publish failed (guild ${guildId}): ${error}`));
-		} catch (error) {
-			this.logger.debug(`Member greeting state publish skipped (guild ${guildId}): ${error}`);
-		}
+		this.publish(memberGreetingStateChannel(guildId), payload, `Member greeting state (guild ${guildId})`);
 	}
 
 	/**
 	 * 길드 데이터(채널·역할 목록) 응답을 Redis Pub/Sub으로 퍼블리시해요
 	 * (채널: `sirubot:guild-data:response` — guildId 접두사 없는 고정 채널이에요).
 	 * data-api의 guildDataHub가 requestId 상관으로 구독해 대시보드 채널/역할 패널에 서빙해요.
-	 * fire-and-forget — publishMemberGreetingState와 같은 안전 규칙을 따라요.
 	 */
 	public publishGuildDataResponse(payload: string): void {
-		try {
-			if (!this.isReady) {
-				this.logger.debug('Guild data response publish skipped (redis not ready)');
-				return;
-			}
-			void this.redis
-				.publish(GUILD_DATA_RESPONSE_CHANNEL, payload)
-				.catch((error) => this.logger.debug(`Guild data response publish failed: ${error}`));
-		} catch (error) {
-			this.logger.debug(`Guild data response publish skipped: ${error}`);
-		}
+		this.publish(GUILD_DATA_RESPONSE_CHANNEL, payload, 'Guild data response');
 	}
 
 	/**
 	 * 웹 플레이어(검색·재생·제어·음성 상태) 응답을 Redis Pub/Sub으로 퍼블리시해요
 	 * (채널: `sirubot:player-web:response` — guildId 접두사 없는 고정 채널이에요).
 	 * data-api의 playerWebHub가 requestId 상관으로 구독해 대시보드 player 페이지에 서빙해요.
-	 * fire-and-forget — publishGuildDataResponse와 같은 안전 규칙을 따라요.
 	 */
 	public publishPlayerWebResponse(payload: string): void {
-		try {
-			if (!this.isReady) {
-				this.logger.debug('Player web response publish skipped (redis not ready)');
-				return;
-			}
-			void this.redis
-				.publish(PLAYER_WEB_RESPONSE_CHANNEL, payload)
-				.catch((error) => this.logger.debug(`Player web response publish failed: ${error}`));
-		} catch (error) {
-			this.logger.debug(`Player web response publish skipped: ${error}`);
-		}
+		this.publish(PLAYER_WEB_RESPONSE_CHANNEL, payload, 'Player web response');
 	}
 
 	/**
 	 * JTC 마커 채널 셋업 결과를 Redis Pub/Sub으로 퍼블리시해요
 	 * (채널: `sirubot:jtc-setup:response` — guildId 접두사 없는 고정 채널이에요).
 	 * data-api의 jtcSetupHub가 requestId 상관으로 구독해 대시보드 설정 화면에 서빙해요.
-	 * fire-and-forget — publishPlayerWebResponse와 같은 안전 규칙을 따라요.
 	 */
 	public publishJtcSetupResponse(payload: string): void {
-		try {
-			if (!this.isReady) {
-				this.logger.debug('JTC setup response publish skipped (redis not ready)');
-				return;
-			}
-			void this.redis
-				.publish(JTC_SETUP_RESPONSE_CHANNEL, payload)
-				.catch((error) => this.logger.debug(`JTC setup response publish failed: ${error}`));
-		} catch (error) {
-			this.logger.debug(`JTC setup response publish skipped: ${error}`);
-		}
+		this.publish(JTC_SETUP_RESPONSE_CHANNEL, payload, 'JTC setup response');
 	}
 
 	public async connect() {
@@ -347,16 +297,19 @@ export class RedisStore {
 		this.nodeSessionStore.onConnect();
 	}
 
+	/** 재연결·오류·종료 공용 — ready 플래그를 내리고 하위 저장소에도 단절을 알린다. (이중 단절 알림 방지) */
+	private markDisconnected(): void {
+		if (!this.isReady) return;
+		this.isReady = false;
+		this.queueStore.onDisconnect();
+		this.playerSaver.onDisconnect();
+		this.nodeSessionStore.onDisconnect();
+	}
+
 	private handleReconnecting() {
 		this.reconnectTryCount++;
 		this.logger.info(`Redis reconnecting (${this.reconnectTryCount})`);
-
-		if (this.isReady) {
-			this.isReady = false;
-			this.queueStore.onDisconnect();
-			this.playerSaver.onDisconnect();
-			this.nodeSessionStore.onDisconnect();
-		}
+		this.markDisconnected();
 	}
 
 	private handleReady() {
@@ -367,37 +320,11 @@ export class RedisStore {
 
 	private handleError(err: Error) {
 		this.logger.error(`Redis Error: ${err}`);
-
-		if (this.isReady) {
-			this.isReady = false;
-			this.queueStore.onDisconnect();
-			this.playerSaver.onDisconnect();
-			this.nodeSessionStore.onDisconnect();
-		}
+		this.markDisconnected();
 	}
 
 	private handleEnd() {
 		this.logger.warn('Redis connection ended');
-
-		if (this.isReady) {
-			this.isReady = false;
-			this.queueStore.onDisconnect();
-			this.playerSaver.onDisconnect();
-			this.nodeSessionStore.onDisconnect();
-		}
-	}
-
-	public getCacheStats() {
-		return {
-			queueStore: this.queueStore.getCacheStats(),
-			playerSaver: this.playerSaver.getCacheStats()
-		};
-	}
-
-	public cleanupCache(): { queueStore: number; playerSaver: number } {
-		return {
-			queueStore: this.queueStore.cleanupCache(),
-			playerSaver: this.playerSaver.cleanupCache()
-		};
+		this.markDisconnected();
 	}
 }

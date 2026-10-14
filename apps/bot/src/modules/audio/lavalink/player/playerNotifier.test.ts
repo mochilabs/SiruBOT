@@ -295,17 +295,23 @@ describe('non-blocking player notifications', () => {
 
 	it('does not start another image request after a pending edit finishes on a destroyed player', async () => {
 		vi.useFakeTimers();
+		mocks.pinned.mockResolvedValue('channel');
+		const rendering = pending<ReturnType<typeof card> | null>();
+		mocks.render.mockReturnValue(rendering.promise); // 첫 카드 요청이 진행 중
 		const editing = pending<TestMessage>();
 		const notifier = new PlayerNotifier();
 		const current = player();
 		await notifier.sendController(current);
+		expect(mocks.render).toHaveBeenCalledTimes(1);
 		(current.controller!.edit as Mock).mockReturnValue(editing.promise);
 		Object.defineProperty(current, 'position', { value: 1000 });
 		notifier.updateController(current);
 		await vi.advanceTimersByTimeAsync(300);
 		await notifier.onPlayerDestroy(current);
 		editing.resolve(message('message-1'));
+		rendering.resolve(null);
 		await vi.advanceTimersByTimeAsync(0);
+		// 파괴 뒤에는 진행 중이던 edit/카드가 끝나도 새 이미지 요청을 하지 않는다.
 		expect(mocks.render).toHaveBeenCalledTimes(1);
 		expect(current.controller).toBeNull();
 	});
@@ -331,18 +337,22 @@ describe('non-blocking player notifications', () => {
 
 	it('does not recreate a pinned controller if it is cleared while checking the channel', async () => {
 		vi.useFakeTimers();
-		const pinLookup = pending<string | null>();
-		mocks.pinned.mockReturnValue(pinLookup.promise);
+		mocks.pinned.mockResolvedValue('channel');
 		const notifier = new PlayerNotifier();
 		const current = player();
 		await notifier.sendController(current);
 		(current.controller!.edit as Mock).mockRejectedValue({ code: 10008 });
 		Object.defineProperty(current, 'position', { value: 1000 });
+		// 10008 복구 경로의 pinned 재확인만 늦춘다 — 그 사이에 컨트롤러가 삭제되면 재생성하지 않는다.
+		const recheck = pending<string | null>();
+		mocks.pinned
+			.mockResolvedValueOnce('channel') // updateControllerNow 본문의 pinned 조회
+			.mockReturnValueOnce(recheck.promise); // catch 복구 분기의 재확인
 		notifier.updateController(current);
 		await vi.advanceTimersByTimeAsync(300);
-		expect(mocks.pinned).toHaveBeenCalledTimes(1);
+		expect(mocks.pinned).toHaveBeenCalledTimes(3); // send 1회 + update 2회
 		await notifier.deleteController(current);
-		pinLookup.resolve('channel');
+		recheck.resolve('channel');
 		await vi.advanceTimersByTimeAsync(0);
 		expect(mocks.send).toHaveBeenCalledTimes(1);
 		expect(current.messageId).toBeNull();

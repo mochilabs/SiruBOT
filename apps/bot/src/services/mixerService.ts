@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Player, Track } from 'lavalink-client';
-import { isYouTubeSource } from '@sirubot/utils';
+import { enqueueOperation, isYouTubeSource } from '@sirubot/utils';
 
 const MIXER_FILTER_KEY = 'mixer';
 /** mixer REST 제한 시간(ms) — 타임아웃이 없으면 slot 직렬화 대기열이 응답 없는 노드에서 영원히 안 끝난다. */
@@ -229,18 +229,9 @@ export class MixerService {
 		this.clearPreloadedState(String(player.guildId));
 	}
 
-	private async enqueueSlotOperation<T>(guildId: string, operation: () => Promise<T>): Promise<T> {
-		const previous = this.slotOperations.get(guildId) ?? Promise.resolve();
-		const result = previous.catch(() => undefined).then(operation);
-		const completed = result.then(
-			() => undefined,
-			() => undefined
-		);
-		this.slotOperations.set(guildId, completed);
-		void completed.finally(() => {
-			if (this.slotOperations.get(guildId) === completed) this.slotOperations.delete(guildId);
-		});
-		return result;
+	/** 같은 길드의 슬롯 조작을 순차 실행 — 공용 enqueueOperation으로 직렬화해요. */
+	private enqueueSlotOperation<T>(guildId: string, operation: () => Promise<T>): Promise<T> {
+		return enqueueOperation(this.slotOperations, guildId, operation);
 	}
 
 	/** DB 설정을 서버에 반영한다 (playerCreate 시 1회). */

@@ -47,6 +47,17 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 	return container;
 }
 
+/** trackAdded 뷰 props 공용 계산 — 추가 직후 시점의 큐 상태로 대기 위치/총 길이를 잰다 (audioService·commandChannel·playerWebResponder 공용). */
+export function trackAddedProps(player: Player, track: Track): playViewProps {
+	const userTracks = getUserQueuedTracks(player);
+	return {
+		track,
+		queued: player.queue.current !== null,
+		position: userTracks.length,
+		totalDuration: userTracks.reduce((acc, t) => acc + (t.info.duration ?? 0), 0)
+	};
+}
+
 type playStartedViewProps = {
 	track: Track;
 	userId: string;

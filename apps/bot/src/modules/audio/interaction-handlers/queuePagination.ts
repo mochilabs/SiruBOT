@@ -1,10 +1,8 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { type ButtonInteraction, MessageFlags } from 'discord.js';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
-import { queueCustomIdPrefix, queueList, queueEmpty } from '../view/queue.ts';
+import { queueCustomIdPrefix, queueList, queueEmpty, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-
-const QUEUE_PAGE_SIZE = 10;
 
 export default class QueuePaginationHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {

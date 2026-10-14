@@ -26,6 +26,14 @@ interface VoteState {
 	requiredVotes: number;
 }
 
+/**
+ * 청취 가능 멤버의 과반 스킵 표표 수 — VoteSkip.requiredVotes와 단독 스킵 판정(isUserAlone)이
+ * 같은 멤버 필터(skip의 buildSkipContext)를 공유하므로 과반 계산 규칙도 한 곳에서 정의한다.
+ */
+export function requiredSkipVotes(members: Collection<string, GuildMember>): number {
+	return Math.ceil(members.size / 2);
+}
+
 export class VoteSkip {
 	private options: VoteSkipOptions;
 	private voteState: VoteState;
@@ -35,7 +43,7 @@ export class VoteSkip {
 		this.voteState = {
 			currentTrackId: options.currentTrack.info.identifier,
 			voteUsers: new Set<string>([options.interaction.user.id]),
-			requiredVotes: Math.ceil(options.voiceChannelMembers.size / 2)
+			requiredVotes: requiredSkipVotes(options.voiceChannelMembers)
 		};
 	}
 

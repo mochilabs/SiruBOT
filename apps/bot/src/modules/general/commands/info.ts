@@ -1,24 +1,16 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, PreconditionContainerArray, UserError, type SimplePreconditionKeys } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
+import { runSubcommandPreconditions, subcommandSummaries, type SubcommandModule } from '../../../lib/subcommandDispatcher.ts';
 import * as avatar from '../subcommands/avatar.ts';
 import * as bot from '../subcommands/bot.ts';
 import * as server from '../subcommands/server.ts';
 
-interface InfoSubcommandModule {
-	name: string;
-	ko: string;
-	description: string;
-	preconditions: string[];
-	build(sub: Parameters<typeof bot.build>[0]): ReturnType<typeof bot.build>;
-	run(interaction: ChatInputCommandInteraction<'cached'>): Promise<unknown>;
-}
-
-const SUBCOMMANDS: InfoSubcommandModule[] = [bot, server, avatar];
+const SUBCOMMANDS: SubcommandModule[] = [bot, server, avatar];
 
 /** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
-export const INFO_SUBCOMMANDS = SUBCOMMANDS.map(({ name, ko, description }) => ({ name, ko, description }));
+export const INFO_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -61,13 +53,7 @@ export class InfoCommand extends Command {
 			});
 		}
 
-		await this.runSubcommandPreconditions(interaction, subcommand);
+		await runSubcommandPreconditions(this, interaction, subcommand.preconditions);
 		await subcommand.run(interaction);
-	}
-
-	private async runSubcommandPreconditions(interaction: ChatInputCommandInteraction<'cached'>, subcommand: InfoSubcommandModule): Promise<void> {
-		// 프레임워크와 같은 방식으로 실행 — 없는 precondition/핸들러도 표준 에러로 처리돼요
-		const result = await new PreconditionContainerArray(subcommand.preconditions as SimplePreconditionKeys[]).chatInputRun(interaction, this);
-		if (result.isErr()) throw result.unwrapErr();
 	}
 }

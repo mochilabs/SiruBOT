@@ -2,16 +2,11 @@ import { container, UserError } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
 import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord.js';
+import { enqueueOperation } from '@sirubot/utils';
 
-import * as view from '../../view/controller.ts';
 import { CustomPlayer } from './customPlayer.ts';
-import {
-	clearNowPlayingCard,
-	getCachedNowPlayingCard,
-	getDisplayNowPlayingCard,
-	getNowPlayingCardKey,
-	resolveNowPlayingCard
-} from './nowPlayingCard.ts';
+import { buildControllerCardPayload } from './controllerPayload.ts';
+import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import { Guild } from '@sirubot/prisma';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
@@ -52,17 +47,7 @@ export class PlayerNotifier {
 	}
 
 	private enqueueControllerOperation(guildId: string, operation: () => Promise<void>): Promise<void> {
-		const previous = this.sendChains.get(guildId) ?? Promise.resolve();
-		const run = previous.catch(() => undefined).then(operation);
-		const completed = run.then(
-			() => undefined,
-			() => undefined
-		);
-		this.sendChains.set(guildId, completed);
-		void completed.finally(() => {
-			if (this.sendChains.get(guildId) === completed) this.sendChains.delete(guildId);
-		});
-		return run;
+		return enqueueOperation(this.sendChains, guildId, operation);
 	}
 
 	private canSend(player: CustomPlayer, version: number, interaction?: ChatInputCommandInteraction): boolean {
@@ -104,16 +89,16 @@ export class PlayerNotifier {
 			if (!this.canSend(player, version, interaction)) return;
 
 			const textChannelId = interaction?.channelId ?? player.textChannelId;
-			const pinnedChannel = textChannelId ? await this.isPinnedChannel(player.guildId, textChannelId) : false;
 			// 큰 카드 이미지는 고정 채널 컨트롤러에서만 사용한다.
-			const card = pinnedChannel ? getDisplayNowPlayingCard(player) : null;
-			const components = view.controllerView({
-				player,
+			const {
+				pinned: pinnedChannel,
+				card,
+				components,
+				files
+			} = await buildControllerCardPayload(player, {
 				volume: options.volume,
-				textChannelId: textChannelId ?? undefined,
-				nowPlayingCardUrl: card?.url
+				textChannelId
 			});
-			const files = card ? [card.file] : [];
 
 			let message;
 			if (interaction) {
@@ -190,19 +175,20 @@ export class PlayerNotifier {
 			if (!options || (!options.enableController && !allowDisabled)) return;
 			if (!this.canSend(player, version) || player.messageId !== message.id || player.controller?.id !== message.id) return;
 			const textChannelId = player.textChannelId;
-			const pinnedChannel = textChannelId ? await this.isPinnedChannel(player.guildId, textChannelId) : false;
-			const card = pinnedChannel ? getDisplayNowPlayingCard(player) : null;
-			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(player) === null;
-			const cardNeedsUpload = card !== null && this.cardTrackKeys.get(message) !== card.trackKey;
-			const components = view.controllerView({
-				player,
+			// 카드 trackKey가 바뀌면 같은 파일명이라도 재업로드한다 (볼륨/챕터/일시정지 상태 변경).
+			const {
+				pinned: pinnedChannel,
+				card,
+				components,
+				attachments,
+				files
+			} = await buildControllerCardPayload(player, {
 				volume: options.volume,
-				textChannelId: textChannelId ?? undefined,
-				nowPlayingCardUrl: card?.url
+				textChannelId,
+				message,
+				previousTrackKey: this.cardTrackKeys.get(message) ?? ''
 			});
-			const attachments =
-				card && !cardNeedsUpload ? message.attachments.filter((file) => file.name === card.filename).map((file) => ({ id: file.id })) : [];
-			const files = card && (cardNeedsUpload || !message.attachments.some((file) => file.name === card.filename)) ? [card.file] : [];
+			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(player) === null;
 			const signature = JSON.stringify(components.toJSON());
 			if (files.length === 0 && this.renderedSignatures.get(message) === signature) {
 				if (missingCurrent) this.startCardRefresh(player, message.id, allowDisabled);

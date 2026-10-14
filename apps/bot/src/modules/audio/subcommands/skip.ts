@@ -1,15 +1,8 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import {
-	AutocompleteInteraction,
-	ChatInputCommandInteraction,
-	Collection,
-	GuildMember,
-	SlashCommandSubcommandBuilder,
-	VoiceBasedChannel
-} from 'discord.js';
-import { Player, Queue, Track } from 'lavalink-client';
+import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from 'discord.js';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import type { SkipContext } from '../../../services/audioService.ts';
 
 export const name = 'skip';
 export const ko = '건너뛰기';
@@ -23,15 +16,6 @@ export const preconditions = [
 	'SongPlaying',
 	'DJOrAlone'
 ];
-
-export interface SkipContext {
-	player: Player;
-	queue: Queue;
-	currentTrack: Track;
-	interaction: ChatInputCommandInteraction<'cached'>;
-	voiceChannel: VoiceBasedChannel;
-	voiceChannelMembers: Collection<string, GuildMember>;
-}
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub

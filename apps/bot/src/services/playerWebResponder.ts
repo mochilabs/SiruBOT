@@ -36,7 +36,6 @@ import type {
 } from '@sirubot/utils';
 import { MessageFlags, PermissionsBitField, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
 import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
-import { getUserQueuedTracks, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import * as playView from '../modules/audio/view/play.ts';
 
 /** 검색 결과로 돌려줄 최대 트랙 수 — 웹 선택 UI 목록 크기 */
@@ -277,10 +276,8 @@ export class PlayerWebResponder {
 
 			if (searchRes.playlist) {
 				// 플레이리스트 URL — 선택 UI가 없어 전체를 한 번에 큐에 넣어요 (웹 MVP 범위)
-				const wasIdle = player.queue.current === null && !player.playing;
 				const tracks = searchRes.tracks as Track[];
-				await player.queue.add(tracks);
-				await removeStaleRelatedTracks(player);
+				const { wasIdle } = await container.audioService.enqueueTrack(player, tracks);
 				const track = searchRes.playlist.selectedTrack ?? tracks[0];
 				if (track) {
 					await this.sendFeedbackMessage(guildId, player.textChannelId, await this.buildFeedback(player, track, request.userId, wasIdle));
@@ -444,15 +441,7 @@ export class PlayerWebResponder {
 		if (wasIdle && (await container.audioService.isControllerEnabled(player.guildId))) {
 			return [playView.playStarted({ track: track as Track, userId })];
 		}
-		const queued = getUserQueuedTracks(player);
-		return [
-			playView.trackAdded({
-				track: track as Track,
-				queued: player.queue.current !== null,
-				position: queued.length,
-				totalDuration: queued.reduce((acc, t) => acc + (t.info.duration ?? 0), 0)
-			})
-		];
+		return [playView.trackAdded(playView.trackAddedProps(player, track as Track))];
 	}
 
 	/** 고정 채널(또는 시스템 채널)에 재생 피드백을 보내요 — Discord 참여자가 웹에서의 재생을 볼 수 있게 해요 */

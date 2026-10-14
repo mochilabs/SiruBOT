@@ -1,13 +1,11 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
-import { queueList, queueSelectCustomId } from '../view/queue.ts';
+import { queueList, queueSelectCustomId, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { errorView } from '../view/error.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
-
-const QUEUE_PAGE_SIZE = 10;
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {

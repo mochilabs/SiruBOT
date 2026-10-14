@@ -34,14 +34,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	// 복원/필터 준비는 Lavalink REST 왕복이므로 3초 응답 제한에 걸리기 전에 defer한다.
 	await interaction.deferReply();
 
-	const previousTrack = player.queue.previous[player.queue.previous.length - 1];
-	if (player.queue.current) {
-		player.queue.tracks.unshift(player.queue.current);
-	}
-	await container.mixerService.clearNext(player).catch(() => null);
-	await container.mixerService.primeForPlay(player);
-	await player.play({ clientTrack: previousTrack });
-	player.queue.previous.pop();
+	const previousTrack = await container.audioService.playPrevious(player);
 
 	const containerComponent = createContainer();
 	containerComponent.addTextDisplayComponents(
