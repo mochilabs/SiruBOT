@@ -150,7 +150,7 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
           />
         </Field>
 
-        <div className="space-y-4">
+        <div className="flex flex-col items-start gap-4">
           <Switch
             checked={form.enableController}
             onChange={(checked: boolean) =>

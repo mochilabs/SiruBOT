@@ -56,7 +56,7 @@ export default async function PlayerPage({
         title="음악 플레이어"
         description="지금 플레이 중인 곡을 실시간으로 보고, 검색해서 바로 재생해요. 음성 채널에 접속 중이라면 봇이 채널에 접속해 재생해요."
       />
-      <WebPlayerSection guildId={id} />
+      <WebPlayerSection key={id} guildId={id} />
     </Container>
   );
 }

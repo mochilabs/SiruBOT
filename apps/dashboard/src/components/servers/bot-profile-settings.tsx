@@ -452,7 +452,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
             size="md"
             onClick={handleFormRevert}
             disabled={saving}
-            className="pointer-coarse:h-11"
+            className="min-h-11"
           >
             되돌리기
           </Button>

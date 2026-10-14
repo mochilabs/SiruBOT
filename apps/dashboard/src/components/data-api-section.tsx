@@ -52,14 +52,9 @@ export function DataApiSection() {
                             <p className="text-sm text-muted-foreground">캐시와 외부 API 연동 상태</p>
                         </div>
                     </div>
-                    <Badge variant={healthy ? "success" : "warning"} dot>
+                    <Badge variant={healthy ? "success" : "warning"}>
                         {healthy ? "정상" : data.ok ? "메모리 모드" : "확인 필요"}
                     </Badge>
-                </div>
-
-                <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-border-subtle pt-3 text-sm">
-                    <span className="text-muted-foreground">Redis</span>
-                    <span className="font-medium text-foreground">{data.redis ? "연결됨" : "메모리 캐시 사용 중"}</span>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">

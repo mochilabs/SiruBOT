@@ -18,14 +18,14 @@ export function PageHeader({
 	className = "",
 }: PageHeaderProps) {
 	return (
-		<header className={`mb-6 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 relative ${className}`}>
+		<header className={`mb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-4 sm:gap-6 pb-6 relative ${className}`}>
 			<div className="flex-1 min-w-0 max-w-full flex flex-col justify-center space-y-3">
 				<div className="space-y-1">
-					<h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-foreground truncate pb-1">
+					<h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter text-foreground break-words pb-1">
 						{title}
 					</h1>
 					{description && (
-						<div className="text-sm sm:text-base font-medium text-muted-foreground truncate">
+						<div className="text-sm sm:text-base font-medium text-muted-foreground break-words">
 							{description}
 						</div>
 					)}
@@ -33,7 +33,7 @@ export function PageHeader({
 			</div>
 
 			{children && (
-				<div className="shrink-0 w-full md:w-auto flex items-center md:justify-end">
+				<div className="min-w-0 max-w-full w-full lg:w-auto flex flex-wrap items-center gap-2 lg:justify-end">
 					{children}
 				</div>
 			)}

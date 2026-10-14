@@ -96,23 +96,50 @@ export function useSettingsForm<T extends Partial<GuildSettings>>(
 	const { settings, isLoading, error, saving, save, reload } = useGuildSettings(guildId);
 	const [form, setForm] = useState<T | null>(null);
 	const dirtyRef = useRef(false);
+	const baselineRef = useRef<T | null>(null);
+	const formRef = useRef<T | null>(null);
+	const pendingRef = useRef<Promise<GuildSettings | null> | null>(null);
 
 	useEffect(() => {
-		if (settings && !dirtyRef.current) setForm(mapSettings(settings));
+		if (settings && !dirtyRef.current && !pendingRef.current) {
+			const next = mapSettings(settings);
+			baselineRef.current = next;
+			formRef.current = next;
+			setForm(next);
+		}
 	}, [settings, mapSettings]);
 
 	const patch = useCallback((next: Partial<T>) => {
-		dirtyRef.current = true;
-		setForm((prev) => (prev ? { ...prev, ...next } : prev));
+		if (!formRef.current || !baselineRef.current || pendingRef.current) return;
+		const updated = { ...formRef.current, ...next };
+		const baseline = baselineRef.current;
+		dirtyRef.current = (Object.keys(updated) as (keyof T)[]).some((key) => {
+			const value = updated[key];
+			const saved = baseline[key];
+			return Array.isArray(value) && Array.isArray(saved)
+				? value.length !== saved.length || value.some((item, index) => item !== saved[index])
+				: value !== saved;
+		});
+		formRef.current = updated;
+		setForm(updated);
 	}, []);
 
-	const submit = useCallback(async (): Promise<GuildSettings | null> => {
-		if (!form) return null;
-		const next = await save(form);
-		setForm(mapSettings(next));
-		dirtyRef.current = false;
-		return next;
-	}, [form, save, mapSettings]);
+	const submit = useCallback((): Promise<GuildSettings | null> => {
+		if (pendingRef.current) return pendingRef.current;
+		if (!formRef.current) return Promise.resolve(null);
+		const request = save(formRef.current).then((next) => {
+			const saved = mapSettings(next);
+			baselineRef.current = saved;
+			formRef.current = saved;
+			dirtyRef.current = false;
+			setForm(saved);
+			return next;
+		}).finally(() => {
+			pendingRef.current = null;
+		});
+		pendingRef.current = request;
+		return request;
+	}, [save, mapSettings]);
 
 	return {
 		form,

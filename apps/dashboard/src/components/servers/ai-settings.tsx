@@ -220,6 +220,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
             variant="icon"
             size="sm"
             aria-label="설정 새로고침"
+            disabled={dirty || saving}
             icon={
               <Loader2 size={16} className={loading ? "animate-spin" : ""} />
             }
@@ -334,7 +335,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
         </p>
       </InfoBox>
 
-      <SaveBar dirty={dirty} saving={saving} onSave={handleSave}>
         <Button
           variant="danger"
           loading={deleting}
@@ -345,7 +345,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
         >
           {confirmDelete ? "정말 삭제할까요?" : "대화 기록 전체 삭제"}
         </Button>
-      </SaveBar>
+      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
     </Card>
   );
 }

@@ -69,18 +69,34 @@ describe("toast 계약", () => {
 		await closeToast(id);
 	});
 
-	it("useToast 반환 참조는 불변이다 — 토스트 방송마다 이펙트가 재실행되지 않는다(F-6)", async () => {
+  it("useToast 반환 참조는 불변이다 — 토스트 방송마다 이펙트가 재실행되지 않는다(F-6)", async () => {
 		const before = useToast();
 
 		let id: string | undefined;
 		await act(async () => {
 			id = toast.success("참조 안정성 확인");
-		});
+  });
 
-		// 토스트 방송 전후로 useToast()의 정체가 같아야 해요.
-		expect(useToast()).toBe(before);
-		await closeToast(id);
-	});
+    expect(useToast()).toBe(before);
+    await closeToast(id);
+  });
+
+  it("renders multiple notices without hiding older text or creating empty actions", async () => {
+    await mount(<Toaster />);
+    let first: string | undefined;
+    let second: string | undefined;
+    await act(async () => {
+      first = toast.error("첫 번째 실패 안내");
+      second = toast.success("두 번째 성공 안내");
+    });
+    expect(document.body.textContent).toContain("첫 번째 실패 안내");
+    expect(document.body.textContent).toContain("두 번째 성공 안내");
+    expect(document.querySelector('[data-slot="toast-action"]')).toBeNull();
+    const close = document.querySelector<HTMLButtonElement>('[data-slot="toast-close"]');
+    expect(close?.getAttribute("aria-label")).toBe("닫기");
+    await closeToast(first);
+    await closeToast(second);
+  });
 
 	it("페이지별 ToastProvider는 금지, <Toaster>는 Providers.tsx에만(F-1/F-2 구조 트립와이어)", () => {
 		const offenders: string[] = [];
