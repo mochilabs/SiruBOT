@@ -6,6 +6,7 @@ import { AnimatePresence, m, useInView, useMotionValueEvent, useReducedMotion, u
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
+import { HeroPattern } from "@/components/home/hero-pattern";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { buttonVariants } from "@/components/ui/button";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -153,6 +154,7 @@ export function HeroSection() {
 
 	return (
 		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
+			<HeroPattern />
 			<div className="relative mx-auto grid min-h-[calc(100svh-var(--navbar-h))] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pb-16 sm:pt-16 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-20">
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
