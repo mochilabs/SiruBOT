@@ -33,7 +33,6 @@ export function BotProfilePreview() {
 						<span className="h-2 w-2 rounded-full bg-success" aria-hidden />
 						<span className="text-2xs text-muted-foreground">온라인</span>
 						<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-control-text">앱</span>
-						<span className="text-2xs text-muted-foreground">sirubot</span>
 					</div>
 				</div>
 				<p className="border-t border-border-subtle px-4 py-2 text-2xs text-muted-foreground">이 길드에만 적용된 프로필이에요.</p>
