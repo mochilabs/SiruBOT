@@ -25,7 +25,7 @@ const CARD_PRESETS = [
 	{
 		label: "따뜻",
 		className: "bg-gradient-to-b from-primary/50 to-primary-control/50",
-		title: "오늘의 첫 방문예요",
+		title: "오늘의 첫 방문이예요",
 		sub: "서름님이 문을 두드렸어요"
 	}
 ];
