@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { isDashboardAdmin } from "@/lib/admin-ids";
-import { auth } from "@/lib/auth";
+import { authorizeDashboardAdmin, deniedUser } from "@/lib/api-guards";
 import { fetchShards } from "@/lib/shard-api";
 
 export async function GET() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!isDashboardAdmin(session.user.id)) {
-    return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
-  }
+  const authz = await authorizeDashboardAdmin();
+  if (!authz.ok) return deniedUser(authz);
 
   try {
     const data = await fetchShards();

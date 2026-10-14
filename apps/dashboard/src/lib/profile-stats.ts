@@ -1,5 +1,6 @@
 import { fetchDataApi } from "@/lib/data-api";
 import { db } from "@/lib/db";
+import { kstDateString } from "@/lib/kst-date";
 import { getZodiac, type ZodiacInfo } from "@/lib/zodiac";
 
 export interface ProfileBirthday {
@@ -80,16 +81,6 @@ export interface ProfileStats {
   music: ProfileMusicStats;
   games: ProfileGamesStats;
   attendance: ProfileAttendance;
-}
-
-/** KST 기준 날짜 키 (YYYY-MM-DD) */
-function kstDayKey(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
 }
 
 const LISTEN_SAMPLE_LIMIT = 500;
@@ -215,6 +206,6 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
       rps: hasRps ? { wins, losses, draws, bestStreak } : null,
       guessBest,
     },
-    attendance: { checkedInToday: lastDay === kstDayKey(), streak, lastDay },
+    attendance: { checkedInToday: lastDay === kstDateString(), streak, lastDay },
   };
 }

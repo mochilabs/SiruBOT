@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { forwardDataApiGet } from "@/lib/data-api";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import type { SearchedTrack } from "@/types/playlist";
@@ -9,10 +9,10 @@ import type { SearchedTrack } from "@/types/playlist";
 const searchSchema = z.object({ query: z.string().trim().min(1).max(200) });
 
 export async function GET(request: Request) {
-	const session = await auth();
-	if (!session?.user?.id) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+	const authz = await authorizeUser();
+	if (!authz.ok) return deniedUser(authz);
 
-	const limited = await guardRateLimit(rateKey("playlist-youtube-search", session.user.id), WRITE_RATE);
+	const limited = await guardRateLimit(rateKey("playlist-youtube-search", authz.userId), WRITE_RATE);
 	if (limited) return limited;
 
 	const parsed = searchSchema.safeParse({ query: new URL(request.url).searchParams.get("query") });

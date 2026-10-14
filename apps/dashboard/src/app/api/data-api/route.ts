@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { isDashboardAdmin } from "@/lib/admin-ids";
-import { auth } from "@/lib/auth";
-import { fetchDataApiStatus } from "@/lib/data-api";
+import { authorizeDashboardAdmin, deniedUser } from "@/lib/api-guards";
+import type { DataApiStatus } from "@/lib/data-api";
+import { fetchDataApi } from "@/lib/data-api";
 
 export async function GET() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!isDashboardAdmin(session.user.id)) {
-    return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
-  }
+  const authz = await authorizeDashboardAdmin();
+  if (!authz.ok) return deniedUser(authz);
 
   try {
-    const data = await fetchDataApiStatus();
+    const data = await fetchDataApi<DataApiStatus>("/v1/status");
     if (!data)
       return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
     return NextResponse.json(data);

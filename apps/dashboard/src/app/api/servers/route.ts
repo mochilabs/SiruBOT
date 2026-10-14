@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { db } from "@/lib/db";
 import { hasManageablePermissions } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 import type { DiscordGuild } from "@/types/discord";
 
 export async function GET() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const accessToken = await getSessionAccessToken();
   if (!accessToken) {
@@ -29,10 +26,6 @@ export async function GET() {
         cache: "no-store",
         signal: AbortSignal.timeout(8_000),
       },
-    );
-
-    console.error(
-      `[diag] Discord /users/@me/guilds -> ${guildsRes.status} ${guildsRes.ok ? "" : await guildsRes.clone().text().then((t) => t.slice(0, 200)).catch(() => "")}`,
     );
 
     if (guildsRes.status === 401) {

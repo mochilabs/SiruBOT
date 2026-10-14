@@ -1,29 +1,26 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { db } from "@/lib/db";
+import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
+import { ensureUserAndFavorites } from "@/lib/playlist-favorites";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 
 const favoriteSchema = z.object({
   trackId: z.string().trim().min(1).max(64),
 });
 
-const FAVORITES_PLAYLIST_NAME = "즐겨찾기";
-
 /**
  * 트랙 → 즐겨찾기 원클릭 추가 (POST /api/favorites)
  * 즐겨찾기 플레이리스트(없으면 자동 생성)에 곡을 추가해요. 이미 추가된 곡이면 409.
  */
 export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("favorites-post", session.user.id),
+    rateKey("favorites-post", authz.userId),
     WRITE_RATE,
   );
   if (limited) return limited;
@@ -39,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const { trackId } = parsed.data;
-  const userId = session.user.id;
+  const userId = authz.userId;
 
   try {
     const track = await db.track.findUnique({ where: { id: trackId } });
@@ -50,26 +47,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const favorites = await db.playlist.findFirst({
-      where: { userId, name: FAVORITES_PLAYLIST_NAME },
-    });
-
-    const playlist =
-      favorites ??
-      (await db.$transaction(async (tx) => {
-        await tx.user.upsert({
-          where: { id: userId },
-          create: { id: userId },
-          update: {},
-        });
-        return tx.playlist.create({
-          data: {
-            userId,
-            name: FAVORITES_PLAYLIST_NAME,
-            description: "즐겨찾기한 음악 목록입니다.",
-          },
-        });
-      }));
+    // 없으면 자동 생성(유저 upsert + 즐겨찾기 생성) — playlists 라우트와 같은 보장이에요.
+    const playlist = await ensureUserAndFavorites(userId);
 
     const existing = await db.playlistTrack.findFirst({
       where: { playlistId: playlist.id, trackId },
@@ -113,14 +92,11 @@ export async function POST(request: Request) {
  * 차트 하트 토글 2번째 클릭(이미 즐겨찾기 상태)에서 사용해요.
  */
 export async function DELETE(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("favorites-delete", session.user.id),
+    rateKey("favorites-delete", authz.userId),
     WRITE_RATE,
   );
   if (limited) return limited;
@@ -134,7 +110,7 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const userId = session.user.id;
+  const userId = authz.userId;
 
   try {
     const playlist = await db.playlist.findFirst({
@@ -179,11 +155,8 @@ export async function DELETE(request: Request) {
  * 즐겨찾기 표시 상태 조회 (GET /api/favorites) — 현재 페이지 트랙 ID 목록으로 필터링
  */
 export async function GET(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const { searchParams } = new URL(request.url);
   const trackIds = (searchParams.get("trackIds") ?? "")
@@ -196,7 +169,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ trackIds: [] });
   }
 
-  const userId = session.user.id;
+  const userId = authz.userId;
 
   try {
     const playlist = await db.playlist.findFirst({

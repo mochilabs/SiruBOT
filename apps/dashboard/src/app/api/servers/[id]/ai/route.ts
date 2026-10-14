@@ -4,12 +4,7 @@ import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
-import {
-  aiSettingsSchema,
-  normalizeAiMode,
-  unknownKeys,
-  zodError,
-} from "@/lib/schemas";
+import { aiSettingsSchema, normalizeAiMode, parseSettingBody } from "@/lib/schemas";
 
 const ALLOWED_KEYS = ["mode", "channelIds"] as const;
 
@@ -58,35 +53,14 @@ export async function PUT(
   if (limited) return limited;
 
   try {
-    const body: unknown = await request.json().catch(() => null);
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      return NextResponse.json(
-        { error: "잘못된 요청이에요." },
-        { status: 400 },
-      );
-    }
-
-    const unknown = unknownKeys(body, ALLOWED_KEYS);
-    if (unknown.length > 0) {
-      return NextResponse.json(
-        { error: `지원하지 않는 필드예요: ${unknown.join(", ")}` },
-        { status: 400 },
-      );
-    }
-
-    const parsed = aiSettingsSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: zodError(parsed.error) },
-        { status: 400 },
-      );
-    }
+    const body = await parseSettingBody(request, aiSettingsSchema, ALLOWED_KEYS);
+    if (!body.ok) return body.response;
 
     const data: {
       aiMode?: string;
       aiChannelIds?: string[];
     } = {};
-    const input = parsed.data;
+    const input = body.data;
 
     if (input.mode !== undefined) data.aiMode = input.mode;
 

@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 interface DataApiPlaybackCounts {
   track_start: number;
   track_end: number;
@@ -222,6 +224,18 @@ export type DataApiImageResult =
   | DataApiForwardFail;
 
 /**
+ * forward* 실패를 대시보드 응답으로 정리 — 4xx는 data-api의 상태와 한국어 message를
+ * 그대로 살리고, 5xx/네트워크(502)는 내성 있는 fallback으로 응답해요.
+ */
+export function dataApiFailResponse(
+  fail: DataApiForwardFail,
+  fallback: string,
+): NextResponse {
+  const status = fail.status < 500 ? fail.status : 502;
+  return NextResponse.json({ error: fail.message ?? fallback }, { status });
+}
+
+/**
  * data-api POST 프록시(이미지) — PNG 등 binary 본문을 ArrayBuffer로 돌려줘요.
  * 응답이 image/*가 아니면 실패로 본다.
  */
@@ -285,9 +299,6 @@ export async function notifyGuildSettingsChanged(
   );
   return result?.ok === true;
 }
-
-/** 라이브 탭 컨트롤러 볼륨 상한 — 봇 /volume 명령 계약(0~150)과 같아요 */
-export const PLAYER_VOLUME_MAX = 150;
 
 /** 웹 플레이어 검색 결과 요약 — 봇이 Lavalink 검색 결과에서 추출해 내려줘요 */
 export interface PlayerWebTrackSummary {
@@ -454,31 +465,4 @@ export async function requestJtcSetup(
     error: null,
     status: 200,
   };
-}
-
-/**
- * data-api 상태 조회 — 관제 페이지(/api/data-api)용. 폴백 체인(DATA_API_AUTH_KEY || AUTH_KEY)은
- * 기존 방침을 유지한다. 키가 없으면(또는 공백뿐이면) 실패시키지 않고 경고 후 스킵.
- */
-export async function fetchDataApiStatus(): Promise<DataApiStatus | null> {
-  // 폴백 체인(DATA_API_AUTH_KEY || AUTH_KEY)은 기존 방침을 유지한다.
-  // 키가 없으면(또는 공백뿐이면) 실패시키지 않고 경고 후 스킵 — 무인증 localhost 호출을 안 한다.
-  const authKey = DATA_API_AUTH_KEY.trim();
-  if (!authKey) {
-    console.warn(
-      "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — 무인증 호출 대신 status 조회를 건너뛴다.",
-    );
-    return null;
-  }
-
-  try {
-    const res = await fetch(`${DATA_API_URL}/v1/status`, {
-      cache: "no-store",
-      headers: { Authorization: authKey },
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as DataApiStatus;
-  } catch {
-    return null;
-  }
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import useSWR from "swr";
 
+import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type {
 	GreetingConfig,
@@ -18,10 +18,6 @@ type TestTicket = { kind: GreetingKind; requestId: string; at: number };
 
 /** 봇 결과 폴링 상한 — 20초 내에 결과가 없으면 확인 실패로 정리해요 (전송 자체는 성공했을 수 있어요) */
 const TEST_TIMEOUT_MS = 20_000;
-
-function loginHref(guildId: string): string {
-	return `/api/auth/signin?callbackUrl=${encodeURIComponent(`/servers/${guildId}`)}`;
-}
 
 async function greetingFetcher(url: string): Promise<GreetingPair> {
 	const res = await fetch(url, { cache: "no-store" });
@@ -40,7 +36,6 @@ async function statusFetcher(url: string): Promise<GreetingTestStatus> {
  * draft는 서버 값(없으면 공용 기본값)으로 채우고, 사용자가 건드린 종류는 백그라운드 재검증이 덮지 않아요.
  */
 export function useMemberGreeting(guildId: string) {
-	const router = useRouter();
 	const { data: pair, error, isLoading, mutate } = useSWR<GreetingPair>(`/api/servers/${guildId}/greeting`, greetingFetcher);
 
 	const [drafts, setDrafts] = useState<Record<GreetingKind, GreetingConfig | null>>({ welcome: null, goodbye: null });
@@ -55,9 +50,11 @@ export function useMemberGreeting(guildId: string) {
 		}));
 	}, [pair]);
 
-	const redirectToLogin = useCallback(() => {
-		router.push(loginHref(guildId));
-	}, [router, guildId]);
+	// 세션 만료(401) — 재시도로는 해결되지 않으니 로그인 후 원래 화면으로 돌아오게 해요
+	const redirectToLogin = useSessionExpiredRedirect(
+		error instanceof ApiError && error.status === 401,
+		`/servers/${guildId}`,
+	);
 
 	const patchKind = useCallback((kind: GreetingKind, next: GreetingConfig) => {
 		touchedRef.current[kind] = true;

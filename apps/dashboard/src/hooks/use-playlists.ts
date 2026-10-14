@@ -1,23 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import useSWR from "swr";
 
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
+import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import { isYoutubeUrl } from "@/lib/youtube-url";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
-
-function formatDuration(ms: number): string {
-	if (!ms) return "0:00";
-	const totalSeconds = Math.floor(ms / 1000);
-	const minutes = Math.floor(totalSeconds / 60);
-	const seconds = totalSeconds % 60;
-	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
 
 function formatTotalDuration(ms: number): string {
 	if (!ms) return "0분";
@@ -28,18 +21,14 @@ function formatTotalDuration(ms: number): string {
 	return `${hours}시간 ${mins}분`;
 }
 
-export { formatDuration, formatTotalDuration };
+export { formatTotalDuration };
 
 export function usePlaylists() {
-	const router = useRouter();
 	const { status } = useSession();
 	const toast = useToast();
 
-	useEffect(() => {
-		if (status === "unauthenticated") {
-			router.push("/api/auth/signin?callbackUrl=/playlists");
-		}
-	}, [status, router]);
+	// 세션 만료(unauthenticated) — 로그인 후 이 화면으로 돌아오게 해요
+	useSessionExpiredRedirect(status === "unauthenticated", "/playlists");
 
 	const { data: listData, mutate: mutateList, isLoading: listLoading } = useSWR<{ playlists: Playlist[] }>(
 		status === "authenticated" ? "/api/playlists" : null
@@ -48,8 +37,8 @@ export function usePlaylists() {
 	const playlists = useMemo(() => {
 		const list = listData?.playlists ?? [];
 		return [...list].sort((a, b) => {
-			if (a.name === "즐겨찾기") return -1;
-			if (b.name === "즐겨찾기") return 1;
+			if (a.name === FAVORITES_PLAYLIST_NAME) return -1;
+			if (b.name === FAVORITES_PLAYLIST_NAME) return 1;
 			return 0;
 		});
 	}, [listData?.playlists]);
@@ -58,18 +47,17 @@ export function usePlaylists() {
 
 	useEffect(() => {
 		if (playlists.length > 0 && !activePlaylistId) {
-			const fav = playlists.find((p) => p.name === "즐겨찾기");
+			const fav = playlists.find((p) => p.name === FAVORITES_PLAYLIST_NAME);
 			setActivePlaylistId(fav ? fav.id : playlists[0].id);
 		}
 	}, [playlists, activePlaylistId]);
 
-	const { data: detailData, mutate: mutateDetail, isLoading: detailLoadingApi } = useSWR<PlaylistDetailResponse>(
+	const { data: detailData, mutate: mutateDetail, isLoading: detailLoading } = useSWR<PlaylistDetailResponse>(
 		activePlaylistId ? `/api/playlists/${activePlaylistId}` : null
 	);
 
 	const activePlaylist = detailData?.playlist ?? null;
 	const tracks = useMemo(() => detailData?.tracks ?? [], [detailData?.tracks]);
-	const detailLoading = detailLoadingApi;
 
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
@@ -143,32 +131,43 @@ export function usePlaylists() {
 		setTrackInput("");
 	}, []);
 
+	/** API 호출 공통 흐름 — 실패 본문의 error를 우선 보여주고 성공/실패 토스트까지 띄워요. 성공 시 본문을, 실패 시 null을 돌려줘요 */
+	async function callApi<T>(
+		url: string,
+		init: RequestInit,
+		messages: { success: string; failure: string },
+	): Promise<T | null> {
+		try {
+			const res = await fetch(url, init);
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || messages.failure);
+			toast.success(messages.success);
+			return data as T;
+		} catch (err: unknown) {
+			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
+			return null;
+		}
+	}
+
 	const handleCreatePlaylist = async () => {
 		if (!nameInput.trim()) {
 			toast.error("플레이리스트 이름을 입력해 주세요.");
 			return;
 		}
 		setLoadingSubmit(true);
-		try {
-			const res = await fetch("/api/playlists", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name: nameInput, description: descInput })
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "플레이리스트를 만들지 못했어요.");
-
-			toast.success("플레이리스트를 만들었어요.");
+		const data = await callApi<{ playlist: { id: string } }>("/api/playlists", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: nameInput, description: descInput })
+		}, { success: "플레이리스트를 만들었어요.", failure: "플레이리스트를 만들지 못했어요." });
+		if (data) {
 			setNameInput("");
 			setDescInput("");
 			setCreateModalOpen(false);
 			await mutateList();
 			setActivePlaylistId(data.playlist.id);
-		} catch (err: unknown) {
-			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
-		} finally {
-			setLoadingSubmit(false);
 		}
+		setLoadingSubmit(false);
 	};
 
 	const handleEditPlaylist = async () => {
@@ -178,16 +177,12 @@ export function usePlaylists() {
 			return;
 		}
 		setLoadingSubmit(true);
-		try {
-			const res = await fetch(`/api/playlists/${editingPlaylist.id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name: nameInput, description: descInput })
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "플레이리스트를 수정하지 못했어요.");
-
-			toast.success("플레이리스트 정보를 수정했어요.");
+		const data = await callApi(`/api/playlists/${editingPlaylist.id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: nameInput, description: descInput })
+		}, { success: "플레이리스트 정보를 수정했어요.", failure: "플레이리스트를 수정하지 못했어요." });
+		if (data) {
 			setEditModalOpen(false);
 			setEditingPlaylist(null);
 			setNameInput("");
@@ -196,32 +191,22 @@ export function usePlaylists() {
 			if (activePlaylistId === editingPlaylist.id) {
 				mutateDetail();
 			}
-		} catch (err: unknown) {
-			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
-		} finally {
-			setLoadingSubmit(false);
 		}
+		setLoadingSubmit(false);
 	};
 
 	const confirmDeletePlaylist = async () => {
 		if (!deletePlaylistTarget) return;
 		setLoadingSubmit(true);
-		try {
-			const res = await fetch(`/api/playlists/${deletePlaylistTarget.id}`, { method: "DELETE" });
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "플레이리스트를 삭제하지 못했어요.");
-
-			toast.success("플레이리스트를 삭제했어요.");
+		const data = await callApi(`/api/playlists/${deletePlaylistTarget.id}`, { method: "DELETE" }, { success: "플레이리스트를 삭제했어요.", failure: "플레이리스트를 삭제하지 못했어요." });
+		if (data) {
 			setDeleteModalOpen(false);
 			if (activePlaylistId === deletePlaylistTarget.id) {
 				setActivePlaylistId(null);
 			}
 			mutateList();
-		} catch (err: unknown) {
-			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
-		} finally {
-			setLoadingSubmit(false);
 		}
+		setLoadingSubmit(false);
 	};
 
 	const handleAddTrack = async (targetTrackId?: string, targetYoutubeUrl?: string) => {
@@ -234,25 +219,18 @@ export function usePlaylists() {
 		}
 
 		setLoadingAddTrack(true);
-		try {
-			const res = await fetch(`/api/playlists/${activePlaylistId}/tracks`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl })
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "곡을 추가하지 못했어요.");
-
-			toast.success("플레이리스트에 곡을 추가했어요.");
+		const data = await callApi(`/api/playlists/${activePlaylistId}/tracks`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(targetTrackId ? { trackId: targetTrackId } : { youtubeUrl })
+		}, { success: "플레이리스트에 곡을 추가했어요.", failure: "곡을 추가하지 못했어요." });
+		if (data) {
 			setTrackInput("");
 			setAddTrackModalOpen(false);
 			mutateDetail();
 			mutateList();
-		} catch (err: unknown) {
-			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
-		} finally {
-			setLoadingAddTrack(false);
 		}
+		setLoadingAddTrack(false);
 	};
 
 	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 delete-playlist-modal과 같은 모달 확인 패턴) */
@@ -266,21 +244,12 @@ export function usePlaylists() {
 		const { position } = removeTrackTarget;
 		setRemoveTrackTarget(null);
 		setLoadingSubmit(true);
-		try {
-			const res = await fetch(`/api/playlists/${activePlaylistId}/tracks?position=${position}`, {
-				method: "DELETE"
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "곡을 삭제하지 못했어요.");
-
-			toast.success("곡을 삭제했어요.");
+		const data = await callApi(`/api/playlists/${activePlaylistId}/tracks?position=${position}`, { method: "DELETE" }, { success: "곡을 삭제했어요.", failure: "곡을 삭제하지 못했어요." });
+		if (data) {
 			mutateDetail();
 			mutateList();
-		} catch (err: unknown) {
-			toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
-		} finally {
-			setLoadingSubmit(false);
 		}
+		setLoadingSubmit(false);
 	};
 
 	const handleReorder = async (sourceIndex: number, destinationIndex: number) => {
@@ -293,21 +262,13 @@ export function usePlaylists() {
 
 		mutateDetail({ playlist: activePlaylist!, tracks: reindexed }, { revalidate: false });
 
-		try {
-			const res = await fetch(`/api/playlists/${activePlaylistId}/reorder`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ sourceIndex, destinationIndex })
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "곡 순서를 바꾸지 못했어요.");
-
-			toast.success("곡 순서를 바꿨어요.");
-		} catch (err: unknown) {
-			toast.error(err instanceof Error ? err.message : "곡 순서를 바꾸지 못했어요.");
-		} finally {
-			mutateDetail();
-		}
+		// 실패해도 finally 대신 호출 뒤 무조건 재검증 — 낙관적 업데이트를 실제 서버값으로 정리해요.
+		await callApi(`/api/playlists/${activePlaylistId}/reorder`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ sourceIndex, destinationIndex })
+		}, { success: "곡 순서를 바꿨어요.", failure: "곡 순서를 바꾸지 못했어요." });
+		mutateDetail();
 	};
 
 	const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -342,7 +303,6 @@ export function usePlaylists() {
 		detailLoading,
 		stats,
 		formatTotalDuration,
-		formatDuration,
 		createModalOpen,
 		editModalOpen,
 		addTrackModalOpen,

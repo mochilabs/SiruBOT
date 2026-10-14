@@ -73,13 +73,12 @@ export function removeEmojis(str: string): string {
 	return result.trim();
 }
 
+/** 볼륨 티어 아이콘 — 0은 🔇, 낮은 볼륨(<33)은 🔉, 그 이상(≥33)은 🔊 */
 export function volumeToEmoji(volume: number): string {
 	if (volume < 1) {
 		return emoji('volume_muted');
 	} else if (volume < 33) {
-		return emoji('volume_up');
-	} else if (volume < 66) {
-		return emoji('volume_up');
+		return emoji('volume_down');
 	} else {
 		return emoji('volume_up');
 	}

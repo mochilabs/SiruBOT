@@ -7,6 +7,7 @@ import { Heart, Music, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist } from "@/types/playlist";
 
 interface PlaylistSidebarProps {
@@ -96,8 +97,8 @@ export function PlaylistSidebar({
 
 					{filteredPlaylists.map((playlist, idx) => {
 						const isActive = playlist.id === activePlaylistId;
-						const isDefault = playlist.name === "즐겨찾기";
-						const isFirstCustom = idx > 0 && filteredPlaylists[idx - 1].name === "즐겨찾기" && !isDefault;
+						const isDefault = playlist.name === FAVORITES_PLAYLIST_NAME;
+						const isFirstCustom = idx > 0 && filteredPlaylists[idx - 1].name === FAVORITES_PLAYLIST_NAME && !isDefault;
 
 						return (
 							<div key={playlist.id} className="w-full flex flex-col">

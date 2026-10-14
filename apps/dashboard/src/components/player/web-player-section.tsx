@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { formatDuration } from "@/lib/format";
 
 interface VoiceContext {
 	inVoice: boolean;
@@ -30,13 +31,6 @@ interface TrackSummary {
 	sourceName: string | null;
 	isStream: boolean;
 }
-
-const formatMs = (ms: number) => {
-	const totalSeconds = Math.floor(ms / 1000);
-	const minutes = Math.floor(totalSeconds / 60);
-	const seconds = totalSeconds % 60;
-	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
 
 const isPlayableUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
@@ -105,7 +99,7 @@ function SearchResultRow({
 				</p>
 			</div>
 			<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-				{track.isStream ? "스트림" : formatMs(track.durationMs)}
+				{track.isStream ? "스트림" : formatDuration(track.durationMs)}
 			</span>
 			<Button
 				variant="secondary"

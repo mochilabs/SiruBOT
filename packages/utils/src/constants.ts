@@ -5,11 +5,7 @@ export const VOICE_CHANNEL_REQUIRED_MESSAGE = '먼저 음성 채널에 접속해
 
 // 기본 색상
 export const DEFAULT_COLOR = 0xffdaff;
-export const OK_COLOR = 0x4299e1;
 export const WARN_COLOR = 0xf56565;
-
-export const AUTOCOMPLETE_MAX_RESULT = 25;
-export const PAGE_CHUNK_SIZE = 10;
 
 /**
  * 진행바 앱 이모지 셀 (resources/emoji_replacement/pb_*.png → 앱 이모지).

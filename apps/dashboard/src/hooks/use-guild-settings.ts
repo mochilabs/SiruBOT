@@ -1,17 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import useSWR from "swr";
 
+import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
-
-/** 세션 만료(401) — 재시도로 해결되지 않으니 로그인 성공 후 원래 화면으로 돌아와요 */
-function loginHref(callbackUrl: string): string {
-	return `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-}
 
 /**
  * 401이면 세션 엔드포인트(catch-all)로 refresh를 쿠키에 반영한 뒤 1회 재시도해요.
@@ -39,18 +34,14 @@ async function settingsFetcher(url: string): Promise<GuildSettings> {
 
 /** 서버 일반 설정 조회 + 부분 저장 (SWR 캐시는 훅 간 공유돼요) */
 export function useGuildSettings(guildId: string) {
-	const router = useRouter();
 	const { data, error, isLoading, mutate } = useSWR<GuildSettings>(`/api/servers/${guildId}/settings`, settingsFetcher);
 	const [saving, setSaving] = useState(false);
 
-	const redirectToLogin = useCallback(() => {
-		router.push(loginHref(`/servers/${guildId}`));
-	}, [router, guildId]);
-
 	// 세션 만료(401) — 이어지는 요청도 같은 결과라 재시도 대신 다시 로그인으로 보내요
-	useEffect(() => {
-		if (error instanceof ApiError && error.status === 401) redirectToLogin();
-	}, [error, redirectToLogin]);
+	const redirectToLogin = useSessionExpiredRedirect(
+		error instanceof ApiError && error.status === 401,
+		`/servers/${guildId}`,
+	);
 
 	const save = useCallback(
 		async (patch: Partial<GuildSettings>): Promise<GuildSettings> => {
@@ -151,18 +142,13 @@ async function discordListFetcher<T>(url: string): Promise<T> {
 
 /** Discord 채널 목록 — 조건부 키로 필요한 패널만 요청해요 */
 export function useGuildChannels(guildId: string, enabled = true) {
-	const router = useRouter();
 	const { data, error, isLoading, mutate } = useSWR<ChannelsPayload>(
 		enabled ? `/api/servers/${guildId}/channels` : null,
 		discordListFetcher<ChannelsPayload>,
 	);
 
 	// 세션 만료(401) — "다시 시도"로는 절대 성공하지 않으니 로그인 페이지로 보내요
-	useEffect(() => {
-		if (error instanceof ApiError && error.status === 401) {
-			router.push(loginHref(`/servers/${guildId}`));
-		}
-	}, [error, guildId, router]);
+	useSessionExpiredRedirect(error instanceof ApiError && error.status === 401, `/servers/${guildId}`);
 
 	return {
 		channels: data?.channels ?? null,
@@ -175,18 +161,13 @@ export function useGuildChannels(guildId: string, enabled = true) {
 
 /** Discord 역할 목록 */
 export function useGuildRoles(guildId: string, enabled = true) {
-	const router = useRouter();
 	const { data, error, isLoading, mutate } = useSWR<RolesPayload>(
 		enabled ? `/api/servers/${guildId}/roles` : null,
 		discordListFetcher<RolesPayload>,
 	);
 
 	// 세션 만료(401) — 채널 목록과 같은 흐름으로 로그인 페이지로 보내요
-	useEffect(() => {
-		if (error instanceof ApiError && error.status === 401) {
-			router.push(loginHref(`/servers/${guildId}`));
-		}
-	}, [error, guildId, router]);
+	useSessionExpiredRedirect(error instanceof ApiError && error.status === 401, `/servers/${guildId}`);
 
 	return {
 		roles: data?.roles ?? null,

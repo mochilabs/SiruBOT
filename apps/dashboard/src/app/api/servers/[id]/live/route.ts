@@ -16,7 +16,7 @@ interface DataApiLiveResponse {
 
 /**
  * 라이브 재생 상태 프록시 — data-api `GET /v1/player/:guildId`(AUTH_KEY 인증)를
- * auth+canManage 뒤에서 대신 호출해요. 읽기 전용 — 제어는 bot RPC로 별도 구현 예정이에요.
+ * authorizeGuildManage 뒤에서 대신 호출해요. 읽기 전용 — 제어는 bot RPC로 별도 구현 예정이에요.
  */
 export async function GET(
   _request: Request,

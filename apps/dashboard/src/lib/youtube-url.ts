@@ -1,6 +1,6 @@
 /**
- * 유튜브 링크 판별 유틸 — 서버 라우트(src/app/api/playlists/[id]/tracks/route.ts)와
- * 동일한 정규식을 써서, 프론트에서 링크로 걸러낸 값이 서버에서도 항상 같은 링크로 인식되게 해요.
+ * 유튜브 링크 판별 유틸 — 정규식의 단일 소스예요. 프론트(hooks)와 서버 라우트
+ * (src/app/api/playlists/[id]/tracks/route.ts)가 같은 패턴으로 링크를 인식하게 해요.
  */
 const YOUTUBE_URL_PATTERN = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
 

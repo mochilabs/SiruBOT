@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { authorizeUser, deniedUser } from "@/lib/api-guards";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 
@@ -20,21 +20,18 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authz = await authorizeUser();
+  if (!authz.ok) return deniedUser(authz);
 
   const limited = await guardRateLimit(
-    rateKey("playlist-reorder", session.user.id),
+    rateKey("playlist-reorder", authz.userId),
     WRITE_RATE,
   );
   if (limited) return limited;
 
   try {
     const { id: playlistId } = await params;
-    const userId = session.user.id;
+    const userId = authz.userId;
 
     // Verify playlist belongs to user
     const playlist = await db.playlist.findFirst({

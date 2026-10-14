@@ -24,10 +24,9 @@ import { SkeletonLine } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
 import { toError } from "@/lib/api-error";
-import { PLAYER_VOLUME_MAX } from "@/lib/data-api";
+import { formatDuration } from "@/lib/format";
+import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 
-/** 라이브 탭 컨트롤러 볼륨 상한 — 봇 /volume 명령 계약(0~150)과 같아요 */
-const LIVE_VOLUME_MAX = PLAYER_VOLUME_MAX;
 /** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
 const VOLUME_SEND_DEBOUNCE_MS = 400;
 
@@ -61,13 +60,6 @@ async function sendPlayerCommand(
       message: "봇에 명령을 전달하지 못했어요. 연결 상태를 확인해 주세요.",
     };
   }
-}
-
-function formatMs(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 /**
@@ -323,10 +315,10 @@ function NowPlaying({
               {state.isStream
                 ? "스트리밍"
                 : hasCurrentTrack
-                  ? formatMs(positionMs)
+                  ? formatDuration(positionMs)
                   : "0:00"}
             </span>
-            <span>{state.isStream ? "" : formatMs(state.durationMs)}</span>
+            <span>{state.isStream ? "" : formatDuration(state.durationMs)}</span>
           </div>
         </div>
 
@@ -405,7 +397,7 @@ function NowPlaying({
             <Slider
               value={displayedVolume}
               min={0}
-              max={LIVE_VOLUME_MAX}
+              max={PLAYER_VOLUME_MAX}
               step={1}
               onChange={handleVolumeChange}
               showValue
@@ -460,7 +452,7 @@ function QueueList({ state }: { state: LivePlayerState }) {
                 </p>
               </div>
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {track.isStream ? "스트림" : formatMs(track.durationMs)}
+                {track.isStream ? "스트림" : formatDuration(track.durationMs)}
               </span>
             </li>
           ))}
