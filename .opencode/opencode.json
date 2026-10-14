@@ -68,6 +68,12 @@
 					"name": "gpt-6.1-sol",
 					"limit": { "context": 1050000, "output": 128000 },
 					"cost": { "input": 2, "output": 10 }
+				},
+				"gemini-4-argon": {
+					"modelID": "gemini-4-argon",
+					"name": "gemini-4-argon",
+					"limit": { "context": 1048576, "output": 32768 },
+					"cost": { "input": 2, "output": 10 }
 				}
 			}
 		}
