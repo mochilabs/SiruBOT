@@ -136,21 +136,25 @@ export function CommandWallSection() {
 							: "sticky top-16 h-[calc(100vh-4rem)] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_4%,black_96%,transparent)]"
 					}
 				>
-					<div className="flex items-start gap-3 sm:gap-4">
-						{COLUMNS.map((column, index) => (
-							<m.div
-								key={index}
-								ref={(element) => {
-									columnRefs.current[index] = element;
-								}}
-								style={shouldReduce ? undefined : { y: columnY[index] }}
-								className={`flex-1 space-y-3 sm:space-y-4 ${index === 2 ? "hidden lg:block" : ""}`}
-							>
-								{column.map((command) => (
-									<CommandTile key={command.cmd} command={command} />
-								))}
-							</m.div>
+					{/* 필름 스트립이 게이트를 지나가듯 약간 기울여(-6°) 카드가 대각선으로 쭉 흘러가요.
+					    좌우 마진을 넉넉히(-mx-24) 줘 회전 후에도 창 양끝을 항상 덮어요 */}
+					<div className={shouldReduce ? "relative" : "relative -mx-24 rotate-[-6deg]"}>
+						<div className="flex items-start gap-3 sm:gap-4">
+							{COLUMNS.map((column, index) => (
+								<m.div
+									key={index}
+									ref={(element) => {
+										columnRefs.current[index] = element;
+									}}
+									style={shouldReduce ? undefined : { y: columnY[index] }}
+									className={`flex-1 space-y-3 sm:space-y-4 ${index === 2 ? "hidden lg:block" : ""}`}
+								>
+									{column.map((command) => (
+										<CommandTile key={command.cmd} command={command} />
+									))}
+								</m.div>
 						))}
+						</div>
 					</div>
 				</div>
 			</div>
