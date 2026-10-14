@@ -556,9 +556,15 @@
 	}
 }
 
-/* 고정 헤더(navbar.tsx: fixed top-0, nav h-16 = 4rem) 아래로 in-page 앵커가 가려지지 않도록 */
+:root {
+	/* 스티키 navbar 높이(navbar.tsx nav h) — 커맨드월 스티키 오프셋, 디자인 페이지 목차 스티키,
+	   scroll-padding·scroll-mt처럼 navbar 상대 위치값이 모두 이 변수 하나를 따른다 */
+	--navbar-h: 4rem;
+}
+
+/* 스티키 헤더(navbar.tsx: sticky top-0, nav 높이 = var(--navbar-h)) 아래로 in-page 앵커가 가려지지 않도록 */
 html {
-	scroll-padding-block-start: 4rem;
+	scroll-padding-block-start: var(--navbar-h);
 }
 
 @media (prefers-reduced-motion: no-preference) {

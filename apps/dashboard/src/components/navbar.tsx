@@ -88,13 +88,15 @@ export function Navbar() {
 
   return (
     <>
+    {/* fixed 대신 루트 flex 컬럼의 sticky로 흐름 공간을 차지해요 — 페이지별 클리어런스 패딩이 필요 없어요.
+        루트의 overflow-x-clip은 스크롤 컨테이너를 만들지 않으므로 sticky가 깨지지 않아요 */}
     <div
-      className={`fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
+      className={`sticky top-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
           ? "bg-background/70 backdrop-blur-xl border-border-subtle shadow-sm"
           : "bg-transparent"
         }`}
     >
-      <nav className="h-16 w-full shrink-0">
+      <nav className="h-[var(--navbar-h)] w-full shrink-0">
         <div className="mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2 group">

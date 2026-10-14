@@ -33,7 +33,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	}
 
 	return (
-		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
+		<main className="relative flex min-h-[calc(100svh-var(--navbar-h))] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 			{/* 배경 블러 */}
 			<div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
 				<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />

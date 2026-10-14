@@ -130,7 +130,7 @@ const COLOR_TOKENS = [
 
 function SectionHeader({ id, title, description }: { id: string; title: string; description: string }) {
 	return (
-		<div id={id} className="scroll-mt-28 space-y-2 mb-6">
+		<div id={id} className="scroll-mt-[calc(var(--navbar-h)+3rem)] space-y-2 mb-6">
 			<div className="flex items-center gap-6">
 				<div className="h-0.5 w-12 bg-primary/40 rounded-full" />
 				<h2 className="text-2xl font-black tracking-tighter text-foreground whitespace-nowrap">{title}</h2>
@@ -350,8 +350,8 @@ export default function DesignPage() {
 
 	return (
 		<>
-			{/* 고정 navbar(h-16) 클리어런스는 Container 컨벤션(pt-16 lg:pt-24)과 동일하게 — 겹침 방지 */}
-			<div className="container mx-auto max-w-7xl px-4 pb-8 pt-16 lg:pt-24">
+			{/* 스티키 navbar은 흐름 공간을 차지하므로 별도 클리어런스 없이 바로 아래에서 시작 */}
+			<div className="container mx-auto max-w-7xl px-4 pb-8">
 				<div className="flex items-start justify-between gap-4 mb-8">
 					<div>
 						<h1 className="text-3xl font-black tracking-tighter text-foreground">Design System</h1>
@@ -362,7 +362,7 @@ export default function DesignPage() {
 
 				<div className="flex gap-8">
 					<nav className="hidden lg:block w-52 shrink-0">
-						<div className="sticky top-28 space-y-1 max-h-[calc(100svh-8rem)] overflow-y-auto pr-2">
+						<div className="sticky top-[calc(var(--navbar-h)+3rem)] space-y-1 max-h-[calc(100svh-var(--navbar-h)-4rem)] overflow-y-auto pr-2">
 							{SECTIONS.map((s, idx) => {
 								const isActive = activeSection === s.id;
 								return (
