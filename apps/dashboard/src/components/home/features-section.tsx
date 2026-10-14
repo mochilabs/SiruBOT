@@ -877,9 +877,7 @@ export function FeaturesSection() {
 					<div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-12 text-center sm:px-6 sm:py-16">
 						<h2 className="text-2xl font-black tracking-tighter text-primary-control-text sm:text-3xl lg:text-4xl">준비되셨나요?</h2>
 						<p className="max-w-md text-sm font-medium leading-relaxed text-primary-control-text/85 sm:text-base">
-							지금 시루봇을 서버에 초대하면
-							<br className="sm:hidden" />
-							음악·AI 채팅·서버 관리가 바로 시작돼요.
+							지금 시루봇을 서버에 초대하면 음악·AI 채팅·서버 관리가 바로 시작돼요.
 						</p>
 						<Link
 							href="/invite"
