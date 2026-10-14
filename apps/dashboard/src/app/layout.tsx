@@ -69,7 +69,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="ko" className={`${pretendard.variable} ${pretendardJP.variable}`} suppressHydrationWarning>
-			<body>
+			<body suppressHydrationWarning>
 				<Providers>
 				<div className="min-h-svh flex flex-col relative overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0">
 					<BackgroundShapes />
