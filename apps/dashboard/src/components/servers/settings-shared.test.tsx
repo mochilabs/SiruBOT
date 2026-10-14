@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { hasUnsavedSettings, SaveBar } from "./settings-shared";
+import { hasUnsavedActiveSettings, hasUnsavedSettings, nudgeSaveBar, SaveBar } from "./settings-shared";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/servers/fixture" }));
 
@@ -43,14 +43,36 @@ describe("floating save actions", () => {
     expect(document.querySelector('[data-slot="settings-save-island"]')).toBeNull();
     await act(async () => { root.render(<SaveBar dirty saving={false} active={false} onSave={onSave} />); });
     expect(hasUnsavedSettings()).toBe(true);
+    expect(hasUnsavedActiveSettings()).toBe(false);
     expect(document.querySelector('[data-slot="settings-save-island"]')).toBeNull();
     await act(async () => { root.render(<SaveBar dirty saving={false} active onSave={onSave} />); });
+    expect(hasUnsavedActiveSettings()).toBe(true);
     const bar = document.querySelector('[data-slot="settings-save-island"]')!;
     expect(host.contains(bar)).toBe(false);
     await act(async () => { bar.querySelector<HTMLButtonElement>("button")!.click(); });
     expect(onSave).toHaveBeenCalledOnce();
     await act(async () => { root.unmount(); });
     expect(hasUnsavedSettings()).toBe(false);
+    host.remove();
+  });
+  it("shakes the visible save island when nudged and stays quiet for hidden bars", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+    const animate = vi.fn();
+    Object.assign(Element.prototype, { animate });
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const onSave = vi.fn();
+    await act(async () => { root.render(<SaveBar dirty saving={false} active={false} onSave={onSave} />); });
+    await act(async () => { nudgeSaveBar(); });
+    expect(animate).not.toHaveBeenCalled();
+    await act(async () => { root.render(<SaveBar dirty saving={false} active onSave={onSave} />); });
+    await act(async () => { nudgeSaveBar(); });
+    expect(animate).toHaveBeenCalledOnce();
+    await act(async () => { root.unmount(); });
+    await act(async () => { nudgeSaveBar(); });
+    expect(animate).toHaveBeenCalledOnce();
     host.remove();
   });
 });

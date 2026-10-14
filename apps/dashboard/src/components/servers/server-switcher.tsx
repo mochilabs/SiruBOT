@@ -93,7 +93,7 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
         <Popover.Trigger render={<Button ref={desktopTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`hidden sm:inline-flex ${triggerClass}`}>{triggerContent}</Button>} />
         <Popover.Portal>
           <Popover.Positioner sideOffset={12} align="start" className="z-50">
-            <Popover.Popup initialFocus={searchRef} className="flex max-h-[min(70dvh,var(--available-height))] w-96 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-menu bg-popover text-sm font-medium tracking-normal text-popover-foreground shadow-2xl outline-none">
+            <Popover.Popup initialFocus={searchRef} className="flex max-h-[min(70dvh,var(--available-height))] w-96 max-w-[calc(100vw-2rem)] origin-(--transform-origin) flex-col overflow-hidden rounded-menu bg-popover text-sm font-medium tracking-normal text-popover-foreground shadow-2xl outline-none duration-fast data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
               <Popover.Title className="sr-only">서버 선택</Popover.Title>
               {searchBox}{list}
             </Popover.Popup>

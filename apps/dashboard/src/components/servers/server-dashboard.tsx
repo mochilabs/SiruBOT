@@ -28,7 +28,7 @@ import { MixerSettings } from "./mixer-settings";
 import { MusicSettings } from "./music-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import ServerStatsTab from "./server-stats-tab";
-import { SettingsPanelActive } from "./settings-shared";
+import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
 
 const TABS = [
   { key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
@@ -87,6 +87,7 @@ export function ServerDashboard({
     tabFromUrl(searchParams.get("tab")),
   );
   const mobileTabsRef = useRef<HTMLDivElement>(null);
+  const nudgeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setTab(tabFromUrl(searchParams.get("tab")));
@@ -94,11 +95,28 @@ export function ServerDashboard({
 
   const selectTab = (value: string) => {
     const nextTab = tabFromUrl(value);
-    setTab(nextTab);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", nextTab);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const commit = () => {
+      setTab(nextTab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", nextTab);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+    if (nextTab === tab || !hasUnsavedActiveSettings()) {
+      commit();
+      return;
+    }
+    // 저장하지 않은 채 다른 탭으로 떠나려 하면 막지 말고 저장 바를 흔들어 알려줘요 (모달 대신)
+    nudgeSaveBar();
+    if (nudgeTimerRef.current) window.clearTimeout(nudgeTimerRef.current);
+    nudgeTimerRef.current = window.setTimeout(() => {
+      nudgeTimerRef.current = null;
+      commit();
+    }, 480);
   };
+
+  useEffect(() => () => {
+    if (nudgeTimerRef.current) window.clearTimeout(nudgeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     const container = mobileTabsRef.current;
