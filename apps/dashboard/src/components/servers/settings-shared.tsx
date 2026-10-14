@@ -193,11 +193,22 @@ export function PanelError({
   );
 }
 
-const dirtySaveBars = new Map<string, boolean>();
+const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean }>();
 export const SettingsPanelActive = createContext(true);
 
 export function hasUnsavedSettings(): boolean {
-  return [...dirtySaveBars.values()].some(Boolean);
+  return [...dirtySaveBars.values()].some((entry) => entry.dirty);
+}
+
+export function hasUnsavedActiveSettings(): boolean {
+  return [...dirtySaveBars.values()].some((entry) => entry.dirty && entry.active);
+}
+
+const nudgeListeners = new Set<() => void>();
+
+/** 저장하지 않은 채 떠나려 할 때 모달 없이 저장 바를 흔들어 주의를 끌어요 */
+export function nudgeSaveBar() {
+  nudgeListeners.forEach((notify) => notify());
 }
 
 export function SaveBar({
@@ -283,33 +294,58 @@ export function SaveBar({
   };
 
   useEffect(() => {
-    dirtySaveBars.set(id, dirty || saving || submitting);
+    dirtySaveBars.set(id, { dirty: dirty || saving || submitting, active });
     return () => {
       dirtySaveBars.delete(id);
     };
-  }, [dirty, saving, submitting, id]);
+  }, [dirty, saving, submitting, active, id]);
+
+  // 탭 전환 시도 등에서 nudgeSaveBar()가 오면 섬을 흔들어 저장이 덜 된 걸 알려줘요
+  useEffect(() => {
+    const notify = () => {
+      const island = islandRef.current;
+      if (!visible || !island || typeof island.animate !== "function") return;
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+      island.animate(
+        [
+          { transform: "translateX(0px)" },
+          { transform: "translateX(-6px)", offset: 0.2 },
+          { transform: "translateX(5px)", offset: 0.4 },
+          { transform: "translateX(-4px)", offset: 0.6 },
+          { transform: "translateX(3px)", offset: 0.8 },
+          { transform: "translateX(0px)" },
+        ],
+        { duration: 480, easing: "ease-in-out" }
+      );
+    };
+    nudgeListeners.add(notify);
+    return () => {
+      nudgeListeners.delete(notify);
+    };
+  }, [visible]);
 
   return (
-    <div ref={anchorRef} style={{ height: visible ? geometry.height + 48 : 0 }}>
+    <div ref={anchorRef} style={{ height: visible ? geometry.height + 36 : 0 }}>
       {visible && <Portal>
         <div ref={setIslandRef} data-slot="settings-save-island"
           onFocusCapture={() => { islandHadFocusRef.current = true; }}
           onBlurCapture={(event) => {
             if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) islandHadFocusRef.current = false;
           }}
-          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-3 rounded-card bg-surface-3 p-4 text-foreground shadow-lg sm:left-[var(--island-left)] sm:right-auto sm:w-[var(--island-width)] sm:flex-row sm:items-center sm:justify-between"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-30 flex flex-col gap-2.5 rounded-card bg-surface-3 px-4 py-2.5 text-foreground shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-fast md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)] md:flex-row md:items-center md:justify-between"
           style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
           <p role="status" className="min-w-0 text-sm font-medium">
-            {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항"}
+            {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {children}
       <Button
         variant="cta"
-        className="min-h-11"
+        size="sm"
+        className="h-8 px-3.5"
         loading={saving || submitting}
         disabled={!dirty}
-        icon={saving ? undefined : <Save size={16} />}
+        icon={saving ? undefined : <Save size={15} />}
         onClick={handleSave}
       >
         {saving || submitting ? "저장 중…" : "변경 사항 저장"}

@@ -56,10 +56,10 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
     if (hasUnsavedSettings()) { closePicker(); setPendingGuild(guild); return; }
     navigate(guild);
   };
-  const triggerContent = <>
+  const triggerContent = (open: boolean) => <>
     <GuildIcon id={guildId} name={guildName} icon={icon} />
     <span className="min-w-0 flex-1 truncate text-left">{guildName}</span>
-    <ChevronDown size={18} className="shrink-0 text-muted-foreground" aria-hidden />
+    <ChevronDown size={18} className={`shrink-0 text-muted-foreground transition-transform duration-base ${open ? "rotate-180" : ""}`} aria-hidden />
   </>;
   const searchBox = (
     <div className="shrink-0 p-3">
@@ -70,7 +70,7 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
     </div>
   );
   const list = (
-    <div className="min-h-0 overflow-y-auto overscroll-contain px-2 pb-2" aria-label="관리할 서버 목록">
+    <div data-stagger className="min-h-0 overflow-y-auto overscroll-contain px-2 pb-2" aria-label="관리할 서버 목록">
       {isLoading ? <p role="status" className="p-4 text-sm text-muted-foreground">서버 불러오는 중…</p>
         : error ? <div className="space-y-2 p-3 text-sm"><p>서버 목록을 불러오지 못했어요.</p><Button variant="secondary" className="min-h-11" onClick={() => void mutate()}>다시 시도</Button></div>
         : manageableGuilds.length ? manageableGuilds.map((guild) => (
@@ -85,15 +85,20 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
         )) : <p className="p-4 text-sm text-muted-foreground">{query ? "검색 결과가 없어요. 다른 이름으로 검색해 주세요." : "관리할 수 있는 서버가 없어요."}</p>}
     </div>
   );
-  const triggerClass = "h-auto min-h-12 max-w-full min-w-0 justify-start gap-3 px-2 py-1 text-xl font-bold tracking-normal sm:text-2xl";
+  // 트리거는 표면/경계(shadow-control-boundary)로 배경과 구분되고, 열림·누름에서 chevron 회전과
+  // 눌림(scale)으로 "작동하는 느낌"을 줘요
+  const triggerClass = (open: boolean) =>
+    `h-auto min-h-12 max-w-full min-w-0 justify-start gap-3 px-2 py-1 text-xl font-bold tracking-normal sm:text-2xl ` +
+    `bg-surface-1 shadow-control-boundary transition-[background-color,transform] duration-fast hover:bg-surface-2 active:scale-[0.98] ` +
+    (open ? "bg-surface-2" : "");
 
   return (
     <div className="min-w-0 max-w-full">
       <Popover.Root open={desktopOpen} onOpenChange={setDesktopOpen}>
-        <Popover.Trigger render={<Button ref={desktopTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`hidden sm:inline-flex ${triggerClass}`}>{triggerContent}</Button>} />
+        <Popover.Trigger render={<Button ref={desktopTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`hidden sm:inline-flex ${triggerClass(desktopOpen)}`}>{triggerContent(desktopOpen)}</Button>} />
         <Popover.Portal>
           <Popover.Positioner sideOffset={12} align="start" className="z-50">
-            <Popover.Popup initialFocus={searchRef} className="flex max-h-[min(70dvh,var(--available-height))] w-96 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-menu bg-popover text-sm font-medium tracking-normal text-popover-foreground shadow-2xl outline-none">
+            <Popover.Popup initialFocus={searchRef} className="pop-in flex max-h-[min(70dvh,var(--available-height))] w-96 max-w-[calc(100vw-2rem)] origin-(--transform-origin) flex-col overflow-hidden rounded-menu bg-popover text-sm font-medium tracking-normal text-popover-foreground shadow-2xl outline-none data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
               <Popover.Title className="sr-only">서버 선택</Popover.Title>
               {searchBox}{list}
             </Popover.Popup>
@@ -101,7 +106,7 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
         </Popover.Portal>
       </Popover.Root>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetTrigger render={<Button ref={mobileTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`sm:hidden ${triggerClass}`}>{triggerContent}</Button>} />
+        <SheetTrigger render={<Button ref={mobileTriggerRef} variant="ghost" aria-label={`${guildName} 서버 선택`} className={`sm:hidden ${triggerClass(mobileOpen)}`}>{triggerContent(mobileOpen)}</Button>} />
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-hidden rounded-t-dialog pb-[env(safe-area-inset-bottom)]">
           <SheetHeader className="px-4 pt-5"><SheetTitle>서버 선택</SheetTitle><SheetDescription>관리할 서버를 고르거나 봇을 초대해요.</SheetDescription></SheetHeader>
           {searchBox}{list}

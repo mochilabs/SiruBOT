@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, m, type MotionValue, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
@@ -12,16 +12,16 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
-// 헤드라인 회전 단어 — "시루봇과 함께 ___ 만들어봐요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
-const ROTATING_WORDS = ['더 즐거운 서버를', '심심할 틈 없는 서버를', '활기찬 서버를'] as const;
+// 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
+const ROTATING_WORDS = ['서버에 필요한 모든 걸', 'Discord 안에서, 웹에서', '게임부터 서버 꾸미기까지'] as const;
 const ROTATE_INTERVAL_MS = 2600;
 // whileInView 진입 조건 — 세 무빙 블록(container/진행 버튼/디스코드 프레임)이 같은 조건을 공유
 const REVEAL_VIEWPORT = { once: true, margin: '-60px' } as const;
 
 // 리빌 단어 조각 — 단어 뒤 공백을 조각에 포함해(whitespace-pre) inline-block 스팬 간 간격을 유지하고
 // 스크린 리더에도 "시루봇과 함께"처럼 공백이 살아있게 해요. 하단 문장은 조각 하나라 문자열 상수로 충분해요.
-const SPLIT_HEADLINE_TOP = ['시루봇과 ', '함께'] as const;
-const SPLIT_HEADLINE_BOTTOM = '만들어봐요';
+const SPLIT_HEADLINE_TOP = ['음악부터 ', 'AI까지,'] as const;
+const SPLIT_HEADLINE_BOTTOM = '시루봇 하나면 돼요';
 
 /** 랜딩 히어로 통계 숫자 — 뷰포트 진입 시 카운트업 ("45개", "28K+" 같은 접미사 유지) */
 function CountUpStat({ end, suffix }: { end: number; suffix?: string }) {
@@ -112,36 +112,18 @@ function WordRotator() {
 	);
 }
 
-/** hero 배경 — 브랜드 도트 그리드 패턴(마스크로 가장자리 페이드). y가 주어지면 스크롤 패럴랙스.
- *  R-07 사유: 음악 봇의 '리듬·비트' 정체성 텍스처 — 저불투명도 질감으로만 쓰고 장식 강조는 하지 않는다. */
-function DotPattern({ y }: { y?: MotionValue<number> }) {
-	return (
-		<m.div style={{ y }} className="pointer-events-none absolute inset-0 -z-10">
-			<svg aria-hidden className="h-full w-full [mask-image:radial-gradient(ellipse_60%_70%_at_50%_35%,black,transparent)]">
-				<defs>
-					<pattern id="hero-dots" width="24" height="24" patternUnits="userSpaceOnUse">
-						<circle cx="2" cy="2" r="1.2" className="fill-primary/10" />
-					</pattern>
-				</defs>
-				<rect width="100%" height="100%" fill="url(#hero-dots)" />
-			</svg>
-		</m.div>
-	);
-}
-
 export function HeroSection() {
 	const [activeSlide, setActiveSlide] = useState(0);
 	const [autoPlay, setAutoPlay] = useState(true);
 	const heroRef = useRef<HTMLElement>(null);
 
-	// 도트 패턴 스크롤 패럴랙스 — 섹션이 화면 위로 빠질 때까지 배경이 콘텐츠보다 천천히 따라와요.
-	// 성능: transform(y)만 사용해 렌더 비용을 최소화하고, reduced-motion 환경에선 정적 배경 유지.
+	// 히어로 스크롤 진행도 — 스크롤 유도 힌트의 페이드아웃/비활성에 써요.
+	// 성능: transform 기반으로 리렌더 없이 동작하고, reduced-motion 환경에선 정지 유지.
 	const shouldReduce = useReducedMotion();
 	const { scrollYProgress } = useScroll({
 		target: heroRef,
 		offset: ["start start", "end start"]
 	});
-	const dotY = useTransform(scrollYProgress, [0, 1], [0, 120]);
 
 	// 스크롤 유도 버튼 — 0~20% 구간에서 페이드아웃(useTransform, 리렌더 없음),
 	// 15%를 넘으면 visibility:hidden 토글로 버튼 클릭·포커스를 차단해요.
@@ -171,9 +153,7 @@ export function HeroSection() {
 
 	return (
 		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
-			{/* 패럴랙스는 reduced-motion 환경에선 걸지 않고 정적 배경 유지 */}
-			<DotPattern y={shouldReduce ? undefined : dotY} />
-			<div className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-32 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-36">
+			<div className="relative mx-auto grid min-h-[calc(100svh-var(--navbar-h))] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pb-16 sm:pt-16 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-20">
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
 					variants={containerVariants}
@@ -188,11 +168,11 @@ export function HeroSection() {
 						{shouldReduce ? (
 							// 접근성 폴백 — reduced-motion 환경에선 단어 분해·회전 없이 정적 헤드라인으로 표시해요
 							<>
-								시루봇과 함께
+								음악부터 AI까지,
 								<br />
 								<span className="text-primary-text">{ROTATING_WORDS[0]}</span>
 								<br />
-								만들어봐요
+								시루봇 하나면 돼요
 							</>
 						) : (
 							<>
@@ -221,7 +201,7 @@ export function HeroSection() {
 					>
 						음악 재생부터 AI 채팅, 서버 관리까지.
 						<br className="hidden sm:block" />
-						채널 한 곳에서 끊김 없이 이어지는 Discord 봇이에요.
+						시루봇 하나로 Discord를 더 편리하게 즐겨보세요.
 					</m.p>
 
 					<m.div variants={itemVariants} className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:justify-start">

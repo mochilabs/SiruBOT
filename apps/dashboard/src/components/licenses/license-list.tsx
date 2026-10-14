@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 
 export interface LicenseEntry {
 	name: string;
-	version: string;
 	license: string;
 	group: string;
 	url: string | null;
@@ -35,7 +34,6 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 		return entries.filter(
 			(entry) =>
 				entry.name.toLowerCase().includes(trimmed) ||
-				entry.version.toLowerCase().includes(trimmed) ||
 				entry.license.toLowerCase().includes(trimmed),
 		);
 	}, [entries, trimmed]);
@@ -66,7 +64,7 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 					type="search"
 					value={query}
 					onChange={(event) => setQuery(event.target.value)}
-					placeholder="패키지 이름 · 버전 · 라이선스"
+					placeholder="패키지 이름 · 라이선스"
 					aria-label="패키지 검색"
 				/>
 			</form>
@@ -90,10 +88,9 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 							</summary>
 							<ol className="space-y-1 px-3 pb-3 pt-2">
 								{items.map((entry) => (
-									<li key={`${entry.name}@${entry.version}`} className={rowClass}>
+									<li key={entry.name} className={rowClass}>
 										<span className="min-w-0 flex-1 truncate">
 											<span className="truncate font-semibold text-foreground">{entry.name}</span>
-											<span className="ml-1 shrink-0 text-xs tabular-nums text-muted-foreground">{entry.version}</span>
 										</span>
 										<span className="hidden max-w-56 truncate text-xs text-muted-foreground sm:block">{entry.license}</span>
 										{entry.url && (

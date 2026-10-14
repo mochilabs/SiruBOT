@@ -217,6 +217,13 @@
 	--border-subtle: #3a2c30;
 	/* 다크 인터랙티브 컨트롤 경계선 — #a37d89는 #1f1618 대비 6.2:1, #2b2023 대비 4.39:1 통과 */
 	--border-strong: #a37d89;
+
+	/* 다크 배경(#1f1618) 위에서 검은 그림자는 파묻혀 안 보여요 — 블러 반경과
+	   불투명도를 올려 카드/오버레이가 실제로 떠 보이게 해요 */
+	--elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 2px 8px -2px rgb(0 0 0 / 0.3);
+	--elev-2: 0 2px 6px -2px rgb(0 0 0 / 0.45), 0 4px 12px -4px rgb(0 0 0 / 0.3);
+	--elev-3: 0 6px 20px -8px rgb(0 0 0 / 0.55), 0 8px 24px -12px rgb(0 0 0 / 0.35);
+	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.65), 0 8px 24px -12px rgb(0 0 0 / 0.45);
 }
 
 @theme inline {
@@ -328,11 +335,7 @@
 	will-change: transform, opacity;
 }
 
-/* 슬래시 커맨드 마키 전용 — hover 일시정지는 트랙의 group-hover:[animation-play-state:paused]가 담당.
-   사유(R-19): 슬래시 커맨드 문화를 텍스트보다 먼저 전달하는 identity motif. 30s로 느려 정보 방해가 아니다. */
-@utility animate-marquee {
-	animation: marquee 30s linear infinite;
-}
+
 
 @keyframes pulse-soft {
 	0%,
@@ -371,14 +374,80 @@
 	}
 }
 
-/* 2회 렌더된 리스트에서 -50% 이동 = 끊김 없는 1주기 */
-@keyframes marquee {
+/* 팝업 등장 모션 — 밋밋한 on/off 대신 살짝 오버슈트하는 스프링 느낌.
+   Base UI 팝업의 data-open(열림 상태)에만 붙어 열릴 때만 재생해요. */
+@keyframes pop-in {
 	from {
-		transform: translateX(0);
+		opacity: 0;
+		transform: translateY(-8px) scale(0.97);
+	}
+
+	60% {
+		opacity: 1;
+		transform: translateY(1px) scale(1.004);
 	}
 
 	to {
-		transform: translateX(-50%);
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.pop-in[data-open] {
+	animation: pop-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 드롭다운 행 스태거 — 팝업이 열리면 행이 위에서 순차적으로 떠올라요.
+   fill을 backwards만 쓰는 이유: 애니메이션이 끝난 뒤에도 transform을 계속
+   지배하지 않게(호버 transform 보존), 재생 전에만 시작 상태를 잡아줘요. */
+@keyframes stagger-rise {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+[data-stagger] > * {
+	animation: stagger-rise 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+[data-stagger] > *:nth-child(1) {
+	animation-delay: 30ms;
+}
+
+[data-stagger] > *:nth-child(2) {
+	animation-delay: 58ms;
+}
+
+[data-stagger] > *:nth-child(3) {
+	animation-delay: 86ms;
+}
+
+[data-stagger] > *:nth-child(4) {
+	animation-delay: 114ms;
+}
+
+[data-stagger] > *:nth-child(5) {
+	animation-delay: 142ms;
+}
+
+[data-stagger] > *:nth-child(6) {
+	animation-delay: 170ms;
+}
+
+[data-stagger] > *:nth-child(n + 7) {
+	animation-delay: 198ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pop-in[data-open],
+	[data-stagger] > * {
+		animation: none;
 	}
 }
 
@@ -487,9 +556,15 @@
 	}
 }
 
-/* 고정 헤더(navbar.tsx: fixed top-0, nav h-16 = 4rem) 아래로 in-page 앵커가 가려지지 않도록 */
+:root {
+	/* 스티키 navbar 높이(navbar.tsx nav h) — 커맨드월 스티키 오프셋, 디자인 페이지 목차 스티키,
+	   scroll-padding·scroll-mt처럼 navbar 상대 위치값이 모두 이 변수 하나를 따른다 */
+	--navbar-h: 4rem;
+}
+
+/* 스티키 헤더(navbar.tsx: sticky top-0, nav 높이 = var(--navbar-h)) 아래로 in-page 앵커가 가려지지 않도록 */
 html {
-	scroll-padding-block-start: 4rem;
+	scroll-padding-block-start: var(--navbar-h);
 }
 
 @media (prefers-reduced-motion: no-preference) {

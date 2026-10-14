@@ -19,9 +19,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "시루봇",
-  description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
+  description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
   openGraph: {
-    description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
+    description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
     url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     images: [
       {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "시루봇",
-    description: "시루봇과 함께 심심할 틈 없는 서버를 만들어봐요!",
+    description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
     images: ["/images/og-image.png"],
   },
   icons: {
@@ -69,9 +69,9 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="ko" className={`${pretendard.variable} ${pretendardJP.variable}`} suppressHydrationWarning>
-			<body>
+			<body suppressHydrationWarning>
 				<Providers>
-				<div className="min-h-svh flex flex-col relative overflow-x-clip">
+				<div className="min-h-svh flex flex-col relative overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0">
 					<BackgroundShapes />
 					<Navbar />
 						<div className="flex-1 relative z-10">

@@ -2,60 +2,16 @@ import { notFound, redirect } from "next/navigation";
 
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
+import { GuildUnavailablePanel } from "@/components/servers/guild-unavailable-panel";
 import { ServerDashboard } from "@/components/servers/server-dashboard";
 import { ServerSwitcher } from "@/components/servers/server-switcher";
 import { auth } from "@/lib/auth";
-import { resolveCanManage, resolveGuildMeta } from "@/lib/guild-permissions";
+import {
+  resolveCanManage,
+  resolveGuildMembership,
+  resolveGuildMeta,
+} from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
-
-interface GuildMember {
-  nick: string | null;
-  roles: string[];
-  joined_at: string;
-  user?: {
-    id: string;
-    username: string;
-    avatar: string | null;
-  };
-}
-
-async function getGuildMember(
-  accessToken: string,
-  guildId: string,
-): Promise<GuildMember | null> {
-  const res = await fetch(
-    `https://discord.com/api/v10/users/@me/guilds/${guildId}/member`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
-    },
-  );
-
-  console.error(
-    `[diag] Discord /users/@me/guilds/${guildId}/member -> ${res.status} ${
-      res.ok
-        ? ""
-        : await res
-            .clone()
-            .text()
-            .then((t) => t.slice(0, 200))
-            .catch(() => "")
-    }`,
-  );
-
-  // 멤버가 아니거나(404) 접근 권한이 없으면(403) 보여줄 대시보드가 없어요.
-  if (res.status === 404 || res.status === 403) return null;
-  // 토큰 만료(401) — 500 대신 재로그인으로 안내해요.
-  if (res.status === 401) {
-    redirect(`/api/auth/signin?callbackUrl=/servers/${guildId}`);
-  }
-  // 429(레이트리밋)/5xx/네트워크 오류 — 일시 장애. 500 폭주 대신 notFound로 우아하게 처리해요
-  // (레이트리밋 윈도우가 길어 여기서 재시도해도 소용없고, SWR 계층이 따로 재시도해요).
-  if (!res.ok) return null;
-
-  return res.json();
-}
 
 export default async function ServerDashboardPage({
   params,
@@ -74,16 +30,34 @@ export default async function ServerDashboardPage({
     redirect(`/api/auth/signin?callbackUrl=/servers/${id}`);
   }
 
-  const member = await getGuildMember(accessToken, id);
-
-  if (!member) {
-    notFound();
-  }
-
-  const [manageable, guildMeta] = await Promise.all([
+  // 멤버십·관리 권한·서버 표시 정보를 하나의 Discord 호출(캐시 + 단일 비행)로 확인해요.
+  // 탭을 누를 때마다 페이지가 서버에서 다시 실행되므로, 호출이 캐시되지 않으면
+  // Discord 레이트리밋(429)이 곧바로 404처럼 보이는 원인이 돼요.
+  const [membership, manageable, guildMeta] = await Promise.all([
+    resolveGuildMembership(accessToken, session.user.id, id),
     resolveCanManage(accessToken, session.user.id, id),
     resolveGuildMeta(accessToken, session.user.id, id),
   ]);
+
+  if (membership.status === "invalid-token") {
+    // 토큰 만료(401): 재로그인으로 안내해요.
+    redirect(`/api/auth/signin?callbackUrl=/servers/${id}`);
+  }
+
+  // Discord 일시 장애(429/5xx/네트워크): 없는 페이지가 아니에요. 404로 위장하지 않아요.
+  if (membership.status === "unavailable") {
+    return (
+      <Container>
+        <GuildUnavailablePanel />
+      </Container>
+    );
+  }
+
+  // 멤버가 아니면(또는 접근 권한이 없으면) 보여줄 대시보드가 없어요.
+  if (!membership.isMember) {
+    notFound();
+  }
+
   const manageableResolved =
     manageable.status === "ok" && manageable.manageable;
 

@@ -68,7 +68,7 @@ function SweepLine() {
 
 function GraphFrame({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="relative overflow-hidden rounded-card border border-border-subtle bg-surface-1">
+		<div className="relative overflow-hidden rounded-card bg-surface-1">
 			<svg viewBox={`0 0 ${GRAPH_W} ${GRAPH_H}`} className="block h-auto w-full" aria-hidden>
 				{children}
 			</svg>

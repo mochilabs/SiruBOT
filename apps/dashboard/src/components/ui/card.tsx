@@ -4,13 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card text-sm text-card-foreground",
+	// 보더리스 규칙 — 서피스 대비 + elevation(다크에서는 강한 --elev-1)만으로 카드를 띄워요.
+	// 아웃라인 대신 그림자가 구분감을 만들고, 라이트는 그림자만으로도 충분히 떠 보여요
+	"group/card relative flex flex-col gap-4 overflow-hidden rounded-card border-0 bg-card text-sm text-card-foreground shadow-sm",
 	{
 		variants: {
 			variant: {
 				default: "",
 				muted: "bg-muted",
-				raised: "shadow-sm",
+				raised: "shadow-md",
 				interactive: "cursor-pointer hover:bg-muted",
 			},
 			padding: {

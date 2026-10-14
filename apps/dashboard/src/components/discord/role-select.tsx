@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-
 import { Portal, usePopoverCoords } from "../overlay/portal";
 
 export interface DiscordRole {
@@ -90,61 +88,70 @@ export function RoleSelect({
 
 	return (
 		<div ref={containerRef} className={`relative ${className}`}>
-			{/* Trigger */}
+			{/* Trigger (선택된 역할 태그가 트리거 안쪽에 들어가요) */}
 			<button
 				ref={triggerRef}
 				type="button"
 				disabled={disabled}
 				onClick={() => setOpen(!open)}
 				className={`
-					w-full min-h-[44px] px-4 py-2 flex items-center justify-between gap-2
+					w-full min-h-9 px-3 py-1.5 flex items-center justify-between gap-2
 					rounded-control border-0 bg-input shadow-control-boundary text-sm font-medium transition-all duration-base cursor-pointer
 					${disabled ? "opacity-50 pointer-events-none" : ""}
 					${open ? "ring-2 ring-ring" : ""}
 				`}
 			>
-				<span className={value.length > 0 ? "text-foreground" : "text-muted-foreground"}>
-					{value.length > 0 ? `${value.length}개 역할 선택됨` : placeholder}
-				</span>
+				{selectedRoles.length > 0 ? (
+					<span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-0.5 text-left">
+						{selectedRoles.map((role) => {
+							const hex = roleColorHex(role.color);
+							return (
+								<span
+									key={role.id}
+									className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border border-primary-control/20 bg-primary-control/10 text-primary-text"
+									style={{
+										borderColor: hex ? `${hex}40` : undefined,
+										backgroundColor: hex ? `${hex}15` : undefined,
+										color: hex ?? undefined,
+									}}
+								>
+									<span
+										className="h-2 w-2 rounded-full shrink-0"
+										style={{ backgroundColor: hex ?? "var(--muted-foreground)" }}
+									/>
+									<span className="max-w-[12rem] truncate">{role.name}</span>
+									<span
+										role="button"
+										tabIndex={disabled ? -1 : 0}
+										onPointerDown={(e) => e.stopPropagation()}
+										onClick={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+											toggle(role.id);
+										}}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.stopPropagation();
+												e.preventDefault();
+												toggle(role.id);
+											}
+										}}
+										className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full p-0.5 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+										aria-label={`${role.name} 제거`}
+									>
+										<X className="h-2.5 w-2.5" aria-hidden />
+									</span>
+								</span>
+							);
+						})}
+					</span>
+				) : (
+					<span className="text-muted-foreground">{placeholder}</span>
+				)}
 				<ChevronDown
-					className={`h-4 w-4 text-muted-foreground transition-transform duration-fast ${open ? "rotate-180" : ""}`}
+					className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-fast ${open ? "rotate-180" : ""}`}
 				/>
 			</button>
-
-			{/* Selected pills */}
-			{selectedRoles.length > 0 && (
-				<div className="flex flex-wrap gap-1.5 mt-2">
-					{selectedRoles.map((role) => {
-						const hex = roleColorHex(role.color);
-						return (
-							<span
-								key={role.id}
-								className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold border"
-								style={{
-									borderColor: hex ? `${hex}40` : undefined,
-									backgroundColor: hex ? `${hex}15` : undefined,
-									color: hex ?? undefined,
-								}}
-							>
-								<span
-									className="h-2 w-2 rounded-full shrink-0"
-									style={{ backgroundColor: hex ?? "var(--muted-foreground)" }}
-								/>
-								{role.name}
-								<Button
-									variant="icon"
-									size="sm"
-									onClick={() => toggle(role.id)}
-									className="h-3.5 w-3.5 rounded-full border-transparent bg-transparent p-0.5 hover:opacity-70"
-									aria-label={`${role.name} 제거`}
-								>
-									<X className="h-2.5 w-2.5" />
-								</Button>
-							</span>
-						);
-					})}
-				</div>
-			)}
 
 			{/* Dropdown */}
 			<AnimatePresence>

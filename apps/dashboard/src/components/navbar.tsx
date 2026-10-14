@@ -7,21 +7,14 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
-import { LogOut, Menu, Moon, Search, Sun, User, X } from "lucide-react";
+import { LogOut, Moon, Search, Sun, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
 
-import { MobileMenu } from "./navbar/mobile-menu";
-
-const navLinks = [
-  { label: "상태", href: "/shards" },
-  { label: "차트", href: "/track" },
-  { label: "프로필", href: "/profile", requireAuth: true },
-  { label: "플레이리스트", href: "/playlists", requireAuth: true },
-  { label: "대시보드", href: "/servers", requireAuth: true },
-];
+import { getNavHref, navLinks } from "./navbar/links";
+import { MobileTabBar } from "./navbar/mobile-tab-bar";
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -32,9 +25,6 @@ export function Navbar() {
   const profileRef = useRef<HTMLDivElement>(null);
 
   const scrolled = useUIStore((s) => s.scrolled);
-  const mobileMenuOpen = useUIStore((s) => s.mobileMenuOpen);
-  const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
-  const toggleMobileMenu = useUIStore((s) => s.toggleMobileMenu);
   const updateScrollState = useUIStore((s) => s.updateScrollState);
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
 
@@ -96,24 +86,20 @@ export function Navbar() {
     updateIndicator();
   }, [updateIndicator]);
 
-  const getNavHref = (link: { href: string; requireAuth?: boolean }) => {
-    if (link.requireAuth && status !== "authenticated") {
-      return `/api/auth/signin?callbackUrl=${encodeURIComponent(link.href)}`;
-    }
-    return link.href;
-  };
-
   return (
+    <>
+    {/* fixed 대신 루트 flex 컬럼의 sticky로 흐름 공간을 차지해요 — 페이지별 클리어런스 패딩이 필요 없어요.
+        루트의 overflow-x-clip은 스크롤 컨테이너를 만들지 않으므로 sticky가 깨지지 않아요 */}
     <div
-      className={`fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled || mobileMenuOpen
-          ? "bg-background/95 shadow-sm"
+      className={`sticky top-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
+          ? "bg-background/70 backdrop-blur-xl border-border-subtle shadow-sm"
           : "bg-transparent"
         }`}
     >
-      <nav className="h-16 w-full shrink-0">
-        <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <nav className="h-[var(--navbar-h)] w-full shrink-0">
+        <div className="mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex shrink-0 items-center gap-2 group">
             <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0">
               <Image
                 src="/images/profile.png"
@@ -125,13 +111,16 @@ export function Navbar() {
             <span className="text-2xl font-black tracking-tighter text-foreground">시루봇</span>
           </Link>
 
-          <div className="flex items-center gap-2 lg:gap-4">
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-1 lg:gap-2 relative">
+          <div className="flex flex-1 items-center gap-2 lg:gap-4">
+            {/* Desktop Menu — 브랜드 옆에 붙여 왼쪽에 모아요 (가운데는 여백, 액션은 우측 밀착) */}
+            <div className="relative ml-6 hidden md:flex items-center gap-1 lg:ml-8 lg:gap-2">
               {indicator && (
+                // transform x로만 이동해요 — left/width를 애니메이션하면 backdrop-blur 레이어가
+                // 매 프레임 재계산되며 텍스트가 세로로 겹쳐 보이는 잔상이 생겨요
                 <m.div
-                  className="absolute top-0 bottom-0 rounded-menu bg-primary-control/10"
-                  animate={{ left: indicator.left, width: indicator.width }}
+                  className="absolute top-0 bottom-0 left-0 rounded-menu bg-primary-control/10 will-change-transform"
+                  initial={false}
+                  animate={{ x: indicator.left, width: indicator.width }}
                   transition={{
                     type: "spring",
                     stiffness: 400,
@@ -143,9 +132,9 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
-                  href={getNavHref(link)}
-                  className={`relative px-4 py-2 rounded-menu text-sm lg:text-base font-medium transition-colors duration-fast ${pathname === link.href
-                      ? "bg-primary-control/10 text-primary-text"
+                  href={getNavHref(link, status)}
+                  className={`relative px-3.5 py-2 rounded-menu text-sm font-medium transition-colors duration-fast ${pathname === link.href
+                      ? "text-primary-text"
                       : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
                     }`}
                 >
@@ -154,12 +143,9 @@ export function Navbar() {
               ))}
             </div>
 
-            {/* divider */}
-            <div className="hidden md:block w-px h-6 bg-border"></div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center gap-2">
+            {/* Action Buttons — 우측 끝에 밀착. 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 {/* 검색+테마 토글을 하나의 세그먼트 pill로 묶어요 — 공유 표면/경계로 한 덩어리,
                     CTA만 분리해 헤더에서 유일한 액센트가 되게 해요. 전부 h-11(44px) 정렬. */}
                 <div className="flex h-11 items-center overflow-hidden rounded-control bg-surface-1 shadow-control-boundary">
@@ -258,36 +244,21 @@ export function Navbar() {
                     <Button
                       variant="secondary"
                       onClick={() => signIn("discord")}
-                      className="h-11 px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text duration-base"
+                      className="h-11 px-4 sm:px-6 bg-surface-1 font-bold text-foreground/80 hover:bg-primary-control/10 hover:text-primary-text duration-base"
                     >
                       시작하기
                     </Button>
                   </div>
                 )}
               </div>
-
-              <Button
-                variant="icon"
-                size="md"
-                className="md:hidden h-11 w-11 bg-surface-1 p-2.5"
-                onClick={toggleMobileMenu}
-                aria-label={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
-                aria-expanded={mobileMenuOpen}
-              >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </Button>
             </div>
           </div>
         </div>
       </nav>
-
-      {/* Mobile Menu */}
-      <MobileMenu
-        isOpen={mobileMenuOpen}
-        navLinks={navLinks}
-        status={status}
-        onClose={() => setMobileMenuOpen(false)}
-      />
     </div>
+
+    {/* 모바일 하단 탭바 — md 이상에서 숨겨져요 */}
+    <MobileTabBar status={status} />
+    </>
   );
 }

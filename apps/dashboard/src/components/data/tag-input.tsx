@@ -62,7 +62,7 @@ export function TagInput({
 		<div
 			onClick={() => inputRef.current?.focus()}
 			className={`
-				rounded-control border-0 bg-input shadow-control-boundary flex flex-wrap items-center gap-2 px-3 py-2.5 min-h-[44px]
+				rounded-control border-0 bg-input shadow-control-boundary flex flex-wrap items-center gap-1.5 px-3 py-1.5 min-h-9
 				transition-control duration-base cursor-text
 				focus-within:ring-2 focus-within:ring-ring
 				${disabled ? "opacity-50 pointer-events-none" : ""}

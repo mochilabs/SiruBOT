@@ -6,7 +6,6 @@ import useSWR from "swr";
 
 import Container from "@/components/container";
 import { DataApiSection } from "@/components/data-api-section";
-import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -15,27 +14,22 @@ import { ShardStats } from "@/components/shard-stats";
 import type { ShardsResponse } from "@/lib/shard-api";
 
 export default function ShardsPage() {
-    const { data, error, isLoading, isValidating, mutate } = useSWR<ShardsResponse>("/api/shards", {
+    const { data, error, isLoading, isValidating } = useSWR<ShardsResponse>("/api/shards", {
         refreshInterval: 11000,
         revalidateOnFocus: true,
         dedupingInterval: 2000,
     });
 
-    if (error || (data && "error" in data)) {
-        return (
-            <Container>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <ErrorPanel 
-                        title="앗, 연결에 실패했어요" 
-                        message="샤드 매니저와 연결하지 못했어요. 서버가 점검 중이거나 오프라인 상태일 수 있어요." 
-                        onRetry={() => mutate()} 
-                    />
-                </div>
-            </Container>
-        );
+    // 연결 실패도 결국 오류예요 — 인라인 안내 대신 라우트 에러 페이지(app/error.tsx)를 띄워요.
+    // isValidating 중에는 참아요: 에러 페이지의 "다시 시도"가 재조회로 실제로 회복될 수 있게.
+    if ((error || (data && "error" in data)) && !isValidating) {
+        // 사용자에게 보이는 메시지는 안내 문구로, 원인은 cause로 남겨요 (콘솔에서 추적 가능)
+        throw new Error("샤드 매니저와 연결하지 못했어요. 서버가 점검 중이거나 오프라인 상태일 수 있어요.", {
+            cause: error ?? data
+        });
     }
 
-    if (isLoading) {
+    if (isLoading || (error && isValidating)) {
         return (
             <Container>
                 <Loader 

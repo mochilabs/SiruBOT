@@ -37,9 +37,9 @@ function Slider({
 	};
 
 	return (
-		<div className={cn("space-y-2", className)}>
+		<div className={cn("w-full space-y-1.5", className)}>
 			{(label || showValue) && (
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between gap-2">
 					{label && <span className="text-sm font-medium text-foreground">{label}</span>}
 					{showValue && <span className="text-sm font-medium tracking-tight text-primary-text tabular-nums">{formatValue(currentValue)}</span>}
 				</div>
@@ -57,7 +57,7 @@ function Slider({
 				thumbAlignment="center"
 				{...props}
 			>
-				<SliderPrimitive.Control className="relative flex min-h-11 w-full touch-none items-center select-none data-disabled:opacity-50">
+				<SliderPrimitive.Control className="relative flex h-6 w-full touch-none items-center select-none data-disabled:opacity-50">
 					<SliderPrimitive.Track
 						data-slot="slider-track"
 						className="relative grow rounded-full bg-muted select-none data-horizontal:h-1.5 data-horizontal:w-full"
