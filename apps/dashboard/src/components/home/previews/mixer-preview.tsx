@@ -48,7 +48,7 @@ export function MixerPreview() {
 			<div className="flex items-center gap-2 px-1 pb-1">
 				<SlidersHorizontal size={14} className="text-muted-foreground" aria-hidden />
 				<p className="text-xs font-black tracking-tighter text-foreground">믹서</p>
-				<p className="ml-auto text-2xs text-muted-foreground">저장하면 봇에 바로 반영돼요</p>
+				<p className="ml-auto text-2xs text-muted-foreground">저장하면 봇에 적용돼요</p>
 			</div>
 
 			{/* 진행 바 — 스폰서 스킵 상태가 그대로 그려요: 켜면 구간이 비워 보이고, 끄면 재생 중 */}

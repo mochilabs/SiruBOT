@@ -35,9 +35,9 @@ export function InviteTicketSection() {
 							<div className="flex flex-wrap items-center gap-2">
 								<span className="text-2xs font-medium text-muted-foreground">초대 티켓</span>
 							</div>
-							<h2 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">서버에 시루를 초대해요</h2>
+							<h2 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">시루를 서버에 초대해 보세요</h2>
 							<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-								초대가 끝나면 시루가 새 멤버로 합류해요. 첫 인사부터 음악 준비까지 바로 시작돼요.
+								음악과 AI, 다양한 편의 기능을 지금 바로 시작할 수 있어요.
 							</p>
 							<div className="flex flex-col gap-3 pt-2 sm:flex-row">
 								<Link href="/invite" className={cn(buttonVariants({ variant: "cta", size: "lg" }), "h-11 w-full text-base sm:w-auto")}>

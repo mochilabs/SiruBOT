@@ -12,16 +12,16 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const SLIDE_INTERVAL = 7000;
-// 헤드라인 회전 단어 — "시루봇과 함께 ___ 만들어봐요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
-const ROTATING_WORDS = ['더 즐거운 서버를', '심심할 틈 없는 서버를', '활기찬 서버를'] as const;
+// 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
+const ROTATING_WORDS = ['서버에 필요한 모든 걸', 'Discord 안에서, 웹에서', '심심할 틈 없이'] as const;
 const ROTATE_INTERVAL_MS = 2600;
 // whileInView 진입 조건 — 세 무빙 블록(container/진행 버튼/디스코드 프레임)이 같은 조건을 공유
 const REVEAL_VIEWPORT = { once: true, margin: '-60px' } as const;
 
 // 리빌 단어 조각 — 단어 뒤 공백을 조각에 포함해(whitespace-pre) inline-block 스팬 간 간격을 유지하고
 // 스크린 리더에도 "시루봇과 함께"처럼 공백이 살아있게 해요. 하단 문장은 조각 하나라 문자열 상수로 충분해요.
-const SPLIT_HEADLINE_TOP = ['시루봇과 ', '함께'] as const;
-const SPLIT_HEADLINE_BOTTOM = '만들어봐요';
+const SPLIT_HEADLINE_TOP = ['음악부터 ', 'AI까지,'] as const;
+const SPLIT_HEADLINE_BOTTOM = '시루봇 하나면 돼요';
 
 /** 랜딩 히어로 통계 숫자 — 뷰포트 진입 시 카운트업 ("45개", "28K+" 같은 접미사 유지) */
 function CountUpStat({ end, suffix }: { end: number; suffix?: string }) {
@@ -168,11 +168,11 @@ export function HeroSection() {
 						{shouldReduce ? (
 							// 접근성 폴백 — reduced-motion 환경에선 단어 분해·회전 없이 정적 헤드라인으로 표시해요
 							<>
-								시루봇과 함께
+								음악부터 AI까지,
 								<br />
 								<span className="text-primary-text">{ROTATING_WORDS[0]}</span>
 								<br />
-								만들어봐요
+								시루봇 하나면 돼요
 							</>
 						) : (
 							<>
@@ -201,7 +201,7 @@ export function HeroSection() {
 					>
 						음악 재생부터 AI 채팅, 서버 관리까지.
 						<br className="hidden sm:block" />
-						채널 한 곳에서 끊김 없이 이어지는 Discord 봇이에요.
+						시루봇 하나로 Discord를 더 편리하게 즐겨보세요.
 					</m.p>
 
 					<m.div variants={itemVariants} className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:justify-start">

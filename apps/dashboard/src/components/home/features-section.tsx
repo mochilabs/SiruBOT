@@ -59,8 +59,8 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		key: "music",
 		icon: Music2,
 		label: "음악 재생",
-		title: "원하는 곡을 바로 재생해요.",
-		desc: "/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.",
+		title: "원하는 음악을, 원하는 채널에서.",
+		desc: "/재생 한 줄로 곡을 찾아 함께 듣고, 컨트롤러 버튼으로 재생을 간편하게 제어하세요.",
 		Preview: PlayerPreview,
 		secondary: { href: "#commands", label: "사용 중인 명령어 보기" },
 	},
@@ -68,8 +68,8 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		key: "playback",
 		icon: SlidersHorizontal,
 		label: "음악 엔진",
-		title: "광고는 걷어내고, 곡은 끊기지 않게.",
-		desc: "곡과 곡 사이, 광고 구간, 소리 자체까지 재생의 모든 디테일을 제어해요.",
+		title: "재생의 디테일까지 직접 설정해요.",
+		desc: "곡 사이의 공백부터 오디오 필터까지. 원하는 설정을 조합해 나만의 재생 환경을 만들어보세요.",
 		Preview: MixerPreview,
 	},
 	{
@@ -84,16 +84,16 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		key: "chat",
 		icon: Bot,
 		label: "AI 채팅",
-		title: "명령어 대신 채팅으로 착.",
-		desc: "명령어를 외우지 않아도 돼요. 멘션으로 말 걸면 시루가 날씨·검색·음악 제어 같은 도구를 직접 골라 써요.",
+		title: "명령어를 몰라도, 시루에게 물어보세요.",
+		desc: "멘션으로 말을 걸면 시루가 대화의 맥락을 이해하고, 검색과 음악 제어 등 필요한 도구를 활용해 답해요.",
 		Preview: AiChatPreview,
 	},
 	{
 		key: "greeting",
 		icon: UserPlus,
 		label: "환영·작별 인사",
-		title: "인사말부터 카드까지 내 서버 스타일로.",
-		desc: "채널과 인사 문구는 직접 정하고, 카드는 프리셋 위에 텍스트·아바타·스티커 레이어를 자유롭게 쌓아 꾸며요. 저장하기 전 테스트 전송으로 미리 확인도 돼요. 전부 무료예요.",
+		title: "새로운 멤버를 우리 서버답게 맞이해요.",
+		desc: "입장·퇴장 메시지부터 환영 카드까지. 채널과 문구를 설정하고, 다양한 디자인으로 서버만의 인사를 만들어보세요.",
 		Preview: MemberGreetingPreview,
 		secondary: { href: "/servers", label: "인사 설정하기" },
 	},
@@ -102,7 +102,7 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		icon: Palette,
 		label: "봇 프로필 커스텀",
 		title: "서버마다 다른 모습의 시루.",
-		desc: "길드마다 닉네임·아바타·배너를 따로 정할 수 있어요. 서버 분위기에 맞춰 시루를 꾸미고, 저장하면 즉시 봇에 반영돼요. 전부 무료예요.",
+		desc: "서버별 닉네임과 아바타, 배너를 설정해 각 커뮤니티의 분위기에 어울리는 시루를 만들어보세요.",
 		Preview: BotProfilePreview,
 		secondary: { href: "/servers", label: "프로필 바꾸기" },
 	},
@@ -110,8 +110,8 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		key: "playlist",
 		icon: ListMusic,
 		label: "내 음악 보관함",
-		title: "자주 듣는 곡을 모아둬요.",
-		desc: "/플레이리스트와 /즐겨찾기로 곡을 저장하고, 불러온 목록을 채널에서 그대로 재생할 수 있어요.",
+		title: "좋아하는 음악을 모아두고, 언제든 다시.",
+		desc: "플레이리스트와 즐겨찾기에 곡을 저장하고, Discord 음성 채널에서 바로 이어서 재생하세요.",
 		Preview: PlaylistPreview,
 		secondary: { href: "/playlists", label: "대시보드에서 보관함 관리" },
 	},
@@ -119,8 +119,8 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		key: "dashboard",
 		icon: LayoutDashboard,
 		label: "서버 대시보드",
-		title: "웹에서 슝 슝, 봇에 바로 반영.",
-		desc: "채널 지정부터 음악 기본값, 역할까지, 웹에서 바꾸면 Discord 서버에 그대로 적용돼요.",
+		title: "서버 설정을 한곳에서 간편하게.",
+		desc: "음악 기본값부터 채널과 권한까지. 웹 대시보드에서 설정하고 서버 운영을 더 편리하게 관리하세요.",
 		Preview: DashboardPreview,
 		secondary: { href: "/servers", label: "서버 관리 시작하기" },
 	},
@@ -159,7 +159,7 @@ function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock;
 							viewport={{ once: true, margin: "-40px" }}
 							className="flex flex-wrap gap-2"
 						>
-							{["/재생", "/검색", "/현재곡", "/대기열", "/볼륨", "/셔플", "/일시정지", "/가사"].map((command) => (
+							{["/음악 재생", "/음악 검색", "/현재곡", "/대기열", "/음악 볼륨", "/음악 필터", "/음악 가사", "/플레이리스트"].map((command) => (
 								<m.li key={command} variants={shouldReduce ? chipFadeVariants : chipVariants} className={COMMAND_TOKEN}>
 									{command}
 								</m.li>
@@ -210,9 +210,9 @@ export function FeaturesSection() {
 					<SectionLabel as="p" className="px-0 py-0">
 						시루봇으로 할 수 있는 일
 					</SectionLabel>
-					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">채널에서 재생하고, 웹에서 관리해요.</h2>
+					<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl lg:text-5xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
 					<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
-						명령어 한 줄로 음악을 시작하고, 서버 설정과 재생목록은 대시보드에서 손봐요. 재생 흐름은 Discord 안에서 끊기지 않게 이어져요.
+						명령어로 바로 실행하고, 웹 대시보드에서 내 서버에 맞게 설정하세요.
 					</p>
 				</m.div>
 
