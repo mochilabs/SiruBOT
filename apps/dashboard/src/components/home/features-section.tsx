@@ -93,7 +93,7 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		icon: Palette,
 		label: "봇 프로필 커스텀",
 		title: "서버마다 다른 모습의 시루.",
-		desc: "길드 전용 닉네임·아바타·배너로 서버 분위기에 맞춰 봇을 바꿔요. 저장하면 즉시 봇에 반영돼요. 전부 무료예요.",
+		desc: "길드마다 닉네임·아바타·배너를 따로 정할 수 있어요. 서버 분위기에 맞춰 시루를 꾸미고, 저장하면 즉시 봇에 반영돼요. 전부 무료예요.",
 		Preview: BotProfilePreview,
 		secondary: { href: "/servers", label: "프로필 바꾸기" },
 	},
