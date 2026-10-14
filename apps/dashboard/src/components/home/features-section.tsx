@@ -3,12 +3,13 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
-import { AudioLines, Bot, FastForward, Infinity as InfinityIcon, LayoutDashboard, ListMusic, ListOrdered, type LucideIcon, Mic, MonitorPlay, Music2, Palette, SlidersHorizontal, UserPlus } from "lucide-react";
+import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, UserPlus } from "lucide-react";
 
 import { AiChatPreview } from "@/components/home/previews/ai-chat-preview";
 import { BotProfilePreview } from "@/components/home/previews/bot-profile-preview";
 import { DashboardPreview } from "@/components/home/previews/dashboard-preview";
 import { MemberGreetingPreview } from "@/components/home/previews/member-greeting-preview";
+import { MixerPreview } from "@/components/home/previews/mixer-preview";
 import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
 import { sectionVariants } from "@/components/home/section-variants";
@@ -61,6 +62,14 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		desc: "/재생 한 줄로 곡을 찾아 다른 사람들과 함께 듣고, Discord 컨트롤러 버튼으로 일시정지·건너뛰기·반복을 해요.",
 		Preview: PlayerPreview,
 		secondary: { href: "#commands", label: "사용 중인 명령어 보기" },
+	},
+	{
+		key: "playback",
+		icon: SlidersHorizontal,
+		label: "음악 엔진",
+		title: "광고는 걷어내고, 곡은 끊기지 않게.",
+		desc: "곡과 곡 사이, 광고 구간, 소리 자체까지 재생의 모든 디테일을 제어해요.",
+		Preview: MixerPreview,
 	},
 	{
 		key: "chat",
@@ -174,65 +183,6 @@ function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock;
 	);
 }
 
-/** 음악 엔진의 기능 한 줄 설명 — 씬 카드의 하단에 사양처럼 나열해요 */
-const ENGINE_FEATURES = [
-	{ icon: FastForward, name: "스폰서 스킵", desc: "광고 구간을 찾아 자동으로 걷어내요." },
-	{ icon: ListOrdered, name: "챕터", desc: "컨트롤러 버튼으로 구간을 바로 이동해요." },
-	{ icon: InfinityIcon, name: "갭리스 · 크로스페이드", desc: "곡 이음새를 지우고 자연스럽게 이어요(4초)." },
-	{ icon: AudioLines, name: "오디오 필터", desc: "베이스부스트·나이트코어·노래방 등 즉석 토글." },
-	{ icon: Mic, name: "TTS 겹침", desc: "노래 위에 입력한 말을 그대로 얹어 전해요." },
-	{ icon: MonitorPlay, name: "대시보드 재생", desc: "웹 플레이어에서 검색해 곧장 대기열에 넣어요." }
-];
-
-/** 음악 엔진 씬 카드 — 스폰서가 걷어진 진행 바와 챕터, 기능 설명을 한 장으로 보여줘요 (넘기기 없음) */
-function PlaybackEngineScene() {
-	return (
-		<m.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-80px" }} variants={sectionVariants} className="space-y-4">
-			<div className="max-w-2xl space-y-3">
-				<div className="flex items-center gap-2.5">
-					<SlidersHorizontal size={18} className="text-primary-text" aria-hidden />
-					<SectionLabel as="p" className="px-0 py-0 text-primary-text">
-						음악 엔진
-					</SectionLabel>
-				</div>
-				<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">광고는 걷어내고, 곡은 끊기지 않게.</h3>
-				<p className="max-w-xl text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
-					곡과 곡 사이, 광고 구간, 소리 자체까지 재생의 모든 디테일을 제어해요.
-				</p>
-			</div>
-			{/* 기준: SponsorBlock 세그먼트 설정, 15분 이상 곡의 챕터(data-api /v1/chapters)와 컨트롤러
-			    챕터 버튼, /music 음성(TTS 겹침), /믹서 갭리스·크로스페이드 */}
-			<div className="mx-auto max-w-2xl space-y-3 rounded-card bg-discord-embed p-3 sm:p-4">
-				<div className="flex items-center gap-2 border-b border-discord-btn-active px-1 pb-2">
-					<Music2 size={14} className="text-discord-text-muted" aria-hidden />
-					<span className="text-xs font-semibold text-discord-text">지금 재생 중</span>
-					<span className="ml-auto text-2xs text-discord-text-muted">#음악-라운지</span>
-				</div>
-				<div className="flex items-center gap-2 text-2xs tabular-nums text-discord-text-muted">
-					<span>0:43 / 4:40</span>
-					<div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-discord-btn-active">
-						<div className="absolute inset-y-0 left-0 w-[28%] rounded-full bg-primary-control" />
-						{["18%", "52%", "79%"].map((left) => (
-							<div key={left} className="absolute inset-y-0 w-px bg-discord-text-muted/70" style={{ left }} />
-						))}
-						<div className="absolute inset-y-0 left-[35%] w-[9%] bg-warning/50" />
-					</div>
-				</div>
-				{ENGINE_FEATURES.map((feature) => (
-					<div key={feature.name} className="flex min-w-0 items-start gap-2 rounded-control bg-discord-btn-active/60 px-2.5 py-2">
-						<feature.icon size={14} className="mt-0.5 shrink-0 text-discord-text-muted" aria-hidden />
-						<div className="min-w-0">
-							<p className="text-xs font-bold text-discord-text">{feature.name}</p>
-							<p className="text-2xs font-medium leading-relaxed text-discord-text-muted">{feature.desc}</p>
-						</div>
-					</div>
-				))}
-				<p className="text-2xs text-discord-text-muted">켜고 끄는 건 /믹서와 /music 필터 명령이면 충분해요.</p>
-			</div>
-		</m.div>
-	);
-}
-
 export function FeaturesSection() {
 	/** 칩 스태거 reduced-motion 폴백 선택용 */
 	const shouldReduce = useReducedMotion();
@@ -257,12 +207,10 @@ export function FeaturesSection() {
 					</p>
 				</m.div>
 
-				{/* 음악 재생 블록 → 음악 엔진 스트립 → 나머지 교차 블록. 홀수 인덱스에서 텍스트가 오른쪽으로 가요 */}
+				{/* 기능 블록 7개 — 위아래로 교차(홀수 인덱스는 데모가 왼쪽) */}
 				<div className="mt-16 space-y-16 sm:mt-24 sm:space-y-24">
-					<FeatureBlockItem block={FEATURE_BLOCKS[0]} index={0} shouldReduce={shouldReduce} />
-					<PlaybackEngineScene />
-					{FEATURE_BLOCKS.slice(1).map((block, index) => (
-						<FeatureBlockItem key={block.key} block={block} index={index + 1} shouldReduce={shouldReduce} />
+					{FEATURE_BLOCKS.map((block, index) => (
+						<FeatureBlockItem key={block.key} block={block} index={index} shouldReduce={shouldReduce} />
 					))}
 				</div>
 			</div>
