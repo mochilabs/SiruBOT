@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { AnimatePresence,m } from "framer-motion";
-import { Music } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -47,7 +47,7 @@ export function MobileMenu({ isOpen, navLinks, status, onClose }: MobileMenuProp
 							className="flex items-center justify-between py-3 text-lg font-bold text-foreground/80 hover:text-primary-text transition-colors duration-fast"
 						>
 							{link.label}
-							<Music size={14} className="text-primary-text" aria-hidden />
+							<ChevronRight size={14} className="text-muted-foreground" aria-hidden />
 						</Link>
 						))}
 						<div className="pt-4 border-t border-border">

@@ -17,11 +17,11 @@ interface FloatingIcon {
 
 const ICON_ITEMS: Array<{ Icon: LucideIcon; tone: string }> = [
 	{ Icon: Music2, tone: "text-primary-text" },
-	{ Icon: Bot, tone: "text-secondary/60" },
+	{ Icon: Bot, tone: "text-muted-foreground/60" },
 	{ Icon: ListMusic, tone: "text-primary-text" },
-	{ Icon: CloudSun, tone: "text-secondary/50" },
+	{ Icon: CloudSun, tone: "text-muted-foreground/50" },
 	{ Icon: Gamepad2, tone: "text-primary-text" },
-	{ Icon: Sparkles, tone: "text-secondary/60" },
+	{ Icon: Sparkles, tone: "text-muted-foreground/60" },
 ];
 
 function makeIcons(): FloatingIcon[] {
@@ -59,7 +59,7 @@ export default function NotFound() {
 
 	return (
 		<main className="relative flex min-h-svh w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-			{/* 배경 블러 */}
+			{/* 배경 블러 — R-01: 단일 초점 페이지(404·초대) 공통의 브랜드 앰비언트 틴트. 4% 저투명도로 장식 강조가 아니라 배경 온도만 유지해요. */}
 			<div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
 				<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
 			</div>

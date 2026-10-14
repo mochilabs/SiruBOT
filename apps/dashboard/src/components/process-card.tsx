@@ -4,6 +4,7 @@ import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { formatMemory, formatRelativeTime, formatUptime } from "@/lib/format";
 import type { ShardProcessInfo } from "@/lib/shard-api";
 
 function ProcessStatusBadge({ status }: { status: string }) {
@@ -17,28 +18,6 @@ function ProcessStatusBadge({ status }: { status: string }) {
 	};
 	const { variant, label } = config[normalized] ?? { variant: "default", label: status };
 	return <Badge variant={variant}>{label}</Badge>;
-}
-
-function formatUptime(secondsValue: number): string {
-	const seconds = Math.floor(secondsValue);
-	const days = Math.floor(seconds / 86400);
-	const hours = Math.floor((seconds % 86400) / 3600);
-	const minutes = Math.floor((seconds % 3600) / 60);
-	if (days > 0) return `${days}일 ${hours}시간`;
-	if (hours > 0) return `${hours}시간 ${minutes}분`;
-	return `${minutes}분`;
-}
-
-function formatRelativeTime(timestamp: number): string {
-	const diff = Math.floor((Date.now() - timestamp) / 1000);
-	if (diff < 5) return "방금 전";
-	if (diff < 60) return `${diff}초 전`;
-	if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-	return `${Math.floor(diff / 3600)}시간 전`;
-}
-
-function formatMemory(bytes: number): string {
-	return `${Math.round(bytes / 1024 / 1024)}MB`;
 }
 
 export function ProcessCard({ process, index }: { process: ShardProcessInfo; index: number }) {

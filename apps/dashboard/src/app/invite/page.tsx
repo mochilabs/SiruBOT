@@ -28,7 +28,7 @@ export default function InvitePage() {
 		<main className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
 
 			<div className="relative z-10 flex flex-col items-center text-center">
-				{/* 배경 블러 */}
+				{/* 배경 블러 — R-01: 단일 초점 페이지(404·초대) 공통의 브랜드 앰비언트 틴트. 4% 저투명도로 장식 강조가 아니라 배경 온도만 유지해요. */}
 				<div className="absolute inset-0 -z-10 flex items-center justify-center">
 					<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
 				</div>
@@ -40,7 +40,7 @@ export default function InvitePage() {
 						</div>
 
 						<div className="space-y-2">
-							<h1 className="text-5xl font-extrabold tracking-tighter text-foreground md:text-7xl">
+							<h1 className="text-5xl font-black tracking-tighter text-foreground md:text-7xl">
 								시루봇과 함께해요
 							</h1>
 							<div className="inline-flex items-center gap-2 rounded-control bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground w-[200px] justify-center tabular-nums">
