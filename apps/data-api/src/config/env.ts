@@ -10,6 +10,8 @@ const envSchema = z
 		OPENAI_COMPATIBLE_API_URL: z.string().default('http://127.0.0.1:8080/v1'),
 		OPENAI_API_KEY: z.string().optional(),
 		TRANSLATION_MODEL: z.string().default('default'),
+		// 커스텀 명령어 초안 생성 모델 — 미설정이면 TRANSLATION_MODEL을 써요
+		CUSTOM_COMMAND_DRAFT_MODEL: z.string().optional(),
 		// 오하아사 일일 갱신 시각 (KST). '06:50' 형태
 		OHAASA_REFRESH_AT: z.string().default('06:50'),
 		// 메모리 정리(nightly pass) — DATABASE_URL이 있을 때만 활성화돼요

@@ -76,7 +76,7 @@ export function PlaylistDetail({
 						<div className="flex items-center gap-3">
 							<h1 className="text-xl lg:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
 								{activePlaylist.name === FAVORITES_PLAYLIST_NAME ? (
-									<Heart size={24} className="text-primary-text fill-primary-control shrink-0" />
+									<Heart size={24} className="text-primary-text shrink-0" />
 								) : (
 									<Music size={24} className="text-primary-text shrink-0" />
 								)}

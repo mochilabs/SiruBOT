@@ -40,6 +40,8 @@ model Guild {
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
+  // 커스텀 명령어 접두사 — 메시지가 이 문자열로 시작하면 길드 커스텀 명령어로 처리해요. 규칙은 packages/utils/src/customCommand.ts.
+  customCommandPrefix String @default("!")
   // 멤버 인사: 입장/퇴장 메시지 + 커스텀 카드 이미지 설정. 구조는 packages/utils/src/memberGreeting.ts 타입과 동기화.
   welcome       Json?
   goodbye       Json?
@@ -47,6 +49,25 @@ model Guild {
   updatedAt     DateTime @updatedAt
 
   history       GuildTrackHistory[]
+  customCommands CustomCommand[]
+}
+
+// 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
+// name은 접두사 뒤 첫 토큰으로 매칭돼요 (공백 불가, 소문자 정규화, 예약어 '도움말' 금지). spec 검증은 packages/utils/src/customCommand.ts의 zod 스키마.
+model CustomCommand {
+  id          String   @id @default(uuid())
+  guildId     String
+  name        String
+  description String   @default("")
+  spec        Json
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, name])
+  @@index([guildId])
 }
 
 model Track {

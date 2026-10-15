@@ -10,7 +10,7 @@ import type {
 	GreetingTemplateVariable,
 	GreetingTextLayer,
 	PresetBackground
-} from "@sirubot/utils";
+} from "@sirubot/utils/memberGreeting";
 
 /**
  * 멤버 인사 대시보드 계약 모음 (v2).

@@ -1,4 +1,4 @@
-import { initSentry, registerProcessErrorHandlers } from '@sirubot/utils';
+import { initSentry, registerProcessErrorHandlers } from '@sirubot/utils/sentry';
 import { validateEnv } from './config/env.ts';
 import { buildServer } from './server.ts';
 import { getLogger } from './utils/logger.ts';

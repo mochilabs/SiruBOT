@@ -10,6 +10,7 @@ import {
   Radio,
   ShieldAlert,
   SlidersHorizontal,
+  SquareSlash,
   UserPlus,
   UserRoundCog,
   Volume2,
@@ -22,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettings } from "./ai-settings";
 import { BotProfileSettings } from "./bot-profile-settings";
 import { ChannelSettings } from "./channel-settings";
+import { CustomCommandsSettings } from "./custom-commands-settings";
 import { JtcSettings } from "./jtc-settings";
 import { MemberGreetingSettings } from "./member-greeting-settings";
 import { MixerSettings } from "./mixer-settings";
@@ -32,6 +34,7 @@ import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./s
 
 const TABS = [
   { key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
+  { key: "custom-commands", label: "커스텀 명령어", icon: <SquareSlash size={14} /> },
   { key: "profile", label: "봇 프로필", icon: <UserRoundCog size={14} /> },
   { key: "music", label: "음악", icon: <Music size={14} /> },
   { key: "player-live", label: "라이브", icon: <Radio size={14} /> },
@@ -187,6 +190,9 @@ export function ServerDashboard({
               >
                 <SettingsPanelActive.Provider value={tab === item.key}>
                 {item.key === "ai" && <AiSettings guildId={guildId} />}
+                {item.key === "custom-commands" && (
+                  <CustomCommandsSettings guildId={guildId} />
+                )}
                 {item.key === "profile" && (
                   <BotProfileSettings guildId={guildId} />
                 )}

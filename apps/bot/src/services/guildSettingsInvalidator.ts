@@ -15,6 +15,7 @@
 import { GUILD_SETTINGS_INVALIDATE_CHANNEL, ManagedRedisSubscriber } from '@sirubot/utils';
 import { container } from '@sapphire/framework';
 
+import { clearGuildCustomCommandsCache } from './customCommands/store.ts';
 import { GuildService } from './guildService.ts';
 
 interface InvalidationPayload {
@@ -81,6 +82,8 @@ export class GuildSettingsInvalidator {
 			return;
 		}
 		this.guildService?.invalidate(guildId);
+		// 커스텀 명령어 테이블도 같은 채널로 무효화돼요 — 커스텀 명령어 저장·접두사 변경이 함께 와요
+		clearGuildCustomCommandsCache(guildId);
 		this.logger.debug(`길드 설정 캐시 무효화: ${guildId}`);
 		if (parseReason(raw) === 'mixer') void this.applyMixerToPlayer(guildId);
 	}

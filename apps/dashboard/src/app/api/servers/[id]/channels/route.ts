@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { guildChannelItemSchema } from "@sirubot/utils";
+import { guildChannelItemSchema } from "@sirubot/utils/guildData";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
