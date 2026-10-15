@@ -91,7 +91,12 @@ export class OpenAICompatTranslationProvider implements TranslationProvider {
 			}),
 			signal: AbortSignal.timeout(60_000)
 		});
-		if (!res.ok) throw new Error(`${providerLabel} failed: ${res.status}`);
+		if (!res.ok) {
+			// 실패 본문까지 남겨야 quota 초과(429 insufficient_quota)·인증 오류가 로그에서 바로 보여요
+			const detail = await res.text().catch(() => '');
+			const snippet = detail.replace(/\s+/g, ' ').trim().slice(0, 500);
+			throw new Error(`${providerLabel} failed: ${res.status}${snippet ? ` ${snippet}` : ''}`);
+		}
 		const body = (await res.json()) as {
 			choices?: Array<{ message?: { content?: string } }>;
 		};

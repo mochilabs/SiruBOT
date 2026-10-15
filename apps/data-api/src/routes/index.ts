@@ -162,7 +162,11 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 					if (deps.translationProvider.available) {
 						try {
 							return await translateDaily(raw, deps.translationProvider);
-						} catch {
+						} catch (error) {
+							// 조용히 원문으로 빠지면 왜 그런지 로그에 남지 않아요 (quota 초과 등)
+							console.warn(
+								`[data-api] ohaasa translation failed, serving raw: ${error instanceof Error ? error.message : String(error)}`
+							);
 							return raw;
 						}
 					}
