@@ -1,5 +1,7 @@
 # Dashboard UI/UX audit and implementation
 
+> **상태**: 구현 배치 완료 `d2de51fd` (#77) — 단 P2 2건(`servers/[id]/page.tsx` 429/5xx→notFound, `use-playlists.ts` SWR 에러 미노출)은 Remaining이므로 후속 이슈로 추적 필요.
+
 Date: 2026-10-14. Baseline: `beta`, `7a213eb`. Branch: `fix/dashboard-workflow-reliability`.
 
 ## Outcome and coverage
@@ -170,7 +172,7 @@ opaque brand surfaces and action-only motion; engineering PASS by the commands
 above. Live production playback and full all-page accessibility are not passed
 or claimed. No deployment, production mutations, commit or push was performed.
 
-1. Implement the unsaved-only floating bar across all seven panels following the existing [responsive plan](plans/2026-10-14-dashboard-responsive-ux.md). Preserve hidden drafts, history deletion, greeting partial failures, JTC setup locking, focus restoration, toast/menu layering, and measured bottom clearance.
+1. Implement the unsaved-only floating bar across all seven panels following the existing [responsive plan](../plans/2026-10-14-dashboard-responsive-ux.md). Preserve hidden drafts, history deletion, greeting partial failures, JTC setup locking, focus restoration, toast/menu layering, and measured bottom clearance.
 2. Distinguish temporary Discord authorization/membership failures from missing servers and provide page-level recovery instead of 404/permission-denied presentation.
 3. Surface playlist list/detail loading failures and retry; validate reorder/remove keyboard access and concurrent queue mutations with controlled fixtures.
 4. Complete authenticated end-to-end testing for all settings tabs, bot-profile revert, JTC setup, greeting partial save, and server-switch warnings with an authorized test guild. No production mutations were made here.

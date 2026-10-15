@@ -294,7 +294,7 @@ should report `Unexpected failures: 0`.
 Implementation update (2026-10-14): the shared header/panel guidance now wraps,
 four shared settings forms compare an editable saved baseline and serialize
 submits, and the live player isolates guild state and exposes recovery. See
-the [bounded audit and validation record](../../docs/dashboard-ui-ux-audit-2026-10-14.md).
+the [bounded audit and validation record](../../docs/audits/2026-10-14-dashboard-ui-ux.md).
 The floating save bar now appears only for dirty/pending active panels through
 the existing portal. Inactive drafts remain registered. AI history deletion
 remains in the form; profile revert remains alongside save. Mobile uses 16px

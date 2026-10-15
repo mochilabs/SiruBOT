@@ -117,7 +117,7 @@ Discord Components V2의 `ContainerBuilder`와 `TextDisplayBuilder`를 사용한
 
 2026-10-14 부분 구현: 공용 제목·안내 줄바꿈, 설정 초안 비교·중복 저장 방지,
 길드별 플레이어 상태 분리·오류 복구를 적용했다. 범위와 실제 검증 결과는
-[UI/UX 감사 기록](docs/dashboard-ui-ux-audit-2026-10-14.md)에 있다.
+[UI/UX 감사 기록](docs/audits/2026-10-14-dashboard-ui-ux.md)에 있다.
 floating 저장 바, 서버 전환 확인 모달, 서버 검색 팝오버와 토스트 정리를 추가 적용했다.
 전체 인증 흐름과 실제 기기의 소프트 키보드 검증은 아직 남아 있다.
 
