@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 /** 채팅 읽기 시퀀스 데모 — 봇이 구현되면 이 흐름(채팅 수신 → TTS로 읽고 → 다음)이 실제로 돌아가요 */
 const CHAT_MESSAGES = [
-	{ author: "서름", time: "오후 8:11", text: "다들 이 구간 듣고 싶다?" },
+	{ author: "서름", time: "오후 8:11", text: "여기 후렴 미쳤다 ㅋㅋ" },
 	{ author: "미니", time: "오후 8:12", text: "노래 좋은데? 누가 골랐어?" },
 	{ author: "서름", time: "오후 8:13", text: "지금 이 부분 진짜 좋다" }
 ];
