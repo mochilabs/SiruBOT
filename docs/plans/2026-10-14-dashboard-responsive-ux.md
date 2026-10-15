@@ -1,3 +1,5 @@
+> **상태**: 부분 구현 — #77(`d2de51fd`)에서 Task 1~3·5 일부가 코드상 구현됨(controlled fixture 렌더만, 실기기·실제 길드 미검증). Task 4·6은 미완/판정 불가 항목 잔류.
+
 # Dashboard Responsive UX Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
