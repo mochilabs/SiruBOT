@@ -59,9 +59,9 @@ export class MixerCommand extends Command {
 							opt
 								.setName('duration')
 								.setNameLocalizations({ ko: '길이' })
-								.setDescription('겹치는 길이 (500-30000ms). 생략하면 현재 값을 유지해요.')
+								.setDescription('겹치는 길이 500~15000ms (0.5초~15초). 생략하면 현재 값을 유지해요.')
 								.setMinValue(500)
-								.setMaxValue(30000)
+								.setMaxValue(15000)
 								.setRequired(false)
 						)
 				);
@@ -151,7 +151,7 @@ export class MixerCommand extends Command {
 			}
 		}
 		const base = saved.crossfadeEnabled
-			? `${emoji('shuffle')} 크로스페이드를 켰어요. (${saved.crossfadeMs}ms 겹치기)`
+			? `${emoji('shuffle')} 크로스페이드를 켰어요. (${(saved.crossfadeMs / 1000).toFixed(1)}초 겹치기)`
 			: `${emoji('shuffle')} 크로스페이드를 껐어요.`;
 		await interaction.editReply({
 			components: [

@@ -254,7 +254,8 @@ export class GuildService {
 	}
 
 	public async setCrossfade(guildId: string, enabled: boolean, durationMs?: number) {
-		const clamped = durationMs === undefined ? undefined : Math.round(Math.min(30000, Math.max(500, durationMs)));
+		// Lavalink mixer 플러그인의 겹치기 상한은 15초(15000ms)라 여기서 잘라요
+		const clamped = durationMs === undefined ? undefined : Math.round(Math.min(15000, Math.max(500, durationMs)));
 		const guild = await this.getGuild(guildId);
 		const data: Prisma.GuildUpdateInput = { crossfadeEnabled: enabled };
 		if (clamped !== undefined) data.crossfadeMs = clamped;
