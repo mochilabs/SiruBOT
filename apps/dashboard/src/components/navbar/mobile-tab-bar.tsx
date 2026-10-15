@@ -30,6 +30,12 @@ const STRETCH_MAX = 0.045;
 type AnimControls = ReturnType<typeof animate>;
 type AnimPair = [value: MotionValue<number>, target: number, transition: Transition];
 
+/** 값마다 진행 중인 애니메이션 — 같은 값을 다시 애니메이션할 때만 이전 것을 멈춰요. */
+interface RunningAnim {
+	controls: AnimControls;
+	target: number;
+}
+
 interface DragState {
 	pointerId: number;
 	startX: number;
@@ -65,7 +71,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	const width = useMotionValue(0);
 	const scaleX = useMotionValue(1);
 	const scaleY = useMotionValue(1);
-	const animsRef = useRef<AnimControls[]>([]);
+	const animsRef = useRef(new Map<MotionValue<number>, RunningAnim>());
 	const dragRef = useRef<DragState | null>(null);
 	const detachRef = useRef<() => void>(() => {});
 	const clickGuardRef = useRef<((event: Event) => void) | null>(null);
@@ -86,16 +92,22 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	tabsRef.current = tabs;
 
 	const stopAnims = useCallback(() => {
-		for (const controls of animsRef.current) controls.stop();
-		animsRef.current = [];
+		for (const running of animsRef.current.values()) running.controls.stop();
+		animsRef.current.clear();
 	}, []);
 
 	const runAnims = useCallback(
 		(pairs: AnimPair[]) => {
-			for (const controls of animsRef.current) controls.stop();
-			animsRef.current = pairs.map(([value, target, transition]) =>
-				reduced ? animate(value, target, { duration: 0 }) : animate(value, target, transition)
-			);
+			for (const [value, target, transition] of pairs) {
+				const running = animsRef.current.get(value);
+				// 같은 목표로 이미 날아가는 중이면 그대로 두어요 — 탭 전환이 눌림 해제 바운스를 잘라내지 않도록
+				if (running?.target === target) continue;
+				running?.controls.stop();
+				animsRef.current.set(value, {
+					controls: reduced ? animate(value, target, { duration: 0 }) : animate(value, target, transition),
+					target
+				});
+			}
 		},
 		[reduced]
 	);
@@ -156,8 +168,8 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	useEffect(
 		() => () => {
 			detachRef.current();
-			for (const controls of animsRef.current) controls.stop();
-			animsRef.current = [];
+			for (const running of animsRef.current.values()) running.controls.stop();
+			animsRef.current.clear();
 			const guard = clickGuardRef.current;
 			if (guard) window.removeEventListener("click", guard, { capture: true });
 		},

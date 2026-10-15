@@ -11,6 +11,34 @@ vi.mock("next/navigation", () => ({
 	usePathname: () => mocks.pathname
 }));
 
+/* happy-dom에선 framer 애니메이션 루프(rAF)가 돌지 않아 animate만 값 적용 페이크로 바꿔요.
+   stop()된 애니메이션이 목표에 도달하지 못하는 것도 그대로 재현해서 끊김을 검증해요. */
+const anim = vi.hoisted(() => {
+	type Tickable = { get: () => number; set: (value: number) => void };
+	const live: Array<{ value: Tickable; target: number; stopped: boolean }> = [];
+	return {
+		live,
+		animate: (value: Tickable, target: number) => {
+			const entry = { value, target, stopped: false };
+			live.push(entry);
+			return {
+				stop: () => {
+					entry.stopped = true;
+				}
+			};
+		},
+		flush: () => {
+			for (const entry of live) {
+				if (!entry.stopped) entry.value.set(entry.target);
+			}
+		}
+	};
+});
+vi.mock("framer-motion", async (importOriginal) => ({
+	...(await importOriginal<typeof import("framer-motion")>()),
+	animate: anim.animate
+}));
+
 /* happy-dom엔 레이아웃이 없어 탭 5개(각 80px, 90px 간격)와 컨테이너 rect를 흉내 내요. */
 const TAB_LEFT = (index: number) => 20 + index * 90;
 const originalRect = Element.prototype.getBoundingClientRect;
@@ -99,5 +127,24 @@ describe("모바일 탭바 드래그 필", () => {
 		const click = new MouseEvent("click", { bubbles: true, cancelable: true });
 		bar.dispatchEvent(click);
 		expect(click.defaultPrevented).toBe(false);
+	});
+
+	it("탭 이동으로 알약이 옮겨가도 눌림 해제 애니메이션이 끊기지 않아요", async () => {
+		const { bar } = await mountBar();
+		const before = anim.live.length;
+		await act(async () => bar.dispatchEvent(pointerEvent("pointerdown", 60)));
+		anim.flush();
+		// 눌림: scaleX·scaleY 모션 값이 실제로 작아졌는지 (DOM 갱신은 rAF가 없어 값으로 검증해요)
+		const pressEntries = anim.live.slice(before);
+		expect(pressEntries.map((entry) => entry.value.get())).toEqual([0.955, 0.9]);
+		await act(async () => window.dispatchEvent(pointerEvent("pointerup", 60)));
+		const releaseEntries = anim.live.slice(anim.live.length - 2);
+		// 놓기 직후 라우트가 바뀌어 탭 전환 애니메이션이 시작돼도 눌림 해제는 완료되어야 해요
+		mocks.pathname = "/track";
+		await act(async () => {
+			root.render(<MobileTabBar status="authenticated" />);
+		});
+		anim.flush();
+		expect(releaseEntries.map((entry) => entry.value.get())).toEqual([1, 1]);
 	});
 });
