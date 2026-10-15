@@ -10,7 +10,7 @@ import {
 	ThumbnailBuilder
 } from 'discord.js';
 import { getZodiacFromDate, ZODIAC_MAP } from '../../games/utils/ohaasaService.ts';
-import { clearUserBirthday, isValidBirthday, setUserBirthday } from '../utils/userProfile.ts';
+import { clearUserBirthday, clearUserIntro, isValidBirthday, setUserBirthday, setUserIntro } from '../utils/userProfile.ts';
 import { buildProfileCardData, formatGameStatsLines } from '../utils/profileCardData.ts';
 import { renderProfileCard } from '../../../services/dataApiClient.ts';
 import { streakBadge } from '../../games/utils/gameRecords.ts';
@@ -100,6 +100,29 @@ export class ProfileCommand extends Command {
 						.setNameLocalizations({ ko: '생일삭제' })
 						.setDescription('Delete my saved birthday.')
 						.setDescriptionLocalizations({ ko: '등록한 생일을 지워요.' })
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('set-intro')
+						.setNameLocalizations({ ko: '소개설정' })
+						.setDescription('Set my one-line intro (shown on the profile card).')
+						.setDescriptionLocalizations({ ko: '프로필 카드에 보여줄 한 줄 소개를 등록해요.' })
+						.addStringOption((option) =>
+							option
+								.setName('intro')
+								.setNameLocalizations({ ko: '소개' })
+								.setDescription('Intro text (up to 120 characters).')
+								.setDescriptionLocalizations({ ko: '소개 문구 (120자 이내)' })
+								.setMaxLength(120)
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('clear-intro')
+						.setNameLocalizations({ ko: '소개삭제' })
+						.setDescription('Delete my saved intro.')
+						.setDescriptionLocalizations({ ko: '등록한 소개를 지워요.' })
 				);
 		});
 	}
@@ -146,6 +169,44 @@ export class ProfileCommand extends Command {
 			const containerComponent = createContainer();
 			containerComponent.addTextDisplayComponents((t) =>
 				t.setContent(cleared ? `${emoji('trash')} 등록된 생일을 지웠어요.` : `${emoji('info')} 등록된 생일이 없어요.`)
+			);
+			await interaction.editReply({
+				components: [containerComponent],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		}
+
+		if (subcommand === 'set-intro') {
+			await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+			const intro = interaction.options.getString('intro', true);
+			const saved = await setUserIntro(interaction.user.id, intro);
+			if (!saved) {
+				throw new UserError({
+					identifier: 'profile_invalid_intro',
+					message: `${emoji('error')} 소개는 1~120자로 입력해 주세요.`,
+					context: { ephemeral: true }
+				});
+			}
+			const containerComponent = createContainer();
+			containerComponent.addTextDisplayComponents((t) =>
+				t.setContent(
+					[`### ${emoji('speech')} 소개를 저장했어요`, '', `> ${intro.trim()}`, '', '-# `/프로필 보기`의 프로필 카드에 보여요.'].join('\n')
+				)
+			);
+			await interaction.editReply({
+				components: [containerComponent],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		}
+
+		if (subcommand === 'clear-intro') {
+			await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+			const cleared = await clearUserIntro(interaction.user.id);
+			const containerComponent = createContainer();
+			containerComponent.addTextDisplayComponents((t) =>
+				t.setContent(cleared ? `${emoji('trash')} 등록한 소개를 지웠어요.` : `${emoji('info')} 등록한 소개가 없어요.`)
 			);
 			await interaction.editReply({
 				components: [containerComponent],
@@ -249,7 +310,7 @@ export class ProfileCommand extends Command {
 			checkinStreak: data.checkinStreak,
 			status: derivedStatus,
 			statusLabel: '',
-			intro: '',
+			intro: data.intro,
 			roleChips,
 			guildTag,
 			guildTagBadgeUrl,
@@ -275,6 +336,11 @@ export class ProfileCommand extends Command {
 
 		// 텍스트 카드 (폴백)
 		const lines = [`### ${emoji('user')} ${target.displayName ?? target.username} 님의 프로필`, ''];
+
+		// 소개 — 유저가 등록한 문구가 있을 때만
+		if (data.intro) {
+			lines.push(`> ${data.intro}`, '');
+		}
 
 		// 생일·별자리 — 생일은 본인에게만
 		if (data.isSelf) {

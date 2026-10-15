@@ -39,6 +39,8 @@ interface ProfileCardData {
 	/** 본인일 때만 값 있음. 타인은 null */
 	birthDay: number | null;
 	zodiacCode: string | null;
+	/** 유저가 등록한 한 줄 소개. 비어 있으면 카드에서 소개 칸을 생략해요 */
+	intro: string;
 	playlistCount: number;
 	requestedCount: number;
 	listenMs: number;
@@ -112,6 +114,7 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 		birthMonth: isSelf ? birthMonth : null,
 		birthDay: isSelf ? birthDay : null,
 		zodiacCode,
+		intro: profile?.intro ?? '',
 		playlistCount,
 		requestedCount,
 		listenMs,

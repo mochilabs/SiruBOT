@@ -429,7 +429,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 					guildTagBadgeUrl: body.guildTagBadgeUrl,
 					status: body.status,
 					onlineLabel: body.statusLabel || statusLabelMap[body.status] || '온라인',
-					intro: body.intro || '느긋하게, 좋아하는 것들과 함께.',
+					// 소개는 유저가 등록한 문구 그대로 쓰고, 비어 있으면 렌더러가 소개 칸을 생략해요
+					intro: body.intro,
 					createdText: dateFmt(body.accountCreated),
 					joinedText: dateFmt(body.guildJoinedAt),
 					roleChips: body.roleChips,

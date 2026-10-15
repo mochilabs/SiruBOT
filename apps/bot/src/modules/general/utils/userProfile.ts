@@ -36,3 +36,29 @@ export async function clearUserBirthday(userId: string): Promise<boolean> {
 	});
 	return true;
 }
+
+/** 소개 문구 유효성 — 1~120자 */
+export function isValidIntro(intro: string): boolean {
+	const trimmed = intro.trim();
+	return trimmed.length >= 1 && trimmed.length <= 120;
+}
+
+/** 소개 저장. 유효하지 않으면 false */
+export async function setUserIntro(userId: string, intro: string): Promise<boolean> {
+	const trimmed = intro.trim();
+	if (!isValidIntro(trimmed)) return false;
+	await container.db.user.upsert({
+		where: { id: userId },
+		create: { id: userId, intro: trimmed },
+		update: { intro: trimmed }
+	});
+	return true;
+}
+
+/** 소개 삭제. 등록된 소개가 있었으면 true */
+export async function clearUserIntro(userId: string): Promise<boolean> {
+	const profile = await getUserProfile(userId);
+	if (!profile?.intro) return false;
+	await container.db.user.update({ where: { id: userId }, data: { intro: null } });
+	return true;
+}

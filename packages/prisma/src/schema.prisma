@@ -94,6 +94,8 @@ model User {
   // 프로필: 생일(월/일) — 별자리 자동 변환용. 연도는 저장하지 않아요.
   birthMonth  Int?
   birthDay    Int?
+  // 프로필 카드의 한 줄 소개 (120자 이내). 비우면 소개 칸을 생략해요.
+  intro       String?         @db.VarChar(120)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
