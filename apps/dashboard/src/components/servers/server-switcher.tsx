@@ -85,11 +85,11 @@ export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; 
         )) : <p className="p-4 text-sm text-muted-foreground">{query ? "검색 결과가 없어요. 다른 이름으로 검색해 주세요." : "관리할 수 있는 서버가 없어요."}</p>}
     </div>
   );
-  // 트리거는 표면/경계(shadow-control-boundary)로 배경과 구분되고, 열림·누름에서 chevron 회전과
+  // 트리거는 표면 채움으로 배경과 구분되고, 열림·누름에서 chevron 회전과
   // 눌림(scale)으로 "작동하는 느낌"을 줘요
   const triggerClass = (open: boolean) =>
     `h-auto min-h-12 max-w-full min-w-0 justify-start gap-3 px-2 py-1 text-xl font-bold tracking-normal sm:text-2xl ` +
-    `bg-surface-1 shadow-control-boundary transition-[background-color,transform] duration-fast hover:bg-surface-2 active:scale-[0.98] ` +
+    `bg-surface-1 transition-[background-color,transform] duration-fast hover:bg-surface-2 active:scale-[0.98] ` +
     (open ? "bg-surface-2" : "");
 
   return (
