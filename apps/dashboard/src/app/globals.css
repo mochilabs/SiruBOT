@@ -141,6 +141,8 @@
 	--color-discord-primary: #5865f2;
 	--color-discord-blue: #00a8fc;
 	--color-discord-light: #949cf7;
+	/* Discord 음성 연결 상태 초록 (라이트/다크 공통 고정값) */
+	--color-discord-voice: #23a559;
 }
 
 /* =============================================================================

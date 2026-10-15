@@ -52,6 +52,8 @@ interface FeatureBlock {
 	desc: string;
 	Preview: ComponentType;
 	secondary?: { href: string; label: string };
+	/** 아직 출시 전인 블록 — 라벨 옆에 "곧 만나요" 상태 칩이 붙어요 */
+	soon?: boolean;
 }
 
 const FEATURE_BLOCKS: FeatureBlock[] = [
@@ -77,8 +79,9 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		icon: Speech,
 		label: "채팅 TTS",
 		title: "채팅이 그대로 목소리가 돼요.",
-		desc: "음성 채널의 채팅을 시루가 목소리로 읽어줘요. 노래를 재생하면서 함께 켜둘 수 있어요. 곧 만나요.",
+		desc: "음성 채널의 채팅을 시루가 목소리로 읽어줘요. 노래를 재생하면서 함께 켜둘 수 있어요.",
 		Preview: ChatTtsPreview,
+		soon: true,
 	},
 	{
 		key: "chat",
@@ -140,10 +143,15 @@ function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock;
 			{/* 텍스트 — 홀수 인덱스(0 기준 1,3,5)에서 lg:order-2로 오른쪽 */}
 			<div className={cn("min-w-0 space-y-3", index % 2 === 1 && "lg:order-2")}>
 				<div className="flex items-center gap-2.5">
-					<block.icon size={18} className="text-primary-text" aria-hidden />
+					<block.icon size={18} className="shrink-0 text-primary-text" aria-hidden />
 					<SectionLabel as="p" className="px-0 py-0 text-primary-text">
 						{block.label}
 					</SectionLabel>
+					{block.soon && (
+						<span className="shrink-0 rounded-sm border border-primary-control/20 bg-primary-control/10 px-1.5 py-0.5 text-2xs font-bold text-primary-text">
+							곧 만나요
+						</span>
+					)}
 				</div>
 				<h3 className="text-2xl font-black tracking-tighter text-foreground sm:text-3xl">{block.title}</h3>
 				<p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">{block.desc}</p>
