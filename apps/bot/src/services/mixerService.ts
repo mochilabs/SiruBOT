@@ -237,9 +237,11 @@ export class MixerService {
 	/** DB 설정을 서버에 반영한다 (playerCreate 시 1회). */
 	public async pushCrossfadeConfig(player: Player): Promise<void> {
 		const settings = await container.guildService.getMixerSettings(player.guildId);
+		// 상한 도입 전에 길게 저장돼 있던 값도 플러그인에 깨지지 않게 잘라요 (최대 15초)
+		const durationMs = Math.min(15000, Math.max(500, settings.crossfadeMs));
 		await this.mixerCall(player, '/mixer/crossfade', {
 			method: 'POST',
-			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.crossfadeEnabled, durationMs: settings.crossfadeMs })
+			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.crossfadeEnabled, durationMs })
 		});
 	}
 

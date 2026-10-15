@@ -49,8 +49,8 @@ export const guildSettingsSchema = z.object({
 	crossfadeMs: z
 		.number()
 		.int("크로스페이드는 정수여야 해요.")
-		.min(500, "크로스페이드는 500ms 이상이에요.")
-		.max(30000, "크로스페이드는 30000ms 이하여야 해요.")
+		.min(500, "크로스페이드는 0.5초 이상이에요.")
+		.max(15000, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
 });
 

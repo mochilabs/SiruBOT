@@ -14,7 +14,7 @@ export function mixerStatus({ settings, state, noPlayer }: MixerStatusProps) {
 		`### ${emoji('spectrum')} 믹서 상태`,
 		``,
 		`${emoji('arrow_forward')} **갭리스**: ${settings.gaplessEnabled ? '켜짐' : '꺼짐'}`,
-		`${emoji('shuffle')} **크로스페이드**: ${settings.crossfadeEnabled ? `켜짐 (${settings.crossfadeMs}ms)` : '꺼짐'}`,
+		`${emoji('shuffle')} **크로스페이드**: ${settings.crossfadeEnabled ? `켜짐 (${(settings.crossfadeMs / 1000).toFixed(1)}초)` : '꺼짐'}`,
 		`${emoji('box')} **예열된 다음 곡**: ${state ? (state.hasNext ? '있음' : '없음') : noPlayer ? '재생 중이 아니라서 없음' : '서버 상태 조회 실패'}`
 	];
 	if (state?.crossfadeActive) lines.push(`${emoji('shuffle')} 크로스페이드 진행 중`);

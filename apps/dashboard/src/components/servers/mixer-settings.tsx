@@ -90,13 +90,13 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
 
       <Field
         label="크로스페이드 길이"
-        description="500ms ~ 30000ms. 길수록 두 곡이 더 오래 겹쳐요."
+        description="0.5초 ~ 15초. 길수록 두 곡이 더 오래 겹쳐요."
       >
         <Slider
           value={form.crossfadeMs}
           onChange={(value) => patch({ crossfadeMs: value })}
           min={500}
-          max={30000}
+          max={15000}
           step={100}
           label="겹치기 길이"
           showValue
