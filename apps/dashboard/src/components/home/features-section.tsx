@@ -3,11 +3,12 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
-import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, Speech, UserPlus } from "lucide-react";
+import { Bot, LayoutDashboard, ListMusic, type LucideIcon, Music2, Palette, SlidersHorizontal, Speech, Terminal, UserPlus } from "lucide-react";
 
 import { AiChatPreview } from "@/components/home/previews/ai-chat-preview";
 import { BotProfilePreview } from "@/components/home/previews/bot-profile-preview";
 import { ChatTtsPreview } from "@/components/home/previews/chat-tts-preview";
+import { CustomCommandPreview } from "@/components/home/previews/custom-command-preview";
 import { DashboardPreview } from "@/components/home/previews/dashboard-preview";
 import { MemberGreetingPreview } from "@/components/home/previews/member-greeting-preview";
 import { MixerPreview } from "@/components/home/previews/mixer-preview";
@@ -90,6 +91,14 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		title: "명령어를 몰라도, 시루에게 물어보세요.",
 		desc: "멘션으로 말을 걸면 시루가 대화의 맥락을 이해하고, 검색과 음악 제어 등 필요한 도구를 활용해 답해요.",
 		Preview: AiChatPreview,
+	},
+	{
+		key: "custom-commands",
+		icon: Terminal,
+		label: "커스텀 명령어",
+		title: "우리 서버만의 명령어를 만들어요.",
+		desc: "접두사 한 글자로 실행하는 우리 서버만의 명령어예요. 대시보드 블록 빌더로 순서를 짜고, AI에게 설명하면 초안이 만들어져요.",
+		Preview: CustomCommandPreview,
 	},
 	{
 		key: "greeting",
