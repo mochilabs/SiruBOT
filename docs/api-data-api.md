@@ -36,7 +36,8 @@
 | POST `/v1/image/nowplaying` | NowPlaying 카드 (5초 버킷) | dedup 키 `img:nowplaying:` | `routes/index.ts:597` |
 | POST `/v1/image/ohaasa` | 운세 카드 | dedup 키 `img:ohaasa:` | `routes/index.ts:613` |
 | POST `/v1/internal/guild-settings/invalidate` | 길드 설정 캐시 무효화 브로드캐스트 | Redis 없으면 503 | `routes/index.ts:633` |
-| POST `/v1/ai/custom-command-draft` | 커스텀 명령어 AI 초안 | 미설정 503·실패 502 | `routes/index.ts:653` |
+| POST `/v1/ai/custom-command-draft` | 커스텀 명령어 AI 초안 (자연어 → v2 스펙 초안) | 미설정 503·실패 502 | `routes/index.ts:653` |
+| POST `/v1/ai/custom-command-refine` | 커스텀 명령어 AI 반복 수정 (현재 스펙+지시+최근 대화 → 수정 스펙) | 미설정 503·실패 502 | `routes/index.ts` |
 | POST `/v1/internal/player/search` | 웹 플레이어 검색 (request/reply) | — | `routes/index.ts:711` |
 | POST `/v1/internal/player/play` | 웹 플레이어 재생 | — | `routes/index.ts:728` |
 | POST `/v1/internal/player/control` | 웹 플레이어 제어 | — | `routes/index.ts:745` |
