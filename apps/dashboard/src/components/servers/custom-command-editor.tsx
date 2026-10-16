@@ -341,7 +341,7 @@ export function CustomCommandEditor({
                       }
                       disabled={saving}
                     />
-                  )}
+                  ) : null}
                 </div>
                 <Button
                   variant="icon"

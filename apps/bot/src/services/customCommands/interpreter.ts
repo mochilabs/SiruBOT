@@ -98,7 +98,7 @@ function sanitizeArg(value: string): string {
 
 /** {argvN} 치환 — N ≥ MAX_ARGS는 빈 문자열 */
 function substituteArgs(text: string, args: string[]): string {
-	return text.replace(/\{argv(\d+)\}/gu, (match, digits: string) => {
+	return text.replace(/\{argv(\d+)\}/gu, (_match, digits: string) => {
 		const index = Number(digits);
 		return index < CUSTOM_COMMAND_MAX_ARGS && args[index] !== undefined ? sanitizeArg(args[index]!) : '';
 	});
