@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CUSTOM_COMMAND_MAX_PER_GUILD,
+  CUSTOM_COMMAND_MAX_SLASH_PER_GUILD,
   CUSTOM_COMMAND_PREFIX_DEFAULT,
   validateCustomCommandPrefix,
 } from "@sirubot/utils/customCommand";
@@ -20,7 +21,6 @@ import type {
   CustomCommandsState,
   CustomCommandSummary,
 } from "@/lib/custom-commands";
-import { MAX_SLASH_COMMANDS_PER_GUILD } from "@/lib/custom-commands";
 
 import { CustomCommandEditor } from "./custom-command-editor";
 import {
@@ -295,7 +295,7 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
           <span className="font-semibold text-foreground">
             {state?.slashCount ?? 0}
           </span>
-          /{MAX_SLASH_COMMANDS_PER_GUILD}개 · 실행 제한은 명령어마다 정할 수
+          /{CUSTOM_COMMAND_MAX_SLASH_PER_GUILD}개 · 실행 제한은 명령어마다 정할 수
           있고, 만들기·수정·삭제는 서버 관리자만 가능해요.
         </p>
       </InfoBox>
