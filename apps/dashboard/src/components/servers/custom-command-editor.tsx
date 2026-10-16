@@ -327,7 +327,7 @@ export function CustomCommandEditor({
                       disabled={saving}
                       className="min-h-12"
                     />
-                  ) : (
+                  ) : step.type === "delay" ? (
                     <Input
                       type="number"
                       min={1}
