@@ -59,6 +59,10 @@ model CustomCommand {
   guildId     String
   name        String
   description String   @default("")
+  /// 실행 방식 — 'prefix' | 'slash'. 생성 시점에 정해지고 바뀌지 않아요 (packages/utils/src/customCommand.ts의 method 계약).
+  method      String   @default("prefix")
+  /// 슬래시형 등록 후 Discord application command ID — 증분 동기화(생성/수정/삭제)에 써요.
+  applicationCommandId String?
   spec        Json
   createdBy   String
   createdAt   DateTime @default(now())
