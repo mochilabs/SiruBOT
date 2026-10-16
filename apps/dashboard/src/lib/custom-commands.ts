@@ -1,10 +1,14 @@
-import type { CustomCommandSpec } from "@sirubot/utils/customCommand";
+import type {
+	CustomCommandMethod,
+	CustomCommandSpec
+} from "@sirubot/utils/customCommand";
 import {
-  CUSTOM_COMMAND_MAX_PER_GUILD,
-  customCommandSpecSchema,
-  normalizeCustomCommandName,
-  normalizeCustomCommandPrefix,
-  validateCustomCommandName,
+	CUSTOM_COMMAND_MAX_PER_GUILD,
+	CUSTOM_COMMAND_MAX_SLASH_PER_GUILD,
+	customCommandSpecSchema,
+	normalizeCustomCommandName,
+	normalizeCustomCommandPrefix,
+	validateCustomCommandName,
 } from "@sirubot/utils/customCommand";
 
 import { db } from "@/lib/db";
@@ -14,6 +18,8 @@ export interface CustomCommandSummary {
   id: string;
   name: string;
   description: string;
+  /** 실행 방식 — 'prefix'는 접두사 메시지, 'slash'는 슬래시로만 실행돼요 (생성 후 불변) */
+  method: CustomCommandMethod;
   spec: CustomCommandSpec;
   createdAt: string;
   updatedAt: string;
@@ -24,6 +30,8 @@ export interface CustomCommandsState {
   ok: true;
   prefix: string;
   commands: CustomCommandSummary[];
+  /** 슬래시형 개수 — 슬롯(최대 MAX_SLASH_COMMANDS_PER_GUILD) 표시용 */
+  slashCount: number;
 }
 
 /**
@@ -43,10 +51,12 @@ export async function readCustomCommandsState(
   return {
     ok: true,
     prefix: normalizeCustomCommandPrefix(guild?.customCommandPrefix),
+    slashCount: rows.filter((row) => row.method === "slash").length,
     commands: rows.map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description,
+      method: row.method === "slash" ? "slash" : "prefix",
       // spec은 저장 시 zod로 검증된 JSON — 응답 타입만 좁혀요
       spec: row.spec as unknown as CustomCommandSpec,
       createdAt: row.createdAt.toISOString(),
@@ -62,5 +72,8 @@ export function normalizedCommandName(name: string): string {
 
 /** 커스텀 명령어 개수 상한 — 서버당 */
 export const MAX_CUSTOM_COMMANDS_PER_GUILD = CUSTOM_COMMAND_MAX_PER_GUILD;
+
+/** 슬래시형 커스텀 명령어 슬롯 상한 — 봇 본 커맨드의 Discord 슬롯을 보호해요 */
+export const MAX_SLASH_COMMANDS_PER_GUILD = CUSTOM_COMMAND_MAX_SLASH_PER_GUILD;
 
 export { customCommandSpecSchema, validateCustomCommandName };

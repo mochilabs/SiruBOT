@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	CUSTOM_COMMAND_MAX_ARGS,
 	CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS,
+	customCommandPatchSchema,
 	customCommandPayloadSchema,
 	customCommandSpecSchema,
 	customCommandSpecSchemaV2,
@@ -209,6 +210,16 @@ describe('customCommandPayloadSchema — 실행 방식', () => {
 				spec: { version: 1, steps: [{ type: 'send_message', text: 'x' }] }
 			}).success
 		).toBe(false);
+	});
+});
+
+describe('customCommandPatchSchema', () => {
+	it('accepts partial updates without method', () => {
+		expect(customCommandPatchSchema.safeParse({ description: '새 설명' }).success).toBe(true);
+		expect(
+			customCommandPatchSchema.safeParse({ name: 'greet', spec: { version: 2, steps: [{ type: 'send_message', text: 'x' }] } }).success
+		).toBe(true);
+		expect(customCommandPatchSchema.safeParse({ name: '' }).success).toBe(false);
 	});
 });
 

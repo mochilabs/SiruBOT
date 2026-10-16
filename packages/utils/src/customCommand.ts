@@ -293,6 +293,21 @@ export const customCommandPayloadSchema = z
 	});
 export type CustomCommandPayload = z.infer<typeof customCommandPayloadSchema>;
 
+/**
+ * 수정(PATCH)용 부분 스펙 — 이름/실행 방식 검증은 대상 명령어의 method에 의존하므로
+ * 라우트가 별도로 검사해요. (zod 4는 refine 있는 스키마에 .partial()을 못 써요)
+ */
+export const customCommandPatchSchema = z.object({
+	name: z
+		.string()
+		.min(1, '이름을 입력해 주세요.')
+		.max(CUSTOM_COMMAND_NAME_MAX_LENGTH, `이름은 ${CUSTOM_COMMAND_NAME_MAX_LENGTH}자 이하로 입력해 주세요.`)
+		.optional(),
+	description: z.string().max(100, '설명은 100자 이하여야 해요.').optional(),
+	spec: customCommandSpecSchemaV2.optional()
+});
+export type CustomCommandPatch = z.infer<typeof customCommandPatchSchema>;
+
 /** 이름 비교용 정규화 — 'Greet'와 'greet'를 같은 명령어로 봐요 */
 export function normalizeCustomCommandName(name: string): string {
 	return name.trim().toLowerCase();

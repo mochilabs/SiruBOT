@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  customCommandPayloadSchema,
+  customCommandPatchSchema,
   validateCustomCommandName,
 } from "@sirubot/utils/customCommand";
 
@@ -11,7 +11,10 @@ import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 
-/** 커스텀 명령어 수정 — 이름·설명·스펙 중 보내준 것만 바꿔요 */
+/**
+ * 커스텀 명령어 수정 — 이름·설명·스펙 중 보내준 것만 바꿔요.
+ * 실행 방식(method)은 불변이에요 — 허용 필드에 없어 보내면 400으로 거부돼요.
+ */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string; cmdId: string }> },
@@ -27,7 +30,7 @@ export async function PATCH(
   if (limited) return limited;
 
   try {
-    const body = await parseSettingBody(request, customCommandPayloadSchema.partial(), [
+    const body = await parseSettingBody(request, customCommandPatchSchema, [
       "name",
       "description",
       "spec",
@@ -52,7 +55,8 @@ export async function PATCH(
     } = {};
     if (body.data.name !== undefined) {
       const name = normalizedCommandName(body.data.name);
-      const nameError = validateCustomCommandName(name);
+      const method = existing.method === "slash" ? "slash" : "prefix";
+      const nameError = validateCustomCommandName(name, method);
       if (nameError) {
         return NextResponse.json({ error: nameError }, { status: 400 });
       }

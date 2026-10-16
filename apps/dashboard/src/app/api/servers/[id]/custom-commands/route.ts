@@ -9,6 +9,7 @@ import { z } from "zod";
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import {
   MAX_CUSTOM_COMMANDS_PER_GUILD,
+  MAX_SLASH_COMMANDS_PER_GUILD,
   normalizedCommandName,
   readCustomCommandsState,
 } from "@/lib/custom-commands";
@@ -51,15 +52,15 @@ export async function POST(
   if (limited) return limited;
 
   try {
-    const body = await parseSettingBody(request, customCommandPayloadSchema, [
-      "name",
-      "description",
-      "spec",
-    ]);
+    const body = await parseSettingBody(
+      request,
+      customCommandPayloadSchema,
+      ["name", "description", "method", "spec"],
+    );
     if (!body.ok) return body.response;
 
     const name = normalizedCommandName(body.data.name);
-    const nameError = validateCustomCommandName(name);
+    const nameError = validateCustomCommandName(name, body.data.method);
     if (nameError) {
       return NextResponse.json({ error: nameError }, { status: 400 });
     }
@@ -77,6 +78,20 @@ export async function POST(
       );
     }
 
+    if (body.data.method === "slash") {
+      const slashCount = await db.customCommand.count({
+        where: { guildId: id, method: "slash" },
+      });
+      if (slashCount >= MAX_SLASH_COMMANDS_PER_GUILD) {
+        return NextResponse.json(
+          {
+            error: `슬래시 명령어는 서버당 최대 ${MAX_SLASH_COMMANDS_PER_GUILD}개까지 등록할 수 있어요 (봇 명령어 슬롯 보호).`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const existing = await db.customCommand.findFirst({
       where: { guildId: id, name },
     });
@@ -92,6 +107,7 @@ export async function POST(
         guildId: id,
         name,
         description: body.data.description,
+        method: body.data.method,
         spec: body.data.spec as object,
         createdBy: authz.userId,
       },
