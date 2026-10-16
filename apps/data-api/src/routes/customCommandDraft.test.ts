@@ -4,8 +4,9 @@ import { generateCustomCommandDraft, parseCustomCommandDraft } from './customCom
 const VALID_OUTPUT = JSON.stringify({
 	name: '아침브리핑',
 	description: '인사와 규칙 요약',
+	method: 'prefix',
 	spec: {
-		version: 1,
+		version: 2,
 		steps: [
 			{ type: 'send_message', text: '좋은 아침!' },
 			{ type: 'delay', seconds: 3 },
@@ -32,18 +33,24 @@ describe('parseCustomCommandDraft', () => {
 		if (!badSpec.ok) expect(badSpec.reason).toContain('spec');
 	});
 
+	it('rejects slash drafts without a description', () => {
+		const result = parseCustomCommandDraft(JSON.stringify({ name: 'greet', method: 'slash', spec: VALID_OUTPUT_SPEC() }));
+		expect(result.ok).toBe(false);
+	});
+
 	it('normalizes names and defaults empty description', () => {
 		const result = parseCustomCommandDraft(JSON.stringify({ name: '  Greet ', spec: VALID_OUTPUT_SPEC() }));
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.draft.name).toBe('greet');
 			expect(result.draft.description).toBe('');
+			expect(result.draft.method).toBe('prefix');
 		}
 	});
 });
 
 function VALID_OUTPUT_SPEC() {
-	return { version: 1, steps: [{ type: 'send_message', text: 'hi' }] };
+	return { version: 2, steps: [{ type: 'send_message', text: 'hi' }] };
 }
 
 describe('generateCustomCommandDraft', () => {

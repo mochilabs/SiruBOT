@@ -24,6 +24,7 @@ import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { ohaasaCardSchema } from './ohaasaCardSchema.ts';
 import { customCommandDraftRequestSchema, generateCustomCommandDraft } from './customCommandDraft.ts';
+import { customCommandRefineRequestSchema, generateCustomCommandRefine } from './customCommandRefine.ts';
 import { deliveryTrackCacheKey, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
@@ -671,6 +672,30 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			}
 			metrics.request('custom-command-draft');
 			return reply.send(result.draft);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// 커스텀 명령어 AI 반복 수정 — 현재 스펙 + 수정 지시(+최근 대화 기억)를 받아 지시된 부분만 바꾼
+	// 전체 스펙을 돌려줘요. 초안과 같은 provider·검증 루프를 써요.
+	const refineRequestSchema = customCommandRefineRequestSchema;
+	fastify.post('/v1/ai/custom-command-refine', async (request, reply) => {
+		try {
+			const refineRequest = refineRequestSchema.parse(request.body);
+			if (!deps.draftProvider.available) {
+				return reply.code(503).send({
+					error: 'draft_unavailable',
+					message: 'AI 수정 기능이 설정되지 않았어요. 봇 관리자에게 OPENAI_API_KEY 설정을 문의해 주세요.'
+				});
+			}
+			const result = await generateCustomCommandRefine(deps.draftProvider, refineRequest);
+			if (!result.ok) {
+				console.warn(`[data-api] custom command refine failed: ${result.reason}`);
+				return reply.code(502).send({ error: 'refine_failed', message: 'AI 수정에 실패했어요. 잠시 후 다시 시도해 주세요.' });
+			}
+			metrics.request('custom-command-refine');
+			return reply.send({ spec: result.spec });
 		} catch (error) {
 			return sendError(reply, error);
 		}

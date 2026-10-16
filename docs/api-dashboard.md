@@ -19,7 +19,7 @@
 | 플레이리스트 (5) | `playlists`, `playlists/search`, `playlists/[id]`, `[id]/tracks`, `[id]/reorder` | DB 직결 |
 | 서버 목록·설정 (6) | `servers`, `servers/[id]/settings`, `channels`, `roles`, `stats`, `bot-profile` | channels/roles는 data-api 봇 캐시 프록시 |
 | AI (2) | `servers/[id]/ai`, `ai/history` | DB 직결 |
-| 커스텀 명령어 (3) | `custom-commands`, `custom-commands/draft`, `custom-commands/[cmdId]` | draft는 data-api LLM |
+| 커스텀 명령어 (4) | `custom-commands`, `custom-commands/draft`, `custom-commands/refine`, `custom-commands/[cmdId]` | draft·refine는 data-api LLM, 실행 방식(method)은 생성 후 불변 |
 | 그리팅 (6) | `greeting`, `greeting/background`, `greeting/layer-image`, `greeting/preview`, `greeting/status`, `greeting/test` | 이미지·테스트는 data-api 경유 |
 | JTC (1) | `jtc/setup` | data-api→봇 수행 (마커 채널은 봇 토큰 필수) |
 | 플레이어·라이브 (7) | `live`, `live/stream`, `player`, `player/command`, `player/play`, `player/search`, `player/voice-context` | data-api request/reply 프록시 |

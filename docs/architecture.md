@@ -146,7 +146,7 @@ graph BT
 | 도메인 | `guildService` `trackService` `playlistService` `audioService` `mixerService` `tempVoiceService` `aiMemoryService` `trackData` | 길드 설정 캐시·트랙/플레이리스트·오디오·믹싱·임시방(JTC)·AI 장기기억 |
 | Redis 구독 응답자 | `guildSettingsInvalidator` `guildDataResponder` `playerWebResponder` `jtcSetupResponder` `botProfileService` `memberGreetingService` | data-api 허브 요청에 답장하거나 브로드캐스트를 소비 (§5.2 채널 맵) |
 | 리포트/연동 | `playbackReporter` `dataApiClient` `ohaasaTranslate` `appEmojiManager` | 재생 이벤트 리포트, data-api HTTP 클라이언트, 운세 번역, 길드 이모지 |
-| 모듈(컨테이너 미등록) | `customCommands/store`·`interpreter` + 접두사 리스너(`general/listeners/message/customCommandPrefix.ts`) | `CustomCommand` 테이블 + 길드별 메모리 캐시(TTL 60초), 실행 전 spec zod 재검증, "접두사+이름" 트리거·3초 쿨다운·`!도움말` 목록 (`customCommand.ts:13-35`, `store.ts:30-76`, `interpreter.ts:24-42`, `customCommandPrefix.ts:26-60`) |
+| 모듈(컨테이너 미등록) | `customCommands/{store,interpreter,slashRegistry}` + 접두사 리스너(`general/listeners/message/customCommandPrefix.ts`) + 슬래시 핸들러(`general/listeners/interaction/customCommandSlash.ts`) | 스펙 v2(메시지·CV2 디자인·대기·역할 부여/제거·리액트·고정·지연 삭제·if 분기·인수 치환 `{argv0}`~) + 실행 제한(access). `CustomCommand` 테이블 + 길드별 메모리 캐시(TTL 60초), 실행 전 spec zod 재검증·역할 위계 재검증. 실행 방식(method)이 'prefix'면 "접두사+이름" 트리거(3초 쿨다운·`!도움말` 목록), 'slash'면 길드 애플리케이션 커맨드로 등록(ID 기반 증분 동기화, 길드당 20슬롯) 후 슬래시로 실행 (`customCommand.ts`, `interpreter.ts`, `slashRegistry.ts`, `customCommandPrefix.ts`, `customCommandSlash.ts`) |
 
 **오디오 이벤트 경로**: 재생 상태는 봇이 `sirubot:player:{guildId}` 채널로 퍼블리시하고, 유일 구독자인 data-api `playerHub`가 SSE로 대시보드에 중계합니다(`packages/utils/src/redisChannels.ts:68-80`, `apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts`).
 
@@ -261,7 +261,7 @@ sequenceDiagram
 
 | 채널 | 게시자 | 구독자 | 용도 · 비고 | 근거 |
 |---|---|---|---|---|
-| `sirubot:guild-settings:invalidate` | data-api | **봇 전체** | 설정 저장 → 각 봇 프로세스가 자기 GuildService 캐시 해당 길드만 비움(다음 조회 DB 재-읽기). 같은 브로드캐스트가 커스텀 명령어 메모리 캐시도 함께 비움 | `redisChannels.ts:6-13`, `guildSettingsInvalidator.ts:84-86` |
+| `sirubot:guild-settings:invalidate` | data-api | **봇 전체** | 설정 저장 → 각 봇 프로세스가 자기 GuildService 캐시 해당 길드만 비움(다음 조회 DB 재-읽기). 같은 브로드캐스트가 커스텀 명령어 메모리 캐시도 함께 비우고, 슬래시형 커스텀 명령어 등록/해제 동기화를 트리거해요 | `redisChannels.ts:6-13`, `guildSettingsInvalidator.ts` |
 | `sirubot:bot-profile:set` | data-api | 해당 길드 봇 | 닉네임/아바타 적용. **본문은 `sirubot:bot-profile:pending:{guildId}` 키로**(아바타 데이터 URI가 커서 복제 방지) | `:15-38` |
 | `sirubot:bot-profile:refresh` | data-api | 해당 길드 봇 | 최신 상태 요청(화면 조회/재시도) | `:26-27` |
 | `sirubot:bot-profile:state:{guildId}` | 봇 | data-api | 적용 결과 퍼블리시 | `:29-43` |
@@ -398,7 +398,7 @@ flowchart TD
 | `Playlist` / `PlaylistTrack` | 150 / 165 | 커스텀 플레이리스트 |
 | `ChannelChatHistory` | 180 | AI 채널 대화 이력 |
 | `UserMemory` | 190 | AI 장기 기억(data-api nightly 정리 대상) |
-| `CustomCommand` | 57 | 길드별 커스텀 명령어 정의 (스펙 JSON·접두사 트리거, §4.1 customCommands 참조) |
+| `CustomCommand` | 57 | 길드별 커스텀 명령어 정의 (스펙 JSON + 실행 방식 method('prefix'/'slash', 생성 후 불변) + 슬래시 등록 ID, §4.1 customCommands 참조) |
 
 **Redis**는 세 계열로 씁니다: ① Lavalink 노드 세션·큐 영속(`modules/audio/lavalink/redisStore.ts`, 종료 저장 `bootstrap.ts:100-118`), ② §5.2 허브 채널, ③ data-api 공유 캐시(`sharedCache`).
 
@@ -430,7 +430,7 @@ flowchart TD
 | `SHARD_MANAGER_URL` | 🔸 프로덕션 필수, 없으면 종료 | 🔸 대시보드 상태 조회(기본 3001) | — | — |
 | `SHARD_MANAGER_AUTH_KEY` | (bot은 `AUTH_KEY` 사용) | ✅ 폴백 없음 | — | ✅ |
 | `OPENAI_COMPATIBLE_API_URL` / `OPENAI_API_KEY` / `TRANSLATION_MODEL` | — | — | 🔸 운세 번역·기억 정리 | — |
-| `CUSTOM_COMMAND_DRAFT_MODEL` | — | — | 🔸 초안 생성 모델, 미설정 시 `TRANSLATION_MODEL`로 폴백 (`config/env.ts:13-14`, `server.ts:42-47`) | — |
+| `CUSTOM_COMMAND_DRAFT_MODEL` | — | — | 🔸 초안·반복 수정 모델, 미설정 시 `TRANSLATION_MODEL`로 폴백 (`config/env.ts:13-14`, `server.ts:42-47`) | — |
 | `PORT` · `HOSTNAME` · `DISCORD_WEBHOOK_URL` (shardmanager) | — | — | — | ✅ `server.ts:25,28` |
 
 ---
@@ -444,7 +444,7 @@ flowchart TD
 | WS identify 프로토콜 | `packages/shardclient/src/client.ts:5,10-12,32-36,42-62,67-98,104-149` |
 | Redis 채널 계약 전체 | `packages/utils/src/redisChannels.ts:1-127` |
 | data-api 조립·허브·close | `apps/data-api/src/server.ts:19-86` |
-| 커스텀 명령어 계약·실행·초안 | `packages/utils/src/customCommand.ts:13-112`, `apps/bot/src/services/customCommands/{store.ts:30-76,interpreter.ts:24-42}`, `apps/bot/src/modules/general/listeners/message/customCommandPrefix.ts:26-60`, `apps/data-api/src/routes/{customCommandDraft.ts:22,98-119,index.ts:653-672}` |
+| 커스텀 명령어 계약·실행·초안·수정 | `packages/utils/src/customCommand.ts`, `apps/bot/src/services/customCommands/{store.ts,interpreter.ts,slashRegistry.ts}`, `apps/bot/src/modules/general/{listeners/message/customCommandPrefix.ts,listeners/interaction/customCommandSlash.ts}`, `apps/data-api/src/routes/{customCommandDraft.ts,customCommandRefine.ts,index.ts}` |
 | data-api 릴레이 실패 매핑·TTL | `apps/data-api/src/routes/index.ts:43-44,72-101,104-111,113` |
 | 대시보드 스택·shard-api 규약 | `apps/dashboard/package.json:14-37`, `apps/dashboard/src/lib/shard-api.ts:28-58`, `apps/dashboard/src/lib/data-api.ts:23,77` |
 | shardmanager 서버·엔드포인트 | `apps/shardmanager/src/server.ts:11-94`, `apps/shardmanager/src/routes/{ws/index,api/shards/index,api/shards/[id],api/shard/count,api/health/health}.ts` |

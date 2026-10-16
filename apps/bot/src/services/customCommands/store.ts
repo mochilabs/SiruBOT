@@ -8,13 +8,15 @@
  * - 브로드캐스트가 끊겨도 TTL(60초) 폴백으로 결국 최신을 봐요 (guildService 캐시와 같은 계약).
  */
 import { container } from '@sapphire/framework';
-import { MemoryCache, normalizeCustomCommandName } from '@sirubot/utils';
+import { MemoryCache, normalizeCustomCommandName, type CustomCommandMethod } from '@sirubot/utils';
 
 export interface CustomCommandEntry {
 	id: string;
 	/** 소문자 정규화된 이름(매칭 키로도 씀) */
 	name: string;
 	description: string;
+	/** 실행 방식 — 'prefix'는 접두사 메시지, 'slash'는 슬래시 인터랙션으로만 실행돼요 */
+	method: CustomCommandMethod;
 	/** DB JSON 원문 — 신뢰할 수 없는 입력. 실행 전 스키마 재검증 필수 */
 	spec: unknown;
 }
@@ -36,7 +38,8 @@ async function load(guildId: string): Promise<GuildCustomCommands | null> {
 	for (const row of rows) {
 		const name = normalizeCustomCommandName(row.name);
 		if (!name) continue;
-		byName.set(name, { id: row.id, name, description: row.description, spec: row.spec });
+		const method: CustomCommandMethod = row.method === 'slash' ? 'slash' : 'prefix';
+		byName.set(name, { id: row.id, name, description: row.description, method, spec: row.spec });
 	}
 	return { byName, ordered: [...byName.values()] };
 }
