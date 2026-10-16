@@ -83,6 +83,11 @@
 			"next-devtools": {
 				"type": "local",
 				"command": ["npx", "-y", "next-devtools-mcp@latest"]
+			},
+			"playwright": {
+				"type": "local",
+				"command": ["npx", "@playwright/mcp@latest"],
+				"enabled": true
 			}
 		}
 	}
