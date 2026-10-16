@@ -20,6 +20,7 @@ import type {
   CustomCommandsState,
   CustomCommandSummary,
 } from "@/lib/custom-commands";
+import { MAX_SLASH_COMMANDS_PER_GUILD } from "@/lib/custom-commands";
 
 import { CustomCommandEditor } from "./custom-command-editor";
 import {
@@ -159,7 +160,7 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
       <PanelHeader
         icon={<SquareSlash className="h-5 w-5" />}
         title="커스텀 명령어"
-        description="접두사 메시지 명령어를 만들고 관리해요. 예: !아침브리핑"
+        description="메시지 트리거·슬래시 명령어를 만들고 관리해요. 예: !아침브리핑 또는 /아침브리핑"
         action={
           <>
             <Button
@@ -230,7 +231,12 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <Badge variant="primary" size="sm">
-                    {`${state?.prefix ?? CUSTOM_COMMAND_PREFIX_DEFAULT}${command.name}`}
+                    {command.method === "slash"
+                      ? `/${command.name}`
+                      : `${state?.prefix ?? CUSTOM_COMMAND_PREFIX_DEFAULT}${command.name}`}
+                  </Badge>
+                  <Badge variant="secondary" size="sm">
+                    {command.method === "slash" ? "슬래시" : "메시지"}
                   </Badge>
                   <span className="truncate text-xs text-muted-foreground">
                     {command.description || "설명 없음"}
@@ -285,8 +291,12 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
           <span className="font-semibold text-foreground">
             {commands.length}
           </span>
-          /{CUSTOM_COMMAND_MAX_PER_GUILD}개 · 실행은 모든 멤버가 할 수 있고
-          만들기·수정·삭제는 서버 관리자만 가능해요.
+          /{CUSTOM_COMMAND_MAX_PER_GUILD}개 · 슬래시 슬롯:{" "}
+          <span className="font-semibold text-foreground">
+            {state?.slashCount ?? 0}
+          </span>
+          /{MAX_SLASH_COMMANDS_PER_GUILD}개 · 실행 제한은 명령어마다 정할 수
+          있고, 만들기·수정·삭제는 서버 관리자만 가능해요.
         </p>
       </InfoBox>
 
