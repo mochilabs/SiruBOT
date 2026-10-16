@@ -338,7 +338,9 @@ export class MemberGreetingService {
 			await channel.send({
 				components: [containerComponent],
 				files,
-				flags: [MessageFlags.IsComponentsV2]
+				flags: [MessageFlags.IsComponentsV2],
+				// @everyone/@here·역할 멘션 전파 차단 — 인사 대상 멤버만 핑해요 (템플릿에 멘션을 써도 안전해요)
+				allowedMentions: { parse: [], users: [member.user.id] }
 			});
 		} catch (error) {
 			return { ok: false, error: `메시지 전송에 실패했어요 (${error instanceof Error ? error.message : String(error)})` };
