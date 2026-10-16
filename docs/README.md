@@ -12,8 +12,7 @@
 | `runbook-production.md` | 운영 런북: Docker 빌드·샤드 장애 대응·종료 순서·헬스체크 |
 | `api-data-api.md` | data-api HTTP 계약: 인증·엔드포인트·TTL·에러 매핑·스케줄러 |
 | `api-dashboard.md` | dashboard API Route 계약: 3계층·라우트 그룹·권한/rate-limit/zod |
-| `plans/2026-10-14-dashboard-responsive-ux.md` | 반응형 UX·플로팅 저장 바 구현 계획 (pending) |
-| `audits/2026-10-14-dashboard-ui-ux.md` | 대시보드 UI/UX 감사 + #77 구현 기록 (P2 2건 잔여) |
+| `3rdparty.md` | 서드파티 컴포넌트 계약: Lavalink 플러그인·클라이언트 라이브러리·외부 HTTP 서비스의 계약면과 업데이트 플레이북 |
 
 ## 역할 분담
 
