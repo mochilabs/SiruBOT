@@ -384,7 +384,7 @@ export function CustomCommandEditor({
 							label="실행 제한"
 							description={
 								roleAction
-									? "역할 변경 액션이 있어 실행 제한이 필수예요 — 아무나 실행하면 역할을 마음대로 줄 수 있어요."
+									? "역할 변경 액션이 있어 실행 제한이 필수예요. 아무나 실행하면 역할을 마음대로 줄 수 있어요."
 									: "누가 이 명령어를 실행할 수 있는지 정해요. 기본은 모든 멤버예요."
 							}
 						>
@@ -474,6 +474,7 @@ export function CustomCommandEditor({
 								</p>
 							</div>
 							<StepsEditor
+								guildId={guildId}
 								steps={steps}
 								roles={roles}
 								channels={channels ?? []}

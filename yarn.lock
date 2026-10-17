@@ -3118,6 +3118,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@sirubot/storage@workspace:apps/storage":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/storage@workspace:apps/storage"
+  dependencies:
+    "@sirubot/utils": "npm:*"
+    fastify: "npm:^5.12.7"
+    zod: "npm:^4.1.11"
+  languageName: unknown
+  linkType: soft
+
 "@sirubot/utils@npm:*, @sirubot/utils@workspace:packages/utils":
   version: 0.0.0-use.local
   resolution: "@sirubot/utils@workspace:packages/utils"

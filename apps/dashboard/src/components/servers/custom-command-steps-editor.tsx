@@ -86,6 +86,7 @@ export function createStep(type: EditorStep["type"]): EditorStep {
 }
 
 interface StepsEditorProps {
+	guildId: string;
 	steps: EditorStep[];
 	roles: DiscordRole[];
 	channels: DiscordChannelSummary[];
@@ -97,6 +98,7 @@ interface StepsEditorProps {
 
 /** 스텝 블록 조립 — 종류별 필드 + 순서 변경 + if 서브 스텝 편집 */
 export function StepsEditor({
+	guildId,
 	steps,
 	roles,
 	channels,
@@ -180,6 +182,7 @@ export function StepsEditor({
 							</SelectContent>
 						</Select>
 						<StepFields
+							guildId={guildId}
 							step={step}
 							roles={roles}
 							channels={channels}
@@ -212,6 +215,7 @@ export function StepsEditor({
 }
 
 interface StepFieldsProps {
+	guildId: string;
 	step: EditorStep;
 	roles: DiscordRole[];
 	channels: DiscordChannelSummary[];
@@ -219,11 +223,12 @@ interface StepFieldsProps {
 	onChange: (step: EditorStep) => void;
 }
 
-function StepFields({ step, roles, channels, saving, onChange }: StepFieldsProps) {
+function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFieldsProps) {
 	switch (step.type) {
 		case "send_message":
 			return step.design ? (
 				<CustomCommandDesigner
+					guildId={guildId}
 					design={step.design}
 					saving={saving}
 					onChange={(design) => onChange({ type: "send_message", design })}
@@ -469,6 +474,7 @@ function StepFields({ step, roles, channels, saving, onChange }: StepFieldsProps
 
 					<p className="text-xs font-medium text-foreground">조건이 맞을 때</p>
 					<StepsEditor
+						guildId={guildId}
 						steps={step.then as EditorStep[]}
 						roles={roles}
 						channels={channels}
@@ -486,6 +492,7 @@ function StepFields({ step, roles, channels, saving, onChange }: StepFieldsProps
 
 					<p className="text-xs font-medium text-foreground">조건이 아닐 때 (선택)</p>
 					<StepsEditor
+						guildId={guildId}
 						steps={(step.else ?? []) as EditorStep[]}
 						roles={roles}
 						channels={channels}
