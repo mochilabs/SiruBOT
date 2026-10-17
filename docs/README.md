@@ -8,6 +8,7 @@
 |---|---|
 | `README.md` (이 파일) | 문서 인덱스·역할 분담·작성 규칙 |
 | `architecture.md` | 시스템 컨텍스트·앱 상세·공유 계약·부팅/종료·환경변수 매트릭스의 기준 문서 |
+| `pr-message-rule.md` | PR 제목·본문 작성 규칙: 유형별 본문 골격과 검증 기록 규칙 |
 | `setup-dev.md` | 신규 온보딩: 설치→env→dev→마이그레이션 순서와 포트·스크립트 |
 | `runbook-production.md` | 운영 런북: Docker 빌드·샤드 장애 대응·종료 순서·헬스체크 |
 | `api-data-api.md` | data-api HTTP 계약: 인증·엔드포인트·TTL·에러 매핑·스케줄러 |
