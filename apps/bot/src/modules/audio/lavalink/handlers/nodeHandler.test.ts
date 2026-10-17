@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { container } from '@sapphire/framework';
 import { NodeHandler } from './nodeHandler.ts';
 
-const { getSubLogger } = vi.hoisted(() => ({ getSubLogger: vi.fn() }));
+const { getSubLogger, reportNodeEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportNodeEvent: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger } } }));
+vi.mock('../../../../services/playbackReporter.ts', () => ({ reportNodeEvent }));
 
 function makeHandler() {
 	const nodeManager = { on: vi.fn() };
@@ -57,5 +59,37 @@ describe('estimatePosition (crash-restore freshness)', () => {
 		const sevenHoursAgo = NOW - 7 * 60 * 60 * 1000;
 		const saved = { position: 60_000, lastPosition: 60_000, lastPositionChange: sevenHoursAgo, savedAt: sevenHoursAgo };
 		expect(handler.estimatePosition(saved)).toBe(60_000);
+	});
+});
+
+describe('node event reporting (상태 페이지 최근 오류)', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		reportNodeEvent.mockClear();
+		// handleNodeDisconnect의 플레이어 마이그레이션 분기를 타지 않도록 빈 스웜을 넣어요
+		Object.assign(container, {
+			audio: {
+				players: { filter: () => ({ values: () => ({ toArray: () => [] }) }) },
+				nodeManager: { leastUsedNodes: () => [] }
+			}
+		});
+	});
+
+	it('reports node disconnect with the close reason', () => {
+		const handler = makeHandler();
+		handler.handleNodeDisconnect({ id: 'main', options: { id: 'main' } }, { code: 1006, reason: 'closed' });
+		expect(reportNodeEvent).toHaveBeenCalledWith('main', 'node_disconnect', 'closed');
+	});
+
+	it('falls back to the close code when there is no reason text', () => {
+		const handler = makeHandler();
+		handler.handleNodeDisconnect({ id: 'main', options: { id: 'main' } }, { code: 1006 });
+		expect(reportNodeEvent).toHaveBeenCalledWith('main', 'node_disconnect', 'code 1006');
+	});
+
+	it('reports node errors with the error message', () => {
+		const handler = makeHandler();
+		handler.handleNodeError({ id: 'main', options: { id: 'main' } }, new Error('boom'), {});
+		expect(reportNodeEvent).toHaveBeenCalledWith('main', 'node_error', 'boom');
 	});
 });
