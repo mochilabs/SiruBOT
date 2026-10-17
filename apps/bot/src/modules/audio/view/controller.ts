@@ -42,10 +42,6 @@ const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
-/** 볼륨 조절 범위(%) */
-const VOLUME_MIN = 0;
-const VOLUME_MAX = 150;
-
 export function controllerView({ player, volume, textChannelId, nowPlayingCardUrl }: controllerViewProps) {
 	const containerComponent = createContainer();
 
@@ -75,27 +71,23 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 
 	const prevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('prev'))
-		.setLabel('이전')
 		.setEmoji(emoji('arrow_back'))
 		.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
 		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
-		.setLabel(player.paused ? '이어 듣기' : '일시정지')
 		.setEmoji(player.paused ? emoji('play') : emoji('pause'));
 
 	const nextButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('next'))
-		.setLabel('다음')
 		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(player.queue.tracks.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setLabel('정지').setEmoji(emoji('stop'));
+	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(emoji('stop'));
 
 	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
 	const queueShowButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('queue:show'))
-		.setLabel(`대기열 ${queueCount}곡`)
 		.setEmoji(emoji('scroll'))
 		.setDisabled(queuedTracks.length === 0);
 
@@ -103,8 +95,6 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton];
 	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		primaryComponents.map((button) => {
-			if (button === pauseButton) return button.setStyle(ButtonStyle.Primary);
-			if (button === stopButton) return button.setStyle(ButtonStyle.Danger);
 			return button.setStyle(ButtonStyle.Secondary);
 		})
 	);
@@ -118,22 +108,21 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 					? wrapPrefix('repeat:track')
 					: wrapPrefix('repeat:off')
 		)
-		.setLabel(player.repeatMode === 'off' ? '반복: 끔' : player.repeatMode === 'track' ? '반복: 한 곡' : '반복: 대기열')
 		.setEmoji(repeatEmoji(player.repeatMode));
 
-	// 볼륨 조절 버튼 — 볼륨 조절이 의미 있을 때만 표시 (하한≠상한일 때).
-	const currentVolume = volume ?? player.volume ?? 0;
-	const showVolume = VOLUME_MAX > VOLUME_MIN + 1;
-	const volumeDownButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('volume:down'))
-		.setLabel('볼륨 낮추기')
-		.setEmoji(emoji('volume_down'))
-		.setDisabled(currentVolume <= VOLUME_MIN);
-	const volumeUpButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('volume:up'))
-		.setLabel('볼륨 높이기')
-		.setEmoji(emoji('volume_up'))
-		.setDisabled(currentVolume >= VOLUME_MAX);
+	// // 볼륨 조절 버튼 — 볼륨 조절이 의미 있을 때만 표시 (하한≠상한일 때).
+	// const currentVolume = volume ?? player.volume ?? 0;
+	// const showVolume = VOLUME_MAX > VOLUME_MIN + 1;
+	// const volumeDownButton = new ButtonBuilder()
+	// 	.setCustomId(wrapPrefix('volume:down'))
+	// 	.setLabel('볼륨 낮추기')
+	// 	.setEmoji(emoji('volume_down'))
+	// 	.setDisabled(currentVolume <= VOLUME_MIN);
+	// const volumeUpButton = new ButtonBuilder()
+	// 	.setCustomId(wrapPrefix('volume:up'))
+	// 	.setLabel('볼륨 높이기')
+	// 	.setEmoji(emoji('volume_up'))
+	// 	.setDisabled(currentVolume >= VOLUME_MAX);
 
 	// 챕터 건너뛰기 버튼 — 챕터가 있는 영상(장문 YouTube)에만 노출해요.
 	// 현재 챕터 시작에서 5초 이상 지났으면 '이전 챕터'가 현재 챕터로 되돌려요.
@@ -161,9 +150,9 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 		);
 	}
 	const settingComponents: ButtonBuilder[] = [repeatButton];
-	if (showVolume) {
-		settingComponents.push(volumeDownButton, volumeUpButton);
-	}
+	// if (showVolume) {
+	// 	settingComponents.push(volumeDownButton, volumeUpButton);
+	// }
 	if (queuedTracks.length > 0) {
 		settingComponents.push(queueShowButton);
 	}

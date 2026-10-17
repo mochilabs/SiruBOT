@@ -5,13 +5,10 @@ import {
 	ApplicationIntegrationType,
 	AttachmentBuilder,
 	ChatInputCommandInteraction,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
 	MessageFlags
 } from 'discord.js';
-import { fetchOhaasaKo, renderOhaasaCard } from '../../../services/dataApiClient.ts';
+import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
-import { buildOhaasaCardRequest } from '../utils/ohaasaCardPayload.ts';
 import { fetchOhaasa, getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
 
 function formatDate(raw: string): string {
@@ -28,9 +25,7 @@ function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[
 		target.content || '오늘의 운세 정보가 없어요.',
 		`${emoji('clover')} ${target.lucky || '럭키 정보 없음'}`,
 		'',
-		`-# 출처: ${daily.source === 'ohaasa' ? '아사히 방송 오하아사' : 'TV 아사히'} · ${
-			daily.translated ? 'AI 한국어 번역본이에요.' : '일본어 원문이에요. `/채팅`으로 한국어로 물어보면 번역해 드려요.'
-		}`
+		`-# 출처: ${daily.source === 'ohaasa' ? '아사히 방송 오하아사' : 'TV 아사히'}`
 	];
 }
 
@@ -132,7 +127,7 @@ export class OhaasaCommand extends Command {
 				const code = getZodiacFromDate(profile.birthMonth, profile.birthDay);
 				if (code) {
 					targetZodiacCode = code;
-					autoNote = `-# ${emoji('pin')} 등록된 생일(${profile.birthMonth}/${profile.birthDay}) 기준 **${ZODIAC_MAP[code]?.ko ?? ''}** 운세예요.`;
+					autoNote = `-# ${emoji('pin')} 등록된 별자리 **${ZODIAC_MAP[code]?.ko ?? ''}** 기준 운세예요.`;
 				}
 			}
 		}
@@ -146,14 +141,6 @@ export class OhaasaCommand extends Command {
 		let target: HoroscopeData | null = null;
 		if (targetZodiacCode) {
 			target = this.resolveTarget(daily, targetZodiacCode);
-			const png = await renderOhaasaCard(buildOhaasaCardRequest(target, formatDate(daily.date))).catch(() => null);
-			if (png) {
-				const filename = `ohaasa-${target.zodiacCode}.png`;
-				files = [new AttachmentBuilder(png, { name: filename })];
-				container.addMediaGalleryComponents(
-					new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${filename}`))
-				);
-			}
 		}
 
 		// 본문: 제목·날짜·별자리·순위·운세 설명·럭키 정보·출처/번역 안내 — 복사하기 쉬운 텍스트예요.
