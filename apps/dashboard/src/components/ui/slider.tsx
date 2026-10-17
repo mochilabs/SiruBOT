@@ -4,13 +4,15 @@ import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 
 import { cn } from "@/lib/utils";
 
-interface SliderProps extends Omit<SliderPrimitive.Root.Props, "value" | "defaultValue" | "onValueChange" | "onChange"> {
+interface SliderProps extends Omit<SliderPrimitive.Root.Props, "value" | "defaultValue" | "onValueChange" | "onChange" | "onValueCommitted"> {
 	value?: number;
 	defaultValue?: number;
 	min?: number;
 	max?: number;
 	step?: number;
 	onChange?: (value: number) => void;
+	/** 조작이 끝나는 시점(드래그 놓기·트랙 클릭·키보드 한 스텝)에 1회 호출돼요 — 히스토리 커밋용 */
+	onCommit?: (value: number) => void;
 	label?: string;
 	showValue?: boolean;
 	formatValue?: (value: number) => string;
@@ -25,6 +27,7 @@ function Slider({
 	max = 100,
 	step = 1,
 	onChange,
+	onCommit,
 	label,
 	showValue = false,
 	formatValue = (v) => String(v),
@@ -34,6 +37,10 @@ function Slider({
 	const currentValue = value ?? defaultValue ?? min;
 	const handleValueChange = (values: number[]) => {
 		onChange?.(values[0] ?? min);
+	};
+	const handleValueCommitted = (committed: number | readonly number[]) => {
+		if (!onCommit) return;
+		onCommit(typeof committed === "number" ? committed : (committed[0] ?? min));
 	};
 
 	return (
@@ -53,6 +60,7 @@ function Slider({
 				max={max}
 				step={step}
 				onValueChange={handleValueChange}
+				onValueCommitted={handleValueCommitted}
 				disabled={disabled}
 				thumbAlignment="center"
 				{...props}

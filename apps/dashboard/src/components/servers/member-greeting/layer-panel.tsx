@@ -35,7 +35,7 @@ interface LayerPanelProps {
 /** 레이어 목록 — 위=앞(가장 나중에 그려지는 레이어). 순서/보임/삭제/복제를 다뤄요. */
 export function LayerPanel({ layers, selectedId, saving, onSelect, onToggleHidden, onRemove, onDuplicate, onMove }: LayerPanelProps) {
 	if (layers.length === 0) {
-		return <p className="text-2xs text-muted-foreground">레이어가 없어요. 아래에서 텍스트·아바타·이미지·도형을 추가해 보세요.</p>;
+		return <p className="text-2xs text-muted-foreground">레이어가 없어요. 요소 추가에서 텍스트·아바타·이미지·도형을 추가해 보세요.</p>;
 	}
 	// 위=앞 → 배열 역순으로 표시 (배열 마지막이 최상단 레이어)
 	const display = [...layers].map((layer, index) => ({ layer, arrayIndex: index })).reverse();
