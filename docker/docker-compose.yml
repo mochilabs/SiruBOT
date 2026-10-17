@@ -99,6 +99,34 @@ services:
   #   networks:
   #     - sirubot-network
 
+  # 길드 에셋 스토리지 — 로컬 볼륨(무DB) 파일 저장소. 디스코드가 임베드로 fetch하는 공개 URL을 발급해요.
+  storage:
+    image: sirubot/storage:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: storage
+    ports:
+      - "3003:3003"
+    env_file:
+      - .env
+    environment:
+      - STORAGE_DATA_DIR=/data
+      # 필수: 디스코드가 임베드로 fetch하는 https 공개 주소 — 실제 공개 도메인으로 교체
+      # (발급 URL 스냅샷이라 도메인 변경 시 기존 에셋 URL 일괄 치환이 필요해요)
+      - STORAGE_PUBLIC_URL=https://cdn.example.com
+    volumes:
+      - storage-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - sirubot-network
+
 networks:
   sirubot-network:
     driver: bridge
@@ -106,3 +134,4 @@ networks:
 volumes:
   redis-data:
   postgres-data:
+  storage-data:

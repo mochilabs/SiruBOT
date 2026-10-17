@@ -114,6 +114,45 @@ services:
         constraints:
           - node.role == manager
 
+  # 길드 에셋 스토리지 — 로컬 볼륨(무DB) 파일 저장소. 디스코드가 임베드로 fetch하는 공개 URL을 발급해요.
+  storage:
+    image: ghcr.io/mochilabs/sirubot-storage:beta
+    env_file:
+      - .env
+    environment:
+      PORT: 3003
+      # 에셋 저장소 — 컨테이너 /data를 named volume으로 영속화 (무DB, 파일 저장)
+      STORAGE_DATA_DIR: /data
+      # 필수: 디스코드가 임베드로 fetch하는 https 공개 주소 — 실제 공개 도메인으로 교체
+      # (발급 URL 스냅샷이라 도메인 변경 시 기존 에셋 URL 일괄 치환이 필요해요)
+      STORAGE_PUBLIC_URL: https://cdn.example.com
+    ports:
+      # 공개 GET(임베드 fetch)이 외부에서 도달해야 하므로 포트 노출이 필요해요.
+      # 업로드/삭제 API는 STORAGE_AUTH_KEY ?? AUTH_KEY 헤더로 보호돼요.
+      - "3003:3003"
+    volumes:
+      # 로컬 볼륨 — placement를 manager로 고정해 두어 스웜 재배포 시에도 같은 노드의 데이터가 유지돼요.
+      - storage-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - sirubot-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        order: stop-first
+      placement:
+        constraints:
+          - node.role == manager
+
 networks:
   sirubot-network:
     external: true
+
+volumes:
+  storage-data:

@@ -26,6 +26,7 @@ COPY apps/bot/package.json ./apps/bot/
 COPY apps/dashboard/package.json ./apps/dashboard/
 COPY apps/shardmanager/package.json ./apps/shardmanager/
 COPY apps/data-api/package.json ./apps/data-api/
+COPY apps/storage/package.json ./apps/storage/
 COPY packages/prisma/package.json ./packages/prisma/
 COPY packages/shardclient/package.json ./packages/shardclient/
 COPY packages/utils/package.json ./packages/utils/
@@ -93,6 +94,14 @@ RUN --mount=type=cache,target=/app/.turbo \
 # devDependencies 제거 — 프로덕션 node_modules를 작게 유지
 # (data-api도 Prisma를 쓰므로 migrate에 필요한 prisma CLI는 dependencies에 유지됨)
 RUN yarn workspaces focus @sirubot/data-api --production
+
+# Build storage
+FROM builder AS builder-storage
+RUN --mount=type=cache,target=/app/.turbo \
+    yarn turbo run build --filter=@sirubot/storage...
+
+# devDependencies 제거 — 프로덕션 node_modules를 작게 유지
+RUN yarn workspaces focus @sirubot/storage --production
 
 # ====================
 # Bot Production
@@ -266,5 +275,53 @@ EXPOSE 3002
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 	CMD ["node", "-e", "fetch('http://127.0.0.1:3002/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+
+CMD ["yarn", "start"]
+
+# ====================
+# Storage Production
+# ====================
+FROM node:22-slim AS storage
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add non-root user
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs sirubot
+
+ARG GIT_HASH=unknown
+ARG GIT_BRANCH=unknown
+ARG VERSION=unknown
+ENV NODE_ENV=production
+ENV GIT_HASH=$GIT_HASH
+ENV GIT_BRANCH=$GIT_BRANCH
+ENV VERSION=$VERSION
+
+# 에셋 저장소 — STORAGE_DATA_DIR 기본값 /data. named volume 마운트 시 이 소유권을
+# 물려받아야 non-root(sirubot)가 쓸 수 있으므로 미리 생성해 둔다.
+ENV STORAGE_DATA_DIR=/data
+RUN mkdir -p /data && chown sirubot:nodejs /data
+
+# Copy built application
+COPY --from=builder-storage --chown=sirubot:nodejs /app/apps/storage/dist ./dist
+COPY --from=builder-storage --chown=sirubot:nodejs /app/apps/storage/package.json ./package.json
+
+# Copy workspace packages (@sirubot/utils 의존성)
+COPY --from=builder-storage --chown=sirubot:nodejs /app/packages ./packages
+
+# Copy only production node_modules
+COPY --from=builder-storage --chown=sirubot:nodejs /app/node_modules ./node_modules
+
+USER sirubot
+EXPOSE 3003
+
+# 헬스체크는 인증 면제 라우트 GET /health (공개 오브젝트 GET은 캐시 헤더만 봐선 기동 상태를 못 잡음)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+	CMD ["node", "-e", "fetch('http://127.0.0.1:3003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
 CMD ["yarn", "start"]
