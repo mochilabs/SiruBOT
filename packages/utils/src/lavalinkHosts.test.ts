@@ -22,4 +22,18 @@ describe('parseLavalinkHosts', () => {
 		expect(() => parseLavalinkHosts('main_localhost_99999', '')).toThrow(/Invalid port/);
 		expect(() => parseLavalinkHosts('   ', '')).toThrow(/at index 0/);
 	});
+
+	it('never echoes the raw entry (password) in error messages', () => {
+		// 형식이 깨진 엔트리에도 비밀번호 조각이 있을 수 있어 메시지로 나가면 안 돼요 (로그 유출 방지)
+		for (const raw of ['_host_2333_topsecret', 'main__2333_topsecret', 'a_b', 'bad_entry_without_port_topsecret']) {
+			let message = '';
+			try {
+				parseLavalinkHosts(raw, '');
+			} catch (error) {
+				message = error instanceof Error ? error.message : String(error);
+			}
+			expect(message).not.toContain('topsecret');
+			expect(message).not.toContain(raw);
+		}
+	});
 });

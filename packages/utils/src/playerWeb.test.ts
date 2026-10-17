@@ -51,6 +51,14 @@ describe('playerWeb request contracts', () => {
 		expect(playerWebPlayRequestSchema.safeParse({ ...VALID_BASE, kind: 'play', uri: 'not-a-url' }).success).toBe(false);
 	});
 
+	it('rejects non-http(s) play uris (Lavalink 측 내부 fetch SSRF 방지)', () => {
+		// 스킴을 http/https로 제한해요 — file:, data:, ftp: 등은 봇을 거쳐 Lavalink가 가져올 수 있어요.
+		for (const uri of ['file:///etc/passwd', 'data:text/plain,hi', 'ftp://example.com/x']) {
+			expect(playerWebPlayRequestSchema.safeParse({ ...VALID_BASE, kind: 'play', uri }).success).toBe(false);
+		}
+		expect(playerWebPlayRequestSchema.safeParse({ ...VALID_BASE, kind: 'play', uri: 'http://example.com/track' }).success).toBe(true);
+	});
+
 	it('accepts every control action and requires value only for volume', () => {
 		for (const action of ['volume' as const, 'pause' as const, 'resume' as const, 'skip' as const, 'stop' as const, 'repeat' as const]) {
 			expect(playerWebControlActionSchema.safeParse(action).success).toBe(true);

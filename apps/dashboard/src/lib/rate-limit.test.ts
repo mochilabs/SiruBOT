@@ -9,10 +9,27 @@ vi.mock("@/lib/redis", () => ({
 
 import { isRedisEnabled, redisEval } from "@/lib/redis";
 
-import { guardRateLimit, rateKey } from "./rate-limit";
+import { guardRateLimit, PUBLIC_RATE, publicReadLimit, rateKey, READ_RATE } from "./rate-limit";
 
 let seq = 0;
 const freshKey = (action: string) => `test:${action}:${++seq}`;
+
+describe("publicReadLimit — 무인증 요청은 전역 공용 버킷 (SEC-002)", () => {
+	it("비로그인 요청은 헤더와 무관하게 anonymous 주체 하나로 묶여요", () => {
+		// 요청 헤더를 인자로 받지 않는 것이 계약이에요 — X-Forwarded-For 위조로 버킷이 늘어나지 않아요.
+		const first = publicReadLimit(undefined);
+		const second = publicReadLimit(undefined);
+		expect(first.subject).toBe("anonymous");
+		expect(second.subject).toBe(first.subject);
+		expect(first.rule).toBe(PUBLIC_RATE);
+	});
+
+	it("로그인 사용자는 userId 버킷에 READ_RATE가 적용돼요", () => {
+		const limit = publicReadLimit("123456789012345678");
+		expect(limit.subject).toBe("123456789012345678");
+		expect(limit.rule).toBe(READ_RATE);
+	});
+});
 
 describe("guardRateLimit — 인메모리 슬라이딩 윈도우", () => {
 	beforeEach(() => {

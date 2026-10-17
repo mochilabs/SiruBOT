@@ -13,7 +13,8 @@ import {
 	greetingConfigSchema,
 	botProfilePendingKey,
 	memberGreetingPendingKey,
-	playerWebControlActionSchema
+	playerWebControlActionSchema,
+	playerWebPlayUriSchema
 } from '@sirubot/utils';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
@@ -715,7 +716,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	const playerWebPlaySchema = z.object({
 		guildId: z.string().trim().min(1).max(32),
 		userId: playerUserIdSchema,
-		uri: z.string().url().max(500)
+		// http/https 전용 — 다른 스킴은 Lavalink 측 내부 fetch(SSRF)로 이어질 수 있어 공용 계약 스키마로 막아요.
+		uri: playerWebPlayUriSchema
 	});
 	const playerWebControlSchema = z.object({
 		guildId: z.string().trim().min(1).max(32),

@@ -100,6 +100,45 @@ describe('customCommandSpecSchemaV2 — 신규 스텝', () => {
 		).toBe(false); // roles 모드인데 roleIds 없음
 	});
 
+	it('requires access control for role actions nested in if branches', () => {
+		// 최상위가 아니라 if.then/if.else 안에 있는 역할 액션도 실행 제한이 필수예요 (가드 우회 방지)
+		const nestedThen = {
+			version: 2,
+			steps: [
+				{
+					type: 'if',
+					condition: { kind: 'arg_matches', index: 0, value: 'x' },
+					then: [{ type: 'add_role', roleId: '123456789012345678' }]
+				}
+			]
+		};
+		expect(customCommandSpecSchemaV2.safeParse(nestedThen).success).toBe(false);
+		const nestedElse = {
+			version: 2,
+			steps: [
+				{
+					type: 'if',
+					condition: { kind: 'channel_match', channelId: '123456789012345678' },
+					then: [{ type: 'send_message', text: 'x' }],
+					else: [{ type: 'remove_role', roleId: '123456789012345678' }]
+				}
+			]
+		};
+		expect(customCommandSpecSchemaV2.safeParse(nestedElse).success).toBe(false);
+		expect(
+			customCommandSpecSchemaV2.safeParse({
+				...nestedThen,
+				access: { mode: 'everyone' }
+			}).success
+		).toBe(false); // everyone 모드도 실행 제한이 없으면 거부
+		expect(
+			customCommandSpecSchemaV2.safeParse({
+				...nestedThen,
+				access: { mode: 'roles', roleIds: ['123456789012345678'] }
+			}).success
+		).toBe(true);
+	});
+
 	it('rejects nested if and oversized then/else', () => {
 		const innerIf = { type: 'if', condition: { kind: 'channel_match', channelId: '123456789012345678' }, then: [{ type: 'pin_message' }] };
 		expect(

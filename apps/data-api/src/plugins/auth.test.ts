@@ -51,11 +51,16 @@ describe('auth plugin', () => {
 		await fastify.close();
 	});
 
-	it('/api/health 접두 경로는 인증 없이 허용한다', async () => {
+	it('/api/health 정확한 경로만 인증 없이 허용한다 (접두사 매칭 금지)', async () => {
 		const fastify = await buildTestApp(KEY);
-		for (const url of ['/api/health', '/api/health/live']) {
+		for (const url of ['/api/health', '/api/health?probe=1']) {
 			const response = await fastify.inject({ method: 'GET', url });
 			expect(response.statusCode, `url=${url}`).toBe(200);
+		}
+		// 접두사로 겹치는 경로는 인증이 필요해요 — 미래 라우트가 무인증으로 새는 것을 막아요
+		for (const url of ['/api/health/live', '/api/healthz']) {
+			const response = await fastify.inject({ method: 'GET', url });
+			expect(response.statusCode, `url=${url}`).toBe(401);
 		}
 		await fastify.close();
 	});

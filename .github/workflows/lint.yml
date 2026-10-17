@@ -4,6 +4,9 @@ on: [push, pull_request]
 jobs:
   lint:
     runs-on: ubuntu-latest 
+    # 최소 권한 — PR 코드를 실행하는 워크플로라 GITHUB_TOKEN 권한을 contents:read로 제한해요.
+    permissions:
+      contents: read
 
     strategy:
       matrix:

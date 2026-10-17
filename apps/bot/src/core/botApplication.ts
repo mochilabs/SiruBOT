@@ -32,7 +32,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();
 	constructor(options: ClientOptions) {
 		super({
-			...options
+			...options,
+			// 전역 기본 allowedMentions — 트랙 제목처럼 외부에서 들어온 문자열에 멘션 마크업이 섞여도
+			// 알림이 울리지 않아요(멘션 주입 방지). 멘션이 필요한 전송(인사 등)은 전송 시점에
+			// allowedMentions를 명시해 다시 켜요 (예: memberGreetingService).
+			allowedMentions: options.allowedMentions ?? { parse: [], users: [], roles: [], repliedUser: false }
 		});
 	}
 

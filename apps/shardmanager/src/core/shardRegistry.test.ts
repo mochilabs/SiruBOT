@@ -12,8 +12,8 @@ function createNotifierStub() {
 	};
 }
 
-function fakeSocket(): WebSocket {
-	return { send: vi.fn(), close: vi.fn() } as unknown as WebSocket;
+function fakeSocket(readyState = 1): WebSocket {
+	return { send: vi.fn(), close: vi.fn(), readyState } as unknown as WebSocket;
 }
 
 describe('ShardRegistry', () => {
@@ -80,14 +80,14 @@ describe('ShardRegistry', () => {
 		});
 	});
 
-	describe('forceAllocate (re-identification)', () => {
+	describe('claimShards (re-identification)', () => {
 		it('reserves claimed shard IDs so the next allocation skips them', () => {
 			const registry = makeRegistry(4, 2);
 			const first = registry.allocateShardIds()!;
 			registerProcess(registry, 'ws-a', first);
 			registry.release('ws-a');
 
-			for (const shardId of first) registry.forceAllocate(shardId);
+			expect(registry.claimShards('ws-b', first)).toEqual(first);
 
 			expect(registry.allocateShardIds()).toEqual([2, 3]);
 		});
@@ -95,12 +95,54 @@ describe('ShardRegistry', () => {
 		it('keeps the re-identified process claimable by its original shard IDs', () => {
 			const registry = makeRegistry(4, 2);
 			const first = registry.allocateShardIds()!;
-			registry.release('ws-a');
-			for (const shardId of first) registry.forceAllocate(shardId);
+			registry.claimShards('ws-a', first);
 
+			expect(registry.claimShards('ws-b', first)).toEqual(first);
 			registerProcess(registry, 'ws-b', first);
 			expect(registry.getProcess('ws-b')?.shardIds).toEqual(first);
 			expect(registry.getProcessByShardId(first[0])?.wsId).toBe('ws-b');
+		});
+
+		it('rejects non-integer, out-of-range, and duplicate shard IDs', () => {
+			const registry = makeRegistry(4, 2);
+			expect(registry.claimShards('ws-a', [3.5])).toBeNull();
+			expect(registry.claimShards('ws-a', [-1])).toBeNull();
+			expect(registry.claimShards('ws-a', [4])).toBeNull();
+			expect(registry.claimShards('ws-a', [0, 0])).toBeNull();
+			// 거부된 claim은 아무것도 예약하지 않아야 해요
+			expect(registry.allocateShardIds()).toEqual([0, 1]);
+		});
+
+		it('rejects claims for shards held by a live process (이중 점유/탈취 방지)', () => {
+			const registry = makeRegistry(4, 2);
+			const first = registry.allocateShardIds()!;
+			registerProcess(registry, 'ws-a', first);
+
+			expect(registry.claimShards('ws-b', [first[0]!])).toBeNull();
+			expect(registry.getProcessByShardId(first[0]!)?.wsId).toBe('ws-a');
+		});
+
+		it('reclaims shards from a disconnected process without double-release', () => {
+			const registry = makeRegistry(4, 2);
+			const first = registry.allocateShardIds()!;
+			registry.register('ws-a', first, fakeSocket(3), 'host-a'); // CLOSED 소켓 — close 이벤트가 아직 안 온 상태
+
+			expect(registry.claimShards('ws-b', first)).toEqual(first);
+			// 이전 주인의 release가 이미 넘어간 ID를 다시 해제하면 안 돼요
+			expect(registry.release('ws-a')).toEqual([]);
+			registerProcess(registry, 'ws-b', first);
+			expect(registry.getProcessByShardId(first[0]!)?.wsId).toBe('ws-b');
+			expect(registry.claimShards('ws-c', [first[0]!])).toBeNull();
+		});
+
+		it('reuses IDs left in the allocation set without an owner (유실 할당 자가 치유)', () => {
+			const registry = makeRegistry(4, 2);
+			// 등록 없이 예약만 된 상태(구버전 할당 누수 모방)
+			expect(registry.claimShards('ws-gone', [0])).toEqual([0]);
+
+			expect(registry.claimShards('ws-b', [0])).toEqual([0]);
+			registerProcess(registry, 'ws-b', [0]);
+			expect(registry.getProcessByShardId(0)?.wsId).toBe('ws-b');
 		});
 	});
 
