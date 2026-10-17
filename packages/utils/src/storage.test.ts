@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	ASSET_ALLOWED_MIME_TYPES,
-	ASSET_BUCKET,
-	ASSET_MAX_BYTES,
-	assetKeyFor,
-	parseAssetKey,
-	sniffImageMime
-} from './storage.js';
+import { ASSET_ALLOWED_MIME_TYPES, ASSET_BUCKET, ASSET_MAX_BYTES, assetKeyFor, parseAssetKey, sniffImageMime } from './storage.js';
 
 describe('sniffImageMime', () => {
 	const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
