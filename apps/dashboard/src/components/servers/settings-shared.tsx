@@ -230,7 +230,6 @@ export function SaveBar({
   const anchorRef = useRef<HTMLDivElement>(null);
   const islandRef = useRef<HTMLDivElement>(null);
   const islandHadFocusRef = useRef(false);
-  const [islandNode, setIslandNode] = useState<HTMLDivElement | null>(null);
   const setIslandRef = useCallback((node: HTMLDivElement | null) => {
     if (!node && islandHadFocusRef.current) {
       const heading = anchorRef.current?.parentElement?.querySelector<HTMLElement>("h2");
@@ -238,31 +237,28 @@ export function SaveBar({
       islandHadFocusRef.current = false;
     }
     islandRef.current = node;
-    setIslandNode(node);
   }, []);
   const savingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
-  const [geometry, setGeometry] = useState({ left: 16, width: 0, height: 0 });
+  // 섬의 좌표는 화면에 고정된 앵커에서 읽어요. 높이는 여기 넣지 않아요.
+  // 섬은 fixed라 본문을 밀지 않고, 앵커에 높이를 예약하면 설정 패널이 갑자기 커져요.
+  const [geometry, setGeometry] = useState({ left: 16, width: 0 });
   const visible = active && (dirty || saving || submitting);
 
   useLayoutEffect(() => {
     if (!visible) return;
     const update = () => {
       const anchor = anchorRef.current;
-      const island = islandRef.current;
       if (!anchor) return;
       const rect = anchor.getBoundingClientRect();
       const available = Math.max(0, Math.min(rect.width, window.innerWidth - Math.max(16, rect.left) - 16));
       const width = Math.min(available, 760);
       const left = Math.max(16, rect.left) + (available - width) / 2;
-      const height = island?.getBoundingClientRect().height ?? 0;
-      setGeometry((previous) => previous.left === left && previous.width === width && previous.height === height
-        ? previous : { left, width, height });
+      setGeometry((previous) => previous.left === left && previous.width === width ? previous : { left, width });
     };
     update();
     const observer = new ResizeObserver(update);
     if (anchorRef.current) observer.observe(anchorRef.current);
-    if (islandRef.current) observer.observe(islandRef.current);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
@@ -271,19 +267,6 @@ export function SaveBar({
       window.removeEventListener("scroll", update, true);
     };
   }, [visible]);
-
-  useEffect(() => {
-    if (!visible || !islandNode) return;
-    const island = islandNode;
-    const observer = new ResizeObserver(() => {
-      const height = island.getBoundingClientRect().height;
-      setGeometry((value) => value.height === height ? value : { ...value, height });
-    });
-    observer.observe(island);
-    const height = island.getBoundingClientRect().height;
-    setGeometry((value) => value.height === height ? value : { ...value, height });
-    return () => observer.disconnect();
-  }, [visible, islandNode]);
 
   const handleSave = async () => {
     if (saving || savingRef.current) return;
@@ -325,7 +308,7 @@ export function SaveBar({
   }, [visible]);
 
   return (
-    <div ref={anchorRef} style={{ height: visible ? geometry.height + 36 : 0 }}>
+    <div ref={anchorRef} data-slot="settings-save-island-anchor">
       {visible && <Portal>
         <div ref={setIslandRef} data-slot="settings-save-island"
           onFocusCapture={() => { islandHadFocusRef.current = true; }}
