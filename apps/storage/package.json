@@ -1,0 +1,22 @@
+{
+    "name": "@sirubot/storage",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "lint": "prettier --check \"src/**/*.ts\"",
+        "lint:fix": "prettier --write \"src/**/*.ts\"",
+        "test": "vitest run --passWithNoTests",
+        "typecheck": "tsc --noEmit",
+        "build": "tsup",
+        "watch": "tsup --watch",
+        "start": "node --enable-source-maps ."
+    },
+    "dependencies": {
+        "@sirubot/utils": "*",
+        "fastify": "^5.12.7",
+        "zod": "^4.1.11"
+    }
+}

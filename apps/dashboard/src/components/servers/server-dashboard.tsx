@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bot,
   Hash,
+  Images,
   Music,
   Radio,
   ShieldAlert,
@@ -21,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { AiSettings } from "./ai-settings";
+import { AssetsSettings } from "./assets-settings";
 import { BotProfileSettings } from "./bot-profile-settings";
 import { ChannelSettings } from "./channel-settings";
 import { CustomCommandsSettings } from "./custom-commands-settings";
@@ -35,6 +37,7 @@ import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./s
 const TABS = [
   { key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
   { key: "custom-commands", label: "커스텀 명령어", icon: <SquareSlash size={14} /> },
+  { key: "assets", label: "에셋", icon: <Images size={14} /> },
   { key: "profile", label: "봇 프로필", icon: <UserRoundCog size={14} /> },
   { key: "music", label: "음악", icon: <Music size={14} /> },
   { key: "player-live", label: "라이브", icon: <Radio size={14} /> },
@@ -193,6 +196,7 @@ export function ServerDashboard({
                 {item.key === "custom-commands" && (
                   <CustomCommandsSettings guildId={guildId} />
                 )}
+                {item.key === "assets" && <AssetsSettings guildId={guildId} />}
                 {item.key === "profile" && (
                   <BotProfileSettings guildId={guildId} />
                 )}

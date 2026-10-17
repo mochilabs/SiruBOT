@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import type {
 	CustomCommandAccentColor,
 	CustomCommandDesign,
@@ -9,7 +10,7 @@ import {
 	CUSTOM_COMMAND_ACCENT_COLOR_VALUES,
 	CUSTOM_COMMAND_ACCENT_COLORS,
 } from "@sirubot/utils/customCommand";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Images, Plus, Trash2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,10 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { toError } from "@/lib/api-error";
+
+import { AssetPicker, uploadAssetFile } from "./asset-picker";
 
 const ACCENT_LABELS: Record<CustomCommandAccentColor, string> = {
 	blue: "파랑",
@@ -56,24 +61,42 @@ export function createDesignItem(kind: CustomCommandDesignItem["kind"]): CustomC
 }
 
 interface CustomCommandDesignerProps {
+	guildId: string;
 	design: CustomCommandDesign;
 	saving: boolean;
 	onChange: (design: CustomCommandDesign) => void;
 }
+
+/** 갤러리에 넣을 수 있는 이미지 상한 (스펙의 media urls 제한과 같아요) */
+const MEDIA_URL_LIMIT = 10;
 
 /**
  * CV2 디자이너 — send_message의 design을 조립하고 실제 전송에 가까운 미리보기를 보여줘요.
  * 미리보기는 근사치예요 (디스코드 폰트·마크다운 렌더와 조금 다를 수 있어요).
  */
 export function CustomCommandDesigner({
+	guildId,
 	design,
 	saving,
 	onChange,
 }: CustomCommandDesignerProps) {
+	const toast = useToast();
+	const singleFileInputRef = useRef<HTMLInputElement>(null);
+	const multiFileInputRef = useRef<HTMLInputElement>(null);
+	/** 숨김 파일 입력이 어느 아이템에 연결된지 기억해요. 업로드 결과를 여기에 반영해요 */
+	const uploadTargetRef = useRef<{ index: number; kind: "section" | "media" } | null>(null);
+	const [pickerTarget, setPickerTarget] = useState<{ index: number; multiple: boolean } | null>(null);
+	const [uploading, setUploading] = useState(false);
+
+	// 업로드가 끝나고 반영할 때 이미 다른 편집이 있었으면 덮어쓰지 않도록 최신 design을 비춰봐요
+	const designRef = useRef(design);
+	designRef.current = design;
+
 	const updateItem = (index: number, next: CustomCommandDesignItem) => {
+		const current = designRef.current;
 		onChange({
-			...design,
-			items: design.items.map((item, i) => (i === index ? next : item)),
+			...current,
+			items: current.items.map((item, i) => (i === index ? next : item)),
 		});
 	};
 
@@ -92,6 +115,52 @@ export function CustomCommandDesigner({
 
 	const removeItem = (index: number) => {
 		onChange({ ...design, items: design.items.filter((_, i) => i !== index) });
+	};
+
+	/** 업로드·피커 선택으로 받은 주소를 아이템 필드에 반영해요 (media는 10개까지) */
+	const applyUrls = (index: number, kind: "section" | "media", urls: string[]) => {
+		const item = designRef.current.items[index];
+		if (!item) return;
+		if (kind === "section" && item.kind === "section") {
+			updateItem(index, {
+				kind: "section",
+				content: item.content,
+				thumbnailUrl: urls[0] ?? item.thumbnailUrl,
+			});
+			return;
+		}
+		if (item.kind !== "media") return;
+		const merged = [...item.urls, ...urls];
+		updateItem(index, {
+			kind: "media",
+			urls: merged.slice(0, MEDIA_URL_LIMIT),
+		});
+		if (merged.length > MEDIA_URL_LIMIT) {
+			toast.warning(`이미지는 ${MEDIA_URL_LIMIT}개까지만 넣을 수 있어요.`, "초과한 이미지는 추가하지 못했어요.");
+		}
+	};
+
+	/** 숨김 파일 입력으로 받은 파일을 순차 업로드해 주소를 채워요 */
+	const handleUpload = async (files: FileList | null) => {
+		const target = uploadTargetRef.current;
+		const list = Array.from(files ?? []);
+		if (!target || list.length === 0) return;
+		setUploading(true);
+		try {
+			const uploadedUrls: string[] = [];
+			for (const file of list) {
+				try {
+					const asset = await uploadAssetFile(guildId, file);
+					uploadedUrls.push(asset.url);
+				} catch (err) {
+					const apiError = toError(err, `\`${file.name}\` 업로드에 실패했어요.`);
+					toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
+				}
+			}
+			if (uploadedUrls.length > 0) applyUrls(target.index, target.kind, uploadedUrls);
+		} finally {
+			setUploading(false);
+		}
 	};
 
 	return (
@@ -223,24 +292,74 @@ export function CustomCommandDesigner({
 								}
 								disabled={saving}
 							/>
+							<div className="flex flex-wrap gap-2">
+								<Button
+									variant="secondary"
+									size="sm"
+									icon={<Upload size={16} />}
+									loading={uploading}
+									disabled={saving}
+									onClick={() => {
+										uploadTargetRef.current = { index, kind: "section" };
+										singleFileInputRef.current?.click();
+									}}
+								>
+									업로드
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									icon={<Images size={16} />}
+									disabled={saving}
+									onClick={() => setPickerTarget({ index, multiple: false })}
+								>
+									에셋에서 선택
+								</Button>
+							</div>
 						</div>
 					)}
 					{item.kind === "media" && (
-						<Textarea
-							placeholder="이미지 주소를 한 줄에 하나씩 (https://, 최대 10개)"
-							value={item.urls.join("\n")}
-							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-								updateItem(index, {
-									kind: "media",
-									urls: e.target.value
-										.split("\n")
-										.map((url) => url.trim())
-										.filter(Boolean),
-								})
-							}
-							disabled={saving}
-							className="min-h-12"
-						/>
+						<div className="space-y-2">
+							<Textarea
+								placeholder="이미지 주소를 한 줄에 하나씩 (https://, 최대 10개)"
+								value={item.urls.join("\n")}
+								onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+									updateItem(index, {
+										kind: "media",
+										urls: e.target.value
+											.split("\n")
+											.map((url) => url.trim())
+											.filter(Boolean),
+									})
+								}
+								disabled={saving}
+								className="min-h-12"
+							/>
+							<div className="flex flex-wrap gap-2">
+								<Button
+									variant="secondary"
+									size="sm"
+									icon={<Upload size={16} />}
+									loading={uploading}
+									disabled={saving}
+									onClick={() => {
+										uploadTargetRef.current = { index, kind: "media" };
+										multiFileInputRef.current?.click();
+									}}
+								>
+									업로드
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									icon={<Images size={16} />}
+									disabled={saving}
+									onClick={() => setPickerTarget({ index, multiple: true })}
+								>
+									에셋에서 선택
+								</Button>
+							</div>
+						</div>
 					)}
 				</div>
 			))}
@@ -256,6 +375,42 @@ export function CustomCommandDesigner({
 			>
 				구성 요소 추가
 			</Button>
+
+			{/* 업로드용 숨김 파일 입력. 어느 아이템에 연결됐는지는 uploadTargetRef로 알려요 */}
+			<input
+				ref={singleFileInputRef}
+				type="file"
+				accept="image/png,image/jpeg,image/webp,image/gif"
+				className="hidden"
+				onChange={(event) => {
+					void handleUpload(event.target.files);
+					event.target.value = "";
+				}}
+			/>
+			<input
+				ref={multiFileInputRef}
+				type="file"
+				multiple
+				accept="image/png,image/jpeg,image/webp,image/gif"
+				className="hidden"
+				onChange={(event) => {
+					void handleUpload(event.target.files);
+					event.target.value = "";
+				}}
+			/>
+
+			<AssetPicker
+				guildId={guildId}
+				multiple={pickerTarget?.multiple ?? false}
+				open={pickerTarget !== null}
+				onClose={() => setPickerTarget(null)}
+				onSelect={(urls) => {
+					if (!pickerTarget) return;
+					const item = designRef.current.items[pickerTarget.index];
+					if (item) applyUrls(pickerTarget.index, item.kind === "media" ? "media" : "section", urls);
+					setPickerTarget(null);
+				}}
+			/>
 
 			<DesignPreview design={design} />
 		</div>
