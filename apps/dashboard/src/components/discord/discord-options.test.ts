@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
 
-import { buildChannelOptions, buildRoleOptions } from "./discord-options";
+import { buildChannelOptions, buildRoleOptions, CHANNEL_TYPE_GROUP } from "./discord-options";
 
 function channel(
   id: string,
@@ -69,6 +69,31 @@ describe("buildChannelOptions", () => {
 		});
 		expect(options.map((option) => option.value)).toEqual(["a", "b"]);
 		expect(options.every((option) => option.group === undefined)).toBe(true);
+	});
+});
+
+describe("CHANNEL_TYPE_GROUP", () => {
+	it("채팅·음성·카테고리·전체 묶음을 고를 수 있다", () => {
+		const pick = (types: readonly number[]) =>
+			buildChannelOptions(CHANNELS, { types, groupByCategory: false }).map((option) => option.value);
+
+		expect(pick(CHANNEL_TYPE_GROUP.chat)).toEqual(["general", "a-text", "b-text"]);
+		expect(pick(CHANNEL_TYPE_GROUP.voice)).toEqual([]);
+		expect(pick(CHANNEL_TYPE_GROUP.category)).toEqual(["a", "b"]);
+		expect(pick(CHANNEL_TYPE_GROUP.all)).toEqual([
+			"general",
+			"a",
+			"a-text",
+			"b",
+			"b-text",
+		]);
+	});
+
+	it("묶음을 섞어 쓸 수 있다", () => {
+		const mixed = [...CHANNEL_TYPE_GROUP.chat, ...CHANNEL_TYPE_GROUP.category];
+		expect(
+			buildChannelOptions(CHANNELS, { types: mixed, groupByCategory: false }).map((o) => o.value),
+		).toEqual(["general", "a", "a-text", "b", "b-text"]);
 	});
 });
 

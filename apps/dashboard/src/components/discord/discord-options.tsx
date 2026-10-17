@@ -8,6 +8,7 @@ import {
   ChannelTypeValue,
   type DiscordChannelSummary,
   type DiscordRoleSummary,
+  SELECTABLE_CHANNEL_TYPES,
 } from "@/types/discord";
 
 /**
@@ -15,7 +16,7 @@ import {
  * 목록을 만드는 곳마다 각자 정렬하던 것을 여기로 모아 순서가 화면마다 갈리지 않게 했어요.
  */
 
-/** 메시지를 받을 수 있는 채널 — 대부분의 채널 선택이 이 목록을 써요 */
+/** 메시지를 주고받는 채널 — 대부분의 채널 선택이 이 목록을 써요 */
 export const TEXT_CHANNEL_TYPES: readonly number[] = [
   ChannelTypeValue.GuildText,
   ChannelTypeValue.GuildAnnouncement,
@@ -26,6 +27,27 @@ export const VOICE_CHANNEL_TYPES: readonly number[] = [
   ChannelTypeValue.GuildVoice,
   ChannelTypeValue.GuildStageVoice,
 ];
+
+/** 채널을 담는 카테고리 */
+export const CATEGORY_CHANNEL_TYPES: readonly number[] = [ChannelTypeValue.GuildCategory];
+
+/** 설정에서 고를 수 있는 모든 채널 */
+export const ALL_CHANNEL_TYPES: readonly number[] = SELECTABLE_CHANNEL_TYPES;
+
+/**
+ * 자주 쓰는 채널 종류 묶음 — `ChannelSelect`의 `types`에 그대로 넘겨요.
+ * 없는 조합이 필요하면 배열을 직접 만들면 돼요 (예: `[...CHANNEL_TYPE_GROUP.chat, ...CHANNEL_TYPE_GROUP.voice]`).
+ */
+export const CHANNEL_TYPE_GROUP = {
+  /** 채팅 채널 (일반·공지) */
+  chat: TEXT_CHANNEL_TYPES,
+  /** 음성 채널 (음성·스테이지) */
+  voice: VOICE_CHANNEL_TYPES,
+  /** 카테고리 */
+  category: CATEGORY_CHANNEL_TYPES,
+  /** 전부 */
+  all: ALL_CHANNEL_TYPES,
+} as const;
 
 /** 채널 종류 아이콘 — 목록과 선택값 표시가 같은 아이콘을 써요 */
 export function channelIcon(type: number) {

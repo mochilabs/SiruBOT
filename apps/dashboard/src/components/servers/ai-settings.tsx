@@ -11,7 +11,8 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { buildChannelOptions, TEXT_CHANNEL_TYPES } from "@/components/discord/discord-options";
+import { ChannelSelect } from "@/components/discord/channel-select";
+import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +21,6 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
-import { SearchableSelect } from "./searchable-select";
 import {
   InfoBox,
   PanelError,
@@ -186,11 +186,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       />
     );
 
-  const channelOptions = buildChannelOptions(channels, {
-    types: TEXT_CHANNEL_TYPES,
-    selectedIds: channelIds,
-  });
-
   return (
     <Card padding="lg" className="gap-6 overflow-visible">
       <PanelHeader
@@ -266,15 +261,15 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
             label="허용 채널"
             description="선택한 텍스트 채널에서만 AI가 답해요. 여러 개를 고를 수 있어요."
           >
-            <SearchableSelect
+            <ChannelSelect
               multiple
-              searchable
+              channels={channels}
+              types={CHANNEL_TYPE_GROUP.chat}
               searchPlaceholder="채널 검색…"
               placeholder="채널을 선택해 주세요"
-              options={channelOptions}
               value={channelIds}
               onChange={setChannelIds}
-              disabled={saving || channels === null}
+              disabled={saving}
             />
           </Field>
           {channelsError && (

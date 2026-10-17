@@ -3,12 +3,9 @@
 import { useCallback } from "react";
 import { Hash, ListChecks, Play } from "lucide-react";
 
-import {
-  buildChannelOptions,
-  buildRoleOptions,
-  TEXT_CHANNEL_TYPES,
-  VOICE_CHANNEL_TYPES,
-} from "@/components/discord/discord-options";
+import { ChannelSelect } from "@/components/discord/channel-select";
+import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
+import { RoleSelect } from "@/components/discord/role-select";
 import { Field } from "@/components/primitives/field";
 import {
   type SearchableOption,
@@ -102,26 +99,6 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (!form) return <PanelLoading label="채널·권한 설정 불러오는 중…" />;
 
-  const textChannelOptions = buildChannelOptions(channels, {
-    types: TEXT_CHANNEL_TYPES,
-    noneLabel: NO_SELECTION.label,
-    selectedIds: form.textChannelId ? [form.textChannelId] : [],
-  });
-  const voiceChannelOptions = buildChannelOptions(channels, {
-    types: VOICE_CHANNEL_TYPES,
-    noneLabel: NO_SELECTION.label,
-    selectedIds: form.voiceChannelId ? [form.voiceChannelId] : [],
-  });
-  const pinnedChannelOptions = buildChannelOptions(channels, {
-    types: TEXT_CHANNEL_TYPES,
-    noneLabel: NO_SELECTION.label,
-    selectedIds: form.pinnedChannelId ? [form.pinnedChannelId] : [],
-  });
-  const roleOptions = buildRoleOptions(roles, {
-    noneLabel: NO_SELECTION.label,
-    selectedIds: form.djRoleId ? [form.djRoleId] : [],
-  });
-
   const listUnavailable = channels === null;
 
   return (
@@ -154,13 +131,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
           label="기본 텍스트 채널"
           description="미설정이면 입력이 온 채널을 그대로 사용해요."
         >
-          <SearchableSelect
-            searchable
-            options={textChannelOptions}
+          <ChannelSelect
+            channels={channels}
+            types={CHANNEL_TYPE_GROUP.chat}
+            noneLabel={NO_SELECTION.label}
             value={form.textChannelId ?? ""}
-            onChange={(value: string) =>
-              patch({ textChannelId: value || null })
-            }
+            onChange={(value: string) => patch({ textChannelId: value || null })}
             placeholder="사용 안 함"
             disabled={saving || listUnavailable}
           />
@@ -170,13 +146,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
           label="기본 음성 채널"
           description="/재생 커맨드로 자동 입장하는 채널이에요."
         >
-          <SearchableSelect
-            searchable
-            options={voiceChannelOptions}
+          <ChannelSelect
+            channels={channels}
+            types={CHANNEL_TYPE_GROUP.voice}
+            noneLabel={NO_SELECTION.label}
             value={form.voiceChannelId ?? ""}
-            onChange={(value: string) =>
-              patch({ voiceChannelId: value || null })
-            }
+            onChange={(value: string) => patch({ voiceChannelId: value || null })}
             placeholder="사용 안 함"
             disabled={saving || listUnavailable}
           />
@@ -187,13 +162,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         label="고정 채널"
         description="이 채널에 입력한 텍스트를 검색어로 재생해요. 전체 채널에서 고정 채널을 하나만 지정할 수 있어요."
       >
-        <SearchableSelect
-          searchable
-          options={pinnedChannelOptions}
+        <ChannelSelect
+          channels={channels}
+          types={CHANNEL_TYPE_GROUP.chat}
+          noneLabel={NO_SELECTION.label}
           value={form.pinnedChannelId ?? ""}
-          onChange={(value: string) =>
-            patch({ pinnedChannelId: value || null })
-          }
+          onChange={(value: string) => patch({ pinnedChannelId: value || null })}
           placeholder="사용 안 함"
           disabled={saving || listUnavailable}
         />
@@ -234,13 +208,13 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         label="DJ 역할"
         description="이 역할을 가진 멤버만 정지·스킵·볼륨 등 컨트롤 커맨드를 쓸 수 있어요. 관리자는 항상 가능해요."
       >
-        <SearchableSelect
-          searchable
-          options={roleOptions}
+        <RoleSelect
+          roles={roles}
+          noneLabel={NO_SELECTION.label}
           value={form.djRoleId ?? ""}
           onChange={(value: string) => patch({ djRoleId: value || null })}
           placeholder="사용 안 함"
-          disabled={saving || roles === null}
+          disabled={saving}
         />
       </Field>
 

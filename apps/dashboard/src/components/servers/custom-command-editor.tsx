@@ -408,6 +408,7 @@ export function CustomCommandEditor({
 								</Select>
 								{access?.mode === "roles" && (
 									<RoleSelect
+										multiple
 										roles={roles}
 										value={access.roleIds ?? []}
 										onChange={(roleIds) =>

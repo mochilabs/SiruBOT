@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ImagePlus, RotateCcw, Send, UserPlus } from "lucide-react";
 
-import { buildChannelOptions, TEXT_CHANNEL_TYPES } from "@/components/discord/discord-options";
+import { ChannelSelect } from "@/components/discord/channel-select";
 import { Field } from "@/components/primitives/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ import {
 } from "@/types/member-greeting";
 
 import { GreetingImageEditor } from "./member-greeting/greeting-image-editor";
-import { SearchableSelect } from "./searchable-select";
 import {
   PanelError,
   PanelHeader,
@@ -299,16 +298,6 @@ function GreetingSection({
     }
   }, [onTest, toast]);
 
-  const channelOptions = useMemo(
-    () =>
-      buildChannelOptions(channels, {
-        types: TEXT_CHANNEL_TYPES,
-        noneLabel: "채널 지정 안 함",
-        selectedIds: draft.channelId ? [draft.channelId] : [],
-      }),
-    [channels, draft.channelId],
-  );
-
   // 테스트 전송은 봇이 읽을 "저장된 설정"으로 실행돼요 — 편집 중인 내용은 저장 후 테스트해요.
   const testReady = saved.enabled && saved.channelId !== null;
 
@@ -405,13 +394,13 @@ function GreetingSection({
           label="메시지 채널"
           description="입장·퇴장 메시지와 카드 이미지가 보내질 텍스트 채널이에요."
         >
-          <SearchableSelect
-            searchable
-            options={channelOptions}
+          <ChannelSelect
+            channels={channels}
+            noneLabel="채널 지정 안 함"
             value={draft.channelId ?? ""}
             onChange={handleChannelChange}
             placeholder="채널을 선택해 주세요"
-            disabled={saving || channels === null}
+            disabled={saving}
           />
         </Field>
 

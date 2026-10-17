@@ -11,7 +11,8 @@ import {
 } from "@sirubot/utils/customCommand";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 
-import { buildChannelOptions, TEXT_CHANNEL_TYPES } from "@/components/discord/discord-options";
+import { ChannelSelect } from "@/components/discord/channel-select";
+import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { RoleSelect } from "@/components/discord/role-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,6 @@ import { Textarea } from "@/components/ui/textarea";
 import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
 
 import { CustomCommandDesigner } from "./custom-command-designer";
-import { SearchableSelect } from "./searchable-select";
 
 export type EditorStep = CustomCommandStep;
 /** if 서브 스텝(then/else)에 들어갈 수 있는 타입 — 중첩 if는 없어요 */
@@ -226,14 +226,6 @@ interface StepFieldsProps {
 }
 
 function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFieldsProps) {
-	// 조건에 이미 들어간 채널이 목록에서 빠져 있어도 선택값을 보여주기 위해 함께 넘겨요
-	const savedChannelId =
-		step.type === "if" && step.condition.kind === "channel_match" ? step.condition.channelId : "";
-	const channelMatchOptions = buildChannelOptions(channels, {
-		types: TEXT_CHANNEL_TYPES,
-		selectedIds: savedChannelId ? [savedChannelId] : [],
-	});
-
 	switch (step.type) {
 		case "send_message":
 			return step.design ? (
@@ -288,10 +280,8 @@ function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFi
 			return (
 				<RoleSelect
 					roles={roles}
-					value={step.roleId ? [step.roleId] : []}
-					onChange={(roleIds) =>
-						onChange({ type: step.type, roleId: roleIds[0] ?? "" })
-					}
+					value={step.roleId}
+					onChange={(roleId) => onChange({ type: step.type, roleId })}
 					placeholder="대상 역할을 선택해 주세요"
 					disabled={saving}
 				/>
@@ -383,11 +373,11 @@ function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFi
 					{step.condition.kind === "has_role" && (
 						<RoleSelect
 							roles={roles}
-							value={step.condition.roleId ? [step.condition.roleId] : []}
-							onChange={(roleIds) =>
+							value={step.condition.roleId}
+							onChange={(roleId) =>
 								onChange({
 									type: "if",
-									condition: { kind: "has_role", roleId: roleIds[0] ?? "" },
+									condition: { kind: "has_role", roleId },
 									then: step.then,
 									...(step.else ? { else: step.else } : {}),
 								})
@@ -397,9 +387,9 @@ function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFi
 						/>
 					)}
 					{step.condition.kind === "channel_match" && (
-						<SearchableSelect
-							searchable
-							options={channelMatchOptions}
+						<ChannelSelect
+							channels={channels}
+							types={CHANNEL_TYPE_GROUP.chat}
 							value={step.condition.channelId}
 							placeholder="확인할 채널을 선택해 주세요"
 							onChange={(value: string) =>
