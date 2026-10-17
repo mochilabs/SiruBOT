@@ -7,6 +7,10 @@ Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music
 - **Branch rule**: Every code change must start on a feature/fix/refactor branch created from `beta` (or `main`). Never commit directly to `beta`/`main`.
 - **Index rule**: Before modifying unfamiliar code, always use the OpenCode semantic index (`codebase_search`, `codebase_context`, `call_graph`) instead of raw grepping. Check `index_status` if unsure.
 
+## PR rules
+
+PR 제목·본문 작성 규칙은 [`docs/pr-message-rule.md`](docs/pr-message-rule.md)를 따르세요. 본문에는 항상 실행한 검증과 미검증 항목을 남기고, UI 변경에는 스크린샷을 포함해요.
+
 ## Skills
 
 Load the matching skill (`.opencode/skills/<id>/SKILL.md`) before starting work in its domain — don't recreate its templates inline:
