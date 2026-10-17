@@ -94,6 +94,9 @@ export const greetingConfigSchema = z
 		template: z.string().max(500),
 		useImage: z.boolean(),
 		image: greetingImageSchema.nullable(),
+		// layout·accentColor는 뒤에 추가된 필드예요 — 저장된 v2 값에 없으면 기본값을 채워 하위 호환을 지켜요.
+		layout: z.enum(["container", "components"]).default("container"),
+		accentColor: z.string().regex(HEX_COLOR).nullable().default(null),
 	})
 	.refine((config) => (config.useImage ? config.image !== null : true), {
 		error: "useImage가 true일 때 image는 필수예요.",
