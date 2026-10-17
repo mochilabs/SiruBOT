@@ -85,20 +85,6 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 
 	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(emoji('stop'));
 
-	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
-	const queueShowButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('queue:show'))
-		.setEmoji(emoji('scroll'))
-		.setDisabled(queuedTracks.length === 0);
-
-	// 핵심 조작만 한 행에 둬 모바일에서도 버튼 라벨이 눌리지 않게 한다.
-	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton];
-	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		primaryComponents.map((button) => {
-			return button.setStyle(ButtonStyle.Secondary);
-		})
-	);
-
 	// 반복 상태 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
@@ -109,6 +95,20 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 					: wrapPrefix('repeat:off')
 		)
 		.setEmoji(repeatEmoji(player.repeatMode));
+
+	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
+	const queueShowButton = new ButtonBuilder()
+		.setCustomId(wrapPrefix('queue:show'))
+		.setEmoji(emoji('scroll'))
+		.setDisabled(queuedTracks.length === 0);
+
+	// 핵심 조작만 한 행에 둬 모바일에서도 버튼 라벨이 눌리지 않게 한다.
+	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton, repeatButton];
+	const controlActionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		primaryComponents.map((button) => {
+			return button.setStyle(ButtonStyle.Secondary);
+		})
+	);
 
 	// // 볼륨 조절 버튼 — 볼륨 조절이 의미 있을 때만 표시 (하한≠상한일 때).
 	// const currentVolume = volume ?? player.volume ?? 0;
@@ -149,7 +149,7 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 			)
 		);
 	}
-	const settingComponents: ButtonBuilder[] = [repeatButton];
+	const settingComponents: ButtonBuilder[] = [];
 	// if (showVolume) {
 	// 	settingComponents.push(volumeDownButton, volumeUpButton);
 	// }
