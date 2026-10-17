@@ -10,6 +10,15 @@ import { z } from 'zod';
  */
 
 // --- 공용 상수 ---
+/** 카드 논리 좌표계 — 렌더러/에디터 미러가 함께 쓰는 1200×675(16:9) 기준 캔버스 */
+export const GREETING_CARD_W = 1200;
+export const GREETING_CARD_H = 675;
+/**
+ * 출력 PNG 축소 배율 — 저장 좌표계는 1200×675를 그대로 두고, 렌더 출력 PNG만 800×450로 균일 축소한다.
+ * 레이어 x/y가 % 기반이라 저장 데이터 마이그레이션·재그리기가 필요 없다. 카드 크기 튜닝용 상수.
+ */
+export const GREETING_RENDER_SCALE = 2 / 3;
+
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
 // jpeg 표기 허용 (image/jpeg). base64 본문은 URL-safe가 아닌 표준 알파벳만 허용.
