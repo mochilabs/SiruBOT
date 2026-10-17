@@ -46,7 +46,7 @@ export async function ensureKoreanFont(): Promise<void> {
 let pathCtorRef: (new (d: string) => unknown) | null = null;
 
 /** URL 이미지를 CanvasDrawable로. 실패 시 null (호출자가 폴백 그려요). */
-export async function loadImage(url: string): Promise<CanvasDrawable | null> {
+async function loadImage(url: string): Promise<CanvasDrawable | null> {
 	try {
 		const { loadImage } = await import('skia-canvas');
 		const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });

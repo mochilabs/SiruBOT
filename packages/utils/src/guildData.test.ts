@@ -86,4 +86,12 @@ describe('guildData item contracts', () => {
 		expect(guildRoleItemSchema.safeParse({ ...sampleRole(), color: '#ff0000' }).success).toBe(false);
 		expect(guildRoleItemSchema.safeParse({ ...sampleRole(), name: 1 }).success).toBe(false);
 	});
+
+	it('caps oversized channels/roles arrays and rejects 구분자 guildId', () => {
+		const requestId = 'b3c1e7a4-9f2d-4c8b-a6e0-1d5f7b9c3a11';
+		const manyRoles = Array.from({ length: 501 }, () => sampleRole());
+		expect(guildDataResponseSchema.safeParse({ requestId, guildId: 'guild-1', kind: 'roles', roles: manyRoles }).success).toBe(false);
+		expect(guildDataResponseSchema.safeParse({ requestId, guildId: 'guild:1', kind: 'roles', roles: [sampleRole()] }).success).toBe(false);
+		expect(guildDataRequestSchema.safeParse({ requestId, guildId: 'evil key', kind: 'channels' }).success).toBe(false);
+	});
 });

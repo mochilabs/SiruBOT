@@ -44,6 +44,14 @@ describe('playerWeb request contracts', () => {
 		expect(playerWebSearchRequestSchema.safeParse({ ...VALID_BASE, kind: 'search', query: 'a'.repeat(201) }).success).toBe(false);
 	});
 
+	it('rejects guildId/userId with Redis 키 구분자·공백 (키 주입 방지)', () => {
+		for (const bad of ['guild:1', 'a b', 'x/y', '', '   ']) {
+			expect(playerWebSearchRequestSchema.safeParse({ ...VALID_BASE, guildId: bad, kind: 'search', query: 'x' }).success).toBe(false);
+			expect(playerWebSearchRequestSchema.safeParse({ ...VALID_BASE, userId: bad, kind: 'search', query: 'x' }).success).toBe(false);
+		}
+		expect(playerWebSearchRequestSchema.safeParse({ ...VALID_BASE, guildId: 'guild-1_2', kind: 'search', query: 'x' }).success).toBe(true);
+	});
+
 	it('requires a well-formed url for the play request', () => {
 		expect(
 			playerWebPlayRequestSchema.safeParse({ ...VALID_BASE, kind: 'play', uri: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }).success

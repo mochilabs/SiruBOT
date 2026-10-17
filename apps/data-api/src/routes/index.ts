@@ -14,7 +14,8 @@ import {
 	botProfilePendingKey,
 	memberGreetingPendingKey,
 	playerWebControlActionSchema,
-	playerWebPlayUriSchema
+	playerWebPlayUriSchema,
+	redisIdSchema
 } from '@sirubot/utils';
 import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
@@ -248,10 +249,10 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	});
 
 	// ── 재생 이벤트 수집 (봇 trackHandler → fire-and-forget) ──
-	const guildIdParams = z.object({ guildId: z.string().trim().min(1).max(32) });
+	const guildIdParams = z.object({ guildId: redisIdSchema });
 	const playbackEventSchema = z.object({
 		type: z.enum(['track_start', 'track_end', 'track_stuck', 'track_error', 'queue_end', 'playback_abort']),
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		shardId: z.number().int().min(0).nullable().default(null),
 		trackTitle: z.string().max(500).nullable().default(null),
 		trackAuthor: z.string().max(500).nullable().default(null),
@@ -391,7 +392,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		.default(null);
 	const profileCardSchema = z.object({
 		preset: z.enum(['dark', 'ticket']).default('dark'),
-		userId: z.string().trim().min(1).max(32),
+		userId: redisIdSchema,
 		displayName: z.string().trim().min(1).max(64),
 		username: z.string().trim().min(1).max(64),
 		avatarUrl: z.string().url().nullable().default(null),
@@ -400,7 +401,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		intro: z.string().trim().max(120).default(''),
 		accountCreated: z.string().trim().max(40).nullable().default(null),
 		guildJoinedAt: z.string().trim().max(40).nullable().default(null),
-		roleChips: z.array(z.string().trim().min(1).max(32)).max(4).default([]),
+		roleChips: z.array(redisIdSchema).max(4).default([]),
 		guildTag: z
 			.string()
 			.trim()
@@ -466,7 +467,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// ── 멤버 인사 카드 이미지 (환영/작별) ──
 	// config는 @sirubot/utils 공용 계약 스키마로 검증해요 — bot 리스너·dashboard 에디터와 같은 구조.
 	const greetingContextSchema = z.object({
-		userId: z.string().trim().min(1).max(32),
+		userId: redisIdSchema,
 		username: z.string().trim().min(1).max(64),
 		displayName: z.string().trim().min(1).max(64),
 		// 이미지 텍스트의 {서버} 토큰용 — 호출자(봇)가 모르면 빈 문자열로 렌더해요
@@ -475,7 +476,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		memberCount: z.number().int().min(0).max(100_000_000)
 	});
 	const memberCardSchema = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		kind: z.enum(['welcome', 'goodbye']),
 		config: greetingConfigSchema,
 		context: greetingContextSchema
@@ -635,7 +636,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// 캐시에서 해당 guildId를 지우고 다음 조회 때 DB에서 다시 읽어요.
 	// reason이 'mixer'면 봇이 재생 중인 플레이어에 갭리스·크로스페이드 설정을 바로 밀어 넣어요.
 	const invalidateSchema = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		reason: z.enum(['mixer']).optional()
 	});
 	fastify.post('/v1/internal/guild-settings/invalidate', async (request, reply) => {
@@ -708,20 +709,20 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// REQUEST 채널로 퍼블리시한 뒤 kind별 대기 시간(playerWebHub KIND_TIMEOUT_MS) 안에 RESPONSE 채널 응답을
 	// 상관해 내려줘요. Redis 없으면 503, 봇이 시간 안에 응답하지 않으면(봇 미보유·미연결 포함) 502,
 	// 봇이 검증 실패 사유(음성 미접속·권한 없음·노드 없음 등)를 실어 보내면 400으로 그 문구를 그대로 전달해요.
-	const playerUserIdSchema = z.string().trim().min(1).max(32).regex(/^\d+$/, 'userId는 Discord 유저 ID 형식이어야 해요.');
+	const playerUserIdSchema = redisIdSchema.regex(/^\d+$/, 'userId는 Discord 유저 ID 형식이어야 해요.');
 	const playerWebSearchSchema = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		userId: playerUserIdSchema,
 		query: z.string().trim().min(1).max(200)
 	});
 	const playerWebPlaySchema = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		userId: playerUserIdSchema,
 		// http/https 전용 — 다른 스킴은 Lavalink 측 내부 fetch(SSRF)로 이어질 수 있어 공용 계약 스키마로 막아요.
 		uri: playerWebPlayUriSchema
 	});
 	const playerWebControlSchema = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		userId: playerUserIdSchema,
 		action: playerWebControlActionSchema,
 		value: z.number().int().min(0).max(150).optional()
@@ -816,9 +817,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// 봇이 tempVoiceService.setupMarkerChannel로 카테고리 검증 → 마커 재사용(이동)·생성 → DB 저장까지
 	// 수행하고 응답해요. Redis 없으면 503, 봇이 응답하지 않으면 502, 봇이 검증 실패 사유를 실어 보내면 400.
 	const jtcSetupRequestBody = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		userId: playerUserIdSchema,
-		categoryId: z.string().trim().min(1).max(32)
+		categoryId: redisIdSchema
 	});
 
 	/** JtcSetupResult를 HTTP로 매핑 — 성공은 markerChannelId, 실패는 공통부(replyBotRelayFailure)로 내려줘요 */
@@ -856,7 +857,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// 큰 본문이 레플리카 수만큼 복제되지 않아요. 봇은 소유 길드만 읽고 즉시 지워요 (TTL 120초).
 	const botProfileSetSchema = z
 		.object({
-			guildId: z.string().trim().min(1).max(32),
+			guildId: redisIdSchema,
 			// undefined = 변경 없음 / string = 설정 / null = 기본값(사용자명 사용으로 초기화)
 			nickname: z.string().max(32).nullable().optional(),
 			avatar: z.union([z.string().startsWith('data:image/').max(5_500_000), z.null()]).optional(),
@@ -903,9 +904,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// pending 키에 기록해 소유 봇 프로세스만 읽게 하고, 채널로는 guildId·requestId만 실어요.
 	// 봇은 실제 멤버 정보로 카드를 렌더·전송하고 결과를 state 채널(memberGreetingStateChannel)로 알려요.
 	const greetingSendSchema = z.object({
-		guildId: z.string().trim().min(1).max(32),
+		guildId: redisIdSchema,
 		kind: z.enum(['welcome', 'goodbye']),
-		userId: z.string().trim().min(1).max(32)
+		userId: redisIdSchema
 	});
 	const GREETING_PENDING_TTL_SECONDS = 120;
 

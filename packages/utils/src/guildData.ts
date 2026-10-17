@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { redisIdSchema } from './redisChannels.js';
 
 /**
  * 길드 데이터(채널·역할 목록) request/reply 공용 계약 — bot과 data-api가 함께 쓴다.
@@ -13,7 +14,7 @@ export type GuildDataKind = z.infer<typeof guildDataKindSchema>;
 
 export const guildDataRequestSchema = z.object({
 	requestId: z.string().uuid(),
-	guildId: z.string().min(1).max(32),
+	guildId: redisIdSchema,
 	kind: guildDataKindSchema
 });
 export type GuildDataRequest = z.infer<typeof guildDataRequestSchema>;
@@ -38,10 +39,11 @@ export type GuildRoleItem = z.infer<typeof guildRoleItemSchema>;
 
 export const guildDataResponseSchema = z.object({
 	requestId: z.string().uuid(),
-	guildId: z.string().min(1).max(32),
+	guildId: redisIdSchema,
 	kind: guildDataKindSchema,
-	channels: z.array(guildChannelItemSchema).optional(),
-	roles: z.array(guildRoleItemSchema).optional(),
+	// 배열 상한 — 검증을 통과한 메시지라도 비정상적으로 큰 목록이 한 메시지에 실리지 않게 해요
+	channels: z.array(guildChannelItemSchema).max(1000).optional(),
+	roles: z.array(guildRoleItemSchema).max(500).optional(),
 	error: z.string().optional()
 });
 export type GuildDataResponse = z.infer<typeof guildDataResponseSchema>;

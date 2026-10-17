@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { redisIdSchema } from './redisChannels.js';
 
 /**
  * 웹 플레이어 request/reply 공용 계약 — bot과 data-api가 함께 쓴다.
@@ -31,8 +32,8 @@ export type PlayerWebTrack = z.infer<typeof playerWebTrackSchema>;
 /** 요청 공통부 + kind별 페이로드. 요청자(userId)까지 전달해 봇이 멤버·음성 채널·권한을 해석해요 */
 const playerWebRequestBase = z.object({
 	requestId: z.string().uuid(),
-	guildId: z.string().min(1).max(32),
-	userId: z.string().min(1).max(32),
+	guildId: redisIdSchema,
+	userId: redisIdSchema,
 	kind: playerWebKindSchema
 });
 
