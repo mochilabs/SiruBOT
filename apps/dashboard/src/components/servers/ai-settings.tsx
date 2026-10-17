@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { buildChannelOptions, TEXT_CHANNEL_TYPES } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
-import { type SearchableOption, SearchableSelect } from "./searchable-select";
+import { SearchableSelect } from "./searchable-select";
 import {
   InfoBox,
   PanelError,
@@ -185,29 +186,10 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       />
     );
 
-  const categories = new Map(
-    (channels ?? []).filter((c) => c.type === 4).map((c) => [c.id, c.name]),
-  );
-  const textChannels = (channels ?? []).filter(
-    (c) => c.type === 0 || c.type === 5,
-  );
-  const channelOptions: SearchableOption[] = textChannels.map((c) => ({
-    value: c.id,
-    label: `# ${c.name}`,
-    group: c.parentId
-      ? (categories.get(c.parentId) ?? "기타")
-      : "카테고리 없음",
-  }));
-  // DB에는 남아 있지만 Discord에서 삭제된 채널도 목록에 보여 제거할 수 있게 해요
-  const knownIds = new Set(textChannels.map((c) => c.id));
-  for (const id of channelIds) {
-    if (!knownIds.has(id))
-      channelOptions.push({
-        value: id,
-        label: `${id} (삭제된 채널)`,
-        group: "삭제된 채널",
-      });
-  }
+  const channelOptions = buildChannelOptions(channels, {
+    types: TEXT_CHANNEL_TYPES,
+    selectedIds: channelIds,
+  });
 
   return (
     <Card padding="lg" className="gap-6 overflow-visible">

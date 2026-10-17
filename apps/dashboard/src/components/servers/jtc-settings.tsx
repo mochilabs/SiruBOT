@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Folder, Volume2 } from "lucide-react";
+import { Volume2 } from "lucide-react";
 
+import { buildChannelOptions } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
 import {
-  type SearchableOption,
   SearchableSelect,
 } from "@/components/servers/searchable-select";
 import { Card } from "@/components/ui/card";
@@ -111,22 +111,11 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (!form) return <PanelLoading label="임시 음성 설정 불러오는 중…" />;
 
-  const categoryOptions: SearchableOption[] = (channels ?? [])
-    .filter((channel) => channel.type === ChannelTypeValue.GuildCategory)
-    .map((channel) => ({
-      value: channel.id,
-      label: channel.name,
-      icon: <Folder size={16} aria-hidden />,
-    }));
-  if (
-    form.jtcCategoryId &&
-    !categoryOptions.some((option) => option.value === form.jtcCategoryId)
-  ) {
-    categoryOptions.push({
-      value: form.jtcCategoryId,
-      label: `${form.jtcCategoryId} (삭제된 카테고리)`,
-    });
-  }
+  const categoryOptions = buildChannelOptions(channels, {
+    types: [ChannelTypeValue.GuildCategory],
+    groupByCategory: false,
+    selectedIds: form.jtcCategoryId ? [form.jtcCategoryId] : [],
+  });
 
   const markerName =
     channels?.find((channel) => channel.id === form.jtcMarkerChannelId)?.name ??

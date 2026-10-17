@@ -31,7 +31,7 @@ import { TagInput } from "@/components/data/tag-input";
 import { ChannelMessage } from "@/components/discord/channel-message";
 import { EmbedPreview } from "@/components/discord/embed-preview";
 import { DISCORD_PERMISSIONS, PermissionList } from "@/components/discord/permission-list";
-import { type DiscordRole, RoleSelect } from "@/components/discord/role-select";
+import { RoleSelect } from "@/components/discord/role-select";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Field } from "@/components/primitives/field";
 import { SectionLabel } from "@/components/primitives/section-label";
@@ -42,6 +42,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ColorPicker } from "@/components/ui/color-picker";
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -94,6 +95,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import type { DiscordRoleSummary } from "@/types/discord";
 
 const SECTIONS = [
 	{ id: "foundation", label: "Foundation", icon: <Palette size={14} /> },
@@ -247,6 +249,7 @@ function ToastDemo() {
 export default function DesignPage() {
 	const [switchVal, setSwitchVal] = useState(true);
 	const [sliderVal, setSliderVal] = useState(60);
+	const [accentColor, setAccentColor] = useState("#ffdaff");
 	const [modalOpen, setModalOpen] = useState(false);
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [cmdOpen, setCmdOpen] = useState(false);
@@ -296,12 +299,12 @@ export default function DesignPage() {
 		}, 1000);
 	};
 
-	const sampleRoles: DiscordRole[] = [
-		{ id: "1", name: "관리자", color: 0xe74c3c, position: 10 },
-		{ id: "2", name: "모더레이터", color: 0x3498db, position: 8 },
-		{ id: "3", name: "DJ", color: 0x9b59b6, position: 6 },
-		{ id: "4", name: "멤버", color: 0x2ecc71, position: 4 },
-		{ id: "5", name: "봇", color: 0x95a5a6, position: 2 },
+	const sampleRoles: DiscordRoleSummary[] = [
+		{ id: "1", name: "관리자", color: "#e74c3c", position: 10, managed: false },
+		{ id: "2", name: "모더레이터", color: "#3498db", position: 8, managed: false },
+		{ id: "3", name: "DJ", color: "#9b59b6", position: 6, managed: false },
+		{ id: "4", name: "멤버", color: "#2ecc71", position: 4, managed: false },
+		{ id: "5", name: "봇", color: "#95a5a6", position: 2, managed: false },
 	];
 
 	interface TableRow {
@@ -557,6 +560,17 @@ export default function DesignPage() {
 								<Input placeholder="비활성화" disabled className="max-w-xs" />
 								<Input defaultValue="잘못된 값" aria-invalid className="max-w-xs" />
 								<Textarea placeholder="여러 줄 입력" className="max-w-md" />
+							</ShowcaseRow>
+
+							<ShowcaseRow label="ColorPicker" block>
+								<div className="grid items-start gap-4 sm:grid-cols-2">
+									<Field label="강조색" description="팔레트를 드래그하거나 HEX로 입력해요.">
+										<ColorPicker value={accentColor} label="강조색" onChange={setAccentColor} />
+									</Field>
+									<Field label="비활성화">
+										<ColorPicker value="#a3416f" label="비활성 색" onChange={() => {}} disabled />
+									</Field>
+								</div>
 							</ShowcaseRow>
 
 							<ShowcaseRow label="Field" block>

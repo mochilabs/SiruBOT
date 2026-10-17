@@ -1,9 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useCallback } from "react";
-import { Hash, ListChecks, Play, Volume2 } from "lucide-react";
+import { Hash, ListChecks, Play } from "lucide-react";
 
+import {
+  buildChannelOptions,
+  buildRoleOptions,
+  TEXT_CHANNEL_TYPES,
+  VOICE_CHANNEL_TYPES,
+} from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
 import {
   type SearchableOption,
@@ -18,7 +23,6 @@ import {
   useSettingsForm,
 } from "@/hooks/use-guild-settings";
 import { toError } from "@/lib/api-error";
-import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
 
 import {
@@ -44,42 +48,6 @@ const PINNED_MODE_OPTIONS: SearchableOption[] = [
 ];
 
 const NO_SELECTION = { value: "", label: "사용 안 함" };
-
-function buildChannelOptions(
-  channels: DiscordChannelSummary[] | null,
-  predicate: (channel: DiscordChannelSummary) => boolean,
-  currentId: string | null,
-  prefix: ReactNode,
-): SearchableOption[] {
-  const list = channels ?? [];
-  const categories = new Map(
-    list
-      .filter((c) => c.type === ChannelTypeValue.GuildCategory)
-      .map((c) => [c.id, c.name]),
-  );
-  const isTextPrefix = typeof prefix === "string";
-  const options: SearchableOption[] = list
-    .filter(
-      (channel) =>
-        channel.type !== ChannelTypeValue.GuildCategory && predicate(channel),
-    )
-    .map((channel) => ({
-      value: channel.id,
-      label: isTextPrefix ? `${prefix as string}${channel.name}` : channel.name,
-      icon: isTextPrefix ? undefined : prefix,
-      group: channel.parentId
-        ? (categories.get(channel.parentId) ?? "기타")
-        : "카테고리 없음",
-    }));
-  if (currentId && !options.some((option) => option.value === currentId)) {
-    options.push({
-      value: currentId,
-      label: `${currentId} (삭제된 채널)`,
-      group: "삭제된 채널",
-    });
-  }
-  return options;
-}
 
 interface ChannelForm {
   textChannelId: string | null;
@@ -134,32 +102,25 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (!form) return <PanelLoading label="채널·권한 설정 불러오는 중…" />;
 
-  const isText = (channel: DiscordChannelSummary) =>
-    channel.type === ChannelTypeValue.GuildText ||
-    channel.type === ChannelTypeValue.GuildAnnouncement;
-  const isVoice = (channel: DiscordChannelSummary) =>
-    channel.type === ChannelTypeValue.GuildVoice ||
-    channel.type === ChannelTypeValue.GuildStageVoice;
-
-  const roleOptions: SearchableOption[] = (roles ?? []).map((role) => ({
-    value: role.id,
-    label: role.name,
-    icon: role.color ? (
-      <span
-        className="h-3 w-3 shrink-0 rounded-full"
-        style={{ backgroundColor: role.color }}
-      />
-    ) : undefined,
-  }));
-  if (
-    form.djRoleId &&
-    !roleOptions.some((option) => option.value === form.djRoleId)
-  ) {
-    roleOptions.push({
-      value: form.djRoleId,
-      label: `${form.djRoleId} (삭제된 역할)`,
-    });
-  }
+  const textChannelOptions = buildChannelOptions(channels, {
+    types: TEXT_CHANNEL_TYPES,
+    noneLabel: NO_SELECTION.label,
+    selectedIds: form.textChannelId ? [form.textChannelId] : [],
+  });
+  const voiceChannelOptions = buildChannelOptions(channels, {
+    types: VOICE_CHANNEL_TYPES,
+    noneLabel: NO_SELECTION.label,
+    selectedIds: form.voiceChannelId ? [form.voiceChannelId] : [],
+  });
+  const pinnedChannelOptions = buildChannelOptions(channels, {
+    types: TEXT_CHANNEL_TYPES,
+    noneLabel: NO_SELECTION.label,
+    selectedIds: form.pinnedChannelId ? [form.pinnedChannelId] : [],
+  });
+  const roleOptions = buildRoleOptions(roles, {
+    noneLabel: NO_SELECTION.label,
+    selectedIds: form.djRoleId ? [form.djRoleId] : [],
+  });
 
   const listUnavailable = channels === null;
 
@@ -195,10 +156,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         >
           <SearchableSelect
             searchable
-            options={[
-              NO_SELECTION,
-              ...buildChannelOptions(channels, isText, form.textChannelId, "#"),
-            ]}
+            options={textChannelOptions}
             value={form.textChannelId ?? ""}
             onChange={(value: string) =>
               patch({ textChannelId: value || null })
@@ -214,15 +172,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         >
           <SearchableSelect
             searchable
-            options={[
-              NO_SELECTION,
-              ...buildChannelOptions(
-                channels,
-                isVoice,
-                form.voiceChannelId,
-                <Volume2 size={16} aria-hidden />,
-              ),
-            ]}
+            options={voiceChannelOptions}
             value={form.voiceChannelId ?? ""}
             onChange={(value: string) =>
               patch({ voiceChannelId: value || null })
@@ -239,10 +189,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       >
         <SearchableSelect
           searchable
-          options={[
-            NO_SELECTION,
-            ...buildChannelOptions(channels, isText, form.pinnedChannelId, "#"),
-          ]}
+          options={pinnedChannelOptions}
           value={form.pinnedChannelId ?? ""}
           onChange={(value: string) =>
             patch({ pinnedChannelId: value || null })
@@ -289,7 +236,7 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
       >
         <SearchableSelect
           searchable
-          options={[NO_SELECTION, ...roleOptions]}
+          options={roleOptions}
           value={form.djRoleId ?? ""}
           onChange={(value: string) => patch({ djRoleId: value || null })}
           placeholder="사용 안 함"

@@ -9,7 +9,7 @@ import type {
 } from "@sirubot/utils/customCommand";
 import { ArrowRight, ArrowUp, ChevronDown } from "lucide-react";
 
-import { type DiscordRole,RoleSelect } from "@/components/discord/role-select";
+import { RoleSelect } from "@/components/discord/role-select";
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +36,6 @@ import type {
 	CustomCommandsState,
 	CustomCommandSummary,
 } from "@/lib/custom-commands";
-import type { DiscordRoleSummary } from "@/types/discord";
 
 import {
 	buildSpec,
@@ -53,15 +52,6 @@ type ChatTurn = { role: "user" | "assistant"; content: string };
 const REFINE_MAX_TURNS = 8;
 
 const REFINE_REPLY = "스펙을 수정했어요. 폼에서 변경 내용을 확인하고 저장 버튼으로 반영해 주세요.";
-
-function toDiscordRole(role: DiscordRoleSummary): DiscordRole {
-	return {
-		id: role.id,
-		name: role.name,
-		color: role.color ? Number.parseInt(role.color.replace("#", ""), 16) : 0,
-		position: role.position,
-	};
-}
 
 /** "AI 도우미" 라벨 — 모바일 토글과 PC 정적 라벨이 같은 내용을 써요 */
 function ChatPanelLabel() {
@@ -102,7 +92,7 @@ export function CustomCommandEditor({
 	const toast = useToast();
 	const { roles: rawRoles } = useGuildRoles(guildId);
 	const { channels } = useGuildChannels(guildId);
-	const roles = (rawRoles ?? []).map(toDiscordRole);
+	const roles = rawRoles ?? [];
 
 	const [name, setName] = useState(command?.name ?? "");
 	const [description, setDescription] = useState(command?.description ?? "");
