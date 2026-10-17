@@ -7,16 +7,20 @@ interface DataApiPlaybackCounts {
   track_error: number;
   queue_end: number;
   playback_abort: number;
+  node_disconnect: number;
+  node_error: number;
 }
 
 interface DataApiPlaybackError {
   type: string;
-  guildId: string;
+  guildId: string | null;
+  nodeId: string | null;
   shardId: number | null;
   trackTitle: string | null;
   trackAuthor: string | null;
   reason: string | null;
   consecutiveErrors: number;
+  count: number;
   at: number;
 }
 

@@ -71,26 +71,39 @@ export function DataApiSection() {
                 </div>
             </Card>
 
-            {errors.length > 0 && (
-                <Card padding="md" className="gap-3">
-                    <h3 className="text-sm font-bold text-foreground">최근 재생 오류</h3>
+            <Card padding="md" className="gap-3">
+                <h3 className="text-sm font-bold text-foreground">최근 재생 오류</h3>
+                {errors.length > 0 ? (
                     <ul className="space-y-2 text-sm">
-                        {errors.map((e, i) => (
-                            <li key={`${e.at}-${i}`} className="flex min-w-0 items-start gap-2">
-                                {e.type === "playback_abort" ? <Ban className="h-3.5 w-3.5 text-destructive shrink-0" aria-hidden /> : <TriangleAlert className="h-3.5 w-3.5 text-warning shrink-0" aria-hidden />}
-                                <span className="min-w-0 break-words text-muted-foreground">
-                                    <span className="font-medium text-foreground">{e.trackTitle ?? "알 수 없는 곡"}</span>
-                                    {e.trackAuthor ? ` · ${e.trackAuthor}` : ""} · {e.reason ?? `오류 ${e.consecutiveErrors}회`}
-                                </span>
-                            </li>
-                        ))}
+                        {errors.map((e, i) => {
+                            // 노드 이벤트는 곡 오류와 원인이 다르므로(음성 서버 장애 vs 곡 문제) 아이콘·제목으로 구분해요.
+                            const isNode = e.type === "node_disconnect" || e.type === "node_error";
+                            const detail = isNode
+                                ? [e.type === "node_disconnect" ? "연결 끊김" : "노드 오류", e.reason, e.count > 1 ? `${e.count}회 보고` : null]
+                                : [e.trackAuthor, e.reason ?? `오류 ${e.consecutiveErrors}회`];
+                            return (
+                                <li key={`${e.at}-${i}`} className="flex min-w-0 items-start gap-2">
+                                    {isNode ? (
+                                        <Network className="h-3.5 w-3.5 text-destructive shrink-0" aria-hidden />
+                                    ) : e.type === "playback_abort" ? (
+                                        <Ban className="h-3.5 w-3.5 text-destructive shrink-0" aria-hidden />
+                                    ) : (
+                                        <TriangleAlert className="h-3.5 w-3.5 text-warning shrink-0" aria-hidden />
+                                    )}
+                                    <span className="min-w-0 break-words text-muted-foreground">
+                                        <span className="font-medium text-foreground">
+                                            {isNode ? `음성 서버 ${e.nodeId ?? "알 수 없음"}` : e.trackTitle ?? "알 수 없는 곡"}
+                                        </span>
+                                        {detail.filter(Boolean).map((part) => ` · ${part}`).join("")}
+                                    </span>
+                                </li>
+                            );
+                        })}
                     </ul>
-                </Card>
-            )}
-
-            {errors.length === 0 && (
-                <p className="px-1 text-sm text-muted-foreground">최근 재생 오류가 없어요.</p>
-            )}
+                ) : (
+                    <p className="text-sm text-muted-foreground">최근 재생 오류가 없어요.</p>
+                )}
+            </Card>
         </section>
     );
 }

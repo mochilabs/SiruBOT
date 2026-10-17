@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { container } from '@sapphire/framework';
 import type { Track, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
 
-const { getSubLogger } = vi.hoisted(() => ({ getSubLogger: vi.fn() }));
+const { getSubLogger, reportPlaybackEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportPlaybackEvent: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger } } }));
+vi.mock('../../../../services/playbackReporter.ts', () => ({ reportPlaybackEvent }));
 
 function makeHandler() {
 	const buildTrack = vi.fn((payload: { encoded: string; info?: Record<string, unknown> }) => ({
@@ -105,5 +107,70 @@ describe('isTransitionAlreadyStarted', () => {
 		const player = { transitionState: { lastStartedEncoded: null } };
 		expect(handler.isTransitionAlreadyStarted(player, track('old-enc'))).toBe(false);
 		expect(handler.isTransitionAlreadyStarted(player, null)).toBe(false);
+	});
+});
+
+describe('trackError 사유 보고 (상태 페이지 최근 재생 오류)', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		reportPlaybackEvent.mockClear();
+		// handleTrackFailure가 스킵 분기로 빠지도록 mixerService를 고정해요 (sendNotification 경로 회피)
+		Object.assign(container, {
+			mixerService: {
+				consumePreloaded: () => false,
+				skip: vi.fn().mockResolvedValue(undefined),
+				markUnmanaged: vi.fn()
+			}
+		});
+	});
+
+	function playerStub() {
+		return { guildId: 'g-1', consecutiveErrors: 0, queue: { tracks: [{}] } };
+	}
+
+	it('reports the lavalink exception message as the reason', async () => {
+		const { handler } = makeHandler();
+		await handler.handleTrackError(playerStub(), track('enc-1'), {
+			exception: { severity: 'COMMON', message: 'This video is age restricted', cause: 'cause', causeStackTrace: '' },
+			error: 'fallback'
+		});
+		expect(reportPlaybackEvent).toHaveBeenCalledWith(
+			'g-1',
+			'track_error',
+			expect.anything(),
+			expect.objectContaining({ reason: 'This video is age restricted', consecutiveErrors: 1 })
+		);
+	});
+
+	it('falls back to the exception cause when the message is empty', async () => {
+		const { handler } = makeHandler();
+		await handler.handleTrackError(playerStub(), track('enc-1'), {
+			exception: { severity: 'COMMON', message: '  ', cause: 'Video unavailable', causeStackTrace: '' },
+			error: ''
+		});
+		expect(reportPlaybackEvent).toHaveBeenCalledWith(
+			'g-1',
+			'track_error',
+			expect.anything(),
+			expect.objectContaining({ reason: 'Video unavailable' })
+		);
+	});
+
+	it('truncates long reasons to the data-api limit of 200 chars', async () => {
+		const { handler } = makeHandler();
+		await handler.handleTrackError(playerStub(), track('enc-1'), {
+			exception: { severity: 'FAULT', message: 'x'.repeat(500), cause: '', causeStackTrace: '' },
+			error: ''
+		});
+		expect(reportPlaybackEvent.mock.calls[0][3].reason).toHaveLength(200);
+	});
+
+	it('omits the reason key when the payload carries no text', async () => {
+		const { handler } = makeHandler();
+		await handler.handleTrackError(playerStub(), track('enc-1'), {
+			exception: { severity: 'COMMON', message: '', cause: '', causeStackTrace: '' },
+			error: ''
+		});
+		expect(reportPlaybackEvent.mock.calls[0][3]).toEqual({ consecutiveErrors: 1 });
 	});
 });

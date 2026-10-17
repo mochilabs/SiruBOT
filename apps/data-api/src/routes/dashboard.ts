@@ -186,10 +186,10 @@ function render(d) {
 
 	const errs = (d.playback.recentErrors || []).slice(-8).reverse();
 	document.getElementById('pb-errors').innerHTML = errs.length
-		? '<table><thead><tr><th>시각</th><th>유형</th><th>곡</th><th>길드</th><th>샤드</th><th class="num">연속</th></tr></thead><tbody>' +
+		? '<table><thead><tr><th>시각</th><th>유형</th><th>대상</th><th>길드</th><th>샤드</th><th class="num">연속</th></tr></thead><tbody>' +
 			errs.map((e) => '<tr><td>' + fmtTime(e.at) + '</td><td><span class="badge ' + (e.type === 'playback_abort' ? 'err' : 'warn') + '">' + esc(e.type) + '</span></td>' +
-			'<td>' + esc(e.trackTitle || '-') + (e.trackAuthor ? ' <span style="color:var(--muted)">· ' + esc(e.trackAuthor) + '</span>' : '') + '</td>' +
-			'<td>' + esc(e.guildId) + '</td><td>' + (e.shardId != null ? e.shardId : '-') + '</td><td class="num">' + e.consecutiveErrors + '</td></tr>').join('') + '</tbody></table>'
+			'<td>' + esc(e.trackTitle || (e.nodeId ? '노드 ' + e.nodeId : '-')) + (e.trackAuthor ? ' <span style="color:var(--muted)">· ' + esc(e.trackAuthor) + '</span>' : '') + '</td>' +
+			'<td>' + esc(e.guildId ?? '-') + '</td><td>' + (e.shardId != null ? e.shardId : '-') + '</td><td class="num">' + e.consecutiveErrors + '</td></tr>').join('') + '</tbody></table>'
 		: '<div class="empty">재생 오류가 없어요 🎉</div>';
 
 	const t = d.memoryTidy || {};

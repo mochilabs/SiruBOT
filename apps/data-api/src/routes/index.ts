@@ -251,8 +251,10 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	// ── 재생 이벤트 수집 (봇 trackHandler → fire-and-forget) ──
 	const guildIdParams = z.object({ guildId: redisIdSchema });
 	const playbackEventSchema = z.object({
-		type: z.enum(['track_start', 'track_end', 'track_stuck', 'track_error', 'queue_end', 'playback_abort']),
-		guildId: redisIdSchema,
+		type: z.enum(['track_start', 'track_end', 'track_stuck', 'track_error', 'queue_end', 'playback_abort', 'node_disconnect', 'node_error']),
+		// 노드 이벤트는 길드가 아니라 음성 서버 단위라 guildId가 없어요. nodeId로 식별해요.
+		guildId: redisIdSchema.nullable().default(null),
+		nodeId: z.string().max(100).nullable().default(null),
 		shardId: z.number().int().min(0).nullable().default(null),
 		trackTitle: z.string().max(500).nullable().default(null),
 		trackAuthor: z.string().max(500).nullable().default(null),

@@ -4,6 +4,7 @@ import { BaseLavalinkHandler } from './base.ts';
 import { NodeSessionStore } from '../redisStore.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { CachedPlayerSaver } from '../player/playerSaver.ts';
+import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
 
 /** playerSaver.get() 반환 — 재시작 복구의 입력이 되는 저장 플레이어 형태. */
 type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
@@ -462,6 +463,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeDisconnect(node: LavalinkNode, reason: { code?: number | undefined; reason?: string | undefined }) {
 		this.logger.info(`Node disconnected: ${node.options.id} | ${reason.reason}`);
+		reportNodeEvent(node.id, 'node_disconnect', reason.reason ?? (reason.code != null ? `code ${reason.code}` : null));
 		const orphanPlayers = this.container.audio.players
 			.filter((player) => player.node.id === node.options.id)
 			.values()
@@ -498,6 +500,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeError(node: LavalinkNode, error: Error, payload: unknown) {
 		this.logger.error(`Node error: ${node.options.id}`, error, payload);
+		reportNodeEvent(node.id, 'node_error', error.message);
 	}
 
 	public cleanup(): void {
