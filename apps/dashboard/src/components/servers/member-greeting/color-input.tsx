@@ -34,12 +34,15 @@ export function ColorField({
 	value,
 	saving,
 	label,
-	onChange
+	onChange,
+	onCommit
 }: {
 	value: string;
 	saving: boolean;
 	label: string;
 	onChange: (color: string) => void;
+	/** 편집 확정(되돌리기 한 단계) — 프리셋 클릭은 즉시, HEX 입력은 blur 때 호출해요 */
+	onCommit?: () => void;
 }) {
 	return (
 		<div className="flex flex-wrap items-center gap-2">
@@ -53,8 +56,14 @@ export function ColorField({
 						aria-checked={value === preset}
 						aria-label={`${label} 색 ${preset}`}
 						disabled={saving}
-						onKeyDown={radioArrowKeyDown(COLOR_PRESETS, value, (key) => onChange(key))}
-						onClick={() => onChange(preset)}
+						onKeyDown={radioArrowKeyDown(COLOR_PRESETS, value, (key) => {
+							onChange(key);
+							onCommit?.();
+						})}
+						onClick={() => {
+							onChange(preset);
+							onCommit?.();
+						}}
 						className={cn(
 							"pointer-coarse:h-11 pointer-coarse:w-11 h-7 w-7 cursor-pointer rounded-full shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 							value === preset && "ring-2 ring-ring"
@@ -63,12 +72,24 @@ export function ColorField({
 					/>
 				))}
 			</div>
-			<HexColorInput value={value} saving={saving} label={label} onCommit={onChange} />
+			<HexColorInput value={value} saving={saving} label={label} onCommit={onChange} onBlur={onCommit} />
 		</div>
 	);
 }
 
-function HexColorInput({ value, saving, label, onCommit }: { value: string; saving: boolean; label: string; onCommit: (color: string) => void }) {
+function HexColorInput({
+	value,
+	saving,
+	label,
+	onCommit,
+	onBlur
+}: {
+	value: string;
+	saving: boolean;
+	label: string;
+	onCommit: (color: string) => void;
+	onBlur?: () => void;
+}) {
 	const [draft, setDraft] = useState(value);
 	useEffect(() => setDraft(value), [value]);
 	const valid = HEX_COLOR_PATTERN.test(draft);
@@ -86,6 +107,7 @@ function HexColorInput({ value, saving, label, onCommit }: { value: string; savi
 				setDraft(raw);
 				if (HEX_COLOR_PATTERN.test(raw)) onCommit(raw.toLowerCase());
 			}}
+			onBlur={onBlur}
 		/>
 	);
 }

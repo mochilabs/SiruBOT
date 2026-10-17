@@ -12,8 +12,9 @@ describe("slider geometry and keyboard", () => {
     document.body.append(host);
     const root = createRoot(host);
     const onChange = vi.fn();
+    const onCommit = vi.fn();
     try {
-      await act(async () => { root.render(<Slider value={50} label="볼륨" onChange={onChange} />); });
+      await act(async () => { root.render(<Slider value={50} label="볼륨" onChange={onChange} onCommit={onCommit} />); });
       expect(host.querySelector('[data-slot="slider-range"]')?.classList.contains("rounded-full")).toBe(true);
       expect(host.querySelector('[data-slot="slider-track"]')?.className).not.toContain("overflow-hidden");
       const input = host.querySelector<HTMLInputElement>('input[type="range"]')!;
@@ -23,6 +24,8 @@ describe("slider geometry and keyboard", () => {
         input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
       });
       expect(onChange).toHaveBeenCalledWith(51);
+      // 키보드 한 스텝도 값 확정으로 인정돼야 히스토리 커밋 단위가 됩니다
+      expect(onCommit).toHaveBeenCalledWith(51);
     } finally {
       await act(async () => { root.unmount(); });
       host.remove();
