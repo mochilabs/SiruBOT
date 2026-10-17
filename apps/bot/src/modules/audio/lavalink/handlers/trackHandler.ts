@@ -13,6 +13,16 @@ const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
 const TRANSITION_RECONCILE_MS = 800;
 
+/**
+ * TrackExceptionEvent에서 사람이 읽을 사유를 뽑아요 (연령 제한, 삭제된 영상 등).
+ * 라바링크 버전/경로에 따라 exception.message, exception.cause, error가 서로 다르게 채워져 전부 대비하고,
+ * data-api 스키마의 reason 상한(200자) 안으로 잘라 보내요.
+ */
+function extractExceptionReason(payload: TrackExceptionEvent): string | null {
+	const raw = payload.exception?.message?.trim() || payload.exception?.cause?.trim() || payload.error?.trim() || '';
+	return raw ? raw.slice(0, 200) : null;
+}
+
 export class TrackHandler extends BaseLavalinkHandler {
 	/**
 	 * 전이 소유권: 서버 슬롯에 예열된 길드는 서버가 trackEnd를 처리하므로 관망하고,
@@ -137,18 +147,29 @@ export class TrackHandler extends BaseLavalinkHandler {
 		await this.handleTrackFailure(player, track, 'stuck');
 	}
 
-	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackExceptionEvent) {
-		await this.handleTrackFailure(player, track, 'error');
+	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
+		await this.handleTrackFailure(player, track, 'error', extractExceptionReason(payload));
 	}
 
 	/**
 	 * trackStuck/trackError 공통 복구 — 연속 오류 중단, 예열 관망, 조용한 스킵/마지막 곡 안내를 공유한다.
+	 * reason은 상태 페이지 '최근 재생 오류'에 사유로 표시돼요 (trackError의 예외 메시지 등).
 	 */
-	private async handleTrackFailure(player: CustomPlayer, track: Track | UnresolvedTrack | null, kind: 'stuck' | 'error') {
+	private async handleTrackFailure(
+		player: CustomPlayer,
+		track: Track | UnresolvedTrack | null,
+		kind: 'stuck' | 'error',
+		reason: string | null = null
+	) {
 		this.clearAdvancePending(player.guildId);
 		player.consecutiveErrors++;
-		this.logger.warn(`Track ${kind} (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}`);
-		reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, { consecutiveErrors: player.consecutiveErrors });
+		this.logger.warn(
+			`Track ${kind} (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}${reason ? ` (${reason})` : ''}`
+		);
+		reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, {
+			...(reason ? { reason } : {}),
+			consecutiveErrors: player.consecutiveErrors
+		});
 
 		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
 			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
