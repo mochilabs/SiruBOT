@@ -35,6 +35,7 @@ import type {
 	PlayerWebVoiceContextRequest
 } from '@sirubot/utils';
 import { MessageFlags, PermissionsBitField, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
+import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../modules/audio/view/play.ts';
 
@@ -77,7 +78,9 @@ export class PlayerWebResponder {
 	private readonly cooldowns = new Map<string, number>();
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void }
+		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
+		private readonly signingKey: string = ''
 	) {}
 
 	/**
@@ -94,7 +97,20 @@ export class PlayerWebResponder {
 			name: '웹 플레이어',
 			url,
 			logger: this.logger,
-			bindings: [{ channel: PLAYER_WEB_REQUEST_CHANNEL, onMessage: (raw) => void this.handleRequest(raw) }]
+			bindings: [
+				{
+					channel: PLAYER_WEB_REQUEST_CHANNEL,
+					// 서명 검증을 통과한 본문만 처리해요 — Redis에 쓸 수 있는 사람이 보내는 사칭 userId 요청을 거부해요 (SEC-006).
+					onMessage: (raw) => {
+						const body = unwrapRedisMessage(this.signingKey, raw);
+						if (body === null) {
+							this.logger.warn('웹 플레이어 요청 거부: 서명 검증 실패');
+							return;
+						}
+						void this.handleRequest(body);
+					}
+				}
+			]
 		});
 		await this.subscriber.start();
 	}
@@ -474,6 +490,6 @@ export class PlayerWebResponder {
 			this.logger.warn(`웹 플레이어 응답을 위한 redisStore가 없어요 (guild ${response.guildId}, kind ${response.kind})`);
 			return;
 		}
-		store.publishPlayerWebResponse(JSON.stringify(response));
+		store.publishPlayerWebResponse(wrapRedisMessage(this.signingKey, response));
 	}
 }

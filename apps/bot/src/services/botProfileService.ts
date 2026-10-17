@@ -18,6 +18,7 @@
  */
 import { container } from '@sapphire/framework';
 import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
+import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { Guild, PermissionFlagsBits } from 'discord.js';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
@@ -60,7 +61,11 @@ export class BotProfileService {
 	private readonly maxLastApplies = 2_000;
 	private subscriber: ManagedRedisSubscriber | null = null;
 
-	public constructor(private readonly logger: ServiceLogger) {}
+	public constructor(
+		private readonly logger: ServiceLogger,
+		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
+		private readonly signingKey: string = ''
+	) {}
 
 	/** 구독을 시작해요. 실패해도 throw하지 않아요 — 재연결을 시도하고 기능만 비활성돼요. */
 	public async start(redisUrl: string | undefined): Promise<void> {
@@ -74,8 +79,23 @@ export class BotProfileService {
 			url,
 			logger: this.logger,
 			bindings: [
-				{ channel: BOT_PROFILE_SET_CHANNEL, onMessage: (raw) => void this.handleSetMessage(raw) },
-				{ channel: BOT_PROFILE_REFRESH_CHANNEL, onMessage: (raw) => void this.handleRefreshMessage(raw) }
+				// 트리거·pending 페이로드 모두 서명 검증을 통과한 것만 처리해요 (SEC-006).
+				{
+					channel: BOT_PROFILE_SET_CHANNEL,
+					onMessage: (raw) => {
+						const body = unwrapRedisMessage(this.signingKey, raw);
+						if (body === null) return this.logger.warn('봇 프로필 set 트리거 거부: 서명 검증 실패');
+						void this.handleSetMessage(body);
+					}
+				},
+				{
+					channel: BOT_PROFILE_REFRESH_CHANNEL,
+					onMessage: (raw) => {
+						const body = unwrapRedisMessage(this.signingKey, raw);
+						if (body === null) return this.logger.warn('봇 프로필 refresh 트리거 거부: 서명 검증 실패');
+						void this.handleRefreshMessage(body);
+					}
+				}
 			]
 		});
 		await this.subscriber.start();
@@ -146,12 +166,17 @@ export class BotProfileService {
 		}
 
 		let payload: PendingPayload = {};
-		try {
-			const parsed = JSON.parse(rawPending) as PendingPayload;
-			if (typeof parsed === 'object' && parsed !== null) payload = parsed;
-		} catch {
-			this.logger.warn(`봇 프로필 pending 페이로드 파싱 실패 (guild ${guildId})`);
-			payload = {};
+		const pendingBody = unwrapRedisMessage(this.signingKey, rawPending);
+		if (pendingBody === null) {
+			this.logger.warn(`봇 프로필 pending 페이로드 서명 검증 실패 (guild ${guildId})`);
+		} else {
+			try {
+				const parsed = JSON.parse(pendingBody) as PendingPayload;
+				if (typeof parsed === 'object' && parsed !== null) payload = parsed;
+			} catch {
+				this.logger.warn(`봇 프로필 pending 페이로드 파싱 실패 (guild ${guildId})`);
+				payload = {};
+			}
 		}
 
 		const hasNickname = 'nickname' in payload;

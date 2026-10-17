@@ -12,6 +12,7 @@
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
 import { HubSubscriber } from '../utils/hubSubscriber.ts';
+import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import {
 	GUILD_DATA_REQUEST_CHANNEL,
 	GUILD_DATA_RESPONSE_CHANNEL,
@@ -130,11 +131,22 @@ export class GuildDataPendingRequests {
 
 const pending = new GuildDataPendingRequests(PENDING_LIMIT);
 
+/** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 없으면 서명 없는 구버전 모드. */
+const redisSigningKey = resolveRedisSigningKey(process.env);
+
 /** Pub/Sub 구독자 — 공용 라이프사이클(HubSubscriber)에 연결·구독·재시도·종료를 위임해요. */
 const subscriber = new HubSubscriber({
 	name: 'guild data hub',
 	channel: GUILD_DATA_RESPONSE_CHANNEL,
-	onMessage: (message) => pending.handleRaw(message),
+	// 응답은 서명 검증을 통과한 본문만 상관해요 — Redis에 쓸 수 있는 사람이 보내는 위조 응답을 거부해요 (SEC-006).
+	onMessage: (message) => {
+		const body = unwrapRedisMessage(redisSigningKey, message);
+		if (body === null) {
+			logger.warn('Rejected guild data response with invalid signature');
+			return;
+		}
+		pending.handleRaw(body);
+	},
 	logger
 });
 
@@ -168,7 +180,7 @@ export async function requestGuildData(guildId: string, kind: GuildDataKind, tim
 	const request: GuildDataRequest = { requestId, guildId, kind };
 	const promise = pending.register(requestId, guildId, kind, timeoutMs);
 	try {
-		await client.publish(GUILD_DATA_REQUEST_CHANNEL, JSON.stringify(request));
+		await client.publish(GUILD_DATA_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, request));
 	} catch (error) {
 		pending.fail(requestId, 'redis_unavailable');
 		logger.warn(`Guild data request publish failed (${guildId}): ${error instanceof Error ? error.message : String(error)}`);

@@ -2,6 +2,19 @@
  * 봇 ↔ data-api ↔ 대시보드가 공유하는 Redis Pub/Sub 채널명 모음.
  * 채널명은 여러 서비스가 동시에 바꿔야 하므로 한 곳에서 관리해요.
  */
+import { z } from 'zod';
+
+/**
+ * Redis 키/채널 페이로드에 들어가는 ID(guildId·userId·roleId 등) — 공백·구분자(:)가 섞여
+ * 키가 엉키거나 다른 키 네임스페이스로 주입되지 않게 영문·숫자·_·- 만 허용해요
+ * (디스코드 스노플레이크를 그대로 포함해요). Redis 키 빌더의 입력 검증 계약이에요.
+ */
+export const redisIdSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(32)
+	.regex(/^[A-Za-z0-9_-]+$/, 'ID 형식이 올바르지 않아요.');
 
 /**
  * 길드 설정 캐시 무효화 브로드캐스트.

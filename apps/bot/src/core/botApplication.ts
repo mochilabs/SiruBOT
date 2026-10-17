@@ -4,6 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 import { SapphireClient } from '@sapphire/framework';
 import { RootData, container, getRootData } from '@sapphire/pieces';
+import { resolveRedisSigningKey } from '@sirubot/utils/redisEnvelope';
 
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
@@ -107,12 +108,15 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			error: (msg: string) => container.logger.error(msg),
 			debug: (msg: string) => container.logger.debug(msg)
 		};
+		// 서비스 간 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (data-api와 공유). 없으면 서명 없는 구버전 모드.
+		// (guildSettingsInvalidator는 대시보드가 직접 퍼블리시하는 채널이라 서명 대상이 아니에요)
+		const redisSigningKey = resolveRedisSigningKey(process.env);
 		container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger);
-		container.playerWebResponder = new PlayerWebResponder(subscriberLogger);
-		container.jtcSetupResponder = new JtcSetupResponder(subscriberLogger);
-		container.botProfileService = new BotProfileService(subscriberLogger);
-		container.memberGreetingService = new MemberGreetingService(subscriberLogger);
-		container.guildDataResponder = new GuildDataResponder(subscriberLogger);
+		container.playerWebResponder = new PlayerWebResponder(subscriberLogger, redisSigningKey);
+		container.jtcSetupResponder = new JtcSetupResponder(subscriberLogger, redisSigningKey);
+		container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey);
+		container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey);
+		container.guildDataResponder = new GuildDataResponder(subscriberLogger, redisSigningKey);
 		container.appEmojiManager = new AppEmojiManager();
 	}
 

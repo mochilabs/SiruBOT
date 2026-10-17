@@ -14,6 +14,7 @@
  */
 import { container } from '@sapphire/framework';
 import { GUILD_DATA_REQUEST_CHANNEL, ManagedRedisSubscriber, guildDataRequestSchema } from '@sirubot/utils';
+import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { GuildChannelItem, GuildDataRequest, GuildDataResponse, GuildRoleItem } from '@sirubot/utils';
 
 /** 페이로드 검증 — {"requestId":"<uuid>","guildId":"<길드 ID>","kind":"channels"|"roles"} 형태만 응답해요 */
@@ -31,7 +32,9 @@ export class GuildDataResponder {
 	private subscriber: ManagedRedisSubscriber | null = null;
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void }
+		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
+		private readonly signingKey: string = ''
 	) {}
 
 	/**
@@ -51,7 +54,20 @@ export class GuildDataResponder {
 			name: '길드 데이터',
 			url,
 			logger: this.logger,
-			bindings: [{ channel: GUILD_DATA_REQUEST_CHANNEL, onMessage: (raw) => this.handleRequest(raw) }]
+			bindings: [
+				{
+					channel: GUILD_DATA_REQUEST_CHANNEL,
+					// 서명 검증을 통과한 본문만 처리해요 (SEC-006).
+					onMessage: (raw) => {
+						const body = unwrapRedisMessage(this.signingKey, raw);
+						if (body === null) {
+							this.logger.warn('길드 데이터 요청 거부: 서명 검증 실패');
+							return;
+						}
+						this.handleRequest(body);
+					}
+				}
+			]
 		});
 		await this.subscriber.start();
 	}
@@ -99,7 +115,7 @@ export class GuildDataResponder {
 			this.logger.warn(`길드 데이터 응답을 위한 redisStore가 없어요 (guild ${response.guildId})`);
 			return;
 		}
-		store.publishGuildDataResponse(JSON.stringify(response));
+		store.publishGuildDataResponse(wrapRedisMessage(this.signingKey, response));
 		this.logger.debug(`길드 데이터 응답 퍼블리시 (guild ${response.guildId}, kind ${response.kind})`);
 	}
 

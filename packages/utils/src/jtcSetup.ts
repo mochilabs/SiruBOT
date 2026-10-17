@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { redisIdSchema } from './redisChannels.js';
 
 /**
  * 임시 방(JTC) 마커 채널 셋업 request/reply 계약 — dashboard, data-api, bot이 함께 쓴다.
@@ -10,9 +11,9 @@ import { z } from 'zod';
  */
 export const jtcSetupRequestSchema = z.object({
 	requestId: z.string().uuid(),
-	guildId: z.string().min(1).max(32),
-	userId: z.string().min(1).max(32),
-	categoryId: z.string().min(1).max(32)
+	guildId: redisIdSchema,
+	userId: redisIdSchema,
+	categoryId: redisIdSchema
 });
 export type JtcSetupRequest = z.infer<typeof jtcSetupRequestSchema>;
 
@@ -22,8 +23,8 @@ export type JtcSetupRequest = z.infer<typeof jtcSetupRequestSchema>;
  */
 export const jtcSetupResponseSchema = z.object({
 	requestId: z.string().uuid(),
-	guildId: z.string().min(1).max(32),
+	guildId: redisIdSchema,
 	error: z.string().optional(),
-	markerChannelId: z.string().min(1).max(32).optional()
+	markerChannelId: redisIdSchema.optional()
 });
 export type JtcSetupResponse = z.infer<typeof jtcSetupResponseSchema>;

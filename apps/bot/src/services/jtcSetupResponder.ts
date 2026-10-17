@@ -15,6 +15,7 @@
 import { DiscordAPIError } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { emoji, JTC_SETUP_REQUEST_CHANNEL, jtcSetupRequestSchema, ManagedRedisSubscriber } from '@sirubot/utils';
+import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { JtcSetupResponse } from '@sirubot/utils';
 
 /** 카테고리 채널이 아니거나 존재하지 않을 때 tempVoiceService가 던지는 오류 메시지 */
@@ -43,7 +44,9 @@ export class JtcSetupResponder {
 	private readonly inFlight = new Set<string>();
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void }
+		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
+		private readonly signingKey: string = ''
 	) {}
 
 	/**
@@ -60,7 +63,20 @@ export class JtcSetupResponder {
 			name: 'JTC 셋업',
 			url,
 			logger: this.logger,
-			bindings: [{ channel: JTC_SETUP_REQUEST_CHANNEL, onMessage: (raw) => void this.handleRequest(raw) }]
+			bindings: [
+				{
+					channel: JTC_SETUP_REQUEST_CHANNEL,
+					// 서명 검증을 통과한 본문만 처리해요 (SEC-006).
+					onMessage: (raw) => {
+						const body = unwrapRedisMessage(this.signingKey, raw);
+						if (body === null) {
+							this.logger.warn('JTC 설정 요청 거부: 서명 검증 실패');
+							return;
+						}
+						void this.handleRequest(body);
+					}
+				}
+			]
 		});
 		await this.subscriber.start();
 	}
@@ -119,6 +135,6 @@ export class JtcSetupResponder {
 			this.logger.warn(`JTC 셋업 응답을 위한 redisStore가 없어요 (guild ${response.guildId})`);
 			return;
 		}
-		store.publishJtcSetupResponse(JSON.stringify(response));
+		store.publishJtcSetupResponse(wrapRedisMessage(this.signingKey, response));
 	}
 }

@@ -31,6 +31,7 @@ import {
 	renderGreetingTemplate,
 	validateGreetingConfig
 } from '@sirubot/utils';
+import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import {
 	AttachmentBuilder,
 	Guild,
@@ -96,7 +97,11 @@ interface ServiceLogger {
 export class MemberGreetingService {
 	private subscriber: ManagedRedisSubscriber | null = null;
 
-	public constructor(private readonly logger: ServiceLogger) {}
+	public constructor(
+		private readonly logger: ServiceLogger,
+		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
+		private readonly signingKey: string = ''
+	) {}
 
 	/** 구독을 시작해요. 실패해도 throw하지 않아요 — 재연결을 시도하고 테스트 전송만 비활성돼요. */
 	public async start(redisUrl: string | undefined): Promise<void> {
@@ -109,7 +114,17 @@ export class MemberGreetingService {
 			name: '멤버 인사',
 			url,
 			logger: this.logger,
-			bindings: [{ channel: MEMBER_GREETING_SEND_CHANNEL, onMessage: (raw) => void this.handleSendBroadcast(raw) }]
+			// 트리거·pending 페이로드 모두 서명 검증을 통과한 것만 처리해요 (SEC-006).
+			bindings: [
+				{
+					channel: MEMBER_GREETING_SEND_CHANNEL,
+					onMessage: (raw) => {
+						const body = unwrapRedisMessage(this.signingKey, raw);
+						if (body === null) return this.logger.warn('인사 테스트 전송 트리거 거부: 서명 검증 실패');
+						void this.handleSendBroadcast(body);
+					}
+				}
+			]
 		});
 		await this.subscriber.start();
 	}
@@ -162,11 +177,16 @@ export class MemberGreetingService {
 		}
 
 		let pending: PendingPayload | null = null;
-		try {
-			const parsed = JSON.parse(rawPending) as PendingPayload;
-			if (typeof parsed === 'object' && parsed !== null) pending = parsed;
-		} catch {
-			pending = null;
+		const pendingBody = unwrapRedisMessage(this.signingKey, rawPending);
+		if (pendingBody === null) {
+			this.logger.warn(`멤버 인사 pending 페이로드 서명 검증 실패, 무시 (guild ${guildId})`);
+		} else {
+			try {
+				const parsed = JSON.parse(pendingBody) as PendingPayload;
+				if (typeof parsed === 'object' && parsed !== null) pending = parsed;
+			} catch {
+				pending = null;
+			}
 		}
 		if (!pending || (pending.kind !== 'welcome' && pending.kind !== 'goodbye') || typeof pending.userId !== 'string') {
 			this.logger.warn(`멤버 인사 pending 페이로드 형식 불일치, 무시 (guild ${guildId})`);

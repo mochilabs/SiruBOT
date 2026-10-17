@@ -35,7 +35,9 @@ export function initSentry(options: SentryInitOptions = {}): void {
 		integrations: [nodeProfilingIntegration()],
 		tracesSampleRate: options.tracesSampleRate ?? (isProd ? 0.2 : 1.0),
 		profilesSampleRate: options.profilesSampleRate ?? (isProd ? 0.2 : 1.0),
-		maxBreadcrumbs: 50
+		maxBreadcrumbs: 50,
+		// 비밀 값 유출 방지 — 토큰/키가 실린 에러가 Sentry로 나가지 않게 마스킹해요.
+		beforeSend: (event) => scrubSecrets(event)
 	});
 
 	if (options.service) Sentry.setTag('service', options.service);
@@ -51,6 +53,38 @@ export function captureSentryException(error: unknown): void {
 type MinimalLogger = {
 	error: (...args: unknown[]) => void;
 };
+
+/** 키 이름에 비밀이 들어갈 수 있는 필드는 값을 그대로 노출하지 않아요 */
+const SECRET_KEY_PATTERN = /(authoriz|token|secret|passw|api[-_]?key|credential)/i;
+/** 문자열 안의 Authorization 헤더/토큰 형태를 마스킹해요 */
+const BEARER_TOKEN_PATTERN = /(Bearer\s+)\S+/gi;
+/** 재귀 순회 한계 — 이벤트 객체는 직렬화 직전이라 순환 참조가 있을 수 있어요 */
+const SCRUB_MAX_DEPTH = 6;
+
+function maskSecretString(value: string): string {
+	return value.replace(BEARER_TOKEN_PATTERN, '$1[redacted]');
+}
+
+/**
+ * 이벤트에서 비밀처럼 보이는 값을 재귀적으로 마스킹해요 — 에러 객체·extra·breadcrumbs에
+ * 토큰/키가 실려 Sentry로 유출되는 것을 막아요 (보안 감사 SEC 후속 — 방어 심화).
+ * 키 이름 기준 마스킹 + 문자열의 Bearer 토큰 마스킹을 해요.
+ */
+export function scrubSecrets<T>(value: T, depth = 0, seen = new WeakSet<object>()): T {
+	if (depth > SCRUB_MAX_DEPTH) return value;
+	if (typeof value === 'string') return maskSecretString(value) as unknown as T;
+	if (Array.isArray(value)) return value.map((item) => scrubSecrets(item, depth + 1, seen)) as unknown as T;
+	if (value && typeof value === 'object') {
+		if (seen.has(value)) return '[circular]' as unknown as T;
+		seen.add(value);
+		const out: Record<string, unknown> = {};
+		for (const [key, item] of Object.entries(value)) {
+			out[key] = SECRET_KEY_PATTERN.test(key) ? '[redacted]' : scrubSecrets(item, depth + 1, seen);
+		}
+		return out as unknown as T;
+	}
+	return value;
+}
 
 /**
  * 프로세스 수준 에러 핸들러 등록 — data-api / shardmanager 엔트리에서 사용.

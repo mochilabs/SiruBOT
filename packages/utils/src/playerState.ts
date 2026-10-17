@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { redisIdSchema } from './redisChannels.js';
 
 /**
  * 플레이어 상태 스냅샷 계약 — 봇(bot playerStatePublisher)이 Redis Pub/Sub으로 퍼블리시하고
@@ -16,7 +17,7 @@ export const queuedTrackSummarySchema = z.object({
 });
 
 export const playerStateSchema = z.object({
-	guildId: z.string(),
+	guildId: redisIdSchema,
 	playing: z.boolean(),
 	paused: z.boolean(),
 	positionMs: z.number(),
@@ -25,7 +26,8 @@ export const playerStateSchema = z.object({
 	trackAuthor: z.string().nullable(),
 	artworkUrl: z.string().nullable(),
 	isStream: z.boolean(),
-	queue: z.array(queuedTrackSummarySchema),
+	// 배열 상한 — 비정상적으로 큰 큐가 한 메시지에 실리지 않게 해요 (표시 데이터라도 DoS 방지)
+	queue: z.array(queuedTrackSummarySchema).max(1000),
 	queueLength: z.number(),
 	repeatMode: z.enum(['off', 'track', 'queue']),
 	volume: z.number(),
