@@ -41,6 +41,11 @@
             "types": "./dist/memberGreeting.d.ts",
             "import": "./dist/memberGreeting.js",
             "require": "./dist/memberGreeting.cjs"
+        },
+        "./redisEnvelope": {
+            "types": "./dist/redisEnvelope.d.ts",
+            "import": "./dist/redisEnvelope.js",
+            "require": "./dist/redisEnvelope.cjs"
         }
     },
     "scripts": {

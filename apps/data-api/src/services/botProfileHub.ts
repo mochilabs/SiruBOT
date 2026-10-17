@@ -8,6 +8,7 @@
  * - 주기 퍼블리시는 하지 않아요 — 변경 빈도가 낮은 프로필은 필요할 때만 확인해요.
  */
 import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_STATE_CHANNEL_PREFIX } from '@sirubot/utils';
+import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
@@ -164,7 +165,7 @@ export async function refreshBotProfile(guildId: string): Promise<boolean> {
 	}, REFRESH_TIMEOUT_MS);
 	refreshRequests.set(guildId, { promise: response, resolve, timer });
 	try {
-		await client.publish(BOT_PROFILE_REFRESH_CHANNEL, JSON.stringify({ guildId }));
+		await client.publish(BOT_PROFILE_REFRESH_CHANNEL, wrapRedisMessage(resolveRedisSigningKey(process.env), { guildId }));
 	} catch (error) {
 		clearTimeout(timer);
 		refreshRequests.delete(guildId);

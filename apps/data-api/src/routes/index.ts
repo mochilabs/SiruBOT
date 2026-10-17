@@ -16,6 +16,7 @@ import {
 	playerWebControlActionSchema,
 	playerWebPlayUriSchema
 } from '@sirubot/utils';
+import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
@@ -864,6 +865,9 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		.refine((body) => 'nickname' in body || 'avatar' in body || 'banner' in body, { message: '변경할 프로필 항목이 없어요.' });
 	const BOT_PROFILE_PENDING_TTL_SECONDS = 120;
 
+	// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). pending 값·트리거 메시지 모두 서명해요 (SEC-006).
+	const redisSigningKey = resolveRedisSigningKey(process.env);
+
 	fastify.post('/v1/internal/bot-profile/set', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
 		try {
 			const body = botProfileSetSchema.parse(request.body);
@@ -885,8 +889,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
 				return reply.code(503).send({ error: 'redis_unavailable', message: '봇 프로필 적용을 위해 Redis가 필요해요.' });
 			}
-			await client.set(botProfilePendingKey(guildId), JSON.stringify(payload), { EX: BOT_PROFILE_PENDING_TTL_SECONDS });
-			await client.publish(BOT_PROFILE_SET_CHANNEL, JSON.stringify({ guildId }));
+			await client.set(botProfilePendingKey(guildId), wrapRedisMessage(redisSigningKey, payload), { EX: BOT_PROFILE_PENDING_TTL_SECONDS });
+			await client.publish(BOT_PROFILE_SET_CHANNEL, wrapRedisMessage(redisSigningKey, { guildId }));
 			metrics.request('bot-profile-set');
 			return reply.send({ ok: true });
 		} catch (error) {
@@ -914,10 +918,14 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 				return reply.code(503).send({ error: 'redis_unavailable', message: '인사 테스트 전송을 위해 Redis가 필요해요.' });
 			}
 			const requestId = crypto.randomUUID();
-			await client.set(memberGreetingPendingKey(body.guildId), JSON.stringify({ kind: body.kind, userId: body.userId, requestId }), {
-				EX: GREETING_PENDING_TTL_SECONDS
-			});
-			await client.publish(MEMBER_GREETING_SEND_CHANNEL, JSON.stringify({ guildId: body.guildId, requestId }));
+			await client.set(
+				memberGreetingPendingKey(body.guildId),
+				wrapRedisMessage(redisSigningKey, { kind: body.kind, userId: body.userId, requestId }),
+				{
+					EX: GREETING_PENDING_TTL_SECONDS
+				}
+			);
+			await client.publish(MEMBER_GREETING_SEND_CHANNEL, wrapRedisMessage(redisSigningKey, { guildId: body.guildId, requestId }));
 			metrics.request('greeting-send');
 			return reply.send({ ok: true, requestId });
 		} catch (error) {

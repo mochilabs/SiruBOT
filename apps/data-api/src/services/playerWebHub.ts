@@ -14,6 +14,7 @@
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
 import { HubSubscriber } from '../utils/hubSubscriber.ts';
+import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import {
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
@@ -142,11 +143,22 @@ export class PlayerWebPendingRequests {
 
 const pending = new PlayerWebPendingRequests(PENDING_LIMIT);
 
+/** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 없으면 서명 없는 구버전 모드. */
+const redisSigningKey = resolveRedisSigningKey(process.env);
+
 /** Pub/Sub 구독자 — 공용 라이프사이클(HubSubscriber)에 연결·구독·재시도·종료를 위임해요. */
 const subscriber = new HubSubscriber({
 	name: 'player web hub',
 	channel: PLAYER_WEB_RESPONSE_CHANNEL,
-	onMessage: (message) => pending.handleRaw(message),
+	// 응답은 서명 검증을 통과한 본문만 상관해요 — 사칭 userId 응답 등 Redis 경유 위조를 거부해요 (SEC-006).
+	onMessage: (message) => {
+		const body = unwrapRedisMessage(redisSigningKey, message);
+		if (body === null) {
+			logger.warn('Rejected player web response with invalid signature');
+			return;
+		}
+		pending.handleRaw(body);
+	},
 	logger
 });
 
@@ -178,7 +190,7 @@ export async function requestPlayerWeb(payload: PlayerWebAnyRequest): Promise<Pl
 	}
 	const promise = pending.register(payload.requestId, payload.guildId, payload.kind, KIND_TIMEOUT_MS[payload.kind]);
 	try {
-		await client.publish(PLAYER_WEB_REQUEST_CHANNEL, JSON.stringify(payload));
+		await client.publish(PLAYER_WEB_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, payload));
 	} catch (error) {
 		pending.fail(payload.requestId, 'redis_unavailable');
 		logger.warn(
