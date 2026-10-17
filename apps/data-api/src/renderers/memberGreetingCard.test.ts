@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_GREETINGS, GREETING_TEMPLATES, type GreetingImage } from '@sirubot/utils';
+import { DEFAULT_GREETINGS, GREETING_CARD_H, GREETING_CARD_W, GREETING_RENDER_SCALE, GREETING_TEMPLATES, type GreetingImage } from '@sirubot/utils';
 import {
 	decodeDataUri,
 	GreetingBackgroundError,
@@ -9,7 +9,11 @@ import {
 	renderGreetingCard
 } from './memberGreetingCard.ts';
 
-/** 카드 렌더 스모크 — 1200×675 PNG 시그니처와 배경 경로(프리셋/업로드)를 검증해요. */
+/** 카드 렌더 스모크 — 출력 PNG 시그니처(논리 1200×675 × GREETING_RENDER_SCALE = 800×450)와 배경 경로(프리셋/업로드)를 검증해요. */
+
+/** 기대 출력 크기 — 논리 좌표계(1200×675)에 출력 축소 배율을 곱한 값 */
+const OUT_W = Math.round(GREETING_CARD_W * GREETING_RENDER_SCALE);
+const OUT_H = Math.round(GREETING_CARD_H * GREETING_RENDER_SCALE);
 
 /** 테스트용 단색 이미지를 dataURI로 — 업로드 배경/정규화 입력을 만들어요. */
 async function solidImage(width: number, height: number): Promise<string> {
@@ -37,23 +41,23 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 }
 
 describe('renderGreetingCard', () => {
-	it('renders a 1200x675 PNG from a preset background', async () => {
+	it('renders a scaled-down PNG (logical 1200×675 × GREETING_RENDER_SCALE) from a preset background', async () => {
 		const buffer = await renderGreetingCard(makeImage(), makeContext());
-		expectPngSize(buffer, 1200, 675);
+		expectPngSize(buffer, OUT_W, OUT_H);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
 	it('renders from an uploaded dataUri background', async () => {
 		const dataUri = await solidImage(320, 180);
 		const buffer = await renderGreetingCard(makeImage({ background: { presetId: null, dataUri } }), makeContext());
-		expectPngSize(buffer, 1200, 675);
+		expectPngSize(buffer, OUT_W, OUT_H);
 	});
 
 	it('falls back to a preset when the dataUri is undecodable', async () => {
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
 			const buffer = await renderGreetingCard(makedecodableBrokenImage(), makeContext());
-			expectPngSize(buffer, 1200, 675);
+			expectPngSize(buffer, OUT_W, OUT_H);
 			expect(consoleError).toHaveBeenCalled();
 		} finally {
 			consoleError.mockRestore();
@@ -63,13 +67,13 @@ describe('renderGreetingCard', () => {
 	it('renders avatar + text layers from the default greeting', async () => {
 		// 기본 인사는 avatar·title·subtitle(텍스트 2) 레이어로 이뤄져 있어요.
 		const buffer = await renderGreetingCard(makeImage(), makeContext());
-		expectPngSize(buffer, 1200, 675);
+		expectPngSize(buffer, OUT_W, OUT_H);
 	});
 
 	it('renders a shape layer (rect) via the minimal-band template', async () => {
 		const minimal = GREETING_TEMPLATES.find((template) => template.id === 'minimal-band')!;
 		const buffer = await renderGreetingCard(minimal.image, makeContext());
-		expectPngSize(buffer, 1200, 675);
+		expectPngSize(buffer, OUT_W, OUT_H);
 	});
 
 	it('renders an uploaded image layer (sticker) at its size', async () => {
@@ -80,7 +84,7 @@ describe('renderGreetingCard', () => {
 			}),
 			makeContext()
 		);
-		expectPngSize(buffer, 1200, 675);
+		expectPngSize(buffer, OUT_W, OUT_H);
 	});
 
 	it('renders a circle shape layer', async () => {
@@ -90,7 +94,7 @@ describe('renderGreetingCard', () => {
 			}),
 			makeContext()
 		);
-		expectPngSize(buffer, 1200, 675);
+		expectPngSize(buffer, OUT_W, OUT_H);
 	});
 
 	it('skips an undecodable image layer without failing the card', async () => {
@@ -104,7 +108,7 @@ describe('renderGreetingCard', () => {
 				}),
 				makeContext()
 			);
-			expectPngSize(buffer, 1200, 675);
+			expectPngSize(buffer, OUT_W, OUT_H);
 		} finally {
 			consoleError.mockRestore();
 		}

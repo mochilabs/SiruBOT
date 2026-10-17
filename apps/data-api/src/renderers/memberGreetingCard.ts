@@ -6,6 +6,9 @@
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 import {
+	GREETING_CARD_H,
+	GREETING_CARD_W,
+	GREETING_RENDER_SCALE,
 	renderGreetingTemplate,
 	type GreetingAvatarLayer,
 	type GreetingImage,
@@ -16,8 +19,8 @@ import {
 } from '@sirubot/utils';
 import { drawCircleImage, ensureKoreanFont, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
 
-const CARD_W = 1200;
-const CARD_H = 675;
+const CARD_W = GREETING_CARD_W;
+const CARD_H = GREETING_CARD_H;
 /** 텍스트 좌우 여백 — 카드 가장자리에 붙지 않게 */
 const TEXT_MARGIN = 64;
 
@@ -64,8 +67,11 @@ export async function renderGreetingCard(image: GreetingImage, context: Greeting
 	const { Canvas } = await import('skia-canvas');
 	await ensureKoreanFont();
 
-	const canvas: Canvas = new Canvas(CARD_W, CARD_H);
+	// 출력 PNG만 균일 축소해요 (1200×675 → 800×450) — draw 함수는 전부 1200×675 논리 좌표를 쓰고
+	// ctx.scale 한 줄로 축소되므로 저장 좌표계(레이어 %/px)는 그대로 유지돼요.
+	const canvas: Canvas = new Canvas(Math.round(CARD_W * GREETING_RENDER_SCALE), Math.round(CARD_H * GREETING_RENDER_SCALE));
 	const ctx = canvas.getContext('2d');
+	ctx.scale(GREETING_RENDER_SCALE, GREETING_RENDER_SCALE);
 
 	await drawGreetingBackground(ctx, image.background);
 	for (const layer of image.layers) {
@@ -161,8 +167,9 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, layer: GreetingTextLayer, 
 	ctx.textBaseline = 'middle';
 	ctx.fillStyle = layer.color;
 	ctx.shadowColor = 'rgba(0,0,0,0.45)';
-	ctx.shadowBlur = Math.max(6, layer.size / 4);
-	ctx.shadowOffsetY = 2;
+	// shadowBlur/shadowOffset는 변환 행렬의 영향을 받지 않아요 — 출력 축소 배율만큼 직접 보정해요
+	ctx.shadowBlur = Math.max(6, layer.size / 4) * GREETING_RENDER_SCALE;
+	ctx.shadowOffsetY = 2 * GREETING_RENDER_SCALE;
 	ctx.fillText(truncate(ctx, rendered, maxW), x, y);
 	ctx.restore();
 }
