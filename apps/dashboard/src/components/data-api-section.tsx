@@ -71,9 +71,9 @@ export function DataApiSection() {
                 </div>
             </Card>
 
-            {errors.length > 0 && (
-                <Card padding="md" className="gap-3">
-                    <h3 className="text-sm font-bold text-foreground">최근 재생 오류</h3>
+            <Card padding="md" className="gap-3">
+                <h3 className="text-sm font-bold text-foreground">최근 재생 오류</h3>
+                {errors.length > 0 ? (
                     <ul className="space-y-2 text-sm">
                         {errors.map((e, i) => {
                             // 노드 이벤트는 곡 오류와 원인이 다르므로(음성 서버 장애 vs 곡 문제) 아이콘·제목으로 구분해요.
@@ -100,12 +100,10 @@ export function DataApiSection() {
                             );
                         })}
                     </ul>
-                </Card>
-            )}
-
-            {errors.length === 0 && (
-                <p className="px-1 text-sm text-muted-foreground">최근 재생 오류가 없어요.</p>
-            )}
+                ) : (
+                    <p className="text-sm text-muted-foreground">최근 재생 오류가 없어요.</p>
+                )}
+            </Card>
         </section>
     );
 }
