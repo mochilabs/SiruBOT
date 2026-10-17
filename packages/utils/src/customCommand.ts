@@ -238,8 +238,12 @@ export const customCommandSpecSchemaV2 = specObjectV2.superRefine((spec, ctx) =>
 			ctx.addIssue({ code: 'custom', message: '보낼 내용(텍스트 또는 디자인)을 입력해 주세요.' });
 		}
 	});
-	// 역할 변경 액션은 실행 제한 필수 — 아무나 실행하면 역할 탈취 수단이 돼요
-	const hasRoleAction = spec.steps.some((step) => step.type === 'add_role' || step.type === 'remove_role');
+	// 역할 변경 액션은 실행 제한 필수 — 아무나 실행하면 역할 탈취 수단이 돼요.
+	// if 분기(then/else) 안의 역할 액션도 놓치지 않도록 walkSteps로 재귀 순회해요 (최상위 검사만 하면 우회돼요).
+	let hasRoleAction = false;
+	walkSteps(spec.steps, (step) => {
+		if (step.type === 'add_role' || step.type === 'remove_role') hasRoleAction = true;
+	});
 	if (hasRoleAction && (spec.access === undefined || spec.access.mode === 'everyone')) {
 		ctx.addIssue({ code: 'custom', message: '역할 변경 액션은 실행 제한(역할/권한)이 필요해요.' });
 	}

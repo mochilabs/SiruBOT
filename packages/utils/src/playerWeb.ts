@@ -42,9 +42,19 @@ export const playerWebSearchRequestSchema = playerWebRequestBase.extend({
 });
 export type PlayerWebSearchRequest = z.infer<typeof playerWebSearchRequestSchema>;
 
+/**
+ * 재생 요청 주소 — http/https만 허용해요. 다른 스킴(file:, data: 등)은 봇을 거쳐 Lavalink가
+ * 내부 네트워크에서 가져올 수 있어(SSRF) 계약 단계에서 막아요. data-api·dashboard가 같은 스키마를 써요.
+ */
+export const playerWebPlayUriSchema = z
+	.string()
+	.max(500)
+	.url('재생 주소는 올바른 URL이어야 해요.')
+	.regex(/^https?:\/\//i, '재생 주소는 http/https로 시작해야 해요.');
+
 export const playerWebPlayRequestSchema = playerWebRequestBase.extend({
 	kind: z.literal('play'),
-	uri: z.string().url().max(500)
+	uri: playerWebPlayUriSchema
 });
 export type PlayerWebPlayRequest = z.infer<typeof playerWebPlayRequestSchema>;
 

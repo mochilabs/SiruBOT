@@ -17,6 +17,8 @@ export const HEAVY_WRITE_RATE: RateRule = { limit: 5, windowMs: 60_000 };
 export const RENDER_RATE: RateRule = { limit: 60, windowMs: 60_000 };
 /** 이미지 에셋 업로드: 분당 10회 — 파일 업로드는 저장소·DB 부하가 커서 좁게 잡아요 */
 export const UPLOAD_RATE: RateRule = { limit: 10, windowMs: 60_000 };
+/** 공개(무인증) 읽기: 분당 120회 — 전역 공용 버킷 하나로 묶어 한도 우회를 막아요 */
+export const PUBLIC_RATE: RateRule = { limit: 120, windowMs: 60_000 };
 
 /**
  * Redis 분산 슬라이딩 윈도우.
@@ -84,6 +86,19 @@ function rateLimit(
 /** 키 조립 — 사용자·길드·작업 단위로 격리해요. */
 export function rateKey(...parts: (string | null | undefined)[]): string {
   return parts.map((part) => part ?? "-").join(":");
+}
+
+/**
+ * 공개(무인증) 엔드포인트의 레이트리밋 결정 — 로그인 사용자는 userId 버킷, 나머지는 전역 공용 버킷이에요.
+ * 요청 헤더(X-Forwarded-For 등)로 주체를 만들지 않는 것이 핵심이에요: 클라이언트가 헤더를 위조하면
+ * 요청마다 새 버킷이 생겨 한도가 우회됩니다(SEC-002). 신뢰할 프록시가 도입되면 그때 IP 주체를 추가해요.
+ */
+export function publicReadLimit(
+  userId: string | undefined,
+): { subject: string; rule: RateRule } {
+  return userId
+    ? { subject: userId, rule: READ_RATE }
+    : { subject: "anonymous", rule: PUBLIC_RATE };
 }
 
 /** 한도 초과면 429 응답, 아니면 null. 라우트 진입점에서 바로 반환하세요. */

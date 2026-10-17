@@ -26,16 +26,18 @@ export function parseLavalinkHosts(raw: string, globalPassword: string): ParsedL
 
 	for (const [index, entry] of raw.split(',').entries()) {
 		const parts = entry.trim().split('_');
+		// 보안: 에러 메시지에 원문을 넣지 않아요 — 엔트리에 노드 비밀번호가 포함되어 로그로 유출될 수 있어요.
 		if (parts.length < 3) {
-			throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${entry}". ` + `Expected: "id_host_port[_password]"`);
+			throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}. ` + `Expected: "id_host_port[_password]"`);
 		}
 		const [id, host, portStr, ...passwordParts] = parts;
 		if (!id || !host) {
-			throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}: "${entry}". id/host must not be empty.`);
+			throw new Error(`Invalid LAVALINK_HOSTS format at index ${index}. id/host must not be empty.`);
 		}
 		const port = parseInt(portStr, 10);
 		if (isNaN(port) || port <= 0 || port > 65535) {
-			throw new Error(`Invalid port "${portStr}" for node "${id}"`);
+			// 포트 자리에 다른 값(비밀번호 등)이 잘못 들어간 경우일 수 있어 값 자체는 메시지로 남기지 않아요.
+			throw new Error(`Invalid port for node "${id}" at index ${index}`);
 		}
 		const explicitPassword = passwordParts.length > 0 ? passwordParts.join('_') : globalPassword;
 		const password = explicitPassword || 'youshallnotpass';

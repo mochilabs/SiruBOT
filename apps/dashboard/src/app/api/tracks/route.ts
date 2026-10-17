@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
+import { guardRateLimit, publicReadLimit,rateKey } from "@/lib/rate-limit";
 import { fixedTrackFilter, PAGE_SIZE } from "@/lib/track-constants";
 
 const tracksQuerySchema = z.object({
@@ -18,17 +18,12 @@ function escapeLikeWildcard(value: string): string {
 
 export async function GET(request: Request) {
   // 공개 차트 엔드포인트 — 읽기 전용 공개 메타데이터라 로그인 없이 허용해요.
-  // 비로그인 요청은 IP 기준으로 같은 READ_RATE 한도를 적용해 남용을 막아요.
+  // 비로그인 요청은 전역 공용 버킷(PUBLIC_RATE)으로 묶어요 — X-Forwarded-For 헤더는 클라이언트가
+  // 위조할 수 있어 주체로 쓰지 않아요(요청마다 새 버킷이 생기는 한도 우회 방지, SEC-002).
   const session = await auth();
-  const subject =
-    session?.user?.id ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "anonymous";
+  const limit = publicReadLimit(session?.user?.id);
 
-  const limited = await guardRateLimit(
-    rateKey("tracks-get", subject),
-    READ_RATE,
-  );
+  const limited = await guardRateLimit(rateKey("tracks-get", limit.subject), limit.rule);
   if (limited) return limited;
 
   const { searchParams } = new URL(request.url);

@@ -95,8 +95,11 @@ jobs:
       - name: Resolve image tag prefix
         if: needs.changes.outputs[matrix.app] == 'true'
         id: tag
+        # github.ref_name은 run: 블록 안에서 직접 치환하지 않아요 — 브랜치명에 셸 특수문자가 섞이면
+        # 명령 주입이 됩니다. env:로만 넘겨 스크립트 안에서는 따옴표 감싼 변수로만 사용해요.
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          REF_NAME="${{ github.ref_name }}"
           if [[ "$REF_NAME" == "beta" ]]; then
             PREFIX="beta"
           else

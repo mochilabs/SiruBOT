@@ -41,7 +41,9 @@ export class ShardManagerServer {
 
 		await auth(this.fastify, this.env);
 		this.fastify.decorate('manager', this as any);
-		await this.fastify.register(WebSocket);
+		// maxPayload — 기본값 100MiB 프레임은 인증된 클라이언트가 메모리로 죽일 수 있어요(SEC-004).
+		// 실제 메시지는 작은 JSON(식별·하트비트·상태)뿐이라 64KiB면 충분해요.
+		await this.fastify.register(WebSocket, { options: { maxPayload: 64 * 1024 } });
 		await this.fastify.register(AutoLoad, {
 			dir: path.join(import.meta.dirname, 'routes'),
 			dirNameRoutePrefix: true,

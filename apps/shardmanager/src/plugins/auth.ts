@@ -24,7 +24,9 @@ export default async function auth(fastify: FastifyInstance, env: Env) {
 	logger.info('AUTH_KEY is set, auth will be enabled');
 
 	fastify.addHook('onRequest', async (request, reply) => {
-		if (excludedRoutes.some((route) => request.url.startsWith(route))) {
+		// 정확한 경로 일치만 인증을 제외해요 — 접두사 매칭은 /api/health/* 아래 미래 라우트를 무인증으로 만들어요.
+		const path = request.url.split('?')[0];
+		if (excludedRoutes.includes(path)) {
 			return;
 		}
 
