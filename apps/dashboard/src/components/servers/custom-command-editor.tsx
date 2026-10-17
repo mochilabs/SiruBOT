@@ -504,6 +504,7 @@ export function CustomCommandEditor({
 							</p>
 						</div>
 						<StepsEditor
+							guildId={guildId}
 							steps={steps}
 							roles={roles}
 							channels={channels ?? []}
