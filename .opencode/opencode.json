@@ -5,13 +5,6 @@
 		{ "action": "read", "resource": "*.env", "effect": "ask" },
 		{ "action": "read", "resource": "*.env.*", "effect": "ask" }
 	],
-	"agents": {
-		"*": {
-			"permissions": [
-				{ "action": "*", "resource": "*", "effect": "allow" }
-			]
-		}
-	},
 	"providers": {
 		"explabs": {
 			"name": "Experiential Labs",
