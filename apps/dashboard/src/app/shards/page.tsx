@@ -11,6 +11,8 @@ import Loader from "@/components/loader";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
+import { VoiceServerHistory } from "@/components/voice-server-history";
+import { VoiceServerSection } from "@/components/voice-server-section";
 import type { ShardsResponse } from "@/lib/shard-api";
 
 export default function ShardsPage() {
@@ -58,6 +60,10 @@ export default function ShardsPage() {
                     </section>
 
                     <DataApiSection />
+
+                    <VoiceServerSection />
+
+                    <VoiceServerHistory />
 
                     <section className="space-y-8">
                         <div className="flex items-center gap-6">
