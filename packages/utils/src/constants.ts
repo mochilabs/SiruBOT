@@ -7,6 +7,9 @@ export const VOICE_CHANNEL_REQUIRED_MESSAGE = '먼저 음성 채널에 접속해
 export const DEFAULT_COLOR = 0xffdaff;
 export const WARN_COLOR = 0xf56565;
 
+/** DEFAULT_COLOR의 HEX 표기 — 컬러피커·강조색 입력의 초기값으로 써요 (숫자와 표기가 갈리지 않게 파생) */
+export const DEFAULT_COLOR_HEX = `#${DEFAULT_COLOR.toString(16).padStart(6, '0')}`;
+
 /**
  * 진행바 앱 이모지 셀 (resources/emoji_replacement/pb_*.png → 앱 이모지).
  * 한 바는 6셀: start + mid×4 + end. 셀당 2스텝(총 12스텝), half 셀이 중간 스텝을 담당해요.

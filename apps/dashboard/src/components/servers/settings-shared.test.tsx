@@ -32,6 +32,29 @@ describe("floating save actions", () => {
     await act(async () => { root.unmount(); });
     host.remove();
   });
+  it("keeps the panel layout untouched when the island appears (no inline height reservation)", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+    // 섬이 실제로 82px라고 흉내 내요 — 섬 높이가 본문 높이로 새지 않아야 해요
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 0, left: 0, right: 760, bottom: 82, width: 760, height: 82, x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const onSave = vi.fn();
+    const render = (dirty: boolean) => <section><h2>설정 패널</h2><SaveBar dirty={dirty} saving={false} active onSave={onSave} /></section>;
+    await act(async () => { root.render(render(false)); });
+    const anchor = document.querySelector('[data-slot="settings-save-island-anchor"]');
+    expect(anchor).not.toBeNull();
+    expect(anchor!.getAttribute("style")).toBeNull();
+    await act(async () => { root.render(render(true)); });
+    expect(document.querySelector('[data-slot="settings-save-island"]')).not.toBeNull();
+    // 섬이 떠도 앵커는 높이를 갖지 않아야 해요 — 설정 패널이 갑자기 커지는 이유였어요
+    expect(anchor!.getAttribute("style")).toBeNull();
+    await act(async () => { root.unmount(); });
+    host.remove();
+  });
   it("hides clean forms and keeps inactive drafts registered without exposing their actions", async () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });

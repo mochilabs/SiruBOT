@@ -3,6 +3,7 @@ import { guildChannelItemSchema } from "@sirubot/utils/guildData";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { sortChannelsForDisplay } from "@/lib/channel-order";
 import { forwardDataApiGet } from "@/lib/data-api";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
 import {
@@ -52,7 +53,7 @@ export async function GET(
   }
 
   const allowed = new Set<number>(SELECTABLE_CHANNEL_TYPES);
-  const channels: DiscordChannelSummary[] = parsed.data.channels
+  const mapped: DiscordChannelSummary[] = parsed.data.channels
     .filter((channel) => allowed.has(channel.type))
     .map((channel) => ({
       id: channel.id,
@@ -60,8 +61,9 @@ export async function GET(
       type: channel.type,
       parentId: channel.parentId,
       position: channel.position,
-    }))
-    .sort((a, b) => a.position - b.position);
+    }));
+  // Discord 사이드바 순서로 정렬해 내려보내요 — 채널 선택지마다 각자 정렬하지 않아도 돼요.
+  const channels = sortChannelsForDisplay(mapped);
 
   return NextResponse.json({ channels });
 }

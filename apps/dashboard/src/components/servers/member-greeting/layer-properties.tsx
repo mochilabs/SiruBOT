@@ -4,12 +4,12 @@ import { Bold } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { cn } from "@/lib/utils";
+import { cn, radioArrowKeyDown } from "@/lib/utils";
 import type { GreetingLayer } from "@/types/member-greeting";
 
-import { ColorField, radioArrowKeyDown } from "./color-input";
 import { clampRatio } from "./greeting-draw";
 
 const ALIGN_OPTIONS = [
@@ -91,8 +91,8 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 					<Field label="글자 크기">
 						<Slider value={layer.size} min={12} max={160} label="글자 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(size) => patch({ size })} onCommit={onCommit} />
 					</Field>
-					<Field label="글자 색" description="프리셋이나 HEX(#RRGGBB)로 지정해요.">
-						<ColorField value={layer.color} saving={saving} label="글자" onChange={(color) => patch({ color })} onCommit={onCommit} />
+					<Field label="글자 색" description="팔레트·프리셋·HEX로 지정해요.">
+						<ColorPicker value={layer.color} disabled={saving} label="글자" onChange={(color) => patch({ color })} onCommit={onCommit} />
 					</Field>
 					<div className="flex flex-wrap items-center gap-4">
 						<Button variant="state-toggle" active={layer.bold} icon={<Bold size={14} />} onClick={() => patchAndCommit({ bold: !layer.bold })} disabled={saving} className="pointer-coarse:h-11">
@@ -127,7 +127,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 						<Slider value={layer.size} min={40} max={600} label="아바타 크기" showValue formatValue={(value) => `${value}px`} disabled={saving} onChange={(size) => patch({ size })} onCommit={onCommit} />
 					</Field>
 					<Field label="링 색">
-						<ColorField value={layer.ringColor} saving={saving} label="링" onChange={(color) => patch({ ringColor: color })} onCommit={onCommit} />
+						<ColorPicker value={layer.ringColor} disabled={saving} label="링" onChange={(color) => patch({ ringColor: color })} onCommit={onCommit} />
 					</Field>
 				</div>
 			);
@@ -189,7 +189,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 						</div>
 					</Field>
 					<Field label="색">
-						<ColorField value={layer.color} saving={saving} label="도형" onChange={(color) => patch({ color })} onCommit={onCommit} />
+						<ColorPicker value={layer.color} disabled={saving} label="도형" onChange={(color) => patch({ color })} onCommit={onCommit} />
 					</Field>
 					<Field label="투명도">
 						<Slider value={layer.opacity} min={0} max={1} step={0.05} label="도형 투명도" showValue formatValue={(value) => `${Math.round(value * 100)}%`} disabled={saving} onChange={(opacity) => patch({ opacity })} onCommit={onCommit} />

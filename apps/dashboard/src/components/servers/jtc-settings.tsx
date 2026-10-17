@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Folder, Volume2 } from "lucide-react";
+import { Volume2 } from "lucide-react";
 
+import { ChannelSelect } from "@/components/discord/channel-select";
+import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
-import {
-  type SearchableOption,
-  SearchableSelect,
-} from "@/components/servers/searchable-select";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -15,7 +13,6 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
 import { toApiError, toError } from "@/lib/api-error";
-import { ChannelTypeValue } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
 
 import {
@@ -111,23 +108,6 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (!form) return <PanelLoading label="임시 음성 설정 불러오는 중…" />;
 
-  const categoryOptions: SearchableOption[] = (channels ?? [])
-    .filter((channel) => channel.type === ChannelTypeValue.GuildCategory)
-    .map((channel) => ({
-      value: channel.id,
-      label: channel.name,
-      icon: <Folder size={16} aria-hidden />,
-    }));
-  if (
-    form.jtcCategoryId &&
-    !categoryOptions.some((option) => option.value === form.jtcCategoryId)
-  ) {
-    categoryOptions.push({
-      value: form.jtcCategoryId,
-      label: `${form.jtcCategoryId} (삭제된 카테고리)`,
-    });
-  }
-
   const markerName =
     channels?.find((channel) => channel.id === form.jtcMarkerChannelId)?.name ??
     form.jtcMarkerChannelId;
@@ -185,13 +165,14 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
           </>
         }
       >
-        <SearchableSelect
-          searchable
-          options={categoryOptions}
+        <ChannelSelect
+          channels={channels}
+          types={CHANNEL_TYPE_GROUP.category}
+          groupByCategory={false}
           value={form.jtcCategoryId ?? ""}
           onChange={(value: string) => void handleCategoryChange(value)}
           placeholder="카테고리 선택"
-          disabled={saving || setupLoading || channels === null}
+          disabled={saving || setupLoading}
         />
       </Field>
 

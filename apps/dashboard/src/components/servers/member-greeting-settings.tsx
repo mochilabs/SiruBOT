@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Hash, ImagePlus, RotateCcw, Send, UserPlus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ImagePlus, RotateCcw, Send, UserPlus } from "lucide-react";
 
+import { ChannelSelect } from "@/components/discord/channel-select";
 import { Field } from "@/components/primitives/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { COLOR_PRESETS,ColorPicker } from "@/components/ui/color-picker";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,17 +30,19 @@ import { useToast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useMemberGreeting } from "@/hooks/use-member-greeting";
 import { toError } from "@/lib/api-error";
-import { ChannelTypeValue, type DiscordChannelSummary } from "@/types/discord";
+import type { DiscordChannelSummary } from "@/types/discord";
 import {
+  DEFAULT_ACCENT_COLOR_HEX,
   DEFAULT_GREETINGS,
+  GREETING_LAYOUTS,
   GREETING_TEMPLATE_VARIABLES,
   type GreetingConfig,
   type GreetingKind,
+  type GreetingLayout,
   type GreetingTestResult,
 } from "@/types/member-greeting";
 
 import { GreetingImageEditor } from "./member-greeting/greeting-image-editor";
-import { type SearchableOption, SearchableSelect } from "./searchable-select";
 import {
   PanelError,
   PanelHeader,
@@ -41,6 +52,12 @@ import {
 } from "./settings-shared";
 
 const TEMPLATE_MAX = 500;
+
+/** 메시지 레이아웃 라벨 — Select의 값 표시와 옵션 목록이 같은 표를 써요 */
+const LAYOUT_LABELS: Record<GreetingLayout, string> = {
+  container: "컨테이너",
+  components: "컴포넌트 목록",
+};
 
 const SECTION_META: Record<
   GreetingKind,
@@ -281,31 +298,6 @@ function GreetingSection({
     }
   }, [onTest, toast]);
 
-  const channelOptions = useMemo<SearchableOption[]>(() => {
-    const options: SearchableOption[] = (channels ?? [])
-      .filter(
-        (channel) =>
-          channel.type === ChannelTypeValue.GuildText ||
-          channel.type === ChannelTypeValue.GuildAnnouncement,
-      )
-      .map((channel) => ({
-        value: channel.id,
-        label: channel.name,
-        icon: <Hash size={16} aria-hidden />,
-      }));
-    if (draft.channelId) {
-      if (!options.some((option) => option.value === draft.channelId)) {
-        options.push({
-          value: draft.channelId,
-          label: `${draft.channelId} (삭제된 채널)`,
-        });
-      }
-      // 채널 지정 해제 — 빈 값은 저장 시 null로 기록돼요
-      options.unshift({ value: "", label: "채널 지정 안 함" });
-    }
-    return options;
-  }, [channels, draft.channelId]);
-
   // 테스트 전송은 봇이 읽을 "저장된 설정"으로 실행돼요 — 편집 중인 내용은 저장 후 테스트해요.
   const testReady = saved.enabled && saved.channelId !== null;
 
@@ -402,15 +394,68 @@ function GreetingSection({
           label="메시지 채널"
           description="입장·퇴장 메시지와 카드 이미지가 보내질 텍스트 채널이에요."
         >
-          <SearchableSelect
-            searchable
-            options={channelOptions}
+          <ChannelSelect
+            channels={channels}
+            noneLabel="채널 지정 안 함"
             value={draft.channelId ?? ""}
             onChange={handleChannelChange}
             placeholder="채널을 선택해 주세요"
-            disabled={saving || channels === null}
+            disabled={saving}
           />
         </Field>
+
+        <Field
+          label="메시지 레이아웃"
+          description="컨테이너는 본문·이미지를 하나로 묶고 강조색을 보여줘요. 컴포넌트 목록은 꾸밈 없이 나열해요."
+        >
+          <Select
+            value={draft.layout}
+            items={LAYOUT_LABELS}
+            disabled={saving}
+            onValueChange={(value) =>
+              onPatch({ ...draft, layout: value as GreetingLayout })
+            }
+          >
+            <SelectTrigger className="w-full sm:w-56" aria-label="메시지 레이아웃">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {GREETING_LAYOUTS.map((layout) => (
+                <SelectItem key={layout} value={layout}>
+                  {LAYOUT_LABELS[layout]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
+        {draft.layout === "container" && (
+          <Field
+            label="강조색"
+            description={`컨테이너 왼쪽 선에 들어가는 색이에요. 봇 기본색을 되돌리면 ${DEFAULT_ACCENT_COLOR_HEX}을 써요.`}
+          >
+            <ColorPicker
+              value={draft.accentColor ?? DEFAULT_ACCENT_COLOR_HEX}
+              label="강조색"
+              disabled={saving}
+              presets={[DEFAULT_ACCENT_COLOR_HEX, ...COLOR_PRESETS]}
+              onChange={(color) => onPatch({ ...draft, accentColor: color })}
+            />
+            {draft.accentColor !== null && (
+              <div className="pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => onPatch({ ...draft, accentColor: null })}
+                  className="pointer-coarse:h-11"
+                >
+                  봇 기본색 사용
+                </Button>
+              </div>
+            )}
+          </Field>
+        )}
 
         <Field
           label="메시지 템플릿"

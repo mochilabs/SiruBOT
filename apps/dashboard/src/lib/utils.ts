@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { type ClassValue, clsx } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
@@ -26,4 +27,24 @@ const twMerge = extendTailwindMerge({
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
+}
+
+/**
+ * 소그룹 단일 선택(radio) 공용 키보드 이동 — 좌/우/위/아래 화살표로 항목을 순환해요.
+ * role="radio"를 쓰는 커스텀 그룹(색 프리셋, 정렬, 도형 등)이 함께 써요.
+ */
+export function radioArrowKeyDown(
+	items: readonly string[],
+	current: string,
+	onPick: (key: string) => void,
+): (event: KeyboardEvent) => void {
+	return (event) => {
+		const index = items.indexOf(current);
+		if (index < 0 || (event.key !== "ArrowRight" && event.key !== "ArrowLeft" && event.key !== "ArrowUp" && event.key !== "ArrowDown")) {
+			return;
+		}
+		event.preventDefault();
+		const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+		onPick(items[(index + step + items.length) % items.length]!);
+	};
 }

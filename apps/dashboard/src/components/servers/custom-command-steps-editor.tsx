@@ -11,7 +11,9 @@ import {
 } from "@sirubot/utils/customCommand";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 
-import { type DiscordRole, RoleSelect } from "@/components/discord/role-select";
+import { ChannelSelect } from "@/components/discord/channel-select";
+import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
+import { RoleSelect } from "@/components/discord/role-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,7 +24,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { DiscordChannelSummary } from "@/types/discord";
+import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
 
 import { CustomCommandDesigner } from "./custom-command-designer";
 
@@ -88,7 +90,7 @@ export function createStep(type: EditorStep["type"]): EditorStep {
 interface StepsEditorProps {
 	guildId: string;
 	steps: EditorStep[];
-	roles: DiscordRole[];
+	roles: DiscordRoleSummary[];
 	channels: DiscordChannelSummary[];
 	saving: boolean;
 	onChange: (steps: EditorStep[]) => void;
@@ -217,7 +219,7 @@ export function StepsEditor({
 interface StepFieldsProps {
 	guildId: string;
 	step: EditorStep;
-	roles: DiscordRole[];
+	roles: DiscordRoleSummary[];
 	channels: DiscordChannelSummary[];
 	saving: boolean;
 	onChange: (step: EditorStep) => void;
@@ -278,10 +280,8 @@ function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFi
 			return (
 				<RoleSelect
 					roles={roles}
-					value={step.roleId ? [step.roleId] : []}
-					onChange={(roleIds) =>
-						onChange({ type: step.type, roleId: roleIds[0] ?? "" })
-					}
+					value={step.roleId}
+					onChange={(roleId) => onChange({ type: step.type, roleId })}
 					placeholder="대상 역할을 선택해 주세요"
 					disabled={saving}
 				/>
@@ -373,11 +373,11 @@ function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFi
 					{step.condition.kind === "has_role" && (
 						<RoleSelect
 							roles={roles}
-							value={step.condition.roleId ? [step.condition.roleId] : []}
-							onChange={(roleIds) =>
+							value={step.condition.roleId}
+							onChange={(roleId) =>
 								onChange({
 									type: "if",
-									condition: { kind: "has_role", roleId: roleIds[0] ?? "" },
+									condition: { kind: "has_role", roleId },
 									then: step.then,
 									...(step.else ? { else: step.else } : {}),
 								})
@@ -387,38 +387,24 @@ function StepFields({ guildId, step, roles, channels, saving, onChange }: StepFi
 						/>
 					)}
 					{step.condition.kind === "channel_match" && (
-						<Select
+						<ChannelSelect
+							channels={channels}
+							types={CHANNEL_TYPE_GROUP.chat}
 							value={step.condition.channelId}
-							onValueChange={(value: string | null) =>
+							placeholder="확인할 채널을 선택해 주세요"
+							onChange={(value: string) =>
 								onChange({
 									type: "if",
 									condition: {
 										kind: "channel_match",
-										channelId: value ?? "",
+										channelId: value,
 									},
 									then: step.then,
 									...(step.else ? { else: step.else } : {}),
 								})
 							}
-						>
-							<SelectTrigger size="sm" aria-label="확인할 채널">
-								<SelectValue placeholder="확인할 채널을 선택해 주세요">
-									{(value: string) =>
-										`#${
-											channels.find((channel) => channel.id === value)?.name ??
-											value
-										}`
-									}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								{channels.map((channel) => (
-									<SelectItem key={channel.id} value={channel.id}>
-										#{channel.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+							disabled={saving}
+						/>
 					)}
 					{step.condition.kind === "arg_matches" && (
 						<div className="flex items-center gap-2">
