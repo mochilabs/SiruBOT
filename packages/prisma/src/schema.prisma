@@ -50,6 +50,7 @@ model Guild {
 
   history       GuildTrackHistory[]
   customCommands CustomCommand[]
+  assets        GuildAsset[]
 }
 
 // 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
@@ -72,6 +73,28 @@ model CustomCommand {
 
   @@unique([guildId, name])
   @@index([guildId])
+}
+
+/// 길드 이미지 에셋 — S3 스타일 스토리지(apps/storage)에 올린 파일의 메타데이터.
+/// 커스텀 명령어의 섹션 썸네일·미디어 갤러리가 url로 참조해요 (스펙은 https URL 계약 유지).
+model GuildAsset {
+  id         String   @id @default(uuid())
+  guildId    String
+  bucket     String
+  key        String
+  name       String
+  mimeType   String
+  sizeBytes  Int
+  /// 공개 GET URL — 스토리지가 돌려준 URL을 그대로 저장해요
+  url        String
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  guild      Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([bucket, key])
+  @@index([guildId, createdAt(sort: Desc)])
 }
 
 model Track {
