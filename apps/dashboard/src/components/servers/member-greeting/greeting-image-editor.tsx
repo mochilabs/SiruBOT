@@ -594,7 +594,7 @@ export function GreetingImageEditor({
             className="mx-auto block w-full cursor-crosshair touch-none rounded-card bg-muted lg:max-w-[74.667dvh]"
             style={{ aspectRatio: "1200 / 675" }}
             role="img"
-            aria-label="인사 카드 미리보기 — 레이어를 클릭해 선택하고 드래그로 옮겨요"
+            aria-label="인사 카드 미리보기, 레이어를 클릭해 선택하고 드래그로 옮겨요"
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={endDrag}
