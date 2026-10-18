@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
-import { CustomPlayer } from './player/customPlayer.ts';
+import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from './player/customPlayer.ts';
 import { isYouTubeSource } from '@sirubot/utils';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 
@@ -353,6 +353,16 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 };
 
 export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): Promise<void> => {
+	// 서버 예열 전이가 진행 중이면 관망한다 — 이 시점의 queue.add는 라이브러리
+	// queueEnd 안에서 current를 새 추천곡으로 시프트해 표시가 실제 재생과 어긋난다
+	// (서버가 이미 예열곡을 시작한 β 시나리오). 정상 전이는 trackStart가 이어준다.
+	const transitionState = (player as CustomPlayer).transitionState;
+	const consumedRecently =
+		transitionState?.preloadConsumedAt != null && Date.now() - transitionState.preloadConsumedAt < TRANSITION_CONFIRM_TIMEOUT_MS;
+	if (container.mixerService.isPreloaded(String(player.guildId)) || consumedRecently) {
+		container.logger.debug('[autoPlayRelated] Server-side transition in flight, skipping fallback');
+		return;
+	}
 	const relatedOn = await container.guildService.getRelated(player.guildId);
 	if (player.repeatMode == 'off' && relatedOn) {
 		if (lastPlayedTrack.info.identifier && isYouTubeSource(lastPlayedTrack.info.sourceName)) {
