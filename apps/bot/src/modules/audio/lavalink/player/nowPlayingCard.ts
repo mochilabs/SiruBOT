@@ -11,6 +11,7 @@ import { renderNowPlayingCard } from '../../../../services/dataApiClient.ts';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID, requesterIdOf } from '../requester.ts';
 import { currentChapterIndex, currentChapter } from './chapters.ts';
+import { nowPlayingTrack } from './nowPlaying.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { Track } from 'lavalink-client';
 
@@ -43,7 +44,7 @@ function getStore(): NowPlayingCardStore {
 }
 
 export function getNowPlayingCardKey(player: CustomPlayer): string | null {
-	const current = player.queue.current;
+	const current = nowPlayingTrack(player);
 	if (!current) return null;
 	// 카드는 정적이므로 진행바가 빠져 5초 위치 버킷은 더 이상 갱신 트리거가 아니다.
 	// 갱신 트리거: 트랙 변경 + 볼륨 변경 + 챕터 변경 + 일시정지/반복 상태 변경.
@@ -59,7 +60,7 @@ export function sameNowPlayingTrackIdentity(a: string, b: string): boolean {
 
 /** 신청자 — 카드에 박을 이름+아바타. 멤버 캐시에 없으면 null (텍스트 라인 멘션이 폴백) */
 function requesterInfo(player: CustomPlayer): { name: string; truncatedName: string; avatarUrl: string | null } | null {
-	const id = requesterIdOf(player.queue.current ?? undefined);
+	const id = requesterIdOf(nowPlayingTrack(player) ?? undefined);
 	if (!id) return null;
 	const member = container.client.guilds.cache.get(player.guildId)?.members.cache.get(id);
 	if (!member) return null;
@@ -128,7 +129,7 @@ function attachment(card: CachedCard, fresh: boolean): NowPlayingCardAttachment 
 }
 
 export async function resolveNowPlayingCard(player: CustomPlayer): Promise<NowPlayingCardAttachment | null> {
-	const current = player.queue.current;
+	const current = nowPlayingTrack(player);
 	const trackKey = getNowPlayingCardKey(player);
 	if (!current || !trackKey) return null;
 	const { cache: cardCache, pending: pendingCards, retryAfter } = getStore();

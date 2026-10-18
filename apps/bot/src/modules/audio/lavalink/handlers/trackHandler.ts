@@ -72,6 +72,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 		const preloadedIdentifier = this.container.mixerService.takePreloadedIdentifier(player.guildId);
 		const startedTrack = this.resolveStartedTrack(player, track, payload, preloadedIdentifier);
 		this.syncQueueToNowPlaying(player, startedTrack);
+		// 표시 확정 — 모든 NOWPLAYING 렌더러는 이 값을 그린다.
+		// (queue.current는 lavalink-client 전이 기계가 뒤늦게 덮어쓸 수 있다.)
+		player.transitionState.confirmedNowPlaying = startedTrack;
+		player.transitionState.serverConsumedTrack = null;
 		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
 		player.consecutiveErrors = 0;
 		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
@@ -134,6 +138,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			player.transitionState.preloadConsumedAt = Date.now();
+			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
+			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).
+			const preheated = player.queue.tracks[0] ?? null;
+			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
 			// β 순서(시작 먼저): 이미 다음 곡이 시작된 상태라면 확인 타이머가 필요 없다.
 			// α 순서(종료 먼저): 마지막 시작곡이 방금 끝났으므로 전이 확인 타이머를 건다.
 			if (!this.isTransitionAlreadyStarted(player, track)) {
@@ -207,6 +215,10 @@ export class TrackHandler extends BaseLavalinkHandler {
 		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			player.transitionState.preloadConsumedAt = Date.now();
+			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
+			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).
+			const preheated = player.queue.tracks[0] ?? null;
+			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
 			if (!this.isTransitionAlreadyStarted(player, track)) {
 				this.armWatchdog(player);
 			}
@@ -344,6 +356,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 		// 종료됐는데 지연 도착한 리커널이 current를 되살리지 않도록 기대치를 비운다.
 		player.transitionState.lastStartedEncoded = null;
 		player.transitionState.preloadConsumedAt = null;
+		player.transitionState.confirmedNowPlaying = null;
+		player.transitionState.serverConsumedTrack = null;
 		await this.container.playerNotifier.deleteController(player);
 
 		if (!player.transitionState.stopByCommand) {
@@ -376,6 +390,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.clearReconcile(player.guildId);
 		this.clearWatchdog(player.guildId);
 		player.transitionState.lastStartedEncoded = null;
+		player.transitionState.confirmedNowPlaying = null;
+		player.transitionState.serverConsumedTrack = null;
 		// 대시보드 라이브 뷰 — 플레이어 소멸 상태 추적기 정리
 		clearPlayerStateTracker(player.guildId);
 		await this.container.mixerService.clearNext(player).catch(() => null);
@@ -424,6 +440,15 @@ export class TrackHandler extends BaseLavalinkHandler {
 					`[transition] unexpected track started (guild ${player.guildId}): preloaded=${preloadedIdentifier}, started=${payloadIdentifier}`
 				);
 			}
+		}
+		// 아밍으로 소비·확정된 예열곡이 큐에서 빠진 뒤 시작되면(사용자가 큐를 바꿔
+		// 재예열된 경우) 서버 payload(file캐시 스냅샷 메타데이터) 대신 봇이 검색한
+		// 신선한 객체를 표시에 쓴다.
+		const consumed = player.transitionState?.serverConsumedTrack;
+		const consumedIdentifier = (consumed as { info?: { identifier?: unknown } } | null)?.info?.identifier;
+		if (consumed && typeof payloadIdentifier === 'string' && consumedIdentifier === payloadIdentifier) {
+			this.logger.debug(`[transition] trackStart resolved from the server-consumed preheat (guild ${player.guildId})`);
+			return consumed;
 		}
 		return this.lavalinkManager.utils.buildTrack(payload.track, undefined);
 	}

@@ -114,3 +114,23 @@ describe('buildPlayerStatePayload', () => {
 		expect(payload.queue[0]!.title).toBe('대기 곡');
 	});
 });
+
+describe('now-playing source', () => {
+	it('renders the confirmed now-playing track over a displaced queue.current', () => {
+		const payload = buildPlayerStatePayload({
+			...player(),
+			queue: {
+				current: { encoded: 'enc-x', info: { title: 'displaced', identifier: 'id-x', duration: 1 } },
+				tracks: []
+			},
+			transitionState: {
+				stopByCommand: false,
+				lastStartedEncoded: null,
+				preloadConsumedAt: null,
+				confirmedNowPlaying: { encoded: 'enc-a', info: { title: 'confirmed', identifier: 'id-a', duration: 1000 } },
+				serverConsumedTrack: null
+			}
+		} as never);
+		expect(payload.trackTitle).toBe('confirmed');
+	});
+});

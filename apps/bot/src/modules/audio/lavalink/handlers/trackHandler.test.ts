@@ -315,3 +315,23 @@ describe('startClientOwnedTrack race handling', () => {
 		expect(player.play).not.toHaveBeenCalled();
 	});
 });
+
+describe('resolveStartedTrack with a server-consumed preheat', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+	});
+
+	it('uses the consumed preheat over the server payload when the track left the queue', () => {
+		const { handler, buildTrack } = makeHandler();
+		const clientTrack = track('client-enc', 'id-a');
+		const consumed = track('fresh-enc', 'id-z');
+		const player = {
+			guildId: 'g',
+			queue: { tracks: [] },
+			transitionState: { serverConsumedTrack: consumed }
+		};
+		const resolved = handler.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), null);
+		expect(resolved).toBe(consumed);
+		expect(buildTrack).not.toHaveBeenCalled();
+	});
+});

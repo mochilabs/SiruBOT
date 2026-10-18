@@ -11,6 +11,7 @@ import { container } from '@sapphire/framework';
 import type { PlayerStatePayload, QueuedTrackSummary } from '@sirubot/utils';
 import type { Track } from 'lavalink-client';
 import { getUserQueuedTracks } from './autoPlayRelated.ts';
+import { nowPlayingTrack } from './player/nowPlaying.ts';
 import { requesterIdOf, resolveRequesterName } from './requester.ts';
 import type { CustomPlayer } from './player/customPlayer.ts';
 
@@ -39,7 +40,7 @@ function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: 
 /** 유저 표시 이름 조회 — 캐시 미스 시 비동기 fetch지만 퍼블리시는 fire-and-forget이므로 무관해요 */
 /** 플레이어에서 상태 스냅샷을 만들어요 (동기 — 이벤트 훅에서 안전) */
 export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayload {
-	const current = player.queue.current;
+	const current = nowPlayingTrack(player);
 	const queued = getUserQueuedTracks(player);
 	const requesterId = requesterIdOf(current ?? undefined);
 
