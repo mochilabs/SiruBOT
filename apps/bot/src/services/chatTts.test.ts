@@ -170,7 +170,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		await service.handleMessage(makeMessage(), '첫 메시지');
 		await flushAsync();
 
-		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('첫 메시지');
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('첫 메시지', { voice: undefined, speed: undefined, pitch: undefined });
 	});
 
 	it('merges messages arriving inside the 3s window into one clip', async () => {
@@ -187,7 +187,38 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 		await vi.advanceTimersByTimeAsync(TTS_MERGE_WINDOW_MS);
 		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(2);
-		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('두 번째 세 번째');
+		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('두 번째 세 번째', { voice: undefined, speed: undefined, pitch: undefined });
+	});
+
+	it('passes the user preset through to synthesize (voice/speed/pitch)', async () => {
+		const service = new ChatTtsService();
+		const player = makePlayer();
+		mocks.audio.getPlayer.mockReturnValue(player);
+
+		await service.handleMessage(makeMessage(), '프리셋 적용', { enabled: true, voice: 'edge:ko-KR-YoonNeural', speed: 1.25, pitch: -2 });
+		await flushAsync();
+
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('프리셋 적용', { voice: 'edge:ko-KR-YoonNeural', speed: 1.25, pitch: -2 });
+	});
+
+	it('carries the preset of the batch-seeding message through a merge batch', async () => {
+		vi.useFakeTimers();
+		const service = new ChatTtsService();
+		const player = makePlayer();
+		mocks.audio.getPlayer.mockReturnValue(player);
+
+		// 첫 메시지는 즉시 합성(프리셋 없음) — 두 번째가 병합 창을 여는데, 이때 프리셋이 배치에 저장된다
+		await service.handleMessage(makeMessage(), '첫 발화');
+		await flushAsync();
+		await service.handleMessage(makeMessage(), '배치 시작', { enabled: true, voice: 'melo:KR', speed: null, pitch: null });
+		await service.handleMessage(makeMessage(), '이어 말하기');
+		await vi.advanceTimersByTimeAsync(TTS_MERGE_WINDOW_MS);
+
+		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('배치 시작 이어 말하기', {
+			voice: 'melo:KR',
+			speed: undefined,
+			pitch: undefined
+		});
 	});
 
 	it('drops messages arriving after the merge window closed (late input race)', async () => {

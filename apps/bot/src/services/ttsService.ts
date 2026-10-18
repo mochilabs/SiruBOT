@@ -40,6 +40,21 @@ export interface TtsClip {
 	durationMs: number;
 }
 
+/** 사용자 프리셋 — voice는 engine:voice 식별자, speed/pitch는 미설정이면 엔진 기본값 */
+export interface TtsSynthOptions {
+	voice?: string;
+	speed?: number;
+	pitch?: number;
+}
+
+/** catalog 항목 — id는 SynthRequest.voice에 그대로 전달 가능한 engine:voice 식별자 */
+export interface TtsVoice {
+	id: string;
+	engine: string;
+	name: string;
+	languages: string[];
+}
+
 export class TtsError extends Error {
 	public constructor(
 		public readonly code: string,
@@ -105,7 +120,7 @@ export class TtsService {
 	 * 텍스트를 합성해 공개 URL로 돌려받는다.
 	 * 실패는 전부 TtsError로 던진다 — 호출부는 채널에 알리지 않고 조용히 스킵한다(명세 4.6).
 	 */
-	public async synthesize(text: string): Promise<TtsClip> {
+	public async synthesize(text: string, options?: TtsSynthOptions): Promise<TtsClip> {
 		const config = getTtsConfig();
 		if (!config) throw new TtsError('not_configured', 'siru_tts is not configured');
 		if (!(await this.isQuotaAvailable())) throw new TtsError('quota_blocked', 'daily character quota is nearly exhausted');
@@ -121,7 +136,14 @@ export class TtsService {
 				res = await fetch(`${config.url}/v1/synthesize`, {
 					method: 'POST',
 					headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ text, voice: config.defaultVoice, format: 'wav', return_url: true }),
+					body: JSON.stringify({
+						text,
+						voice: options?.voice ?? config.defaultVoice,
+						format: 'wav',
+						return_url: true,
+						...(options?.speed !== undefined ? { speed: options.speed } : {}),
+						...(options?.pitch !== undefined ? { pitch: options.pitch } : {})
+					}),
 					signal: AbortSignal.timeout(remaining)
 				});
 			} catch (error) {
@@ -138,6 +160,42 @@ export class TtsService {
 			break;
 		}
 		throw lastError ?? new TtsError('timeout', 'siru_tts synthesize budget exceeded');
+	}
+
+	/**
+	 * 음성 카탈로그 — /tts voice autocomplete용. 쿼리가 비어 있으면 전체 첫 페이지.
+	 * 실패 시 빈 배열 — autocomplete는 조용히 빈 선택지만 보여준다.
+	 */
+	public async listVoices(query?: string): Promise<TtsVoice[]> {
+		const config = getTtsConfig();
+		if (!config) return [];
+		const params = new URLSearchParams({ page_size: '25' });
+		const q = (query ?? '').trim();
+		if (q) params.set('q', q);
+		try {
+			const res = await fetch(`${config.url}/v1/voices?${params.toString()}`, {
+				headers: { Authorization: `Bearer ${config.apiKey}` },
+				signal: AbortSignal.timeout(TTS_PROBE_TIMEOUT_MS)
+			});
+			if (!res.ok) return [];
+			const body = (await res.json()) as { items?: unknown };
+			if (!Array.isArray(body.items)) return [];
+			const voices: TtsVoice[] = [];
+			for (const item of body.items) {
+				if (typeof item !== 'object' || item === null) continue;
+				const { id, engine, name, languages } = item as Record<string, unknown>;
+				if (typeof id !== 'string' || id.length === 0) continue;
+				voices.push({
+					id,
+					engine: typeof engine === 'string' ? engine : '',
+					name: typeof name === 'string' ? name : id,
+					languages: Array.isArray(languages) ? languages.filter((l): l is string => typeof l === 'string') : []
+				});
+			}
+			return voices;
+		} catch {
+			return [];
+		}
 	}
 
 	/**

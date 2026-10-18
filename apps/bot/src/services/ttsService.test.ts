@@ -13,8 +13,8 @@ function respondJson(status: number, body: unknown, headers?: Record<string, str
 	return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
 
-/** siru_tts 3개 엔드포인트를 URL별로 라우팅하는 fetch 목 */
-function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesize?: () => any }): void {
+/** siru_tts 엔드포인트를 URL별로 라우팅하는 fetch 목 */
+function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesize?: () => any; voices?: () => any }): void {
 	fetchMock.mockImplementation(async (input: string | URL | Request) => {
 		const url = String(input instanceof Request ? input.url : input);
 		if (url.includes('/v1/usage'))
@@ -22,6 +22,8 @@ function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesiz
 				? handlers.usage()
 				: respondJson(200, { resets_at: '2026-10-19T00:00:00+09:00', owner: { enabled: true, limit: 1000, used_chars: 10 }, user: null });
 		if (url.includes('/readyz')) return handlers.readyz ? handlers.readyz() : new Response('', { status: 200 });
+		if (url.includes('/v1/voices'))
+			return handlers.voices ? handlers.voices() : respondJson(200, { items: [], total: 0, page: 1, page_size: 25 });
 		if (url.includes('/v1/synthesize'))
 			return handlers.synthesize
 				? handlers.synthesize()
@@ -107,6 +109,44 @@ describe('TtsService synthesize', () => {
 		expect(clip).toEqual({ url: 'https://tts.example.com/v1/shared/Ab3', expiresIn: 600, format: 'wav', cache: 'hit', durationMs: 120 });
 		expect(sentBody).toEqual({ text: '안녕하세요', voice: 'edge:ko-KR-SunHiNeural', format: 'wav', return_url: true });
 		expect(auth).toBe('Bearer key');
+	});
+
+	it('merges the user preset (voice/speed/pitch) into the request body', async () => {
+		let sentBody: Record<string, unknown> = {};
+		routeFetch({
+			synthesize: () => {
+				const init = fetchMock.mock.calls.at(-1)?.[1] as RequestInit;
+				sentBody = JSON.parse(String(init.body));
+				return respondJson(200, {
+					url: 'https://tts.example.com/v1/shared/p',
+					expires_in: 600,
+					format: 'wav',
+					cache: 'miss',
+					duration_ms: 1
+				});
+			}
+		});
+		await new TtsService().synthesize('안녕', { voice: 'melo:KR', speed: 1.5, pitch: -3 });
+		expect(sentBody).toEqual({ text: '안녕', voice: 'melo:KR', format: 'wav', return_url: true, speed: 1.5, pitch: -3 });
+	});
+
+	it('omits speed/pitch when the preset leaves them unset', async () => {
+		let sentBody: Record<string, unknown> = {};
+		routeFetch({
+			synthesize: () => {
+				const init = fetchMock.mock.calls.at(-1)?.[1] as RequestInit;
+				sentBody = JSON.parse(String(init.body));
+				return respondJson(200, {
+					url: 'https://tts.example.com/v1/shared/p',
+					expires_in: 600,
+					format: 'wav',
+					cache: 'miss',
+					duration_ms: 1
+				});
+			}
+		});
+		await new TtsService().synthesize('안녕', { voice: 'melo:KR', speed: undefined, pitch: undefined });
+		expect(sentBody).toEqual({ text: '안녕', voice: 'melo:KR', format: 'wav', return_url: true });
 	});
 
 	it('retries once on 429 honoring Retry-After', async () => {
@@ -223,5 +263,51 @@ describe('TtsService quota guard', () => {
 	it('fails open when the usage snapshot cannot be fetched', async () => {
 		routeFetch({ usage: () => Promise.reject(new Error('network down')) });
 		await expect(new TtsService().synthesize('안녕')).resolves.toMatchObject({ url: 'https://tts.example.com/v1/shared/token' });
+	});
+});
+
+describe('TtsService listVoices', () => {
+	it('parses catalog items and passes the query through', async () => {
+		let requestedUrl = '';
+		routeFetch({
+			voices: () => {
+				requestedUrl = String(fetchMock.mock.calls.at(-1)?.[0]);
+				return respondJson(200, {
+					items: [
+						{
+							id: 'edge:ko-KR-SunHiNeural',
+							engine: 'edge',
+							name: 'SunHiNeural',
+							languages: ['ko-KR'],
+							styles: [],
+							emotions: [],
+							sample_url: null
+						},
+						{ id: 'melo:KR', engine: 'melo', name: '한국어', languages: ['ko'], styles: [], emotions: [], sample_url: null },
+						{ id: 42 }
+					],
+					total: 2,
+					page: 1,
+					page_size: 25
+				});
+			}
+		});
+		const voices = await new TtsService().listVoices('ko-KR');
+		expect(requestedUrl).toContain('/v1/voices?');
+		expect(requestedUrl).toContain('q=ko-KR');
+		expect(voices).toEqual([
+			{ id: 'edge:ko-KR-SunHiNeural', engine: 'edge', name: 'SunHiNeural', languages: ['ko-KR'] },
+			{ id: 'melo:KR', engine: 'melo', name: '한국어', languages: ['ko'] }
+		]);
+	});
+
+	it('returns an empty list when disabled, on error, or on a bad body', async () => {
+		envOff();
+		expect(await new TtsService().listVoices('x')).toEqual([]);
+		envOn();
+		routeFetch({ voices: () => Promise.reject(new Error('down')) });
+		expect(await new TtsService().listVoices()).toEqual([]);
+		routeFetch({ voices: () => respondJson(200, { items: 'nope' }) });
+		expect(await new TtsService().listVoices()).toEqual([]);
 	});
 });

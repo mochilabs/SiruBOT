@@ -35,6 +35,10 @@ export class ChatTtsListener extends Listener {
 		const settings = await this.container.guildService.getTtsSettings(message.guildId);
 		if (!isTtsEnabled(settings, message.channelId)) return;
 
+		// 사용자 opt-in: /tts on으로 낭독 대상에 포함된 사용자만 읽는다
+		const preset = await this.container.ttsUserSettings.get(message.guildId, message.author.id);
+		if (!preset.enabled) return;
+
 		// 봇이 음성에 연결돼 있을 때만 읽는다 — 자동 조인은 하지 않는다 (명세 4.1)
 		const player = this.container.audio.getPlayer(message.guildId) as CustomPlayer | null | undefined;
 		if (!player?.voiceChannelId || !player.connected) return;
@@ -47,6 +51,6 @@ export class ChatTtsListener extends Listener {
 		const text = preprocessTtsMessage(message);
 		if (!text) return;
 
-		await this.container.chatTtsService.handleMessage(message, text);
+		await this.container.chatTtsService.handleMessage(message, text, preset);
 	}
 }

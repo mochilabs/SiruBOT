@@ -4,6 +4,7 @@ import type { Track, UnresolvedTrack } from 'lavalink-client';
 import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { TtsClip, TtsError, getTtsConfig } from './ttsService.ts';
+import type { TtsUserPreset } from './ttsUserSettings.ts';
 
 /**
  * 채팅 TTS 오케스트레이터 — 메시지 전처리·병합·스로틀 후 클립을 재생 모드(오버레이/단독)로 dispatch한다.
@@ -82,6 +83,8 @@ interface MergeBatch {
 	startedAt: number;
 	userId: string;
 	timer: ReturnType<typeof setTimeout>;
+	/** 발화 시작 시점의 사용자 프리셋 — 병합된 메시지는 이 값으로 합성한다 */
+	preset?: TtsUserPreset;
 }
 
 interface SoloClip {
@@ -111,7 +114,7 @@ export class ChatTtsService {
 	 * text는 호출자가 preprocessTtsMessage로 전처리한 결과다 (빈 문자열이면 진입하지 않는다).
 	 * 실패는 전부 조용히 스킵하고 로그만 남긴다 (명세 4.6).
 	 */
-	public async handleMessage(message: Message<true>, text: string): Promise<void> {
+	public async handleMessage(message: Message<true>, text: string, preset?: TtsUserPreset): Promise<void> {
 		const guildId = message.guildId;
 		const channelId = message.channelId;
 		const userId = message.author.id;
@@ -132,17 +135,17 @@ export class ChatTtsService {
 
 		const last = state.lastSynthAt.get(userId) ?? 0;
 		if (now - last < TTS_USER_INTERVAL_MS) {
-			// 간격 안의 메시지는 새 병합 창을 열어 모았다가 한 발화로 합성한다
+			// 간격 안의 메시지는 새 병합 창을 열어 모았다가 한 발화로 합성한다 — 프리셋은 발화 시작 시점의 값을 쓴다
 			const timer = setTimeout(() => {
 				void this.flushBatch(guildId, batchKey);
 			}, TTS_MERGE_WINDOW_MS);
-			state.batches.set(batchKey, { parts: [text], startedAt: now, userId, timer });
+			state.batches.set(batchKey, { parts: [text], startedAt: now, userId, timer, preset });
 			return;
 		}
 
 		// 첫 메시지는 지연 없이 바로 합성한다
 		state.lastSynthAt.set(userId, now);
-		this.enqueueSynthesis(guildId, text.slice(0, TTS_CLIP_MAX_CHARS));
+		this.enqueueSynthesis(guildId, text.slice(0, TTS_CLIP_MAX_CHARS), preset);
 	}
 
 	/** 병합 창 종료 — 모인 메시지를 한 발화로 합성한다. */
@@ -153,11 +156,11 @@ export class ChatTtsService {
 		state.batches.delete(batchKey);
 		clearTimeout(batch.timer);
 		state.lastSynthAt.set(batch.userId, Date.now());
-		this.enqueueSynthesis(guildId, batch.parts.join(' ').slice(0, TTS_CLIP_MAX_CHARS));
+		this.enqueueSynthesis(guildId, batch.parts.join(' ').slice(0, TTS_CLIP_MAX_CHARS), batch.preset);
 	}
 
 	/** 합성 작업을 길드당 동시 2개 제한 아래로 넣고, dispatch는 메시지 순서대로 이어 붙인다. */
-	private enqueueSynthesis(guildId: string, text: string): void {
+	private enqueueSynthesis(guildId: string, text: string, preset?: TtsUserPreset): void {
 		const state = this.getGuildState(guildId);
 		const now = Date.now();
 		if (now - state.charWindow.start >= 60_000) {
@@ -174,7 +177,13 @@ export class ChatTtsService {
 			return;
 		}
 
-		const synth = this.withSynthSlot(state, () => container.ttsService.synthesize(text));
+		const synth = this.withSynthSlot(state, () =>
+			container.ttsService.synthesize(text, {
+				voice: preset?.voice ?? undefined,
+				speed: preset?.speed ?? undefined,
+				pitch: preset?.pitch ?? undefined
+			})
+		);
 		// dispatch는 seq 순서로 이어 붙인다 — 합성은 병렬로 끝나도 재생 순서는 메시지 순서를 지킨다
 		state.dispatchChain = state.dispatchChain
 			.then(async () => {

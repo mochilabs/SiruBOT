@@ -218,6 +218,23 @@ model ChannelChatHistory {
   @@index([guildId])
 }
 
+// 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in(off 기본)과 음성 프리셋(voice/speed/pitch)
+model TtsUserSetting {
+  guildId String
+  userId  String
+  // opt-in: 채팅 낭독 대상에 포함될지 (길드 단위)
+  enabled Boolean @default(false)
+  // 음성 프리셋: engine:voice 식별자. null이면 봇 기본 음성 사용
+  voice   String?
+  // 속도 0.25~4, 피치 -12~12. null이면 엔진 기본값
+  speed   Float?
+  pitch   Float?
+
+  updatedAt DateTime @updatedAt
+
+  @@id([guildId, userId])
+}
+
 // 사용자 메모리 — 에이전트가 memory 도구로 자동 갱신하는 장기/단기 기억
 model UserMemory {
   userId String @id

@@ -17,6 +17,7 @@ import { PlaylistService } from '../services/playlistService.ts';
 import { AudioService } from '../services/audioService.ts';
 import { MixerService } from '../services/mixerService.ts';
 import { TtsService } from '../services/ttsService.ts';
+import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
@@ -101,6 +102,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
 		container.ttsService = new TtsService();
+		container.ttsUserSettings = new TtsUserSettingsService();
 		container.chatTtsService = new ChatTtsService();
 		container.tempVoiceService = new TempVoiceService();
 		container.aiMemoryService = new AiMemoryService();
