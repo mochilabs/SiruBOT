@@ -4,6 +4,7 @@ import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPla
 import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { CHAPTER_FETCH_MIN_DURATION_MS, DEFAULT_COLOR, resolveYouTubeVideoId } from '@sirubot/utils';
 import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated.ts';
+import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { clearPlayerStateTracker, publishPlayerState } from '../playerStatePublisher.ts';
@@ -90,7 +91,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
-		if (startedTrack && !startedTrack.info.isStream) {
+		if (startedTrack && !startedTrack.info.isStream && !isTtsClip(startedTrack)) {
 			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
 			// fire-and-forget
 			this.container.trackService
@@ -103,7 +104,15 @@ export class TrackHandler extends BaseLavalinkHandler {
 		//        play 이전 prime이 실패했을 때의 재시도) → 다음 곡 예열.
 		// 슬롯 공백을 줄이기 위해 컨트롤러 알림과 병렬로 먼저 시작한다.
 		const mixerWiring = this.runMixerWiring(player, startedTrack);
-		await this.container.playerNotifier.onTrackStart(player);
+		if (isTtsClip(startedTrack)) {
+			// 채팅 TTS 클립마다 컨트롤러를 다시 보내면 메시지마다 리센드 스팸이 된다 — 알림만 생략한다.
+		} else {
+			await this.container.playerNotifier.onTrackStart(player);
+			// 음악이 시작되면 단독 대기 중이던 TTS 클립은 오버레이로 순서대로 넘어간다 (명세 4.3)
+			void this.container.chatTtsService
+				.drainSoloQueueToAnnounce(player)
+				.catch((error) => this.logger.warn(`[chatTts] solo queue drain failed (guild ${player.guildId}): ${error}`));
+		}
 		await mixerWiring;
 	}
 
@@ -135,6 +144,18 @@ export class TrackHandler extends BaseLavalinkHandler {
 		reportPlaybackEvent(player.guildId, 'track_end', track, { reason: payload.reason });
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
 		publishPlayerState(player);
+		// 채팅 TTS 클립 전용 진행 — 기존 전이 분기(예열 관망/클라이언트 진행)와 섞지 않는다 (명세 4.2).
+		if (this.container.chatTtsService.isTtsEnded(player, track)) {
+			if (payload.reason === 'replaced') {
+				// 치환은 새 트랙이 이미 시작되는 경로다 — 반복 모드 잔재만 걷어내고 관여하지 않는다.
+				this.container.chatTtsService.scrubTtsClips(player, track);
+				return;
+			}
+			void this.continueAfterTtsClip(player, track).catch((error) =>
+				this.logger.error(`Failed to continue after TTS clip (guild ${player.guildId}): ${error}`)
+			);
+			return;
+		}
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
 		if (this.container.mixerService.consumePreloaded(player.guildId)) {
 			player.transitionState.preloadConsumedAt = Date.now();
@@ -166,6 +187,63 @@ export class TrackHandler extends BaseLavalinkHandler {
 		}
 	}
 
+	/**
+	 * 채팅 TTS 클립 종료 후속 처리 (명세 4.2/4.3):
+	 * 반복 모드가 남긴 TTS 잔재를 걷어낸 뒤, 음악이 대기 중이면 음악을,
+	 * 아니면 내부 단독 큐의 다음 클립을 시작하고, 둘 다 없으면 조용히 끝낸다.
+	 * 알림·컨트롤러 삭제는 하지 않는다 (TTS 조용한 스킵 규칙).
+	 */
+	private async continueAfterTtsClip(player: CustomPlayer, track: Track | null): Promise<void> {
+		this.container.chatTtsService.scrubTtsClips(player, track);
+		if (player.transitionState.stopByCommand) {
+			this.container.chatTtsService.clearSoloQueue(player.guildId);
+			return;
+		}
+		// mixer 예열 슬롯이 남아 있으면 서버가 다음 트랙을 시작한다 — bookkeeping만 하고 관망한다.
+		if (this.container.mixerService.consumePreloaded(player.guildId)) {
+			player.transitionState.preloadConsumedAt = Date.now();
+			const preheated = player.queue.tracks[0] ?? null;
+			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
+			if (!this.isTransitionAlreadyStarted(player, track)) this.armWatchdog(player);
+			return;
+		}
+		if (this.watchdogs.has(player.guildId)) return;
+
+		const current = player.queue.current as Track | null;
+		if (current && !isTtsClip(current)) {
+			// 음악 대기 중 — 클라이언트가 다음 곡을 시작한다
+			await this.startClientOwnedTrack(player);
+			return;
+		}
+		if (current) {
+			// 이미 다음 TTS 클립이 시작됐다 (중복 이벤트) — 건드리지 않는다
+			return;
+		}
+		const seeded = await this.container.chatTtsService.seedNextSoloClip(player);
+		if (!seeded) {
+			await this.quietEndTts(player);
+			return;
+		}
+		const next = player.queue.tracks.shift();
+		if (next) player.queue.current = next as (typeof player.queue)['current'];
+		if (player.queue.current) {
+			await this.startClientOwnedTrack(player);
+			return;
+		}
+		await this.quietEndTts(player);
+	}
+
+	/** TTS 조용한 종료 — 알림·컨트롤러 삭제 없이 상태만 정리하고, TTS가 켜진 길드면 음성에 남는다. */
+	private async quietEndTts(player: CustomPlayer): Promise<void> {
+		player.transitionState.lastStartedEncoded = null;
+		player.transitionState.preloadConsumedAt = null;
+		player.transitionState.confirmedNowPlaying = null;
+		player.transitionState.serverConsumedTrack = null;
+		player.playing = false;
+		publishPlayerState(player);
+		await this.container.chatTtsService.keepAliveForTts(player);
+	}
+
 	private async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
 		await this.handleTrackFailure(player, track, 'stuck');
 	}
@@ -184,6 +262,17 @@ export class TrackHandler extends BaseLavalinkHandler {
 		kind: 'stuck' | 'error',
 		reason: string | null = null
 	) {
+		// 채팅 TTS 클립 실패는 조용히 스킵한다 (명세 4.6): 알림·연속 오류 중단 없이 다음 클립으로 진행한다.
+		if (isTtsClip(track)) {
+			this.logger.warn(`[chatTts] TTS clip ${kind} silently skipped (guild ${player.guildId})${reason ? ` (${reason})` : ''}`);
+			this.clearAdvancePending(player.guildId);
+			// 스킵이 trackEnd/queueEnd를 다시 태워 continueAfterTtsClip으로 이어진다 — 실패하면 직접 진행한다.
+			await this.container.mixerService.skip(player).catch((error) => {
+				this.logger.warn(`[chatTts] clip skip failed (guild ${player.guildId}), continuing directly: ${error}`);
+				return this.continueAfterTtsClip(player, track as Track | null);
+			});
+			return;
+		}
 		this.clearAdvancePending(player.guildId);
 		player.consecutiveErrors++;
 		this.logger.warn(
@@ -252,6 +341,21 @@ export class TrackHandler extends BaseLavalinkHandler {
 		reportPlaybackEvent(player.guildId, 'queue_end', track);
 		// 대시보드 라이브 뷰 — 큐 종료 상태를 즉시 반영 (fire-and-forget)
 		publishPlayerState(player);
+
+		// 채팅 TTS 클립으로 큐가 끝난 경우 (명세 4.2/4.3): 다음 단독 클립을 시드해 이어 읽고,
+		// 남은 클립이 없으면 조용히 끝낸다 — "모두 재생 완료" 알림·컨트롤러 삭제를 보내지 않는다.
+		if (this.container.chatTtsService.isTtsEnded(player, track)) {
+			if (player.transitionState.stopByCommand) {
+				this.container.chatTtsService.clearSoloQueue(player.guildId);
+				return;
+			}
+			const seeded = await this.container.chatTtsService.seedNextSoloClip(player);
+			if (!seeded) {
+				await this.quietEndTts(player);
+				return;
+			}
+			// 시드 성공 — 아래 기존 분기가 큐의 클립을 시작한다 (defer/watchdog 경로도 tracks에서 찾아 시작한다).
+		}
 
 		// 서버 예열 슬롯이 남아 있으면 서버가 content end에 자동 진행한다 —
 		// 이때 queueEnd를 처리하면 컨트롤러가 삭제되고 "큐 종료" 안내가 나가며,
@@ -348,6 +452,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 		// 대기열의 모든 곡이 끝났다.
 		await this.finishQueue(player);
+		// 채팅 TTS가 켜진 길드는 음악이 끝나도 음성에 남아 채팅을 계속 읽는다 (명세 4.2).
+		await this.container.chatTtsService.keepAliveForTts(player);
 	}
 
 	/** 큐의 실제 종료 처리: 컨트롤러를 삭제하고 안내를 보낸다. 전이 확정 리커널을 무효화한다. */
@@ -386,6 +492,7 @@ export class TrackHandler extends BaseLavalinkHandler {
 
 	private async handlePlayerDestroy(player: CustomPlayer): Promise<void> {
 		this.container.mixerService.markUnmanaged(player.guildId);
+		this.container.chatTtsService.clearGuild(player.guildId);
 		this.clearAdvancePending(player.guildId);
 		this.clearReconcile(player.guildId);
 		this.clearWatchdog(player.guildId);

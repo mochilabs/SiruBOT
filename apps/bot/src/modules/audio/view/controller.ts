@@ -26,7 +26,7 @@ import {
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPlayRelated.ts';
 import { repeatEmoji } from './repeat.ts';
-import { RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
+import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { nowPlayingTrack } from '../lavalink/player/nowPlaying.ts';
 import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters.ts';
@@ -234,7 +234,13 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	// 신청자
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	if (requesterId) {
-		contents.push(requesterId === RELATED_TRACK_REQUESTER_ID ? `-# 추천 곡 ${emoji('sparkle')}` : `-# 신청자: <@${requesterId}>`);
+		contents.push(
+			requesterId === RELATED_TRACK_REQUESTER_ID
+				? `-# 추천 곡 ${emoji('sparkle')}`
+				: requesterId === TTS_CLIP_REQUESTER_ID
+					? `-# 채팅 TTS`
+					: `-# 신청자: <@${requesterId}>`
+		);
 	}
 
 	// 상대 타임스탬프는 종료 직후 "0초 전"으로 남으므로, 양쪽 레이아웃에서 경과/전체 시간만 표시한다.
