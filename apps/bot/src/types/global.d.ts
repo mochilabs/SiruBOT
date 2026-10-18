@@ -49,6 +49,7 @@ declare module '@sapphire/pieces' {
 		audioService: import('../services/audioService.ts').AudioService;
 		mixerService: import('../services/mixerService.ts').MixerService;
 		ttsService: import('../services/ttsService.ts').TtsService;
+		chatTtsService: import('../services/chatTts.ts').ChatTtsService;
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
