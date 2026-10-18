@@ -22,6 +22,8 @@ export interface MixerStateResponse {
 	tailConfirmMs: number;
 	nextTrimMs: [number, number] | null;
 	announcementsQueued: number;
+	/** 서버 슬롯에 예열된 곡의 identifier — 재시작 복구 때 클라이언트 기록과 대조한다. 예전 JAR엔 없을 수 있다. */
+	nextTrackIdentifier?: string | null;
 }
 
 /** `POST /mixer/announce` 202 응답 — 안내가 큐에 쌓였다는 영수증. 오버레이 재생 시작이 아니다. */
@@ -239,6 +241,57 @@ export class MixerService {
 	/** 예열이 이뤄지지 않은 길드로 표시한다(클라이언트가 전이를 소유). */
 	public markUnmanaged(guildId: string): void {
 		this.clearPreloadedState(String(guildId));
+	}
+
+	/**
+	 * 봇 재시작 뒤 서버에 살아남은 mixer 상태와 클라이언트 기록을 맞춘다.
+	 *
+	 * session resume이 성공하면 서버는 예열 슬롯과 필터를 그대로 들고 있지만 새
+	 * 프로세스의 preloaded 기록은 비어 있어, 첫 trackEnd에서 관망(서버 소유 진행)
+	 * 대신 클라이언트 진행으로 새어 갭·이중 재생처럼 보인다. /mixer/state로 서버
+	 * 슬롯을 확인해 대기열 머리와 같은 곡이면 채택하고, 아니면 다시 예열한다.
+	 */
+	public async reconcileAfterResume(player: Player): Promise<void> {
+		const gid = String(player.guildId);
+		let state: MixerStateResponse;
+		try {
+			state = await this.getState(player);
+		} catch (error) {
+			if (error instanceof MixerRequestError && error.status === 404) {
+				// GuildMixer가 없다 = 서버가 플러그인 상태를 잃었다(예: 노드 재시작).
+				// 클라이언트 소유 진행으로 두고 다음 play에서 다시 prime한다.
+				this.markUnmanaged(gid);
+				this.markFiltersStale(gid);
+				return;
+			}
+			// 네트워크 실패 등은 기록을 모르는 채로 둔다 — 기존 클라이언트 진행 동작이 그대로 이어진다.
+			container.logger.warn(`[mixer] state probe failed after restore (guild ${player.guildId}): ${error}`);
+			return;
+		}
+
+		// 오버랩이 진행 중이면 손대지 않는다 — trackStart가 wiring을 다시 수행한다.
+		if (state.crossfadeActive) return;
+
+		const head = player.queue?.tracks?.[0];
+		if (!head) {
+			// 대기열이 비었는데 슬롯이 남아 있으면 stale 곡이 발화하는 것을 막는다.
+			this.clearPreloadedState(gid);
+			if (state.hasNext) await this.clearNext(player).catch(() => null);
+			return;
+		}
+
+		const headIdentifier = head.info?.identifier;
+		if (state.hasNext && typeof headIdentifier === 'string' && state.nextTrackIdentifier === headIdentifier) {
+			// 서버 슬롯이 대기열 머리와 같은 곡 → 그대로 채택해 첫 전이를 서버 소유로 잇는다.
+			this.preloaded.add(gid);
+			this.preloadedIdentifiers.set(gid, headIdentifier);
+			return;
+		}
+
+		// 슬롯이 비었거나 다른 곡이다 → 기록을 비우고 머리 곡으로 다시 예열한다.
+		this.clearPreloadedState(gid);
+		await this.clearNext(player).catch(() => null);
+		await this.preloadUpcoming(player);
 	}
 
 	public async clearNext(player: Player): Promise<void> {

@@ -256,6 +256,12 @@ export class NodeHandler extends BaseLavalinkHandler {
 		createdPlayer.paused = lavalinkPlayer.paused;
 		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
+		// 재시작 프로세스의 mixer 기록(preloaded)은 비어 있지만 서버는 슬롯을 들고
+		// 있다 — 서버 상태와 맞춰 첫 전이가 서버 소유(갭리스·크로스페이드)로 이어지게 한다.
+		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
+			this.logger.warn(`Mixer reconcile after resume failed at ${lavalinkPlayer.guildId}: ${error}`);
+		});
+
 		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
 	}
 
@@ -465,6 +471,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 		if (saved.paused) {
 			await createdPlayer.pause().catch(() => null);
 		}
+
+		// 서버 플레이어가 살아 있어 noReplace play가 trackStart를 발화하지 않으면
+		// 예열 슬롯 복구가 빠진다. 여기서 확인해 두면 새 세션(trackStart 경로)과
+		// 서버 생존(noReplace 경로) 모두 슬롯이 이어진다(slot 직렬화로 idempotent).
+		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
+			this.logger.warn(`Mixer reconcile after fresh restore failed at ${guildId}: ${error}`);
+		});
 
 		this.logger.info(`Fresh restore finished at ${guildId} (position ${Math.round(position / 1000)}s${saved.paused ? ', paused' : ''})`);
 	}
