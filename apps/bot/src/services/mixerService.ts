@@ -325,9 +325,24 @@ export class MixerService {
 	/**
 	 * 사용자 스킵 전용: 예열 슬롯을 먼저 비운 뒤 스킵한다.
 	 * 직접 `player.skip()`을 부르면 stale 예열곡이 다음 trackEnd 때 재생된다.
+	 * 슬롯 정리 실패를 삼키면(stale 곡 발화의 통로) 그대로 전파한다 — 호출부가
+	 * 사용자 안내로 변환하거나 watchdog 복구에 맡긴다.
 	 */
 	public async skip(player: Player, position?: number): Promise<void> {
-		await this.clearNext(player).catch(() => null);
+		await this.clearNext(player);
 		await player.skip(position);
+	}
+
+	/** 정지·소멸 경로 전용: 슬롯 정리 실패를 1회 재시도하고, 그래도 실패하면 로그로 남긴다. */
+	public async clearNextLenient(player: Player): Promise<void> {
+		try {
+			await this.clearNext(player);
+		} catch {
+			try {
+				await this.clearNext(player);
+			} catch (retryError) {
+				container.logger.warn(`[mixer] clearNext failed twice (guild ${player.guildId}); stale slot heals on next prime: ${retryError}`);
+			}
+		}
 	}
 }

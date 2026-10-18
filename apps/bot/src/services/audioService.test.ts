@@ -62,7 +62,7 @@ describe('handleSkip branch matrix', () => {
 	it('skips immediately when the requester started the current track (no vote)', async () => {
 		const context = makeContext({ requesterId: 'requester', queueTracks: [track('other-user')] });
 		await service.handleSkip(context, false, 0);
-		expect(mixerSkip).toHaveBeenCalledWith(context.player);
+		expect(mixerSkip).toHaveBeenCalledWith(context.player, undefined);
 		expect(context.interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
@@ -128,5 +128,14 @@ describe('handleSkip branch matrix', () => {
 		await service.handleSkip(context, false, 2);
 		expect(mixerSkip).toHaveBeenCalledWith(context.player, 2);
 		expect(context.interaction.reply).toHaveBeenCalled();
+	});
+});
+
+describe('mixer slot fail-closed', () => {
+	it('surfaces a user error when the preheated slot could not be cleared', async () => {
+		const context = makeContext({ requesterId: 'bot-self', members: 3, queueTracks: [] });
+		mixerSkip.mockRejectedValueOnce(new Error('mixer down'));
+		await expectUserError(service.handleSkip(context, false, 0), 'skip_mixer_failed');
+		expect(context.interaction.reply).not.toHaveBeenCalled();
 	});
 });

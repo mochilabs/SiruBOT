@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from 'lavalink-client';
-import { normalizeTitle, titleSimilarity, pickBySimilarity, fetchRelatedCandidate } from './autoPlayRelated.ts';
+import { normalizeTitle, titleSimilarity, pickBySimilarity, fetchRelatedCandidate, autoPlayRelated } from './autoPlayRelated.ts';
 
 const { container } = vi.hoisted(() => ({
-	container: { logger: { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }
+	container: {
+		logger: { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		mixerService: { isPreloaded: vi.fn(() => false) },
+		guildService: { getRelated: vi.fn(async () => false) }
+	}
 }));
 
 vi.mock('@sapphire/framework', () => ({ container }));
@@ -156,5 +160,37 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 			queue: { current: null, previous: [], tracks: [] }
 		} as unknown as Parameters<typeof fetchRelatedCandidate>[0];
 		expect(await fetchRelatedCandidate(errorPlayer, reference)).toBeNull();
+	});
+});
+
+describe('autoPlayRelated transition gate', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		(container.mixerService.isPreloaded as ReturnType<typeof vi.fn>).mockReturnValue(false);
+	});
+
+	function gatePlayer(transitionState: Record<string, unknown> = {}) {
+		return {
+			guildId: 'g',
+			repeatMode: 'off',
+			transitionState,
+			queue: { current: null, tracks: [], previous: [] }
+		} as never;
+	}
+
+	it('skips while the server-side transition is in flight (preheated slot)', async () => {
+		(container.mixerService.isPreloaded as ReturnType<typeof vi.fn>).mockReturnValue(true);
+		await autoPlayRelated(gatePlayer(), track('Current', 'current-id'));
+		expect(container.guildService.getRelated).not.toHaveBeenCalled();
+	});
+
+	it('skips right after a preheated slot was consumed', async () => {
+		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() }), track('Current', 'current-id'));
+		expect(container.guildService.getRelated).not.toHaveBeenCalled();
+	});
+
+	it('runs normally outside the confirm window', async () => {
+		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() - 60_000 }), track('Current', 'current-id'));
+		expect(container.guildService.getRelated).toHaveBeenCalled();
 	});
 });

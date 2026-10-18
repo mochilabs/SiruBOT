@@ -344,7 +344,9 @@ export class AudioService {
 	 */
 	public async stopPlayback(player: CustomPlayer): Promise<void> {
 		player.transitionState.stopByCommand = true;
-		await container.mixerService.clearNext(player).catch(() => null);
+		// 정지는 플레이어가 곧 사라지므로 슬롯 정리 실패가 치명적이진 않다 — 다만
+		// 무기록으로 남기지 않도록 재시도 후 로그로 남긴다 (P2).
+		await container.mixerService.clearNextLenient(player);
 		await player.stopPlaying().catch(() => null);
 		await player.disconnect().catch(() => null);
 	}
@@ -447,7 +449,7 @@ export class AudioService {
 		const { currentTrack, interaction, player } = context;
 
 		if (this.isTrackRequestedByBot(currentTrack)) {
-			await container.mixerService.skip(player, 0);
+			await this.skipViaMixer(player, 0);
 			await interaction.reply({
 				components: [skipView.trackRelatedSkipped({ track: currentTrack })],
 				flags: [MessageFlags.IsComponentsV2]
@@ -479,11 +481,27 @@ export class AudioService {
 	/** 공용 스킵 피드백 — 스킵 실행 후 지정된 뷰로 즉시 응답한다 (요청자/추천곡/단독/강제 스킵이 공유). */
 	private async skipAndReply(context: SkipContext, components: ReturnType<typeof skipView.trackSkipped>): Promise<void> {
 		const { player, interaction } = context;
-		await container.mixerService.skip(player);
+		await this.skipViaMixer(player);
 		await interaction.reply({
 			components: [components],
 			flags: [MessageFlags.IsComponentsV2]
 		});
+	}
+
+	/**
+	 * mixer 경유 스킵 — 예열 슬롯 정리가 실패하면 스킵을 진행하지 않는다 (stale 예열곡이
+	 * 뒤늦게 재생되는 통로). 실패는 사용자 재시도 안내로 변환한다.
+	 */
+	private async skipViaMixer(player: Player, position?: number): Promise<void> {
+		try {
+			await container.mixerService.skip(player, position);
+		} catch {
+			throw new UserError({
+				identifier: 'skip_mixer_failed',
+				message: '⚠️ 예열된 곡을 정리하지 못해 스킵하지 못했어요. 잠시 후 다시 시도해 주세요.',
+				context: { ephemeral: true }
+			});
+		}
 	}
 
 	private async handleVoteSkip(context: SkipContext): Promise<void> {
@@ -529,7 +547,7 @@ export class AudioService {
 
 		const track = player.queue.tracks[to - 1] as Track;
 
-		await container.mixerService.skip(player, to);
+		await this.skipViaMixer(player, to);
 		await interaction.reply({
 			components: [
 				skipView.trackSkippedTo({

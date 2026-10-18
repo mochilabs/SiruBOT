@@ -12,6 +12,9 @@ export type CustomPlayerJson = PlayerJson & {
 	messageId: string | null;
 };
 
+/** 예열 소비 확인 창(ms) — TrackHandler의 watchdog·reconcile과 autoPlayRelated 게이트가 공유한다. */
+export const TRANSITION_CONFIRM_TIMEOUT_MS = Number(process.env.MIXER_CONFIRM_TIMEOUT_MS) || 5000;
+
 /**
  * 클라이언트 전이 상태 — 무형 setData/getData 문자열 키 대신, 불변식이 타입으로 걸리는 3개 값.
  * 프로세스 로컬(재시작 복구 대상 아님) — toJSON에 포함되지 않는다.

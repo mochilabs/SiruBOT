@@ -1,12 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
 import type { Track, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
 
-const { getSubLogger, reportPlaybackEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportPlaybackEvent: vi.fn() }));
+const { getSubLogger, reportPlaybackEvent, playerNotifierUpdate, mixerService } = vi.hoisted(() => ({
+	getSubLogger: vi.fn(),
+	reportPlaybackEvent: vi.fn(),
+	playerNotifierUpdate: vi.fn(),
+	mixerService: {
+		markUnmanaged: vi.fn(),
+		isPreloaded: vi.fn(() => false),
+		skip: vi.fn(),
+		clearNext: vi.fn(),
+		primeForPlay: vi.fn(),
+		takePreloadedIdentifier: vi.fn(() => null)
+	}
+}));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger } } }));
+vi.mock('@sapphire/framework', () => ({
+	container: { logger: { getSubLogger }, playerNotifier: { updateController: playerNotifierUpdate }, mixerService }
+}));
 vi.mock('../../../../services/playbackReporter.ts', () => ({ reportPlaybackEvent }));
 
 function makeHandler() {
@@ -172,5 +186,132 @@ describe('trackError 사유 보고 (상태 페이지 최근 재생 오류)', () 
 			error: ''
 		});
 		expect(reportPlaybackEvent.mock.calls[0][3]).toEqual({ consecutiveErrors: 1 });
+	});
+});
+
+function transitionPlayer(serverResponse: unknown) {
+	return {
+		guildId: 'g',
+		queue: { current: null, tracks: [], previous: [] },
+		playing: true,
+		paused: false,
+		transitionState: { stopByCommand: false, lastStartedEncoded: null, preloadConsumedAt: null },
+		node: { fetchPlayer: vi.fn(async () => serverResponse) },
+		play: vi.fn()
+	} as unknown as { [key: string]: any };
+}
+
+describe('reconcileNowPlaying', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.clearAllMocks();
+	});
+
+	it('restores the started track when the server is playing the same video', async () => {
+		const { handler } = makeHandler();
+		const started = track('started-enc', 'id-a');
+		const displaced = track('displaced-enc', 'id-x');
+		const player = transitionPlayer({ track: { encoded: 'server-enc', info: { identifier: 'id-a' } }, paused: false });
+		player.queue.current = displaced;
+		player.transitionState.lastStartedEncoded = 'started-enc';
+
+		await handler.reconcileNowPlaying(player, started, 'started-enc');
+
+		expect(player.queue.current).toBe(started);
+		expect(player.queue.tracks[0]).toBe(displaced);
+	});
+
+	it('follows the server when it is playing a different track', async () => {
+		const { handler } = makeHandler();
+		const started = track('started-enc', 'id-a');
+		const displaced = track('displaced-enc', 'id-x');
+		const player = transitionPlayer({ track: { encoded: 'server-enc', info: { identifier: 'id-z' } }, paused: false });
+		player.queue.current = displaced;
+		player.transitionState.lastStartedEncoded = 'started-enc';
+
+		await handler.reconcileNowPlaying(player, started, 'started-enc');
+
+		expect(player.queue.current).toEqual(expect.objectContaining({ encoded: 'server-enc' }));
+		expect(player.transitionState.lastStartedEncoded).toBe('server-enc');
+	});
+
+	it('does not resurrect a finished queue when the server has no track', async () => {
+		const { handler } = makeHandler();
+		const started = track('started-enc', 'id-a');
+		const displaced = track('displaced-enc', 'id-x');
+		const player = transitionPlayer({ track: null, paused: false });
+		player.queue.current = displaced;
+		player.transitionState.lastStartedEncoded = 'started-enc';
+
+		await handler.reconcileNowPlaying(player, started, 'started-enc');
+
+		expect(player.queue.current).toBe(displaced);
+		expect(playerNotifierUpdate).not.toHaveBeenCalled();
+	});
+
+	it('restores conservatively when the server cannot be queried', async () => {
+		const { handler } = makeHandler();
+		const started = track('started-enc', 'id-a');
+		const player = transitionPlayer(null);
+		(player.node.fetchPlayer as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('down'));
+		player.queue.current = track('displaced-enc', 'id-x');
+		player.transitionState.lastStartedEncoded = 'started-enc';
+
+		await handler.reconcileNowPlaying(player, started, 'started-enc');
+
+		expect(player.queue.current).toBe(started);
+	});
+
+	it('reconciles through the timer after the delay', async () => {
+		const { handler } = makeHandler();
+		const started = track('started-enc', 'id-a');
+		const player = transitionPlayer({ track: { encoded: 'started-enc', info: { identifier: 'id-a' } }, paused: false });
+		player.queue.current = started;
+		handler.setLastStarted(player, started);
+		// 라이브러리의 지연 continuation이 current를 밀어낸 상황 재현
+		player.queue.current = track('displaced-enc', 'id-x');
+
+		await vi.advanceTimersByTimeAsync(900);
+
+		expect(player.queue.current).toBe(started);
+	});
+});
+
+describe('startClientOwnedTrack race handling', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.clearAllMocks();
+	});
+
+	it('stamps the current track only when the server agrees with it', async () => {
+		const { handler } = makeHandler();
+		const current = track('client-enc', 'id-b');
+		const player = transitionPlayer({ track: { encoded: 'server-enc', info: { identifier: 'id-b' } }, paused: false });
+		player.queue.current = current;
+
+		await handler.startClientOwnedTrack(player);
+
+		expect(player.transitionState.lastStartedEncoded).toBe('client-enc');
+		expect(player.play).not.toHaveBeenCalled();
+	});
+
+	it('follows the server track when the client advance lost the race', async () => {
+		const { handler } = makeHandler();
+		const player = transitionPlayer({ track: { encoded: 'server-enc', info: { identifier: 'id-a' } }, paused: false });
+		player.queue.current = track('client-enc', 'id-b');
+
+		await handler.startClientOwnedTrack(player);
+
+		expect(player.queue.current).toEqual(expect.objectContaining({ encoded: 'server-enc' }));
+		expect(player.transitionState.lastStartedEncoded).toBe('server-enc');
+		expect(player.play).not.toHaveBeenCalled();
 	});
 });
