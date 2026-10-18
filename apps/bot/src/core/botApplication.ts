@@ -16,6 +16,7 @@ import { TrackService } from '../services/trackService.ts';
 import { PlaylistService } from '../services/playlistService.ts';
 import { AudioService } from '../services/audioService.ts';
 import { MixerService } from '../services/mixerService.ts';
+import { TtsService } from '../services/ttsService.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
@@ -98,6 +99,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.playlistService = new PlaylistService();
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
+		container.ttsService = new TtsService();
 		container.tempVoiceService = new TempVoiceService();
 		container.aiMemoryService = new AiMemoryService();
 
