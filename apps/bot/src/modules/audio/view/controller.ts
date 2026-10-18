@@ -28,6 +28,7 @@ import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPla
 import { repeatEmoji } from './repeat.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { nowPlayingTrack } from '../lavalink/player/nowPlaying.ts';
 import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters.ts';
 
 type controllerViewProps = {
@@ -45,7 +46,8 @@ const wrapPrefix = (customId: string) => {
 export function controllerView({ player, volume, textChannelId, nowPlayingCardUrl }: controllerViewProps) {
 	const containerComponent = createContainer();
 
-	const current = player.queue.current;
+	// NOWPLAYING 표시는 trackStart 확정 트랙을 본다 (queue.current는 전이 기계가 덮어쓴다).
+	const current = nowPlayingTrack(player);
 	// 선예열한 추천곡은 대기열이 아니므로 개수·남은 시간·다음 곡 안내에서 제외한다.
 	const queuedTracks = getUserQueuedTracks(player);
 	const queueCount = queuedTracks.length;

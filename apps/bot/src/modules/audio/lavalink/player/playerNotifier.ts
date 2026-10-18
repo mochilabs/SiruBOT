@@ -5,6 +5,7 @@ import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord
 import { enqueueOperation } from '@sirubot/utils';
 
 import { CustomPlayer } from './customPlayer.ts';
+import { nowPlayingTrack } from './nowPlaying.ts';
 import { buildControllerCardPayload } from './controllerPayload.ts';
 import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import { Guild } from '@sirubot/prisma';
@@ -138,7 +139,7 @@ export class PlayerNotifier {
 			}
 			player.messageId = message.id;
 			player.controller = message;
-			this.renderedSignatures.set(message, JSON.stringify(components.toJSON()));
+			this.renderedSignatures.set(message, this.renderSignature(player, components));
 			this.cardTrackKeys.set(message, card ? card.trackKey : '');
 			if (pinnedChannel && !getCachedNowPlayingCard(player)) this.startCardRefresh(player, message.id, Boolean(interaction));
 			this.ensureProgressTick(player);
@@ -166,6 +167,15 @@ export class PlayerNotifier {
 		this.debounceTimers.set(player.guildId, timer);
 	}
 
+	/**
+	 * 편집 생략 판별용 시그니처 — 트랙 identity를 포함한다. 카드 모드에서 트랙
+	 * 식별자가 이미지 첨부에만 실려 있어, 컴포넌트 JSON만 비교하면 전이 직후의
+	 * 편집이 스킵될 수 있다.
+	 */
+	private renderSignature(player: CustomPlayer, components: { toJSON(): unknown }): string {
+		return `${nowPlayingTrack(player)?.encoded ?? ''}::${JSON.stringify(components.toJSON())}`;
+	}
+
 	private async updateControllerNow(player: CustomPlayer, allowDisabled = false): Promise<void> {
 		const message = player.controller;
 		const version = this.controllerVersions.get(player) ?? 0;
@@ -189,7 +199,7 @@ export class PlayerNotifier {
 				previousTrackKey: this.cardTrackKeys.get(message) ?? ''
 			});
 			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(player) === null;
-			const signature = JSON.stringify(components.toJSON());
+			const signature = this.renderSignature(player, components);
 			if (files.length === 0 && this.renderedSignatures.get(message) === signature) {
 				if (missingCurrent) this.startCardRefresh(player, message.id, allowDisabled);
 				this.ensureProgressTick(player);

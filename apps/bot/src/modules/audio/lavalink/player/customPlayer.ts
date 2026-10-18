@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { LavalinkManager, Player, PlayerJson, PlayerOptions } from 'lavalink-client';
+import { LavalinkManager, Player, PlayerJson, PlayerOptions, Track } from 'lavalink-client';
 
 type Chapter = {
 	name: string;
@@ -26,6 +26,14 @@ export type TransitionState = {
 	lastStartedEncoded: string | null;
 	/** 예열 소비 확인 창 시작 시각 — trackStart 확정 시 해제 */
 	preloadConsumedAt: number | null;
+	/**
+	 * trackStart로 확정된 표시 트랙 — NOWPLAYING 렌더러의 단일 소스.
+	 * `queue.current`는 lavalink-client의 전이 기계(지연 shift, queueEnd 시프트)가
+	 * 수시로 덮어쓰므로 표시 근거로 쓰지 않는다. [nowPlayingTrack]로 읽는다.
+	 */
+	confirmedNowPlaying: Track | null;
+	/** 예열 슬롯을 서버가 소비·재생 확정한 트랙 — 큐에서 빠진 예열곡의 표시 메타데이터 출처 */
+	serverConsumedTrack: Track | null;
 };
 
 export class CustomPlayer extends Player {
@@ -38,7 +46,13 @@ export class CustomPlayer extends Player {
 	public queueSelectedIndex: number | null = null;
 	public activeFilters: string[] = [];
 	public consecutiveErrors: number = 0;
-	public transitionState: TransitionState = { stopByCommand: false, lastStartedEncoded: null, preloadConsumedAt: null };
+	public transitionState: TransitionState = {
+		stopByCommand: false,
+		lastStartedEncoded: null,
+		preloadConsumedAt: null,
+		confirmedNowPlaying: null,
+		serverConsumedTrack: null
+	};
 
 	constructor(options: PlayerOptions, LavalinkManager: LavalinkManager, dontEmitPlayerCreateEvent?: boolean) {
 		super(options, LavalinkManager, dontEmitPlayerCreateEvent);
