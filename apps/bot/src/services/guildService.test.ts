@@ -143,3 +143,107 @@ describe('GuildService TTS settings', () => {
 		expect(isTtsEnabled({ mode: 'channels', channelIds: [] }, 'chan')).toBe(false);
 	});
 });
+
+describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
+	beforeEach(() => {
+		upsert.mockReset();
+	});
+
+	/**
+	 * 읽기(현재 설정 조회) → 쓰기(토글 반영) 순서로 upsert가 두 번 호출돼요.
+	 * 첫 번째는 현재 상태, 두 번째는 반영 결과를 반환하게 해요.
+	 */
+	function seed(read: Guild, written: Guild) {
+		upsert.mockResolvedValueOnce(read).mockResolvedValueOnce(written);
+	}
+
+	it('켜기: off → channels + [채널]', async () => {
+		seed({ ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'channels', ttsChannelIds: ['chan'] } as Guild);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'chan', true, []);
+		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
+		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['chan'] });
+	});
+
+	it('켜기: channels → 목록에 추가(중복 없음)', async () => {
+		seed(
+			{ ...guild(), ttsMode: 'channels', ttsChannelIds: ['a', 'b'] } as Guild,
+			{
+				...guild(),
+				ttsMode: 'channels',
+				ttsChannelIds: ['a', 'b', 'c']
+			} as Guild
+		);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'c', true, []);
+		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'b', 'c'] });
+	});
+
+	it('켜기: all이면 그대로 (이미 전체 허용)', async () => {
+		seed({ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'chan', true, []);
+		expect(result).toEqual({ mode: 'all', channelIds: [] });
+		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'all', ttsChannelIds: [] });
+	});
+
+	it('끄기: channels → 목록에서 제거', async () => {
+		seed(
+			{ ...guild(), ttsMode: 'channels', ttsChannelIds: ['a', 'b'] } as Guild,
+			{
+				...guild(),
+				ttsMode: 'channels',
+				ttsChannelIds: ['b']
+			} as Guild
+		);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'a', false, []);
+		expect(result).toEqual({ mode: 'channels', channelIds: ['b'] });
+		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['b'] });
+	});
+
+	it('끄기: 목록이 비면 off', async () => {
+		seed({ ...guild(), ttsMode: 'channels', ttsChannelIds: ['a'] } as Guild, { ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'a', false, []);
+		expect(result).toEqual({ mode: 'off', channelIds: [] });
+		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'off', ttsChannelIds: [] });
+	});
+
+	it('끄기: all → 나머지 텍스트 채널을 목록으로 승계', async () => {
+		seed(
+			{ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild,
+			{
+				...guild(),
+				ttsMode: 'channels',
+				ttsChannelIds: ['a', 'c']
+			} as Guild
+		);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'b', false, ['a', 'b', 'c']);
+		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'c'] });
+		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['a', 'c'] });
+	});
+
+	it('끄기: all인데 남는 채널이 없으면 off', async () => {
+		seed({ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild);
+		const service = new GuildService();
+		const result = await service.setChannelTtsEnabled('guild', 'a', false, ['a']);
+		expect(result).toEqual({ mode: 'off', channelIds: [] });
+	});
+
+	it('AI 채팅 채널 토글도 같은 규칙을 공유한다 (computeChannelToggle)', async () => {
+		seed(
+			{ ...guild(), aiMode: 'off', aiChannelIds: [] } as Guild,
+			{
+				...guild(),
+				aiMode: 'channels',
+				aiChannelIds: ['chan']
+			} as Guild
+		);
+		const service = new GuildService();
+		const result = await service.setChannelAiEnabled('guild', 'chan', true, []);
+		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
+		expect(upsert.mock.calls[1][0].update).toEqual({ aiMode: 'channels', aiChannelIds: ['chan'] });
+	});
+});

@@ -93,3 +93,46 @@ describe('node event reporting (상태 페이지 최근 오류)', () => {
 		expect(reportNodeEvent).toHaveBeenCalledWith('main', 'node_error', 'boom');
 	});
 });
+
+describe('mixer op handling (raw + error)', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		getSubLogger.mockReturnValue(stubLogger);
+		reportNodeEvent.mockClear();
+		stubLogger.debug.mockClear();
+		stubLogger.error.mockClear();
+		Object.assign(container, {
+			mixerService: { observeMixerEvent: vi.fn() }
+		});
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('mixer op를 MixerService에 넘기고 ready 복구는 돌리지 않는다', () => {
+		const handler = makeHandler();
+		const payload = { op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: '123' };
+		handler.handleNodeRaw({ id: 'main', options: { id: 'main' }, sessionId: 's1' }, payload);
+
+		expect(container.mixerService.observeMixerEvent).toHaveBeenCalledWith(payload);
+		expect(handler.restoreTimers.size).toBe(0);
+	});
+
+	it('ready op는 여전히 세션 복구 타이머를 건다', () => {
+		const handler = makeHandler();
+		handler.handleNodeRaw({ id: 'main', options: { id: 'main' }, sessionId: 's1' }, { op: 'ready', resumed: true });
+
+		expect(container.mixerService.observeMixerEvent).not.toHaveBeenCalled();
+		expect(handler.restoreTimers.size).toBe(1);
+	});
+
+	it('lavalink-client가 모르는 mixer op 오류는 debug로만 남긴다', () => {
+		const handler = makeHandler();
+		handler.handleNodeError({ id: 'main', options: { id: 'main' } }, new Error('Unexpected op "mixer" with data'), { op: 'mixer' });
+
+		expect(stubLogger.debug).toHaveBeenCalled();
+		expect(stubLogger.error).not.toHaveBeenCalled();
+		expect(reportNodeEvent).not.toHaveBeenCalled();
+	});
+});

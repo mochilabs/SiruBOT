@@ -68,14 +68,22 @@ export class NodeHandler extends BaseLavalinkHandler {
 	}
 
 	/**
-	 * 모든 raw payload 중 ready op만 처리한다.
-	 * - resumed=true: sessionId 확정 저장(이미 'resumed' 핸들러가 복구를 담당).
-	 * - resumed=false: 이전 세션을 못 썼다는 뜻 — 서버에 플레이어가 없으므로
+	 * raw payload 중 ready op와 mixer op를 처리한다.
+	 * - mixer op: overlapEnd(aborted)만 MixerService에 기록한다(나머지는 무시).
+	 * - ready resumed=true: sessionId 확정 저장(이미 'resumed' 핸들러가 복구를 담당).
+	 * - ready resumed=false: 이전 세션을 못 썼다는 뜻 — 서버에 플레이어가 없으므로
 	 *   Redis의 플레이어/큐 기록에서 재구성한다(크래시 재시작 포함).
 	 */
 	private handleNodeRaw(node: LavalinkNode, payload: unknown) {
 		const data = payload as { op?: unknown; resumed?: unknown } | null;
-		if (!data || data.op !== 'ready') return;
+		if (!data) return;
+		// mixer op는 lavalink-client가 몰라 'raw'로만 흘러온다. overlapEnd(aborted)를
+		// TrackHandler가 trackEnd 분기에 쓰도록 기록만 남긴다.
+		if (data.op === 'mixer') {
+			this.container.mixerService.observeMixerEvent(data);
+			return;
+		}
+		if (data.op !== 'ready') return;
 		// 'raw'는 라이브러리가 payload.sessionId을 node.sessionId에 대입하기 '전'에 발화한다
 		// (lavalink-client: emit('raw') → switch → sessionId assign). 새 세션 id를 보려면
 		// 다음 턴으로 넘겨야 한다 — 여기서 읽으면 이전 세션 id(또는 null)를 읽는다.
@@ -499,6 +507,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 	}
 
 	private handleNodeError(node: LavalinkNode, error: Error, payload: unknown) {
+		// lavalink-client가 mixer op를 몰라 던지는 오류 — raw에서 이미 소비하므로 error로 안 올린다.
+		if (error.message.startsWith('Unexpected op "mixer"')) {
+			this.logger.debug(`Node ${node.options.id} reported a mixer op: ${JSON.stringify(payload)}`);
+			return;
+		}
 		this.logger.error(`Node error: ${node.options.id}`, error, payload);
 		reportNodeEvent(node.id, 'node_error', error.message);
 	}

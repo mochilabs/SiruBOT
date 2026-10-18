@@ -5,6 +5,8 @@ import { enqueueOperation, isYouTubeSource } from '@sirubot/utils';
 const MIXER_FILTER_KEY = 'mixer';
 /** mixer REST 제한 시간(ms) — 타임아웃이 없으면 slot 직렬화 대기열이 응답 없는 노드에서 영원히 안 끝난다. */
 const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
+/** overlapEnd(aborted) 직후의 trackEnd만 인정한다 — 그보다 오래된 기록은 무시한다. */
+const OVERLAP_ABORT_GRACE_MS = 5_000;
 
 export interface MixerStateResponse {
 	guildId: string;
@@ -66,6 +68,8 @@ export class MixerService {
 	private readonly filterReady = new Set<string>();
 	/** 동일 길드의 POST/DELETE가 도착 순서와 다르게 서버 슬롯을 덮어쓰지 않도록 직렬화한다. */
 	private readonly slotOperations = new Map<string, Promise<void>>();
+	/** 서버에서 overlapEnd(aborted)를 받은 시각(ms) — trackEnd에서 consume한다. */
+	private readonly overlapAbortedAt = new Map<string, number>();
 
 	private nodeRest(player: Player): { base: string; auth: string } {
 		const o = (player.node?.options ?? {}) as { host?: string; port?: number; authorization?: string; secure?: boolean };
@@ -206,6 +210,25 @@ export class MixerService {
 	/** trackEnd 전용: 예열 여부를 소비한다(삭제하고 반환). */
 	public consumePreloaded(guildId: string): boolean {
 		return this.preloaded.delete(String(guildId));
+	}
+
+	/** trackEnd 전용: 최근 overlap abort 여부를 소비한다(삭제하고 반환). 그 이후 기록은 만료된 것으로 본다. */
+	public consumeOverlapAbort(guildId: string): boolean {
+		const gid = String(guildId);
+		const abortedAt = this.overlapAbortedAt.get(gid);
+		this.overlapAbortedAt.delete(gid);
+		return abortedAt !== undefined && Date.now() - abortedAt <= OVERLAP_ABORT_GRACE_MS;
+	}
+
+	/**
+	 * 노드 WS `mixer` op를 관찰한다. lavalink-client가 모르는 op라 raw로만 전달된다.
+	 * overlapEnd(aborted)만 기록한다 — abort 직후의 trackEnd는 서버가 자동 진행하지
+	 * 않으므로 TrackHandler가 관망 대신 클라이언트 소유 진행으로 넘어가야 한다.
+	 */
+	public observeMixerEvent(payload: unknown): void {
+		const data = payload as { type?: unknown; reason?: unknown; guildId?: unknown } | null;
+		if (!data || data.type !== 'overlapEnd' || data.reason !== 'aborted' || typeof data.guildId !== 'string') return;
+		this.overlapAbortedAt.set(String(data.guildId), Date.now());
 	}
 
 	/** 서버 슬롯에 예열된 곡이 남아 있으면 true — 서버가 content end에 자동 진행한다. */

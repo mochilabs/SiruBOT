@@ -157,7 +157,9 @@ export class TrackHandler extends BaseLavalinkHandler {
 			return;
 		}
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
-		if (this.container.mixerService.consumePreloaded(player.guildId)) {
+		// 단, 직전 overlap이 abort됐다면 서버는 진행하지 않는다(서버 슬롯도 이미 비웠다) —
+		// 관망하지 말고 아래 클라이언트 소유 진행으로 즉시 넘어간다.
+		if (this.container.mixerService.consumePreloaded(player.guildId) && !this.container.mixerService.consumeOverlapAbort(player.guildId)) {
 			player.transitionState.preloadConsumedAt = Date.now();
 			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
 			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).

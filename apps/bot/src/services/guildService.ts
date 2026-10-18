@@ -338,17 +338,17 @@ export class GuildService {
 	}
 
 	/**
-	 * 특정 채널의 AI 채팅 on/off — 모드와 허용 목록을 함께 계산해요.
+	 * 채널 단위 on/off에서 모드·허용 목록이 어떻게 바뀌는지 계산해요 — AI 채팅과
+	 * 채팅 TTS가 같은 규칙을 써요.
 	 * - 켜기: off면 channels + [해당 채널], channels면 목록에 추가 (all은 이미 켜져 있어요)
 	 * - 끄기: channels면 목록에서 제거(비면 off), all이면 나머지 텍스트 채널을 목록으로 승계
 	 */
-	public async setChannelAiEnabled(
-		guildId: string,
+	private computeChannelToggle<TMode extends 'all' | 'channels' | 'off'>(
+		settings: { mode: TMode; channelIds: string[] },
 		channelId: string,
 		enabled: boolean,
 		allTextChannelIds: string[]
-	): Promise<{ mode: AiMode; channelIds: string[] }> {
-		const settings = await this.getAiSettings(guildId);
+	): { mode: TMode; channelIds: string[] } {
 		let mode = settings.mode;
 		let channelIds = settings.channelIds;
 
@@ -356,19 +356,29 @@ export class GuildService {
 			if (mode === 'all') return { mode, channelIds };
 			const base = mode === 'off' ? [] : channelIds;
 			channelIds = [...new Set([...base, channelId])];
-			mode = 'channels';
+			mode = 'channels' as TMode;
 		} else {
 			if (mode === 'off') return { mode, channelIds };
 			if (mode === 'all') {
 				channelIds = allTextChannelIds.filter((id) => id !== channelId);
-				mode = channelIds.length > 0 ? 'channels' : 'off';
+				mode = (channelIds.length > 0 ? 'channels' : 'off') as TMode;
 			} else {
 				channelIds = channelIds.filter((id) => id !== channelId);
-				if (channelIds.length === 0) mode = 'off';
+				if (channelIds.length === 0) mode = 'off' as TMode;
 			}
 		}
+		return { mode, channelIds };
+	}
 
-		const data: Prisma.GuildUpdateInput = { aiMode: mode, aiChannelIds: channelIds };
+	/** 특정 채널의 AI 채팅 on/off */
+	public async setChannelAiEnabled(
+		guildId: string,
+		channelId: string,
+		enabled: boolean,
+		allTextChannelIds: string[]
+	): Promise<{ mode: AiMode; channelIds: string[] }> {
+		const next = this.computeChannelToggle(await this.getAiSettings(guildId), channelId, enabled, allTextChannelIds);
+		const data: Prisma.GuildUpdateInput = { aiMode: next.mode, aiChannelIds: next.channelIds };
 		const guild = await container.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
@@ -376,6 +386,24 @@ export class GuildService {
 		});
 		this.updateCache(guild);
 		return { mode: normalizeAiMode(guild.aiMode), channelIds: guild.aiChannelIds };
+	}
+
+	/** 특정 채널의 채팅 TTS 낭독 on/off — setChannelAiEnabled와 같은 규칙이에요 */
+	public async setChannelTtsEnabled(
+		guildId: string,
+		channelId: string,
+		enabled: boolean,
+		allTextChannelIds: string[]
+	): Promise<{ mode: TtsMode; channelIds: string[] }> {
+		const next = this.computeChannelToggle(await this.getTtsSettings(guildId), channelId, enabled, allTextChannelIds);
+		const data: Prisma.GuildUpdateInput = { ttsMode: next.mode, ttsChannelIds: next.channelIds };
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
+			update: data
+		});
+		this.updateCache(guild);
+		return { mode: normalizeTtsMode(guild.ttsMode), channelIds: guild.ttsChannelIds };
 	}
 }
 

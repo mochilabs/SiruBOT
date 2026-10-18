@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Player } from 'lavalink-client';
 import { MixerRequestError, MixerService } from './mixerService.ts';
 
@@ -58,5 +58,53 @@ describe('MixerService.announce (queued contract)', () => {
 			status: 504
 		});
 		expect(MixerRequestError).toBeDefined();
+	});
+});
+
+describe('MixerService overlap abort (mixer WS op 기록)', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-10-18T12:00:00Z'));
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('aborted overlapEnd만 기록한다 — overlapStart/handoff/비문자열 guildId는 무시', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123' });
+		expect(service.consumeOverlapAbort('123')).toBe(false);
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'handoff', guildId: '123' });
+		expect(service.consumeOverlapAbort('123')).toBe(false);
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: 123 });
+		expect(service.consumeOverlapAbort('123')).toBe(false);
+		service.observeMixerEvent(null);
+		service.observeMixerEvent(undefined);
+		expect(service.consumeOverlapAbort('123')).toBe(false);
+
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: '123' });
+		expect(service.consumeOverlapAbort('123')).toBe(true);
+	});
+
+	it('abort 기록은 1회성이다 — 두 번째 consume은 false', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: '123' });
+		expect(service.consumeOverlapAbort('123')).toBe(true);
+		expect(service.consumeOverlapAbort('123')).toBe(false);
+	});
+
+	it('grace(5s)가 지난 기록은 만료된 것으로 본다', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: '123' });
+		vi.setSystemTime(new Date('2026-10-18T12:00:06Z'));
+		expect(service.consumeOverlapAbort('123')).toBe(false);
+	});
+
+	it('guild별로 기록이 독립이다', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: 'one' });
+		expect(service.consumeOverlapAbort('two')).toBe(false);
+		expect(service.consumeOverlapAbort('one')).toBe(true);
 	});
 });

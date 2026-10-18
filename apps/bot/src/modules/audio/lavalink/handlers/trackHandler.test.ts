@@ -335,3 +335,62 @@ describe('resolveStartedTrack with a server-consumed preheat', () => {
 		expect(buildTrack).not.toHaveBeenCalled();
 	});
 });
+
+describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		reportPlaybackEvent.mockClear();
+		Object.assign(container, {
+			chatTtsService: { isTtsEnded: vi.fn(() => false) }
+		});
+	});
+
+	function endPlayer() {
+		return {
+			guildId: 'g-1',
+			queue: { current: track('b-enc', 'id-b'), tracks: [] },
+			transitionState: { stopByCommand: false, lastStartedEncoded: 'a-enc', preloadConsumedAt: null }
+		} as unknown as { [key: string]: any };
+	}
+
+	it('abort 직후엔 서버 관망 대신 클라이언트 소유 진행으로 즉시 넘어간다', () => {
+		const { handler } = makeHandler();
+		const player = endPlayer();
+		Object.assign(container, { mixerService: { consumePreloaded: vi.fn(() => true), consumeOverlapAbort: vi.fn(() => true) } });
+		handler.armWatchdog = vi.fn();
+		handler.startClientOwnedTrack = vi.fn(() => Promise.resolve());
+
+		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
+
+		expect(handler.startClientOwnedTrack).toHaveBeenCalledWith(player);
+		expect(handler.armWatchdog).not.toHaveBeenCalled();
+		expect(player.transitionState.preloadConsumedAt).toBeNull();
+	});
+
+	it('abort가 없으면 서버 소유 관망(예열 소비 + watchdog)을 유지한다', () => {
+		const { handler } = makeHandler();
+		const player = endPlayer();
+		Object.assign(container, { mixerService: { consumePreloaded: vi.fn(() => true), consumeOverlapAbort: vi.fn(() => false) } });
+		handler.armWatchdog = vi.fn();
+		handler.startClientOwnedTrack = vi.fn(() => Promise.resolve());
+
+		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
+
+		expect(handler.armWatchdog).toHaveBeenCalledWith(player);
+		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
+		expect(typeof player.transitionState.preloadConsumedAt).toBe('number');
+	});
+
+	it('예열이 없으면 abort 기록을 소비하지 않는다', () => {
+		const { handler } = makeHandler();
+		const player = endPlayer();
+		const consumeOverlapAbort = vi.fn(() => true);
+		Object.assign(container, { mixerService: { consumePreloaded: vi.fn(() => false), consumeOverlapAbort } });
+		handler.startClientOwnedTrack = vi.fn(() => Promise.resolve());
+
+		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
+
+		expect(consumeOverlapAbort).not.toHaveBeenCalled();
+		expect(handler.startClientOwnedTrack).toHaveBeenCalledWith(player);
+	});
+});
