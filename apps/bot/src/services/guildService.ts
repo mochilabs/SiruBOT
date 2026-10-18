@@ -17,6 +17,28 @@ export function normalizeAiMode(value: string): AiMode {
 	return AI_MODES.includes(value) ? (value as AiMode) : 'all';
 }
 
+/** 채팅 TTS 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기(기본). TTS는 명시적으로 켜야 해요 */
+export type TtsMode = 'all' | 'channels' | 'off';
+
+const TTS_MODES: readonly string[] = ['all', 'channels', 'off'];
+
+/** DB에 잘못된 값이 들어와도 안전하게 기본값('off')으로 되돌려요 */
+export function normalizeTtsMode(value: string): TtsMode {
+	return TTS_MODES.includes(value) ? (value as TtsMode) : 'off';
+}
+
+export interface TtsSettings {
+	mode: TtsMode;
+	channelIds: string[];
+}
+
+/** 이 채널의 메시지를 낭독 대상인지 — 리스너는 조용히 건너뛰므로 boolean만 돌려줘요 */
+export function isTtsEnabled(settings: TtsSettings, channelId: string): boolean {
+	if (settings.mode === 'off') return false;
+	if (settings.mode === 'all') return true;
+	return settings.channelIds.includes(channelId);
+}
+
 export class GuildService {
 	// Guild settings cache (60s TTL, max 500)
 	private cache = new MemoryCache<string, Guild>({ ttl: 60_000, maxSize: 500 });
@@ -275,6 +297,15 @@ export class GuildService {
 		return {
 			mode: normalizeAiMode(guild.aiMode),
 			channelIds: guild.aiChannelIds
+		};
+	}
+
+	/** 채팅 TTS 정책 — 잘못된 모드 값은 'off'로 폴백해요 (명시적으로 켠 길드만 낭독) */
+	public async getTtsSettings(guildId: string): Promise<TtsSettings> {
+		const guild = await this.getGuild(guildId);
+		return {
+			mode: normalizeTtsMode(guild.ttsMode),
+			channelIds: guild.ttsChannelIds
 		};
 	}
 

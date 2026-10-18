@@ -28,6 +28,9 @@ declare module '@skyra/env-utilities' {
 		SHARD_MANAGER_URL?: string;
 		AUTH_KEY?: string;
 		SENTRY_DSN?: string;
+		SIRU_TTS_URL?: string;
+		SIRU_TTS_API_KEY?: string;
+		SIRU_TTS_DEFAULT_VOICE?: string;
 	}
 }
 
@@ -45,6 +48,7 @@ declare module '@sapphire/pieces' {
 		playlistService: import('../services/playlistService.ts').PlaylistService;
 		audioService: import('../services/audioService.ts').AudioService;
 		mixerService: import('../services/mixerService.ts').MixerService;
+		ttsService: import('../services/ttsService.ts').TtsService;
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;

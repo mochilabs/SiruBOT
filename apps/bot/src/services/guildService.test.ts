@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Guild } from '@sirubot/prisma';
-import { GuildService } from './guildService.ts';
+import { GuildService, isTtsEnabled } from './guildService.ts';
 
 const { upsert } = vi.hoisted(() => ({ upsert: vi.fn() }));
 
@@ -118,5 +118,28 @@ describe('GuildService invalidation', () => {
 		await service.getGuild('guild'); // 무효화 이후 시작 → 캐시 심기 정상
 		await service.getGuild('guild'); // 캐시 히트
 		expect(upsert).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('GuildService TTS settings', () => {
+	beforeEach(() => {
+		upsert.mockReset();
+	});
+
+	it('reads ttsMode/ttsChannelIds and falls back to off when the stored mode is invalid', async () => {
+		upsert.mockResolvedValueOnce({ ...guild(), ttsMode: 'channels', ttsChannelIds: ['chan'] } as Guild);
+		const service = new GuildService();
+		await expect(service.getTtsSettings('guild')).resolves.toEqual({ mode: 'channels', channelIds: ['chan'] });
+
+		upsert.mockResolvedValueOnce({ ...guild(), ttsMode: 'bogus', ttsChannelIds: [] } as Guild);
+		await expect(service.getTtsSettings('guild2')).resolves.toEqual({ mode: 'off', channelIds: [] });
+	});
+
+	it('allows reading only for enabled policies', () => {
+		expect(isTtsEnabled({ mode: 'off', channelIds: ['chan'] }, 'chan')).toBe(false);
+		expect(isTtsEnabled({ mode: 'all', channelIds: [] }, 'chan')).toBe(true);
+		expect(isTtsEnabled({ mode: 'channels', channelIds: ['chan'] }, 'chan')).toBe(true);
+		expect(isTtsEnabled({ mode: 'channels', channelIds: ['chan'] }, 'other')).toBe(false);
+		expect(isTtsEnabled({ mode: 'channels', channelIds: [] }, 'chan')).toBe(false);
 	});
 });
