@@ -1,7 +1,6 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { MixerRequestError } from '../../../services/mixerService.ts';
 
 export const name = 'tts';
 export const ko = '음성';
@@ -61,25 +60,21 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const ttsUrl = `https://translate.google.com/translate_tts?client=tw-ob&tl=ko&q=${encodeURIComponent(text)}`;
 
 	try {
-		await container.mixerService.announce(player, ttsUrl, TTS_DUCK_LEVEL);
-	} catch (error) {
+		const receipt = await container.mixerService.announce(player, ttsUrl, TTS_DUCK_LEVEL);
+		await interaction.editReply({
+			components: [
+				createContainer().addTextDisplayComponents((textDisplay) =>
+					textDisplay.setContent(`${emoji('volume_up')} 안내가 ${receipt.position}번째로 예약됐어요.`)
+				)
+			],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { roles: [], users: [] }
+		});
+	} catch {
 		throw new UserError({
-			identifier: error instanceof MixerRequestError && error.status === 409 ? 'tts_mixer_busy' : 'tts_mixer_failed',
-			message:
-				error instanceof MixerRequestError && error.status === 409
-					? `${emoji('error')} 현재 다른 음성 효과가 진행 중이에요. 잠시 후 다시 시도해 주세요.`
-					: `${emoji('error')} 음성 안내를 재생하지 못했어요. 잠시 후 다시 시도해 주세요.`,
+			identifier: 'tts_mixer_failed',
+			message: `${emoji('error')} 음성 안내를 예약하지 못했어요. 잠시 후 다시 시도해 주세요.`,
 			context: { ephemeral: true }
 		});
 	}
-
-	await interaction.editReply({
-		components: [
-			createContainer().addTextDisplayComponents((textDisplay) =>
-				textDisplay.setContent(`${emoji('volume_up')} 입력한 내용을 음성으로 재생해요.`)
-			)
-		],
-		flags: [MessageFlags.IsComponentsV2],
-		allowedMentions: { roles: [], users: [] }
-	});
 }
