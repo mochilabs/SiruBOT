@@ -38,6 +38,7 @@ function player(overrides: Record<string, unknown> = {}): CustomPlayer {
 		repeatMode: 'off',
 		chapters: [],
 		node: { id: 'node-1' },
+		voiceChannelId: 'voice-channel',
 		queue: { current: TRACK, previous: [], tracks: [] },
 		...overrides
 	} as unknown as CustomPlayer;
@@ -52,9 +53,18 @@ function controllerJson(options: { player?: CustomPlayer; nowPlayingCardUrl?: st
 	return controllerView({
 		player: options.player ?? player(),
 		volume: 50,
-		textChannelId: 'text-channel',
 		nowPlayingCardUrl: options.nowPlayingCardUrl
 	}).toJSON() as unknown as PlainComponent;
+}
+
+/** 컨테이너 전체를 돌며 TextDisplay content를 모은다 (섹션 내부 포함). */
+function collectTexts(component: unknown): string[] {
+	if (!component || typeof component !== 'object') return [];
+	const node = component as Record<string, unknown>;
+	const texts: string[] = [];
+	if (typeof node.content === 'string') texts.push(node.content);
+	for (const child of (node.components as unknown[] | undefined) ?? []) texts.push(...collectTexts(child));
+	return texts;
 }
 
 /** Discord는 ActionRow당 버튼 1~5개만 허용한다 (BASE_TYPE_BAD_LENGTH). */
@@ -116,5 +126,45 @@ describe('controllerView action rows', () => {
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(1);
+	});
+});
+
+describe('controllerView 재생 라벨·타이틀', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mocks.queued.mockReturnValue([]);
+		mocks.remaining.mockReturnValue(0);
+		mocks.nowPlaying.mockReturnValue(TRACK);
+		mocks.chapter.mockReturnValue(null);
+		mocks.chapterIndex.mockReturnValue(null);
+	});
+
+	it('재생 중 라벨은 텍스트 채널이 아니라 보이스 채널을 멘션한다', () => {
+		const texts = collectTexts(controllerJson());
+
+		expect(texts.some((text) => text.includes('<#voice-channel>에서 재생 중'))).toBe(true);
+		expect(texts.some((text) => text.includes('<#text-channel>'))).toBe(false);
+	});
+
+	it('보이스 채널을 알 수 없으면 재생 중 라벨을 붙이지 않는다', () => {
+		const texts = collectTexts(controllerJson({ player: player({ voiceChannelId: undefined }) }));
+
+		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
+	});
+
+	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
+		const texts = collectTexts(controllerJson());
+
+		expect(texts.some((text) => text.includes(`### **[테스트 곡](https://example.com/track)**`))).toBe(true);
+	});
+
+	it('URL이 너무 길면 타이틀 링크를 걸지 않는다', () => {
+		const longUri = `https://example.com/${'a'.repeat(80)}`;
+		mocks.nowPlaying.mockReturnValue({ ...TRACK, info: { ...TRACK.info, uri: longUri } });
+
+		const texts = collectTexts(controllerJson());
+
+		expect(texts.some((text) => text.includes(`### **테스트 곡**`))).toBe(true);
+		expect(texts.some((text) => text.includes(longUri))).toBe(false);
 	});
 });

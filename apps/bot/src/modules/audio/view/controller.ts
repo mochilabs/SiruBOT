@@ -31,10 +31,12 @@ import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { nowPlayingTrack } from '../lavalink/player/nowPlaying.ts';
 import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters.ts';
 
+// 타이틀 링크로 걸 수 있는 URL 최대 길이 (formatTrack의 제한과 같다).
+const MAX_TRACK_URL_LENGTH = 70;
+
 type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
-	textChannelId?: string;
 	nowPlayingCardUrl?: string;
 };
 
@@ -43,7 +45,7 @@ const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
 
-export function controllerView({ player, volume, textChannelId, nowPlayingCardUrl }: controllerViewProps) {
+export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
 	const containerComponent = createContainer();
 
 	// NOWPLAYING 표시는 trackStart 확정 트랙을 본다 (queue.current는 전이 기계가 덮어쓴다).
@@ -64,7 +66,7 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 			})}`
 	);
 
-	const playbackLabel = current && textChannelId ? `-# <#${textChannelId}>에서 재생 중` : null;
+	const playbackLabel = current && player.voiceChannelId ? `-# <#${player.voiceChannelId}>에서 재생 중` : null;
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
@@ -229,7 +231,10 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 		return contents;
 	}
 
-	contents.push(`### **${removeEmojis(track.info.title)}**`);
+	// 타이틀에 원본 링크를 되살린다 — 마크다운 제한에 안 걸리게 짧은 URL일 때만 건다.
+	const trackTitle = removeEmojis(track.info.title);
+	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
+	contents.push(`### **${hasValidUrl ? `[${trackTitle}](${track.info.uri})` : trackTitle}**`);
 	contents.push(`-# 아티스트: ${track.info.author}`);
 
 	// 챕터(에피소드) 표시

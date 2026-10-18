@@ -93,3 +93,89 @@ describe('node event reporting (상태 페이지 최근 오류)', () => {
 		expect(reportNodeEvent).toHaveBeenCalledWith('main', 'node_error', 'boom');
 	});
 });
+
+describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		reportNodeEvent.mockClear();
+	});
+
+	it('session resume 복구가 끝나면 mixer 상태를 서버와 맞춘다', async () => {
+		const handler = makeHandler();
+		const createdPlayer = { queue: { current: null }, paused: false, playing: false, lastPosition: 0, lastPositionChange: 0, ping: {} };
+		handler.recreateSavedPlayer = vi.fn().mockResolvedValue(createdPlayer);
+		const reconcile = vi.fn().mockResolvedValue(undefined);
+		Object.assign(container, {
+			audio: {
+				players: { has: () => false },
+				options: {},
+				utils: { buildTrack: vi.fn().mockReturnValue({ info: { identifier: 'a' }, requester: {} }) }
+			},
+			client: { user: { id: 'bot' } },
+			mixerService: { reconcileAfterResume: reconcile }
+		});
+
+		const node = { options: { id: 'main' } };
+		const lavalinkPlayer = {
+			guildId: 'g1',
+			state: { time: NOW, position: 10_000, ping: 1 },
+			volume: 100,
+			paused: false,
+			track: { encoded: 'x' }
+		};
+		const playerSaver = { get: vi.fn().mockResolvedValue({ options: {} }), delete: vi.fn() };
+
+		await handler.resumeSinglePlayer(node, lavalinkPlayer, playerSaver, NOW);
+
+		expect(reconcile).toHaveBeenCalledTimes(1);
+		expect(reconcile).toHaveBeenCalledWith(createdPlayer);
+	});
+
+	it('resume 복구에서 reconcile이 실패해도 복구 자체는 완료된다', async () => {
+		const handler = makeHandler();
+		const createdPlayer = { queue: { current: null }, paused: false, playing: false, lastPosition: 0, lastPositionChange: 0, ping: {} };
+		handler.recreateSavedPlayer = vi.fn().mockResolvedValue(createdPlayer);
+		const reconcile = vi.fn().mockRejectedValue(new Error('mixer unreachable'));
+		Object.assign(container, {
+			audio: {
+				players: { has: () => false },
+				options: {},
+				utils: { buildTrack: vi.fn().mockReturnValue({ info: { identifier: 'a' }, requester: {} }) }
+			},
+			client: { user: { id: 'bot' } },
+			mixerService: { reconcileAfterResume: reconcile }
+		});
+
+		const node = { options: { id: 'main' } };
+		const lavalinkPlayer = { guildId: 'g1', state: { time: NOW, position: 10_000, ping: 1 }, volume: 100, paused: false, track: null };
+		const playerSaver = { get: vi.fn().mockResolvedValue({ options: {} }), delete: vi.fn() };
+
+		await expect(handler.resumeSinglePlayer(node, lavalinkPlayer, playerSaver, NOW)).resolves.toBeUndefined();
+		expect(reconcile).toHaveBeenCalledTimes(1);
+	});
+
+	it('fresh 복구가 끝나면 mixer 상태를 서버와 맞춘다', async () => {
+		const handler = makeHandler();
+		const createdPlayer = {
+			queue: { current: { info: { duration: 100_000 } } },
+			play: vi.fn().mockResolvedValue(null),
+			seek: vi.fn().mockResolvedValue(null),
+			pause: vi.fn().mockResolvedValue(null),
+			destroy: vi.fn()
+		};
+		handler.recreateSavedPlayer = vi.fn().mockResolvedValue(createdPlayer);
+		const reconcile = vi.fn().mockResolvedValue(undefined);
+		Object.assign(container, {
+			mixerService: { reconcileAfterResume: reconcile, markFiltersStale: vi.fn(), primeForPlay: vi.fn().mockResolvedValue(null) },
+			redisStore: { getPlayerSaver: vi.fn() }
+		});
+
+		const saved = { paused: false, position: 50_000, lastPosition: 50_000, lastPositionChange: NOW - 1_000, savedAt: NOW - 1_000 };
+
+		await handler.restoreFreshPlayer({ options: { id: 'main' } }, 'g1', saved);
+
+		expect(createdPlayer.play).toHaveBeenCalledWith({ noReplace: true });
+		expect(reconcile).toHaveBeenCalledTimes(1);
+		expect(reconcile).toHaveBeenCalledWith(createdPlayer);
+	});
+});

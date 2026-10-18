@@ -45,7 +45,6 @@ export async function buildControllerCardPayload(player: CustomPlayer, options: 
 	const components = controllerView({
 		player,
 		volume: options.volume,
-		textChannelId: options.textChannelId ?? undefined,
 		nowPlayingCardUrl: card?.url
 	});
 
