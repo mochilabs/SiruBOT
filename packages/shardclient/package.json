@@ -17,7 +17,7 @@
     "scripts": {
         "lint": "prettier --check \"src/**/*.ts\"",
         "lint:fix": "prettier --write \"src/**/*.ts\"",
-        "test": "vitest run --passWithNoTests",
+        "test": "vitest run --passWithNoTests --config ../../vitest.config.ts",
         "typecheck": "tsc --noEmit",
         "build": "tsup",
         "watch": "tsup --watch"
