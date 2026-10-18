@@ -19,6 +19,17 @@ export interface MixerStateResponse {
 	silenceThresholdDb: number;
 	tailConfirmMs: number;
 	nextTrimMs: [number, number] | null;
+	announcementsQueued: number;
+}
+
+/** `POST /mixer/announce` 202 응답 — 안내가 큐에 쌓였다는 영수증. 오버레이 재생 시작이 아니다. */
+export interface MixerAnnounceReceipt {
+	guildId: string;
+	id: number;
+	/** 대기 중인 안내 기준 1-based 순번 (현재 재생 중인 오버레이 미포함) */
+	position: number;
+	/** 이번 등록 이후 대기 안내 수 (현재 재생 중인 오버레이 미포함) */
+	queueLength: number;
 }
 
 interface MixerCallInit {
@@ -314,12 +325,16 @@ export class MixerService {
 		return (await this.mixerCall(player, `/mixer/state?guildId=${gid}`)) as MixerStateResponse;
 	}
 
-	/** 현재 재생 중인 오디오 위에 안내 음성을 섞고, 원곡 볼륨을 일시적으로 낮춘다. */
-	public async announce(player: Player, identifier: string, duckLevel: number): Promise<void> {
-		await this.mixerCall(player, '/mixer/announce', {
+	/**
+	 * 현재 재생 중인 오디오 위에 안내 음성을 섞고, 원곡 볼륨을 일시적으로 낮춘다.
+	 * 서버가 예전에 안내를 재생 중이어도 409가 아니라 큐에 쌓이고, 순차 재생된다.
+	 * 반환 영수증의 `position`으로 대기 순번을 안내할 수 있다 (성공 ≠ 재생 시작).
+	 */
+	public async announce(player: Player, identifier: string, duckLevel: number): Promise<MixerAnnounceReceipt> {
+		return (await this.mixerCall(player, '/mixer/announce', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), identifier, duckLevel })
-		});
+		})) as MixerAnnounceReceipt;
 	}
 
 	/**
