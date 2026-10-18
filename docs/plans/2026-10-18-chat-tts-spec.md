@@ -243,6 +243,17 @@ Content-Type: application/json
 | `app/api/servers/[id]/settings/route.ts` | `toSettings` 매핑 |
 | `components/servers/` (신규 `tts-settings.tsx` 또는 `ai-settings.tsx` 인접) | 토글("읽어주는 중") + `ChannelSelect`(`CHANNEL_TYPE_GROUP.chat`) + 프라이버시 한 줄 고지. `ai-settings.tsx`의 ChannelSelect 패턴 재사용 |
 
+### 6.4 사용자 opt-in · 음성 프리셋 (2026-10-18 추가, PR-C4)
+
+길드 정책(6.1~6.3)과 별개로, **사용자 자신이** `/tts`로 낭독 대상에 포함되고 음성 프리셋을 정한다. 길드 정책이 "어디서 읽을지"라면, 여기는 "누가 읽히고 어떤 목소리로 읽힐지"다.
+
+- **스키마**: `model TtsUserSetting` — 복합 PK `(guildId, userId)`, `enabled Boolean @default(false)`, `voice String?`(engine:voice), `speed Float?`(0.25~4), `pitch Float?`(-12~12). 외래키 없음(경량 독립 테이블). 마이그레이션 기본값만으로 동작.
+- **봇**: `TtsUserSettingsService` (`services/ttsUserSettings.ts`) — MemoryCache 60s/500, `get`은 행이 없거나 DB 실패 시 `enabled: false` 폴백(fail-safe off), `set`은 upsert + 같은 프로세스 캐시 갱신(길드=샤드 고정). `container.ttsUserSettings` 등록.
+- **리스너 게이트**: `isTtsEnabled`(길드/채널) 통과 후 `preset.enabled` 검사 — opt-in 안 한 사용자는 읽지 않는다. 프리셋은 `handleMessage(message, text, preset)`로 전달되고 병합 배치의 발화 시작 시점 값을 쓴다.
+- **합성 전달**: `ttsService.synthesize(text, {voice?, speed?, pitch?})` — voice는 기본 음성 폴백, speed/pitch는 미설정이면 본문에 포함하지 않는다. 프리셋은 봇 DB에 저장하고 siru_tts 프로필 API는 쓰지 않는다(단일 소스, 동기화 없음).
+- **커맨드**: `/tts` (`modules/general/commands/tts.ts`, 카테고리 '일반', ManageGuild 불필요·자기 설정) — `on`/`off`(ephemeral opt-in/아웃), `voice`(autocomplete, `ttsService.listVoices` → `GET /v1/voices?q=`, 옵션 생략 시 기본 음성 복귀), `speed`(0.25~4, 생략 시 복귀), `pitch`(-12~12, 생략 시 복귀), `상태`. 응답 전부 ephemeral.
+- **프라이버시**: 발화자 프리셋(음성 선택)도 메시지 내용과 마찬가지로 사용자 명시 동의(opt-in) 기반이다.
+
 ## 7. 검증 계획
 
 구현 PR 단위로 기록하되, 명세 기준의 수용 조건은 아래와 같다.
@@ -273,8 +284,9 @@ Content-Type: application/json
 | PR-C1 | `ttsService` + env + Guild 스키마(`ttsMode`/`ttsChannelIds`) + guildService + 정책 폴백 | SiruBOT | PR-A |
 | PR-C2 | `chatTts` 리스너: 트리거·전처리·병합·스로틀·오버레이/단독 모드 | SiruBOT | PR-C1, PR-B4 |
 | PR-C3 | 대시보드 설정 패널 + 스키마/API | SiruBOT | PR-C1 |
+| PR-C4 | 사용자 opt-in·프리셋: `TtsUserSetting` 스키마 + `/tts` 커맨드 + 리스너 게이트 + `synthesize` 프리셋 전달 | SiruBOT | PR-C2 |
 | PR-D (후보) | `/music tts`·`music_tts` AI 도구의 Google TTS → siru_tts 이관 | SiruBOT | PR-A |
-| 2단계 후보 | 사용자별 음성 프로필(`user_id: discord:<id>`), 닉네임 선독 옵션, 스킵 커맨드, 길드별 voice 설정 | — | PR-C2 |
+| 2단계 후보 | siru_tts 프로필 API 연동(`user_id: discord:<id>` — 과금 tier 분리 이득), 닉네임 선독 옵션, 스킵 커맨드, 길드별 voice 설정 | — | PR-C2 |
 
 ## 9. 미결 질문 (2026-10-18 확정)
 
