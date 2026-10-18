@@ -158,7 +158,12 @@ export function controllerView({ player, volume, textChannelId, nowPlayingCardUr
 	if (queuedTracks.length > 0) {
 		settingComponents.push(queueShowButton);
 	}
-	utilityRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(settingComponents.map((button) => button.setStyle(ButtonStyle.Secondary))));
+	// 버튼이 하나도 없으면 빈 ActionRow(길이 0)를 보내게 되어 Discord가 400을 반환한다.
+	if (settingComponents.length > 0) {
+		utilityRows.push(
+			new ActionRowBuilder<ButtonBuilder>().addComponents(settingComponents.map((button) => button.setStyle(ButtonStyle.Secondary)))
+		);
+	}
 
 	if (nowPlayingCardUrl) {
 		if (playbackLabel) containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(playbackLabel));
