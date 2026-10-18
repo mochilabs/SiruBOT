@@ -492,12 +492,14 @@ const musicTtsTool: AiTool = {
 		if (!text) throw new Error('읽을 내용이 필요해요.');
 		if (text.length > 200) throw new Error('음성 안내는 200자까지 가능해요.');
 		const ttsUrl = `https://translate.google.com/translate_tts?client=tw-ob&tl=ko&q=${encodeURIComponent(text)}`;
+		let position = 1;
 		try {
-			await container.mixerService.announce(player, ttsUrl, 0.2);
+			const receipt = await container.mixerService.announce(player, ttsUrl, 0.2);
+			position = receipt.position;
 		} catch {
-			throw new Error('다른 음성 효과가 진행 중이거나 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
+			throw new Error('음성 안내를 예약하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
-		return JSON.stringify({ status: 'ok', speaking: text });
+		return JSON.stringify({ status: 'ok', speaking: text, position });
 	}
 };
 

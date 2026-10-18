@@ -49,23 +49,30 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Purpose:** A standalone plugin that provides gapless playback, crossfade, TTS ducking, and silence skipping without modifying Lavalink itself. It mixes PCM from a hidden secondary player for each guild at the beginning of the main filter chain.
 - **Source:** Sibling project `../lavalink_mixer` (Kotlin, `dev.lavalink.mixer`). The JAR deployed to the server is a release/CI artifact from that repository.
 - **SiruBOT integration:**
-  - `apps/bot/src/services/mixerService.ts` (333 lines): complete REST wrapper for `/mixer/*`
+  - `apps/bot/src/services/mixerService.ts` (363 lines): complete REST wrapper for `/mixer/*`
   - `apps/bot/src/modules/audio/commands/mixer.ts`: `/music mixer` slash command
   - `apps/bot/src/modules/audio/lavalink/handlers/trackHandler.ts`: server-side auto-start and transition handling
   - `apps/bot/src/services/guildService.ts`, `getMixerSettings()`: `MixerSettings {gaplessEnabled, crossfadeEnabled, crossfadeMs}`
 
-**REST contract:** The node password is sent verbatim in the `Authorization` header. The timeout is `MIXER_CALL_TIMEOUT_MS` (default 5 seconds; `mixerService.ts:7,73`). Because these paths are outside `/v4/`, the implementation uses plain `fetch` rather than `player.node.request()`.
+**REST contract:** The node password is sent verbatim in the `Authorization` header. The timeout is `MIXER_CALL_TIMEOUT_MS` (default 5 seconds; `mixerService.ts:7,84`). Because these paths are outside `/v4/`, the implementation uses plain `fetch` rather than `player.node.request()`.
 
 | Endpoint | Purpose | Caller |
 |---|---|---|
-| `POST /mixer/queue/next` | Preload the next track (`identifier` or `encodedTrack`) | `mixerService.ts:161` |
-| `DELETE /mixer/queue/next?guildId=` | Remove the preloaded slot | `mixerService.ts:220` |
-| `POST /mixer/crossfade` | Configure crossfade (`durationMs`) | `mixerService.ts:242,306` |
-| `GET /mixer/state?guildId=` | Read state (`hasNext`, `nextTrimMs`, etc.) | `mixerService.ts:314` |
-| `POST /mixer/announce` | TTS overlay and music ducking | `mixerService.ts:319` |
-| `POST /mixer/announce/cancel`, `POST /mixer/silence`, `POST /mixer/fade-in` | Stop overlay, tune silence, and fade in | Not called by the bot; intended for agents/manual use. See the plugin's `api/openapi.yaml`. |
+| `POST /mixer/queue/next` | Preload the next track (`identifier` or `encodedTrack`) | `mixerService.ts:172` |
+| `DELETE /mixer/queue/next?guildId=` | Remove the preloaded slot | `mixerService.ts:231` |
+| `POST /mixer/crossfade` | Configure crossfade (`durationMs`) | `mixerService.ts:253,317` |
+| `GET /mixer/state?guildId=` | Read state (`hasNext`, `nextTrimMs`, `announcementsQueued`, etc.) | `mixerService.ts:325` |
+| `POST /mixer/announce` | TTS overlay and music ducking — **queued**, replies `202 {id, position, queueLength}` | `mixerService.ts:334` |
+| `POST /mixer/announce/cancel`, `DELETE /mixer/announce/queue`, `POST /mixer/silence`, `POST /mixer/fade-in` | Stop the active overlay, drop queued announcements, tune silence, fade in | Not called by the bot; intended for agents/manual use. See the plugin's `api/openapi.yaml`. |
 
-**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts:100`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts:287`) must run before `player.play()`. Current call sites include `apps/bot/src/services/audioService.ts:321` and `apps/bot/src/services/aiTools/music.ts:326`.
+**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts:111`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts:298`) must run before `player.play()`. Current call sites include `apps/bot/src/services/audioService.ts:321` and `apps/bot/src/services/aiTools/music.ts:326`.
+
+**Announce contract:** Announcements are **queued** — the old HTTP 409 "slot busy" response is gone, every request enqueues and the queue plays back to back in enqueue order through the hidden secondary player.
+
+- `POST /mixer/announce` answers `202 {guildId, id, position, queueLength}` (`MixerAnnounceReceipt`, `mixerService.ts:333-340`). This is an enqueue receipt, **not** playback start. `position` is the 1-based order among queued announcements at enqueue time and `queueLength` is the queue size after this enqueue; the currently speaking overlay is in neither count.
+- Progress: `announcementsQueued` (integer) in `GET /mixer/state`, or the plugin's WebSocket frames (raw-message hook, `payload.op === "mixer"`): `{"op":"mixer","type":"announceStart","guildId","announcementId","track":{identifier,title}}` when a queued item starts talking over the music, `{"op":"mixer","type":"announceEnd","guildId"}` when the overlay ends (natural end, cancel, or sub failure). The bot does not consume these events today.
+- `DELETE /mixer/announce/queue` drops queued (not active) announcements and reports the drop count; `POST /mixer/announce/cancel` stops the active overlay only.
+- A queued identifier is resolved at start time, so freshly synthesized TTS URLs stay valid while waiting.
 
 **Client contract:** Create `lavalink-client` with `autoSkip: false` (`apps/bot/src/core/botApplication.ts:141`). Skipping must go through the mixer so the server-side slot stays synchronized; do not call `player.skip()` directly.
 
@@ -73,8 +80,8 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 
 1. **Filter priming order:** If the filter is primed after `play()`, the effect is absent. Prime it before playback.
 2. **`guildId` must be a string.** Discord snowflakes exceed JavaScript's safe integer range (`2^53`); sending them as JSON numbers can corrupt them. Keep `guildId` string-valued in filter payloads.
-3. **One auxiliary source per guild:** If the slot is occupied, `POST /mixer/announce` returns HTTP 409. Preserve the `MixerBusyException` handling path.
-4. **Clamp crossfade duration:** The plugin accepts 500–30,000 ms; SiruBOT restricts it to 500–15,000 ms (`mixerService.ts:241`, command options `mixer.ts:62-64`). Review both sides when changing the contract.
+3. **Announcements queue; there is no 409:** `POST /mixer/announce` never reports "busy" — repeat calls stack into the queue and play sequentially. Surface the `position` from the `202` receipt instead of a retry hint, and do not treat a `202` as "speaking now".
+4. **Clamp crossfade duration:** The plugin accepts 500–30,000 ms; SiruBOT restricts it to 500–15,000 ms (`mixerService.ts:252`, command options `mixer.ts:62-64`). Review both sides when changing the contract.
 5. **Confirm track starts:** Do not trust the server's `trackStart` payload blindly. Match by identifier using `resolveStartedTrack` in `trackHandler.ts`; retain the watchdog controlled by `MIXER_CONFIRM_TIMEOUT_MS` (default 5 seconds, `trackHandler.ts:32`). This contract interacts with 3RD-02.
 
 ### 3RD-02. `youtube-file-cache` (`lavalink_file_cache`)
