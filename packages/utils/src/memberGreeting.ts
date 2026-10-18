@@ -6,6 +6,8 @@ import { z } from 'zod';
  *
  * v2 변경점: 고정 레이아웃(배경+아바타+제목/부제) → 자유 레이어 배열(image.layers)로 진화.
  * 아바타·제목·부제는 이제 각각 레이어 한 개이고, 텍스트/아바타/이미지/도형을 순서대로 쌓는다.
+ * 이후 추가: layout(컨테이너/컴포넌트 목록)과 accentColor(컨테이너 강조색) — 둘 다 기본값이 있어
+ * 예전에 저장된 v2 값도 그대로 검증을 통과한다.
  * 템플릿 변수: {유저} {유저이름} {서버} {멤버수} — GREETING_TEMPLATE_VARIABLES 참고.
  */
 
@@ -92,6 +94,16 @@ export type GreetingImage = {
 	layers: GreetingLayer[];
 };
 
+/**
+ * 메시지 레이아웃 — Discord에 보내는 최상위 구조를 선택해요.
+ * 'container'는 컨테이너 1개에 담아 보내는 방식이고, 'components'는 컨테이너 없이
+ * 컴포넌트 목록(TextDisplay·Separator·Section·MediaGallery)을 그대로 보내는 방식이에요.
+ * 강조색(accent color)은 컨테이너 전용 속성이라 'components'에서는 쓸 수 없어요.
+ */
+export type GreetingLayout = 'container' | 'components';
+
+export const GREETING_LAYOUTS = ['container', 'components'] as const;
+
 /** Guild.welcome / goodbye에 저장되는 값. version은 스키마 진화용 리터럴. */
 export type GreetingConfig = {
 	version: 2;
@@ -100,6 +112,10 @@ export type GreetingConfig = {
 	template: string; // 봇 메시지 본문. 변수: {유저} {유저이름} {서버} {멤버수}
 	useImage: boolean;
 	image: GreetingImage | null; // useImage가 true일 때만 유효
+	/** 메시지 레이아웃 — 기본 'container' */
+	layout: GreetingLayout;
+	/** 컨테이너 강조색(#RRGGBB) — null이면 봇 기본색. layout이 'components'면 무시돼요 */
+	accentColor: string | null;
 };
 
 /** 인사 종류 — Guild 컬럼 이름(welcome/goodbye)과 렌더러 분기에 모두 쓴다 */
@@ -173,7 +189,10 @@ export const greetingConfigSchema = z
 		channelId: z.string().regex(SNOWFLAKE).nullable(),
 		template: z.string().max(500),
 		useImage: z.boolean(),
-		image: greetingImageSchema.nullable()
+		image: greetingImageSchema.nullable(),
+		// layout·accentColor는 뒤에 추가된 필드예요 — 저장된 v2 값에 없으면 기본값을 채워 하위 호환을 지켜요.
+		layout: z.enum(GREETING_LAYOUTS).default('container'),
+		accentColor: z.string().regex(HEX_COLOR).nullable().default(null)
 	})
 	.refine((config) => (config.useImage ? config.image !== null : true), {
 		error: 'useImage가 true일 때 image는 필수예요.'
@@ -192,6 +211,8 @@ export const DEFAULT_WELCOME_GREETING: GreetingConfig = {
 	channelId: null,
 	template: '{유저}님이 입장했어요. 반가워요!',
 	useImage: true,
+	layout: 'container',
+	accentColor: null,
 	image: {
 		background: { presetId: 'rose', dataUri: null },
 		layers: [
@@ -218,6 +239,8 @@ export const DEFAULT_GOODBYE_GREETING: GreetingConfig = {
 	channelId: null,
 	template: '{유저이름}님이 서버를 떠났어요.',
 	useImage: true,
+	layout: 'container',
+	accentColor: null,
 	image: {
 		background: { presetId: 'rose', dataUri: null },
 		layers: [

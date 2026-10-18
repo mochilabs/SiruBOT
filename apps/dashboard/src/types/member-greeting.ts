@@ -5,6 +5,7 @@ import type {
 	GreetingImageLayer,
 	GreetingKind,
 	GreetingLayer,
+	GreetingLayout,
 	GreetingShapeLayer,
 	GreetingTemplate,
 	GreetingTemplateVariable,
@@ -26,12 +27,22 @@ export type {
 	GreetingImageLayer,
 	GreetingKind,
 	GreetingLayer,
+	GreetingLayout,
 	GreetingShapeLayer,
 	GreetingTemplate,
 	GreetingTemplateVariable,
 	GreetingTextLayer,
 	PresetBackground
 };
+
+/** 메시지 레이아웃 옵션 — 원본 GREETING_LAYOUTS의 복제본이에요 */
+export const GREETING_LAYOUTS = ["container", "components"] as const;
+
+/**
+ * 봇 기본 강조색(#RRGGBB) — accentColor를 지정하지 않을 때 쓰이는 색이에요.
+ * packages/utils의 DEFAULT_COLOR_HEX와 같은 값이라 계약이 바뀌면 같이 업데이트해요.
+ */
+export const DEFAULT_ACCENT_COLOR_HEX = "#ffdaff";
 
 /** 템플릿 변수 메타데이터 — 원본 GREETING_TEMPLATE_VARIABLES의 복제본이에요 */
 export const GREETING_TEMPLATE_VARIABLES: readonly GreetingTemplateVariable[] = [
@@ -56,6 +67,8 @@ export const DEFAULT_GREETINGS: Record<GreetingKind, GreetingConfig> = {
 		channelId: null,
 		template: "{유저}님이 입장했어요. 반가워요!",
 		useImage: true,
+		layout: "container",
+		accentColor: null,
 		image: {
 			background: { presetId: "rose", dataUri: null },
 			layers: [
@@ -71,6 +84,8 @@ export const DEFAULT_GREETINGS: Record<GreetingKind, GreetingConfig> = {
 		channelId: null,
 		template: "{유저이름}님이 서버를 떠났어요.",
 		useImage: true,
+		layout: "container",
+		accentColor: null,
 		image: {
 			background: { presetId: "rose", dataUri: null },
 			layers: [
