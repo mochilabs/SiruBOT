@@ -75,16 +75,16 @@ export function parseMessageLinks(content: string, limit: number = MESSAGE_LINK_
 	return targets;
 }
 
-// --- 임베드 복구: X·인스타그램은 프로바이더 도메인 스왑, BOOTH는 자체 OG 임베드 ---
+// --- 임베드 복구: X·인스타·TikTok·Reddit·Pixiv·Threads는 프로바이더 도메인 스왑, BOOTH는 자체 OG 임베드 ---
 
-export const EMBED_FIX_SITES = ['x', 'instagram', 'booth'] as const;
+export const EMBED_FIX_SITES = ['x', 'instagram', 'booth', 'tiktok', 'reddit', 'pixiv', 'threads'] as const;
 export type EmbedFixSite = (typeof EMBED_FIX_SITES)[number];
 
 export const embedFixSiteSchema = z.enum(EMBED_FIX_SITES, '지원하는 임베드 복구 사이트를 선택해 주세요.');
 
 /** 대시보드 저장값 계약 — 스키마는 lib/schemas.ts가 이 상수로 만들어요 */
 export function normalizeEmbedFixSites(sites: readonly string[] | string[] | null | undefined): EmbedFixSite[] {
-	if (!Array.isArray(sites)) return [...EMBED_FIX_SITES];
+	if (!Array.isArray(sites)) return [];
 	const allowed = new Set<string>(EMBED_FIX_SITES);
 	const normalized: EmbedFixSite[] = [];
 	for (const site of sites) {
@@ -98,10 +98,18 @@ export function normalizeEmbedFixSites(sites: readonly string[] | string[] | nul
  * - twitter.com → fxtwitter.com (FxEmbed)
  * - x.com → fixupx.com (FxEmbed, x.com 전용)
  * - instagram.com → kkinstagram.com (KKInstagram)
+ * - tiktok.com → tnktok.com (fxTikTok)
+ * - reddit.com → vxreddit.com (vxReddit)
+ * - pixiv.net → www.phixiv.net (Phixiv)
+ * - threads.net/threads.com → fixthreads.seria.moe (FixThreads 포크, Embed Fixer 봇이 쓰는 인스턴스)
  */
 export const X_TWITTER_FIX_DOMAIN = 'fxtwitter.com';
 export const X_FIX_DOMAIN = 'fixupx.com';
 export const INSTAGRAM_FIX_DOMAIN = 'kkinstagram.com';
+export const TIKTOK_FIX_DOMAIN = 'tnktok.com';
+export const REDDIT_FIX_DOMAIN = 'vxreddit.com';
+export const PIXIV_FIX_DOMAIN = 'www.phixiv.net';
+export const THREADS_FIX_DOMAIN = 'fixthreads.seria.moe';
 
 /** 한 메시지에서 복구할 최대 링크 수 */
 export const EMBED_FIX_LINK_MAX = 2;
@@ -118,17 +126,56 @@ export interface EmbedFixInstagramLink {
 	fixed: string;
 }
 
+export interface EmbedFixTikTokLink {
+	site: 'tiktok';
+	original: string;
+	fixed: string;
+}
+
+export interface EmbedFixRedditLink {
+	site: 'reddit';
+	original: string;
+	fixed: string;
+}
+
+export interface EmbedFixPixivLink {
+	site: 'pixiv';
+	original: string;
+	fixed: string;
+}
+
+export interface EmbedFixThreadsLink {
+	site: 'threads';
+	original: string;
+	fixed: string;
+}
+
 export interface EmbedFixBoothLink {
 	site: 'booth';
 	original: string;
 }
 
-export type EmbedFixLink = EmbedFixXLink | EmbedFixInstagramLink | EmbedFixBoothLink;
+/** 도메인 스왑으로 고칠 수 있는 사이트 (BOOTH는 제외) */
+export type EmbedFixSwapLink =
+	| EmbedFixXLink
+	| EmbedFixInstagramLink
+	| EmbedFixTikTokLink
+	| EmbedFixRedditLink
+	| EmbedFixPixivLink
+	| EmbedFixThreadsLink;
+
+export type EmbedFixLink = EmbedFixSwapLink | EmbedFixBoothLink;
 
 const X_LINK_PATTERN =
 	/(?<![\w.-])(?:https?:\/\/)?(?:www\.)?(twitter|x)\.com\/([A-Za-z0-9_]{1,20})\/status(?:es)?\/(\d{3,25})(\/(?:photo|video)\/\d+)?/gu;
 const INSTAGRAM_LINK_PATTERN = /(?<![\w.-])(?:https?:\/\/)?(?:www\.)?instagram\.com\/(p|reel|reels|tv)\/([A-Za-z0-9_-]{5,64})/gu;
 const BOOTH_LINK_PATTERN = /(?<![\w.-])(?:https?:\/\/)?(?:[A-Za-z0-9-]+\.)*booth\.pm\/(?:ko\/|ja\/|en\/)?items\/(\d+)(\/[A-Za-z0-9_-]+)?/gu;
+const TIKTOK_LINK_PATTERN = /(?<![\w.-])(?:https?:\/\/)?(?:www\.)?tiktok\.com\/(@[A-Za-z0-9_.]{1,24}\/(?:video|photo)\/\d{5,25})/gu;
+const REDDIT_LINK_PATTERN =
+	/(?<![\w.-])(?:https?:\/\/)?(?:(?:www|old|np)\.)?reddit\.com\/(r\/[A-Za-z0-9][A-Za-z0-9_]{1,24}\/comments\/[a-z0-9]{3,12}(?:\/[A-Za-z0-9][A-Za-z0-9_-]*)?)/gu;
+const PIXIV_LINK_PATTERN = /(?<![\w.-])(?:https?:\/\/)?(?:www\.)?pixiv\.net\/((?:[a-z]{2}\/)?artworks\/\d{2,20})/gu;
+const THREADS_LINK_PATTERN =
+	/(?<![\w.-])(?:https?:\/\/)?(?:www\.)?threads\.(?:net|com)\/((?:@[A-Za-z0-9_.]{1,30}\/post\/[A-Za-z0-9_-]{5,40})|(?:t\/[A-Za-z0-9_-]{5,40}))/gu;
 
 /** URL 끝에 붙은 문장 부호를 떼어요 — 괄호로 감싼 링크의 `)`까지 주소로 인식하는 걸 막아요 */
 function trimTrailingPunctuation(url: string): string {
@@ -145,6 +192,46 @@ function unmaskWrappedLinks(content: string): string {
 	return content.replace(/<https?:\/\/[^>]+>/gu, ' ');
 }
 
+/** 사이트별 링크 규칙 — 정규식 매칭과 고친 주소 빌드를 한 곳에서 관리해요 */
+interface EmbedFixUrlRule {
+	pattern: RegExp;
+	original: (match: RegExpMatchArray) => string;
+	fixed: (match: RegExpMatchArray) => string;
+}
+
+const EMBED_FIX_URL_RULES: Record<Exclude<EmbedFixSite, 'booth'>, EmbedFixUrlRule> = {
+	x: {
+		pattern: X_LINK_PATTERN,
+		original: (match) => normalizeMatchedUrl(match[0]),
+		fixed: (match) => `https://${match[1] === 'twitter' ? X_TWITTER_FIX_DOMAIN : X_FIX_DOMAIN}/${match[2]}/status/${match[3]}${match[4] ?? ''}`
+	},
+	instagram: {
+		pattern: INSTAGRAM_LINK_PATTERN,
+		original: (match) => `${normalizeMatchedUrl(match[0])}/`,
+		fixed: (match) => `https://${INSTAGRAM_FIX_DOMAIN}/${match[1]}/${match[2]}/`
+	},
+	tiktok: {
+		pattern: TIKTOK_LINK_PATTERN,
+		original: (match) => normalizeMatchedUrl(match[0]),
+		fixed: (match) => `https://${TIKTOK_FIX_DOMAIN}/${match[1]}`
+	},
+	reddit: {
+		pattern: REDDIT_LINK_PATTERN,
+		original: (match) => normalizeMatchedUrl(match[0]),
+		fixed: (match) => `https://${REDDIT_FIX_DOMAIN}/${match[1]}/`
+	},
+	pixiv: {
+		pattern: PIXIV_LINK_PATTERN,
+		original: (match) => normalizeMatchedUrl(match[0]),
+		fixed: (match) => `https://${PIXIV_FIX_DOMAIN}/${match[1]}`
+	},
+	threads: {
+		pattern: THREADS_LINK_PATTERN,
+		original: (match) => normalizeMatchedUrl(match[0]),
+		fixed: (match) => `https://${THREADS_FIX_DOMAIN}/${match[1]}`
+	}
+};
+
 /** 메시지 본문에서 임베드를 복구할 링크를 뽑아요. 사이트별 도메인 스왑/자체 임베드를 결정해요 */
 export function findEmbedFixLinks(content: string, sites: readonly EmbedFixSite[]): EmbedFixLink[] {
 	const unmasked = unmaskWrappedLinks(content);
@@ -156,19 +243,11 @@ export function findEmbedFixLinks(content: string, sites: readonly EmbedFixSite[
 		seen.add(key);
 		found.push(link);
 	};
-	if (sites.includes('x')) {
-		for (const match of unmasked.matchAll(X_LINK_PATTERN)) {
-			const host = match[1] === 'twitter' ? X_TWITTER_FIX_DOMAIN : X_FIX_DOMAIN;
-			push({ site: 'x', original: normalizeMatchedUrl(match[0]), fixed: `https://${host}/${match[2]}/status/${match[3]}${match[4] ?? ''}` });
-		}
-	}
-	if (sites.includes('instagram')) {
-		for (const match of unmasked.matchAll(INSTAGRAM_LINK_PATTERN)) {
-			push({
-				site: 'instagram',
-				original: `${normalizeMatchedUrl(match[0])}/`,
-				fixed: `https://${INSTAGRAM_FIX_DOMAIN}/${match[1]}/${match[2]}/`
-			});
+	for (const site of EMBED_FIX_SITES) {
+		if (site === 'booth' || !sites.includes(site)) continue;
+		const rule = EMBED_FIX_URL_RULES[site];
+		for (const match of unmasked.matchAll(rule.pattern)) {
+			push({ site, original: rule.original(match), fixed: rule.fixed(match) } as EmbedFixSwapLink);
 		}
 	}
 	if (sites.includes('booth')) {
@@ -179,12 +258,32 @@ export function findEmbedFixLinks(content: string, sites: readonly EmbedFixSite[
 	return found.slice(0, EMBED_FIX_LINK_MAX);
 }
 
-// --- BOOTH 자체 임베드: OG 메타를 직접 읽어 큰 이미지 임베드를 만들어요 ---
+/**
+ * 원본 URL을 고친 주소로 다시 계산해요 — data-api가 클라이언트가 보낸 fixedUrl을 그대로 믿지 않을 때 써요.
+ * 패턴이 안 맞거나 BOOTH면 null을 돌려줘요.
+ */
+export function swapEmbedFixUrl(site: EmbedFixSite, original: string): string | null {
+	if (site === 'booth') return null;
+	const rule = EMBED_FIX_URL_RULES[site];
+	const match = original.match(new RegExp(rule.pattern.source, 'u'));
+	return match ? rule.fixed(match) : null;
+}
+
+// --- BOOTH 자체 임베드·사이트 카드: OG 메타를 직접 읽어 임베드를 만들어요 ---
 
 export interface BoothOgMeta {
 	title: string;
 	description: string;
 	image: string;
+	url: string;
+}
+
+/** 일반 OG 메타 — image·video는 사이트마다 있을 수도, 없을 수도 있어요 */
+export interface OgMeta {
+	title: string;
+	description: string;
+	image: string | null;
+	video: string | null;
 	url: string;
 }
 
@@ -213,10 +312,10 @@ export function enlargeBoothImage(url: string): string {
 }
 
 /**
- * BOOTH 상품 페이지의 OG 메타를 파싱해요. title·image가 없으면 null을 돌려줘요.
- * description은 EMBED_FIX_MAX_DESCRIPTION자로 자르고, image는 원본 해상도로 바꿔요.
+ * 페이지의 OG 메타를 파싱해요. title이 없으면 null을 돌려줘요.
+ * description은 EMBED_FIX_MAX_DESCRIPTION자로 잘라요.
  */
-export function parseBoothOg(html: string, pageUrl: string): BoothOgMeta | null {
+export function parseOgMeta(html: string, pageUrl: string): OgMeta | null {
 	const og = new Map<string, string>();
 	for (const tagMatch of html.matchAll(/<meta\b[^>]*>/giu)) {
 		const tag = tagMatch[0];
@@ -225,16 +324,25 @@ export function parseBoothOg(html: string, pageUrl: string): BoothOgMeta | null 
 		if (property && content !== null) og.set(property.toLowerCase(), decodeHtmlEntities(content));
 	}
 	const title = og.get('og:title');
-	const image = og.get('og:image');
-	if (!title || !image) return null;
+	if (!title) return null;
 	const description = og.get('og:description') ?? '';
-	const url = og.get('og:url') ?? pageUrl;
 	return {
 		title,
 		description: description.length > EMBED_FIX_MAX_DESCRIPTION ? `${description.slice(0, EMBED_FIX_MAX_DESCRIPTION - 1)}…` : description,
-		image: enlargeBoothImage(image),
-		url
+		image: og.get('og:image') ?? null,
+		video: og.get('og:video') ?? null,
+		url: og.get('og:url') ?? pageUrl
 	};
+}
+
+/**
+ * BOOTH 상품 페이지의 OG 메타를 파싱해요. title·image가 없으면 null을 돌려줘요.
+ * image는 원본 해상도로 바꿔요.
+ */
+export function parseBoothOg(html: string, pageUrl: string): BoothOgMeta | null {
+	const meta = parseOgMeta(html, pageUrl);
+	if (!meta || !meta.image) return null;
+	return { title: meta.title, description: meta.description, image: enlargeBoothImage(meta.image), url: meta.url };
 }
 
 // --- X(Twitter) 메타데이터: FxEmbed API 페이징을 봇이 쓰기 좋은 형태로 정리해요 ---
@@ -363,7 +471,8 @@ export const embedFixResultSchema = z.object({
 	likeCount: z.number().optional(),
 	createdAt: z.number().optional(),
 	sourceUrl: z.string().optional(),
-	fixedUrl: z.string().optional()
+	fixedUrl: z.string().optional(),
+	videoUrl: z.string().optional()
 });
 
 export const embedFixMetadataResponseSchema = z.object({

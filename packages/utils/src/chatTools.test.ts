@@ -18,7 +18,9 @@ import {
 	embedFixMetadataResponseSchema,
 	embedFixResultSchema,
 	fxTwitterApiUrl,
-	parseFxTwitterStatus
+	parseFxTwitterStatus,
+	parseOgMeta,
+	swapEmbedFixUrl
 } from './chatTools.ts';
 
 describe('parseEmojiOnlyMessage', () => {
@@ -83,13 +85,13 @@ describe('parseMessageLinks', () => {
 });
 
 describe('normalizeEmbedFixSites', () => {
-	it('값이 없으면 전체 사이트 기본값이에요', () => {
-		expect(normalizeEmbedFixSites(null)).toEqual(['x', 'instagram', 'booth']);
-		expect(normalizeEmbedFixSites(undefined)).toEqual(['x', 'instagram', 'booth']);
+	it('값이 없으면 비활성(빈 배열)이에요 — 기본은 전부 꺼짐', () => {
+		expect(normalizeEmbedFixSites(null)).toEqual([]);
+		expect(normalizeEmbedFixSites(undefined)).toEqual([]);
 	});
 
 	it('모르는 사이트는 걸러내고 중복을 제거해요', () => {
-		expect(normalizeEmbedFixSites(['x', 'x', 'tiktok', 'booth'])).toEqual(['x', 'booth']);
+		expect(normalizeEmbedFixSites(['x', 'x', 'facebook', 'booth'])).toEqual(['x', 'booth']);
 		expect(normalizeEmbedFixSites([])).toEqual([]);
 	});
 });
@@ -142,6 +144,50 @@ describe('findEmbedFixLinks', () => {
 			)
 		).toHaveLength(2);
 	});
+
+	it('TikTok·Reddit·Pixiv·Threads 링크를 고친 주소로 바꿔요', () => {
+		const [tiktok] = findEmbedFixLinks('https://www.tiktok.com/@khaby.lame/video/7483143881148665110', ['tiktok']);
+		expect(tiktok).toEqual({
+			site: 'tiktok',
+			original: 'https://www.tiktok.com/@khaby.lame/video/7483143881148665110',
+			fixed: 'https://tnktok.com/@khaby.lame/video/7483143881148665110'
+		});
+		const [reddit] = findEmbedFixLinks('https://www.reddit.com/r/jobs/comments/1wsezqo/giving_a_twoweek_notice/', ['reddit']);
+		expect(reddit).toEqual({
+			site: 'reddit',
+			original: 'https://www.reddit.com/r/jobs/comments/1wsezqo/giving_a_twoweek_notice',
+			fixed: 'https://vxreddit.com/r/jobs/comments/1wsezqo/giving_a_twoweek_notice/'
+		});
+		const [pixiv] = findEmbedFixLinks('https://www.pixiv.net/en/artworks/150944479', ['pixiv']);
+		expect(pixiv).toEqual({
+			site: 'pixiv',
+			original: 'https://www.pixiv.net/en/artworks/150944479',
+			fixed: 'https://www.phixiv.net/en/artworks/150944479'
+		});
+		const [threads] = findEmbedFixLinks('https://www.threads.net/@dhruboahmed071/post/DdmvmJBkz7h', ['threads']);
+		expect(threads).toEqual({
+			site: 'threads',
+			original: 'https://www.threads.net/@dhruboahmed071/post/DdmvmJBkz7h',
+			fixed: 'https://fixthreads.seria.moe/@dhruboahmed071/post/DdmvmJBkz7h'
+		});
+	});
+
+	it('TikTok·Reddit·Pixiv·Threads 유사 도메인·비게시물 링크는 오탐하지 않아요', () => {
+		expect(findEmbedFixLinks('https://notiktok.com/@user/video/123', ['tiktok'])).toEqual([]);
+		expect(findEmbedFixLinks('https://vt.tiktok.com/@user/video/123456789012', ['tiktok'])).toEqual([]);
+		expect(findEmbedFixLinks('https://www.tiktok.com/explore', ['tiktok'])).toEqual([]);
+		expect(findEmbedFixLinks('https://www.reddit.com/r/jobs', ['reddit'])).toEqual([]);
+		expect(findEmbedFixLinks('https://www.pixiv.net/en/users/123', ['pixiv'])).toEqual([]);
+		expect(findEmbedFixLinks('https://www.threads.net/@user', ['threads'])).toEqual([]);
+	});
+
+	it('한 메시지에서 여러 사이트 링크를 계약 순서로 뽑아요', () => {
+		const links = findEmbedFixLinks(
+			'https://www.pixiv.net/artworks/150944479 그리고 https://www.tiktok.com/@khaby.lame/photo/7483143881148665110',
+			['pixiv', 'tiktok']
+		);
+		expect(links.map((link) => link.site)).toEqual(['tiktok', 'pixiv']);
+	});
 });
 
 describe('parseBoothOg', () => {
@@ -174,6 +220,57 @@ describe('enlargeBoothImage', () => {
 	it('pximg 리사이즈 세그먼트를 제거해요', () => {
 		expect(enlargeBoothImage('https://booth.pximg.net/c/620x620/a/i/1/b.jpg')).toBe('https://booth.pximg.net/a/i/1/b.jpg');
 		expect(enlargeBoothImage('https://example.com/a.jpg')).toBe('https://example.com/a.jpg');
+	});
+});
+
+describe('swapEmbedFixUrl', () => {
+	it('원본 주소에서 고친 주소를 다시 계산해요', () => {
+		expect(swapEmbedFixUrl('tiktok', 'https://www.tiktok.com/@khaby.lame/video/7483143881148665110')).toBe(
+			'https://tnktok.com/@khaby.lame/video/7483143881148665110'
+		);
+		expect(swapEmbedFixUrl('reddit', 'https://www.reddit.com/r/jobs/comments/1wsezqo/')).toBe('https://vxreddit.com/r/jobs/comments/1wsezqo/');
+		expect(swapEmbedFixUrl('x', 'https://twitter.com/user/status/123')).toBe('https://fxtwitter.com/user/status/123');
+	});
+
+	it('패턴이 안 맞거나 BOOTH면 null이에요', () => {
+		expect(swapEmbedFixUrl('booth', 'https://booth.pm/ko/items/123')).toBeNull();
+		expect(swapEmbedFixUrl('tiktok', 'https://example.com/not-tiktok')).toBeNull();
+	});
+});
+
+describe('parseOgMeta', () => {
+	it('og 메타를 읽고 image·video·url을 채워요', () => {
+		const html = `
+			<html><head>
+			<meta property="og:title" content="Khabane lame (@khaby.lame)" />
+			<meta property="og:description" content="영상 설명" />
+			<meta property="og:image" content="https://example.com/thumb.jpg" />
+			<meta property="og:video" content="https://offload.tnktok.com/generate/video/123.mp4" />
+			<meta property="og:url" content="https://www.tiktok.com/@khaby.lame/video/123" />
+			</head></html>`;
+		const meta = parseOgMeta(html, 'https://fallback.example');
+		expect(meta).toEqual({
+			title: 'Khabane lame (@khaby.lame)',
+			description: '영상 설명',
+			image: 'https://example.com/thumb.jpg',
+			video: 'https://offload.tnktok.com/generate/video/123.mp4',
+			url: 'https://www.tiktok.com/@khaby.lame/video/123'
+		});
+	});
+
+	it('image·video·og:url이 없으면 null과 pageUrl로 채워요', () => {
+		const meta = parseOgMeta('<html><meta property="og:title" content="제목만"></html>', 'https://example.com/page');
+		expect(meta).toEqual({ title: '제목만', description: '', image: null, video: null, url: 'https://example.com/page' });
+	});
+
+	it('title이 없으면 null, description은 잘라요', () => {
+		expect(parseOgMeta('<html><meta property="og:image" content="https://example.com/a.jpg"></html>', 'https://example.com')).toBeNull();
+		const meta = parseOgMeta(
+			`<html><meta property="og:title" content="제목"><meta property="og:description" content="${'나'.repeat(EMBED_FIX_MAX_DESCRIPTION + 10)}"></html>`,
+			'https://example.com'
+		);
+		expect(meta?.description).toHaveLength(EMBED_FIX_MAX_DESCRIPTION);
+		expect(meta?.description.endsWith('…')).toBe(true);
 	});
 });
 
@@ -360,7 +457,11 @@ describe('임베드 복구 게이트웨이 스키마', () => {
 		expect(ok.success).toBe(true);
 
 		expect(embedFixMetadataRequestSchema.safeParse({ links: [] }).success).toBe(false);
-		expect(embedFixMetadataRequestSchema.safeParse({ links: [{ site: 'tiktok', url: 'https://tiktok.com/x' }] }).success).toBe(false);
+		expect(
+			embedFixMetadataRequestSchema.safeParse({ links: [{ site: 'tiktok', url: 'https://www.tiktok.com/@user/video/1234567890123456789' }] })
+				.success
+		).toBe(true);
+		expect(embedFixMetadataRequestSchema.safeParse({ links: [{ site: 'facebook', url: 'https://facebook.com/x' }] }).success).toBe(false);
 		expect(embedFixMetadataRequestSchema.safeParse({ links: [{ site: 'x', url: 'not-a-url' }] }).success).toBe(false);
 	});
 
@@ -386,6 +487,15 @@ describe('임베드 복구 게이트웨이 스키마', () => {
 
 		const skip = embedFixResultSchema.safeParse({ site: 'booth', mode: 'skip' });
 		expect(skip.success).toBe(true);
+
+		const videoCard = embedFixResultSchema.safeParse({
+			site: 'tiktok',
+			mode: 'card',
+			title: 'Khabane lame (@khaby.lame)',
+			videoUrl: 'https://offload.tnktok.com/generate/video/7483143881148665110.mp4',
+			sourceUrl: 'https://www.tiktok.com/@khaby.lame/video/7483143881148665110'
+		});
+		expect(videoCard.success).toBe(true);
 
 		expect(embedFixResultSchema.safeParse({ site: 'x', mode: 'bogus' }).success).toBe(false);
 	});
