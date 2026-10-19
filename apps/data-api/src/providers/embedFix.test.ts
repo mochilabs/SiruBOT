@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boothEmbedFixResult, instagramEmbedFixResult, xEmbedFixResult } from './embedFix.ts';
+import { boothEmbedFixResult, instagramEmbedFixResult, ogEmbedFixResult, xEmbedFixResult } from './embedFix.ts';
 import type { FxTwitterStatus } from '@sirubot/utils';
 
 const X_LINK = { site: 'x', url: 'https://x.com/jack/status/20', fixedUrl: 'https://fixupx.com/jack/status/20' } as const;
@@ -99,5 +99,72 @@ describe('boothEmbedFixResult', () => {
 	it('skips when the product is unavailable', () => {
 		const result = boothEmbedFixResult(BOOTH_LINK, null);
 		expect(result.mode).toBe('skip');
+	});
+});
+
+const TIKTOK_LINK = {
+	site: 'tiktok',
+	url: 'https://www.tiktok.com/@khaby.lame/video/7483143881148665110',
+	fixedUrl: 'https://tnktok.com/@khaby.lame/video/7483143881148665110'
+} as const;
+const REDDIT_LINK = {
+	site: 'reddit',
+	url: 'https://www.reddit.com/r/jobs/comments/1wsezqo/',
+	fixedUrl: 'https://vxreddit.com/r/jobs/comments/1wsezqo/'
+} as const;
+
+describe('ogEmbedFixResult', () => {
+	it('maps og meta with a video to a card (TikTok)', () => {
+		const result = ogEmbedFixResult(
+			TIKTOK_LINK,
+			{
+				title: 'Khabane lame (@khaby.lame)',
+				description: '영상 설명',
+				image: 'https://example.com/thumb.jpg',
+				video: 'https://offload.tnktok.com/generate/video/7483143881148665110.mp4',
+				url: TIKTOK_LINK.url
+			},
+			TIKTOK_LINK.fixedUrl
+		);
+		expect(result.site).toBe('tiktok');
+		expect(result.mode).toBe('card');
+		if (result.mode !== 'card') return;
+		expect(result.title).toBe('Khabane lame (@khaby.lame)');
+		expect(result.description).toBe('영상 설명');
+		expect(result.images).toEqual(['https://example.com/thumb.jpg']);
+		expect(result.videoUrl).toBe('https://offload.tnktok.com/generate/video/7483143881148665110.mp4');
+		expect(result.sourceUrl).toBe(TIKTOK_LINK.url);
+	});
+
+	it('maps a text-only og meta to a card without images (Reddit)', () => {
+		const result = ogEmbedFixResult(
+			REDDIT_LINK,
+			{ title: '게시물 제목', description: '본문 요약', image: null, video: null, url: REDDIT_LINK.url },
+			REDDIT_LINK.fixedUrl
+		);
+		expect(result.mode).toBe('card');
+		if (result.mode !== 'card') return;
+		expect(result.title).toBe('게시물 제목');
+		expect(result.images).toBeUndefined();
+		expect(result.videoUrl).toBeUndefined();
+		expect(result.sourceUrl).toBe(REDDIT_LINK.url);
+	});
+
+	it('falls back to the swapped link when og meta is unavailable', () => {
+		const result = ogEmbedFixResult(TIKTOK_LINK, null, TIKTOK_LINK.fixedUrl);
+		expect(result.mode).toBe('link');
+		if (result.mode !== 'link') return;
+		expect(result.fixedUrl).toBe(TIKTOK_LINK.fixedUrl);
+	});
+
+	it('falls back to the caller fixedUrl when even the swap misses', () => {
+		const result = ogEmbedFixResult(
+			{ site: 'pixiv', url: 'https://www.pixiv.net/artworks/1', fixedUrl: 'https://www.phixiv.net/artworks/1' },
+			null,
+			null
+		);
+		expect(result.mode).toBe('link');
+		if (result.mode !== 'link') return;
+		expect(result.fixedUrl).toBe('https://www.phixiv.net/artworks/1');
 	});
 });

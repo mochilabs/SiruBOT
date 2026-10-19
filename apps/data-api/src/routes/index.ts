@@ -17,6 +17,7 @@ import {
 	playerWebPlayUriSchema,
 	redisIdSchema,
 	embedFixMetadataRequestSchema,
+	swapEmbedFixUrl,
 	type EmbedFixResult
 } from '@sirubot/utils';
 import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
@@ -53,12 +54,17 @@ import {
 	fetchBoothMeta,
 	fetchFxTwitterStatus,
 	fetchInstagramImageOk,
+	fetchOgMeta,
 	instagramEmbedFixResult,
+	ogEmbedFixResult,
 	xEmbedFixResult
 } from '../providers/embedFix.ts';
 
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
 const WEATHER_TTL_SECONDS = 15 * 60;
+
+/** OG 카드 사이트별 서킷브레이커 프로바이더 이름 — 프로바이더 교체 시 여기만 고쳐요 */
+const OG_CARD_PROVIDERS = { tiktok: 'tnktok', reddit: 'vxreddit', pixiv: 'phixiv', threads: 'fixthreads' } as const;
 
 export interface RouteDeps {
 	translationProvider: OpenAICompatTranslationProvider;
@@ -213,7 +219,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
-	// ── 임베드 복구 메타데이터 (X·인스타그램·BOOTH — 봇 채팅 유틸 리스너가 호출해요) ──
+	// ── 임베드 복구 메타데이터 (X·인스타그램·BOOTH·TikTok·Reddit·Pixiv·Threads — 봇 채팅 유틸 리스너가 호출해요) ──
 	fastify.post('/v1/embed-fix/metadata', async (request, reply) => {
 		try {
 			const parsed = embedFixMetadataRequestSchema.parse(request.body);
@@ -238,7 +244,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 						fetchFresh: () => fetchInstagramImageOk(link.fixedUrl ?? link.url)
 					});
 					results.push(instagramEmbedFixResult(link, imageOk));
-				} else {
+				} else if (link.site === 'booth') {
 					const { data: meta } = await serveCached({
 						route: 'embed-fix',
 						key: embedFixCacheKey('booth', link.url),
@@ -247,6 +253,18 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 						fetchFresh: () => fetchBoothMeta(link.url)
 					});
 					results.push(boothEmbedFixResult(link, meta));
+				} else {
+					// OG 카드 사이트(TikTok·Reddit·Pixiv·Threads) — 고친 주소에서 og 메타를 읽어 카드를 만들어요
+					const provider = OG_CARD_PROVIDERS[link.site];
+					const swappedUrl = swapEmbedFixUrl(link.site, link.url);
+					const { data: meta } = await serveCached({
+						route: 'embed-fix',
+						key: embedFixCacheKey(link.site, link.url),
+						ttlSeconds: EMBED_FIX_TTL_SECONDS,
+						provider,
+						fetchFresh: () => fetchOgMeta(swappedUrl ?? link.url)
+					});
+					results.push(ogEmbedFixResult(link, meta, swappedUrl));
 				}
 			}
 			return reply.send({ results });
