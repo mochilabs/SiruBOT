@@ -96,12 +96,12 @@ describe('findEmbedFixLinks', () => {
 			fixed: 'https://fxtwitter.com/user/status/1234567890123456789'
 		});
 		const [x] = findEmbedFixLinks('https://x.com/user/status/1234567890123456789?s=20', ['x']);
-		expect(x?.fixed).toBe('https://fixupx.com/user/status/1234567890123456789');
+		expect(x?.site === 'x' && x.fixed).toBe('https://fixupx.com/user/status/1234567890123456789');
 	});
 
 	it('photo 접미사는 유지하고 감싼 링크는 건너뛰어요', () => {
 		const [photo] = findEmbedFixLinks('https://x.com/user/status/123/photo/1)', ['x']);
-		expect(photo?.fixed).toBe('https://fixupx.com/user/status/123/photo/1');
+		expect(photo?.site === 'x' && photo.fixed).toBe('https://fixupx.com/user/status/123/photo/1');
 		expect(findEmbedFixLinks('<https://x.com/user/status/123>', ['x'])).toEqual([]);
 	});
 
