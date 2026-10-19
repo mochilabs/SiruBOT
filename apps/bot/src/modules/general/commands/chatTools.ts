@@ -140,10 +140,16 @@ export class ChatToolsCommand extends Command {
 		const label = FEATURE_LABELS[tool];
 
 		if (enable) {
-			const content =
+			let content =
 				result.mode === 'all'
 					? `${emoji('sparkle')} ${label}는 이미 서버의 모든 채널에서 켜져 있어요.`
 					: `${emoji('sparkle')} 지금부터 <#${interaction.channelId}>에서 ${label}를 켰어요.`;
+			if (tool === 'embedFix') {
+				const settings = await this.container.guildService.getChatToolSettings(interaction.guildId);
+				if (settings.embedFixSites.length === 0) {
+					content += `\n-# ${emoji('info')} 복구할 사이트가 전부 꺼져 있어요. 대시보드 채팅 유틸 탭에서 사이트를 골라 주세요.`;
+				}
+			}
 			await interaction.editReply({ allowedMentions: { parse: [] }, content });
 			return;
 		}

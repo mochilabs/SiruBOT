@@ -1,8 +1,8 @@
 /**
- * 임베드 복구 리스너 — X·인스타그램·BOOTH 링크의 임베드를 제대로 떠요.
+ * 임베드 복구 리스너 — X·인스타그램·BOOTH·TikTok·Reddit·Pixiv·Threads 링크의 임베드를 제대로 떠요.
  *
  * - 메타데이터는 data-api(/v1/embed-fix/metadata)에 물어봐요 — 프로바이더 캐시·서킷브레이커가 거기 있어요.
- *   X·인스타그램은 Components V2 카드로, BOOTH는 원본 해상도 상품 카드로 만들어요.
+ *   OG 메타가 오는 사이트는 전부 Components V2 카드로 재구성해요.
  * - 결과는 채널 웹훅으로 "링크를 보낸 사람" 이름·프사로 보내요 (embed-fixer 관행).
  *   웹훅을 못 쓰면(스레드·권한 없음·실패) 봇 아이디 리플라이로 폴백해요.
  * - data-api를 못 쓰면 레거시 경로로 폴백해요 — 고친 주소(fxtwitter/fixupx/kkinstagram)를 다시 보내
@@ -26,10 +26,9 @@ import {
 } from 'discord.js';
 import {
 	type EmbedFixBoothLink,
-	type EmbedFixInstagramLink,
 	type EmbedFixLink,
 	type EmbedFixResult,
-	type EmbedFixXLink,
+	type EmbedFixSwapLink,
 	MemoryCache,
 	createContainer,
 	createThumbnail,
@@ -49,6 +48,16 @@ const BOOTH_USER_AGENT = 'Discordbot/2.0';
 const CARD_TEXT_MAX = 1_000;
 /** 미디어 갤러리 항목 상한 (Components V2 제한) */
 const CARD_IMAGE_MAX = 10;
+
+/** OG 카드 사이트(TikTok·Reddit·Pixiv·Threads) 헤더 문구와 이모지 */
+const OG_CARD_SITE_HEADERS = {
+	tiktok: { label: 'TikTok 영상', emoji: 'link' },
+	reddit: { label: 'Reddit 게시물', emoji: 'link' },
+	pixiv: { label: 'Pixiv 작품', emoji: 'frame' },
+	threads: { label: 'Threads 게시물', emoji: 'link' }
+} as const;
+type OgCardSiteKey = keyof typeof OG_CARD_SITE_HEADERS;
+type OgCardSiteHeader = (typeof OG_CARD_SITE_HEADERS)[OgCardSiteKey];
 
 /** 전송 가능한 결과 한 건 — content(레거시 스왑 링크) 또는 components(CV2 카드) */
 interface EmbedFixPayload {
@@ -92,13 +101,7 @@ export class EmbedFixListener extends Listener {
 	private async buildPayloads(links: EmbedFixLink[]): Promise<EmbedFixPayload[]> {
 		const gatewayResults = await fetchEmbedFixMetadata({
 			links: links.map((link) =>
-				link.site === 'booth'
-					? { site: link.site, url: link.original }
-					: {
-							site: (link as EmbedFixXLink | EmbedFixInstagramLink).site,
-							url: link.original,
-							fixedUrl: (link as EmbedFixXLink | EmbedFixInstagramLink).fixed
-						}
+				link.site === 'booth' ? { site: link.site, url: link.original } : { site: link.site, url: link.original, fixedUrl: link.fixed }
 			)
 		});
 
@@ -125,7 +128,7 @@ export class EmbedFixListener extends Listener {
 	private async buildLegacyPayloads(links: EmbedFixLink[]): Promise<EmbedFixPayload[]> {
 		const payloads: EmbedFixPayload[] = [];
 
-		const swapLinks = links.filter((link): link is EmbedFixXLink | EmbedFixInstagramLink => link.site !== 'booth');
+		const swapLinks = links.filter((link): link is EmbedFixSwapLink => link.site !== 'booth');
 		if (swapLinks.length > 0) payloads.push({ content: swapLinks.map((link) => link.fixed).join('\n') });
 
 		const boothLink = links.find((link): link is EmbedFixBoothLink => link.site === 'booth');
@@ -151,7 +154,36 @@ export class EmbedFixListener extends Listener {
 		if (result.site === 'x') return this.buildXCard(result);
 		if (result.site === 'instagram') return this.buildInstagramCard(result);
 		if (result.site === 'booth') return this.buildBoothCard(result);
-		return null;
+		const header = OG_CARD_SITE_HEADERS[result.site as OgCardSiteKey];
+		return header ? this.buildOgCard(result, header) : null;
+	}
+
+	/** OG 카드 사이트 헤더 — 사이트 이름과 이모지는 여기서 관리해요 */
+	private buildOgCard(result: EmbedFixResult, header: OgCardSiteHeader): ContainerBuilder | null {
+		if (!result.sourceUrl) return null;
+		const container = createContainer();
+
+		container.addSectionComponents(
+			new SectionBuilder()
+				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji(header.emoji)} ${header.label}`))
+				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
+		);
+		if (result.title) {
+			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${result.title}`));
+		}
+		if (result.description && result.description.length > 0) {
+			const text = result.description.length > CARD_TEXT_MAX ? `${result.description.slice(0, CARD_TEXT_MAX - 1)}…` : result.description;
+			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text));
+		}
+
+		// og:video(TikTok 등)를 우선으로 깔고 나머지 이미지를 이어요
+		const mediaUrls = [...(result.videoUrl ? [result.videoUrl] : []), ...(result.images ?? [])].slice(0, CARD_IMAGE_MAX);
+		if (mediaUrls.length > 0) {
+			const gallery = new MediaGalleryBuilder();
+			for (const url of mediaUrls) gallery.addItems(new MediaGalleryItemBuilder().setURL(url));
+			container.addMediaGalleryComponents(gallery);
+		}
+		return container;
 	}
 
 	/** X 카드 — 작성자 섹션(프사 썸네일) + 본문 + 사진 + 참여 수 + 원문 버튼 */
