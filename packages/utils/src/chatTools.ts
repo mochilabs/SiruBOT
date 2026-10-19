@@ -4,6 +4,8 @@
  * 봇의 general/message 리스너들은 이 모듈의 순수 함수로만 메시지를 판정해요 (DB·Discord API 접근 없음).
  * 대시보드는 EMBED_FIX_SITES·normalizeEmbedFixSites 계약을 그대로 재사용해요.
  * 임베드 복구 프로바이더(kkinstagram 등)는 외부 서비스라 불안정할 수 있어요 — 도메인은 상수로 두고 교체할 수 있게 해요.
+ * X 메타데이터는 FxEmbed 공개 API(api.fxtwitter.com)에서 가져와요. data-api /v1/embed-fix/metadata 라우트와
+ * 봇 embedFixGateway는 이 모듈의 요청/응답 스키마를 공유해요.
  */
 import { z } from 'zod';
 
@@ -234,6 +236,142 @@ export function parseBoothOg(html: string, pageUrl: string): BoothOgMeta | null 
 		url
 	};
 }
+
+// --- X(Twitter) 메타데이터: FxEmbed API 페이징을 봇이 쓰기 좋은 형태로 정리해요 ---
+
+export interface FxTwitterStatus {
+	url: string;
+	text: string;
+	authorName: string;
+	authorHandle: string;
+	authorAvatar: string;
+	/** 정적 사진(name=large 정규화) — 동영상·GIF 트윗은 카드 대신 링크 모드로 넘겨요 */
+	photos: string[];
+	hasVideo: boolean;
+	hasPoll: boolean;
+	hasQuote: boolean;
+	replyCount: number;
+	retweetCount: number;
+	likeCount: number;
+	/** 유닉스 초 */
+	createdAt: number;
+}
+
+/** twitter.com/x.com 링크를 FxEmbed API 주소로 바꿔요 (경로 유지). X 링크가 아니면 null */
+export function fxTwitterApiUrl(original: string): string | null {
+	const replaced = original.replace(/^(?:https?:\/\/)?(?:www\.)?(?:twitter|x)\.com\//iu, 'https://api.fxtwitter.com/');
+	return replaced === original && !/^https:\/\/api\.fxtwitter\.com\//iu.test(replaced) ? null : replaced;
+}
+
+/** pbs.twimg.com 사진 파라미터를 name=large로 정규화해요 */
+export function enlargeTwitterPhoto(url: string): string {
+	return url.replace(/([?&])name=\w+/u, '$1name=large');
+}
+
+/** 트위터 프로필 아바타(_normal·_bigger·_mini·_200x200)를 400x400으로 키워요 */
+export function enlargeTwitterAvatar(url: string): string {
+	return url.replace(/_(?:normal|bigger|mini|200x200)\./u, '_400x400.');
+}
+
+function toCount(value: unknown): number {
+	return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * FxEmbed API(v1·v2) 응답 payload를 파싱해요 — v1은 `tweet`, v2는 `status` 래퍼를 쓰고
+ * 리포스트 수 필드도 `retweets`/`reposts`로 갈렵니다, 둘 다 받아들여요.
+ * code가 200이 아니거나 트윗 본문이 없으면(삭제·비공개) null을 돌려줘요.
+ */
+export function parseFxTwitterStatus(payload: unknown): FxTwitterStatus | null {
+	if (typeof payload !== 'object' || payload === null) return null;
+	const root = payload as Record<string, unknown>;
+	if (root.code !== 200) return null;
+	const tweet = (root.tweet ?? root.status) as Record<string, unknown> | undefined;
+	if (typeof tweet !== 'object' || tweet === null) return null;
+	const author = tweet.author as Record<string, unknown> | undefined;
+	const media = tweet.media as Record<string, unknown> | undefined;
+	const photos: string[] = [];
+	if (typeof media === 'object' && media !== null && Array.isArray(media.photos)) {
+		for (const photo of media.photos) {
+			if (typeof photo !== 'object' || photo === null) continue;
+			const entry = photo as Record<string, unknown>;
+			if (entry.type !== 'photo' || typeof entry.url !== 'string' || !/^https?:\/\//iu.test(entry.url)) continue;
+			photos.push(enlargeTwitterPhoto(entry.url));
+		}
+	}
+	const videos = typeof media === 'object' && media !== null && Array.isArray(media.videos) ? media.videos.length : 0;
+	return {
+		url: typeof tweet.url === 'string' ? tweet.url : '',
+		text: typeof tweet.text === 'string' ? tweet.text : '',
+		authorName: typeof author?.name === 'string' ? author.name : '',
+		authorHandle: typeof author?.screen_name === 'string' ? author.screen_name : '',
+		authorAvatar: typeof author?.avatar_url === 'string' ? enlargeTwitterAvatar(author.avatar_url) : '',
+		photos,
+		hasVideo: videos > 0 || (typeof media === 'object' && media !== null && media.external !== undefined),
+		hasPoll: typeof tweet.poll === 'object' && tweet.poll !== null,
+		hasQuote: typeof tweet.quote === 'object' && tweet.quote !== null,
+		replyCount: toCount(tweet.replies),
+		retweetCount: toCount(tweet.retweets ?? tweet.reposts),
+		likeCount: toCount(tweet.likes),
+		createdAt: toCount(tweet.created_timestamp)
+	};
+}
+
+// --- 임베드 복구 메타데이터 게이트웨이 계약: 봇 → data-api 요청/응답 스키마 ---
+
+/** 게이트웨이 요청 한 번에 담을 수 있는 링크 수 (EMBED_FIX_LINK_MAX 여유분) */
+export const EMBED_FIX_METADATA_LINK_MAX = 4;
+
+export interface EmbedFixMetadataRequestLink {
+	site: EmbedFixSite;
+	/** 원본 링크 */
+	url: string;
+	/** 프로바이더가 정한 고친 링크 — x·instagram만 있어요 */
+	fixedUrl?: string;
+}
+
+export const embedFixMetadataRequestSchema = z.object({
+	links: z
+		.array(
+			z.object({
+				site: embedFixSiteSchema,
+				url: z.string().url(),
+				fixedUrl: z.string().url().optional()
+			})
+		)
+		.min(1)
+		.max(EMBED_FIX_METADATA_LINK_MAX)
+});
+
+/**
+ * 링크 하나의 복구 결과 — mode가 정하는 3갈래:
+ * - card: 메타데이터로 자체 Components V2 임베드를 만들어요 (title·description·images·author…)
+ * - link: 프로바이더 고친 링크(fixedUrl)만 다시 보내 Discord가 unfurl하게 해요
+ * - skip: 복구할 게 없어요 (비공개·삭제 게시물 등)
+ */
+export const embedFixResultSchema = z.object({
+	site: embedFixSiteSchema,
+	mode: z.enum(['card', 'link', 'skip']),
+	title: z.string().optional(),
+	description: z.string().optional(),
+	authorName: z.string().optional(),
+	authorHandle: z.string().optional(),
+	authorAvatar: z.string().optional(),
+	images: z.array(z.string()).optional(),
+	replyCount: z.number().optional(),
+	retweetCount: z.number().optional(),
+	likeCount: z.number().optional(),
+	createdAt: z.number().optional(),
+	sourceUrl: z.string().optional(),
+	fixedUrl: z.string().optional()
+});
+
+export const embedFixMetadataResponseSchema = z.object({
+	results: z.array(embedFixResultSchema)
+});
+
+export type EmbedFixMetadataRequest = z.infer<typeof embedFixMetadataRequestSchema>;
+export type EmbedFixResult = z.infer<typeof embedFixResultSchema>;
 
 // --- 카운팅 채널: 지정 채널에서 숫자를 순서대로 세어요 ---
 

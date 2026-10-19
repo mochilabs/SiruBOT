@@ -11,7 +11,14 @@ import {
 	parseEmojiOnlyMessage,
 	parseMessageLinks,
 	customEmojiUrl,
-	enlargeBoothImage
+	enlargeBoothImage,
+	enlargeTwitterAvatar,
+	enlargeTwitterPhoto,
+	embedFixMetadataRequestSchema,
+	embedFixMetadataResponseSchema,
+	embedFixResultSchema,
+	fxTwitterApiUrl,
+	parseFxTwitterStatus
 } from './chatTools.ts';
 
 describe('parseEmojiOnlyMessage', () => {
@@ -215,5 +222,179 @@ describe('evaluateCounting', () => {
 		const third = evaluateCounting({ current: 2, lastUserId: 'b', best: 10 }, 3, 'c');
 		expect(third.newBest).toBe(false);
 		expect(third.state.best).toBe(10);
+	});
+});
+
+describe('fxTwitterApiUrl', () => {
+	it('twitter.com·x.com 링크를 FxEmbed API 주소로 바꿔요 (경로 유지)', () => {
+		expect(fxTwitterApiUrl('https://twitter.com/jack/status/20')).toBe('https://api.fxtwitter.com/jack/status/20');
+		expect(fxTwitterApiUrl('https://x.com/jack/status/20')).toBe('https://api.fxtwitter.com/jack/status/20');
+		expect(fxTwitterApiUrl('https://www.twitter.com/jack/status/20?s=20')).toBe('https://api.fxtwitter.com/jack/status/20?s=20');
+		expect(fxTwitterApiUrl('twitter.com/jack/status/20')).toBe('https://api.fxtwitter.com/jack/status/20');
+	});
+
+	it('X 링크가 아니면 null이에요', () => {
+		expect(fxTwitterApiUrl('https://fxtwitter.com/jack/status/20')).toBeNull();
+		expect(fxTwitterApiUrl('https://instagram.com/p/abc123')).toBeNull();
+		expect(fxTwitterApiUrl('https://example.com/twitter.com/x')).toBeNull();
+	});
+});
+
+describe('enlargeTwitterPhoto·enlargeTwitterAvatar', () => {
+	it('사진 name 파라미터를 large로 정규화해요', () => {
+		expect(enlargeTwitterPhoto('https://pbs.twimg.com/media/Abc123?format=jpg&name=small')).toBe(
+			'https://pbs.twimg.com/media/Abc123?format=jpg&name=large'
+		);
+		expect(enlargeTwitterPhoto('https://pbs.twimg.com/media/Abc123?format=jpg')).toBe('https://pbs.twimg.com/media/Abc123?format=jpg');
+	});
+
+	it('아바타 변형을 400x400으로 키워요', () => {
+		expect(enlargeTwitterAvatar('https://pbs.twimg.com/profile_images/123/abc_normal.jpg')).toBe(
+			'https://pbs.twimg.com/profile_images/123/abc_400x400.jpg'
+		);
+		expect(enlargeTwitterAvatar('https://pbs.twimg.com/profile_images/123/abc_200x200.jpg')).toBe(
+			'https://pbs.twimg.com/profile_images/123/abc_400x400.jpg'
+		);
+		expect(enlargeTwitterAvatar('https://pbs.twimg.com/profile_images/123/abc_400x400.jpg')).toBe(
+			'https://pbs.twimg.com/profile_images/123/abc_400x400.jpg'
+		);
+	});
+});
+
+// 실측 기반 fixture — api.fxtwitter.com/jack/status/20 (2026-10-19 라이브 응답)
+const JACK_STATUS_PAYLOAD = {
+	code: 200,
+	message: 'OK',
+	tweet: {
+		url: 'https://twitter.com/jack/status/20',
+		text: 'just setting up my twttr',
+		author: { name: 'jack', screen_name: 'jack', avatar_url: 'https://pbs.twimg.com/profile_images/123/abc_200x200.jpg' },
+		replies: 120,
+		retweets: 34,
+		likes: 560,
+		created_timestamp: 1142974214,
+		media: {
+			photos: [{ type: 'photo', url: 'https://pbs.twimg.com/media/Abc123?format=jpg&name=small', width: 1200, height: 800 }]
+		}
+	}
+};
+
+describe('parseFxTwitterStatus', () => {
+	it('v1 래퍼(tweet)를 파싱해요 — 사진 name=large·아바타 400x400 정규화', () => {
+		const status = parseFxTwitterStatus(JACK_STATUS_PAYLOAD);
+		expect(status).toEqual({
+			url: 'https://twitter.com/jack/status/20',
+			text: 'just setting up my twttr',
+			authorName: 'jack',
+			authorHandle: 'jack',
+			authorAvatar: 'https://pbs.twimg.com/profile_images/123/abc_400x400.jpg',
+			photos: ['https://pbs.twimg.com/media/Abc123?format=jpg&name=large'],
+			hasVideo: false,
+			hasPoll: false,
+			hasQuote: false,
+			replyCount: 120,
+			retweetCount: 34,
+			likeCount: 560,
+			createdAt: 1142974214
+		});
+	});
+
+	it('v2 래퍼(status)와 reposts 필드도 받아들여요', () => {
+		const status = parseFxTwitterStatus({
+			code: 200,
+			status: { ...JACK_STATUS_PAYLOAD.tweet, retweets: undefined, reposts: 77 }
+		});
+		expect(status?.retweetCount).toBe(77);
+	});
+
+	it('code가 200이 아니거나 트윗이 없으면 null이에요', () => {
+		expect(parseFxTwitterStatus({ code: 404, message: 'Not Found' })).toBeNull();
+		expect(parseFxTwitterStatus({ code: 200 })).toBeNull();
+		expect(parseFxTwitterStatus('nope')).toBeNull();
+	});
+
+	it('동영상·GIF·external 미디어는 hasVideo로 알려줘요', () => {
+		const withVideo = parseFxTwitterStatus({
+			code: 200,
+			tweet: { ...JACK_STATUS_PAYLOAD.tweet, media: { videos: [{ type: 'video', url: 'https://video.twimg.com/x.mp4' }] } }
+		});
+		expect(withVideo?.hasVideo).toBe(true);
+		const withExternal = parseFxTwitterStatus({
+			code: 200,
+			tweet: { ...JACK_STATUS_PAYLOAD.tweet, media: { external: { url: 'https://youtube.com/watch?v=x' } } }
+		});
+		expect(withExternal?.hasVideo).toBe(true);
+	});
+
+	it('photo가 아니거나 url이 이상한 미디어는 건너뛰어요', () => {
+		const status = parseFxTwitterStatus({
+			code: 200,
+			tweet: {
+				...JACK_STATUS_PAYLOAD.tweet,
+				media: {
+					photos: [
+						{ type: 'gif', url: 'https://pbs.twimg.com/media/x?format=gif&name=small' },
+						{ type: 'photo', url: 'javascript:alert(1)' }
+					]
+				}
+			}
+		});
+		expect(status?.photos).toEqual([]);
+	});
+
+	it('숫자가 아닌 카운트는 0으로 돌려줘요', () => {
+		const status = parseFxTwitterStatus({ code: 200, tweet: { ...JACK_STATUS_PAYLOAD.tweet, replies: 'n/a', likes: undefined } });
+		expect(status?.replyCount).toBe(0);
+		expect(status?.likeCount).toBe(0);
+	});
+});
+
+describe('임베드 복구 게이트웨이 스키마', () => {
+	it('요청 스키마는 site·url·fixedUrl을 검증해요', () => {
+		const ok = embedFixMetadataRequestSchema.safeParse({
+			links: [
+				{ site: 'x', url: 'https://x.com/jack/status/20', fixedUrl: 'https://fixupx.com/jack/status/20' },
+				{ site: 'booth', url: 'https://booth.pm/ko/items/8711621' }
+			]
+		});
+		expect(ok.success).toBe(true);
+
+		expect(embedFixMetadataRequestSchema.safeParse({ links: [] }).success).toBe(false);
+		expect(embedFixMetadataRequestSchema.safeParse({ links: [{ site: 'tiktok', url: 'https://tiktok.com/x' }] }).success).toBe(false);
+		expect(embedFixMetadataRequestSchema.safeParse({ links: [{ site: 'x', url: 'not-a-url' }] }).success).toBe(false);
+	});
+
+	it('결과 스키마는 모드별 카드/링크 필드를 받아들여요', () => {
+		const card = embedFixResultSchema.safeParse({
+			site: 'x',
+			mode: 'card',
+			authorName: 'jack',
+			authorHandle: 'jack',
+			authorAvatar: 'https://pbs.twimg.com/profile_images/123/abc_400x400.jpg',
+			description: 'just setting up my twttr',
+			images: ['https://pbs.twimg.com/media/Abc123?format=jpg&name=large'],
+			replyCount: 120,
+			retweetCount: 34,
+			likeCount: 560,
+			createdAt: 1142974214,
+			sourceUrl: 'https://twitter.com/jack/status/20'
+		});
+		expect(card.success).toBe(true);
+
+		const link = embedFixResultSchema.safeParse({ site: 'instagram', mode: 'link', fixedUrl: 'https://www.kkinstagram.com/p/abc123/' });
+		expect(link.success).toBe(true);
+
+		const skip = embedFixResultSchema.safeParse({ site: 'booth', mode: 'skip' });
+		expect(skip.success).toBe(true);
+
+		expect(embedFixResultSchema.safeParse({ site: 'x', mode: 'bogus' }).success).toBe(false);
+	});
+
+	it('응답 스키마는 results 배열을 감싸요', () => {
+		const ok = embedFixMetadataResponseSchema.safeParse({
+			results: [{ site: 'x', mode: 'link', fixedUrl: 'https://fxtwitter.com/jack/status/20' }]
+		});
+		expect(ok.success).toBe(true);
+		expect(embedFixMetadataResponseSchema.safeParse({ results: 'nope' }).success).toBe(false);
 	});
 });
