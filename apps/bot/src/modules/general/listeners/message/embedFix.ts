@@ -1,8 +1,9 @@
 /**
  * 임베드 복구 리스너 — X·인스타그램·BOOTH·TikTok·Reddit·Pixiv·Threads 링크의 임베드를 제대로 떠요.
  *
- * - 메타데이터는 data-api(/v1/embed-fix/metadata)에 물어봐요 — 프로바이더 캐시·서킷브레이커가 거기 있어요.
- *   OG 메타가 오는 사이트는 전부 Components V2 카드로 재구성해요.
+ * - 메타데이터는 data-api(/v1/embed-fix/metadata)에 물어봐요 — 캐싱은 data-api 계층에서 해요.
+ *   OG 메타가 오는 사이트는 전부 Components V2 카드로 재구성해요 — accent color는 플랫폼 브랜드색이에요.
+ *   모든 카드의 "원문 보기" 버튼은 마지막 섹션 accessory로 위치를 통일했어요.
  * - 결과는 채널 웹훅으로 "링크를 보낸 사람" 이름·프사로 보내요 (embed-fixer 관행).
  *   웹훅을 못 쓰면(스레드·권한 없음·실패) 봇 아이디 리플라이로 폴백해요.
  * - data-api를 못 쓰면 레거시 경로로 폴백해요 — 고친 주소(fxtwitter/fixupx/kkinstagram)를 다시 보내
@@ -28,6 +29,7 @@ import {
 	type EmbedFixBoothLink,
 	type EmbedFixLink,
 	type EmbedFixResult,
+	type EmbedFixSite,
 	type EmbedFixSwapLink,
 	MemoryCache,
 	createContainer,
@@ -58,6 +60,17 @@ const OG_CARD_SITE_HEADERS = {
 } as const;
 type OgCardSiteKey = keyof typeof OG_CARD_SITE_HEADERS;
 type OgCardSiteHeader = (typeof OG_CARD_SITE_HEADERS)[OgCardSiteKey];
+
+/** 플랫폼 브랜드색(HEX) — 카드 accent color. Threads 브랜드는 검정이에요. */
+const SITE_ACCENT_COLORS: Record<EmbedFixSite, string> = {
+	x: '#1DA1F2',
+	instagram: '#E1306C',
+	booth: '#FC4F4F',
+	tiktok: '#FE2C55',
+	reddit: '#FF4500',
+	pixiv: '#0096FA',
+	threads: '#000000'
+};
 
 /** 전송 가능한 결과 한 건 — content(레거시 스왑 링크) 또는 components(CV2 카드) */
 interface EmbedFixPayload {
@@ -97,31 +110,33 @@ export class EmbedFixListener extends Listener {
 		}
 	}
 
-	/** 우선 data-api 카드, data-api를 못 쓰면 레거시 도메인 스왑으로 폴백해요 */
+	/** 우선 data-api 카드(메타 캐싱은 data-api 계층), data-api를 못 쓰면 레거시 도메인 스왑으로 폴백해요 */
 	private async buildPayloads(links: EmbedFixLink[]): Promise<EmbedFixPayload[]> {
 		const gatewayResults = await fetchEmbedFixMetadata({
 			links: links.map((link) =>
 				link.site === 'booth' ? { site: link.site, url: link.original } : { site: link.site, url: link.original, fixedUrl: link.fixed }
 			)
 		});
-
-		if (gatewayResults) {
-			const payloads: EmbedFixPayload[] = [];
-			const fixedUrls: string[] = [];
-			for (const result of gatewayResults) {
-				if (result.mode === 'skip') continue;
-				if (result.mode === 'link') {
-					if (result.fixedUrl) fixedUrls.push(result.fixedUrl);
-					continue;
-				}
-				const container = this.buildResultCard(result);
-				if (container) payloads.push({ components: container });
-			}
-			if (fixedUrls.length > 0) payloads.push({ content: fixedUrls.join('\n') });
-			return payloads;
-		}
+		if (gatewayResults) return this.payloadsFromResults(gatewayResults);
 
 		return this.buildLegacyPayloads(links);
+	}
+
+	/** 게이트웨이 결과를 전송 페이로드로 바꿔요 — skip은 버리고, link 모드는 주소를 모아 한 메시지로 묶어요 */
+	private payloadsFromResults(results: EmbedFixResult[]): EmbedFixPayload[] {
+		const payloads: EmbedFixPayload[] = [];
+		const fixedUrls: string[] = [];
+		for (const result of results) {
+			if (result.mode === 'skip') continue;
+			if (result.mode === 'link') {
+				if (result.fixedUrl) fixedUrls.push(result.fixedUrl);
+				continue;
+			}
+			const container = this.buildResultCard(result);
+			if (container) payloads.push({ components: container });
+		}
+		if (fixedUrls.length > 0) payloads.push({ content: fixedUrls.join('\n') });
+		return payloads;
 	}
 
 	/** 레거시 경로 — 고친 주소를 다시 보내 Discord가 임베드를 떠 주게 하고, BOOTH는 OG를 직접 읽어요 */
@@ -158,16 +173,11 @@ export class EmbedFixListener extends Listener {
 		return header ? this.buildOgCard(result, header) : null;
 	}
 
-	/** OG 카드 사이트 헤더 — 사이트 이름과 이모지는 여기서 관리해요 */
+	/** OG 카드 — 제목·본문·미디어 뒤 마지막 섹션에 사이트 라벨과 원문 버튼을 놓아요 */
 	private buildOgCard(result: EmbedFixResult, header: OgCardSiteHeader): ContainerBuilder | null {
 		if (!result.sourceUrl) return null;
-		const container = createContainer();
+		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
 
-		container.addSectionComponents(
-			new SectionBuilder()
-				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji(header.emoji)} ${header.label}`))
-				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
-		);
 		if (result.title) {
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${result.title}`));
 		}
@@ -183,13 +193,19 @@ export class EmbedFixListener extends Listener {
 			for (const url of mediaUrls) gallery.addItems(new MediaGalleryItemBuilder().setURL(url));
 			container.addMediaGalleryComponents(gallery);
 		}
+
+		container.addSectionComponents(
+			new SectionBuilder()
+				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji(header.emoji)} ${header.label}`))
+				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
+		);
 		return container;
 	}
 
 	/** X 카드 — 작성자 섹션(프사 썸네일) + 본문 + 사진 + 참여 수 + 원문 버튼 */
 	private buildXCard(result: EmbedFixResult): ContainerBuilder | null {
 		if (!result.sourceUrl) return null;
-		const container = createContainer();
+		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
 
 		const headerComponents = [
 			new TextDisplayBuilder().setContent(`**${result.authorName ?? 'X 게시물'}**`),
@@ -221,32 +237,29 @@ export class EmbedFixListener extends Listener {
 		return container;
 	}
 
-	/** 인스타그램 카드 — kkinstagram은 이미지 리다이렉트만 돼요 (메타 없음) — 이미지 갤러리 + 원문 버튼 */
+	/** 인스타그램 카드 — kkinstagram은 이미지 리다이렉트만 돼요 (메타 없음) — 본문·갤러리 뒤 마지막 섹션에 라벨과 원문 버튼 */
 	private buildInstagramCard(result: EmbedFixResult): ContainerBuilder | null {
 		if (!result.sourceUrl) return null;
-		const container = createContainer();
+		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
+		if (result.description && result.description.length > 0) {
+			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
+		}
+		this.addImageGallery(container, result.images);
 		container.addSectionComponents(
 			new SectionBuilder()
 				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('frame')} Instagram 게시물`))
 				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
 		);
-		if (result.description && result.description.length > 0) {
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
-		}
-		this.addImageGallery(container, result.images);
 		return container;
 	}
 
-	/** BOOTH 상품 카드 — 원본 해상도 상품 이미지로요 */
+	/** BOOTH 상품 카드 — 원본 해상도 상품 이미지로 마지막 섹션에 라벨과 원문 버튼을 놓아요 */
 	private buildBoothCard(result: EmbedFixResult): ContainerBuilder | null {
 		if (!result.sourceUrl || !result.title) return null;
 		const image = result.images?.[0];
-		const container = createContainer();
+		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
 
-		const titleComponents = [
-			new TextDisplayBuilder().setContent(`## ${result.title}`),
-			new TextDisplayBuilder().setContent(`-# ${emoji('link')} [상품 보기](${result.sourceUrl})`)
-		];
+		const titleComponents = [new TextDisplayBuilder().setContent(`## ${result.title}`)];
 		if (image) {
 			container.addSectionComponents(
 				new SectionBuilder().addTextDisplayComponents(...titleComponents).setThumbnailAccessory(createThumbnail(image))
@@ -259,6 +272,12 @@ export class EmbedFixListener extends Listener {
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
 		}
 		this.addImageGallery(container, result.images);
+
+		container.addSectionComponents(
+			new SectionBuilder()
+				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('link')} BOOTH 상품`))
+				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
+		);
 		return container;
 	}
 

@@ -1,6 +1,6 @@
 # 채팅 유틸 기능(이모지 확대·메시지 인용·임베드 복구·카운팅 채널) 명세서
 
-> **상태**: 구현 완료 (feat/chat-tools → beta PR) — 2차: 채널 단위 on/off·봇 명령어·임베드 CV2 카드·웹훅 릴레이 추가 / 3차: 임베드 복구 사이트 4종(TikTok·Reddit·Pixiv·Threads) OG 카드 추가
+> **상태**: 구현 완료 (feat/chat-tools → beta PR) — 2차: 채널 단위 on/off·봇 명령어·임베드 CV2 카드·웹훅 릴레이 추가 / 3차: 임베드 복구 사이트 4종(TikTok·Reddit·Pixiv·Threads) OG 카드 추가 / 4차: 이모지 확대 웹훅 릴레이 전환·캡션 제거, 카드 accent color 플랫폼 브랜드색, 원문 버튼 위치 통일
 > **형태**: 기능 명세서 — 구현 결과와 계약을 기록해요.
 > **Baseline**: `beta` @ `78556d9d` (2026-10-18), feature 브랜치 `feat/chat-tools`에서 구현.
 > **출처**: `docs/plans/2026-10-16-feature-opportunities.md` 아이디어 목록 중 #1·#2·#3·#11을 선택.
@@ -25,7 +25,7 @@
 ### 1.1 이모지 확대 (`emojiEnlargeMode` + `emojiEnlargeChannelIds`)
 - **채널 게이트**: `isChannelToggleEnabled(settings.emojiEnlarge, channelId)` — off면 무반응, all이면 항상, channels면 목록에 있을 때만.
 - **판정**: `parseEmojiOnlyMessage(content)` — 공백으로 구분된 커스텀 이모지 토큰(`[a]?:name:id`) 1~10개만 인정. 텍스트·유니코드 이모지가 섞이면 무반응.
-- **응답**: CV2 컨테이너 + 미디어 갤러리(`customEmojiUrl` — png/gif `?size=512&quality=lossless`), `-# 확대했어요` 캡션.
+- **응답**: 미디어 갤러리(`customEmojiUrl` — png/gif `?size=512&quality=lossless`)만 담은 CV2 컨테이너를 **원작자 이름·프사 웹훅**으로 전송(캡션 없음). 웹훅 실패 시 봇 아이디 리플라이 폴백.
 - **쿨다운**: 길드+유저 5초 (`MemoryCache`).
 
 ### 1.2 메시지 인용 (`quoteMode` + `quoteChannelIds`)
@@ -46,8 +46,11 @@
   - **OG 카드 사이트(TikTok·Reddit·Pixiv·Threads)**: 고친 주소(tnktok·vxreddit·phixiv·fixthreads.seria.moe)의 og 메타를 `parseOgMeta`로 읽어 `card`(제목·설명 350자·이미지, TikTok은 og:video까지)를 만들어요. 메타가 없으면 `link`(고친 링크) 폴백. 프로바이더들은 Discord 크롤러 UA에만 og 태그를 내려서 Discordbot UA로 조회해요.
   - 도메인 실패(삭제 트윗 등)는 캐시·브레이커 오염 없이 `link`/`skip`으로만 흘러요. 게이트웨이 전체 실패 시 봇은 레거시 폴백(X/인스타 링크 스왑 안내, BOOTH 직접 OG)으로 동작해요.
 - **전송 (웹훅 릴레이)**: 결과 카드(CV2)·링크를 **원작자 표시 이름 + 프사**로 보내요 — 채널에 봇 소유 웹훅(`SiruBOT 임베드`)을 찾아/만들어 전송(60초 캐시). 스레드(웹훅 생성 불가)·`ManageWebhooks` 권한 없음·전송 실패면 `message.reply` 봇 아이디 폴백. **원본 메시지는 절대 지우지 않아요.**
+- **카드 공통**: accent color는 플랫폼 브랜드색(X `#1DA1F2`, 인스타 `#E1306C`, BOOTH `#FC4F4F`, TikTok `#FE2C55`, Reddit `#FF4500`, Pixiv `#0096FA`, Threads `#000000`). 모든 카드의 `원문 보기` 링크 버튼은 **마지막 섹션 accessory**로 위치를 통일했어요.
 - **X 카드 레이아웃**: 작성자 섹션(이름 + `-# @handle` + 아바타 썸네일) + 본문 + 사진 갤러리(최대 10장) + 하단 섹션(답글·리포스트·좋아요 수 + `<t:..:R>` + `원문 보기` 링크 버튼).
-- **OG 카드 레이아웃**: 사이트 헤더(`-# TikTok 영상/Reddit 게시물/Pixiv 작품/Threads 게시물` + `원문 보기` 버튼) + `## 제목` + 설명(1000자 상한) + 미디어 갤러리(og:video 우선, 이미지 최대 10장).
+- **인스타 카드 레이아웃**: 캡션(있으면) + 이미지 갤러리 + 하단 섹션(`-# Instagram 게시물` + `원문 보기` 버튼).
+- **BOOTH 카드 레이아웃**: 제목 섹션(썸네일) + 설명 + 이미지 갤러리 + 하단 섹션(`-# BOOTH 상품` + `원문 보기` 버튼).
+- **OG 카드 레이아웃**: `## 제목` + 설명(1000자 상한) + 미디어 갤러리(og:video 우선, 이미지 최대 10장) + 하단 섹션(`-# TikTok 영상/Reddit 게시물/Pixiv 작품/Threads 게시물` + `원문 보기` 버튼).
 - **프로바이더 상비 교체**: 외부 fix 서비스는 불안정 — fix 도메인 상수(`TIKTOK/REDDIT/PIXIV/THREADS_FIX_DOMAIN` 등)와 data-api 프로바이더 함수 교체로 대응 (InstaFix 아카이브 이슈·tfxktok 폐쇄 참고).
 - **원본 억제**: `embedFixSuppressOriginal` 켜짐 + 봇에게 `ManageMessages` 있으면 `message.suppressEmbeds(true)`.
 - **쿨다운**: 길드+유저 3초.
@@ -98,4 +101,5 @@ countingChannelId       String?
 - data-api typecheck·prettier 통과, 111개 테스트 통과 (임베드 복구 프로바이더 매핑 8개 신규)
 - 대시보드 eslint 0 경고·tsc 통과, 86개 테스트 통과, `next build --turbopack` 성공
 - 마이그레이션 `migrate dev` 로컬 DB 적용 확인 (기존 `TtsUserSetting.updatedAt` 기본값 drift는 본 변경과 무관해 그대로 둠)
-- 실제 디스코드 메시지 동작(각 기능의 카드·인용·카운팅 응답, 웹훅 원작자 프사·이름 표시, data-api 게이트웨이 실호출)은 미검증 — 병합 후 운영에서 확인 필요
+- 4차(웹훅 통일·플랫폼 accent·버튼 위치 통일): 봇 typecheck·prettier 통과, 326개 테스트 통과
+- 실제 디스코드 메시지 동작(각 기능의 카드·인용·카운팅 응답, 웹훅 원작자 프사·이름 표시, data-api 게이트웨이 실호출, 이모지 확대 웹훅 전송)은 미검증 — 병합 후 운영에서 확인 필요
