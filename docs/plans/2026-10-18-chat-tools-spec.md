@@ -1,6 +1,6 @@
 # 채팅 유틸 기능(이모지 확대·메시지 인용·임베드 복구·카운팅 채널) 명세서
 
-> **상태**: 구현 완료 (feat/chat-tools → beta PR) — 2차: 채널 단위 on/off·봇 명령어·임베드 CV2 카드·웹훅 릴레이 추가 / 3차: 임베드 복구 사이트 4종(TikTok·Reddit·Pixiv·Threads) OG 카드 추가 / 4차: 이모지 확대 웹훅 릴레이 전환·캡션 제거, 카드 accent color 플랫폼 브랜드색, 원문 버튼 위치 통일
+> **상태**: 구현 완료 (feat/chat-tools → beta PR) — 2차: 채널 단위 on/off·봇 명령어·임베드 CV2 카드·웹훅 릴레이 추가 / 3차: 임베드 복구 사이트 4종(TikTok·Reddit·Pixiv·Threads) OG 카드 추가 / 4차: 이모지 확대 웹훅 릴레이 전환·캡션 제거, 카드 accent color 플랫폼 브랜드색, 원문 버튼 위치 통일 / 5차: 인스타그램 CV2 카드 업그레이드(kirkstagram 캐러셀 + toinstagram 캡션 병합, kkinstagram 이미지 폴백)
 > **형태**: 기능 명세서 — 구현 결과와 계약을 기록해요.
 > **Baseline**: `beta` @ `78556d9d` (2026-10-18), feature 브랜치 `feat/chat-tools`에서 구현.
 > **출처**: `docs/plans/2026-10-16-feature-opportunities.md` 아이디어 목록 중 #1·#2·#3·#11을 선택.
@@ -39,16 +39,16 @@
 - **채널 게이트**: `isChannelToggleEnabled(settings.embedFix, channelId)`.
 - **판정**: `findEmbedFixLinks(content, sites)` — 감싼 링크 스킵, 도메인 시작 경계 룩비하인드(`(?<![\w.-])`)로 유사 도메인 오탐 방지, 최대 2개.
 - **메타데이터 게이트웨이 (1차 경로)**: 봇이 data-api `POST /v1/embed-fix/metadata`에 링크 목록(site·url·fixedUrl)을 보내요.
-  - data-api는 사이트별 `serveCached`(30분, 서킷 브레이커, 프로바이더 `fxtwitter`/`kkinstagram`/`booth`/`tnktok`/`vxreddit`/`phixiv`/`fixthreads`)로 조회해요.
+  - data-api는 사이트별 `serveCached`(30분, 서킷 브레이커, 프로바이더 `fxtwitter`/`instagram-meta`/`booth`/`tnktok`/`vxreddit`/`phixiv`/`fixthreads`)로 조회해요.
   - **X**: `api.fxtwitter.com`(FxEmbed API)에서 텍스트·작성자·아바타(_400x400)·사진(name=large)·카운트·생성 시각을 받아 `card` 모드로. 동영상·투표·인용 트윗은 카드가 어려워 `link` 모드(고친 링크만).
-  - **인스타그램**: kkinstagram 고친 링크가 실제 이미지(302 → fbcdn)로 열리는지만 확인해 `card`(이미지 갤러리) 또는 `link`. 캡션·작성자 메타는 프로바이더가 안 줘요.
+  - **인스타그램**: kirkstagram(작성자 `og:title` + 캐러셀 미디어 전체 — 페이지에 심어둔 Discord component embed JSON의 갤러리 type 12)와 toinstagram/InstaFix(캡션 `og:description`)을 병렬 fetch해 병합해요. 둘 다 실패하면 kkinstagram 이미지만 확인해 이미지 전용 카드, 그마저 아니면 `link`. 네트워크 실패만 브레이커에 기록하고 삭제된 게시물은 `link` 폴백이에요.
   - **BOOTH**: OG 직접 fetch(UA `Discordbot/2.0`) → `parseBoothOg` → `card`(제목·설명 350자·원본 해상도 이미지). 실패(삭제 상품 등)면 `skip`.
   - **OG 카드 사이트(TikTok·Reddit·Pixiv·Threads)**: 고친 주소(tnktok·vxreddit·phixiv·fixthreads.seria.moe)의 og 메타를 `parseOgMeta`로 읽어 `card`(제목·설명 350자·이미지, TikTok은 og:video까지)를 만들어요. 메타가 없으면 `link`(고친 링크) 폴백. 프로바이더들은 Discord 크롤러 UA에만 og 태그를 내려서 Discordbot UA로 조회해요.
   - 도메인 실패(삭제 트윗 등)는 캐시·브레이커 오염 없이 `link`/`skip`으로만 흘러요. 게이트웨이 전체 실패 시 봇은 레거시 폴백(X/인스타 링크 스왑 안내, BOOTH 직접 OG)으로 동작해요.
 - **전송 (웹훅 릴레이)**: 결과 카드(CV2)·링크를 **원작자 표시 이름 + 프사**로 보내요 — 채널에 봇 소유 웹훅(`SiruBOT 임베드`)을 찾아/만들어 전송(60초 캐시). 스레드(웹훅 생성 불가)·`ManageWebhooks` 권한 없음·전송 실패면 `message.reply` 봇 아이디 폴백. **원본 메시지는 절대 지우지 않아요.**
 - **카드 공통**: accent color는 플랫폼 브랜드색(X `#1DA1F2`, 인스타 `#E1306C`, BOOTH `#FC4F4F`, TikTok `#FE2C55`, Reddit `#FF4500`, Pixiv `#0096FA`, Threads `#000000`). 모든 카드의 `원문 보기` 링크 버튼은 **마지막 섹션 accessory**로 위치를 통일했어요.
 - **X 카드 레이아웃**: 작성자 섹션(이름 + `-# @handle` + 아바타 썸네일) + 본문 + 사진 갤러리(최대 10장) + 하단 섹션(답글·리포스트·좋아요 수 + `<t:..:R>` + `원문 보기` 링크 버튼).
-- **인스타 카드 레이아웃**: 캡션(있으면) + 이미지 갤러리 + 하단 섹션(`-# Instagram 게시물` + `원문 보기` 버튼).
+- **인스타 카드 레이아웃**: OG 카드와 같은 뼈대 — `## @작성자` + 캡션(1000자 상한) + 미디어 갤러리(릴 영상 우선, 캐러셀 이미지 최대 10장) + 하단 섹션(`-# Instagram 게시물` + `원문 보기` 버튼). 메타가 없는 kkinstagram 폴백이면 갤러리만 떠요.
 - **BOOTH 카드 레이아웃**: 제목 섹션(썸네일) + 설명 + 이미지 갤러리 + 하단 섹션(`-# BOOTH 상품` + `원문 보기` 버튼).
 - **OG 카드 레이아웃**: `## 제목` + 설명(1000자 상한) + 미디어 갤러리(og:video 우선, 이미지 최대 10장) + 하단 섹션(`-# TikTok 영상/Reddit 게시물/Pixiv 작품/Threads 게시물` + `원문 보기` 버튼).
 - **프로바이더 상비 교체**: 외부 fix 서비스는 불안정 — fix 도메인 상수(`TIKTOK/REDDIT/PIXIV/THREADS_FIX_DOMAIN` 등)와 data-api 프로바이더 함수 교체로 대응 (InstaFix 아카이브 이슈·tfxktok 폐쇄 참고).
