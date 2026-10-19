@@ -1048,6 +1048,24 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		}
 	});
 
+	// ── 멤버 표시 정보 (대시보드 통계 topRequesters의 아바타/별명 표시 — 채널·역할과 같은 Redis request/reply) ──
+	// 조회 대상은 userIds 쿼리(쉼표 구분, 최대 10명)로 지정해요. 봇 캐시에서 못 찾은 멤버는 응답에서
+	// 빠져요 — 호출자(dashboard stats)가 ID 라벨로 폴백해요.
+	const membersQuery = z.object({ userIds: z.string().trim().min(1).max(400) });
+	fastify.get('/v1/guilds/:guildId/members', async (request, reply) => {
+		try {
+			const { guildId } = guildIdParams.parse(request.params);
+			const { userIds } = membersQuery.parse(request.query);
+			const parsedUserIds = z.array(redisIdSchema).min(1).max(10).parse(userIds.split(','));
+			const result = await requestGuildData(guildId, 'members', parsedUserIds);
+			if (!result.ok) return replyGuildDataFailure(reply, result.reason);
+			metrics.request('guild-data-members');
+			return reply.send({ members: result.members ?? [] });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
 	// ── 유튜브 챕터 ──
 	const chaptersQuery = z.object({
 		videoId: z.string().trim().min(5).max(20),

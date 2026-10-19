@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildPlayerStatePayload, publishPlayerState, clearPlayerStateTracker } from './playerStatePublisher.ts';
+import { buildPlayerStatePayload, publishPlayerState, publishPlayerEnded, clearPlayerStateTracker } from './playerStatePublisher.ts';
 
 const { store } = vi.hoisted(() => ({ store: { ready: true, publishRawPlayerState: vi.fn() } }));
 
@@ -88,6 +88,38 @@ describe('statusFingerprint-driven publish throttling', () => {
 		clearPlayerStateTracker('g1');
 		publishPlayerState(player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('publishPlayerEnded — 확정 종료 tombstone', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(NOW);
+		store.publishRawPlayerState.mockClear();
+		container.playerStatePublishTracker = new Map();
+	});
+
+	it('bypasses the 5s throttle and publishes ended:true immediately', () => {
+		publishPlayerState(player() as never);
+		publishPlayerEnded(player() as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
+		const [channel, payload] = store.publishRawPlayerState.mock.calls[1] as [string, string];
+		expect(channel).toBe('g1');
+		expect(JSON.parse(payload)).toMatchObject({ guildId: 'g1', ended: true });
+	});
+
+	it('clears the tracker so the next live snapshot publishes immediately', () => {
+		publishPlayerState(player() as never);
+		publishPlayerEnded(player() as never);
+		publishPlayerState(player() as never);
+		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(3);
+	});
+
+	it('publishes nothing while redis is not ready', () => {
+		store.ready = false;
+		publishPlayerEnded(player() as never);
+		expect(store.publishRawPlayerState).not.toHaveBeenCalled();
+		store.ready = true;
 	});
 });
 

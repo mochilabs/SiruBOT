@@ -33,7 +33,11 @@ export const playerStateSchema = z.object({
 	volume: z.number(),
 	requesterName: z.string().nullable(),
 	sourceName: z.string().nullable(),
-	updatedAt: z.number()
+	updatedAt: z.number(),
+	// 확정 종료 표시(tombstone) — 봇이 큐 종료·플레이어 파괴 시점에만 true로 실어요.
+	// playerHub는 이 프레임을 저장하지 않고 길드 엔트리를 지운 뒤 SSE에 player:null을 relay해요
+	// (마지막 프레임이 남으면 대시보드가 유령 상태에 갇혀요). optional이라 이전 릴리스와 호환돼요.
+	ended: z.boolean().optional()
 });
 
 /** playerHub가 나이·stale을 덧붙여 내려주는 형태 — dashboard가 이를 검증해요 */

@@ -32,8 +32,9 @@ function formatDate(iso: string): string {
   return iso.slice(0, 10).replaceAll("-", ".");
 }
 
-function requesterLabel(userId: string): string {
-  return `사용자 ${userId.slice(0, 6)}…`;
+/** 표시 이름 폴백 — 봇 캐시 조회 실패(탈퇴한 멤버 등)면 사용자 ID 앞 6자리 라벨로 표시해요 */
+function requesterLabel(requester: { userId: string; displayName: string | null }): string {
+  return requester.displayName ?? `사용자 ${requester.userId.slice(0, 6)}…`;
 }
 
 /** 리스트 항목 스태거 간격(ms) — 10개 항목 기준 마지막 딜레이 405ms */
@@ -123,11 +124,20 @@ function RequesterList({ requesters }: { requesters: StatsServerStatsResponse["t
           <span className="w-5 shrink-0 text-center text-sm font-black tabular-nums text-muted-foreground">
             {index + 1}
           </span>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-muted-foreground">
-            <User size={18} />
-          </div>
+          {requester.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={requester.avatarUrl}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-muted-foreground">
+              <User size={18} />
+            </div>
+          )}
           <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-            {requesterLabel(requester.userId)}
+            {requesterLabel(requester)}
           </p>
           <Badge size="sm">{requester.count}회</Badge>
         </li>

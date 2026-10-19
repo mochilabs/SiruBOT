@@ -1,5 +1,5 @@
 /**
- * 길드 데이터(채널·역할 목록) request/reply 허브 — 봇이 보유한 길드의 캐시를 requestId로 상관해 내려줘요.
+ * 길드 데이터(채널·역할·멤버 목록) request/reply 허브 — 봇이 보유한 길드의 캐시를 requestId로 상관해 내려줘요.
  *
  * - 대시보드는 사용자 토큰으로 Discord API를 직접 호출하면 401이 나므로 봇 권한으로 우회해요.
  * - requestGuildData()가 REQUEST 채널(`sirubot:guild-data:request`)로 요청을 퍼블리시하면,
@@ -21,6 +21,7 @@ import {
 	type GuildDataKind,
 	type GuildDataRequest,
 	type GuildDataResponse,
+	type GuildMemberItem,
 	type GuildRoleItem
 } from '@sirubot/utils';
 
@@ -32,7 +33,9 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 5_000;
 const PENDING_LIMIT = 200;
 
 export type GuildDataFailureReason = 'redis_unavailable' | 'timeout';
-export type GuildDataResult = { ok: true; channels?: GuildChannelItem[]; roles?: GuildRoleItem[] } | { ok: false; reason: GuildDataFailureReason };
+export type GuildDataResult =
+	| { ok: true; channels?: GuildChannelItem[]; roles?: GuildRoleItem[]; members?: GuildMemberItem[] }
+	| { ok: false; reason: GuildDataFailureReason };
 
 interface PendingEntry {
 	requestId: string;
@@ -115,7 +118,7 @@ export class GuildDataPendingRequests {
 			entry.resolve({ ok: false, reason: 'timeout' });
 			return 'resolved';
 		}
-		entry.resolve({ ok: true, channels: response.channels, roles: response.roles });
+		entry.resolve({ ok: true, channels: response.channels, roles: response.roles, members: response.members });
 		return 'resolved';
 	}
 
@@ -170,14 +173,20 @@ export async function stopGuildDataHub(): Promise<void> {
  * 길드 데이터를 봇에 요청해요. Redis 클라이언트가 없으면 즉시 redis_unavailable, REQUEST 채널을
  * 퍼블리시하고 `timeoutMs`(기본 5초) 안에 응답이 없으면 timeout으로 실패해요.
  * 봇은 보유 길드에만 응답하므로 응답 없음은 봇 미보유·미연결과 같은 실패로 매핑돼요.
+ * kind === 'members'일 때는 `userIds`(최대 10명)를 함께 보내 표시 정보를 조회해요.
  */
-export async function requestGuildData(guildId: string, kind: GuildDataKind, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS): Promise<GuildDataResult> {
+export async function requestGuildData(
+	guildId: string,
+	kind: GuildDataKind,
+	userIds?: string[],
+	timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
+): Promise<GuildDataResult> {
 	const client = sharedCache.getClient();
 	if (!client) {
 		return { ok: false, reason: 'redis_unavailable' };
 	}
 	const requestId = crypto.randomUUID();
-	const request: GuildDataRequest = { requestId, guildId, kind };
+	const request: GuildDataRequest = userIds ? { requestId, guildId, kind, userIds } : { requestId, guildId, kind };
 	const promise = pending.register(requestId, guildId, kind, timeoutMs);
 	try {
 		await client.publish(GUILD_DATA_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, request));

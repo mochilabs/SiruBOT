@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { guildChannelItemSchema, guildDataKindSchema, guildDataRequestSchema, guildDataResponseSchema, guildRoleItemSchema } from './guildData.ts';
+import {
+	guildChannelItemSchema,
+	guildDataKindSchema,
+	guildDataRequestSchema,
+	guildDataResponseSchema,
+	guildMemberItemSchema,
+	guildRoleItemSchema
+} from './guildData.ts';
 
 const REQUEST_ID = 'd4c0d34d-8a4f-4c8e-9b1e-2f4a6b8c0d10';
 
@@ -11,6 +18,10 @@ function sampleRole() {
 	return { id: '333333333333333333', name: '관리자', color: 15548997, position: 5, managed: false };
 }
 
+function sampleMember() {
+	return { id: '444444444444444444', displayName: '별명', username: 'account', avatarUrl: 'https://cdn.discordapp.com/avatars/1/2.png' };
+}
+
 describe('guildData request contract', () => {
 	it('accepts a valid request and keeps fields', () => {
 		const result = guildDataRequestSchema.safeParse({ requestId: REQUEST_ID, guildId: '123456789012345678', kind: 'channels' });
@@ -18,18 +29,40 @@ describe('guildData request contract', () => {
 		if (result.success) expect(result.data.kind).toBe('channels');
 	});
 
-	it('keeps kind valid for both kinds', () => {
+	it('keeps kind valid for all three kinds', () => {
 		expect(guildDataKindSchema.safeParse('channels').success).toBe(true);
 		expect(guildDataKindSchema.safeParse('roles').success).toBe(true);
+		expect(guildDataKindSchema.safeParse('members').success).toBe(true);
 	});
 
 	it('rejects a non-uuid requestId and an unknown kind', () => {
 		expect(guildDataRequestSchema.safeParse({ requestId: 'not-a-uuid', guildId: '123', kind: 'channels' }).success).toBe(false);
-		expect(guildDataRequestSchema.safeParse({ requestId: REQUEST_ID, guildId: '123', kind: 'members' }).success).toBe(false);
+		expect(guildDataRequestSchema.safeParse({ requestId: REQUEST_ID, guildId: '123', kind: 'emojis' }).success).toBe(false);
 	});
 
 	it('rejects an empty guildId', () => {
 		expect(guildDataRequestSchema.safeParse({ requestId: REQUEST_ID, guildId: '', kind: 'channels' }).success).toBe(false);
+	});
+
+	it('accepts a members request with userIds and keeps them', () => {
+		const result = guildDataRequestSchema.safeParse({
+			requestId: REQUEST_ID,
+			guildId: '123456789012345678',
+			kind: 'members',
+			userIds: ['111111111111111111', '222222222222222222']
+		});
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.data.userIds).toHaveLength(2);
+	});
+
+	it('rejects a members batch over 10 and malformed user ids', () => {
+		const userIds = Array.from({ length: 11 }, () => '111111111111111111');
+		expect(guildDataRequestSchema.safeParse({ requestId: REQUEST_ID, guildId: '123456789012345678', kind: 'members', userIds }).success).toBe(
+			false
+		);
+		expect(
+			guildDataRequestSchema.safeParse({ requestId: REQUEST_ID, guildId: '123456789012345678', kind: 'members', userIds: ['bad id!'] }).success
+		).toBe(false);
 	});
 });
 
@@ -65,9 +98,27 @@ describe('guildData response contract', () => {
 		if (result.success) expect(result.data.error).toBe('not_owned');
 	});
 
+	it('roundtrips a members response with avatarUrl null fallback', () => {
+		const request = guildDataRequestSchema.parse({
+			requestId: REQUEST_ID,
+			guildId: '123456789012345678',
+			kind: 'members',
+			userIds: ['444444444444444444', '555555555555555555']
+		});
+		const result = guildDataResponseSchema.safeParse({
+			...request,
+			members: [sampleMember(), { ...sampleMember(), id: '555555555555555555', displayName: '기본', avatarUrl: null }]
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.members?.[0]?.displayName).toBe('별명');
+			expect(result.data.members?.[1]?.avatarUrl).toBeNull();
+		}
+	});
+
 	it('rejects a non-uuid requestId and an unknown kind', () => {
 		expect(guildDataResponseSchema.safeParse({ requestId: 'not-a-uuid', guildId: '123', kind: 'channels' }).success).toBe(false);
-		expect(guildDataResponseSchema.safeParse({ requestId: REQUEST_ID, guildId: '123', kind: 'members' }).success).toBe(false);
+		expect(guildDataResponseSchema.safeParse({ requestId: REQUEST_ID, guildId: '123', kind: 'emojis' }).success).toBe(false);
 	});
 });
 
@@ -78,6 +129,17 @@ describe('guildData item contracts', () => {
 
 	it('rejects a role item without the managed boolean', () => {
 		expect(guildRoleItemSchema.safeParse({ id: '333333333333333333', name: '관리자', color: 15548997, position: 5 }).success).toBe(false);
+	});
+
+	it('rejects a member item missing displayName', () => {
+		expect(guildMemberItemSchema.safeParse({ id: '444444444444444444', username: 'account', avatarUrl: null }).success).toBe(false);
+	});
+
+	it('caps members arrays at 10', () => {
+		const manyMembers = Array.from({ length: 11 }, () => sampleMember());
+		expect(
+			guildDataResponseSchema.safeParse({ requestId: REQUEST_ID, guildId: '123456789012345678', kind: 'members', members: manyMembers }).success
+		).toBe(false);
 	});
 
 	it('rejects non-integer type/color/position and non-string names', () => {

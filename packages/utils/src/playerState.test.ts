@@ -33,6 +33,18 @@ describe('playerState schema contract', () => {
 		expect(playerStateSchema.safeParse({ ...sampleState(), repeatMode: 'all' }).success).toBe(false);
 		expect(playerStateSchema.safeParse({ ...sampleState(), queue: [{ title: 1 }] }).success).toBe(false);
 	});
+
+	it('keeps the explicit ended tombstone flag', () => {
+		const result = playerStateSchema.safeParse({ ...sampleState(), ended: true });
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.data.ended).toBe(true);
+	});
+
+	it('still accepts snapshots without ended — 구버전 봇 퍼블리셔와 호환돼요', () => {
+		const result = playerStateSchema.safeParse(sampleState());
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.data.ended).toBeUndefined();
+	});
 });
 
 describe('playerStateResponse schema contract', () => {

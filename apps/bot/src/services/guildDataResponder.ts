@@ -1,10 +1,10 @@
 /**
- * 길드 데이터(채널·역할 목록) 응답자 — 대시보드 조회 → data-api Redis 요청 → 봇 캐시 매핑 → Redis 응답.
+ * 길드 데이터(채널·역할·멤버 목록) 응답자 — 대시보드 조회 → data-api Redis 요청 → 봇 캐시 매핑 → Redis 응답.
  *
  * 대시보드가 사용자 토큰으로 Discord API를 직접 호출하면 401이 나므로 봇 권한으로 우회해요.
- * data-api가 Redis 채널(`sirubot:guild-data:request`)로 {requestId, guildId, kind}를
+ * data-api가 Redis 채널(`sirubot:guild-data:request`)로 {requestId, guildId, kind, userIds?}를
  * 브로드캐스트하면, 그 길드를 보유한 봇 프로세스만 이 서비스가 guild.channels.cache/
- * guild.roles.cache를 매핑해 `sirubot:guild-data:response` 채널로 응답해요 —
+ * guild.roles.cache/guild.members.cache를 매핑해 `sirubot:guild-data:response` 채널로 응답해요 —
  * data-api guildDataHub가 requestId로 응답을 상관(correlation)해 대시보드에 내려줘요.
  *
  * - 구독은 RedisStore 공용 연결을 못 쓰므로(구독 모드는 일반 명령 불가) 전용 연결을 만들어요.
@@ -15,9 +15,10 @@
 import { container } from '@sapphire/framework';
 import { GUILD_DATA_REQUEST_CHANNEL, ManagedRedisSubscriber, guildDataRequestSchema } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import type { GuildChannelItem, GuildDataRequest, GuildDataResponse, GuildRoleItem } from '@sirubot/utils';
+import type { GuildChannelItem, GuildDataRequest, GuildDataResponse, GuildMemberItem, GuildRoleItem } from '@sirubot/utils';
+import type { Guild, GuildMember } from 'discord.js';
 
-/** 페이로드 검증 — {"requestId":"<uuid>","guildId":"<길드 ID>","kind":"channels"|"roles"} 형태만 응답해요 */
+/** 페이로드 검증 — {"requestId":"<uuid>","guildId":"<길드 ID>","kind":"channels"|"roles"|"members"} 형태만 응답해요 */
 function parseGuildDataRequest(raw: string): GuildDataRequest | null {
 	try {
 		const parsed = guildDataRequestSchema.safeParse(JSON.parse(raw));
@@ -26,6 +27,24 @@ function parseGuildDataRequest(raw: string): GuildDataRequest | null {
 		// 형식 불일치 — 조용히 무시 (로그는 호출부에서 남겨요)
 	}
 	return null;
+}
+
+/** mapGuildMemberToItem이 필요로 하는 최소 구조 — GuildMember 대신 구조 타입을 쓰면 유닛 테스트가 가벼워져요 */
+interface MemberLike {
+	id: string;
+	nickname: string | null;
+	user: { username: string; globalName: string | null };
+	displayAvatarURL(options?: { size?: number }): string;
+}
+
+/** 멤버 표시 정보 매핑 — 서버 별명이 최우선, 그다음 전역 표시 이름, 마지막으로 계정 사용자명이에요 */
+export function mapGuildMemberToItem(member: MemberLike): GuildMemberItem {
+	return {
+		id: member.id,
+		displayName: member.nickname ?? member.user.globalName ?? member.user.username,
+		username: member.user.username,
+		avatarUrl: member.displayAvatarURL({ size: 64 })
+	};
 }
 
 export class GuildDataResponder {
@@ -95,6 +114,12 @@ export class GuildDataResponder {
 				return;
 			}
 
+			if (request.kind === 'members') {
+				// 멤버 조회는 캐시 미스 시 fetch가 필요한 비동기 작업이에요 — 구독 onMessage(동기)를 막지 않게 분리해요.
+				void this.handleMembersRequest(guild, request);
+				return;
+			}
+
 			const roles: GuildRoleItem[] = [...guild.roles.cache.values()].map((role) => ({
 				id: role.id,
 				name: role.name,
@@ -105,6 +130,28 @@ export class GuildDataResponder {
 			this.respond({ requestId: request.requestId, guildId: request.guildId, kind: request.kind, roles });
 		} catch (error) {
 			this.logger.warn(`길드 데이터 응답 작성 실패, 대시보드 타임아웃 폴백 (guild ${request.guildId}, kind ${request.kind}): ${error}`);
+		}
+	}
+
+	/**
+	 * 멤버 표시 정보를 병렬로 조회해 응답해요 — 대시보드 통계 topRequesters의 아바타/별명 표시에 쓰여요.
+	 * 캐시에 없는 멤버는 개별 fetch하고, 이미 길드를 떠난 멤버는 조용히 건너뛰어요.
+	 */
+	private async handleMembersRequest(guild: Guild, request: GuildDataRequest): Promise<void> {
+		try {
+			const settled = await Promise.allSettled(
+				(request.userIds ?? []).map(async (userId) => {
+					const cached = guild.members.cache.get(userId);
+					if (cached) return cached;
+					return guild.members.fetch(userId);
+				})
+			);
+			const members: GuildMemberItem[] = settled
+				.filter((result): result is PromiseFulfilledResult<GuildMember> => result.status === 'fulfilled')
+				.map((result) => mapGuildMemberToItem(result.value));
+			this.respond({ requestId: request.requestId, guildId: request.guildId, kind: request.kind, members });
+		} catch (error) {
+			this.logger.warn(`멤버 목록 응답 실패, 대시보드 ID 폴백 (guild ${request.guildId}): ${error}`);
 		}
 	}
 

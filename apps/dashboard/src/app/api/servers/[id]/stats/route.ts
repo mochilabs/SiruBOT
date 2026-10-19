@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { fetchGuildMembers } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { kstDateString } from "@/lib/kst-date";
 import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
@@ -26,6 +27,10 @@ export interface StatsTopTrack {
 export interface StatsTopRequester {
   userId: string;
   count: number;
+  /** 봇 캐시에서 조회한 표시 이름 — 조회 실패 시 null이면 클라이언트가 ID 라벨로 표시해요 */
+  displayName: string | null;
+  /** 봇 캐시에서 조회한 아바타 URL — 없으면 null */
+  avatarUrl: string | null;
 }
 
 export interface StatsServerStatsResponse {
@@ -39,9 +44,42 @@ export interface StatsServerStatsResponse {
 }
 
 /**
+ * topRequesters에 봇 캐시에서 조회한 표시 정보(별명·아바타)를 입혀요.
+ * data-api 요청 실패나 봇 미응답 시 표시 정보는 null로 내려가요 —
+ * 부가 표시일 뿐이라 통계 본문이 실패하지 않게 해요.
+ */
+async function enrichRequesters(
+  guildId: string,
+  requesters: { userId: string; count: number }[],
+): Promise<StatsTopRequester[]> {
+  if (requesters.length === 0) return [];
+  const memberMap = new Map<string, { displayName: string; avatarUrl: string | null }>();
+  try {
+    const members = await fetchGuildMembers(
+      guildId,
+      requesters.map((requester) => requester.userId),
+    );
+    for (const member of members ?? []) {
+      memberMap.set(member.id, { displayName: member.displayName, avatarUrl: member.avatarUrl });
+    }
+  } catch {
+    // 표시 정보는 부가 장식이에요 — 조회 실패가 통계 본문까지 실패시키지 않게 해요.
+  }
+  return requesters.map((requester) => {
+    const member = memberMap.get(requester.userId);
+    return {
+      ...requester,
+      displayName: member?.displayName ?? null,
+      avatarUrl: member?.avatarUrl ?? null,
+    };
+  });
+}
+
+/**
  * 길드 재생 기록 통계 — GuildTrackHistory를 Prisma groupBy로 집계해요.
- * 요청자 이름은 Discord API를 추가로 호출하지 않아요 — userId 앞 6자리를
- * 클라이언트에서 축약 라벨로 표시해요.
+ * 요청자 표시 정보(별명·아바타)는 사용자 토큰으로 Discord API를 직접 호출할 수 없어서
+ * 봇 캐시 경유(data-api Redis request/reply)로 조회해요. 조회 실패 시 표시 정보 없이
+ * 내려가고 클라이언트가 사용자 ID 라벨로 표시해요.
  */
 export async function GET(
   request: Request,
@@ -155,9 +193,10 @@ export async function GET(
       ];
     });
 
-    const topRequesters: StatsTopRequester[] = groupedRequesters.flatMap(
+    const baseRequesters = groupedRequesters.flatMap(
       (row) => (row.userId ? [{ userId: row.userId, count: row._count.userId }] : []),
     );
+    const topRequesters = await enrichRequesters(id, baseRequesters);
 
     // 날짜별 재생 수 — KST 하루 단위로 그룹핑 후 오름차순 정렬해요.
     const dailyMap = new Map<string, number>();
