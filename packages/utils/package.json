@@ -27,6 +27,11 @@
             "import": "./dist/customCommand.js",
             "require": "./dist/customCommand.cjs"
         },
+        "./chatTools": {
+            "types": "./dist/chatTools.d.ts",
+            "import": "./dist/chatTools.js",
+            "require": "./dist/chatTools.cjs"
+        },
         "./playerState": {
             "types": "./dist/playerState.d.ts",
             "import": "./dist/playerState.js",
