@@ -168,3 +168,32 @@ describe('controllerView 재생 라벨·타이틀', () => {
 		expect(texts.some((text) => text.includes(longUri))).toBe(false);
 	});
 });
+
+describe('controllerView 챕터(에피소드) 줄', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mocks.queued.mockReturnValue([]);
+		mocks.remaining.mockReturnValue(0);
+		mocks.nowPlaying.mockReturnValue(TRACK);
+		mocks.chapter.mockReturnValue(null);
+		mocks.chapterIndex.mockReturnValue(null);
+	});
+
+	it('챕터가 00:00부터 시작하면 시각 범위만 보여준다', () => {
+		mocks.chapter.mockReturnValue({ name: '1화', start: 0, end: 234_000, duration: 234_000 });
+
+		const texts = collectTexts(controllerJson());
+
+		expect(texts.some((text) => text.includes('╰ 1화 • 00:00~03:54'))).toBe(true);
+		expect(texts.some((text) => text.includes('(03:54)'))).toBe(false);
+	});
+
+	it('영상 중간부터 시작하는 챕터도 길이 표기 없이 시각 범위만 보여준다', () => {
+		mocks.chapter.mockReturnValue({ name: '2화', start: 60_000, end: 120_000, duration: 60_000 });
+
+		const texts = collectTexts(controllerJson());
+
+		expect(texts.some((text) => text.includes('╰ 2화 • 01:00~02:00'))).toBe(true);
+		expect(texts.some((text) => text.includes('(01:00)'))).toBe(false);
+	});
+});

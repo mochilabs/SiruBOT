@@ -212,7 +212,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 
 /**
  * 현재 위치 기준 재생 중인 챕터 한 줄을 만든다. 챕터가 없으면 null.
- * 구간은 챕터의 시작~끝 + 챕터 자체 길이(전체 영상 길이가 아니라)를 보여준다.
+ * 구간은 챕터의 시작~끝 시각만 보여준다 — 시작~끝이면 길이도 계산되므로 별도 표기는 생략한다.
  */
 function buildEpisodeLine(player: Player): string | null {
 	const chapter = currentChapter(player as CustomPlayer);
@@ -220,8 +220,7 @@ function buildEpisodeLine(player: Player): string | null {
 
 	const start = formatTime(chapter.start / 1000);
 	const end = formatTime(chapter.end / 1000);
-	const length = formatTime(chapter.duration / 1000);
-	return `-# ╰ ${chapter.name} • ${start}~${end} (${length})`;
+	return `-# ╰ ${chapter.name} • ${start}~${end}`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
