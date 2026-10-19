@@ -198,6 +198,25 @@ export class RedisStore {
 		}
 	}
 
+	/** 범용 해시 전체 읽기 — 카운팅 채널 상태 등. 미연결/오류 시 null (호출자가 기본값으로 폴백) */
+	public async getCacheHashFields(key: string): Promise<Record<string, string> | null> {
+		try {
+			if (this.isReady) return await this.redis.hGetAll(key);
+		} catch (error) {
+			this.logger.warn(`Cache hGetAll failed (${key}): ${error}`);
+		}
+		return null;
+	}
+
+	/** 범용 해시 필드 저장 — 미연결/오류 시 조용히 스킵해요 (재생 경로처럼 호출부를 블로킹하지 않아요) */
+	public async setCacheHashFields(key: string, fields: Record<string, string>): Promise<void> {
+		try {
+			if (this.isReady && Object.keys(fields).length > 0) await this.redis.hSet(key, fields);
+		} catch (error) {
+			this.logger.warn(`Cache hSet failed (${key}): ${error}`);
+		}
+	}
+
 	/**
 	 * isReady 가드 + fire-and-forget 퍼블리시 공용 헬퍼 — Redis 미연결/오류 시 조용히 스킵하고
 	 * 재생 경로를 절대 블로킹하지 않아요. label은 스킵/실패 로그 구분에만 쓰여요.

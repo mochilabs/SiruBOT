@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Guild, Prisma } from '@sirubot/prisma';
-import { MemoryCache, normalizeCustomCommandPrefix } from '@sirubot/utils';
+import { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites, type EmbedFixSite } from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
@@ -37,6 +37,17 @@ export function isTtsEnabled(settings: TtsSettings, channelId: string): boolean 
 	if (settings.mode === 'off') return false;
 	if (settings.mode === 'all') return true;
 	return settings.channelIds.includes(channelId);
+}
+
+/** 채팅 유틸 설정 — 대시보드에서 켜고 끄는 이모지 확대·메시지 인용·임베드 복구·카운팅이에요 */
+export interface ChatToolSettings {
+	emojiEnlargeEnabled: boolean;
+	quoteEnabled: boolean;
+	embedFixEnabled: boolean;
+	embedFixSites: EmbedFixSite[];
+	embedFixSuppressOriginal: boolean;
+	countingEnabled: boolean;
+	countingChannelId: string | null;
 }
 
 export class GuildService {
@@ -313,6 +324,20 @@ export class GuildService {
 	public async getCustomCommandPrefix(guildId: string): Promise<string> {
 		const guild = await this.getGuild(guildId);
 		return normalizeCustomCommandPrefix(guild.customCommandPrefix);
+	}
+
+	/** 채팅 유틸 설정 — 사이트 목록은 공용 계약 정규화를 거쳐요 (모르는 사이트·중복 제거, 없으면 전체 허용) */
+	public async getChatToolSettings(guildId: string): Promise<ChatToolSettings> {
+		const guild = await this.getGuild(guildId);
+		return {
+			emojiEnlargeEnabled: guild.emojiEnlargeEnabled,
+			quoteEnabled: guild.quoteEnabled,
+			embedFixEnabled: guild.embedFixEnabled,
+			embedFixSites: normalizeEmbedFixSites(guild.embedFixSites),
+			embedFixSuppressOriginal: guild.embedFixSuppressOriginal,
+			countingEnabled: guild.countingEnabled,
+			countingChannelId: guild.countingChannelId
+		};
 	}
 
 	public async setAiMode(guildId: string, mode: AiMode): Promise<AiMode> {
