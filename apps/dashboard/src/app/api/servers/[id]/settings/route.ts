@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeEmbedFixSites } from "@sirubot/utils";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
@@ -27,6 +28,13 @@ const ALLOWED_KEYS = [
   "gaplessEnabled",
   "crossfadeEnabled",
   "crossfadeMs",
+  "emojiEnlargeEnabled",
+  "quoteEnabled",
+  "embedFixEnabled",
+  "embedFixSites",
+  "embedFixSuppressOriginal",
+  "countingEnabled",
+  "countingChannelId",
 ] as const;
 
 /** DB 행이 없어도 기본값을 내려주는 응답 빌더 (봇 기본값과 동일해야 해요) */
@@ -51,6 +59,13 @@ function toSettings(
     gaplessEnabled: boolean;
     crossfadeEnabled: boolean;
     crossfadeMs: number;
+    emojiEnlargeEnabled: boolean;
+    quoteEnabled: boolean;
+    embedFixEnabled: boolean;
+    embedFixSites: string[];
+    embedFixSuppressOriginal: boolean;
+    countingEnabled: boolean;
+    countingChannelId: string | null;
   } | null,
 ): GuildSettings {
   if (!guild) {
@@ -74,6 +89,13 @@ function toSettings(
       gaplessEnabled: true,
       crossfadeEnabled: true,
       crossfadeMs: 5000,
+      emojiEnlargeEnabled: false,
+      quoteEnabled: false,
+      embedFixEnabled: false,
+      embedFixSites: ["x", "instagram", "booth"],
+      embedFixSuppressOriginal: false,
+      countingEnabled: false,
+      countingChannelId: null,
     };
   }
   return {
@@ -100,6 +122,13 @@ function toSettings(
     gaplessEnabled: guild.gaplessEnabled,
     crossfadeEnabled: guild.crossfadeEnabled,
     crossfadeMs: guild.crossfadeMs,
+    emojiEnlargeEnabled: guild.emojiEnlargeEnabled,
+    quoteEnabled: guild.quoteEnabled,
+    embedFixEnabled: guild.embedFixEnabled,
+    embedFixSites: normalizeEmbedFixSites(guild.embedFixSites),
+    embedFixSuppressOriginal: guild.embedFixSuppressOriginal,
+    countingEnabled: guild.countingEnabled,
+    countingChannelId: guild.countingChannelId,
   };
 }
 

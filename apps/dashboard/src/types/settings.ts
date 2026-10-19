@@ -29,4 +29,12 @@ export interface GuildSettings {
 	gaplessEnabled: boolean;
 	crossfadeEnabled: boolean;
 	crossfadeMs: number;
+	// 채팅 유틸 — 봇의 ChatToolSettings와 계약이 같아요 (packages/utils/src/chatTools.ts)
+	emojiEnlargeEnabled: boolean;
+	quoteEnabled: boolean;
+	embedFixEnabled: boolean;
+	embedFixSites: string[];
+	embedFixSuppressOriginal: boolean;
+	countingEnabled: boolean;
+	countingChannelId: string | null;
 }

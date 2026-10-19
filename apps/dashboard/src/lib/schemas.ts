@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { EMBED_FIX_SITES } from "@sirubot/utils";
 import { z } from "zod";
 
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
@@ -52,6 +53,17 @@ export const guildSettingsSchema = z.object({
 		.min(500, "크로스페이드는 0.5초 이상이에요.")
 		.max(15000, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
+	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts
+	emojiEnlargeEnabled: z.boolean().optional(),
+	quoteEnabled: z.boolean().optional(),
+	embedFixEnabled: z.boolean().optional(),
+	embedFixSites: z
+		.array(z.enum(EMBED_FIX_SITES, "임베드 복구 사이트가 잘못됐어요."))
+		.max(EMBED_FIX_SITES.length, `사이트는 최대 ${EMBED_FIX_SITES.length}개까지 선택할 수 있어요.`)
+		.optional(),
+	embedFixSuppressOriginal: z.boolean().optional(),
+	countingEnabled: z.boolean().optional(),
+	countingChannelId: nullableSnowflake.optional(),
 });
 
 /** POST /api/servers/[id]/jtc/setup */

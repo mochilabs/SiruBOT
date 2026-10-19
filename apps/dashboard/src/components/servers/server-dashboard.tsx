@@ -7,6 +7,7 @@ import {
   Bot,
   Hash,
   Images,
+  MessageSquare,
   Music,
   Radio,
   ShieldAlert,
@@ -25,6 +26,7 @@ import { AiSettings } from "./ai-settings";
 import { AssetsSettings } from "./assets-settings";
 import { BotProfileSettings } from "./bot-profile-settings";
 import { ChannelSettings } from "./channel-settings";
+import { ChatToolsSettings } from "./chat-tools-settings";
 import { CustomCommandsSettings } from "./custom-commands-settings";
 import { JtcSettings } from "./jtc-settings";
 import { MemberGreetingSettings } from "./member-greeting-settings";
@@ -43,6 +45,7 @@ const TABS = [
   { key: "player-live", label: "라이브", icon: <Radio size={14} /> },
   { key: "stats", label: "통계", icon: <BarChart3 size={14} /> },
   { key: "channels", label: "채널·권한", icon: <Hash size={14} /> },
+  { key: "chat-tools", label: "채팅 유틸", icon: <MessageSquare size={14} /> },
   { key: "jtc", label: "임시 음성", icon: <Volume2 size={14} /> },
   { key: "mixer", label: "오디오 엔진", icon: <SlidersHorizontal size={14} /> },
   { key: "greeting", label: "멤버", icon: <UserPlus size={14} /> },
@@ -207,6 +210,9 @@ export function ServerDashboard({
                 {item.key === "stats" && <ServerStatsTab guildId={guildId} />}
                 {item.key === "channels" && (
                   <ChannelSettings guildId={guildId} />
+                )}
+                {item.key === "chat-tools" && (
+                  <ChatToolsSettings guildId={guildId} />
                 )}
                 {item.key === "jtc" && <JtcSettings guildId={guildId} />}
                 {item.key === "mixer" && <MixerSettings guildId={guildId} />}
