@@ -54,7 +54,7 @@ model Guild {
   // 채팅 유틸: 임베드 복구 — X·인스타그램은 fix 도메인으로 재전송, BOOTH는 자체 OG 임베드. 계약은 packages/utils/src/chatTools.ts (all | channels | off)
   embedFixMode       String   @default("off")
   embedFixChannelIds String[] @default([])
-  embedFixSites          String[] @default(["x", "instagram", "booth"])
+  embedFixSites          String[] @default([])
   embedFixSuppressOriginal Boolean @default(false)
   // 채팅 유틸: 카운팅 채널 — 지정 채널에서 숫자를 순서대로 세고 틀리면 초기화해요
   countingEnabled  Boolean @default(false)
