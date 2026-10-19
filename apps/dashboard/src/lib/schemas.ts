@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 
 const AI_MODES = ["all", "channels", "off"] as const;
+const CHAT_TOOL_MODES = ["all", "channels", "off"] as const;
 const REPEAT_MODES = ["off", "track", "queue"] as const;
 const PINNED_MODES = ["play", "select"] as const;
 export const SPONSORBLOCK_SEGMENTS = [
@@ -53,10 +54,13 @@ export const guildSettingsSchema = z.object({
 		.min(500, "크로스페이드는 0.5초 이상이에요.")
 		.max(15000, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
-	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts
-	emojiEnlargeEnabled: z.boolean().optional(),
-	quoteEnabled: z.boolean().optional(),
-	embedFixEnabled: z.boolean().optional(),
+	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts, 채널 토글: 봇 guildService의 ChatToolSettings
+	emojiEnlargeMode: z.enum(CHAT_TOOL_MODES, "이모지 확대 모드가 잘못됐어요.").optional(),
+	emojiEnlargeChannelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
+	quoteMode: z.enum(CHAT_TOOL_MODES, "메시지 인용 모드가 잘못됐어요.").optional(),
+	quoteChannelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
+	embedFixMode: z.enum(CHAT_TOOL_MODES, "임베드 복구 모드가 잘못됐어요.").optional(),
+	embedFixChannelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
 	embedFixSites: z
 		.array(z.enum(EMBED_FIX_SITES, "임베드 복구 사이트가 잘못됐어요."))
 		.max(EMBED_FIX_SITES.length, `사이트는 최대 ${EMBED_FIX_SITES.length}개까지 선택할 수 있어요.`)
@@ -122,4 +126,9 @@ export async function parseSettingBody<S extends z.ZodTypeAny>(
 /** DB에 저장된 모드 값을 안전하게 정규화해요 */
 export function normalizeAiMode(value: string | null | undefined): "all" | "channels" | "off" {
 	return value && (AI_MODES as readonly string[]).includes(value) ? (value as "all" | "channels" | "off") : "all";
+}
+
+/** 채팅 유틸 모드 정규화 — 봇 기본값은 꺼짐(off)이에요 */
+export function normalizeChatToolMode(value: string | null | undefined): "all" | "channels" | "off" {
+	return value && (CHAT_TOOL_MODES as readonly string[]).includes(value) ? (value as "all" | "channels" | "off") : "off";
 }
