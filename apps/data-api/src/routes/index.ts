@@ -15,7 +15,9 @@ import {
 	memberGreetingPendingKey,
 	playerWebControlActionSchema,
 	playerWebPlayUriSchema,
-	redisIdSchema
+	redisIdSchema,
+	embedFixMetadataRequestSchema,
+	type EmbedFixResult
 } from '@sirubot/utils';
 import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
@@ -44,6 +46,16 @@ import { requestJtcSetup, type JtcSetupResult } from '../services/jtcSetupHub.ts
 import { registerDashboard } from './dashboard.ts';
 import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
 import { searchLavalinkYoutube } from '../providers/lavalinkSearch.ts';
+import {
+	EMBED_FIX_TTL_SECONDS,
+	boothEmbedFixResult,
+	embedFixCacheKey,
+	fetchBoothMeta,
+	fetchFxTwitterStatus,
+	fetchInstagramImageOk,
+	instagramEmbedFixResult,
+	xEmbedFixResult
+} from '../providers/embedFix.ts';
 
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
 const WEATHER_TTL_SECONDS = 15 * 60;
@@ -196,6 +208,48 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		try {
 			const daily = await refreshOhaasaNow(deps.translationProvider.available ? deps.translationProvider : null);
 			return reply.send(daily);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// ── 임베드 복구 메타데이터 (X·인스타그램·BOOTH — 봇 채팅 유틸 리스너가 호출해요) ──
+	fastify.post('/v1/embed-fix/metadata', async (request, reply) => {
+		try {
+			const parsed = embedFixMetadataRequestSchema.parse(request.body);
+			const results: EmbedFixResult[] = [];
+			for (const link of parsed.links) {
+				if (link.site === 'x') {
+					const { data: status } = await serveCached({
+						route: 'embed-fix',
+						key: embedFixCacheKey('x', link.url),
+						ttlSeconds: EMBED_FIX_TTL_SECONDS,
+						provider: 'fxtwitter',
+						fetchFresh: () => fetchFxTwitterStatus(link.url)
+					});
+					results.push(xEmbedFixResult(link, status));
+				} else if (link.site === 'instagram') {
+					// kkinstagram 고친 주소로 실제 이미지가 이어지는지만 확인해요 (메타는 안 와요)
+					const { data: imageOk } = await serveCached({
+						route: 'embed-fix',
+						key: embedFixCacheKey('instagram', link.url),
+						ttlSeconds: EMBED_FIX_TTL_SECONDS,
+						provider: 'kkinstagram',
+						fetchFresh: () => fetchInstagramImageOk(link.fixedUrl ?? link.url)
+					});
+					results.push(instagramEmbedFixResult(link, imageOk));
+				} else {
+					const { data: meta } = await serveCached({
+						route: 'embed-fix',
+						key: embedFixCacheKey('booth', link.url),
+						ttlSeconds: EMBED_FIX_TTL_SECONDS,
+						provider: 'booth',
+						fetchFresh: () => fetchBoothMeta(link.url)
+					});
+					results.push(boothEmbedFixResult(link, meta));
+				}
+			}
+			return reply.send({ results });
 		} catch (error) {
 			return sendError(reply, error);
 		}
