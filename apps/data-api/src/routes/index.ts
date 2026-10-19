@@ -53,7 +53,7 @@ import {
 	embedFixCacheKey,
 	fetchBoothMeta,
 	fetchFxTwitterStatus,
-	fetchInstagramImageOk,
+	fetchInstagramMeta,
 	fetchOgMeta,
 	instagramEmbedFixResult,
 	ogEmbedFixResult,
@@ -235,15 +235,15 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 					});
 					results.push(xEmbedFixResult(link, status));
 				} else if (link.site === 'instagram') {
-					// kkinstagram 고친 주소로 실제 이미지가 이어지는지만 확인해요 (메타는 안 와요)
-					const { data: imageOk } = await serveCached({
+					// kirkstagram(작성자·캐러셀) + toinstagram(캡션)을 병합하고, 둘 다 실패하면 kkinstagram 이미지로 폴백해요
+					const { data: meta } = await serveCached({
 						route: 'embed-fix',
 						key: embedFixCacheKey('instagram', link.url),
 						ttlSeconds: EMBED_FIX_TTL_SECONDS,
-						provider: 'kkinstagram',
-						fetchFresh: () => fetchInstagramImageOk(link.fixedUrl ?? link.url)
+						provider: 'instagram-meta',
+						fetchFresh: () => fetchInstagramMeta(link)
 					});
-					results.push(instagramEmbedFixResult(link, imageOk));
+					results.push(instagramEmbedFixResult(link, meta));
 				} else if (link.site === 'booth') {
 					const { data: meta } = await serveCached({
 						route: 'embed-fix',

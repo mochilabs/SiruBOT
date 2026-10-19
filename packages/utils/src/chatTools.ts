@@ -306,31 +306,43 @@ function readAttribute(tag: string, name: string): string | null {
 	return match ? match[1] : null;
 }
 
+/** 상대경로면 pageUrl 기준으로 절대경로를 만들고, 이미 절대경로면 그대로 돌려줘요 */
+export function absolutizeUrl(value: string, pageUrl: string): string {
+	try {
+		return new URL(value, pageUrl).href;
+	} catch {
+		return value;
+	}
+}
+
 /** pximg 리사이즈 세그먼트(/c/620x620/)를 떼면 원본 해상도가 돼요 */
 export function enlargeBoothImage(url: string): string {
 	return url.replace(/\/c\/\d+x\d+\//u, '/');
 }
 
 /**
- * 페이지의 OG 메타를 파싱해요. title이 없으면 null을 돌려줘요.
+ * 페이지의 OG 메타를 파싱해요. title(og:title, 없으면 twitter:title)이 없으면 null을 돌려줘요.
  * description은 EMBED_FIX_MAX_DESCRIPTION자로 잘라요.
+ * image·video는 상대경로면 pageUrl 기준으로 절대경로로 바꿔요.
  */
 export function parseOgMeta(html: string, pageUrl: string): OgMeta | null {
 	const og = new Map<string, string>();
 	for (const tagMatch of html.matchAll(/<meta\b[^>]*>/giu)) {
 		const tag = tagMatch[0];
-		const property = readAttribute(tag, 'property');
+		const key = readAttribute(tag, 'property') ?? readAttribute(tag, 'name');
 		const content = readAttribute(tag, 'content');
-		if (property && content !== null) og.set(property.toLowerCase(), decodeHtmlEntities(content));
+		if (key && content !== null) og.set(key.toLowerCase(), decodeHtmlEntities(content));
 	}
-	const title = og.get('og:title');
+	const title = og.get('og:title') ?? og.get('twitter:title');
 	if (!title) return null;
-	const description = og.get('og:description') ?? '';
+	const description = og.get('og:description') ?? og.get('twitter:description') ?? '';
+	const image = og.get('og:image') ?? og.get('og:image:secure_url') ?? og.get('twitter:image');
+	const video = og.get('og:video') ?? og.get('og:video:secure_url') ?? og.get('twitter:player:stream');
 	return {
 		title,
 		description: description.length > EMBED_FIX_MAX_DESCRIPTION ? `${description.slice(0, EMBED_FIX_MAX_DESCRIPTION - 1)}…` : description,
-		image: og.get('og:image') ?? null,
-		video: og.get('og:video') ?? null,
+		image: image ? absolutizeUrl(image, pageUrl) : null,
+		video: video ? absolutizeUrl(video, pageUrl) : null,
 		url: og.get('og:url') ?? pageUrl
 	};
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { boothEmbedFixResult, instagramEmbedFixResult, ogEmbedFixResult, xEmbedFixResult } from './embedFix.ts';
+import {
+	boothEmbedFixResult,
+	instagramEmbedFixResult,
+	mergeInstagramMeta,
+	ogEmbedFixResult,
+	parseKirkstagramGallery,
+	xEmbedFixResult
+} from './embedFix.ts';
 import type { FxTwitterStatus } from '@sirubot/utils';
 
 const X_LINK = { site: 'x', url: 'https://x.com/jack/status/20', fixedUrl: 'https://fixupx.com/jack/status/20' } as const;
@@ -65,19 +72,91 @@ describe('xEmbedFixResult', () => {
 });
 
 describe('instagramEmbedFixResult', () => {
-	it('maps a live post to a card with the kkinstagram media url', () => {
-		const result = instagramEmbedFixResult(INSTAGRAM_LINK, true);
+	it('maps a merged post meta to a card with author, caption and media', () => {
+		const result = instagramEmbedFixResult(INSTAGRAM_LINK, {
+			author: '@girlgangcraft',
+			caption: '캡션 텍스트',
+			images: ['https://kirkstagram.com/images/Dd9mHhJIMz9/1', 'https://kirkstagram.com/images/Dd9mHhJIMz9/2'],
+			videoUrl: 'https://kirkstagram.com/videos/Dd9mHhJIMz9/7'
+		});
 		expect(result.mode).toBe('card');
 		if (result.mode !== 'card') return;
-		expect(result.images).toEqual([INSTAGRAM_LINK.fixedUrl]);
+		expect(result.title).toBe('@girlgangcraft');
+		expect(result.description).toBe('캡션 텍스트');
+		expect(result.images).toEqual(['https://kirkstagram.com/images/Dd9mHhJIMz9/1', 'https://kirkstagram.com/images/Dd9mHhJIMz9/2']);
+		expect(result.videoUrl).toBe('https://kirkstagram.com/videos/Dd9mHhJIMz9/7');
 		expect(result.sourceUrl).toBe(INSTAGRAM_LINK.url);
 	});
 
-	it('falls back to the fixed link when the post does not resolve to an image', () => {
-		const result = instagramEmbedFixResult(INSTAGRAM_LINK, false);
+	it('maps a kkinstagram image-only fallback to a card without title', () => {
+		const result = instagramEmbedFixResult(INSTAGRAM_LINK, { author: null, caption: null, images: [INSTAGRAM_LINK.fixedUrl], videoUrl: null });
+		expect(result.mode).toBe('card');
+		if (result.mode !== 'card') return;
+		expect(result.title).toBeUndefined();
+		expect(result.images).toEqual([INSTAGRAM_LINK.fixedUrl]);
+	});
+
+	it('falls back to the fixed link when the post has no meta at all', () => {
+		const result = instagramEmbedFixResult(INSTAGRAM_LINK, null);
 		expect(result.mode).toBe('link');
 		if (result.mode !== 'link') return;
 		expect(result.fixedUrl).toBe(INSTAGRAM_LINK.fixedUrl);
+	});
+});
+
+const KIRK_GALLERY_HTML = `
+	<html><head>
+	<meta property="og:title" content="@girlgangcraft"/>
+	<meta property="og:image" content="/grid/Dd9mHhJIMz9"/>
+	<script id="discord:component-embed" type="application/json">{"component":{"type":17,"components":[
+		{"type":10,"content":"**@girlgangcraft**"},
+		{"type":12,"items":[
+			{"media":{"url":"https://kirkstagram.com/images/Dd9mHhJIMz9/1"}},
+			{"media":{"url":"https://kirkstagram.com/images/Dd9mHhJIMz9/2"}},
+			{"media":{"url":"https://kirkstagram.com/videos/Dd9mHhJIMz9/7"}}
+		]},
+		{"type":1,"components":[{"type":2,"style":5,"url":"https://instagram.com/p/Dd9mHhJIMz9/","label":"Open on Instagram"}]}
+	]}}</script>
+	</head></html>`;
+
+describe('parseKirkstagramGallery', () => {
+	it('extracts the media gallery (type 12) from the component embed JSON', () => {
+		expect(parseKirkstagramGallery(KIRK_GALLERY_HTML)).toEqual([
+			'https://kirkstagram.com/images/Dd9mHhJIMz9/1',
+			'https://kirkstagram.com/images/Dd9mHhJIMz9/2',
+			'https://kirkstagram.com/videos/Dd9mHhJIMz9/7'
+		]);
+	});
+
+	it('returns an empty list when the embed JSON is missing or broken', () => {
+		expect(parseKirkstagramGallery('<html><body>없음</body></html>')).toEqual([]);
+		expect(parseKirkstagramGallery('<script id="discord:component-embed">{not json</script>')).toEqual([]);
+	});
+});
+
+describe('mergeInstagramMeta', () => {
+	it('merges kirk media with the toig caption and splits the video out', () => {
+		const merged = mergeInstagramMeta(
+			{ author: '@girlgangcraft', media: ['https://kirkstagram.com/images/Dd9mHhJIMz9/1', 'https://kirkstagram.com/videos/Dd9mHhJIMz9/7'] },
+			{ author: '@girlgangcraft', caption: '캡션', media: ['https://toinstagram.com/videos/Dd9mHhJIMz9/1'] }
+		);
+		expect(merged).toEqual({
+			author: '@girlgangcraft',
+			caption: '캡션',
+			images: ['https://kirkstagram.com/images/Dd9mHhJIMz9/1'],
+			videoUrl: 'https://kirkstagram.com/videos/Dd9mHhJIMz9/7'
+		});
+	});
+
+	it('uses the toig media when kirk has no carousel', () => {
+		const merged = mergeInstagramMeta(null, { author: '@arabnews', caption: null, media: ['https://toinstagram.com/videos/Dd-y-P_CfZN/1'] });
+		expect(merged?.videoUrl).toBe('https://toinstagram.com/videos/Dd-y-P_CfZN/1');
+		expect(merged?.images).toEqual([]);
+	});
+
+	it('returns null when both sides are empty', () => {
+		expect(mergeInstagramMeta(null, null)).toBeNull();
+		expect(mergeInstagramMeta({ author: null, media: [] }, null)).toBeNull();
 	});
 });
 

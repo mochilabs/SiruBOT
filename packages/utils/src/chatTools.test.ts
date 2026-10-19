@@ -272,6 +272,32 @@ describe('parseOgMeta', () => {
 		expect(meta?.description).toHaveLength(EMBED_FIX_MAX_DESCRIPTION);
 		expect(meta?.description.endsWith('…')).toBe(true);
 	});
+
+	it('og:title이 없으면 twitter:title로 대체하고 twitter:description도 읽어요', () => {
+		const html = `
+			<html><head>
+			<meta name="twitter:title" content="@girlgangcraft" />
+			<meta name="twitter:player:stream" content="/videos/Dd9mHhJIMz9/1" />
+			<meta property="og:description" content="캡션" />
+			</head></html>`;
+		const meta = parseOgMeta(html, 'https://toinstagram.com/p/Dd9mHhJIMz9/');
+		expect(meta?.title).toBe('@girlgangcraft');
+		expect(meta?.description).toBe('캡션');
+		expect(meta?.video).toBe('https://toinstagram.com/videos/Dd9mHhJIMz9/1');
+	});
+
+	it('상대경로 og:image를 pageUrl 기준으로 절대경로로 바꿔요', () => {
+		const meta = parseOgMeta(
+			'<html><meta property="og:title" content="@arabnews"><meta property="og:image" content="/grid/Dd9mHhJIMz9"><meta property="og:video" content="/videos/Dd-y-P_CfZN/1"></html>',
+			'https://kirkstagram.com/reel/Dd-y-P_CfZN/'
+		);
+		expect(meta?.image).toBe('https://kirkstagram.com/grid/Dd9mHhJIMz9');
+		expect(meta?.video).toBe('https://kirkstagram.com/videos/Dd-y-P_CfZN/1');
+	});
+
+	it('twitter뿐이고 title이 없으면 null이에요', () => {
+		expect(parseOgMeta('<html><meta name="twitter:image" content="/grid/1"></html>', 'https://example.com')).toBeNull();
+	});
 });
 
 describe('parseCountingMessage', () => {
