@@ -51,8 +51,9 @@ const CARD_TEXT_MAX = 1_000;
 /** 미디어 갤러리 항목 상한 (Components V2 제한) */
 const CARD_IMAGE_MAX = 10;
 
-/** OG 카드 사이트(TikTok·Reddit·Pixiv·Threads) 헤더 문구와 이모지 */
+/** OG 카드 사이트(Instagram·TikTok·Reddit·Pixiv·Threads) 헤더 문구와 이모지 */
 const OG_CARD_SITE_HEADERS = {
+	instagram: { label: 'Instagram 게시물', emoji: 'frame' },
 	tiktok: { label: 'TikTok 영상', emoji: 'link' },
 	reddit: { label: 'Reddit 게시물', emoji: 'link' },
 	pixiv: { label: 'Pixiv 작품', emoji: 'frame' },
@@ -167,7 +168,6 @@ export class EmbedFixListener extends Listener {
 
 	private buildResultCard(result: EmbedFixResult): ContainerBuilder | null {
 		if (result.site === 'x') return this.buildXCard(result);
-		if (result.site === 'instagram') return this.buildInstagramCard(result);
 		if (result.site === 'booth') return this.buildBoothCard(result);
 		const header = OG_CARD_SITE_HEADERS[result.site as OgCardSiteKey];
 		return header ? this.buildOgCard(result, header) : null;
@@ -232,22 +232,6 @@ export class EmbedFixListener extends Listener {
 		container.addSectionComponents(
 			new SectionBuilder()
 				.addTextDisplayComponents(new TextDisplayBuilder().setContent(stats))
-				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
-		);
-		return container;
-	}
-
-	/** 인스타그램 카드 — kkinstagram은 이미지 리다이렉트만 돼요 (메타 없음) — 본문·갤러리 뒤 마지막 섹션에 라벨과 원문 버튼 */
-	private buildInstagramCard(result: EmbedFixResult): ContainerBuilder | null {
-		if (!result.sourceUrl) return null;
-		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
-		if (result.description && result.description.length > 0) {
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
-		}
-		this.addImageGallery(container, result.images);
-		container.addSectionComponents(
-			new SectionBuilder()
-				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('frame')} Instagram 게시물`))
 				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
 		);
 		return container;
