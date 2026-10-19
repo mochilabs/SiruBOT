@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { EMBED_FIX_SITES } from "@sirubot/utils";
+import { EMBED_FIX_SITES } from "@sirubot/utils/chatTools";
 import { z } from "zod";
 
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";

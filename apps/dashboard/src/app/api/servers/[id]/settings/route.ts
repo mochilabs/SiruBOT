@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { normalizeEmbedFixSites } from "@sirubot/utils";
+import { normalizeEmbedFixSites } from "@sirubot/utils/chatTools";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
