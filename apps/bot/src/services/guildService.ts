@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { Guild, Prisma } from '@sirubot/prisma';
-import { MemoryCache, normalizeCustomCommandPrefix } from '@sirubot/utils';
+import { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites, type EmbedFixSite } from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
@@ -34,10 +34,52 @@ export interface TtsSettings {
 
 /** 이 채널의 메시지를 낭독 대상인지 — 리스너는 조용히 건너뛰므로 boolean만 돌려줘요 */
 export function isTtsEnabled(settings: TtsSettings, channelId: string): boolean {
+	return isChannelToggleEnabled(settings, channelId);
+}
+
+/** 채널 토글 공용 규칙 — off면 끄기, all이면 항상 켜기, channels면 허용 목록에 있는 채널만 켜기 */
+export function isChannelToggleEnabled(settings: { mode: 'all' | 'channels' | 'off'; channelIds: string[] }, channelId: string): boolean {
 	if (settings.mode === 'off') return false;
 	if (settings.mode === 'all') return true;
 	return settings.channelIds.includes(channelId);
 }
+
+/** 채팅 유틸 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기(기본). 채팅 유틸은 명시적으로 켜야 해요 */
+export type ChatToolMode = 'all' | 'channels' | 'off';
+
+const CHAT_TOOL_MODES: readonly string[] = ['all', 'channels', 'off'];
+
+/** DB에 잘못된 값이 들어와도 안전하게 기본값('off')으로 되돌려요 */
+export function normalizeChatToolMode(value: string): ChatToolMode {
+	return CHAT_TOOL_MODES.includes(value) ? (value as ChatToolMode) : 'off';
+}
+
+/** 채널 토글 설정 — 이모지 확대·메시지 인용·임베드 복구가 같은 모양을 공유해요 */
+export interface ChannelToggleSettings {
+	mode: ChatToolMode;
+	channelIds: string[];
+}
+
+/** 채팅 유틸 설정 — 대시보드·명령어에서 켜고 끄는 이모지 확대·메시지 인용·임베드 복구·카운팅이에요 */
+export interface ChatToolSettings {
+	emojiEnlarge: ChannelToggleSettings;
+	quote: ChannelToggleSettings;
+	embedFix: ChannelToggleSettings;
+	embedFixSites: EmbedFixSite[];
+	embedFixSuppressOriginal: boolean;
+	countingEnabled: boolean;
+	countingChannelId: string | null;
+}
+
+/** 채팅 유틸 채널 토글이 매핑되는 DB 필드 — 세 기능이 같은 규칙을 공유해요 */
+const CHAT_TOOL_TOGGLE_FIELDS = {
+	emojiEnlarge: { mode: 'emojiEnlargeMode', channelIds: 'emojiEnlargeChannelIds' },
+	quote: { mode: 'quoteMode', channelIds: 'quoteChannelIds' },
+	embedFix: { mode: 'embedFixMode', channelIds: 'embedFixChannelIds' }
+} as const;
+
+/** 채팅 유틸 기능 키 — 명령어·서비스가 채널 토글을 지정할 때 써요 */
+export type ChatToolName = keyof typeof CHAT_TOOL_TOGGLE_FIELDS;
 
 export class GuildService {
 	// Guild settings cache (60s TTL, max 500)
@@ -315,6 +357,20 @@ export class GuildService {
 		return normalizeCustomCommandPrefix(guild.customCommandPrefix);
 	}
 
+	/** 채팅 유틸 설정 — 모드는 'off' 폴백 정규화, 사이트 목록은 공용 계약 정규화를 거쳐요 (모르는 사이트·중복 제거, 없으면 전체 허용) */
+	public async getChatToolSettings(guildId: string): Promise<ChatToolSettings> {
+		const guild = await this.getGuild(guildId);
+		return {
+			emojiEnlarge: { mode: normalizeChatToolMode(guild.emojiEnlargeMode), channelIds: guild.emojiEnlargeChannelIds },
+			quote: { mode: normalizeChatToolMode(guild.quoteMode), channelIds: guild.quoteChannelIds },
+			embedFix: { mode: normalizeChatToolMode(guild.embedFixMode), channelIds: guild.embedFixChannelIds },
+			embedFixSites: normalizeEmbedFixSites(guild.embedFixSites),
+			embedFixSuppressOriginal: guild.embedFixSuppressOriginal,
+			countingEnabled: guild.countingEnabled,
+			countingChannelId: guild.countingChannelId
+		};
+	}
+
 	public async setAiMode(guildId: string, mode: AiMode): Promise<AiMode> {
 		const guild = await this.upsertField(guildId, 'aiMode', mode);
 		return normalizeAiMode(guild.aiMode);
@@ -404,6 +460,53 @@ export class GuildService {
 		});
 		this.updateCache(guild);
 		return { mode: normalizeTtsMode(guild.ttsMode), channelIds: guild.ttsChannelIds };
+	}
+
+	/** 특정 채널의 채팅 유틸 기능(이모지 확대·인용·임베드 복구) on/off — AI 채팅과 같은 토글 규칙이에요 */
+	public async setChannelChatToolEnabled(
+		guildId: string,
+		tool: ChatToolName,
+		channelId: string,
+		enabled: boolean,
+		allTextChannelIds: string[]
+	): Promise<ChannelToggleSettings> {
+		const settings = await this.getChatToolSettings(guildId);
+		const next = this.computeChannelToggle(settings[tool], channelId, enabled, allTextChannelIds);
+		const fields = CHAT_TOOL_TOGGLE_FIELDS[tool];
+		const data: Prisma.GuildUpdateInput =
+			tool === 'emojiEnlarge'
+				? { emojiEnlargeMode: next.mode, emojiEnlargeChannelIds: next.channelIds }
+				: tool === 'quote'
+					? { quoteMode: next.mode, quoteChannelIds: next.channelIds }
+					: { embedFixMode: next.mode, embedFixChannelIds: next.channelIds };
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
+			update: data
+		});
+		this.updateCache(guild);
+		return { mode: normalizeChatToolMode(guild[fields.mode]), channelIds: guild[fields.channelIds] };
+	}
+
+	/** 카운팅 채널 지정 — 지정한 순간 켜져요. null을 넘기면 꺼요 */
+	public async setCountingChannel(
+		guildId: string,
+		channelId: string | null
+	): Promise<{ countingEnabled: boolean; countingChannelId: string | null }> {
+		const data: Prisma.GuildUpdateInput = { countingChannelId: channelId, countingEnabled: channelId !== null };
+		const guild = await container.db.guild.upsert({
+			where: { id: guildId },
+			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
+			update: data
+		});
+		this.updateCache(guild);
+		return { countingEnabled: guild.countingEnabled, countingChannelId: guild.countingChannelId };
+	}
+
+	/** 카운팅 on/off만 바꿔요 (채널 지정은 그대로 유지) */
+	public async setCountingEnabled(guildId: string, enabled: boolean): Promise<boolean> {
+		const guild = await this.upsertField(guildId, 'countingEnabled', enabled);
+		return guild.countingEnabled;
 	}
 }
 

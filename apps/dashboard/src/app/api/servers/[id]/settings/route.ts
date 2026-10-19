@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { normalizeEmbedFixSites } from "@sirubot/utils/chatTools";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
-import { guildSettingsSchema, parseSettingBody } from "@/lib/schemas";
+import { guildSettingsSchema, normalizeChatToolMode, parseSettingBody } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
 const ALLOWED_KEYS = [
@@ -27,6 +28,16 @@ const ALLOWED_KEYS = [
   "gaplessEnabled",
   "crossfadeEnabled",
   "crossfadeMs",
+  "emojiEnlargeMode",
+  "emojiEnlargeChannelIds",
+  "quoteMode",
+  "quoteChannelIds",
+  "embedFixMode",
+  "embedFixChannelIds",
+  "embedFixSites",
+  "embedFixSuppressOriginal",
+  "countingEnabled",
+  "countingChannelId",
 ] as const;
 
 /** DB 행이 없어도 기본값을 내려주는 응답 빌더 (봇 기본값과 동일해야 해요) */
@@ -51,6 +62,16 @@ function toSettings(
     gaplessEnabled: boolean;
     crossfadeEnabled: boolean;
     crossfadeMs: number;
+    emojiEnlargeMode: string;
+    emojiEnlargeChannelIds: string[];
+    quoteMode: string;
+    quoteChannelIds: string[];
+    embedFixMode: string;
+    embedFixChannelIds: string[];
+    embedFixSites: string[];
+    embedFixSuppressOriginal: boolean;
+    countingEnabled: boolean;
+    countingChannelId: string | null;
   } | null,
 ): GuildSettings {
   if (!guild) {
@@ -74,6 +95,16 @@ function toSettings(
       gaplessEnabled: true,
       crossfadeEnabled: true,
       crossfadeMs: 5000,
+      emojiEnlargeMode: "off",
+      emojiEnlargeChannelIds: [],
+      quoteMode: "off",
+      quoteChannelIds: [],
+      embedFixMode: "off",
+      embedFixChannelIds: [],
+      embedFixSites: [],
+      embedFixSuppressOriginal: false,
+      countingEnabled: false,
+      countingChannelId: null,
     };
   }
   return {
@@ -100,6 +131,16 @@ function toSettings(
     gaplessEnabled: guild.gaplessEnabled,
     crossfadeEnabled: guild.crossfadeEnabled,
     crossfadeMs: guild.crossfadeMs,
+    emojiEnlargeMode: normalizeChatToolMode(guild.emojiEnlargeMode),
+    emojiEnlargeChannelIds: guild.emojiEnlargeChannelIds,
+    quoteMode: normalizeChatToolMode(guild.quoteMode),
+    quoteChannelIds: guild.quoteChannelIds,
+    embedFixMode: normalizeChatToolMode(guild.embedFixMode),
+    embedFixChannelIds: guild.embedFixChannelIds,
+    embedFixSites: normalizeEmbedFixSites(guild.embedFixSites),
+    embedFixSuppressOriginal: guild.embedFixSuppressOriginal,
+    countingEnabled: guild.countingEnabled,
+    countingChannelId: guild.countingChannelId,
   };
 }
 

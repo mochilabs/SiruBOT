@@ -1,6 +1,9 @@
 /** AI 채팅 모드 — 봇 GuildService의 AiMode와 일치해야 해요 */
 export type AiMode = "all" | "channels" | "off";
 
+/** 채팅 유틸 채널 정책 — 봇 GuildService의 ChatToolMode와 일치해야 해요 */
+export type ChatToolMode = "all" | "channels" | "off";
+
 /** /api/servers/[id]/ai GET·PUT 본문 */
 export interface AiPolicy {
 	mode: AiMode;
@@ -29,4 +32,15 @@ export interface GuildSettings {
 	gaplessEnabled: boolean;
 	crossfadeEnabled: boolean;
 	crossfadeMs: number;
+	// 채팅 유틸 — 봇의 ChatToolSettings와 계약이 같아요 (packages/utils/src/chatTools.ts)
+	emojiEnlargeMode: "all" | "channels" | "off";
+	emojiEnlargeChannelIds: string[];
+	quoteMode: "all" | "channels" | "off";
+	quoteChannelIds: string[];
+	embedFixMode: "all" | "channels" | "off";
+	embedFixChannelIds: string[];
+	embedFixSites: string[];
+	embedFixSuppressOriginal: boolean;
+	countingEnabled: boolean;
+	countingChannelId: string | null;
 }

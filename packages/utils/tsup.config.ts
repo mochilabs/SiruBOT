@@ -8,6 +8,7 @@ export default createConfig({
         'src/time.ts',
         'src/sentry.ts',
         'src/customCommand.ts',
+        'src/chatTools.ts',
         'src/playerState.ts',
         'src/guildData.ts',
         'src/memberGreeting.ts',

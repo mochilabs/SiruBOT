@@ -69,6 +69,7 @@ export const APP_EMOJI_FALLBACKS = {
 	gem: '💎',
 	globe: '🌐',
 	headphone: '🎧',
+	heart: '❤️',
 	hourglass: '⏳',
 	house: '🏠',
 	id: '🆔',

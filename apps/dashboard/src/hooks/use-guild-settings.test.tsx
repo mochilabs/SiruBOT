@@ -18,6 +18,10 @@ const saved: GuildSettings = {
   pinnedChannelDeleteInput: false, jtcEnabled: false, jtcCategoryId: null,
   jtcMarkerChannelId: null, jtcTemplate: "{user}의 방", jtcUserLimit: 0,
   gaplessEnabled: false, crossfadeEnabled: false, crossfadeMs: 500,
+  emojiEnlargeMode: "off", emojiEnlargeChannelIds: [], quoteMode: "off", quoteChannelIds: [],
+  embedFixMode: "off", embedFixChannelIds: [],
+  embedFixSites: ["x", "instagram", "booth"], embedFixSuppressOriginal: false,
+  countingEnabled: false, countingChannelId: null,
 };
 const editable = (settings: GuildSettings) => ({ volume: settings.volume, sponsorBlockSegments: settings.sponsorBlockSegments });
 let current: ReturnType<typeof useSettingsForm<ReturnType<typeof editable>>>;
