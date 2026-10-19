@@ -45,12 +45,15 @@ model Guild {
   ttsChannelIds        String[] @default([])
   // 커스텀 명령어 접두사 — 메시지가 이 문자열로 시작하면 길드 커스텀 명령어로 처리해요. 규칙은 packages/utils/src/customCommand.ts.
   customCommandPrefix String @default("!")
-  // 채팅 유틸: 이모지 확대 — 커스텀 이모지만으로 구성된 메시지를 큰 이미지로 다시 보여줘요
-  emojiEnlargeEnabled Boolean @default(false)
-  // 채팅 유틸: 메시지 인용 — discord.com/channels/... 링크를 자체 인용 임베드로 보여줘요
-  quoteEnabled Boolean @default(false)
-  // 채팅 유틸: 임베드 복구 — X·인스타그램은 fix 도메인으로 재전송, BOOTH는 자체 OG 임베드. 계약은 packages/utils/src/chatTools.ts
-  embedFixEnabled        Boolean  @default(false)
+  // 채팅 유틸: 이모지 확대 — 커스텀 이모지만으로 구성된 메시지를 큰 이미지로 다시 보여줘요 (all | channels | off)
+  emojiEnlargeMode       String   @default("off")
+  emojiEnlargeChannelIds String[] @default([])
+  // 채팅 유틸: 메시지 인용 — discord.com/channels/... 링크를 자체 인용 임베드로 보여줘요 (all | channels | off)
+  quoteMode       String   @default("off")
+  quoteChannelIds String[] @default([])
+  // 채팅 유틸: 임베드 복구 — X·인스타그램은 fix 도메인으로 재전송, BOOTH는 자체 OG 임베드. 계약은 packages/utils/src/chatTools.ts (all | channels | off)
+  embedFixMode       String   @default("off")
+  embedFixChannelIds String[] @default([])
   embedFixSites          String[] @default(["x", "instagram", "booth"])
   embedFixSuppressOriginal Boolean @default(false)
   // 채팅 유틸: 카운팅 채널 — 지정 채널에서 숫자를 순서대로 세고 틀리면 초기화해요
