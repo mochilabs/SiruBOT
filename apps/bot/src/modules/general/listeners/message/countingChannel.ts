@@ -2,17 +2,16 @@
  * 카운팅 채널 리스너 — 지정 채널에서 숫자를 순서대로 세요.
  *
  * - 규칙: 1부터 시작, 같은 사람이 연속으로 세면 실패(도배 방지), 틀리면 카운트가 초기화돼요.
- * - 상태는 Redis 해시(sirubot:counting:<guildId>)에 저장돼 재시작 뒤에도 이어져요.
- *   Redis 없는 개발 환경에서는 메모리 상태로만 동작해요 (재시작 시 초기화).
+ * - 상태는 services/countingState.ts가 관리해요 (Redis에 저장돼 재시작 뒤에도 이어져요).
  * - 숫자가 아닌 메시지는 조용히 무시해요 — 카운팅 채널에서 잡담도 할 수 있어요.
  * - 판정 계약은 packages/utils/src/chatTools.ts (evaluateCounting).
  */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
-import { type CountingState, COUNTING_STATE_DEFAULT, emoji, evaluateCounting, parseCountingMessage } from '@sirubot/utils';
+import { emoji, evaluateCounting, parseCountingMessage } from '@sirubot/utils';
+import { loadCountingState, saveCountingState } from '../../../../services/countingState.ts';
 
-const COUNTING_KEY_PREFIX = 'sirubot:counting:';
 /** 최고 기록 알림 기준 — 매 숫자마다 알리면 시끄러워요 */
 const COUNTING_ANNOUNCE_MIN = 10;
 
@@ -20,9 +19,6 @@ const COUNTING_ANNOUNCE_MIN = 10;
 	event: Events.MessageCreate
 })
 export class CountingChannelListener extends Listener {
-	/** 샤드 메모리 캐시 — 항상 최신 상태(길드는 샤드 하나에만 속해요), Redis는 재시작 복구용이에요 */
-	private readonly memory = new Map<string, CountingState>();
-
 	public override async run(message: Message) {
 		if (message.author.bot || !message.inGuild() || message.webhookId) return;
 		if (!message.channel.isSendable()) return;
@@ -35,16 +31,9 @@ export class CountingChannelListener extends Listener {
 			const attempt = parseCountingMessage(message.content);
 			if (attempt === null) return;
 
-			const key = `${COUNTING_KEY_PREFIX}${message.guildId}`;
-			const state = await this.loadState(message.guildId, key);
+			const state = await loadCountingState(message.guildId);
 			const result = evaluateCounting(state, attempt, message.author.id);
-
-			this.memory.set(message.guildId, result.state);
-			await this.container.redisStore.setCacheHashFields(key, {
-				current: String(result.state.current),
-				lastUserId: result.state.lastUserId ?? '',
-				best: String(result.state.best)
-			});
+			await saveCountingState(message.guildId, result.state);
 
 			// 성공은 조용히 — 새 최고 기록만 알려줘요
 			if (result.ok) {
@@ -72,19 +61,5 @@ export class CountingChannelListener extends Listener {
 				allowedMentions: { parse: [] }
 			})
 			.catch(() => undefined);
-	}
-
-	private async loadState(guildId: string, key: string): Promise<CountingState> {
-		const cached = this.memory.get(guildId);
-		if (cached) return cached;
-		const fields = await this.container.redisStore.getCacheHashFields(key).catch(() => null);
-		if (fields && fields.current !== undefined) {
-			return {
-				current: Number.parseInt(fields.current, 10) || 0,
-				lastUserId: fields.lastUserId && fields.lastUserId.length > 0 ? fields.lastUserId : null,
-				best: Number.parseInt(fields.best, 10) || 0
-			};
-		}
-		return COUNTING_STATE_DEFAULT;
 	}
 }

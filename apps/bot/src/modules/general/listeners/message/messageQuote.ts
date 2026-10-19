@@ -17,6 +17,7 @@ import {
 	TextDisplayBuilder
 } from 'discord.js';
 import { type MessageLinkTarget, MemoryCache, addSeparator, createContainer, createThumbnail, emoji, parseMessageLinks } from '@sirubot/utils';
+import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 
 const QUOTE_SNIPPET_MAX = 500;
 const QUOTE_IMAGE_MAX = 4;
@@ -34,7 +35,7 @@ export class MessageQuoteListener extends Listener {
 
 		try {
 			const settings = await this.container.guildService.getChatToolSettings(message.guildId);
-			if (!settings.quoteEnabled) return;
+			if (!isChannelToggleEnabled(settings.quote, message.channelId)) return;
 
 			// 다른 길드·DM 링크는 원본 임베드가 있으니 이 길드 링크만 다뤄요
 			const targets = parseMessageLinks(message.content).filter((target) => target.guildId === message.guildId);
