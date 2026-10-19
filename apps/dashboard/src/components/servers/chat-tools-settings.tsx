@@ -21,6 +21,10 @@ const SITE_TOGGLES = [
 	{ value: "x", label: "X (트위터)" },
 	{ value: "instagram", label: "인스타그램" },
 	{ value: "booth", label: "BOOTH" },
+	{ value: "tiktok", label: "TikTok" },
+	{ value: "reddit", label: "Reddit" },
+	{ value: "pixiv", label: "Pixiv" },
+	{ value: "threads", label: "Threads" },
 ] as const;
 
 interface ChatToolsForm {

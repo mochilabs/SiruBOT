@@ -101,7 +101,7 @@ function toSettings(
       quoteChannelIds: [],
       embedFixMode: "off",
       embedFixChannelIds: [],
-      embedFixSites: ["x", "instagram", "booth"],
+      embedFixSites: [],
       embedFixSuppressOriginal: false,
       countingEnabled: false,
       countingChannelId: null,
