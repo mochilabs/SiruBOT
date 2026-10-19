@@ -20,6 +20,8 @@ const logger = getLogger('playerHub');
 
 /** 마지막 갱신 기준 이 시간이 지나면 stale */
 const STALE_MS = 60_000;
+/** 이 시간이 지난 엔트리는 유령으로 판정해 정리해요 — 봇이 종료 프레임을 못 보내고 죽은 경우의 방어예요. */
+const PURGE_MS = 10 * 60_000;
 /** 길드 상태 엔트리 최대 보관 수 (장기 비활성 길드 누수 방지) */
 const MAX_ENTRIES = 5_000;
 
@@ -62,7 +64,12 @@ export function subscribeSse(guildId: string, send: (payload: string) => void): 
 	};
 }
 
-function handleMessage(message: string, channel: string): void {
+/**
+ * Pub/Sub 메시지 처리 — 일반 스냅샷은 저장하고, 확정 종료(ended:true) 프레임은 길드 엔트리를
+ * 지운 뒤 SSE 구독자에게 player:null을 relay해요. 유닛 테스트가 직접 호출할 수 있게 내보내요
+ * (다루는 게 모듈 states/SSE 레지스트리뿐이라 Redis 연결 없이도 검증돼요).
+ */
+export function handlePlayerStateMessage(message: string, channel: string): void {
 	const guildId = guildIdFromPlayerStateChannel(channel);
 	if (!guildId) return;
 
@@ -74,6 +81,14 @@ function handleMessage(message: string, channel: string): void {
 		}
 		const parsed: PlayerStatePayload = result.data;
 		if (parsed.guildId !== guildId) return;
+
+		// 확정 종료 신호(tombstone) — 마지막 프레임을 남기면 대시보드 라이브 뷰가 유령 상태에 갇혀요.
+		// 엔트리를 지우고 SSE에 player:null을 relay해 빈 상태(LiveEmpty)로 즉시 돌아가게 해요.
+		if (parsed.ended === true) {
+			states.delete(guildId);
+			notifySseSubscribers(guildId, JSON.stringify({ player: getPlayerState(guildId), hub: playerHubStatus() }));
+			return;
+		}
 
 		if (states.size >= MAX_ENTRIES && !states.has(guildId)) {
 			// 가장 오래된 엔트리를 하나 비워요 — 정확한 LRU는 아니지만 충분해요.
@@ -95,7 +110,7 @@ const subscriber = new HubSubscriber({
 	name: 'player hub',
 	channel: PLAYER_STATE_CHANNEL_PATTERN,
 	pattern: true,
-	onMessage: handleMessage,
+	onMessage: handlePlayerStateMessage,
 	logger
 });
 
@@ -119,8 +134,14 @@ export async function stopPlayerHub(): Promise<void> {
 export function getPlayerState(guildId: string): PlayerStateResponse | null {
 	const entry = states.get(guildId);
 	if (!entry) return null;
-	const now = Date.now();
-	return { ...entry.state, ageMs: now - entry.lastUpdate, stale: now - entry.lastUpdate > STALE_MS };
+	const ageMs = Date.now() - entry.lastUpdate;
+	// 봇이 종료 프레임을 못 보내고 죽은 경우의 방어 — 살아 있는 재생은 5초 간격으로 리프레시되므로
+	// 이보다 오래된 엔트리는 유령이에요. 지우고 null로 응답해 라이브 뷰가 빈 상태로 돌아가게 해요.
+	if (ageMs > PURGE_MS) {
+		states.delete(guildId);
+		return null;
+	}
+	return { ...entry.state, ageMs, stale: ageMs > STALE_MS };
 }
 
 /** 관제용 — 현재 보관 중인 길드 수와 실제 구독 상태 (소켓이 아니라 pSubscribe/재구독 완료 기준) */

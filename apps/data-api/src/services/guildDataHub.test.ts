@@ -145,4 +145,26 @@ describe('GuildDataPendingRequests', () => {
 		expect(registry.size).toBe(0);
 		await expect(promise).resolves.toEqual({ ok: false, reason: 'redis_unavailable' });
 	});
+
+	it('resolves a members response with member display info', async () => {
+		const registry = new GuildDataPendingRequests(10);
+		const promise = registry.register(REQUEST_ID, 'guild-1', 'members', 3_000);
+		const assertion = expect(promise).resolves.toEqual({
+			ok: true,
+			members: [{ id: 'u1', displayName: '별명', username: 'account', avatarUrl: null }]
+		});
+
+		expect(
+			registry.handleRaw(
+				JSON.stringify({
+					requestId: REQUEST_ID,
+					guildId: 'guild-1',
+					kind: 'members',
+					members: [{ id: 'u1', displayName: '별명', username: 'account', avatarUrl: null }]
+				})
+			)
+		).toBe('resolved');
+		expect(registry.size).toBe(0);
+		await assertion;
+	});
 });

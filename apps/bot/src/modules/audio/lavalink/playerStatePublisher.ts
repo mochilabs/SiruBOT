@@ -100,6 +100,22 @@ export function publishPlayerState(player: CustomPlayer): void {
 	store.publishRawPlayerState(player.guildId, JSON.stringify(payload));
 }
 
+/**
+ * 플레이어 확정 종료(tombstone)를 퍼블리시해요 — 큐 종료·플레이어 파괴 시점에만 호출해요.
+ * ended:true 프레임은 스로틀을 건너뛰고 즉시 발행하며, playerHub가 받으면 길드 엔트리를 지우고
+ * SSE에 player:null을 relay해 대시보드가 유령 상태 없이 빈 화면으로 돌아가요.
+ * fire-and-forget — Redis 미연결 시 redisStore가 조용히 스킵해요.
+ */
+export function publishPlayerEnded(player: CustomPlayer): void {
+	const store = container.redisStore;
+	if (!store?.ready) return;
+
+	const payload: PlayerStatePayload = { ...buildPlayerStatePayload(player), ended: true };
+	// 종료 프레임은 이후 상태와 비교할 대상이 아니에요 — 스로틀 추적기를 비워요.
+	getPublishTracker().delete(player.guildId);
+	store.publishRawPlayerState(player.guildId, JSON.stringify(payload));
+}
+
 /** 플레이어 파괴 시 마지막 퍼블리시 상태 정리 */
 export function clearPlayerStateTracker(guildId: string): void {
 	getPublishTracker().delete(guildId);

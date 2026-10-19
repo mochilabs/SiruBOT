@@ -7,7 +7,7 @@ import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated
 import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
-import { clearPlayerStateTracker, publishPlayerState } from '../playerStatePublisher.ts';
+import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
 import * as Sentry from '@sentry/node';
 
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
@@ -466,6 +466,8 @@ export class TrackHandler extends BaseLavalinkHandler {
 		player.transitionState.preloadConsumedAt = null;
 		player.transitionState.confirmedNowPlaying = null;
 		player.transitionState.serverConsumedTrack = null;
+		// 대시보드 라이브 뷰 — 종료를 확정 신호(ended)로 알려 마지막 프레임이 유령으로 남지 않게 한다 (fire-and-forget)
+		publishPlayerEnded(player);
 		await this.container.playerNotifier.deleteController(player);
 
 		if (!player.transitionState.stopByCommand) {
