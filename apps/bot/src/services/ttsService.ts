@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { sleep } from '@sirubot/utils/time';
 
 /**
  * 채팅 TTS(siru_tts) 클라이언트 — 합성 요청·공개 URL 수신·quota 감시·재시도.
@@ -95,10 +96,6 @@ export function getTtsConfig(): TtsConfig | null {
 function quotaNearlySpent(quota: QuotaUsageBody | null | undefined): boolean {
 	if (!quota?.enabled || !quota.limit || quota.used_chars === undefined) return false;
 	return quota.used_chars / quota.limit >= TTS_QUOTA_BLOCK_RATIO;
-}
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export class TtsService {

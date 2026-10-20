@@ -28,6 +28,7 @@ import {
 	type CustomCommandDesign,
 	type CustomCommandStep
 } from '@sirubot/utils';
+import { sleep } from '@sirubot/utils/time';
 
 export interface CustomCommandSendPayload {
 	content?: string;
@@ -86,10 +87,6 @@ export type CustomCommandRunResult =
 	| { kind: 'invalid_spec' }
 	| { kind: 'access_denied' }
 	| { kind: 'action_failed'; sent: number; stepIndex: number; reason: string };
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /** 인수 값의 디스코드 멘션 문법 제거 — 치환 결과로 핑이 튀는 것을 막아요 */
 function sanitizeArg(value: string): string {

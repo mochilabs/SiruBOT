@@ -1,3 +1,4 @@
+import { sleep } from "@sirubot/utils/time";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 import { db } from "@/lib/db";
@@ -309,8 +310,4 @@ async function performRefresh(userId: string, lockVal: string | null): Promise<E
       await redisCompareAndDel(lockKey, lockVal);
     }
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

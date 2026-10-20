@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@sirubot/prisma';
+import { sleep } from '@sirubot/utils/time';
 import { getLogger } from '../utils/logger.ts';
 import { parseClock } from '../utils/parseClock.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
@@ -64,10 +65,6 @@ function tidyOutputValid(original: string, output: string): boolean {
 	const after = countMarkdownEntries(output);
 	if (before > 0 && after < Math.ceil(before * 0.4)) return false;
 	return after > 0 || before === 0;
-}
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** 저장된 장기 기억을 파일 형식(마크다운)으로 정규화해요. */

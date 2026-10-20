@@ -7,9 +7,8 @@ import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { setSentryShardTags } from './sentry.ts';
 import { parseLavalinkHosts } from '@sirubot/utils';
+import { sleep } from '@sirubot/utils/time';
 import * as Sentry from '@sentry/node';
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const main = async () => {
 	const isDevMode = process.env.NODE_ENV !== 'production';

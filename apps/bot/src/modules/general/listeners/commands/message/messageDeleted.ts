@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { ContainerBuilder, Message } from 'discord.js';
 import { emoji, DEFAULT_COLOR, MemoryCache } from '@sirubot/utils';
-import { sleep } from '@sapphire/utilities';
+import { sleep } from '@sirubot/utils/time';
 
 const deleteCountCache = new MemoryCache<string, number>({
 	maxSize: 100,

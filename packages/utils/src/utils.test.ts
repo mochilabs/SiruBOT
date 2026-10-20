@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatTime, formatTimeToKorean } from './time.ts';
+import { formatTime, formatTimeToKorean, sleep } from './time.ts';
 import { MemoryCache } from './memoryCache.ts';
 
 describe('formatTime', () => {
@@ -26,6 +26,29 @@ describe('formatTimeToKorean', () => {
 		expect(formatTimeToKorean(65)).toBe('1분 5초');
 		expect(formatTimeToKorean(3600)).toBe('1시간 0분');
 		expect(formatTimeToKorean(3723)).toBe('1시간 2분 3초');
+	});
+});
+
+describe('sleep', () => {
+	it('resolves after the given delay', async () => {
+		vi.useFakeTimers();
+		try {
+			let resolved = false;
+			const promise = sleep(1000).then(() => {
+				resolved = true;
+			});
+			await vi.advanceTimersByTimeAsync(999);
+			expect(resolved).toBe(false);
+			await vi.advanceTimersByTimeAsync(1);
+			await promise;
+			expect(resolved).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('resolves with real timers', async () => {
+		await expect(sleep(1)).resolves.toBeUndefined();
 	});
 });
 

@@ -31,3 +31,7 @@ export function formatTimeToKorean(seconds: number): string {
 
 	return parts.join(' ');
 }
+
+export function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
