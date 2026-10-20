@@ -1,6 +1,6 @@
 # SiruBOT — Agent Instructions
 
-Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS), `apps/storage` (Fastify 오브젝트 스토리지), `apps/notifier` (Fastify 소셜 알림 웹훅·스케줄러); `packages/prisma|shardclient|utils`.
+Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS), `apps/storage` (Fastify 오브젝트 스토리지), `apps/notifier` (Fastify 소셜 알림 웹훅·스케줄러); `packages/prisma|shardclient|utils|app-kit`.
 
 ## Branch & index rules
 
@@ -55,7 +55,7 @@ yarn lint / yarn lint:fix             # turbo fan-out; pre-push hook runs lint:f
 yarn typecheck                        # turbo; dependsOn ^build ^generate — don't run bare tsc first
 ```
 
-- Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
+- Lint differs per package: bot/data-api/shardmanager/storage/notifier/packages(utils·shardclient·app-kit) = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
 - CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the **root `vitest.config.ts`** — every workspace test script runs with `--config ../../vitest.config.ts` (dashboard만 예외 — 자체 `vitest.config.ts`로 `*.test.tsx` 포함), so `@sirubot/utils` (and subpaths like `@sirubot/utils/redisEnvelope`) resolve to **source** via aliases. Tests therefore run without building `packages/utils` dist: raw `vitest` runs can never see a stale dist artifact. Per-workspace: `yarn workspace @sirubot/bot test` etc. (bot ×36 files, data-api ×17, utils ×15, dashboard ×21, storage ×6, notifier ×6, shardclient ×1, shardmanager ×1 as of 2026-10-20; root-wide `yarn test` = 103 files); prisma has no tests yet.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
@@ -80,6 +80,7 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 - data-api 키 계약: data-api는 `DATA_API_AUTH_KEY ?? AUTH_KEY`가 없으면 **기동 거부(fail-closed)**, 인증 면제는 `/api/health`뿐. 대시보드는 `DATA_API_URL`(기본 `http://localhost:3002`) + 같은 폴백 체인의 키로 호출하며, 키 미설정 시 호출 전면 스킵 → 길드 채널/역할/플레이어 연동이 전부 502처럼 보인다. `Authorization` 헤더는 `Bearer` 없이 **키 원문 그대로**. 대시보드/봇/data-api 세 앱이 같은 키를 공유해야 한다.
 - data-api의 OpenAI 호환 LLM 계약: `OPENAI_COMPATIBLE_API_URL` + `OPENAI_API_KEY`로 번역(`TRANSLATION_MODEL`)과 커스텀 명령어 초안 생성(`CUSTOM_COMMAND_DRAFT_MODEL`, 미설정 시 TRANSLATION_MODEL 폴백)이 함께 쓰인다. 키 없으면 번역은 원문 served, 초안 생성(`/v1/ai/custom-command-draft`)은 503 안내.
 - storage 키·공개 URL 계약: `apps/storage`(3003)는 `STORAGE_AUTH_KEY ?? AUTH_KEY`가 없으면 **기동 거부(fail-closed)**, 인증 면제는 `/health`와 공개 오브젝트 GET뿐. `STORAGE_PUBLIC_URL`(필수, https)은 디스코드가 임베드로 fetch하는 공개 주소이며 발급 URL 스냅샷이라 도메인 변경 시 기존 에셋 URL 일괄 치환이 필요하다. 저장소는 로컬 볼륨(무DB)이라 `STORAGE_DATA_DIR`(컨테이너 `/data`)를 `storage-data` 볼륨으로 영속화해야 한다.
+- Fastify 인증·로거·env 검증 공용은 `packages/app-kit`(`createKeyAuthHook`/`createKeyPreHandler`/`timingSafeKeyEqual`, `parseEnvOrExit`/`authKeyChain`, `getAppLogger`) — data-api·shardmanager·storage·notifier가 사용. app-kit 로거 설정은 `packages/utils` `createLogger`의 수동 미러라 utils 쪽 변경 시 함께 갱신.
 - Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop (guildSettingsInvalidator·botProfileService·memberGreetingService·guildDataResponder) → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
 - Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
 
