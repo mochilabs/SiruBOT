@@ -15,6 +15,7 @@
         "start": "node --enable-source-maps ."
     },
     "dependencies": {
+        "@sirubot/app-kit": "workspace:^",
         "@sirubot/utils": "*",
         "fastify": "^5.12.7",
         "zod": "^4.1.11"

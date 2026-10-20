@@ -3017,6 +3017,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sirubot/app-kit@workspace:^, @sirubot/app-kit@workspace:packages/app-kit":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/app-kit@workspace:packages/app-kit"
+  dependencies:
+    "@types/node": "npm:^22.18.1"
+    fastify: "npm:^5.12.7"
+    tslog: "npm:^4.10.2"
+    zod: "npm:^4.1.11"
+  languageName: unknown
+  linkType: soft
+
 "@sirubot/bot@workspace:apps/bot":
   version: 0.0.0-use.local
   resolution: "@sirubot/bot@workspace:apps/bot"
@@ -3101,6 +3112,7 @@ __metadata:
   dependencies:
     "@prisma/adapter-pg": "npm:^7.7.0"
     "@redis/client": "npm:^5.8.2"
+    "@sirubot/app-kit": "workspace:^"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     discord.js: "npm:^14.0.0"
@@ -3118,6 +3130,7 @@ __metadata:
   dependencies:
     "@prisma/adapter-pg": "npm:^7.7.0"
     "@redis/client": "npm:^5.8.2"
+    "@sirubot/app-kit": "workspace:^"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     fast-xml-parser: "npm:^5.11.2"
@@ -3150,6 +3163,7 @@ __metadata:
   dependencies:
     "@fastify/autoload": "npm:^6.3.1"
     "@fastify/websocket": "npm:^11.2.0"
+    "@sirubot/app-kit": "workspace:^"
     "@sirubot/shardclient": "npm:*"
     "@sirubot/utils": "npm:*"
     discord.js: "npm:^14.0.0"
@@ -3166,6 +3180,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sirubot/storage@workspace:apps/storage"
   dependencies:
+    "@sirubot/app-kit": "workspace:^"
     "@sirubot/utils": "npm:*"
     fastify: "npm:^5.12.7"
     zod: "npm:^4.1.11"

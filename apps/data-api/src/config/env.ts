@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { authKeyChain, parseEnvOrExit } from '@sirubot/app-kit';
 
 const envSchema = z
 	.object({
@@ -29,18 +30,12 @@ const envSchema = z
 	// 폴백 체인(DATA_API_AUTH_KEY ?? AUTH_KEY)을 스키마 안에서 정규화해요.
 	.transform((env) => ({
 		...env,
-		dataApiAuthKey: env.DATA_API_AUTH_KEY ?? env.AUTH_KEY,
-		notifierAuthKey: env.NOTIFIER_AUTH_KEY ?? env.AUTH_KEY
+		dataApiAuthKey: authKeyChain(env.DATA_API_AUTH_KEY, env.AUTH_KEY),
+		notifierAuthKey: authKeyChain(env.NOTIFIER_AUTH_KEY, env.AUTH_KEY)
 	}));
 
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	const result = envSchema.safeParse(process.env);
-	if (!result.success) {
-		console.error('❌ Invalid environment variables:');
-		console.error(result.error.format());
-		process.exit(1);
-	}
-	return result.data;
+	return parseEnvOrExit(envSchema);
 }
