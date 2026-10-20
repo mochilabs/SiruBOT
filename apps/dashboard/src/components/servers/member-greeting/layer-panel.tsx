@@ -1,10 +1,10 @@
 "use client";
 
+import type { GreetingLayer } from "@sirubot/utils/memberGreeting";
 import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Image as ImageIcon, Shapes, Trash2, Type, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { GreetingLayer } from "@/types/member-greeting";
 
 import { layerLabel } from "./greeting-draw";
 

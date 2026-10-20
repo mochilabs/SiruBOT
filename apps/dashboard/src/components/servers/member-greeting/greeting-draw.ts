@@ -5,7 +5,7 @@ import type {
 	GreetingLayer,
 	GreetingShapeLayer,
 	GreetingTextLayer
-} from "@/types/member-greeting";
+} from "@sirubot/utils/memberGreeting";
 
 /**
  * 인사 카드 브라우저 canvas 미리보기 — 서버 skia 렌더러(data-api/src/renderers/memberGreetingCard.ts)와

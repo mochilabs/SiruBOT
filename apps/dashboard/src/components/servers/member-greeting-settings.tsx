@@ -1,6 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DEFAULT_GREETINGS,
+  GREETING_LAYOUTS,
+  GREETING_TEMPLATE_VARIABLES,
+  type GreetingConfig,
+  type GreetingKind,
+  type GreetingLayout,
+} from "@sirubot/utils/memberGreeting";
 import { ImagePlus, RotateCcw, Send, UserPlus } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
@@ -31,16 +39,7 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useMemberGreeting } from "@/hooks/use-member-greeting";
 import { toError } from "@/lib/api-error";
 import type { DiscordChannelSummary } from "@/types/discord";
-import {
-  DEFAULT_ACCENT_COLOR_HEX,
-  DEFAULT_GREETINGS,
-  GREETING_LAYOUTS,
-  GREETING_TEMPLATE_VARIABLES,
-  type GreetingConfig,
-  type GreetingKind,
-  type GreetingLayout,
-  type GreetingTestResult,
-} from "@/types/member-greeting";
+import type { GreetingTestResult } from "@/types/member-greeting";
 
 import { GreetingImageEditor } from "./member-greeting/greeting-image-editor";
 import {
@@ -50,6 +49,13 @@ import {
   SaveBar,
   WarningBox,
 } from "./settings-shared";
+
+/**
+ * 봇 기본 강조색(#RRGGBB) — accentColor를 지정하지 않을 때 초기값으로 보여줘요.
+ * 원본은 packages/utils constants.ts의 DEFAULT_COLOR_HEX인데 배럴 전용 export라 서브패스로
+ * 가져올 수 없어 리터럴을 유지해요 — 봇 기본색이 바뀌면 같이 업데이트해요.
+ */
+const DEFAULT_ACCENT_COLOR_HEX = "#ffdaff";
 
 const TEMPLATE_MAX = 500;
 

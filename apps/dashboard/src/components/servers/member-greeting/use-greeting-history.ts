@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import type { GreetingImage } from "@/types/member-greeting";
+import type { GreetingImage } from "@sirubot/utils/memberGreeting";
 
 /** 되돌리기 히스토리 최대 길이 — 넘치면 가장 오래된 스냅샷부터 버려요 */
 const HISTORY_LIMIT = 50;

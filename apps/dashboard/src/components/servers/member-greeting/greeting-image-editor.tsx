@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
+  GREETING_TEMPLATES,
+  type GreetingConfig,
+  type GreetingImage,
+  type GreetingLayer,
+  PRESET_BACKGROUNDS,
+} from "@sirubot/utils/memberGreeting";
+import {
   ImagePlus,
   LayoutTemplate,
   Redo2,
@@ -25,13 +32,6 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { toApiError, toError } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
-import {
-  GREETING_TEMPLATES,
-  type GreetingConfig,
-  type GreetingImage,
-  type GreetingLayer,
-  PRESET_BACKGROUNDS,
-} from "@/types/member-greeting";
 
 import {
   CARD_H,
