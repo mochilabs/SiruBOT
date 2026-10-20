@@ -181,49 +181,6 @@ export class AiMemoryService {
 		return removed;
 	}
 
-	/**
-	 * nightly pass 후보 — 24시간 이상 정리 안 됐고 장기 기억이 있는 사용자.
-	 * never-tidied(null)를 먼저 정렬해요.
-	 */
-	public async findTidyCandidates(limit: number): Promise<{ userId: string }[]> {
-		const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-		const rows = await container.db.userMemory.findMany({
-			where: { OR: [{ tidiedAt: null }, { tidiedAt: { lt: cutoff } }] },
-			take: limit * 3
-		});
-		const candidates: { userId: string; tidiedAt: Date | null; entries: number }[] = [];
-		for (const row of rows) {
-			const entries = this.countStoredEntries(row.longTerm);
-			if (entries > 0) candidates.push({ userId: row.userId, tidiedAt: row.tidiedAt, entries });
-		}
-		candidates.sort((a, b) => {
-			if (a.tidiedAt === null && b.tidiedAt === null) return 0;
-			if (a.tidiedAt === null) return -1;
-			if (b.tidiedAt === null) return 1;
-			return a.tidiedAt.getTime() - b.tidiedAt.getTime();
-		});
-		return candidates.slice(0, limit);
-	}
-
-	/** 저장된 장기 기억의 항목 수를 형태(파일/옛 배열) 상관없이 세어요 */
-	private countStoredEntries(stored: unknown): number {
-		if (typeof stored === 'string') {
-			const sections = parseMemoryMarkdown(stored);
-			return CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0);
-		}
-		if (Array.isArray(stored)) return stored.filter((f) => f && typeof (f as { text?: unknown }).text === 'string').length;
-		return 0;
-	}
-
-	/** nightly pass가 이 사용자를 처리했다는 표시 (실패해도 표시해 다음 배치로 넘겨요) */
-	public async markTidied(userId: string): Promise<void> {
-		await container.db.userMemory.upsert({
-			where: { userId },
-			create: { userId, tidiedAt: new Date() },
-			update: { tidiedAt: new Date() }
-		});
-	}
-
 	/** 한 턴의 대화를 단기 기억에 밀어 넣어요 (최근 8개 유지). */ public async pushTurn(
 		userId: string,
 		channelId: string,

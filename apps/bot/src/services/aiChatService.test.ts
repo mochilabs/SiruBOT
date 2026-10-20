@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { runChatTurn } from './aiChatService.ts';
+import { extractThinkTokens, runChatTurn } from './aiChatService.ts';
 
 const mocks = vi.hoisted(() => ({
 	policy: vi.fn(),
@@ -74,5 +74,36 @@ describe('AI context preparation', () => {
 		expect(mocks.channel).not.toHaveBeenCalled();
 		expect(mocks.memory).not.toHaveBeenCalled();
 		expect(fetch).not.toHaveBeenCalled();
+	});
+});
+
+describe('extractThinkTokens', () => {
+	it('returns plain text unchanged when no think tokens are present', () => {
+		expect(extractThinkTokens('그냥 답변이에요')).toBe('그냥 답변이에요');
+	});
+
+	it('removes the reasoning block and keeps text before and after it', () => {
+		const raw = '앞 문장 <think>사용자에게 인사를 하는 게 좋겠다</think>뒷 문장';
+		expect(extractThinkTokens(raw)).toBe('앞 문장 뒷 문장');
+	});
+
+	it('keeps only the answer when reasoning comes first (typical model output)', () => {
+		const raw = '<think>먼저 인사를 해야 해요</think>안녕하세요!';
+		expect(extractThinkTokens(raw)).toBe('안녕하세요!');
+	});
+
+	it('matches tags case-insensitively while preserving the answer case', () => {
+		const raw = '<THINK>생각</THINK>AnSwEr';
+		expect(extractThinkTokens(raw)).toBe('AnSwEr');
+	});
+
+	it('removes multiple reasoning blocks', () => {
+		const raw = '첫 답변 <think>생각 1</think>중간 답변 <think>생각 2</think>끝 답변';
+		expect(extractThinkTokens(raw)).toBe('첫 답변 중간 답변 끝 답변');
+	});
+
+	it('drops an unterminated reasoning block instead of leaking it', () => {
+		const raw = '여기까지 <think>닫히지 않은 추론이 계속돼요';
+		expect(extractThinkTokens(raw)).toBe('여기까지 ');
 	});
 });
