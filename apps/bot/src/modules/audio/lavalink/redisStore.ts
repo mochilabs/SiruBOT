@@ -5,7 +5,8 @@ import {
 	JTC_SETUP_RESPONSE_CHANNEL,
 	memberGreetingStateChannel,
 	PLAYER_WEB_RESPONSE_CHANNEL,
-	playerStateChannel
+	playerStateChannel,
+	SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL
 } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
@@ -287,6 +288,15 @@ export class RedisStore {
 	 */
 	public publishJtcSetupResponse(payload: string): void {
 		this.publish(JTC_SETUP_RESPONSE_CHANNEL, payload, 'JTC setup response');
+	}
+
+	/**
+	 * 소셜 알림 웹훅 생성 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:social:webhook-create:response` — guildId 접두사 없는 고정 채널이에요).
+	 * notifier의 웹훅 생성 허브가 requestId 상관으로 구독해 구독 추가 절차를 마무리해요.
+	 */
+	public publishSocialWebhookCreateResponse(payload: string): void {
+		this.publish(SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL, payload, 'Social webhook create response');
 	}
 
 	public async connect() {

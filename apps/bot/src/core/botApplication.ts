@@ -24,6 +24,7 @@ import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { PlayerWebResponder } from '../services/playerWebResponder.ts';
 import { JtcSetupResponder } from '../services/jtcSetupResponder.ts';
+import { SocialWebhookResponder } from '../services/socialWebhookResponder.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../services/memberGreetingService.ts';
 import { GuildDataResponder } from '../services/guildDataResponder.ts';
@@ -123,6 +124,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey);
 		container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey);
 		container.guildDataResponder = new GuildDataResponder(subscriberLogger, redisSigningKey);
+		container.socialWebhookResponder = new SocialWebhookResponder(subscriberLogger, redisSigningKey);
 		container.appEmojiManager = new AppEmojiManager();
 	}
 
