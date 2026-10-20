@@ -1,16 +1,47 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GuildDataPendingRequests } from './guildDataHub.ts';
+import { PendingRequestPool, type GuildDataKind } from '@sirubot/utils';
+import { correlateGuildDataResponse, type GuildDataFailureReason, type GuildDataPendingMeta, type GuildDataResult } from './guildDataHub.ts';
 
 const REQUEST_ID = 'c9a1e0b2-4e6f-4a3d-8c2b-1f2e3d4c5b6a';
 const OTHER_REQUEST_ID = 'a1b2c3d4-e5f6-4748-a9b0-c1d2e3f4a5b6';
 
-describe('GuildDataPendingRequests', () => {
+/**
+ * 허브의 requestGuildData()와 같은 조립을 테스트용으로 만들어요 —
+ * 메타데이터를 register 전에 심고, 상관은 correlateGuildDataResponse가 담당해요.
+ */
+function makeRegistry(capacity = 10) {
+	const pendingMeta = new Map<string, GuildDataPendingMeta>();
+	const pending = new PendingRequestPool<GuildDataResult>({
+		capacity,
+		timeoutResult: () => ({ ok: false, reason: 'timeout' }),
+		onTimeout: (requestId) => pendingMeta.delete(requestId)
+	});
+	return {
+		get size() {
+			return pending.size;
+		},
+		register(requestId: string, guildId: string, kind: GuildDataKind, timeoutMs: number) {
+			pendingMeta.set(requestId, { guildId, kind });
+			return pending.register(requestId, timeoutMs);
+		},
+		handleRaw(raw: string) {
+			return correlateGuildDataResponse(raw, pending, pendingMeta);
+		},
+		fail(requestId: string, reason: GuildDataFailureReason) {
+			if (pending.fail(requestId, { ok: false, reason })) {
+				pendingMeta.delete(requestId);
+			}
+		}
+	};
+}
+
+describe('guildDataHub pending correlation', () => {
 	afterEach(() => {
 		vi.useRealTimers();
 	});
 
 	it('fails a new request immediately without registering when the pending limit is reached', async () => {
-		const registry = new GuildDataPendingRequests(1);
+		const registry = makeRegistry(1);
 		const first = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 		expect(registry.size).toBe(1);
 
@@ -25,7 +56,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('resolves pending requests as timeout when no response arrives within timeoutMs', async () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'timeout' });
 		await vi.advanceTimersByTimeAsync(3_000);
@@ -36,7 +67,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('does not time out before timeoutMs and still resolves via a matching response', async () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'roles', 3_000);
 		const assertion = expect(promise).resolves.toEqual({
 			ok: true,
@@ -60,7 +91,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('leaves unexpired requests pending when the schema rejects the payload', () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 
 		expect(registry.handleRaw('not-json')).toBe('malformed');
@@ -71,7 +102,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('ignores responses for unknown requestIds while keeping the pending entry', async () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 
 		expect(registry.handleRaw(JSON.stringify({ requestId: OTHER_REQUEST_ID, guildId: 'guild-1', kind: 'channels', channels: [] }))).toBe(
@@ -87,7 +118,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('resolves by requestId and treats later responses to the same id as unmatched', () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 		const assertion = expect(promise).resolves.toEqual({
 			ok: true,
@@ -112,7 +143,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('ignores responses whose guildId or kind do not match the request', async () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild-2', kind: 'channels', channels: [] }))).toBe('unmatched');
@@ -126,7 +157,7 @@ describe('GuildDataPendingRequests', () => {
 
 	it('responses carrying error resolve as timeout instead of success', async () => {
 		vi.useFakeTimers();
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'roles', 3_000);
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'timeout' });
 
@@ -139,7 +170,7 @@ describe('GuildDataPendingRequests', () => {
 	});
 
 	it('fail() resolves a pending request immediately (publish failure path)', async () => {
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'channels', 3_000);
 		registry.fail(REQUEST_ID, 'redis_unavailable');
 		expect(registry.size).toBe(0);
@@ -147,7 +178,7 @@ describe('GuildDataPendingRequests', () => {
 	});
 
 	it('resolves a members response with member display info', async () => {
-		const registry = new GuildDataPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, 'guild-1', 'members', 3_000);
 		const assertion = expect(promise).resolves.toEqual({
 			ok: true,

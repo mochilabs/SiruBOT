@@ -6,6 +6,7 @@
  *   해당 길드를 보유한 봇 프로세스(전용 구독자)가 RESPONSE 채널(`sirubot:guild-data:response`)로 응답해요.
  * - 이 허브는 RESPONSE 채널을 구독해 requestId로 대기 중 요청을 resolve해요. 응답이 없으면
  *   (봇이 이 길드를 보유하지 않거나 미연결) 타임아웃으로 동일하게 실패해요.
+ * - 대기 요청의 용량 상한·타임아웃 회수는 공용 PendingRequestPool(@sirubot/utils)에 위임해요.
  * - REQUEST 퍼블리시는 sharedCache 클라이언트로 해요 (invalidate/bot-profile 라우트와 같은 방식).
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 playerHub와 같은 연결 라이프사이클을 따라요.
  */
@@ -16,6 +17,7 @@ import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@s
 import {
 	GUILD_DATA_REQUEST_CHANNEL,
 	GUILD_DATA_RESPONSE_CHANNEL,
+	PendingRequestPool,
 	guildDataResponseSchema,
 	type GuildChannelItem,
 	type GuildDataKind,
@@ -37,102 +39,63 @@ export type GuildDataResult =
 	| { ok: true; channels?: GuildChannelItem[]; roles?: GuildRoleItem[]; members?: GuildMemberItem[] }
 	| { ok: false; reason: GuildDataFailureReason };
 
-interface PendingEntry {
-	requestId: string;
+/** 등록할 때 requestId에 묶어두는 요청 메타데이터 — 응답의 guildId·kind가 요청과 일치하는지 검증에 써요 */
+export interface GuildDataPendingMeta {
 	guildId: string;
 	kind: GuildDataKind;
-	resolve: (result: GuildDataResult) => void;
-	timer: ReturnType<typeof setTimeout>;
 }
 
 /**
- * requestId별 대기 요청 레지스트리 — 용량 상한·타임아웃·응답 상관 로직만 담당해요.
- * Redis I/O와 연결 상태를 몰라서 순수하게 유닛 테스트할 수 있어요.
+ * RESPONSE 채널 raw 메시지를 대기 중 요청과 상관해요. requestId의 메타데이터와 guildId·kind가 일치하면
+ * 풀을 완료하고, 그 외(잘못된 본문, 대기 중이 아닌 requestId, 불일치)는 무시해요.
+ * Redis I/O와 연결 상태를 몰라요 — 풀과 메타데이터 맵을 인자로 받으므로 순수하게 유닛 테스트할 수 있어요.
  */
-export class GuildDataPendingRequests {
-	private readonly entries = new Map<string, PendingEntry>();
-
-	public constructor(private readonly capacity: number) {}
-
-	public get size(): number {
-		return this.entries.size;
+export function correlateGuildDataResponse(
+	raw: string,
+	pending: PendingRequestPool<GuildDataResult>,
+	pendingMeta: Map<string, GuildDataPendingMeta>
+): 'resolved' | 'unmatched' | 'malformed' {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		logger.debug(`Malformed guild data response (not JSON): ${raw.slice(0, 120)}`);
+		return 'malformed';
 	}
-
-	/**
-	 * 요청을 등록하고 응답 대기 Promise를 반환해요. 용량이 가득 차면 등록하지 않고
-	 * 즉시 timeout 실패로 resolve해요 (봇 응답 없음과 동일 매핑 — 새 요청이 pending을 밀어내지 않아요).
-	 */
-	public register(requestId: string, guildId: string, kind: GuildDataKind, timeoutMs: number): Promise<GuildDataResult> {
-		if (this.entries.size >= this.capacity) {
-			logger.warn(`Guild data pending limit reached (${this.capacity}), failing request ${requestId} immediately`);
-			return Promise.resolve({ ok: false, reason: 'timeout' });
-		}
-		let resolve!: (result: GuildDataResult) => void;
-		const promise = new Promise<GuildDataResult>((res) => {
-			resolve = res;
-		});
-		const entry: PendingEntry = {
-			requestId,
-			guildId,
-			kind,
-			resolve,
-			timer: setTimeout(() => {
-				this.entries.delete(requestId);
-				resolve({ ok: false, reason: 'timeout' });
-			}, timeoutMs)
-		};
-		this.entries.set(requestId, entry);
-		return promise;
+	const result = guildDataResponseSchema.safeParse(parsed);
+	if (!result.success) {
+		logger.debug(`Malformed guild data response: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
+		return 'malformed';
 	}
-
-	/**
-	 * RESPONSE 채널 raw 메시지를 상관해요. requestId로 대기 중 요청을 찾아 resolve하고,
-	 * 그 외(잘못된 본문, 대기 중이 아닌 requestId, guildId·kind 불일치)는 무시해요.
-	 */
-	public handleRaw(raw: string): 'resolved' | 'unmatched' | 'malformed' {
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(raw);
-		} catch {
-			logger.debug(`Malformed guild data response (not JSON): ${raw.slice(0, 120)}`);
-			return 'malformed';
-		}
-		const result = guildDataResponseSchema.safeParse(parsed);
-		if (!result.success) {
-			logger.debug(`Malformed guild data response: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
-			return 'malformed';
-		}
-		const response: GuildDataResponse = result.data;
-		const entry = this.entries.get(response.requestId);
-		if (!entry) return 'unmatched';
-		// requestId가 일치해도 guildId·kind가 다르면 왔던 응답 뒤에 다른 요청의 것이 섞인 경우 — resolve하지 않고 타임아웃으로 회수돼요.
-		if (response.guildId !== entry.guildId || response.kind !== entry.kind) {
-			logger.debug(`Ignored guild data response ${response.requestId} — guildId/kind mismatch`);
-			return 'unmatched';
-		}
-		clearTimeout(entry.timer);
-		this.entries.delete(response.requestId);
-		if (response.error) {
-			// 봇이 데이터를 못 꺼낸 경우 — 성공으로 보면 안 되고 실패 이유는 timeout(bot_timeout) 매핑이 유일해요.
-			logger.debug(`Guild data response ${response.requestId} carried error: ${response.error}`);
-			entry.resolve({ ok: false, reason: 'timeout' });
-			return 'resolved';
-		}
-		entry.resolve({ ok: true, channels: response.channels, roles: response.roles, members: response.members });
+	const response: GuildDataResponse = result.data;
+	const meta = pendingMeta.get(response.requestId);
+	if (!meta) return 'unmatched';
+	// requestId가 일치해도 guildId·kind가 다르면 왔던 응답 뒤에 다른 요청의 것이 섞인 경우 — resolve하지 않고 타임아웃으로 회수돼요.
+	if (response.guildId !== meta.guildId || response.kind !== meta.kind) {
+		logger.debug(`Ignored guild data response ${response.requestId} — guildId/kind mismatch`);
+		return 'unmatched';
+	}
+	pendingMeta.delete(response.requestId);
+	if (response.error) {
+		// 봇이 데이터를 못 꺼낸 경우 — 성공으로 보면 안 되고 실패 이유는 timeout(bot_timeout) 매핑이 유일해요.
+		logger.debug(`Guild data response ${response.requestId} carried error: ${response.error}`);
+		pending.resolve(response.requestId, { ok: false, reason: 'timeout' });
 		return 'resolved';
 	}
-
-	/** publish 실패 등 응답이 절대 오지 않게 된 요청을 즉시 실패로 정리해요. */
-	public fail(requestId: string, reason: GuildDataFailureReason): void {
-		const entry = this.entries.get(requestId);
-		if (!entry) return;
-		clearTimeout(entry.timer);
-		this.entries.delete(requestId);
-		entry.resolve({ ok: false, reason });
-	}
+	pending.resolve(response.requestId, { ok: true, channels: response.channels, roles: response.roles, members: response.members });
+	return 'resolved';
 }
 
-const pending = new GuildDataPendingRequests(PENDING_LIMIT);
+/** requestId별 대기 요청 메타데이터 — 타임아웃 회수(onTimeout)와 상관 완료(correlate)에서 함께 정리해 누수를 막아요 */
+const pendingMeta = new Map<string, GuildDataPendingMeta>();
+
+/** 동시 대기 요청 상한·타임아웃 회수는 공용 풀에 위임해요 — 봇 응답 없음과 타임아웃은 같은 실패로 매핑해요 */
+const pending = new PendingRequestPool<GuildDataResult>({
+	capacity: PENDING_LIMIT,
+	logger,
+	timeoutResult: () => ({ ok: false, reason: 'timeout' }),
+	onTimeout: (requestId) => pendingMeta.delete(requestId)
+});
 
 /** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 없으면 서명 없는 구버전 모드. */
 const redisSigningKey = resolveRedisSigningKey(process.env);
@@ -148,7 +111,7 @@ const subscriber = new HubSubscriber({
 			logger.warn('Rejected guild data response with invalid signature');
 			return;
 		}
-		pending.handleRaw(body);
+		correlateGuildDataResponse(body, pending, pendingMeta);
 	},
 	logger
 });
@@ -187,11 +150,16 @@ export async function requestGuildData(
 	}
 	const requestId = crypto.randomUUID();
 	const request: GuildDataRequest = userIds ? { requestId, guildId, kind, userIds } : { requestId, guildId, kind };
-	const promise = pending.register(requestId, guildId, kind, timeoutMs);
+	// 용량 초과 등 즉시 실패 경로에서도 onTimeout이 메타데이터를 정리할 수 있게 register 전에 심어요
+	pendingMeta.set(requestId, { guildId, kind });
+	const promise = pending.register(requestId, timeoutMs);
 	try {
 		await client.publish(GUILD_DATA_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, request));
 	} catch (error) {
-		pending.fail(requestId, 'redis_unavailable');
+		// publish 실패 — 응답이 절대 오지 않으니 즉시 실패로 정리해요
+		if (pending.fail(requestId, { ok: false, reason: 'redis_unavailable' })) {
+			pendingMeta.delete(requestId);
+		}
 		logger.warn(`Guild data request publish failed (${guildId}): ${error instanceof Error ? error.message : String(error)}`);
 	}
 	return promise;

@@ -24,3 +24,4 @@ export * from './customCommand.js';
 export * from './chatTools.js';
 export * from './storage.js';
 export * from './social.js';
+export * from './pendingRequestPool.js';
