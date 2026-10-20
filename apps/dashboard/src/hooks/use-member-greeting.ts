@@ -1,18 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_GREETINGS, type GreetingConfig, type GreetingKind } from "@sirubot/utils/memberGreeting";
 import useSWR from "swr";
 
 import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
-import type {
-	GreetingConfig,
-	GreetingKind,
-	GreetingPair,
-	GreetingTestResult,
-	GreetingTestStatus
-} from "@/types/member-greeting";
-import { DEFAULT_GREETINGS } from "@/types/member-greeting";
+import type { GreetingPair, GreetingTestResult, GreetingTestStatus } from "@/types/member-greeting";
 
 type TestTicket = { kind: GreetingKind; requestId: string; at: number };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { GreetingLayer } from "@sirubot/utils/memberGreeting";
 import { Bold } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
@@ -8,7 +9,6 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { cn, radioArrowKeyDown } from "@/lib/utils";
-import type { GreetingLayer } from "@/types/member-greeting";
 
 import { clampRatio } from "./greeting-draw";
 

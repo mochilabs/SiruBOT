@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
+import { greetingConfigSchema, type GreetingKind } from "@sirubot/utils/memberGreeting";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { auth } from "@/lib/auth";
 import { dataApiFailResponse, forwardDataApiImage } from "@/lib/data-api";
-import { greetingConfigSchema } from "@/lib/greeting-schema";
 import { guardRateLimit, rateKey, RENDER_RATE } from "@/lib/rate-limit";
 import { zodError } from "@/lib/schemas";
-import type { GreetingKind } from "@/types/member-greeting";
 
 const previewSchema = z.object({
 	kind: z.enum(["welcome", "goodbye"], "kind는 welcome 또는 goodbye여야 해요."),

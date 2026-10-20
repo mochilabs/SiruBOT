@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@sirubot/prisma";
+import { type GreetingConfig,greetingConfigSchema, validateGreetingConfig } from "@sirubot/utils/memberGreeting";
 import { z } from "zod";
 
 import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
-import { greetingConfigSchema, validateGreetingConfig } from "@/lib/greeting-schema";
 import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 import type { GreetingPair } from "@/types/member-greeting";
-import { type GreetingConfig } from "@/types/member-greeting";
 
 const ALLOWED_KEYS = ["welcome", "goodbye"] as const;
 
