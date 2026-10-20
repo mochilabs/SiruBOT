@@ -4,7 +4,7 @@ import { emoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, AttachmentBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
-import { fetchOhaasa, getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
+import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
 
 function formatDate(raw: string): string {
 	const compact = raw.replace(/\//g, '');
@@ -92,15 +92,11 @@ export class OhaasaCommand extends Command {
 		try {
 			daily = await fetchOhaasaKo();
 		} catch (e) {
-			try {
-				daily = await fetchOhaasa();
-			} catch {
-				throw new UserError({
-					identifier: 'ohaasa_fetch_failed',
-					message: `${emoji('error')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
-					context: { ephemeral: true }
-				});
-			}
+			throw new UserError({
+				identifier: 'ohaasa_fetch_failed',
+				message: `${emoji('error')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
+				context: { ephemeral: true }
+			});
 		}
 
 		let targetZodiacCode = zodiacOption;

@@ -1,5 +1,4 @@
 import { container } from '@sapphire/framework';
-import { CATEGORIES, capMemorySections, hasMemoryEntries, parseMemoryMarkdown, renderMemoryMarkdown } from './aiMemoryService.ts';
 import { executeAiTool, getAiToolDefinitions, getAiToolStatus, type AiToolContext, type AiToolDefinition } from './aiTools/index.ts';
 import type { AiMode } from './guildService.ts';
 
@@ -80,7 +79,7 @@ const SUMMARY_MIN_BATCH = 6;
 const SUMMARY_BATCH_SIZE = 12;
 /** 요약기가 장시간 실패해도 기록이 무한 증식하지 않도록 하는 pending 상한 */
 const SUMMARY_PENDING_MAX = 120;
-const REASON_OPEN = '</think>';
+const REASON_OPEN = '<think>';
 const REASON_CLOSE = '</think>';
 
 /**
@@ -548,125 +547,6 @@ async function runSummaryJob(channelId: string, config: ChatConfig): Promise<voi
 	}
 }
 
-// nightly pass (장기 기억 정리 배치)
-const TIDY_BATCH_SIZE = 40;
-const TIDY_USER_DELAY_MS = 1500;
-
-const TIDY_SYSTEM_PROMPT = [
-	'당신은 장기 기억 파일(MEMORY.md)을 관리하는 정리 담당이에요. 입력된 파일을 검토해 정리한 파일 전체를 출력해요.',
-	'할 일:',
-	'- 내용이 같은 항목은 하나로 병합해요 (날짜 표기는 유지하거나 더 최신으로 바꿔요).',
-	'- 섹션 배정이 어긋난 항목만 옮겨요: 사실은 Facts, 선호는 Preferences, 약속·미결은 Commitments.',
-	'- 명백히 지난 시점 정보의 표기는 고칠 수 있지만, 원문에 없는 새 사실을 지어내지 않아요.',
-	'규칙:',
-	'- 형식 유지: "# MEMORY.md" 제목 + 안내 주석 + "## Facts" / "## Preferences" / "## Commitments" 헤더 (섹션이 비어도 헤더 유지)',
-	'- 항목은 한 줄 불릿("- ...")으로, 총 40개 이하',
-	'- 불릿 외 다른 텍스트·설명·코드 펜스를 붙이지 않고 파일 본문만 출력해요.'
-].join('\n');
-
-/** ```` 펜스로 감싸 온 출력을 벗겨요 */
-function stripCodeFences(text: string): string {
-	const lines = text.split('\n');
-	while (lines.length > 0 && /^```/.test(lines[0]!.trim())) lines.shift();
-	while (lines.length > 0 && /^```/.test(lines[lines.length - 1]!.trim())) lines.pop();
-	return lines.join('\n').trim();
-}
-
-function countMarkdownEntries(markdown: string): number {
-	const sections = parseMemoryMarkdown(markdown);
-	return CATEGORIES.reduce((sum, category) => sum + sections[category].length, 0);
-}
-
-/** 정리 출력이 안전한지 검증해요 — 형식 붕괴·과도한 삭제 시 원본을 유지해요 */
-function tidyOutputValid(original: string, output: string): boolean {
-	if (!output.includes('# MEMORY.md')) return false;
-	if (!output.includes('## Facts') || !output.includes('## Preferences') || !output.includes('## Commitments')) return false;
-	const before = countMarkdownEntries(original);
-	const after = countMarkdownEntries(output);
-	if (before > 0 && after < Math.ceil(before * 0.4)) return false;
-	return after > 0 || before === 0;
-}
-
-/** 한 사용자의 MEMORY.md를 LLM으로 정리해요. 검증 실패 시 원본 유지. */
-async function tidyMemoryUser(userId: string): Promise<void> {
-	const config = getChatConfig();
-	if (!config) return;
-	try {
-		const memory = container.aiMemoryService;
-		const original = await memory.readFile(userId);
-		if (!hasMemoryEntries(parseMemoryMarkdown(original))) {
-			await memory.markTidied(userId);
-			return;
-		}
-
-		const result = await streamChatCompletion({
-			messages: [
-				{ role: 'system', content: TIDY_SYSTEM_PROMPT },
-				{ role: 'user', content: original }
-			],
-			config: { ...config, timeoutMs: Math.min(config.timeoutMs, 60_000) }
-		});
-		const output = stripCodeFences(result.content);
-
-		if (tidyOutputValid(original, output)) {
-			const sections = parseMemoryMarkdown(output);
-			capMemorySections(sections);
-			await memory.writeFile(userId, renderMemoryMarkdown(sections));
-		} else {
-			container.logger.warn('[aiChat] memory tidy output rejected, keeping original:', userId);
-		}
-		await memory.markTidied(userId);
-	} catch (error) {
-		container.logger.error('[aiChat] memory tidy failed:', userId, error);
-		// 실패해도 markTidied — 같은 사용자가 매 밤 재시도되지 않도록 (24시간 후 다시 후보)
-		await container.aiMemoryService.markTidied(userId).catch(() => undefined);
-	}
-}
-
-let tidyScheduled = false;
-let tidyRunning = false;
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** 다음 자정(+0~30분 지터)에 기억 정리 배치를 돌리고 반복 예약해요. ready에서 1회 호출. */
-export function startMemoryTidySchedule(): void {
-	if (tidyScheduled) return;
-	tidyScheduled = true;
-	scheduleNextTidy();
-}
-
-function scheduleNextTidy(): void {
-	const now = new Date();
-	const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-	const jitter = Math.floor(Math.random() * 30 * 60_000);
-	const delay = Math.max(60_000, next.getTime() + jitter - now.getTime());
-	setTimeout(() => {
-		void runMemoryTidyBatch().finally(scheduleNextTidy);
-	}, delay).unref?.();
-}
-
-async function runMemoryTidyBatch(): Promise<void> {
-	if (tidyRunning) return;
-	tidyRunning = true;
-	try {
-		if (!getChatConfig()) return;
-		const candidates = await container.aiMemoryService.findTidyCandidates(TIDY_BATCH_SIZE);
-		if (candidates.length === 0) return;
-		container.logger.info(`[aiChat] memory tidy pass started (${candidates.length} users)`);
-		for (const candidate of candidates) {
-			await tidyMemoryUser(candidate.userId);
-			await sleep(TIDY_USER_DELAY_MS);
-		}
-		container.logger.info('[aiChat] memory tidy pass finished');
-	} catch (error) {
-		container.logger.error('[aiChat] memory tidy batch failed:', error);
-	} finally {
-		tidyRunning = false;
-	}
-}
-
 // 오류
 export class ChatServiceError extends Error {
 	public constructor(
@@ -740,19 +620,18 @@ export function abortChatTurn(key: string, requesterId: string): ChatAbortResult
 
 // 스트리밍
 
-/** ``
 /** `<think>` 토큰을 쓰는 모델용 — 추론 부분을 본문에서 제거 */
-function extractThinkTokens(raw: string): string {
+export function extractThinkTokens(raw: string): string {
 	let result = '';
 	let insideReason = false;
 	let index = 0;
 	while (index < raw.length) {
-		const open = raw.toLowerCase().indexOf(REASON_OPEN, index);
-		if (open === -1) {
-			if (!insideReason) result += raw.slice(index);
-			break;
-		}
 		if (!insideReason) {
+			const open = raw.toLowerCase().indexOf(REASON_OPEN, index);
+			if (open === -1) {
+				result += raw.slice(index);
+				break;
+			}
 			result += raw.slice(index, open);
 			index = open + REASON_OPEN.length;
 			insideReason = true;

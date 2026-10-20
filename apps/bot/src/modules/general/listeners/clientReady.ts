@@ -6,8 +6,6 @@ import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
-import { startMemoryTidySchedule } from '../../../services/aiChatService.ts';
-import { startOhaasaPrefetchSchedule } from '../../../services/ohaasaTranslate.ts';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
@@ -27,21 +25,10 @@ export class ReadyEvent extends Listener {
 
 		await this.printBanner().catch((error) => this.container.logger.error('Failed to print banner:', error));
 
-		// 야간 배치들 — BOT_ACTIVITY 파싱이 던져도 항상 시작되도록 활동 설정보다 먼저
-		// (프로세스 중복 실행 방지를 위해 셰드 0만)
-		const shard = this.container.client.shard;
-		if (!shard || shard.ids.includes(0)) {
-			// 메모리 정리(nightly pass)·오하아사 프리패치 — data-api 게이트웨이가 담당해요.
-			// 게이트웨이가 없으면(개발 등) 봇이 직접 스케줄을 돌려요.
-			if (!process.env.DATA_API_URL?.trim()) {
-				startMemoryTidySchedule();
-				startOhaasaPrefetchSchedule();
-			}
-		}
-
 		// 앱 이모지 동기화 — shard 0만 미등록 PNG를 업로드하고, 모든 프로세스가
 		// 조회 결과를 `emoji()` 캐시에 주입한다. 실패해도 emoji()가 유니코드 폴백으로
 		// 동작해서 기능은 그대로다.
+		const shard = this.container.client.shard;
 		const shouldUpload = !shard || shard.ids.includes(0);
 		await this.container.appEmojiManager?.sync(shouldUpload);
 
