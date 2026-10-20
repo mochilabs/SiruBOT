@@ -10,6 +10,7 @@ import { TemplateEditor, type TemplateSample } from "@/components/servers/social
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useSocialAlerts } from "@/hooks/use-social-alerts";
@@ -51,6 +52,8 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const [showAdd, setShowAdd] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [draft, setDraft] = useState("");
+	const [nameDraft, setNameDraft] = useState("");
+	const [avatarDraft, setAvatarDraft] = useState("");
 	const [confirmingId, setConfirmingId] = useState<string | null>(null);
 	const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -68,18 +71,23 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const startEdit = (subscription: SocialSubscription) => {
 		setEditingId(subscription.id);
 		setDraft(subscription.messageTemplate ?? "");
+		setNameDraft(subscription.webhookName ?? "");
+		setAvatarDraft(subscription.webhookAvatarUrl ?? "");
 	};
 
-	const saveTemplate = async (subscription: SocialSubscription) => {
-		const template = draft.trim() ? draft : null;
+	const saveSettings = async (subscription: SocialSubscription) => {
 		setBusyId(subscription.id);
-		const result = await updateSubscription(subscription.id, { messageTemplate: template });
+		const result = await updateSubscription(subscription.id, {
+			messageTemplate: draft.trim() ? draft : null,
+			webhookName: nameDraft.trim() ? nameDraft.trim() : null,
+			webhookAvatarUrl: avatarDraft.trim() ? avatarDraft.trim() : null
+		});
 		setBusyId(null);
 		if (result.ok) {
-			toast.success(template ? "알림 메시지를 저장했어요." : "기본 알림 메시지로 되돌렸어요.");
+			toast.success("알림 설정을 저장했어요.", "비운 항목은 기본값으로 보내요.");
 			setEditingId(null);
 		} else {
-			toast.error("알림 메시지를 저장하지 못했어요.", result.error);
+			toast.error("알림 설정을 저장하지 못했어요.", result.error);
 		}
 	};
 
@@ -158,7 +166,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 									onClick={() => (editing ? setEditingId(null) : startEdit(subscription))}
 								>
 									<PencilLine size={14} />
-									{editing ? "편집 닫기" : "알림 메시지"}
+									{editing ? "편집 닫기" : "알림 설정"}
 								</Button>
 								{confirming ? (
 									<>
@@ -190,14 +198,38 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 							<div className="bg-muted rounded-md px-3 py-2 text-sm break-all whitespace-pre-wrap">{subscription.messageTemplate}</div>
 						)}
 
+						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl) && (
+							<p className="text-muted-foreground text-xs">
+								웨훅 표시: {subscription.webhookName ?? "기본"}
+								{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
+							</p>
+						)}
+
 						{editing && (
 							<div className="flex flex-col gap-3">
 								<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
+								<div className="flex flex-col gap-2">
+									<span className="text-xs font-medium text-muted-foreground">웨훅 표시 (비우면 기본)</span>
+									<div className="grid gap-2 sm:grid-cols-2">
+										<Input
+											value={nameDraft}
+											onChange={(event) => setNameDraft(event.target.value)}
+											placeholder="웨훅 표시명"
+											maxLength={80}
+										/>
+										<Input
+											value={avatarDraft}
+											onChange={(event) => setAvatarDraft(event.target.value)}
+											placeholder="프로필 사진 URL (https://...)"
+											maxLength={2048}
+										/>
+									</div>
+								</div>
 								<div className="flex justify-end gap-2">
 									<Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
 										취소
 									</Button>
-									<Button size="sm" disabled={busy || !draft.trim()} onClick={() => void saveTemplate(subscription)}>
+									<Button size="sm" disabled={busy} onClick={() => void saveSettings(subscription)}>
 										저장
 									</Button>
 								</div>

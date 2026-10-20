@@ -38,6 +38,8 @@ function makeSubscription(overrides: Partial<SocialSubscription> = {}): SocialSu
 		webhookId: 'wh-1',
 		webhookToken: 'webhook-token-value',
 		messageTemplate: null,
+		webhookName: null,
+		webhookAvatarUrl: null,
 		status: 'active',
 		createdAt: new Date(0),
 		updatedAt: new Date(0),
@@ -115,6 +117,23 @@ describe('SocialDispatcher.dispatch', () => {
 		const payload = dispatcher.buildPayload(subscription, EVENT);
 		expect(payload.content).toBe('방송 시작했어요! 올라옴! <@&192837465051627384>');
 		expect(payload.allowed_mentions).toEqual({ parse: [], roles: ['192837465051627384'] });
+	});
+
+	it('overrides the webhook display name and avatar when the subscription has them', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const subscription = makeSubscription({ webhookName: '시루 알림봇', webhookAvatarUrl: 'https://cdn.example.com/avatar.png' });
+		const payload = dispatcher.buildPayload(subscription, EVENT);
+		expect(payload.username).toBe('시루 알림봇');
+		expect(payload.avatar_url).toBe('https://cdn.example.com/avatar.png');
+	});
+
+	it('omits the display overrides when the subscription uses webhook defaults', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const payload = dispatcher.buildPayload(makeSubscription(), EVENT);
+		expect(payload.username).toBeUndefined();
+		expect(payload.avatar_url).toBeUndefined();
 	});
 
 	it('marks the subscription failed immediately on dead webhooks (404)', async () => {

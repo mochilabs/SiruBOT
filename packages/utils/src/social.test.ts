@@ -11,8 +11,10 @@ import {
 	socialSubscriptionStatusSchema,
 	socialSubscriptionUpdateSchema,
 	socialTemplateIssue,
+	socialWebhookAvatarUrlSchema,
 	socialWebhookCreateRequestSchema,
 	socialWebhookCreateResponseSchema,
+	socialWebhookNameSchema,
 	type SocialEvent
 } from './social.ts';
 
@@ -191,6 +193,43 @@ describe('socialSubscriptionCreateSchema', () => {
 		expect(result.success).toBe(true);
 	});
 
+	it('accepts webhook display overrides and null defaults', () => {
+		const withDisplay = socialSubscriptionCreateSchema.safeParse({
+			guildId: GUILD_ID,
+			platform: 'chzzk',
+			sourcePlatformId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+			sourceName: '시루',
+			targetChannelId: CHANNEL_ID,
+			webhookName: '시루 알림봇',
+			webhookAvatarUrl: 'https://cdn.example.com/avatar.png'
+		});
+		expect(withDisplay.success).toBe(true);
+
+		const withNulls = socialSubscriptionCreateSchema.safeParse({
+			guildId: GUILD_ID,
+			platform: 'chzzk',
+			sourcePlatformId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+			sourceName: '시루',
+			targetChannelId: CHANNEL_ID,
+			webhookName: null,
+			webhookAvatarUrl: null
+		});
+		expect(withNulls.success).toBe(true);
+	});
+
+	it('rejects a webhook avatar url that is not http(s)', () => {
+		expect(
+			socialSubscriptionCreateSchema.safeParse({
+				guildId: GUILD_ID,
+				platform: 'chzzk',
+				sourcePlatformId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+				sourceName: '시루',
+				targetChannelId: CHANNEL_ID,
+				webhookAvatarUrl: 'file:///tmp/avatar.png'
+			}).success
+		).toBe(false);
+	});
+
 	it('rejects an invalid platform', () => {
 		expect(
 			socialSubscriptionCreateSchema.safeParse({
@@ -232,6 +271,54 @@ describe('socialSubscriptionUpdateSchema', () => {
 
 	it('rejects an empty update body', () => {
 		expect(socialSubscriptionUpdateSchema.safeParse({}).success).toBe(false);
+	});
+
+	it('accepts a webhook display-only update and clears it with null', () => {
+		expect(
+			socialSubscriptionUpdateSchema.safeParse({ webhookName: '시루 알림봇', webhookAvatarUrl: 'https://example.com/avatar.png' }).success
+		).toBe(true);
+		expect(socialSubscriptionUpdateSchema.safeParse({ webhookName: null, webhookAvatarUrl: null }).success).toBe(true);
+	});
+
+	it('rejects a webhook display update failing Discord rules', () => {
+		expect(socialSubscriptionUpdateSchema.safeParse({ webhookName: 'discord 알림' }).success).toBe(false);
+		expect(socialSubscriptionUpdateSchema.safeParse({ webhookAvatarUrl: 'ftp://example.com/avatar.png' }).success).toBe(false);
+	});
+});
+
+describe('socialWebhookNameSchema', () => {
+	it('accepts and trims a valid display name', () => {
+		const result = socialWebhookNameSchema.safeParse('  시루 알림봇  ');
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.data).toBe('시루 알림봇');
+	});
+
+	it('rejects a name longer than 80 characters', () => {
+		expect(socialWebhookNameSchema.safeParse('시루'.repeat(41)).success).toBe(false);
+	});
+
+	it('rejects discord and clyde substrings regardless of case', () => {
+		expect(socialWebhookNameSchema.safeParse('Discord 알림').success).toBe(false);
+		expect(socialWebhookNameSchema.safeParse('CLYDE봇').success).toBe(false);
+	});
+
+	it('rejects a blank name', () => {
+		expect(socialWebhookNameSchema.safeParse('   ').success).toBe(false);
+	});
+});
+
+describe('socialWebhookAvatarUrlSchema', () => {
+	it('accepts an http(s) image url', () => {
+		expect(socialWebhookAvatarUrlSchema.safeParse('https://cdn.example.com/avatar.png').success).toBe(true);
+		expect(socialWebhookAvatarUrlSchema.safeParse('http://cdn.example.com/avatar.png').success).toBe(true);
+	});
+
+	it('rejects a non-http url', () => {
+		expect(socialWebhookAvatarUrlSchema.safeParse('ftp://example.com/avatar.png').success).toBe(false);
+	});
+
+	it('rejects a malformed url', () => {
+		expect(socialWebhookAvatarUrlSchema.safeParse('이미지 주소').success).toBe(false);
 	});
 });
 

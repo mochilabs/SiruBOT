@@ -34,6 +34,10 @@ export interface SocialWebhookPayload {
 	content?: string;
 	embeds: SocialEmbed[];
 	allowed_mentions: { parse: string[]; roles?: string[] };
+	/** 이 메시지에서만 웨훅 이름을 바꿔요 (구독 webhookName 오버라이드) */
+	username?: string;
+	/** 이 메시지에서만 웨훅 프로필 사진을 바꿔요 (구독 webhookAvatarUrl 오버라이드) */
+	avatar_url?: string;
 }
 
 export type WebhookFetchFn = (input: string, init?: RequestInit) => Promise<Response>;
@@ -104,6 +108,10 @@ export class SocialDispatcher {
 					allowed_mentions: { parse: [], roles: extractSocialTemplateRoleIds(template) }
 				}
 			: { embeds: [embed], allowed_mentions: { parse: [] } };
+		// 구독별 표시 오버라이드 — Discord 웨훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
+		// 웨훅 기본 표시는 그대로 두고, 수정하면 다음 알림부터 바로 반영돼요.
+		if (subscription.webhookName) payload.username = subscription.webhookName;
+		if (subscription.webhookAvatarUrl) payload.avatar_url = subscription.webhookAvatarUrl;
 		return payload;
 	}
 

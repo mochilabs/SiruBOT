@@ -129,6 +129,27 @@ export const socialSubscriptionStatusSchema = z.union([z.literal('active'), z.li
 export type SocialSubscriptionStatus = z.infer<typeof socialSubscriptionStatusSchema>;
 
 /**
+ * 웨훅 표시명 오버라이드 — 전송 payload의 username으로 쓰고, 구독 생성 시엔 봇이 만드는 웨훅 이름으로도 지정해요.
+ * Discord 규칙: 1~80자, 'discord'·'clyde' 부분문자열 금지 (위반하면 Discord가 400으로 거부해요).
+ */
+export const socialWebhookNameSchema = z
+	.string()
+	.trim()
+	.min(1, '웨훅 표시명은 1자 이상이어야 해요. 기본 이름으로 쓸 거면 비워 두세요.')
+	.max(80, '웨훅 표시명은 80자 이하여야 해요.')
+	.refine((name) => !/discord|clyde/i.test(name), { message: '웨훅 표시명에는 discord·clyde를 쓸 수 없어요 (Discord 규칙).' });
+export type SocialWebhookName = z.infer<typeof socialWebhookNameSchema>;
+
+/** 웨훅 프로필 사진 오버라이드 — Discord가 전송 시점에 fetch하는 이미지 URL이에요 (http/https). */
+export const socialWebhookAvatarUrlSchema = z
+	.string()
+	.trim()
+	.url('프로필 사진 URL 형식이 올바르지 않아요.')
+	.max(2048, '프로필 사진 URL은 2048자 이하여야 해요.')
+	.refine((url) => /^https?:\/\//i.test(url), { message: '프로필 사진 URL은 http 또는 https 주소여야 해요.' });
+export type SocialWebhookAvatarUrl = z.infer<typeof socialWebhookAvatarUrlSchema>;
+
+/**
  * 구독 생성 요청 본문 — 대시보드가 data-api 프록시로 보내고 notifier가 검증·저장해요.
  * 웹훅은 이 요청 처리 중에 socialWebhookCreateRequestSchema 요청으로 봇에 만들어 달라고 해요.
  */
@@ -141,17 +162,29 @@ export const socialSubscriptionCreateSchema = z.object({
 	sourceName: z.string().min(1).max(128),
 	targetChannelId: redisIdSchema,
 	/** null이면 플랫폼 기본(임베드만), 있으면 content 커스텀 */
-	messageTemplate: socialMessageTemplateSchema.nullable().optional()
+	messageTemplate: socialMessageTemplateSchema.nullable().optional(),
+	/** 웨훅 표시명 오버라이드 — null이면 기본 이름(시루 소셜 알림 — 채널 이름)으로 만들어요 */
+	webhookName: socialWebhookNameSchema.nullable().optional(),
+	/** 웨훅 프로필 사진 오버라이드 — null이면 웨훅 기본 아바타로 전송해요 */
+	webhookAvatarUrl: socialWebhookAvatarUrlSchema.nullable().optional()
 });
 export type SocialSubscriptionCreate = z.infer<typeof socialSubscriptionCreateSchema>;
 
-/** 구독 수정 본문 — 템플릿이나 상태만 바꿔요 (채널·웹훅 재생성은 삭제 후 다시 만들어요) */
+/** 구독 수정 본문 — 템플릿·웨훅 표시·상태만 바꿔요 (채널·웹훅 재생성은 삭제 후 다시 만들어요) */
 export const socialSubscriptionUpdateSchema = z
 	.object({
 		messageTemplate: socialMessageTemplateSchema.nullable().optional(),
-		status: socialSubscriptionStatusSchema.optional()
+		status: socialSubscriptionStatusSchema.optional(),
+		/** 웨훅 표시명 오버라이드 — undefined면 변경 없음, null이면 기본 표시로 되돌려요 */
+		webhookName: socialWebhookNameSchema.nullable().optional(),
+		/** 웨훅 프로필 사진 오버라이드 — undefined면 변경 없음, null이면 기본 아바타로 되돌려요 */
+		webhookAvatarUrl: socialWebhookAvatarUrlSchema.nullable().optional()
 	})
-	.refine((body) => body.messageTemplate !== undefined || body.status !== undefined, { message: '수정할 항목이 없어요.' });
+	.refine(
+		(body) =>
+			body.messageTemplate !== undefined || body.status !== undefined || body.webhookName !== undefined || body.webhookAvatarUrl !== undefined,
+		{ message: '수정할 항목이 없어요.' }
+	);
 export type SocialSubscriptionUpdate = z.infer<typeof socialSubscriptionUpdateSchema>;
 
 /**
