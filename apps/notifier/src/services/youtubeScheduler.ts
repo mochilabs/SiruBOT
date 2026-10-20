@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import type { SocialEvent } from '@sirubot/utils';
+import { BREAKER_THRESHOLD, SubscriptionPoller, type PollOutcome } from './pollingLoop.ts';
 import {
 	fetchYouTubeUploadsFeed,
 	parseYouTubeAtomFeed,
@@ -23,102 +24,61 @@ const AUDIT_KEY_PREFIX = 'sirubot:social:youtube:audit:';
 // plan §8 — RSS 감사 폴링은 채널당 30분~1시간 (지터 포함). WebSub 푸시가 유실된 영상을 회수해요.
 const AUDIT_INTERVAL_BASE_SECONDS = 30 * 60;
 const AUDIT_JITTER_SECONDS = 30 * 60;
-// plan §8 — 폴링 실패 5회 연속 → 30분 봉쇄 (half-open: 이후 틱에서 자동 재시도)
-const BREAKER_THRESHOLD = 5;
-const BREAKER_COOLDOWN_MS = 30 * 60 * 1000;
 
 interface LeaseState {
 	leaseUntil: number;
 }
 
 /** 유튜브 WebSub lease 갱신 + RSS 감사 폴링 스케줄러 (plan §10 ⑤). */
-export class YouTubeScheduler {
+export class YouTubeScheduler extends SubscriptionPoller {
 	private readonly fetchFn: YouTubeFetchFn;
-	private readonly now: () => number;
-	private timer: ReturnType<typeof setTimeout> | null = null;
-	private running = false;
-	private stopped = true;
-	private consecutiveFailures = 0;
-	private breakerOpenUntil = 0;
+	private readonly dispatcher: { dispatch(event: SocialEvent): Promise<void> };
+	private readonly callbackUrl: string | null;
+	private readonly hubSecret: string | null;
 
-	public constructor(
-		private readonly options: {
-			redis: NotifierRedis;
-			getDb: () => PrismaClient | null;
-			dispatcher: { dispatch(event: SocialEvent): Promise<void> };
-			/** 공개 콜백 주소+hub secret이 세트로 있어야 WebSub 푸시가 동작해요. 없으면 RSS 감사만 돌아요. */
-			callbackUrl: string | null;
-			hubSecret: string | null;
-			fetchFn?: YouTubeFetchFn;
-			now?: () => number;
-		}
-	) {
+	public constructor(options: {
+		redis: NotifierRedis;
+		getDb: () => PrismaClient | null;
+		dispatcher: { dispatch(event: SocialEvent): Promise<void> };
+		/** 공개 콜백 주소+hub secret이 세트로 있어야 WebSub 푸시가 동작해요. 없으면 RSS 감사만 돌아요. */
+		callbackUrl: string | null;
+		hubSecret: string | null;
+		fetchFn?: YouTubeFetchFn;
+		now?: () => number;
+	}) {
+		super(options, {
+			name: 'youtubeScheduler',
+			intervalMs: TICK_MS,
+			lockKey: LOCK_KEY,
+			lockTtlSeconds: LOCK_TTL_SECONDS,
+			logger,
+			startMessage: '유튜브 스케줄러를 시작해요.',
+			breakerOpenMessage: `유튜브 스케줄러가 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`
+		});
 		this.fetchFn = options.fetchFn ?? fetch;
-		this.now = options.now ?? Date.now;
+		this.dispatcher = options.dispatcher;
+		this.callbackUrl = options.callbackUrl;
+		this.hubSecret = options.hubSecret;
 	}
 
-	public start(): void {
-		if (!this.stopped) return;
-		this.stopped = false;
-		logger.info('유튜브 스케줄러를 시작해요.');
-		void this.tick();
-	}
-
-	public stop(): void {
-		this.stopped = true;
-		if (this.timer) {
-			clearTimeout(this.timer);
-			this.timer = null;
-		}
-	}
-
-	private scheduleNext(): void {
-		if (this.stopped) return;
-		this.timer = setTimeout(() => void this.tick(), TICK_MS);
-	}
-
-	private async tick(): Promise<void> {
-		if (this.stopped) return;
-		try {
-			if (!this.running) {
-				this.running = true;
-				try {
-					await this.pollOnce();
-				} finally {
-					this.running = false;
-				}
-			}
-		} finally {
-			this.scheduleNext();
-		}
-	}
-
-	private async pollOnce(): Promise<void> {
-		const now = this.now();
-		// 서킷 브레이커 — 봉쇄 중이면 스킵 (쿨다운 종료 후 half-open으로 자동 재시도)
-		if (now < this.breakerOpenUntil) return;
-		const acquired = await this.options.redis.acquireLock(LOCK_KEY, LOCK_TTL_SECONDS);
-		if (!acquired) return;
-		const db = this.options.getDb();
-		if (!db) return;
-
+	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
 		const rows = await db.socialSubscription
 			.findMany({ where: { platform: 'youtube', status: 'active' }, select: { sourcePlatformId: true } })
 			.catch(() => []);
 		const channelIds = [...new Set(rows.map((row) => row.sourcePlatformId))];
-		if (channelIds.length === 0) return;
+		if (channelIds.length === 0) return 'skipped';
 
 		let tickFailed = false;
 
 		// ① WebSub lease 갱신 — 만료 임박 토픽만 재등록해요 (푸시가 켜져 있을 때만)
-		if (this.options.callbackUrl && this.options.hubSecret) {
+		if (this.callbackUrl && this.hubSecret) {
 			for (const channelId of channelIds) {
 				const lease = await this.loadLease(channelId);
 				if (lease && lease.leaseUntil - now > RENEW_THRESHOLD_MS) continue;
 				const ok = await subscribeYouTubeChannel({
 					channelId,
-					callbackUrl: this.options.callbackUrl,
-					secret: this.options.hubSecret,
+					callbackUrl: this.callbackUrl,
+					secret: this.hubSecret,
 					fetchFn: this.fetchFn
 				});
 				if (ok) {
@@ -143,7 +103,7 @@ export class YouTubeScheduler {
 				const { events } = parseYouTubeAtomFeed(xml);
 				for (const event of events) {
 					// 구독 생성 이전 콘텐츠는 dispatcher가 알림에서 걸러요 — 신규 구독 직후 과거 영상 폭발 방지
-					await this.options.dispatcher.dispatch(event).catch(() => undefined);
+					await this.dispatcher.dispatch(event).catch(() => undefined);
 				}
 				const ttl = AUDIT_INTERVAL_BASE_SECONDS + Math.floor(Math.random() * AUDIT_JITTER_SECONDS);
 				await this.options.redis.set(auditKey, '1', ttl);
@@ -153,16 +113,7 @@ export class YouTubeScheduler {
 			}
 		}
 
-		if (tickFailed) {
-			this.consecutiveFailures++;
-			if (this.consecutiveFailures >= BREAKER_THRESHOLD) {
-				this.breakerOpenUntil = this.now() + BREAKER_COOLDOWN_MS;
-				this.consecutiveFailures = 0;
-				logger.error(`유튜브 스케줄러가 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`);
-			}
-		} else {
-			this.consecutiveFailures = 0;
-		}
+		return tickFailed ? 'failed' : 'ok';
 	}
 
 	private async loadLease(channelId: string): Promise<LeaseState | null> {
