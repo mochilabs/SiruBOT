@@ -46,6 +46,8 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 	const [resolved, setResolved] = useState<ResolvedSource | null>(null);
 	const [targetChannelId, setTargetChannelId] = useState("");
 	const [template, setTemplate] = useState("");
+	const [webhookName, setWebhookName] = useState("");
+	const [webhookAvatarUrl, setWebhookAvatarUrl] = useState("");
 	const [saving, setSaving] = useState(false);
 
 	const [keyword, setKeyword] = useState("");
@@ -158,6 +160,8 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 			sourceName: resolved.name,
 			targetChannelId,
 			messageTemplate: template.trim() ? template : null,
+			webhookName: webhookName.trim() ? webhookName.trim() : null,
+			webhookAvatarUrl: webhookAvatarUrl.trim() ? webhookAvatarUrl.trim() : null,
 		};
 		const result = await createSubscription(input);
 		setSaving(false);
@@ -292,6 +296,27 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				keepMissing={false}
 				groupByCategory={false}
 			/>
+
+			<div className="flex flex-col gap-2">
+				<span className="text-xs font-medium text-muted-foreground">웨훅 표시 (선택)</span>
+				<div className="grid gap-2 sm:grid-cols-2">
+					<Input
+						value={webhookName}
+						onChange={(event) => setWebhookName(event.target.value)}
+						placeholder={`기본: 시루 소셜 알림 — ${resolved?.name ?? "채널 이름"}`}
+						maxLength={80}
+					/>
+					<Input
+						value={webhookAvatarUrl}
+						onChange={(event) => setWebhookAvatarUrl(event.target.value)}
+						placeholder="프로필 사진 URL (https://...)"
+						maxLength={2048}
+					/>
+				</div>
+				<p className="text-xs text-muted-foreground">
+					비우면 봇 기본 이름·사진으로 보내요. 표시명은 Discord 규칙상 discord·clyde를 쓸 수 없어요.
+				</p>
+			</div>
 
 			<TemplateEditor guildId={guildId} value={template} onChange={setTemplate} sample={resolved?.sample ?? {
 				platform,

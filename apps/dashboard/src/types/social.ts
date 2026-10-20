@@ -11,6 +11,10 @@ export interface SocialSubscription {
   sourceName: string;
   targetChannelId: string;
   messageTemplate: string | null;
+  /** 웨훅 표시명 오버라이드 — null이면 웨훅 기본 이름 */
+  webhookName: string | null;
+  /** 웨훅 프로필 사진 오버라이드 — null이면 웨훅 기본 아바타 */
+  webhookAvatarUrl: string | null;
   status: SocialSubscriptionStatus;
   createdAt: string;
   updatedAt: string;

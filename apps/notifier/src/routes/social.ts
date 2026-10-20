@@ -16,6 +16,8 @@ type SubscriptionRow = {
 	sourceName: string;
 	targetChannelId: string;
 	messageTemplate: string | null;
+	webhookName: string | null;
+	webhookAvatarUrl: string | null;
 	status: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -38,6 +40,8 @@ function publicSubscription(row: SubscriptionRow) {
 		sourceName: row.sourceName,
 		targetChannelId: row.targetChannelId,
 		messageTemplate: row.messageTemplate,
+		webhookName: row.webhookName,
+		webhookAvatarUrl: row.webhookAvatarUrl,
 		status: row.status,
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt
@@ -110,7 +114,8 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 			requestId: randomUUID(),
 			guildId,
 			targetChannelId: body.targetChannelId,
-			name: `시루 소셜 알림 — ${body.sourceName}`.slice(0, 80)
+			// 커스텀 표시명이 있으면 웨훅 자체의 이름으로도 반영하고, 없으면 기본 이름을 만들어요.
+			name: body.webhookName ?? `시루 소셜 알림 — ${body.sourceName}`.slice(0, 80)
 		};
 		const hubResponse = await hub.requestWebhookCreate(hubRequest);
 		if (hubResponse.error || !hubResponse.webhookId || !hubResponse.webhookToken) {
@@ -127,6 +132,8 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 					sourceName: body.sourceName,
 					targetChannelId: body.targetChannelId,
 					messageTemplate: body.messageTemplate ?? null,
+					webhookName: body.webhookName ?? null,
+					webhookAvatarUrl: body.webhookAvatarUrl ?? null,
 					webhookId: hubResponse.webhookId,
 					webhookToken: hubResponse.webhookToken
 				}
@@ -162,7 +169,9 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 				where: { id },
 				data: {
 					...(parsed.data.messageTemplate !== undefined ? { messageTemplate: parsed.data.messageTemplate } : {}),
-					...(parsed.data.status !== undefined ? { status: parsed.data.status } : {})
+					...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
+					...(parsed.data.webhookName !== undefined ? { webhookName: parsed.data.webhookName } : {}),
+					...(parsed.data.webhookAvatarUrl !== undefined ? { webhookAvatarUrl: parsed.data.webhookAvatarUrl } : {})
 				}
 			});
 			return reply.send({ subscription: publicSubscription(row) });

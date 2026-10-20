@@ -8,15 +8,24 @@ import type { SocialSubscriptionResponse } from "@/types/social";
 
 const idSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
-/** 구독 수정 본문 — 템플릿 교체 또는 상태(일시정지/재개) 변경이에요. 최종 검증은 notifier가 해요. */
+/** 구독 수정 본문 — 템플릿·웨훅 표시·상태 변경이에요. 최종 검증은 notifier가 해요. */
 const updateSchema = z
   .object({
     messageTemplate: z.string().trim().min(1).max(1000).nullable().optional(),
     status: z.enum(["active", "failed", "disabled"]).optional(),
+    webhookName: z.string().trim().min(1).max(80).nullable().optional(),
+    webhookAvatarUrl: z.string().trim().min(1).max(2048).nullable().optional(),
   })
-  .refine((body) => body.messageTemplate !== undefined || body.status !== undefined, {
-    message: "변경할 내용이 없어요.",
-  });
+  .refine(
+    (body) =>
+      body.messageTemplate !== undefined ||
+      body.status !== undefined ||
+      body.webhookName !== undefined ||
+      body.webhookAvatarUrl !== undefined,
+    {
+      message: "변경할 내용이 없어요.",
+    },
+  );
 
 const UPDATE_FALLBACK = "알림 구독을 수정하지 못했어요.";
 const DELETE_FALLBACK = "알림 구독을 삭제하지 못했어요.";
