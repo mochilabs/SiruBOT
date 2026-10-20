@@ -1,6 +1,6 @@
 # SiruBOT 아키텍처
 
-> **문서 기준일**: 2026-10-15 (2026-10-16 추기) · 검증 방식: 각 섹션에 명시한 소스 경로의 **실제 라인**을 읽고 작성했습니다.
+> **문서 기준일**: 2026-10-15 (2026-10-20 추기) · 검증 방식: 각 섹션에 명시한 소스 경로의 **실제 라인**을 읽고 작성했습니다.
 > 코드가 우선입니다. 인용된 `파일경로:라인범위`는 코드 변경 시 함께 갱신해 주세요.
 > 각 앱은 독립 프로세스이며, 서로는 아래 "공유 계약"(Redis 채널·HTTP 인증·WS 프로토콜)으로만 통신합니다.
 
@@ -23,7 +23,7 @@
 
 ## 1. 개요
 
-SiruBOT은 단일 저장소(모노레포)에 4개의 독립 프로세스 앱과 3개의 공유 패키지로 구성된 Discord 음악봇 플랫폼입니다. 워크스페이스는 `apps/*`, `packages/*`이고(`package.json:5-8`), 빌드/개발 오케스트레이션은 Turborepo(`turbo.json`), Node ≥ 22(`package.json:40-41`), Yarn 4(Corepack)를 사용합니다.
+SiruBOT은 단일 저장소(모노레포)에 6개의 독립 프로세스 앱과 3개의 공유 패키지로 구성된 Discord 음악봇 플랫폼입니다. 워크스페이스는 `apps/*`, `packages/*`이고(`package.json:5-8`), 빌드/개발 오케스트레이션은 Turborepo(`turbo.json`), Node ≥ 22(`package.json:40-41`), Yarn 4(Corepack)를 사용합니다.
 
 | 구분 | 대상 | 한 줄 정의 | 런타임 |
 |---|---|---|---|
@@ -31,11 +31,13 @@ SiruBOT은 단일 저장소(모노레포)에 4개의 독립 프로세스 앱과 
 | 앱 | `apps/dashboard` | 길드 관리 웹 대시보드(플레이어·설정·통계·AI 기록) | Next.js 16.4 App Router + React 19 |
 | 앱 | `apps/data-api` | 외부 제공자 캐시 게이트웨이·Redis 허브·canvas 이미지 렌더·LLM 배치 | Fastify 5 (포트 3002) |
 | 앱 | `apps/shardmanager` | 봇 프로세스(샤드) 할당·헬스 집계 WS 서버 | Fastify 5 + @fastify/websocket |
+| 앱 | `apps/storage` | 오브젝트 스토리지 — 인증 업로드·공개 GET(디스코드 임베드 에셋 서빙) | Fastify 5 (포트 3003) |
+| 앱 | `apps/notifier` | 소셜 알림 — YouTube·트위치·치지직 구독 폴링·디스코드 웹훅 발행 | Fastify 5 (포트 3004) |
 | 패키지 | `packages/prisma` | PostgreSQL 스키마·Prisma 클라이언트 (10모델) | Prisma 7 + PrismaPg |
 | 패키지 | `packages/shardclient` | shardmanager 접속용 WS 클라이언트(재시도·백오프 내장) | ws |
 | 패키지 | `packages/utils` | Redis 채널 상수·페이로드 스키마·공용 유틸 | zod |
 
-기본 포트: 대시보드 3000 · shardmanager 3001 · data-api 3002 (`README.ko.md:76-88`, `apps/dashboard/src/lib/shard-api.ts:28`).
+기본 포트: 대시보드 3000 · shardmanager 3001 · data-api 3002 · storage 3003 · notifier 3004 (`README.ko.md:76-88`, `apps/dashboard/src/lib/shard-api.ts:28`, `apps/storage/src/config/env.ts:5`, `apps/notifier/src/config/env.ts:5`).
 
 ---
 
@@ -85,7 +87,7 @@ graph LR
 
 핵심 경계 규칙:
 
-- **봇이 data-api를 쓰는가**: `apps/bot/.env`에 `DATA_API_URL`이 있을 때만 사용하고, 없으면 봇이 외부 제공자를 직접 호출합니다(`README.ko.md:112,132`).
+- **봇이 data-api를 쓰는가**: 외부 제공자(운세·날씨·가사·택배·유튜브 챕터) 호출과 LLM 배치(운세 번역·기억 정리)는 **data-api가 단일 책임**입니다(2026-10-20 결정 — 봇 로컬 폴백 제거). `DATA_API_URL`이 없으면 봇이 외부를 직접 호출하지 않고, `dataApiClient.gatewayGet`이 `Error('data-api disabled')`로 즉시 실패(fail-fast)합니다(`apps/bot/src/services/dataApiClient.ts:47`).
 - **대시보드는 봇과 직접 통신하지 않습니다.** 채널/역할 목록·플레이어 제어는 전부 data-api의 Redis request/reply 허브를 우회합니다(`packages/utils/src/redisChannels.ts:87-127`). 유저 OAuth 토큰으로는 Discord API를 직접 못 쓰기 때문입니다(`redisChannels.ts:89-93`).
 - **data-api는 인증 키가 없으면 기동 거부(fail-closed)**입니다. 인증 면제는 `/api/health`와 내장 모니터링 페이지뿐입니다(`README.ko.md:92-94,106`, `apps/data-api/src/routes/index.ts:104-111`).
 
@@ -408,8 +410,8 @@ flowchart TD
 
 - **Turborepo 파이프라인**(`turbo.json`): `build` = `^typecheck ^generate ^build` 의존(`:4-8`), `typecheck` = `^build ^generate`(`:31-35`), `test` = `^generate ^build`(`:36-39`), `dev`은 캐시 비활성+persistent(`:12-15`). Prisma 클라이언트 생성(`yarn generate`)이 typecheck/build/test의 선행 조건입니다.
 - **CI(`.github/workflows/lint.yml`)**: push/PR 트리거(`:3`), Node 22(`:24-27`), `yarn install --immutable`(`:30`) → `yarn lint`(`:33`) → `yarn typecheck`(`:36`) → `yarn test`(`:39`). 이미지 파이프라인: `docker-publish.yml`, `docker-beta.yml`.
-- **Docker**: 루트 Dockerfile이 봇·대시보드·shardmanager·data-api 4개 타겟을 각각 빌드(`README.ko.md:186-196`). 컴포즈: `docker/docker-compose.yml`, `docker-stack.yml`, `docker-stack-infra.yml`.
-- **테스트**: 워크스페이스별 vitest(`--passWithNoTests`). 봇·data-api·utils·dashboard·shardclient에 테스트 존재, shardmanager/prisma는 없음.
+- **Docker**: 루트 Dockerfile이 봇·대시보드·shardmanager·data-api·storage·notifier 6개 타겟을 각각 빌드(`Dockerfile` — `README.ko.md:186-196`은 4앱만 서술). 컴포즈: `docker/docker-compose.yml`, `docker-stack.yml`, `docker-stack-infra.yml`.
+- **테스트**: 워크스페이스별 vitest(`--passWithNoTests`). 봇·data-api·utils·dashboard·storage·notifier·shardclient·shardmanager에 테스트 존재, prisma는 없음.
 
 ---
 
@@ -425,7 +427,7 @@ flowchart TD
 | `LAVALINK_HOSTS` (`id_host_port[\_password]` 콤마 목록) | ✅ zod 파싱 실패 시 기동 중단 | — | — | — |
 | `DISCORD_CLIENT_ID` / `CLIENT_SECRET` | — | ✅ | — | — |
 | `AUTH_SECRET` | — | ✅ | — | — |
-| `DATA_API_URL` | 🔸 설정 시에만 게이트웨이 사용(기본 3002) | ✅ 기본 3002 | — | — |
+| `DATA_API_URL` | 🔸 미설정 시 게이트웨이 기능이 즉시 실패(fail-fast) | ✅ 기본 3002 | — | — |
 | `DATA_API_AUTH_KEY` 또는 `AUTH_KEY` | ✅ | ✅ | ✅ **둘 다 없으면 기동 거부** | — |
 | `SHARD_MANAGER_URL` | 🔸 프로덕션 필수, 없으면 종료 | 🔸 대시보드 상태 조회(기본 3001) | — | — |
 | `SHARD_MANAGER_AUTH_KEY` | (bot은 `AUTH_KEY` 사용) | ✅ 폴백 없음 | — | ✅ |
