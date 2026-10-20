@@ -21,10 +21,17 @@ const envSchema = z
 		MEMORY_TIDY_BATCH_SIZE: z.coerce.number().int().positive().max(200).default(40),
 		// YouTube 검색에 사용할 Lavalink REST 주소와 비밀번호 — data-api 서버에서만 사용해요
 		LAVALINK_REST_URL: z.string().url().optional(),
-		LAVALINK_PASSWORD: z.string().optional()
+		LAVALINK_PASSWORD: z.string().optional(),
+		// 소셜 알림(notifier) 프록시 대상 — 기본값은 단일 호스트 개발 구성이에요
+		NOTIFIER_URL: z.string().url().default('http://localhost:3004'),
+		NOTIFIER_AUTH_KEY: z.string().optional()
 	})
 	// 폴백 체인(DATA_API_AUTH_KEY ?? AUTH_KEY)을 스키마 안에서 정규화해요.
-	.transform((env) => ({ ...env, dataApiAuthKey: env.DATA_API_AUTH_KEY ?? env.AUTH_KEY }));
+	.transform((env) => ({
+		...env,
+		dataApiAuthKey: env.DATA_API_AUTH_KEY ?? env.AUTH_KEY,
+		notifierAuthKey: env.NOTIFIER_AUTH_KEY ?? env.AUTH_KEY
+	}));
 
 export type Env = z.infer<typeof envSchema>;
 

@@ -61,7 +61,9 @@ export async function buildServer(env: Env) {
 		translationProvider,
 		draftProvider,
 		lavalinkRestUrl: env.LAVALINK_REST_URL,
-		lavalinkPassword: env.LAVALINK_PASSWORD
+		lavalinkPassword: env.LAVALINK_PASSWORD,
+		notifierUrl: env.NOTIFIER_URL,
+		notifierAuthKey: env.notifierAuthKey
 	});
 
 	const stopScheduler = startOhaasaScheduler(env, translationProvider);

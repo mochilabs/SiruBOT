@@ -60,6 +60,8 @@ import {
 	xEmbedFixResult
 } from '../providers/embedFix.ts';
 
+import { registerSocialRoutes } from './social.ts';
+
 const LYRICS_TTL_SECONDS = 30 * 24 * 3600;
 const WEATHER_TTL_SECONDS = 15 * 60;
 
@@ -72,6 +74,10 @@ export interface RouteDeps {
 	draftProvider: OpenAICompatTranslationProvider;
 	lavalinkRestUrl?: string;
 	lavalinkPassword?: string;
+	/** 소셜 알림 프록시 대상 — 미설정이면 프록시 라우트가 503으로 응답해요 */
+	notifierUrl?: string;
+	/** notifier 인증 키 — Authorization 헤더 원문(Bearer 없음) */
+	notifierAuthKey?: string;
 }
 
 function sendError(reply: { code: (n: number) => any }, error: unknown): any {
@@ -1091,4 +1097,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 			return sendError(reply, error);
 		}
 	});
+
+	// 소셜 알림 프록시 — 구독 도메인은 notifier가 단일 소유해요.
+	await registerSocialRoutes(fastify, deps);
 }

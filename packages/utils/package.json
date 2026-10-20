@@ -51,6 +51,11 @@
             "types": "./dist/redisEnvelope.d.ts",
             "import": "./dist/redisEnvelope.js",
             "require": "./dist/redisEnvelope.cjs"
+        },
+        "./social": {
+            "types": "./dist/social.d.ts",
+            "import": "./dist/social.js",
+            "require": "./dist/social.cjs"
         }
     },
     "scripts": {

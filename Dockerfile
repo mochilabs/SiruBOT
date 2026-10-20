@@ -27,6 +27,7 @@ COPY apps/dashboard/package.json ./apps/dashboard/
 COPY apps/shardmanager/package.json ./apps/shardmanager/
 COPY apps/data-api/package.json ./apps/data-api/
 COPY apps/storage/package.json ./apps/storage/
+COPY apps/notifier/package.json ./apps/notifier/
 COPY packages/prisma/package.json ./packages/prisma/
 COPY packages/shardclient/package.json ./packages/shardclient/
 COPY packages/utils/package.json ./packages/utils/
@@ -102,6 +103,14 @@ RUN --mount=type=cache,target=/app/.turbo \
 
 # devDependencies 제거 — 프로덕션 node_modules를 작게 유지
 RUN yarn workspaces focus @sirubot/storage --production
+
+# Build notifier
+FROM builder AS builder-notifier
+RUN --mount=type=cache,target=/app/.turbo \
+    yarn turbo run build --filter=@sirubot/notifier...
+
+# devDependencies 제거 — 프로덕션 node_modules를 작게 유지
+RUN yarn workspaces focus @sirubot/notifier --production
 
 # ====================
 # Bot Production
@@ -323,5 +332,49 @@ EXPOSE 3003
 # 헬스체크는 인증 면제 라우트 GET /health (공개 오브젝트 GET은 캐시 헤더만 봐선 기동 상태를 못 잡음)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 	CMD ["node", "-e", "fetch('http://127.0.0.1:3003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+
+CMD ["yarn", "start"]
+
+# ====================
+# Notifier Production
+# ====================
+FROM node:22-slim AS notifier
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add non-root user
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs sirubot
+
+ARG GIT_HASH=unknown
+ARG GIT_BRANCH=unknown
+ARG VERSION=unknown
+ENV NODE_ENV=production
+ENV GIT_HASH=$GIT_HASH
+ENV GIT_BRANCH=$GIT_BRANCH
+ENV VERSION=$VERSION
+
+# Copy built application
+COPY --from=builder-notifier --chown=sirubot:nodejs /app/apps/notifier/dist ./dist
+COPY --from=builder-notifier --chown=sirubot:nodejs /app/apps/notifier/package.json ./package.json
+
+# Copy workspace packages (@sirubot/utils·@sirubot/prisma 의존성)
+COPY --from=builder-notifier --chown=sirubot:nodejs /app/packages ./packages
+
+# Copy only production node_modules
+COPY --from=builder-notifier --chown=sirubot:nodejs /app/node_modules ./node_modules
+
+USER sirubot
+EXPOSE 3004
+
+# 헬스체크는 인증 면제 라우트 GET /health — fail-closed 키 없으면 기동 자체가 안 되므로
+# start-period는 15s면 충분해요 (DB·Redis는 optional이라 연결 없어도 /health는 살아요).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+	CMD ["node", "-e", "fetch('http://127.0.0.1:3004/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
 CMD ["yarn", "start"]

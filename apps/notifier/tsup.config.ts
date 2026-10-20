@@ -1,0 +1,14 @@
+import { createConfig } from "../../scripts/tsup.config.js";
+
+export default createConfig({
+  // 테스트 파일은 빌드 산출물에서 제외 — dist/*.test.js가 vitest 워크스페이스 실행에 이중으로 잡히는
+  // 문제 방지 (apps/storage/tsup.config.ts와 같은 규칙).
+  entry: ["src/**/*.ts", "!src/**/*.test.ts", "!src/**/*.spec.ts"],
+  dts: false,
+  splitting: false,
+  // CJS로 번들링되는 workspace 패키지가 ESM 안에서
+  // 동적 require("...")를 호출할 때 node_modules를 정상 참조하도록 보장
+  banner: {
+    js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+  },
+});
