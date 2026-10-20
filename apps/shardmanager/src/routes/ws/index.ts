@@ -10,7 +10,7 @@ import {
 	WsMessageSchema
 } from '@sirubot/shardclient/ws-types';
 import { getLogger } from '../../utils/logger.ts';
-import { safeEqual } from '../../plugins/auth.ts';
+import { timingSafeKeyEqual } from '@sirubot/app-kit';
 
 const logger = getLogger('websocket');
 
@@ -108,7 +108,7 @@ export default async function routes(fastify: FastifyInstance) {
 			}
 
 			// Authorization 헤더는 이미 검증됐지만, IDENTIFY payload의 토큰도 이중으로 검증해요.
-			if (!payload.token || !wsAuthKey || !safeEqual(payload.token, wsAuthKey)) {
+			if (!payload.token || !wsAuthKey || !timingSafeKeyEqual(payload.token, wsAuthKey)) {
 				logger.warn(`[${id}] IDENTIFY rejected: invalid identify token`);
 				send(ws, {
 					op: WsOp.IDENTIFY_ACK,

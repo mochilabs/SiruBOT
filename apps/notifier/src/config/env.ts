@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { authKeyChain, parseEnvOrExit } from '@sirubot/app-kit';
 
 const envSchema = z
 	.object({
@@ -25,7 +26,7 @@ const envSchema = z
 	})
 	.transform((env) => ({
 		...env,
-		notifierAuthKey: env.NOTIFIER_AUTH_KEY ?? env.AUTH_KEY,
+		notifierAuthKey: authKeyChain(env.NOTIFIER_AUTH_KEY, env.AUTH_KEY),
 		// 끝 슬래시 정규화 — 콜백 URL 조립(/pubsub/youtube)이 깔끔해요.
 		notifierPublicUrl: env.NOTIFIER_PUBLIC_URL?.replace(/\/+$/, ''),
 		chzzkPollingEnabled: env.CHZZK_POLLING_ENABLED !== 'false'
@@ -34,16 +35,11 @@ const envSchema = z
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	const result = envSchema.safeParse(process.env);
-	if (!result.success) {
-		console.error('❌ Invalid environment variables:');
-		console.error(result.error.format());
-		process.exit(1);
-	}
+	const env = parseEnvOrExit(envSchema);
 	// 키가 없으면 fail-closed — 인증 없는 notifier로 기동하지 않아요. 무인증 표면은 공개 콜백(+health)뿐이에요.
-	if (!result.data.notifierAuthKey) {
+	if (!env.notifierAuthKey) {
 		console.error('❌ NOTIFIER_AUTH_KEY 또는 AUTH_KEY 중 하나는 반드시 설정해야 해요.');
 		process.exit(1);
 	}
-	return result.data;
+	return env;
 }
