@@ -146,11 +146,12 @@ export type DataApiForwardResult<T> = DataApiForwardOk<T> | DataApiForwardFail;
  * data-api POST 프록시(JSON) — postDataApi와 달리 실패 상태와 본문 message를 파기하지 않아요.
  * 인사 카드 이미지 라우트처럼 data-api의 형식·용량 안내(400)를 사용자에게 그대로 보여줘야 하는 곳에서 써요.
  * LLM 호출처럼 응답이 오래 걸리는 엔드포인트는 timeoutMs를 넓혀요 (기본 10초).
+ * method로 PATCH·DELETE도 보낼 수 있어요 — 본문이 없으면 body를 실어 보내지 않아요.
  */
 export async function forwardDataApiPost<T>(
   path: string,
   body: unknown,
-  options?: { timeoutMs?: number },
+  options?: { timeoutMs?: number; method?: "POST" | "PATCH" | "DELETE" },
 ): Promise<DataApiForwardResult<T>> {
   const authKey = DATA_API_AUTH_KEY.trim();
   if (!authKey) {
@@ -160,11 +161,16 @@ export async function forwardDataApiPost<T>(
     return { ok: false, status: 503, message: null };
   }
   try {
+    const method = options?.method ?? "POST";
+    const payload = body === undefined ? undefined : JSON.stringify(body);
     const res = await fetch(`${DATA_API_URL}${path}`, {
-      method: "POST",
+      method,
       cache: "no-store",
-      headers: { Authorization: authKey, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers:
+        payload === undefined
+          ? { Authorization: authKey }
+          : { Authorization: authKey, "Content-Type": "application/json" },
+      body: payload,
       signal: AbortSignal.timeout(options?.timeoutMs ?? 10_000),
     });
     if (!res.ok) {

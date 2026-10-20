@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
+  Bell,
   Bot,
   Hash,
   Images,
@@ -35,6 +36,7 @@ import { MusicSettings } from "./music-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import ServerStatsTab from "./server-stats-tab";
 import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
+import SocialAlertsSettings from "./social-alerts-settings";
 
 const TABS = [
   { key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
@@ -48,6 +50,7 @@ const TABS = [
   { key: "chat-tools", label: "채팅 유틸", icon: <MessageSquare size={14} /> },
   { key: "jtc", label: "임시 음성", icon: <Volume2 size={14} /> },
   { key: "mixer", label: "오디오 엔진", icon: <SlidersHorizontal size={14} /> },
+  { key: "social", label: "소셜 알림", icon: <Bell size={14} /> },
   { key: "greeting", label: "멤버", icon: <UserPlus size={14} /> },
 ] as const;
 
@@ -216,6 +219,12 @@ export function ServerDashboard({
                 )}
                 {item.key === "jtc" && <JtcSettings guildId={guildId} />}
                 {item.key === "mixer" && <MixerSettings guildId={guildId} />}
+                {item.key === "social" && (
+                  <SocialAlertsSettings
+                    guildId={guildId}
+                    visible={tab === "social"}
+                  />
+                )}
                 {item.key === "greeting" && (
                   <MemberGreetingSettings
                     guildId={guildId}
