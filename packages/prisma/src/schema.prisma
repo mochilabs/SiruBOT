@@ -261,3 +261,48 @@ model UserMemory {
   updatedAt DateTime @updatedAt
 }
 
+// 소셜 알림 구독 — apps/notifier가 소유하는 도메인이에요 (봇은 웹훅 생성 시점에만 관여).
+// 감지된 이벤트(YT WebSub·TW EventSub 콜백, 치지직 live-status 폴링)는 저장된 웹훅으로
+// 봇을 거치지 않고 직접 POST 돼요. 계약은 packages/utils/src/social.ts.
+model SocialSubscription {
+  id               String    @id @default(uuid())
+  guildId          String
+  /// 플랫폼 — 'youtube' | 'chzzk' | 'twitch' (social.ts socialPlatformSchema)
+  platform         String
+  /// 플랫폼별 채널 식별자 — YT 채널ID(UC...) / 치지직 채널ID(32-hex) / Twitch 사용자ID
+  sourcePlatformId String
+  /// 표시용 채널 이름 — 임베드 author와 대시보드 라벨로 써요
+  sourceName       String
+  /// 알림을 받을 디스코드 채널 ID
+  targetChannelId  String
+  /// 봇이 생성한 웹훅 식별자 — 전송은 webhookId+token 조합 URL로 POST해요
+  webhookId        String
+  /// 웹훅 token — 민감정보: 대시보드 응답에서는 마스킹해요
+  webhookToken     String
+  /// content 커스텀 템플릿 — null이면 임베드만 전송. 변수 {title} {url} {author}, 멘션 <#채널ID> <@&역할ID> (social.ts 계약)
+  messageTemplate  String?
+  /// 배달 상태 — 'active' | 'failed' | 'disabled'. 연속 5회 실패 또는 웹훅 404/410이면 failed
+  status           String    @default("active")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([guildId, platform, sourcePlatformId, targetChannelId])
+  @@index([platform, sourcePlatformId])
+}
+
+// 소셜 이벤트 배달 이력 — (platform, contentId)로 중복 알림을 막는 진실 원천이에요.
+// WebSub/EventSub 중복 콜백, 폴링·RSS 감사 경합, 재시작 후 재전송을 전부 여기서 방어해요.
+model SocialEventLog {
+  id          String   @id @default(uuid())
+  /// 이벤트 플랫폼 — 'youtube' | 'chzzk' | 'twitch'
+  platform    String
+  /// 플랫폼별 콘텐츠 식별자 — YT 영상ID / 치지직 liveID / Twitch 방송ID
+  contentId   String
+  /// 정규화 이벤트 스냅샷 — social.ts socialEventSchema
+  payload     Json
+  deliveredAt DateTime @default(now())
+
+  @@unique([platform, contentId])
+  @@index([deliveredAt])
+}
+

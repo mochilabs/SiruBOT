@@ -139,3 +139,15 @@ export const PLAYER_WEB_RESPONSE_CHANNEL = 'sirubot:player-web:response';
  */
 export const JTC_SETUP_REQUEST_CHANNEL = 'sirubot:jtc-setup:request';
 export const JTC_SETUP_RESPONSE_CHANNEL = 'sirubot:jtc-setup:response';
+
+/**
+ * 소셜 알림 웹훅 생성 request/reply 브로드캐스트 — 대시보드 구독 추가 시점에만 일어나요.
+ * 웹훅 생성은 Manage Webhooks 권한이 필요한데 봇만 갖고 있어요 (유저 OAuth 토큰으로는 불가).
+ * notifier가 구독 생성 중 REQUEST 채널로 퍼블리시하면 해당 길드를 보유한 봇 프로세스가
+ * guild.channels.createWebhook()으로 만들어 RESPONSE 채널로 응답하고, notifier 웹훅 생성 허브가
+ * requestId로 상관(타임아웃 포함)해 구독 저장을 마저 해요.
+ *
+ * 페이로드: socialWebhookCreateRequestSchema / socialWebhookCreateResponseSchema (social.ts)
+ */
+export const SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL = 'sirubot:social:webhook-create:request';
+export const SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL = 'sirubot:social:webhook-create:response';
