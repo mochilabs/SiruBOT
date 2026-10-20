@@ -1,12 +1,13 @@
 name: Beta Docker Image
 
-# beta 및 feat/** 브랜치 push마다 빌드. 매 커밋 해시 태그 + 이동 태그 발행.
-#   beta : beta, beta-<sha> / feat 브랜치 : <branch-slug>, <branch-slug>-<sha>
+# beta 브랜치 push마다 빌드. 매 커밋 해시 태그 + 이동 태그 발행.
+#   beta : beta, beta-<sha>
+# PR(feat/**) 브랜치에서는 이미지를 빌드하지 않아요 — lint.yml의 타입체크(lint/typecheck/test)만 돌아요.
 # 코드와 무관한 변경(문서 등)은 paths 필터에서 제외되어 빌드를 건너뛴다.
 # 변경된 앱의 이미지만 빌드한다 (공유 패키지/Dockerfile 변경 시 전체 빌드).
 on:
   push:
-    branches: [beta, 'feat/**']
+    branches: [beta]
     paths:
       - 'apps/**'
       - 'packages/**'
