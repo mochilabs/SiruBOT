@@ -1,0 +1,26 @@
+{
+    "name": "@sirubot/notifier",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "lint": "prettier --check \"src/**/*.ts\"",
+        "lint:fix": "prettier --write \"src/**/*.ts\"",
+        "test": "vitest run --passWithNoTests --config ../../vitest.config.ts",
+        "typecheck": "tsc --noEmit",
+        "build": "tsup",
+        "watch": "tsup --watch",
+        "start": "node --enable-source-maps ."
+    },
+    "dependencies": {
+        "@prisma/adapter-pg": "^7.7.0",
+        "@redis/client": "^5.8.2",
+        "@sirubot/prisma": "*",
+        "@sirubot/utils": "*",
+        "fast-xml-parser": "^5.11.2",
+        "fastify": "^5.12.7",
+        "zod": "^4.1.11"
+    }
+}
