@@ -1,6 +1,6 @@
 # SiruBOT — Agent Instructions
 
-Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS); `packages/prisma|shardclient|utils`.
+Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS), `apps/storage` (Fastify 오브젝트 스토리지), `apps/notifier` (Fastify 소셜 알림 웹훅·스케줄러); `packages/prisma|shardclient|utils`.
 
 ## Branch & index rules
 
@@ -57,7 +57,7 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 
 - Lint differs per package: bot/shardmanager/packages = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
 - Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the **root `vitest.config.ts`** — every workspace test script runs with `--config ../../vitest.config.ts`, so `@sirubot/utils` (and subpaths like `@sirubot/utils/redisEnvelope`) resolve to **source** via aliases. Tests therefore run without building `packages/utils` dist: raw `vitest` runs can never see a stale dist artifact. Per-workspace: `yarn workspace @sirubot/bot test` etc. (bot ×27 files, data-api ×15, utils ×13, dashboard ×21, storage ×6, shardclient ×1, shardmanager ×1 as of 2026-10-18; root-wide `yarn test` = 75 files / 537 tests); shardmanager/prisma have no tests yet.
+- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the **root `vitest.config.ts`** — every workspace test script runs with `--config ../../vitest.config.ts` (dashboard만 예외 — 자체 `vitest.config.ts`로 `*.test.tsx` 포함), so `@sirubot/utils` (and subpaths like `@sirubot/utils/redisEnvelope`) resolve to **source** via aliases. Tests therefore run without building `packages/utils` dist: raw `vitest` runs can never see a stale dist artifact. Per-workspace: `yarn workspace @sirubot/bot test` etc. (bot ×36 files, data-api ×17, utils ×15, dashboard ×21, storage ×6, notifier ×6, shardclient ×1, shardmanager ×1 as of 2026-10-20; root-wide `yarn test` = 103 files); prisma has no tests yet.
 - Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
 - Turbo `build` depends on `^typecheck ^generate ^build` (not `^lint:fix`) — building one app rebuilds deps.
 
