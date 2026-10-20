@@ -8,6 +8,7 @@
  * - 이 허브는 RESPONSE 채널을 구독해 requestId로 대기 중 요청을 resolve해요. 응답이 없으면
  *   (봇이 이 길드를 보유하지 않거나 미연결) 타임아웃으로 동일하게 실패해요.
  * - 봇이 error 메시지(한국어)를 실어도 그대로 전달해요 — 실제 실패 사유를 사용자에게 보여줄 수 있어요.
+ * - 대기 요청의 용량 상한·타임아웃 회수는 공용 PendingRequestPool(@sirubot/utils)에 위임해요.
  * - REQUEST 퍼블리시는 sharedCache 클라이언트로 해요 (guildData와 같은 방식).
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 guildDataHub와 같은 연결 라이프사이클을 따라요.
  */
@@ -18,6 +19,7 @@ import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@s
 import {
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
+	PendingRequestPool,
 	playerWebResponseSchema,
 	type PlayerVoiceContext,
 	type PlayerWebControlRequest,
@@ -48,100 +50,62 @@ export type PlayerWebResult =
 	| { ok: true; tracks?: PlayerWebTrack[]; voice?: PlayerVoiceContext }
 	| { ok: false; reason: PlayerWebFailureReason; message: string | null };
 
-interface PendingEntry {
-	requestId: string;
+/** 등록할 때 requestId에 묶어두는 요청 메타데이터 — 응답의 guildId·kind가 요청과 일치하는지 검증에 써요 */
+export interface PlayerWebPendingMeta {
 	guildId: string;
 	kind: PlayerWebKind;
-	resolve: (result: PlayerWebResult) => void;
-	timer: ReturnType<typeof setTimeout>;
 }
 
 /**
- * requestId별 대기 요청 레지스트리 — 용량 상한·타임아웃·응답 상관 로직만 담당해요.
- * Redis I/O와 연결 상태를 몰라서 순수하게 유닛 테스트할 수 있어요 (GuildDataPendingRequests와 같은 형태).
+ * RESPONSE 채널 raw 메시지를 대기 중 요청과 상관해요. requestId의 메타데이터와 guildId·kind가 일치하면
+ * 풀을 완료하고, 그 외(잘못된 본문, 대기 중이 아닌 requestId, 불일치)는 무시해요.
+ * Redis I/O와 연결 상태를 몰라요 — 풀과 메타데이터 맵을 인자로 받으므로 순수하게 유닛 테스트할 수 있어요.
  */
-export class PlayerWebPendingRequests {
-	private readonly entries = new Map<string, PendingEntry>();
-
-	public constructor(private readonly capacity: number) {}
-
-	public get size(): number {
-		return this.entries.size;
+export function correlatePlayerWebResponse(
+	raw: string,
+	pending: PendingRequestPool<PlayerWebResult>,
+	pendingMeta: Map<string, PlayerWebPendingMeta>
+): 'resolved' | 'unmatched' | 'malformed' {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		logger.debug(`Malformed player web response (not JSON): ${raw.slice(0, 120)}`);
+		return 'malformed';
 	}
-
-	/**
-	 * 요청을 등록하고 응답 대기 Promise를 반환해요. 용량이 가득 차면 등록하지 않고
-	 * 즉시 timeout 실패로 resolve해요 (봇 응답 없음과 동일 매핑 — 새 요청이 pending을 밀어내지 않아요).
-	 */
-	public register(requestId: string, guildId: string, kind: PlayerWebKind, timeoutMs: number): Promise<PlayerWebResult> {
-		if (this.entries.size >= this.capacity) {
-			logger.warn(`Player web pending limit reached (${this.capacity}), failing request ${requestId} immediately`);
-			return Promise.resolve({ ok: false, reason: 'timeout', message: null });
-		}
-		let resolve!: (result: PlayerWebResult) => void;
-		const promise = new Promise<PlayerWebResult>((res) => {
-			resolve = res;
-		});
-		this.entries.set(requestId, {
-			requestId,
-			guildId,
-			kind,
-			resolve,
-			timer: setTimeout(() => {
-				this.entries.delete(requestId);
-				resolve({ ok: false, reason: 'timeout', message: null });
-			}, timeoutMs)
-		});
-		return promise;
+	const result = playerWebResponseSchema.safeParse(parsed);
+	if (!result.success) {
+		logger.debug(`Malformed player web response: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
+		return 'malformed';
 	}
-
-	/**
-	 * RESPONSE 채널 raw 메시지를 상관해요. requestId로 대기 중 요청을 찾아 resolve하고,
-	 * 그 외(잘못된 본문, 대기 중이 아닌 requestId, guildId·kind 불일치)는 무시해요.
-	 */
-	public handleRaw(raw: string): 'resolved' | 'unmatched' | 'malformed' {
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(raw);
-		} catch {
-			logger.debug(`Malformed player web response (not JSON): ${raw.slice(0, 120)}`);
-			return 'malformed';
-		}
-		const result = playerWebResponseSchema.safeParse(parsed);
-		if (!result.success) {
-			logger.debug(`Malformed player web response: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
-			return 'malformed';
-		}
-		const response = result.data;
-		const entry = this.entries.get(response.requestId);
-		if (!entry) return 'unmatched';
-		// requestId가 일치해도 guildId·kind가 다르면 왔던 응답 뒤에 다른 요청의 것이 섞인 경우 — resolve하지 않고 타임아웃으로 회수돼요.
-		if (response.guildId !== entry.guildId || response.kind !== entry.kind) {
-			logger.debug(`Ignored player web response ${response.requestId} — guildId/kind mismatch`);
-			return 'unmatched';
-		}
-		clearTimeout(entry.timer);
-		this.entries.delete(response.requestId);
-		if (response.error) {
-			// 봇이 검증 실패(음성 미접속·권한 없음·노드 없음 등)를 한국어로 실어 보낸 경우 — 실제 사유를 그대로 전달해요.
-			entry.resolve({ ok: false, reason: 'bot_error', message: response.error });
-			return 'resolved';
-		}
-		entry.resolve({ ok: true, tracks: response.tracks, voice: response.voice });
+	const response = result.data;
+	const meta = pendingMeta.get(response.requestId);
+	if (!meta) return 'unmatched';
+	// requestId가 일치해도 guildId·kind가 다르면 왔던 응답 뒤에 다른 요청의 것이 섞인 경우 — resolve하지 않고 타임아웃으로 회수돼요.
+	if (response.guildId !== meta.guildId || response.kind !== meta.kind) {
+		logger.debug(`Ignored player web response ${response.requestId} — guildId/kind mismatch`);
+		return 'unmatched';
+	}
+	pendingMeta.delete(response.requestId);
+	if (response.error) {
+		// 봇이 검증 실패(음성 미접속·권한 없음·노드 없음 등)를 한국어로 실어 보낸 경우 — 실제 사유를 그대로 전달해요.
+		pending.resolve(response.requestId, { ok: false, reason: 'bot_error', message: response.error });
 		return 'resolved';
 	}
-
-	/** publish 실패 등 응답이 절대 오지 않게 된 요청을 즉시 실패로 정리해요. */
-	public fail(requestId: string, reason: PlayerWebFailureReason): void {
-		const entry = this.entries.get(requestId);
-		if (!entry) return;
-		clearTimeout(entry.timer);
-		this.entries.delete(requestId);
-		entry.resolve({ ok: false, reason, message: null });
-	}
+	pending.resolve(response.requestId, { ok: true, tracks: response.tracks, voice: response.voice });
+	return 'resolved';
 }
 
-const pending = new PlayerWebPendingRequests(PENDING_LIMIT);
+/** requestId별 대기 요청 메타데이터 — 타임아웃 회수(onTimeout)와 상관 완료(correlate)에서 함께 정리해 누수를 막아요 */
+const pendingMeta = new Map<string, PlayerWebPendingMeta>();
+
+/** 동시 대기 요청 상한·타임아웃 회수는 공용 풀에 위임해요 — 봇 응답 없음과 타임아웃은 같은 실패로 매핑해요 */
+const pending = new PendingRequestPool<PlayerWebResult>({
+	capacity: PENDING_LIMIT,
+	logger,
+	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
+	onTimeout: (requestId) => pendingMeta.delete(requestId)
+});
 
 /** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 없으면 서명 없는 구버전 모드. */
 const redisSigningKey = resolveRedisSigningKey(process.env);
@@ -157,7 +121,7 @@ const subscriber = new HubSubscriber({
 			logger.warn('Rejected player web response with invalid signature');
 			return;
 		}
-		pending.handleRaw(body);
+		correlatePlayerWebResponse(body, pending, pendingMeta);
 	},
 	logger
 });
@@ -188,11 +152,16 @@ export async function requestPlayerWeb(payload: PlayerWebAnyRequest): Promise<Pl
 	if (!client) {
 		return { ok: false, reason: 'redis_unavailable', message: null };
 	}
-	const promise = pending.register(payload.requestId, payload.guildId, payload.kind, KIND_TIMEOUT_MS[payload.kind]);
+	// 용량 초과 등 즉시 실패 경로에서도 onTimeout이 메타데이터를 정리할 수 있게 register 전에 심어요
+	pendingMeta.set(payload.requestId, { guildId: payload.guildId, kind: payload.kind });
+	const promise = pending.register(payload.requestId, KIND_TIMEOUT_MS[payload.kind]);
 	try {
 		await client.publish(PLAYER_WEB_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, payload));
 	} catch (error) {
-		pending.fail(payload.requestId, 'redis_unavailable');
+		// publish 실패 — 응답이 절대 오지 않으니 즉시 실패로 정리해요
+		if (pending.fail(payload.requestId, { ok: false, reason: 'redis_unavailable', message: null })) {
+			pendingMeta.delete(payload.requestId);
+		}
 		logger.warn(
 			`Player web request publish failed (${payload.guildId}, kind ${payload.kind}): ${error instanceof Error ? error.message : String(error)}`
 		);

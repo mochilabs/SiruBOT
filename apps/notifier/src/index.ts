@@ -22,7 +22,7 @@ async function main(): Promise<void> {
 	await redis.connect(env.REDIS_URL);
 
 	const dispatcher = new SocialDispatcher({ getDb: () => db, redis });
-	const hub = new SocialWebhookHub(redis, resolveRedisSigningKey(process.env));
+	const hub = new SocialWebhookHub(redis, resolveRedisSigningKey(process.env), env.REDIS_URL);
 	// 트위치 클라이언트는 login 해석 라우트가 쓸 수 있게 푸시 활성과 무관하게 만들어요.
 	const twitchClient =
 		env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET

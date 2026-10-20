@@ -42,6 +42,11 @@ export class ManagedRedisSubscriber {
 		this.maxDelay = options.reconnectMaxDelayMs ?? 60_000;
 	}
 
+	/** 연결+전체 채널 구독 성공 후 연결 종료('end') 전까지 true예요 — 요청 시점 가용성 판단용 (소켓이 아니라 구독 완료 기준) */
+	public get isSubscribed(): boolean {
+		return this.subscriber !== null;
+	}
+
 	/** 시작 — 실패해도 throw하지 않아요 */
 	public async start(): Promise<void> {
 		this.stopped = false;

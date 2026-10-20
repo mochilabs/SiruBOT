@@ -1,17 +1,48 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { JtcSetupPendingRequests } from './jtcSetupHub.ts';
+import { PendingRequestPool } from '@sirubot/utils';
+import { correlateJtcSetupResponse, type JtcSetupFailureReason, type JtcSetupPendingMeta, type JtcSetupResult } from './jtcSetupHub.ts';
 
 const REQUEST_ID = 'c9d3a1b2-4e5f-4a6b-8c7d-2b1e3f4a5c61';
 const OTHER_REQUEST_ID = 'a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c51';
 const GUILD_ID = '123456789012345678';
 
-describe('JtcSetupPendingRequests', () => {
+/**
+ * 허브의 requestJtcSetup()과 같은 조립을 테스트용으로 만들어요 —
+ * 메타데이터를 register 전에 심고, 상관은 correlateJtcSetupResponse가 담당해요.
+ */
+function makeRegistry(capacity = 10) {
+	const pendingMeta = new Map<string, JtcSetupPendingMeta>();
+	const pending = new PendingRequestPool<JtcSetupResult>({
+		capacity,
+		timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
+		onTimeout: (requestId) => pendingMeta.delete(requestId)
+	});
+	return {
+		get size() {
+			return pending.size;
+		},
+		register(requestId: string, guildId: string, timeoutMs: number) {
+			pendingMeta.set(requestId, { guildId });
+			return pending.register(requestId, timeoutMs);
+		},
+		handleRaw(raw: string) {
+			return correlateJtcSetupResponse(raw, pending, pendingMeta);
+		},
+		fail(requestId: string, reason: JtcSetupFailureReason) {
+			if (pending.fail(requestId, { ok: false, reason, message: null })) {
+				pendingMeta.delete(requestId);
+			}
+		}
+	};
+}
+
+describe('jtcSetupHub pending correlation', () => {
 	afterEach(() => {
 		vi.useRealTimers();
 	});
 
 	it('fails a new request immediately without registering when the pending limit is reached', async () => {
-		const registry = new JtcSetupPendingRequests(1);
+		const registry = makeRegistry(1);
 		const first = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 		expect(registry.size).toBe(1);
 
@@ -30,7 +61,7 @@ describe('JtcSetupPendingRequests', () => {
 
 	it('resolves pending requests as timeout when no response arrives within timeoutMs', async () => {
 		vi.useFakeTimers();
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'timeout', message: null });
 		await vi.advanceTimersByTimeAsync(10_000);
@@ -41,7 +72,7 @@ describe('JtcSetupPendingRequests', () => {
 
 	it('resolves a matching response with the marker channel id before timeoutMs', async () => {
 		vi.useFakeTimers();
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 		const assertion = expect(promise).resolves.toEqual({ ok: true, markerChannelId: '0192837465f1e2d3c4' });
 
@@ -56,7 +87,7 @@ describe('JtcSetupPendingRequests', () => {
 
 	it('carries the bot error message back as a bot_error failure', async () => {
 		vi.useFakeTimers();
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 		const assertion = expect(promise).resolves.toEqual({ ok: false, reason: 'bot_error', message: '카테고리 채널만 선택할 수 있어요.' });
 
@@ -68,7 +99,7 @@ describe('JtcSetupPendingRequests', () => {
 	});
 
 	it('leaves unexpired requests pending when the schema rejects the payload', () => {
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		registry.register(REQUEST_ID, GUILD_ID, 10_000);
 
 		expect(registry.handleRaw('not-json')).toBe('malformed');
@@ -79,7 +110,7 @@ describe('JtcSetupPendingRequests', () => {
 
 	it('ignores responses whose guildId does not match the request', async () => {
 		vi.useFakeTimers();
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 
 		expect(registry.handleRaw(JSON.stringify({ requestId: REQUEST_ID, guildId: '999999999999999999', markerChannelId: 'x' }))).toBe('unmatched');
@@ -91,7 +122,7 @@ describe('JtcSetupPendingRequests', () => {
 	});
 
 	it('resolves by requestId and treats later responses to the same id as unmatched', async () => {
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 		const assertion = expect(promise).resolves.toEqual({ ok: true, markerChannelId: '0192837465f1' });
 
@@ -103,7 +134,7 @@ describe('JtcSetupPendingRequests', () => {
 	});
 
 	it('fail() resolves a pending request immediately (publish failure path)', async () => {
-		const registry = new JtcSetupPendingRequests(10);
+		const registry = makeRegistry();
 		const promise = registry.register(REQUEST_ID, GUILD_ID, 10_000);
 		registry.fail(REQUEST_ID, 'redis_unavailable');
 		expect(registry.size).toBe(0);
