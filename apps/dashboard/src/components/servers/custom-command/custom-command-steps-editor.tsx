@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
 
 import { CustomCommandDesigner } from "./custom-command-designer";
+import { useListEditor } from "./use-list-editor";
 
 export type EditorStep = CustomCommandStep;
 /** if 서브 스텝(then/else)에 들어갈 수 있는 타입 — 중첩 if는 없어요 */
@@ -110,22 +111,12 @@ export function StepsEditor({
 }: StepsEditorProps) {
 	const limit = nested ? CUSTOM_COMMAND_IF_MAX_SUB_STEPS : 20;
 
-	const updateStep = (index: number, next: EditorStep) => {
-		onChange(steps.map((step, i) => (i === index ? next : step)));
-	};
-
-	const moveStep = (index: number, delta: -1 | 1) => {
-		const target = index + delta;
-		if (target < 0 || target >= steps.length) return;
-		const next = [...steps];
-		const [moved] = next.splice(index, 1);
-		next.splice(target, 0, moved!);
-		onChange(next);
-	};
-
-	const removeStep = (index: number) => {
-		onChange(steps.filter((_, i) => i !== index));
-	};
+	// 목록 조작(수정·이동·삭제)은 공용 훅 — 디자이너 구성 요소 편집과 같은 동작이에요
+	const {
+		updateItem: updateStep,
+		moveItem: moveStep,
+		removeItem: removeStep,
+	} = useListEditor(steps, onChange);
 
 	const typeOptions = nested
 		? STEP_TYPE_OPTIONS.filter((option) => option.value !== "if")

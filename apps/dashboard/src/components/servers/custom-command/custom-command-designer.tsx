@@ -23,9 +23,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
-import { toError } from "@/lib/api-error";
 
-import { AssetPicker, uploadAssetFile } from "./asset-picker";
+import { AssetPicker } from "../asset-picker";
+
+import { useDesignUpload } from "./use-design-upload";
+import { useListEditor } from "./use-list-editor";
 
 const ACCENT_LABELS: Record<CustomCommandAccentColor, string> = {
 	blue: "파랑",
@@ -81,40 +83,20 @@ export function CustomCommandDesigner({
 	onChange,
 }: CustomCommandDesignerProps) {
 	const toast = useToast();
-	const singleFileInputRef = useRef<HTMLInputElement>(null);
-	const multiFileInputRef = useRef<HTMLInputElement>(null);
-	/** 숨김 파일 입력이 어느 아이템에 연결된지 기억해요. 업로드 결과를 여기에 반영해요 */
-	const uploadTargetRef = useRef<{ index: number; kind: "section" | "media" } | null>(null);
+	/** 에셋 선택 다이얼로그가 어느 아이템(단일/복수)에 연결됐는지 기억해요 */
 	const [pickerTarget, setPickerTarget] = useState<{ index: number; multiple: boolean } | null>(null);
-	const [uploading, setUploading] = useState(false);
 
 	// 업로드가 끝나고 반영할 때 이미 다른 편집이 있었으면 덮어쓰지 않도록 최신 design을 비춰봐요
 	const designRef = useRef(design);
 	designRef.current = design;
 
-	const updateItem = (index: number, next: CustomCommandDesignItem) => {
-		const current = designRef.current;
-		onChange({
-			...current,
-			items: current.items.map((item, i) => (i === index ? next : item)),
-		});
-	};
+	// 목록 조작(수정·이동·삭제)은 공용 훅 — 스텝 조립과 같은 동작이에요
+	const { updateItem, moveItem, removeItem } = useListEditor(design.items, (items) =>
+		onChange({ ...designRef.current, items }),
+	);
 
 	const changeKind = (index: number, kind: CustomCommandDesignItem["kind"]) => {
 		updateItem(index, createDesignItem(kind));
-	};
-
-	const moveItem = (index: number, delta: -1 | 1) => {
-		const target = index + delta;
-		if (target < 0 || target >= design.items.length) return;
-		const items = [...design.items];
-		const [moved] = items.splice(index, 1);
-		items.splice(target, 0, moved!);
-		onChange({ ...design, items });
-	};
-
-	const removeItem = (index: number) => {
-		onChange({ ...design, items: design.items.filter((_, i) => i !== index) });
 	};
 
 	/** 업로드·피커 선택으로 받은 주소를 아이템 필드에 반영해요 (media는 10개까지) */
@@ -140,28 +122,8 @@ export function CustomCommandDesigner({
 		}
 	};
 
-	/** 숨김 파일 입력으로 받은 파일을 순차 업로드해 주소를 채워요 */
-	const handleUpload = async (files: FileList | null) => {
-		const target = uploadTargetRef.current;
-		const list = Array.from(files ?? []);
-		if (!target || list.length === 0) return;
-		setUploading(true);
-		try {
-			const uploadedUrls: string[] = [];
-			for (const file of list) {
-				try {
-					const asset = await uploadAssetFile(guildId, file);
-					uploadedUrls.push(asset.url);
-				} catch (err) {
-					const apiError = toError(err, `\`${file.name}\` 업로드에 실패했어요.`);
-					toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
-				}
-			}
-			if (uploadedUrls.length > 0) applyUrls(target.index, target.kind, uploadedUrls);
-		} finally {
-			setUploading(false);
-		}
-	};
+	// 숨김 파일 입력 업로드 — 파일을 에셋으로 올리고 돌아온 주소를 applyUrls로 채워요
+	const { uploading, singleFileInputRef, multiFileInputRef, requestUpload, handleUpload } = useDesignUpload(guildId, applyUrls);
 
 	return (
 		<div className="space-y-3 rounded-menu bg-muted/20 p-3">
@@ -299,10 +261,7 @@ export function CustomCommandDesigner({
 									icon={<Upload size={16} />}
 									loading={uploading}
 									disabled={saving}
-									onClick={() => {
-										uploadTargetRef.current = { index, kind: "section" };
-										singleFileInputRef.current?.click();
-									}}
+									onClick={() => requestUpload({ index, kind: "section" })}
 								>
 									업로드
 								</Button>
@@ -342,10 +301,7 @@ export function CustomCommandDesigner({
 									icon={<Upload size={16} />}
 									loading={uploading}
 									disabled={saving}
-									onClick={() => {
-										uploadTargetRef.current = { index, kind: "media" };
-										multiFileInputRef.current?.click();
-									}}
+									onClick={() => requestUpload({ index, kind: "media" })}
 								>
 									업로드
 								</Button>
@@ -376,7 +332,7 @@ export function CustomCommandDesigner({
 				구성 요소 추가
 			</Button>
 
-			{/* 업로드용 숨김 파일 입력. 어느 아이템에 연결됐는지는 uploadTargetRef로 알려요 */}
+			{/* 업로드용 숨김 파일 입력. 어느 아이템에 연결됐는지는 useDesignUpload가 기억해요 */}
 			<input
 				ref={singleFileInputRef}
 				type="file"

@@ -22,7 +22,7 @@ import type {
   CustomCommandSummary,
 } from "@/lib/custom-commands";
 
-import { CustomCommandEditor } from "./custom-command-editor";
+import { CustomCommandEditor } from "./custom-command/custom-command-editor";
 import {
   InfoBox,
   PanelError,
