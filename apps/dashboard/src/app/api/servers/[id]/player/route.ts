@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { authorizeGuildMember, deniedGuildMember } from "@/lib/api-guards";
+import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
+import { READ_RATE } from "@/lib/rate-limit";
 
 interface PlayerTrack {
   id: string;
@@ -19,84 +20,82 @@ interface RecentEntry extends PlayerTrack {
   requestedById: string | null;
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const authz = await authorizeGuildMember(id);
-  if (!authz.ok) return deniedGuildMember(authz);
+export const GET = createGuildApiHandler({
+  role: "member",
+  rate: READ_RATE,
+  key: "player-get",
+  handler: async ({ guildId }) => {
+    try {
+      const [recent, topTracks, totalPlays] = await Promise.all([
+        db.guildTrackHistory.findMany({
+          where: { guildId },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { track: true },
+        }),
+        db.guildTrackHistory.groupBy({
+          by: ["trackId"],
+          where: { guildId },
+          _count: { _all: true },
+          orderBy: { _count: { trackId: "desc" } },
+          take: 10,
+        }),
+        db.guildTrackHistory.count({ where: { guildId } }),
+      ]);
 
-  try {
-    const [recent, topTracks, totalPlays] = await Promise.all([
-      db.guildTrackHistory.findMany({
-        where: { guildId: id },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        include: { track: true },
-      }),
-      db.guildTrackHistory.groupBy({
-        by: ["trackId"],
-        where: { guildId: id },
-        _count: { _all: true },
-        orderBy: { _count: { trackId: "desc" } },
-        take: 10,
-      }),
-      db.guildTrackHistory.count({ where: { guildId: id } }),
-    ]);
-
-    const topTrackIds = topTracks.map((entry) => entry.trackId);
-    const topTrackRows = topTrackIds.length
-      ? await db.track.findMany({ where: { id: { in: topTrackIds } } })
-      : [];
-    const trackById = new Map(topTrackRows.map((track) => [track.id, track]));
-    const playCountById = new Map(
-      topTracks.map((entry) => [entry.trackId, entry._count._all]),
-    );
-
-    const recentTracks: RecentEntry[] = recent.map((entry) => ({
-      id: entry.track.id,
-      title: entry.track.title,
-      artist: entry.track.artist,
-      duration: entry.track.duration,
-      thumbnail: entry.track.thumbnail,
-      url: entry.track.url,
-      source: entry.track.source,
-      totalPlays: entry.track.totalPlays,
-      playedAt: entry.createdAt.toISOString(),
-      requestedById: entry.userId,
-    }));
-
-    const top: Array<PlayerTrack & { playCount: number }> = topTrackIds
-      .map((trackId) => {
-        const track = trackById.get(trackId);
-        if (!track) return null;
-        return {
-          id: track.id,
-          title: track.title,
-          artist: track.artist,
-          duration: track.duration,
-          thumbnail: track.thumbnail,
-          url: track.url,
-          source: track.source,
-          totalPlays: track.totalPlays,
-          playCount: playCountById.get(trackId) ?? 0,
-        };
-      })
-      .filter(
-        (entry): entry is PlayerTrack & { playCount: number } => entry !== null,
+      const topTrackIds = topTracks.map((entry) => entry.trackId);
+      const topTrackRows = topTrackIds.length
+        ? await db.track.findMany({ where: { id: { in: topTrackIds } } })
+        : [];
+      const trackById = new Map(topTrackRows.map((track) => [track.id, track]));
+      const playCountById = new Map(
+        topTracks.map((entry) => [entry.trackId, entry._count._all]),
       );
 
-    return NextResponse.json({
-      recent: recentTracks,
-      top,
-      totalPlays,
-    });
-  } catch (error) {
-    console.error("Failed to load player stats:", error);
-    return NextResponse.json(
-      { error: "요청을 처리하지 못했어요." },
-      { status: 500 },
-    );
-  }
-}
+      const recentTracks: RecentEntry[] = recent.map((entry) => ({
+        id: entry.track.id,
+        title: entry.track.title,
+        artist: entry.track.artist,
+        duration: entry.track.duration,
+        thumbnail: entry.track.thumbnail,
+        url: entry.track.url,
+        source: entry.track.source,
+        totalPlays: entry.track.totalPlays,
+        playedAt: entry.createdAt.toISOString(),
+        requestedById: entry.userId,
+      }));
+
+      const top: Array<PlayerTrack & { playCount: number }> = topTrackIds
+        .map((trackId) => {
+          const track = trackById.get(trackId);
+          if (!track) return null;
+          return {
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            duration: track.duration,
+            thumbnail: track.thumbnail,
+            url: track.url,
+            source: track.source,
+            totalPlays: track.totalPlays,
+            playCount: playCountById.get(trackId) ?? 0,
+          };
+        })
+        .filter(
+          (entry): entry is PlayerTrack & { playCount: number } => entry !== null,
+        );
+
+      return NextResponse.json({
+        recent: recentTracks,
+        top,
+        totalPlays,
+      });
+    } catch (error) {
+      console.error("Failed to load player stats:", error);
+      return NextResponse.json(
+        { error: "요청을 처리하지 못했어요." },
+        { status: 500 },
+      );
+    }
+  },
+});

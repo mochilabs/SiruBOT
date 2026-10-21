@@ -3,10 +3,10 @@ import { Prisma } from "@sirubot/prisma";
 import { type GreetingConfig,greetingConfigSchema, validateGreetingConfig } from "@sirubot/utils/memberGreeting";
 import { z } from "zod";
 
-import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
-import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 import type { GreetingPair } from "@/types/member-greeting";
 
@@ -34,58 +34,58 @@ function asJsonWrite(value: GreetingConfig | null | undefined) {
 	return value === null ? Prisma.DbNull : value;
 }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-	const { id } = await params;
-	const authz = await authorizeGuildManage(id);
-	if (!authz.ok) return deniedGuildManage(authz);
-	try {
-		return NextResponse.json(await readPair(id));
-	} catch (error) {
-		console.error(`Failed to load guild greeting (guild ${id}):`, error);
-		return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
-	}
-}
+export const GET = createGuildApiHandler({
+	role: "manage",
+	rate: READ_RATE,
+	key: "greeting-get",
+	handler: async ({ guildId }) => {
+		try {
+			return NextResponse.json(await readPair(guildId));
+		} catch (error) {
+			console.error(`Failed to load guild greeting (guild ${guildId}):`, error);
+			return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
+		}
+	},
+});
 
 /**
  * 인사 설정 저장 — 저장값이 없는 길드는 upsert로 Guild 행을 만들어요 (settings 라우트와 같은 방식).
  * null은 기본값 사용으로 저장해요 (봇도 Json 컬럼이 비어 있으면 자기 기본값으로 동작해요).
  * 저장 후 인사 설정 캐시 무효화를 봇 프로세스에 브로드캐스트해요 (settings 라우트와 같은 방식).
  */
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-	const { id } = await params;
-	const authz = await authorizeGuildManage(id);
-	if (!authz.ok) return deniedGuildManage(authz);
+export const PATCH = createGuildApiHandler({
+	role: "manage",
+	rate: WRITE_RATE,
+	key: "greeting-patch",
+	handler: async ({ guildId, request }) => {
+		try {
+			const body = await parseSettingBody(request, patchSchema, ALLOWED_KEYS);
+			if (!body.ok) return body.response;
 
-	const limited = await guardRateLimit(rateKey("greeting-patch", authz.userId, id), WRITE_RATE);
-	if (limited) return limited;
+			const data = body.data;
+			if ("welcome" in data || "goodbye" in data) {
+				const { welcome, goodbye } = data;
+				await db.guild.upsert({
+					where: { id: guildId },
+					create: { id: guildId, welcome: asJsonWrite(welcome), goodbye: asJsonWrite(goodbye) },
+					update: {
+						...(welcome !== undefined ? { welcome: asJsonWrite(welcome) } : {}),
+						...(goodbye !== undefined ? { goodbye: asJsonWrite(goodbye) } : {}),
+					},
+				});
+			}
 
-	try {
-		const body = await parseSettingBody(request, patchSchema, ALLOWED_KEYS);
-		if (!body.ok) return body.response;
+			const pair = await readPair(guildId);
 
-		const data = body.data;
-		if ("welcome" in data || "goodbye" in data) {
-			const { welcome, goodbye } = data;
-			await db.guild.upsert({
-				where: { id },
-				create: { id, welcome: asJsonWrite(welcome), goodbye: asJsonWrite(goodbye) },
-				update: {
-					...(welcome !== undefined ? { welcome: asJsonWrite(welcome) } : {}),
-					...(goodbye !== undefined ? { goodbye: asJsonWrite(goodbye) } : {}),
-				},
+			// 저장 성공 후 인사 설정 캐시 무효화 (fire-and-forget) — 실패해도 봇의 60초 TTL 폴백이 최신값을 읽어요.
+			notifyGuildSettingsChanged(guildId).catch((error) => {
+				console.warn(`Failed to notify guild settings change (guild ${guildId}):`, error);
 			});
+
+			return NextResponse.json(pair);
+		} catch (error) {
+			console.error(`Failed to update guild greeting (guild ${guildId}):`, error);
+			return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
 		}
-
-		const pair = await readPair(id);
-
-		// 저장 성공 후 인사 설정 캐시 무효화 (fire-and-forget) — 실패해도 봇의 60초 TTL 폴백이 최신값을 읽어요.
-		notifyGuildSettingsChanged(id).catch((error) => {
-			console.warn(`Failed to notify guild settings change (guild ${id}):`, error);
-		});
-
-		return NextResponse.json(pair);
-	} catch (error) {
-		console.error(`Failed to update guild greeting (guild ${id}):`, error);
-		return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
-	}
-}
+	},
+});

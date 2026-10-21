@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { createGuildApiHandler } from "@/lib/api-handler";
 import { forwardDataApiPost } from "@/lib/data-api";
-import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { WRITE_RATE } from "@/lib/rate-limit";
 import type { SocialSubscriptionResponse } from "@/types/social";
 
 const idSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -31,74 +31,57 @@ const UPDATE_FALLBACK = "알림 구독을 수정하지 못했어요.";
 const DELETE_FALLBACK = "알림 구독을 삭제하지 못했어요.";
 
 /** 알림 구독 수정 — 템플릿 교체·일시정지·재개. */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string; subId: string }> },
-) {
-  const { id, subId } = await params;
-  const authz = await authorizeGuildManage(id);
-  if (!authz.ok) return deniedGuildManage(authz);
+export const PATCH = createGuildApiHandler({
+  role: "manage",
+  rate: WRITE_RATE,
+  key: "social-subscriptions-update",
+  schema: updateSchema,
+  invalidMessage: "잘못된 요청입니다.",
+  handler: async ({ params, data }) => {
+    const { subId } = params;
+    if (!idSchema.safeParse(subId).success) {
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
 
-  const limited = await guardRateLimit(
-    rateKey("social-subscriptions-update", authz.userId, id),
-    WRITE_RATE,
-  );
-  if (limited) return limited;
-
-  if (!idSchema.safeParse(subId).success) {
-    return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
-  }
-
-  const parsed = updateSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
-  }
-
-  const result = await forwardDataApiPost<SocialSubscriptionResponse>(
-    `/v1/social/subscriptions/${subId}`,
-    parsed.data,
-    { method: "PATCH" },
-  );
-  if (!result.ok) {
-    return NextResponse.json(
-      { error: result.message ?? UPDATE_FALLBACK },
-      { status: result.message ? result.status : 502 },
+    const result = await forwardDataApiPost<SocialSubscriptionResponse>(
+      `/v1/social/subscriptions/${subId}`,
+      data,
+      { method: "PATCH" },
     );
-  }
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.message ?? UPDATE_FALLBACK },
+        { status: result.message ? result.status : 502 },
+      );
+    }
 
-  return NextResponse.json(result.data);
-}
+    return NextResponse.json(result.data);
+  },
+});
 
 /** 알림 구독 삭제 — notifier가 구독과 웹훅을 정리해요. */
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string; subId: string }> },
-) {
-  const { id, subId } = await params;
-  const authz = await authorizeGuildManage(id);
-  if (!authz.ok) return deniedGuildManage(authz);
+export const DELETE = createGuildApiHandler({
+  role: "manage",
+  rate: WRITE_RATE,
+  key: "social-subscriptions-delete",
+  handler: async ({ params }) => {
+    const { subId } = params;
+    if (!idSchema.safeParse(subId).success) {
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
 
-  const limited = await guardRateLimit(
-    rateKey("social-subscriptions-delete", authz.userId, id),
-    WRITE_RATE,
-  );
-  if (limited) return limited;
-
-  if (!idSchema.safeParse(subId).success) {
-    return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
-  }
-
-  const result = await forwardDataApiPost<{ ok: true }>(
-    `/v1/social/subscriptions/${subId}`,
-    undefined,
-    { method: "DELETE" },
-  );
-  if (!result.ok) {
-    return NextResponse.json(
-      { error: result.message ?? DELETE_FALLBACK },
-      { status: result.message ? result.status : 502 },
+    const result = await forwardDataApiPost<{ ok: true }>(
+      `/v1/social/subscriptions/${subId}`,
+      undefined,
+      { method: "DELETE" },
     );
-  }
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.message ?? DELETE_FALLBACK },
+        { status: result.message ? result.status : 502 },
+      );
+    }
 
-  return NextResponse.json({ ok: true });
-}
+    return NextResponse.json({ ok: true });
+  },
+});

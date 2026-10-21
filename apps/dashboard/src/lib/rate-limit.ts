@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { isRedisEnabled, redisEval } from "@/lib/redis";
 
-interface RateRule {
+export interface RateRule {
   limit: number;
   windowMs: number;
 }

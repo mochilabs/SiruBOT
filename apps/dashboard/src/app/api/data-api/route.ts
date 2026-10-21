@@ -1,23 +1,26 @@
 import { NextResponse } from "next/server";
 
-import { authorizeDashboardAdmin, deniedUser } from "@/lib/api-guards";
+import { createGuildApiHandler } from "@/lib/api-handler";
 import type { DataApiStatus } from "@/lib/data-api";
 import { fetchDataApi } from "@/lib/data-api";
+import { READ_RATE } from "@/lib/rate-limit";
 
-export async function GET() {
-  const authz = await authorizeDashboardAdmin();
-  if (!authz.ok) return deniedUser(authz);
-
-  try {
-    const data = await fetchDataApi<DataApiStatus>("/v1/status");
-    if (!data)
-      return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Failed to fetch data-api status:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
+export const GET = createGuildApiHandler({
+  role: "admin",
+  rate: READ_RATE,
+  key: "data-api-get",
+  handler: async () => {
+    try {
+      const data = await fetchDataApi<DataApiStatus>("/v1/status");
+      if (!data)
+        return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
+      return NextResponse.json(data);
+    } catch (error) {
+      console.error("Failed to fetch data-api status:", error);
+      return NextResponse.json(
+        { error: "Internal Server Error" },
+        { status: 500 },
+      );
+    }
+  },
+});
