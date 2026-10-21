@@ -4,13 +4,10 @@ import { useCallback, useState } from "react";
 import useSWR from "swr";
 
 import { toApiError, toError } from "@/lib/api-error";
+import { createApiFetcher } from "@/lib/swr";
 import type { BotProfileResponse } from "@/types/bot-profile";
 
-async function profileFetcher(url: string): Promise<BotProfileResponse> {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw await toApiError(res, "봇 프로필 상태를 불러오지 못했어요.");
-  return (await res.json()) as BotProfileResponse;
-}
+const profileFetcher = createApiFetcher<BotProfileResponse>("봇 프로필 상태를 불러오지 못했어요.");
 
 /**
  * 봇 프로필 상태 조회 + 저장 (multipart PATCH).
@@ -18,11 +15,7 @@ async function profileFetcher(url: string): Promise<BotProfileResponse> {
  * 적용된 상태를 받아요. 실패도 상태 퍼블리시로 돌아와 lastApply로 보여줘요.
  */
 export function useBotProfile(guildId: string) {
-  const { data, error, isLoading, mutate } = useSWR<BotProfileResponse>(
-    `/api/servers/${guildId}/bot-profile`,
-    profileFetcher,
-    { revalidateOnFocus: false },
-  );
+  const { data, error, isLoading, mutate } = useSWR<BotProfileResponse>(`/api/servers/${guildId}/bot-profile`, profileFetcher);
   const [saving, setSaving] = useState(false);
 
   const save = useCallback(

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_GREETINGS, type GreetingConfig, type GreetingKind } from "@sirubot/utils/memberGreeting";
 import useSWR from "swr";
 
-import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import type { GreetingPair, GreetingTestResult, GreetingTestStatus } from "@/types/member-greeting";
 
 type TestTicket = { kind: GreetingKind; requestId: string; at: number };
@@ -13,24 +13,17 @@ type TestTicket = { kind: GreetingKind; requestId: string; at: number };
 /** 봇 결과 폴링 상한 — 20초 내에 결과가 없으면 확인 실패로 정리해요 (전송 자체는 성공했을 수 있어요) */
 const TEST_TIMEOUT_MS = 20_000;
 
-async function greetingFetcher(url: string): Promise<GreetingPair> {
-	const res = await fetch(url, { cache: "no-store" });
-	if (!res.ok) throw await toApiError(res, "인사 설정을 불러오지 못했어요.");
-	return (await res.json()) as GreetingPair;
-}
-
-async function statusFetcher(url: string): Promise<GreetingTestStatus> {
-	const res = await fetch(url, { cache: "no-store" });
-	if (!res.ok) throw await toApiError(res, "테스트 전송 결과를 불러오지 못했어요.");
-	return (await res.json()) as GreetingTestStatus;
-}
+const greetingFetcher = createApiFetcher<GreetingPair>("인사 설정을 불러오지 못했어요.");
+const statusFetcher = createApiFetcher<GreetingTestStatus>("테스트 전송 결과를 불러오지 못했어요.");
 
 /**
  * 멤버 인사(환영/작별) 설정 편집 상태 — 종류별 draft, 저장, 테스트 전송과 결과 매칭을 한 곳에서 관리해요.
  * draft는 서버 값(없으면 공용 기본값)으로 채우고, 사용자가 건드린 종류는 백그라운드 재검증이 덮지 않아요.
  */
 export function useMemberGreeting(guildId: string) {
-	const { data: pair, error, isLoading, mutate } = useSWR<GreetingPair>(`/api/servers/${guildId}/greeting`, greetingFetcher);
+	const { data: pair, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<GreetingPair>(guildId, "/greeting", {
+		fetcher: greetingFetcher,
+	});
 
 	const [drafts, setDrafts] = useState<Record<GreetingKind, GreetingConfig | null>>({ welcome: null, goodbye: null });
 	/** 사용자 편집 마킹 — SWR이 도착해도 편집 중인 종류는 서버 값으로 되돌리지 않아요 */
@@ -44,12 +37,7 @@ export function useMemberGreeting(guildId: string) {
 		}));
 	}, [pair]);
 
-	// 세션 만료(401) — 재시도로는 해결되지 않으니 로그인 후 원래 화면으로 돌아오게 해요
-	const redirectToLogin = useSessionExpiredRedirect(
-		error instanceof ApiError && error.status === 401,
-		`/servers/${guildId}`,
-	);
-
+	// 세션 만료(401) 리다이렉트는 useGuildResource가 담당해요 — 저장·전송의 수동 401도 같은 redirectToLogin을 써요
 	const patchKind = useCallback((kind: GreetingKind, next: GreetingConfig) => {
 		touchedRef.current[kind] = true;
 		setDrafts((prev) => ({ ...prev, [kind]: next }));
@@ -60,7 +48,7 @@ export function useMemberGreeting(guildId: string) {
 		if (!drafts.welcome || !drafts.goodbye) return null;
 		setSaving(true);
 		try {
-			const res = await fetch(`/api/servers/${guildId}/greeting`, {
+			const res = await fetch(guildUrl, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ welcome: drafts.welcome, goodbye: drafts.goodbye }),
@@ -77,7 +65,7 @@ export function useMemberGreeting(guildId: string) {
 		} finally {
 			setSaving(false);
 		}
-	}, [drafts, guildId, mutate, redirectToLogin]);
+	}, [drafts, guildUrl, mutate, redirectToLogin]);
 
 	// 테스트 전송: 종류별 진행 티켓(requestId) → 결과 상태 폴링 → requestId 매칭으로 정리
 	const [tickets, setTickets] = useState<TestTicket[]>([]);
@@ -88,7 +76,7 @@ export function useMemberGreeting(guildId: string) {
 
 	const polling = tickets.length > 0;
 	const { data: status, mutate: mutateStatus } = useSWR<GreetingTestStatus>(
-		polling ? `/api/servers/${guildId}/greeting/status` : null,
+		polling ? `${guildUrl}/status` : null,
 		statusFetcher,
 		{ refreshInterval: 1_000 },
 	);
@@ -125,7 +113,7 @@ export function useMemberGreeting(guildId: string) {
 
 	const startTest = useCallback(
 		async (kind: GreetingKind): Promise<void> => {
-			const res = await fetch(`/api/servers/${guildId}/greeting/test`, {
+			const res = await fetch(`${guildUrl}/test`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ kind }),
@@ -145,7 +133,7 @@ export function useMemberGreeting(guildId: string) {
 			// dedupingInterval(5초)로 진행 요청 마커가 남는 걸 우회해요 (useGuildSettings 주석 참고)
 			void mutateStatus();
 		},
-		[guildId, mutateStatus, redirectToLogin],
+		[guildUrl, mutateStatus, redirectToLogin],
 	);
 
 	return {

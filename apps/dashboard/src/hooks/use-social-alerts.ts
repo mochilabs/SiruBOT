@@ -1,9 +1,7 @@
 "use client";
 
-import useSWR from "swr";
-
-import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
-import { ApiError, toApiError, toError } from "@/lib/api-error";
+import { toError } from "@/lib/api-error";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import type {
 	ChzzkChannelSummary,
 	ChzzkProfileResponse,
@@ -39,11 +37,7 @@ export interface SocialSubscriptionPatch {
 
 export type SocialActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-const listFetcher = async (url: string): Promise<SocialSubscriptionsResponse> => {
-	const res = await fetch(url, { cache: "no-store" });
-	if (!res.ok) throw toApiError(res, "알림 구독 목록을 불러오지 못했어요.");
-	return (await res.json()) as SocialSubscriptionsResponse;
-};
+const listFetcher = createApiFetcher<SocialSubscriptionsResponse>("알림 구독 목록을 불러오지 못했어요.");
 
 async function readError(res: Response, fallback: string): Promise<string> {
 	const payload = (await res.json().catch(() => null)) as { error?: unknown } | null;
@@ -52,20 +46,17 @@ async function readError(res: Response, fallback: string): Promise<string> {
 
 /** 소셜 알림 구독 CRUD + 플랫폼별 채널 해석 — data-api → notifier 프록시를 경유해요. */
 export function useSocialAlerts(guildId: string, enabled = true) {
-	const { data, error, isLoading, mutate } = useSWR<SocialSubscriptionsResponse>(
-		enabled ? `/api/servers/${guildId}/social/subscriptions` : null,
-		listFetcher,
-	);
-
-	// 세션 만료(401) — 다른 길드 패널과 같은 흐름으로 로그인 페이지로 보내요
-	useSessionExpiredRedirect(error instanceof ApiError && error.status === 401, `/servers/${guildId}`);
+	const { data, error, isLoading, mutate, guildUrl } = useGuildResource<SocialSubscriptionsResponse>(guildId, "/social/subscriptions", {
+		enabled,
+		fetcher: listFetcher,
+	});
 
 	const subscriptions: SocialSubscription[] | null = data?.subscriptions ?? null;
 
 	const createSubscription = async (
 		input: SocialSubscriptionInput,
 	): Promise<SocialActionResult<SocialSubscription>> => {
-		const res = await fetch(`/api/servers/${guildId}/social/subscriptions`, {
+		const res = await fetch(guildUrl, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(input),
@@ -82,7 +73,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 		subscriptionId: string,
 		patch: SocialSubscriptionPatch,
 	): Promise<SocialActionResult<SocialSubscription>> => {
-		const res = await fetch(`/api/servers/${guildId}/social/subscriptions/${subscriptionId}`, {
+		const res = await fetch(`${guildUrl}/${subscriptionId}`, {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(patch),
@@ -99,7 +90,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 	};
 
 	const removeSubscription = async (subscriptionId: string): Promise<SocialActionResult<null>> => {
-		const res = await fetch(`/api/servers/${guildId}/social/subscriptions/${subscriptionId}`, {
+		const res = await fetch(`${guildUrl}/${subscriptionId}`, {
 			method: "DELETE",
 		});
 		if (!res.ok) return { ok: false, error: await readError(res, "알림 구독을 삭제하지 못했어요.") };
