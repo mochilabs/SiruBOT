@@ -13,7 +13,7 @@ SiruBOT
   <a href="README.md">English</a> | <b>한국어</b>
 </p>
 
-Discord.js와 Lavalink를 사용하는 음악 봇입니다. 저장소에는 Next.js 대시보드, 데이터 API, 샤드 매니저도 Yarn workspaces 모노레포로 함께 구성돼 있습니다.
+Discord.js와 Lavalink를 사용하는 음악 봇입니다. 저장소에는 Next.js 대시보드, 데이터 API, 샤드 매니저, 스토리지, 알림 서비스(notifier)도 Yarn workspaces 모노레포로 함께 구성돼 있습니다.
 
 ---
 
@@ -103,13 +103,13 @@ TRANSLATION_MODEL=your_model_name
 DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
 ```
 
-봇은 `apps/bot/.env`에 `DATA_API_URL`을 설정했을 때만 게이트웨이를 사용합니다. 대시보드의 기본 주소는 `http://localhost:3002`입니다. data-api, 봇, 대시보드에 `DATA_API_AUTH_KEY` 또는 `AUTH_KEY`를 같은 값으로 설정하세요. 요청의 `Authorization` 헤더에는 `Bearer` 접두사 없이 키 원문을 전달합니다. 인증 없이 접근할 수 있는 경로는 `/api/health`뿐입니다.
+봇이 게이트웨이 기능을 쓰려면 `apps/bot/.env`의 `DATA_API_URL` 설정이 필요합니다(미설정 시 해당 기능 호출이 오류로 실패합니다). 대시보드의 기본 주소는 `http://localhost:3002`입니다. data-api, 봇, 대시보드에 `DATA_API_AUTH_KEY` 또는 `AUTH_KEY`를 같은 값으로 설정하세요. 요청의 `Authorization` 헤더에는 `Bearer` 접두사 없이 키 원문을 전달합니다. 인증 없이 접근할 수 있는 경로는 `/api/health`뿐입니다.
 
 ---
 
 ### 데이터 API 게이트웨이
 
-게이트웨이는 기본 포트 `3002`에서 실행됩니다. 봇에 `DATA_API_URL`이 없으면 봇이 외부 프로바이더를 직접 호출합니다.
+게이트웨이는 기본 포트 `3002`에서 실행됩니다. 외부 프로바이더 호출은 게이트웨이가 전담하며, 봇과 대시보드는 게이트웨이를 통해서만 접근합니다.
 
 | 엔드포인트 | 메서드 | 설명 | 캐시 TTL |
 |---|---|---|---|
@@ -129,7 +129,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
 - **운세 번역**: 매일 KST 06:50에 실행하며 Redis 캐시를 미리 채웁니다.
 - **기억 정리 (nightly pass)**: 매일 자정에 유저별 장기 기억을 LLM으로 정리합니다. `DATABASE_URL`과 번역 프로바이더가 모두 설정돼야 실행됩니다.
 
-봇은 `DATA_API_URL`을 설정했을 때만 게이트웨이를 사용합니다. 기본 포트는 `3002`이며, 미설정이면 봇이 외부 프로바이더를 직접 호출합니다.
+봇과 대시보드는 `DATA_API_URL`로 게이트웨이(기본 포트 `3002`)에 연결하며, 외부 프로바이더 호출은 게이트웨이가 전담합니다.
 
 ```bash
 # 개발 실행
@@ -184,13 +184,13 @@ turbo build --filter=@sirubot/utils
 
 ## 🐳 Docker 배포 가이드
 
-루트 Dockerfile은 봇, 대시보드, 샤드 매니저, 데이터 API 이미지를 각각 빌드합니다. `--target`으로 서비스를 선택하고 실행 시 해당 환경 변수를 전달하세요. 저장소의 Compose 파일은 일부 예시이며, 앱과 Redis/PostgreSQL 서비스 설정은 주석 처리돼 있습니다.
+루트 Dockerfile은 봇, 대시보드, 샤드 매니저, 데이터 API, 스토리지, 알림 서비스 이미지를 각각 빌드합니다. `--target`으로 서비스를 선택하고 실행 시 해당 환경 변수를 전달하세요. 저장소의 Compose 파일은 일부 예시이며, 앱과 Redis/PostgreSQL 서비스 설정은 주석 처리돼 있습니다.
 
 ```bash
 # 봇 이미지 빌드
 docker build --target bot -t sirubot-bot:latest .
 
-# 다른 target: dashboard, shardmanager, data-api
+# 다른 target: dashboard, shardmanager, data-api, storage, notifier
 ```
 
 컨테이너 실행 전에 PostgreSQL, Redis, Lavalink와 각 서비스 인증 정보를 준비하세요. 봇 이미지는 시작할 때 Prisma 마이그레이션을 실행합니다.
