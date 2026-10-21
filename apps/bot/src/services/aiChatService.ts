@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
-import { CATEGORIES, capMemorySections, hasMemoryEntries, parseMemoryMarkdown, renderMemoryMarkdown } from './aiMemoryService.ts';
+import { MEMORY_CATEGORIES, hasMemoryEntries, parseMemoryMarkdown, renderMemoryMarkdown } from '@sirubot/utils';
+import { capMemorySections } from './aiMemoryService.ts';
 import { executeAiTool, getAiToolDefinitions, getAiToolStatus, type AiToolContext, type AiToolDefinition } from './aiTools/index.ts';
 import type { AiMode } from './guildService.ts';
 
@@ -573,8 +574,8 @@ function stripCodeFences(text: string): string {
 }
 
 function countMarkdownEntries(markdown: string): number {
-	const sections = parseMemoryMarkdown(markdown);
-	return CATEGORIES.reduce((sum, category) => sum + sections[category].length, 0);
+	const sections = parseMemoryMarkdown(markdown, { strictSections: false });
+	return MEMORY_CATEGORIES.reduce((sum, category) => sum + sections[category].length, 0);
 }
 
 /** 정리 출력이 안전한지 검증해요 — 형식 붕괴·과도한 삭제 시 원본을 유지해요 */
@@ -594,7 +595,7 @@ async function tidyMemoryUser(userId: string): Promise<void> {
 	try {
 		const memory = container.aiMemoryService;
 		const original = await memory.readFile(userId);
-		if (!hasMemoryEntries(parseMemoryMarkdown(original))) {
+		if (!hasMemoryEntries(parseMemoryMarkdown(original, { strictSections: false }))) {
 			await memory.markTidied(userId);
 			return;
 		}
@@ -609,7 +610,7 @@ async function tidyMemoryUser(userId: string): Promise<void> {
 		const output = stripCodeFences(result.content);
 
 		if (tidyOutputValid(original, output)) {
-			const sections = parseMemoryMarkdown(output);
+			const sections = parseMemoryMarkdown(output, { strictSections: false });
 			capMemorySections(sections);
 			await memory.writeFile(userId, renderMemoryMarkdown(sections));
 		} else {

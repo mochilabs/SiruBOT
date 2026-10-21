@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { formatDuration } from "@sirubot/utils/time";
 import {
   ListMusic,
   Pause,
@@ -25,7 +26,6 @@ import { SkeletonLine } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
 import { toApiError, toError } from "@/lib/api-error";
-import { formatDuration } from "@/lib/format";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 import { playerErrorMessage } from "@/lib/player-error";
 import { prettySourceName } from "@/utils";

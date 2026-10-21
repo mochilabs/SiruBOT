@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { formatDuration } from "@sirubot/utils/time";
 import { ArrowLeft, Clock, History, Music2, Play, Trophy } from "lucide-react";
 import useSWR from "swr";
 
@@ -10,7 +11,7 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDuration, formatRelativeTimeFromISO as formatRelativeTime } from "@/lib/format";
+import { formatRelativeTimeFromISO as formatRelativeTime } from "@/lib/format";
 
 export interface PlayerTrack {
 	id: string;

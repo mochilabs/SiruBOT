@@ -1,14 +1,13 @@
 import { container } from '@sapphire/framework';
-
-/** 장기 기억 파일의 섹션 — 사실/선호/약속 */
-export type MemoryCategory = 'facts' | 'preferences' | 'commitments';
-
-export const CATEGORIES: MemoryCategory[] = ['facts', 'preferences', 'commitments'];
-const SECTION_TITLES: Record<MemoryCategory, string> = {
-	facts: 'Facts',
-	preferences: 'Preferences',
-	commitments: 'Commitments'
-};
+import {
+	MEMORY_CATEGORIES,
+	createEmptyMemorySections,
+	hasMemoryEntries,
+	parseMemoryMarkdown,
+	renderMemoryMarkdown,
+	type MemoryCategory,
+	type MemorySections
+} from '@sirubot/utils';
 
 /** 단기 기억 항목 — 최근 대화 하이라이트 */
 export type MemoryTurn = {
@@ -23,20 +22,11 @@ const SHORT_TERM_MAX = 8;
 const FACT_MAX_CHARS = 300;
 const PROMPT_TURN_CHARS = 160;
 
-/** 파일 안에 들어가는 인트로 주석 (MEMORY.md 본문의 일부) */
-const MEMORY_FILE_INTRO = '<!-- 시루가 모아둔 장기 기억: 오래가는 사실·선호·약속만. 일상 잡담은 남기지 않아요. -->';
-
 /** 읽을 때 앞에 붙는 안내 — 파일 본문에는 없는 주석이에요 (프롬프트에서만 제공) */
 export const MEMORY_FILE_ABOUT =
 	'> **이 파일에 대해.** 이것은 시루의 장기 기억 파일(MEMORY.md)이에요. 대화에서 얻은 오래가는 사실·선호·약속을 모아요. ' +
 	'시루는 대화를 시작할 때 읽고, 오래되면 정리해요. 시루의 이해를 반영한 것이므로 최신이 아닐 수 있어요. ' +
 	'직접 편집하거나 잊으라고 말할 수 있어요. **이 안내는 파일에 없는 주석이에요.**';
-
-type MemorySections = Record<MemoryCategory, string[]>;
-
-function emptySections(): MemorySections {
-	return { facts: [], preferences: [], commitments: [] };
-}
 
 function clip(text: string, max: number): string {
 	return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -49,42 +39,11 @@ function dateLabel(at: number): string {
 	return `${d.getFullYear()}-${month}-${day}`;
 }
 
-/** 빈 섹션 헤더도 유지한 채 파일 마크다운을 만들어요 */
-export function renderMemoryMarkdown(sections: MemorySections): string {
-	const lines = ['# MEMORY.md', '', MEMORY_FILE_INTRO];
-	for (const category of CATEGORIES) {
-		lines.push('', `## ${SECTION_TITLES[category]}`);
-		if (sections[category].length > 0) lines.push(...sections[category].map((entry) => `- ${entry}`));
-	}
-	return lines.join('\n');
-}
-
-/** 파일 마크다운을 섹션별 항목 목록으로 파싱해요 */
-export function parseMemoryMarkdown(markdown: string): MemorySections {
-	const sections = emptySections();
-	// 섹션 헤더 전의 불릿은 Facts로 보내요
-	let current: MemoryCategory = 'facts';
-	for (const rawLine of markdown.split('\n')) {
-		const line = rawLine.trim();
-		const heading = line.match(/^##\s+(Facts|Preferences|Commitments)\s*$/i);
-		if (heading) {
-			current = heading[1]!.toLowerCase() as MemoryCategory;
-			continue;
-		}
-		if (line.startsWith('- ')) sections[current].push(line.slice(2).trim());
-	}
-	return sections;
-}
-
-export function hasMemoryEntries(sections: MemorySections): boolean {
-	return CATEGORIES.some((category) => sections[category].length > 0);
-}
-
-/** 총 항목 수 상한 — 넘치면 오래된 것부터 Facts → Preferences → Commitments 순으로 잘라요 */
+/** 총 항목 수 상한 — 넘치면 오래된 것부터 Facts → Preferences → Commitments 순으로 잘라요 (봇 정책; data-api는 섹션별 상한) */
 export function capMemorySections(sections: MemorySections): void {
-	let total = CATEGORIES.reduce((sum, category) => sum + sections[category].length, 0);
+	let total = MEMORY_CATEGORIES.reduce((sum, category) => sum + sections[category].length, 0);
 	if (total <= LONG_TERM_MAX) return;
-	for (const category of CATEGORIES) {
+	for (const category of MEMORY_CATEGORIES) {
 		while (sections[category].length > 0 && total > LONG_TERM_MAX) {
 			sections[category].shift();
 			total--;
@@ -93,9 +52,9 @@ export function capMemorySections(sections: MemorySections): void {
 	}
 }
 
-/** 옛 구조({ id, text, at } 배열)를 Facts 섹션 마크다운으로 변환해요 */
+/** 옛 구조({ id, text, at } 배열)를 Facts 섹션 마크다운으로 변환해요 (봇 변환: 날짜 꼬리표·300자 클립 — data-api 변환과 계약이 달라요) */
 function legacyToMarkdown(facts: unknown[]): string {
-	const sections = emptySections();
+	const sections = createEmptyMemorySections();
 	for (const fact of facts) {
 		if (!fact || typeof fact !== 'object') continue;
 		const f = fact as { text?: unknown; at?: unknown };
@@ -132,7 +91,7 @@ export class AiMemoryService {
 			return stored;
 		}
 		if (Array.isArray(stored)) return legacyToMarkdown(stored);
-		return renderMemoryMarkdown(emptySections());
+		return renderMemoryMarkdown(createEmptyMemorySections());
 	}
 
 	public async writeFile(userId: string, markdown: string): Promise<void> {
@@ -147,18 +106,18 @@ export class AiMemoryService {
 	public async saveFact(userId: string, category: MemoryCategory, text: string): Promise<{ added: boolean; total: number }> {
 		const trimmed = clip(text.trim().replace(/\s+/g, ' '), FACT_MAX_CHARS);
 		if (!trimmed) throw new Error('저장할 내용이 없어요.');
-		if (!CATEGORIES.includes(category)) throw new Error('알 수 없는 기억 섹션이에요.');
+		if (!MEMORY_CATEGORIES.includes(category)) throw new Error('알 수 없는 기억 섹션이에요.');
 
-		const sections = parseMemoryMarkdown(await this.readFile(userId));
-		const duplicated = CATEGORIES.some((c) => sections[c].some((entry) => entry.toLowerCase() === trimmed.toLowerCase()));
+		const sections = parseMemoryMarkdown(await this.readFile(userId), { strictSections: false });
+		const duplicated = MEMORY_CATEGORIES.some((c) => sections[c].some((entry) => entry.toLowerCase() === trimmed.toLowerCase()));
 		if (duplicated) {
-			return { added: false, total: CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0) };
+			return { added: false, total: MEMORY_CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0) };
 		}
 
 		sections[category].push(trimmed);
 		capMemorySections(sections);
 		await this.writeFile(userId, renderMemoryMarkdown(sections));
-		return { added: true, total: CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0) };
+		return { added: true, total: MEMORY_CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0) };
 	}
 
 	/** 항목 텍스트 일부로 MEMORY.md에서 기억을 지워요. 일치하는 항목 모두 제거. */
@@ -166,9 +125,9 @@ export class AiMemoryService {
 		const needle = match.trim().toLowerCase();
 		if (!needle) throw new Error('지울 기억의 텍스트가 필요해요.');
 
-		const sections = parseMemoryMarkdown(await this.readFile(userId));
+		const sections = parseMemoryMarkdown(await this.readFile(userId), { strictSections: false });
 		const removed: string[] = [];
-		for (const category of CATEGORIES) {
+		for (const category of MEMORY_CATEGORIES) {
 			const kept: string[] = [];
 			for (const entry of sections[category]) {
 				if (entry.toLowerCase().includes(needle)) removed.push(entry);
@@ -208,8 +167,8 @@ export class AiMemoryService {
 	/** 저장된 장기 기억의 항목 수를 형태(파일/옛 배열) 상관없이 세어요 */
 	private countStoredEntries(stored: unknown): number {
 		if (typeof stored === 'string') {
-			const sections = parseMemoryMarkdown(stored);
-			return CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0);
+			const sections = parseMemoryMarkdown(stored, { strictSections: false });
+			return MEMORY_CATEGORIES.reduce((sum, c) => sum + sections[c].length, 0);
 		}
 		if (Array.isArray(stored)) return stored.filter((f) => f && typeof (f as { text?: unknown }).text === 'string').length;
 		return 0;
@@ -244,7 +203,7 @@ export class AiMemoryService {
 	public async buildPromptBlock(userId: string): Promise<string | null> {
 		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true } });
 		const file = this.storedFileToMarkdown(row?.longTerm);
-		const sections = parseMemoryMarkdown(file);
+		const sections = parseMemoryMarkdown(file, { strictSections: false });
 		const shortTerm = Array.isArray(row?.shortTerm) ? (row.shortTerm as MemoryTurn[]).filter((t) => t && typeof t.q === 'string') : [];
 
 		if (!hasMemoryEntries(sections) && shortTerm.length === 0) return null;

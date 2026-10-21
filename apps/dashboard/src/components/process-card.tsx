@@ -1,10 +1,11 @@
 "use client";
 
+import { formatUptime } from "@sirubot/utils/time";
 import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { formatMemory, formatRelativeTime, formatUptime } from "@/lib/format";
+import { formatMemory, formatRelativeTime } from "@/lib/format";
 import type { ShardProcessInfo } from "@/lib/shard-api";
 
 function ProcessStatusBadge({ status }: { status: string }) {

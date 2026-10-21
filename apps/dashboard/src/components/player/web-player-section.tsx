@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { formatDuration } from "@sirubot/utils/time";
 import { ListMusic, Loader2, Play, Search, X } from "lucide-react";
 import useSWR from "swr";
 
@@ -15,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
-import { formatDuration } from "@/lib/format";
 import { playerErrorMessage } from "@/lib/player-error";
 import { prettySourceName } from "@/utils";
 
