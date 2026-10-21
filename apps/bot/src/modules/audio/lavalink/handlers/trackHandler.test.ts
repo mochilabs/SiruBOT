@@ -3,10 +3,27 @@ import { container } from '@sapphire/framework';
 import type { Track, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
 
-const { getSubLogger, reportPlaybackEvent, playerNotifierUpdate, mixerService } = vi.hoisted(() => ({
+const {
+	getSubLogger,
+	reportPlaybackEvent,
+	playerNotifierUpdate,
+	publishPlayerState,
+	publishPlayerEnded,
+	clearPlayerStateTracker,
+	getInFlightRelatedFetch,
+	queueRelatedUpfront,
+	fetchYouTubeChapters,
+	mixerService
+} = vi.hoisted(() => ({
 	getSubLogger: vi.fn(),
 	reportPlaybackEvent: vi.fn(),
 	playerNotifierUpdate: vi.fn(),
+	publishPlayerState: vi.fn(),
+	publishPlayerEnded: vi.fn(),
+	clearPlayerStateTracker: vi.fn(),
+	getInFlightRelatedFetch: vi.fn(() => undefined),
+	queueRelatedUpfront: vi.fn(async () => undefined),
+	fetchYouTubeChapters: vi.fn(async () => []),
 	mixerService: {
 		markUnmanaged: vi.fn(),
 		isPreloaded: vi.fn(() => false),
@@ -22,6 +39,13 @@ vi.mock('@sapphire/framework', () => ({
 	container: { logger: { getSubLogger }, playerNotifier: { updateController: playerNotifierUpdate }, mixerService }
 }));
 vi.mock('../../../../services/playbackReporter.ts', () => ({ reportPlaybackEvent }));
+vi.mock('../playerStatePublisher.ts', () => ({ publishPlayerState, publishPlayerEnded, clearPlayerStateTracker }));
+vi.mock('../autoPlayRelated.ts', () => ({ getInFlightRelatedFetch, queueRelatedUpfront }));
+vi.mock('../../../../services/dataApiClient.ts', () => ({ fetchYouTubeChapters }));
+vi.mock('@sentry/node', () => ({
+	withScope: vi.fn((callback: (scope: { setTag: (key: string, value: string) => void }) => void) => callback({ setTag: vi.fn() })),
+	captureException: vi.fn()
+}));
 
 function makeHandler() {
 	const buildTrack = vi.fn((payload: { encoded: string; info?: Record<string, unknown> }) => ({
@@ -31,7 +55,7 @@ function makeHandler() {
 	}));
 	const manager = { on: vi.fn(), utils: { buildTrack }, removeAllListeners: vi.fn() };
 	const handler = new TrackHandler(manager as never);
-	return { handler: handler as unknown as { [key: string]: any }, buildTrack };
+	return { handler: handler as unknown as { [key: string]: any }, buildTrack, manager };
 }
 
 function track(encoded: string, identifier?: string): Track {
@@ -392,5 +416,424 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 
 		expect(consumeOverlapAbort).not.toHaveBeenCalled();
 		expect(handler.startClientOwnedTrack).toHaveBeenCalledWith(player);
+	});
+});
+
+/* ─── 공개 계약 고정: 이벤트 흐름 전체 경로 (start→end→advance, 실패/종료/타이머 정리) ─── */
+
+function ttsTrack(encoded: string, identifier?: string): Track {
+	return { encoded, info: { identifier, title: `title-${encoded}` }, requester: { id: 'chat_tts_clip' } } as unknown as Track;
+}
+
+function fullPlayer(overrides: Record<string, unknown> = {}) {
+	return {
+		guildId: 'g-1',
+		consecutiveErrors: 0,
+		playing: false,
+		paused: false,
+		textChannelId: 'tc-1',
+		chapters: [],
+		chaptersTrackIdentifier: null,
+		queue: { current: null, tracks: [] as unknown[], previous: [] as unknown[] },
+		transitionState: {
+			stopByCommand: false,
+			lastStartedEncoded: null as string | null,
+			preloadConsumedAt: null as number | null,
+			confirmedNowPlaying: null,
+			serverConsumedTrack: null
+		},
+		node: { fetchPlayer: vi.fn(async () => ({ track: null, paused: false })) },
+		play: vi.fn(async () => undefined),
+		stopPlaying: vi.fn(async () => undefined),
+		disconnect: vi.fn(async () => undefined),
+		...overrides
+	} as unknown as { [key: string]: any };
+}
+
+const channelSend = vi.fn(async (_payload: unknown) => undefined);
+/** 테스트별로 생성한 핸들러 — afterEach에서 cleanup해 남은 타이머가 다음 테스트를 오염시키지 않게 한다. */
+const handlerBin: Array<{ [key: string]: any }> = [];
+
+function makeTrackedHandler() {
+	const made = makeHandler();
+	handlerBin.push(made.handler);
+	return made;
+}
+
+function stubPlaybackContainer(mixerOverrides: Record<string, unknown> = {}) {
+	Object.assign(container, {
+		mixerService: {
+			takePreloadedIdentifier: vi.fn(() => null),
+			consumePreloaded: vi.fn(() => false),
+			consumeOverlapAbort: vi.fn(() => false),
+			isPreloaded: vi.fn(() => false),
+			ensureMixerFilter: vi.fn(async () => undefined),
+			preloadUpcoming: vi.fn(async () => true),
+			markUnmanaged: vi.fn(),
+			skip: vi.fn(async () => undefined),
+			clearNext: vi.fn(async () => undefined),
+			primeForPlay: vi.fn(async () => undefined),
+			...mixerOverrides
+		},
+		trackService: { increasePlays: vi.fn(async () => undefined), addHistory: vi.fn(async () => undefined) },
+		playerNotifier: {
+			updateController: playerNotifierUpdate,
+			onTrackStart: vi.fn(async () => undefined),
+			deleteController: vi.fn(async () => undefined)
+		},
+		chatTtsService: {
+			isTtsEnded: vi.fn(() => false),
+			drainSoloQueueToAnnounce: vi.fn(async () => undefined),
+			keepAliveForTts: vi.fn(async () => undefined),
+			clearGuild: vi.fn(),
+			clearSoloQueue: vi.fn(),
+			seedNextSoloClip: vi.fn(async () => false),
+			scrubTtsClips: vi.fn()
+		},
+		client: { channels: { cache: { get: vi.fn(() => ({ isSendable: () => true, send: channelSend })) } } }
+	});
+	return {
+		mixer: container.mixerService as unknown as { [key: string]: ReturnType<typeof vi.fn> },
+		tracks: container.trackService as unknown as { [key: string]: ReturnType<typeof vi.fn> },
+		notifier: container.playerNotifier as unknown as { [key: string]: ReturnType<typeof vi.fn> },
+		chatTts: container.chatTtsService as unknown as { [key: string]: ReturnType<typeof vi.fn> }
+	};
+}
+
+function resetSpies() {
+	getSubLogger.mockReturnValue(stubLogger);
+	reportPlaybackEvent.mockClear();
+	playerNotifierUpdate.mockClear();
+	publishPlayerState.mockClear();
+	publishPlayerEnded.mockClear();
+	clearPlayerStateTracker.mockClear();
+	queueRelatedUpfront.mockClear();
+	channelSend.mockClear();
+}
+
+function afterEachCleanup() {
+	for (const handler of handlerBin.splice(0)) handler.cleanup();
+	vi.useRealTimers();
+}
+
+describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
+	beforeEach(() => {
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('시작한 곡을 NOWPLAYING으로 확정하고 리포트·히스토리·컨트롤러 알림을 보낸다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer, tracks, notifier, chatTts } = stubPlaybackContainer();
+		const player = fullPlayer();
+		const started = track('a-enc', 'id-a');
+
+		await handler.handleTrackStart(player, started, startEvent('a-enc', 'id-a'));
+
+		expect(player.transitionState.confirmedNowPlaying).toBe(started);
+		expect(player.transitionState.serverConsumedTrack).toBeNull();
+		expect(player.transitionState.stopByCommand).toBe(false);
+		expect(player.transitionState.preloadConsumedAt).toBeNull();
+		expect(player.transitionState.lastStartedEncoded).toBe('a-enc');
+		expect(player.consecutiveErrors).toBe(0);
+		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', started);
+		expect(publishPlayerState).toHaveBeenCalledWith(player);
+		expect(mixer.ensureMixerFilter).toHaveBeenCalledWith(player);
+		expect(mixer.preloadUpcoming).toHaveBeenCalledWith(player);
+		expect(queueRelatedUpfront).not.toHaveBeenCalled();
+		expect(notifier.onTrackStart).toHaveBeenCalledWith(player);
+		expect(chatTts.drainSoloQueueToAnnounce).toHaveBeenCalledWith(player);
+		expect(tracks.increasePlays).toHaveBeenCalledWith(started);
+		await vi.waitFor(() => expect(tracks.addHistory).toHaveBeenCalledWith('g-1', started));
+	});
+
+	it('이전 전이에서 남은 watchdog과 advance-pending 타이머를 정리한다', async () => {
+		vi.useFakeTimers();
+		const { handler } = makeTrackedHandler();
+		stubPlaybackContainer();
+		const player = fullPlayer();
+		const started = track('a-enc', 'id-a');
+		// 이전 전이의 잔재: watchdog 1개 + advance-pending 1개
+		handler.armWatchdog(player);
+		handler.setAdvancePending('g-1');
+		expect(vi.getTimerCount()).toBe(2);
+
+		await handler.handleTrackStart(player, started, startEvent('a-enc', 'id-a'));
+
+		// 시작 확정이 둘을 지우고, 전이 확정 리커널(reconcile) 1개만 남는다
+		expect(vi.getTimerCount()).toBe(1);
+	});
+
+	it('TTS 클립 시작은 컨트롤러 알림과 히스토리 기록을 생략한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { tracks, notifier, chatTts } = stubPlaybackContainer();
+		const player = fullPlayer();
+		const clip = ttsTrack('tts-enc', 'id-t');
+
+		await handler.handleTrackStart(player, clip, startEvent('tts-enc', 'id-t'));
+
+		expect(player.transitionState.confirmedNowPlaying).toBe(clip);
+		expect(player.transitionState.lastStartedEncoded).toBe('tts-enc');
+		expect(notifier.onTrackStart).not.toHaveBeenCalled();
+		expect(chatTts.drainSoloQueueToAnnounce).not.toHaveBeenCalled();
+		expect(tracks.increasePlays).not.toHaveBeenCalled();
+		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', clip);
+	});
+});
+
+describe('start → end → advance (클라이언트 소유 전이)', () => {
+	beforeEach(() => {
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('비예열 길드에서 finished trackEnd가 clearNext → primeForPlay → play(noReplace)로 이어진다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.queue.current = track('b-enc', 'id-b');
+
+		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
+
+		await vi.waitFor(() => expect(player.play).toHaveBeenCalledWith({ noReplace: true }));
+		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_end', expect.anything(), { reason: 'finished' });
+		expect(mixer.clearNext).toHaveBeenCalledWith(player);
+		expect(mixer.primeForPlay).toHaveBeenCalledWith(player);
+	});
+});
+
+describe('handleTrackFailure (stuck/error 공통 복구)', () => {
+	beforeEach(() => {
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('중간 오류는 연속 오류를 누적하고 다음 곡으로 조용히 스킵한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.queue.tracks = [{}];
+
+		await handler.handleTrackStuck(player, track('c-enc', 'id-c'), {});
+
+		expect(player.consecutiveErrors).toBe(1);
+		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_stuck', expect.anything(), { consecutiveErrors: 1 });
+		expect(mixer.skip).toHaveBeenCalledWith(player);
+		expect(channelSend).not.toHaveBeenCalled();
+	});
+
+	it('연속 오류 상한에 도달하면 중단·알림·연결 해제하고 watchdog을 해제한다', async () => {
+		vi.useFakeTimers();
+		const { handler } = makeTrackedHandler();
+		const { mixer } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.consecutiveErrors = 2;
+		handler.armWatchdog(player);
+		expect(vi.getTimerCount()).toBe(1);
+
+		await handler.handleTrackError(player, track('c-enc', 'id-c'), {
+			exception: { severity: 'FAULT', message: 'boom', cause: '', causeStackTrace: '' },
+			error: ''
+		});
+
+		expect(player.consecutiveErrors).toBe(3);
+		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'playback_abort', expect.anything(), {
+			reason: 'max_consecutive_errors',
+			consecutiveErrors: 3
+		});
+		expect(channelSend).toHaveBeenCalledTimes(1);
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('연속 재생 오류');
+		expect(player.transitionState.stopByCommand).toBe(true);
+		expect(mixer.markUnmanaged).toHaveBeenCalledWith('g-1');
+		expect(player.stopPlaying).toHaveBeenCalled();
+		expect(player.disconnect).toHaveBeenCalled();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('TTS 클립 stuck은 알림·오류 누적 없이 조용히 스킵한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer } = stubPlaybackContainer();
+		const player = fullPlayer();
+
+		await handler.handleTrackStuck(player, ttsTrack('tts-enc', 'id-t'), {});
+
+		expect(mixer.skip).toHaveBeenCalledWith(player);
+		expect(player.consecutiveErrors).toBe(0);
+		expect(reportPlaybackEvent).not.toHaveBeenCalled();
+		expect(channelSend).not.toHaveBeenCalled();
+	});
+});
+
+describe('handleQueueEnd', () => {
+	beforeEach(() => {
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('큐가 정말 끝나면 컨트롤러를 지우고 모두 재생 완료 안내를 보낸다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { notifier, chatTts } = stubPlaybackContainer();
+		const player = fullPlayer();
+
+		await handler.handleQueueEnd(player, track('last-enc', 'id-l'), { reason: 'finished' });
+
+		expect(publishPlayerEnded).toHaveBeenCalledWith(player);
+		expect(notifier.deleteController).toHaveBeenCalledWith(player);
+		expect(channelSend).toHaveBeenCalledTimes(1);
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📭 대기열의 모든 곡을 재생했어요.');
+		expect(chatTts.keepAliveForTts).toHaveBeenCalledWith(player);
+	});
+
+	it('stopByCommand로 끝나면 완료 안내를 보내지 않는다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { notifier } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.transitionState.stopByCommand = true;
+
+		await handler.handleQueueEnd(player, track('last-enc', 'id-l'), { reason: 'stopped' });
+
+		expect(notifier.deleteController).toHaveBeenCalledWith(player);
+		expect(channelSend).not.toHaveBeenCalled();
+	});
+
+	it('서버 예열 슬롯이 남아 있으면 종료를 미루고 watchdog만 암한다', async () => {
+		vi.useFakeTimers();
+		const { handler } = makeTrackedHandler();
+		const { notifier } = stubPlaybackContainer({ isPreloaded: vi.fn(() => true) });
+		const player = fullPlayer();
+
+		await handler.handleQueueEnd(player, track('last-enc', 'id-l'), { reason: 'finished' });
+
+		expect(notifier.deleteController).not.toHaveBeenCalled();
+		expect(channelSend).not.toHaveBeenCalled();
+		expect(vi.getTimerCount()).toBe(1);
+	});
+
+	it('β 착시: 서버가 아직 재생 중이면 current를 복원하고 종료하지 않는다', async () => {
+		vi.useFakeTimers();
+		const { handler } = makeTrackedHandler();
+		const { notifier } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.node.fetchPlayer = vi.fn(async () => ({ track: { encoded: 'srv-enc', info: { identifier: 'id-srv' } }, paused: false }));
+
+		await handler.handleQueueEnd(player, track('old-enc', 'id-old'), { reason: 'finished' });
+
+		expect(player.queue.current).toEqual(expect.objectContaining({ encoded: 'srv-enc' }));
+		expect(player.transitionState.lastStartedEncoded).toBe('srv-enc');
+		expect(player.playing).toBe(true);
+		expect(notifier.deleteController).not.toHaveBeenCalled();
+		expect(channelSend).not.toHaveBeenCalled();
+		expect(playerNotifierUpdate).toHaveBeenCalledWith(player);
+		expect(vi.getTimerCount()).toBe(1);
+	});
+});
+
+describe('handlePlayerDestroy (타이머 정리)', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('arm된 watchdog/reconcile/advance-pending 타이머를 모두 해제하고 길드 상태를 정리한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer, chatTts } = stubPlaybackContainer();
+		const player = fullPlayer();
+		handler.armWatchdog(player);
+		handler.setAdvancePending('g-1');
+		handler.setLastStarted(player, track('a-enc', 'id-a'));
+		expect(vi.getTimerCount()).toBe(3);
+
+		await handler.handlePlayerDestroy(player);
+
+		expect(vi.getTimerCount()).toBe(0);
+		expect(mixer.markUnmanaged).toHaveBeenCalledWith('g-1');
+		expect(chatTts.clearGuild).toHaveBeenCalledWith('g-1');
+		expect(mixer.clearNext).toHaveBeenCalledWith(player);
+		expect(clearPlayerStateTracker).toHaveBeenCalledWith('g-1');
+		expect(player.transitionState.lastStartedEncoded).toBeNull();
+	});
+
+	it('destroy 이후 시간이 지나도 복구·리커널 콜백이 발화하지 않는다', async () => {
+		const { handler } = makeTrackedHandler();
+		stubPlaybackContainer();
+		const player = fullPlayer();
+		handler.armWatchdog(player);
+		handler.setAdvancePending('g-1');
+		handler.setLastStarted(player, track('a-enc', 'id-a'));
+
+		await handler.handlePlayerDestroy(player);
+		await vi.advanceTimersByTimeAsync(60_000);
+
+		expect(player.node.fetchPlayer).not.toHaveBeenCalled();
+		expect(playerNotifierUpdate).not.toHaveBeenCalled();
+	});
+});
+
+describe('cleanup()', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('등록한 리스너 6종을 해제하고 남은 타이머를 모두 지운다', () => {
+		const { handler, manager } = makeTrackedHandler();
+		const player = fullPlayer();
+		handler.armWatchdog(player);
+		handler.setAdvancePending('g-1');
+		handler.setLastStarted(player, track('a-enc', 'id-a'));
+		expect(vi.getTimerCount()).toBe(3);
+
+		handler.cleanup();
+
+		expect(vi.getTimerCount()).toBe(0);
+		for (const event of ['trackStart', 'trackEnd', 'trackStuck', 'trackError', 'queueEnd', 'playerDestroy']) {
+			expect(manager.removeAllListeners).toHaveBeenCalledWith(event);
+		}
+	});
+});
+
+describe('watchdog 복구 루프', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		resetSpies();
+		stubPlaybackContainer();
+	});
+	afterEach(afterEachCleanup);
+
+	it('전이 확인 타이머 만료 시 서버에 트랙이 없으면 current를 다시 재생한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { mixer } = stubPlaybackContainer();
+		const player = fullPlayer();
+		player.queue.current = track('c-enc', 'id-c');
+
+		handler.armWatchdog(player);
+		await vi.advanceTimersByTimeAsync(5_000);
+
+		expect(mixer.markUnmanaged).toHaveBeenCalledWith('g-1');
+		expect(mixer.clearNext).toHaveBeenCalledWith(player);
+		expect(mixer.primeForPlay).toHaveBeenCalledWith(player);
+		expect(player.play).toHaveBeenCalledWith({ noReplace: true });
+	});
+
+	it('복구할 곡이 없으면 종료로 확정한다', async () => {
+		const { handler } = makeTrackedHandler();
+		const { notifier } = stubPlaybackContainer();
+		const player = fullPlayer();
+
+		handler.armWatchdog(player);
+		await vi.advanceTimersByTimeAsync(5_000);
+
+		expect(publishPlayerEnded).toHaveBeenCalledWith(player);
+		expect(notifier.deleteController).toHaveBeenCalledWith(player);
+		expect(channelSend).toHaveBeenCalledTimes(1);
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📭 대기열의 모든 곡을 재생했어요.');
 	});
 });
