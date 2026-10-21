@@ -1,12 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type {
-	CustomCommandAccess,
-	CustomCommandMethod,
-	CustomCommandSpec,
-	CustomCommandSpecV2,
-} from "@sirubot/utils/customCommand";
 import { ArrowRight, ArrowUp, ChevronDown } from "lucide-react";
 
 import { RoleSelect } from "@/components/discord/role-select";
@@ -29,29 +22,19 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/toast";
 import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
-import { toApiError, toError } from "@/lib/api-error";
 import type {
 	CustomCommandsState,
 	CustomCommandSummary,
 } from "@/lib/custom-commands";
 
 import {
-	buildSpec,
-	type EditorDraft,
 	hasRoleAction,
 	totalDelaySeconds,
-	validateEditorDraft,
 } from "./custom-command-editor.utils";
-import { type EditorStep,PERMISSION_OPTIONS, StepsEditor } from "./custom-command-steps-editor";
-
-type ChatTurn = { role: "user" | "assistant"; content: string };
-
-/** 대화 기억 한도 — 최근 N턴(사용자·응답 쌍)만 보내요 */
-const REFINE_MAX_TURNS = 8;
-
-const REFINE_REPLY = "스펙을 수정했어요. 폼에서 변경 내용을 확인하고 저장 버튼으로 반영해 주세요.";
+import { PERMISSION_OPTIONS, StepsEditor } from "./custom-command-steps-editor";
+import { useCommandAssistant } from "./use-command-assistant";
+import { useCustomCommandEditor } from "./use-custom-command-editor";
 
 /** "AI 도우미" 라벨 — 모바일 토글과 PC 정적 라벨이 같은 내용을 써요 */
 function ChatPanelLabel() {
@@ -79,8 +62,7 @@ interface CustomCommandEditorProps {
 /**
  * 커스텀 명령어 편집기 — 폼(이름·설명·실행 제한·스텝 조립)과 AI 채팅으로 구성해요.
  * PC에서는 폼 + 채팅 두 칸이고, 좁은 화면에서는 채팅이 접이식 섹션으로 위에 놓여요.
- * 채팅 입력 한 개로 흐름이 정해져요: 아직 초안이 없으면 draft API, 초안이 있으면(수정 포함) refine API.
- * 채팅 결과는 폼에만 적용돼요 — 저장은 사용자가 직접 눌러야 해요.
+ * 폼 상태·저장은 useCustomCommandEditor, AI 채팅은 useCommandAssistant가 맡아요.
  */
 export function CustomCommandEditor({
 	guildId,
@@ -89,192 +71,48 @@ export function CustomCommandEditor({
 	onClose,
 	onSaved,
 }: CustomCommandEditorProps) {
-	const toast = useToast();
 	const { roles: rawRoles } = useGuildRoles(guildId);
 	const { channels } = useGuildChannels(guildId);
 	const roles = rawRoles ?? [];
 
-	const [name, setName] = useState(command?.name ?? "");
-	const [description, setDescription] = useState(command?.description ?? "");
-	const [method, setMethod] = useState<CustomCommandMethod>(command?.method ?? "prefix");
-	const [steps, setSteps] = useState<EditorStep[]>(
-		command && command.spec.version === 2
-			? command.spec.steps.map((step) => ({ ...step }))
-			: command
-				? command.spec.steps.map((step) => ({ ...step }))
-				: [{ type: "send_message", text: "" }],
-	);
-	const [access, setAccess] = useState<CustomCommandAccess | null>(
-		command && command.spec.version === 2 ? (command.spec.access ?? null) : null,
-	);
-	const [saving, setSaving] = useState(false);
-	const [prompt, setPrompt] = useState("");
-	const [busy, setBusy] = useState(false);
-	const [chat, setChat] = useState<ChatTurn[]>([]);
-	/** 이번 세션에서 draft 결과를 폼에 적용했는지 — 있으면 이후 지시는 refine으로 가요 */
-	const [draftApplied, setDraftApplied] = useState(false);
-	/** 접이식 토글은 좁은 화면용 — 새 명령어에선 펼치고, 수정에선 접어요 (PC는 항상 보여요) */
-	const [chatOpen, setChatOpen] = useState(!command);
-	const messagesRef = useRef<HTMLDivElement | null>(null);
-	const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
+	const {
+		name,
+		description,
+		method,
+		steps,
+		access,
+		setName,
+		setDescription,
+		setMethod,
+		setSteps,
+		setAccess,
+		draft,
+		applySpec,
+		applyDraftMetadata,
+		saving,
+		handleSave,
+	} = useCustomCommandEditor({ guildId, command, prefix, onSaved });
+	const {
+		prompt,
+		setPrompt,
+		busy,
+		chat,
+		chatOpen,
+		setChatOpen,
+		messagesRef,
+		chatInputRef,
+		sendPrompt,
+		handleChatKeyDown,
+	} = useCommandAssistant({
+		guildId,
+		isEditing: command !== null,
+		draft,
+		applySpec,
+		applyDraftMetadata,
+	});
 
 	const totalDelay = totalDelaySeconds(steps);
 	const roleAction = hasRoleAction(steps);
-
-	const draft: EditorDraft = { name, description, method, steps, access };
-
-	// 새 메시지·전송 상태가 바뀌면 목록 맨 아래를 보여줘요
-	useEffect(() => {
-		const el = messagesRef.current;
-		if (el) el.scrollTop = el.scrollHeight;
-	}, [chat, chatOpen, busy]);
-
-	const applySpec = (spec: CustomCommandSpecV2) => {
-		setSteps(spec.steps.map((step) => ({ ...step })) as EditorStep[]);
-		setAccess(spec.access ?? null);
-	};
-
-	const sendPrompt = async () => {
-		const text = prompt.trim();
-		if (!text || busy) return;
-
-		// 초안이 없으면 자연어 → 스펙 초안, 있으면 현재 폼 스펙 기준으로 수정해요
-		if (command !== null || draftApplied) {
-			const built = buildSpec(draft);
-			if (!built.ok) {
-				toast.error(built.error, "AI에 맡기기 전에 스텝 구성부터 맞춰 주세요.");
-				return;
-			}
-			setBusy(true);
-			try {
-				const res = await fetch(`/api/servers/${guildId}/custom-commands/refine`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						prompt: text,
-						currentSpec: built.spec,
-						history: chat.slice(-REFINE_MAX_TURNS * 2),
-					}),
-				});
-				if (!res.ok) throw await toApiError(res, "AI 수정에 실패했어요.");
-				const data = (await res.json()) as { spec: CustomCommandSpecV2 };
-				applySpec(data.spec);
-				setChat((prev) =>
-					[...prev, { role: "user" as const, content: text }, { role: "assistant" as const, content: REFINE_REPLY }].slice(
-						-REFINE_MAX_TURNS * 2,
-					),
-				);
-				setPrompt("");
-			} catch (error) {
-				const apiError = toError(error, "AI 수정에 실패했어요.");
-				toast.error(
-					apiError.message,
-					apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-				);
-			} finally {
-				setBusy(false);
-			}
-			return;
-		}
-
-		setBusy(true);
-		try {
-			const res = await fetch(`/api/servers/${guildId}/custom-commands/draft`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ prompt: text }),
-			});
-			if (!res.ok) throw await toApiError(res, "AI 초안 생성에 실패했어요.");
-			const data = (await res.json()) as {
-				draft: {
-					name: string;
-					description: string;
-					method: CustomCommandMethod;
-					spec: CustomCommandSpec;
-				};
-			};
-			setName(data.draft.name);
-			setDescription(data.draft.description);
-			// 실행 방식은 새로 만들 때만 초안을 따라가요 — 수정 중에는 바뀌지 않아요
-			if (!command) setMethod(data.draft.method);
-			if (data.draft.spec.version === 2) applySpec(data.draft.spec);
-			setDraftApplied(true);
-			// 초안은 새 대화예요 — 이전 지시와는 이어지지 않아요
-			setChat([
-				{ role: "user", content: text },
-				{
-					role: "assistant",
-					content: `「${data.draft.name}」 초안을 채웠어요. 폼에서 내용을 확인하고 저장 버튼으로 반영해 주세요.`,
-				},
-			]);
-			setPrompt("");
-		} catch (error) {
-			const apiError = toError(error, "AI 초안 생성에 실패했어요.");
-			toast.error(
-				apiError.message,
-				apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-			);
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-		// Enter로 보내고 Shift+Enter로 개행 — 한글 IME 조합 중인 Enter는 무시해요
-		if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
-		e.preventDefault();
-		void sendPrompt();
-	};
-
-	const handleSave = async () => {
-		const error = validateEditorDraft(draft);
-		if (error) {
-			toast.error(error);
-			return;
-		}
-		const built = buildSpec(draft);
-		if (!built.ok) {
-			toast.error(built.error);
-			return;
-		}
-
-		setSaving(true);
-		try {
-			const res = await fetch(
-				command
-					? `/api/servers/${guildId}/custom-commands/${command.id}`
-					: `/api/servers/${guildId}/custom-commands`,
-				{
-					method: command ? "PATCH" : "POST",
-					headers: { "Content-Type": "application/json" },
-					// 실행 방식(method)은 생성 후 불변 — 수정 요청에는 보내지 않아요
-					body: JSON.stringify(
-						command
-							? { name, description, spec: built.spec }
-							: { name, description, method, spec: built.spec },
-					),
-				},
-			);
-			if (!res.ok) throw await toApiError(res, "저장에 실패했어요.");
-			onSaved((await res.json()) as CustomCommandsState);
-			const runHint =
-				method === "slash"
-					? `슬래시 \`/${name.trim().toLowerCase()}\`로 실행해요.`
-					: `디스코드에서 \`${prefix}${name.trim().toLowerCase()}\`로 실행해요.`;
-			toast.success(
-				command ? "커스텀 명령어를 수정했어요." : "커스텀 명령어를 만들었어요.",
-				runHint,
-			);
-		} catch (error) {
-			const apiError = toError(error, "저장에 실패했어요.");
-			toast.error(
-				apiError.message,
-				apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-			);
-		} finally {
-			setSaving(false);
-		}
-	};
 
 	return (
 		<Dialog
