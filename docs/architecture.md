@@ -11,7 +11,7 @@
 1. [개요](#1-개요)
 2. [시스템 컨텍스트](#2-시스템-컨텍스트)
 3. [모노레포 의존성](#3-모노레포-의존성)
-4. [앱 상세 — bot / data-api / dashboard / shardmanager](#4-앱-상세)
+4. [앱 상세 — bot / data-api / dashboard / shardmanager / storage / notifier](#4-앱-상세)
 5. [공유 계약 — Redis 채널 맵 · 인증 · WS 프로토콜](#5-공유-계약)
 6. [런타임 플로우](#6-런타임-플로우)
 7. [부팅·종료 시퀀스 (봇)](#7-부팅·종료-시퀀스-봇)
@@ -66,13 +66,18 @@ graph LR
         dataapi["apps/data-api :3002<br/>캐시 게이트웨이 · 허브"]
         dashboard["apps/dashboard :3000<br/>웹 대시보드"]
         sm["apps/shardmanager :3001<br/>샤드 할당 WS"]
+        storage["apps/storage :3003<br/>이미지 오브젝트 저장소 · 공개 URL"]
+        notifier["apps/notifier :3004<br/>유튜브/트위치/치지직 알림 폴러"]
     end
 
     users <-->|"커맨드 · 음성"| gw
     users -->|"브라우저"| dashboard
+    users -->|"알림 수신"| notifier
     dashboard -->|"API Route + 공유 키"| dataapi
     dashboard -->|"REST + 키"| sm
+    dashboard -->|"에셋 업로드/삭제 + 키"| storage
     gw <--> bot
+    gw -->|"임베드 이미지 fetch (공개 URL)"| storage
     bot <-->|"lavalink-client"| lavalink
     bot <-->|"WS identify/heartbeat"| sm
     bot <--> redis
@@ -83,6 +88,10 @@ graph LR
     dataapi <-->|"REST 검색 프록시"| lavalink
     dataapi --> providers
     dataapi --> llm
+    notifier --> providers
+    notifier -->|"Discord 웹훅 전송"| gw
+    notifier <--> redis
+    notifier --> pg
 ```
 
 핵심 경계 규칙:
@@ -100,23 +109,33 @@ graph BT
     prisma["@sirubot/prisma<br/>스키마 + 클라이언트"]
     sc["@sirubot/shardclient<br/>WS 클라이언트"]
     utils["@sirubot/utils<br/>채널 상수 · 스키마 · 유틸"]
+    ak["@sirubot/app-kit<br/>Fastify 인증 · 로거 · env"]
     bot["@sirubot/bot"]
     da["@sirubot/data-api"]
     dash["@sirubot/dashboard"]
     sm["@sirubot/shardmanager"]
+    storage["@sirubot/storage"]
+    notifier["@sirubot/notifier"]
 
     bot --> prisma
     bot --> sc
     bot --> utils
     da --> prisma
     da --> utils
+    da --> ak
     dash --> prisma
     dash --> utils
     sm --> sc
     sm --> utils
+    sm --> ak
+    storage --> utils
+    storage --> ak
+    notifier --> prisma
+    notifier --> utils
+    notifier --> ak
 ```
 
-근거: `apps/bot/package.json:32-34`, `apps/data-api/package.json:20-21`, `apps/dashboard/package.json:18-19`, `apps/shardmanager/package.json:20-21`. shardmanager가 shardclient에 의존하는 이유는 서버 측에서 WS 계약 타입(ops/payload)을 공유하기 위함입니다(`packages/shardclient/src/client.ts:5`).
+근거: 각 앱 `package.json`의 `@sirubot/*` 의존성. shardmanager가 shardclient에 의존하는 이유는 서버 측에서 WS 계약 타입(ops/payload)을 공유하기 위함입니다(`packages/shardclient/src/client.ts:5`). app-kit는 Fastify 계열 4앱(data-api·shardmanager·storage·notifier)이 공유해요.
 
 ---
 
@@ -225,6 +244,24 @@ graph LR
 - 코어: `ShardRegistry(shardCount, shardsPerProcess)` — 샤드↔프로세스 할당 원장, 장애 감지 알림용 `DiscordNotifier`(웹훅) (`server.ts:21-30`).
 - 엔드포인트: REST `/api/health` · `/api/shards` · `/api/shards/:id` · `/api/shard/count`, WS `ws://{host}:{port}/ws` (`server.ts:61`, `src/routes/`).
 - graceful stop: registry destroy → Fastify close (`server.ts:69-77`).
+
+---
+
+### 4.5 apps/storage
+
+- Fastify 5 (포트 3003), DB 없음 — 로컬 볼륨 파일 저장(`STORAGE_DATA_DIR`, 컨테이너 `/data` = `storage-data` 볼륨).
+- 인증: `STORAGE_AUTH_KEY ?? AUTH_KEY` 없으면 **기동 거부(fail-closed)**, 면제는 `/health`와 공개 오브젝트 GET뿐 (`src/plugins/auth.ts` — `Authorization` 헤더는 `Bearer` 없이 키 원문).
+- `STORAGE_PUBLIC_URL`(필수, https)은 디스코드 임베드가 fetch하는 공개 주소이자 **발급 URL 스냅샷** — 도메인 변경 시 기존 에셋 URL 일괄 치환 필요.
+- 소비자: 대시보드 `src/lib/storage.ts`(길드 이미지 에셋 업로드/삭제) + `api/servers/[id]/assets` 라우트.
+
+---
+
+### 4.6 apps/notifier
+
+- Fastify 5 (포트 3004), 소셜 알림 워커 — 구독 저장(DB) + 폴링 + 디스코드 웹훅 발행.
+- 폴러 3종: `youtubeScheduler` · `twitchScheduler`(EventSub 수신 `routes/eventsub.ts` 동반) · `chzzkPoller` — 공통 폴링 루프는 `services/pollingLoop.ts`(stop→start 타이머 연쇄·unhandled rejection 가드 내장).
+- 발행: `services/dispatcher.ts` → `services/webhookHub.ts`(웹훅 발송, pending 맵 PENDING_LIMIT 200 · 5s 타임아웃).
+- 의존성 옵션성: `DATABASE_URL` 없으면 소셜 워커 비활성(`services/db.ts`), Redis 없으면 프로세스 메모리 폴백(단일 레플리카 가정, `services/redis.ts`).
 
 ---
 
@@ -410,7 +447,7 @@ flowchart TD
 
 - **Turborepo 파이프라인**(`turbo.json`): `build` = `^typecheck ^generate ^build` 의존(`:4-8`), `typecheck` = `^build ^generate`(`:31-35`), `test` = `^generate ^build`(`:36-39`), `dev`은 캐시 비활성+persistent(`:12-15`). Prisma 클라이언트 생성(`yarn generate`)이 typecheck/build/test의 선행 조건입니다.
 - **CI(`.github/workflows/lint.yml`)**: push/PR 트리거(`:3`), Node 22(`:24-27`), `yarn install --immutable`(`:30`) → `yarn lint`(`:33`) → `yarn typecheck`(`:36`) → `yarn test`(`:39`). 이미지 파이프라인: `docker-publish.yml`, `docker-beta.yml`.
-- **Docker**: 루트 Dockerfile이 봇·대시보드·shardmanager·data-api·storage·notifier 6개 타겟을 각각 빌드(`Dockerfile` — `README.ko.md:186-196`은 4앱만 서술). 컴포즈: `docker/docker-compose.yml`, `docker-stack.yml`, `docker-stack-infra.yml`.
+- **Docker**: 루트 Dockerfile이 봇·대시보드·shardmanager·data-api·storage·notifier 6개 타겟을 각각 빌드(`Dockerfile`, `README.ko.md:186-196` 동기화됨). 컴포즈: `docker/docker-compose.yml`, `docker-stack.yml`, `docker-stack-infra.yml`.
 - **테스트**: 워크스페이스별 vitest(`--passWithNoTests`). 봇·data-api·utils·dashboard·storage·notifier·shardclient·shardmanager에 테스트 존재, prisma는 없음.
 
 ---
