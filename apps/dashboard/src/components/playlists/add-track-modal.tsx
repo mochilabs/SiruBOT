@@ -83,7 +83,7 @@ export function AddTrackModal({
 	return (
 		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
 			<DialogContent
-				className={`grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden ${keyboardLayout ? "-translate-y-0" : ""}`}
+				className={`grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden ${keyboardLayout ? "-translate-y-0" : ""}`}
 				style={keyboardLayout ? { top: `${keyboardLayout.top}px`, height: `${keyboardLayout.height}px`, maxHeight: `${keyboardLayout.height}px` } : undefined}
 			>
 				<DialogHeader>
@@ -164,7 +164,7 @@ export function AddTrackModal({
 						)}
 					</div>
 				</div>
-				<DialogFooter>
+				<DialogFooter className="shrink-0">
 					<Button variant="secondary" size="sm" onClick={onClose}>
 						취소
 					</Button>
