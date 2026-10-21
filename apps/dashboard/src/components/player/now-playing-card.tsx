@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatDuration } from "@sirubot/utils/time";
 import { ListMusic, Pause, Play, Repeat, SkipForward, Square, Volume2 } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
-import { formatDuration } from "@/lib/format";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 import { playerErrorMessage } from "@/lib/player-error";
 import { prettySourceName } from "@/utils";

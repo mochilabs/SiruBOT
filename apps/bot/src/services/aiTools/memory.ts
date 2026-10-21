@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { type MemoryCategory } from '../aiMemoryService.ts';
+import { type MemoryCategory } from '@sirubot/utils';
 import type { AiTool } from './types.ts';
 
 const CATEGORY_HINT = 'facts: 이름·거주지·상황 등 사실 / preferences: 선호·취미·스타일 / commitments: 약속·미결 사항';

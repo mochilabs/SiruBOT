@@ -25,3 +25,4 @@ export * from './chatTools.js';
 export * from './storage.js';
 export * from './social.js';
 export * from './pendingRequestPool.js';
+export * from './memoryFile.js';

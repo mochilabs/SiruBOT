@@ -1,10 +1,10 @@
+import { formatDuration } from "@sirubot/utils/time";
 import { ListMusic } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { formatDuration } from "@/lib/format";
 
 export function QueueList({ state }: { state: LivePlayerState }) {
   return (

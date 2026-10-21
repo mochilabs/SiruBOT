@@ -1,20 +1,22 @@
 import type { PrismaClient } from '@sirubot/prisma';
-import { sleep } from '@sirubot/utils/time';
+import {
+	MEMORY_CATEGORIES,
+	countMarkdownEntries,
+	createEmptyMemorySections,
+	hasMemoryEntries,
+	parseMemoryMarkdown,
+	renderMemoryMarkdown,
+	type MemoryCategory,
+	type MemorySections
+} from '@sirubot/utils';
 import { getLogger } from '../utils/logger.ts';
 import { parseClock } from '../utils/parseClock.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
-import {
-	capMemorySections,
-	countMarkdownEntries,
-	hasMemoryEntries,
-	legacyToMarkdown,
-	parseMemoryMarkdown,
-	renderMemoryMarkdown
-} from './memoryFile.ts';
 
 const logger = getLogger('memory-tidy');
 
 const TIDY_USER_DELAY_MS = 1500;
+const LONG_TERM_MAX = 40;
 const MEMORY_TIDY_PROMPT = [
 	'당신은 장기 기억 파일(MEMORY.md)을 관리하는 정리 담당이에요. 입력된 파일을 검토해 정리한 파일 전체를 출력해요.',
 	'할 일:',
@@ -65,6 +67,32 @@ function tidyOutputValid(original: string, output: string): boolean {
 	const after = countMarkdownEntries(output);
 	if (before > 0 && after < Math.ceil(before * 0.4)) return false;
 	return after > 0 || before === 0;
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 섹션별 상한 — 최근 항목 우선으로 뒤에서 자라요 (data-api tidy 정책; 봇은 총량 상한) */
+function capMemorySections(sections: MemorySections): void {
+	for (const category of MEMORY_CATEGORIES) {
+		const list = sections[category];
+		if (list.length > LONG_TERM_MAX) sections[category] = list.slice(list.length - LONG_TERM_MAX);
+	}
+}
+
+/** 옛 배열 형태({ text, category? })를 마크다운으로 변환해요 (레거시 호환: category 보존 — 봇 변환과 계약이 달라요) */
+function legacyToMarkdown(items: unknown[]): string {
+	const sections = createEmptyMemorySections();
+	for (const item of items) {
+		if (!item || typeof item !== 'object') continue;
+		const f = item as { text?: unknown; category?: unknown };
+		if (typeof f.text !== 'string' || !f.text) continue;
+		const category =
+			typeof f.category === 'string' && MEMORY_CATEGORIES.includes(f.category as MemoryCategory) ? (f.category as MemoryCategory) : 'facts';
+		sections[category].push(f.text.trim());
+	}
+	return renderMemoryMarkdown(sections);
 }
 
 /** 저장된 장기 기억을 파일 형식(마크다운)으로 정규화해요. */
