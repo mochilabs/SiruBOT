@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { getVoiceServerStatsUrl } from "@/lib/env";
+
 export interface VoiceServerNode {
 	host: string;
 	name: string;
@@ -27,8 +29,6 @@ export interface VoiceServerHistoryPoint {
 	cpuSystemLoad: number;
 	cpuLavalinkLoad: number;
 }
-
-const LAVALINK_STATS_URL = process.env.LAVALINK_STATS_URL || "https://lavalink.siru.life";
 
 const voiceServerNodeSchema = z
 	.object({
@@ -99,7 +99,7 @@ export function aggregateVoiceServerHistory(rows: VoiceServerNode[]): VoiceServe
 /** GET /api/stats/latest (인증 불필요) — 실패(비2xx·타임아웃·형식 불일치)는 null. */
 export async function fetchVoiceServerStats(): Promise<VoiceServerNode[] | null> {
 	try {
-		const res = await fetch(`${LAVALINK_STATS_URL}/api/stats/latest`, {
+		const res = await fetch(`${getVoiceServerStatsUrl()}/api/stats/latest`, {
 			cache: "no-store",
 			signal: AbortSignal.timeout(10_000),
 		});
@@ -113,7 +113,7 @@ export async function fetchVoiceServerStats(): Promise<VoiceServerNode[] | null>
 /** GET /api/stats/history?hours=N (인증 불필요) — 노드별 이력을 집계한 시계열. 실패는 null. */
 export async function fetchVoiceServerHistory(hours: number): Promise<VoiceServerHistoryPoint[] | null> {
 	try {
-		const res = await fetch(`${LAVALINK_STATS_URL}/api/stats/history?hours=${hours}`, {
+		const res = await fetch(`${getVoiceServerStatsUrl()}/api/stats/history?hours=${hours}`, {
 			cache: "no-store",
 			signal: AbortSignal.timeout(10_000),
 		});
