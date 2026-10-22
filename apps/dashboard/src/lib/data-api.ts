@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { getDataApiEnv } from "@/lib/env";
+
 interface DataApiPlaybackCounts {
   track_start: number;
   track_end: number;
@@ -43,16 +45,12 @@ export interface DataApiStatus {
   };
 }
 
-const DATA_API_URL = process.env.DATA_API_URL || "http://localhost:3002";
-const DATA_API_AUTH_KEY =
-  process.env.DATA_API_AUTH_KEY || process.env.AUTH_KEY || "";
-
 /**
  * data-api GET 프록시 — AUTH_KEY는 서버 전용(env). 클라이언트 번들로 절대 노출하지 않아요.
  * 키가 없으면(또는 공백뿐이면) 실패시키지 않고 null — 무인증 localhost 호출을 안 한다.
  */
 export async function fetchDataApi<T>(path: string): Promise<T | null> {
-  const authKey = DATA_API_AUTH_KEY.trim();
+  const { url, authKey } = getDataApiEnv();
   if (!authKey) {
     console.warn(
       "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
@@ -61,7 +59,7 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
   }
 
   try {
-    const res = await fetch(`${DATA_API_URL}${path}`, {
+    const res = await fetch(`${url}${path}`, {
       cache: "no-store",
       headers: { Authorization: authKey },
       signal: AbortSignal.timeout(10_000),
@@ -81,11 +79,11 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
 export async function openDataApiStream(
   path: string,
 ): Promise<Response | null> {
-  const authKey = DATA_API_AUTH_KEY.trim();
+  const { url, authKey } = getDataApiEnv();
   if (!authKey) return null;
 
   try {
-    const upstream = await fetch(`${DATA_API_URL}${path}`, {
+    const upstream = await fetch(`${url}${path}`, {
       headers: { Authorization: authKey },
       cache: "no-store",
     });
@@ -104,11 +102,11 @@ export async function postDataApi<T>(
   path: string,
   body: unknown,
 ): Promise<T | null> {
-  const authKey = DATA_API_AUTH_KEY.trim();
+  const { url, authKey } = getDataApiEnv();
   if (!authKey) return null;
 
   try {
-    const res = await fetch(`${DATA_API_URL}${path}`, {
+    const res = await fetch(`${url}${path}`, {
       method: "POST",
       cache: "no-store",
       headers: { Authorization: authKey, "Content-Type": "application/json" },
@@ -153,7 +151,7 @@ export async function forwardDataApiPost<T>(
   body: unknown,
   options?: { timeoutMs?: number; method?: "POST" | "PATCH" | "DELETE" },
 ): Promise<DataApiForwardResult<T>> {
-  const authKey = DATA_API_AUTH_KEY.trim();
+  const { url, authKey } = getDataApiEnv();
   if (!authKey) {
     console.warn(
       "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
@@ -163,7 +161,7 @@ export async function forwardDataApiPost<T>(
   try {
     const method = options?.method ?? "POST";
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    const res = await fetch(`${DATA_API_URL}${path}`, {
+    const res = await fetch(`${url}${path}`, {
       method,
       cache: "no-store",
       headers:
@@ -199,7 +197,7 @@ export async function forwardDataApiPost<T>(
 export async function forwardDataApiGet<T>(
   path: string,
 ): Promise<DataApiForwardResult<T>> {
-  const authKey = DATA_API_AUTH_KEY.trim();
+  const { url, authKey } = getDataApiEnv();
   if (!authKey) {
     console.warn(
       "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
@@ -207,7 +205,7 @@ export async function forwardDataApiGet<T>(
     return { ok: false, status: 503, message: null };
   }
   try {
-    const res = await fetch(`${DATA_API_URL}${path}`, {
+    const res = await fetch(`${url}${path}`, {
       cache: "no-store",
       headers: { Authorization: authKey },
       signal: AbortSignal.timeout(10_000),
@@ -255,7 +253,7 @@ export async function forwardDataApiImage(
   path: string,
   body: unknown,
 ): Promise<DataApiImageResult> {
-  const authKey = DATA_API_AUTH_KEY.trim();
+  const { url, authKey } = getDataApiEnv();
   if (!authKey) {
     console.warn(
       "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
@@ -264,7 +262,7 @@ export async function forwardDataApiImage(
   }
   try {
     // 이미지 렌더는 data-api에서 최대 ~20초까지 걸릴 수 있어요 (봇 dataApiClient 기준) — 여유 있게 30초.
-    const res = await fetch(`${DATA_API_URL}${path}`, {
+    const res = await fetch(`${url}${path}`, {
       method: "POST",
       cache: "no-store",
       headers: { Authorization: authKey, "Content-Type": "application/json" },

@@ -5,10 +5,12 @@
  * fail-closed 규칙: env가 설정되지 않으면 모두 차단해요 — 환경 변수 누락이 무단 열람으로 이어지지 않게
  * 기본값을 막는 방향으로 둬요. 운영 환경에서는 반드시 값을 설정해 주세요.
  */
+import { getDashboardAdminIdsRaw } from "@/lib/env";
+
 let warnedUnset = false;
 
 function getDashboardAdminIds(): string[] {
-  const raw = (process.env.DASHBOARD_ADMIN_IDS ?? "").trim();
+  const raw = getDashboardAdminIdsRaw();
   if (!raw) {
     if (!warnedUnset) {
       warnedUnset = true;

@@ -13,6 +13,10 @@ import { TrackService } from '../services/trackService.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
+/**
+ * @skyra/env-utilities의 envParse* 타입 선언 — 호출부(envParseString/envParseArray)의 타입용이에요.
+ * 키 목록·형식·필수 여부의 단일 원본은 core/env.ts의 zod 스키마예요 — 키를 추가·수정할 땐 두 곳을 함께 고쳐요.
+ */
 declare module '@skyra/env-utilities' {
 	interface Env {
 		DISCORD_TOKEN: string;

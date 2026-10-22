@@ -1,15 +1,16 @@
 import { ASSET_BUCKET, sniffImageMime } from "@sirubot/utils/storage";
 
+import { getStorageEnv } from "@/lib/env";
+
 /**
  * 스토리지(apps/storage) 클라이언트 — 길드 이미지 에셋 원본을 올리고 지워요.
  * data-api 클라이언트와 같은 규율이에요:
- * - env는 서버 전용(process.env) — 클라이언트 번들로 절대 노출하지 않아요
+ * - env는 서버 전용(env.ts의 getStorageEnv) — 클라이언트 번들로 절대 노출하지 않아요
  * - `STORAGE_AUTH_KEY ?? AUTH_KEY` 폴백, 키가 없으면 호출 전면 스킵하고 한국어 에러를 throw해요
  * - `Authorization` 헤더는 Bearer 스킴 없이 키 원문 그대로 (apps/storage plugins/auth.ts 계약)
  * - 타임아웃 15초 (`AbortSignal.timeout`), 실패 시 스토리지 응답의 한국어 메시지를 그대로 전달해요
  */
-const STORAGE_URL = process.env.STORAGE_URL || "http://localhost:3003";
-const STORAGE_AUTH_KEY = process.env.STORAGE_AUTH_KEY || process.env.AUTH_KEY || "";
+
 
 /** PUT /:bucket/*key 성공 응답 — url은 스토리지가 발급한 공개 URL이라 그대로 저장해요 */
 export interface PutAssetResult {
@@ -59,7 +60,7 @@ export async function deleteAssetObject(bucket: string, key: string): Promise<vo
 }
 
 function requireAuthKey(): string {
-	const authKey = STORAGE_AUTH_KEY.trim();
+	const { authKey } = getStorageEnv();
 	if (!authKey) {
 		console.warn("[storage] STORAGE_AUTH_KEY/AUTH_KEY 미설정 — 스토리지 호출을 건너뛴다.");
 		throw new Error(NOT_CONFIGURED_MESSAGE);
@@ -78,7 +79,7 @@ function encodeKeyPath(key: string): string {
 async function requestStorage(path: string, init: RequestInit): Promise<Response> {
 	const authKey = requireAuthKey();
 	try {
-		return await fetch(`${STORAGE_URL}${path}`, {
+		return await fetch(`${getStorageEnv().url}${path}`, {
 			...init,
 			cache: "no-store",
 			headers: { ...init.headers, Authorization: authKey },

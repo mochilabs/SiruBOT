@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 
 import { db } from "@/lib/db";
 import { requestDiscordToken } from "@/lib/discord-token";
+import { getSessionSecret } from "@/lib/env";
 import { isRedisEnabled, randomLockToken, redisCompareAndDel, redisSetNx } from "@/lib/redis";
 
 /**
@@ -53,7 +54,7 @@ const WAIT_MAX_MS = 12_000;
  * 시크릿이 없으면 null을 돌려주고, 모든 함수가 "토큰 없음"으로 graceful하게 동작해요.
  */
 function encryptionKey(): Buffer | null {
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+  const secret = getSessionSecret() ?? "";
   if (!secret) return null;
   return createHash("sha256").update(secret).digest();
 }
