@@ -21,7 +21,14 @@ function liveResponse(isLive: boolean, liveId = 'live-9'): Response {
 		JSON.stringify({
 			code: 200,
 			content: isLive
-				? { channelId: CHANNEL_ID, channelName: '시루', liveId, liveTitle: '첫방송', openLive: true, liveImageUrl: 'image_{type}.jpg' }
+				? {
+						channelId: CHANNEL_ID,
+						channelName: '시루',
+						liveId,
+						liveTitle: '첫방송',
+						openLive: true,
+						liveImageUrl: 'https://livecloud-thumb.example.net/thumbnail/image_{type}.jpg'
+					}
 				: { channelId: CHANNEL_ID, channelName: '시루', openLive: false }
 		}),
 		{ status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -77,19 +84,20 @@ describe('ChzzkPoller transitions', () => {
 			contentId: 'live-9',
 			title: '첫방송',
 			url: 'https://chzzk.naver.com/live/live-9',
-			thumbnail: 'image_1080.jpg',
+			thumbnail: 'https://livecloud-thumb.example.net/thumbnail/image_1080.jpg',
 			author: '시루'
 		});
 	});
 
 	it('falls back to the subscription name and channel url when live-status omits liveId and channelName (실측 형상)', async () => {
 		const seed = JSON.stringify({ isLive: false, liveId: null, lastPolledAt: 1_700_000_000_000 - 10 * 60 * 1000 });
-		const openOnly = new Response(JSON.stringify({ code: 200, content: { channelId: CHANNEL_ID, status: 'OPEN', liveTitle: '야간 방송' } }), {
-			status: 200,
-			headers: { 'Content-Type': 'application/json' }
-		});
+		const openOnly = () =>
+			new Response(JSON.stringify({ code: 200, content: { channelId: CHANNEL_ID, status: 'OPEN', liveTitle: '야간 방송' } }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			});
 		const { poller, dispatch } = makePoller({
-			fetchFn: vi.fn(async () => openOnly),
+			fetchFn: vi.fn(async () => openOnly()),
 			seed,
 			subscriptions: [{ sourcePlatformId: CHANNEL_ID, sourceName: '시룰루' }]
 		});
@@ -104,6 +112,31 @@ describe('ChzzkPoller transitions', () => {
 			thumbnail: null,
 			author: '시룰루'
 		});
+	});
+
+	it('fills the thumbnail from live-detail when live-status omits liveImageUrl (2026-10 실측)', async () => {
+		const seed = JSON.stringify({ isLive: false, liveId: null, lastPolledAt: 1_700_000_000_000 - 10 * 60 * 1000 });
+		// 2026-10 실측: polling v2 live-status는 이미지 필드가 없고 liveId·channelName도 없어요.
+		const liveStatusOnly = () =>
+			new Response(JSON.stringify({ code: 200, content: { channelId: CHANNEL_ID, status: 'OPEN', liveTitle: '야간 방송' } }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		const liveDetail = () =>
+			new Response(
+				JSON.stringify({
+					code: 200,
+					content: { status: 'OPEN', liveImageUrl: 'https://livecloud-thumb.example.net/thumb/image_{type}.jpg' }
+				}),
+				{ status: 200, headers: { 'Content-Type': 'application/json' } }
+			);
+		const fetchFn = vi.fn(async (input: string) => (input.includes('live-detail') ? liveDetail() : liveStatusOnly()));
+		const { poller, dispatch } = makePoller({ fetchFn, seed, subscriptions: [{ sourcePlatformId: CHANNEL_ID, sourceName: '시룰루' }] });
+		poller.start();
+		await vi.waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
+		poller.stop();
+		const event = (dispatch.mock.calls[0] as unknown as [SocialEvent])[0];
+		expect(event.thumbnail).toBe('https://livecloud-thumb.example.net/thumb/image_1080.jpg');
 	});
 
 	it('keeps polling after a deleted channel returns 404', async () => {

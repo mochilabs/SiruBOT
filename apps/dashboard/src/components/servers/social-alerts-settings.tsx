@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useSocialAlerts } from "@/hooks/use-social-alerts";
@@ -54,6 +55,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const [draft, setDraft] = useState("");
 	const [nameDraft, setNameDraft] = useState("");
 	const [avatarDraft, setAvatarDraft] = useState("");
+	const [showThumbDraft, setShowThumbDraft] = useState(true);
 	const [confirmingId, setConfirmingId] = useState<string | null>(null);
 	const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -73,6 +75,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		setDraft(subscription.messageTemplate ?? "");
 		setNameDraft(subscription.webhookName ?? "");
 		setAvatarDraft(subscription.webhookAvatarUrl ?? "");
+		setShowThumbDraft(subscription.showThumbnail);
 	};
 
 	const saveSettings = async (subscription: SocialSubscription) => {
@@ -80,7 +83,8 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		const result = await updateSubscription(subscription.id, {
 			messageTemplate: draft.trim() ? draft : null,
 			webhookName: nameDraft.trim() ? nameDraft.trim() : null,
-			webhookAvatarUrl: avatarDraft.trim() ? avatarDraft.trim() : null
+			webhookAvatarUrl: avatarDraft.trim() ? avatarDraft.trim() : null,
+			showThumbnail: showThumbDraft
 		});
 		setBusyId(null);
 		if (result.ok) {
@@ -198,10 +202,11 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 							<div className="bg-muted rounded-md px-3 py-2 text-sm break-all whitespace-pre-wrap">{subscription.messageTemplate}</div>
 						)}
 
-						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl) && (
+						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl || !subscription.showThumbnail) && (
 							<p className="text-muted-foreground text-xs">
 								웨훅 표시: {subscription.webhookName ?? "기본"}
 								{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
+								{!subscription.showThumbnail ? " · 섬네일 이미지 없음" : ""}
 							</p>
 						)}
 
@@ -224,6 +229,17 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											maxLength={2048}
 										/>
 									</div>
+								</div>
+								<div className="flex flex-col gap-1.5">
+									<Switch
+										checked={showThumbDraft}
+										onChange={setShowThumbDraft}
+										label="방송 시작 섬네일 이미지 표시"
+										labelPosition="right"
+									/>
+									<p className="text-xs text-muted-foreground">
+										라이브 미리보기 이미지를 임베드에 넣어요. 트위치는 이미지가 없어 자동으로 생략돼요.
+									</p>
 								</div>
 								<div className="flex justify-end gap-2">
 									<Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>

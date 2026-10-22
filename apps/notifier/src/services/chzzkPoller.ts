@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import type { SocialEvent } from '@sirubot/utils';
-import { ChzzkApiError, fetchChzzkLiveStatus, type ChzzkLiveStatus, type FetchFn } from './chzzkApi.ts';
+import { ChzzkApiError, fetchChzzkLiveStatus, fetchChzzkLiveThumbnail, type ChzzkLiveStatus, type FetchFn } from './chzzkApi.ts';
 import { BREAKER_THRESHOLD, SubscriptionPoller, type PollOutcome } from './pollingLoop.ts';
 import type { NotifierRedis } from './redis.ts';
 import { getLogger } from '../utils/logger.ts';
@@ -117,7 +117,8 @@ export class ChzzkPoller extends SubscriptionPoller {
 				contentId: status.liveId ?? `${channelId}-${publishedAt}`,
 				title: status.liveTitle ?? `${author} 방송 시작!`,
 				url: status.liveId ? `https://chzzk.naver.com/live/${status.liveId}` : `https://chzzk.naver.com/${channelId}`,
-				thumbnail: status.thumbnailUrl,
+				// live-status는 liveImageUrl을 제공하지 않아서(2026-10 실측), 뱅온 확정 시점에 live-detail로 섬네일을 보완해요.
+				thumbnail: status.thumbnailUrl ?? (await fetchChzzkLiveThumbnail(channelId, this.fetchFn)),
 				author,
 				publishedAt
 			};

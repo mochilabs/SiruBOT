@@ -18,6 +18,7 @@ type SubscriptionRow = {
 	messageTemplate: string | null;
 	webhookName: string | null;
 	webhookAvatarUrl: string | null;
+	showThumbnail: boolean;
 	status: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -42,6 +43,7 @@ function publicSubscription(row: SubscriptionRow) {
 		messageTemplate: row.messageTemplate,
 		webhookName: row.webhookName,
 		webhookAvatarUrl: row.webhookAvatarUrl,
+		showThumbnail: row.showThumbnail,
 		status: row.status,
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt
@@ -134,6 +136,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 					messageTemplate: body.messageTemplate ?? null,
 					webhookName: body.webhookName ?? null,
 					webhookAvatarUrl: body.webhookAvatarUrl ?? null,
+					showThumbnail: body.showThumbnail,
 					webhookId: hubResponse.webhookId,
 					webhookToken: hubResponse.webhookToken
 				}
@@ -171,7 +174,8 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 					...(parsed.data.messageTemplate !== undefined ? { messageTemplate: parsed.data.messageTemplate } : {}),
 					...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
 					...(parsed.data.webhookName !== undefined ? { webhookName: parsed.data.webhookName } : {}),
-					...(parsed.data.webhookAvatarUrl !== undefined ? { webhookAvatarUrl: parsed.data.webhookAvatarUrl } : {})
+					...(parsed.data.webhookAvatarUrl !== undefined ? { webhookAvatarUrl: parsed.data.webhookAvatarUrl } : {}),
+					...(parsed.data.showThumbnail !== undefined ? { showThumbnail: parsed.data.showThumbnail } : {})
 				}
 			});
 			return reply.send({ subscription: publicSubscription(row) });

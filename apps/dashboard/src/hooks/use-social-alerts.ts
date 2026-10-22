@@ -24,6 +24,8 @@ export interface SocialSubscriptionInput {
 	webhookName?: string | null;
 	/** 웨훅 프로필 사진 URL — null이면 웨훅 기본 아바타 */
 	webhookAvatarUrl?: string | null;
+	/** 라이브 섬네일 표시 — 없으면 기본값(true) */
+	showThumbnail?: boolean;
 }
 
 export interface SocialSubscriptionPatch {
@@ -33,6 +35,8 @@ export interface SocialSubscriptionPatch {
 	webhookName?: string | null;
 	/** 웨훅 프로필 사진 URL — null이면 기본 아바타로 되돌려요 */
 	webhookAvatarUrl?: string | null;
+	/** 라이브 섬네일 표시 */
+	showThumbnail?: boolean;
 }
 
 export type SocialActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
