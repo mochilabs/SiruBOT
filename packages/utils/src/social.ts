@@ -162,7 +162,9 @@ export const socialSubscriptionCreateSchema = z.object({
 	/** 웹훅 표시명 오버라이드 — null이면 기본 이름(시루 소셜 알림 — 채널 이름)으로 만들어요 */
 	webhookName: socialWebhookNameSchema.nullable().optional(),
 	/** 웹훅 프로필 사진 오버라이드 — null이면 웹훅 기본 아바타로 전송해요 */
-	webhookAvatarUrl: socialWebhookAvatarUrlSchema.nullable().optional()
+	webhookAvatarUrl: socialWebhookAvatarUrlSchema.nullable().optional(),
+	/** 라이브 섬네일 표시 — 임베드에 라이브 이미지를 넣을지 (기본 ON, Prisma showThumbnail 기본값과 동일) */
+	showThumbnail: z.boolean().optional().default(true)
 });
 
 /** 구독 수정 본문 — 템플릿·웹훅 표시·상태만 바꿔요 (채널·웹훅 재생성은 삭제 후 다시 만들어요) */
@@ -173,11 +175,17 @@ export const socialSubscriptionUpdateSchema = z
 		/** 웹훅 표시명 오버라이드 — undefined면 변경 없음, null이면 기본 표시로 되돌려요 */
 		webhookName: socialWebhookNameSchema.nullable().optional(),
 		/** 웹훅 프로필 사진 오버라이드 — undefined면 변경 없음, null이면 기본 아바타로 되돌려요 */
-		webhookAvatarUrl: socialWebhookAvatarUrlSchema.nullable().optional()
+		webhookAvatarUrl: socialWebhookAvatarUrlSchema.nullable().optional(),
+		/** 라이브 섬네일 표시 — undefined면 변경 없음 */
+		showThumbnail: z.boolean().optional()
 	})
 	.refine(
 		(body) =>
-			body.messageTemplate !== undefined || body.status !== undefined || body.webhookName !== undefined || body.webhookAvatarUrl !== undefined,
+			body.messageTemplate !== undefined ||
+			body.status !== undefined ||
+			body.webhookName !== undefined ||
+			body.webhookAvatarUrl !== undefined ||
+			body.showThumbnail !== undefined,
 		{ message: '수정할 항목이 없어요.' }
 	);
 

@@ -15,13 +15,15 @@ const updateSchema = z
     status: z.enum(["active", "failed", "disabled"]).optional(),
     webhookName: z.string().trim().min(1).max(80).nullable().optional(),
     webhookAvatarUrl: z.string().trim().min(1).max(2048).nullable().optional(),
+    showThumbnail: z.boolean().optional(),
   })
   .refine(
     (body) =>
       body.messageTemplate !== undefined ||
       body.status !== undefined ||
       body.webhookName !== undefined ||
-      body.webhookAvatarUrl !== undefined,
+      body.webhookAvatarUrl !== undefined ||
+      body.showThumbnail !== undefined,
     {
       message: "변경할 내용이 없어요.",
     },

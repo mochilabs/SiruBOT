@@ -7,6 +7,13 @@ const REQUEST_TIMEOUT_MS = 8_000;
 // liveImageUrl은 `{type}` 플레이스홀더 템플릿이라 실제 사이즈로 치환해요.
 const LIVE_IMAGE_TYPE = '1080';
 
+/** liveImageUrl 템플릿(`.../image_{type}.jpg`)의 {type}을 실제 사이즈로 치환해요 — http(s) URL이 아니면 null. */
+export function resolveChzzkLiveImageUrl(template: string | null | undefined): string | null {
+	if (!template) return null;
+	const resolved = template.replaceAll('{type}', LIVE_IMAGE_TYPE);
+	return /^https?:\/\//i.test(resolved) ? resolved : null;
+}
+
 // 응답 스펙은 커뮤니티 관찰 기반이라 관대하게 파싱하고, 필드가 없으면 오프라인으로 판정해요 (실측은 한국망 런타임에서 필요).
 const liveStatusContentSchema = z.object({
 	channelId: z.string().nullish(),
@@ -67,8 +74,45 @@ export async function fetchChzzkLiveStatus(channelId: string, fetchFn: FetchFn =
 		liveId: content?.liveId != null ? String(content.liveId) : null,
 		liveTitle: content?.liveTitle ?? null,
 		channelName: content?.channelName ?? null,
-		thumbnailUrl: content?.liveImageUrl?.replaceAll('{type}', LIVE_IMAGE_TYPE) ?? null
+		thumbnailUrl: resolveChzzkLiveImageUrl(content?.liveImageUrl)
 	};
+}
+
+// ── 라이브 섬네일 (polling v2 live-status는 liveImageUrl을 주지 않음 — 2026-10 실측, live-detail에서 보완) ──
+
+const CHZZK_LIVE_DETAIL_URL = 'https://api.chzzk.naver.com/service/v2/channels';
+
+const liveDetailResponseSchema = z.object({
+	code: z.number().nullish(),
+	content: z
+		.object({
+			status: z.string().nullish(),
+			liveImageUrl: z.string().nullish()
+		})
+		.nullish()
+});
+
+/**
+ * 라이브 방송의 섬네일 URL을 조회해요 (service v2 live-detail — OPEN일 때만 liveImageUrl이 있어요).
+ * polling v2 live-status는 이미지 필드를 제공하지 않아서, 폴러가 뱅온 전이를 확정한 뒤 이벤트당 1회 호출해요.
+ * 섬네일 실패가 알림 전송을 깨지 않도록 에러를 던지지 않고 null을 돌려요.
+ */
+export async function fetchChzzkLiveThumbnail(channelId: string, fetchFn: FetchFn = fetch): Promise<string | null> {
+	try {
+		const response = await fetchFn(`${CHZZK_LIVE_DETAIL_URL}/${encodeURIComponent(channelId)}/live-detail`, {
+			headers: { 'User-Agent': CHZZK_USER_AGENT, Accept: 'application/json' },
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+		});
+		if (!response.ok) return null;
+		const parsed = liveDetailResponseSchema.safeParse(await response.json());
+		if (!parsed.success) return null;
+		const content = parsed.data.content;
+		// OPEN이 아닐 때는 liveImageUrl이 없어요 — 상태 경합 시에도 null로 방어해요.
+		if (content?.status != null && content.status !== 'OPEN') return null;
+		return resolveChzzkLiveImageUrl(content?.liveImageUrl);
+	} catch {
+		return null;
+	}
 }
 
 // ── 채널 검색·프로필 (대시보드 구독 추가용 — 관리자 수동 검색 시에만 호출돼요) ──

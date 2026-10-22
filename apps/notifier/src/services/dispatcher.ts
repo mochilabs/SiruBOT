@@ -13,11 +13,11 @@ const FAILURE_COUNTER_TTL_SECONDS = 30 * 24 * 60 * 60;
 const RETRY_AFTER_MAX_SECONDS = 60;
 const EMBED_TITLE_MAX = 256;
 
-/** 플랫폼별 임베드 accent color (치지직 브랜드색은 PR에서 최종 확정 예정) */
+/** 플랫폼별 임베드 accent color — 치지직은 브랜드 네온 그린(#00ffa3) */
 const PLATFORM_COLORS: Record<SocialPlatform, number> = {
 	youtube: 0xff0000,
 	twitch: 0x9146ff,
-	chzzk: 0x3a9afe
+	chzzk: 0x00ffa3
 };
 
 export interface SocialEmbed {
@@ -25,7 +25,8 @@ export interface SocialEmbed {
 	url: string;
 	color: number;
 	author?: { name: string };
-	thumbnail?: { url: string };
+	/** 라이브 섬네일 — 구독 showThumbnail이 켜져 있고 이벤트에 이미지가 있을 때만 실려요 */
+	image?: { url: string };
 	footer: { text: string };
 	timestamp: string;
 }
@@ -87,21 +88,23 @@ export class SocialDispatcher {
 		await Promise.allSettled(subscriptions.map((subscription) => this.deliver(subscription, event)));
 	}
 
-	private buildEmbed(event: SocialEvent): SocialEmbed {
+	private buildEmbed(event: SocialEvent, showThumbnail: boolean): SocialEmbed {
 		const title = event.title.length > EMBED_TITLE_MAX ? `${event.title.slice(0, EMBED_TITLE_MAX - 1)}…` : event.title;
 		return {
 			title,
 			url: event.url,
 			color: PLATFORM_COLORS[event.platform],
 			author: { name: event.author },
-			thumbnail: event.thumbnail ? { url: event.thumbnail } : undefined,
+			// 섬네일 표시가 꺼져 있거나 이벤트에 이미지가 없으면(Twitch) 조용히 생략해요.
+			image: showThumbnail && event.thumbnail ? { url: event.thumbnail } : undefined,
 			footer: { text: `${SOCIAL_PLATFORM_LABELS[event.platform]} 알림` },
 			timestamp: new Date(event.publishedAt).toISOString()
 		};
 	}
 
 	public buildPayload(subscription: SocialSubscription, event: SocialEvent): SocialWebhookPayload {
-		const embed = this.buildEmbed(event);
+		// showThumbnail이 없는 이전 행(migration 미적용)은 undefined — 기본값 ON으로 취급해요.
+		const embed = this.buildEmbed(event, subscription.showThumbnail !== false);
 		const template = subscription.messageTemplate;
 		const payload: SocialWebhookPayload = template
 			? {
