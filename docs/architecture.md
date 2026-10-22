@@ -353,7 +353,7 @@ sequenceDiagram
 
 재생 시작/종료/끊김/오류는 별도로 `playbackReporter`가 data-api `/v1/playback/events`(POST)로 리포트되고 `/v1/playback/recent`로 조회됩니다(`README.ko.md:121-122`, 봇 `services/playbackReporter.ts`, data-api `services/playbackStore.ts`).
 
-### 6.2 Redis request/reply — 대시보드가 "봇에게 물어보는" 표준 패턴
+### 6.2 Redis request/reply: 대시보드가 "봇에게 물어보는" 표준 패턴
 
 guild-data, player-web, jtc-setup 3흐름이 모두 이 패턴입니다(`routes/index.ts:72-74` 주석 명시).
 

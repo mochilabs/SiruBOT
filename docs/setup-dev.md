@@ -14,7 +14,7 @@
 1. `yarn install` — 의존성 설치.
 2. `yarn generate` — **typecheck/build 전 필수** (Prisma 클라이언트 생성). `turbo.json:5-7`의 `build`는 `^generate`에 의존한다.
 3. per-app `.env` 작성 — 각 `apps/*/.env.example`을 복사 (4개 전부 실존 확인: `bot`·`dashboard`·`data-api`·`shardmanager`). 비밀값은 커밋 금지.
-4. `yarn dev` — 전체 실행. 단일 앱은 `turbo dev --filter=@sirubot/bot` 형식 (`README.ko.md:168-181`).
+4. 실행 — 대시보드는 `yarn dev` (dev 스크립트를 가진 유일한 워크스페이스), 백엔드 앱은 `yarn watch`로 변경 시 자동 재빌드 후 별도 터미널에서 `yarn workspace @sirubot/<앱 이름> start`. 단일 앱은 `turbo dev --filter=@sirubot/dashboard`, `turbo run watch --filter=@sirubot/bot` 형식 (`README.ko.md:168-181`).
 5. `yarn workspace @sirubot/prisma migrate:dev` — DB 마이그레이션 (`README.ko.md:158`).
 
 ## 포트

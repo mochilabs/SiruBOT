@@ -1,4 +1,4 @@
-# Security Audit Report — SiruBOT monorepo
+# Security Audit Report: SiruBOT monorepo
 
 | | |
 |---|---|
@@ -30,7 +30,7 @@ The codebase is defensively well-built: service auth is fail-closed and timing-s
 
 ## Detailed findings
 
-### SEC-001 — Nested `if` steps bypass the mandatory access guard on role actions
+### SEC-001: Nested `if` steps bypass the mandatory access guard on role actions
 
 | Field | Content |
 |---|---|
@@ -84,7 +84,7 @@ Design-level alternative: make `checkAccess` deny-by-default whenever *any* reac
 
 ---
 
-### SEC-002 — Rate-limit bypass via spoofed `X-Forwarded-For` on public `GET /api/tracks`
+### SEC-002: Rate-limit bypass via spoofed `X-Forwarded-For` on public `GET /api/tracks`
 
 | Field | Content |
 |---|---|
@@ -125,7 +125,7 @@ const subject =
 
 ---
 
-### SEC-003 — Shardmanager re-IDENTIFY leaks allocations and allows unbounded shard claims
+### SEC-003: Shardmanager re-IDENTIFY leaks allocations and allows unbounded shard claims
 
 | Field | Content |
 |---|---|
@@ -162,7 +162,7 @@ const subject =
 
 ---
 
-### SEC-004 — Shardmanager WS `maxPayload` unconfigured; no connection limits
+### SEC-004: Shardmanager WS `maxPayload` unconfigured; no connection limits
 
 | Field | Content |
 |---|---|
@@ -180,7 +180,7 @@ const subject =
 
 ---
 
-### SEC-005 — Play relay accepts arbitrary URL schemes → fetch from Lavalink host network
+### SEC-005: Play relay accepts arbitrary URL schemes → fetch from Lavalink host network
 
 | Field | Content |
 |---|---|
@@ -205,7 +205,7 @@ const subject =
 
 ---
 
-### SEC-006 — Redis request/reply messages carry no origin authentication
+### SEC-006: Redis request/reply messages carry no origin authentication
 
 | Field | Content |
 |---|---|
@@ -223,7 +223,7 @@ const subject =
 
 ---
 
-### SEC-007 — Mention injection via attacker-controlled track titles
+### SEC-007: Mention injection via attacker-controlled track titles
 
 | Field | Content |
 |---|---|
@@ -241,7 +241,7 @@ const subject =
 
 ---
 
-### SEC-008 — Malformed `LAVALINK_HOSTS` error echoes the raw entry (password) into logs
+### SEC-008: Malformed `LAVALINK_HOSTS` error echoes the raw entry (password) into logs
 
 | Field | Content |
 |---|---|
@@ -257,11 +257,11 @@ const subject =
 
 ---
 
-### SEC-009 — `${{ github.ref_name }}` interpolated inside a `run:` shell block (Info)
+### SEC-009: `${{ github.ref_name }}` interpolated inside a `run:` shell block (Info)
 
 `REF_NAME="${{ github.ref_name }}"` (`.github/workflows/docker-beta.yml:99`). Git ref names may contain `"` `$()` `;`, making this a genuine command-injection primitive in shell context. **Defense-in-depth only:** the workflow runs on `push` to `beta`/`feat/**`, i.e. only for users who can already edit the workflow on their own ref, and the job holds `contents: read` + `GITHUB_TOKEN` only — no privilege gain. Fix via `env:` indirection (never `${{ }}` inside `run:`). Same class: `lint.yml` lacks a `permissions:` block (runs PR code with default token — `pull_request`, no secrets, so low risk); `node:22-slim` base images unpinned to digest.
 
-### SEC-010 — Prefix-based auth exclusion for `/api/health` (Info)
+### SEC-010: Prefix-based auth exclusion for `/api/health` (Info)
 
 Both gateways exclude with `request.url.startsWith('/api/health')` (`apps/data-api/src/plugins/auth.ts:8,25`; `apps/shardmanager/src/plugins/auth.ts:6,27`); the data-api test suite even enshrines prefix behavior (`apps/data-api/src/plugins/auth.test.ts:54-61`). A future route under `/api/health*` would be silently unauthenticated. Not exploitable today (no such route exists; path confusion into protected routes is not possible). Fix: exact-path comparison.
 
@@ -294,7 +294,7 @@ Both gateways exclude with `request.url.startsWith('/api/health')` (`apps/data-a
 - **data-api `/api/health` Redis boolean** — negligible disclosure (by design).
 - **`figlet` 1.11.0 DoS advisory (GHSA-62ch-8vmq-8xm7)** — only call site passes a fixed string (`clientReady.ts:112`); vulnerable path unreachable.
 
-## Informational — dependencies (`yarn npm audit --all`, resolved against `yarn.lock`)
+## Informational: dependencies (`yarn npm audit --all`, resolved against `yarn.lock`)
 
 - **`undici` 7.26.0** (direct dep of bot/data-api/shardmanager/utils): 21 advisories, all fixed in **7.29.1** (incl. [GHSA-w293-vg96-wgc3](https://github.com/advisories/GHSA-w293-vg96-wgc3), [GHSA-vmh5-mc38-953g](https://github.com/advisories/GHSA-vmh5-mc38-953g), [GHSA-4cwx-7wf7-3272](https://github.com/advisories/GHSA-4cwx-7wf7-3272)). Current code uses only `fetch`, `Agent`+`buildConnector` (`apps/bot/src/services/aiTools/webFetch.ts:3`), and `fetch` (`apps/shardmanager/src/utils/gateway.ts:1`, `packages/utils/src/youtube.ts:1`) — none of the vulnerable `ProxyAgent`/`BalancedPool`/`WebSocketStream`/cache-interceptor classes — so the high-severity items are **not reachable via current usage** (verified). Still upgrade: future use of those classes would silently inherit the risk. `undici` 6.29.0 (transitive) also in-tree.
 - **`figlet` 1.11.0** — [GHSA-62ch-8vmq-8xm7](https://github.com/advisories/GHSA-62ch-8vmq-8xm7) (High, DoS): not reachable (see above); upgrade opportunistically.

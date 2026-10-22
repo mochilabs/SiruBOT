@@ -217,7 +217,7 @@ Content-Type: application/json
 
 ## 6. 설정 계약
 
-### 6.1 스키마 (`packages/prisma/src/schema.prisma` — `model Guild`)
+### 6.1 스키마 (`packages/prisma/src/schema.prisma`의 `model Guild`)
 
 ```prisma
   // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요.

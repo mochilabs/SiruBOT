@@ -91,7 +91,7 @@ spacing:
 - 실패하면 초안과 저장 행동을 유지하고 실패 이유를 알린다. 되돌리기는 현재 지원되는 패널에서 유지한다.
 - 대화 기록 삭제처럼 미저장 상태와 관계없는 작업은 해당 설정 본문에 둔다.
 
-자세한 상태 표와 구현 경계는 [대시보드 UX 계약](apps/dashboard/DESIGN.md#8-responsive-ux-and-floating-save-bar-planned)을 따른다.
+자세한 상태 표와 구현 경계는 [대시보드 UX 계약](apps/dashboard/DESIGN.md#8-responsive-ux-and-floating-save-bar)을 따른다.
 
 ### 데스크톱과 모바일 레이아웃
 
@@ -117,11 +117,13 @@ Discord Components V2의 `ContainerBuilder`와 `TextDisplayBuilder`를 사용한
 
 2026-10-14 부분 구현: 공용 제목·안내 줄바꿈, 설정 초안 비교·중복 저장 방지,
 길드별 플레이어 상태 분리·오류 복구를 적용했다. 범위와 실제 검증 결과는
-[UI/UX 감사 기록](docs/audits/2026-10-14-dashboard-ui-ux.md)에 있다.
+2026-10-14 UI/UX 감사 기록(`docs/audits/2026-10-14-dashboard-ui-ux.md`)에 있다.
+그 파일은 현재 저장소에 없다.
 floating 저장 바, 서버 전환 확인 모달, 서버 검색 팝오버와 토스트 정리를 추가 적용했다.
 전체 인증 흐름과 실제 기기의 소프트 키보드 검증은 아직 남아 있다.
 
-[구현 계획](docs/plans/2026-10-14-dashboard-responsive-ux.md)에 대상 파일, 작업 순서, 상태 보존 회귀와 화면 검증 항목을 기록했다.
+2026-10-14 반응형 UX 구현 계획(`docs/plans/2026-10-14-dashboard-responsive-ux.md`)에
+대상 파일, 작업 순서, 상태 보존 회귀와 화면 검증 항목을 기록했다. 그 파일도 현재 저장소에 없다.
 320·375·768·1024·1440px와 그 사이 폭, 두 테마, 200% 확대, 키보드 탐색, reduced-motion을 확인한다.
 모바일 소프트 키보드는 실제 장치 또는 키보드 환경에서 별도 확인하며 화면 크기 에뮬레이션으로 통과를 주장하지 않는다.
 문서 검증과 실제 UI 검증 결과는 구분해서 기록한다.

@@ -25,8 +25,11 @@ sirubot/
 │   ├── bot/           # Discord bot application
 │   ├── dashboard/     # Next.js web dashboard
 │   ├── data-api/      # External data gateway (cache + LLM batch jobs)
-│   └── shardmanager/  # Shard management server
+│   ├── notifier/      # Social alert service (webhooks + live-stream schedulers)
+│   ├── shardmanager/  # Shard management server
+│   └── storage/       # Object storage service (generated images and assets)
 └── packages/
+    ├── app-kit/       # Shared Fastify helpers (auth, env validation, logger)
     ├── prisma/        # Database schema and client
     ├── shardclient/   # Shard client library
     └── utils/         # Shared utility functions and modules
@@ -151,8 +154,11 @@ yarn install
 # Generate Prisma client files
 yarn generate
 
-# Run all configured apps in development mode concurrently
+# Start the dashboard dev server (the only workspace with a dev script)
 yarn dev
+
+# Rebuild the backend apps and shared packages on change (watch mode)
+yarn watch
 
 # Apply database migrations in development
 yarn workspace @sirubot/prisma migrate:dev
@@ -167,18 +173,18 @@ yarn test
 yarn build
 ```
 
-For local development, create the per-app environment files described above, then run `yarn dev`. Generate the Prisma client with `yarn generate` before typechecking or building.
+For local development, create the per-app environment files described above. Then run `yarn dev` for the dashboard, and run `yarn watch` for the backend apps (bot, data-api, notifier, storage, shardmanager) — it rebuilds them on change but does not start them. Start a backend app in a second terminal with `yarn workspace @sirubot/<name> start`. Generate the Prisma client with `yarn generate` before typechecking or building.
 
 ### Filtering Specific Projects (Turbo Filter)
 
 To build or run dev servers for single projects rather than the entire monorepo, utilize Turbo's filtering syntax:
 
 ```bash
-# Start bot in development mode
-turbo dev --filter=@sirubot/bot
-
-# Start dashboard in development mode
+# Start the dashboard dev server
 turbo dev --filter=@sirubot/dashboard
+
+# Rebuild the bot on change (backend apps have no dev script, they use watch)
+turbo run watch --filter=@sirubot/bot
 
 # Build the shared utils package
 turbo build --filter=@sirubot/utils

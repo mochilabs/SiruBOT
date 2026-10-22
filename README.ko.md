@@ -25,8 +25,11 @@ sirubot/
 │   ├── bot/           # 디스코드 봇 애플리케이션
 │   ├── dashboard/     # Next.js 웹 대시보드
 │   ├── data-api/      # 외부 데이터 게이트웨이 (캐시 + LLM 배치 작업)
-│   └── shardmanager/  # 샤드 관리 서버 (Shard Management)
+│   ├── notifier/      # 소셜 알림 서비스 (웹훅 + 라이브 스트림 스케줄러)
+│   ├── shardmanager/  # 샤드 관리 서버 (Shard Management)
+│   └── storage/       # 오브젝트 스토리지 (생성 이미지·에셋 보관)
 └── packages/
+    ├── app-kit/       # 공용 Fastify 유틸 (인증·env 검증·로거)
     ├── prisma/        # 데이터베이스 스키마 및 클라이언트
     ├── shardclient/   # 샤드 클라이언트 라이브러리
     └── utils/         # 공통 유틸리티 기능 패키지
@@ -151,8 +154,11 @@ yarn install
 # Prisma 클라이언트 코드 생성
 yarn generate
 
-# 설정된 앱 개발 서버 실행
+# 대시보드 개발 서버 실행 (dev 스크립트가 있는 유일한 워크스페이스)
 yarn dev
+
+# 백엔드 앱·공용 패키지를 변경 시 자동 재빌드 (watch 모드)
+yarn watch
 
 # 데이터베이스 마이그레이션 적용
 yarn workspace @sirubot/prisma migrate:dev
@@ -163,17 +169,17 @@ yarn test
 yarn build
 ```
 
-로컬 개발은 각 앱의 `.env`를 설정한 뒤 `yarn dev`로 시작합니다. 타입 검사나 빌드 전에 `yarn generate`를 실행해 Prisma 클라이언트를 생성하세요.
+로컬 개발은 각 앱의 `.env`를 설정한 뒤 시작합니다. 대시보드는 `yarn dev`로 실행하고, 백엔드 앱(bot·data-api·notifier·storage·shardmanager)은 `yarn watch`로 변경 시 자동 재빌드한 뒤 별도 터미널에서 `yarn workspace @sirubot/<앱 이름> start`로 실행합니다. 타입 검사나 빌드 전에 `yarn generate`를 실행해 Prisma 클라이언트를 생성하세요.
 
 ### 개별 애플리케이션 및 패키지 실행 (Turbo 필터)
 
 전체 실행 대신 특정 프로젝트만 빌드하거나 개발 모드로 실행하고 싶다면 Turbo 필터를 이용하세요:
 
 ```bash
-# 봇 단독 개발 실행
-turbo dev --filter=@sirubot/bot
+# 봇 변경 시 자동 재빌드 (봇에는 dev 스크립트가 없음)
+turbo run watch --filter=@sirubot/bot
 
-# 대시보드 단독 개발 실행
+# 대시보드 개발 서버 실행
 turbo dev --filter=@sirubot/dashboard
 
 # 공통 유틸리티 빌드

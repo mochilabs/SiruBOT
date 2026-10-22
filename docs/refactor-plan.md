@@ -7,17 +7,17 @@
 
 ## 목차
 
-1. [TL;DR — 우선순위 요약](#1-tldr--우선순위-요약)
-2. [크로스커팅 — 여러 워크스페이스에 걸친 중복 패턴](#2-크로스커팅--여러-워크스페이스에-걸친-중복-패턴)
+1. [TL;DR: 우선순위 요약](#1-tldr-우선순위-요약)
+2. [크로스커팅: 여러 워크스페이스에 걸친 중복 패턴](#2-크로스커팅-여러-워크스페이스에-걸친-중복-패턴)
 3. [워크스페이스별 계획](#3-워크스페이스별-계획)
-4. [의도적 중복 — 건드리지 않을 것들](#4-의도적-중복--건드리지-않을-것들)
+4. [의도적 중복: 건드리지 않을 것들](#4-의도적-중복-건드리지-않을-것들)
 5. [조사 중 발견한 잠재 버그](#5-조사-중-발견한-잠재-버그)
 6. [문서 정합성 문제](#6-문서-정합성-문제)
 7. [실행 로드맵 (리스크 낮은 순)](#7-실행-로드맵-리스크-낮은-순)
 
 ---
 
-## 1. TL;DR — 우선순위 요약
+## 1. TL;DR: 우선순위 요약
 
 | # | 대상 | 무엇을 | 근거 | 리스크 | 효과 |
 |---|------|--------|------|--------|------|
@@ -37,9 +37,9 @@
 
 ---
 
-## 2. 크로스커팅 — 여러 워크스페이스에 걸친 중복 패턴
+## 2. 크로스커팅: 여러 워크스페이스에 걸친 중복 패턴
 
-### 2.1 크로스-앱 도메인 로직 이중 홈 — 최우선
+### 2.1 크로스-앱 도메인 로직 이중 홈: 최우선
 
 봇이 data-api 소유의 외부 데이터/배치를 로컬 구현으로 한 번 더 들고 있는 구간들. **2026-10-20 결정: 폴백을 유지하지 않고 삭제 — data-api 단일 책임으로 통일**합니다.
 
@@ -79,7 +79,7 @@
 - fetch 타임아웃 래퍼: `AbortSignal.timeout`/`AbortController` 사용 26 파일 산재 — 초소형 `httpGetJson(url, {timeoutMs})` 점진 도입 후보(우선순위 낮음).
 - 에러 클래스 이중 정의: `WeatherError`(bot weatherService.ts:11 ↔ data-api providers/weather.ts:11), `DeliveryError`(bot deliveryService.ts:9 ↔ data-api providers/delivery.ts:4) — 봇 쪽은 게이트웨이 응답 매핑용이라 dataApiClient 공통 매퍼로 흡수 검토(우선순위 낮음).
 
-### 2.2 Fastify 앱 공용 인프라 4벌 — `packages/utils` 승격 후보
+### 2.2 Fastify 앱 공용 인프라 4벌: `packages/utils` 승격 후보
 
 data-api · shardmanager · storage · notifier 네 앱이 같은 밑바닥 코드를 각자 갖고 있습니다.
 
@@ -128,7 +128,7 @@ data-api · shardmanager · storage · notifier 네 앱이 같은 밑바닥 코�
 
 ## 3. 워크스페이스별 계획
 
-### 3.1 `apps/data-api` — 최우선
+### 3.1 `apps/data-api`: 최우선
 
 **(P0) `routes/index.ts` 1,103 LOC 모놀리스 분리.** `call_graph` 기준 `registerRoutes`가 651개 함수를 직접 호출하고 그래프 연결 652로 리포 최대 허브(`architecture_context` 결과). 파일 안에 라우트 핸들러 + 인라인 zod 스키마 + SSE 브로드캐스트 + Redis publish가 섞여 있습니다. 이미 `routes/dashboard.ts`, `routes/social.ts`로 추출한 선례가 있으므로 같은 패턴으로 이어가면 됩니다.
 
@@ -150,7 +150,7 @@ data-api · shardmanager · storage · notifier 네 앱이 같은 밑바닥 코�
 
 **잘 되어 있는 것(유지)**: `utils/`의 `serveCached`/`dedup`/`breaker`/`cache`/`metrics` 추상, `renderers/canvasUtils.ts`(582 LOC)에 폰트 로딩·이미지 allowlist·truncate·RNG·아이콘·hexToRgba가 잘 중앙화됨(각 렌더러가 공유 확인).
 
-### 3.2 `apps/bot` — 큰 서비스 2개부터
+### 3.2 `apps/bot`: 큰 서비스 2개부터
 
 **(P1) `services/aiChatService.ts` 1,108 LOC — 책임 7개 분리.** 심볼 맵 기준 실제 구성:
 
@@ -210,7 +210,7 @@ data-api · shardmanager · storage · notifier 네 앱이 같은 밑바닥 코�
 
 ---
 
-## 4. 의도적 중복 — 건드리지 않을 것들
+## 4. 의도적 중복: 건드리지 않을 것들
 
 복제처럼 보이지만 이유가 있는 것들. 리팩토링 범위에서 제외하고, 대신 가드만 추가합니다.
 
@@ -259,7 +259,7 @@ data-api · shardmanager · storage · notifier 네 앱이 같은 밑바닥 코�
 
 ---
 
-## 부록 — 재현 가능한 조사 방법
+## 부록: 재현 가능한 조사 방법
 
 - 인덱스 상태: `index_status`(8,108 chunks, ollama/nomic-embed-text, 2026-10-20 기준 ready)
 - 허브/커뮤니티: `code_communities`(minSize 3, hubThreshold 5), `architecture_context`(depth 3)

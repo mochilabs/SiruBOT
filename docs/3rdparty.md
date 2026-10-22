@@ -34,7 +34,7 @@
 | 3RD-07 | Prisma, Redis, Fastify, Next.js, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
 | 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, OpenAI-compatible LLM | External HTTP | `apps/data-api/src/providers/*` | REST, including unofficial APIs | YouTube's internal API can change without notice |
 
-For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-system-context). For the relationship among mixer, file-cache, and SiruBOT, consult the corresponding sibling-project documentation.
+For the overall system diagram, see [System Context in `architecture.md`, Section 2](./architecture.md#2-시스템-컨텍스트). For the relationship among mixer, file-cache, and SiruBOT, consult the corresponding sibling-project documentation.
 
 ---
 

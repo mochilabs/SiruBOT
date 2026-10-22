@@ -1,4 +1,4 @@
-# SiruBOT — Agent Instructions
+# SiruBOT: Agent Instructions
 
 Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS), `apps/storage` (Fastify 오브젝트 스토리지), `apps/notifier` (Fastify 소셜 알림 웹훅·스케줄러); `packages/prisma|shardclient|utils|app-kit`.
 
@@ -50,7 +50,8 @@ The repo is indexed (7,348 chunks total / 5,434 on the current branch, auto-incr
 yarn install                          # Corepack Yarn 4, node-modules linker, Node 22+
 yarn generate                         # REQUIRED before typecheck/build (Prisma client)
 yarn workspace @sirubot/prisma migrate:dev
-yarn dev                              # all apps; single: turbo dev --filter=@sirubot/bot
+yarn dev                              # dashboard dev server only (the only `dev` script in the repo)
+yarn watch                            # rebuild bot/data-api/notifier/storage/shardmanager + packages on change
 yarn lint / yarn lint:fix             # turbo fan-out; pre-push hook runs lint:fix + typecheck
 yarn typecheck                        # turbo; dependsOn ^build ^generate — don't run bare tsc first
 ```

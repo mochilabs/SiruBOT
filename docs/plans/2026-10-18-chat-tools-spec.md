@@ -3,7 +3,7 @@
 > **상태**: 구현 완료 (feat/chat-tools → beta PR) — 2차: 채널 단위 on/off·봇 명령어·임베드 CV2 카드·웹훅 릴레이 추가 / 3차: 임베드 복구 사이트 4종(TikTok·Reddit·Pixiv·Threads) OG 카드 추가 / 4차: 이모지 확대 웹훅 릴레이 전환·캡션 제거, 카드 accent color 플랫폼 브랜드색, 원문 버튼 위치 통일 / 5차: 인스타그램 CV2 카드 업그레이드(kirkstagram 캐러셀 + toinstagram 캡션 병합, kkinstagram 이미지 폴백)
 > **형태**: 기능 명세서 — 구현 결과와 계약을 기록해요.
 > **Baseline**: `beta` @ `78556d9d` (2026-10-18), feature 브랜치 `feat/chat-tools`에서 구현.
-> **출처**: `docs/plans/2026-10-16-feature-opportunities.md` 아이디어 목록 중 #1·#2·#3·#11을 선택.
+> **출처**: `docs/plans/2026-10-16-feature-opportunities.md`(현재 트리에는 없다) 아이디어 목록 중 #1·#2·#3·#11을 선택.
 
 ---
 
