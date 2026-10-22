@@ -2,12 +2,29 @@ import { type RedisClientType } from '@redis/client';
 import { Awaitable, QueueStoreManager, StoredQueue } from 'lavalink-client';
 import { PendingWriteStore } from '../pendingWriteStore.ts';
 
+/**
+ * write-behind 코레일스 윈도우 — 큐 변경 이벤트마다 전체 스냅샷을 Redis로 보내던 것을
+ * 이 시간 안의 변경끼리 묶어 마지막 것 하나만 기록한다.
+ */
+export const QUEUE_WRITE_COALESCE_MS = 400;
+
+/**
+ * 큐 저장소 — 읽기는 캐시 우선(저널 → 메모리 → Redis), 쓰기는 인메모리가 먼저다.
+ * 코레일스 윈도우 동안 큐의 authoritative 소스는 인메모리이고 Redis는 그만큼 뒤처진다 —
+ * Redis 단절 시와 같은 정합성 모델이며, 크래시 시 윈도우(≤QUEUE_WRITE_COALESCE_MS)의
+ * 변경만 유실 가능하다. 정상 종료는 종료 순서의 drainPendingWrites가 저널을 모두 비운다.
+ */
 export class CachedQueueStore extends PendingWriteStore implements QueueStoreManager {
 	constructor(redis: RedisClientType) {
-		super(redis, 'queueStore', {
-			ttl: 30 * 60 * 1000,
-			maxSize: 1000
-		});
+		super(
+			redis,
+			'queueStore',
+			{
+				ttl: 30 * 60 * 1000,
+				maxSize: 1000
+			},
+			QUEUE_WRITE_COALESCE_MS
+		);
 	}
 
 	protected getKey(guildId: string): string {
@@ -28,6 +45,7 @@ export class CachedQueueStore extends PendingWriteStore implements QueueStoreMan
 		return defaultQueue;
 	}
 
+	/** 인메모리 반영은 즉시, Redis 기록은 코레일스 윈도우를 거친다(write-behind). */
 	public async set(guildId: string, value: StoredQueue | string): Promise<void | boolean> {
 		this.logger.trace(`Setting queue for guild ${guildId}`);
 		const stringValue = this.stringify(value) as string;
