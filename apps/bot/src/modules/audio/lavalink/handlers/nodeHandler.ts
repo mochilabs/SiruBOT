@@ -1,30 +1,19 @@
-import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer, NodeManager } from 'lavalink-client';
-import { ChannelType } from 'discord.js';
+import { LavalinkNode, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
-import { NodeSessionStore } from '../redisStore.ts';
-import { CustomPlayer } from '../player/customPlayer.ts';
-import { CachedPlayerSaver } from '../player/playerSaver.ts';
+import { SessionRestoreEngine } from './sessionRestore.ts';
 import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
 
-/** playerSaver.get() 반환 — 재시작 복구의 입력이 되는 저장 플레이어 형태. */
-type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
-
-/** fresh 세션 복구 한도 — 이보다 오래된 잔재는 복구하지 않고 정리한다. */
-const FRESH_RESTORE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
-/** 길드가 캐시에 도착할 때까지 기다리는 시간(대형 봇은 READY 뒤에도 GUILD_CREATE가 스트리밍된다). */
-const GUILD_WAIT_TIMEOUT_MS = 90_000;
-const GUILD_WAIT_POLL_MS = 3_000;
-/** resume 대상 플레이어의 마지막 상태 갱신이 이보다 오래됐으면 stale로 간주한다. */
-const RESUME_STALE_THRESHOLD_MS = 5 * 60 * 1000;
-/** 복구 동시성 — Discord 음성 연결/REST에 과부하를 주지 않도록 제한한다. */
-const RESTORE_BATCH_SIZE = 10;
-
+/**
+ * lavalink 노드 이벤트 핸들러 — 세션 저장/복원 엔진(SessionRestoreEngine)과
+ * 노드 수명주기 로깅·고아 플레이어 마이그레이션만 담당한다.
+ */
 export class NodeHandler extends BaseLavalinkHandler {
-	/** 복구 대기/재시도 타이머 — cleanup 시 일괄 해제한다. */
-	private readonly restoreTimers = new Set<NodeJS.Timeout>();
+	/** 세션 저장·복원 엔진 — ready/resumed 위임과 크래시 복구 전체를 담는다. */
+	public readonly sessionRestore: SessionRestoreEngine;
 
 	constructor(private readonly nodeManager: NodeManager) {
 		super('nodeHandler');
+		this.sessionRestore = new SessionRestoreEngine(this.logger);
 
 		this.nodeManager.on('create', this.handleNodeCreate.bind(this));
 		this.nodeManager.on('connect', this.wrapAsyncHandler(this.handleNodeConnect.bind(this), 'handleNodeConnect'));
@@ -32,7 +21,10 @@ export class NodeHandler extends BaseLavalinkHandler {
 		this.nodeManager.on('reconnecting', this.handleNodeReconnecting.bind(this));
 		this.nodeManager.on('destroy', this.handleNodeDestroy.bind(this));
 		this.nodeManager.on('error', this.handleNodeError.bind(this));
-		this.nodeManager.on('resumed', this.wrapAsyncHandler(this.handleNodeResumed.bind(this), 'handleNodeResumed'));
+		this.nodeManager.on(
+			'resumed',
+			this.wrapAsyncHandler(this.sessionRestore.handleResumedPlayers.bind(this.sessionRestore), 'handleNodeResumed')
+		);
 		// ready op는 'resumed' 이벤트와 무관하게 항상 온다 — sessionId 확정 저장과
 		// fresh 세션 복구(크래시 재시작)의 트리거로 사용한다.
 		this.nodeManager.on('raw', this.handleNodeRaw.bind(this));
@@ -53,26 +45,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 		} catch (error) {
 			this.logger.debug(`updateSession skipped for node ${node.options.id}: ${error}`);
 		}
-		await this.saveNodeSession(node);
-	}
-
-	/** ready op 도착 시점의 sessionId는 확정값 — 크래시 재시작 후 세션 복구가 가능하도록 저장한다. */
-	private async saveNodeSession(node: LavalinkNode): Promise<void> {
-		if (!node.sessionId || !this.container.shardInfo) return;
-		try {
-			const shardKey = NodeSessionStore.makeShardKey(this.container.shardInfo.shardIds);
-			await this.container.redisStore.getNodeSessionStore().save(node.id, node.sessionId, shardKey);
-		} catch (error) {
-			this.logger.warn(`Failed to save session for node ${node.id}: ${error}`);
-		}
+		await this.sessionRestore.saveNodeSession(node);
 	}
 
 	/**
-	 * raw payload 중 ready op와 mixer op를 처리한다.
+	 * raw payload 중 ready op와 mixer op를 이벤트 측에서 분류한다.
 	 * - mixer op: overlapEnd(aborted)만 MixerService에 기록한다(나머지는 무시).
-	 * - ready resumed=true: sessionId 확정 저장(이미 'resumed' 핸들러가 복구를 담당).
-	 * - ready resumed=false: 이전 세션을 못 썼다는 뜻 — 서버에 플레이어가 없으므로
-	 *   Redis의 플레이어/큐 기록에서 재구성한다(크래시 재시작 포함).
+	 * - ready op: sessionId 확정 저장·resume 연장·fresh 복구는 엔진(handleReadyOp)이 위임한다.
 	 */
 	private handleNodeRaw(node: LavalinkNode, payload: unknown) {
 		const data = payload as { op?: unknown; resumed?: unknown } | null;
@@ -84,454 +63,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return;
 		}
 		if (data.op !== 'ready') return;
-		// 'raw'는 라이브러리가 payload.sessionId을 node.sessionId에 대입하기 '전'에 발화한다
-		// (lavalink-client: emit('raw') → switch → sessionId assign). 새 세션 id를 보려면
-		// 다음 턴으로 넘겨야 한다 — 여기서 읽으면 이전 세션 id(또는 null)를 읽는다.
-		const timer = setTimeout(() => {
-			this.restoreTimers.delete(timer);
-			void this.saveNodeSession(node);
-			// ready 직후에도 세션 유지(resume)를 다시 연장한다 — 5분 타이머가 걸려 있어야
-			// 그 안에 재시작됐을 때 서버 플레이어가 그대로 이어진다.
-			if (node.sessionId) void node.updateSession(true, 60 * 5).catch(() => null);
-			if (data.resumed === false) {
-				this.logger.info(`Node ${node.options.id} started a fresh session: restoring players from store`);
-				void this.restoreFreshSession(node).catch((error) => this.logger.error(`Fresh session restore failed: ${error}`));
-			}
-		}, 0);
-		this.restoreTimers.add(timer);
-	}
-
-	private async handleNodeResumed(
-		node: LavalinkNode,
-		payload: {
-			resumed: true;
-			sessionId: string;
-			op: 'ready';
-		},
-		players: LavalinkPlayer[] | InvalidLavalinkRestRequest
-	) {
-		if (!Array.isArray(players)) {
-			throw new Error('Resume players is not an array');
-		}
-		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
-		const startTime = Date.now();
-		const playerSaver = this.container.redisStore.getPlayerSaver();
-		const BATCH_SIZE = RESTORE_BATCH_SIZE;
-
-		// 유효한 플레이어만 필터링
-		const validPlayers: LavalinkPlayer[] = [];
-		const pendingGuildPlayers: LavalinkPlayer[] = [];
-		players.forEach((lavalinkPlayer) => {
-			if (!lavalinkPlayer.state.connected) {
-				this.logger.debug(`Player at ${lavalinkPlayer.guildId} is already disconnected`);
-				playerSaver.delete(lavalinkPlayer.guildId);
-				return;
-			}
-
-			if (!this.container.client.guilds.cache.has(lavalinkPlayer.guildId)) {
-				// READY 직후에는 대형 봇의 GUILD_CREATE가 아직 스트리밍 중일 수 있다 —
-				// 길드가 캐시에 오기를 기다렸다가 복구한다(즉시 버리지 않는다).
-				pendingGuildPlayers.push(lavalinkPlayer);
-				return;
-			}
-
-			// 마지막 상태 업데이트가 너무 오래됐으면 버리기
-			if (lavalinkPlayer.state.time && startTime - lavalinkPlayer.state.time > RESUME_STALE_THRESHOLD_MS) {
-				this.logger.debug(
-					`Skipping stale player at ${lavalinkPlayer.guildId} (last update: ${Math.round((startTime - lavalinkPlayer.state.time) / 1000)}s ago)`
-				);
-				playerSaver.delete(lavalinkPlayer.guildId);
-				return;
-			}
-
-			validPlayers.push(lavalinkPlayer);
-		});
-
-		this.logger.debug(
-			`Filtered ${players.length} -> ${validPlayers.length} valid + ${pendingGuildPlayers.length} pending (guild cache) players for resume`
-		);
-
-		// 배치 단위 병렬 처리
-		for (let i = 0; i < validPlayers.length; i += BATCH_SIZE) {
-			const batch = validPlayers.slice(i, i + BATCH_SIZE);
-			const results = await Promise.allSettled(
-				batch.map((lavalinkPlayer) => this.resumeSinglePlayer(node, lavalinkPlayer, playerSaver, startTime))
-			);
-
-			for (const result of results) {
-				if (result.status === 'rejected') {
-					this.logger.error(`Failed to resume a player:`, result.reason);
-				}
-			}
-		}
-
-		// 길드 캐시를 기다리던 플레이어는 폴링 재시도로 이어받는다.
-		for (const pending of pendingGuildPlayers) {
-			this.scheduleResumeRetry(node, pending, playerSaver, startTime, 0);
-		}
-
-		this.logger.info(`Resume completed in ${Date.now() - startTime}ms (${validPlayers.length} players)`);
-	}
-
-	/** 길드 캐시 도착을 폴링하다 나타나면 복구하고, 끝내 없으면 서버 플레이어와 기록을 정리한다. */
-	private scheduleResumeRetry(
-		node: LavalinkNode,
-		lavalinkPlayer: LavalinkPlayer,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
-		startTime: number,
-		attempt: number
-	): void {
-		const guildId = lavalinkPlayer.guildId;
-		// 이미 복구됐거나(다른 경로) 길드가 도착했다면 즉시 시도한다.
-		if (this.container.audio.players.has(guildId)) return;
-		if (this.container.client.guilds.cache.has(guildId)) {
-			this.resumeSinglePlayer(node, lavalinkPlayer, playerSaver, startTime).catch((error) => {
-				this.logger.error(`Failed to resume player at ${guildId} (retry): ${error}`);
-				this.scheduleResumeRetry(node, lavalinkPlayer, playerSaver, startTime, attempt + 1);
-			});
-			return;
-		}
-		if ((attempt + 1) * GUILD_WAIT_POLL_MS > GUILD_WAIT_TIMEOUT_MS) {
-			this.logger.info(`Resume cancelled at ${guildId}: guild not available after ${GUILD_WAIT_TIMEOUT_MS}ms`);
-			void node.destroyPlayer(guildId).catch(() => null);
-			void playerSaver.delete(guildId).catch(() => null);
-			return;
-		}
-		const timer = setTimeout(() => {
-			this.restoreTimers.delete(timer);
-			this.scheduleResumeRetry(node, lavalinkPlayer, playerSaver, startTime, attempt + 1);
-		}, GUILD_WAIT_POLL_MS);
-		this.restoreTimers.add(timer);
-	}
-
-	private async resumeSinglePlayer(
-		node: LavalinkNode,
-		lavalinkPlayer: LavalinkPlayer,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
-		startTime: number
-	) {
-		// 다른 경로에서 이미 복구됐으면 재생성하지 않는다.
-		if (this.container.audio.players.has(lavalinkPlayer.guildId)) {
-			this.logger.debug(`Client player already exists at ${lavalinkPlayer.guildId}, skipping resume recreate`);
-			return;
-		}
-
-		// 재시도 경로도 동일한 stale 기준을 적용한다 — 오래된 상태로 복구하면 어긋난 위치부터 재생한다.
-		if (lavalinkPlayer.state.time && startTime - lavalinkPlayer.state.time > RESUME_STALE_THRESHOLD_MS) {
-			this.logger.info(`Skipping stale player at ${lavalinkPlayer.guildId} (retry path)`);
-			await node.destroyPlayer(lavalinkPlayer.guildId).catch(() => null);
-			await playerSaver.delete(lavalinkPlayer.guildId).catch(() => null);
-			return;
-		}
-
-		const savedPlayer = await playerSaver.get(lavalinkPlayer.guildId);
-		if (!savedPlayer) {
-			// 기록이 없는 서버 플레이어는 통제 불가능한 고아 — 재생을 멈추고 정리한다.
-			this.logger.info(`No saved player at guild ${lavalinkPlayer.guildId}, destroying orphan server player`);
-			await node.destroyPlayer(lavalinkPlayer.guildId).catch((error) => {
-				this.logger.debug(`Failed to destroy orphan player at ${lavalinkPlayer.guildId}: ${error}`);
-			});
-			return;
-		}
-
-		const createdPlayer = await this.recreateSavedPlayer(node, lavalinkPlayer.guildId, savedPlayer, {
-			volume: this.container.audio.options.playerOptions?.volumeDecrementer
-				? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
-				: lavalinkPlayer.volume,
-			restoreFilters: true,
-			silentSync: true
-		});
-
-		if (lavalinkPlayer.track)
-			createdPlayer.queue.current = this.container.audio.utils.buildTrack(
-				lavalinkPlayer.track,
-				createdPlayer.queue.current?.requester || this.container.client.user
-			);
-
-		const now = Date.now();
-		createdPlayer.lastPosition = lavalinkPlayer.state.position + (now - startTime);
-		createdPlayer.lastPositionChange = now;
-		createdPlayer.ping.lavalink = lavalinkPlayer.state.ping;
-
-		createdPlayer.paused = lavalinkPlayer.paused;
-		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
-
-		// 재시작 프로세스의 mixer 기록(preloaded)은 비어 있지만 서버는 슬롯을 들고
-		// 있다 — 서버 상태와 맞춰 첫 전이가 서버 소유(갭리스·크로스페이드)로 이어지게 한다.
-		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
-			this.logger.warn(`Mixer reconcile after resume failed at ${lavalinkPlayer.guildId}: ${error}`);
-		});
-
-		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
-	}
-
-	/**
-	 * 저장된 플레이어 기록으로 클라이언트 플레이어를 재생성하고 컨트롤러 참조·음성 연결·큐를 복원한다.
-	 * session resume(resumeSinglePlayer)과 fresh 복구(restoreFreshPlayer)가 공유한다.
-	 * - volume: resume만 복원된 서버 볼륨을 넘긴다 (fresh는 기본 볼륨으로 시작).
-	 * - restoreFilters: resume은 서버 필터가 살아 있으므로 이전 상태를 이어붙인다.
-	 * - silentSync: resume은 큐 sync 실패를 로그로 삼키고 이어서 current를 복원한다.
-	 *   fresh는 실패가 상위로 전파되어 저장 기록을 다음 재시작까지 남긴다.
-	 */
-	private async recreateSavedPlayer(
-		node: LavalinkNode,
-		guildId: string,
-		saved: SavedPlayer,
-		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean } = {}
-	): Promise<CustomPlayer> {
-		const createdPlayer = await this.container.audio.createPlayer({
-			guildId,
-			voiceChannelId: saved.voiceChannelId,
-			textChannelId: saved.textChannelId,
-			selfDeaf: saved.options.selfDeaf,
-			selfMute: saved.options.selfMute,
-
-			node: node.id,
-			...(options.volume !== undefined ? { volume: options.volume } : {}),
-
-			// volume은 filters가 아니라 playerOptions로 보낸다(부분 filters op는 서버의 필터
-			// 상태 전체를 덮어써 mixer 플러그인 키를 지운다). 이전 세션의 true 값도 무시한다.
-			applyVolumeAsFilter: false,
-			instaUpdateFiltersFix: saved.options.instaUpdateFiltersFix,
-			vcRegion: saved.options.vcRegion
-		});
-
-		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId}`);
-
-		await createdPlayer.connect();
-		if (options.restoreFilters) createdPlayer.filterManager.data = saved.filters;
-		const sync = createdPlayer.queue.utils.sync(true, false);
-		await (options.silentSync ? sync.catch(this.logger.error.bind(this)) : sync);
-
-		return createdPlayer;
-	}
-
-	/** 이전 세션의 컨트롤러 메시지(채널+메시지 id)를 다시 붙인다 — 실패해도 다음 trackStart가 새 메시지를 보낸다. */
-	private async restoreControllerRef(
-		createdPlayer: CustomPlayer,
-		textChannelId: string | null | undefined,
-		messageId: string | null | undefined,
-		label: string
-	): Promise<void> {
-		if (!textChannelId || !messageId) return;
-		this.logger.debug(`Setting cached controller message and message id for ${label}`);
-		const fetchedChannel = await this.container.client.channels.fetch(textChannelId).catch(() => null);
-		if (fetchedChannel && fetchedChannel.isTextBased()) {
-			const message = await fetchedChannel.messages.fetch(messageId).catch(() => null);
-			this.logger.debug(`Fetched controller message for ${label}`);
-			if (message?.editable) {
-				createdPlayer.messageId = message.id;
-				createdPlayer.controller = message;
-			}
-		}
-	}
-
-	/**
-	 * fresh 세션 복구: 이전 세션을 못 써서 서버에 플레이어가 없어도
-	 * Redis의 플레이어/큐 기록에서 재구성한다(음성 채널 점유 + 신선도 조건 충족 시).
-	 *
-	 * - 스캔 결과엔 다른샤드(레플리카)의 길드도 섞인다. 남의 길드는 이 프로세스 캐시에
-	 *   절대 없어 waitForGuild가 90초를 통째로 소모하고 배치를 막았으므로, 샤드 소유로
-	 *   먼저 걸러 자국 길드 복구가 밀리지 않게 한다.
-	 * - 배치 순차 await 대신 워커 풀로 돌려 한 길드의 캐시 대기(최대 90초)가 뒤 길드
-	 *   복구 전체로 누적되지 않게 한다.
-	 */
-	private async restoreFreshSession(node: LavalinkNode): Promise<void> {
-		const playerSaver = this.container.redisStore.getPlayerSaver();
-		// 신선도 판정 기준 시각 — 복구 작업이 밀려 늦어져도 세션 시작 시점 기준으로 본다.
-		const sessionStartedAt = Date.now();
-		const savedGuildIds = await playerSaver.listGuildIds();
-		if (savedGuildIds.length === 0) return;
-
-		const guildIds = savedGuildIds.filter((guildId) => this.isOwnedByThisShard(guildId));
-		const foreignCount = savedGuildIds.length - guildIds.length;
-		if (foreignCount > 0) {
-			this.logger.info(`Fresh session restore: ignoring ${foreignCount} saved player(s) owned by other shards`);
-		}
-		if (guildIds.length === 0) return;
-		this.logger.info(`Fresh session restore: ${guildIds.length} saved player(s) found`);
-
-		// 길드 캐시 도착 대기는 워커와 분리해 미리 병렬로 돌린다 — 워커가 폴링 시간을
-		// 점유하면 뒤 길드 복구가 대기 시간만큼 밀린다. 캐시에 이미 온 길드는 즉시 도착.
-		// 캐시에 온 길드를 먼저 집어 워커가 불필요한 대기에 묶이지 않게 한다.
-		type RestoreTask = { guildId: string; arrived: Promise<boolean> };
-		const ready: RestoreTask[] = [];
-		const pending: RestoreTask[] = [];
-		for (const guildId of guildIds) {
-			const cached = this.container.client.guilds.cache.has(guildId);
-			const arrived = cached ? Promise.resolve(true) : this.waitForGuild(guildId);
-			(cached ? ready : pending).push({ guildId, arrived });
-		}
-		const workQueue = [...ready, ...pending];
-
-		const workers = Array.from({ length: Math.min(RESTORE_BATCH_SIZE, workQueue.length) }, async () => {
-			for (let task = workQueue.shift(); task !== undefined; task = workQueue.shift()) {
-				try {
-					await this.restoreFreshGuild(node, task.guildId, playerSaver, sessionStartedAt, task.arrived);
-				} catch (error) {
-					this.logger.error(`Fresh restore failed: ${error}`);
-				}
-			}
-		});
-		await Promise.all(workers);
-	}
-
-	/**
-	 * 이 프로세스가 담당하는 샤드의 길드인지 — 샤드 분리(레플리카 다수) 운영에서
-	 * 남의 길드 기록이 90초 캐시 대기(restoreFreshSession)에 들지 않도록 걸러낸다.
-	 * 샤드 정보가 없거나 길드 id를 판별할 수 없으면 보수적으로 모두 후보로 남긴다.
-	 */
-	private isOwnedByThisShard(guildId: string): boolean {
-		const shardInfo = this.container.shardInfo;
-		if (!shardInfo || shardInfo.shardCount <= 1 || shardInfo.shardIds.length === 0) return true;
-		try {
-			const shardId = Number((BigInt(guildId) >> 22n) % BigInt(shardInfo.shardCount));
-			return shardInfo.shardIds.includes(shardId);
-		} catch {
-			return true;
-		}
-	}
-
-	/**
-	 * 단일 길드의 fresh 복구 — 조건 불충분 시 기록을 지우는 대신 건너뛴다(다음 재시작 재시도).
-	 * 길드 캐시 대기(`arrived`)는 호출자 `restoreFreshSession`이 미리 병렬로 돌려 넘긴다 —
-	 * 여기서 폴링을 시작하면 워커가 대기 시간을 점유해 뒤 길드 복구가 밀린다.
-	 */
-	private async restoreFreshGuild(
-		node: LavalinkNode,
-		guildId: string,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
-		sessionStartedAt: number,
-		arrived: Promise<boolean>
-	): Promise<void> {
-		// 다른 경로(재접속 등)에서 이미 복구됐으면 건너뛴다.
-		if (this.container.audio.players.has(guildId)) return;
-		const saved = await playerSaver.get(guildId);
-		if (!saved) return;
-
-		// 오래된 잔재는 복구하지 않고 정리한다. 신선도는 복구 작업이 밀려도 세션 시작
-		// 시점 기준으로 판정한다 — 대기 줄 밀림이 6h 한도를 넘겨 복구 기회를 영구 잃지 않게.
-		const age = saved.savedAt !== undefined ? sessionStartedAt - saved.savedAt : Number.POSITIVE_INFINITY;
-		if (age > FRESH_RESTORE_MAX_AGE_MS) {
-			this.logger.info(`Discarding stale saved player at ${guildId} (${Math.round(age / 60_000)}min old)`);
-			await this.discardSavedPlayer(guildId, saved, playerSaver);
-			return;
-		}
-
-		// READY 직후엔 GUILD_CREATE가 스트리밍 중일 수 있다 — 캐시 도착을 기다린다.
-		if (!(await arrived)) {
-			// 길드가 안 온다고 기록을 지우면 복구 기회를 잃는다 — 남겨 두고 다음
-			// 재시작 때 재시도한다. (기록은 6h 신선도 한도에서 자연히 소멸한다.)
-			this.logger.info(`Fresh restore deferred at ${guildId}: guild not available after ${GUILD_WAIT_TIMEOUT_MS}ms (records kept)`);
-			return;
-		}
-
-		// 음성 채널에 사람이 없으면 재연결하지 않는다(무인 재생 방지).
-		if (!(await this.isVoiceChannelOccupied(saved.voiceChannelId))) {
-			this.logger.info(`Discarding saved player at ${guildId}: voice channel empty or missing`);
-			await this.discardSavedPlayer(guildId, saved, playerSaver);
-			return;
-		}
-
-		await this.restoreFreshPlayer(node, guildId, saved);
-	}
-
-	/** 길드가 캐시에 올 때까지 폴링한다. */
-	private async waitForGuild(guildId: string): Promise<boolean> {
-		const deadline = Date.now() + GUILD_WAIT_TIMEOUT_MS;
-		while (Date.now() < deadline) {
-			if (this.container.client.guilds.cache.has(guildId)) return true;
-			await new Promise((resolve) => setTimeout(resolve, GUILD_WAIT_POLL_MS));
-		}
-		return this.container.client.guilds.cache.has(guildId);
-	}
-
-	/** 음성 채널에 봇이 아닌 멤버가 최소 1명 있는지 — 없으면 재연결하지 않는다. */
-	private async isVoiceChannelOccupied(channelId: string | null | undefined): Promise<boolean> {
-		if (!channelId) return false;
-		try {
-			const channel =
-				this.container.client.channels.cache.get(channelId) ?? (await this.container.client.channels.fetch(channelId).catch(() => null));
-			if (channel?.type !== ChannelType.GuildVoice && channel?.type !== ChannelType.GuildStageVoice) return false;
-			return channel.members.some((member) => !member.user.bot);
-		} catch {
-			return false;
-		}
-	}
-
-	/** 복구하지 않는 플레이어 기록 정리: 컨트롤러 메시지 + 플레이어/큐 저장 키 제거. */
-	private async discardSavedPlayer(
-		guildId: string,
-		saved: { textChannelId?: string | null; messageId?: string | null } | null,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>
-	): Promise<void> {
-		if (saved?.textChannelId && saved.messageId) {
-			const channel = await this.container.client.channels.fetch(saved.textChannelId).catch(() => null);
-			const message = channel?.isTextBased() ? await channel.messages.fetch(saved.messageId).catch(() => null) : null;
-			if (message?.deletable) {
-				await message.delete().catch(() => null);
-			}
-		}
-		await playerSaver.delete(guildId).catch(() => null);
-		await this.container.redisStore
-			.getQueueStore()
-			.delete(guildId)
-			.catch(() => null);
-	}
-
-	/** 저장된 위치를 기반으로 복구 시 재생 위치를 추정한다(저장 이후 경과 시간 반영). */
-	private estimatePosition(saved: { position?: number; lastPosition?: number; lastPositionChange?: number | null; savedAt?: number }): number {
-		const base = saved.lastPosition ?? saved.position ?? 0;
-		const at = saved.lastPositionChange ?? saved.savedAt ?? 0;
-		if (base <= 0 || at <= 0) return 0;
-		const elapsed = Date.now() - at;
-		if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > FRESH_RESTORE_MAX_AGE_MS) return Math.max(0, base);
-		return Math.max(0, base + elapsed);
-	}
-
-	/** fresh 세션에서 단일 플레이어를 재구성하고 재생을 재개한다. */
-	private async restoreFreshPlayer(node: LavalinkNode, guildId: string, saved: SavedPlayer): Promise<void> {
-		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved);
-
-		// 새 세션에는 이전 필터/예열 슬롯이 없다 — 다음 play에서 다시 prime 하도록 표시한다.
-		this.container.mixerService.markFiltersStale(guildId);
-
-		// 큐(current/대기열/이전곡)은 recreateSavedPlayer가 Redis 큐 저장소에서 되살렸다.
-
-		if (!createdPlayer.queue.current) {
-			// 복구할 재생 상태가 없음 → 기록과 컨트롤러를 정리한다.
-			this.logger.info(`Fresh restore: no queue to restore at ${guildId}, discarding`);
-			await createdPlayer.destroy('FreshRestoreEmpty').catch(() => null);
-			await this.discardSavedPlayer(guildId, saved, this.container.redisStore.getPlayerSaver());
-			return;
-		}
-
-		// mixer 필터는 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다(lavaplayer는
-		// 트랙 시작 시점에만 필터를 읽음) — primeForPlay가 내부에서 실패를 삼키므로
-		// 필터 재적용에 실패해도 재생 복구 자체는 계속 진행된다.
-		await this.container.mixerService.primeForPlay(createdPlayer);
-
-		await createdPlayer.play({ noReplace: true });
-
-		// 위치·일시정지 상태를 되살린다.
-		const duration = createdPlayer.queue.current.info.duration ?? 0;
-		let position = this.estimatePosition(saved);
-		if (duration > 0) position = Math.min(position, Math.max(0, duration - 1500));
-		if (position > 1000) {
-			await createdPlayer.seek(position).catch((error) => this.logger.debug(`Fresh restore seek failed at ${guildId}: ${error}`));
-		}
-		if (saved.paused) {
-			await createdPlayer.pause().catch(() => null);
-		}
-
-		// 서버 플레이어가 살아 있어 noReplace play가 trackStart를 발화하지 않으면
-		// 예열 슬롯 복구가 빠진다. 여기서 확인해 두면 새 세션(trackStart 경로)과
-		// 서버 생존(noReplace 경로) 모두 슬롯이 이어진다(slot 직렬화로 idempotent).
-		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
-			this.logger.warn(`Mixer reconcile after fresh restore failed at ${guildId}: ${error}`);
-		});
-
-		this.logger.info(`Fresh restore finished at ${guildId} (position ${Math.round(position / 1000)}s${saved.paused ? ', paused' : ''})`);
+		this.sessionRestore.handleReadyOp(node, data.resumed === false);
 	}
 
 	private handleNodeDisconnect(node: LavalinkNode, reason: { code?: number | undefined; reason?: string | undefined }) {
@@ -583,8 +115,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	public cleanup(): void {
 		this.logger.info('Cleanup lavalink nodeHandler');
-		for (const timer of this.restoreTimers) clearTimeout(timer);
-		this.restoreTimers.clear();
+		this.sessionRestore.clearTimers();
 		this.nodeManager?.removeAllListeners('create');
 		this.nodeManager?.removeAllListeners('connect');
 		this.nodeManager?.removeAllListeners('disconnect');
