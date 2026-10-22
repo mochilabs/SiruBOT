@@ -35,7 +35,8 @@ export {
 	clearChannelHistory,
 	dropChannelHistory,
 	removeFromChannelHistory,
-	updateChannelHistoryMessage
+	updateChannelHistoryMessage,
+	flushChannelHistoryPersist
 } from './aiChat/historyStore.ts';
 export {
 	acquireChannelTurn,

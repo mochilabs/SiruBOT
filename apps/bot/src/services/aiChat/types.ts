@@ -59,6 +59,8 @@ export interface ChannelHistoryState {
 	summary: string | null;
 	/** 요약 대기 중인 원문 — 백그라운드 요약 작업이 summary로 흡수해요 */
 	pending: ChatMessage[];
+	/** messages 전부의 historyLine 토큰 합계 — push/제거마다 증분 갱신해요 (persist payload에는 담지 않아요, 로드 시 재계산) */
+	tokens: number;
 }
 
 // 오류

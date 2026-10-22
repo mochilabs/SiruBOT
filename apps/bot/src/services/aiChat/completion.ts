@@ -10,9 +10,11 @@ export function extractThinkTokens(raw: string): string {
 	let result = '';
 	let insideReason = false;
 	let index = 0;
+	// 소문자 사본은 루프 밖에서 1회만 — 이터레이션마다 전체 문자열을 복사하면 스트림 응답 크기만큼 할당이 쌓여요
+	const lowered = raw.toLowerCase();
 	while (index < raw.length) {
 		if (!insideReason) {
-			const open = raw.toLowerCase().indexOf(REASON_OPEN, index);
+			const open = lowered.indexOf(REASON_OPEN, index);
 			if (open === -1) {
 				result += raw.slice(index);
 				break;
@@ -22,7 +24,7 @@ export function extractThinkTokens(raw: string): string {
 			insideReason = true;
 			continue;
 		}
-		const close = raw.toLowerCase().indexOf(REASON_CLOSE, index);
+		const close = lowered.indexOf(REASON_CLOSE, index);
 		if (close === -1) break;
 		index = close + REASON_CLOSE.length;
 		insideReason = false;
