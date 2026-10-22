@@ -285,6 +285,8 @@ model SocialSubscription {
   webhookName      String?
   /// 웹훅 메시지 프로필 사진 오버라이드 — null이면 웹훅 기본 아바타로 전송 (Discord가 fetch하는 http/https URL)
   webhookAvatarUrl String?
+  /// 라이브 섬네일 표시 — false면 임베드 이미지 생략. 이벤트에 섬네일이 없으면(Twitch) 항상 생략 (social.ts 계약)
+  showThumbnail    Boolean   @default(true)
   /// 배달 상태 — 'active' | 'failed' | 'disabled'. 연속 5회 실패 또는 웹훅 404/410이면 failed
   status           String    @default("active")
   createdAt        DateTime  @default(now())

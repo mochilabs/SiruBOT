@@ -15,6 +15,7 @@ const createSchema = z.object({
   messageTemplate: z.string().trim().min(1).max(1000).nullable().optional(),
   webhookName: z.string().trim().min(1).max(80).nullable().optional(),
   webhookAvatarUrl: z.string().trim().min(1).max(2048).nullable().optional(),
+  showThumbnail: z.boolean().optional(),
 });
 
 const LIST_FALLBACK = "알림 구독 목록을 불러오지 못했어요.";

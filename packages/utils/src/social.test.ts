@@ -254,6 +254,35 @@ describe('socialSubscriptionCreateSchema', () => {
 			}).success
 		).toBe(false);
 	});
+
+	it('defaults showThumbnail to true and honors an explicit false', () => {
+		const base = {
+			guildId: GUILD_ID,
+			platform: 'chzzk' as const,
+			sourcePlatformId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+			sourceName: '시루',
+			targetChannelId: CHANNEL_ID
+		};
+		const defaults = socialSubscriptionCreateSchema.safeParse(base);
+		expect(defaults.success).toBe(true);
+		if (defaults.success) expect(defaults.data.showThumbnail).toBe(true);
+		const withOff = socialSubscriptionCreateSchema.safeParse({ ...base, showThumbnail: false });
+		expect(withOff.success).toBe(true);
+		if (withOff.success) expect(withOff.data.showThumbnail).toBe(false);
+	});
+
+	it('rejects a non-boolean showThumbnail', () => {
+		expect(
+			socialSubscriptionCreateSchema.safeParse({
+				guildId: GUILD_ID,
+				platform: 'chzzk',
+				sourcePlatformId: 'x',
+				sourceName: 'x',
+				targetChannelId: CHANNEL_ID,
+				showThumbnail: 'yes'
+			}).success
+		).toBe(false);
+	});
 });
 
 describe('socialSubscriptionUpdateSchema', () => {
@@ -283,6 +312,12 @@ describe('socialSubscriptionUpdateSchema', () => {
 	it('rejects a webhook display update failing Discord rules', () => {
 		expect(socialSubscriptionUpdateSchema.safeParse({ webhookName: 'discord 알림' }).success).toBe(false);
 		expect(socialSubscriptionUpdateSchema.safeParse({ webhookAvatarUrl: 'ftp://example.com/avatar.png' }).success).toBe(false);
+	});
+
+	it('accepts a showThumbnail-only update', () => {
+		expect(socialSubscriptionUpdateSchema.safeParse({ showThumbnail: false }).success).toBe(true);
+		expect(socialSubscriptionUpdateSchema.safeParse({ showThumbnail: true }).success).toBe(true);
+		expect(socialSubscriptionUpdateSchema.safeParse({ showThumbnail: 'yes' }).success).toBe(false);
 	});
 });
 

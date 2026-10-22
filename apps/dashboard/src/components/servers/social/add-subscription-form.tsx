@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { type SocialSubscriptionInput,useSocialAlerts } from "@/hooks/use-social-alerts";
@@ -48,6 +49,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 	const [template, setTemplate] = useState("");
 	const [webhookName, setWebhookName] = useState("");
 	const [webhookAvatarUrl, setWebhookAvatarUrl] = useState("");
+	const [showThumbnail, setShowThumbnail] = useState(true);
 	const [saving, setSaving] = useState(false);
 
 	const [keyword, setKeyword] = useState("");
@@ -162,6 +164,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 			messageTemplate: template.trim() ? template : null,
 			webhookName: webhookName.trim() ? webhookName.trim() : null,
 			webhookAvatarUrl: webhookAvatarUrl.trim() ? webhookAvatarUrl.trim() : null,
+			showThumbnail,
 		};
 		const result = await createSubscription(input);
 		setSaving(false);
@@ -315,6 +318,13 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				</div>
 				<p className="text-xs text-muted-foreground">
 					비우면 봇 기본 이름·사진으로 보내요. 표시명은 Discord 규칙상 discord·clyde를 쓸 수 없어요.
+				</p>
+			</div>
+
+			<div className="flex flex-col gap-1.5">
+				<Switch checked={showThumbnail} onChange={setShowThumbnail} label="방송 시작 섬네일 이미지 표시" labelPosition="right" />
+				<p className="text-xs text-muted-foreground">
+					방송 시작 알림에 라이브 미리보기 이미지를 넣어요. 트위치 알림에는 원래 이미지가 없어 자동으로 생략돼요.
 				</p>
 			</div>
 

@@ -15,6 +15,8 @@ export interface SocialSubscription {
   webhookName: string | null;
   /** 웹훅 프로필 사진 오버라이드 — null이면 웹훅 기본 아바타 */
   webhookAvatarUrl: string | null;
+  /** 라이브 섬네일 표시 — 임베드에 라이브 이미지를 넣을지 */
+  showThumbnail: boolean;
   status: SocialSubscriptionStatus;
   createdAt: string;
   updatedAt: string;

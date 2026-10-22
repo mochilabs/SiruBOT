@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchChzzkChannelProfile, fetchChzzkLiveStatus, searchChzzkChannels, type FetchFn } from './chzzkApi.ts';
+import {
+	fetchChzzkChannelProfile,
+	fetchChzzkLiveStatus,
+	fetchChzzkLiveThumbnail,
+	resolveChzzkLiveImageUrl,
+	searchChzzkChannels,
+	type FetchFn
+} from './chzzkApi.ts';
 
 const CHANNEL_ID = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 
@@ -18,7 +25,7 @@ describe('fetchChzzkLiveStatus', () => {
 					liveId: 'live-9',
 					liveTitle: '첫방송',
 					openLive: true,
-					liveImageUrl: 'image_{type}.jpg'
+					liveImageUrl: 'https://livecloud-thumb.example.net/thumbnail/image_{type}.jpg'
 				}
 			})
 		);
@@ -27,7 +34,7 @@ describe('fetchChzzkLiveStatus', () => {
 		expect(status.liveId).toBe('live-9');
 		expect(status.liveTitle).toBe('첫방송');
 		expect(status.channelName).toBe('시루');
-		expect(status.thumbnailUrl).toBe('image_1080.jpg');
+		expect(status.thumbnailUrl).toBe('https://livecloud-thumb.example.net/thumbnail/image_1080.jpg');
 	});
 
 	it('treats status OPEN as live even without openLive', async () => {
@@ -53,6 +60,53 @@ describe('fetchChzzkLiveStatus', () => {
 	it('throws on unexpected response shapes', async () => {
 		const fetchFn: FetchFn = vi.fn(async () => jsonResponse({ nope: true }));
 		await expect(fetchChzzkLiveStatus(CHANNEL_ID, fetchFn)).rejects.toThrow('응답 형식');
+	});
+});
+
+describe('resolveChzzkLiveImageUrl', () => {
+	it('replaces the {type} placeholder with the 1080 size', () => {
+		expect(resolveChzzkLiveImageUrl('https://livecloud-thumb.example.net/thumbnail/image_{type}.jpg')).toBe(
+			'https://livecloud-thumb.example.net/thumbnail/image_1080.jpg'
+		);
+	});
+
+	it('rejects non-http values and empty input', () => {
+		expect(resolveChzzkLiveImageUrl('image_1080.jpg')).toBeNull();
+		expect(resolveChzzkLiveImageUrl(null)).toBeNull();
+		expect(resolveChzzkLiveImageUrl(undefined)).toBeNull();
+	});
+});
+
+describe('fetchChzzkLiveThumbnail', () => {
+	it('resolves the live-detail {type} template into a full image url', async () => {
+		const fetchFn = vi.fn(async () =>
+			jsonResponse({
+				code: 200,
+				content: {
+					status: 'OPEN',
+					liveImageUrl: 'https://livecloud-thumb.akamaized.net/chzzk/livecloud/KR/stream/1/live/2/record/3/thumbnail/image_{type}.jpg'
+				}
+			})
+		);
+		expect(await fetchChzzkLiveThumbnail(CHANNEL_ID, fetchFn)).toBe(
+			'https://livecloud-thumb.akamaized.net/chzzk/livecloud/KR/stream/1/live/2/record/3/thumbnail/image_1080.jpg'
+		);
+		const url = (fetchFn.mock.calls[0] as unknown as [string])[0];
+		expect(url).toBe(`https://api.chzzk.naver.com/service/v2/channels/${CHANNEL_ID}/live-detail`);
+	});
+
+	it('returns null when the channel is no longer OPEN', async () => {
+		const fetchFn: FetchFn = vi.fn(async () => jsonResponse({ code: 200, content: { status: 'CLOSE', liveImageUrl: null } }));
+		expect(await fetchChzzkLiveThumbnail(CHANNEL_ID, fetchFn)).toBeNull();
+	});
+
+	it('returns null on non-2xx responses and network errors instead of throwing', async () => {
+		const bad: FetchFn = vi.fn(async () => jsonResponse({}, 503));
+		expect(await fetchChzzkLiveThumbnail(CHANNEL_ID, bad)).toBeNull();
+		const boom: FetchFn = vi.fn(async () => {
+			throw new Error('network down');
+		});
+		expect(await fetchChzzkLiveThumbnail(CHANNEL_ID, boom)).toBeNull();
 	});
 });
 
