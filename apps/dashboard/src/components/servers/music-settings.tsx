@@ -26,7 +26,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
-import { SPONSORBLOCK_SEGMENTS } from "@/lib/schemas";
+import { SPONSORBLOCK_SEGMENTS, type SponsorBlockSegment } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
 import {
@@ -52,7 +52,7 @@ const REPEAT_OPTIONS: SearchableOption[] = [
 ];
 
 const SEGMENT_OPTIONS_META: Record<
-  (typeof SPONSORBLOCK_SEGMENTS)[number],
+  SponsorBlockSegment,
   { label: string; icon: React.ReactNode }
 > = {
   sponsor: {
@@ -83,7 +83,7 @@ interface MusicForm {
   repeat: GuildSettings["repeat"];
   related: boolean;
   enableController: boolean;
-  sponsorBlockSegments: string[];
+  sponsorBlockSegments: GuildSettings["sponsorBlockSegments"];
 }
 
 const toMusicForm = (settings: GuildSettings): MusicForm => ({
@@ -172,7 +172,11 @@ function MusicSettingsPanel({ guildId }: { guildId: string }) {
           multiple
           options={SEGMENT_OPTIONS}
           value={form.sponsorBlockSegments}
-          onChange={(value: string[]) => patch({ sponsorBlockSegments: value })}
+          onChange={(value: string[]) =>
+            patch({
+              sponsorBlockSegments: value as MusicForm["sponsorBlockSegments"],
+            })
+          }
           placeholder="구간을 선택하지 않으면 건너뛰지 않아요"
           disabled={saving}
         />
