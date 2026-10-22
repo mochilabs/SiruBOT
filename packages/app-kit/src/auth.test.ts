@@ -94,10 +94,15 @@ describe('createKeyAuthHook', () => {
 		await hook({ url: '/x', headers: { authorization: 'secret' } }, res);
 		expect(res.send).not.toHaveBeenCalled();
 
+		// 보호 경로 — 헤더 없으면 401 (preHandler와 같은 한국어 문구)
+		await hook({ url: '/x', headers: {} }, res);
+		expect(res.code).toHaveBeenCalledWith(401);
+		expect(res.send).toHaveBeenCalledWith({ error: '인증 정보가 없어요.' });
+
 		// 보호 경로 — 잘못된 키 401
 		await hook({ url: '/x', headers: { authorization: 'wrong' } }, res);
-		expect(res.code).toHaveBeenCalledWith(401);
-		expect(res.send).toHaveBeenCalledWith({ error: 'Unauthorized' });
+		expect(res.code).toHaveBeenLastCalledWith(401);
+		expect(res.send).toHaveBeenLastCalledWith({ error: '인증에 실패했어요.' });
 
 		// 제외 경로도 query string이 붙으면 일치하지 않아요 (정확한 경로 일치만 면제)
 		await hook({ url: '/api/health?x=1', headers: {} }, res);

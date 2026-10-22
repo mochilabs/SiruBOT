@@ -2,6 +2,8 @@ import Fastify, { FastifyInstance } from 'fastify';
 import path from 'path';
 import AutoLoad from '@fastify/autoload';
 import WebSocket from '@fastify/websocket';
+import { registerAppErrorHandler } from '@sirubot/app-kit';
+import { captureSentryException } from '@sirubot/utils/sentry';
 import { getLogger } from './utils/logger.ts';
 import auth from './plugins/auth.ts';
 import { ShardRegistry } from './core/shardRegistry.ts';
@@ -30,14 +32,9 @@ export class ShardManagerServer {
 	}
 
 	public async setupRoutes() {
-		// Global error handler
-		this.fastify.setErrorHandler((error: { message: string; statusCode?: number }, request, reply) => {
-			this.logger.error({ error, url: request.url, method: request.method }, 'Request error');
-			reply.status(error.statusCode ?? 500).send({
-				error: 'Internal Server Error',
-				statusCode: error.statusCode ?? 500
-			});
-		});
+		// Global error handler — 공용 { error: 코드, message: 한국어 } 계약으로 통일해요.
+		// (기존 로컬 핸들러는 error: 'Internal Server Error' + statusCode만 내려서 영문·shape 이질적이었어요.)
+		registerAppErrorHandler(this.fastify, { logger: this.logger, onServerError: captureSentryException });
 
 		await auth(this.fastify, this.env);
 		// 명시적 제네릭 — decorate의 조건부 오버로드 추론이 클래스 인스턴스에서 함수 타입으로 잘못 잡혀요(as any 캐스트 불필요).
