@@ -4,8 +4,9 @@
  */
 import { NextResponse } from "next/server";
 
-import type { DataApiForwardFail, DataApiForwardResult, DataApiImageResult, GuildSettingsInvalidateResult } from "./types";
 import { getDataApiEnv } from "@/lib/env";
+
+import type { DataApiForwardFail, DataApiForwardResult, DataApiImageResult, GuildSettingsInvalidateResult } from "./types";
 
 /**
  * data-api GET 프록시 — AUTH_KEY는 서버 전용(env). 클라이언트 번들로 절대 노출하지 않아요.
