@@ -1,6 +1,7 @@
 // 루트 배럴은 "실제로 쓰이는 public API"만 명시적으로 re-export해요 — export *는 내부 구현까지 공개 API로 누수시켜요.
 // node 전용 모듈(version·logger·redisSubscriber·youtube·appEmoji)이 여기 있는 한 루트는 노드 전용이에요 —
 // 클라이언트("use client") 번들은 '@sirubot/utils/client'(또는 /time·/storage·/playerWeb 등 순수 서브패스)만 임포트해요.
+// 대시보드는 eslint no-restricted-imports로 루트 임포트가 금지돼요 (apps/dashboard/eslint.config.mjs).
 
 export { isDev } from './env.js';
 export { versionInfo } from './version.js';

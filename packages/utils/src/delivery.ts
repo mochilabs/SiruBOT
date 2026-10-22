@@ -1,9 +1,9 @@
 /**
- * 택배 도메인 타입·에러 클래스·운송장 정규화.
+ * 택배 도메인 계약 — 인터페이스·에러 클래스·운송장번호 정규화의 단일 홈.
  *
- * 배송 조회 자체는 data-api(`/v1/delivery/*`, providers/delivery.ts)가 담당 —
- * 봇은 `services/dataApiClient.ts`의 trackDelivery로 게이트웨이를 호출하고,
- * 이 파일은 운송장번호 정규화와 타입·에러 식별만 담당해요.
+ * 배송 조회 구현은 data-api(`/v1/delivery/*`, `apps/data-api/src/providers/delivery.ts`)가 소유하고,
+ * 봇은 `services/dataApiClient.ts`의 trackDelivery로 게이트웨이를 호출해 같은 타입을 써요.
+ * 택배사 별칭 해석·캐시 키는 data-api 쪽에 남아 있어요.
  */
 
 export class DeliveryError extends Error {

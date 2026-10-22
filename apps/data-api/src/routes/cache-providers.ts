@@ -1,10 +1,12 @@
 import type { FastifyInstance } from 'fastify';
+import { normalizeTrackingNumber } from '@sirubot/utils/delivery';
+import type { WeatherScope } from '@sirubot/utils/weather';
 import { z } from 'zod';
 import { serveCached } from './serveCached.ts';
 import { sendError } from './common.ts';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
-import { fetchWeather, weatherCacheKey, type WeatherScope } from '../providers/weather.ts';
-import { deliveryTrackCacheKey, normalizeTrackingNumber, trackDelivery } from '../providers/delivery.ts';
+import { fetchWeather, weatherCacheKey } from '../providers/weather.ts';
+import { deliveryTrackCacheKey, trackDelivery } from '../providers/delivery.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 
 /** 캐시형 외부 프로바이더 읽기 — 가사(lrclib)·날씨(Open-Meteo)·택배(tracker.delivery)·유튜브 챕터. TTL은 라우트 단위 상수로 여기에 둬요. */

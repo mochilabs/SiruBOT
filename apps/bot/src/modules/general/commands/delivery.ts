@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
+import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '@sirubot/utils/delivery';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '../utils/deliveryService.ts';
 import { GatewayDomainError } from '../../../services/dataApiClient.ts';
 import { trackDelivery } from '../../../services/dataApiClient.ts';
 

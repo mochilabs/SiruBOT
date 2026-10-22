@@ -1,9 +1,9 @@
 import { container } from '@sapphire/framework';
 import type { GreetingConfig, GreetingKind } from '@sirubot/utils';
+import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
+import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 import type { DailyHoroscope } from '../modules/games/utils/ohaasaService.ts';
-import type { DeliveryTrackResult } from '../modules/general/utils/deliveryService.ts';
-import type { WeatherResult, WeatherScope } from '../modules/general/utils/weatherService.ts';
 
 /** 게이트웨이 4xx 본문 — { error, message } 형태 (도메인 에러). 명령어에서 UserError로 변환해요. */
 export class GatewayDomainError extends Error {
