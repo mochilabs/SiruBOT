@@ -33,7 +33,7 @@ interface ChatToolsForm {
 	quoteChannelIds: string[];
 	embedFixMode: ChatToolMode;
 	embedFixChannelIds: string[];
-	embedFixSites: string[];
+	embedFixSites: GuildSettings["embedFixSites"];
 	embedFixSuppressOriginal: boolean;
 	countingEnabled: boolean;
 	countingChannelId: string | null;
@@ -132,7 +132,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 	);
 
 	const toggleSite = (site: string, checked: boolean) => {
-		const selected = new Set(form.embedFixSites);
+		const selected = new Set<string>(form.embedFixSites);
 		if (checked) selected.add(site);
 		else selected.delete(site);
 		// 계약 순서(x → instagram → booth)를 유지해요

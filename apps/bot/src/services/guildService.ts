@@ -1,6 +1,13 @@
 import { container } from '@sapphire/framework';
 import { Guild, Prisma } from '@sirubot/prisma';
-import { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites, type EmbedFixSite } from '@sirubot/utils';
+import {
+	type ChatToolMode,
+	type EmbedFixSite,
+	MemoryCache,
+	normalizeChatToolMode,
+	normalizeCustomCommandPrefix,
+	normalizeEmbedFixSites
+} from '@sirubot/utils';
 import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 
@@ -42,16 +49,6 @@ export function isChannelToggleEnabled(settings: { mode: 'all' | 'channels' | 'o
 	if (settings.mode === 'off') return false;
 	if (settings.mode === 'all') return true;
 	return settings.channelIds.includes(channelId);
-}
-
-/** 채팅 유틸 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기(기본). 채팅 유틸은 명시적으로 켜야 해요 */
-export type ChatToolMode = 'all' | 'channels' | 'off';
-
-const CHAT_TOOL_MODES: readonly string[] = ['all', 'channels', 'off'];
-
-/** DB에 잘못된 값이 들어와도 안전하게 기본값('off')으로 되돌려요 */
-export function normalizeChatToolMode(value: string): ChatToolMode {
-	return CHAT_TOOL_MODES.includes(value) ? (value as ChatToolMode) : 'off';
 }
 
 /** 채널 토글 설정 — 이모지 확대·메시지 인용·임베드 복구가 같은 모양을 공유해요 */

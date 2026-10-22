@@ -1,48 +1,24 @@
 import { NextResponse } from "next/server";
 import type { Guild as PrismaGuild } from "@sirubot/prisma";
-import { normalizeEmbedFixSites } from "@sirubot/utils/chatTools";
+import { normalizeChatToolMode, normalizeEmbedFixSites } from "@sirubot/utils/chatTools";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-import { GUILD_SETTING_KEYS, guildSettingsSchema, normalizeChatToolMode, parseSettingBody } from "@/lib/schemas";
+import {
+  GUILD_SETTING_KEYS,
+  GUILD_SETTINGS_DEFAULTS,
+  guildSettingsSchema,
+  normalizeSponsorBlockSegments,
+  parseSettingBody,
+} from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
-/** DB 행이 없어도 기본값을 내려주는 응답 빌더 (봇 기본값과 동일해야 해요) */
+/** DB 행이 없어도 기본값을 내려주는 응답 빌더 — 기본값 단일 소스는 GUILD_SETTINGS_DEFAULTS (스키마·Prisma @default와 동일성 검증은 schemas.test.ts) */
 function toSettings(guild: PrismaGuild | null): GuildSettings {
   if (!guild) {
-    return {
-      volume: 10,
-      repeat: "off",
-      related: false,
-      enableController: true,
-      sponsorBlockSegments: [],
-      djRoleId: null,
-      textChannelId: null,
-      voiceChannelId: null,
-      pinnedChannelId: null,
-      pinnedChannelMode: "play",
-      pinnedChannelDeleteInput: false,
-      jtcEnabled: false,
-      jtcCategoryId: null,
-      jtcMarkerChannelId: null,
-      jtcTemplate: "{user}의 방",
-      jtcUserLimit: 0,
-      gaplessEnabled: true,
-      crossfadeEnabled: true,
-      crossfadeMs: 5000,
-      emojiEnlargeMode: "off",
-      emojiEnlargeChannelIds: [],
-      quoteMode: "off",
-      quoteChannelIds: [],
-      embedFixMode: "off",
-      embedFixChannelIds: [],
-      embedFixSites: [],
-      embedFixSuppressOriginal: false,
-      countingEnabled: false,
-      countingChannelId: null,
-    };
+    return GUILD_SETTINGS_DEFAULTS;
   }
   return {
     volume: guild.volume,
@@ -51,7 +27,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
       : "off") as GuildSettings["repeat"],
     related: guild.related,
     enableController: guild.enableController,
-    sponsorBlockSegments: guild.sponsorBlockSegments,
+    sponsorBlockSegments: normalizeSponsorBlockSegments(guild.sponsorBlockSegments),
     djRoleId: guild.djRoleId,
     textChannelId: guild.textChannelId,
     voiceChannelId: guild.voiceChannelId,

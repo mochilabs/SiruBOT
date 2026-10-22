@@ -113,6 +113,8 @@ export {
 } from './customCommand.js';
 export {
 	type BoothOgMeta,
+	CHAT_TOOL_MODES,
+	type ChatToolMode,
 	COUNTING_STATE_DEFAULT,
 	type CountingState,
 	customEmojiUrl,
@@ -130,6 +132,7 @@ export {
 	fxTwitterApiUrl,
 	type FxTwitterStatus,
 	type MessageLinkTarget,
+	normalizeChatToolMode,
 	normalizeEmbedFixSites,
 	type OgMeta,
 	parseBoothOg,
