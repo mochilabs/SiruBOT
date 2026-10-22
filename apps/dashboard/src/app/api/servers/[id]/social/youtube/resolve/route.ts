@@ -18,7 +18,7 @@ export const POST = createGuildApiHandler({
   rate: READ_RATE,
   key: "social-youtube-resolve",
   schema: bodySchema,
-  invalidMessage: "잘못된 요청입니다.",
+  invalidMessage: "요청 형식이 올바르지 않아요.",
   handler: async ({ data }) => {
     const result = await forwardDataApiPost<YouTubeResolveResponse>(
       `/v1/social/youtube/resolve`,

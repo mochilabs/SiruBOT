@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 
-import { ChannelMessage } from "@/components/discord/channel-message";
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
-import { EmbedPreview } from "@/components/discord/embed-preview";
-import { DISCORD_PERMISSIONS, PermissionList } from "@/components/discord/permission-list";
 import { RoleSelect } from "@/components/discord/role-select";
 import { SearchableSelect } from "@/components/servers/searchable-select";
 import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
@@ -36,7 +33,6 @@ const sampleChannels: DiscordChannelSummary[] = [
 ];
 
 export function DiscordSection() {
-	const [permissions, setPermissions] = useState(0);
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 	const [sampleChatChannel, setSampleChatChannel] = useState("");
 	const [sampleVoiceChannels, setSampleVoiceChannels] = useState<string[]>([]);
@@ -52,56 +48,6 @@ export function DiscordSection() {
 				description="Discord 스타일 UI 컴포넌트"
 			/>
 			<Showcase className="space-y-8">
-				<ShowcaseRow label="EmbedPreview">
-					<EmbedPreview
-						embed={{
-							color: "var(--primary)",
-							author: { name: "시루" },
-							title: "지금 재생 중",
-							titleUrl: "#",
-							description: "Blinding Lights · The Weeknd",
-							fields: [
-								{ name: "요청자", value: "@음악러버", inline: true },
-								{ name: "길이", value: "3:22", inline: true },
-								{ name: "대기열", value: "4곡", inline: true },
-							],
-							footer: { text: "시루 뮤직", timestamp: "오늘 오후 3:42" },
-						}}
-					/>
-				</ShowcaseRow>
-
-				<ShowcaseRow label="ChannelMessage" block>
-					<div className="w-full max-w-xl overflow-hidden rounded-xl bg-discord-bg py-2">
-						<ChannelMessage
-							author={{ id: "bot", username: "시루", bot: true }}
-							content="🎵 지금 재생 중: **Blinding Lights** · The Weeknd"
-							timestamp="오후 3:42"
-						>
-							<div className="mt-2">
-								<EmbedPreview
-									embed={{
-										color: "var(--primary)",
-										title: "Blinding Lights",
-										description: "The Weeknd · After Hours · 2020",
-										footer: { text: "3:22 · 대기열 4곡" },
-									}}
-								/>
-							</div>
-						</ChannelMessage>
-						<ChannelMessage
-							author={{ id: "user1", username: "음악러버" }}
-							content="좋은 노래 감사합니다! 다음 곡도 기대됩니다 😊"
-							timestamp="오후 3:43"
-						/>
-					</div>
-				</ShowcaseRow>
-
-				<ShowcaseRow label="PermissionList" block>
-					<div className="w-full max-w-xl">
-						<PermissionList categories={DISCORD_PERMISSIONS.slice(0, 2)} value={permissions} onChange={setPermissions} />
-					</div>
-				</ShowcaseRow>
-
 				<ShowcaseRow label="RoleSelect" block>
 					<div className="w-full max-w-sm">
 						<RoleSelect multiple roles={sampleRoles} value={selectedRoles} onChange={setSelectedRoles} />
@@ -119,7 +65,7 @@ export function DiscordSection() {
 								onChange={setSampleChatChannel}
 								noneLabel="채널 지정 안 함"
 							/>
-							<p className="text-2xs text-muted-foreground">
+							<p className="text-sm text-muted-foreground">
 								카테고리 없는 채널이 먼저, 이어서 카테고리 안의 채널이 카테고리 순서대로 보여요.
 							</p>
 						</div>

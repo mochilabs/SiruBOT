@@ -7,7 +7,7 @@ import { fetchDataApi } from "@/lib/data-api";
 import { READ_RATE } from "@/lib/rate-limit";
 
 // 스냅샷 계약은 @sirubot/utils에서 단일 정의 — 대시보드 별칭만 유지해요
-export type { PlayerStateResponse as LivePlayerState, QueuedTrackSummary as LiveQueueTrack } from "@sirubot/utils/playerState";
+export type { PlayerStateResponse as LivePlayerState } from "@sirubot/utils/playerState";
 
 interface DataApiLiveResponse {
   player: PlayerStateResponse | null;

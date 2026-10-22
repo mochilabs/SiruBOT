@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ASSET_ALLOWED_MIME_TYPES, ASSET_BUCKET, ASSET_MAX_BYTES, ASSET_NAME_MAX_LENGTH, assetKeyFor, sniffImageMime } from "@sirubot/utils";
+import { ASSET_ALLOWED_MIME_TYPES, ASSET_BUCKET, ASSET_MAX_BYTES, ASSET_NAME_MAX_LENGTH, assetKeyFor, sniffImageMime } from "@sirubot/utils/storage";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";

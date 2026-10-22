@@ -46,7 +46,7 @@ export const POST = createGuildApiHandler({
   rate: WRITE_RATE,
   key: "social-subscriptions-create",
   schema: createSchema,
-  invalidMessage: "잘못된 요청입니다.",
+  invalidMessage: "요청 형식이 올바르지 않아요.",
   handler: async ({ guildId, data }) => {
     const result = await forwardDataApiPost<SocialSubscriptionResponse>(
       `/v1/guilds/${guildId}/social/subscriptions`,

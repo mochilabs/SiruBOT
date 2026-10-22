@@ -5,7 +5,6 @@ import type {
 import {
 	CUSTOM_COMMAND_MAX_PER_GUILD,
 	CUSTOM_COMMAND_MAX_SLASH_PER_GUILD,
-	customCommandSpecSchema,
 	normalizeCustomCommandName,
 	normalizeCustomCommandPrefix,
 	validateCustomCommandName,
@@ -76,4 +75,4 @@ export const MAX_CUSTOM_COMMANDS_PER_GUILD = CUSTOM_COMMAND_MAX_PER_GUILD;
 /** 슬래시형 커스텀 명령어 슬롯 상한 — 봇 본 커맨드의 Discord 슬롯을 보호해요 */
 export const MAX_SLASH_COMMANDS_PER_GUILD = CUSTOM_COMMAND_MAX_SLASH_PER_GUILD;
 
-export { customCommandSpecSchema, validateCustomCommandName };
+export { validateCustomCommandName };

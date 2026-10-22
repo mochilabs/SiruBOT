@@ -17,7 +17,7 @@ export const GET = createGuildApiHandler({
 	handler: async ({ request }) => {
 		const { searchParams } = new URL(request.url);
 		const parsed = historyQuerySchema.safeParse({ hours: searchParams.get("hours") || "24" });
-		if (!parsed.success) return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+		if (!parsed.success) return NextResponse.json({ error: "요청 형식이 올바르지 않아요." }, { status: 400 });
 
 		try {
 			const data = await fetchVoiceServerHistory(parsed.data.hours);

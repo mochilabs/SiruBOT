@@ -298,7 +298,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 			/>
 
 			<div className="flex flex-col gap-2">
-				<span className="text-xs font-medium text-muted-foreground">웨훅 표시 (선택)</span>
+				<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (선택)</span>
 				<div className="grid gap-2 sm:grid-cols-2">
 					<Input
 						value={webhookName}

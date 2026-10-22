@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { playerWebPlayUriSchema } from "@sirubot/utils";
+import { playerWebPlayUriSchema } from "@sirubot/utils/playerWeb";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";

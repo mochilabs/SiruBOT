@@ -1,4 +1,4 @@
-import { ASSET_BUCKET, sniffImageMime } from "@sirubot/utils";
+import { ASSET_BUCKET, sniffImageMime } from "@sirubot/utils/storage";
 
 /**
  * 스토리지(apps/storage) 클라이언트 — 길드 이미지 에셋 원본을 올리고 지워요.
@@ -22,11 +22,6 @@ export interface PutAssetResult {
 
 const NOT_CONFIGURED_MESSAGE = "이미지 저장소가 설정되지 않았어요. (STORAGE_AUTH_KEY 또는 AUTH_KEY 미설정)";
 const NETWORK_MESSAGE = "이미지 저장소에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.";
-
-/** 스토리지가 설정됐는지 (키 없으면 false — 라우트에서 502 안내에 써요) */
-export function isStorageConfigured(): boolean {
-	return STORAGE_AUTH_KEY.trim().length > 0;
-}
 
 /** 업로드 (원시 바이트 PUT). 실패하면 한국어 사유를 throw해요 */
 export async function putAssetObject(key: string, bytes: Uint8Array): Promise<PutAssetResult> {

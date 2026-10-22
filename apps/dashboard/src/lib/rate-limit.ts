@@ -26,6 +26,8 @@ export const PUBLIC_RATE: RateRule = { limit: 120, windowMs: 60_000 };
  * 서버 시각은 Lua 안에서 `TIME`으로 읽어요 — 인스턴스 간 클록 오차를 없애고
  * 다중 인스턴스 배포에서도 한도가 프로세스 수만큼 희석되지 않게 해요.
  * member는 now + 랜덤 접미로 동일 밀리초에 여러 요청이 와도 서로 덮어쓰지 않게 해요.
+ * 랜덤 시드는 Redis < 7에서 스크립트 실행마다 고정이라 TIME 마이크로초로 매 실행 다시 씨뿌려요 —
+ * 안 그러면 동일 밀리초 요청이 같은 member를 만들어 ZADD가 멱등 처리돼 한도가 새지 않아요.
  * 반환은 `{ok, retryAfterMs}` 배열 (ok: 1=허용, 0=차단).
  */
 const SLIDING_WINDOW_SCRIPT = `
@@ -42,6 +44,7 @@ const SLIDING_WINDOW_SCRIPT = `
     return {0, tonumber(oldest[2]) + windowMs - now}
   end
 
+  math.randomseed(time[1] * 1000000 + time[2])
   local member = tostring(now) .. ':' .. tostring(math.random(0, 999999))
   redis.call('ZADD', KEYS[1], now, member)
   redis.call('PEXPIRE', KEYS[1], windowMs)

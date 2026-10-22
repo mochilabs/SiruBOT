@@ -6,11 +6,9 @@ import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
 import Loader from "@/components/loader";
 import { AddTrackModal } from "@/components/playlists/add-track-modal";
-import { CreatePlaylistModal } from "@/components/playlists/create-playlist-modal";
-import { DeletePlaylistModal } from "@/components/playlists/delete-playlist-modal";
-import { DeleteTrackModal } from "@/components/playlists/delete-track-modal";
-import { EditPlaylistModal } from "@/components/playlists/edit-playlist-modal";
+import { ConfirmDeleteModal } from "@/components/playlists/confirm-delete-modal";
 import { PlaylistDetail } from "@/components/playlists/playlist-detail";
+import { PlaylistFormModal } from "@/components/playlists/playlist-form-modal";
 import { PlaylistSelectMobile } from "@/components/playlists/playlist-select-mobile";
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
 import { usePlaylists } from "@/hooks/use-playlists";
@@ -119,7 +117,8 @@ function PlaylistsContent() {
 				</div>
 			</div>
 
-			<CreatePlaylistModal
+			<PlaylistFormModal
+				mode="create"
 				open={createModalOpen}
 				onClose={closeModals}
 				nameInput={nameInput}
@@ -130,7 +129,8 @@ function PlaylistsContent() {
 				loading={loadingSubmit}
 			/>
 
-			<EditPlaylistModal
+			<PlaylistFormModal
+				mode="edit"
 				open={editModalOpen}
 				onClose={closeModals}
 				nameInput={nameInput}
@@ -153,21 +153,27 @@ function PlaylistsContent() {
 				onAddTrack={handleAddTrack}
 			/>
 
-			<DeletePlaylistModal
+			<ConfirmDeleteModal
 				open={deleteModalOpen}
-				playlistName={deletePlaylistTarget?.name ?? null}
+				title="플레이리스트 삭제"
 				onClose={closeModals}
 				onConfirm={confirmDeletePlaylist}
 				loading={loadingSubmit}
-			/>
+			>
+				정말 <strong>{deletePlaylistTarget?.name ?? ""}</strong> 플레이리스트를 삭제하시겠어요?<br />
+				이 작업은 되돌릴 수 없으며 소속된 트랙 정보도 모두 함께 지워집니다.
+			</ConfirmDeleteModal>
 
-			<DeleteTrackModal
+			<ConfirmDeleteModal
 				open={removeTrackTarget !== null}
-				trackTitle={removeTrackTarget?.title ?? null}
+				title="트랙 삭제"
 				onClose={closeModals}
 				onConfirm={confirmRemoveTrack}
 				loading={loadingSubmit}
-			/>
+			>
+				정말 <strong>{removeTrackTarget?.title ?? ""}</strong> 곡을 삭제할까요?<br />
+				이 플레이리스트에서만 제거되며 곡 자체는 남아있어요.
+			</ConfirmDeleteModal>
 		</Container>
 	);
 }

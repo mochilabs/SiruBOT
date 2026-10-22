@@ -4,8 +4,7 @@ import { useCallback, useState } from "react";
 import { Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
-import { toError } from "@/lib/api-error";
+import { notifyApiError } from "@/lib/notify";
 import type { GreetingTestResult } from "@/types/member-greeting";
 
 
@@ -24,7 +23,6 @@ export function GreetingTestPanel({
   result,
   onTest,
 }: GreetingTestPanelProps) {
-  const toast = useToast();
   const [sendingTest, setSendingTest] = useState(false);
 
   const handleTest = useCallback(async () => {
@@ -32,15 +30,11 @@ export function GreetingTestPanel({
     try {
       await onTest();
     } catch (err) {
-      const apiError = toError(err, "테스트 전송을 요청하지 못했어요.");
-      toast.error(
-        apiError.message,
-        apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-      );
+      notifyApiError(err, "테스트 전송을 요청하지 못했어요.");
     } finally {
       setSendingTest(false);
     }
-  }, [onTest, toast]);
+  }, [onTest]);
 
   return (
     <div className="space-y-2 rounded-card bg-surface-2 p-4">
@@ -62,7 +56,7 @@ export function GreetingTestPanel({
           </p>
         )}
       </div>
-      <p className="text-2xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {ready
           ? "저장된 설정대로 본인 멤버 카드를 그려 메시지 채널에 보내요."
           : "테스트 전송은 저장된 설정으로 진행돼요. 저장한 뒤 활성화와 채널이 준비되면 보낼 수 있어요."}

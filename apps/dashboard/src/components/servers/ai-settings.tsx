@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Bot,
   Check,
@@ -17,11 +17,14 @@ import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { ApiError, toApiError, toError } from "@/lib/api-error";
+import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
 import {
+  ChannelListError,
   InfoBox,
   PanelError,
   PanelHeader,
@@ -64,10 +67,10 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
   const [policy, setPolicy] = useState<AiPolicy | null>(null);
   const [mode, setMode] = useState<AiMode>("all");
   const [channelIds, setChannelIds] = useState<string[]>([]);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { armedId: confirmTarget, request: requestDelete } = useConfirmDelete();
   const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [retryToken, setRetryToken] = useState(0);
-  const confirmTimerRef = useRef<number | null>(null);
+  const confirmDelete = confirmTarget === "history";
 
   // 특정 채널 모드가 활성일 때만 채널 목록을 요청해요
   const {
@@ -75,13 +78,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
     error: channelsError,
     reload: reloadChannels,
   } = useGuildChannels(guildId, mode === "channels");
-
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current !== null)
-        window.clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
 
   const applyPolicy = useCallback((next: AiPolicy) => {
     setPolicy(next);
@@ -113,14 +109,6 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
     };
   }, [guildId, applyPolicy, retryToken]);
 
-  const reportError = (error: unknown, fallback: string) => {
-    const apiError = toError(error, fallback);
-    toast.error(
-      apiError.message,
-      apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-    );
-  };
-
   const dirty =
     policy !== null &&
     (mode !== policy.mode ||
@@ -139,26 +127,17 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) throw await toApiError(res, "저장에 실패했어요.");
       applyPolicy((await res.json()) as AiPolicy);
-      toast.success("AI 설정을 저장했어요.", "봇이 곧 새 설정을 적용해요.");
+      notifySaved("AI 설정을 저장했어요.");
     } catch (error) {
-      reportError(error, "저장에 실패했어요.");
+      notifyApiError(error, "저장에 실패했어요.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteHistory = async () => {
-    if (!confirmDelete) {
-      if (confirmTimerRef.current !== null)
-        window.clearTimeout(confirmTimerRef.current);
-      setConfirmDelete(true);
-      confirmTimerRef.current = window.setTimeout(
-        () => setConfirmDelete(false),
-        4000,
-      );
-      return;
-    }
-    setConfirmDelete(false);
+    // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
+    if (!requestDelete("history")) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/servers/${guildId}/ai/history`, {
@@ -168,7 +147,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       setPolicy((prev) => (prev ? { ...prev, historyCount: 0 } : prev));
       toast.success("이 서버의 AI 대화 기록을 삭제했어요.");
     } catch (error) {
-      reportError(error, "기록 삭제에 실패했어요.");
+      notifyApiError(error, "기록 삭제에 실패했어요.");
     } finally {
       setDeleting(false);
     }
@@ -272,18 +251,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
               disabled={saving}
             />
           </Field>
-          {channelsError && (
-            <WarningBox>
-              채널 목록을 불러오지 못했어요. ({channelsError.message}){" "}
-              <button
-                type="button"
-                className="font-semibold underline"
-                onClick={reloadChannels}
-              >
-                다시 시도
-              </button>
-            </WarningBox>
-          )}
+          {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
           {!channelsError && channelIds.length === 0 && (
             <WarningBox>
               허용 채널이 0개면 어디서도 응답하지 않아요. 채널을 최소 1개 선택해

@@ -3,6 +3,7 @@ import { EMBED_FIX_SITES } from "@sirubot/utils/chatTools";
 import { z } from "zod";
 
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
+import type { GuildSettings } from "@/types/settings";
 
 const AI_MODES = ["all", "channels", "off"] as const;
 const CHAT_TOOL_MODES = ["all", "channels", "off"] as const;
@@ -69,6 +70,17 @@ export const guildSettingsSchema = z.object({
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
 });
+
+/**
+ * PUT /api/servers/[id]/settings 허용 키 — zod 스키마에서 도출해 ALLOWED_KEYS와 스키마가
+ * 어긋나는(유효 필드 거부·미등록 키 통과) 드리프트를 구조적으로 막아요.
+ */
+export const GUILD_SETTING_KEYS = Object.keys(guildSettingsSchema.shape);
+
+/** 계약 정합 가드 — 스키마와 GuildSettings(응답 타입)의 키가 어긋나면 컴파일 오류로 알려줘요 */
+type AssertSameKeys<A, B> = [keyof A] extends [keyof B] ? ([keyof B] extends [keyof A] ? true : never) : never;
+type Assert<T extends true> = T;
+export type GuildSettingsContractOk = Assert<AssertSameKeys<z.infer<typeof guildSettingsSchema>, GuildSettings>>;
 
 /** POST /api/servers/[id]/jtc/setup */
 export const jtcSetupSchema = z.object({

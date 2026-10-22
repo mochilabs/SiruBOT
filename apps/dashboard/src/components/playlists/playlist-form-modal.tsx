@@ -12,7 +12,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-interface CreatePlaylistModalProps {
+/** create는 안내 문구가 있는 빈 폼, edit은 현재 값이 채진 채 표시예요 */
+type PlaylistFormMode = "create" | "edit";
+
+const MODE_COPY: Record<PlaylistFormMode, { title: string; namePlaceholder?: string; descLabel: string; descPlaceholder?: string; submitLabel: string; idPrefix: string }> = {
+	create: {
+		title: "새 플레이리스트 생성",
+		namePlaceholder: "이름 입력 (예: 코딩할 때 듣는 노동요)",
+		descLabel: "설명 (선택사항)",
+		descPlaceholder: "플레이리스트에 대한 간단한 설명을 입력하세요.",
+		submitLabel: "생성하기",
+		idPrefix: "p",
+	},
+	edit: {
+		title: "플레이리스트 정보 수정",
+		descLabel: "설명",
+		submitLabel: "수정 완료",
+		idPrefix: "pe",
+	},
+};
+
+interface PlaylistFormModalProps {
+	mode: PlaylistFormMode;
 	open: boolean;
 	onClose: () => void;
 	nameInput: string;
@@ -23,7 +44,9 @@ interface CreatePlaylistModalProps {
 	loading: boolean;
 }
 
-export function CreatePlaylistModal({
+/** 플레이리스트 생성·수정 공용 폼 모달 — 제목/placeholder/제출 문구만 mode로 갈아 끼워요 */
+export function PlaylistFormModal({
+	mode,
 	open,
 	onClose,
 	nameInput,
@@ -32,28 +55,31 @@ export function CreatePlaylistModal({
 	onDescChange,
 	onSubmit,
 	loading,
-}: CreatePlaylistModalProps) {
+}: PlaylistFormModalProps) {
+	const copy = MODE_COPY[mode];
+	const nameId = `${copy.idPrefix}-name`;
+	const descId = `${copy.idPrefix}-desc`;
 	return (
 		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>새 플레이리스트 생성</DialogTitle>
+					<DialogTitle>{copy.title}</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4 py-2">
-					<Field htmlFor="p-name" label="플레이리스트 이름">
+					<Field htmlFor={nameId} label="플레이리스트 이름">
 						<Input
-							id="p-name"
+							id={nameId}
 							type="text"
-							placeholder="이름 입력 (예: 코딩할 때 듣는 노동요)"
+							placeholder={copy.namePlaceholder}
 							value={nameInput}
 							onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNameChange(e.target.value)}
 							maxLength={50}
 						/>
 					</Field>
-					<Field htmlFor="p-desc" label="설명 (선택사항)">
+					<Field htmlFor={descId} label={copy.descLabel}>
 						<Textarea
-							id="p-desc"
-							placeholder="플레이리스트에 대한 간단한 설명을 입력하세요."
+							id={descId}
+							placeholder={copy.descPlaceholder}
 							value={descInput}
 							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onDescChange(e.target.value)}
 							maxLength={200}
@@ -66,7 +92,7 @@ export function CreatePlaylistModal({
 						취소
 					</Button>
 					<Button variant="primary" size="sm" loading={loading} onClick={onSubmit}>
-						생성하기
+						{copy.submitLabel}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

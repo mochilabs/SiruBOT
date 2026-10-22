@@ -21,7 +21,7 @@ export const POST = createGuildApiHandler({
   rate: READ_RATE,
   key: "social-twitch-resolve",
   schema: bodySchema,
-  invalidMessage: "잘못된 요청입니다.",
+  invalidMessage: "요청 형식이 올바르지 않아요.",
   handler: async ({ data }) => {
     const result = await forwardDataApiPost<TwitchResolveResponse>(
       `/v1/social/twitch/resolve`,

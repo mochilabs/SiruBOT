@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { m } from "framer-motion";
+import { useCallback, useRef } from "react";
 
+import { SidebarIndicatorOverlay, useSidebarIndicator } from "@/components/primitives/sidebar-indicator";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -18,14 +18,6 @@ interface ServerFeatureSidebarProps {
 	onSelect: (key: string) => void;
 }
 
-
-interface IndicatorState {
-	top: number;
-	left: number;
-	width: number;
-	height: number;
-}
-
 /**
  * PC(lg+) 전용 기능 사이드바 — 플레이리스트 사이드바와 같은 "카드 + 목록" 언어를 써서
  * 대시보드 안에서 새 패턴을 만들지 않아요. 활성 항목은 spring 인디케이터로 표시해
@@ -33,51 +25,15 @@ interface IndicatorState {
  */
 export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureSidebarProps) {
 	const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-	const [indicator, setIndicator] = useState<IndicatorState | null>(null);
-
-	useEffect(() => {
-		const idx = items.findIndex((item) => item.key === active);
-		const el = idx >= 0 ? itemRefs.current[idx] : null;
-
-		if (!el) {
-			setIndicator(null);
-			return;
-		}
-
-		const update = () => {
-			setIndicator({
-				top: el.offsetTop,
-				left: el.offsetLeft,
-				width: el.offsetWidth,
-				height: el.offsetHeight,
-			});
-		};
-
-		update();
-
-		const observer = new ResizeObserver(update);
-		observer.observe(el);
-		if (el.parentElement) observer.observe(el.parentElement);
-
-		return () => observer.disconnect();
-	}, [active, items]);
+	const activeIndex = items.findIndex((item) => item.key === active);
+	const getItemEl = useCallback((index: number) => itemRefs.current[index], []);
+	const indicator = useSidebarIndicator(items, activeIndex, getItemEl);
 
 	return (
 		<nav className="hidden w-full lg:block lg:w-72 shrink-0 lg:sticky lg:top-24 lg:z-10" aria-label="서버 설정 기능">
 			<Card padding="none" className="overflow-hidden border-0">
 				<div className="relative flex flex-col gap-0.5 p-2">
-					{indicator && (
-						<m.div
-							className="absolute rounded-menu border-0 bg-primary-control/10 z-0"
-							animate={{
-								top: indicator.top,
-								left: indicator.left,
-								width: indicator.width,
-								height: indicator.height,
-							}}
-							transition={{ type: "spring", stiffness: 400, damping: 30 }}
-						/>
-					)}
+					<SidebarIndicatorOverlay indicator={indicator} />
 
 					{items.map((item, idx) => {
 						const isActive = item.key === active;

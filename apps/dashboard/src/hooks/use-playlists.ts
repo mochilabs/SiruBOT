@@ -229,7 +229,7 @@ export function usePlaylists() {
 		setLoadingAddTrack(false);
 	};
 
-	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 delete-playlist-modal과 같은 모달 확인 패턴) */
+	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 ConfirmDeleteModal 같은 모달 확인 패턴) */
 	const handleRemoveTrack = (position: number, title: string) => {
 		if (!activePlaylistId) return;
 		setRemoveTrackTarget({ position, title });

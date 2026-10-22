@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -9,30 +11,26 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 
-interface DeletePlaylistModalProps {
+interface ConfirmDeleteModalProps {
 	open: boolean;
-	playlistName: string | null;
+	title: string;
+	/** 확인 본문 — 대상 이름을 <strong>로 강조한 문장을 넘겨요 */
+	children: ReactNode;
 	onClose: () => void;
 	onConfirm: () => void;
 	loading: boolean;
 }
 
-export function DeletePlaylistModal({
-	open,
-	playlistName,
-	onClose,
-	onConfirm,
-	loading,
-}: DeletePlaylistModalProps) {
+/** 플레이리스트·트랙 삭제 확인 공용 모달 — 제목·본문 문구만 넘기면 돼요 */
+export function ConfirmDeleteModal({ open, title, children, onClose, onConfirm, loading }: ConfirmDeleteModalProps) {
 	return (
 		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>플레이리스트 삭제</DialogTitle>
+					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
 				<p className="text-sm text-muted-foreground font-medium leading-relaxed py-2">
-					정말 <strong>{playlistName}</strong> 플레이리스트를 삭제하시겠어요?<br />
-					이 작업은 되돌릴 수 없으며 소속된 트랙 정보도 모두 함께 지워집니다.
+					{children}
 				</p>
 				<DialogFooter>
 					<Button variant="secondary" size="sm" onClick={onClose}>

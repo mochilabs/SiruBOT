@@ -1,79 +1,16 @@
 import { NextResponse } from "next/server";
+import type { Guild as PrismaGuild } from "@sirubot/prisma";
 import { normalizeEmbedFixSites } from "@sirubot/utils/chatTools";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-import { guildSettingsSchema, normalizeChatToolMode, parseSettingBody } from "@/lib/schemas";
+import { GUILD_SETTING_KEYS, guildSettingsSchema, normalizeChatToolMode, parseSettingBody } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
-const ALLOWED_KEYS = [
-  "volume",
-  "repeat",
-  "related",
-  "enableController",
-  "sponsorBlockSegments",
-  "djRoleId",
-  "textChannelId",
-  "voiceChannelId",
-  "pinnedChannelId",
-  "pinnedChannelMode",
-  "pinnedChannelDeleteInput",
-  "jtcEnabled",
-  "jtcCategoryId",
-  "jtcMarkerChannelId",
-  "jtcTemplate",
-  "jtcUserLimit",
-  "gaplessEnabled",
-  "crossfadeEnabled",
-  "crossfadeMs",
-  "emojiEnlargeMode",
-  "emojiEnlargeChannelIds",
-  "quoteMode",
-  "quoteChannelIds",
-  "embedFixMode",
-  "embedFixChannelIds",
-  "embedFixSites",
-  "embedFixSuppressOriginal",
-  "countingEnabled",
-  "countingChannelId",
-] as const;
-
 /** DB 행이 없어도 기본값을 내려주는 응답 빌더 (봇 기본값과 동일해야 해요) */
-function toSettings(
-  guild: {
-    volume: number;
-    repeat: string;
-    related: boolean;
-    enableController: boolean;
-    sponsorBlockSegments: string[];
-    djRoleId: string | null;
-    textChannelId: string | null;
-    voiceChannelId: string | null;
-    pinnedChannelId: string | null;
-    pinnedChannelMode: string;
-    pinnedChannelDeleteInput: boolean;
-    jtcEnabled: boolean;
-    jtcCategoryId: string | null;
-    jtcMarkerChannelId: string | null;
-    jtcTemplate: string;
-    jtcUserLimit: number;
-    gaplessEnabled: boolean;
-    crossfadeEnabled: boolean;
-    crossfadeMs: number;
-    emojiEnlargeMode: string;
-    emojiEnlargeChannelIds: string[];
-    quoteMode: string;
-    quoteChannelIds: string[];
-    embedFixMode: string;
-    embedFixChannelIds: string[];
-    embedFixSites: string[];
-    embedFixSuppressOriginal: boolean;
-    countingEnabled: boolean;
-    countingChannelId: string | null;
-  } | null,
-): GuildSettings {
+function toSettings(guild: PrismaGuild | null): GuildSettings {
   if (!guild) {
     return {
       volume: 10,
@@ -168,7 +105,7 @@ export const PUT = createGuildApiHandler({
   key: "settings-put",
   handler: async ({ guildId, request }) => {
     try {
-      const body = await parseSettingBody(request, guildSettingsSchema, ALLOWED_KEYS);
+      const body = await parseSettingBody(request, guildSettingsSchema, GUILD_SETTING_KEYS);
       if (!body.ok) return body.response;
 
       const data = body.data;

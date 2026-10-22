@@ -10,18 +10,17 @@ import { UserPlus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/toast";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useMemberGreeting } from "@/hooks/use-member-greeting";
-import { toError } from "@/lib/api-error";
+import { notifyApiError, notifySaved } from "@/lib/notify";
 
 import { GreetingSection } from "./member-greeting/greeting-section";
 import {
+  ChannelListError,
   PanelError,
   PanelHeader,
   PanelLoading,
   SaveBar,
-  WarningBox,
 } from "./settings-shared";
 
 export function MemberGreetingSettings({
@@ -51,7 +50,6 @@ function MemberGreetingPanel({
   visible: boolean;
   guildName: string | null;
 }) {
-  const toast = useToast();
   const {
     pair,
     drafts,
@@ -95,18 +93,11 @@ function MemberGreetingPanel({
   const handleSave = useCallback(async () => {
     try {
       await save();
-      toast.success(
-        "인사 설정을 저장했어요.",
-        "멤버 입장·퇴장 때 새 설정이 적용돼요.",
-      );
+      notifySaved("인사 설정을 저장했어요.", "멤버 입장·퇴장 때 새 설정이 적용돼요.");
     } catch (err) {
-      const apiError = toError(err, "인사 설정을 저장하지 못했어요.");
-      toast.error(
-        apiError.message,
-        apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-      );
+      notifyApiError(err, "인사 설정을 저장하지 못했어요.");
     }
-  }, [save, toast]);
+  }, [save]);
 
   if (error) return <PanelError error={error} onRetry={reload} />;
   if (isLoading || !pair || !drafts.welcome || !drafts.goodbye) {
@@ -121,18 +112,7 @@ function MemberGreetingPanel({
         description="멤버가 입장·퇴장할 때 환영·작별 메시지와 카드 이미지를 보내요."
       />
 
-      {channelsError && (
-        <WarningBox>
-          채널 목록을 불러오지 못했어요. ({channelsError.message}){" "}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={reloadChannels}
-          >
-            다시 시도
-          </button>
-        </WarningBox>
-      )}
+      {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
       <Tabs defaultValue="welcome" className="min-w-0">
         <TabsList className="w-full sm:w-fit" aria-label="멤버 인사 유형">
           <TabsTrigger value="welcome" className="flex-1 sm:flex-none">

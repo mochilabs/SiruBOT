@@ -59,16 +59,17 @@ export function useAuthedSWR<T>(key: string | null, callbackUrl: string): SWRRes
  * 길드 리소스 공통 훅 — `/api/servers/:id<path>`를 ApiError fetcher로 읽어오고,
  * 401(세션 만료)이면 "다시 시도"로는 절대 성공하지 않으니 로그인 페이지로 보내요.
  * `enabled: false`면 키를 닫아 필요한 패널만 요청해요.
+ * `refreshInterval`은 SSE 폴백 폴링처럼 주기 재검증이 필요한 화면에서만 넘겨요.
  * `guildUrl`은 실제 SWR 키 그대로 돌려주니 쓰기 요청도 같은 문자열에서 파생시켜요.
  */
 export function useGuildResource<T>(
 	guildId: string,
 	path: string,
-	options: { fetcher: Fetcher<T, string>; enabled?: boolean },
+	options: { fetcher: Fetcher<T, string>; enabled?: boolean; refreshInterval?: number },
 ): SWRResponse<T> & { guildUrl: string; redirectToLogin: () => void } {
-	const { fetcher, enabled = true } = options;
+	const { fetcher, enabled = true, refreshInterval } = options;
 	const guildUrl = `/api/servers/${guildId}${path}`;
-	const swr = useSWR<T>(enabled ? guildUrl : null, fetcher);
+	const swr = useSWR<T>(enabled ? guildUrl : null, fetcher, refreshInterval !== undefined ? { refreshInterval } : undefined);
 
 	// 세션 만료(401) — 이어지는 요청도 같은 결과라 재시도 대신 다시 로그인으로 보내요
 	const redirectToLogin = useSessionExpiredRedirect(swr.error instanceof ApiError && swr.error.status === 401, `/servers/${guildId}`);

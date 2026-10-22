@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CUSTOM_COMMAND_MAX_PER_GUILD,
   CUSTOM_COMMAND_MAX_SLASH_PER_GUILD,
@@ -16,11 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import { type ApiError,toApiError, toError } from "@/lib/api-error";
 import type {
   CustomCommandsState,
   CustomCommandSummary,
 } from "@/lib/custom-commands";
+import { notifyApiError } from "@/lib/notify";
 
 import { CustomCommandEditor } from "./custom-command/custom-command-editor";
 import {
@@ -42,15 +44,7 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
   const [editor, setEditor] = useState<
     { open: true; command: CustomCommandSummary | null } | { open: false }
   >({ open: false });
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const confirmTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current !== null)
-        window.clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
+  const { armedId: confirmDeleteId, request: requestDelete } = useConfirmDelete();
 
   const applyState = useCallback((next: CustomCommandsState) => {
     setState(next);
@@ -81,14 +75,6 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
     };
   }, [guildId, applyState, retryToken]);
 
-  const reportError = (error: unknown, fallback: string) => {
-    const apiError = toError(error, fallback);
-    toast.error(
-      apiError.message,
-      apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-    );
-  };
-
   const prefixDirty = state !== null && prefixInput !== state.prefix;
 
   const handleSavePrefix = async () => {
@@ -108,26 +94,15 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
       applyState((await res.json()) as CustomCommandsState);
       toast.success("접두사를 저장했어요.", "봇이 곧 새 접두사를 적용해요.");
     } catch (error) {
-      reportError(error, "접두사 저장에 실패했어요.");
+      notifyApiError(error, "접두사 저장에 실패했어요.");
     } finally {
       setSavingPrefix(false);
     }
   };
 
   const handleDelete = async (command: CustomCommandSummary) => {
-    if (confirmDeleteId !== command.id) {
-      if (confirmTimerRef.current !== null)
-        window.clearTimeout(confirmTimerRef.current);
-      setConfirmDeleteId(command.id);
-      confirmTimerRef.current = window.setTimeout(
-        () => setConfirmDeleteId(null),
-        4000,
-      );
-      return;
-    }
-    if (confirmTimerRef.current !== null)
-      window.clearTimeout(confirmTimerRef.current);
-    setConfirmDeleteId(null);
+    // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
+    if (!requestDelete(command.id)) return;
     try {
       const res = await fetch(
         `/api/servers/${guildId}/custom-commands/${command.id}`,
@@ -137,7 +112,7 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
       applyState((await res.json()) as CustomCommandsState);
       toast.success(`\`${command.name}\` 커스텀 명령어를 삭제했어요.`);
     } catch (error) {
-      reportError(error, "삭제에 실패했어요.");
+      notifyApiError(error, "삭제에 실패했어요.");
     }
   };
 

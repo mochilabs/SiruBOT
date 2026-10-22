@@ -4,7 +4,6 @@ import {
 	buildSpec,
 	type EditorDraft,
 	hasRoleAction,
-	slashSlotWarning,
 	totalDelaySeconds,
 	validateEditorDraft,
 } from "./custom-command-editor.utils";
@@ -76,13 +75,5 @@ describe("buildSpec", () => {
 		const withAccess = buildSpec(draft({ access: { mode: "roles", roleIds: ["999000000000000001"] } }));
 		expect(withAccess.ok).toBe(true);
 		if (withAccess.ok) expect(withAccess.spec.access?.mode).toBe("roles");
-	});
-});
-
-describe("slashSlotWarning", () => {
-	it("warns only for slash method at capacity", () => {
-		expect(slashSlotWarning(20, 20, "slash")).toContain("가득");
-		expect(slashSlotWarning(19, 20, "slash")).toBeNull();
-		expect(slashSlotWarning(20, 20, "prefix")).toBeNull();
 	});
 });

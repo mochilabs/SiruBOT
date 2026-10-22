@@ -6,6 +6,7 @@ import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { MockThumbnail } from "@/components/primitives/mock-thumbnail";
 import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,19 +36,6 @@ function formatDay(playedAt: string): string {
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yy}.${mm}.${dd}`;
-}
-
-function MockThumbnail({ className }: { className: string }) {
-  return (
-    <div
-      className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}
-    >
-      <Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" aria-hidden />
-      <span className="absolute bottom-1 right-1 text-3xs font-black text-primary-text uppercase tracking-tighter select-none z-10">
-        No Image
-      </span>
-    </div>
-  );
 }
 
 /** 출석 연속 일수 — 뷰포트 진입 시 카운트업 (작고 조용한 스탯) */

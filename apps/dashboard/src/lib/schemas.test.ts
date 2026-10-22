@@ -1,6 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import { guildSettingsSchema } from "./schemas";
+import { GUILD_SETTING_KEYS, guildSettingsSchema, parseSettingBody } from "./schemas";
+
+describe("guildSettingsSchema 허용 키 계약", () => {
+	it("GUILD_SETTING_KEYS는 스키마 shape에서 도출돼요 — 29개 필드", () => {
+		expect(GUILD_SETTING_KEYS).toEqual(Object.keys(guildSettingsSchema.shape));
+		expect(GUILD_SETTING_KEYS).toHaveLength(29);
+	});
+
+	it("parseSettingBody가 허용 키는 받고 미등록 키는 400으로 거절해요", async () => {
+		const ok = await parseSettingBody(
+			new Request("http://localhost", { method: "PUT", body: JSON.stringify({ volume: 20 }) }),
+			guildSettingsSchema,
+			GUILD_SETTING_KEYS,
+		);
+		expect(ok.ok).toBe(true);
+
+		const unknown = await parseSettingBody(
+			new Request("http://localhost", { method: "PUT", body: JSON.stringify({ notASetting: 1 }) }),
+			guildSettingsSchema,
+			GUILD_SETTING_KEYS,
+		);
+		expect(unknown.ok).toBe(false);
+	});
+});
 
 describe("guildSettingsSchema 크로스페이드 범위", () => {
 	it("0.5초(500ms) ~ 15초(15000ms) 사이만 받아들여요", () => {

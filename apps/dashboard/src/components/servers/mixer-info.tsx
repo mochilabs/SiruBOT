@@ -175,7 +175,7 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 							<p className="mt-1 text-xs font-medium leading-relaxed text-muted-foreground">{copy.description}</p>
 							<div className="mt-2.5">{kind === "crossfade" ? <CrossfadeGraph /> : <GaplessGraph />}</div>
 							<GraphLegend center={kind === "crossfade" ? "겹치는 구간" : "공백 0초"} centerTone={kind === "crossfade"} />
-							<p className="mt-1.5 text-2xs text-muted-foreground">{copy.caption}</p>
+							<p className="mt-1.5 text-sm text-muted-foreground">{copy.caption}</p>
 						</m.div>
 					</Portal>
 				)}

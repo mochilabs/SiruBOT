@@ -95,7 +95,7 @@ export function GreetingTemplateField({
           </Button>
         ))}
       </div>
-      <p className="text-2xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {value.length}/{TEMPLATE_MAX} · 예시:{" "}
         <span className="text-foreground font-semibold">
           {sampleTemplate(value.trim() || DEFAULT_GREETINGS[kind].template)}

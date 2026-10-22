@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useSocialAlerts } from "@/hooks/use-social-alerts";
 import type { SocialPlatform, SocialSubscription, SocialSubscriptionStatus } from "@/types/social";
@@ -54,9 +55,9 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const [draft, setDraft] = useState("");
 	const [nameDraft, setNameDraft] = useState("");
 	const [avatarDraft, setAvatarDraft] = useState("");
-	const [confirmingId, setConfirmingId] = useState<string | null>(null);
+	// 첫 클릭 무장 → "정말 삭제" 버튼으로 교체. 취소 버튼은 reset(), 4초 지나면 자동 해제
+	const { armedId: confirmingId, request: requestDelete, reset: cancelConfirm } = useConfirmDelete();
 	const [busyId, setBusyId] = useState<string | null>(null);
-
 	const channelName = (id: string) => channels?.find((channel) => channel.id === id)?.name ?? null;
 
 	const toggleStatus = async (subscription: SocialSubscription) => {
@@ -97,7 +98,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		setBusyId(null);
 		if (result.ok) {
 			toast.success("알림을 삭제했어요.");
-			setConfirmingId(null);
+			cancelConfirm();
 		} else {
 			toast.error("알림을 삭제하지 못했어요.", result.error);
 		}
@@ -174,12 +175,12 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											<Trash2 size={14} />
 											정말 삭제
 										</Button>
-										<Button size="sm" variant="ghost" onClick={() => setConfirmingId(null)}>
+										<Button size="sm" variant="ghost" onClick={cancelConfirm}>
 											취소
 										</Button>
 									</>
 								) : (
-									<Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingId(subscription.id)}>
+									<Button size="sm" variant="ghost" disabled={busy} onClick={() => requestDelete(subscription.id)}>
 										<Trash2 size={14} />
 										삭제
 									</Button>
@@ -200,7 +201,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 
 						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl) && (
 							<p className="text-muted-foreground text-xs">
-								웨훅 표시: {subscription.webhookName ?? "기본"}
+								웹훅 표시: {subscription.webhookName ?? "기본"}
 								{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
 							</p>
 						)}
@@ -209,12 +210,12 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 							<div className="flex flex-col gap-3">
 								<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
 								<div className="flex flex-col gap-2">
-									<span className="text-xs font-medium text-muted-foreground">웨훅 표시 (비우면 기본)</span>
+									<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (비우면 기본)</span>
 									<div className="grid gap-2 sm:grid-cols-2">
 										<Input
 											value={nameDraft}
 											onChange={(event) => setNameDraft(event.target.value)}
-											placeholder="웨훅 표시명"
+											placeholder="웹훅 표시명"
 											maxLength={80}
 										/>
 										<Input

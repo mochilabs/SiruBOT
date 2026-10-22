@@ -57,6 +57,18 @@ export function WarningBox({ children }: { children: ReactNode }) {
   );
 }
 
+/** 채널 목록 로드 실패 공용 안내 — useGuildChannels를 쓰는 설정 패널이 같이 써요 */
+export function ChannelListError({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
+  return (
+    <WarningBox>
+      채널 목록을 불러오지 못했어요. ({error.message}){" "}
+      <button type="button" className="font-semibold underline" onClick={onRetry}>
+        다시 시도
+      </button>
+    </WarningBox>
+  );
+}
+
 export function PanelLoading({ label }: { label: string }) {
   return (
     <Card

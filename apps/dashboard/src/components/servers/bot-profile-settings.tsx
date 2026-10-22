@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
-import { toError } from "@/lib/api-error";
+import { notifyApiError } from "@/lib/notify";
 
 import {
   PanelError,
@@ -158,11 +158,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
       setBannerReset(false);
       toast.success("봇 프로필을 저장했어요.", "봇이 Discord에 곧 적용해요.");
     } catch (err) {
-      const apiError = toError(err, "저장에 실패했어요.");
-      toast.error(
-        apiError.message,
-        apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-      );
+      notifyApiError(err, "저장에 실패했어요.");
     }
   }, [
     avatarFile,

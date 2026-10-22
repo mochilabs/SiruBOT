@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { formatDuration } from "@sirubot/utils/time";
 import { ListMusic, Loader2, Play, Search, X } from "lucide-react";
-import useSWR from "swr";
 
 import { PlayerClient, type PlayerTrack } from "@/app/player/[id]/player-client";
 import PlayerLiveTab from "@/components/player/player-live-tab";
@@ -17,13 +16,19 @@ import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { playerErrorMessage } from "@/lib/player-error";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import { prettySourceName } from "@/utils";
-
 interface VoiceContext {
 	inVoice: boolean;
 	voiceChannelName: string | null;
 	canControl: boolean;
 }
+
+interface VoiceContextResponse {
+	voice: VoiceContext | null;
+}
+
+const voiceContextFetcher = createApiFetcher<VoiceContextResponse>("음성 연결 상태를 불러오지 못했어요.");
 
 interface TrackSummary {
 	title: string;
@@ -38,9 +43,7 @@ interface TrackSummary {
 const isPlayableUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
 function VoiceStatusBadge({ guildId }: { guildId: string }) {
-	const { data, error, isLoading } = useSWR<{ voice: VoiceContext | null }>(
-		`/api/servers/${guildId}/player/voice-context`,
-	);
+	const { data, error, isLoading } = useGuildResource<VoiceContextResponse>(guildId, "/player/voice-context", { fetcher: voiceContextFetcher });
 
 	if (isLoading) return <SkeletonLine width="72px" height="h-6" />;
 	if (error || !data?.voice) {
@@ -132,7 +135,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const playPendingRef = useRef(false);
 	const searchAbortRef = useRef<AbortController | null>(null);
 	const lastSearchedRef = useRef<string>("");
-	const { data: voiceData } = useSWR<{ voice: VoiceContext | null }>(`/api/servers/${guildId}/player/voice-context`);
+	const { data: voiceData } = useGuildResource<VoiceContextResponse>(guildId, "/player/voice-context", { fetcher: voiceContextFetcher });
 	const canControl = voiceData?.voice?.canControl ?? true;
 	const inVoice = voiceData?.voice?.inVoice ?? true;
 

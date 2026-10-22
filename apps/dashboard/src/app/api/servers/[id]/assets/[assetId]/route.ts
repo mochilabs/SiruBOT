@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assetNameSchema } from "@sirubot/utils";
+import { assetNameSchema } from "@sirubot/utils/storage";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";

@@ -20,18 +20,18 @@ export interface SocialSubscriptionInput {
 	sourceName: string;
 	targetChannelId: string;
 	messageTemplate?: string | null;
-	/** 웨훅 표시명 — null이면 기본 이름(시루 소셜 알림 — 채널 이름) */
+	/** 웹훅 표시명 — null이면 기본 이름(시루 소셜 알림 — 채널 이름) */
 	webhookName?: string | null;
-	/** 웨훅 프로필 사진 URL — null이면 웨훅 기본 아바타 */
+	/** 웹훅 프로필 사진 URL — null이면 웹훅 기본 아바타 */
 	webhookAvatarUrl?: string | null;
 }
 
 export interface SocialSubscriptionPatch {
 	messageTemplate?: string | null;
 	status?: "active" | "disabled";
-	/** 웨훅 표시명 — null이면 기본 표시로 되돌려요 */
+	/** 웹훅 표시명 — null이면 기본 표시로 되돌려요 */
 	webhookName?: string | null;
-	/** 웨훅 프로필 사진 URL — null이면 기본 아바타로 되돌려요 */
+	/** 웹훅 프로필 사진 URL — null이면 기본 아바타로 되돌려요 */
 	webhookAvatarUrl?: string | null;
 }
 

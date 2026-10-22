@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Radio } from "lucide-react";
-import useSWR from "swr";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { PanelError } from "@/components/servers/settings-shared";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
-import { toApiError, toError } from "@/lib/api-error";
+import { toError } from "@/lib/api-error";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 
 import { QueueList } from "./live-queue-list";
 import { NowPlaying } from "./now-playing-card";
@@ -51,11 +51,7 @@ interface LivePayload {
   hub: { guilds: number; subscribed: boolean; staleMs: number };
 }
 
-async function liveFetcher(url: string): Promise<LivePayload> {
-  const response = await fetch(url);
-  if (!response.ok) throw await toApiError(response, "라이브 상태를 불러오지 못했어요.");
-  return response.json();
-}
+const liveFetcher = createApiFetcher<LivePayload>("라이브 상태를 불러오지 못했어요.");
 
 /** 폴백 폴링 주기 — 2000ms면 READ_RATE(분당 30회) 경계에 딱 붙어 윈도우 지터로 429가 튀니 분당 24회로 낮춰요. */
 const FALLBACK_POLL_INTERVAL_MS = 2500;
@@ -78,7 +74,8 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
     error,
     isLoading,
     mutate,
-  } = useSWR<LivePayload>(`/api/servers/${guildId}/live`, liveFetcher, {
+  } = useGuildResource<LivePayload>(guildId, "/live", {
+    fetcher: liveFetcher,
     refreshInterval: mode === "polling" ? FALLBACK_POLL_INTERVAL_MS : 0,
   });
 

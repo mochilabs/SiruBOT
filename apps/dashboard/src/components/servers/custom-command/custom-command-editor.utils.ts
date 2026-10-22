@@ -82,10 +82,3 @@ export function validateEditorDraft(draft: EditorDraft): string | null {
 	const spec = buildSpec(draft);
 	return spec.ok ? null : spec.error;
 }
-
-/** 슬래시 슬롯 경고 문구 — 초과 아니면 null */
-export function slashSlotWarning(slashCount: number, maxSlash: number, method: CustomCommandMethod): string | null {
-	if (method !== "slash") return null;
-	if (slashCount >= maxSlash) return `슬래시 명령어 슬롯이 가득 찼어요 (${slashCount}/${maxSlash}).`;
-	return null;
-}

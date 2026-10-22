@@ -7,9 +7,8 @@ import { Field } from "@/components/primitives/field";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/toast";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
-import { toError } from "@/lib/api-error";
+import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { GuildSettings } from "@/types/settings";
 
 import { MixerInfoTip } from "./mixer-info";
@@ -28,19 +27,17 @@ const toMixerForm = (settings: GuildSettings): MixerForm => ({
 });
 
 function MixerSettingsPanel({ guildId }: { guildId: string }) {
-  const toast = useToast();
   const { form, isLoading, error, saving, dirty, patch, submit, reload } =
     useSettingsForm(guildId, toMixerForm);
 
 	const handleSave = useCallback(async () => {
 		try {
 			await submit();
-			toast.success("오디오 엔진 설정을 저장했어요.");
+			notifySaved("오디오 엔진 설정을 저장했어요.", null);
 		} catch (err) {
-			const apiError = toError(err, "저장에 실패했어요.");
-			toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
+			notifyApiError(err, "저장에 실패했어요.");
 		}
-	}, [submit, toast]);
+	}, [submit]);
 
   if (isLoading) return <PanelLoading label="오디오 엔진 설정 불러오는 중…" />;
   if (error) return <PanelError error={error} onRetry={reload} />;

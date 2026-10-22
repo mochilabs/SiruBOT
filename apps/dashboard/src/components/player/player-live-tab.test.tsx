@@ -9,7 +9,9 @@ import PlayerLiveTab from "./player-live-tab";
 
 const remote = vi.hoisted(() => ({ data: undefined as unknown, error: null as Error | null, mutate: vi.fn() }));
 vi.mock("swr", () => ({ default: () => ({ ...remote, isLoading: !remote.data && !remote.error }) }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/servers/guild-a" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/servers/guild-a", useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "authenticated" }) }));
+vi.mock("@/hooks/use-session-redirect", () => ({ useSessionExpiredRedirect: () => vi.fn() }));
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ error: vi.fn() }) }));
 
 class Source {

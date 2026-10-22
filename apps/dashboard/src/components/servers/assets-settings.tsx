@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Check, Copy, Images, Pencil, Trash2, Upload, X } from "lucide-react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import {
   ASSET_ALLOWED_MIME,
   ASSET_MAX_BYTES,
@@ -47,15 +48,7 @@ function AssetsPanel({ guildId }: { guildId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [savingName, setSavingName] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const confirmTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current !== null)
-        window.clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
+  const { armedId: confirmDeleteId, request: requestDelete } = useConfirmDelete();
 
   const handleFiles = async (files: File[]) => {
     const accepted: File[] = [];
@@ -114,19 +107,8 @@ function AssetsPanel({ guildId }: { guildId: string }) {
   };
 
   const handleDelete = async (asset: GuildAsset) => {
-    if (confirmDeleteId !== asset.id) {
-      if (confirmTimerRef.current !== null)
-        window.clearTimeout(confirmTimerRef.current);
-      setConfirmDeleteId(asset.id);
-      confirmTimerRef.current = window.setTimeout(
-        () => setConfirmDeleteId(null),
-        4000,
-      );
-      return;
-    }
-    if (confirmTimerRef.current !== null)
-      window.clearTimeout(confirmTimerRef.current);
-    setConfirmDeleteId(null);
+    // 첫 클릭은 무장(4초 자동 해제), 두 번째 클릭이 실제 삭제예요
+    if (!requestDelete(asset.id)) return;
     await remove(asset.id);
   };
 

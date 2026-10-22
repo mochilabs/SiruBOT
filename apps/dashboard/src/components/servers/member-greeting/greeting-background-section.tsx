@@ -102,7 +102,7 @@ export function GreetingBackgroundSection({
           </Button>
         )}
       </div>
-      <p className="px-3 text-2xs text-muted-foreground">
+      <p className="px-3 text-sm text-muted-foreground">
         3MB 이하 PNG·JPEG·WebP는 JPEG(긴 변 1600px)로 줄여 저장돼요.
       </p>
     </>

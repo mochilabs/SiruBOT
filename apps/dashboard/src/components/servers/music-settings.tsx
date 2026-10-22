@@ -24,9 +24,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/toast";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
-import { toError } from "@/lib/api-error";
+import { notifyApiError, notifySaved } from "@/lib/notify";
 import { SPONSORBLOCK_SEGMENTS } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
@@ -96,22 +95,17 @@ const toMusicForm = (settings: GuildSettings): MusicForm => ({
 });
 
 function MusicSettingsPanel({ guildId }: { guildId: string }) {
-  const toast = useToast();
   const { form, isLoading, error, saving, dirty, patch, submit, reload } =
     useSettingsForm(guildId, toMusicForm);
 
   const handleSave = useCallback(async () => {
     try {
       await submit();
-      toast.success("음악 설정을 저장했어요.", "봇이 곧 새 설정을 적용해요.");
+      notifySaved("음악 설정을 저장했어요.");
     } catch (err) {
-      const apiError = toError(err, "저장에 실패했어요.");
-      toast.error(
-        apiError.message,
-        apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-      );
+      notifyApiError(err, "저장에 실패했어요.");
     }
-  }, [submit, toast]);
+  }, [submit]);
 
   if (isLoading) return <PanelLoading label="음악 설정 불러오는 중…" />;
   if (error) return <PanelError error={error} onRetry={reload} />;

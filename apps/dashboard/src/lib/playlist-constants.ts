@@ -11,4 +11,4 @@ export const MAX_PLAYLIST_DESCRIPTION_LENGTH = 500;
 export const FAVORITES_PLAYLIST_NAME = "즐겨찾기";
 
 /** 자동 생성되는 "즐겨찾기" 플레이리스트의 기본 설명 */
-export const FAVORITES_PLAYLIST_DESCRIPTION = "즐겨찾기한 음악 목록입니다.";
+export const FAVORITES_PLAYLIST_DESCRIPTION = "즐겨찾기한 음악 목록이에요.";

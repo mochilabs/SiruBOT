@@ -113,17 +113,6 @@ export async function redisSetNx(key: string, value: string, ttlMs: number): Pro
 	}
 }
 
-/** DEL — 삭제 여부 반환 */
-export async function redisDel(key: string): Promise<boolean> {
-	const client = await ready();
-	if (!client) return false;
-	try {
-		return (await client.del(k(key))) > 0;
-	} catch {
-		return false;
-	}
-}
-
 /**
  * 소유자 검증 후 삭제 — 값이 일치할 때만 DEL (Redlock 안전 해제).
  * TTL이 먼저 만료돼 다른 요청이 재획득한 뮤텍스를 내가 지우지 않도록 보장한다.

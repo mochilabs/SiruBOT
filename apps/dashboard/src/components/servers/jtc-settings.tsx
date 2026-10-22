@@ -12,16 +12,17 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
-import { toApiError, toError } from "@/lib/api-error";
+import { toApiError } from "@/lib/api-error";
+import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { GuildSettings } from "@/types/settings";
 
 import {
+  ChannelListError,
   InfoBox,
   PanelError,
   PanelHeader,
   PanelLoading,
   SaveBar,
-  WarningBox,
 } from "./settings-shared";
 
 interface JtcForm {
@@ -54,18 +55,11 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
   const handleSave = useCallback(async () => {
     try {
       await submit();
-      toast.success(
-        "임시 음성 설정을 저장했어요.",
-        "봇이 곧 새 설정을 적용해요.",
-      );
+      notifySaved("임시 음성 설정을 저장했어요.");
     } catch (err) {
-      const apiError = toError(err, "저장에 실패했어요.");
-      toast.error(
-        apiError.message,
-        apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-      );
+      notifyApiError(err, "저장에 실패했어요.");
     }
-  }, [submit, toast]);
+  }, [submit]);
 
   /** 카테고리 선택 = 봇과 같은 마커 채널 준비 작업(디스코드 채널 생성/이동) */
   const handleCategoryChange = useCallback(
@@ -92,11 +86,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
           "해당 카테고리에 '🔊 임시방 만들기' 채널이 생기거나 옮겨졌어요.",
         );
       } catch (err) {
-        const apiError = toError(err, "마커 채널을 준비하지 못했어요.");
-        toast.error(
-          apiError.message,
-          apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined,
-        );
+        notifyApiError(err, "마커 채널을 준비하지 못했어요.");
       } finally {
         setSetupLoading(false);
       }
@@ -120,29 +110,18 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
     <Card padding="lg" className="gap-6 border-0 overflow-visible">
       <PanelHeader
         icon={<Volume2 className="h-5 w-5" />}
-        title="임시 음성채널 (JTC)"
+        title="임시 음성 채널 (JTC)"
         description="마커 채널에 들어가면 방장 이름으로 개인 음성방을 만들어 줘요."
       />
 
-      {channelsError && (
-        <WarningBox>
-          채널 목록을 불러오지 못했어요. ({channelsError.message}){" "}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={reloadChannels}
-          >
-            다시 시도
-          </button>
-        </WarningBox>
-      )}
+      {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
 
       <div className="flex items-center justify-between gap-4">
         <Switch
           checked={form.jtcEnabled}
           onChange={(checked: boolean) => patch({ jtcEnabled: checked })}
           disabled={saving || !form.jtcMarkerChannelId}
-          label="임시 음성채널 사용"
+          label="임시 음성 채널 사용"
           labelPosition="left"
         />
         {!form.jtcMarkerChannelId && (

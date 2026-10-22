@@ -41,7 +41,7 @@ function ChatPanelLabel() {
 	return (
 		<span className="space-y-0.5">
 			<span className="block text-xs font-medium text-muted-foreground">AI 도우미</span>
-			<span className="block text-2xs text-muted-foreground">
+			<span className="block text-sm text-muted-foreground">
 				만들고 싶은 명령어를 말하면 초안을 채우고, 이어서 다듬을 수 있어요.
 			</span>
 		</span>
@@ -398,7 +398,7 @@ export function CustomCommandEditor({
 								/>
 							</div>
 
-							<p className="shrink-0 text-2xs text-muted-foreground">
+							<p className="shrink-0 text-sm text-muted-foreground">
 								AI가 바꾼 내용은 폼에만 적용돼요. 만들기·수정 완료 버튼을 눌러야 서버에 반영돼요.
 							</p>
 						</div>
