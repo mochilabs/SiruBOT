@@ -7,12 +7,14 @@ import { Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
 import { InfoBox, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
 import { AddSubscriptionForm } from "@/components/servers/social/add-subscription-form";
 import { TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
+import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { useBotProfile } from "@/hooks/use-bot-profile";
 import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useSocialAlerts } from "@/hooks/use-social-alerts";
@@ -50,12 +52,14 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const enabled = visible !== false;
 	const { subscriptions, isLoading, error, reload, updateSubscription, removeSubscription } = useSocialAlerts(guildId, enabled);
 	const { channels } = useGuildChannels(guildId, enabled);
+	// 웹훅 프로필 사진 폴백 미리보기용 — 서버(길드) 전용 → 전역 봇 프로필 사진 순서 (봇 프로필 설정과 동일)
+	const { profile: botProfile } = useBotProfile(guildId);
 
 	const [showAdd, setShowAdd] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [draft, setDraft] = useState("");
 	const [nameDraft, setNameDraft] = useState("");
-	const [avatarDraft, setAvatarDraft] = useState("");
+	const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
 	const [showThumbDraft, setShowThumbDraft] = useState(true);
 	// 첫 클릭 무장 → "정말 삭제" 버튼으로 교체. 취소 버튼은 reset(), 4초 지나면 자동 해제
 	const { armedId: confirmingId, request: requestDelete, reset: cancelConfirm } = useConfirmDelete();
@@ -75,7 +79,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		setEditingId(subscription.id);
 		setDraft(subscription.messageTemplate ?? "");
 		setNameDraft(subscription.webhookName ?? "");
-		setAvatarDraft(subscription.webhookAvatarUrl ?? "");
+		setAvatarDraft(subscription.webhookAvatarUrl ?? null);
 		setShowThumbDraft(subscription.showThumbnail);
 	};
 
@@ -84,7 +88,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		const result = await updateSubscription(subscription.id, {
 			messageTemplate: draft.trim() ? draft : null,
 			webhookName: nameDraft.trim() ? nameDraft.trim() : null,
-			webhookAvatarUrl: avatarDraft.trim() ? avatarDraft.trim() : null,
+			webhookAvatarUrl: avatarDraft,
 			showThumbnail: showThumbDraft
 		});
 		setBusyId(null);
@@ -214,22 +218,22 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 						{editing && (
 							<div className="flex flex-col gap-3">
 								<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
-								<div className="flex flex-col gap-2">
-									<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (비우면 기본)</span>
-									<div className="grid gap-2 sm:grid-cols-2">
-										<Input
-											value={nameDraft}
-											onChange={(event) => setNameDraft(event.target.value)}
-											placeholder="웹훅 표시명"
-											maxLength={80}
-										/>
-										<Input
-											value={avatarDraft}
-											onChange={(event) => setAvatarDraft(event.target.value)}
-											placeholder="프로필 사진 URL (https://...)"
-											maxLength={2048}
-										/>
+								<div className="flex flex-col gap-3">
+									<div className="flex flex-col gap-1.5">
+										<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (비우면 기본)</span>
+										<Input value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} placeholder="웹훅 표시명" maxLength={80} disabled={busy} />
+										<p className="text-xs text-muted-foreground">
+											{nameDraft.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).
+										</p>
 									</div>
+									<WebhookAvatarField
+										guildId={guildId}
+										value={avatarDraft}
+										onChange={setAvatarDraft}
+										fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
+										fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
+										disabled={busy}
+									/>
 								</div>
 								<div className="flex flex-col gap-1.5">
 									<Switch
