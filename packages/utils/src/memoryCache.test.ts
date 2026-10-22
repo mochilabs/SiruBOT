@@ -1,56 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatTime, formatTimeToKorean, sleep } from './time.ts';
 import { MemoryCache } from './memoryCache.ts';
-
-describe('formatTime', () => {
-	it('formats seconds as mm:ss', () => {
-		expect(formatTime(0)).toBe('00:00');
-		expect(formatTime(65)).toBe('01:05');
-		expect(formatTime(3599)).toBe('59:59');
-	});
-
-	it('formats hours as hh:mm:ss', () => {
-		expect(formatTime(3600)).toBe('01:00:00');
-		expect(formatTime(3723)).toBe('01:02:03');
-	});
-
-	it('returns 00:00 for invalid input', () => {
-		expect(formatTime(NaN)).toBe('00:00');
-		expect(formatTime(-5)).toBe('00:00');
-	});
-});
-
-describe('formatTimeToKorean', () => {
-	it('formats Korean durations', () => {
-		expect(formatTimeToKorean(0)).toBe('0초');
-		expect(formatTimeToKorean(65)).toBe('1분 5초');
-		expect(formatTimeToKorean(3600)).toBe('1시간 0분');
-		expect(formatTimeToKorean(3723)).toBe('1시간 2분 3초');
-	});
-});
-
-describe('sleep', () => {
-	it('resolves after the given delay', async () => {
-		vi.useFakeTimers();
-		try {
-			let resolved = false;
-			const promise = sleep(1000).then(() => {
-				resolved = true;
-			});
-			await vi.advanceTimersByTimeAsync(999);
-			expect(resolved).toBe(false);
-			await vi.advanceTimersByTimeAsync(1);
-			await promise;
-			expect(resolved).toBe(true);
-		} finally {
-			vi.useRealTimers();
-		}
-	});
-
-	it('resolves with real timers', async () => {
-		await expect(sleep(1)).resolves.toBeUndefined();
-	});
-});
 
 describe('MemoryCache', () => {
 	it('stores and retrieves values', () => {

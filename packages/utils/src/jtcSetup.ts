@@ -15,7 +15,6 @@ export const jtcSetupRequestSchema = z.object({
 	userId: redisIdSchema,
 	categoryId: redisIdSchema
 });
-export type JtcSetupRequest = z.infer<typeof jtcSetupRequestSchema>;
 
 /**
  * 응답 — 성공이면 markerChannelId를 채우고, 실패면 error에 한국어 안내를 실어요.

@@ -1,8 +1,58 @@
-import { describe, expect, it } from 'vitest';
-import { formatDuration, formatUptime } from './time.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { formatDuration, formatTime, formatTimeToKorean, formatUptime, sleep } from './time.ts';
 
 // formatUptime/formatDuration은 apps/dashboard/src/lib/format.ts에서 승격된 함수예요.
 // 출력 계약(분 미패딩·시간 자리 없음 등)을 여기서 고정해요 — formatTime(format.ts)과 다르게 동작하는 게 의도예요.
+
+describe('sleep', () => {
+	it('resolves after the given delay', async () => {
+		vi.useFakeTimers();
+		try {
+			let resolved = false;
+			const promise = sleep(1000).then(() => {
+				resolved = true;
+			});
+			await vi.advanceTimersByTimeAsync(999);
+			expect(resolved).toBe(false);
+			await vi.advanceTimersByTimeAsync(1);
+			await promise;
+			expect(resolved).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('resolves with real timers', async () => {
+		await expect(sleep(1)).resolves.toBeUndefined();
+	});
+});
+
+describe('formatTime', () => {
+	it('formats seconds as mm:ss', () => {
+		expect(formatTime(0)).toBe('00:00');
+		expect(formatTime(65)).toBe('01:05');
+		expect(formatTime(3599)).toBe('59:59');
+	});
+
+	it('formats hours as hh:mm:ss', () => {
+		expect(formatTime(3600)).toBe('01:00:00');
+		expect(formatTime(3723)).toBe('01:02:03');
+	});
+
+	it('returns 00:00 for invalid input', () => {
+		expect(formatTime(NaN)).toBe('00:00');
+		expect(formatTime(-5)).toBe('00:00');
+	});
+});
+
+describe('formatTimeToKorean', () => {
+	it('formats Korean durations', () => {
+		expect(formatTimeToKorean(0)).toBe('0초');
+		expect(formatTimeToKorean(65)).toBe('1분 5초');
+		expect(formatTimeToKorean(3600)).toBe('1시간 0분');
+		expect(formatTimeToKorean(3723)).toBe('1시간 2분 3초');
+	});
+});
 
 describe('formatUptime', () => {
 	it('1시간 미만은 분만 표기해요', () => {

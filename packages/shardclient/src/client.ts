@@ -207,6 +207,11 @@ export class ShardClient {
 	}
 
 	private startStatsReporter(): void {
+		// onStats가 다시 불리면 이전 인터벌이 영구 누수되지 않게 먼저 정리해요 (startHeartbeat와 같은 규율).
+		if (this.statsInterval) {
+			clearInterval(this.statsInterval);
+			this.statsInterval = null;
+		}
 		this.statsInterval = setInterval(() => {
 			if (!this.identity || !this.statsCallback) return;
 

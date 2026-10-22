@@ -281,9 +281,9 @@ model SocialSubscription {
   webhookToken     String
   /// content 커스텀 템플릿 — null이면 임베드만 전송. 변수 {title} {url} {author}, 멘션 <#채널ID> <@&역할ID> (social.ts 계약)
   messageTemplate  String?
-  /// 웨훅 메시지 표시명 오버라이드 — null이면 웨훅 기본 이름으로 전송. 생성 시엔 웨훅 이름으로도 지정해요 (Discord 규칙 1~80자)
+  /// 웹훅 메시지 표시명 오버라이드 — null이면 웹훅 기본 이름으로 전송. 생성 시엔 웹훅 이름으로도 지정해요 (Discord 규칙 1~80자)
   webhookName      String?
-  /// 웨훅 메시지 프로필 사진 오버라이드 — null이면 웨훅 기본 아바타로 전송 (Discord가 fetch하는 http/https URL)
+  /// 웹훅 메시지 프로필 사진 오버라이드 — null이면 웹훅 기본 아바타로 전송 (Discord가 fetch하는 http/https URL)
   webhookAvatarUrl String?
   /// 배달 상태 — 'active' | 'failed' | 'disabled'. 연속 5회 실패 또는 웹훅 404/410이면 failed
   status           String    @default("active")
@@ -307,6 +307,5 @@ model SocialEventLog {
   deliveredAt DateTime @default(now())
 
   @@unique([platform, contentId])
-  @@index([deliveredAt])
 }
 

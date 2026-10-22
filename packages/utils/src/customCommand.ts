@@ -254,7 +254,6 @@ export const customCommandSpecSchemaV2 = specObjectV2.superRefine((spec, ctx) =>
 });
 export type CustomCommandSpecV2 = z.infer<typeof customCommandSpecSchemaV2>;
 export type CustomCommandStep = z.infer<typeof customCommandStepSchema>;
-export type CustomCommandStepV1 = z.infer<typeof customCommandStepSchemaV1>;
 
 /** v1 스펙 — 저장된 옛 스펙 실행용으로만 써요 */
 export const customCommandSpecSchemaV1 = z
@@ -271,7 +270,6 @@ export const customCommandSpecSchemaV1 = z
 			CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS,
 		{ message: `대기 시간 합계는 ${CUSTOM_COMMAND_MAX_TOTAL_DELAY_SECONDS}초를 넘길 수 없어요.` }
 	);
-export type CustomCommandSpecV1 = z.infer<typeof customCommandSpecSchemaV1>;
 
 /** 저장된 spec(JSON)은 신뢰할 수 없는 입력이에요 — 실행 전에 반드시 이 스키마로 재검증해요. v1·v2 모두 허용 */
 export const customCommandSpecSchema = z.union([customCommandSpecSchemaV1, customCommandSpecSchemaV2]);
@@ -310,7 +308,6 @@ export const customCommandPatchSchema = z.object({
 	description: z.string().max(100, '설명은 100자 이하여야 해요.').optional(),
 	spec: customCommandSpecSchemaV2.optional()
 });
-export type CustomCommandPatch = z.infer<typeof customCommandPatchSchema>;
 
 /** 이름 비교용 정규화 — 'Greet'와 'greet'를 같은 명령어로 봐요 */
 export function normalizeCustomCommandName(name: string): string {

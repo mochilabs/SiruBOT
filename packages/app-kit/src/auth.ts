@@ -31,9 +31,10 @@ export function createKeyAuthHook(options: KeyAuthHookOptions): (fastify: Fastif
 	return async function keyAuth(fastify: FastifyInstance): Promise<void> {
 		const logger = getAppLogger(appName)('auth');
 		// 키가 없으면 auth 비활성화 대신 fail-closed — 기동 자체를 거절해요.
+		// 라이브러리는 프로세스를 종료하지 않아요: throw는 각 앱 진입점의 main().catch → process.exit(1)로 이어져요.
 		if (!key) {
 			logger.error('AUTH_KEY is not set - refusing to start (fail-closed)');
-			process.exit(1);
+			throw new Error('AUTH_KEY is not set - refusing to start (fail-closed)');
 		}
 		logger.info('AUTH_KEY is set, auth will be enabled');
 		fastify.addHook('onRequest', async (request, reply) => {
@@ -61,14 +62,12 @@ export interface KeyPreHandlerOptions {
 export function createKeyPreHandler(options: KeyPreHandlerOptions): preHandlerAsyncHookHandler {
 	const { key, appName } = options;
 	if (!key) throw new Error(`${appName} auth key가 비어 있어요 — ${appName.toUpperCase()}_AUTH_KEY 또는 AUTH_KEY를 설정해야 해요.`);
-	const expected = Buffer.from(key, 'utf8');
 
 	return async function authPreHandler(request: FastifyRequest, reply: FastifyReply) {
 		const provided = request.headers.authorization;
 		if (typeof provided !== 'string') return reply.code(401).send({ error: '인증 정보가 없어요.' });
-		const actual = Buffer.from(provided, 'utf8');
-		// 길이가 다르면 timingSafeEqual가 throw하므로 먼저 검사해요.
-		if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+		// 문자열 직접 비교 대신 sha256 다이제스트 기반 타이밍 안전 비교로 통일해요 (timingSafeKeyEqual).
+		if (!timingSafeKeyEqual(provided, key)) {
 			return reply.code(401).send({ error: '인증에 실패했어요.' });
 		}
 		return undefined;

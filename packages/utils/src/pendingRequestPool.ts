@@ -8,6 +8,8 @@
  * 호출자가 요청당 메타데이터(예: guildId)를 id에 묶어둬야 한다면 register 전에 심어두고
  * onTimeout에서 함께 정리하세요 — timeout 페이로드로 완료되는 모든 경로(대기 초과·용량 초과 즉시 실패·
  * 중복 id 재등록)에서 onTimeout이 불리므로 같은 자리에서 정리하면 맵 누수가 없어요.
+ * 단, 풀은 모든 완료 경로에서 `timeoutResult(id)`를 **먼저** 계산한 뒤 onTimeout을 호출해요 —
+ * timeoutResult가 묶인 메타데이터(예: guildId)를 읽을 수 있게 하기 위함이에요.
  */
 
 export interface PendingRequestPoolLogger {
@@ -24,7 +26,7 @@ export interface PendingRequestPoolOptions<TPayload> {
 	 * 페이로드로 완료해요 (봇 응답 없음과 타임아웃을 같은 실패로 매핑하는 기존 허브들의 규칙이에요).
 	 */
 	timeoutResult: (id: string) => TPayload;
-	/** timeout 페이로드로 완료될 때마다 호출돼요 — id에 묶어둔 보조 메타데이터를 정리하는 용도예요 */
+	/** timeout 페이로드로 완료될 때마다 호출돼요 — id에 묶어둔 보조 메타데이터를 정리하는 용도예요 (timeoutResult 계산 이후에 불려요) */
 	onTimeout?: (id: string) => void;
 }
 
@@ -54,13 +56,15 @@ export class PendingRequestPool<TPayload> {
 	public register(id: string, timeoutMs: number): Promise<TPayload> {
 		if (this.entries.size >= this.options.capacity) {
 			this.options.logger?.warn(`Pending request pool limit reached (${this.options.capacity}), failing request ${id} immediately`);
+			const payload = this.options.timeoutResult(id);
 			this.options.onTimeout?.(id);
-			return Promise.resolve(this.options.timeoutResult(id));
+			return Promise.resolve(payload);
 		}
 		if (this.entries.has(id)) {
 			this.options.logger?.warn(`Duplicate pending request id ${id}, failing the new registration immediately`);
+			const payload = this.options.timeoutResult(id);
 			this.options.onTimeout?.(id);
-			return Promise.resolve(this.options.timeoutResult(id));
+			return Promise.resolve(payload);
 		}
 		let resolve!: (payload: TPayload) => void;
 		const promise = new Promise<TPayload>((res) => {
@@ -70,8 +74,9 @@ export class PendingRequestPool<TPayload> {
 			resolve,
 			timer: setTimeout(() => {
 				this.entries.delete(id);
+				const payload = this.options.timeoutResult(id);
 				this.options.onTimeout?.(id);
-				resolve(this.options.timeoutResult(id));
+				resolve(payload);
 			}, timeoutMs)
 		});
 		return promise;
