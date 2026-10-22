@@ -4,7 +4,7 @@
   "version": "5.2.12",
   "license": "MIT",
   "main": "dist/index.js",
-  "types": "dist/index.d.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
     "lint": "prettier --check \"src/**/*.ts\"",
@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsup",
     "watch": "tsup --watch",
-    "start": "node --experimental-specifier-resolution=node --enable-source-maps dist/"
+    "start": "node --enable-source-maps dist/"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
