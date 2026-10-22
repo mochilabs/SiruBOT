@@ -74,6 +74,12 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 - Container services: `container.db` (Prisma), `container.redisStore`, `container.audio` (LavalinkManager), `container.logger`, `container.shardInfo`, `container.{guildService,trackService,playlistService,audioService,mixerService,tempVoiceService,aiMemoryService}`, `container.{playerNotifier,playerWebResponder,guildDataResponder,guildSettingsInvalidator,jtcSetupResponder,appEmojiManager,botProfileService,memberGreetingService,socialWebhookResponder}` — 대부분 `core/botApplication.ts`에서 할당, `container.lavalinkHandler`·`container.shardClient`는 `core/bootstrap.ts`에서.
 - UI: Discord Components V2 (`MessageFlags.IsComponentsV2`, `ContainerBuilder`/`TextDisplayBuilder`), color via `DEFAULT_COLOR` from `@sirubot/utils`.
 
+## `@sirubot/utils` 배럴 vs 서브패스
+
+- 루트 배럴(`@sirubot/utils`)은 node 전용 모듈(version·appEmoji·redisSubscriber·youtube·embed·logger)을 함께 노출하므로 **서버 앱 전용**이에요. 클라이언트 번들(대시보드)은 서브패스만 임포트해요 — `apps/dashboard/eslint.config.mjs`의 `no-restricted-imports`가 루트 임포트를 에러로 막아요.
+- 순수 계약(zod 스키마·타입·상수·에러 클래스)은 서브패스로 노출해요. 서브패스를 추가(또는 제거)할 때는 `packages/utils/package.json`의 `exports`와 `tsup.config.ts`의 `entry`를 **함께** 수정해야 `dist/*.{js,cjs,d.ts}`가 생성돼요 (선례: `/time` `/storage` `/playerWeb` `/weather` `/delivery` `/client`).
+- 도메인 계약의 이중 정의 금지 — 날씨(`@sirubot/utils/weather`)·택배(`@sirubot/utils/delivery`) 타입·에러 클래스·운송장 정규화의 단일 홈은 `packages/utils/src/{weather,delivery}.ts`이고 봇·data-api는 import만 해요.
+
 ## Env / runtime gotchas
 
 - Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets.

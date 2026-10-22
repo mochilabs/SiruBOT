@@ -1,38 +1,13 @@
+import {
+	DeliveryError,
+	normalizeTrackingNumber,
+	type DeliveryCarrier,
+	type DeliveryProgress,
+	type DeliveryTrackResult
+} from '@sirubot/utils/delivery';
+
 const DELIVERY_REST_BASE_URL = 'https://apis.tracker.delivery';
 const DELIVERY_TIMEOUT_MS = 15_000;
-
-export class DeliveryError extends Error {
-	public constructor(
-		public readonly identifier: string,
-		message: string
-	) {
-		super(message);
-		this.name = 'DeliveryError';
-	}
-}
-
-export interface DeliveryCarrier {
-	id: string;
-	name: string;
-	tel?: string;
-}
-
-export interface DeliveryProgress {
-	time: string | null;
-	statusText: string;
-	location: string | null;
-	description: string | null;
-}
-
-export interface DeliveryTrackResult {
-	carrier: DeliveryCarrier;
-	stateText: string;
-	fromName: string | null;
-	fromTime: string | null;
-	toName: string | null;
-	toTime: string | null;
-	progresses: DeliveryProgress[];
-}
 
 interface LegacyRestResponse {
 	carrier?: { id?: string; name?: string; tel?: string };
@@ -105,10 +80,6 @@ function normalizeCarrierInput(raw: string): string {
 	if (CARRIER_ALIASES[lower]) return CARRIER_ALIASES[lower]!;
 	if (CARRIER_ALIASES[trimmed]) return CARRIER_ALIASES[trimmed]!;
 	return trimmed;
-}
-
-export function normalizeTrackingNumber(raw: string): string {
-	return raw.trim().replace(/[\s-]/g, '');
 }
 
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {

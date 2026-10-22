@@ -1,4 +1,4 @@
-import { normalizeTrackingNumber } from '../../modules/general/utils/deliveryService.ts';
+import { normalizeTrackingNumber } from '@sirubot/utils/delivery';
 import { trackDelivery } from '../dataApiClient.ts';
 import type { AiTool } from './types.ts';
 

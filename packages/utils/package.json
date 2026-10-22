@@ -67,6 +67,16 @@
             "import": "./dist/storage.js",
             "require": "./dist/storage.cjs"
         },
+        "./weather": {
+            "types": "./dist/weather.d.ts",
+            "import": "./dist/weather.js",
+            "require": "./dist/weather.cjs"
+        },
+        "./delivery": {
+            "types": "./dist/delivery.d.ts",
+            "import": "./dist/delivery.js",
+            "require": "./dist/delivery.cjs"
+        },
         "./client": {
             "types": "./dist/client.d.ts",
             "import": "./dist/client.js",
