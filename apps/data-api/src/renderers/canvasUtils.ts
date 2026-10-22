@@ -4,6 +4,9 @@
 import type { CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 import { getLogger } from '../utils/logger.ts';
 
+// hexToRgba 구현은 공용 계약(greetingCardDesign)에 단일화 — 인사 카드·어하사 카드가 같은 rgba 문자열을 써요
+export { hexToRgba } from '@sirubot/utils/greetingCardDesign';
+
 const logger = getLogger('canvasUtils');
 
 /** 카드 폰트(한·영·일 Pretendard JP + 색 이모지 Twemoji) 1회 등록 (Dockerfile에 resources/fonts 포함). + lucide Path2D 워밍업. */
@@ -564,11 +567,6 @@ function fillPathData(ctx: CanvasRenderingContext2D, d: string): void {
 
 function strokePathData(ctx: CanvasRenderingContext2D, d: string): void {
 	applyPathData(ctx, d, 'stroke');
-}
-
-export function hexToRgba(hex: string, alpha: number): string {
-	const n = parseInt(hex.slice(1), 16);
-	return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
 /** 원형 클립 안에 이미지를 cover-fit으로 그려요 (아바타 등) */

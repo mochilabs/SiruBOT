@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { greetingPresetBackgroundPlan } from "@sirubot/utils/greetingCardDesign";
 
-import { presetGradient } from "./greeting-draw";
-
-/** 프리셋 그라디언트 스와치 — 서버 렌더러와 같은 그라디언트를 작은 캔버스로 그려요 */
+/** 프리셋 그라디언트 스와치 — 서버 렌더러와 같은 그라디언트 데이터(공용 계약)를 작은 캔버스로 그려요 */
 export function PresetSwatch({ id }: { id: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const gradient = presetGradient(id);
-    ctx.fillStyle = gradient.base;
+    const plan = greetingPresetBackgroundPlan(canvas.width, canvas.height, id);
+    ctx.fillStyle = plan.base;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const g = ctx.createLinearGradient(0, canvas.height, canvas.width, 0);
-    g.addColorStop(0, gradient.from);
-    g.addColorStop(1, gradient.to);
-    ctx.fillStyle = g;
+    const gradient = ctx.createLinearGradient(plan.linear.x0, plan.linear.y0, plan.linear.x1, plan.linear.y1);
+    for (const [offset, color] of plan.linear.stops) {
+      gradient.addColorStop(offset, color);
+    }
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, [id]);
   return (

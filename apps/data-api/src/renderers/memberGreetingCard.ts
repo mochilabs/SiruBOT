@@ -2,7 +2,7 @@
  * 멤버 인사 카드 렌더러 — 환영/작별 카드 1종 1200×675(16:9).
  * 배경은 브랜드 프리셋(코드로 그린 그라디언트)이나 업로드 dataURI(cover-fit)를 깔고
  * 그 위에 image.layers를 순서대로(z-order) 쌓아 그려요 — 텍스트/아바타/이미지/도형.
- * 좌표·수치는 bot 리스너·dashboard 에디터 미리보기와 공용 계약이에요 (packages/utils memberGreeting).
+ * 좌표·수치는 bot 리스너·dashboard 에디터 미리보기와 공용 계약이에요 (packages/utils memberGreeting·greetingCardDesign).
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 import {
@@ -17,22 +17,13 @@ import {
 	type GreetingShapeLayer,
 	type GreetingTextLayer
 } from '@sirubot/utils';
-import { drawCircleImage, ensureKoreanFont, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
+import { greetingPresetBackgroundPlan, type GreetingPresetBackgroundPlan } from '@sirubot/utils/greetingCardDesign';
+import { drawCircleImage, ensureKoreanFont, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 const CARD_W = GREETING_CARD_W;
 const CARD_H = GREETING_CARD_H;
 /** 텍스트 좌우 여백 — 카드 가장자리에 붙지 않게 */
 const TEXT_MARGIN = 64;
-
-/**
- * 배경을 코드로 그리는 프리셋 — DESIGN.md 브랜드 팔레트(로즈 핑크/플럼 다크/골드 secondary)의
- * 그라디언트라서 프리셋 자체가 브랜드 정체성이에요. 사진 배경이 아니라 브랜드 그라디언트를 제공하는 이유.
- */
-const PRESET_BACKGROUNDS: Record<string, { base: string; from: string; to: string; glow: string }> = {
-	rose: { base: '#3d2328', from: '#d1608a', to: '#ff85c1', glow: '#ffe4f0' },
-	plum: { base: '#1a0e12', from: '#231317', to: '#4d2a35', glow: '#ffb3d9' },
-	gold: { base: '#231a10', from: '#8a6a44', to: '#d4a574', glow: '#f0e2cf' }
-};
 
 /** 인사 배경 정규화/디코딩 실패 — 라우트가 400으로 매핑해요 (WeatherError/DeliveryError와 같은 패턴) */
 export class GreetingBackgroundError extends Error {
@@ -89,25 +80,27 @@ async function drawGreetingBackground(ctx: CanvasRenderingContext2D, background:
 		// 깨진 업로드 배경으로 카드가 안 나오는 쪽이 더 나빠요 — 조용히 프리셋으로 폴백
 		console.error('[data-api] greeting background dataUri is not decodable, falling back to preset');
 	}
-	const preset = (background.presetId && PRESET_BACKGROUNDS[background.presetId]) || PRESET_BACKGROUNDS.plum;
-	drawPresetBackground(ctx, preset);
+	const plan = greetingPresetBackgroundPlan(CARD_W, CARD_H, background.presetId);
+	drawPresetBackground(ctx, plan);
 	// 그라디언트 위에서 흰 타이틀이 읽히도록 은은한 어두운 스크림
-	ctx.fillStyle = 'rgba(26,14,18,0.32)';
+	ctx.fillStyle = plan.scrim;
 	ctx.fillRect(0, 0, CARD_W, CARD_H);
 }
 
-/** 프리셋 배경 — 대각 그라디언트 + 코너 글로우 정도만 (장식 과잉 없이 브랜드 톤 유지) */
-function drawPresetBackground(ctx: CanvasRenderingContext2D, preset: { base: string; from: string; to: string; glow: string }): void {
-	ctx.fillStyle = preset.base;
+/** 프리셋 배경 — 공용 계약(greetingCardDesign)의 계획을 대각 그라디언트 + 코너 글로우로 옮겨 그려요 */
+export function drawPresetBackground(ctx: CanvasRenderingContext2D, plan: GreetingPresetBackgroundPlan): void {
+	ctx.fillStyle = plan.base;
 	ctx.fillRect(0, 0, CARD_W, CARD_H);
-	const gradient = ctx.createLinearGradient(0, CARD_H, CARD_W, 0);
-	gradient.addColorStop(0, preset.from);
-	gradient.addColorStop(1, preset.to);
+	const gradient = ctx.createLinearGradient(plan.linear.x0, plan.linear.y0, plan.linear.x1, plan.linear.y1);
+	for (const [offset, color] of plan.linear.stops) {
+		gradient.addColorStop(offset, color);
+	}
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, CARD_W, CARD_H);
-	const glow = ctx.createRadialGradient(CARD_W * 0.78, CARD_H * 0.22, 0, CARD_W * 0.78, CARD_H * 0.22, CARD_W * 0.55);
-	glow.addColorStop(0, hexToRgba(preset.glow, 0.2));
-	glow.addColorStop(1, hexToRgba(preset.glow, 0));
+	const glow = ctx.createRadialGradient(plan.glow.cx, plan.glow.cy, 0, plan.glow.cx, plan.glow.cy, plan.glow.radius);
+	for (const [offset, color] of plan.glow.stops) {
+		glow.addColorStop(offset, color);
+	}
 	ctx.fillStyle = glow;
 	ctx.fillRect(0, 0, CARD_W, CARD_H);
 }
