@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { requestPlayerControl } from "@/lib/data-api";
+import { requestPlayerControl } from "@/lib/data-api/player-web";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
 /**

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api";
+import { forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
 import { WRITE_RATE } from "@/lib/rate-limit";
 import type { SocialSubscriptionResponse, SocialSubscriptionsResponse } from "@/types/social";
 

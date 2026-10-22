@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { requestJtcSetup } from "@/lib/data-api";
+import { requestJtcSetup } from "@/lib/data-api/jtc";
 import { HEAVY_WRITE_RATE } from "@/lib/rate-limit";
 import { jtcSetupSchema } from "@/lib/schemas";
 

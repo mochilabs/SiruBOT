@@ -3,7 +3,7 @@ import type { PlayerStateResponse } from "@sirubot/utils/playerState";
 import { playerStateResponseSchema } from "@sirubot/utils/playerState";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { fetchDataApi } from "@/lib/data-api";
+import { fetchDataApi } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 
 // 스냅샷 계약은 @sirubot/utils에서 단일 정의 — 대시보드 별칭만 유지해요

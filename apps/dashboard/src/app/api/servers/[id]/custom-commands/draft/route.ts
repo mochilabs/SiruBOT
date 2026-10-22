@@ -3,7 +3,7 @@ import { customCommandPayloadSchema } from "@sirubot/utils/customCommand";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiPost } from "@/lib/data-api";
+import { forwardDataApiPost } from "@/lib/data-api/client";
 import { HEAVY_WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 

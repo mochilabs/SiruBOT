@@ -5,7 +5,7 @@ import useSWR from "swr";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import type { DataApiStatus } from "@/lib/data-api";
+import type { DataApiStatus } from "@/lib/data-api/types";
 
 function hitRate(status: DataApiStatus): string {
     const hits = status.cache.redisHits + status.cache.memoryHits;

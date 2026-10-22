@@ -4,7 +4,7 @@ import { type GreetingConfig,greetingConfigSchema, validateGreetingConfig } from
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { notifyGuildSettingsChanged } from "@/lib/data-api";
+import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";

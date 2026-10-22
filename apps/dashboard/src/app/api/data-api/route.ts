@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import type { DataApiStatus } from "@/lib/data-api";
-import { fetchDataApi } from "@/lib/data-api";
+import { fetchDataApi } from "@/lib/data-api/client";
+import type { DataApiStatus } from "@/lib/data-api/types";
 import { READ_RATE } from "@/lib/rate-limit";
 
 export const GET = createGuildApiHandler({

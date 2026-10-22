@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api";
+import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api/client";
 import { guardRateLimit, HEAVY_WRITE_RATE, rateKey } from "@/lib/rate-limit";
 
 /** 이미지 업로드 원본 상한 3MiB — data-api가 저장 규격으로 정규화해요 */
