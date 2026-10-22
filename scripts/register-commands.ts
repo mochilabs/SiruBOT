@@ -7,6 +7,7 @@ config({ path: join(process.cwd(), 'apps', 'bot', '.env') });
 
 import { BotApplication } from '../apps/bot/src/core/botApplication.ts';
 import { GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { ApplicationCommandRegistry } from '@sapphire/framework';
 import { blue, green, yellow, red, bold, gray, cyan } from 'colorette';
 
 // CLI 인자 파싱
@@ -17,7 +18,7 @@ const forceGlobal = args.includes('--global') || args.includes('-g');
 
 // --guild 파싱
 let targetGuildId: string | undefined = undefined;
-const guildIdx = args.findIndex(arg => arg === '--guild' || arg === '-guild');
+const guildIdx = args.findIndex((arg) => arg === '--guild' || arg === '-guild');
 if (guildIdx !== -1 && args[guildIdx + 1] && !args[guildIdx + 1].startsWith('-')) {
 	targetGuildId = args[guildIdx + 1];
 } else if (args.includes('--guild') || args.includes('-guild')) {
@@ -44,25 +45,32 @@ if (showHelp) {
 }
 
 // Discord API 등록을 위한 Mock Registry 구현
-class MockRegistry {
-	public chatInputBuilders: any[] = [];
+// 실제 ApplicationCommandRegistry를 상속해 커맨드 쪽 시그니처(Command.Registry)와 타입을 그대로 맞추고,
+// 이 스크립트가 수집하는 빌더 동작만 오버라이드한다(레지스트리 내부 버퍼는 사용하지 않음).
+class MockRegistry extends ApplicationCommandRegistry {
+	public chatInputBuilders: SlashCommandBuilder[] = [];
 
-	public registerChatInputCommand(
-		builderOrValue:
-			| SlashCommandBuilder
-			| ((builder: SlashCommandBuilder) => SlashCommandBuilder)
-			| ((builder: SlashCommandBuilder) => any)
-	) {
-		if (typeof builderOrValue === 'function') {
-			const builder = new SlashCommandBuilder();
-			const result = builderOrValue(builder);
-			this.chatInputBuilders.push(result ?? builder);
-		} else {
-			this.chatInputBuilders.push(builderOrValue);
-		}
+	public constructor() {
+		super('mock-registry');
 	}
 
-	public registerContextMenuCommand() { }
+	public override registerChatInputCommand(
+		command: SlashCommandBuilder | ((builder: SlashCommandBuilder) => SlashCommandBuilder | undefined)
+	): this {
+		if (typeof command === 'function') {
+			const builder = new SlashCommandBuilder();
+			const result = command(builder);
+			this.chatInputBuilders.push(result ?? builder);
+		} else {
+			this.chatInputBuilders.push(command);
+		}
+
+		return this;
+	}
+
+	public override registerContextMenuCommand(): this {
+		return this;
+	}
 }
 
 async function main() {
@@ -80,7 +88,7 @@ async function main() {
 
 	// --guild 파싱 및 .env 환경변수 폴백 (GUILD_ID 또는 DEV_GUILD_IDS 지원)
 	const envGuildId = process.env.GUILD_ID || process.env.DEV_GUILD_IDS;
-	const guildId = forceGlobal ? undefined : (targetGuildId || envGuildId);
+	const guildId = forceGlobal ? undefined : targetGuildId || envGuildId;
 
 	console.log(bold(cyan('\n[SiruBOT 동적 슬래시 커맨드 동기화 도구]')));
 	console.log(gray('==============================================='));
@@ -121,6 +129,11 @@ async function main() {
 		await Promise.all(client.stores.map((store) => store.loadAll()));
 
 		const commandsStore = client.stores.get('commands');
+		// 스크립트 파일은 루트 패키지 컨텍스트(CJS)라 @sapphire/framework의 CJS 선언을 쓰고,
+		// BotApplication이 선언된 ESM 컨텍스트는 같은 클래스의 ESM 선언을 쓴다(듀얼 패키지 → 별개 선언).
+		// 등록 메서드가 기대하는 레지스트리 타입은 ESM 쪽이므로 명시적으로 여기서만 이어 준다.
+		type CommandPiece = ReturnType<typeof commandsStore.values> extends IterableIterator<infer T> ? T : never;
+		type CommandRegistry = Parameters<NonNullable<CommandPiece['registerApplicationCommands']>>[0];
 		const mockRegistry = new MockRegistry();
 
 		console.log(green(`총 ${commandsStore.size}개의 명령어 파일이 동적으로 스캔되었습니다.`));
@@ -130,17 +143,17 @@ async function main() {
 		// SlashCommandBuilder 객체 데이터를 MockRegistry에 적재합니다.
 		for (const command of commandsStore.values()) {
 			try {
-				// @ts-ignore
-				await command.registerApplicationCommands(mockRegistry as any);
-			} catch (err: any) {
-				console.warn(yellow(`[${command.name}] 명령어 파싱 과정 중 스킵 처리되었습니다: ${err.message || err}`));
+				// registerApplicationCommands은 선택 메서드 — 정의가 없으면 TypeError로 떨어져 기존과 동일하게 아래 catch에서 스킵된다.
+				await command.registerApplicationCommands!(mockRegistry as unknown as CommandRegistry);
+			} catch (error) {
+				const reason = error instanceof Error && error.message ? error.message : String(error);
+				console.warn(yellow(`[${command.name}] 명령어 파싱 과정 중 스킵 처리되었습니다: ${reason}`));
 			}
 		}
 
 		// 적재된 모든 빌더 정보를 Discord REST 규격인 JSON으로 변환합니다.
 		const serializedCommands = mockRegistry.chatInputBuilders.map((builder) => {
 			const json = builder.toJSON();
-			console.log(json)
 			return {
 				name: json.name,
 				description: json.description,
@@ -157,8 +170,7 @@ async function main() {
 		console.log(gray('\n--- 동적으로 수집된 슬래시 커맨드 목록 ---'));
 		serializedCommands.forEach((cmd, idx) => {
 			console.log(
-				`  ${bold(green(`${idx + 1}.`))} /${bold(blue(cmd.name))} - ${gray(cmd.description)} ` +
-				`[${cyan(`옵션 ${cmd.optionsCount}개`)}]`
+				`  ${bold(green(`${idx + 1}.`))} /${bold(blue(cmd.name))} - ${gray(cmd.description)} ` + `[${cyan(`옵션 ${cmd.optionsCount}개`)}]`
 			);
 		});
 		console.log(gray('---------------------------------------------\n'));
@@ -172,7 +184,7 @@ async function main() {
 		}
 
 		const rest = new REST({ version: '10' }).setToken(token);
-		const rawPayloads = serializedCommands.map(c => c.raw);
+		const rawPayloads = serializedCommands.map((c) => c.raw);
 
 		if (guildId) {
 			console.log(bold(blue(`특정 길드(${guildId})에 ${serializedCommands.length}개의 슬래시 커맨드를 배포합니다...`)));
