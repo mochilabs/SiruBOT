@@ -1,22 +1,12 @@
 /**
- * 날씨 도메인 타입·에러 클래스.
+ * 날씨 도메인 타입.
  *
  * 날씨 조회 자체는 data-api(`/v1/weather`, providers/weather.ts)가 담당 —
  * 봇은 `services/dataApiClient.ts`의 fetchWeather로 게이트웨이를 호출하고,
- * 타입·에러 식별만 이 파일에서 가져가요.
+ * 타입만 이 파일에서 가져가요. 조회 실패는 명령어 쪽에서 UserError로 처리해요.
  */
 
 export type WeatherScope = 'now' | 'today' | 'tomorrow' | 'week';
-
-export class WeatherError extends Error {
-	public constructor(
-		public readonly identifier: string,
-		message: string
-	) {
-		super(message);
-		this.name = 'WeatherError';
-	}
-}
 
 export interface DailyForecastDay {
 	date: string;

@@ -8,16 +8,14 @@ import {
 	getAiChatPolicy,
 	assertChatEnabled,
 	getChatConfig,
-	registerChatAbort,
 	releaseChannelTurn,
-	releaseChatAbort,
-	runChatTurn,
 	tryConsumeUserTurn,
 	type ChatConfig
 } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
 import { emoji } from '@sirubot/utils';
-import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from '../../utils/chatView.ts';
+import { runChatTurnToScreen } from '../../utils/chatTurnRunner.ts';
+import { errorPayload, livePayload } from '../../utils/chatView.ts';
 
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
@@ -59,11 +57,11 @@ export class MentionReplyListener extends Listener {
 			return;
 		}
 
-		// 유저당 턴 상한(10분 윈도우) — 초과 시 조용히 안내해요
-		if (!(await tryConsumeUserTurn(message.author.id))) {
+		// 같은 채널 턴이 진행 중이면 조용히 무시하지 않고 안내해요
+		if (!acquireChannelTurn(channelId)) {
 			await message
 				.reply({
-					content: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`,
+					content: `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -71,11 +69,13 @@ export class MentionReplyListener extends Listener {
 			return;
 		}
 
-		// 같은 채널 턴이 진행 중이면 조용히 무시하지 않고 안내해요
-		if (!acquireChannelTurn(channelId)) {
+		// 유저당 턴 상한(10분 윈도우) — 채널 턴을 확보한 뒤에 소모해,
+		// 이미 답변 중인 채널에서 사용량만 빠지는 일이 없게 해요
+		if (!(await tryConsumeUserTurn(message.author.id))) {
+			releaseChannelTurn(channelId);
 			await message
 				.reply({
-					content: `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`,
+					content: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -103,61 +103,24 @@ export class MentionReplyListener extends Listener {
 			username: message.author.username
 		};
 
-		const { key: cancelKey, controller } = registerChatAbort(message.author.id);
-		try {
-			const reply = await message.reply(livePayload('', cancelKey));
-
-			let lastEditAt = 0;
-			const onDelta = async (text: string) => {
-				const now = Date.now();
-				if (now - lastEditAt < config.streamUpdateMs || !text) return;
-				lastEditAt = now;
-				await reply.edit(livePayload(text, cancelKey)).catch(() => undefined);
-			};
-			const onStatus = async (status: string) => {
-				lastEditAt = Date.now();
-				await reply.edit(statusPayload(status, cancelKey)).catch(() => undefined);
-			};
-
-			let answer: string;
-			let memoryUpdated = false;
-			try {
-				const turn = await runChatTurn({
-					channelId,
-					prompt,
-					config,
-					toolContext,
-					images,
-					signal: controller.signal,
-					author: message.member?.displayName ?? message.author.displayName,
-					userMessageId: message.id,
-					assistantMessageId: reply.id,
-					excludeMessageId: message.id,
-					onDelta,
-					onStatus
-				});
-				answer = turn.answer;
-				memoryUpdated = turn.memoryUpdated;
-			} catch (error) {
-				if (error instanceof ChatServiceError && error.identifier === 'chat_cancelled') {
-					await reply.edit(stoppedPayload()).catch(() => undefined);
-					return;
-				}
-				const text = error instanceof ChatServiceError ? error.message : '알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
-				await reply.edit(errorPayload(text)).catch(() => undefined);
-				return;
+		let live: Message | null = null;
+		await runChatTurnToScreen({
+			config,
+			userId: message.author.id,
+			channelId,
+			prompt,
+			images,
+			toolContext,
+			author: message.member?.displayName ?? message.author.displayName,
+			userMessageId: message.id,
+			excludeMessageId: message.id,
+			screen: {
+				create: async (cancelKey) => {
+					live = await message.reply(livePayload('', cancelKey));
+					return live;
+				},
+				edit: (payload) => (live ? live.edit(payload) : Promise.resolve(null))
 			}
-
-			// 턴 도중/직후 중지가 수락됐으면 최종 답변으로 덮지 않아요
-			if (controller.signal.aborted) {
-				await reply.edit(stoppedPayload()).catch(() => undefined);
-				return;
-			}
-
-			await reply.edit(finalPayload(answer, { memoryUpdated })).catch(() => undefined);
-		} finally {
-			// 첫 reply가 실패해도 abort 키가 새지 않도록 여기서 보장해요
-			releaseChatAbort(cancelKey);
-		}
+		});
 	}
 }

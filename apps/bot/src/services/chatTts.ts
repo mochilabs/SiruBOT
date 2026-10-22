@@ -15,7 +15,7 @@ import type { TtsUserPreset } from './ttsUserSettings.ts';
  */
 
 /** 같은 유저의 연속 합성 간격(ms) — 이 안의 메시지는 병합 창으로 모인다 (명세 4.4) */
-export const TTS_USER_INTERVAL_MS = 3000;
+const TTS_USER_INTERVAL_MS = 3000;
 /** 메시지 병합 창(ms) — 창 안의 메시지는 한 발화로 합성하고, 창을 넘긴 메시지는 버린다 */
 export const TTS_MERGE_WINDOW_MS = 3000;
 /** 클립 최대 길이(자) — 초과분은 절단한다 (명세 4.4, 분할 없음) */

@@ -40,7 +40,7 @@ function dateLabel(at: number): string {
 }
 
 /** 총 항목 수 상한 — 넘치면 오래된 것부터 Facts → Preferences → Commitments 순으로 잘라요 (봇 정책; data-api는 섹션별 상한) */
-export function capMemorySections(sections: MemorySections): void {
+function capMemorySections(sections: MemorySections): void {
 	let total = MEMORY_CATEGORIES.reduce((sum, category) => sum + sections[category].length, 0);
 	if (total <= LONG_TERM_MAX) return;
 	for (const category of MEMORY_CATEGORIES) {

@@ -18,7 +18,7 @@ interface JtcSettings {
 const MARKER_CHANNEL_NAME = '🔊 임시방 만들기';
 
 /** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS 환경변수, 기본 30초 */
-export function jtcEmptyGraceMs(): number {
+function jtcEmptyGraceMs(): number {
 	return Number(process.env.JTC_EMPTY_GRACE_MS) || 30_000;
 }
 
@@ -166,7 +166,7 @@ export class TempVoiceService {
 		}
 
 		try {
-			await channel.delete(`임시 음성채널: ${jtcEmptyGraceText()}간 비어 있음`);
+			await channel.delete(`임시 음성 채널: ${jtcEmptyGraceText()}간 비어 있음`);
 			this.rooms.delete(channelId);
 		} catch (error) {
 			container.logger.error(`[tempVoice] failed to delete empty room ${channelId}: ${error}`);

@@ -13,7 +13,7 @@ const COUNTING_KEY_PREFIX = 'sirubot:counting:';
 const memory = new Map<string, CountingState>();
 
 /** Redis 해시 키 — 길드당 하나의 카운팅 상태예요 */
-export function countingStateKey(guildId: string): string {
+function countingStateKey(guildId: string): string {
 	return `${COUNTING_KEY_PREFIX}${guildId}`;
 }
 

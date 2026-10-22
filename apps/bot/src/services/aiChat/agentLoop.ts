@@ -67,7 +67,7 @@ export async function runChatTurn(options: {
 	onDelta?: (fullText: string) => void | Promise<void>;
 	onStatus?: (status: string) => void | Promise<void>;
 }): Promise<ChatTurnResult> {
-	const { channelId, config: baseConfig } = options;
+	const { channelId, config } = options;
 	const userId = options.toolContext.userId;
 	const throwIfCancelled = () => {
 		if (options.signal?.aborted) throw new ChatServiceError('chat_cancelled', '응답 생성을 중지했어요.');
@@ -75,7 +75,6 @@ export async function runChatTurn(options: {
 
 	const policy = await getAiChatPolicy(options.toolContext.guildId);
 	assertChatEnabled(policy, channelId);
-	const config = baseConfig;
 
 	setChannelGuild(channelId, options.toolContext.guildId);
 	// 정책 확인 후, 서로 독립적인 맥락 조회를 함께 시작한다.

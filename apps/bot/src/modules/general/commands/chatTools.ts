@@ -45,10 +45,12 @@ export class ChatToolsCommand extends Command {
 								.setDescription('The chat tool to toggle.')
 								.setDescriptionLocalizations({ ko: '켜거나 끌 기능이에요.' })
 								.setRequired(true)
+								// 선택지는 FEATURE_LABELS에서 뽑는다 — 같은 목록을 두 번 선언하면 한쪽만 갱신돼 어긋난다.
 								.addChoices(
-									{ name: '이모지 확대', value: 'emojiEnlarge' },
-									{ name: '메시지 인용', value: 'quote' },
-									{ name: '임베드 복구', value: 'embedFix' }
+									...(Object.keys(FEATURE_LABELS) as ChatToolName[]).map((value) => ({
+										name: FEATURE_LABELS[value],
+										value
+									}))
 								)
 						)
 						.addStringOption((option) =>
@@ -115,13 +117,6 @@ export class ChatToolsCommand extends Command {
 
 		const tool = interaction.options.getString('feature', true) as ChatToolName;
 		const enable = interaction.options.getString('state', true) === 'on';
-		if (!(tool in FEATURE_LABELS)) {
-			throw new UserError({
-				identifier: 'chattools_unknown_feature',
-				message: `${emoji('error')} 알 수 없는 기능이에요.`,
-				context: { ephemeral: true }
-			});
-		}
 
 		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
 		const otherTextChannelIds = interaction.guild.channels.cache

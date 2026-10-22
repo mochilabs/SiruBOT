@@ -15,7 +15,7 @@ import { settingsView, SettingsMode } from '../view/settings.ts';
 import { RepeatMode } from 'lavalink-client';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 export default class SettingsInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {

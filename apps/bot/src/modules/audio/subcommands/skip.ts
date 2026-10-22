@@ -22,7 +22,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setName(name)
 		.setNameLocalizations({ ko })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡을 건너뜁니다.' })
+		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡을 건너뛰어요.' })
 		.addBooleanOption((option) =>
 			option
 				.setName('force')
@@ -36,7 +36,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('to')
 				.setDescription('Skip to the specified track')
 				.setNameLocalizations({ ko: '곡' })
-				.setDescriptionLocalizations({ ko: '건너뛸 곡의 번호를 입력해주세요.' })
+				.setDescriptionLocalizations({ ko: '건너뛸 곡의 번호를 입력해 주세요.' })
 				.setMinValue(1)
 				.setRequired(false)
 				.setAutocomplete(true)

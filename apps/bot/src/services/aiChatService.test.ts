@@ -505,6 +505,33 @@ describe('streamChatCompletion', () => {
 		expect(result.content).toBe('정답');
 	});
 
+	it('라이브 화면으로 흘려보내는 중간 본문에도 미정제 추론이 섞이지 않는다', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValue(
+					sseResponse([
+						'{"choices":[{"delta":{"content":"생각 중 "}}]}',
+						'{"choices":[{"delta":{"content":"<think>비밀 추론 내용"}}]}',
+						'{"choices":[{"delta":{"content":"왜냐하면"}}]}',
+						'{"choices":[{"delta":{"content":"</think>정답"}}]}',
+						'[DONE]'
+					])
+				)
+		);
+		const deltas: string[] = [];
+		const result = await streamChatCompletion({
+			messages: [{ role: 'user', content: 'hi' }],
+			config: { ...config, thinkToken: true },
+			onDelta: (text) => void deltas.push(text)
+		});
+
+		expect(result.content).toBe('생각 중 정답');
+		expect(deltas.join('\n')).not.toContain('비밀 추론 내용');
+		expect(deltas.at(-1)).toBe('생각 중 정답');
+	});
+
 	it('sends the bearer token only when an api key is configured', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(Response.json({ choices: [{ message: { content: 'ok' } }] }));
 		vi.stubGlobal('fetch', fetchMock);

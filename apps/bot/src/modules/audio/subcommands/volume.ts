@@ -19,7 +19,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('volume')
 				.setNameLocalizations({ ko: '볼륨' })
 				.setDescription('Set the volume of the player.')
-				.setDescriptionLocalizations({ ko: '설정할 볼륨을 입력해주세요.' })
+				.setDescriptionLocalizations({ ko: '설정할 볼륨을 입력해 주세요.' })
 				.setMinValue(0)
 				.setMaxValue(150)
 		);

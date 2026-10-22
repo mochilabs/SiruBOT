@@ -22,6 +22,8 @@ export abstract class PendingWriteStore {
 	protected readonly cache: MemoryCache<string, string>;
 	protected isRedisConnected = true;
 	protected readonly pendingWrites = new Map<string, string | null>();
+	/** 연결 세대 — 진행 중 drain의 플립이 뒤늦게 도착해 최신 단절 상태를 덮어쓰지 않게 한다. */
+	private connectGeneration = 0;
 	private _logger: Logger<ILogObj> | null = null;
 
 	protected constructor(
@@ -118,17 +120,30 @@ export abstract class PendingWriteStore {
 		}
 	}
 
+	/**
+	 * 재연결 시 pending 저널을 Redis로 밀어 넣는다.
+	 * drain이 끝난 뒤에만 Redis를 원본으로 취급한다 — 먼저 flip하면 동기화 중 get()이
+	 * Redis의 과거 값을 읽어 cache의 더 최신 pending 값을 덮어썼다(재연결 경합).
+	 * reject가 나면 로그를 남기고 세대가 그대로면 플래그를 복원한다 — 안 그러면
+	 * 영구 캐시 모드로 고착되고 거부 자체가 unhandled rejection으로 남는다.
+	 */
 	public onConnect(): void {
 		this.logger.info('Redis connected, syncing pending writes...');
-		// sync가 끝난 뒤에만 Redis를 원본으로 취급한다 — 먼저 flip하면 동기화 중 get()이
-		// Redis의 과거 값을 읽어 cache의 더 최신 pending 값을 덮어썼다(재연결 경합).
-		void this.drainPendingWrites().then(() => {
-			this.isRedisConnected = true;
-		});
+		const generation = ++this.connectGeneration;
+		void this.drainPendingWrites()
+			.catch((error) => {
+				this.logger.error(`Pending write drain failed, direct writes resume on next I/O: ${error}`);
+			})
+			.finally(() => {
+				// drain 도중 onDisconnect가 다시 왔으면(세대가 바뀌었으면) 최신 세대 상태를 지킨다
+				if (this.connectGeneration === generation) this.isRedisConnected = true;
+			});
 	}
 
 	public onDisconnect(): void {
 		this.logger.warn('Redis disconnected, switching to cache-only mode');
+		// 진행 중이던 drain의 플립을 무효화한다
+		this.connectGeneration++;
 		this.isRedisConnected = false;
 	}
 

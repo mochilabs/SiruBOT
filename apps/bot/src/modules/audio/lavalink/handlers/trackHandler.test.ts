@@ -75,7 +75,7 @@ describe('resolveStartedTrack', () => {
 		const { handler, buildTrack } = makeHandler();
 		const clientTrack = track('client-enc', 'id-a');
 		const player = { guildId: 'g', queue: { tracks: [] } };
-		const resolved = handler.resolveStartedTrack(player, clientTrack, startEvent(), null);
+		const resolved = handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent(), null);
 		expect(resolved).toBe(clientTrack);
 		expect(buildTrack).not.toHaveBeenCalled();
 	});
@@ -84,14 +84,14 @@ describe('resolveStartedTrack', () => {
 		const { handler } = makeHandler();
 		const clientTrack = track('same-enc', 'id-a');
 		const player = { guildId: 'g', queue: { tracks: [] } };
-		expect(handler.resolveStartedTrack(player, clientTrack, startEvent('same-enc', 'id-a'), null)).toBe(clientTrack);
+		expect(handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent('same-enc', 'id-a'), null)).toBe(clientTrack);
 	});
 
 	it('prefers the client track when identifiers match even though encoded ids differ (stale server metadata)', () => {
 		const { handler, buildTrack } = makeHandler();
 		const clientTrack = track('client-enc', 'id-a');
 		const player = { guildId: 'g', queue: { tracks: [] } };
-		expect(handler.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-a'), null)).toBe(clientTrack);
+		expect(handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-a'), null)).toBe(clientTrack);
 		expect(buildTrack).not.toHaveBeenCalled();
 	});
 
@@ -100,7 +100,7 @@ describe('resolveStartedTrack', () => {
 		const clientTrack = track('client-enc', 'id-a');
 		const queued = track('queued-enc', 'id-b');
 		const player = { guildId: 'g', queue: { tracks: [queued] } };
-		const resolved = handler.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-b'), null);
+		const resolved = handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-b'), null);
 		expect(resolved).toBe(queued);
 		expect(buildTrack).not.toHaveBeenCalled();
 	});
@@ -109,7 +109,7 @@ describe('resolveStartedTrack', () => {
 		const { handler, buildTrack } = makeHandler();
 		const clientTrack = track('client-enc', 'id-a');
 		const player = { guildId: 'g', queue: { tracks: [] } };
-		const resolved = handler.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), null);
+		const resolved = handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), null);
 		expect(buildTrack).toHaveBeenCalledWith(expect.objectContaining({ encoded: 'server-enc' }), undefined);
 		expect(resolved).toEqual(expect.objectContaining({ encoded: 'server-enc' }));
 	});
@@ -118,7 +118,7 @@ describe('resolveStartedTrack', () => {
 		const { handler } = makeHandler();
 		const clientTrack = track('client-enc', 'id-a');
 		const player = { guildId: 'g', queue: { tracks: [] } };
-		handler.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), 'preloaded-id');
+		handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), 'preloaded-id');
 		expect(stubLogger.warn).toHaveBeenCalled();
 	});
 });
@@ -243,7 +243,7 @@ describe('reconcileNowPlaying', () => {
 		player.queue.current = displaced;
 		player.transitionState.lastStartedEncoded = 'started-enc';
 
-		await handler.reconcileNowPlaying(player, started, 'started-enc');
+		await handler.playbackWatchdog.reconcileNowPlaying(player, started, 'started-enc');
 
 		expect(player.queue.current).toBe(started);
 		expect(player.queue.tracks[0]).toBe(displaced);
@@ -257,7 +257,7 @@ describe('reconcileNowPlaying', () => {
 		player.queue.current = displaced;
 		player.transitionState.lastStartedEncoded = 'started-enc';
 
-		await handler.reconcileNowPlaying(player, started, 'started-enc');
+		await handler.playbackWatchdog.reconcileNowPlaying(player, started, 'started-enc');
 
 		expect(player.queue.current).toEqual(expect.objectContaining({ encoded: 'server-enc' }));
 		expect(player.transitionState.lastStartedEncoded).toBe('server-enc');
@@ -271,7 +271,7 @@ describe('reconcileNowPlaying', () => {
 		player.queue.current = displaced;
 		player.transitionState.lastStartedEncoded = 'started-enc';
 
-		await handler.reconcileNowPlaying(player, started, 'started-enc');
+		await handler.playbackWatchdog.reconcileNowPlaying(player, started, 'started-enc');
 
 		expect(player.queue.current).toBe(displaced);
 		expect(playerNotifierUpdate).not.toHaveBeenCalled();
@@ -285,7 +285,7 @@ describe('reconcileNowPlaying', () => {
 		player.queue.current = track('displaced-enc', 'id-x');
 		player.transitionState.lastStartedEncoded = 'started-enc';
 
-		await handler.reconcileNowPlaying(player, started, 'started-enc');
+		await handler.playbackWatchdog.reconcileNowPlaying(player, started, 'started-enc');
 
 		expect(player.queue.current).toBe(started);
 	});
@@ -338,6 +338,21 @@ describe('startClientOwnedTrack race handling', () => {
 		expect(player.transitionState.lastStartedEncoded).toBe('server-enc');
 		expect(player.play).not.toHaveBeenCalled();
 	});
+
+	it('play가 거부되면 오류는 던지되 복구용 watchdog은 남긴다 (무음 정체 방지)', async () => {
+		const { handler } = makeHandler();
+		resetSpies();
+		stubPlaybackContainer();
+		const player = transitionPlayer(null);
+		player.queue.current = track('client-enc', 'id-b');
+		player.play = vi.fn().mockRejectedValue(new Error('REST 500'));
+
+		await expect(handler.startClientOwnedTrack(player)).rejects.toThrow('REST 500');
+
+		// 서버에 트랙이 없으니 이후 재생 이벤트가 없다 — 복구 타이머는 반드시 남아 있어야 한다.
+		expect(handler.hasWatchdog('g')).toBe(true);
+		handler.cleanup();
+	});
 });
 
 describe('resolveStartedTrack with a server-consumed preheat', () => {
@@ -354,7 +369,7 @@ describe('resolveStartedTrack with a server-consumed preheat', () => {
 			queue: { tracks: [] },
 			transitionState: { serverConsumedTrack: consumed }
 		};
-		const resolved = handler.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), null);
+		const resolved = handler.trackStartOrchestrator.resolveStartedTrack(player, clientTrack, startEvent('server-enc', 'id-z'), null);
 		expect(resolved).toBe(consumed);
 		expect(buildTrack).not.toHaveBeenCalled();
 	});
@@ -556,7 +571,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		const started = track('a-enc', 'id-a');
 		// 이전 전이의 잔재: watchdog 1개 + advance-pending 1개
 		handler.armWatchdog(player);
-		handler.setAdvancePending('g-1');
+		handler.queueAdvancer.setAdvancePending('g-1');
 		expect(vi.getTimerCount()).toBe(2);
 
 		await handler.handleTrackStart(player, started, startEvent('a-enc', 'id-a'));
@@ -745,7 +760,7 @@ describe('handlePlayerDestroy (타이머 정리)', () => {
 		const { mixer, chatTts } = stubPlaybackContainer();
 		const player = fullPlayer();
 		handler.armWatchdog(player);
-		handler.setAdvancePending('g-1');
+		handler.queueAdvancer.setAdvancePending('g-1');
 		handler.setLastStarted(player, track('a-enc', 'id-a'));
 		expect(vi.getTimerCount()).toBe(3);
 
@@ -764,7 +779,7 @@ describe('handlePlayerDestroy (타이머 정리)', () => {
 		stubPlaybackContainer();
 		const player = fullPlayer();
 		handler.armWatchdog(player);
-		handler.setAdvancePending('g-1');
+		handler.queueAdvancer.setAdvancePending('g-1');
 		handler.setLastStarted(player, track('a-enc', 'id-a'));
 
 		await handler.handlePlayerDestroy(player);
@@ -787,7 +802,7 @@ describe('cleanup()', () => {
 		const { handler, manager } = makeTrackedHandler();
 		const player = fullPlayer();
 		handler.armWatchdog(player);
-		handler.setAdvancePending('g-1');
+		handler.queueAdvancer.setAdvancePending('g-1');
 		handler.setLastStarted(player, track('a-enc', 'id-a'));
 		expect(vi.getTimerCount()).toBe(3);
 

@@ -3,7 +3,7 @@ import { Events, InteractionHandlerError as InteractionHandlerErrorPayload, List
 import { MessageFlags, InteractionReplyOptions } from 'discord.js';
 import * as Sentry from '@sentry/node';
 import { emoji } from '@sirubot/utils';
-import { errorView } from '../../audio/view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.InteractionHandlerError })
 export class InteractionHandlerError extends Listener {

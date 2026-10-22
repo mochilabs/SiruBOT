@@ -43,7 +43,7 @@ export class MessageDeleteListener extends Listener {
 										.setAccentColor(DEFAULT_COLOR)
 										.addTextDisplayComponents((t) =>
 											t.setContent(
-												`-# ${emoji('bulb')} 봇의 노래 재생 메세지가 불편하시다면, /설정 명령어로 **[오디오 컨트롤러]** 옵션을 끌 수 있어요.`
+												`-# ${emoji('bulb')} 봇의 노래 재생 메시지가 불편하시다면, /설정 명령어로 **[오디오 컨트롤러]** 옵션을 끌 수 있어요.`
 											)
 										)
 								]

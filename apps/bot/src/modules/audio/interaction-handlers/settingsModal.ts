@@ -4,7 +4,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { settingsView } from '../view/settings.ts';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.ModalSubmit

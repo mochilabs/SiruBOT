@@ -50,7 +50,9 @@ export async function getGuildCustomCommands(guildId: string): Promise<GuildCust
 	if (cached) return cached;
 
 	const pending = pendingReads.get(guildId);
-	if (pending) return (await pending) ?? EMPTY;
+	// 선점한 호출자만 catch로 빈 목록을 받고 대기자는 예외를 받으면 정책이 갈린다 —
+	// 같은 Promise를 기다린 쪽도 같은 정책(DB 오류면 빈 목록)으로 통일한다.
+	if (pending) return (await pending.catch(() => null)) ?? EMPTY;
 
 	const read = load(guildId);
 	pendingReads.set(guildId, read);

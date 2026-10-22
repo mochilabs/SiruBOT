@@ -4,7 +4,7 @@ import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { queueList, queueSelectCustomId, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {

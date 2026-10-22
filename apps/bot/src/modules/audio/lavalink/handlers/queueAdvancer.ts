@@ -404,6 +404,10 @@ export class QueueAdvancer {
 			if (this.clientAdvancePending.get(player.guildId)?.token === token) {
 				this.clearAdvancePending(player.guildId);
 			}
+			// play 실패(라바링크 REST 5xx·노드 재연결 창)에서는 서버에 트랙이 없으므로
+			// 이후 재생 이벤트가 하나도 오지 않는다 — watchdog이 미장착이면 복구 타이머도
+			// 없어 길드가 무음으로 정체한다. 오류를 호출자에 넘기기 전에 복구 루프를 건다.
+			this.host.armWatchdogUnlessStarted(player);
 			throw error;
 		}
 	}

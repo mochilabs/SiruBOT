@@ -23,7 +23,7 @@ export type TtsMode = 'all' | 'channels' | 'off';
 const TTS_MODES: readonly string[] = ['all', 'channels', 'off'];
 
 /** DB에 잘못된 값이 들어와도 안전하게 기본값('off')으로 되돌려요 */
-export function normalizeTtsMode(value: string): TtsMode {
+function normalizeTtsMode(value: string): TtsMode {
 	return TTS_MODES.includes(value) ? (value as TtsMode) : 'off';
 }
 

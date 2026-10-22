@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 import * as view from '../view/stop.ts';
 
 export const name = 'stop';

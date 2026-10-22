@@ -3,7 +3,7 @@ import { createContainer, emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { addManualRecommendation, getInFlightRelatedFetch } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'recommend';
 export const ko = '추천';
@@ -15,7 +15,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setName(name)
 		.setNameLocalizations({ ko })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡과 비슷한 추천곡을 대기열에 추가합니다.' })
+		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡과 비슷한 추천곡을 대기열에 추가해요.' })
 		.addIntegerOption((option) =>
 			option
 				.setName('count')
@@ -57,7 +57,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (added.length === 0) {
 		await interaction.editReply({
 			components: [
-				errorView(`${emoji('error')} **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(Youtube) 곡일 때만 동작해요.`)
+				errorView(`${emoji('error')} **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(YouTube) 곡일 때만 동작해요.`)
 			],
 			flags: [MessageFlags.IsComponentsV2]
 		});

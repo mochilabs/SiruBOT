@@ -328,38 +328,90 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	/**
 	 * fresh 세션 복구: 이전 세션을 못 써서 서버에 플레이어가 없어도
-	 * Redis의 플레이어/큐 기록에서 재구성한다(음성채널 점유 + 신선도 조건 충족 시).
-	 * 길드 캐시 대기(최대 90초)가 길드별로 병렬로 돌아야 하므로 배치 단위로 처리한다 —
-	 * 순차 처리면 앞 길드의 대기 시간이 뒤 길드 전체로 누적된다.
+	 * Redis의 플레이어/큐 기록에서 재구성한다(음성 채널 점유 + 신선도 조건 충족 시).
+	 *
+	 * - 스캔 결과엔 다른샤드(레플리카)의 길드도 섞인다. 남의 길드는 이 프로세스 캐시에
+	 *   절대 없어 waitForGuild가 90초를 통째로 소모하고 배치를 막았으므로, 샤드 소유로
+	 *   먼저 걸러 자국 길드 복구가 밀리지 않게 한다.
+	 * - 배치 순차 await 대신 워커 풀로 돌려 한 길드의 캐시 대기(최대 90초)가 뒤 길드
+	 *   복구 전체로 누적되지 않게 한다.
 	 */
 	private async restoreFreshSession(node: LavalinkNode): Promise<void> {
 		const playerSaver = this.container.redisStore.getPlayerSaver();
-		const guildIds = await playerSaver.listGuildIds();
+		// 신선도 판정 기준 시각 — 복구 작업이 밀려 늦어져도 세션 시작 시점 기준으로 본다.
+		const sessionStartedAt = Date.now();
+		const savedGuildIds = await playerSaver.listGuildIds();
+		if (savedGuildIds.length === 0) return;
+
+		const guildIds = savedGuildIds.filter((guildId) => this.isOwnedByThisShard(guildId));
+		const foreignCount = savedGuildIds.length - guildIds.length;
+		if (foreignCount > 0) {
+			this.logger.info(`Fresh session restore: ignoring ${foreignCount} saved player(s) owned by other shards`);
+		}
 		if (guildIds.length === 0) return;
 		this.logger.info(`Fresh session restore: ${guildIds.length} saved player(s) found`);
 
-		for (let i = 0; i < guildIds.length; i += RESTORE_BATCH_SIZE) {
-			const batch = guildIds.slice(i, i + RESTORE_BATCH_SIZE);
-			const results = await Promise.allSettled(batch.map((guildId) => this.restoreFreshGuild(node, guildId, playerSaver)));
-			for (const result of results) {
-				if (result.status === 'rejected') this.logger.error(`Fresh restore failed: ${result.reason}`);
+		// 길드 캐시 도착 대기는 워커와 분리해 미리 병렬로 돌린다 — 워커가 폴링 시간을
+		// 점유하면 뒤 길드 복구가 대기 시간만큼 밀린다. 캐시에 이미 온 길드는 즉시 도착.
+		// 캐시에 온 길드를 먼저 집어 워커가 불필요한 대기에 묶이지 않게 한다.
+		type RestoreTask = { guildId: string; arrived: Promise<boolean> };
+		const ready: RestoreTask[] = [];
+		const pending: RestoreTask[] = [];
+		for (const guildId of guildIds) {
+			const cached = this.container.client.guilds.cache.has(guildId);
+			const arrived = cached ? Promise.resolve(true) : this.waitForGuild(guildId);
+			(cached ? ready : pending).push({ guildId, arrived });
+		}
+		const workQueue = [...ready, ...pending];
+
+		const workers = Array.from({ length: Math.min(RESTORE_BATCH_SIZE, workQueue.length) }, async () => {
+			for (let task = workQueue.shift(); task !== undefined; task = workQueue.shift()) {
+				try {
+					await this.restoreFreshGuild(node, task.guildId, playerSaver, sessionStartedAt, task.arrived);
+				} catch (error) {
+					this.logger.error(`Fresh restore failed: ${error}`);
+				}
 			}
+		});
+		await Promise.all(workers);
+	}
+
+	/**
+	 * 이 프로세스가 담당하는 샤드의 길드인지 — 샤드 분리(레플리카 다수) 운영에서
+	 * 남의 길드 기록이 90초 캐시 대기(restoreFreshSession)에 들지 않도록 걸러낸다.
+	 * 샤드 정보가 없거나 길드 id를 판별할 수 없으면 보수적으로 모두 후보로 남긴다.
+	 */
+	private isOwnedByThisShard(guildId: string): boolean {
+		const shardInfo = this.container.shardInfo;
+		if (!shardInfo || shardInfo.shardCount <= 1 || shardInfo.shardIds.length === 0) return true;
+		try {
+			const shardId = Number((BigInt(guildId) >> 22n) % BigInt(shardInfo.shardCount));
+			return shardInfo.shardIds.includes(shardId);
+		} catch {
+			return true;
 		}
 	}
 
-	/** 단일 길드의 fresh 복구 — 조건 불충분 시 기록을 지우는 대신 건너뛴다(다음 재시작 재시도). */
+	/**
+	 * 단일 길드의 fresh 복구 — 조건 불충분 시 기록을 지우는 대신 건너뛴다(다음 재시작 재시도).
+	 * 길드 캐시 대기(`arrived`)는 호출자 `restoreFreshSession`이 미리 병렬로 돌려 넘긴다 —
+	 * 여기서 폴링을 시작하면 워커가 대기 시간을 점유해 뒤 길드 복구가 밀린다.
+	 */
 	private async restoreFreshGuild(
 		node: LavalinkNode,
 		guildId: string,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>
+		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
+		sessionStartedAt: number,
+		arrived: Promise<boolean>
 	): Promise<void> {
 		// 다른 경로(재접속 등)에서 이미 복구됐으면 건너뛴다.
 		if (this.container.audio.players.has(guildId)) return;
 		const saved = await playerSaver.get(guildId);
 		if (!saved) return;
 
-		// 오래된 잔재는 복구하지 않고 정리한다.
-		const age = saved.savedAt !== undefined ? Date.now() - saved.savedAt : Number.POSITIVE_INFINITY;
+		// 오래된 잔재는 복구하지 않고 정리한다. 신선도는 복구 작업이 밀려도 세션 시작
+		// 시점 기준으로 판정한다 — 대기 줄 밀림이 6h 한도를 넘겨 복구 기회를 영구 잃지 않게.
+		const age = saved.savedAt !== undefined ? sessionStartedAt - saved.savedAt : Number.POSITIVE_INFINITY;
 		if (age > FRESH_RESTORE_MAX_AGE_MS) {
 			this.logger.info(`Discarding stale saved player at ${guildId} (${Math.round(age / 60_000)}min old)`);
 			await this.discardSavedPlayer(guildId, saved, playerSaver);
@@ -367,14 +419,14 @@ export class NodeHandler extends BaseLavalinkHandler {
 		}
 
 		// READY 직후엔 GUILD_CREATE가 스트리밍 중일 수 있다 — 캐시 도착을 기다린다.
-		if (!(await this.waitForGuild(guildId))) {
+		if (!(await arrived)) {
 			// 길드가 안 온다고 기록을 지우면 복구 기회를 잃는다 — 남겨 두고 다음
 			// 재시작 때 재시도한다. (기록은 6h 신선도 한도에서 자연히 소멸한다.)
 			this.logger.info(`Fresh restore deferred at ${guildId}: guild not available after ${GUILD_WAIT_TIMEOUT_MS}ms (records kept)`);
 			return;
 		}
 
-		// 음성채널에 사람이 없으면 재연결하지 않는다(무인 재생 방지).
+		// 음성 채널에 사람이 없으면 재연결하지 않는다(무인 재생 방지).
 		if (!(await this.isVoiceChannelOccupied(saved.voiceChannelId))) {
 			this.logger.info(`Discarding saved player at ${guildId}: voice channel empty or missing`);
 			await this.discardSavedPlayer(guildId, saved, playerSaver);
@@ -394,7 +446,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 		return this.container.client.guilds.cache.has(guildId);
 	}
 
-	/** 음성채널에 봇이 아닌 멤버가 최소 1명 있는지 — 없으면 재연결하지 않는다. */
+	/** 음성 채널에 봇이 아닌 멤버가 최소 1명 있는지 — 없으면 재연결하지 않는다. */
 	private async isVoiceChannelOccupied(channelId: string | null | undefined): Promise<boolean> {
 		if (!channelId) return false;
 		try {

@@ -119,11 +119,6 @@ export class TrackHandler extends BaseLavalinkHandler implements TrackTransition
 		return this.playbackWatchdog.fetchServerTrack(player);
 	}
 
-	// 테스트 계약 검증용 위임 — 협력 클래스의 공개 계약을 퍼사드에서도 관찰할 수 있게 한다.
-	public reconcileNowPlaying(player: CustomPlayer, track: Track, encoded: string): Promise<void> {
-		return this.playbackWatchdog.reconcileNowPlaying(player, track, encoded);
-	}
-
 	/* ── queueAdvancer 위임 ── */
 
 	public startClientOwnedTrack(player: CustomPlayer): Promise<void> {
@@ -138,11 +133,6 @@ export class TrackHandler extends BaseLavalinkHandler implements TrackTransition
 		this.queueAdvancer.clearAdvancePending(guildId);
 	}
 
-	// 테스트 계약 검증용 위임 — 협력 클래스의 공개 계약을 퍼사드에서도 관찰할 수 있게 한다.
-	public setAdvancePending(guildId: string): number {
-		return this.queueAdvancer.setAdvancePending(guildId);
-	}
-
 	/* ── trackStartOrchestrator 위임 (TTS 이어가기) ── */
 
 	public continueAfterTtsClip(player: CustomPlayer, track: Track | null): Promise<void> {
@@ -151,16 +141,6 @@ export class TrackHandler extends BaseLavalinkHandler implements TrackTransition
 
 	public quietEndTts(player: CustomPlayer): Promise<void> {
 		return this.trackStartOrchestrator.quietEndTts(player);
-	}
-
-	// 테스트 계약 검증용 위임 — 협력 클래스의 공개 계약을 퍼사드에서도 관찰할 수 있게 한다.
-	public resolveStartedTrack(
-		player: CustomPlayer,
-		track: Track | null,
-		payload: TrackStartEvent,
-		preloadedIdentifier: string | null
-	): Track | null {
-		return this.trackStartOrchestrator.resolveStartedTrack(player, track, payload, preloadedIdentifier);
 	}
 
 	public cleanup() {

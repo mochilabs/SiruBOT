@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { settingsView } from '../../audio/view/settings.ts';
+import { settingsView } from '../view/settings.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,

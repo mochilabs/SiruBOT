@@ -30,7 +30,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('query')
 				.setNameLocalizations({ ko: '검색어' })
 				.setDescription('Enter the title or URL of the song you want to play.')
-				.setDescriptionLocalizations({ ko: '재생할 노래의 제목이나 주소를 입력해주세요.' })
+				.setDescriptionLocalizations({ ko: '재생할 노래의 제목이나 주소를 입력해 주세요.' })
 				.setAutocomplete(true)
 				.setRequired(true)
 		)
@@ -39,7 +39,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('platform')
 				.setNameLocalizations({ ko: '플랫폼' })
 				.setDescription('Select the platform to search for music.')
-				.setDescriptionLocalizations({ ko: '노래를 찾을 플랫폼을 선택해주세요.' })
+				.setDescriptionLocalizations({ ko: '노래를 찾을 플랫폼을 선택해 주세요.' })
 				.addChoices([
 					{ name: 'youtube', name_localizations: { ko: '유튜브' }, value: 'ytsearch' },
 					{ name: 'soundcloud', name_localizations: { ko: '사운드클라우드' }, value: 'scsearch' },

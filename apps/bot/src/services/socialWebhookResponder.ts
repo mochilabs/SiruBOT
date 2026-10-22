@@ -15,27 +15,22 @@
 import { DiscordAPIError } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { emoji, ManagedRedisSubscriber, SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL, socialWebhookCreateRequestSchema } from '@sirubot/utils';
+import { discordApiErrorText } from '../lib/discordErrorText.ts';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { SocialWebhookCreateResponse } from '@sirubot/utils';
 
-/** Discord API 오류 코드 — unknown channel / missing access / missing permissions / webhook limit */
-const DISCORD_UNKNOWN_CHANNEL = 10003;
-const DISCORD_MISSING_ACCESS = 50001;
-const DISCORD_MISSING_PERMISSIONS = 50013;
+/** Discord API 오류 코드 — 웹훅 한도 */
 const DISCORD_MAX_WEBHOOKS = 220001;
 
 /** 처리 흐름의 실패를 한국어 안내로 바꿔요 — 사용자가 고칠 수 있는 행동별로 구분해요 */
 function toKoreanError(error: unknown): string {
-	if (error instanceof DiscordAPIError) {
-		if (error.code === DISCORD_UNKNOWN_CHANNEL) return `${emoji('error')} 채널을 찾을 수 없어요.`;
-		if (error.code === DISCORD_MISSING_ACCESS || error.code === DISCORD_MISSING_PERMISSIONS) {
-			return `${emoji('error')} 웹훅 생성 권한이 봇에 없어요. 서버 설정에서 봇 역할의 웹훅 관리 권한을 확인해 주세요.`;
-		}
-		if (error.code === DISCORD_MAX_WEBHOOKS) {
-			return `${emoji('error')} 이 채널의 웹훅 한도(10개)가 가득 찼어요. 사용하지 않는 웹훅을 삭제한 뒤 다시 시도해 주세요.`;
-		}
+	if (error instanceof DiscordAPIError && error.code === DISCORD_MAX_WEBHOOKS) {
+		return `${emoji('error')} 이 채널의 웹훅 한도(10개)가 가득 찼어요. 사용하지 않는 웹훅을 삭제한 뒤 다시 시도해 주세요.`;
 	}
-	return `${emoji('error')} 웹훅을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`;
+	return discordApiErrorText(error, {
+		permission: '웹훅 생성 권한이 봇에 없어요. 서버 설정에서 봇 역할의 웹훅 관리 권한을 확인해 주세요.',
+		fallback: `${emoji('error')} 웹훅을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`
+	});
 }
 
 export class SocialWebhookResponder {

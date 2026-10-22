@@ -222,3 +222,111 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		expect(reconcile).toHaveBeenCalledWith(createdPlayer);
 	});
 });
+
+describe('restoreFreshSession (샤드 소유 필터 · 병렬 복구)', () => {
+	// (id >> 22) % 2 가 각각 1, 0 이 되도록 만든 길드 id (샤드 분리 운영 재현용)
+	const SHARD1_GUILD = String(1n << 22n);
+	const SHARD0_GUILD = String(2n << 22n);
+
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+	});
+
+	// shardInfo는 이 파일이 새로 심는 전역 상태 — 이후 파일이 단일 인스턴스로 오인하지 않게 되돌린다.
+	afterEach(() => {
+		(container as unknown as Record<string, unknown>).shardInfo = undefined;
+	});
+
+	it('다른 샤드(레플리카) 소유 길드는 복구 후보에서 제외한다', async () => {
+		const handler = makeHandler();
+		const restoreFreshGuild = vi.fn(async (_node: unknown, guildId: string) => {
+			void guildId;
+		});
+		handler.restoreFreshGuild = restoreFreshGuild;
+		Object.assign(container, {
+			shardInfo: { shardIds: [0], shardCount: 2 },
+			client: { guilds: { cache: new Map([[SHARD0_GUILD, {}]]) } },
+			redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [SHARD0_GUILD, SHARD1_GUILD] }) }
+		});
+
+		await handler.restoreFreshSession({ options: { id: 'main' } });
+
+		// 남의 길드는 캐시에 없어 90초 폴링을 통째로 소모했다 — 소유 길드만 복구한다.
+		expect(restoreFreshGuild).toHaveBeenCalledTimes(1);
+		expect(restoreFreshGuild.mock.calls[0][1]).toBe(SHARD0_GUILD);
+	});
+
+	it('샤드 정보가 없으면(단일 인스턴스) 모든 길드를 후보로 남긴다', async () => {
+		const handler = makeHandler();
+		const restoreFreshGuild = vi.fn(async (_node: unknown, guildId: string) => {
+			void guildId;
+		});
+		handler.restoreFreshGuild = restoreFreshGuild;
+		Object.assign(container, {
+			shardInfo: undefined,
+			client: { guilds: { cache: new Map([[SHARD0_GUILD, {}]]) } },
+			redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [SHARD0_GUILD, SHARD1_GUILD] }) }
+		});
+
+		await handler.restoreFreshSession({ options: { id: 'main' } });
+
+		expect(restoreFreshGuild).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('fresh 복구 신선도 판정 (세션 시작 시점 기준)', () => {
+	const SIX_HOURS = 6 * 60 * 60 * 1000;
+
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		Object.assign(container, { audio: { players: { has: () => false } } });
+	});
+
+	function stubRestore(handler: ReturnType<typeof makeHandler>) {
+		handler.isVoiceChannelOccupied = vi.fn(async () => true);
+		handler.restoreFreshPlayer = vi.fn(async () => undefined);
+		handler.discardSavedPlayer = vi.fn(async () => undefined);
+	}
+
+	it('복구가 세션 시작 뒤로 밀려도 신선도는 세션 시작 시점으로 판정한다', async () => {
+		const handler = makeHandler();
+		stubRestore(handler);
+		const now = Date.now();
+		// 세션 시작 70분 뒤에야 복구가 도착하는 상황 — 저장값은 세션 시작 시점 기준 5h55m 전(신선),
+		// 지금 시각 기준으로는 6h55m 전(구판 기준이라면 이미 폐기됐을 값).
+		const sessionStartedAt = now - 70 * 60_000;
+		const savedAt = sessionStartedAt - (SIX_HOURS - 5 * 60_000);
+		const playerSaver = { get: vi.fn(async () => ({ savedAt, voiceChannelId: 'vc-1' })), delete: vi.fn() };
+
+		await handler.restoreFreshGuild({ options: { id: 'main' } }, 'g1', playerSaver as never, sessionStartedAt, Promise.resolve(true));
+
+		expect(handler.discardSavedPlayer).not.toHaveBeenCalled();
+		expect(handler.restoreFreshPlayer).toHaveBeenCalled();
+	});
+
+	it('세션 시작 시점에도 이미 6h를 넘긴 기록은 폐기한다', async () => {
+		const handler = makeHandler();
+		stubRestore(handler);
+		const sessionStartedAt = Date.now();
+		const savedAt = sessionStartedAt - SIX_HOURS - 1;
+		const playerSaver = { get: vi.fn(async () => ({ savedAt, voiceChannelId: 'vc-1' })), delete: vi.fn() };
+
+		await handler.restoreFreshGuild({ options: { id: 'main' } }, 'g1', playerSaver as never, sessionStartedAt, Promise.resolve(true));
+
+		expect(handler.discardSavedPlayer).toHaveBeenCalled();
+		expect(handler.restoreFreshPlayer).not.toHaveBeenCalled();
+	});
+
+	it('길드 캐시가 안 오면 기록을 지우지 않고 다음 재시작으로 넘긴다', async () => {
+		const handler = makeHandler();
+		stubRestore(handler);
+		const sessionStartedAt = Date.now();
+		const playerSaver = { get: vi.fn(async () => ({ savedAt: sessionStartedAt, voiceChannelId: 'vc-1' })), delete: vi.fn() };
+
+		await handler.restoreFreshGuild({ options: { id: 'main' } }, 'g1', playerSaver as never, sessionStartedAt, Promise.resolve(false));
+
+		expect(handler.restoreFreshPlayer).not.toHaveBeenCalled();
+		expect(handler.discardSavedPlayer).not.toHaveBeenCalled();
+		expect(playerSaver.delete).not.toHaveBeenCalled();
+	});
+});

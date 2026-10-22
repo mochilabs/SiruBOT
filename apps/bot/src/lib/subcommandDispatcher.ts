@@ -14,7 +14,7 @@ export interface SubcommandModule {
 
 /**
  * 서브커맨드별 precondition 실행 — 커맨드를 하나로 합치면 union precondition이
- * 가벼운 하위 명령어(예: /음악 가사)까지 음성채널을 요구하게 되므로 서브커맨드 단위로 나눠서 실행해요.
+ * 가벼운 하위 명령어(예: /음악 가사)까지 음성 채널을 요구하게 되므로 서브커맨드 단위로 나눠서 실행해요.
  */
 export async function runSubcommandPreconditions(
 	command: ChatInputCommand,

@@ -122,7 +122,9 @@ export async function streamChatCompletion(options: {
 			const message = payload?.choices?.[0]?.message;
 			const fullText = String(message?.content ?? '');
 			const toolCalls = collectToolCallsFromMessage(message);
-			await options.onDelta?.(fullText);
+			// 라이브 화면에도 정제본을 흘려 보낸다 — 중지·오류 경로에서는 최종 교체본(final)이
+			// 한 번도 노출되지 않아 미정제 추론 토큰이 그대로 보이기 때문이다.
+			await options.onDelta?.(finalizeText(fullText, config));
 			return { content: finalizeText(fullText, config), toolCalls };
 		}
 
@@ -160,7 +162,9 @@ export async function streamChatCompletion(options: {
 					const delta = payload?.choices?.[0]?.delta;
 					if (delta?.content) {
 						fullText += String(delta.content);
-						await options.onDelta?.(fullText);
+						// 스트리밍 중 화면에 보이는 본문도 정제본 — THINK 모드의 미정제 추론이
+						// 라이브 화면에 노출되지 않도록 한다 (최종 교체본은 아래에서 한 번 더 정제).
+						await options.onDelta?.(finalizeText(fullText, config));
 					}
 					if (Array.isArray(delta?.tool_calls)) {
 						for (const chunk of delta.tool_calls) {

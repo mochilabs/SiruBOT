@@ -3,6 +3,14 @@ import type { RepeatMode, SearchPlatform } from 'lavalink-client';
 import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { checkDJOrAlone } from '../../modules/audio/utils/permissionCheck.ts';
+import {
+	applyFilterPreset,
+	dropLoserFilters,
+	FILTER_PRESET_NAMES,
+	isFilterPreset,
+	resetAllFilters
+} from '../../modules/audio/utils/filterPresets.ts';
+import { parseTimeToMs } from '../../modules/audio/utils/timeParse.ts';
 import type { CustomPlayer } from '../../modules/audio/lavalink/player/customPlayer.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { searchLyrics } from '../dataApiClient.ts';
@@ -177,46 +185,6 @@ function requireCustomPlayer(guildId: string): CustomPlayer {
 	return player as CustomPlayer;
 }
 
-function parseSeekMs(input: string): number | null {
-	const trimmed = String(input).trim();
-	if (trimmed.includes(':')) {
-		const parts = trimmed.split(':').map(Number);
-		if (parts.some(Number.isNaN)) return null;
-		if (parts.length === 2) return (parts[0]! * 60 + parts[1]!) * 1000;
-		if (parts.length === 3) return (parts[0]! * 3600 + parts[1]! * 60 + parts[2]!) * 1000;
-		return null;
-	}
-	const seconds = Number(trimmed);
-	if (Number.isNaN(seconds)) return null;
-	return seconds * 1000;
-}
-
-async function applyPresetOnce(player: CustomPlayer, preset: string) {
-	switch (preset) {
-		case 'bassboost':
-			await player.filterManager.setEQ([
-				{ band: 0, gain: 0.6 },
-				{ band: 1, gain: 0.7 },
-				{ band: 2, gain: 0.8 },
-				{ band: 3, gain: 0.55 },
-				{ band: 4, gain: 0.25 }
-			]);
-			break;
-		case 'nightcore':
-			await player.filterManager.toggleNightcore(1.3, 1.3, 1);
-			break;
-		case 'vaporwave':
-			await player.filterManager.toggleVaporwave(0.8, 0.8, 1);
-			break;
-		case '8d':
-			await player.filterManager.toggleRotation(0.2);
-			break;
-		case 'karaoke':
-			await player.filterManager.toggleKaraoke(1.0, 1.0, 220, 100);
-			break;
-	}
-}
-
 const musicVolumeTool: AiTool = {
 	name: 'music_volume',
 	description: '볼륨을 조회하거나 조절해요. volume을 주면 0~150으로 설정하고, 안 주면 현재 볼륨을 알려줘요.',
@@ -258,7 +226,7 @@ const musicSeekTool: AiTool = {
 		const current = player.queue.current;
 		if (!current) throw new Error('현재 재생 중인 곡이 없어요.');
 		if (current.info.isStream) throw new Error('실시간 스트리밍에서는 이동할 수 없어요.');
-		const ms = parseSeekMs(String(args.time ?? ''));
+		const ms = parseTimeToMs(String(args.time ?? ''));
 		if (ms === null || ms < 0) throw new Error('시간 형식이 잘못됐어요. (예: 90, 1:30)');
 		if (ms > current.info.duration) throw new Error('곡의 길이를 초과하는 시간이에요.');
 		await player.seek(ms);
@@ -387,7 +355,8 @@ const musicFilterTool: AiTool = {
 		preset: {
 			type: 'string',
 			description: '필터 프리셋',
-			enum: ['bassboost', 'nightcore', 'vaporwave', '8d', 'karaoke', 'reset']
+			// 선택지 목록은 프리셋 카탈로그에서 뽑는다 — 스키마 enum과 검증기가 갈라지지 않게
+			enum: [...FILTER_PRESET_NAMES, 'reset']
 		}
 	},
 	required: ['preset'],
@@ -396,11 +365,9 @@ const musicFilterTool: AiTool = {
 		await requireDjOrAlone(ctx);
 		const player = requireCustomPlayer(requireGuild(ctx));
 		const preset = String(args.preset ?? '');
-		if (!['bassboost', 'nightcore', 'vaporwave', '8d', 'karaoke', 'reset'].includes(preset)) throw new Error('알 수 없는 필터 프리셋이에요.');
+		if (!isFilterPreset(preset) && preset !== 'reset') throw new Error('알 수 없는 필터 프리셋이에요.');
 
-		await player.filterManager.resetFilters();
-		await player.filterManager.clearEQ();
-		await container.mixerService.reapplyMixerFilter(player);
+		await resetAllFilters(player);
 
 		if (preset === 'reset') {
 			player.activeFilters = [];
@@ -410,9 +377,9 @@ const musicFilterTool: AiTool = {
 		const active = player.activeFilters ?? [];
 		const willEnable = !active.includes(preset);
 		const newFilters = willEnable ? [...active, preset] : active.filter((f) => f !== preset);
-		for (const f of newFilters) await applyPresetOnce(player, f);
-		player.activeFilters = newFilters;
-		return JSON.stringify({ status: 'ok', preset, enabled: willEnable, active_filters: newFilters });
+		for (const f of newFilters) await applyFilterPreset(player, f);
+		player.activeFilters = dropLoserFilters(newFilters);
+		return JSON.stringify({ status: 'ok', preset, enabled: willEnable, active_filters: player.activeFilters });
 	}
 };
 

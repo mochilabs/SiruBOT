@@ -25,14 +25,14 @@ export class PlaylistService {
 			data: {
 				userId,
 				name: FAVORITES_PLAYLIST_NAME,
-				description: '즐겨찾기한 음악 목록입니다.'
+				description: '즐겨찾기한 음악 목록이에요.'
 			}
 		});
 	}
 
 	public async createPlaylist(userId: string, name: string, description?: string) {
 		if (name === FAVORITES_PLAYLIST_NAME) {
-			throw new Error('이름으로 "즐겨찾기"는 사용할 수 없어요. 이는 기본 제공되는 플레이리스트입니다.');
+			throw new Error('이름으로 "즐겨찾기"는 사용할 수 없어요. 이건 기본 제공되는 플레이리스트예요.');
 		}
 
 		const existing = await container.db.playlist.count({

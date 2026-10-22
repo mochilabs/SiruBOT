@@ -41,7 +41,14 @@ export class CachedQueueStore extends PendingWriteStore implements QueueStoreMan
 
 	public parse(value: StoredQueue | string): Partial<StoredQueue> {
 		this.logger.trace(`Parsing queue`);
-		return typeof value === 'string' ? JSON.parse(value) : value;
+		if (typeof value !== 'string') return value;
+		try {
+			return JSON.parse(value);
+		} catch (error) {
+			// 손상된 큐 값이 라이브러리로 새면 어디로 튈지 알 수 없다 — 빈 큐로 정의된 폴백을 준다.
+			this.logger.warn(`Corrupted stored queue ignored, falling back to an empty queue: ${error}`);
+			return { current: null, previous: [], tracks: [] };
+		}
 	}
 
 	public stringify(value: StoredQueue | string): Awaitable<StoredQueue | string> {
