@@ -40,6 +40,7 @@ function makeSubscription(overrides: Partial<SocialSubscription> = {}): SocialSu
 		messageTemplate: null,
 		webhookName: null,
 		webhookAvatarUrl: null,
+		showThumbnail: true,
 		status: 'active',
 		createdAt: new Date(0),
 		updatedAt: new Date(0),
@@ -134,6 +135,43 @@ describe('SocialDispatcher.dispatch', () => {
 		const payload = dispatcher.buildPayload(makeSubscription(), EVENT);
 		expect(payload.username).toBeUndefined();
 		expect(payload.avatar_url).toBeUndefined();
+	});
+
+	it('includes the live thumbnail as a big embed image by default (showThumbnail on)', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const payload = dispatcher.buildPayload(makeSubscription(), EVENT);
+		expect(payload.embeds[0].image).toEqual({ url: 'https://image.example.com/thumb.jpg' });
+	});
+
+	it('treats a subscription without showThumbnail (pre-migration row) as on', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const legacyRow = { ...makeSubscription() } as unknown as Record<string, unknown>;
+		delete legacyRow.showThumbnail;
+		const payload = dispatcher.buildPayload(legacyRow as unknown as SocialSubscription, EVENT);
+		expect(payload.embeds[0].image).toEqual({ url: 'https://image.example.com/thumb.jpg' });
+	});
+
+	it('omits the embed image when the subscription turns showThumbnail off', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const payload = dispatcher.buildPayload(makeSubscription({ showThumbnail: false }), EVENT);
+		expect(payload.embeds[0].image).toBeUndefined();
+	});
+
+	it('quietly omits the embed image when the event has no thumbnail (twitch)', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const payload = dispatcher.buildPayload(makeSubscription(), { ...EVENT, platform: 'twitch', thumbnail: null });
+		expect(payload.embeds[0].image).toBeUndefined();
+	});
+
+	it('paints the chzzk embed with the neon green brand color', () => {
+		const redis = new FakeRedis() as unknown as NotifierRedis;
+		const dispatcher = makeDispatcher(makeDb(), redis);
+		const payload = dispatcher.buildPayload(makeSubscription(), EVENT);
+		expect(payload.embeds[0].color).toBe(0x00ffa3);
 	});
 
 	it('marks the subscription failed immediately on dead webhooks (404)', async () => {

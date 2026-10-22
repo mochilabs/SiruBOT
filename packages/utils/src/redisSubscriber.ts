@@ -42,6 +42,11 @@ export class ManagedRedisSubscriber {
 		this.maxDelay = options.reconnectMaxDelayMs ?? 60_000;
 	}
 
+	/** 연결+전체 채널 구독 성공 후 연결 종료('end') 전까지 true예요 — 요청 시점 가용성 판단용 (소켓이 아니라 구독 완료 기준) */
+	public get isSubscribed(): boolean {
+		return this.subscriber !== null;
+	}
+
 	/** 시작 — 실패해도 throw하지 않아요 */
 	public async start(): Promise<void> {
 		this.stopped = false;
@@ -51,28 +56,39 @@ export class ManagedRedisSubscriber {
 	private async connectOnce(): Promise<void> {
 		if (this.stopped) return;
 		const previous = this.subscriber;
+		let client: RedisClientType | null = null;
 		try {
-			const client = createClient({ url: this.options.url }) as RedisClientType;
-			client.on('error', (error) => this.options.logger.warn(`${this.options.name} 구독 오류: ${error.message}`));
+			client = createClient({ url: this.options.url }) as RedisClientType;
+			const connecting = client;
+			connecting.on('error', (error) => this.options.logger.warn(`${this.options.name} 구독 오류: ${error.message}`));
 			// 끊김 → 재연결. node-redis도 자체 재연결을 하지만 end 이후에는 살아나지 않으므로 안전망을 둔다.
-			client.on('end', () => {
-				if (this.subscriber === client) {
+			connecting.on('end', () => {
+				if (this.subscriber === connecting) {
 					this.subscriber = null;
 					void this.scheduleReconnect();
 				}
 			});
 
-			await client.connect();
+			await connecting.connect();
 			for (const binding of this.options.bindings) {
-				await client.subscribe(binding.channel, (raw) => binding.onMessage(raw));
+				await connecting.subscribe(binding.channel, (raw) => binding.onMessage(raw));
 			}
 
-			this.subscriber = client;
+			// stop()이 connect 완료 전에 불렸으면 등록하지 않고 즉시 닫는다 — shutdown 후 잔류 구독 연결 방지.
+			if (this.stopped) {
+				await connecting.quit().catch(() => undefined);
+				return;
+			}
+			this.subscriber = connecting;
 			this.attempts = 0;
 			this.options.logger.info(`${this.options.name} 구독 시작: ${this.options.bindings.map((b) => b.channel).join(', ')}`);
 		} catch (error) {
 			this.subscriber = this.subscriber === previous ? null : this.subscriber;
 			this.options.logger.warn(`${this.options.name} 구독 실패, 재연결 예약: ${error instanceof Error ? error.message : String(error)}`);
+			// connect 성공 후 subscribe 실패 같은 경로에서 새 클라이언트 소켓이 열린 채 남지 않게 즉시 닫는다.
+			if (client && client !== this.subscriber && client.isOpen) {
+				client.destroy();
+			}
 			await this.scheduleReconnect();
 		} finally {
 			// 실패/교체로 버려진 이전 연결을 닫는다 — 소켓 누수 방지.

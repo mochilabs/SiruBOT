@@ -1,4 +1,4 @@
-import { fetchDataApi } from "@/lib/data-api";
+import { fetchDataApi } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { kstDateString } from "@/lib/kst-date";
 import { getZodiac, type ZodiacInfo } from "@/lib/zodiac";

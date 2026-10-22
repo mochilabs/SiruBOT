@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseEnvOrExit } from '@sirubot/app-kit';
 
 const shardCountSchema = z.preprocess(
 	(val) => {
@@ -20,21 +21,11 @@ const envSchema = z.object({
 	DISCORD_WEBHOOK_URL: z.string().url().optional(),
 	SHARD_COUNT: shardCountSchema,
 	SHARDS_PER_PROCESS: z.coerce.number().int().positive().default(5),
-	LOGLEVEL: z.string().default('info'),
-	AUTH_KEY: z.string().optional(),
-	NODE_ENV: z.enum(['development', 'production']).default('development')
+	AUTH_KEY: z.string().optional()
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(): Env {
-	const result = envSchema.safeParse(process.env);
-
-	if (!result.success) {
-		console.error('❌ Invalid environment variables:');
-		console.error(result.error.format());
-		process.exit(1);
-	}
-
-	return result.data;
+	return parseEnvOrExit(envSchema);
 }

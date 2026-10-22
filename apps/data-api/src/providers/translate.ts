@@ -9,7 +9,7 @@ export interface TranslationItem {
 	lucky: string;
 }
 
-/** 번역 프로바이더 추상화 — `TRANSLATION_PROVIDER`로 교체해요 (현재 openai만 구현). */
+/** 번역 프로바이더 추상화 — 구현 교체 지점 (현재 OpenAI 호환 엔드포인트만 구현, 별도 환경변수 없음). */
 export interface TranslationProvider {
 	readonly name: string;
 	readonly available: boolean;

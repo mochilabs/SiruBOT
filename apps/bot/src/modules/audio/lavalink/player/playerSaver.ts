@@ -26,7 +26,14 @@ export class CachedPlayerSaver extends PendingWriteStore {
 			this.logger.trace(`No data found for guild ${guildId}`);
 			return null;
 		}
-		return JSON.parse(raw);
+		try {
+			return JSON.parse(raw);
+		} catch (error) {
+			// 손상된 기록이 복구 경로로 새면 원시 throw가 어디로 튈지 알 수 없다 —
+			// "기록 없음"이라는 정의된 폴백으로 통일한다.
+			this.logger.warn(`Corrupted saved player for guild ${guildId}, ignoring: ${error}`);
+			return null;
+		}
 	}
 
 	public async delete(guildId: string): Promise<void> {

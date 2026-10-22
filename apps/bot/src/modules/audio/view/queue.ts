@@ -2,6 +2,7 @@ import { emoji, createContainer, formatTrack, formatTimeToKorean, formatTime } f
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { truncateText } from '../../../lib/text.ts';
 
 type QueueViewProps = {
 	player: Player;
@@ -21,12 +22,6 @@ export const queueSelectCustomId = 'controller:queue:select';
 /** 대기열 목록에서 쓰는 점프/삭제 버튼 — controllerButton 핸들러의 queue 서브커맨드와 같다. */
 const queueJumpCustomId = 'controller:queue:jumpTo';
 const queueRemoveCustomId = 'controller:queue:remove';
-
-/** 문자열을 max_length 이하로 줄이고 넘치는 부분은 …로 대체한다. (undefined도 안전하게) */
-function truncate(text: string | undefined, maxLength: number): string {
-	const value = text ?? '';
-	return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
-}
 
 export function queueList({ player, page, totalPages, authorId, selectedIndex = null }: QueueViewProps) {
 	const containerComponent = createContainer();
@@ -66,9 +61,9 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 			pageTracks.map((track, index) => {
 				const globalIndex = start + index;
 				return {
-					label: truncate(`#${globalIndex + 1} ${(track as Track).info.title ?? '(제목 없음)'}`, 100),
+					label: truncateText(`#${globalIndex + 1} ${(track as Track).info.title ?? '(제목 없음)'}`, 100),
 					value: String(globalIndex + 1),
-					description: truncate(
+					description: truncateText(
 						`${(track as Track).info.author ?? '알 수 없음'} · ${formatTime(((track as Track).info.duration ?? 0) / 1000)}`,
 						100
 					),

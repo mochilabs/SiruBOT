@@ -3,9 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, ModalSubmitInteraction, TextDisplayBuilder } from 'discord.js';
 import { emoji, createContainer } from '@sirubot/utils';
 import { inspect } from 'node:util';
-import { envParseArray } from '@skyra/env-utilities';
-
-const OWNERS = envParseArray('OWNERS');
+import { OWNERS } from '../../../lib/owners.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.ModalSubmit
@@ -23,7 +21,8 @@ export class EvalModalHandler extends InteractionHandler {
 		}
 
 		const code = interaction.fields.getTextInputValue('eval-code');
-		await interaction.deferReply();
+		// eval 결과(환경값·토큰 등 컨테이너 값)가 채널 전체에 보이지 않도록 임시 메시지로만 게시해요
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
 		let result: string;
 		let success = true;

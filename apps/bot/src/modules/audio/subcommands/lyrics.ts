@@ -2,7 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
 import { searchLyrics } from '../../../services/dataApiClient.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'lyrics';
 export const ko = '가사';

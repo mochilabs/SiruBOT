@@ -7,8 +7,8 @@ import useSWR from "swr";
 
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
+import { useAuthedSWR } from "@/lib/swr";
 import { isYoutubeUrl } from "@/lib/youtube-url";
 import type { Playlist, PlaylistDetailResponse, SearchTracksResponse } from "@/types/playlist";
 
@@ -27,12 +27,8 @@ export function usePlaylists() {
 	const { status } = useSession();
 	const toast = useToast();
 
-	// 세션 만료(unauthenticated) — 로그인 후 이 화면으로 돌아오게 해요
-	useSessionExpiredRedirect(status === "unauthenticated", "/playlists");
-
-	const { data: listData, mutate: mutateList, isLoading: listLoading } = useSWR<{ playlists: Playlist[] }>(
-		status === "authenticated" ? "/api/playlists" : null
-	);
+	// 세션 만료 리다이렉트·인증 게이트는 useAuthedSWR가 담당해요 — 로그인 후 이 화면으로 돌아와요
+	const { data: listData, mutate: mutateList, isLoading: listLoading } = useAuthedSWR<{ playlists: Playlist[] }>("/api/playlists", "/playlists");
 
 	const playlists = useMemo(() => {
 		const list = listData?.playlists ?? [];
@@ -233,7 +229,7 @@ export function usePlaylists() {
 		setLoadingAddTrack(false);
 	};
 
-	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 delete-playlist-modal과 같은 모달 확인 패턴) */
+	/** 트랙 삭제 확인 모달을 열어요 (window.confirm 대신 ConfirmDeleteModal 같은 모달 확인 패턴) */
 	const handleRemoveTrack = (position: number, title: string) => {
 		if (!activePlaylistId) return;
 		setRemoveTrackTarget({ position, title });

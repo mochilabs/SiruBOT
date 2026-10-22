@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { m } from "framer-motion";
 import { Server } from "lucide-react";
-import useSWR from "swr";
 
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
@@ -15,20 +12,13 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton, ServersPageSkeleton } from "@/components/servers/servers-page-skeleton";
+import { useAuthedSWR } from "@/lib/swr";
 import { buildInviteUrl } from "@/utils";
 
 export default function ServersPage() {
     const { data: session, status } = useSession();
-    const router = useRouter();
-    const { data, error, isLoading, mutate } = useSWR<{ guilds: EnrichedGuild[] }>(
-        status === "authenticated" ? "/api/servers" : null,
-    );
-
-    useEffect(() => {
-        if (status === "unauthenticated") {
-            router.push("/api/auth/signin?callbackUrl=/servers");
-        }
-    }, [status, router]);
+    // 세션 만료(unauthenticated) 리다이렉트·인증 게이트는 useAuthedSWR가 담당해요 — 로그인 후 이 화면으로 돌아와요
+    const { data, error, isLoading, mutate } = useAuthedSWR<{ guilds: EnrichedGuild[] }>("/api/servers", "/servers");
 
     if (status === "loading") {
         return (

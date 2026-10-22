@@ -7,27 +7,19 @@
  */
 import { container } from '@sapphire/framework';
 import { embedFixMetadataResponseSchema, type EmbedFixMetadataRequest, type EmbedFixResult } from '@sirubot/utils';
+import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 
 const METADATA_TIMEOUT_MS = 10_000;
-
-function gatewayBaseUrl(): string | null {
-	const raw = (process.env.DATA_API_URL ?? '').trim().replace(/\/+$/, '');
-	return raw || null;
-}
 
 /** 링크들의 임베드 메타데이터를 물어봐요 — 실패는 null (레거시 폴백) */
 export async function fetchEmbedFixMetadata(request: EmbedFixMetadataRequest): Promise<EmbedFixResult[] | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
 
-	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
 	try {
 		const response = await fetch(`${base}/v1/embed-fix/metadata`, {
 			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				...(authKey ? { authorization: authKey } : {})
-			},
+			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
 			body: JSON.stringify(request),
 			signal: AbortSignal.timeout(METADATA_TIMEOUT_MS)
 		});

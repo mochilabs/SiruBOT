@@ -12,12 +12,13 @@ import {
 import { createContainer, emoji } from '@sirubot/utils';
 import type { TtsService, TtsVoice } from '../../../services/ttsService.ts';
 import type { TtsUserPreset, TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
+import { truncateText } from '../../../lib/text.ts';
 
 /**
  * /tts 설정 패널(Components V2) 뷰와 컴포넌트 customId 계약.
- * 상호작용은 `modules/general/interaction-handlers/ttsPanel.ts`(버튼·셀렉트)와
- * `ttsPanelModal.ts`(속도·피치 모달)가 파싱한다. 패널 응답은 전부 ephemeral이라
- * 상호작용은 작성자만 가능하다.
+ * 상호작용은 `modules/general/interaction-handlers/ttsPanelButton.ts`(버튼),
+ * `ttsPanelSelect.ts`(셀렉트), `ttsPanelModal.ts`(속도·피치 모달)가 파싱한다.
+ * 패널 응답은 전부 ephemeral이라 상호작용은 작성자만 가능하다.
  */
 
 export const ttsPanelPrefix = 'tts:panel:';
@@ -42,10 +43,6 @@ export interface TtsPanelProps {
 	serviceReady: boolean;
 }
 
-function truncate(text: string, maxLength: number): string {
-	return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
-}
-
 function speedLabel(speed: number | null): string {
 	return speed !== null ? `${speed}x` : '기본값';
 }
@@ -58,7 +55,7 @@ function pitchLabel(pitch: number | null): string {
 function voiceLabel(preset: TtsUserPreset, voices: TtsVoice[]): string {
 	if (preset.voice === null) return '기본 음성';
 	const match = voices.find((voice) => voice.id === preset.voice);
-	if (!match) return truncate(preset.voice, 60);
+	if (!match) return truncateText(preset.voice, 60);
 	return match.engine ? `${match.name} (${match.engine})` : match.name;
 }
 
@@ -79,9 +76,9 @@ export function buildVoiceOptions(preset: TtsUserPreset, voices: TtsVoice[]): St
 		const detail = [voice.engine, voice.languages[0]].filter(Boolean).join(' · ');
 		options.push(
 			new StringSelectMenuOptionBuilder()
-				.setLabel(truncate(voice.name, 100))
+				.setLabel(truncateText(voice.name, 100))
 				.setValue(voice.id)
-				.setDescription(truncate(detail || '사용자 지정 음성', 100))
+				.setDescription(truncateText(detail || '사용자 지정 음성', 100))
 				.setDefault(preset.voice === voice.id)
 		);
 	}
@@ -90,7 +87,7 @@ export function buildVoiceOptions(preset: TtsUserPreset, voices: TtsVoice[]): St
 	if (currentMissing && preset.voice !== null) {
 		options.push(
 			new StringSelectMenuOptionBuilder()
-				.setLabel(truncate(preset.voice, 100))
+				.setLabel(truncateText(preset.voice, 100))
 				.setValue(preset.voice)
 				.setDescription('현재 설정된 음성이에요')
 				.setDefault(true)

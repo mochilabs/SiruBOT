@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { emoji, createContainer, DEFAULT_COLOR } from '@sirubot/utils';
+import { sleep } from '@sirubot/utils/time';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
 import { MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
@@ -20,10 +21,6 @@ function splitForTyping(lines: string[]): string[] {
 		segments.push(lines.slice(i, i + size).join('\n'));
 	}
 	return segments;
-}
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildHelpContainer(content: string, typing: boolean): ContainerBuilder {

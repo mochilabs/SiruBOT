@@ -1,46 +1,15 @@
+/** 채팅 유틸 채널 정책 — 봇 GuildService도 같은 @sirubot/utils/chatTools 계약을 써요 */
+export type { ChatToolMode } from "@sirubot/utils/chatTools";
+
+/** /api/servers/[id]/settings GET·PUT 본문 — 단일 소스는 @/lib/schemas의 guildSettingsSchema예요 */
+export type { GuildSettings } from "@/lib/schemas";
+
 /** AI 채팅 모드 — 봇 GuildService의 AiMode와 일치해야 해요 */
 export type AiMode = "all" | "channels" | "off";
-
-/** 채팅 유틸 채널 정책 — 봇 GuildService의 ChatToolMode와 일치해야 해요 */
-export type ChatToolMode = "all" | "channels" | "off";
 
 /** /api/servers/[id]/ai GET·PUT 본문 */
 export interface AiPolicy {
 	mode: AiMode;
 	channelIds: string[];
 	historyCount: number;
-}
-
-/** /api/servers/[id]/settings GET·PUT 본문 (봇 Guild 모델의 일반 설정) */
-export interface GuildSettings {
-	volume: number;
-	repeat: "off" | "track" | "queue";
-	related: boolean;
-	enableController: boolean;
-	sponsorBlockSegments: string[];
-	djRoleId: string | null;
-	textChannelId: string | null;
-	voiceChannelId: string | null;
-	pinnedChannelId: string | null;
-	pinnedChannelMode: "play" | "select";
-	pinnedChannelDeleteInput: boolean;
-	jtcEnabled: boolean;
-	jtcCategoryId: string | null;
-	jtcMarkerChannelId: string | null;
-	jtcTemplate: string;
-	jtcUserLimit: number;
-	gaplessEnabled: boolean;
-	crossfadeEnabled: boolean;
-	crossfadeMs: number;
-	// 채팅 유틸 — 봇의 ChatToolSettings와 계약이 같아요 (packages/utils/src/chatTools.ts)
-	emojiEnlargeMode: "all" | "channels" | "off";
-	emojiEnlargeChannelIds: string[];
-	quoteMode: "all" | "channels" | "off";
-	quoteChannelIds: string[];
-	embedFixMode: "all" | "channels" | "off";
-	embedFixChannelIds: string[];
-	embedFixSites: string[];
-	embedFixSuppressOriginal: boolean;
-	countingEnabled: boolean;
-	countingChannelId: string | null;
 }

@@ -1,8 +1,9 @@
 import { container } from '@sapphire/framework';
 import type { GreetingConfig, GreetingKind } from '@sirubot/utils';
-import type { DailyHoroscope } from '../modules/games/utils/ohaasaService.ts';
-import type { DeliveryTrackResult } from '../modules/general/utils/deliveryService.ts';
-import type { WeatherResult, WeatherScope } from '../modules/general/utils/weatherService.ts';
+import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
+import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
+import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
+import type { DailyHoroscope } from './types.ts';
 
 /** 게이트웨이 4xx 본문 — { error, message } 형태 (도메인 에러). 명령어에서 UserError로 변환해요. */
 export class GatewayDomainError extends Error {
@@ -32,21 +33,12 @@ export interface YouTubeChapter {
 // 구 직접호출 체인과 같은 15초 — open-meteo가 느리게 답하는 요청을 성공으로 살려야 해요
 const GATEWAY_TIMEOUT_MS = 15_000;
 
-function gatewayBaseUrl(): string | null {
-	const raw = (process.env.DATA_API_URL ?? '').trim().replace(/\/+$/, '');
-	return raw || null;
-}
-
-function gatewayHeaders(authKey: string | undefined): Record<string, string> {
-	return authKey ? { authorization: authKey } : {};
-}
-
 /** data-api GET. 실패/미설정 시 throw. 4xx 도메인 에러는 GatewayDomainError로 변환해요. */
 async function gatewayGet<T>(path: string): Promise<T> {
 	const base = gatewayBaseUrl();
 	if (!base) throw new Error('data-api disabled');
 	const res = await fetch(`${base}${path}`, {
-		headers: gatewayHeaders((process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim() || undefined),
+		headers: dataApiAuthHeaders(),
 		signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS)
 	});
 	if (!res.ok) {
@@ -185,11 +177,10 @@ export interface NowPlayingCardRequest {
 export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise<Buffer | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
-	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
 	try {
 		const res = await fetch(`${base}/v1/image/nowplaying`, {
 			method: 'POST',
-			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
 			body: JSON.stringify(data),
 			signal: AbortSignal.timeout(20_000)
 		});
@@ -204,53 +195,15 @@ export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise
 }
 
 /**
- * 운세 카드 이미지 데이터 — data-api POST /v1/image/ohaasa 바디와 동일한 형식이에요.
- * 카드는 요약(별자리·순위·행운의 아이템/열쇠·날짜)만 그려요 — 운세 설명·럭키 컬러는
- * 텍스트 본문 전용이라 전송하지 않아요 (같은 /v1/ohaasa 원본을 이미지와 텍스트가 나눠 써요).
- */
-export interface OhaasaCardRequest {
-	zodiacCode: string;
-	rank: number;
-	luckyItem?: string;
-	luckyKey?: string;
-	date?: string;
-}
-
-/**
- * 운세 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
- */
-export async function renderOhaasaCard(data: OhaasaCardRequest): Promise<Buffer | null> {
-	const base = gatewayBaseUrl();
-	if (!base) return null;
-	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
-	try {
-		const res = await fetch(`${base}/v1/image/ohaasa`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
-			body: JSON.stringify(data),
-			signal: AbortSignal.timeout(20_000)
-		});
-		if (!res.ok) throw new Error(`data-api ${res.status}`);
-		const type = res.headers.get('content-type') ?? '';
-		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
-		return Buffer.from(await res.arrayBuffer());
-	} catch (error) {
-		container.logger.warn(`[data-api] ohaasa-card failed: ${error instanceof Error ? error.message : String(error)}`);
-		return null;
-	}
-}
-
-/**
  * 프로필 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
  */
 export async function renderProfileCard(data: ProfileCardRequest): Promise<Buffer | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
-	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
 	try {
 		const res = await fetch(`${base}/v1/image/profile`, {
 			method: 'POST',
-			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
 			body: JSON.stringify(data),
 			signal: AbortSignal.timeout(20_000)
 		});
@@ -285,11 +238,10 @@ export async function renderMemberCard(
 ): Promise<Buffer | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
-	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
 	try {
 		const res = await fetch(`${base}/v1/image/member-card`, {
 			method: 'POST',
-			headers: { 'content-type': 'application/json', ...(authKey ? { authorization: authKey } : {}) },
+			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
 			body: JSON.stringify({ guildId, kind, config, context }),
 			signal: AbortSignal.timeout(20_000)
 		});

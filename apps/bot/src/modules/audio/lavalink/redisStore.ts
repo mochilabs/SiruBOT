@@ -304,8 +304,18 @@ export class RedisStore {
 	}
 
 	public async disconnect() {
-		if (this.isReady) {
+		// 미 ready(재연결 시도 중)에서도 소켓이 열려 있으면 반드시 닫는다 — 안 그러면
+		// node-redis의 내장 재연결 루프가 살아남아 우아한 종료를 붙잡고 SIGKILL까지 가게 한다.
+		if (!this.redis.isOpen) return;
+		if (!this.redis.isReady) {
+			this.redis.destroy();
+			return;
+		}
+		try {
 			await this.redis.quit();
+		} catch (error) {
+			this.logger.warn(`Redis quit failed during shutdown, destroying the socket: ${error}`);
+			this.redis.destroy();
 		}
 	}
 

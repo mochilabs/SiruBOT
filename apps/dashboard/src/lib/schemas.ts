@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { EMBED_FIX_SITES } from "@sirubot/utils/chatTools";
+import { CHAT_TOOL_MODES, EMBED_FIX_SITES } from "@sirubot/utils/chatTools";
 import { z } from "zod";
 
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 
 const AI_MODES = ["all", "channels", "off"] as const;
-const CHAT_TOOL_MODES = ["all", "channels", "off"] as const;
 const REPEAT_MODES = ["off", "track", "queue"] as const;
 const PINNED_MODES = ["play", "select"] as const;
 export const SPONSORBLOCK_SEGMENTS = [
@@ -18,6 +17,7 @@ export const SPONSORBLOCK_SEGMENTS = [
 	"music_offtopic",
 	"filler",
 ] as const;
+export type SponsorBlockSegment = (typeof SPONSORBLOCK_SEGMENTS)[number];
 
 const snowflake = z.string().regex(/^\d{17,20}$/, "올바른 ID 형식이 아니에요.");
 const nullableSnowflake = snowflake.nullable();
@@ -69,6 +69,58 @@ export const guildSettingsSchema = z.object({
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
 });
+
+/**
+ * 길드 설정 계약의 단일 소스 — 허용 키(GUILD_SETTING_KEYS)·응답 타입(GuildSettings)·기본값
+ * (GUILD_SETTINGS_DEFAULTS)이 전부 guildSettingsSchema에서 파생돼요. 한쪽을 고치면 나머지도
+ * 컴파일/테스트로 함께 움직이므로 키 드리프트(유효 필드 거부·미등록 키 통과)가 구조적으로 못 생겨요.
+ */
+export const GUILD_SETTING_KEYS = Object.keys(guildSettingsSchema.shape);
+
+/** 설정 응답 본문 — 스키마의 optional을 걷어낸 값이에요 (GET·PUT 응답은 항상 전 필드를 내려줘요) */
+export type GuildSettings = Required<z.infer<typeof guildSettingsSchema>>;
+
+/**
+ * DB 행이 없을 때 내려주는 기본값 — 키·타입은 스키마에서, 값은 Prisma Guild의 @default와
+ * 같아야 해요 (봇 기본값과의 일치는 schemas.test.ts가 스키마 원문으로 검증해요).
+ */
+export const GUILD_SETTINGS_DEFAULTS = {
+	volume: 10,
+	repeat: "off",
+	related: false,
+	enableController: true,
+	sponsorBlockSegments: [],
+	djRoleId: null,
+	textChannelId: null,
+	voiceChannelId: null,
+	pinnedChannelId: null,
+	pinnedChannelMode: "play",
+	pinnedChannelDeleteInput: false,
+	jtcEnabled: false,
+	jtcCategoryId: null,
+	jtcMarkerChannelId: null,
+	jtcTemplate: "{user}의 방",
+	jtcUserLimit: 0,
+	gaplessEnabled: true,
+	crossfadeEnabled: true,
+	crossfadeMs: 5000,
+	emojiEnlargeMode: "off",
+	emojiEnlargeChannelIds: [],
+	quoteMode: "off",
+	quoteChannelIds: [],
+	embedFixMode: "off",
+	embedFixChannelIds: [],
+	embedFixSites: [],
+	embedFixSuppressOriginal: false,
+	countingEnabled: false,
+	countingChannelId: null,
+} satisfies GuildSettings;
+
+/** SponsorBlock 구간 정규화 — DB에 잘못된 구간이 섞여 있어도 계약에 있는 값만 남겨요 */
+export function normalizeSponsorBlockSegments(values: readonly string[]): SponsorBlockSegment[] {
+	const allowed = new Set<string>(SPONSORBLOCK_SEGMENTS);
+	return values.filter((value): value is SponsorBlockSegment => allowed.has(value));
+}
 
 /** POST /api/servers/[id]/jtc/setup */
 export const jtcSetupSchema = z.object({
@@ -126,9 +178,4 @@ export async function parseSettingBody<S extends z.ZodTypeAny>(
 /** DB에 저장된 모드 값을 안전하게 정규화해요 */
 export function normalizeAiMode(value: string | null | undefined): "all" | "channels" | "off" {
 	return value && (AI_MODES as readonly string[]).includes(value) ? (value as "all" | "channels" | "off") : "all";
-}
-
-/** 채팅 유틸 모드 정규화 — 봇 기본값은 꺼짐(off)이에요 */
-export function normalizeChatToolMode(value: string | null | undefined): "all" | "channels" | "off" {
-	return value && (CHAT_TOOL_MODES as readonly string[]).includes(value) ? (value as "all" | "channels" | "off") : "off";
 }

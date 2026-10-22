@@ -1,12 +1,3 @@
-import { Logger, ILogObj } from 'tslog';
-import { createLogger } from '@sirubot/utils';
+import { getAppLogger } from '@sirubot/app-kit';
 
-let logger: Logger<ILogObj> | null = null;
-
-export function getLogger(name: string) {
-	if (!logger) {
-		logger = createLogger('ShardManager');
-	}
-
-	return logger.getSubLogger({ name });
-}
+export const getLogger = getAppLogger('ShardManager');

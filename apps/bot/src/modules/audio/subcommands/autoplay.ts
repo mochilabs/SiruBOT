@@ -14,13 +14,13 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setName(name)
 		.setNameLocalizations({ ko })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '추천곡 자동재생을 켜거나 끕니다.' })
+		.setDescriptionLocalizations({ ko: '추천곡 자동재생을 켜거나 꺼요.' })
 		.addBooleanOption((option) =>
 			option
 				.setName('enabled')
 				.setNameLocalizations({ ko: '사용' })
 				.setDescription('Enable or disable autoplay of related tracks')
-				.setDescriptionLocalizations({ ko: '추천곡 자동재생을 켜거나 끕니다.' })
+				.setDescriptionLocalizations({ ko: '추천곡 자동재생을 켜거나 꺼요.' })
 		);
 }
 

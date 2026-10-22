@@ -5,7 +5,7 @@ import { ChannelType, ComponentType, Message, MessageFlags, StringSelectMenuInte
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;

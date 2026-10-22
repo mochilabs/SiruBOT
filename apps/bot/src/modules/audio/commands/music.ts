@@ -93,7 +93,7 @@ export class MusicCommand extends Command {
 		}
 
 		// 기존에는 명령어마다 달랐던 precondition을 서브커맨드별로 실행해요.
-		// (하나의 명령어에 합치면서 union으로 걸면 /음악 가사 같은 가벼운 명령어까지 음성채널을 요구하게 돼요)
+		// (하나의 명령어에 합치면서 union으로 걸면 /음악 가사 같은 가벼운 명령어까지 음성 채널을 요구하게 돼요)
 		await runSubcommandPreconditions(this, interaction, subcommand.preconditions);
 
 		await subcommand.run(interaction);

@@ -1,10 +1,11 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
-import { ApplicationIntegrationType, AttachmentBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
-import { fetchOhaasa, getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
+import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../utils/ohaasaService.ts';
+import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
 
 function formatDate(raw: string): string {
 	const compact = raw.replace(/\//g, '');
@@ -92,15 +93,11 @@ export class OhaasaCommand extends Command {
 		try {
 			daily = await fetchOhaasaKo();
 		} catch (e) {
-			try {
-				daily = await fetchOhaasa();
-			} catch {
-				throw new UserError({
-					identifier: 'ohaasa_fetch_failed',
-					message: `${emoji('error')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
-					context: { ephemeral: true }
-				});
-			}
+			throw new UserError({
+				identifier: 'ohaasa_fetch_failed',
+				message: `${emoji('error')} 운세 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요. (${e instanceof Error ? e.message : String(e)})`,
+				context: { ephemeral: true }
+			});
 		}
 
 		let targetZodiacCode = zodiacOption;
@@ -127,25 +124,20 @@ export class OhaasaCommand extends Command {
 			}
 		}
 
-		// 이미지(갤러리)를 텍스트보다 먼저 넣어요 — Components V2는 컴포넌트 추가 순서로 렌더돼요.
-		const container = createContainer();
-
-		// 별자리 지정 시 운세 카드 요약 이미지를 본문 위에 첨부해요 (실패하면 텍스트만).
-		// 카드는 별자리·순위·행운의 아이템/열쇠·날짜만 그려요 — 운세 설명과 럭키 컬러는 아래 본문 전용.
-		let files: AttachmentBuilder[] | undefined;
+		// 본문: 제목·날짜·별자리·순위·운세 설명·럭키 정보·출처/번역 안내 — 복사하기 쉬운 텍스트예요.
 		let target: HoroscopeData | null = null;
 		if (targetZodiacCode) {
 			target = this.resolveTarget(daily, targetZodiacCode);
 		}
 
-		// 본문: 제목·날짜·별자리·순위·운세 설명·럭키 정보·출처/번역 안내 — 복사하기 쉬운 텍스트예요.
+		// 본문 라인: 별자리 지정이면 단일 운세, 아니면 TOP 3 요약이에요.
+		const container = createContainer();
 		const lines = target ? buildSingleLines(daily, target) : buildTopLines(daily);
 		if (autoNote) lines.push('', autoNote);
 		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 
 		await interaction.editReply({
 			components: [container],
-			...(files ? { files } : {}),
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

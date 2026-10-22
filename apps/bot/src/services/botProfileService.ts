@@ -18,7 +18,7 @@
  */
 import { container } from '@sapphire/framework';
 import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
-import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { Guild, PermissionFlagsBits } from 'discord.js';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
@@ -255,7 +255,8 @@ export class BotProfileService {
 				updatedAt: Date.now()
 			};
 
-			publish.publishBotProfileState(guild.id, JSON.stringify(state));
+			// SEC-006: data-api 허브가 fail-closed 검증을 하므로 서명 봉투로 감싸 보내요.
+			publish.publishBotProfileState(guild.id, wrapRedisMessage(this.signingKey, state));
 		} catch (error) {
 			this.logger.debug(`봇 프로필 상태 퍼블리시 실패 (guild ${guild.id}): ${error}`);
 		}

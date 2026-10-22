@@ -12,6 +12,7 @@ export default defineConfig({
       // 서브경로는 확장자 없이 import하므로 .ts를 붙여 매핑해요 (미부착 시 "Cannot find package").
       { find: /^@sirubot\/utils$/, replacement: path.join(rootDir, "packages/utils/src/index.ts") },
       { find: /^@sirubot\/utils\/(.*)$/, replacement: path.join(rootDir, "packages/utils/src/$1.ts") },
+      { find: /^@sirubot\/app-kit$/, replacement: path.join(rootDir, "packages/app-kit/src/index.ts") },
       // dashboard tsconfig paths(@/*) — 워크스페이스 스크립트가 이 루트 config를 공유하므로 함께 등록.
       { find: /^@\//, replacement: path.join(rootDir, "apps/dashboard/src") + "/" },
     ],

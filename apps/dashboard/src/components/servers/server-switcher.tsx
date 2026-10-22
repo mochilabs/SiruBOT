@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Popover } from "@base-ui/react/popover";
 import { Check, ChevronDown, Search } from "lucide-react";
-import useSWR from "swr";
 
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { discordGuildIconUrl } from "@/lib/discord-cdn";
+import { useAuthedSWR } from "@/lib/swr";
 import { buildInviteUrl } from "@/utils";
 
 import { hasUnsavedSettings } from "./settings-shared";
@@ -30,7 +30,8 @@ function GuildIcon({ id, name, icon }: { id: string; name: string; icon: string 
 export function ServerSwitcher({ guildId, guildName, icon }: { guildId: string; guildName: string; icon: string | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data, error, isLoading, mutate } = useSWR<ServerListResponse>("/api/servers");
+  // 세션 게이트는 useAuthedSWR이 담당해요 — servers/page.tsx와 같은 URL·계약
+  const { data, error, isLoading, mutate } = useAuthedSWR<ServerListResponse>("/api/servers", "/servers");
   const [query, setQuery] = useState("");
   const [desktopOpen, setDesktopOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

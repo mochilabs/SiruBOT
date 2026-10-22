@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RedisClientType } from '@redis/client';
-import { CachedQueueStore } from './queueStore.ts';
+import { CachedQueueStore, QUEUE_WRITE_COALESCE_MS } from './queueStore.ts';
 
 const { getSubLogger } = vi.hoisted(() => ({ getSubLogger: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -169,5 +169,145 @@ describe('CachedQueueStore pending writes', () => {
 		expect(redis.del).not.toHaveBeenCalled();
 		expect(redis.set).toHaveBeenCalledWith('lavalink/queue/g1', 'V2', { EX: QUEUE_TTL_SECONDS });
 		expect(pendingCount(store)).toBe(0);
+	});
+});
+
+const EMPTY_QUEUE = JSON.stringify({ current: null, previous: [], tracks: [] });
+
+describe('CachedQueueStore cache-first reads', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('reads from memory after a single redis.get', async () => {
+		const { redis, handle } = makeRedis(async () => 'FROM-REDIS');
+		const store = new CachedQueueStore(handle);
+
+		await expect(store.get('g1')).resolves.toBe('FROM-REDIS');
+		await expect(store.get('g1')).resolves.toBe('FROM-REDIS');
+		await expect(store.get('g1')).resolves.toBe('FROM-REDIS');
+
+		expect(redis.get).toHaveBeenCalledTimes(1);
+	});
+
+	it('goes back to redis only after the memory ttl expires', async () => {
+		let reads = 0;
+		const { redis, handle } = makeRedis(async () => `FROM-REDIS-${++reads}`);
+		const store = new CachedQueueStore(handle);
+
+		await expect(store.get('g1')).resolves.toBe('FROM-REDIS-1');
+		await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1);
+		await expect(store.get('g1')).resolves.toBe('FROM-REDIS-2');
+
+		expect(redis.get).toHaveBeenCalledTimes(2);
+	});
+
+	it('serves the newest snapshot inside the coalesce window without redis', async () => {
+		const { redis, handle } = makeRedis(async () => 'STALE-REDIS');
+		const store = new CachedQueueStore(handle);
+
+		await store.set('g1', 'V1');
+		await store.set('g1', 'V2');
+
+		await expect(store.get('g1')).resolves.toBe('V2');
+		expect(redis.get).not.toHaveBeenCalled();
+		expect(redis.set).not.toHaveBeenCalled();
+	});
+
+	it('keeps a deleted queue invisible while the tombstone delete is in flight', async () => {
+		let releaseDelete!: (removed: number) => void;
+		const { redis, handle } = makeRedis(async () => 'STALE-REDIS');
+		redis.del.mockImplementation(
+			() =>
+				new Promise<number>((resolve) => {
+					releaseDelete = resolve;
+				})
+		);
+		const store = new CachedQueueStore(handle);
+
+		const deleting = store.delete('g1');
+		await expect(store.get('g1')).resolves.toBe(EMPTY_QUEUE);
+		expect(redis.get).not.toHaveBeenCalled();
+
+		releaseDelete(1);
+		await deleting;
+	});
+});
+
+describe('CachedQueueStore write-behind coalesce', () => {
+	beforeEach(() => {
+		getSubLogger.mockReturnValue(stubLogger);
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('coalesces N sets into a single redis.set of the last snapshot', async () => {
+		const { redis, handle } = makeRedis();
+		const store = new CachedQueueStore(handle);
+
+		for (let i = 1; i <= 5; i++) {
+			await store.set('g1', `V${i}`);
+		}
+		expect(redis.set).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(QUEUE_WRITE_COALESCE_MS);
+
+		expect(redis.set).toHaveBeenCalledTimes(1);
+		expect(redis.set).toHaveBeenCalledWith('lavalink/queue/g1', 'V5', { EX: QUEUE_TTL_SECONDS });
+		expect(pendingCount(store)).toBe(0);
+	});
+
+	it('opens a new window for writes that arrive after a flush', async () => {
+		const { redis, handle } = makeRedis();
+		const store = new CachedQueueStore(handle);
+
+		await store.set('g1', 'V1');
+		await vi.advanceTimersByTimeAsync(QUEUE_WRITE_COALESCE_MS);
+		expect(redis.set).toHaveBeenCalledTimes(1);
+
+		await store.set('g1', 'V2');
+		expect(redis.set).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(QUEUE_WRITE_COALESCE_MS);
+
+		expect(redis.set).toHaveBeenCalledTimes(2);
+		expect(redis.set).toHaveBeenLastCalledWith('lavalink/queue/g1', 'V2', { EX: QUEUE_TTL_SECONDS });
+	});
+
+	it('flushes queued writes through the pending journal on shutdown drain', async () => {
+		const { redis, handle } = makeRedis();
+		const store = new CachedQueueStore(handle);
+
+		await store.set('g1', 'V1');
+		await store.set('g1', 'V2');
+		expect(pendingCount(store)).toBe(1);
+
+		await store.drainPendingWrites();
+
+		expect(redis.set).toHaveBeenCalledTimes(1);
+		expect(redis.set).toHaveBeenCalledWith('lavalink/queue/g1', 'V2', { EX: QUEUE_TTL_SECONDS });
+		expect(pendingCount(store)).toBe(0);
+
+		await vi.advanceTimersByTimeAsync(QUEUE_WRITE_COALESCE_MS * 2);
+		expect(redis.set).toHaveBeenCalledTimes(1);
+	});
+
+	it('deletes immediately instead of coalescing it', async () => {
+		const { redis, handle } = makeRedis();
+		const store = new CachedQueueStore(handle);
+
+		await store.set('g1', 'V1');
+		await store.delete('g1');
+
+		expect(redis.del).toHaveBeenCalledWith('lavalink/queue/g1');
+		expect(pendingCount(store)).toBe(0);
+
+		await vi.advanceTimersByTimeAsync(QUEUE_WRITE_COALESCE_MS * 2);
+		expect(redis.set).not.toHaveBeenCalled();
 	});
 });

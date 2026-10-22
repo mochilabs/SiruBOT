@@ -6,7 +6,7 @@ import { emoji } from '@sirubot/utils';
 export class ClientVoiceConnectable extends AllFlowsPrecondition {
 	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
-		return `${emoji('headphone')} 봇이 음성 채널에 접속할 수 없어요. 음성 채널 권한을 확인해주세요.`;
+		return `${emoji('headphone')} 봇이 음성 채널에 접속할 수 없어요. 음성 채널 권한을 확인해 주세요.`;
 	}
 	#ephemeral = false;
 

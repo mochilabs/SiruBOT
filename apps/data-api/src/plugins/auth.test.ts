@@ -19,11 +19,10 @@ describe('auth plugin', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('키가 없으면 fail-closed로 기동을 거절한다 (process.exit(1))', async () => {
-		const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+	it('키가 없으면 fail-closed로 기동을 거절한다', async () => {
+		// 라이브러리는 throw로 거절해요 — 진입점(index.ts main().catch)이 process.exit(1)로 이어져요.
 		const fastify = Fastify({ logger: false });
-		await auth(fastify, undefined);
-		expect(exitSpy).toHaveBeenCalledWith(1);
+		await expect(auth(fastify, undefined)).rejects.toThrow(/AUTH_KEY is not set/);
 		await fastify.close();
 	});
 
@@ -48,6 +47,15 @@ describe('auth plugin', () => {
 		const fastify = await buildTestApp(KEY);
 		const response = await fastify.inject({ method: 'GET', url: '/probe' });
 		expect(response.statusCode).toBe(401);
+		expect(response.json()).toEqual({ error: '인증 정보가 없어요.' });
+		await fastify.close();
+	});
+
+	it('잘못된 키는 401 한국어 문구를 반환한다', async () => {
+		const fastify = await buildTestApp(KEY);
+		const response = await fastify.inject({ method: 'GET', url: '/probe', headers: { authorization: 'wrong' } });
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toEqual({ error: '인증에 실패했어요.' });
 		await fastify.close();
 	});
 

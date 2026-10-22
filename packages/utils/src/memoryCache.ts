@@ -1,7 +1,6 @@
 export type MemoryCacheEntry<T> = {
 	data: T;
 	expiresAt: number;
-	lastUpdated: number;
 };
 
 export type MemoryCacheOptions = {
@@ -18,17 +17,18 @@ export class MemoryCache<Key, Value> {
 	}
 
 	public set(key: Key, value: Value) {
+		// JS Map은 insertion-ordered — 첫 엔트리가 가장 오래 전에 삽입된 항목이라 O(1)로 제거 가능.
 		if (!this.cache.has(key) && this.cache.size >= this.memoryCacheOptions.maxSize) {
-			this.evictOldest();
+			const oldestKey = this.cache.keys().next().value;
+			if (oldestKey !== undefined) {
+				this.cache.delete(oldestKey);
+			}
 		}
 
-		const now = Date.now();
-		const entry: MemoryCacheEntry<Value> = {
+		this.cache.set(key, {
 			data: value,
-			expiresAt: now + this.memoryCacheOptions.ttl,
-			lastUpdated: now
-		};
-		this.cache.set(key, entry);
+			expiresAt: Date.now() + this.memoryCacheOptions.ttl
+		});
 	}
 
 	public get(key: Key): Value | undefined {
@@ -40,7 +40,9 @@ export class MemoryCache<Key, Value> {
 			return undefined;
 		}
 
-		entry.lastUpdated = Date.now();
+		// 재삽입으로 최근 사용 항목을 맨 뒤로 승격 — O(1) LRU 갱신.
+		this.cache.delete(key);
+		this.cache.set(key, entry);
 		return entry.data;
 	}
 
@@ -66,29 +68,6 @@ export class MemoryCache<Key, Value> {
 		}
 
 		return true;
-	}
-
-	private evictOldest(): void {
-		let oldestKey: Key | undefined;
-		let oldestTime = Number.POSITIVE_INFINITY;
-
-		for (const [key, entry] of this.cache.entries()) {
-			// 만료된 항목이 있으면 우선 제거
-			if (entry.expiresAt < Date.now()) {
-				this.cache.delete(key);
-				return;
-			}
-
-			// 가장 오래 접근하지 않은 항목 찾기
-			if (entry.lastUpdated < oldestTime) {
-				oldestTime = entry.lastUpdated;
-				oldestKey = key;
-			}
-		}
-
-		if (oldestKey !== undefined) {
-			this.cache.delete(oldestKey);
-		}
 	}
 
 	public cleanup(): number {

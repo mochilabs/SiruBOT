@@ -2,7 +2,7 @@
 
 Discord 서버를 위한 음악 봇입니다. Lavalink 기반으로 안정적인 음악 스트리밍과 다양한 편의 기능을 제공합니다.
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 [![Discord.js](https://img.shields.io/badge/discord.js-v14.22.1-blue.svg)](https://discord.js.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue.svg)](https://www.typescriptlang.org/)
 
@@ -114,25 +114,25 @@ apps/bot/
    ```
 
 3. **환경 변수 설정**
-   
+
    `.env` 파일을 프로젝트 루트에 생성:
    ```env
    # Discord
    DISCORD_TOKEN=your_discord_bot_token
    OWNERS=USER_ID_1 USER_ID_2
-   
+
    # Database
    DATABASE_URL=postgresql://user:password@localhost:5432/sirubot
-   
+
    # Redis
    REDIS_URL=redis://localhost:6379
-   
+
    # Lavalink
    LAVALINK_HOSTS=[{"id":"main","host":"localhost","port":2333,"authorization":"youshallnotpass","secure":false}]
-   
+
    # Logging
    LOGLEVEL=2
-   
+
    # Optional
    BOT_ACTIVITY=음악 재생 중
    DEV_GUILD_IDS=GUILD_ID_1 GUILD_ID_2
@@ -280,7 +280,7 @@ yarn typecheck
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](../../LICENSE) 파일을 참조하세요.
 
 ---
 

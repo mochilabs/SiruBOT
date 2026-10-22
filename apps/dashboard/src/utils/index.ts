@@ -5,10 +5,10 @@ export function buildInviteUrl({ redirect_url, guildId }: { redirect_url?: strin
 
 /** 라바링크 소스 이름을 표시용 라벨로 바꿔요 — 모르는 소스는 원문을 그대로 돌려줘요 */
 const SOURCE_LABELS: Record<string, string> = {
-	"youtube-file-cache": "Youtube",
-	youtube: "Youtube",
-	youtubemusic: "Youtube Music",
-	"youtube-music": "Youtube Music",
+	"youtube-file-cache": "YouTube",
+	youtube: "YouTube",
+	youtubemusic: "YouTube Music",
+	"youtube-music": "YouTube Music",
 	spotify: "Spotify",
 	soundcloud: "SoundCloud",
 };

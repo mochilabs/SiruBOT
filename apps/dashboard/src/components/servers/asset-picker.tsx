@@ -21,7 +21,8 @@ import {
 	type GuildAsset,
 	useGuildAssets
 } from "@/hooks/use-guild-assets";
-import { ApiError, toApiError, toError } from "@/lib/api-error";
+import { ApiError, toApiError } from "@/lib/api-error";
+import { notifyApiError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 interface AssetPickerProps {
@@ -97,8 +98,7 @@ export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect
 					const asset = await uploadAssetFile(guildId, file);
 					uploadedUrls.push(asset.url);
 				} catch (err) {
-					const apiError = toError(err, `\`${file.name}\` 업로드에 실패했어요.`);
-					toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
+					notifyApiError(err, `\`${file.name}\` 업로드에 실패했어요.`);
 				}
 			}
 			if (uploadedUrls.length === 0) return;

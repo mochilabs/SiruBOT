@@ -72,7 +72,7 @@ export async function eventsubRoutes(fastify: FastifyInstance, options: { dispat
 								}
 							})();
 						} else {
-							logger.warn('stream.online 이벤트 필드가 불완전해요 — 알림을 건너뜌.');
+							logger.warn('stream.online 이벤트 필드가 불완전해요 — 알림을 건너뛸게요.');
 						}
 					}
 					return reply.code(200).send({ ok: true });

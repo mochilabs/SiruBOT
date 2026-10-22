@@ -28,6 +28,7 @@ COPY apps/shardmanager/package.json ./apps/shardmanager/
 COPY apps/data-api/package.json ./apps/data-api/
 COPY apps/storage/package.json ./apps/storage/
 COPY apps/notifier/package.json ./apps/notifier/
+COPY packages/app-kit/package.json ./packages/app-kit/
 COPY packages/prisma/package.json ./packages/prisma/
 COPY packages/shardclient/package.json ./packages/shardclient/
 COPY packages/utils/package.json ./packages/utils/

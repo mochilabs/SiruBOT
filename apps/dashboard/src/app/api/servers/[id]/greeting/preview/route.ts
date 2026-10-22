@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
+import { greetingConfigSchema, type GreetingKind } from "@sirubot/utils/memberGreeting";
 import { z } from "zod";
 
-import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
+import { createGuildApiHandler } from "@/lib/api-handler";
 import { auth } from "@/lib/auth";
-import { dataApiFailResponse, forwardDataApiImage } from "@/lib/data-api";
-import { greetingConfigSchema } from "@/lib/greeting-schema";
-import { guardRateLimit, rateKey, RENDER_RATE } from "@/lib/rate-limit";
-import { zodError } from "@/lib/schemas";
-import type { GreetingKind } from "@/types/member-greeting";
+import { dataApiFailResponse, forwardDataApiImage } from "@/lib/data-api/client";
+import { RENDER_RATE } from "@/lib/rate-limit";
 
 const previewSchema = z.object({
 	kind: z.enum(["welcome", "goodbye"], "kind는 welcome 또는 goodbye여야 해요."),
@@ -72,52 +70,45 @@ async function getGuildMeta(accessToken: string, id: string): Promise<GuildMeta>
  * context는 실제로 파악할 수 있는 값만 써요: 로그인 세션의 Discord id·이름·아바타와
  * Discord API 근사 멤버 수(60초 캐시). 이름은 세션 시점 값이라 닉네임 변경 후 재로그인 전이면 낡아 있어요.
  */
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-	const { id } = await params;
-	const authz = await authorizeGuildManage(id);
-	if (!authz.ok) return deniedGuildManage(authz);
+export const POST = createGuildApiHandler({
+	role: "manage",
+	rate: RENDER_RATE,
+	key: "greeting-preview",
+	schema: previewSchema,
+	handler: async ({ guildId, authz, data }) => {
+		try {
+			const session = await auth();
+			const name = session?.user?.name ?? null;
+			const displayName = name && name.length <= 64 ? name : "유저";
+			const meta = await getGuildMeta(authz.token, guildId);
 
-	const limited = await guardRateLimit(rateKey("greeting-preview", authz.userId, id), RENDER_RATE);
-	if (limited) return limited;
+			const result = await forwardDataApiImage("/v1/image/member-card", {
+				guildId,
+				kind: data.kind satisfies GreetingKind,
+				config: data.config,
+				context: {
+					userId: authz.userId,
+					username: displayName,
+					displayName,
+					guildName: meta.name,
+					avatarUrl: session?.user?.image ?? null,
+					memberCount: meta.memberCount,
+				},
+			});
+			if (!result.ok) {
+				return dataApiFailResponse(
+					result,
+					"미리보기를 그리지 못했어요. 이미지 서버 상태를 확인해 주세요.",
+				);
+			}
 
-	try {
-		const body: unknown = await request.json().catch(() => null);
-		const parsed = previewSchema.safeParse(body);
-		if (!parsed.success) {
-			return NextResponse.json({ error: zodError(parsed.error) }, { status: 400 });
+			return new Response(result.buffer, {
+				status: 200,
+				headers: { "Content-Type": result.contentType, "Cache-Control": "no-store" },
+			});
+		} catch (error) {
+			console.error(`Failed to render greeting preview (guild ${guildId}):`, error);
+			return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
 		}
-
-		const session = await auth();
-		const name = session?.user?.name ?? null;
-		const displayName = name && name.length <= 64 ? name : "유저";
-		const meta = await getGuildMeta(authz.token, id);
-
-		const result = await forwardDataApiImage("/v1/image/member-card", {
-			guildId: id,
-			kind: parsed.data.kind satisfies GreetingKind,
-			config: parsed.data.config,
-			context: {
-				userId: authz.userId,
-				username: displayName,
-				displayName,
-				guildName: meta.name,
-				avatarUrl: session?.user?.image ?? null,
-				memberCount: meta.memberCount,
-			},
-		});
-		if (!result.ok) {
-			return dataApiFailResponse(
-				result,
-				"미리보기를 그리지 못했어요. 이미지 서버 상태를 확인해 주세요.",
-			);
-		}
-
-		return new Response(result.buffer, {
-			status: 200,
-			headers: { "Content-Type": result.contentType, "Cache-Control": "no-store" },
-		});
-	} catch (error) {
-		console.error(`Failed to render greeting preview (guild ${id}):`, error);
-		return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
-	}
-}
+	},
+});

@@ -3,14 +3,15 @@
 import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { formatDuration } from "@sirubot/utils/time";
 import { ArrowLeft, Clock, History, Music2, Play, Trophy } from "lucide-react";
-import useSWR from "swr";
 
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDuration, formatRelativeTimeFromISO as formatRelativeTime } from "@/lib/format";
+import { formatRelativeTimeFromISO as formatRelativeTime } from "@/lib/format";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 
 export interface PlayerTrack {
 	id: string;
@@ -37,6 +38,8 @@ interface PlayerStats {
 	top: TopEntry[];
 	totalPlays: number;
 }
+
+const playerStatsFetcher = createApiFetcher<PlayerStats>("재생 기록을 불러오지 못했어요.");
 
 function SectionHeading({ icon, title }: { icon: React.ReactNode; title: string }) {
 	return (
@@ -113,7 +116,7 @@ function StatsSkeleton() {
 
 export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (track: PlayerTrack) => void }) {
 	const [tab, setTab] = useState<"top" | "recent">("top");
-	const { data, error, isLoading, mutate } = useSWR<PlayerStats>(`/api/servers/${guildId}/player`);
+	const { data, error, isLoading, mutate } = useGuildResource<PlayerStats>(guildId, "/player", { fetcher: playerStatsFetcher });
 
 	const handleRetry = useCallback(() => {
 		mutate();

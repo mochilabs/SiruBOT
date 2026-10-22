@@ -1,16 +1,12 @@
 import { container } from '@sapphire/framework';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
+import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 
 export type PlaybackReportType = 'track_start' | 'track_end' | 'track_stuck' | 'track_error' | 'queue_end' | 'playback_abort';
 /** 음성 서버(라바링크) 노드 단위 이벤트. 길드가 아니라 노드로 식별해요. */
 export type NodeReportType = 'node_disconnect' | 'node_error';
 
 const REPORT_TIMEOUT_MS = 5_000;
-
-function gatewayBaseUrl(): string | null {
-	const raw = (process.env.DATA_API_URL ?? '').trim().replace(/\/+$/, '');
-	return raw || null;
-}
 
 /**
  * data-api로 재생 이벤트 본문을 보내요. fire-and-forget: 실패해도 재생 경로에 영향 없어요.
@@ -19,13 +15,9 @@ function gatewayBaseUrl(): string | null {
 function postPlaybackEvent(body: Record<string, unknown>): void {
 	const base = gatewayBaseUrl();
 	if (!base) return;
-	const authKey = (process.env.DATA_API_AUTH_KEY ?? process.env.AUTH_KEY ?? '').trim();
 	void fetch(`${base}/v1/playback/events`, {
 		method: 'POST',
-		headers: {
-			'content-type': 'application/json',
-			...(authKey ? { authorization: authKey } : {})
-		},
+		headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
 		body: JSON.stringify(body),
 		signal: AbortSignal.timeout(REPORT_TIMEOUT_MS)
 	}).catch((error) => {

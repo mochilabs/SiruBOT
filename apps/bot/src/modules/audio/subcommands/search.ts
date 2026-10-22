@@ -11,7 +11,7 @@ import {
 } from 'discord.js';
 import { Player, SearchPlatform, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
 import * as view from '../view/search.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'search';
 export const ko = '검색';
@@ -35,13 +35,13 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setName(name)
 		.setNameLocalizations({ ko, 'en-US': 'search' })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '곡을 검색해서 5개 결과 중 골라 재생합니다.' })
+		.setDescriptionLocalizations({ ko: '곡을 검색해서 5개 결과 중 골라 재생해요.' })
 		.addStringOption((option) =>
 			option
 				.setName('query')
 				.setNameLocalizations({ ko: '검색어' })
 				.setDescription('Enter the keyword to search for.')
-				.setDescriptionLocalizations({ ko: '검색할 노래 제목이나 키워드를 입력해주세요.' })
+				.setDescriptionLocalizations({ ko: '검색할 노래 제목이나 키워드를 입력해 주세요.' })
 				.setAutocomplete(true)
 				.setRequired(true)
 		)
@@ -50,7 +50,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('platform')
 				.setNameLocalizations({ ko: '플랫폼' })
 				.setDescription('Select the platform to search for music.')
-				.setDescriptionLocalizations({ ko: '노래를 찾을 플랫폼을 선택해주세요.' })
+				.setDescriptionLocalizations({ ko: '노래를 찾을 플랫폼을 선택해 주세요.' })
 				.addChoices([
 					{ name: 'youtube', name_localizations: { ko: '유튜브' }, value: 'ytsearch' },
 					{ name: 'soundcloud', name_localizations: { ko: '사운드클라우드' }, value: 'scsearch' },
@@ -130,7 +130,7 @@ async function runSelection(
 			container.logger.error(`[search] failed to play selected track (guild ${interaction.guildId}): ${error}`);
 			await interaction
 				.editReply({
-					components: [errorView(`${emoji('error')} 선택한 곡을 재생하지 못했어요. 다시 /음악 검색 을 시도해 주세요.`)],
+					components: [errorView(`${emoji('error')} 선택한 곡을 재생하지 못했어요. 다시 /음악 검색을 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { users: [], roles: [] }
 				})

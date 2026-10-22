@@ -2,7 +2,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { filterCustomIdPrefix, filterView } from '../view/filter.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 

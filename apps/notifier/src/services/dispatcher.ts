@@ -13,11 +13,11 @@ const FAILURE_COUNTER_TTL_SECONDS = 30 * 24 * 60 * 60;
 const RETRY_AFTER_MAX_SECONDS = 60;
 const EMBED_TITLE_MAX = 256;
 
-/** 플랫폼별 임베드 accent color (치지직 브랜드색은 PR에서 최종 확정 예정) */
+/** 플랫폼별 임베드 accent color — 치지직은 브랜드 네온 그린(#00ffa3) */
 const PLATFORM_COLORS: Record<SocialPlatform, number> = {
 	youtube: 0xff0000,
 	twitch: 0x9146ff,
-	chzzk: 0x3a9afe
+	chzzk: 0x00ffa3
 };
 
 export interface SocialEmbed {
@@ -25,7 +25,8 @@ export interface SocialEmbed {
 	url: string;
 	color: number;
 	author?: { name: string };
-	thumbnail?: { url: string };
+	/** 라이브 섬네일 — 구독 showThumbnail이 켜져 있고 이벤트에 이미지가 있을 때만 실려요 */
+	image?: { url: string };
 	footer: { text: string };
 	timestamp: string;
 }
@@ -34,9 +35,9 @@ export interface SocialWebhookPayload {
 	content?: string;
 	embeds: SocialEmbed[];
 	allowed_mentions: { parse: string[]; roles?: string[] };
-	/** 이 메시지에서만 웨훅 이름을 바꿔요 (구독 webhookName 오버라이드) */
+	/** 이 메시지에서만 웹훅 이름을 바꿔요 (구독 webhookName 오버라이드) */
 	username?: string;
-	/** 이 메시지에서만 웨훅 프로필 사진을 바꿔요 (구독 webhookAvatarUrl 오버라이드) */
+	/** 이 메시지에서만 웹훅 프로필 사진을 바꿔요 (구독 webhookAvatarUrl 오버라이드) */
 	avatar_url?: string;
 }
 
@@ -78,27 +79,32 @@ export class SocialDispatcher {
 					createdAt: { lte: new Date(event.publishedAt) }
 				}
 			})
-			.catch(() => []);
+			.catch((error: unknown) => {
+				logger.error('구독 목록 조회 실패 — 이벤트 알림을 건너뛰어요:', String(error));
+				return [];
+			});
 		if (subscriptions.length === 0) return;
 
 		await Promise.allSettled(subscriptions.map((subscription) => this.deliver(subscription, event)));
 	}
 
-	private buildEmbed(event: SocialEvent): SocialEmbed {
+	private buildEmbed(event: SocialEvent, showThumbnail: boolean): SocialEmbed {
 		const title = event.title.length > EMBED_TITLE_MAX ? `${event.title.slice(0, EMBED_TITLE_MAX - 1)}…` : event.title;
 		return {
 			title,
 			url: event.url,
 			color: PLATFORM_COLORS[event.platform],
 			author: { name: event.author },
-			thumbnail: event.thumbnail ? { url: event.thumbnail } : undefined,
+			// 섬네일 표시가 꺼져 있거나 이벤트에 이미지가 없으면(Twitch) 조용히 생략해요.
+			image: showThumbnail && event.thumbnail ? { url: event.thumbnail } : undefined,
 			footer: { text: `${SOCIAL_PLATFORM_LABELS[event.platform]} 알림` },
 			timestamp: new Date(event.publishedAt).toISOString()
 		};
 	}
 
 	public buildPayload(subscription: SocialSubscription, event: SocialEvent): SocialWebhookPayload {
-		const embed = this.buildEmbed(event);
+		// showThumbnail이 없는 이전 행(migration 미적용)은 undefined — 기본값 ON으로 취급해요.
+		const embed = this.buildEmbed(event, subscription.showThumbnail !== false);
 		const template = subscription.messageTemplate;
 		const payload: SocialWebhookPayload = template
 			? {
@@ -108,8 +114,8 @@ export class SocialDispatcher {
 					allowed_mentions: { parse: [], roles: extractSocialTemplateRoleIds(template) }
 				}
 			: { embeds: [embed], allowed_mentions: { parse: [] } };
-		// 구독별 표시 오버라이드 — Discord 웨훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
-		// 웨훅 기본 표시는 그대로 두고, 수정하면 다음 알림부터 바로 반영돼요.
+		// 구독별 표시 오버라이드 — Discord 웹훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
+		// 웹훅 기본 표시는 그대로 두고, 수정하면 다음 알림부터 바로 반영돼요.
 		if (subscription.webhookName) payload.username = subscription.webhookName;
 		if (subscription.webhookAvatarUrl) payload.avatar_url = subscription.webhookAvatarUrl;
 		return payload;

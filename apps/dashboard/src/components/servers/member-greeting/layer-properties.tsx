@@ -1,5 +1,6 @@
 "use client";
 
+import type { GreetingLayer } from "@sirubot/utils/memberGreeting";
 import { Bold } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
@@ -8,7 +9,6 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { cn, radioArrowKeyDown } from "@/lib/utils";
-import type { GreetingLayer } from "@/types/member-greeting";
 
 import { clampRatio } from "./greeting-draw";
 
@@ -34,7 +34,7 @@ interface LayerPropertiesProps {
 /** 선택된 레이어의 속성 편집 — 타입별 필드 + 공통 x/y */
 export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: LayerPropertiesProps) {
 	if (!layer) {
-		return <p className="text-2xs text-muted-foreground">편집할 레이어를 선택하세요. 미리보기에서 레이어를 클릭하거나 위 목록에서 고를 수 있어요.</p>;
+		return <p className="text-sm text-muted-foreground">편집할 레이어를 선택하세요. 미리보기에서 레이어를 클릭하거나 위 목록에서 고를 수 있어요.</p>;
 	}
 
 	const patch = (partial: Partial<GreetingLayer>) => onPatchLayer(layer.id, partial);

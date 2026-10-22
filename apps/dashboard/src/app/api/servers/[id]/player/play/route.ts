@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { playerWebPlayUriSchema } from "@sirubot/utils";
+import { playerWebPlayUriSchema } from "@sirubot/utils/playerWeb";
 import { z } from "zod";
 
-import { authorizeGuildMember, deniedGuildMember } from "@/lib/api-guards";
-import { requestPlayerPlay } from "@/lib/data-api";
-import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { createGuildApiHandler } from "@/lib/api-handler";
+import { requestPlayerPlay } from "@/lib/data-api/player-web";
+import { WRITE_RATE } from "@/lib/rate-limit";
 
 /**
  * 곡 재생 요청 — 검색 결과의 uri(다시 재생 URL 포함)을 봇에 전달해요.
@@ -16,23 +16,18 @@ const playSchema = z.object({
   uri: playerWebPlayUriSchema,
 });
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const authz = await authorizeGuildMember(id);
-  if (!authz.ok) return deniedGuildMember(authz);
+export const POST = createGuildApiHandler({
+  role: "member",
+  rate: WRITE_RATE,
+  key: "player-play",
+  schema: playSchema,
+  invalidMessage: "재생할 곡 주소 형식이 올바르지 않아요.",
+  handler: async ({ guildId, authz, data }) => {
+    const result = await requestPlayerPlay(guildId, authz.userId, data.uri);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error ?? "재생을 시작하지 못했어요." }, { status: result.status });
+    }
 
-  const limited = await guardRateLimit(rateKey("player-play", authz.userId, id), WRITE_RATE);
-  if (limited) return limited;
-
-  const parsed = playSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "재생할 곡 주소 형식이 올바르지 않아요." }, { status: 400 });
-  }
-
-  const result = await requestPlayerPlay(id, authz.userId, parsed.data.uri);
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error ?? "재생을 시작하지 못했어요." }, { status: result.status });
-  }
-
-  return NextResponse.json({ ok: true });
-}
+    return NextResponse.json({ ok: true });
+  },
+});

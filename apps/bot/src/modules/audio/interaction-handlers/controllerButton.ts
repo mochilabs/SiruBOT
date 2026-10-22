@@ -9,7 +9,7 @@ import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { buildControllerCardPayload } from '../lavalink/player/controllerPayload.ts';
 import { currentChapterIndex } from '../lavalink/player/chapters.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 export default class ControllerButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -102,7 +102,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('tools')} 알 수 없는 버튼 명령어입니다. (${command})`)]
+					components: [errorView(`${emoji('tools')} 알 수 없는 버튼 명령어예요. (${command})`)]
 				});
 				break;
 		}
@@ -306,7 +306,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			default:
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('error')} 알 수 없는 큐 명령어입니다.`)]
+					components: [errorView(`${emoji('error')} 알 수 없는 큐 명령어예요.`)]
 				});
 				break;
 		}

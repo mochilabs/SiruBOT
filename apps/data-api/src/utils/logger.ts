@@ -1,6 +1,3 @@
-import { Logger, type ILogObj } from 'tslog';
-import { createLogger } from '@sirubot/utils';
+import { getAppLogger } from '@sirubot/app-kit';
 
-export function getLogger(name: string): Logger<ILogObj> {
-	return createLogger('DataApi').getSubLogger({ name });
-}
+export const getLogger = getAppLogger('DataApi');

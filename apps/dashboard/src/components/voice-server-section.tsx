@@ -1,11 +1,12 @@
 "use client";
 
+import { formatUptime } from "@sirubot/utils/time";
 import { Activity, Cpu, HardDrive, Server } from "lucide-react";
 import useSWR from "swr";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { formatMemory, formatUptime } from "@/lib/format";
+import { formatMemory } from "@/lib/format";
 import type { VoiceServerNode } from "@/lib/voice-server-stats";
 
 /** Lavalink CPU 부하는 0~1 비율이라 퍼센트로 바꿔요 */

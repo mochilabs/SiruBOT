@@ -1,6 +1,8 @@
 import { createClient, type RedisClientType } from "@redis/client";
 import { randomBytes } from "node:crypto";
 
+import { getRedisUrl } from "@/lib/env";
+
 /**
  * 대시보드 전용 Redis 연결 — rate-limit·guild 캐시·refresh 뮤텍스의 공용 기반.
  *
@@ -27,7 +29,7 @@ if (!globalStore.__sirubotDashboardRedis) {
 const state = globalStore.__sirubotDashboardRedis;
 
 export function isRedisEnabled(): boolean {
-	return Boolean(process.env.REDIS_URL);
+	return Boolean(getRedisUrl());
 }
 
 /** 전체 키에 접두사를 붙여 봇·data-api와 격리한다. */
@@ -41,7 +43,7 @@ function getClient(): Promise<RedisClientType | null> {
 
 	if (!state.connecting) {
 		state.connecting = (async () => {
-			const client = createClient({ url: process.env.REDIS_URL }) as RedisClientType;
+			const client = createClient({ url: getRedisUrl() }) as RedisClientType;
 			client.on("error", () => {
 				/* 요청 경로를 죽이지 않는다 — 명령 단위 try/catch가 처리 */
 			});
@@ -108,17 +110,6 @@ export async function redisSetNx(key: string, value: string, ttlMs: number): Pro
 	try {
 		const reply = await client.set(k(key), value, { NX: true, expiration: { type: "PX", value: ttlMs } });
 		return reply === "OK";
-	} catch {
-		return false;
-	}
-}
-
-/** DEL — 삭제 여부 반환 */
-export async function redisDel(key: string): Promise<boolean> {
-	const client = await ready();
-	if (!client) return false;
-	try {
-		return (await client.del(k(key))) > 0;
 	} catch {
 		return false;
 	}

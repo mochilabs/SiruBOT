@@ -13,7 +13,7 @@ SiruBOT
   <b>English</b> | <a href="README.ko.md">한국어</a>
 </p>
 
-A Discord music bot built with Discord.js and Lavalink. The repository also contains a Next.js dashboard, a data API, and a shard manager, organized as a Yarn workspaces monorepo.
+A Discord music bot built with Discord.js and Lavalink. The repository also contains a Next.js dashboard, a data API, a shard manager, a storage service, and a notifier service, organized as a Yarn workspaces monorepo.
 
 ---
 
@@ -25,8 +25,11 @@ sirubot/
 │   ├── bot/           # Discord bot application
 │   ├── dashboard/     # Next.js web dashboard
 │   ├── data-api/      # External data gateway (cache + LLM batch jobs)
-│   └── shardmanager/  # Shard management server
+│   ├── notifier/      # Social alert service (webhooks + live-stream schedulers)
+│   ├── shardmanager/  # Shard management server
+│   └── storage/       # Object storage service (generated images and assets)
 └── packages/
+    ├── app-kit/       # Shared Fastify helpers (auth, env validation, logger)
     ├── prisma/        # Database schema and client
     ├── shardclient/   # Shard client library
     └── utils/         # Shared utility functions and modules
@@ -103,7 +106,7 @@ TRANSLATION_MODEL=your_model_name
 DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
 ```
 
-The bot uses the gateway only when `DATA_API_URL` is set in `apps/bot/.env`. The dashboard defaults to `http://localhost:3002`. Set `DATA_API_AUTH_KEY` or `AUTH_KEY` to the same value in the data API, bot, and dashboard environments. Requests send the key as the raw `Authorization` header value, without a `Bearer` prefix. Only `/api/health` is unauthenticated.
+The bot requires `DATA_API_URL` in `apps/bot/.env` for gateway-backed features; without it those calls fail with an error. The dashboard defaults to `http://localhost:3002`. Set `DATA_API_AUTH_KEY` or `AUTH_KEY` to the same value in the data API, bot, and dashboard environments. Requests send the key as the raw `Authorization` header value, without a `Bearer` prefix. Only `/api/health` is unauthenticated.
 
 ---
 
@@ -129,7 +132,7 @@ Background jobs (single instance, jittered schedule):
 - **Horoscope translation**: daily at KST 06:50. It keeps Redis warm so shard requests do not need to call the LLM.
 - **Memory tidy (nightly pass)**: daily at midnight, compacts per-user long-term memory via LLM. It runs only when both `DATABASE_URL` and the translation provider are configured.
 
-The gateway listens on port `3002` by default. When `DATA_API_URL` is not set in the bot environment, the bot uses its direct provider integrations instead.
+The gateway listens on port `3002` by default. The bot and the dashboard reach external providers only through the gateway; the gateway owns all provider integrations.
 
 ```bash
 # Build dependencies, then run the data API
@@ -151,8 +154,11 @@ yarn install
 # Generate Prisma client files
 yarn generate
 
-# Run all configured apps in development mode concurrently
+# Start the dashboard dev server (the only workspace with a dev script)
 yarn dev
+
+# Rebuild the backend apps and shared packages on change (watch mode)
+yarn watch
 
 # Apply database migrations in development
 yarn workspace @sirubot/prisma migrate:dev
@@ -167,18 +173,18 @@ yarn test
 yarn build
 ```
 
-For local development, create the per-app environment files described above, then run `yarn dev`. Generate the Prisma client with `yarn generate` before typechecking or building.
+For local development, create the per-app environment files described above. Then run `yarn dev` for the dashboard, and run `yarn watch` for the backend apps (bot, data-api, notifier, storage, shardmanager) — it rebuilds them on change but does not start them. Start a backend app in a second terminal with `yarn workspace @sirubot/<name> start`. Generate the Prisma client with `yarn generate` before typechecking or building.
 
 ### Filtering Specific Projects (Turbo Filter)
 
 To build or run dev servers for single projects rather than the entire monorepo, utilize Turbo's filtering syntax:
 
 ```bash
-# Start bot in development mode
-turbo dev --filter=@sirubot/bot
-
-# Start dashboard in development mode
+# Start the dashboard dev server
 turbo dev --filter=@sirubot/dashboard
+
+# Rebuild the bot on change (backend apps have no dev script, they use watch)
+turbo run watch --filter=@sirubot/bot
 
 # Build the shared utils package
 turbo build --filter=@sirubot/utils
@@ -188,13 +194,13 @@ turbo build --filter=@sirubot/utils
 
 ## 🐳 Docker Deployment Guide
 
-The root Dockerfile builds separate images for the bot, dashboard, shard manager, and data API. Select a target with `--target` and provide that service's environment variables at runtime. The checked-in Compose file is a partial example: the application services and Redis/PostgreSQL services are commented out.
+The root Dockerfile builds separate images for the bot, dashboard, shard manager, data API, storage, and notifier. Select a target with `--target` and provide that service's environment variables at runtime. The checked-in Compose file is a partial example: the application services and Redis/PostgreSQL services are commented out.
 
 ```bash
 # Build the bot image
 docker build --target bot -t sirubot-bot:latest .
 
-# Other targets: dashboard, shardmanager, data-api
+# Other targets: dashboard, shardmanager, data-api, storage, notifier
 ```
 
 Configure PostgreSQL, Redis, Lavalink, and the required service credentials before starting the containers. The bot image runs Prisma migrations on startup.

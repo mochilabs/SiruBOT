@@ -1,4 +1,4 @@
-import { Logger, ILogObj, ISettingsParam } from 'tslog';
+import { type ILogObj, type ISettingsParam } from 'tslog';
 
 const LOG_LEVEL_MAP: Record<string, number> = {
 	silly: 0,
@@ -27,8 +27,4 @@ export function getLoggerSettings(name: string, settings?: Partial<ISettingsPara
 		hideLogPositionForProduction: typeof process !== 'undefined' && process.env?.NODE_ENV === 'production',
 		...settings
 	};
-}
-
-export function createLogger(name: string, settings?: Partial<ISettingsParam<ILogObj>>): Logger<ILogObj> {
-	return new Logger<ILogObj>(getLoggerSettings(name, settings));
 }

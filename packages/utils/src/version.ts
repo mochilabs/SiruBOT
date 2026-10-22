@@ -40,15 +40,12 @@ function getGitBranch(): string {
 
 class VersionInfo {
 	private static instance: VersionInfo;
-	private gitHash: string;
-	private gitBranch: string;
-	private gitDirty: boolean;
+	// git 정보는 첫 사용 시점에 계산해요 — 모듈 import만으로 git 프로세스 4회를 스폰하지 않기 위함이에요.
+	private gitDirty?: boolean;
+	private gitHash?: string;
+	private gitBranch?: string;
 
-	private constructor() {
-		this.gitDirty = isGitDirty();
-		this.gitHash = getGitHash();
-		this.gitBranch = getGitBranch();
-	}
+	private constructor() {}
 
 	public static getInstance(): VersionInfo {
 		if (!VersionInfo.instance) {
@@ -62,23 +59,30 @@ class VersionInfo {
 	}
 
 	public getGitHash(): string {
-		return this.gitHash.slice(0, 7);
+		return this.resolveGitHash().slice(0, 7);
 	}
 
 	public getGitFullHash(): string {
-		return this.gitHash;
+		return this.resolveGitHash();
 	}
 
 	public isGitDirty(): boolean {
+		this.gitDirty ??= isGitDirty();
 		return this.gitDirty;
 	}
 
 	public getGitBranch(): string {
+		this.gitBranch ??= getGitBranch();
 		return this.gitBranch;
 	}
 
 	public getNodeVersion(): string {
 		return process.version;
+	}
+
+	private resolveGitHash(): string {
+		this.gitHash ??= getGitHash();
+		return this.gitHash;
 	}
 }
 

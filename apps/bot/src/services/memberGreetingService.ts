@@ -31,7 +31,7 @@ import {
 	renderGreetingTemplate,
 	validateGreetingConfig
 } from '@sirubot/utils';
-import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import {
 	AttachmentBuilder,
 	ContainerBuilder,
@@ -88,8 +88,8 @@ export interface MemberGreetingTestState {
 	ok: boolean;
 	/** 실패 때만 담아요 */
 	error?: string;
-	/** ISO 8601 */
-	sentAt: string;
+	/** 전송 시각 — epoch milliseconds (number). data-api 허브와 대시보드 상태 계약이 number예요. */
+	sentAt: number;
 }
 
 interface SendBroadcastPayload {
@@ -259,10 +259,11 @@ export class MemberGreetingService {
 			requestId,
 			kind,
 			ok: result.ok,
-			sentAt: new Date().toISOString()
+			sentAt: Date.now()
 		};
 		if (result.error) state.error = result.error;
-		store.publishMemberGreetingState(guildId, JSON.stringify(state));
+		// SEC-006: data-api 허브가 fail-closed 검증을 하므로 서명 봉투로 감싸 보내요.
+		store.publishMemberGreetingState(guildId, wrapRedisMessage(this.signingKey, state));
 		this.logger.debug(`멤버 인사 테스트 결과 퍼블리시 (guild ${guildId}, kind ${kind}, ok ${result.ok})`);
 	}
 

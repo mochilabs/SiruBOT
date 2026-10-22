@@ -1,3 +1,5 @@
+import { getDiscordOAuthEnv } from "@/lib/env";
+
 export interface DiscordTokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -29,8 +31,8 @@ export async function requestDiscordToken(refreshToken: string): Promise<Refresh
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID ?? "",
-        client_secret: process.env.DISCORD_CLIENT_SECRET ?? "",
+        client_id: getDiscordOAuthEnv().clientId ?? "",
+        client_secret: getDiscordOAuthEnv().clientSecret ?? "",
         grant_type: "refresh_token",
         refresh_token: refreshToken,
       }),

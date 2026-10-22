@@ -1,6 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { parseTimeToMs } from '../utils/timeParse.ts';
 import * as view from '../view/seek.ts';
 
 export const name = 'seek';
@@ -24,32 +25,6 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		);
 }
 
-/**
- * Parses time strings like "1:30", "90", "0:45", "1:02:30"
- * Returns milliseconds or null if invalid
- */
-function parseTime(input: string): number | null {
-	const trimmed = input.trim();
-
-	if (trimmed.includes(':')) {
-		const parts = trimmed.split(':').map(Number);
-		if (parts.some(isNaN)) return null;
-
-		if (parts.length === 2) {
-			const [minutes, seconds] = parts;
-			return (minutes * 60 + seconds) * 1000;
-		} else if (parts.length === 3) {
-			const [hours, minutes, seconds] = parts;
-			return (hours * 3600 + minutes * 60 + seconds) * 1000;
-		}
-		return null;
-	}
-
-	const seconds = Number(trimmed);
-	if (isNaN(seconds)) return null;
-	return seconds * 1000;
-}
-
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
 	const player = container.audio.getPlayer(interaction.guildId);
 	const current = player?.queue.current;
@@ -64,7 +39,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	const timeStr = interaction.options.getString('time', true);
-	const positionMs = parseTime(timeStr);
+	const positionMs = parseTimeToMs(timeStr);
 
 	if (positionMs === null || positionMs < 0) {
 		throw new UserError({

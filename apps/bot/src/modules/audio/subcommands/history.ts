@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { errorView } from '../view/error.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'history';
 export const ko = '재생기록';

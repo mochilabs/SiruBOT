@@ -8,8 +8,8 @@ vi.mock('@sapphire/framework', () => ({ container: { db: { guild: { upsert } } }
 vi.mock('@sirubot/utils', async () => {
 	const { MemoryCache } = await import('../../../../packages/utils/src/memoryCache.ts');
 	const { normalizeCustomCommandPrefix } = await import('../../../../packages/utils/src/customCommand.ts');
-	const { normalizeEmbedFixSites } = await import('../../../../packages/utils/src/chatTools.ts');
-	return { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites };
+	const { normalizeChatToolMode, normalizeEmbedFixSites } = await import('../../../../packages/utils/src/chatTools.ts');
+	return { MemoryCache, normalizeCustomCommandPrefix, normalizeChatToolMode, normalizeEmbedFixSites };
 });
 
 function guild(id = 'guild', volume = 10): Guild {

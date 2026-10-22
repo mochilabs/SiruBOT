@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDuration } from "@sirubot/utils/time";
 import { type Virtualizer } from "@tanstack/react-virtual";
 import { Clock, Edit, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
 
@@ -15,7 +16,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDuration } from "@/lib/format";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist, Track } from "@/types/playlist";
 

@@ -93,7 +93,7 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 		`${emoji('scroll')} **텍스트 채널**: ${guild.textChannelId ? `<#${guild.textChannelId}>` : '설정 안 됨'}`,
 		`${emoji('music_note')} **음성 채널**: ${guild.voiceChannelId ? `<#${guild.voiceChannelId}>` : '설정 안 됨'}`,
 		`${emoji('pin')} **고정 채널**: ${guild.pinnedChannelId ? `<#${guild.pinnedChannelId}>` : '설정 안 됨'}`,
-		`${emoji('volume_up')} **임시 음성채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`
+		`${emoji('volume_up')} **임시 음성 채널**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`
 	];
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
@@ -341,7 +341,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 
 function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuilder {
 	const lines = [
-		`### ${emoji('volume_up')} 임시 음성채널 설정`,
+		`### ${emoji('volume_up')} 임시 음성 채널 설정`,
 		``,
 		`**상태**: ${guild.jtcEnabled ? '켜짐' : '꺼짐'}`,
 		`**생성 위치**: ${guild.jtcCategoryId ? `<#${guild.jtcCategoryId}>` : '`미설정`'}`,

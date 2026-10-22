@@ -12,6 +12,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("tab=music"),
   usePathname: () => "/servers/a",
 }));
+vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "authenticated" }) }));
+vi.mock("@/hooks/use-session-redirect", () => ({ useSessionExpiredRedirect: () => vi.fn() }));
 vi.mock("swr", () => ({ default: () => ({ data: { guilds: [
   { id: "a", name: "현재 서버", icon: null, isManageable: true, isInstalled: true },
   { id: "b", name: "다음 서버", icon: null, isManageable: true, isInstalled: true },

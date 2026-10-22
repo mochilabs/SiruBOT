@@ -1,7 +1,3 @@
-import { createLogger } from '@sirubot/utils';
+import { getAppLogger } from '@sirubot/app-kit';
 
-const logger = createLogger('Notifier');
-
-export function getLogger(name: string) {
-	return logger.getSubLogger({ name });
-}
+export const getLogger = getAppLogger('Notifier');

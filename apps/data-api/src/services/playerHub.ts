@@ -13,6 +13,7 @@ import {
 	type PlayerStatePayload,
 	type PlayerStateResponse
 } from '@sirubot/utils';
+import { resolveRedisSigningKey, unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { getLogger } from '../utils/logger.ts';
 import { HubSubscriber } from '../utils/hubSubscriber.ts';
 
@@ -73,8 +74,16 @@ export function handlePlayerStateMessage(message: string, channel: string): void
 	const guildId = guildIdFromPlayerStateChannel(channel);
 	if (!guildId) return;
 
+	// 서명 키는 REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 매 메시지마다 읽어 테스트에서 환경을 스왑할 수 있게 해요.
+	// 키가 있는 환경에서는 서명 봉투를 검증해 무서명 위조 프레임을 거부해요 (SEC-006, guildDataHub와 동일 계약).
+	const body = unwrapRedisMessage(resolveRedisSigningKey(process.env), message);
+	if (body === null) {
+		logger.warn(`Rejected player state from ${channel} with invalid signature`);
+		return;
+	}
+
 	try {
-		const result = playerStateSchema.safeParse(JSON.parse(message));
+		const result = playerStateSchema.safeParse(JSON.parse(body));
 		if (!result.success) {
 			logger.debug(`Malformed player state from ${channel}: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
 			return;

@@ -1,9 +1,7 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { envParseArray } from '@skyra/env-utilities';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowflake } from 'discord.js';
-
-const OWNERS = envParseArray('OWNERS');
+import { OWNERS } from '../../../lib/owners.ts';
 
 export class OwnerOnlyPrecondition extends AllFlowsPrecondition {
 	// 스토어 로드 시점엔 이모지 매핑이 아직 안 로드되므로 접근 때 평가해요

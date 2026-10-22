@@ -17,6 +17,7 @@
     "dependencies": {
         "@prisma/adapter-pg": "^7.7.0",
         "@redis/client": "^5.8.2",
+        "@sirubot/app-kit": "workspace:^",
         "@sirubot/prisma": "*",
         "@sirubot/utils": "*",
         "fast-xml-parser": "^5.11.2",

@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import { getToken } from "next-auth/jwt";
 
+import { getSessionSecret } from "@/lib/env";
+
 /**
  * 서버(Route Handler/Server Component) 전용 — 현재 요청의 JWT에서 Discord accessToken을 읽어요.
  * accessToken은 session 콜백에서 노출하지 않으므로(클라이언트 유출 방지),
@@ -22,7 +24,7 @@ export interface SessionTokenState {
 
 /** 토큰과 만료 시각을 함께 읽어요 — 로그인 페이지가 "실제로 쓸 수 있는 세션"인지 판단할 때 써요. */
 export async function getSessionTokenState(): Promise<SessionTokenState> {
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+  const secret = getSessionSecret();
   if (!secret) return { accessToken: null, expiresAt: null };
 
   const reqHeaders = await headers();

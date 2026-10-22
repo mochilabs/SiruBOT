@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import useSWR from "swr";
 
 import { useToast } from "@/components/ui/toast";
 import { type ApiError, toApiError, toError } from "@/lib/api-error";
+import { notifyApiError } from "@/lib/notify";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 
 export interface GuildAsset {
 	id: string;
@@ -28,7 +29,7 @@ interface DeleteAssetResponse {
 	referencedBy: string[];
 }
 
-export interface UseGuildAssetsResult {
+interface UseGuildAssetsResult {
 	assets: GuildAsset[];
 	error: ApiError | null;
 	loading: boolean;
@@ -40,21 +41,15 @@ export interface UseGuildAssetsResult {
 	refresh: () => void;
 }
 
-type ToastApi = ReturnType<typeof useToast>;
-
-/** 액션 실패 토스트 — 서버의 한국어 메시지를 우선 보여주고, 재시도 가능한 오류만 안내를 덧붙여요 */
-function reportError(toast: ToastApi, error: unknown, fallback: string): void {
-	const apiError = toError(error, fallback);
-	toast.error(apiError.message, apiError.retryable ? "잠시 후 다시 시도해 주세요." : undefined);
-}
+const assetsFetcher = createApiFetcher<GuildAssetsResponse>("이미지 에셋을 불러오지 못했어요.");
 
 /**
  * 길드 이미지 에셋 — 목록 조회(SWR)와 업로드·이름 변경·삭제 액션을 한곳에서 관리해요.
- * 목록은 전역 SWR fetcher 설정을 쓰므로 키만 넘기고, 액션은 성공 후 mutate로 재검증해요.
+ * 목록은 useGuildResource 세션 게이트 계약을 쓰고, 액션은 성공 후 mutate로 재검증해요.
  */
 export function useGuildAssets(guildId: string): UseGuildAssetsResult {
 	const toast = useToast();
-	const { data, error, isLoading, mutate } = useSWR<GuildAssetsResponse>(`/api/servers/${guildId}/assets`);
+	const { data, error, isLoading, mutate, guildUrl } = useGuildResource<GuildAssetsResponse>(guildId, "/assets", { fetcher: assetsFetcher });
 	const [uploading, setUploading] = useState(false);
 
 	const upload = useCallback(
@@ -67,11 +62,11 @@ export function useGuildAssets(guildId: string): UseGuildAssetsResult {
 					try {
 						const form = new FormData();
 						form.append("file", file);
-						const res = await fetch(`/api/servers/${guildId}/assets`, { method: "POST", body: form });
+						const res = await fetch(guildUrl, { method: "POST", body: form });
 						if (!res.ok) throw await toApiError(res, `\`${file.name}\` 업로드에 실패했어요.`);
 						uploaded += 1;
 					} catch (error) {
-						reportError(toast, error, `\`${file.name}\` 업로드에 실패했어요.`);
+						notifyApiError(error, `\`${file.name}\` 업로드에 실패했어요.`);
 					}
 				}
 				if (uploaded > 0) {
@@ -87,13 +82,13 @@ export function useGuildAssets(guildId: string): UseGuildAssetsResult {
 				setUploading(false);
 			}
 		},
-		[guildId, mutate, toast]
+		[guildUrl, mutate, toast]
 	);
 
 	const rename = useCallback(
 		async (id: string, name: string): Promise<boolean> => {
 			try {
-				const res = await fetch(`/api/servers/${guildId}/assets/${id}`, {
+				const res = await fetch(`${guildUrl}/${id}`, {
 					method: "PATCH",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ name })
@@ -103,17 +98,17 @@ export function useGuildAssets(guildId: string): UseGuildAssetsResult {
 				toast.success(`\`${name}\`(으)로 이름을 바꿨어요.`);
 				return true;
 			} catch (error) {
-				reportError(toast, error, "이미지 이름 변경에 실패했어요.");
+				notifyApiError(error, "이미지 이름 변경에 실패했어요.");
 				return false;
 			}
 		},
-		[guildId, mutate, toast]
+		[guildUrl, mutate, toast]
 	);
 
 	const remove = useCallback(
 		async (id: string): Promise<boolean> => {
 			try {
-				const res = await fetch(`/api/servers/${guildId}/assets/${id}`, { method: "DELETE" });
+				const res = await fetch(`${guildUrl}/${id}`, { method: "DELETE" });
 				if (!res.ok) throw await toApiError(res, "이미지 삭제에 실패했어요.");
 				const data = (await res.json()) as Partial<DeleteAssetResponse>;
 				await mutate();
@@ -124,11 +119,11 @@ export function useGuildAssets(guildId: string): UseGuildAssetsResult {
 				}
 				return true;
 			} catch (error) {
-				reportError(toast, error, "이미지 삭제에 실패했어요.");
+				notifyApiError(error, "이미지 삭제에 실패했어요.");
 				return false;
 			}
 		},
-		[guildId, mutate, toast]
+		[guildUrl, mutate, toast]
 	);
 
 	const refresh = useCallback(() => {

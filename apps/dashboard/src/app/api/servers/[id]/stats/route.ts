@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authorizeGuildManage, deniedGuildManage } from "@/lib/api-guards";
-import { fetchGuildMembers } from "@/lib/data-api";
+import { createGuildApiHandler } from "@/lib/api-handler";
+import { fetchGuildMembers } from "@/lib/data-api/guild-members";
 import { db } from "@/lib/db";
 import { kstDateString } from "@/lib/kst-date";
-import { guardRateLimit, rateKey, READ_RATE } from "@/lib/rate-limit";
+import { READ_RATE } from "@/lib/rate-limit";
 
 /**
  * days 파라미터 — "safe"(전체 기간) 또는 1~90 정수.
@@ -81,153 +81,145 @@ async function enrichRequesters(
  * 봇 캐시 경유(data-api Redis request/reply)로 조회해요. 조회 실패 시 표시 정보 없이
  * 내려가고 클라이언트가 사용자 ID 라벨로 표시해요.
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const authz = await authorizeGuildManage(id);
-  if (!authz.ok) return deniedGuildManage(authz);
+export const GET = createGuildApiHandler({
+  role: "manage",
+  rate: READ_RATE,
+  key: "stats-get",
+  handler: async ({ guildId, request }) => {
+    const { searchParams } = new URL(request.url);
+    const daysParam = searchParams.get("days") ?? "7";
 
-  const limited = await guardRateLimit(
-    rateKey("stats-get", authz.userId, id),
-    READ_RATE,
-  );
-  if (limited) return limited;
-
-  const { searchParams } = new URL(request.url);
-  const daysParam = searchParams.get("days") ?? "7";
-
-  // "safe"(전체 기간)는 스키마 밖에서 먼저 걸러요 — 나머지는 coerce 검증.
-  let days: number | "safe";
-  if (daysParam === "safe") {
-    days = "safe";
-  } else {
-    const parsed = daysSchema.safeParse(daysParam);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "days는 1~90 사이의 숫자 또는 'safe'여야 해요." },
-        { status: 400 },
-      );
-    }
-    days = parsed.data;
-  }
-
-  try {
-    const guild = await db.guild.findUnique({ where: { id } });
-    if (!guild) {
-      return NextResponse.json(
-        { error: "봇이 설치된 서버가 아니에요." },
-        { status: 404 },
-      );
+    // "safe"(전체 기간)는 스키마 밖에서 먼저 걸러요 — 나머지는 coerce 검증.
+    let days: number | "safe";
+    if (daysParam === "safe") {
+      days = "safe";
+    } else {
+      const parsed = daysSchema.safeParse(daysParam);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: "days는 1~90 사이의 숫자 또는 'safe'여야 해요." },
+          { status: 400 },
+        );
+      }
+      days = parsed.data;
     }
 
-    const since =
-      days === "safe" ? null : new Date(Date.now() - days * 24 * 3600 * 1000);
-    const where = {
-      guildId: id,
-      ...(since ? { createdAt: { gte: since } } : {}),
-    };
+    try {
+      const guild = await db.guild.findUnique({ where: { id: guildId } });
+      if (!guild) {
+        return NextResponse.json(
+          { error: "봇이 설치된 서버가 아니에요." },
+          { status: 404 },
+        );
+      }
 
-    const [totalPlays, groupedTracks, groupedRequesters, historyRows, periodAggregate] =
-      await Promise.all([
-        db.guildTrackHistory.count({ where }),
-        db.guildTrackHistory.groupBy({
-          by: ["trackId"],
-          where,
-          _count: { trackId: true },
-          orderBy: { _count: { trackId: "desc" } },
-          take: 10,
-        }),
-        db.guildTrackHistory.groupBy({
-          by: ["userId"],
-          where: { ...where, userId: { not: null } },
-          _count: { userId: true },
-          orderBy: { _count: { userId: "desc" } },
-          take: 10,
-        }),
-        db.guildTrackHistory.findMany({
-          where,
-          select: { createdAt: true },
-          take: days === "safe" ? 45_000 : days * 500,
-          orderBy: { createdAt: "desc" },
-        }),
-        db.guildTrackHistory.aggregate({
-          where,
-          _min: { createdAt: true },
-          _max: { createdAt: true },
-        }),
-      ]);
+      const since =
+        days === "safe" ? null : new Date(Date.now() - days * 24 * 3600 * 1000);
+      const where = {
+        guildId,
+        ...(since ? { createdAt: { gte: since } } : {}),
+      };
 
-    // 트랙 상세 조합 — groupBy 결과 순서를 유지해요.
-    const trackIds = groupedTracks.map((row) => row.trackId);
-    const tracks =
-      trackIds.length > 0
-        ? await db.track.findMany({
-            where: { id: { in: trackIds } },
-            select: {
-              id: true,
-              title: true,
-              artist: true,
-              thumbnail: true,
-              url: true,
-              duration: true,
-            },
-          })
-        : [];
-    const trackMap = new Map(tracks.map((track) => [track.id, track]));
+      const [totalPlays, groupedTracks, groupedRequesters, historyRows, periodAggregate] =
+        await Promise.all([
+          db.guildTrackHistory.count({ where }),
+          db.guildTrackHistory.groupBy({
+            by: ["trackId"],
+            where,
+            _count: { trackId: true },
+            orderBy: { _count: { trackId: "desc" } },
+            take: 10,
+          }),
+          db.guildTrackHistory.groupBy({
+            by: ["userId"],
+            where: { ...where, userId: { not: null } },
+            _count: { userId: true },
+            orderBy: { _count: { userId: "desc" } },
+            take: 10,
+          }),
+          db.guildTrackHistory.findMany({
+            where,
+            select: { createdAt: true },
+            take: days === "safe" ? 45_000 : days * 500,
+            orderBy: { createdAt: "desc" },
+          }),
+          db.guildTrackHistory.aggregate({
+            where,
+            _min: { createdAt: true },
+            _max: { createdAt: true },
+          }),
+        ]);
 
-    const topTracks: StatsTopTrack[] = groupedTracks.flatMap((row) => {
-      const track = trackMap.get(row.trackId);
-      if (!track) return [];
-      return [
-        {
-          trackId: row.trackId,
-          title: track.title,
-          artist: track.artist,
-          thumbnail: track.thumbnail,
-          url: track.url,
-          duration: track.duration,
-          count: row._count.trackId,
+      // 트랙 상세 조합 — groupBy 결과 순서를 유지해요.
+      const trackIds = groupedTracks.map((row) => row.trackId);
+      const tracks =
+        trackIds.length > 0
+          ? await db.track.findMany({
+              where: { id: { in: trackIds } },
+              select: {
+                id: true,
+                title: true,
+                artist: true,
+                thumbnail: true,
+                url: true,
+                duration: true,
+              },
+            })
+          : [];
+      const trackMap = new Map(tracks.map((track) => [track.id, track]));
+
+      const topTracks: StatsTopTrack[] = groupedTracks.flatMap((row) => {
+        const track = trackMap.get(row.trackId);
+        if (!track) return [];
+        return [
+          {
+            trackId: row.trackId,
+            title: track.title,
+            artist: track.artist,
+            thumbnail: track.thumbnail,
+            url: track.url,
+            duration: track.duration,
+            count: row._count.trackId,
+          },
+        ];
+      });
+
+      const baseRequesters = groupedRequesters.flatMap(
+        (row) => (row.userId ? [{ userId: row.userId, count: row._count.userId }] : []),
+      );
+      const topRequesters = await enrichRequesters(guildId, baseRequesters);
+
+      // 날짜별 재생 수 — KST 하루 단위로 그룹핑 후 오름차순 정렬해요.
+      const dailyMap = new Map<string, number>();
+      for (const row of historyRows) {
+        const dateKey = kstDateString(row.createdAt);
+        dailyMap.set(dateKey, (dailyMap.get(dateKey) ?? 0) + 1);
+      }
+      const dailyCounts = [...dailyMap.entries()]
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      return NextResponse.json({
+        ok: true as const,
+        range: {
+          days,
+          since: since ? since.toISOString() : null,
         },
-      ];
-    });
-
-    const baseRequesters = groupedRequesters.flatMap(
-      (row) => (row.userId ? [{ userId: row.userId, count: row._count.userId }] : []),
-    );
-    const topRequesters = await enrichRequesters(id, baseRequesters);
-
-    // 날짜별 재생 수 — KST 하루 단위로 그룹핑 후 오름차순 정렬해요.
-    const dailyMap = new Map<string, number>();
-    for (const row of historyRows) {
-      const dateKey = kstDateString(row.createdAt);
-      dailyMap.set(dateKey, (dailyMap.get(dateKey) ?? 0) + 1);
+        totalPlays,
+        topTracks,
+        topRequesters,
+        dailyCounts,
+        period: {
+          first: periodAggregate._min.createdAt?.toISOString() ?? null,
+          last: periodAggregate._max.createdAt?.toISOString() ?? null,
+        },
+      } satisfies StatsServerStatsResponse);
+    } catch (error) {
+      console.error("Failed to fetch server stats:", error);
+      return NextResponse.json(
+        { error: "통계를 불러오지 못했어요." },
+        { status: 500 },
+      );
     }
-    const dailyCounts = [...dailyMap.entries()]
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return NextResponse.json({
-      ok: true as const,
-      range: {
-        days,
-        since: since ? since.toISOString() : null,
-      },
-      totalPlays,
-      topTracks,
-      topRequesters,
-      dailyCounts,
-      period: {
-        first: periodAggregate._min.createdAt?.toISOString() ?? null,
-        last: periodAggregate._max.createdAt?.toISOString() ?? null,
-      },
-    } satisfies StatsServerStatsResponse);
-  } catch (error) {
-    console.error("Failed to fetch server stats:", error);
-    return NextResponse.json(
-      { error: "통계를 불러오지 못했어요." },
-      { status: 500 },
-    );
-  }
-}
+  },
+});

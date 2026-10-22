@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authorizeUser, deniedUser } from "@/lib/api-guards";
+import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import {
   FAVORITES_PLAYLIST_NAME,
   MAX_TRACKS_PER_PLAYLIST,
 } from "@/lib/playlist-constants";
-import { guardRateLimit, rateKey, WRITE_RATE } from "@/lib/rate-limit";
+import { WRITE_RATE } from "@/lib/rate-limit";
 import { extractYoutubeVideoId } from "@/lib/youtube-url";
 
 /** 외부 noembed API 타임아웃 — 무응답 연결 고갈 방지 */
@@ -20,196 +20,180 @@ const addTrackSchema = z
   })
   .refine((body) => body.trackId !== undefined || body.youtubeUrl !== undefined);
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const authz = await authorizeUser();
-  if (!authz.ok) return deniedUser(authz);
-
-  const limited = await guardRateLimit(
-    rateKey("playlist-tracks-post", authz.userId),
-    WRITE_RATE,
-  );
-  if (limited) return limited;
-
-  try {
-    const { id } = await params;
+export const POST = createGuildApiHandler({
+  role: "user",
+  rate: WRITE_RATE,
+  key: "playlist-tracks-post",
+  handler: async ({ authz, params, request }) => {
+    const playlistId = params.id;
     const userId = authz.userId;
 
-    // Verify playlist belongs to user
-    const playlist = await db.playlist.findFirst({
-      where: { id, userId },
-    });
+    try {
+      // 소유·개수 상한 검증이 본문 파싱보다 먼저예요 — 그래서 본문은 래퍼 schema 대신 여기서 검증해요.
+      const playlist = await db.playlist.findFirst({
+        where: { id: playlistId, userId },
+      });
 
-    if (!playlist) {
-      return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없어요." },
-        { status: 404 },
-      );
-    }
-
-    // 트랙 개수 상한 (플레이리스트당)
-    const trackCount = await db.playlistTrack.count({
-      where: { playlistId: id },
-    });
-    if (trackCount >= MAX_TRACKS_PER_PLAYLIST) {
-      return NextResponse.json(
-        {
-          error: `플레이리스트에 곡은 최대 ${MAX_TRACKS_PER_PLAYLIST.toLocaleString()}개까지 추가할 수 있어요.`,
-        },
-        { status: 400 },
-      );
-    }
-
-    const parsed = addTrackSchema.safeParse(
-      await request.json().catch(() => null),
-    );
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "추가할 곡의 정보가 올바르지 않아요." },
-        { status: 400 },
-      );
-    }
-
-    const { trackId, youtubeUrl } = parsed.data;
-
-    // URL 경유가 아니라 trackId 직접 지정이면 실제 존재하는 곡인지 확인해요 (favorites와 같은 방식)
-    if (trackId) {
-      const track = await db.track.findUnique({ where: { id: trackId } });
-      if (!track) {
+      if (!playlist) {
         return NextResponse.json(
-          { error: "곡을 찾을 수 없어요." },
+          { error: "플레이리스트를 찾을 수 없어요." },
           { status: 404 },
         );
       }
-    }
 
-    let finalTrackId = trackId;
-
-    if (!finalTrackId && youtubeUrl) {
-      const videoId = extractYoutubeVideoId(youtubeUrl);
-
-      if (!videoId) {
+      // 트랙 개수 상한 (플레이리스트당)
+      const trackCount = await db.playlistTrack.count({
+        where: { playlistId },
+      });
+      if (trackCount >= MAX_TRACKS_PER_PLAYLIST) {
         return NextResponse.json(
-          { error: "올바르지 않은 유튜브 주소예요." },
+          {
+            error: `플레이리스트에 곡은 최대 ${MAX_TRACKS_PER_PLAYLIST.toLocaleString()}개까지 추가할 수 있어요.`,
+          },
           { status: 400 },
         );
       }
 
-      // Fetch metadata from noembed
-      let title = "Unknown Title";
-      let artist = "Unknown Artist";
-      let thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-
-      try {
-        const res = await fetch(
-          `https://noembed.com/embed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`,
-          { signal: AbortSignal.timeout(NOEMBED_TIMEOUT_MS) },
+      const parsed = addTrackSchema.safeParse(
+        await request.json().catch(() => null),
+      );
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: "추가할 곡의 정보가 올바르지 않아요." },
+          { status: 400 },
         );
-        if (res.ok) {
-          const json = await res.json();
-          if (json && !json.error) {
-            title = json.title || title;
-            artist = json.author_name || artist;
-            thumbnail = json.thumbnail_url || thumbnail;
-          }
+      }
+
+      const { trackId, youtubeUrl } = parsed.data;
+
+      // URL 경유가 아니라 trackId 직접 지정이면 실제 존재하는 곡인지 확인해요 (favorites와 같은 방식)
+      if (trackId) {
+        const track = await db.track.findUnique({ where: { id: trackId } });
+        if (!track) {
+          return NextResponse.json(
+            { error: "곡을 찾을 수 없어요." },
+            { status: 404 },
+          );
         }
-      } catch (err) {
-        console.warn("Failed to fetch noembed metadata, using defaults:", err);
       }
 
-      // Clean up titles (e.g. remove "Official Music Video", etc.)
-      title = title.replace(
-        /\s*[\(\[][Oo]fficial\s*([Mm]usic\s*)?[Vv]ideo[\)\]]\s*/g,
-        "",
-      );
+      let finalTrackId = trackId;
 
-      // Upsert Track record
-      const track = await db.track.upsert({
-        where: { id: videoId },
-        create: {
-          id: videoId,
-          title,
-          artist,
-          duration: 0,
-          url: `https://www.youtube.com/watch?v=${videoId}`,
-          source: "youtube",
-          thumbnail,
-        },
-        update: {
-          title,
-          artist,
-          thumbnail,
-        },
-      });
+      if (!finalTrackId && youtubeUrl) {
+        const videoId = extractYoutubeVideoId(youtubeUrl);
 
-      finalTrackId = track.id;
-    }
+        if (!videoId) {
+          return NextResponse.json(
+            { error: "올바르지 않은 유튜브 주소예요." },
+            { status: 400 },
+          );
+        }
 
-    if (!finalTrackId) {
-      return NextResponse.json(
-        { error: "추가할 곡의 정보가 올바르지 않아요." },
-        { status: 400 },
-      );
-    }
+        // Fetch metadata from noembed
+        let title = "Unknown Title";
+        let artist = "Unknown Artist";
+        let thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
-    // Check if track is already in this playlist (especially for "즐겨찾기" playlist)
-    if (playlist.name === FAVORITES_PLAYLIST_NAME) {
-      const existing = await db.playlistTrack.findFirst({
-        where: { playlistId: id, trackId: finalTrackId },
-      });
-      if (existing) {
+        try {
+          const res = await fetch(
+            `https://noembed.com/embed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`,
+            { signal: AbortSignal.timeout(NOEMBED_TIMEOUT_MS) },
+          );
+          if (res.ok) {
+            const json = await res.json();
+            if (json && !json.error) {
+              title = json.title || title;
+              artist = json.author_name || artist;
+              thumbnail = json.thumbnail_url || thumbnail;
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch noembed metadata, using defaults:", err);
+        }
+
+        // Clean up titles (e.g. remove "Official Music Video", etc.)
+        title = title.replace(
+          /\s*[\(\[][Oo]fficial\s*([Mm]usic\s*)?[Vv]ideo[\)\]]\s*/g,
+          "",
+        );
+
+        // Upsert Track record
+        const track = await db.track.upsert({
+          where: { id: videoId },
+          create: {
+            id: videoId,
+            title,
+            artist,
+            duration: 0,
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            source: "youtube",
+            thumbnail,
+          },
+          update: {
+            title,
+            artist,
+            thumbnail,
+          },
+        });
+
+        finalTrackId = track.id;
+      }
+
+      if (!finalTrackId) {
         return NextResponse.json(
-          { error: "이미 즐겨찾기에 추가된 곡이에요." },
+          { error: "추가할 곡의 정보가 올바르지 않아요." },
           { status: 400 },
         );
       }
+
+      // Check if track is already in this playlist (especially for "즐겨찾기" playlist)
+      if (playlist.name === FAVORITES_PLAYLIST_NAME) {
+        const existing = await db.playlistTrack.findFirst({
+          where: { playlistId, trackId: finalTrackId },
+        });
+        if (existing) {
+          return NextResponse.json(
+            { error: "이미 즐겨찾기에 추가된 곡이에요." },
+            { status: 400 },
+          );
+        }
+      }
+
+      // Get current max position
+      const maxPositionResult = await db.playlistTrack.aggregate({
+        where: { playlistId },
+        _max: { position: true },
+      });
+
+      const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
+
+      // Create PlaylistTrack record
+      const playlistTrack = await db.playlistTrack.create({
+        data: {
+          playlistId,
+          trackId: finalTrackId,
+          position: nextPosition,
+        },
+        include: { track: true },
+      });
+
+      return NextResponse.json({ playlistTrack });
+    } catch (error) {
+      console.error("Failed to add track:", error);
+      return NextResponse.json(
+        { error: "곡을 플레이리스트에 추가하지 못했어요." },
+        { status: 500 },
+      );
     }
+  },
+});
 
-    // Get current max position
-    const maxPositionResult = await db.playlistTrack.aggregate({
-      where: { playlistId: id },
-      _max: { position: true },
-    });
-
-    const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
-
-    // Create PlaylistTrack record
-    const playlistTrack = await db.playlistTrack.create({
-      data: {
-        playlistId: id,
-        trackId: finalTrackId,
-        position: nextPosition,
-      },
-      include: { track: true },
-    });
-
-    return NextResponse.json({ playlistTrack });
-  } catch (error) {
-    console.error("Failed to add track:", error);
-    return NextResponse.json(
-      { error: "곡을 플레이리스트에 추가하지 못했어요." },
-      { status: 500 },
-    );
-  }
-}
-
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const authz = await authorizeUser();
-  if (!authz.ok) return deniedUser(authz);
-
-  const limited = await guardRateLimit(
-    rateKey("playlist-tracks-delete", authz.userId),
-    WRITE_RATE,
-  );
-  if (limited) return limited;
-
-  try {
-    const { id } = await params;
+export const DELETE = createGuildApiHandler({
+  role: "user",
+  rate: WRITE_RATE,
+  key: "playlist-tracks-delete",
+  handler: async ({ authz, params, request }) => {
+    const playlistId = params.id;
     const userId = authz.userId;
     const { searchParams } = new URL(request.url);
     const positionStr = searchParams.get("position");
@@ -230,52 +214,52 @@ export async function DELETE(
       );
     }
 
-    // Verify playlist belongs to user
-    const playlist = await db.playlist.findFirst({
-      where: { id, userId },
-    });
+    try {
+      // Verify playlist belongs to user
+      const playlist = await db.playlist.findFirst({
+        where: { id: playlistId, userId },
+      });
 
-    if (!playlist) {
+      if (!playlist) {
+        return NextResponse.json(
+          { error: "플레이리스트를 찾을 수 없어요." },
+          { status: 404 },
+        );
+      }
+
+      // Find the specific PlaylistTrack by position
+      const playlistTrack = await db.playlistTrack.findFirst({
+        where: { playlistId, position },
+      });
+
+      if (!playlistTrack) {
+        return NextResponse.json(
+          { error: "해당 순서의 곡을 찾을 수 없어요." },
+          { status: 404 },
+        );
+      }
+
+      // Run in transaction to delete and shift subsequent track positions down
+      await db.$transaction([
+        db.playlistTrack.delete({
+          where: { id: playlistTrack.id },
+        }),
+        db.playlistTrack.updateMany({
+          where: {
+            playlistId,
+            position: { gt: position },
+          },
+          data: { position: { decrement: 1 } },
+        }),
+      ]);
+
+      return NextResponse.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete track from playlist:", error);
       return NextResponse.json(
-        { error: "플레이리스트를 찾을 수 없어요." },
-        { status: 404 },
+        { error: "곡 삭제에 실패했어요." },
+        { status: 500 },
       );
     }
-
-    // Find the specific PlaylistTrack by position
-    const playlistTrack = await db.playlistTrack.findFirst({
-      where: { playlistId: id, position },
-    });
-
-    if (!playlistTrack) {
-      return NextResponse.json(
-        { error: "해당 순서의 곡을 찾을 수 없어요." },
-        { status: 404 },
-      );
-    }
-
-    // Run in transaction to delete and shift subsequent track positions down
-    await db.$transaction([
-      db.playlistTrack.delete({
-        where: { id: playlistTrack.id },
-      }),
-      db.playlistTrack.updateMany({
-        where: {
-          playlistId: id,
-          position: { gt: position },
-        },
-        data: {
-          position: { decrement: 1 },
-        },
-      }),
-    ]);
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Failed to delete track from playlist:", error);
-    return NextResponse.json(
-      { error: "곡 삭제에 실패했어요." },
-      { status: 500 },
-    );
-  }
-}
+  },
+});

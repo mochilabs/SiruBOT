@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { m } from "framer-motion";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Heart, Music, Plus, Search } from "lucide-react";
 
+import { SidebarIndicatorOverlay, useSidebarIndicator } from "@/components/primitives/sidebar-indicator";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ export function PlaylistSidebar({
 	onCreateNew,
 }: PlaylistSidebarProps) {
 	const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-	const [indicator, setIndicator] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 
 	const filteredPlaylists = useMemo(() => {
@@ -32,36 +31,9 @@ export function PlaylistSidebar({
 		return playlists.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 	}, [playlists, searchQuery]);
 
-	useEffect(() => {
-		const activeIndex = filteredPlaylists.findIndex((p) => p.id === activePlaylistId);
-		const el = activeIndex >= 0 ? itemRefs.current[activeIndex] : null;
-
-		if (!el) {
-			setIndicator(null);
-			return;
-		}
-
-		const update = () => {
-			setIndicator({
-				top: el.offsetTop,
-				left: el.offsetLeft,
-				width: el.offsetWidth,
-				height: el.offsetHeight,
-			});
-		};
-
-		update();
-
-		const observer = new ResizeObserver(() => {
-			update();
-		});
-		observer.observe(el);
-		if (el.parentElement) {
-			observer.observe(el.parentElement);
-		}
-
-		return () => observer.disconnect();
-	}, [activePlaylistId, filteredPlaylists]);
+	const activeIndex = filteredPlaylists.findIndex((p) => p.id === activePlaylistId);
+	const getItemEl = useCallback((index: number) => itemRefs.current[index], []);
+	const indicator = useSidebarIndicator(filteredPlaylists, activeIndex, getItemEl);
 
 	return (
 		<div className="hidden w-full lg:block lg:w-80 shrink-0 lg:sticky lg:top-24 lg:z-10">
@@ -82,18 +54,7 @@ export function PlaylistSidebar({
 				)}
 
 				<div className={`flex-1 overflow-y-auto p-2 flex flex-col gap-0.5 relative ${playlists.length < 5 ? 'pt-2' : ''}`}>
-					{indicator && (
-						<m.div
-							className="absolute bg-primary-control/10 rounded-menu z-0"
-							animate={{
-								top: indicator.top,
-								left: indicator.left,
-								width: indicator.width,
-								height: indicator.height,
-							}}
-							transition={{ type: "spring", stiffness: 400, damping: 30 }}
-						/>
-					)}
+					<SidebarIndicatorOverlay indicator={indicator} />
 
 					{filteredPlaylists.map((playlist, idx) => {
 						const isActive = playlist.id === activePlaylistId;

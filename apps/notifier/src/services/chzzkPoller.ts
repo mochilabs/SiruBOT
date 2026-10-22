@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import type { SocialEvent } from '@sirubot/utils';
-import { ChzzkApiError, fetchChzzkLiveStatus, type ChzzkLiveStatus, type FetchFn } from './chzzkApi.ts';
+import { ChzzkApiError, fetchChzzkLiveStatus, fetchChzzkLiveThumbnail, type ChzzkLiveStatus, type FetchFn } from './chzzkApi.ts';
+import { BREAKER_THRESHOLD, SubscriptionPoller, type PollOutcome } from './pollingLoop.ts';
 import type { NotifierRedis } from './redis.ts';
 import { getLogger } from '../utils/logger.ts';
 
@@ -17,9 +18,6 @@ const INTERVAL_ONLINE_MS = 2 * 60 * 1000;
 const INTERVAL_OFFLINE_MS = 5 * 60 * 1000;
 // 구독 목록 캐시 — 매 틱마다 DB를 때리지 않아요.
 const SUBSCRIPTION_CACHE_MS = 60_000;
-// plan §8 — 폴링 실패 5회 연속 → 30분 봉쇄 (half-open: 이후 틱에서 자동 재시도)
-const BREAKER_THRESHOLD = 5;
-const BREAKER_COOLDOWN_MS = 30 * 60 * 1000;
 
 interface ChannelState {
 	isLive: boolean;
@@ -34,76 +32,36 @@ export interface PolledChzzkChannel {
 }
 
 /** 치지직 뱅온 전이 감지 폴러 — offline→online 전이만 이벤트를 발사해요. */
-export class ChzzkPoller {
+export class ChzzkPoller extends SubscriptionPoller {
 	private readonly fetchFn: FetchFn;
-	private readonly now: () => number;
-	private timer: ReturnType<typeof setTimeout> | null = null;
-	private running = false;
-	private stopped = true;
+	private readonly dispatcher: { dispatch(event: SocialEvent): Promise<void> };
 	private subscriptionsCache: { channels: PolledChzzkChannel[]; cachedAt: number } | null = null;
-	private consecutiveFailures = 0;
-	private breakerOpenUntil = 0;
 
-	public constructor(
-		private readonly options: {
-			redis: NotifierRedis;
-			getDb: () => PrismaClient | null;
-			dispatcher: { dispatch(event: SocialEvent): Promise<void> };
-			fetchFn?: FetchFn;
-			now?: () => number;
-		}
-	) {
+	public constructor(options: {
+		redis: NotifierRedis;
+		getDb: () => PrismaClient | null;
+		dispatcher: { dispatch(event: SocialEvent): Promise<void> };
+		fetchFn?: FetchFn;
+		now?: () => number;
+	}) {
+		super(options, {
+			name: 'chzzkPoller',
+			intervalMs: TICK_MS,
+			lockKey: LOCK_KEY,
+			lockTtlSeconds: LOCK_TTL_SECONDS,
+			logger,
+			startMessage: '치지직 폴러를 시작해요.',
+			breakerOpenMessage: `치지직 폴링이 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`
+		});
 		this.fetchFn = options.fetchFn ?? fetch;
-		this.now = options.now ?? Date.now;
+		this.dispatcher = options.dispatcher;
 	}
 
-	public start(): void {
-		if (!this.stopped) return;
-		this.stopped = false;
-		logger.info('치지직 폴러를 시작해요.');
-		void this.tick();
-	}
-
-	public stop(): void {
-		this.stopped = true;
-		if (this.timer) {
-			clearTimeout(this.timer);
-			this.timer = null;
-		}
-	}
-
-	private scheduleNext(): void {
-		if (this.stopped) return;
-		this.timer = setTimeout(() => void this.tick(), TICK_MS);
-	}
-
-	private async tick(): Promise<void> {
-		if (this.stopped) return;
-		try {
-			if (!this.running) {
-				this.running = true;
-				try {
-					await this.pollOnce();
-				} finally {
-					this.running = false;
-				}
-			}
-		} finally {
-			this.scheduleNext();
-		}
-	}
-
-	private async pollOnce(): Promise<void> {
-		const now = this.now();
-		// 서킷 브레이커 — 봉쇄 중이면 폴링 생략 (쿨다운 종료 후 half-open으로 자동 재시도)
-		if (now < this.breakerOpenUntil) return;
-		const acquired = await this.options.redis.acquireLock(LOCK_KEY, LOCK_TTL_SECONDS);
-		if (!acquired) return;
-		const db = this.options.getDb();
-		if (!db) return;
-
-		const channels = await this.getChannels(db);
-		if (channels.length === 0) return;
+	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
+		const channels = await this.getChannels(db, now);
+		// DB 오류 — 빈 목록으로 위장하면 브레이커 계정에서 빠져 장애가 조용히 이어져요.
+		if (!channels) return 'failed';
+		if (channels.length === 0) return 'skipped';
 
 		let tickFailed = false;
 		for (const channel of channels) {
@@ -125,31 +83,28 @@ export class ChzzkPoller {
 			}
 		}
 
-		if (tickFailed) {
-			this.consecutiveFailures++;
-			if (this.consecutiveFailures >= BREAKER_THRESHOLD) {
-				this.breakerOpenUntil = this.now() + BREAKER_COOLDOWN_MS;
-				this.consecutiveFailures = 0;
-				logger.error(`치지직 폴링이 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`);
-			}
-		} else {
-			this.consecutiveFailures = 0;
-		}
+		return tickFailed ? 'failed' : 'ok';
 	}
 
-	private async getChannels(db: PrismaClient): Promise<PolledChzzkChannel[]> {
-		const now = this.now();
+	/** 구독 채널 목록 — DB 오류 시 null을 돌려 틱을 'failed'로 만들어요 (빈 목록 캐시로 장애를 가리지 않도록). */
+	private async getChannels(db: PrismaClient, now: number): Promise<PolledChzzkChannel[] | null> {
 		if (this.subscriptionsCache && now - this.subscriptionsCache.cachedAt < SUBSCRIPTION_CACHE_MS) {
 			return this.subscriptionsCache.channels;
 		}
-		const rows = await db.socialSubscription
-			.findMany({ where: { platform: 'chzzk', status: 'active' }, select: { sourcePlatformId: true, sourceName: true } })
-			.catch(() => []);
-		const unique = new Map<string, string | null>();
-		for (const row of rows) unique.set(row.sourcePlatformId, row.sourceName);
-		const channels = [...unique.entries()].map(([sourcePlatformId, sourceName]) => ({ sourcePlatformId, sourceName }));
-		this.subscriptionsCache = { channels, cachedAt: now };
-		return channels;
+		try {
+			const rows = await db.socialSubscription.findMany({
+				where: { platform: 'chzzk', status: 'active' },
+				select: { sourcePlatformId: true, sourceName: true }
+			});
+			const unique = new Map<string, string | null>();
+			for (const row of rows) unique.set(row.sourcePlatformId, row.sourceName);
+			const channels = [...unique.entries()].map(([sourcePlatformId, sourceName]) => ({ sourcePlatformId, sourceName }));
+			this.subscriptionsCache = { channels, cachedAt: now };
+			return channels;
+		} catch (error) {
+			logger.error('치지직 구독 목록 조회 실패 — 이번 틱은 실패로 기록해요:', String(error));
+			return null;
+		}
 	}
 
 	private async handleTransition(channel: PolledChzzkChannel, state: ChannelState | null, status: ChzzkLiveStatus): Promise<void> {
@@ -171,12 +126,13 @@ export class ChzzkPoller {
 				contentId: status.liveId ?? `${channelId}-${publishedAt}`,
 				title: status.liveTitle ?? `${author} 방송 시작!`,
 				url: status.liveId ? `https://chzzk.naver.com/live/${status.liveId}` : `https://chzzk.naver.com/${channelId}`,
-				thumbnail: status.thumbnailUrl,
+				// live-status는 liveImageUrl을 제공하지 않아서(2026-10 실측), 뱅온 확정 시점에 live-detail로 섬네일을 보완해요.
+				thumbnail: status.thumbnailUrl ?? (await fetchChzzkLiveThumbnail(channelId, this.fetchFn)),
 				author,
 				publishedAt
 			};
 			logger.info(`치지직 뱅온 감지: ${author} (${channelId})`);
-			await this.options.dispatcher.dispatch(event);
+			await this.dispatcher.dispatch(event);
 		}
 		await this.saveState(channelId, { isLive: status.isLive, liveId: status.liveId, lastPolledAt: now });
 	}

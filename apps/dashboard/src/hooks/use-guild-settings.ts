@@ -1,53 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import useSWR from "swr";
 
-import { useSessionExpiredRedirect } from "@/hooks/use-session-redirect";
-import { ApiError, toApiError, toError } from "@/lib/api-error";
+import { toApiError, toError } from "@/lib/api-error";
+import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import type { DiscordChannelSummary, DiscordRoleSummary } from "@/types/discord";
 import type { GuildSettings } from "@/types/settings";
 
-/**
- * 401이면 세션 엔드포인트(catch-all)로 refresh를 쿠키에 반영한 뒤 1회 재시도해요.
- * 라우트 핸들러의 auth()는 refresh 결과를 Set-Cookie로 내보내지 못하므로,
- * 실제 persist는 /api/auth/session이 담당해요(getSessionAccessToken이 방금 발급 토큰을 읽게).
- */
-async function fetchWithSessionRetry(url: string, init?: RequestInit): Promise<Response> {
-	const res = await fetch(url, init);
-	if (res.status !== 401) return res;
-	try {
-		const sessionRes = await fetch("/api/auth/session", { cache: "no-store" });
-		const session = sessionRes.ok ? await sessionRes.json() : null;
-		if (!session?.user?.id) return res;
-	} catch {
-		return res;
-	}
-	return fetch(url, init);
-}
-
-async function settingsFetcher(url: string): Promise<GuildSettings> {
-	const res = await fetchWithSessionRetry(url, { cache: "no-store" });
-	if (!res.ok) throw await toApiError(res, "설정을 불러오지 못했어요.");
-	return (await res.json()) as GuildSettings;
-}
+/** 설정 목록 fetcher — 401이면 세션 갱신 후 한 번만 재시도하는 공용 계약 (lib/swr) */
+const settingsFetcher = createApiFetcher<GuildSettings>("설정을 불러오지 못했어요.", { sessionRetry: true });
 
 /** 서버 일반 설정 조회 + 부분 저장 (SWR 캐시는 훅 간 공유돼요) */
 export function useGuildSettings(guildId: string) {
-	const { data, error, isLoading, mutate } = useSWR<GuildSettings>(`/api/servers/${guildId}/settings`, settingsFetcher);
+	const { data, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<GuildSettings>(guildId, "/settings", {
+		fetcher: settingsFetcher,
+	});
 	const [saving, setSaving] = useState(false);
-
-	// 세션 만료(401) — 이어지는 요청도 같은 결과라 재시도 대신 다시 로그인으로 보내요
-	const redirectToLogin = useSessionExpiredRedirect(
-		error instanceof ApiError && error.status === 401,
-		`/servers/${guildId}`,
-	);
 
 	const save = useCallback(
 		async (patch: Partial<GuildSettings>): Promise<GuildSettings> => {
 			setSaving(true);
 			try {
-				const res = await fetch(`/api/servers/${guildId}/settings`, {
+				const res = await fetch(guildUrl, {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(patch),
@@ -65,7 +39,7 @@ export function useGuildSettings(guildId: string) {
 				setSaving(false);
 			}
 		},
-		[guildId, mutate, redirectToLogin],
+		[guildUrl, mutate, redirectToLogin],
 	);
 
 	const reload = useCallback(() => {
@@ -161,21 +135,12 @@ export interface RolesPayload {
 	roles: DiscordRoleSummary[];
 }
 
-async function discordListFetcher<T>(url: string): Promise<T> {
-	const res = await fetchWithSessionRetry(url, { cache: "no-store" });
-	if (!res.ok) throw await toApiError(res, "목록을 불러오지 못했어요.");
-	return (await res.json()) as T;
-}
+const channelsFetcher = createApiFetcher<ChannelsPayload>("목록을 불러오지 못했어요.", { sessionRetry: true });
+const rolesFetcher = createApiFetcher<RolesPayload>("목록을 불러오지 못했어요.", { sessionRetry: true });
 
 /** Discord 채널 목록 — 조건부 키로 필요한 패널만 요청해요 */
 export function useGuildChannels(guildId: string, enabled = true) {
-	const { data, error, isLoading, mutate } = useSWR<ChannelsPayload>(
-		enabled ? `/api/servers/${guildId}/channels` : null,
-		discordListFetcher<ChannelsPayload>,
-	);
-
-	// 세션 만료(401) — "다시 시도"로는 절대 성공하지 않으니 로그인 페이지로 보내요
-	useSessionExpiredRedirect(error instanceof ApiError && error.status === 401, `/servers/${guildId}`);
+	const { data, error, isLoading, mutate } = useGuildResource<ChannelsPayload>(guildId, "/channels", { enabled, fetcher: channelsFetcher });
 
 	return {
 		channels: data?.channels ?? null,
@@ -188,13 +153,7 @@ export function useGuildChannels(guildId: string, enabled = true) {
 
 /** Discord 역할 목록 */
 export function useGuildRoles(guildId: string, enabled = true) {
-	const { data, error, isLoading, mutate } = useSWR<RolesPayload>(
-		enabled ? `/api/servers/${guildId}/roles` : null,
-		discordListFetcher<RolesPayload>,
-	);
-
-	// 세션 만료(401) — 채널 목록과 같은 흐름으로 로그인 페이지로 보내요
-	useSessionExpiredRedirect(error instanceof ApiError && error.status === 401, `/servers/${guildId}`);
+	const { data, error, isLoading, mutate } = useGuildResource<RolesPayload>(guildId, "/roles", { enabled, fetcher: rolesFetcher });
 
 	return {
 		roles: data?.roles ?? null,

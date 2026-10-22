@@ -1,15 +1,10 @@
 import { addSeparator, emoji, createContainer, formatTime } from '@sirubot/utils';
 import { ActionRowBuilder, ContainerBuilder, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Track, UnresolvedTrack } from 'lavalink-client';
+import { truncateText } from '../../../lib/text.ts';
 
 /** /검색 결과 셀렉트 메뉴의 customId — 신규 핸들러는 이 값으로 파싱한다. */
 export const searchSelectCustomId = 'search:select';
-
-/** 문자열을 max_length 이하로 줄이고 넘치는 부분은 …로 대체한다. (undefined도 안전하게) */
-function truncate(text: string | undefined, maxLength: number): string {
-	const value = text ?? '';
-	return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
-}
 
 /** 트랙 길이(ms)를 formatTime이 기대하는 초 단위로 넘겨 m:ss 포맷으로 만든다. */
 function trackDurationText(track: Track | UnresolvedTrack): string {
@@ -30,7 +25,7 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 	const listText = tracks
 		.map(
 			(track, index) =>
-				`${index + 1}. **${truncate(track.info.title ?? '(제목 없음)', 60)}** · ${truncate(track.info.author ?? '알 수 없음', 40)} · ${trackDurationText(track)}`
+				`${index + 1}. **${truncateText(track.info.title ?? '(제목 없음)', 60)}** · ${truncateText(track.info.author ?? '알 수 없음', 40)} · ${trackDurationText(track)}`
 		)
 		.join('\n');
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(listText));
@@ -45,9 +40,9 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 		.setMaxValues(1)
 		.addOptions(
 			tracks.map((track, index) => ({
-				label: truncate(`${index + 1}. ${track.info.title ?? '(제목 없음)'}`, 100),
+				label: truncateText(`${index + 1}. ${track.info.title ?? '(제목 없음)'}`, 100),
 				value: String(index),
-				description: truncate(`${track.info.author ?? '알 수 없음'} · ${trackDurationText(track)}`, 100)
+				description: truncateText(`${track.info.author ?? '알 수 없음'} · ${trackDurationText(track)}`, 100)
 			}))
 		);
 
@@ -59,6 +54,6 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 /** 검색 시간 초과 안내 — 재생 컨트롤 정보가 없는 단순 안내 컨테이너. */
 export function searchTimeout(): ContainerBuilder {
 	return createContainer().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${emoji('hourglass')} 시간이 지나 검색을 취소했어요. 다시 /검색 을 사용해 주세요.`)
+		new TextDisplayBuilder().setContent(`${emoji('hourglass')} 시간이 지나 검색을 취소했어요. 다시 /검색을 사용해 주세요.`)
 	);
 }

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    return NextResponse.json({ error: "요청 형식이 올바르지 않아요." }, { status: 400 });
   }
 
   const { query, page: currentPage } = parsed.data;

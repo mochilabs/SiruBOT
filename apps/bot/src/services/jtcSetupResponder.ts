@@ -12,7 +12,7 @@
  *   data-api가 그대로 400으로 전달해 대시보드에서 안내해요.
  * - 어떤 경우에도 절대 throw하지 않아요 — 처리 실패는 대시보드의 타임아웃 폴백으로 이어져요.
  */
-import { DiscordAPIError } from 'discord.js';
+import { discordApiErrorText } from '../lib/discordErrorText.ts';
 import { container } from '@sapphire/framework';
 import { emoji, JTC_SETUP_REQUEST_CHANNEL, jtcSetupRequestSchema, ManagedRedisSubscriber } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
@@ -20,23 +20,15 @@ import type { JtcSetupResponse } from '@sirubot/utils';
 
 /** 카테고리 채널이 아니거나 존재하지 않을 때 tempVoiceService가 던지는 오류 메시지 */
 const NOT_CATEGORY_MESSAGE = 'selected channel is not a category';
-/** Discord API 오류 코드 — unknown channel / missing access */
-const DISCORD_UNKNOWN_CHANNEL = 10003;
-const DISCORD_MISSING_ACCESS = 50001;
-const DISCORD_MISSING_PERMISSIONS = 50013;
-
 /** 처리 흐름의 실패를 한국어 안내로 바꿔요 — 사용자가 고칠 수 있는 행동별로 구분해요 */
 function toKoreanError(error: unknown): string {
 	if (error instanceof Error && error.message.includes(NOT_CATEGORY_MESSAGE)) {
 		return `${emoji('error')} 카테고리 채널만 선택할 수 있어요.`;
 	}
-	if (error instanceof DiscordAPIError) {
-		if (error.code === DISCORD_UNKNOWN_CHANNEL) return `${emoji('error')} 채널을 찾을 수 없어요.`;
-		if (error.code === DISCORD_MISSING_ACCESS || error.code === DISCORD_MISSING_PERMISSIONS) {
-			return `${emoji('error')} 채널 생성·이동 권한이 봇에 없어요. 서버 설정에서 봇 역할 권한을 확인해 주세요.`;
-		}
-	}
-	return `${emoji('error')} 마커 채널을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.`;
+	return discordApiErrorText(error, {
+		permission: '채널 생성·이동 권한이 봇에 없어요. 서버 설정에서 봇 역할 권한을 확인해 주세요.',
+		fallback: `${emoji('error')} 마커 채널을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.`
+	});
 }
 
 export class JtcSetupResponder {

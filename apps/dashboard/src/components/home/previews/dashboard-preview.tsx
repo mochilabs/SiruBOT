@@ -41,7 +41,7 @@ const dashboardSettingSlides: SettingToggle[] = [
 		],
 	},
 	{
-		label: "임시 음성채널",
+		label: "임시 음성 채널",
 		rows: [
 			{ name: "사용", from: "끄기", to: "켜기" },
 			{ name: "생성 위치", from: "미지정", to: "게임 카테고리" },

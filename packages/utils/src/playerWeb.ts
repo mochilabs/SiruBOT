@@ -15,7 +15,6 @@ export type PlayerWebKind = z.infer<typeof playerWebKindSchema>;
 
 /** 라이브 제어 액션 — 슬래시 커맨드(/volume·/stop 등)와 같은 동작을 웹에서 수행해요 */
 export const playerWebControlActionSchema = z.enum(['volume', 'pause', 'resume', 'skip', 'stop', 'repeat']);
-export type PlayerWebControlAction = z.infer<typeof playerWebControlActionSchema>;
 
 /** 검색 결과 요약 — 봇이 Lavalink SearchResult에서 뽑아 응답에 실어요 */
 export const playerWebTrackSchema = z.object({

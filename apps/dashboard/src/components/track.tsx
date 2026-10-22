@@ -5,9 +5,10 @@ import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";
 import { formatTimeToKorean } from "@sirubot/utils/time";
-import { Crown, Heart, Music4 } from "lucide-react";
+import { Crown, Heart } from "lucide-react";
 import useSWR from "swr";
 
+import { MockThumbnail } from "@/components/primitives/mock-thumbnail";
 import { TrackListenLink } from "@/components/track-listen-link";
 import { useToast } from "@/components/ui/toast";
 
@@ -15,17 +16,6 @@ interface TrackListProps {
 	tracks: TrackType[];
 	rankOffset?: number;
 }
-
-	function MockThumbnail({ className }: { className: string }) {
-		return (
-			<div className={`flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/20 relative ${className}`}>
-				<Music4 className="h-1/3 w-1/3 text-primary-text relative z-10" />
-				<span className="absolute bottom-1 right-1 text-3xs font-black text-primary-text uppercase tracking-tighter select-none z-10">
-					No Image
-				</span>
-			</div>
-		);
-	}
 
 const BATCH_SIZE = 10;
 

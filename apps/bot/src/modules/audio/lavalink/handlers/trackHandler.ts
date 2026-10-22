@@ -1,64 +1,51 @@
 import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
-import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
-import { ContainerBuilder, MessageFlags } from 'discord.js';
-import { CHAPTER_FETCH_MIN_DURATION_MS, DEFAULT_COLOR, resolveYouTubeVideoId } from '@sirubot/utils';
-import { getInFlightRelatedFetch, queueRelatedUpfront } from '../autoPlayRelated.ts';
-import { isTtsClip } from '../requester.ts';
-import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
-import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
-import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
-import * as Sentry from '@sentry/node';
+import { CustomPlayer } from '../player/customPlayer.ts';
+import { PlaybackWatchdog, ServerTrackProbe } from './playbackWatchdog.ts';
+import { QueueAdvancer } from './queueAdvancer.ts';
+import { TrackStartOrchestrator } from './trackStartOrchestrator.ts';
 
-const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
-/** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
-const TRANSITION_RECONCILE_MS = 800;
-
-type ServerTrackProbe = { known: true; track: Track | null } | { known: false };
-
-/** encoded가 달라도(파일캐시 재구성 등) 같은 영상이면 같은 트랙으로 본다. */
-function isSameTrack(
-	a: { encoded?: unknown; info?: { identifier?: unknown } } | null | undefined,
-	b: { encoded?: unknown; info?: { identifier?: unknown } } | null | undefined
-): boolean {
-	const encodedA = a?.encoded;
-	const encodedB = b?.encoded;
-	if (typeof encodedA === 'string' && encodedA === encodedB) return true;
-	const identifierA = a?.info?.identifier;
-	const identifierB = b?.info?.identifier;
-	return typeof identifierA === 'string' && identifierA.length > 0 && identifierA === identifierB;
+/**
+ * 협력 클래스 간 위임 계약 — 분리 전 단일 클래스 안에서 서로를 부르던 private 메서드 호출을
+ * 그대로 이어준다. TrackHandler가 각 협력 클래스로 위임하므로 외부 호출자(이벤트 배선 등)는
+ * 분리 전후로 동일한 시그니처를 본다.
+ */
+export interface TrackTransitionHost {
+	// playbackWatchdog 소유
+	hasWatchdog(guildId: string): boolean;
+	armWatchdog(player: CustomPlayer, serverActiveObserved?: number): void;
+	armWatchdogUnlessStarted(player: CustomPlayer): void;
+	clearWatchdog(guildId: string): void;
+	setLastStarted(player: CustomPlayer, track: Track | null): void;
+	clearReconcile(guildId: string): void;
+	isTransitionAlreadyStarted(player: CustomPlayer, ended: Track | UnresolvedTrack | null): boolean;
+	fetchServerTrack(player: CustomPlayer): Promise<ServerTrackProbe>;
+	// queueAdvancer 소유
+	startClientOwnedTrack(player: CustomPlayer): Promise<void>;
+	finishQueue(player: CustomPlayer): Promise<void>;
+	clearAdvancePending(guildId: string): void;
+	// trackStartOrchestrator 소유 (TTS 이어가기)
+	continueAfterTtsClip(player: CustomPlayer, track: Track | null): Promise<void>;
+	quietEndTts(player: CustomPlayer): Promise<void>;
 }
 
 /**
- * TrackExceptionEvent에서 사람이 읽을 사유를 뽑아요 (연령 제한, 삭제된 영상 등).
- * 라바링크 버전/경로에 따라 exception.message, exception.cause, error가 서로 다르게 채워져 전부 대비하고,
- * data-api 스키마의 reason 상한(200자) 안으로 잘라 보내요.
+ * Lavalink 재생 이벤트의 진입점(퍼사드) — 이벤트 등록과 협력 클래스 간 위임만 담당한다.
+ * - trackStartOrchestrator: 시작 확정·mixer 배선·TTS 이어가기
+ * - queueAdvancer: trackEnd/failure/queueEnd/destroy 진행·finishQueue·advance-pending
+ * - playbackWatchdog: 전이 확인 타이머·리커널·서버 프로브(타이머 맵 일원화)
  */
-function extractExceptionReason(payload: TrackExceptionEvent): string | null {
-	const raw = payload.exception?.message?.trim() || payload.exception?.cause?.trim() || payload.error?.trim() || '';
-	return raw ? raw.slice(0, 200) : null;
-}
-
-export class TrackHandler extends BaseLavalinkHandler {
-	/**
-	 * 전이 소유권: 서버 슬롯에 예열된 길드는 서버가 trackEnd를 처리하므로 관망하고,
-	 * 예열하지 않은 길드(갭리스 off / 반복 모드 / trackStart 이후 추가)는 클라이언트가
-	 * play로 진행한다. 예열 상태는 MixerService가 소유한다.
-	 */
-	private readonly watchdogs = new Map<string, ReturnType<typeof setTimeout>>();
-	/** 전이 확정 리커널 — 지연 도착한 trackEnd/queueEnd가 current를 덮어쓸 때 실제 재생 곡으로 복원한다. */
-	private readonly reconcileTimers = new Map<string, ReturnType<typeof setTimeout>>();
-	/**
-	 * 클라이언트가 직접 보낸 play가 queueEnd fallback과 중복되지 않도록 추적한다.
-	 * token은 타이머와 경합할 때 오래된 정리가 최신 대기를 지우지 않도록 보호하고,
-	 * timer는 play가 서버 재생 중이라 조용히 무시돼도 다음 전이가 영구히 막히지 않도록 한다.
-	 */
-	private readonly clientAdvancePending = new Map<string, { token: number; timer: ReturnType<typeof setTimeout> }>();
-	private advanceTokenSeq = 0;
-	private readonly confirmTimeoutMs = TRANSITION_CONFIRM_TIMEOUT_MS;
+export class TrackHandler extends BaseLavalinkHandler implements TrackTransitionHost {
+	private readonly playbackWatchdog: PlaybackWatchdog;
+	private readonly queueAdvancer: QueueAdvancer;
+	private readonly trackStartOrchestrator: TrackStartOrchestrator;
 
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
 		super('trackHandler');
+
+		this.playbackWatchdog = new PlaybackWatchdog(this, this.logger, lavalinkManager);
+		this.queueAdvancer = new QueueAdvancer(this, this.logger, lavalinkManager);
+		this.trackStartOrchestrator = new TrackStartOrchestrator(this, this.logger, lavalinkManager);
 
 		this.lavalinkManager.on('trackStart', this.wrapAsyncHandler(this.handleTrackStart.bind(this), 'trackStart'));
 		this.lavalinkManager.on('trackEnd', this.wrapAsyncHandler(this.handleTrackEnd.bind(this), 'trackEnd'));
@@ -68,817 +55,97 @@ export class TrackHandler extends BaseLavalinkHandler {
 		this.lavalinkManager.on('playerDestroy', this.wrapAsyncHandler(this.handlePlayerDestroy.bind(this), 'playerDestroy'));
 	}
 
+	/* ── 이벤트 진입 위임 (등록 시그니처는 분리 전과 동일) ── */
+
 	private async handleTrackStart(player: CustomPlayer, track: Track | null, payload: TrackStartEvent) {
-		// 예열 소비 후 이어지는 trackStart에서 서버가 시작한 트랙을 대조한다.
-		const preloadedIdentifier = this.container.mixerService.takePreloadedIdentifier(player.guildId);
-		const startedTrack = this.resolveStartedTrack(player, track, payload, preloadedIdentifier);
-		this.syncQueueToNowPlaying(player, startedTrack);
-		// 표시 확정 — 모든 NOWPLAYING 렌더러는 이 값을 그린다.
-		// (queue.current는 lavalink-client 전이 기계가 뒤늦게 덮어쓸 수 있다.)
-		player.transitionState.confirmedNowPlaying = startedTrack;
-		player.transitionState.serverConsumedTrack = null;
-		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
-		player.consecutiveErrors = 0;
-		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
-		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
-		publishPlayerState(player);
-		player.transitionState.stopByCommand = false;
-		// 예열 소비 확인 창(preloadConsumedAt)은 시작 확정과 함께 닫는다 — 남겨두면 창 안에
-		// 도착한 무관한 늦은 queueEnd를 defer해 실제 종료 처리(finishQueue)가 늦어진다.
-		player.transitionState.preloadConsumedAt = null;
-		this.setLastStarted(player, startedTrack);
-		this.clearAdvancePending(player.guildId);
-		this.clearWatchdog(player.guildId);
-		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
-		this.loadChapters(player, startedTrack);
-		if (startedTrack && !startedTrack.info.isStream && !isTtsClip(startedTrack)) {
-			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
-			// fire-and-forget
-			this.container.trackService
-				.increasePlays(startedTrack)
-				.then(() => this.container.trackService.addHistory(player.guildId, startedTrack))
-				.catch((error) => this.logger.error(`Failed to record track history: ${error}`));
-		}
-
-		// mixer: 필터 보장(정상 경로에서는 primeForPlay가 play 이전에 이미 보낸다 → 여기서는 no-op,
-		//        play 이전 prime이 실패했을 때의 재시도) → 다음 곡 예열.
-		// 슬롯 공백을 줄이기 위해 컨트롤러 알림과 병렬로 먼저 시작한다.
-		const mixerWiring = this.runMixerWiring(player, startedTrack);
-		if (isTtsClip(startedTrack)) {
-			// 채팅 TTS 클립마다 컨트롤러를 다시 보내면 메시지마다 리센드 스팸이 된다 — 알림만 생략한다.
-		} else {
-			await this.container.playerNotifier.onTrackStart(player);
-			// 음악이 시작되면 단독 대기 중이던 TTS 클립은 오버레이로 순서대로 넘어간다 (명세 4.3)
-			void this.container.chatTtsService
-				.drainSoloQueueToAnnounce(player)
-				.catch((error) => this.logger.warn(`[chatTts] solo queue drain failed (guild ${player.guildId}): ${error}`));
-		}
-		await mixerWiring;
-	}
-
-	/** trackStart의 mixer 배선 — 예열 슬롯 갱신과 추천 선예열을 컨트롤러 알림과 병렬로 수행한다. */
-	private async runMixerWiring(player: CustomPlayer, startedTrack: Track | null): Promise<void> {
-		try {
-			await this.container.mixerService.ensureMixerFilter(player).catch((error) => {
-				this.logger.warn(`[mixer] enableFilter failed for guild ${player.guildId}, will retry: ${error}`);
-			});
-			const preloaded = await this.container.mixerService.preloadUpcoming(player).catch((error) => {
-				this.logger.warn(`[mixer] preload failed (guild ${player.guildId}): ${error}`);
-				return false;
-			});
-			// 대기열이 비어 있으면(현재 곡이 마지막) 추천곡을 미리 큐에 추가해
-			// 갭리스 자동재생 체인을 유지한다 (repeat/갭리스 off는 헬퍼가 거름)
-			if (!preloaded && startedTrack && player.queue.tracks.length === 0) {
-				await queueRelatedUpfront(player, startedTrack).catch((error) => {
-					this.logger.warn(`[mixer] related pre-add failed (guild ${player.guildId}): ${error}`);
-				});
-			}
-		} catch (error) {
-			this.logger.warn(`[mixer] trackStart wiring failed (guild ${player.guildId}): ${error}`);
-			this.container.mixerService.markUnmanaged(player.guildId);
-		}
+		await this.trackStartOrchestrator.handleTrackStart(player, track, payload);
 	}
 
 	private handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
-		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author} (reason: ${payload.reason})`);
-		reportPlaybackEvent(player.guildId, 'track_end', track, { reason: payload.reason });
-		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
-		publishPlayerState(player);
-		// 채팅 TTS 클립 전용 진행 — 기존 전이 분기(예열 관망/클라이언트 진행)와 섞지 않는다 (명세 4.2).
-		if (this.container.chatTtsService.isTtsEnded(player, track)) {
-			if (payload.reason === 'replaced') {
-				// 치환은 새 트랙이 이미 시작되는 경로다 — 반복 모드 잔재만 걷어내고 관여하지 않는다.
-				this.container.chatTtsService.scrubTtsClips(player, track);
-				return;
-			}
-			void this.continueAfterTtsClip(player, track).catch((error) =>
-				this.logger.error(`Failed to continue after TTS clip (guild ${player.guildId}): ${error}`)
-			);
-			return;
-		}
-		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
-		// 단, 직전 overlap이 abort됐다면 서버는 진행하지 않는다(서버 슬롯도 이미 비웠다) —
-		// 관망하지 말고 아래 클라이언트 소유 진행으로 즉시 넘어간다.
-		if (this.container.mixerService.consumePreloaded(player.guildId) && !this.container.mixerService.consumeOverlapAbort(player.guildId)) {
-			player.transitionState.preloadConsumedAt = Date.now();
-			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
-			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).
-			const preheated = player.queue.tracks[0] ?? null;
-			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
-			// β 순서(시작 먼저): 이미 다음 곡이 시작된 상태라면 확인 타이머가 필요 없다.
-			// α 순서(종료 먼저): 마지막 시작곡이 방금 끝났으므로 전이 확인 타이머를 건다.
-			if (!this.isTransitionAlreadyStarted(player, track)) {
-				this.armWatchdog(player);
-			}
-			return;
-		}
-		if (this.watchdogs.has(player.guildId)) return;
-
-		// 클라이언트 소유 전이: 서버가 예열하지 않은 길드(갭리스 off / 반복 모드 /
-		// trackStart 이후 추가된 곡). autoSkip: false라 아무도 진행하지 않으므로
-		// 클라이언트가 play로 진행한다.
-		// - 'finished': 자연 전이
-		// - 'stopped': 클라이언트가 보낸 skip(/skip, 오류 복구, watchdog 복구) —
-		//   autoSkip: false라 라이브러리가 다음 곡으로 넘기지 않으므로 여기서 진행해야 한다.
-		//   '/stop'은 큐를 비운 뒤 queueEnd로 가므로 도달하지 않는다.
-		// 'replaced'(이전곡 치환)와 'loadFailed'/'cleanup'(trackError/trackStuck 핸들러 소유)는 제외 — 이중 진행 방지.
-		if ((payload.reason === 'finished' || payload.reason === 'stopped') && player.queue.current && !player.transitionState.stopByCommand) {
-			void this.startClientOwnedTrack(player).catch((error) =>
-				this.logger.error(`Failed to advance track (client-owned transition): ${error}`)
-			);
-		}
+		this.queueAdvancer.handleTrackEnd(player, track, payload);
 	}
 
-	/**
-	 * 채팅 TTS 클립 종료 후속 처리 (명세 4.2/4.3):
-	 * 반복 모드가 남긴 TTS 잔재를 걷어낸 뒤, 음악이 대기 중이면 음악을,
-	 * 아니면 내부 단독 큐의 다음 클립을 시작하고, 둘 다 없으면 조용히 끝낸다.
-	 * 알림·컨트롤러 삭제는 하지 않는다 (TTS 조용한 스킵 규칙).
-	 */
-	private async continueAfterTtsClip(player: CustomPlayer, track: Track | null): Promise<void> {
-		this.container.chatTtsService.scrubTtsClips(player, track);
-		if (player.transitionState.stopByCommand) {
-			this.container.chatTtsService.clearSoloQueue(player.guildId);
-			return;
-		}
-		// mixer 예열 슬롯이 남아 있으면 서버가 다음 트랙을 시작한다 — bookkeeping만 하고 관망한다.
-		if (this.container.mixerService.consumePreloaded(player.guildId)) {
-			player.transitionState.preloadConsumedAt = Date.now();
-			const preheated = player.queue.tracks[0] ?? null;
-			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
-			if (!this.isTransitionAlreadyStarted(player, track)) this.armWatchdog(player);
-			return;
-		}
-		if (this.watchdogs.has(player.guildId)) return;
-
-		const current = player.queue.current as Track | null;
-		if (current && !isTtsClip(current)) {
-			// 음악 대기 중 — 클라이언트가 다음 곡을 시작한다
-			await this.startClientOwnedTrack(player);
-			return;
-		}
-		if (current) {
-			// 이미 다음 TTS 클립이 시작됐다 (중복 이벤트) — 건드리지 않는다
-			return;
-		}
-		const seeded = await this.container.chatTtsService.seedNextSoloClip(player);
-		if (!seeded) {
-			await this.quietEndTts(player);
-			return;
-		}
-		const next = player.queue.tracks.shift();
-		if (next) player.queue.current = next as (typeof player.queue)['current'];
-		if (player.queue.current) {
-			await this.startClientOwnedTrack(player);
-			return;
-		}
-		await this.quietEndTts(player);
-	}
-
-	/** TTS 조용한 종료 — 알림·컨트롤러 삭제 없이 상태만 정리하고, TTS가 켜진 길드면 음성에 남는다. */
-	private async quietEndTts(player: CustomPlayer): Promise<void> {
-		player.transitionState.lastStartedEncoded = null;
-		player.transitionState.preloadConsumedAt = null;
-		player.transitionState.confirmedNowPlaying = null;
-		player.transitionState.serverConsumedTrack = null;
-		player.playing = false;
-		publishPlayerState(player);
-		await this.container.chatTtsService.keepAliveForTts(player);
-	}
-
-	private async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
-		await this.handleTrackFailure(player, track, 'stuck');
+	private async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackStuckEvent) {
+		await this.queueAdvancer.handleTrackStuck(player, track, payload);
 	}
 
 	private async handleTrackError(player: CustomPlayer, track: Track | UnresolvedTrack | null, payload: TrackExceptionEvent) {
-		await this.handleTrackFailure(player, track, 'error', extractExceptionReason(payload));
-	}
-
-	/**
-	 * trackStuck/trackError 공통 복구 — 연속 오류 중단, 예열 관망, 조용한 스킵/마지막 곡 안내를 공유한다.
-	 * reason은 상태 페이지 '최근 재생 오류'에 사유로 표시돼요 (trackError의 예외 메시지 등).
-	 */
-	private async handleTrackFailure(
-		player: CustomPlayer,
-		track: Track | UnresolvedTrack | null,
-		kind: 'stuck' | 'error',
-		reason: string | null = null
-	) {
-		// 채팅 TTS 클립 실패는 조용히 스킵한다 (명세 4.6): 알림·연속 오류 중단 없이 다음 클립으로 진행한다.
-		if (isTtsClip(track)) {
-			this.logger.warn(`[chatTts] TTS clip ${kind} silently skipped (guild ${player.guildId})${reason ? ` (${reason})` : ''}`);
-			this.clearAdvancePending(player.guildId);
-			// 스킵이 trackEnd/queueEnd를 다시 태워 continueAfterTtsClip으로 이어진다 — 실패하면 직접 진행한다.
-			await this.container.mixerService.skip(player).catch((error) => {
-				this.logger.warn(`[chatTts] clip skip failed (guild ${player.guildId}), continuing directly: ${error}`);
-				return this.continueAfterTtsClip(player, track as Track | null);
-			});
-			return;
-		}
-		this.clearAdvancePending(player.guildId);
-		player.consecutiveErrors++;
-		this.logger.warn(
-			`Track ${kind} (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}${reason ? ` (${reason})` : ''}`
-		);
-		reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, {
-			...(reason ? { reason } : {}),
-			consecutiveErrors: player.consecutiveErrors
-		});
-
-		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
-			reportPlaybackEvent(player.guildId, 'playback_abort', track, {
-				reason: 'max_consecutive_errors',
-				consecutiveErrors: player.consecutiveErrors
-			});
-			await this.sendNotification(
-				player,
-				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
-			);
-			player.transitionState.stopByCommand = true;
-			this.container.mixerService.markUnmanaged(player.guildId);
-			this.clearWatchdog(player.guildId);
-			await player.stopPlaying();
-			await player.disconnect();
-			return;
-		}
-
-		// mixer 예열 길드는 서버가 자동 진행하므로 수동 스킵 금지 (watchdog만).
-		if (this.container.mixerService.consumePreloaded(player.guildId)) {
-			player.transitionState.preloadConsumedAt = Date.now();
-			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
-			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).
-			const preheated = player.queue.tracks[0] ?? null;
-			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
-			if (!this.isTransitionAlreadyStarted(player, track)) {
-				this.armWatchdog(player);
-			}
-			return;
-		}
-		if (this.watchdogs.has(player.guildId)) return;
-
-		// 중간 오류는 조용히 스킵하고, 마지막(남은 곡 없음)에만 한 번 알린다. (3연속 중단 알림은 위 abort 분기)
-		if (player.queue.tracks.length > 0) {
-			// raw player.skip() 폴백은 예열 슬롯을 남겨 stale 곡이 뒤늦게 재생된다
-			// (docs/3rdparty.md: 스킵은 mixerService를 거쳐야 한다). 스킵이 실패하면
-			// watchdog 복구 루프가 수습한다.
-			await this.container.mixerService.skip(player).catch((error) => {
-				this.logger.warn(`[mixer] error-skip failed (guild ${player.guildId}), deferring to watchdog: ${error}`);
-				this.armWatchdog(player);
-			});
-		} else {
-			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
-			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
-			player.transitionState.stopByCommand = true;
-			await player.stopPlaying();
-		}
+		await this.queueAdvancer.handleTrackError(player, track, payload);
 	}
 
 	private async handleQueueEnd(
 		player: CustomPlayer,
 		track: Track | UnresolvedTrack | null,
-		_payload: TrackEndEvent | TrackStuckEvent | TrackExceptionEvent
+		payload: TrackEndEvent | TrackStuckEvent | TrackExceptionEvent
 	) {
-		this.logger.info(`Queue ended for guild: ${player.guildId}`);
-		reportPlaybackEvent(player.guildId, 'queue_end', track);
-		// 대시보드 라이브 뷰 — 큐 종료 상태를 즉시 반영 (fire-and-forget)
-		publishPlayerState(player);
-
-		// 채팅 TTS 클립으로 큐가 끝난 경우 (명세 4.2/4.3): 다음 단독 클립을 시드해 이어 읽고,
-		// 남은 클립이 없으면 조용히 끝낸다 — "모두 재생 완료" 알림·컨트롤러 삭제를 보내지 않는다.
-		if (this.container.chatTtsService.isTtsEnded(player, track)) {
-			if (player.transitionState.stopByCommand) {
-				this.container.chatTtsService.clearSoloQueue(player.guildId);
-				return;
-			}
-			const seeded = await this.container.chatTtsService.seedNextSoloClip(player);
-			if (!seeded) {
-				await this.quietEndTts(player);
-				return;
-			}
-			// 시드 성공 — 아래 기존 분기가 큐의 클립을 시작한다 (defer/watchdog 경로도 tracks에서 찾아 시작한다).
-		}
-
-		// 서버 예열 슬롯이 남아 있으면 서버가 content end에 자동 진행한다 —
-		// 이때 queueEnd를 처리하면 컨트롤러가 삭제되고 "큐 종료" 안내가 나가며,
-		// 라이브러리의 onEmptyQueue.destroyAfterMs(10s) 타이머가 걸려 서버가
-		// 전이를 시작한 뒤에도 플레이어가 강제 destroy될 수 있다.
-		if (this.container.mixerService.isPreloaded(player.guildId)) {
-			this.logger.debug(`[mixer] queueEnd deferred: server slot preheated (guild ${player.guildId})`);
-			// trackEnd가 라이브러리의 queueEnd 단축분기(라인 2756)로 스킵되면 watchdog이
-			// 걸리지 않는다. 서버가 진행하지 않으면 여기서 복구한다.
-			this.armWatchdog(player);
-			return;
-		}
-
-		// (b) 조기 queueEnd — 크로스페이드/전이 창에 이미 새 곡이 재생 중이다.
-		// queueEnd() 진입 시 라이브러리가 playing=false로 만들지만 그 사이 trackStart가
-		// 도착하면 true로 되돌아온다. 이때 "모두 재생 완료"를 보내면 재생은 계속된다.
-		if (player.playing) {
-			this.logger.debug(`[mixer] queueEnd deferred: still playing (guild ${player.guildId})`);
-			this.armWatchdog(player);
-			return;
-		}
-
-		// (b) 방금 시작한 곡과 다른 트랙의 queueEnd — 과거/중복 이벤트로 보고 관망한다.
-		const lastStarted = player.transitionState.lastStartedEncoded;
-		const endedEncoded = (track as { encoded?: unknown } | null)?.encoded;
-		if (typeof lastStarted === 'string' && typeof endedEncoded === 'string' && endedEncoded !== lastStarted) {
-			this.logger.debug(`[mixer] queueEnd deferred: stale event for ${endedEncoded} (guild ${player.guildId})`);
-			this.armWatchdog(player);
-			return;
-		}
-
-		// (b) 예열 슬롯을 방금 소비했다(종료 먼저 온 α 순서) — 서버 전이가 곧 trackStart로 확인된다.
-		const consumedAt = player.transitionState.preloadConsumedAt;
-		if (consumedAt && Date.now() - consumedAt < this.confirmTimeoutMs) {
-			this.logger.debug(`[mixer] queueEnd deferred: preloaded slot consumed just now (guild ${player.guildId})`);
-			this.armWatchdog(player);
-			return;
-		}
-
-		const inFlightRelated = getInFlightRelatedFetch(player.guildId);
-		if (inFlightRelated) {
-			const addedTrack = await inFlightRelated.catch(() => null);
-			if (addedTrack && !player.playing && (player.queue.current || player.queue.tracks.length > 0)) {
-				await this.startClientOwnedTrack(player).catch((error) => this.logger.error(`Failed to start pre-added autoplay track: ${error}`));
-				return;
-			}
-			if (addedTrack && (player.queue.current || player.playing)) return;
-		}
-
-		// autoPlayFunction은 곡을 current로 옮기지만 autoSkip: false에서는 재생을
-		// 시작하지 않는다. 이 경로는 서버 슬롯이 비어 있으므로 클라이언트 play가 맞다.
-		if (this.clientAdvancePending.has(player.guildId)) return;
-		if (player.queue.current && !player.playing) {
-			await this.startClientOwnedTrack(player).catch((error) => this.logger.error(`Failed to start autoplay track: ${error}`));
-			return;
-		}
-
-		// 선예열이 방금 끝나 in-flight 가드를 놓친 사이 queueEnd가 올 수 있다 —
-		// 큐에 추천곡이 남아 있는데 "모두 재생 완료"로 끝내면 곡이 영원히 재생되지 않는다.
-		if (!player.playing && player.queue.tracks.length > 0) {
-			if (!player.queue.current) {
-				const next = player.queue.tracks.shift();
-				if (next) player.queue.current = next as (typeof player.queue)['current'];
-			}
-			if (player.queue.current) {
-				await this.startClientOwnedTrack(player).catch((error) => this.logger.error(`Failed to start queued track after queueEnd: ${error}`));
-				return;
-			}
-		}
-
-		// (e) queueEnd인데 서버는 아직 트랙을 재생 중 — 클라이언트 큐만 빈 β 순서 착시다
-		// (신곡 trackStart가 큐를 비운 뒤 구곡 trackEnd가 라이브러리 빈큐 단축분기로
-		// queueEnd를 직행시킨 경우). 라이브러리는 진입부에서 current=null, playing=false로
-		// 덮어쓰고 destroyAfterMs(10s) 타이머를 암 — 그 타이머는 발화 시점에 current가 있으면
-		// 스스로 취소되므로, 서버가 재생 중인 트랙을 current로 되살려 재생 중 파괴를 막고
-		// 종료 처리를 건너뛴다. 확인(REST)과 판정 사이에 서버 상태가 바뀌는 경합 창은 남는다:
-		// 완전 제거가 아니라 빈도 제거가 목표다. 조회 실패 시에는 서버 상태를 알 수 없으니
-		// 기존 종료 경로를 그대로 탄다.
-		const serverPlayer = await player.node.fetchPlayer(String(player.guildId)).catch(() => null);
-		if (serverPlayer && !('status' in serverPlayer) && serverPlayer.track) {
-			this.logger.warn(`[mixer] queueEnd deferred: server still has an active track (guild ${player.guildId}), restoring client state`);
-			const serverTrack = this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined);
-			player.queue.current = serverTrack as (typeof player.queue)['current'];
-			player.transitionState.lastStartedEncoded = typeof serverTrack.encoded === 'string' ? serverTrack.encoded : null;
-			// queueEnd가 지운 playing 플래그도 되돌린다 — 일시정지 상태에서는 재생 중이 아니므로 둔다.
-			if (!serverPlayer.paused) player.playing = true;
-			this.armWatchdog(player);
-			// 이 복원이 UI에 반영되는 유일한 시점일 수 있다 — queueEnd 경로의 publish는
-			// 이미 잘못된 상태로 발행됐다.
-			publishPlayerState(player);
-			await this.container.playerNotifier.updateController(player);
-			return;
-		}
-
-		// 대기열의 모든 곡이 끝났다.
-		await this.finishQueue(player);
-		// 채팅 TTS가 켜진 길드는 음악이 끝나도 음성에 남아 채팅을 계속 읽는다 (명세 4.2).
-		await this.container.chatTtsService.keepAliveForTts(player);
+		await this.queueAdvancer.handleQueueEnd(player, track, payload);
 	}
 
-	/** 큐의 실제 종료 처리: 컨트롤러를 삭제하고 안내를 보낸다. 전이 확정 리커널을 무효화한다. */
-	private async finishQueue(player: CustomPlayer): Promise<void> {
-		this.clearWatchdog(player.guildId);
-		// 종료됐는데 지연 도착한 리커널이 current를 되살리지 않도록 기대치를 비운다.
-		player.transitionState.lastStartedEncoded = null;
-		player.transitionState.preloadConsumedAt = null;
-		player.transitionState.confirmedNowPlaying = null;
-		player.transitionState.serverConsumedTrack = null;
-		// 대시보드 라이브 뷰 — 종료를 확정 신호(ended)로 알려 마지막 프레임이 유령으로 남지 않게 한다 (fire-and-forget)
-		publishPlayerEnded(player);
-		await this.container.playerNotifier.deleteController(player);
-
-		if (!player.transitionState.stopByCommand) {
-			await this.sendNotification(player, '📭 대기열의 모든 곡을 재생했어요.');
-		}
+	private async handlePlayerDestroy(player: CustomPlayer) {
+		await this.queueAdvancer.handlePlayerDestroy(player);
 	}
 
-	private async sendNotification(player: CustomPlayer, message: string) {
-		if (!player.textChannelId) return;
-		try {
-			const channel = this.container.client.channels.cache.get(player.textChannelId);
-			if (channel?.isSendable()) {
-				await channel.send({
-					components: [
-						new ContainerBuilder()
-							.setAccentColor(DEFAULT_COLOR)
-							.addTextDisplayComponents((textDisplay) => textDisplay.setContent(message))
-					],
-					flags: [MessageFlags.IsComponentsV2]
-				});
-			}
-		} catch (error) {
-			this.logger.error(`Failed to send notification: ${error}`);
-		}
+	/* ── playbackWatchdog 위임 ── */
+
+	public hasWatchdog(guildId: string): boolean {
+		return this.playbackWatchdog.hasWatchdog(guildId);
 	}
 
-	private async handlePlayerDestroy(player: CustomPlayer): Promise<void> {
-		this.container.mixerService.markUnmanaged(player.guildId);
-		this.container.chatTtsService.clearGuild(player.guildId);
-		this.clearAdvancePending(player.guildId);
-		this.clearReconcile(player.guildId);
-		this.clearWatchdog(player.guildId);
-		player.transitionState.lastStartedEncoded = null;
-		player.transitionState.confirmedNowPlaying = null;
-		player.transitionState.serverConsumedTrack = null;
-		// 대시보드 라이브 뷰 — 플레이어 소멸 상태 추적기 정리
-		clearPlayerStateTracker(player.guildId);
-		await this.container.mixerService.clearNext(player).catch(() => null);
+	public armWatchdog(player: CustomPlayer, serverActiveObserved: number = 0): void {
+		this.playbackWatchdog.armWatchdog(player, serverActiveObserved);
 	}
 
-	/**
-	 * Lavalink payload가 실제 시작한 곡과 클라이언트 current가 다르면 payload를 우선한다.
-	 *
-	 * 단, encoded만 다르고 identifier가 큐의 트랙과 같으면 서버가 같은 영상을 다른
-	 * 메타데이터로 재구성한 것으로 본다 (예: lavalink_file_cache의 stale 메타데이터로
-	 * trackStart payload가 만들어진 경우). 이때는 봇이 검색한 신선한 메타데이터를 가진
-	 * 큐의 트랙 객체를 단일 source of truth로 써서 표시와 실제 재생이 어긋나지 않게 한다.
-	 */
-	private resolveStartedTrack(
-		player: CustomPlayer,
-		track: Track | null,
-		payload: TrackStartEvent,
-		preloadedIdentifier: string | null
-	): Track | null {
-		const payloadEncoded = payload.track?.encoded;
-		const currentEncoded = (track as { encoded?: unknown } | null)?.encoded;
-		if (!payloadEncoded || payloadEncoded === currentEncoded) return track;
-
-		const payloadIdentifier = payload.track?.info?.identifier;
-		const currentIdentifier = (track as { info?: { identifier?: unknown } } | null)?.info?.identifier;
-		// 클라이언트 current 자체가 서버가 시작한 것과 같은 영상이면(클라이언트 소유 전이 등)
-		// 서버 메타데이터 대신 클라이언트 객체를 쓴다 — 표시의 단일 source of truth.
-		if (typeof payloadIdentifier === 'string' && payloadIdentifier.length > 0 && track && currentIdentifier === payloadIdentifier) {
-			return track;
-		}
-		if (typeof payloadIdentifier === 'string' && payloadIdentifier.length > 0 && Array.isArray(player.queue.tracks)) {
-			// 같은 identifier(같은 영상)의 큐 트랙이 있으면 그 객체를 쓴다.
-			const queued = player.queue.tracks.find(
-				(t: unknown) =>
-					(t as { encoded?: unknown })?.encoded != null &&
-					(t as { info?: { identifier?: unknown } })?.info?.identifier === payloadIdentifier
-			);
-			if (queued) {
-				this.logger.debug(`[transition] trackStart resolved by identifier (guild ${player.guildId}): using queued track for display`);
-				return queued as Track;
-			}
-			// 예열한 곡도 큐에 있는 곡도 아닌 트랙이 시작됐다 — 서버(믹서/파일 캐시)가
-			// 예상 밖의 트랙을 재생한 것이므로 경고로 남긴다.
-			if (preloadedIdentifier && preloadedIdentifier !== payloadIdentifier) {
-				this.logger.warn(
-					`[transition] unexpected track started (guild ${player.guildId}): preloaded=${preloadedIdentifier}, started=${payloadIdentifier}`
-				);
-			}
-		}
-		// 아밍으로 소비·확정된 예열곡이 큐에서 빠진 뒤 시작되면(사용자가 큐를 바꿔
-		// 재예열된 경우) 서버 payload(file캐시 스냅샷 메타데이터) 대신 봇이 검색한
-		// 신선한 객체를 표시에 쓴다.
-		const consumed = player.transitionState?.serverConsumedTrack;
-		const consumedIdentifier = (consumed as { info?: { identifier?: unknown } } | null)?.info?.identifier;
-		if (consumed && typeof payloadIdentifier === 'string' && consumedIdentifier === payloadIdentifier) {
-			this.logger.debug(`[transition] trackStart resolved from the server-consumed preheat (guild ${player.guildId})`);
-			return consumed;
-		}
-		return this.lavalinkManager.utils.buildTrack(payload.track, undefined);
+	public armWatchdogUnlessStarted(player: CustomPlayer): void {
+		this.playbackWatchdog.armWatchdogUnlessStarted(player);
 	}
 
-	/** 서버가 시작한 곡을 play 없이 클라이언트 큐에 동기화한다. */
-	private syncQueueToNowPlaying(player: CustomPlayer, track: Track | null): void {
-		const queue = player.queue;
-		if (!queue || !track) return;
-		const encoded = (track as { encoded?: unknown }).encoded;
-		if (Array.isArray(queue.tracks) && typeof encoded === 'string') {
-			const index = queue.tracks.findIndex((t: unknown) => (t as { encoded?: unknown })?.encoded === encoded);
-			if (index >= 0) {
-				const [now] = queue.tracks.splice(index, 1);
-				if (queue.current && (queue.current as { encoded?: unknown })?.encoded !== encoded) {
-					if (Array.isArray(queue.previous)) {
-						queue.previous.unshift(queue.current);
-						while (queue.previous.length > 25) queue.previous.pop();
-					}
-				}
-				queue.current = now as Track;
-				return;
-			}
-		}
-		if ((queue.current as { encoded?: unknown })?.encoded !== encoded) {
-			if (queue.current && Array.isArray(queue.previous)) {
-				queue.previous.unshift(queue.current);
-				while (queue.previous.length > 25) queue.previous.pop();
-			}
-			queue.current = track as (typeof queue)['current'];
-		}
+	public clearWatchdog(guildId: string): void {
+		this.playbackWatchdog.clearWatchdog(guildId);
 	}
 
-	/**
-	 * YouTube 챕터(에피소드)를 REST로 직접 조회해 `player.chapters`에 넣는다.
-	 *
-	 * SponsorBlock 플러그인은 `categories`가 등록된 길드에서만 `ChaptersLoaded`를 보내고
-	 * (기본값 `[]`이면 아예 조회하지 않으므로), lavaplayer는 그 조회가 실패하면
-	 * 챕터를 내려주지 않는다. 대부분의 길드는 여기서 챕터를 채운다.
-	 */
-	private loadChapters(player: CustomPlayer, track: Track | null): void {
-		const videoId = resolveYouTubeVideoId(track);
-		if (player.chaptersTrackIdentifier !== videoId) {
-			player.chapters = [];
-			player.chaptersTrackIdentifier = videoId;
-		}
-		if (!videoId || player.chapters.length > 0) return;
-
-		const duration = track?.info?.duration ?? 0;
-		if (duration < CHAPTER_FETCH_MIN_DURATION_MS) return;
-
-		void fetchYouTubeChapters(videoId, duration)
-			.then((chapters) => {
-				// 그 사이에 다른 트랙으로 바뀌었다면 버린다.
-				if (player.chaptersTrackIdentifier !== videoId || chapters.length === 0) return;
-				player.chapters = chapters;
-				this.container.playerNotifier.updateController(player);
-			})
-			.catch((error) => this.logger.debug(`[chapters] failed for ${videoId}: ${error}`));
+	public setLastStarted(player: CustomPlayer, track: Track | null): void {
+		this.playbackWatchdog.setLastStarted(player, track);
 	}
 
-	/**
-	 * 마지막으로 시작한 곡을 기록하고 전이 확정 리커널을 예약한다.
-	 * 라이브러리의 지연 continuation(β 순서의 trackEnd, 중복 trackEnd)이
-	 * `queue.current`를 비우거나 밀어내 프론트엔드 표시 곡이 어긋나는 것을 복원한다.
-	 */
-	private setLastStarted(player: CustomPlayer, track: Track | null): void {
-		const encoded = (track as { encoded?: unknown } | null)?.encoded;
-		player.transitionState.lastStartedEncoded = typeof encoded === 'string' ? encoded : null;
-		if (!track || typeof encoded !== 'string') return;
-
-		const guildId = player.guildId;
-		this.clearReconcile(guildId);
-		this.reconcileTimers.set(
-			guildId,
-			setTimeout(() => {
-				this.reconcileTimers.delete(guildId);
-				void this.reconcileNowPlaying(player, track, encoded).catch((error) =>
-					this.logger.warn(`[transition] reconcile failed (guild ${guildId}): ${error}`)
-				);
-			}, TRANSITION_RECONCILE_MS)
-		);
+	public clearReconcile(guildId: string): void {
+		this.playbackWatchdog.clearReconcile(guildId);
 	}
 
-	/**
-	 * 전이 확정 리커널 본체 — 라이브러리의 지연 continuation이 current를 밀어내면
-	 * 서버의 실제 재생 트랙을 기준으로 되돌린다. 서버가 다른 트랙을 재생 중이면
-	 * 그쪽이 진실이므로 클라를 서버에 맞춘다.
-	 */
-	private async reconcileNowPlaying(player: CustomPlayer, track: Track, encoded: string): Promise<void> {
-		// 그 사이에 다른 곡이 시작되었거나 정지 명령이 오면 이 리커널은 무효다.
-		if (player.transitionState.lastStartedEncoded !== encoded) return;
-		if (player.transitionState.stopByCommand) return;
-		const currentEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-		if (currentEncoded === encoded) return;
-
-		const probe = await this.fetchServerTrack(player);
-		if (!probe.known) {
-			// 서버 확인 불가 — 기존 신호로 판단: 재생도 멈췄고 대기열도 비면 정상 종료로 보고 복원하지 않는다.
-			if (!player.playing && player.queue.tracks.length === 0) return;
-		} else if (probe.track === null) {
-			// 서버에 트랙이 없다 — 끝났거나 정지됐다. 복원하지 않는다.
-			return;
-		} else if (!isSameTrack(probe.track, track)) {
-			// 서버가 시작 확정값과 다른 트랙을 재생 중 — 클라가 어긋난 쪽이므로 서버를 따른다.
-			this.logger.warn(`[transition] client drifted from server (guild ${player.guildId}), following the server track`);
-			this.syncQueueToNowPlaying(player, probe.track);
-			this.setLastStarted(player, probe.track);
-			this.container.playerNotifier.updateController(player);
-			return;
-		}
-
-		this.logger.warn(`[transition] now-playing mismatch after start (guild ${player.guildId}), restoring state`);
-		const displaced = player.queue.current;
-		player.queue.current = track as (typeof player.queue)['current'];
-		// 밀려난 current는 다음 곡 후보 → 큐 선두로 되돌린다 (정상 순서 유지).
-		if (displaced && (displaced as { encoded?: unknown }).encoded !== encoded && Array.isArray(player.queue.tracks)) {
-			player.queue.tracks.unshift(displaced as (typeof player.queue.tracks)[number]);
-		}
-		// 뷰 복원 전용: 곡은 이미 재생 중이므로 새 컨트롤러를 보내지 않고(edit/send 없이)
-		// 기존 메시지 컴포넌트만 다시 그린다. sendController를 부르면 정상 trackStart가
-		// 보낸 컨트롤러와 중복 발송 레이스가 생긴다.
-		this.container.playerNotifier.updateController(player);
+	public isTransitionAlreadyStarted(player: CustomPlayer, ended: Track | UnresolvedTrack | null): boolean {
+		return this.playbackWatchdog.isTransitionAlreadyStarted(player, ended);
 	}
 
-	/** 종료된 트랙이 이미 시작된(=전이 완료된) 상태인지 — β/중복 이벤트 판별용. */
-	private isTransitionAlreadyStarted(player: CustomPlayer, ended: Track | UnresolvedTrack | null): boolean {
-		const endedEncoded = (ended as { encoded?: unknown } | null)?.encoded;
-		const lastStarted = player.transitionState.lastStartedEncoded;
-		return typeof endedEncoded === 'string' && typeof lastStarted === 'string' && endedEncoded !== lastStarted;
+	public fetchServerTrack(player: CustomPlayer): Promise<ServerTrackProbe> {
+		return this.playbackWatchdog.fetchServerTrack(player);
 	}
 
-	/**
-	 * 서버가 실제로 재생 중인 트랙을 REST로 조회한다 (클라 current와 무관).
-	 * 조회 실패({known:false})와 서버 무트랙({known:true, track:null})을 구분해
-	 * 반환한다 — 실패 시 보수적 판정을 호출부가 결정한다.
-	 */
-	private async fetchServerTrack(player: CustomPlayer): Promise<ServerTrackProbe> {
-		try {
-			const serverPlayer = await player.node.fetchPlayer(String(player.guildId));
-			if (!serverPlayer || 'status' in serverPlayer || !serverPlayer.track) return { known: true, track: null };
-			return { known: true, track: this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined) };
-		} catch (error) {
-			this.logger.debug(`[mixer] fetchPlayer failed (guild ${player.guildId}): ${error}`);
-			return { known: false };
-		}
+	/* ── queueAdvancer 위임 ── */
+
+	public startClientOwnedTrack(player: CustomPlayer): Promise<void> {
+		return this.queueAdvancer.startClientOwnedTrack(player);
 	}
 
-	/** 서버에 재생 중인 트랙이 있는지 — 확인 불가하면 보수적으로 '있다'로 본다 (play 무음 거부 방지). */
-	private async isServerTrackActive(player: CustomPlayer): Promise<boolean> {
-		const probe = await this.fetchServerTrack(player);
-		return probe.known ? probe.track !== null : true;
+	public finishQueue(player: CustomPlayer): Promise<void> {
+		return this.queueAdvancer.finishQueue(player);
 	}
 
-	private armWatchdog(player: CustomPlayer, serverActiveObserved: number = 0): void {
-		const guildId = player.guildId;
-		this.clearWatchdog(guildId);
-		this.watchdogs.set(
-			guildId,
-			setTimeout(() => {
-				this.watchdogs.delete(guildId);
-				void Promise.resolve()
-					.then(async () => {
-						// 아직 서버가 트랙을 재생 중이면(긴 크로스페이드/β 전이) 시스템은 살아 있으니 한 번 더 관망한다.
-						// 로컬 player.playing은 라이브러리가 일반 trackEnd에서 내리지 않는다(내리는 건 queueEnd와
-						// 노드 종료뿐) — 예열 소비 후 서버가 trackStart를 보내지 않는 실패에서는 플래그가 true로
-						// 남아 관망만 반복하고 아래 복구 분기에 영원히 도달하지 못한다(무음 교착). 그래서
-						// fetchPlayer로 서버의 실제 트랙 유무를 판정한다. fetch 실패는 isServerTrackActive가
-						// '활성'으로 보수 판정하므로, 관망 상한(serverActiveObserved)을 넘기면 복구로 내려보내
-						// 연속 fetch 실패의 교착도 깬다.
-						if (serverActiveObserved < 4 && (await this.isServerTrackActive(player))) {
-							this.armWatchdog(player, serverActiveObserved + 1);
-							return;
-						}
-						this.container.mixerService.markUnmanaged(guildId);
-						// 서버가 자동 진행하지 않음 (예열 실패 등) → 수동 복구.
-						// current에 남은 곡을 직접 재생하는 쪽을 먼저 시도한다.
-						// 복구 명령도 조용히 무시되면 다음 주기에 다시 시도한다
-						// (정상 시작이면 trackStart가 이 타이머를 지운다).
-						if (player.queue.current) {
-							// 클라 play는 서버가 이미 트랙을 시작했으면 noReplace로 조용히 무시된다 —
-							// 그 상태로 play하면 클라 큐만 소비되어 NOWPLAYING과 출력이 어긋난다.
-							// 위 관망 판정(REST 왕복) 사이에 서버가 트랙을 시작했을 수 있으니 play 전에
-							// 한 번 더 확인하고, 살아 있으면 클라 상태가 뒤따를 때까지 관망한다.
-							// 단, 보수적 판정이 반복되면 영원히 관망만 하게 되므로
-							// 일정 횟수 이후에는 play를 시도해 교착에서 빠져나온다.
-							if (serverActiveObserved < 4 && (await this.isServerTrackActive(player))) {
-								this.armWatchdog(player, serverActiveObserved + 1);
-								return;
-							}
-							return this.container.mixerService
-								.clearNext(player)
-								.catch(() => null)
-								.then(() => this.container.mixerService.primeForPlay(player).catch(() => null))
-								.then(() => player.play({ noReplace: true }))
-								.then(() => this.armWatchdogUnlessStarted(player));
-						}
-						if (player.queue.tracks.length > 0) {
-							// 라이브러리 skip()은 !playing && !current일 때 내부에서 play()를 floating
-							// 호출한다 — 이 경로에서는 그 rejection이 unhandled가 되므로, 다음 곡을
-							// current에 올려 클라이언트 주도 전이(clearNext → prime → play)로 보낸다.
-							const next = player.queue.tracks.shift();
-							if (next) player.queue.current = next as (typeof player.queue)['current'];
-							return this.startClientOwnedTrack(player);
-						}
-						// 재생할 곡이 없음 — 조기 queueEnd를 관망한 결과 실제 종료로 확정한다.
-						return this.finishQueue(player);
-					})
-					.catch((error) => {
-						// 복구 명령이 실패하면 이 타이머는 이미 만료됐다 — 실패를 조용히 삼키면
-						// 다음 관찰 사이클이 아예 사라져 길드가 무음으로 멈춘다. 실패를 기록하고
-						// 사이클을 다시 걸어 위 "다음 주기에 다시 시도" 주석이 실제로 성립하게 한다.
-						this.logger.error(`Watchdog recovery failed (guild ${player.guildId}), re-arming watchdog: ${error}`);
-						Sentry.withScope((scope) => {
-							scope.setTag('handler_context', 'watchdog_recovery');
-							scope.setTag('guild_id', player.guildId);
-							Sentry.captureException(error);
-						});
-						this.armWatchdog(player, serverActiveObserved + 1);
-					});
-			}, this.confirmTimeoutMs)
-		);
+	public clearAdvancePending(guildId: string): void {
+		this.queueAdvancer.clearAdvancePending(guildId);
 	}
 
-	/**
-	 * 시작이 확정(current === lastStarted)되고 실제 재생 중일 때를 제외하고 확인 타이머를 건다.
-	 * trackStart가 이미 처리된 상태라면 불필요한 타이머를 만들지 않고,
-	 * no-op이거나 재생이 멈춘 상태에서는 복구 루프를 유지한다.
-	 */
-	private armWatchdogUnlessStarted(player: CustomPlayer): void {
-		const currentEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-		const started = typeof currentEncoded === 'string' && player.transitionState.lastStartedEncoded === currentEncoded;
-		if (started && player.playing) return;
-		this.armWatchdog(player);
+	/* ── trackStartOrchestrator 위임 (TTS 이어가기) ── */
+
+	public continueAfterTtsClip(player: CustomPlayer, track: Track | null): Promise<void> {
+		return this.trackStartOrchestrator.continueAfterTtsClip(player, track);
 	}
 
-	/** 서버 슬롯이 없는 전이에서만 호출: stale 슬롯을 비운 뒤 클라이언트가 다음 곡을 시작한다. */
-	private async startClientOwnedTrack(player: CustomPlayer): Promise<void> {
-		if (this.clientAdvancePending.has(player.guildId)) return;
-		const token = this.setAdvancePending(player.guildId);
-		// 서버가 이미 트랙을 시작했으면(슬롯 자동 진행이 경합에서 이김) play({noReplace:true})는
-		// 조용히 무시되고 클라 큐만 한 칸 소비된다 — NOWPLAYING과 출력이 어긋나는 원인.
-		// 진행 전 서버 트랙을 확인해 살아 있으면 클라 상태 동기화와 관망으로 끝낸다.
-		const probe = await this.fetchServerTrack(player);
-		if (probe.known ? probe.track !== null : true) {
-			if (this.clientAdvancePending.get(player.guildId)?.token === token) this.clearAdvancePending(player.guildId);
-			this.container.mixerService.markUnmanaged(player.guildId);
-			// 오염된 current를 시작 확정값으로 도장하면 남은 전이 가드가 전부 무력화된다 —
-			// 서버가 재생 중인 트랙이 current와 같을 때만 도장하고, 다르면 서버를 따른다.
-			// (확인 불가 시에는 도장하지 않고 관망만 한다 — 정상 trackStart가 도장한다.)
-			const serverTrack = probe.known ? probe.track : null;
-			if (serverTrack && isSameTrack(serverTrack, player.queue.current)) {
-				this.setLastStarted(player, player.queue.current);
-			} else if (serverTrack) {
-				this.logger.warn(`[transition] client advance lost the race (guild ${player.guildId}), following the server track`);
-				this.syncQueueToNowPlaying(player, serverTrack);
-				this.setLastStarted(player, serverTrack);
-			}
-			// 확인이 오탐이었을 수 있으니 복구 타이머를 유지한다 — 정상 trackStart가 지운다.
-			this.armWatchdog(player);
-			this.container.playerNotifier.updateController(player);
-			return;
-		}
-		try {
-			await this.container.mixerService.clearNext(player).catch(() => null);
-			// mixer 필터를 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다.
-			await this.container.mixerService.primeForPlay(player);
-			await player.play({ noReplace: true });
-			// play가 서버 재생 중이라 조용히 무시돼도 다음 전이가 영구히 막히지 않도록 확인
-			// 타이머를 건다. 정상 시작이면 trackStart가 즉시 지우고, no-op이면 watchdog이
-			// prime+play로 복구하거나 종료로 확정한다.
-			this.armWatchdogUnlessStarted(player);
-		} catch (error) {
-			if (this.clientAdvancePending.get(player.guildId)?.token === token) {
-				this.clearAdvancePending(player.guildId);
-			}
-			throw error;
-		}
-	}
-
-	private setAdvancePending(guildId: string): number {
-		this.clearAdvancePending(guildId);
-		const token = ++this.advanceTokenSeq;
-		const timer = setTimeout(() => {
-			const entry = this.clientAdvancePending.get(guildId);
-			if (entry?.token === token) this.clientAdvancePending.delete(guildId);
-		}, this.confirmTimeoutMs);
-		this.clientAdvancePending.set(guildId, { token, timer });
-		return token;
-	}
-
-	private clearAdvancePending(guildId: string): void {
-		const entry = this.clientAdvancePending.get(guildId);
-		if (entry) clearTimeout(entry.timer);
-		this.clientAdvancePending.delete(guildId);
-	}
-
-	private clearReconcile(guildId: string): void {
-		const timer = this.reconcileTimers.get(guildId);
-		if (timer) {
-			clearTimeout(timer);
-			this.reconcileTimers.delete(guildId);
-		}
-	}
-
-	private clearWatchdog(guildId: string): void {
-		const timer = this.watchdogs.get(guildId);
-		if (timer) {
-			clearTimeout(timer);
-			this.watchdogs.delete(guildId);
-		}
+	public quietEndTts(player: CustomPlayer): Promise<void> {
+		return this.trackStartOrchestrator.quietEndTts(player);
 	}
 
 	public cleanup() {
-		for (const timer of this.watchdogs.values()) clearTimeout(timer);
-		this.watchdogs.clear();
-		for (const timer of this.reconcileTimers.values()) clearTimeout(timer);
-		this.reconcileTimers.clear();
-		for (const entry of this.clientAdvancePending.values()) clearTimeout(entry.timer);
-		this.clientAdvancePending.clear();
+		this.playbackWatchdog.cleanup();
+		this.queueAdvancer.cleanup();
 		this.lavalinkManager?.removeAllListeners('trackStart');
 		this.lavalinkManager?.removeAllListeners('trackEnd');
 		this.lavalinkManager?.removeAllListeners('trackStuck');

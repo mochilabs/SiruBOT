@@ -7,11 +7,15 @@ import { Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
 import { InfoBox, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
 import { AddSubscriptionForm } from "@/components/servers/social/add-subscription-form";
 import { TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
+import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { useBotProfile } from "@/hooks/use-bot-profile";
+import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { useSocialAlerts } from "@/hooks/use-social-alerts";
 import type { SocialPlatform, SocialSubscription, SocialSubscriptionStatus } from "@/types/social";
@@ -48,15 +52,18 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const enabled = visible !== false;
 	const { subscriptions, isLoading, error, reload, updateSubscription, removeSubscription } = useSocialAlerts(guildId, enabled);
 	const { channels } = useGuildChannels(guildId, enabled);
+	// 웹훅 프로필 사진 폴백 미리보기용 — 서버(길드) 전용 → 전역 봇 프로필 사진 순서 (봇 프로필 설정과 동일)
+	const { profile: botProfile } = useBotProfile(guildId);
 
 	const [showAdd, setShowAdd] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [draft, setDraft] = useState("");
 	const [nameDraft, setNameDraft] = useState("");
-	const [avatarDraft, setAvatarDraft] = useState("");
-	const [confirmingId, setConfirmingId] = useState<string | null>(null);
+	const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
+	const [showThumbDraft, setShowThumbDraft] = useState(true);
+	// 첫 클릭 무장 → "정말 삭제" 버튼으로 교체. 취소 버튼은 reset(), 4초 지나면 자동 해제
+	const { armedId: confirmingId, request: requestDelete, reset: cancelConfirm } = useConfirmDelete();
 	const [busyId, setBusyId] = useState<string | null>(null);
-
 	const channelName = (id: string) => channels?.find((channel) => channel.id === id)?.name ?? null;
 
 	const toggleStatus = async (subscription: SocialSubscription) => {
@@ -72,7 +79,8 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		setEditingId(subscription.id);
 		setDraft(subscription.messageTemplate ?? "");
 		setNameDraft(subscription.webhookName ?? "");
-		setAvatarDraft(subscription.webhookAvatarUrl ?? "");
+		setAvatarDraft(subscription.webhookAvatarUrl ?? null);
+		setShowThumbDraft(subscription.showThumbnail);
 	};
 
 	const saveSettings = async (subscription: SocialSubscription) => {
@@ -80,7 +88,8 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		const result = await updateSubscription(subscription.id, {
 			messageTemplate: draft.trim() ? draft : null,
 			webhookName: nameDraft.trim() ? nameDraft.trim() : null,
-			webhookAvatarUrl: avatarDraft.trim() ? avatarDraft.trim() : null
+			webhookAvatarUrl: avatarDraft,
+			showThumbnail: showThumbDraft
 		});
 		setBusyId(null);
 		if (result.ok) {
@@ -97,7 +106,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		setBusyId(null);
 		if (result.ok) {
 			toast.success("알림을 삭제했어요.");
-			setConfirmingId(null);
+			cancelConfirm();
 		} else {
 			toast.error("알림을 삭제하지 못했어요.", result.error);
 		}
@@ -174,12 +183,12 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											<Trash2 size={14} />
 											정말 삭제
 										</Button>
-										<Button size="sm" variant="ghost" onClick={() => setConfirmingId(null)}>
+										<Button size="sm" variant="ghost" onClick={cancelConfirm}>
 											취소
 										</Button>
 									</>
 								) : (
-									<Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingId(subscription.id)}>
+									<Button size="sm" variant="ghost" disabled={busy} onClick={() => requestDelete(subscription.id)}>
 										<Trash2 size={14} />
 										삭제
 									</Button>
@@ -198,32 +207,44 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 							<div className="bg-muted rounded-md px-3 py-2 text-sm break-all whitespace-pre-wrap">{subscription.messageTemplate}</div>
 						)}
 
-						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl) && (
+						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl || !subscription.showThumbnail) && (
 							<p className="text-muted-foreground text-xs">
-								웨훅 표시: {subscription.webhookName ?? "기본"}
+								웹훅 표시: {subscription.webhookName ?? "기본"}
 								{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
+								{!subscription.showThumbnail ? " · 섬네일 이미지 없음" : ""}
 							</p>
 						)}
 
 						{editing && (
 							<div className="flex flex-col gap-3">
 								<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
-								<div className="flex flex-col gap-2">
-									<span className="text-xs font-medium text-muted-foreground">웨훅 표시 (비우면 기본)</span>
-									<div className="grid gap-2 sm:grid-cols-2">
-										<Input
-											value={nameDraft}
-											onChange={(event) => setNameDraft(event.target.value)}
-											placeholder="웨훅 표시명"
-											maxLength={80}
-										/>
-										<Input
-											value={avatarDraft}
-											onChange={(event) => setAvatarDraft(event.target.value)}
-											placeholder="프로필 사진 URL (https://...)"
-											maxLength={2048}
-										/>
+								<div className="flex flex-col gap-3">
+									<div className="flex flex-col gap-1.5">
+										<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (비우면 기본)</span>
+										<Input value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} placeholder="웹훅 표시명" maxLength={80} disabled={busy} />
+										<p className="text-xs text-muted-foreground">
+											{nameDraft.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).
+										</p>
 									</div>
+									<WebhookAvatarField
+										guildId={guildId}
+										value={avatarDraft}
+										onChange={setAvatarDraft}
+										fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
+										fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
+										disabled={busy}
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5">
+									<Switch
+										checked={showThumbDraft}
+										onChange={setShowThumbDraft}
+										label="방송 시작 섬네일 이미지 표시"
+										labelPosition="right"
+									/>
+									<p className="text-xs text-muted-foreground">
+										라이브 미리보기 이미지를 임베드에 넣어요. 트위치는 이미지가 없어 자동으로 생략돼요.
+									</p>
 								</div>
 								<div className="flex justify-end gap-2">
 									<Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>

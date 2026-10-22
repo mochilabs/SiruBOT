@@ -78,7 +78,7 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 
 ## 3. Token reference
 
-### Semantic color (Pink Beret Music Bot palette — base `#ffdada`)
+### Semantic color (Pink Beret Music Bot palette, base `#ffdada`)
 
 | Token | Light | Dark | Utility |
 | --- | --- | --- | --- |
@@ -294,7 +294,8 @@ should report `Unexpected failures: 0`.
 Implementation update (2026-10-14): the shared header/panel guidance now wraps,
 four shared settings forms compare an editable saved baseline and serialize
 submits, and the live player isolates guild state and exposes recovery. See
-the [bounded audit and validation record](../../docs/audits/2026-10-14-dashboard-ui-ux.md).
+the bounded audit and validation record (`docs/audits/2026-10-14-dashboard-ui-ux.md`,
+which is not present in this repository).
 The floating save bar now appears only for dirty/pending active panels through
 the existing portal. Inactive drafts remain registered. AI history deletion
 remains in the form; profile revert remains alongside save. Mobile uses 16px
@@ -307,7 +308,8 @@ real-device keyboard acceptance remains unverified.
 
 The user approved planning and design-document updates, desktop/mobile UX
 improvements, and a floating save bar shown only for unsaved changes.
-Implementation tasks are in [the responsive UX plan](../../docs/plans/2026-10-14-dashboard-responsive-ux.md).
+Implementation tasks are in the responsive UX plan (`docs/plans/2026-10-14-dashboard-responsive-ux.md`,
+which is not present in this repository).
 Product direction is in [the root design document](../../DESIGN.md).
 
 Keep `ENERGY 2 / RHYTHM 2 / MOTION 2`, the current pink/maroon palette,

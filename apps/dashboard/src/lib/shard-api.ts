@@ -1,3 +1,5 @@
+import { getShardManagerEnv } from "@/lib/env";
+
 export interface ShardProcessInfo {
 	wsId: string;
 	shardIds: number[];
@@ -25,11 +27,9 @@ export interface ShardsResponse {
 	stats: ShardAggregateStats;
 }
 
-const SHARD_MANAGER_URL = process.env.SHARD_MANAGER_URL || 'http://localhost:3001';
-
-/** SHARD_MANAGER_AUTH_KEY가 없으면 에러 — 기본 키 폴백을 두지 않는다 */
+/** SHARD_MANAGER_AUTH_KEY가 없으면 에러 — 기본 키 폴백을 두지 않는다 (env.ts의 getShardManagerEnv) */
 function getShardManagerAuthKey(): string {
-	const key = process.env.SHARD_MANAGER_AUTH_KEY;
+	const key = getShardManagerEnv().authKey;
 	if (!key) {
 		throw new Error('[shard-api] SHARD_MANAGER_AUTH_KEY 환경변수가 설정되지 않았습니다.');
 	}
@@ -45,7 +45,7 @@ export async function fetchShards(): Promise<ShardsResponse | null> {
 		return null;
 	}
 	try {
-		const res = await fetch(`${SHARD_MANAGER_URL}/api/shards`, {
+		const res = await fetch(`${getShardManagerEnv().url}/api/shards`, {
 			cache: 'no-store',
 			headers: {
 				Authorization: authKey,
