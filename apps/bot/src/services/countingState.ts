@@ -16,7 +16,7 @@ const memory = new Map<string, CountingState>();
 const flushScheduled = new Set<string>();
 
 /** Redis 해시 키 — 길드당 하나의 카운팅 상태예요 */
-function countingStateKey(guildId: string): string {
+export function countingStateKey(guildId: string): string {
 	return `${COUNTING_KEY_PREFIX}${guildId}`;
 }
 
