@@ -18,6 +18,9 @@ import {
 	type GreetingTextLayer
 } from '@sirubot/utils';
 import { drawCircleImage, ensureKoreanFont, hexToRgba, loadImageAllowed, truncate } from './canvasUtils.ts';
+import { getLogger } from '../utils/logger.ts';
+
+const logger = getLogger('memberGreetingCard');
 
 const CARD_W = GREETING_CARD_W;
 const CARD_H = GREETING_CARD_H;
@@ -87,7 +90,7 @@ async function drawGreetingBackground(ctx: CanvasRenderingContext2D, background:
 	if (background.dataUri && (await drawUploadedBackground(ctx, background.dataUri))) return;
 	if (background.dataUri) {
 		// 깨진 업로드 배경으로 카드가 안 나오는 쪽이 더 나빠요 — 조용히 프리셋으로 폴백
-		console.error('[data-api] greeting background dataUri is not decodable, falling back to preset');
+		logger.warn('[data-api] greeting background dataUri is not decodable, falling back to preset');
 	}
 	const preset = (background.presetId && PRESET_BACKGROUNDS[background.presetId]) || PRESET_BACKGROUNDS.plum;
 	drawPresetBackground(ctx, preset);
@@ -126,7 +129,7 @@ async function drawUploadedBackground(ctx: CanvasRenderingContext2D, dataUri: st
 		ctx.drawImage(img, (CARD_W - iw * scale) / 2, (CARD_H - ih * scale) / 2, iw * scale, ih * scale);
 		return true;
 	} catch (error) {
-		console.error(`[data-api] greeting background decode failed: ${error instanceof Error ? error.message : String(error)}`);
+		logger.error(`[data-api] greeting background decode failed: ${error instanceof Error ? error.message : String(error)}`);
 		return false;
 	}
 }
@@ -223,7 +226,7 @@ async function drawImageLayer(ctx: CanvasRenderingContext2D, layer: GreetingImag
 		ctx.drawImage(img, cx - layer.width / 2, cy - layer.height / 2, layer.width, layer.height);
 		ctx.restore();
 	} catch (error) {
-		console.error(`[data-api] greeting image layer decode failed: ${error instanceof Error ? error.message : String(error)}`);
+		logger.error(`[data-api] greeting image layer decode failed: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 

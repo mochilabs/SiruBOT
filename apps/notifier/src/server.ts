@@ -1,7 +1,10 @@
 import Fastify from 'fastify';
+import { registerAppErrorHandler } from '@sirubot/app-kit';
 import type { PrismaClient } from '@sirubot/prisma';
+import { captureSentryException } from '@sirubot/utils/sentry';
 import type { Env } from './config/env.ts';
 import { requireAuth } from './plugins/auth.ts';
+import { getLogger } from './utils/logger.ts';
 import health from './routes/health.ts';
 import pubsubRoutes from './routes/pubsub.ts';
 import { eventsubRoutes } from './routes/eventsub.ts';
@@ -30,6 +33,8 @@ export async function buildServer(
 	fastify.addHook('onSend', async (request, reply) => {
 		reply.header('x-request-id', request.id);
 	});
+	// 공용 에러 계약 — 라우트가 미처 처리하지 못한 층만 수거해요. social 라우트의 sendError 개별 매핑은 그대로 써요.
+	registerAppErrorHandler(fastify, { logger: getLogger('server'), onServerError: captureSentryException });
 	// WebSub/EventSub 콜백은 XML 본문으로 오므로 raw string으로 받아요 — HMAC 서명 검증에 원문이 필요해요.
 	fastify.addContentTypeParser(['application/atom+xml', 'application/xml', 'text/xml'], { parseAs: 'string' }, (_request, body, done) =>
 		done(null, body)

@@ -9,6 +9,12 @@ import {
 	renderGreetingCard
 } from './memberGreetingCard.ts';
 
+// 렌더러 로거를 vi.fn으로 대체 — decode 실패 로그(warn) 호출을 검증해요.
+vi.mock('../utils/logger.ts', () => {
+	const warn = vi.fn();
+	return { getLogger: () => ({ warn, error: vi.fn(), info: vi.fn(), debug: vi.fn() }) };
+});
+
 /** 카드 렌더 스모크 — 출력 PNG 시그니처(논리 1200×675 × GREETING_RENDER_SCALE = 800×450)와 배경 경로(프리셋/업로드)를 검증해요. */
 
 /** 기대 출력 크기 — 논리 좌표계(1200×675)에 출력 축소 배율을 곱한 값 */
@@ -54,14 +60,12 @@ describe('renderGreetingCard', () => {
 	});
 
 	it('falls back to a preset when the dataUri is undecodable', async () => {
-		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-		try {
-			const buffer = await renderGreetingCard(makedecodableBrokenImage(), makeContext());
-			expectPngSize(buffer, OUT_W, OUT_H);
-			expect(consoleError).toHaveBeenCalled();
-		} finally {
-			consoleError.mockRestore();
-		}
+		const { getLogger } = await import('../utils/logger.ts');
+		const loggerWarn = vi.mocked(getLogger('memberGreetingCard').warn);
+		loggerWarn.mockClear();
+		const buffer = await renderGreetingCard(makedecodableBrokenImage(), makeContext());
+		expectPngSize(buffer, OUT_W, OUT_H);
+		expect(loggerWarn).toHaveBeenCalled();
 	});
 
 	it('renders avatar + text layers from the default greeting', async () => {

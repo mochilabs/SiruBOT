@@ -41,8 +41,12 @@ export function createKeyAuthHook(options: KeyAuthHookOptions): (fastify: Fastif
 			const path = request.url.split('?')[0];
 			if (excludePaths.includes(path)) return;
 			const header = request.headers.authorization;
-			if (typeof header !== 'string' || !timingSafeKeyEqual(header, key)) {
-				return reply.code(401).send({ error: 'Unauthorized' });
+			// 문구는 preHandler(createKeyPreHandler)와 동일한 한국어로 통일해요 — 저장소·대시보드 사용자에게 그대로 보여져요.
+			if (typeof header !== 'string') {
+				return reply.code(401).send({ error: '인증 정보가 없어요.' });
+			}
+			if (!timingSafeKeyEqual(header, key)) {
+				return reply.code(401).send({ error: '인증에 실패했어요.' });
 			}
 		});
 	};

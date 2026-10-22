@@ -47,6 +47,15 @@ describe('auth plugin', () => {
 		const fastify = await buildTestApp(KEY);
 		const response = await fastify.inject({ method: 'GET', url: '/probe' });
 		expect(response.statusCode).toBe(401);
+		expect(response.json()).toEqual({ error: '인증 정보가 없어요.' });
+		await fastify.close();
+	});
+
+	it('잘못된 키는 401 한국어 문구를 반환한다', async () => {
+		const fastify = await buildTestApp(KEY);
+		const response = await fastify.inject({ method: 'GET', url: '/probe', headers: { authorization: 'wrong' } });
+		expect(response.statusCode).toBe(401);
+		expect(response.json()).toEqual({ error: '인증에 실패했어요.' });
 		await fastify.close();
 	});
 

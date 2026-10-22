@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import { registerAppErrorHandler } from '@sirubot/app-kit';
+import { captureSentryException } from '@sirubot/utils/sentry';
 import type { Env } from './config/env.ts';
 import auth from './plugins/auth.ts';
 import { sharedCache } from './utils/cache.ts';
@@ -53,6 +55,9 @@ export async function buildServer(env: Env) {
 	fastify.addHook('onSend', async (request, reply) => {
 		reply.header('x-request-id', request.id);
 	});
+	// 공용 에러 계약 — 라우트가 미처 처리하지 못한 층(본문 파싱 실패·검증 예외·미확인 throw)만 수거해요.
+	// 도메인 라우트의 sendError 개별 매핑은 그대로 써요.
+	registerAppErrorHandler(fastify, { logger, onServerError: captureSentryException });
 
 	// register()는 캡슐화 컨텍스트를 만들어 루트 레벨 라우트에 훅이 안 붙어요.
 	// shardmanager와 동일하게 플러그인을 직접 호출해요.
