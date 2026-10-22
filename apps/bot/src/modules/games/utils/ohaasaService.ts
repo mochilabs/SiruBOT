@@ -32,19 +32,3 @@ export function getZodiacFromDate(month: number, day: number): string | null {
 	if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return '12';
 	return null;
 }
-
-export interface HoroscopeData {
-	rank: number;
-	zodiacCode: string;
-	zodiac: { jp: string; ko: string; en: string };
-	content: string;
-	lucky: string;
-}
-
-export interface DailyHoroscope {
-	date: string;
-	source: 'ohaasa' | 'tv-asahi';
-	/** content/lucky가 AI로 한국어 번역됐는지 (false면 일본어 원문) */
-	translated: boolean;
-	horoscopes: HoroscopeData[];
-}

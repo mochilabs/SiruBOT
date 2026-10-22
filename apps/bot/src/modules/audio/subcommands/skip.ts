@@ -2,7 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from 'discord.js';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
-import type { SkipContext } from '../../../services/audioService.ts';
+import { skipPolicy, type SkipContext } from '../../../services/skipPolicy.ts';
 
 export const name = 'skip';
 export const ko = '건너뛰기';
@@ -98,5 +98,5 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const force = interaction.options.getBoolean('force') ?? false;
 	const to = interaction.options.getInteger('to') ?? 0;
 
-	await container.audioService.handleSkip(context, force, to);
+	await skipPolicy.handleSkip(context, force, to);
 }

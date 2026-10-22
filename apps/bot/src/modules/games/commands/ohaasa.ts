@@ -4,7 +4,8 @@ import { emoji, createContainer } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
-import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP, type DailyHoroscope, type HoroscopeData } from '../utils/ohaasaService.ts';
+import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../utils/ohaasaService.ts';
+import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
 
 function formatDate(raw: string): string {
 	const compact = raw.replace(/\//g, '');

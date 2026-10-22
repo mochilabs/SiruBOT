@@ -1,5 +1,6 @@
 import type { WeatherScope } from '@sirubot/utils/weather';
 import { fetchWeather } from '../dataApiClient.ts';
+
 import type { AiTool } from './types.ts';
 
 const VALID_SCOPES: WeatherScope[] = ['now', 'today', 'tomorrow', 'week'];
