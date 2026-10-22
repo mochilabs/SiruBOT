@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiPost } from "@/lib/data-api";
+import { forwardDataApiPost } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import type { YouTubeResolveResponse } from "@/types/social";
 

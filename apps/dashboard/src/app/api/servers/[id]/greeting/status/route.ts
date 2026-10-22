@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { fetchDataApi } from "@/lib/data-api";
+import { fetchDataApi } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 
 /**

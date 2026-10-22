@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { fetchPlayerVoiceContext } from "@/lib/data-api";
+import { fetchPlayerVoiceContext } from "@/lib/data-api/player-web";
 import { READ_RATE } from "@/lib/rate-limit";
 
 /**

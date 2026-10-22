@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { auth } from "@/lib/auth";
-import { dataApiFailResponse, forwardDataApiImage } from "@/lib/data-api";
+import { dataApiFailResponse, forwardDataApiImage } from "@/lib/data-api/client";
 import { RENDER_RATE } from "@/lib/rate-limit";
 
 const previewSchema = z.object({

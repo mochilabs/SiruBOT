@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api";
+import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api/client";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
 const testSchema = z.object({

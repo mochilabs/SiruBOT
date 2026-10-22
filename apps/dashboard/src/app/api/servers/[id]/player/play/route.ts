@@ -3,7 +3,7 @@ import { playerWebPlayUriSchema } from "@sirubot/utils/playerWeb";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { requestPlayerPlay } from "@/lib/data-api";
+import { requestPlayerPlay } from "@/lib/data-api/player-web";
 import { WRITE_RATE } from "@/lib/rate-limit";
 
 /**

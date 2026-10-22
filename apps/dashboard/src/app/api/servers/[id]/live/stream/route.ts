@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { openDataApiStream } from "@/lib/data-api";
+import { openDataApiStream } from "@/lib/data-api/client";
 
 /**
  * 실시간 상태 스트림 프록시 — data-api `GET /v1/player/:guildId/stream`(SSE)을

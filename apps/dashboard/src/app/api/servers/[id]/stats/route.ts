@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { fetchGuildMembers } from "@/lib/data-api";
+import { fetchGuildMembers } from "@/lib/data-api/guild-members";
 import { db } from "@/lib/db";
 import { kstDateString } from "@/lib/kst-date";
 import { READ_RATE } from "@/lib/rate-limit";

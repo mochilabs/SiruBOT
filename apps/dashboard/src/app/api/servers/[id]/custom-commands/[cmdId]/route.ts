@@ -6,7 +6,7 @@ import {
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { normalizedCommandName, readCustomCommandsState } from "@/lib/custom-commands";
-import { notifyGuildSettingsChanged } from "@/lib/data-api";
+import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";

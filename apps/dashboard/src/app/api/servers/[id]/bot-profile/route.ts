@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { fetchDataApi, postDataApi } from "@/lib/data-api";
+import { fetchDataApi, postDataApi } from "@/lib/data-api/client";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import type { BotProfilePatch, BotProfileResponse } from "@/types/bot-profile";
 

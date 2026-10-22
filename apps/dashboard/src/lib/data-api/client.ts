@@ -1,47 +1,10 @@
+/**
+ * data-api HTTP 프록시 클라이언트 — GET/POST/SSE/이미지 forward와 실패 응답 정리.
+ * 서버 전용(env의 AUTH_KEY를 다뤄요). 클라이언트 번들로 절대 노출하지 않아요.
+ */
 import { NextResponse } from "next/server";
 
-interface DataApiPlaybackCounts {
-  track_start: number;
-  track_end: number;
-  track_stuck: number;
-  track_error: number;
-  queue_end: number;
-  playback_abort: number;
-  node_disconnect: number;
-  node_error: number;
-}
-
-interface DataApiPlaybackError {
-  type: string;
-  guildId: string | null;
-  nodeId: string | null;
-  shardId: number | null;
-  trackTitle: string | null;
-  trackAuthor: string | null;
-  reason: string | null;
-  consecutiveErrors: number;
-  count: number;
-  at: number;
-}
-
-export interface DataApiStatus {
-  ok: boolean;
-  redis: boolean;
-  cache: { redisHits: number; memoryHits: number; misses: number };
-  routes: Record<
-    string,
-    {
-      requests: number;
-      cacheHits: number;
-      upstreamCalls: number;
-      upstreamErrors: number;
-    }
-  >;
-  playback: {
-    counts: DataApiPlaybackCounts;
-    recentErrors: DataApiPlaybackError[];
-  };
-}
+import type { DataApiForwardFail, DataApiForwardResult, DataApiImageResult, GuildSettingsInvalidateResult } from "./types";
 
 const DATA_API_URL = process.env.DATA_API_URL || "http://localhost:3002";
 const DATA_API_AUTH_KEY =
@@ -121,26 +84,6 @@ export async function postDataApi<T>(
     return null;
   }
 }
-
-/** 길드 설정 캐시 무효화 브로드캐스트 결과 */
-export interface GuildSettingsInvalidateResult {
-  ok: boolean;
-}
-
-/** data-api 호출 결과의 성공 형태 — JSON 응답이에요 */
-export interface DataApiForwardOk<T> {
-  ok: true;
-  data: T;
-}
-
-/** data-api 호출 실패 — status와 4xx 본문의 message(한국어)를 그대로 전달해요 */
-export interface DataApiForwardFail {
-  ok: false;
-  status: number;
-  message: string | null;
-}
-
-export type DataApiForwardResult<T> = DataApiForwardOk<T> | DataApiForwardFail;
 
 /**
  * data-api POST 프록시(JSON) — postDataApi와 달리 실패 상태와 본문 message를 파기하지 않아요.
@@ -231,10 +174,6 @@ export async function forwardDataApiGet<T>(
   }
 }
 
-export type DataApiImageResult =
-  | { ok: true; buffer: ArrayBuffer; contentType: string }
-  | DataApiForwardFail;
-
 /**
  * forward* 실패를 대시보드 응답으로 정리 — 4xx는 data-api의 상태와 한국어 message를
  * 그대로 살리고, 5xx/네트워크(502)는 내성 있는 fallback으로 응답해요.
@@ -310,197 +249,4 @@ export async function notifyGuildSettingsChanged(
     reason ? { guildId, reason } : { guildId },
   );
   return result?.ok === true;
-}
-
-/** 웹 플레이어 검색 결과 요약 — 봇이 Lavalink 검색 결과에서 추출해 내려줘요 */
-export interface PlayerWebTrackSummary {
-  title: string;
-  author: string;
-  durationMs: number;
-  artworkUrl: string | null;
-  uri: string;
-  sourceName: string | null;
-  isStream: boolean;
-}
-
-/** 요청자 음성·권한 상태 — 봇이 음성 채널·DJ 권한을 해석해서 내려줘요 */
-export interface PlayerVoiceContextData {
-  inVoice: boolean;
-  voiceChannelName: string | null;
-  canControl: boolean;
-}
-
-export interface PlayerWebApiResult {
-  ok: boolean;
-  /** 검색 결과 — search 성공 시에만 있어요 */
-  tracks: PlayerWebTrackSummary[] | null;
-  /** 요청자 음성·권한 상태 — voice-context 성공 시에만 있어요 */
-  voice: PlayerVoiceContextData | null;
-  /** 실패 사유 — 봇이 실은 한국어 안내를 그대로 전달해요 */
-  error: string | null;
-  /** data-api 실패 상태 코드 — 라우트가 이 상태로 응답해요 */
-  status: number;
-}
-
-/**
- * 웹 플레이어 request/reply — 요청자(userId)를 봇에 전달해 음성 채널·권한을 봇이 판정해요.
- * forwardDataApiPost 계약 위에서 실패 상태와 한국어 message를 그대로 보존해요.
- */
-async function requestPlayerWeb(
-  path: string,
-  body: unknown,
-): Promise<PlayerWebApiResult> {
-  const result = await forwardDataApiPost<{
-    ok: true;
-    tracks: PlayerWebTrackSummary[] | null;
-    voice: PlayerVoiceContextData | null;
-  }>(path, body);
-  if (!result.ok) {
-    return {
-      ok: false,
-      tracks: null,
-      voice: null,
-      error: result.message ?? null,
-      status: result.status,
-    };
-  }
-  return {
-    ok: true,
-    tracks: result.data.tracks ?? null,
-    voice: result.data.voice ?? null,
-    error: null,
-    status: 200,
-  };
-}
-
-/** 곡 검색 — 검증(권한·음성 접속)까지 봇에서 수행돼요. 실패 시 error에 안내가 실려요 */
-export function requestPlayerSearch(
-  guildId: string,
-  userId: string,
-  query: string,
-): Promise<PlayerWebApiResult> {
-  return requestPlayerWeb("/v1/internal/player/search", {
-    guildId,
-    userId,
-    query,
-  });
-}
-
-/** 재생 시작 — 검색 결과의 uri(또는 플레이리스트·다시 재생 URL)를 봇이 검색해 큐잉·접속·재생해요 */
-export function requestPlayerPlay(
-  guildId: string,
-  userId: string,
-  uri: string,
-): Promise<PlayerWebApiResult> {
-  return requestPlayerWeb("/v1/internal/player/play", { guildId, userId, uri });
-}
-
-/** 라이브 제어 — volume·pause·resume·skip·stop (볼륨은 value 필수) */
-export function requestPlayerControl(
-  guildId: string,
-  userId: string,
-  action: "volume" | "pause" | "resume" | "skip" | "stop" | "repeat",
-  value?: number,
-): Promise<PlayerWebApiResult> {
-  return requestPlayerWeb("/v1/internal/player/control", {
-    guildId,
-    userId,
-    action,
-    ...(value !== undefined ? { value } : {}),
-  });
-}
-
-/** 요청자 음성·권한 상태 조회 — player 페이지 배지와 재생 UI 활성화에 써요 */
-export async function fetchPlayerVoiceContext(
-  guildId: string,
-  userId: string,
-): Promise<PlayerWebApiResult> {
-  const result = await forwardDataApiGet<{
-    ok: true;
-    voice: PlayerVoiceContextData | null;
-  }>(
-    `/v1/player/${guildId}/voice-context?userId=${encodeURIComponent(userId)}`,
-  );
-  if (!result.ok) {
-    return {
-      ok: false,
-      tracks: null,
-      voice: null,
-      error: result.message ?? null,
-      status: result.status,
-    };
-  }
-  return {
-    ok: true,
-    tracks: null,
-    voice: result.data.voice ?? null,
-    error: null,
-    status: 200,
-  };
-}
-
-/** 길드 멤버 표시 정보 — data-api가 봇 캐시에서 조회한 별명·사용자명·아바타예요 */
-export interface GuildMemberSummary {
-  id: string;
-  displayName: string;
-  username: string;
-  avatarUrl: string | null;
-}
-
-/**
- * 멤버 표시 정보를 봇 캐시 경유로 조회해요 (채널·역할과 같은 Redis request/reply).
- * data-api 계약상 한 번에 최대 10명까지만 조회할 수 있어요. 실패하면 null을 돌려
- * 호출자가 사용자 ID 라벨로 폴백하게 해요.
- */
-export async function fetchGuildMembers(
-  guildId: string,
-  userIds: string[],
-): Promise<GuildMemberSummary[] | null> {
-  const limited = userIds.slice(0, 10);
-  if (limited.length === 0) return [];
-  const query = limited.map((id) => encodeURIComponent(id)).join(",");
-  const result = await forwardDataApiGet<{ members: GuildMemberSummary[] }>(
-    `/v1/guilds/${guildId}/members?userIds=${query}`,
-  );
-  return result.ok ? result.data.members ?? [] : null;
-}
-
-/** 임시 방(JTC) 마커 채널 셋업 결과 — 봇 tempVoiceService가 수행한 결과예요 */
-export interface JtcSetupApiResult {
-  ok: boolean;
-  /** 마커 채널 ID — 성공 시에만 있어요 */
-  markerChannelId: string | null;
-  /** 실패 사유 — 봇이 실은 한국어 안내를 그대로 전달해요 */
-  error: string | null;
-  /** data-api 실패 상태 코드 — 라우트가 이 상태로 응답해요 */
-  status: number;
-}
-
-/**
- * JTC 마커 채널 셋업을 봇에 위임해요 — 채널 생성·이동은 Discord 규격상 봇 토큰으로만 가능하고,
- * 유저 OAuth 토큰으로는 403이 나요. 검증 실패 시 error에 안내가 실려요.
- */
-export async function requestJtcSetup(
-  guildId: string,
-  userId: string,
-  categoryId: string,
-): Promise<JtcSetupApiResult> {
-  const result = await forwardDataApiPost<{
-    ok: true;
-    markerChannelId: string | null;
-  }>("/v1/internal/jtc/setup", { guildId, userId, categoryId });
-  if (!result.ok) {
-    return {
-      ok: false,
-      markerChannelId: null,
-      error: result.message ?? null,
-      status: result.status,
-    };
-  }
-  return {
-    ok: true,
-    markerChannelId: result.data.markerChannelId ?? null,
-    error: null,
-    status: 200,
-  };
 }

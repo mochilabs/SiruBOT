@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { sortChannelsForDisplay } from "@/lib/channel-order";
-import { forwardDataApiGet } from "@/lib/data-api";
+import { forwardDataApiGet } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import {
   type DiscordChannelSummary,
