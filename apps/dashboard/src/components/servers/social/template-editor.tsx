@@ -115,7 +115,7 @@ export function TemplateEditor({ guildId, value, onChange, sample, disabled = fa
 						disabled={disabled}
 						className="rounded-md border border-border bg-surface-2 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
 					>
-						{`{${variable}`} · {VARIABLE_LABELS[variable]}
+						{`{${variable}}`} · {VARIABLE_LABELS[variable]}
 					</button>
 				))}
 			</div>
