@@ -12,6 +12,9 @@ const COUNTING_KEY_PREFIX = 'sirubot:counting:';
 /** 샤드 메모리 캐시 — 길드는 샤드 하나에만 속해요. Redis 없는 개발 환경에서도 동작해요 */
 const memory = new Map<string, CountingState>();
 
+/** write-behind flush가 예약된 길드 — 같은 틱의 연속 저장은 마지막 상태 하나만 흘러가요 */
+const flushScheduled = new Set<string>();
+
 /** Redis 해시 키 — 길드당 하나의 카운팅 상태예요 */
 export function countingStateKey(guildId: string): string {
 	return `${COUNTING_KEY_PREFIX}${guildId}`;
@@ -35,13 +38,30 @@ export async function loadCountingState(guildId: string): Promise<CountingState>
 	return COUNTING_STATE_DEFAULT;
 }
 
-/** 카운팅 상태 저장 — 메모리에 심고 Redis에도 흘려요 (Redis 장애여도 이 샤드은 이어가요) */
-export async function saveCountingState(guildId: string, state: CountingState): Promise<void> {
+/**
+ * 카운팅 상태 저장 — 메모리에 동기으로 기록하고 Redis에는 write-behind로 흘려보내요 (hot path가 RTT를 기다리지 않아요).
+ * flush는 실행 시점에 메모리의 최신 상태를 읽어 같은 틱의 연속 저장을 하나로 모아요.
+ * Redis 실패는 재시도하지 않아요 — 메모리가 항상 최신이라 다음 저장이 그대로 덮어써요.
+ */
+export function saveCountingState(guildId: string, state: CountingState): void {
 	memory.set(guildId, state);
-	await container.redisStore.setCacheHashFields(countingStateKey(guildId), {
-		current: String(state.current),
-		lastUserId: state.lastUserId ?? '',
-		best: String(state.best)
+	scheduleFlush(guildId);
+}
+
+function scheduleFlush(guildId: string): void {
+	if (flushScheduled.has(guildId)) return;
+	flushScheduled.add(guildId);
+	queueMicrotask(() => {
+		flushScheduled.delete(guildId);
+		const state = memory.get(guildId);
+		if (!state) return; // 그 사이에 초기화됐어요 — 쓸 상태 없음
+		void container.redisStore
+			.setCacheHashFields(countingStateKey(guildId), {
+				current: String(state.current),
+				lastUserId: state.lastUserId ?? '',
+				best: String(state.best)
+			})
+			.catch(() => undefined);
 	});
 }
 
