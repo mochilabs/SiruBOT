@@ -10,6 +10,7 @@ import {
 	dropChannelHistory,
 	estimateTokens,
 	extractThinkTokens,
+	flushChannelHistoryPersist,
 	getAiChatPolicy,
 	getChatConfig,
 	getContextTokenBudget,
@@ -23,6 +24,7 @@ import {
 	tryConsumeUserTurn,
 	updateChannelHistoryMessage
 } from './aiChatService.ts';
+import { getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
 import { executeAiTool, getAiToolStatus } from './aiTools/index.ts';
 
 const mocks = vi.hoisted(() => ({
@@ -94,7 +96,9 @@ beforeEach(() => {
 	mocks.redisStore = undefined;
 	vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ choices: [{ message: { content: '반가워요' } }] })));
 });
-afterEach(() => {
+afterEach(async () => {
+	// debounce로 예약된 persist가 다음 테스트로 새지 않도록 비우고
+	await flushChannelHistoryPersist();
 	vi.unstubAllGlobals();
 	vi.unstubAllEnvs();
 });
@@ -194,6 +198,31 @@ describe('estimateTokens', () => {
 		expect(estimateTokens('hello')).toBe(2); // 5 * 0.28
 		expect(estimateTokens('가나다')).toBe(3); // 3 * 0.7
 		expect(estimateTokens('ab가')).toBe(2); // 0.56 + 0.7
+	});
+
+	it('weights mixed Korean, ascii and whitespace from a single count', () => {
+		expect(estimateTokens('안녕 hello 123')).toBe(5); // dense 2 + rest 10 → 1.4 + 2.8
+		expect(estimateTokens('   ')).toBe(1); // 3 * 0.28 = 0.84
+	});
+
+	it('matches the regex-based reference on assorted input', () => {
+		const reference = (text: string): number => {
+			// 기존 DENSE_CHARS_RE와 동일한 5개 범위 (한글 자모/호환 자모/자모 확장-A/음절/전각)
+			const hits = text.match(/[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7af\uff00-\uffef]/g)?.length ?? 0;
+			return Math.ceil(hits * 0.7 + (text.length - hits) * 0.28);
+		};
+		for (const sample of [
+			'',
+			'plain ascii 123',
+			'가나다라마바사',
+			'한글 and English 42',
+			'ᄀᇿ㄰㆏ꥠꥯ힯＀￯',
+			'ㄱㄴㄷ ㅏㅑ',
+			'ＡＢＣ abc',
+			'이모지 😀와 우정'
+		]) {
+			expect(estimateTokens(sample)).toBe(reference(sample));
+		}
 	});
 });
 
@@ -365,6 +394,7 @@ describe('channel history store', () => {
 			}
 		});
 		await expect(removeFromChannelHistory(channelId, new Set(['m1', 'm0']))).resolves.toBe(3);
+		await flushChannelHistoryPersist(channelId);
 		const payload = mocks.persist.mock.calls.at(-1)?.[0]?.create?.messages;
 		expect(payload.messages.map((m: { messageId?: string }) => m.messageId)).toEqual(['m3', 'm4']);
 		expect(payload.pending).toEqual([]);
@@ -392,11 +422,13 @@ describe('channel history store', () => {
 			}
 		});
 		await expect(updateChannelHistoryMessage(channelId, 'u1', '수정된 내용')).resolves.toBe(true);
+		await flushChannelHistoryPersist(channelId);
 		expect(mocks.persist.mock.calls.at(-1)?.[0]?.create?.messages.messages[0].content).toBe('수정된 내용');
 
 		await expect(updateChannelHistoryMessage(channelId, 'b1', '봇 답변은 못 바꿔요')).resolves.toBe(false);
 		// 빈 편집은 삭제로 처리되고, 삭제된 사용자 메시지의 직후 봇 답변(b1)도 한 쌍으로 함께 빠진다
 		await expect(updateChannelHistoryMessage(channelId, 'u1', '   ')).resolves.toBe(true);
+		await flushChannelHistoryPersist(channelId);
 		expect(mocks.persist.mock.calls.at(-1)?.[0]?.create?.messages.messages).toEqual([]);
 	});
 
@@ -449,6 +481,93 @@ describe('channel history store', () => {
 		// 캐시와 negative set이 모두 비워졌으므로 다음 접근은 DB를 다시 조회한다
 		await removeFromChannelHistory(channelId, new Set(['d1']));
 		expect(mocks.history).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('historyLine', () => {
+	it('formats speaker prefix, text and image marker without empty joins', () => {
+		expect(historyLine({ role: 'user', content: '안녕' })).toBe('사용자: 안녕');
+		expect(historyLine({ role: 'user', content: '안녕', author: '철수', imageCount: 2 })).toBe('철수: 안녕 [이미지 2장]');
+		expect(historyLine({ role: 'user', content: '', imageCount: 1 })).toBe('사용자: [이미지 1장]');
+		expect(historyLine({ role: 'user', content: '' })).toBe('사용자: ');
+		expect(historyLine({ role: 'assistant', content: '답변' })).toBe('시루: 답변');
+	});
+});
+
+describe('channel history persist coalescing', () => {
+	it('batches repeated mutations into a single upsert with the latest state', async () => {
+		const channelId = 'coalesce-batch';
+		pushChannelHistory(channelId, { role: 'user', content: 'q1' }, { role: 'assistant', content: 'a1' });
+		pushChannelHistory(channelId, { role: 'user', content: 'q2' });
+		expect(mocks.persist).not.toHaveBeenCalled();
+		await flushChannelHistoryPersist(channelId);
+		expect(mocks.persist).toHaveBeenCalledTimes(1);
+		const payload = mocks.persist.mock.calls[0]?.[0]?.create?.messages;
+		expect(payload.messages).toHaveLength(3);
+		// 이미 비워진 채널을 다시 flush해도 중복 기록하지 않는다
+		await flushChannelHistoryPersist(channelId);
+		expect(mocks.persist).toHaveBeenCalledTimes(1);
+	});
+
+	it('auto-flushes once the coalesce window elapses', () => {
+		vi.useFakeTimers();
+		try {
+			const channelId = 'coalesce-window';
+			pushChannelHistory(channelId, { role: 'user', content: 'hi' });
+			expect(mocks.persist).not.toHaveBeenCalled();
+			vi.advanceTimersByTime(500);
+			expect(mocks.persist).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('writes pending changes before a reload reads the database', async () => {
+		const channelId = 'coalesce-reload';
+		pushChannelHistory(channelId, { role: 'user', content: '방금 말한 것' });
+		mocks.history.mockResolvedValueOnce({
+			channelId,
+			guildId: null,
+			messages: { messages: [{ role: 'user', content: '방금 말한 것' }], summary: null, pending: [] }
+		});
+		await loadChannelHistory(channelId);
+		expect(mocks.persist).toHaveBeenCalledTimes(1);
+		expect(mocks.persist.mock.invocationCallOrder[0]).toBeLessThan(mocks.history.mock.invocationCallOrder[0]);
+	});
+
+	it('clearChannelHistory cancels a scheduled write instead of resurrecting the row', async () => {
+		const channelId = 'coalesce-clear';
+		pushChannelHistory(channelId, { role: 'user', content: '지울 대화' });
+		clearChannelHistory(channelId);
+		await flushChannelHistoryPersist(channelId);
+		expect(mocks.persist).not.toHaveBeenCalled();
+		expect(mocks.deleteRow).toHaveBeenCalledWith({ where: { channelId } });
+	});
+});
+
+describe('incremental history token accounting', () => {
+	it('keeps state.tokens equal to a full recompute across load, pushes and trims', async () => {
+		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', '2000');
+		const channelId = 'tokens-sync';
+		mocks.history.mockResolvedValueOnce({
+			channelId,
+			guildId: null,
+			messages: { messages: [{ role: 'user', content: '이전 대화', messageId: 'old' }], summary: null, pending: [] }
+		});
+		await loadChannelHistory(channelId);
+		for (let i = 0; i < 40; i++) {
+			pushChannelHistory(
+				channelId,
+				{ role: 'user', content: `질문 ${i} ${'내용'.repeat(60)}` },
+				{ role: 'assistant', content: `답변 ${i} ${'내용'.repeat(60)}` }
+			);
+		}
+		const state = getChannelHistoryState(channelId);
+		const recompute = state.messages.reduce((sum, m) => sum + estimateTokens(historyLine(m)), 0);
+		expect(state.tokens).toBe(recompute);
+		expect(state.tokens).toBeLessThanOrEqual(1200);
+		expect(state.messages.length).toBeGreaterThanOrEqual(2);
+		expect(state.messages.length + state.pending.length).toBe(81);
 	});
 });
 
