@@ -7,7 +7,9 @@
  * - botProfileHub와 같은 구조예요 — 대시보드가 send 응답의 requestId를 갖고 이 허브를 폴링해요.
  * - 결과는 requestId로 매칭해요 — 마지막 결과가 이전 테스트의 것일 수 있어요 (폴링 쪽 책임).
  */
-import { MEMBER_GREETING_STATE_CHANNEL_PREFIX, type GreetingKind } from '@sirubot/utils';
+import { z } from 'zod';
+import { MEMBER_GREETING_STATE_CHANNEL_PREFIX } from '@sirubot/utils';
+import { resolveRedisSigningKey, unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 
 import { getLogger } from '../utils/logger.ts';
 import { HubSubscriber } from '../utils/hubSubscriber.ts';
@@ -19,14 +21,32 @@ const MAX_ENTRIES = 5_000;
 /** 구독 채널 패턴 — 봇 퍼블리셔와 계약이에요 */
 const CHANNEL_PATTERN = `${MEMBER_GREETING_STATE_CHANNEL_PREFIX}*`;
 
-/** 봇이 state 채널로 퍼블리시하는 테스트 전송 결과 */
-export interface GreetingTestResult {
-	requestId: string;
-	kind: GreetingKind;
-	ok: boolean;
-	error: string | null;
-	sentAt: number;
-}
+/**
+ * 봇이 state 채널로 퍼블리시하는 테스트 전송 결과 — 봇의 MemberGreetingTestState와 같은 계약이에요.
+ * sentAt은 epoch milliseconds(number)가 계약이에요 — 레거시 ISO 문자열은 number로 정규화하고,
+ * 없거나 깨졌으면 수신 시각으로 대체해요 (값 타입이 이상해도 결과 전체를 버리지 않게).
+ */
+export const memberGreetingTestStateSchema = z.object({
+	requestId: z.string().min(1).max(64),
+	kind: z.enum(['welcome', 'goodbye']),
+	ok: z.boolean(),
+	/** 실패 사유 — 봇이 실패 때만 담고, 없으면 null이에요 */
+	error: z.string().nullable().default(null),
+	sentAt: z
+		.union([
+			z.number(),
+			z.string().transform((value, ctx) => {
+				const at = Date.parse(value);
+				if (Number.isNaN(at)) {
+					ctx.addIssue({ code: 'custom', message: 'ISO8601 날짜 형식이 아니에요' });
+					return z.NEVER;
+				}
+				return at;
+			})
+		])
+		.catch(() => Date.now())
+});
+export type GreetingTestResult = z.infer<typeof memberGreetingTestStateSchema>;
 
 /** 보관 단위 — 용량 상한 도달 시 갱신 도착 순과 무관하게 가장 오래 도착한 엔트리부터 비워요 */
 interface Entry {
@@ -36,20 +56,12 @@ interface Entry {
 
 function parsePayload(message: string): GreetingTestResult | null {
 	try {
-		const parsed = JSON.parse(message) as Partial<GreetingTestResult> & { kind?: unknown };
-		if (typeof parsed !== 'object' || parsed === null) return null;
-		if (typeof parsed.requestId !== 'string' || parsed.requestId.length < 1 || parsed.requestId.length > 64) return null;
-		if (parsed.kind !== 'welcome' && parsed.kind !== 'goodbye') return null;
-		if (typeof parsed.ok !== 'boolean') return null;
-		if (parsed.error !== undefined && parsed.error !== null && typeof parsed.error !== 'string') return null;
-		return {
-			requestId: parsed.requestId,
-			kind: parsed.kind,
-			ok: parsed.ok,
-			error: parsed.error ?? null,
-			// sentAt은 봇 시각 — 못 받으면 수신 시각으로라도 기록해요
-			sentAt: typeof parsed.sentAt === 'number' ? parsed.sentAt : Date.now()
-		};
+		const result = memberGreetingTestStateSchema.safeParse(JSON.parse(message));
+		if (!result.success) {
+			logger.debug(`Malformed member greeting state: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
+			return null;
+		}
+		return result.data;
 	} catch (error) {
 		logger.debug(`Malformed member greeting state: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
@@ -58,12 +70,24 @@ function parsePayload(message: string): GreetingTestResult | null {
 
 const results = new Map<string, Entry>();
 
-function handleMessage(message: string, channel: string): void {
+/**
+ * Pub/Sub 메시지 처리 — 서명 검증(SEC-006) 후 결과를 길드별로 보관해요.
+ * 유닛 테스트가 직접 호출할 수 있게 내보내요 (다루는 게 모듈 results 맵뿐이라 Redis 연결 없이도 검증돼요).
+ */
+export function handleMemberGreetingStateMessage(message: string, channel: string): void {
 	if (!channel.startsWith(MEMBER_GREETING_STATE_CHANNEL_PREFIX)) return;
 	const guildId = channel.slice(MEMBER_GREETING_STATE_CHANNEL_PREFIX.length);
 	if (!guildId) return;
 
-	const payload = parsePayload(message);
+	// 서명 키는 REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 매 메시지마다 읽어 테스트에서 환경을 스왑할 수 있게 해요.
+	// 키가 있는 환경에서는 서명 봉투를 검증해 무서명 위조 프레임을 거부해요 (SEC-006, guildDataHub와 동일 계약).
+	const body = unwrapRedisMessage(resolveRedisSigningKey(process.env), message);
+	if (body === null) {
+		logger.warn(`Rejected member greeting state from ${channel} with invalid signature`);
+		return;
+	}
+
+	const payload = parsePayload(body);
 	if (!payload) return;
 
 	if (results.size >= MAX_ENTRIES && !results.has(guildId)) {
@@ -80,7 +104,7 @@ const subscriber = new HubSubscriber({
 	name: 'member greeting hub',
 	channel: CHANNEL_PATTERN,
 	pattern: true,
-	onMessage: handleMessage,
+	onMessage: handleMemberGreetingStateMessage,
 	logger
 });
 

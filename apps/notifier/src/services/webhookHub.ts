@@ -42,12 +42,13 @@ export class SocialWebhookHub {
 		this.pending = new PendingRequestPool<SocialWebhookCreateResponse>({
 			capacity: PENDING_LIMIT,
 			logger,
-			timeoutResult: (requestId) => ({
-				requestId,
-				guildId: this.pendingGuilds.get(requestId) ?? '',
-				error: '봇이 응답하지 않았어요. 봇이 이 서버에 없거나 아직 연결되지 않았을 수 있어요.'
-			}),
-			onTimeout: (requestId) => this.pendingGuilds.delete(requestId)
+			// guildId 조회와 맵 정리를 timeoutResult 한 자리에서 해요 — 풀의 모든 타임아웃 완료 경로
+			// (용량 초과·중복 id·타이머)가 이 팩토리를 거치므로 호출 순서에 의존하지 않고 맵 누수가 없어요.
+			timeoutResult: (requestId) => {
+				const guildId = this.pendingGuilds.get(requestId) ?? '';
+				this.pendingGuilds.delete(requestId);
+				return { requestId, guildId, error: '봇이 응답하지 않았어요. 봇이 이 서버에 없거나 아직 연결되지 않았을 수 있어요.' };
+			}
 		});
 		// REDIS_URL이 없으면 구독자를 만들지 않아요 — 요청은 'Redis 연결이 없어요'로 즉시 응답해요.
 		this.subscriber = redisUrl

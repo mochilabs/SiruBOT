@@ -12,6 +12,7 @@ import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEn
 import { sharedCache } from '../utils/cache.ts';
 import { metrics } from '../utils/metrics.ts';
 import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure } from './common.ts';
+import { DataApiError } from './serveCached.ts';
 import { getBotProfile, botProfileHubStatus, refreshBotProfile } from '../services/botProfileHub.ts';
 import { getGreetingTestResult } from '../services/memberGreetingHub.ts';
 import { requestGuildData, type GuildDataFailureReason } from '../services/guildDataHub.ts';
@@ -148,7 +149,19 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 				// Redis 없으면 브로드캐스트 불가 — 실패로 대응해 대시보드가 재시도 가능하게 해요.
 				return reply.code(503).send({ error: 'redis_unavailable', message: '봇 프로필 적용을 위해 Redis가 필요해요.' });
 			}
-			await client.set(botProfilePendingKey(guildId), wrapRedisMessage(redisSigningKey, payload), { EX: BOT_PROFILE_PENDING_TTL_SECONDS });
+			// pending 키는 길드당 1개 — 봇이 소비(NX 선점)하기 전에 두 번째 요청이 덮어쓰면 첫 요청의 변경이
+			// 조용히 날아가므로 409로 거절해요. 봇이 키를 읽는 즉시 지우므로 정상 흐름에서는 잠깐만 점유돼요.
+			const acquired = await client.set(botProfilePendingKey(guildId), wrapRedisMessage(redisSigningKey, payload), {
+				EX: BOT_PROFILE_PENDING_TTL_SECONDS,
+				NX: true
+			});
+			if (acquired === null) {
+				throw new DataApiError(
+					409,
+					'bot_profile_pending_conflict',
+					'이전 프로필 적용 요청이 아직 처리 중이에요. 잠시 후 다시 시도해 주세요.'
+				);
+			}
 			await client.publish(BOT_PROFILE_SET_CHANNEL, wrapRedisMessage(redisSigningKey, { guildId }));
 			metrics.request('bot-profile-set');
 			return reply.send({ ok: true });
@@ -177,13 +190,16 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 				return reply.code(503).send({ error: 'redis_unavailable', message: '인사 테스트 전송을 위해 Redis가 필요해요.' });
 			}
 			const requestId = crypto.randomUUID();
-			await client.set(
+			// pending 키는 길드당 1개 — 두 번째 요청이 첫 페이로드를 덮어쓰면 첫 requestId로는 결과가 절대 오지 않아요.
+			// 봇이 소비(NX 선점) 전 겹친 요청은 409로 거절해요 — 데이터 오작동은 requestId 상관이 막지만 첫 요청 전체가 타임아웃돼요.
+			const acquired = await client.set(
 				memberGreetingPendingKey(body.guildId),
 				wrapRedisMessage(redisSigningKey, { kind: body.kind, userId: body.userId, requestId }),
-				{
-					EX: GREETING_PENDING_TTL_SECONDS
-				}
+				{ EX: GREETING_PENDING_TTL_SECONDS, NX: true }
 			);
+			if (acquired === null) {
+				throw new DataApiError(409, 'greeting_pending_conflict', '이전 인사 테스트 요청이 아직 처리 중이에요. 잠시 후 다시 시도해 주세요.');
+			}
 			await client.publish(MEMBER_GREETING_SEND_CHANNEL, wrapRedisMessage(redisSigningKey, { guildId: body.guildId, requestId }));
 			metrics.request('greeting-send');
 			return reply.send({ ok: true, requestId });

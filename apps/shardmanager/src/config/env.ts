@@ -21,9 +21,7 @@ const envSchema = z.object({
 	DISCORD_WEBHOOK_URL: z.string().url().optional(),
 	SHARD_COUNT: shardCountSchema,
 	SHARDS_PER_PROCESS: z.coerce.number().int().positive().default(5),
-	LOGLEVEL: z.string().default('info'),
-	AUTH_KEY: z.string().optional(),
-	NODE_ENV: z.enum(['development', 'production']).default('development')
+	AUTH_KEY: z.string().optional()
 });
 
 export type Env = z.infer<typeof envSchema>;

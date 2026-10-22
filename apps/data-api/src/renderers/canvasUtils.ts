@@ -2,6 +2,9 @@
  * skia-canvas 공용 헬퍼 — nowPlayingCard / greetingCard / ohaasaCard / 프로필 카드 프리셋(dark·ticket)에서 함께 써요.
  */
 import type { CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import { getLogger } from '../utils/logger.ts';
+
+const logger = getLogger('canvasUtils');
 
 /** 카드 폰트(한·영·일 Pretendard JP + 색 이모지 Twemoji) 1회 등록 (Dockerfile에 resources/fonts 포함). + lucide Path2D 워밍업. */
 export async function ensureKoreanFont(): Promise<void> {
@@ -26,7 +29,7 @@ export async function ensureKoreanFont(): Promise<void> {
 			if (pretendardPath) {
 				FontLibrary.use('Pretendard JP', [pretendardPath]);
 			} else {
-				console.warn('[data-api] PretendardJPVariable.ttf를 찾지 못했어요 — 카드 텍스트가 시스템 폰트로 폴백해요.');
+				logger.warn('PretendardJPVariable.ttf를 찾지 못했어요 — 카드 텍스트가 시스템 폰트로 폴백해요.');
 			}
 
 			// 색 이모지(COLR/CPAL) — 곡 제목·닉네임의 이모지를 카드에 렌더 (CC-BY 4.0, 대시보드 /licenses에 고지)
@@ -34,11 +37,11 @@ export async function ensureKoreanFont(): Promise<void> {
 			if (twemojiPath) {
 				FontLibrary.use('Twemoji Mozilla', [twemojiPath]);
 			} else {
-				console.warn('[data-api] TwemojiMozilla.ttf를 찾지 못했어요 — 카드 이모지가 tofu로 그려질 수 있어요.');
+				logger.warn('TwemojiMozilla.ttf를 찾지 못했어요 — 카드 이모지가 tofu로 그려질 수 있어요.');
 			}
 		}
 	} catch (error) {
-		console.error(`[data-api] font load failed: ${error instanceof Error ? error.message : String(error)}`);
+		logger.error(`font load failed: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 

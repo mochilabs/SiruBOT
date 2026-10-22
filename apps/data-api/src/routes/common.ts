@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { redisIdSchema } from '@sirubot/utils';
+import { getLogger } from '../utils/logger.ts';
 import { DataApiError } from './serveCached.ts';
+
+const logger = getLogger('common');
 
 /**
  * 도메인 라우트 모듈(ohaasa·embed-fix·cache-providers·render·ai·player·guild-data)이 공유하는 라우트 공통부 —
@@ -18,10 +21,10 @@ export function sendError(reply: { code: (n: number) => any }, error: unknown): 
 			message: error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
 		});
 	}
-	// 스택/detail은 콘솔 로그에만 남기고 500 응답 본문에는 일반 메시지만 내려요 (내부 정보 유출 방지).
+	// 스택/detail은 앱 로거에만 남기고 500 응답 본문에는 일반 메시지만 내려요 (내부 정보 유출 방지).
 	const stack = error instanceof Error ? error.stack : undefined;
 	const detail = error instanceof Error ? error.message : String(error);
-	console.error(`[data-api] unhandled route error: ${detail}${stack ? `\n${stack}` : ''}`);
+	logger.error(`unhandled route error: ${detail}${stack ? `\n${stack}` : ''}`);
 	return reply.code(500).send({
 		error: 'internal_error',
 		message: '일시적인 오류예요. 잠시 후 다시 시도해 주세요.'

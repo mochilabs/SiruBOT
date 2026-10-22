@@ -62,9 +62,14 @@ export class YouTubeScheduler extends SubscriptionPoller {
 	}
 
 	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
-		const rows = await db.socialSubscription
-			.findMany({ where: { platform: 'youtube', status: 'active' }, select: { sourcePlatformId: true } })
-			.catch(() => []);
+		let rows: { sourcePlatformId: string }[];
+		try {
+			rows = await db.socialSubscription.findMany({ where: { platform: 'youtube', status: 'active' }, select: { sourcePlatformId: true } });
+		} catch (error) {
+			// DB 오류를 빈 목록으로 삼키면 lease 갱신·RSS 감사가 멈춰도 브레이커에 잡히지 않아요 (WebSub 5일 내 만료 위험).
+			logger.error('유튜브 구독 목록 조회 실패 — 이번 틱은 실패로 기록해요:', String(error));
+			return 'failed';
+		}
 		const channelIds = [...new Set(rows.map((row) => row.sourcePlatformId))];
 		if (channelIds.length === 0) return 'skipped';
 

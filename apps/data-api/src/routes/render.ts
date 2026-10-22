@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { greetingConfigSchema, redisIdSchema } from '@sirubot/utils';
@@ -13,6 +14,11 @@ import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { ohaasaCardSchema } from './ohaasaCardSchema.ts';
 
 /** 이미지 렌더 라우트 — 프로필 카드(dark/ticket)·멤버 인사 카드·NowPlaying·운세 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
+
+/** dedup 키용 페이로드 해시 — 같은 유저의 다른 요청(preset·설정·배경 변경)이 첫 렌더를 공유하지 않게 키에 섞어 넣어요 */
+function payloadHash(payload: unknown): string {
+	return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 16);
+}
 
 export function registerRenderRoutes(fastify: FastifyInstance): void {
 	// ── 프로필 카드 이미지 (프리셋: dark=RINE 다크 퍼플 / ticket=RINE 멤버패스 티켓) ──
@@ -70,7 +76,8 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
 			};
 			const statusLabelMap: Record<string, string> = { online: '온라인', idle: '자리 비움', dnd: '방해 금지', invisible: '오프라인' };
-			const buffer = await deduped(`img:card:${body.userId}`, () => {
+			// 키에 페이로드 해시를 넣어요 — 다른 preset·입력의 동시 요청이 첫 렌더 이미지를 공유하지 않게.
+			const buffer = await deduped(`img:card:${body.userId}:${payloadHash(body)}`, () => {
 				// dark/ticket 공통 필드 — 선택된 프리셋 입력만 조립해요.
 				const base = {
 					userId: body.userId,
@@ -133,7 +140,8 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				// 계약상 useImage:false 설정은 image:null — 이미지 경로는 렌더할 배경이 없어요
 				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요 — useImage를 켜고 배경을 지정해 주세요.');
 			}
-			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}`, () =>
+			// 키에 페이로드 해시를 넣어요 — 배경·설정·유저 컨텍스트가 다른 동시 미리보기 요청이 첫 렌더를 공유하지 않게.
+			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
 				renderGreetingCard(image, {
 					userId: body.context.userId,
 					displayName: body.context.displayName,

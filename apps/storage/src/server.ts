@@ -18,5 +18,5 @@ export async function buildServer(env: Env) {
 		guard,
 		publicUrl: env.STORAGE_PUBLIC_URL
 	});
-	return { fastify, guard };
+	return { fastify };
 }

@@ -1,11 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
+import { getLogger } from '../utils/logger.ts';
 import { metrics } from '../utils/metrics.ts';
 import { sendError } from './common.ts';
 import { customCommandDraftRequestSchema, generateCustomCommandDraft } from './customCommandDraft.ts';
 import { customCommandRefineRequestSchema, generateCustomCommandRefine } from './customCommandRefine.ts';
 
 /** 커스텀 명령어 AI 생성 — 자연어 설명 → JSON 스펙 초안(draft)과 반복 수정(refine). 파싱·재검증 루프는 customCommandDraft/Refine.ts가 소유해요. */
+
+const logger = getLogger('ai');
 
 export function registerAiRoutes(fastify: FastifyInstance, deps: { draftProvider: OpenAICompatTranslationProvider }): void {
 	// ── 커스텀 명령어 AI 초안 (대시보드 빌더: 자연어 설명 → JSON 스펙 초안) ──
@@ -23,7 +26,7 @@ export function registerAiRoutes(fastify: FastifyInstance, deps: { draftProvider
 			}
 			const result = await generateCustomCommandDraft(deps.draftProvider, prompt);
 			if (!result.ok) {
-				console.warn(`[data-api] custom command draft failed: ${result.reason}`);
+				logger.warn(`custom command draft failed: ${result.reason}`);
 				return reply.code(502).send({ error: 'draft_failed', message: 'AI 초안 생성에 실패했어요. 잠시 후 다시 시도해 주세요.' });
 			}
 			metrics.request('custom-command-draft');
@@ -47,7 +50,7 @@ export function registerAiRoutes(fastify: FastifyInstance, deps: { draftProvider
 			}
 			const result = await generateCustomCommandRefine(deps.draftProvider, refineRequest);
 			if (!result.ok) {
-				console.warn(`[data-api] custom command refine failed: ${result.reason}`);
+				logger.warn(`custom command refine failed: ${result.reason}`);
 				return reply.code(502).send({ error: 'refine_failed', message: 'AI 수정에 실패했어요. 잠시 후 다시 시도해 주세요.' });
 			}
 			metrics.request('custom-command-refine');

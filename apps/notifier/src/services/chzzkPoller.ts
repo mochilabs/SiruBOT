@@ -59,6 +59,8 @@ export class ChzzkPoller extends SubscriptionPoller {
 
 	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
 		const channels = await this.getChannels(db, now);
+		// DB 오류 — 빈 목록으로 위장하면 브레이커 계정에서 빠져 장애가 조용히 이어져요.
+		if (!channels) return 'failed';
 		if (channels.length === 0) return 'skipped';
 
 		let tickFailed = false;
@@ -84,18 +86,25 @@ export class ChzzkPoller extends SubscriptionPoller {
 		return tickFailed ? 'failed' : 'ok';
 	}
 
-	private async getChannels(db: PrismaClient, now: number): Promise<PolledChzzkChannel[]> {
+	/** 구독 채널 목록 — DB 오류 시 null을 돌려 틱을 'failed'로 만들어요 (빈 목록 캐시로 장애를 가리지 않도록). */
+	private async getChannels(db: PrismaClient, now: number): Promise<PolledChzzkChannel[] | null> {
 		if (this.subscriptionsCache && now - this.subscriptionsCache.cachedAt < SUBSCRIPTION_CACHE_MS) {
 			return this.subscriptionsCache.channels;
 		}
-		const rows = await db.socialSubscription
-			.findMany({ where: { platform: 'chzzk', status: 'active' }, select: { sourcePlatformId: true, sourceName: true } })
-			.catch(() => []);
-		const unique = new Map<string, string | null>();
-		for (const row of rows) unique.set(row.sourcePlatformId, row.sourceName);
-		const channels = [...unique.entries()].map(([sourcePlatformId, sourceName]) => ({ sourcePlatformId, sourceName }));
-		this.subscriptionsCache = { channels, cachedAt: now };
-		return channels;
+		try {
+			const rows = await db.socialSubscription.findMany({
+				where: { platform: 'chzzk', status: 'active' },
+				select: { sourcePlatformId: true, sourceName: true }
+			});
+			const unique = new Map<string, string | null>();
+			for (const row of rows) unique.set(row.sourcePlatformId, row.sourceName);
+			const channels = [...unique.entries()].map(([sourcePlatformId, sourceName]) => ({ sourcePlatformId, sourceName }));
+			this.subscriptionsCache = { channels, cachedAt: now };
+			return channels;
+		} catch (error) {
+			logger.error('치지직 구독 목록 조회 실패 — 이번 틱은 실패로 기록해요:', String(error));
+			return null;
+		}
 	}
 
 	private async handleTransition(channel: PolledChzzkChannel, state: ChannelState | null, status: ChzzkLiveStatus): Promise<void> {

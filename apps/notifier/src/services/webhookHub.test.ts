@@ -95,6 +95,19 @@ describe('SocialWebhookHub', () => {
 		await hub.stop();
 	});
 
+	it('keeps the guild id in timeout payloads (타임아웃 회수 후에도 요청의 길드 정보를 싣어요)', async () => {
+		const hub = makeHub();
+		const pending = hub.requestWebhookCreate(REQUEST);
+		await vi.advanceTimersByTimeAsync(10);
+		await vi.advanceTimersByTimeAsync(5_100);
+		await expect(pending).resolves.toMatchObject({
+			requestId: REQUEST.requestId,
+			guildId: REQUEST.guildId,
+			error: expect.stringContaining('봇이 응답하지 않았어요')
+		});
+		await hub.stop();
+	});
+
 	it('answers with an error when redis is not ready', async () => {
 		const hub = makeHub(false);
 		await expect(hub.requestWebhookCreate(REQUEST)).resolves.toMatchObject({ error: expect.stringContaining('Redis 연결이 없어요') });

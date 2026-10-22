@@ -33,11 +33,14 @@ function makePoller(options: {
 	seed?: string;
 	now?: () => number;
 	subscriptions?: { sourcePlatformId: string; sourceName?: string | null }[];
+	findMany?: ReturnType<typeof vi.fn>;
 }) {
 	const redis = new FakeRedis();
 	if (options.seed) redis.store.set(STATE_KEY, options.seed);
 	const db = {
-		socialSubscription: { findMany: vi.fn(async () => options.subscriptions ?? [{ sourcePlatformId: CHANNEL_ID }]) }
+		socialSubscription: {
+			findMany: options.findMany ?? vi.fn(async () => options.subscriptions ?? [{ sourcePlatformId: CHANNEL_ID }])
+		}
 	} as unknown as PrismaClient;
 	const dispatch = vi.fn(async () => {});
 	const poller = new ChzzkPoller({
@@ -168,5 +171,23 @@ describe('ChzzkPoller transitions', () => {
 		await settle();
 		poller.stop();
 		expect(fetchFn).toHaveBeenCalledTimes(5);
+	});
+
+	it('counts subscription DB failures as failed ticks instead of swallowing them as an empty list', async () => {
+		const findMany = vi.fn().mockRejectedValue(new Error('db down'));
+		const { poller, redis } = makePoller({ fetchFn: vi.fn(), findMany });
+		for (let tick = 1; tick <= 5; tick++) {
+			poller.start();
+			await vi.waitFor(() => expect(findMany).toHaveBeenCalledTimes(tick));
+			poller.stop();
+		}
+		// 실패로 계정돼야 브레이커가 5틱 후 열리고 6번째 틱은 조회를 건너뛰어요.
+		// (구버전은 DB 오류를 빈 목록으로 삼켜 'skipped'가 되어 브레이커에 잡히지 않았어요.)
+		poller.start();
+		await settle();
+		poller.stop();
+		expect(findMany).toHaveBeenCalledTimes(5);
+		// 실패한 틱은 구독 캐시로 승격되지 않아야 해요.
+		expect(redis.set).not.toHaveBeenCalled();
 	});
 });

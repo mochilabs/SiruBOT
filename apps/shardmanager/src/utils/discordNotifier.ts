@@ -69,7 +69,7 @@ export class DiscordNotifier {
 	async managerStarted(shardCount: number, shardsPerProcess: number): Promise<void> {
 		await this.send({
 			title: '🟢 Shard Manager 시작',
-			description: 'Shard Manager가 시작되었습니다.',
+			description: 'Shard Manager가 시작됐어요.',
 			color: Colors.GREEN,
 			fields: [
 				{ name: '샤드 수', value: `${shardCount}`, inline: true },
@@ -81,7 +81,7 @@ export class DiscordNotifier {
 	async managerStopped(): Promise<void> {
 		await this.send({
 			title: '🔴 Shard Manager 종료',
-			description: 'Shard Manager가 종료되었습니다.',
+			description: 'Shard Manager가 종료됐어요.',
 			color: Colors.RED
 		});
 	}
@@ -123,7 +123,7 @@ export class DiscordNotifier {
 	async allShardsReady(shardCount: number): Promise<void> {
 		await this.send({
 			title: '🎉 모든 샤드 준비 완료',
-			description: `총 **${shardCount}**개의 샤드가 모두 성공적으로 연결되고 준비되었습니다.`,
+			description: `총 **${shardCount}**개의 샤드가 모두 성공적으로 연결되고 준비됐어요.`,
 			color: Colors.GREEN
 		});
 	}
@@ -146,7 +146,7 @@ export class DiscordNotifier {
 	async shardHeartbeatTimeout(wsId: string, shardIds: number[], hostname?: string): Promise<void> {
 		await this.send({
 			title: '💀 하트비트 타임아웃',
-			description: '샤드 프로세스가 응답하지 않아 연결을 해제합니다.',
+			description: '샤드 프로세스가 응답하지 않아 연결을 해제해요.',
 			color: Colors.RED,
 			fields: [
 				{

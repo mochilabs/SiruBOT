@@ -77,7 +77,14 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 
 	// ── 라이브 플레이어 상태 SSE — Redis Pub/Sub 구독을 즉시 relay해요 ──
 	fastify.get('/v1/player/:guildId/stream', async (request, reply) => {
-		const { guildId = '' } = guildIdParams.parse(request.params);
+		// 파라미터 검증 실패는 hijack 전에 400으로 내려요 — hijack 후에는 HTTP 응답을 보낼 수 없고
+		// ZodError가 Fastify 기본 핸들러로 가 500(내부 스택 노출)이 돼요.
+		let guildId: string;
+		try {
+			({ guildId } = guildIdParams.parse(request.params));
+		} catch (error) {
+			return sendError(reply, error);
+		}
 		// SSE는 응답 수명을 직접 관리하므로 Fastify 라이프사이클(타임아웃/자동 종료)에서 분리해요.
 		reply.hijack();
 		const raw = reply.raw;

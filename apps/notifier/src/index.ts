@@ -1,4 +1,5 @@
 import { resolveRedisSigningKey } from '@sirubot/utils/redisEnvelope';
+import { initSentry, registerProcessErrorHandlers } from '@sirubot/utils/sentry';
 import { validateEnv } from './config/env.ts';
 import { buildServer } from './server.ts';
 import { connectDb, disconnectDb } from './services/db.ts';
@@ -12,6 +13,10 @@ import { SocialWebhookHub } from './services/webhookHub.ts';
 import { getLogger } from './utils/logger.ts';
 
 const logger = getLogger('index');
+
+// data-api·shardmanager와 같은 패턴 — SENTRY_DSN이 없으면 no-op이에요.
+initSentry({ service: 'notifier' });
+registerProcessErrorHandlers(logger);
 
 async function main(): Promise<void> {
 	const env = validateEnv();
@@ -28,7 +33,7 @@ async function main(): Promise<void> {
 		env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET
 			? new TwitchApiClient({ clientId: env.TWITCH_CLIENT_ID, clientSecret: env.TWITCH_CLIENT_SECRET })
 			: null;
-	const { fastify } = await buildServer(env, { dispatcher, getDb: () => db, hub, twitchClient });
+	const { fastify } = await buildServer(env, { dispatcher, getDb: () => db, hub, twitchClient, redis });
 
 	const poller = new ChzzkPoller({ redis, getDb: () => db, dispatcher, fetchFn: fetch });
 	if (env.chzzkPollingEnabled && db) {
@@ -94,6 +99,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((error) => {
-	console.error('❌ notifier 기동에 실패했어요:', error);
+	logger.error('notifier 기동에 실패했어요:', error);
 	process.exit(1);
 });

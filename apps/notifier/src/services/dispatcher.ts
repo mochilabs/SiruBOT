@@ -34,9 +34,9 @@ export interface SocialWebhookPayload {
 	content?: string;
 	embeds: SocialEmbed[];
 	allowed_mentions: { parse: string[]; roles?: string[] };
-	/** 이 메시지에서만 웨훅 이름을 바꿔요 (구독 webhookName 오버라이드) */
+	/** 이 메시지에서만 웹훅 이름을 바꿔요 (구독 webhookName 오버라이드) */
 	username?: string;
-	/** 이 메시지에서만 웨훅 프로필 사진을 바꿔요 (구독 webhookAvatarUrl 오버라이드) */
+	/** 이 메시지에서만 웹훅 프로필 사진을 바꿔요 (구독 webhookAvatarUrl 오버라이드) */
 	avatar_url?: string;
 }
 
@@ -78,7 +78,10 @@ export class SocialDispatcher {
 					createdAt: { lte: new Date(event.publishedAt) }
 				}
 			})
-			.catch(() => []);
+			.catch((error: unknown) => {
+				logger.error('구독 목록 조회 실패 — 이벤트 알림을 건너뛰어요:', String(error));
+				return [];
+			});
 		if (subscriptions.length === 0) return;
 
 		await Promise.allSettled(subscriptions.map((subscription) => this.deliver(subscription, event)));
@@ -108,8 +111,8 @@ export class SocialDispatcher {
 					allowed_mentions: { parse: [], roles: extractSocialTemplateRoleIds(template) }
 				}
 			: { embeds: [embed], allowed_mentions: { parse: [] } };
-		// 구독별 표시 오버라이드 — Discord 웨훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
-		// 웨훅 기본 표시는 그대로 두고, 수정하면 다음 알림부터 바로 반영돼요.
+		// 구독별 표시 오버라이드 — Discord 웹훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
+		// 웹훅 기본 표시는 그대로 두고, 수정하면 다음 알림부터 바로 반영돼요.
 		if (subscription.webhookName) payload.username = subscription.webhookName;
 		if (subscription.webhookAvatarUrl) payload.avatar_url = subscription.webhookAvatarUrl;
 		return payload;

@@ -7,8 +7,9 @@
  * - 화면 조회/재시도 때 요청을 받아 봇이 Discord에서 최신 상태를 읽어 응답해요.
  * - 주기 퍼블리시는 하지 않아요 — 변경 빈도가 낮은 프로필은 필요할 때만 확인해요.
  */
+import { z } from 'zod';
 import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_STATE_CHANNEL_PREFIX } from '@sirubot/utils';
-import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 
 import { sharedCache } from '../utils/cache.ts';
 import { getLogger } from '../utils/logger.ts';
@@ -23,17 +24,29 @@ const MAX_ENTRIES = 5_000;
 /** 구독 채널 패턴 — 봇 퍼블리시어(botProfileService)와 계약이에요 */
 const CHANNEL_PATTERN = `${BOT_PROFILE_STATE_CHANNEL_PREFIX}*`;
 
-export interface BotProfileStatePayload {
-	guildId: string;
-	nickname: string | null;
-	username: string;
-	guildAvatarUrl: string | null;
-	guildBannerUrl: string | null;
-	globalAvatarUrl: string | null;
-	canChangeNickname: boolean;
-	lastApply: { ok: boolean; error: string | null; at: number } | null;
-	updatedAt: number;
-}
+/**
+ * 봇이 state 채널로 퍼블리시하는 길드별 봇 프로필 상태 — 봇의 BotProfileState와 같은 계약이에요.
+ * 형태 검증은 이 zod 스키마가 단일 소스예요 (필드 추가 시 무시되지 않게).
+ */
+export const botProfileStateSchema = z.object({
+	guildId: z.string().min(1).max(32),
+	/** 현재 길드 닉네임 — null이면 사용자명으로 표시 중이에요 */
+	nickname: z.string().nullable(),
+	/** 봇 사용자명 — 닉네임 초기화 시 표시할 기본값이에요 */
+	username: z.string(),
+	/** 길드 전용 아바타 URL — 설정 안 됐으면 null (패널은 전역 아바타를 보여줘요) */
+	guildAvatarUrl: z.string().nullable(),
+	/** 길드 전용 배너 URL — 설정 안 됐으면 null */
+	guildBannerUrl: z.string().nullable(),
+	/** 전역(앱) 아바타 URL */
+	globalAvatarUrl: z.string().nullable(),
+	/** 닉네임 변경 가능 여부 — CHANGE_NICKNAME 또는 MANAGE_NICKNAMES */
+	canChangeNickname: z.boolean(),
+	/** 마지막 적용 시도 결과 — 시도가 없으면 null */
+	lastApply: z.object({ ok: z.boolean(), error: z.string().nullable(), at: z.number() }).nullable().default(null),
+	updatedAt: z.number()
+});
+export type BotProfileStatePayload = z.infer<typeof botProfileStateSchema>;
 
 interface Entry {
 	state: BotProfileStatePayload;
@@ -49,39 +62,19 @@ interface RefreshRequest {
 const states = new Map<string, Entry>();
 const refreshRequests = new Map<string, RefreshRequest>();
 
-function isNullableString(value: unknown): value is string | null {
-	return typeof value === 'string' || value === null;
-}
-
 /** 퍼블리시 페이로드 검증 — malformed 메시지는 조용히 버리고 정상 메시지만 인메모리에 심어요 */
 function parsePayload(message: string, guildId: string): BotProfileStatePayload | null {
 	try {
-		const parsed = JSON.parse(message) as Partial<BotProfileStatePayload>;
-		if (typeof parsed !== 'object' || parsed === null || parsed.guildId !== guildId) return null;
-		if (!isNullableString(parsed.nickname) || typeof parsed.username !== 'string') return null;
-		if (!isNullableString(parsed.guildAvatarUrl) || !isNullableString(parsed.guildBannerUrl) || !isNullableString(parsed.globalAvatarUrl))
+		const result = botProfileStateSchema.safeParse(JSON.parse(message));
+		if (!result.success) {
+			logger.debug(
+				`Malformed bot profile state from ${BOT_PROFILE_STATE_CHANNEL_PREFIX}${guildId}: ${result.error.issues[0]?.message ?? 'invalid shape'}`
+			);
 			return null;
-		if (typeof parsed.canChangeNickname !== 'boolean' || typeof parsed.updatedAt !== 'number') return null;
-
-		let lastApply: BotProfileStatePayload['lastApply'] = null;
-		if (parsed.lastApply !== null && parsed.lastApply !== undefined) {
-			const apply = parsed.lastApply as BotProfileStatePayload['lastApply'];
-			if (typeof apply !== 'object' || apply === null || typeof apply.ok !== 'boolean') return null;
-			if (!isNullableString(apply.error) || typeof apply.at !== 'number') return null;
-			lastApply = { ok: apply.ok, error: apply.error, at: apply.at };
 		}
-
-		return {
-			guildId,
-			nickname: parsed.nickname,
-			username: parsed.username,
-			guildAvatarUrl: parsed.guildAvatarUrl,
-			guildBannerUrl: parsed.guildBannerUrl,
-			globalAvatarUrl: parsed.globalAvatarUrl,
-			canChangeNickname: parsed.canChangeNickname,
-			lastApply,
-			updatedAt: parsed.updatedAt
-		};
+		// 채널의 길드와 다른 페이로드는 무시해요 — 다른 길드 상태가 엉뚱한 엔트리에 심기지 않게.
+		if (result.data.guildId !== guildId) return null;
+		return result.data;
 	} catch (error) {
 		logger.debug(
 			`Malformed bot profile state from ${BOT_PROFILE_STATE_CHANNEL_PREFIX}${guildId}: ${
@@ -92,12 +85,24 @@ function parsePayload(message: string, guildId: string): BotProfileStatePayload 
 	}
 }
 
-function handleMessage(message: string, channel: string): void {
+/**
+ * Pub/Sub 메시지 처리 — 서명 검증(SEC-006) 후 페이로드를 보관하고, 대기 중이던 refresh 요청을 완료해요.
+ * 유닛 테스트가 직접 호출할 수 있게 내보내요 (다루는 게 모듈 states 맵뿐이라 Redis 연결 없이도 검증돼요).
+ */
+export function handleBotProfileStateMessage(message: string, channel: string): void {
 	if (!channel.startsWith(BOT_PROFILE_STATE_CHANNEL_PREFIX)) return;
 	const guildId = channel.slice(BOT_PROFILE_STATE_CHANNEL_PREFIX.length);
 	if (!guildId) return;
 
-	const payload = parsePayload(message, guildId);
+	// 서명 키는 REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 매 메시지마다 읽어 테스트에서 환경을 스왑할 수 있게 해요.
+	// 키가 있는 환경에서는 서명 봉투를 검증해 무서명 위조 프레임을 거부해요 (SEC-006, guildDataHub와 동일 계약).
+	const body = unwrapRedisMessage(resolveRedisSigningKey(process.env), message);
+	if (body === null) {
+		logger.warn(`Rejected bot profile state from ${channel} with invalid signature`);
+		return;
+	}
+
+	const payload = parsePayload(body, guildId);
 	if (!payload) return;
 
 	if (states.size >= MAX_ENTRIES && !states.has(guildId)) {
@@ -120,7 +125,7 @@ const subscriber = new HubSubscriber({
 	name: 'bot profile hub',
 	channel: CHANNEL_PATTERN,
 	pattern: true,
-	onMessage: handleMessage,
+	onMessage: handleBotProfileStateMessage,
 	logger
 });
 

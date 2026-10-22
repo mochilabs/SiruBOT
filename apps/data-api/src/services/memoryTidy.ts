@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@sirubot/prisma';
+import { Prisma, type PrismaClient } from '@sirubot/prisma';
 import {
 	MEMORY_CATEGORIES,
 	countMarkdownEntries,
@@ -151,27 +151,38 @@ async function tidyUser(db: PrismaClient, provider: OpenAICompatTranslationProvi
 	}
 }
 
-/** nightly pass 후보 — 24시간 이상 정리 안 됐고 장기 기억이 있는 사용자. never-tidied 우선. */
+/** nightly pass 후보 스캔 상한 — 페이지를 넘겨가며 찾되 배치의 배수(10배) 행까지만 봐요 (공백 longTerm 행이 섞여도 한 밤에 크게 밀리지 않게) */
+const CANDIDATE_SCAN_FACTOR = 10;
+
+/** nightly pass 후보 — 24시간 이상 정리 안 됐고 장기 기억이 있는 사용자. never-tidied 우선, tidiedAt 오래된 순. */
 async function findCandidates(db: PrismaClient, limit: number): Promise<string[]> {
 	const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-	const rows = await db.userMemory.findMany({
-		where: { OR: [{ tidiedAt: null }, { tidiedAt: { lt: cutoff } }] },
-		take: limit * 3
-	});
-	const candidates: { userId: string; tidiedAt: Date | null; entries: number }[] = [];
-	for (const row of rows) {
-		const normalized = normalizeStored(row.longTerm);
-		if (!normalized) continue;
-		const entries = countMarkdownEntries(normalized);
-		if (entries > 0) candidates.push({ userId: row.userId, tidiedAt: row.tidiedAt, entries });
+	const scanCap = limit * CANDIDATE_SCAN_FACTOR;
+	const candidates: { userId: string }[] = [];
+	let scanned = 0;
+	while (candidates.length < limit && scanned < scanCap) {
+		const take = Math.min(limit * 3, scanCap - scanned);
+		// 빈 longTerm(SQL NULL) 행은 쿼리에서 먼저 걸러 후보 창을 낭비하지 않아요.
+		const rows = await db.userMemory.findMany({
+			where: {
+				AND: [{ longTerm: { not: Prisma.DbNull } }, { OR: [{ tidiedAt: null }, { tidiedAt: { lt: cutoff } }] }]
+			},
+			// never-tidied를 앞에 두고 오래된 순 — DB가 보장하는 순서라 메모리 정렬 없이 페이지네이션이 안전해요.
+			orderBy: [{ tidiedAt: { sort: 'asc', nulls: 'first' } }, { userId: 'asc' }],
+			skip: scanned,
+			take
+		});
+		if (rows.length === 0) break;
+		scanned += rows.length;
+		for (const row of rows) {
+			const normalized = normalizeStored(row.longTerm);
+			if (!normalized) continue;
+			if (countMarkdownEntries(normalized) > 0) candidates.push({ userId: row.userId });
+			if (candidates.length >= limit) break;
+		}
+		if (rows.length < take) break; // 페이지가 가득 안 채워졌다는 건 더 이상 행이 없어요
 	}
-	candidates.sort((a, b) => {
-		if (a.tidiedAt === null && b.tidiedAt === null) return 0;
-		if (a.tidiedAt === null) return -1;
-		if (b.tidiedAt === null) return 1;
-		return a.tidiedAt.getTime() - b.tidiedAt.getTime();
-	});
-	return candidates.slice(0, limit).map((c) => c.userId);
+	return candidates.map((c) => c.userId);
 }
 
 async function runMemoryTidy(db: PrismaClient, provider: OpenAICompatTranslationProvider, batchSize: number): Promise<MemoryTidyStats> {
@@ -231,13 +242,14 @@ export function startMemoryTidyScheduler(
 
 	const tick = () => {
 		if (stopped) return;
+		// 지터는 한 번만 뽑아요 — 예약된 타이머와 표시값(stats.nextRunAt)이 같은 시각을 가리키게.
+		const delayMs = msUntilNext(options.at);
+		stats.nextRunAt = Date.now() + delayMs;
 		timer = setTimeout(() => {
 			if (stopped) return;
-			stats.nextRunAt = Date.now() + msUntilNext(options.at);
 			void runMemoryTidy(db, provider, options.batchSize).finally(tick);
-		}, msUntilNext(options.at));
+		}, delayMs);
 		timer.unref?.();
-		stats.nextRunAt = Date.now() + msUntilNext(options.at);
 	};
 
 	tick();
