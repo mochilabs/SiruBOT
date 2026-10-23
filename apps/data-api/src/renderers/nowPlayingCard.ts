@@ -8,6 +8,7 @@
  * 커버돼요. 갱신 주기는 봇이 트랙/볼륨/챕터/일시정지/반복 변경을 감지해 다시 렌더.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
+import { BOT_NAME } from '@sirubot/utils';
 import { drawCircleImage, drawIcon, ensureKoreanFont, formatClock, hashString, loadImageAllowed, truncate, type IconName } from './canvasUtils.ts';
 
 export interface NowPlayingCardInput {
@@ -292,7 +293,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
 
-	// ── 액센트: 아트워크 도미넌트 컬러 ──
+	// 액센트: 아트워크 도미넌트 컬러
 	const artImg = input.artworkUrl ? await loadImageAllowed(input.artworkUrl) : null;
 	let accent: { primary: string };
 	if (artImg) {
@@ -302,7 +303,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		accent = fallbackAccent(input.trackId);
 	}
 
-	// ── 배경: 아트워크 기반 블러 + 딤 그라디언트 ──
+	// 배경: 아트워크 기반 블러 + 딤 그라디언트
 	const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
 	bgGrad.addColorStop(0, '#141a26');
 	bgGrad.addColorStop(1, '#0d1117');
@@ -317,7 +318,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	ctx.fillStyle = glow;
 	ctx.fillRect(0, 0, W, H);
 
-	// ── 아트워크 — 16:9 비율, 높이 기준 180px ──
+	// 아트워크: 16:9 비율, 높이 기준 180px
 	const THUMB_H = 180;
 	const THUMB_W = Math.round(THUMB_H * (16 / 9)); // 320
 	const artX = 28;
@@ -325,7 +326,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	if (artImg) drawCoverFitWide(ctx, artImg, artX, artY, THUMB_W, THUMB_H, 20);
 	else drawArtworkFallback(ctx, accent, artX, artY, THUMB_H, 20);
 
-	// ── 텍스트 영역 ──
+	// 텍스트 영역
 	const tx = artX + THUMB_W + 28;
 	const right = W - 32;
 	const textW = right - tx;
@@ -339,12 +340,13 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	ctx.fillText('NOW PLAYING', tx, 56);
 	let badgeX = tx + ctx.measureText('NOW PLAYING').width + 14;
 	if (input.isStream) {
-		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'radio', label: 'LIVE', bg: '#ff3b5c', fg: '#ffffff' }) + 8;
+		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'radio', label: 'LIVE', bg: '#d11f3f', fg: '#ffffff' }) + 8;
 	}
 	if (input.isPaused) {
 		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'pause', label: '일시정지', bg: 'rgba(255,255,255,0.13)' }) + 8;
 	}
 	if (input.isRecommended) {
+		// 봇 추천 뱃지: sparkle는 '봇이 고른 곡' 상태 표시라 라벨과 짝으로만 써요.
 		badgeX =
 			drawPill(ctx, {
 				x: badgeX,
@@ -362,7 +364,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'repeat', label: '반복: 대기열', bg: 'rgba(255,255,255,0.13)' }) + 8;
 	}
 
-	// ── 신청자 pill — 상단 우측 (뱃지와 겹치면 생략, 텍스트 라인 멘션이 폴백) ──
+	// 신청자 pill: 상단 우측, 뱃지와 겹치면 생략, 텍스트 라인 멘션이 폴백
 	const reqImg = input.requester?.avatarUrl ? await loadImageAllowed(input.requester.avatarUrl) : null;
 	if (input.requester?.name) {
 		ctx.save();
@@ -403,7 +405,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		ctx.textBaseline = 'alphabetic';
 	}
 
-	// 제목 — 카드에는 곡 제목 크게, 말줄임 없이 전체 제목을 그려요 (줄 바꿈 없이)
+	// 제목: 카드에는 곡 제목 크게, textW를 넘으면 최대 2줄로 줄바꿈해요 (말줄임표 없음)
 	const titleSize = 40;
 	ctx.fillStyle = '#ffffff';
 	ctx.font = `700 ${titleSize}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
@@ -414,7 +416,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		titleY += 46;
 	}
 
-	// ── 아티스트 / 챕터 ──
+	// 아티스트 / 챕터
 	const titleBottom = titleY;
 	let cursorY = titleBottom;
 
@@ -440,7 +442,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		artCursorY = chapterY;
 	}
 
-	// ── 다음 곡 목록 — 유저 대기열 기준, 공간이 허용되는 만큼(최대 3) ──
+	// 다음 곡 목록: 유저 대기열 기준, 공간이 허용되는 만큼(최대 3)
 	const nextList = (input.nextTracks ?? []).slice(0, 3);
 	if (nextList.length > 0) {
 		const headerBase = artCursorY + 44;
@@ -463,7 +465,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		}
 	}
 
-	// ── 하단 메타: 대기열 + 볼륨 + 반복 + 노드 — 우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략 ──
+	// 하단 메타: 대기열 + 볼륨 + 반복 + 노드 (우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략)
 	const metaY = Math.min(H - 24, Math.max(cursorY + 64, artCursorY + 128));
 	type MetaSegment = { icon: IconName; text: string };
 	const metaSegments: MetaSegment[] = [];
@@ -484,7 +486,7 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 
 	if (metaSegments.length > 0) {
 		ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		const brandText = input.brandLine ?? '시루봇';
+		const brandText = input.brandLine ?? BOT_NAME;
 		const brandW = ctx.measureText(brandText).width;
 		const metaMaxW = right - brandW - 36 - tx;
 		// 우선순위 뒤(노드)부터 잘라요 — 최소 1세그먼트는 남긴다
@@ -508,14 +510,14 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	} else if (!input.brandLine) {
 		ctx.fillStyle = 'rgba(255,255,255,0.55)';
 		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText('SiruBOT', tx, metaY);
+		ctx.fillText(BOT_NAME, tx, metaY);
 	}
 
-	// ── 푸터 브랜드: 봇 이름 + 버전/해시 (이미지에 박는다) ──
+	// 푸터 브랜드: 봇 이름 + 버전/해시 (이미지에 박는다)
 	ctx.textAlign = 'right';
 	ctx.fillStyle = `${accent.primary}bf`;
 	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillText(input.brandLine ?? '시루봇', right, H - 22);
+	ctx.fillText(input.brandLine ?? BOT_NAME, right, H - 22);
 
 	return (await canvas.toBuffer('png')) as Buffer;
 }

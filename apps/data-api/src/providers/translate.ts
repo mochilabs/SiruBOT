@@ -14,6 +14,8 @@ export interface TranslationProvider {
 	readonly name: string;
 	readonly available: boolean;
 	translateHoroscope(items: TranslationItem[]): Promise<Map<string, TranslationItem>>;
+	/** OpenAI 호환 chat/completions 공용 호출: 운세 번역과 장기 기억 정리가 같은 경로를 써요. */
+	chatCompletion(systemPrompt: string, userContent: string, providerLabel: string): Promise<string>;
 }
 
 const TRANSLATE_SYSTEM_PROMPT = [
