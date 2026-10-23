@@ -183,7 +183,7 @@ export function dataApiFailResponse(
  * ("Route DELETE:/v1/... not found")이 사용자에게 새는 것을 막아요. 한글 안내로 보이는
  * 메시지만 살리고 그 외는 각 라우트의 한국어 폴백으로 바꿔요.
  */
-export function dataApiUserMessage(message: string | null, fallback: string): string {
+export function dataApiUserMessage(message: string | null, fallback: string | null): string | null {
   return message && /[가-힣]/.test(message) ? message : fallback;
 }
 
