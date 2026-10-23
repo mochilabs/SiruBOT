@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASSET_ALLOWED_MIME_TYPES, ASSET_BUCKET, ASSET_MAX_BYTES, assetKeyFor, parseAssetKey, sniffImageMime } from './storage.js';
+import { ASSET_ALLOWED_MIME_TYPES, ASSET_BUCKET, ASSET_MAX_BYTES, assetKeyFor, assetNameSchema, sniffImageMime } from './storage.js';
 
 describe('sniffImageMime', () => {
 	const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
@@ -20,23 +20,31 @@ describe('sniffImageMime', () => {
 	});
 });
 
-describe('assetKeyFor / parseAssetKey', () => {
-	it('길드·에셋·mime으로 키를 만들고 다시 파싱해요', () => {
-		const key = assetKeyFor('123', 'abc-1', 'image/jpeg');
-		expect(key).toBe('123/abc-1.jpg');
-		expect(parseAssetKey(key)).toEqual({ guildId: '123', assetId: 'abc-1', ext: 'jpg' });
+describe('assetKeyFor', () => {
+	it('길드·에셋·mime으로 키를 만들어요', () => {
+		expect(assetKeyFor('123', 'abc-1', 'image/jpeg')).toBe('123/abc-1.jpg');
 	});
 
 	it('경로 탈출 조각은 거부해요', () => {
 		expect(() => assetKeyFor('../etc', 'x', 'image/png')).toThrow();
 		expect(() => assetKeyFor('123', '../x', 'image/png')).toThrow();
-		expect(parseAssetKey('123/../../x.png')).toBeNull();
-		expect(parseAssetKey('123/nested/x.png')).toBeNull();
 	});
 
 	it('상수 계약이 있어요', () => {
 		expect(ASSET_BUCKET).toBe('guild-assets');
 		expect(ASSET_MAX_BYTES).toBe(8 * 1024 * 1024);
 		expect(ASSET_ALLOWED_MIME_TYPES.has('image/gif')).toBe(true);
+	});
+});
+
+describe('assetNameSchema', () => {
+	it('빈 이름과 공백만 있는 이름을 거부해요', () => {
+		expect(assetNameSchema.safeParse('').success).toBe(false);
+		expect(assetNameSchema.safeParse('   ').success).toBe(false);
+	});
+
+	it('60자를 초과하면 거부하고 60자까지는 허용해요', () => {
+		expect(assetNameSchema.safeParse('a'.repeat(60)).success).toBe(true);
+		expect(assetNameSchema.safeParse('a'.repeat(61)).success).toBe(false);
 	});
 });

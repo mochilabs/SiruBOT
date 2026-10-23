@@ -50,10 +50,6 @@ export class MemoryCache<Key, Value> {
 		this.cache.delete(key);
 	}
 
-	public clear() {
-		this.cache.clear();
-	}
-
 	public size(): number {
 		return this.cache.size;
 	}
@@ -68,20 +64,6 @@ export class MemoryCache<Key, Value> {
 		}
 
 		return true;
-	}
-
-	public cleanup(): number {
-		const now = Date.now();
-		let removedCount = 0;
-
-		for (const [key, entry] of this.cache.entries()) {
-			if (entry.expiresAt < now) {
-				this.cache.delete(key);
-				removedCount++;
-			}
-		}
-
-		return removedCount;
 	}
 
 	public getStats() {

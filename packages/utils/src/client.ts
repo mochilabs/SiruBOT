@@ -6,4 +6,4 @@
  * 대시보드 next.config.ts에 discord.js 정적 해석으로 빌드가 깨진 선례가 있어요.
  * 새 모듈을 여기에 넣을 때는 "순수 값·zod 스키마만"인지 확인하세요.
  */
-export { BOT_NAME, DEFAULT_COLOR, DEFAULT_COLOR_HEX, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';
+export { BOT_NAME, DEFAULT_COLOR, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';

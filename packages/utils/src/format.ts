@@ -41,11 +41,14 @@ export function emojiProgressBar(percent: number): string {
 	return parts.join('');
 }
 
+/** 추천곡 센티널, 봇이 자동 추천곡의 track.requester.id에 심는 값 (apps/bot requester.ts의 RELATED_TRACK_REQUESTER_ID와 일치해야 해요) */
+export const RELATED_TRACK_REQUESTER_ID = 'related_track';
+
 export function getRequesterText(track: Track): string {
-	// controller.ts와 동일한 가드: requester가 없거나 문자열이면 .id 접근으로 터지지 않도록 한다.
+	// requester가 없거나 문자열이면 .id 접근으로 터지지 않도록 하는 가드예요.
 	const requester = track.requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
-	if (requesterId === 'related_track') return `추천 곡 ${emoji('sparkle')}`;
+	if (requesterId === RELATED_TRACK_REQUESTER_ID) return `추천 곡 ${emoji('sparkle')}`;
 	if (typeof requesterId === 'string' && requesterId.length > 0) return `신청자: <@${requesterId}>`;
 	return '';
 }
@@ -133,10 +136,8 @@ export function formatTrack(track: Track, options?: FormatTrackOptions): string 
 	if (withMarkdownURL) {
 		if (hasValidUrl) {
 			return `[${formattedTitle}${lengthStr}](${track.info.uri})`;
-		} else {
-			// fallback without link if url is too long or missing
-			return `${formattedTitle}${lengthStr}`;
 		}
+		return `${formattedTitle}${lengthStr}`;
 	}
 
 	return `${formattedTitle}${lengthStr}`;

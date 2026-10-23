@@ -8,6 +8,7 @@
 
 export type WeatherScope = 'now' | 'today' | 'tomorrow' | 'week';
 
+/** 날씨 조회 실패, 서브패스별 단일 홈 정책이라 공용 Error 베이스 없이 이 파일에 정의해요 */
 export class WeatherError extends Error {
 	public constructor(
 		public readonly identifier: string,

@@ -90,7 +90,7 @@ export type PlayerVoiceContext = z.infer<typeof playerVoiceContextSchema>;
  */
 export const playerWebResponseSchema = z.object({
 	requestId: z.string().uuid(),
-	guildId: z.string().min(1).max(32),
+	guildId: redisIdSchema,
 	kind: playerWebKindSchema,
 	error: z.string().optional(),
 	tracks: z.array(playerWebTrackSchema).max(5).optional(),

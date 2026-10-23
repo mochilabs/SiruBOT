@@ -41,7 +41,7 @@ function readAttribute(tag: string, name: string): string | null {
 }
 
 /** 상대경로면 pageUrl 기준으로 절대경로를 만들고, 이미 절대경로면 그대로 돌려줘요 */
-export function absolutizeUrl(value: string, pageUrl: string): string {
+function absolutizeUrl(value: string, pageUrl: string): string {
 	try {
 		return new URL(value, pageUrl).href;
 	} catch {
@@ -91,7 +91,7 @@ export function parseBoothOg(html: string, pageUrl: string): BoothOgMeta | null 
 	return { title: meta.title, description: meta.description, image: enlargeBoothImage(meta.image), url: meta.url };
 }
 
-// --- X(Twitter) 메타데이터: FxEmbed API 페이징을 봇이 쓰기 좋은 형태로 정리해요 ---
+// X(Twitter) 메타데이터, FxEmbed API 페이징을 봇이 쓰기 좋은 형태로 정리해요
 
 export interface FxTwitterStatus {
 	url: string;

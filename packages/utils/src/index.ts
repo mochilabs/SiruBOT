@@ -5,7 +5,7 @@
 
 export { isDev } from './env.js';
 export { versionInfo } from './version.js';
-export { BOT_NAME, DEFAULT_COLOR, DEFAULT_COLOR_HEX, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';
+export { BOT_NAME, DEFAULT_COLOR, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';
 export { emojiProgressBar, formatTrack, getRequesterText, removeEmojis, volumeToEmoji } from './format.js';
 export { formatTime, formatTimeToKorean } from './time.js';
 export { getSimpleYouTubeSuggestions } from './youtube.js';

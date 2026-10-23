@@ -8,7 +8,7 @@
 /** 한 메시지에서 확대할 최대 이모지 수 */
 export const EMOJI_ENLARGE_MAX = 10;
 
-/** 커스텀 이모지 토큰 — <a?:name:id> 형식만 인정해요 (유니코드 이모지는 CDN 이미지가 없어 확대 대상이 아니에요) */
+/** 커스텀 이모지 토큰 — <a?:name:id> 형식만 인정해요 */
 const CUSTOM_EMOJI_PATTERN = /^<[a]?:([A-Za-z0-9_~]+):(\d{17,20})>$/u;
 
 export interface EnlargedEmoji {
