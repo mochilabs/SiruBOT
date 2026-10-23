@@ -7,6 +7,7 @@ import useSWR from "swr";
 
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
+import { toApiError } from "@/lib/api-error";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import { useAuthedSWR } from "@/lib/swr";
 import { isYoutubeUrl } from "@/lib/youtube-url";
@@ -127,7 +128,7 @@ export function usePlaylists() {
 		setTrackInput("");
 	}, []);
 
-	/** API 호출 공통 흐름 — 실패 본문의 error를 우선 보여주고 성공/실패 토스트까지 띄워요. 성공 시 본문을, 실패 시 null을 돌려줘요 */
+	/** API 호출 공통 흐름 — 실패는 toApiError가 본문 error(한국어)를 우선 추출하고 성공/실패 토스트까지 띄워요. 성공 시 본문을, 실패 시 null을 돌려줘요 */
 	async function callApi<T>(
 		url: string,
 		init: RequestInit,
@@ -135,8 +136,8 @@ export function usePlaylists() {
 	): Promise<T | null> {
 		try {
 			const res = await fetch(url, init);
+			if (!res.ok) throw await toApiError(res, messages.failure);
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || messages.failure);
 			toast.success(messages.success);
 			return data as T;
 		} catch (err: unknown) {

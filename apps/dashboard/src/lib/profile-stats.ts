@@ -68,6 +68,10 @@ export interface ProfileRpsStats {
 export interface ProfileGamesStats {
   rps: ProfileRpsStats | null;
   guessBest: number | null;
+  /** 승/패/연승 표본이 RPS_SAMPLE_LIMIT(최근 5000건) 한도에 걸렸으면 true — 한도를 넘긴 기록은 반영되지 않아요 */
+  rpsSampled?: boolean;
+  /** 최소 시도 표본이 GUESS_SAMPLE_LIMIT(최근 1000건) 한도에 걸렸으면 true — listenSampled와 같은 고지용 플래그예요 */
+  guessSampled?: boolean;
 }
 
 export interface ProfileAttendance {
@@ -205,6 +209,8 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
     games: {
       rps: hasRps ? { wins, losses, draws, bestStreak } : null,
       guessBest,
+      rpsSampled: rpsRecords.length >= RPS_SAMPLE_LIMIT,
+      guessSampled: guessWins.length >= GUESS_SAMPLE_LIMIT,
     },
     attendance: { checkedInToday: lastDay === kstDateString(), streak, lastDay },
   };

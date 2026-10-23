@@ -13,7 +13,7 @@ import {
 	type UserAuthorizeResult,
 } from "@/lib/api-guards";
 import { guardRateLimit, rateKey as buildRateKey, type RateRule } from "@/lib/rate-limit";
-import { zodError } from "@/lib/schemas";
+import { parseSettingBody } from "@/lib/schemas";
 
 /**
  * 라우트 게이트 역할 — `manage`/`member`는 길드 권한(세션 → accessToken → Discord 확인),
@@ -58,9 +58,9 @@ export interface ApiHandlerContext<R extends ApiRouteRole, S extends z.ZodType |
 
 export type ApiHandlerOptions<R extends ApiRouteRole, S extends z.ZodType | undefined> = RateOptions & {
 	role: R;
-	/** JSON 본문 검증 — 생략하면 본문은 핸들러가 직접 다뤄요 (소유 검증이 본문 파싱보다 앞서거나 formData인 라우트) */
+	/** JSON 객체 본문 검증 — parseSettingBody 공통 흐름(파싱·객체 형태·미등록 필드·스키마)을 거쳐요. 생략하면 본문은 핸들러가 직접 다뤄요 (소유 검증이 본문 파싱보다 앞서거나 formData인 라우트) */
 	schema?: S;
-	/** schema 실패 시 고정 메시지 — 없으면 zodError로 첫 이슈 메시지를 그대로 내려요 */
+	/** 스키마 검증 실패 시 고정 메시지 — 없으면 zodError로 첫 이슈 메시지를 그대로 내려요 */
 	invalidMessage?: string;
 	handler: (context: ApiHandlerContext<R, S>) => Response | Promise<Response>;
 };
@@ -89,6 +89,11 @@ function deniedResponse(role: ApiRouteRole, authz: Extract<AuthorizeResult, { ok
 	if (role === "member") return deniedGuildMember(authz);
 	// user/admin 게이트는 401/403만 만들지만 실패 타입은 넓은 AuthorizeResult와 합쳐져 있어요 — 캐스트로 좁혀요.
 	return deniedUser(authz as Extract<UserAuthorizeResult, { ok: false }>);
+}
+
+/** schema 옵션의 미등록 필드 검사용 허용 키 — zod 4의 refine()은 ZodObject의 shape를 그대로 두므로 refine 스키마에서도 키를 뽑아요. */
+function schemaAllowedKeys(schema: z.ZodType): readonly string[] {
+	return Object.keys((schema as unknown as { shape?: Record<string, unknown> }).shape ?? {});
 }
 
 /**
@@ -125,11 +130,9 @@ export function createGuildApiHandler<R extends ApiRouteRole, S extends z.ZodTyp
 
 		let data: unknown = undefined;
 		if (options.schema) {
-			// JSON 파싱 실패는 null로 떨어져 스키마 검증 400으로 이어져요 — 기존 라우트의 안전한 본문 읽기와 같은 동작이에요.
-			const parsed = options.schema.safeParse(await request.json().catch(() => null));
-			if (!parsed.success) {
-				return NextResponse.json({ error: options.invalidMessage ?? zodError(parsed.error) }, { status: 400 });
-			}
+			// 본문 검증은 parseSettingBody 한 곳 — JSON 파싱·객체 형태·미등록 필드·스키마 400이 설정 라우트와 같은 계약이에요.
+			const parsed = await parseSettingBody(request, options.schema, schemaAllowedKeys(options.schema), options.invalidMessage);
+			if (!parsed.ok) return parsed.response;
 			data = parsed.data;
 		}
 

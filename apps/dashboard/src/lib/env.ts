@@ -20,7 +20,7 @@ const dataApiEnvSchema = z
   })
   .transform((env) => ({
     url: env.DATA_API_URL,
-    // data-api 계약: 둘 중 하나만 있어도 동작. || 이라서 빈 문자열도 폴백해요 (기존 lib/data-api.ts와 동일).
+    // data-api 계약: 둘 중 하나만 있어도 동작. || 이라서 빈 문자열도 폴백해요.
     authKey: (env.DATA_API_AUTH_KEY || env.AUTH_KEY || "").trim(),
   }));
 
