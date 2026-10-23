@@ -2,18 +2,12 @@ import { fetch } from 'undici';
 
 export interface YouTubeSuggestion {
 	query: string;
-	type: number;
 	relevance?: number[];
 }
 
 export interface YouTubeSuggestionsResponse {
 	query: string;
 	suggestions: YouTubeSuggestion[];
-	metadata?: {
-		sessionId: string;
-		experimentId: number;
-		query: string;
-	};
 }
 
 export async function getYouTubeSuggestions(query: string, locale: string = 'ko', region: string = 'kr'): Promise<YouTubeSuggestionsResponse> {
@@ -49,24 +43,16 @@ export async function getYouTubeSuggestions(query: string, locale: string = 'ko'
 		}
 
 		const data = JSON.parse(jsonpMatch[1]);
-		const [originalQuery, suggestionsArray, metadata] = data;
+		const [originalQuery, suggestionsArray] = data;
 
 		const suggestions: YouTubeSuggestion[] = suggestionsArray.map((item: any[]) => ({
 			query: item[0],
-			type: item[1],
 			relevance: item[2] || undefined
 		}));
 
 		return {
 			query: originalQuery,
-			suggestions,
-			metadata: metadata
-				? {
-						sessionId: metadata.j || '',
-						experimentId: metadata.k || 0,
-						query: metadata.q || ''
-					}
-				: undefined
+			suggestions
 		};
 	} catch (error) {
 		throw new Error(`Failed to get suggestions: ${error instanceof Error ? error.message : String(error)}`);

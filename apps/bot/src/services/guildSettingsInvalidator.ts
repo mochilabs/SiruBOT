@@ -17,6 +17,7 @@ import { container } from '@sapphire/framework';
 
 import { clearGuildCustomCommandsCache } from './customCommands/store.ts';
 import { syncGuildSlashCommands } from './customCommands/slashRegistry.ts';
+import type { ServiceLogger } from './types.ts';
 import { GuildService } from './guildService.ts';
 
 interface InvalidationPayload {
@@ -51,9 +52,7 @@ export class GuildSettingsInvalidator {
 	private subscriber: ManagedRedisSubscriber | null = null;
 	private guildService: GuildService | null = null;
 
-	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void }
-	) {}
+	public constructor(private readonly logger: ServiceLogger) {}
 
 	/**
 	 * 구독을 시작해요. 실패해도 throw하지 않아요 — TTL 폴백으로 동작이 이어지고,

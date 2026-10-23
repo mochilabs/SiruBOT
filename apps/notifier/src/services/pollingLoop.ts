@@ -4,21 +4,21 @@ import type { NotifierRedis } from './redis.ts';
 
 const logger = getLogger('pollingLoop');
 
-// plan §8 — 폴링 실패 5회 연속 → 30분 봉쇄 (half-open: 이후 틱에서 자동 재시도)
+// plan §8: 폴링 실패 5회 연속 → 30분 봉쇄 (half-open: 이후 틱에서 자동 재시도)
 export const BREAKER_THRESHOLD = 5;
 export const BREAKER_COOLDOWN_MS = 30 * 60 * 1000;
 
-/** notifier 앱 공용 로거 타입 — 각 스케줄러가 자기 모듈 로거를 넘겨 채널을 유지해요. */
+/** notifier 앱 공용 로거 타입: 각 스케줄러가 자기 모듈 로거를 넘겨 채널을 유지해요. */
 export type NotifierLogger = ReturnType<typeof getLogger>;
 
-/** 한 틱의 결과 — 'skipped'는 브레이커 실패 계정에서 제외돼요 (락 미획득·구독 없음 등 조기 종료). */
+/** 한 틱의 결과: 'skipped'는 브레이커 실패 계정에서 제외돼요 (락 미획득·구독 없음 등 조기 종료). */
 export type PollOutcome = 'ok' | 'failed' | 'skipped';
 
-/** tick 예외 처리 정책 — 'continue'는 로그를 남기고 다음 틱을 예약하고, 'abort'는 루프를 멈춰요. */
+/** tick 예외 처리 정책: 'continue'는 로그를 남기고 다음 틱을 예약하고, 'abort'는 루프를 멈춰요. */
 export type PollingErrorPolicy = 'continue' | 'abort';
 
 export interface PollingLoopOptions {
-	/** 진단용 루프 이름 — tick 예외 로그에 남겨요. */
+	/** 진단용 루프 이름: tick 예외 로그에 남겨요. */
 	name: string;
 	/** 틱 간격 (ms). */
 	intervalMs: number;
@@ -26,26 +26,26 @@ export interface PollingLoopOptions {
 	runImmediately?: boolean;
 	/** tick에서 던져진 예외의 처리 정책. 기본은 'continue'예요. */
 	errorPolicy?: PollingErrorPolicy;
-	/** tick 예외 로깅 훅 — 정책을 적용하기 전에 불려요. 미지정이면 모듈 로거로 남겨요. */
+	/** tick 예외 로깅 훅: 정책을 적용하기 전에 불려요. 미지정이면 모듈 로거로 남겨요. */
 	onError?: (error: unknown) => void;
 	/** 틱 본문. */
 	tick: () => Promise<void>;
 }
 
-/** interval 폴링 루프의 공용 골격 (plan §2.5) — 스케줄링·타이머 정리·재입장 방지를 담당해요. */
+/** interval 폴링 루프의 공용 골격 (plan §2.5): 스케줄링·타이머 정리·재입장 방지를 담당해요. */
 export class PollingLoop {
 	private readonly options: PollingLoopOptions;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private ticking = false;
 	private stopped = true;
-	/** start/stop마다 증가 — 이전 세대가 남긴 타이머 연쇄가 되살아나지 않게 해요. */
+	/** start/stop마다 증가: 이전 세대가 남긴 타이머 연쇄가 되살아나지 않게 해요. */
 	private generation = 0;
 
 	public constructor(options: PollingLoopOptions) {
 		this.options = options;
 	}
 
-	/** 루프가 켜져 있는지 — 중복 start()에서 시작 로그를 다시 남기지 않는 데 써요. */
+	/** 루프가 켜져 있는지: 중복 start()에서 시작 로그를 다시 남기지 않는 데 써요. */
 	public get isRunning(): boolean {
 		return !this.stopped;
 	}
@@ -117,9 +117,9 @@ export interface SubscriptionPollerConfig {
 	name: string;
 	/** 틱 간격 (ms). */
 	intervalMs: number;
-	/** 분산 락 키 — 폴러 다중 인스턴스 방지. */
+	/** 분산 락 키: 폴러 다중 인스턴스 방지. */
 	lockKey: string;
-	/** 락 TTL(초) — 틱 간격보다 짧게. */
+	/** 락 TTL(초): 틱 간격보다 짧게. */
 	lockTtlSeconds: number;
 	/** start·브레이커 안내를 남길 로거. */
 	logger: NotifierLogger;
@@ -159,17 +159,17 @@ export abstract class SubscriptionPoller {
 		this.loop.stop();
 	}
 
-	/** 한 틱 — 브레이커·락·DB 가드를 통과한 뒤 도메인 pollOnce를 부르고 실패 계정을 갱신해요. */
+	/** 한 틱: 브레이커·락·DB 가드를 통과한 뒤 도메인 pollOnce를 부르고 실패 계정을 갱신해요. */
 	private async pollTick(): Promise<void> {
 		const now = this.now();
-		// 서킷 브레이커 — 봉쇄 중이면 생략 (쿨다운 종료 후 half-open으로 자동 재시도)
+		// 서킷 브레이커: 봉쇄 중이면 생략 (쿨다운 종료 후 half-open으로 자동 재시도)
 		if (now < this.breakerOpenUntil) return;
 		if (!(await this.options.redis.acquireLock(this.config.lockKey, this.config.lockTtlSeconds))) return;
 		const db = this.options.getDb();
 		if (!db) return;
 
 		const outcome = await this.pollOnce(db, now);
-		// 'skipped'는 계정에서 제외 — 실패 연속 카운트에 영향을 주지 않아요.
+		// 'skipped'는 계정에서 제외: 실패 연속 카운트에 영향을 주지 않아요.
 		if (outcome === 'skipped') return;
 		if (outcome === 'failed') {
 			this.consecutiveFailures++;
@@ -183,6 +183,6 @@ export abstract class SubscriptionPoller {
 		}
 	}
 
-	/** 한 틱의 도메인 작업 — 구독 조회·상태 확인·이벤트 발행. 반환값으로 브레이커 계정을 갱신해요. */
+	/** 한 틱의 도메인 작업: 구독 조회·상태 확인·이벤트 발행. 반환값으로 브레이커 계정을 갱신해요. */
 	protected abstract pollOnce(db: PrismaClient, now: number): Promise<PollOutcome>;
 }

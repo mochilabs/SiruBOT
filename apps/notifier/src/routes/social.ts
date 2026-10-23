@@ -14,7 +14,7 @@ import { getLogger } from '../utils/logger.ts';
 
 const logger = getLogger('social');
 
-/** 공개 응답에서 빼는 필드 — webhookId/webhookToken은 대시보드에 절대 노출하지 않아요. */
+/** 공개 응답에서 빼는 필드: webhookId/webhookToken은 대시보드에 절대 노출하지 않아요. */
 type SubscriptionRow = Omit<SocialSubscription, 'webhookId' | 'webhookToken'>;
 
 export interface SocialRouteOptions {
@@ -22,7 +22,7 @@ export interface SocialRouteOptions {
 	getDb: () => PrismaClient | null;
 	hub: SocialWebhookHub;
 	twitchClient: TwitchApiClient | null;
-	/** 트위치 EventSub 구독 상태 키 정리용 — twitchScheduler와 같은 Redis를 써요. */
+	/** 트위치 EventSub 구독 상태 키 정리용: twitchScheduler와 같은 Redis를 써요. */
 	redis: NotifierRedis;
 	fetchFn?: FetchFn;
 }
@@ -61,7 +61,7 @@ async function sendError(reply: FastifyReply, error: unknown) {
 			message: issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')
 		});
 	}
-	// 예측 못 한 내부 오류 — 앱 로거(로거:false인 Fastify의 reply.log는 no-op이라 유실됨)와 Sentry에 남겨요.
+	// 예측 못 한 내부 오류: 앱 로거(로거:false인 Fastify의 reply.log는 no-op이라 유실됨)와 Sentry에 남겨요.
 	captureSentryException(error);
 	logger.error(error, '[notifier] social 라우트 처리 실패');
 	reply.code(500);
@@ -83,7 +83,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 	const { guard, getDb, hub, twitchClient, redis, fetchFn } = options;
 
 	/**
-	 * Twitch EventSub 구독 정리 — 스트리머 단위 구독이라 다른 길드가 아직 활성 구독이면 호출하지 않아요.
+	 * Twitch EventSub 구독 정리: 스트리머 단위 구독이라 다른 길드가 아직 활성 구독이면 호출하지 않아요.
 	 * 구독 ID는 twitchScheduler가 Redis 상태 키에 남기므로 그 키를 열어 즉시 해지하고, 정리 실패는
 	 * best-effort예요 (약 10일 뒤 Twitch 쪽에서 저절로 만료돼요).
 	 */
@@ -100,7 +100,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 				logger.info(`트위치 EventSub 구독 해지: ${broadcasterId} → ${state.subscriptionId}`);
 			}
 		} catch (error) {
-			logger.warn(error, '[notifier] 트위치 EventSub 구독 정리 실패 — Twitch 만료(약 10일)까지 남아요');
+			logger.warn(error, '[notifier] 트위치 EventSub 구독 정리 실패: Twitch 만료(약 10일)까지 남아요');
 		}
 	}
 
@@ -140,7 +140,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 			guildId,
 			targetChannelId: body.targetChannelId,
 			// 커스텀 표시명이 있으면 웹훅 자체의 이름으로도 반영하고, 없으면 기본 이름을 만들어요.
-			name: body.webhookName ?? `시루 소셜 알림 — ${body.sourceName}`.slice(0, 80)
+			name: body.webhookName ?? `시루 소셜 알림: ${body.sourceName}`.slice(0, 80)
 		};
 		const hubResponse = await hub.requestWebhookCreate(hubRequest);
 		if (hubResponse.error || !hubResponse.webhookId || !hubResponse.webhookToken) {
@@ -176,7 +176,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 		}
 	});
 
-	// 구독 IDOR 방지 — 길드 스코프 경로에서 `where: { id, guildId }`로 조회해요.
+	// 구독 IDOR 방지: 길드 스코프 경로에서 `where: { id, guildId }`로 조회해요.
 	// 다른 길드의 구독 UUID를 알아도 자기 길드 소유가 아니면 404예요 (생성·목록과 동일한 스코프 계약).
 	fastify.patch('/v1/guilds/:guildId/social/subscriptions/:id', { preHandler: guard }, async (request, reply) => {
 		const { guildId, id } = request.params as { guildId: string; id: string };
@@ -209,7 +209,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 			});
 			return reply.send({ subscription: publicSubscription(row) });
 		} catch (error) {
-			// 소유권 미일치(P2025)도 "찾지 못함"으로 — 존재 여부를 새어 나가지 않아요.
+			// 소유권 미일치(P2025)도 "찾지 못함"으로: 존재 여부를 새어 나가지 않아요.
 			if (prismaErrorCode(error) === 'P2025') {
 				reply.code(404);
 				return reply.send({ error: 'subscription_not_found', message: '구독을 찾지 못했어요.' });
@@ -218,7 +218,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 		}
 	});
 
-	// 구독 IDOR 방지 — PATCH와 같은 길드 스코프에서 소유권을 확인해요 (미소유 = 404).
+	// 구독 IDOR 방지: PATCH와 같은 길드 스코프에서 소유권을 확인해요 (미소유 = 404).
 	fastify.delete('/v1/guilds/:guildId/social/subscriptions/:id', { preHandler: guard }, async (request, reply) => {
 		const { guildId, id } = request.params as { guildId: string; id: string };
 		if (!/^[a-zA-Z0-9_-]+$/.test(guildId)) {
@@ -240,7 +240,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 				reply.code(404);
 				return reply.send({ error: 'subscription_not_found', message: '구독을 찾지 못했어요.' });
 			}
-			// Twitch EventSub 구독은 스트리머 단위라 공유돼요 — 마지막 활성 구독일 때만 해지해요.
+			// Twitch EventSub 구독은 스트리머 단위라 공유돼요. 마지막 활성 구독일 때만 해지해요.
 			const remainingTwitch =
 				row.platform === 'twitch'
 					? await db.socialSubscription.count({

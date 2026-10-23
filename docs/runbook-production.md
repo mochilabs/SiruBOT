@@ -1,12 +1,12 @@
 # 프로덕션 운영 런북
 
-> **기준일**: 2026-10-15
+> **기준일**: 2026-10-22 (storage·notifier 타겟 반영)
 
 아키텍처·계약 상위는 `./architecture.md`, env 전체 매트릭스는 `./architecture.md#10-환경변수-매트릭스` 참조. 본 문서는 운영 동작만 다룬다.
 
 ## Docker 빌드·실행
 
-- 최종 타겟 4개 (`Dockerfile:100,150,187,229`): `bot`·`dashboard`·`shardmanager`·`data-api`. 빌드 스테이지(`builder-bot` 등 4개)는 중간 산출물이다.
+- 최종 타겟 6개 (`Dockerfile:119,169,206,248,294,342`): `bot`·`dashboard`·`shardmanager`·`data-api`·`storage`·`notifier`. 빌드 스테이지(`builder-bot` 등 6개, `Dockerfile:71-116`)는 중간 산출물이다.
 - 컴포즈 파일 3개 (`docker/`): `docker-compose.yml`·`docker-stack.yml`·`docker-stack-infra.yml`.
 - 봇 기동 시 `prisma migrate deploy` 자동 실행 (`Dockerfile:145`).
 
@@ -26,6 +26,8 @@
 - 봇 (`apps/bot/src/core/bootstrap.ts:99-153`): Lavalink 세션 저장 → 오디오 리스너·Redis 구독 서비스 정지 → pending 저널 flush → Redis 해제 → DB 해제 → 게이트웨이 destroy → shardClient destroy.
 - data-api (`apps/data-api/src/server.ts:78-90`): 스케줄러 2종 정지 → player/bot-profile/greeting/guild-data/player-web/jtc 6개 허브 정지 → Redis 해제 → DB 해제 → Fastify close.
 - shardmanager (`apps/shardmanager/src/server.ts:69-77`): registry destroy → Fastify close.
+- storage (`apps/storage/src/index.ts:16-20`): Fastify close만 — 로컬 볼륨(무DB)·외부 연결 없음.
+- notifier (`apps/notifier/src/index.ts:83-92`): 폴러·스케줄러·트위치 스케줄러·허브 정지 → DB 해제 → Redis 해제 → Fastify close.
 
 ## Redis 미연결 시 메모리 폴백의 의미
 
@@ -40,5 +42,7 @@
 | data-api | `/api/health` (인증 면제 유일 경로) | `apps/data-api/src/routes/index.ts:107`, `Dockerfile:268` |
 | shardmanager | `/api/health` → `{ ok: true }` | `apps/shardmanager/src/routes/api/health/health.ts:3-7` |
 | dashboard | TCP 3000 | `Dockerfile:179-180` |
+| storage | `/health` → `{ ok: true }` (인증 면제는 `/health`+공개 오브젝트 GET뿐) | `apps/storage/src/routes/health.ts:4-6`, `Dockerfile:334` |
+| notifier | `/health` → `{ ok: true }` (인증 면제 유일 경로) | `apps/notifier/src/routes/health.ts:4-6`, `Dockerfile:378` |
 
 봇 헬스는 READY 이후 2분 재연결 유예 내에는 200을 유지해 재시작 증폭을 막는다 (`apps/bot/src/core/bootstrap.ts:239-242`).

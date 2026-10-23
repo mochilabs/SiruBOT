@@ -184,11 +184,11 @@ function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock;
 						</m.ul>
 						<div className="grid grid-cols-2 gap-3">
 							<div>
-								<p className="text-2xs font-medium text-muted-foreground">지원 음원</p>
+								<p className="text-xs font-medium text-muted-foreground">지원 음원</p>
 								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">YouTube · Spotify</p>
 							</div>
 							<div>
-								<p className="text-2xs font-medium text-muted-foreground">오디오</p>
+								<p className="text-xs font-medium text-muted-foreground">오디오</p>
 								<p className="mt-1 text-sm font-black tracking-tighter text-foreground">크로스페이드 지원</p>
 							</div>
 						</div>
@@ -233,7 +233,7 @@ export function FeaturesSection() {
 					</p>
 				</m.div>
 
-				{/* 기능 블록 7개 — 위아래로 교차(홀수 인덱스는 데모가 왼쪽) */}
+				{/* 기능 블록 9개 — 위아래로 교차(홀수 인덱스는 데모가 왼쪽) */}
 				<div className="mt-16 space-y-16 sm:mt-24 sm:space-y-24">
 					{FEATURE_BLOCKS.map((block, index) => (
 						<FeatureBlockItem key={block.key} block={block} index={index} shouldReduce={shouldReduce} />

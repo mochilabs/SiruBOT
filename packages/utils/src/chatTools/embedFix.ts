@@ -42,7 +42,7 @@ export const PIXIV_FIX_DOMAIN = 'www.phixiv.net';
 export const THREADS_FIX_DOMAIN = 'fixthreads.seria.moe';
 
 /** 한 메시지에서 복구할 최대 링크 수 */
-export const EMBED_FIX_LINK_MAX = 2;
+const EMBED_FIX_LINK_MAX = 2;
 
 export interface EmbedFixXLink {
 	site: 'x';
@@ -199,10 +199,10 @@ export function swapEmbedFixUrl(site: EmbedFixSite, original: string): string | 
 	return match ? rule.fixed(match) : null;
 }
 
-// --- 임베드 복구 메타데이터 게이트웨이 계약: 봇 → data-api 요청/응답 스키마 ---
+// 임베드 복구 메타데이터 게이트웨이 계약, 봇 → data-api 요청/응답 스키마
 
 /** 게이트웨이 요청 한 번에 담을 수 있는 링크 수 (EMBED_FIX_LINK_MAX 여유분) */
-export const EMBED_FIX_METADATA_LINK_MAX = 4;
+const EMBED_FIX_METADATA_LINK_MAX = 4;
 
 export interface EmbedFixMetadataRequestLink {
 	site: EmbedFixSite;

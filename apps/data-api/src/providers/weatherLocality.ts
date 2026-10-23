@@ -302,6 +302,9 @@ const KR_TO_EN_QUERY: Record<string, string> = {
 	두바이: 'Dubai, UAE'
 };
 
+/** 한국어 지명 끝의 행정구역 접미사: weather.ts도 이 규칙을 import해 같은 기준으로 잘라요. */
+export const KR_ADMIN_SUFFIX = /(특별시|광역시|특별자치시|특별자치도|시|군|구|도)$/;
+
 function stripNoise(s: string): string {
 	return s
 		.trim()
@@ -337,7 +340,7 @@ export function normalizeWeatherLocationQuery(raw: string): {
 	}
 
 	// 접미사만 다른 경우 (특별시/광역시/특별자치시/특별자치도/시/군/구/도)
-	const noMetroSuffix = originalQuery.replace(/(특별시|광역시|특별자치시|특별자치도|시|군|구|도)$/, '');
+	const noMetroSuffix = originalQuery.replace(KR_ADMIN_SUFFIX, '');
 	const hit2 = KR_TO_EN_QUERY[stripNoise(noMetroSuffix)];
 	if (hit2) {
 		return { geocodeQuery: hit2, originalQuery };

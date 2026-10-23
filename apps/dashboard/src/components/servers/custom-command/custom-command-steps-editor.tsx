@@ -130,6 +130,7 @@ export function StepsEditor({
 						<Button
 							variant="icon"
 							size="icon-xs"
+							className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
 							aria-label="위로 이동"
 							disabled={index === 0 || saving}
 							icon={<ArrowUp size={14} />}
@@ -138,6 +139,7 @@ export function StepsEditor({
 						<Button
 							variant="icon"
 							size="icon-xs"
+							className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
 							aria-label="아래로 이동"
 							disabled={index === steps.length - 1 || saving}
 							icon={<ArrowDown size={14} />}

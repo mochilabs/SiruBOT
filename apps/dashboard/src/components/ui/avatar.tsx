@@ -29,7 +29,15 @@ const statusColors: Record<AvatarStatus, string> = {
 	online: "bg-success",
 	idle: "bg-warning",
 	dnd: "bg-destructive",
-	offline: "bg-dot-neutral/40",
+	// 40% 불투명도는 페이지 배경과 합성하면 1.56~1.71:1이라 거의 안 보여요. 불투명도 100%로 올려 4.95~7.54:1을 확보해요.
+	offline: "bg-dot-neutral",
+};
+
+const statusLabels: Record<AvatarStatus, string> = {
+	online: "온라인",
+	idle: "자리 비움",
+	dnd: "방해 금지",
+	offline: "오프라인",
 };
 
 const statusDotSizes: Record<AvatarSize, string> = {
@@ -81,7 +89,7 @@ function Avatar({
 
 			{status && (
 				<span
-					aria-label={status}
+					aria-label={statusLabels[status]}
 					className={cn(
 						"absolute bottom-0 right-0 rounded-full border-background",
 						statusDotSizes[size],

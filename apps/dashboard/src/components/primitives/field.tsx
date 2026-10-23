@@ -7,6 +7,8 @@ export interface FieldRenderProps {
 	id: string;
 	describedBy?: string;
 	invalid: boolean;
+	/** 필수 입력 여부: 렌더 프롭 소비자가 컨트롤에 required/aria-required를 연결할 때 써요 */
+	required: boolean;
 }
 
 interface FieldProps {
@@ -35,19 +37,22 @@ export function Field({ label, description, error, required = false, htmlFor, cl
 			<Label htmlFor={labelFor} className="block text-sm font-semibold text-foreground">
 				{label}
 				{required && (
-					<span aria-hidden className="ml-1 text-destructive">
-						*
-					</span>
+					<>
+						<span aria-hidden className="ml-1 text-destructive">
+							*
+						</span>
+						<span className="sr-only">(필수)</span>
+					</>
 				)}
 			</Label>
-			{isRenderProp ? (children as (props: FieldRenderProps) => React.ReactNode)({ id, describedBy, invalid }) : children}
+			{isRenderProp ? (children as (props: FieldRenderProps) => React.ReactNode)({ id, describedBy, invalid, required }) : children}
 			{description && (
-				<p id={descriptionId} className="text-xs text-muted-foreground">
+				<p id={descriptionId} className="text-sm text-muted-foreground">
 					{description}
 				</p>
 			)}
 			{error && (
-				<p id={errorId} role="alert" className="text-xs font-medium text-destructive">
+				<p id={errorId} role="alert" className="text-sm font-medium text-destructive">
 					{error}
 				</p>
 			)}

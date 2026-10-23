@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Bot,
-  Check,
   Globe,
   Hash,
   Loader2,
@@ -26,6 +25,8 @@ import type { AiMode, AiPolicy } from "@/types/settings";
 import {
   ChannelListError,
   InfoBox,
+  type ModeCardOption,
+  ModePicker,
   PanelError,
   PanelHeader,
   PanelLoading,
@@ -33,12 +34,8 @@ import {
   WarningBox,
 } from "./settings-shared";
 
-const MODE_CARDS: Array<{
-  value: AiMode;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-}> = [
+// 모드 카드 데이터(라벨·설명·아이콘)만 여기 두고 마크업은 settings-shared의 ModePicker를 써요
+const MODE_CARDS: ModeCardOption<AiMode>[] = [
   {
     value: "all",
     label: "모든 채널",
@@ -189,49 +186,13 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
       />
 
       {/* 모드 선택 */}
-      <div
-        role="radiogroup"
-        aria-label="AI 채팅 모드"
-        className="grid gap-3 sm:grid-cols-3"
-      >
-        {MODE_CARDS.map((card) => {
-          const active = mode === card.value;
-          return (
-            <button
-              key={card.value}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              disabled={saving}
-              onClick={() => setMode(card.value)}
-              className={`relative rounded-card p-4 text-left transition-colors duration-fast ${
-                active
-                  ? "bg-primary/10 ring-2 ring-ring/40"
-                  : "bg-surface-2 hover:bg-surface-3"
-              }`}
-            >
-              <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <span
-                  className={
-                    active ? "text-primary-text" : "text-muted-foreground"
-                  }
-                >
-                  {card.icon}
-                </span>
-                {card.label}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {card.description}
-              </span>
-              {active && (
-                <span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-control-text">
-                  <Check size={12} />
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <ModePicker
+        label="AI 채팅 모드"
+        value={mode}
+        options={MODE_CARDS}
+        disabled={saving}
+        onChange={setMode}
+      />
 
       {/* 특정 채널 선택 */}
       {mode === "channels" && (

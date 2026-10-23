@@ -11,7 +11,7 @@ import type { TtsUserPreset } from './ttsUserSettings.ts';
  *
  * 모드는 dispatch 시점에 재판정한다 (명세 4.2): 메인 트랙이 있으면 mixer announce 오버레이,
  * 없으면 클립을 메인 플레이어 트랙으로 재생하는 단독 모드. 만들어진 클립은 버리지 않고
- * 시점에 따라 둘 중 하나로 재생한다. 계약 전문은 docs/plans/2026-10-18-chat-tts-spec.md.
+ * 시점에 따라 둘 중 하나로 재생한다.
  */
 
 /** 같은 유저의 연속 합성 간격(ms) — 이 안의 메시지는 병합 창으로 모인다 (명세 4.4) */
@@ -25,13 +25,13 @@ export const TTS_SOLO_QUEUE_MAX = 5;
 /** 오버레이 대기(mixer announcementsQueued) 상한 — 초과 시 신규 안내를 조용히 거절한다 */
 export const TTS_OVERLAY_QUEUE_MAX = 5;
 /** 길드당 동시 합성 수 — 초과분은 FIFO로 대기한다 */
-export const TTS_GUILD_CONCURRENT_SYNTH = 2;
+const TTS_GUILD_CONCURRENT_SYNTH = 2;
 /** 길드 분당 합성 글자 수 — 초과 시 클립을 버린다 */
 export const TTS_GUILD_CHARS_PER_MIN = 1000;
 /** 오버레이 ducking 수준 (명세 4.2) */
 export const TTS_DUCK_LEVEL = 0.2;
 
-export interface TtsTextResolvers {
+interface TtsTextResolvers {
 	memberName(id: string): string | null;
 	roleName(id: string): string | null;
 	channelName(id: string): string | null;

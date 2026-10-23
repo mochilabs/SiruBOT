@@ -52,7 +52,6 @@ export class ShardsCommand extends Command {
 			lines.push(`${emoji('radio_wave')} **샤드 매니저**: 미연결 (개발 모드)`);
 		}
 
-		// Guild & memory stats
 		lines.push('');
 		lines.push(`${emoji('house')} **서버**: ${client.guilds.cache.size}개`);
 		lines.push(`${emoji('music_note')} **플레이어**: ${this.container.audio?.players?.size ?? 0}개`);

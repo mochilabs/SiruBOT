@@ -1,6 +1,7 @@
 ---
 description: shardmanager 서버(Fastify WS/API), 배포 워크플로(docker-publish·docker-beta·lint CI), Sentry/로깅/에러 처리 체계를 만들거나 수정할 때 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

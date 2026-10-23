@@ -1,32 +1,14 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
+import { playlistMetadataSchema } from "@/app/api/_shared/validation";
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import {
   FAVORITES_PLAYLIST_NAME,
-  MAX_PLAYLIST_DESCRIPTION_LENGTH,
   MAX_PLAYLISTS_PER_USER,
 } from "@/lib/playlist-constants";
 import { ensureUserAndFavorites } from "@/lib/playlist-favorites";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-
-const createPlaylistSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "플레이리스트 이름을 입력해 주세요.")
-    .max(50, "이름은 최대 50자까지 입력할 수 있어요."),
-  description: z
-    .string()
-    .trim()
-    .max(
-      MAX_PLAYLIST_DESCRIPTION_LENGTH,
-      `설명은 최대 ${MAX_PLAYLIST_DESCRIPTION_LENGTH}자까지 입력할 수 있어요.`,
-    )
-    .nullish()
-    .transform((value) => (value ? value : null)),
-});
 
 export const GET = createGuildApiHandler({
   role: "user",
@@ -62,7 +44,7 @@ export const POST = createGuildApiHandler({
   role: "user",
   rate: WRITE_RATE,
   key: "playlists-post",
-  schema: createPlaylistSchema,
+  schema: playlistMetadataSchema,
   handler: async ({ authz, data }) => {
     try {
       const userId = authz.userId;

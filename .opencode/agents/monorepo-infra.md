@@ -1,6 +1,7 @@
 ---
 description: packages/prisma 스키마 변경·마이그레이션, packages/utils 공용 헬퍼(포맷·시간·임베드·로거·env) 추가, 모노리포 전반(yarn workspace·turbo 파이프라인·버전 동기화) 작업 시 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

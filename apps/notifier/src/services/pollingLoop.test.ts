@@ -5,9 +5,9 @@ import type { NotifierRedis } from './redis.ts';
 
 const INTERVAL_MS = 1_000;
 const START_MESSAGE = '테스트 폴러를 시작해요.';
-const BREAKER_OPEN_MESSAGE = `테스트 폴러가 ${BREAKER_THRESHOLD}틱 연속 실패 — 봉쇄해요.`;
+const BREAKER_OPEN_MESSAGE = `테스트 폴러가 ${BREAKER_THRESHOLD}틱 연속 실패: 봉쇄해요.`;
 
-/** 테스트용 최소 폴러 — pollOnce 호출 수와 결과만 조작해요. */
+/** 테스트용 최소 폴러: pollOnce 호출 수와 결과만 조작해요. */
 class FakePoller extends SubscriptionPoller {
 	public pollCalls = 0;
 	public outcome: PollOutcome;
@@ -166,7 +166,7 @@ describe('PollingLoop', () => {
 		await vi.advanceTimersByTimeAsync(2 * INTERVAL_MS);
 		expect(tick).toHaveBeenCalledTimes(1); // gate가 안 열렸으니 몸통은 계속 점유 상태
 		release();
-		await vi.advanceTimersByTimeAsync(0); // 이전 세대 몸통 종료 — 세대가 달라 예약은 무시돼요.
+		await vi.advanceTimersByTimeAsync(0); // 이전 세대 몸통 종료: 세대가 달라 예약은 무시돼요.
 		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
 		expect(tick).toHaveBeenCalledTimes(2); // 새 세대 타이머 연쇄만 살아 있어요.
 		loop.stop();
@@ -212,7 +212,7 @@ describe('SubscriptionPoller', () => {
 		expect(error).toHaveBeenCalledTimes(1);
 		expect(error).toHaveBeenCalledWith(BREAKER_OPEN_MESSAGE);
 		await vi.advanceTimersByTimeAsync(3 * INTERVAL_MS);
-		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD); // 봉쇄 중 — 도메인 폴링 없음
+		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD); // 봉쇄 중: 도메인 폴링 없음
 		fakeNow += BREAKER_COOLDOWN_MS + 1; // 쿨다운 종료
 		await vi.advanceTimersByTimeAsync(INTERVAL_MS);
 		expect(poller.pollCalls).toBe(BREAKER_THRESHOLD + 1); // half-open 재시도
@@ -226,7 +226,7 @@ describe('SubscriptionPoller', () => {
 		first.poller.outcome = 'skipped';
 		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 건너뛴 틱은 실패 계정에 영향을 주지 않아요
 		first.poller.outcome = 'failed';
-		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 5번째 실패 — 브레이커 개방
+		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 5번째 실패: 브레이커 개방
 		expect(first.poller.pollCalls).toBe(6);
 		first.poller.outcome = 'ok';
 		await vi.advanceTimersByTimeAsync(2 * INTERVAL_MS);
@@ -236,9 +236,9 @@ describe('SubscriptionPoller', () => {
 		const second = makePoller('failed', { now: () => fakeNow });
 		await runTicks(second.poller, 4); // 실패 4연속
 		second.poller.outcome = 'ok';
-		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 성공 — 카운트 리셋
+		await vi.advanceTimersByTimeAsync(INTERVAL_MS); // 성공: 카운트 리셋
 		second.poller.outcome = 'failed';
-		await vi.advanceTimersByTimeAsync(4 * INTERVAL_MS); // 실패 4연속 — 브레이커 미개방
+		await vi.advanceTimersByTimeAsync(4 * INTERVAL_MS); // 실패 4연속: 브레이커 미개방
 		expect(second.poller.pollCalls).toBe(9);
 		second.poller.stop();
 	});

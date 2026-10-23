@@ -6,7 +6,6 @@ const FAVORITES_PLAYLIST_NAME = '즐겨찾기';
 
 export class PlaylistService {
 	public async getOrCreateFavoritesPlaylist(userId: string) {
-		// Ensure user exists
 		await container.db.user.upsert({
 			where: { id: userId },
 			create: { id: userId },
@@ -77,7 +76,7 @@ export class PlaylistService {
 			}
 		}
 
-		const data = this.extractTrackData(track);
+		const data = extractTrackData(track);
 
 		if (playlist.name === FAVORITES_PLAYLIST_NAME) {
 			const existingTrack = await container.db.playlistTrack.count({
@@ -175,6 +174,4 @@ export class PlaylistService {
 			where: { userId, name }
 		});
 	}
-
-	private extractTrackData = extractTrackData;
 }

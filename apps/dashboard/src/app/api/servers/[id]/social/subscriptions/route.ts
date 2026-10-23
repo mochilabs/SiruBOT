@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiFailResponse, dataApiUserMessage, forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-import type { SocialSubscriptionResponse,SocialSubscriptionsResponse } from "@/types/social";
+import type { SocialSubscriptionResponse, SocialSubscriptionsResponse } from "@/types/social";
 
 /** 알림 구독 생성 본문 — 최종 검증은 notifier가 socialSubscriptionCreateSchema로 해요. */
 const createSchema = z.object({
@@ -31,10 +31,7 @@ export const GET = createGuildApiHandler({
       `/v1/guilds/${guildId}/social/subscriptions`,
     );
     if (!result.ok) {
-      return NextResponse.json(
-        { error: result.message ?? LIST_FALLBACK },
-        { status: result.message ? result.status : 502 },
-      );
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, LIST_FALLBACK);
     }
 
     return NextResponse.json(result.data);
@@ -54,10 +51,7 @@ export const POST = createGuildApiHandler({
       data,
     );
     if (!result.ok) {
-      return NextResponse.json(
-        { error: result.message ?? CREATE_FALLBACK },
-        { status: result.message ? result.status : 502 },
-      );
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, CREATE_FALLBACK);
     }
 
     return NextResponse.json(result.data);

@@ -13,9 +13,6 @@ interface CommandErrorContext extends Record<string, unknown> {
 }
 
 export class AudioService {
-	/**
-	 * Gets an existing player or creates a new one for the guild
-	 */
 	public async getOrCreatePlayer(guildId: string, voiceChannelId: string, textChannelId: string | null): Promise<Player> {
 		return (
 			container.audio.getPlayer(guildId) ||
@@ -95,9 +92,6 @@ export class AudioService {
 		}
 	}
 
-	/**
-	 * Searches for a track or playlist
-	 */
 	public async search(
 		player: Player,
 		query: string,
@@ -114,7 +108,7 @@ export class AudioService {
 			});
 			throw new UserError({
 				identifier: 'play_search_error',
-				message: '🛠️  음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+				message: '🛠️ 음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
 				context
 			});
 		}
@@ -122,7 +116,7 @@ export class AudioService {
 		if (searchRes.loadType === 'empty') {
 			throw new UserError({
 				identifier: 'play_search_empty',
-				message: '🔎  검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.',
+				message: '🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.',
 				context
 			});
 		}
@@ -289,9 +283,6 @@ export class AudioService {
 		});
 	}
 
-	/**
-	 * Starts playback if the player is not currently playing
-	 */
 	public async ensurePlayback(player: Player): Promise<void> {
 		if (player.playing) return;
 		// mixer 필터는 play op보다 먼저 도착해야 트랙 시작 시의 필터 체인에 포함된다.

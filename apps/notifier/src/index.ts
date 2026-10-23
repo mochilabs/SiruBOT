@@ -14,14 +14,14 @@ import { getLogger } from './utils/logger.ts';
 
 const logger = getLogger('index');
 
-// data-api·shardmanager와 같은 패턴 — SENTRY_DSN이 없으면 no-op이에요.
+// data-api·shardmanager와 같은 패턴: SENTRY_DSN이 없으면 no-op이에요.
 initSentry({ service: 'notifier' });
 registerProcessErrorHandlers(logger);
 
 async function main(): Promise<void> {
 	const env = validateEnv();
 
-	// 서비스 의존성을 먼저 뭉쳐요 — 공개 콜백 라우트가 dispatcher를 필요로 해요.
+	// 서비스 의존성을 먼저 뭉쳐요. 공개 콜백 라우트가 dispatcher를 필요로 해요.
 	const db = await connectDb(env.DATABASE_URL);
 	const redis = new NotifierRedis();
 	await redis.connect(env.REDIS_URL);
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
 	if (env.chzzkPollingEnabled && db) {
 		poller.start();
 	} else if (!env.chzzkPollingEnabled) {
-		logger.warn('CHZZK_POLLING_ENABLED=false — 치지직 폴러를 꺼요.');
+		logger.warn('CHZZK_POLLING_ENABLED=false: 치지직 폴러를 꺼요.');
 	} else {
 		logger.warn('DB 연결이 없어 치지직 폴러를 켤 수 없어요.');
 	}
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
 	if (db) {
 		scheduler.start();
 		if (!pushEnabled) {
-			logger.info('NOTIFIER_PUBLIC_URL/YOUTUBE_HUB_SECRET가 세트가 아니에요 — 유튜브 WebSub 푸시 없이 RSS 감사만 동작해요.');
+			logger.info('NOTIFIER_PUBLIC_URL/YOUTUBE_HUB_SECRET가 세트가 아니에요. 유튜브 WebSub 푸시 없이 RSS 감사만 동작해요.');
 		}
 	} else {
 		logger.warn('DB 연결이 없어 유튜브 스케줄러를 켤 수 없어요.');
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
 	} else if (!db) {
 		logger.warn('DB 연결이 없어 트위치 스케줄러를 켤 수 없어요.');
 	} else {
-		logger.info('TWITCH_CLIENT_ID/SECRET/EVENTSUB_SECRET 또는 NOTIFIER_PUBLIC_URL이 세트가 아니에요 — 트위치 EventSub 푸시가 꺼져요.');
+		logger.info('TWITCH_CLIENT_ID/SECRET/EVENTSUB_SECRET 또는 NOTIFIER_PUBLIC_URL이 세트가 아니에요. 트위치 EventSub 푸시가 꺼져요.');
 	}
 
 	let closing = false;

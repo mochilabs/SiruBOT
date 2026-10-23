@@ -63,7 +63,7 @@ export async function drawMusicSection(
 ): Promise<void> {
 	let cy = y;
 
-	// ── 지금 재생 중 배너 ──
+	// 지금 재생 중 배너
 	if (nowPlaying) {
 		ctx.save();
 		ctx.beginPath();
@@ -109,7 +109,7 @@ export async function drawMusicSection(
 		cy += NP_H + 18;
 	}
 
-	// ── 자주 신청한 곡 패널 ──
+	// 자주 신청한 곡 패널
 	const rows = Math.min(3, topTracks.length);
 	if (rows > 0) {
 		const panelH = PANEL_HEADER + rows * THUMB + (rows - 1) * ROW_GAP + 24;
@@ -162,7 +162,7 @@ export async function drawMusicSection(
 			ctx.fillStyle = pal.rankBg;
 			ctx.fill();
 			ctx.fillStyle = pal.rankText;
-			ctx.font = '800 12px "Pretendard JP", "Twemoji Mozilla", sans-serif';
+			ctx.font = '800 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
 			ctx.fillText(String(i + 1), x + PANEL_PAD_X + 11, ry + 11.5);

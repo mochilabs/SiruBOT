@@ -18,6 +18,7 @@ import { emoji, ManagedRedisSubscriber, SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL, s
 import { discordApiErrorText } from '../lib/discordErrorText.ts';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { SocialWebhookCreateResponse } from '@sirubot/utils';
+import type { ServiceLogger } from './types.ts';
 
 /** Discord API 오류 코드 — 웹훅 한도 */
 const DISCORD_MAX_WEBHOOKS = 220001;
@@ -38,7 +39,7 @@ export class SocialWebhookResponder {
 	private readonly inFlight = new Set<string>();
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		private readonly logger: ServiceLogger,
 		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
 		private readonly signingKey: string = ''
 	) {}

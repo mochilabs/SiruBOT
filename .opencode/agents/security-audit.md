@@ -1,6 +1,7 @@
 ---
 description: "Security audit agent — vulnerability discovery → attack path analysis → exploitability verification → remediation. Use for security reviews, authn/authz audits, dependency CVE/GHSA checks, injection and secret-handling reviews, and validating suspected vulnerabilities against real code paths."
 mode: all
+model: xiaomi/mimo-v2.6-flash
 temperature: 0.2
 permissions:
   - action: "*"

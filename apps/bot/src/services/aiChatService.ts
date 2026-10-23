@@ -40,11 +40,14 @@ export {
 } from './aiChat/historyStore.ts';
 export {
 	acquireChannelTurn,
+	acquireChatTurn,
 	releaseChannelTurn,
 	tryConsumeUserTurn,
 	registerChatAbort,
 	releaseChatAbort,
-	abortChatTurn
+	abortChatTurn,
+	type ChatTurnDenial,
+	type ChatTurnGrant
 } from './aiChat/turnControl.ts';
 export { extractThinkTokens, streamChatCompletion } from './aiChat/completion.ts';
 export { collectImageUrls, runChatTurn } from './aiChat/agentLoop.ts';

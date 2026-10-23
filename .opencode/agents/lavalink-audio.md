@@ -1,6 +1,7 @@
 ---
 description: 음악 재생이 안 되거나 끊기거나, 스킵/일시정지/필터/자동재생/큐 동작이 이상할 때 호출. Lavalink 노드 장애, trackStuck/trackError 반복, 음성 채널 연결·이동·빈방 퇴장 문제를 다룸
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

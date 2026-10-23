@@ -12,6 +12,7 @@ const buttonVariants = cva(
 	{
 		variants: {
 			variant: {
+				// 별칭 계약: default와 primary는 같은 클래스를 가리키는 공개 API 별칭이에요(호출부 혼용 유지).
 				default: "bg-primary text-primary-foreground hover:bg-primary/70",
 				primary: "bg-primary text-primary-foreground hover:bg-primary/70",
 				// secondary fill alone is too subtle against cards, so an inset
@@ -19,6 +20,7 @@ const buttonVariants = cva(
 				// meeting SC 1.4.11 (3:1 non-text contrast).
 				secondary: "bg-secondary text-secondary-foreground shadow-control-boundary hover:bg-surface-3",
 				ghost: "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
+				// 별칭 계약: danger와 destructive도 같은 클래스를 가리키는 공개 API 별칭이에요(호출부 혼용 유지).
 				danger: "bg-destructive/10 text-destructive hover:bg-destructive/15",
 				icon: "bg-secondary text-secondary-foreground shadow-control-boundary hover:bg-surface-3 hover:text-foreground",
 				// "on" 상태는 브랜드 핑크(primary-control) 채움 + 마룬 텍스트 (4.75:1)
@@ -27,7 +29,7 @@ const buttonVariants = cva(
 				cta: "bg-primary-control font-semibold text-primary-control-text shadow-sm hover:bg-primary-control-hover",
 				destructive: "bg-destructive/10 text-destructive hover:bg-destructive/15",
 				outline:
-					"border border-border-strong bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30 dark:hover:bg-input/50",
+					"border border-border-strong bg-outline-fill hover:bg-outline-fill-hover hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
 				link: "text-primary-text underline-offset-4 hover:underline",
 			},
 			size: {

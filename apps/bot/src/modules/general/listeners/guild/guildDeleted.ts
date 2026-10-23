@@ -9,7 +9,6 @@ export class GuildDeleteListener extends Listener {
 	public override async run(guild: Guild) {
 		this.container.logger.info(`Bot removed from guild: ${guild.name} (${guild.id})`);
 
-		// Stop and destroy audio player if it exists
 		if (this.container.audio) {
 			const player = this.container.audio.getPlayer(guild.id);
 			if (player) {

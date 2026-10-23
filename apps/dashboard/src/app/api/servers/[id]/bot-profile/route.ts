@@ -10,6 +10,22 @@ const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 /** Discord 멤버 닉네임 길이 제한이에요 */
 const MAX_NICKNAME_LENGTH = 32;
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const MAX_IMAGE_MB = Math.floor(MAX_AVATAR_BYTES / 1024 / 1024);
+
+/**
+ * 이미지 파일 검증 — 크기·MIME을 확인하고 base64 data URI로 바꿔요.
+ * 실패 사유는 문자열로 돌려주고, 호출한 쪽에서 400으로 응답해요.
+ */
+async function toImageDataUri(file: File): Promise<{ dataUri: string } | { error: string }> {
+  if (file.size > MAX_AVATAR_BYTES) {
+    return { error: `이미지가 너무 커요. 최대 ${MAX_IMAGE_MB}MB까지 올릴 수 있어요.` };
+  }
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return { error: "PNG, JPEG, GIF, WebP 이미지만 지원해요." };
+  }
+  const bytes = Buffer.from(await file.arrayBuffer());
+  return { dataUri: `data:${file.type};base64,${bytes.toString("base64")}` };
+}
 
 interface DataApiOk {
   ok: boolean;
@@ -63,14 +79,11 @@ export const PATCH = createGuildApiHandler({
     const avatarFile = form.get("avatar");
     const avatarReset = form.get("avatarReset");
     if (avatarFile instanceof File && avatarFile.size > 0) {
-      if (avatarFile.size > MAX_AVATAR_BYTES) {
-        return NextResponse.json({ error: "이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요." }, { status: 400 });
+      const avatar = await toImageDataUri(avatarFile);
+      if ("error" in avatar) {
+        return NextResponse.json({ error: avatar.error }, { status: 400 });
       }
-      if (!ALLOWED_IMAGE_TYPES.has(avatarFile.type)) {
-        return NextResponse.json({ error: "PNG, JPEG, GIF, WebP 이미지만 지원해요." }, { status: 400 });
-      }
-      const bytes = Buffer.from(await avatarFile.arrayBuffer());
-      patchBody.avatar = `data:${avatarFile.type};base64,${bytes.toString("base64")}`;
+      patchBody.avatar = avatar.dataUri;
     } else if (avatarReset === "1") {
       patchBody.avatar = null;
     }
@@ -78,14 +91,11 @@ export const PATCH = createGuildApiHandler({
     const bannerFile = form.get("banner");
     const bannerReset = form.get("bannerReset");
     if (bannerFile instanceof File && bannerFile.size > 0) {
-      if (bannerFile.size > MAX_AVATAR_BYTES) {
-        return NextResponse.json({ error: "이미지가 너무 커요. 최대 3MB까지 올릴 수 있어요." }, { status: 400 });
+      const banner = await toImageDataUri(bannerFile);
+      if ("error" in banner) {
+        return NextResponse.json({ error: banner.error }, { status: 400 });
       }
-      if (!ALLOWED_IMAGE_TYPES.has(bannerFile.type)) {
-        return NextResponse.json({ error: "PNG, JPEG, GIF, WebP 이미지만 지원해요." }, { status: 400 });
-      }
-      const bytes = Buffer.from(await bannerFile.arrayBuffer());
-      patchBody.banner = `data:${bannerFile.type};base64,${bytes.toString("base64")}`;
+      patchBody.banner = banner.dataUri;
     } else if (bannerReset === "1") {
       patchBody.banner = null;
     }

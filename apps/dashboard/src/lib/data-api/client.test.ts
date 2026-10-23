@@ -207,6 +207,20 @@ describe("dataApiFailResponse", () => {
 	});
 });
 
+describe("dataApiUserMessage", () => {
+	it("한글 안내 메시지는 그대로 살려요", async () => {
+		const { dataApiUserMessage } = await loadClient({});
+		expect(dataApiUserMessage("이 서버의 알림 구독을 찾을 수 없어요.", "대체 문구")).toBe("이 서버의 알림 구독을 찾을 수 없어요.");
+	});
+
+	it("Fastify·HTTP 기술 원문과 빈 값은 fallback으로 바꿔요", async () => {
+		const { dataApiUserMessage } = await loadClient({});
+		expect(dataApiUserMessage("Route DELETE:/v1/guilds/1/social/subscriptions/x not found", "삭제하지 못했어요.")).toBe("삭제하지 못했어요.");
+		expect(dataApiUserMessage(null, "삭제하지 못했어요.")).toBe("삭제하지 못했어요.");
+		expect(dataApiUserMessage("   ", "삭제하지 못했어요.")).toBe("삭제하지 못했어요.");
+	});
+});
+
 describe("notifyGuildSettingsChanged", () => {
 	it("무효화 경로로 길드 ID만 보내고, mixer 사유는 함께 보내요", async () => {
 		fetchMock.mockResolvedValue(okJson({ ok: true }));

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiFailResponse, dataApiUserMessage, forwardDataApiPost } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import type { YouTubeResolveResponse } from "@/types/social";
 
@@ -25,10 +25,7 @@ export const POST = createGuildApiHandler({
       data,
     );
     if (!result.ok) {
-      return NextResponse.json(
-        { error: result.message ?? FALLBACK },
-        { status: result.message ? result.status : 502 },
-      );
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, FALLBACK);
     }
 
     return NextResponse.json(result.data);

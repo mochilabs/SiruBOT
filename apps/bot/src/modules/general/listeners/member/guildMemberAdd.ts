@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { GuildMember } from 'discord.js';
 
-import { container } from '@sapphire/framework';
+import { dispatchMemberGreeting } from '../../utils/greetingDispatch.ts';
 
 /**
  * 입장 — 환영 인사를 보내요. 설정은 GuildService 캐시(Guild.welcome)에서 읽어요.
@@ -11,16 +11,6 @@ import { container } from '@sapphire/framework';
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberAdd })
 export class GuildMemberAddListener extends Listener {
 	public override async run(member: GuildMember) {
-		const guild = member.guild;
-		try {
-			await container.memberGreetingService.dispatch(guild, 'welcome', {
-				user: { id: member.id, username: member.user?.username ?? member.displayName },
-				displayName: member.displayName,
-				mention: member.toString(),
-				avatarUrl: member.displayAvatarURL({ size: 256, extension: 'png' })
-			});
-		} catch (error) {
-			this.container.logger.warn(`환영 인사 처리 실패 (guild ${guild.id}): ${error}`);
-		}
+		await dispatchMemberGreeting(member.guild, 'welcome', member);
 	}
 }

@@ -251,7 +251,7 @@ describe('social routes', () => {
 		const shared = await app.inject({ method: 'DELETE', url: `/v1/guilds/${GUILD_A}/social/subscriptions/${SUB_ID}`, headers: authHeader });
 		expect(shared.statusCode).toBe(200);
 		await vi.waitFor(() => expect(db.socialSubscription.delete).toHaveBeenCalled());
-		// 다른 길드가 아직 활성 구독 중 — EventSub 구독은 유지해요.
+		// 다른 길드가 아직 활성 구독 중: EventSub 구독은 유지해요.
 		expect(twitchClient.deleteSubscription).not.toHaveBeenCalled();
 
 		const last = await app.inject({

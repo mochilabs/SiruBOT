@@ -90,7 +90,7 @@ describe('ManagedRedisSubscriber', () => {
 		await flush();
 		await subscriber.stop();
 
-		// 진행 중이던 connect가 뒤에 완료돼도 구독을 등록하지 않고 quit해요
+		// subscribe까지 끝난 뒤에도 this.subscriber에 올리지 않고 즉시 quit해요
 		resolveConnect();
 		await starting;
 		expect(client.subscribe).toHaveBeenCalled();

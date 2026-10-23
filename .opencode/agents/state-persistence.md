@@ -1,6 +1,7 @@
 ---
 description: 재시작 후 큐·재생 상태가 유실되거나 중복될 때, Lavalink 세션 resume 실패·stale 플레이어 문제, 길드 설정·플레이리스트 CRUD·재생 기록 통계 버그를 다룰 때 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

@@ -337,7 +337,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 							}}
 							href={getNavHref(link, status)}
 							aria-current={index === activeIndex ? "page" : undefined}
-							className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-2xs font-medium transition-colors duration-fast ${
+							className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-xs font-medium transition-colors duration-fast ${
 								active ? "text-primary-text" : "text-muted-foreground"
 							}`}
 						>

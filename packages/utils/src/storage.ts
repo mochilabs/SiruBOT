@@ -51,14 +51,6 @@ export function assetKeyFor(guildId: string, assetId: string, mime: string): str
 	return `${guildId}/${assetId}.${ext}`;
 }
 
-/** 키 파싱 — 규약과 다르면 null (경로 탈출 포함) */
-export function parseAssetKey(key: string): { guildId: string; assetId: string; ext: string } | null {
-	const match = /^([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\.(png|jpg|webp|gif)$/.exec(key);
-	if (!match) return null;
-	if (match[1]!.includes('..') || match[2]!.includes('..')) return null;
-	return { guildId: match[1]!, assetId: match[2]!, ext: match[3]! };
-}
-
 /** 에셋 이름(사용자 라벨) 검증 — 공백만으로 이루어진 이름 거부 */
 export const assetNameSchema = z
 	.string()

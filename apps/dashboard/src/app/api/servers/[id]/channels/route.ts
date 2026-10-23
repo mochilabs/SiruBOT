@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { sortChannelsForDisplay } from "@/lib/channel-order";
-import { forwardDataApiGet } from "@/lib/data-api/client";
+import { dataApiFailResponse, forwardDataApiGet } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import {
   type DiscordChannelSummary,
@@ -30,10 +30,7 @@ export const GET = createGuildApiHandler({
     );
     if (!result.ok) {
       // data-api의 한국어 안내는 upstream 상태와 함께 그대로 전달해요 — 본문이 비었으면 502로 감싸요.
-      return NextResponse.json(
-        { error: result.message ?? CHANNELS_FALLBACK },
-        { status: result.message ? result.status : 502 },
-      );
+      return dataApiFailResponse(result, CHANNELS_FALLBACK);
     }
 
     // 응답 본문을 공용 스키마로 검증해요 — 계약이 어긋나면 서버 로그만 남기고 기존 폴백(502)으로 응답해요.

@@ -10,7 +10,6 @@ initSentry({ service: 'shardmanager' });
 async function main() {
 	logger.info('Starting SiruBOT Shard manager...');
 
-	// Validate environment variables
 	const env = validateEnv();
 
 	try {

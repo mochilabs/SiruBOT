@@ -13,25 +13,25 @@ const FAILURE_COUNTER_TTL_SECONDS = 30 * 24 * 60 * 60;
 const RETRY_AFTER_MAX_SECONDS = 60;
 const EMBED_TITLE_MAX = 256;
 
-/** 플랫폼별 임베드 accent color — 치지직은 브랜드 네온 그린(#00ffa3) */
+/** 플랫폼별 임베드 accent color: 치지직은 브랜드 네온 그린(#00ffa3) */
 const PLATFORM_COLORS: Record<SocialPlatform, number> = {
 	youtube: 0xff0000,
 	twitch: 0x9146ff,
 	chzzk: 0x00ffa3
 };
 
-export interface SocialEmbed {
+interface SocialEmbed {
 	title: string;
 	url: string;
 	color: number;
 	author?: { name: string };
-	/** 라이브 섬네일 — 구독 showThumbnail이 켜져 있고 이벤트에 이미지가 있을 때만 실려요 */
+	/** 라이브 섬네일: 구독 showThumbnail이 켜져 있고 이벤트에 이미지가 있을 때만 실려요 */
 	image?: { url: string };
 	footer: { text: string };
 	timestamp: string;
 }
 
-export interface SocialWebhookPayload {
+interface SocialWebhookPayload {
 	content?: string;
 	embeds: SocialEmbed[];
 	allowed_mentions: { parse: string[]; roles?: string[] };
@@ -41,7 +41,7 @@ export interface SocialWebhookPayload {
 	avatar_url?: string;
 }
 
-export type WebhookFetchFn = (input: string, init?: RequestInit) => Promise<Response>;
+type WebhookFetchFn = (input: string, init?: RequestInit) => Promise<Response>;
 
 export class SocialDispatcher {
 	private readonly fetchFn: WebhookFetchFn;
@@ -55,7 +55,7 @@ export class SocialDispatcher {
 		const db = this.options.getDb();
 		if (!db) return;
 
-		// dedup — (platform, contentId)가 이미 기록돼 있으면 스킵 (WebSub 중복 콜백·폴링 경합 방어)
+		// dedup: (platform, contentId)가 이미 기록돼 있으면 스킵 (WebSub 중복 콜백·폴링 경합 방어)
 		const existing = await db.socialEventLog
 			.findUnique({ where: { platform_contentId: { platform: event.platform, contentId: event.contentId } } })
 			.catch(() => null);
@@ -63,12 +63,12 @@ export class SocialDispatcher {
 		try {
 			await db.socialEventLog.create({ data: { platform: event.platform, contentId: event.contentId, payload: event } });
 		} catch {
-			// P2002 등 동시 삽입 경합 — 이미 다른 인스턴스가 처리했어요
+			// P2002 등 동시 삽입 경합: 이미 다른 인스턴스가 처리했어요
 			return;
 		}
 
-		// 팬아웃 — 해당 소스를 구독 중인 활성 구독만.
-		// 구독 생성 시점보다 오래된 콘텐츠는 알림에서 제외해요 —
+		// 팬아웃: 해당 소스를 구독 중인 활성 구독만.
+		// 구독 생성 시점보다 오래된 콘텐츠는 알림에서 제외해요.
 		// 신규 구독 직후 RSS 감사가 과거 영상 15개를 전부 뿜는 백필 폭발을 막아요 (plan §7).
 		const subscriptions = await db.socialSubscription
 			.findMany({
@@ -80,7 +80,7 @@ export class SocialDispatcher {
 				}
 			})
 			.catch((error: unknown) => {
-				logger.error('구독 목록 조회 실패 — 이벤트 알림을 건너뛰어요:', String(error));
+				logger.error('구독 목록 조회 실패: 이벤트 알림을 건너뛰어요:', String(error));
 				return [];
 			});
 		if (subscriptions.length === 0) return;
@@ -103,7 +103,7 @@ export class SocialDispatcher {
 	}
 
 	public buildPayload(subscription: SocialSubscription, event: SocialEvent): SocialWebhookPayload {
-		// showThumbnail이 없는 이전 행(migration 미적용)은 undefined — 기본값 ON으로 취급해요.
+		// showThumbnail이 없는 이전 행(migration 미적용)은 undefined: 기본값 ON으로 취급해요.
 		const embed = this.buildEmbed(event, subscription.showThumbnail !== false);
 		const template = subscription.messageTemplate;
 		const payload: SocialWebhookPayload = template
@@ -114,7 +114,7 @@ export class SocialDispatcher {
 					allowed_mentions: { parse: [], roles: extractSocialTemplateRoleIds(template) }
 				}
 			: { embeds: [embed], allowed_mentions: { parse: [] } };
-		// 구독별 표시 오버라이드 — Discord 웹훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
+		// 구독별 표시 오버라이드: Discord 웹훅 execute의 username/avatar_url은 이 메시지에서만 적용돼요.
 		// 웹훅 기본 표시는 그대로 두고, 수정하면 다음 알림부터 바로 반영돼요.
 		if (subscription.webhookName) payload.username = subscription.webhookName;
 		if (subscription.webhookAvatarUrl) payload.avatar_url = subscription.webhookAvatarUrl;
@@ -138,7 +138,7 @@ export class SocialDispatcher {
 			await this.options.redis.del(this.failureKey(subscription.id));
 			return;
 		}
-		// 죽은 웹훅 — 즉시 FAILED (채널/웹훅 삭제, 재시도 정지)
+		// 죽은 웹훅: 즉시 FAILED (채널/웹훅 삭제, 재시도 정지)
 		if (response && (response.status === 404 || response.status === 410)) {
 			await this.markFailed(subscription, '웹훅이 삭제됐어요 (404/410)');
 			return;
@@ -169,7 +169,7 @@ export class SocialDispatcher {
 	}
 
 	private async markFailed(subscription: SocialSubscription, reason: string): Promise<void> {
-		logger.warn(`구독 ${subscription.id}를 FAILED로 표시해요 — ${reason}`);
+		logger.warn(`구독 ${subscription.id}를 FAILED로 표시해요. ${reason}`);
 		await this.options.redis.del(this.failureKey(subscription.id));
 		const db = this.options.getDb();
 		await db?.socialSubscription.update({ where: { id: subscription.id }, data: { status: 'failed' } }).catch(() => null);

@@ -1,5 +1,3 @@
--- CreateEnum (none)
-
 -- CreateTable
 CREATE TABLE "ChannelChatHistory" (
     "channelId" TEXT NOT NULL,

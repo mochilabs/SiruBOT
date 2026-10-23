@@ -3,7 +3,7 @@ import type { LyricsResult } from './types.ts';
 const LRCLIB_BASE = 'https://lrclib.net/api/search';
 const TIMEOUT_MS = 10_000;
 
-/** 괄호·대괄호로 묶인 보컬/버전 표기 제거 — normalizeQuery와 fetchLyrics가 같은 규칙을 써요. */
+/** 괄호·대괄호로 묶인 보컬/버전 표기 제거: normalizeQuery와 fetchLyrics가 같은 규칙을 써요. 캐시 키만 소문자로 정규화해요(검색 쿼리는 원문 유지). */
 const STRIP_PARENS = /\(.*?\)|\[.*?\]/g;
 
 function normalizeQuery(query: string): string {
@@ -12,7 +12,7 @@ function normalizeQuery(query: string): string {
 
 /** 가사 검색 — 결과 불변이라 장기 캐시해요. */
 export async function fetchLyrics(query: string): Promise<LyricsResult> {
-	const q = query.replace(/\(.*?\)|\[.*?\]/g, '').trim();
+	const q = query.replace(STRIP_PARENS, '').trim();
 	const res = await fetch(`${LRCLIB_BASE}?q=${encodeURIComponent(q)}`, {
 		headers: { 'User-Agent': 'SiruBOT/1.0' },
 		signal: AbortSignal.timeout(TIMEOUT_MS)

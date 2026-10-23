@@ -3,7 +3,7 @@ import { NotifierRedis } from './redis.ts';
 
 describe('NotifierRedis memory fallback (REDIS_URL 없이 동작하는 단일 인스턴스 경로)', () => {
 	afterEach(async () => {
-		// disconnect가 프로세스 메모리 폴백 저장소를 비워요 — 테스트 간 상태 공유 방지.
+		// disconnect가 프로세스 메모리 폴백 저장소를 비워요. 테스트 간 상태 공유 방지.
 		await new NotifierRedis().disconnect();
 		vi.useRealTimers();
 	});

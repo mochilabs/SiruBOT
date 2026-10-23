@@ -14,7 +14,6 @@ const deleteCountCache = new MemoryCache<string, number>({
 })
 export class MessageDeleteListener extends Listener {
 	public override async run(message: Message) {
-		// Ignore audio is not initialized
 		if (!this.container.audio) return;
 		if (!message.guild?.id) return;
 

@@ -1,6 +1,4 @@
-import { ShardClientError } from './ShardClientError.ts';
-
-export class NoShardsAvailableError extends ShardClientError {
+export class NoShardsAvailableError extends Error {
 	constructor() {
 		super('No shards available from shard manager');
 		this.name = 'NoShardsAvailableError';

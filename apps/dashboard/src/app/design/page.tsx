@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { Layers, MessageSquare, Moon, Palette, PanelLeft, Sun, Table2, Tags, Zap } from "lucide-react";
+import { Component, Layers, MessageSquare, Moon, Palette, PanelLeft, Sun, Table2, Tags } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ const SECTIONS = [
 	{ id: "foundation", label: "Foundation", icon: <Palette size={14} /> },
 	{ id: "tokens", label: "Tokens", icon: <Tags size={14} /> },
 	{ id: "surfaces", label: "Surfaces", icon: <Layers size={14} /> },
-	{ id: "primitives", label: "Primitives", icon: <Zap size={14} /> },
+	{ id: "primitives", label: "Primitives", icon: <Component size={14} /> },
 	{ id: "data", label: "Data", icon: <Table2 size={14} /> },
 	{ id: "overlay", label: "Overlay", icon: <PanelLeft size={14} /> },
 	{ id: "discord", label: "Discord", icon: <MessageSquare size={14} /> },
@@ -56,7 +56,6 @@ function ThemeToggle() {
 export default function DesignPage() {
 	const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
 
-	const tocRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 	// 클릭으로 시작된 smooth 스크롤이 끝날 때까지 스크롤 핸들러의 활성 섹션 재계산을 잠가요.
 	// 잠그지 않으면 스크롤 비행 중간 위치 샘플로 이전 섹션이 다시 활성화돼 "클릭한 것의 하나 위"가 선택돼 보여요.
 	const clickTargetRef = useRef<string | null>(null);
@@ -108,14 +107,11 @@ export default function DesignPage() {
 				<div className="flex gap-8">
 					<nav className="hidden lg:block w-52 shrink-0">
 						<div className="sticky top-[calc(var(--navbar-h)+3rem)] space-y-1 max-h-[calc(100svh-var(--navbar-h)-4rem)] overflow-y-auto pr-2">
-							{SECTIONS.map((s, idx) => {
+							{SECTIONS.map((s) => {
 								const isActive = activeSection === s.id;
 								return (
 									<a
 										key={s.id}
-										ref={(el) => {
-											tocRefs.current[idx] = el;
-										}}
 										href={`#${s.id}`}
 										onClick={() => handleTocClick(s.id)}
 										className={cn(

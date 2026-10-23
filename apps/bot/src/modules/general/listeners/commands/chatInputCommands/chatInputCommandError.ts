@@ -4,6 +4,7 @@ import { Listener, UserError } from '@sapphire/framework';
 import { emoji, DEFAULT_COLOR, WARN_COLOR } from '@sirubot/utils';
 import { ContainerBuilder } from 'discord.js';
 import { sendComponent } from './chatInputCommandDenied.ts';
+import { resolveErrorEphemeral } from '../../../../../lib/errorView.ts';
 import * as Sentry from '@sentry/node';
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandError })
@@ -11,7 +12,6 @@ export class ChatInputCommandError extends Listener {
 	public override async run(error: Error, { interaction, command }: ChatInputCommandErrorPayload) {
 		const userError = error instanceof UserError;
 
-		// send actual error to sentry
 		if (!userError) {
 			Sentry.withScope((scope) => {
 				scope.setUser({ id: interaction.user.id });
@@ -32,8 +32,7 @@ export class ChatInputCommandError extends Listener {
 			});
 		}
 
-		const context = error instanceof UserError ? error.context : undefined;
-		const ephemeral = typeof context === 'object' && context !== null && 'ephemeral' in context ? Boolean(context.ephemeral) : !userError;
+		const ephemeral = resolveErrorEphemeral(error);
 
 		await sendComponent(
 			interaction,

@@ -20,6 +20,7 @@ import { container } from '@sapphire/framework';
 import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { Guild, PermissionFlagsBits } from 'discord.js';
+import type { ServiceLogger } from './types.ts';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
 export interface BotProfileState {
@@ -39,14 +40,6 @@ export interface BotProfileState {
 	/** 마지막 적용 시도 결과 — 시도가 없으면 null */
 	lastApply: { ok: boolean; error: string | null; at: number } | null;
 	updatedAt: number;
-}
-
-/** 서비스 주입 로거 — guildSettingsInvalidator와 같은 구조예요 */
-interface ServiceLogger {
-	info(msg: string): void;
-	warn(msg: string): void;
-	error(msg: string): void;
-	debug(msg: string): void;
 }
 
 interface PendingPayload {

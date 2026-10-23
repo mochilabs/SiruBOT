@@ -142,7 +142,7 @@ describe('mixer slot fail-closed', () => {
 
 /** private 정책 메서드를 규칙 단위로 검사하기 위한 캐스트 */
 type UncheckedSkipPolicy = {
-	checkDJRole(context: SkipContext): Promise<boolean>;
+	checkDJRole(context: SkipContext): Promise<void>;
 	handleForceSkip(context: SkipContext): Promise<void>;
 };
 const unchecked = policy as unknown as UncheckedSkipPolicy;
@@ -153,9 +153,9 @@ describe('DJ 역할 게이트·강제 스킵 규칙 (단위)', () => {
 		mixerSkip.mockReset().mockResolvedValue(undefined);
 	});
 
-	it('checkDJRole은 DJ 역할이 있으면 true를 반환한다', async () => {
+	it('checkDJRole은 DJ 역할이 있으면 거절 없이 통과한다', async () => {
 		hasDJRole.mockResolvedValue(true);
-		await expect(unchecked.checkDJRole(makeContext())).resolves.toBe(true);
+		await expect(unchecked.checkDJRole(makeContext())).resolves.toBeUndefined();
 	});
 
 	it('checkDJRole은 DJ 역할이 없으면 일시적인 사용자 오류로 거절한다', async () => {

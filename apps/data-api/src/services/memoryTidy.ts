@@ -11,7 +11,7 @@ import {
 } from '@sirubot/utils';
 import { getLogger } from '../utils/logger.ts';
 import { parseClock } from '../utils/parseClock.ts';
-import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
+import type { TranslationProvider } from '../providers/translate.ts';
 
 const logger = getLogger('memory-tidy');
 
@@ -112,7 +112,7 @@ function normalizeStored(stored: unknown): string | null {
 }
 
 /** 한 사용자의 MEMORY.md를 LLM으로 정리해요. 검증 실패 시 원본을 유지해요. */
-async function tidyUser(db: PrismaClient, provider: OpenAICompatTranslationProvider, userId: string): Promise<'ok' | 'rejected' | 'failed'> {
+async function tidyUser(db: PrismaClient, provider: TranslationProvider, userId: string): Promise<'ok' | 'rejected' | 'failed'> {
 	try {
 		const row = await db.userMemory.findUnique({ where: { userId } });
 		const original = normalizeStored(row?.longTerm);
@@ -185,7 +185,7 @@ async function findCandidates(db: PrismaClient, limit: number): Promise<string[]
 	return candidates.map((c) => c.userId);
 }
 
-async function runMemoryTidy(db: PrismaClient, provider: OpenAICompatTranslationProvider, batchSize: number): Promise<MemoryTidyStats> {
+async function runMemoryTidy(db: PrismaClient, provider: TranslationProvider, batchSize: number): Promise<MemoryTidyStats> {
 	if (stats.running) return memoryTidyStatus();
 	stats.running = true;
 	stats.lastRunAt = Date.now();
@@ -227,7 +227,7 @@ function msUntilNext(at: string, jitterMaxMs = 30 * 60_000): number {
 /** 매일 자정(+0~30분 지터)에 기억 정리 배치. DATABASE_URL·프로바이더가 있을 때만 시작해요. */
 export function startMemoryTidyScheduler(
 	db: PrismaClient | null,
-	provider: OpenAICompatTranslationProvider,
+	provider: TranslationProvider,
 	options: { enabled: boolean; at: string; batchSize: number }
 ): () => void {
 	let stopped = false;

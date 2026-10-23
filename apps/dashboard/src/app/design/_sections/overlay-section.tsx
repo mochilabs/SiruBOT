@@ -82,6 +82,8 @@ export function OverlaySection() {
 	const [cmdOpen, setCmdOpen] = useState(false);
 	const [selectValue, setSelectValue] = useState<string>("");
 	const [saveBarDemo, setSaveBarDemo] = useState(false);
+	const [drawerVolume, setDrawerVolume] = useState(80);
+	const [menuAction, setMenuAction] = useState<string | null>(null);
 
 	const commandItems = [
 		{ id: "home", label: "홈으로 이동", icon: <Home size={16} />, group: "페이지", onSelect: () => setCmdOpen(false) },
@@ -130,7 +132,7 @@ export function OverlaySection() {
 							<div className="space-y-6 px-4">
 								<Switch checked disabled={false} label="자동 DJ 모드" />
 								<Switch checked={false} label="24시간 재생" />
-								<Slider value={80} onChange={() => {}} label="기본 볼륨" showValue formatValue={(v) => `${v}%`} />
+								<Slider value={drawerVolume} onChange={setDrawerVolume} label="기본 볼륨" showValue formatValue={(v) => `${v}%`} />
 							</div>
 							<SheetFooter>
 								<Button size="sm" onClick={() => setSheetOpen(false)}>
@@ -153,24 +155,27 @@ export function OverlaySection() {
 						<DropdownMenuContent>
 							<DropdownMenuGroup>
 								<DropdownMenuLabel>일반</DropdownMenuLabel>
-								<DropdownMenuItem onClick={() => {}}>
+								<DropdownMenuItem onClick={() => setMenuAction("서버 설정")}>
 									<Settings size={14} />
 									서버 설정
 								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => {}}>
+								<DropdownMenuItem onClick={() => setMenuAction("멤버 관리")}>
 									<Users size={14} />
 									멤버 관리
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>
-								<DropdownMenuItem variant="destructive" onClick={() => {}}>
+								<DropdownMenuItem variant="destructive" onClick={() => setMenuAction("서버 나가기")}>
 									<Trash2 size={14} />
 									서버 나가기
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>
+					<p className="w-full text-xs text-muted-foreground">
+						{menuAction ? `${menuAction} 항목을 선택했어요.` : "메뉴 항목을 선택하면 여기에 표시돼요."}
+					</p>
 				</ShowcaseRow>
 
 				<ShowcaseRow label="Select">

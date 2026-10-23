@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertCircle, Loader2, LogIn, Save, X } from "lucide-react";
+import { AlertCircle, Check, Loader2, LogIn, Save, X } from "lucide-react";
 
 import { Portal } from "@/components/overlay/portal";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -79,6 +79,60 @@ export function PanelLoading({ label }: { label: string }) {
       <Loader2 className="h-4 w-4 animate-spin" />
       {label}
     </Card>
+  );
+}
+
+/** 모드 선택 카드(radiogroup): AI 설정·채팅 유틸 패널이 같은 마크업을 써요 */
+export interface ModeCardOption<T extends string = string> {
+  value: T;
+  label: string;
+  description: string;
+  icon: ReactNode;
+}
+
+export function ModePicker<T extends string>({
+  label,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly ModeCardOption<T>[];
+  disabled?: boolean;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="grid gap-3 sm:grid-cols-3">
+      {options.map((card) => {
+        const active = value === card.value;
+        return (
+          <button
+            key={card.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => onChange(card.value)}
+            className={`relative rounded-card p-4 text-left transition-colors duration-fast ${
+              active ? "bg-primary/10 ring-2 ring-ring/40" : "bg-surface-2 hover:bg-surface-3"
+            }`}
+          >
+            <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+              <span className={active ? "text-primary-text" : "text-muted-foreground"}>{card.icon}</span>
+              {card.label}
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">{card.description}</span>
+            {active && (
+              <span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-control-text">
+                <Check size={12} />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -337,7 +391,7 @@ export function SaveBar({
       <Button
         variant="cta"
         size="sm"
-        className="h-8 px-3.5"
+        className="h-8 px-3.5 pointer-coarse:min-h-11"
         loading={saving || submitting}
         disabled={!dirty}
         icon={saving ? undefined : <Save size={15} />}

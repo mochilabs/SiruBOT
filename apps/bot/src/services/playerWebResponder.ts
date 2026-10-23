@@ -38,6 +38,7 @@ import { MessageFlags, PermissionsBitField, type Channel, type ContainerBuilder,
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../modules/audio/view/play.ts';
+import type { ServiceLogger } from './types.ts';
 
 /** 검색 결과로 돌려줄 최대 트랙 수 — 웹 선택 UI 목록 크기 */
 const MAX_TRACKS = 5;
@@ -78,7 +79,7 @@ export class PlayerWebResponder {
 	private readonly cooldowns = new Map<string, number>();
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		private readonly logger: ServiceLogger,
 		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
 		private readonly signingKey: string = ''
 	) {}
@@ -179,7 +180,7 @@ export class PlayerWebResponder {
 		this.respond({ requestId, guildId, kind, error: `${emoji('error')} 요청 형식이 올바르지 않아요.` });
 	}
 
-	// ── kind: voice-context ── 사용자 음성·권한 상태만 돌려줘요 (권한 제한 없음)
+	// kind: voice-context, 사용자 음성·권한 상태만 돌려줘요 (권한 제한 없음)
 	private async handleVoiceContext(guild: Guild, request: PlayerWebVoiceContextRequest): Promise<void> {
 		const member = await this.fetchMember(guild, request.userId);
 		if (!member) {
@@ -205,7 +206,7 @@ export class PlayerWebResponder {
 		});
 	}
 
-	// ── kind: search ── 검색 결과 5개 요약. 재생 전제 검증(음성·권한·채널 충돌)을 미리 적용해요
+	// kind: search, 검색 결과 5개 요약. 재생 전제 검증(음성·권한·채널 충돌)을 미리 적용해요
 	private async handleSearch(guild: Guild, request: PlayerWebSearchRequest): Promise<void> {
 		const verified = await this.verifyPlaybackRequest(guild, request.userId);
 		if ('error' in verified) {
@@ -241,7 +242,7 @@ export class PlayerWebResponder {
 		});
 	}
 
-	// ── kind: play ── 선택한 트랙 URI(또는 다시 재생 URL·플레이리스트)를 검색해 큐에 넣고 재생을 보장해요
+	// kind: play, 선택한 트랙 URI(또는 다시 재생 URL·플레이리스트)를 검색해 큐에 넣고 재생을 보장해요
 	private async handlePlay(guild: Guild, request: PlayerWebPlayRequest): Promise<void> {
 		const { guildId } = request;
 		if (this.inFlight.has(guildId)) {
@@ -319,7 +320,7 @@ export class PlayerWebResponder {
 		}
 	}
 
-	// ── kind: control ── 볼륨·일시정지·재생·스킵·정지·반복 — 봇 슬래시 커맨드 가드를 웹에 맞게 단순화해요
+	// kind: control, 볼륨·일시정지·재생·스킵·정지·반복, 봇 슬래시 커맨드 가드를 웹에 맞게 단순화해요
 	//   volume: 관리자/DJ 권한만 (기존 대시보드 라이브 탭 컨트롤러와 같은 동작 — 저장 길드 설정 반영)
 	//   pause/resume: 활성 플레이어 필요 (Discord /pause의 DJOrAlone·SongPlaying에 대응)
 	//   skip: 활성 플레이어 + 봇과 같은 음성 채널 (Discord /skip의 SameVoiceChannel에 대응)
@@ -333,7 +334,12 @@ export class PlayerWebResponder {
 				return;
 			}
 			if (!(await this.hasControlPermission(guildId, member))) {
-				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: '재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.' });
+				this.respond({
+					requestId: request.requestId,
+					guildId,
+					kind: 'control',
+					error: `${emoji('error')} 재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.`
+				});
 				return;
 			}
 
@@ -384,11 +390,8 @@ export class PlayerWebResponder {
 			} else if (request.action === 'skip') {
 				await container.mixerService.skip(player);
 			} else if (request.action === 'stop') {
-				// 봇 /stop과 같은 동작 — 큐 정리 후 정지·퇴장
-				player.transitionState.stopByCommand = true;
-				await container.mixerService.clearNext(player).catch(() => null);
-				await player.stopPlaying();
-				await player.disconnect();
+				// 봇 /stop과 같은 공용 흐름 (queueEnd 안내 억제 + mixer 슬롯 정리)
+				await container.audioService.stopPlayback(player);
 			}
 			this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 		} catch (error) {

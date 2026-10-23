@@ -12,7 +12,7 @@ const REQUEST = {
 	name: '시루 소셜 알림'
 };
 
-/** ManagedRedisSubscriber가 createClient로 만드는 구독 전용 클라이언트 목 — 응답 핸들러 캡처용 */
+/** ManagedRedisSubscriber가 createClient로 만드는 구독 전용 클라이언트 목: 응답 핸들러 캡처용 */
 const fakeRedis = vi.hoisted(() => {
 	const state = {
 		responseHandler: null as ((raw: string) => void) | null,
@@ -30,7 +30,7 @@ const fakeRedis = vi.hoisted(() => {
 	return { state, subscriber };
 });
 
-// 공용 ManagedRedisSubscriber가 여는 구독 전용 연결을 목으로 대체해요 — 실제 구독 라이프사이클(connect→subscribe)은 그대로 태워요.
+// 공용 ManagedRedisSubscriber가 여는 구독 전용 연결을 목으로 대체해요. 실제 구독 라이프사이클(connect→subscribe)은 그대로 태워요.
 vi.mock('@redis/client', () => ({
 	createClient: vi.fn(() => fakeRedis.subscriber)
 }));

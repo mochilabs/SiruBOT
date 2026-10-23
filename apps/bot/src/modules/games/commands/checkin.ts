@@ -1,8 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { doCheckin, streakBadge } from '../utils/gameRecords.ts';
+import { textContainer } from '../utils/textContainer.ts';
 
 // 모듈 평가 시점엔 이모지 매핑이 로드 전일 수 있어 렌더 시점 함수로 만든다
 function getMilestones(): Record<number, string> {
@@ -37,21 +38,16 @@ export class CheckinCommand extends Command {
 
 		const { checkedIn, streak } = await doCheckin(interaction.user.id);
 		const badge = streakBadge(streak);
-		const container = createContainer();
 
 		if (checkedIn) {
-			container.addTextDisplayComponents((t) =>
-				t.setContent(
-					[
-						`### ${emoji('calendar')} 오늘은 이미 출석했어요`,
-						'',
-						`**${interaction.user.displayName}** 님, ${badge} **${streak}일 연속** 출석 중이에요!`,
-						'',
-						'-# 내일 다시 출석하면 스트릭이 이어져요.'
-					].join('\n')
-				)
-			);
-			await interaction.editReply({ components: [container], flags: [MessageFlags.IsComponentsV2] });
+			const lines = [
+				`### ${emoji('calendar')} 오늘은 이미 출석했어요`,
+				'',
+				`**${interaction.user.displayName}** 님, ${badge} **${streak}일 연속** 출석 중이에요!`,
+				'',
+				'-# 내일 다시 출석하면 스트릭이 이어져요.'
+			];
+			await interaction.editReply({ components: [textContainer(lines)], flags: [MessageFlags.IsComponentsV2] });
 			return;
 		}
 
@@ -64,7 +60,6 @@ export class CheckinCommand extends Command {
 		if (milestones[streak]) lines.push('', `${emoji('party')} ${milestones[streak]}`);
 		if (streak === 1) lines.push('', '-# 매일 출석해서 스트릭을 쌓아보세요. `/프로필 보기`에서 확인할 수 있어요.');
 
-		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
-		await interaction.editReply({ components: [container], flags: [MessageFlags.IsComponentsV2] });
+		await interaction.editReply({ components: [textContainer(lines)], flags: [MessageFlags.IsComponentsV2] });
 	}
 }

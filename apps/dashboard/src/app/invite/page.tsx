@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Home, UserPlus } from "lucide-react";
 
+import { FocusPageShell } from "@/app/_components/focus-page-shell";
 import Loader from "@/components/loader";
 import { buildInviteUrl } from "@/utils";
 
@@ -25,14 +26,8 @@ export default function InvitePage() {
 	}, [count, inviteUrl]);
 
 	return (
-		<main className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-
+		<FocusPageShell>
 			<div className="relative z-10 flex flex-col items-center text-center">
-				{/* 배경 블러 — R-01: 단일 초점 페이지(404·초대) 공통의 브랜드 앰비언트 틴트. 4% 저투명도로 장식 강조가 아니라 배경 온도만 유지해요. */}
-				<div className="absolute inset-0 -z-10 flex items-center justify-center">
-					<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
-				</div>
-
 				<div className="space-y-8">
 					<div className="flex flex-col items-center space-y-4">
 						<div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-surface-1 p-6">
@@ -43,7 +38,7 @@ export default function InvitePage() {
 							<h1 className="text-5xl font-black tracking-tighter text-foreground md:text-7xl">
 								시루봇과 함께해요
 							</h1>
-							<div className="inline-flex items-center gap-2 rounded-control bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground w-[200px] justify-center tabular-nums">
+							<div className="inline-flex items-center gap-2 rounded-control bg-surface-1 px-3 py-1 text-xs font-bold text-muted-foreground min-w-[200px] justify-center tabular-nums">
 								<Loader size="xs" iconOnly />
 								<span>{count}초 뒤에 자동으로 이동할게요...</span>
 							</div>
@@ -52,7 +47,7 @@ export default function InvitePage() {
 
 					<div className="max-w-md mx-auto mb-0">
 						<p className="text-lg font-medium leading-relaxed text-muted-foreground md:text-xl break-keep">
-							최고의 음악 경험을 전하는 시루를 초대해보세요.
+							시루를 초대하면 음악 신청과 대기열 관리, 웹 플레이어로 서버의 재생을 이어갈 수 있어요.
 						</p>
 					</div>
 
@@ -78,6 +73,6 @@ export default function InvitePage() {
 					</div>
 				</div>
 			</div>
-		</main>
+		</FocusPageShell>
 	);
 }

@@ -23,7 +23,7 @@ const WEBHOOK_CACHE_TTL_MS = 60_000;
 /** 채널별 웹훅 캐시 */
 const webhooks = new MemoryCache<string, Webhook>({ ttl: WEBHOOK_CACHE_TTL_MS, maxSize: 500 });
 
-export interface WebhookRelayOptions {
+interface WebhookRelayOptions {
 	/** 원작자 표시 이름 */
 	username: string;
 	/** 원작자 프사 URL */

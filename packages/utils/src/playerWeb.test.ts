@@ -103,10 +103,10 @@ describe('playerWeb response contract', () => {
 			requestId: REQUEST_ID,
 			guildId: VALID_BASE.guildId,
 			kind: 'play',
-			error: '🎧 음성 채널에 먼저 접속해 주세요.'
+			error: '음성 채널에 먼저 접속해 주세요.'
 		});
 		expect(result.success).toBe(true);
-		if (result.success) expect(result.data.error).toBe('🎧 음성 채널에 먼저 접속해 주세요.');
+		if (result.success) expect(result.data.error).toBe('음성 채널에 먼저 접속해 주세요.');
 	});
 
 	it('roundtrips a voice-context response and rejects bad shapes', () => {

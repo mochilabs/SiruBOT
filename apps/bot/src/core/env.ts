@@ -19,7 +19,7 @@ const optionalNumber = z.preprocess((value) => (typeof value === 'string' && val
 const logLevel = z.union([z.coerce.number(), z.enum(['silly', 'trace', 'debug', 'info', 'warn', 'error', 'fatal'])]).optional();
 
 const botEnvSchema = z.object({
-	// --- 필수: 없으면 기동 불가. 기존 envParseString/envParseArray/Prisma가 이미 기동 중에 throw하던 키들이에요. ---
+	// 필수: 없으면 기동 불가. 기존 envParseString/envParseArray/Prisma가 이미 기동 중에 throw하던 키들이에요.
 	/** Discord 봇 토큰 — client.login()이 envParseString으로 읽어요. */
 	DISCORD_TOKEN: z.string().trim().min(1),
 	/** 봇 소유자 목록 (공백 구분) — lib/owners.ts가 모듈 로드 시 envParseArray로 읽어요. */
@@ -35,7 +35,7 @@ const botEnvSchema = z.object({
 	/** 개발 전용 커맨드 등록 길드 (공백 구분) — development/* 커맨드의 registerApplicationCommands가 envParseArray로 읽어요. */
 	DEV_GUILD_IDS: z.string().trim().min(1),
 
-	// --- 선택: 설정되면 형식만 검증해요. ---
+	// 선택: 설정되면 형식만 검증해요.
 	/** 실행 환경 — bootstrap의 isDevMode 판별에 써요. */
 	NODE_ENV: z.string().optional(),
 	/** 슬래시 커맨드 덮어쓰기 등록 — 'true'일 때만 Overwrite (core/setup.ts). */
@@ -55,7 +55,7 @@ const botEnvSchema = z.object({
 	/** data-api 인증 키 — DATA_API_AUTH_KEY ?? AUTH_KEY 폴백 (lib/dataApi.ts). */
 	DATA_API_AUTH_KEY: z.string().optional(),
 
-	// --- AI 채팅/챗 TTS (선택, 미설정이면 기능 off) ---
+	// AI 채팅/챗 TTS (선택, 미설정이면 기능 off)
 	CHAT_MODEL: z.string().optional(),
 	OPENAI_COMPATIBLE_API_URL: z.string().optional(),
 	OPENAI_API_KEY: z.string().optional(),
@@ -66,7 +66,7 @@ const botEnvSchema = z.object({
 	SIRU_TTS_API_KEY: z.string().optional(),
 	SIRU_TTS_DEFAULT_VOICE: z.string().optional(),
 
-	// --- 숫자형 tunable (선택, 미설정이면 각 소비 모듈의 기본값) ---
+	// 숫자형 tunable (선택, 미설정이면 각 소비 모듈의 기본값)
 	LOGLEVEL: logLevel,
 	SHARD_IDENTIFY_RETRY_MS: optionalNumber,
 	HEALTH_PORT: optionalNumber,
@@ -82,7 +82,7 @@ const botEnvSchema = z.object({
 	CHAT_CONTEXT_TOKEN_BUDGET: optionalNumber
 });
 
-export type BotEnv = z.infer<typeof botEnvSchema>;
+type BotEnv = z.infer<typeof botEnvSchema>;
 
 export function validateEnv(env: Record<string, string | undefined> = process.env): BotEnv {
 	const result = botEnvSchema.safeParse(env);

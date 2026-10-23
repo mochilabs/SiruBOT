@@ -9,9 +9,11 @@ export interface YouTubeChapter {
 	duration: number;
 }
 
-/** 장문 영상에서만 챕터가 의미 있으므로 이 미만은 조회하지 않는다. */
-export const CHAPTER_FETCH_MIN_DURATION_MS = 15 * 60 * 1000;
+/** 장문 영상에서만 챕터가 의미 있으므로 이 미만은 조회하지 않는다 (값의 단일 소스는 @sirubot/utils). */
+export { CHAPTER_FETCH_MIN_DURATION_MS } from '@sirubot/utils';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+/** 다른 provider와 같은 관례로 fetch에 타임아웃을 걸어요. 없으면 조회가 무한정 멈춰요. */
+const CHAPTER_FETCH_TIMEOUT_MS = 10_000;
 
 const WEB_CONTEXT = {
 	context: { client: { clientName: 'WEB', clientVersion: '2.20220502.01.00', hl: 'ko', gl: 'KR' } }
@@ -77,7 +79,8 @@ async function fetchFromSearch(videoId: string, durationMs: number): Promise<You
 	const response = await fetch('https://www.youtube.com/youtubei/v1/search?prettyPrint=false', {
 		method: 'POST',
 		headers: { 'content-type': 'application/json', referer: 'https://www.youtube.com' },
-		body: JSON.stringify({ ...WEB_CONTEXT, query: videoId })
+		body: JSON.stringify({ ...WEB_CONTEXT, query: videoId }),
+		signal: AbortSignal.timeout(CHAPTER_FETCH_TIMEOUT_MS)
 	});
 	if (!response.ok) return [];
 
@@ -106,7 +109,10 @@ async function fetchFromSearch(videoId: string, durationMs: number): Promise<You
 
 /** 시청 페이지의 `ytInitialData`에서 챕터를 읽는다 (검색 결과에 카드가 없을 때 폴백). */
 async function fetchFromWatchPage(videoId: string, durationMs: number): Promise<YouTubeChapter[]> {
-	const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, { headers: { 'user-agent': USER_AGENT } });
+	const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+		headers: { 'user-agent': USER_AGENT },
+		signal: AbortSignal.timeout(CHAPTER_FETCH_TIMEOUT_MS)
+	});
 	if (!response.ok) return [];
 
 	const html = await response.text();

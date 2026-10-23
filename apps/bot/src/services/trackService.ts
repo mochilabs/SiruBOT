@@ -5,7 +5,7 @@ import { isTtsClip, RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink
 
 export class TrackService {
 	public async increasePlays(track: Track) {
-		const data = this.extractTrackData(track);
+		const data = extractTrackData(track);
 
 		const newTrack = await container.db.track.upsert({
 			where: { id: data.id },
@@ -24,7 +24,7 @@ export class TrackService {
 	public async addHistory(guildId: string, track: Track) {
 		// 채팅 TTS 클립은 재생 히스토리 대상이 아니다 (명세 4.2 단독 클립 규칙).
 		if (isTtsClip(track)) return;
-		const data = this.extractTrackData(track);
+		const data = extractTrackData(track);
 		let userId: string | null = null;
 		if (track.requester) {
 			const requesterId = (track.requester as { id: string } | undefined)?.id;
@@ -49,6 +49,4 @@ export class TrackService {
 			}
 		});
 	}
-
-	private extractTrackData = extractTrackData;
 }

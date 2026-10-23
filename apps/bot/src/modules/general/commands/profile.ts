@@ -282,7 +282,14 @@ export class ProfileCommand extends Command {
 			}
 		}
 
-		const derivedStatus = (member?.presence?.status ?? 'online') as 'online' | 'idle' | 'dnd' | 'invisible';
+		// presence를 관측하지 못한 멤버는 상태를 단정하지 않아요. offline은 카드가 그리는 'invisible'(오프라인)으로 매핑해요.
+		const observedStatus = member?.presence?.status;
+		const derivedStatus =
+			observedStatus === 'online' || observedStatus === 'idle' || observedStatus === 'dnd'
+				? observedStatus
+				: observedStatus === 'offline' || observedStatus === 'invisible'
+					? 'invisible'
+					: null;
 
 		const cardPng = await renderProfileCard({
 			preset,
@@ -308,8 +315,8 @@ export class ProfileCommand extends Command {
 			})),
 			gameStats: data.gameStats,
 			checkinStreak: data.checkinStreak,
-			status: derivedStatus,
-			statusLabel: '',
+			status: derivedStatus ?? 'invisible',
+			statusLabel: derivedStatus ? '' : '상태 알 수 없음',
 			intro: data.intro,
 			roleChips,
 			guildTag,
