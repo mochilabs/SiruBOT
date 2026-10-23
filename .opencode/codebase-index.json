@@ -1,7 +1,0 @@
-{
-	"embeddingProvider": "ollama",
-	"embeddingModel": "nomic-embed-text",
-	"indexing": {
-		"autoIndex": true
-	}
-}
