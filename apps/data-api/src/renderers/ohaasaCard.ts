@@ -9,12 +9,12 @@ import type { Canvas, CanvasRenderingContext2D } from 'skia-canvas';
 import { drawIcon, ensureKoreanFont, hexToRgba, makeRng, truncate } from './canvasUtils.ts';
 import { ZODIAC_MAP } from '../providers/types.ts';
 
-export interface ZodiacTheme {
+interface ZodiacTheme {
 	primary: string;
 	soft: string;
 }
 
-export const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
+const ZODIAC_THEMES: Record<string, ZodiacTheme> = {
 	'01': { primary: '#fb7185', soft: '#fda4af' }, // 양자리 — 로즈
 	'02': { primary: '#e8a87c', soft: '#f4c9a5' }, // 황소자리 — 살구
 	'03': { primary: '#f0abfc', soft: '#f5e0ff' }, // 쌍둥이자리 — 라일락
@@ -45,10 +45,10 @@ export interface OhaasaCardInput {
 interface LuckyBox {
 	label: string;
 	value: string;
-	icon: 'sparkles' | 'star';
+	icon: 'sparkles' | 'key';
 }
 
-/** 밤하늘 별밭 — 시드 없이 매번 살짝 다르게 (카드별 개성용). */
+/** 밤하늘 별밭: 별자리 코드로 시드를 고정해 같은 별자리 카드는 같은 별밭이 나와요. */
 function drawStarfield(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number): void {
 	const rnd = makeRng(seed);
 	for (let i = 0; i < 84; i++) {
@@ -77,12 +77,12 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	const HEADER_H = 150;
 	const BOX_H = 118;
 
-	// ── 럭키 박스 구성 — 아이템/열쇠만, 컬러는 카드에서 뺐어요 ──
+	// 럭키 박스 구성: 아이템/열쇠만, 컬러는 카드에서 뺐어요
 	const item = (input.luckyItem ?? '').trim();
 	const key = (input.luckyKey ?? '').trim();
 	const boxes: LuckyBox[] = [];
 	if (item) boxes.push({ label: '행운의 아이템', value: item, icon: 'sparkles' });
-	if (key) boxes.push({ label: '행운의 열쇠', value: key, icon: 'star' });
+	if (key) boxes.push({ label: '행운의 열쇠', value: key, icon: 'key' });
 
 	const boxesTop = HEADER_H + 38;
 	const H = boxes.length > 0 ? boxesTop + BOX_H + 90 : 300;
@@ -90,7 +90,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
 
-	// ── 배경: 다크 베이스 + 별자리 틴트 ──
+	// 배경: 다크 베이스 + 별자리 틴트
 	ctx.fillStyle = '#1a0e12';
 	ctx.fillRect(0, 0, W, H);
 	const headGrad = ctx.createLinearGradient(0, 0, 0, HEADER_H + 40);
@@ -114,7 +114,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	ctx.fillStyle = accent;
 	ctx.fillRect(0, 0, W, 5);
 
-	// ── 헤더: 타이틀 + 날짜 ──
+	// 헤더: 타이틀 + 날짜
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 	ctx.fillStyle = '#fce7f3';
@@ -128,7 +128,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 		ctx.textAlign = 'left';
 	}
 
-	// ── 별자리 이름 + 순위 뱃지 ──
+	// 별자리 이름 + 순위 뱃지
 	const nameY = 124;
 	ctx.fillStyle = theme.primary;
 	ctx.font = '800 50px "Pretendard JP", "Twemoji Mozilla", sans-serif';
@@ -166,7 +166,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 	ctx.lineTo(W - PAD, HEADER_H - 8);
 	ctx.stroke();
 
-	// ── 럭키 박스 (아이템/열쇠) — 2개면 나란히, 1개면 와이드 ──
+	// 럭키 박스 (아이템/열쇠): 2개면 나란히, 1개면 와이드
 	if (boxes.length > 0) {
 		const gap = 20;
 		const boxW = boxes.length === 2 ? (W - PAD * 2 - gap) / 2 : W - PAD * 2;
@@ -206,7 +206,7 @@ export async function renderOhaasaCard(input: OhaasaCardInput): Promise<Buffer> 
 		ctx.textBaseline = 'alphabetic';
 	}
 
-	// ── 하단 시그니처 ──
+	// 하단 시그니처
 	ctx.textAlign = 'right';
 	ctx.fillStyle = '#c9a8b5';
 	ctx.font = '700 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';

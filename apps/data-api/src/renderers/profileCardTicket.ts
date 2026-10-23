@@ -43,21 +43,24 @@ const STATUS_COLORS: Record<string, string> = {
 	invisible: '#747a8d'
 };
 
-// ── 크림/세이지 팔레트 ──
+// 크림/세이지 팔레트
 const CREAM = '#f3efe6';
 const CREAM_SOFT = 'rgba(255,255,255,0.55)';
 const SAGE = '#bfd3c5';
 const SAGE_DEEP = '#4f6a58';
-const SAGE_MID = '#5d7a66';
+/** 스텁 라벨 잉크: 그라디언트가 어두워지는 구간(#aec3b5)에서도 4.5:1을 넘는 값을 써요 */
+const SAGE_LABEL = '#35473c';
+/** 본문 흐린 잉크: 크림/카드 위 둘 다 4.5:1을 넘도록 알파를 0.78로 유지해요 */
+const INK_MUTED = 'rgba(63, 58, 53, 0.78)';
 const INK = '#3f3a35';
-const INK_MUTED = 'rgba(63, 58, 53, 0.62)';
 /** 아바타 폴백 테마 — 로즈 원 + 음표 */
 const AVATAR_FALLBACK = { bg: '#d8c7cd', icon: 'rgba(63, 58, 53, 0.45)', iconSize: 28 };
 const CHIP_PINK_BG = '#e8d4d2';
-const CHIP_PINK_TEXT = '#b97f7e';
+const CHIP_PINK_TEXT = '#7d4a49';
 const CHIP_GREEN_BG = '#d6e4da';
-const CHIP_GREEN_TEXT = '#61826c';
-const ACCENT_ROSE = '#a96a64';
+const CHIP_GREEN_TEXT = '#46614f';
+/** 로즈 액센트: 라벨·아이콘·랭크 배지가 크림/카드 위에서 4.5:1을 넘는 어두운 로즈 */
+const ACCENT_ROSE = '#8f544e';
 
 function drawChip(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, bg: string, color: string): number {
 	ctx.save();
@@ -103,7 +106,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	await ensureKoreanFont();
 	const dotColor = STATUS_COLORS[input.status] ?? (input.statusColor.startsWith('#') ? input.statusColor : STATUS_COLORS.online);
 
-	// ── 본문 높이 산출 (티켓은 고정 폭, 콘텐츠에 따라 높이 가변) ──
+	// 본문 높이 산출 (티켓은 고정 폭, 콘텐츠에 따라 높이 가변)
 	const BODY_PAD_X = 40;
 	const contentW = BODY_W - BODY_PAD_X * 2 - 72; // 스텁과 겹치지 않게
 	const avatarR = 46;
@@ -137,7 +140,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	const canvas: Canvas = new Canvas(W, H2);
 	const ctx = canvas.getContext('2d');
 
-	// ── 배경(페이지: 크림 외곽) + 티켓 본문 ──
+	// 배경(페이지: 크림 외곽) + 티켓 본문
 	ctx.fillStyle = '#efeae0';
 	ctx.fillRect(0, 0, W, H2);
 
@@ -160,7 +163,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.fillStyle = stubGrad;
 	ctx.fillRect(BODY_W, 0, STUB_W, H2);
 
-	// ── 스텁 내용: MEMBER PASS / ✦ / 세로 대형 @{id} / PERSONAL PROFILE ──
+	// 스텁 내용: MEMBER PASS / ✦ / 세로 대형 @{id} / PERSONAL PROFILE
 	const stubCx = BODY_W + STUB_W / 2;
 	ctx.save();
 	ctx.textAlign = 'center';
@@ -208,19 +211,19 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.textBaseline = 'alphabetic';
 
 	ctx.textAlign = 'center';
-	ctx.fillStyle = 'rgba(79, 106, 88, 0.75)';
+	ctx.fillStyle = SAGE_LABEL;
 	ctx.font = '600 15px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
 	ctx.fillText('PERSONAL PROFILE', stubCx, H2 - 40);
 	ctx.restore();
 
-	// ── 절취선 ──
+	// 절취선
 	drawPerforation(ctx, BODY_W, H2);
 
-	// ── 본문: {ID} / MEMBER PASS 헤더 + 구분선 ──
+	// 본문: {ID} / MEMBER PASS 헤더 + 구분선
 	ctx.save();
 	ctx.textAlign = 'left';
 	ctx.font = '600 17px "Pretendard JP", "Twemoji Mozilla", ui-sans-serif, sans-serif';
-	ctx.fillStyle = 'rgba(169, 106, 100, 0.55)';
+	ctx.fillStyle = ACCENT_ROSE;
 	ctx.fillText(`${input.profileId.toUpperCase()} / MEMBER PASS`, PAD, 36);
 	ctx.strokeStyle = 'rgba(63, 58, 53, 0.14)';
 	ctx.lineWidth = 1.5;
@@ -230,7 +233,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.stroke();
 	ctx.restore();
 
-	// ── 아바타 ──
+	// 아바타
 	const avatarCy = nameBase - 34;
 	ctx.save();
 	ctx.beginPath();
@@ -244,7 +247,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 		else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR, AVATAR_FALLBACK);
 	} else drawAvatarFallback(ctx, avatarCx, avatarCy, avatarR, AVATAR_FALLBACK);
 
-	// ── 이름/핸들/서버태그/온라인 ──
+	// 이름/핸들/서버태그/온라인
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 	ctx.fillStyle = INK;
@@ -277,13 +280,13 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.arc(nameX + 26, statusY - 2, 5.5, 0, Math.PI * 2);
 	ctx.fillStyle = dotColor;
 	ctx.fill();
-	ctx.fillStyle = SAGE_MID;
+	ctx.fillStyle = SAGE_DEEP;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.fillText(input.onlineLabel, nameX + stW / 2 + 8, statusY - 1);
 	ctx.restore();
 
-	// ── 역할 캡슐 ──
+	// 역할 캡슐
 	if (hasChips) {
 		let chipX = PAD;
 		ctx.save();
@@ -300,14 +303,14 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 		}
 	}
 
-	// ── 소개 ──
+	// 소개
 	if (hasIntro) {
 		ctx.fillStyle = 'rgba(63, 58, 53, 0.86)';
 		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, input.intro.trim(), contentW), PAD, introBase);
 	}
 
-	// ── 구분선 + 두 날짜 ──
+	// 구분선 + 두 날짜
 	const sepY = statsTop - 44;
 	ctx.strokeStyle = 'rgba(63, 58, 53, 0.12)';
 	ctx.lineWidth = 1.5;
@@ -317,7 +320,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.stroke();
 
 	const colSplit = PAD + contentW * 0.44;
-	drawDateColumn(ctx, '디스코드 가입', input.createdText, PAD, statsTop, '#a96a64');
+	drawDateColumn(ctx, '디스코드 가입', input.createdText, PAD, statsTop, ACCENT_ROSE);
 	// 세로 미세 구분선
 	ctx.save();
 	ctx.strokeStyle = 'rgba(63, 58, 53, 0.12)';
@@ -326,9 +329,9 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 	ctx.lineTo(colSplit, statsTop + 66);
 	ctx.stroke();
 	ctx.restore();
-	drawDateColumn(ctx, '서버 합류', input.joinedText, colSplit + 36, statsTop, '#a96a64');
+	drawDateColumn(ctx, '서버 합류', input.joinedText, colSplit + 36, statsTop, ACCENT_ROSE);
 
-	// ── 미니 스탯 (2열 그리드, 라이트 카드) ──
+	// 미니 스탯 (2열 그리드, 라이트 카드)
 	if (hasStats) {
 		const stats = input.stats ?? [];
 		const stW2 = (BODY_W - PAD * 2 - 72 - 16) / 2;
@@ -345,7 +348,7 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 			ctx.strokeStyle = 'rgba(63, 58, 53, 0.10)';
 			ctx.lineWidth = 1.2;
 			ctx.stroke();
-			drawIcon(ctx, stats[i].icon, sx + 16, sy + 13, 17, '#a96a64');
+			drawIcon(ctx, stats[i].icon, sx + 16, sy + 13, 17, ACCENT_ROSE);
 			ctx.fillStyle = INK_MUTED;
 			ctx.font = '500 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 			ctx.textAlign = 'left';
@@ -357,16 +360,16 @@ export async function renderProfileCardTicket(input: ProfileCardTicketInput): Pr
 		}
 	}
 
-	// ── 음악 섹션 (지금 재생 중 + 자주 신청한 곡 — 라이트 톤 팔레트로 로컬 조정) ──
+	// 음악 섹션 (지금 재생 중 + 자주 신청한 곡, 라이트 톤 팔레트로 로컬 조정)
 	if (input.topTracks.length > 0 || input.nowPlaying) {
 		await drawMusicSection(ctx, input.topTracks, input.nowPlaying ?? null, LIGHT_MUSIC_PAL, PAD, musicTop, contentW);
 	}
 
-	// ── 하단: {id} / profile ──
+	// 하단: {id} / profile
 	ctx.save();
 	ctx.textAlign = 'left';
 	ctx.font = '500 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillStyle = 'rgba(169, 106, 100, 0.8)';
+	ctx.fillStyle = ACCENT_ROSE;
 	ctx.fillText(`${input.profileId} / profile`, PAD, H2 - 22);
 	ctx.restore();
 
@@ -383,7 +386,7 @@ const LIGHT_MUSIC_PAL = {
 	chip: CHIP_GREEN_BG,
 	chipText: CHIP_GREEN_TEXT,
 	text: INK,
-	textMuted: 'rgba(63, 58, 53, 0.62)',
+	textMuted: INK_MUTED,
 	textFaint: 'rgba(63, 58, 53, 0.5)',
 	accent: ACCENT_ROSE,
 	online: '#2f9e5f',

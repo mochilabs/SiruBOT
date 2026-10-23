@@ -36,12 +36,16 @@ export function lastGoodDaily(): DailyHoroscope | null {
 async function refreshOnce(provider: TranslationProvider | null): Promise<DailyHoroscope> {
 	const raw = await fetchOhaasaRaw();
 	const key = ohaasaCacheKey(raw.date);
+	// 세 갱신 경로(원문·번역·폴백)가 같은 규칙으로 마지막 기록과 Redis 캐시를 함께 남겨요.
+	const commit = async (daily: DailyHoroscope, source: string): Promise<void> => {
+		lastGood = daily;
+		lastRefreshAt = Date.now();
+		lastSource = source;
+		await sharedCache.set(key, JSON.stringify(daily), REDIS_TTL_SECONDS);
+	};
 
 	if (!provider || !provider.available) {
-		lastGood = raw;
-		lastRefreshAt = Date.now();
-		lastSource = 'raw';
-		await sharedCache.set(key, JSON.stringify(raw), REDIS_TTL_SECONDS);
+		await commit(raw, 'raw');
 		return raw;
 	}
 
@@ -51,18 +55,12 @@ async function refreshOnce(provider: TranslationProvider | null): Promise<DailyH
 
 	try {
 		const daily = await translateDaily(raw, provider);
-		lastGood = daily;
-		lastRefreshAt = Date.now();
-		lastSource = 'translated';
-		await sharedCache.set(key, JSON.stringify(daily), REDIS_TTL_SECONDS);
+		await commit(daily, 'translated');
 		logger.info(`ohaasa refreshed: ${daily.date} (translated)`);
 		return daily;
 	} catch (error) {
 		logger.warn('ohaasa translation failed, serving raw:', String(error));
-		lastGood = raw;
-		lastRefreshAt = Date.now();
-		lastSource = 'raw-fallback';
-		await sharedCache.set(key, JSON.stringify(raw), REDIS_TTL_SECONDS);
+		await commit(raw, 'raw-fallback');
 		return raw;
 	}
 }

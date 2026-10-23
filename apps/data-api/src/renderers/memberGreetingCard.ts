@@ -39,6 +39,11 @@ export class GreetingBackgroundError extends Error {
 	}
 }
 
+/** 업로드 이미지 디코딩 실패: 라우트가 그대로 400으로 내려요 */
+const INVALID_IMAGE_MESSAGE = '이미지를 읽을 수 없어요. PNG·JPEG·WEBP 파일로 다시 시도해 주세요.';
+/** 바이트 상한을 낮춰도 못 줄인 입력: 더 작은 이미지를 요구해요 */
+const IMAGE_TOO_LARGE_MESSAGE = '이미지를 충분히 줄일 수 없어요. 더 작은 이미지로 시도해 주세요.';
+
 /** dataURI에서 base64 본문만 떼어 Buffer로 — 손상 입력은 null (호출자가 폴백해요) */
 export function decodeDataUri(dataUri: string): Buffer | null {
 	const comma = dataUri.indexOf(',');
@@ -240,7 +245,7 @@ function drawShapeLayer(ctx: CanvasRenderingContext2D, layer: GreetingShapeLayer
 	ctx.restore();
 }
 
-// ── 업로드 이미지 정규화 — 대시보드 업로드를 저장 규격으로 맞춰요 ──
+// 업로드 이미지 정규화: 대시보드 업로드를 저장 규격으로 맞춰요
 // dataURI를 Prisma Json 컬럼에 통째로 저장하는 관계로, 저장 비용 상한이 필요해요.
 // 문자 길이가 아니라 재인코딩 결과 바이너리 기준으로 판정해요.
 // 배경(1600px·JPEG)과 레이어(1200px·PNG)는 상수·포맷만 달라요.
@@ -260,8 +265,8 @@ interface NormalizeUploadedImageOptions {
 }
 
 /**
- * 업로드 이미지 축소·재인코딩 공용 파이프라인 — decode → load → 첫 축소 →
- * 재인코딩 결과가 상한을 넘으면 가장 긴 변을 200px씩 더 줄여요.
+ * 업로드 이미지 축소·재인코딩 공용 파이프라인: decode → load → 첫 축소 →
+ * 재인코딩 결과가 IMAGE_MAX_BYTES를 넘으면 가장 긴 변을 IMAGE_STEP_PX씩 더 줄여요.
  * 리턴은 data:image/jpeg;base64,… (배경) 또는 data:image/png;base64,… (레이어).
  */
 async function normalizeUploadedImage(
@@ -271,19 +276,19 @@ async function normalizeUploadedImage(
 ): Promise<string> {
 	const raw = decodeDataUri(dataUri);
 	if (!raw) {
-		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
+		throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
 	}
 	const { Canvas, loadImage } = await import('skia-canvas');
 	let source: CanvasDrawable;
 	try {
 		source = (await loadImage(raw)) as unknown as CanvasDrawable;
 	} catch {
-		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
+		throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
 	}
 	const iw = (source as { width: number }).width;
 	const ih = (source as { height: number }).height;
 	if (!iw || !ih) {
-		throw new GreetingBackgroundError('invalid_image', '이미지를 읽을 수 없어요 — PNG·JPEG·WEBP 파일로 다시 시도해 주세요.');
+		throw new GreetingBackgroundError('invalid_image', INVALID_IMAGE_MESSAGE);
 	}
 
 	// 첫 목표 — 가장 긴 변 maxSide 이하
@@ -301,24 +306,23 @@ async function normalizeUploadedImage(
 		const longest = Math.max(w, h);
 		const nextLongest = longest - IMAGE_STEP_PX;
 		if (nextLongest < options.minSide) {
-			throw new GreetingBackgroundError('image_too_large', '이미지를 충분히 줄일 수 없어요 — 더 작은 이미지로 시도해 주세요.');
+			throw new GreetingBackgroundError('image_too_large', IMAGE_TOO_LARGE_MESSAGE);
 		}
 		scale = scale * (nextLongest / longest);
 	}
 }
 
 /**
- * 업로드 배경 축소·재인코딩 — 가장 긴 변 1600px, JPEG q0.82, 900KB 넘으면 200px씩 더 줄여요.
- * 리턴은 data:image/jpeg;base64,…
+ * 업로드 배경 축소·재인코딩: 가장 긴 변 BG_MAX_SIDE, JPEG 품질 BG_QUALITY를 써요.
+ * IMAGE_MAX_BYTES를 넘으면 IMAGE_STEP_PX씩 더 줄여요. 리턴은 data:image/jpeg;base64,…
  */
 export async function normalizeGreetingBackground(dataUri: string): Promise<string> {
 	return normalizeUploadedImage(dataUri, { maxSide: BG_MAX_SIDE, minSide: BG_MIN_SIDE }, { format: 'jpeg', quality: BG_QUALITY });
 }
 
 /**
- * 업로드 이미지 레이어 축소·재인코딩 — 투명도를 보존하기 위해 PNG로 저장해요.
- * 가장 긴 변 1200px, PNG 인코딩 900KB 넘으면 200px씩 더 줄여요.
- * 리턴은 data:image/png;base64,…
+ * 업로드 이미지 레이어 축소·재인코딩: 투명도를 보존하기 위해 PNG로 저장해요.
+ * 가장 긴 변 LAYER_MAX_SIDE, IMAGE_MAX_BYTES를 넘으면 IMAGE_STEP_PX씩 더 줄여요. 리턴은 data:image/png;base64,…
  */
 export async function normalizeGreetingLayerImage(dataUri: string): Promise<string> {
 	return normalizeUploadedImage(dataUri, { maxSide: LAYER_MAX_SIDE, minSide: LAYER_MIN_SIDE }, { format: 'png' });

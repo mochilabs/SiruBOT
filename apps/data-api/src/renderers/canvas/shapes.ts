@@ -1,5 +1,5 @@
 /**
- * 카드 도형·텍스트 유틸 — 측정/생략, 시드 난수, 색 보간, 원형 이미지 클립.
+ * 카드 도형·텍스트 유틸: 측정/생략, 시드 난수, 색 변환(hexToRgba 재수출), 원형 이미지 클립.
  */
 import type { CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 
