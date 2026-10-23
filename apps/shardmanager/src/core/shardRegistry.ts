@@ -1,14 +1,14 @@
 import type { WebSocket } from '@fastify/websocket';
 import { getLogger } from '../utils/logger.ts';
-import type { WsMessage, ShardStatus, ShardStatsPayload } from '@sirubot/shardclient/ws-types';
+import type { ShardStatus, ShardStatsPayload } from '@sirubot/shardclient/ws-types';
 import type { DiscordNotifier } from '../utils/discordNotifier.ts';
 
 const logger = getLogger('shardRegistry');
 
-const HEARTBEAT_TIMEOUT_MS = 60_000;
+export const HEARTBEAT_TIMEOUT_MS = 60_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 
-// ws readyState 값 — 2(CLOSING)/3(CLOSED)는 이미 끊긴 소켓이에요
+/** ws readyState 값: 2(CLOSING)/3(CLOSED)는 이미 끊긴 소켓이에요 */
 const WS_CLOSING = 2;
 const WS_CLOSED = 3;
 
@@ -41,9 +41,6 @@ export class ShardRegistry {
 		this.startHeartbeatMonitor();
 	}
 
-	/**
-	 * Allocate the next available batch of shard IDs
-	 */
 	public allocateShardIds(): number[] | null {
 		const available: number[] = [];
 
@@ -68,11 +65,11 @@ export class ShardRegistry {
 	}
 
 	/**
-	 * Re-identification용 샤드 ID claim — 요청 전체를 검증하고, 하나라도 잘못되면 null을 돌려줘요.
+	 * Re-identification용 샤드 ID claim: 요청 전체를 검증하고, 하나라도 잘못되면 null을 돌려줘요.
 	 * - 각 ID는 [0, shardCount) 안의 정수여야 하고 중복이면 안 돼요
 	 * - 살아있는 다른 프로세스가 점유 중인 ID는 거부해요 (샤드 이중 점유/탈취 방지)
 	 * - 점유 주인의 소켓이 이미 끊긴 경우(재연결 레이스)에는 이전 등록에서 떼어와 새 주인에게 넘겨요
-	 * 할당 집합(allocatedShards)에만 남은 유실 ID는 재사용해요 — 이전 버전의 할당 누수를 스스로 치유해요.
+	 * 할당 집합(allocatedShards)에만 남은 유실 ID는 재사용해요. 이전 버전의 할당 누수를 스스로 치유해요.
 	 */
 	public claimShards(wsId: string, requested: number[]): number[] | null {
 		const claimed: number[] = [];
@@ -87,7 +84,7 @@ export class ShardRegistry {
 			if (owner && owner.wsId !== wsId) {
 				const readyState = owner.info.wsConnection.readyState;
 				if (readyState !== WS_CLOSING && readyState !== WS_CLOSED) return null;
-				// 끊긴 소켓의 잔여 등록 — 이후 release가 이 ID를 다시 해제하지 않도록 떼어내요
+				// 끊긴 소켓의 잔여 등록: 이후 release가 이 ID를 다시 해제하지 않도록 떼어내요
 				owner.info.shardIds = owner.info.shardIds.filter((id) => id !== shardId);
 				logger.info(`Shard ${shardId} reclaimed from disconnected process ${owner.wsId}`);
 			}
@@ -108,9 +105,6 @@ export class ShardRegistry {
 		return null;
 	}
 
-	/**
-	 * Register a new process connection
-	 */
 	public register(wsId: string, shardIds: number[], ws: WebSocket, hostname?: string): void {
 		this.processes.set(wsId, {
 			shardIds,
@@ -128,16 +122,10 @@ export class ShardRegistry {
 		logger.info(`Registered process ${wsId}${hostname ? ` (${hostname})` : ''} with shards [${shardIds.join(', ')}]`);
 	}
 
-	/**
-	 * Get process info by wsId
-	 */
 	public getProcess(wsId: string): ShardProcessInfo | undefined {
 		return this.processes.get(wsId);
 	}
 
-	/**
-	 * Release shards when a process disconnects
-	 */
 	public release(wsId: string): number[] | undefined {
 		const process = this.processes.get(wsId);
 		if (!process) return undefined;
@@ -154,9 +142,6 @@ export class ShardRegistry {
 		return released;
 	}
 
-	/**
-	 * Update heartbeat timestamp
-	 */
 	public heartbeat(wsId: string): void {
 		const process = this.processes.get(wsId);
 		if (process) {
@@ -164,9 +149,6 @@ export class ShardRegistry {
 		}
 	}
 
-	/**
-	 * Update process status
-	 */
 	public updateStatus(wsId: string, status: ShardStatus): void {
 		const process = this.processes.get(wsId);
 		if (process) {
@@ -192,9 +174,6 @@ export class ShardRegistry {
 		this.previouslyAllReady = isAllReady;
 	}
 
-	/**
-	 * Update process stats
-	 */
 	public updateStats(wsId: string, stats: ShardStatsPayload): void {
 		const process = this.processes.get(wsId);
 		if (process) {
@@ -205,9 +184,7 @@ export class ShardRegistry {
 		}
 	}
 
-	/**
-	 * Get all process infos (without ws connections)
-	 */
+	/** 반환에서 wsConnection은 제외해요. */
 	public getAllProcesses(): Array<Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }> {
 		return Array.from(this.processes.entries()).map(([wsId, info]) => {
 			const { wsConnection, ...rest } = info;
@@ -215,9 +192,6 @@ export class ShardRegistry {
 		});
 	}
 
-	/**
-	 * Get a specific shard's process info
-	 */
 	public getProcessByShardId(shardId: number): (Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }) | null {
 		for (const [wsId, info] of this.processes.entries()) {
 			if (info.shardIds.includes(shardId)) {
@@ -228,23 +202,6 @@ export class ShardRegistry {
 		return null;
 	}
 
-	/**
-	 * Send a message to all connected processes
-	 */
-	public broadcast<T>(message: WsMessage<T>): void {
-		const payload = JSON.stringify(message);
-		for (const process of this.processes.values()) {
-			try {
-				process.wsConnection.send(payload);
-			} catch (error) {
-				logger.error('Failed to broadcast:', error);
-			}
-		}
-	}
-
-	/**
-	 * Get aggregate stats
-	 */
 	public getAggregateStats() {
 		let totalGuilds = 0;
 		let totalPlayers = 0;
@@ -275,9 +232,6 @@ export class ShardRegistry {
 		return this.shardsPerProcess;
 	}
 
-	/**
-	 * Monitor heartbeats and mark dead processes
-	 */
 	private startHeartbeatMonitor(): void {
 		this.heartbeatTimer = setInterval(() => {
 			const now = Date.now();
@@ -289,7 +243,7 @@ export class ShardRegistry {
 					try {
 						process.wsConnection.close();
 					} catch {
-						// ignore
+						// 이미 끊긴 소켓 close 실패는 무해해요
 					}
 					this.release(wsId);
 				}

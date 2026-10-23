@@ -199,7 +199,7 @@ describe('ChzzkPoller transitions', () => {
 			await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(tick));
 			poller.stop();
 		}
-		// 6번째 틱 — 브레이커가 열려 있으면 폴링 자체를 건너뛰어요.
+		// 6번째 틱: 브레이커가 열려 있으면 폴링 자체를 건너뛰어요.
 		poller.start();
 		await settle();
 		poller.stop();

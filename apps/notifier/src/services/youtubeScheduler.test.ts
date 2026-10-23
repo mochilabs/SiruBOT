@@ -101,7 +101,7 @@ describe('YouTubeScheduler.pollOnce', () => {
 			hubSecret: 'hub-secret'
 		});
 		// 남은 lease가 갱신 임계(24h)보다 넉넉하면 hub 재등록 없이 RSS 감사만 돌아요.
-		await scheduler.pollOnce(db, NOW); // 1회 — lease 기록
+		await scheduler.pollOnce(db, NOW); // 1회: lease 기록
 		const hubCalls = fetchFn.mock.calls.filter(([url]) => String(url).includes('pubsubhubbub')).length;
 		await scheduler.pollOnce(db, NOW);
 		expect(fetchFn.mock.calls.filter(([url]) => String(url).includes('pubsubhubbub'))).toHaveLength(hubCalls);

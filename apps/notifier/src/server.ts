@@ -24,7 +24,7 @@ export async function buildServer(
 		redis: NotifierRedis;
 	}
 ) {
-	// 로거는 app-kit 로거가 소유해요 — Fastify의 구조화 로거는 끄고, 라우트 에러는 모듈 로거(getLogger)로 남겨요
+	// 로거는 app-kit 로거가 소유해요. Fastify의 구조화 로거는 끄고, 라우트 에러는 모듈 로거(getLogger)로 남겨요
 	// (logger:false일 때 reply.log는 no-op이라 유실됨).
 	const fastify = Fastify({
 		logger: false,
@@ -33,19 +33,19 @@ export async function buildServer(
 	fastify.addHook('onSend', async (request, reply) => {
 		reply.header('x-request-id', request.id);
 	});
-	// 공용 에러 계약 — 라우트가 미처 처리하지 못한 층만 수거해요. social 라우트의 sendError 개별 매핑은 그대로 써요.
+	// 공용 에러 계약: 라우트가 미처 처리하지 못한 층만 수거해요. social 라우트의 sendError 개별 매핑은 그대로 써요.
 	registerAppErrorHandler(fastify, { logger: getLogger('server'), onServerError: captureSentryException });
-	// WebSub/EventSub 콜백은 XML 본문으로 오므로 raw string으로 받아요 — HMAC 서명 검증에 원문이 필요해요.
+	// WebSub/EventSub 콜백은 XML 본문으로 오므로 raw string으로 받아요. HMAC 서명 검증에 원문이 필요해요.
 	fastify.addContentTypeParser(['application/atom+xml', 'application/xml', 'text/xml'], { parseAs: 'string' }, (_request, body, done) =>
 		done(null, body)
 	);
 
 	const guard = requireAuth(env.notifierAuthKey!);
 	await health(fastify);
-	// 공개 콜백 (무인증) — challenge echo·HMAC 검증이 인증을 대신해요.
+	// 공개 콜백 (무인증): challenge echo·HMAC 검증이 인증을 대신해요.
 	await pubsubRoutes(fastify, { dispatcher: services.dispatcher, hubSecret: env.YOUTUBE_HUB_SECRET ?? '' });
 	await eventsubRoutes(fastify, { dispatcher: services.dispatcher, secret: env.TWITCH_EVENTSUB_SECRET ?? '' });
-	// 보호 라우트 — guard(키 원문)가 인증을 담당해요.
+	// 보호 라우트: guard(키 원문)가 인증을 담당해요.
 	await subscriptionRoutes(fastify, {
 		guard,
 		getDb: services.getDb,

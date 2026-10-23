@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from './config/env.ts';
 import { buildServer } from './server.ts';
 
-// 공용 에러 계약 스모크 — buildServer가 등록한 errorHandler·auth 401·notFound shape를 잠가요.
+// 공용 에러 계약 스모크: buildServer가 등록한 errorHandler·auth 401·notFound shape를 잠가요.
 
 let dir: string;
 let fastify: Awaited<ReturnType<typeof buildServer>>['fastify'];
@@ -37,6 +37,12 @@ describe('storage error contract', () => {
 		const res = await fastify.inject({ method: 'PUT', url: '/single-segment' });
 		expect(res.statusCode).toBe(404);
 		expect(res.json()).toEqual({ error: 'not_found', message: '요청한 리소스를 찾을 수 없어요.' });
+	});
+
+	it('모든 응답에 x-request-id 헤더를 실어요', async () => {
+		const res = await fastify.inject({ method: 'GET', url: '/health' });
+		expect(typeof res.headers['x-request-id']).toBe('string');
+		expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/i);
 	});
 
 	it('라우트 레벨 개별 400 매핑은 그대로 유지돼요', async () => {

@@ -6,17 +6,17 @@ import { getLogger } from '../utils/logger.ts';
 
 const logger = getLogger('twitchScheduler');
 
-const TICK_MS = 60 * 60 * 1000; // 1시간 — 구독 수명이 약 10일이라 여유 있게 점검해요.
+const TICK_MS = 60 * 60 * 1000; // 1시간: 구독 수명이 약 10일이라 여유 있게 점검해요.
 const LOCK_KEY = 'sirubot:social:twitch:scheduler-lock';
-const LOCK_TTL_SECONDS = 3_000; // 틱(1h)보다 살짝 짧게 — 매 틱이 락을 다시 얻어요.
+const LOCK_TTL_SECONDS = 3_000; // 틱(1h)보다 살짝 짧게: 매 틱이 락을 다시 얻어요.
 const STATE_KEY_PREFIX = 'sirubot:social:twitch:sub:';
 
-/** 브로드캐스터별 EventSub 구독 상태 키 — social 라우트의 DELETE 정리 경로와 공유해요. */
+/** 브로드캐스터별 EventSub 구독 상태 키: social 라우트의 DELETE 정리 경로와 공유해요. */
 export function twitchSubscriptionStateKey(broadcasterId: string): string {
 	return `${STATE_KEY_PREFIX}${broadcasterId}`;
 }
 const STATE_TTL_SECONDS = 12 * 24 * 60 * 60;
-// 구독 수명 약 10일 — 8일이 지나면 새 구독을 만들어 교체해요 (구형은 만료되면 저절로 사라져요).
+// 구독 수명 약 10일: 8일이 지나면 새 구독을 만들어 교체해요 (구형은 만료되면 저절로 사라져요).
 const RENEWAL_AGE_MS = 8 * 24 * 60 * 60 * 1000;
 
 interface SubscriptionState {
@@ -24,7 +24,7 @@ interface SubscriptionState {
 	createdAt: number;
 }
 
-/** 트위치 EventSub 구독 갱신 워커 — stream.online 구독이 약 10일마다 만료되므로 8일 시점에 새로 등록해요. */
+/** 트위치 EventSub 구독 갱신 워커: stream.online 구독이 약 10일마다 만료되므로 8일 시점에 새로 등록해요. */
 export class TwitchScheduler extends SubscriptionPoller {
 	private readonly client: TwitchApiClient;
 	private readonly callbackUrl: string;
@@ -45,7 +45,7 @@ export class TwitchScheduler extends SubscriptionPoller {
 			lockTtlSeconds: LOCK_TTL_SECONDS,
 			logger,
 			startMessage: '트위치 스케줄러를 시작해요.',
-			breakerOpenMessage: `트위치 구독 동기화가 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`
+			breakerOpenMessage: `트위치 구독 동기화가 ${BREAKER_THRESHOLD}틱 연속 실패: 30분간 봉쇄해요.`
 		});
 		this.client = options.client;
 		this.callbackUrl = options.callbackUrl;
@@ -58,7 +58,7 @@ export class TwitchScheduler extends SubscriptionPoller {
 			rows = await db.socialSubscription.findMany({ where: { platform: 'twitch', status: 'active' }, select: { sourcePlatformId: true } });
 		} catch (error) {
 			// DB 오류를 빈 목록으로 삼키면 브레이커 계정에서 빠져 장애가 조용히 이어져요.
-			logger.error('트위치 구독 목록 조회 실패 — 이번 틱은 실패로 기록해요:', String(error));
+			logger.error('트위치 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:', String(error));
 			return 'failed';
 		}
 		const broadcasterIds = [...new Set(rows.map((row) => row.sourcePlatformId))];

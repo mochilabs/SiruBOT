@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WebSocket } from '@fastify/websocket';
-import { ShardRegistry } from './shardRegistry.ts';
+import { ShardRegistry, HEARTBEAT_TIMEOUT_MS } from './shardRegistry.ts';
 import type { DiscordNotifier } from '../utils/discordNotifier.ts';
-
-const HEARTBEAT_TIMEOUT_MS = 60_000;
 
 function createNotifierStub() {
 	return {
@@ -125,7 +123,7 @@ describe('ShardRegistry', () => {
 		it('reclaims shards from a disconnected process without double-release', () => {
 			const registry = makeRegistry(4, 2);
 			const first = registry.allocateShardIds()!;
-			registry.register('ws-a', first, fakeSocket(3), 'host-a'); // CLOSED 소켓 — close 이벤트가 아직 안 온 상태
+			registry.register('ws-a', first, fakeSocket(3), 'host-a'); // CLOSED 소켓: close 이벤트가 아직 안 온 상태
 
 			expect(registry.claimShards('ws-b', first)).toEqual(first);
 			// 이전 주인의 release가 이미 넘어간 ID를 다시 해제하면 안 돼요

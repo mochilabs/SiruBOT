@@ -11,14 +11,14 @@ export class NotifierRedis {
 
 	public async connect(url: string | undefined): Promise<void> {
 		if (!url) {
-			logger.warn('REDIS_URL이 없어요 — 메모리 폴백으로 동작해요 (단일 인스턴스만 지원).');
+			logger.warn('REDIS_URL이 없어요. 메모리 폴백으로 동작해요 (단일 인스턴스만 지원).');
 			return;
 		}
 		try {
 			const client = createClient({ url });
 			client.on('error', (error) => logger.error('redis 오류, 메모리 폴백으로 전환:', String(error)));
 			this.client = client;
-			// 최초 연결은 백그라운드로 돌아가요 — Redis가 notifier보다 늦게 떠도 부팅을 막지 않아요.
+			// 최초 연결은 백그라운드로 돌아가요. Redis가 notifier보다 늦게 떠도 부팅을 막지 않아요.
 			logger.info('Redis 백그라운드 연결 중 (준비 전까지 메모리 폴백)');
 			void client.connect().catch((error) => {
 				logger.warn('Redis 연결 실패, 메모리 폴백 유지:', String(error));
@@ -54,7 +54,7 @@ export class NotifierRedis {
 	}
 
 	public async get(key: string): Promise<string | null> {
-		// isReady 기준 가드 — 연결 도중(isOpen만 true)에 명령을 내면 오프라인 큐에서 영원히 대기하므로, 준비 전엔 메모리 폴백으로 처리해요.
+		// isReady 기준 가드: 연결 도중(isOpen만 true)에 명령을 내면 오프라인 큐에서 영원히 대기하므로, 준비 전엔 메모리 폴백으로 처리해요.
 		if (this.client?.isReady) {
 			try {
 				return await this.client.get(key);
@@ -119,7 +119,7 @@ export class NotifierRedis {
 		return next;
 	}
 
-	/** 분산 락 (폴러 다중 인스턴스 방지). Redis 없으면 항상 획득 성공 — 단일 인스턴스 가정. */
+	/** 분산 락 (폴러 다중 인스턴스 방지). Redis 없으면 항상 획득 성공: 단일 인스턴스 가정. */
 	public async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
 		if (this.client?.isReady) {
 			try {
