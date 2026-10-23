@@ -1,10 +1,11 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../utils/ohaasaService.ts';
+import { textContainer } from '../utils/textContainer.ts';
 import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
 
 function formatDate(raw: string): string {
@@ -124,20 +125,16 @@ export class OhaasaCommand extends Command {
 			}
 		}
 
-		// 본문: 제목·날짜·별자리·순위·운세 설명·럭키 정보·출처/번역 안내 — 복사하기 쉬운 텍스트예요.
 		let target: HoroscopeData | null = null;
 		if (targetZodiacCode) {
 			target = this.resolveTarget(daily, targetZodiacCode);
 		}
 
-		// 본문 라인: 별자리 지정이면 단일 운세, 아니면 TOP 3 요약이에요.
-		const container = createContainer();
 		const lines = target ? buildSingleLines(daily, target) : buildTopLines(daily);
 		if (autoNote) lines.push('', autoNote);
-		container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 
 		await interaction.editReply({
-			components: [container],
+			components: [textContainer(lines)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

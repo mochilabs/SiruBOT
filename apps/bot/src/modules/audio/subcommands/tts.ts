@@ -40,6 +40,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		});
 	}
 
+	// setMaxLength(200)로 길이가 제한되지만, 방어로 한 번 더 검증한다.
 	if (text.length > MAX_TEXT_LENGTH) {
 		throw new UserError({
 			identifier: 'tts_text_too_long',

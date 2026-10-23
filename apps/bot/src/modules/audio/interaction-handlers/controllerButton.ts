@@ -380,7 +380,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		player.queueSelectedIndex = null;
 
-		// Adjust page if needed
 		const remaining = getUserQueuedTracks(player);
 		const newTotalPages = Math.max(1, Math.ceil(remaining.length / QUEUE_PAGE_SIZE));
 		if (currentPage > newTotalPages) {
@@ -414,7 +413,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			return;
 		}
 
-		// Skip to the specified position (remove tracks before it and play it)
 		// 새 곡의 trackStart가 컨트롤러를 새로 보내므로 컨트롤러 edit는 생략하고,
 		// 대기열 목록(ephemeral) 메시지만 새로고침한다.
 		await interaction.deferUpdate();

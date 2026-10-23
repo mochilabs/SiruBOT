@@ -9,10 +9,10 @@ const { db, redisStore } = vi.hoisted(() => ({
 }));
 
 vi.mock('@sapphire/framework', () => ({ container: { db, redisStore } }));
-// 이모지 매핑은 스토어 로드 후에야 채워진다 — 뱃지 판정 테스트는 이름만 보게 한다
+// 이모지 매핑은 스토어 로드 후에야 채워진다. 뱃지 판정 테스트는 이름만 보게 한다
 vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => name }));
 
-import { doCheckin, getCheckinState, getRpsStats, streakBadge } from './gameRecords.ts';
+import { doCheckin, getCheckinState, getGuessBest, getRpsStats, streakBadge } from './gameRecords.ts';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -29,7 +29,7 @@ afterEach(() => {
 
 describe('getRpsStats (연승·최고 연승 집계)', () => {
 	it('최근 기록 순서대로 승패무를 집계하고 맨 앞 연승을 스티reak로 본다', async () => {
-		// 최신 기록이 앞 — [최신 … 과거]
+		// 최신 기록이 앞: [최신 … 과거]
 		db.gameRecord.findMany.mockResolvedValue([
 			{ result: 'win' },
 			{ result: 'win' },
@@ -115,5 +115,31 @@ describe('getCheckinState / streakBadge', () => {
 		expect(streakBadge(30)).toBe('flash');
 		expect(streakBadge(100)).toBe('crown');
 		expect(streakBadge(365)).toBe('gem');
+	});
+});
+
+describe('getGuessBest (숫자맞히기 개인 최고 기록)', () => {
+	it('여러 기록 중 시도 횟수 최솟값을 고른다', async () => {
+		db.gameRecord.findMany.mockResolvedValue([{ meta: { attempts: 5 } }, { meta: { attempts: 2 } }, { meta: { attempts: 9 } }]);
+
+		await expect(getGuessBest('u1')).resolves.toBe(2);
+	});
+
+	it('깨진 meta(0 이하·정수 아님·형식 불일치)는 걸러내고 유효값만 본다', async () => {
+		db.gameRecord.findMany.mockResolvedValue([
+			{ meta: { attempts: 0 } },
+			{ meta: { attempts: 1.5 } },
+			{ meta: { attempts: '3' } },
+			{ meta: null },
+			{ meta: { attempts: 4 } }
+		]);
+
+		await expect(getGuessBest('u1')).resolves.toBe(4);
+	});
+
+	it('유효한 기록이 없으면 null을 반환한다', async () => {
+		db.gameRecord.findMany.mockResolvedValue([]);
+
+		await expect(getGuessBest('u1')).resolves.toBeNull();
 	});
 });

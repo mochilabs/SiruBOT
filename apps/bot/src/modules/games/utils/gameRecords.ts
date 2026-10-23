@@ -2,8 +2,8 @@ import { container } from '@sapphire/framework';
 import { Prisma } from '@sirubot/prisma';
 import { emoji } from '@sirubot/utils';
 
-/** 지원하는 게임 ID */
-const GAME_IDS = ['rps', 'guess', 'dice', 'attendance', 'quiz'] as const;
+/** 지원하는 게임 ID (기록을 쓰는 게임만) */
+const GAME_IDS = ['rps', 'guess', 'attendance'] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
 /** 전적 결과 */
@@ -135,7 +135,7 @@ export async function getCheckinState(userId: string): Promise<CheckinState> {
  * 출석 체크. 오늘 이미 했으면 { checkedIn: true }.
  * 연속 출석이면 streak+1, 끊겼으면 1부터.
  * 읽기→쓰기 사이 동시 실행이 중복 streak을 부여할 수 있어 Redis NX 락으로 원자화한다.
- * Redis 없으면 보호 불가 — 기존 동작(락 획득한 것으로 간주)을 유지한다.
+ * Redis 없으면 보호 불가. 기존 동작(락 획득한 것으로 간주)을 유지한다.
  */
 export async function doCheckin(userId: string): Promise<{ checkedIn: boolean; streak: number }> {
 	const today = kstDayKey();
@@ -147,7 +147,7 @@ export async function doCheckin(userId: string): Promise<{ checkedIn: boolean; s
 	const lockKey = `attendance/lock/${userId}/${today}`;
 	const acquired = (await store?.setCacheValueNX(lockKey, '1', 60 * 60 * 24 * 2)) ?? true;
 	if (!acquired) {
-		// 락은 선점됐지만 레코드가 아직 안 보이는 진행 중 구간 — 기록된 streak로 응답
+		// 락은 선점됐지만 레코드가 아직 안 보이는 진행 중 구간. 기록된 streak로 응답
 		const retry = await getCheckinState(userId);
 		return { checkedIn: true, streak: retry.streak };
 	}

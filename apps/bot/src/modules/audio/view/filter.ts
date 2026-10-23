@@ -28,6 +28,12 @@ export const FILTER_PRESETS: FilterPreset[] = [
 
 export const filterPresetEmoji = (preset: FilterPreset) => emoji(preset.appEmojiName, preset.unicode);
 
+// 프리셋 이름→표시 라벨 매핑: 카탈로그에 없는 이름은 원문을 유지한다.
+const presetLabel = (name: string): string => {
+	const preset = FILTER_PRESETS.find((p) => p.name === name);
+	return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
+};
+
 export const filterCustomIdPrefix = 'filter:';
 
 type FilterViewProps = {
@@ -42,12 +48,7 @@ export function filterView({ activeFilters }: FilterViewProps) {
 	statusLines.push(`### ${emoji('spectrum')} 오디오 필터`);
 
 	if (activeFilters.length > 0) {
-		const activeLabels = activeFilters
-			.map((name) => {
-				const preset = FILTER_PRESETS.find((p) => p.name === name);
-				return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
-			})
-			.join(', ');
+		const activeLabels = activeFilters.map(presetLabel).join(', ');
 		statusLines.push(`현재 적용 중: **${activeLabels}**`);
 	} else {
 		statusLines.push(`현재 적용 중인 필터가 없어요.`);
@@ -95,12 +96,7 @@ export function filterApplied({ filters }: { filters: string[] }) {
 		return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('repeat')} 모든 필터를 해제했어요.`));
 	}
 
-	const labels = filters
-		.map((name) => {
-			const preset = FILTER_PRESETS.find((p) => p.name === name);
-			return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
-		})
-		.join(', ');
+	const labels = filters.map(presetLabel).join(', ');
 
 	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('spectrum')} 필터 적용: **${labels}**`));
 }

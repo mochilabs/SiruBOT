@@ -6,6 +6,7 @@ import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
 import { lookupSource } from '../utils/source.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
+import { errorView } from '../../../lib/errorView.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -147,7 +148,7 @@ export class FavoritesCommand extends Command {
 			});
 		} catch (error: unknown) {
 			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
+				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 		}
@@ -210,7 +211,7 @@ export class FavoritesCommand extends Command {
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
+				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
@@ -293,7 +294,7 @@ export class FavoritesCommand extends Command {
 			});
 		} catch (error: unknown) {
 			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${getErrorMessage(error)}`))],
+				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		}
