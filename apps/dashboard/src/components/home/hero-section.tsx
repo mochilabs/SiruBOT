@@ -261,7 +261,7 @@ export function HeroSection() {
 									onClick={() => handleSlideChange(index)}
 									aria-pressed={activeSlide === index}
 									className={cn(
-										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
+										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast pointer-coarse:min-h-11",
 										activeSlide === index
 											? "bg-primary-control text-primary-control-text"
 											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",

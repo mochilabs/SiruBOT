@@ -298,7 +298,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
               <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
                 <ImagePlus className="h-5 w-5" aria-hidden />
                 <span className="text-xs">
-                  배너 없음 — 공개 서버 목록 등에 떠요
+                  배너 없음, 공개 서버 목록 등에 떠요
                 </span>
               </div>
             )}

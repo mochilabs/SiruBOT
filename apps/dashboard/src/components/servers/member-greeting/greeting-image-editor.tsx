@@ -61,7 +61,7 @@ export function GreetingImageEditor({
     image.background.presetId ?? PRESET_BACKGROUNDS[0].id,
   );
 
-  // ── 편집 상태 — imageRef는 patchImage가 동기적으로 갱신해요 (히스토리 커밋이 최신값을 읽기 위함) ──
+  // 편집 상태: imageRef는 patchImage가 동기적으로 갱신해요 (히스토리 커밋이 최신값을 읽기 위함)
   const imageRef = useRef(image);
   useEffect(() => {
     imageRef.current = image;
@@ -75,7 +75,7 @@ export function GreetingImageEditor({
     [config, onPatch],
   );
 
-  // ── 되돌리기/다시실행 — 조작 단위로 commit()이 호출돼 한 단계씩 쌓여요 ──
+  // 되돌리기/다시실행: 조작 단위로 commit()이 호출돼 한 단계씩 쌓여요
   const { canUndo, canRedo, commit, undo, redo } = useGreetingHistory({
     getSnapshot: () => imageRef.current,
     applySnapshot: patchImage,
@@ -95,7 +95,7 @@ export function GreetingImageEditor({
     [image, patchImage],
   );
 
-  // ── 캔버스 드로잉 — 편집 상태가 바뀔 때마다 재그려요 ──
+  // 캔버스 드로잉: 편집 상태가 바뀔 때마다 재그려요
   useEffect(() => {
     if (!active) return;
     const canvas = canvasRef.current;
@@ -113,7 +113,7 @@ export function GreetingImageEditor({
     };
   }, [active, image, selectedId, avatarSrc, guildName]);
 
-  // ── 드래그 이동·리사이즈 (pointer capture + rAF 스로틀) ──
+  // 드래그 이동·리사이즈 (pointer capture + rAF 스로틀)
   const { handlePointerDown, handlePointerMove, endDrag } = useGreetingDrag({
     canvasRef,
     saving,
@@ -124,7 +124,7 @@ export function GreetingImageEditor({
     commit,
   });
 
-  // ── 레이어 조작 — 각 조작이 되돌리기 한 단계(커밋 1회)예요 ──
+  // 레이어 조작: 각 조작이 되돌리기 한 단계(커밋 1회)예요
   const addLayer = useCallback(
     (layer: GreetingLayer) => {
       patchImage({ ...image, layers: [...image.layers, layer] });
@@ -200,7 +200,7 @@ export function GreetingImageEditor({
     [patchImage, commit],
   );
 
-  // ── 배경 — 마지막으로 선택한 프리셋으로 되돌려요 (하드코딩 없이) ──
+  // 배경: 마지막으로 선택한 프리셋으로 되돌려요 (하드코딩 없이)
   const applyPresetBackground = useCallback(
     (presetId: string) => {
       lastPresetRef.current = presetId;
@@ -218,7 +218,7 @@ export function GreetingImageEditor({
     commit();
   }, [image, patchImage, commit]);
 
-  // ── 업로드 (이미지 레이어 / 커스텀 배경) ──
+  // 업로드 (이미지 레이어 / 커스텀 배경)
   const { uploading, backgroundUploading, handleImageUpload, handleBackgroundUpload } =
     useGreetingUpload({ guildId, image, patchImage, commit, addLayer });
 
@@ -226,7 +226,7 @@ export function GreetingImageEditor({
     ? (image.layers.find((layer) => layer.id === selectedId) ?? null)
     : null;
 
-  // ── 키보드 단축키 (되돌리기·다시실행·삭제) ──
+  // 키보드 단축키 (되돌리기·다시실행·삭제)
   useGreetingShortcuts({
     active,
     saving,

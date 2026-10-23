@@ -32,7 +32,7 @@ const COPY = {
 
 export type MixerInfoKind = keyof typeof COPY;
 
-/* ── 그래프 지오메트리 — viewBox 240×56, 막대 32개 ─────────────────────────── */
+/* 그래프 지오메트리: viewBox 240×56, 막대 32개 */
 const GRAPH_W = 240;
 const GRAPH_H = 56;
 const BAR_COUNT = 32;
@@ -79,7 +79,7 @@ function GraphFrame({ children }: { children: React.ReactNode }) {
 
 function GraphLegend({ center, centerTone }: { center: string; centerTone?: boolean }) {
 	return (
-		<div className="mt-1.5 flex items-center justify-between text-2xs font-bold text-muted-foreground">
+		<div className="mt-1.5 flex items-center justify-between text-xs font-bold text-muted-foreground">
 			<span className="flex items-center gap-1">
 				<i className="h-1.5 w-1.5 rounded-full bg-primary-control" aria-hidden />
 				현재 곡
@@ -151,7 +151,7 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 				onClick={() => setOpen((v) => !v)}
 				aria-expanded={open}
 				aria-label={open ? `${copy.title} 설명 닫기` : copy.buttonLabel}
-				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
 			>
 				<Info size={14} aria-hidden />
 			</button>
