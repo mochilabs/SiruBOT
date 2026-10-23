@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { filterYouTubeSuggestions, type YouTubeSuggestion } from './youtube.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { fetch } from 'undici';
+import { filterYouTubeSuggestions, getYouTubeSuggestions, type YouTubeSuggestion } from './youtube.ts';
+
+vi.mock('undici', () => ({ fetch: vi.fn() }));
 
 function suggestion(query: string, relevance?: number[]): YouTubeSuggestion {
-	return { query, type: 4, relevance };
+	return { query, relevance };
 }
 
 describe('filterYouTubeSuggestions', () => {
@@ -25,5 +28,27 @@ describe('filterYouTubeSuggestions', () => {
 
 	it('maxResults로 잘라요', () => {
 		expect(filterYouTubeSuggestions([suggestion('a'), suggestion('b'), suggestion('c')], 2)).toEqual(['a', 'b']);
+	});
+});
+
+describe('getYouTubeSuggestions', () => {
+	it('JSONP 응답에서 쿼리와 추천어를 파싱해요', async () => {
+		const body = 'window.google.ac.h(["레나",[["아이유",4,null,[0.9]],["아이유 노래",4,null,[0.5]]],{"j":"session"}]);';
+		vi.mocked(fetch).mockResolvedValue({ ok: true, text: async () => body } as never);
+
+		const result = await getYouTubeSuggestions('레나');
+
+		expect(result.query).toBe('레나');
+		expect(result.suggestions.map((item) => item.query)).toEqual(['아이유', '아이유 노래']);
+	});
+
+	it('JSONP 형식이 아니면 실패해요', async () => {
+		vi.mocked(fetch).mockResolvedValue({ ok: true, text: async () => '<html>bad</html>' } as never);
+		await expect(getYouTubeSuggestions('x')).rejects.toThrow('Failed to parse suggestions');
+	});
+
+	it('HTTP 응답이 실패면 실패해요', async () => {
+		vi.mocked(fetch).mockResolvedValue({ ok: false, status: 500, statusText: 'ISE' } as never);
+		await expect(getYouTubeSuggestions('x')).rejects.toThrow('Failed to fetch suggestions');
 	});
 });

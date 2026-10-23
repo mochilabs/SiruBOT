@@ -34,7 +34,7 @@ export function parseCountingMessage(content: string): number | null {
 
 /**
  * 카운팅 시도를 판정해요 — 정답은 current + 1이고, 같은 사람이 연속으로 세는 건 막아요 (혼자 도배 방지).
- * 틀리면 0으로 초기화돼요 (reset: true). 판정은 순수하게 유지하고 저장은 봇 서비스가 해요.
+ * 틀리면 0으로 초기화돼요 (reset: true).
  */
 export function evaluateCounting(state: CountingState, attempt: number, userId: string): CountingAttemptResult {
 	if (attempt === state.current + 1 && state.lastUserId !== userId) {

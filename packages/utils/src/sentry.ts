@@ -65,11 +65,7 @@ function maskSecretString(value: string): string {
 	return value.replace(BEARER_TOKEN_PATTERN, '$1[redacted]');
 }
 
-/**
- * 이벤트에서 비밀처럼 보이는 값을 재귀적으로 마스킹해요 — 에러 객체·extra·breadcrumbs에
- * 토큰/키가 실려 Sentry로 유출되는 것을 막아요 (보안 감사 SEC 후속 — 방어 심화).
- * 키 이름 기준 마스킹 + 문자열의 Bearer 토큰 마스킹을 해요.
- */
+/** 이벤트 값 재귀 마스킹, 깊이 6까지 순회하고 순환 참조는 [circular] 문자열로 남겨요 */
 export function scrubSecrets<T>(value: T, depth = 0, seen = new WeakSet<object>()): T {
 	if (depth > SCRUB_MAX_DEPTH) return value;
 	if (typeof value === 'string') return maskSecretString(value) as unknown as T;

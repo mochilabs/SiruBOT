@@ -11,14 +11,12 @@ import { join } from 'node:path';
  *    `setAppEmojiIdMap()`으로 주입해요 — 파일 로드 이후의 단일 보충 경로예요.
  *
  * - 앱 이모지는 봇이 보내는 메시지에서 USE_EXTERNAL_EMOJIS 없이 사용 가능
- * - API 조회도 실패하면(네트워크·권한) 유니코드 폴백 문자열을 반환
- *   (빈 결과는 캐시하지 않아요 — 부팅 시점의 일시 장애가 프로세스 생애
- *   전체를 폴백으로 고정하지 않게 다음 호출이 재시도하고, 30초 뒤 한 번만 예약 재시도해요)
+ * - 로드가 빈 결과면 유니코드 폴백 문자열을 반환해요 (재시도 계약은 ensureAppEmojisLoaded 문서 참조)
  *
  * 사용 규칙:
- * - `e('name', fallback)` — 등록된 이름이면 `<:name:id>`, 아니면 폴백 유니코드.
- *   같은 이름에 폴백이 여러 번 다르게 쓰이지 않게, 표준 폴백은 EMOTIONS 표 한 곳에서만
- *   관리해요. 직접 폴백을 넣는 건 표에 없는 이름뿐이에요.
+ * - `emoji('name')` — 등록된 이름이면 `<:name:id>`, 아니면 표준 유니코드 폴백.
+ *   같은 이름에 폴백이 여러 번 다르게 쓰이지 않게, 표준 폴백은 APP_EMOJI_FALLBACKS 표 한 곳에서만
+ *   관리해요. 표에 없는 이름만 `emoji('name', fallback)`으로 직접 폴백을 넣어요.
  */
 
 type EmojiIdMap = Record<string, string>;
@@ -26,7 +24,7 @@ type EmojiIdMap = Record<string, string>;
 /**
  * 유니코드 폴백 표 — 키 = resources/emoji_replacement/ png 파일명(=앱 이모지 이름).
  * 폴백 문자열의 단일 진실 공급원. 새 이모지 추가 시 이 표에 한 줄만 넣으면
- * `e('이름')` 어디서든 동일 폴백을 써요.
+ * `emoji('이름')` 어디서든 동일 폴백을 써요.
  */
 const APP_EMOJI_FALLBACKS = {
 	arrow_back: '⏮️',
@@ -134,7 +132,7 @@ export function emoji(name: string, fallback?: string): string {
 
 let cachedMap: EmojiIdMap | null = null;
 let loadPromise: Promise<EmojiIdMap> | null = null;
-/** 빈 결과일 때 30초 뒤 재시도를 한 번만 예약하기 위한 플래그 */
+/** 30초 예약 재시도가 이미 있는지 표시하는 플래그 */
 let retryScheduled = false;
 
 /** JSON 매핑 파일 후보 경로 — 커밋된 canonical(레포 루트)과 런타임 각 CWD 기준 */
@@ -181,9 +179,9 @@ export async function ensureAppEmojisLoaded(): Promise<void> {
 		cachedMap = map;
 		return;
 	}
-	// 빈 결과는 일시 장애일 수 있어 캐시하지 않아요 — 다음 호출이 재시도하게 loadPromise만 리셋
+	// 캐시하지 않으므로 다음 호출이 다시 읽도록 loadPromise만 리셋해요
 	loadPromise = null;
-	// clientReady에서 사실상 1회만 호출돼 다음 호출이 없을 수 있으니, 30초 뒤 재시도를 한 번만 예약해요
+	// 다음 호출이 없을 수 있어 30초 뒤 재시도를 예약해요, retryScheduled 플래그로 중복 예약을 막아요
 	if (!retryScheduled) {
 		retryScheduled = true;
 		setTimeout(() => void ensureAppEmojisLoaded(), 30_000).unref?.();
