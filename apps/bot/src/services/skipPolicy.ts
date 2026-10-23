@@ -21,9 +21,6 @@ export interface SkipContext {
  * DJ 역할 게이트·요청자/추천곡/단독/투표 판정과 mixer 경유 스킵 실행을 담당한다.
  */
 export class SkipPolicy {
-	/**
-	 * Handles skip logic, previously in SkipCommand
-	 */
 	public async handleSkip(context: SkipContext, force: boolean, to: number): Promise<void> {
 		if (force || to) {
 			await this.checkDJRole(context);
@@ -151,7 +148,7 @@ export class SkipPolicy {
 		await voteSkip.execute();
 	}
 
-	private async checkDJRole(context: SkipContext): Promise<boolean> {
+	private async checkDJRole(context: SkipContext): Promise<void> {
 		const { interaction } = context;
 		const hasPermission = await container.guildService.hasDJRole(interaction.guildId, interaction.member);
 
@@ -162,8 +159,6 @@ export class SkipPolicy {
 				context: { ephemeral: true }
 			});
 		}
-
-		return true;
 	}
 
 	private async handleForceSkip(context: SkipContext): Promise<void> {

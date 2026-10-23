@@ -1,8 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { normalizeAiMode } from '../../../services/guildService.ts';
+import { collectOtherTextChannelIds } from '../utils/channels.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -91,13 +92,7 @@ export class ChatSettingsCommand extends Command {
 		if (subcommand === 'channel') {
 			const enabled = interaction.options.getBoolean('enabled', true);
 			// 끄기로 인해 목록을 만들어야 하는(all → channels) 경우를 위한 서버의 나머지 텍스트 채널
-			const otherTextChannelIds = interaction.guild.channels.cache
-				.filter(
-					(channel) =>
-						channel.id !== interaction.channelId &&
-						(channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement)
-				)
-				.map((channel) => channel.id);
+			const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
 			const result = await this.container.guildService.setChannelAiEnabled(guildId, interaction.channelId, enabled, otherTextChannelIds);
 			const content = enabled
 				? `${emoji('speech')} 이 채널에서 AI 채팅을 **${result.mode === 'all' ? '켰어요 (서버 전체 켜짐)' : '켰어요'}**. (허용 채널 ${

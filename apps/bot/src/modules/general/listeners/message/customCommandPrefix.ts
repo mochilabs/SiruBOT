@@ -8,7 +8,7 @@
  */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
-import { ContainerBuilder, Message, MessageCreateOptions, MessageFlags, PermissionFlagsBits, TextDisplayBuilder } from 'discord.js';
+import { ContainerBuilder, Message, MessageCreateOptions, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import {
 	CUSTOM_COMMAND_MAX_ARGS,
 	CUSTOM_COMMAND_RESERVED_NAMES,
@@ -18,6 +18,7 @@ import {
 	normalizeCustomCommandName
 } from '@sirubot/utils';
 
+import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../../../services/customCommands/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../../../services/customCommands/interpreter.ts';
 import { findCustomCommand, getGuildCustomCommands } from '../../../../services/customCommands/store.ts';
 
@@ -79,21 +80,11 @@ export class CustomCommandPrefixListener extends Listener {
 		const args = parseCustomCommandArgs(firstTokenEnd === -1 ? '' : rest.slice(firstTokenEnd));
 		const ctx: CustomCommandContext = {
 			channel: { send: (payload) => message.channel.send(payload as MessageCreateOptions) },
-			member: {
-				id: member.id,
-				permissions: 'permissionsFor' in message.channel ? (message.channel.permissionsFor(member)?.bitfield ?? 0n) : 0n,
-				hasRole: (roleId) => member.roles.cache.has(roleId),
-				addRole: (roleId) => member.roles.add(roleId),
-				removeRole: (roleId) => member.roles.remove(roleId)
-			},
-			guild: {
-				botTopRolePosition: me?.roles.highest.position ?? 0,
-				botCanManageRoles: me?.permissions.has(PermissionFlagsBits.ManageRoles) ?? false,
-				getRole: (roleId) => {
-					const role = message.guild.roles.cache.get(roleId);
-					return role ? { id: role.id, position: role.position, managed: role.managed } : null;
-				}
-			},
+			member: buildCustomCommandMemberContext(
+				member,
+				'permissionsFor' in message.channel ? (message.channel.permissionsFor(member)?.bitfield ?? 0n) : 0n
+			),
+			guild: buildCustomCommandGuildContext(message.guild, me),
 			channelId: message.channel.id,
 			args,
 			triggerMessage: {
@@ -104,33 +95,16 @@ export class CustomCommandPrefixListener extends Listener {
 		};
 
 		const result = await runCustomCommandSpec(entry.spec, ctx);
-		if (result.kind === 'invalid_spec') {
-			await message
-				.reply({
-					content: `-# ${emoji('error')} \`${prefix}${entry.name}\` 명령어 정의가 올바르지 않아요. 서버 관리자가 대시보드에서 다시 저장해 주세요.`,
-					flags: [MessageFlags.SuppressNotifications],
-					allowedMentions: { parse: [] }
-				})
-				.catch(() => undefined);
-			return;
-		}
-		if (result.kind === 'access_denied') {
-			await message
-				.reply({
-					content: `-# ${emoji('error')} 이 명령어를 실행할 권한이 없어요.`,
-					flags: [MessageFlags.SuppressNotifications],
-					allowedMentions: { parse: [] }
-				})
-				.catch(() => undefined);
-			return;
-		}
 		if (result.kind === 'action_failed') {
 			this.container.logger.warn(
 				`[customCommands] 실행 실패 (${message.guildId}/${entry.name}, 스텝 ${result.stepIndex}, ${result.sent}개 전송 후): ${result.reason}`
 			);
+		}
+		const notice = customCommandNotice(result, `\`${prefix}${entry.name}\``);
+		if (notice) {
 			await message
 				.reply({
-					content: `-# ${emoji('error')} 명령어 실행에 실패했어요: ${result.reason}`,
+					content: notice,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -151,7 +125,7 @@ export class CustomCommandPrefixListener extends Listener {
 		} else {
 			const lines = commands.ordered
 				.filter((command) => command.method === 'prefix')
-				.map((command) => `\`${prefix}${command.name}\` — ${command.description || '설명 없음'}`);
+				.map((command) => `\`${prefix}${command.name}\` · ${command.description || '설명 없음'}`);
 			if (lines.length === 0) {
 				container.addTextDisplayComponents(
 					new TextDisplayBuilder().setContent(

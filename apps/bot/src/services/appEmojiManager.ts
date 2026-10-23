@@ -28,13 +28,13 @@ export class AppEmojiManager {
 	 * @param upload true면 미등록 PNG를 업로드한다 (shard 0만). false면 조회·캐시만.
 	 */
 	public async sync(upload: boolean): Promise<void> {
-		// 1) 커밋 매핑 먼저 — API가 없어도 emoji()가 커밋된 87종 이상은 즉시 동작한다(오프라인 폴백).
+		// 커밋 매핑 먼저, API가 없어도 emoji()가 커밋된 87종 이상은 즉시 동작한다(오프라인 폴백).
 		await ensureAppEmojisLoaded();
 
 		const application = container.client.application;
 		if (!application) return;
 
-		// 2) API로 최신 앱 이모지 조회 → 이름→ID 맵 (커밋 매핑보다 우선, 미등록분 포함)
+		// API로 최신 앱 이모지 조회 → 이름→ID 맵 (커밋 매핑보다 우선, 미등록분 포함)
 		let map: Record<string, string> = {};
 		try {
 			const emojis = await application.emojis.fetch();
@@ -46,12 +46,12 @@ export class AppEmojiManager {
 			return;
 		}
 
-		// 3) 미등록 PNG 업로드 (shard 0)
+		// 미등록 PNG 업로드는 shard 0에서만
 		if (upload) {
 			await this.uploadMissing(application, map);
 		}
 
-		// 4) 최종 맵 캐시 주입
+		// 조회한 맵이 있을 때만 최종 캐시에 주입한다
 		if (Object.keys(map).length) {
 			setAppEmojiIdMap(map);
 		}

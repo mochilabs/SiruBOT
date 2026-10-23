@@ -4,6 +4,7 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction, ChannelType, M
 import { emoji } from '@sirubot/utils';
 import { type ChatToolName } from '../../../services/guildService.ts';
 import { resetCountingState } from '../../../services/countingState.ts';
+import { collectOtherTextChannelIds } from '../utils/channels.ts';
 
 /**
  * /채팅유틸 — 채팅 유틸 기능의 채널 단위 on/off + 카운팅 채널 지정.
@@ -119,12 +120,7 @@ export class ChatToolsCommand extends Command {
 		const enable = interaction.options.getString('state', true) === 'on';
 
 		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
-		const otherTextChannelIds = interaction.guild.channels.cache
-			.filter(
-				(channel) =>
-					channel.id !== interaction.channelId && (channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement)
-			)
-			.map((channel) => channel.id);
+		const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
 		const result = await this.container.guildService.setChannelChatToolEnabled(
 			interaction.guildId,
 			tool,

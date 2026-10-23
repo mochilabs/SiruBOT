@@ -18,6 +18,25 @@ export function releaseChannelTurn(channelId: string): void {
 	activeChannelTurns.delete(channelId);
 }
 
+/** 채널 턴 거절 사유: channel_busy는 같은 채널 진행 중, rate_limited는 유저 10분 한도 소진 */
+export type ChatTurnDenial = 'channel_busy' | 'rate_limited';
+
+export type ChatTurnGrant = { ok: true; release: () => void } | { ok: false; denial: ChatTurnDenial };
+
+/**
+ * 채널 턴 확보 → 유저 턴 소모를 한 단계로 묶어요. 채널 턴을 확보한 뒤에 사용량을 소모하고,
+ * 소모에 실패하면 채널 턴을 바로 돌려줘야 해요 (진행 중인 채널에서 응답도 못 받고 사용량만
+ * 빠지는 일을 막기 위해). 성공 시 반환된 release()를 finally에서 호출해요.
+ */
+export async function acquireChatTurn(channelId: string, userId: string): Promise<ChatTurnGrant> {
+	if (!acquireChannelTurn(channelId)) return { ok: false, denial: 'channel_busy' };
+	if (!(await tryConsumeUserTurn(userId))) {
+		releaseChannelTurn(channelId);
+		return { ok: false, denial: 'rate_limited' };
+	}
+	return { ok: true, release: () => releaseChannelTurn(channelId) };
+}
+
 // 유저당 턴 상한 (10분 윈도우)
 /** 윈도우(10분)당 유저별 최대 AI 턴 수 */
 const USER_TURN_WINDOW_SECONDS = 10 * 60;

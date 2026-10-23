@@ -32,6 +32,29 @@ export interface YouTubeChapter {
 
 // 구 직접호출 체인과 같은 15초 — open-meteo가 느리게 답하는 요청을 성공으로 살려야 해요
 const GATEWAY_TIMEOUT_MS = 15_000;
+/** 이미지 렌더 POST 타임아웃: 카드 3종(지금 재생/프로필/인사)이 공유해요 */
+const IMAGE_RENDER_TIMEOUT_MS = 20_000;
+
+/** 이미지 렌더 POST 공용: URL 가드·타임아웃·content-type 검증·실패 시 로그 후 null 반환까지 한곳에서 처리해요 */
+async function renderImage(path: string, body: unknown): Promise<Buffer | null> {
+	const base = gatewayBaseUrl();
+	if (!base) return null;
+	try {
+		const res = await fetch(`${base}${path}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(IMAGE_RENDER_TIMEOUT_MS)
+		});
+		if (!res.ok) throw new Error(`data-api ${res.status}`);
+		const type = res.headers.get('content-type') ?? '';
+		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
+		return Buffer.from(await res.arrayBuffer());
+	} catch (error) {
+		container.logger.warn(`[data-api] ${path} failed: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+}
 
 /** data-api GET. 실패/미설정 시 throw. 4xx 도메인 에러는 GatewayDomainError로 변환해요. */
 async function gatewayGet<T>(path: string): Promise<T> {
@@ -94,7 +117,7 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
  * 프로필 카드 이미지 데이터 — data-api POST 바디와 동일한 형식이에요.
  * preset: 'dark'(RINE 다크 퍼플) | 'ticket'(RINE 멤버패스 티켓)
  */
-export interface ProfileCardRequest {
+interface ProfileCardRequest {
 	preset?: 'dark' | 'ticket';
 	userId: string;
 	displayName: string;
@@ -138,7 +161,7 @@ export interface ProfileCardRequest {
 /**
  * NowPlaying 카드 이미지 데이터 — data-api POST /v1/image/nowplaying 바디와 동일한 형식이에요.
  */
-export interface NowPlayingCardRequest {
+interface NowPlayingCardRequest {
 	trackId: string;
 	title: string;
 	artist: string;
@@ -175,50 +198,18 @@ export interface NowPlayingCardRequest {
  * NowPlaying 카드 PNG 렌더. 실패/미설정 시 null (호출자가 기존 썸네일로 폴백해요).
  */
 export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise<Buffer | null> {
-	const base = gatewayBaseUrl();
-	if (!base) return null;
-	try {
-		const res = await fetch(`${base}/v1/image/nowplaying`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
-			body: JSON.stringify(data),
-			signal: AbortSignal.timeout(20_000)
-		});
-		if (!res.ok) throw new Error(`data-api ${res.status}`);
-		const type = res.headers.get('content-type') ?? '';
-		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
-		return Buffer.from(await res.arrayBuffer());
-	} catch (error) {
-		container.logger.warn(`[data-api] nowplaying-card failed: ${error instanceof Error ? error.message : String(error)}`);
-		return null;
-	}
+	return renderImage('/v1/image/nowplaying', data);
 }
 
 /**
  * 프로필 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
  */
 export async function renderProfileCard(data: ProfileCardRequest): Promise<Buffer | null> {
-	const base = gatewayBaseUrl();
-	if (!base) return null;
-	try {
-		const res = await fetch(`${base}/v1/image/profile`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
-			body: JSON.stringify(data),
-			signal: AbortSignal.timeout(20_000)
-		});
-		if (!res.ok) throw new Error(`data-api ${res.status}`);
-		const type = res.headers.get('content-type') ?? '';
-		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
-		return Buffer.from(await res.arrayBuffer());
-	} catch (error) {
-		container.logger.warn(`[data-api] profile-card failed: ${error instanceof Error ? error.message : String(error)}`);
-		return null;
-	}
+	return renderImage('/v1/image/profile', data);
 }
 
 /** 멤버 인사 카드 렌더에 박을 멤버/서버 컨텍스트 — 렌더러가 템플릿({유저이름} {서버} {멤버수}) 치환에 써요 */
-export interface MemberCardRenderContext {
+interface MemberCardRenderContext {
 	userId: string;
 	username: string;
 	displayName: string;
@@ -236,21 +227,5 @@ export async function renderMemberCard(
 	config: GreetingConfig,
 	context: MemberCardRenderContext
 ): Promise<Buffer | null> {
-	const base = gatewayBaseUrl();
-	if (!base) return null;
-	try {
-		const res = await fetch(`${base}/v1/image/member-card`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
-			body: JSON.stringify({ guildId, kind, config, context }),
-			signal: AbortSignal.timeout(20_000)
-		});
-		if (!res.ok) throw new Error(`data-api ${res.status}`);
-		const type = res.headers.get('content-type') ?? '';
-		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
-		return Buffer.from(await res.arrayBuffer());
-	} catch (error) {
-		container.logger.warn(`[data-api] member-card failed: ${error instanceof Error ? error.message : String(error)}`);
-		return null;
-	}
+	return renderImage('/v1/image/member-card', { guildId, kind, config, context });
 }

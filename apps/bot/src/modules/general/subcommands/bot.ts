@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { emoji, BOT_NAME, createContainer, versionInfo } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { formatDayHourMinute } from '../utils/uptime.ts';
 
 export const name = 'bot';
 export const ko = '봇';
@@ -24,11 +25,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const heapUsedMB = (memUsage.heapUsed / 1024 / 1024).toFixed(1);
 	const heapTotalMB = (memUsage.heapTotal / 1024 / 1024).toFixed(1);
 
-	const uptimeSeconds = Math.floor(process.uptime());
-	const days = Math.floor(uptimeSeconds / 86400);
-	const hours = Math.floor((uptimeSeconds % 86400) / 3600);
-	const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-	const uptimeStr = `${days}일 ${hours}시간 ${minutes}분`;
+	const uptimeStr = formatDayHourMinute(process.uptime());
 
 	const shardInfo = client.shard ? `샤드 ${client.shard.ids.join(', ')} / 총 ${client.shard.count}개` : '샤딩 없음';
 

@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
+import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import { buildTtsPanel } from '../utils/ttsView.ts';
 
 /**
@@ -89,12 +90,7 @@ export class TtsCommand extends Command {
 		}
 
 		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
-		const otherTextChannelIds = interaction.guild.channels.cache
-			.filter(
-				(channel) =>
-					channel.id !== interaction.channelId && (channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement)
-			)
-			.map((channel) => channel.id);
+		const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
 		const enabled = subcommand === 'on';
 		const result = await this.container.guildService.setChannelTtsEnabled(
 			interaction.guildId,

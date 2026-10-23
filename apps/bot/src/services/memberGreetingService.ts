@@ -47,6 +47,7 @@ import {
 	TextDisplayBuilder
 } from 'discord.js';
 import { renderMemberCard } from './dataApiClient.ts';
+import type { ServiceLogger } from './types.ts';
 
 /** 인사 메시지를 이루는 최상위 컴포넌트 조각 — 컨테이너에 담거나 목록으로 그대로 보내요 */
 type GreetingMessagePart = TextDisplayBuilder | SectionBuilder | MediaGalleryBuilder | SeparatorBuilder;
@@ -82,7 +83,7 @@ export interface GreetingSendResult {
 }
 
 /** 인사 테스트 전송 결과 상태 페이로드 — data-api/대시보드 인사 패널과 계약이에요 */
-export interface MemberGreetingTestState {
+interface MemberGreetingTestState {
 	requestId: string;
 	kind: GreetingKind;
 	ok: boolean;
@@ -101,14 +102,6 @@ interface PendingPayload {
 	kind?: unknown;
 	userId?: unknown;
 	requestId?: unknown;
-}
-
-/** 서비스 주입 로거 — botProfileService와 같은 구조예요 */
-interface ServiceLogger {
-	info(msg: string): void;
-	warn(msg: string): void;
-	error(msg: string): void;
-	debug(msg: string): void;
 }
 
 export class MemberGreetingService {

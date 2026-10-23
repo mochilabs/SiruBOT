@@ -108,7 +108,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.tempVoiceService = new TempVoiceService();
 		container.aiMemoryService = new AiMemoryService();
 
-		// Redis 구독 4형제 — bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
+		// Redis 구독 서비스군 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
 		const subscriberLogger = {
 			info: (msg: string) => container.logger.info(msg),
 			warn: (msg: string) => container.logger.warn(msg),
