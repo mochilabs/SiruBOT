@@ -1,4 +1,5 @@
 import Container from "@/components/container";
+import { SERVER_TABS } from "@/components/servers/server-tabs";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonCircle } from "@/components/ui/skeleton";
 
@@ -7,6 +8,7 @@ import { Skeleton, SkeletonCircle } from "@/components/ui/skeleton";
  * PageHeader(!mb-2 !pb-2) 안의 ServerSwitcher 트리거(size-8 rounded-control 아이콘 + 서버 이름) 아래
  * PC(lg+)는 기능 사이드바 카드 + 설정 패널 2단, 모바일은 가로 탭 스트립 + 패널이에요.
  * SaveBar는 편집 전에는 뜨지 않으므로 하단 가짜 취소/저장 버튼은 두지 않아요.
+ * 탭 수·라벨 길이는 SERVER_TABS(실제 TABS와 같은 소스)에서 그대로 따라가요.
  */
 export default function ServerDashboardLoading() {
   return (
@@ -29,13 +31,13 @@ export default function ServerDashboardLoading() {
 
         {/* ServerDashboard 셸 — PC는 사이드바+패널 2단, 모바일은 탭+패널 세로 */}
         <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-          {/* PC 기능 사이드바 모양 (ServerFeatureSidebar — 카드 + 항목 9개) */}
+          {/* PC 기능 사이드바 모양 (ServerFeatureSidebar — 카드 + 항목, TABS 길이와 동일) */}
           <Card aria-hidden padding="none" className="hidden w-full shrink-0 lg:block lg:w-72">
             <div className="flex flex-col gap-0.5 p-2">
-              {Array.from({ length: 9 }, (_, index) => (
-                <div key={index} className="flex items-center gap-2.5 px-3 py-2.5">
+              {SERVER_TABS.map((item) => (
+                <div key={item.key} className="flex items-center gap-2.5 px-3 py-2.5">
                   <SkeletonCircle size="h-3.5 w-3.5" />
-                  <Skeleton.Line width={index === 0 ? "6rem" : "5rem"} height="h-4" />
+                  <Skeleton.Line width={`${Math.max(2.5, item.label.length * 0.75)}rem`} height="h-4" />
                 </div>
               ))}
             </div>
@@ -44,11 +46,11 @@ export default function ServerDashboardLoading() {
           <div className="w-full min-w-0 flex-1">
             {/* 모바일 탭 스트립 모양 — 활성 탭 자리에 실제 인디케이터와 같은 핑크 언더라인 */}
             <div role="presentation" className="mb-4 flex items-center gap-1 overflow-x-auto scrollbar-none lg:hidden">
-              {[4.5, 4.5, 3, 3.5, 3, 4.5, 4.5].map((width, index) => (
-                <div key={index} className="relative flex min-h-11 shrink-0 items-center gap-1.5 px-3">
+              {SERVER_TABS.map((item, index) => (
+                <div key={item.key} className="relative flex min-h-11 shrink-0 items-center gap-1.5 px-3">
                   {index === 0 && <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-primary-control" />}
                   <SkeletonCircle size="h-3.5 w-3.5" />
-                  <Skeleton.Line width={`${width}rem`} height="h-4" />
+                  <Skeleton.Line width={`${Math.max(2.5, item.label.length * 0.75)}rem`} height="h-4" />
                 </div>
               ))}
             </div>
@@ -57,7 +59,7 @@ export default function ServerDashboardLoading() {
             <Card aria-hidden padding="lg">
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
-                  <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-control" />
                   <div className="min-w-0 space-y-1.5">
                     <Skeleton.Line width="9rem" height="h-5" />
                     <Skeleton.Line width="16rem" height="h-4" />

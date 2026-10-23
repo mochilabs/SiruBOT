@@ -5,8 +5,8 @@ import {
   Bot,
   Globe,
   Hash,
-  Loader2,
   PowerOff,
+  RefreshCw,
   Trash2,
 } from "lucide-react";
 
@@ -174,9 +174,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
             size="sm"
             aria-label="설정 새로고침"
             disabled={dirty || saving}
-            icon={
-              <Loader2 size={16} className={loading ? "animate-spin" : ""} />
-            }
+            icon={<RefreshCw size={16} />}
             onClick={() => {
               setLoading(true);
               setRetryToken((t) => t + 1);
@@ -241,6 +239,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
         </p>
       </InfoBox>
 
+      <Field label="대화 기록" description="AI가 기억하는 이 서버의 대화 기록을 전부 지워요.">
         <Button
           variant="danger"
           loading={deleting}
@@ -251,6 +250,7 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
         >
           {confirmDelete ? "정말 삭제할까요?" : "대화 기록 전체 삭제"}
         </Button>
+      </Field>
       <SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
     </Card>
   );

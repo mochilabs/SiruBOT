@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ChevronLeft, RefreshCw } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 interface ErrorPageProps {
 	searchParams: Promise<{ error?: string }>;
 }
@@ -42,7 +45,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 						</p>
 						{error && (
 							<p className="pt-1 font-mono text-2xs text-muted-foreground">
-								code: {error}
+							코드: {error}
 							</p>
 						)}
 					</div>
@@ -50,14 +53,14 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 					<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
 						<Link
 							href="/login"
-							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-primary-control px-6 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover sm:w-auto"
+							className={cn(buttonVariants({ variant: "cta" }), "h-11 w-full gap-2 px-6 text-base font-bold sm:w-auto")}
 						>
 							<RefreshCw className="h-4 w-4" aria-hidden />
 							다시 로그인하기
 						</Link>
 						<Link
 							href="/"
-							className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-surface-2 px-6 text-base font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 sm:w-auto"
+							className={cn(buttonVariants({ variant: "secondary" }), "h-11 w-full gap-2 px-6 text-base sm:w-auto")}
 						>
 							<ChevronLeft className="h-4 w-4" aria-hidden />
 							홈으로 가기

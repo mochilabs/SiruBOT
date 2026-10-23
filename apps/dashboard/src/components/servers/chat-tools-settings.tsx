@@ -13,7 +13,7 @@ import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { ChatToolMode, GuildSettings } from "@/types/settings";
 
-import { InfoBox, type ModeCardOption, ModePicker, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { ChannelListError, InfoBox, type ModeCardOption, ModePicker, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 // 임베드 복구 사이트 — 봇 계약(packages/utils/src/chatTools.ts)과 같은 순서를 지켜요
 const SITE_TOGGLES = [
@@ -78,15 +78,6 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 
 	const listUnavailable = channels === null;
 
-	const channelsWarning = (
-		<WarningBox>
-			채널 목록을 불러오지 못했어요. ({channelsError?.message ?? "알 수 없는 오류"}){" "}
-			<button type="button" className="font-semibold underline" onClick={reloadChannels}>
-				다시 시도
-			</button>
-		</WarningBox>
-	);
-
 	const toggleSite = (site: string, checked: boolean) => {
 		const selected = new Set<string>(form.embedFixSites);
 		if (checked) selected.add(site);
@@ -112,7 +103,6 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 						disabled={saving}
 					/>
 				</Field>
-				{channelsError && channelsWarning}
 				{!channelsError && channelIds.length === 0 && <WarningBox>선택된 채널이 0개면 이 기능이 동작하지 않아요. 최소 1개는 남겨 주세요.</WarningBox>}
 			</div>
 		);
@@ -126,7 +116,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				description="메시지에 자동으로 반응하는 편의 기능을 채널 단위로 관리해요."
 			/>
 
-			{channelsError && channelsWarning}
+			{channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
 
 			<div className="flex flex-col gap-3">
 				<SectionLabel>

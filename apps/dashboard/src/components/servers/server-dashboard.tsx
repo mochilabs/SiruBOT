@@ -35,26 +35,28 @@ import { MixerSettings } from "./mixer-settings";
 import { MusicSettings } from "./music-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
 import ServerStatsTab from "./server-stats-tab";
+import { SERVER_TABS, type ServerTabKey } from "./server-tabs";
 import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
 import SocialAlertsSettings from "./social-alerts-settings";
 
-const TABS = [
-  { key: "ai", label: "AI 채팅", icon: <Bot size={14} /> },
-  { key: "custom-commands", label: "커스텀 명령어", icon: <SquareSlash size={14} /> },
-  { key: "assets", label: "에셋", icon: <Images size={14} /> },
-  { key: "profile", label: "봇 프로필", icon: <UserRoundCog size={14} /> },
-  { key: "music", label: "음악", icon: <Music size={14} /> },
-  { key: "player-live", label: "라이브", icon: <Radio size={14} /> },
-  { key: "stats", label: "통계", icon: <BarChart3 size={14} /> },
-  { key: "channels", label: "채널·권한", icon: <Hash size={14} /> },
-  { key: "chat-tools", label: "채팅 유틸", icon: <MessageSquare size={14} /> },
-  { key: "jtc", label: "임시 음성", icon: <Volume2 size={14} /> },
-  { key: "mixer", label: "오디오 엔진", icon: <SlidersHorizontal size={14} /> },
-  { key: "social", label: "소셜 알림", icon: <Bell size={14} /> },
-  { key: "greeting", label: "멤버", icon: <UserPlus size={14} /> },
-] as const;
+// 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
+const TABS = SERVER_TABS.map((item) => ({ ...item, icon: ICONS[item.key] }));
 
-type TabKey = (typeof TABS)[number]["key"];
+const ICONS = {
+  ai: <Bot size={14} />,
+  "custom-commands": <SquareSlash size={14} />,
+  assets: <Images size={14} />,
+  profile: <UserRoundCog size={14} />,
+  music: <Music size={14} />,
+  "player-live": <Radio size={14} />,
+  stats: <BarChart3 size={14} />,
+  channels: <Hash size={14} />,
+  "chat-tools": <MessageSquare size={14} />,
+  jtc: <Volume2 size={14} />,
+  mixer: <SlidersHorizontal size={14} />,
+  social: <Bell size={14} />,
+  greeting: <UserPlus size={14} />,
+} as const;
 
 function NotManageable() {
   return (
@@ -93,9 +95,9 @@ export function ServerDashboard({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const tabFromUrl = (value: string | null): TabKey =>
-    TABS.some((item) => item.key === value) ? (value as TabKey) : "ai";
-  const [tab, setTab] = useState<TabKey>(() =>
+  const tabFromUrl = (value: string | null): ServerTabKey =>
+    TABS.some((item) => item.key === value) ? (value as ServerTabKey) : "ai";
+  const [tab, setTab] = useState<ServerTabKey>(() =>
     tabFromUrl(searchParams.get("tab")),
   );
   const mobileTabsRef = useRef<HTMLDivElement>(null);

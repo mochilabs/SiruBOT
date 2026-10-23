@@ -248,7 +248,7 @@ export function PlaylistDetail({
 											<Button
 												variant="icon"
 												size="icon-xs"
-												className="pointer-coarse:min-h-11"
+												className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
 												aria-label="위로 이동"
 												disabled={idx === 0}
 												icon={<ArrowUp size={14} />}
@@ -257,7 +257,7 @@ export function PlaylistDetail({
 											<Button
 												variant="icon"
 												size="icon-xs"
-												className="pointer-coarse:min-h-11"
+												className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
 												aria-label="아래로 이동"
 												disabled={idx === tracks.length - 1}
 												icon={<ArrowDown size={14} />}
@@ -269,6 +269,7 @@ export function PlaylistDetail({
 														<Button
 															variant="icon"
 															size="md"
+															aria-label={`${track.title} 트랙 메뉴`}
 															className="-mr-2 bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
 														>
 															<MoreHorizontal size={16} />

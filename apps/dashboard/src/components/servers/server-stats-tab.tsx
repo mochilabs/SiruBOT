@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { BarChart3, Music, Play, User } from "lucide-react";
-import useSWR from "swr";
 
 import type { StatsServerStatsResponse } from "@/app/api/servers/[id]/stats/route";
 import { StatCard } from "@/components/data/stat-card";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { PanelHeader } from "@/components/servers/settings-shared";
 import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toError } from "@/lib/api-error";
+import { useAuthedSWR } from "@/lib/swr";
 
 const RANGE_TABS = [
   { key: "1", label: "24시간" },
@@ -168,7 +170,7 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
             title={`${formatDate(entry.date)} · ${entry.count}회`}
             role="img"
             aria-label={`${formatDate(entry.date)} ${entry.count}회`}
-            className="min-w-[0px] flex-1 origin-bottom rounded-t bg-primary-control/60"
+            className="flex-1 origin-bottom rounded-t-control bg-primary-control/60"
             style={{
               height: `${max > 0 ? Math.max(4, (entry.count / max) * 100) : 4}%`,
               transform: inView ? "scaleY(1)" : "scaleY(0)",
@@ -186,18 +188,26 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
 }
 
 function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey }) {
-  const { data, error, isLoading } = useSWR<StatsServerStatsResponse>(
+  // 다른 패널과 같은 세션 게이트 훅 — 로그인 전 요청을 막고, 세션 만료면 로그인 후 이 화면으로 돌아와요
+  const { data, error, isLoading, mutate } = useAuthedSWR<StatsServerStatsResponse>(
     guildId ? `/api/servers/${guildId}/stats?days=${range}` : null,
-    {
-      keepPreviousData: true,
-    },
+    `/servers/${guildId}`,
   );
 
   if (error) {
     const apiError = toError(error, "통계를 불러오지 못했어요.");
     return (
       <Card padding="lg">
-        <EmptyState icon={BarChart3} title="통계를 불러오지 못했어요" description={apiError.message} />
+        <EmptyState
+          icon={BarChart3}
+          title="통계를 불러오지 못했어요"
+          description={apiError.message}
+          action={
+            <Button size="sm" variant="secondary" onClick={() => mutate()}>
+              다시 시도
+            </Button>
+          }
+        />
       </Card>
     );
   }
@@ -264,6 +274,11 @@ export default function ServerStatsTab({ guildId }: { guildId: string }) {
 
   return (
     <div className="space-y-2">
+      <PanelHeader
+        icon={<BarChart3 className="h-5 w-5" />}
+        title="통계"
+        description="기간별 재생 기록과 요청자 순위를 확인해요."
+      />
       <Tabs value={range} onValueChange={(key) => setRange(key as RangeKey)} aria-label="통계 기간 필터" className="mb-4">
         <TabsList>
           {RANGE_TABS.map((item) => (

@@ -158,7 +158,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 										{STATUS_LABEL[subscription.status]}
 									</Badge>
 									<span className="min-w-0 truncate text-sm font-medium text-foreground">{subscription.sourceName}</span>
-									<span className="text-sm text-muted-foreground">→ #{target ?? subscription.targetChannelId}</span>
+									<span className="min-w-0 truncate text-sm text-muted-foreground">→ #{target ?? "알 수 없는 채널"}</span>
 									<span className="text-xs text-muted-foreground">{new Date(subscription.createdAt).toLocaleDateString("ko-KR")}</span>
 									<div className="ml-auto flex items-center gap-1">
 										<Button

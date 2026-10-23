@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 
 import { FocusPageShell } from "@/app/_components/focus-page-shell";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function InviteRedirectPage() {
   return (
@@ -23,7 +25,7 @@ export default function InviteRedirectPage() {
             </div>
 
             <div className="space-y-4">
-              <h1 className="text-5xl font-extrabold tracking-tighter text-foreground md:text-7xl break-keep">
+              <h1 className="text-5xl font-black tracking-tighter text-foreground md:text-7xl break-keep">
                 초대해줘서 고마워요!
               </h1>
               <p className="text-lg font-medium leading-relaxed text-muted-foreground md:text-xl max-w-xl break-keep">
@@ -37,8 +39,8 @@ export default function InviteRedirectPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
             <Link
               href="/servers"
-              className="inline-flex h-11 items-center justify-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover"
-              >
+              className={cn(buttonVariants({ variant: "cta" }), "h-11 gap-3 px-8 text-base font-bold")}
+            >
               <Settings2 className="h-5 w-5" />
               설정하러 가기
               <ChevronRight className="h-4 w-4 opacity-70" />
@@ -46,7 +48,7 @@ export default function InviteRedirectPage() {
 
             <Link
               href="/"
-              className="group flex items-center gap-2 text-lg font-semibold text-muted-foreground transition-colors hover:text-primary-text"
+              className="group flex items-center gap-2 rounded-control px-2 text-lg font-semibold text-muted-foreground transition-colors hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 pointer-coarse:min-h-11"
             >
               <Home className="h-5 w-5" />
               홈으로 가기

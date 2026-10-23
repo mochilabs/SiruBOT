@@ -25,10 +25,15 @@ const STEP_MS = 1800;
  */
 export function CustomCommandPreview() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
-  /** -1: 대기(아직 미실행), 0: 명령어 입력, 1~3: 실행 중인 스텝 순번 */
-  const [step, setStep] = useState(-1);
+  /** -1: 대기(아직 미실행), 0: 명령어 입력, 1~3: 실행 중인 스텝 순번 — reduced-motion에선 마지막 상태로 고정 */
+  const [step, setStep] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? DEMO_STEPS.length : -1,
+  );
+  // reduced-motion에선 타이머를 돌리지 않고 모든 스텝이 켜진 정지 화면을 보여줘요 (형제 프리뷰와 같은 규칙)
+  const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   useEffect(() => {
+    if (prefersReducedMotion) return undefined;
     if (!inView) return undefined;
     if (step === -1) {
       const timer = setTimeout(() => setStep(0), 700);
@@ -40,7 +45,7 @@ export function CustomCommandPreview() {
       isLast ? STEP_MS + 700 : STEP_MS,
     );
     return () => clearTimeout(timer);
-  }, [inView, step]);
+  }, [inView, step, prefersReducedMotion]);
 
   return (
     <div

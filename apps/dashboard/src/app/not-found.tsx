@@ -5,8 +5,14 @@ import { m, useReducedMotion } from "framer-motion";
 import { ChevronLeft, Home } from "lucide-react";
 
 import { FocusPageShell } from "@/app/_components/focus-page-shell";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-/** 형태 띠 — 푸터의 기하학적 모티프(원·둥근 사각형·반원)를 배경에 흘려 보내요. 가장자리는 마스크로 사라져요 */
+/**
+ * 형태 띠 — 푸터의 기하학적 모티프(원·둥근 사각형·반원)를 배경에 흘려 보내요. 가장자리는 마스크로 사라져요.
+ * 사유(R-19): 404 페이지의 아이덴티티 모티프 — 예외 페이지에도 브랜드 기하학이 살아있게 하는 장식 루프로,
+ * reduced-motion 환경에서는 정지한 띠로만 노출된다.
+ */
 function ShapeBand({
   className,
   duration,
@@ -78,17 +84,14 @@ export default function NotFound() {
           </div>
 
           <div className="flex flex-col items-center gap-4 pt-2 sm:flex-row sm:justify-center">
-            <Link
-              href="/"
-              className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover"
-            >
+            <Link href="/" className={cn(buttonVariants({ variant: "cta" }), "h-11 gap-3 px-8 text-base font-bold")}>
               <Home className="h-5 w-5" aria-hidden />
               홈으로 가기
             </Link>
             <button
               type="button"
               onClick={() => window.history.back()}
-              className="group flex h-11 items-center gap-1.5 px-4 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
+              className="group flex h-11 pointer-coarse:min-h-11 items-center gap-1.5 rounded-control px-4 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               <ChevronLeft
                 className="h-4 w-4 transition-transform duration-fast group-hover:-translate-x-0.5"

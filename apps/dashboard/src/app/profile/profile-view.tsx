@@ -43,7 +43,7 @@ function StreakCount({ streak }: { streak: number }) {
   const { ref, value } = useCountUp({ end: streak });
 
   return (
-    <p className="text-xl font-black tabular-nums text-foreground">
+    <p className="text-xl font-black tabular-nums text-primary-text">
       <span ref={ref}>{Math.round(value).toLocaleString("ko-KR")}</span>
       <span className="ml-1 text-xs font-bold text-muted-foreground">일 연속</span>
     </p>
@@ -209,7 +209,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               <RevealGroup className="space-y-2">
                 {music.topTracks.map((track, i) => (
                   <RevealItem key={`${track.title}-${track.artist}-${i}`}>
-                    <li
+                    <div
                       className="bg-surface-1 rounded-card flex items-center gap-3 p-3 transition-colors duration-fast"
                     >
                       <span className="hidden sm:flex w-6 justify-center shrink-0 text-sm font-bold text-muted-foreground">
@@ -243,7 +243,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                         </p>
                       </div>
                       <TrackListenLink url={track.url} title={track.title} compact />
-                    </li>
+                    </div>
                   </RevealItem>
                 ))}
               </RevealGroup>

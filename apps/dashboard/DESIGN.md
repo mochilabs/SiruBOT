@@ -95,7 +95,7 @@ Consequence: theme variables are **not** emitted into `:root`. Only the raw
 | `--accent` / `--accent-foreground` | `#ffc3c9` / `#4f1c2a` | `#4d3b40` / `#ffdada` | `bg-accent` |
 | `--border` / `--input` | `#f3d3d6` / `var(--border)` | `#4d3b40` / `var(--border)` | `border-border`, `border-input` |
 | `--border-subtle` / `--border-strong` | `#f8e1e4` / `#b4779b` | `#3a2c30` / `#a37d89` | `border-border-subtle`, `border-border-strong` |
-| `--ring` | `var(--brand)` (`#ee6f8b`) | `var(--brand)` (`#f98aa0`) | `ring-ring` |
+| `--ring` | `#c4476a` (AA-safe 어두운 변형) | `var(--brand)` (`#f98aa0`) | `ring-ring` — 라이트 테마는 SC 1.4.11 비텍스트 3:1 대비를 만족하는 `--brand`보다 어두운 값 |
 | `--dot-neutral` | `var(--muted-foreground)` | 동일 | `bg-dot-neutral` — 중립 상태 점·배지 dot 채움 |
 | `--rank-1` / `--rank-2` / `--rank-3` | `#b47716` / `#8f8f8f` / `#b0743a` | `#f0b232` / `#b9bbbe` / `#cd7f32` | `text-rank-*`, 현행 랭킹 왕관 색상 |
 
@@ -128,6 +128,7 @@ Role tokens (new, for new code):
 | Token | Value | Utility |
 | --- | --- | --- |
 | `--r-control` | `0.625rem` | `rounded-control` — buttons, inputs, selects |
+| `--r-control-inner` | `0.375rem` | `rounded-control-inner` — control 크기 컨테이너 안의 내부 칩·애드온 |
 | `--r-menu` | `0.75rem` | `rounded-menu` — dropdowns, popovers |
 | `--r-card` | `1rem` | `rounded-card` — cards, panels |
 | `--r-dialog` | `1rem` | `rounded-dialog` — modals, sheets |
@@ -159,6 +160,12 @@ Elevation steps replace Tailwind's defaults:
 
 `shadow-xs` / `shadow-xl`은 소비자 0으로 삭제됐다 — 대응 `--elev-4`도 함께 정리했다.
 Shadows express elevation only — never decoration.
+
+### Layering
+
+| Token | Value | Utility | Use |
+| --- | --- | --- | --- |
+| `--z-toast` | `100` | `z-toast` | 토스트 알림 — 모달/드롭다운(z-50) 위 항상 보이게 |
 
 ### Status colors
 
@@ -199,6 +206,11 @@ MOTION 다이얼: **2** (스크롤 리빌 + 전환). 기록된 사유 기반 예
 `animate-marquee`(슬래시 커맨드 문화 제시 identity motif, hover 일시정지 있음), `BackgroundShapes`(배경 identity
 모티프 — 도형 3개로 제한, `hidden md:block`, reduced-motion 시 정지). 두 장식은 R-19 사유가 코드 주석과 이 문서에
 기록되어 있으므로 허용되며, 새 무한 루프 장식을 추가하려면 같은 방식으로 사유를 기록해야 한다.
+
+2026-10-23 업데이트 (UI-polish 브랜치): 추가로 로그된 무한 루프 — previews/hero 장식 루프 (reduced-motion 게이트 있음).
+대상: 404 ShapeBand, 히어로 셰브론, 타이핑 커서 블링크, AI thinking 점, 플레이리스트 이퀄라이저
+(모두 reduced-motion 게이트/사유 주석 동반). 재생·생각 중·입력 중 같은 콘텐츠 상태 표시라는 R-19 사유로 유지하며,
+새 무한 루프를 추가할 때는 같은 기록 방식을 따라야 한다.
 
 Use named durations for new work. Existing numeric duration utilities do not
 justify introducing new values when a matching token exists.

@@ -314,14 +314,14 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 								aria-label="검색 중"
 							/>
 						) : query ? (
-							<button
-								type="button"
-								onClick={() => setQuery("")}
-								className="absolute right-2.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-[min(0px,calc((100%-44px)/2))]"
-								aria-label="검색어 지우기"
-							>
-								<X size={13} aria-hidden />
-							</button>
+						<button
+							type="button"
+							onClick={() => setQuery("")}
+							className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11 pointer-coarse:w-11"
+							aria-label="검색어 지우기"
+						>
+							<X size={13} aria-hidden />
+						</button>
 						) : null}
 					</div>
 					{isUrl && (

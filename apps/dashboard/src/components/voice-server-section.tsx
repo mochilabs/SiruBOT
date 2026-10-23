@@ -6,6 +6,7 @@ import useSWR from "swr";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { formatMemory } from "@/lib/format";
 import type { VoiceServerNode } from "@/lib/voice-server-stats";
 
@@ -15,13 +16,45 @@ function cpuPercent(load: number): string {
 }
 
 export function VoiceServerSection() {
-	const { data } = useSWR<VoiceServerNode[]>("/api/voice-servers", {
+	const { data, isLoading } = useSWR<VoiceServerNode[]>("/api/voice-servers", {
 		refreshInterval: 15000,
 		dedupingInterval: 5000,
 	});
 
-	// 인증 실패·연동 실패 때는 섹션 자체를 숨겨요 (DataApiSection과 같은 처리)
-	if (!data) return null;
+	// 섹션 헤더를 계속 마운트해 두고 본문만 상태로 갈아끼워요 (DataApiSection과 같은 처리).
+	// 인증 실패·연동 실패 때도 섹션이 통째로 사라지면 화면이 점프해요.
+	const sectionHeader = (
+		<div className="flex items-center gap-3">
+			<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text">
+				<Server size={19} aria-hidden />
+			</div>
+			<div>
+				<h2 className="text-lg font-bold text-foreground">음성 서버</h2>
+				<p className="text-sm text-muted-foreground">Lavalink 노드의 플레이어·리소스 현황</p>
+			</div>
+		</div>
+	);
+
+	if (!data) {
+		return (
+			<section className="space-y-4">
+				<Card padding="md" className="gap-5">
+					<div className="flex flex-wrap items-start justify-between gap-3">
+						{sectionHeader}
+					</div>
+					{isLoading ? (
+						<div className="grid gap-3 sm:grid-cols-3">
+							<SkeletonCard lines={2} avatar={false} />
+							<SkeletonCard lines={2} avatar={false} />
+							<SkeletonCard lines={2} avatar={false} />
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">음성 서버 상태를 불러오지 못했어요.</p>
+					)}
+				</Card>
+			</section>
+		);
+	}
 
 	const totalPlayers = data.reduce((sum, node) => sum + node.players, 0);
 	const totalPlaying = data.reduce((sum, node) => sum + node.playingPlayers, 0);
@@ -39,15 +72,7 @@ export function VoiceServerSection() {
 		<section className="space-y-4">
 			<Card padding="md" className="gap-5">
 				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div className="flex items-center gap-3">
-						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text">
-							<Server size={19} aria-hidden />
-						</div>
-						<div>
-							<h2 className="text-lg font-bold text-foreground">음성 서버</h2>
-							<p className="text-sm text-muted-foreground">Lavalink 노드의 플레이어·리소스 현황</p>
-						</div>
-					</div>
+					{sectionHeader}
 					<Badge variant={data.length > 0 ? "primary" : "warning"}>{data.length > 0 ? `노드 ${data.length}개` : "노드 없음"}</Badge>
 				</div>
 

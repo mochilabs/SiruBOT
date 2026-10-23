@@ -4,11 +4,12 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertCircle, Check, Loader2, LogIn, Save, X } from "lucide-react";
+import { AlertCircle, Check, LogIn, Save, X } from "lucide-react";
 
 import { Portal } from "@/components/overlay/portal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiError } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ export function PanelHeader({
   return (
     <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-text">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/15 text-primary-text">
           {icon}
         </span>
         <div className="min-w-0 break-words">
@@ -57,27 +58,54 @@ export function WarningBox({ children }: { children: ReactNode }) {
   );
 }
 
+/** 경고 박스 안 쓰는 공용 재시도 링크 — 모든 설정 패널이 같은 형태로 다시 시도해요 */
+export function RetryLink({ onRetry, className }: { onRetry: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onRetry}
+      className={cn(buttonVariants({ variant: "link" }), "font-semibold pointer-coarse:min-h-11", className)}
+    >
+      다시 시도
+    </button>
+  );
+}
+
 /** 채널 목록 로드 실패 공용 안내 — useGuildChannels를 쓰는 설정 패널이 같이 써요 */
 export function ChannelListError({ error, onRetry }: { error: ApiError; onRetry: () => void }) {
   return (
     <WarningBox>
       채널 목록을 불러오지 못했어요. ({error.message}){" "}
-      <button type="button" className="font-semibold underline" onClick={onRetry}>
-        다시 시도
-      </button>
+      <RetryLink onRetry={onRetry} />
     </WarningBox>
   );
 }
 
+/**
+ * 설정 패널 로딩 중 — 라우트 loading.tsx와 같은 모양(PanelHeader 아이콘+제목, 2단 필드 그리드)이에요.
+ * 스켈레톤이 실제 패널과 자리를 공유해야 탭 전환·최초 진입에서 이중 레이아웃 시프트가 없어요.
+ */
 export function PanelLoading({ label }: { label: string }) {
   return (
-    <Card
-      padding="lg"
-      className="flex items-center gap-3 text-muted-foreground text-sm"
-      role="status"
-    >
-      <Loader2 className="h-4 w-4 animate-spin" />
-      {label}
+    <Card padding="lg" role="status" aria-label={label}>
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+          <div className="min-w-0 space-y-1.5">
+            <Skeleton.Line width="9rem" height="h-5" />
+            <Skeleton.Line width="16rem" height="h-4" />
+          </div>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {[0, 1, 2, 3].map((field) => (
+            <div key={field} className="space-y-2">
+              <Skeleton.Line width="5rem" height="h-4" />
+              <Skeleton.Line width="100%" height="h-9" />
+              <Skeleton.Line width="65%" height="h-3.5" />
+            </div>
+          ))}
+        </div>
+      </div>
     </Card>
   );
 }
@@ -86,7 +114,7 @@ export function PanelLoading({ label }: { label: string }) {
 export interface ModeCardOption<T extends string = string> {
   value: T;
   label: string;
-  description: string;
+  description?: string;
   icon: ReactNode;
 }
 
@@ -115,7 +143,7 @@ export function ModePicker<T extends string>({
             aria-checked={active}
             disabled={disabled}
             onClick={() => onChange(card.value)}
-            className={`relative rounded-card p-4 text-left transition-colors duration-fast ${
+            className={`relative rounded-card p-4 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
               active ? "bg-primary/10 ring-2 ring-ring/40" : "bg-surface-2 hover:bg-surface-3"
             }`}
           >
@@ -123,7 +151,7 @@ export function ModePicker<T extends string>({
               <span className={active ? "text-primary-text" : "text-muted-foreground"}>{card.icon}</span>
               {card.label}
             </span>
-            <span className="mt-1 block text-xs text-muted-foreground">{card.description}</span>
+            {card.description && <span className="mt-1 block text-xs text-muted-foreground">{card.description}</span>}
             {active && (
               <span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-control-text">
                 <Check size={12} />
@@ -207,13 +235,7 @@ export function PanelError({
       return (
         <p className="text-xs text-muted-foreground">
           {error.message}{" "}
-          <button
-            type="button"
-            className="font-semibold underline underline-offset-2"
-            onClick={onRetry}
-          >
-            다시 시도
-          </button>
+          <RetryLink onRetry={onRetry} />
         </p>
       );
     }
@@ -229,13 +251,7 @@ export function PanelError({
             <AlertCircle size={14} aria-hidden className="shrink-0" />
             {error.message}
           </p>
-          <button
-            type="button"
-            className="font-semibold underline underline-offset-2"
-            onClick={onRetry}
-          >
-            다시 시도
-          </button>
+          <RetryLink onRetry={onRetry} />
         </div>
         <Button
           variant="ghost"

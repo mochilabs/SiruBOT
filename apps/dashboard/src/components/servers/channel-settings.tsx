@@ -26,6 +26,7 @@ import {
   PanelError,
   PanelHeader,
   PanelLoading,
+  RetryLink,
   SaveBar,
   WarningBox,
 } from "./settings-shared";
@@ -104,16 +105,12 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         <WarningBox>
           일부 목록을 불러오지 못했어요. (
           {channelsError?.message ?? rolesError?.message}){" "}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={() => {
+          <RetryLink
+            onRetry={() => {
               reloadChannels();
               reloadRoles();
             }}
-          >
-            다시 시도
-          </button>
+          />
         </WarningBox>
       )}
 

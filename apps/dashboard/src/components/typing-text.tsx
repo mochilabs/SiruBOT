@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { m } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 
 import { decomposeHangul } from "@/lib/hangul";
 
@@ -23,6 +23,7 @@ export function TypingText({
 	className?: string;
 	fit?: boolean;
 }) {
+	const shouldReduce = useReducedMotion();
 	const [displayText, setDisplayText] = useState("");
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -75,8 +76,9 @@ export function TypingText({
 	const content = (
 		<>
 			{displayText}
+			{/* 타이핑 커서 깜빡임 — 타이핑 데모의 핵심 모티프(R-19). reduced-motion에선 정지한 커서. */}
 			<m.span
-				animate={{ opacity: [1, 0] }}
+				animate={shouldReduce ? undefined : { opacity: [1, 0] }}
 				transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
 				className="-ml-px inline-block h-[0.9em] w-0.5 bg-primary-control align-baseline"
 				aria-hidden

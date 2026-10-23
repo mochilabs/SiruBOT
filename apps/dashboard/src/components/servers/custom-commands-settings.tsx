@@ -7,7 +7,7 @@ import {
   CUSTOM_COMMAND_PREFIX_DEFAULT,
   validateCustomCommandPrefix,
 } from "@sirubot/utils/customCommand";
-import { Loader2, Pencil, Plus, SquareSlash, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, SquareSlash, Trash2 } from "lucide-react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Field } from "@/components/primitives/field";
@@ -143,7 +143,7 @@ function CustomCommandsPanel({ guildId }: { guildId: string }) {
               size="sm"
               aria-label="목록 새로고침"
               disabled={prefixDirty || savingPrefix}
-              icon={<Loader2 size={16} className={loading ? "animate-spin" : ""} />}
+              icon={<RefreshCw size={16} />}
               onClick={() => {
                 setLoading(true);
                 setRetryToken((t) => t + 1);

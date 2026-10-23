@@ -6,6 +6,8 @@ import { ExternalLink, Home, UserPlus } from "lucide-react";
 
 import { FocusPageShell } from "@/app/_components/focus-page-shell";
 import Loader from "@/components/loader";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { buildInviteUrl } from "@/utils";
 
 export default function InvitePage() {
@@ -52,24 +54,25 @@ export default function InvitePage() {
 					</div>
 
 					<div className="flex flex-col items-center gap-6 pt-8">
-						<a
-							href={inviteUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="inline-flex h-11 items-center gap-3 rounded-control bg-primary-control px-8 text-base font-bold text-primary-control-text transition-colors duration-fast hover:bg-primary-control-hover"
-						>
-							<UserPlus className="h-5 w-5" />
-							지금 초대하기
-							<ExternalLink className="h-4 w-4 opacity-60 transition-opacity" />
-						</a>
+					<a
+						href={inviteUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className={cn(buttonVariants({ variant: "cta" }), "h-11 gap-3 px-8 text-base font-bold")}
+					>
+						<UserPlus className="h-5 w-5" />
+						지금 초대하기
+						<ExternalLink className="h-4 w-4 opacity-60 transition-opacity" />
+					</a>
 
-						<Link
-							href="/"
-							className="group flex items-center gap-2 text-base font-semibold text-muted-foreground transition-colors duration-fast hover:text-primary-text"
-						>
-							<Home className="h-5 w-5" />
-							홈으로 가기
-						</Link>
+					<Link
+						href="/"
+						className="group flex items-center gap-2 rounded-control px-2 text-base font-semibold text-muted-foreground transition-colors duration-fast hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 pointer-coarse:min-h-11"
+					>
+						<Home className="h-5 w-5" />
+						홈으로 가기
+					</Link>
+
 					</div>
 				</div>
 			</div>

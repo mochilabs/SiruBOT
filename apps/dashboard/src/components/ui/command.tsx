@@ -55,7 +55,7 @@ function CommandDialog({
       </DialogHeader>
       <DialogContent
         className={cn(
-          "top-1/3 translate-y-0 overflow-hidden rounded-dialog! border-0 p-0 shadow-2xl",
+          "top-1/3 translate-y-0 overflow-hidden rounded-dialog border-0 p-0 shadow-2xl",
           className
         )}
         showCloseButton={showCloseButton}
@@ -162,7 +162,7 @@ function CommandItem({
       {...props}
     >
       {children}
-      <CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
+      <CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-selected/command-item:opacity-100" />
     </CommandPrimitive.Item>
   )
 }

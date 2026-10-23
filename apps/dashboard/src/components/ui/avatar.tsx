@@ -42,9 +42,9 @@ const statusLabels: Record<AvatarStatus, string> = {
 
 const statusDotSizes: Record<AvatarSize, string> = {
 	xs: "h-2 w-2 border",
-	sm: "h-2.5 w-2.5 border-[1.5px]",
+	sm: "h-2.5 w-2.5 border",
 	md: "h-3.5 w-3.5 border-2",
-	lg: "h-5 w-5 border-[3px]",
+	lg: "h-4.5 w-4.5 border-2",
 };
 
 function Avatar({
