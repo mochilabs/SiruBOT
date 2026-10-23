@@ -1,4 +1,4 @@
--- 커스텀 명령어: 접두사 메시지 명령어. 대시보드(관리자)가 만들고 봇이 JSON 스텝 체인으로 실행해요.
+-- 커스텀 명령어 접두사 컬럼과 CustomCommand 테이블 추가.
 
 -- AlterTable
 ALTER TABLE "Guild" ADD COLUMN "customCommandPrefix" TEXT NOT NULL DEFAULT '!';
