@@ -16,7 +16,7 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { type SocialSubscriptionInput,useSocialAlerts } from "@/hooks/use-social-alerts";
 import type { ChzzkChannelSummary, SocialPlatform } from "@/types/social";
 
-import { TemplateEditor, type TemplateSample } from "./template-editor";
+import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "./template-editor";
 
 const PLATFORMS: { key: SocialPlatform; label: string; icon: typeof Radio }[] = [
 	{ key: "chzzk", label: "치지직", icon: Radio },
@@ -103,7 +103,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				platform: "chzzk",
 				sourceId: channel.channelId,
 				title: channel.liveTitle ?? `${channel.channelName} 방송 시작!`,
-				url: `https://chzzk.naver.com/live/12345`,
+				url: SAMPLE_URLS.chzzk,
 				author: channel.channelName,
 			},
 		});
@@ -129,7 +129,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					platform: "youtube",
 					sourceId: result.data.channelId,
 					title: "새 영상 제목",
-					url: "https://youtu.be/dQw4w9WgXcQ",
+					url: SAMPLE_URLS.youtube,
 					author: result.data.channelName ?? "채널 이름",
 				},
 			});
@@ -310,7 +310,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					<Input
 						value={webhookName}
 						onChange={(event) => setWebhookName(event.target.value)}
-						placeholder={`기본: 시루 소셜 알림 — ${resolved?.name ?? "채널 이름"}`}
+						placeholder={`기본: 시루 소셜 알림(${resolved?.name ?? "채널 이름"})`}
 						maxLength={80}
 						disabled={saving}
 					/>
@@ -339,7 +339,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				platform,
 				sourceId: "preview",
 				title: "방송 시작!",
-				url: "https://example.com",
+				url: SAMPLE_URLS[platform],
 				author: "채널 이름",
 			}} />
 

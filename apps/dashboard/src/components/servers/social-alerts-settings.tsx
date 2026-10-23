@@ -6,7 +6,7 @@ import { Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
 
 import { InfoBox, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
 import { AddSubscriptionForm } from "@/components/servers/social/add-subscription-form";
-import { TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
+import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
 import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,14 +38,15 @@ const STATUS_LABEL: Record<SocialSubscriptionStatus, string> = {
 	disabled: "일시정지"
 };
 
-function sampleFor(subscription: SocialSubscription): TemplateSample {
+/** 미리보기 샘플: 소스 이름만 실제 값으로 쓰고 URL은 플랫폼 자리 표시로 보내요 (R-38) */
+export function sampleFor(subscription: SocialSubscription): TemplateSample {
 	if (subscription.platform === "youtube") {
-		return { platform: "youtube", sourceId: subscription.sourcePlatformId, title: "새 영상 제목", url: "https://youtu.be/dQw4w9WgXcQ", author: subscription.sourceName };
+		return { platform: "youtube", sourceId: subscription.sourcePlatformId, title: "새 영상 제목", url: SAMPLE_URLS.youtube, author: subscription.sourceName };
 	}
 	if (subscription.platform === "twitch") {
-		return { platform: "twitch", sourceId: subscription.sourcePlatformId, title: `${subscription.sourceName} 방송 시작!`, url: "https://www.twitch.tv/example", author: subscription.sourceName };
+		return { platform: "twitch", sourceId: subscription.sourcePlatformId, title: `${subscription.sourceName} 방송 시작!`, url: SAMPLE_URLS.twitch, author: subscription.sourceName };
 	}
-	return { platform: "chzzk", sourceId: subscription.sourcePlatformId, title: `${subscription.sourceName} 방송 시작!`, url: "https://chzzk.naver.com/live/12345", author: subscription.sourceName };
+	return { platform: "chzzk", sourceId: subscription.sourcePlatformId, title: `${subscription.sourceName} 방송 시작!`, url: SAMPLE_URLS.chzzk, author: subscription.sourceName };
 }
 
 export default function SocialAlertsSettings({ guildId, visible }: { guildId: string; visible?: boolean }) {

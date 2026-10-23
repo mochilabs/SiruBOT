@@ -9,14 +9,14 @@ import { Card } from "@/components/ui/card";
 
 const BOT_AVATAR = "/images/profile.png";
 
-export interface TrackInfo {
+interface TrackInfo {
 	title: string;
 	artist: string;
 	duration: number;
 	thumbnail: string;
 }
 
-export interface SlideConfig {
+interface SlideConfig {
 	command: string;
 	args: string;
 }

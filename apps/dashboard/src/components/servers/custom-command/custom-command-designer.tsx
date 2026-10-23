@@ -129,7 +129,7 @@ export function CustomCommandDesigner({
 		<div className="space-y-3 rounded-menu bg-muted/20 p-3">
 			<div className="flex items-center justify-between gap-2">
 				<p className="text-xs font-medium text-muted-foreground">
-					디자인 메시지 — 텍스트·구분선·섹션·이미지로 꾸며요 (구성 요소 10개 이하)
+					디자인 메시지: 텍스트·구분선·섹션·이미지로 꾸며요 (구성 요소 10개 이하)
 				</p>
 				<div className="flex items-center gap-1">
 					{CUSTOM_COMMAND_ACCENT_COLORS.map((color) => (
@@ -138,7 +138,7 @@ export function CustomCommandDesigner({
 							type="button"
 							aria-label={`강조색 ${ACCENT_LABELS[color]}`}
 							disabled={saving}
-							className={`h-5 w-5 rounded-full border-2 ${
+							className={`relative h-5 w-5 rounded-full border-2 after:absolute after:inset-y-[min(0px,calc((100%-44px)/2))] after:inset-x-[min(0px,calc((100%-24px)/2))] ${
 								design.accentColor === color
 									? "border-foreground"
 									: "border-transparent"

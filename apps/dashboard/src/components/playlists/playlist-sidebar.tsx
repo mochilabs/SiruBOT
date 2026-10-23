@@ -45,6 +45,7 @@ export function PlaylistSidebar({
 							<Input
 								type="text"
 								placeholder="검색..."
+								aria-label="플레이리스트 검색"
 								value={searchQuery}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
 								className="bg-input/50 py-2 pl-9 hover:bg-input/60 focus:bg-input/60"

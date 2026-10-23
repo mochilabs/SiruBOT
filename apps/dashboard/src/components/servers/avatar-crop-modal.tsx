@@ -269,7 +269,7 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 						<div
 							ref={viewportRef}
 							role="application"
-							aria-label="크롭 영역 — 드래그로 위치를 옮기고 방향키도 쓸 수 있어요"
+							aria-label="크롭 영역, 드래그로 위치를 옮기고 방향키도 쓸 수 있어요"
 							tabIndex={0}
 							onPointerDown={handlePointerDown}
 							onPointerMove={handlePointerMove}

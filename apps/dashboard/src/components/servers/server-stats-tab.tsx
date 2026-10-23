@@ -160,11 +160,14 @@ function DailyBars({ dailyCounts }: { dailyCounts: StatsServerStatsResponse["dai
   return (
     <div className="space-y-2">
       {/* 컨테이너 1회 트리거 + 인덱스 기반 transitionDelay 미세 스태거 (막대 30개 → 개별 useInView는 비용 과다) */}
+      {/* 값이 title 속성에만 있으면 스크린 리더·터치에서 안 읽혀서 role="img" + aria-label을 함께 걸어요 */}
       <div ref={ref} className="flex h-24 items-end gap-1">
         {dailyCounts.map((entry, index) => (
           <div
             key={entry.date}
             title={`${formatDate(entry.date)} · ${entry.count}회`}
+            role="img"
+            aria-label={`${formatDate(entry.date)} ${entry.count}회`}
             className="min-w-[0px] flex-1 origin-bottom rounded-t bg-primary-control/60"
             style={{
               height: `${max > 0 ? Math.max(4, (entry.count / max) * 100) : 4}%`,

@@ -216,7 +216,7 @@ export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect
 											</span>
 										)}
 									</span>
-									<span className="truncate text-2xs font-medium text-foreground">{asset.name}</span>
+									<span className="truncate text-xs font-medium text-foreground">{asset.name}</span>
 								</button>
 							);
 						})}

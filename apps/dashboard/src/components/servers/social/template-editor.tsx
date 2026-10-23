@@ -19,6 +19,13 @@ export interface TemplateSample {
 	author: string;
 }
 
+/** 미리보기용 자리 표시 URL: 실제 방송 주소를 흉내 내지 않도록 플랫폼 형태만 갖춰요 (R-38) */
+export const SAMPLE_URLS: Record<SocialPlatform, string> = {
+	youtube: "https://www.youtube.com/watch?v=VIDEO_ID",
+	twitch: "https://www.twitch.tv/CHANNEL",
+	chzzk: "https://chzzk.naver.com/live/LIVE_ID",
+};
+
 const VARIABLE_LABELS: Record<(typeof SOCIAL_TEMPLATE_VARIABLES)[number], string> = {
 	title: "제목",
 	url: "링크",
