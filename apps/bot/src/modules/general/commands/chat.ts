@@ -2,14 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import {
-	acquireChannelTurn,
-	clearChannelHistory,
-	collectImageUrls,
-	getChatConfig,
-	releaseChannelTurn,
-	tryConsumeUserTurn
-} from '../../../services/aiChatService.ts';
+import { acquireChatTurn, clearChannelHistory, collectImageUrls, getChatConfig } from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
 import { runChatTurnToScreen } from '../utils/chatTurnRunner.ts';
 import { errorPayload, livePayload } from '../utils/chatView.ts';
@@ -98,8 +91,17 @@ export class ChatCommand extends Command {
 			username: interaction.user.username
 		};
 
-		// 같은 채널에서 이미 턴이 돌고 있으면 겹쳐 쓰지 않아요 (멘션 답변과 히스토리 경쟁 방지)
-		if (!acquireChannelTurn(channelId)) {
+		// 같은 채널에서 이미 턴이 돌고 있으면 겹쳐 쓰지 않아요 (멘션 답변과 히스토리 경쟁 방지).
+		// 채널 턴을 확보한 뒤에 유저 사용량을 소모하고, 소모에 실패하면 채널 턴도 바로 돌려줘요.
+		const turn = await acquireChatTurn(channelId, interaction.user.id);
+		if (!turn.ok) {
+			if (turn.denial === 'rate_limited') {
+				throw new UserError({
+					identifier: 'chat_rate_limited',
+					message: `${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 시도해 주세요.`,
+					context: { ephemeral: true }
+				});
+			}
 			await interaction
 				.reply({
 					...errorPayload(`${emoji('hourglass')} 이 채널에서 이미 답변하는 중이에요. 잠시 후 다시 시도해 주세요.`),
@@ -107,17 +109,6 @@ export class ChatCommand extends Command {
 				})
 				.catch(() => undefined);
 			return;
-		}
-
-		// 유저당 턴 상한(10분 윈도우) — 채널 턴을 확보한 뒤에 소모해, 이미 답변 중인
-		// 채널에서 응답도 못 받고 사용량만 빠지는 일이 없게 해요.
-		if (!(await tryConsumeUserTurn(interaction.user.id))) {
-			releaseChannelTurn(channelId);
-			throw new UserError({
-				identifier: 'chat_rate_limited',
-				message: `${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 시도해 주세요.`,
-				context: { ephemeral: true }
-			});
 		}
 
 		try {
@@ -137,7 +128,7 @@ export class ChatCommand extends Command {
 			});
 		} finally {
 			// 초기 편집이 실패해도 턴 잠금이 새지 않도록 여기서 보장해요
-			releaseChannelTurn(channelId);
+			turn.release();
 		}
 	}
 }

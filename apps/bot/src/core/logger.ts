@@ -2,10 +2,7 @@ import { ILogger, LogLevel } from '@sapphire/framework';
 import { Logger, ILogObj, ISettingsParam } from 'tslog';
 import { getLoggerSettings } from '@sirubot/utils';
 
-/**
- * Log level mapping from string to numeric values
- * Maps environment log levels to tslog numeric levels
- */
+/** 환경 변수 로그 레벨 문자열 → tslog 숫자 레벨 */
 const LOG_LEVEL_MAP: Record<string, number> = {
 	silly: 0,
 	trace: 1,

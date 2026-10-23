@@ -165,7 +165,6 @@ export const main = async () => {
 	process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
 	try {
-		// show pid and pid-name
 		client.logger.info(`Starting SiruBOT with PID: ${process.pid}`);
 		client.logger.info(`Mode: ${isDevMode ? 'dev mode (standalone)' : `production (shards: [${shardIds}])`}`);
 

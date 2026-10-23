@@ -3,8 +3,7 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 
 import { handleCustomCommandSlashInteraction } from './customCommandSlash.ts';
 
-const { findMany, deferReply, editReply, deleteReply, channelSend, addRole, react, pin } = vi.hoisted(() => ({
-	findMany: vi.fn(async () => [] as unknown[]),
+const { deferReply, editReply, deleteReply, channelSend, addRole, react, pin } = vi.hoisted(() => ({
 	deferReply: vi.fn(async () => undefined),
 	editReply: vi.fn(async () => undefined),
 	deleteReply: vi.fn(async () => undefined),
@@ -66,7 +65,6 @@ async function mockEntry(entry: unknown) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	void findMany;
 });
 
 describe('handleCustomCommandSlashInteraction', () => {

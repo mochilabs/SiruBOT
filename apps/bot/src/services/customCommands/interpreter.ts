@@ -38,18 +38,18 @@ export interface CustomCommandSendPayload {
 	allowedMentions: { parse: [] };
 }
 
-export interface CustomCommandChannel {
+interface CustomCommandChannel {
 	send(payload: CustomCommandSendPayload): Promise<unknown>;
 }
 
 /** 리액트/고정/삭제 대상이 되는 '실행을 유발한 메시지' — 접두사에선 트리거 메시지, 슬래시에선 응답 메시지 */
-export interface CustomCommandTriggerMessage {
+interface CustomCommandTriggerMessage {
 	react(emoji: string): Promise<unknown>;
 	pin(): Promise<unknown>;
 	delete(): Promise<unknown>;
 }
 
-export interface CustomCommandRoleInfo {
+interface CustomCommandRoleInfo {
 	id: string;
 	position: number;
 	managed: boolean;
