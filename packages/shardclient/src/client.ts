@@ -48,7 +48,7 @@ export class ShardClient {
 
 				return await this.sendIdentify({ withShardIds: false });
 			} catch (error) {
-				// Fatal: no shards available — do not retry, let the process exit
+				// Fatal: no shards available. Do not retry, let the process exit
 				if (error instanceof NoShardsAvailableError) {
 					throw error;
 				}
@@ -90,9 +90,6 @@ export class ShardClient {
 		}
 	}
 
-	/**
-	 * Re-identify with shard manager, sending current shard IDs
-	 */
 	private reidentify(): Promise<void> {
 		return this.sendIdentify({ withShardIds: true }).then(() => undefined);
 	}
@@ -139,8 +136,6 @@ export class ShardClient {
 
 				this.startHeartbeat();
 
-				this.setupEventHandlers();
-
 				// After successful identification, reconnect on disconnect
 				this.ws.onClose((_code, reason) => {
 					this.logger.warn(`Shard manager disconnected (${reason}). Will reconnect...`);
@@ -153,18 +148,6 @@ export class ShardClient {
 		});
 	}
 
-	/**
-	 * Setup persistent event handlers (heartbeat ack)
-	 */
-	private setupEventHandlers(): void {
-		this.ws.on(WsOp.HEARTBEAT_ACK, () => {
-			// heartbeat acknowledged
-		});
-	}
-
-	/**
-	 * Report shard status
-	 */
 	public reportStatus(status: ShardStatusPayload['status']): void {
 		if (!this.identity) return;
 
@@ -177,9 +160,6 @@ export class ShardClient {
 		});
 	}
 
-	/**
-	 * Set callback for collecting stats
-	 */
 	public onStats(callback: () => Omit<ShardStatsPayload, 'shardIds'>): void {
 		this.statsCallback = callback;
 		this.startStatsReporter();

@@ -57,12 +57,7 @@ function readEntry(cacheKey: string): { expires: number; result: CanManageResult
 }
 
 function writeCache(cacheKey: string, result: CanManageResult, meta: GuildMeta | null): void {
-  const ttl =
-    result.status === "ok"
-      ? OK_CACHE_TTL_MS
-      : result.status === "unavailable"
-        ? UNAVAILABLE_CACHE_TTL_MS
-        : 0;
+  const ttl = cacheTtlMs(result);
   if (ttl === 0) return;
 
   if (resolveCache.size >= CACHE_MAX_ENTRIES) {
@@ -85,7 +80,7 @@ function redisKey(userId: string, guildId: string): string {
   return `guild-perm:${userId}:${guildId}`;
 }
 
-/** 결과별 캐시 TTL — invalid-token은 0(캐시 안 함), 인메모리 writeCache와 동일해요. */
+/** 결과별 캐시 TTL — invalid-token은 0(캐시 안 함), 인메모리·Redis 캐시가 같은 값을 써요. */
 function cacheTtlMs(result: CanManageResult): number {
   return result.status === "ok"
     ? OK_CACHE_TTL_MS

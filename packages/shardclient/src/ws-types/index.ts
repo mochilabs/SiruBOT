@@ -17,45 +17,7 @@ export interface WsMessage<T = unknown> {
 	payload: T;
 }
 
-export interface HelloPayload {
-	shardCount: number;
-	shardsPerProcess: number;
-	heartbeatInterval: number;
-}
-
-export interface IdentifyPayload {
-	token: string; // Auth token for verification
-	shardIds?: number[]; // Existing shard IDs for re-identification
-	hostname?: string; // Container/process hostname
-}
-
-export interface IdentifyAckPayload {
-	shardIds: number[];
-	shardCount: number;
-}
-
-export interface HeartbeatPayload {
-	timestamp: number;
-}
-
-export interface HeartbeatAckPayload {
-	timestamp: number;
-}
-
-export type ShardStatus = 'ready' | 'connecting' | 'disconnected' | 'errored';
-
-export interface ShardStatusPayload {
-	status: ShardStatus;
-	shardIds: number[];
-}
-
-export interface ShardStatsPayload {
-	shardIds: number[];
-	guilds: number;
-	players: number;
-	memoryUsage: number;
-	uptime: number;
-}
+// 페이로드 타입은 아래 zod 스키마에서 z.infer로 뽑아요. 계약은 스키마 한 곳만 고치면 돼요.
 
 export const HelloPayloadSchema = z.object({
 	shardCount: z.number(),
@@ -63,25 +25,39 @@ export const HelloPayloadSchema = z.object({
 	heartbeatInterval: z.number()
 });
 
+export type HelloPayload = z.infer<typeof HelloPayloadSchema>;
+
 export const IdentifyPayloadSchema = z.object({
-	token: z.string(),
-	shardIds: z.array(z.number()).optional(),
-	hostname: z.string().optional()
+	token: z.string(), // Auth token for verification
+	shardIds: z.array(z.number()).optional(), // Existing shard IDs for re-identification
+	hostname: z.string().optional() // Container/process hostname
 });
+
+export type IdentifyPayload = z.infer<typeof IdentifyPayloadSchema>;
 
 export const IdentifyAckPayloadSchema = z.object({
 	shardIds: z.array(z.number()),
 	shardCount: z.number()
 });
 
+export type IdentifyAckPayload = z.infer<typeof IdentifyAckPayloadSchema>;
+
 export const HeartbeatPayloadSchema = z.object({
 	timestamp: z.number()
 });
 
+export type HeartbeatPayload = z.infer<typeof HeartbeatPayloadSchema>;
+
+const shardStatusSchema = z.enum(['ready', 'connecting', 'disconnected', 'errored']);
+
+export type ShardStatus = z.infer<typeof shardStatusSchema>;
+
 export const ShardStatusPayloadSchema = z.object({
-	status: z.enum(['ready', 'connecting', 'disconnected', 'errored']),
+	status: shardStatusSchema,
 	shardIds: z.array(z.number())
 });
+
+export type ShardStatusPayload = z.infer<typeof ShardStatusPayloadSchema>;
 
 export const ShardStatsPayloadSchema = z.object({
 	shardIds: z.array(z.number()),
@@ -90,6 +66,8 @@ export const ShardStatsPayloadSchema = z.object({
 	memoryUsage: z.number(),
 	uptime: z.number()
 });
+
+export type ShardStatsPayload = z.infer<typeof ShardStatsPayloadSchema>;
 
 export const WsMessageSchema = z.discriminatedUnion('op', [
 	z.object({ op: z.literal(WsOp.HELLO), payload: HelloPayloadSchema }),

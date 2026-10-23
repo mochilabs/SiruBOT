@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { getLoggerSettings } from '@sirubot/utils';
+
 import { getAppLogger, resolveMinLevel } from './logger.ts';
 
-// resolveMinLevel은 packages/utils/src/logger.ts(getLoggerSettings)의 미러예요 — 한쪽을 바꾸면 함께 바꿔요.
+// resolveMinLevel은 packages/utils/src/logger.ts(getLoggerSettings)의 미러예요.
+// 미러 드리프트는 아래 "packages/utils logger 미러 동기화" describe가 잡아요.
 
 const originalLoglevel = process.env.LOGLEVEL;
 
@@ -40,5 +43,24 @@ describe('getAppLogger', () => {
 		expect(typeof getSubLogger).toBe('function');
 		const sub = getSubLogger('auth');
 		expect(sub).toBeDefined();
+	});
+});
+
+describe('packages/utils logger 미러 동기화', () => {
+	it('LOGLEVEL 해석(minLevel)이 utils getLoggerSettings와 일치해요', () => {
+		const samples = [undefined, '0', '5', 'info', 'WARN', 'debug', 'fatal', 'bogus'];
+		for (const value of samples) {
+			if (value === undefined) delete process.env.LOGLEVEL;
+			else process.env.LOGLEVEL = value;
+			expect(resolveMinLevel(), `LOGLEVEL=${String(value)}`).toBe(getLoggerSettings('Sync').minLevel);
+		}
+	});
+
+	it('기본 설정(type pretty, minLevel info)도 utils와 같은 값을 줘요', () => {
+		delete process.env.LOGLEVEL;
+		const utilsSettings = getLoggerSettings('Sync');
+		expect(utilsSettings.type).toBe('pretty');
+		expect(utilsSettings.minLevel).toBe(3);
+		expect(resolveMinLevel()).toBe(utilsSettings.minLevel);
 	});
 });

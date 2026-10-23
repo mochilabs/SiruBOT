@@ -12,6 +12,16 @@ export function timingSafeKeyEqual(a: string, b: string): boolean {
 	return timingSafeEqual(da, db);
 }
 
+/**
+ * Authorization 헤더 검사 — 헤더 없음·키 불일치를 같은 401로 응답하고 성공이면 null이에요.
+ * 문구는 저장소·대시보드 사용자에게 그대로 보여지는 한국어라 createKeyAuthHook·createKeyPreHandler가 공유해요.
+ */
+function rejectUnauthorized(header: string | undefined, key: string, reply: FastifyReply): FastifyReply | null {
+	if (typeof header !== 'string') return reply.code(401).send({ error: '인증 정보가 없어요.' });
+	if (!timingSafeKeyEqual(header, key)) return reply.code(401).send({ error: '인증에 실패했어요.' });
+	return null;
+}
+
 export interface KeyAuthHookOptions {
 	/** 없으면 auth 비활성화 대신 fail-closed — 기동 자체를 거절해요. */
 	key: string | undefined;
@@ -30,8 +40,7 @@ export function createKeyAuthHook(options: KeyAuthHookOptions): (fastify: Fastif
 	const { key, appName, excludePaths } = options;
 	return async function keyAuth(fastify: FastifyInstance): Promise<void> {
 		const logger = getAppLogger(appName)('auth');
-		// 키가 없으면 auth 비활성화 대신 fail-closed — 기동 자체를 거절해요.
-		// 라이브러리는 프로세스를 종료하지 않아요: throw는 각 앱 진입점의 main().catch → process.exit(1)로 이어져요.
+		// 라이브러리 미종료 설계의 근거는 env.ts parseEnvOrExit 주석, throw는 각 앱 진입점의 main().catch → process.exit(1)로 이어져요.
 		if (!key) {
 			logger.error('AUTH_KEY is not set - refusing to start (fail-closed)');
 			throw new Error('AUTH_KEY is not set - refusing to start (fail-closed)');
@@ -40,14 +49,8 @@ export function createKeyAuthHook(options: KeyAuthHookOptions): (fastify: Fastif
 		fastify.addHook('onRequest', async (request, reply) => {
 			const path = request.url.split('?')[0];
 			if (excludePaths.includes(path)) return;
-			const header = request.headers.authorization;
-			// 문구는 preHandler(createKeyPreHandler)와 동일한 한국어로 통일해요 — 저장소·대시보드 사용자에게 그대로 보여져요.
-			if (typeof header !== 'string') {
-				return reply.code(401).send({ error: '인증 정보가 없어요.' });
-			}
-			if (!timingSafeKeyEqual(header, key)) {
-				return reply.code(401).send({ error: '인증에 실패했어요.' });
-			}
+			const denied = rejectUnauthorized(request.headers.authorization, key, reply);
+			if (denied) return denied;
 		});
 	};
 }
@@ -68,12 +71,7 @@ export function createKeyPreHandler(options: KeyPreHandlerOptions): preHandlerAs
 	if (!key) throw new Error(`${appName} auth key가 비어 있어요 — ${appName.toUpperCase()}_AUTH_KEY 또는 AUTH_KEY를 설정해야 해요.`);
 
 	return async function authPreHandler(request: FastifyRequest, reply: FastifyReply) {
-		const provided = request.headers.authorization;
-		if (typeof provided !== 'string') return reply.code(401).send({ error: '인증 정보가 없어요.' });
-		// 문자열 직접 비교 대신 sha256 다이제스트 기반 타이밍 안전 비교로 통일해요 (timingSafeKeyEqual).
-		if (!timingSafeKeyEqual(provided, key)) {
-			return reply.code(401).send({ error: '인증에 실패했어요.' });
-		}
-		return undefined;
+		const denied = rejectUnauthorized(request.headers.authorization, key, reply);
+		return denied ?? undefined;
 	};
 }

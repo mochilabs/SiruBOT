@@ -58,7 +58,7 @@ export class ShardWebSocket {
 				this.ws.on('message', (data) => {
 					try {
 						const parsed: unknown = JSON.parse(data.toString());
-						// manager와 동일하게 zod 스키마로 검증 — 깨진/악의적 payload가
+						// manager와 동일하게 zod 스키마로 검증: 깨진/악의적 payload가
 						// 핸들러에 전달되지 않도록 한다.
 						const message = WsMessageSchema.parse(parsed);
 						this.emit(message.op, message);
@@ -70,7 +70,7 @@ export class ShardWebSocket {
 				this.ws.on('close', (code, reason) => {
 					const reasonStr = reason.toString();
 					this.logger.warn(`WebSocket closed: ${code} ${reasonStr}`);
-					// Do NOT auto-reconnect — let the caller handle reconnection
+					// Do NOT auto-reconnect. Let the caller handle reconnection.
 					if (this.onCloseCallback) {
 						this.onCloseCallback(code, reasonStr);
 					}
