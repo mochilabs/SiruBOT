@@ -46,7 +46,7 @@ async function verifySubscriptionOwnership(
     `/v1/guilds/${guildId}/social/subscriptions`,
   );
   if (!list.ok) {
-    return dataApiFailResponse(list, dataApiUserMessage(list.message, OWNERSHIP_FALLBACK));
+    return dataApiFailResponse({ ...list, message: dataApiUserMessage(list.message, null) }, OWNERSHIP_FALLBACK);
   }
   if (!list.data.subscriptions.some((subscription) => subscription.id === subId)) {
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
@@ -76,7 +76,7 @@ export const PATCH = createGuildApiHandler({
       { method: "PATCH" },
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, dataApiUserMessage(result.message, UPDATE_FALLBACK));
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, UPDATE_FALLBACK);
     }
 
     return NextResponse.json(result.data);
@@ -103,7 +103,7 @@ export const DELETE = createGuildApiHandler({
       { method: "DELETE" },
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, dataApiUserMessage(result.message, DELETE_FALLBACK));
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, DELETE_FALLBACK);
     }
 
     return NextResponse.json({ ok: true });

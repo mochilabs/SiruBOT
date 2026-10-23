@@ -39,7 +39,7 @@ export const GET = createGuildApiHandler({
       `/v1/social/chzzk/search?${query.toString()}`,
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, dataApiUserMessage(result.message, FALLBACK));
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, FALLBACK);
     }
 
     return NextResponse.json(result.data);

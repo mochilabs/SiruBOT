@@ -31,7 +31,7 @@ export const GET = createGuildApiHandler({
       `/v1/guilds/${guildId}/social/subscriptions`,
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, dataApiUserMessage(result.message, LIST_FALLBACK));
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, LIST_FALLBACK);
     }
 
     return NextResponse.json(result.data);
@@ -51,7 +51,7 @@ export const POST = createGuildApiHandler({
       data,
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, dataApiUserMessage(result.message, CREATE_FALLBACK));
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, CREATE_FALLBACK);
     }
 
     return NextResponse.json(result.data);

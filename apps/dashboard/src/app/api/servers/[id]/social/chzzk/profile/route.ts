@@ -25,7 +25,7 @@ export const POST = createGuildApiHandler({
       data,
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, dataApiUserMessage(result.message, FALLBACK));
+      return dataApiFailResponse({ ...result, message: dataApiUserMessage(result.message, null) }, FALLBACK);
     }
 
     return NextResponse.json(result.data);
