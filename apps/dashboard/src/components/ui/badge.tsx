@@ -13,11 +13,14 @@ const badgeVariants = cva(
 				default: "bg-surface-2 text-foreground/80",
 				primary: "bg-primary/10 text-primary-text",
 				success: "bg-success/10 text-success",
-				warning: "bg-warning/10 text-warning",
-				danger: "bg-destructive/10 text-destructive",
-				destructive: "bg-destructive/10 text-destructive",
+				// 12px 배지 텍스트는 warning·destructive·discord 틴트 배경 위에서 AA 4.5:1에 못 미쳐요(측정 3.98~4.50:1).
+				// 이 세 톤만 솔리드 채움 + 전경 토큰으로 바꿔요(측정 라이트 4.61~5.25:1, 다크 4.61~8.97:1).
+				warning: "bg-warning text-warning-foreground",
+				// 별칭 계약: danger와 destructive는 같은 클래스를 가리키는 공개 API 별칭이에요(호출부 혼용 유지).
+				danger: "bg-destructive text-destructive-foreground",
+				destructive: "bg-destructive text-destructive-foreground",
 				info: "bg-info/10 text-info",
-				discord: "bg-discord-primary/10 text-discord-primary",
+				discord: "bg-discord-primary text-white",
 				secondary: "bg-secondary text-secondary-foreground",
 				outline: "border border-border bg-background text-foreground",
 				ghost: "hover:bg-muted hover:text-muted-foreground",
@@ -39,11 +42,13 @@ const dotVariants: Record<NonNullable<VariantProps<typeof badgeVariants>["varian
 	default: "bg-dot-neutral",
 	primary: "bg-primary-control",
 	success: "bg-success",
-	warning: "bg-warning",
-	danger: "bg-destructive",
-	destructive: "bg-destructive",
+	// 솔리드 배경(위 warning·destructive·discord) 위에서는 dot도 전경색으로 뒤집어야 형태가 읽혀요(측정 4.61~8.97:1)
+	warning: "bg-warning-foreground",
+	// 별칭 계약: danger와 destructive는 같은 값을 가져요(위 variant와 동일한 별칭 관계).
+	danger: "bg-destructive-foreground",
+	destructive: "bg-destructive-foreground",
 	info: "bg-info",
-	discord: "bg-discord-primary",
+	discord: "bg-white",
 	secondary: "bg-secondary",
 	outline: "bg-dot-neutral",
 	ghost: "bg-dot-neutral",

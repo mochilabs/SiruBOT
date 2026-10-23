@@ -57,7 +57,9 @@
 	--accent-foreground: #4f1c2a;
 	--border: #f3d3d6;
 	--input: var(--border);
-	--ring: var(--brand);
+	/* 라이트 포커스 링: --brand(#ee6f8b)는 라이트 서피스 위 2.07~2.88:1이라 3:1에 못 미쳐요.
+	   같은 핑크 계열의 더 어두운 값(#c4476a)으로 올려 3.39~4.71:1을 확보해요(비텍스트 3:1 기준). */
+	--ring: #c4476a;
 
 	--discord-embed: #f2f3f5;
 	--discord-text: #313338;
@@ -65,6 +67,16 @@
 	--discord-btn-active: #e3e5e8;
 	--discord-btn-hover: #d5d6d7;
 	--discord-bg: #ebedef;
+
+	/* 컴포넌트 테마 값: 다크 차이(투명도)는 여기서만 재정의해요.
+	   대상: 아웃라인 버튼 채움, 입력 그룹 채움·무효 링, 메뉴 destructive 포커스 틴트.
+	   (설계 토큰 규칙: 다크는 CSS 변수 재정의만, 컴포넌트에서 dark: 분기 금지) */
+	--outline-fill: var(--background);
+	--outline-fill-hover: var(--muted);
+	--input-group-fill: transparent;
+	--input-group-fill-disabled: color-mix(in srgb, var(--input) 50%, transparent);
+	--input-group-invalid-ring: color-mix(in srgb, var(--destructive) 20%, transparent);
+	--destructive-focus-fill: color-mix(in srgb, var(--destructive) 10%, transparent);
 
 }
 .dark {
@@ -92,6 +104,7 @@
 	--accent-foreground: #ffdada;
 	--border: #4d3b40;
 	--input: var(--border);
+	/* 다크 링은 --brand(#f98aa0) 그대로로 서피스 위 6.88~7.73:1 통과 */
 	--ring: var(--brand);
 
 	--discord-embed: #2b2d31;
@@ -100,6 +113,13 @@
 	--discord-btn-active: #4e5058;
 	--discord-btn-hover: #6d6f78;
 	--discord-bg: #35373c;
+
+	--outline-fill: color-mix(in srgb, var(--input) 30%, transparent);
+	--outline-fill-hover: color-mix(in srgb, var(--input) 50%, transparent);
+	--input-group-fill: color-mix(in srgb, var(--input) 30%, transparent);
+	--input-group-fill-disabled: color-mix(in srgb, var(--input) 80%, transparent);
+	--input-group-invalid-ring: color-mix(in srgb, var(--destructive) 40%, transparent);
+	--destructive-focus-fill: color-mix(in srgb, var(--destructive) 20%, transparent);
 
 }
 
@@ -131,6 +151,12 @@
 	--color-input: var(--input);
 	--color-border: var(--border);
 	--color-ring: var(--ring);
+	--color-outline-fill: var(--outline-fill);
+	--color-outline-fill-hover: var(--outline-fill-hover);
+	--color-input-group-fill: var(--input-group-fill);
+	--color-input-group-fill-disabled: var(--input-group-fill-disabled);
+	--color-input-group-invalid-ring: var(--input-group-invalid-ring);
+	--color-destructive-focus-fill: var(--destructive-focus-fill);
 
 	--color-discord-embed: var(--discord-embed);
 	--color-discord-text: var(--discord-text);
