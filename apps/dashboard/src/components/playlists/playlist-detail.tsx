@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
 import { type Virtualizer } from "@tanstack/react-virtual";
-import { Clock, Edit, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock, Edit, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
 
 import Loader from "@/components/loader";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -18,6 +19,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import type { Playlist, Track } from "@/types/playlist";
+
+// 키보드 이동은 부모가 준 드래그 핸들러를 그대로 태워요: onDrop이 부모 상태의 draggedIdx를 읽어야 해서
+// onDragStart 호출과 onDrop 호출을 한 렌더씩 나눠야 해요 (재정렬 API는 페이지의 훅에만 있어요).
+const dragEventShim = {
+	preventDefault() {},
+	dataTransfer: { effectAllowed: "move" },
+} as unknown as React.DragEvent;
 
 interface PlaylistDetailProps {
 	activePlaylist: Playlist | null;
@@ -56,6 +64,22 @@ export function PlaylistDetail({
 	parentRef,
 	rowVirtualizer,
 }: PlaylistDetailProps) {
+	// 위/아래 이동: onDragStart가 부모의 draggedIdx를 세우면 다음 렌더에서 onDrop을 넘겨 재정렬을 요청해요.
+	const [pendingMove, setPendingMove] = useState<{ from: number; to: number } | null>(null);
+
+	useEffect(() => {
+		if (!pendingMove || draggedIdx !== pendingMove.from) return;
+		onDrop(dragEventShim, pendingMove.to);
+		onDragEnd();
+		setPendingMove(null);
+	}, [pendingMove, draggedIdx, onDrop, onDragEnd]);
+
+	const moveTrack = (from: number, to: number) => {
+		if (to < 0 || to >= tracks.length || from === to) return;
+		onDragStart(dragEventShim, from);
+		setPendingMove({ from, to });
+	};
+
 	if (detailLoading) {
 		return (
 			<Card padding="none" className="h-full items-center justify-center p-20">
@@ -167,7 +191,7 @@ export function PlaylistDetail({
 								return (
 									<div
 										key={track.id}
-										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border-subtle group transition-colors hover:bg-surface-2/50 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
+										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border-subtle transition-colors hover:bg-surface-2/50 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
 										style={{
 											height: `${virtualRow.size}px`,
 											transform: `translateY(${virtualRow.start}px)`,
@@ -178,11 +202,11 @@ export function PlaylistDetail({
 										onDrop={(e) => onDrop(e, idx)}
 										onDragEnd={onDragEnd}
 									>
-										<div className="hidden md:flex w-10 shrink-0 items-center justify-center">
-											<span className="text-muted-foreground font-medium group-hover:hidden text-xs tabular-nums">
+										<div className="hidden md:flex w-10 shrink-0 items-center justify-center gap-1">
+											<span className="text-muted-foreground font-medium text-xs tabular-nums">
 												{idx + 1}
 											</span>
-											<Move size={14} className="text-muted-foreground hidden group-hover:block cursor-grab active:cursor-grabbing" />
+											<Move size={14} className="text-muted-foreground cursor-grab active:cursor-grabbing" aria-hidden />
 										</div>
 										<span className="md:hidden w-5 shrink-0 text-right text-2xs tabular-nums text-muted-foreground">
 											{idx + 1}
@@ -221,6 +245,24 @@ export function PlaylistDetail({
 
 										<div className="shrink-0 ml-3 md:ml-4 flex items-center justify-center gap-2">
 											<TrackListenLink url={track.url} title={track.title} compact />
+											<Button
+												variant="icon"
+												size="icon-xs"
+												className="pointer-coarse:min-h-11"
+												aria-label="위로 이동"
+												disabled={idx === 0}
+												icon={<ArrowUp size={14} />}
+												onClick={() => moveTrack(idx, idx - 1)}
+											/>
+											<Button
+												variant="icon"
+												size="icon-xs"
+												className="pointer-coarse:min-h-11"
+												aria-label="아래로 이동"
+												disabled={idx === tracks.length - 1}
+												icon={<ArrowDown size={14} />}
+												onClick={() => moveTrack(idx, idx + 1)}
+											/>
 											<DropdownMenu>
 												<DropdownMenuTrigger
 													render={
@@ -248,10 +290,11 @@ export function PlaylistDetail({
 							})}
 						</div>
 
+						{/* 흐린 표시는 opacity가 아니라 muted 토큰으로 해요. opacity-40이면 본문 대비가 2.3:1까지 내려가요 */}
 						{tracks.length > 0 && (
-							<div className="flex flex-col items-center justify-center py-12 mt-4 text-center opacity-40 select-none border-t border-border/10">
+							<div className="flex flex-col items-center justify-center py-12 mt-4 text-center text-muted-foreground select-none border-t border-border/10">
 								<div className="text-xs font-medium mb-1.5 flex items-center gap-2">
-									<span>더이상 표시할 곡이 없어요</span>
+									<span>더 이상 표시할 곡이 없어요</span>
 								</div>
 								<Button variant="ghost" size="sm" onClick={onOpenAddTrack}>
 									곡 추가 버튼을 눌러 플레이리스트를 채워보세요!

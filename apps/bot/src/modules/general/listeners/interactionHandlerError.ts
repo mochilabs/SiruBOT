@@ -3,7 +3,7 @@ import { Events, InteractionHandlerError as InteractionHandlerErrorPayload, List
 import { MessageFlags, InteractionReplyOptions } from 'discord.js';
 import * as Sentry from '@sentry/node';
 import { emoji } from '@sirubot/utils';
-import { errorView } from '../../../lib/errorView.ts';
+import { errorView, resolveErrorEphemeral } from '../../../lib/errorView.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.InteractionHandlerError })
 export class InteractionHandlerError extends Listener {
@@ -27,11 +27,9 @@ export class InteractionHandlerError extends Listener {
 			this.container.logger.warn(`InteractionHandlerError (UserError) in ${handler.name}: ${error.identifier}`);
 		}
 
-		// 사용자에게 에러 메시지 전달
 		if (interaction.isRepliable()) {
 			try {
-				const context = userError ? error.context : undefined;
-				const ephemeral = typeof context === 'object' && context !== null && 'ephemeral' in context ? Boolean(context.ephemeral) : !userError;
+				const ephemeral = resolveErrorEphemeral(error);
 				const message = userError ? error.message : `${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`;
 
 				const payload = ephemeral

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@sirubot/prisma";
-import { type GreetingConfig,greetingConfigSchema, validateGreetingConfig } from "@sirubot/utils/memberGreeting";
+import { type GreetingConfig, greetingConfigSchema, validateGreetingConfig } from "@sirubot/utils/memberGreeting";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";

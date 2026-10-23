@@ -105,7 +105,7 @@ function runSaturationWorkload(
 ): number {
 	const startedAt = performance.now();
 
-	// 포화 상태를 만들고(신규 키 연속 삽입 = 매 삽입이 eviction을 유발), 이어서 연속 get.
+	// 포화 상태 신규 키 삽입 워크로드, 매 삽입이 eviction을 유발해요.
 	for (let i = 0; i < operations; i++) {
 		cache.set(`key-${i}`, i);
 	}
@@ -114,7 +114,6 @@ function runSaturationWorkload(
 		cache.get(`key-${i}`);
 	}
 
-	// 작업이 끝나도 maxSize를 넘지 않아야 해요.
 	expect(cache.size()).toBeLessThanOrEqual(maxSize);
 
 	return performance.now() - startedAt;

@@ -4,10 +4,11 @@ export const toneStyles = {
 	neutral: { badge: "border-0 bg-surface-2 text-foreground/80", dot: "bg-dot-neutral", text: "text-foreground/80" },
 	primary: { badge: "border-0 bg-primary/10 text-primary-text", dot: "bg-primary-control", text: "text-primary-text" },
 	success: { badge: "border-0 bg-success/10 text-success", dot: "bg-success", text: "text-success" },
-	warning: { badge: "border-0 bg-warning/10 text-warning", dot: "bg-warning", text: "text-warning" },
-	destructive: { badge: "border-0 bg-destructive/10 text-destructive", dot: "bg-destructive", text: "text-destructive" },
+	// badge 조합은 badge.tsx와 같은 규칙이에요: 이 세 톤은 틴트 위 12px 텍스트가 AA에 못 미쳐 솔리드로 써요.
+	warning: { badge: "border-0 bg-warning text-warning-foreground", dot: "bg-warning", text: "text-warning" },
+	destructive: { badge: "border-0 bg-destructive text-destructive-foreground", dot: "bg-destructive", text: "text-destructive" },
 	info: { badge: "border-0 bg-info/10 text-info", dot: "bg-info", text: "text-info" },
-	discord: { badge: "border-0 bg-discord-primary/10 text-discord-primary", dot: "bg-discord-primary", text: "text-discord-primary" },
+	discord: { badge: "border-0 bg-discord-primary text-white", dot: "bg-discord-primary", text: "text-discord-primary" },
 } as const;
 
 export type Tone = keyof typeof toneStyles;

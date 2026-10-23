@@ -3,6 +3,7 @@ import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { emoji, createContainer } from '@sirubot/utils';
 import { envParseArray } from '@skyra/env-utilities';
+import { formatDayHourMinute } from '../../utils/uptime.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -52,14 +53,9 @@ export class NodesCommand extends Command {
 					const players = stats.players ?? 0;
 					const playingPlayers = stats.playingPlayers ?? 0;
 
-					const uptimeSeconds = Math.floor((stats.uptime ?? 0) / 1000);
-					const days = Math.floor(uptimeSeconds / 86400);
-					const hours = Math.floor((uptimeSeconds % 86400) / 3600);
-					const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-
 					lines.push(`  ${emoji('chart')} 플레이어: ${playingPlayers}/${players} | CPU: ${cpuLoad}%`);
 					lines.push(`  ${emoji('disk')} 메모리: ${memUsed}MB / ${memTotal}MB`);
-					lines.push(`  ${emoji('clock')} 업타임: ${days}일 ${hours}시간 ${minutes}분`);
+					lines.push(`  ${emoji('clock')} 업타임: ${formatDayHourMinute((stats.uptime ?? 0) / 1000)}`);
 				}
 
 				lines.push('');

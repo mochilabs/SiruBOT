@@ -3,7 +3,7 @@ import { getLogger } from './logger.ts';
 
 const logger = getLogger('gateway');
 
-export interface GatewayResponse {
+interface GatewayResponse {
 	url: string;
 	shards: number;
 	session_start_limit: {

@@ -210,9 +210,10 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
       </div>
 
       <InfoBox>
+        {/* 서버 운영용 환경변수명(JTC_EMPTY_GRACE_MS)은 사용자에게 보이지 않게 감춰요 */}
         <p>
-          비어 있는 임시방은 30초 후 자동으로 삭제돼요. (서버 설정
-          JTC_EMPTY_GRACE_MS로 조정 가능)
+          비어 있는 임시방은 30초 후 자동으로 삭제돼요. (서버 설정으로 조정할 수
+          있어요)
         </p>
       </InfoBox>
 

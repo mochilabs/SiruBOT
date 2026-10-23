@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { textContainer } from '../utils/textContainer.ts';
 
 const FORMULA_PATTERN = /^(\d{1,2})d(\d{1,3})(?:\s*([+-])\s*(\d{1,3}))?$/i;
 
@@ -66,19 +67,11 @@ export class DiceCommand extends Command {
 		await interaction.deferReply();
 		await interaction.editReply({
 			components: [
-				(() => {
-					const container = createContainer();
-					container.addTextDisplayComponents((t) =>
-						t.setContent(
-							[
-								`### ${emoji('dice')} 주사위 굴림`,
-								`**${displayFormula}** → \`${rollsText}\`${modifierText} = **${total}**`,
-								`-# ${interaction.user.displayName} 님이 굴렸어요.`
-							].join('\n')
-						)
-					);
-					return container;
-				})()
+				textContainer([
+					`### ${emoji('dice')} 주사위 굴림`,
+					`**${displayFormula}** → \`${rollsText}\`${modifierText} = **${total}**`,
+					`-# ${interaction.user.displayName} 님이 굴렸어요.`
+				])
 			],
 			flags: [MessageFlags.IsComponentsV2]
 		});

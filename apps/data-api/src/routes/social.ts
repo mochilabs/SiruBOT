@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { redisIdSchema } from '@sirubot/utils';
 import { metrics } from '../utils/metrics.ts';
+import { guildIdParams } from './common.ts';
 
 /**
  * 소셜 알림 프록시 — 대시보드의 단일 게이트웨이(data-api) 규칙을 유지하면서
@@ -9,7 +10,6 @@ import { metrics } from '../utils/metrics.ts';
  * 파라미터·바디의 최종 검증은 notifier가 담당하고, 여기서는 경로 파라미터만 검증해요.
  */
 
-const guildIdParams = z.object({ guildId: redisIdSchema });
 /** 구독 수정·삭제 경로 파라미터 — notifier가 길드 스코프(`{ id, guildId }`)로 소유권을 검증하므로 guildId가 함께 필요해요. */
 const subscriptionRouteParams = z.object({ guildId: redisIdSchema, id: z.string().uuid() });
 
@@ -65,41 +65,43 @@ async function handleProxy(
 	}
 }
 
+/** 경로 파라미터 검증. 실패하면 400을 내리고 null을 돌려 핸들러가 조기 반환해요. */
+function parseParamsOr400<Output>(reply: FastifyReply, schema: z.ZodType<Output>, params: unknown, message: string): Output | null {
+	const parsed = schema.safeParse(params);
+	if (!parsed.success) {
+		reply.code(400).send({ error: 'invalid_params', message });
+		return null;
+	}
+	return parsed.data;
+}
+
 export async function registerSocialRoutes(fastify: FastifyInstance, deps: { notifierUrl?: string; notifierAuthKey?: string }): Promise<void> {
 	fastify.get('/v1/guilds/:guildId/social/subscriptions', async (request, reply) => {
-		const parsed = guildIdParams.safeParse(request.params);
-		if (!parsed.success) {
-			return reply.code(400).send({ error: 'invalid_params', message: '길드 ID 형식이 올바르지 않아요.' });
-		}
+		const parsed = parseParamsOr400(reply, guildIdParams, request.params, '길드 ID 형식이 올바르지 않아요.');
+		if (!parsed) return reply;
 		metrics.request('social-subscriptions-list');
-		return handleProxy(deps, reply, 'GET', `/v1/guilds/${parsed.data.guildId}/social/subscriptions`);
+		return handleProxy(deps, reply, 'GET', `/v1/guilds/${parsed.guildId}/social/subscriptions`);
 	});
 
 	fastify.post('/v1/guilds/:guildId/social/subscriptions', async (request, reply) => {
-		const parsed = guildIdParams.safeParse(request.params);
-		if (!parsed.success) {
-			return reply.code(400).send({ error: 'invalid_params', message: '길드 ID 형식이 올바르지 않아요.' });
-		}
+		const parsed = parseParamsOr400(reply, guildIdParams, request.params, '길드 ID 형식이 올바르지 않아요.');
+		if (!parsed) return reply;
 		metrics.request('social-subscriptions-create');
-		return handleProxy(deps, reply, 'POST', `/v1/guilds/${parsed.data.guildId}/social/subscriptions`, { body: request.body });
+		return handleProxy(deps, reply, 'POST', `/v1/guilds/${parsed.guildId}/social/subscriptions`, { body: request.body });
 	});
 
 	fastify.patch('/v1/guilds/:guildId/social/subscriptions/:id', async (request, reply) => {
-		const parsed = subscriptionRouteParams.safeParse(request.params);
-		if (!parsed.success) {
-			return reply.code(400).send({ error: 'invalid_params', message: '구독 ID 형식이 올바르지 않아요.' });
-		}
+		const parsed = parseParamsOr400(reply, subscriptionRouteParams, request.params, '구독 ID 형식이 올바르지 않아요.');
+		if (!parsed) return reply;
 		metrics.request('social-subscriptions-update');
-		return handleProxy(deps, reply, 'PATCH', `/v1/guilds/${parsed.data.guildId}/social/subscriptions/${parsed.data.id}`, { body: request.body });
+		return handleProxy(deps, reply, 'PATCH', `/v1/guilds/${parsed.guildId}/social/subscriptions/${parsed.id}`, { body: request.body });
 	});
 
 	fastify.delete('/v1/guilds/:guildId/social/subscriptions/:id', async (request, reply) => {
-		const parsed = subscriptionRouteParams.safeParse(request.params);
-		if (!parsed.success) {
-			return reply.code(400).send({ error: 'invalid_params', message: '구독 ID 형식이 올바르지 않아요.' });
-		}
+		const parsed = parseParamsOr400(reply, subscriptionRouteParams, request.params, '구독 ID 형식이 올바르지 않아요.');
+		if (!parsed) return reply;
 		metrics.request('social-subscriptions-delete');
-		return handleProxy(deps, reply, 'DELETE', `/v1/guilds/${parsed.data.guildId}/social/subscriptions/${parsed.data.id}`);
+		return handleProxy(deps, reply, 'DELETE', `/v1/guilds/${parsed.guildId}/social/subscriptions/${parsed.id}`);
 	});
 
 	fastify.get('/v1/social/chzzk/search', async (request, reply) => {

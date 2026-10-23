@@ -8,8 +8,7 @@
  * 호출자가 요청당 메타데이터(예: guildId)를 id에 묶어둬야 한다면 register 전에 심어두고
  * onTimeout에서 함께 정리하세요 — timeout 페이로드로 완료되는 모든 경로(대기 초과·용량 초과 즉시 실패·
  * 중복 id 재등록)에서 onTimeout이 불리므로 같은 자리에서 정리하면 맵 누수가 없어요.
- * 단, 풀은 모든 완료 경로에서 `timeoutResult(id)`를 **먼저** 계산한 뒤 onTimeout을 호출해요 —
- * timeoutResult가 묶인 메타데이터(예: guildId)를 읽을 수 있게 하기 위함이에요.
+ * timeoutResult를 먼저 계산하는 순서 계약은 options.onTimeout 문서 참조.
  */
 
 export interface PendingRequestPoolLogger {
@@ -26,7 +25,7 @@ export interface PendingRequestPoolOptions<TPayload> {
 	 * 페이로드로 완료해요 (봇 응답 없음과 타임아웃을 같은 실패로 매핑하는 기존 허브들의 규칙이에요).
 	 */
 	timeoutResult: (id: string) => TPayload;
-	/** timeout 페이로드로 완료될 때마다 호출돼요 — id에 묶어둔 보조 메타데이터를 정리하는 용도예요 (timeoutResult 계산 이후에 불려요) */
+	/** timeout 페이로드로 완료될 때마다 호출돼요 — id에 묶어둔 보조 메타데이터를 정리하는 용도예요. 모든 완료 경로에서 timeoutResult를 먼저 계산한 뒤 불려요(호출자가 페이로드에서 메타데이터를 읽을 수 있게) */
 	onTimeout?: (id: string) => void;
 }
 
@@ -51,7 +50,7 @@ export class PendingRequestPool<TPayload> {
 	 * - timeoutMs 안에 resolve/fail로 완료되지 않으면 타이머가 회수해 timeoutResult 페이로드로 완료해요.
 	 * - 용량이 가득 차면 등록하지 않고 즉시 timeoutResult 페이로드로 완료해요 — 새 요청이 pending을 밀어내지 않아요.
 	 * - 같은 id가 이미 대기 중이면 새 등록만 즉시 실패하고 기존 대기는 그대로 유지해요.
-	 * - 호출자의 보조 메타데이터는 register 전에 심어두세요 — 즉시 실패 경로에서도 onTimeout이 동기적으로 불려요.
+	 * - 즉시 실패 경로(용량 초과·중복 id)에서도 onTimeout은 동기적으로 불려요.
 	 */
 	public register(id: string, timeoutMs: number): Promise<TPayload> {
 		if (this.entries.size >= this.options.capacity) {

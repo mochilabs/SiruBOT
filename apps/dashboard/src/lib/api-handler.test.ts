@@ -183,6 +183,17 @@ describe("createGuildApiHandler — 본문 스키마", () => {
 		expect(body.error).toContain("volume:");
 	});
 
+	it("미등록 필드가 섞이면 parseSettingBody 공통 계약대로 400으로 거절해요", async () => {
+		const handler = vi.fn().mockResolvedValue(NextResponse.json({}));
+		const route = createGuildApiHandler({ role: "manage", rate: RULE, key: "t", schema, handler });
+		const res = await route(makeRequest({ volume: 42, junk: 1 }), guildContext);
+
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as { error: string };
+		expect(body.error).toContain("지원하지 않는 필드예요");
+		expect(handler).not.toHaveBeenCalled();
+	});
+
 	it("JSON이 깨져 있으면 null로 떨어져 400 스키마 검증으로 이어져요", async () => {
 		const request = new Request("http://localhost/api/test", { method: "POST", body: "{not-json" });
 		const handler = vi.fn().mockResolvedValue(NextResponse.json({}));

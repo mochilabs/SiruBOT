@@ -34,10 +34,10 @@ export default async function routes(fastify: FastifyInstance) {
 		const notifier = fastify.manager.getNotifier();
 		const wsAuthKey = fastify.manager.getAuthKey() ?? '';
 
-		// 미식별 소켓 수명 제한 — IDENTIFY 없이 붙어만 있는 소켓은 하트비트 회수 대상이 아니라 그대로 쌓여요.
+		// 미식별 소켓 수명 제한: IDENTIFY 없이 붙어만 있는 소켓은 하트비트 회수 대상이 아니라 그대로 쌓여요.
 		const identifyTimeout = setTimeout(() => {
 			if (!registry.getProcess(wsId)) {
-				logger.warn(`[${wsId}] Identify timeout — closing unidentified socket`);
+				logger.warn(`[${wsId}] Identify timeout: closing unidentified socket`);
 				socket.close(4002, 'Identify timeout');
 			}
 		}, IDENTIFY_TIMEOUT_MS);
@@ -100,7 +100,7 @@ export default async function routes(fastify: FastifyInstance) {
 		});
 
 		function handleIdentify(id: string, ws: WebSocket, payload: IdentifyPayload) {
-			// 같은 소켓에서의 재-IDENTIFY는 정당한 흐름이 아니에요 — 이전 등록을 갱신하면
+			// 같은 소켓에서의 재-IDENTIFY는 정당한 흐름이 아니에요. 이전 등록을 갱신하면
 			// 이전 샤드 ID가 할당 집합에 남아 영구히 유출됩니다(할당 고갈 DoS 방지, SEC-003).
 			if (registry.getProcess(id)) {
 				logger.warn(`[${id}] IDENTIFY rejected: socket is already identified`);
@@ -120,7 +120,7 @@ export default async function routes(fastify: FastifyInstance) {
 
 			let shardIds: number[] | null;
 
-			// Re-identification: bot sends its current shard IDs — 정수·범위·점유 상태를 검증해요.
+			// Re-identification: bot sends its current shard IDs. 정수·범위·점유 상태를 검증해요.
 			if (payload.shardIds && payload.shardIds.length > 0) {
 				logger.info(`[${id}] Re-identifying with existing shards [${payload.shardIds.join(', ')}]`);
 				shardIds = registry.claimShards(id, payload.shardIds);

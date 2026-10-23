@@ -23,7 +23,7 @@ interface LegacyRestResponse {
 }
 
 /** 한국어 택배사 별칭 → tracker.delivery carrier ID */
-export const CARRIER_ALIASES: Record<string, string> = {
+const CARRIER_ALIASES: Record<string, string> = {
 	cj: 'kr.cjlogistics',
 	cj대한통운: 'kr.cjlogistics',
 	cj택배: 'kr.cjlogistics',

@@ -25,13 +25,13 @@ export const TTS_SOLO_QUEUE_MAX = 5;
 /** 오버레이 대기(mixer announcementsQueued) 상한 — 초과 시 신규 안내를 조용히 거절한다 */
 export const TTS_OVERLAY_QUEUE_MAX = 5;
 /** 길드당 동시 합성 수 — 초과분은 FIFO로 대기한다 */
-export const TTS_GUILD_CONCURRENT_SYNTH = 2;
+const TTS_GUILD_CONCURRENT_SYNTH = 2;
 /** 길드 분당 합성 글자 수 — 초과 시 클립을 버린다 */
 export const TTS_GUILD_CHARS_PER_MIN = 1000;
 /** 오버레이 ducking 수준 (명세 4.2) */
 export const TTS_DUCK_LEVEL = 0.2;
 
-export interface TtsTextResolvers {
+interface TtsTextResolvers {
 	memberName(id: string): string | null;
 	roleName(id: string): string | null;
 	channelName(id: string): string | null;

@@ -99,7 +99,8 @@ export function LicenseList({ entries, summary, total }: LicenseListProps) {
 												target="_blank"
 												rel="noopener noreferrer"
 												aria-label={`${entry.name} 원본 저장소`}
-												className="shrink-0 text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+												// 아이콘(13px)만으로는 터치하기 어려워 after로 44px 히트 영역을 넓혀요(배지 dismiss와 같은 방식).
+												className="relative shrink-0 text-muted-foreground transition-colors duration-fast hover:text-primary-text after:absolute after:inset-[min(0px,calc((100%-44px)/2))]"
 											>
 												<ExternalLink size={13} aria-hidden />
 											</a>

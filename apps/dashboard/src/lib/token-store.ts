@@ -141,7 +141,7 @@ export async function replaceTokenSet(
  * 백필용 — 행이 이미 있으면 아무것도 안 해요(no-op update).
  * 동시 백필이 겹쳐도 기존(더 새) 데이터를 덮어쓰지 않도록 멱등하게 유지해요.
  */
-export async function insertTokenSetIfAbsent(
+async function insertTokenSetIfAbsent(
   userId: string,
   set: Omit<TokenSet, "version">,
 ): Promise<void> {
@@ -163,7 +163,7 @@ export async function insertTokenSetIfAbsent(
  * 낙관적 잠금 쓰기 — expectedVersion과 일치할 때만 갱신해요(version 1 증가).
  * 경쟁에서 진 요청은 0건이 반환돼 "승자 채택"으로 폴백해요.
  */
-export async function writeTokenSetOptimistic(
+async function writeTokenSetOptimistic(
   userId: string,
   set: Omit<TokenSet, "version">,
   expectedVersion: number,
@@ -183,7 +183,7 @@ export async function writeTokenSetOptimistic(
 }
 
 /** 토큰 셋 삭제 (진짜 폐기 시). */
-export async function deleteTokenSet(userId: string): Promise<void> {
+async function deleteTokenSet(userId: string): Promise<void> {
   const key = encryptionKey();
   if (!key) return;
   try {

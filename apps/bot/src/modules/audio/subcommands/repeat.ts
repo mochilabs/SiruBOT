@@ -44,6 +44,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
+	// addChoices로 값이 제한되지만, 방어로 한 번 더 검증한다.
 	if (!(VALID_REPEAT_MODES as readonly string[]).includes(mode)) {
 		throw new UserError({
 			identifier: 'repeat_invalid',

@@ -1,13 +1,7 @@
 /**
- * 커스텀 명령어 AI 초안 생성 — 대시보드 빌더의 자연어 설명을 JSON 스펙 초안으로 바꿔요.
- *
- * LLM 출력은 신뢰할 수 없으므로 (코드 펜스·잡담·형식 오류 포함) 항상 파싱+스키마 재검증을
- * 거쳐요. 형식이 맞지 않으면 사유를 담아 1회 재요청하고, 그래도 실패하면 사유를 돌려줘요
- * (HTTP 응답의 한국어 안내는 라우트가 만들어요).
- *
- * 모델 계약은 @sirubot/utils의 customCommandPayloadSchema(스펙 v2)예요 — 스펙 v2가 바뀌면
- * CUSTOM_COMMAND_SPEC_RULES의 규칙 설명도 함께 갱신해요. 반복 수정(customCommandRefine)도
- * 같은 규칙 상수를 써요.
+ * 커스텀 명령어 AI 초안 생성. 대시보드 빌더의 자연어 설명을 JSON 스펙 초안으로 바꿔요.
+ * LLM 출력은 파싱+스키마 재검증을 거치고, 형식 오류는 사유를 담아 1회 재요청해요(HTTP 안내는 라우트 소유).
+ * 모델 계약은 @sirubot/utils의 customCommandPayloadSchema(스펙 v2)예요. 스펙이 바뀌면 CUSTOM_COMMAND_SPEC_RULES도 함께 갱신하고, 반복 수정도 같은 규칙 상수를 써요.
  */
 import { z } from 'zod';
 import {
@@ -75,7 +69,7 @@ const DRAFT_SYSTEM_PROMPT = [
 ].join('\n');
 
 /** ```` 펜스로 감싸 온 출력을 벗겨요 */
-function stripCodeFences(text: string): string {
+export function stripCodeFences(text: string): string {
 	const lines = text.split('\n');
 	while (lines.length > 0 && /^```/.test(lines[0]!.trim())) lines.shift();
 	while (lines.length > 0 && /^```/.test(lines[lines.length - 1]!.trim())) lines.pop();

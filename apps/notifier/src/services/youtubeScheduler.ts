@@ -15,13 +15,13 @@ const logger = getLogger('youtubeScheduler');
 
 const TICK_MS = 5 * 60 * 1000;
 const LOCK_KEY = 'sirubot:social:youtube:scheduler-lock';
-const LOCK_TTL_SECONDS = 270; // 틱(5분)보다 짧게 — 다음 틱이 다시 잡을 수 있게
+const LOCK_TTL_SECONDS = 270; // 틱(5분)보다 짧게: 다음 틱이 다시 잡을 수 있게
 const LEASE_KEY_PREFIX = 'sirubot:social:youtube:lease:';
 // lease가 하루보다 적게 남으면 재등록해요 (유튜브 lease 최대 5일, plan §8)
 const RENEW_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 const LEASE_TTL_SECONDS = YOUTUBE_LEASE_SECONDS + 60;
 const AUDIT_KEY_PREFIX = 'sirubot:social:youtube:audit:';
-// plan §8 — RSS 감사 폴링은 채널당 30분~1시간 (지터 포함). WebSub 푸시가 유실된 영상을 회수해요.
+// plan §8: RSS 감사 폴링은 채널당 30분~1시간 (지터 포함). WebSub 푸시가 유실된 영상을 회수해요.
 const AUDIT_INTERVAL_BASE_SECONDS = 30 * 60;
 const AUDIT_JITTER_SECONDS = 30 * 60;
 
@@ -53,7 +53,7 @@ export class YouTubeScheduler extends SubscriptionPoller {
 			lockTtlSeconds: LOCK_TTL_SECONDS,
 			logger,
 			startMessage: '유튜브 스케줄러를 시작해요.',
-			breakerOpenMessage: `유튜브 스케줄러가 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`
+			breakerOpenMessage: `유튜브 스케줄러가 ${BREAKER_THRESHOLD}틱 연속 실패: 30분간 봉쇄해요.`
 		});
 		this.fetchFn = options.fetchFn ?? fetch;
 		this.dispatcher = options.dispatcher;
@@ -67,7 +67,7 @@ export class YouTubeScheduler extends SubscriptionPoller {
 			rows = await db.socialSubscription.findMany({ where: { platform: 'youtube', status: 'active' }, select: { sourcePlatformId: true } });
 		} catch (error) {
 			// DB 오류를 빈 목록으로 삼키면 lease 갱신·RSS 감사가 멈춰도 브레이커에 잡히지 않아요 (WebSub 5일 내 만료 위험).
-			logger.error('유튜브 구독 목록 조회 실패 — 이번 틱은 실패로 기록해요:', String(error));
+			logger.error('유튜브 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:', String(error));
 			return 'failed';
 		}
 		const channelIds = [...new Set(rows.map((row) => row.sourcePlatformId))];
@@ -75,7 +75,7 @@ export class YouTubeScheduler extends SubscriptionPoller {
 
 		let tickFailed = false;
 
-		// ① WebSub lease 갱신 — 만료 임박 토픽만 재등록해요 (푸시가 켜져 있을 때만)
+		// WebSub lease 갱신: 만료 임박 토픽만 재등록해요 (푸시가 켜져 있을 때만)
 		if (this.callbackUrl && this.hubSecret) {
 			for (const channelId of channelIds) {
 				const lease = await this.loadLease(channelId);
@@ -87,7 +87,7 @@ export class YouTubeScheduler extends SubscriptionPoller {
 					fetchFn: this.fetchFn
 				});
 				if (ok) {
-					// lease 상태는 Redis에 — 유실돼도 다음 틱이 재등록하니 안전해요
+					// lease 상태는 Redis에: 유실돼도 다음 틱이 재등록하니 안전해요
 					await this.options.redis.set(
 						`${LEASE_KEY_PREFIX}${channelId}`,
 						JSON.stringify({ leaseUntil: now + YOUTUBE_LEASE_SECONDS * 1000 }),
@@ -99,7 +99,7 @@ export class YouTubeScheduler extends SubscriptionPoller {
 			}
 		}
 
-		// ② RSS 감사 — WebSub 재전송이 없어서 놓친 영상을 저빈도 폴링으로 회수해요 (dedup가 중복을 막아요)
+		// RSS 감사: WebSub 재전송이 없어서 놓친 영상을 저빈도 폴링으로 회수해요 (dedup가 중복을 막아요)
 		for (const channelId of channelIds) {
 			const auditKey = `${AUDIT_KEY_PREFIX}${channelId}`;
 			if (await this.options.redis.get(auditKey)) continue;
@@ -107,7 +107,7 @@ export class YouTubeScheduler extends SubscriptionPoller {
 				const xml = await fetchYouTubeUploadsFeed(channelId, this.fetchFn);
 				const { events } = parseYouTubeAtomFeed(xml);
 				for (const event of events) {
-					// 구독 생성 이전 콘텐츠는 dispatcher가 알림에서 걸러요 — 신규 구독 직후 과거 영상 폭발 방지
+					// 구독 생성 이전 콘텐츠는 dispatcher가 알림에서 걸러요. 신규 구독 직후 과거 영상 폭발 방지
 					await this.dispatcher.dispatch(event).catch(() => undefined);
 				}
 				const ttl = AUDIT_INTERVAL_BASE_SECONDS + Math.floor(Math.random() * AUDIT_JITTER_SECONDS);

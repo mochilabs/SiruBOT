@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { Calculator, Check, Globe, Hash, Link2, MessageSquare, PowerOff, Quote, Smile } from "lucide-react";
+import { Calculator, Globe, Hash, Link2, MessageSquare, PowerOff, Quote, Smile } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
@@ -13,7 +13,7 @@ import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { ChatToolMode, GuildSettings } from "@/types/settings";
 
-import { InfoBox, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { InfoBox, type ModeCardOption, ModePicker, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
 
 // 임베드 복구 사이트 — 봇 계약(packages/utils/src/chatTools.ts)과 같은 순서를 지켜요
 const SITE_TOGGLES = [
@@ -52,56 +52,12 @@ const toChatToolsForm = (settings: GuildSettings): ChatToolsForm => ({
 	countingChannelId: settings.countingChannelId,
 });
 
-/** 채널 정책 카드 — AI 설정 패널과 같은 radiogroup 마크업을 재사용해요 */
-const MODE_CARDS: Array<{
-	value: ChatToolMode;
-	label: string;
-	description: string;
-	icon: React.ReactNode;
-}> = [
+// 채널 정책 카드 데이터만 여기 두고 마크업은 settings-shared의 ModePicker를 써요
+const MODE_CARDS: ModeCardOption<ChatToolMode>[] = [
 	{ value: "all", label: "모든 채널", description: "어떤 텍스트 채널에서든 동작해요.", icon: <Globe size={16} /> },
 	{ value: "channels", label: "특정 채널", description: "아래에서 선택한 채널에서만 동작해요.", icon: <Hash size={16} /> },
 	{ value: "off", label: "끄기", description: "이 서버에서는 동작하지 않아요.", icon: <PowerOff size={16} /> },
 ];
-
-interface ModePickerProps {
-	label: string;
-	value: ChatToolMode;
-	disabled?: boolean;
-	onChange: (mode: ChatToolMode) => void;
-}
-
-function ModePicker({ label, value, disabled, onChange }: ModePickerProps) {
-	return (
-		<div role="radiogroup" aria-label={label} className="grid gap-3 sm:grid-cols-3">
-			{MODE_CARDS.map((card) => {
-				const active = value === card.value;
-				return (
-					<button
-						key={card.value}
-						type="button"
-						role="radio"
-						aria-checked={active}
-						disabled={disabled}
-						onClick={() => onChange(card.value)}
-						className={`relative rounded-card p-4 text-left transition-colors duration-fast ${active ? "bg-primary/10 ring-2 ring-ring/40" : "bg-surface-2 hover:bg-surface-3"}`}
-					>
-						<span className="flex items-center gap-2 text-sm font-bold text-foreground">
-							<span className={active ? "text-primary-text" : "text-muted-foreground"}>{card.icon}</span>
-							{card.label}
-						</span>
-						<span className="mt-1 block text-xs text-muted-foreground">{card.description}</span>
-						{active && (
-							<span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-control-text">
-								<Check size={12} />
-							</span>
-						)}
-					</button>
-				);
-			})}
-		</div>
-	);
-}
 
 function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 	const { form, isLoading, error, saving, dirty, patch, submit, reload } = useSettingsForm(guildId, toChatToolsForm);
@@ -181,11 +137,12 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				<ModePicker
 					label="이모지 확대 모드"
 					value={form.emojiEnlargeMode}
+					options={MODE_CARDS}
 					disabled={saving}
 					onChange={(mode) => patch({ emojiEnlargeMode: mode })}
 				/>
 				{renderChannelPicker(form.emojiEnlargeMode, form.emojiEnlargeChannelIds, (ids) => patch({ emojiEnlargeChannelIds: ids }))}
-				<p className="text-sm font-medium text-muted-foreground/80">
+				<p className="text-sm font-medium text-muted-foreground">
 					커스텀 이모지만으로 보낸 메시지를 큰 이미지로 다시 보내줘요. 이모지 디테일을 자세히 볼 수 있어요.
 				</p>
 			</div>
@@ -199,11 +156,12 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				<ModePicker
 					label="메시지 인용 모드"
 					value={form.quoteMode}
+					options={MODE_CARDS}
 					disabled={saving}
 					onChange={(mode) => patch({ quoteMode: mode })}
 				/>
 				{renderChannelPicker(form.quoteMode, form.quoteChannelIds, (ids) => patch({ quoteChannelIds: ids }))}
-				<p className="text-sm font-medium text-muted-foreground/80">
+				<p className="text-sm font-medium text-muted-foreground">
 					디스코드 메시지 링크를 보내면 내용을 카드로 인용해요. 같은 서버의 공개 채널만 인용하고, 비공개·연령 제한 채널은 건너뛰어요.
 				</p>
 			</div>
@@ -217,6 +175,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				<ModePicker
 					label="임베드 복구 모드"
 					value={form.embedFixMode}
+					options={MODE_CARDS}
 					disabled={saving}
 					onChange={(mode) => patch({ embedFixMode: mode })}
 				/>

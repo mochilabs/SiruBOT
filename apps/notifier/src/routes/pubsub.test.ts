@@ -30,7 +30,7 @@ function sign(raw: string, secret = HUB_SECRET): string {
 async function start(options: { hubSecret?: string } = {}) {
 	const dispatch = vi.fn(async () => {});
 	const app = Fastify();
-	// 서버(server.ts)와 같은 XML 본문 파서 — WebSub 콜백은 원문이 필요해요.
+	// 서버(server.ts)와 같은 XML 본문 파서: WebSub 콜백은 원문이 필요해요.
 	app.addContentTypeParser(['application/atom+xml', 'application/xml', 'text/xml'], { parseAs: 'string' }, (_request, body, done) =>
 		done(null, body)
 	);

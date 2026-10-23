@@ -14,10 +14,17 @@
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 guildDataHub와 같은 연결 라이프사이클을 따라요.
  */
 import { sharedCache } from '../utils/cache.ts';
+import { correlateHubResponse } from '../utils/hubCorrelate.ts';
 import { getLogger } from '../utils/logger.ts';
 import { HubSubscriber } from '../utils/hubSubscriber.ts';
 import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import { JTC_SETUP_REQUEST_CHANNEL, JTC_SETUP_RESPONSE_CHANNEL, PendingRequestPool, jtcSetupResponseSchema } from '@sirubot/utils';
+import {
+	JTC_SETUP_REQUEST_CHANNEL,
+	JTC_SETUP_RESPONSE_CHANNEL,
+	PendingRequestPool,
+	jtcSetupResponseSchema,
+	type JtcSetupResponse
+} from '@sirubot/utils';
 
 const logger = getLogger('jtcSetupHub');
 
@@ -37,41 +44,30 @@ export interface JtcSetupPendingMeta {
 /**
  * RESPONSE 채널 raw 메시지를 대기 중 요청과 상관해요. requestId의 메타데이터와 guildId가 일치하면
  * 풀을 완료하고, 그 외(잘못된 본문, 대기 중이 아닌 requestId, 불일치)는 무시해요.
- * Redis I/O와 연결 상태를 몰라요 — 풀과 메타데이터 맵을 인자로 받으므로 순수하게 유닛 테스트할 수 있어요.
+ * 파싱·검증·메타 대조·결과 매핑 순서는 공용 correlateHubResponse가, 이 허브의 기준과 결과는 아래 콜백이 정해요.
  */
 export function correlateJtcSetupResponse(
 	raw: string,
 	pending: PendingRequestPool<JtcSetupResult>,
 	pendingMeta: Map<string, JtcSetupPendingMeta>
 ): 'resolved' | 'unmatched' | 'malformed' {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		logger.debug(`Malformed jtc setup response (not JSON): ${raw.slice(0, 120)}`);
-		return 'malformed';
-	}
-	const result = jtcSetupResponseSchema.safeParse(parsed);
-	if (!result.success) {
-		logger.debug(`Malformed jtc setup response: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
-		return 'malformed';
-	}
-	const response = result.data;
-	const meta = pendingMeta.get(response.requestId);
-	if (!meta) return 'unmatched';
-	// requestId가 일치해도 guildId가 다르면 왔던 응답 뒤에 다른 요청의 것이 섞인 경우 — resolve하지 않고 타임아웃으로 회수돼요.
-	if (response.guildId !== meta.guildId) {
-		logger.debug(`Ignored jtc setup response ${response.requestId} — guildId mismatch`);
-		return 'unmatched';
-	}
-	pendingMeta.delete(response.requestId);
-	if (response.error) {
-		// 봇이 검증 실패(카테고리 아님·권한 부족 등)를 한국어로 실어 보낸 경우 — 실제 사유를 그대로 전달해요.
-		pending.resolve(response.requestId, { ok: false, reason: 'bot_error', message: response.error });
-		return 'resolved';
-	}
-	pending.resolve(response.requestId, { ok: true, markerChannelId: response.markerChannelId });
-	return 'resolved';
+	return correlateHubResponse<JtcSetupResponse, JtcSetupPendingMeta, JtcSetupResult>({
+		raw,
+		hub: 'jtc setup',
+		mismatch: 'guildId mismatch',
+		logger,
+		schema: jtcSetupResponseSchema,
+		pending,
+		pendingMeta,
+		matches: (response, meta) => response.guildId === meta.guildId,
+		toResult: (response) => {
+			if (response.error) {
+				// 봇이 검증 실패(카테고리 아님·권한 부족 등)를 한국어로 실어 보낸 경우: 실제 사유를 그대로 전달해요.
+				return { ok: false, reason: 'bot_error', message: response.error };
+			}
+			return { ok: true, markerChannelId: response.markerChannelId };
+		}
+	});
 }
 
 /** requestId별 대기 요청 메타데이터 — 타임아웃 회수(onTimeout)와 상관 완료(correlate)에서 함께 정리해 누수를 막아요 */

@@ -6,6 +6,7 @@ import { renderSocialContent, SOCIAL_TEMPLATE_VARIABLES, type SocialEvent,social
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { RoleSelect } from "@/components/discord/role-select";
 import { Field } from "@/components/primitives/field";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
 import type { SocialPlatform } from "@/types/social";
@@ -18,6 +19,13 @@ export interface TemplateSample {
 	url: string;
 	author: string;
 }
+
+/** 미리보기용 자리 표시 URL: 실제 방송 주소를 흉내 내지 않도록 플랫폼 형태만 갖춰요 (R-38) */
+export const SAMPLE_URLS: Record<SocialPlatform, string> = {
+	youtube: "https://www.youtube.com/watch?v=VIDEO_ID",
+	twitch: "https://www.twitch.tv/CHANNEL",
+	chzzk: "https://chzzk.naver.com/live/LIVE_ID",
+};
 
 const VARIABLE_LABELS: Record<(typeof SOCIAL_TEMPLATE_VARIABLES)[number], string> = {
 	title: "제목",
@@ -108,19 +116,21 @@ export function TemplateEditor({ guildId, value, onChange, sample, disabled = fa
 
 			<div className="flex flex-wrap items-center gap-1.5">
 				{SOCIAL_TEMPLATE_VARIABLES.map((variable) => (
-					<button
+					<Button
 						key={variable}
 						type="button"
-						onClick={() => insertToken(`{${variable}}`)}
+						variant="secondary"
+						size="xs"
+						className="pointer-coarse:h-11"
 						disabled={disabled}
-						className="rounded-md border border-border bg-surface-2 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+						onClick={() => insertToken(`{${variable}}`)}
 					>
 						{`{${variable}}`} · {VARIABLE_LABELS[variable]}
-					</button>
+					</Button>
 				))}
 			</div>
 
-			<div className="grid gap-1.5 sm:grid-cols-2">
+			<div className="grid gap-2 sm:grid-cols-2">
 				<ChannelSelect
 					channels={channels}
 					value={mentionChannel}
@@ -147,9 +157,9 @@ export function TemplateEditor({ guildId, value, onChange, sample, disabled = fa
 			</div>
 
 			{issue ? (
-				<p className="text-xs text-destructive">{issue}</p>
+				<p className="text-xs font-medium text-destructive">{issue}</p>
 			) : (
-				<div className="rounded-md border border-border bg-surface-2 px-3 py-2">
+				<div className="rounded-control border border-border-subtle bg-surface-2 px-3 py-2">
 					<p className="text-xs text-muted-foreground">미리보기</p>
 					<p className="mt-0.5 text-sm text-foreground">{preview}</p>
 				</div>

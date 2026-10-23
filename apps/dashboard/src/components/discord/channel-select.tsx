@@ -11,7 +11,12 @@ import { SearchableSelect } from "@/components/servers/searchable-select";
 import type { DiscordChannelSummary } from "@/types/discord";
 
 interface ChannelSelectBase {
-	/** 길드 채널 목록 — 순서·카테고리 정렬은 buildChannelOptions가 Discord 기준으로 해요 */
+	/**
+	 * 길드 채널 목록: 순서·카테고리 정렬은 buildChannelOptions가 Discord 기준으로 해요.
+	 * `null`은 "목록 미도착(로딩) 또는 조회 실패"예요. 로딩·오류 상태는 호출부가 먼저 보여주고
+	 * (예: channel-settings의 PanelLoading·WarningBox), 여기에는 그 결과로 내려온 값을 넘겨요.
+	 * 목록이 `null`이면 선택기는 이유를 알 수 없게 비활성화돼요.
+	 */
 	channels: DiscordChannelSummary[] | null;
 	/**
 	 * 넣을 채널 종류 — `CHANNEL_TYPE_GROUP`에서 골라요 (기본은 `chat`).

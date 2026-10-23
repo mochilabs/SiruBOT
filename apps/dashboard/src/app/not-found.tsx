@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { m } from "framer-motion";
-import { Bot, ChevronLeft, CloudSun, Gamepad2, Home, ListMusic, type LucideIcon,Music2, Sparkles } from "lucide-react";
+import { Bot, Check, ChevronLeft, CloudSun, Gamepad2, Home, ListMusic, type LucideIcon, Music2, Sparkles } from "lucide-react";
+
+import { FocusPageShell } from "@/app/_components/focus-page-shell";
 
 /** 떨어뜨릴 수 있는 아이콘 — 봇 기능 아이콘들이 붕 떠 있어요 */
 interface FloatingIcon {
@@ -58,14 +60,9 @@ export default function NotFound() {
 	};
 
 	return (
-		<main className="relative flex min-h-[calc(100svh-var(--navbar-h))] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-			{/* 배경 블러 — R-01: 단일 초점 페이지(404·초대) 공통의 브랜드 앰비언트 틴트. 4% 저투명도로 장식 강조가 아니라 배경 온도만 유지해요. */}
-			<div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
-				<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
-			</div>
-
-			{/* 떠 있는 아이콘 — 클릭하면 중력에 떨어져요 */}
-			<div aria-hidden className="pointer-events-none absolute inset-0">
+		<FocusPageShell>
+			{/* 떠 있는 아이콘 — 클릭하거나 키보드로 선택하면 중력에 떨어져요 */}
+			<div className="pointer-events-none absolute inset-0">
 				{icons.map((icon) => (
 					<div
 						key={icon.id}
@@ -91,8 +88,7 @@ export default function NotFound() {
 								whileHover={{ scale: 1.25 }}
 								whileTap={{ scale: 0.85 }}
 								className={`pointer-events-auto flex h-full w-full cursor-pointer items-center justify-center border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${icon.tone}`}
-								aria-hidden
-								tabIndex={-1}
+								aria-label={`떠 있는 아이콘 ${icon.id + 1} 떨어뜨리기`}
 							>
 								<icon.Icon style={{ width: "100%", height: "100%" }} strokeWidth={2.4} />
 							</m.button>
@@ -111,9 +107,8 @@ export default function NotFound() {
 								initial={{ scale: 0.8, opacity: 0 }}
 								animate={{ scale: 1, opacity: 1 }}
 								transition={{ type: "spring", stiffness: 260, damping: 16 }}
-								className="text-3xl sm:text-4xl"
 							>
-								🎉
+								<Check className="h-8 w-8 text-success sm:h-10 sm:w-10" aria-hidden />
 							</m.span>
 						) : (
 							<m.span key="counter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-baseline gap-1.5">
@@ -160,6 +155,6 @@ export default function NotFound() {
 					</div>
 				</div>
 			</div>
-		</main>
+		</FocusPageShell>
 	);
 }

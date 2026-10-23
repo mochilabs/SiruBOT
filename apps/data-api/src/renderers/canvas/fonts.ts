@@ -37,7 +37,7 @@ export async function ensureKoreanFont(): Promise<void> {
 			if (pretendardPath) {
 				FontLibrary.use('Pretendard JP', [pretendardPath]);
 			} else {
-				logger.warn('PretendardJPVariable.ttf를 찾지 못했어요 — 카드 텍스트가 시스템 폰트로 폴백해요.');
+				logger.warn('PretendardJPVariable.ttf를 찾지 못했어요. 카드 텍스트가 시스템 폰트로 폴백해요.');
 			}
 
 			// 색 이모지(COLR/CPAL) — 곡 제목·닉네임의 이모지를 카드에 렌더 (CC-BY 4.0, 대시보드 /licenses에 고지)
@@ -45,7 +45,7 @@ export async function ensureKoreanFont(): Promise<void> {
 			if (twemojiPath) {
 				FontLibrary.use('Twemoji Mozilla', [twemojiPath]);
 			} else {
-				logger.warn('TwemojiMozilla.ttf를 찾지 못했어요 — 카드 이모지가 tofu로 그려질 수 있어요.');
+				logger.warn('TwemojiMozilla.ttf를 찾지 못했어요. 카드 이모지가 tofu로 그려질 수 있어요.');
 			}
 		}
 	} catch (error) {

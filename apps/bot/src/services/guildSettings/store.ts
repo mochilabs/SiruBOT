@@ -18,9 +18,6 @@ export class GuildSettingsStore {
 	/** 길드별 무효화 세대 — 무효화 1회마다 1씩 증가해요 (단조 증가, 삭제하지 않아요) */
 	private readonly invalidationGeneration = new Map<string, number>();
 
-	/**
-	 * Get guild settings. If cached, return from cache, otherwise upsert from DB.
-	 */
 	public async getGuild(guildId: string): Promise<Guild> {
 		const cached = this.cache.get(guildId);
 		if (cached) return cached;

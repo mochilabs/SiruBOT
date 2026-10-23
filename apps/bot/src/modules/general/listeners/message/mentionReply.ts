@@ -3,13 +3,11 @@ import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
 import {
 	ChatServiceError,
-	acquireChannelTurn,
+	acquireChatTurn,
 	collectImageUrls,
 	getAiChatPolicy,
 	assertChatEnabled,
 	getChatConfig,
-	releaseChannelTurn,
-	tryConsumeUserTurn,
 	type ChatConfig
 } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
@@ -57,25 +55,17 @@ export class MentionReplyListener extends Listener {
 			return;
 		}
 
-		// 같은 채널 턴이 진행 중이면 조용히 무시하지 않고 안내해요
-		if (!acquireChannelTurn(channelId)) {
+		// 같은 채널 턴이 진행 중이면 조용히 무시하지 않고 안내해요.
+		// 채널 턴을 확보한 뒤에 유저 사용량을 소모하고, 소모에 실패하면 채널 턴도 바로 돌려줘요.
+		const turn = await acquireChatTurn(channelId, message.author.id);
+		if (!turn.ok) {
+			const text =
+				turn.denial === 'channel_busy'
+					? `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`
+					: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`;
 			await message
 				.reply({
-					content: `-# ${emoji('hourglass')} 방금 멘션에 답변하는 중이에요. 잠시 후 다시 멘션해 주세요.`,
-					flags: [MessageFlags.SuppressNotifications],
-					allowedMentions: { parse: [] }
-				})
-				.catch(() => undefined);
-			return;
-		}
-
-		// 유저당 턴 상한(10분 윈도우) — 채널 턴을 확보한 뒤에 소모해,
-		// 이미 답변 중인 채널에서 사용량만 빠지는 일이 없게 해요
-		if (!(await tryConsumeUserTurn(message.author.id))) {
-			releaseChannelTurn(channelId);
-			await message
-				.reply({
-					content: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`,
+					content: text,
 					flags: [MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -88,7 +78,7 @@ export class MentionReplyListener extends Listener {
 		} catch (error) {
 			this.container.logger.error('[mentionReply] Failed to respond:', error);
 		} finally {
-			releaseChannelTurn(channelId);
+			turn.release();
 		}
 	}
 

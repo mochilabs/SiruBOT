@@ -150,10 +150,7 @@ const musicStopTool: AiTool = {
 		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
-		player.transitionState.stopByCommand = true;
-		await container.mixerService.clearNext(player).catch(() => null);
-		await player.stopPlaying();
-		await player.disconnect();
+		await container.audioService.stopPlayback(player);
 		return JSON.stringify({ status: 'stopped' });
 	}
 };
@@ -288,12 +285,7 @@ const musicPreviousTool: AiTool = {
 		await requireDjOrAlone(ctx);
 		const player = requireCustomPlayer(requireGuild(ctx));
 		if (player.queue.previous.length === 0) throw new Error('이전에 재생한 곡이 없어요.');
-		const previousTrack = player.queue.previous[player.queue.previous.length - 1];
-		if (player.queue.current) player.queue.tracks.unshift(player.queue.current);
-		await container.mixerService.clearNext(player).catch(() => null);
-		await container.mixerService.primeForPlay(player);
-		await player.play({ clientTrack: previousTrack });
-		player.queue.previous.pop();
+		const previousTrack = await container.audioService.playPrevious(player);
 		return JSON.stringify({ status: 'ok', playing: trackInfo(previousTrack) });
 	}
 };

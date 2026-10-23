@@ -41,7 +41,6 @@ export class PlayerNotifier {
 		return container;
 	}
 
-	// Force send controller message
 	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
 		const version = this.controllerVersions.get(player) ?? 0;
 		return this.enqueueControllerOperation(player.guildId, () => this.sendControllerNow(player, interaction, version));
@@ -73,11 +72,9 @@ export class PlayerNotifier {
 		try {
 			if (!this.canSend(player, version, interaction)) return;
 			this.clearDebounceTimer(player.guildId);
-			// when interaction is none and player has not textChannelId, throw error
 			if (!interaction && !player.textChannelId) throw new Error(`Player has not textChannelId ${player.guildId}`);
 			const options = await this.getControllerOptions(player.guildId);
 
-			// Check if options null and guild not using audio controller, and this method called automatically, ignore it
 			if (!options) {
 				if (interaction) throw new Error(`Controller settings unavailable for guild ${player.guildId}`);
 				return;
@@ -85,7 +82,7 @@ export class PlayerNotifier {
 			if (!options.enableController && !interaction) return;
 			if (!this.canSend(player, version, interaction)) return;
 
-			// Delete existing controller message (only when a new one will actually be sent)
+			// 새 컨트롤러를 실제로 보내기 직전에만 기존 메시지를 지운다.
 			await this.removeController(player);
 			if (!this.canSend(player, version, interaction)) return;
 
@@ -153,7 +150,6 @@ export class PlayerNotifier {
 		}
 	}
 
-	// Update controller message (debounce)
 	public updateController(player: CustomPlayer): void {
 		this.clearDebounceTimer(player.guildId);
 
@@ -261,7 +257,6 @@ export class PlayerNotifier {
 			});
 	}
 
-	// Clear debounce timer
 	private clearDebounceTimer(guildId: string): void {
 		const timer = this.debounceTimers.get(guildId);
 		if (timer) {
@@ -297,7 +292,6 @@ export class PlayerNotifier {
 		}
 	}
 
-	// Delete controller message
 	public async deleteController(player: CustomPlayer): Promise<void> {
 		this.controllerVersions.set(player, (this.controllerVersions.get(player) ?? 0) + 1);
 		await this.removeController(player);
@@ -341,7 +335,6 @@ export class PlayerNotifier {
 		}
 	}
 
-	// Event handlers
 	public async onTrackStart(player: CustomPlayer): Promise<void> {
 		this.logger.debug(`Track started in guild: ${player.guildId}`);
 
@@ -367,7 +360,6 @@ export class PlayerNotifier {
 	public onPlayerUpdate(player: CustomPlayer): void {
 		this.logger.trace(`Player updated in guild: ${player.guildId}`);
 
-		// Ignore when nothing is playing (e.g. track loading / idle)
 		if (!player.queue.current) {
 			// 재생 중인데 current가 비어 있으면 전이 리커널(trackHandler)이 복원할 때까지 기다린다.
 			if (player.playing) {

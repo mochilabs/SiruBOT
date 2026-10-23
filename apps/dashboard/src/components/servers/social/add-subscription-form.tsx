@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Play, Radio, Search, Tv } from "lucide-react";
+import { Check, Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
+import { Field } from "@/components/primitives/field";
 import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { type SocialSubscriptionInput,useSocialAlerts } from "@/hooks/use-social-alerts";
 import type { ChzzkChannelSummary, SocialPlatform } from "@/types/social";
 
-import { TemplateEditor, type TemplateSample } from "./template-editor";
+import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "./template-editor";
 
 const PLATFORMS: { key: SocialPlatform; label: string; icon: typeof Radio }[] = [
 	{ key: "chzzk", label: "치지직", icon: Radio },
@@ -103,7 +104,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				platform: "chzzk",
 				sourceId: channel.channelId,
 				title: channel.liveTitle ?? `${channel.channelName} 방송 시작!`,
-				url: `https://chzzk.naver.com/live/12345`,
+				url: SAMPLE_URLS.chzzk,
 				author: channel.channelName,
 			},
 		});
@@ -129,7 +130,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					platform: "youtube",
 					sourceId: result.data.channelId,
 					title: "새 영상 제목",
-					url: "https://youtu.be/dQw4w9WgXcQ",
+					url: SAMPLE_URLS.youtube,
 					author: result.data.channelName ?? "채널 이름",
 				},
 			});
@@ -150,7 +151,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					platform: "twitch",
 					sourceId: result.data.id,
 					title: `${result.data.displayName} 방송 시작!`,
-					url: `https://www.twitch.tv/${result.data.login}`,
+					url: SAMPLE_URLS.twitch,
 					author: result.data.displayName,
 				},
 			});
@@ -196,19 +197,25 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 							placeholder="치지직 채널 이름·링크·채널 ID"
 							disabled={looking}
 						/>
-						<Button type="button" variant="secondary" onClick={() => void handleChzzkLookup()} disabled={looking || !keyword.trim()}>
+						<Button
+							type="button"
+							variant="secondary"
+							className="pointer-coarse:h-11"
+							onClick={() => void handleChzzkLookup()}
+							disabled={looking || !keyword.trim()}
+						>
 							{looking ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
 							찾기
 						</Button>
 					</div>
 					{chzzkResults && chzzkResults.length > 0 ? (
-						<ul className="flex max-h-64 flex-col gap-1 overflow-y-auto rounded-control border border-border bg-surface-2 p-1">
+						<ul className="flex max-h-64 flex-col gap-1 overflow-y-auto rounded-control border border-border bg-surface-1 p-1">
 							{chzzkResults.map((channel) => (
 								<li key={channel.channelId}>
 									<button
 										type="button"
 										onClick={() => pickChzzk(channel)}
-										className="flex w-full items-center gap-3 rounded-control px-2 py-1.5 text-left transition-colors hover:bg-muted"
+										className="flex w-full items-center gap-3 rounded-control px-2 py-2 text-left transition-colors hover:bg-surface-3 pointer-coarse:min-h-11"
 									>
 										<span className="min-w-0 flex-1">
 											<span className="flex items-center gap-1.5 text-sm text-foreground">
@@ -239,7 +246,13 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					placeholder={platform === "youtube" ? "유튜브 채널 링크·@핸들·채널 ID" : "트위치 로그인 아이디"}
 					disabled={looking}
 				/>
-				<Button type="button" variant="secondary" onClick={() => void handleResolve()} disabled={looking || !sourceInput.trim()}>
+				<Button
+					type="button"
+					variant="secondary"
+					className="pointer-coarse:h-11"
+					onClick={() => void handleResolve()}
+					disabled={looking || !sourceInput.trim()}
+				>
 					{looking ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
 					확인
 				</Button>
@@ -257,27 +270,46 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 	};
 
 	return (
-		<Card padding="lg" className="gap-4">
+		<Card variant="muted" padding="lg" className="gap-4 overflow-visible">
 			<div className="flex items-center justify-between">
 				<h3 className="text-sm font-semibold text-foreground">알림 추가</h3>
-				<Button type="button" variant="ghost" size="sm" onClick={onDone}>
-					닫기
-				</Button>
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					icon={<X size={14} />}
+					aria-label="알림 추가 닫기"
+					className="pointer-coarse:h-11"
+					onClick={onDone}
+				/>
 			</div>
 
-			<div className="flex flex-wrap gap-1.5">
-				{PLATFORMS.map(({ key, label, icon: Icon }) => (
-					<Button
-						key={key}
-						type="button"
-						variant={platform === key ? "default" : "secondary"}
-						size="sm"
-						onClick={() => resetPlatform(key)}
-					>
-						<Icon className="h-4 w-4" aria-hidden />
-						{label}
-					</Button>
-				))}
+			<div role="radiogroup" aria-label="플랫폼" className="grid gap-3 sm:grid-cols-3">
+				{PLATFORMS.map(({ key, label, icon: Icon }) => {
+					const active = platform === key;
+					return (
+						<button
+							key={key}
+							type="button"
+							role="radio"
+							aria-checked={active}
+							onClick={() => resetPlatform(key)}
+							className={`relative rounded-card p-4 text-left transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary/10 ring-2 ring-ring/40" : "bg-surface-1 hover:bg-surface-3"}`}
+						>
+							<span className="flex items-center gap-2 text-sm font-bold text-foreground">
+								<span className={active ? "text-primary-text" : "text-muted-foreground"}>
+									<Icon size={16} />
+								</span>
+								{label}
+							</span>
+							{active && (
+								<span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-control-text">
+									<Check size={12} />
+								</span>
+							)}
+						</button>
+					);
+				})}
 			</div>
 
 			<div className="flex flex-col gap-2">
@@ -295,38 +327,43 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				)}
 			</div>
 
-			<ChannelSelect
-				channels={channels}
-				value={targetChannelId}
-				onChange={setTargetChannelId}
-				placeholder="알림을 받을 디스코드 채널"
-				keepMissing={false}
-				groupByCategory={false}
-			/>
+			<Field label="알림을 받을 채널" description="선택한 채널에 알림 메시지와 함께 웹훅이 만들어져요.">
+				<ChannelSelect
+					channels={channels}
+					value={targetChannelId}
+					onChange={setTargetChannelId}
+					placeholder="알림을 받을 디스코드 채널"
+					keepMissing={false}
+					groupByCategory={false}
+					disabled={saving}
+				/>
+			</Field>
 
-			<div className="flex flex-col gap-3">
-				<div className="flex flex-col gap-1.5">
-					<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (선택)</span>
+			<Field
+				label="웹훅 표시명 (선택)"
+				description={`${webhookName.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).`}
+			>
+				{({ id, describedBy }) => (
 					<Input
+						id={id}
+						aria-describedby={describedBy}
 						value={webhookName}
 						onChange={(event) => setWebhookName(event.target.value)}
-						placeholder={`기본: 시루 소셜 알림 — ${resolved?.name ?? "채널 이름"}`}
+						placeholder={`기본: 시루 소셜 알림 (${resolved?.name ?? "채널 이름"})`}
 						maxLength={80}
 						disabled={saving}
 					/>
-					<p className="text-xs text-muted-foreground">
-						{webhookName.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).
-					</p>
-				</div>
-				<WebhookAvatarField
-					guildId={guildId}
-					value={webhookAvatarUrl}
-					onChange={setWebhookAvatarUrl}
-					fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
-					fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
-					disabled={saving}
-				/>
-			</div>
+				)}
+			</Field>
+
+			<WebhookAvatarField
+				guildId={guildId}
+				value={webhookAvatarUrl}
+				onChange={setWebhookAvatarUrl}
+				fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
+				fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
+				disabled={saving}
+			/>
 
 			<div className="flex flex-col gap-1.5">
 				<Switch checked={showThumbnail} onChange={setShowThumbnail} label="방송 시작 섬네일 이미지 표시" labelPosition="right" />
@@ -339,16 +376,15 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				platform,
 				sourceId: "preview",
 				title: "방송 시작!",
-				url: "https://example.com",
+				url: SAMPLE_URLS[platform],
 				author: "채널 이름",
 			}} />
 
 			<div className="flex justify-end gap-2">
-				<Button type="button" variant="ghost" onClick={onDone}>
+				<Button type="button" variant="secondary" className="pointer-coarse:h-11" onClick={onDone}>
 					취소
 				</Button>
-				<Button type="button" onClick={() => void handleSubmit()} disabled={!canSubmit}>
-					{saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+				<Button type="button" variant="primary" loading={saving} disabled={!canSubmit} className="pointer-coarse:h-11" onClick={() => void handleSubmit()}>
 					추가
 				</Button>
 			</div>

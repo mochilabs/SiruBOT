@@ -17,6 +17,7 @@ import { GUILD_DATA_REQUEST_CHANNEL, ManagedRedisSubscriber, guildDataRequestSch
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { GuildChannelItem, GuildDataRequest, GuildDataResponse, GuildMemberItem, GuildRoleItem } from '@sirubot/utils';
 import type { Guild, GuildMember } from 'discord.js';
+import type { ServiceLogger } from './types.ts';
 
 /** 페이로드 검증 — {"requestId":"<uuid>","guildId":"<길드 ID>","kind":"channels"|"roles"|"members"} 형태만 응답해요 */
 function parseGuildDataRequest(raw: string): GuildDataRequest | null {
@@ -51,7 +52,7 @@ export class GuildDataResponder {
 	private subscriber: ManagedRedisSubscriber | null = null;
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		private readonly logger: ServiceLogger,
 		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
 		private readonly signingKey: string = ''
 	) {}

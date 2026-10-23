@@ -5,7 +5,7 @@
  */
 
 /** 한 메시지에서 인용할 최대 링크 수 */
-export const MESSAGE_LINK_MAX = 3;
+const MESSAGE_LINK_MAX = 3;
 
 export interface MessageLinkTarget {
 	guildId: string;

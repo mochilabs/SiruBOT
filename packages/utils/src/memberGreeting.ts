@@ -11,8 +11,11 @@ import { z } from 'zod';
  * 템플릿 변수: {유저} {유저이름} {서버} {멤버수} — GREETING_TEMPLATE_VARIABLES 참고.
  */
 
-// --- 공용 상수 ---
-/** 카드 논리 좌표계 — 렌더러/에디터 미러가 함께 쓰는 1200×675(16:9) 기준 캔버스 */
+/**
+ * 카드 논리 좌표계 — 렌더러/에디터 미러 공용 계약 (1200×675, 16:9 기준 캔버스).
+ * x/y는 카드 너비·높이 대비 %(0~100), 중앙 앵커(요소 중심이 그 점에 놓인다).
+ * size/width/height는 카드 실좌표(1200×675) 기준 px.
+ */
 export const GREETING_CARD_W = 1200;
 export const GREETING_CARD_H = 675;
 /**
@@ -26,12 +29,6 @@ const SNOWFLAKE = /^\d{17,20}$/;
 // jpeg 표기 허용 (image/jpeg). base64 본문은 URL-safe가 아닌 표준 알파벳만 허용.
 const DATA_URI = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 const DATA_URI_MAX_LENGTH = 1_500_000; // prefix 포함 문자 길이 ≈ 1.1MB 바이너리 상한
-
-/**
- * 카드 기준 좌표계 — 렌더러/에디터 미러 공용 계약.
- * x/y는 카드 너비·높이 대비 %(0~100), **중앙 앵커**(요소 중심이 그 점에 놓인다).
- * size/width/height는 카드 실좌표(1200×675) 기준 px.
- */
 
 /** 텍스트 레이어 — 템플릿 변수를 포함할 수 있는 문자열 1개 */
 export type GreetingTextLayer = {
@@ -121,7 +118,7 @@ export type GreetingConfig = {
 /** 인사 종류 — Guild 컬럼 이름(welcome/goodbye)과 렌더러 분기에 모두 쓴다 */
 export type GreetingKind = 'welcome' | 'goodbye';
 
-// --- zod 스키마 ---
+// zod 스키마
 const position = { x: z.number().min(0).max(100), y: z.number().min(0).max(100) };
 
 const textLayerSchema = z.object({
@@ -204,7 +201,14 @@ export function validateGreetingConfig(value: unknown): GreetingConfig | null {
 	return result.success ? result.data : null;
 }
 
-// --- 기본값 (v2) ---
+// 기본값 (v2)
+/** classic-center 카드의 기본 레이어 3종, 기본 환영 설정과 프리셋이 같은 데이터를 써요 */
+const CLASSIC_CENTER_LAYERS: GreetingLayer[] = [
+	{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
+	{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
+	{ id: 'subtitle', type: 'text', x: 50, y: 60, size: 24, color: '#ffffff', bold: false, align: 'center', text: '{서버}의 {멤버수}번째 멤버' }
+];
+
 export const DEFAULT_WELCOME_GREETING: GreetingConfig = {
 	version: 2,
 	enabled: false,
@@ -215,21 +219,7 @@ export const DEFAULT_WELCOME_GREETING: GreetingConfig = {
 	accentColor: null,
 	image: {
 		background: { presetId: 'rose', dataUri: null },
-		layers: [
-			{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
-			{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
-			{
-				id: 'subtitle',
-				type: 'text',
-				x: 50,
-				y: 60,
-				size: 24,
-				color: '#ffffff',
-				bold: false,
-				align: 'center',
-				text: '{서버}의 {멤버수}번째 멤버'
-			}
-		]
+		layers: structuredClone(CLASSIC_CENTER_LAYERS)
 	}
 };
 
@@ -256,7 +246,7 @@ export const DEFAULT_GREETINGS: Record<GreetingKind, GreetingConfig> = {
 	goodbye: DEFAULT_GOODBYE_GREETING
 };
 
-// --- 카드 템플릿 (프리셋 레이아웃) ---
+// 카드 템플릿 (프리셋 레이아웃)
 /** 완성형 카드 디자인 프리셋 — 에디터가 골라 시작한 뒤 자유 수정한다. */
 export type GreetingTemplate = {
 	id: string;
@@ -270,21 +260,7 @@ export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
 		name: '클래식 중앙',
 		image: {
 			background: { presetId: 'rose', dataUri: null },
-			layers: [
-				{ id: 'avatar', type: 'avatar', x: 50, y: 20, size: 180, ringColor: '#ffffff' },
-				{ id: 'title', type: 'text', x: 50, y: 44, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
-				{
-					id: 'subtitle',
-					type: 'text',
-					x: 50,
-					y: 60,
-					size: 24,
-					color: '#ffffff',
-					bold: false,
-					align: 'center',
-					text: '{서버}의 {멤버수}번째 멤버'
-				}
-			]
+			layers: structuredClone(CLASSIC_CENTER_LAYERS)
 		}
 	},
 	{
@@ -334,12 +310,11 @@ export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
 	}
 ];
 
-// --- 템플릿 변수 ---
 /** 템플릿 변수 메타데이터 — dashboard 에디터의 변수 삽입 칩과 bot 치환기가 함께 참조 */
 export type GreetingTemplateVariable = { token: string; description: string; usableInImage: boolean };
 
 export const GREETING_TEMPLATE_VARIABLES: readonly GreetingTemplateVariable[] = [
-	{ token: '{유저}', description: '멘션(@유저)으로 표시 — 봇 메시지 전용, 이미지 카드에는 못 써요', usableInImage: false },
+	{ token: '{유저}', description: '멘션(@유저)으로 표시 (봇 메시지 전용, 이미지 카드에는 못 써요)', usableInImage: false },
 	{ token: '{유저이름}', description: '멤버 표시 이름(닉네임)', usableInImage: true },
 	{ token: '{서버}', description: '서버 이름', usableInImage: true },
 	{ token: '{멤버수}', description: '서버 멤버 수', usableInImage: true }
@@ -354,7 +329,7 @@ export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
 	{ id: 'gold', name: '골드' }
 ];
 
-export const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);
+const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);
 
 /**
  * 템플릿 치환기 — 봇 메시지와 이미지 카드 텍스트가 같은 토큰 체계를 공유해요.

@@ -7,8 +7,6 @@
  *
  * 스펙 버전(version)을 올릴 때는 이 파일의 스키마만 확장하고, 봇 인터프리터와
  * 대시보드 빌더·data-api 생성 프롬프트를 함께 갱신해요.
- * - v1(2026-10): send_message(텍스트)·delay
- * - v2(2026-10): 실행 제한(access)·역할 부여/제거·리액트·고정·지연 삭제·if·인수 치환·CV2 디자인
  */
 import { z } from 'zod';
 
@@ -50,12 +48,12 @@ const httpsUrlSchema = z
 	.url('이미지 주소가 올바르지 않아요.')
 	.regex(/^https:\/\//u, 'https 주소만 사용할 수 있어요.');
 
-// --- 실행 방식 (method) — DB 컬럼과 같은 값이에요. 생성 시점에 정해지고 바뀌지 않아요 ---
+// 실행 방식 (method) — DB 컬럼과 같은 값이에요. 생성 시점에 정해지고 바뀌지 않아요
 
 export const customCommandMethodSchema = z.enum(['prefix', 'slash']);
 export type CustomCommandMethod = z.infer<typeof customCommandMethodSchema>;
 
-// --- 실행 제한 (access) — 누가 이 명령어를 실행할 수 있는지 ---
+// 실행 제한 (access) — 누가 이 명령어를 실행할 수 있는지
 
 export const customCommandAccessSchema = z
 	.object({
@@ -76,7 +74,7 @@ export const customCommandAccessSchema = z
 	});
 export type CustomCommandAccess = z.infer<typeof customCommandAccessSchema>;
 
-// --- CV2 디자인 — send_message의 design 필드. items는 컨테이너 안에 순서대로 쌓여요 ---
+// CV2 디자인 — send_message의 design 필드. items는 컨테이너 안에 순서대로 쌓여요
 
 export const CUSTOM_COMMAND_ACCENT_COLORS = ['blue', 'green', 'red', 'purple', 'gray'] as const;
 export type CustomCommandAccentColor = (typeof CUSTOM_COMMAND_ACCENT_COLORS)[number];
@@ -111,7 +109,7 @@ export const cv2DesignSchema = z.object({
 export type CustomCommandDesign = z.infer<typeof cv2DesignSchema>;
 export type CustomCommandDesignItem = z.infer<typeof cv2DesignItemSchema>;
 
-// --- 스텝 스키마 ---
+// 스텝 스키마
 
 const sendMessageStepSchema = z.object({
 	type: z.literal('send_message'),
@@ -200,7 +198,7 @@ const sendMessageStepSchemaV1 = z.object({
 });
 export const customCommandStepSchemaV1 = z.discriminatedUnion('type', [sendMessageStepSchemaV1, delayStepSchema]);
 
-// --- 스펙 전체 검증 ---
+// 스펙 전체 검증
 
 type StepLike = { type: string; seconds?: number; text?: string; design?: unknown; then?: StepLike[]; else?: StepLike[] };
 

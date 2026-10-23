@@ -24,7 +24,7 @@ const TTS_USAGE_TTL_MS = 5 * 60_000;
 const TTS_QUOTA_BLOCK_RATIO = 0.9;
 
 /** 공개 URL로 발행 가능한 포맷 — pcm_s16le_48k_stereo는 share가 거부된다 */
-export type TtsShareFormat = 'wav' | 'opus' | 'mp3';
+type TtsShareFormat = 'wav' | 'opus' | 'mp3';
 
 export interface TtsConfig {
 	url: string;
@@ -42,7 +42,7 @@ export interface TtsClip {
 }
 
 /** 사용자 프리셋 — voice는 engine:voice 식별자, speed/pitch는 미설정이면 엔진 기본값 */
-export interface TtsSynthOptions {
+interface TtsSynthOptions {
 	voice?: string;
 	speed?: number;
 	pitch?: number;

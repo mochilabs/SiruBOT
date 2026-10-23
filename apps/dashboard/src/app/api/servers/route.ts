@@ -71,7 +71,7 @@ export const GET = createGuildApiHandler({
     } catch (error) {
       console.error("Failed to fetch servers:", error);
       return NextResponse.json(
-        { error: "Internal server error" },
+        { error: "서버 목록을 불러오지 못했어요." },
         { status: 500 },
       );
     }

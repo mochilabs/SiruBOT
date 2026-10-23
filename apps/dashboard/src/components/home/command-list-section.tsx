@@ -99,7 +99,7 @@ export function CommandListSection() {
 					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 						음악 재생부터 AI 대화, 게임, 각종 편의 기능까지. 직관적인 슬래시 커맨드로 간편하게 이용하세요.
 					</p>
-					<p className="text-2xs font-medium text-muted-foreground mt-1">대표 슬래시 커맨드 40개 · 모든 기능 무료</p>
+					<p className="text-xs font-medium text-muted-foreground mt-1">대표 슬래시 커맨드 40개 · 모든 기능 무료</p>
 				</m.div>
 
 				{/* 카테고리 탭 — 이 섹션의 유일한 인터랙션. 가로 넘침은 스크롤로 흘려보내요 */}

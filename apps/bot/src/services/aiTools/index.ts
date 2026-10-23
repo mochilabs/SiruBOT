@@ -42,7 +42,7 @@ function parseArguments(rawArguments: string): Record<string, unknown> | null {
 /** 도구 실행 중 표시할 행동 멘트를 찾아요. */
 export function getAiToolStatus(name: string, rawArguments = ''): string {
 	const tool = TOOL_MAP.get(name);
-	if (!tool?.status) return `${name} 사용 중...`;
+	if (!tool?.status) return `${name} 사용 중..`;
 	if (typeof tool.status === 'string') return tool.status;
 	return tool.status(parseArguments(rawArguments) ?? {});
 }

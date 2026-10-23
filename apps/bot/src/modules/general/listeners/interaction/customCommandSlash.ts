@@ -10,9 +10,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import type { ChatInputCommandInteraction, Interaction, MessageCreateOptions } from 'discord.js';
-import { PermissionFlagsBits } from 'discord.js';
 import { CUSTOM_COMMAND_MAX_ARGS, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
+import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../../../services/customCommands/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../../../services/customCommands/interpreter.ts';
 import { findCustomCommand } from '../../../../services/customCommands/store.ts';
 
@@ -51,21 +51,8 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 				return interaction.channel.send(payload as MessageCreateOptions);
 			}
 		},
-		member: {
-			id: member.id,
-			permissions: interaction.memberPermissions?.bitfield ?? 0n,
-			hasRole: (roleId) => member.roles.cache.has(roleId),
-			addRole: (roleId) => member.roles.add(roleId),
-			removeRole: (roleId) => member.roles.remove(roleId)
-		},
-		guild: {
-			botTopRolePosition: me?.roles.highest.position ?? 0,
-			botCanManageRoles: me?.permissions.has(PermissionFlagsBits.ManageRoles) ?? false,
-			getRole: (roleId) => {
-				const role = guild.roles.cache.get(roleId);
-				return role ? { id: role.id, position: role.position, managed: role.managed } : null;
-			}
-		},
+		member: buildCustomCommandMemberContext(member, interaction.memberPermissions?.bitfield ?? 0n),
+		guild: buildCustomCommandGuildContext(guild, me),
 		channelId: interaction.channelId,
 		args,
 		triggerMessage: {
@@ -76,20 +63,9 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 	};
 
 	const result = await runCustomCommandSpec(entry.spec, ctx);
-	switch (result.kind) {
-		case 'invalid_spec':
-			await notify(`-# ${emoji('error')} \`/${entry.name}\` 명령어 정의가 올바르지 않아요. 서버 관리자가 대시보드에서 다시 저장해 주세요.`);
-			break;
-		case 'access_denied':
-			await notify(`-# ${emoji('error')} 이 명령어를 실행할 권한이 없어요.`);
-			break;
-		case 'action_failed':
-			await notify(`-# ${emoji('error')} 명령어 실행에 실패했어요: ${result.reason}`);
-			break;
-		case 'ok':
-			if (!replied) await interaction.editReply('처리했어요.').catch(() => undefined);
-			break;
-	}
+	const notice = customCommandNotice(result, `\`/${entry.name}\``);
+	if (notice) await notify(notice);
+	else if (!replied) await interaction.editReply('처리했어요.').catch(() => undefined);
 	return true;
 }
 

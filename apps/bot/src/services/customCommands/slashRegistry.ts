@@ -13,13 +13,7 @@
 import { container } from '@sapphire/framework';
 import { ApplicationCommandOptionType, type ApplicationCommandOptionData } from 'discord.js';
 import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_MAX_SLASH_PER_GUILD, normalizeCustomCommandName } from '@sirubot/utils';
-
-export interface SlashSyncLogger {
-	info(msg: string): void;
-	warn(msg: string): void;
-	error(msg: string): void;
-	debug(msg: string): void;
-}
+import type { ServiceLogger } from '../types.ts';
 
 /** 문자열·조건의 {argvN}/index에서 인수 사용처를 모아요 */
 function collectArgIndexes(node: unknown, into: number[]): void {
@@ -65,7 +59,7 @@ function optionNames(options: readonly { name: string }[]): string[] {
 const syncChains = new Map<string, Promise<void>>();
 
 /** 저장/삭제 브로드캐스트 때마다 불려요. 이 길드를 보유한 레플리카만 실제 동작해요. */
-export function syncGuildSlashCommands(guildId: string, logger: SlashSyncLogger): Promise<void> {
+export function syncGuildSlashCommands(guildId: string, logger: ServiceLogger): Promise<void> {
 	const previous = syncChains.get(guildId) ?? Promise.resolve();
 	const next = previous
 		.then(() => doSync(guildId, logger))
@@ -76,7 +70,7 @@ export function syncGuildSlashCommands(guildId: string, logger: SlashSyncLogger)
 	return next;
 }
 
-async function doSync(guildId: string, logger: SlashSyncLogger): Promise<void> {
+async function doSync(guildId: string, logger: ServiceLogger): Promise<void> {
 	const guild = container.client.guilds.cache.get(guildId);
 	if (!guild) return; // 다른 레플리카가 보유한 길드
 

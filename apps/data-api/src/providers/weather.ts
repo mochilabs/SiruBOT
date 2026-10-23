@@ -1,5 +1,5 @@
 import { WeatherError, type AirQualityInfo, type DailyForecastDay, type WeatherResult, type WeatherScope } from '@sirubot/utils/weather';
-import { normalizeWeatherLocationQuery } from './weatherLocality.ts';
+import { KR_ADMIN_SUFFIX, normalizeWeatherLocationQuery } from './weatherLocality.ts';
 
 const GEOCODING_BASE_URL = 'https://geocoding-api.open-meteo.com/v1';
 const FORECAST_BASE_URL = 'https://api.open-meteo.com/v1';
@@ -78,7 +78,7 @@ function buildGeocodeCandidateNames(rawInput: string, geocodeQuery: string, orig
 	}
 	for (const s of [...seen]) {
 		if (/[가-힣]/.test(s)) {
-			const simplified = s.replace(/(특별시|광역시|특별자치시|특별자치도|시|군|구|도)$/, '');
+			const simplified = s.replace(KR_ADMIN_SUFFIX, '');
 			if (simplified && simplified !== s) add(simplified);
 		}
 	}

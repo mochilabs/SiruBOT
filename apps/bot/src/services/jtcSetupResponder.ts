@@ -17,6 +17,7 @@ import { container } from '@sapphire/framework';
 import { emoji, JTC_SETUP_REQUEST_CHANNEL, jtcSetupRequestSchema, ManagedRedisSubscriber } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { JtcSetupResponse } from '@sirubot/utils';
+import type { ServiceLogger } from './types.ts';
 
 /** 카테고리 채널이 아니거나 존재하지 않을 때 tempVoiceService가 던지는 오류 메시지 */
 const NOT_CATEGORY_MESSAGE = 'selected channel is not a category';
@@ -36,7 +37,7 @@ export class JtcSetupResponder {
 	private readonly inFlight = new Set<string>();
 
 	public constructor(
-		private readonly logger: { info(msg: string): void; warn(msg: string): void; error(msg: string): void; debug(msg: string): void },
+		private readonly logger: ServiceLogger,
 		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
 		private readonly signingKey: string = ''
 	) {}

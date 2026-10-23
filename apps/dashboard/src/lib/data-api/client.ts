@@ -9,17 +9,41 @@ import { getDataApiEnv } from "@/lib/env";
 import type { DataApiForwardFail, DataApiForwardResult, DataApiImageResult, GuildSettingsInvalidateResult } from "./types";
 
 /**
+ * 인증 키 미설정 가드 — 키가 없으면 경고를 남기고 null, 있으면 env를 그대로 줘요.
+ * data-api 호출 7곳이 이 가드를 통과해 미설정 경로의 로깅이 한곳에서만 정해져요.
+ */
+function requireDataApi(): { url: string; authKey: string } | null {
+  const env = getDataApiEnv();
+  if (env.authKey) return env;
+  console.warn(
+    "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
+  );
+  return null;
+}
+
+/** forward 실패 응답 정리 — data-api 본문의 message(한국어)를 살리고 없으면 null로 내려요. */
+async function readForwardFail(res: Response): Promise<DataApiForwardFail> {
+  const payload = (await res.json().catch(() => null)) as {
+    message?: unknown;
+  } | null;
+  return {
+    ok: false,
+    status: res.status,
+    message:
+      typeof payload?.message === "string" && payload.message.trim()
+        ? payload.message
+        : null,
+  };
+}
+
+/**
  * data-api GET 프록시 — AUTH_KEY는 서버 전용(env). 클라이언트 번들로 절대 노출하지 않아요.
  * 키가 없으면(또는 공백뿐이면) 실패시키지 않고 null — 무인증 localhost 호출을 안 한다.
  */
 export async function fetchDataApi<T>(path: string): Promise<T | null> {
-  const { url, authKey } = getDataApiEnv();
-  if (!authKey) {
-    console.warn(
-      "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
-    );
-    return null;
-  }
+  const env = requireDataApi();
+  if (!env) return null;
+  const { url, authKey } = env;
 
   try {
     const res = await fetch(`${url}${path}`, {
@@ -42,8 +66,9 @@ export async function fetchDataApi<T>(path: string): Promise<T | null> {
 export async function openDataApiStream(
   path: string,
 ): Promise<Response | null> {
-  const { url, authKey } = getDataApiEnv();
-  if (!authKey) return null;
+  const env = requireDataApi();
+  if (!env) return null;
+  const { url, authKey } = env;
 
   try {
     const upstream = await fetch(`${url}${path}`, {
@@ -65,8 +90,9 @@ export async function postDataApi<T>(
   path: string,
   body: unknown,
 ): Promise<T | null> {
-  const { url, authKey } = getDataApiEnv();
-  if (!authKey) return null;
+  const env = requireDataApi();
+  if (!env) return null;
+  const { url, authKey } = env;
 
   try {
     const res = await fetch(`${url}${path}`, {
@@ -94,13 +120,9 @@ export async function forwardDataApiPost<T>(
   body: unknown,
   options?: { timeoutMs?: number; method?: "POST" | "PATCH" | "DELETE" },
 ): Promise<DataApiForwardResult<T>> {
-  const { url, authKey } = getDataApiEnv();
-  if (!authKey) {
-    console.warn(
-      "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
-    );
-    return { ok: false, status: 503, message: null };
-  }
+  const env = requireDataApi();
+  if (!env) return { ok: false, status: 503, message: null };
+  const { url, authKey } = env;
   try {
     const method = options?.method ?? "POST";
     const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -114,19 +136,7 @@ export async function forwardDataApiPost<T>(
       body: payload,
       signal: AbortSignal.timeout(options?.timeoutMs ?? 10_000),
     });
-    if (!res.ok) {
-      const payload = (await res.json().catch(() => null)) as {
-        message?: unknown;
-      } | null;
-      return {
-        ok: false,
-        status: res.status,
-        message:
-          typeof payload?.message === "string" && payload.message.trim()
-            ? payload.message
-            : null,
-      };
-    }
+    if (!res.ok) return readForwardFail(res);
     return { ok: true, data: (await res.json()) as T };
   } catch {
     return { ok: false, status: 502, message: null };
@@ -140,32 +150,16 @@ export async function forwardDataApiPost<T>(
 export async function forwardDataApiGet<T>(
   path: string,
 ): Promise<DataApiForwardResult<T>> {
-  const { url, authKey } = getDataApiEnv();
-  if (!authKey) {
-    console.warn(
-      "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
-    );
-    return { ok: false, status: 503, message: null };
-  }
+  const env = requireDataApi();
+  if (!env) return { ok: false, status: 503, message: null };
+  const { url, authKey } = env;
   try {
     const res = await fetch(`${url}${path}`, {
       cache: "no-store",
       headers: { Authorization: authKey },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) {
-      const payload = (await res.json().catch(() => null)) as {
-        message?: unknown;
-      } | null;
-      return {
-        ok: false,
-        status: res.status,
-        message:
-          typeof payload?.message === "string" && payload.message.trim()
-            ? payload.message
-            : null,
-      };
-    }
+    if (!res.ok) return readForwardFail(res);
     return { ok: true, data: (await res.json()) as T };
   } catch {
     return { ok: false, status: 502, message: null };
@@ -185,6 +179,15 @@ export function dataApiFailResponse(
 }
 
 /**
+ * upstream(data-api) 실패 메시지의 사용자 노출 판정 — Fastify 라우터 미매칭 같은 기술 원문
+ * ("Route DELETE:/v1/... not found")이 사용자에게 새는 것을 막아요. 한글 안내로 보이는
+ * 메시지만 살리고 그 외는 각 라우트의 한국어 폴백으로 바꿔요.
+ */
+export function dataApiUserMessage(message: string | null, fallback: string | null): string | null {
+  return message && /[가-힣]/.test(message) ? message : fallback;
+}
+
+/**
  * data-api POST 프록시(이미지) — PNG 등 binary 본문을 ArrayBuffer로 돌려줘요.
  * 응답이 image/*가 아니면 실패로 본다.
  */
@@ -192,13 +195,9 @@ export async function forwardDataApiImage(
   path: string,
   body: unknown,
 ): Promise<DataApiImageResult> {
-  const { url, authKey } = getDataApiEnv();
-  if (!authKey) {
-    console.warn(
-      "[data-api] DATA_API_AUTH_KEY/AUTH_KEY 미설정 — data-api 호출을 건너뛴다.",
-    );
-    return { ok: false, status: 503, message: null };
-  }
+  const env = requireDataApi();
+  if (!env) return { ok: false, status: 503, message: null };
+  const { url, authKey } = env;
   try {
     // 이미지 렌더는 data-api에서 최대 ~20초까지 걸릴 수 있어요 (봇 dataApiClient 기준) — 여유 있게 30초.
     const res = await fetch(`${url}${path}`, {
@@ -208,19 +207,7 @@ export async function forwardDataApiImage(
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(30_000),
     });
-    if (!res.ok) {
-      const payload = (await res.json().catch(() => null)) as {
-        message?: unknown;
-      } | null;
-      return {
-        ok: false,
-        status: res.status,
-        message:
-          typeof payload?.message === "string" && payload.message.trim()
-            ? payload.message
-            : null,
-      };
-    }
+    if (!res.ok) return readForwardFail(res);
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.startsWith("image/"))
       return { ok: false, status: 502, message: null };

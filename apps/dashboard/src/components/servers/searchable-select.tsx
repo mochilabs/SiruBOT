@@ -177,7 +177,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 												removeSelectedValue(option.value);
 											}
 										}}
-										className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-primary-control/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+										className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-primary-control/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 after:absolute after:inset-y-[min(0px,calc((100%-44px)/2))] after:inset-x-[min(0px,calc((100%-24px)/2))]"
 										aria-label={`${option.label} 제거`}
 									>
 										<X className="h-2.5 w-2.5" aria-hidden />

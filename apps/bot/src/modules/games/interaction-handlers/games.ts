@@ -1,12 +1,13 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
 import { getRpsStats, recordGameResult, type GameResult } from '../utils/gameRecords.ts';
+import { textContainer } from '../utils/textContainer.ts';
 
 const RPS_ICONS = ['✌️', '✊', '🖐'];
 
-/** outcome: 0 = 비김, 1 = 승, 2 = 패 — 표시할 연승 문구가 있으면 반환 */
+/** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
 async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {
 	const before = await getRpsStats(userId);
 	const result: GameResult = outcome === 1 ? 'win' : outcome === 2 ? 'loss' : 'draw';
@@ -24,12 +25,6 @@ async function resolveStreakLine(userId: string, outcome: number): Promise<strin
 	return before.streak >= 2 ? `${emoji('fist_bump')} ${before.streak}연승 유지 중 (최고 ${before.best}연승)` : null;
 }
 
-function noticeContainer(text: string) {
-	const container = createContainer();
-	container.addTextDisplayComponents((t) => t.setContent(text));
-	return container;
-}
-
 function rpsResultContainer(displayName: string, userPick: number, botPick: number, streakLine: string | null) {
 	const outcome = (userPick - botPick + 3) % 3;
 	// 승·무는 앱 이모지를 쓰지만, 앱 이모지 표(emoji-ids.json)에 패배 계열 이모지가 없어 패만 유니코드를 유지해요
@@ -45,8 +40,7 @@ function rpsResultContainer(displayName: string, userPick: number, botPick: numb
 	];
 	if (streakLine) lines.push(streakLine);
 
-	const container = createContainer();
-	container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
+	const container = textContainer(lines);
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
@@ -88,7 +82,7 @@ export default class GamesInteractionHandler extends InteractionHandler {
 			const userPick = Number(arg);
 			if (!Number.isInteger(userPick) || userPick < 0 || userPick > 2) {
 				await interaction.editReply({
-					components: [noticeContainer(`${emoji('error')} 잘못된 가위바위보 선택이에요.`)],
+					components: [textContainer([`${emoji('error')} 잘못된 가위바위보 선택이에요.`])],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 				return;

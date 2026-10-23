@@ -6,7 +6,7 @@
  * |---|---|
  * | canvas/fonts.ts | Pretendard·Twemoji 1회 등록 + Path2D 생성자 싱글턴 |
  * | canvas/images.ts | 이미지 fetch 허용 호스트 allowlist(SSRF 방지)와 로딩 |
- * | canvas/shapes.ts | 텍스트 생략·시드 난수·시계 포맷·색 보간·원형 이미지 클립 |
+ * | canvas/shapes.ts | 텍스트 생략·시드 난수·시계 포맷·색 변환(hexToRgba 재수출)·원형 이미지 클립 |
  * | canvas/icons.ts | lucide 아이콘 경로 DB와 drawIcon 드로잉 |
  */
 export { ensureKoreanFont } from './canvas/fonts.ts';

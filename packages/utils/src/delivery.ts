@@ -6,6 +6,7 @@
  * 택배사 별칭 해석·캐시 키는 data-api 쪽에 남아 있어요.
  */
 
+/** 택배 조회 실패, 서브패스별 단일 홈 정책이라 공용 Error 베이스 없이 이 파일에 정의해요 */
 export class DeliveryError extends Error {
 	public constructor(
 		public readonly identifier: string,

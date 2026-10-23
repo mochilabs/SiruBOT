@@ -30,6 +30,8 @@ const tabItems = [
 export function PrimitivesSection() {
 	const [switchVal, setSwitchVal] = useState(true);
 	const [sliderVal, setSliderVal] = useState(60);
+	const [cooldownVal, setCooldownVal] = useState(30);
+	const [dismissableDemo, setDismissableDemo] = useState(true);
 	const [accentColor, setAccentColor] = useState("#ffdaff");
 
 	return (
@@ -144,9 +146,15 @@ export function PrimitivesSection() {
 					</Badge>
 					<Badge variant="info">info</Badge>
 					<Badge variant="discord">BOT</Badge>
-					<Badge variant="primary" dismissible onDismiss={() => {}}>
-						dismissible
-					</Badge>
+					{dismissableDemo ? (
+						<Badge variant="primary" dismissible onDismiss={() => setDismissableDemo(false)}>
+							dismissible
+						</Badge>
+					) : (
+						<Button size="sm" variant="ghost" onClick={() => setDismissableDemo(true)}>
+							배지 되돌리기
+						</Button>
+					)}
 				</ShowcaseRow>
 
 				<ShowcaseRow label="StatusDot">
@@ -237,7 +245,7 @@ export function PrimitivesSection() {
 				<ShowcaseRow label="Slider" block>
 					<div className="w-full max-w-sm space-y-6">
 						<Slider value={sliderVal} onChange={setSliderVal} label="볼륨" showValue formatValue={(v) => `${v}%`} />
-						<Slider value={30} onChange={() => {}} min={0} max={60} step={5} label="쿨다운" showValue formatValue={(v) => `${v}초`} />
+						<Slider value={cooldownVal} onChange={setCooldownVal} min={0} max={60} step={5} label="쿨다운" showValue formatValue={(v) => `${v}초`} />
 						<Slider value={50} onChange={() => {}} disabled label="비활성" />
 					</div>
 				</ShowcaseRow>

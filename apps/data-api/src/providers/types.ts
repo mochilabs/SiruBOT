@@ -1,6 +1,6 @@
 /** 봇과 공유하는 응답 스키마. 봇 `DailyHoroscope`/`WeatherResult`/lrclib 형태와 호환돼요. */
 
-/** 별자리 코드 → 정보 매핑 (봇 `ohaasaService.ts`와 동일) */
+/** 별자리 코드 → 정보 매핑 (봇 `apps/bot/src/modules/games/utils/ohaasaService.ts`와 같은 값, 이중 정의는 유지 판정) */
 export const ZODIAC_MAP: Record<string, { jp: string; ko: string; en: string }> = {
 	'01': { jp: 'おひつじ座', ko: '양자리', en: 'Aries' },
 	'02': { jp: 'おうし座', ko: '황소자리', en: 'Taurus' },

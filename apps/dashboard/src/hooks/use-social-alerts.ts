@@ -1,6 +1,6 @@
 "use client";
 
-import { toError } from "@/lib/api-error";
+import { toApiError, toError } from "@/lib/api-error";
 import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import type {
 	ChzzkChannelSummary,
@@ -43,19 +43,21 @@ export type SocialActionResult<T> = { ok: true; data: T } | { ok: false; error: 
 
 const listFetcher = createApiFetcher<SocialSubscriptionsResponse>("알림 구독 목록을 불러오지 못했어요.");
 
-async function readError(res: Response, fallback: string): Promise<string> {
-	const payload = (await res.json().catch(() => null)) as { error?: unknown } | null;
-	return typeof payload?.error === "string" && payload.error.trim() ? payload.error : fallback;
-}
-
 /** 소셜 알림 구독 CRUD + 플랫폼별 채널 해석 — data-api → notifier 프록시를 경유해요. */
 export function useSocialAlerts(guildId: string, enabled = true) {
-	const { data, error, isLoading, mutate, guildUrl } = useGuildResource<SocialSubscriptionsResponse>(guildId, "/social/subscriptions", {
+	const { data, error, isLoading, mutate, guildUrl, redirectToLogin } = useGuildResource<SocialSubscriptionsResponse>(guildId, "/social/subscriptions", {
 		enabled,
 		fetcher: listFetcher,
 	});
 
 	const subscriptions: SocialSubscription[] | null = data?.subscriptions ?? null;
+
+	/** 실패 응답 — 본문 error(한국어) 우선은 toApiError가 담당하고, status를 잃지 않도록 401은 로그인으로 보내요 (다른 길드 훅과 같은 규율). */
+	const failure = async (res: Response, fallback: string): Promise<{ ok: false; error: string }> => {
+		const apiError = await toApiError(res, fallback);
+		if (apiError.status === 401) redirectToLogin();
+		return { ok: false, error: apiError.message };
+	};
 
 	const createSubscription = async (
 		input: SocialSubscriptionInput,
@@ -65,7 +67,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(input),
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "알림 구독을 추가하지 못했어요.") };
+		if (!res.ok) return failure(res, "알림 구독을 추가하지 못했어요.");
 		const payload = (await res.json()) as { subscription: SocialSubscription };
 		const current = data?.subscriptions ?? [];
 		await mutate({ subscriptions: [payload.subscription, ...current] }, { revalidate: false });
@@ -82,7 +84,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(patch),
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "알림 구독을 수정하지 못했어요.") };
+		if (!res.ok) return failure(res, "알림 구독을 수정하지 못했어요.");
 		const payload = (await res.json()) as { subscription: SocialSubscription };
 		const current = data?.subscriptions ?? [];
 		await mutate(
@@ -97,7 +99,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 		const res = await fetch(`${guildUrl}/${subscriptionId}`, {
 			method: "DELETE",
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "알림 구독을 삭제하지 못했어요.") };
+		if (!res.ok) return failure(res, "알림 구독을 삭제하지 못했어요.");
 		const current = data?.subscriptions ?? [];
 		await mutate(
 			{ subscriptions: current.filter((item) => item.id !== subscriptionId) },
@@ -116,7 +118,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 		const res = await fetch(`/api/servers/${guildId}/social/chzzk/search?${query.toString()}`, {
 			cache: "no-store",
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "치지직 채널 검색에 실패했어요.") };
+		if (!res.ok) return failure(res, "치지직 채널 검색에 실패했어요.");
 		const payload = (await res.json()) as ChzzkSearchResponse;
 		return { ok: true, data: payload.channels };
 	};
@@ -129,7 +131,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ channelId }),
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "치지직 채널 정보를 불러오지 못했어요.") };
+		if (!res.ok) return failure(res, "치지직 채널 정보를 불러오지 못했어요.");
 		const payload = (await res.json()) as ChzzkProfileResponse;
 		return { ok: true, data: payload.channel };
 	};
@@ -140,7 +142,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ input }),
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "유튜브 채널을 확인하지 못했어요.") };
+		if (!res.ok) return failure(res, "유튜브 채널을 확인하지 못했어요.");
 		return { ok: true, data: (await res.json()) as YouTubeResolveResponse };
 	};
 
@@ -150,7 +152,7 @@ export function useSocialAlerts(guildId: string, enabled = true) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ login }),
 		});
-		if (!res.ok) return { ok: false, error: await readError(res, "트위치 사용자를 확인하지 못했어요.") };
+		if (!res.ok) return failure(res, "트위치 사용자를 확인하지 못했어요.");
 		return { ok: true, data: (await res.json()) as TwitchResolveResponse };
 	};
 

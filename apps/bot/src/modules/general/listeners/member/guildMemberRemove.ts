@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { GuildMember, PartialGuildMember } from 'discord.js';
 
-import { container } from '@sapphire/framework';
+import { dispatchMemberGreeting } from '../../utils/greetingDispatch.ts';
 
 /**
  * 퇴장 — 작별 인사를 보내요. 떠난 멤버는 캐시에서 사라질 수 있으므로 표시 이름은
@@ -12,16 +12,6 @@ import { container } from '@sapphire/framework';
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberRemove })
 export class GuildMemberRemoveListener extends Listener {
 	public override async run(member: GuildMember | PartialGuildMember) {
-		const guild = member.guild;
-		try {
-			await container.memberGreetingService.dispatch(guild, 'goodbye', {
-				user: { id: member.id, username: member.user?.username ?? member.displayName },
-				displayName: member.displayName,
-				mention: member.toString(),
-				avatarUrl: member.displayAvatarURL({ size: 256, extension: 'png' })
-			});
-		} catch (error) {
-			this.container.logger.warn(`작별 인사 처리 실패 (guild ${guild.id}): ${error}`);
-		}
+		await dispatchMemberGreeting(member.guild, 'goodbye', member);
 	}
 }

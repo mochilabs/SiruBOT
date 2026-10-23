@@ -13,6 +13,7 @@
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 guildDataHub와 같은 연결 라이프사이클을 따라요.
  */
 import { sharedCache } from '../utils/cache.ts';
+import { correlateHubResponse } from '../utils/hubCorrelate.ts';
 import { getLogger } from '../utils/logger.ts';
 import { HubSubscriber } from '../utils/hubSubscriber.ts';
 import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
@@ -25,6 +26,7 @@ import {
 	type PlayerWebControlRequest,
 	type PlayerWebKind,
 	type PlayerWebPlayRequest,
+	type PlayerWebResponse,
 	type PlayerWebSearchRequest,
 	type PlayerWebTrack,
 	type PlayerWebVoiceContextRequest
@@ -59,41 +61,30 @@ export interface PlayerWebPendingMeta {
 /**
  * RESPONSE 채널 raw 메시지를 대기 중 요청과 상관해요. requestId의 메타데이터와 guildId·kind가 일치하면
  * 풀을 완료하고, 그 외(잘못된 본문, 대기 중이 아닌 requestId, 불일치)는 무시해요.
- * Redis I/O와 연결 상태를 몰라요 — 풀과 메타데이터 맵을 인자로 받으므로 순수하게 유닛 테스트할 수 있어요.
+ * 파싱·검증·메타 대조·결과 매핑 순서는 공용 correlateHubResponse가, 이 허브의 기준과 결과는 아래 콜백이 정해요.
  */
 export function correlatePlayerWebResponse(
 	raw: string,
 	pending: PendingRequestPool<PlayerWebResult>,
 	pendingMeta: Map<string, PlayerWebPendingMeta>
 ): 'resolved' | 'unmatched' | 'malformed' {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		logger.debug(`Malformed player web response (not JSON): ${raw.slice(0, 120)}`);
-		return 'malformed';
-	}
-	const result = playerWebResponseSchema.safeParse(parsed);
-	if (!result.success) {
-		logger.debug(`Malformed player web response: ${result.error.issues[0]?.message ?? 'invalid shape'}`);
-		return 'malformed';
-	}
-	const response = result.data;
-	const meta = pendingMeta.get(response.requestId);
-	if (!meta) return 'unmatched';
-	// requestId가 일치해도 guildId·kind가 다르면 왔던 응답 뒤에 다른 요청의 것이 섞인 경우 — resolve하지 않고 타임아웃으로 회수돼요.
-	if (response.guildId !== meta.guildId || response.kind !== meta.kind) {
-		logger.debug(`Ignored player web response ${response.requestId} — guildId/kind mismatch`);
-		return 'unmatched';
-	}
-	pendingMeta.delete(response.requestId);
-	if (response.error) {
-		// 봇이 검증 실패(음성 미접속·권한 없음·노드 없음 등)를 한국어로 실어 보낸 경우 — 실제 사유를 그대로 전달해요.
-		pending.resolve(response.requestId, { ok: false, reason: 'bot_error', message: response.error });
-		return 'resolved';
-	}
-	pending.resolve(response.requestId, { ok: true, tracks: response.tracks, voice: response.voice });
-	return 'resolved';
+	return correlateHubResponse<PlayerWebResponse, PlayerWebPendingMeta, PlayerWebResult>({
+		raw,
+		hub: 'player web',
+		mismatch: 'guildId/kind mismatch',
+		logger,
+		schema: playerWebResponseSchema,
+		pending,
+		pendingMeta,
+		matches: (response, meta) => response.guildId === meta.guildId && response.kind === meta.kind,
+		toResult: (response) => {
+			if (response.error) {
+				// 봇이 검증 실패(음성 미접속·권한 없음·노드 없음 등)를 한국어로 실어 보낸 경우: 실제 사유를 그대로 전달해요.
+				return { ok: false, reason: 'bot_error', message: response.error };
+			}
+			return { ok: true, tracks: response.tracks, voice: response.voice };
+		}
+	});
 }
 
 /** requestId별 대기 요청 메타데이터 — 타임아웃 회수(onTimeout)와 상관 완료(correlate)에서 함께 정리해 누수를 막아요 */

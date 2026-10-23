@@ -128,7 +128,7 @@ export const jtcSetupSchema = z.object({
 });
 
 /** 미등록 필드를 조용히 무시하지 말고 알려줘요 (기존 AI 라우트의 동작 유지) */
-export function unknownKeys(body: unknown, allowed: readonly string[]): string[] {
+function unknownKeys(body: unknown, allowed: readonly string[]): string[] {
 	if (!body || typeof body !== "object" || Array.isArray(body)) return [];
 	return Object.keys(body).filter((key) => !allowed.includes(key));
 }
@@ -144,13 +144,15 @@ export function zodError(error: z.ZodError): string {
 export type SettingBodyResult<T> = { ok: true; data: T } | { ok: false; response: NextResponse };
 
 /**
- * 설정 라우트(PUT/PATCH) 본문 검증 공통 흐름 — JSON 파싱·객체 형태·미등록 필드·스키마를
+ * 설정 라우트(PUT/PATCH)·api-handler schema 옵션의 본문 검증 공통 흐름 — JSON 파싱·객체 형태·미등록 필드·스키마를
  * 한 번에 검사하고 실패 시 그에 맞는 400 응답을 돌려줘요. 라우트는 결과의 ok만 보면 돼요.
+ * `invalidMessage`를 주면 스키마 검증 실패 시 그 고정 메시지를 써요 (api-handler의 invalidMessage 옵션 계약).
  */
 export async function parseSettingBody<S extends z.ZodTypeAny>(
 	request: Request,
 	schema: S,
 	allowedKeys: readonly string[],
+	invalidMessage?: string,
 ): Promise<SettingBodyResult<z.infer<S>>> {
 	const body: unknown = await request.json().catch(() => null);
 	if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -170,7 +172,7 @@ export async function parseSettingBody<S extends z.ZodTypeAny>(
 
 	const parsed = schema.safeParse(body);
 	if (!parsed.success) {
-		return { ok: false, response: NextResponse.json({ error: zodError(parsed.error) }, { status: 400 }) };
+		return { ok: false, response: NextResponse.json({ error: invalidMessage ?? zodError(parsed.error) }, { status: 400 }) };
 	}
 	return { ok: true, data: parsed.data };
 }

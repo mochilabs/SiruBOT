@@ -43,7 +43,7 @@ export interface ProfileCardDarkInput {
 	nowPlaying?: ProfileNowPlaying | null;
 }
 
-// ── 다크 퍼플 팔레트 (RINE 샘플 기준) ──
+// 다크 퍼플 팔레트 (RINE 샘플 기준)
 const PAL: CardPalette = {
 	page: '#191122',
 	card: '#221a30',
@@ -119,7 +119,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const rng = makeRng(hashString(input.userId));
 	const dotColor = statusColorOf(input);
 
-	// ── 레이아웃 산출 ──
+	// 레이아웃 산출
 	const avatarCx = PAD + AVATAR_R;
 	const avatarCy = HEADER_H + 24; // 헤더 바로 아래에 온전히 배치 — 이름/핸들 블록과 수직 정렬
 	const nameX = PAD + AVATAR_R * 2 + 44;
@@ -148,11 +148,11 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
 
-	// ── 배경 ──
+	// 배경
 	ctx.fillStyle = PAL.page;
 	ctx.fillRect(0, 0, W, H);
 
-	// ── 헤더 그라디언트 + 스파클 ──
+	// 헤더 그라디언트 + 스파클
 	ctx.save();
 	ctx.beginPath();
 	ctx.moveTo(0, 0);
@@ -164,7 +164,8 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.lineTo(0, HEADER_H - 26);
 	ctx.closePath();
 	const headGrad = ctx.createLinearGradient(0, 0, W * 0.72, HEADER_H);
-	headGrad.addColorStop(0, '#a98cd6');
+	// 시작색은 헤더 좌상단(핸들·PROFILE 라벨 자리)의 흰 글씨 대비로 잡아요. 더 밝아지면 4.5:1 미달
+	headGrad.addColorStop(0, '#8a68bd');
 	headGrad.addColorStop(0.45, '#6b517f');
 	headGrad.addColorStop(1, '#241a2e');
 	ctx.fillStyle = headGrad;
@@ -201,7 +202,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	}
 	ctx.restore();
 
-	// ── 헤더 로고: ✦ {HANDLE} | PROFILE ──
+	// 헤더 로고: ✦ {HANDLE} | PROFILE
 	ctx.save();
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'middle';
@@ -213,12 +214,12 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	const headW = ctx.measureText(handleUpper).width;
 	ctx.fillStyle = 'rgba(255,255,255,0.42)';
 	ctx.fillRect(PAD + 44 + headW, 24, 2, 30);
-	ctx.fillStyle = 'rgba(255,255,255,0.8)';
+	ctx.fillStyle = '#ffffff';
 	ctx.font = '600 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 	ctx.fillText('PROFILE', PAD + 58 + headW, 40);
 	ctx.restore();
 
-	// ── 아바타: 헤더 경계에 걸치게 + 라이트 링 ──
+	// 아바타: 헤더 경계에 걸치게 + 라이트 링
 	ctx.save();
 	ctx.beginPath();
 	ctx.arc(avatarCx, avatarCy, AVATAR_R + 6, 0, Math.PI * 2);
@@ -234,7 +235,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	}
 	fmtStatusDot(ctx, avatarCx + AVATAR_R * 0.76, avatarCy + AVATAR_R * 0.76, 11, dotColor);
 
-	// ── 이름 + ✦ / 핸들 ──
+	// 이름 + ✦ / 핸들
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 	const nameText = truncate(ctx, input.displayName, W - nameX - 240);
@@ -250,7 +251,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.fillText(handleText, nameX, handleBase);
 	const handleW = ctx.measureText(handleText).width;
 
-	// ── 서버 태그 (guildTagBadge 이미지 + 태그 텍스트) ──
+	// 서버 태그 (guildTagBadge 이미지 + 태그 텍스트)
 	await drawGuildTag(ctx, {
 		tag: input.guildTag,
 		badgeUrl: input.guildTagBadgeUrl,
@@ -259,7 +260,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 		color: PAL.accent
 	});
 
-	// ── 온라인 상태 캡슐 (우측, 핸들 라인에 정렬) ──
+	// 온라인 상태 캡슐 (우측, 핸들 라인에 정렬)
 	const stLabel = input.onlineLabel || '온라인';
 	ctx.save();
 	ctx.font = '600 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
@@ -280,7 +281,7 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.fillText(stLabel, stX + stW / 2 + 10, stY + 23);
 	ctx.restore();
 
-	// ── 역할 캡슐 ──
+	// 역할 캡슐
 	if (hasChips) {
 		let chipX = nameX;
 		ctx.save();
@@ -307,19 +308,19 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 		}
 	}
 
-	// ── 소개 문구 ──
+	// 소개 문구
 	if (hasIntro) {
 		ctx.fillStyle = 'rgba(246, 241, 250, 0.9)';
 		ctx.font = '500 21px "Pretendard JP", "Twemoji Mozilla", sans-serif';
 		ctx.fillText(truncate(ctx, input.intro.trim(), W - PAD * 2 - 40), PAD, introBase);
 	}
 
-	// ── 구분선 ──
+	// 구분선
 	const separatorY = datesTop - 44;
 	ctx.fillStyle = PAL.separator;
 	ctx.fillRect(PAD, separatorY, W - PAD * 2, 1.5);
 
-	// ── 두 날짜 컬럼 (lucide calendar 아이콘) ──
+	// 두 날짜 컬럼 (lucide calendar 아이콘)
 	const colSplit = W * 0.47;
 	const col2X = colSplit + 40;
 	const dateIconY = dateLabelTop;
@@ -348,12 +349,12 @@ export async function renderProfileCardDark(input: ProfileCardDarkInput): Promis
 	ctx.restore();
 	drawDateCol('서버 합류', input.joinedText, col2X, 'left');
 
-	// ── 음악 섹션 ──
+	// 음악 섹션
 	if (showsMusic) {
 		await drawMusicSection(ctx, input.topTracks, input.nowPlaying ?? null, PAL, PAD, musicTop, W - PAD * 2);
 	}
 
-	// ── 하단: ✦ {id} / profile ──
+	// 하단: ✦ {id} / profile
 	ctx.save();
 	ctx.fillStyle = PAL.textFaint;
 	ctx.textAlign = 'left';
