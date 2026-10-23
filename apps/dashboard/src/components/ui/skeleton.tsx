@@ -53,7 +53,7 @@ function SkeletonCard({ lines = 3, avatar = true, className }: SkeletonCardProps
 }
 
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="skeleton" className={cn("animate-pulse rounded-md bg-muted", className)} {...props} />;
+	return <div data-slot="skeleton" className={cn(pulseBase, className)} {...props} />;
 }
 
 Skeleton.Line = SkeletonLine;
