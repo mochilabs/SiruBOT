@@ -13,7 +13,7 @@ import { lastGoodDaily, refreshOhaasaNow } from '../services/ohaasaScheduler.ts'
 const logger = getLogger('ohaasaRoute');
 
 export function registerOhaasaRoutes(fastify: FastifyInstance, deps: { translationProvider: OpenAICompatTranslationProvider }): void {
-	// ── 오하아사 (오늘 JST 키 단일화: 캐시는 항상 번역본) ──
+	// 오하아사 (오늘 JST 키 단일화: 캐시는 항상 번역본)
 	fastify.get('/v1/ohaasa', async (_request, reply) => {
 		try {
 			const { data, cached } = await serveCached({
