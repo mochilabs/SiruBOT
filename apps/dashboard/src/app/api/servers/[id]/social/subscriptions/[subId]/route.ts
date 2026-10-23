@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { dataApiFailResponse, forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiFailResponse, dataApiUserMessage, forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
 import { WRITE_RATE } from "@/lib/rate-limit";
 import type { SocialSubscriptionResponse, SocialSubscriptionsResponse } from "@/types/social";
 
@@ -46,7 +46,7 @@ async function verifySubscriptionOwnership(
     `/v1/guilds/${guildId}/social/subscriptions`,
   );
   if (!list.ok) {
-    return dataApiFailResponse(list, OWNERSHIP_FALLBACK);
+    return dataApiFailResponse(list, dataApiUserMessage(list.message, OWNERSHIP_FALLBACK));
   }
   if (!list.data.subscriptions.some((subscription) => subscription.id === subId)) {
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
@@ -76,7 +76,7 @@ export const PATCH = createGuildApiHandler({
       { method: "PATCH" },
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, UPDATE_FALLBACK);
+      return dataApiFailResponse(result, dataApiUserMessage(result.message, UPDATE_FALLBACK));
     }
 
     return NextResponse.json(result.data);
@@ -103,7 +103,7 @@ export const DELETE = createGuildApiHandler({
       { method: "DELETE" },
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, DELETE_FALLBACK);
+      return dataApiFailResponse(result, dataApiUserMessage(result.message, DELETE_FALLBACK));
     }
 
     return NextResponse.json({ ok: true });

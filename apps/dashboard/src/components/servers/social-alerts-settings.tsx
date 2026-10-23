@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { SOCIAL_PLATFORM_LABELS } from "@sirubot/utils/social";
-import { Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
+import { Bell, Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
 
-import { InfoBox, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { Field } from "@/components/primitives/field";
+import { InfoBox, PanelError, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
 import { AddSubscriptionForm } from "@/components/servers/social/add-subscription-form";
 import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
 import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
@@ -62,8 +64,8 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const [nameDraft, setNameDraft] = useState("");
 	const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
 	const [showThumbDraft, setShowThumbDraft] = useState(true);
-	// 첫 클릭 무장 → "정말 삭제" 버튼으로 교체. 취소 버튼은 reset(), 4초 지나면 자동 해제
-	const { armedId: confirmingId, request: requestDelete, reset: cancelConfirm } = useConfirmDelete();
+	// 첫 클릭 무장 → 4초 안에 다시 클릭해야 삭제돼요 (ai·커스텀 명령어 패널과 같은 2클릭 삭제)
+	const { armedId: confirmingId, request: requestDelete } = useConfirmDelete();
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const channelName = (id: string) => channels?.find((channel) => channel.id === id)?.name ?? null;
 
@@ -105,161 +107,178 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 		setBusyId(subscription.id);
 		const result = await removeSubscription(subscription.id);
 		setBusyId(null);
-		if (result.ok) {
-			toast.success("알림을 삭제했어요.");
-			cancelConfirm();
-		} else {
-			toast.error("알림을 삭제하지 못했어요.", result.error);
-		}
+		if (result.ok) toast.success("알림을 삭제했어요.");
+		else toast.error("알림을 삭제하지 못했어요.", result.error);
 	};
 
-	if (isLoading) return <PanelLoading label="알림 목록을 불러오는 중..." />;
+	if (isLoading) return <PanelLoading label="알림 구독 목록을 불러오는 중…" />;
+	if (error) return <PanelError error={error} onRetry={reload} />;
 
 	return (
-		<section className="flex flex-col gap-4">
+		<Card padding="lg" className="gap-6 overflow-visible">
 			<PanelHeader
-				icon={<Pause size={16} />}
+				icon={<Bell className="h-5 w-5" />}
 				title="소셜 알림"
 				description="유튜브 업로드·치지직 방송 시작·트위치 방송 시작 알림을 디스코드 채널로 보내요."
 				action={
-					<Button size="sm" variant={showAdd ? "secondary" : "default"} onClick={() => setShowAdd((value) => !value)}>
-						<Plus size={14} />
-						{showAdd ? "닫기" : "알림 추가"}
+					<Button variant="primary" size="sm" icon={<Plus size={16} />} onClick={() => setShowAdd((value) => !value)}>
+						{showAdd ? "추가 닫기" : "알림 추가"}
 					</Button>
 				}
 			/>
 
-			{error && (
-				<Card padding="lg" className="flex flex-wrap items-center gap-3">
-					<span className="text-destructive text-sm">알림 목록을 불러오지 못했어요. ({error.message})</span>
-					<Button size="sm" variant="secondary" onClick={() => void reload()}>
-						다시 시도
-					</Button>
-				</Card>
-			)}
-
 			{showAdd && <AddSubscriptionForm guildId={guildId} onDone={() => setShowAdd(false)} />}
 
 			{subscriptions && subscriptions.length === 0 && !showAdd && (
-				<InfoBox>
-					아직 등록된 알림이 없어요. &apos;알림 추가&apos;로 유튜브·치지직·트위치 알림을 만들어 보세요. 알림은 봇이 웹훅을
-					만들고, 대시보드에서 고치지 않는 한 봇 없이도 계속 전송돼요.
-				</InfoBox>
+				<EmptyState
+					icon={Bell}
+					title="등록된 알림이 없어요"
+					description="유튜브 업로드와 치지직·트위치 방송 시작을 디스코드 채널로 보내는 알림을 만들어 보세요."
+					action={
+						<Button variant="primary" icon={<Plus size={16} />} onClick={() => setShowAdd(true)}>
+							알림 추가
+						</Button>
+					}
+				/>
 			)}
 
-			{subscriptions?.map((subscription) => {
-				const editing = editingId === subscription.id;
-				const confirming = confirmingId === subscription.id;
-				const busy = busyId === subscription.id;
-				const target = channelName(subscription.targetChannelId);
+			{subscriptions && subscriptions.length > 0 && (
+				<ul className="space-y-2">
+					{subscriptions.map((subscription) => {
+						const editing = editingId === subscription.id;
+						const confirming = confirmingId === subscription.id;
+						const busy = busyId === subscription.id;
+						const target = channelName(subscription.targetChannelId);
 
-				return (
-					<Card key={subscription.id} padding="lg" className="flex flex-col gap-3">
-						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant={PLATFORM_BADGE[subscription.platform]}>{SOCIAL_PLATFORM_LABELS[subscription.platform]}</Badge>
-							<Badge variant={STATUS_BADGE[subscription.status]} dot>
-								{STATUS_LABEL[subscription.status]}
-							</Badge>
-							<span className="text-sm font-medium">{subscription.sourceName}</span>
-							<span className="text-muted-foreground text-sm">→ #{target ?? subscription.targetChannelId}</span>
-							<span className="text-muted-foreground text-xs">
-								{new Date(subscription.createdAt).toLocaleDateString("ko-KR")}
-							</span>
-							<div className="ml-auto flex flex-wrap items-center gap-2">
-								<Button size="sm" variant="secondary" disabled={busy} onClick={() => void toggleStatus(subscription)}>
-									{subscription.status === "disabled" ? <Play size={14} /> : <Pause size={14} />}
-									{subscription.status === "disabled" ? "재개" : "일시정지"}
-								</Button>
-								<Button
-									size="sm"
-									variant="secondary"
-									onClick={() => (editing ? setEditingId(null) : startEdit(subscription))}
-								>
-									<PencilLine size={14} />
-									{editing ? "편집 닫기" : "알림 설정"}
-								</Button>
-								{confirming ? (
-									<>
-										<Button size="sm" variant="danger" disabled={busy} onClick={() => void remove(subscription)}>
-											<Trash2 size={14} />
-											정말 삭제
+						return (
+							<li key={subscription.id} className="flex flex-col gap-3 rounded-menu bg-surface-2 px-4 py-3">
+								<div className="flex flex-wrap items-center gap-2">
+									<Badge variant={PLATFORM_BADGE[subscription.platform]}>{SOCIAL_PLATFORM_LABELS[subscription.platform]}</Badge>
+									<Badge variant={STATUS_BADGE[subscription.status]} dot>
+										{STATUS_LABEL[subscription.status]}
+									</Badge>
+									<span className="min-w-0 truncate text-sm font-medium text-foreground">{subscription.sourceName}</span>
+									<span className="text-sm text-muted-foreground">→ #{target ?? subscription.targetChannelId}</span>
+									<span className="text-xs text-muted-foreground">{new Date(subscription.createdAt).toLocaleDateString("ko-KR")}</span>
+									<div className="ml-auto flex items-center gap-1">
+										<Button
+											variant="icon"
+											size="sm"
+											aria-label={`${subscription.sourceName} 알림 ${subscription.status === "disabled" ? "재개" : "일시정지"}`}
+											disabled={busy}
+											className="pointer-coarse:h-11"
+											onClick={() => void toggleStatus(subscription)}
+										>
+											{subscription.status === "disabled" ? <Play size={14} /> : <Pause size={14} />}
 										</Button>
-										<Button size="sm" variant="ghost" onClick={cancelConfirm}>
-											취소
+										<Button
+											variant="icon"
+											size="sm"
+											aria-label={`${subscription.sourceName} 알림 설정 ${editing ? "편집 닫기" : "편집하기"}`}
+											disabled={busy}
+											className="pointer-coarse:h-11"
+											onClick={() => (editing ? setEditingId(null) : startEdit(subscription))}
+										>
+											<PencilLine size={14} />
 										</Button>
-									</>
-								) : (
-									<Button size="sm" variant="ghost" disabled={busy} onClick={() => requestDelete(subscription.id)}>
-										<Trash2 size={14} />
-										삭제
-									</Button>
-								)}
-							</div>
-						</div>
-
-						{subscription.status === "failed" && (
-							<WarningBox>
-								이 알림은 전송에 계속 실패하고 있어요. 웹훅이나 대상 채널이 삭제되었을 수 있어요. 채널을 확인한 뒤 알림을
-								삭제하고 다시 추가해 주세요.
-							</WarningBox>
-						)}
-
-						{!editing && subscription.messageTemplate && (
-							<div className="bg-muted rounded-md px-3 py-2 text-sm break-all whitespace-pre-wrap">{subscription.messageTemplate}</div>
-						)}
-
-						{!editing && (subscription.webhookName || subscription.webhookAvatarUrl || !subscription.showThumbnail) && (
-							<p className="text-muted-foreground text-xs">
-								웹훅 표시: {subscription.webhookName ?? "기본"}
-								{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
-								{!subscription.showThumbnail ? " · 섬네일 이미지 없음" : ""}
-							</p>
-						)}
-
-						{editing && (
-							<div className="flex flex-col gap-3">
-								<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
-								<div className="flex flex-col gap-3">
-									<div className="flex flex-col gap-1.5">
-										<span className="text-xs font-medium text-muted-foreground">웹훅 표시 (비우면 기본)</span>
-										<Input value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} placeholder="웹훅 표시명" maxLength={80} disabled={busy} />
-										<p className="text-xs text-muted-foreground">
-											{nameDraft.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).
-										</p>
+										<Button
+											variant="icon"
+											size="sm"
+											aria-label={`${subscription.sourceName} 알림 삭제`}
+											disabled={busy}
+											className={`pointer-coarse:h-11 ${confirming ? "ring-2 ring-destructive/50" : ""}`}
+											icon={confirming ? <Trash2 size={14} className="text-destructive" /> : <Trash2 size={14} />}
+											onClick={() => {
+												if (requestDelete(subscription.id)) void remove(subscription);
+											}}
+										/>
 									</div>
-									<WebhookAvatarField
-										guildId={guildId}
-										value={avatarDraft}
-										onChange={setAvatarDraft}
-										fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
-										fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
-										disabled={busy}
-									/>
 								</div>
-								<div className="flex flex-col gap-1.5">
-									<Switch
-										checked={showThumbDraft}
-										onChange={setShowThumbDraft}
-										label="방송 시작 섬네일 이미지 표시"
-										labelPosition="right"
-									/>
+
+								{subscription.status === "failed" && (
+									<WarningBox>
+										이 알림은 전송에 계속 실패하고 있어요. 웹훅이나 대상 채널이 삭제되었을 수 있어요. 채널을 확인한 뒤 알림을
+										삭제하고 다시 추가해 주세요.
+									</WarningBox>
+								)}
+
+								{!editing && subscription.messageTemplate && (
+									<div className="rounded-control bg-surface-1 px-3 py-2 text-sm break-all whitespace-pre-wrap text-foreground">
+										{subscription.messageTemplate}
+									</div>
+								)}
+
+								{!editing && (subscription.webhookName || subscription.webhookAvatarUrl || !subscription.showThumbnail) && (
 									<p className="text-xs text-muted-foreground">
-										라이브 미리보기 이미지를 임베드에 넣어요. 트위치는 이미지가 없어 자동으로 생략돼요.
+										웹훅 표시: {subscription.webhookName ?? "기본"}
+										{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
+										{!subscription.showThumbnail ? " · 섬네일 이미지 없음" : ""}
 									</p>
-								</div>
-								<div className="flex justify-end gap-2">
-									<Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
-										취소
-									</Button>
-									<Button size="sm" disabled={busy} onClick={() => void saveSettings(subscription)}>
-										저장
-									</Button>
-								</div>
-							</div>
-						)}
-					</Card>
-				);
-			})}
-		</section>
+								)}
+
+								{editing && (
+									<div className="flex flex-col gap-3 border-t border-border-subtle pt-3">
+										<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
+										<Field
+											label="웹훅 표시명"
+											htmlFor={`webhook-name-${subscription.id}`}
+											description={`${nameDraft.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).`}
+										>
+											<Input
+												id={`webhook-name-${subscription.id}`}
+												value={nameDraft}
+												onChange={(event) => setNameDraft(event.target.value)}
+												placeholder="웹훅 표시명"
+												maxLength={80}
+												disabled={busy}
+											/>
+										</Field>
+										<WebhookAvatarField
+											guildId={guildId}
+											value={avatarDraft}
+											onChange={setAvatarDraft}
+											fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
+											fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
+											disabled={busy}
+										/>
+										<div className="flex flex-col gap-1.5">
+											<Switch
+												checked={showThumbDraft}
+												onChange={setShowThumbDraft}
+												label="방송 시작 섬네일 이미지 표시"
+												labelPosition="right"
+											/>
+											<p className="text-xs text-muted-foreground">
+												라이브 미리보기 이미지를 임베드에 넣어요. 트위치는 이미지가 없어 자동으로 생략돼요.
+											</p>
+										</div>
+										<div className="flex justify-end gap-2">
+											<Button size="sm" variant="secondary" className="pointer-coarse:h-11" onClick={() => setEditingId(null)}>
+												취소
+											</Button>
+											<Button
+												size="sm"
+												variant="primary"
+												loading={busy}
+												className="pointer-coarse:h-11"
+												onClick={() => void saveSettings(subscription)}
+											>
+												저장
+											</Button>
+										</div>
+									</div>
+								)}
+							</li>
+						);
+					})}
+				</ul>
+			)}
+
+			<InfoBox>
+				<p>
+					알림은 봇이 채널에 웹훅을 만든 뒤에는 대시보드를 닫아도 계속 전송돼요. 알림을 없애려면 목록에서 삭제해 주세요.
+				</p>
+			</InfoBox>
+		</Card>
 	);
 }

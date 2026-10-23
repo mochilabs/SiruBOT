@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiFailResponse, dataApiUserMessage, forwardDataApiPost } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import type { ChzzkProfileResponse } from "@/types/social";
 
@@ -25,7 +25,7 @@ export const POST = createGuildApiHandler({
       data,
     );
     if (!result.ok) {
-      return dataApiFailResponse(result, FALLBACK);
+      return dataApiFailResponse(result, dataApiUserMessage(result.message, FALLBACK));
     }
 
     return NextResponse.json(result.data);
