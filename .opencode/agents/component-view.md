@@ -1,6 +1,7 @@
 ---
 description: 새로운 view 파일을 만들거나 기존 view(재생 알림, 컨트롤러, 대기열, 설정, 에러 등)의 Components V2 레이아웃·버튼/셀렉트메뉴·한국어 문구를 작성·수정할 때 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

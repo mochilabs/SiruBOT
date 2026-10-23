@@ -1,6 +1,7 @@
 ---
 description: 임시 음성 채널(생성·삭제·소유권 이전·설정), 게임 명령어(주사위·가위바위보·행운·오하아사·숫자맞추기·출석)를 만들거나 수정할 때 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

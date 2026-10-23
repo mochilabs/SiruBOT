@@ -1,6 +1,7 @@
 ---
 description: 프로덕션 샤드 할당 실패(NoShardsAvailableError), 샤드·Lavalink 노드 장애 조치(failover), 헬스체크 503, 배포 후 음성 끊김, shardmanager 연동 문제를 다룰 때 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

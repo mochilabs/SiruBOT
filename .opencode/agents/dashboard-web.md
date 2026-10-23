@@ -1,6 +1,7 @@
 ---
 description: 대시보드(apps/dashboard) 페이지·API Route·SWR 훅·zustand 스토어를 만들거나 수정할 때 호출. next-auth 인증, zod 검증, fetcher 규약, 권한 체크가 궁금할 때도 사용
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

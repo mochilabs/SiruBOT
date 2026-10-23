@@ -1,6 +1,7 @@
 ---
 description: 슬래시 커맨드를 새로 만들거나 수정할 때, precondition·버튼/셀렉트메뉴/모달·페이지네이션 등 인터랙션 처리와 Components V2 view 렌더링을 검증할 때 호출
 mode: subagent
+model: xiaomi/mimo-v2.6-flash
 permissions:
   - action: "*"
     resource: "*"

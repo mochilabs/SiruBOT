@@ -11,7 +11,7 @@ import type { TtsUserPreset } from './ttsUserSettings.ts';
  *
  * 모드는 dispatch 시점에 재판정한다 (명세 4.2): 메인 트랙이 있으면 mixer announce 오버레이,
  * 없으면 클립을 메인 플레이어 트랙으로 재생하는 단독 모드. 만들어진 클립은 버리지 않고
- * 시점에 따라 둘 중 하나로 재생한다. 계약 전문은 docs/plans/2026-10-18-chat-tts-spec.md.
+ * 시점에 따라 둘 중 하나로 재생한다.
  */
 
 /** 같은 유저의 연속 합성 간격(ms) — 이 안의 메시지는 병합 창으로 모인다 (명세 4.4) */

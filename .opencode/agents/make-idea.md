@@ -1,6 +1,7 @@
 ---
 description: "Discover, research, validate, and prioritize evidence-backed product opportunities by inspecting the current repository and researching external sources. Use for feature ideation, product roadmaps, competitive analysis, UX opportunities, architectural opportunities, and hypothesis validation."
 mode: all
+model: xiaomi/mimo-v2.6-flash
 temperature: 0.2
 permissions:
   - action: edit

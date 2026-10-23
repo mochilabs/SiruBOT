@@ -1,6 +1,7 @@
 ---
 description: "Ask — Strict read-only codebase analysis and Q&A agent. No file modifications, command execution, or subagent delegation."
 mode: all
+model: xiaomi/mimo-v2.6-flash
 temperature: 0.1
 
 permission:
