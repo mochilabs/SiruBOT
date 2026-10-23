@@ -1,15 +1,11 @@
-/* =============================================================================
-   1. Tailwind & shadcn/ui integration
-   ============================================================================= */
+/* Tailwind & shadcn/ui integration */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "../styles/shadcn-tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
-/* =============================================================================
-   2. Light & dark semantic theme variables
-   ============================================================================= */
+/* Light & dark semantic theme variables */
 /* 이모지 폴백 웹폰트 — 시스템 이모지 폰트가 없는 클라이언트(리눅스 등)만 로드해요(unicode-range lazy load).
    Twemoji by Twitter, Inc and other contributors — CC-BY 4.0, 고지는 /licenses 페이지에 있어요. */
 @font-face {
@@ -25,10 +21,10 @@
 	/* Pretendard(next/font) → Pretendard JP(일본어 한자) → Twemoji(이모지) → 네이티브 이모지 → 시스템 폴백 */
 	--font-stack: var(--font-pretendard), var(--font-pretendard-jp), "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-	/* ============ Pink Beret Music Bot palette (shadcn, base #ffdada) ============
+	/* Pink Beret Music Bot palette (shadcn, base #ffdada):
 	   포커스 링·브랜드 액션(--brand)은 포인트 핑크, 본체(--primary)는 라이트 핑크 서피스.
 	   텍스트는 primary-foreground(마룬) / accent-foreground 계열로 AA를 맞춘다.
-	   서피스 슬롯(card·popover·secondary·muted)은 §5의 --surface-* 단일 소스를 참조한다. */
+	   서피스 슬롯(card·popover·secondary·muted)은 --surface-* 단일 소스를 참조한다. */
 	--background: #fff9f9;
 	--foreground: #3a2c30;
 	--card: var(--surface-1);
@@ -103,11 +99,8 @@
 
 }
 
-/* =============================================================================
-   3. Tailwind theme mappings
-   `@theme inline` resolves every utility to the runtime variable, so `.dark`
-   overrides on <html> take effect without a second generated rule set.
-   ============================================================================= */
+/* Tailwind theme mappings: `@theme inline` resolves every utility to the runtime variable, so `.dark`
+   overrides on <html> take effect without a second generated rule set. */
 @theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
@@ -145,9 +138,7 @@
 	--color-discord-voice: #23a559;
 }
 
-/* =============================================================================
-   4. Typography tokens
-   ============================================================================= */
+/* Typography tokens */
 @theme inline {
 	--font-sans: var(--font-stack);
 
@@ -158,9 +149,7 @@
 	--text-3xs--line-height: 0.75rem;
 }
 
-/* =============================================================================
-   5. Radius & surface tokens
-   ============================================================================= */
+/* Radius & surface tokens */
 /* --surface-3의 역할은 '플로팅 오버레이'가 원본이지만, 중립 컨트롤(secondary·icon 버튼)의
    hover 단계로 쓰는 관례(bg-secondary → hover:bg-surface-3)가 9+ 파일에 정착했다 — 공식 관례로 승격.
    라이트에서 #ffffff로 밝아지고 다크에서 #3a2c30으로 한 단계 밝아지는 elevation hover를 만든다. */
@@ -197,9 +186,7 @@
 	--color-surface-3: var(--surface-3);
 }
 
-/* =============================================================================
-   6. Border & shadow tokens
-   ============================================================================= */
+/* Border & shadow tokens */
 :root {
 	--border-subtle: #f8e1e4;
 	/* 인터랙티브 컨트롤 경계선 — #b4779b는 #ffffff 대비 3.47:1, #fff9f9 대비 3.36:1로 3.0:1 통과 */
@@ -240,9 +227,7 @@
 	--shadow-2xl: var(--elev-5);
 }
 
-/* =============================================================================
-   7. Status colors
-   ============================================================================= */
+/* Status colors */
 /* 상태색은 기존 대비가 통과하는 값 유지 (text-success를 bg-success/10 tint 위에 쓰는
    현재 컴포넌트 규칙과 호환). 팔레트의 파스텔 상태색은 solid 배지 전용 스타일로 별도 전환 필요.
    상태 *-foreground 4종은 현재 소비자 0 — solid 배지 마이그레이션 때 쓰도록 삭제를 보류한다. */
@@ -304,9 +289,7 @@
 	--color-dot-neutral: var(--dot-neutral);
 }
 
-/* =============================================================================
-   8. Component-independent utilities
-   ============================================================================= */
+/* Component-independent utilities */
 @utility transition-control {
 	transition-property: color, background-color, box-shadow;
 	transition-timing-function: var(--tw-ease, var(--default-transition-timing-function, cubic-bezier(0.4, 0, 0.2, 1)));
@@ -501,9 +484,7 @@
 	}
 }
 
-/* =============================================================================
-   9. Motion tokens & accessibility preferences
-   ============================================================================= */
+/* Motion tokens & accessibility preferences */
 :root {
 	--motion-fast: 200ms;
 	--motion-base: 300ms;

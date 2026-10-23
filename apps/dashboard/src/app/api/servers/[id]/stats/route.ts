@@ -89,7 +89,6 @@ export const GET = createGuildApiHandler({
     const { searchParams } = new URL(request.url);
     const daysParam = searchParams.get("days") ?? "7";
 
-    // "safe"(전체 기간)는 스키마 밖에서 먼저 걸러요 — 나머지는 coerce 검증.
     let days: number | "safe";
     if (daysParam === "safe") {
       days = "safe";

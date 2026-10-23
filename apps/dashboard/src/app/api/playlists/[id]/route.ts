@@ -1,31 +1,11 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
+import { playlistMetadataSchema } from "@/app/api/_shared/validation";
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { db } from "@/lib/db";
-import {
-  FAVORITES_PLAYLIST_NAME,
-  MAX_PLAYLIST_DESCRIPTION_LENGTH,
-} from "@/lib/playlist-constants";
+import { FAVORITES_PLAYLIST_NAME } from "@/lib/playlist-constants";
 import { rateKey, READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import { zodError } from "@/lib/schemas";
-
-const updatePlaylistSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "플레이리스트 이름을 입력해 주세요.")
-    .max(50, "이름은 최대 50자까지 입력할 수 있어요."),
-  description: z
-    .string()
-    .trim()
-    .max(
-      MAX_PLAYLIST_DESCRIPTION_LENGTH,
-      `설명은 최대 ${MAX_PLAYLIST_DESCRIPTION_LENGTH}자까지 입력할 수 있어요.`,
-    )
-    .nullish()
-    .transform((value) => (value ? value : null)),
-});
 
 export const GET = createGuildApiHandler({
   role: "user",
@@ -109,7 +89,7 @@ export const PATCH = createGuildApiHandler({
       }
 
       // 소유 검증이 먼저라 본문 파싱은 핸들러 안에서 해요 (래퍼 schema 대신 직접 검증).
-      const parsed = updatePlaylistSchema.safeParse(
+      const parsed = playlistMetadataSchema.safeParse(
         await request.json().catch(() => null),
       );
       if (!parsed.success) {

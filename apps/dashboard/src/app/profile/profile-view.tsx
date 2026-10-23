@@ -167,7 +167,9 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 <span className="text-xs text-muted-foreground">(최근 기록 기준)</span>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">-</p>
+              <p className="text-sm text-muted-foreground">
+                아직 게임 기록이 없어요. 디스코드에서 가위바위보로 시작해 보세요.
+              </p>
             )}
           </CardContent>
           </Card>

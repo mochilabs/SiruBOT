@@ -53,7 +53,6 @@ export const POST = createGuildApiHandler({
         return NextResponse.json({ success: true });
       }
 
-      // Fetch target track to move
       const targetTrack = await db.playlistTrack.findUnique({
         where: {
           playlistId_position: {
@@ -79,15 +78,13 @@ export const POST = createGuildApiHandler({
         );
       }
 
-      // Run reordering inside a transaction
       await db.$transaction(async (tx) => {
-        // 1. Temporarily move the target track to a position outside the unique bounds (-1)
+        // Temporarily move the target track to a position outside the unique bounds (-1)
         await tx.playlistTrack.update({
           where: { id: targetTrack.id },
           data: { position: -1 },
         });
 
-        // 2. Shift other tracks
         if (sourceIndex < destinationIndex) {
           // Shift tracks in between down by 1 (e.g. moving a track from index 2 to index 5)
           await tx.playlistTrack.updateMany({
@@ -108,7 +105,6 @@ export const POST = createGuildApiHandler({
           });
         }
 
-        // 3. Move target track to destinationIndex
         await tx.playlistTrack.update({
           where: { id: targetTrack.id },
           data: { position: destinationIndex },

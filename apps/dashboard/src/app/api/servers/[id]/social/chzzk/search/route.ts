@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiGet } from "@/lib/data-api/client";
+import { dataApiFailResponse, forwardDataApiGet } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import type { ChzzkSearchResponse } from "@/types/social";
 
@@ -39,10 +39,7 @@ export const GET = createGuildApiHandler({
       `/v1/social/chzzk/search?${query.toString()}`,
     );
     if (!result.ok) {
-      return NextResponse.json(
-        { error: result.message ?? FALLBACK },
-        { status: result.message ? result.status : 502 },
-      );
+      return dataApiFailResponse(result, FALLBACK);
     }
 
     return NextResponse.json(result.data);

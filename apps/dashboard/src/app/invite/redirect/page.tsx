@@ -8,18 +8,14 @@ import {
   Settings2
 } from "lucide-react";
 
+import { FocusPageShell } from "@/app/_components/focus-page-shell";
+
 export default function InviteRedirectPage() {
   return (
-    <main className="relative flex min-h-[calc(100svh-var(--navbar-h))] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
+    <FocusPageShell>
       <div className="relative z-10 flex flex-col items-center text-center">
-        {/* 배경 블러 */}
-        <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
-          <div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
-        </div>
-
         <div className="space-y-12">
           <div className="flex flex-col items-center space-y-6">
-            {/* Success Symbol */}
             <div className="relative">
               <div className="flex h-32 w-32 items-center justify-center rounded-full bg-surface-1 p-6">
                 <CheckCircle2 className="h-16 w-16 text-success" />
@@ -58,6 +54,6 @@ export default function InviteRedirectPage() {
           </div>
         </div>
       </div>
-    </main>
+    </FocusPageShell>
   );
 }

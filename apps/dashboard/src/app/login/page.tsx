@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+import { FocusPageShell } from "@/app/_components/focus-page-shell";
 import { Button } from "@/components/ui/button";
 import { auth, signIn } from "@/lib/auth";
 import { getSessionTokenState } from "@/lib/session-token";
@@ -33,12 +34,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	}
 
 	return (
-		<main className="relative flex min-h-[calc(100svh-var(--navbar-h))] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-			{/* 배경 블러 */}
-			<div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
-				<div className="h-[32rem] w-[32rem] rounded-full bg-primary/[0.04] blur-3xl" />
-			</div>
-
+		<FocusPageShell>
 			<div className="relative z-10 flex flex-col items-center text-center">
 				<div className="space-y-10">
 					<div className="flex flex-col items-center space-y-6">
@@ -86,6 +82,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 					</div>
 				</div>
 			</div>
-		</main>
+		</FocusPageShell>
 	);
 }
