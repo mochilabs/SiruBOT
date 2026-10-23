@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiUserMessage, forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
 import { WRITE_RATE } from "@/lib/rate-limit";
 import type { SocialSubscriptionResponse, SocialSubscriptionsResponse } from "@/types/social";
 
@@ -47,7 +47,7 @@ async function verifySubscriptionOwnership(
   );
   if (!list.ok) {
     return NextResponse.json(
-      { error: list.message ?? OWNERSHIP_FALLBACK },
+      { error: dataApiUserMessage(list.message, OWNERSHIP_FALLBACK) },
       { status: list.message ? list.status : 502 },
     );
   }
@@ -80,7 +80,7 @@ export const PATCH = createGuildApiHandler({
     );
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.message ?? UPDATE_FALLBACK },
+        { error: dataApiUserMessage(result.message, UPDATE_FALLBACK) },
         { status: result.message ? result.status : 502 },
       );
     }
@@ -110,7 +110,7 @@ export const DELETE = createGuildApiHandler({
     );
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.message ?? DELETE_FALLBACK },
+        { error: dataApiUserMessage(result.message, DELETE_FALLBACK) },
         { status: result.message ? result.status : 502 },
       );
     }

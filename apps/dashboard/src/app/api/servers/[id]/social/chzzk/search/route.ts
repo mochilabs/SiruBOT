@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiGet } from "@/lib/data-api/client";
+import { dataApiUserMessage, forwardDataApiGet } from "@/lib/data-api/client";
 import { READ_RATE } from "@/lib/rate-limit";
 import type { ChzzkSearchResponse } from "@/types/social";
 
@@ -40,7 +40,7 @@ export const GET = createGuildApiHandler({
     );
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.message ?? FALLBACK },
+        { error: dataApiUserMessage(result.message, FALLBACK) },
         { status: result.message ? result.status : 502 },
       );
     }

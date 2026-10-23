@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiUserMessage, forwardDataApiGet, forwardDataApiPost } from "@/lib/data-api/client";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import type { SocialSubscriptionResponse,SocialSubscriptionsResponse } from "@/types/social";
 
@@ -32,7 +32,7 @@ export const GET = createGuildApiHandler({
     );
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.message ?? LIST_FALLBACK },
+        { error: dataApiUserMessage(result.message, LIST_FALLBACK) },
         { status: result.message ? result.status : 502 },
       );
     }
@@ -55,7 +55,7 @@ export const POST = createGuildApiHandler({
     );
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.message ?? CREATE_FALLBACK },
+        { error: dataApiUserMessage(result.message, CREATE_FALLBACK) },
         { status: result.message ? result.status : 502 },
       );
     }
