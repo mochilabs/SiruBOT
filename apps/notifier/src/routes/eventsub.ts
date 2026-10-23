@@ -15,11 +15,11 @@ interface StreamOnlineEvent {
 }
 
 /**
- * 트위치 EventSub 공개 콜백 (무인증) — HMAC 서명 검증이 인증을 대신해요.
+ * 트위치 EventSub 공개 콜백 (무인증): HMAC 서명 검증이 인증을 대신해요.
  * POST /eventsub/twitch
  */
 export async function eventsubRoutes(fastify: FastifyInstance, options: { dispatcher: SocialDispatcher; secret: string }): Promise<void> {
-	// HMAC 검증에 raw 본문이 필요해요 — 이 스코프에서만 JSON을 string으로 받아요.
+	// HMAC 검증에 raw 본문이 필요해요. 이 스코프에서만 JSON을 string으로 받아요.
 	// (register로 캡슐화했으니 다른 라우트의 JSON 파서엔 영향이 없어요.)
 	await fastify.register(async (scope) => {
 		scope.addContentTypeParser('application/json', { parseAs: 'string' }, (_request, body, done) => done(null, body));
@@ -37,7 +37,7 @@ export async function eventsubRoutes(fastify: FastifyInstance, options: { dispat
 			if (!messageId || !messageTimestamp || !signature) {
 				return reply.code(400).send({ error: 'EventSub 헤더가 누락됐어요.' });
 			}
-			// 리플레이 가드 — 10분 이상 지난 메시지는 서명이 유효해도 버려요.
+			// 리플레이 가드: 10분 이상 지난 메시지는 서명이 유효해도 버려요.
 			if (!isEventSubTimestampFresh(messageTimestamp)) {
 				return reply.code(403).send({ error: '메시지 시간이 너무 오래됐어요.' });
 			}
@@ -54,7 +54,7 @@ export async function eventsubRoutes(fastify: FastifyInstance, options: { dispat
 
 			switch (messageType) {
 				case 'webhook_callback_verification': {
-					// 구독 생성 직후 오는 검증 메시지 — challenge 원문을 그대로 echo해요.
+					// 구독 생성 직후 오는 검증 메시지: challenge 원문을 그대로 echo해요.
 					const challenge = envelope.challenge;
 					if (typeof challenge !== 'string') return reply.code(400).send({ error: 'challenge가 없어요.' });
 					return reply.code(200).send(challenge);
@@ -62,7 +62,7 @@ export async function eventsubRoutes(fastify: FastifyInstance, options: { dispat
 				case 'notification': {
 					if (envelope.subscription?.type === 'stream.online') {
 						const event = envelope.event;
-						// 검증된 발신이지만 필드 결손은 조용히 넘겨요 — 200을 안 보내면 hub가 계속 재전송해요.
+						// 검증된 발신이지만 필드 결손은 조용히 넘겨요. 200을 안 보내면 hub가 계속 재전송해요.
 						if (isStreamOnlineEvent(event)) {
 							void (async () => {
 								try {
@@ -72,14 +72,14 @@ export async function eventsubRoutes(fastify: FastifyInstance, options: { dispat
 								}
 							})();
 						} else {
-							logger.warn('stream.online 이벤트 필드가 불완전해요 — 알림을 건너뛸게요.');
+							logger.warn('stream.online 이벤트 필드가 불완전해요. 알림을 건너뛸게요.');
 						}
 					}
 					return reply.code(200).send({ ok: true });
 				}
 				case 'revocation': {
-					// 구독 해지 통보 — 대시보드에서 상태로 보이게 로그만 남겨요 (2차: 구독 상태 반영).
-					logger.warn(`트위치 구독이 해지됐어요: ${envelope.subscription?.type ?? '알 수 없음'}`);
+					// 구독 해지 통보: 대시보드에서 상태로 보이게 로그만 남겨요 (2차: 구독 상태 반영).
+					logger.warn(`트위치 구독이 해지됐어요. ${envelope.subscription?.type ?? '알 수 없음'}`);
 					return reply.code(200).send({ ok: true });
 				}
 				default:
@@ -101,7 +101,7 @@ function isStreamOnlineEvent(event: unknown): event is StreamOnlineEvent {
 	);
 }
 
-/** stream.online → SocialEvent 정규화 — 썸네일은 1차에 null (별도 Get Streams 호출이 필요해요). */
+/** stream.online → SocialEvent 정규화: 썸네일은 1차에 null (별도 Get Streams 호출이 필요해요). */
 function normalizeStreamOnline(event: StreamOnlineEvent): SocialEvent {
 	return {
 		platform: 'twitch',

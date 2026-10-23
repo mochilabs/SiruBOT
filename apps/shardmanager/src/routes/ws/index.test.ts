@@ -61,7 +61,7 @@ describe('ws IDENTIFY route', () => {
 		public static async connect(port: number): Promise<TestClient> {
 			const socket = new WebSocket(`ws://127.0.0.1:${port}/`);
 			sockets.push(socket);
-			// 메시지 리스너는 open 대기 전에 붙여요 — HELLO는 101 업그레이드 응답과 같은 첫 데이터 뭉치로 올 수 있어요.
+			// 메시지 리스너는 open 대기 전에 붙여요. HELLO는 101 업그레이드 응답과 같은 첫 데이터 뭉치로 올 수 있어요.
 			const client = new TestClient(socket);
 			client.closeInfo = new Promise((resolve) => socket.once('close', (code, reason) => resolve({ code, reason: reason.toString() })));
 			await new Promise<void>((resolve, reject) => {
@@ -75,7 +75,7 @@ describe('ws IDENTIFY route', () => {
 			this.socket.send(JSON.stringify({ op, payload }));
 		}
 
-		/** 특정 조건의 메시지를 기다려요 — 서버는 클라이언트 메시지를 마주쳐야 응답하므로 polling이 자연스러워요. */
+		/** 특정 조건의 메시지를 기다려요. 서버는 클라이언트 메시지를 마주쳐야 응답하므로 polling이 자연스러워요. */
 		public async waitFor(predicate: (message: WsMessage<unknown>) => boolean, timeoutMs = 2_000): Promise<WsMessage<unknown>> {
 			const deadline = Date.now() + timeoutMs;
 			while (Date.now() < deadline) {
@@ -83,7 +83,7 @@ describe('ws IDENTIFY route', () => {
 				if (found) return found;
 				await new Promise((resolve) => setTimeout(resolve, 10));
 			}
-			throw new Error(`timed out waiting for ws message — got ${JSON.stringify(this.messages)}`);
+			throw new Error(`timed out waiting for ws message: got ${JSON.stringify(this.messages)}`);
 		}
 
 		public async waitForClose(timeoutMs = 2_000): Promise<{ code: number; reason: string }> {
@@ -94,7 +94,7 @@ describe('ws IDENTIFY route', () => {
 			]);
 		}
 
-		/** 조건 없이 잠깐 기다려요 — "오면 안 되는" 메시지 부재 검증용. */
+		/** 조건 없이 잠깐 기다려요. "오면 안 되는" 메시지 부재 검증용. */
 		public async waitQuietly(ms: number): Promise<void> {
 			await new Promise((resolve) => setTimeout(resolve, ms));
 		}

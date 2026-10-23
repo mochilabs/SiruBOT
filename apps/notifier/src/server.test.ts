@@ -7,7 +7,7 @@ import type { SocialDispatcher } from './services/dispatcher.ts';
 import type { SocialWebhookHub } from './services/webhookHub.ts';
 import type { NotifierRedis } from './services/redis.ts';
 
-// 공용 에러 계약 스모크 — buildServer가 등록한 errorHandler·auth 401·notFound shape를 잠가요.
+// 공용 에러 계약 스모크: buildServer가 등록한 errorHandler·auth 401·notFound shape를 잠가요.
 
 const ENV = {
 	PORT: 0,

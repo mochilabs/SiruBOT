@@ -7,16 +7,16 @@ import { getLogger } from '../utils/logger.ts';
 
 const logger = getLogger('chzzkPoller');
 
-// 틱 주기 — 개별 채널은 due 계산으로 실제 폴링 주기가 갈려요.
+// 틱 주기: 개별 채널은 due 계산으로 실제 폴링 주기가 갈려요.
 const TICK_MS = 30_000;
 const LOCK_KEY = 'sirubot:social:chzzk:poll-lock';
 const LOCK_TTL_SECONDS = 25;
 const STATE_KEY_PREFIX = 'sirubot:social:chzzk:live:';
 const STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
-// plan §8 — 라이브 중 2분, 오프라인 5분 (적응형 폴링)
+// plan §8: 라이브 중 2분, 오프라인 5분 (적응형 폴링)
 const INTERVAL_ONLINE_MS = 2 * 60 * 1000;
 const INTERVAL_OFFLINE_MS = 5 * 60 * 1000;
-// 구독 목록 캐시 — 매 틱마다 DB를 때리지 않아요.
+// 구독 목록 캐시: 매 틱마다 DB를 때리지 않아요.
 const SUBSCRIPTION_CACHE_MS = 60_000;
 
 interface ChannelState {
@@ -25,13 +25,13 @@ interface ChannelState {
 	lastPolledAt: number;
 }
 
-/** 폴링 대상 채널 — 이벤트 author 폴백에 구독 시점의 채널 이름을 써요. */
-export interface PolledChzzkChannel {
+/** 폴링 대상 채널: 이벤트 author 폴백에 구독 시점의 채널 이름을 써요. */
+interface PolledChzzkChannel {
 	sourcePlatformId: string;
 	sourceName: string | null;
 }
 
-/** 치지직 뱅온 전이 감지 폴러 — offline→online 전이만 이벤트를 발사해요. */
+/** 치지직 뱅온 전이 감지 폴러: offline→online 전이만 이벤트를 발사해요. */
 export class ChzzkPoller extends SubscriptionPoller {
 	private readonly fetchFn: FetchFn;
 	private readonly dispatcher: { dispatch(event: SocialEvent): Promise<void> };
@@ -51,7 +51,7 @@ export class ChzzkPoller extends SubscriptionPoller {
 			lockTtlSeconds: LOCK_TTL_SECONDS,
 			logger,
 			startMessage: '치지직 폴러를 시작해요.',
-			breakerOpenMessage: `치지직 폴링이 ${BREAKER_THRESHOLD}틱 연속 실패 — 30분간 봉쇄해요.`
+			breakerOpenMessage: `치지직 폴링이 ${BREAKER_THRESHOLD}틱 연속 실패: 30분간 봉쇄해요.`
 		});
 		this.fetchFn = options.fetchFn ?? fetch;
 		this.dispatcher = options.dispatcher;
@@ -59,7 +59,7 @@ export class ChzzkPoller extends SubscriptionPoller {
 
 	protected override async pollOnce(db: PrismaClient, now: number): Promise<PollOutcome> {
 		const channels = await this.getChannels(db, now);
-		// DB 오류 — 빈 목록으로 위장하면 브레이커 계정에서 빠져 장애가 조용히 이어져요.
+		// DB 오류: 빈 목록으로 위장하면 브레이커 계정에서 빠져 장애가 조용히 이어져요.
 		if (!channels) return 'failed';
 		if (channels.length === 0) return 'skipped';
 
@@ -74,8 +74,8 @@ export class ChzzkPoller extends SubscriptionPoller {
 				await this.handleTransition(channel, state, status);
 			} catch (error) {
 				if (error instanceof ChzzkApiError && error.status === 404) {
-					// 채널 단위 문제(삭제된 채널) — 시스템 장애가 아니라 브레이커에 넣지 않아요.
-					logger.warn(`치지직 채널 ${channelId}을(를) 찾을 수 없어요 — 삭제된 채널이에요. 구독을 정리해 주세요.`);
+					// 채널 단위 문제(삭제된 채널): 시스템 장애가 아니라 브레이커에 넣지 않아요.
+					logger.warn(`치지직 채널 ${channelId}을(를) 찾을 수 없어요. 삭제된 채널이에요. 구독을 정리해 주세요.`);
 					continue;
 				}
 				tickFailed = true;
@@ -86,7 +86,7 @@ export class ChzzkPoller extends SubscriptionPoller {
 		return tickFailed ? 'failed' : 'ok';
 	}
 
-	/** 구독 채널 목록 — DB 오류 시 null을 돌려 틱을 'failed'로 만들어요 (빈 목록 캐시로 장애를 가리지 않도록). */
+	/** 구독 채널 목록: DB 오류 시 null을 돌려 틱을 'failed'로 만들어요 (빈 목록 캐시로 장애를 가리지 않도록). */
 	private async getChannels(db: PrismaClient, now: number): Promise<PolledChzzkChannel[] | null> {
 		if (this.subscriptionsCache && now - this.subscriptionsCache.cachedAt < SUBSCRIPTION_CACHE_MS) {
 			return this.subscriptionsCache.channels;
@@ -102,7 +102,7 @@ export class ChzzkPoller extends SubscriptionPoller {
 			this.subscriptionsCache = { channels, cachedAt: now };
 			return channels;
 		} catch (error) {
-			logger.error('치지직 구독 목록 조회 실패 — 이번 틱은 실패로 기록해요:', String(error));
+			logger.error('치지직 구독 목록 조회 실패: 이번 틱은 실패로 기록해요:', String(error));
 			return null;
 		}
 	}
@@ -111,13 +111,13 @@ export class ChzzkPoller extends SubscriptionPoller {
 		const channelId = channel.sourcePlatformId;
 		const now = this.now();
 		if (!state) {
-			// 첫 관찰 — 초기 동기화만 하고 알림은 안 보내요 (재시작 직후 온라인 채널 전체 폭발 방지)
+			// 첫 관찰: 초기 동기화만 하고 알림은 안 보내요 (재시작 직후 온라인 채널 전체 폭발 방지)
 			await this.saveState(channelId, { isLive: status.isLive, liveId: status.liveId, lastPolledAt: now });
 			return;
 		}
 		if (status.isLive && !state.isLive) {
-			// offline → online 전이 — 뱅온 이벤트!
-			// live-status v2엔 channelName이 없는 경우가 있어요 — 구독 시점 이름으로 폴백 (실측 반영)
+			// offline → online 전이: 뱅온 이벤트!
+			// live-status v2엔 channelName이 없는 경우가 있어요. 구독 시점 이름으로 폴백 (실측 반영)
 			const author = status.channelName ?? channel.sourceName ?? channelId;
 			const publishedAt = this.now();
 			const event: SocialEvent = {
