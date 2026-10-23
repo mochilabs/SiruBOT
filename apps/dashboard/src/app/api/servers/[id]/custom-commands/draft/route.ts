@@ -3,7 +3,7 @@ import { customCommandPayloadSchema } from "@sirubot/utils/customCommand";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { forwardDataApiPost } from "@/lib/data-api/client";
+import { dataApiFailResponse, forwardDataApiPost } from "@/lib/data-api/client";
 import { HEAVY_WRITE_RATE } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
 
@@ -34,13 +34,9 @@ export const POST = createGuildApiHandler({
         { timeoutMs: 60_000 },
       );
       if (!result.ok) {
-        return NextResponse.json(
-          {
-            error:
-              result.message ??
-              "AI 초안 생성에 실패했어요. 잠시 후 다시 시도해 주세요.",
-          },
-          { status: result.status },
+        return dataApiFailResponse(
+          result,
+          "AI 초안 생성에 실패했어요. 잠시 후 다시 시도해 주세요.",
         );
       }
 

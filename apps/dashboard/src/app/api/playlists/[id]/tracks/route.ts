@@ -10,6 +10,8 @@ import {
 import { WRITE_RATE } from "@/lib/rate-limit";
 import { extractYoutubeVideoId } from "@/lib/youtube-url";
 
+import { cleanYoutubeTitle } from "./clean-title";
+
 /** 외부 noembed API 타임아웃 — 무응답 연결 고갈 방지 */
 const NOEMBED_TIMEOUT_MS = 10_000;
 
@@ -89,9 +91,8 @@ export const POST = createGuildApiHandler({
           );
         }
 
-        // Fetch metadata from noembed
-        let title = "Unknown Title";
-        let artist = "Unknown Artist";
+        let title = "제목 없음";
+        let artist = "아티스트 없음";
         let thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
         try {
@@ -111,13 +112,8 @@ export const POST = createGuildApiHandler({
           console.warn("Failed to fetch noembed metadata, using defaults:", err);
         }
 
-        // Clean up titles (e.g. remove "Official Music Video", etc.)
-        title = title.replace(
-          /\s*[\(\[][Oo]fficial\s*([Mm]usic\s*)?[Vv]ideo[\)\]]\s*/g,
-          "",
-        );
+        title = cleanYoutubeTitle(title);
 
-        // Upsert Track record
         const track = await db.track.upsert({
           where: { id: videoId },
           create: {
@@ -159,7 +155,6 @@ export const POST = createGuildApiHandler({
         }
       }
 
-      // Get current max position
       const maxPositionResult = await db.playlistTrack.aggregate({
         where: { playlistId },
         _max: { position: true },
@@ -167,7 +162,6 @@ export const POST = createGuildApiHandler({
 
       const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
 
-      // Create PlaylistTrack record
       const playlistTrack = await db.playlistTrack.create({
         data: {
           playlistId,
@@ -227,7 +221,6 @@ export const DELETE = createGuildApiHandler({
         );
       }
 
-      // Find the specific PlaylistTrack by position
       const playlistTrack = await db.playlistTrack.findFirst({
         where: { playlistId, position },
       });

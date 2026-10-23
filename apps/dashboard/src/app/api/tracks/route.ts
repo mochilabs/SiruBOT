@@ -3,18 +3,15 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { guardRateLimit, publicReadLimit,rateKey } from "@/lib/rate-limit";
+import { guardRateLimit, publicReadLimit, rateKey } from "@/lib/rate-limit";
 import { fixedTrackFilter, PAGE_SIZE } from "@/lib/track-constants";
+
+import { escapeLikeWildcard } from "./search-query";
 
 const tracksQuerySchema = z.object({
   query: z.string().max(200).default(""),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
-
-/** Prisma contains(ILIKE) 와일드카드 이스케이프 — %, _, \를 리터럴로 취급해요 */
-function escapeLikeWildcard(value: string): string {
-  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
 
 export async function GET(request: Request) {
   // 공개 차트 엔드포인트 — 읽기 전용 공개 메타데이터라 로그인 없이 허용해요.
@@ -80,7 +77,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Failed to fetch tracks:", error);
     return NextResponse.json(
-      { error: "Failed to fetch tracks" },
+      { error: "곡 목록을 불러오지 못했어요." },
       { status: 500 },
     );
   }
