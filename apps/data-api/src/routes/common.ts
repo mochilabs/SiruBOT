@@ -31,6 +31,13 @@ export function sendError(reply: { code: (n: number) => any }, error: unknown): 
 	});
 }
 
+/** 이름이 지정된 도메인 에러를 400 응답으로 매핑해요. error.name 검증은 호출부에서 하고,
+ *  이 헬퍼는 identifier가 있으면 그대로, 없으면 fallbackCode를 에러 코드로 써요. */
+export function sendDomainError(reply: { code: (n: number) => any }, error: Error, fallbackCode: string): any {
+	const identifier = (error as { identifier?: string }).identifier;
+	return reply.code(400).send({ error: identifier ?? fallbackCode, message: error.message });
+}
+
 /** 봇 릴레이 실패 사유를 HTTP로 매핑하는 공통부 — redis_unavailable=503, timeout(봇 미응답)=502,
  *  그 외(봇이 실어 보낸 검증 거부·오류)=400. 세 릴레이 흐름(길드 데이터·플레이어 웹·JTC 셋업)이 같은 규칙을 써요. */
 export function replyBotRelayFailure(

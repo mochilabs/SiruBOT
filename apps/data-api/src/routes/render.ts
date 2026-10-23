@@ -5,7 +5,7 @@ import { greetingConfigSchema, redisIdSchema } from '@sirubot/utils';
 import { deduped } from '../utils/dedup.ts';
 import { metrics } from '../utils/metrics.ts';
 import { DataApiError } from './serveCached.ts';
-import { sendError } from './common.ts';
+import { sendDomainError, sendError } from './common.ts';
 import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
@@ -21,7 +21,7 @@ function payloadHash(payload: unknown): string {
 }
 
 export function registerRenderRoutes(fastify: FastifyInstance): void {
-	// ── 프로필 카드 이미지 (프리셋: dark=RINE 다크 퍼플 / ticket=RINE 멤버패스 티켓) ──
+	// 프로필 카드 이미지 (프리셋: dark=RINE 다크 퍼플 / ticket=RINE 멤버패스 티켓)
 	const topTracksSchema = z
 		.array(
 			z.object({
@@ -115,7 +115,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// ── 멤버 인사 카드 이미지 (환영/작별) ──
+	// 멤버 인사 카드 이미지 (환영/작별)
 	// config는 @sirubot/utils 공용 계약 스키마로 검증해요 — bot 리스너·dashboard 에디터와 같은 구조.
 	const greetingContextSchema = z.object({
 		userId: redisIdSchema,
@@ -138,7 +138,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const image = body.config.image;
 			if (!image) {
 				// 계약상 useImage:false 설정은 image:null — 이미지 경로는 렌더할 배경이 없어요
-				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요 — useImage를 켜고 배경을 지정해 주세요.');
+				throw new DataApiError(400, 'greeting_image_missing', '이미지 설정이 비어 있어요. useImage를 켜고 배경을 지정해 주세요.');
 			}
 			// 키에 페이로드 해시를 넣어요 — 배경·설정·유저 컨텍스트가 다른 동시 미리보기 요청이 첫 렌더를 공유하지 않게.
 			const buffer = await deduped(`img:greeting:${body.guildId}:${body.kind}:${body.context.userId}:${payloadHash(body)}`, () =>
@@ -157,7 +157,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// ── 멤버 인사 배경/레이어 업로드 정규화 ──
+	// 멤버 인사 배경/레이어 업로드 정규화
 	// 브라우저에서 온 이미지를 저장 규격으로 맞춰요. 배경은 JPEG(가장 긴 변 1600px, 인코딩 후 900KB 이하),
 	// 스티커/로고 레이어는 알파를 살려야 해서 PNG로 정규화해요.
 	// dataURI를 Prisma Json 컬럼에 통째로 저장하는 관계로 이것이 저장 비용 상한이에요.
@@ -175,10 +175,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 				metrics.request(metric);
 				return reply.send({ dataUri });
 			} catch (error) {
-				if (error instanceof Error && error.name === 'GreetingBackgroundError') {
-					const e = error as { identifier?: string };
-					return reply.code(400).send({ error: e.identifier ?? 'greeting_error', message: error.message });
-				}
+				if (error instanceof Error && error.name === 'GreetingBackgroundError') return sendDomainError(reply, error, 'greeting_error');
 				return sendError(reply, error);
 			}
 		});
@@ -186,7 +183,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 	registerGreetingImageNormalizeRoute('/v1/image/member-card/background', 'image-member-card-background', normalizeGreetingBackground);
 	registerGreetingImageNormalizeRoute('/v1/image/member-card/layer-image', 'image-member-card-layer-image', normalizeGreetingLayerImage);
 
-	// ── NowPlaying 카드 이미지 ──
+	// NowPlaying 카드 이미지
 	// 카드는 트랙 식별자 + 볼륨/챕터 + 5초 위치 버킷마다 다시 렌더돼요
 	// (도미넌트 색 배경 + 제목 + 다음 곡 목록 + 대기열/볼륨/반복/노드/브랜드 메타).
 	// 신청자·추천/일시정지 뱃지도 이미지에 박아요 — 텍스트 동적 라인은 봇이 담당.
@@ -268,7 +265,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 		}
 	});
 
-	// ── 운세 카드 이미지 ──
+	// 운세 카드 이미지
 	// 봇이 /v1/ohaasa 1건에서 요약 필드만 골라 POST해요 — 카드는 별자리·순위·럭키만 그려요.
 	// 운세 설명·럭키 컬러는 카드에 넣지 않아요(텍스트 본문 전용) — 스키마에 필드 자체가 없어요.
 	fastify.post('/v1/image/ohaasa', async (request, reply) => {

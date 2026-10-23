@@ -10,7 +10,7 @@
 import { z } from 'zod';
 import { customCommandSpecSchemaV2, type CustomCommandSpecV2 } from '@sirubot/utils';
 
-import { CUSTOM_COMMAND_SPEC_RULES, generateValidated, type DraftProvider } from './customCommandDraft.ts';
+import { CUSTOM_COMMAND_SPEC_RULES, generateValidated, stripCodeFences, type DraftProvider } from './customCommandDraft.ts';
 
 /** 최근 대화 기억 한도 — 대시보드 세션이 넘기기 전에 여기서 한 번 더 잘라요 */
 export const CUSTOM_COMMAND_REFINE_MAX_HISTORY = 16;
@@ -43,14 +43,6 @@ const REFINE_SYSTEM_PROMPT = [
 	'',
 	CUSTOM_COMMAND_SPEC_RULES
 ].join('\n');
-
-/** ```` 펜스로 감싸 온 출력을 벗겨요 (초안 파서와 같은 처리) */
-function stripCodeFences(text: string): string {
-	const lines = text.split('\n');
-	while (lines.length > 0 && /^```/.test(lines[0]!.trim())) lines.shift();
-	while (lines.length > 0 && /^```/.test(lines[lines.length - 1]!.trim())) lines.pop();
-	return lines.join('\n').trim();
-}
 
 /** LLM 출력 → 검증된 스펙. 실패하면 재요청에 쓸 한국어 사유를 돌려줘요. */
 export function parseCustomCommandRefine(raw: string): CustomCommandRefineResult {
