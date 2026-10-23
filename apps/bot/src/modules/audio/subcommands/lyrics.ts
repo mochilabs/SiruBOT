@@ -30,7 +30,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	let query = interaction.options.getString('query');
 
-	// If no query, try to use current playing track
 	if (!query) {
 		const player = container.audio.getPlayer(interaction.guildId);
 		if (player?.queue.current) {
@@ -60,7 +59,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		const result = results[0];
 		let lyrics = result.plainLyrics ?? result.syncedLyrics ?? '';
 
-		// Strip synced lyrics timestamps if using synced
+		// 동기화 가사를 쓰면 타임스탬프는 제거하고 본문만 남긴다
 		if (!result.plainLyrics && result.syncedLyrics) {
 			lyrics = lyrics.replace(/\[\d{2}:\d{2}\.\d{2,3}\]\s*/g, '');
 		}

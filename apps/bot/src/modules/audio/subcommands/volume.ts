@@ -40,6 +40,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
+	// Discord 옵션 제약(setMinValue/setMaxValue) 밖 값은 사실상 불가능하지만, 방어로 한 번 더 검증한다.
 	if (volume < 0 || volume > 150) {
 		throw new UserError({
 			identifier: 'volume_invalid',

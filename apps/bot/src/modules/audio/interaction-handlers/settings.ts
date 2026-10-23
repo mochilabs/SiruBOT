@@ -122,7 +122,6 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			const next: RepeatMode = current === 'off' ? 'track' : current === 'track' ? 'queue' : 'off';
 			await this.container.guildService.setRepeat(interaction.guildId, next);
 
-			// Update player if exists
 			const player = this.container.audio.players.get(interaction.guildId);
 			if (player) {
 				player.setRepeatMode(next);

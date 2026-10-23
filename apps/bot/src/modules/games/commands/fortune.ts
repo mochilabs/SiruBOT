@@ -1,8 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { createHash } from 'node:crypto';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { textContainer } from '../utils/textContainer.ts';
 
 const FORTUNES = [
 	'오늘은 작은 시도가 큰 결과로 돌아오는 날이에요. 주저말고 밀어붙여 보세요!',
@@ -52,17 +53,18 @@ export class FortuneCommand extends Command {
 		const hash = createHash('sha256').update(`${interaction.user.id}:${dateKey}`).digest('hex');
 
 		const fortune = FORTUNES[parseInt(hash.slice(0, 8), 16) % FORTUNES.length];
-		const grade = getGrades()[parseInt(hash.slice(8, 16), 16) % 5];
+		const grades = getGrades();
+		const grade = grades[parseInt(hash.slice(8, 16), 16) % grades.length];
 		const color = COLORS[parseInt(hash.slice(16, 24), 16) % COLORS.length];
 		const luckyNumber = (parseInt(hash.slice(24, 32), 16) % 99) + 1;
-		const luckyEmoji = getLuckyEmojis()[parseInt(hash.slice(32, 40), 16) % 5];
+		const luckyEmojis = getLuckyEmojis();
+		const luckyEmoji = luckyEmojis[parseInt(hash.slice(32, 40), 16) % luckyEmojis.length];
 
 		await interaction.deferReply();
 
-		const container = createContainer();
-		container.addTextDisplayComponents((t) =>
-			t.setContent(
-				[
+		await interaction.editReply({
+			components: [
+				textContainer([
 					`### ${emoji('crystal_ball')} ${interaction.user.displayName} 님의 오늘 운세`,
 					'',
 					`**${grade}**`,
@@ -70,12 +72,8 @@ export class FortuneCommand extends Command {
 					'',
 					`${emoji('clover')} 럭키 넘버: **${luckyNumber}** · ${emoji('palette')} 럭키 컬러: **${color}** · ${luckyEmoji}`,
 					`-# ${dateKey} 기준, 내일 다시 오면 새로운 운세가 기다려요.`
-				].join('\n')
-			)
-		);
-
-		await interaction.editReply({
-			components: [container],
+				])
+			],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

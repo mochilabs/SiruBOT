@@ -1,8 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { getGuessBest, recordGameResult } from '../utils/gameRecords.ts';
+import { textContainer } from '../utils/textContainer.ts';
 
 interface GuessSession {
 	target: number;
@@ -11,12 +12,6 @@ interface GuessSession {
 
 const MAX_ATTEMPTS = 6;
 const sessions = new Map<string, GuessSession>();
-
-function resultContainer(lines: string[]) {
-	const container = createContainer();
-	container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
-	return container;
-}
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -61,7 +56,7 @@ export class GuessCommand extends Command {
 			sessions.set(userId, { target, attempts: MAX_ATTEMPTS });
 			await interaction.reply({
 				components: [
-					resultContainer([
+					textContainer([
 						`### ${emoji('dice')} 숫자맞히기 시작!`,
 						'',
 						`**${interaction.user.displayName}** 님의 게임이 열렸어요.`,
@@ -107,7 +102,7 @@ export class GuessCommand extends Command {
 
 			await interaction.reply({
 				components: [
-					resultContainer([
+					textContainer([
 						`### ${emoji('party')} 정답!`,
 						`**${interaction.user.displayName}** 님의 정답: **${guess}**`,
 						`**${used}번** 만에 맞혔어요${used === 1 ? ', 한 번에?! 🤯' : '!'}`,
@@ -128,7 +123,7 @@ export class GuessCommand extends Command {
 			await recordGameResult(userId, 'guess', 'loss', { target: session.target });
 			await interaction.reply({
 				components: [
-					resultContainer([
+					textContainer([
 						`### ${emoji('boom')} 게임 오버`,
 						`**${interaction.user.displayName}** 님의 추측: **${guess}**`,
 						`정답은 **${session.target}** 이었어요.`,
@@ -141,7 +136,7 @@ export class GuessCommand extends Command {
 		}
 
 		await interaction.reply({
-			components: [resultContainer([`### ${emoji('eye')} 힌트`, `추측: **${guess}** → ${hint}`, `남은 기회: **${session.attempts}번**`])],
+			components: [textContainer([`### ${emoji('eye')} 힌트`, `추측: **${guess}** → ${hint}`, `남은 기회: **${session.attempts}번**`])],
 			flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 		});
 	}
