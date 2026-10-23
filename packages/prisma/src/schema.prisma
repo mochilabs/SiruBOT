@@ -35,7 +35,7 @@ model Guild {
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
-  // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요 — 오케스트레이션은 apps/bot/src/services/chatTts.ts.
+  // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요. 오케스트레이션은 apps/bot/src/services/chatTts.ts.
   ttsMode              String   @default("off")
   ttsChannelIds        String[] @default([])
   // 커스텀 명령어 접두사 — 메시지가 이 문자열로 시작하면 길드 커스텀 명령어로 처리해요. 규칙은 packages/utils/src/customCommand.ts.
