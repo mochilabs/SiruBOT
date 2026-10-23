@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"],
+      "exposure": "direct",
+      "description": "Next.js development tools for inspecting routes, builds, and runtime behavior in apps/dashboard."
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"],
+      "exposure": "direct",
+      "description": "Browser automation for checking dashboard and web UI behavior."
+    }
+  }
+}
