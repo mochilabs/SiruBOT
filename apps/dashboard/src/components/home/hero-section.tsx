@@ -76,14 +76,14 @@ const headlineRotatorVariants = {
 
 /**
  * 헤드라인 단어 회전기 — 현재 단어가 위로 빠지면서 다음 단어가 아래에서 올라와요.
- * 폭은 "정착 완료된" 단어 기준 sizer가 잡아요: 교체 애니메이션 중에는 이전 폭을 유지해
- * 뒤따르는 "만들어봐요"가 애니메이션 도중 점프하지 않고, 완료와 함께 한 번만 이동해요.
+ * 폭 sizer는 "교체 대상(다음) 단어" 기준으로 즉시 전환해요: 이전 단어 폭을 유지하면
+ * 더 긴 단어가 진입하는 동안 overflow-hidden에 잘려요(슬라이드업 중 텍스트 소실 결함).
+ * 그래서 뒤따르는 "만들어봐요"는 애니메이션 시작 순간 새 폭으로 한 번만 이동해요.
  * reduced-motion 환경에선 MotionConfig가 슬라이드를 자동으로 페이드로 낮춰요.
  * 마스크 하단 패딩은 자모 받침 클리핑 방지용이에요.
  */
 function WordRotator() {
 	const [index, setIndex] = useState(0);
-	const [settledIndex, setSettledIndex] = useState(0);
 
 	useEffect(() => {
 		const timer = setInterval(() => setIndex((prev) => (prev + 1) % ROTATING_WORDS.length), ROTATE_INTERVAL_MS);
@@ -92,9 +92,10 @@ function WordRotator() {
 
 	return (
 		<span className="relative inline-block overflow-hidden whitespace-pre pb-[0.12em] -mb-[0.12em] align-bottom">
-			{/* 폭 sizer — 보이지 않지만 레이아웃을 잡아요 (교체 중에는 이전 단어 폭 유지) */}
+			{/* 폭 sizer — 보이지 않지만 레이아웃을 잡아요. 다음 단어 폭을 즉시 반영해
+			    진입 단어가 마스크에 잘리지 않게 해요 (이전 폭 유지 시 긴 단어 소실). */}
 			<span className="invisible" aria-hidden>
-				{ROTATING_WORDS[settledIndex]}
+				{ROTATING_WORDS[index]}
 			</span>
 			<AnimatePresence initial={false}>
 				<m.span
@@ -104,7 +105,6 @@ function WordRotator() {
 					animate={{ y: "0%", opacity: 1 }}
 					exit={{ y: "-110%", opacity: 0 }}
 					transition={{ type: "spring", stiffness: 260, damping: 32 }}
-					onAnimationComplete={() => setSettledIndex(index)}
 				>
 					{ROTATING_WORDS[index]}
 				</m.span>
