@@ -96,7 +96,7 @@ async function storageFailureMessage(res: Response, fallback: string): Promise<s
 	const message = [payload?.error, payload?.message].find(
 		(value): value is string => typeof value === "string" && value.trim().length > 0,
 	);
-	if (message) return message;
+	if (message && /[가-힣]/.test(message)) return message;
 	if (res.status === 400) return "이미지 형식이나 경로가 올바르지 않아요.";
 	if (res.status === 401) return "이미지 저장소 인증에 실패했어요. 관리자에게 문의해 주세요.";
 	if (res.status === 413) return "이미지가 너무 커요. 더 작은 파일로 다시 시도해 주세요.";

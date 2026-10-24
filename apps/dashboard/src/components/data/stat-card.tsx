@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";

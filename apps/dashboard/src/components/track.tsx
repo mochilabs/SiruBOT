@@ -3,7 +3,7 @@
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
-import { Track as TrackType } from "@sirubot/prisma";
+import type { Track as TrackType } from "@sirubot/prisma";
 import { formatTimeToKorean } from "@sirubot/utils/time";
 import { Crown, Heart } from "lucide-react";
 import useSWR from "swr";
