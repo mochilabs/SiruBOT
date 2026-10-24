@@ -49,15 +49,22 @@ async function fetchContributors(): Promise<Contributor[]> {
 
 /**
  * 최근 1년 주간 커밋 통계. GitHub stats API는 첫 요청에 202(계산 중)를 줘요 —
- * 한 번 재시도하고 여전히 준비 안 됐으면 null을 돌려 히트맵만 숨겨요(fail-open).
+ * 백그라운드 계산이 끝날 시간을 주고 짧게 대기한 뒤 재시도해요(즉시 재요청은 또 202를 받음).
+ * 2회 재시도 후에도 준비 안 됐으면 null을 돌려 히트맵만 숨겨요(fail-open).
  */
 async function fetchCommitActivity(): Promise<CommitWeek[] | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(`https://api.github.com/repos/${REPO}/stats/commit_activity`, {
       headers: { Accept: "application/vnd.github+json" },
       next: { revalidate: 86400 },
     });
-    if (res.status === 202) continue;
+    if (res.status === 202) {
+      // GitHub이 통계를 계산 중 — 잠시 대기 후 재시도(계산 완료 시간을 줘야 200을 받아요)
+      const { promise, resolve } = Promise.withResolvers<void>();
+      setTimeout(resolve, 1500);
+      await promise;
+      continue;
+    }
     if (!res.ok) return null;
     const weeks = (await res.json()) as CommitWeek[];
     if (Array.isArray(weeks) && weeks.length > 0) return weeks;
