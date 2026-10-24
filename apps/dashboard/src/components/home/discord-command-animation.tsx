@@ -90,7 +90,7 @@ function Heading({ children }: { children: ReactNode }) {
 	return <p className="text-sm font-bold leading-snug text-discord-text">{children}</p>;
 }
 
-/** 실제 봇 푸터: `-# 📡 main • 🔊 100% • 시루 x.x.x (hash)` */
+/** 실제 봇 푸터: `-# 📡 main 🔊 100% ℹ️ 시루 x.x.x (hash)` */
 function Footer({ left, right }: { left: string; right?: string }) {
 	return (
 		<div className="mt-2 flex items-center justify-between border-t border-discord-btn-active pt-2 text-2xs text-discord-text-muted">
@@ -113,7 +113,7 @@ function PlayResult() {
 					<span className="ml-1.5 align-middle text-2xs font-medium tabular-nums text-discord-text-muted">({formatDuration(track.duration)})</span>
 				</Heading>
 				<Subtext>
-					아티스트: {track.artist} • 신청자: <span className={COMMAND_MENTION}>@사용자</span> • 3곡 남음 (12:36)
+					({track.artist}) <span className={COMMAND_MENTION}>@사용자</span> (3곡 남음 12:36)
 				</Subtext>
 			</Section>
 		</div>
@@ -163,23 +163,23 @@ function PlaylistResult() {
 	);
 }
 
-/** /현재곡 — nowplaying.ts: "-# 🎵 <#채널> 에서 재생 중" + ### 제목(링크) + 아티스트/신청자/길이 + footer */
+/** /현재곡 — nowplaying.ts: "-# 🔊 <#채널>" + ### 제목(링크) + (아티스트)(신청자) + (시간)(프로그레스바) + footer */
 function NowPlayingResult() {
 	const track = TRACKS[0];
 
 	return (
 		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<Subtext>🎵 #음악-라운지 에서 재생 중</Subtext>
+			<Subtext>🔊 #음악-라운지</Subtext>
 			<Section thumbnail={track.thumbnail}>
 				<Heading>
 					<span className="underline decoration-discord-text/20 underline-offset-2">{track.title}</span>
 				</Heading>
 				<Subtext>
-					아티스트: {track.artist} • 신청자: <span className={COMMAND_MENTION}>@사용자</span>
+					({track.artist}) <span className={COMMAND_MENTION}>@사용자</span>
 				</Subtext>
 				<Subtext>(0:43 / {formatDuration(track.duration)})</Subtext>
 			</Section>
-			<Footer left="📡 main • 🔊 100%" />
+			<Footer left="📡 main 🔊 100%" />
 		</div>
 	);
 }

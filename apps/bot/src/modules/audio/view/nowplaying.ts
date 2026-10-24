@@ -22,12 +22,11 @@ export function nowplaying({ player, track }: NowPlayingViewProps) {
 		containerComponent.addTextDisplayComponents(nowplayingTextDisplay);
 	}
 
-	const separatorSmall = new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small);
-
-	// 카드 이미지 없는 텍스트 뷰 — 브랜드(봇 이름/버전)까지 텍스트로 표시한다.
-	containerComponent
-		.addSeparatorComponents(separatorSmall)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${buildFooterSegments(player).join(' • ')}`));
+	// Queue details stay visually separated; the idle footer does not.
+	if (player.queue.tracks.length > 0) {
+		containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+	}
+	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${buildFooterSegments(player).join(' ')}`));
 
 	return containerComponent;
 }

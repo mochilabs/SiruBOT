@@ -172,7 +172,7 @@ interface NowPlayingCardRequest {
 	isStream: boolean;
 	/** 일시정지 상태 — 카드에 일시정지 뱃지를 박아요 */
 	isPaused?: boolean;
-	/** 반복 모드 — off가 아니면 메타에 상태를 표기해요 */
+	/** 반복 모드 — off가 아니면 카드에 상단 반복 뱃지로 표기돼요 */
 	repeatMode?: 'off' | 'track' | 'queue';
 	/** 현재 곡이 봇 추천(related) 곡인지 — 카드에 봇 추천 뱃지를 박아요 */
 	isRecommended?: boolean;
@@ -181,10 +181,11 @@ interface NowPlayingCardRequest {
 	queueCount: number;
 	/** 대기열 전체 남은 시간(ms) */
 	queueRemainingMs: number;
-	/** 볼륨(%) */
+	/** 볼륨(%) — 브랜드줄(brandLine)에 통합되어 카드에서는 미사용 (호환용으로 유지) */
 	volume: number | null;
+	/** 노드 ID — 브랜드줄(brandLine)에 통합되어 카드에서는 미사용 (호환용으로 유지) */
 	nodeId: string | null;
-	/** 브랜드 줄 (봇 이름 + 버전/해시) */
+	/** 브랜드 줄 (노드·볼륨·봇 이름 + 버전/해시) */
 	brandLine: string | null;
 	/** 현재 재생 중인 챕터 — 있으면 카드에 구간을 표시해요 */
 	chapter?: { name: string; startMs: number; endMs: number } | null;

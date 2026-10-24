@@ -15,6 +15,7 @@ const args = process.argv.slice(2);
 const showHelp = args.includes("--help") || args.includes("-h");
 const isDryRun = args.includes("--dry-run") || args.includes("-d");
 const isClean = args.includes("--clean");
+const updateProgress = args.includes("--update-progress");
 
 const EMOJI_SOURCE_DIR = join(process.cwd(), "resources", "emoji_replacement");
 /** 이모지 이름은 2~32자, 소문자+숫자+언더스코어만 허용 */
@@ -31,6 +32,9 @@ if (showHelp) {
   );
   console.log(
     `  ${bold("--clean")}        : 기존 앱 이모지를 모두 삭제한 뒤 업로드합니다 (이름 불일치 잔여 이모지 정리용).`,
+  );
+  console.log(
+    `  --update-progress : 진행바 PNG 9종만 기존 이모지를 삭제하지 않고 업데이트합니다.`,
   );
   console.log(bold("설명:"));
   console.log(
@@ -153,57 +157,43 @@ async function main() {
     existingByName.clear();
   }
 
-  // 이름 같은 것은 건너뛰고(갱신 안 함), 없는 것만 업로드
-  const toUpload = files.filter(
-    (f) => !existingByName.has(basename(f, ".png")),
-  );
-  const skipped = files.length - toUpload.length;
-  if (skipped > 0)
-    console.log(
-      gray(`이미 존재해서 건너뛸 이모지: ${skipped}개 (기존 이미지는 유지)\n`),
-    );
+  // --update-progress only updates the nine progress-bar assets in place.
+  const toUpdate = updateProgress ? files.filter((file) => /^pb_(start|mid|end)_(empty|half|filled)\.png$/.test(file)) : [];
+  const toUpload = files.filter((file) => !existingByName.has(basename(file, ".png")) && !toUpdate.includes(file));
+  const skipped = files.length - toUpload.length - toUpdate.length;
+  if (toUpdate.length > 0) console.log(gray(`기존 진행바 이모지 업데이트: ${toUpdate.length}개\n`));
+  if (skipped > 0) console.log(gray(`이미 존재해서 건너뛸 이모지: ${skipped}개 (기존 이미지는 유지)\n`));
 
   /** 이름 → 이모지 ID 매핑 — 업로드 결과 + 기존 존재분 전부 기록 */
   const emojiIdMap: Record<string, string> = Object.fromEntries(existingByName);
 
-  let created = 0;
+  let changed = 0;
   let failed = 0;
-  for (const [i, file] of toUpload.entries()) {
+  const changes = [
+    ...toUpload.map((file) => ({ file, updateId: undefined as string | undefined })),
+    ...toUpdate.map((file) => ({ file, updateId: existingByName.get(basename(file, ".png")) }))
+  ];
+  for (const [i, { file, updateId }] of changes.entries()) {
     const name = basename(file, ".png");
     const filePath = join(EMOJI_SOURCE_DIR, file);
     try {
       const data = await readFile(filePath);
       const sizeKiB = data.byteLength / 1024;
       if (sizeKiB > 256) {
-        console.warn(
-          yellow(
-            `  ⚠️ :${name}: 256KiB 초과 (${sizeKiB.toFixed(1)}KiB) — 건너뜀`,
-          ),
-        );
+        console.warn(yellow(`  ⚠️ :${name}: 256KiB 초과 (${sizeKiB.toFixed(1)}KiB) — 건너뜀`));
         failed++;
         continue;
       }
-      const dataUri = `data:image/png;base64,${data.toString("base64")}`;
-      const createdEmoji = (await rest.post(
-        Routes.applicationEmojis(applicationId),
-        {
-          body: { name, image: dataUri },
-        },
-      )) as { id: string; name: string };
-      emojiIdMap[createdEmoji.name] = createdEmoji.id;
-      created++;
-      console.log(
-        green(
-          `  ✅ (${i + 1}/${toUpload.length}) :${createdEmoji.name}: → id ${createdEmoji.id}`,
-        ),
-      );
+      const image = `data:image/png;base64,${data.toString("base64")}`;
+      const result = updateId
+        ? ((await rest.patch(Routes.applicationEmoji(applicationId, updateId), { body: { name, image } })) as { id: string; name: string })
+        : ((await rest.post(Routes.applicationEmojis(applicationId), { body: { name, image } })) as { id: string; name: string });
+      emojiIdMap[result.name] = result.id;
+      changed++;
+      console.log(green(`  ✅ (${i + 1}/${changes.length}) :${result.name}: ${updateId ? "업데이트" : "등록"} → id ${result.id}`));
     } catch (error) {
       failed++;
-      console.warn(
-        yellow(
-          `  ⚠️ (${i + 1}/${toUpload.length}) :${name}: 업로드 실패 (${error instanceof Error ? error.message : String(error)})`,
-        ),
-      );
+      console.warn(yellow(`  ⚠️ (${i + 1}/${changes.length}) :${name}: 업로드 실패 (${error instanceof Error ? error.message : String(error)})`));
     }
   }
 
@@ -232,7 +222,7 @@ async function main() {
   console.log("");
   console.log(
     bold(
-      green(`완료! 생성 ${created}개 / 건너뜀 ${skipped}개 / 실패 ${failed}개`),
+      green(`완료! 변경 ${changed}개 / 건너뜀 ${skipped}개 / 실패 ${failed}개`),
     ),
   );
 }
