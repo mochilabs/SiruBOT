@@ -176,7 +176,7 @@ export function Navbar() {
                     variant="ghost"
                     onClick={toggleTheme}
                     disabled={!mounted}
-                    aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+                    aria-label={mounted ? (theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환") : "테마 전환"}
                     className="relative h-full w-11 overflow-hidden rounded-none rounded-r-control px-0 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   >
                     {mounted && (

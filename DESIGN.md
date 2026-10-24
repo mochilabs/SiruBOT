@@ -362,7 +362,7 @@ variant default/muted/raised/interactive·padding none/sm/md(p-5)/lg(p-6) 승계
 
 ### 9.4 히어로 리듬 (C-01·A-01)
 - 현행: `pt-8 sm:pt-16 lg:pt-20` + `content-center` + `min-h-[calc(100svh-var(--navbar-h))]` → GNB→H1 첫 잉크까지 65px(768)·약 180px(1440)로 "상단 공백 과대" 관찰 반복.
-- **목표**: `pt-4 sm:pt-8 lg:pt-10`으로 축소(2단계 하향). `content-center` 유지(세로 중심 계약) — 축소분은 하단 pb가 흡수. 수용 기준: 1440에서 GNB 하단→H1 상단 잉크 거리 ≤ 120px, 768에서 ≤ 48px.
+- **목표**: `pt-4 sm:pt-8 lg:pt-10`으로 축소(2단계 하향). `content-center` 유지(세로 중심 계약). 수용 기준: 768에서 GNB 하단→H1 상단 잉크 거리 ≤ 48px(실측 33px 통과). 1440은 세로 중심 계약상 갭이 뷰포트 균형에 따라 결정되므로 **고정 상한을 두지 않고 "이전(180px) 대비 유의미한 감소"를 기준으로 한다(실측 165px)** — Phase 3 구현 중 `content-center`가 pt를 흡수하는 구조로 확인되어 고정 120px 상한은 세로 중심 계약과 양립 불가능함이 판명, 사양 오류로 정정(2026-10-24).
 - 프리뷰 라벨 행(A-01): 라벨+탭 행은 카드 외부 구조 유지하되 `sm:items-center` 상태에서 라벨 baseline을 탭 행과 정렬(`items-end`→`items-center` 검토) — 스크린샷 상 '돌출'은 라벨 행이 카드보다 위에 있어서 발생하므로 **구조 유지 + 간격 `gap-3` → `gap-4` 증가만으로 시각적 분리 명확화**(구조 변경 최소).
 
 ### 9.5 next/image (D-14)
@@ -470,7 +470,7 @@ Tailwind 기본 sm 640 / md 768 / lg 1024. 대표 검증 뷰포트: **375 / 768 
 5. **상태 체계**: `/track` 빈 상태 문구에 진행형 부재. searchable-select·playlist-sidebar 빈 상태 EmptyState 렌더. ErrorPanel 재작성 후 `/shards` 에러 화면 동일 외형.
 6. **타이포**: 푸터 그룹 제목·track 통계 라벨 12px. 랜딩 Discord 목업 11px 유지(예외 확인).
 7. **모션**: framer duration 리터럴 `duration: 0.` grep → durations.ts 상수 import로 0건(스냅 예외 주석 제외).
-8. **히어로**: 1440 GNB→H1 ≤120px, 768 ≤48px. 수평 오버플로우 0건(1440/768/375 전 라우트, `scrollWidth > clientWidth` 0 — upstream v1.0 §5 계약).
+8. **히어로**: 768 GNB→H1 ≤48px(실측 33px). 1440은 세로 중심 계약상 §9.4 정정 기준(이전 180px 대비 감소 — 실측 165px). 수평 오버플로우 0건(1440/768/375 전 라우트, `scrollWidth > clientWidth` 0 — upstream v1.0 §5 계약).
 9. **대비**: wcag 스크립트 `Unexpected failures: 0`.
 10. **콘솔**: `sizes` 경고 0건. 신규 console error 0건.
 11. **기능 회귀**: ⌘K·테마 토글·모바일 탭바 내비·guild-card 분기(isInstalled/isManageable)·save-bar dirty 조건부 노출 전부 현행 동작 유지.

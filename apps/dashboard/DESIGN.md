@@ -91,6 +91,7 @@
 | 컨트롤 경계 | `--control-boundary` | `shadow-control-boundary` (`inset 0 0 0 1px var(--border-strong)`) | 중립 버튼·입력창의 3:1 경계 |
 | 오류 경계 | `--control-boundary-invalid` | `shadow-control-boundary-invalid` (`inset 0 0 0 1px var(--destructive)`) | 유효성 실패 입력창 |
 | 그림자 | `--elev-1/2/3/5` | `shadow-sm`, `shadow-md`, `shadow-lg`, `shadow-2xl` | 높낮이(Elevation) 전용 — 장식용 그림자 금지 |
+| Z-index 레이어 | `--z-content/savebar/float/overlay/popover-high` | `10/30/40/50/60` → `z-(--z-*)` | 레이아웃 레이어·저장 바·플로팅 액션·모달·오버레이 위 팝오버. 카드 내부 국소 스택(`relative z-10`)은 로컬 관례로 토큰 대상 아님 |
 | 토스트 Z-index | `--toast-z` | `100` → `z-(--toast-z)` | Tailwind v4에는 `--z-*` 테마 네임스페이스가 없으므로 arbitrary CSS 변수 문법 `z-(--toast-z)`로 소비 |
 
 ### 3.5 타이포그래피와 모션
