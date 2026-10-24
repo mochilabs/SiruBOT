@@ -1,5 +1,3 @@
-"use client";
-
 import { Activity, Cpu, RadioTower, Server } from "lucide-react";
 
 import { StatCard } from "@/components/data/stat-card";

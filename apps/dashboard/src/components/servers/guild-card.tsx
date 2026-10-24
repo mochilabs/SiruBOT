@@ -1,10 +1,8 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, Play, Settings2, ShieldCheck, UserPlus } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import { discordGuildIconUrl } from "@/lib/discord-cdn";
 import { cn } from "@/lib/utils";

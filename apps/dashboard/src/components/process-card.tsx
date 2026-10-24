@@ -1,5 +1,3 @@
-"use client";
-
 import { formatUptime } from "@sirubot/utils/time";
 import { Clock3, HardDrive, RadioTower, Server } from "lucide-react";
 
