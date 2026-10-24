@@ -114,9 +114,9 @@ export function DashboardPreview() {
 	};
 
 	return (
-		<div ref={ref} className="relative pb-10 pr-2">
+		<div ref={ref} className="relative">
 			<div className="flex flex-col gap-3 sm:flex-row">
-				<div className="flex min-w-0 shrink-0 gap-2 overflow-x-auto sm:flex-col sm:overflow-visible" role="tablist" aria-label="설정 예시">
+				<div className="flex min-w-0 shrink-0 flex-wrap gap-1.5 sm:flex-col" role="tablist" aria-label="설정 예시">
 					{dashboardSettingSlides.map((slide, index) => (
 						<button
 							key={slide.label}

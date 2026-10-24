@@ -199,7 +199,7 @@ export function HeroSection() {
 						variants={itemVariants}
 						className="max-w-xl text-base font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg lg:mx-0"
 					>
-						음악 재생부터 AI 채팅, 서버 관리까지.
+						음악 재생부터 AI 채팅, 서버 관리까지.{" "}
 						<br className="hidden sm:block" />
 						시루봇 하나로 Discord를 더 편리하게 즐겨보세요.
 					</m.p>

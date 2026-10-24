@@ -148,7 +148,7 @@ export function MemberGreetingPreview() {
                   {/* 인사 카드 mock — 실제로는 data-api가 1200×675 PNG로 렌더해 첨부해요 */}
                   <div
                     key={preset.label}
-                    className={`relative aspect-[2/1] w-full max-w-md overflow-hidden rounded-lg ${preset.className}`}
+                    className={`relative aspect-[2/1] w-full max-w-md overflow-hidden rounded-card ${preset.className}`}
                   >
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text ring-2 ring-background/40 ring-offset-2 ring-offset-transparent">

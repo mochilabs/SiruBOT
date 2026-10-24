@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDuration } from "@sirubot/utils/time";
 import { type Virtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, Clock, Edit, Heart, MoreHorizontal, Move, Music, Plus, Settings, Trash2 } from "lucide-react";
+import { Clock, Edit, ExternalLink, GripVertical, Heart, MoreHorizontal, Music, Plus, Settings, Trash2 } from "lucide-react";
 
 import Loader from "@/components/loader";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { TrackListenLink } from "@/components/track-listen-link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -66,6 +65,27 @@ export function PlaylistDetail({
 }: PlaylistDetailProps) {
 	// 위/아래 이동: onDragStart가 부모의 draggedIdx를 세우면 다음 렌더에서 onDrop을 넘겨 재정렬을 요청해요.
 	const [pendingMove, setPendingMove] = useState<{ from: number; to: number } | null>(null);
+	// 터치(모바일) 길게 누르기 드래그 상태
+	const [touchDragIdx, setTouchDragIdx] = useState<number | null>(null);
+	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+	const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const touchStartRef = useRef<{ clientY: number; clientX: number } | null>(null);
+	const touchActiveRef = useRef(false);
+
+	const clearTouchTimer = () => {
+		if (touchTimerRef.current) {
+			clearTimeout(touchTimerRef.current);
+			touchTimerRef.current = null;
+		}
+	};
+
+	const clearTouchDrag = () => {
+		clearTouchTimer();
+		touchActiveRef.current = false;
+		touchStartRef.current = null;
+		setTouchDragIdx(null);
+		setDragOverIdx(null);
+	};
 
 	useEffect(() => {
 		if (!pendingMove || draggedIdx !== pendingMove.from) return;
@@ -74,10 +94,75 @@ export function PlaylistDetail({
 		setPendingMove(null);
 	}, [pendingMove, draggedIdx, onDrop, onDragEnd]);
 
+	useEffect(() => {
+		return () => clearTouchTimer();
+	}, []);
+
 	const moveTrack = (from: number, to: number) => {
 		if (to < 0 || to >= tracks.length || from === to) return;
 		onDragStart(dragEventShim, from);
 		setPendingMove({ from, to });
+	};
+
+	/** 모바일: 길게 누르면 해당 행을 드래그 모드로 진입해요. */
+	const beginTouchDrag = (idx: number) => {
+		touchActiveRef.current = true;
+		setTouchDragIdx(idx);
+		setDragOverIdx(idx);
+		onDragStart(dragEventShim, idx);
+	};
+
+	const handleTouchStart = (idx: number) => (e: React.TouchEvent) => {
+		if (e.touches.length !== 1) return;
+		const touch = e.touches[0]!;
+		touchStartRef.current = { clientY: touch.clientY, clientX: touch.clientX };
+		clearTouchTimer();
+		touchTimerRef.current = setTimeout(() => {
+			if (!touchStartRef.current) return;
+			beginTouchDrag(idx);
+		}, 220);
+	};
+
+	const handleTouchMove = (e: React.TouchEvent) => {
+		const touch = e.touches[0];
+		if (!touch) return;
+		if (!touchActiveRef.current) {
+			// 아직 드래그 모드가 아니면 스크롤 제스처를 허용해요 (8px 임계값 초과 시 타이머 취소)
+			if (touchStartRef.current) {
+				const dy = Math.abs(touch.clientY - touchStartRef.current.clientY);
+				const dx = Math.abs(touch.clientX - touchStartRef.current.clientX);
+				if (dy > 8 || dx > 8) clearTouchTimer();
+			}
+			return;
+		}
+		e.preventDefault();
+		const parent = parentRef.current;
+		if (!parent || touchDragIdx === null) return;
+		const rect = parent.getBoundingClientRect();
+		const offset = touch.clientY - rect.top + parent.scrollTop;
+		const item = rowVirtualizer.getVirtualItemForOffset(offset);
+		const clamped = item
+			? Math.max(0, Math.min(tracks.length - 1, item.index))
+			: Math.max(0, Math.min(tracks.length - 1, Math.floor(offset / 56)));
+		setDragOverIdx(clamped);
+	};
+
+	const handleTouchEnd = () => {
+		if (touchActiveRef.current && touchDragIdx !== null && dragOverIdx !== null && touchDragIdx !== dragOverIdx) {
+			moveTrack(touchDragIdx, dragOverIdx);
+		}
+		clearTouchDrag();
+	};
+
+	const handleKeyDown = (idx: number) => (e: React.KeyboardEvent) => {
+		if (!e.altKey) return;
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			moveTrack(idx, idx - 1);
+		} else if (e.key === "ArrowDown") {
+			e.preventDefault();
+			moveTrack(idx, idx + 1);
+		}
 	};
 
 	if (detailLoading) {
@@ -117,6 +202,11 @@ export function PlaylistDetail({
 								<Clock size={14} className="text-primary-text" />
 								<span>{formatTotalDuration(stats.duration)}</span>
 							</div>
+							<div className="w-1 h-1 rounded-full bg-border" />
+							<span className="flex items-center gap-1.5">
+								<GripVertical size={13} className="text-muted-foreground" />
+								드래그하거나 길게 눌러 순서 변경
+							</span>
 							{activePlaylist.description && (
 								<>
 									<div className="w-1 h-1 rounded-full bg-border" />
@@ -188,27 +278,47 @@ export function PlaylistDetail({
 							{rowVirtualizer.getVirtualItems().map((virtualRow) => {
 								const idx = virtualRow.index;
 								const track = tracks[idx];
+								const isDragging = draggedIdx === idx || touchDragIdx === idx;
+								const isDragOver = dragOverIdx === idx && (draggedIdx !== null || touchDragIdx !== null) && draggedIdx !== idx && touchDragIdx !== idx;
 								return (
 									<div
 										key={track.id}
-										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border-subtle transition-colors hover:bg-surface-2/50 ${draggedIdx === idx ? 'opacity-50 bg-primary/5' : ''}`}
+										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border-subtle transition-colors hover:bg-surface-2/50 ${isDragging ? 'opacity-50 bg-primary/5' : ''} ${isDragOver ? 'ring-1 ring-primary-control bg-primary/10' : ''}`}
 										style={{
 											height: `${virtualRow.size}px`,
 											transform: `translateY(${virtualRow.start}px)`,
 										}}
 										draggable
 										onDragStart={(e) => onDragStart(e, idx)}
-										onDragOver={onDragOver}
-										onDrop={(e) => onDrop(e, idx)}
-										onDragEnd={onDragEnd}
+										onDragOver={(e) => {
+											setDragOverIdx(idx);
+											onDragOver(e);
+										}}
+										onDragEnter={(e) => e.preventDefault()}
+										onDrop={(e) => {
+											onDrop(e, idx);
+											setDragOverIdx(null);
+										}}
+										onDragEnd={() => {
+											onDragEnd();
+											setDragOverIdx(null);
+										}}
+										onKeyDown={handleKeyDown(idx)}
+										onTouchStart={handleTouchStart(idx)}
+										onTouchMove={handleTouchMove}
+										onTouchEnd={handleTouchEnd}
+										onTouchCancel={handleTouchEnd}
+										tabIndex={0}
+										role="listitem"
 									>
-										<div className="hidden md:flex w-10 shrink-0 items-center justify-center gap-1">
-											<span className="text-muted-foreground font-medium text-xs tabular-nums">
-												{idx + 1}
-											</span>
-											<Move size={14} className="text-muted-foreground cursor-grab active:cursor-grabbing" aria-hidden />
+										<div className="flex w-7 md:w-10 shrink-0 items-center justify-center">
+											<GripVertical
+												size={18}
+												className="text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+												aria-hidden
+											/>
 										</div>
-										<span className="md:hidden w-5 shrink-0 text-right text-2xs tabular-nums text-muted-foreground">
+										<span className="w-5 md:hidden shrink-0 text-right text-2xs tabular-nums text-muted-foreground">
 											{idx + 1}
 										</span>
 
@@ -224,7 +334,18 @@ export function PlaylistDetail({
 												)}
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="font-medium text-foreground text-sm truncate leading-tight mb-0.5">{track.title}</p>
+												{/^https?:\/\//i.test(track.url ?? "") ? (
+													<a
+														href={track.url!}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="block truncate font-medium text-foreground text-sm leading-tight mb-0.5 hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+													>
+														{track.title}
+													</a>
+												) : (
+													<p className="font-medium text-foreground text-sm truncate leading-tight mb-0.5">{track.title}</p>
+												)}
 
 												<p className="md:hidden text-xs text-muted-foreground font-medium truncate flex items-center gap-1.5">
 													<span>{track.artist}</span>
@@ -244,23 +365,6 @@ export function PlaylistDetail({
 										</div>
 
 										<div className="shrink-0 ml-3 md:ml-4 flex items-center justify-center gap-2">
-											<TrackListenLink url={track.url} title={track.title} compact />
-											<Button
-												variant="icon"
-												size="icon-xs"
-												aria-label="위로 이동"
-												disabled={idx === 0}
-												icon={<ArrowUp size={14} />}
-												onClick={() => moveTrack(idx, idx - 1)}
-											/>
-											<Button
-												variant="icon"
-												size="icon-xs"
-												aria-label="아래로 이동"
-												disabled={idx === tracks.length - 1}
-												icon={<ArrowDown size={14} />}
-												onClick={() => moveTrack(idx, idx + 1)}
-											/>
 											<DropdownMenu>
 												<DropdownMenuTrigger
 													render={
@@ -276,6 +380,12 @@ export function PlaylistDetail({
 												/>
 												<DropdownMenuContent align="end">
 													<DropdownMenuGroup>
+														{/^https?:\/\//i.test(track.url ?? "") && (
+															<DropdownMenuItem onClick={() => window.open(track.url, "_blank", "noopener,noreferrer")}>
+																<ExternalLink size={14} />
+																{track.source === "youtube" ? "유튜브에서 열기" : "원본 링크 열기"}
+															</DropdownMenuItem>
+														)}
 														<DropdownMenuItem variant="destructive" onClick={() => onRemoveTrack(track.position, track.title)}>
 															<Trash2 size={14} />
 															트랙 삭제

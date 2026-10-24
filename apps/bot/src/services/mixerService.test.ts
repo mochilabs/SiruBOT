@@ -108,10 +108,13 @@ describe('MixerService overlap abort (mixer WS op 기록)', () => {
 		vi.useRealTimers();
 	});
 
-	it('aborted overlapEnd만 기록한다 — overlapStart/handoff/비문자열 guildId는 무시', () => {
+	it('aborted overlapEnd만 consumeOverlapAbort로 기록한다 — overlapStart는 오버랩 기록, handoff/비문자열 guildId는 무시', () => {
 		const service = new MixerService();
 		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123' });
 		expect(service.consumeOverlapAbort('123')).toBe(false);
+		// overlapStart는 activeOverlaps를 켠다.
+		expect(service.isOverlapActive('123')).toBe(true);
+		expect(service.getOverlapTrackIdentifier('123')).toBeNull();
 		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'handoff', guildId: '123' });
 		expect(service.consumeOverlapAbort('123')).toBe(false);
 		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: 123 });
@@ -143,6 +146,98 @@ describe('MixerService overlap abort (mixer WS op 기록)', () => {
 		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: 'one' });
 		expect(service.consumeOverlapAbort('two')).toBe(false);
 		expect(service.consumeOverlapAbort('one')).toBe(true);
+	});
+});
+
+describe('MixerService activeOverlaps (overlapStart → overlapEnd 수명)', () => {
+	it('overlapStart로 켜지고 overlapEnd로 꺼진다', () => {
+		const service = new MixerService();
+		expect(service.isOverlapActive('123')).toBe(false);
+		expect(service.getOverlapTrackIdentifier('123')).toBeNull();
+
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123', track: { identifier: 'abc123' } });
+		expect(service.isOverlapActive('123')).toBe(true);
+		expect(service.getOverlapTrackIdentifier('123')).toBe('abc123');
+
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'handoff', guildId: '123' });
+		expect(service.isOverlapActive('123')).toBe(false);
+		expect(service.getOverlapTrackIdentifier('123')).toBeNull();
+	});
+
+	it('track 정보가 없는 overlapStart는 null 식별자로 기록된다', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123' });
+		expect(service.isOverlapActive('123')).toBe(true);
+		expect(service.getOverlapTrackIdentifier('123')).toBeNull();
+
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '456', track: { identifier: 42 } });
+		expect(service.isOverlapActive('456')).toBe(true);
+		expect(service.getOverlapTrackIdentifier('456')).toBeNull();
+	});
+
+	it('aborted overlapEnd도 오버랩을 끝낸 뒤 abort 기록을 남긴다', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123', track: { identifier: 'abc123' } });
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'aborted', guildId: '123' });
+		expect(service.isOverlapActive('123')).toBe(false);
+		expect(service.getOverlapTrackIdentifier('123')).toBeNull();
+		expect(service.consumeOverlapAbort('123')).toBe(true);
+	});
+
+	it('guild별로 오버랩 기록이 독립이다', () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: 'one', track: { identifier: 'a' } });
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: 'two' });
+		expect(service.getOverlapTrackIdentifier('one')).toBe('a');
+		expect(service.getOverlapTrackIdentifier('two')).toBeNull();
+		expect(service.getOverlapTrackIdentifier('three')).toBeNull();
+
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapEnd', reason: 'handoff', guildId: 'one' });
+		expect(service.isOverlapActive('one')).toBe(false);
+		expect(service.isOverlapActive('two')).toBe(true);
+	});
+
+	it('skip은 진행 중 오버랩 기록을 함께 지운다', async () => {
+		const service = new MixerService();
+		const player = {
+			guildId: '123456789012345678',
+			node: { options: { host: 'localhost', port: 2333, authorization: 'node-pw' } }
+		} as unknown as Player;
+		const clearNextSpy = vi.spyOn(service, 'clearNext').mockResolvedValue(undefined);
+		const skipSpy = vi.fn().mockResolvedValue(undefined);
+		(player as unknown as { skip: typeof skipSpy }).skip = skipSpy;
+
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123456789012345678', track: { identifier: 'abc123' } });
+		expect(service.isOverlapActive('123456789012345678')).toBe(true);
+
+		await service.skip(player);
+
+		expect(clearNextSpy).toHaveBeenCalledWith(player);
+		expect(skipSpy).toHaveBeenCalledWith(undefined);
+		expect(service.isOverlapActive('123456789012345678')).toBe(false);
+	});
+
+	it('markUnmanaged와 takePreloadedIdentifier도 오버랩 기록을 지운다', async () => {
+		const service = new MixerService();
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: 'one', track: { identifier: 'a' } });
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: 'two', track: { identifier: 'b' } });
+
+		service.markUnmanaged('one');
+		expect(service.isOverlapActive('one')).toBe(false);
+
+		service.takePreloadedIdentifier('two');
+		expect(service.isOverlapActive('two')).toBe(false);
+	});
+
+	it('resume 복구 때 서버가 crossfadeActive면 incoming 트랙 식별자로 오버랩을 채택한다', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mixerState({ crossfadeActive: true, subTrackIdentifier: 'incoming-abc' }), 200));
+		vi.stubGlobal('fetch', fetchMock);
+		const service = new MixerService();
+
+		await service.reconcileAfterResume(queuedPlayer('abc123'));
+
+		expect(service.isOverlapActive('123456789012345678')).toBe(true);
+		expect(service.getOverlapTrackIdentifier('123456789012345678')).toBe('incoming-abc');
 	});
 });
 

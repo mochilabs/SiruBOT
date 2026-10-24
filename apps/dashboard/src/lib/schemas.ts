@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CHAT_TOOL_MODES, EMBED_FIX_SITES } from "@sirubot/utils/chatTools";
+import { CHAT_TOOL_MODES, EMBED_FIX_SITES, EMBED_FIX_TRANSLATE_LANGS } from "@sirubot/utils/chatTools";
 import { z } from "zod";
 
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
@@ -66,6 +66,7 @@ export const guildSettingsSchema = z.object({
 		.max(EMBED_FIX_SITES.length, `사이트는 최대 ${EMBED_FIX_SITES.length}개까지 선택할 수 있어요.`)
 		.optional(),
 	embedFixSuppressOriginal: z.boolean().optional(),
+	embedFixTranslateLang: z.enum(EMBED_FIX_TRANSLATE_LANGS, "임베드 번역 언어가 잘못됐어요.").optional(),
 	countingEnabled: z.boolean().optional(),
 	countingChannelId: nullableSnowflake.optional(),
 });
@@ -112,6 +113,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	embedFixChannelIds: [],
 	embedFixSites: [],
 	embedFixSuppressOriginal: false,
+	embedFixTranslateLang: "off",
 	countingEnabled: false,
 	countingChannelId: null,
 } satisfies GuildSettings;

@@ -31,6 +31,7 @@ import {
 	type EmbedFixResult,
 	type EmbedFixSite,
 	type EmbedFixSwapLink,
+	type EmbedFixTranslateLang,
 	MemoryCache,
 	createContainer,
 	createThumbnail,
@@ -100,7 +101,7 @@ export class EmbedFixListener extends Listener {
 			if (this.cooldowns.has(cooldownKey)) return;
 			this.cooldowns.set(cooldownKey, true);
 
-			const payloads = await this.buildPayloads(links);
+			const payloads = await this.buildPayloads(links, settings.embedFixTranslateLang);
 			if (payloads.length > 0) await this.sendPayloads(message, payloads);
 
 			if (settings.embedFixSuppressOriginal) {
@@ -112,11 +113,12 @@ export class EmbedFixListener extends Listener {
 	}
 
 	/** 우선 data-api 카드(메타 캐싱은 data-api 계층), data-api를 못 쓰면 레거시 도메인 스왑으로 폴백해요 */
-	private async buildPayloads(links: EmbedFixLink[]): Promise<EmbedFixPayload[]> {
+	private async buildPayloads(links: EmbedFixLink[], translateTo: EmbedFixTranslateLang = 'off'): Promise<EmbedFixPayload[]> {
 		const gatewayResults = await fetchEmbedFixMetadata({
 			links: links.map((link) =>
 				link.site === 'booth' ? { site: link.site, url: link.original } : { site: link.site, url: link.original, fixedUrl: link.fixed }
-			)
+			),
+			...(translateTo !== 'off' ? { translateTo } : {})
 		});
 		if (gatewayResults) return this.payloadsFromResults(gatewayResults);
 
@@ -185,7 +187,7 @@ export class EmbedFixListener extends Listener {
 			const text = result.description.length > CARD_TEXT_MAX ? `${result.description.slice(0, CARD_TEXT_MAX - 1)}…` : result.description;
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text));
 		}
-
+		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
 		// og:video(TikTok 등)를 우선으로 깔고 나머지 이미지를 이어요
 		const mediaUrls = [...(result.videoUrl ? [result.videoUrl] : []), ...(result.images ?? [])].slice(0, CARD_IMAGE_MAX);
 		if (mediaUrls.length > 0) {
@@ -223,7 +225,7 @@ export class EmbedFixListener extends Listener {
 			const text = result.description.length > CARD_TEXT_MAX ? `${result.description.slice(0, CARD_TEXT_MAX - 1)}…` : result.description;
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text));
 		}
-
+		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
 		this.addImageGallery(container, result.images);
 
 		const stats = `-# ${emoji('speech')} ${result.replyCount ?? 0} · ${emoji('repeat')} ${result.retweetCount ?? 0} · ${emoji('heart')} ${result.likeCount ?? 0}${
@@ -255,7 +257,7 @@ export class EmbedFixListener extends Listener {
 		if (result.description && result.description.length > 0) {
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
 		}
-		this.addImageGallery(container, result.images);
+		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
 
 		container.addSectionComponents(
 			new SectionBuilder()
@@ -265,6 +267,19 @@ export class EmbedFixListener extends Listener {
 		return container;
 	}
 
+	private addTranslationBlock(container: ContainerBuilder, translatedTitle: string | undefined, translatedDescription: string | undefined): void {
+		const lines: string[] = [];
+		if (translatedTitle && translatedTitle.length > 0) {
+			lines.push(`**${translatedTitle}**`);
+		}
+		if (translatedDescription && translatedDescription.length > 0) {
+			const text =
+				translatedDescription.length > CARD_TEXT_MAX ? `${translatedDescription.slice(0, CARD_TEXT_MAX - 1)}…` : translatedDescription;
+			lines.push(text);
+		}
+		if (lines.length === 0) return;
+		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('globe')} 번역\n${lines.join('\n')}`));
+	}
 	private buildSourceButton(url: string): ButtonBuilder {
 		return new ButtonBuilder().setLabel('원문 보기').setStyle(ButtonStyle.Link).setURL(url);
 	}

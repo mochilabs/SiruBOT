@@ -39,9 +39,6 @@ import { SERVER_TABS, type ServerTabKey } from "./server-tabs";
 import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
 import SocialAlertsSettings from "./social-alerts-settings";
 
-// 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
-const TABS = SERVER_TABS.map((item) => ({ ...item, icon: ICONS[item.key] }));
-
 const ICONS = {
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
@@ -58,6 +55,8 @@ const ICONS = {
   greeting: <UserPlus size={14} />,
 } as const;
 
+// 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
+const TABS = SERVER_TABS.map((item) => ({ ...item, icon: ICONS[item.key] }));
 function NotManageable() {
   return (
     <Card

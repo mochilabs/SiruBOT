@@ -1,4 +1,4 @@
-import type { ChatToolMode, EmbedFixSite } from '@sirubot/utils';
+import type { ChatToolMode, EmbedFixSite, EmbedFixTranslateLang } from '@sirubot/utils';
 
 /** 채팅 유틸 모드 계약 — @sirubot/utils의 chatToolMode 단일 소스를 재수출해요 */
 export { normalizeChatToolMode, type ChatToolMode } from '@sirubot/utils';
@@ -89,6 +89,7 @@ export interface ChatToolSettings {
 	embedFix: ChannelToggleSettings;
 	embedFixSites: EmbedFixSite[];
 	embedFixSuppressOriginal: boolean;
+	embedFixTranslateLang: EmbedFixTranslateLang;
 	countingEnabled: boolean;
 	countingChannelId: string | null;
 }

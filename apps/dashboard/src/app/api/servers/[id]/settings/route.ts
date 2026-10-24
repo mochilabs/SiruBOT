@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Guild as PrismaGuild } from "@sirubot/prisma";
-import { normalizeChatToolMode, normalizeEmbedFixSites } from "@sirubot/utils/chatTools";
+import { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } from "@sirubot/utils/chatTools";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
@@ -52,6 +52,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     embedFixChannelIds: guild.embedFixChannelIds,
     embedFixSites: normalizeEmbedFixSites(guild.embedFixSites),
     embedFixSuppressOriginal: guild.embedFixSuppressOriginal,
+    embedFixTranslateLang: normalizeEmbedFixTranslateLang(guild.embedFixTranslateLang),
     countingEnabled: guild.countingEnabled,
     countingChannelId: guild.countingChannelId,
   };

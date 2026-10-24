@@ -5,7 +5,6 @@ import { emoji, createContainer, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot
 import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
 import { lookupSource } from '../utils/source.ts';
-import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 @ApplyOptions<Command.Options>({
@@ -389,6 +388,7 @@ export class PlaylistCommand extends Command {
 			}
 
 			let addedCount = 0;
+			const resolvedTracks: Track[] = [];
 			const CONCURRENCY = 5;
 			for (let i = 0; i < tracks.length; i += CONCURRENCY) {
 				const batch = tracks.slice(i, i + CONCURRENCY);
@@ -397,18 +397,15 @@ export class PlaylistCommand extends Command {
 				);
 				for (const result of searchResults) {
 					if (result.status === 'fulfilled' && result.value.tracks.length > 0) {
-						await player.queue.add(result.value.tracks[0]);
-						await removeStaleRelatedTracks(player);
+						resolvedTracks.push(result.value.tracks[0] as Track);
 						addedCount++;
 					}
 				}
 			}
 
-			if (!player.playing && !player.paused) {
-				await this.container.mixerService.primeForPlay(player);
-				await player.play();
-			} else if (addedCount > 0) {
-				void this.container.mixerService.preloadUpcoming(player).catch(() => null);
+			if (resolvedTracks.length > 0) {
+				await this.container.audioService.enqueueTrack(player, resolvedTracks);
+				await this.container.audioService.ensurePlayback(player);
 			}
 
 			await interaction.editReply({

@@ -49,7 +49,7 @@ export function PlayerPreview() {
 
 	return (
 		// 데모 패널을 여러 겹으로 쌓아 depth를 만들어요 — 부유 카드는 실제 제품 상태(대기열 1곡 추가)예요
-		<div ref={ref} className="relative pb-10 pr-2">
+		<div ref={ref} className="relative pb-16 pr-2">
 			<div className="flex flex-col gap-3 rounded-card bg-discord-embed p-3 sm:p-4">
 				<div className="flex gap-3">
 					<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
