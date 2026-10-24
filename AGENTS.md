@@ -2,10 +2,9 @@
 
 Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS), `apps/storage` (Fastify 오브젝트 스토리지), `apps/notifier` (Fastify 소셜 알림 웹훅·스케줄러); `packages/prisma|shardclient|utils|app-kit`.
 
-## Branch & index rules
+## Branch rule
 
-- **Branch rule**: Every code change must start on a feature/fix/refactor branch created from `beta` (or `main`). Never commit directly to `beta`/`main`.
-- **Index rule**: Before modifying unfamiliar code, always use the OpenCode semantic index (`codebase_search`, `codebase_context`, `call_graph`) instead of raw grepping. Check `index_status` if unsure.
+Every code change must start on a feature/fix/refactor branch created from `beta` (or `main`). Never commit directly to `beta`/`main`.
 
 ## PR rules
 
@@ -13,36 +12,14 @@ PR 제목·본문 작성 규칙은 [`docs/pr-message-rule.md`](docs/pr-message-r
 
 ## Skills
 
-Load the matching skill (`.opencode/skills/<id>/SKILL.md`) before starting work in its domain — don't recreate its templates inline:
+Load the matching skill (`.pi/skills/<id>/SKILL.md`) before starting work in its domain — don't recreate its templates inline:
 
-- `codebase-search` — semantic search / orienting in the repo before editing unfamiliar code
-- `sapphire-command` — bot slash commands; `sapphire-precondition` — command guards (both under `apps/bot/src/modules/`)
-- `dashboard-conventions` — Next.js dashboard code (SWR/fetcher, zustand, API routes + zod, next-auth, security)
-- `design-tokens` — dashboard color/type/spacing/radius/dark-mode tokens; `ui-primitives` — primitives/overlay/layout components; `discord-patterns` — Discord-style UI
-- `scroll-effects` — dashboard scroll/motion effects
-- `ai-slop-cleaner` — deletion-first cleanup of duplicated/dead/over-abstracted code
-
-## Semantic code search (opencode index)
-
-The repo is indexed (7,348 chunks total / 5,434 on the current branch, auto-incrementing via `.opencode/index/codebase.db`). Prefer semantic tools before raw grepping when locating unfamiliar code:
-- `codebase_search` — natural-language chunk search (best first step)
-- `codebase_context` — repo-scale question with cited lines; `codebase_edit_context` — pre-edit context for a known symbol
-- `call_graph` / `call_graph_path` — callers/callees and connection paths between symbols
-- If index readiness is unknown, check `index_status` first. The watcher re-indexes automatically after ~10s; large changes may need `/index`.
-
-**Rule: if you are unfamiliar with this codebase (or the area you are about to touch), search it before you edit.** Orient with the semantic tools, read the relevant source, then change code — never guess file/function locations from memory. See the `codebase-search` skill (`.opencode/skills/codebase-search/SKILL.md`) for the full tool guide and configuration reference (open-codebase-index docs: https://github.com/Helweg/open-codebase-index/blob/main/docs/configuration.md).
-
-## Local documentation (`localdocs/`)
-
-- These instructions apply only when the repository-root `localdocs/` directory exists. If it is absent, skip this section and work from the source code; do not create the directory unless the user explicitly requests it.
-- Use the repository-root `localdocs/` directory as persistent codebase notes and working memory across sessions. Agents may read, search, create, and update Markdown files there as part of their work without separate approval.
-- At the start of a task, read `localdocs/README.md` (document index) and `localdocs/08-working-memory.md` when available, then read the documents relevant to the task and their referenced source files.
-- The directory is Git-ignored, so normal tracked-file searches may omit it. Discover documents with `rg --files --hidden --no-ignore localdocs -g '*.md'`; search their contents with `rg --hidden --no-ignore '<pattern>' localdocs`.
-- Verify the current branch, commit, and working tree before using old notes. Documentation may describe another branch or an earlier implementation; current source code and the user's instructions take precedence. Correct outdated notes after checking the code.
-- Keep documents focused by topic, use descriptive filenames consistent with the existing index, and add new documents to `localdocs/README.md`. Reference related documents and source files with relative Markdown links; avoid duplicating large code blocks.
-- Record the date and branch/commit baseline, architecture and behavior, relevant source paths, decisions and constraints, validation results, and unresolved questions or next steps. Distinguish verified behavior, hypotheses, proposed changes, and untested runtime behavior; never imply a test or measurement was performed when it was not.
-- When a task changes documented behavior, update the relevant notes and leave concise handoff context in `localdocs/08-working-memory.md` so the next session can resume without repeating the investigation. Supersede obsolete guidance clearly.
-- Keep `localdocs/` ignored and local unless the user explicitly requests that its contents be committed. Do not force-add it or change its ignore rule. Never put secrets, environment values, tokens, or private user data in these notes.
+- `sapphire-command` — bot slash commands and preconditions (precondition chain order is a fragile contract); `component-view` — Components V2 view files
+- `bot-features` — AI chat/aiTools/memory, TTS·mixer·lyrics, temp voice channels, games; `bot-ops` — playback/Lavalink/session/shard operations
+- `dashboard-conventions` — Next.js dashboard code (SWR/fetcher, zustand, API routes + zod, next-auth, security); `repo-infra` — prisma, utils subpaths, yarn/turbo, CI, Sentry/logging
+- `dashboard-ui` — dashboard visual work: design tokens, primitives, Discord-style specs, scroll/motion effects; load `antislop-ui` (anti-slop filter) first
+- `security-audit` — evidence-driven vulnerability review
+- `ai-slop-cleaner` — deletion-first cleanup of duplicated/dead/over-abstracted code and AI-slop comments
 
 ## Commands
 
@@ -64,7 +41,7 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 
 ## Bot conventions (see skills first)
 
-- Load the matching skill before writing bot code: `sapphire-command`, `sapphire-precondition` (in `.opencode/skills/`). Don't duplicate their templates here.
+- Load the matching skill before writing bot code: `sapphire-command` (covers preconditions), `component-view`, `bot-features`, `bot-ops` (in `.pi/skills/`). Don't duplicate their templates here.
 - Modules are `audio`, `general`, `voice`, and `games` — registered via `setupStore()` in `apps/bot/src/core/bootstrap.ts`. Place files under `apps/bot/src/modules/<audio|general|voice|games>/{commands,preconditions,listeners,interaction-handlers}/`.
 - TS: `allowImportingTsExtensions` — **always use `.ts` extension in bot relative imports** (e.g. `./logger.ts`). ESM (`type: module`), strict + decorators.
 - Slash commands: `registerApplicationCommands` + `GuildInstall` integration, `ko` primary / `en-US` fallback localizations, `fullCategory: ['음악'|'일반'|'개발'|'게임']`, `deferReply()` before async work, throw `UserError({ identifier, message, context: { ephemeral: true } })` for user errors. All user-facing strings in Korean.
@@ -90,17 +67,3 @@ yarn typecheck                        # turbo; dependsOn ^build ^generate — do
 - Fastify 인증·로거·env 검증 공용은 `packages/app-kit`(`createKeyAuthHook`/`createKeyPreHandler`/`timingSafeKeyEqual`, `parseEnvOrExit`/`authKeyChain`, `getAppLogger`) — data-api·shardmanager·storage·notifier가 사용. app-kit 로거 설정은 `packages/utils` `createLogger`의 수동 미러라 utils 쪽 변경 시 함께 갱신.
 - Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop (guildSettingsInvalidator·playerWebResponder·jtcSetupResponder·botProfileService·memberGreetingService·guildDataResponder·socialWebhookResponder) → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
 - Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
-
-<!-- antislop:start -->
-## antislop
-For UI, copy, people, mobile layout, or code comments work, read `antislop.md` (core) and then the skill for the task:
-- UI / visual: `skills/antislop-ui/SKILL.md`
-- Copy & text: `skills/antislop-copywriting/SKILL.md`
-- People: `skills/antislop-human/SKILL.md`
-- Mobile / responsive: `skills/antislop-layoutmobile/SKILL.md`
-- Code comments: `skills/antislop-code/SKILL.md`
-Before starting, follow the core's "Two Usage Modes" section in strict order: explicit session instruction first, then global preference, then ask. A session instruction always wins. For a resolved mode, say `antislop active: <mode> (session override).` or `antislop active: <mode> (global preference).` once before presenting findings or making edits, using the actual mode and source. Acknowledging the user's request without naming the source does not replace this notice.
-Only an explicit choice of antislop during or after selects a session mode. A request to review, audit, or avoid file edits does not select a mode; read the global preference in that case. Another skill's mode does not select antislop's mode.
-If the mode is unresolved, ask during/after and end the response; wait for the answer before any UI review, planning, or concept. For read-only tasks, put the active-mode notice only at the start of the final answer, never in progress messages. For editing tasks, announce before the first edit and omit it from the final answer.
-To update antislop later: download `antislop.md` again, or run `npx antislop-ai --update` if it was installed as skill folders.
-<!-- antislop:end -->

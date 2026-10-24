@@ -151,5 +151,5 @@
 - **브랜치**: 각 PR은 `beta`에서 `feat/<주제>` 분기. PR 본문은 `docs/pr-message-rule.md` 준수 — 검증/미검증 명시, 대시보드 UI 변경은 스크린샷
 - **린트**: 봇·packages는 prettier(`src/**/*.ts`), 대시보드는 eslint(`--max-warnings=0`). 탭·싱글쿼트·printWidth 150
 - **명령어 등록**: PR 1·2·3·4·6·7은 슬래시 구조 변경 → `REGISTER_COMMANDS=true` 기동 또는 `yarn dlx tsx scripts/register-commands.ts --guild`로 확인
-- **스킬 로드**: `sapphire-command`·`sapphire-precondition`(PR 1·2·6·7), `dashboard-conventions`·`design-tokens`·`ui-primitives`(PR 5·6 대시보드), `codebase-search`(탐색)
+- **스킬 로드**: `sapphire-command`·`sapphire-precondition`(PR 1·2·6·7), `dashboard-conventions`·`design-tokens`·`ui-primitives`(PR 5·6 대시보드)
 - **권장 순서**: PR 1 → PR 3 → PR 2 → PR 4 → PR 5 → PR 6 → PR 7(PR 6 migration과 묶어도 됨) → PR 8

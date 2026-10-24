@@ -1,135 +1,53 @@
 ---
 name: ai-slop-cleaner
-description: AI가 생성한 코드 슬롭(중복·죽은 코드·불필요한 추상화)을 회귀 안전한 deletion-first 워크플로로 정리. deslop/antislop/AI slop 요청, 지저분하거나 과추상화된 코드 정리, 리뷰 전용 정리 검토(--review) 할 때 사용.
+description: "Regression-safe, deletion-first cleanup of AI-generated code slop (duplicates, dead code, needless abstraction) plus code comment hygiene. Load on deslop/antislop/cleanup requests or a --review read-only pass."
 ---
-
 # AI Slop Cleaner
 
-Use this skill to clean AI-generated code slop without drifting scope or changing intended behavior. In this repo, this is the bounded cleanup workflow for code that works but feels bloated, repetitive, weakly tested, or over-abstracted.
+Bounded cleanup of working-but-bloated AI code without drifting scope or changing intended behavior. Goal: simplification, not new features.
 
-## When to Use
+## When to use
+- User says `deslop`, `anti-slop`, `AI slop`, or asks to clean noisy/repetitive/over-abstracted code
+- Follow-up work left duplicate logic, dead code, wrapper layers, boundary leaks, or weak regression coverage
+- Reviewer-only anti-slop pass via `--review`
 
-Use this skill when:
-- the user explicitly says `deslop`, `anti-slop`, or `AI slop`
-- the request is to clean up or refactor code that feels noisy, repetitive, or overly abstract
-- follow-up implementation left duplicate logic, dead code, wrapper layers, boundary leaks, or weak regression coverage
-- the user wants a reviewer-only anti-slop pass via `--review`
-- the goal is simplification and cleanup, not new feature delivery
+Skip for: new-feature builds, broad redesigns, generic refactors with no simplification intent, or behavior too unclear to protect with tests or a concrete verification plan.
 
-## When Not to Use
-
-Do not use this skill when:
-- the task is mainly a new feature build or product change
-- the user wants a broad redesign instead of an incremental cleanup pass
-- the request is a generic refactor with no simplification or anti-slop intent
-- behavior is too unclear to protect with tests or a concrete verification plan
-
-## Execution Posture
-
+## Posture
 - Preserve behavior unless the user explicitly asks for behavior changes.
-- Lock behavior with focused regression tests first whenever practical.
-- Write a cleanup plan before editing code.
-- Prefer deletion over addition.
-- Reuse existing utilities and patterns before introducing new ones.
-- Avoid new dependencies unless the user explicitly requests them.
+- Lock behavior with the narrowest regression tests first, before editing.
+- Write a cleanup plan before touching code.
+- Prefer deletion over addition; reuse existing utilities/patterns; no new dependencies unless requested.
 - Keep diffs small, reversible, and smell-focused.
-- Stay concise and evidence-dense: inspect, edit, verify, and report.
-- Treat new user instructions as local scope updates without dropping earlier non-conflicting constraints.
+- Treat new instructions as local scope updates; keep earlier non-conflicting constraints.
 
-## Scoped File-List Usage
-
-This skill can be bounded to an explicit file list or changed-file scope when the caller already knows the safe cleanup surface.
-
-- Good fit: `clean up .opencode/skills/ui-primitives/SKILL.md and .opencode/skills/design-tokens/SKILL.md`
-- Good fit: a prior session handing off only the files it changed (`git diff --name-only`)
-- Preserve the same regression-safe workflow even when the scope is a short file list
-- Do not silently expand a changed-file scope into broader cleanup work unless the user explicitly asks for it
-
-## Review Mode (`--review`)
-
-`--review` is a reviewer-only pass after cleanup work is drafted. It exists to preserve explicit writer/reviewer separation for anti-slop work.
-
-- **Writer pass**: make the cleanup changes with behavior locked by tests.
-- **Reviewer pass**: inspect the cleanup plan, changed files, and verification evidence.
-- The same pass must not both write and self-approve high-impact cleanup without a separate review step.
-
-In review mode:
-1. Do **not** start by editing files.
-2. Review the cleanup plan, changed files, and regression coverage.
-3. Check specifically for:
-   - leftover dead code or unused exports
-   - duplicate logic that should have been consolidated
-   - needless wrappers or abstractions that still blur boundaries
-   - missing tests or weak verification for preserved behavior
-   - cleanup that appears to have changed behavior without intent
-4. Produce a reviewer verdict with required follow-ups.
-5. Hand needed changes back to a separate writer pass instead of fixing and approving in one step.
+## Scope fencing
+Bound the pass to an explicit file list or changed-file scope (e.g. a prior session's `git diff --name-only`). Keep the same regression-safe workflow even for a short list. Never silently expand a changed-file scope into broader cleanup unless the user asks.
 
 ## Workflow
+1. **Protect behavior first**: identify what must stay the same; add/run the narrowest regression tests; if tests cannot come first, record the verification plan explicitly.
+2. **Plan before code**: list the concrete smells to remove; order from safest deletion to riskier consolidation.
+3. **Classify slop**: duplication (copy-paste branches, redundant helpers), dead code (unused/unreachable code, stale flags, debug leftovers), needless abstraction (pass-through wrappers, speculative indirection, single-use layers), boundary violations (hidden coupling, misplaced responsibilities, wrong-layer imports/side effects), missing tests.
+4. **One smell-focused pass at a time**: dead code, then duplicates, then naming/error handling, then test reinforcement. Re-run targeted verification after each pass. Never bundle unrelated refactors into one edit set.
+5. **Quality gates**: keep regression tests green; run the relevant lint, typecheck, and unit/integration tests for the touched area (`yarn lint` / `yarn typecheck` / `yarn test`); if a gate fails, fix or back out the risky cleanup instead of forcing it through.
+6. **Report**: changed files, simplifications made, behavior lock / verification run, remaining risks.
 
-1. **Protect current behavior first**
-   - Identify what must stay the same.
-   - Add or run the narrowest regression tests needed before editing.
-   - If tests cannot come first, record the verification plan explicitly before touching code.
+## Review mode (`--review`)
+Reviewer-only pass over drafted cleanup. Do not start by editing files. Inspect the cleanup plan, changed files, and regression coverage for: leftover dead code or unused exports, unconsolidated duplicate logic, needless wrappers still blurring boundaries, missing/weak tests, and cleanup that changed behavior without intent. Produce a reviewer verdict with required follow-ups; hand needed changes back to a separate writer pass. The same pass must never both write and self-approve high-impact cleanup.
 
-2. **Write a cleanup plan before code**
-   - Bound the pass to the requested files or feature area.
-   - List the concrete smells to remove.
-   - Order the work from safest deletion to riskier consolidation.
+## Code comment hygiene
+On any comment-only pass, modify comments only: never touch executable code, identifiers, imports, formatting, whitespace, or logic. When in doubt, leave the code untouched.
 
-3. **Classify the slop before editing**
-   - **Duplication** — repeated logic, copy-paste branches, redundant helpers
-   - **Dead code** — unused code, unreachable branches, stale flags, debug leftovers
-   - **Needless abstraction** — pass-through wrappers, speculative indirection, single-use helper layers
-   - **Boundary violations** — hidden coupling, misplaced responsibilities, wrong-layer imports or side effects
-   - **Missing tests** — behavior not locked, weak regression coverage, edge-case gaps
-   - **UI/design defaults** — generic visual patterns that make an AI-built interface feel unreviewed
+Delete comments that:
+- restate the code (`// User class` above `class User {}`, signature-echoing JSDoc)
+- narrate the obvious step by step (`// Step 1: Validate input`, `// First...`, `// Next...`, end markers like `} // end if`)
+- are decorative: banner separators, ALL-CAPS/box-drawn headers, emoji labels, empty labels (`// Main logic`), vague TODOs that name no actionable task
+- pad a one-line fact into a paragraph (issue numbers, version history, reasoning chains), or comment every trivial line instead of one concise comment per logical block
 
-### UI/Design Reviewer Checklist
+Keep comments that carry contracts, invariants, or the why: business intent, architectural decisions, security considerations, performance trade-offs, concurrency behavior, protocol/API details, workarounds, edge cases, licensing. Keep a TODO only when it names a specific actionable task. Keep comments short, natural, sentence case; explain why, not what. Value is not length: a kept comment is one or two lines, never a paragraph.
 
-Use these as review prompts, not absolute bans. Keep intentional brand, accessibility, product-density, or design-system choices when they have a clear rationale.
+## Good fits
+- `deslop this module: too many wrappers, duplicate helpers, and dead code`
+- `cleanup the AI slop in src/auth and tighten boundaries without changing behavior`
 
-- **Korean readability:** flag body text set around 11-12px; Korean body copy generally needs at least 14px unless a validated dense-data exception applies.
-- **Shadow restraint:** question box shadows on every surface, logo, background, card, or icon; keep shadows only where they clarify elevation or interaction.
-- **Content hierarchy:** remove repetitive eyebrow/title/description/extra `<p>` stuffing when the title already carries the message; avoid generic emoji badges unless they are part of the product voice.
-- **Palette rationale:** challenge default AI blue/purple palettes, especially Tailwind-like `#3B82F6`, when no brand or system rationale exists.
-- **Layout rhythm:** avoid overly perfect 3- or 4-column uniform grids when the product context benefits from rhythm, emphasis, asymmetry, carousel/bento treatment, or varied card weights.
-- **Gradient restraint:** tone down extreme gradients unless the brand deliberately owns that visual language.
-
-4. **Run one smell-focused pass at a time**
-   - **Pass 1: Dead code deletion**
-   - **Pass 2: Duplicate removal**
-   - **Pass 3: Naming and error-handling cleanup**
-   - **Pass 4: Test reinforcement**
-   - Re-run targeted verification after each pass.
-   - Do not bundle unrelated refactors into the same edit set.
-
-5. **Run the quality gates**
-   - Keep regression tests green.
-   - Run the relevant lint, typecheck, and unit/integration tests for the touched area.
-   - Run existing static or security checks when available.
-   - If a gate fails, fix the issue or back out the risky cleanup instead of forcing it through.
-
-6. **Close with an evidence-dense report**
-   Always report:
-   - **Changed files**
-   - **Simplifications**
-   - **Behavior lock / verification run**
-   - **Remaining risks**
-
-## Usage
-
-- 로드: 스킬 도구로 `ai-slop-cleaner` 로드 후 `deslop <대상>` 요청
-- `deslop <대상> --review` — 작성 없는 리뷰어 전용 패스
-- `deslop <file-a> <file-b> <file-c>` — 파일 목록으로 범위 제한
-- 저장소 명령으로 검증: `yarn lint` / `yarn typecheck` / `yarn test`
-
-## Good Fits
-
-**Good:** `deslop this module: too many wrappers, duplicate helpers, and dead code`
-
-**Good:** `cleanup the AI slop in src/auth and tighten boundaries without changing behavior`
-
-**Bad:** `refactor auth to support SSO`
-
-**Bad:** `clean up formatting`
+Bad fits: `refactor auth to support SSO`, `clean up formatting`.

@@ -30,7 +30,7 @@
 | 3RD-03 | `youtube-plugin` (official `youtube-source`) | Lavalink server plugin | `dev.lavalink.youtube:youtube-plugin:1.18.2` | Track loading / format resolution | 3RD-02 depends on its **internal APIs** |
 | 3RD-04 | SponsorBlock plugin | Lavalink server plugin | Installed separately on nodes | `SegmentSkipped` / `ChaptersLoaded` events | Guilds without registered categories receive no chapter events |
 | 3RD-05 | `lavalink-client` | Bot client library | `^2.10.0` (`apps/bot/package.json`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
-| 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.3.6` | Slash command and precondition registration | Bot conventions are in `.opencode/skills/sapphire-*` |
+| 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.3.6` | Slash command and precondition registration | Bot conventions are in `.pi/skills/sapphire-command` |
 | 3RD-07 | Prisma, Redis, Fastify, Next.js, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
 | 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, OpenAI-compatible LLM | External HTTP | `apps/data-api/src/providers/*` | REST, including unofficial APIs | YouTube's internal API can change without notice |
 
@@ -141,7 +141,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 ### 3RD-06. `discord.js` + `@sapphire/framework`
 
 - **Versions:** `discord.js ^14.27.0` (`apps/bot`), `@sapphire/framework ^5.3.6` plus plugins such as `plugin-subcommands ^7.0.1` and `discord.js-utilities ^7.3.3`. In `apps/dashboard` and `apps/data-api`, `discord.js ^14.0.0` is used for types/utilities.
-- **Contract surface:** Registration conventions for slash commands, preconditions, and interaction handlers (Sapphire stores). Follow `AGENTS.md` under “Bot conventions” and `.opencode/skills/sapphire-command` / `.opencode/skills/sapphire-precondition`. Avoid duplicating those conventions here.
+- **Contract surface:** Registration conventions for slash commands, preconditions, and interaction handlers (Sapphire stores). Follow `AGENTS.md` under “Bot conventions” and the `sapphire-command` skill (`.pi/skills/sapphire-command/SKILL.md`). Avoid duplicating those conventions here.
 - **Fragile Rule:** The order of the precondition chain (`NodeAvailable`, `VoiceConnected`, `SameVoiceChannel`, `DJOrAlone`) is part of the permission and voice-state contract. Changing the order changes command-entry conditions.
 
 ### 3RD-07. Runtime Dependencies (Version Pins)
