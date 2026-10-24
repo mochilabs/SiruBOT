@@ -15,8 +15,8 @@ import { MixerPreview } from "@/components/home/previews/mixer-preview";
 import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
 import { sectionVariants } from "@/components/home/section-variants";
-import { buttonVariants } from "@/components/ui/button";
 import { SectionLabel } from "@/components/primitives/section-label";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 
