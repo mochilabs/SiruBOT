@@ -201,9 +201,20 @@ export function NowPlaying({
           </div>
         )}
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="break-words text-lg font-bold text-foreground">
-            {state.trackTitle ?? "재생 중인 곡이 없어요"}
-          </p>
+          {state.trackTitle && /^https?:\/\//i.test(state.trackUri ?? "") ? (
+            <a
+              href={state.trackUri!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="break-words text-lg font-bold text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+            >
+              {state.trackTitle}
+            </a>
+          ) : (
+            <p className="break-words text-lg font-bold text-foreground">
+              {state.trackTitle ?? "재생 중인 곡이 없어요"}
+            </p>
+          )}
           <p className="break-words text-sm text-muted-foreground">
             {state.trackAuthor ?? "아티스트 정보 없음"}
             {state.requesterName ? ` · 신청: ${state.requesterName}` : ""}

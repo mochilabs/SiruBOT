@@ -25,7 +25,9 @@ export function initSentry(options: SentryInitOptions = {}): void {
 	}
 
 	const environment = options.environment ?? process.env.NODE_ENV ?? 'development';
-	const release = options.release ?? process.env.VERSION ?? 'unknown';
+	// Sentry 릴리스는 배포마다 고유해야 해요 — 표시용 VERSION(예: 'beta', 태그명)과 분리해요.
+	// SENTRY_RELEASE가 없으면 기존처럼 VERSION으로 폴백(프로덕션 릴리스는 VERSION=태그라 그대로 고유).
+	const release = options.release ?? process.env.SENTRY_RELEASE ?? process.env.VERSION ?? 'unknown';
 	const isProd = environment === 'production';
 
 	Sentry.init({

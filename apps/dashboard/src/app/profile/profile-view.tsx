@@ -222,6 +222,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                             alt={track.title}
                             fill
                             sizes="48px"
+                            unoptimized
                             className="object-cover"
                           />
                         ) : (
@@ -230,7 +231,18 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-black text-foreground" title={track.title}>
-                          {track.title}
+                          {/^https?:\/\//i.test(track.url ?? "") ? (
+                            <a
+                              href={track.url!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+                            >
+                              {track.title}
+                            </a>
+                          ) : (
+                            track.title
+                          )}
                         </p>
                         <p className="truncate text-xs font-bold text-muted-foreground" title={track.artist}>
                           {track.artist}

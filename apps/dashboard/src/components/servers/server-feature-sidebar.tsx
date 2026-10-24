@@ -30,9 +30,9 @@ export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureS
 	const indicator = useSidebarIndicator(items, activeIndex, getItemEl);
 
 	return (
-		<nav className="hidden w-full lg:block lg:w-72 shrink-0 lg:sticky lg:top-24 lg:z-10" aria-label="서버 설정 기능">
-			<Card padding="none" className="overflow-hidden border-0">
-				<div className="relative flex flex-col gap-0.5 p-2">
+		<nav className="hidden w-full lg:block lg:w-72 shrink-0 lg:sticky lg:top-20 lg:z-10" aria-label="서버 설정 기능">
+			<Card padding="none" className="overflow-hidden">
+				<div className="relative flex max-h-[calc(100svh-7rem)] flex-col gap-0.5 overflow-y-auto p-2">
 					<SidebarIndicatorOverlay indicator={indicator} />
 
 					{items.map((item, idx) => {

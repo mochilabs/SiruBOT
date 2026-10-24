@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import Loader from "@/components/loader";
-import { TrackListenLink } from "@/components/track-listen-link";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -145,11 +144,21 @@ export function AddTrackModal({
 												className="rounded-card shrink-0"
 											/>
 											<div className="min-w-0">
-												<p className="text-xs font-medium text-foreground truncate">{track.title}</p>
+												{track.youtubeUrl ? (
+													<a
+														href={track.youtubeUrl}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="block truncate text-xs font-medium text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+													>
+														{track.title}
+													</a>
+												) : (
+													<p className="text-xs font-medium text-foreground truncate">{track.title}</p>
+												)}
 												<p className="text-xs text-muted-foreground truncate">{track.artist}</p>
 											</div>
 										</div>
-										{track.youtubeUrl && <TrackListenLink url={track.youtubeUrl} title={track.title} compact />}
 										<Button
 											variant="secondary"
 											size="sm"

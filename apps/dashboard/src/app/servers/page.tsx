@@ -42,8 +42,7 @@ export default function ServersPage() {
                 title="어떤 서버로 갈까요?"
                 description="관리할 서버를 선택하거나, 시루봇을 새로 초대해 주세요."
             >
-                <div className="flex items-center gap-3 bg-surface-1 rounded-card px-4 py-3 shadow-sm relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <div className="flex items-center gap-3 bg-surface-1 rounded-card px-4 py-3 shadow-sm relative overflow-hidden">
                     {session?.user?.image ? (
                         <Image src={session.user.image} alt="User avatar" width={40} height={40} className="rounded-full ring-2 ring-primary/20 relative z-10" />
                     ) : (
@@ -88,7 +87,7 @@ export default function ServersPage() {
                 </section>
             ) : (
                 <section className="space-y-12">
-                    <div className="grid gap-3 md:gap-6 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
                         {guilds.map((guild, index) => (
                             <m.div
                                 key={guild.id}

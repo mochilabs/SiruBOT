@@ -82,7 +82,6 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 		title: "채팅이 그대로 목소리가 돼요.",
 		desc: "음성 채널의 채팅을 시루가 목소리로 읽어줘요. 노래를 재생하면서 함께 켜둘 수 있어요.",
 		Preview: ChatTtsPreview,
-		soon: true,
 	},
 	{
 		key: "chat",

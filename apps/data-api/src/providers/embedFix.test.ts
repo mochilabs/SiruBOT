@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
 	boothEmbedFixResult,
+	embedFixTranslateCacheKey,
+	extractTranslatableEmbedFields,
 	instagramEmbedFixResult,
 	mergeInstagramMeta,
 	ogEmbedFixResult,
+	parseEmbedTranslationResponse,
 	parseKirkstagramGallery,
+	translateEmbedFixCard,
 	xEmbedFixResult
 } from './embedFix.ts';
 import type { FxTwitterStatus } from '@sirubot/utils';
@@ -245,5 +249,51 @@ describe('ogEmbedFixResult', () => {
 		expect(result.mode).toBe('link');
 		if (result.mode !== 'link') return;
 		expect(result.fixedUrl).toBe('https://www.phixiv.net/artworks/1');
+	});
+});
+
+describe('translateEmbedFixCard & extractTranslatableEmbedFields', () => {
+	it('skips translation when the post is already in Korean', async () => {
+		const provider = {
+			name: 'openai',
+			available: true,
+			translateHoroscope: vi.fn(),
+			chatCompletion: vi.fn()
+		};
+		const koreanCard = xEmbedFixResult(X_LINK, {
+			...STATUS,
+			text: '오늘 저녁 8시에 새로운 업데이트 방송을 진행합니다!'
+		});
+		expect(extractTranslatableEmbedFields(koreanCard, 'ko')).toBeNull();
+		await expect(translateEmbedFixCard(koreanCard, 'ko', provider)).resolves.toBeNull();
+		expect(provider.chatCompletion).not.toHaveBeenCalled();
+	});
+
+	it('translates foreign posts and parses JSON response', async () => {
+		const provider = {
+			name: 'openai',
+			available: true,
+			translateHoroscope: vi.fn(),
+			chatCompletion: vi.fn().mockResolvedValue('{"description":"방금 내 트위터를 설정했어요"}')
+		};
+		const englishCard = xEmbedFixResult(X_LINK, STATUS);
+		expect(embedFixTranslateCacheKey('x', X_LINK.url, 'ko')).toBe(`dataapi:v1:embed-fix:tr:ko:x:${X_LINK.url}`);
+		const translated = await translateEmbedFixCard(englishCard, 'ko', provider);
+		expect(translated).toEqual({ description: '방금 내 트위터를 설정했어요' });
+		expect(provider.chatCompletion).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not translate Instagram author title, only caption description', () => {
+		const igCard = instagramEmbedFixResult(INSTAGRAM_LINK, {
+			author: 'Instagram User (@user)',
+			caption: '오늘 날씨가 정말 좋네요!',
+			images: ['https://example.com/a.jpg'],
+			videoUrl: null
+		});
+		expect(extractTranslatableEmbedFields(igCard, 'ko')).toBeNull();
+		expect(parseEmbedTranslationResponse('```json\n{"title":"제목","description":"본문"}\n```')).toEqual({
+			title: '제목',
+			description: '본문'
+		});
 	});
 });

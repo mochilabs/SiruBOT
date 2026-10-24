@@ -7,8 +7,9 @@ vi.mock('@sapphire/framework', () => ({ container: { db: { guild: { upsert } } }
 vi.mock('@sirubot/utils', async () => {
 	const { MemoryCache } = await import('../../../../../packages/utils/src/memoryCache.ts');
 	const { normalizeCustomCommandPrefix } = await import('../../../../../packages/utils/src/customCommand.ts');
-	const { normalizeEmbedFixSites } = await import('../../../../../packages/utils/src/chatTools.ts');
-	return { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites };
+	// vitest vi.mock 팩토리는 호이스팅되므로 동적 import가 필요해요
+	const { normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } = await import('../../../../../packages/utils/src/chatTools.ts');
+	return { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang };
 });
 
 import { getAiSettings, getCustomCommandPrefix, removeAiChannel, setAiChannelIds } from './chatPolicy.ts';

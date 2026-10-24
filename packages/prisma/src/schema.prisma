@@ -51,6 +51,7 @@ model Guild {
   embedFixChannelIds String[] @default([])
   embedFixSites          String[] @default([])
   embedFixSuppressOriginal Boolean @default(false)
+  embedFixTranslateLang    String   @default("off")
   // 채팅 유틸: 카운팅 채널 — 지정 채널에서 숫자를 순서대로 세고 틀리면 초기화해요
   countingEnabled  Boolean @default(false)
   countingChannelId String?

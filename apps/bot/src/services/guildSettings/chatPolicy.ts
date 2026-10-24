@@ -1,5 +1,5 @@
 import type { Prisma } from '@sirubot/prisma';
-import { normalizeCustomCommandPrefix, normalizeEmbedFixSites } from '@sirubot/utils';
+import { normalizeCustomCommandPrefix, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } from '@sirubot/utils';
 import type { GuildSettingsStore } from './store.ts';
 import {
 	CHAT_TOOL_TOGGLE_FIELDS,
@@ -52,6 +52,7 @@ export async function getChatToolSettings(store: GuildSettingsStore, guildId: st
 		embedFix: { mode: normalizeChatToolMode(guild.embedFixMode), channelIds: guild.embedFixChannelIds },
 		embedFixSites: normalizeEmbedFixSites(guild.embedFixSites),
 		embedFixSuppressOriginal: guild.embedFixSuppressOriginal,
+		embedFixTranslateLang: normalizeEmbedFixTranslateLang(guild.embedFixTranslateLang),
 		countingEnabled: guild.countingEnabled,
 		countingChannelId: guild.countingChannelId
 	};

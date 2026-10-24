@@ -27,7 +27,7 @@ export function nowplaying({ player, track }: NowPlayingViewProps) {
 	// 카드 이미지 없는 텍스트 뷰 — 브랜드(봇 이름/버전)까지 텍스트로 표시한다.
 	containerComponent
 		.addSeparatorComponents(separatorSmall)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${buildFooterSegments(player).join(' | ')}`));
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${buildFooterSegments(player).join(' • ')}`));
 
 	return containerComponent;
 }

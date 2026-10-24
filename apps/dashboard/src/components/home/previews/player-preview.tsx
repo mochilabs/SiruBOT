@@ -49,7 +49,7 @@ export function PlayerPreview() {
 
 	return (
 		// 데모 패널을 여러 겹으로 쌓아 depth를 만들어요 — 부유 카드는 실제 제품 상태(대기열 1곡 추가)예요
-		<div ref={ref} className="relative pb-10 pr-2">
+		<div ref={ref} className="relative pb-16 pr-2">
 			<div className="flex flex-col gap-3 rounded-card bg-discord-embed p-3 sm:p-4">
 				<div className="flex gap-3">
 					<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
@@ -66,12 +66,11 @@ export function PlayerPreview() {
 								<p className="line-clamp-2 text-sm font-bold leading-snug text-discord-text underline decoration-discord-text/20 underline-offset-2">
 									{track.title}
 								</p>
-								<p className="truncate text-2xs text-discord-text-muted">아티스트: {track.artist}</p>
-							</m.div>
-						</AnimatePresence>
-						<p className="truncate text-2xs text-discord-text-muted">
-							신청자: <span className="rounded-sm bg-discord-primary/20 px-1 text-discord-light">@사용자</span>
-						</p>
+						</m.div>
+					</AnimatePresence>
+					<p className="truncate text-2xs text-discord-text-muted">
+						아티스트: {track.artist} • 신청자: <span className="rounded-sm bg-discord-primary/20 px-1 text-discord-light">@사용자</span>
+					</p>
 						<div className="flex items-center gap-2 text-2xs tabular-nums text-discord-text-muted">
 							<span>
 								{fmtTime(seconds)} / {track.duration}
@@ -127,7 +126,7 @@ export function PlayerPreview() {
 				</div>
 				{/* Separator + Footer — 실제 봇의 buildFooterSegments와 동일 */}
 				<div className="flex items-center justify-between border-t border-discord-btn-active pt-2">
-					<p className="text-2xs text-discord-text-muted">📡 재생 서버: 시루-노드-01 | 🔊 볼륨: 100%</p>
+					<p className="text-2xs text-discord-text-muted">📡 시루-노드-01 • 🔊 100%</p>
 					<span className="rounded-sm bg-discord-primary/10 px-1.5 py-1 text-2xs font-semibold text-discord-light">
 						{fmtTime(seconds)} / {track.duration}
 					</span>
