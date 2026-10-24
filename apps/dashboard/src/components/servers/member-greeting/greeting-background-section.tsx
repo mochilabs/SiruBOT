@@ -57,7 +57,7 @@ export function GreetingBackgroundSection({
               onClick={() => onSelectPreset(preset.id)}
               className={cn(
                 "w-fit cursor-pointer rounded-control p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                selected && "ring-2 ring-ring/40",
+                selected && "ring-2 ring-ring",
               )}
             >
               <PresetSwatch id={preset.id} />

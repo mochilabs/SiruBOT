@@ -4,6 +4,7 @@ import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { m, useReducedMotion } from "framer-motion";
 
+import { motionBase } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
 import { PLAYLIST_TRACKS } from "./tracks";
@@ -58,7 +59,7 @@ export function PlaylistPreview() {
 					{PLAYLIST_TRACKS.map((track, index) => (
 						<m.div
 							key={track.title}
-							variants={{ hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } } }}
+							variants={{ hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0, transition: { duration: motionBase, ease: "easeOut" } } }}
 							className={cn(
 								"flex min-w-0 items-center gap-2.5 rounded-sm px-1.5 py-1 text-sm transition-colors",
 								index === 0 ? "bg-primary/8" : "hover:bg-surface-1",

@@ -310,7 +310,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 	return (
 		<nav
 			aria-label="모바일 탭 바로가기"
-			className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-2.5 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] md:hidden"
+			className="pointer-events-none fixed inset-x-0 bottom-0 z-(--z-overlay) flex justify-center px-2.5 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] md:hidden"
 		>
 			<div
 				ref={containerRef}
@@ -337,7 +337,7 @@ export function MobileTabBar({ status }: { status: "authenticated" | "unauthenti
 							}}
 							href={getNavHref(link, status)}
 							aria-current={index === activeIndex ? "page" : undefined}
-							className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-0.5 py-1.5 text-2xs font-medium transition-colors duration-fast ${
+							className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-0.5 py-1.5 text-2xs font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
 								active ? "text-primary-text" : "text-muted-foreground"
 							}`}
 						>

@@ -33,7 +33,7 @@ function DialogOverlay({
       // backdrop-blur 레이어에는 opacity 애니메이션을 걸지 않아요 — 애니메이션 중 매 프레임
       // 뷰포트 전체 블러가 재계산돼 열 때 렉이 났어요. 배경은 즉시, 패널만 페이드/줌으로 움직여요.
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/60 backdrop-blur-sm",
+        "fixed inset-0 isolate z-(--z-overlay) bg-black/60 backdrop-blur-sm",
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-dialog bg-popover p-4 text-sm text-popover-foreground shadow-2xl duration-fast outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-(--z-overlay) grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-dialog bg-popover p-4 text-sm text-popover-foreground shadow-2xl duration-fast outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

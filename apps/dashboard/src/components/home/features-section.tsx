@@ -15,6 +15,7 @@ import { MixerPreview } from "@/components/home/previews/mixer-preview";
 import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
 import { sectionVariants } from "@/components/home/section-variants";
+import { motionBase, motionFast } from "@/components/motion/durations";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,13 +28,13 @@ import { cn } from "@/lib/utils";
  */
 const chipVariants = {
 	hidden: { opacity: 0, y: 6 },
-	visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
+	visible: { opacity: 1, y: 0, transition: { duration: motionFast, ease: "easeOut" } },
 } as const;
 
 /** chipVariants의 reduced-motion 폴백 — 위치 이동 없이 opacity 페이드만으로 등장해요. */
 const chipFadeVariants = {
 	hidden: { opacity: 0 },
-	visible: { opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
+	visible: { opacity: 1, transition: { duration: motionBase, ease: "easeOut" } },
 } as const;
 
 /** 칩 스태거 컨테이너 — 자식 칩들이 0.04초 간격으로 연쇄 등장해요. */

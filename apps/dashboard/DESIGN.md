@@ -35,8 +35,8 @@
 4. **타이포그래피 토큰** — `--font-sans`, `--text-2xs`(11px), `--text-3xs`(8px).
 5. **반경 및 표면 토큰** — `--radius*`, 역할별 반경(`--r-*`), 불투명 표면(`--surface-1..3`).
 6. **경계 및 그림자 토큰** — `--border-subtle/strong`, `--elev-1..3` 및 `--elev-5`, `--control-boundary`, `--toast-z`.
-7. **상태 색상** — `--success`, `--warning`, `--info`, `--destructive` (각 `-foreground` 토큰은 현재 소비자 0건으로 보류 상태).
-8. **유틸리티 및 키프레임** — `@utility` 정의(`transition-control`, `animate-page-in`, `animate-marquee`, `scrollbar-none`), 베이스 스크롤바, 키프레임.
+7. **상태 색상** — `--success`, `--warning`, `--info`, `--destructive`. `-foreground` 토큰 중 `--warning-foreground`·`--destructive-foreground`는 `Badge` 솔리드 톤이 소비(유지), `--success-foreground`·`--info-foreground`는 소비자 0건이므로 정리 대상.
+8. **유틸리티 및 키프레임** — `@utility` 정의(`transition-control`, `animate-page-in`, `scrollbar-none`), 베이스 스크롤바, 키프레임. (`animate-marquee` 정의는 없음 — 컴포넌트와 함께 03971a7c에서 삭제됨)
 9. **모션 토큰 및 접근성** — `--motion-fast/base/slow`, `--ease-out-expo`, View Transitions, `prefers-reduced-motion: reduce` 가드.
 
 ---
@@ -91,6 +91,7 @@
 | 컨트롤 경계 | `--control-boundary` | `shadow-control-boundary` (`inset 0 0 0 1px var(--border-strong)`) | 중립 버튼·입력창의 3:1 경계 |
 | 오류 경계 | `--control-boundary-invalid` | `shadow-control-boundary-invalid` (`inset 0 0 0 1px var(--destructive)`) | 유효성 실패 입력창 |
 | 그림자 | `--elev-1/2/3/5` | `shadow-sm`, `shadow-md`, `shadow-lg`, `shadow-2xl` | 높낮이(Elevation) 전용 — 장식용 그림자 금지 |
+| Z-index 레이어 | `--z-content/savebar/float/overlay/popover-high` | `10/30/40/50/60` → `z-(--z-*)` | 레이아웃 레이어·저장 바·플로팅 액션·모달·오버레이 위 팝오버. 카드 내부 국소 스택(`relative z-10`)은 로컬 관례로 토큰 대상 아님 |
 | 토스트 Z-index | `--toast-z` | `100` → `z-(--toast-z)` | Tailwind v4에는 `--z-*` 테마 네임스페이스가 없으므로 arbitrary CSS 변수 문법 `z-(--toast-z)`로 소비 |
 
 ### 3.5 타이포그래피와 모션
@@ -98,7 +99,7 @@
 - **폰트 스택**: `--font-sans` (`Pretendard Variable` → `Pretendard JP Variable` → `Twemoji Mozilla` → 시스템 폴백).
 - **마이크로 텍스트**: `text-2xs` (`0.6875rem` / 11px), `text-3xs` (`0.5rem` / 8px, 워터마크·축소 썸네일 전용).
 - **트랜지션**: 숫자 duration 클래스 대신 `duration-fast`(200ms), `duration-base`(300ms), `duration-slow`(500ms), `ease-standard`(`cubic-bezier(.16,1,.3,1)`), `transition-control`을 사용한다.
-- **무한 루프 예외(R-19)**: `animate-marquee`(커맨드 마키, 호버 시 일시정지), `BackgroundShapes`(배경 도형 3개, 모바일 숨김), 404/푸터 `ShapeBand`, 히어로 스크롤 셰브론, 타이핑 커서·생각 중 점·플레이리스트 이퀄라이저(실제 상태 표현). 모두 `prefers-reduced-motion` 가드를 포함한다.
+- **무한 루프 예외(R-19)**: `BackgroundShapes`(배경 도형 3개, 모바일 숨김), 404/푸터 `ShapeBand`, 히어로 스크롤 셰브론, 타이핑 커서·생각 중 점·플레이리스트 이퀄라이저(실제 상태 표현). 모두 `prefers-reduced-motion` 가드를 포함한다. (`animate-marquee` 커맨드 마키는 03971a7c에서 삭제됨)
 
 ---
 

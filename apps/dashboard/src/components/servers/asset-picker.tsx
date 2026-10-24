@@ -205,7 +205,7 @@ export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect
 									onClick={() => pickUrl(asset.url)}
 									className={cn(
 										"flex flex-col gap-1 rounded-control p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-										isSelected ? "ring-2 ring-ring/40" : "hover:bg-muted/40"
+										isSelected ? "ring-2 ring-ring" : "hover:bg-muted/40"
 									)}
 								>
 									<span className="relative block">

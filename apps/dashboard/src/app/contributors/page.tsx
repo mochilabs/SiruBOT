@@ -99,8 +99,8 @@ export default async function ContributorsPage() {
                   className="h-14 w-14 rounded-full object-cover ring-4 ring-primary/10"
                   unoptimized
                 />
-                <p className="w-full truncate text-sm font-bold text-foreground">{contributor.login}</p>
-                <p className="text-2xs tabular-nums text-muted-foreground">{contributor.contributions.toLocaleString()}회 기여</p>
+                <p className="w-full truncate text-sm font-bold text-foreground" title={contributor.login}>{contributor.login}</p>
+                <p className="text-xs tabular-nums text-muted-foreground">{contributor.contributions.toLocaleString()}회 기여</p>
               </a>
             ))}
           </div>

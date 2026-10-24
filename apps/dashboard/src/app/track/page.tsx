@@ -68,7 +68,7 @@ function TrackContent() {
           <div className="flex w-full sm:w-auto gap-2 sm:gap-3 h-14 sm:h-14">
             <div className="bg-surface-1 rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center transition-colors flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary-text">
-                <span className="text-2xs sm:text-xs font-black">
+                <span className="text-xs font-black">
                   {query ? "검색 결과 수" : "단일 곡 수"}
                 </span>
               </div>
@@ -79,7 +79,7 @@ function TrackContent() {
 
             <div className="bg-surface-1 rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center transition-colors flex-1 sm:flex-none sm:min-w-[140px]">
               <div className="flex items-center gap-1.5 text-primary-text">
-                <span className="text-2xs sm:text-xs font-black">
+                <span className="text-xs font-black">
                   재생 횟수
                 </span>
               </div>
@@ -97,11 +97,8 @@ function TrackContent() {
         ) : tracks.length === 0 ? (
           <EmptyState
             icon={Search}
-            title={
-              query
-                ? "노래를 찾을 수 없어요."
-                : "차트 데이터를 모으고 있어요..."
-            }
+            title={query ? "노래를 찾을 수 없어요." : "아직 차트 데이터가 없어요."}
+            description={query ? undefined : "노래를 재생하면 순위가 집계돼요."}
           />
         ) : (
           <div className="space-y-10">

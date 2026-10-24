@@ -48,7 +48,7 @@ export default function InviteRedirectPage() {
 
             <Link
               href="/"
-              className="group flex items-center gap-2 rounded-control px-2 text-lg font-semibold text-muted-foreground transition-colors hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="group flex items-center gap-2 rounded-control px-2 text-lg font-semibold text-muted-foreground transition-colors hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Home className="h-5 w-5" />
               홈으로 가기

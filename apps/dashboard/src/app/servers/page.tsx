@@ -8,6 +8,7 @@ import { Server } from "lucide-react";
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
+import { motionBase } from "@/components/motion/durations";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
@@ -94,7 +95,7 @@ export default function ServersPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.4, delay: Math.min(index, 11) * 0.05 }}
+                                transition={{ duration: motionBase, delay: Math.min(index, 11) * 0.05 }}
                             >
                                 <GuildCard guild={guild} inviteUrl={buildInviteUrl({ guildId: guild.id })} />
                             </m.div>

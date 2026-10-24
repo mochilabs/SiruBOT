@@ -46,7 +46,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
-      // 모달류(dialog/sheet/dropdown 등)는 z-50, 토스트 알림은 항상 그 위 z-(--toast-z)(=100) — 모달이 열려 있어도 알림이 뒤로 가려지지 않게.
+      // 모달류(dialog/sheet/dropdown 등)는 z-(--z-overlay)(=50), 토스트 알림은 항상 그 위 z-(--toast-z)(=100) — 모달이 열려 있어도 알림이 뒤로 가려지지 않게.
       // z-toast처럼 보이는 커스텀 이름은 v4 --z-* 네임스페이스가 없어 규칙이 안 만들어지므로 z-(--var) 문법을 써요.
       className={cn(
         "pointer-events-none fixed inset-x-4 top-20 z-(--toast-z) mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",

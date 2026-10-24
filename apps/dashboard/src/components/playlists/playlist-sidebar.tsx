@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Heart, Music, Plus, Search } from "lucide-react";
 
+import { EmptyState } from "@/components/primitives/empty-state";
 import { SidebarIndicatorOverlay, useSidebarIndicator } from "@/components/primitives/sidebar-indicator";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -105,9 +106,7 @@ export function PlaylistSidebar({
 					})}
 
 					{filteredPlaylists.length === 0 && (
-						<div className="py-8 text-center text-xs text-muted-foreground">
-							검색 결과가 없어요.
-						</div>
+						<EmptyState size="sm" title="검색 결과가 없어요." />
 					)}
 
 					<div className="pt-2 mt-1">

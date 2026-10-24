@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import { Volume2 } from "lucide-react";
 
+import { motionBase, motionFast } from "@/components/motion/durations";
 import { Card } from "@/components/ui/card";
 
 const BOT_AVATAR = "/images/profile.png";
@@ -217,13 +218,13 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						transition={{ duration: 0.18, ease: "easeOut" }}
+						transition={{ duration: motionFast, ease: "easeOut" }}
 						className="space-y-4"
 					>
 						<m.div
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
+							transition={{ duration: motionBase, ease: "easeOut", delay: 0.05 }}
 							className="flex gap-3"
 						>
 							<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text">
@@ -243,7 +244,7 @@ export function DiscordCommandAnimation({ activeSlide = 0 }: { activeSlide?: num
 						<m.div
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.3, ease: "easeOut", delay: 0.2 }}
+							transition={{ duration: motionBase, ease: "easeOut", delay: 0.2 }}
 							className="flex gap-3"
 						>
 							<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">

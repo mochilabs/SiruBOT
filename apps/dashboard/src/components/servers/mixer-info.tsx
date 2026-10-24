@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Info } from "lucide-react";
 
+import { motionFast } from "@/components/motion/durations";
 import { Portal, usePopoverCoords } from "@/components/overlay/portal";
 
 /**
@@ -151,7 +152,7 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 				onClick={() => setOpen((v) => !v)}
 				aria-expanded={open}
 				aria-label={open ? `${copy.title} 설명 닫기` : copy.buttonLabel}
-				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				<Info size={14} aria-hidden />
 			</button>
@@ -160,13 +161,13 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 				{open && coords.top > 0 && (
 					<Portal>
 						{/* 바깥 클릭용 투명 백드롭 — 스크롤은 막지 않아요(팝오버가 트리거를 따라가요) */}
-						<div className="fixed inset-0 z-[190]" onClick={() => setOpen(false)} aria-hidden />
+						<div className="fixed inset-0 z-(--z-overlay)" onClick={() => setOpen(false)} aria-hidden />
 						<m.div
 							initial={{ opacity: 0, y: -4 }}
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: -4 }}
-							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="fixed z-[200] w-72 rounded-menu border-0 bg-popover p-3.5 shadow-2xl"
+							transition={{ duration: motionFast, ease: "easeOut" }}
+							className="fixed z-(--z-popover-high) w-72 rounded-menu border-0 bg-popover p-3.5 shadow-2xl"
 							style={{ top: coords.top + 8, left }}
 							role="dialog"
 							aria-label={`${copy.title} 설명`}

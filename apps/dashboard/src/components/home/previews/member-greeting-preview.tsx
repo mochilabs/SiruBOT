@@ -6,6 +6,7 @@ import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import { Bot, CornerDownRight } from "lucide-react";
 
+import { motionBase, motionFast } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
 /** 인사 카드 프리셋 — 에디터가 완성형 디자인을 먼저 고르고, 위에 자유 레이어를 덧칠하는 실제 흐름을 딴 것 */
@@ -92,7 +93,7 @@ export function MemberGreetingPreview() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: motionFast, ease: "easeOut" }}
           >
             {phase >= 1 && (
               // Discord 참여 시스템 메시지 — 이름은 서버 권한 컬러처럼 보이는 초록
@@ -100,7 +101,7 @@ export function MemberGreetingPreview() {
                 className="flex items-center gap-1.5 text-2xs text-discord-text-muted"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+                transition={{ duration: motionBase, ease: "easeOut" }}
               >
                 <CornerDownRight
                   size={12}
@@ -119,7 +120,7 @@ export function MemberGreetingPreview() {
                 className="flex gap-2.5"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+                transition={{ duration: motionBase, ease: "easeOut" }}
               >
                 <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
                   <Image
@@ -164,7 +165,7 @@ export function MemberGreetingPreview() {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          transition={{ duration: motionFast, ease: "easeOut" }}
                         >
                           {preset.sub}
                         </m.p>

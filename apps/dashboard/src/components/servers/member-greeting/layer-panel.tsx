@@ -50,7 +50,7 @@ export function LayerPanel({ layers, selectedId, saving, onSelect, onToggleHidde
 						key={layer.id}
 						className={cn(
 							"flex items-center gap-1 rounded-control bg-surface-1 p-1",
-							selected && "ring-2 ring-ring/40"
+							selected && "ring-2 ring-ring"
 						)}
 					>
 						<button

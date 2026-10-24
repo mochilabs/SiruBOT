@@ -276,7 +276,7 @@ export function AvatarCropModal({ source, shape, onClose, onApply }: AvatarCropM
 							onPointerUp={handlePointerUp}
 							onPointerCancel={handlePointerUp}
 							onKeyDown={handleKeyDown}
-							className={`relative max-w-full touch-none select-none overflow-hidden bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${spec.viewportClass} ${
+							className={`relative max-w-full touch-none select-none overflow-hidden bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-ring ${spec.viewportClass} ${
 								dragging ? "cursor-grabbing" : "cursor-grab"
 							}`}
 						>
