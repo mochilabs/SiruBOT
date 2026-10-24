@@ -325,14 +325,15 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 								aria-label="검색 중"
 							/>
 						) : query ? (
-						<button
+						<Button
+							variant="ghost"
 							type="button"
 							onClick={() => setQuery("")}
-							className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							aria-label="검색어 지우기"
+							className="absolute right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full p-0 text-muted-foreground hover:bg-surface-2 hover:text-foreground"
 						>
 							<X size={13} aria-hidden />
-						</button>
+						</Button>
 						) : null}
 					</div>
 					{isUrl && (

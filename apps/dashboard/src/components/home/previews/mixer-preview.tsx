@@ -4,6 +4,7 @@ import { useState } from "react";
 import { m } from "framer-motion";
 import { Mic, SlidersHorizontal } from "lucide-react";
 
+import { motionFast } from "@/components/motion/durations";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +77,7 @@ export function MixerPreview() {
 			<div className="px-1">
 				<m.div
 					animate={{ opacity: ttsOverlay ? 1 : 0 }}
-					transition={{ duration: 0.2, ease: "easeOut" }}
+					transition={{ duration: motionFast, ease: "easeOut" }}
 					aria-hidden={!ttsOverlay}
 					className="flex items-center gap-2 rounded-control bg-surface-1 px-2.5 py-1.5"
 				>

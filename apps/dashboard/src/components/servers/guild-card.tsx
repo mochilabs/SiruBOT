@@ -51,8 +51,8 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						href={`/servers/${guild.id}`}
 						aria-label="관리하기"
 						className={cn(
-							buttonVariants(),
-							"h-11 w-11 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-auto md:flex-1 md:gap-2 md:px-3.5",
+							buttonVariants({ variant: "primary", size: "xl" }),
+							"w-11 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-auto md:flex-1 md:gap-2 md:px-3.5",
 						)}
 					>
 						<Settings2 size={18} />
@@ -61,10 +61,10 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<Link
 						href={`/player/${guild.id}`}
 						aria-label="음악 컨트롤러"
-					className={cn(
-						buttonVariants(),
-						"h-11 w-11 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-auto md:flex-1 md:gap-2 md:px-3.5",
-					)}
+						className={cn(
+							buttonVariants({ variant: "primary", size: "xl" }),
+							"w-11 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-auto md:flex-1 md:gap-2 md:px-3.5",
+						)}
 					>
 						<Play size={18} />
 						<span className="hidden text-sm font-bold md:inline">컨트롤러</span>
@@ -75,8 +75,8 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						href={`/player/${guild.id}`}
 						aria-label="음악 컨트롤러"
 						className={cn(
-							buttonVariants(),
-							"h-11 w-11 shrink-0 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-full md:gap-2 md:px-3.5",
+							buttonVariants({ variant: "primary", size: "xl" }),
+							"w-11 shrink-0 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-full md:gap-2 md:px-3.5",
 						)}
 					>
 						<Play size={18} />
@@ -90,8 +90,8 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					rel="noopener noreferrer"
 					aria-label="시루봇 초대하기"
 					className={cn(
-						buttonVariants({ variant: "secondary" }),
-						"h-11 w-11 shrink-0 bg-surface-2 md:h-12 md:min-h-12 md:w-full md:gap-2 md:px-3.5",
+						buttonVariants({ variant: "secondary", size: "xl" }),
+						"w-11 shrink-0 bg-surface-2 md:w-full md:gap-2 md:px-3.5",
 					)}
 				>
 					<UserPlus size={18} />
@@ -105,7 +105,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					disabled
 					title="초대 링크가 없어요"
 					aria-label="초대 링크가 없어요"
-					className={cn(buttonVariants(), "h-11 w-11 shrink-0 justify-center bg-surface-2 px-0 font-bold text-muted-foreground md:h-12 md:min-h-12 md:w-full md:gap-2 md:px-3.5")}
+					className={cn(buttonVariants({ size: "xl" }), "w-11 shrink-0 justify-center bg-surface-2 px-0 text-muted-foreground md:w-full md:gap-2 md:px-3.5")}
 				>
 					<UserPlus size={18} />
 					<span className="hidden text-sm font-bold md:inline">초대 링크가 없어요</span>

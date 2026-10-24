@@ -2,6 +2,8 @@
 
 import { m } from "framer-motion";
 
+import { motionSlow } from "@/components/motion/durations";
+
 const containerVariants = {
 	hidden: {},
 	visible: { transition: { staggerChildren: 0.08 } },
@@ -9,7 +11,7 @@ const containerVariants = {
 
 const itemVariants = {
 	hidden: { opacity: 0, y: 24 },
-	visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+	visible: { opacity: 1, y: 0, transition: { duration: motionSlow, ease: "easeOut" } },
 } as const;
 
 interface RevealProps {

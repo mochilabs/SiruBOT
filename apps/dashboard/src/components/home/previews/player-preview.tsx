@@ -6,6 +6,7 @@ import Image from "next/image";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { ListMusic, Pause, Repeat, SkipForward } from "lucide-react";
 
+import { motionBase } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
 import { fmtTime, PLAYLIST_TRACKS, PREVIEW_TAIL_SECONDS, toSeconds } from "./tracks";
@@ -61,7 +62,7 @@ export function PlayerPreview() {
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
 								exit={{ opacity: 0 }}
-								transition={{ duration: 0.25, ease: "easeOut" }}
+								transition={{ duration: motionBase, ease: "easeOut" }}
 							>
 								<p className="line-clamp-2 text-sm font-bold leading-snug text-discord-text underline decoration-discord-text/20 underline-offset-2">
 									{track.title}
@@ -92,7 +93,7 @@ export function PlayerPreview() {
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
 								exit={{ opacity: 0 }}
-								transition={{ duration: 0.4 }}
+								transition={{ duration: motionBase }}
 							>
 								<Image src={track.thumbnail} alt="" fill className="object-cover" sizes="80px" unoptimized />
 							</m.div>

@@ -7,6 +7,7 @@ import useSWR from "swr";
 import Container from "@/components/container";
 import { DataApiSection } from "@/components/data-api-section";
 import { PageHeader } from "@/components/layout/page-header";
+import { motionBase } from "@/components/motion/durations";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
@@ -61,7 +62,7 @@ export default function ShardsPage() {
                             <button
                                 type="button"
                                 onClick={() => mutate()}
-                                className="text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-control px-2 py-1"
+                                className="text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-control px-2 py-1"
                             >
                                 다시 시도
                             </button>
@@ -101,7 +102,7 @@ export default function ShardsPage() {
                                         initial={{ opacity: 0, y: 20 }}
                                         whileInView={{ opacity: 1, y: 0 }}
                                         viewport={{ once: true, margin: "-50px" }}
-                                        transition={{ duration: 0.4, delay: index * 0.05 }}
+                                        transition={{ duration: motionBase, delay: index * 0.05 }}
                                     >
                                         <ProcessCard process={process} index={index} />
                                     </m.div>

@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { Check, ChevronDown, X } from "lucide-react";
 
+import { EmptyState } from "@/components/primitives/empty-state";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -177,7 +178,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 												removeSelectedValue(option.value);
 											}
 										}}
-										className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-primary-control/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 after:absolute after:inset-y-[min(0px,calc((100%-44px)/2))] after:inset-x-[min(0px,calc((100%-24px)/2))]"
+										className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-fast hover:bg-primary-control/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-y-[min(0px,calc((100%-44px)/2))] after:inset-x-[min(0px,calc((100%-24px)/2))]"
 										aria-label={`${option.label} 제거`}
 									>
 										<X className="h-2.5 w-2.5" aria-hidden />
@@ -197,7 +198,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 			</SelectPrimitive.Trigger>
 
 			<SelectPrimitive.Portal>
-				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={4} className="z-50">
+				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={4} className="z-(--z-overlay)">
 					<SelectPrimitive.Popup
 						id={listboxId}
 						className="pop-in max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-hidden rounded-menu border-0 bg-popover text-popover-foreground shadow-2xl data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
@@ -216,7 +217,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 						)}
 						<SelectPrimitive.List className="max-h-60 overflow-y-auto p-1">
 							{grouped.length === 0 && (
-								<div className="px-3 py-2 text-sm text-muted-foreground">검색 결과가 없어요.</div>
+								<EmptyState size="sm" title="검색 결과가 없어요." className="py-6" />
 							)}
 							{grouped.map(([groupName, items]) => (
 								<SelectPrimitive.Group key={groupName}>

@@ -2,8 +2,8 @@
 
 import { AlertTriangle } from "lucide-react";
 
+import { EmptyState } from "@/components/primitives/empty-state";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 interface ErrorPanelProps {
   title?: string;
@@ -18,21 +18,21 @@ export function ErrorPanel({
   onRetry,
   className = ""
 }: ErrorPanelProps) {
-  // EmptyState와 같은 형태 언어: rounded 컨테이너 + rounded-control 아이콘 칩 + sm 타이포 + secondary 재시도
+  // EmptyState tone="destructive" 위임 — 형태 언어를 EmptyState와 공유하되 max-w-xl 중앙 배치만 유지(P1)
   return (
-    <Card padding="none" className={`flex flex-col items-center justify-center gap-3 p-12 text-center max-w-xl mx-auto ${className}`}>
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-control bg-destructive/10 text-destructive">
-        <AlertTriangle className="h-5 w-5" aria-hidden />
-      </span>
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
-      {onRetry && (
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+    <EmptyState
+      icon={AlertTriangle}
+      tone="destructive"
+      title={title}
+      description={message}
+      action={
+        onRetry ? (
           <Button variant="secondary" onClick={onRetry}>
             다시 시도하기
           </Button>
-        </div>
-      )}
-    </Card>
+        ) : undefined
+      }
+      className={`max-w-xl mx-auto p-12 ${className}`}
+    />
   );
 }

@@ -6,6 +6,7 @@ import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { MockThumbnail } from "@/components/primitives/mock-thumbnail";
 import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
@@ -167,9 +168,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 <span className="text-xs text-muted-foreground">(최근 기록 기준)</span>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                아직 게임 기록이 없어요. 디스코드에서 가위바위보로 시작해 보세요.
-              </p>
+              <EmptyState
+                size="sm"
+                title="아직 게임 기록이 없어요."
+                description="디스코드에서 가위바위보로 시작해 보세요."
+              />
             )}
           </CardContent>
           </Card>
@@ -260,9 +263,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                 ))}
               </RevealGroup>
             ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                아직 신청 기록이 없어요. 디스코드에서 음악을 신청해보세요!
-              </p>
+              <EmptyState
+                size="sm"
+                title="아직 신청 기록이 없어요."
+                description="디스코드에서 음악을 신청해 보세요."
+              />
             )}
           </CardContent>
         </Card>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { AnimatePresence, m } from "framer-motion";
 
+import { motionBase } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
 const settingRow = "flex min-w-0 items-center justify-between gap-3 rounded-control bg-surface-1 px-3 py-2";
@@ -72,7 +73,7 @@ function SettingToggleRow({ name, from, to, index }: { name: string; from: strin
 					className="absolute inset-0 text-right text-muted-foreground"
 					initial={{ y: 0, opacity: 1 }}
 					animate={{ y: -12, opacity: 0 }}
-					transition={{ delay: 0.4 + index * 0.3, duration: 0.35, ease: "easeOut" }}
+					transition={{ delay: 0.4 + index * 0.3, duration: motionBase, ease: "easeOut" }}
 				>
 					{from}
 				</m.span>
@@ -148,7 +149,7 @@ export function DashboardPreview() {
 							initial={{ opacity: 0, y: 12 }}
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: -12 }}
-							transition={{ duration: 0.25, ease: "easeOut" }}
+							transition={{ duration: motionBase, ease: "easeOut" }}
 						>
 							<SettingScroller slide={dashboardSettingSlides[activeSlide]} />
 						</m.div>

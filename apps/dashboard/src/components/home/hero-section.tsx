@@ -6,6 +6,7 @@ import { AnimatePresence, m, useInView, useMotionValueEvent, useReducedMotion, u
 import { ArrowRight, ChevronDown, LayoutDashboard } from "lucide-react";
 
 import { DiscordCommandAnimation, slideConfigs } from "@/components/home/discord-command-animation";
+import { motionBase, motionSlow } from "@/components/motion/durations";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { buttonVariants } from "@/components/ui/button";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -153,7 +154,7 @@ export function HeroSection() {
 
 	return (
 		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
-			<div className="relative mx-auto grid min-h-[calc(100svh-var(--navbar-h))] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-8 sm:px-6 sm:pb-16 sm:pt-16 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-20">
+			<div className="relative mx-auto grid min-h-[calc(100svh-var(--navbar-h))] w-full max-w-7xl content-center gap-10 px-4 pb-14 pt-4 sm:px-6 sm:pb-16 sm:pt-8 lg:grid-cols-[minmax(0,0.9fr)_auto] lg:items-center lg:gap-14 lg:px-8 lg:pb-20 lg:pt-10">
 				<m.div
 					className="flex min-w-0 flex-col items-center gap-7 text-center lg:items-start lg:text-left"
 					variants={containerVariants}
@@ -205,11 +206,11 @@ export function HeroSection() {
 					</m.p>
 
 					<m.div variants={itemVariants} className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:justify-start">
-						<Link href="/invite" className={cn(buttonVariants({ variant: "cta", size: "lg" }), "group h-11 w-full text-base sm:w-auto")}>
+						<Link href="/invite" className={cn(buttonVariants({ variant: "cta", size: "xl" }), "group w-full text-base sm:w-auto")}>
 							지금 초대하기
 							<ArrowRight size={17} aria-hidden className="transition-transform duration-fast group-hover:translate-x-0.5" />
 						</Link>
-						<Link href="/servers" className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "h-11 w-full text-base sm:w-auto")}>
+						<Link href="/servers" className={cn(buttonVariants({ variant: "secondary", size: "xl" }), "w-full text-base sm:w-auto")}>
 							<LayoutDashboard size={17} aria-hidden />
 							대시보드 시작하기
 						</Link>
@@ -236,13 +237,13 @@ export function HeroSection() {
 				</m.div>
 
 				{/* 우측 목업 컬럼 — self-stretch으로 그리드 행 높이를 가득 채우고, xl 이상에서 폭도 넓혀 대형 헤드라인과 균형을 맞춰요 */}
-				<div className="flex min-w-0 flex-col gap-3 lg:w-[500px] lg:self-stretch lg:justify-self-end xl:w-[560px]">
+				<div className="flex min-w-0 flex-col gap-4 lg:w-[500px] lg:self-stretch lg:justify-self-end xl:w-[560px]">
 					<m.div
 						className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
 						initial={{ opacity: 0, y: 12 }}
 						whileInView={{ opacity: 1, y: 0 }}
 						viewport={REVEAL_VIEWPORT}
-						transition={{ delay: 0.35, duration: 0.4, ease: "easeOut" }}
+						transition={{ delay: 0.35, duration: motionBase, ease: "easeOut" }}
 					>
 						<SectionLabel as="p" className="px-0">
 							Discord에서 이렇게 동작해요
@@ -288,7 +289,7 @@ export function HeroSection() {
 						initial={{ opacity: 0, y: 20 }}
 						whileInView={{ opacity: 1, y: 0 }}
 						viewport={REVEAL_VIEWPORT}
-						transition={{ delay: 0.45, duration: 0.5, ease: "easeOut" }}
+						transition={{ delay: 0.45, duration: motionSlow, ease: "easeOut" }}
 					>
 						<div className="h-full min-w-0">
 							<DiscordCommandAnimation activeSlide={activeSlide} />
@@ -315,7 +316,7 @@ export function HeroSection() {
 					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
-					transition={{ delay: 1.2, duration: 0.6 }}
+					transition={{ delay: 1.2, duration: motionSlow }}
 				>
 					{/* 스크롤 유도 셰브론 — 히어로 안내 모티프(R-19). 무한 루프지만 reduced-motion에선 정지. */}
 					<m.span

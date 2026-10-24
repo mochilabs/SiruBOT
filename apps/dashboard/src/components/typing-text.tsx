@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { m, useReducedMotion } from "framer-motion";
 
+import { motionSlow } from "@/components/motion/durations";
 import { decomposeHangul } from "@/lib/hangul";
 
 /**
@@ -79,7 +80,7 @@ export function TypingText({
 			{/* 타이핑 커서 깜빡임 — 타이핑 데모의 핵심 모티프(R-19). reduced-motion에선 정지한 커서. */}
 			<m.span
 				animate={shouldReduce ? undefined : { opacity: [1, 0] }}
-				transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+				transition={{ duration: motionSlow, repeat: Infinity, ease: "linear" }}
 				className="-ml-px inline-block h-[0.9em] w-0.5 bg-primary-control align-baseline"
 				aria-hidden
 			/>

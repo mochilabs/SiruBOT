@@ -9,6 +9,7 @@ import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
 import { LogOut, Moon, Search, Sun, User } from "lucide-react";
 
+import { motionFast } from "@/components/motion/durations";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/use-ui-store";
@@ -96,7 +97,7 @@ export function Navbar() {
     {/* fixed 대신 루트 flex 컬럼의 sticky로 흐름 공간을 차지해요 — 페이지별 클리어런스 패딩이 필요 없어요.
         루트의 overflow-x-clip은 스크롤 컨테이너를 만들지 않으므로 sticky가 깨지지 않아요 */}
     <div
-      className={`sticky top-0 z-50 flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
+      className={`sticky top-0 z-(--z-overlay) flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
           ? "bg-background/70 backdrop-blur-xl border-border-subtle shadow-sm"
           : "bg-transparent"
         }`}
@@ -110,6 +111,7 @@ export function Navbar() {
                 src="/images/profile.png"
                 alt="시루봇"
                 fill
+                sizes="32px"
                 className="object-cover"
               />
             </div>
@@ -138,7 +140,7 @@ export function Navbar() {
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link, status)}
-                  className={`relative px-3.5 py-2 rounded-menu text-sm font-medium transition-colors duration-fast ${pathname === link.href
+                  className={`relative px-3.5 py-2 rounded-menu text-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${pathname === link.href
                       ? "text-primary-text"
                       : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
                     }`}
@@ -223,8 +225,8 @@ export function Navbar() {
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu bg-popover py-1 shadow-2xl z-50"
+                          transition={{ duration: motionFast }}
+                          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu bg-popover py-1 shadow-2xl z-(--z-overlay)"
                         >
                           <Link
                             href="/profile"

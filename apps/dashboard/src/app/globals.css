@@ -158,7 +158,6 @@
 	--color-discord-btn-hover: var(--discord-btn-hover);
 	--color-discord-bg: var(--discord-bg);
 	--color-discord-primary: #5865f2;
-	--color-discord-blue: #00a8fc;
 	--color-discord-light: #949cf7;
 	/* Discord 음성 연결 상태 초록 (라이트/다크 공통 고정값) */
 	--color-discord-voice: #23a559;
@@ -247,6 +246,11 @@
    v4에는 --z-* 테마 네임스페이스가 없어 이 변수로는 유틸리티가 만들어지지 않아요 —
    소비부는 z-(--toast-z) 문법으로 참조해요. */
 :root {
+	--z-content: 10;
+	--z-savebar: 30;
+	--z-float: 40;
+	--z-overlay: 50;
+	--z-popover-high: 60;
 	--toast-z: 100;
 }
 
@@ -265,16 +269,15 @@
 /* Status colors */
 /* 상태색은 기존 대비가 통과하는 값 유지 (text-success를 bg-success/10 tint 위에 쓰는
    현재 컴포넌트 규칙과 호환). 팔레트의 파스텔 상태색은 solid 배지 전용 스타일로 별도 전환 필요.
-   상태 *-foreground 4종은 현재 소비자 0 — solid 배지 마이그레이션 때 쓰도록 삭제를 보류한다. */
+   상태 *-foreground은 Badge의 warning/destructive solid 톤만 소비한다 — success/info-foreground는
+   소비처 0이라 제거했고, 신규 소비가 필요하면 tint 배지 체계(bg-{tone}/10 + text-{tone})를 쓴다. */
 :root {
 	--destructive: #d4183d;
 	--destructive-foreground: #ffffff;
 	--success: #0f7a52;
-	--success-foreground: #ffffff;
 	--warning: #9a6100;
 	--warning-foreground: #ffffff;
 	--info: #0b6bb0;
-	--info-foreground: #ffffff;
 }
 
 .dark {
@@ -282,22 +285,18 @@
 	--destructive: #ff7b8a;
 	--destructive-foreground: #2b1018;
 	--success: #34d399;
-	--success-foreground: #052e16;
 	--warning: #fbbf24;
 	--warning-foreground: #451a03;
 	--info: #38bdf8;
-	--info-foreground: #082f49;
 }
 
 @theme inline {
 	--color-destructive: var(--destructive);
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-success: var(--success);
-	--color-success-foreground: var(--success-foreground);
 	--color-warning: var(--warning);
 	--color-warning-foreground: var(--warning-foreground);
 	--color-info: var(--info);
-	--color-info-foreground: var(--info-foreground);
 }
 
 /* 랭킹 메달(금·은·동 왕관) — 장식 아이콘이라 비텍스트 3:1만 맞춘다.

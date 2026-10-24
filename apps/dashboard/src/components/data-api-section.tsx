@@ -85,7 +85,7 @@ export function DataApiSection() {
 
                 <div className="grid gap-3 sm:grid-cols-3">
                     {metrics.map(({ label, value, detail, icon: Icon }) => (
-                        <div key={label} className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 p-3">
+                        <div key={label} className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2 p-4">
                             <Icon size={17} className="shrink-0 text-muted-foreground" aria-hidden />
                             <div className="min-w-0">
                                 <p className="text-xs text-muted-foreground">{label}</p>

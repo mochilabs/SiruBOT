@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import { Bot, Brain, CloudSun, Music2 } from "lucide-react";
 
+import { motionBase, motionFast } from "@/components/motion/durations";
 import { StreamingTypeText } from "@/components/streaming-type-text";
 import { TypingText } from "@/components/typing-text";
 import { cn } from "@/lib/utils";
@@ -135,7 +136,7 @@ function ChatPreview() {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						transition={{ duration: 0.25, ease: "easeOut" }}
+						transition={{ duration: motionBase, ease: "easeOut" }}
 						className="absolute inset-x-0 top-2 space-y-3"
 					>
 						{/* 1단계 — 사용자: 멘션 + 프롬프트 타이핑 */}
@@ -162,7 +163,7 @@ function ChatPreview() {
 							<m.div
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
-								transition={{ duration: 0.3, ease: "easeOut" }}
+								transition={{ duration: motionBase, ease: "easeOut" }}
 								className="flex gap-2.5"
 							>
 								<div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
@@ -181,7 +182,7 @@ function ChatPreview() {
 												initial={{ opacity: 0 }}
 												animate={{ opacity: 1 }}
 												exit={{ opacity: 0 }}
-												transition={{ duration: 0.2 }}
+												transition={{ duration: motionFast }}
 												className="flex items-center gap-1.5 text-2xs font-medium text-discord-text-muted"
 											>
 												시루가 생각 중
@@ -202,7 +203,7 @@ function ChatPreview() {
 												key="reply"
 												initial={{ opacity: 0 }}
 												animate={{ opacity: 1 }}
-												transition={{ duration: 0.2 }}
+												transition={{ duration: motionFast }}
 											>
 												<p className="mb-1 text-2xs font-medium text-discord-text-muted">
 													{current.status} (완료)
