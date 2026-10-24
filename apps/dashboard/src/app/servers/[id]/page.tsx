@@ -64,7 +64,7 @@ export default async function ServerDashboardPage({
   return (
     <Container>
       <PageHeader
-        className="!mb-2 !pb-2"
+        className="mb-4 pb-2"
         title={
           <ServerSwitcher
             guildId={id}

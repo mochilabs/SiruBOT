@@ -140,7 +140,7 @@ export function MixerPreview() {
 				</div>
 			</div>
 
-			<p className="px-1 text-2xs text-muted-foreground">채널에서도 /믹서 · /music 필터 명령으로 같은 설정을 해요.</p>
+			<p className="px-1 text-2xs text-muted-foreground">채널에서도 /믹서 · /음악 필터 명령으로 같은 설정을 해요.</p>
 		</div>
 	);
 }

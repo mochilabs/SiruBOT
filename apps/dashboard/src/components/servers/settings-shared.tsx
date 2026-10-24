@@ -90,7 +90,7 @@ export function PanelLoading({ label }: { label: string }) {
     <Card padding="lg" role="status" aria-label={label}>
       <div className="space-y-6">
         <div className="flex items-start gap-3">
-          <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+          <Skeleton className="h-10 w-10 shrink-0 rounded-control" />
           <div className="min-w-0 space-y-1.5">
             <Skeleton.Line width="9rem" height="h-5" />
             <Skeleton.Line width="16rem" height="h-4" />
