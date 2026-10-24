@@ -212,6 +212,7 @@ export const TrackItem = memo(function TrackItem({
 						aria-hidden
 						fill
 						sizes="64px"
+						unoptimized
 						className="object-cover"
 						onError={() => setImgError(true)}
 					/>
@@ -222,7 +223,18 @@ export const TrackItem = memo(function TrackItem({
 
 			<div className="min-w-0 flex-1">
 				<h3 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={track.title}>
-					{track.title}
+					{/^https?:\/\//i.test(track.url ?? "") ? (
+						<a
+							href={track.url!}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+						>
+							{track.title}
+						</a>
+					) : (
+						track.title
+					)}
 				</h3>
 				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={track.artist}>
 					{track.artist}
@@ -247,17 +259,21 @@ export const TrackItem = memo(function TrackItem({
 });
 
 export function Track({ track }: { track: TrackType }) {
+	const [imgError, setImgError] = useState(false);
+
 	return (
 		<div className="bg-surface-1 rounded-card flex items-center gap-3 p-3 transition-colors duration-fast">
 			<div className="relative h-14 w-14 overflow-hidden rounded-card">
-				{track.thumbnail ? (
+				{track.thumbnail && !imgError ? (
 					<Image
 						src={track.thumbnail}
 						alt=""
 						aria-hidden
 						fill
 						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+						unoptimized
 						className="object-cover"
+						onError={() => setImgError(true)}
 					/>
 				) : (
 					<MockThumbnail className="h-full w-full" />
@@ -265,7 +281,18 @@ export function Track({ track }: { track: TrackType }) {
 			</div>
 			<div className="min-w-0 flex-1">
 				<h3 className="truncate text-base font-semibold text-foreground" title={track.title}>
-					{track.title}
+					{/^https?:\/\//i.test(track.url ?? "") ? (
+						<a
+							href={track.url!}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+						>
+							{track.title}
+						</a>
+					) : (
+						track.title
+					)}
 				</h3>
 				<p className="truncate text-sm font-normal text-muted-foreground" title={track.artist}>
 					{track.artist}

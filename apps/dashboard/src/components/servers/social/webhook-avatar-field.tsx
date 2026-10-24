@@ -95,26 +95,26 @@ export function WebhookAvatarField({
 	const caption = previewUrl
 		? uploading
 			? "이미지를 업로드하는 중이에요."
-			: "새 프로필 사진 미리보기에요. 저장하면 웹훅 프로필 사진으로 보내요."
+			: "새 프로필 사진 미리보기에요."
 		: value
-			? "커스텀 프로필 사진으로 보낼 거예요."
+			? "커스텀 프로필 사진으로 보내요."
 			: fallbackGuildAvatarUrl
 				? "이 서버 봇 프로필 사진을 그대로 써요."
-				: "기본 프로필 사진으로 보내요. 이 서버에만 다른 사진을 넣을 수 있어요.";
+				: "기본 프로필 사진으로 보내요.";
 	const canClear = Boolean(value) || Boolean(file);
 
 	return (
 		<Field label="프로필 사진" description={caption}>
-			<div className="flex items-center gap-3">
-				<span className="relative inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-full bg-surface-2">
+			<div className="flex flex-wrap items-center gap-3">
+				<span className="relative inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-full bg-surface-2 ring-2 ring-border-subtle">
 					{preview ? (
 						// eslint-disable-next-line @next/next/no-img-element
 						<img src={preview} alt="웹훅 프로필 사진 미리보기" className="h-full w-full object-cover" />
 					) : (
-						<UserRoundCog className="m-auto h-6 w-6 text-muted-foreground" aria-hidden />
+						<UserRoundCog className="m-auto h-5 w-5 text-muted-foreground" aria-hidden />
 					)}
 				</span>
-				<div className="flex flex-col items-start gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					<input
 						ref={inputRef}
 						type="file"
@@ -132,7 +132,7 @@ export function WebhookAvatarField({
 						onClick={() => inputRef.current?.click()}
 						disabled={disabled || uploading}
 					>
-						{uploading ? "업로드 중…" : "이미지 선택"}
+						{uploading ? "업로드 중…" : "이미지 변경"}
 					</Button>
 					{canClear && (
 						<Button
@@ -142,7 +142,7 @@ export function WebhookAvatarField({
 							onClick={handleReset}
 							disabled={disabled || uploading}
 						>
-							기본 아바타 사용
+							기본값
 						</Button>
 					)}
 				</div>

@@ -5,16 +5,14 @@ import { SOCIAL_PLATFORM_LABELS } from "@sirubot/utils/social";
 import { Bell, Pause, PencilLine, Play, Plus, Trash2 } from "lucide-react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
-import { Field } from "@/components/primitives/field";
 import { InfoBox, PanelError, PanelHeader, PanelLoading, WarningBox } from "@/components/servers/settings-shared";
 import { AddSubscriptionForm } from "@/components/servers/social/add-subscription-form";
 import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "@/components/servers/social/template-editor";
-import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
+import { WebhookProfileSection } from "@/components/servers/social/webhook-profile-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { useConfirmDelete } from "@/hooks/use-confirm-delete";
@@ -68,6 +66,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 	const { armedId: confirmingId, request: requestDelete } = useConfirmDelete();
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const channelName = (id: string) => channels?.find((channel) => channel.id === id)?.name ?? null;
+	const editingSub = subscriptions?.find((subscription) => subscription.id === editingId) ?? null;
 
 	const toggleStatus = async (subscription: SocialSubscription) => {
 		const next: SocialSubscriptionStatus = subscription.status === "disabled" ? "active" : "disabled";
@@ -145,22 +144,51 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 			{subscriptions && subscriptions.length > 0 && (
 				<ul className="space-y-2">
 					{subscriptions.map((subscription) => {
-						const editing = editingId === subscription.id;
 						const confirming = confirmingId === subscription.id;
 						const busy = busyId === subscription.id;
 						const target = channelName(subscription.targetChannelId);
+						const effectiveAvatar = subscription.webhookAvatarUrl ?? botProfile?.guildAvatarUrl ?? botProfile?.globalAvatarUrl;
+						const metaParts: string[] = [];
+						if (subscription.webhookName) metaParts.push(`프로필: ${subscription.webhookName}`);
+						if (subscription.webhookAvatarUrl) metaParts.push("커스텀 프로필 사진");
+						if (!subscription.showThumbnail) metaParts.push("섬네일 끔");
+						if (subscription.messageTemplate) metaParts.push(subscription.messageTemplate);
 
 						return (
-							<li key={subscription.id} className="flex flex-col gap-3 rounded-menu bg-surface-2 px-4 py-3">
-								<div className="flex flex-wrap items-center gap-2">
-									<Badge variant={PLATFORM_BADGE[subscription.platform]}>{SOCIAL_PLATFORM_LABELS[subscription.platform]}</Badge>
-									<Badge variant={STATUS_BADGE[subscription.status]} dot>
-										{STATUS_LABEL[subscription.status]}
-									</Badge>
-									<span className="min-w-0 truncate text-sm font-medium text-foreground">{subscription.sourceName}</span>
-									<span className="min-w-0 truncate text-sm text-muted-foreground">→ #{target ?? "알 수 없는 채널"}</span>
-									<span className="text-xs text-muted-foreground">{new Date(subscription.createdAt).toLocaleDateString("ko-KR")}</span>
-									<div className="ml-auto flex items-center gap-1">
+							<li key={subscription.id} className="flex flex-col gap-2 rounded-card bg-surface-2 px-4 py-3">
+								<div className="flex items-center gap-3">
+									<span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-surface-2 ring-2 ring-border-subtle">
+										{effectiveAvatar ? (
+											// eslint-disable-next-line @next/next/no-img-element
+											<img
+												src={effectiveAvatar}
+												alt={`${subscription.sourceName} 웹훅 프로필 사진`}
+												className="h-full w-full object-cover"
+											/>
+										) : (
+											<Bell className="m-auto h-5 w-5 text-muted-foreground" aria-hidden />
+										)}
+									</span>
+
+									<div className="min-w-0 flex-1">
+										<div className="flex flex-wrap items-center gap-2">
+											<Badge variant={PLATFORM_BADGE[subscription.platform]} size="sm">
+												{SOCIAL_PLATFORM_LABELS[subscription.platform]}
+											</Badge>
+											<span className="min-w-0 truncate text-sm font-bold text-foreground">{subscription.sourceName}</span>
+											<span className="min-w-0 truncate text-xs font-medium text-muted-foreground">
+												→ #{target ?? "알 수 없는 채널"}
+											</span>
+											<Badge variant={STATUS_BADGE[subscription.status]} size="sm" dot>
+												{STATUS_LABEL[subscription.status]}
+											</Badge>
+										</div>
+										<p className="truncate text-xs text-muted-foreground">
+											{metaParts.length > 0 ? metaParts.join(" · ") : "기본 프로필"}
+										</p>
+									</div>
+
+									<div className="flex shrink-0 items-center gap-1">
 										<Button
 											variant="icon"
 											size="sm"
@@ -173,9 +201,9 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 										<Button
 											variant="icon"
 											size="sm"
-											aria-label={`${subscription.sourceName} 알림 설정 ${editing ? "편집 닫기" : "편집하기"}`}
+											aria-label={`${subscription.sourceName} 알림 설정 편집하기`}
 											disabled={busy}
-											onClick={() => (editing ? setEditingId(null) : startEdit(subscription))}
+											onClick={() => startEdit(subscription)}
 										>
 											<PencilLine size={14} />
 										</Button>
@@ -199,77 +227,45 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 										삭제하고 다시 추가해 주세요.
 									</WarningBox>
 								)}
-
-								{!editing && subscription.messageTemplate && (
-									<div className="rounded-control bg-surface-1 px-3 py-2 text-sm break-all whitespace-pre-wrap text-foreground">
-										{subscription.messageTemplate}
-									</div>
-								)}
-
-								{!editing && (subscription.webhookName || subscription.webhookAvatarUrl || !subscription.showThumbnail) && (
-									<p className="text-xs text-muted-foreground">
-										웹훅 표시: {subscription.webhookName ?? "기본"}
-										{subscription.webhookAvatarUrl ? " · 커스텀 프로필 사진" : ""}
-										{!subscription.showThumbnail ? " · 섬네일 이미지 없음" : ""}
-									</p>
-								)}
-
-								{editing && (
-									<div className="flex flex-col gap-3 border-t border-border-subtle pt-3">
-										<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(subscription)} />
-										<Field
-											label="웹훅 표시명"
-											htmlFor={`webhook-name-${subscription.id}`}
-											description={`${nameDraft.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).`}
-										>
-											<Input
-												id={`webhook-name-${subscription.id}`}
-												value={nameDraft}
-												onChange={(event) => setNameDraft(event.target.value)}
-												placeholder="웹훅 표시명"
-												maxLength={80}
-												disabled={busy}
-											/>
-										</Field>
-										<WebhookAvatarField
-											guildId={guildId}
-											value={avatarDraft}
-											onChange={setAvatarDraft}
-											fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
-											fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
-											disabled={busy}
-										/>
-										<div className="flex flex-col gap-1.5">
-											<Switch
-												checked={showThumbDraft}
-												onChange={setShowThumbDraft}
-												label="방송 시작 섬네일 이미지 표시"
-												labelPosition="right"
-											/>
-											<p className="text-xs text-muted-foreground">
-												라이브 미리보기 이미지를 임베드에 넣어요. 트위치는 이미지가 없어 자동으로 생략돼요.
-											</p>
-										</div>
-										<div className="flex justify-end gap-2">
-											<Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
-												취소
-											</Button>
-											<Button
-												size="sm"
-												variant="primary"
-												loading={busy}
-												onClick={() => void saveSettings(subscription)}
-											>
-												저장
-											</Button>
-										</div>
-									</div>
-								)}
 							</li>
 						);
 					})}
 				</ul>
 			)}
+
+			<Dialog open={editingSub !== null} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+				<DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
+					{editingSub && (
+						<>
+							<DialogHeader>
+								<DialogTitle>{editingSub.sourceName} 알림 설정</DialogTitle>
+							</DialogHeader>
+							<WebhookProfileSection
+								guildId={guildId}
+								name={nameDraft}
+								onNameChange={setNameDraft}
+								avatarValue={avatarDraft}
+								onAvatarChange={setAvatarDraft}
+								showThumbnail={showThumbDraft}
+								onShowThumbnailChange={setShowThumbDraft}
+								fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
+								fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
+								disabled={busyId === editingSub.id}
+								surface="surface-2"
+							/>
+							<TemplateEditor guildId={guildId} value={draft} onChange={setDraft} sample={sampleFor(editingSub)} />
+							<DialogFooter>
+								<Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>
+									취소
+								</Button>
+								<Button variant="primary" size="sm" loading={busyId === editingSub.id} onClick={() => void saveSettings(editingSub)}>
+									저장
+								</Button>
+							</DialogFooter>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
 
 			<InfoBox>
 				<p>

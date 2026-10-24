@@ -98,7 +98,18 @@ function SearchResultRow({
 				</div>
 			)}
 			<div className="min-w-0 flex-1">
-				<p className="line-clamp-1 text-sm font-semibold text-foreground">{track.title}</p>
+				{isPlayableUrl(track.uri) ? (
+					<a
+						href={track.uri}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+					>
+						{track.title}
+					</a>
+				) : (
+					<p className="line-clamp-1 text-sm font-semibold text-foreground">{track.title}</p>
+				)}
 				<p className="truncate text-xs text-muted-foreground">
 					{track.author}
 					{track.sourceName ? ` · ${prettySourceName(track.sourceName)}` : ""}

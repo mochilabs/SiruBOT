@@ -12,6 +12,7 @@ export const queuedTrackSummarySchema = z.object({
 	author: z.string(),
 	durationMs: z.number(),
 	artworkUrl: z.string().nullable(),
+	uri: z.string().nullable().optional(),
 	isStream: z.boolean(),
 	requesterName: z.string().nullable()
 });
@@ -25,6 +26,7 @@ export const playerStateSchema = z.object({
 	trackTitle: z.string().nullable(),
 	trackAuthor: z.string().nullable(),
 	artworkUrl: z.string().nullable(),
+	trackUri: z.string().nullable().optional(),
 	isStream: z.boolean(),
 	// 배열 상한 — 비정상적으로 큰 큐가 한 메시지에 실리지 않게 해요 (표시 데이터라도 DoS 방지)
 	queue: z.array(queuedTrackSummarySchema).max(1000),

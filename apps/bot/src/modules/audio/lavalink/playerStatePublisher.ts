@@ -33,6 +33,7 @@ function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: 
 		author: track.info.author?.slice(0, 120) ?? '알 수 없는 아티스트',
 		durationMs: track.info.duration ?? 0,
 		artworkUrl: track.info.artworkUrl ?? null,
+		uri: track.info.uri ?? null,
 		isStream: track.info.isStream ?? false,
 		requesterName
 	};
@@ -54,6 +55,7 @@ export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayloa
 		trackTitle: current?.info.title?.slice(0, 200) ?? null,
 		trackAuthor: current?.info.author?.slice(0, 120) ?? null,
 		artworkUrl: current?.info.artworkUrl ?? null,
+		trackUri: current?.info.uri ?? null,
 		isStream: current?.info.isStream ?? false,
 		queue: queued.slice(0, 5).map((track) => {
 			return summarizeTrack(track as CustomPlayer['queue']['current'], resolveRequesterName(player, requesterIdOf(track as Track)))!;

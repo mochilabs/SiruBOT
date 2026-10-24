@@ -1,16 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
+import { ChevronDown, Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { Field } from "@/components/primitives/field";
-import { WebhookAvatarField } from "@/components/servers/social/webhook-avatar-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
@@ -20,6 +18,7 @@ import type { ChzzkChannelSummary, SocialPlatform } from "@/types/social";
 import { type ModeCardOption,ModePicker } from "../settings-shared";
 
 import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "./template-editor";
+import { WebhookProfileSection, webhookProfileSummary } from "./webhook-profile-section";
 
 const PLATFORMS: readonly ModeCardOption<SocialPlatform>[] = [
 	{ value: "chzzk", label: "치지직", icon: <Radio size={16} /> },
@@ -57,6 +56,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 	const [webhookName, setWebhookName] = useState("");
 	const [webhookAvatarUrl, setWebhookAvatarUrl] = useState<string | null>(null);
 	const [showThumbnail, setShowThumbnail] = useState(true);
+	const [profileOpen, setProfileOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
 
 	const [keyword, setKeyword] = useState("");
@@ -312,38 +312,42 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				/>
 			</Field>
 
-			<Field
-				label="웹훅 표시명 (선택)"
-				description={`${webhookName.length}/80 · 비우면 기본 이름으로 보내요. discord·clyde는 쓸 수 없어요 (Discord 규칙).`}
+			<button
+				type="button"
+				aria-expanded={profileOpen}
+				onClick={() => setProfileOpen((value) => !value)}
+				className="flex w-full items-center justify-between gap-2 rounded-control px-3 py-2.5 text-left transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				{({ id, describedBy }) => (
-					<Input
-						id={id}
-						aria-describedby={describedBy}
-						value={webhookName}
-						onChange={(event) => setWebhookName(event.target.value)}
-						placeholder={`기본: 시루 소셜 알림 (${resolved?.name ?? "채널 이름"})`}
-						maxLength={80}
-						disabled={saving}
-					/>
-				)}
-			</Field>
+				<span className="flex min-w-0 items-center gap-2">
+					<span className="shrink-0 text-sm font-semibold text-foreground">웹훅 프로필 · 표시 설정</span>
+					{!profileOpen && (
+						<span className="truncate text-xs text-muted-foreground">
+							{webhookProfileSummary(webhookName, webhookAvatarUrl, showThumbnail)}
+						</span>
+					)}
+				</span>
+				<ChevronDown
+					size={16}
+					className={`shrink-0 text-muted-foreground transition-transform duration-base ${profileOpen ? "rotate-180" : ""}`}
+					aria-hidden
+				/>
+			</button>
 
-			<WebhookAvatarField
-				guildId={guildId}
-				value={webhookAvatarUrl}
-				onChange={setWebhookAvatarUrl}
-				fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
-				fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
-				disabled={saving}
-			/>
-
-			<div className="flex flex-col gap-1.5">
-				<Switch checked={showThumbnail} onChange={setShowThumbnail} label="방송 시작 섬네일 이미지 표시" labelPosition="right" />
-				<p className="text-xs text-muted-foreground">
-					방송 시작 알림에 라이브 미리보기 이미지를 넣어요. 트위치 알림에는 원래 이미지가 없어 자동으로 생략돼요.
-				</p>
-			</div>
+			{profileOpen && (
+				<WebhookProfileSection
+					guildId={guildId}
+					name={webhookName}
+					onNameChange={setWebhookName}
+					namePlaceholder={`기본: 시루 소셜 알림 (${resolved?.name ?? "채널 이름"})`}
+					avatarValue={webhookAvatarUrl}
+					onAvatarChange={setWebhookAvatarUrl}
+					showThumbnail={showThumbnail}
+					onShowThumbnailChange={setShowThumbnail}
+					fallbackGuildAvatarUrl={botProfile?.guildAvatarUrl ?? null}
+					fallbackGlobalAvatarUrl={botProfile?.globalAvatarUrl ?? null}
+					disabled={saving}
+				/>
+			)}
 
 			<TemplateEditor guildId={guildId} value={template} onChange={setTemplate} sample={resolved?.sample ?? {
 				platform,
