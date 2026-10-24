@@ -12,6 +12,7 @@
  */
 import {
 	type BoothOgMeta,
+	type EmbedFixActiveTranslateLang,
 	type EmbedFixMetadataRequestLink,
 	type EmbedFixResult,
 	type FxTwitterStatus,
@@ -19,8 +20,10 @@ import {
 	fxTwitterApiUrl,
 	parseBoothOg,
 	parseFxTwitterStatus,
-	parseOgMeta
+	parseOgMeta,
+	shouldTranslateEmbedText
 } from '@sirubot/utils';
+import type { TranslationProvider } from './translate.ts';
 
 const FX_FETCH_TIMEOUT_MS = 10_000;
 const INSTAGRAM_FETCH_TIMEOUT_MS = 10_000;
@@ -36,6 +39,77 @@ export const EMBED_FIX_TTL_SECONDS = 30 * 60;
 
 export function embedFixCacheKey(site: string, url: string): string {
 	return `dataapi:v1:embed-fix:${site}:${url}`;
+}
+
+/** 소셜 임베드 번역 캐시 수명 — 같은 게시물 링크는 24시간 동안 재번역하지 않아요 */
+export const EMBED_FIX_TRANSLATE_TTL_SECONDS = 24 * 60 * 60;
+
+export function embedFixTranslateCacheKey(site: string, url: string, lang: EmbedFixActiveTranslateLang): string {
+	return `dataapi:v1:embed-fix:tr:${lang}:${site}:${url}`;
+}
+
+const TARGET_LANG_NAMES: Record<EmbedFixActiveTranslateLang, string> = {
+	ko: '한국어',
+	en: '영어(English)',
+	ja: '일본어(日本語)'
+};
+
+export interface EmbedTranslationFields {
+	title?: string;
+	description?: string;
+}
+
+/** 카드에서 번역이 필요한 텍스트 필드만 추려요 — 인스타그램 title은 작성자 핸들이라 제외해요 */
+export function extractTranslatableEmbedFields(result: EmbedFixResult, targetLang: EmbedFixActiveTranslateLang): EmbedTranslationFields | null {
+	if (result.mode !== 'card') return null;
+	const translateTitle = result.site !== 'instagram' && result.site !== 'x' && shouldTranslateEmbedText(result.title, targetLang);
+	const translateDescription = shouldTranslateEmbedText(result.description, targetLang);
+	if (!translateTitle && !translateDescription) return null;
+	return {
+		...(translateTitle && result.title ? { title: result.title } : {}),
+		...(translateDescription && result.description ? { description: result.description } : {})
+	};
+}
+
+export function parseEmbedTranslationResponse(text: string): EmbedTranslationFields | null {
+	const stripped = text.replace(/```(?:json)?/giu, '').trim();
+	const start = stripped.indexOf('{');
+	const end = stripped.lastIndexOf('}');
+	if (start === -1 || end <= start) return null;
+	try {
+		const parsed = JSON.parse(stripped.slice(start, end + 1)) as { title?: unknown; description?: unknown };
+		const title = typeof parsed.title === 'string' && parsed.title.trim().length > 0 ? parsed.title.trim() : undefined;
+		const description = typeof parsed.description === 'string' && parsed.description.trim().length > 0 ? parsed.description.trim() : undefined;
+		if (!title && !description) return null;
+		return { ...(title ? { title } : {}), ...(description ? { description } : {}) };
+	} catch {
+		return null;
+	}
+}
+
+/** 소셜 임베드 텍스트를 목표 언어로 번역해요 — 이미 목표 언어면 null을 반환해 LLM 호출을 생략해요 */
+export async function translateEmbedFixCard(
+	result: EmbedFixResult,
+	targetLang: EmbedFixActiveTranslateLang,
+	provider: TranslationProvider
+): Promise<EmbedTranslationFields | null> {
+	const fields = extractTranslatableEmbedFields(result, targetLang);
+	if (!fields) return null;
+	const langLabel = TARGET_LANG_NAMES[targetLang];
+	const systemPrompt = [
+		`당신은 소셜 미디어 게시물(X, Instagram, BOOTH, Pixiv, Reddit 등)을 자연스러운 ${langLabel}로 번역하는 전문가예요.`,
+		'입력은 JSON 객체({"title"?: string, "description"?: string})예요.',
+		'규칙:',
+		`- 입력에 포함된 키(title, description)만 ${langLabel}로 자연스럽게 번역해요.`,
+		'- URL, 해시태그(#), 멘션(@), 고유명사, 줄바꿈 구조는 그대로 유지해요.',
+		'- 원문이 이미 목표 언어라면 원문을 그대로 돌려줘요.',
+		'- 출력은 {"title":"...","description":"..."} 형태의 JSON 객체 하나만, 설명이나 마크다운 펜스 없이 반환해요.'
+	].join('\n');
+
+	const raw = await provider.chatCompletion(systemPrompt, JSON.stringify(fields), 'embed-fix translation');
+	const parsed = parseEmbedTranslationResponse(raw);
+	if (!parsed) throw new Error('embed-fix translation returned invalid JSON');
+	return parsed;
 }
 
 /** X 게시물 메타데이터 — 삭제·비공개 트윗은 null (네트워크 실패와 구분돼요) */

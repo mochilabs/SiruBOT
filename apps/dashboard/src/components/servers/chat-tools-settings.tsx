@@ -8,6 +8,7 @@ import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
 import { SectionLabel } from "@/components/primitives/section-label";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
@@ -26,6 +27,12 @@ const SITE_TOGGLES = [
 	{ value: "threads", label: "Threads" },
 ] as const;
 
+const TRANSLATE_LANG_OPTIONS: ReadonlyArray<{ value: GuildSettings["embedFixTranslateLang"]; label: string }> = [
+	{ value: "off", label: "번역 안 함" },
+	{ value: "ko", label: "한국어" },
+	{ value: "en", label: "영어 (English)" },
+	{ value: "ja", label: "일본어 (日本語)" },
+];
 interface ChatToolsForm {
 	emojiEnlargeMode: ChatToolMode;
 	emojiEnlargeChannelIds: string[];
@@ -35,6 +42,7 @@ interface ChatToolsForm {
 	embedFixChannelIds: string[];
 	embedFixSites: GuildSettings["embedFixSites"];
 	embedFixSuppressOriginal: boolean;
+	embedFixTranslateLang: GuildSettings["embedFixTranslateLang"];
 	countingEnabled: boolean;
 	countingChannelId: string | null;
 }
@@ -48,6 +56,7 @@ const toChatToolsForm = (settings: GuildSettings): ChatToolsForm => ({
 	embedFixChannelIds: settings.embedFixChannelIds,
 	embedFixSites: settings.embedFixSites,
 	embedFixSuppressOriginal: settings.embedFixSuppressOriginal,
+	embedFixTranslateLang: settings.embedFixTranslateLang,
 	countingEnabled: settings.countingEnabled,
 	countingChannelId: settings.countingChannelId,
 });
@@ -196,6 +205,35 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 								onChange={(checked: boolean) => patch({ embedFixSuppressOriginal: checked })}
 								disabled={saving}
 							/>
+						</Field>
+						<Field
+							label="임베드 자동 번역"
+							description="외국어 게시글을 선택한 언어로 번역해 함께 보여줘요. 이미 해당 언어인 게시글은 번역하지 않고, 번역 결과는 캐싱돼요."
+						>
+							<div className="max-w-xs">
+								<Select
+									value={form.embedFixTranslateLang}
+									onValueChange={(value) => {
+										if (value) patch({ embedFixTranslateLang: value as GuildSettings["embedFixTranslateLang"] });
+									}}
+									disabled={saving}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue>
+											{(value: string) =>
+												TRANSLATE_LANG_OPTIONS.find((opt) => opt.value === value)?.label ?? "번역 안 함"
+											}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{TRANSLATE_LANG_OPTIONS.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
 						</Field>
 					</>
 				)}

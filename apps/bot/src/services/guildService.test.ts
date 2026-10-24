@@ -8,8 +8,10 @@ vi.mock('@sapphire/framework', () => ({ container: { db: { guild: { upsert } } }
 vi.mock('@sirubot/utils', async () => {
 	const { MemoryCache } = await import('../../../../packages/utils/src/memoryCache.ts');
 	const { normalizeCustomCommandPrefix } = await import('../../../../packages/utils/src/customCommand.ts');
-	const { normalizeChatToolMode, normalizeEmbedFixSites } = await import('../../../../packages/utils/src/chatTools.ts');
-	return { MemoryCache, normalizeCustomCommandPrefix, normalizeChatToolMode, normalizeEmbedFixSites };
+	// vitest vi.mock 팩토리는 호이스팅되므로 동적 import가 필요해요
+	const { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } =
+		await import('../../../../packages/utils/src/chatTools.ts');
+	return { MemoryCache, normalizeCustomCommandPrefix, normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang };
 });
 
 function guild(id = 'guild', volume = 10): Guild {
@@ -270,6 +272,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			embedFixChannelIds: [],
 			embedFixSites: ['x', 'x', 'unknown'],
 			embedFixSuppressOriginal: true,
+			embedFixTranslateLang: 'ko',
 			countingEnabled: true,
 			countingChannelId: 'c'
 		} as Guild);
@@ -280,6 +283,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			embedFix: { mode: 'off', channelIds: [] },
 			embedFixSites: ['x'],
 			embedFixSuppressOriginal: true,
+			embedFixTranslateLang: 'ko',
 			countingEnabled: true,
 			countingChannelId: 'c'
 		});

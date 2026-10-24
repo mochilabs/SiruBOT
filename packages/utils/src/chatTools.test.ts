@@ -18,8 +18,10 @@ import {
 	embedFixMetadataResponseSchema,
 	embedFixResultSchema,
 	fxTwitterApiUrl,
+	normalizeEmbedFixTranslateLang,
 	parseFxTwitterStatus,
 	parseOgMeta,
+	shouldTranslateEmbedText,
 	swapEmbedFixUrl
 } from './chatTools.ts';
 
@@ -532,5 +534,31 @@ describe('임베드 복구 게이트웨이 스키마', () => {
 		});
 		expect(ok.success).toBe(true);
 		expect(embedFixMetadataResponseSchema.safeParse({ results: 'nope' }).success).toBe(false);
+	});
+});
+
+describe('임베드 번역 언어 판정 (shouldTranslateEmbedText)', () => {
+	it('normalizeEmbedFixTranslateLang은 허용 언어만 남기고 나머지는 off로 되돌려요', () => {
+		expect(normalizeEmbedFixTranslateLang('ko')).toBe('ko');
+		expect(normalizeEmbedFixTranslateLang('en')).toBe('en');
+		expect(normalizeEmbedFixTranslateLang('ja')).toBe('ja');
+		expect(normalizeEmbedFixTranslateLang('off')).toBe('off');
+		expect(normalizeEmbedFixTranslateLang('fr')).toBe('off');
+		expect(normalizeEmbedFixTranslateLang(null)).toBe('off');
+	});
+
+	it('이미 한국어인 게시글은 ko 설정에서 번역하지 않아요', () => {
+		expect(shouldTranslateEmbedText('오늘 오후 8시에 방송 시작합니다! 많이 보러 와주세요 https://x.com/test', 'ko')).toBe(false);
+		expect(shouldTranslateEmbedText('오늘 VRChat 신상 아바타 BOOTH에 업로드했어요!', 'ko')).toBe(false);
+	});
+
+	it('일본어·영어 게시글은 ko 설정에서 번역 대상이에요', () => {
+		expect(shouldTranslateEmbedText('【新作】VRChat向けオリジナル3Dモデルを公開しました！', 'ko')).toBe(true);
+		expect(shouldTranslateEmbedText('We just released version 2.0 with custom shader support!', 'ko')).toBe(true);
+	});
+
+	it('링크·멘션·이모지만 있는 게시글이나 off 설정은 번역하지 않아요', () => {
+		expect(shouldTranslateEmbedText('https://x.com/user/status/123 @user 🎨✨ 1234', 'ko')).toBe(false);
+		expect(shouldTranslateEmbedText('Hello world', 'off')).toBe(false);
 	});
 });

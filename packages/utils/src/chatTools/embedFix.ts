@@ -23,6 +23,62 @@ export function normalizeEmbedFixSites(sites: readonly string[] | string[] | nul
 	return normalized;
 }
 
+export const EMBED_FIX_TRANSLATE_LANGS = ['off', 'ko', 'en', 'ja'] as const;
+export type EmbedFixTranslateLang = (typeof EMBED_FIX_TRANSLATE_LANGS)[number];
+export type EmbedFixActiveTranslateLang = Exclude<EmbedFixTranslateLang, 'off'>;
+
+export const embedFixTranslateLangSchema = z.enum(EMBED_FIX_TRANSLATE_LANGS, '지원하는 임베드 번역 언어를 선택해 주세요.');
+
+/** 대시보드·봇 저장값 정규화 — 알 수 없는 값은 'off'(번역 안 함)로 되돌려요 */
+export function normalizeEmbedFixTranslateLang(value: string | null | undefined): EmbedFixTranslateLang {
+	if (typeof value === 'string' && (EMBED_FIX_TRANSLATE_LANGS as readonly string[]).includes(value)) {
+		return value as EmbedFixTranslateLang;
+	}
+	return 'off';
+}
+
+/**
+ * 임베드 텍스트가 목표 언어로 번역이 필요한지 판정해요.
+ * - 링크·멘션·숫자·이모지를 제외한 실제 문자(\p{L})가 2자 미만이면 번역하지 않아요.
+ * - 이미 목표 언어 비중이 충분하면(예: ko 설정인데 한글 비중 40% 이상이고 일본어 가나가 없는 경우) LLM 호출을 건너뛰어요.
+ */
+export function shouldTranslateEmbedText(text: string | null | undefined, targetLang: EmbedFixTranslateLang): boolean {
+	if (!text || targetLang === 'off') return false;
+	const cleaned = text
+		.replace(/https?:\/\/\S+/gu, ' ')
+		.replace(/@[\w.]+/gu, ' ')
+		.replace(/#([^\s#]+)/gu, '$1');
+	const letters = [...cleaned.matchAll(/\p{L}/gu)].map((match) => match[0]);
+	if (letters.length < 2) return false;
+
+	let hangul = 0;
+	let kana = 0;
+	let han = 0;
+	let latin = 0;
+	for (const ch of letters) {
+		if (/[\uAC00-\uD7A3\u3131-\u318E]/u.test(ch)) hangul++;
+		else if (/[\u3040-\u309F\u30A0-\u30FF\u31F0-\u31FF\uFF66-\uFF9F]/u.test(ch)) kana++;
+		else if (/[\u4E00-\u9FFF\u3400-\u4DBF]/u.test(ch)) han++;
+		else if (/[A-Za-z\u00C0-\u024F]/u.test(ch)) latin++;
+	}
+
+	const total = letters.length;
+	if (targetLang === 'ko') {
+		// 이미 한글 비중이 40% 이상이고 일본어 가나가 없으면 한국어 게시글로 보고 번역하지 않아요
+		if (hangul / total >= 0.4 && kana === 0) return false;
+		return true;
+	}
+	if (targetLang === 'ja') {
+		if ((kana + han) / total >= 0.4 && hangul === 0 && (kana > 0 || latin / total < 0.3)) return false;
+		return true;
+	}
+	if (targetLang === 'en') {
+		if (latin / total >= 0.7 && hangul === 0 && kana === 0 && han === 0) return false;
+		return true;
+	}
+	return false;
+}
+
 /**
  * 임베드 복구 프로바이더 도메인 — 외부 서비스가 죽으면 이 상수만 교체하면 돼요.
  * - twitter.com → fxtwitter.com (FxEmbed)
@@ -217,7 +273,8 @@ export const embedFixMetadataRequestSchema = z.object({
 			})
 		)
 		.min(1)
-		.max(EMBED_FIX_METADATA_LINK_MAX)
+		.max(EMBED_FIX_METADATA_LINK_MAX),
+	translateTo: embedFixTranslateLangSchema.optional()
 });
 
 /**
@@ -241,7 +298,10 @@ export const embedFixResultSchema = z.object({
 	createdAt: z.number().optional(),
 	sourceUrl: z.string().optional(),
 	fixedUrl: z.string().optional(),
-	videoUrl: z.string().optional()
+	videoUrl: z.string().optional(),
+	translatedTitle: z.string().optional(),
+	translatedDescription: z.string().optional(),
+	translatedTo: embedFixTranslateLangSchema.optional()
 });
 
 export const embedFixMetadataResponseSchema = z.object({

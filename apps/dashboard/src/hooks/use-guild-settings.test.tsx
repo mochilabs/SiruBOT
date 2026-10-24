@@ -20,7 +20,7 @@ const saved: GuildSettings = {
   gaplessEnabled: false, crossfadeEnabled: false, crossfadeMs: 500,
   emojiEnlargeMode: "off", emojiEnlargeChannelIds: [], quoteMode: "off", quoteChannelIds: [],
   embedFixMode: "off", embedFixChannelIds: [],
-  embedFixSites: ["x", "instagram", "booth"], embedFixSuppressOriginal: false,
+  embedFixSites: ["x", "instagram", "booth"], embedFixSuppressOriginal: false, embedFixTranslateLang: "off",
   countingEnabled: false, countingChannelId: null,
 };
 const editable = (settings: GuildSettings) => ({ volume: settings.volume, sponsorBlockSegments: settings.sponsorBlockSegments });

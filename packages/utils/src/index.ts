@@ -118,6 +118,9 @@ export {
 	COUNTING_STATE_DEFAULT,
 	type CountingState,
 	customEmojiUrl,
+	EMBED_FIX_SITES,
+	EMBED_FIX_TRANSLATE_LANGS,
+	type EmbedFixActiveTranslateLang,
 	type EmbedFixBoothLink,
 	type EmbedFixLink,
 	type EmbedFixMetadataRequest,
@@ -127,6 +130,8 @@ export {
 	type EmbedFixResult,
 	type EmbedFixSite,
 	type EmbedFixSwapLink,
+	type EmbedFixTranslateLang,
+	embedFixTranslateLangSchema,
 	evaluateCounting,
 	findEmbedFixLinks,
 	fxTwitterApiUrl,
@@ -134,6 +139,7 @@ export {
 	type MessageLinkTarget,
 	normalizeChatToolMode,
 	normalizeEmbedFixSites,
+	normalizeEmbedFixTranslateLang,
 	type OgMeta,
 	parseBoothOg,
 	parseCountingMessage,
@@ -141,6 +147,7 @@ export {
 	parseFxTwitterStatus,
 	parseMessageLinks,
 	parseOgMeta,
+	shouldTranslateEmbedText,
 	swapEmbedFixUrl
 } from './chatTools.js';
 export {
