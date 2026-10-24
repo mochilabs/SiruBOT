@@ -42,7 +42,7 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 				: typeof requesterId === 'string' && requesterId
 					? `<@${requesterId}>`
 					: null;
-	let artistText = `-# (${track.info.author})${requesterLabel ? ` ${requesterLabel}` : ''}`;
+	let artistText = `-# ${emoji('artist')} ${track.info.author}${requesterLabel ? ` ${requesterLabel}` : ''}`;
 
 	if (queued) {
 		artistText += ` (${position}개 남음, ${formatTime((totalDuration ?? 0) / 1000)})`;
@@ -81,7 +81,7 @@ export function playStarted({ track, userId }: playStartedViewProps) {
 		withMarkdownURL: true
 	});
 
-	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# (${track.info.author})`;
+	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# ${emoji('artist')} ${track.info.author}`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;

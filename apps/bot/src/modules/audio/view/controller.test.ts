@@ -140,16 +140,22 @@ describe('controllerView 재생 라벨·타이틀', () => {
 		mocks.chapterIndex.mockReturnValue(null);
 	});
 
-	it('재생 라벨은 음성 채널 아이콘과 멘션만 표시한다', () => {
+	it('재생 라벨은 채널 멘션과 "에서 재생 중"만 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('🔊 <#voice-channel>'))).toBe(true);
-		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#voice-channel>에서 재생 중'))).toBe(true);
+		expect(texts.some((text) => text.includes('🔊 <#'))).toBe(false);
 		expect(texts.some((text) => text.includes('<#text-channel>'))).toBe(false);
 	});
 
 	it('보이스 채널을 알 수 없으면 재생 라벨을 붙이지 않는다', () => {
 		const texts = collectTexts(controllerJson({ player: player({ voiceChannelId: undefined }) }));
-		expect(texts.some((text) => text.includes('🔊 <#'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#') && text.includes('에서 재생 중'))).toBe(false);
+	});
+
+	it('아티스트 줄은 이모지와 괄호 없이 아티스트 이름만 표시한다', () => {
+		const texts = collectTexts(controllerJson());
+		expect(texts.some((text) => text.includes('💿 아티스트 <@user-1>'))).toBe(true);
+		expect(texts.some((text) => text.includes('(아티스트)'))).toBe(false);
 	});
 
 	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
@@ -199,14 +205,14 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('╰ 1화 (00:00~03:54)'))).toBe(true);
+		expect(texts.some((text) => text.includes('🎬 1화 (00:00~03:54)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(03:54)'))).toBe(false);
 	});
 
-	it('챕터 구간을 구분점 대신 괄호와 물결표로 표시한다', () => {
+	it('챕터 구간을 이모지와 괄호로 표시한다', () => {
 		mocks.chapter.mockReturnValue({ name: '1화', start: 0, end: 60_000, duration: 60_000 });
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('╰ 1화 (00:00~01:00)'))).toBe(true);
+		expect(texts.some((text) => text.includes('🎬 1화 (00:00~01:00)'))).toBe(true);
 	});
 
 	it('영상 중간부터 시작하는 챕터도 길이 표기 없이 시각 범위만 보여준다', () => {
@@ -214,7 +220,7 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('╰ 2화 (01:00~02:00)'))).toBe(true);
+		expect(texts.some((text) => text.includes('🎬 2화 (01:00~02:00)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(01:00)'))).toBe(false);
 	});
 });

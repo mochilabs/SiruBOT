@@ -65,7 +65,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
-	const playbackLabel = current && player.voiceChannelId ? `-# 🔊 <#${player.voiceChannelId}>` : null;
+	const playbackLabel = current && player.voiceChannelId ? `-# <#${player.voiceChannelId}>에서 재생 중` : null;
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
 	const thumbnail = new ThumbnailBuilder();
@@ -214,7 +214,7 @@ function buildEpisodeLine(player: Player): string | null {
 
 	const start = formatTime(chapter.start / 1000);
 	const end = formatTime(chapter.end / 1000);
-	return `-# ╰ ${chapter.name} (${start}~${end})`;
+	return `-# ${emoji('chapter')} ${chapter.name} (${start}~${end})`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
@@ -237,7 +237,7 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 				: typeof requesterId === 'string' && requesterId
 					? `<@${requesterId}>`
 					: null;
-	contents.push(requesterLabel ? `-# (${track.info.author}) ${requesterLabel}` : `-# (${track.info.author})`);
+	contents.push(requesterLabel ? `-# ${emoji('artist')} ${track.info.author} ${requesterLabel}` : `-# ${emoji('artist')} ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
