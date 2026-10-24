@@ -46,7 +46,6 @@ export function GreetingTemplateSection({
             icon={<LayoutTemplate size={14} />}
             disabled={saving}
             onClick={() => setPendingTemplate(template)}
-            className="pointer-coarse:h-11"
           >
             {template.name}
           </Button>

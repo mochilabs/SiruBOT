@@ -91,7 +91,7 @@ function TrackRow({
 				<button
 					type="button"
 					onClick={() => onPlay(track)}
-					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-control"
+					className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-control"
 					aria-label={`${track.title} 다시 재생`}
 				>
 					<Play size={13} aria-hidden />
@@ -132,7 +132,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 					title="재생 기록을 불러오지 못했어요."
 					description="잠시 후 다시 시도해 주세요."
 					action={
-						<Button variant="secondary" onClick={handleRetry} className="pointer-coarse:min-h-11">
+						<Button variant="secondary" onClick={handleRetry}>
 							다시 시도
 						</Button>
 					}
@@ -158,7 +158,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 				<p className="mt-6">
 					<Link
 						href={`/servers/${guildId}`}
-						className={cn(buttonVariants({ variant: "secondary" }), "gap-2 pointer-coarse:min-h-11")}
+						className={cn(buttonVariants({ variant: "secondary" }), "gap-2")}
 					>
 						<ArrowLeft size={15} aria-hidden />
 						서버 설정으로 돌아가기

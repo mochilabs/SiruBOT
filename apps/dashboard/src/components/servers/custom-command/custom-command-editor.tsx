@@ -323,7 +323,7 @@ export function CustomCommandEditor({
 							variant="outline"
 							size="sm"
 							aria-expanded={chatOpen}
-							className="w-full justify-between p-3 text-left pointer-coarse:h-11 lg:hidden"
+							className="w-full justify-between p-3 text-left lg:hidden"
 							onClick={() => setChatOpen((v) => !v)}
 						>
 							<ChatPanelLabel />

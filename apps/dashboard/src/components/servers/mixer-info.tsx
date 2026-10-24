@@ -151,7 +151,7 @@ export function MixerInfoTip({ kind }: { kind: MixerInfoKind }) {
 				onClick={() => setOpen((v) => !v)}
 				aria-expanded={open}
 				aria-label={open ? `${copy.title} 설명 닫기` : copy.buttonLabel}
-				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+				className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
 			>
 				<Info size={14} aria-hidden />
 			</button>

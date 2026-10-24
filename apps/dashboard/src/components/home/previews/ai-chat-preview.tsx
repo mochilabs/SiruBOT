@@ -111,7 +111,7 @@ function ChatPreview() {
 							aria-controls="ai-chat-preview-tool-panel"
 							aria-label={utility.title}
 							onClick={() => selectTool(index)}
-							className="group flex h-4 w-4 cursor-pointer items-center justify-center pointer-coarse:h-11 pointer-coarse:w-11"
+							className="group flex h-4 w-4 cursor-pointer items-center justify-center"
 						>
 							<span
 								className={cn(

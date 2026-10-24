@@ -56,7 +56,7 @@ export function GreetingBackgroundSection({
               disabled={saving}
               onClick={() => onSelectPreset(preset.id)}
               className={cn(
-                "pointer-coarse:h-11 w-fit cursor-pointer rounded-control p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "w-fit cursor-pointer rounded-control p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 selected && "ring-2 ring-ring/40",
               )}
             >
@@ -86,7 +86,6 @@ export function GreetingBackgroundSection({
           loading={uploading}
           onClick={() => backgroundFileInputRef.current?.click()}
           disabled={saving}
-          className="pointer-coarse:h-11"
         >
           커스텀 배경 업로드
         </Button>
@@ -96,7 +95,6 @@ export function GreetingBackgroundSection({
             size="sm"
             onClick={onReset}
             disabled={saving || uploading}
-            className="pointer-coarse:h-11"
           >
             배경 초기화
           </Button>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, RefreshCw } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
 interface ErrorPageProps {

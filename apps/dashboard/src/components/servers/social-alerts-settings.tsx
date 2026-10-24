@@ -166,7 +166,6 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											size="sm"
 											aria-label={`${subscription.sourceName} 알림 ${subscription.status === "disabled" ? "재개" : "일시정지"}`}
 											disabled={busy}
-											className="pointer-coarse:h-11"
 											onClick={() => void toggleStatus(subscription)}
 										>
 											{subscription.status === "disabled" ? <Play size={14} /> : <Pause size={14} />}
@@ -176,7 +175,6 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											size="sm"
 											aria-label={`${subscription.sourceName} 알림 설정 ${editing ? "편집 닫기" : "편집하기"}`}
 											disabled={busy}
-											className="pointer-coarse:h-11"
 											onClick={() => (editing ? setEditingId(null) : startEdit(subscription))}
 										>
 											<PencilLine size={14} />
@@ -186,7 +184,7 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											size="sm"
 											aria-label={`${subscription.sourceName} 알림 삭제`}
 											disabled={busy}
-											className={`pointer-coarse:h-11 ${confirming ? "ring-2 ring-destructive/50" : ""}`}
+											className={confirming ? "ring-2 ring-destructive/50" : undefined}
 											icon={confirming ? <Trash2 size={14} className="text-destructive" /> : <Trash2 size={14} />}
 											onClick={() => {
 												if (requestDelete(subscription.id)) void remove(subscription);
@@ -253,14 +251,13 @@ export default function SocialAlertsSettings({ guildId, visible }: { guildId: st
 											</p>
 										</div>
 										<div className="flex justify-end gap-2">
-											<Button size="sm" variant="secondary" className="pointer-coarse:h-11" onClick={() => setEditingId(null)}>
+											<Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
 												취소
 											</Button>
 											<Button
 												size="sm"
 												variant="primary"
 												loading={busy}
-												className="pointer-coarse:h-11"
 												onClick={() => void saveSettings(subscription)}
 											>
 												저장

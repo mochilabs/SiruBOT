@@ -13,7 +13,7 @@ import type { GuildCardProps } from "./guild-card.types";
 
 /**
  * PC(md 이상)는 그리드 카드, 모바일은 한 행 리스트 — 같은 마크업을 반응형 클래스만으로
- * 바꿔요. 모바일에서 진입 동작은 44px(pointer-coarse:min-h-11) 터치 영역을 가져요.
+ * 바꿔요. 모바일 진입 버튼은 h-11(44px) 터치 영역을 가져요.
  */
 export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 	const iconUrl = guild.icon ? discordGuildIconUrl(guild.id, guild.icon) : null;
@@ -53,7 +53,6 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						className={cn(
 							buttonVariants(),
 							"h-11 w-11 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-auto md:flex-1 md:gap-2 md:px-3.5",
-							"pointer-coarse:min-h-11",
 						)}
 					>
 						<Settings2 size={18} />
@@ -62,11 +61,10 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					<Link
 						href={`/player/${guild.id}`}
 						aria-label="음악 컨트롤러"
-						className={cn(
-							buttonVariants(),
-							"h-11 w-11 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-auto md:flex-1 md:gap-2 md:px-3.5",
-							"pointer-coarse:min-h-11",
-						)}
+					className={cn(
+						buttonVariants(),
+						"h-11 w-11 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-auto md:flex-1 md:gap-2 md:px-3.5",
+					)}
 					>
 						<Play size={18} />
 						<span className="hidden text-sm font-bold md:inline">컨트롤러</span>
@@ -79,7 +77,6 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						className={cn(
 							buttonVariants(),
 							"h-11 w-11 shrink-0 justify-center bg-primary/10 px-0 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text md:h-12 md:min-h-12 md:w-full md:gap-2 md:px-3.5",
-							"pointer-coarse:min-h-11",
 						)}
 					>
 						<Play size={18} />
@@ -95,7 +92,6 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 					className={cn(
 						buttonVariants({ variant: "secondary" }),
 						"h-11 w-11 shrink-0 bg-surface-2 md:h-12 md:min-h-12 md:w-full md:gap-2 md:px-3.5",
-						"pointer-coarse:min-h-11",
 					)}
 				>
 					<UserPlus size={18} />

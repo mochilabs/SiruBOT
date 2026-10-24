@@ -158,7 +158,7 @@ function FavoriteButton({
 			onClick={handleClick}
 			disabled={pending}
 			title={favorite ? "즐겨찾기 제거" : "즐겨찾기에 추가"}
-			className={`flex h-8 w-8 sm:h-10 sm:w-10 pointer-coarse:min-h-11 pointer-coarse:min-w-11 items-center justify-center rounded-control transition-colors duration-fast shadow-control-boundary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
+			className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-control transition-colors duration-fast shadow-control-boundary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 ${
 				favorite
 					? "bg-primary-control text-primary-control-text hover:bg-primary-control-hover"
 					: "bg-secondary text-muted-foreground hover:bg-surface-3 hover:text-foreground"

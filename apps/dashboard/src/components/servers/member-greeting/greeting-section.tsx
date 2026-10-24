@@ -143,7 +143,6 @@ export function GreetingSection({
                 icon={<RotateCcw size={14} />}
                 onClick={onReset}
                 disabled={saving || !dirty}
-                className="pointer-coarse:h-11"
               >
                 초기화
               </Button>
@@ -227,7 +226,6 @@ export function GreetingSection({
                   size="sm"
                   disabled={saving}
                   onClick={() => onPatch({ ...draft, accentColor: null })}
-                  className="pointer-coarse:h-11"
                 >
                   봇 기본색 사용
                 </Button>

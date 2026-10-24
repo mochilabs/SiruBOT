@@ -144,7 +144,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
               size="sm"
               icon={<Upload size={16} />}
               loading={uploading}
-              className="pointer-coarse:h-11"
               onClick={() => fileInputRef.current?.click()}
             >
               {uploading ? "올리는 중…" : "이미지 올리기"}
@@ -163,7 +162,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
               variant="primary"
               icon={<Upload size={16} />}
               disabled={uploading}
-              className="pointer-coarse:h-11"
               onClick={() => fileInputRef.current?.click()}
             >
               첫 이미지 올리기
@@ -206,7 +204,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                         size="sm"
                         icon={<Check size={14} />}
                         loading={savingName}
-                        className="pointer-coarse:h-11"
                         onClick={() => void handleRename(asset)}
                       >
                         저장
@@ -216,7 +213,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                         size="sm"
                         icon={<X size={14} />}
                         disabled={savingName}
-                        className="pointer-coarse:h-11"
                         onClick={() => setEditingId(null)}
                       >
                         취소
@@ -233,7 +229,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                       size="sm"
                       aria-label={`${asset.name} 이름 수정`}
                       icon={<Pencil size={14} />}
-                      className="pointer-coarse:h-11"
                       onClick={() => startRename(asset)}
                     />
                   </div>
@@ -249,7 +244,6 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                     variant="secondary"
                     size="sm"
                     icon={<Copy size={14} />}
-                    className="pointer-coarse:h-11"
                     onClick={() => void handleCopyUrl(asset)}
                   >
                     주소 복사
@@ -258,7 +252,7 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                     variant="icon"
                     size="sm"
                     aria-label={`${asset.name} 삭제`}
-                    className={`pointer-coarse:h-11 ${
+                    className={` ${
                       confirmDeleteId === asset.id ? "ring-2 ring-destructive/50" : ""
                     }`}
                     icon={

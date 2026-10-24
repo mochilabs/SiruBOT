@@ -46,7 +46,6 @@ export function GreetingTestPanel({
           loading={sendingTest || pending}
           disabled={!ready}
           onClick={() => void handleTest()}
-          className="pointer-coarse:h-11"
         >
           테스트 전송
         </Button>

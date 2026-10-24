@@ -84,7 +84,6 @@ export function GreetingTemplateField({
             disabled={disabled}
             title={variable.description}
             onClick={() => insertTemplateToken(variable.token)}
-            className="pointer-coarse:h-11"
           >
             {variable.token}
             {!variable.usableInImage && (

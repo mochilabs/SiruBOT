@@ -131,7 +131,6 @@ export function WebhookAvatarField({
 						icon={uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
 						onClick={() => inputRef.current?.click()}
 						disabled={disabled || uploading}
-						className="pointer-coarse:h-11"
 					>
 						{uploading ? "업로드 중…" : "이미지 선택"}
 					</Button>
@@ -142,7 +141,6 @@ export function WebhookAvatarField({
 							icon={<RotateCcw size={14} />}
 							onClick={handleReset}
 							disabled={disabled || uploading}
-							className="pointer-coarse:h-11"
 						>
 							기본 아바타 사용
 						</Button>
