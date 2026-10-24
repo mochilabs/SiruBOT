@@ -132,11 +132,12 @@ RUN groupadd --system --gid 1001 nodejs && \
 ARG GIT_HASH=unknown
 ARG GIT_BRANCH=unknown
 ARG VERSION=unknown
-
+ARG SENTRY_RELEASE=unknown
 ENV NODE_ENV=production
 ENV GIT_HASH=$GIT_HASH
 ENV GIT_BRANCH=$GIT_BRANCH
 ENV VERSION=$VERSION
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 # Copy built application
 COPY --from=builder-bot --chown=sirubot:nodejs /app/apps/bot/dist ./dist
@@ -219,10 +220,12 @@ RUN groupadd --system --gid 1001 nodejs && \
 ARG GIT_HASH=unknown
 ARG GIT_BRANCH=unknown
 ARG VERSION=unknown
+ARG SENTRY_RELEASE=unknown
 ENV NODE_ENV=production
 ENV GIT_HASH=$GIT_HASH
 ENV GIT_BRANCH=$GIT_BRANCH
 ENV VERSION=$VERSION
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 # Copy built application
 COPY --from=builder-shardmanager --chown=sirubot:nodejs /app/apps/shardmanager/dist ./dist
@@ -261,10 +264,12 @@ RUN groupadd --system --gid 1001 nodejs && \
 ARG GIT_HASH=unknown
 ARG GIT_BRANCH=unknown
 ARG VERSION=unknown
+ARG SENTRY_RELEASE=unknown
 ENV NODE_ENV=production
 ENV GIT_HASH=$GIT_HASH
 ENV GIT_BRANCH=$GIT_BRANCH
 ENV VERSION=$VERSION
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 # Copy built application
 COPY --from=builder-data-api --chown=sirubot:nodejs /app/apps/data-api/dist ./dist
@@ -307,10 +312,12 @@ RUN groupadd --system --gid 1001 nodejs && \
 ARG GIT_HASH=unknown
 ARG GIT_BRANCH=unknown
 ARG VERSION=unknown
+ARG SENTRY_RELEASE=unknown
 ENV NODE_ENV=production
 ENV GIT_HASH=$GIT_HASH
 ENV GIT_BRANCH=$GIT_BRANCH
 ENV VERSION=$VERSION
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 # 에셋 저장소 — STORAGE_DATA_DIR 기본값 /data. named volume 마운트 시 이 소유권을
 # 물려받아야 non-root(sirubot)가 쓸 수 있으므로 미리 생성해 둔다.
@@ -355,10 +362,12 @@ RUN groupadd --system --gid 1001 nodejs && \
 ARG GIT_HASH=unknown
 ARG GIT_BRANCH=unknown
 ARG VERSION=unknown
+ARG SENTRY_RELEASE=unknown
 ENV NODE_ENV=production
 ENV GIT_HASH=$GIT_HASH
 ENV GIT_BRANCH=$GIT_BRANCH
 ENV VERSION=$VERSION
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 # Copy built application
 COPY --from=builder-notifier --chown=sirubot:nodejs /app/apps/notifier/dist ./dist

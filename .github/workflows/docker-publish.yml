@@ -61,5 +61,6 @@ jobs:
             GIT_HASH=${{ github.sha }}
             GIT_BRANCH=${{ github.ref_name }}
             VERSION=${{ github.event.release.tag_name }}
+            SENTRY_RELEASE=${{ github.event.release.tag_name }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}

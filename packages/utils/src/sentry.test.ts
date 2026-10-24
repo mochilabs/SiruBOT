@@ -68,6 +68,22 @@ describe('initSentry', () => {
 		expect(Sentry.init).toHaveBeenCalledTimes(1);
 		expect(Sentry.setTag).toHaveBeenCalledWith('service', 'bot');
 	});
+
+	it('SENTRY_RELEASE가 있으면 VERSION과 무관하게 릴리스로 사용해요', () => {
+		const originalRelease = process.env.SENTRY_RELEASE;
+		const originalVersion = process.env.VERSION;
+		process.env.SENTRY_RELEASE = 'beta-abc1234';
+		process.env.VERSION = 'beta';
+		try {
+			initSentry({ dsn: 'https://public@example.com/1' });
+			expect(Sentry.init).toHaveBeenCalledWith(expect.objectContaining({ release: 'beta-abc1234' }));
+		} finally {
+			if (originalRelease === undefined) delete process.env.SENTRY_RELEASE;
+			else process.env.SENTRY_RELEASE = originalRelease;
+			if (originalVersion === undefined) delete process.env.VERSION;
+			else process.env.VERSION = originalVersion;
+		}
+	});
 });
 
 describe('registerProcessErrorHandlers', () => {
