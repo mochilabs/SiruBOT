@@ -167,7 +167,7 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 						draggingRef.current = false;
 					}}
 					className={cn(
-						"relative w-4 shrink-0 rounded-full shadow-control-boundary select-none pointer-coarse:w-11",
+						"relative w-4 shrink-0 rounded-full shadow-control-boundary select-none",
 						disabled ? "cursor-not-allowed opacity-50" : "cursor-ns-resize",
 						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					)}
@@ -205,7 +205,7 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 									onCommit?.(preset.toLowerCase());
 								}}
 								className={cn(
-									"pointer-coarse:h-11 pointer-coarse:w-11 h-7 w-7 cursor-pointer rounded-full shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+									" h-7 w-7 cursor-pointer rounded-full shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 									normalized === preset.toLowerCase() && "ring-2 ring-ring"
 								)}
 								style={{ backgroundColor: preset }}

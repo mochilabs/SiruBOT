@@ -121,7 +121,6 @@ export function TemplateEditor({ guildId, value, onChange, sample, disabled = fa
 						type="button"
 						variant="secondary"
 						size="xs"
-						className="pointer-coarse:h-11"
 						disabled={disabled}
 						onClick={() => insertToken(`{${variable}}`)}
 					>

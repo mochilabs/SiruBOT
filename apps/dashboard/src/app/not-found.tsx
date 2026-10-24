@@ -91,7 +91,7 @@ export default function NotFound() {
             <button
               type="button"
               onClick={() => window.history.back()}
-              className="group flex h-11 pointer-coarse:min-h-11 items-center gap-1.5 rounded-control px-4 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="group flex h-11 items-center gap-1.5 rounded-control px-4 text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               <ChevronLeft
                 className="h-4 w-4 transition-transform duration-fast group-hover:-translate-x-0.5"

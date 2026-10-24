@@ -82,7 +82,7 @@ function Badge({
 					type="button"
 					onClick={onDismiss}
 					aria-label="제거"
-					className="-mr-0.5 ml-0.5 inline-flex cursor-pointer items-center justify-center rounded-full p-0.5 transition-colors hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11 pointer-coarse:w-11"
+					className="-mr-0.5 ml-0.5 inline-flex cursor-pointer items-center justify-center rounded-full p-0.5 transition-colors hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				>
 					<X className="h-3 w-3" aria-hidden />
 				</button>

@@ -261,7 +261,7 @@ export function HeroSection() {
 									onClick={() => handleSlideChange(index)}
 									aria-pressed={activeSlide === index}
 									className={cn(
-										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast pointer-coarse:min-h-11",
+										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
 											? "bg-primary-control text-primary-control-text"
 											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
@@ -312,7 +312,7 @@ export function HeroSection() {
 					type="button"
 					onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
 					aria-label="아래로 스크롤해서 기능 보기"
-					className="pointer-events-auto flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.2, duration: 0.6 }}

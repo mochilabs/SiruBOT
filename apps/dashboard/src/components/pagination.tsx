@@ -35,7 +35,6 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 			tabIndex={currentPage <= 1 ? -1 : undefined}
 			className={cn(
 				buttonVariants({ variant: "ghost" }),
-				"pointer-coarse:min-h-11",
 				currentPage <= 1 && "pointer-events-none text-muted-foreground",
 			)}
 		>
@@ -53,7 +52,6 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 			tabIndex={currentPage >= totalPages ? -1 : undefined}
 			className={cn(
 				buttonVariants({ variant: "ghost" }),
-				"pointer-coarse:min-h-11",
 				currentPage >= totalPages && "pointer-events-none text-muted-foreground",
 			)}
 		>

@@ -38,7 +38,6 @@ export function GreetingElementSection({
           icon={<Type size={14} />}
           disabled={saving}
           onClick={onAddText}
-          className="pointer-coarse:h-11"
         >
           텍스트
         </Button>
@@ -48,7 +47,6 @@ export function GreetingElementSection({
           icon={<UserRound size={14} />}
           disabled={saving}
           onClick={onAddAvatar}
-          className="pointer-coarse:h-11"
         >
           아바타
         </Button>
@@ -58,7 +56,6 @@ export function GreetingElementSection({
           icon={<Shapes size={14} />}
           disabled={saving}
           onClick={onAddShape}
-          className="pointer-coarse:h-11"
         >
           도형
         </Button>
@@ -79,7 +76,6 @@ export function GreetingElementSection({
           loading={uploading}
           disabled={saving}
           onClick={() => fileInputRef.current?.click()}
-          className="pointer-coarse:h-11"
         >
           이미지
         </Button>

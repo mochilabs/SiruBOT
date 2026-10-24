@@ -95,7 +95,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 						<ColorPicker value={layer.color} disabled={saving} label="글자" onChange={(color) => patch({ color })} onCommit={onCommit} />
 					</Field>
 					<div className="flex flex-wrap items-center gap-4">
-						<Button variant="state-toggle" active={layer.bold} icon={<Bold size={14} />} onClick={() => patchAndCommit({ bold: !layer.bold })} disabled={saving} className="pointer-coarse:h-11">
+						<Button variant="state-toggle" active={layer.bold} icon={<Bold size={14} />} onClick={() => patchAndCommit({ bold: !layer.bold })} disabled={saving}>
 							굵게
 						</Button>
 						<div role="radiogroup" aria-label="정렬" className="inline-flex rounded-control bg-input p-0.5">
@@ -108,7 +108,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 									onKeyDown={radioArrowKeyDown(ALIGN_OPTIONS.map((item) => item.value), layer.align, (key) => patchAndCommit({ align: key as "left" | "center" | "right" }))}
 									onClick={() => patchAndCommit({ align: option.value })}
 									className={cn(
-										"pointer-coarse:min-h-9 cursor-pointer rounded-control px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+										"cursor-pointer rounded-control px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 										layer.align === option.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
 									)}
 								>
@@ -167,7 +167,7 @@ export function LayerProperties({ layer, saving, onPatchLayer, onCommit }: Layer
 									onKeyDown={radioArrowKeyDown(SHAPE_OPTIONS.map((item) => item.value), layer.shape, (key) => patchAndCommit({ shape: key as "rect" | "circle" }))}
 									onClick={() => patchAndCommit({ shape: option.value })}
 									className={cn(
-										"pointer-coarse:min-h-9 cursor-pointer rounded-control px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+										"cursor-pointer rounded-control px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 										layer.shape === option.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
 									)}
 								>

@@ -202,7 +202,6 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 						<Button
 							type="button"
 							variant="secondary"
-							className="pointer-coarse:h-11"
 							onClick={() => void handleChzzkLookup()}
 							disabled={looking || !keyword.trim()}
 						>
@@ -217,7 +216,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 									<button
 										type="button"
 										onClick={() => pickChzzk(channel)}
-										className="flex w-full items-center gap-3 rounded-control px-2 py-2 text-left transition-colors hover:bg-surface-3 pointer-coarse:min-h-11"
+										className="flex w-full items-center gap-3 rounded-control px-2 py-2 text-left transition-colors hover:bg-surface-3"
 									>
 										<span className="min-w-0 flex-1">
 											<span className="flex items-center gap-1.5 text-sm text-foreground">
@@ -251,7 +250,6 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				<Button
 					type="button"
 					variant="secondary"
-					className="pointer-coarse:h-11"
 					onClick={() => void handleResolve()}
 					disabled={looking || !sourceInput.trim()}
 				>
@@ -281,7 +279,6 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					size="sm"
 					icon={<X size={14} />}
 					aria-label="알림 추가 닫기"
-					className="pointer-coarse:h-11"
 					onClick={onDone}
 				/>
 			</div>
@@ -357,10 +354,10 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 			}} />
 
 			<div className="flex justify-end gap-2">
-				<Button type="button" variant="secondary" className="pointer-coarse:h-11" onClick={onDone}>
+				<Button type="button" variant="secondary" onClick={onDone}>
 					취소
 				</Button>
-				<Button type="button" variant="primary" loading={saving} disabled={!canSubmit} className="pointer-coarse:h-11" onClick={() => void handleSubmit()}>
+				<Button type="button" variant="primary" loading={saving} disabled={!canSubmit} onClick={() => void handleSubmit()}>
 					추가
 				</Button>
 			</div>

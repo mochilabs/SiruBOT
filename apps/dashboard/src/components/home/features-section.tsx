@@ -196,7 +196,7 @@ function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock;
 				)}
 				{/* 초대 CTA는 티켓 한 곳만 — 블록엔 각자 정체가 있는 동작만 남겨요 */}
 				{block.secondary && (
-					<Link href={block.secondary.href} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-6 self-start pointer-coarse:min-h-11")}>
+					<Link href={block.secondary.href} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-6 self-start")}>
 						{block.secondary.label}
 					</Link>
 				)}

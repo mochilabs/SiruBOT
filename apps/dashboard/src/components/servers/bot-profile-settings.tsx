@@ -310,7 +310,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
                 icon={<ImagePlus size={14} />}
                 onClick={() => bannerInputRef.current?.click()}
                 disabled={saving}
-                className="pointer-coarse:h-11"
               >
                 배너 선택
               </Button>
@@ -324,7 +323,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
                     setBannerReset(true);
                   }}
                   disabled={saving}
-                  className="pointer-coarse:h-11"
                 >
                   배너 제거
                 </Button>
@@ -369,7 +367,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
                 icon={<ImagePlus size={14} />}
                 onClick={() => fileInputRef.current?.click()}
                 disabled={saving}
-                className="pointer-coarse:h-11"
               >
                 이미지 선택
               </Button>
@@ -383,7 +380,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
                     setAvatarReset(true);
                   }}
                   disabled={saving}
-                  className="pointer-coarse:h-11"
                 >
                   기본 아바타 사용
                 </Button>
@@ -422,7 +418,6 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
               icon={<RotateCcw size={14} />}
               onClick={handleNicknameReset}
               disabled={saving || nicknameDisabled}
-              className="pointer-coarse:h-11"
             >
               기본 이름 사용
             </Button>

@@ -64,7 +64,7 @@ export function RetryLink({ onRetry, className }: { onRetry: () => void; classNa
     <button
       type="button"
       onClick={onRetry}
-      className={cn(buttonVariants({ variant: "link" }), "font-semibold pointer-coarse:min-h-11", className)}
+      className={cn(buttonVariants({ variant: "link" }), "font-semibold", className)}
     >
       다시 시도
     </button>
@@ -407,7 +407,7 @@ export function SaveBar({
       <Button
         variant="cta"
         size="sm"
-        className="h-8 px-3.5 pointer-coarse:min-h-11"
+        className="h-8 px-3.5"
         loading={saving || submitting}
         disabled={!dirty}
         icon={saving ? undefined : <Save size={15} />}
