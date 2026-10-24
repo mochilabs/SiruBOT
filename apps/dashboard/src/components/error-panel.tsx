@@ -18,12 +18,14 @@ export function ErrorPanel({
   onRetry,
   className = ""
 }: ErrorPanelProps) {
-  // EmptyState tone="destructive" 위임 — 형태 언어를 EmptyState와 공유하되 max-w-xl 중앙 배치만 유지(P1)
+  // EmptyState tone="destructive" 위임 — 형태 언어를 EmptyState와 공유하되 max-w-xl 중앙 배치만 유지(P1).
+  // 제목은 h3 헤딩 의미론 유지 — error boundary에 다른 페이지 헤딩이 없을 때 스크린리더 헤딩 탐색으로 접근 가능해야 해요.
   return (
     <EmptyState
       icon={AlertTriangle}
       tone="destructive"
       title={title}
+      titleAs="h3"
       description={message}
       action={
         onRetry ? (
