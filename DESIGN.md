@@ -42,7 +42,7 @@ motion:
 
 # SiruBOT DESIGN.md — 목표 디자인 사양 (Phase 2)
 
-기준일: 2026-10-24. 소스 확인 기준: `beta` @ `bfff575b` (워크트리 `docs/design-current-audit`).
+기준일: 2026-10-24. 소스 확인 기준: `origin/beta` @ `4193e249` (감사는 `bfff575b`에서 수행, upstream 병합 후 §13 대상 결함의 잔존을 재확인 — D-17 참조).
 근거 문서: [DESIGN.current.md](DESIGN.current.md) (Phase 1 감사 + Phase 2 재검증 정정 부기).
 이 문서는 **목표 상태**를 규정한다. 현행 값과 다른 토큰은 §12 매핑 표의 "변경 유형"으로 구분한다.
 구현(Phase 3) 전까지 어떤 애플리케이션 코드도 이 문서를 근거로 변경되지 않았다.
@@ -91,7 +91,7 @@ motion:
 - 실수: framer 인라인 `duration: 0.25` 등 토큰 미참조 값 산발(현행 29곳, D-06).
 
 **P7. 한국어 문구는 상태와 원인을 정확히 (Korean copy states facts)**
-- 함의: 모든 상태 문구는 (원인) + (다음 행동) 구조. 진행형 문구는 실제 진행 중일 때만. 경어체 유지.
+- **보이스 & 톤(upstream v1.0 계약 승계)**: 해요체(`~해요`, `~했어요`), 무엇이 바뀌는지·실패 시 해야 할 행동 명시. 사용자 노출 문구에 em dash(`—`)와 막연한 마케팅 수식어 금지.
 - 실수: 영구 빈 상태에 진행형(현행 `/track`), "오류" 원인 불명 문구.
 
 ## 2. 목표·비목표
@@ -120,7 +120,7 @@ motion:
 
 ### 기능적 비변경 계약
 - 모든 인터랙션 동작(⌘K 팔레트·테마 토글·모바일 탭바 제스처·드래그 순서 변경·virtualizer·폴링)은 시각만 정돈하고 행동을 바꾸지 않는다.
-- `keepMounted` 탭 패널·초안(draft) 보존·`hasUnsavedSettings()` 경고 체계 유지.
+- 곡 제목 링크 일원화(웹 플레이어·플레이리스트·차트·프로필·서버 통계의 원본 음원 링크), 플레이리스트 순서 변경 상호작용(드래그·롱프레스·`Alt+↑/↓`), 소셜 알림 컴팩트 행·전용 모달 편집 — **upstream v1.0 §3.3으로 이미 구현·계약된 동작, Phase 3에서 재변경 금지**.
 
 ## 3. 디자인 시스템 아키텍처 (변경 없음, 준수 계약)
 
@@ -234,7 +234,7 @@ Tailwind 기본 4px 스텝 유지(별도 척도 토큰 도입 안 함 — §12 D
 | safe-area | `pb-[calc(5.25rem+env(safe-area-inset-bottom))]`(layout 본문) | 모바일 탭바 클리어런스 승계 |
 
 ### 6.2 컨테이너·콘텐츠 폭
-- `Container` = `mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8` + `min-h-[calc(100svh-var(--navbar-h))]` (단일 산식, 5곳 중복은 `--hero-scroll-hint-gap`류 개별 산식과 함께 §12에서 "산식 상수"로 정리).
+- `Container` = `mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-16` + `min-h-[calc(100svh-var(--navbar-h))]` (upstream에서 `pt-6 sm:pt-8` 추가 — v1.0 §3.1 계약 승계. 5곳 중복 산식은 `--hero-scroll-hint-gap`류와 함께 §12 "산식 상수"로 정리).
 - 하위 폭: 섹션 헤더 `max-w-2xl`, 초점형 `max-w-xl`, 다이얼로그 `max-w-6xl`(편집기 예외 승계), SaveBar 아일랜드 `max-w-[760px]`(§8 승계).
 
 ### 6.3 헤더·사이드바
@@ -287,7 +287,7 @@ Tailwind 기본 4px 스텝 유지(별도 척도 토큰 도입 안 함 — §12 D
 - **variant 정리**: `icon` variant는 유지하되 `variant="icon"` + size(`icon-xs/sm/-/lg`)의 산발 대신 **`size`가 아이콘 크기를 결정**하는 현행 compound 계약 승계.
 - 로딩: `loading` prop(Loader2로 children 대체, disabled 병행) — 신규 컴포넌트별 spinner 금지(P1).
 - FavoriteButton(`track.tsx:156`): `variant="icon"` + `size` 반응(h-8 sm:h-10 → `size="sm"` + `sm:size`는 cva 밖이므로 **`size="icon-sm"` 데스크톱 전환은 구현 시 클릭 영역 유지 검증 후 결정**, 우선 `icon-sm` 단일화 제안)·active 상태 = `data-active` + 하트 fill 색상만 클래스 오버라이드 허용(상태색이라 cva 밖 가치).
-- 웹 플레이어 검색어 지우기(`web-player-section.tsx:317`): `SearchInput`의 `Button ghost` 청소 버튼과 동일 구현으로 통일(D-07).
+- 웹 플레이어 검색어 지우기(`web-player-section.tsx:332`): `SearchInput`의 `Button ghost` 청소 버튼과 동일 구현으로 통일(D-07).
 
 ### 8.2 Input / Textarea / InputGroup / Select / SearchableSelect
 - Input·Textarea: `h-9 bg-input border-0 shadow-control-boundary`, focus `ring-2 ring-ring`, `aria-invalid` → `shadow-control-boundary-invalid` + `ring-destructive`(승계).
@@ -371,12 +371,12 @@ variant default/muted/raised/interactive·padding none/sm/md(p-5)/lg(p-6) 승계
 ## 10. 반응형 디자인
 
 ### 10.1 브레이크포인트 전략 (변경 없음)
-Tailwind 기본 sm 640 / md 768 / lg 1024. 대표 검증 뷰포트: 1440 / 768 / 390(+수용 기준 산출 시 320·200% 줌).
+Tailwind 기본 sm 640 / md 768 / lg 1024. 대표 검증 뷰포트: **375 / 768 / 1024 / 1440**(upstream v1.0 §5 계약 승계 — 390 대신 375 기준, 중간 1024 추가). 수용 산출 시 320·200% 줌 추가.
 
 ### 10.2 전환 규칙 (실측 승계 + 계약)
 - 1440: 히어로 2열(`lg:grid-cols-[minmax(0,0.9fr)_auto]`), 도메인 사이드바 `hidden lg:block`.
 - 1024 미만(태블릿 768): 히어로 단일 열 중앙 정렬(`items-center text-center`), 도메인 탭 스트립(`lg:hidden`), 모바일 탭바는 md까지 표시.
-- 768 미만(모바일 390): 데스크톱 nav row `hidden`(미터치 0 실측), 하단 플로팅 탭바, 본문 safe-area 패딩. 랜딩 CTA 세로 스택(`w-full sm:w-auto` 승계).
+- 768 미만(모바일 375 대표): 데스크톱 nav row `hidden`(미터치 0 실측 — 390 기준, 375에서 재확인), 하단 플로팅 탭바, 본문 safe-area 패딩. 랜딩 CTA 세로 스택(`w-full sm:w-auto` 승계). 375px에서 탭바 라벨 5개 전부 말줄임 없이 표시(upstream v1.0 §3.1 계약).
 - 그리드: contributors `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`, profile/ProcessCard `md:grid-cols-2` 승계.
 - 오버플로우: 전 라우트×3 뷰포트 0건 실측(DESIGN.current.md §10) — 회귀 기준으로 승계. 허용된 국소 스크롤(탭 스트립·테이블)은 `scrollbar-none` 관례 유지.
 
@@ -426,7 +426,7 @@ Tailwind 기본 sm 640 / md 768 / lg 1024. 대표 검증 뷰포트: 1440 / 768 /
 | 14 | next/image sizes | `navbar.tsx:112` 외 전수 | 추가 | D-14 |
 | 15 | 죽은 토큰 삭제: `--success-foreground`·`--info-foreground`·`--color-discord-blue`(소비처 0 재확인 후) | `globals.css:161·172-176 부근` | 정리 | D-15 |
 | 16 | 문서 동기화: `apps/dashboard/DESIGN.md` marquee 언급 제거·`--z-toast`→`--toast-z` 문법 수정·DataTable/TagInput/NotificationStack 언급 제거, 루트 v1 DESIGN.md의 `bot-ok/bot-warn` 스테일 값 정리 | 두 문서 | 정리 | D-16 |
-| 17 | web-player 검색어 지우기 → Button ghost 통일 | `player/web-player-section.tsx:317` | 통합 | D-07 |
+| 17 | web-player 검색어 지우기 → Button ghost 통일 | `player/web-player-section.tsx:332` | 통합 | D-07 |
 | 18 | 검증 후(선택): FavoriteButton size 통일, SkeletonLine radius, track 통계 박스 구분선 | `track.tsx:156`·`ui/skeleton.tsx:20`·`track/page.tsx:69-90` | 선택 | U-3 |
 
 **Phase 3 구현 순서**: 1-4(토큰·전역) → 5-8(프리미티브·상태) → 9-14(페이지·모션) → 15-17(정리) → 18+수용 기준 §14. 각 단계 후 `yarn lint && yarn typecheck` + wcag 스크립트(색 건드린 경우).
@@ -456,6 +456,7 @@ Tailwind 기본 sm 640 / md 768 / lg 1024. 대표 검증 뷰포트: 1440 / 768 /
 - **U-1** 첫 Tab 착지 요소(§11.1) — 현행 실측(CTA)과 DOM 순서(로고) 불일치. 가설로 기록, 확인 후 필요 시 수정. 신뢰도: 낮음(측정 환경 영향 가능).
 - **U-2** 정식 접근성 검증(axe·스크린리더·200%·소프트키보드) 미실행 — Phase 3 수용 기준에 포함.
 - **U-3** FavoriteButton size·SkeletonLine radius·통계 박스 — 구현 중 검증 후 선택.
+- **D-17 (병합 후 재검증, 2026-10-24)**: upstream `0a0b8292..4193e249` 병합(PR #131–#133: 곡 제목 링크·플레이리스트 UI 개편·소셜 알림·Container `pt-6 sm:pt-8` 추가) 후에도 §12 대상 결함 전부 잔존 확인(`z-[190]/[200]`, `ring-ring/40`, InputGroup border, guild-card 오버라이드, `text-2xs` 12px 위반 3곳, `/track` 진행형 빈 문구, navbar `sizes` 부재). §12 매핑 라인 번호는 병합 후 기준으로 일치. upstream이 신규 추가한 화면(`webhook-profile-section.tsx`)은 감사 범위 밖 — Phase 3에서 §14 기준과 함께 신규 검증 권장.
 - **D-11 전제**: 인증 도메인 4라우트(`/servers/[id]`·`/playlists`·`/player/[id]`·`/profile`)는 소스 기반 사양만 존재. Phase 3 시작 전 OAuth 테스트 세션으로 실측 감사 선행 권장(DESIGN.current.md §15-1 승계). 이 문서의 도메인 규격(§9.3)은 소스 기반임을 명시.
 
 ## 14. 시각 수용 기준 (Phase 3 완료 판정)
@@ -469,7 +470,7 @@ Tailwind 기본 sm 640 / md 768 / lg 1024. 대표 검증 뷰포트: 1440 / 768 /
 5. **상태 체계**: `/track` 빈 상태 문구에 진행형 부재. searchable-select·playlist-sidebar 빈 상태 EmptyState 렌더. ErrorPanel 재작성 후 `/shards` 에러 화면 동일 외형.
 6. **타이포**: 푸터 그룹 제목·track 통계 라벨 12px. 랜딩 Discord 목업 11px 유지(예외 확인).
 7. **모션**: framer duration 리터럴 `duration: 0.` grep → durations.ts 상수 import로 0건(스냅 예외 주석 제외).
-8. **히어로**: 1440 GNB→H1 ≤120px, 768 ≤48px. 수평 오버플로우 0건(1440/768/390 전 라우트 승계 기준).
+8. **히어로**: 1440 GNB→H1 ≤120px, 768 ≤48px. 수평 오버플로우 0건(1440/768/375 전 라우트, `scrollWidth > clientWidth` 0 — upstream v1.0 §5 계약).
 9. **대비**: wcag 스크립트 `Unexpected failures: 0`.
 10. **콘솔**: `sizes` 경고 0건. 신규 console error 0건.
 11. **기능 회귀**: ⌘K·테마 토글·모바일 탭바 내비·guild-card 분기(isInstalled/isManageable)·save-bar dirty 조건부 노출 전부 현행 동작 유지.
