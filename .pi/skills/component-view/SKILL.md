@@ -1,16 +1,17 @@
 ---
 name: component-view
-description: 새로운 view 파일을 만들거나 기존 view(재생 알림, 컨트롤러, 대기열, 설정, 에러 등)의 Components V2 레이아웃·버튼/셀렉트메뉴·한국어 문구를 작성·수정할 때 호출
+description: Create or modify SiruBOT Components V2 views (playback notification, controller, queue, settings, error) including layout, buttons/selects, and Korean copy.
 ---
 
-당신은 SiruBOT Discord Components V2 view 작성 전문가다. 모든 view는 `apps/bot/src/modules/<audio|general>/view/`에 함수형으로 존재하며, 기존 Embed(`ExtendedEmbedBuilder`)는 신규 작성에 쓰지 않는다.
+# Component Views (Discord Components V2)
 
-작성 규칙:
-1. 기반 헬퍼 우선: `@sirubot/utils`의 `createContainer()`(DEFAULT_COLOR accent 자동 설정)로 시작하고, `addSeparator(container)`, `createThumbnail(url)`를 직접 new보다 먼저 쓸 것. 썸네일+텍스트 조합은 `view/play.ts`의 `addTextWithThumbnail` 패턴(SectionBuilder + setThumbnailAccessory, URL 없으면 TextDisplay 단독)을 따를 것.
-2. 컴포넌트 조립 순서: TextDisplay/Section → ActionRow(버튼·셀렉트) → Separator → 푸터. V2에서는 버튼·셀렉트를 `container.addActionRowComponents()` 안에 넣고, 전송 시점에 반드시 `flags: [MessageFlags.IsComponentsV2]`를 붙일 것 (잊으면 렌더링 실패 — 호출부까지 확인할 것).
-3. customId 규약: 컨트롤러 계열은 `controller:` prefix + `wrapPrefix` 헬퍼(`view/controller.ts`)를 재사용하고, 신규 핸들러용 ID는 기존 `interaction-handlers/*.ts`의 `parse()`와 충돌하지 않게 짓고 핸들러 쪽 파싱 가능 여부를 함께 명시할 것.
-4. 상태 반영: 버튼 disabled·이모지·라벨은 플레이어 상태(paused, repeatMode, queue 길이, 페이지 경계)에서 파생시킬 것. 페이지네이션은 5개 단위(`QUEUE_PAGE_CHUNK_SIZE = 5`) + `queuePage` 클램핑 패턴을 따를 것. 셀렉트 옵션 label은 100자 제한 — `formatTrack(..., { titleLength: { maxLength: 80 } })`처럼 자를 것.
-5. 텍스트: 한국어, `-#` 서브텍스트·`###` 제목·이모지(🎵📄🔇 등) 기존 톤 유지. 포맷은 `formatTrack`/`formatTime`/`formatTimeToKorean`/`getRequesterText`/`emojiProgressBar`/`volumeToEmoji`를 재사용하고 새로 만들지 말 것. 에러 한 줄짜리는 `errorView(message)`를 쓸 것.
-6. 푸터: 재생 관련 view면 `buildFooterSegments(player, volume)`(재생 서버·볼륨·버전) 패턴을 붙일 것.
+All views live as functions in `apps/bot/src/modules/<audio|general>/view/`. Never write new views with legacy Embeds (`ExtendedEmbedBuilder`).
 
-답변 톤: view 함수 완성 코드 + 호출부(핸들러/커맨드)에서 필요한 flags·customId 대응표. Discord 컴포넌트 제한(행당 버튼 5개, 셀렉트 옵션 25개, 텍스트 4000자)에 걸리면 먼저 지적할 것.
+1. Start with helpers from `@sirubot/utils`: `createContainer()` (auto DEFAULT_COLOR accent), then `addSeparator(container)` and `createThumbnail(url)` — prefer these over `new`. Thumbnail+text combo: follow the `addTextWithThumbnail` pattern from `view/play.ts` (SectionBuilder + setThumbnailAccessory; TextDisplay alone if no URL).
+2. Assembly order: TextDisplay/Section → ActionRow (buttons/selects) → Separator → footer. Put buttons/selects inside `container.addActionRowComponents()`. Always send with `flags: [MessageFlags.IsComponentsV2]` — omitting it breaks rendering; check the call site too.
+3. customId: controller-family IDs use the `controller:` prefix + `wrapPrefix` helper (`view/controller.ts`). New handler IDs must not collide with existing `parse()` in `interaction-handlers/*.ts`; state whether the handler can parse it.
+4. State: derive button disabled/emoji/labels from player state (paused, repeatMode, queue length, page bounds). Pagination: 5-item chunks (`QUEUE_PAGE_CHUNK_SIZE = 5`) + the `queuePage` clamping pattern. Select option labels are capped at 100 chars — truncate via `formatTrack(..., { titleLength: { maxLength: 80 } })`.
+5. Text: Korean; keep existing tone (`-#` subtext, `###` headings, emoji like 🎵📄🔇). Reuse `formatTrack` / `formatTime` / `formatTimeToKorean` / `getRequesterText` / `emojiProgressBar` / `volumeToEmoji` — don't create new formatters. One-line errors: `errorView(message)`.
+6. Footer: playback views attach the `buildFooterSegments(player, volume)` pattern (playing server, volume, version).
+
+Deliver: complete view function code + a table of required flags/customIds at each call site (handler/command). Flag Discord limits up front if hit (5 buttons per row, 25 select options, 4000 chars text).

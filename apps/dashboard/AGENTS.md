@@ -11,4 +11,3 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Before writing code, always read
 
 1. **Context7 docs** — for any library, framework, SDK or API the task touches (including Next.js itself), fetch the current docs via the Context7 MCP tool first. Training data may be stale; the docs are the source of truth.
-2. **OpenCode semantic index** — use `codebase_search`, `codebase_context`, and `call_graph` to locate the relevant existing code before editing, instead of guessing or raw-grepping.

@@ -25,7 +25,7 @@
 | 주체 | 역할 | 예시 |
 |---|---|---|
 | `AGENTS.md` (리포 루트) | 에이전트 코딩 규약 — 브랜치 규칙·명령어·봇 컨벤션·env 주의점 | 직접 수정은 규약 변경일 때만 |
-| `.opencode/skills/*` (9종, `SKILL.md` 실존 확인) | 작업 템플릿 — `sapphire-command`·`sapphire-precondition`·`dashboard-conventions`·`design-tokens`·`ui-primitives`·`discord-patterns`·`scroll-effects`·`codebase-search`·`ai-slop-cleaner` | 봇/대시보드 작업 전 해당 skill 로드 |
+| `.pi/skills/*` (10종, `SKILL.md` 실존 확인) | 작업 템플릿(영문) — `sapphire-command`·`component-view`·`bot-features`·`bot-ops`·`dashboard-conventions`·`repo-infra`·`dashboard-ui`·`antislop-ui`·`security-audit`·`ai-slop-cleaner` | 봇/대시보드 작업 전 해당 skill 로드 |
 | `docs/*` | 인간용 구조·계약·운영 문서 — "무엇이 어디에 있고 어떻게 호출되는가" | 계약 변경 시 코드와 함께 갱신 |
 
 ## "코드가 진실" 규칙

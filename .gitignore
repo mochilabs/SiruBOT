@@ -45,9 +45,8 @@ packages/prisma/src/client/
 # 일회성 작업 스크립트/산출물 (커밋 금지)
 .tmp/
 
-# Local codebase documentation
-/localdocs/
-.opencode/index/
+# 시맨틱 코드 인덱스 (로컬 전용)
+.codebase-index/
 
 # Playwright MCP 스냅샷 산출물
 .playwright-mcp/

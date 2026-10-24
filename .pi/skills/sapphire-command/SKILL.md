@@ -1,143 +1,85 @@
 ---
 name: sapphire-command
-description: >
-  Create new Sapphire Framework slash commands for the SiruBOT Discord music bot.
-  Use when adding, modifying, or reviewing chat input commands in apps/bot/src/modules/.
+description: Author Sapphire Framework slash commands and preconditions (guards) for the SiruBOT Discord music bot.
 ---
 
-# Sapphire Command Skill
+# Sapphire Commands & Preconditions
 
-## Overview
+## Commands
 
-SiruBOT uses `@sapphire/framework` v5 with `@sapphire/decorators`. Commands live in `apps/bot/src/modules/<module>/commands/`. Each module with commands (audio, general, games) has its own command directory — the voice module only has listeners.
+- Locations: `apps/bot/src/modules/<module>/commands/` — audio, general (`development/` for dev), games. Voice module has only `listeners/`, no commands.
+- File `commandName.ts` (camelCase), class `CommandNameCommand`, `name` lowercase no spaces.
+- Stack: `@sapphire/framework` v5 + `@sapphire/decorators`; services registered in `core/botApplication.ts:90-113`, typed in `apps/bot/src/types/global.d.ts`.
 
-## File Location
-
-- Music commands: `apps/bot/src/modules/audio/commands/`
-- General commands: `apps/bot/src/modules/general/commands/`
-- Dev commands: `apps/bot/src/modules/general/commands/development/`
-- Game commands: `apps/bot/src/modules/games/commands/` (the voice module has only `listeners/`, no commands)
-
-## Command Structure
+### Template
 
 ```ts
-import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
-
 @ApplyOptions<Command.Options>({
-	enabled: true,
 	name: 'commandname',
-	description: 'Korean description.',
-	fullCategory: ['모듈명'] // e.g. ['음악'], ['일반'], ['개발'], ['게임']
-	// preconditions: ['PreconditionName'] // if needed
+	description: 'Description.',
+	fullCategory: ['audio'] // or 'general', 'development', 'games'
+	// preconditions: ['OwnerOnly']
 })
 export class CommandNameCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
-		registry.registerChatInputCommand((builder) => {
+		registry.registerChatInputCommand((builder) =>
 			builder
 				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 				.setName('commandname')
-				.setNameLocalizations({ ko: '한글명' })
+				.setNameLocalizations({ ko: '...' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '한글 설명.' })
-				// Add options here:
-				.addStringOption((option) =>
-					option
-						.setName('query')
-						.setNameLocalizations({ ko: '검색어' })
-						.setDescription('English description.')
-						.setDescriptionLocalizations({ ko: '한글 설명.' })
-						.setRequired(true)
-				);
-		});
+				.setDescriptionLocalizations({ 'en-US': '...', ko: '...' })
+				.addStringOption((o) => o.setName('query').setRequired(true))
+		);
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (!interaction.inCachedGuild()) {
-			throw new UserError({
-				identifier: 'commandname_not_in_guild',
-				message: '❌ 길드 안에서만 사용할 수 있어요.',
-				context: { ephemeral: true }
-			});
+			throw new UserError({ identifier: 'commandname_not_in_guild', message: '...', context: { ephemeral: true } });
 		}
-
 		await interaction.deferReply();
-		// Command logic here
 		await interaction.editReply({ content: 'Done!' });
 	}
 }
 ```
 
-## Key Patterns
+### Rules
+- Always `deferReply()` before async work; `editReply()` for deferred replies. Quick pre-defer errors: `interaction.reply()` with `MessageFlags.Ephemeral`.
+- User-facing errors: `throw new UserError({ identifier, message, context: { ephemeral: true } })`.
+- Localizations: `ko` primary, `en-US` fallback; set both name and description localizations.
+- Autocomplete: `autocompleteRun(interaction)` → `interaction.respond([{ name, value }])`, max 25 choices, names ≤100 chars.
+- Components V2: `MessageFlags.IsComponentsV2`, `ContainerBuilder`/`TextDisplayBuilder`, `DEFAULT_COLOR` from `@sirubot/utils` (see component-view skill).
 
-### Naming
-- File name: `commandName.ts` (camelCase)
-- Class name: `CommandNameCommand` (PascalCase + `Command` suffix)
-- File class export is the default pattern
-- `name` in options: lowercase, no spaces (used as slash command name)
+### Subcommand pattern (main pattern)
+Subcommand logic lives in `apps/bot/src/modules/audio/subcommands/*.ts` (or `modules/general/subcommands/*.ts`), exporting `name` / `ko` / `description` / `preconditions` / `build(sub)` / `run(interaction)`. Command keeps a `SUBCOMMANDS` array, registers each entry in `registerApplicationCommands`, and routes + runs each subcommand's preconditions itself via `PreconditionContainerArray` in `chatInputRun` — see `modules/audio/commands/music.ts:22-48,86-116` and `modules/general/commands/info.ts:9-72`. Add new subcommands as a `subcommands/` module + one array entry; don't create a separate top-level command unless it stands alone.
 
-### Subcommand Pattern (current main pattern)
-Logic lives in `apps/bot/src/modules/audio/subcommands/*.ts` (or `modules/general/subcommands/*.ts`) modules exporting `name` / `ko` / `description` / `preconditions` / `build(sub)` / `run(interaction)`. The command keeps a `SUBCOMMANDS` array, registers each entry in `registerApplicationCommands`, and routes + runs each subcommand's preconditions itself via `PreconditionContainerArray` in `chatInputRun` — see `apps/bot/src/modules/audio/commands/music.ts:22-48,86-116` and the same pattern in `apps/bot/src/modules/general/commands/info.ts:9-72`. Add new subcommands as a module in `subcommands/` + one entry in the array; do not create a separate top-level command unless it stands alone.
+### Container services
+`audioService` (playback), `guildService` (settings, 60s TTL cache), `trackService`, `playlistService`, `mixerService` (Lavalink filters/gapless preload), `tempVoiceService` (create/delete/ownership/marker), `aiMemoryService` (Prisma only), `redisStore` (queue/player/session stores, pendingWrites journal), `playerNotifier` (controller embed), `lavalinkHandler` (node/track handler registry, `cleanup()` at shutdown), `appEmojiManager`, `guildSettingsInvalidator` + Redis subscribers, `audio` (LavalinkManager).
 
-### Localizations
-- All commands use Korean (`ko`) as primary language
-- English (`en-US`) as fallback
-- Set both `setNameLocalizations` and `setDescriptionLocalizations`
+### `@sirubot/utils`
+`DEFAULT_COLOR`; `emoji(name, fallback?)` (app emoji, `packages/utils/src/appEmoji.ts`); `createContainer()` (`packages/utils/src/embed.ts`); `pickRandom(array)`; `formatTime(seconds)` — seconds, not ms (`packages/utils/src/time.ts:1-13`); `getSimpleYouTubeSuggestions(query)`.
 
-### Preconditions
-- Defined in the `preconditions` array in `@ApplyOptions`
-- Resolved by Sapphire from the **file name** (piece name = file name without `.ts`), not the class name — e.g. `OwnerOnly.ts` exports `OwnerOnlyPrecondition` and `ManageGuild.ts` exports `ManageGuildPrecondition`, but they are referenced as `'OwnerOnly'` / `'ManageGuild'`
-- Common audio preconditions: `TextChannelAllowed`, `NodeAvailable`, `VoiceConnected`, `SameVoiceChannel`, `MemberListenable`, `ClientVoiceConnectable`, `ClientVoiceSpeakable`
-- Common general preconditions: `OwnerOnly`, `ManageGuild`
+Build: TypeScript + tsup (`scripts/tsup.config.ts`), extends root `tsconfig.base.json`, ESM.
 
-### Defer Reply
-- Always `deferReply()` before async work
-- Use `editReply()` for deferred responses
-- Use `interaction.reply()` with `MessageFlags.Ephemeral` for quick error responses before deferring
+## Preconditions
 
-### Error Handling
-- Throw `UserError` with `identifier`, `message`, and `context: { ephemeral: true }` for user-facing errors
-- The framework handles displaying these to the user
+- Locations: `apps/bot/src/modules/audio/preconditions/`, `apps/bot/src/modules/general/preconditions/`.
+- Extend `AllFlowsPrecondition` (works for chat input, context menu, message). Must implement `chatInputRun(interaction)`, `contextMenuRun(interaction)`, `messageRun(message)`.
+- Return `this.ok()` or `this.error({ message, context })`; `context.ephemeral: true` = show only to user; `context.silent: true` = don't show (e.g. OwnerOnly).
+- File `PreconditionName.ts` (PascalCase). Sapphire resolves by **piece name = file name** (without `.ts`), not class name: `OwnerOnly.ts` exports `OwnerOnlyPrecondition`, `ManageGuild.ts` exports `ManageGuildPrecondition`, yet referenced as `'OwnerOnly'` / `'ManageGuild'`.
+- Use `get #message()` getter for the message (class field would evaluate before app emoji mapping loads; convention from `VoiceConnected.ts:7-9`); `TextChannelAllowed` builds messages inline instead. Private `createError()` helper per class (`NodeAvailable.ts:27-29`); omit if calling `this.error(...)` directly.
+- Container access: `db` (PrismaClient), `audio` (LavalinkManager), `client`, `logger`, `redisStore`.
+- Reuse `guildService.getDefaultTextChannel(guildId)` (60s TTL cache) instead of hitting Prisma per command (`TextChannelAllowed.ts:20-21`).
+- Env check: `envParseArray('OWNERS')` from `@skyra/env-utilities`.
+- Voice checks: `interaction.member.voice.channelId`; bot perms via `channel.permissionsFor(interaction.guild.members.me).has(PermissionsBitField.Flags.Connect)`.
 
-### Autocomplete
-- Implement `autocompleteRun(interaction: AutocompleteInteraction)` override
-- Return `interaction.respond([{ name, value }])` with max 25 choices
-- Truncate names to 100 chars (Discord limit)
+### Existing preconditions
+Audio: `TextChannelAllowed` (guild's configured text channel), `NodeAvailable` (≥1 Lavalink node connected), `VoiceConnected` (user in voice), `SameVoiceChannel`, `MemberListenable` (user not deafened), `ClientVoiceConnectable` (bot Connect perm), `ClientVoiceSpeakable` (bot Speak perm), `DJOrAlone`, `SongPlaying`.
+General: `OwnerOnly` (OWNERS env), `ManageGuild`.
 
-### Components V2
-- Use `MessageFlags.IsComponentsV2` for modern Discord components
-- Build with `ContainerBuilder`, `TextDisplayBuilder` from `discord.js`
-- Use `@sirubot/utils` `DEFAULT_COLOR` for embed colors
-
-## Services
-
-Commands delegate business logic to services on `container` (declared in `apps/bot/src/types/global.d.ts`, registered in `core/botApplication.ts:90-113`):
-- `this.container.audioService` — music playback operations
-- `this.container.guildService` — guild settings (60s TTL cache)
-- `this.container.trackService` — track metadata
-- `this.container.playlistService` — playlist CRUD
-- `this.container.mixerService` — Lavalink filters / gapless preload
-- `this.container.tempVoiceService` — temp voice channels (create/delete/ownership/marker)
-- `this.container.aiMemoryService` — AI long-term memory (Prisma only)
-- `this.container.redisStore` — Redis queue/player/session stores (pendingWrites journal)
-- `this.container.playerNotifier` — playback notifications (controller embed)
-- `this.container.lavalinkHandler` — node/track handler registry (`cleanup()` runs at shutdown)
-- `this.container.appEmojiManager` — app emoji cache
-- `this.container.guildSettingsInvalidator` + other Redis subscribers — dashboard↔bot Redis wiring
-- `this.container.audio` — LavalinkManager instance
-
-## Available from `@sirubot/utils`
-
-- `DEFAULT_COLOR` — default embed color constant
-- `emoji(name)` / `emoji(name, fallback)` — app emoji rendering (`packages/utils/src/appEmoji.ts`) — most used for message strings
-- `createContainer()` — Components V2 `ContainerBuilder` helper (`packages/utils/src/embed.ts`)
-- `pickRandom(array)` — random item from array
-- `formatTime(seconds: number)` — formats a **seconds** value to `MM:SS`/`HH:MM:SS` (`packages/utils/src/time.ts:1-13` — seconds, not milliseconds)
-- `getSimpleYouTubeSuggestions(query)` — YouTube autocomplete
-
-## Build
-
-- TypeScript with `tsup` (shared config from `scripts/tsup.config.ts`)
-- Extends `tsconfig.base.json` from monorepo root
-- ESM modules (`"type": "module"` in package.json)
+### Attaching — order is a fragile contract, run in array order
+Common audio chain, in order:
+`TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel, MemberListenable, ClientVoiceConnectable, ClientVoiceSpeakable`
+- Subcommand-level `export const preconditions` (main path; `music.ts:107-115` runs each via `PreconditionContainerArray`, e.g. `subcommands/play.ts:10-18`).
+- Command-level `preconditions` in `@ApplyOptions` — some commands only (`mixer.ts:13`, `queue.ts:15`, `playlist.ts`, `favorites.ts`, `nowplaying.ts`), often the shorter chain `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel`.
+If any fails, the command is blocked.
