@@ -54,7 +54,7 @@ export function PlayerPreview() {
 			<div className="flex flex-col gap-3 rounded-card bg-discord-embed p-3 sm:p-4">
 				<div className="flex gap-3">
 					<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
-						<p className="text-2xs text-discord-text-muted">#음악-라운지에서 재생 중</p>
+						<p className="text-2xs text-discord-text-muted">재생 중 #음악-라운지</p>
 						{/* 곡 제목·아티스트 — 높이가 고정된 블록이라 건너뛰기 없이 제자리 페이드만으로 넘어가요 */}
 						<AnimatePresence mode="wait" initial={false}>
 							<m.div

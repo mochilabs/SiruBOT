@@ -140,16 +140,32 @@ describe('controllerView 재생 라벨·타이틀', () => {
 		mocks.chapterIndex.mockReturnValue(null);
 	});
 
-	it('재생 라벨은 채널 멘션과 "에서 재생 중"만 표시한다', () => {
+	it('재생 라벨은 상태와 채널 멘션을 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('<#voice-channel>에서 재생 중'))).toBe(true);
+		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(true);
+		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
 		expect(texts.some((text) => text.includes('🔊 <#'))).toBe(false);
 		expect(texts.some((text) => text.includes('<#text-channel>'))).toBe(false);
 	});
 
+	it('일시정지하면 라벨 상태가 일시정지로 바뀐다', () => {
+		const texts = collectTexts(controllerJson({ player: player({ paused: true }) }));
+		expect(texts.some((text) => text.includes('일시정지 <#voice-channel>'))).toBe(true);
+		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(false);
+		// 일시정지 중에도 현재 위치는 계속 보여준다
+		expect(texts.some((text) => text.includes('(00:30 / 03:00)'))).toBe(true);
+	});
+
+	it('스트리밍이면 라벨 상태가 실시간이 된다', () => {
+		const streamTrack = { ...TRACK, info: { ...TRACK.info, isStream: true, duration: 0 } };
+		mocks.nowPlaying.mockReturnValue(streamTrack);
+		const texts = collectTexts(controllerJson({ player: player({ queue: { current: streamTrack, previous: [], tracks: [] } }) }));
+		expect(texts.some((text) => text.includes('실시간 <#voice-channel>'))).toBe(true);
+	});
+
 	it('보이스 채널을 알 수 없으면 재생 라벨을 붙이지 않는다', () => {
 		const texts = collectTexts(controllerJson({ player: player({ voiceChannelId: undefined }) }));
-		expect(texts.some((text) => text.includes('<#') && text.includes('에서 재생 중'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#') && text.includes('재생 중'))).toBe(false);
 	});
 
 	it('아티스트 줄은 이모지와 괄호 없이 아티스트 이름만 표시한다', () => {

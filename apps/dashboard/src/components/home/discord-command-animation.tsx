@@ -163,13 +163,13 @@ function PlaylistResult() {
 	);
 }
 
-/** /현재곡 — nowplaying.ts: "-# <#채널>에서 재생 중" + ### 제목(링크) + 💿아티스트 신청자 + (시간)(프로그레스바) + footer */
+/** /현재곡 — nowplaying.ts: "-# 재생 중 <#채널>" + ### 제목(링크) + 💿아티스트 신청자 + (시간)(프로그레스바) + footer */
 function NowPlayingResult() {
 	const track = TRACKS[0];
 
 	return (
 		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<Subtext>#음악-라운지에서 재생 중</Subtext>
+			<Subtext>재생 중 #음악-라운지</Subtext>
 			<Section thumbnail={track.thumbnail}>
 				<Heading>
 					<span className="underline decoration-discord-text/20 underline-offset-2">{track.title}</span>
