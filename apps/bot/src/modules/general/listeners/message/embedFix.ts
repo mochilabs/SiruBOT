@@ -258,6 +258,7 @@ export class EmbedFixListener extends Listener {
 			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
 		}
 		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
+		this.addImageGallery(container, result.images);
 
 		container.addSectionComponents(
 			new SectionBuilder()
