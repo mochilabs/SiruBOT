@@ -65,7 +65,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
-	const playbackLabel = current && player.voiceChannelId ? `-# 🔊 <#${player.voiceChannelId}>` : null;
+	// 플레이어 상태를 재생 라벨에 통합한다 — 재생 중 / 일시정지 / 실시간.
+	const statusLabel = !current ? null : current.info.isStream ? '실시간' : player.paused ? '일시정지' : '재생 중';
+	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# ${statusLabel} <#${player.voiceChannelId}>` : null;
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
 	const thumbnail = new ThumbnailBuilder();
@@ -214,7 +216,7 @@ function buildEpisodeLine(player: Player): string | null {
 
 	const start = formatTime(chapter.start / 1000);
 	const end = formatTime(chapter.end / 1000);
-	return `-# ╰ ${chapter.name} (${start}~${end})`;
+	return `-# ${emoji('chapter')} ${chapter.name} (${start}~${end})`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
@@ -237,16 +239,16 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 				: typeof requesterId === 'string' && requesterId
 					? `<@${requesterId}>`
 					: null;
-	contents.push(requesterLabel ? `-# (${track.info.author}) ${requesterLabel}` : `-# (${track.info.author})`);
+	contents.push(requesterLabel ? `-# ${emoji('artist')} ${track.info.author} ${requesterLabel}` : `-# ${emoji('artist')} ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
 
+	// 상태(재생/일시정지/실시간)는 재생 라벨로 올렸으므로 여기서는 진행 정보만 보여준다.
 	if (track.info.isStream) {
-		contents.push(`-# ${emoji('radio_wave')} 실시간 스트리밍`);
-	} else if (player.paused) {
-		contents.push(`-# ${emoji('pause')} 일시정지됨`);
+		// 라이브는 길이가 없어 진행바·타임이 무의미 — 라이브 표시만 남긴다.
+		contents.push(`-# ${emoji('radio_wave')} 라이브`);
 	} else {
 		// The bar precedes the elapsed/total time, matching the compact controller layout.
 		const progressText = options.progressEmoji ? `${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))} ` : '';

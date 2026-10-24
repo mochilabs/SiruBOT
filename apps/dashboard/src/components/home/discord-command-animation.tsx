@@ -113,7 +113,7 @@ function PlayResult() {
 					<span className="ml-1.5 align-middle text-2xs font-medium tabular-nums text-discord-text-muted">({formatDuration(track.duration)})</span>
 				</Heading>
 				<Subtext>
-					({track.artist}) <span className={COMMAND_MENTION}>@사용자</span> (3곡 남음 12:36)
+					💿 {track.artist} <span className={COMMAND_MENTION}>@사용자</span> (3곡 남음 12:36)
 				</Subtext>
 			</Section>
 		</div>
@@ -163,19 +163,19 @@ function PlaylistResult() {
 	);
 }
 
-/** /현재곡 — nowplaying.ts: "-# 🔊 <#채널>" + ### 제목(링크) + (아티스트)(신청자) + (시간)(프로그레스바) + footer */
+/** /현재곡 — nowplaying.ts: "-# 재생 중 <#채널>" + ### 제목(링크) + 💿아티스트 신청자 + (시간)(프로그레스바) + footer */
 function NowPlayingResult() {
 	const track = TRACKS[0];
 
 	return (
 		<div className="space-y-1.5 rounded-md border-l-4 border-discord-primary bg-discord-embed p-3">
-			<Subtext>🔊 #음악-라운지</Subtext>
+			<Subtext>재생 중 #음악-라운지</Subtext>
 			<Section thumbnail={track.thumbnail}>
 				<Heading>
 					<span className="underline decoration-discord-text/20 underline-offset-2">{track.title}</span>
 				</Heading>
 				<Subtext>
-					({track.artist}) <span className={COMMAND_MENTION}>@사용자</span>
+					💿 {track.artist} <span className={COMMAND_MENTION}>@사용자</span>
 				</Subtext>
 				<Subtext>(0:43 / {formatDuration(track.duration)})</Subtext>
 			</Section>
