@@ -24,6 +24,8 @@ export interface MixerStateResponse {
 	announcementsQueued: number;
 	/** 서버 슬롯에 예열된 곡의 identifier — 재시작 복구 때 클라이언트 기록과 대조한다. 예전 JAR엔 없을 수 있다. */
 	nextTrackIdentifier?: string | null;
+	/** 크로스페이드로 진입 중인(sub) 곡의 identifier — 예전 JAR엔 없을 수 있다. */
+	subTrackIdentifier?: string | null;
 }
 
 /** `POST /mixer/announce` 202 응답 — 안내가 큐에 쌓였다는 영수증. 오버레이 재생 시작이 아니다. */
@@ -72,6 +74,8 @@ export class MixerService {
 	private readonly slotOperations = new Map<string, Promise<void>>();
 	/** 서버에서 overlapEnd(aborted)를 받은 시각(ms) — trackEnd에서 consume한다. */
 	private readonly overlapAbortedAt = new Map<string, number>();
+	/** 진행 중인 크로스페이드(overlap) 길드 — 값은 incoming(sub) 트랙 identifier 또는 null. */
+	private readonly activeOverlaps = new Map<string, string | null>();
 
 	private nodeRest(player: Player): { base: string; auth: string } {
 		const o = (player.node?.options ?? {}) as { host?: string; port?: number; authorization?: string; secure?: boolean };
@@ -206,6 +210,7 @@ export class MixerService {
 		const gid = String(guildId);
 		const identifier = this.preloadedIdentifiers.get(gid) ?? null;
 		this.preloadedIdentifiers.delete(gid);
+		this.activeOverlaps.delete(gid);
 		return identifier;
 	}
 
@@ -224,13 +229,32 @@ export class MixerService {
 
 	/**
 	 * 노드 WS `mixer` op를 관찰한다. lavalink-client가 모르는 op라 raw로만 전달된다.
-	 * overlapEnd(aborted)만 기록한다 — abort 직후의 trackEnd는 서버가 자동 진행하지
-	 * 않으므로 TrackHandler가 관망 대신 클라이언트 소유 진행으로 넘어가야 한다.
+	 * overlapStart는 진행 중 크로스페이드로 기록해(audioService의 관련곡 끊기 판단에 쓴다),
+	 * overlapEnd(aborted)는 abort 직후의 trackEnd가 서버 자동 진행이 아님을 TrackHandler에 알린다.
 	 */
 	public observeMixerEvent(payload: unknown): void {
-		const data = payload as { type?: unknown; reason?: unknown; guildId?: unknown } | null;
-		if (!data || data.type !== 'overlapEnd' || data.reason !== 'aborted' || typeof data.guildId !== 'string') return;
-		this.overlapAbortedAt.set(String(data.guildId), Date.now());
+		const data = payload as { type?: unknown; reason?: unknown; guildId?: unknown; track?: { identifier?: unknown } | null } | null;
+		if (!data || typeof data.guildId !== 'string') return;
+		const gid = String(data.guildId);
+		if (data.type === 'overlapStart') {
+			const trackId = typeof data.track?.identifier === 'string' ? data.track.identifier : null;
+			this.activeOverlaps.set(gid, trackId);
+			return;
+		}
+		if (data.type === 'overlapEnd') {
+			this.activeOverlaps.delete(gid);
+			if (data.reason === 'aborted') this.overlapAbortedAt.set(gid, Date.now());
+		}
+	}
+
+	/** 서버가 overlapStart를 알린 뒤 overlapEnd를 받지 못했으면 true — 크로스페이드 진행 중이다. */
+	public isOverlapActive(guildId: string): boolean {
+		return this.activeOverlaps.has(String(guildId));
+	}
+
+	/** 진행 중 크로스페이드의 incoming(sub) 트랙 identifier — 서버가 트랙 정보를 안 줬으면 null이다. */
+	public getOverlapTrackIdentifier(guildId: string): string | null {
+		return this.activeOverlaps.get(String(guildId)) ?? null;
 	}
 
 	/** 서버 슬롯에 예열된 곡이 남아 있으면 true — 서버가 content end에 자동 진행한다. */
@@ -241,6 +265,7 @@ export class MixerService {
 	/** 예열이 이뤄지지 않은 길드로 표시한다(클라이언트가 전이를 소유). */
 	public markUnmanaged(guildId: string): void {
 		this.clearPreloadedState(String(guildId));
+		this.activeOverlaps.delete(String(guildId));
 	}
 
 	/**
@@ -270,7 +295,11 @@ export class MixerService {
 		}
 
 		// 오버랩이 진행 중이면 손대지 않는다 — trackStart가 wiring을 다시 수행한다.
-		if (state.crossfadeActive) return;
+		// 대신 incoming(sub) 트랙 식별자를 기록해 관련곡 크로스페이드 끊기 판단에 쓴다.
+		if (state.crossfadeActive) {
+			this.activeOverlaps.set(gid, state.subTrackIdentifier ?? null);
+			return;
+		}
 
 		const head = player.queue?.tracks?.[0];
 		if (!head) {
@@ -420,6 +449,9 @@ export class MixerService {
 	 * 사용자 안내로 변환하거나 watchdog 복구에 맡긴다.
 	 */
 	public async skip(player: Player, position?: number): Promise<void> {
+		// 스킵이 곧 overlap 종료다 — stale 기록이 남으면 다음 enqueueTrack이 관련곡
+		// 크로스페이드로 오판한다. clearPreloadedState는 여기서 안 지우므로 따로 뺀다.
+		this.activeOverlaps.delete(String(player.guildId));
 		await this.clearNext(player);
 		await player.skip(position);
 	}

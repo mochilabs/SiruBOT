@@ -22,9 +22,9 @@ export function getInFlightRelatedFetch(guildId: string): Promise<Track | null> 
 	return relatedFetchInFlight.get(String(guildId));
 }
 
-/** 봇이 자동으로 넣은 추천곡인지 판별한다 (requester.id === 'related_track') */
-function isRelatedTrack(track: Track | UnresolvedTrack): boolean {
-	const requester = (track as { requester?: unknown }).requester;
+/** 봇이 자동으로 넣은 추천곡인지 판별한다 (requester.id === 'related_track'). null/undefined는 추천곡이 아니다. */
+export function isRelatedTrack(track: Track | UnresolvedTrack | null | undefined): boolean {
+	const requester = track?.requester;
 	const requesterId = requester && typeof requester === 'object' ? (requester as { id?: unknown }).id : requester;
 	return requesterId === RELATED_TRACK_REQUESTER_ID;
 }

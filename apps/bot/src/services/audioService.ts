@@ -2,7 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import * as Sentry from '@sentry/node';
 import { ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
-import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import * as view from '../modules/audio/view/play.ts';
 
@@ -326,9 +326,43 @@ export class AudioService {
 	 */
 	public async enqueueTrack(player: Player, track: Track | UnresolvedTrack | (Track | UnresolvedTrack)[]): Promise<{ wasIdle: boolean }> {
 		const wasIdle = player.queue.current === null && !player.playing;
+		const customPlayer = player as CustomPlayer;
+		// 지금 크로스페이드로 들어오고 있는 곡이 추천곡인지 판단하려고 추가 전 큐 상태를 잰다.
+		const firstBeforeAdd = player.queue.tracks[0];
+		const consumedTrack = customPlayer.transitionState?.serverConsumedTrack ?? null;
+		const overlapTrackId = container.mixerService.getOverlapTrackIdentifier(String(player.guildId));
+		const firstIsRelated =
+			isRelatedTrack(firstBeforeAdd) ||
+			isRelatedTrack(consumedTrack) ||
+			(overlapTrackId !== null && firstBeforeAdd?.info?.identifier === overlapTrackId && isRelatedTrack(firstBeforeAdd));
+		const inCrossfadeTransition =
+			container.mixerService.isOverlapActive(String(player.guildId)) || customPlayer.transitionState?.preloadConsumedAt != null;
+		const shouldInterruptRelatedCrossfade = !wasIdle && firstIsRelated && inCrossfadeTransition;
+
 		await player.queue.add(track);
 		await removeStaleRelatedTracks(player);
-		if (!wasIdle) this.preloadAfterQueueChange(player);
+
+		if (shouldInterruptRelatedCrossfade && player.queue.tracks.length > 0) {
+			// 추천곡 크로스페이드를 끊고 유저 곡으로 즉시 교체한다 — 이전 브랜치 없이
+			// 관련곡이 3~10초 재생된 뒤 유저 곡이 이어지는 더듬는 경험을 막는다.
+			const nextTrack = (await player.queue.splice(0, 1)) as Track | UnresolvedTrack | null;
+			if (nextTrack) {
+				if (player.queue.current && !isRelatedTrack(player.queue.current) && Array.isArray(player.queue.previous)) {
+					player.queue.previous.unshift(player.queue.current);
+					while (player.queue.previous.length > 25) player.queue.previous.pop();
+				}
+				if (customPlayer.transitionState) {
+					customPlayer.transitionState.preloadConsumedAt = null;
+					customPlayer.transitionState.serverConsumedTrack = null;
+				}
+				await container.mixerService.clearNext(player).catch(() => null);
+				await container.mixerService.primeForPlay(player);
+				await player.play({ clientTrack: nextTrack as Track, paused: false });
+				if (player.queue.tracks.length > 0) this.preloadAfterQueueChange(player);
+			}
+		} else if (!wasIdle) {
+			this.preloadAfterQueueChange(player);
+		}
 		return { wasIdle };
 	}
 

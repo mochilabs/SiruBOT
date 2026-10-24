@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from 'lavalink-client';
-import { normalizeTitle, titleSimilarity, pickBySimilarity, fetchRelatedCandidate, autoPlayRelated } from './autoPlayRelated.ts';
+import { normalizeTitle, titleSimilarity, pickBySimilarity, fetchRelatedCandidate, autoPlayRelated, isRelatedTrack } from './autoPlayRelated.ts';
+import { RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 
 const { container } = vi.hoisted(() => ({
 	container: {
@@ -19,6 +20,25 @@ function track(title: string, identifier: string, duration = 100_000, extra: Rec
 		...extra
 	} as unknown as Track;
 }
+
+describe('isRelatedTrack', () => {
+	it('null/undefined는 추천곡이 아니다', () => {
+		expect(isRelatedTrack(null)).toBe(false);
+		expect(isRelatedTrack(undefined)).toBe(false);
+	});
+
+	it('requester.id가 추천곡 센티널이면 true다', () => {
+		expect(isRelatedTrack(track('related song', 'rel-1', 100_000, { requester: { id: RELATED_TRACK_REQUESTER_ID } }))).toBe(true);
+	});
+
+	it('일반 유저 트랙은 requester.id가 달라 false다', () => {
+		expect(isRelatedTrack(track('user song', 'usr-1', 100_000, { requester: { id: '123456789012345678' } }))).toBe(false);
+	});
+
+	it('requester가 없는 트랙은 false다', () => {
+		expect(isRelatedTrack(track('plain song', 'plain-1'))).toBe(false);
+	});
+});
 
 describe('normalizeTitle', () => {
 	it('strips bracketed suffixes, separators and special characters', () => {
