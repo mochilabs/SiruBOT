@@ -10,22 +10,22 @@ function track(info: Partial<{ title: string; duration: number; isStream: boolea
 
 describe('emojiProgressBar', () => {
 	it('0%는 전 셀이 비어 있고 100%는 전 셀이 차요', () => {
-		expect(emojiProgressBar(0)).toBe('□□□□□□');
-		expect(emojiProgressBar(1)).toBe('■■■■■■');
+		expect(emojiProgressBar(0)).toBe('□□□□□');
+		expect(emojiProgressBar(1)).toBe('■■■■■');
 	});
 
 	it('반은 채우고 반은 비워요 (셀 경계)', () => {
-		expect(emojiProgressBar(0.5)).toBe('■■■□□□');
+		expect(emojiProgressBar(0.5)).toBe('■■◐□□');
 	});
 
 	it('half 셀은 ◐로 표시해요', () => {
-		expect(emojiProgressBar(1 / 12)).toBe('◐□□□□□');
+		expect(emojiProgressBar(1 / 10)).toBe('◐□□□□');
 	});
 
 	it('범위 밖·NaN은 클램프해서 처리해요', () => {
-		expect(emojiProgressBar(-1)).toBe('□□□□□□');
-		expect(emojiProgressBar(2)).toBe('■■■■■■');
-		expect(emojiProgressBar(Number.NaN)).toBe('□□□□□□');
+		expect(emojiProgressBar(-1)).toBe('□□□□□');
+		expect(emojiProgressBar(2)).toBe('■■■■■');
+		expect(emojiProgressBar(Number.NaN)).toBe('□□□□□');
 	});
 });
 

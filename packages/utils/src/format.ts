@@ -9,7 +9,7 @@ const EMOJI_COMPONENT_REGEX = /\p{Emoji_Component}/gu;
 const DIGIT_SYMBOL_REGEX = /[\d*#]/;
 
 /**
- * 앱 이모지 진행바 — 6셀(start + mid×4 + end), 셀당 filled/half/empty.
+ * 앱 이모지 진행바 — 5셀(start + mid×3 + end), 셀당 filled/half/empty.
  * 셀 png는 resources/emoji_replacement/pb_*.png (upload-emojis로 앱 이모지 등록).
  * 매핑이 아직 없으면 셀이 유니코드 폴백('■'/'◐'/'□')으로 나와요.
  */

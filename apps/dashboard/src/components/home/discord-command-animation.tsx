@@ -89,7 +89,7 @@ function Heading({ children }: { children: ReactNode }) {
 	return <p className="text-sm font-bold leading-snug text-discord-text">{children}</p>;
 }
 
-/** 실제 봇 푸터: `-# 📡 재생 서버: main | 🔊 볼륨: 100% | 시루 x.x.x` */
+/** 실제 봇 푸터: `-# 📡 main • 🔊 100% • 시루 x.x.x (hash)` */
 function Footer({ left, right }: { left: string; right?: string }) {
 	return (
 		<div className="mt-2 flex items-center justify-between border-t border-discord-btn-active pt-2 text-2xs text-discord-text-muted">
@@ -112,7 +112,7 @@ function PlayResult() {
 					<span className="ml-1.5 align-middle text-2xs font-medium tabular-nums text-discord-text-muted">({formatDuration(track.duration)})</span>
 				</Heading>
 				<Subtext>
-					아티스트: {track.artist} | 신청자: <span className={COMMAND_MENTION}>@사용자</span> | 3곡 남음 (12:36)
+					아티스트: {track.artist} • 신청자: <span className={COMMAND_MENTION}>@사용자</span> • 3곡 남음 (12:36)
 				</Subtext>
 			</Section>
 		</div>
@@ -173,13 +173,12 @@ function NowPlayingResult() {
 				<Heading>
 					<span className="underline decoration-discord-text/20 underline-offset-2">{track.title}</span>
 				</Heading>
-				<Subtext>아티스트: {track.artist}</Subtext>
 				<Subtext>
-					신청자: <span className={COMMAND_MENTION}>@사용자</span>
+					아티스트: {track.artist} • 신청자: <span className={COMMAND_MENTION}>@사용자</span>
 				</Subtext>
 				<Subtext>(0:43 / {formatDuration(track.duration)})</Subtext>
 			</Section>
-			<Footer left="📡 재생 서버: main | 🔊 볼륨: 100%" />
+			<Footer left="📡 main • 🔊 100%" />
 		</div>
 	);
 }
