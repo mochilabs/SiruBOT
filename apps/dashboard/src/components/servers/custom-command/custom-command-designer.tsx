@@ -91,7 +91,7 @@ export function CustomCommandDesigner({
 	designRef.current = design;
 
 	// 목록 조작(수정·이동·삭제)은 공용 훅 — 스텝 조립과 같은 동작이에요
-	const { updateItem, moveItem, removeItem } = useListEditor(design.items, (items) =>
+	const { keys: itemKeys, updateItem, moveItem, removeItem } = useListEditor(design.items, (items) =>
 		onChange({ ...designRef.current, items }),
 	);
 
@@ -152,7 +152,7 @@ export function CustomCommandDesigner({
 
 			{design.items.map((item, index) => (
 				<div
-					key={index}
+					key={itemKeys[index] ?? index}
 					className="space-y-2 rounded-menu bg-surface-2 p-3"
 				>
 					<div className="flex items-center gap-2">

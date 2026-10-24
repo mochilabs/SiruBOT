@@ -59,6 +59,11 @@ describe("putAssetObject", () => {
 		await expect(putAssetObject("guild/a.png", PNG_BYTES)).rejects.toThrow("이미지 형식이 올바르지 않아요.");
 	});
 
+	it("영문 기술 원문(Route not found 등)은 노출하지 않고 상태 폴백으로 대체해요", async () => {
+		fetchMock.mockResolvedValueOnce(jsonResponse({ message: "Route PUT:/assets/guild/a.png not found" }, 502));
+		await expect(putAssetObject("guild/a.png", PNG_BYTES)).rejects.toThrow("이미지를 저장하지 못했어요.");
+	});
+
 	it("본문 없는 401은 상태 코드에 맞는 안내로 바꿔서 throw해요", async () => {
 		fetchMock.mockResolvedValueOnce(new Response("", { status: 401 }));
 		await expect(putAssetObject("guild/a.png", PNG_BYTES)).rejects.toThrow(

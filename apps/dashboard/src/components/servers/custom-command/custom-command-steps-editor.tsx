@@ -113,6 +113,7 @@ export function StepsEditor({
 
 	// 목록 조작(수정·이동·삭제)은 공용 훅 — 디자이너 구성 요소 편집과 같은 동작이에요
 	const {
+		keys: stepKeys,
 		updateItem: updateStep,
 		moveItem: moveStep,
 		removeItem: removeStep,
@@ -125,7 +126,7 @@ export function StepsEditor({
 	return (
 		<div className="space-y-2">
 			{steps.map((step, index) => (
-				<div key={index} className="flex items-start gap-2 rounded-menu bg-surface-2 p-3">
+				<div key={stepKeys[index] ?? index} className="flex items-start gap-2 rounded-menu bg-surface-2 p-3">
 					<div className="flex flex-col gap-1">
 						<Button
 							variant="icon"

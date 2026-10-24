@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useListEditor } from "./use-list-editor";
 
 function Harness({ items, onChange }: { items: readonly string[]; onChange: (next: string[]) => void }) {
-  const { updateItem, moveItem, removeItem } = useListEditor(items, onChange);
+  const { keys, updateItem, moveItem, removeItem } = useListEditor(items, onChange);
   return (
     <div>
       <button onClick={() => moveItem(0, -1)}>첫 행 위로</button>
@@ -15,6 +15,7 @@ function Harness({ items, onChange }: { items: readonly string[]; onChange: (nex
       <button onClick={() => moveItem(2, -1)}>끝 행 위로</button>
       <button onClick={() => updateItem(1, "B")}>수정</button>
       <button onClick={() => removeItem(0)}>삭제</button>
+      <output data-testid="keys">{keys.join(",")}</output>
     </div>
   );
 }
@@ -71,5 +72,30 @@ describe("useListEditor", () => {
     await click(2);
     expect(second).toHaveBeenLastCalledWith(["y", "x"]);
     expect(first).toHaveBeenCalledTimes(2);
+  });
+
+  it("중간 삭제·순서 이동 시 keys 배열도 항목을 따라 이동해 정체성을 유지해요", async () => {
+    let current = ["a", "b", "c"];
+    const rerender = async () => {
+      await act(async () => { root.render(<Harness items={current} onChange={(next) => { current = next; }} />); });
+    };
+    await rerender();
+    const initialKeys = document.querySelector("[data-testid='keys']")?.textContent?.split(",") ?? [];
+    expect(initialKeys).toHaveLength(3);
+    expect(new Set(initialKeys).size).toBe(3);
+
+    // 0번을 아래로 이동 → key 순서도 [k1, k0, k2]로 뒤바뀌어야 함
+    await click(2);
+    await rerender();
+    expect(document.querySelector("[data-testid='keys']")?.textContent).toBe(
+      [initialKeys[1], initialKeys[0], initialKeys[2]].join(","),
+    );
+
+    // 새 0번(원래 1번) 삭제 → 남은 key는 [k0, k2] (뒤 항목이 앞 key를 물려받지 않음)
+    await click(5);
+    await rerender();
+    expect(document.querySelector("[data-testid='keys']")?.textContent).toBe(
+      [initialKeys[0], initialKeys[2]].join(","),
+    );
   });
 });

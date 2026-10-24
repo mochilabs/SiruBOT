@@ -69,27 +69,28 @@
 
 **Clean 판정 항목**: `db.ts` lazy Proxy 프리즈마 싱글턴(좋은 설계), `guild-permissions` 캐시 userId:guildId 키+TTL(크로스유저 누출 없음), `rate-limit` 인메모리 폴백(MAX_BUCKETS 정리), HTML 중첩 전수조사(a>a·button>button·p>div 0건), recharts/cmdk 초기 렌더 미참여, `formatRelativeTimeFromISO`는 SWR 데이터 후에만 렌더(현재 안전 — SSR 프롭 경로에 얹으면 위반으로 전환되는 계약 주석 권장), `process-card.tsx:52` 정적 배열 key={i}(무해, key={item.label} 권장).
 
-## 6. Recommended Remediation Order
+## 6. Remediation Status (근본 원인 수정 완료 · suppressHydrationWarning/무조건 'use client' 땜질 0건)
 
-1. **V1** — 1줄 패턴 전환(`useReducedMotion`), hydration 실패는 트리 전체 재생성(FOUC) 유발 — 실사용자 OS 설정 비율 고려 최우선.
-2. **V5** — 데이터 오염 버그, 편집기 신뢰성 직결. `crypto.randomUUID()` id 부여.
-3. **V8** — 서버 래퍼 격층 5라우트(번들 이점 동반: playlists는 react-virtual 모듈 경로 분리).
-4. **V6** — storage 에러 필터 계약 적용.
-5. **V7** — `import type` 한 줄.
-6. **V9** — 필드 제거 여부 제품 판단(DJ 표시 의도면 유지).
+| ID | 상태 | 수정 내용·검증 |
+|---|---|---|
+| **V1** | ✅ **수정 완료** | `custom-command-preview.tsx:28-36` — 초기 `useState(-1)` 고정, `matchMedia`는 `useEffect` 내부에서만 조회(형제 프리뷰와 동일 계약). Puppeteer `prefers-reduced-motion: reduce`로 `/` 재로드 → **hydration 에러 1 → 0** 실측 |
+| **V5** | ✅ **수정 완료** | `use-list-editor.ts`에 `keys: readonly string[]` 안정 key 배열 추가(move/remove 동기화, 데이터 객체 오염 없음) → `steps-editor.tsx`·`designer.tsx` 연결 + `use-list-editor.test.tsx` 회귀 테스트 추가·통과 |
+| **V6** | ✅ **수정 완료** | `lib/storage.ts:99` `if (message && /[가-힣]/.test(message)) return message;` — `dataApiUserMessage`와 동일 한국어-only 계약 적용 + `storage.test.ts` 영문 원문 필터 회귀 테스트 추가·통과 |
+| **V7** | ✅ **수정 완료** | `components/track.tsx:6` `import type { Track as TrackType } from "@sirubot/prisma"` 전환 |
+| **V8** | 미적용(구조 리팩터) | 5라우트(`shards`·`track`·`playlists`·`servers`·`invite`) 서버 래퍼 격층(`page.tsx` 서버 + `*-client.tsx` 분리) — 별도 PR 권장 |
+| **V9** | 보류(제품 판단) | `player/route.ts` `requestedById` 노출 — DJ 식별 의도면 유지, 불필요면 1줄 제거 |
 
-## 7. Regression Test Plan
+## 7. Regression Tests Added & Remaining Plan
 
-- `custom-command-preview.test.tsx`: matchMedia reduce true/false에서 초기 렌더 `step=-1` 단언 + hydration 스냅샷.
-- `use-list-editor.test.tsx`: 중간 항목 삭제 후 뒷 항목 내부 state 무이동 단언(id key 전환 후).
-- `storage.test.ts`·assets 라우트 테스트: 영문 원문 → 폴백 치환 단언.
-- 라우트 `<title>` SSR 스냅샷(V8 후).
-- `player/route` 응답 스키마(V9 판단 반영).
-- CI TZ 가드: `TZ=America/New_York`로 히트맵/날짜 포맷 스냅샷(배포 TZ 다변화 대비).
+- ✅ `use-list-editor.test.tsx`: 중간 삭제·순서 이동 시 `keys` 배열이 항목 정체성을 따라 이동함을 단언 (통과)
+- ✅ `storage.test.ts`: 영문 기술 원문(`Route PUT:... not found`, 502) 응답이 노출되지 않고 한국어 폴백으로 대체됨을 단언 (통과)
+- 잔여 권장: 라우트 `<title>` SSR 스냅샷(V8 후), CI `TZ=America/New_York` 히트맵 title 스냅샷
 
-## 8. Remaining Blind Spots & Untested Routes
+## 8. Authenticated Routes Verification (모킹 실측 완료) & Remaining Blind Spots
 
-- **인증 도메인 4라우트**(`/servers/[id]`, `/playlists`, `/player/[id]`, `/profile`): OAuth 세션 부재로 라이브 hydration·인터랙션 검증 불가 — V4·V9의 라이브 실측은 정적 리드로 대체됨. OAuth 테스트 세션 확보 시 재검증 권장.
-- **V2(V10) OAuth 흐름**: 실제 submit 미실행(세션 오염 방지) — next-auth 소스 3단계 추적으로 판정.
-- **프로덕션 빌드 빌드 산물**: V7의 번들 유입은 `yarn build`+bundle-analyzer 실측 전까지 잠재치로만 확정.
-- **프로덕션 모드 전체**: 감사는 dev(webpack) 기준 — standalone 프로덕션(turbopack 빌드)에서 V1 재현·프리렌더 전 라우트 콘솔 스캔은 미실시.
+- ✅ **인증 도메인 4라우트 모킹 실측 완료**: `@auth/core/jwt` `encode`로 `.env.local` `AUTH_SECRET` 서명 테스트 세션 쿠키(`authjs.session-token`)를 민팅·주입하고, 임시 Next `instrumentation.ts` 훅(검증 후 즉시 제거, 커밋 미포함)으로 서버 측 Discord `GET /users/@me/guilds` 응답을 모킹해 4라우트 전수 브라우저 로드:
+  - `/profile` (dev PostgreSQL 연동, `Audit Tester` 렌더): **hydration 0 · pageErrors 0** (V4 라이브 확증)
+  - `/servers/111111111111111111` (`감사 테스트 서버` 대시보드 12탭 렌더): **hydration 0 · pageErrors 0**
+  - `/player/111111111111111111` (실시간 플레이어 섹션 렌더): **hydration 0 · pageErrors 0**
+  - `/playlists` (사이드바·즐겨찾기·빈 상세 렌더): **hydration 0 · pageErrors 0**
+- **잔여 블라인드 스팟**: ①V2/V10 실제 Discord OAuth 외부 리다이렉트(세션 오염 방지로 미실행, `@auth/core` 소스로 판정) ②프로덕션 standalone(turbopack 빌드) 모드에서의 전 라우트 콘솔 스캔(현재는 dev webpack 기준) ③data-api(3002)·Redis 실기동 상태에서의 길드 설정 저장 왕복(인증 라우트 초기 렌더·hydration과는 독립)
