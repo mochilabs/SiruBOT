@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { controllerView } from './controller.ts';
+import { repeatEmoji } from './repeat.ts';
 
 const mocks = vi.hoisted(() => ({ queued: vi.fn(), remaining: vi.fn(), nowPlaying: vi.fn(), chapter: vi.fn(), chapterIndex: vi.fn() }));
 
@@ -139,17 +140,16 @@ describe('controllerView 재생 라벨·타이틀', () => {
 		mocks.chapterIndex.mockReturnValue(null);
 	});
 
-	it('재생 중 라벨은 텍스트 채널이 아니라 보이스 채널을 멘션한다', () => {
+	it('재생 라벨은 음성 채널 아이콘과 멘션만 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-
-		expect(texts.some((text) => text.includes('<#voice-channel>에서 재생 중'))).toBe(true);
+		expect(texts.some((text) => text.includes('🔊 <#voice-channel>'))).toBe(true);
+		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
 		expect(texts.some((text) => text.includes('<#text-channel>'))).toBe(false);
 	});
 
-	it('보이스 채널을 알 수 없으면 재생 중 라벨을 붙이지 않는다', () => {
+	it('보이스 채널을 알 수 없으면 재생 라벨을 붙이지 않는다', () => {
 		const texts = collectTexts(controllerJson({ player: player({ voiceChannelId: undefined }) }));
-
-		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
+		expect(texts.some((text) => text.includes('🔊 <#'))).toBe(false);
 	});
 
 	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
@@ -166,6 +166,21 @@ describe('controllerView 재생 라벨·타이틀', () => {
 
 		expect(texts.some((text) => text.includes(`### **테스트 곡**`))).toBe(true);
 		expect(texts.some((text) => text.includes(longUri))).toBe(false);
+	});
+
+	it('진행바를 재생 시간 앞에 배치한다', () => {
+		const texts = collectTexts(controllerJson());
+		expect(texts.some((text) => text.includes('■□□□□ (00:30 / 03:00)'))).toBe(true);
+	});
+
+	it('대기열이 없으면 divider를 렌더하지 않는다', () => {
+		const json = controllerJson();
+		expect((json.components ?? []).some((component) => component.type === 14)).toBe(false);
+	});
+	it('track-repeat off 아이콘은 slash가 포함된 별도 앱 이모지를 사용한다', () => {
+		const json = controllerJson();
+		const repeatButton = actionRows(json)[0]![4] as unknown as Record<string, unknown>;
+		expect(repeatButton.emoji).toEqual({ name: repeatEmoji('off'), animated: false });
 	});
 });
 
@@ -184,8 +199,14 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('╰ 1화 • 00:00~03:54'))).toBe(true);
+		expect(texts.some((text) => text.includes('╰ 1화 (00:00~03:54)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(03:54)'))).toBe(false);
+	});
+
+	it('챕터 구간을 구분점 대신 괄호와 물결표로 표시한다', () => {
+		mocks.chapter.mockReturnValue({ name: '1화', start: 0, end: 60_000, duration: 60_000 });
+		const texts = collectTexts(controllerJson());
+		expect(texts.some((text) => text.includes('╰ 1화 (00:00~01:00)'))).toBe(true);
 	});
 
 	it('영상 중간부터 시작하는 챕터도 길이 표기 없이 시각 범위만 보여준다', () => {
@@ -193,7 +214,7 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('╰ 2화 • 01:00~02:00'))).toBe(true);
+		expect(texts.some((text) => text.includes('╰ 2화 (01:00~02:00)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(01:00)'))).toBe(false);
 	});
 });

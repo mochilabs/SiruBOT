@@ -61,9 +61,13 @@ describe('renderNowPlayingCard', () => {
 		);
 		const avgTitleLuma = titleLumas.reduce((a, b) => a + b, 0) / titleLumas.length;
 		expect(avgTitleLuma).toBeGreaterThan(0.25);
-		// 브랜드는 우측 하단 22px 위치에 액센트 색으로 그려져요.
-		const brandPixel = Array.from(ctx.getImageData(900, 375, 1, 1).data.slice(0, 3));
-		expect(luma(brandPixel as never)).toBeGreaterThan(0.25);
+		// 브랜드는 좌측 하단(baseline H-22=378)에 액센트 색으로 그려져요.
+		// 대기열 메타는 그 위 한 줄(metaY≈350)에 그려지므로 브랜드 줄만 담기는 영역으로 검증한다.
+		const brandRegion = ctx.getImageData(376, 355, 552, 35);
+		const brandPixels = Array.from({ length: brandRegion.data.length / 4 }, (_, i) =>
+			luma([brandRegion.data[i * 4]!, brandRegion.data[i * 4 + 1]!, brandRegion.data[i * 4 + 2]!])
+		);
+		expect(Math.max(...brandPixels)).toBeGreaterThan(0.25);
 	});
 
 	it('does not draw a progress bar for non-stream tracks', async () => {

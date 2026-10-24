@@ -6,7 +6,7 @@
  */
 import { container } from '@sapphire/framework';
 import { AttachmentBuilder } from 'discord.js';
-import { BOT_NAME, isDev, versionInfo } from '@sirubot/utils';
+import { BOT_NAME, emoji, isDev, versionInfo } from '@sirubot/utils';
 import { renderNowPlayingCard } from '../../../../services/dataApiClient.ts';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID, requesterIdOf } from '../requester.ts';
@@ -78,9 +78,10 @@ function safeFilename(trackKey: string): string {
 	return `nowplaying-${(h >>> 0).toString(36)}.png`;
 }
 
-/** 카드 하단 메타에 박을 브랜드 줄 — 봇 이름 + 짧은 버전/해시 */
-function brandLine(): string {
-	return `${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`;
+/** Card footer: node and volume first, then bot name and version/hash. */
+function brandLine(player: CustomPlayer): string {
+	const volume = player.volume ?? 0;
+	return `${emoji('radio_wave')} ${player.node?.id ?? 'BETA-1'} ${emoji(volume === 0 ? 'volume_muted' : volume < 50 ? 'volume_down' : 'volume_up')} ${volume}% ${emoji('info')} ${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`;
 }
 
 async function renderCard(player: CustomPlayer, current: Track, trackKey: string): Promise<CachedCard | null> {
@@ -102,7 +103,7 @@ async function renderCard(player: CustomPlayer, current: Track, trackKey: string
 		queueRemainingMs: remainingUntilQueueEnd(player, queuedTracks),
 		volume: player.volume ?? null,
 		nodeId: player.node?.id ?? null,
-		brandLine: brandLine(),
+		brandLine: brandLine(player),
 		chapter: (() => {
 			const chapter = currentChapter(player);
 			return chapter ? { name: chapter.name, startMs: chapter.start, endMs: chapter.end } : null;

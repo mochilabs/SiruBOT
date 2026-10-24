@@ -54,7 +54,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const queuedTracks = getUserQueuedTracks(player);
 	const queueCount = queuedTracks.length;
 
-	// 메시지에서 재생 상태를 먼저 읽고, 다음 곡은 보조 영역으로 분리한다.
 	const NEXT_UP_COUNT = 3;
 	const nextUpLines = queuedTracks.slice(0, NEXT_UP_COUNT).map(
 		(track, index) =>
@@ -66,11 +65,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
-	const playbackLabel = current && player.voiceChannelId ? `-# <#${player.voiceChannelId}>에서 재생 중` : null;
+	const playbackLabel = current && player.voiceChannelId ? `-# 🔊 <#${player.voiceChannelId}>` : null;
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
-
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
-
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
@@ -193,20 +190,17 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	}
 
 	if (!nowPlayingCardUrl) {
-		// 작은 컨트롤러는 서버·볼륨 상태를 텍스트로 요약한다.
+		if (queueCount > 0 && !nextUpLines.length) {
+			containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+		}
 		const footerSegments = buildFooterSegments(player, volume);
 		if (queueCount > 0) {
 			footerSegments.unshift(
-				`${emoji('scroll')} 대기열 ${queueCount}곡 · ${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음`
+				`${emoji('scroll')} 대기열 ${queueCount}곡 (${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음)`
 			);
 		}
-
-		// `-#`는 줄 맨 앞에서만 적용되므로 메타데이터를 한 줄에 합친다.
-		containerComponent
-			.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-			.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' • ')}`));
+		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' ')}`));
 	}
-
 	return containerComponent;
 }
 
@@ -220,7 +214,7 @@ function buildEpisodeLine(player: Player): string | null {
 
 	const start = formatTime(chapter.start / 1000);
 	const end = formatTime(chapter.end / 1000);
-	return `-# ╰ ${chapter.name} • ${start}~${end}`;
+	return `-# ╰ ${chapter.name} (${start}~${end})`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
@@ -234,41 +228,35 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	const trackTitle = removeEmojis(track.info.title);
 	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
 	contents.push(`### **${hasValidUrl ? `[${trackTitle}](${track.info.uri})` : trackTitle}**`);
-	// 아티스트·신청자를 한 줄로 묶는다 — 줄 수를 아껴 카드·컨트롤러 레이아웃 여유를 확보한다.
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	const requesterLabel =
 		requesterId === RELATED_TRACK_REQUESTER_ID
-			? `추천 곡 ${emoji('sparkle')}`
+			? `${emoji('sparkle')} 추천곡`
 			: requesterId === TTS_CLIP_REQUESTER_ID
 				? '채팅 TTS'
 				: typeof requesterId === 'string' && requesterId
-					? `신청자: <@${requesterId}>`
+					? `<@${requesterId}>`
 					: null;
-	contents.push(requesterLabel ? `-# 아티스트: ${track.info.author} • ${requesterLabel}` : `-# 아티스트: ${track.info.author}`);
+	contents.push(requesterLabel ? `-# (${track.info.author}) ${requesterLabel}` : `-# (${track.info.author})`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
 
-	// 상대 타임스탬프는 종료 직후 "0초 전"으로 남으므로, 양쪽 레이아웃에서 경과/전체 시간만 표시한다.
 	if (track.info.isStream) {
 		contents.push(`-# ${emoji('radio_wave')} 실시간 스트리밍`);
 	} else if (player.paused) {
 		contents.push(`-# ${emoji('pause')} 일시정지됨`);
 	} else {
-		const progressText = options.progressEmoji ? ` ${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))}` : '';
-		contents.push(`-# (${formatTime((player.position ?? 0) / 1000)} / ${formatTime(track.info.duration / 1000)})${progressText}`);
+		// The bar precedes the elapsed/total time, matching the compact controller layout.
+		const progressText = options.progressEmoji ? `${emojiProgressBar((player.position ?? 0) / (track.info.duration || 1))} ` : '';
+		contents.push(`-# ${progressText}(${formatTime((player.position ?? 0) / 1000)} / ${formatTime(track.info.duration / 1000)})`);
 	}
 
 	return contents;
 }
 
-/**
- * 컨트롤러 하단 푸터 세그먼트 — 서버·볼륨·브랜드(봇 이름/버전) 순.
- * 라벨("재생 서버:", "볼륨:") 없이 값만 보여준다.
- * `-#`(작은 글씨)는 줄 맨 앞에서만 적용되므로, 여기선 세그먼트를 평문으로 돌려주고
- * 호출자가 한 줄로 합친 뒤 맨 앞에 `-# `를 한 번만 붙인다(중간 `-#`가 그대로 노출되는 버그 방지).
- */
+/** Footer segments: node, volume, then bot name and version/hash. */
 export function buildFooterSegments(player: Player, volume?: number, includeBrand = true): string[] {
 	const segments = [`${emoji('radio_wave')} ${player.node.id}`];
 	if (volume !== undefined) {
@@ -278,7 +266,7 @@ export function buildFooterSegments(player: Player, volume?: number, includeBran
 	}
 	if (includeBrand) {
 		segments.push(
-			`${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
+			`${emoji('info')} ${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
 		);
 	}
 	return segments;

@@ -1,7 +1,8 @@
-import { addSeparator, emoji, createContainer, createThumbnail, formatTime, formatTimeToKorean, formatTrack, getRequesterText } from '@sirubot/utils';
+import { addSeparator, emoji, createContainer, createThumbnail, formatTime, formatTimeToKorean, formatTrack } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, PlaylistInfo, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
 
 type playViewProps = {
 	track: Track;
@@ -32,13 +33,19 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 		showLength: true,
 		withMarkdownURL: true
 	});
-	let artistText = `-# 아티스트: ${track.info.author}`;
-
-	const requesterText = getRequesterText(track);
-	if (requesterText) artistText += ' • ' + requesterText;
+	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
+	const requesterLabel =
+		requesterId === RELATED_TRACK_REQUESTER_ID
+			? `${emoji('sparkle')} 추천곡`
+			: requesterId === TTS_CLIP_REQUESTER_ID
+				? '채팅 TTS'
+				: typeof requesterId === 'string' && requesterId
+					? `<@${requesterId}>`
+					: null;
+	let artistText = `-# (${track.info.author})${requesterLabel ? ` ${requesterLabel}` : ''}`;
 
 	if (queued) {
-		artistText += ` • ${position}개 남음 (${formatTime((totalDuration ?? 0) / 1000)})`;
+		artistText += ` (${position}개 남음, ${formatTime((totalDuration ?? 0) / 1000)})`;
 	}
 
 	const content = `${firstContent}\n### ${trackText}\n${artistText}`;
@@ -74,7 +81,7 @@ export function playStarted({ track, userId }: playStartedViewProps) {
 		withMarkdownURL: true
 	});
 
-	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# 아티스트: ${track.info.author}`;
+	const content = `${emoji('music_note')} <@${userId}>님이 재생을 시작했어요!\n### ${trackText}\n-# (${track.info.author})`;
 	addTextWithThumbnail(container, content, track?.info.artworkUrl);
 
 	return container;

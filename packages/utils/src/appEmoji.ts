@@ -88,6 +88,7 @@ const APP_EMOJI_FALLBACKS = {
 	rain: '🌧️',
 	repeat: '🔁',
 	repeat_one: '🔂',
+	repeat_off: '🔁̸',
 	robot: '🤖',
 	scissors: '✂️',
 	scroll: '📄',

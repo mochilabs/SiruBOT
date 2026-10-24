@@ -185,7 +185,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 
 	// NowPlaying 카드 이미지
 	// 카드는 트랙 식별자 + 볼륨/챕터 + 5초 위치 버킷마다 다시 렌더돼요
-	// (도미넌트 색 배경 + 제목 + 다음 곡 목록 + 대기열/볼륨/반복/노드/브랜드 메타).
+	// (도미넌트 색 배경 + 제목 + 다음 곡 목록 + 대기열 메타 + 브랜드줄).
 	// 신청자·추천/일시정지 뱃지도 이미지에 박아요 — 텍스트 동적 라인은 봇이 담당.
 	const nowPlayingCardSchema = z.object({
 		trackId: z.string().trim().min(1).max(200),
@@ -224,6 +224,7 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			.min(0)
 			.max(24 * 3600_000)
 			.default(0),
+		// 볼륨/노드 — 브랜드줄(brandLine)에 통합되어 카드 렌더에서는 미사용 (하위호환으로 유지)
 		volume: z.number().int().min(0).max(1000).nullable().default(null),
 		nodeId: z.string().trim().min(1).max(100).nullable().default(null),
 		brandLine: z.string().trim().min(1).max(120).nullable().default(null),

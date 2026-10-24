@@ -1,7 +1,7 @@
 /**
  * NowPlaying 카드 렌더러 — skia-canvas로 현재 재생 곡을 카드 이미지로 그려요.
  * 아트워크(16:9 블러 배경 + 썸네일) + 제목 + 아티스트 + 챕터/신청자/추천·일시정지 뱃지 +
- * 다음 곡 목록 + 하단 메타(대기열/볼륨/반복/노드) + 브랜드(봇이름/버전).
+ * 다음 곡 목록 + 하단 메타(대기열) + 브랜드줄(노드·볼륨·봇이름/버전).
  * 배경 액센트는 아트워크의 도미넌트 컬러.
  *
  * 카드는 정적 — 진행바가 이미지에 들어가지 않아요. 동적 시간은 디스코드 타임스탬프로
@@ -26,7 +26,7 @@ export interface NowPlayingCardInput {
 	isStream: boolean;
 	/** 일시정지 상태 — 일시정지 뱃지를 박아요 */
 	isPaused?: boolean;
-	/** 반복 모드 — off가 아니면 하단 메타에 표기해요 */
+	/** 반복 모드 — off가 아니면 상단에 반복 뱃지로 표기해요 */
 	repeatMode?: 'off' | 'track' | 'queue';
 	/** 현재 곡이 봇 추천(related) 곡인지 — 봇 추천 뱃지를 박아요 */
 	isRecommended?: boolean;
@@ -36,9 +36,11 @@ export interface NowPlayingCardInput {
 	queueCount: number;
 	/** 대기열 전체 남은 시간(ms) — 0이면 미표기 */
 	queueRemainingMs: number;
+	/** 볼륨(%) — 브랜드줄(brandLine)에 통합되어 렌더러에서는 미사용 (스키마/타입 호환용으로 유지) */
 	volume: number | null;
+	/** 노드 ID — 브랜드줄(brandLine)에 통합되어 렌더러에서는 미사용 (스키마/타입 호환용으로 유지) */
 	nodeId: string | null;
-	/** 브랜드 줄 (봇 이름 + 버전/해시) */
+	/** 브랜드 줄 (노드·볼륨·봇 이름 + 버전/해시) */
 	brandLine: string | null;
 	/** 현재 재생 중인 챕터 — 있으면 제목 아래에 구간을 표시해요 */
 	chapter: { name: string; startMs: number; endMs: number } | null;
@@ -465,59 +467,24 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		}
 	}
 
-	// 하단 메타: 대기열 + 볼륨 + 반복 + 노드 (우측 브랜드와 같은 줄, 넘치면 뒤 세그먼트부터 생략)
-	const metaY = Math.min(H - 24, Math.max(cursorY + 64, artCursorY + 128));
-	type MetaSegment = { icon: IconName; text: string };
-	const metaSegments: MetaSegment[] = [];
+	// 하단 푸터: 대기열 메타(위) + 브랜드줄(아래). 같은 위치에 겹치지 않게 별도 베이스라인으로 나눠요.
+	const brandY = H - 22;
+	const metaY = Math.min(brandY - 28, Math.max(cursorY + 64, artCursorY + 128));
+
+	// 대기열 메타 — 브랜드줄 바로 위 한 줄에 표시.
 	if (input.queueCount > 0) {
-		const remaining = input.queueRemainingMs > 0 ? ` · ${Math.floor(input.queueRemainingMs / 60000)}분 남음` : '';
-		metaSegments.push({ icon: 'list', text: `대기열 ${input.queueCount}곡${remaining}` });
-	}
-	if (input.volume !== null) {
-		metaSegments.push({ icon: input.volume === 0 ? 'volume-x' : input.volume < 50 ? 'volume-1' : 'volume-2', text: `볼륨 ${input.volume}%` });
-	}
-	if (input.repeatMode && input.repeatMode !== 'off') {
-		metaSegments.push({
-			icon: input.repeatMode === 'track' ? 'repeat-1' : 'repeat',
-			text: input.repeatMode === 'track' ? '반복: 현재 곡' : '반복: 대기열'
-		});
-	}
-	if (input.nodeId) metaSegments.push({ icon: 'radio', text: `노드 ${input.nodeId}` });
-
-	if (metaSegments.length > 0) {
-		ctx.font = '700 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		const brandText = input.brandLine ?? BOT_NAME;
-		const brandW = ctx.measureText(brandText).width;
-		const metaMaxW = right - brandW - 36 - tx;
-		// 우선순위 뒤(노드)부터 잘라요 — 최소 1세그먼트는 남긴다
-		while (metaSegments.length > 1) {
-			const total = metaSegments.reduce((acc, seg) => {
-				ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-				return acc + 25 + ctx.measureText(seg.text).width + 26;
-			}, 0);
-			if (total <= metaMaxW) break;
-			metaSegments.pop();
-		}
-		let cx = tx;
-		for (const segment of metaSegments) {
-			drawIcon(ctx, segment.icon, cx, metaY - 15, 18, 'rgba(255,255,255,0.55)');
-			cx += 25;
-			ctx.fillStyle = 'rgba(255,255,255,0.55)';
-			ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-			ctx.fillText(segment.text, cx, metaY);
-			cx += ctx.measureText(segment.text).width + 26;
-		}
-	} else if (!input.brandLine) {
-		ctx.fillStyle = 'rgba(255,255,255,0.55)';
+		const remaining = input.queueRemainingMs > 0 ? ` (${Math.floor(input.queueRemainingMs / 60000)}분 남음)` : '';
 		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText(BOT_NAME, tx, metaY);
+		drawIcon(ctx, 'list', tx, metaY - 15, 18, 'rgba(255,255,255,0.55)');
+		ctx.fillStyle = 'rgba(255,255,255,0.55)';
+		ctx.fillText(`대기열 ${input.queueCount}곡${remaining}`, tx + 25, metaY);
 	}
 
-	// 푸터 브랜드: 봇 이름 + 버전/해시 (이미지에 박는다)
-	ctx.textAlign = 'right';
+	// The bot-supplied brandLine includes node, volume, bot name and version/hash.
+	ctx.textAlign = 'left';
 	ctx.fillStyle = `${accent.primary}bf`;
 	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillText(input.brandLine ?? BOT_NAME, right, H - 22);
+	ctx.fillText(input.brandLine ?? BOT_NAME, tx, brandY);
 
 	return (await canvas.toBuffer('png')) as Buffer;
 }

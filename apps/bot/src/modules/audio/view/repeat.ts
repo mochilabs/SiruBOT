@@ -7,7 +7,7 @@ type RepeatUpdatedProps = {
 };
 
 const REPEAT_MODE_EMOJI_NAMES: Record<RepeatMode, AppEmojiFallbackKey> = {
-	off: 'arrow_forward',
+	off: 'repeat_off',
 	track: 'repeat_one',
 	queue: 'repeat'
 } as const;
