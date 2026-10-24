@@ -1,0 +1,34 @@
+{
+	"servers": {
+		"prismals": {
+			"rootMarkers": ["packages/prisma/src/schema.prisma"],
+			"languageId": "prisma",
+			"warmupTimeoutMs": 30000
+		},
+		"eslint": {
+			"rootMarkers": ["apps/dashboard/eslint.config.mjs", "eslint.config.mjs", "eslint.config.js", ".eslintrc"]
+		},
+		"typescript-language-server": {
+			"initOptions": {
+				"hostInfo": "omp-coding-agent",
+				"tsserver": {
+					"maxTsServerMemory": 8192
+				},
+				"preferences": {
+					"includeInlayParameterNameHints": "all",
+					"includeInlayVariableTypeHints": true,
+					"includeInlayFunctionParameterTypeHints": true
+				}
+			}
+		},
+		"tailwindcss": {
+			"rootMarkers": ["apps/dashboard/postcss.config.mjs", "tailwind.config.js", "tailwind.config.ts", "tailwind.config.mjs", "tailwind.config.cjs"],
+			"initOptions": {
+				"userLanguages": {
+					"plaintext": "tailwindcss"
+				}
+			}
+		}
+	},
+	"idleTimeoutMs": 600000
+}
