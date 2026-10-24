@@ -204,7 +204,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		// `-#`는 줄 맨 앞에서만 적용되므로 메타데이터를 한 줄에 합친다.
 		containerComponent
 			.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-			.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' | ')}`));
+			.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' • ')}`));
 	}
 
 	return containerComponent;
@@ -234,23 +234,21 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	const trackTitle = removeEmojis(track.info.title);
 	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
 	contents.push(`### **${hasValidUrl ? `[${trackTitle}](${track.info.uri})` : trackTitle}**`);
-	contents.push(`-# 아티스트: ${track.info.author}`);
+	// 아티스트·신청자를 한 줄로 묶는다 — 줄 수를 아껴 카드·컨트롤러 레이아웃 여유를 확보한다.
+	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
+	const requesterLabel =
+		requesterId === RELATED_TRACK_REQUESTER_ID
+			? `추천 곡 ${emoji('sparkle')}`
+			: requesterId === TTS_CLIP_REQUESTER_ID
+				? '채팅 TTS'
+				: typeof requesterId === 'string' && requesterId
+					? `신청자: <@${requesterId}>`
+					: null;
+	contents.push(requesterLabel ? `-# 아티스트: ${track.info.author} • ${requesterLabel}` : `-# 아티스트: ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
-
-	// 신청자
-	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
-	if (requesterId) {
-		contents.push(
-			requesterId === RELATED_TRACK_REQUESTER_ID
-				? `-# 추천 곡 ${emoji('sparkle')}`
-				: requesterId === TTS_CLIP_REQUESTER_ID
-					? `-# 채팅 TTS`
-					: `-# 신청자: <@${requesterId}>`
-		);
-	}
 
 	// 상대 타임스탬프는 종료 직후 "0초 전"으로 남으므로, 양쪽 레이아웃에서 경과/전체 시간만 표시한다.
 	if (track.info.isStream) {
@@ -266,16 +264,17 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 }
 
 /**
- * 컨트롤러 하단 푸터 세그먼트 — 재생 서버·볼륨·브랜드(봇 이름/버전) 순.
+ * 컨트롤러 하단 푸터 세그먼트 — 서버·볼륨·브랜드(봇 이름/버전) 순.
+ * 라벨("재생 서버:", "볼륨:") 없이 값만 보여준다.
  * `-#`(작은 글씨)는 줄 맨 앞에서만 적용되므로, 여기선 세그먼트를 평문으로 돌려주고
  * 호출자가 한 줄로 합친 뒤 맨 앞에 `-# `를 한 번만 붙인다(중간 `-#`가 그대로 노출되는 버그 방지).
  */
 export function buildFooterSegments(player: Player, volume?: number, includeBrand = true): string[] {
-	const segments = [`${emoji('radio_wave')} 재생 서버: ${player.node.id}`];
+	const segments = [`${emoji('radio_wave')} ${player.node.id}`];
 	if (volume !== undefined) {
-		segments.push(`${volumeToEmoji(volume)} 볼륨: ${volume}%`);
+		segments.push(`${volumeToEmoji(volume)} ${volume}%`);
 	} else if (player.volume !== undefined) {
-		segments.push(`${volumeToEmoji(player.volume)} 볼륨: ${player.volume}%`);
+		segments.push(`${volumeToEmoji(player.volume)} ${player.volume}%`);
 	}
 	if (includeBrand) {
 		segments.push(

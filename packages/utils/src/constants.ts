@@ -9,7 +9,7 @@ export const WARN_COLOR = 0xf56565;
 
 /**
  * 진행바 앱 이모지 셀 (resources/emoji_replacement/pb_*.png → 앱 이모지).
- * 한 바는 6셀: start + mid×4 + end. 셀당 2스텝, half 셀이 중간 스텝을 담당해요.
+ * 한 바는 5셀: start + mid×3 + end. 셀당 2스텝, half 셀이 중간 스텝을 담당해요.
  */
 export const PROGRESS_BAR_EMOJI_NAMES = {
 	start_empty: 'pb_start_empty',
@@ -23,6 +23,6 @@ export const PROGRESS_BAR_EMOJI_NAMES = {
 	end_filled: 'pb_end_filled'
 } as const;
 
-export const PROGRESS_BAR_EMOJI_COUNT = 6;
-/** 셀당 스텝 수 — start/mid/end 각 half 셀 표현용 (6셀 × 2스텝 = 전체 12스텝, 상태값 s는 0~12) */
+export const PROGRESS_BAR_EMOJI_COUNT = 5;
+/** 셀당 스텝 수 — start/mid/end 각 half 셀 표현용 (5셀 × 2스텝 = 전체 10스텝, 상태값 s는 0~10) */
 export const PROGRESS_BAR_STEPS_PER_CELL = 2;

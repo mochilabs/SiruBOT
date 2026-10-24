@@ -145,6 +145,6 @@ jobs:
           build-args: |
             GIT_HASH=${{ github.sha }}
             GIT_BRANCH=${{ github.ref_name }}
-            VERSION=${{ steps.tag.outputs.prefix }}-${{ github.sha }}
+            VERSION=${{ steps.tag.outputs.prefix }}
           cache-from: type=gha,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
