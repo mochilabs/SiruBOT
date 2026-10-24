@@ -37,8 +37,7 @@ const PENDING_LIMIT = 200;
 
 export type GuildDataFailureReason = 'redis_unavailable' | 'timeout';
 export type GuildDataResult =
-	| { ok: true; channels?: GuildChannelItem[]; roles?: GuildRoleItem[]; members?: GuildMemberItem[] }
-	| { ok: false; reason: GuildDataFailureReason };
+	{ ok: true; channels?: GuildChannelItem[]; roles?: GuildRoleItem[]; members?: GuildMemberItem[] } | { ok: false; reason: GuildDataFailureReason };
 
 /** 등록할 때 requestId에 묶어두는 요청 메타데이터 — 응답의 guildId·kind가 요청과 일치하는지 검증에 써요 */
 export interface GuildDataPendingMeta {

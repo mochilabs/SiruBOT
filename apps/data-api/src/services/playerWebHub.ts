@@ -49,8 +49,7 @@ const PENDING_LIMIT = 200;
 
 export type PlayerWebFailureReason = 'redis_unavailable' | 'timeout' | 'bot_error';
 export type PlayerWebResult =
-	| { ok: true; tracks?: PlayerWebTrack[]; voice?: PlayerVoiceContext }
-	| { ok: false; reason: PlayerWebFailureReason; message: string | null };
+	{ ok: true; tracks?: PlayerWebTrack[]; voice?: PlayerVoiceContext } | { ok: false; reason: PlayerWebFailureReason; message: string | null };
 
 /** 등록할 때 requestId에 묶어두는 요청 메타데이터 — 응답의 guildId·kind가 요청과 일치하는지 검증에 써요 */
 export interface PlayerWebPendingMeta {

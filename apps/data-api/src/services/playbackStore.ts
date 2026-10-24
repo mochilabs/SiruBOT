@@ -1,14 +1,7 @@
 /** 재생 이벤트 수집 — 각 샤드 프로세스의 trackHandler가 fire-and-forget으로 보고해요. */
 
 export type PlaybackEventType =
-	| 'track_start'
-	| 'track_end'
-	| 'track_stuck'
-	| 'track_error'
-	| 'queue_end'
-	| 'playback_abort'
-	| 'node_disconnect'
-	| 'node_error';
+	'track_start' | 'track_end' | 'track_stuck' | 'track_error' | 'queue_end' | 'playback_abort' | 'node_disconnect' | 'node_error';
 
 export interface PlaybackEvent {
 	type: PlaybackEventType;

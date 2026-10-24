@@ -202,11 +202,9 @@ export async function streamChatCompletion(options: {
 
 function collectToolCallsFromMessage(message: any): ToolCallRequest[] {
 	if (!Array.isArray(message?.tool_calls)) return [];
-	return message.tool_calls.map(
-		(tc: any): ToolCallRequest => ({
-			id: String(tc?.id ?? ''),
-			name: String(tc?.function?.name ?? ''),
-			arguments: String(tc?.function?.arguments ?? '')
-		})
-	);
+	return message.tool_calls.map((tc: any): ToolCallRequest => ({
+		id: String(tc?.id ?? ''),
+		name: String(tc?.function?.name ?? ''),
+		arguments: String(tc?.function?.arguments ?? '')
+	}));
 }

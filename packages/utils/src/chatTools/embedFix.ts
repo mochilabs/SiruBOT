@@ -87,12 +87,7 @@ export interface EmbedFixBoothLink {
 
 /** 도메인 스왑으로 고칠 수 있는 사이트 (BOOTH는 제외) */
 export type EmbedFixSwapLink =
-	| EmbedFixXLink
-	| EmbedFixInstagramLink
-	| EmbedFixTikTokLink
-	| EmbedFixRedditLink
-	| EmbedFixPixivLink
-	| EmbedFixThreadsLink;
+	EmbedFixXLink | EmbedFixInstagramLink | EmbedFixTikTokLink | EmbedFixRedditLink | EmbedFixPixivLink | EmbedFixThreadsLink;
 
 export type EmbedFixLink = EmbedFixSwapLink | EmbedFixBoothLink;
 
