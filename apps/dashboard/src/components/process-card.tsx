@@ -23,10 +23,10 @@ function ProcessStatusBadge({ status }: { status: string }) {
 
 export function ProcessCard({ process, index }: { process: ShardProcessInfo; index: number }) {
 	return (
-		<Card padding="lg" className="gap-6 transition-all duration-base">
+		<Card padding="lg" className="gap-6 transition-colors">
 			<div className="flex items-center justify-between gap-4">
 				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary-text">
+					<div className="w-10 h-10 rounded-control bg-primary/10 flex items-center justify-center text-primary-text">
 						<Server size={20} />
 					</div>
 					<div>
@@ -55,7 +55,7 @@ export function ProcessCard({ process, index }: { process: ShardProcessInfo; ind
 					{ label: "메모리", value: formatMemory(process.memoryUsage), icon: HardDrive },
 					{ label: "운영 시간", value: formatUptime(process.uptime), icon: Clock3 },
 				].map((item, i) => (
-					<div key={i} className="rounded-xl bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
+					<div key={i} className="rounded-control bg-surface-2 p-4 space-y-2 group hover:bg-surface-3 transition-colors duration-fast">
 						<div className="flex items-center gap-2 text-muted-foreground font-black text-xs">
 							<item.icon size={12} />
 							{item.label}

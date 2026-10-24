@@ -49,7 +49,7 @@ export default function Loader({
                 {(text || description) && (
                     <div className="text-center space-y-2">
                         {text && (
-                            <p className="text-xl font-black tracking-tight text-foreground/80 animate-pulse">
+                            <p className="text-xl font-black tracking-tight text-foreground/80 animate-pulse-soft">
                                 {text}
                             </p>
                         )}
@@ -68,7 +68,7 @@ export default function Loader({
         <div className="flex flex-col items-center justify-center gap-4 py-12">
             {LoaderIcon}
             {text && (
-                <p className="text-lg font-bold text-muted-foreground animate-pulse tracking-tight">
+                <p className="text-lg font-bold text-muted-foreground animate-pulse-soft tracking-tight">
                     {text}
                 </p>
             )}

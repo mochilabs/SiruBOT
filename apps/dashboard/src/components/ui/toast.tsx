@@ -46,9 +46,9 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
-      // 모달류(dialog/sheet/dropdown 등)는 z-50, 토스트 알림은 항상 그 위 z-[100] — 모달이 열려 있어도 알림이 뒤로 가려지지 않게
+      // 모달류(dialog/sheet/dropdown 등)는 z-50, 토스트 알림은 항상 그 위 z-toast(=100) — 모달이 열려 있어도 알림이 뒤로 가려지지 않게
       className={cn(
-        "pointer-events-none fixed inset-x-4 top-20 z-[100] mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        "pointer-events-none fixed inset-x-4 top-20 z-toast mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
         className
       )}
       {...props}

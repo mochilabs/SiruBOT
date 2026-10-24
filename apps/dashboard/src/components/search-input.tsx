@@ -55,16 +55,13 @@ export function SearchInput({
 
 	return (
 		<div className={`relative group ${className}`}>
-			<div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-slow" />
-			
 			<Search className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary-text" />
-			
 			<Input
 				type="text"
 				value={value}
 				onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
 				placeholder={placeholder}
-				className="h-12 w-full rounded-card bg-card pl-12 pr-12 text-base font-medium shadow-sm transition-all placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring sm:h-14 sm:text-lg"
+				className="h-12 w-full rounded-control bg-input pl-12 pr-12 text-base font-medium shadow-control-boundary sm:h-14 sm:text-lg"
 			/>
 
 			{value && (

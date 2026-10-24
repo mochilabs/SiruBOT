@@ -7,11 +7,13 @@ import { formatDuration } from "@sirubot/utils/time";
 import { ArrowLeft, Clock, History, Music2, Play, Trophy } from "lucide-react";
 
 import { EmptyState } from "@/components/primitives/empty-state";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatRelativeTimeFromISO as formatRelativeTime } from "@/lib/format";
 import { createApiFetcher, useGuildResource } from "@/lib/swr";
+import { cn } from "@/lib/utils";
 
 export interface PlayerTrack {
 	id: string;
@@ -130,13 +132,9 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 					title="재생 기록을 불러오지 못했어요."
 					description="잠시 후 다시 시도해 주세요."
 					action={
-						<button
-							type="button"
-							onClick={handleRetry}
-							className="inline-flex h-9 items-center rounded-control border border-border-strong bg-surface-2 px-4 text-sm font-medium text-foreground transition-colors duration-fast hover:bg-surface-3"
-						>
+						<Button variant="secondary" onClick={handleRetry} className="pointer-coarse:min-h-11">
 							다시 시도
-						</button>
+						</Button>
 					}
 				/>
 			</div>
@@ -160,7 +158,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 				<p className="mt-6">
 					<Link
 						href={`/servers/${guildId}`}
-						className="inline-flex h-9 items-center gap-2 rounded-control border border-border-strong bg-surface-2 px-4 text-sm font-medium text-foreground transition-colors duration-fast hover:bg-surface-3"
+						className={cn(buttonVariants({ variant: "secondary" }), "gap-2 pointer-coarse:min-h-11")}
 					>
 						<ArrowLeft size={15} aria-hidden />
 						서버 설정으로 돌아가기

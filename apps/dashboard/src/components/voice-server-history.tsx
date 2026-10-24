@@ -7,6 +7,7 @@ import useSWR from "swr";
 
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import type { VoiceServerHistoryPoint } from "@/lib/voice-server-stats";
 
 /** 조회 기간 (hours 쿼리 파라미터, 1~168) */
@@ -131,49 +132,76 @@ function ChartCard({
 /** 음성 서버 추이 — 플레이어 수와 CPU 사용률을 기간별로 보여줘요. 기간 셀렉터가 두 차트를 함께 제어요. */
 export function VoiceServerHistory() {
 	const [hours, setHours] = useState(24);
-	const { data } = useSWR<VoiceServerHistoryPoint[]>(`/api/voice-servers/history?hours=${hours}`, {
+	const { data, isLoading } = useSWR<VoiceServerHistoryPoint[]>(`/api/voice-servers/history?hours=${hours}`, {
 		refreshInterval: 60000,
 		dedupingInterval: 10000,
 	});
 
-	// 연동 실패·데이터 없음 때는 섹션 자체를 숨겨요 (VoiceServerSection과 같은 처리)
-	if (!data || data.length === 0) return null;
+	// 섹션 헤더(제목+기간 셀렉터)는 계속 마운트해 두고 차트 영역만 상태로 갈아끼워요 (VoiceServerSection과 같은 처리).
+	const rangeSelector = (
+		<Select
+			value={String(hours)}
+			onValueChange={(value: string | null) => {
+				if (!RANGE_OPTIONS.some((option) => option.value === value)) return;
+				setHours(Number(value));
+			}}
+		>
+			<SelectTrigger size="sm" aria-label="조회 기간">
+				<SelectValue>{(value: string) => RANGE_OPTIONS.find((option) => option.value === value)?.label ?? value}</SelectValue>
+			</SelectTrigger>
+			<SelectContent>
+				{RANGE_OPTIONS.map((option) => (
+					<SelectItem key={option.value} value={option.value}>
+						{option.label}
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
+	);
 
-	const points: ChartPoint[] = data.map((point) => ({
-		time: point.time,
-		players: point.players,
-		playing: point.playingPlayers,
-		system: point.cpuSystemLoad * 100,
-		lavalink: point.cpuLavalinkLoad * 100,
-	}));
+	// 데이터 미도착이면 스켈레톤 차트 카드를, 도착했는데 비어 있으면(연동 직후 등) 조용한 안내를 보여줘요
+	let chartArea: React.ReactNode;
+	if (!data) {
+		chartArea = isLoading ? (
+			<div className="grid gap-4 lg:grid-cols-2">
+				<SkeletonCard lines={4} avatar={false} />
+				<SkeletonCard lines={4} avatar={false} />
+			</div>
+		) : (
+			<Card padding="md">
+				<p className="text-sm text-muted-foreground">변화 추이를 불러오지 못했어요.</p>
+			</Card>
+		);
+	} else if (data.length === 0) {
+		chartArea = (
+			<Card padding="md">
+				<p className="text-sm text-muted-foreground">아직 수집된 변화 추이가 없어요. 잠시 후 다시 확인해 주세요.</p>
+			</Card>
+		);
+	} else {
+		const points: ChartPoint[] = data.map((point) => ({
+			time: point.time,
+			players: point.players,
+			playing: point.playingPlayers,
+			system: point.cpuSystemLoad * 100,
+			lavalink: point.cpuLavalinkLoad * 100,
+		}));
+		chartArea = (
+			<div className="grid gap-4 lg:grid-cols-2">
+				<ChartCard title="플레이어 수 추이" icon={TrendingUp} series={PLAYER_SERIES} points={points} yTickFormat={(value) => value.toLocaleString()} />
+				<ChartCard title="CPU 사용률" icon={Cpu} series={CPU_SERIES} points={points} yTickFormat={(value) => `${value}%`} />
+			</div>
+		);
+	}
 
 	return (
 		<section className="space-y-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<h2 className="text-lg font-bold text-foreground">변화 추이</h2>
-				<Select
-					value={String(hours)}
-					onValueChange={(value: string | null) => {
-						if (!RANGE_OPTIONS.some((option) => option.value === value)) return;
-						setHours(Number(value));
-					}}
-				>
-					<SelectTrigger size="sm" aria-label="조회 기간">
-						<SelectValue>{(value: string) => RANGE_OPTIONS.find((option) => option.value === value)?.label ?? value}</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						{RANGE_OPTIONS.map((option) => (
-							<SelectItem key={option.value} value={option.value}>
-								{option.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+				{rangeSelector}
 			</div>
-			<div className="grid gap-4 lg:grid-cols-2">
-				<ChartCard title="플레이어 수 추이" icon={TrendingUp} series={PLAYER_SERIES} points={points} yTickFormat={(value) => value.toLocaleString()} />
-				<ChartCard title="CPU 사용률" icon={Cpu} series={CPU_SERIES} points={points} yTickFormat={(value) => `${value}%`} />
-			</div>
+			{chartArea}
 		</section>
 	);
 }
+

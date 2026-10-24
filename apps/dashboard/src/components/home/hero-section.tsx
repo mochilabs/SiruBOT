@@ -317,8 +317,9 @@ export function HeroSection() {
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.2, duration: 0.6 }}
 				>
+					{/* 스크롤 유도 셰브론 — 히어로 안내 모티프(R-19). 무한 루프지만 reduced-motion에선 정지. */}
 					<m.span
-						animate={{ y: [0, 6, 0] }}
+						animate={shouldReduce ? undefined : { y: [0, 6, 0] }}
 						transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
 						className="flex"
 					>

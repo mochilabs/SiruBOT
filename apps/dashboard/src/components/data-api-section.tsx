@@ -5,6 +5,7 @@ import useSWR from "swr";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import type { DataApiStatus } from "@/lib/data-api/types";
 
 function hitRate(status: DataApiStatus): string {
@@ -22,12 +23,45 @@ function upstreamTotals(status: DataApiStatus): { calls: number; errors: number 
 }
 
 export function DataApiSection() {
-    const { data } = useSWR<DataApiStatus>("/api/data-api", {
+    const { data, isLoading } = useSWR<DataApiStatus>("/api/data-api", {
         refreshInterval: 15000,
         dedupingInterval: 5000,
     });
 
-    if (!data) return null;
+    // 섹션 헤더를 계속 마운트해 두고 본문만 상태로 갈아끼워요 —
+    // 로딩·실패가 왔다 갔다 해도 화면 구조가 점프하지 않게요.
+    const sectionHeader = (
+        <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text">
+                <Database size={19} aria-hidden />
+            </div>
+            <div>
+                <h2 className="text-lg font-bold text-foreground">데이터 게이트웨이</h2>
+                <p className="text-sm text-muted-foreground">캐시와 외부 API 연동 상태</p>
+            </div>
+        </div>
+    );
+
+    if (!data) {
+        return (
+            <section className="space-y-4">
+                <Card padding="md" className="gap-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        {sectionHeader}
+                    </div>
+                    {isLoading ? (
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <SkeletonCard lines={2} avatar={false} />
+                            <SkeletonCard lines={2} avatar={false} />
+                            <SkeletonCard lines={2} avatar={false} />
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">데이터 게이트웨이 상태를 불러오지 못했어요.</p>
+                    )}
+                </Card>
+            </section>
+        );
+    }
 
     const totals = upstreamTotals(data);
     const errors = data.playback.recentErrors.slice(-5).reverse();
@@ -43,15 +77,7 @@ export function DataApiSection() {
         <section className="space-y-4">
             <Card padding="md" className="gap-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary-text">
-                            <Database size={19} aria-hidden />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-foreground">데이터 게이트웨이</h2>
-                            <p className="text-sm text-muted-foreground">캐시와 외부 API 연동 상태</p>
-                        </div>
-                    </div>
+                    {sectionHeader}
                     <Badge variant={healthy ? "success" : "warning"}>
                         {healthy ? "정상" : data.ok ? "메모리 모드" : "확인 필요"}
                     </Badge>

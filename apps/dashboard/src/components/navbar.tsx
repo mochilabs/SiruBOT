@@ -23,6 +23,7 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const profileTriggerRef = useRef<HTMLButtonElement>(null);
 
   const scrolled = useUIStore((s) => s.scrolled);
   const updateScrollState = useUIStore((s) => s.updateScrollState);
@@ -48,13 +49,17 @@ export function Navbar() {
   }, []);
 
   // R-32: 열린 프로필 메뉴는 Escape로도 닫혀요 (외부 클릭과 같은 경로).
+  // 닫히면 포커스를 트리거로 돌려 키보드 흐름이 끊기지 않게 해요.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setProfileOpen(false);
+      if (e.key === "Escape" && profileOpen) {
+        setProfileOpen(false);
+        profileTriggerRef.current?.focus();
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [profileOpen]);
 
   const toggleTheme = () => {
     if (!document.startViewTransition) {
@@ -163,13 +168,16 @@ export function Navbar() {
                     </kbd>
                   </Button>
                   <div aria-hidden className="h-5 w-px bg-border" />
-                  {mounted && (
-                    <Button
-                      variant="ghost"
-                      onClick={toggleTheme}
-                      aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
-                      className="relative h-full w-11 overflow-hidden rounded-none rounded-r-control px-0 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-                    >
+                  {/* 하이드레이션 전에도 44px 자리를 미리 그려 토글이 나중에 튀어오르지 않게 해요.
+                      테마 아이콘은 localStorage 읽기 전에 확정할 수 없으니 mounted 전엔 비활성화. */}
+                  <Button
+                    variant="ghost"
+                    onClick={toggleTheme}
+                    disabled={!mounted}
+                    aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+                    className="relative h-full w-11 overflow-hidden rounded-none rounded-r-control px-0 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                  >
+                    {mounted && (
                       <AnimatePresence mode="popLayout" initial={false}>
                         <m.span
                           key={theme}
@@ -182,14 +190,17 @@ export function Navbar() {
                           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                         </m.span>
                       </AnimatePresence>
-                    </Button>
-                  )}
+                    )}
+                  </Button>
                 </div>
                 {status === "authenticated" ? (
                   <div className="relative" ref={profileRef}>
                     <Button
+                      ref={profileTriggerRef}
                       variant="ghost"
                       onClick={() => setProfileOpen(!profileOpen)}
+                      aria-expanded={profileOpen}
+                      aria-haspopup="menu"
                       className="h-auto gap-2 px-2 py-1.5 hover:bg-primary-control/5"
                     >
                       {session.user?.image && (

@@ -185,7 +185,7 @@ export const TrackItem = memo(function TrackItem({
 	const isTopThree = rank <= 3;
 
 	return (
-		<div className="bg-surface-1 rounded-card group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
+		<div className="bg-surface-2 rounded-card group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
 			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 justify-center shrink-0">
 				{isTopThree ? (
@@ -195,9 +195,9 @@ export const TrackItem = memo(function TrackItem({
 				)}
 			</div>
 
-			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-card sm:rounded-xl bg-muted/20">
+			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-card bg-muted/20">
 				{/* Mobile Rank Overlay */}
-				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-[20px] h-5 bg-surface-3 rounded-br-lg px-1.5 shadow-sm">
+				<div className="absolute top-0 left-0 z-10 sm:hidden flex items-center justify-center min-w-5 h-5 bg-surface-3 rounded-br-lg px-1.5 shadow-sm">
 					{isTopThree ? (
 						<Crown className={`h-3 w-3 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
 					) : (
@@ -206,10 +206,11 @@ export const TrackItem = memo(function TrackItem({
 				</div>
 
 				{track.thumbnail && !imgError ? (
-					<Image 
-						src={track.thumbnail} 
-						alt={track.title} 
-						fill 
+					<Image
+						src={track.thumbnail}
+						alt=""
+						aria-hidden
+						fill
 						sizes="64px"
 						className="object-cover"
 						onError={() => setImgError(true)}
@@ -250,12 +251,13 @@ export function Track({ track }: { track: TrackType }) {
 		<div className="bg-surface-1 rounded-card flex items-center gap-3 p-3 transition-colors duration-fast">
 			<div className="relative h-14 w-14 overflow-hidden rounded-card">
 				{track.thumbnail ? (
-					<Image 
-						src={track.thumbnail} 
-						alt={track.title} 
-						fill 
+					<Image
+						src={track.thumbnail}
+						alt=""
+						aria-hidden
+						fill
 						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-						className="object-cover" 
+						className="object-cover"
 					/>
 				) : (
 					<MockThumbnail className="h-full w-full" />

@@ -183,6 +183,7 @@
 	--radius: 1rem;
 
 	--r-control: 0.625rem;
+	--r-control-inner: 0.375rem;
 	--r-card: 1rem;
 	--r-menu: 0.75rem;
 	--r-dialog: 1rem;
@@ -203,6 +204,7 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-control: var(--r-control);
+	--radius-control-inner: var(--r-control-inner);
 	--radius-card: var(--r-card);
 	--radius-menu: var(--r-menu);
 	--radius-dialog: var(--r-dialog);
@@ -241,7 +243,15 @@
 	--elev-5: 0 28px 64px -24px rgb(0 0 0 / 0.65), 0 8px 24px -12px rgb(0 0 0 / 0.45);
 }
 
+/* Z-index 토큰 — z-50(모달류)보다 위 토스트의 층위를 변수로 추적해요. --toast-z가 원본이고,
+   @theme inline 매핑이 Tailwind v4의 --z-* 네임스페이스로 `z-toast` 유틸리티를 만든다. */
+:root {
+	--toast-z: 100;
+}
+
 @theme inline {
+	--z-toast: var(--toast-z);
+
 	--color-border-subtle: var(--border-subtle);
 	--color-border-strong: var(--border-strong);
 	--shadow-control-boundary: var(--control-boundary);

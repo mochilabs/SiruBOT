@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
+import { Loader2, Play, Radio, Search, Tv, X } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { Field } from "@/components/primitives/field";
@@ -17,12 +17,14 @@ import { useGuildChannels } from "@/hooks/use-guild-settings";
 import { type SocialSubscriptionInput,useSocialAlerts } from "@/hooks/use-social-alerts";
 import type { ChzzkChannelSummary, SocialPlatform } from "@/types/social";
 
+import { type ModeCardOption,ModePicker } from "../settings-shared";
+
 import { SAMPLE_URLS, TemplateEditor, type TemplateSample } from "./template-editor";
 
-const PLATFORMS: { key: SocialPlatform; label: string; icon: typeof Radio }[] = [
-	{ key: "chzzk", label: "치지직", icon: Radio },
-	{ key: "youtube", label: "유튜브", icon: Play },
-	{ key: "twitch", label: "트위치", icon: Tv },
+const PLATFORMS: readonly ModeCardOption<SocialPlatform>[] = [
+	{ value: "chzzk", label: "치지직", icon: <Radio size={16} /> },
+	{ value: "youtube", label: "유튜브", icon: <Play size={16} /> },
+	{ value: "twitch", label: "트위치", icon: <Tv size={16} /> },
 ];
 
 interface ResolvedSource {
@@ -284,33 +286,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 				/>
 			</div>
 
-			<div role="radiogroup" aria-label="플랫폼" className="grid gap-3 sm:grid-cols-3">
-				{PLATFORMS.map(({ key, label, icon: Icon }) => {
-					const active = platform === key;
-					return (
-						<button
-							key={key}
-							type="button"
-							role="radio"
-							aria-checked={active}
-							onClick={() => resetPlatform(key)}
-							className={`relative rounded-card p-4 text-left transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary/10 ring-2 ring-ring/40" : "bg-surface-1 hover:bg-surface-3"}`}
-						>
-							<span className="flex items-center gap-2 text-sm font-bold text-foreground">
-								<span className={active ? "text-primary-text" : "text-muted-foreground"}>
-									<Icon size={16} />
-								</span>
-								{label}
-							</span>
-							{active && (
-								<span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-control text-primary-control-text">
-									<Check size={12} />
-								</span>
-							)}
-						</button>
-					);
-				})}
-			</div>
+			<ModePicker label="플랫폼" value={platform} options={PLATFORMS} onChange={resetPlatform} />
 
 			<div className="flex flex-col gap-2">
 				{sourceStep}

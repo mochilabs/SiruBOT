@@ -12,7 +12,9 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { GuildCard } from "@/components/servers/guild-card";
 import type { EnrichedGuild } from "@/components/servers/guild-card.types";
 import { ServersGridSkeleton, ServersPageSkeleton } from "@/components/servers/servers-page-skeleton";
+import { buttonVariants } from "@/components/ui/button";
 import { useAuthedSWR } from "@/lib/swr";
+import { cn } from "@/lib/utils";
 import { buildInviteUrl } from "@/utils";
 
 export default function ServersPage() {
@@ -77,7 +79,7 @@ export default function ServersPage() {
                                 href={buildInviteUrl({})}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex h-10 items-center gap-2 rounded-control bg-primary/10 px-4 text-sm font-bold text-primary-text transition-colors duration-fast hover:bg-primary-control hover:text-primary-control-text"
+                                className={cn(buttonVariants(), "h-10 bg-primary/10 px-4 font-bold text-primary-text hover:bg-primary-control hover:text-primary-control-text")}
                             >
                                 시루봇 초대하기
                             </a>

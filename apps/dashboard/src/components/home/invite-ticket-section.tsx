@@ -20,8 +20,8 @@ export function InviteTicketSection() {
           viewport={{ once: true, margin: "-60px" }}
           variants={sectionVariants}
         >
-          {/* 티켓 본체 */}
-          <div className="relative grid overflow-hidden rounded-card bg-surface-1 [filter:drop-shadow(0_6px_20px_rgb(0_0_0/0.16))_drop-shadow(0_2px_6px_rgb(0_0_0/0.1))] transition-transform duration-base hover:-rotate-[0.4deg] dark:[filter:drop-shadow(0_8px_24px_rgb(0_0_0/0.55))_drop-shadow(0_8px_24px_rgb(0_0_0/0.35))] sm:grid-cols-[7.5rem_1fr] sm:[mask-composite:intersect] sm:[mask-image:radial-gradient(circle_at_120px_0,transparent_12px,#000_12.5px),radial-gradient(circle_at_120px_100%,transparent_12px,#000_12.5px)]">
+          {/* 티켓 본체 — 그림자는 토큰 elevation(shadow-lg/2xl)으로. 노치 mask는 mask-*로 유지해요 */}
+          <div className="relative grid overflow-hidden rounded-card bg-surface-1 shadow-lg transition-transform duration-base hover:-rotate-[0.4deg] dark:shadow-2xl sm:grid-cols-[7.5rem_1fr] sm:[mask-composite:intersect] sm:[mask-image:radial-gradient(circle_at_120px_0,transparent_12px,#000_12.5px),radial-gradient(circle_at_120px_100%,transparent_12px,#000_12.5px)]">
             {/* 스텁 — 데스크톱만 */}
             <div className="relative hidden flex-col items-center justify-center gap-3 border-r border-dashed border-border py-8 sm:flex">
               <div className="relative h-8 w-8 overflow-hidden rounded-full">

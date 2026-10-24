@@ -70,10 +70,9 @@ function SettingToggleRow({ name, from, to, index }: { name: string; from: strin
 				</m.span>
 				<m.span
 					className="absolute inset-0 text-right text-muted-foreground"
-					initial={{ y: 0, opacity: 0 }}
+					initial={{ y: 0, opacity: 1 }}
 					animate={{ y: -12, opacity: 0 }}
 					transition={{ delay: 0.4 + index * 0.3, duration: 0.35, ease: "easeOut" }}
-					style={{ opacity: 0 }}
 				>
 					{from}
 				</m.span>

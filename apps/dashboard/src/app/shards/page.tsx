@@ -7,42 +7,35 @@ import useSWR from "swr";
 import Container from "@/components/container";
 import { DataApiSection } from "@/components/data-api-section";
 import { PageHeader } from "@/components/layout/page-header";
-import Loader from "@/components/loader";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
+import { Badge } from "@/components/ui/badge";
 import { VoiceServerHistory } from "@/components/voice-server-history";
 import { VoiceServerSection } from "@/components/voice-server-section";
 import type { ShardsResponse } from "@/lib/shard-api";
 
 export default function ShardsPage() {
-    const { data, error, isLoading, isValidating } = useSWR<ShardsResponse>("/api/shards", {
+    const { data, error, isLoading, isValidating, mutate } = useSWR<ShardsResponse>("/api/shards", {
         refreshInterval: 11000,
         revalidateOnFocus: true,
         dedupingInterval: 2000,
     });
 
-    // 연결 실패도 결국 오류예요 — 인라인 안내 대신 라우트 에러 페이지(app/error.tsx)를 띄워요.
-    // isValidating 중에는 참아요: 에러 페이지의 "다시 시도"가 재조회로 실제로 회복될 수 있게.
-    if ((error || (data && "error" in data)) && !isValidating) {
-        // 사용자에게 보이는 메시지는 안내 문구로, 원인은 cause로 남겨요 (콘솔에서 추적 가능)
+    // 폴링 실패 처리 — 마지막 정상 데이터가 있으면 화면을 유지해요:
+    // 일시적인 네트워크 오류로 실시간 대시보드 전체가 에러 페이지로 튀는 것보다,
+    // 마지막 정보를 계속 보여 주고 조용한 배지로 상태를 알리는 편이 낫기 때문이에요.
+    // 최초 로드 실패(데이터 없음)일 때만 라우트 에러 페이지(app/error.tsx)로 넘겨요.
+    const initialLoadFailed = (error || (data && "error" in data)) && !data;
+    if (initialLoadFailed && !isValidating) {
         throw new Error("샤드 매니저와 연결하지 못했어요. 서버가 점검 중이거나 오프라인 상태일 수 있어요.", {
             cause: error ?? data
         });
     }
 
-    if (isLoading || (error && isValidating)) {
-        return (
-            <Container>
-                <Loader 
-                    fullPage 
-                    size="xl" 
-                    text="샤드 정보 불러오는 중" 
-                    description="네트워크 상태에 따라 지연될 수 있어요." 
-                />
-            </Container>
-        );
-    }
+    const pollFailed = Boolean(error || (data && "error" in data)) && Boolean(data);
+
+    if (isLoading) return null; // 라우트 loading.tsx 스켈레톤이 자리를 채워요.
 
     if (!data) return null;
     const { processes, stats } = data;
@@ -52,8 +45,29 @@ export default function ShardsPage() {
             <div className="relative overflow-visible">
                 <PageHeader
                     title="시스템 상태"
-                    description={isValidating ? "샤드 정보를 동기화하는 중이에요." : "시루봇 서버의 상태를 실시간으로 확인할 수 있어요."}
-                />
+                    description={
+                        pollFailed
+                            ? "동기화 실패 · 마지막 정보를 표시하는 중이에요."
+                            : isValidating
+                              ? "샤드 정보를 동기화하는 중이에요."
+                              : "시루봇 서버의 상태를 실시간으로 확인할 수 있어요."
+                    }
+                >
+                    {pollFailed && (
+                        <div className="flex items-center gap-2">
+                            <Badge variant="warning" dot>
+                                동기화 실패 · 마지막 정보를 표시하는 중
+                            </Badge>
+                            <button
+                                type="button"
+                                onClick={() => mutate()}
+                                className="text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-control px-2 py-1"
+                            >
+                                다시 시도
+                            </button>
+                        </div>
+                    )}
+                </PageHeader>
                 <div className="grid gap-8">
                     <section>
                         <ShardStats stats={stats} />
@@ -67,8 +81,7 @@ export default function ShardsPage() {
 
                     <section className="space-y-8">
                         <div className="flex items-center gap-6">
-                            <div className="h-[2px] w-12 bg-primary/40 rounded-full" />
-                            <h2 className="text-3xl font-black tracking-tighter text-foreground">
+                            <h2 className="text-lg font-bold text-foreground">
                                 연동된 프로세스 <span className="text-primary-text ml-1">({processes.length})</span>
                             </h2>
                             <div className="h-px flex-1 bg-border-subtle" />

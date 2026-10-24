@@ -16,10 +16,10 @@ import { PlayerPreview } from "@/components/home/previews/player-preview";
 import { PlaylistPreview } from "@/components/home/previews/playlist-preview";
 import { sectionVariants } from "@/components/home/section-variants";
 import { SectionLabel } from "@/components/primitives/section-label";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const secondaryLink =
-	"inline-flex h-8 pointer-coarse:min-h-11 cursor-pointer select-none items-center justify-center gap-2 self-start rounded-control border border-border-strong bg-surface-2 px-3 text-sm font-medium text-foreground transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
+
 
 /**
  * 명령어 칩 — 살짝 아래에서 올라오며 등장해요.
@@ -196,7 +196,7 @@ function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock;
 				)}
 				{/* 초대 CTA는 티켓 한 곳만 — 블록엔 각자 정체가 있는 동작만 남겨요 */}
 				{block.secondary && (
-					<Link href={block.secondary.href} className={cn(secondaryLink, "mt-6")}>
+					<Link href={block.secondary.href} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-6 self-start pointer-coarse:min-h-11")}>
 						{block.secondary.label}
 					</Link>
 				)}

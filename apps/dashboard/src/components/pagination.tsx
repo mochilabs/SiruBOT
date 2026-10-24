@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 interface PaginationProps {
 	currentPage: number;
 	totalPages: number;
@@ -26,15 +29,15 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 
 	return (
 		<div className="mt-6 flex items-center justify-between gap-3">
-			<Link
-				href={createPageUrl(prevPage)}
-				aria-disabled={currentPage <= 1}
-				tabIndex={currentPage <= 1 ? -1 : undefined}
-			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 pointer-coarse:min-h-11 text-sm transition-colors ${
-				currentPage <= 1
-					? "pointer-events-none text-muted-foreground"
-					: "hover:bg-primary/10 hover:text-primary-text bg-background/50"
-			}`}
+		<Link
+			href={createPageUrl(prevPage)}
+			aria-disabled={currentPage <= 1}
+			tabIndex={currentPage <= 1 ? -1 : undefined}
+			className={cn(
+				buttonVariants({ variant: "ghost" }),
+				"pointer-coarse:min-h-11",
+				currentPage <= 1 && "pointer-events-none text-muted-foreground",
+			)}
 		>
 			<ChevronLeft className="h-4 w-4" aria-hidden />
 			이전
@@ -44,15 +47,15 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
 				페이지 {currentPage} / {totalPages}
 			</p>
 
-			<Link
-				href={createPageUrl(nextPage)}
-				aria-disabled={currentPage >= totalPages}
-				tabIndex={currentPage >= totalPages ? -1 : undefined}
-			className={`inline-flex items-center gap-2 rounded-control px-4 py-2 pointer-coarse:min-h-11 text-sm transition-colors ${
-				currentPage >= totalPages
-					? "pointer-events-none text-muted-foreground"
-					: "hover:bg-primary/10 hover:text-primary-text bg-background/50"
-			}`}
+		<Link
+			href={createPageUrl(nextPage)}
+			aria-disabled={currentPage >= totalPages}
+			tabIndex={currentPage >= totalPages ? -1 : undefined}
+			className={cn(
+				buttonVariants({ variant: "ghost" }),
+				"pointer-coarse:min-h-11",
+				currentPage >= totalPages && "pointer-events-none text-muted-foreground",
+			)}
 		>
 			다음
 			<ChevronRight className="h-4 w-4" aria-hidden />

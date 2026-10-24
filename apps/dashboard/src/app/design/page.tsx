@@ -115,7 +115,7 @@ export default function DesignPage() {
 										href={`#${s.id}`}
 										onClick={() => handleTocClick(s.id)}
 										className={cn(
-											"flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-fast",
+											"flex items-center gap-2.5 px-3 py-2 rounded-menu text-sm font-medium transition-colors duration-fast",
 											isActive
 												? "text-primary-text font-bold bg-primary-control/10"
 												: "text-muted-foreground hover:text-foreground hover:bg-accent/30",

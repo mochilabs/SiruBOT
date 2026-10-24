@@ -106,10 +106,12 @@ function ChatPreview() {
 							key={utility.title}
 							type="button"
 							role="tab"
+							id="ai-chat-preview-tool-tab"
 							aria-selected={activeTool === index}
+							aria-controls="ai-chat-preview-tool-panel"
 							aria-label={utility.title}
 							onClick={() => selectTool(index)}
-							className="group flex h-4 w-4 cursor-pointer items-center justify-center"
+							className="group flex h-4 w-4 cursor-pointer items-center justify-center pointer-coarse:h-11 pointer-coarse:w-11"
 						>
 							<span
 								className={cn(
@@ -127,6 +129,9 @@ function ChatPreview() {
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={current.title}
+						role="tabpanel"
+						id="ai-chat-preview-tool-panel"
+						aria-labelledby="ai-chat-preview-tool-tab"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
@@ -180,6 +185,7 @@ function ChatPreview() {
 												className="flex items-center gap-1.5 text-2xs font-medium text-discord-text-muted"
 											>
 												시루가 생각 중
+												{/* 생각 중 도트 — 대기 상태 모티프(R-19). reduced-motion에선 phase 2로 건너뛰어 렌더 자체가 안 돼요. */}
 												<span className="flex gap-0.5" aria-hidden>
 													{[0, 1, 2].map((dot) => (
 														<m.span

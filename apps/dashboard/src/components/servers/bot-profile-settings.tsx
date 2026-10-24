@@ -19,6 +19,7 @@ import {
   PanelError,
   PanelHeader,
   PanelLoading,
+  RetryLink,
   SaveBar,
   WarningBox,
 } from "./settings-shared";
@@ -188,13 +189,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
           {refreshFailed
             ? "봇에서 최신 프로필 상태를 받지 못했어요. 봇이 서버에 접속해 있는지 확인하고 다시 시도해 주세요."
             : "봇이 이 서버의 프로필 상태를 아직 보내지 않았어요. 봇 접속 상태를 확인하고 잠시 후 시도해 주세요."}{" "}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={reload}
-          >
-            다시 시도
-          </button>
+          <RetryLink onRetry={reload} />
         </WarningBox>
       </Card>
     );
@@ -274,13 +269,7 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         <WarningBox>
           봇에서 최신 상태를 받지 못해 마지막으로 확인한 닉네임·사진을 표시하고
           있어요.{" "}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={reload}
-          >
-            다시 시도
-          </button>
+          <RetryLink onRetry={reload} />
         </WarningBox>
       )}
 

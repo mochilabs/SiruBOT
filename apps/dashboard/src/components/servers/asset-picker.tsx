@@ -25,6 +25,12 @@ import { ApiError, toApiError } from "@/lib/api-error";
 import { notifyApiError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
+/** 에셋 용량 표기 — assets-settings의 표기와 동일한 규칙이에요 */
+function formatAssetSize(sizeBytes: number): string {
+	if (sizeBytes >= 1024 * 1024) return `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`;
+	return `${Math.max(1, Math.round(sizeBytes / 1024))}KB`;
+}
+
 interface AssetPickerProps {
 	guildId: string;
 	/** true면 여러 장을 골라 한 번에 넘겨요. false면 썸네일을 누르는 즉시 선택돼요 */
@@ -195,6 +201,7 @@ export function AssetPicker({ guildId, multiple = false, open, onClose, onSelect
 									key={asset.id}
 									type="button"
 									aria-pressed={multiple ? isSelected : undefined}
+									aria-label={`${asset.name} 선택, ${formatAssetSize(asset.sizeBytes)}`}
 									onClick={() => pickUrl(asset.url)}
 									className={cn(
 										"flex flex-col gap-1 rounded-control p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
