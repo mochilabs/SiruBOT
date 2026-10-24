@@ -148,8 +148,12 @@ export function PlaylistDetail({
 	};
 
 	const handleTouchEnd = () => {
-		if (touchActiveRef.current && touchDragIdx !== null && dragOverIdx !== null && touchDragIdx !== dragOverIdx) {
+		if (!touchActiveRef.current) return;
+		if (touchDragIdx !== null && dragOverIdx !== null && touchDragIdx !== dragOverIdx) {
 			moveTrack(touchDragIdx, dragOverIdx);
+		} else {
+			// 이동 없이 끝나도 onDragStart가 세운 부모의 draggedIdx를 해제해야 행이 흐려진 채 남지 않아요.
+			onDragEnd();
 		}
 		clearTouchDrag();
 	};
