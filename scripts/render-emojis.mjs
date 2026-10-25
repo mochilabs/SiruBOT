@@ -206,10 +206,6 @@ async function loadIconNodes(icon, depth = 0) {
   throw new Error(`no node data for ${icon}`);
 }
 
-<<<<<<< HEAD
-// SVG 노드(path/rect/circle)를 스트로크 또는 fill로 그리고, ink box를 INK에 맞춰 중앙 배치한 캔버스를 반환해요.
-function renderIconCanvas(nodes, filled) {
-=======
 // lucide SVG 노드를 Path2D로 변환해요. lucide가 쓰는 7종 태그(path/circle/rect/line/ellipse/polyline/polygon) 전부를 지원해요.
 // frame처럼 line만 쓰는 아이콘도 빠짐없이 그려져요. 알 수 없는 태그는 건너뛰고 경고를 돌려줘요.
 // 반환: { path, fillRule } — fillRule은 path 태그의 fill-rule 속성(evenodd 등)을 반영해요.
@@ -276,7 +272,6 @@ function nodeToPath(tag, attrs) {
 
 // SVG 노드를 스트로크 또는 fill로 그리고, ink box를 params.ink에 맞춰 중앙 배치한 캔버스를 반환해요.
 function renderIconCanvas(nodes, filled, params) {
->>>>>>> b7b9c625 (feat(emojis): 이모지·진행바 리디자인 — 크기 조정, pb_mid_end 라운드, 색상 통일)
   const T = 1024; // ink 측정용 임시 캔버스
   const tc = new Canvas(T, T);
   const ctx = tc.getContext("2d");
@@ -286,38 +281,16 @@ function renderIconCanvas(nodes, filled, params) {
   ctx.lineJoin = "round";
   ctx.translate(T / 2 - 12 * (T / 24), T / 2 - 12 * (T / 24));
   ctx.scale(T / 24, T / 24);
-<<<<<<< HEAD
-  const paint = (p) =>
-    filled ? ctx.fill(p) : ((ctx.lineWidth = STROKE), ctx.stroke(p));
-=======
   ctx.lineWidth = params.stroke;
   let skipped = null;
->>>>>>> b7b9c625 (feat(emojis): 이모지·진행바 리디자인 — 크기 조정, pb_mid_end 라운드, 색상 통일)
   for (const [tag, attrs] of nodes) {
-    let p;
-    if (tag === "path" && attrs.d) {
-      p = new Path2D(attrs.d);
-    } else if (tag === "rect") {
-      p = new Path2D();
-      const r = +attrs.rx || 0;
-      if (p.roundRect)
-        p.roundRect(
-          +attrs.x || 0,
-          +attrs.y || 0,
-          +attrs.width,
-          +attrs.height,
-          r,
-        );
-      else p.rect(+attrs.x || 0, +attrs.y || 0, +attrs.width, +attrs.height);
-    } else if (tag === "circle") {
-      p = new Path2D();
-      const cx = +attrs.cx || 0,
-        cy = +attrs.cy || 0,
-        r = +attrs.r;
-      p.moveTo(cx + r, cy);
-      p.arc(cx, cy, r, 0, Math.PI * 2);
+    const r = nodeToPath(tag, attrs);
+    if (!r || r.skipped) {
+      skipped = (skipped || []).concat(r?.skipped ?? tag);
+      continue;
     }
-    if (p) paint(p);
+    if (filled) ctx.fill(r.path, r.fillRule);
+    else ctx.stroke(r.path);
   }
   // ink box 측정
   const d = ctx.getImageData(0, 0, T, T).data;
@@ -333,14 +306,9 @@ function renderIconCanvas(nodes, filled, params) {
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
       }
-<<<<<<< HEAD
-  if (maxX <= minX) return new Canvas(SIZE, SIZE); // 빈 아이콘
-  // ink box max dim을 INK로 스케일해 SIZE 캔버스 중앙 배치
-=======
   if (maxX <= minX)
     return { canvas: new Canvas(SIZE, SIZE), skipped, empty: true }; // 빈 아이콘
   // ink box max dim을 params.ink로 스케일해 SIZE 캔버스 중앙 배치
->>>>>>> b7b9c625 (feat(emojis): 이모지·진행바 리디자인 — 크기 조정, pb_mid_end 라운드, 색상 통일)
   const iw = maxX - minX + 1,
     ih = maxY - minY + 1;
   const s = params.ink / Math.max(iw, ih);
@@ -361,7 +329,7 @@ function renderIconCanvas(nodes, filled, params) {
     dw,
     dh,
   );
-  return out;
+  return { canvas: out, skipped, empty: false };
 }
 
 /*
@@ -524,8 +492,6 @@ async function main() {
       const isFilled = FILLED.has(name);
       if (isFilled) filled++;
       const nodes = await loadIconNodes(EMOJI_LUCIDE_MAP[name]);
-<<<<<<< HEAD
-=======
       const { canvas, skipped, empty } = renderIconCanvas(
         nodes,
         isFilled,
@@ -533,11 +499,12 @@ async function main() {
       );
       if (empty)
         throw new Error(`빈 아이콘(ink 없음) — 미지원 태그만 있거나 노드 없음`);
->>>>>>> b7b9c625 (feat(emojis): 이모지·진행바 리디자인 — 크기 조정, pb_mid_end 라운드, 색상 통일)
       await writeFile(
         join(outDir, name + ".png"),
-        await renderIconCanvas(nodes, isFilled).toBuffer("png"),
+        await canvas.toBuffer("png"),
       );
+      if (skipped?.length)
+        console.warn(`경고 ${name}: 미지원 태그 ${skipped.join(",")} 건너뜀`);
       ok++;
     } catch (e) {
       console.error(`FAIL ${name}(${EMOJI_LUCIDE_MAP[name]}): ${e.message}`);
