@@ -53,8 +53,12 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
+	// 재생 상태 라벨(음성 채널 멘션·재생 중/일시정지/실시간) — 트랙 정보 위 한 줄로 보여준다.
+	const statusLabel = current ? (current.info.isStream ? '실시간' : player.paused ? '일시정지' : '재생 중') : null;
+	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# ${statusLabel} <#${player.voiceChannelId}>` : null;
+
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(trackLines.join('\n'));
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
@@ -185,6 +189,11 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 				`${emoji('scroll')} 대기열 ${queueCount}곡 (${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음)`
 			);
 		}
+		// 신청자는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다 — 추천곡/채팅 TTS는 아티스트 줄 라벨을 유지한다.
+		const requesterMention = current ? footerRequesterMention(current) : null;
+		if (requesterMention) {
+			footerSegments.push(`${emoji('user')} ${requesterMention}`);
+		}
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' ')}`));
 	}
 	return containerComponent;
@@ -214,22 +223,17 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	const trackTitle = removeEmojis(track.info.title);
 	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
 	contents.push(`### **${hasValidUrl ? `[${trackTitle}](${track.info.uri})` : trackTitle}**`);
+	// 신청자 멘션은 footer로 옮겼고, 여기서는 추천곡/채팅 TTS 라벨만 남긴다.
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	const requesterLabel =
-		requesterId === RELATED_TRACK_REQUESTER_ID
-			? `${emoji('sparkle')} 추천곡`
-			: requesterId === TTS_CLIP_REQUESTER_ID
-				? '채팅 TTS'
-				: typeof requesterId === 'string' && requesterId
-					? `<@${requesterId}>`
-					: null;
+		requesterId === RELATED_TRACK_REQUESTER_ID ? `${emoji('sparkle')} 추천곡` : requesterId === TTS_CLIP_REQUESTER_ID ? '채팅 TTS' : null;
 	contents.push(requesterLabel ? `-# ${emoji('artist')} ${track.info.author} ${requesterLabel}` : `-# ${emoji('artist')} ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
 
-	// 재생 상태 라벨은 제거됨 — 여기서는 진행 정보(라이브 표시 or 진행바·타임)만 보여준다.
+	// 진행 정보 — 재생 상태 라벨은 controllerView에서 트랙 줄 위에 붙인다.
 	if (track.info.isStream) {
 		// 라이브는 길이가 없어 진행바·타임이 무의미 — 라이브 표시만 남긴다.
 		contents.push(`-# ${emoji('radio_wave')} 라이브`);
@@ -240,6 +244,14 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	}
 
 	return contents;
+}
+
+/** footer용 신청자 멘션 — 사람이 신청한 곡만 멘션, 추천곡/채팅 TTS 센티널은 null. */
+function footerRequesterMention(track: Track): string | null {
+	const requester = track.requester;
+	const id = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
+	if (typeof id !== 'string' || !id || id === RELATED_TRACK_REQUESTER_ID || id === TTS_CLIP_REQUESTER_ID) return null;
+	return `<@${id}>`;
 }
 
 /** Footer segments: 음성 서버(node), 볼륨. */

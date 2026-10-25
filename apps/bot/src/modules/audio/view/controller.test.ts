@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { emoji } from '@sirubot/utils';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { controllerView } from './controller.ts';
 import { repeatEmoji } from './repeat.ts';
@@ -140,37 +141,49 @@ describe('controllerView 라벨·타이틀', () => {
 		mocks.chapterIndex.mockReturnValue(null);
 	});
 
-	it('재생 상태 라벨(재생 중/일시정지/실시간 + 채널 멘션)은 렌더하지 않는다', () => {
-		// 재생 라벨은 사용자 요청으로 제거됨 — 상태는 버튼/진행 정보로만 표현한다.
+	it('재생 라벨은 상태와 음성 채널 멘션을 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(false);
-		expect(texts.some((text) => text.includes('일시정지 <#voice-channel>'))).toBe(false);
-		expect(texts.some((text) => text.includes('실시간 <#voice-channel>'))).toBe(false);
-		expect(texts.some((text) => text.includes('<#voice-channel>'))).toBe(false);
+		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(true);
+		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
+		expect(texts.some((text) => text.includes('🔊 <#'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#text-channel>'))).toBe(false);
 	});
 
-	it('일시정지해도 현재 위치는 계속 보여준다', () => {
+	it('일시정지하면 라벨 상태가 일시정지로 바뀐다', () => {
 		const texts = collectTexts(controllerJson({ player: player({ paused: true }) }));
+		expect(texts.some((text) => text.includes('일시정지 <#voice-channel>'))).toBe(true);
+		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(false);
+		// 일시정지 중에도 현재 위치는 계속 보여준다
 		expect(texts.some((text) => text.includes('(00:30 / 03:00)'))).toBe(true);
 	});
 
-	it('스트리밍이면 라이브 표시를 남긴다', () => {
+	it('스트리밍이면 라벨 상태가 실시간이 된다', () => {
 		const streamTrack = { ...TRACK, info: { ...TRACK.info, isStream: true, duration: 0 } };
 		mocks.nowPlaying.mockReturnValue(streamTrack);
 		const texts = collectTexts(controllerJson({ player: player({ queue: { current: streamTrack, previous: [], tracks: [] } }) }));
+		expect(texts.some((text) => text.includes('실시간 <#voice-channel>'))).toBe(true);
 		expect(texts.some((text) => text.includes('라이브'))).toBe(true);
 	});
 
-	it('보이스 채널을 알 수 없어도 재생 표시는 그대로다', () => {
+	it('보이스 채널을 알 수 없으면 재생 라벨을 붙이지 않는다', () => {
 		const texts = collectTexts(controllerJson({ player: player({ voiceChannelId: undefined }) }));
-		expect(texts.some((text) => text.includes('재생 중'))).toBe(false);
-		expect(texts.some((text) => text.includes('<#'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#') && text.includes('재생 중'))).toBe(false);
+		expect(texts.some((text) => text.includes('(00:30 / 03:00)'))).toBe(true);
 	});
 
 	it('아티스트 줄은 이모지와 괄호 없이 아티스트 이름만 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('💿 아티스트 <@user-1>'))).toBe(true);
+		expect(texts.some((text) => text.includes('💿 아티스트'))).toBe(true);
 		expect(texts.some((text) => text.includes('(아티스트)'))).toBe(false);
+	});
+
+	it('신청자는 footer 맨 마지막에 아이콘과 함께 표시한다', () => {
+		const texts = collectTexts(controllerJson());
+		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('<@user-1>'));
+		expect(footer).toBeDefined();
+		expect(footer).toContain('50%');
+		expect(footer?.trimEnd().endsWith('<@user-1>')).toBe(true);
+		expect(footer).toContain(emoji('user'));
 	});
 
 	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
