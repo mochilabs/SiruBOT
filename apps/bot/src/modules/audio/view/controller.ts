@@ -229,7 +229,7 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	const episode = buildEpisodeLine(player);
 	if (episode) contents.push(episode);
 
-	// 상태(재생/일시정지/실시간)는 재생 라벨로 올렸으므로 여기서는 진행 정보만 보여준다.
+	// 재생 상태 라벨은 제거됨 — 여기서는 진행 정보(라이브 표시 or 진행바·타임)만 보여준다.
 	if (track.info.isStream) {
 		// 라이브는 길이가 없어 진행바·타임이 무의미 — 라이브 표시만 남긴다.
 		contents.push(`-# ${emoji('radio_wave')} 라이브`);
