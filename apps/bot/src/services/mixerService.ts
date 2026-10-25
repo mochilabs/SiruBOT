@@ -295,9 +295,13 @@ export class MixerService {
 		}
 
 		// 오버랩이 진행 중이면 손대지 않는다 — trackStart가 wiring을 다시 수행한다.
-		// 대신 incoming(sub) 트랙 식별자를 기록해 관련곡 크로스페이드 끊기 판단에 쓴다.
+		// incoming(sub) 트랙은 overlap 기록으로, 슬롯의 next 트랙은 예열 기록으로 각각 남긴다.
 		if (state.crossfadeActive) {
 			this.activeOverlaps.set(gid, state.subTrackIdentifier ?? null);
+			if (state.hasNext && typeof state.nextTrackIdentifier === 'string') {
+				this.preloaded.add(gid);
+				this.preloadedIdentifiers.set(gid, state.nextTrackIdentifier);
+			}
 			return;
 		}
 

@@ -211,14 +211,10 @@ export class QueueAdvancer {
 			// 시드 성공 — 아래 기존 분기가 큐의 클립을 시작한다 (defer/watchdog 경로도 tracks에서 찾아 시작한다).
 		}
 
-		// 서버 예열 슬롯이 남아 있으면 서버가 content end에 자동 진행한다 —
-		// 이때 queueEnd를 처리하면 컨트롤러가 삭제되고 "큐 종료" 안내가 나가며,
-		// 라이브러리의 onEmptyQueue.destroyAfterMs(10s) 타이머가 걸려 서버가
-		// 전이를 시작한 뒤에도 플레이어가 강제 destroy될 수 있다.
-		if (this.container.mixerService.isPreloaded(player.guildId)) {
-			this.logger.debug(`[mixer] queueEnd deferred: server slot preheated (guild ${player.guildId})`);
-			// trackEnd가 라이브러리의 queueEnd 단축분기(라인 2756)로 스킵되면 watchdog이
-			// 걸리지 않는다. 서버가 진행하지 않으면 여기서 복구한다.
+		// 예열 슬롯과 진행 중 크로스페이드는 서버가 전이를 소유한다. trackEnd에서 예열을
+		// 이미 소비했거나 구곡 queueEnd와 신곡 시작 사이 레이스에서는 overlap도 함께 본다.
+		if (this.container.mixerService.isPreloaded(player.guildId) || this.container.mixerService.isOverlapActive(player.guildId)) {
+			this.logger.debug(`[mixer] queueEnd deferred: server owns transition (guild ${player.guildId})`);
 			this.host.armWatchdog(player);
 			return;
 		}
