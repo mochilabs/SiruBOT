@@ -6,6 +6,3 @@
 export const motionFast = 0.2;
 export const motionBase = 0.3;
 export const motionSlow = 0.5;
-
-/** cubic-bezier(0.16, 1, 0.3, 1) — CSS `--ease-out-expo`와 대응하는 framer easing 값 */
-export const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];

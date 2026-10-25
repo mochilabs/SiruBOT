@@ -14,5 +14,3 @@ export const setup = () => {
 
 	colorette.createColors({ useColor: true });
 };
-
-export default setup;
