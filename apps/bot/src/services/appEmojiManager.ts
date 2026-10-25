@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { ensureAppEmojisLoaded, setAppEmojiIdMap } from '@sirubot/utils';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { ClientApplication } from 'discord.js';
 
@@ -118,5 +118,84 @@ export class AppEmojiManager {
 
 	private describe(error: unknown): string {
 		return error instanceof Error ? error.message : String(error);
+	}
+
+	/** 현재 등록된 앱 이모지 목록을 이름순으로 반환한다. */
+	public async list(): Promise<Array<{ id: string; name: string }>> {
+		const application = container.client.application;
+		if (!application) return [];
+		const emojis = await application.emojis.fetch();
+		return [...emojis.values()].map((emoji) => ({ id: emoji.id, name: emoji.name })).sort((a, b) => a.name.localeCompare(b.name));
+	}
+
+	/**
+	 * 전체 앱 이모지를 삭제한 뒤 로컬 PNG로 다시 등록한다 — ID 갱신 필요 시(이미지가 API로 반영 안 될 때).
+	 * 완료 후 이름→ID 매핑을 캐시에 주입하고, 커밋 대상 `emoji-ids.json` 두 본에 저장한다.
+	 */
+	public async forceReupload(): Promise<{ created: number; failed: number; map: Record<string, string> }> {
+		const application = container.client.application;
+		if (!application) throw new Error('application unavailable');
+		const dir = await this.sourceDir();
+		if (!dir) throw new Error('emoji source dir not found');
+
+		// 1) 기존 전량 삭제
+		const existing = await application.emojis.fetch();
+		let deleted = 0;
+		for (const emoji of existing.values()) {
+			try {
+				await application.emojis.delete(emoji.id);
+				deleted++;
+			} catch (error) {
+				container.logger.warn(`[appEmoji] :${emoji.name}: 삭제 실패 (${this.describe(error)})`);
+			}
+		}
+
+		// 2) 로컬 PNG 전량 재등록 (신규 ID 발급)
+		const files = (await readdir(dir)).filter((f) => f.toLowerCase().endsWith('.png') && NAME_REGEX.test(basename(f, '.png'))).sort();
+		const map: Record<string, string> = {};
+		let created = 0;
+		let failed = 0;
+		for (const file of files) {
+			const name = basename(file, '.png');
+			try {
+				const buffer = await readFile(join(dir, file));
+				if (buffer.byteLength > MAX_PNG_BYTES) {
+					failed++;
+					continue;
+				}
+				const emoji = await application.emojis.create({ name, attachment: buffer });
+				map[emoji.name] = emoji.id;
+				created++;
+			} catch (error) {
+				failed++;
+				container.logger.warn(`[appEmoji] :${name}: 재등록 실패 (${this.describe(error)})`);
+			}
+		}
+
+		// 3) 매핑 캐시 주입 + 커밋 대상 JSON 두 본 저장
+		setAppEmojiIdMap(map);
+		await this.saveIdMap(map);
+
+		container.logger.info(`[appEmoji] 강제 재업로드 완료: 삭제 ${deleted} / 생성 ${created} / 실패 ${failed}`);
+		return { created, failed, map };
+	}
+
+	/** 이름→ID 매핑을 canonical(레포 루트)과 런타임(apps/bot) JSON 두 본에 저장한다. */
+	private async saveIdMap(map: Record<string, string>): Promise<void> {
+		const payload = `${JSON.stringify(map, null, 2)}\n`;
+		const targets = [
+			join(process.cwd(), 'resources', 'emoji_replacement', 'emoji-ids.json'),
+			join(process.cwd(), 'resources', 'emoji-ids.json'),
+			join(process.cwd(), 'apps', 'bot', 'resources', 'emoji-ids.json'),
+			join('/app', 'resources', 'emoji_replacement', 'emoji-ids.json')
+		];
+		for (const path of targets) {
+			try {
+				await writeFile(path, payload, 'utf-8');
+				container.logger.info(`[appEmoji] 매핑 저장: ${path}`);
+			} catch {
+				// 존재하지 않는 후보 경로는 무시 (CWD/컨테이너 환경 차이)
+			}
+		}
 	}
 }
