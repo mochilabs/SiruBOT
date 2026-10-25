@@ -159,6 +159,13 @@ export class MixerService {
 
 	private async preloadUpcomingNow(player: Player): Promise<boolean> {
 		const gid = String(player.guildId);
+		// 크로스페이드 진행 중에는 예열 슬롯을 조작하지 않는다 — sub 트랙이 이미 서버에서
+		// 재생 중인데 슬롯에 같은 곡을 다시 POST하면 서버 상태가 꼬여 재생 중 곡이 처음부터
+		// 다시 시작되고 큐가 중복으로 보인다. 전이가 끝나는 trackStart/trackEnd 경로가
+		// 자연스럽게 다음 예열을 수행한다.
+		if (this.activeOverlaps.has(gid)) {
+			return false;
+		}
 		if (player.repeatMode !== 'off') {
 			await this.clearNextNow(player).catch(() => null);
 			return false;
