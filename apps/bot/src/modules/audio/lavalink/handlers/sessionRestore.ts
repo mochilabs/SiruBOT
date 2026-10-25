@@ -11,6 +11,14 @@ type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
 
 /** fresh 세션 복구 한도 — 이보다 오래된 잔재는 복구하지 않고 정리한다. */
 const FRESH_RESTORE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+/**
+ * Lavalink 세션 resume 유지 시간(초). 노드 재접속 시 이 시간 안에는 옛 세션의
+ * 플레이어가 서버에 살아 재생을 이어준다. 너무 길면 새 세션 복구(fresh restore)가
+ * 같은 길드에 두 번째 플레이어를 만드는 창이 그만큼 열린다 — 두 플레이어의 필터
+ * 체인이 같은 GuildMixer에 이중으로 붙어 chainPos가 2배로 쌓여 조기 크로스페이드를
+ * 일으킨 적이 있다(플러그인에 피더 중재가 있어도 창 자체를 줄인다).
+ */
+export const RESUME_TIMEOUT_SECONDS = 60;
 /** 길드가 캐시에 도착할 때까지 기다리는 시간(대형 봇은 READY 뒤에도 GUILD_CREATE가 스트리밍된다). */
 const GUILD_WAIT_TIMEOUT_MS = 90_000;
 const GUILD_WAIT_POLL_MS = 3_000;
@@ -58,7 +66,7 @@ export class SessionRestoreEngine {
 			void this.saveNodeSession(node);
 			// ready 직후에도 세션 유지(resume)를 다시 연장한다 — 5분 타이머가 걸려 있어야
 			// 그 안에 재시작됐을 때 서버 플레이어가 그대로 이어진다.
-			if (node.sessionId) void node.updateSession(true, 60 * 5).catch(() => null);
+			if (node.sessionId) void node.updateSession(true, RESUME_TIMEOUT_SECONDS).catch(() => null);
 			if (needsFreshRestore) {
 				this.logger.info(`Node ${node.options.id} started a fresh session: restoring players from store`);
 				void this.restoreFreshSession(node).catch((error) => this.logger.error(`Fresh session restore failed: ${error}`));

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
-import type { Track, TrackStartEvent } from 'lavalink-client';
+import type { Track, TrackEndEvent, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
 
 const {
@@ -431,6 +431,26 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 
 		expect(consumeOverlapAbort).not.toHaveBeenCalled();
 		expect(handler.startClientOwnedTrack).toHaveBeenCalledWith(player);
+	});
+
+	it('β 순서에서 신곡이 이미 시작된 뒤 도착한 구곡 finished trackEnd는 클라이언트 진행 및 watchdog을 건너뛴다', () => {
+		const { handler } = makeHandler();
+		const player = endPlayer();
+		player.transitionState.lastStartedEncoded = 'b-enc';
+		player.queue.current = track('b-enc', 'id-b');
+		const consumePreloaded = vi.fn(() => false);
+		Object.assign(container, { mixerService: { consumePreloaded, consumeOverlapAbort: vi.fn(() => false) } });
+		handler.armWatchdog = vi.fn();
+		handler.startClientOwnedTrack = vi.fn(() => Promise.resolve());
+
+		handler.handleTrackEnd(player, track('b-enc', 'id-b'), {
+			reason: 'finished',
+			track: { encoded: 'a-enc', info: { identifier: 'id-a' } }
+		} as unknown as TrackEndEvent);
+
+		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
+		expect(handler.armWatchdog).not.toHaveBeenCalled();
+		expect(consumePreloaded).not.toHaveBeenCalled();
 	});
 });
 

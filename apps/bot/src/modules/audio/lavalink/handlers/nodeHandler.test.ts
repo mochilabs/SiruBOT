@@ -166,7 +166,7 @@ describe('handleReadyOp (ready op → 엔진 위임)', () => {
 		await vi.advanceTimersByTimeAsync(0);
 
 		expect(saveNodeSession).toHaveBeenCalledWith(node);
-		expect(updateSession).toHaveBeenCalledWith(true, 300);
+		expect(updateSession).toHaveBeenCalledWith(true, 60);
 		expect(restoreFreshSession).toHaveBeenCalledWith(node);
 		expect(engine.restoreTimers.size).toBe(0);
 	});
