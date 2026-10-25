@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 const REPO = "mochiLabs/SiruBOT";
 
 export const metadata: Metadata = {
-  title: "기여자 | 시루봇",
+  title: "기여자",
   description: "시루봇을 함께 만들어 나가는 모든 기여자를 소개해요.",
 };
 

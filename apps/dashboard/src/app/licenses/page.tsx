@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import Container from "@/components/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { LicenseList } from "@/components/licenses/license-list";
@@ -5,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import licenseData from "@/generated/open-source-licenses.json";
 
-export const metadata = {
-  title: "오픈소스 라이선스 | 시루봇",
+export const metadata: Metadata = {
+  title: "오픈소스 라이선스",
   description: "시루봇에 포함된 오픈소스 자산과 코드 의존성 전체 라이선스 고지예요.",
 };
 

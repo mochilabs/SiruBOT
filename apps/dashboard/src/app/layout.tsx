@@ -18,11 +18,16 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-  title: "시루봇",
+  title: {
+    default: "시루봇 | Discord 음악·AI·서버 관리 봇",
+    template: "%s | 시루봇",
+  },
   description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
+  applicationName: "시루봇",
   openGraph: {
     description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
     url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    siteName: "시루봇",
     images: [
       {
         url: "/images/og-image.png",
@@ -33,6 +38,10 @@ export const metadata: Metadata = {
     ],
     locale: "ko_KR",
     type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
   twitter: {
     card: "summary_large_image",

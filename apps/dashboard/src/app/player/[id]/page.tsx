@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import Container from "@/components/container";
@@ -7,9 +8,10 @@ import { auth } from "@/lib/auth";
 import { resolveGuildMembership } from "@/lib/guild-permissions";
 import { getSessionAccessToken } from "@/lib/session-token";
 
-export const metadata = {
-  title: "음악 플레이어 | 시루봇",
+export const metadata: Metadata = {
+  title: "음악 플레이어",
   description: "실시간 재생 상태를 확인하고 곡을 검색해 바로 재생해요.",
+  robots: { index: false },
 };
 
 export default async function PlayerPage({

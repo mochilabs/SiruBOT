@@ -30,10 +30,16 @@ const supportLinks: FooterLink[] = [
 	...(process.env.NEXT_PUBLIC_SUPPORT_SERVER ? [{ label: '공식 디스코드', href: process.env.NEXT_PUBLIC_SUPPORT_SERVER, internal: false }] : []),
 ];
 
+const legalLinks: FooterLink[] = [
+	{ label: '이용약관', href: process.env.NEXT_PUBLIC_TOS_URL || '/terms', internal: !process.env.NEXT_PUBLIC_TOS_URL },
+	{ label: '개인정보처리방침', href: process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL || '/privacy', internal: !process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL },
+];
+
 const linkGroups = [
 	{ title: '기능', links: featureLinks },
 	{ title: '서비스', links: serviceLinks },
 	{ title: '지원', links: supportLinks },
+	{ title: '약관', links: legalLinks },
 ];
 
 export function Footer() {
