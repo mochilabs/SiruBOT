@@ -1,6 +1,6 @@
 import { LavalinkNode, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
-import { SessionRestoreEngine } from './sessionRestore.ts';
+import { RESUME_TIMEOUT_SECONDS, SessionRestoreEngine } from './sessionRestore.ts';
 import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
 
 /**
@@ -37,10 +37,10 @@ export class NodeHandler extends BaseLavalinkHandler {
 	private async handleNodeConnect(node: LavalinkNode) {
 		this.logger.info(`Node connected: ${node.options.id}`);
 		try {
-			// Enable resuming for 5 minutes (timeout is in seconds per Lavalink API).
+			// Enable resuming (timeout is in seconds per Lavalink API).
 			// 첫 연결(sessionId 미확정)이나 이전 세션 만료(404)면 건너뛴다 — ready op가 새 세션을 확정한다.
 			if (node.sessionId) {
-				await node.updateSession(true, 60 * 5);
+				await node.updateSession(true, RESUME_TIMEOUT_SECONDS);
 			}
 		} catch (error) {
 			this.logger.debug(`updateSession skipped for node ${node.options.id}: ${error}`);

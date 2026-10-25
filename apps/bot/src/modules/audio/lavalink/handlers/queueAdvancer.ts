@@ -49,22 +49,34 @@ export class QueueAdvancer {
 	}
 
 	public handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
-		this.logger.info(`Track ended: ${track?.info.title} by ${track?.info.author} (reason: ${payload.reason})`);
-		reportPlaybackEvent(player.guildId, 'track_end', track, { reason: payload.reason });
+		const ended = (payload.track?.encoded ? payload.track : track) as Track | null;
+		this.logger.info(
+			`Track ended: ${ended?.info?.title ?? track?.info.title} by ${ended?.info?.author ?? track?.info.author} (reason: ${payload.reason})`
+		);
+		reportPlaybackEvent(player.guildId, 'track_end', ended, { reason: payload.reason });
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
 		publishPlayerState(player);
 		// 채팅 TTS 클립 전용 진행 — 기존 전이 분기(예열 관망/클라이언트 진행)와 섞지 않는다 (명세 4.2).
-		if (this.container.chatTtsService.isTtsEnded(player, track)) {
+		if (this.container.chatTtsService.isTtsEnded(player, ended)) {
 			if (payload.reason === 'replaced') {
 				// 치환은 새 트랙이 이미 시작되는 경로다 — 반복 모드 잔재만 걷어내고 관여하지 않는다.
-				this.container.chatTtsService.scrubTtsClips(player, track);
+				this.container.chatTtsService.scrubTtsClips(player, ended);
 				return;
 			}
 			void this.host
-				.continueAfterTtsClip(player, track)
+				.continueAfterTtsClip(player, ended)
 				.catch((error) => this.logger.error(`Failed to continue after TTS clip (guild ${player.guildId}): ${error}`));
 			return;
 		}
+
+		// β 순서(시작 먼저 도착): 이미 새 곡이 시작된 상태에서 도착한 구곡의 trackEnd는
+		// 전이가 이미 끝났으므로 관망·예열 소비·클라이언트 진행을 모두 생략한다.
+		// (여기서 consumePreloaded를 부르면 trackStart의 wiring이 방금 채운 차차기 곡 예열을 훔치게 된다.)
+		if (this.host.isTransitionAlreadyStarted(player, ended)) {
+			this.logger.debug(`[transition] trackEnd ignored: transition already started (guild ${player.guildId})`);
+			return;
+		}
+
 		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
 		// 단, 직전 overlap이 abort됐다면 서버는 진행하지 않는다(서버 슬롯도 이미 비웠다) —
 		// 관망하지 말고 아래 클라이언트 소유 진행으로 즉시 넘어간다.
@@ -76,7 +88,7 @@ export class QueueAdvancer {
 			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
 			// β 순서(시작 먼저): 이미 다음 곡이 시작된 상태라면 확인 타이머가 필요 없다.
 			// α 순서(종료 먼저): 마지막 시작곡이 방금 끝났으므로 전이 확인 타이머를 건다.
-			if (!this.host.isTransitionAlreadyStarted(player, track)) {
+			if (!this.host.isTransitionAlreadyStarted(player, ended)) {
 				this.host.armWatchdog(player);
 			}
 			return;
@@ -229,11 +241,14 @@ export class QueueAdvancer {
 		}
 
 		// (b) 방금 시작한 곡과 다른 트랙의 queueEnd — 과거/중복 이벤트로 보고 관망한다.
+		const ended = (_payload?.track?.encoded ? _payload.track : track) as Track | null;
 		const lastStarted = player.transitionState.lastStartedEncoded;
-		const endedEncoded = (track as { encoded?: unknown } | null)?.encoded;
+		const endedEncoded = (ended as { encoded?: unknown } | null)?.encoded;
 		if (typeof lastStarted === 'string' && typeof endedEncoded === 'string' && endedEncoded !== lastStarted) {
 			this.logger.debug(`[mixer] queueEnd deferred: stale event for ${endedEncoded} (guild ${player.guildId})`);
-			this.host.armWatchdog(player);
+			if (!this.host.isTransitionAlreadyStarted(player, ended)) {
+				this.host.armWatchdog(player);
+			}
 			return;
 		}
 

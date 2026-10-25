@@ -14,8 +14,8 @@ import { CachedQueueStore } from './queue/queueStore.ts';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 import { Logger, ILogObj } from 'tslog';
 
-/** Resume timeout과 동일 (5분 = 300초) */
-const SESSION_TTL_SECONDS = 60 * 5;
+/** Resume timeout과 동일 (sessionRestore의 RESUME_TIMEOUT_SECONDS=60 — 순환 import를 피해 리터럴로 둠) */
+const SESSION_TTL_SECONDS = 60;
 
 /**
  * Shard 기반 Lavalink node session 저장소.
