@@ -288,6 +288,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handleQueue(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
 		switch (subcommand) {
+			case 'view':
+				await this.handleQueueView(interaction, player);
+				break;
 			case 'prev':
 				await this.handleQueuePrev(interaction, player);
 				break;
@@ -307,6 +310,24 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				});
 				break;
 		}
+	}
+
+	/** 컨트롤러의 '대기열 보기' 버튼 — 새 메시지로 queueList(10곡/쪽)를 연다. 컨트롤러는 유지한다. */
+	private async handleQueueView(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
+		const tracks = getUserQueuedTracks(player);
+		if (tracks.length === 0) {
+			await interaction.reply({
+				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+				components: [queueEmpty()]
+			});
+			return;
+		}
+
+		const totalPages = Math.ceil(tracks.length / QUEUE_PAGE_SIZE);
+		await interaction.reply({
+			components: [queueList({ player, page: 1, totalPages, authorId: interaction.user.id })],
+			flags: [MessageFlags.IsComponentsV2]
+		});
 	}
 
 	private async handleQueuePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {

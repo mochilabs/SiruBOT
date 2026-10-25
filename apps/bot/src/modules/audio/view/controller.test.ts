@@ -103,13 +103,13 @@ describe('controllerView action rows', () => {
 		expect(rows[0]).toHaveLength(5);
 	});
 
-	it('대기열이 있어도 대기열 보기 행을 추가하지 않는다', () => {
+	it('대기열이 있으면 대기열 보기 행을 추가한다', () => {
 		mocks.queued.mockReturnValue([TRACK]);
 		const rows = actionRows(controllerJson());
 
 		expectValidActionRows(rows);
-		expect(rows).toHaveLength(1);
-		expect(rows.flat().some((button) => button.custom_id === 'controller:queue:show')).toBe(false);
+		expect(rows).toHaveLength(2);
+		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:queue:view']);
 	});
 
 	it('챕터가 있으면 챕터 행을 추가한다', () => {
@@ -122,14 +122,15 @@ describe('controllerView action rows', () => {
 		expect(rows[1]!.map((button) => button.emoji?.name)).toEqual(['arrow_back', 'arrow_forward']);
 	});
 
-	it('챕터와 대기열이 있어도 챕터 행만 만든다', () => {
+	it('챕터와 대기열이 있으면 챕터 행과 대기열 보기 행을 만든다', () => {
 		mocks.queued.mockReturnValue([TRACK]);
 		mocks.chapterIndex.mockReturnValue(0);
 		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS }) }));
 
 		expectValidActionRows(rows);
-		expect(rows).toHaveLength(2);
+		expect(rows).toHaveLength(3);
 		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:chapter:prev', 'controller:chapter:next']);
+		expect(rows[2]!.map((button) => button.custom_id)).toEqual(['controller:queue:view']);
 	});
 
 	it('카드 모드에서도 ActionRow 길이 제약을 지킨다', () => {
