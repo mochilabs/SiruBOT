@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Guild" ADD COLUMN "ttsVolume" INTEGER NOT NULL DEFAULT 100;
