@@ -28,8 +28,6 @@ export const TTS_OVERLAY_QUEUE_MAX = 5;
 const TTS_GUILD_CONCURRENT_SYNTH = 2;
 /** 길드 분당 합성 글자 수 — 초과 시 클립을 버린다 */
 export const TTS_GUILD_CHARS_PER_MIN = 1000;
-/** 오버레이 ducking 수준 (명세 4.2) */
-export const TTS_DUCK_LEVEL = 0.2;
 
 interface TtsTextResolvers {
 	memberName(id: string): string | null;
@@ -244,7 +242,8 @@ export class ChatTtsService {
 			// state 조회 실패는 거절 근거가 없다 — announce를 시도하고, 그것도 실패하면 조용히 버린다
 			container.logger.debug(`[chatTts] mixer state unavailable, trying announce (guild ${player.guildId}): ${error}`);
 		}
-		await container.mixerService.announce(player, clip.url, TTS_DUCK_LEVEL).catch((error) => {
+		const duckLevel = await container.guildService.getTtsDuck(player.guildId);
+		await container.mixerService.announce(player, clip.url, duckLevel).catch((error) => {
 			this.warnOnce(player.guildId, 'announce_failed', `[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
 		});
 	}
@@ -301,9 +300,10 @@ export class ChatTtsService {
 	public async drainSoloQueueToAnnounce(player: CustomPlayer): Promise<void> {
 		const state = this.guildStates.get(player.guildId);
 		if (!state || state.soloQueue.length === 0) return;
+		const duckLevel = await container.guildService.getTtsDuck(player.guildId);
 		const clips = state.soloQueue.splice(0, state.soloQueue.length);
 		for (const clip of clips) {
-			await container.mixerService.announce(player, clip.url, TTS_DUCK_LEVEL).catch((error) => {
+			await container.mixerService.announce(player, clip.url, duckLevel).catch((error) => {
 				this.warnOnce(player.guildId, 'drain_failed', `[chatTts] 잔여 클립 오버레이 이관 실패 (guild ${player.guildId}): ${error}`);
 			});
 		}

@@ -44,6 +44,14 @@ export class GuildService extends GuildSettingsStore {
 		return playback.getVolume(this, guildId);
 	}
 
+	public async updateTtsDuck(guildId: string, duckLevel: number) {
+		return playback.updateTtsDuck(this, guildId, duckLevel);
+	}
+
+	public async getTtsDuck(guildId: string) {
+		return playback.getTtsDuck(this, guildId);
+	}
+
 	public async getDJRole(guildId: string): Promise<string | null> {
 		return playback.getDJRole(this, guildId);
 	}

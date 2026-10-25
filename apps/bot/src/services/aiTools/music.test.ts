@@ -1,14 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AiToolContext } from './types.ts';
 
-const { announce, getPlayer, checkDJOrAlone, reapplyMixerFilter } = vi.hoisted(() => ({
+const { announce, getPlayer, checkDJOrAlone, reapplyMixerFilter, getTtsDuck } = vi.hoisted(() => ({
 	announce: vi.fn(),
 	getPlayer: vi.fn(),
 	checkDJOrAlone: vi.fn(),
-	reapplyMixerFilter: vi.fn()
+	reapplyMixerFilter: vi.fn(),
+	getTtsDuck: vi.fn()
 }));
 
-vi.mock('@sapphire/framework', () => ({ container: { audio: { getPlayer }, mixerService: { announce, reapplyMixerFilter } } }));
+vi.mock('@sapphire/framework', () => ({
+	container: { audio: { getPlayer }, mixerService: { announce, reapplyMixerFilter }, guildService: { getTtsDuck } }
+}));
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
 vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: vi.fn(), removeStaleRelatedTracks: vi.fn() }));
 vi.mock('../dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
@@ -38,6 +41,7 @@ beforeEach(() => {
 	checkDJOrAlone.mockResolvedValue(true);
 	getPlayer.mockReturnValue({ guildId: 'g1' });
 	announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });
+	getTtsDuck.mockResolvedValue(0.35);
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -50,7 +54,8 @@ describe('music_tts ai tool (queued announce)', () => {
 		expect(result).toEqual({ status: 'ok', speaking: '안녕하세요', position: 3 });
 		const [, identifier, duckLevel] = announce.mock.calls[0] as [unknown, string, number];
 		expect(identifier).toContain('translate.google.com');
-		expect(duckLevel).toBe(0.2);
+		expect(duckLevel).toBe(0.35);
+		expect(getTtsDuck).toHaveBeenCalledWith('g1');
 	});
 
 	it('reports a failed enqueue without blaming a busy overlay', async () => {

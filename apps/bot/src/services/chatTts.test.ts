@@ -1,13 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-	ChatTtsService,
-	preprocessTtsText,
-	TTS_CLIP_MAX_CHARS,
-	TTS_DUCK_LEVEL,
-	TTS_MERGE_WINDOW_MS,
-	TTS_OVERLAY_QUEUE_MAX,
-	TTS_SOLO_QUEUE_MAX
-} from './chatTts.ts';
+import { ChatTtsService, preprocessTtsText, TTS_CLIP_MAX_CHARS, TTS_MERGE_WINDOW_MS, TTS_OVERLAY_QUEUE_MAX, TTS_SOLO_QUEUE_MAX } from './chatTts.ts';
 import { TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import type { Message, User } from 'discord.js';
@@ -18,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 	ttsService: { synthesize: vi.fn() },
 	mixerService: { getState: vi.fn(), announce: vi.fn() },
 	audioService: { ensurePlayback: vi.fn() },
-	guildService: { getTtsSettings: vi.fn() },
+	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn() },
 	audio: { getPlayer: vi.fn() }
 }));
 
@@ -255,6 +247,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	it('overlays via mixer announce when music is playing', async () => {
+		mocks.guildService.getTtsDuck.mockResolvedValue(0.35);
 		const service = new ChatTtsService();
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
@@ -263,7 +256,8 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		await service.handleMessage(makeMessage(), '읽어줘');
 		await flushAsync();
 
-		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), TTS_DUCK_LEVEL);
+		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35);
+		expect(mocks.guildService.getTtsDuck).toHaveBeenCalledWith('guild-1');
 		expect(player.search).not.toHaveBeenCalled();
 	});
 
