@@ -61,7 +61,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	try {
 		const duckLevel = await container.guildService.getTtsDuck(interaction.guildId);
-		const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel);
+		const parallel = await container.guildService.getTtsParallel(interaction.guildId);
+		const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel, parallel ? 'parallel' : 'sequential');
 		await interaction.editReply({
 			components: [
 				createContainer().addTextDisplayComponents((textDisplay) =>

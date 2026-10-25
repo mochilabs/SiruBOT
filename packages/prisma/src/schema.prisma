@@ -34,6 +34,10 @@ model Guild {
   gaplessEnabled Boolean @default(true)
   crossfadeEnabled Boolean @default(true)
   crossfadeMs   Int      @default(5000)
+  // 볼륨 정규화: 첫 곡이 세션 기준이 되고 이후 곡은 그 라우드니스로 맞춰요. Lavalink mixer 플러그인의 /mixer/normalization.
+  normalizationEnabled Boolean @default(false)
+  // 동시 TTS: 여러 안내를 병렬 오버레이(mixer announce mode=parallel)로 겹쳐 재생해요.
+  ttsParallelEnabled Boolean @default(false)
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])

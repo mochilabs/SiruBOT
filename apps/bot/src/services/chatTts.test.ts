@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 	ttsService: { synthesize: vi.fn() },
 	mixerService: { getState: vi.fn(), announce: vi.fn() },
 	audioService: { ensurePlayback: vi.fn() },
-	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn() },
+	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn(), getTtsParallel: vi.fn() },
 	audio: { getPlayer: vi.fn() }
 }));
 
@@ -94,6 +94,7 @@ beforeEach(() => {
 		clip(`https://tts.example/v1/shared/${encodeURIComponent(text.slice(0, 8))}`)
 	);
 	mocks.audio.getPlayer.mockReturnValue(undefined);
+	mocks.guildService.getTtsParallel.mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -256,7 +257,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		await service.handleMessage(makeMessage(), '읽어줘');
 		await flushAsync();
 
-		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35);
+		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential');
 		expect(mocks.guildService.getTtsDuck).toHaveBeenCalledWith('guild-1');
 		expect(player.search).not.toHaveBeenCalled();
 	});

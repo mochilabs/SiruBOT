@@ -11,11 +11,11 @@ vi.mock('@sirubot/utils', async () => {
 	return { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites };
 });
 
-import { getMixerSettings, setCrossfade, setGapless } from './mixer.ts';
+import { getMixerSettings, setCrossfade, setGapless, setNormalization } from './mixer.ts';
 import { GuildSettingsStore } from './store.ts';
 
 function guild(id = 'guild', overrides: Partial<Guild> = {}): Guild {
-	return { id, gaplessEnabled: false, crossfadeEnabled: false, crossfadeMs: 1000, ...overrides } as Guild;
+	return { id, gaplessEnabled: false, crossfadeEnabled: false, crossfadeMs: 1000, normalizationEnabled: false, ...overrides } as Guild;
 }
 
 describe('mixer 도메인 CRUD', () => {
@@ -25,9 +25,14 @@ describe('mixer 도메인 CRUD', () => {
 	});
 
 	it('갭리스·크로스페이드 설정을 한 번에 읽어요', async () => {
-		upsert.mockResolvedValueOnce(guild('guild', { gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 2500 }));
+		upsert.mockResolvedValueOnce(guild('guild', { gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 2500, normalizationEnabled: true }));
 		const store = new GuildSettingsStore();
-		await expect(getMixerSettings(store, 'guild')).resolves.toEqual({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 2500 });
+		await expect(getMixerSettings(store, 'guild')).resolves.toEqual({
+			gaplessEnabled: true,
+			crossfadeEnabled: true,
+			crossfadeMs: 2500,
+			normalizationEnabled: true
+		});
 	});
 
 	it('setGapless는 단일 필드로 저장해요', async () => {
@@ -59,7 +64,19 @@ describe('mixer 도메인 CRUD', () => {
 		expect(update.mock.calls[0][0].data).toEqual({ crossfadeEnabled: false });
 
 		// 저장 직후 읽기는 캐시에서 — DB 조회는 setCrossfade의 1회뿐이에요
-		await expect(getMixerSettings(store, 'guild')).resolves.toEqual({ gaplessEnabled: false, crossfadeEnabled: false, crossfadeMs: 2500 });
+		await expect(getMixerSettings(store, 'guild')).resolves.toEqual({
+			gaplessEnabled: false,
+			crossfadeEnabled: false,
+			crossfadeMs: 2500,
+			normalizationEnabled: false
+		});
 		expect(upsert).toHaveBeenCalledTimes(1);
+	});
+
+	it('setNormalization는 단일 필드로 저장해요', async () => {
+		upsert.mockResolvedValueOnce(guild('guild', { normalizationEnabled: true }));
+		const store = new GuildSettingsStore();
+		await expect(setNormalization(store, 'guild', true)).resolves.toBe(true);
+		expect(upsert.mock.calls[0][0].update).toEqual({ normalizationEnabled: true });
 	});
 });

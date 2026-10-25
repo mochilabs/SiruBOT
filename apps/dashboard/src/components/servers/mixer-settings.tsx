@@ -18,12 +18,16 @@ interface MixerForm {
   gaplessEnabled: boolean;
   crossfadeEnabled: boolean;
   crossfadeMs: number;
+  normalizationEnabled: boolean;
+  ttsParallelEnabled: boolean;
 }
 
 const toMixerForm = (settings: GuildSettings): MixerForm => ({
   gaplessEnabled: settings.gaplessEnabled,
   crossfadeEnabled: settings.crossfadeEnabled,
   crossfadeMs: settings.crossfadeMs,
+  normalizationEnabled: settings.normalizationEnabled,
+  ttsParallelEnabled: settings.ttsParallelEnabled,
 });
 
 function MixerSettingsPanel({ guildId }: { guildId: string }) {
@@ -81,6 +85,36 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
           </div>
           <p className="text-xs text-muted-foreground">
             곡 끝과 다음 곡 시작을 겹쳐서 이어요.
+          </p>
+        </div>
+
+        <div className="space-y-4 rounded-card bg-surface-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Switch
+              checked={form.normalizationEnabled}
+              onChange={(checked) => patch({ normalizationEnabled: checked })}
+              disabled={saving}
+              label="볼륨 정규화"
+              labelPosition="left"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            첫 곡 기준으로 다음 곡들의 볼륨을 자동으로 맞춰요.
+          </p>
+        </div>
+
+        <div className="space-y-4 rounded-card bg-surface-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Switch
+              checked={form.ttsParallelEnabled}
+              onChange={(checked) => patch({ ttsParallelEnabled: checked })}
+              disabled={saving}
+              label="동시 TTS"
+              labelPosition="left"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            여러 음성 안내를 동시에 재생해요. 꺼두면 순서대로 재생돼요.
           </p>
         </div>
       </div>

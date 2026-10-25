@@ -22,6 +22,8 @@ export interface MixerStateResponse {
 	tailConfirmMs: number;
 	nextTrimMs: [number, number] | null;
 	announcementsQueued: number;
+	/** 볼륨 정규화 on/off — 예전 JAR엔 없을 수 있다. */
+	normalizationEnabled?: boolean;
 	/** 서버 슬롯에 예열된 곡의 identifier — 재시작 복구 때 클라이언트 기록과 대조한다. 예전 JAR엔 없을 수 있다. */
 	nextTrackIdentifier?: string | null;
 	/** 크로스페이드로 진입 중인(sub) 곡의 identifier — 예전 JAR엔 없을 수 있다. */
@@ -363,6 +365,16 @@ export class MixerService {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.crossfadeEnabled, durationMs })
 		});
+		await this.pushNormalizationConfig(player);
+	}
+
+	/** DB 볼륨 정규화 설정을 서버에 반영한다. */
+	public async pushNormalizationConfig(player: Player): Promise<void> {
+		const settings = await container.guildService.getMixerSettings(player.guildId);
+		await this.mixerCall(player, '/mixer/normalization', {
+			method: 'POST',
+			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.normalizationEnabled })
+		});
 	}
 
 	/**
@@ -429,6 +441,13 @@ export class MixerService {
 		})) as MixerStateResponse;
 	}
 
+	public async setNormalization(player: Player, enabled: boolean): Promise<MixerStateResponse> {
+		return (await this.mixerCall(player, '/mixer/normalization', {
+			method: 'POST',
+			body: JSON.stringify({ guildId: String(player.guildId), enabled })
+		})) as MixerStateResponse;
+	}
+
 	public async getState(player: Player): Promise<MixerStateResponse> {
 		const gid = encodeURIComponent(String(player.guildId));
 		return (await this.mixerCall(player, `/mixer/state?guildId=${gid}`)) as MixerStateResponse;
@@ -436,13 +455,15 @@ export class MixerService {
 
 	/**
 	 * 현재 재생 중인 오디오 위에 안내 음성을 섞고, 원곡 볼륨을 일시적으로 낮춘다.
-	 * 서버가 예전에 안내를 재생 중이어도 409가 아니라 큐에 쌓이고, 순차 재생된다.
+	 * 서버가 예전에 안내를 재생 중이어도 409가 아니라 큐에 쌓인다.
+	 * `mode: "sequential"`(기본)은 단일 보조 플레이어에서 순차 재생하고,
+	 * `mode: "parallel"`은 여러 안내를 동시에(최대 maxParallelOverlays) 겹쳐 재생한다.
 	 * 반환 영수증의 `position`으로 대기 순번을 안내할 수 있다 (성공 ≠ 재생 시작).
 	 */
-	public async announce(player: Player, identifier: string, duckLevel: number): Promise<MixerAnnounceReceipt> {
+	public async announce(player: Player, identifier: string, duckLevel: number, mode?: 'sequential' | 'parallel'): Promise<MixerAnnounceReceipt> {
 		return (await this.mixerCall(player, '/mixer/announce', {
 			method: 'POST',
-			body: JSON.stringify({ guildId: String(player.guildId), identifier, duckLevel })
+			body: JSON.stringify({ guildId: String(player.guildId), identifier, duckLevel, ...(mode ? { mode } : {}) })
 		})) as MixerAnnounceReceipt;
 	}
 

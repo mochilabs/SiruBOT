@@ -164,8 +164,20 @@ export class GuildService extends GuildSettingsStore {
 		return mixer.setGapless(this, guildId, enabled);
 	}
 
+	public async setNormalization(guildId: string, enabled: boolean) {
+		return mixer.setNormalization(this, guildId, enabled);
+	}
+
 	public async setCrossfade(guildId: string, enabled: boolean, durationMs?: number) {
 		return mixer.setCrossfade(this, guildId, enabled, durationMs);
+	}
+
+	public async getTtsParallel(guildId: string): Promise<boolean> {
+		return playback.getTtsParallel(this, guildId);
+	}
+
+	public async setTtsParallel(guildId: string, enabled: boolean): Promise<boolean> {
+		return playback.setTtsParallel(this, guildId, enabled);
 	}
 
 	public async setSponsorBlockSegments(guildId: string, segments: string[]): Promise<string[]> {

@@ -1,16 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AiToolContext } from './types.ts';
 
-const { announce, getPlayer, checkDJOrAlone, reapplyMixerFilter, getTtsDuck } = vi.hoisted(() => ({
+const { announce, getPlayer, checkDJOrAlone, reapplyMixerFilter, getTtsDuck, getTtsParallel } = vi.hoisted(() => ({
 	announce: vi.fn(),
 	getPlayer: vi.fn(),
 	checkDJOrAlone: vi.fn(),
 	reapplyMixerFilter: vi.fn(),
-	getTtsDuck: vi.fn()
+	getTtsDuck: vi.fn(),
+	getTtsParallel: vi.fn()
 }));
 
 vi.mock('@sapphire/framework', () => ({
-	container: { audio: { getPlayer }, mixerService: { announce, reapplyMixerFilter }, guildService: { getTtsDuck } }
+	container: { audio: { getPlayer }, mixerService: { announce, reapplyMixerFilter }, guildService: { getTtsDuck, getTtsParallel } }
 }));
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
 vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: vi.fn(), removeStaleRelatedTracks: vi.fn() }));
@@ -42,6 +43,7 @@ beforeEach(() => {
 	getPlayer.mockReturnValue({ guildId: 'g1' });
 	announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });
 	getTtsDuck.mockResolvedValue(0.35);
+	getTtsParallel.mockResolvedValue(false);
 });
 afterEach(() => vi.unstubAllGlobals());
 

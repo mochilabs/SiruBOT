@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Player } from 'lavalink-client';
 
-const { announce, getPlayer, getTtsDuck } = vi.hoisted(() => ({ announce: vi.fn(), getPlayer: vi.fn(), getTtsDuck: vi.fn() }));
+const { announce, getPlayer, getTtsDuck, getTtsParallel } = vi.hoisted(() => ({
+	announce: vi.fn(),
+	getPlayer: vi.fn(),
+	getTtsDuck: vi.fn(),
+	getTtsParallel: vi.fn()
+}));
 
 vi.mock('@sapphire/framework', () => ({
 	UserError: class UserError extends Error {
@@ -14,7 +19,7 @@ vi.mock('@sapphire/framework', () => ({
 			this.context = options.context;
 		}
 	},
-	container: { audio: { getPlayer }, mixerService: { announce }, guildService: { getTtsDuck } }
+	container: { audio: { getPlayer }, mixerService: { announce }, guildService: { getTtsDuck, getTtsParallel } }
 }));
 
 import { run } from './tts.ts';
@@ -39,6 +44,7 @@ beforeEach(() => {
 	getPlayer.mockReturnValue({ guildId: 'g1' } as unknown as Player);
 	announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });
 	getTtsDuck.mockResolvedValue(0.35);
+	getTtsParallel.mockResolvedValue(false);
 });
 afterEach(() => vi.unstubAllGlobals());
 

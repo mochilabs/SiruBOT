@@ -108,4 +108,5 @@ export interface MixerSettings {
 	gaplessEnabled: boolean;
 	crossfadeEnabled: boolean;
 	crossfadeMs: number;
+	normalizationEnabled: boolean;
 }

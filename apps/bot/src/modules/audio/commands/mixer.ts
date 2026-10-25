@@ -64,6 +64,34 @@ export class MixerCommand extends Command {
 								.setMaxValue(15000)
 								.setRequired(false)
 						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('normalization')
+						.setNameLocalizations({ ko: '볼륨정규화' })
+						.setDescription('Toggle volume normalization.')
+						.setDescriptionLocalizations({ ko: '곡 사이 볼륨 차이를 자동으로 맞춰요.' })
+						.addBooleanOption((opt) =>
+							opt
+								.setName('enabled')
+								.setNameLocalizations({ ko: '켜기' })
+								.setDescription('볼륨 정규화를 켤지 끌지 선택해요.')
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('parallel-tts')
+						.setNameLocalizations({ ko: '동시tts' })
+						.setDescription('Toggle simultaneous TTS announcements.')
+						.setDescriptionLocalizations({ ko: '여러 음성 안내를 동시에 재생할지 설정해요.' })
+						.addBooleanOption((opt) =>
+							opt
+								.setName('enabled')
+								.setNameLocalizations({ ko: '켜기' })
+								.setDescription('동시 재생을 켤지 끌지 선택해요.')
+								.setRequired(true)
+						)
 				);
 		});
 	}
@@ -83,6 +111,10 @@ export class MixerCommand extends Command {
 				return this.handleGapless(interaction, player);
 			case 'crossfade':
 				return this.handleCrossfade(interaction, player);
+			case 'normalization':
+				return this.handleNormalization(interaction, player);
+			case 'parallel-tts':
+				return this.handleParallelTts(interaction);
 			default:
 				throw new UserError({
 					identifier: 'mixer_unknown_subcommand',
@@ -159,6 +191,49 @@ export class MixerCommand extends Command {
 					message: player ? base : `${base} 다음에 재생할 때부터 적용돼요.`
 				})
 			],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { roles: [], users: [] }
+		});
+	}
+
+	private async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+		await this.checkDJ(interaction);
+		const enabled = interaction.options.getBoolean('enabled', true);
+		await this.container.guildService.setNormalization(interaction.guildId, enabled);
+		if (player) {
+			try {
+				await this.container.mixerService.setNormalization(player, enabled);
+			} catch {
+				throw new UserError({
+					identifier: 'mixer_normalization_failed',
+					message: `${emoji('tools')} 볼륨 정규화 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.`,
+					context: { ephemeral: true }
+				});
+			}
+		}
+		const message = enabled
+			? `${emoji('arrow_forward')} 볼륨 정규화를 켰어요. 첫 곡 기준으로 다음 곡들의 볼륨을 맞춰요.`
+			: `${emoji('arrow_forward')} 볼륨 정규화를 껐어요.`;
+		await interaction.editReply({
+			components: [
+				view.mixerUpdated({
+					message: player ? message : `${message} 다음에 재생할 때부터 적용돼요.`
+				})
+			],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { roles: [], users: [] }
+		});
+	}
+
+	private async handleParallelTts(interaction: ChatInputCommandInteraction<'cached'>) {
+		await this.checkDJ(interaction);
+		const enabled = interaction.options.getBoolean('enabled', true);
+		await this.container.guildService.setTtsParallel(interaction.guildId, enabled);
+		const message = enabled
+			? `${emoji('volume_up')} 동시 TTS를 켰어요. 여러 음성 안내가 동시에 재생돼요.`
+			: `${emoji('volume_up')} 동시 TTS를 껐어요. 음성 안내가 순서대로 재생돼요.`;
+		await interaction.editReply({
+			components: [view.mixerUpdated({ message })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});

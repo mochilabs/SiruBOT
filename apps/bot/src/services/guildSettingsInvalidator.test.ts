@@ -7,7 +7,7 @@ const { bindings, clearGuildCustomCommandsCache, syncGuildSlashCommands, contain
 	containerStub: {
 		audio: { getPlayer: vi.fn() },
 		guildService: { getMixerSettings: vi.fn() },
-		mixerService: { setCrossfade: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
+		mixerService: { setCrossfade: vi.fn(), setNormalization: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
 	}
 }));
 
@@ -37,7 +37,12 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	bindings.length = 0;
 	containerStub.audio.getPlayer.mockReturnValue(null);
-	containerStub.guildService.getMixerSettings.mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 600 });
+	containerStub.guildService.getMixerSettings.mockResolvedValue({
+		gaplessEnabled: true,
+		crossfadeEnabled: true,
+		crossfadeMs: 600,
+		normalizationEnabled: false
+	});
 });
 
 describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
@@ -81,6 +86,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 
 		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g2'));
 		await vi.waitFor(() => expect(containerStub.mixerService.setCrossfade).toHaveBeenCalledWith(player, true, 600));
+		await vi.waitFor(() => expect(containerStub.mixerService.setNormalization).toHaveBeenCalledWith(player, false));
 		await vi.waitFor(() => expect(containerStub.mixerService.preloadUpcoming).toHaveBeenCalledWith(player));
 	});
 

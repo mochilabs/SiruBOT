@@ -243,7 +243,8 @@ export class ChatTtsService {
 			container.logger.debug(`[chatTts] mixer state unavailable, trying announce (guild ${player.guildId}): ${error}`);
 		}
 		const duckLevel = await container.guildService.getTtsDuck(player.guildId);
-		await container.mixerService.announce(player, clip.url, duckLevel).catch((error) => {
+		const parallel = await container.guildService.getTtsParallel(player.guildId);
+		await container.mixerService.announce(player, clip.url, duckLevel, parallel ? 'parallel' : 'sequential').catch((error) => {
 			this.warnOnce(player.guildId, 'announce_failed', `[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
 		});
 	}
@@ -301,9 +302,10 @@ export class ChatTtsService {
 		const state = this.guildStates.get(player.guildId);
 		if (!state || state.soloQueue.length === 0) return;
 		const duckLevel = await container.guildService.getTtsDuck(player.guildId);
+		const parallel = await container.guildService.getTtsParallel(player.guildId);
 		const clips = state.soloQueue.splice(0, state.soloQueue.length);
 		for (const clip of clips) {
-			await container.mixerService.announce(player, clip.url, duckLevel).catch((error) => {
+			await container.mixerService.announce(player, clip.url, duckLevel, parallel ? 'parallel' : 'sequential').catch((error) => {
 				this.warnOnce(player.guildId, 'drain_failed', `[chatTts] 잔여 클립 오버레이 이관 실패 (guild ${player.guildId}): ${error}`);
 			});
 		}
