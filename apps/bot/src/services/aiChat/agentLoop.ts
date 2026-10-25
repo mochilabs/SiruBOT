@@ -3,10 +3,9 @@ import { executeAiTool, getAiToolDefinitions, getAiToolStatus, type AiToolContex
 import { assertChatEnabled, getAiChatPolicy } from './config.ts';
 import { streamChatCompletion } from './completion.ts';
 import { getChannelHistoryState, loadChannelHistory, pushChannelHistory, setChannelGuild } from './historyStore.ts';
-import { buildRecentChannelBlock, buildSystemContent } from './prompt.ts';
+import { buildDiscordContextBlock, buildRecentChannelBlock, buildSystemContent } from './prompt.ts';
 import { scheduleSummary } from './summarizer.ts';
 import { ChatServiceError, type ChatConfig, type ChatContent, type ChatContentPart, type ChatMessage, type ChatTurnResult } from './types.ts';
-
 const MAX_TOOL_ROUNDS = 5;
 
 // 멀티모달 이미지
@@ -86,9 +85,10 @@ export async function runChatTurn(options: {
 			return null;
 		})
 	]);
+	const discordContextBlock = buildDiscordContextBlock(options.toolContext.guildId, userId);
 
 	const messages: ChatMessage[] = [
-		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock) },
+		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock, discordContextBlock) },
 		{ role: 'user', content: buildUserContent(options.prompt, options.images) }
 	];
 
