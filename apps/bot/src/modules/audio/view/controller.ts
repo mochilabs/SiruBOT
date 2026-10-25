@@ -1,4 +1,4 @@
-import { emoji, emojiProgressBar, createContainer, formatTime, formatTimeToKorean, formatTrack, removeEmojis, volumeToEmoji } from '@sirubot/utils';
+import { emoji, emojiProgressBar, createContainer, formatTime, formatTimeToKorean, removeEmojis, volumeToEmoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -42,17 +42,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const queuedTracks = getUserQueuedTracks(player);
 	const queueCount = queuedTracks.length;
 
-	const NEXT_UP_COUNT = 3;
-	const nextUpLines = queuedTracks.slice(0, NEXT_UP_COUNT).map(
-		(track, index) =>
-			`${index + 1}. ${formatTrack(track as Track, {
-				showLength: false,
-				withMarkdownURL: true,
-				cleanTitle: true,
-				titleLength: { maxLength: 80 }
-			})}`
-	);
-
 	// 재생 상태 라벨(음성 채널 멘션·재생 중/일시정지/실시간) — 트랙 정보 위 한 줄로 보여준다.
 	const statusLabel = current ? (current.info.isStream ? '실시간' : player.paused ? '일시정지' : '재생 중') : null;
 	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# ${statusLabel} <#${player.voiceChannelId}>` : null;
@@ -87,12 +76,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 					: wrapPrefix('repeat:off')
 		)
 		.setEmoji(repeatEmoji(player.repeatMode));
-
-	// '대기열 보기' 버튼: 상세 목록(페이지네이션)은 버튼 클릭 시 ephemeral 메시지로 표시한다.
-	const queueShowButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('queue:show'))
-		.setEmoji(emoji('scroll'))
-		.setDisabled(queuedTracks.length === 0);
 
 	// 핵심 조작만 한 행에 둬 모바일에서도 버튼 라벨이 눌리지 않게 한다.
 	const primaryComponents: ButtonBuilder[] = [prevButton, pauseButton, nextButton, stopButton, repeatButton];
@@ -141,20 +124,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			)
 		);
 	}
-	const settingComponents: ButtonBuilder[] = [];
-	// if (showVolume) {
-	// 	settingComponents.push(volumeDownButton, volumeUpButton);
-	// }
-	if (queuedTracks.length > 0) {
-		settingComponents.push(queueShowButton);
-	}
-	// 버튼이 하나도 없으면 빈 ActionRow(길이 0)를 보내게 되어 Discord가 400을 반환한다.
-	if (settingComponents.length > 0) {
-		utilityRows.push(
-			new ActionRowBuilder<ButtonBuilder>().addComponents(settingComponents.map((button) => button.setStyle(ButtonStyle.Secondary)))
-		);
-	}
-
 	if (nowPlayingCardUrl) {
 		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
 		containerComponent.addMediaGalleryComponents(gallery);
@@ -173,22 +142,17 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		containerComponent.addActionRowComponents(utilityRow);
 	}
 
-	if (nextUpLines.length > 0 && !nowPlayingCardUrl) {
-		containerComponent
-			.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-			.addTextDisplayComponents(new TextDisplayBuilder().setContent([`### 다음 곡`, ...nextUpLines].join('\n')));
-	}
-
 	if (!nowPlayingCardUrl) {
-		if (queueCount > 0 && !nextUpLines.length) {
+		// 대기열 요약 → divider → 컨텐츠 → footer 순서. footer에는 대기열 개수를 두지 않는다.
+		if (queueCount > 0) {
+			containerComponent.addTextDisplayComponents(
+				new TextDisplayBuilder().setContent(
+					`-# ${emoji('scroll')} 대기열 ${queueCount}곡 (${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음)`
+				)
+			);
 			containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
 		}
 		const footerSegments = buildFooterSegments(player, volume);
-		if (queueCount > 0) {
-			footerSegments.unshift(
-				`${emoji('scroll')} 대기열 ${queueCount}곡 (${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음)`
-			);
-		}
 		// 신청자는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다 — 추천곡/채팅 TTS는 아티스트 줄 라벨을 유지한다.
 		const requesterMention = current ? footerRequesterMention(current) : null;
 		if (requesterMention) {

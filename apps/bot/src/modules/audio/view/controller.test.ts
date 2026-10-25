@@ -28,6 +28,7 @@ const CHAPTERS = [{ name: '1장', start: 0, end: 60_000 }];
 
 interface PlainComponent {
 	type: number;
+	content?: string;
 	custom_id?: string;
 	components?: PlainComponent[];
 }
@@ -95,13 +96,13 @@ describe('controllerView action rows', () => {
 		expect(rows[0]).toHaveLength(5);
 	});
 
-	it('대기열이 있으면 대기열 보기 행을 추가한다', () => {
+	it('대기열이 있어도 대기열 보기 행을 추가하지 않는다', () => {
 		mocks.queued.mockReturnValue([TRACK]);
 		const rows = actionRows(controllerJson());
 
 		expectValidActionRows(rows);
-		expect(rows).toHaveLength(2);
-		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:queue:show']);
+		expect(rows).toHaveLength(1);
+		expect(rows.flat().some((button) => button.custom_id === 'controller:queue:show')).toBe(false);
 	});
 
 	it('챕터가 있으면 챕터 행을 추가한다', () => {
@@ -113,14 +114,14 @@ describe('controllerView action rows', () => {
 		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:chapter:prev', 'controller:chapter:next']);
 	});
 
-	it('챕터와 대기열이 모두 있으면 각각 행을 만든다', () => {
+	it('챕터와 대기열이 있어도 챕터 행만 만든다', () => {
 		mocks.queued.mockReturnValue([TRACK]);
 		mocks.chapterIndex.mockReturnValue(0);
 		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS }) }));
 
 		expectValidActionRows(rows);
-		expect(rows).toHaveLength(3);
-		expect(rows[2]!.map((button) => button.custom_id)).toEqual(['controller:queue:show']);
+		expect(rows).toHaveLength(2);
+		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:chapter:prev', 'controller:chapter:next']);
 	});
 
 	it('카드 모드에서도 ActionRow 길이 제약을 지킨다', () => {
@@ -212,6 +213,23 @@ describe('controllerView 라벨·타이틀', () => {
 		const json = controllerJson();
 		expect((json.components ?? []).some((component) => component.type === 14)).toBe(false);
 	});
+
+	it('대기열 요약은 divider 다음 컨텐츠보다 먼저 나타난다', () => {
+		mocks.queued.mockReturnValue([TRACK]);
+		mocks.remaining.mockReturnValue(60_000);
+
+		const components = controllerJson().components ?? [];
+		const summaryIndex = components.findIndex((component) => component.type === 10 && component.content?.includes('대기열 1곡 (1분 남음)'));
+		const dividerIndex = components.findIndex((component) => component.type === 14);
+		const texts = collectTexts(controllerJson());
+		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('50%'));
+
+		expect(summaryIndex).toBeGreaterThanOrEqual(0);
+		expect(dividerIndex).toBe(summaryIndex + 1);
+		expect(footer).toBeDefined();
+		expect(footer).not.toContain('대기열');
+	});
+
 	it('track-repeat off 아이콘은 slash가 포함된 별도 앱 이모지를 사용한다', () => {
 		const json = controllerJson();
 		const repeatButton = actionRows(json)[0]![4] as unknown as Record<string, unknown>;

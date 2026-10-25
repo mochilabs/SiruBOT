@@ -288,9 +288,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handleQueue(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
 		switch (subcommand) {
-			case 'show':
-				await this.handleQueueShow(interaction, player);
-				break;
 			case 'prev':
 				await this.handleQueuePrev(interaction, player);
 				break;
@@ -310,27 +307,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				});
 				break;
 		}
-	}
-
-	private async handleQueueShow(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		if (getUserQueuedTracks(player).length === 0) {
-			await interaction
-				.reply({
-					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [queueEmpty()]
-				})
-				.catch(() => null);
-			return;
-		}
-
-		const totalPages = Math.max(1, Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE));
-		player.queuePage = 1;
-		await interaction
-			.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [queueList({ player, page: 1, totalPages, authorId: interaction.user.id })]
-			})
-			.catch(() => null);
 	}
 
 	private async handleQueuePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
