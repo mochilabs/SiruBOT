@@ -107,12 +107,12 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const chapterPrevButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('chapter:prev'))
 		.setLabel('이전 챕터')
-		.setEmoji(emoji('chapters_prev', '⏪'))
+		.setEmoji(emoji('arrow_back'))
 		.setDisabled(chapterIndex === null || (chapterIndex === 0 && atChapterStart));
 	const chapterNextButton = new ButtonBuilder()
 		.setCustomId(wrapPrefix('chapter:next'))
 		.setLabel('다음 챕터')
-		.setEmoji(emoji('chapters_next', '⏩'))
+		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);
 
 	// 부가 조작은 챕터 이동과 재생 설정으로 나눠 한 행에 과밀하게 몰리지 않게 한다.
