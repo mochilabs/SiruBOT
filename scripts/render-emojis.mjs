@@ -61,7 +61,7 @@ const EMOJI_LUCIDE_MAP = {
   stop: "square",
   repeat: "repeat",
   repeat_one: "repeat-1",
-  repeat_off: "repeat",
+  repeat_off: "repeat-off",
   shuffle: "shuffle",
   volume_up: "volume-2",
   volume_down: "volume-1",
