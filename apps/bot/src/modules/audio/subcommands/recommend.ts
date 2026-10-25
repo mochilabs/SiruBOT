@@ -7,7 +7,7 @@ import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'recommend';
 export const ko = '추천';
-export const description = '현재 곡 기반의 추천곡을 대기열에 추가해요.';
+export const description = '현재 곡 기반의 추천 곡을 대기열에 추가해요.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
@@ -15,13 +15,13 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setName(name)
 		.setNameLocalizations({ ko })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡과 비슷한 추천곡을 대기열에 추가해요.' })
+		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡과 비슷한 추천 곡을 대기열에 추가해요.' })
 		.addIntegerOption((option) =>
 			option
 				.setName('count')
 				.setNameLocalizations({ ko: '개수' })
 				.setDescription('How many recommendations to add')
-				.setDescriptionLocalizations({ ko: '추가할 추천곡 개수 (1~5)' })
+				.setDescriptionLocalizations({ ko: '추가할 추천 곡 개수 (1~5)' })
 				.setRequired(false)
 				.setMinValue(1)
 				.setMaxValue(5)
@@ -42,14 +42,14 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (getInFlightRelatedFetch(interaction.guildId)) {
 		throw new UserError({
 			identifier: 'RecommendCommandBusy',
-			message: '추천곡을 이미 준비 중이에요. 잠시 후 다시 시도해요.',
+			message: '추천 곡을 이미 준비 중이에요. 잠시 후 다시 시도해요.',
 			context: { ephemeral: true }
 		});
 	}
 
 	const count = interaction.options.getInteger('count') ?? 1;
 
-	// 추천곡 검색은 YouTube RD 플레이리스트 조회라 네트워크 왕복이 필요하다.
+	// 추천 곡 검색은 YouTube RD 플레이리스트 조회라 네트워크 왕복이 필요하다.
 	await interaction.deferReply();
 
 	const added = await addManualRecommendation(player, current, count);
@@ -57,7 +57,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (added.length === 0) {
 		await interaction.editReply({
 			components: [
-				errorView(`${emoji('error')} **${current.info.title}** 기준의 추천곡을 찾지 못했어요. 같은 소스(YouTube) 곡일 때만 동작해요.`)
+				errorView(`${emoji('error')} **${current.info.title}** 기준의 추천 곡을 찾지 못했어요. 같은 소스(YouTube) 곡일 때만 동작해요.`)
 			],
 			flags: [MessageFlags.IsComponentsV2]
 		});
@@ -67,7 +67,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const listLines = added.map((track, index) => `${index + 1}. **${track.info.title}**`);
 	const containerComponent = createContainer();
 	containerComponent.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent([`${emoji('sparkle')} 추천곡 **${added.length}곡**을 대기열에 추가했어요.`, ...listLines].join('\n'))
+		new TextDisplayBuilder().setContent([`${emoji('sparkle')} 추천 곡 **${added.length}곡**을 대기열에 추가했어요.`, ...listLines].join('\n'))
 	);
 
 	await interaction.editReply({

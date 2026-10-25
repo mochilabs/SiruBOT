@@ -3,10 +3,10 @@ import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilde
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/related.ts';
 
-/** 기존 /related(추천곡)에서 개명 — /recommend(추천)와 헷갈린다는 지적 반영 */
+/** 기존 /related(추천 곡)에서 개명 — /recommend(추천)와 헷갈린다는 지적 반영 */
 export const name = 'autoplay';
 export const ko = '자동재생';
-export const description = '추천곡 자동재생을 켜거나 꺼요.';
+export const description = '추천 곡 자동재생을 켜거나 꺼요.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
@@ -14,13 +14,13 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.setName(name)
 		.setNameLocalizations({ ko })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '추천곡 자동재생을 켜거나 꺼요.' })
+		.setDescriptionLocalizations({ ko: '추천 곡 자동재생을 켜거나 꺼요.' })
 		.addBooleanOption((option) =>
 			option
 				.setName('enabled')
 				.setNameLocalizations({ ko: '사용' })
 				.setDescription('Enable or disable autoplay of related tracks')
-				.setDescriptionLocalizations({ ko: '추천곡 자동재생을 켜거나 꺼요.' })
+				.setDescriptionLocalizations({ ko: '추천 곡 자동재생을 켜거나 꺼요.' })
 		);
 }
 
