@@ -2,6 +2,7 @@ import Container from "@/components/container";
 import { SERVER_TABS } from "@/components/servers/server-tabs";
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonCircle } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 /**
  * 서버 대시보드 로딩 중 — 실제 화면과 같은 구조로 그려요:
@@ -44,16 +45,23 @@ export default function ServerDashboardLoading() {
           </Card>
 
           <div className="w-full min-w-0 flex-1">
-            {/* 모바일 탭 스트립 모양 — 활성 탭 자리에 실제 인디케이터와 같은 핑크 언더라인 */}
-            <div role="presentation" className="mb-4 flex items-center gap-1 overflow-x-auto scrollbar-none lg:hidden">
-              {SERVER_TABS.map((item, index) => (
-                <div key={item.key} className="relative flex min-h-11 shrink-0 items-center gap-1.5 px-3">
-                  {index === 0 && <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-primary-control" />}
-                  <SkeletonCircle size="h-3.5 w-3.5" />
-                  <Skeleton.Line width={`${Math.max(2.5, item.label.length * 0.75)}rem`} height="h-4" />
-                </div>
-              ))}
-            </div>
+            {/* 모바일 기능 네비게이션 서피스 모양 (ServerDashboard 모바일 탭 카드와 동일 구조) */}
+            <Card aria-hidden padding="none" className="mb-4 overflow-hidden lg:hidden">
+              <div role="presentation" className="flex items-center gap-1 overflow-x-auto scrollbar-none p-1.5">
+                {SERVER_TABS.map((item, index) => (
+                  <div
+                    key={item.key}
+                    className={cn(
+                      "relative flex min-h-11 shrink-0 items-center gap-2 rounded-menu px-3.5 py-2.5",
+                      index === 0 && "bg-primary-control/10",
+                    )}
+                  >
+                    <SkeletonCircle size="h-3.5 w-3.5" />
+                    <Skeleton.Line width={`${Math.max(2.5, item.label.length * 0.75)}rem`} height="h-4" />
+                  </div>
+                ))}
+              </div>
+            </Card>
 
             {/* 활성 패널 — 설정 패널 카드(padding="lg")와 같은 모양 (PanelHeader 아이콘+제목, 2단 필드) */}
             <Card aria-hidden padding="lg">

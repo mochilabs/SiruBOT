@@ -173,29 +173,35 @@ export function ServerDashboard({
             className="w-full"
             aria-label="서버 설정 패널"
           >
-            <div
-              ref={mobileTabsRef}
-              className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-none lg:hidden"
-            >
-              <TabsList className="w-max min-w-full justify-start whitespace-nowrap">
-                {TABS.map((item) => (
-                  <TabsTrigger
-                    key={item.key}
-                    value={item.key}
-                    data-mobile-tab={item.key}
-                    className="min-h-11 min-w-max flex-none gap-1.5 px-3 after:bottom-0"
-                  >
-                    {item.icon}
-                    {item.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+            {/* 모바일 기능 네비게이션 서피스 — PC 사이드바(ServerFeatureSidebar)와 동일한
+                Card 서피스 + rounded-menu 언어를 써서 부유하는 맨 요소 대신 안정된 표면을 제공해요.
+                가로 스크롤은 카드 내부로 격리되고 활성 탭은 ServerFeatureSidebar와 일치하는
+                primary-control/10 알약 스타일로 표시돼요. */}
+            <Card padding="none" className="mb-4 overflow-hidden lg:hidden">
+              <div
+                ref={mobileTabsRef}
+                className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-none p-1.5"
+              >
+                <TabsList className="w-max min-w-full justify-start gap-1 whitespace-nowrap bg-transparent p-0">
+                  {TABS.map((item) => (
+                    <TabsTrigger
+                      key={item.key}
+                      value={item.key}
+                      data-mobile-tab={item.key}
+                      className="min-h-11 min-w-max flex-none gap-2 rounded-menu px-3.5 py-2.5 text-sm font-medium transition-colors duration-fast after:hidden hover:bg-accent/10 hover:text-foreground data-active:bg-primary-control/10 data-active:font-bold data-active:text-primary-text"
+                    >
+                      <span aria-hidden className="shrink-0">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            </Card>
             {TABS.map((item) => (
               <TabsContent
                 key={item.key}
                 value={item.key}
-                className="pt-4 lg:pt-0"
+                className="pt-0 lg:pt-0"
                 keepMounted
               >
                 <SettingsPanelActive.Provider value={tab === item.key}>
