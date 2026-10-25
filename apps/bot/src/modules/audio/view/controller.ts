@@ -43,8 +43,8 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	const queueCount = queuedTracks.length;
 
 	// 재생 상태 라벨(음성 채널 멘션·재생 중/일시정지/실시간) — 트랙 정보 위 한 줄로 보여준다.
-	const statusLabel = current ? (current.info.isStream ? '실시간' : player.paused ? '일시정지' : '재생 중') : null;
-	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# ${statusLabel} <#${player.voiceChannelId}>` : null;
+	const statusLabel = current ? (current.info.isStream ? '실시간으로 재생 중' : player.paused ? '일시정지됨' : '재생 중') : null;
+	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# <#${player.voiceChannelId}> 에서 ${statusLabel}` : null;
 
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));

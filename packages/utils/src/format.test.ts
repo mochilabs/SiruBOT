@@ -10,29 +10,31 @@ function track(info: Partial<{ title: string; duration: number; isStream: boolea
 
 describe('emojiProgressBar', () => {
 	it('0%는 전 셀이 비어 있고 100%는 전 셀이 차요', () => {
-		// 시작/끝 셀에는 캔버스 패딩 폴백(공백)이 붙는다 — start 왼쪽, end 오른쪽.
-		expect(emojiProgressBar(0)).toBe(' □□□□□ ');
-		expect(emojiProgressBar(1)).toBe(' ■■■■■ ');
+		// 셀은 full-bleed — 좌우에 빈 공간이 없어요.
+		expect(emojiProgressBar(0)).toBe('□□□□□');
+		expect(emojiProgressBar(1)).toBe('■■■■■');
 	});
 
 	it('반은 채우고 반은 비워요 (셀 경계)', () => {
-		// mid_end 셀은 오른쪽 패딩(공백)을 남긴다 — PNG 셀 패딩과 같은 규칙.
-		expect(emojiProgressBar(0.5)).toBe(' ■■◐ □□ ');
+		expect(emojiProgressBar(0.5)).toBe('■■◐□□');
 	});
 
 	it('half 셀은 ◐로 표시해요', () => {
-		expect(emojiProgressBar(1 / 10)).toBe(' ◐□□□□ ');
+		expect(emojiProgressBar(1 / 10)).toBe('◐□□□□');
 	});
 
 	it('범위 밖·NaN은 클램프해서 처리해요', () => {
-		expect(emojiProgressBar(-1)).toBe(' □□□□□ ');
-		expect(emojiProgressBar(2)).toBe(' ■■■■■ ');
-		expect(emojiProgressBar(Number.NaN)).toBe(' □□□□□ ');
+		expect(emojiProgressBar(-1)).toBe('□□□□□');
+		expect(emojiProgressBar(2)).toBe('■■■■■');
+		expect(emojiProgressBar(Number.NaN)).toBe('□□□□□');
 	});
 
-	it('마지막 채워진 셀이 mid면 mid_end 오른쪽 패딩과 end 오른쪽 패딩만 남는다', () => {
+	it('바 좌우에 빈 공간이 남지 않는다', () => {
 		// 0.3 → start_filled + mid_end_half + mid×2 empty + end_empty
-		expect(emojiProgressBar(0.3)).toBe(' ■◐ □□□ ');
+		const bar = emojiProgressBar(0.3);
+		expect(bar).toBe('■◐□□□');
+		expect(bar.startsWith(' ')).toBe(false);
+		expect(bar.endsWith(' ')).toBe(false);
 	});
 });
 

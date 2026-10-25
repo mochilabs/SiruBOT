@@ -59,8 +59,8 @@ const PARAMS = {
     desc: "라운드 엔드 캡 반경 px. 0이면 자동(pbHeight/2)",
   },
   pbPad: {
-    def: 61,
-    desc: "정사각 이모지와 같은 좌우 캔버스 패딩 px — start는 왼쪽에만, end는 오른쪽에만. 0이면 기존 full-bleed",
+    def: 0,
+    desc: "셀 캔버스 여백 px — 도형은 왼쪽에 붙고 여백은 오른쪽에만 남겨요. 0이면 셀 전체가 도형(full-bleed)",
   },
   pbEmptyColor: { def: "#fbd3e7", desc: "empty 셀 색상(#rrggbb)" },
 };
@@ -274,8 +274,9 @@ function nodeToPath(tag, attrs) {
   }
 }
 
-// SVG 노드를 스트로크 또는 fill로 그리고, ink box를 params.ink에 맞춰 중앙 배치한 캔버스를 반환해요.
-function renderIconCanvas(nodes, filled, params) {
+// SVG 노드를 스트로크 또는 fill로 그리고, ink box를 params.ink에 맞춰 캔버스에 배치한 결과를 반환해요.
+// anchorLeft=true면 가로는 왼쪽 정렬(ink 좌측 = 캔버스 좌측, padLeft=0), 세로는 가운데 정렬 — artist 전용.
+function renderIconCanvas(nodes, filled, params, anchorLeft = false) {
   const T = 1024; // ink 측정용 임시 캔버스
   const tc = new Canvas(T, T);
   const ctx = tc.getContext("2d");
@@ -312,7 +313,7 @@ function renderIconCanvas(nodes, filled, params) {
       }
   if (maxX <= minX)
     return { canvas: new Canvas(SIZE, SIZE), skipped, empty: true }; // 빈 아이콘
-  // ink box max dim을 params.ink로 스케일해 SIZE 캔버스 중앙 배치
+  // ink box max dim을 params.ink로 스케일해 배치 — 기본은 중앙, anchorLeft면 가로 왼쪽 정렬
   const iw = maxX - minX + 1,
     ih = maxY - minY + 1;
   const s = params.ink / Math.max(iw, ih);
@@ -328,7 +329,7 @@ function renderIconCanvas(nodes, filled, params) {
     minY,
     iw,
     ih,
-    (SIZE - dw) / 2,
+    anchorLeft ? 0 : (SIZE - dw) / 2,
     (SIZE - dh) / 2,
     dw,
     dh,
@@ -341,6 +342,7 @@ function renderIconCanvas(nodes, filled, params) {
  * pb_mid_end: 진행바의 마지막 채워진 세그먼트가 mid일 때 — accent 끝을 오른쪽으로 둥글게 처리해 자연스러운 종단을 만들어요.
  *   mid_end_filled=오른쪽 둥근 채움, mid_end_half=왼쪽 절반 채움(끝 둥글게), mid_end_empty=빈 mid(사각).
  * end 셀은 오른쪽 라우드, start 셀은 왼쪽 라우드, mid는 사각이에요.
+ * 셀 도형은 왼쪽에 붙이고 여백은 오른쪽에만 남겨 셀들이 왼쪽 기준으로 이어져요.
  * kind: 'start' | 'mid' | 'end' | 'mid_end', state: 'filled' | 'half' | 'empty'
  */
 function renderProgressBarCell(kind, state, params) {
@@ -354,26 +356,25 @@ function renderProgressBarCell(kind, state, params) {
   const leftCap = kind === "start"; // start만 왼쪽 라우드
   const rightCap = kind === "end" || kind === "mid_end"; // end·mid_end는 오른쪽 라우드
 
-  // 캔버스 패딩 — 정사각 이모지와 같은 여백. start는 왼쪽만, end·mid_end는 오른쪽만 벌려
-  // 좌우 끝에서만 자연스럽게 떨어지고 바 전체 모양(폭·연결부)은 그대로예요. mid는 full-bleed(패딩 없음).
+  // 셀 여백 — 도형은 왼쪽에 붙이고 여백은 오른쪽에만 남겨 셀들이 왼쪽 기준으로 이어져요.
+  // 기본 pbPad=0이면 전 셀이 full-bleed라 바 좌우에 빈 공간이 없어요.
   const pad = Math.max(0, params.pbPad);
-  const padL = kind === "start" ? pad : 0;
-  const padR = kind === "end" || kind === "mid_end" ? pad : 0;
-  const innerW = W - padL - padR;
+  const padR = pad;
+  const innerW = W - padR;
 
   // 1) 빈 배경 레이어: 사각으로 채우고, start/end가 열리는 쪽 모서리만 투명(destination-out)으로 자른 캡을 만들어요.
   //    mid/mid_end는 사각 그대로. empty/half에서 accent 위에 보이는 빈 배경은 여기서 만들어져요.
   const bgLayer = new Canvas(W, H);
   const b = bgLayer.getContext("2d");
   b.fillStyle = emptyColor;
-  b.fillRect(padL, 0, innerW, H);
+  b.fillRect(0, 0, innerW, H);
   if (leftCap || (rightCap && kind === "end")) {
     // 라운드 캡 "안" 영역만 남기기: destination-in에 라운드 마스크
     const cap = new Canvas(W, H);
     const m = cap.getContext("2d");
     m.fillStyle = "#fff";
-    if (leftCap) roundRect(m, padL, 0, innerW, H, r, true, kind === "end" && rightCap);
-    else roundRect(m, padL, 0, innerW, H, r, false, true);
+    if (leftCap) roundRect(m, 0, 0, innerW, H, r, true, kind === "end" && rightCap);
+    else roundRect(m, 0, 0, innerW, H, r, false, true);
     b.globalCompositeOperation = "destination-in";
     b.drawImage(cap, 0, 0);
   }
@@ -383,8 +384,8 @@ function renderProgressBarCell(kind, state, params) {
     const layer = new Canvas(W, H);
     const f = layer.getContext("2d");
     f.fillStyle = fill;
-    if (state === "filled") roundRect(f, padL, 0, innerW, H, r, leftCap, rightCap);
-    else roundRect(f, padL, 0, padL + Math.round(innerW / 2), H, r, leftCap, true);
+    if (state === "filled") roundRect(f, 0, 0, innerW, H, r, leftCap, rightCap);
+    else roundRect(f, 0, 0, Math.round(innerW / 2), H, r, leftCap, true);
     b.globalCompositeOperation = "source-over";
     bgLayer.getContext("2d").drawImage(layer, 0, 0);
     // bgLayer 위에 accent를 올린 뒤 한 번에 캔버스로 옮겨 캡 마스크를 한 번만 적용한다.
@@ -510,6 +511,7 @@ async function main() {
         nodes,
         isFilled,
         params,
+        name === "artist",
       );
       if (empty)
         throw new Error(`빈 아이콘(ink 없음) — 미지원 태그만 있거나 노드 없음`);
