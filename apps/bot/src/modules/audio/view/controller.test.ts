@@ -150,18 +150,17 @@ describe('controllerView 라벨·타이틀', () => {
 		mocks.chapterIndex.mockReturnValue(null);
 	});
 
-	it('재생 라벨은 상태와 음성 채널 멘션을 표시한다', () => {
+	it('재생 라벨은 음성 채널 멘션 뒤에 상태를 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(true);
-		expect(texts.some((text) => text.includes('에서 재생 중'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#voice-channel> 에서 재생 중'))).toBe(true);
 		expect(texts.some((text) => text.includes('🔊 <#'))).toBe(false);
 		expect(texts.some((text) => text.includes('<#text-channel>'))).toBe(false);
 	});
 
 	it('일시정지하면 라벨 상태가 일시정지로 바뀐다', () => {
 		const texts = collectTexts(controllerJson({ player: player({ paused: true }) }));
-		expect(texts.some((text) => text.includes('일시정지 <#voice-channel>'))).toBe(true);
-		expect(texts.some((text) => text.includes('재생 중 <#voice-channel>'))).toBe(false);
+		expect(texts.some((text) => text.includes('<#voice-channel> 에서 일시정지됨'))).toBe(true);
+		expect(texts.some((text) => text.includes('<#voice-channel> 에서 재생 중'))).toBe(false);
 		// 일시정지 중에도 현재 위치는 계속 보여준다
 		expect(texts.some((text) => text.includes('(00:30 / 03:00)'))).toBe(true);
 	});
@@ -170,7 +169,7 @@ describe('controllerView 라벨·타이틀', () => {
 		const streamTrack = { ...TRACK, info: { ...TRACK.info, isStream: true, duration: 0 } };
 		mocks.nowPlaying.mockReturnValue(streamTrack);
 		const texts = collectTexts(controllerJson({ player: player({ queue: { current: streamTrack, previous: [], tracks: [] } }) }));
-		expect(texts.some((text) => text.includes('실시간 <#voice-channel>'))).toBe(true);
+		expect(texts.some((text) => text.includes('<#voice-channel> 에서 실시간으로 재생 중'))).toBe(true);
 		expect(texts.some((text) => text.includes('라이브'))).toBe(true);
 	});
 
@@ -213,8 +212,8 @@ describe('controllerView 라벨·타이틀', () => {
 
 	it('진행바를 재생 시간 앞에 배치한다', () => {
 		const texts = collectTexts(controllerJson());
-		// 시작/끝 셀 패딩 폴백(공백)이 진행바 좌우에 붙는다 — 30초/180초 → ' ■□□□□ '
-		expect(texts.some((text) => text.includes(' ■□□□□  (00:30 / 03:00)') || text.includes(' ■□□□□ (00:30 / 03:00)'))).toBe(true);
+		// 셀은 full-bleed — 30초/180초 → '■□□□□'
+		expect(texts.some((text) => text.includes('■□□□□  (00:30 / 03:00)') || text.includes('■□□□□ (00:30 / 03:00)'))).toBe(true);
 	});
 
 	it('대기열이 없으면 divider를 렌더하지 않는다', () => {
