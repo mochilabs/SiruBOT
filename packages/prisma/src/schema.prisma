@@ -70,6 +70,8 @@ model Guild {
   history       GuildTrackHistory[]
   customCommands CustomCommand[]
   assets        GuildAsset[]
+  ticketConfig  TicketConfig?
+  tickets       Ticket[]
 }
 
 // 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
@@ -310,3 +312,39 @@ model SocialEventLog {
   @@unique([platform, contentId])
 }
 
+// 티켓 시스템 설정 — 길드당 1:1 관계. 패널 생성 위치, 티켓 채널 카테고리, 담당자 역할 등을 지정해요.
+model TicketConfig {
+  guildId          String   @id
+  guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  enabled          Boolean  @default(false)
+  categoryId       String?  /// 티켓 채널이 생성될 카테고리 ID
+  supportRoleIds   String[] @default([]) /// 티켓 관리/열람 권한을 가질 담당자 역할 ID 목록
+  logChannelId     String?  /// 티켓 종료 시 로그/트랜스크립트 요약이 전송될 채널 ID
+  maxOpenPerUser   Int      @default(1) /// 유저 1명당 동시에 열 수 있는 최대 티켓 수
+  panelChannelId   String?  /// 티켓 오픈 패널 메시지가 게시된 채널 ID
+  panelMessageId   String?  /// 티켓 오픈 패널 메시지 ID
+  panelTitle       String   @default("고객지원 티켓")
+  panelDescription String   @default("아래 버튼을 눌러 담당자와 1:1 비공개 상담 채널을 개설해요.")
+  ticketCounter    Int      @default(0) /// 티켓 채번용 카운터
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// 개별 티켓 인스턴스 — 생성된 비공개 티켓 채널의 상태와 이력
+model Ticket {
+  id           String    @id @default(uuid())
+  guildId      String
+  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  channelId    String    @unique /// Discord 상의 비공개 텍스트 채널 ID
+  ticketNumber Int       /// 서버 내 티켓 순번 (예: 1 -> #ticket-0001)
+  ownerId      String    /// 티켓을 연 유저의 Discord ID
+  status       String    @default("open") /// "open" | "closed"
+  claimedById  String?   /// 티켓을 담당하기로 지정한 스태프 ID
+  closedById   String?   /// 티켓을 닫은 유저/스태프 ID
+  closeReason  String?   /// 닫은 사유
+  createdAt    DateTime  @default(now())
+  closedAt     DateTime?
+
+  @@index([guildId, ownerId, status])
+  @@index([guildId, status])
+}

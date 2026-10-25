@@ -21,6 +21,7 @@ import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
+import { TicketService } from '../services/ticketService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { PlayerWebResponder } from '../services/playerWebResponder.ts';
 import { JtcSetupResponder } from '../services/jtcSetupResponder.ts';
@@ -107,6 +108,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.chatTtsService = new ChatTtsService();
 		container.tempVoiceService = new TempVoiceService();
 		container.aiMemoryService = new AiMemoryService();
+		container.ticketService = new TicketService();
 
 		// Redis 구독 서비스군 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
 		const subscriberLogger = {

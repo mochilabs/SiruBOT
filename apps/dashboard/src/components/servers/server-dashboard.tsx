@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   SquareSlash,
+  Ticket,
   UserPlus,
   UserRoundCog,
   Volume2,
@@ -38,7 +39,7 @@ import ServerStatsTab from "./server-stats-tab";
 import { SERVER_TABS, type ServerTabKey } from "./server-tabs";
 import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
 import SocialAlertsSettings from "./social-alerts-settings";
-
+import { TicketSettings } from "./ticket-settings";
 const ICONS = {
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
@@ -53,8 +54,8 @@ const ICONS = {
   mixer: <SlidersHorizontal size={14} />,
   social: <Bell size={14} />,
   greeting: <UserPlus size={14} />,
+  ticket: <Ticket size={14} />,
 } as const;
-
 // 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
 const TABS = SERVER_TABS.map((item) => ({ ...item, icon: ICONS[item.key] }));
 function NotManageable() {
@@ -238,6 +239,9 @@ export function ServerDashboard({
                     visible={tab === "greeting"}
                     guildName={guildName}
                   />
+                )}
+                {item.key === "ticket" && (
+                  <TicketSettings guildId={guildId} />
                 )}
                 </SettingsPanelActive.Provider>
               </TabsContent>

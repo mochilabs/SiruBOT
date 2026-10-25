@@ -57,6 +57,7 @@ declare module '@sapphire/pieces' {
 		chatTtsService: import('../services/chatTts.ts').ChatTtsService;
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
+		ticketService: import('../services/ticketService.ts').TicketService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
 		playerWebResponder?: import('../services/playerWebResponder.ts').PlayerWebResponder;
 		jtcSetupResponder?: import('../services/jtcSetupResponder.ts').JtcSetupResponder;
