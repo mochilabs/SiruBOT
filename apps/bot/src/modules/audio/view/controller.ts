@@ -1,4 +1,4 @@
-import { emoji, emojiProgressBar, createContainer, formatTime, formatTimeToKorean, removeEmojis, volumeToEmoji } from '@sirubot/utils';
+import { emoji, emojiProgressBar, createContainer, formatTrack, formatTime, formatTimeToKorean, removeEmojis, volumeToEmoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -22,6 +22,9 @@ import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters
 // 타이틀 링크로 걸 수 있는 URL 최대 길이 (formatTrack의 제한과 같다).
 const MAX_TRACK_URL_LENGTH = 70;
 
+/** 컨트롤러에서 보여주는 큐 미리보기 곡 수. */
+const QUEUE_PREVIEW_COUNT = 5;
+
 type controllerViewProps = {
 	player: CustomPlayer;
 	volume?: number;
@@ -32,6 +35,9 @@ const customIdPrefix = 'controller:';
 const wrapPrefix = (customId: string) => {
 	return customIdPrefix + customId;
 };
+
+/** 컨트롤러 미리보기 아래 '대기열 보기' 버튼 — controllerButton 핸들러의 queue:view 서브커맨드로 파싱한다. */
+const queueViewCustomId = wrapPrefix('queue:view');
 
 export function controllerView({ player, volume, nowPlayingCardUrl }: controllerViewProps) {
 	const containerComponent = createContainer();
@@ -151,6 +157,26 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 				)
 			);
 			containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+
+			// 큐 미리보기 — 대기열 앞 5곡을 한 줄씩 보여준다.
+			const previewLines = queuedTracks.slice(0, QUEUE_PREVIEW_COUNT).map((track, index) => {
+				const title = formatTrack(track, { showLength: false, titleLength: { maxLength: 60 } });
+				return `-# ${index + 1}. ${title}`;
+			});
+			const preview = [new TextDisplayBuilder().setContent(previewLines.join('\n'))];
+			if (queueCount > QUEUE_PREVIEW_COUNT) {
+				preview.push(new TextDisplayBuilder().setContent(`-# … 외 ${queueCount - QUEUE_PREVIEW_COUNT}곡 더`));
+			}
+			containerComponent.addTextDisplayComponents(...preview);
+			containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+
+			// 대기열 전체 보기 진입 버튼 — 누르면 새 메시지로 queueList(10곡/쪽)를 연다.
+			const viewQueueButton = new ButtonBuilder()
+				.setCustomId(queueViewCustomId)
+				.setLabel('대기열 보기')
+				.setEmoji(emoji('scroll'))
+				.setStyle(ButtonStyle.Secondary);
+			containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(viewQueueButton));
 		}
 		const footerSegments = buildFooterSegments(player, volume);
 		// 신청자는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다 — 추천곡/채팅 TTS는 아티스트 줄 라벨을 유지한다.
