@@ -18,6 +18,16 @@ export async function getVolume(store: GuildSettingsStore, guildId: string) {
 	return guild.volume;
 }
 
+export async function updateTtsDuck(store: GuildSettingsStore, guildId: string, duckLevel: number): Promise<Guild> {
+	const guild = await store.upsertField(guildId, 'ttsDuckLevel', duckLevel);
+	return guild;
+}
+
+export async function getTtsDuck(store: GuildSettingsStore, guildId: string) {
+	const guild = await store.getGuild(guildId);
+	return guild.ttsDuckLevel;
+}
+
 export async function getDJRole(store: GuildSettingsStore, guildId: string): Promise<string | null> {
 	const guild = await store.getGuild(guildId);
 	return guild.djRoleId;

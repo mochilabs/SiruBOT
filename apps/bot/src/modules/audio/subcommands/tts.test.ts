@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Player } from 'lavalink-client';
 
-const { announce, getPlayer } = vi.hoisted(() => ({ announce: vi.fn(), getPlayer: vi.fn() }));
+const { announce, getPlayer, getTtsDuck } = vi.hoisted(() => ({ announce: vi.fn(), getPlayer: vi.fn(), getTtsDuck: vi.fn() }));
 
 vi.mock('@sapphire/framework', () => ({
 	UserError: class UserError extends Error {
@@ -14,7 +14,7 @@ vi.mock('@sapphire/framework', () => ({
 			this.context = options.context;
 		}
 	},
-	container: { audio: { getPlayer }, mixerService: { announce } }
+	container: { audio: { getPlayer }, mixerService: { announce }, guildService: { getTtsDuck } }
 }));
 
 import { run } from './tts.ts';
@@ -38,6 +38,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	getPlayer.mockReturnValue({ guildId: 'g1' } as unknown as Player);
 	announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });
+	getTtsDuck.mockResolvedValue(0.35);
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -59,7 +60,7 @@ describe('music tts subcommand (queued announce)', () => {
 		expect(replyText(interaction)).toContain('안내가 1번째로 예약됐어요.');
 	});
 
-	it('sends the text as a TTS URL with the overlay duck level', async () => {
+	it('sends the text as a TTS URL with the guild duck level from settings', async () => {
 		const interaction = makeInteraction('반가워요');
 
 		await run(interaction as Parameters<typeof run>[0]);
@@ -67,7 +68,8 @@ describe('music tts subcommand (queued announce)', () => {
 		const [, identifier, duckLevel] = announce.mock.calls[0] as [Player, string, number];
 		expect(identifier).toContain('translate.google.com');
 		expect(identifier).toContain(encodeURIComponent('반가워요'));
-		expect(duckLevel).toBe(0.2);
+		expect(duckLevel).toBe(0.35);
+		expect(getTtsDuck).toHaveBeenCalledWith('g1');
 	});
 
 	it('maps every announce failure to tts_mixer_failed — 409 is no longer "busy"', async () => {

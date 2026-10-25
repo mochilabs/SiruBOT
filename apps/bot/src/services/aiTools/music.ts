@@ -453,7 +453,8 @@ const musicTtsTool: AiTool = {
 		const ttsUrl = `https://translate.google.com/translate_tts?client=tw-ob&tl=ko&q=${encodeURIComponent(text)}`;
 		let position = 1;
 		try {
-			const receipt = await container.mixerService.announce(player, ttsUrl, 0.2);
+			const duckLevel = await container.guildService.getTtsDuck(guildId);
+			const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel);
 			position = receipt.position;
 		} catch {
 			throw new Error('음성 안내를 예약하지 못했어요. 잠시 후 다시 시도해 주세요.');

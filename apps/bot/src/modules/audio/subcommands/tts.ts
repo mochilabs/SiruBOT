@@ -8,7 +8,6 @@ export const description = '현재 재생 중인 곡 위에 입력한 내용을 
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying'];
 
 const MAX_TEXT_LENGTH = 200;
-const TTS_DUCK_LEVEL = 0.2;
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
@@ -61,7 +60,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const ttsUrl = `https://translate.google.com/translate_tts?client=tw-ob&tl=ko&q=${encodeURIComponent(text)}`;
 
 	try {
-		const receipt = await container.mixerService.announce(player, ttsUrl, TTS_DUCK_LEVEL);
+		const duckLevel = await container.guildService.getTtsDuck(interaction.guildId);
+		const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel);
 		await interaction.editReply({
 			components: [
 				createContainer().addTextDisplayComponents((textDisplay) =>
