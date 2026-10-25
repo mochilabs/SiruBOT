@@ -337,3 +337,32 @@ describe('MixerService.reconcileAfterResume (재시작 뒤 서버 상태 반영)
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('MixerService.preloadUpcoming (크로스페이드 진행 중 예열 금지)', () => {
+	it('크로스페이드 진행 중에는 예열 슬롯을 조작하지 않는다', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		vi.stubGlobal('fetch', fetchMock);
+		const service = new MixerService();
+		// overlapStart → activeOverlaps가 켜진 상태 (크로스페이드 진행 중)
+		service.observeMixerEvent({ op: 'mixer', type: 'overlapStart', guildId: '123456789012345678', track: { identifier: 'incoming-b' } });
+
+		const result = await service.preloadUpcoming(queuedPlayer('next-b'));
+
+		expect(result).toBe(false);
+		expect(service.isPreloaded('123456789012345678')).toBe(false);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('크로스페이드가 끝나면 정상적으로 예열한다', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		vi.stubGlobal('fetch', fetchMock);
+		const service = new MixerService();
+
+		const result = await service.preloadUpcoming(queuedPlayer('next-b'));
+
+		expect(result).toBe(true);
+		expect(service.isPreloaded('123456789012345678')).toBe(true);
+		const calls = fetchMock.mock.calls as Array<[string, RequestInit?]>;
+		expect(calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)).toEqual(['POST http://localhost:2333/mixer/queue/next']);
+	});
+});

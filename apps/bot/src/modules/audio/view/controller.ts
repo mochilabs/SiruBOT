@@ -156,7 +156,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 					`-# ${emoji('scroll')} 대기열 ${queueCount}곡 (${formatTimeToKorean(remainingUntilQueueEnd(player, queuedTracks) / 1000)} 남음)`
 				)
 			);
-			containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+			// divider 없이 spacing만 두면 구분선이 사라지고 최소 여백만 남는다.
+			// divider(구분선)는 기본 spacing(1)과 함께 렌더링돼 1번 곡 위에 빈 줄을 만든다.
+			containerComponent.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
 			// 큐 미리보기 — 대기열 앞 5곡을 한 줄씩 보여준다.
 			const previewLines = queuedTracks.slice(0, QUEUE_PREVIEW_COUNT).map((track, index) => {
@@ -168,7 +170,7 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 				preview.push(new TextDisplayBuilder().setContent(`-# … 외 ${queueCount - QUEUE_PREVIEW_COUNT}곡 더`));
 			}
 			containerComponent.addTextDisplayComponents(...preview);
-			containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+			containerComponent.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
 			// 대기열 전체 보기 진입 버튼 — 누르면 새 메시지로 queueList(10곡/쪽)를 연다.
 			const viewQueueButton = new ButtonBuilder()
