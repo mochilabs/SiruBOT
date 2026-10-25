@@ -10,6 +10,7 @@ datasource db {
 model Guild {
   id            String   @id
   volume        Int      @default(10)
+  ttsVolume     Int      @default(100)
   ttsDuckLevel  Float    @default(0.2)
   textChannelId String?
   voiceChannelId String?
