@@ -54,6 +54,8 @@ export const guildSettingsSchema = z.object({
 		.min(500, "크로스페이드는 0.5초 이상이에요.")
 		.max(15000, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
+	normalizationEnabled: z.boolean().optional(),
+	ttsParallelEnabled: z.boolean().optional(),
 	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts, 채널 토글: 봇 guildService의 ChatToolSettings
 	emojiEnlargeMode: z.enum(CHAT_TOOL_MODES, "이모지 확대 모드가 잘못됐어요.").optional(),
 	emojiEnlargeChannelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
@@ -105,6 +107,8 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	gaplessEnabled: true,
 	crossfadeEnabled: true,
 	crossfadeMs: 5000,
+	normalizationEnabled: false,
+	ttsParallelEnabled: false,
 	emojiEnlargeMode: "off",
 	emojiEnlargeChannelIds: [],
 	quoteMode: "off",

@@ -454,7 +454,8 @@ const musicTtsTool: AiTool = {
 		let position = 1;
 		try {
 			const duckLevel = await container.guildService.getTtsDuck(guildId);
-			const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel);
+			const parallel = await container.guildService.getTtsParallel(guildId);
+			const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel, parallel ? 'parallel' : 'sequential');
 			position = receipt.position;
 		} catch {
 			throw new Error('음성 안내를 예약하지 못했어요. 잠시 후 다시 시도해 주세요.');

@@ -38,6 +38,16 @@ export async function getTtsDuck(store: GuildSettingsStore, guildId: string) {
 	return guild.ttsDuckLevel;
 }
 
+export async function getTtsParallel(store: GuildSettingsStore, guildId: string): Promise<boolean> {
+	const guild = await store.getGuild(guildId);
+	return guild.ttsParallelEnabled;
+}
+
+export async function setTtsParallel(store: GuildSettingsStore, guildId: string, enabled: boolean): Promise<boolean> {
+	const guild = await store.upsertField(guildId, 'ttsParallelEnabled', enabled);
+	return guild.ttsParallelEnabled;
+}
+
 export async function getDJRole(store: GuildSettingsStore, guildId: string): Promise<string | null> {
 	const guild = await store.getGuild(guildId);
 	return guild.djRoleId;

@@ -5,7 +5,11 @@ import { MixerRequestError, MixerService } from './mixerService.ts';
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		logger: { warn: vi.fn() },
-		guildService: { getMixerSettings: vi.fn().mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 3000 }) }
+		guildService: {
+			getMixerSettings: vi
+				.fn()
+				.mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 3000, normalizationEnabled: false })
+		}
 	}
 }));
 

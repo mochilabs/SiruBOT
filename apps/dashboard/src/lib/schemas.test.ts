@@ -37,9 +37,9 @@ function parsePrismaDefault(raw: string): unknown {
 }
 
 describe("guildSettingsSchema 허용 키 계약", () => {
-	it("GUILD_SETTING_KEYS는 스키마 shape에서 도출돼요 — 30개 필드", () => {
+	it("GUILD_SETTING_KEYS는 스키마 shape에서 도출돼요 — 32개 필드", () => {
 		expect(GUILD_SETTING_KEYS).toEqual(Object.keys(guildSettingsSchema.shape));
-		expect(GUILD_SETTING_KEYS).toHaveLength(30);
+		expect(GUILD_SETTING_KEYS).toHaveLength(32);
 	});
 
 	it("parseSettingBody가 허용 키는 받고 미등록 키는 400으로 거절해요", async () => {
@@ -58,7 +58,7 @@ describe("guildSettingsSchema 허용 키 계약", () => {
 		expect(unknown.ok).toBe(false);
 	});
 
-	it("기본값 29키 전수가 PUT 본문으로 그대로 통과해요 — 유효 필드가 거부되면 안 돼요", async () => {
+	it("기본값 31키 전수가 PUT 본문으로 그대로 통과해요 — 유효 필드가 거부되면 안 돼요", async () => {
 		const result = await parseSettingBody(
 			new Request("http://localhost", { method: "PUT", body: JSON.stringify(GUILD_SETTINGS_DEFAULTS) }),
 			guildSettingsSchema,

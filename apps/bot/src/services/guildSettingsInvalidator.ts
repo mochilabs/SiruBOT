@@ -101,6 +101,7 @@ export class GuildSettingsInvalidator {
 			if (!player) return;
 			const settings = await container.guildService.getMixerSettings(guildId);
 			await container.mixerService.setCrossfade(player, settings.crossfadeEnabled, settings.crossfadeMs);
+			await container.mixerService.setNormalization(player, settings.normalizationEnabled);
 			if (settings.gaplessEnabled) {
 				await container.mixerService.preloadUpcoming(player).catch(() => null);
 			} else {

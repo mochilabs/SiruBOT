@@ -13,13 +13,19 @@ export async function getMixerSettings(store: GuildSettingsStore, guildId: strin
 	return {
 		gaplessEnabled: guild.gaplessEnabled,
 		crossfadeEnabled: guild.crossfadeEnabled,
-		crossfadeMs: guild.crossfadeMs
+		crossfadeMs: guild.crossfadeMs,
+		normalizationEnabled: guild.normalizationEnabled
 	};
 }
 
 export async function setGapless(store: GuildSettingsStore, guildId: string, enabled: boolean) {
 	const guild = await store.upsertField(guildId, 'gaplessEnabled', enabled);
 	return guild.gaplessEnabled;
+}
+
+export async function setNormalization(store: GuildSettingsStore, guildId: string, enabled: boolean) {
+	const guild = await store.upsertField(guildId, 'normalizationEnabled', enabled);
+	return guild.normalizationEnabled;
 }
 
 export async function setCrossfade(store: GuildSettingsStore, guildId: string, enabled: boolean, durationMs?: number) {
