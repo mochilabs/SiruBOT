@@ -443,7 +443,10 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 		handler.armWatchdog = vi.fn();
 		handler.startClientOwnedTrack = vi.fn(() => Promise.resolve());
 
-		handler.handleTrackEnd(player, track('b-enc', 'id-b'), { reason: 'finished', track: { encoded: 'a-enc', info: { identifier: 'id-a' } } } as unknown as TrackEndEvent);
+		handler.handleTrackEnd(player, track('b-enc', 'id-b'), {
+			reason: 'finished',
+			track: { encoded: 'a-enc', info: { identifier: 'id-a' } }
+		} as unknown as TrackEndEvent);
 
 		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
 		expect(handler.armWatchdog).not.toHaveBeenCalled();
