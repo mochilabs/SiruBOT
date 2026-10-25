@@ -20,7 +20,8 @@ export default createConfig({
 		'src/storage.ts',
 		'src/weather.ts',
 		'src/delivery.ts',
-		'src/client.ts'
+		'src/client.ts',
+		'src/ticket.ts'
 	],
 	format: ['esm', 'cjs'],
 	dts: true,

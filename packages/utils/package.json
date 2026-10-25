@@ -86,6 +86,11 @@
             "types": "./dist/client.d.ts",
             "import": "./dist/client.js",
             "require": "./dist/client.cjs"
+        },
+        "./ticket": {
+            "types": "./dist/ticket.d.ts",
+            "import": "./dist/ticket.js",
+            "require": "./dist/ticket.cjs"
         }
     },
     "scripts": {
