@@ -8,13 +8,13 @@ import {
 	getAiChatPolicy,
 	assertChatEnabled,
 	getChatConfig,
+	isAiAssistantMessage,
 	type ChatConfig
 } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
 import { emoji } from '@sirubot/utils';
 import { runChatTurnToScreen } from '../../utils/chatTurnRunner.ts';
 import { errorPayload, livePayload } from '../../utils/chatView.ts';
-
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })
@@ -22,12 +22,24 @@ export class MentionReplyListener extends Listener {
 	public override async run(message: Message) {
 		if (message.author.bot) return;
 		const client = this.container.client;
-		// @everyone/@here 멘션은 무시 — 봇이 직접 멘션된 경우에만 응답해요
-		if (!client.user || !message.mentions.has(client.user, { ignoreEveryone: true })) return;
+		if (!client.user) return;
+
+		// 1. 직접 멘션(@시루)이 메시지 본문에 명시적으로 들어있는지 확인
+		const hasExplicitMention = new RegExp(`<@!?${client.user.id}>`).test(message.content);
+
+		// 2. 메시지가 봇을 멘션하지도 않았고 명시적 멘션도 없으면 무시
+		if (!hasExplicitMention && !message.mentions.has(client.user, { ignoreEveryone: true })) return;
+
+		// 3. 만약 명시적 멘션 없이 Discord 답장(Reply)으로 인해 암묵적으로 봇이 멘션된 경우:
+		// 답장 대상 메시지가 실제 "AI 어시스턴트의 답변"일 때만 대화로 인정해요.
+		// (컨트롤러 버튼, 슬래시 커맨드 응답, 임베드 등에 답장했을 때 AI가 끼어드는 것을 차단)
+		if (!hasExplicitMention && message.reference?.messageId) {
+			const isAiMessage = await isAiAssistantMessage(message.channelId, message.reference.messageId);
+			if (!isAiMessage) return;
+		}
 
 		const config = getChatConfig();
 		if (!config) return;
-
 		if (!message.channel.isSendable()) return;
 
 		const channelId = message.channelId;
