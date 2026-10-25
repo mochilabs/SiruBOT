@@ -35,8 +35,17 @@ export function emojiProgressBar(percent: number): string {
 
 	const parts: string[] = [];
 	for (let i = 0; i < PROGRESS_BAR_EMOJI_COUNT; i++) {
-		const kind = i === 0 ? 'start' : i === PROGRESS_BAR_EMOJI_COUNT - 1 ? 'end' : 'mid';
-		parts.push(cell(PROGRESS_BAR_EMOJI_NAMES[`${kind}_${stateOf(i)}` as keyof typeof PROGRESS_BAR_EMOJI_NAMES], stateOf(i)));
+		const state = stateOf(i);
+		// 진행바의 마지막 채워진 세그먼트가 mid이고 그 뒤가 비어있으면 mid_end로 라운드 종단을 줘요.
+		// - state가 filled/half(끝단)이고, i가 start(0)도 아니고 마지막 셀도 아닌(mid) 경우에만.
+		// - 나머지 뒤 셀(i+1~)이 모두 empty인지로 "바가 여기서 끝남"을 판정해요.
+		const isMidEnd =
+			state !== 'empty' &&
+			i > 0 &&
+			i < PROGRESS_BAR_EMOJI_COUNT - 1 &&
+			Array.from({ length: PROGRESS_BAR_EMOJI_COUNT - 1 - i }, (_, k) => stateOf(i + 1 + k)).every((x) => x === 'empty');
+		const kind = i === 0 ? 'start' : i === PROGRESS_BAR_EMOJI_COUNT - 1 ? 'end' : isMidEnd ? 'mid_end' : 'mid';
+		parts.push(cell(PROGRESS_BAR_EMOJI_NAMES[`${kind}_${state}` as keyof typeof PROGRESS_BAR_EMOJI_NAMES], state));
 	}
 	return parts.join('');
 }

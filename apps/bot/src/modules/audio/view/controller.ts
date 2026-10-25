@@ -1,16 +1,4 @@
-import {
-	emoji,
-	emojiProgressBar,
-	createContainer,
-	formatTime,
-	formatTimeToKorean,
-	formatTrack,
-	removeEmojis,
-	volumeToEmoji,
-	BOT_NAME,
-	versionInfo,
-	isDev
-} from '@sirubot/utils';
+import { emoji, emojiProgressBar, createContainer, formatTime, formatTimeToKorean, formatTrack, removeEmojis, volumeToEmoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -65,11 +53,8 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			})}`
 	);
 
-	// 플레이어 상태를 재생 라벨에 통합한다 — 재생 중 / 일시정지 / 실시간.
-	const statusLabel = !current ? null : current.info.isStream ? '실시간' : player.paused ? '일시정지' : '재생 중';
-	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# ${statusLabel} <#${player.voiceChannelId}>` : null;
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
-	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
+	const nowplayingTextDisplay = new TextDisplayBuilder().setContent(trackLines.join('\n'));
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
@@ -167,7 +152,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 	}
 
 	if (nowPlayingCardUrl) {
-		if (playbackLabel) containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(playbackLabel));
 		const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(nowPlayingCardUrl));
 		containerComponent.addMediaGalleryComponents(gallery);
 	} else if (current?.info.artworkUrl) {
@@ -258,18 +242,13 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	return contents;
 }
 
-/** Footer segments: node, volume, then bot name and version/hash. */
-export function buildFooterSegments(player: Player, volume?: number, includeBrand = true): string[] {
+/** Footer segments: 음성 서버(node), 볼륨. */
+export function buildFooterSegments(player: Player, volume?: number): string[] {
 	const segments = [`${emoji('radio_wave')} ${player.node.id}`];
 	if (volume !== undefined) {
 		segments.push(`${volumeToEmoji(volume)} ${volume}%`);
 	} else if (player.volume !== undefined) {
 		segments.push(`${volumeToEmoji(player.volume)} ${player.volume}%`);
-	}
-	if (includeBrand) {
-		segments.push(
-			`${emoji('info')} ${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`
-		);
 	}
 	return segments;
 }

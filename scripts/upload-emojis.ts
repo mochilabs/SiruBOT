@@ -158,11 +158,22 @@ async function main() {
   }
 
   // --update-progress only updates the nine progress-bar assets in place.
-  const toUpdate = updateProgress ? files.filter((file) => /^pb_(start|mid|end)_(empty|half|filled)\.png$/.test(file)) : [];
-  const toUpload = files.filter((file) => !existingByName.has(basename(file, ".png")) && !toUpdate.includes(file));
+  const toUpdate = updateProgress
+    ? files.filter((file) =>
+        /^pb_(start|mid|end|mid_end)_(empty|half|filled)\.png$/.test(file),
+      )
+    : [];
+  const toUpload = files.filter(
+    (file) =>
+      !existingByName.has(basename(file, ".png")) && !toUpdate.includes(file),
+  );
   const skipped = files.length - toUpload.length - toUpdate.length;
-  if (toUpdate.length > 0) console.log(gray(`기존 진행바 이모지 업데이트: ${toUpdate.length}개\n`));
-  if (skipped > 0) console.log(gray(`이미 존재해서 건너뛸 이모지: ${skipped}개 (기존 이미지는 유지)\n`));
+  if (toUpdate.length > 0)
+    console.log(gray(`기존 진행바 이모지 업데이트: ${toUpdate.length}개\n`));
+  if (skipped > 0)
+    console.log(
+      gray(`이미 존재해서 건너뛸 이모지: ${skipped}개 (기존 이미지는 유지)\n`),
+    );
 
   /** 이름 → 이모지 ID 매핑 — 업로드 결과 + 기존 존재분 전부 기록 */
   const emojiIdMap: Record<string, string> = Object.fromEntries(existingByName);
@@ -170,8 +181,14 @@ async function main() {
   let changed = 0;
   let failed = 0;
   const changes = [
-    ...toUpload.map((file) => ({ file, updateId: undefined as string | undefined })),
-    ...toUpdate.map((file) => ({ file, updateId: existingByName.get(basename(file, ".png")) }))
+    ...toUpload.map((file) => ({
+      file,
+      updateId: undefined as string | undefined,
+    })),
+    ...toUpdate.map((file) => ({
+      file,
+      updateId: existingByName.get(basename(file, ".png")),
+    })),
   ];
   for (const [i, { file, updateId }] of changes.entries()) {
     const name = basename(file, ".png");
@@ -180,20 +197,36 @@ async function main() {
       const data = await readFile(filePath);
       const sizeKiB = data.byteLength / 1024;
       if (sizeKiB > 256) {
-        console.warn(yellow(`  ⚠️ :${name}: 256KiB 초과 (${sizeKiB.toFixed(1)}KiB) — 건너뜀`));
+        console.warn(
+          yellow(
+            `  ⚠️ :${name}: 256KiB 초과 (${sizeKiB.toFixed(1)}KiB) — 건너뜀`,
+          ),
+        );
         failed++;
         continue;
       }
       const image = `data:image/png;base64,${data.toString("base64")}`;
       const result = updateId
-        ? ((await rest.patch(Routes.applicationEmoji(applicationId, updateId), { body: { name, image } })) as { id: string; name: string })
-        : ((await rest.post(Routes.applicationEmojis(applicationId), { body: { name, image } })) as { id: string; name: string });
+        ? ((await rest.patch(Routes.applicationEmoji(applicationId, updateId), {
+            body: { name, image },
+          })) as { id: string; name: string })
+        : ((await rest.post(Routes.applicationEmojis(applicationId), {
+            body: { name, image },
+          })) as { id: string; name: string });
       emojiIdMap[result.name] = result.id;
       changed++;
-      console.log(green(`  ✅ (${i + 1}/${changes.length}) :${result.name}: ${updateId ? "업데이트" : "등록"} → id ${result.id}`));
+      console.log(
+        green(
+          `  ✅ (${i + 1}/${changes.length}) :${result.name}: ${updateId ? "업데이트" : "등록"} → id ${result.id}`,
+        ),
+      );
     } catch (error) {
       failed++;
-      console.warn(yellow(`  ⚠️ (${i + 1}/${changes.length}) :${name}: 업로드 실패 (${error instanceof Error ? error.message : String(error)})`));
+      console.warn(
+        yellow(
+          `  ⚠️ (${i + 1}/${changes.length}) :${name}: 업로드 실패 (${error instanceof Error ? error.message : String(error)})`,
+        ),
+      );
     }
   }
 
@@ -213,7 +246,9 @@ async function main() {
       "utf-8",
     );
     console.log(
-      gray(`런타임 매핑 동기화 (canonical과 함께 커밋): ${join(botResourcesDir, "emoji-ids.json")}`),
+      gray(
+        `런타임 매핑 동기화 (canonical과 함께 커밋): ${join(botResourcesDir, "emoji-ids.json")}`,
+      ),
     );
   } catch {
     // 모노레포 루트가 아닌 위치에서 실행 시 무시

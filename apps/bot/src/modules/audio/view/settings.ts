@@ -86,7 +86,7 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 		``,
 		`${emoji('volume_up')} **볼륨**: ${guild.volume}%`,
 		`${emoji('repeat')} **반복 모드**: ${repeatLabels[guild.repeat] ?? '반복 없음'}`,
-		`${emoji('sparkle')} **추천곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
+		`${emoji('sparkle')} **추천 곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
 		`${emoji('spectrum')} **컨트롤러**: ${guild.enableController ? '켜짐' : '꺼짐'}`,
 		`${emoji('arrow_forward')} **SponsorBlock**: ${sponsorBlockStatus}`,
 		`${emoji('cd')} **DJ 역할**: ${guild.djRoleId ? `<@&${guild.djRoleId}>` : '없음 (모든 사용자)'}`,
@@ -107,7 +107,7 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 				.setMinValues(1)
 				.setMaxValues(1)
 				.addOptions([
-					{ value: 'music', label: `${emoji('music_note')} 음악 설정`, description: '컨트롤러·추천곡·반복 모드' },
+					{ value: 'music', label: `${emoji('music_note')} 음악 설정`, description: '컨트롤러·추천 곡·반복 모드' },
 					{ value: 'sponsorblock', label: `${emoji('arrow_forward')} 스폰서블록`, description: sponsorBlockDescription },
 					{ value: 'dj', label: `${emoji('cd')} DJ 설정`, description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
 					{ value: 'channel', label: `${emoji('scroll')} 채널 설정`, description: channelDescription },
@@ -124,7 +124,7 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 		`### ${emoji('music_note')} 음악 설정`,
 		``,
 		`${emoji('spectrum')} **컨트롤러**: ${guild.enableController ? '켜짐' : '꺼짐'}`,
-		`${emoji('sparkle')} **추천곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
+		`${emoji('sparkle')} **추천 곡 자동재생**: ${guild.related ? '켜짐' : '꺼짐'}`,
 		`${emoji('repeat')} **반복 모드**: ${repeatLabels[guild.repeat] ?? '반복 없음'}`
 	];
 
@@ -141,7 +141,7 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('toggle:related'))
-				.setLabel(guild.related ? `${emoji('sparkle')} 추천곡 끄기` : `${emoji('sparkle')} 추천곡 켜기`)
+				.setLabel(guild.related ? `${emoji('sparkle')} 추천 곡 끄기` : `${emoji('sparkle')} 추천 곡 켜기`)
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('toggle:repeat'))
