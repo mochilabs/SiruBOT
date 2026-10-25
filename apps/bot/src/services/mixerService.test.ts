@@ -307,7 +307,7 @@ describe('MixerService.reconcileAfterResume (재시작 뒤 서버 상태 반영)
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
-	it('오버랩이 진행 중이면 상태 조회만 하고 손대지 않는다', async () => {
+	it('오버랩이 진행 중이면 슬롯과 incoming을 각각 상태로만 보존한다', async () => {
 		const fetchMock = vi
 			.fn()
 			.mockResolvedValue(jsonResponse(mixerState({ crossfadeActive: true, hasNext: true, nextTrackIdentifier: 'abc123' }), 200));
@@ -316,7 +316,9 @@ describe('MixerService.reconcileAfterResume (재시작 뒤 서버 상태 반영)
 
 		await service.reconcileAfterResume(queuedPlayer('abc123'));
 
-		expect(service.isPreloaded('123456789012345678')).toBe(false);
+		expect(service.isOverlapActive('123456789012345678')).toBe(true);
+		expect(service.isPreloaded('123456789012345678')).toBe(true);
+		expect(service.takePreloadedIdentifier('123456789012345678')).toBe('abc123');
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 

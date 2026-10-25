@@ -482,6 +482,7 @@ function stubPlaybackContainer(mixerOverrides: Record<string, unknown> = {}) {
 			consumePreloaded: vi.fn(() => false),
 			consumeOverlapAbort: vi.fn(() => false),
 			isPreloaded: vi.fn(() => false),
+			isOverlapActive: vi.fn(() => false),
 			ensureMixerFilter: vi.fn(async () => undefined),
 			preloadUpcoming: vi.fn(async () => true),
 			markUnmanaged: vi.fn(),
@@ -719,6 +720,19 @@ describe('handleQueueEnd', () => {
 		vi.useFakeTimers();
 		const { handler } = makeTrackedHandler();
 		const { notifier } = stubPlaybackContainer({ isPreloaded: vi.fn(() => true) });
+		const player = fullPlayer();
+
+		await handler.handleQueueEnd(player, track('last-enc', 'id-l'), { reason: 'finished' });
+
+		expect(notifier.deleteController).not.toHaveBeenCalled();
+		expect(channelSend).not.toHaveBeenCalled();
+		expect(vi.getTimerCount()).toBe(1);
+	});
+
+	it('크로스페이드 진행 중에는 종료를 미루고 watchdog만 암한다', async () => {
+		vi.useFakeTimers();
+		const { handler } = makeTrackedHandler();
+		const { notifier } = stubPlaybackContainer({ isOverlapActive: vi.fn(() => true) });
 		const player = fullPlayer();
 
 		await handler.handleQueueEnd(player, track('last-enc', 'id-l'), { reason: 'finished' });
