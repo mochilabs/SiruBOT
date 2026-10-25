@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { emoji } from '@sirubot/utils';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { controllerView } from './controller.ts';
 import { repeatEmoji } from './repeat.ts';
 
 const mocks = vi.hoisted(() => ({ queued: vi.fn(), remaining: vi.fn(), nowPlaying: vi.fn(), chapter: vi.fn(), chapterIndex: vi.fn() }));
 
-vi.mock('../lavalink/player/customPlayer.ts', () => ({ CustomPlayer: class CustomPlayer {} }));
+vi.mock('../lavalink/player/customPlayer.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../lavalink/player/customPlayer.ts')>()),
+	CustomPlayer: class CustomPlayer {}
+}));
+vi.mock('@sirubot/utils', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@sirubot/utils')>()),
+	emoji: vi.fn((name: string) => name)
+}));
 vi.mock('../lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: mocks.queued, remainingUntilQueueEnd: mocks.remaining }));
 vi.mock('../lavalink/player/nowPlaying.ts', () => ({ nowPlayingTrack: mocks.nowPlaying }));
 vi.mock('../lavalink/player/chapters.ts', () => ({ currentChapter: mocks.chapter, currentChapterIndex: mocks.chapterIndex }));
@@ -30,6 +36,7 @@ interface PlainComponent {
 	type: number;
 	content?: string;
 	custom_id?: string;
+	emoji?: { name?: string };
 	components?: PlainComponent[];
 }
 
@@ -112,6 +119,7 @@ describe('controllerView action rows', () => {
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(2);
 		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:chapter:prev', 'controller:chapter:next']);
+		expect(rows[1]!.map((button) => button.emoji?.name)).toEqual(['arrow_back', 'arrow_forward']);
 	});
 
 	it('챕터와 대기열이 있어도 챕터 행만 만든다', () => {
@@ -174,7 +182,7 @@ describe('controllerView 라벨·타이틀', () => {
 
 	it('아티스트 줄은 이모지와 괄호 없이 아티스트 이름만 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('💿 아티스트'))).toBe(true);
+		expect(texts.some((text) => text.includes('artist 아티스트'))).toBe(true);
 		expect(texts.some((text) => text.includes('(아티스트)'))).toBe(false);
 	});
 
@@ -184,7 +192,7 @@ describe('controllerView 라벨·타이틀', () => {
 		expect(footer).toBeDefined();
 		expect(footer).toContain('50%');
 		expect(footer?.trimEnd().endsWith('<@user-1>')).toBe(true);
-		expect(footer).toContain(emoji('user'));
+		expect(footer).toContain('user');
 	});
 
 	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
@@ -252,14 +260,14 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('🎬 1화 (00:00~03:54)'))).toBe(true);
+		expect(texts.some((text) => text.includes('chapter 1화 (00:00~03:54)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(03:54)'))).toBe(false);
 	});
 
 	it('챕터 구간을 이모지와 괄호로 표시한다', () => {
 		mocks.chapter.mockReturnValue({ name: '1화', start: 0, end: 60_000, duration: 60_000 });
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('🎬 1화 (00:00~01:00)'))).toBe(true);
+		expect(texts.some((text) => text.includes('chapter 1화 (00:00~01:00)'))).toBe(true);
 	});
 
 	it('영상 중간부터 시작하는 챕터도 길이 표기 없이 시각 범위만 보여준다', () => {
@@ -267,7 +275,7 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('🎬 2화 (01:00~02:00)'))).toBe(true);
+		expect(texts.some((text) => text.includes('chapter 2화 (01:00~02:00)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(01:00)'))).toBe(false);
 	});
 });
