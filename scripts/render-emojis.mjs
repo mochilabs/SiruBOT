@@ -58,6 +58,10 @@ const PARAMS = {
     def: 0,
     desc: "라운드 엔드 캡 반경 px. 0이면 자동(pbHeight/2)",
   },
+  pbPad: {
+    def: 61,
+    desc: "정사각 이모지와 같은 좌우 캔버스 패딩 px — start는 왼쪽에만, end는 오른쪽에만. 0이면 기존 full-bleed",
+  },
   pbEmptyColor: { def: "#fbd3e7", desc: "empty 셀 색상(#rrggbb)" },
 };
 
@@ -347,39 +351,49 @@ function renderProgressBarCell(kind, state, params) {
     params.pbCapRadius > 0 ? params.pbCapRadius : Math.round(H * 0.43636);
   const fill = params.accent;
   const emptyColor = params.pbEmptyColor;
-  const canvas = new Canvas(W, H);
-  const ctx = canvas.getContext("2d");
   const leftCap = kind === "start"; // start만 왼쪽 라우드
   const rightCap = kind === "end" || kind === "mid_end"; // end·mid_end는 오른쪽 라우드
 
+  // 캔버스 패딩 — 정사각 이모지와 같은 여백. start는 왼쪽만, end·mid_end는 오른쪽만 벌려
+  // 좌우 끝에서만 자연스럽게 떨어지고 바 전체 모양(폭·연결부)은 그대로예요. mid는 full-bleed(패딩 없음).
+  const pad = Math.max(0, params.pbPad);
+  const padL = kind === "start" ? pad : 0;
+  const padR = kind === "end" || kind === "mid_end" ? pad : 0;
+  const innerW = W - padL - padR;
+
   // 1) 빈 배경 레이어: 사각으로 채우고, start/end가 열리는 쪽 모서리만 투명(destination-out)으로 자른 캡을 만들어요.
-  //    mid/mid_end는 사각 그대로. empty/half에서 accent 위에 보이는 빈 배경이 여기서 만들어져요.
+  //    mid/mid_end는 사각 그대로. empty/half에서 accent 위에 보이는 빈 배경은 여기서 만들어져요.
   const bgLayer = new Canvas(W, H);
   const b = bgLayer.getContext("2d");
   b.fillStyle = emptyColor;
-  b.fillRect(0, 0, W, H);
+  b.fillRect(padL, 0, innerW, H);
   if (leftCap || (rightCap && kind === "end")) {
     // 라운드 캡 "안" 영역만 남기기: destination-in에 라운드 마스크
     const cap = new Canvas(W, H);
     const m = cap.getContext("2d");
     m.fillStyle = "#fff";
-    if (leftCap) roundRect(m, 0, 0, W, H, r, true, kind === "end" && rightCap);
-    else roundRect(m, 0, 0, W, H, r, false, true);
+    if (leftCap) roundRect(m, padL, 0, innerW, H, r, true, kind === "end" && rightCap);
+    else roundRect(m, padL, 0, innerW, H, r, false, true);
     b.globalCompositeOperation = "destination-in";
     b.drawImage(cap, 0, 0);
   }
-  ctx.drawImage(bgLayer, 0, 0);
 
   // 2) 채워진(accent) 레이어: filled/half 면적을 라운드 마스크로 자른 뒤 배경 위에 덮어요.
   if (state !== "empty") {
     const layer = new Canvas(W, H);
     const f = layer.getContext("2d");
     f.fillStyle = fill;
-    if (state === "filled") roundRect(f, 0, 0, W, H, r, leftCap, rightCap);
-    else roundRect(f, 0, 0, Math.round(W / 2), H, r, leftCap, true);
-    ctx.drawImage(layer, 0, 0);
+    if (state === "filled") roundRect(f, padL, 0, innerW, H, r, leftCap, rightCap);
+    else roundRect(f, padL, 0, padL + Math.round(innerW / 2), H, r, leftCap, true);
+    b.globalCompositeOperation = "source-over";
+    bgLayer.getContext("2d").drawImage(layer, 0, 0);
+    // bgLayer 위에 accent를 올린 뒤 한 번에 캔버스로 옮겨 캡 마스크를 한 번만 적용한다.
+    const out = new Canvas(W, H);
+    const octx = out.getContext("2d");
+    octx.drawImage(bgLayer, 0, 0);
+    return out;
   }
-  return canvas;
+  return bgLayer;
 }
 
 // 한쪽 모서리만(또는 양쪽) 라운드된 사각형을 그려요. 왼쪽=상·하 모서리만, 오른쪽=상·하 모서리만.

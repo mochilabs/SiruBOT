@@ -204,7 +204,8 @@ describe('controllerView 라벨·타이틀', () => {
 
 	it('진행바를 재생 시간 앞에 배치한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('■□□□□ (00:30 / 03:00)'))).toBe(true);
+		// 시작/끝 셀 패딩 폴백(공백)이 진행바 좌우에 붙는다 — 30초/180초 → ' ■□□□□ '
+		expect(texts.some((text) => text.includes(' ■□□□□  (00:30 / 03:00)') || text.includes(' ■□□□□ (00:30 / 03:00)'))).toBe(true);
 	});
 
 	it('대기열이 없으면 divider를 렌더하지 않는다', () => {

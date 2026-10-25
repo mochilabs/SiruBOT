@@ -20,8 +20,12 @@ export function emojiProgressBar(percent: number): string {
 	const FILL_FALLBACK = '■';
 	const HALF_FALLBACK = '◐';
 	const EMPTY_FALLBACK = '□';
-	const cell = (name: string, state: 'filled' | 'half' | 'empty') =>
-		emoji(name, state === 'filled' ? FILL_FALLBACK : state === 'half' ? HALF_FALLBACK : EMPTY_FALLBACK);
+	// 시작/끝 셀 폴백에는 캔버스 패딩을 남긴다 — start는 왼쪽만, end(·mid_end)는 오른쪽만,
+	// mid는 full-bleed. 값은 render-emojis.mjs의 pbPad(61px)와 같은 것을 쓴다.
+	// 앱 이모지가 미등록(테스트·초기 기동)이어도 바 좌우 여백이 컨트롤러와 같아 보이도록.
+	const padChar = (ch: string, kind: 'start' | 'mid' | 'end' | 'mid_end') => (kind === 'start' ? ` ${ch}` : kind === 'mid' ? ch : `${ch} `);
+	const cell = (name: string, state: 'filled' | 'half' | 'empty', kind: 'start' | 'mid' | 'end' | 'mid_end') =>
+		emoji(name, padChar(state === 'filled' ? FILL_FALLBACK : state === 'half' ? HALF_FALLBACK : EMPTY_FALLBACK, kind));
 
 	// 전체 스텝 = 셀 수 × 셀당 스텝. 스텝 s가 속한 셀의 채움 상태로 변환해요.
 	const steps = PROGRESS_BAR_EMOJI_COUNT * PROGRESS_BAR_STEPS_PER_CELL;
@@ -45,7 +49,7 @@ export function emojiProgressBar(percent: number): string {
 			i < PROGRESS_BAR_EMOJI_COUNT - 1 &&
 			Array.from({ length: PROGRESS_BAR_EMOJI_COUNT - 1 - i }, (_, k) => stateOf(i + 1 + k)).every((x) => x === 'empty');
 		const kind = i === 0 ? 'start' : i === PROGRESS_BAR_EMOJI_COUNT - 1 ? 'end' : isMidEnd ? 'mid_end' : 'mid';
-		parts.push(cell(PROGRESS_BAR_EMOJI_NAMES[`${kind}_${state}` as keyof typeof PROGRESS_BAR_EMOJI_NAMES], state));
+		parts.push(cell(PROGRESS_BAR_EMOJI_NAMES[`${kind}_${state}` as keyof typeof PROGRESS_BAR_EMOJI_NAMES], state, kind));
 	}
 	return parts.join('');
 }
