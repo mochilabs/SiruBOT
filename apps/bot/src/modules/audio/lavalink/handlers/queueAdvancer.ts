@@ -10,7 +10,8 @@ import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from 
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
 import { isSameTrack, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
-
+import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
+import { cancelPendingInvalidate, getTargetNextTrack } from '../queue/queueWrapper.ts';
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 
 /**
@@ -54,12 +55,10 @@ export class QueueAdvancer {
 			`Track ended: ${ended?.info?.title ?? track?.info.title} by ${ended?.info?.author ?? track?.info.author} (reason: ${payload.reason})`
 		);
 		reportPlaybackEvent(player.guildId, 'track_end', ended, { reason: payload.reason });
-		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
-		publishPlayerState(player);
-		// 채팅 TTS 클립 전용 진행 — 기존 전이 분기(예열 관망/클라이언트 진행)와 섞지 않는다 (명세 4.2).
+
+		// 채팅 TTS 클립 전용 진행 — 명세 4.2 (다른 경로와 섞지 않는다).
 		if (this.container.chatTtsService.isTtsEnded(player, ended)) {
 			if (payload.reason === 'replaced') {
-				// 치환은 새 트랙이 이미 시작되는 경로다 — 반복 모드 잔재만 걷어내고 관여하지 않는다.
 				this.container.chatTtsService.scrubTtsClips(player, ended);
 				return;
 			}
@@ -71,43 +70,13 @@ export class QueueAdvancer {
 
 		// β 순서(시작 먼저 도착): 이미 새 곡이 시작된 상태에서 도착한 구곡의 trackEnd는
 		// 전이가 이미 끝났으므로 관망·예열 소비·클라이언트 진행을 모두 생략한다.
-		// (여기서 consumePreloaded를 부르면 trackStart의 wiring이 방금 채운 차차기 곡 예열을 훔치게 된다.)
 		if (this.host.isTransitionAlreadyStarted(player, ended)) {
 			this.logger.debug(`[transition] trackEnd ignored: transition already started (guild ${player.guildId})`);
 			return;
 		}
 
-		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
-		// 단, 직전 overlap이 abort됐다면 서버는 진행하지 않는다(서버 슬롯도 이미 비웠다) —
-		// 관망하지 말고 아래 클라이언트 소유 진행으로 즉시 넘어간다.
-		if (this.container.mixerService.consumePreloaded(player.guildId) && !this.container.mixerService.consumeOverlapAbort(player.guildId)) {
-			player.transitionState.preloadConsumedAt = Date.now();
-			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
-			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).
-			const preheated = player.queue.tracks[0] ?? null;
-			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
-			// β 순서(시작 먼저): 이미 다음 곡이 시작된 상태라면 확인 타이머가 필요 없다.
-			// α 순서(종료 먼저): 마지막 시작곡이 방금 끝났으므로 전이 확인 타이머를 건다.
-			if (!this.host.isTransitionAlreadyStarted(player, ended)) {
-				this.host.armWatchdog(player);
-			}
-			return;
-		}
-		if (this.host.hasWatchdog(player.guildId)) return;
-
-		// 클라이언트 소유 전이: 서버가 예열하지 않은 길드(갭리스 off / 반복 모드 /
-		// trackStart 이후 추가된 곡). autoSkip: false라 아무도 진행하지 않으므로
-		// 클라이언트가 play로 진행한다.
-		// - 'finished': 자연 전이
-		// - 'stopped': 클라이언트가 보낸 skip(/skip, 오류 복구, watchdog 복구) —
-		//   autoSkip: false라 라이브러리가 다음 곡으로 넘기지 않으므로 여기서 진행해야 한다.
-		//   '/stop'은 큐를 비운 뒤 queueEnd로 가므로 도달하지 않는다.
-		// 'replaced'(이전곡 치환)와 'loadFailed'/'cleanup'(trackError/trackStuck 핸들러 소유)는 제외 — 이중 진행 방지.
-		if ((payload.reason === 'finished' || payload.reason === 'stopped') && player.queue.current && !player.transitionState.stopByCommand) {
-			void this.host
-				.startClientOwnedTrack(player)
-				.catch((error) => this.logger.error(`Failed to advance track (client-owned transition): ${error}`));
-		}
+		// v2 Protocol: delegating cold-start / natural finish handling to mixerHandlers
+		void handleMixerTrackEnd(player, payload);
 	}
 
 	public async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
@@ -129,13 +98,12 @@ export class QueueAdvancer {
 		reason: string | null = null
 	) {
 		// 채팅 TTS 클립 실패는 조용히 스킵한다 (명세 4.6): 알림·연속 오류 중단 없이 다음 클립으로 진행한다.
+		// 단독 TTS 중 음악 큐는 비어 있다 — mixerService.skip은 STOP 오버라이드로 단독 큐를 죽이므로 직접 진행한다.
 		if (isTtsClip(track)) {
 			this.logger.warn(`[chatTts] TTS clip ${kind} silently skipped (guild ${player.guildId})${reason ? ` (${reason})` : ''}`);
 			this.clearAdvancePending(player.guildId);
-			// 스킵이 trackEnd/queueEnd를 다시 태워 continueAfterTtsClip으로 이어진다 — 실패하면 직접 진행한다.
-			await this.container.mixerService.skip(player).catch((error) => {
-				this.logger.warn(`[chatTts] clip skip failed (guild ${player.guildId}), continuing directly: ${error}`);
-				return this.host.continueAfterTtsClip(player, track as Track | null);
+			await this.host.continueAfterTtsClip(player, track as Track | null).catch((error) => {
+				this.logger.warn(`[chatTts] clip continue failed (guild ${player.guildId}): ${error}`);
 			});
 			return;
 		}
@@ -162,6 +130,8 @@ export class QueueAdvancer {
 			player.transitionState.stopByCommand = true;
 			this.container.mixerService.markUnmanaged(player.guildId);
 			this.host.clearWatchdog(player.guildId);
+			cancelPendingInvalidate(player);
+			await sendOverride(player, 'STOP', null).catch(() => null);
 			await player.stopPlaying();
 			await player.disconnect();
 			return;
@@ -182,7 +152,7 @@ export class QueueAdvancer {
 		if (this.host.hasWatchdog(player.guildId)) return;
 
 		// 중간 오류는 조용히 스킵하고, 마지막(남은 곡 없음)에만 한 번 알린다. (3연속 중단 알림은 위 abort 분기)
-		if (player.queue.tracks.length > 0) {
+		if (player.queue.tracks.length > 0 || getTargetNextTrack(player) !== null) {
 			// raw player.skip() 폴백은 예열 슬롯을 남겨 stale 곡이 뒤늦게 재생된다
 			// (docs/3rdparty.md: 스킵은 mixerService를 거쳐야 한다). 스킵이 실패하면
 			// watchdog 복구 루프가 수습한다.
@@ -194,6 +164,8 @@ export class QueueAdvancer {
 			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
 			player.transitionState.stopByCommand = true;
+			cancelPendingInvalidate(player);
+			await sendOverride(player, 'STOP', null).catch(() => null);
 			await player.stopPlaying();
 		}
 	}
@@ -363,6 +335,7 @@ export class QueueAdvancer {
 
 	public async handlePlayerDestroy(player: CustomPlayer): Promise<void> {
 		this.container.mixerService.markUnmanaged(player.guildId);
+		this.container.mixerService.markFiltersStale?.(player.guildId);
 		this.container.chatTtsService.clearGuild(player.guildId);
 		this.clearAdvancePending(player.guildId);
 		this.host.clearReconcile(player.guildId);
@@ -373,6 +346,7 @@ export class QueueAdvancer {
 		// 대시보드 라이브 뷰 — 플레이어 소멸 상태 추적기 정리
 		clearPlayerStateTracker(player.guildId);
 		await this.container.mixerService.clearNext(player).catch(() => null);
+		clearMixerRuntime(player);
 	}
 
 	/** 서버 슬롯이 없는 전이에서만 호출: stale 슬롯을 비운 뒤 클라이언트가 다음 곡을 시작한다. */

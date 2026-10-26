@@ -3,6 +3,7 @@ import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from './player/customPlayer.ts';
 import { isYouTubeSource } from '@sirubot/utils';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
+import { notifyQueueMutated } from './queue/queueWrapper.ts';
 
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
@@ -291,6 +292,8 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 			return null;
 
 		await player.queue.add(selectedTrack);
+		// 빈 큐 선두에 추천곡을 넣었다 — 타깃 헤드가 바뀌므로 큐 관측을 태운다.
+		if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(player as CustomPlayer);
 		if (player.playing) {
 			// 서버가 재생 중 → 슬롯에 예열 (trackEnd 관망은 TrackHandler가 처리)
 			await container.mixerService.preloadUpcoming(player).catch(() => null);
@@ -394,6 +397,8 @@ export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): P
 			}
 
 			await player.queue.add(selectedTrack);
+			// 빈 큐 선두에 추천곡을 넣었다 — 타깃 헤드가 바뀌므로 큐 관측을 태운다.
+			if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(player as CustomPlayer);
 		}
 	}
 };

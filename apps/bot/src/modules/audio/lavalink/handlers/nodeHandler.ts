@@ -2,7 +2,15 @@ import { LavalinkNode, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { RESUME_TIMEOUT_SECONDS, SessionRestoreEngine } from './sessionRestore.ts';
 import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
-
+import type { CustomPlayer } from '../player/customPlayer.ts';
+import {
+	handleMixerNeedNext,
+	handleMixerAdvanced,
+	handleMixerOverridden,
+	type MixerNeedNextEventPayload,
+	type MixerAdvancedEventPayload,
+	type MixerOverriddenEventPayload
+} from './mixerHandlers.ts';
 /**
  * lavalink 노드 이벤트 핸들러 — 세션 저장/복원 엔진(SessionRestoreEngine)과
  * 노드 수명주기 로깅·고아 플레이어 마이그레이션만 담당한다.
@@ -56,10 +64,22 @@ export class NodeHandler extends BaseLavalinkHandler {
 	private handleNodeRaw(node: LavalinkNode, payload: unknown) {
 		const data = payload as { op?: unknown; resumed?: unknown } | null;
 		if (!data) return;
-		// mixer op는 lavalink-client가 몰라 'raw'로만 흘러온다. overlapEnd(aborted)를
-		// TrackHandler가 trackEnd 분기에 쓰도록 기록만 남긴다.
+		// v2 mixer custom WebSocket events
 		if (data.op === 'mixer') {
-			this.container.mixerService.observeMixerEvent(data);
+			const mixerMsg = payload as { type?: string; guildId?: string };
+			const gid = mixerMsg.guildId;
+			if (!gid) return;
+			this.container.mixerService?.observeMixerEvent?.(payload);
+			const player = this.container.audio?.getPlayer?.(gid) as CustomPlayer | null;
+			if (!player) return;
+
+			if (mixerMsg.type === 'MixerNeedNextTrackEvent') {
+				void handleMixerNeedNext(player, payload as unknown as MixerNeedNextEventPayload);
+			} else if (mixerMsg.type === 'MixerAdvancedEvent') {
+				void handleMixerAdvanced(player, payload as unknown as MixerAdvancedEventPayload);
+			} else if (mixerMsg.type === 'MixerOverriddenEvent') {
+				handleMixerOverridden(player, payload as unknown as MixerOverriddenEventPayload);
+			}
 			return;
 		}
 		if (data.op !== 'ready') return;
@@ -86,8 +106,16 @@ export class NodeHandler extends BaseLavalinkHandler {
 			// Simple cycling through available nodes
 			// changeNode 실패(레이스로 신노드에 플레이어 미존재 등)를 두면 unhandled rejection + 오펜 플레이어가 남는다.
 			const player = orphanPlayers[idx];
+			this.container.mixerService?.markFiltersStale?.(player.guildId);
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
+				.then(async () => {
+					// 마이그레이션한 신노드의 플러그인은 필터·설정·슬롯 상태를 모른다 —
+					// 필터와 DB 설정을 재전송하고 에폭을 맞추기 위해 리셋한다 (B-10).
+					await Promise.resolve(this.container.mixerService?.ensureMixerFilter?.(player)).catch(() => null);
+					const reset = this.container.mixerService?.reset?.(player as CustomPlayer, (player as CustomPlayer).currentEpoch ?? 1);
+					return Promise.resolve(reset).catch(() => null);
+				})
 				.catch((error) => this.logger.warn(`Node migration failed at guild ${player.guildId}: ${error}`));
 		}
 	}

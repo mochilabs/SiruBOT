@@ -392,7 +392,7 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 		} as unknown as { [key: string]: any };
 	}
 
-	it('abort 직후엔 서버 관망 대신 클라이언트 소유 진행으로 즉시 넘어간다', () => {
+	it('abort 직후엔 v2 플러그인 전이로 위임되고 클라이언트 소유 진행은 생략된다', () => {
 		const { handler } = makeHandler();
 		const player = endPlayer();
 		Object.assign(container, { mixerService: { consumePreloaded: vi.fn(() => true), consumeOverlapAbort: vi.fn(() => true) } });
@@ -401,12 +401,12 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 
 		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
 
-		expect(handler.startClientOwnedTrack).toHaveBeenCalledWith(player);
+		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
 		expect(handler.armWatchdog).not.toHaveBeenCalled();
 		expect(player.transitionState.preloadConsumedAt).toBeNull();
 	});
 
-	it('abort가 없으면 서버 소유 관망(예열 소비 + watchdog)을 유지한다', () => {
+	it('abort가 없으면 v2 전이로 위임되고 abort 기록은 서버 소유 관망을 유지한다', () => {
 		const { handler } = makeHandler();
 		const player = endPlayer();
 		Object.assign(container, { mixerService: { consumePreloaded: vi.fn(() => true), consumeOverlapAbort: vi.fn(() => false) } });
@@ -415,12 +415,11 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 
 		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
 
-		expect(handler.armWatchdog).toHaveBeenCalledWith(player);
+		expect(player.transitionState.preloadConsumedAt).toBeNull();
 		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
-		expect(typeof player.transitionState.preloadConsumedAt).toBe('number');
 	});
 
-	it('예열이 없으면 abort 기록을 소비하지 않는다', () => {
+	it('예열이 없으면 v2 전이로 위임되고 abort 기록은 소비되지 않는다', () => {
 		const { handler } = makeHandler();
 		const player = endPlayer();
 		const consumeOverlapAbort = vi.fn(() => true);
@@ -430,7 +429,7 @@ describe('handleTrackEnd: overlap abort 직후 진행 분기', () => {
 		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
 
 		expect(consumeOverlapAbort).not.toHaveBeenCalled();
-		expect(handler.startClientOwnedTrack).toHaveBeenCalledWith(player);
+		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
 	});
 
 	it('β 순서에서 신곡이 이미 시작된 뒤 도착한 구곡 finished trackEnd는 클라이언트 진행 및 watchdog을 건너뛴다', () => {
@@ -625,18 +624,20 @@ describe('start → end → advance (클라이언트 소유 전이)', () => {
 	});
 	afterEach(afterEachCleanup);
 
-	it('비예열 길드에서 finished trackEnd가 clearNext → primeForPlay → play(noReplace)로 이어진다', async () => {
+	it('비예열 길드에서 finished trackEnd가 v2 전이로 위임되고 fallback watchdog을 안다', async () => {
 		const { handler } = makeTrackedHandler();
-		const { mixer } = stubPlaybackContainer();
+		stubPlaybackContainer({
+			consumePreloaded: vi.fn(() => false),
+			consumeOverlapAbort: vi.fn(() => false)
+		});
+		handler.armWatchdog = vi.fn();
+		handler.startClientOwnedTrack = vi.fn(() => Promise.resolve());
 		const player = fullPlayer();
-		player.queue.current = track('b-enc', 'id-b');
 
 		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
 
-		await vi.waitFor(() => expect(player.play).toHaveBeenCalledWith({ noReplace: true }));
 		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_end', expect.anything(), { reason: 'finished' });
-		expect(mixer.clearNext).toHaveBeenCalledWith(player);
-		expect(mixer.primeForPlay).toHaveBeenCalledWith(player);
+		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
 	});
 });
 
@@ -689,14 +690,16 @@ describe('handleTrackFailure (stuck/error 공통 복구)', () => {
 		expect(vi.getTimerCount()).toBe(0);
 	});
 
-	it('TTS 클립 stuck은 알림·오류 누적 없이 조용히 스킵한다', async () => {
+	it('TTS 클립 stuck은 알림·오류 누적 없이 조용히 이어 진행한다', async () => {
 		const { handler } = makeTrackedHandler();
 		const { mixer } = stubPlaybackContainer();
 		const player = fullPlayer();
+		handler.continueAfterTtsClip = vi.fn(async () => undefined);
 
 		await handler.handleTrackStuck(player, ttsTrack('tts-enc', 'id-t'), {});
 
-		expect(mixer.skip).toHaveBeenCalledWith(player);
+		expect(handler.continueAfterTtsClip).toHaveBeenCalledWith(player, expect.objectContaining({ encoded: 'tts-enc' }));
+		expect(mixer.skip).not.toHaveBeenCalled();
 		expect(player.consecutiveErrors).toBe(0);
 		expect(reportPlaybackEvent).not.toHaveBeenCalled();
 		expect(channelSend).not.toHaveBeenCalled();

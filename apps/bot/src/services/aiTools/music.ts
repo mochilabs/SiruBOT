@@ -270,7 +270,7 @@ const musicRepeatTool: AiTool = {
 		const updated = await container.guildService.setRepeat(guildId, mode as RepeatMode);
 		const player = container.audio.getPlayer(guildId);
 		await player?.setRepeatMode(updated);
-		if (player && updated !== 'off') await container.mixerService.clearNext(player).catch(() => null);
+		if (player) await container.mixerService.clearNext(player).catch(() => null);
 		return JSON.stringify({ status: 'ok', mode: updated });
 	}
 };

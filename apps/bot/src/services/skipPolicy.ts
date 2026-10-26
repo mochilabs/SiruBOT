@@ -1,6 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { APIUser, ChatInputCommandInteraction, Collection, GuildMember, MessageFlags, VoiceBasedChannel } from 'discord.js';
 import { Player, Queue, Track } from 'lavalink-client';
+import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { VoteSkip, requiredSkipVotes } from '../modules/audio/managers/voteSkip.ts';
 import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
@@ -126,7 +127,7 @@ export class SkipPolicy {
 	 */
 	private async skipViaMixer(player: Player, position?: number): Promise<void> {
 		try {
-			await container.mixerService.skip(player, position);
+			await container.mixerService.skip(player as CustomPlayer, position);
 		} catch {
 			throw new UserError({
 				identifier: 'skip_mixer_failed',

@@ -91,20 +91,6 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 		})
 	);
 
-	// // 볼륨 조절 버튼 — 볼륨 조절이 의미 있을 때만 표시 (하한≠상한일 때).
-	// const currentVolume = volume ?? player.volume ?? 0;
-	// const showVolume = VOLUME_MAX > VOLUME_MIN + 1;
-	// const volumeDownButton = new ButtonBuilder()
-	// 	.setCustomId(wrapPrefix('volume:down'))
-	// 	.setLabel('볼륨 낮추기')
-	// 	.setEmoji(emoji('volume_down'))
-	// 	.setDisabled(currentVolume <= VOLUME_MIN);
-	// const volumeUpButton = new ButtonBuilder()
-	// 	.setCustomId(wrapPrefix('volume:up'))
-	// 	.setLabel('볼륨 높이기')
-	// 	.setEmoji(emoji('volume_up'))
-	// 	.setDisabled(currentVolume >= VOLUME_MAX);
-
 	// 챕터 건너뛰기 버튼 — 챕터가 있는 영상(장문 YouTube)에만 노출해요.
 	// 현재 챕터 시작에서 5초 이상 지났으면 '이전 챕터'가 현재 챕터로 되돌려요.
 	const chapters = player.chapters ?? [];

@@ -230,7 +230,7 @@ export class ChatTtsService {
 	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip): Promise<void> {
 		try {
 			const state = await container.mixerService.getState(player);
-			if (state.announcementsQueued > TTS_OVERLAY_QUEUE_MAX) {
+			if ((state.announcementsQueued ?? 0) > TTS_OVERLAY_QUEUE_MAX) {
 				this.warnOnce(
 					player.guildId,
 					'overlay_overflow',

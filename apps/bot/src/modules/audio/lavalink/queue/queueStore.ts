@@ -1,3 +1,4 @@
+import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
 import { Awaitable, QueueStoreManager, StoredQueue } from 'lavalink-client';
 import { PendingWriteStore } from '../pendingWriteStore.ts';
@@ -48,7 +49,12 @@ export class CachedQueueStore extends PendingWriteStore implements QueueStoreMan
 	/** 인메모리 반영은 즉시, Redis 기록은 코레일스 윈도우를 거친다(write-behind). */
 	public async set(guildId: string, value: StoredQueue | string): Promise<void | boolean> {
 		this.logger.trace(`Setting queue for guild ${guildId}`);
-		const stringValue = this.stringify(value) as string;
+		const player = container.audio?.getPlayer?.(guildId) as { currentEpoch?: number } | undefined;
+		const enriched =
+			typeof value === 'object' && value !== null && typeof player?.currentEpoch === 'number'
+				? ({ ...value, epoch: player.currentEpoch } as StoredQueue & { epoch: number })
+				: value;
+		const stringValue = this.stringify(enriched) as string;
 		await this.writeRaw(guildId, stringValue);
 	}
 

@@ -364,7 +364,7 @@ export class PlayerWebResponder {
 				const nextMode = player.repeatMode === 'off' ? 'track' : player.repeatMode === 'track' ? 'queue' : 'off';
 				const repeatMode = await container.guildService.setRepeat(guildId, nextMode);
 				await player.setRepeatMode(repeatMode);
-				if (repeatMode !== 'off') await container.mixerService.clearNext(player).catch(() => null);
+				await container.mixerService.clearNext(player).catch(() => null);
 				this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 				return;
 			}

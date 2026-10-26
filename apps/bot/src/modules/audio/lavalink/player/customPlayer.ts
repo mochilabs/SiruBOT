@@ -10,6 +10,7 @@ type Chapter = {
 
 export type CustomPlayerJson = PlayerJson & {
 	messageId: string | null;
+	currentEpoch?: number;
 };
 
 /** 예열 소비 확인 창(ms) — TrackHandler의 watchdog·reconcile과 autoPlayRelated 게이트가 공유한다. */
@@ -35,6 +36,23 @@ export type TransitionState = {
 	/** 예열 슬롯을 서버가 소비·재생 확정한 트랙 — 큐에서 빠진 예열곡의 표시 메타데이터 출처 */
 	serverConsumedTrack: Track | null;
 };
+export type OverrideAction = 'PLAY_NOW' | 'STOP';
+
+export interface PendingOverride {
+	epoch: number;
+	action: OverrideAction;
+	intentKey: string;
+	recovery: boolean;
+	timer: NodeJS.Timeout;
+}
+
+export interface MixerRuntime {
+	pending: Map<string, PendingOverride>;
+	transitionSeq: number;
+	lastTargetUid: string | null;
+	invalidateTimer: NodeJS.Timeout | null;
+	sampleMiss: number;
+}
 
 export class CustomPlayer extends Player {
 	public messageId: string | null = null;
@@ -53,6 +71,14 @@ export class CustomPlayer extends Player {
 		confirmedNowPlaying: null,
 		serverConsumedTrack: null
 	};
+	public currentEpoch: number = 1;
+	public mixerRuntime: MixerRuntime = {
+		pending: new Map(),
+		transitionSeq: 0,
+		lastTargetUid: null,
+		invalidateTimer: null,
+		sampleMiss: 0
+	};
 
 	constructor(options: PlayerOptions, LavalinkManager: LavalinkManager, dontEmitPlayerCreateEvent?: boolean) {
 		super(options, LavalinkManager, dontEmitPlayerCreateEvent);
@@ -61,7 +87,8 @@ export class CustomPlayer extends Player {
 	public override toJSON() {
 		return {
 			...super.toJSON(),
-			messageId: this.messageId
+			messageId: this.messageId,
+			currentEpoch: this.currentEpoch
 		};
 	}
 }

@@ -150,8 +150,8 @@ export class MixerCommand extends Command {
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setGapless(interaction.guildId, enabled);
 		if (player) {
-			if (!enabled) await this.container.mixerService.clearNext(player).catch(() => null);
-			else await this.container.mixerService.preloadUpcoming(player).catch(() => null);
+			if (!enabled) await this.container.mixerService.clearNext(player, { force: true }).catch(() => null);
+			else await this.container.mixerService.preloadUpcoming(player, { force: true }).catch(() => null);
 		}
 		let message: string;
 		if (player) {
