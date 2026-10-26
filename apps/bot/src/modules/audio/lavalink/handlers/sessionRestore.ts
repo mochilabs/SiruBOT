@@ -5,7 +5,8 @@ import type { ILogObj, Logger } from 'tslog';
 import { NodeSessionStore } from '../redisStore.ts';
 import type { CustomPlayer } from '../player/customPlayer.ts';
 import type { CachedPlayerSaver } from '../player/playerSaver.ts';
-
+import { getTargetNextTrack } from '../queue/queueWrapper.ts';
+import { commitLocal } from './mixerHandlers.ts';
 /** playerSaver.get() 반환 — 재시작 복구의 입력이 되는 저장 플레이어 형태. */
 type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
 
@@ -217,11 +218,12 @@ export class SessionRestoreEngine {
 			silentSync: true
 		});
 
-		if (lavalinkPlayer.track)
+		if (lavalinkPlayer.track) {
 			createdPlayer.queue.current = this.container.audio.utils.buildTrack(
 				lavalinkPlayer.track,
 				createdPlayer.queue.current?.requester || this.container.client.user
 			);
+		}
 
 		const now = Date.now();
 		createdPlayer.lastPosition = lavalinkPlayer.state.position + (now - startTime);
@@ -231,15 +233,46 @@ export class SessionRestoreEngine {
 		createdPlayer.paused = lavalinkPlayer.paused;
 		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
-		// 재시작 프로세스의 mixer 기록(preloaded)은 비어 있지만 서버는 슬롯을 들고
-		// 있다 — 서버 상태와 맞춰 첫 전이가 서버 소유(갭리스·크로스페이드)로 이어지게 한다.
-		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
-			this.logger.warn(`Mixer reconcile after resume failed at ${lavalinkPlayer.guildId}: ${error}`);
+		// v2 Rehydration: fetch plugin state and advance currentEpoch with safe margin
+
+		let pluginState: { lastKnownEpoch?: number } | null = null;
+		try {
+			pluginState = await this.container.mixerService.getState(createdPlayer);
+		} catch {
+			this.logger.warn(`Mixer state query failed at ${lavalinkPlayer.guildId}`);
+		}
+		const queueStore = this.container.redisStore?.getQueueStore?.();
+		const savedQueue = queueStore ? await queueStore.get(lavalinkPlayer.guildId).catch(() => null) : null;
+		const rawParsed = typeof savedQueue === 'string' ? JSON.parse(savedQueue) : savedQueue;
+		const savedEpoch = typeof rawParsed?.epoch === 'number' ? rawParsed.epoch : 1;
+		createdPlayer.currentEpoch = Math.max(savedEpoch, pluginState?.lastKnownEpoch ?? 1) + 10;
+		if (!createdPlayer.mixerRuntime) {
+			createdPlayer.mixerRuntime = { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 };
+		}
+
+		// Server track validation against queue head
+		const serverTrack = lavalinkPlayer.track?.encoded ?? null;
+		if (serverTrack && Array.isArray(createdPlayer.queue?.tracks)) {
+			const head = createdPlayer.queue.tracks[0] as import('lavalink-client').Track | undefined;
+			if (head && head.encoded === serverTrack && createdPlayer.queue.current?.encoded !== serverTrack) {
+				commitLocal(createdPlayer, head, { invalidate: false });
+			}
+		}
+
+		// Initialize lastTargetUid so subsequent mutations do not fire spurious epoch++
+		const target = getTargetNextTrack(createdPlayer);
+		const uid = target?.userData?.uid;
+		createdPlayer.mixerRuntime.lastTargetUid = typeof uid === 'string' ? uid : (target?.encoded ?? null);
+
+		// Force-reset mixer plugin to wipe stale sub slots and sync lastKnownEpoch
+		await this.container.mixerService?.ensureMixerFilter?.(createdPlayer)?.catch(() => null);
+		await this.container.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch((error: unknown) => {
+			this.logger.warn(`Mixer reset after resume failed at ${lavalinkPlayer.guildId}: ${error instanceof Error ? error.message : String(error)}`);
 		});
+		await this.container.mixerService?.reconcileAfterResume?.(createdPlayer)?.catch(() => null);
 
-		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId}`);
+		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId} (epoch: ${createdPlayer.currentEpoch})`);
 	}
-
 	/**
 	 * 저장된 플레이어 기록으로 클라이언트 플레이어를 재생성하고 컨트롤러 참조·음성 연결·큐를 복원한다.
 	 * session resume(resumeSinglePlayer)과 fresh 복구(restoreFreshPlayer)가 공유한다.

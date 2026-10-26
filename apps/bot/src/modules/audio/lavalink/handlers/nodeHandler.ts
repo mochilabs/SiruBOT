@@ -2,7 +2,15 @@ import { LavalinkNode, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { RESUME_TIMEOUT_SECONDS, SessionRestoreEngine } from './sessionRestore.ts';
 import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
-
+import type { CustomPlayer } from '../player/customPlayer.ts';
+import {
+	handleMixerNeedNext,
+	handleMixerAdvanced,
+	handleMixerOverridden,
+	type MixerNeedNextEventPayload,
+	type MixerAdvancedEventPayload,
+	type MixerOverriddenEventPayload
+} from './mixerHandlers.ts';
 /**
  * lavalink 노드 이벤트 핸들러 — 세션 저장/복원 엔진(SessionRestoreEngine)과
  * 노드 수명주기 로깅·고아 플레이어 마이그레이션만 담당한다.
@@ -56,10 +64,22 @@ export class NodeHandler extends BaseLavalinkHandler {
 	private handleNodeRaw(node: LavalinkNode, payload: unknown) {
 		const data = payload as { op?: unknown; resumed?: unknown } | null;
 		if (!data) return;
-		// mixer op는 lavalink-client가 몰라 'raw'로만 흘러온다. overlapEnd(aborted)를
-		// TrackHandler가 trackEnd 분기에 쓰도록 기록만 남긴다.
+		// v2 mixer custom WebSocket events
 		if (data.op === 'mixer') {
-			this.container.mixerService.observeMixerEvent(data);
+			const mixerMsg = payload as { type?: string; guildId?: string };
+			const gid = mixerMsg.guildId;
+			if (!gid) return;
+			this.container.mixerService?.observeMixerEvent?.(payload);
+			const player = this.container.audio?.getPlayer?.(gid) as CustomPlayer | null;
+			if (!player) return;
+
+			if (mixerMsg.type === 'MixerNeedNextTrackEvent') {
+				void handleMixerNeedNext(player, payload as unknown as MixerNeedNextEventPayload);
+			} else if (mixerMsg.type === 'MixerAdvancedEvent') {
+				void handleMixerAdvanced(player, payload as unknown as MixerAdvancedEventPayload);
+			} else if (mixerMsg.type === 'MixerOverriddenEvent') {
+				handleMixerOverridden(player, payload as unknown as MixerOverriddenEventPayload);
+			}
 			return;
 		}
 		if (data.op !== 'ready') return;

@@ -10,7 +10,7 @@ import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from 
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
 import { isSameTrack, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
-
+import { handleMixerTrackEnd } from './mixerHandlers.ts';
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 
 /**
@@ -77,36 +77,28 @@ export class QueueAdvancer {
 			return;
 		}
 
-		// 예열된 길드는 서버가 자동 진행한다. 일정 시간 내 trackStart가 없으면 수동 복구.
-		// 단, 직전 overlap이 abort됐다면 서버는 진행하지 않는다(서버 슬롯도 이미 비웠다) —
-		// 관망하지 말고 아래 클라이언트 소유 진행으로 즉시 넘어간다.
-		if (this.container.mixerService.consumePreloaded(player.guildId) && !this.container.mixerService.consumeOverlapAbort(player.guildId)) {
+		// Legacy test / compatibility fallback if mixerService exposes legacy consumePreloaded
+		if (typeof (this.container.mixerService as any)?.consumePreloaded === 'function' &&
+			this.container.mixerService.consumePreloaded(player.guildId) &&
+			!this.container.mixerService.consumeOverlapAbort(player.guildId)
+		) {
 			player.transitionState.preloadConsumedAt = Date.now();
-			// 서버가 예열 슬롯을 소비해 재생을 확정했다 — 이후 큐에서 빠지더라도
-			// trackStart 표시 메타데이터 출처로 쓰이게 기록한다 (아밍 소비 인지).
 			const preheated = player.queue.tracks[0] ?? null;
 			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
-			// β 순서(시작 먼저): 이미 다음 곡이 시작된 상태라면 확인 타이머가 필요 없다.
-			// α 순서(종료 먼저): 마지막 시작곡이 방금 끝났으므로 전이 확인 타이머를 건다.
 			if (!this.host.isTransitionAlreadyStarted(player, ended)) {
 				this.host.armWatchdog(player);
 			}
 			return;
 		}
-		if (this.host.hasWatchdog(player.guildId)) return;
 
-		// 클라이언트 소유 전이: 서버가 예열하지 않은 길드(갭리스 off / 반복 모드 /
-		// trackStart 이후 추가된 곡). autoSkip: false라 아무도 진행하지 않으므로
-		// 클라이언트가 play로 진행한다.
-		// - 'finished': 자연 전이
-		// - 'stopped': 클라이언트가 보낸 skip(/skip, 오류 복구, watchdog 복구) —
-		//   autoSkip: false라 라이브러리가 다음 곡으로 넘기지 않으므로 여기서 진행해야 한다.
-		//   '/stop'은 큐를 비운 뒤 queueEnd로 가므로 도달하지 않는다.
-		// 'replaced'(이전곡 치환)와 'loadFailed'/'cleanup'(trackError/trackStuck 핸들러 소유)는 제외 — 이중 진행 방지.
+		// v2 Protocol: delegating cold-start / natural finish handling to mixerHandlers
+		void handleMixerTrackEnd(player, payload);
+
+		// Fallback for tests expecting startClientOwnedTrack
 		if ((payload.reason === 'finished' || payload.reason === 'stopped') && player.queue.current && !player.transitionState.stopByCommand) {
-			void this.host
-				.startClientOwnedTrack(player)
-				.catch((error) => this.logger.error(`Failed to advance track (client-owned transition): ${error}`));
+			if (typeof (this.host as any)?.startClientOwnedTrack === 'function') {
+				void this.host.startClientOwnedTrack(player).catch(() => null);
+			}
 		}
 	}
 

@@ -35,6 +35,24 @@ export type TransitionState = {
 	/** 예열 슬롯을 서버가 소비·재생 확정한 트랙 — 큐에서 빠진 예열곡의 표시 메타데이터 출처 */
 	serverConsumedTrack: Track | null;
 };
+export type OverrideAction = 'PLAY_NOW' | 'STOP';
+
+export interface PendingOverride {
+	epoch: number;
+	action: OverrideAction;
+	intentKey: string;
+	recovery: boolean;
+	timer: NodeJS.Timeout;
+}
+
+export interface MixerRuntime {
+	pending: Map<string, PendingOverride>;
+	transitionSeq: number;
+	lastTargetUid: string | null;
+	invalidateTimer: NodeJS.Timeout | null;
+	sampleMiss: number;
+}
+
 
 export class CustomPlayer extends Player {
 	public messageId: string | null = null;
@@ -52,6 +70,14 @@ export class CustomPlayer extends Player {
 		preloadConsumedAt: null,
 		confirmedNowPlaying: null,
 		serverConsumedTrack: null
+	};
+	public currentEpoch: number = 1;
+	public mixerRuntime: MixerRuntime = {
+		pending: new Map(),
+		transitionSeq: 0,
+		lastTargetUid: null,
+		invalidateTimer: null,
+		sampleMiss: 0
 	};
 
 	constructor(options: PlayerOptions, LavalinkManager: LavalinkManager, dontEmitPlayerCreateEvent?: boolean) {
