@@ -169,7 +169,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
 		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, toSet);
 		await player.setRepeatMode(repeatUpdated);
-		if (repeatUpdated !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
+		await this.container.mixerService.clearNext(player).catch(() => null);
 		await this.updateControllerOrFail(interaction, player);
 	}
 

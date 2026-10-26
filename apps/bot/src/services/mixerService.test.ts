@@ -211,6 +211,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		const musicPlayer = {
 			...fakePlayer(),
 			repeatMode: 'off',
+			playing: true,
 			currentEpoch: 5,
 			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
 			queue: {
@@ -230,5 +231,42 @@ describe('MixerService v2 Protocol Tests', () => {
 			encodedTrack: null,
 			isEmpty: true
 		});
+	});
+
+	it('handleMixerNeedNext aborts when the trigger track changes during the settings await (F1)', async () => {
+		const { handleMixerNeedNext } = await import('../modules/audio/lavalink/handlers/mixerHandlers.ts');
+		const { container } = await import('@sapphire/framework');
+		const service = new MixerService();
+		container.mixerService = service as any;
+
+		// DB 조회가 지연되는 동안 전이가 진행돼 current가 바뀐다.
+		let releaseSettings!: () => void;
+		(container.guildService.getMixerSettings as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+			new Promise((resolve) => {
+				releaseSettings = () => resolve({ gaplessEnabled: true, crossfadeEnabled: true });
+			})
+		);
+
+		const player = {
+			...fakePlayer(),
+			repeatMode: 'off',
+			playing: true,
+			currentEpoch: 5,
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: { encoded: 'song-a', requester: { id: 'user-1' } },
+				tracks: [{ encoded: 'song-b', requester: { id: 'user-1' } }],
+				previous: []
+			}
+		} as unknown as CustomPlayer;
+
+		const promise = handleMixerNeedNext(player, { remainingMs: 5000, currentTrackEncoded: 'song-a' });
+		// 전이 완료: current가 다음 곡으로 바뀐다.
+		player.queue.current = { encoded: 'song-b', requester: { id: 'user-1' } } as any;
+		player.queue.tracks = [{ encoded: 'song-c', requester: { id: 'user-1' } }] as any;
+		releaseSettings();
+		await promise;
+
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

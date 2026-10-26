@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { container } from '@sapphire/framework';
 import { Track, TrackEndEvent } from 'lavalink-client';
 import { CustomPlayer, OverrideAction } from '../player/customPlayer.ts';
-import { getTargetNextTrack, notifyQueueMutated } from '../queue/queueWrapper.ts';
+import { getTargetNextTrack, getTrackUid, notifyQueueMutated } from '../queue/queueWrapper.ts';
 import { isTtsClip } from '../requester.ts';
+import { isSameTrack } from './playbackWatchdog.ts';
 import { MixerRequestError } from '../../../../services/mixerService.ts';
 
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
@@ -64,6 +65,9 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	// 클립은 1~4초마다 끝나므로 이벤트가 매번 오고, 음악 슬롯은 continueAfterTtsClip이 소유한다.
 	if (isTtsClip(player.queue?.current)) return;
 
+	// 이벤트가 이 곡의 전이를 묘사한다고 가정한다 — DB await·REST 왕복 사이에
+	// 스킵/콜드스타트/오버라이드/트랙스타트가 끼어들면 stale로 판정해 아밍하지 않는다.
+	const triggerEncoded = player.queue.current?.encoded ?? null;
 	const settings = await container.guildService.getMixerSettings(player.guildId).catch(() => null);
 	const gapless = settings?.gaplessEnabled ?? true;
 	const crossfade = settings?.crossfadeEnabled ?? false;
@@ -71,6 +75,15 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	// gapless/crossfade가 모두 꺼져 있으면 NO_NEXT(isEmpty: true)로 아밍해 서버가 TrackEndEvent를
 	// 내보낸 뒤 cold start를 봇에게 맡긴다. 아밍 경로 자체는 항상 같다 (409 재시도 공유).
 	const shouldArm = gapless || crossfade;
+
+	const stale = () =>
+		isTtsClip(player.queue.current) ||
+		!player.playing ||
+		rt(player).pending.size > 0 ||
+		(player.queue.current?.encoded ?? null) !== triggerEncoded;
+
+	if (stale()) return;
+
 	const target = shouldArm ? getTargetNextTrack(player) : null;
 	const key = randomUUID();
 
@@ -84,6 +97,9 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 			},
 			key
 		);
+		// 아밍한 헤드를 기록해 notifyQueueMutated가 null==null blind spot으로
+		// invalidate를 누락하는 일을 막는다 (F3).
+		player.mixerRuntime.lastTargetUid = getTrackUid(target);
 	} catch (error: unknown) {
 		if (!(error instanceof MixerRequestError) || error.status !== 409) {
 			container.logger.warn(`[mixer] arm failed on guild ${player.guildId}: ${error instanceof Error ? error.message : String(error)}`);
@@ -99,6 +115,10 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 			if (remainingWait > 0) await sleep(remainingWait);
 		}
 
+		// 재시도 전에도 전이가 이미 소유권을 넘겼는지 재확인한다 — 그렇지 않으면
+		// 콜드스타트/스킵된 새 곡의 시작 시점에 다음 곡을 아밍해 슬롯을 핀한다 (F1).
+		if (stale()) return;
+
 		try {
 			const latestTarget = shouldArm ? getTargetNextTrack(player) : null;
 			await container.mixerService.arm(
@@ -110,6 +130,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 				},
 				randomUUID()
 			);
+			player.mixerRuntime.lastTargetUid = getTrackUid(latestTarget);
 		} catch (retryError) {
 			container.logger.error(
 				`[mixer] arm retry failed on guild ${player.guildId}: ${retryError instanceof Error ? retryError.message : String(retryError)}`
@@ -123,21 +144,37 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 /* ------------------------------------------------------------------ */
 export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdvancedEventPayload): Promise<void> {
 	const target = getTargetNextTrack(player);
+	const confirmedEncoded = player.transitionState?.confirmedNowPlaying?.encoded ?? player.queue.current?.encoded ?? null;
 
-	// (1) Stale: Bot epoch has already moved ahead
+	// (1) Stale: Bot epoch has already moved ahead. If the advanced track is the
+	// track the server is actually playing (confirmed/current), the epoch just
+	// lagged behind a local mutation that hadn't invalidated yet — resync and
+	// commit, don't recover. Reserve recovery for a real track mismatch.
 	if (event.epoch !== player.currentEpoch) {
-		if (player.queue.current?.encoded === event.encodedTrack) {
+		if (player.queue.current?.encoded === event.encodedTrack || confirmedEncoded === event.encodedTrack) {
+			// 서버가 이미 이 트랙을 시작했다 — epoch만 뒤처진 것이므로 재동기화하고
+			// 추가 전이(commit) 없이 돌아간다.
+			player.currentEpoch = Math.max(player.currentEpoch, event.epoch);
+			return;
+		}
+		if (target && target.encoded === event.encodedTrack) {
+			// 로컬 epoch가 앞서나갔지만 아직 invalidate가 서버에 도달하기 전에
+			// 서버가 (변경 없는) 헤드로 정상 전이한 경우 — recover하지 말고
+			// epoch만 재동기화하고 정상 commit한다 (S11).
+			player.currentEpoch = Math.max(player.currentEpoch, event.epoch);
+			rt(player).transitionSeq++;
+			commitLocal(player, target as Track, { invalidate: false });
 			return;
 		}
 		container.logger.warn(`[mixer] stale advanced event (got ${event.epoch}, current ${player.currentEpoch}) on guild ${player.guildId}`);
-		await recover(player, 'stale');
+		await recover(player, 'stale', event.encodedTrack);
 		return;
 	}
 
 	// (2) Desync: Epoch matches but encoded track does not match target head
 	if (!target || target.encoded !== event.encodedTrack) {
 		container.logger.error(`[mixer] desync assert failed: plugin=${event.encodedTrack}, target=${target?.encoded} on guild ${player.guildId}`);
-		await recover(player, 'desync');
+		await recover(player, 'desync', event.encodedTrack);
 		return;
 	}
 
@@ -146,11 +183,28 @@ export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdva
 	commitLocal(player, target as Track, { invalidate: false });
 }
 
-async function recover(player: CustomPlayer, reason: 'stale' | 'desync'): Promise<void> {
+async function recover(player: CustomPlayer, reason: 'stale' | 'desync', serverEncoded?: string): Promise<void> {
 	if (isOverrideInFlight(player)) {
+		// A pending override owns the slot right now. Do not drop the recovery:
+		// retry once the override settles so a silent guild doesn't stall forever.
+		setTimeout(() => {
+			if (!isOverrideInFlight(player)) void recover(player, reason, serverEncoded);
+		}, OVERRIDDEN_TIMEOUT_MS);
 		return;
 	}
+
+	// 서버가 이미 해당 트랙을 재생 중이면 bookkeeping만 하고 재시작(오버라이드)하지
+	// 않는다 — 재시작하면 들리는 오디오가 0초로 되감겨 S10의 이중 재생이 된다.
 	const head = player.queue.tracks[0] as Track | undefined;
+	if (serverEncoded) {
+		const serverTrack = await fetchServerTrackById(player);
+		if (serverTrack && isSameTrack(serverTrack, { encoded: serverEncoded })) {
+			commitLocalIfMatches(player, serverEncoded);
+			container.logger.info(`[mixer] recovery (${reason}) reconciled to server track on guild ${player.guildId}`);
+			return;
+		}
+	}
+
 	if (head) {
 		commitLocal(player, head, { invalidate: false });
 		await sendOverride(player, 'PLAY_NOW', head.encoded ?? null, { recovery: true });
@@ -160,6 +214,28 @@ async function recover(player: CustomPlayer, reason: 'stale' | 'desync'): Promis
 		await sendOverride(player, 'STOP', null, { recovery: true });
 	}
 	container.logger.info(`[mixer] recovery (${reason}) executed on guild ${player.guildId}`);
+}
+
+/** REST 프로브로 서버 재생 트랙을 조회한다 (실패 시 null). */
+async function fetchServerTrackById(player: CustomPlayer): Promise<{ encoded?: string; info?: { identifier?: string } } | null> {
+	try {
+		const serverPlayer = (await player.node.fetchPlayer(String(player.guildId))) as {
+			track?: { encoded?: string; info?: { identifier?: string } };
+		} | null;
+		if (!serverPlayer || 'status' in serverPlayer || !serverPlayer.track) return null;
+		return serverPlayer.track;
+	} catch {
+		return null;
+	}
+}
+
+/** 서버가 이미 재생 중인 트랙이면 큐 선두가 그 트랙일 때만 commit한다 (그 외엔 손대지 않는다). */
+function commitLocalIfMatches(player: CustomPlayer, serverEncoded: string): void {
+	const head = player.queue.tracks[0] as Track | undefined;
+	if (head && head.encoded === serverEncoded) {
+		rt(player).transitionSeq++;
+		commitLocal(player, head, { invalidate: false });
+	}
 }
 
 /* ------------------------------------------------------------------ */
@@ -209,6 +285,15 @@ async function coldStart(player: CustomPlayer, ended: string): Promise<void> {
 	if (!next) {
 		player.queue.current = null;
 		container.playerNotifier.updateController(player);
+		return;
+	}
+
+	// 플러그인이 이미 갭리스/크로스페이드로 이 곡을 시작했는데 trackStart가
+	// 200ms 확인창보다 늦게 도착하면 PLAY_NOW가 방금 시작된 곡을 0초로 되감는다.
+	// 서버 프로브로 이미 재생 중이면 bookkeeping만 하고 오버라이드는 생략한다 (F4).
+	const serverTrack = await fetchServerTrackById(player);
+	if (serverTrack && isSameTrack(serverTrack, next)) {
+		commitLocal(player, next, { invalidate: false });
 		return;
 	}
 
@@ -287,6 +372,15 @@ export async function sendOverride(
 			}
 			await execute(player.currentEpoch);
 		}
+		// 성공(또는 duplicate) 시 MixerOverriddenEvent가 아직 도착하지 않았다면
+		// 여기서 정리한다 — 이벤트/타이머 손실이 pending을 5초간 붙잡아 trackEnd·
+		// recovery 판정을 직렬 지연시키는 것을 막는다 (F6). 새 idemKey 레코드는
+		// 키가 다르므로 오염되지 않는다.
+		const rec = state.pending.get(idemKey);
+		if (rec) {
+			clearTimeout(rec.timer);
+			state.pending.delete(idemKey);
+		}
 		return 'sent';
 	} catch (fatalError: unknown) {
 		clearTimeout(timer);
@@ -314,16 +408,15 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 		// Wait past plugin's windowOpenGraceMs (default 1500ms) so the follow-up override isn't rejected with 409 PRE_RESET_ARRIVAL
 		await sleep(1600);
 
+		// 재-결정 시점의 epoch와 큐를 다시 읽는다 — sleep 사이에 notifyQueueMutated가
+		// epoch를 또 올리거나 current가 바뀌었을 수 있다 (F7). 최종 override는
+		// dedup/409 재시도/hardResync 회계를 갖춘 sendOverride로 보낸다.
+		const freshEpoch = await container.mixerService.getState(player).then((s) => s.lastKnownEpoch).catch(() => null);
+		if (typeof freshEpoch === 'number') {
+			player.currentEpoch = Math.max(player.currentEpoch, freshEpoch + 1);
+		}
 		const current = player.queue.current;
-		await container.mixerService.override(
-			player,
-			{
-				epoch: player.currentEpoch,
-				action: current ? 'PLAY_NOW' : 'STOP',
-				encodedTrack: current?.encoded
-			},
-			randomUUID()
-		);
+		await sendOverride(player, current ? 'PLAY_NOW' : 'STOP', current?.encoded ?? null);
 	} catch (resyncError: unknown) {
 		container.logger.error(
 			`[mixer] hard resync failed on guild ${player.guildId}: ${resyncError instanceof Error ? resyncError.message : String(resyncError)}`

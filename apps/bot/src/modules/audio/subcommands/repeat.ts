@@ -57,7 +57,9 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const player = container.audio.getPlayer(interaction.guildId);
 	await player?.setRepeatMode(repeatUpdated);
 	// 반복 모드는 클라이언트가 전이를 소유하므로 mixer 예열 슬롯을 비운다.
-	if (player && repeatUpdated !== 'off') await container.mixerService.clearNext(player).catch(() => null);
+	// 'off'로 바뀔 때도 슬롯을 비워야 한다 — track-repeat 중 아밍된 현재 곡이
+	// off 전환 뒤에도 남아 ghost-repeat으로 재생되는 것을 막는다 (F2).
+	if (player) await container.mixerService.clearNext(player).catch(() => null);
 
 	await interaction.reply({
 		components: [view.repeatUpdated({ mode: repeatUpdated })],

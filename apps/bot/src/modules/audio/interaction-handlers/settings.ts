@@ -125,7 +125,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			const player = this.container.audio.players.get(interaction.guildId);
 			if (player) {
 				player.setRepeatMode(next);
-				if (next !== 'off') await this.container.mixerService.clearNext(player).catch(() => null);
+				await this.container.mixerService.clearNext(player).catch(() => null);
 			}
 		}
 
