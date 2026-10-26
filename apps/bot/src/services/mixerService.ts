@@ -188,7 +188,6 @@ export class MixerService {
 
 		void this.enqueue(gid, async (signal) => {
 			const item = this.pendingInvalidate.get(gid);
-			this.pendingInvalidate.delete(gid);
 			if (!item) return;
 			try {
 				await this.rawCall(player, '/mixer/queue/invalidate', {
@@ -197,10 +196,14 @@ export class MixerService {
 					headers: { 'Idempotency-Key': randomUUID() },
 					signal
 				});
+				this.pendingInvalidate.delete(gid);
 				item.resolve();
 			} catch (err: unknown) {
+				this.pendingInvalidate.delete(gid);
 				item.reject(err instanceof Error ? err : new Error(String(err)));
 			}
+		}).catch((err) => {
+			container.logger.debug(`[mixer] invalidate queue task error (guild ${gid}): ${err}`);
 		});
 		return promise;
 	}

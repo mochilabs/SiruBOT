@@ -131,7 +131,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 /* 2. MixerAdvancedEvent Handler                                      */
 /* ------------------------------------------------------------------ */
 export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdvancedEventPayload): Promise<void> {
-	const head = player.queue.tracks[0];
+	const target = getTargetNextTrack(player);
 
 	// (1) Stale: Bot epoch has already moved ahead
 	if (event.epoch !== player.currentEpoch) {
@@ -143,16 +143,16 @@ export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdva
 		return;
 	}
 
-	// (2) Desync: Epoch matches but encoded track does not match head
-	if (!head || head.encoded !== event.encodedTrack) {
-		container.logger.error(`[mixer] desync assert failed: plugin=${event.encodedTrack}, head=${head?.encoded} on guild ${player.guildId}`);
+	// (2) Desync: Epoch matches but encoded track does not match target head
+	if (!target || target.encoded !== event.encodedTrack) {
+		container.logger.error(`[mixer] desync assert failed: plugin=${event.encodedTrack}, target=${target?.encoded} on guild ${player.guildId}`);
 		await recover(player, 'desync');
 		return;
 	}
 
 	// (3) Normal Commit: Advance 1 track without firing invalidate
 	rt(player).transitionSeq++;
-	commitLocal(player, head as Track, { invalidate: false });
+	commitLocal(player, target as Track, { invalidate: false });
 }
 
 async function recover(player: CustomPlayer, reason: 'stale' | 'desync'): Promise<void> {
@@ -306,6 +306,9 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 		const state = await container.mixerService.getState(player).catch(() => null);
 		player.currentEpoch = Math.max(player.currentEpoch, state?.lastKnownEpoch ?? 0) + 100;
 		await container.mixerService.reset(player, player.currentEpoch, randomUUID());
+
+		// Wait past plugin's windowOpenGraceMs (default 1500ms) so the follow-up override isn't rejected with 409 PRE_RESET_ARRIVAL
+		await sleep(1600);
 
 		const current = player.queue.current;
 		await container.mixerService.override(

@@ -54,12 +54,13 @@ export class QueueAdvancer {
 			`Track ended: ${ended?.info?.title ?? track?.info.title} by ${ended?.info?.author ?? track?.info.author} (reason: ${payload.reason})`
 		);
 		reportPlaybackEvent(player.guildId, 'track_end', ended, { reason: payload.reason });
-		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
-		publishPlayerState(player);
-		// 채팅 TTS 클립 전용 진행 — 기존 전이 분기(예열 관망/클라이언트 진행)와 섞지 않는다 (명세 4.2).
+	}
+
+	public handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
+		const ended = track?.encoded ?? null;
+		// 채팅 TTS 클립 전용 진행 — 명세 4.2 (다른 경로와 섞지 않는다).
 		if (this.container.chatTtsService.isTtsEnded(player, ended)) {
 			if (payload.reason === 'replaced') {
-				// 치환은 새 트랙이 이미 시작되는 경로다 — 반복 모드 잔재만 걷어내고 관여하지 않는다.
 				this.container.chatTtsService.scrubTtsClips(player, ended);
 				return;
 			}
@@ -71,35 +72,13 @@ export class QueueAdvancer {
 
 		// β 순서(시작 먼저 도착): 이미 새 곡이 시작된 상태에서 도착한 구곡의 trackEnd는
 		// 전이가 이미 끝났으므로 관망·예열 소비·클라이언트 진행을 모두 생략한다.
-		// (여기서 consumePreloaded를 부르면 trackStart의 wiring이 방금 채운 차차기 곡 예열을 훔치게 된다.)
 		if (this.host.isTransitionAlreadyStarted(player, ended)) {
 			this.logger.debug(`[transition] trackEnd ignored: transition already started (guild ${player.guildId})`);
 			return;
 		}
 
-		// Legacy test / compatibility fallback if mixerService exposes legacy consumePreloaded
-		if (typeof (this.container.mixerService as any)?.consumePreloaded === 'function' &&
-			this.container.mixerService.consumePreloaded(player.guildId) &&
-			!this.container.mixerService.consumeOverlapAbort(player.guildId)
-		) {
-			player.transitionState.preloadConsumedAt = Date.now();
-			const preheated = player.queue.tracks[0] ?? null;
-			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
-			if (!this.host.isTransitionAlreadyStarted(player, ended)) {
-				this.host.armWatchdog(player);
-			}
-			return;
-		}
-
 		// v2 Protocol: delegating cold-start / natural finish handling to mixerHandlers
 		void handleMixerTrackEnd(player, payload);
-
-		// Fallback for tests expecting startClientOwnedTrack
-		if ((payload.reason === 'finished' || payload.reason === 'stopped') && player.queue.current && !player.transitionState.stopByCommand) {
-			if (typeof (this.host as any)?.startClientOwnedTrack === 'function') {
-				void this.host.startClientOwnedTrack(player).catch(() => null);
-			}
-		}
 	}
 
 	public async handleTrackStuck(player: CustomPlayer, track: Track | UnresolvedTrack | null, _payload: TrackStuckEvent) {
