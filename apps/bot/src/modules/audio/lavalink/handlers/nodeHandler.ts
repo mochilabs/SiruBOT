@@ -108,6 +108,12 @@ export class NodeHandler extends BaseLavalinkHandler {
 			const player = orphanPlayers[idx];
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
+				.then(() => {
+					// 마이그레이션한 신노드의 플러그인은 깨끗한 슬롯 상태를 모른다 — 에폭을 맞추기 위해 리셋한다.
+					// 테스트의 최소 스텁에서도 깨지지 않게 옵셔널 체이닝으로만 둔다.
+					const reset = this.container.mixerService?.reset?.(player as CustomPlayer, (player as CustomPlayer).currentEpoch ?? 1);
+					return Promise.resolve(reset).catch(() => null);
+				})
 				.catch((error) => this.logger.warn(`Node migration failed at guild ${player.guildId}: ${error}`));
 		}
 	}

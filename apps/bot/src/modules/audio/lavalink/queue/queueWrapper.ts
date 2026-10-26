@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Track, UnresolvedTrack } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import type { CustomPlayer } from '../player/customPlayer.ts';
+import { isTtsClip } from '../requester.ts';
 
 /**
  * Ensures every track has a stable unique identifier stored in track.userData.uid.
@@ -34,10 +35,15 @@ export function getTrackUid(track: Track | UnresolvedTrack | null | undefined): 
  * - Otherwise: the first track waiting in queue.tracks[0].
  */
 export function getTargetNextTrack(player: CustomPlayer): Track | null {
+	// 단독 TTS 클립 재생 중엔 음악 트랙을 아밍하지 않는다 — continueAfterTtsClip이
+	// 클립 종료 후 음악을 시작한다 (명세 4.2). 클립을 다음 타깃으로 아밍하지도 않는다.
+	if (isTtsClip(player.queue?.current)) return null;
 	if (player.repeatMode === 'track') {
-		return (player.queue?.current as Track | null) ?? null;
+		const candidate = (player.queue?.current as Track | null) ?? null;
+		return isTtsClip(candidate) ? null : candidate;
 	}
-	return (player.queue?.tracks?.[0] as Track | null) ?? null;
+	const candidate = (player.queue?.tracks?.[0] as Track | null) ?? null;
+	return isTtsClip(candidate) ? null : candidate;
 }
 
 export interface QueueMutationOptions {

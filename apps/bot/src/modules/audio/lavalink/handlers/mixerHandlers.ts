@@ -3,6 +3,7 @@ import { container } from '@sapphire/framework';
 import { Track, TrackEndEvent } from 'lavalink-client';
 import { CustomPlayer, OverrideAction } from '../player/customPlayer.ts';
 import { getTargetNextTrack, notifyQueueMutated } from '../queue/queueWrapper.ts';
+import { isTtsClip } from '../requester.ts';
 import { MixerRequestError } from '../../../../services/mixerService.ts';
 
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
@@ -59,30 +60,18 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: { invalida
 /* 1. MixerNeedNextTrackEvent Handler                                 */
 /* ------------------------------------------------------------------ */
 export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNeedNextEventPayload): Promise<void> {
+	// 단독 TTS 클립 재생 중엔 DB 조회·REST 아밍을 하지 않는다 (명세 4.2) —
+	// 클립은 1~4초마다 끝나므로 이벤트가 매번 오고, 음악 슬롯은 continueAfterTtsClip이 소유한다.
+	if (isTtsClip(player.queue?.current)) return;
+
 	const settings = await container.guildService.getMixerSettings(player.guildId).catch(() => null);
 	const gapless = settings?.gaplessEnabled ?? true;
 	const crossfade = settings?.crossfadeEnabled ?? false;
 
-	// If both gapless and crossfade are disabled, do not arm the next track on the server.
-	// Tell the plugin NO_NEXT (isEmpty: true) so it emits TrackEndEvent and leaves Cold Start to the bot.
-	if (!gapless && !crossfade) {
-		try {
-			await container.mixerService.arm(
-				player,
-				{
-					epoch: player.currentEpoch,
-					encodedTrack: null,
-					isEmpty: true
-				},
-				randomUUID()
-			);
-		} catch (error) {
-			container.logger.debug(`[mixer] arm NO_NEXT (gapless/crossfade off) failed on guild ${player.guildId}: ${String(error)}`);
-		}
-		return;
-	}
-
-	const target = getTargetNextTrack(player);
+	// gapless/crossfade가 모두 꺼져 있으면 NO_NEXT(isEmpty: true)로 아밍해 서버가 TrackEndEvent를
+	// 내보낸 뒤 cold start를 봇에게 맡긴다. 아밍 경로 자체는 항상 같다 (409 재시도 공유).
+	const shouldArm = gapless || crossfade;
+	const target = shouldArm ? getTargetNextTrack(player) : null;
 	const key = randomUUID();
 
 	try {
@@ -111,7 +100,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 		}
 
 		try {
-			const latestTarget = getTargetNextTrack(player);
+			const latestTarget = shouldArm ? getTargetNextTrack(player) : null;
 			await container.mixerService.arm(
 				player,
 				{
@@ -122,7 +111,9 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 				randomUUID()
 			);
 		} catch (retryError) {
-			container.logger.error(`[mixer] arm retry failed on guild ${player.guildId}: ${retryError instanceof Error ? retryError.message : String(retryError)}`);
+			container.logger.error(
+				`[mixer] arm retry failed on guild ${player.guildId}: ${retryError instanceof Error ? retryError.message : String(retryError)}`
+			);
 		}
 	}
 }
@@ -178,7 +169,11 @@ export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndE
 	if (event.reason !== 'finished' && event.reason !== 'loadFailed') return;
 
 	const ended = event.track?.encoded ?? null;
-	if (!ended || ended !== player.queue.current?.encoded) {
+	// lavalink-client가 queueEnd 경로에서 queue.current를 먼저 비울 수 있다 —
+	// 시작 확정값(confirmedNowPlaying/lastStartedEncoded)을 폴백으로 삼아 현재 곡을 판별한다.
+	const currentOrConfirmed =
+		player.queue.current?.encoded ?? player.transitionState?.confirmedNowPlaying?.encoded ?? player.transitionState?.lastStartedEncoded ?? null;
+	if (!ended || ended !== currentOrConfirmed) {
 		return;
 	}
 
@@ -189,7 +184,14 @@ export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndE
 	if (TRACK_END_CONFIRM_MS > 0) {
 		const seq = rt(player).transitionSeq;
 		await sleep(TRACK_END_CONFIRM_MS);
-		if (seq !== rt(player).transitionSeq || player.queue.current?.encoded !== ended) {
+		// 대기 동안 current가 비었는지 여부만으로 판단하지 않는다 — 확인값이 살아 있으면
+		// ended와 같을 때만 진행해 queueEnd 시프트와 뒤늦은 다른 트랙 시작을 거른다.
+		const afterCurrent =
+			player.queue.current?.encoded ??
+			player.transitionState?.confirmedNowPlaying?.encoded ??
+			player.transitionState?.lastStartedEncoded ??
+			null;
+		if (seq !== rt(player).transitionSeq || (afterCurrent !== null && afterCurrent !== ended)) {
 			return;
 		}
 	}
@@ -289,7 +291,9 @@ export async function sendOverride(
 	} catch (fatalError: unknown) {
 		clearTimeout(timer);
 		state.pending.delete(idemKey);
-		container.logger.error(`[mixer] override failed twice on guild ${player.guildId}: ${fatalError instanceof Error ? fatalError.message : String(fatalError)}`);
+		container.logger.error(
+			`[mixer] override failed twice on guild ${player.guildId}: ${fatalError instanceof Error ? fatalError.message : String(fatalError)}`
+		);
 		await hardResync(player);
 		return 'resynced';
 	}
@@ -321,7 +325,9 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 			randomUUID()
 		);
 	} catch (resyncError: unknown) {
-		container.logger.error(`[mixer] hard resync failed on guild ${player.guildId}: ${resyncError instanceof Error ? resyncError.message : String(resyncError)}`);
+		container.logger.error(
+			`[mixer] hard resync failed on guild ${player.guildId}: ${resyncError instanceof Error ? resyncError.message : String(resyncError)}`
+		);
 	}
 }
 
@@ -330,7 +336,9 @@ function scheduleRecoveryProbe(player: CustomPlayer): void {
 		if (isOverrideInFlight(player)) return;
 
 		for (let i = 0; i < 3; i++) {
-			const serverPlayer = (await player.node?.fetchPlayer(String(player.guildId)).catch(() => null)) as { track?: { encoded?: string } } | null;
+			const serverPlayer = (await player.node?.fetchPlayer(String(player.guildId)).catch(() => null)) as {
+				track?: { encoded?: string };
+			} | null;
 			const serverTrack = serverPlayer?.track?.encoded ?? null;
 			const clientTrack = player.queue.current?.encoded ?? null;
 

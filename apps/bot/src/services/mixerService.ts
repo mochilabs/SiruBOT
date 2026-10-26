@@ -3,7 +3,8 @@ import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
 import type { CustomPlayer, OverrideAction } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { commitLocal, sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
-import { cancelPendingInvalidate } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 const MIXER_FILTER_KEY = 'mixer';
 const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
 
@@ -196,10 +197,15 @@ export class MixerService {
 					headers: { 'Idempotency-Key': randomUUID() },
 					signal
 				});
-				this.pendingInvalidate.delete(gid);
+				// 최신 invalidate로 교체됐으면 이 완료가 구 요청의 항목을 지우지 않게 한다.
+				if (this.pendingInvalidate.get(gid) === item) {
+					this.pendingInvalidate.delete(gid);
+				}
 				item.resolve();
 			} catch (err: unknown) {
-				this.pendingInvalidate.delete(gid);
+				if (this.pendingInvalidate.get(gid) === item) {
+					this.pendingInvalidate.delete(gid);
+				}
 				item.reject(err instanceof Error ? err : new Error(String(err)));
 			}
 		}).catch((err) => {
@@ -231,6 +237,9 @@ export class MixerService {
 	 */
 	public async skip(player: CustomPlayer, position?: number): Promise<void> {
 		if (typeof position === 'number' && position > 1) {
+			// position은 getUserQueuedTracks 기준 사용자 번호다 — 선예열 추천곡이 남아 있으면
+			// 인덱스가 밀리므로 스플라이스 전에 걷어낸다.
+			await removeStaleRelatedTracks(player);
 			const dropCount = Math.min(position - 1, player.queue.tracks.length);
 			player.queue.tracks.splice(0, dropCount);
 		}
@@ -267,19 +276,24 @@ export class MixerService {
 	public async getInfo(player: Player): Promise<{ protocolVersion: number; version: string }> {
 		return (await this.rawCall(player, '/mixer/info')) as { protocolVersion: number; version: string };
 	}
-	public async clearNext(_player: Player): Promise<void> {
+	public async clearNext(player: Player): Promise<void> {
 		// v2: slot is managed by JIT; clearNext is a no-op
+		// setRepeatMode 등 반복 모드 변경 직후 불리므로 큐 관측을 한 곳에서 태운다.
+		notifyQueueMutated(player as CustomPlayer);
 	}
-	public async preloadUpcoming(_player: Player): Promise<void> {
+	public async preloadUpcoming(player: Player): Promise<void> {
 		// v2: preloading is JIT-driven via MixerNeedNextTrackEvent
+		// 큐 변형(shuffle/clear/remove/move/enqueue) 직후 불리므로 큐 관측을 한 곳에서 태운다.
+		notifyQueueMutated(player as CustomPlayer);
 	}
 
 	public async primeForPlay(player: Player): Promise<void> {
 		await this.ensureMixerFilter(player).catch(() => null);
 	}
 
-	public async clearNextLenient(_player: Player): Promise<void> {
+	public async clearNextLenient(player: Player): Promise<void> {
 		// v2: slot is JIT-managed
+		notifyQueueMutated(player as CustomPlayer);
 	}
 
 	public async reconcileAfterResume(_player: Player): Promise<void> {

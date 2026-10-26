@@ -5,7 +5,7 @@ import type { ILogObj, Logger } from 'tslog';
 import { NodeSessionStore } from '../redisStore.ts';
 import type { CustomPlayer } from '../player/customPlayer.ts';
 import type { CachedPlayerSaver } from '../player/playerSaver.ts';
-import { getTargetNextTrack } from '../queue/queueWrapper.ts';
+import { getTargetNextTrack, getTrackUid } from '../queue/queueWrapper.ts';
 import { commitLocal } from './mixerHandlers.ts';
 /** playerSaver.get() 반환 — 재시작 복구의 입력이 되는 저장 플레이어 형태. */
 type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
@@ -219,10 +219,27 @@ export class SessionRestoreEngine {
 		});
 
 		if (lavalinkPlayer.track) {
-			createdPlayer.queue.current = this.container.audio.utils.buildTrack(
-				lavalinkPlayer.track,
-				createdPlayer.queue.current?.requester || this.container.client.user
-			);
+			// 서버가 재생 중인 트랙이 큐 헤드와 같은 곡이면 buildTrack 재구성 대신 큐 객체를
+			// current로 올린다 — 메타데이터·uid가 저장된 큐와 일치해 아밍 중복을 막는다.
+			const serverEncoded = lavalinkPlayer.track?.encoded;
+			const createdQueue = createdPlayer.queue as { tracks?: unknown[] } | undefined;
+			const queueTracks = Array.isArray(createdQueue?.tracks) ? createdQueue!.tracks : [];
+			const head = queueTracks[0] as import('lavalink-client').Track | undefined;
+			if (typeof serverEncoded === 'string' && head?.encoded === serverEncoded) {
+				if (createdPlayer.queue.current?.encoded !== serverEncoded) {
+					if (createdPlayer.queue.current) {
+						createdPlayer.queue.previous.unshift(createdPlayer.queue.current);
+						while (createdPlayer.queue.previous.length > 25) createdPlayer.queue.previous.pop();
+					}
+				}
+				createdPlayer.queue.tracks.shift();
+				createdPlayer.queue.current = (head as import('lavalink-client').Track) ?? null;
+			} else {
+				createdPlayer.queue.current = this.container.audio.utils.buildTrack(
+					lavalinkPlayer.track,
+					createdPlayer.queue.current?.requester || this.container.client.user
+				);
+			}
 		}
 
 		const now = Date.now();
@@ -260,14 +277,14 @@ export class SessionRestoreEngine {
 		}
 
 		// Initialize lastTargetUid so subsequent mutations do not fire spurious epoch++
-		const target = getTargetNextTrack(createdPlayer);
-		const uid = target?.userData?.uid;
-		createdPlayer.mixerRuntime.lastTargetUid = typeof uid === 'string' ? uid : (target?.encoded ?? null);
+		createdPlayer.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(createdPlayer));
 
 		// Force-reset mixer plugin to wipe stale sub slots and sync lastKnownEpoch
 		await this.container.mixerService?.ensureMixerFilter?.(createdPlayer)?.catch(() => null);
 		await this.container.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch((error: unknown) => {
-			this.logger.warn(`Mixer reset after resume failed at ${lavalinkPlayer.guildId}: ${error instanceof Error ? error.message : String(error)}`);
+			this.logger.warn(
+				`Mixer reset after resume failed at ${lavalinkPlayer.guildId}: ${error instanceof Error ? error.message : String(error)}`
+			);
 		});
 		await this.container.mixerService?.reconcileAfterResume?.(createdPlayer)?.catch(() => null);
 

@@ -3,6 +3,8 @@ import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, Un
 import * as Sentry from '@sentry/node';
 import { ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import { sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import * as view from '../modules/audio/view/play.ts';
 
@@ -299,10 +301,20 @@ export class AudioService {
 		if (player.queue.current) {
 			player.queue.tracks.unshift(player.queue.current);
 		}
+		player.queue.previous.pop();
+		player.queue.current = previousTrack as Track;
+		notifyQueueMutated(player, { invalidate: false });
+		cancelPendingInvalidate(player);
 		await container.mixerService.clearNext(player).catch(() => null);
 		await container.mixerService.primeForPlay(player);
-		await player.play({ clientTrack: previousTrack });
-		player.queue.previous.pop();
+		try {
+			await sendOverride(player, 'PLAY_NOW', previousTrack.encoded ?? null);
+		} catch (error: unknown) {
+			// mixer 미설치/테스트 스텁 등 오버라이드 실패 시 라이브러리 play로 폴백한다.
+			await player.play({ clientTrack: previousTrack }).catch(() => {
+				throw error;
+			});
+		}
 		return previousTrack;
 	}
 

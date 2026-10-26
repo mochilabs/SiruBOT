@@ -54,10 +54,7 @@ export class QueueAdvancer {
 			`Track ended: ${ended?.info?.title ?? track?.info.title} by ${ended?.info?.author ?? track?.info.author} (reason: ${payload.reason})`
 		);
 		reportPlaybackEvent(player.guildId, 'track_end', ended, { reason: payload.reason });
-	}
 
-	public handleTrackEnd(player: CustomPlayer, track: Track | null, payload: TrackEndEvent) {
-		const ended = track?.encoded ?? null;
 		// 채팅 TTS 클립 전용 진행 — 명세 4.2 (다른 경로와 섞지 않는다).
 		if (this.container.chatTtsService.isTtsEnded(player, ended)) {
 			if (payload.reason === 'replaced') {
@@ -100,13 +97,12 @@ export class QueueAdvancer {
 		reason: string | null = null
 	) {
 		// 채팅 TTS 클립 실패는 조용히 스킵한다 (명세 4.6): 알림·연속 오류 중단 없이 다음 클립으로 진행한다.
+		// 단독 TTS 중 음악 큐는 비어 있다 — mixerService.skip은 STOP 오버라이드로 단독 큐를 죽이므로 직접 진행한다.
 		if (isTtsClip(track)) {
 			this.logger.warn(`[chatTts] TTS clip ${kind} silently skipped (guild ${player.guildId})${reason ? ` (${reason})` : ''}`);
 			this.clearAdvancePending(player.guildId);
-			// 스킵이 trackEnd/queueEnd를 다시 태워 continueAfterTtsClip으로 이어진다 — 실패하면 직접 진행한다.
-			await this.container.mixerService.skip(player).catch((error) => {
-				this.logger.warn(`[chatTts] clip skip failed (guild ${player.guildId}), continuing directly: ${error}`);
-				return this.host.continueAfterTtsClip(player, track as Track | null);
+			await this.host.continueAfterTtsClip(player, track as Track | null).catch((error) => {
+				this.logger.warn(`[chatTts] clip continue failed (guild ${player.guildId}): ${error}`);
 			});
 			return;
 		}

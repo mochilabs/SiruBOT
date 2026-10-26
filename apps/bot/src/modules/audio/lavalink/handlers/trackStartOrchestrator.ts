@@ -66,7 +66,10 @@ export class TrackStartOrchestrator {
 			// 채팅 TTS 클립마다 컨트롤러를 다시 보내면 메시지마다 리센드 스팸이 된다 — 알림만 생략한다.
 		} else {
 			await this.container.playerNotifier.onTrackStart(player);
-			// 음악이 시작되면 단독 대기 중이던 TTS 클립은 오버레이로 순서대로 넘어간다 (명세 4.3)
+			// 음악이 시작되면 단독 대기 중이던 TTS 클립은 오버레이로 순서대로 넘어간다 (명세 4.3).
+			// 그 전에 시드만 되고 재생되지 않은 단독 TTS 클립 잔재를 큐에서 걷어낸다 (명세 4.2) —
+			// 남겨두면 곡 사이에 클립이 메인 트랙으로 재생될 수 있다.
+			this.container.chatTtsService.scrubTtsClips(player, null);
 			void this.container.chatTtsService
 				.drainSoloQueueToAnnounce(player)
 				.catch((error) => this.logger.warn(`[chatTts] solo queue drain failed (guild ${player.guildId}): ${error}`));

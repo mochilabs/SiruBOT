@@ -626,7 +626,7 @@ describe('start → end → advance (클라이언트 소유 전이)', () => {
 
 	it('비예열 길드에서 finished trackEnd가 v2 전이로 위임되고 fallback watchdog을 안다', async () => {
 		const { handler } = makeTrackedHandler();
-		const { mixer } = stubPlaybackContainer({
+		stubPlaybackContainer({
 			consumePreloaded: vi.fn(() => false),
 			consumeOverlapAbort: vi.fn(() => false)
 		});
@@ -636,7 +636,7 @@ describe('start → end → advance (클라이언트 소유 전이)', () => {
 
 		handler.handleTrackEnd(player, track('a-enc', 'id-a'), { reason: 'finished' });
 
-		expect(reportPlaybackEvent).not.toHaveBeenCalled();
+		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_end', expect.anything(), { reason: 'finished' });
 		expect(handler.startClientOwnedTrack).not.toHaveBeenCalled();
 	});
 });
@@ -690,14 +690,16 @@ describe('handleTrackFailure (stuck/error 공통 복구)', () => {
 		expect(vi.getTimerCount()).toBe(0);
 	});
 
-	it('TTS 클립 stuck은 알림·오류 누적 없이 조용히 스킵한다', async () => {
+	it('TTS 클립 stuck은 알림·오류 누적 없이 조용히 이어 진행한다', async () => {
 		const { handler } = makeTrackedHandler();
 		const { mixer } = stubPlaybackContainer();
 		const player = fullPlayer();
+		handler.continueAfterTtsClip = vi.fn(async () => undefined);
 
 		await handler.handleTrackStuck(player, ttsTrack('tts-enc', 'id-t'), {});
 
-		expect(mixer.skip).toHaveBeenCalledWith(player);
+		expect(handler.continueAfterTtsClip).toHaveBeenCalledWith(player, expect.objectContaining({ encoded: 'tts-enc' }));
+		expect(mixer.skip).not.toHaveBeenCalled();
 		expect(player.consecutiveErrors).toBe(0);
 		expect(reportPlaybackEvent).not.toHaveBeenCalled();
 		expect(channelSend).not.toHaveBeenCalled();

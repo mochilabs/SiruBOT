@@ -127,4 +127,108 @@ describe('MixerService v2 Protocol Tests', () => {
 			epoch: 100
 		});
 	});
+
+	it('preloadUpcoming and clearNext notify queue mutation when head track changes', async () => {
+		vi.useFakeTimers();
+		fetchMock.mockResolvedValue(
+			new Response(JSON.stringify({ state: 'PLAYING', epoch: 2 }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const service = new MixerService();
+		(await import('@sapphire/framework')).container.mixerService = service as any;
+		const player = {
+			...fakePlayer(),
+			repeatMode: 'off',
+			currentEpoch: 1,
+			mixerRuntime: {
+				pending: new Map(),
+				transitionSeq: 0,
+				lastTargetUid: 'uid-old',
+				invalidateTimer: null,
+				sampleMiss: 0
+			},
+			queue: {
+				current: { encoded: 'cur', userData: { uid: 'uid-cur' } },
+				tracks: [{ encoded: 'next-new', userData: { uid: 'uid-new' } }],
+				previous: []
+			}
+		} as unknown as CustomPlayer;
+
+		await service.preloadUpcoming(player);
+		expect(player.currentEpoch).toBe(2);
+		await vi.advanceTimersByTimeAsync(60);
+		expect(fetchMock).toHaveBeenCalledWith(
+			'http://localhost:2333/mixer/queue/invalidate',
+			expect.objectContaining({ method: 'POST' })
+		);
+		vi.useRealTimers();
+	});
+
+	it('handleMixerNeedNext ignores solo TTS current track and retries 409 when gapless/crossfade are both off', async () => {
+		const { handleMixerNeedNext } = await import('../modules/audio/lavalink/handlers/mixerHandlers.ts');
+		const { TTS_CLIP_REQUESTER_ID } = await import('../modules/audio/lavalink/requester.ts');
+		const { container } = await import('@sapphire/framework');
+		const service = new MixerService();
+		container.mixerService = service as any;
+
+		const ttsPlayer = {
+			...fakePlayer(),
+			repeatMode: 'off',
+			currentEpoch: 5,
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: { encoded: 'tts-enc', requester: { id: TTS_CLIP_REQUESTER_ID } },
+				tracks: [{ encoded: 'song-a', info: { identifier: 'a' } }],
+				previous: []
+			}
+		} as unknown as CustomPlayer;
+
+		await handleMixerNeedNext(ttsPlayer, { remainingMs: 2000, currentTrackEncoded: 'tts-enc' });
+		expect(fetchMock).not.toHaveBeenCalled();
+
+		// Now test Crossfade OFF + Gapless OFF with 409 epoch sync retry
+		(container.guildService.getMixerSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+			gaplessEnabled: false,
+			crossfadeEnabled: false
+		});
+		fetchMock
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ error: 'STALE_EPOCH', lastKnownEpoch: 12 }), {
+					status: 409,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ state: 'NO_NEXT', epoch: 12 }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			);
+
+		const musicPlayer = {
+			...fakePlayer(),
+			repeatMode: 'off',
+			currentEpoch: 5,
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: { encoded: 'song-cur', requester: { id: 'user-1' } },
+				tracks: [{ encoded: 'song-next', requester: { id: 'user-1' } }],
+				previous: []
+			}
+		} as unknown as CustomPlayer;
+
+		await handleMixerNeedNext(musicPlayer, { remainingMs: 5000, currentTrackEncoded: 'song-cur' });
+		expect(musicPlayer.currentEpoch).toBe(12);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		const retryBody = JSON.parse((fetchMock.mock.calls[1] as [string, RequestInit])[1].body as string);
+		expect(retryBody).toEqual({
+			guildId: '123456789012345678',
+			epoch: 12,
+			encodedTrack: null,
+			isEmpty: true
+		});
+	});
 });
