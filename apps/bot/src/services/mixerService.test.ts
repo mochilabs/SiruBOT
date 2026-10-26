@@ -263,7 +263,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		const promise = handleMixerNeedNext(player, { remainingMs: 5000, currentTrackEncoded: 'song-a' });
 		// 전이 완료: current가 다음 곡으로 바뀐다.
 		player.queue.current = { encoded: 'song-b', requester: { id: 'user-1' } } as any;
-		player.queue.tracks = [{ encoded: 'song-c', requester: { id: 'user-1' } }] as any;
+		player.queue.tracks.splice(0, player.queue.tracks.length, { encoded: 'song-c', requester: { id: 'user-1' } } as any);
 		releaseSettings();
 		await promise;
 
