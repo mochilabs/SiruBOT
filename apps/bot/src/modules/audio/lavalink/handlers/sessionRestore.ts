@@ -268,11 +268,7 @@ export class SessionRestoreEngine {
 		const savedQueue = queueStore ? await queueStore.get(lavalinkPlayer.guildId).catch(() => null) : null;
 		const rawParsed = typeof savedQueue === 'string' ? JSON.parse(savedQueue) : savedQueue;
 		const savedEpoch =
-			typeof rawParsed?.epoch === 'number'
-				? rawParsed.epoch
-				: typeof savedPlayer.currentEpoch === 'number'
-					? savedPlayer.currentEpoch
-					: 1;
+			typeof rawParsed?.epoch === 'number' ? rawParsed.epoch : typeof savedPlayer.currentEpoch === 'number' ? savedPlayer.currentEpoch : 1;
 		createdPlayer.currentEpoch = Math.max(savedEpoch, pluginState?.lastKnownEpoch ?? 1) + 10;
 		if (!createdPlayer.mixerRuntime) {
 			createdPlayer.mixerRuntime = { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 };

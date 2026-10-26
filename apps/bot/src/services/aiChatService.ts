@@ -36,6 +36,7 @@ export {
 	dropChannelHistory,
 	removeFromChannelHistory,
 	updateChannelHistoryMessage,
+	isAiAssistantMessage,
 	flushChannelHistoryPersist
 } from './aiChat/historyStore.ts';
 export {

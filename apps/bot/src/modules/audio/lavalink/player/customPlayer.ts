@@ -54,7 +54,6 @@ export interface MixerRuntime {
 	sampleMiss: number;
 }
 
-
 export class CustomPlayer extends Player {
 	public messageId: string | null = null;
 	public controller: Message | null = null;

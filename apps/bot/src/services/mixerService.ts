@@ -3,7 +3,12 @@ import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
 import type { CustomPlayer, OverrideAction } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { commitLocal, sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
-import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type QueueMutationOptions } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import {
+	cancelPendingInvalidate,
+	getTargetNextTrack,
+	notifyQueueMutated,
+	type QueueMutationOptions
+} from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 const MIXER_FILTER_KEY = 'mixer';
 const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;

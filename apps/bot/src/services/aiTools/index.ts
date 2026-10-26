@@ -7,9 +7,19 @@ import { webSearchTool } from './search.ts';
 import type { AiTool, AiToolContext, AiToolDefinition } from './types.ts';
 import { weatherTool } from './weather.ts';
 import { webFetchTool } from './webFetch.ts';
+import { serverInfoTool } from './serverInfo.ts';
 
-const TOOLS: AiTool[] = [webSearchTool, webFetchTool, weatherTool, deliveryTool, ohaasaTool, botHelpTool, ...musicTools, ...memoryTools];
-
+const TOOLS: AiTool[] = [
+	webSearchTool,
+	webFetchTool,
+	weatherTool,
+	deliveryTool,
+	ohaasaTool,
+	botHelpTool,
+	serverInfoTool,
+	...musicTools,
+	...memoryTools
+];
 const TOOL_MAP = new Map<string, AiTool>(TOOLS.map((tool) => [tool.name, tool]));
 
 export function getAiToolDefinitions(): AiToolDefinition[] {

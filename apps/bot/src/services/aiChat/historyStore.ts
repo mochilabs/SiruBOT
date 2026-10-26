@@ -339,3 +339,20 @@ export async function updateChannelHistoryMessage(channelId: string, messageId: 
 		return false;
 	}
 }
+
+/**
+ * 특정 메시지 ID가 AI 어시스턴트의 답변 메시지인지 확인해요.
+ * 답장(Reply) 시 봇의 다른 기능성 메시지(컨트롤러, 명령어 결과 등)에 달린 답장으로 AI가 오작동하는 것을 방지해요.
+ */
+export async function isAiAssistantMessage(channelId: string, messageId: string): Promise<boolean> {
+	try {
+		if (!channelHistories.has(channelId) && !emptyChannelIds.has(channelId)) {
+			await loadChannelHistory(channelId);
+		}
+		const state = channelHistories.get(channelId);
+		if (!state) return false;
+		return state.messages.some((m) => m.role === 'assistant' && m.messageId === messageId);
+	} catch {
+		return false;
+	}
+}

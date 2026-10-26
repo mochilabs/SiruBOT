@@ -251,10 +251,7 @@ async function recover(player: CustomPlayer, reason: 'stale' | 'desync', serverE
 	if (serverEncoded) {
 		const serverTrack = await fetchServerTrackById(player);
 		if (serverTrack) {
-			if (
-				isSameTrack(serverTrack, player.queue.current) ||
-				isSameTrack(serverTrack, player.transitionState?.confirmedNowPlaying)
-			) {
+			if (isSameTrack(serverTrack, player.queue.current) || isSameTrack(serverTrack, player.transitionState?.confirmedNowPlaying)) {
 				rt(player).transitionSeq++;
 				player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
 				container.logger.info(`[mixer] recovery (${reason}) reconciled to current playing track on guild ${player.guildId}`);
@@ -321,13 +318,10 @@ export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndE
 	// 1) 빈 큐(repeat=off)면 queueEnd를 불러 queue.current를 null로 비우고,
 	// 2) 대기열에 곡이 있거나 repeat=queue면 queueTrackEnd를 먼저 불러 다음 곡을 queue.current로 시프트한다!
 	// 따라서 시작 확정값(confirmedNowPlaying/lastStartedEncoded)과 queue.current를 모두 대조해야 한다 (C-03).
-	const confirmedOrStarted =
-		player.transitionState?.confirmedNowPlaying?.encoded ?? player.transitionState?.lastStartedEncoded ?? null;
+	const confirmedOrStarted = player.transitionState?.confirmedNowPlaying?.encoded ?? player.transitionState?.lastStartedEncoded ?? null;
 	const currentEncoded = player.queue.current?.encoded ?? null;
 	const preShiftedByLibrary =
-		currentEncoded !== null &&
-		currentEncoded !== ended &&
-		(confirmedOrStarted === ended || player.queue.previous?.[0]?.encoded === ended);
+		currentEncoded !== null && currentEncoded !== ended && (confirmedOrStarted === ended || player.queue.previous?.[0]?.encoded === ended);
 	if (!ended || (ended !== currentEncoded && ended !== confirmedOrStarted && !preShiftedByLibrary)) {
 		return;
 	}
@@ -360,9 +354,10 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 
 	// lavalink-client의 queueTrackEnd가 이미 다음 곡을 queue.current로 시프트해 놓은 경우
 	// 다시 commitLocal(splice)을 부르면 차차기 곡으로 한 칸 더 건너뛰므로 그 current를 그대로 쓴다 (C-03).
-	const next = preShiftedByLibrary && player.queue.current && player.queue.current.encoded !== ended
-		? (player.queue.current as Track)
-		: getTargetNextTrack(player);
+	const next =
+		preShiftedByLibrary && player.queue.current && player.queue.current.encoded !== ended
+			? (player.queue.current as Track)
+			: getTargetNextTrack(player);
 	if (!next) {
 		player.queue.current = null;
 		notifyQueueMutated(player, { invalidate: false, bumpEpoch: false, force: true });
@@ -534,7 +529,10 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 		// 재-결정 시점의 epoch와 큐를 다시 읽는다 — sleep 사이에 notifyQueueMutated가
 		// epoch를 또 올리거나 current가 바뀌었을 수 있다 (F7). sendOverride를 재호출하면
 		// 실패 시 hardResync 재귀가 발생할 수 있으므로 직접 override를 호출하고 409만 1회 재시도한다.
-		const freshEpoch = await container.mixerService.getState(player).then((s) => s.lastKnownEpoch).catch(() => null);
+		const freshEpoch = await container.mixerService
+			.getState(player)
+			.then((s) => s.lastKnownEpoch)
+			.catch(() => null);
 		if (typeof freshEpoch === 'number') {
 			player.currentEpoch = Math.max(player.currentEpoch, freshEpoch + 1);
 		}
@@ -543,11 +541,7 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 		const encodedTrack = current?.encoded ?? null;
 		const resyncKey = randomUUID();
 		try {
-			await container.mixerService.override(
-				player,
-				{ epoch: player.currentEpoch, action, encodedTrack },
-				resyncKey
-			);
+			await container.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, resyncKey);
 		} catch (err: unknown) {
 			if (err instanceof MixerRequestError && err.status === 409) {
 				if (typeof err.lastKnownEpoch === 'number') {
@@ -557,11 +551,7 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 					const waitMs = err.v2WindowOpenAt - Date.now() + 50;
 					if (waitMs > 0) await sleep(waitMs);
 				}
-				await container.mixerService.override(
-					player,
-					{ epoch: player.currentEpoch, action, encodedTrack },
-					randomUUID()
-				);
+				await container.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, randomUUID());
 			} else {
 				throw err;
 			}

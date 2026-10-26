@@ -22,8 +22,8 @@ const SYSTEM_PROMPT = [
 	'',
 	'## 도구 사용',
 	'- 사용자가 "뭐 할 수 있어", "무엇이 가능해", "명령어 알려줘", "사용법" 등을 물으면 `bot_help`로 실제 명령어 목록을 조회하고, 결과의 `mention`을 답변에 그대로 넣어 클릭해서 바로 실행되게 해요.',
+	'- 서버 인원, 채널 수, 개설일, 문의 방법/티켓 설정 등을 물으면 `server_info` 도구를 써요.',
 	'- 날씨는 `weather_get`, 배송 조회는 `delivery_track`, 별자리 운세는 `get_ohaasa_horoscope` 전용 도구를 써요.',
-	'- 그 외 최신·실시간 사실이 필요하면 `web_search`를 먼저 사용하고, 검색 결과를 근거로 답해요. 원문 내용이 더 필요하면 `web_fetch`로 페이지 본문을 가져와 요약해요.',
 	'- 사용자가 음악 요청(재생/일시정지/스킵/정지/대기열/볼륨/이동·탐색/셔플/반복/이전곡/삭제·순서 변경/필터/가사/재생 기록/TTS/플레이리스트)을 하면 `music_*` 도구를 사용해요. 음성 채널 미접속 오류는 자연스럽게 안내해요.',
 	'- 도구 결과의 `error`가 오면 사과하고 사용자가 이해할 수 있는 한국어로 대신 전달해요.',
 	'- 사용자가 이미지를 보내면 이미지 내용을 잘 보고 답해요. 텍스트가 없어도 이미지만으로 대화할 수 있어요.',
@@ -71,6 +71,36 @@ export async function buildRecentChannelBlock(channelId: string, excludeMessageI
 	}
 }
 
+/** 질문 유저의 음성 채널 상태 및 서버 음악 재생 상황을 간결하게 컨텍스트로 제공해요 */
+export function buildDiscordContextBlock(guildId?: string | null, userId?: string | null): string | null {
+	if (!guildId) return null;
+	const client = container.client;
+	const guild = client?.guilds?.cache?.get(guildId);
+	if (!guild) return null;
+	const lines: string[] = [];
+
+	if (userId) {
+		const member = guild.members.cache.get(userId);
+		const voice = member?.voice?.channel;
+		if (voice) {
+			const memberNames = voice.members.map((m) => m.displayName).slice(0, 10);
+			const moreCount = voice.members.size - memberNames.length;
+			const membersText = moreCount > 0 ? `${memberNames.join(', ')} 외 ${moreCount}명` : memberNames.join(', ');
+			lines.push(`- 사용자 음성 채널: #${voice.name} (참여 ${voice.members.size}명: ${membersText})`);
+		}
+	}
+
+	const player = container.audio?.getPlayer(guildId);
+	if (player && player.queue?.current) {
+		const track = player.queue.current;
+		const status = player.paused ? '일시정지' : '재생 중';
+		lines.push(`- 현재 음악: ${track.info.title} (${track.info.author}) [${status}]`);
+	}
+
+	if (lines.length === 0) return null;
+	return ['# 현재 상황 컨텍스트', ...lines].join('\n');
+}
+
 /**
  * 시스템 프롬프트 조립 — 고정 페르소나 + 채널 최근 채팅 + 사용자 기억 + 서버 지침
  * + 롤링 요약 + 요약 대기 원문 + 최근 대화 기록을 한 블록으로 넘겨요.
@@ -82,9 +112,11 @@ export function buildSystemContent(
 	state: ChannelHistoryState,
 	channelBlock: string | null = null,
 	memoryBlock: string | null = null,
+	discordContextBlock: string | null = null,
 	budget: number = getContextTokenBudget()
 ): string {
 	const head: string[] = [SYSTEM_PROMPT];
+	if (discordContextBlock) head.push('', discordContextBlock);
 	if (channelBlock) head.push('', channelBlock);
 	if (memoryBlock) head.push('', memoryBlock);
 	if (state.summary) head.push('', '# 이전 대화 요약', '더 오래된 대화를 압축한 요약이에요. 사실과 기억의 근거로 참고해요.', state.summary);

@@ -162,10 +162,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		await service.preloadUpcoming(player);
 		expect(player.currentEpoch).toBe(2);
 		await vi.advanceTimersByTimeAsync(60);
-		expect(fetchMock).toHaveBeenCalledWith(
-			'http://localhost:2333/mixer/queue/invalidate',
-			expect.objectContaining({ method: 'POST' })
-		);
+		expect(fetchMock).toHaveBeenCalledWith('http://localhost:2333/mixer/queue/invalidate', expect.objectContaining({ method: 'POST' }));
 		vi.useRealTimers();
 	});
 

@@ -36,7 +36,8 @@ export function syncQueueToNowPlaying(player: CustomPlayer, track: Track | null)
 	}
 	if (Array.isArray(queue.tracks) && typeof encoded === 'string') {
 		const index = queue.tracks.findIndex(
-			(t: unknown) => (t as { encoded?: unknown })?.encoded === encoded || isSameTrack(t as { encoded?: unknown; info?: { identifier?: unknown } }, track)
+			(t: unknown) =>
+				(t as { encoded?: unknown })?.encoded === encoded || isSameTrack(t as { encoded?: unknown; info?: { identifier?: unknown } }, track)
 		);
 		if (index >= 0) {
 			const [now] = queue.tracks.splice(index, 1);
