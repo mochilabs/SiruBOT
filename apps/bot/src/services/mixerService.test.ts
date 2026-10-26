@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Player } from 'lavalink-client';
+import { container } from '@sapphire/framework';
+import type { Player, Track, TrackEndEvent } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import { commitLocal, handleMixerAdvanced, handleMixerOverridden, handleMixerTrackEnd } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
+import { getTargetNextTrack } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { MixerService } from './mixerService.ts';
-
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
@@ -268,5 +270,157 @@ describe('MixerService v2 Protocol Tests', () => {
 		await promise;
 
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('repeatMode=queue returns current track when tracks is empty and rotates queue on commitLocal (B-1)', () => {
+		const trackA = { encoded: 'enc-a', info: { identifier: 'id-a' }, userData: { uid: 'uid-a' } } as unknown as Track;
+		const trackB = { encoded: 'enc-b', info: { identifier: 'id-b' }, userData: { uid: 'uid-b' } } as unknown as Track;
+		const saveMock = vi.fn().mockResolvedValue(undefined);
+
+		const player = {
+			...fakePlayer(),
+			repeatMode: 'queue',
+			currentEpoch: 1,
+			transitionState: { confirmedNowPlaying: trackA },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: trackA,
+				tracks: [trackB],
+				previous: [],
+				utils: { save: saveMock }
+			}
+		} as unknown as CustomPlayer;
+
+		// Normal advance from A to B in repeatMode=queue rotates A to the back of tracks without bumping epoch
+		commitLocal(player, trackB, { invalidate: false, bumpEpoch: false });
+		expect(player.queue.current).toBe(trackB);
+		expect(player.queue.tracks).toEqual([trackA]);
+		expect(player.currentEpoch).toBe(1);
+		expect(saveMock).toHaveBeenCalled();
+
+		// Single-track queue in repeatMode=queue targets current
+		player.queue.tracks.splice(0, player.queue.tracks.length);
+		expect(getTargetNextTrack(player)).toBe(trackB);
+	});
+
+	it('handleMixerAdvanced normal commit does not bump currentEpoch or fire invalidate (B-2 / C-01)', async () => {
+		const trackA = { encoded: 'enc-a', info: { identifier: 'id-a' }, userData: { uid: 'uid-a' } } as unknown as Track;
+		const trackB = { encoded: 'enc-b', info: { identifier: 'id-b' }, userData: { uid: 'uid-b' } } as unknown as Track;
+		const trackC = { encoded: 'enc-c', info: { identifier: 'id-c' }, userData: { uid: 'uid-c' } } as unknown as Track;
+
+		const player = {
+			...fakePlayer(),
+			repeatMode: 'off',
+			currentEpoch: 5,
+			transitionState: { confirmedNowPlaying: trackA },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: trackA,
+				tracks: [trackB, trackC],
+				previous: [],
+				utils: { save: vi.fn().mockResolvedValue(undefined) }
+			}
+		} as unknown as CustomPlayer;
+
+		await handleMixerAdvanced(player, { epoch: 5, encodedTrack: 'enc-b', handoffType: 'CROSSFADE', handoffId: 'h-1' });
+		expect(player.queue.current).toBe(trackB);
+		expect(player.queue.tracks).toEqual([trackC]);
+		expect(player.currentEpoch).toBe(5);
+		expect(player.mixerRuntime.lastTargetUid).toBe('uid-c');
+		expect(player.mixerRuntime.invalidateTimer).toBeNull();
+	});
+
+	it('handleMixerTrackEnd coldStart plays pre-shifted current track when lavalink-client queueTrackEnd already shifted queue (C-03)', async () => {
+		vi.useFakeTimers();
+		const service = new MixerService();
+		container.mixerService = service;
+
+		fetchMock.mockResolvedValueOnce(
+			new Response(JSON.stringify({ state: 'PLAYING', epoch: 3 }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const trackA = { encoded: 'enc-a', info: { identifier: 'id-a' }, userData: { uid: 'uid-a' } } as unknown as Track;
+		const trackB = { encoded: 'enc-b', info: { identifier: 'id-b' }, userData: { uid: 'uid-b' } } as unknown as Track;
+		const trackC = { encoded: 'enc-c', info: { identifier: 'id-c' }, userData: { uid: 'uid-c' } } as unknown as Track;
+
+		// Simulate lavalink-client's queueTrackEnd having shifted B into queue.current and A into previous[0]
+		const player = {
+			...fakePlayer(),
+			node: {
+				options: { host: 'localhost', port: 2333, authorization: 'node-pw' },
+				fetchPlayer: vi.fn().mockResolvedValue({ track: null })
+			},
+			repeatMode: 'off',
+			currentEpoch: 3,
+			transitionState: { confirmedNowPlaying: trackA, lastStartedEncoded: 'enc-a' },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: trackB,
+				tracks: [trackC],
+				previous: [trackA],
+				utils: { save: vi.fn().mockResolvedValue(undefined) }
+			}
+		} as unknown as CustomPlayer;
+
+		const endEvent = { reason: 'finished', track: { encoded: 'enc-a' } } as unknown as TrackEndEvent;
+		const endPromise = handleMixerTrackEnd(player, endEvent);
+		await vi.advanceTimersByTimeAsync(250);
+		await endPromise;
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(url).toBe('http://localhost:2333/mixer/queue/override');
+		expect(JSON.parse(init.body as string)).toEqual({
+			guildId: '123456789012345678',
+			epoch: 3,
+			action: 'PLAY_NOW',
+			encodedTrack: 'enc-b'
+		});
+		// B was played without double-splicing C out of tracks
+		expect(player.queue.current).toBe(trackB);
+		expect(player.queue.tracks).toEqual([trackC]);
+
+		// Clean up pending timer
+		const reqId = (init.headers as Record<string, string>)['Idempotency-Key'];
+		handleMixerOverridden(player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
+		vi.useRealTimers();
+	});
+	it('invalidate retries on 409 STALE_EPOCH and observeMixerEvent tracks overlap state (B-11, B-13)', async () => {
+		fetchMock
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ error: 'STALE_EPOCH', lastKnownEpoch: 15 }), {
+					status: 409,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ state: 'PLAYING', epoch: 15, refiredNeedNext: true }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			);
+
+		const service = new MixerService();
+		const player = {
+			...fakePlayer(),
+			currentEpoch: 4
+		} as unknown as CustomPlayer;
+
+		service.observeMixerEvent({
+			op: 'mixer',
+			type: 'overlapStart',
+			guildId: '123456789012345678',
+			track: { identifier: 'rel-1' }
+		});
+		expect(service.isOverlapActive('123456789012345678')).toBe(true);
+		expect(service.getOverlapTrackIdentifier('123456789012345678')).toBe('rel-1');
+
+		await service.invalidate(player, 4);
+		expect(player.currentEpoch).toBe(15);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(service.isOverlapActive('123456789012345678')).toBe(false);
 	});
 });

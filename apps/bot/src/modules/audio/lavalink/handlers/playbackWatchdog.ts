@@ -4,6 +4,7 @@ import { ILogObj, Logger } from 'tslog';
 import * as Sentry from '@sentry/node';
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
+import { getTargetNextTrack, getTrackUid, notifyQueueMutated } from '../queue/queueWrapper.ts';
 
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
 const TRANSITION_RECONCILE_MS = 800;
@@ -28,8 +29,15 @@ export function syncQueueToNowPlaying(player: CustomPlayer, track: Track | null)
 	const queue = player.queue;
 	if (!queue || !track) return;
 	const encoded = (track as { encoded?: unknown }).encoded;
+	// 이미 current가 시작된 트랙과 같으면(playPrevious, commitLocal, 한 곡 반복 등)
+	// queue.tracks 안의 동일 곡 사본을 잘못 splice하지 않도록 즉시 종료한다 (B-8).
+	if (queue.current && ((queue.current as { encoded?: unknown })?.encoded === encoded || isSameTrack(queue.current, track))) {
+		return;
+	}
 	if (Array.isArray(queue.tracks) && typeof encoded === 'string') {
-		const index = queue.tracks.findIndex((t: unknown) => (t as { encoded?: unknown })?.encoded === encoded);
+		const index = queue.tracks.findIndex(
+			(t: unknown) => (t as { encoded?: unknown })?.encoded === encoded || isSameTrack(t as { encoded?: unknown; info?: { identifier?: unknown } }, track)
+		);
 		if (index >= 0) {
 			const [now] = queue.tracks.splice(index, 1);
 			if (queue.current && (queue.current as { encoded?: unknown })?.encoded !== encoded) {
@@ -37,8 +45,15 @@ export function syncQueueToNowPlaying(player: CustomPlayer, track: Track | null)
 					queue.previous.unshift(queue.current);
 					while (queue.previous.length > 25) queue.previous.pop();
 				}
+				if (player.repeatMode === 'queue') {
+					queue.tracks.push(queue.current);
+				}
 			}
 			queue.current = now as Track;
+			if (player.mixerRuntime) {
+				player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
+			}
+			void queue.utils?.save?.()?.catch(() => null);
 			return;
 		}
 	}
@@ -47,7 +62,14 @@ export function syncQueueToNowPlaying(player: CustomPlayer, track: Track | null)
 			queue.previous.unshift(queue.current);
 			while (queue.previous.length > 25) queue.previous.pop();
 		}
+		if (queue.current && player.repeatMode === 'queue' && Array.isArray(queue.tracks)) {
+			queue.tracks.push(queue.current);
+		}
 		queue.current = track as (typeof queue)['current'];
+		if (player.mixerRuntime) {
+			player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
+		}
+		void queue.utils?.save?.()?.catch(() => null);
 	}
 }
 
@@ -131,6 +153,10 @@ export class PlaybackWatchdog {
 		if (displaced && (displaced as { encoded?: unknown }).encoded !== encoded && Array.isArray(player.queue.tracks)) {
 			player.queue.tracks.unshift(displaced as (typeof player.queue.tracks)[number]);
 		}
+		if (player.mixerRuntime) {
+			notifyQueueMutated(player, { invalidate: false, bumpEpoch: false });
+		}
+		void player.queue?.utils?.save?.()?.catch(() => null);
 		// 뷰 복원 전용: 곡은 이미 재생 중이므로 새 컨트롤러를 보내지 않고(edit/send 없이)
 		// 기존 메시지 컴포넌트만 다시 그린다. sendController를 부르면 정상 trackStart가
 		// 보낸 컨트롤러와 중복 발송 레이스가 생긴다.

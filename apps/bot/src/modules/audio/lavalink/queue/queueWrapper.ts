@@ -32,6 +32,7 @@ export function getTrackUid(track: Track | UnresolvedTrack | null | undefined): 
 /**
  * Returns the next target track to be played:
  * - In 'track' repeat mode: the current playing track.
+ * - In 'queue' repeat mode: queue.tracks[0], or current playing track when on the last song.
  * - Otherwise: the first track waiting in queue.tracks[0].
  */
 export function getTargetNextTrack(player: CustomPlayer): Track | null {
@@ -42,30 +43,42 @@ export function getTargetNextTrack(player: CustomPlayer): Track | null {
 		const candidate = (player.queue?.current as Track | null) ?? null;
 		return isTtsClip(candidate) ? null : candidate;
 	}
+	if (player.repeatMode === 'queue') {
+		const first = (player.queue?.tracks?.[0] as Track | null) ?? null;
+		if (first && !isTtsClip(first)) return first;
+		const current = (player.queue?.current as Track | null) ?? null;
+		return isTtsClip(current) ? null : current;
+	}
 	const candidate = (player.queue?.tracks?.[0] as Track | null) ?? null;
 	return isTtsClip(candidate) ? null : candidate;
 }
 
 export interface QueueMutationOptions {
 	invalidate?: boolean;
+	bumpEpoch?: boolean;
+	force?: boolean;
 }
 
 /**
  * Central queue mutation observer.
  * Inspects whether the target next track (head) has changed.
- * Only increments player.currentEpoch when the head's uid actually changes.
+ * Only increments player.currentEpoch when the head's uid actually changes (or force=true)
+ * and bumpEpoch is not false.
  */
 export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOptions = {}): void {
+	if (!player.mixerRuntime) return;
 	const target = getTargetNextTrack(player);
 	const targetUid = getTrackUid(target);
 
-	// If the head track's uid hasn't changed (e.g. tracks appended to the tail), do nothing
-	if (targetUid === player.mixerRuntime.lastTargetUid) {
+	// If the head track's uid hasn't changed (e.g. tracks appended to the tail), do nothing unless forced
+	if (!opts.force && targetUid === player.mixerRuntime.lastTargetUid) {
 		return;
 	}
 
 	player.mixerRuntime.lastTargetUid = targetUid;
-	player.currentEpoch++;
+	if (opts.bumpEpoch !== false) {
+		player.currentEpoch++;
+	}
 
 	// Cancel any pending debounced invalidate
 	if (player.mixerRuntime.invalidateTimer) {
@@ -73,7 +86,7 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
 		player.mixerRuntime.invalidateTimer = null;
 	}
 
-	// Invalidate is skipped when an immediate override is planned (e.g. user skip / recovery)
+	// Invalidate is skipped when an immediate override is planned or on normal transitions
 	if (opts.invalidate === false) {
 		return;
 	}
@@ -92,7 +105,7 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
  * Cancels any currently pending debounced invalidate request.
  */
 export function cancelPendingInvalidate(player: CustomPlayer): void {
-	if (player.mixerRuntime.invalidateTimer) {
+	if (player.mixerRuntime?.invalidateTimer) {
 		clearTimeout(player.mixerRuntime.invalidateTimer);
 		player.mixerRuntime.invalidateTimer = null;
 	}

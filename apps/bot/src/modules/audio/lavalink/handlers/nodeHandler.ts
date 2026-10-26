@@ -106,11 +106,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 			// Simple cycling through available nodes
 			// changeNode 실패(레이스로 신노드에 플레이어 미존재 등)를 두면 unhandled rejection + 오펜 플레이어가 남는다.
 			const player = orphanPlayers[idx];
+			this.container.mixerService?.markFiltersStale?.(player.guildId);
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
-				.then(() => {
-					// 마이그레이션한 신노드의 플러그인은 깨끗한 슬롯 상태를 모른다 — 에폭을 맞추기 위해 리셋한다.
-					// 테스트의 최소 스텁에서도 깨지지 않게 옵셔널 체이닝으로만 둔다.
+				.then(async () => {
+					// 마이그레이션한 신노드의 플러그인은 필터·설정·슬롯 상태를 모른다 —
+					// 필터와 DB 설정을 재전송하고 에폭을 맞추기 위해 리셋한다 (B-10).
+					await Promise.resolve(this.container.mixerService?.ensureMixerFilter?.(player)).catch(() => null);
 					const reset = this.container.mixerService?.reset?.(player as CustomPlayer, (player as CustomPlayer).currentEpoch ?? 1);
 					return Promise.resolve(reset).catch(() => null);
 				})

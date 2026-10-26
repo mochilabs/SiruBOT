@@ -10,6 +10,7 @@ type Chapter = {
 
 export type CustomPlayerJson = PlayerJson & {
 	messageId: string | null;
+	currentEpoch?: number;
 };
 
 /** 예열 소비 확인 창(ms) — TrackHandler의 watchdog·reconcile과 autoPlayRelated 게이트가 공유한다. */
@@ -87,7 +88,8 @@ export class CustomPlayer extends Player {
 	public override toJSON() {
 		return {
 			...super.toJSON(),
-			messageId: this.messageId
+			messageId: this.messageId,
+			currentEpoch: this.currentEpoch
 		};
 	}
 }

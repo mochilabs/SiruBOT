@@ -303,9 +303,12 @@ export class AudioService {
 		}
 		player.queue.previous.pop();
 		player.queue.current = previousTrack as Track;
-		notifyQueueMutated(player, { invalidate: false });
+		if (player.transitionState) {
+			player.transitionState.confirmedNowPlaying = previousTrack as Track;
+		}
+		notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
-		await container.mixerService.clearNext(player).catch(() => null);
+		void player.queue?.utils?.save?.()?.catch(() => null);
 		await container.mixerService.primeForPlay(player);
 		try {
 			await sendOverride(player, 'PLAY_NOW', previousTrack.encoded ?? null);
@@ -319,14 +322,18 @@ export class AudioService {
 	}
 
 	/**
-	 * 정지 공용 흐름 — queueEnd 종료 안내를 억제하고 mixer 슬롯을 정리한 뒤 재생을 끊는다.
+	 * 정지 공용 흐름 — queueEnd 종료 안내를 억제하고 mixer 슬롯·오버레이를 STOP 오버라이드로 정리한 뒤 재생을 끊는다.
 	 * (/정지 커맨드와 컨트롤러 stop 버튼이 공유)
 	 */
 	public async stopPlayback(player: CustomPlayer): Promise<void> {
 		player.transitionState.stopByCommand = true;
-		// 정지는 플레이어가 곧 사라지므로 슬롯 정리 실패가 치명적이진 않다 — 다만
-		// 무기록으로 남기지 않도록 재시도 후 로그로 남긴다 (P2).
-		await container.mixerService.clearNextLenient(player);
+		if (Array.isArray(player.queue?.tracks)) {
+			player.queue.tracks.splice(0, player.queue.tracks.length);
+		}
+		player.queue.current = null;
+		notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
+		cancelPendingInvalidate(player);
+		await sendOverride(player, 'STOP', null).catch(() => null);
 		await player.stopPlaying().catch(() => null);
 		await player.disconnect().catch(() => null);
 	}
@@ -363,14 +370,20 @@ export class AudioService {
 					player.queue.previous.unshift(player.queue.current);
 					while (player.queue.previous.length > 25) player.queue.previous.pop();
 				}
+				player.queue.current = nextTrack as Track;
 				if (customPlayer.transitionState) {
 					customPlayer.transitionState.preloadConsumedAt = null;
 					customPlayer.transitionState.serverConsumedTrack = null;
+					customPlayer.transitionState.confirmedNowPlaying = nextTrack as Track;
 				}
-				await container.mixerService.clearNext(player).catch(() => null);
+				notifyQueueMutated(customPlayer, { invalidate: false, bumpEpoch: true, force: true });
+				cancelPendingInvalidate(customPlayer);
 				await container.mixerService.primeForPlay(player);
-				await player.play({ clientTrack: nextTrack as Track, paused: false });
-				if (player.queue.tracks.length > 0) this.preloadAfterQueueChange(player);
+				try {
+					await sendOverride(customPlayer, 'PLAY_NOW', (nextTrack as Track).encoded ?? null);
+				} catch {
+					await player.play({ clientTrack: nextTrack as Track, paused: false });
+				}
 			}
 		} else if (!wasIdle) {
 			this.preloadAfterQueueChange(player);

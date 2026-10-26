@@ -35,7 +35,9 @@ export class TrackStartOrchestrator {
 		// (queue.current는 lavalink-client 전이 기계가 뒤늦게 덮어쓸 수 있다.)
 		player.transitionState.confirmedNowPlaying = startedTrack;
 		player.transitionState.serverConsumedTrack = null;
-		this.logger.info(`Track started: ${startedTrack?.info.title} by ${startedTrack?.info.author}`);
+		if (player.mixerRuntime) {
+			player.mixerRuntime.transitionSeq++;
+		}
 		player.consecutiveErrors = 0;
 		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)

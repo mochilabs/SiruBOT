@@ -3,7 +3,7 @@ import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
 import type { CustomPlayer, OverrideAction } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { commitLocal, sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
-import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type QueueMutationOptions } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 const MIXER_FILTER_KEY = 'mixer';
 const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
@@ -68,11 +68,12 @@ export class MixerRequestError extends Error {
  */
 export class MixerService {
 	private readonly filterReady = new Set<string>();
+	/** Active overlap state per guild (value = incoming sub track identifier, or null if unknown). */
+	private readonly activeOverlaps = new Map<string, string | null>();
 	/** Guild-isolated Promise serial queue to enforce strict ordering of REST mutations. */
 	private readonly chains = new Map<string, Promise<unknown>>();
 	/** Pending invalidate coalescence per guild. */
 	private readonly pendingInvalidate = new Map<string, { epoch: number; resolve: () => void; reject: (e: Error) => void }>();
-
 	private nodeRest(player: Player): { base: string; auth: string } {
 		const o = (player.node?.options ?? {}) as { host?: string; port?: number; authorization?: string; secure?: boolean };
 		const proto = o.secure ? 'https' : 'http';
@@ -135,6 +136,14 @@ export class MixerService {
 		const prev = this.chains.get(guildId) ?? Promise.resolve();
 		const next = prev.catch(() => {}).then(() => this.attempt(fn));
 		this.chains.set(guildId, next);
+		void next.then(
+			() => {
+				if (this.chains.get(guildId) === next) this.chains.delete(guildId);
+			},
+			() => {
+				if (this.chains.get(guildId) === next) this.chains.delete(guildId);
+			}
+		);
 		return next;
 	}
 
@@ -180,6 +189,7 @@ export class MixerService {
 
 	public async invalidate(player: CustomPlayer, epoch: number): Promise<void> {
 		const gid = String(player.guildId);
+		this.activeOverlaps.delete(gid);
 		const { promise, resolve, reject } = Promise.withResolvers<void>();
 		const old = this.pendingInvalidate.get(gid);
 		if (old) {
@@ -190,22 +200,38 @@ export class MixerService {
 		void this.enqueue(gid, async (signal) => {
 			const item = this.pendingInvalidate.get(gid);
 			if (!item) return;
-			try {
-				await this.rawCall(player, '/mixer/queue/invalidate', {
+			// Pop before the network call so an in-flight request is never mistaken for a queued item.
+			this.pendingInvalidate.delete(gid);
+			const sendInvalidate = (targetEpoch: number, sig: AbortSignal) =>
+				this.rawCall(player, '/mixer/queue/invalidate', {
 					method: 'POST',
-					body: JSON.stringify({ guildId: gid, epoch: item.epoch }),
+					body: JSON.stringify({ guildId: gid, epoch: targetEpoch }),
 					headers: { 'Idempotency-Key': randomUUID() },
-					signal
+					signal: sig
 				});
-				// 최신 invalidate로 교체됐으면 이 완료가 구 요청의 항목을 지우지 않게 한다.
-				if (this.pendingInvalidate.get(gid) === item) {
-					this.pendingInvalidate.delete(gid);
+			try {
+				try {
+					await sendInvalidate(item.epoch, signal);
+				} catch (error: unknown) {
+					if (!(error instanceof MixerRequestError) || error.status !== 409) {
+						throw error;
+					}
+					if (typeof error.lastKnownEpoch === 'number') {
+						player.currentEpoch = Math.max(player.currentEpoch ?? item.epoch, error.lastKnownEpoch);
+					}
+					if (typeof error.v2WindowOpenAt === 'number') {
+						const waitMs = error.v2WindowOpenAt - Date.now() + 50;
+						if (waitMs > 0) {
+							const { promise: waitPromise, resolve: waitResolve } = Promise.withResolvers<void>();
+							setTimeout(waitResolve, waitMs);
+							await waitPromise;
+						}
+					}
+					const retryEpoch = Math.max(item.epoch, player.currentEpoch ?? item.epoch);
+					await sendInvalidate(retryEpoch, AbortSignal.timeout(MIXER_CALL_TIMEOUT_MS));
 				}
 				item.resolve();
 			} catch (err: unknown) {
-				if (this.pendingInvalidate.get(gid) === item) {
-					this.pendingInvalidate.delete(gid);
-				}
 				item.reject(err instanceof Error ? err : new Error(String(err)));
 			}
 		}).catch((err) => {
@@ -216,6 +242,7 @@ export class MixerService {
 
 	public async override(player: CustomPlayer, opts: OverrideRequestOptions, idemKey: string = randomUUID()): Promise<unknown> {
 		const gid = String(player.guildId);
+		this.activeOverlaps.delete(gid);
 		return this.enqueue(gid, (signal) =>
 			this.rawCall(player, '/mixer/queue/override', {
 				method: 'POST',
@@ -244,20 +271,27 @@ export class MixerService {
 			player.queue.tracks.splice(0, dropCount);
 		}
 
-		const next = player.queue.tracks[0] as Track | undefined;
+		const explicitJump = typeof position === 'number' && position >= 1;
+		const next = explicitJump
+			? (player.queue.tracks[0] as Track | undefined)
+			: ((player.queue.tracks[0] as Track | undefined) ?? getTargetNextTrack(player) ?? undefined);
 		if (!next) {
 			player.queue.current = null;
+			notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
+			cancelPendingInvalidate(player);
+			void player.queue?.utils?.save?.()?.catch(() => null);
 			container.playerNotifier.updateController(player);
 			await sendOverride(player, 'STOP', null);
 			return;
 		}
 
-		commitLocal(player, next, { invalidate: false });
+		commitLocal(player, next, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
 		await sendOverride(player, 'PLAY_NOW', next.encoded ?? null);
 	}
 	public async reset(player: CustomPlayer, epoch: number, idemKey: string = randomUUID()): Promise<unknown> {
 		const gid = String(player.guildId);
+		this.activeOverlaps.delete(gid);
 		return this.enqueue(gid, (signal) =>
 			this.rawCall(player, '/mixer/reset', {
 				method: 'POST',
@@ -276,26 +310,23 @@ export class MixerService {
 	public async getInfo(player: Player): Promise<{ protocolVersion: number; version: string }> {
 		return (await this.rawCall(player, '/mixer/info')) as { protocolVersion: number; version: string };
 	}
-	public async clearNext(player: Player): Promise<void> {
-		// v2: slot is managed by JIT; clearNext is a no-op
-		// setRepeatMode 등 반복 모드 변경 직후 불리므로 큐 관측을 한 곳에서 태운다.
-		notifyQueueMutated(player as CustomPlayer);
+	public async clearNext(player: Player, opts?: QueueMutationOptions): Promise<void> {
+		// v2: slot is managed by JIT; clearNext triggers queue mutation observation
+		notifyQueueMutated(player as CustomPlayer, opts);
 	}
-	public async preloadUpcoming(player: Player): Promise<void> {
+	public async preloadUpcoming(player: Player, opts?: QueueMutationOptions): Promise<void> {
 		// v2: preloading is JIT-driven via MixerNeedNextTrackEvent
-		// 큐 변형(shuffle/clear/remove/move/enqueue) 직후 불리므로 큐 관측을 한 곳에서 태운다.
-		notifyQueueMutated(player as CustomPlayer);
+		notifyQueueMutated(player as CustomPlayer, opts);
 	}
 
 	public async primeForPlay(player: Player): Promise<void> {
 		await this.ensureMixerFilter(player).catch(() => null);
 	}
 
-	public async clearNextLenient(player: Player): Promise<void> {
+	public async clearNextLenient(player: Player, opts?: QueueMutationOptions): Promise<void> {
 		// v2: slot is JIT-managed
-		notifyQueueMutated(player as CustomPlayer);
+		notifyQueueMutated(player as CustomPlayer, opts);
 	}
-
 	public async reconcileAfterResume(_player: Player): Promise<void> {
 		// v2: handled by sessionRestore.ts resetV2 call
 	}
@@ -303,12 +334,12 @@ export class MixerService {
 		return false;
 	}
 
-	public isOverlapActive(_guildId: string): boolean {
-		return false;
+	public isOverlapActive(guildId: string): boolean {
+		return this.activeOverlaps.has(String(guildId));
 	}
 
-	public getOverlapTrackIdentifier(_guildId: string): string | null {
-		return null;
+	public getOverlapTrackIdentifier(guildId: string): string | null {
+		return this.activeOverlaps.get(String(guildId)) ?? null;
 	}
 
 	public consumePreloaded(_guildId: string): boolean {
@@ -319,23 +350,36 @@ export class MixerService {
 		return false;
 	}
 
-	public markUnmanaged(_guildId: string): void {
-		// no-op in v2
+	public markUnmanaged(guildId: string): void {
+		const gid = String(guildId);
+		this.activeOverlaps.delete(gid);
+		this.pendingInvalidate.delete(gid);
 	}
 
 	public takePreloadedIdentifier(_guildId: string): string | null {
 		return null;
 	}
 
-	public observeMixerEvent(_payload: unknown): void {
-		// v2 events are routed via nodeHandler to mixerHandlers
+	public observeMixerEvent(payload: unknown): void {
+		const msg = payload as { op?: string; type?: string; guildId?: string; track?: { identifier?: string } } | null;
+		if (!msg || msg.op !== 'mixer' || !msg.guildId) return;
+		const gid = String(msg.guildId);
+		if (msg.type === 'overlapStart') {
+			this.activeOverlaps.set(gid, msg.track?.identifier ?? null);
+		} else if (msg.type === 'overlapEnd' || msg.type === 'MixerAdvancedEvent' || msg.type === 'MixerOverriddenEvent') {
+			this.activeOverlaps.delete(gid);
+		}
 	}
 
 	public async setCrossfade(player: Player, enabled: boolean, durationMs?: number): Promise<MixerStateResponse> {
-		return (await this.rawCall(player, '/mixer/crossfade', {
+		const res = (await this.rawCall(player, '/mixer/crossfade', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled, durationMs })
 		})) as MixerStateResponse;
+		if ((player as CustomPlayer).mixerRuntime && (player.playing || player.paused || player.queue?.current)) {
+			notifyQueueMutated(player as CustomPlayer, { force: true });
+		}
+		return res;
 	}
 
 	public async setNormalization(player: Player, enabled: boolean): Promise<MixerStateResponse> {

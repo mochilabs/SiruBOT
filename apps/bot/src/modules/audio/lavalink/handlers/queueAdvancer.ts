@@ -10,7 +10,8 @@ import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from 
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
 import { isSameTrack, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
-import { handleMixerTrackEnd } from './mixerHandlers.ts';
+import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
+import { cancelPendingInvalidate, getTargetNextTrack } from '../queue/queueWrapper.ts';
 const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
 
 /**
@@ -129,6 +130,8 @@ export class QueueAdvancer {
 			player.transitionState.stopByCommand = true;
 			this.container.mixerService.markUnmanaged(player.guildId);
 			this.host.clearWatchdog(player.guildId);
+			cancelPendingInvalidate(player);
+			await sendOverride(player, 'STOP', null).catch(() => null);
 			await player.stopPlaying();
 			await player.disconnect();
 			return;
@@ -149,7 +152,7 @@ export class QueueAdvancer {
 		if (this.host.hasWatchdog(player.guildId)) return;
 
 		// 중간 오류는 조용히 스킵하고, 마지막(남은 곡 없음)에만 한 번 알린다. (3연속 중단 알림은 위 abort 분기)
-		if (player.queue.tracks.length > 0) {
+		if (player.queue.tracks.length > 0 || getTargetNextTrack(player) !== null) {
 			// raw player.skip() 폴백은 예열 슬롯을 남겨 stale 곡이 뒤늦게 재생된다
 			// (docs/3rdparty.md: 스킵은 mixerService를 거쳐야 한다). 스킵이 실패하면
 			// watchdog 복구 루프가 수습한다.
@@ -161,6 +164,8 @@ export class QueueAdvancer {
 			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
 			player.transitionState.stopByCommand = true;
+			cancelPendingInvalidate(player);
+			await sendOverride(player, 'STOP', null).catch(() => null);
 			await player.stopPlaying();
 		}
 	}
@@ -330,6 +335,7 @@ export class QueueAdvancer {
 
 	public async handlePlayerDestroy(player: CustomPlayer): Promise<void> {
 		this.container.mixerService.markUnmanaged(player.guildId);
+		this.container.mixerService.markFiltersStale?.(player.guildId);
 		this.container.chatTtsService.clearGuild(player.guildId);
 		this.clearAdvancePending(player.guildId);
 		this.host.clearReconcile(player.guildId);
@@ -340,6 +346,7 @@ export class QueueAdvancer {
 		// 대시보드 라이브 뷰 — 플레이어 소멸 상태 추적기 정리
 		clearPlayerStateTracker(player.guildId);
 		await this.container.mixerService.clearNext(player).catch(() => null);
+		clearMixerRuntime(player);
 	}
 
 	/** 서버 슬롯이 없는 전이에서만 호출: stale 슬롯을 비운 뒤 클라이언트가 다음 곡을 시작한다. */

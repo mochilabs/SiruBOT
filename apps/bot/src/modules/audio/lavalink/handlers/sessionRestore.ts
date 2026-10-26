@@ -1,12 +1,13 @@
 import { container } from '@sapphire/framework';
 import { ChannelType } from 'discord.js';
-import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer } from 'lavalink-client';
+import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer, type Track } from 'lavalink-client';
 import type { ILogObj, Logger } from 'tslog';
 import { NodeSessionStore } from '../redisStore.ts';
 import type { CustomPlayer } from '../player/customPlayer.ts';
 import type { CachedPlayerSaver } from '../player/playerSaver.ts';
 import { getTargetNextTrack, getTrackUid } from '../queue/queueWrapper.ts';
 import { commitLocal } from './mixerHandlers.ts';
+import { isSameTrack } from './playbackWatchdog.ts';
 /** playerSaver.get() 반환 — 재시작 복구의 입력이 되는 저장 플레이어 형태. */
 type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
 
@@ -219,27 +220,33 @@ export class SessionRestoreEngine {
 		});
 
 		if (lavalinkPlayer.track) {
-			// 서버가 재생 중인 트랙이 큐 헤드와 같은 곡이면 buildTrack 재구성 대신 큐 객체를
-			// current로 올린다 — 메타데이터·uid가 저장된 큐와 일치해 아밍 중복을 막는다.
+			// 서버가 재생 중인 트랙이 큐 안에 있으면 그 위치까지 앞선 구곡들을 걷어내고
+			// 큐 객체를 current로 올린다 — 메타데이터·uid가 저장된 큐와 일치해 아밍 중복을 막는다.
 			const serverEncoded = lavalinkPlayer.track?.encoded;
 			const createdQueue = createdPlayer.queue as { tracks?: unknown[] } | undefined;
-			const queueTracks = Array.isArray(createdQueue?.tracks) ? createdQueue!.tracks : [];
-			const head = queueTracks[0] as import('lavalink-client').Track | undefined;
-			if (typeof serverEncoded === 'string' && head?.encoded === serverEncoded) {
-				if (createdPlayer.queue.current?.encoded !== serverEncoded) {
-					if (createdPlayer.queue.current) {
-						createdPlayer.queue.previous.unshift(createdPlayer.queue.current);
-						while (createdPlayer.queue.previous.length > 25) createdPlayer.queue.previous.pop();
-					}
+			const queueTracks = Array.isArray(createdQueue?.tracks) ? (createdQueue.tracks as Track[]) : [];
+			const matchIndex = queueTracks.findIndex(
+				(t) => (typeof serverEncoded === 'string' && t?.encoded === serverEncoded) || isSameTrack(t, lavalinkPlayer.track)
+			);
+			if (matchIndex >= 0) {
+				const [matched] = queueTracks.splice(0, matchIndex + 1).slice(-1);
+				if (createdPlayer.queue.current && !isSameTrack(createdPlayer.queue.current, matched)) {
+					createdPlayer.queue.previous.unshift(createdPlayer.queue.current);
+					while (createdPlayer.queue.previous.length > 25) createdPlayer.queue.previous.pop();
 				}
-				createdPlayer.queue.tracks.shift();
-				createdPlayer.queue.current = (head as import('lavalink-client').Track) ?? null;
-			} else {
+				createdPlayer.queue.current = matched ?? null;
+				void createdPlayer.queue?.utils?.save?.()?.catch(() => null);
+			} else if (!createdPlayer.queue.current || !isSameTrack(createdPlayer.queue.current, lavalinkPlayer.track)) {
 				createdPlayer.queue.current = this.container.audio.utils.buildTrack(
 					lavalinkPlayer.track,
 					createdPlayer.queue.current?.requester || this.container.client.user
 				);
 			}
+		}
+		if (createdPlayer.transitionState && createdPlayer.queue.current) {
+			createdPlayer.transitionState.confirmedNowPlaying = createdPlayer.queue.current;
+			createdPlayer.transitionState.lastStartedEncoded =
+				typeof createdPlayer.queue.current.encoded === 'string' ? createdPlayer.queue.current.encoded : null;
 		}
 
 		const now = Date.now();
@@ -251,7 +258,6 @@ export class SessionRestoreEngine {
 		createdPlayer.playing = !lavalinkPlayer.paused && !!lavalinkPlayer.track;
 
 		// v2 Rehydration: fetch plugin state and advance currentEpoch with safe margin
-
 		let pluginState: { lastKnownEpoch?: number } | null = null;
 		try {
 			pluginState = await this.container.mixerService.getState(createdPlayer);
@@ -261,7 +267,12 @@ export class SessionRestoreEngine {
 		const queueStore = this.container.redisStore?.getQueueStore?.();
 		const savedQueue = queueStore ? await queueStore.get(lavalinkPlayer.guildId).catch(() => null) : null;
 		const rawParsed = typeof savedQueue === 'string' ? JSON.parse(savedQueue) : savedQueue;
-		const savedEpoch = typeof rawParsed?.epoch === 'number' ? rawParsed.epoch : 1;
+		const savedEpoch =
+			typeof rawParsed?.epoch === 'number'
+				? rawParsed.epoch
+				: typeof savedPlayer.currentEpoch === 'number'
+					? savedPlayer.currentEpoch
+					: 1;
 		createdPlayer.currentEpoch = Math.max(savedEpoch, pluginState?.lastKnownEpoch ?? 1) + 10;
 		if (!createdPlayer.mixerRuntime) {
 			createdPlayer.mixerRuntime = { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 };
@@ -270,9 +281,9 @@ export class SessionRestoreEngine {
 		// Server track validation against queue head
 		const serverTrack = lavalinkPlayer.track?.encoded ?? null;
 		if (serverTrack && Array.isArray(createdPlayer.queue?.tracks)) {
-			const head = createdPlayer.queue.tracks[0] as import('lavalink-client').Track | undefined;
+			const head = createdPlayer.queue.tracks[0] as Track | undefined;
 			if (head && head.encoded === serverTrack && createdPlayer.queue.current?.encoded !== serverTrack) {
-				commitLocal(createdPlayer, head, { invalidate: false });
+				commitLocal(createdPlayer, head, { invalidate: false, bumpEpoch: false });
 			}
 		}
 
@@ -530,6 +541,13 @@ export class SessionRestoreEngine {
 			await this.discardSavedPlayer(guildId, saved, this.container.redisStore.getPlayerSaver());
 			return;
 		}
+		if (typeof saved.currentEpoch === 'number') {
+			createdPlayer.currentEpoch = Math.max(createdPlayer.currentEpoch ?? 1, saved.currentEpoch + 10);
+		}
+		if (createdPlayer.mixerRuntime) {
+			createdPlayer.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(createdPlayer));
+		}
+		await this.container.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch(() => null);
 
 		// mixer 필터는 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다(lavaplayer는
 		// 트랙 시작 시점에만 필터를 읽음) — primeForPlay가 내부에서 실패를 삼키므로
@@ -555,7 +573,6 @@ export class SessionRestoreEngine {
 		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
 			this.logger.warn(`Mixer reconcile after fresh restore failed at ${guildId}: ${error}`);
 		});
-
 		this.logger.info(`Fresh restore finished at ${guildId} (position ${Math.round(position / 1000)}s${saved.paused ? ', paused' : ''})`);
 	}
 
