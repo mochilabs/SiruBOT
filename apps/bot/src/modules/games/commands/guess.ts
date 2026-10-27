@@ -16,7 +16,7 @@ const sessions = new Map<string, GuessSession>();
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'guess',
-	description: '1~100 숫자를 맞히는 게임이에요. 6번 안에 맞히면 이겨요!',
+	description: 'Guess a number between 1 and 100 within 6 tries.',
 	fullCategory: ['게임']
 })
 export class GuessCommand extends Command {
@@ -30,8 +30,8 @@ export class GuessCommand extends Command {
 				.setDescriptionLocalizations({ ko: '1~100 숫자를 맞히는 게임이에요. 6번 안에 맞히면 이겨요!' })
 				.addStringOption((option) =>
 					option
-						.setName('입력')
-						.setNameLocalizations({ ko: '입력', 'en-US': 'input' })
+						.setName('input')
+						.setNameLocalizations({ ko: '입력' })
 						.setDescription('«시작»으로 새 게임, 1~100 숫자로 도전해요.')
 						.setDescriptionLocalizations({ ko: '«시작»으로 새 게임, 1~100 숫자로 도전해요.' })
 						.setRequired(true)
@@ -48,12 +48,13 @@ export class GuessCommand extends Command {
 			});
 		}
 
-		const raw = interaction.options.getString('입력', true).trim();
-		const userId = interaction.user.id;
+		const raw = interaction.options.getString('input', true).trim();
+		// 세션은 길드 단위로 분리해요 — 다른 서버에서 시작한 게임이 이어지면 안 돼요.
+		const sessionKey = `${interaction.guildId}:${interaction.user.id}`;
 
 		if (raw === '시작' || raw.toLowerCase() === 'start') {
 			const target = Math.floor(Math.random() * 100) + 1;
-			sessions.set(userId, { target, attempts: MAX_ATTEMPTS });
+			sessions.set(sessionKey, { target, attempts: MAX_ATTEMPTS });
 			await interaction.reply({
 				components: [
 					textContainer([
@@ -79,7 +80,7 @@ export class GuessCommand extends Command {
 			});
 		}
 
-		const session = sessions.get(userId);
+		const session = sessions.get(sessionKey);
 		if (!session) {
 			throw new UserError({
 				identifier: 'guess_no_session',
@@ -90,11 +91,11 @@ export class GuessCommand extends Command {
 
 		if (guess === session.target) {
 			const used = MAX_ATTEMPTS - session.attempts + 1;
-			sessions.delete(userId);
+			sessions.delete(sessionKey);
 
-			const prevBest = await getGuessBest(userId);
+			const prevBest = await getGuessBest(interaction.user.id);
 			const isNewBest = prevBest == null || used < prevBest;
-			await recordGameResult(userId, 'guess', 'win', { attempts: used });
+			await recordGameResult(interaction.user.id, 'guess', 'win', { attempts: used });
 
 			const recordLine = isNewBest
 				? `${emoji('trophy')} ${prevBest == null ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
@@ -119,8 +120,8 @@ export class GuessCommand extends Command {
 		const hint = guess < session.target ? `${emoji('arrow_up')} 더 높아요` : `${emoji('arrow_down')} 더 낮아요`;
 
 		if (session.attempts <= 0) {
-			sessions.delete(userId);
-			await recordGameResult(userId, 'guess', 'loss', { target: session.target });
+			sessions.delete(sessionKey);
+			await recordGameResult(interaction.user.id, 'guess', 'loss', { target: session.target });
 			await interaction.reply({
 				components: [
 					textContainer([

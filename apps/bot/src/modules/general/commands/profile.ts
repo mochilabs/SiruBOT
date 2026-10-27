@@ -23,7 +23,7 @@ function zodiacLabel(code: string): string {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'profile',
-	description: '프로필(생일·별자리·음악 기록)을 확인하고 관리해요.',
+	description: 'View and manage your profile (birthday, zodiac, music stats).',
 	fullCategory: ['일반']
 })
 export class ProfileCommand extends Command {
@@ -63,7 +63,10 @@ export class ProfileCommand extends Command {
 								.setNameLocalizations({ ko: '스타일' })
 								.setDescription('Profile card design.')
 								.setDescriptionLocalizations({ ko: '프로필 카드 디자인이에요. 기본은 다크 퍼플 카드예요.' })
-								.addChoices({ name: '다크 (기본)', value: 'dark' }, { name: '멤버 패스 티켓', value: 'ticket' })
+								.addChoices(
+									{ name: 'Dark (default)', name_localizations: { ko: '다크 (기본)' }, value: 'dark' },
+									{ name: 'Member pass ticket', name_localizations: { ko: '멤버 패스 티켓' }, value: 'ticket' }
+								)
 								.setRequired(false)
 						)
 				)

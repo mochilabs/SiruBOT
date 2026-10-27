@@ -4,21 +4,27 @@ import {
 	MediaGalleryBuilder,
 	MediaGalleryItemBuilder,
 	MessageFlags,
+	SlashCommandOptionsOnlyBuilder,
 	SlashCommandSubcommandBuilder,
 	TextDisplayBuilder
 } from 'discord.js';
 
 export const name = 'avatar';
 export const ko = '아바타';
-export const description = '사용자의 아바타를 보여줘요.';
+export const description = '유저 아바타를 크게 보여줘요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Show a user avatar in full size.';
 export const preconditions: string[] = [];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub
-		.setName(name)
-		.setNameLocalizations({ ko })
-		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '유저의 아바타를 보여줘요.' })
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
+	withOptions(named);
+	return named;
+}
+
+/** 옵션만 붙여요 — `/아바타` top-level 커맨드가 같은 옵션 정의를 재사용해요 */
+export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
+	builder
 		.addUserOption((option) =>
 			option
 				.setName('user')

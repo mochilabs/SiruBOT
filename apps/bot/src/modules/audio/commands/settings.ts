@@ -7,7 +7,7 @@ import { settingsView } from '../view/settings.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'settings',
-	description: '봇의 서버 설정을 관리해요.',
+	description: "Manage this server's bot settings.",
 	fullCategory: ['일반'],
 	preconditions: ['ManageGuild']
 })

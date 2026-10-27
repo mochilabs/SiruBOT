@@ -34,8 +34,36 @@ export const CUSTOM_COMMAND_NAME_PATTERN = /^\S+$/u;
 /** 슬래시형 이름 — Discord 애플리케이션 커맨드 패턴 (^[-_\p{L}\p{N}]{1,32}$). 라틴 대문자는 validate가 별도로 막아요 */
 export const CUSTOM_COMMAND_SLASH_NAME_PATTERN = /^[-_\p{L}\p{N}]{1,32}$/u;
 
-/** 기능성 예약 키워드 — 목록 응답(!도움말) 등에 쓰이므로 사용자 이름으로 등록 불가 */
-export const CUSTOM_COMMAND_RESERVED_NAMES = ['도움말'] as const;
+/**
+ * 기능성 예약 키워드 — 목록 응답(`!도움말`)과 top-level 슬래시 커맨드의 한국어 이름이 쓰므로 사용자 이름으로 등록 불가.
+ * top-level 커맨드를 추가/개명하면 이 목록도 함께 갱신해야 접두사 명령어가 슬래시 명령어를 가로채지 않아요.
+ */
+export const CUSTOM_COMMAND_RESERVED_NAMES = [
+	'도움말',
+	'음악',
+	'재생',
+	'건너뛰기',
+	'대기열',
+	'지금재생',
+	'플레이리스트',
+	'즐겨찾기',
+	'믹서',
+	'설정',
+	'정보',
+	'프로필',
+	'출석',
+	'주사위',
+	'숫자맞히기',
+	'가위바위보',
+	'오하아사',
+	'날씨',
+	'택배',
+	'티켓',
+	'채팅',
+	'청소',
+	'초대',
+	'핑'
+] as const;
 
 /** 접두사 기본값·규칙 — 1~3자, 공백 불가 */
 export const CUSTOM_COMMAND_PREFIX_DEFAULT = '!';

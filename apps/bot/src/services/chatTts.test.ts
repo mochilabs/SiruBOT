@@ -8,9 +8,10 @@ import type { Track } from 'lavalink-client';
 const mocks = vi.hoisted(() => ({
 	logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 	ttsService: { synthesize: vi.fn() },
-	mixerService: { getState: vi.fn(), announce: vi.fn() },
+	// announce 방식은 길드 설정 3택으로 결정돼요 — clearAnnounceQueue는 interrupt 모드 전용이에요
+	mixerService: { getState: vi.fn(), announce: vi.fn(), clearAnnounceQueue: vi.fn() },
 	audioService: { ensurePlayback: vi.fn() },
-	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn(), getTtsParallel: vi.fn() },
+	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn(), getTtsAnnounceMode: vi.fn() },
 	audio: { getPlayer: vi.fn() }
 }));
 
@@ -94,7 +95,8 @@ beforeEach(() => {
 		clip(`https://tts.example/v1/shared/${encodeURIComponent(text.slice(0, 8))}`)
 	);
 	mocks.audio.getPlayer.mockReturnValue(undefined);
-	mocks.guildService.getTtsParallel.mockResolvedValue(false);
+	mocks.guildService.getTtsAnnounceMode.mockResolvedValue('sequential');
+	mocks.mixerService.clearAnnounceQueue.mockResolvedValue(0);
 });
 
 afterEach(() => {

@@ -448,6 +448,20 @@ export class MixerService {
 		this.filterReady.delete(String(guildId));
 	}
 
+	/**
+	 * 대기 중인 안내를 모두 버려요 — `interrupt` 모드에서 새 안내 직전에 호출해 "최신만" 정책을 만들어요.
+	 * (플러그인 `DELETE /mixer/announce/queue`: 활성 안내는 건드리지 않고 대기분만 드롭해요)
+	 */
+	public async clearAnnounceQueue(player: Player): Promise<number> {
+		const result = (await this.rawCall(player, '/mixer/announce/queue', { method: 'DELETE' })) as { dropped?: number } | null;
+		return typeof result?.dropped === 'number' ? result.dropped : 0;
+	}
+
+	/** 현재 재생 중인 안내를 즉시 멈춰요 (`POST /mixer/announce/cancel`). */
+	public async cancelAnnounce(player: Player): Promise<void> {
+		await this.rawCall(player, '/mixer/announce/cancel', { method: 'POST' });
+	}
+
 	public async announce(player: Player, identifier: string, duckLevel: number, mode?: 'sequential' | 'parallel'): Promise<MixerAnnounceReceipt> {
 		return (await this.rawCall(player, '/mixer/announce', {
 			method: 'POST',

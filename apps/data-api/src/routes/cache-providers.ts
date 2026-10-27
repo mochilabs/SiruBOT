@@ -6,7 +6,7 @@ import { serveCached } from './serveCached.ts';
 import { sendDomainError, sendError } from './common.ts';
 import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { fetchWeather, weatherCacheKey } from '../providers/weather.ts';
-import { deliveryTrackCacheKey, trackDelivery } from '../providers/delivery.ts';
+import { deliveryTrackCacheKey, searchDeliveryCarriers, trackDelivery } from '../providers/delivery.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
 
 /** 캐시형 외부 프로바이더 읽기 — 가사(lrclib)·날씨(Open-Meteo)·택배(tracker.delivery)·유튜브 챕터. TTL은 라우트 단위 상수로 여기에 둬요. */
@@ -73,6 +73,18 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance): void {
 				fetchFresh: () => trackDelivery(carrier, trackingNumber)
 			});
 			return reply.send({ ...data, _cached: cached });
+		} catch (error) {
+			if (error instanceof Error && error.name === 'DeliveryError') return sendDomainError(reply, error, 'delivery_error');
+			return sendError(reply, error);
+		}
+	});
+
+	// 택배사 검색 — 봇 `/택배 택배사` 자동완성용. 목록은 24시간 캐시(provider) 안에서만 조회해요.
+	const deliveryCarriersQuery = z.object({ q: z.string().trim().max(100).default('') });
+	fastify.get('/v1/delivery/carriers', async (request, reply) => {
+		try {
+			const { q } = deliveryCarriersQuery.parse(request.query);
+			return reply.send({ carriers: await searchDeliveryCarriers(q) });
 		} catch (error) {
 			if (error instanceof Error && error.name === 'DeliveryError') return sendDomainError(reply, error, 'delivery_error');
 			return sendError(reply, error);

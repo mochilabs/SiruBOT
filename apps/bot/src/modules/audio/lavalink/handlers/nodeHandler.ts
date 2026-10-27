@@ -2,6 +2,7 @@ import { LavalinkNode, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { RESUME_TIMEOUT_SECONDS, SessionRestoreEngine } from './sessionRestore.ts';
 import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
+import * as Sentry from '@sentry/node';
 import type { CustomPlayer } from '../player/customPlayer.ts';
 import {
 	handleMixerNeedNext,
@@ -139,6 +140,13 @@ export class NodeHandler extends BaseLavalinkHandler {
 		}
 		this.logger.error(`Node error: ${node.options.id}`, error, payload);
 		reportNodeEvent(node.id, 'node_error', error.message);
+
+		// 재생 상태 페이지(reportNodeEvent)는 요약만 남겨요 — 원인 추적용 스택은 Sentry로 보내요
+		Sentry.withScope((scope) => {
+			scope.setTag('type', 'lavalinkNodeError');
+			scope.setTag('lavalink_node', node.options.id);
+			Sentry.captureException(error);
+		});
 	}
 
 	public cleanup(): void {

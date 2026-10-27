@@ -189,6 +189,18 @@ async function resolveCarrierId(carrierHint: string): Promise<string> {
 	return candidates[0]!.id;
 }
 
+/**
+ * 택배사 이름/별칭 검색 — 봇 `/택배` 자동완성이 쓰는 목록 API예요.
+ * 조회 경로와 같은 별칭·정렬 규칙(searchCarriersLocal)을 공유해야 자동완성에서 고른 택배사가 그대로 조회돼요.
+ */
+export async function searchDeliveryCarriers(query: string, limit = 25): Promise<DeliveryCarrier[]> {
+	const carriers = await getCarriersCached();
+	const trimmed = query.trim();
+	if (!trimmed) return carriers.slice(0, limit);
+	const matched = searchCarriersLocal(carriers, trimmed, limit);
+	return matched.length > 0 ? matched : carriers.slice(0, limit);
+}
+
 /** 운송장 조회 단기 캐시 (배송 상태는 변해요) */
 export function deliveryTrackCacheKey(carrierId: string, trackingNumber: string): string {
 	return `dataapi:v1:delivery:track:${carrierId}:${trackingNumber}`;

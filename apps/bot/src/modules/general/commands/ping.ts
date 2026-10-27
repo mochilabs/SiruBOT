@@ -24,7 +24,7 @@ function metricLine(emoji: string, label: string, value: string): string {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'ping',
-	description: '봇과 각 구간의 연결 상태를 보여드려요.',
+	description: 'Show gateway, Redis, and Lavalink latency.',
 	fullCategory: ['일반']
 })
 export class PingCommand extends Command {

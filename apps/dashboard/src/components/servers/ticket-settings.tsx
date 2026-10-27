@@ -27,6 +27,7 @@ import {
   PanelLoading,
   SaveBar,
 } from "./settings-shared";
+import { TicketManagePanel } from "./ticket-manage-panel";
 
 const ticketFetcher = createApiFetcher<TicketConfig>(
   "티켓 설정을 불러오지 못했어요.",
@@ -233,6 +234,10 @@ export function TicketSettings({ guildId }: { guildId: string }) {
         saving={saving}
         onSave={handleSave}
       />
+
+      <Card>
+        <TicketManagePanel guildId={guildId} />
+      </Card>
     </div>
   );
 }

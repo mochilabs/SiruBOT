@@ -6,6 +6,8 @@ import * as view from '../view/volume.ts';
 export const name = 'volume';
 export const ko = '볼륨';
 export const description = '플레이어의 볼륨을 설정해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Set the player volume.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
 type VolumeTarget = 'music' | 'tts' | 'duck';
@@ -27,7 +29,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: description })
 		.addStringOption((option) =>
 			option

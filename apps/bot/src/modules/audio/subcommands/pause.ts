@@ -5,10 +5,12 @@ import * as view from '../view/pause.ts';
 export const name = 'pause';
 export const ko = '일시정지';
 export const description = '현재 곡을 일시정지하거나 다시 재생해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Pause or resume the current track.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	return sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {

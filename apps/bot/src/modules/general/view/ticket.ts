@@ -8,7 +8,7 @@ import {
 	SeparatorSpacingSize,
 	TextDisplayBuilder
 } from 'discord.js';
-import { DEFAULT_COLOR } from '@sirubot/utils';
+import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
 import {
 	TICKET_OPEN_CUSTOM_ID,
 	TICKET_CLOSE_CUSTOM_ID,
@@ -54,7 +54,11 @@ export function ticketWelcomeView(ticket: Ticket): { flags: number; components: 
 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
 
-	const closeButton = new ButtonBuilder().setCustomId(TICKET_CLOSE_CUSTOM_ID).setLabel('티켓 닫기').setEmoji('🔒').setStyle(ButtonStyle.Danger);
+	const closeButton = new ButtonBuilder()
+		.setCustomId(TICKET_CLOSE_CUSTOM_ID)
+		.setLabel('티켓 닫기')
+		.setEmoji(emoji('lock'))
+		.setStyle(ButtonStyle.Danger);
 
 	const claimButton = new ButtonBuilder()
 		.setCustomId(TICKET_CLAIM_CUSTOM_ID)
@@ -77,7 +81,9 @@ export function ticketCloseConfirmView(): { flags: number; components: [Containe
 	const container = new ContainerBuilder()
 		.setAccentColor(DEFAULT_COLOR)
 		.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent('### 🔒 티켓을 닫으시겠어요?\n닫기를 누르면 유저의 채널 접근이 종료되고 티켓이 마감돼요.')
+			new TextDisplayBuilder().setContent(
+				`### ${emoji('lock')} 티켓을 닫으시겠어요?\n닫기를 누르면 유저의 채널 접근이 종료되고 티켓이 마감돼요.`
+			)
 		);
 
 	const confirmButton = new ButtonBuilder().setCustomId(TICKET_CONFIRM_CLOSE_CUSTOM_ID).setLabel('확인하고 닫기').setStyle(ButtonStyle.Danger);

@@ -36,8 +36,11 @@ model Guild {
   crossfadeMs   Int      @default(5000)
   // 볼륨 정규화: 첫 곡이 세션 기준이 되고 이후 곡은 그 라우드니스로 맞춰요. Lavalink mixer 플러그인의 /mixer/normalization.
   normalizationEnabled Boolean @default(false)
-  // 동시 TTS: 여러 안내를 병렬 오버레이(mixer announce mode=parallel)로 겹쳐 재생해요.
-  ttsParallelEnabled Boolean @default(false)
+  // TTS 안내 방식 — mixer announce mode와 1:1이에요.
+  // "sequential"(순서대로) | "parallel"(겹쳐서) | "interrupt"(새 안내가 오면 대기 중인 안내를 버리고 최신만).
+  // 기존 ttsParallelEnabled는 이 값에서 파생돼요(parallel만 true) — 구 플러그인 계약 호환용으로 남겨둡니다.
+  ttsAnnounceMode      String   @default("sequential")
+  ttsParallelEnabled   Boolean  @default(false)
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
@@ -342,6 +345,11 @@ model Ticket {
   claimedById  String?   /// 티켓을 담당하기로 지정한 스태프 ID
   closedById   String?   /// 티켓을 닫은 유저/스태프 ID
   closeReason  String?   /// 닫은 사유
+  /// 대화 기록(transcript) 저장 키 — 비공개 버킷 `ticket-transcripts` 아래 `{guildId}/{ticketId}.json.gz`.
+  /// 채널은 마감 후 삭제되므로 대화 원문은 여기에만 남아요. 저장 실패 시 null.
+  transcriptKey String?
+  /// transcript 저장 시각 — 재시도/만료 판정용
+  transcribedAt DateTime?
   createdAt    DateTime  @default(now())
   closedAt     DateTime?
 

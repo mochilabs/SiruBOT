@@ -5,6 +5,7 @@ import { SlidersHorizontal } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
@@ -19,15 +20,22 @@ interface MixerForm {
   crossfadeEnabled: boolean;
   crossfadeMs: number;
   normalizationEnabled: boolean;
-  ttsParallelEnabled: boolean;
+  ttsAnnounceMode: GuildSettings["ttsAnnounceMode"];
 }
+
+/** 안내 방식 3택 — 봇 `/믹서 안내방식`·`/설정 audio`와 같은 값이에요 */
+const ANNOUNCE_MODE_OPTIONS = [
+  { value: "sequential", label: "순서대로", hint: "안내가 끝나야 다음 안내가 시작돼요." },
+  { value: "parallel", label: "겹쳐서", hint: "여러 안내를 동시에 재생해요." },
+  { value: "interrupt", label: "최신 안내만", hint: "새 안내가 오면 대기 중인 안내를 버리고 최신 것만 읽어요." },
+] as const;
 
 const toMixerForm = (settings: GuildSettings): MixerForm => ({
   gaplessEnabled: settings.gaplessEnabled,
   crossfadeEnabled: settings.crossfadeEnabled,
   crossfadeMs: settings.crossfadeMs,
   normalizationEnabled: settings.normalizationEnabled,
-  ttsParallelEnabled: settings.ttsParallelEnabled,
+  ttsAnnounceMode: settings.ttsAnnounceMode,
 });
 
 function MixerSettingsPanel({ guildId }: { guildId: string }) {
@@ -104,18 +112,35 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
         </div>
 
         <div className="space-y-4 rounded-card bg-surface-2 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <Switch
-              checked={form.ttsParallelEnabled}
-              onChange={(checked) => patch({ ttsParallelEnabled: checked })}
+          <Field
+            label="음성 안내 방식"
+            description={
+              ANNOUNCE_MODE_OPTIONS.find((option) => option.value === form.ttsAnnounceMode)?.hint ?? ""
+            }
+          >
+            <Select
+              value={form.ttsAnnounceMode}
+              onValueChange={(value) => {
+                if (value) patch({ ttsAnnounceMode: value as GuildSettings["ttsAnnounceMode"] });
+              }}
               disabled={saving}
-              label="동시 TTS"
-              labelPosition="left"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            여러 음성 안내를 동시에 재생해요. 꺼두면 순서대로 재생돼요.
-          </p>
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: string) =>
+                    ANNOUNCE_MODE_OPTIONS.find((option) => option.value === value)?.label ?? "순서대로"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {ANNOUNCE_MODE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
       </div>
 

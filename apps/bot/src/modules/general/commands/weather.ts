@@ -1,9 +1,29 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchWeather, GatewayDomainError } from '../../../services/dataApiClient.ts';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
+
+/** 채널별 최근 조회 위치 — 자동완성 후보 상한 (길드 공용 기록이에요) */
+const RECENT_LOCATION_LIMIT = 20;
+const recentLocations = new Map<string, string[]>();
+
+/** 최근 성공 위치를 채널 단위로 남겨 자동완성 후보로 써요 (프로세스 메모리, 재시작 시 초기화) */
+function rememberLocation(channelId: string, location: string): void {
+	const key = location.trim();
+	if (!key) return;
+	const previous = recentLocations.get(channelId) ?? [];
+	const next = [key, ...previous.filter((entry) => entry !== key)].slice(0, RECENT_LOCATION_LIMIT);
+	recentLocations.set(channelId, next);
+}
+
+/** 자동완성 후보 — 최근 조회 위치 + 현재 입력 접두 필터 */
+function suggestLocations(channelId: string, typed: string): string[] {
+	const needle = typed.trim().toLowerCase();
+	const recent = recentLocations.get(channelId) ?? [];
+	return recent.filter((entry) => entry.toLowerCase().includes(needle)).slice(0, 25);
+}
 
 const SCOPE_LABELS: Record<WeatherScope, string> = {
 	now: '지금 날씨',
@@ -77,7 +97,7 @@ function buildContainer(result: WeatherResult) {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'weather',
-	description: '현재 날씨와 예보를 확인해요.',
+	description: 'Check current weather and forecasts.',
 	fullCategory: ['일반']
 })
 export class WeatherCommand extends Command {
@@ -102,6 +122,7 @@ export class WeatherCommand extends Command {
 								.setDescription('Location name')
 								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -117,6 +138,7 @@ export class WeatherCommand extends Command {
 								.setDescription('Location name')
 								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -132,6 +154,7 @@ export class WeatherCommand extends Command {
 								.setDescription('Location name')
 								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -147,9 +170,15 @@ export class WeatherCommand extends Command {
 								.setDescription('Location name')
 								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				);
 		});
+	}
+
+	public override async autocompleteRun(interaction: AutocompleteInteraction) {
+		const typed = interaction.options.getFocused();
+		await interaction.respond(suggestLocations(interaction.channelId, typed).map((location) => ({ name: location, value: location })));
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
@@ -173,6 +202,9 @@ export class WeatherCommand extends Command {
 			}
 			throw error;
 		}
+
+		// 성공한 조회만 자동완성 후보로 남겨요 — 오타·없는 지명이 후보에 섞이지 않게
+		rememberLocation(interaction.channelId, location);
 
 		await interaction.editReply({
 			components: [buildContainer(result)],

@@ -3,11 +3,10 @@ import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { runSubcommandPreconditions, subcommandSummaries, type SubcommandModule } from '../../../lib/subcommandDispatcher.ts';
-import * as avatar from '../subcommands/avatar.ts';
 import * as bot from '../subcommands/bot.ts';
 import * as server from '../subcommands/server.ts';
 
-const SUBCOMMANDS: SubcommandModule[] = [bot, server, avatar];
+const SUBCOMMANDS: SubcommandModule[] = [bot, server];
 
 /** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
 export const INFO_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
@@ -15,7 +14,7 @@ export const INFO_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'info',
-	description: '봇·서버·유저 정보를 보여줘요.',
+	description: 'Show bot, server, and user information.',
 	fullCategory: ['일반']
 })
 export class InfoCommand extends Command {

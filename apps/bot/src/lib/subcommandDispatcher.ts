@@ -5,7 +5,10 @@ import type { AutocompleteInteraction, ChatInputCommandInteraction, SlashCommand
 export interface SubcommandModule {
 	name: string;
 	ko: string;
+	/** 한국어 설명 — ko 로컬라이제이션으로 등록돼요 */
 	description: string;
+	/** en-US 기본 설명 — 없으면 description을 그대로 써요 */
+	descriptionEn?: string;
 	preconditions: string[];
 	build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder;
 	run(interaction: ChatInputCommandInteraction<'cached'>): Promise<unknown>;
@@ -28,5 +31,5 @@ export async function runSubcommandPreconditions(
 
 /** /도움말에서 서브커맨드 멘션을 그릴 때 쓰는 요약 */
 export function subcommandSummaries(subcommands: readonly SubcommandModule[]) {
-	return subcommands.map(({ name, ko, description }) => ({ name, ko, description }));
+	return subcommands.map(({ name, ko, description, descriptionEn }) => ({ name, ko, description, descriptionEn: descriptionEn ?? description }));
 }

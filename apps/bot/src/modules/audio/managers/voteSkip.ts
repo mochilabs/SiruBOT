@@ -10,7 +10,7 @@ import {
 import { Player, Track } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import * as view from '../view/skip.ts';
-import { createContainer } from '@sirubot/utils';
+import { createContainer, emoji } from '@sirubot/utils';
 
 interface VoteSkipOptions {
 	player: Player;
@@ -107,10 +107,10 @@ export class VoteSkip {
 
 	private validateVote(userId: string): string | null {
 		if (this.voteState.voteUsers.has(userId)) {
-			return '❌ 이미 투표에 참여했어요.';
+			return `${emoji('error')} 이미 투표에 참여했어요.`;
 		}
 		if (!this.options.voiceChannelMembers.has(userId)) {
-			return '❌ 음성 채널에 접속한 사용자만 투표에 참여할 수 있어요.';
+			return `${emoji('error')} 음성 채널에 접속한 사용자만 투표에 참여할 수 있어요.`;
 		}
 
 		return null;

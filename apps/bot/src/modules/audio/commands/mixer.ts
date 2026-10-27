@@ -1,14 +1,121 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
+import { Command, UserError, container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import {
+	ApplicationIntegrationType,
+	ChatInputCommandInteraction,
+	MessageFlags,
+	type SlashCommandSubcommandGroupBuilder,
+	type SlashCommandSubcommandsOnlyBuilder
+} from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
+import { normalizeAnnounceMode, type TtsAnnounceMode } from '../../../services/guildSettings/playback.ts';
+
+/** 안내 방식 문구 — 커맨드 응답과 뷰가 같은 말을 써요 */
+const ANNOUNCE_MODE_LABELS: Record<TtsAnnounceMode, string> = {
+	sequential: '음성 안내를 순서대로 재생해요.',
+	parallel: '음성 안내를 겹쳐서 재생해요.',
+	interrupt: '새 안내가 오면 대기 중인 안내를 버리고 최신 안내만 재생해요.'
+};
+
+/**
+ * 믹서 서브커맨드 정의 — `/믹서`와 `/설정 audio`가 같은 옵션을 써야 해서 한 곳에 둬요.
+ */
+export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder | SlashCommandSubcommandGroupBuilder): void {
+	builder
+		.addSubcommand((sub) =>
+			sub
+				.setName('status')
+				.setNameLocalizations({ ko: '상태' })
+				.setDescription('Show mixer settings and state.')
+				.setDescriptionLocalizations({ ko: '믹서 설정과 상태를 보여줘요.' })
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('gapless')
+				.setNameLocalizations({ ko: '갭리스' })
+				.setDescription('Toggle gapless playback.')
+				.setDescriptionLocalizations({ ko: '갭리스 재생을 켜거나 꺼요.' })
+				.addBooleanOption((opt) =>
+					opt
+						.setName('enabled')
+						.setNameLocalizations({ ko: '켜기' })
+						.setDescription('Enable or disable gapless playback.')
+						.setRequired(true)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('crossfade')
+				.setNameLocalizations({ ko: '크로스페이드' })
+				.setDescription('Toggle overlap crossfade.')
+				.setDescriptionLocalizations({ ko: '곡 사이 겹치기(크로스페이드)를 설정해요.' })
+				.addBooleanOption((opt) =>
+					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('Enable or disable crossfade.').setRequired(true)
+				)
+				.addIntegerOption((opt) =>
+					opt
+						.setName('duration')
+						.setNameLocalizations({ ko: '길이' })
+						.setDescription('Overlap length in ms (500-15000). Omit to keep the current value.')
+						.setMinValue(500)
+						.setMaxValue(15000)
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('normalization')
+				.setNameLocalizations({ ko: '볼륨정규화' })
+				.setDescription('Toggle volume normalization.')
+				.setDescriptionLocalizations({ ko: '곡 사이 볼륨 차이를 자동으로 맞춰요.' })
+				.addBooleanOption((opt) =>
+					opt
+						.setName('enabled')
+						.setNameLocalizations({ ko: '켜기' })
+						.setDescription('Enable or disable volume normalization.')
+						.setRequired(true)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('announce-mode')
+				.setNameLocalizations({ ko: '안내방식' })
+				.setDescription('How TTS announcements are played.')
+				.setDescriptionLocalizations({ ko: '음성 안내를 어떻게 재생할지 정해요.' })
+				.addStringOption((opt) =>
+					opt
+						.setName('mode')
+						.setNameLocalizations({ ko: '방식' })
+						.setDescription('sequential, parallel, or interrupt.')
+						.setDescriptionLocalizations({ ko: '순서대로 / 겹쳐서 / 최신 안내만' })
+						.setRequired(true)
+						.addChoices(
+							{
+								name: 'Sequential',
+								name_localizations: { ko: '순서대로' },
+								value: 'sequential'
+							},
+							{
+								name: 'Parallel',
+								name_localizations: { ko: '겹쳐서' },
+								value: 'parallel'
+							},
+							{
+								name: 'Interrupt',
+								name_localizations: { ko: '최신 안내만' },
+								value: 'interrupt'
+							}
+						)
+				)
+		);
+}
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'mixer',
-	description: '갭리스 재생과 크로스페이드를 설정해요.',
+	description: 'Configure gapless playback and crossfade.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel']
 })
@@ -20,79 +127,8 @@ export class MixerCommand extends Command {
 				.setName(this.name)
 				.setNameLocalizations({ ko: '믹서' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '갭리스 재생과 크로스페이드를 설정해요.' })
-				.addSubcommand((sub) =>
-					sub
-						.setName('status')
-						.setNameLocalizations({ ko: '상태' })
-						.setDescription('Show mixer settings and state.')
-						.setDescriptionLocalizations({ ko: '믹서 설정과 상태를 보여줘요.' })
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('gapless')
-						.setNameLocalizations({ ko: '갭리스' })
-						.setDescription('Toggle gapless playback.')
-						.setDescriptionLocalizations({ ko: '갭리스 재생을 켜거나 꺼요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('갭리스 재생을 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('crossfade')
-						.setNameLocalizations({ ko: '크로스페이드' })
-						.setDescription('Toggle overlap crossfade.')
-						.setDescriptionLocalizations({ ko: '곡 사이 겹치기(크로스페이드)를 설정해요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('크로스페이드를 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-						.addIntegerOption((opt) =>
-							opt
-								.setName('duration')
-								.setNameLocalizations({ ko: '길이' })
-								.setDescription('겹치는 길이 500~15000ms (0.5초~15초). 생략하면 현재 값을 유지해요.')
-								.setMinValue(500)
-								.setMaxValue(15000)
-								.setRequired(false)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('normalization')
-						.setNameLocalizations({ ko: '볼륨정규화' })
-						.setDescription('Toggle volume normalization.')
-						.setDescriptionLocalizations({ ko: '곡 사이 볼륨 차이를 자동으로 맞춰요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('볼륨 정규화를 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('parallel-tts')
-						.setNameLocalizations({ ko: '동시tts' })
-						.setDescription('Toggle simultaneous TTS announcements.')
-						.setDescriptionLocalizations({ ko: '여러 음성 안내를 동시에 재생할지 설정해요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('동시 재생을 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-				);
+				.setDescriptionLocalizations({ ko: '갭리스 재생과 크로스페이드를 설정해요.' });
+			withMixerSubcommands(builder);
 		});
 	}
 
@@ -113,8 +149,8 @@ export class MixerCommand extends Command {
 				return this.handleCrossfade(interaction, player);
 			case 'normalization':
 				return this.handleNormalization(interaction, player);
-			case 'parallel-tts':
-				return this.handleParallelTts(interaction);
+			case 'announce-mode':
+				return this.handleAnnounceMode(interaction);
 			default:
 				throw new UserError({
 					identifier: 'mixer_unknown_subcommand',
@@ -124,7 +160,36 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	private async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	/**
+	 * `/설정 audio` 같은 다른 커맨드가 같은 핸들러를 쓰도록 위임해요.
+	 * 인스턴스는 서브커맨드/플레이어만 쓰므로 커맨드 컨텍스트 없이 만들어도 안전해요.
+	 */
+	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
+		const command = new MixerCommand(container.client as never);
+		const player = container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
+		const subcommand = interaction.options.getSubcommand(true);
+
+		switch (subcommand) {
+			case 'status':
+				return command.handleStatus(interaction, player);
+			case 'gapless':
+				return command.handleGapless(interaction, player);
+			case 'crossfade':
+				return command.handleCrossfade(interaction, player);
+			case 'normalization':
+				return command.handleNormalization(interaction, player);
+			case 'announce-mode':
+				return command.handleAnnounceMode(interaction);
+			default:
+				throw new UserError({
+					identifier: 'mixer_unknown_subcommand',
+					message: `${emoji('error')} 알 수 없는 하위 명령어예요.`,
+					context: { ephemeral: true }
+				});
+		}
+	}
+
+	async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		const settings = await this.container.guildService.getMixerSettings(interaction.guildId);
 		const state = player ? await this.container.mixerService.getState(player).catch(() => null) : null;
 		await interaction.editReply({
@@ -134,7 +199,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
+	async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
 		const allowed = await this.container.guildService.hasDJRole(interaction.guildId, interaction.member);
 		if (!allowed) {
 			throw new UserError({
@@ -145,7 +210,7 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	private async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setGapless(interaction.guildId, enabled);
@@ -166,7 +231,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		const duration = interaction.options.getInteger('duration') ?? undefined;
@@ -196,7 +261,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setNormalization(interaction.guildId, enabled);
@@ -225,15 +290,14 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async handleParallelTts(interaction: ChatInputCommandInteraction<'cached'>) {
+	/** TTS 안내 방식 — sequential(순서) / parallel(겹침) / interrupt(최신만) */
+	async handleAnnounceMode(interaction: ChatInputCommandInteraction<'cached'>) {
 		await this.checkDJ(interaction);
-		const enabled = interaction.options.getBoolean('enabled', true);
-		await this.container.guildService.setTtsParallel(interaction.guildId, enabled);
-		const message = enabled
-			? `${emoji('volume_up')} 동시 TTS를 켰어요. 여러 음성 안내가 동시에 재생돼요.`
-			: `${emoji('volume_up')} 동시 TTS를 껐어요. 음성 안내가 순서대로 재생돼요.`;
+		const mode = normalizeAnnounceMode(interaction.options.getString('mode', true));
+		await this.container.guildService.setTtsAnnounceMode(interaction.guildId, mode);
+		const label = ANNOUNCE_MODE_LABELS[mode];
 		await interaction.editReply({
-			components: [view.mixerUpdated({ message })],
+			components: [view.mixerUpdated({ message: `${emoji('volume_up')} ${label}` })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});

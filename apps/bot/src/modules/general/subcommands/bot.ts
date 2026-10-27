@@ -5,11 +5,13 @@ import { formatDayHourMinute } from '../utils/uptime.ts';
 
 export const name = 'bot';
 export const ko = '봇';
-export const description = '봇의 정보와 통계를 보여줘요.';
+export const description = '봇 정보와 통계를 보여줘요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Show bot information and stats.';
 export const preconditions: string[] = [];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	return sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {

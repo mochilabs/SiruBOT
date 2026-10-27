@@ -18,7 +18,8 @@ export class ReloadCommand extends Command {
 					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 					.setName(this.name)
 					.setNameLocalizations({ ko: '리로드' })
-					.setDescription('명령어 리로드');
+					.setDescription('Reload commands.')
+					.setDescriptionLocalizations({ ko: '명령어를 리로드해요.' });
 			},
 			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);

@@ -14,6 +14,7 @@ import {
 } from "@/lib/api-guards";
 import { guardRateLimit, rateKey as buildRateKey, type RateRule } from "@/lib/rate-limit";
 import { parseSettingBody } from "@/lib/schemas";
+import { reportRouteError } from "@/lib/sentry";
 
 /**
  * 라우트 게이트 역할 — `manage`/`member`는 길드 권한(세션 → accessToken → Discord 확인),
@@ -137,12 +138,24 @@ export function createGuildApiHandler<R extends ApiRouteRole, S extends z.ZodTyp
 		}
 
 		// authz·guildId·data는 위 분기에서 role/schema에 맞는 값만 채워져요 — 조건부 타입을 객체 리터럴에 그대로 매칭할 수 없어 한 번에 캐스트해요.
-		return await options.handler({
-			request,
-			params,
-			authz,
-			guildId,
-			data,
-		} as unknown as ApiHandlerContext<R, S>);
+		let handlerResult: Response;
+		try {
+			handlerResult = await options.handler({
+				request,
+				params,
+				authz,
+				guildId,
+				data,
+			} as unknown as ApiHandlerContext<R, S>);
+		} catch (error) {
+			reportRouteError(error, {
+				key: String(options.key ?? ''),
+				role: options.role,
+				guildId,
+				userId: authz.userId ?? '',
+			});
+			return NextResponse.json({ error: "요청을 처리하지 못했어요." }, { status: 500 });
+		}
+		return handlerResult;
 	};
 }

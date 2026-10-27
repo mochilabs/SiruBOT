@@ -7,6 +7,8 @@ import * as view from '../view/repeat.ts';
 export const name = 'repeat';
 export const ko = '반복';
 export const description = '반복 모드를 설정해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Set the repeat mode.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 const VALID_REPEAT_MODES = ['off', 'track', 'queue'] as const;
@@ -15,7 +17,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: description })
 		.addStringOption((option) =>
 			option

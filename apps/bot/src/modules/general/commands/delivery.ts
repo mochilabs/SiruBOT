@@ -2,10 +2,10 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
 import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '@sirubot/utils/delivery';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 import { GatewayDomainError } from '../../../services/dataApiClient.ts';
-import { trackDelivery } from '../../../services/dataApiClient.ts';
+import { searchDeliveryCarriers, trackDelivery } from '../../../services/dataApiClient.ts';
 
 const MAX_PROGRESS_LINES = 5;
 
@@ -40,7 +40,7 @@ function buildContainer(result: DeliveryTrackResult, trackingNumber: string) {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'delivery',
-	description: '택배 배송 상태를 조회해요.',
+	description: 'Track a parcel delivery.',
 	fullCategory: ['일반']
 })
 export class DeliveryCommand extends Command {
@@ -59,6 +59,7 @@ export class DeliveryCommand extends Command {
 						.setDescription('Carrier name (e.g. CJ Logistics)')
 						.setDescriptionLocalizations({ ko: '택배사 이름 (예: cj대한통운, 한진택배, 우체국)' })
 						.setRequired(true)
+						.setAutocomplete(true)
 				)
 				.addStringOption((option) =>
 					option
@@ -69,6 +70,18 @@ export class DeliveryCommand extends Command {
 						.setRequired(true)
 				);
 		});
+	}
+
+	public override async autocompleteRun(interaction: AutocompleteInteraction) {
+		const focused = interaction.options.getFocused();
+		// 조회 실패(게이트웨이 미설정·프로바이더 장애)면 빈 목록 — 자유 입력은 그대로 유지돼요
+		const carriers = await searchDeliveryCarriers(focused).catch(() => []);
+		await interaction.respond(
+			carriers.slice(0, 25).map((carrier) => ({
+				name: carrier.name.length > 100 ? `${carrier.name.slice(0, 99)}…` : carrier.name,
+				value: carrier.id
+			}))
+		);
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {

@@ -2,7 +2,7 @@ import { container } from '@sapphire/framework';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
 import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
-import { DEFAULT_COLOR } from '@sirubot/utils';
+import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
 import { getInFlightRelatedFetch } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
@@ -161,7 +161,7 @@ export class QueueAdvancer {
 				this.host.armWatchdog(player);
 			});
 		} else {
-			await this.sendNotification(player, `❌ **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
+			await this.sendNotification(player, `${emoji('error')} **${track?.info.title ?? '알 수 없는 곡'}** 재생 중 오류가 발생했어요.`);
 			// 오류 종료 뒤 queueEnd의 일반 종료 안내가 덧붙지 않도록 억제
 			player.transitionState.stopByCommand = true;
 			cancelPendingInvalidate(player);
@@ -310,7 +310,7 @@ export class QueueAdvancer {
 		await this.container.playerNotifier.deleteController(player);
 
 		if (!player.transitionState.stopByCommand) {
-			await this.sendNotification(player, '📭 대기열의 모든 곡을 재생했어요.');
+			await this.sendNotification(player, `${emoji('inbox_tray')} 대기열의 모든 곡을 재생했어요.`);
 		}
 	}
 

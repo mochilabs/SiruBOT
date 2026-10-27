@@ -2,7 +2,7 @@ import { LavalinkManager, SponsorBlockChaptersLoaded, SponsorBlockSegmentSkipped
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
-import { DEFAULT_COLOR, resolveYouTubeVideoId } from '@sirubot/utils';
+import { DEFAULT_COLOR, emoji, resolveYouTubeVideoId } from '@sirubot/utils';
 
 export class SponsorBlockHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -43,7 +43,7 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 							.setAccentColor(DEFAULT_COLOR)
 							.addTextDisplayComponents((textDisplay) =>
 								textDisplay.setContent(
-									`⏩ [SponsorBlock] **${segments[payload.segment.category] ?? payload.segment.category}** 구간을 건너뛰었어요.`
+									`${emoji('arrow_forward')} [SponsorBlock] **${segments[payload.segment.category] ?? payload.segment.category}** 구간을 건너뛰었어요.`
 								)
 							)
 					],

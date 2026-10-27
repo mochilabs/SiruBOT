@@ -723,7 +723,7 @@ describe('handleQueueEnd', () => {
 		expect(publishPlayerEnded).toHaveBeenCalledWith(player);
 		expect(notifier.deleteController).toHaveBeenCalledWith(player);
 		expect(channelSend).toHaveBeenCalledTimes(1);
-		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📭 대기열의 모든 곡을 재생했어요.');
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.'); // inbox_tray 폴백
 		expect(chatTts.keepAliveForTts).toHaveBeenCalledWith(player);
 	});
 
@@ -886,6 +886,6 @@ describe('watchdog 복구 루프', () => {
 		expect(publishPlayerEnded).toHaveBeenCalledWith(player);
 		expect(notifier.deleteController).toHaveBeenCalledWith(player);
 		expect(channelSend).toHaveBeenCalledTimes(1);
-		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📭 대기열의 모든 곡을 재생했어요.');
+		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.'); // inbox_tray 폴백
 	});
 });

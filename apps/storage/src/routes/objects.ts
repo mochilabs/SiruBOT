@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, preHandlerAsyncHookHandler } from 'fastify';
-import { ASSET_ALLOWED_MIME_TYPES, ASSET_MAX_BYTES, sniffImageMime } from '@sirubot/utils';
+import { ASSET_ALLOWED_MIME_TYPES, ASSET_MAX_BYTES, sniffImageMime, TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 import { ObjectPathError, ObjectStore, INVALID_OBJECT_PATH_MESSAGE, contentTypeForKey } from '../services/objectStore.ts';
 
 interface ObjectRouteOptions {
@@ -9,6 +9,9 @@ interface ObjectRouteOptions {
 }
 
 const DEFAULT_MAX_KEYS = 1000;
+
+/** 비공개 transcript 상한 — 텍스트를 gzip한 결과 기준이에요 (긴 상담도 수백 KB 수준) */
+const TICKET_TRANSCRIPT_MAX_BYTES = 16 * 1024 * 1024;
 
 type StoreCallResult<T> = { ok: true; value: T } | { ok: false; reply: FastifyReply };
 
@@ -42,6 +45,20 @@ export async function registerObjectRoutes(fastify: FastifyInstance, options: Ob
 			}
 			if (!Buffer.isBuffer(body)) return reply.code(400).send({ error: '파일 본문이 필요해요.' });
 			const bytes = new Uint8Array(body);
+
+			// 비공개 버킷(티켓 transcript)은 문서라 매직 바이트 이미지 검증을 하지 않아요 — 크기 상한만 지켜요.
+			if (bucket === TICKET_TRANSCRIPT_BUCKET) {
+				if (!key.endsWith('.json.gz')) return reply.code(400).send({ error: 'transcript는 .json.gz 형식이어야 해요.' });
+				if (bytes.length > TICKET_TRANSCRIPT_MAX_BYTES) {
+					return reply.code(413).send({ error: 'transcript가 너무 커요. 최대 16MB까지 올릴 수 있어요.' });
+				}
+				const putResult = await storeCall(reply, () => store.put(bucket, key, bytes, 'application/gzip'));
+				if (!putResult.ok) return putResult.reply;
+				const saved = putResult.value;
+				// 비공개 버킷은 공개 URL을 발급하지 않아요 — key만 돌려주고 대시보드가 storage 인증으로 내려받아요.
+				return reply.code(201).send({ bucket, key: saved.key, size: saved.size, contentType: 'application/gzip', etag: saved.etag });
+			}
+
 			if (bytes.length > ASSET_MAX_BYTES) return reply.code(413).send({ error: '이미지가 너무 커요. 최대 8MB까지 올릴 수 있어요.' });
 
 			const mime = sniffImageMime(bytes);
@@ -68,6 +85,8 @@ export async function registerObjectRoutes(fastify: FastifyInstance, options: Ob
 
 	// 공개 조회 (GET /:bucket/*key): 인증 없음. 디스코드 이미지 프록시가 직접 fetch해요.
 	fastify.get<{ Params: { bucket: string; '*': string } }>('/:bucket/*', async (request, reply) => {
+		// 비공개 버킷은 공개 GET을 막아요 — 인증된 DELETE/목록만 남고, 읽기는 대시보드가 별도 경로로 처리해요.
+		if (request.params.bucket === TICKET_TRANSCRIPT_BUCKET) return reply.code(404).send({ error: '이미지를 찾을 수 없어요.' });
 		const getResult = await storeCall(reply, () => store.get(request.params.bucket, request.params['*']));
 		if (!getResult.ok) return getResult.reply;
 		const got = getResult.value;

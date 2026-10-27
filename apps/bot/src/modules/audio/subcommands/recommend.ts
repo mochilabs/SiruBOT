@@ -8,13 +8,15 @@ import { errorView } from '../../../lib/errorView.ts';
 export const name = 'recommend';
 export const ko = '추천';
 export const description = '현재 곡 기반의 추천 곡을 대기열에 추가해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Queue tracks related to the current one.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡과 비슷한 추천 곡을 대기열에 추가해요.' })
 		.addIntegerOption((option) =>
 			option

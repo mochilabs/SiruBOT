@@ -18,7 +18,8 @@ export class ShardsCommand extends Command {
 					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 					.setName(this.name)
 					.setNameLocalizations({ ko: '샤드' })
-					.setDescription('샤드 상태를 보여줘요. (봇 소유자 전용)');
+					.setDescription('Show shard status (bot owner only).')
+					.setDescriptionLocalizations({ ko: '샤드 상태를 보여줘요. (봇 소유자 전용)' });
 			},
 			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);

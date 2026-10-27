@@ -1,12 +1,20 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from 'discord.js';
+import {
+	AutocompleteInteraction,
+	ChatInputCommandInteraction,
+	GuildMember,
+	type SlashCommandOptionsOnlyBuilder,
+	SlashCommandSubcommandBuilder
+} from 'discord.js';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { skipPolicy, type SkipContext } from '../../../services/skipPolicy.ts';
 
 export const name = 'skip';
 export const ko = '건너뛰기';
 export const description = '현재 재생 중인 곡을 건너뛰어요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Skip the current track.';
 export const preconditions = [
 	'TextChannelAllowed',
 	'NodeAvailable',
@@ -18,11 +26,14 @@ export const preconditions = [
 ];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub
-		.setName(name)
-		.setNameLocalizations({ ko })
-		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡을 건너뛰어요.' })
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
+	withOptions(named);
+	return named;
+}
+
+/** 옵션만 붙여요 — `/건너뛰기`처럼 top-level 커맨드로 승격할 때 같은 옵션 정의를 재사용해요 */
+export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
+	builder
 		.addBooleanOption((option) =>
 			option
 				.setName('force')
@@ -34,7 +45,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 		.addIntegerOption((option) =>
 			option
 				.setName('to')
-				.setDescription('Skip to the specified track')
+				.setDescription('Skip forward to the given queue position.')
 				.setNameLocalizations({ ko: '곡' })
 				.setDescriptionLocalizations({ ko: '건너뛸 곡의 번호를 입력해 주세요.' })
 				.setMinValue(1)

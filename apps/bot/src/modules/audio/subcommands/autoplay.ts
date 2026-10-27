@@ -7,13 +7,15 @@ import * as view from '../view/related.ts';
 export const name = 'autoplay';
 export const ko = '자동재생';
 export const description = '추천 곡 자동재생을 켜거나 꺼요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Turn autoplay of related tracks on or off.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: '추천 곡 자동재생을 켜거나 꺼요.' })
 		.addBooleanOption((option) =>
 			option

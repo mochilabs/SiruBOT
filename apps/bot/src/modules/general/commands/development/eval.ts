@@ -23,7 +23,9 @@ export class EvalCommand extends Command {
 				builder
 					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 					.setName(this.name)
-					.setDescription('코드를 실행해요. (봇 소유자 전용)');
+					.setNameLocalizations({ ko: '실행' })
+					.setDescription('Evaluate code (bot owner only).')
+					.setDescriptionLocalizations({ ko: '코드를 실행해요. (봇 소유자 전용)' });
 			},
 			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);

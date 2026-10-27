@@ -35,7 +35,20 @@ export function sendError(reply: { code: (n: number) => any }, error: unknown): 
  *  이 헬퍼는 identifier가 있으면 그대로, 없으면 fallbackCode를 에러 코드로 써요. */
 export function sendDomainError(reply: { code: (n: number) => any }, error: Error, fallbackCode: string): any {
 	const identifier = (error as { identifier?: string }).identifier;
+	// 도메인 에러(WeatherError/DeliveryError 등)는 사용자 안내 문구라 그대로 내려요.
 	return reply.code(400).send({ error: identifier ?? fallbackCode, message: error.message });
+}
+
+/**
+ * 업스트림(외부 프로바이더) 실패 — 응답 본문에는 고정 안내만 내려요.
+ * `error.message`는 fetch 실패면 요청 URL까지 포함할 수 있어(쿼리에 위치·운송장번호 등 사용자 입력) 그대로 쓰면 유출이에요.
+ * 원인은 로그/Sentry에만 남겨요.
+ */
+export function sendUpstreamError(reply: { code: (n: number) => any }, error: unknown): any {
+	const detail = error instanceof Error ? error.message : String(error);
+	const stack = error instanceof Error ? error.stack : undefined;
+	logger.error(`upstream failed: ${detail}${stack ? `\n${stack}` : ''}`);
+	return reply.code(502).send({ error: 'upstream_failed', message: '외부 API 호출에 실패했어요. 잠시 후 다시 시도해 주세요.' });
 }
 
 /** 봇 릴레이 실패 사유를 HTTP로 매핑하는 공통부 — redis_unavailable=503, timeout(봇 미응답)=502,

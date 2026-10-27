@@ -3,7 +3,7 @@ import { Command } from '@sapphire/framework';
 import { emoji, createContainer, DEFAULT_COLOR } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
-import { MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
+import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
 import { INFO_SUBCOMMANDS } from './info.ts';
 
@@ -36,13 +36,17 @@ function subcommandMention(commandName: string, subcommandName: string, index: R
 	return command ? `</${commandName} ${subcommandName}:${command.id}>` : `\`/${commandName} ${subcommandName}\``;
 }
 
-/** AI 섹션에 따로 적어 일반 목록에서는 제외하는 명령어들 */
+/**
+ * AI 섹션에 따로 적어 일반 목록에서는 제외하는 명령어들.
+ * 관리자 설정 커맨드(settings·mixer·chattools·config)는 `/설정` 그룹으로 안내해 일반 목록에서 빼요.
+ */
 const AI_COMMAND_NAMES = new Set(['chat', 'chat-settings']);
+const ADMIN_COMMAND_NAMES = new Set(['settings', 'mixer', 'chattools', 'config']);
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'help',
-	description: '사용 가능한 명령어 목록을 보여줘요.'
+	description: 'Show the list of available commands.'
 })
 export class HelpCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
@@ -98,10 +102,14 @@ export class HelpCommand extends Command {
 					for (const sub of MUSIC_SUBCOMMANDS) {
 						audioCommands.push(`　└ ${subcommandMention('music', sub.name, index)} · ${sub.description}`);
 					}
+					// 승격 커맨드는 /음악 서브커맨드 대신 top-level로 보여줘요 (같은 동작이 두 번 보이지 않게)
+					for (const promoted of MUSIC_PROMOTED_COMMANDS) {
+						audioCommands.push(`${commandMention(promoted.name, index)} · ${promoted.description}`);
+					}
 				}
 			} else if (cmd.fullCategory.includes('게임')) {
 				gameCommands.push(line);
-			} else if (!AI_COMMAND_NAMES.has(cmd.name)) {
+			} else if (!AI_COMMAND_NAMES.has(cmd.name) && !ADMIN_COMMAND_NAMES.has(cmd.name)) {
 				const preconditions = cmd.options.preconditions;
 				const isOwnerOnly = Array.isArray(preconditions) && preconditions.includes('OwnerOnly');
 				if (!isOwnerOnly) {
@@ -134,7 +142,13 @@ export class HelpCommand extends Command {
 			...gameCommands,
 			'',
 			`**${emoji('tools')} 일반**`,
-			...generalCommands
+			...generalCommands,
+			'',
+			`**${emoji('lock')} 서버 관리(관리자)**`,
+			`${commandMention('config', index)} · 서버 설정 요약·음악·믹서·AI·채팅 유틸을 한 곳에서`,
+			`${commandMention('ticket', index)} · 고객지원 티켓`,
+			`${commandMention('purge', index)} · 채널 메시지 정리`,
+			`${commandMention('chat-settings', index)} · AI 채팅 on/off (\`/설정 chat\`과 같은 설정)`
 		];
 	}
 }

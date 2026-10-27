@@ -1,12 +1,14 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
-import { AutocompleteInteraction, ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 'discord.js';
+import { AutocompleteInteraction, ChatInputCommandInteraction, type SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandBuilder } from 'discord.js';
 import { SearchPlatform } from 'lavalink-client';
 
 export const name = 'play';
 export const ko = '재생';
 export const description = '음성 채널에서 노래를 재생해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Play a track in your voice channel.';
 export const preconditions = [
 	'TextChannelAllowed',
 	'NodeAvailable',
@@ -20,11 +22,14 @@ export const preconditions = [
 const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub
-		.setName(name)
-		.setNameLocalizations({ ko })
-		.setDescription(description)
-		.setDescriptionLocalizations({ ko: description })
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
+	withOptions(named);
+	return named;
+}
+
+/** 옵션만 붙여요 — `/재생`처럼 서브커맨드 없이 top-level 커맨드로 승격할 때 같은 옵션 정의를 재사용해요 */
+export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
+	builder
 		.addStringOption((option) =>
 			option
 				.setName('query')

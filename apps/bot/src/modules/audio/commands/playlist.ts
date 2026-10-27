@@ -1,16 +1,17 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji, createContainer, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { Track } from 'lavalink-client';
 import { getErrorMessage } from '../utils/error.ts';
 import { lookupSource } from '../utils/source.ts';
 import { errorView } from '../../../lib/errorView.ts';
+import { respondPlaylistNames, respondPlaylistTrackPositions } from '../../../lib/autocomplete.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'playlist',
-	description: '커스텀 플레이리스트를 관리해요.',
+	description: 'Manage your custom playlists.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable']
 })
@@ -30,10 +31,21 @@ export class PlaylistCommand extends Command {
 						.setDescription('Create a new playlist.')
 						.setDescriptionLocalizations({ ko: '새로운 플레이리스트를 생성해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('이름을 입력하세요.').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist name.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setRequired(true)
 						)
 						.addStringOption((opt) =>
-							opt.setName('description').setNameLocalizations({ ko: '설명' }).setDescription('설명을 입력하세요.').setRequired(false)
+							opt
+								.setName('description')
+								.setNameLocalizations({ ko: '설명' })
+								.setDescription('Optional playlist description.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 설명 (선택)' })
+								.setRequired(false)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -43,7 +55,13 @@ export class PlaylistCommand extends Command {
 						.setDescription('Delete a playlist.')
 						.setDescriptionLocalizations({ ko: '플레이리스트를 삭제해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('삭제할 플레이리스트 이름').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist to delete.')
+								.setDescriptionLocalizations({ ko: '삭제할 플레이리스트 이름이에요.' })
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -60,7 +78,13 @@ export class PlaylistCommand extends Command {
 						.setDescription('View tracks in a playlist.')
 						.setDescriptionLocalizations({ ko: '플레이리스트에 담긴 곡들을 보여줘요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('조회할 플레이리스트 이름').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist to view.')
+								.setDescriptionLocalizations({ ko: '조회할 플레이리스트 이름이에요.' })
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -70,10 +94,20 @@ export class PlaylistCommand extends Command {
 						.setDescription('Add a track to a playlist.')
 						.setDescriptionLocalizations({ ko: '플레이리스트에 곡을 추가해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('플레이리스트 이름').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist name.')
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 						.addStringOption((opt) =>
-							opt.setName('query').setNameLocalizations({ ko: '검색어' }).setDescription('곡 제목이나 URL').setRequired(true)
+							opt
+								.setName('query')
+								.setNameLocalizations({ ko: '검색어' })
+								.setDescription('Track title or URL.')
+								.setDescriptionLocalizations({ ko: '곡 제목이나 URL이에요.' })
+								.setRequired(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -83,7 +117,12 @@ export class PlaylistCommand extends Command {
 						.setDescription('Add the currently playing track to a playlist.')
 						.setDescriptionLocalizations({ ko: '현재 재생 중인 곡을 플레이리스트에 추가해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('플레이리스트 이름').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist name.')
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -93,10 +132,21 @@ export class PlaylistCommand extends Command {
 						.setDescription('Remove a track from a playlist.')
 						.setDescriptionLocalizations({ ko: '플레이리스트에서 곡을 제거해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('플레이리스트 이름').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist name.')
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 						.addIntegerOption((opt) =>
-							opt.setName('position').setNameLocalizations({ ko: '번호' }).setDescription('제거할 곡의 번호').setRequired(true)
+							opt
+								.setName('position')
+								.setNameLocalizations({ ko: '번호' })
+								.setDescription('Track number to remove.')
+								.setDescriptionLocalizations({ ko: '제거할 곡의 번호예요.' })
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -106,10 +156,37 @@ export class PlaylistCommand extends Command {
 						.setDescription('Play a playlist.')
 						.setDescriptionLocalizations({ ko: '플레이리스트의 곡들을 대기열에 추가하고 재생해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('재생할 플레이리스트 이름').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist to play.')
+								.setDescriptionLocalizations({ ko: '재생할 플레이리스트 이름이에요.' })
+								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				);
 		});
+	}
+
+	public override async autocompleteRun(interaction: AutocompleteInteraction) {
+		if (!interaction.inCachedGuild()) return interaction.respond([]);
+
+		let subcommand: string;
+		try {
+			subcommand = interaction.options.getSubcommand(true);
+		} catch {
+			return interaction.respond([]);
+		}
+
+		const focused = interaction.options.getFocused(true);
+		if (focused.name === 'position') {
+			// 번호 후보는 이미 고른 플레이리스트의 곡 목록이에요
+			return respondPlaylistTrackPositions(interaction, interaction.options.getString('name'));
+		}
+		if (focused.name === 'name' && subcommand !== 'create') {
+			return respondPlaylistNames(interaction);
+		}
+		return interaction.respond([]);
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {

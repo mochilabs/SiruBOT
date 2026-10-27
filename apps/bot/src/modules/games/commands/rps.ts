@@ -23,7 +23,7 @@ function choiceContainer(displayName: string) {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'rps',
-	description: '가위바위보로 봇과 승부해요.',
+	description: 'Play rock-paper-scissors against the bot.',
 	fullCategory: ['게임']
 })
 export class RpsCommand extends Command {

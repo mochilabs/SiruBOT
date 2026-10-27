@@ -1,6 +1,14 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { Command, UserError, container } from '@sapphire/framework';
+import {
+	ApplicationIntegrationType,
+	ChatInputCommandInteraction,
+	ChannelType,
+	MessageFlags,
+	PermissionFlagsBits,
+	type SlashCommandSubcommandGroupBuilder,
+	type SlashCommandSubcommandsOnlyBuilder
+} from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { type ChatToolName } from '../../../services/guildService.ts';
 import { resetCountingState } from '../../../services/countingState.ts';
@@ -18,10 +26,78 @@ const FEATURE_LABELS: Record<ChatToolName, string> = {
 	embedFix: '임베드 복구'
 };
 
+/**
+ * 채팅 유틸 서브커맨드 정의 — `/채팅유틸`과 `/설정 채팅유틸`이 같은 옵션을 써요.
+ */
+export function withChatToolsSubcommands(builder: SlashCommandSubcommandsOnlyBuilder | SlashCommandSubcommandGroupBuilder): void {
+	builder
+		.addSubcommand((sub) =>
+			sub
+				.setName('channel')
+				.setNameLocalizations({ ko: '채널' })
+				.setDescription('Toggle a chat tool for this channel.')
+				.setDescriptionLocalizations({ ko: '이 채널에서 채팅 유틸 기능을 켜거나 꺼요.' })
+				.addStringOption((option) =>
+					option
+						.setName('feature')
+						.setNameLocalizations({ ko: '기능' })
+						.setDescription('The chat tool to toggle.')
+						.setDescriptionLocalizations({ ko: '켜거나 끌 기능이에요.' })
+						.setRequired(true)
+						// 선택지는 FEATURE_LABELS에서 뽑는다 — 같은 목록을 두 번 선언하면 한쪽만 갱신돼 어긋난다.
+						.addChoices(
+							...(Object.keys(FEATURE_LABELS) as ChatToolName[]).map((value) => ({
+								name: value,
+								name_localizations: { ko: FEATURE_LABELS[value] },
+								value
+							}))
+						)
+				)
+				.addStringOption((option) =>
+					option
+						.setName('state')
+						.setNameLocalizations({ ko: '상태' })
+						.setDescription('Whether to enable or disable.')
+						.setDescriptionLocalizations({ ko: '켜기 또는 끄기예요.' })
+						.setRequired(true)
+						.addChoices(
+							{ name: 'On', name_localizations: { ko: '켜기' }, value: 'on' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('counting')
+				.setNameLocalizations({ ko: '카운팅' })
+				.setDescription('Designate the counting channel.')
+				.setDescriptionLocalizations({ ko: '카운팅 채널을 지정하거나 카운팅을 꺼요.' })
+				.addChannelOption((option) =>
+					option
+						.setName('channel')
+						.setNameLocalizations({ ko: '채널' })
+						.setDescription('Channel to count in.')
+						.setDescriptionLocalizations({ ko: '숫자를 셀 채널이에요. 비워 두면 이 채널로 지정해요.' })
+						.addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+				)
+				.addStringOption((option) =>
+					option
+						.setName('state')
+						.setNameLocalizations({ ko: '상태' })
+						.setDescription('Whether to enable or disable counting.')
+						.setDescriptionLocalizations({ ko: '지정 또는 끄기예요. 기본값은 지정이에요.' })
+						.addChoices(
+							{ name: 'Set', name_localizations: { ko: '지정' }, value: 'on' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
+				)
+		);
+}
+
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'chattools',
-	description: '채팅 유틸 기능을 채널별로 켜고 끄고 카운팅 채널을 지정해요.',
+	description: 'Toggle chat tools per channel and set the counting channel.',
 	fullCategory: ['일반']
 })
 export class ChatToolsCommand extends Command {
@@ -32,62 +108,14 @@ export class ChatToolsCommand extends Command {
 				.setName(this.name)
 				.setNameLocalizations({ ko: '채팅유틸' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '채팅 유틸 기능을 채널별로 켜고 끄고 카운팅 채널을 지정해요.' })
-				.addSubcommand((sub) =>
-					sub
-						.setName('channel')
-						.setNameLocalizations({ ko: '채널' })
-						.setDescription('Toggle a chat tool for this channel.')
-						.setDescriptionLocalizations({ ko: '이 채널에서 채팅 유틸 기능을 켜거나 꺼요.' })
-						.addStringOption((option) =>
-							option
-								.setName('feature')
-								.setNameLocalizations({ ko: '기능' })
-								.setDescription('The chat tool to toggle.')
-								.setDescriptionLocalizations({ ko: '켜거나 끌 기능이에요.' })
-								.setRequired(true)
-								// 선택지는 FEATURE_LABELS에서 뽑는다 — 같은 목록을 두 번 선언하면 한쪽만 갱신돼 어긋난다.
-								.addChoices(
-									...(Object.keys(FEATURE_LABELS) as ChatToolName[]).map((value) => ({
-										name: FEATURE_LABELS[value],
-										value
-									}))
-								)
-						)
-						.addStringOption((option) =>
-							option
-								.setName('state')
-								.setNameLocalizations({ ko: '상태' })
-								.setDescription('Whether to enable or disable.')
-								.setDescriptionLocalizations({ ko: '켜기 또는 끄기예요.' })
-								.setRequired(true)
-								.addChoices({ name: '켜기', value: 'on' }, { name: '끄기', value: 'off' })
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('counting')
-						.setNameLocalizations({ ko: '카운팅' })
-						.setDescription('Designate the counting channel.')
-						.setDescriptionLocalizations({ ko: '카운팅 채널을 지정하거나 카운팅을 꺼요.' })
-						.addChannelOption((option) =>
-							option
-								.setName('channel')
-								.setNameLocalizations({ ko: '채널' })
-								.setDescription('Channel to count in.')
-								.setDescriptionLocalizations({ ko: '숫자를 셀 채널이에요. 비워 두면 이 채널로 지정해요.' })
-								.addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-						)
-						.addStringOption((option) =>
-							option
-								.setName('state')
-								.setNameLocalizations({ ko: '상태' })
-								.setDescription('Whether to enable or disable counting.')
-								.setDescriptionLocalizations({ ko: '지정 또는 끄기예요. 기본값은 지정이에요.' })
-								.addChoices({ name: '지정', value: 'on' }, { name: '끄기', value: 'off' })
-						)
-				);
+				.setDescriptionLocalizations({ ko: '채팅 유틸 기능을 채널별로 켜고 끄고 카운팅 채널을 지정해요.' });
+			withChatToolsSubcommands(builder);
 		});
+	}
+
+	/** `/설정 채팅유틸`이 같은 검증·핸들러를 재사용해요 */
+	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
+		return new ChatToolsCommand(container.client as never).chatInputRun(interaction);
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
@@ -153,7 +181,7 @@ export class ChatToolsCommand extends Command {
 	}
 
 	/** 카운팅 서브커맨드 — 채널 지정(기본: 이 채널) 또는 끄기. 상태는 새로 시작해요 */
-	private async runCounting(interaction: ChatInputCommandInteraction<'cached'>) {
+	async runCounting(interaction: ChatInputCommandInteraction<'cached'>) {
 		if (interaction.options.getString('state') === 'off') {
 			await this.container.guildService.setCountingEnabled(interaction.guildId, false);
 			await resetCountingState(interaction.guildId);
