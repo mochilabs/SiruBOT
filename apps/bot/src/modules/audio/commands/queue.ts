@@ -9,7 +9,7 @@ import { respondQueuedTracks } from '../../../lib/autocomplete.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'queue',
-	description: '음악 대기열을 보거나 관리해요.',
+	description: 'View and manage the music queue.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying']
 })

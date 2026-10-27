@@ -6,7 +6,7 @@ import * as view from '../view/stop.ts';
 
 export const name = 'stop';
 export const ko = '정지';
-export const description = '대기열을 정리하고 노래를 멈춰요';
+export const description = '대기열을 정리하고 노래를 멈춰요.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {

@@ -97,7 +97,7 @@ function buildContainer(result: WeatherResult) {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'weather',
-	description: '현재 날씨와 예보를 확인해요.',
+	description: 'Check current weather and forecasts.',
 	fullCategory: ['일반']
 })
 export class WeatherCommand extends Command {

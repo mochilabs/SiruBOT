@@ -12,7 +12,7 @@ import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
 
 /**
- * 믹서 서브커맨드 정의 — `/믹서`와 `/설정 믹서`가 같은 옵션을 써야 해서 한 곳에 둬요.
+ * 믹서 서브커맨드 정의 — `/믹서`와 `/설정 audio`가 같은 옵션을 써야 해서 한 곳에 둬요.
  */
 export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder | SlashCommandSubcommandGroupBuilder): void {
 	builder
@@ -30,7 +30,11 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 				.setDescription('Toggle gapless playback.')
 				.setDescriptionLocalizations({ ko: '갭리스 재생을 켜거나 꺼요.' })
 				.addBooleanOption((opt) =>
-					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('갭리스 재생을 켤지 끌지 선택해요.').setRequired(true)
+					opt
+						.setName('enabled')
+						.setNameLocalizations({ ko: '켜기' })
+						.setDescription('Enable or disable gapless playback.')
+						.setRequired(true)
 				)
 		)
 		.addSubcommand((sub) =>
@@ -40,13 +44,13 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 				.setDescription('Toggle overlap crossfade.')
 				.setDescriptionLocalizations({ ko: '곡 사이 겹치기(크로스페이드)를 설정해요.' })
 				.addBooleanOption((opt) =>
-					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('크로스페이드를 켤지 끌지 선택해요.').setRequired(true)
+					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('Enable or disable crossfade.').setRequired(true)
 				)
 				.addIntegerOption((opt) =>
 					opt
 						.setName('duration')
 						.setNameLocalizations({ ko: '길이' })
-						.setDescription('겹치는 길이 500~15000ms (0.5초~15초). 생략하면 현재 값을 유지해요.')
+						.setDescription('Overlap length in ms (500-15000). Omit to keep the current value.')
 						.setMinValue(500)
 						.setMaxValue(15000)
 						.setRequired(false)
@@ -59,7 +63,11 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 				.setDescription('Toggle volume normalization.')
 				.setDescriptionLocalizations({ ko: '곡 사이 볼륨 차이를 자동으로 맞춰요.' })
 				.addBooleanOption((opt) =>
-					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('볼륨 정규화를 켤지 끌지 선택해요.').setRequired(true)
+					opt
+						.setName('enabled')
+						.setNameLocalizations({ ko: '켜기' })
+						.setDescription('Enable or disable volume normalization.')
+						.setRequired(true)
 				)
 		)
 		.addSubcommand((sub) =>
@@ -69,7 +77,11 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 				.setDescription('Toggle simultaneous TTS announcements.')
 				.setDescriptionLocalizations({ ko: '여러 음성 안내를 동시에 재생할지 설정해요.' })
 				.addBooleanOption((opt) =>
-					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('동시 재생을 켤지 끌지 선택해요.').setRequired(true)
+					opt
+						.setName('enabled')
+						.setNameLocalizations({ ko: '켜기' })
+						.setDescription('Enable or disable simultaneous playback.')
+						.setRequired(true)
 				)
 		);
 }
@@ -77,7 +89,7 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'mixer',
-	description: '갭리스 재생과 크로스페이드를 설정해요.',
+	description: 'Configure gapless playback and crossfade.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel']
 })
@@ -123,7 +135,7 @@ export class MixerCommand extends Command {
 	}
 
 	/**
-	 * `/설정 믹서` 같은 다른 커맨드가 같은 핸들러를 쓰도록 위임해요.
+	 * `/설정 audio` 같은 다른 커맨드가 같은 핸들러를 쓰도록 위임해요.
 	 * 인스턴스는 서브커맨드/플레이어만 쓰므로 커맨드 컨텍스트 없이 만들어도 안전해요.
 	 */
 	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {

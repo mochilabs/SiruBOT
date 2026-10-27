@@ -52,7 +52,7 @@ const PROMOTED_MUSIC_SUBCOMMANDS = new Set(['play', 'skip']);
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'help',
-	description: '사용 가능한 명령어 목록을 보여줘요.'
+	description: 'Show the list of available commands.'
 })
 export class HelpCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
@@ -152,7 +152,7 @@ export class HelpCommand extends Command {
 			`${commandMention('config', index)} · 서버 설정 요약·음악·믹서·AI·채팅 유틸을 한 곳에서`,
 			`${commandMention('ticket', index)} · 고객지원 티켓`,
 			`${commandMention('purge', index)} · 채널 메시지 정리`,
-			`${commandMention('chat-settings', index)} · AI 채팅 on/off (\`/설정 ai\`와 같은 설정)`
+			`${commandMention('chat-settings', index)} · AI 채팅 on/off (\`/설정 chat\`과 같은 설정)`
 		];
 	}
 }

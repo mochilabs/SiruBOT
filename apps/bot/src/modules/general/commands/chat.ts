@@ -10,7 +10,7 @@ import { errorPayload, livePayload } from '../utils/chatView.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'chat',
-	description: 'AI와 대화해요. 대화 기록은 채널 단위로 기억해요.',
+	description: "Chat with the AI. It remembers this channel's conversation.",
 	fullCategory: ['일반']
 })
 export class ChatCommand extends Command {

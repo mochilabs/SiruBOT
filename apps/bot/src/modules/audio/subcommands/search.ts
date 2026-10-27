@@ -33,7 +33,7 @@ const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
 		.setName(name)
-		.setNameLocalizations({ ko, 'en-US': 'search' })
+		.setNameLocalizations({ ko })
 		.setDescription(description)
 		.setDescriptionLocalizations({ ko: '곡을 검색해서 5개 결과 중 골라 재생해요.' })
 		.addStringOption((option) =>

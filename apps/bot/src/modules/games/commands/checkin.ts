@@ -18,7 +18,7 @@ function getMilestones(): Record<number, string> {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'checkin',
-	description: '매일 출석 체크를 해요. 연속 출석하면 스트릭이 쌓여요.',
+	description: 'Daily check-in. Consecutive days build a streak.',
 	fullCategory: ['게임']
 })
 export class CheckinCommand extends Command {

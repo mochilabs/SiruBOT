@@ -10,7 +10,7 @@ import { errorView } from '../../../lib/errorView.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'favorites',
-	description: '즐겨찾기한 노래를 관리해요.',
+	description: 'Manage your favorite tracks.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable']
 })

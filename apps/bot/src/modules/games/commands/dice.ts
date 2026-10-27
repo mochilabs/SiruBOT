@@ -23,7 +23,7 @@ interface DiceRoll {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'dice',
-	description: '주사위를 굴려요. 기본은 1d6이고, 개수·면·보정을 옵션으로 지정할 수 있어요.',
+	description: 'Roll dice (default 1d6; set count, sides, and modifier via options).',
 	fullCategory: ['게임']
 })
 export class DiceCommand extends Command {

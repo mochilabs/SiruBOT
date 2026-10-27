@@ -43,7 +43,7 @@ export function withOptions<T extends SlashCommandSubcommandBuilder | SlashComma
 		.addIntegerOption((option) =>
 			option
 				.setName('to')
-				.setDescription('Skip to the specified track')
+				.setDescription('Skip forward to the given queue position.')
 				.setNameLocalizations({ ko: '곡' })
 				.setDescriptionLocalizations({ ko: '건너뛸 곡의 번호를 입력해 주세요.' })
 				.setMinValue(1)

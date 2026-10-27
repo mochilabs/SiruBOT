@@ -30,7 +30,11 @@ export function withChatSettingsSubcommands(builder: SlashCommandSubcommandsOnly
 						.setDescription('AI chat mode: all channels, selected channels, or off.')
 						.setDescriptionLocalizations({ ko: '모든 채널 / 특정 채널 / 끄기 중에서 골라요.' })
 						.setRequired(true)
-						.addChoices({ name: '모든 채널', value: 'all' }, { name: '특정 채널', value: 'channels' }, { name: '끄기', value: 'off' })
+						.addChoices(
+							{ name: 'All channels', name_localizations: { ko: '모든 채널' }, value: 'all' },
+							{ name: 'Selected channels', name_localizations: { ko: '특정 채널' }, value: 'channels' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
 				)
 		)
 		.addSubcommand((sub) =>
@@ -53,7 +57,7 @@ export function withChatSettingsSubcommands(builder: SlashCommandSubcommandsOnly
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'chat-settings',
-	description: '서버와 채널의 AI 채팅 설정을 관리해요.',
+	description: 'Manage AI chat settings for this server and channels.',
 	fullCategory: ['일반'],
 	preconditions: ['ManageGuild']
 })
@@ -71,7 +75,7 @@ export class ChatSettingsCommand extends Command {
 		});
 	}
 
-	/** `/설정 ai`가 같은 검증·핸들러를 재사용해요 */
+	/** `/설정 chat`가 같은 검증·핸들러를 재사용해요 */
 	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
 		return new ChatSettingsCommand(container.client as never).chatInputRun(interaction);
 	}

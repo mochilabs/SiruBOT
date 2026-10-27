@@ -19,11 +19,27 @@ export class EmojisCommand extends Command {
 					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
 					.setName(this.name)
 					.setNameLocalizations({ ko: '이모지' })
-					.setDescription('앱 이모지를 관리해요. (봇 소유자 전용)')
+					.setDescription('Manage app emojis (bot owner only).')
+					.setDescriptionLocalizations({ ko: '앱 이모지를 관리해요. (봇 소유자 전용)' })
 					.setDescriptionLocalizations({ ko: '앱 이모지를 조회·동기화·전체 재업로드해요. (봇 소유자 전용)' })
-					.addSubcommand((sub) => sub.setName('list').setDescription('등록된 앱 이모지 목록을 보여요.'))
-					.addSubcommand((sub) => sub.setName('sync').setDescription('미등록 PNG를 업로드하고 캐시를 갱신해요.'))
-					.addSubcommand((sub) => sub.setName('reupload').setDescription('전체 이모지를 삭제 후 재업로드해요 (ID 갱신).'));
+					.addSubcommand((sub) =>
+						sub
+							.setName('list')
+							.setDescription('List registered app emojis.')
+							.setDescriptionLocalizations({ ko: '등록된 앱 이모지 목록을 보여요.' })
+					)
+					.addSubcommand((sub) =>
+						sub
+							.setName('sync')
+							.setDescription('Upload missing PNGs and refresh the cache.')
+							.setDescriptionLocalizations({ ko: '미등록 PNG를 업로드하고 캐시를 갱신해요.' })
+					)
+					.addSubcommand((sub) =>
+						sub
+							.setName('reupload')
+							.setDescription('Delete and re-upload every emoji (new IDs).')
+							.setDescriptionLocalizations({ ko: '전체 이모지를 삭제 후 재업로드해요 (ID 갱신).' })
+					);
 			},
 			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);

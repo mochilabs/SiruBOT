@@ -15,7 +15,7 @@ import { buildTtsPanel } from '../utils/ttsView.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'tts',
-	description: '채널 채팅 낭독을 켜고 내 TTS 설정을 관리해요.',
+	description: 'Toggle channel reading and manage your TTS settings.',
 	fullCategory: ['일반']
 })
 export class TtsCommand extends Command {

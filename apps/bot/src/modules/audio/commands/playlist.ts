@@ -11,7 +11,7 @@ import { respondPlaylistNames, respondPlaylistTrackPositions } from '../../../li
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'playlist',
-	description: '커스텀 플레이리스트를 관리해요.',
+	description: 'Manage your custom playlists.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable']
 })
@@ -31,10 +31,21 @@ export class PlaylistCommand extends Command {
 						.setDescription('Create a new playlist.')
 						.setDescriptionLocalizations({ ko: '새로운 플레이리스트를 생성해요.' })
 						.addStringOption((opt) =>
-							opt.setName('name').setNameLocalizations({ ko: '이름' }).setDescription('이름을 입력하세요.').setRequired(true)
+							opt
+								.setName('name')
+								.setNameLocalizations({ ko: '이름' })
+								.setDescription('Playlist name.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setRequired(true)
 						)
 						.addStringOption((opt) =>
-							opt.setName('description').setNameLocalizations({ ko: '설명' }).setDescription('설명을 입력하세요.').setRequired(false)
+							opt
+								.setName('description')
+								.setNameLocalizations({ ko: '설명' })
+								.setDescription('Optional playlist description.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 설명 (선택)' })
+								.setRequired(false)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -47,7 +58,8 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
-								.setDescription('삭제할 플레이리스트 이름')
+								.setDescription('Playlist to delete.')
+								.setDescriptionLocalizations({ ko: '삭제할 플레이리스트 이름이에요.' })
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -69,7 +81,8 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
-								.setDescription('조회할 플레이리스트 이름')
+								.setDescription('Playlist to view.')
+								.setDescriptionLocalizations({ ko: '조회할 플레이리스트 이름이에요.' })
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -84,12 +97,17 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
-								.setDescription('플레이리스트 이름')
+								.setDescription('Playlist name.')
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
 						.addStringOption((opt) =>
-							opt.setName('query').setNameLocalizations({ ko: '검색어' }).setDescription('곡 제목이나 URL').setRequired(true)
+							opt
+								.setName('query')
+								.setNameLocalizations({ ko: '검색어' })
+								.setDescription('Track title or URL.')
+								.setDescriptionLocalizations({ ko: '곡 제목이나 URL이에요.' })
+								.setRequired(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -102,7 +120,7 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
-								.setDescription('플레이리스트 이름')
+								.setDescription('Playlist name.')
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -117,7 +135,7 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
-								.setDescription('플레이리스트 이름')
+								.setDescription('Playlist name.')
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -125,7 +143,8 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('position')
 								.setNameLocalizations({ ko: '번호' })
-								.setDescription('제거할 곡의 번호')
+								.setDescription('Track number to remove.')
+								.setDescriptionLocalizations({ ko: '제거할 곡의 번호예요.' })
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -140,7 +159,8 @@ export class PlaylistCommand extends Command {
 							opt
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
-								.setDescription('재생할 플레이리스트 이름')
+								.setDescription('Playlist to play.')
+								.setDescriptionLocalizations({ ko: '재생할 플레이리스트 이름이에요.' })
 								.setRequired(true)
 								.setAutocomplete(true)
 						)

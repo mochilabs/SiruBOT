@@ -6,7 +6,7 @@ import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, M
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'invite',
-	description: '봇 초대 링크를 보여줘요.',
+	description: 'Show the bot invite link.',
 	fullCategory: ['일반']
 })
 export class InviteCommand extends Command {

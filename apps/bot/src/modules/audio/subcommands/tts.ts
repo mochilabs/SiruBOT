@@ -12,15 +12,15 @@ const MAX_TEXT_LENGTH = 200;
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
 		.setName(name)
-		.setNameLocalizations({ ko, 'en-US': 'tts' })
+		.setNameLocalizations({ ko })
 		.setDescription(description)
-		.setDescriptionLocalizations({ ko: description, 'en-US': 'Play text-to-speech over the current song.' })
+		.setDescriptionLocalizations({ ko: description })
 		.addStringOption((option) =>
 			option
 				.setName('text')
-				.setNameLocalizations({ ko: '내용', 'en-US': 'text' })
+				.setNameLocalizations({ ko: '내용' })
 				.setDescription('Text to speak in Korean.')
-				.setDescriptionLocalizations({ ko: '음성으로 읽을 내용을 입력해 주세요.', 'en-US': 'Text to speak in Korean.' })
+				.setDescriptionLocalizations({ ko: '음성으로 읽을 내용을 입력해 주세요.' })
 				.setMinLength(1)
 				.setMaxLength(MAX_TEXT_LENGTH)
 				.setRequired(true)

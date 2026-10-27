@@ -47,7 +47,8 @@ export function withChatToolsSubcommands(builder: SlashCommandSubcommandsOnlyBui
 						// 선택지는 FEATURE_LABELS에서 뽑는다 — 같은 목록을 두 번 선언하면 한쪽만 갱신돼 어긋난다.
 						.addChoices(
 							...(Object.keys(FEATURE_LABELS) as ChatToolName[]).map((value) => ({
-								name: FEATURE_LABELS[value],
+								name: value,
+								name_localizations: { ko: FEATURE_LABELS[value] },
 								value
 							}))
 						)
@@ -59,7 +60,10 @@ export function withChatToolsSubcommands(builder: SlashCommandSubcommandsOnlyBui
 						.setDescription('Whether to enable or disable.')
 						.setDescriptionLocalizations({ ko: '켜기 또는 끄기예요.' })
 						.setRequired(true)
-						.addChoices({ name: '켜기', value: 'on' }, { name: '끄기', value: 'off' })
+						.addChoices(
+							{ name: 'On', name_localizations: { ko: '켜기' }, value: 'on' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
 				)
 		)
 		.addSubcommand((sub) =>
@@ -82,7 +86,10 @@ export function withChatToolsSubcommands(builder: SlashCommandSubcommandsOnlyBui
 						.setNameLocalizations({ ko: '상태' })
 						.setDescription('Whether to enable or disable counting.')
 						.setDescriptionLocalizations({ ko: '지정 또는 끄기예요. 기본값은 지정이에요.' })
-						.addChoices({ name: '지정', value: 'on' }, { name: '끄기', value: 'off' })
+						.addChoices(
+							{ name: 'Set', name_localizations: { ko: '지정' }, value: 'on' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
 				)
 		);
 }
@@ -90,7 +97,7 @@ export function withChatToolsSubcommands(builder: SlashCommandSubcommandsOnlyBui
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'chattools',
-	description: '채팅 유틸 기능을 채널별로 켜고 끄고 카운팅 채널을 지정해요.',
+	description: 'Toggle chat tools per channel and set the counting channel.',
 	fullCategory: ['일반']
 })
 export class ChatToolsCommand extends Command {

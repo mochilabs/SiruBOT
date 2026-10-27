@@ -43,7 +43,7 @@ export const MUSIC_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'music',
-	description: '음악 재생을 제어해요.',
+	description: 'Control music playback (play, pause, queue, filters).',
 	fullCategory: ['음악']
 })
 export class MusicCommand extends Command {

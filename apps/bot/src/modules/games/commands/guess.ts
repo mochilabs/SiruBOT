@@ -16,7 +16,7 @@ const sessions = new Map<string, GuessSession>();
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'guess',
-	description: '1~100 숫자를 맞히는 게임이에요. 6번 안에 맞히면 이겨요!',
+	description: 'Guess a number between 1 and 100 within 6 tries.',
 	fullCategory: ['게임']
 })
 export class GuessCommand extends Command {

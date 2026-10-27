@@ -40,7 +40,7 @@ function buildContainer(result: DeliveryTrackResult, trackingNumber: string) {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'delivery',
-	description: '택배 배송 상태를 조회해요.',
+	description: 'Track a parcel delivery.',
 	fullCategory: ['일반']
 })
 export class DeliveryCommand extends Command {

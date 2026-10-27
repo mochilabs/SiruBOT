@@ -6,7 +6,7 @@ import * as view from '../view/nowplaying.ts';
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'nowplaying',
-	description: '현재 재생 중인 곡의 정보를 보여줘요.',
+	description: 'Show the currently playing track.',
 	fullCategory: ['음악'],
 	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying']
 })

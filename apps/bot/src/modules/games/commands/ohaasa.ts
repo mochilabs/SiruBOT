@@ -42,7 +42,7 @@ function buildTopLines(daily: DailyHoroscope): string[] {
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'ohaasa',
-	description: '일본 아사히 방송의 오늘 별자리 운세를 확인해요.',
+	description: "Today's zodiac horoscope from TV Asahi (Ohaasa).",
 	fullCategory: ['게임']
 })
 export class OhaasaCommand extends Command {
@@ -60,7 +60,13 @@ export class OhaasaCommand extends Command {
 						.setNameLocalizations({ ko: '별자리' })
 						.setDescription('Zodiac sign')
 						.setDescriptionLocalizations({ ko: '조회할 별자리 (미지정 시 오늘의 TOP 3)' })
-						.setChoices(ZODIAC_CHOICES.map((item) => ({ name: `${item.ko} (${item.jp})`, value: item.code })))
+						.setChoices(
+							ZODIAC_CHOICES.map((item) => ({
+								name: `${item.en} (${item.jp})`,
+								name_localizations: { ko: `${item.ko} (${item.jp})` },
+								value: item.code
+							}))
+						)
 				)
 				.addIntegerOption((option) =>
 					option

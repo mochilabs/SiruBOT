@@ -14,7 +14,7 @@ export const INFO_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'info',
-	description: '봇·서버·유저 정보를 보여줘요.',
+	description: 'Show bot, server, and user information.',
 	fullCategory: ['일반']
 })
 export class InfoCommand extends Command {

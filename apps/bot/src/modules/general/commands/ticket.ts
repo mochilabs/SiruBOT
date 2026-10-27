@@ -6,7 +6,7 @@ import { ticketPanelView } from '../view/ticket.ts';
 @ApplyOptions<Subcommand.Options>({
 	enabled: true,
 	name: 'ticket',
-	description: '고객지원 및 문의 티켓 시스템을 관리해요.',
+	description: 'Manage the support ticket system.',
 	fullCategory: ['일반'],
 	subcommands: [
 		{ name: 'panel', chatInputRun: 'chatInputPanel' },
@@ -28,36 +28,60 @@ export class TicketCommand extends Subcommand {
 					sub
 						.setName('panel')
 						.setNameLocalizations({ ko: '패널' })
-						.setDescription('지정한 채널에 유저가 누를 수 있는 티켓 오픈 패널을 게시해요 (관리자 전용).')
+						.setDescription('Post a ticket open panel users can click (admins only).')
+						.setDescriptionLocalizations({ ko: '지정한 채널에 유저가 누를 수 있는 티켓 오픈 패널을 게시해요 (관리자 전용).' })
 						.addChannelOption((opt) =>
-							opt.setName('channel').setNameLocalizations({ ko: '채널' }).setDescription('패널을 전송할 텍스트 채널').setRequired(false)
+							opt
+								.setName('channel')
+								.setNameLocalizations({ ko: '채널' })
+								.setDescription('Text channel to post the panel in.')
+								.setDescriptionLocalizations({ ko: '패널을 전송할 텍스트 채널' })
+								.setRequired(false)
 						)
 				)
 				.addSubcommand((sub) =>
 					sub
 						.setName('close')
 						.setNameLocalizations({ ko: '닫기' })
-						.setDescription('현재 진행 중인 티켓을 마감하고 채널을 정리해요.')
+						.setDescription('Close the current ticket and clean up the channel.')
+						.setDescriptionLocalizations({ ko: '현재 진행 중인 티켓을 마감하고 채널을 정리해요.' })
 						.addStringOption((opt) =>
-							opt.setName('reason').setNameLocalizations({ ko: '사유' }).setDescription('티켓을 종료하는 사유').setRequired(false)
+							opt
+								.setName('reason')
+								.setNameLocalizations({ ko: '사유' })
+								.setDescription('Reason for closing the ticket.')
+								.setDescriptionLocalizations({ ko: '티켓을 종료하는 사유' })
+								.setRequired(false)
 						)
 				)
 				.addSubcommand((sub) =>
 					sub
 						.setName('add')
 						.setNameLocalizations({ ko: '초대' })
-						.setDescription('현재 티켓 채널에 다른 유저를 초대해요.')
+						.setDescription('Invite another user to this ticket channel.')
+						.setDescriptionLocalizations({ ko: '현재 티켓 채널에 다른 유저를 초대해요.' })
 						.addUserOption((opt) =>
-							opt.setName('user').setNameLocalizations({ ko: '유저' }).setDescription('티켓에 참여시킬 대상 유저').setRequired(true)
+							opt
+								.setName('user')
+								.setNameLocalizations({ ko: '유저' })
+								.setDescription('User to add to the ticket.')
+								.setDescriptionLocalizations({ ko: '티켓에 참여시킬 대상 유저' })
+								.setRequired(true)
 						)
 				)
 				.addSubcommand((sub) =>
 					sub
 						.setName('remove')
 						.setNameLocalizations({ ko: '제외' })
-						.setDescription('현재 티켓 채널에서 유저를 제외해요.')
+						.setDescription('Remove a user from this ticket channel.')
+						.setDescriptionLocalizations({ ko: '현재 티켓 채널에서 유저를 제외해요.' })
 						.addUserOption((opt) =>
-							opt.setName('user').setNameLocalizations({ ko: '유저' }).setDescription('티켓에서 제외할 대상 유저').setRequired(true)
+							opt
+								.setName('user')
+								.setNameLocalizations({ ko: '유저' })
+								.setDescription('User to remove from the ticket.')
+								.setDescriptionLocalizations({ ko: '티켓에서 제외할 대상 유저' })
+								.setRequired(true)
 						)
 				);
 		});

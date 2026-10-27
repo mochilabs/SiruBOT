@@ -19,7 +19,7 @@ import { purgeUserData, summarizeUserData } from '../../../services/userDataServ
 @ApplyOptions<Subcommand.Options>({
 	enabled: true,
 	name: 'privacy',
-	description: '내 데이터를 확인하거나 지워요. (AI 기억·프로필·게임 전적)',
+	description: 'View or delete the data I store about you.',
 	fullCategory: ['일반'],
 	subcommands: [
 		{ name: 'view', chatInputRun: 'chatInputView' },
