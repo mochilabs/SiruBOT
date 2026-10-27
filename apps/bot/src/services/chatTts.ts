@@ -226,6 +226,28 @@ export class ChatTtsService {
 		await this.dispatchSolo(player, { url: clip.url, text });
 	}
 
+	/**
+	 * 커맨드가 직접 호출하는 발화 — `/tts 말하기`가 써요.
+	 *
+	 * 채팅 낭독과 달리 **opt-in/채널 정책을 보지 않아요**(명시적으로 명령한 발화예요).
+	 * 음악이 재생 중이면 오버레이로 겹쳐 읽고, 없으면 플레이어 큐에 단독 재생해요
+	 * (dispatchClip의 판단을 그대로 재사용). 반환값은 예약/단독 재생 결과예요.
+	 */
+	public async speakNow(player: CustomPlayer, text: string, preset: TtsUserPreset): Promise<'overlay' | 'solo'> {
+		const clip = await container.ttsService.synthesize(text, {
+			voice: preset.voice ?? undefined,
+			speed: preset.speed ?? undefined,
+			pitch: preset.pitch ?? undefined
+		});
+		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
+		if (hasMusic) {
+			await this.dispatchOverlay(player, clip);
+			return 'overlay';
+		}
+		await this.dispatchSolo(player, { url: clip.url, text });
+		return 'solo';
+	}
+
 	/** 오버레이: mixer announce로 음악 위에 겹쳐 읽는다 (큐잉·순차는 mixer가 담당). */
 	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip): Promise<void> {
 		try {
@@ -242,11 +264,28 @@ export class ChatTtsService {
 			// state 조회 실패는 거절 근거가 없다 — announce를 시도하고, 그것도 실패하면 조용히 버린다
 			container.logger.debug(`[chatTts] mixer state unavailable, trying announce (guild ${player.guildId}): ${error}`);
 		}
-		const duckLevel = await container.guildService.getTtsDuck(player.guildId);
-		const parallel = await container.guildService.getTtsParallel(player.guildId);
-		await container.mixerService.announce(player, clip.url, duckLevel, parallel ? 'parallel' : 'sequential').catch((error) => {
+		await this.speakOverlay(player, clip.url);
+	}
+
+	/**
+	 * 안내 방식 적용 — 길드 설정 3택을 mixer 호출로 옮겨요.
+	 * - sequential: 순서대로 큐잉
+	 * - parallel: 겹쳐서 재생
+	 * - interrupt: 대기분을 먼저 비워 "가장 최근 안내만" 남겨요 (재생 중인 안내는 그대로 끝나요)
+	 */
+	private async speakOverlay(player: CustomPlayer, url: string): Promise<void> {
+		try {
+			const [duckLevel, mode] = await Promise.all([
+				container.guildService.getTtsDuck(player.guildId),
+				container.guildService.getTtsAnnounceMode(player.guildId)
+			]);
+			if (mode === 'interrupt') {
+				await container.mixerService.clearAnnounceQueue(player).catch(() => 0);
+			}
+			await container.mixerService.announce(player, url, duckLevel, mode === 'parallel' ? 'parallel' : 'sequential');
+		} catch (error) {
 			this.warnOnce(player.guildId, 'announce_failed', `[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
-		});
+		}
 	}
 
 	/** 단독: 클립을 메인 플레이어 트랙으로 재생한다. 이미 클립이 이어지는 중이면 내부 큐에 쌓는다. */
@@ -301,13 +340,9 @@ export class ChatTtsService {
 	public async drainSoloQueueToAnnounce(player: CustomPlayer): Promise<void> {
 		const state = this.guildStates.get(player.guildId);
 		if (!state || state.soloQueue.length === 0) return;
-		const duckLevel = await container.guildService.getTtsDuck(player.guildId);
-		const parallel = await container.guildService.getTtsParallel(player.guildId);
 		const clips = state.soloQueue.splice(0, state.soloQueue.length);
 		for (const clip of clips) {
-			await container.mixerService.announce(player, clip.url, duckLevel, parallel ? 'parallel' : 'sequential').catch((error) => {
-				this.warnOnce(player.guildId, 'drain_failed', `[chatTts] 잔여 클립 오버레이 이관 실패 (guild ${player.guildId}): ${error}`);
-			});
+			await this.speakOverlay(player, clip.url);
 		}
 	}
 

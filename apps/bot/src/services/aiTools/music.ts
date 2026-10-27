@@ -435,35 +435,6 @@ const musicHistoryTool: AiTool = {
 	}
 };
 
-const musicTtsTool: AiTool = {
-	name: 'music_tts',
-	description: '현재 재생 중인 음성을 일시적으로 깔고 텍스트를 음성으로 들려줘요. 짧은 안내 문구에 써요.',
-	properties: {
-		text: { type: 'string', description: '음성으로 읽을 내용 (200자 이하, 한국어)' }
-	},
-	required: ['text'],
-	status: '시루가 음성으로 읽어주는 중..',
-	execute: async (args, ctx) => {
-		await requireDjOrAlone(ctx);
-		const guildId = requireGuild(ctx);
-		const player = requirePlayer(guildId);
-		const text = String(args.text ?? '').trim();
-		if (!text) throw new Error('읽을 내용이 필요해요.');
-		if (text.length > 200) throw new Error('음성 안내는 200자까지 가능해요.');
-		const ttsUrl = `https://translate.google.com/translate_tts?client=tw-ob&tl=ko&q=${encodeURIComponent(text)}`;
-		let position = 1;
-		try {
-			const duckLevel = await container.guildService.getTtsDuck(guildId);
-			const parallel = await container.guildService.getTtsParallel(guildId);
-			const receipt = await container.mixerService.announce(player, ttsUrl, duckLevel, parallel ? 'parallel' : 'sequential');
-			position = receipt.position;
-		} catch {
-			throw new Error('음성 안내를 예약하지 못했어요. 잠시 후 다시 시도해 주세요.');
-		}
-		return JSON.stringify({ status: 'ok', speaking: text, position });
-	}
-};
-
 const musicPlaylistTool: AiTool = {
 	name: 'music_playlist',
 	description: '내 보관함의 플레이리스트를 재생해요. 이름으로 찾고, 최대 100곡까지 대기열에 넣어요.',
@@ -529,6 +500,5 @@ export const musicTools: AiTool[] = [
 	musicFilterTool,
 	musicLyricsTool,
 	musicHistoryTool,
-	musicTtsTool,
 	musicPlaylistTool
 ];

@@ -10,6 +10,14 @@ import {
 } from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
+import { normalizeAnnounceMode, type TtsAnnounceMode } from '../../../services/guildSettings/playback.ts';
+
+/** 안내 방식 문구 — 커맨드 응답과 뷰가 같은 말을 써요 */
+const ANNOUNCE_MODE_LABELS: Record<TtsAnnounceMode, string> = {
+	sequential: '음성 안내를 순서대로 재생해요.',
+	parallel: '음성 안내를 겹쳐서 재생해요.',
+	interrupt: '새 안내가 오면 대기 중인 안내를 버리고 최신 안내만 재생해요.'
+};
 
 /**
  * 믹서 서브커맨드 정의 — `/믹서`와 `/설정 audio`가 같은 옵션을 써야 해서 한 곳에 둬요.
@@ -72,16 +80,34 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 		)
 		.addSubcommand((sub) =>
 			sub
-				.setName('parallel-tts')
-				.setNameLocalizations({ ko: '동시tts' })
-				.setDescription('Toggle simultaneous TTS announcements.')
-				.setDescriptionLocalizations({ ko: '여러 음성 안내를 동시에 재생할지 설정해요.' })
-				.addBooleanOption((opt) =>
+				.setName('announce-mode')
+				.setNameLocalizations({ ko: '안내방식' })
+				.setDescription('How TTS announcements are played.')
+				.setDescriptionLocalizations({ ko: '음성 안내를 어떻게 재생할지 정해요.' })
+				.addStringOption((opt) =>
 					opt
-						.setName('enabled')
-						.setNameLocalizations({ ko: '켜기' })
-						.setDescription('Enable or disable simultaneous playback.')
+						.setName('mode')
+						.setNameLocalizations({ ko: '방식' })
+						.setDescription('sequential, parallel, or interrupt.')
+						.setDescriptionLocalizations({ ko: '순서대로 / 겹쳐서 / 최신 안내만' })
 						.setRequired(true)
+						.addChoices(
+							{
+								name: 'Sequential',
+								name_localizations: { ko: '순서대로' },
+								value: 'sequential'
+							},
+							{
+								name: 'Parallel',
+								name_localizations: { ko: '겹쳐서' },
+								value: 'parallel'
+							},
+							{
+								name: 'Interrupt',
+								name_localizations: { ko: '최신 안내만' },
+								value: 'interrupt'
+							}
+						)
 				)
 		);
 }
@@ -123,8 +149,8 @@ export class MixerCommand extends Command {
 				return this.handleCrossfade(interaction, player);
 			case 'normalization':
 				return this.handleNormalization(interaction, player);
-			case 'parallel-tts':
-				return this.handleParallelTts(interaction);
+			case 'announce-mode':
+				return this.handleAnnounceMode(interaction);
 			default:
 				throw new UserError({
 					identifier: 'mixer_unknown_subcommand',
@@ -152,8 +178,8 @@ export class MixerCommand extends Command {
 				return command.handleCrossfade(interaction, player);
 			case 'normalization':
 				return command.handleNormalization(interaction, player);
-			case 'parallel-tts':
-				return command.handleParallelTts(interaction);
+			case 'announce-mode':
+				return command.handleAnnounceMode(interaction);
 			default:
 				throw new UserError({
 					identifier: 'mixer_unknown_subcommand',
@@ -264,15 +290,14 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	async handleParallelTts(interaction: ChatInputCommandInteraction<'cached'>) {
+	/** TTS 안내 방식 — sequential(순서) / parallel(겹침) / interrupt(최신만) */
+	async handleAnnounceMode(interaction: ChatInputCommandInteraction<'cached'>) {
 		await this.checkDJ(interaction);
-		const enabled = interaction.options.getBoolean('enabled', true);
-		await this.container.guildService.setTtsParallel(interaction.guildId, enabled);
-		const message = enabled
-			? `${emoji('volume_up')} 동시 TTS를 켰어요. 여러 음성 안내가 동시에 재생돼요.`
-			: `${emoji('volume_up')} 동시 TTS를 껐어요. 음성 안내가 순서대로 재생돼요.`;
+		const mode = normalizeAnnounceMode(interaction.options.getString('mode', true));
+		await this.container.guildService.setTtsAnnounceMode(interaction.guildId, mode);
+		const label = ANNOUNCE_MODE_LABELS[mode];
 		await interaction.editReply({
-			components: [view.mixerUpdated({ message })],
+			components: [view.mixerUpdated({ message: `${emoji('volume_up')} ${label}` })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});

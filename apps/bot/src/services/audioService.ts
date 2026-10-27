@@ -82,6 +82,7 @@ export class AudioService {
 		try {
 			await player.connect();
 		} catch (error) {
+			if (error instanceof UserError) throw error;
 			container.logger.error(error);
 			// 인프라 실패는 사용자 메시지(UserError)와 별개로 추적 가능해야 해요 — 원인을 Sentry로 남겨요.
 			Sentry.captureException(error, {

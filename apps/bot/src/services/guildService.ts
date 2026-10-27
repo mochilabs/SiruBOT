@@ -172,6 +172,14 @@ export class GuildService extends GuildSettingsStore {
 		return mixer.setCrossfade(this, guildId, enabled, durationMs);
 	}
 
+	public async getTtsAnnounceMode(guildId: string) {
+		return playback.getTtsAnnounceMode(this, guildId);
+	}
+
+	public async setTtsAnnounceMode(guildId: string, mode: playback.TtsAnnounceMode) {
+		return playback.setTtsAnnounceMode(this, guildId, mode);
+	}
+
 	public async getTtsParallel(guildId: string): Promise<boolean> {
 		return playback.getTtsParallel(this, guildId);
 	}

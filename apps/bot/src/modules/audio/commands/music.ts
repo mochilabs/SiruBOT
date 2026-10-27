@@ -16,7 +16,6 @@ import * as search from '../subcommands/search.ts';
 import * as seek from '../subcommands/seek.ts';
 import * as skip from '../subcommands/skip.ts';
 import * as stop from '../subcommands/stop.ts';
-import * as tts from '../subcommands/tts.ts';
 import * as volume from '../subcommands/volume.ts';
 
 const SUBCOMMANDS: SubcommandModule[] = [
@@ -33,7 +32,6 @@ const SUBCOMMANDS: SubcommandModule[] = [
 	lyrics,
 	recommend,
 	autoplay,
-	tts,
 	history
 ];
 

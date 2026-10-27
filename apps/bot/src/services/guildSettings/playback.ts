@@ -38,14 +38,32 @@ export async function getTtsDuck(store: GuildSettingsStore, guildId: string) {
 	return guild.ttsDuckLevel;
 }
 
-export async function getTtsParallel(store: GuildSettingsStore, guildId: string): Promise<boolean> {
+/** TTS 안내 방식 — mixer announce mode와 1:1. 알 수 없는 값은 sequential로 폴백해요. */
+export type TtsAnnounceMode = 'sequential' | 'parallel' | 'interrupt';
+
+const ANNOUNCE_MODES: readonly TtsAnnounceMode[] = ['sequential', 'parallel', 'interrupt'];
+
+export function normalizeAnnounceMode(value: string | null | undefined): TtsAnnounceMode {
+	return ANNOUNCE_MODES.find((mode) => mode === value) ?? 'sequential';
+}
+
+export async function getTtsAnnounceMode(store: GuildSettingsStore, guildId: string): Promise<TtsAnnounceMode> {
 	const guild = await store.getGuild(guildId);
-	return guild.ttsParallelEnabled;
+	return normalizeAnnounceMode(guild.ttsAnnounceMode);
+}
+
+export async function setTtsAnnounceMode(store: GuildSettingsStore, guildId: string, mode: TtsAnnounceMode): Promise<TtsAnnounceMode> {
+	// 기존 플러그인 계약(불리언)도 같은 트랜잭션 값으로 맞춰 둬요 — 두 필드가 갈라지면 안내 방식이 엇갈려요.
+	const guild = await store.upsertData(guildId, { ttsAnnounceMode: mode, ttsParallelEnabled: mode === 'parallel' });
+	return normalizeAnnounceMode(guild.ttsAnnounceMode);
+}
+
+export async function getTtsParallel(store: GuildSettingsStore, guildId: string): Promise<boolean> {
+	return (await getTtsAnnounceMode(store, guildId)) === 'parallel';
 }
 
 export async function setTtsParallel(store: GuildSettingsStore, guildId: string, enabled: boolean): Promise<boolean> {
-	const guild = await store.upsertField(guildId, 'ttsParallelEnabled', enabled);
-	return guild.ttsParallelEnabled;
+	return (await setTtsAnnounceMode(store, guildId, enabled ? 'parallel' : 'sequential')) === 'parallel';
 }
 
 export async function getDJRole(store: GuildSettingsStore, guildId: string): Promise<string | null> {

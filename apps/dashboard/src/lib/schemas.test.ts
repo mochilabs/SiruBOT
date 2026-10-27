@@ -37,9 +37,9 @@ function parsePrismaDefault(raw: string): unknown {
 }
 
 describe("guildSettingsSchema 허용 키 계약", () => {
-	it("GUILD_SETTING_KEYS는 스키마 shape에서 도출돼요 — 32개 필드", () => {
+	it("GUILD_SETTING_KEYS는 스키마 shape에서 도출돼요 — 33개 필드", () => {
 		expect(GUILD_SETTING_KEYS).toEqual(Object.keys(guildSettingsSchema.shape));
-		expect(GUILD_SETTING_KEYS).toHaveLength(32);
+		expect(GUILD_SETTING_KEYS).toHaveLength(33);
 	});
 
 	it("parseSettingBody가 허용 키는 받고 미등록 키는 400으로 거절해요", async () => {
