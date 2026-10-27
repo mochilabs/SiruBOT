@@ -8,7 +8,7 @@
 
 - 최종 타겟 6개 (`Dockerfile:119,169,206,248,294,342`): `bot`·`dashboard`·`shardmanager`·`data-api`·`storage`·`notifier`. 빌드 스테이지(`builder-bot` 등 6개, `Dockerfile:71-116`)는 중간 산출물이다.
 - 컴포즈 파일 3개 (`docker/`): `docker-compose.yml`·`docker-stack.yml`·`docker-stack-infra.yml`.
-- 봇 기동 시 `prisma migrate deploy` 자동 실행 (`Dockerfile:145`).
+- 봇 기동 시 `prisma migrate deploy` 자동 실행, `GIT_BRANCH=beta`인 경우 추가로 `prisma db push --accept-data-loss`를 실행해 마이그레이션 파일이 누락된 스키마 변경도 동기화 (`Dockerfile:166`).
 
 ## 필수 env (프로덕션)
 

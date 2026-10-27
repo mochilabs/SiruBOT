@@ -161,8 +161,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
 	CMD ["node", "-e", "require('http').get('http://127.0.0.1:'+(Number(process.env.HEALTH_PORT)||8080)+'/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
 
 # 스키마 변경이 있어도 기동 시점에 자동 반영 (수동 migrate 누락 방지)
+# beta 브랜치에서는 마이그레이션 파일이 누락된 스키마 변경도 db push로 자동 동기화한다.
 # exec로 PID1을 node로 교체 — SIGTERM이 sh가 아닌 봇 프로세스에 직접 전달되도록 한다.
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --config packages/prisma/prisma.config.ts && exec yarn start"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --config packages/prisma/prisma.config.ts && if [ \"$GIT_BRANCH\" = \"beta\" ]; then node_modules/.bin/prisma db push --accept-data-loss --config packages/prisma/prisma.config.ts; fi && exec yarn start"]
 
 # ====================
 # Dashboard Production
