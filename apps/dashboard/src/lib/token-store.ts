@@ -1,5 +1,5 @@
+import { decryptSecret, decryptsWith, deriveKeyFromSecret, encryptSecret } from "@sirubot/utils/secretBox";
 import { sleep } from "@sirubot/utils/time";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 import { db } from "@/lib/db";
 import { requestDiscordToken } from "@/lib/discord-token";
@@ -50,42 +50,40 @@ const POLL_MS = 150;
 const WAIT_MAX_MS = 12_000;
 
 /**
- * AES-256-GCM 키 — AUTH_SECRET(또는 NEXTAUTH_SECRET)의 SHA-256 다이제스트(32바이트).
- * 시크릿이 없으면 null을 돌려주고, 모든 함수가 "토큰 없음"으로 graceful하게 동작해요.
+ * 암호화 키 소스 우선순위 — 전용 키 → 세션 시크릿 폴백.
+ *
+ * 전용 키(`TOKEN_ENCRYPTION_KEY`)를 두는 이유: 세션 시크릿에서 키를 유도하면 세션 시크릿을
+ * 회전하는 순간 **전 사용자의 Discord refresh 토큰이 복호 불가**가 돼요(재로그인 유도).
+ * 폴백은 기존 배포 호환용이고, 전용 키가 설정되면 저장 시점부터 즉시 전용 키로 다시 암호화돼요
+ * (복호는 두 키를 모두 시도해 마이그레이션이 필요 없어요).
  */
+function encryptionSecrets(): string[] {
+  const dedicated = process.env.TOKEN_ENCRYPTION_KEY?.trim();
+  const session = getSessionSecret() ?? "";
+  // 복호 시도 순서: 전용 키가 있으면 먼저, 그다음 기존 세션 시크릿
+  return [dedicated, session].filter((value): value is string => Boolean(value));
+}
+
+
+/** 저장 키 — 전용 키가 없으면 기존 계약대로 세션 시크릿을 써요. */
 function encryptionKey(): Buffer | null {
-  const secret = getSessionSecret() ?? "";
-  if (!secret) return null;
-  return createHash("sha256").update(secret).digest();
+  const [secret] = encryptionSecrets();
+  return deriveKeyFromSecret(secret);
 }
 
-/** 평문 토큰을 `base64url(iv):base64url(authTag):base64url(ciphertext)`로 암호화해요. */
+/** 평문 토큰 암호화 — 형식/키 정책은 공용 `@sirubot/utils/secretBox`가 소유해요. */
 export function encryptToken(plain: string): string {
-  const key = encryptionKey();
-  if (!key) return "";
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const ciphertext = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-  return [iv, authTag, ciphertext].map((b) => b.toString("base64url")).join(":");
+  return encryptSecret(plain, encryptionKey());
 }
 
-/** 암호화 문자열을 복호해요. 파싱/복호 실패 시 null(→ 재로그인 경로). throw 금지. */
+/** 암호문 복호 — 전용 키 → 세션 시크릿 순으로 시도해 회전 중 혼재 행도 읽어요. */
 export function decryptToken(enc: string): string | null {
-  const key = encryptionKey();
-  if (!key) return null;
-  try {
-    const [ivPart, tagPart, dataPart] = enc.split(":");
-    if (!ivPart || !tagPart || !dataPart) return null;
-    const iv = Buffer.from(ivPart, "base64url");
-    const authTag = Buffer.from(tagPart, "base64url");
-    const ciphertext = Buffer.from(dataPart, "base64url");
-    const decipher = createDecipheriv("aes-256-gcm", key, iv);
-    decipher.setAuthTag(authTag);
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
-  } catch {
-    return null;
-  }
+  return decryptSecret(enc, encryptionSecrets().map(deriveKeyFromSecret));
+}
+
+/** 행이 전용 키가 아닌 폴백 키로 암호화됐는지 — 맞으면 저장 시점에 새 키로 다시 써요. */
+function needsRekey(enc: string): boolean {
+  return !decryptsWith(enc, encryptionKey());
 }
 
 /** DB 행을 복호해 TokenSet으로 변환. 행 없음/복호 실패 시 null. */
@@ -98,6 +96,15 @@ export async function readTokenSet(userId: string): Promise<TokenSet | null> {
     const accessToken = decryptToken(row.accessToken);
     const refreshToken = decryptToken(row.refreshToken);
     if (accessToken === null || refreshToken === null) return null;
+    // 전용 키 도입 전에 세션 시크릿으로 암호화된 행은 읽을 때 한 번 다시 암호화해요 (best-effort, 실패는 무시)
+    if (needsRekey(row.accessToken) || needsRekey(row.refreshToken)) {
+      void db.userToken
+        .update({
+          where: { userId, version: row.version },
+          data: { accessToken: encryptToken(accessToken), refreshToken: encryptToken(refreshToken) },
+        })
+        .catch(() => undefined);
+    }
     return {
       accessToken,
       refreshToken,

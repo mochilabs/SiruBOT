@@ -1,9 +1,78 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
+import { Command, UserError, container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import {
+	ApplicationIntegrationType,
+	ChatInputCommandInteraction,
+	MessageFlags,
+	type SlashCommandSubcommandGroupBuilder,
+	type SlashCommandSubcommandsOnlyBuilder
+} from 'discord.js';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
+
+/**
+ * 믹서 서브커맨드 정의 — `/믹서`와 `/설정 믹서`가 같은 옵션을 써야 해서 한 곳에 둬요.
+ */
+export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder | SlashCommandSubcommandGroupBuilder): void {
+	builder
+		.addSubcommand((sub) =>
+			sub
+				.setName('status')
+				.setNameLocalizations({ ko: '상태' })
+				.setDescription('Show mixer settings and state.')
+				.setDescriptionLocalizations({ ko: '믹서 설정과 상태를 보여줘요.' })
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('gapless')
+				.setNameLocalizations({ ko: '갭리스' })
+				.setDescription('Toggle gapless playback.')
+				.setDescriptionLocalizations({ ko: '갭리스 재생을 켜거나 꺼요.' })
+				.addBooleanOption((opt) =>
+					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('갭리스 재생을 켤지 끌지 선택해요.').setRequired(true)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('crossfade')
+				.setNameLocalizations({ ko: '크로스페이드' })
+				.setDescription('Toggle overlap crossfade.')
+				.setDescriptionLocalizations({ ko: '곡 사이 겹치기(크로스페이드)를 설정해요.' })
+				.addBooleanOption((opt) =>
+					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('크로스페이드를 켤지 끌지 선택해요.').setRequired(true)
+				)
+				.addIntegerOption((opt) =>
+					opt
+						.setName('duration')
+						.setNameLocalizations({ ko: '길이' })
+						.setDescription('겹치는 길이 500~15000ms (0.5초~15초). 생략하면 현재 값을 유지해요.')
+						.setMinValue(500)
+						.setMaxValue(15000)
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('normalization')
+				.setNameLocalizations({ ko: '볼륨정규화' })
+				.setDescription('Toggle volume normalization.')
+				.setDescriptionLocalizations({ ko: '곡 사이 볼륨 차이를 자동으로 맞춰요.' })
+				.addBooleanOption((opt) =>
+					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('볼륨 정규화를 켤지 끌지 선택해요.').setRequired(true)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('parallel-tts')
+				.setNameLocalizations({ ko: '동시tts' })
+				.setDescription('Toggle simultaneous TTS announcements.')
+				.setDescriptionLocalizations({ ko: '여러 음성 안내를 동시에 재생할지 설정해요.' })
+				.addBooleanOption((opt) =>
+					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('동시 재생을 켤지 끌지 선택해요.').setRequired(true)
+				)
+		);
+}
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -20,79 +89,8 @@ export class MixerCommand extends Command {
 				.setName(this.name)
 				.setNameLocalizations({ ko: '믹서' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '갭리스 재생과 크로스페이드를 설정해요.' })
-				.addSubcommand((sub) =>
-					sub
-						.setName('status')
-						.setNameLocalizations({ ko: '상태' })
-						.setDescription('Show mixer settings and state.')
-						.setDescriptionLocalizations({ ko: '믹서 설정과 상태를 보여줘요.' })
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('gapless')
-						.setNameLocalizations({ ko: '갭리스' })
-						.setDescription('Toggle gapless playback.')
-						.setDescriptionLocalizations({ ko: '갭리스 재생을 켜거나 꺼요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('갭리스 재생을 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('crossfade')
-						.setNameLocalizations({ ko: '크로스페이드' })
-						.setDescription('Toggle overlap crossfade.')
-						.setDescriptionLocalizations({ ko: '곡 사이 겹치기(크로스페이드)를 설정해요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('크로스페이드를 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-						.addIntegerOption((opt) =>
-							opt
-								.setName('duration')
-								.setNameLocalizations({ ko: '길이' })
-								.setDescription('겹치는 길이 500~15000ms (0.5초~15초). 생략하면 현재 값을 유지해요.')
-								.setMinValue(500)
-								.setMaxValue(15000)
-								.setRequired(false)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('normalization')
-						.setNameLocalizations({ ko: '볼륨정규화' })
-						.setDescription('Toggle volume normalization.')
-						.setDescriptionLocalizations({ ko: '곡 사이 볼륨 차이를 자동으로 맞춰요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('볼륨 정규화를 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('parallel-tts')
-						.setNameLocalizations({ ko: '동시tts' })
-						.setDescription('Toggle simultaneous TTS announcements.')
-						.setDescriptionLocalizations({ ko: '여러 음성 안내를 동시에 재생할지 설정해요.' })
-						.addBooleanOption((opt) =>
-							opt
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('동시 재생을 켤지 끌지 선택해요.')
-								.setRequired(true)
-						)
-				);
+				.setDescriptionLocalizations({ ko: '갭리스 재생과 크로스페이드를 설정해요.' });
+			withMixerSubcommands(builder);
 		});
 	}
 
@@ -124,7 +122,36 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	private async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	/**
+	 * `/설정 믹서` 같은 다른 커맨드가 같은 핸들러를 쓰도록 위임해요.
+	 * 인스턴스는 서브커맨드/플레이어만 쓰므로 커맨드 컨텍스트 없이 만들어도 안전해요.
+	 */
+	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
+		const command = new MixerCommand(container.client as never);
+		const player = container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
+		const subcommand = interaction.options.getSubcommand(true);
+
+		switch (subcommand) {
+			case 'status':
+				return command.handleStatus(interaction, player);
+			case 'gapless':
+				return command.handleGapless(interaction, player);
+			case 'crossfade':
+				return command.handleCrossfade(interaction, player);
+			case 'normalization':
+				return command.handleNormalization(interaction, player);
+			case 'parallel-tts':
+				return command.handleParallelTts(interaction);
+			default:
+				throw new UserError({
+					identifier: 'mixer_unknown_subcommand',
+					message: `${emoji('error')} 알 수 없는 하위 명령어예요.`,
+					context: { ephemeral: true }
+				});
+		}
+	}
+
+	async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		const settings = await this.container.guildService.getMixerSettings(interaction.guildId);
 		const state = player ? await this.container.mixerService.getState(player).catch(() => null) : null;
 		await interaction.editReply({
@@ -134,7 +161,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
+	async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
 		const allowed = await this.container.guildService.hasDJRole(interaction.guildId, interaction.member);
 		if (!allowed) {
 			throw new UserError({
@@ -145,7 +172,7 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	private async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setGapless(interaction.guildId, enabled);
@@ -166,7 +193,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		const duration = interaction.options.getInteger('duration') ?? undefined;
@@ -196,7 +223,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+	async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setNormalization(interaction.guildId, enabled);
@@ -225,7 +252,7 @@ export class MixerCommand extends Command {
 		});
 	}
 
-	private async handleParallelTts(interaction: ChatInputCommandInteraction<'cached'>) {
+	async handleParallelTts(interaction: ChatInputCommandInteraction<'cached'>) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setTtsParallel(interaction.guildId, enabled);

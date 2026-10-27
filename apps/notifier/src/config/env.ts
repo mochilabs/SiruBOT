@@ -22,7 +22,10 @@ const envSchema = z
 		// EventSub 구독 secret: 콜백 HMAC 검증 + 구독 생성에 같이 써요 (트위치 규칙: 20~100자).
 		TWITCH_EVENTSUB_SECRET: z.string().optional(),
 		// 치지직 폴러 킬 스위치: 'false'일 때만 꺼요. (z.coerce.boolean()은 'false'를 true로 바꿔버리니 문자열 비교로 해요.)
-		CHZZK_POLLING_ENABLED: z.string().optional()
+		CHZZK_POLLING_ENABLED: z.string().optional(),
+		// 저장 데이터 암호화 키 (웹훅 토큰). 없으면 AUTH_KEY에서 유도해요.
+		// AUTH_KEY를 회전할 때는 이전 AUTH_KEY 값을 여기에 넣어 두면 기존 행이 계속 복호돼요.
+		DATA_ENCRYPTION_KEY: z.string().optional()
 	})
 	.transform((env) => ({
 		...env,

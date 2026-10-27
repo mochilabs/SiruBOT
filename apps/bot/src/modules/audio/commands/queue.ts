@@ -1,9 +1,10 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/queue.ts';
+import { respondQueuedTracks } from '../../../lib/autocomplete.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -64,6 +65,7 @@ export class QueueCommand extends Command {
 								.setDescriptionLocalizations({ ko: '제거할 곡의 번호에요.' })
 								.setMinValue(1)
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -80,6 +82,7 @@ export class QueueCommand extends Command {
 								.setDescriptionLocalizations({ ko: '이동할 곡의 현재 위치에요.' })
 								.setMinValue(1)
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 						.addIntegerOption((option) =>
 							option
@@ -89,9 +92,15 @@ export class QueueCommand extends Command {
 								.setDescriptionLocalizations({ ko: '곡을 이동할 위치에요.' })
 								.setMinValue(1)
 								.setRequired(true)
+								.setAutocomplete(true)
 						)
 				);
 		});
+	}
+
+	public override async autocompleteRun(interaction: AutocompleteInteraction) {
+		// 제거·이동 세 옵션 모두 같은 유저 대기열 번호 규칙을 써요 (/음악 건너뛰기와 동일)
+		return respondQueuedTracks(interaction);
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {

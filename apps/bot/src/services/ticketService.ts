@@ -3,6 +3,7 @@ import { ChannelType, Guild, GuildMember, OverwriteType, PermissionFlagsBits, Te
 import { formatTicketChannelName } from '@sirubot/utils/ticket';
 import type { Ticket } from '@sirubot/prisma';
 import { ticketWelcomeView } from '../modules/general/view/ticket.ts';
+import { saveTicketTranscript } from './ticketTranscript.ts';
 export class TicketService {
 	private get db() {
 		return container.db;
@@ -186,6 +187,12 @@ export class TicketService {
 			}
 		});
 
+		// 채널이 사라지기 전에 대화 기록을 비공개 버킷에 남겨요 — 실패해도 마감은 계속돼요
+		const transcriptKey = await saveTicketTranscript(guild, updatedTicket, closedByMember.id, updatedTicket.closeReason).catch(() => null);
+		const ticketWithTranscript = transcriptKey
+			? await this.db.ticket.update({ where: { id: ticket.id }, data: { transcriptKey, transcribedAt: new Date() } })
+			: updatedTicket;
+
 		// 채널 삭제 (스케줄링 또는 즉시 삭제)
 		const channel = guild.channels.cache.get(channelId);
 		if (channel && channel.isTextBased()) {
@@ -209,7 +216,7 @@ export class TicketService {
 			}
 		}
 
-		return { ok: true, ticket: updatedTicket };
+		return { ok: true, ticket: ticketWithTranscript };
 	}
 
 	/**

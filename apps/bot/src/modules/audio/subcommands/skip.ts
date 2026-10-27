@@ -1,6 +1,12 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from 'discord.js';
+import {
+	AutocompleteInteraction,
+	ChatInputCommandInteraction,
+	GuildMember,
+	type SlashCommandOptionsOnlyBuilder,
+	SlashCommandSubcommandBuilder
+} from 'discord.js';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { skipPolicy, type SkipContext } from '../../../services/skipPolicy.ts';
 
@@ -18,11 +24,14 @@ export const preconditions = [
 ];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub
-		.setName(name)
-		.setNameLocalizations({ ko })
-		.setDescription(description)
-		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡을 건너뛰어요.' })
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	withOptions(named);
+	return named;
+}
+
+/** 옵션만 붙여요 — `/건너뛰기`처럼 top-level 커맨드로 승격할 때 같은 옵션 정의를 재사용해요 */
+export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
+	builder
 		.addBooleanOption((option) =>
 			option
 				.setName('force')

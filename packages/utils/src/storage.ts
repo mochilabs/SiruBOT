@@ -19,6 +19,13 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const SAFE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
+/**
+ * 비공개 버킷 — 공개 GET이 없고 대시보드(관리자)가 storage에서 직접 내려받아요.
+ * 티켓 대화 transcript처럼 채널 밖으로 나가면 안 되는 문서를 여기에 둬요.
+ * 저장 형식은 `{guildId}/{ticketId}.json.gz` (contract: `packages/utils/src/ticket.ts`).
+ */
+export const TICKET_TRANSCRIPT_BUCKET = 'ticket-transcripts';
+
 /** 매직 바이트로 실제 이미지 형식을 판별해요 — Content-Type 헤더는 신뢰하지 않아요 */
 export function sniffImageMime(bytes: Uint8Array): string | null {
 	if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';

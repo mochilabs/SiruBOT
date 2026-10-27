@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getSimpleYouTubeSuggestions } from '@sirubot/utils';
-import { AutocompleteInteraction, ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 'discord.js';
+import { AutocompleteInteraction, ChatInputCommandInteraction, type SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandBuilder } from 'discord.js';
 import { SearchPlatform } from 'lavalink-client';
 
 export const name = 'play';
@@ -20,11 +20,14 @@ export const preconditions = [
 const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub
-		.setName(name)
-		.setNameLocalizations({ ko })
-		.setDescription(description)
-		.setDescriptionLocalizations({ ko: description })
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	withOptions(named);
+	return named;
+}
+
+/** 옵션만 붙여요 — `/재생`처럼 서브커맨드 없이 top-level 커맨드로 승격할 때 같은 옵션 정의를 재사용해요 */
+export function withOptions<T extends SlashCommandSubcommandBuilder | SlashCommandOptionsOnlyBuilder>(builder: T): void {
+	builder
 		.addStringOption((option) =>
 			option
 				.setName('query')

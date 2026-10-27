@@ -37,6 +37,20 @@ describe('scrubSecrets — Sentry 비밀 마스킹', () => {
 		expect(scrubSecrets({ note: 'user 1234 joined' })).toEqual({ note: 'user 1234 joined' });
 	});
 
+	it('URL 안에 실린 웹훅 토큰·쿼리 크리덴셜·userinfo를 마스킹해요', () => {
+		const scrubbed = scrubSecrets({
+			url: 'https://discord.com/api/webhooks/123456789012345678/abcdEFGH-token_value',
+			endpoint: 'https://api.example.com/v1/weather?location=서울&token=secret123&scope=now',
+			dsn: 'https://user:password@example.com/1'
+		});
+
+		expect(scrubbed).toEqual({
+			url: 'https://discord.com/api/webhooks/123456789012345678/[redacted]',
+			endpoint: 'https://api.example.com/v1/weather?location=서울&token=[redacted]&scope=now',
+			dsn: 'https://[redacted]@example.com/1'
+		});
+	});
+
 	it('중첩 객체·배열을 재귀적으로 처리하고 순환 참조를 견뎌요', () => {
 		const cyclic: Record<string, unknown> = { extra: { headers: { Authorization: 'Bearer toptoken' } }, list: [{ secret: 's' }] };
 		cyclic.self = cyclic;

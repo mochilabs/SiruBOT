@@ -36,8 +36,18 @@ function subcommandMention(commandName: string, subcommandName: string, index: R
 	return command ? `</${commandName} ${subcommandName}:${command.id}>` : `\`/${commandName} ${subcommandName}\``;
 }
 
-/** AI 섹션에 따로 적어 일반 목록에서는 제외하는 명령어들 */
+/**
+ * AI 섹션에 따로 적어 일반 목록에서는 제외하는 명령어들.
+ * 관리자 설정 커맨드(settings·mixer·chattools·config)는 `/설정` 그룹으로 안내해 일반 목록에서 빼요.
+ */
 const AI_COMMAND_NAMES = new Set(['chat', 'chat-settings']);
+const ADMIN_COMMAND_NAMES = new Set(['settings', 'mixer', 'chattools', 'config']);
+
+/**
+ * `/음악`의 서브커맨드 목록에서 빼고 top-level로 따로 안내하는 승격 커맨드.
+ * (음악 재생·건너뛰기는 `/재생`·`/건너뛰기`로 1급 승격돼 같은 동작이 두 번 보이면 안 돼요)
+ */
+const PROMOTED_MUSIC_SUBCOMMANDS = new Set(['play', 'skip']);
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -96,12 +106,14 @@ export class HelpCommand extends Command {
 				audioCommands.push(line);
 				if (cmd.name === 'music') {
 					for (const sub of MUSIC_SUBCOMMANDS) {
+						if (PROMOTED_MUSIC_SUBCOMMANDS.has(sub.name)) continue;
 						audioCommands.push(`　└ ${subcommandMention('music', sub.name, index)} · ${sub.description}`);
 					}
+					audioCommands.push('-# 재생·건너뛰기는 `/재생`, `/건너뛰기`로 바로 쓸 수 있어요.');
 				}
 			} else if (cmd.fullCategory.includes('게임')) {
 				gameCommands.push(line);
-			} else if (!AI_COMMAND_NAMES.has(cmd.name)) {
+			} else if (!AI_COMMAND_NAMES.has(cmd.name) && !ADMIN_COMMAND_NAMES.has(cmd.name)) {
 				const preconditions = cmd.options.preconditions;
 				const isOwnerOnly = Array.isArray(preconditions) && preconditions.includes('OwnerOnly');
 				if (!isOwnerOnly) {
@@ -134,7 +146,13 @@ export class HelpCommand extends Command {
 			...gameCommands,
 			'',
 			`**${emoji('tools')} 일반**`,
-			...generalCommands
+			...generalCommands,
+			'',
+			`**${emoji('lock')} 서버 관리(관리자)**`,
+			`${commandMention('config', index)} · 서버 설정 요약·음악·믹서·AI·채팅 유틸을 한 곳에서`,
+			`${commandMention('ticket', index)} · 고객지원 티켓`,
+			`${commandMention('purge', index)} · 채널 메시지 정리`,
+			`${commandMention('chat-settings', index)} · AI 채팅 on/off (\`/설정 ai\`와 같은 설정)`
 		];
 	}
 }

@@ -60,11 +60,22 @@ type MinimalLogger = {
 const SECRET_KEY_PATTERN = /(authoriz|token|secret|passw|api[-_]?key|credential)/i;
 /** 문자열 안의 Authorization 헤더/토큰 형태를 마스킹해요 */
 const BEARER_TOKEN_PATTERN = /(Bearer\s+)\S+/gi;
+/**
+ * URL 안에 실린 크리덴셜 — Discord 웹훅(`/webhooks/{id}/{token}`)·쿼리 토큰(`?token=` 등)·URL userinfo.
+ * 키 이름이 `url`이면 SECRET_KEY_PATTERN에 걸리지 않으므로 값 자체를 마스킹해야 해요.
+ */
+const URL_SECRET_PATTERNS: readonly [RegExp, string][] = [
+	[/(https:\/\/[^\s"'?#]*?\/webhooks\/\d+\/)[^\s"'?#]+/gi, '$1[redacted]'],
+	[/([?&](?:token|key|api_key|apikey|access_token|refresh_token|secret|sig|signature|password)=)[^&\s"']+/gi, '$1[redacted]'],
+	[/(https?:\/\/)[^\s/"'@]+:[^\s/"'@]+@/gi, '$1[redacted]@']
+];
 /** 재귀 순회 한계 — 이벤트 객체는 직렬화 직전이라 순환 참조가 있을 수 있어요 */
 const SCRUB_MAX_DEPTH = 6;
 
-function maskSecretString(value: string): string {
-	return value.replace(BEARER_TOKEN_PATTERN, '$1[redacted]');
+export function maskSecretString(value: string): string {
+	let masked = value.replace(BEARER_TOKEN_PATTERN, '$1[redacted]');
+	for (const [pattern, replacement] of URL_SECRET_PATTERNS) masked = masked.replace(pattern, replacement);
+	return masked;
 }
 
 /** 이벤트 값 재귀 마스킹, 깊이 6까지 순회하고 순환 참조는 [circular] 문자열로 남겨요 */

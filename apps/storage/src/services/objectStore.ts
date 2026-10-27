@@ -17,7 +17,9 @@ const MIME_BY_EXT: Record<string, string> = {
 	jpg: 'image/jpeg',
 	jpeg: 'image/jpeg',
 	webp: 'image/webp',
-	gif: 'image/gif'
+	gif: 'image/gif',
+	// 비공개 버킷(티켓 transcript) — gzip 압축 JSON
+	gz: 'application/gzip'
 };
 
 /** 저장된 파일의 Content-Type: 확장자 매핑 (업로드 시 매직 바이트와 확장자 일치를 검증해요) */

@@ -59,7 +59,8 @@ export async function serveCached<T>(options: {
 			if (error instanceof Error && error.name !== 'Error' && error.name !== 'TypeError' && error.name !== 'AbortError') throw error;
 			// 여기까지 도달한 건 진짜 업스트림 장애(fetch 실패·응답 검증 실패)뿐이에요 — 이것만 회로에 기록해요.
 			breaker.recordFailure(provider);
-			throw new DataApiError(502, 'upstream_failed', error instanceof Error ? error.message : '외부 API 호출에 실패했어요.');
+			// 응답 본문에는 원인을 싣지 않아요 — fetch 실패 메시지에는 요청 URL(사용자 입력 포함)이 들어가요
+			throw new DataApiError(502, 'upstream_failed', '외부 API 호출에 실패했어요. 잠시 후 다시 시도해 주세요.');
 		}
 	});
 	return { data, cached: false };

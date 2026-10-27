@@ -12,6 +12,8 @@ import type { NotifierRedis } from '../services/redis.ts';
 import { requireAuth } from '../plugins/auth.ts';
 import { getLogger } from '../utils/logger.ts';
 
+import { openWebhookToken, sealWebhookToken } from '../services/secretStorage.ts';
+
 const logger = getLogger('social');
 
 /** 공개 응답에서 빼는 필드: webhookId/webhookToken은 대시보드에 절대 노출하지 않아요. */
@@ -161,7 +163,8 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 					webhookAvatarUrl: body.webhookAvatarUrl ?? null,
 					showThumbnail: body.showThumbnail,
 					webhookId: hubResponse.webhookId,
-					webhookToken: hubResponse.webhookToken
+					// 저장 직전 암호화 — DB에는 크리덴셜 평문을 두지 않아요 (키 없으면 평문 폴백)
+					webhookToken: sealWebhookToken(hubResponse.webhookToken)
 				}
 			});
 			return reply.send({ subscription: publicSubscription(row) });
@@ -248,7 +251,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance, optio
 						})
 					: 0;
 			await db.socialSubscription.delete({ where: { id } });
-			void deleteDiscordWebhook(row.webhookId, row.webhookToken, fetchFn);
+			void deleteDiscordWebhook(row.webhookId, openWebhookToken(row.webhookToken), fetchFn);
 			if (row.platform === 'twitch' && remainingTwitch === 0) void releaseTwitchEventSub(row.sourcePlatformId);
 			return reply.send({ ok: true });
 		} catch (error) {

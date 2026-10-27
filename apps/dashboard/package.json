@@ -15,6 +15,7 @@
     "@base-ui/react": "^1.9.0",
     "@prisma/adapter-pg": "^7.10.1",
     "@redis/client": "^6.3.0",
+    "@sentry/nextjs": "^9.47.2",
     "@sirubot/prisma": "*",
     "@sirubot/utils": "*",
     "@tanstack/react-virtual": "^3.14.22",

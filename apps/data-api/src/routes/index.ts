@@ -18,6 +18,7 @@ import { registerRenderRoutes } from './render.ts';
 import { registerAiRoutes } from './ai.ts';
 import { registerPlayerRoutes } from './player.ts';
 import { registerGuildDataRoutes } from './guild-data.ts';
+import { registerStorageProxyRoutes } from './storage.ts';
 
 export interface RouteDeps {
 	translationProvider: OpenAICompatTranslationProvider;
@@ -29,6 +30,9 @@ export interface RouteDeps {
 	notifierUrl?: string;
 	/** notifier 인증 키 — Authorization 헤더 원문(Bearer 없음) */
 	notifierAuthKey?: string;
+	/** storage base URL·키 — 비공개 오브젝트(티켓 transcript) 중계용. 미설정이면 503 */
+	storageUrl?: string;
+	storageAuthKey?: string;
 }
 
 /**
@@ -71,6 +75,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	registerAiRoutes(fastify, deps);
 	registerPlayerRoutes(fastify, deps);
 	registerGuildDataRoutes(fastify);
+	registerStorageProxyRoutes(fastify, { storageUrl: deps.storageUrl, storageAuthKey: deps.storageAuthKey });
 
 	// 소셜 알림 프록시 — 구독 도메인은 notifier가 단일 소유해요.
 	await registerSocialRoutes(fastify, deps);

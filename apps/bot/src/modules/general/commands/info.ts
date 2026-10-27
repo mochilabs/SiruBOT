@@ -3,11 +3,10 @@ import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { runSubcommandPreconditions, subcommandSummaries, type SubcommandModule } from '../../../lib/subcommandDispatcher.ts';
-import * as avatar from '../subcommands/avatar.ts';
 import * as bot from '../subcommands/bot.ts';
 import * as server from '../subcommands/server.ts';
 
-const SUBCOMMANDS: SubcommandModule[] = [bot, server, avatar];
+const SUBCOMMANDS: SubcommandModule[] = [bot, server];
 
 /** /도움말에서 서브커맨드 멘션을 그릴 때 써요 */
 export const INFO_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS);

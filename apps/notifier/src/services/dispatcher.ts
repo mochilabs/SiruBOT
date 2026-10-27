@@ -2,6 +2,7 @@ import { extractSocialTemplateRoleIds, renderSocialContent, SOCIAL_PLATFORM_LABE
 import type { PrismaClient, SocialSubscription } from '@sirubot/prisma';
 import { getLogger } from '../utils/logger.ts';
 import type { NotifierRedis } from './redis.ts';
+import { openWebhookToken } from './secretStorage.ts';
 
 const logger = getLogger('dispatcher');
 
@@ -122,7 +123,13 @@ export class SocialDispatcher {
 	}
 
 	private async deliver(subscription: SocialSubscription, event: SocialEvent): Promise<void> {
-		const url = `${DISCORD_WEBHOOK_URL}/${subscription.webhookId}/${subscription.webhookToken}`;
+		// DB에는 암호화된 토큰이 저장돼요 — 전송 직전에만 복호해요
+		const webhookToken = openWebhookToken(subscription.webhookToken);
+		if (!webhookToken) {
+			await this.markFailed(subscription, '웹훅 토큰을 복호할 수 없어요 (암호화 키 확인)');
+			return;
+		}
+		const url = `${DISCORD_WEBHOOK_URL}/${subscription.webhookId}/${webhookToken}`;
 		const payload = this.buildPayload(subscription, event);
 
 		let response = await this.postWebhook(url, payload);

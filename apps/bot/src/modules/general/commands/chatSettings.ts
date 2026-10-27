@@ -1,9 +1,54 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { Command, UserError, container } from '@sapphire/framework';
+import {
+	ApplicationIntegrationType,
+	ChatInputCommandInteraction,
+	MessageFlags,
+	PermissionFlagsBits,
+	type SlashCommandSubcommandGroupBuilder,
+	type SlashCommandSubcommandsOnlyBuilder
+} from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { normalizeAiMode } from '../../../services/guildService.ts';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
+
+/**
+ * AI 채팅 설정 서브커맨드 정의 — `/채팅설정`과 `/ai`가 같은 옵션을 써요.
+ */
+export function withChatSettingsSubcommands(builder: SlashCommandSubcommandsOnlyBuilder | SlashCommandSubcommandGroupBuilder): void {
+	builder
+		.addSubcommand((sub) =>
+			sub
+				.setName('server')
+				.setNameLocalizations({ ko: '서버' })
+				.setDescription('Set how AI chat works for this server.')
+				.setDescriptionLocalizations({ ko: '이 서버의 AI 채팅 모드를 바꿔요.' })
+				.addStringOption((option) =>
+					option
+						.setName('mode')
+						.setNameLocalizations({ ko: '모드' })
+						.setDescription('AI chat mode: all channels, selected channels, or off.')
+						.setDescriptionLocalizations({ ko: '모든 채널 / 특정 채널 / 끄기 중에서 골라요.' })
+						.setRequired(true)
+						.addChoices({ name: '모든 채널', value: 'all' }, { name: '특정 채널', value: 'channels' }, { name: '끄기', value: 'off' })
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('channel')
+				.setNameLocalizations({ ko: '채널' })
+				.setDescription('Enable or disable AI chat for this channel.')
+				.setDescriptionLocalizations({ ko: '현재 채널의 AI 채팅을 켜거나 꺼요.' })
+				.addBooleanOption((option) =>
+					option
+						.setName('enabled')
+						.setNameLocalizations({ ko: '켜기' })
+						.setDescription('Whether AI chat is enabled in this channel.')
+						.setDescriptionLocalizations({ ko: '현재 채널에서 AI 채팅 사용 여부예요.' })
+						.setRequired(true)
+				)
+		);
+}
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -21,43 +66,14 @@ export class ChatSettingsCommand extends Command {
 				.setName(this.name)
 				.setNameLocalizations({ ko: '채팅설정' })
 				.setDescription(this.description)
-				.setDescriptionLocalizations({ ko: '서버·채널의 AI 채팅 on/off를 설정해요.' })
-				.addSubcommand((sub) =>
-					sub
-						.setName('server')
-						.setNameLocalizations({ ko: '서버' })
-						.setDescription('Set how AI chat works for this server.')
-						.setDescriptionLocalizations({ ko: '이 서버의 AI 채팅 모드를 바꿔요.' })
-						.addStringOption((option) =>
-							option
-								.setName('mode')
-								.setNameLocalizations({ ko: '모드' })
-								.setDescription('AI chat mode: all channels, selected channels, or off.')
-								.setDescriptionLocalizations({ ko: '모든 채널 / 특정 채널 / 끄기 중에서 골라요.' })
-								.setRequired(true)
-								.addChoices(
-									{ name: '모든 채널', value: 'all' },
-									{ name: '특정 채널', value: 'channels' },
-									{ name: '끄기', value: 'off' }
-								)
-						)
-				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('channel')
-						.setNameLocalizations({ ko: '채널' })
-						.setDescription('Enable or disable AI chat for this channel.')
-						.setDescriptionLocalizations({ ko: '현재 채널의 AI 채팅을 켜거나 꺼요.' })
-						.addBooleanOption((option) =>
-							option
-								.setName('enabled')
-								.setNameLocalizations({ ko: '켜기' })
-								.setDescription('Whether AI chat is enabled in this channel.')
-								.setDescriptionLocalizations({ ko: '현재 채널에서 AI 채팅 사용 여부예요.' })
-								.setRequired(true)
-						)
-				);
+				.setDescriptionLocalizations({ ko: '서버·채널의 AI 채팅 on/off를 설정해요.' });
+			withChatSettingsSubcommands(builder);
 		});
+	}
+
+	/** `/설정 ai`가 같은 검증·핸들러를 재사용해요 */
+	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
+		return new ChatSettingsCommand(container.client as never).chatInputRun(interaction);
 	}
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {

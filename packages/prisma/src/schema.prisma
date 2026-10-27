@@ -342,6 +342,11 @@ model Ticket {
   claimedById  String?   /// 티켓을 담당하기로 지정한 스태프 ID
   closedById   String?   /// 티켓을 닫은 유저/스태프 ID
   closeReason  String?   /// 닫은 사유
+  /// 대화 기록(transcript) 저장 키 — 비공개 버킷 `ticket-transcripts` 아래 `{guildId}/{ticketId}.json.gz`.
+  /// 채널은 마감 후 삭제되므로 대화 원문은 여기에만 남아요. 저장 실패 시 null.
+  transcriptKey String?
+  /// transcript 저장 시각 — 재시도/만료 판정용
+  transcribedAt DateTime?
   createdAt    DateTime  @default(now())
   closedAt     DateTime?
 

@@ -25,13 +25,17 @@ const envSchema = z
 		LAVALINK_PASSWORD: z.string().optional(),
 		// 소셜 알림(notifier) 프록시 대상 — 기본값은 단일 호스트 개발 구성이에요
 		NOTIFIER_URL: z.string().url().default('http://localhost:3004'),
-		NOTIFIER_AUTH_KEY: z.string().optional()
+		NOTIFIER_AUTH_KEY: z.string().optional(),
+		// 티켓 transcript 같은 비공개 오브젝트를 중계할 storage 주소·키 (봇·대시보드는 이 값을 몰라요)
+		STORAGE_URL: z.string().url().default('http://localhost:3003'),
+		STORAGE_AUTH_KEY: z.string().optional()
 	})
 	// 폴백 체인(DATA_API_AUTH_KEY ?? AUTH_KEY)을 스키마 안에서 정규화해요.
 	.transform((env) => ({
 		...env,
 		dataApiAuthKey: authKeyChain(env.DATA_API_AUTH_KEY, env.AUTH_KEY),
-		notifierAuthKey: authKeyChain(env.NOTIFIER_AUTH_KEY, env.AUTH_KEY)
+		notifierAuthKey: authKeyChain(env.NOTIFIER_AUTH_KEY, env.AUTH_KEY),
+		storageAuthKey: authKeyChain(env.STORAGE_AUTH_KEY, env.AUTH_KEY)
 	}));
 
 export type Env = z.infer<typeof envSchema>;

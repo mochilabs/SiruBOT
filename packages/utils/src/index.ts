@@ -157,7 +157,8 @@ export {
 	ASSET_NAME_MAX_LENGTH,
 	assetKeyFor,
 	assetNameSchema,
-	sniffImageMime
+	sniffImageMime,
+	TICKET_TRANSCRIPT_BUCKET
 } from './storage.js';
 export {
 	extractSocialTemplateRoleIds,

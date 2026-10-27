@@ -22,6 +22,11 @@
             "import": "./dist/sentry.js",
             "require": "./dist/sentry.cjs"
         },
+        "./secretBox": {
+            "types": "./dist/secretBox.d.ts",
+            "import": "./dist/secretBox.js",
+            "require": "./dist/secretBox.cjs"
+        },
         "./customCommand": {
             "types": "./dist/customCommand.d.ts",
             "import": "./dist/customCommand.js",

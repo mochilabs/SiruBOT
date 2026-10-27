@@ -1,11 +1,12 @@
 // token-store 회귀 계약 — refresh 레이스·Redis 뮤텍스·낙관적 version 잠금을 잠가요.
 // DB·Discord·Redis는 전부 목으로 대체하고 AUTH_SECRET만 실제 env로 줘요.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({
 	db: {
 		userToken: {
 			findUnique: vi.fn(),
+			update: vi.fn(),
 			updateMany: vi.fn(),
 			upsert: vi.fn(),
 			deleteMany: vi.fn(),
@@ -28,7 +29,7 @@ import { db } from "@/lib/db";
 import { requestDiscordToken } from "@/lib/discord-token";
 import { isRedisEnabled, redisCompareAndDel, redisSetNx } from "@/lib/redis";
 
-import { decryptToken, encryptToken, ensureFreshToken } from "./token-store";
+import { decryptToken, encryptToken, ensureFreshToken, readTokenSet } from "./token-store";
 
 const USER = "user-token-store";
 
@@ -211,4 +212,47 @@ describe("ensureFreshToken", () => {
 		expect(result).toMatchObject({ status: "ok", accessToken: "access-winner" });
 		expect(requestDiscordToken).not.toHaveBeenCalled();
 	}, 15_000);
+});
+describe("TOKEN_ENCRYPTION_KEY (키 회전)", () => {
+	const OLD_SECRET = process.env.AUTH_SECRET;
+	const NEW_KEY = "dedicated-encryption-key-for-tests";
+
+	afterEach(() => {
+		delete process.env.TOKEN_ENCRYPTION_KEY;
+		if (OLD_SECRET === undefined) delete process.env.AUTH_SECRET;
+		else process.env.AUTH_SECRET = OLD_SECRET;
+	});
+
+	it("전용 키가 생기면 세션 시크릿으로 쓴 기존 토큰도 읽을 수 있어요", () => {
+		delete process.env.TOKEN_ENCRYPTION_KEY;
+		const legacy = encryptToken("refresh-legacy");
+
+		process.env.TOKEN_ENCRYPTION_KEY = NEW_KEY;
+		expect(decryptToken(legacy)).toBe("refresh-legacy");
+	});
+
+	it("전용 키로 쓴 토큰은 세션 시크릿이 바뀌어도 복호돼요", () => {
+		process.env.TOKEN_ENCRYPTION_KEY = NEW_KEY;
+		process.env.AUTH_SECRET = "rotated-session-secret";
+		const enc = encryptToken("access-after-rotation");
+		expect(decryptToken(enc)).toBe("access-after-rotation");
+	});
+
+	it("읽은 행이 옛 키로 암호화돼 있으면 전용 키로 다시 암호화해요", async () => {
+		delete process.env.TOKEN_ENCRYPTION_KEY;
+		const legacyRow = tokenRow({ version: 3, expiresAtMs: Date.now() + 3_600_000 });
+		vi.mocked(db.userToken.findUnique).mockResolvedValue(legacyRow);
+		vi.mocked(db.userToken.update).mockResolvedValue(legacyRow as never);
+
+		process.env.TOKEN_ENCRYPTION_KEY = NEW_KEY;
+		await readTokenSet(USER);
+
+		expect(db.userToken.update).toHaveBeenCalledTimes(1);
+		const call = vi.mocked(db.userToken.update).mock.calls[0]![0] as unknown as {
+			where: { userId: string; version: number };
+			data: { refreshToken: string };
+		};
+		expect(call.where).toEqual({ userId: USER, version: 3 });
+		expect(decryptToken(call.data.refreshToken)).toBe("refresh-current");
+	});
 });

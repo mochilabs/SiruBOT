@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { GreetingConfig, GreetingKind } from '@sirubot/utils';
 import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
+import type { DeliveryCarrier } from '@sirubot/utils/delivery';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 import type { DailyHoroscope } from './types.ts';
@@ -106,6 +107,39 @@ export async function trackDelivery(carrierHint: string, trackingNumber: string)
 	return gatewayGet<DeliveryTrackResult>(
 		`/v1/delivery/track?carrier=${encodeURIComponent(carrierHint)}&number=${encodeURIComponent(trackingNumber)}`
 	);
+}
+
+/**
+ * 오브젝트 업로드 — storage가 아니라 data-api 게이트웨이를 거쳐요(스토리지 주소·키는 게이트웨이만 알아요).
+ * 실패·미설정이면 null을 돌려줘 호출부가 기능을 건너뛸 수 있게 해요.
+ */
+export async function uploadObject(
+	bucket: string,
+	key: string,
+	bytes: Uint8Array,
+	contentType: string
+): Promise<{ key: string; url: string | null } | null> {
+	const base = gatewayBaseUrl();
+	if (!base) return null;
+	try {
+		const res = await fetch(`${base}/v1/storage/${encodeURIComponent(bucket)}/${key.split('/').map(encodeURIComponent).join('/')}`, {
+			method: 'PUT',
+			headers: { 'content-type': contentType, ...dataApiAuthHeaders() },
+			body: bytes,
+			signal: AbortSignal.timeout(IMAGE_RENDER_TIMEOUT_MS)
+		});
+		if (!res.ok) throw new Error(`data-api storage ${res.status}`);
+		return (await res.json()) as { key: string; url: string | null };
+	} catch (error) {
+		container.logger.warn(`[data-api] storage upload failed for ${bucket}/${key}: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+}
+
+/** 택배사 검색 — `/택배 택배사` 자동완성용. 게이트웨이가 택배사 목록을 24시간 캐시해요. */
+export async function searchDeliveryCarriers(query: string): Promise<DeliveryCarrier[]> {
+	const result = await gatewayGet<{ carriers: DeliveryCarrier[] }>(`/v1/delivery/carriers?q=${encodeURIComponent(query)}`);
+	return result.carriers;
 }
 
 /** 날씨 — 게이트웨이 (15분 캐시). */
