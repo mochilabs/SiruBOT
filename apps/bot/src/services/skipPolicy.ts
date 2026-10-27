@@ -3,6 +3,7 @@ import { APIUser, ChatInputCommandInteraction, Collection, GuildMember, MessageF
 import { Player, Queue, Track } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { VoteSkip, requiredSkipVotes } from '../modules/audio/managers/voteSkip.ts';
+import { emoji } from '@sirubot/utils';
 import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
@@ -90,7 +91,7 @@ export class SkipPolicy {
 		} else {
 			throw new UserError({
 				identifier: 'skip_no_more_tracks',
-				message: '🔍 건너뛸 노래가 없어요.',
+				message: `${emoji('magnet')} 건너뛸 노래가 없어요.`,
 				context: {
 					...context,
 					ephemeral: true
@@ -131,7 +132,7 @@ export class SkipPolicy {
 		} catch {
 			throw new UserError({
 				identifier: 'skip_mixer_failed',
-				message: '⚠️ 예열된 곡을 정리하지 못해 스킵하지 못했어요. 잠시 후 다시 시도해 주세요.',
+				message: `${emoji('warning')} 예열된 곡을 정리하지 못해 스킵하지 못했어요. 잠시 후 다시 시도해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -156,7 +157,7 @@ export class SkipPolicy {
 		if (!hasPermission) {
 			throw new UserError({
 				identifier: 'forceskip_no_permission',
-				message: '❌ 곡을 강제로 건너뛰려면 DJ 역할이나 관리자 권한이 필요해요.',
+				message: `${emoji('error')} 곡을 강제로 건너뛰려면 DJ 역할이나 관리자 권한이 필요해요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -171,7 +172,7 @@ export class SkipPolicy {
 		if (to > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'skipto_invalid_index',
-				message: '🎵 건너뛸 곡이 대기열에 존재하지 않아요.',
+				message: `${emoji('music_note')} 건너뛸 곡이 대기열에 존재하지 않아요.`,
 				context: { ephemeral: true }
 			});
 		}

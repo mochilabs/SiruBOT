@@ -2,7 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
 import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord.js';
-import { enqueueOperation } from '@sirubot/utils';
+import { emoji, enqueueOperation } from '@sirubot/utils';
 
 import { CustomPlayer } from './customPlayer.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
@@ -55,7 +55,7 @@ export class PlayerNotifier {
 		if (interaction) {
 			throw new UserError({
 				identifier: 'nowplaying_state_changed',
-				message: '🎵 재생 상태가 바뀌었어요. `/현재곡`으로 다시 확인해 주세요.',
+				message: `${emoji('music_note')} 재생 상태가 바뀌었어요. \`/현재곡\`으로 다시 확인해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}

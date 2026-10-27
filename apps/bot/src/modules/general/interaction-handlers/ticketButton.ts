@@ -1,6 +1,7 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { ButtonInteraction, MessageFlags } from 'discord.js';
 import { TICKET_OPEN_CUSTOM_ID, TICKET_CLOSE_CUSTOM_ID, TICKET_CLAIM_CUSTOM_ID, TICKET_CONFIRM_CLOSE_CUSTOM_ID } from '@sirubot/utils/ticket';
+import { emoji } from '@sirubot/utils';
 import { ticketCloseConfirmView } from '../view/ticket.ts';
 
 export default class TicketButtonHandler extends InteractionHandler {
@@ -36,12 +37,12 @@ export default class TicketButtonHandler extends InteractionHandler {
 				const result = await ticketService.createTicket(guild, member);
 				if (!result.ok) {
 					await interaction.editReply({
-						content: `❌ ${result.reason}`
+						content: `${emoji('error')} ${result.reason}`
 					});
 					return;
 				}
 				await interaction.editReply({
-					content: `✅ 티켓 채널이 개설되었어요: <#${result.channel.id}>`
+					content: `${emoji('success')} 티켓 채널이 개설되었어요: <#${result.channel.id}>`
 				});
 				return;
 			}
@@ -58,12 +59,12 @@ export default class TicketButtonHandler extends InteractionHandler {
 				const result = await ticketService.closeTicket(guild, interaction.channelId, member);
 				if (!result.ok) {
 					await interaction.editReply({
-						content: `❌ ${result.reason}`
+						content: `${emoji('error')} ${result.reason}`
 					});
 					return;
 				}
 				await interaction.editReply({
-					content: '✅ 티켓이 성공적으로 닫혔어요.'
+					content: `${emoji('success')} 티켓이 성공적으로 닫혔어요.`
 				});
 				return;
 			}
@@ -73,13 +74,13 @@ export default class TicketButtonHandler extends InteractionHandler {
 				const result = await ticketService.toggleClaim(guild, interaction.channelId, member);
 				if (!result.ok) {
 					await interaction.editReply({
-						content: `❌ ${result.reason}`
+						content: `${emoji('error')} ${result.reason}`
 					});
 					return;
 				}
 				const isClaimed = Boolean(result.ticket.claimedById);
 				await interaction.editReply({
-					content: isClaimed ? '✅ 이 티켓의 담당자로 등록되었어요.' : '✅ 티켓 담당을 해제했어요.'
+					content: isClaimed ? `${emoji('success')} 이 티켓의 담당자로 등록되었어요.` : `${emoji('success')} 티켓 담당을 해제했어요.`
 				});
 				return;
 			}

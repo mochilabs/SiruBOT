@@ -2,6 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import * as Sentry from '@sentry/node';
 import { ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
+import { emoji } from '@sirubot/utils';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
@@ -46,7 +47,7 @@ export class AudioService {
 		if (!voiceChannelId) {
 			throw new UserError({
 				identifier: 'play_voice_channel_not_found',
-				message: '🎧 음성 채널 정보를 찾을 수 없어요.',
+				message: `${emoji('headphone')} 음성 채널 정보를 찾을 수 없어요.`,
 				context
 			});
 		}
@@ -54,7 +55,7 @@ export class AudioService {
 		if (!voiceChannel || !voiceChannel.isVoiceBased()) {
 			throw new UserError({
 				identifier: 'play_channel_not_found',
-				message: '🎧 음성 채널을 찾을 수 없어요.',
+				message: `${emoji('headphone')} 음성 채널을 찾을 수 없어요.`,
 				context
 			});
 		}
@@ -65,14 +66,14 @@ export class AudioService {
 			if (!permissions?.has(PermissionsBitField.Flags.Connect)) {
 				throw new UserError({
 					identifier: 'play_no_connect_permission',
-					message: '🔒 봇이 음성 채널에 접속할 권한이 없어요.',
+					message: `${emoji('lock')} 봇이 음성 채널에 접속할 권한이 없어요.`,
 					context
 				});
 			}
 			if (!permissions?.has(PermissionsBitField.Flags.Speak)) {
 				throw new UserError({
 					identifier: 'play_no_speak_permission',
-					message: '🔇 봇이 음성 채널에서 말할 권한이 없어요.',
+					message: `${emoji('volume_muted')} 봇이 음성 채널에서 말할 권한이 없어요.`,
 					context
 				});
 			}
@@ -88,7 +89,7 @@ export class AudioService {
 			});
 			throw new UserError({
 				identifier: 'play_connect_error',
-				message: '🛠️ 음성 채널에 접속할 수 없어요.',
+				message: `${emoji('tools')} 음성 채널에 접속할 수 없어요.`,
 				context
 			});
 		}
@@ -110,7 +111,7 @@ export class AudioService {
 			});
 			throw new UserError({
 				identifier: 'play_search_error',
-				message: '🛠️ 음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+				message: `${emoji('tools')} 음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`,
 				context
 			});
 		}
@@ -118,7 +119,7 @@ export class AudioService {
 		if (searchRes.loadType === 'empty') {
 			throw new UserError({
 				identifier: 'play_search_empty',
-				message: '🔎 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.',
+				message: `${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`,
 				context
 			});
 		}
@@ -137,7 +138,7 @@ export class AudioService {
 		const playlist = searchRes.playlist;
 		if (!playlist) {
 			await interaction.editReply({
-				content: '🛠️ 플레이리스트 정보를 불러올 수 없어요.',
+				content: `${emoji('tools')} 플레이리스트 정보를 불러올 수 없어요.`,
 				flags: MessageFlags.IsComponentsV2
 			});
 			return;

@@ -152,7 +152,10 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary)
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('back'))
+				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setStyle(ButtonStyle.Primary)
 		)
 	);
 
@@ -196,7 +199,10 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 	container.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('back'))
+				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('reset:sponsorblock'))
 				.setLabel(`${emoji('repeat')} 전체 해제`)
@@ -227,7 +233,10 @@ function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilde
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('back'))
+				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('remove:dj'))
 				.setLabel(`${emoji('trash')} DJ 역할 제거`)
@@ -312,7 +321,10 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary),
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('back'))
+				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(wrapPrefix('toggle:pindelete'))
 				.setLabel(guild.pinnedChannelDeleteInput ? '입력 메시지 보존' : '입력 메시지 삭제')
@@ -405,7 +417,10 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(wrapPrefix('back')).setLabel('◀ 뒤로가기').setStyle(ButtonStyle.Primary)
+			new ButtonBuilder()
+				.setCustomId(wrapPrefix('back'))
+				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setStyle(ButtonStyle.Primary)
 		)
 	);
 

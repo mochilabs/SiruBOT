@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { WARN_COLOR } from '@sirubot/utils';
+import { WARN_COLOR, emoji } from '@sirubot/utils';
 import { ChannelType, ContainerBuilder, GuildMember, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
 
 interface RoomInfo {
@@ -225,7 +225,7 @@ export class TempVoiceService {
 							new ContainerBuilder()
 								.setAccentColor(WARN_COLOR)
 								.addTextDisplayComponents((textDisplay) =>
-									textDisplay.setContent('❌ 임시 음성 채널을 만들지 못했어요. 잠시 후 다시 시도해 주세요.')
+									textDisplay.setContent(`${emoji('error')} 임시 음성 채널을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`)
 								)
 						]
 					});
