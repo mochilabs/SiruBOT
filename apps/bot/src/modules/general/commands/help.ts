@@ -3,7 +3,7 @@ import { Command } from '@sapphire/framework';
 import { emoji, createContainer, DEFAULT_COLOR } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
-import { MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
+import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
 import { INFO_SUBCOMMANDS } from './info.ts';
 
@@ -42,12 +42,6 @@ function subcommandMention(commandName: string, subcommandName: string, index: R
  */
 const AI_COMMAND_NAMES = new Set(['chat', 'chat-settings']);
 const ADMIN_COMMAND_NAMES = new Set(['settings', 'mixer', 'chattools', 'config']);
-
-/**
- * `/음악`의 서브커맨드 목록에서 빼고 top-level로 따로 안내하는 승격 커맨드.
- * (음악 재생·건너뛰기는 `/재생`·`/건너뛰기`로 1급 승격돼 같은 동작이 두 번 보이면 안 돼요)
- */
-const PROMOTED_MUSIC_SUBCOMMANDS = new Set(['play', 'skip']);
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -106,10 +100,12 @@ export class HelpCommand extends Command {
 				audioCommands.push(line);
 				if (cmd.name === 'music') {
 					for (const sub of MUSIC_SUBCOMMANDS) {
-						if (PROMOTED_MUSIC_SUBCOMMANDS.has(sub.name)) continue;
 						audioCommands.push(`　└ ${subcommandMention('music', sub.name, index)} · ${sub.description}`);
 					}
-					audioCommands.push('-# 재생·건너뛰기는 `/재생`, `/건너뛰기`로 바로 쓸 수 있어요.');
+					// 승격 커맨드는 /음악 서브커맨드 대신 top-level로 보여줘요 (같은 동작이 두 번 보이지 않게)
+					for (const promoted of MUSIC_PROMOTED_COMMANDS) {
+						audioCommands.push(`${commandMention(promoted.name, index)} · ${promoted.description}`);
+					}
 				}
 			} else if (cmd.fullCategory.includes('게임')) {
 				gameCommands.push(line);

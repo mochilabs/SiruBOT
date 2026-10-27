@@ -7,10 +7,12 @@ import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 export const name = 'previous';
 export const ko = '이전곡';
 export const description = '이전에 재생한 곡을 다시 재생해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Play the previous track again.';
 export const preconditions = ['NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	return sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	return sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {

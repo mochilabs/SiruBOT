@@ -6,14 +6,16 @@ import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'lyrics';
 export const ko = '가사';
-export const description = '곡의 가사를 검색해요.';
+export const description = '가사를 검색해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Search the lyrics of a song.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: '현재 재생 중인 곡 또는 검색한 곡의 가사를 보여줘요.' })
 		.addStringOption((option) =>
 			option

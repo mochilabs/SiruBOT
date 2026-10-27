@@ -4,7 +4,9 @@ import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilde
 
 export const name = 'tts';
 export const ko = '음성';
-export const description = '현재 재생 중인 곡 위에 입력한 내용을 음성으로 재생해요.';
+export const description = '재생 중인 곡 위에 입력한 문장을 음성으로 겹쳐요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Speak your text over the current track.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying'];
 
 const MAX_TEXT_LENGTH = 200;
@@ -13,7 +15,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: description })
 		.addStringOption((option) =>
 			option

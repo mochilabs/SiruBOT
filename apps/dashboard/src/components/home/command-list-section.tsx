@@ -10,8 +10,12 @@ import { cn } from "@/lib/utils";
 
 /**
  * 명령어 사전: 연출 없이 실제 슬래시 커맨드를 카테고리 탭으로 골라 훑게 하는 정보 섹션이에요.
- * cmd/desc 문자열은 봇 로캘의 한국어 명령어 이름 그대로 — apps/bot/src/modules/<모듈>/commands/*의
- * setNameLocalizations({ ko }) 값이므로 임의로 바꾸지 마세요.
+ *
+ * cmd/desc는 봇 커맨드 정의의 **ko 로캘 문구를 그대로** 옮겨 적어요 —
+ * `apps/bot/src/modules/<모듈>/commands/*.ts`의 `setNameLocalizations({ ko })` / `setDescriptionLocalizations({ ko })`,
+ * 서브커맨드는 `subcommands/*.ts`의 `name`/`ko`/`description`. 봇 문구를 바꾸면 이 목록도 함께 갱신하세요.
+ *
+ * 톤: 사용자에게 말을 거는 해요체 존댓말, 마침표 유지, 기능만 서술하고 광고문구는 넣지 않아요.
  */
 
 interface CommandCard {
@@ -20,23 +24,23 @@ interface CommandCard {
 }
 
 const MUSIC_COMMANDS: CommandCard[] = [
-	{ cmd: "/음악 재생", desc: "음성 채널에서 노래를 재생해요." },
+	{ cmd: "/재생", desc: "음성 채널에서 노래를 재생해요." },
+	{ cmd: "/건너뛰기", desc: "현재 재생 중인 곡을 건너뛰어요." },
 	{ cmd: "/음악 검색", desc: "곡을 검색해서 5개 결과 중 골라 재생해요." },
 	{ cmd: "/음악 일시정지", desc: "현재 곡을 일시정지하거나 다시 재생해요." },
-	{ cmd: "/음악 건너뛰기", desc: "현재 재생 중인 곡을 건너뛰어요." },
 	{ cmd: "/음악 이전곡", desc: "이전에 재생한 곡을 다시 재생해요." },
 	{ cmd: "/음악 정지", desc: "대기열을 정리하고 노래를 멈춰요." },
 	{ cmd: "/음악 시간이동", desc: "현재 곡의 특정 시간으로 이동해요." },
 	{ cmd: "/음악 볼륨", desc: "플레이어의 볼륨을 설정해요." },
 	{ cmd: "/음악 반복", desc: "반복 모드를 설정해요." },
-	{ cmd: "/음악 자동재생", desc: "추천곡 자동재생을 켜거나 꺼요." },
+	{ cmd: "/음악 자동재생", desc: "추천 곡 자동재생을 켜거나 꺼요." },
 	{ cmd: "/음악 필터", desc: "오디오 필터를 적용하거나 해제해요." },
 	{ cmd: "/현재곡", desc: "현재 재생 중인 곡의 정보를 보여줘요." },
 	{ cmd: "/대기열", desc: "음악 대기열을 보거나 관리해요." },
 	{ cmd: "/음악 가사", desc: "곡의 가사를 검색해요." },
-	{ cmd: "/음악 추천", desc: "현재 곡 기반의 추천곡을 대기열에 추가해요." },
+	{ cmd: "/음악 추천", desc: "현재 곡 기반의 추천 곡을 대기열에 추가해요." },
 	{ cmd: "/음악 재생기록", desc: "이 서버에서 재생된 최근 음악 기록을 보여줘요." },
-	{ cmd: "/음악 음성", desc: "재생 중인 곡 위에 입력한 내용을 음성으로 겹쳐요." },
+	{ cmd: "/음악 음성", desc: "재생 중인 곡 위에 입력한 문장을 음성으로 겹쳐요." },
 	{ cmd: "/플레이리스트", desc: "커스텀 플레이리스트를 관리해요." },
 	{ cmd: "/즐겨찾기", desc: "즐겨찾기한 노래를 관리해요." },
 	{ cmd: "/믹서", desc: "갭리스 재생과 크로스페이드를 설정해요." }
@@ -47,16 +51,17 @@ const LIFE_COMMANDS: CommandCard[] = [
 	{ cmd: "/채팅설정", desc: "서버와 채널의 AI 채팅 설정을 관리해요." },
 	{ cmd: "/날씨", desc: "현재 날씨와 예보를 확인해요." },
 	{ cmd: "/택배", desc: "택배 배송 상태를 조회해요." },
-	{ cmd: "/프로필", desc: "생일·별자리·음악 기록을 확인하고 관리해요." }
+	{ cmd: "/프로필", desc: "프로필(생일·별자리·음악 기록)을 확인하고 관리해요." }
 ];
 
 const UTILITY_COMMANDS: CommandCard[] = [
 	{ cmd: "/정보", desc: "봇·서버·유저 정보를 보여줘요." },
-	{ cmd: "/정보 아바타", desc: "사용자의 아바타를 보여줘요." },
-	{ cmd: "/정보 봇", desc: "봇의 정보와 통계를 보여줘요." },
-	{ cmd: "/정보 서버", desc: "현재 서버의 정보를 보여줘요." },
+	{ cmd: "/정보 봇", desc: "봇 정보와 통계를 보여줘요." },
+	{ cmd: "/정보 서버", desc: "현재 서버 정보를 보여줘요." },
+	{ cmd: "/아바타", desc: "유저 아바타를 크게 보여줘요." },
 	{ cmd: "/도움말", desc: "사용 가능한 명령어 목록을 보여줘요." },
 	{ cmd: "/설정", desc: "봇의 서버 설정을 관리해요." },
+	{ cmd: "/개인정보", desc: "내 데이터를 확인하거나 지워요. (AI 기억·프로필·게임 전적)" },
 	{ cmd: "/청소", desc: "채널의 최근 메시지를 일괄 삭제해요. (14일 이내)" },
 	{ cmd: "/초대", desc: "봇 초대 링크를 보여줘요." },
 	{ cmd: "/핑", desc: "봇과 각 구간의 연결 상태를 보여드려요." }
@@ -64,11 +69,10 @@ const UTILITY_COMMANDS: CommandCard[] = [
 
 const GAME_COMMANDS: CommandCard[] = [
 	{ cmd: "/출석", desc: "매일 출석 체크를 해요. 연속 출석하면 스트릭이 쌓여요." },
-	{ cmd: "/주사위", desc: "주사위를 굴려요. 2d20+3 같은 식도 돼요." },
+	{ cmd: "/주사위", desc: "주사위를 굴려요. 기본은 1d6이고, 개수·면·보정을 옵션으로 지정할 수 있어요." },
 	{ cmd: "/가위바위보", desc: "가위바위보로 봇과 승부해요." },
 	{ cmd: "/숫자맞히기", desc: "1~100 숫자를 맞히는 게임이에요. 6번 안에 맞히면 이겨요!" },
-	{ cmd: "/운세", desc: "오늘의 운세를 봐요. 하루에 한 번 같은 결과!" },
-	{ cmd: "/오하아사", desc: "오늘의 별자리 운세를 확인해요." }
+	{ cmd: "/오하아사", desc: "일본 아사히 방송의 오늘 별자리 운세를 확인해요." }
 ];
 
 type CategoryKey = "music" | "life" | "utility" | "games";
@@ -79,6 +83,9 @@ const CATEGORIES: Array<{ key: CategoryKey; label: string; icon: LucideIcon; com
 	{ key: "utility", label: "유틸리티", icon: Wrench, commands: UTILITY_COMMANDS },
 	{ key: "games", label: "게임", icon: Gamepad2, commands: GAME_COMMANDS }
 ];
+
+/** 하단 안내의 개수는 목록에서 파생해요 — 커맨드가 늘고 줄 때 문구가 어긋나지 않게 */
+const TOTAL_COMMAND_COUNT = CATEGORIES.reduce((sum, category) => sum + category.commands.length, 0);
 
 export function CommandListSection() {
 	const [activeCategory, setActiveCategory] = useState<CategoryKey>("music");
@@ -99,7 +106,7 @@ export function CommandListSection() {
 					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 						음악 재생부터 AI 대화, 게임, 각종 편의 기능까지. 직관적인 슬래시 커맨드로 간편하게 이용하세요.
 					</p>
-					<p className="text-xs font-medium text-muted-foreground mt-1">대표 슬래시 커맨드 40개 · 모든 기능 무료</p>
+					<p className="text-xs font-medium text-muted-foreground mt-1">{`대표 슬래시 커맨드 ${TOTAL_COMMAND_COUNT}개 · 모든 기능 무료`}</p>
 				</m.div>
 
 				{/* 카테고리 탭 — 이 섹션의 유일한 인터랙션. 가로 넘침은 스크롤로 흘려보내요 */}

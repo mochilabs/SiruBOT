@@ -11,11 +11,13 @@ import {
 
 export const name = 'avatar';
 export const ko = '아바타';
-export const description = '사용자의 아바타를 보여줘요.';
+export const description = '유저 아바타를 크게 보여줘요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Show a user avatar in full size.';
 export const preconditions: string[] = [];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
 	withOptions(named);
 	return named;
 }

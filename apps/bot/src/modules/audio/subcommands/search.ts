@@ -16,6 +16,8 @@ import { errorView } from '../../../lib/errorView.ts';
 export const name = 'search';
 export const ko = '검색';
 export const description = '곡을 검색해서 5개 결과 중 골라 재생해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Search tracks and pick one of five results to play.';
 export const preconditions = [
 	'TextChannelAllowed',
 	'NodeAvailable',
@@ -34,7 +36,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: '곡을 검색해서 5개 결과 중 골라 재생해요.' })
 		.addStringOption((option) =>
 			option

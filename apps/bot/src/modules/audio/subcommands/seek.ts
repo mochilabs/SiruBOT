@@ -7,13 +7,15 @@ import * as view from '../view/seek.ts';
 export const name = 'seek';
 export const ko = '시간이동';
 export const description = '현재 곡의 특정 시간으로 이동해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Jump to a specific time in the current track.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub
 		.setName(name)
 		.setNameLocalizations({ ko })
-		.setDescription(description)
+		.setDescription(descriptionEn)
 		.setDescriptionLocalizations({ ko: description })
 		.addStringOption((option) =>
 			option

@@ -7,6 +7,8 @@ import { SearchPlatform } from 'lavalink-client';
 export const name = 'play';
 export const ko = '재생';
 export const description = '음성 채널에서 노래를 재생해요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Play a track in your voice channel.';
 export const preconditions = [
 	'TextChannelAllowed',
 	'NodeAvailable',
@@ -20,7 +22,7 @@ export const preconditions = [
 const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
 	withOptions(named);
 	return named;
 }

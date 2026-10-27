@@ -13,6 +13,8 @@ import { skipPolicy, type SkipContext } from '../../../services/skipPolicy.ts';
 export const name = 'skip';
 export const ko = '건너뛰기';
 export const description = '현재 재생 중인 곡을 건너뛰어요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Skip the current track.';
 export const preconditions = [
 	'TextChannelAllowed',
 	'NodeAvailable',
@@ -24,7 +26,7 @@ export const preconditions = [
 ];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
-	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(description).setDescriptionLocalizations({ ko: description });
+	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
 	withOptions(named);
 	return named;
 }

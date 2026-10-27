@@ -150,7 +150,7 @@ export function PlayerPreview() {
 				</div>
 			</div>
 			<div aria-hidden className="absolute -top-4 right-3 rotate-2 rounded-card bg-surface-1 p-2.5 shadow-lg sm:right-5">
-				<span className="text-xs font-bold text-primary-text sm:text-sm">/음악 재생</span>
+				<span className="text-xs font-bold text-primary-text sm:text-sm">/재생</span>
 			</div>
 		</div>
 	);
