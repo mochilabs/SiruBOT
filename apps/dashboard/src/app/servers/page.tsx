@@ -43,7 +43,7 @@ export default function ServersPage() {
                 title="어떤 서버로 갈까요?"
                 description="관리할 서버를 선택하거나, 시루봇을 새로 초대해 주세요."
             >
-                <div className="flex items-center gap-3 bg-surface-1 rounded-card px-4 py-3 shadow-sm relative overflow-hidden">
+                <div className="flex w-full sm:w-auto items-center gap-3 bg-surface-1 rounded-card px-4 py-3 shadow-sm relative overflow-hidden">
                     {session?.user?.image ? (
                         <Image src={session.user.image} alt="User avatar" width={40} height={40} className="rounded-full ring-2 ring-primary/20 relative z-10" />
                     ) : (

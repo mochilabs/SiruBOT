@@ -43,9 +43,10 @@ const CPU_SERIES: SeriesConfig[] = [
 	{ key: "lavalink", name: "Lavalink CPU (%)", color: "var(--brand)", format: (value) => `${value.toFixed(1)}%` },
 ];
 
-/** 축 눈금·툴팁 라벨 — 수집 시각 문자열("YYYY-MM-DD HH:mm")을 원문 그대로 써요 (시간대 미검증이라 변환하지 않아요) */
+/** 축 눈금·툴팁 라벨 — "YYYY-MM-DD HH:mm"과 ISO 문자열 모두에서 HH:mm만 안전하게 뽑아요 */
 function timeLabel(time: string): string {
-	return time.slice(11, 16);
+	const match = /(\d{2}:\d{2})/.exec(time);
+	return match ? match[1] : time.slice(11, 16);
 }
 
 function HistoryTooltip({ active, payload, label, series }: TooltipContentProps & { series: SeriesConfig[] }) {
@@ -121,7 +122,17 @@ function ChartCard({
 					/>
 					<Tooltip content={(tooltipProps) => <HistoryTooltip {...tooltipProps} series={series} />} cursor={{ stroke: "var(--border-strong)" }} />
 					{series.map((item) => (
-						<Area key={item.key} type="monotone" dataKey={item.key} name={item.name} stroke={item.color} fill={item.color} fillOpacity={0.12} strokeWidth={2} />
+						<Area
+							key={item.key}
+							type="monotone"
+							dataKey={item.key}
+							name={item.name}
+							stroke={item.color}
+							fill={item.color}
+							fillOpacity={0.12}
+							strokeWidth={2}
+							dot={points.length <= 2 ? { r: 3, fill: item.color, strokeWidth: 0 } : false}
+						/>
 					))}
 				</AreaChart>
 			</ResponsiveContainer>

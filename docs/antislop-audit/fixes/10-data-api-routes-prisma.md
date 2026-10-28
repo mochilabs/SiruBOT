@@ -2,7 +2,7 @@ FIXED: 20 / DEFERRED: 2 / N/A: 0
 
 # FIX 리포트: 10 data-api routes/plugins/config + 18 packages/prisma
 
-- 수정 브랜치: `fix/data-api-routes-prisma` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-data-api-routes-prisma`)
+- 수정 브랜치: `fix/data-api-routes-prisma` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-data-api-routes-prisma`)
 - 커밋: `29e531b7` refactor: data-api 라우트 antislop 감사 수정 / `7aba664f` chore: prisma 스키마·마이그레이션 주석 슬롭 정리 (push 없음)
 - 수정 범위: `apps/data-api/src/{routes,plugins,config}` + `packages/prisma/**`. `services/ providers/ renderers/ utils/`는 다른 에이전트 소유라 수정하지 않음
 - 근거 문서: `docs/antislop-audit/segments/10-data-api-routes.md`, `docs/antislop-audit/segments/18-prisma.md`

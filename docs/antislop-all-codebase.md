@@ -2103,7 +2103,7 @@ TOTAL: 27 (HIGH:9 MEDIUM:9 LOW:9)
 - 브랜치: chore/antislop-audit
 - 범위: `apps/data-api/src/{services,providers,renderers,utils}/**` (renderers/canvas 포함). routes/plugins/config 제외.
 - 감사 파일 수: 56 (비테스트 38 전문 검토 + 테스트 18 패턴 스캔)
-- 방법: 주석·중복·죽은 코드는 전수 확인, 캔버스 텍스트 대비는 `/home/sunshine/.config/opencode/skills/antislop-human/contrast-check.py`로 산출한 수치로만 FAIL 판정. 알파 텍스트는 실제 합성 색으로 변환 후 측정. 코드·설정 변경 없음.
+- 방법: 주석·중복·죽은 코드는 전수 확인, 캔버스 텍스트 대비는 `/home/seonu/.config/opencode/skills/antislop-human/contrast-check.py`로 산출한 수치로만 FAIL 판정. 알파 텍스트는 실제 합성 색으로 변환 후 측정. 코드·설정 변경 없음.
 
 ---
 

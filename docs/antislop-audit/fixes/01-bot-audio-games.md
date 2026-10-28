@@ -2,7 +2,7 @@
 
 FIXED: 12 / DEFERRED: 4 / N/A: 0
 
-- 수정 브랜치: `fix/bot-audio-games` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-bot-audio-games`)
+- 수정 브랜치: `fix/bot-audio-games` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-bot-audio-games`)
 - 커밋: `a592953d` chore(bot): antislop 감사 01/03 세그먼트 수정 (audio·games)
 - 수정 범위: `apps/bot/src/modules/{audio,games}` (voice는 감사 결과 문제 없음, 수정 0건)
 

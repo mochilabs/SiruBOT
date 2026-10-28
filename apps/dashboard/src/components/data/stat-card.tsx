@@ -44,7 +44,7 @@ export function StatCard({ icon: Icon, label, value, sub, trend, trendValue, cla
 	const t = trend ? trendConfig[trend] : null;
 
 	return (
-		<Card className={cn("gap-3 rounded-card border-0 p-5 text-foreground ring-0", className)}>
+		<Card className={cn("gap-3 rounded-card border-0 p-4 sm:p-5 text-foreground ring-0", className)}>
 			<div className="flex items-start justify-between gap-3">
 				<p className="text-xs font-medium text-muted-foreground">{label}</p>
 				{Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
@@ -61,7 +61,7 @@ export function StatCard({ icon: Icon, label, value, sub, trend, trendValue, cla
 						</span>
 					)}
 				</div>
-				{sub && <p className="text-sm text-muted-foreground">{sub}</p>}
+				{sub && <p className="text-xs sm:text-sm text-muted-foreground break-keep leading-snug">{sub}</p>}
 			</div>
 		</Card>
 	);

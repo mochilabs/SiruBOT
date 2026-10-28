@@ -224,7 +224,7 @@ export function PlaylistDetail({
 							<DropdownMenu>
 								<DropdownMenuTrigger
 									render={
-										<Button variant="ghost" className="h-10 px-4 font-bold hover:bg-muted/50">
+										<Button variant="secondary" size="sm" className="px-3.5 font-bold">
 											<Settings size={16} className="mr-2 opacity-70" />
 											설정
 										</Button>
@@ -252,7 +252,7 @@ export function PlaylistDetail({
 				</div>
 			</Card>
 
-			<Card padding="none" className="flex-1 overflow-hidden min-h-[320px]" style={{ maxHeight: 'calc(100svh - 17rem)' }}>
+			<Card padding="none" className={`flex-1 overflow-hidden ${tracks.length === 0 ? "min-h-[320px]" : ""}`} style={{ maxHeight: 'calc(100svh - 17rem)' }}>
 				{tracks.length === 0 ? (
 					<EmptyState
 						className="flex-1 border-none bg-transparent"
@@ -266,7 +266,7 @@ export function PlaylistDetail({
 						}
 					/>
 				) : (
-					<div ref={parentRef} className="overflow-auto flex-1 custom-scrollbar w-full">
+					<div ref={parentRef} className="overflow-auto flex-1 w-full">
 						<div className="hidden md:flex items-center px-4 py-3 border-b border-border-subtle text-xs font-black text-muted-foreground sticky top-0 z-10">
 							<div className="w-12 text-center shrink-0">#</div>
 							<div className="flex-1 min-w-[240px]">곡 정보</div>
@@ -405,7 +405,7 @@ export function PlaylistDetail({
 
 						{/* 흐린 표시는 opacity가 아니라 muted 토큰으로 해요. opacity-40이면 본문 대비가 2.3:1까지 내려가요 */}
 						{tracks.length > 0 && (
-							<div className="flex flex-col items-center justify-center py-12 mt-4 text-center text-muted-foreground select-none border-t border-border/10">
+							<div className="flex flex-col items-center justify-center py-6 mt-2 text-center text-muted-foreground select-none border-t border-border/10">
 								<div className="text-xs font-medium mb-1.5 flex items-center gap-2">
 									<span>더 이상 표시할 곡이 없어요</span>
 								</div>

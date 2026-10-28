@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, RefreshCw } from "lucide-react";
 
+import { FocusPageShell } from "@/app/_components/focus-page-shell";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
@@ -28,12 +29,7 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 	const content = ERROR_MESSAGES[error ?? "default"] ?? ERROR_MESSAGES.default;
 
 	return (
-		<main className="relative flex min-h-[calc(100svh-var(--navbar-h))] w-full items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8">
-			{/* 배경 워터마크: 글자를 3:1까지 올리면 그 위를 지나가는 본문 텍스트 대비가 깨져서, 순수 장식이라 텍스트가 아닌 CSS 배경 요소로 그려요. */}
-			<div className="absolute inset-0 -z-10 flex items-center justify-center" aria-hidden>
-				<div className="h-[24rem] w-[44rem] max-w-[95vw] rounded-full bg-foreground/[0.06] blur-3xl" />
-			</div>
-
+		<FocusPageShell>
 			<div className="relative z-10 flex flex-col items-center text-center">
 				<div className="space-y-8">
 					<div className="space-y-3">
@@ -68,6 +64,6 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 					</div>
 				</div>
 			</div>
-		</main>
+		</FocusPageShell>
 	);
 }

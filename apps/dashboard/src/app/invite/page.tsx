@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 import { buildInviteUrl } from "@/utils";
 
 export default function InvitePage() {
-	const inviteUrl = buildInviteUrl({ redirect_url: process.env.NEXT_PUBLIC_APP_URL + "/invite/redirect" });
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+	const inviteUrl = buildInviteUrl({ redirect_url: `${appUrl}/invite/redirect` });
 	const [count, setCount] = useState(5);
 
 	useEffect(() => {

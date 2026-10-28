@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Command, Home, RadioTower, Search, Server, Settings, Trash2, Users } from "lucide-react";
+import { ChevronDown, CommandIcon, Home, RadioTower, Search, Server, Settings, Trash2, Users } from "lucide-react";
 
 import { SaveBar } from "@/components/servers/settings-shared";
 import { Button } from "@/components/ui/button";
 import {
+	Command,
 	CommandDialog,
 	CommandEmpty,
 	CommandGroup,
@@ -83,7 +84,17 @@ export function OverlaySection() {
 	const [selectValue, setSelectValue] = useState<string>("");
 	const [saveBarDemo, setSaveBarDemo] = useState(false);
 	const [drawerVolume, setDrawerVolume] = useState(80);
+	const [autoDj, setAutoDj] = useState(true);
+	const [play24h, setPlay24h] = useState(false);
 	const [menuAction, setMenuAction] = useState<string | null>(null);
+
+	const SELECT_LABELS: Record<string, string> = {
+		kr: "한국어",
+		jp: "日本語",
+		en: "English",
+		de: "Deutsch",
+		fr: "Français",
+	};
 
 	const commandItems = [
 		{ id: "home", label: "홈으로 이동", icon: <Home size={16} />, group: "페이지", onSelect: () => setCmdOpen(false) },
@@ -129,9 +140,9 @@ export function OverlaySection() {
 								<SheetTitle>서버 설정</SheetTitle>
 								<SheetDescription>서버 설정 내용이 여기에 표시됩니다.</SheetDescription>
 							</SheetHeader>
-							<div className="space-y-6 px-4">
-								<Switch checked disabled={false} label="자동 DJ 모드" />
-								<Switch checked={false} label="24시간 재생" />
+							<div className="flex flex-col items-start gap-5 px-5">
+								<Switch checked={autoDj} onChange={setAutoDj} label="자동 DJ 모드" />
+								<Switch checked={play24h} onChange={setPlay24h} label="24시간 재생" />
 								<Slider value={drawerVolume} onChange={setDrawerVolume} label="기본 볼륨" showValue formatValue={(v) => `${v}%`} />
 							</div>
 							<SheetFooter>
@@ -181,7 +192,9 @@ export function OverlaySection() {
 				<ShowcaseRow label="Select">
 					<Select value={selectValue} onValueChange={(value) => setSelectValue(value ?? "")}>
 						<SelectTrigger className="w-56">
-							<SelectValue placeholder="언어 선택" />
+							<SelectValue placeholder="언어 선택">
+								{(value: string) => SELECT_LABELS[value] ?? "언어 선택"}
+							</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							<SelectGroup>
@@ -200,12 +213,13 @@ export function OverlaySection() {
 				</ShowcaseRow>
 
 				<ShowcaseRow label="Command dialog">
-					<Button variant="ghost" size="sm" icon={<Command size={14} />} onClick={() => setCmdOpen(true)}>
+					<Button variant="ghost" size="sm" icon={<CommandIcon size={14} />} onClick={() => setCmdOpen(true)}>
 						커맨드 팔레트 열기
 					</Button>
 					<CommandDialog open={cmdOpen} onOpenChange={setCmdOpen}>
-						<CommandInput placeholder="명령어 검색..." />
-						<CommandList>
+						<Command>
+							<CommandInput placeholder="명령어 검색..." />
+							<CommandList>
 							<CommandEmpty>결과가 없어요</CommandEmpty>
 							{["페이지", "명령어"].map((group) => (
 								<CommandGroup key={group} heading={group}>
@@ -223,7 +237,8 @@ export function OverlaySection() {
 								</CommandGroup>
 							))}
 							</CommandList>
-						</CommandDialog>
+						</Command>
+					</CommandDialog>
 					</ShowcaseRow>
 
 				<ShowcaseRow label="SaveBar (설정 저장 바)" block>

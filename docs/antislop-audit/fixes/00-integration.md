@@ -2,7 +2,7 @@
 
 MERGED: 11 / CONFLICTS: 8 / REVERTED: 0
 
-- 통합 브랜치: `fix/integration` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-integration`)
+- 통합 브랜치: `fix/integration` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-integration`)
 - 기준 커밋: `13c323f5` (Merge PR #125 refactor/codebase-cleanup)
 - 작업 일자: 2026-10-23
 - push: 없음. 전부 로컬 커밋. `fix/integration`은 upstream 미설정.

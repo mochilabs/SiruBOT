@@ -3,7 +3,7 @@ FIXED: 29 / DEFERRED: 0 / N/A: 0
 # antislop 감사 수정 리포트: 05 대시보드 페이지 + 06 대시보드 API
 
 - 날짜: 2026-10-23
-- 워크트리/브랜치: /home/sunshine/.local/share/opencode/worktree/e08104/fix-dashboard-app (fix/dashboard-app)
+- 워크트리/브랜치: /home/seonu/.local/share/opencode/worktree/e08104/fix-dashboard-app (fix/dashboard-app)
 - 커밋: 512046c6 (push 없음)
 - 수정 범위: `apps/dashboard/src/app/**` (페이지 + API 라우트). `components/`, `lib/`, `hooks/`는 소유 에이전트 영역이라 수정하지 않음.
 - 신규 파일: `app/_components/focus-page-shell.tsx`, `app/api/_shared/validation.ts`, `app/contributors/loading.tsx`, `app/player/[id]/loading.tsx`, `app/api/tracks/search-query.ts`, `app/api/tracks/search-query.test.ts`, `app/api/playlists/[id]/tracks/clean-title.ts`, `app/api/playlists/[id]/tracks/clean-title.test.ts`

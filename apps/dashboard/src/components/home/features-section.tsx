@@ -142,12 +142,13 @@ const FEATURE_BLOCKS: FeatureBlock[] = [
 function FeatureBlockItem({ block, index, shouldReduce }: { block: FeatureBlock; index: number; shouldReduce: boolean | null }) {
 	return (
 		<m.div
+			id={`feature-${block.key}`}
 			key={block.key}
 			initial="hidden"
 			whileInView="visible"
 			viewport={{ once: true, margin: "-80px" }}
 			variants={sectionVariants}
-			className="grid items-center gap-6 lg:grid-cols-2 lg:gap-12"
+			className="scroll-mt-24 grid items-center gap-6 lg:grid-cols-2 lg:gap-12"
 		>
 			{/* 텍스트 — 홀수 인덱스(0 기준 1,3,5)에서 lg:order-2로 오른쪽 */}
 			<div className={cn("min-w-0 space-y-3", index % 2 === 1 && "lg:order-2")}>
@@ -217,22 +218,50 @@ export function FeaturesSection() {
 		<section id="features" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 				{/* 섹션 헤더 — 기존 그대로 */}
-				<m.div
-					className="max-w-2xl space-y-3"
-					initial="hidden"
-					whileInView="visible"
-					viewport={{ once: true, margin: "-80px" }}
-					variants={sectionVariants}
-				>
-					<SectionLabel as="p" className="px-0 py-0">
-						시루봇으로 할 수 있는 일
-					</SectionLabel>
-					<h2 className="break-keep text-3xl font-black tracking-tighter text-foreground sm:text-4xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
-					<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
-						명령어로 바로 실행하고, 웹 대시보드에서 내 서버에 맞게 설정하세요.
-					</p>
-				</m.div>
+				{/* 섹션 헤더 + 기능 퀵 점프 바 */}
+				<div className="space-y-8">
+					<m.div
+						className="max-w-2xl space-y-3"
+						initial="hidden"
+						whileInView="visible"
+						viewport={{ once: true, margin: "-80px" }}
+						variants={sectionVariants}
+					>
+						<SectionLabel as="p" className="px-0 py-0">
+							시루봇으로 할 수 있는 일
+						</SectionLabel>
+						<h2 className="break-keep text-3xl font-black tracking-tighter text-foreground sm:text-4xl">필요한 기능은 간편하게, 설정은 자유롭게.</h2>
+						<p className="text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">
+							명령어로 바로 실행하고, 웹 대시보드에서 내 서버에 맞게 설정하세요.
+						</p>
+					</m.div>
 
+					{/* 기능 목차 점프 바 — 9개 기능 블록을 한눈에 보여주고 클릭 시 해당 섹션으로 스크롤 이동 (R-19: 스태거 리빌 1회, 무한 루프 없음) */}
+					<m.nav
+						aria-label="주요 기능 바로가기"
+						variants={chipsContainerVariants}
+						initial="hidden"
+						whileInView="visible"
+						viewport={{ once: true, margin: "-60px" }}
+						className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+					>
+						{FEATURE_BLOCKS.map((block) => (
+							<m.a
+								key={block.key}
+								href={`#feature-${block.key}`}
+								variants={shouldReduce ? chipFadeVariants : chipVariants}
+								className="group inline-flex min-h-10 shrink-0 items-center gap-2 rounded-control bg-surface-1 px-3.5 py-2 text-xs font-bold text-foreground shadow-control-boundary transition-colors duration-fast hover:bg-primary-control hover:text-primary-control-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9"
+							>
+								<block.icon
+									size={14}
+									aria-hidden
+									className="shrink-0 text-primary-text transition-colors duration-fast group-hover:text-primary-control-text"
+								/>
+								<span>{block.label}</span>
+							</m.a>
+						))}
+					</m.nav>
+				</div>
 				{/* 기능 블록 9개 — 위아래로 교차(홀수 인덱스는 데모가 왼쪽) */}
 				<div className="mt-16 space-y-16 sm:mt-24 sm:space-y-24">
 					{FEATURE_BLOCKS.map((block, index) => (

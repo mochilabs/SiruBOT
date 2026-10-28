@@ -74,7 +74,17 @@ async function fetchCommitActivity(): Promise<CommitWeek[] | null> {
 }
 
 
-function CommitHeatmap({ weeks }: { weeks: CommitWeek[] }) {
+function CommitHeatmap({ weeks }: { weeks: CommitWeek[] | null }) {
+  if (weeks === null || weeks.length === 0) {
+    return (
+      <Card padding="lg">
+        <h2 className="text-base font-bold text-foreground">지난 1년 커밋</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          GitHub에서 최근 1년 커밋 통계를 집계하고 있어요. 잠시 후 새로고침하면 커밋 히트맵이 표시돼요.
+        </p>
+      </Card>
+    );
+  }
   const total = weeks.reduce((sum, week) => sum + week.days.reduce((a, b) => a + b, 0), 0);
   const startDate = new Date(weeks[0].week * 1000);
   const endDate = new Date((weeks[weeks.length - 1].week + 6 * 86400) * 1000);
@@ -142,7 +152,7 @@ export default async function ContributorsPage() {
         />
       ) : (
         <div className="space-y-6">
-          {commitWeeks && <CommitHeatmap weeks={commitWeeks} />}
+          <CommitHeatmap weeks={commitWeeks} />
 
           <Card padding="none">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-5 py-4">
