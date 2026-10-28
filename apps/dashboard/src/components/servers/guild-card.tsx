@@ -50,7 +50,7 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						aria-label="관리하기"
 						className={cn(
 							buttonVariants({ variant: "primary", size: "xl" }),
-							"w-11 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-auto md:flex-1 md:gap-2 md:px-3.5",
+							"w-11 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-auto md:flex-1 md:gap-1.5 md:px-2.5 lg:gap-2 lg:px-3.5 whitespace-nowrap",
 						)}
 					>
 						<Settings2 size={18} />
@@ -60,8 +60,8 @@ export function GuildCard({ guild, inviteUrl }: GuildCardProps) {
 						href={`/player/${guild.id}`}
 						aria-label="음악 컨트롤러"
 						className={cn(
-							buttonVariants({ variant: "primary", size: "xl" }),
-							"w-11 justify-center px-0 bg-primary/10 text-primary-text hover:bg-primary-control hover:text-primary-control-text md:w-auto md:flex-1 md:gap-2 md:px-3.5",
+							buttonVariants({ variant: "secondary", size: "xl" }),
+							"w-11 justify-center px-0 md:w-auto md:flex-1 md:gap-1.5 md:px-2.5 lg:gap-2 lg:px-3.5 whitespace-nowrap",
 						)}
 					>
 						<Play size={18} />

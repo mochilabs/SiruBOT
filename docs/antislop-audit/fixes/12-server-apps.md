@@ -2,7 +2,7 @@
 
 FIXED: 26 / DEFERRED: 1 / N/A: 1
 
-- 수정 브랜치: `fix/server-apps` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-server-apps`)
+- 수정 브랜치: `fix/server-apps` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-server-apps`)
 - 커밋: `35ea0499` chore: shardmanager/storage/notifier antislop 감사 수정 (push 없음)
 - 수정 범위: `apps/shardmanager/src/**`, `apps/storage/src/**`, `apps/notifier/src/**` 한정
 

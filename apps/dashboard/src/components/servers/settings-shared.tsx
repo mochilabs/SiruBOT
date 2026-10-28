@@ -276,6 +276,13 @@ export function PanelError({
 }
 
 const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean }>();
+
+const saveBarListeners = new Set<() => void>();
+
+function notifySaveBarListeners() {
+  saveBarListeners.forEach((fn) => fn());
+}
+
 export const SettingsPanelActive = createContext(true);
 
 export function hasUnsavedSettings(): boolean {
@@ -284,6 +291,21 @@ export function hasUnsavedSettings(): boolean {
 
 export function hasUnsavedActiveSettings(): boolean {
   return [...dirtySaveBars.values()].some((entry) => entry.dirty && entry.active);
+}
+
+export function useHasUnsavedActiveSettings(): boolean {
+  const [hasUnsaved, setHasUnsaved] = useState(() => hasUnsavedActiveSettings());
+
+  useEffect(() => {
+    const listener = () => setHasUnsaved(hasUnsavedActiveSettings());
+    saveBarListeners.add(listener);
+    listener();
+    return () => {
+      saveBarListeners.delete(listener);
+    };
+  }, []);
+
+  return hasUnsaved;
 }
 
 const nudgeListeners = new Set<() => void>();
@@ -360,8 +382,10 @@ export function SaveBar({
 
   useEffect(() => {
     dirtySaveBars.set(id, { dirty: dirty || saving || submitting, active });
+    notifySaveBarListeners();
     return () => {
       dirtySaveBars.delete(id);
+      notifySaveBarListeners();
     };
   }, [dirty, saving, submitting, active, id]);
 

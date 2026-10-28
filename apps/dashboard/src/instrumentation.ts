@@ -4,7 +4,8 @@
  * edge 런타임은 쓰지 않아요(미들웨어 없음).
  */
 export async function register(): Promise<void> {
-	if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-	const { initDashboardSentry } = await import('./lib/sentry');
-	initDashboardSentry();
+	if (process.env.NEXT_RUNTIME === 'nodejs') {
+		const { initDashboardSentry } = await import('./lib/sentry');
+		initDashboardSentry();
+	}
 }

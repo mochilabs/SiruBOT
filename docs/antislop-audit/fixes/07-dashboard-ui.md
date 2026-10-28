@@ -3,7 +3,7 @@ FIXED: 15 / DEFERRED: 1 / N/A: 0
 # 세그먼트 07 fix: 대시보드 UI 프리미티브
 
 - 수정일: 2026-10-23
-- 워크트리: /home/sunshine/.local/share/opencode/worktree/e08104/fix-dashboard-ui (브랜치 fix/dashboard-ui)
+- 워크트리: /home/seonu/.local/share/opencode/worktree/e08104/fix-dashboard-ui (브랜치 fix/dashboard-ui)
 - 커밋: f5fcf986 (미push)
 - 근거 문서: docs/antislop-audit/segments/07-dashboard-ui-primitives.md Findings 1~16
 - 수정 범위: apps/dashboard/src/components/{ui,primitives,overlay,layout,navbar,discord,data,motion,licenses} + 토큰 확보를 위한 app/globals.css

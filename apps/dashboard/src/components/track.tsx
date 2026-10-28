@@ -185,7 +185,7 @@ export const TrackItem = memo(function TrackItem({
 	const isTopThree = rank <= 3;
 
 	return (
-		<div className="bg-surface-2 rounded-card group relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
+		<div className="bg-surface-2 rounded-card group relative flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
 			{/* Desktop Rank Indicator */}
 			<div className="hidden sm:flex w-10 justify-center shrink-0">
 				{isTopThree ? (
@@ -239,11 +239,14 @@ export const TrackItem = memo(function TrackItem({
 				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={track.artist}>
 					{track.artist}
 				</p>
-				<p className="mt-1 text-xs sm:text-sm font-medium text-muted-foreground">{formatTimeToKorean(track.duration / 1000)}</p>
+				<p className="mt-1 truncate text-xs sm:text-sm font-medium text-muted-foreground">
+					{formatTimeToKorean(track.duration / 1000)}
+					<span className="sm:hidden"> · <span className="font-bold text-primary-text tabular-nums">{track.totalPlays.toLocaleString()}</span>회</span>
+				</p>
 			</div>
 
-			<div className="flex items-center gap-3 sm:gap-4 pr-1 sm:pr-2 shrink-0">
-				<div className="text-right">
+			<div className="flex items-center gap-1.5 sm:gap-4 pr-0.5 sm:pr-2 shrink-0">
+				<div className="hidden sm:block text-right">
 					<p className="text-base sm:text-lg font-black text-primary-text leading-none">{track.totalPlays.toLocaleString()}</p>
 					<p className="hidden sm:block mt-1 text-xs text-muted-foreground font-bold">총 재생</p>
 				</div>

@@ -3,7 +3,7 @@ FIXED: 26 / DEFERRED: 1 / N/A: 0
 # FIX 리포트: 세그먼트 09 (대시보드 lib/hooks) + 19 (shardclient) + 20 (app-kit)
 
 - 수정일: 2026-10-23
-- 브랜치: `fix/dashboard-lib-contracts` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-dashboard-lib-contracts`)
+- 브랜치: `fix/dashboard-lib-contracts` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-dashboard-lib-contracts`)
 - 커밋: `0da70a1c` refactor: antislop 감사 09/19/20 세그먼트 finding 수정 (push 없음)
 - 수정 범위: `apps/dashboard/src/{lib,hooks}/**`, `packages/shardclient/**`, `packages/app-kit/**` 한정. `packages/utils`와 `apps/dashboard/src/{app,components}`는 수정하지 않음
 

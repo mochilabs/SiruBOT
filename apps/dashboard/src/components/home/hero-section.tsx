@@ -164,7 +164,7 @@ export function HeroSection() {
 				>
 					<m.h1
 						variants={shouldReduce ? itemVariants : headlineVariants}
-						className="text-4xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
+						className="text-[1.75rem] font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
 					>
 						{shouldReduce ? (
 							// 접근성 폴백 — reduced-motion 환경에선 단어 분해·회전 없이 정적 헤드라인으로 표시해요
@@ -262,7 +262,7 @@ export function HeroSection() {
 									onClick={() => handleSlideChange(index)}
 									aria-pressed={activeSlide === index}
 									className={cn(
-										"relative cursor-pointer overflow-hidden rounded-control border-0 px-3 py-1.5 text-xs font-bold transition-colors duration-fast",
+										"relative cursor-pointer overflow-hidden rounded-control border-0 min-h-11 px-3 py-2 sm:min-h-0 sm:py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
 											? "bg-primary-control text-primary-control-text"
 											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
@@ -313,7 +313,7 @@ export function HeroSection() {
 					type="button"
 					onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
 					aria-label="아래로 스크롤해서 기능 보기"
-					className="pointer-events-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
+					className="pointer-events-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-fast hover:text-primary-text"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.2, duration: motionSlow }}

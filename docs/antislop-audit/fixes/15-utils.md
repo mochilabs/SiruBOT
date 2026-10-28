@@ -2,7 +2,7 @@
 
 FIXED: 32 / DEFERRED: 2 / N/A: 1
 
-- 브랜치: fix/utils (워크트리 /home/sunshine/.local/share/opencode/worktree/e08104/fix-utils)
+- 브랜치: fix/utils (워크트리 /home/seonu/.local/share/opencode/worktree/e08104/fix-utils)
 - 커밋: b86cc62d `refactor(utils): antislop 감사 세그먼트 15~17 수정 (주석 슬롭·죽은 코드·복제 통합·테스트 보강)` (push 없음)
 - 수정 범위: packages/utils/** 만. apps/** 및 다른 packages는 수정하지 않음.
 

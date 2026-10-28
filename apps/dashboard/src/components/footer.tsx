@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const footerLink = "text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground";
+const footerLink = "inline-flex min-h-7 items-center text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground";
 
 interface FooterLink {
 	label: string;
@@ -15,14 +15,13 @@ const featureLinks: FooterLink[] = [
 	{ label: '플레이리스트', href: '/playlists', internal: true },
 ];
 
-	const serviceLinks: FooterLink[] = [
+const serviceLinks: FooterLink[] = [
 	{ label: '서버 상태', href: '/shards', internal: true },
 	{ label: '내 프로필', href: '/profile', internal: true },
 	{ label: '서버 관리', href: '/servers', internal: true },
 	{ label: '봇 초대하기', href: '/invite', internal: true },
 	{ label: '오픈소스 라이선스', href: '/licenses', internal: true },
 	{ label: '기여자', href: '/contributors', internal: true },
-	{ label: '디자인 시스템', href: '/design', internal: true },
 ];
 
 const supportLinks: FooterLink[] = [
@@ -68,7 +67,7 @@ export function Footer() {
 					</div>
 
 					{/* 링크 그룹 */}
-					<div className="grid grid-cols-3 gap-4 sm:gap-6 md:col-span-3">
+					<div className="grid grid-cols-2 gap-6 sm:grid-cols-4 md:col-span-3">
 						{linkGroups.map((group) => (
 							<nav key={group.title} aria-label={group.title} className="space-y-3 md:space-y-4">
 								<h3 className="text-xs font-medium text-muted-foreground">{group.title}</h3>

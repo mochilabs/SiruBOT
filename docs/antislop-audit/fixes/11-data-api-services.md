@@ -2,11 +2,11 @@ FIXED: 27 / DEFERRED: 0 / N/A: 0
 
 # FIX 리포트: 11 data-api services/providers/renderers/utils
 
-- 수정 브랜치: `fix/data-api-services` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-data-api-services`)
+- 수정 브랜치: `fix/data-api-services` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-data-api-services`)
 - 커밋: `65fca5c6` fix(data-api): antislop 감사 세그먼트 11 수정 (카드 텍스트 대비·주석 슬롭·허브 중복) (push 없음)
 - 수정 범위: `apps/data-api/src/{services,providers,renderers,utils}/**` 만. routes/plugins/config는 세그먼트 10 소관이라 수정하지 않음
 - 근거 문서: `docs/antislop-audit/segments/11-data-api-services.md`
-- 대비 측정 도구: `/home/sunshine/.config/opencode/skills/antislop-human/contrast-check.py`
+- 대비 측정 도구: `/home/seonu/.config/opencode/skills/antislop-human/contrast-check.py`
 
 ## finding별 처리
 

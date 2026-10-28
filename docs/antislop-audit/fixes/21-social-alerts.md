@@ -2,7 +2,7 @@ FIXED: 4 / DEFERRED: 1 / N/A: 1
 
 # FIX REPORT: 소셜 알림 (대시보드 UI 재작업 + 에러 경화)
 
-- 브랜치: fix/social-alerts (워크트리 /home/sunshine/.local/share/opencode/worktree/e08104/fix-social-alerts)
+- 브랜치: fix/social-alerts (워크트리 /home/seonu/.local/share/opencode/worktree/e08104/fix-social-alerts)
 - 커밋: f5332ebd `fix(dashboard): 소셜 알림 API의 upstream 기술 메시지 사용자 노출 차단`, 746dd676 `feat(dashboard): 소셜 알림 설정 패널을 다른 설정 패널 관례로 재작업` (push 없음)
 - 수정 범위: apps/dashboard의 소셜 알림 관련 파일과 공용 data-api client 헬프터만 수정. 다른 영역은 손대지 않음.
 

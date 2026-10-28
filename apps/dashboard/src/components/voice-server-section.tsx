@@ -7,8 +7,15 @@ import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { formatMemory } from "@/lib/format";
+import { formatMemory, formatRelativeTime } from "@/lib/format";
 import type { VoiceServerNode } from "@/lib/voice-server-stats";
+
+/** API가 ISO 문자열을 줄 수도 있어서 파싱 실패하면 원문을 그대로 보여줘요 */
+function formatNodeTimestamp(ts: string): string {
+	const parsed = Date.parse(ts);
+	if (!Number.isNaN(parsed)) return formatRelativeTime(parsed);
+	return ts;
+}
 
 /** Lavalink CPU 부하는 0~1 비율이라 퍼센트로 바꿔요 */
 function cpuPercent(load: number): string {
@@ -116,7 +123,7 @@ export function VoiceServerSection() {
 										</div>
 									))}
 								</div>
-								<p className="truncate text-2xs text-muted-foreground">수집 {node.timestamp}</p>
+								<p className="truncate text-2xs text-muted-foreground">수집: {formatNodeTimestamp(node.timestamp)}</p>
 							</div>
 						))}
 					</div>

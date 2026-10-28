@@ -131,7 +131,7 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 				>
 					<span
 						aria-hidden
-						className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
+						className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md ring-1 ring-black/25"
 						style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, ...swatchStyle }}
 					/>
 				</div>
@@ -177,7 +177,7 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 				>
 					<span
 						aria-hidden
-						className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
+						className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md ring-1 ring-black/25"
 						style={{ top: `${(hsv.h / 360) * 100}%`, ...swatchStyle }}
 					/>
 				</div>
@@ -186,7 +186,7 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 			<div className="flex flex-wrap items-center gap-2">
 				<HexInput value={normalized} label={label} disabled={disabled} onChange={onChange} onCommit={onCommit} />
 				{presets.length > 0 && (
-					<div role="radiogroup" aria-label={`${label} 색 프리셋`} className="flex items-center gap-1.5">
+					<div role="radiogroup" aria-label={`${label} 색 프리셋`} className="flex items-center gap-2.5">
 						{presets.map((preset) => (
 							// D 분류 — 색 프리셋 옵션 행은 raw 유지 (디자인 시스템 7장 §raw button)
 							<button
@@ -205,7 +205,7 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 									onCommit?.(preset.toLowerCase());
 								}}
 								className={cn(
-									" h-7 w-7 cursor-pointer rounded-full shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+									" relative h-7 w-7 cursor-pointer rounded-full shadow-control-boundary transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:-inset-2",
 									normalized === preset.toLowerCase() && "ring-2 ring-ring"
 								)}
 								style={{ backgroundColor: preset }}

@@ -3,7 +3,7 @@ FIXED: 16 / DEFERRED: 0 / N/A: 0
 # 세그먼트 08 fix: 대시보드 기능 UI 컴포넌트
 
 - 수정일: 2026-10-23
-- 워크트리: /home/sunshine/.local/share/opencode/worktree/e08104/fix-dashboard-features (브랜치 fix/dashboard-features)
+- 워크트리: /home/seonu/.local/share/opencode/worktree/e08104/fix-dashboard-features (브랜치 fix/dashboard-features)
 - 커밋: ad913be8 (미push)
 - 근거 문서: docs/antislop-audit/segments/08-dashboard-components-feature.md Findings 1~16
 - 수정 범위: apps/dashboard/src/components/{servers,player,playlists,home}/**. app/, lib/, hooks/, components/{ui,primitives,...}는 수정하지 않았습니다.

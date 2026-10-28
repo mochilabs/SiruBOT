@@ -5,9 +5,11 @@ import { AnimatePresence, m } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 
 import { motionFast } from "@/components/motion/durations";
+import { useHasUnsavedActiveSettings } from "@/components/servers/settings-shared";
 
 export function ScrollToTop() {
 	const [isVisible, setIsVisible] = useState(false);
+	const saveBarActive = useHasUnsavedActiveSettings();
 
 	useEffect(() => {
 		const toggleVisibility = () => {
@@ -24,7 +26,7 @@ export function ScrollToTop() {
 
 	return (
 		<AnimatePresence>
-			{isVisible && (
+			{isVisible && !saveBarActive && (
 				<m.button
 					initial={{ opacity: 0, y: 12 }}
 					animate={{ opacity: 1, y: 0 }}

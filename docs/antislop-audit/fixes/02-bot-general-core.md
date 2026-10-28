@@ -3,7 +3,7 @@ FIXED: 28 / DEFERRED: 2 / N/A: 0
 # FIX 리포트: 02 bot general + 04 bot core·services
 
 - 수정일: 2026-10-23
-- 수정 브랜치: `fix/bot-general-core` (워크트리 `/home/sunshine/.local/share/opencode/worktree/e08104/fix-bot-general-core`)
+- 수정 브랜치: `fix/bot-general-core` (워크트리 `/home/seonu/.local/share/opencode/worktree/e08104/fix-bot-general-core`)
 - 커밋: `905688db` fix(antislop): 봇 general·core/services 감사 finding 수정 (02·04 세그먼트) (미push, 작업 트리 청정)
 - 근거 문서: `docs/antislop-audit/segments/02-bot-general.md`, `docs/antislop-audit/segments/04-bot-core-services.md`
 - 수정 범위: `apps/bot/src/modules/general/**`, `apps/bot/src/{core,services,lib,types}/**`, `apps/bot/src/index.ts` (`index.ts` 변경 없음)
