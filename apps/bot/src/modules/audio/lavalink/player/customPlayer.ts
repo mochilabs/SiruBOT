@@ -35,6 +35,8 @@ export type TransitionState = {
 	confirmedNowPlaying: Track | null;
 	/** 예열 슬롯을 서버가 소비·재생 확정한 트랙 — 큐에서 빠진 예열곡의 표시 메타데이터 출처 */
 	serverConsumedTrack: Track | null;
+	/** 중복 기록 방지용 마지막 차트/히스토리 기록 트랙 키 (trackStart와 MixerAdvancedEvent 간 멱등성 보장) */
+	lastRecordedKey?: string | null;
 };
 export type OverrideAction = 'PLAY_NOW' | 'STOP';
 
@@ -69,7 +71,8 @@ export class CustomPlayer extends Player {
 		lastStartedEncoded: null,
 		preloadConsumedAt: null,
 		confirmedNowPlaying: null,
-		serverConsumedTrack: null
+		serverConsumedTrack: null,
+		lastRecordedKey: null
 	};
 	public currentEpoch: number = 1;
 	public mixerRuntime: MixerRuntime = {

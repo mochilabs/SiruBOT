@@ -196,26 +196,25 @@ export function PlaylistDetail({
 								{activePlaylist.name}
 							</h1>
 						</div>
-						<div className="flex flex-wrap items-center gap-2.5 text-xs font-medium text-muted-foreground mt-1.5">
-							<div className="flex items-center gap-1.5 font-bold">
-								<Music size={14} className="text-primary-text" />
-								<span>{stats.count}곡</span>
+						<div className="mt-1.5 space-y-1">
+							<div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium text-muted-foreground">
+								<div className="flex items-center gap-1.5 font-bold">
+									<Music size={14} className="text-primary-text" />
+									<span>{stats.count}곡</span>
+								</div>
+								<div className="w-1 h-1 rounded-full bg-border" aria-hidden />
+								<div className="flex items-center gap-1.5 font-bold">
+									<Clock size={14} className="text-primary-text" />
+									<span>{formatTotalDuration(stats.duration)}</span>
+								</div>
+								<div className="w-1 h-1 rounded-full bg-border" aria-hidden />
+								<span className="flex items-center gap-1">
+									<GripVertical size={13} className="text-muted-foreground" aria-hidden />
+									드래그하거나 길게 눌러 순서 변경
+								</span>
 							</div>
-							<div className="w-1 h-1 rounded-full bg-border" />
-							<div className="flex items-center gap-1.5 font-bold">
-								<Clock size={14} className="text-primary-text" />
-								<span>{formatTotalDuration(stats.duration)}</span>
-							</div>
-							<div className="w-1 h-1 rounded-full bg-border" />
-							<span className="flex items-center gap-1.5">
-								<GripVertical size={13} className="text-muted-foreground" />
-								드래그하거나 길게 눌러 순서 변경
-							</span>
 							{activePlaylist.description && (
-								<>
-									<div className="w-1 h-1 rounded-full bg-border" />
-									<p>{activePlaylist.description}</p>
-								</>
+								<p className="text-xs font-medium text-muted-foreground break-keep">{activePlaylist.description}</p>
 							)}
 						</div>
 					</div>
@@ -252,7 +251,7 @@ export function PlaylistDetail({
 				</div>
 			</Card>
 
-			<Card padding="none" className={`flex-1 overflow-hidden ${tracks.length === 0 ? "min-h-[320px]" : ""}`} style={{ maxHeight: 'calc(100svh - 17rem)' }}>
+			<Card padding="none" className={`flex-1 overflow-hidden ${tracks.length === 0 ? "min-h-[320px]" : ""}`} style={tracks.length > 0 ? { maxHeight: "calc(100svh - 17rem)" } : undefined}>
 				{tracks.length === 0 ? (
 					<EmptyState
 						className="flex-1 border-none bg-transparent"
@@ -287,7 +286,7 @@ export function PlaylistDetail({
 								return (
 									<div
 										key={track.id}
-										className={`absolute top-0 left-0 w-full flex items-center px-3 md:px-4 py-1.5 border-b border-border-subtle transition-colors hover:bg-surface-2/50 ${isDragging ? 'opacity-50 bg-primary/5' : ''} ${isDragOver ? 'ring-1 ring-primary-control bg-primary/10' : ''}`}
+										className={`absolute top-0 left-0 w-full flex items-center gap-2 md:gap-0 px-3 md:px-4 py-1.5 border-b border-border-subtle transition-colors hover:bg-surface-2/50 ${isDragging ? 'opacity-50 bg-primary/5' : ''} ${isDragOver ? 'ring-1 ring-inset ring-primary-control bg-primary/10' : ''}`}
 										style={{
 											height: `${virtualRow.size}px`,
 											transform: `translateY(${virtualRow.start}px)`,
@@ -315,14 +314,14 @@ export function PlaylistDetail({
 										tabIndex={0}
 										role="listitem"
 									>
-										<div className="flex w-7 md:w-10 shrink-0 items-center justify-center">
+										<div className="flex w-5 md:w-10 shrink-0 items-center justify-center">
 											<GripVertical
-												size={18}
+												size={16}
 												className="text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
 												aria-hidden
 											/>
 										</div>
-										<span className="w-5 md:hidden shrink-0 text-right text-2xs tabular-nums text-muted-foreground">
+										<span className="w-4 md:hidden shrink-0 text-center text-2xs font-bold tabular-nums text-muted-foreground">
 											{idx + 1}
 										</span>
 
@@ -351,12 +350,11 @@ export function PlaylistDetail({
 													<p className="font-medium text-foreground text-sm truncate leading-tight mb-0.5">{track.title}</p>
 												)}
 
-												<p className="md:hidden text-xs text-muted-foreground font-medium truncate flex items-center gap-1.5">
-													<span>{track.artist}</span>
-													<span className="w-0.5 h-0.5 rounded-full bg-border" />
-													<span>{formatDuration(track.duration)}</span>
+												<p className="md:hidden text-xs text-muted-foreground font-medium flex items-center gap-1.5 min-w-0">
+													<span className="truncate">{track.artist}</span>
+													<span className="w-0.5 h-0.5 shrink-0 rounded-full bg-border" />
+													<span className="shrink-0 tabular-nums">{formatDuration(track.duration)}</span>
 												</p>
-
 											</div>
 										</div>
 
@@ -368,15 +366,15 @@ export function PlaylistDetail({
 											{formatDuration(track.duration)}
 										</div>
 
-										<div className="shrink-0 ml-3 md:ml-4 flex items-center justify-center gap-2">
+										<div className="shrink-0 ml-1 md:ml-4 flex items-center justify-center">
 											<DropdownMenu>
 												<DropdownMenuTrigger
 													render={
 														<Button
-															variant="icon"
-															size="md"
+															variant="ghost"
+															size="icon-sm"
 															aria-label={`${track.title} 트랙 메뉴`}
-															className="-mr-2 bg-transparent p-2 text-muted-foreground hover:bg-muted/40 hover:text-foreground md:mr-0"
+															className="text-muted-foreground hover:bg-surface-2 hover:text-foreground"
 														>
 															<MoreHorizontal size={16} />
 														</Button>
@@ -405,12 +403,11 @@ export function PlaylistDetail({
 
 						{/* 흐린 표시는 opacity가 아니라 muted 토큰으로 해요. opacity-40이면 본문 대비가 2.3:1까지 내려가요 */}
 						{tracks.length > 0 && (
-							<div className="flex flex-col items-center justify-center py-6 mt-2 text-center text-muted-foreground select-none border-t border-border/10">
-								<div className="text-xs font-medium mb-1.5 flex items-center gap-2">
-									<span>더 이상 표시할 곡이 없어요</span>
-								</div>
-								<Button variant="ghost" size="sm" onClick={onOpenAddTrack}>
-									곡 추가 버튼을 눌러 플레이리스트를 채워보세요!
+							<div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs text-muted-foreground select-none">
+								<span>총 {tracks.length}곡이 담겨 있어요</span>
+								<Button variant="ghost" size="xs" onClick={onOpenAddTrack} className="font-bold text-primary-text hover:bg-primary/10 hover:text-primary-text">
+									<Plus size={13} />
+									곡 더 추가하기
 								</Button>
 							</div>
 						)}

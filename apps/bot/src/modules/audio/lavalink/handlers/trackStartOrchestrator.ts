@@ -51,7 +51,9 @@ export class TrackStartOrchestrator {
 		this.host.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
-		if (startedTrack && !startedTrack.info.isStream && !isTtsClip(startedTrack)) {
+		const startedKey = startedTrack ? (startedTrack.encoded ?? startedTrack.info?.identifier ?? startedTrack.info?.uri ?? null) : null;
+		if (startedTrack && !startedTrack.info.isStream && !isTtsClip(startedTrack) && startedKey !== player.transitionState.lastRecordedKey) {
+			player.transitionState.lastRecordedKey = startedKey;
 			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
 			// fire-and-forget
 			this.container.trackService
@@ -201,6 +203,12 @@ export class TrackStartOrchestrator {
 				this.logger.warn(
 					`[transition] unexpected track started (guild ${player.guildId}): preloaded=${preloadedIdentifier}, started=${payloadIdentifier}`
 				);
+			}
+		}
+		if (typeof payloadIdentifier === 'string' && payloadIdentifier.length > 0 && Array.isArray(player.queue.previous)) {
+			const prev = player.queue.previous.find((t) => t?.info?.identifier === payloadIdentifier);
+			if (prev) {
+				return prev as Track;
 			}
 		}
 		// 아밍으로 소비·확정된 예열곡이 큐에서 빠진 뒤 시작되면(사용자가 큐를 바꿔

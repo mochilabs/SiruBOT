@@ -16,7 +16,11 @@ export class TrackService {
 				totalPlays: 1
 			},
 			update: {
-				totalPlays: { increment: 1 }
+				totalPlays: { increment: 1 },
+				...(data.title && data.title !== '(제목 없음)' ? { title: data.title } : {}),
+				...(data.artist && data.artist !== '(아티스트 정보 없음)' ? { artist: data.artist } : {}),
+				...(data.duration > 0 ? { duration: data.duration } : {}),
+				...(data.thumbnail ? { thumbnail: data.thumbnail } : {})
 			}
 		});
 
@@ -36,13 +40,20 @@ export class TrackService {
 			}
 		}
 
-		if (userId) {
-			await container.db.user.upsert({
-				where: { id: userId },
-				create: { id: userId },
+		await Promise.all([
+			container.db.guild.upsert({
+				where: { id: guildId },
+				create: { id: guildId },
 				update: {}
-			});
-		}
+			}),
+			userId
+				? container.db.user.upsert({
+						where: { id: userId },
+						create: { id: userId },
+						update: {}
+					})
+				: Promise.resolve()
+		]);
 
 		await container.db.guildTrackHistory.create({
 			data: {

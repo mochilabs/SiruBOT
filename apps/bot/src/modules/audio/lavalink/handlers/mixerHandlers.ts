@@ -47,6 +47,24 @@ export interface MixerOverriddenEventPayload {
 	action: OverrideAction;
 }
 
+function recordTrackPlayIfNeeded(player: CustomPlayer, track: Track | null): void {
+	if (!track || track.info?.isStream || isTtsClip(track)) return;
+	const key = track.encoded ?? track.info?.identifier ?? track.info?.uri ?? null;
+	if (!key) return;
+	if (player.transitionState && player.transitionState.lastRecordedKey === key && player.repeatMode !== 'track') {
+		return;
+	}
+	if (player.transitionState) {
+		player.transitionState.lastRecordedKey = key;
+	}
+	const trackSvc = container.trackService;
+	if (!trackSvc?.increasePlays) return;
+	void trackSvc
+		.increasePlays(track)
+		.then(() => trackSvc.addHistory?.(player.guildId, track))
+		.catch((error) => container.logger?.error?.(`Failed to record track history: ${error}`));
+}
+
 /**
  * Common local commit function shared by normal advance, user skip, recovery, and rehydration.
  */
@@ -61,6 +79,7 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = track;
 		}
+		recordTrackPlayIfNeeded(player, track);
 		notifyQueueMutated(player, mutationOpts);
 		void player.queue?.utils?.save?.()?.catch(() => null);
 		container.playerNotifier.updateController(player);
@@ -72,6 +91,7 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = track;
 		}
+		recordTrackPlayIfNeeded(player, track);
 		notifyQueueMutated(player, mutationOpts);
 		void player.queue?.utils?.save?.()?.catch(() => null);
 		container.playerNotifier.updateController(player);
@@ -94,6 +114,7 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 	if (player.transitionState) {
 		player.transitionState.confirmedNowPlaying = nextCurrent;
 	}
+	recordTrackPlayIfNeeded(player, nextCurrent);
 	notifyQueueMutated(player, mutationOpts);
 	void player.queue?.utils?.save?.()?.catch(() => null);
 	container.playerNotifier.updateController(player);

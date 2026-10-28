@@ -6,6 +6,6 @@ export const fixedTrackFilter = {
 		lt: 60 * 1000 * 60,
 	},
 	totalPlays: {
-		gt: 10,
+		gte: 1,
 	},
 } as const;
