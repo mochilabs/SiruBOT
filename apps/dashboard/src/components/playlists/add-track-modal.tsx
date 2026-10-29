@@ -64,8 +64,8 @@ export function AddTrackModal({
 			}
 
 			const nextLayout = {
-				top: Math.max(0, Math.round(visualViewport.offsetTop + 12)),
-				height: Math.max(1, Math.min(280, Math.round(visualViewport.height - 24))),
+				top: Math.max(0, Math.round(visualViewport.offsetTop + 8)),
+				height: Math.max(220, Math.round(visualViewport.height - 16)),
 			};
 			setKeyboardLayout((current) => current?.top === nextLayout.top && current.height === nextLayout.height ? current : nextLayout);
 		};
@@ -82,25 +82,25 @@ export function AddTrackModal({
 	return (
 		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
 			<DialogContent
-				className={`grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden ${keyboardLayout ? "-translate-y-0" : ""}`}
+				className={`grid max-h-[calc(100dvh-2rem)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-md ${keyboardLayout ? "-translate-y-0 gap-2.5 p-4" : ""}`}
 				style={keyboardLayout ? { top: `${keyboardLayout.top}px`, height: `${keyboardLayout.height}px`, maxHeight: `${keyboardLayout.height}px` } : undefined}
 			>
-				<DialogHeader>
-					<DialogTitle>플레이리스트에 곡 추가</DialogTitle>
+				<DialogHeader className="min-w-0 pr-8">
+					<DialogTitle className="truncate">플레이리스트에 곡 추가</DialogTitle>
 				</DialogHeader>
-				<div className={`flex min-h-0 flex-col gap-3 py-2 ${keyboardLayout ? "" : "h-[380px]"}`}>
-					<div className="relative">
-						<Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+				<div className={`flex min-h-0 min-w-0 flex-col gap-3 ${keyboardLayout ? "py-0.5" : "h-[360px] py-1"}`}>
+					<div className="relative min-w-0 px-0.5 pt-0.5">
+						<Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							type="text"
-							placeholder="유튜브 링크 붙여넣기 또는 곡 제목·아티스트 검색..."
+							placeholder="유튜브 링크 또는 곡 제목·아티스트 검색..."
 							value={trackInput}
 							onChange={(e: React.ChangeEvent<HTMLInputElement>) => onTrackInputChange(e.target.value)}
 							className="pl-10"
 						/>
 					</div>
 
-					<div className="min-h-0 flex-1 overflow-y-auto pr-1">
+					<div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-0.5">
 						{isUrl ? (
 							<div className="flex h-full flex-col items-center justify-center gap-1.5 px-4 text-center">
 								<p className="text-sm font-medium text-foreground">링크를 확인했어요.</p>
@@ -134,35 +134,35 @@ export function AddTrackModal({
 								{searchedTracks.map((track) => (
 									<div
 										key={track.id}
-										className="rounded-card bg-surface-1 p-2 flex items-center justify-between gap-3 hover:bg-muted/50 transition-colors duration-fast"
+										className="flex min-w-0 items-center justify-between gap-2.5 rounded-card bg-surface-2 p-2 transition-colors duration-fast hover:bg-surface-3"
 									>
-										<div className="flex items-center gap-2 min-w-0 flex-1">
+										<div className="flex min-w-0 flex-1 items-center gap-2.5">
 											<Avatar
 												src={track.thumbnail || ""}
 												fallback="M"
 												size="xs"
-												className="rounded-card shrink-0"
+												className="shrink-0 rounded-control"
 											/>
-											<div className="min-w-0">
+											<div className="min-w-0 flex-1">
 												{track.youtubeUrl ? (
 													<a
 														href={track.youtubeUrl}
 														target="_blank"
 														rel="noopener noreferrer"
-														className="block truncate text-xs font-medium text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+														className="block truncate text-xs font-semibold text-foreground transition-colors duration-fast hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
 													>
 														{track.title}
 													</a>
 												) : (
-													<p className="text-xs font-medium text-foreground truncate">{track.title}</p>
+													<p className="truncate text-xs font-semibold text-foreground">{track.title}</p>
 												)}
-												<p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+												<p className="truncate text-2xs text-muted-foreground">{track.artist}</p>
 											</div>
 										</div>
 										<Button
 											variant="secondary"
 											size="sm"
-											className="shrink-0"
+											className="shrink-0 px-3 font-bold"
 											onClick={() => onAddTrack(track.youtubeUrl ? undefined : track.id, track.youtubeUrl)}
 										>
 											추가
@@ -173,8 +173,8 @@ export function AddTrackModal({
 						)}
 					</div>
 				</div>
-				<DialogFooter className="shrink-0">
-					<Button variant="secondary" size="sm" onClick={onClose}>
+				<DialogFooter className={`shrink-0 ${keyboardLayout ? "-mx-4 -mb-4 px-4 py-2.5" : ""}`}>
+					<Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={onClose}>
 						취소
 					</Button>
 					{isUrl && (
