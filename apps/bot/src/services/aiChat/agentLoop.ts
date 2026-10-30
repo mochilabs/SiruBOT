@@ -77,15 +77,15 @@ export async function runChatTurn(options: {
 
 	setChannelGuild(channelId, options.toolContext.guildId);
 	// 정책 확인 후, 서로 독립적인 맥락 조회를 함께 시작한다.
-	const [, channelBlock, memoryBlock] = await Promise.all([
+	const [, channelBlock, memoryBlock, discordContextBlock] = await Promise.all([
 		loadChannelHistory(channelId),
 		buildRecentChannelBlock(channelId, options.excludeMessageId),
 		container.aiMemoryService.buildPromptBlock(userId).catch((error) => {
 			container.logger.error('[aiChat] failed to load user memory:', error);
 			return null;
-		})
+		}),
+		buildDiscordContextBlock(options.toolContext.guildId, userId)
 	]);
-	const discordContextBlock = buildDiscordContextBlock(options.toolContext.guildId, userId);
 
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock, discordContextBlock) },
