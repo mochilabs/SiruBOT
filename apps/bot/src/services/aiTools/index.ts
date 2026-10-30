@@ -8,6 +8,8 @@ import type { AiTool, AiToolContext, AiToolDefinition } from './types.ts';
 import { weatherTool } from './weather.ts';
 import { webFetchTool } from './webFetch.ts';
 import { serverInfoTool } from './serverInfo.ts';
+import { musicSettingsTools } from './musicSettings.ts';
+import { botSettingsTools } from './botSettings.ts';
 
 const TOOLS: AiTool[] = [
 	webSearchTool,
@@ -18,6 +20,8 @@ const TOOLS: AiTool[] = [
 	botHelpTool,
 	serverInfoTool,
 	...musicTools,
+	...musicSettingsTools,
+	...botSettingsTools,
 	...memoryTools
 ];
 const TOOL_MAP = new Map<string, AiTool>(TOOLS.map((tool) => [tool.name, tool]));

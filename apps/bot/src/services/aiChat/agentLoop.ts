@@ -4,6 +4,7 @@ import { assertChatEnabled, getAiChatPolicy } from './config.ts';
 import { streamChatCompletion } from './completion.ts';
 import { getChannelHistoryState, loadChannelHistory, pushChannelHistory, setChannelGuild } from './historyStore.ts';
 import { buildDiscordContextBlock, buildRecentChannelBlock, buildSystemContent } from './prompt.ts';
+import { scheduleMemoryPromotion } from './memoryPromotion.ts';
 import { scheduleSummary } from './summarizer.ts';
 import { ChatServiceError, type ChatConfig, type ChatContent, type ChatContentPart, type ChatMessage, type ChatTurnResult } from './types.ts';
 const MAX_TOOL_ROUNDS = 5;
@@ -77,15 +78,15 @@ export async function runChatTurn(options: {
 
 	setChannelGuild(channelId, options.toolContext.guildId);
 	// 정책 확인 후, 서로 독립적인 맥락 조회를 함께 시작한다.
-	const [, channelBlock, memoryBlock] = await Promise.all([
+	const [, channelBlock, memoryBlock, discordContextBlock] = await Promise.all([
 		loadChannelHistory(channelId),
 		buildRecentChannelBlock(channelId, options.excludeMessageId),
 		container.aiMemoryService.buildPromptBlock(userId).catch((error) => {
 			container.logger.error('[aiChat] failed to load user memory:', error);
 			return null;
-		})
+		}),
+		buildDiscordContextBlock(options.toolContext.guildId, userId)
 	]);
-	const discordContextBlock = buildDiscordContextBlock(options.toolContext.guildId, userId);
 
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock, discordContextBlock) },
@@ -158,6 +159,8 @@ export async function runChatTurn(options: {
 		await container.aiMemoryService.pushTurn(userId, channelId, options.prompt, answer).catch((error) => {
 			container.logger.error('[aiChat] failed to push short-term memory:', error);
 		});
+		// 단기 기억이 충분히 쌓이면 백그라운드에서 장기 기억으로 승격해요 (응답 지연 없음, 배치 단위라 비용 낮음)
+		scheduleMemoryPromotion(userId, config);
 	}
 
 	return { answer, memoryUpdated };

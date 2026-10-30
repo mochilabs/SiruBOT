@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { PermissionFlagsBits } from 'discord.js';
 import { historyLine } from './historyStore.ts';
 import { estimateTokens, getContextTokenBudget } from './tokenBudget.ts';
 import type { ChannelHistoryState, ChatMessage } from './types.ts';
@@ -25,6 +26,12 @@ const SYSTEM_PROMPT = [
 	'- 서버 인원, 채널 수, 개설일, 문의 방법/티켓 설정 등을 물으면 `server_info` 도구를 써요.',
 	'- 날씨는 `weather_get`, 배송 조회는 `delivery_track`, 별자리 운세는 `get_ohaasa_horoscope` 전용 도구를 써요.',
 	'- 사용자가 음악 요청(재생/일시정지/스킵/정지/대기열/볼륨/이동·탐색/셔플/반복/이전곡/삭제·순서 변경/필터/가사/재생 기록/TTS/플레이리스트)을 하면 `music_*` 도구를 사용해요. 음성 채널 미접속 오류는 자연스럽게 안내해요.',
+	'- 음악 재생 설정(갭리스, 크로스페이드, 음량 평준화, 추천곡 자동재생, 곡 안내 낭독, 컨트롤러 카드, 스폰서블록 등) 조회는 `music_settings_get`, 변경은 `music_settings_set` 도구를 써요.',
+	'- 봇 서버 설정(기본 채널, 음악 고정 채널 및 모드, DJ 역할, 임시 음성방(JTC), AI 채팅 모드, 채팅 TTS, 숫자 세기 채널 등) 조회는 `bot_settings_get`, 변경은 `bot_settings_set` 도구를 써요.',
+	'- **설정 변경 권한 규칙 (필수)**: 사용자가 설정을 **변경**하려 할 때는 반드시 아래 `# 현재 상황 컨텍스트`의 사용자 권한을 확인하세요:',
+	'  - 봇 설정 변경: 사용자에게 `서버 관리(ManageGuild)` 권한이 없으면 도구를 호출하지 말고, "서버 관리 권한이 있는 멤버만 봇 설정을 변경할 수 있어요."라고 정중히 거절하세요.',
+	'  - 음악 설정 변경: 사용자에게 `DJ 역할` 또는 `서버 관리(ManageGuild)` 권한이 없으면 도구를 호출하지 말고, "DJ 역할이나 서버 관리 권한이 있는 멤버만 음악 설정을 변경할 수 있어요."라고 정중히 거절하세요.',
+	'  - 설정 단순 **조회**(확인)는 권한 제한 없이 누구나 가능하므로 바로 도구를 호출해 확인해 주세요.',
 	'- 도구 결과의 `error`가 오면 사과하고 사용자가 이해할 수 있는 한국어로 대신 전달해요.',
 	'- 사용자가 이미지를 보내면 이미지 내용을 잘 보고 답해요. 텍스트가 없어도 이미지만으로 대화할 수 있어요.',
 	'',
@@ -71,8 +78,8 @@ export async function buildRecentChannelBlock(channelId: string, excludeMessageI
 	}
 }
 
-/** 질문 유저의 음성 채널 상태 및 서버 음악 재생 상황을 간결하게 컨텍스트로 제공해요 */
-export function buildDiscordContextBlock(guildId?: string | null, userId?: string | null): string | null {
+/** 질문 유저의 음성 채널 상태, 권한 및 서버 음악 재생 상황을 간결하게 컨텍스트로 제공해요 */
+export async function buildDiscordContextBlock(guildId?: string | null, userId?: string | null): Promise<string | null> {
 	if (!guildId) return null;
 	const client = container.client;
 	const guild = client?.guilds?.cache?.get(guildId);
@@ -81,16 +88,37 @@ export function buildDiscordContextBlock(guildId?: string | null, userId?: strin
 
 	if (userId) {
 		const member = guild.members.cache.get(userId);
-		const voice = member?.voice?.channel;
-		if (voice) {
-			const memberNames = voice.members.map((m) => m.displayName).slice(0, 10);
-			const moreCount = voice.members.size - memberNames.length;
-			const membersText = moreCount > 0 ? `${memberNames.join(', ')} 외 ${moreCount}명` : memberNames.join(', ');
-			lines.push(`- 사용자 음성 채널: #${voice.name} (참여 ${voice.members.size}명: ${membersText})`);
+		if (member) {
+			const voice = member.voice?.channel;
+			if (voice) {
+				const memberNames = voice.members.map((m) => m.displayName).slice(0, 10);
+				const moreCount = voice.members.size - memberNames.length;
+				const membersText = moreCount > 0 ? `${memberNames.join(', ')} 외 ${moreCount}명` : memberNames.join(', ');
+				lines.push(`- 사용자 음성 채널: #${voice.name} (참여 ${voice.members.size}명: ${membersText})`);
+			}
+
+			// 설정 변경 시 LLM이 권한을 직접 확인할 수 있도록 컨텍스트를 제공해요
+			let isManager = false;
+			try {
+				isManager = Boolean(
+					member.permissions?.has?.(PermissionFlagsBits.ManageGuild) || member.permissions?.has?.(PermissionFlagsBits.Administrator)
+				);
+			} catch {
+				isManager = false;
+			}
+			const djRoleId = await container.guildService?.getDJRole?.(guildId).catch(() => null);
+			const hasDj = !djRoleId || isManager || Boolean(member.roles?.cache?.has?.(djRoleId));
+			const perms: string[] = [];
+			if (isManager) perms.push('서버 관리(ManageGuild)');
+			if (hasDj) {
+				perms.push(djRoleId ? 'DJ 역할' : 'DJ 권한(서버 DJ 미설정으로 음악 제어 가능)');
+			}
+			const permText = perms.length > 0 ? perms.join(', ') : '일반 권한(설정 변경 권한 없음)';
+			lines.push(`- 사용자(${member.displayName}) 권한: ${permText}`);
 		}
 	}
 
-	const player = container.audio?.getPlayer(guildId);
+	const player = container.audio?.getPlayer?.(guildId);
 	if (player && player.queue?.current) {
 		const track = player.queue.current;
 		const status = player.paused ? '일시정지' : '재생 중';
