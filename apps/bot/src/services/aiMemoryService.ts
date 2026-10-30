@@ -156,14 +156,69 @@ export class AiMemoryService {
 		});
 	}
 
-	/** 시스템 프롬프트에 넣을 기억 블록 — MEMORY.md 파일 + 단기 기억. 둘 다 없으면 null. */
+	/** 단기 기억(최근 대화) 턴 목록을 읽어요 — 장기 기억 승격(promotion)의 원재료. */
+	public async getShortTermTurns(userId: string): Promise<MemoryTurn[]> {
+		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { shortTerm: true } });
+		return Array.isArray(row?.shortTerm) ? (row.shortTerm as MemoryTurn[]).filter((t) => t && typeof t.q === 'string') : [];
+	}
+
+	/** 추출된 장기 기억 항목들을 MEMORY.md에 병합해요. 중복은 무시하고, 이미 저장된 항목과 겹치지 않는 것만 추가해요. */
+	public async mergeLongTerm(userId: string, entries: { category: MemoryCategory; text: string }[]): Promise<number> {
+		const sections = parseMemoryMarkdown(await this.readFile(userId), { strictSections: false });
+		let added = 0;
+		for (const entry of entries) {
+			const trimmed = clip(entry.text.trim().replace(/\s+/g, ' '), FACT_MAX_CHARS);
+			if (!trimmed) continue;
+			if (!MEMORY_CATEGORIES.includes(entry.category)) continue;
+			const duplicated = MEMORY_CATEGORIES.some((c) => sections[c].some((existing) => existing.toLowerCase() === trimmed.toLowerCase()));
+			if (duplicated) continue;
+			sections[entry.category].push(trimmed);
+			added++;
+		}
+		if (added === 0) return 0;
+		capMemorySections(sections);
+		await this.writeFile(userId, renderMemoryMarkdown(sections));
+		return added;
+	}
+
+	/** 압축된 단기 기억 요약을 읽어요. 없으면 null. */
+	public async getShortTermSummary(userId: string): Promise<string | null> {
+		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { shortTermSummary: true } });
+		const summary = row?.shortTermSummary?.trim();
+		return summary ? summary : null;
+	}
+
+	/** 승격/압축 후 단기 기억 원본 턴을 비우고, 압축 요약을 새 것으로 교체해요. */
+	public async compactShortTerm(userId: string, summary: string): Promise<void> {
+		const trimmed = summary.trim();
+		await container.db.userMemory.upsert({
+			where: { userId },
+			create: { userId, shortTerm: [], shortTermSummary: trimmed },
+			update: { shortTerm: [], shortTermSummary: trimmed }
+		});
+	}
+
+	/** 압축할 게 없을 때 단기 기억 원본만 비워요 (요약은 유지). */
+	public async clearShortTerm(userId: string): Promise<void> {
+		await container.db.userMemory.upsert({
+			where: { userId },
+			create: { userId, shortTerm: [] },
+			update: { shortTerm: [] }
+		});
+	}
+
+	/** 시스템 프롬프트에 넣을 기억 블록 — MEMORY.md 파일 + 압축 요약 + 단기 기억. 셋 다 없으면 null. */
 	public async buildPromptBlock(userId: string): Promise<string | null> {
-		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true } });
+		const row = await container.db.userMemory.findUnique({
+			where: { userId },
+			select: { longTerm: true, shortTerm: true, shortTermSummary: true }
+		});
 		const file = this.storedFileToMarkdown(row?.longTerm);
 		const sections = parseMemoryMarkdown(file, { strictSections: false });
 		const shortTerm = Array.isArray(row?.shortTerm) ? (row.shortTerm as MemoryTurn[]).filter((t) => t && typeof t.q === 'string') : [];
+		const summary = row?.shortTermSummary?.trim() || null;
 
-		if (!hasMemoryEntries(sections) && shortTerm.length === 0) return null;
+		if (!hasMemoryEntries(sections) && shortTerm.length === 0 && !summary) return null;
 
 		const lines: string[] = [
 			'# 사용자 기억 (MEMORY.md)',
@@ -174,6 +229,9 @@ export class AiMemoryService {
 			'',
 			file
 		];
+		if (summary) {
+			lines.push('', '## 최근 대화 요약 (압축)', summary);
+		}
 		if (shortTerm.length > 0) {
 			lines.push('', '## 단기 기억 (최근 대화)', ...shortTerm.map((turn) => `- 사용자: ${turn.q}\n  시루: ${turn.a}`));
 		}
