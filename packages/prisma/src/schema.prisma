@@ -260,6 +260,8 @@ model UserMemory {
   longTerm  Json?
   // 단기 기억: [{ q, a, at, channelId }] — 최근 대화 하이라이트 (최대 8개)
   shortTerm Json?
+  // 단기 기억 압축 요약 — shortTerm이 가득 차면 백그라운드에서 압축된 최근 컨텍스트 (rolling summary)
+  shortTermSummary String?
   // nightly pass(기억 정리 배치) 마지막 수행 시각
   tidiedAt  DateTime?
   updatedAt DateTime @updatedAt
