@@ -8,7 +8,7 @@ import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
-import { syncQueueToNowPlaying } from './playbackWatchdog.ts';
+import { isSameEncodedTrack, normalizeTrackEncoded, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 
 /**
@@ -51,7 +51,12 @@ export class TrackStartOrchestrator {
 		this.host.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
-		const startedKey = startedTrack ? (startedTrack.encoded ?? startedTrack.info?.identifier ?? startedTrack.info?.uri ?? null) : null;
+		const startedKey = startedTrack
+			? ((startedTrack.encoded ? normalizeTrackEncoded(startedTrack.encoded) : null) ??
+				startedTrack.info?.identifier ??
+				startedTrack.info?.uri ??
+				null)
+			: null;
 		if (startedTrack && !startedTrack.info.isStream && !isTtsClip(startedTrack) && startedKey !== player.transitionState.lastRecordedKey) {
 			player.transitionState.lastRecordedKey = startedKey;
 			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
@@ -177,7 +182,7 @@ export class TrackStartOrchestrator {
 	): Track | null {
 		const payloadEncoded = payload.track?.encoded;
 		const currentEncoded = (track as { encoded?: unknown } | null)?.encoded;
-		if (!payloadEncoded || payloadEncoded === currentEncoded) return track;
+		if (!payloadEncoded || isSameEncodedTrack(payloadEncoded, currentEncoded)) return track;
 
 		const payloadIdentifier = payload.track?.info?.identifier;
 		const currentIdentifier = (track as { info?: { identifier?: unknown } } | null)?.info?.identifier;

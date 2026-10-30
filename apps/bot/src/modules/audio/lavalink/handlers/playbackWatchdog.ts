@@ -11,14 +11,39 @@ const TRANSITION_RECONCILE_MS = 800;
 
 export type ServerTrackProbe = { known: true; track: Track | null } | { known: false };
 
-/** encoded가 달라도(파일캐시 재구성 등) 같은 영상이면 같은 트랙으로 본다. */
+/**
+ * Lavaplayer base64 트랙의 마지막 8바이트(track.getPosition())를 0으로 정규화한다.
+ * TrackEndEvent/fetchPlayer 등에서 position > 0으로 인코딩된 문자열이
+ * TrackStartEvent/loadTracks 시점(position = 0) 문자열과 달라지는 문제를 막는다.
+ */
+export function normalizeTrackEncoded(encoded: string): string {
+	if (typeof encoded !== 'string' || encoded.length < 20) return encoded;
+	try {
+		const buf = Buffer.from(encoded, 'base64');
+		if (buf.length < 16) return encoded;
+		const header = buf.readUInt32BE(0);
+		if (header >>> 30 !== 1 || (header & 0x3fffffff) !== buf.length - 4) return encoded;
+		if (buf.readBigUInt64BE(buf.length - 8) === 0n) return encoded;
+		buf.writeBigUInt64BE(0n, buf.length - 8);
+		return buf.toString('base64');
+	} catch {
+		return encoded;
+	}
+}
+
+/** position 바이트 차이를 무시하고 두 encoded 문자열이 같은 트랙인지 판별한다. */
+export function isSameEncodedTrack(a: unknown, b: unknown): boolean {
+	if (typeof a !== 'string' || typeof b !== 'string') return false;
+	if (a === b) return true;
+	return normalizeTrackEncoded(a) === normalizeTrackEncoded(b);
+}
+
+/** encoded가 달라도(파일캐시 재구성·position 바이트 차이 등) 같은 영상이면 같은 트랙으로 본다. */
 export function isSameTrack(
 	a: { encoded?: unknown; info?: { identifier?: unknown } } | null | undefined,
 	b: { encoded?: unknown; info?: { identifier?: unknown } } | null | undefined
 ): boolean {
-	const encodedA = a?.encoded;
-	const encodedB = b?.encoded;
-	if (typeof encodedA === 'string' && encodedA === encodedB) return true;
+	if (isSameEncodedTrack(a?.encoded, b?.encoded)) return true;
 	const identifierA = a?.info?.identifier;
 	const identifierB = b?.info?.identifier;
 	return typeof identifierA === 'string' && identifierA.length > 0 && identifierA === identifierB;
@@ -102,10 +127,10 @@ export class PlaybackWatchdog {
 	 * `queue.current`를 비우거나 밀어내 프론트엔드 표시 곡이 어긋나는 것을 복원한다.
 	 */
 	public setLastStarted(player: CustomPlayer, track: Track | null): void {
-		const encoded = (track as { encoded?: unknown } | null)?.encoded;
-		player.transitionState.lastStartedEncoded = typeof encoded === 'string' ? encoded : null;
+		const rawEncoded = (track as { encoded?: unknown } | null)?.encoded;
+		const encoded = typeof rawEncoded === 'string' ? normalizeTrackEncoded(rawEncoded) : null;
+		player.transitionState.lastStartedEncoded = encoded;
 		if (!track || typeof encoded !== 'string') return;
-
 		const guildId = player.guildId;
 		this.clearReconcile(guildId);
 		this.reconcileTimers.set(
@@ -126,10 +151,10 @@ export class PlaybackWatchdog {
 	 */
 	public async reconcileNowPlaying(player: CustomPlayer, track: Track, encoded: string): Promise<void> {
 		// 그 사이에 다른 곡이 시작되었거나 정지 명령이 오면 이 리커널은 무효다.
-		if (player.transitionState.lastStartedEncoded !== encoded) return;
+		if (!isSameEncodedTrack(player.transitionState.lastStartedEncoded, encoded)) return;
 		if (player.transitionState.stopByCommand) return;
 		const currentEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-		if (currentEncoded === encoded) return;
+		if (isSameEncodedTrack(currentEncoded, encoded) || isSameTrack(player.queue.current, track)) return;
 
 		const probe = await this.fetchServerTrack(player);
 		if (!probe.known) {
@@ -151,7 +176,7 @@ export class PlaybackWatchdog {
 		const displaced = player.queue.current;
 		player.queue.current = track as (typeof player.queue)['current'];
 		// 밀려난 current는 다음 곡 후보 → 큐 선두로 되돌린다 (정상 순서 유지).
-		if (displaced && (displaced as { encoded?: unknown }).encoded !== encoded && Array.isArray(player.queue.tracks)) {
+		if (displaced && !isSameTrack(displaced, track) && Array.isArray(player.queue.tracks)) {
 			player.queue.tracks.unshift(displaced as (typeof player.queue.tracks)[number]);
 		}
 		if (player.mixerRuntime) {
@@ -168,7 +193,12 @@ export class PlaybackWatchdog {
 	public isTransitionAlreadyStarted(player: CustomPlayer, ended: Track | UnresolvedTrack | null): boolean {
 		const endedEncoded = (ended as { encoded?: unknown } | null)?.encoded;
 		const lastStarted = player.transitionState.lastStartedEncoded;
-		return typeof endedEncoded === 'string' && typeof lastStarted === 'string' && endedEncoded !== lastStarted;
+		if (typeof endedEncoded !== 'string' || typeof lastStarted !== 'string') return false;
+		if (isSameEncodedTrack(endedEncoded, lastStarted)) return false;
+		if (player.transitionState.confirmedNowPlaying && isSameTrack(ended, player.transitionState.confirmedNowPlaying)) {
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -270,7 +300,11 @@ export class PlaybackWatchdog {
 	 */
 	public armWatchdogUnlessStarted(player: CustomPlayer): void {
 		const currentEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-		const started = typeof currentEncoded === 'string' && player.transitionState.lastStartedEncoded === currentEncoded;
+		const started =
+			(typeof currentEncoded === 'string' && isSameEncodedTrack(player.transitionState.lastStartedEncoded, currentEncoded)) ||
+			(player.queue.current != null &&
+				player.transitionState.confirmedNowPlaying != null &&
+				isSameTrack(player.queue.current, player.transitionState.confirmedNowPlaying));
 		if (started && player.playing) return;
 		this.armWatchdog(player);
 	}

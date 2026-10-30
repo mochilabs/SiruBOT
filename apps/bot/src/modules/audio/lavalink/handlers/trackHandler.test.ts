@@ -146,6 +146,18 @@ describe('isTransitionAlreadyStarted', () => {
 		expect(handler.isTransitionAlreadyStarted(player, track('old-enc'))).toBe(false);
 		expect(handler.isTransitionAlreadyStarted(player, null)).toBe(false);
 	});
+
+	it('treats a track end with non-zero Lavaplayer position trailer as the same started track', () => {
+		const { handler } = makeHandler();
+		const posZero =
+			'QAAA4QMANe2YgeuqheuPhOykkSDpnanlkb3pgZPkuK0gKEFpTkEgVEhFIEVORCkgLyBtaWxsIGNvdmVyAARtaWxsAAAAAAADAYgAC09XbktPWWJHMjNBAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T1duS09ZYkcyM0EBAD9odHRwczovL2kueXRpbWcuY29tL3ZpL09XbktPWWJHMjNBL21heHJlc2RlZmF1bHQuanBnP3Y9NjkxMTcwYjYAABJ5b3V0dWJlLWZpbGUtY2FjaGUAAAAAAAAAAA==';
+		const buf = Buffer.from(posZero, 'base64');
+		buf.writeBigUInt64BE(196510n, buf.length - 8);
+		const posEnd = buf.toString('base64');
+		const player = { transitionState: { lastStartedEncoded: posZero } };
+		expect(posEnd).not.toBe(posZero);
+		expect(handler.isTransitionAlreadyStarted(player, track(posEnd, 'OWnKOYbG23A'))).toBe(false);
+	});
 });
 
 describe('trackError 사유 보고 (상태 페이지 최근 재생 오류)', () => {

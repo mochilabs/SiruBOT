@@ -4,7 +4,7 @@ import { Track, TrackEndEvent } from 'lavalink-client';
 import { CustomPlayer, OverrideAction } from '../player/customPlayer.ts';
 import { cancelPendingInvalidate, getTargetNextTrack, getTrackUid, notifyQueueMutated, type QueueMutationOptions } from '../queue/queueWrapper.ts';
 import { isTtsClip } from '../requester.ts';
-import { isSameTrack } from './playbackWatchdog.ts';
+import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
 import { MixerRequestError } from '../../../../services/mixerService.ts';
 
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
@@ -18,7 +18,7 @@ function sleep(ms: number): Promise<void> {
 	return promise;
 }
 const rt = (p: CustomPlayer) => p.mixerRuntime;
-export const isOverrideInFlight = (p: CustomPlayer) => p.mixerRuntime.pending.size > 0;
+export const isOverrideInFlight = (p: CustomPlayer) => (p.mixerRuntime?.pending?.size ?? 0) > 0;
 
 export function clearMixerRuntime(player: CustomPlayer): void {
 	cancelPendingInvalidate(player);
@@ -49,7 +49,7 @@ export interface MixerOverriddenEventPayload {
 
 function recordTrackPlayIfNeeded(player: CustomPlayer, track: Track | null): void {
 	if (!track || track.info?.isStream || isTtsClip(track)) return;
-	const key = track.encoded ?? track.info?.identifier ?? track.info?.uri ?? null;
+	const key = (track.encoded ? normalizeTrackEncoded(track.encoded) : null) ?? track.info?.identifier ?? track.info?.uri ?? null;
 	if (!key) return;
 	if (player.transitionState && player.transitionState.lastRecordedKey === key && player.repeatMode !== 'track') {
 		return;
@@ -72,7 +72,7 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 	const mutationOpts: QueueMutationOptions = { invalidate: false, bumpEpoch: false, ...opts };
 	const tracks = player.queue.tracks;
 	const headTrack = tracks[0] as Track | undefined;
-	const shouldSpliceHead = headTrack !== undefined && (headTrack === track || headTrack.encoded === track.encoded);
+	const shouldSpliceHead = headTrack !== undefined && (headTrack === track || isSameTrack(headTrack, track));
 
 	if (player.repeatMode === 'track' && !shouldSpliceHead) {
 		player.queue.current = track;
@@ -143,7 +143,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 		isTtsClip(player.queue.current) ||
 		!player.playing ||
 		rt(player).pending.size > 0 ||
-		(player.queue.current?.encoded ?? null) !== triggerEncoded;
+		!isSameEncodedTrack(player.queue.current?.encoded ?? null, triggerEncoded);
 
 	if (stale()) return;
 
@@ -156,7 +156,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 			player,
 			{
 				epoch: player.currentEpoch,
-				encodedTrack: target?.encoded ?? null,
+				encodedTrack: target?.encoded ? normalizeTrackEncoded(target.encoded) : null,
 				isEmpty: !target
 			},
 			key
@@ -190,7 +190,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 				player,
 				{
 					epoch: player.currentEpoch,
-					encodedTrack: latestTarget?.encoded ?? null,
+					encodedTrack: latestTarget?.encoded ? normalizeTrackEncoded(latestTarget.encoded) : null,
 					isEmpty: !latestTarget
 				},
 				randomUUID()
@@ -210,7 +210,8 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdvancedEventPayload): Promise<void> {
 	const target = getTargetNextTrack(player);
 	const confirmedEncoded = player.transitionState?.confirmedNowPlaying?.encoded ?? player.queue.current?.encoded ?? null;
-	const alreadyCurrent = player.queue.current?.encoded === event.encodedTrack || confirmedEncoded === event.encodedTrack;
+	const alreadyCurrent =
+		isSameEncodedTrack(player.queue.current?.encoded, event.encodedTrack) || isSameEncodedTrack(confirmedEncoded, event.encodedTrack);
 
 	// (1) Stale: Bot epoch has already moved ahead. If the advanced track is the
 	// track the server is actually playing (confirmed/current), the epoch just
@@ -223,7 +224,7 @@ export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdva
 			player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
 			return;
 		}
-		if (target && target.encoded === event.encodedTrack) {
+		if (target && isSameEncodedTrack(target.encoded, event.encodedTrack)) {
 			// 로컬 epoch가 앞서나갔지만 아직 invalidate가 서버에 도달하기 전에
 			// 서버가 (변경 없는) 헤드로 정상 전이한 경우 — recover하지 말고
 			// epoch만 재동기화하고 정상 commit한다 (S11).
@@ -240,14 +241,14 @@ export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdva
 	// (2) Epoch matches: if TrackStartEvent arrived slightly before MixerAdvancedEvent,
 	// syncQueueToNowPlaying already shifted the track into queue.current (and target is
 	// now the FOLLOWING track). Treat that as already-committed rather than a false desync.
-	if ((!target || target.encoded !== event.encodedTrack) && alreadyCurrent && player.repeatMode !== 'track') {
+	if ((!target || !isSameEncodedTrack(target.encoded, event.encodedTrack)) && alreadyCurrent && player.repeatMode !== 'track') {
 		rt(player).transitionSeq++;
 		player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
 		return;
 	}
 
 	// (3) Desync: Epoch matches but encoded track does not match target head
-	if (!target || target.encoded !== event.encodedTrack) {
+	if (!target || !isSameEncodedTrack(target.encoded, event.encodedTrack)) {
 		container.logger.error(`[mixer] desync assert failed: plugin=${event.encodedTrack}, target=${target?.encoded} on guild ${player.guildId}`);
 		await recover(player, 'desync', event.encodedTrack);
 		return;
@@ -278,7 +279,7 @@ async function recover(player: CustomPlayer, reason: 'stale' | 'desync', serverE
 				container.logger.info(`[mixer] recovery (${reason}) reconciled to current playing track on guild ${player.guildId}`);
 				return;
 			}
-			if (head && (isSameTrack(serverTrack, head) || serverTrack.encoded === serverEncoded)) {
+			if (head && (isSameTrack(serverTrack, head) || isSameEncodedTrack(serverTrack.encoded, serverEncoded))) {
 				rt(player).transitionSeq++;
 				commitLocal(player, head, { invalidate: false, bumpEpoch: false });
 				container.logger.info(`[mixer] recovery (${reason}) reconciled to server head track on guild ${player.guildId}`);
@@ -322,7 +323,7 @@ async function fetchServerTrackById(player: CustomPlayer): Promise<{ encoded?: s
 /** 서버가 이미 재생 중인 트랙이면 큐 선두가 그 트랙일 때만 commit한다 (그 외엔 손대지 않는다). */
 function commitLocalIfMatches(player: CustomPlayer, serverEncoded: string): void {
 	const head = getTargetNextTrack(player) ?? (player.queue.tracks[0] as Track | undefined);
-	if (head && head.encoded === serverEncoded) {
+	if (head && isSameEncodedTrack(head.encoded, serverEncoded)) {
 		rt(player).transitionSeq++;
 		commitLocal(player, head, { invalidate: false, bumpEpoch: false });
 	}
@@ -334,16 +335,27 @@ function commitLocalIfMatches(player: CustomPlayer, serverEncoded: string): void
 export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndEvent): Promise<void> {
 	if (event.reason !== 'finished' && event.reason !== 'loadFailed') return;
 
-	const ended = event.track?.encoded ?? null;
+	const endedTrack = event.track ?? null;
+	const ended = endedTrack?.encoded ? normalizeTrackEncoded(endedTrack.encoded) : null;
 	// lavalink-client의 trackEnd 핸들러는:
 	// 1) 빈 큐(repeat=off)면 queueEnd를 불러 queue.current를 null로 비우고,
 	// 2) 대기열에 곡이 있거나 repeat=queue면 queueTrackEnd를 먼저 불러 다음 곡을 queue.current로 시프트한다!
-	// 따라서 시작 확정값(confirmedNowPlaying/lastStartedEncoded)과 queue.current를 모두 대조해야 한다 (C-03).
-	const confirmedOrStarted = player.transitionState?.confirmedNowPlaying?.encoded ?? player.transitionState?.lastStartedEncoded ?? null;
-	const currentEncoded = player.queue.current?.encoded ?? null;
+	// 또한 Lavaplayer는 TrackEndEvent 시점의 track.position을 encoded 마지막 8바이트에 기록하므로
+	// position 정규화 및 identifier 대조(isSameTrack)를 함께 수행해야 한다 (C-03).
+	const confirmedTrack = player.transitionState?.confirmedNowPlaying ?? null;
+	const confirmedOrStarted = confirmedTrack?.encoded ?? player.transitionState?.lastStartedEncoded ?? null;
+	const currentTrack = player.queue.current ?? null;
+	const currentEncoded = currentTrack?.encoded ?? null;
+	const prevTrack = player.queue.previous?.[0] ?? null;
+
+	const matchesEnded = (candidateEncoded: unknown, candidateTrack?: { encoded?: unknown; info?: { identifier?: unknown } } | null) =>
+		isSameEncodedTrack(candidateEncoded, ended) || (endedTrack != null && candidateTrack != null && isSameTrack(candidateTrack, endedTrack));
+
 	const preShiftedByLibrary =
-		currentEncoded !== null && currentEncoded !== ended && (confirmedOrStarted === ended || player.queue.previous?.[0]?.encoded === ended);
-	if (!ended || (ended !== currentEncoded && ended !== confirmedOrStarted && !preShiftedByLibrary)) {
+		currentEncoded !== null &&
+		!matchesEnded(currentEncoded, currentTrack) &&
+		(matchesEnded(confirmedOrStarted, confirmedTrack) || matchesEnded(prevTrack?.encoded, prevTrack));
+	if (!ended || (!matchesEnded(currentEncoded, currentTrack) && !matchesEnded(confirmedOrStarted, confirmedTrack) && !preShiftedByLibrary)) {
 		return;
 	}
 
@@ -354,12 +366,12 @@ export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndE
 	if (TRACK_END_CONFIRM_MS > 0) {
 		const seq = rt(player).transitionSeq;
 		await sleep(TRACK_END_CONFIRM_MS);
-		const afterConfirmed =
-			player.transitionState?.confirmedNowPlaying?.encoded ??
-			player.transitionState?.lastStartedEncoded ??
-			player.queue.current?.encoded ??
-			null;
-		if (seq !== rt(player).transitionSeq || (afterConfirmed !== null && afterConfirmed !== ended && !preShiftedByLibrary)) {
+		const afterConfirmedTrack = player.transitionState?.confirmedNowPlaying ?? null;
+		const afterConfirmed = afterConfirmedTrack?.encoded ?? player.transitionState?.lastStartedEncoded ?? player.queue.current?.encoded ?? null;
+		if (
+			seq !== rt(player).transitionSeq ||
+			(afterConfirmed !== null && !matchesEnded(afterConfirmed, afterConfirmedTrack ?? player.queue.current) && !preShiftedByLibrary)
+		) {
 			return;
 		}
 	}
@@ -376,11 +388,13 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 	// lavalink-client의 queueTrackEnd가 이미 다음 곡을 queue.current로 시프트해 놓은 경우
 	// 다시 commitLocal(splice)을 부르면 차차기 곡으로 한 칸 더 건너뛰므로 그 current를 그대로 쓴다 (C-03).
 	const next =
-		preShiftedByLibrary && player.queue.current && player.queue.current.encoded !== ended
+		preShiftedByLibrary && player.queue.current && !isSameEncodedTrack(player.queue.current.encoded, ended)
 			? (player.queue.current as Track)
 			: getTargetNextTrack(player);
 	if (!next) {
 		player.queue.current = null;
+		player.playing = false;
+		player.lastPositionChange = null;
 		notifyQueueMutated(player, { invalidate: false, bumpEpoch: false, force: true });
 		cancelPendingInvalidate(player);
 		void player.queue?.utils?.save?.()?.catch(() => null);
@@ -397,8 +411,8 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 		// 프로브 대기 동안 MixerAdvancedEvent나 사용자 스킵이 이미 전이를 끝냈다.
 		return;
 	}
-	if (next.encoded !== ended && serverTrack && isSameTrack(serverTrack, next)) {
-		if (player.queue.current?.encoded !== next.encoded) {
+	if (!isSameEncodedTrack(next.encoded, ended) && serverTrack && isSameTrack(serverTrack, next)) {
+		if (!isSameEncodedTrack(player.queue.current?.encoded, next.encoded)) {
 			commitLocal(player, next, { invalidate: false, bumpEpoch: false });
 		} else {
 			notifyQueueMutated(player, { invalidate: false, bumpEpoch: false });
@@ -411,6 +425,7 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = next;
 		}
+		recordTrackPlayIfNeeded(player, next);
 		notifyQueueMutated(player, { invalidate: false, bumpEpoch: false });
 		container.playerNotifier.updateController(player);
 	} else {
@@ -447,7 +462,8 @@ export async function sendOverride(
 ): Promise<'sent' | 'deduped' | 'resynced'> {
 	const state = rt(player);
 	if (!state) return 'sent';
-	const intentKey = `${player.currentEpoch}:${action}:${encodedTrack ?? ''}`;
+	const canonicalEncoded = encodedTrack ? normalizeTrackEncoded(encodedTrack) : null;
+	const intentKey = `${player.currentEpoch}:${action}:${canonicalEncoded ?? ''}`;
 	for (const p of state.pending.values()) {
 		if (p.intentKey === intentKey) {
 			return 'deduped';
@@ -471,7 +487,7 @@ export async function sendOverride(
 			{
 				epoch,
 				action,
-				encodedTrack
+				encodedTrack: canonicalEncoded
 			},
 			key
 		);

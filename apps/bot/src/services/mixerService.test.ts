@@ -420,4 +420,76 @@ describe('MixerService v2 Protocol Tests', () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(service.isOverlapActive('123456789012345678')).toBe(false);
 	});
+
+	it('handleMixerTrackEnd coldStart matches ended track even when Lavaplayer TrackEndEvent encodes non-zero end position', async () => {
+		vi.useFakeTimers();
+		const service = new MixerService();
+		container.mixerService = service;
+		fetchMock.mockResolvedValueOnce(
+			new Response(JSON.stringify({ state: 'PLAYING', epoch: 3, duplicate: false }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const posZeroA =
+			'QAAA4QMANe2YgeuqheuPhOykkSDpnanlkb3pgZPkuK0gKEFpTkEgVEhFIEVORCkgLyBtaWxsIGNvdmVyAARtaWxsAAAAAAADAYgAC09XbktPWWJHMjNBAAEAK2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9T1duS09ZYkcyM0EBAD9odHRwczovL2kueXRpbWcuY29tL3ZpL09XbktPWWJHMjNBL21heHJlc2RlZmF1bHQuanBnP3Y9NjkxMTcwYjYAABJ5b3V0dWJlLWZpbGUtY2FjaGUAAAAAAAAAAA==';
+		const bufA = Buffer.from(posZeroA, 'base64');
+		bufA.writeBigUInt64BE(196510n, bufA.length - 8);
+		const posEndA = bufA.toString('base64');
+		const encB =
+			'QAAAuwMAHk92ZXJkb3NlIChuYXRvcmkpIC8gbWlsbCBjb3ZlcgAEbWlsbAAAAAAAAvXQAAtBYkJyZUdiMk1uQQABACtodHRwczovL3d3dy55b3V0dWJlLmNvbS93YXRjaD92PUFiQnJlR2IyTW5BAQAwaHR0cHM6Ly9pLnl0aW1nLmNvbS92aS9BYkJyZUdiMk1uQS9tcWRlZmF1bHQuanBnAAASeW91dHViZS1maWxlLWNhY2hlAAAAAAAAAAA=';
+
+		const trackA = { encoded: posZeroA, info: { identifier: 'OWnKOYbG23A', title: 'A' }, userData: { uid: 'uid-a' } } as unknown as Track;
+		const trackB = {
+			encoded: encB,
+			info: { identifier: 'AbBreGb2MnA', title: 'Overdose' },
+			userData: { uid: 'uid-b', requester: { id: 'related_track' } }
+		} as unknown as Track;
+
+		const player = {
+			...fakePlayer(),
+			currentEpoch: 3,
+			repeatMode: 'off',
+			node: {
+				...fakePlayer().node,
+				fetchPlayer: vi.fn().mockResolvedValue({ track: null })
+			},
+			transitionState: {
+				confirmedNowPlaying: trackA,
+				lastStartedEncoded: posZeroA,
+				stopByCommand: false,
+				preloadConsumedAt: null,
+				serverConsumedTrack: null,
+				lastRecordedKey: null
+			},
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			queue: {
+				current: trackB,
+				previous: [trackA],
+				tracks: [],
+				utils: { save: vi.fn().mockResolvedValue(undefined) }
+			}
+		} as unknown as CustomPlayer;
+
+		const endEvent = { reason: 'finished', track: { encoded: posEndA, info: { identifier: 'OWnKOYbG23A' } } } as unknown as TrackEndEvent;
+		const endPromise = handleMixerTrackEnd(player, endEvent);
+		await vi.advanceTimersByTimeAsync(250);
+		await endPromise;
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(url).toBe('http://localhost:2333/mixer/queue/override');
+		expect(JSON.parse(init.body as string)).toEqual({
+			guildId: '123456789012345678',
+			epoch: 3,
+			action: 'PLAY_NOW',
+			encodedTrack: encB
+		});
+		expect(player.transitionState.confirmedNowPlaying).toBe(trackB);
+
+		const reqId = (init.headers as Record<string, string>)['Idempotency-Key'];
+		handleMixerOverridden(player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
+		vi.useRealTimers();
+	});
 });

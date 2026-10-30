@@ -8,7 +8,7 @@ import { isTtsClip } from '../requester.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
-import { isSameTrack, syncQueueToNowPlaying } from './playbackWatchdog.ts';
+import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
 import { cancelPendingInvalidate, getTargetNextTrack } from '../queue/queueWrapper.ts';
@@ -216,7 +216,7 @@ export class QueueAdvancer {
 		const ended = (_payload?.track?.encoded ? _payload.track : track) as Track | null;
 		const lastStarted = player.transitionState.lastStartedEncoded;
 		const endedEncoded = (ended as { encoded?: unknown } | null)?.encoded;
-		if (typeof lastStarted === 'string' && typeof endedEncoded === 'string' && endedEncoded !== lastStarted) {
+		if (typeof lastStarted === 'string' && typeof endedEncoded === 'string' && !isSameEncodedTrack(endedEncoded, lastStarted)) {
 			this.logger.debug(`[mixer] queueEnd deferred: stale event for ${endedEncoded} (guild ${player.guildId})`);
 			if (!this.host.isTransitionAlreadyStarted(player, ended)) {
 				this.host.armWatchdog(player);
@@ -280,7 +280,7 @@ export class QueueAdvancer {
 			this.logger.warn(`[mixer] queueEnd deferred: server still has an active track (guild ${player.guildId}), restoring client state`);
 			const serverTrack = this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined);
 			player.queue.current = serverTrack as (typeof player.queue)['current'];
-			player.transitionState.lastStartedEncoded = typeof serverTrack.encoded === 'string' ? serverTrack.encoded : null;
+			player.transitionState.lastStartedEncoded = typeof serverTrack.encoded === 'string' ? normalizeTrackEncoded(serverTrack.encoded) : null;
 			// queueEnd가 지운 playing 플래그도 되돌린다 — 일시정지 상태에서는 재생 중이 아니므로 둔다.
 			if (!serverPlayer.paused) player.playing = true;
 			this.host.armWatchdog(player);

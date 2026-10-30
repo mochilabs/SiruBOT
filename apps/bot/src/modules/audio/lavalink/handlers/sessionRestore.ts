@@ -7,7 +7,7 @@ import type { CustomPlayer } from '../player/customPlayer.ts';
 import type { CachedPlayerSaver } from '../player/playerSaver.ts';
 import { getTargetNextTrack, getTrackUid } from '../queue/queueWrapper.ts';
 import { commitLocal } from './mixerHandlers.ts';
-import { isSameTrack } from './playbackWatchdog.ts';
+import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
 /** playerSaver.get() 반환 — 재시작 복구의 입력이 되는 저장 플레이어 형태. */
 type SavedPlayer = NonNullable<Awaited<ReturnType<CachedPlayerSaver['get']>>>;
 
@@ -246,7 +246,7 @@ export class SessionRestoreEngine {
 		if (createdPlayer.transitionState && createdPlayer.queue.current) {
 			createdPlayer.transitionState.confirmedNowPlaying = createdPlayer.queue.current;
 			createdPlayer.transitionState.lastStartedEncoded =
-				typeof createdPlayer.queue.current.encoded === 'string' ? createdPlayer.queue.current.encoded : null;
+				typeof createdPlayer.queue.current.encoded === 'string' ? normalizeTrackEncoded(createdPlayer.queue.current.encoded) : null;
 		}
 
 		const now = Date.now();
@@ -278,7 +278,7 @@ export class SessionRestoreEngine {
 		const serverTrack = lavalinkPlayer.track?.encoded ?? null;
 		if (serverTrack && Array.isArray(createdPlayer.queue?.tracks)) {
 			const head = createdPlayer.queue.tracks[0] as Track | undefined;
-			if (head && head.encoded === serverTrack && createdPlayer.queue.current?.encoded !== serverTrack) {
+			if (head && isSameEncodedTrack(head.encoded, serverTrack) && !isSameEncodedTrack(createdPlayer.queue.current?.encoded, serverTrack)) {
 				commitLocal(createdPlayer, head, { invalidate: false, bumpEpoch: false });
 			}
 		}

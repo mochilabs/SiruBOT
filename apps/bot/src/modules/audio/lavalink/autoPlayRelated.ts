@@ -4,6 +4,7 @@ import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from './player/customPlay
 import { isYouTubeSource } from '@sirubot/utils';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { notifyQueueMutated } from './queue/queueWrapper.ts';
+import { isSameEncodedTrack } from './handlers/playbackWatchdog.ts';
 
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
@@ -288,7 +289,11 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 
 		const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
 		// fetch 동안 정지하거나 다른 곡으로 전이됐으면 이전 곡 기준 추천을 추가하지 않는다.
-		if (player.transitionState.stopByCommand || player.queue.tracks.length > 0 || (player.playing && activeEncoded !== currentEncoded))
+		if (
+			player.transitionState.stopByCommand ||
+			player.queue.tracks.length > 0 ||
+			(player.playing && !isSameEncodedTrack(activeEncoded, currentEncoded))
+		)
 			return null;
 
 		await player.queue.add(selectedTrack);
@@ -329,7 +334,7 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 
 			// fetch 동안 정지/전이됐으면 이 기준의 추천을 더 넣지 않는다.
 			const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
-			if (player.transitionState.stopByCommand || (player.queue.current && activeEncoded !== referenceEncoded)) break;
+			if (player.transitionState.stopByCommand || (player.queue.current && !isSameEncodedTrack(activeEncoded, referenceEncoded))) break;
 
 			await player.queue.add(selected);
 			pickedIds.push(selected.info.identifier);
