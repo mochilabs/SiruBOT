@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { m } from "framer-motion";
-import { RadioTower } from "lucide-react";
+import { RadioTower, ShieldCheck } from "lucide-react";
 import useSWR from "swr";
 
 import Container from "@/components/container";
@@ -12,6 +13,7 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { ProcessCard } from "@/components/process-card";
 import { ShardStats } from "@/components/shard-stats";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { VoiceServerHistory } from "@/components/voice-server-history";
 import { VoiceServerSection } from "@/components/voice-server-section";
 import type { ShardsResponse } from "@/lib/shard-api";
@@ -54,20 +56,29 @@ export default function ShardsPage() {
                               : "시루봇 서버의 상태를 실시간으로 확인할 수 있어요."
                     }
                 >
-                    {pollFailed && (
-                        <div className="flex items-center gap-2">
-                            <Badge variant="warning" dot>
-                                동기화 실패 · 마지막 정보를 표시하는 중
-                            </Badge>
-                            <button
-                                type="button"
-                                onClick={() => mutate()}
-                                className="text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-control px-2 py-1"
-                            >
-                                다시 시도
-                            </button>
-                        </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {pollFailed && (
+                            <>
+                                <Badge variant="warning" dot>
+                                    동기화 실패 · 마지막 정보를 표시하는 중
+                                </Badge>
+                                <button
+                                    type="button"
+                                    onClick={() => mutate()}
+                                    className="text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-control px-2 py-1"
+                                >
+                                    다시 시도
+                                </button>
+                            </>
+                        )}
+                        <Link
+                            href="/admin"
+                            className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        >
+                            <ShieldCheck size={14} />
+                            <span>봇 관리자 패널</span>
+                        </Link>
+                    </div>
                 </PageHeader>
                 <div className="grid gap-8">
                     <section>

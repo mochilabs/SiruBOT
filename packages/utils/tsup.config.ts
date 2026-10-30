@@ -22,7 +22,9 @@ export default createConfig({
 		'src/weather.ts',
 		'src/delivery.ts',
 		'src/client.ts',
-		'src/ticket.ts'
+		'src/ticket.ts',
+		'src/botAdmin.ts',
+		'src/memoryFile.ts'
 	],
 	format: ['esm', 'cjs'],
 	dts: true,

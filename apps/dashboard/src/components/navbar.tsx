@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, m } from "framer-motion";
-import { LogOut, Moon, Search, Sun, User } from "lucide-react";
+import { LogOut, Moon, Search, ShieldCheck, Sun, User } from "lucide-react";
 
 import { motionFast } from "@/components/motion/durations";
 import { Button } from "@/components/ui/button";
@@ -236,6 +236,16 @@ export function Navbar() {
                             <span>내 프로필</span>
                             <User size={16} />
                           </Link>
+                          {session.user?.isAdmin && (
+                            <Link
+                              href="/admin"
+                              onClick={() => setProfileOpen(false)}
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-accent-foreground transition-colors"
+                            >
+                              <span>관리자 패널</span>
+                              <ShieldCheck size={16} />
+                            </Link>
+                          )}
                           <div className="h-px bg-border my-1 mx-2" />
                           <button
                             onClick={() => signOut()}

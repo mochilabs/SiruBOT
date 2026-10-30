@@ -30,6 +30,7 @@ import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../services/memberGreetingService.ts';
 import { GuildDataResponder } from '../services/guildDataResponder.ts';
 import { AppEmojiManager } from '../services/appEmojiManager.ts';
+import { BotAdminResponder } from '../services/botAdminResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -127,6 +128,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey);
 		container.guildDataResponder = new GuildDataResponder(subscriberLogger, redisSigningKey);
 		container.socialWebhookResponder = new SocialWebhookResponder(subscriberLogger, redisSigningKey);
+		container.botAdminResponder = new BotAdminResponder(subscriberLogger, redisSigningKey);
 		container.appEmojiManager = new AppEmojiManager();
 	}
 

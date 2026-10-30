@@ -12,7 +12,7 @@ import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
-
+import type { BotAdminResponder } from '../services/botAdminResponder.ts';
 /**
  * @skyra/env-utilities의 envParse* 타입 선언 — 호출부(envParseString/envParseArray)의 타입용이에요.
  * 키 목록·형식·필수 여부의 단일 원본은 core/env.ts의 zod 스키마예요 — 키를 추가·수정할 땐 두 곳을 함께 고쳐요.
@@ -66,6 +66,7 @@ declare module '@sapphire/pieces' {
 		guildDataResponder?: import('../services/guildDataResponder.ts').GuildDataResponder;
 		socialWebhookResponder?: import('../services/socialWebhookResponder.ts').SocialWebhookResponder;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
+		botAdminResponder?: BotAdminResponder;
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };
 	}

@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 
+import { isDashboardAdmin } from "@/lib/admin-ids";
 import { getDiscordOAuthEnv } from "@/lib/env";
 
 import { ensureFreshToken, replaceTokenSet } from "./token-store";
@@ -90,7 +91,9 @@ export const { handlers, auth, signIn } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        const userId = token.id as string;
+        session.user.id = userId;
+        session.user.isAdmin = isDashboardAdmin(userId);
       }
       return session;
     },
