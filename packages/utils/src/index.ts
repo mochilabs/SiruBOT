@@ -12,6 +12,8 @@ export { getSimpleYouTubeSuggestions } from './youtube.js';
 export { addSeparator, createContainer, createSeparator, createThumbnail } from './embed.js';
 export { MemoryCache } from './memoryCache.js';
 export {
+	BOT_ADMIN_REQUEST_CHANNEL,
+	BOT_ADMIN_RESPONSE_CHANNEL,
 	BOT_PROFILE_REFRESH_CHANNEL,
 	BOT_PROFILE_SET_CHANNEL,
 	BOT_PROFILE_STATE_CHANNEL_PREFIX,
@@ -185,3 +187,17 @@ export {
 	parseMemoryMarkdown,
 	renderMemoryMarkdown
 } from './memoryFile.js';
+export {
+	type BotAdminEmojiItem,
+	botAdminEmojiItemSchema,
+	type BotAdminKind,
+	botAdminKindSchema,
+	type BotAdminNodeItem,
+	botAdminNodeItemSchema,
+	type BotAdminReloadStore,
+	botAdminReloadStoreSchema,
+	type BotAdminRequest,
+	botAdminRequestSchema,
+	type BotAdminResponse,
+	botAdminResponseSchema
+} from './botAdmin.js';

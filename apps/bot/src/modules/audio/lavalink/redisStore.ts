@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import {
+	BOT_ADMIN_RESPONSE_CHANNEL,
 	botProfileStateChannel,
 	GUILD_DATA_RESPONSE_CHANNEL,
 	JTC_SETUP_RESPONSE_CHANNEL,
@@ -297,6 +298,14 @@ export class RedisStore {
 	 */
 	public publishSocialWebhookCreateResponse(payload: string): void {
 		this.publish(SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL, payload, 'Social webhook create response');
+	}
+
+	/**
+	 * 봇 관리자 제어 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:bot-admin:response`).
+	 */
+	public publishBotAdminResponse(payload: string): void {
+		this.publish(BOT_ADMIN_RESPONSE_CHANNEL, payload, 'Bot admin response');
 	}
 
 	public async connect() {

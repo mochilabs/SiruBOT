@@ -151,3 +151,12 @@ export const JTC_SETUP_RESPONSE_CHANNEL = 'sirubot:jtc-setup:response';
  */
 export const SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL = 'sirubot:social:webhook-create:request';
 export const SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL = 'sirubot:social:webhook-create:response';
+
+/**
+ * 봇 관리자(운영자) 제어 request/reply 브로드캐스트 — 대시보드 관리자 패널(/admin)에서
+ * Lavalink 노드 상태 조회·재연결·앱 이모지 동기화·스토어 리로드를 요청할 때 사용해요.
+ *
+ * 페이로드: botAdminRequestSchema / botAdminResponseSchema (botAdmin.ts)
+ */
+export const BOT_ADMIN_REQUEST_CHANNEL = 'sirubot:bot-admin:request';
+export const BOT_ADMIN_RESPONSE_CHANNEL = 'sirubot:bot-admin:response';

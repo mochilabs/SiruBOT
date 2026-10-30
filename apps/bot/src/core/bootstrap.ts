@@ -138,7 +138,7 @@ export const main = async () => {
 		await container.memberGreetingService?.stop().catch(() => null);
 		await container.guildDataResponder?.stop().catch(() => null);
 		await container.socialWebhookResponder?.stop().catch(() => null);
-
+		await container.botAdminResponder?.stop().catch(() => null);
 		// 종료 전에 저널을 비운다 — Redis를 끊은 뒤엔 pending 큐/플레이어 변경이 소실된다.
 		// 세션 저장(위)은 Redis 연결이 필요한 첫 단계고, 여기서 남은 저널을 마저 민 뒤 끊는다.
 		if (container.redisStore) {
@@ -207,7 +207,7 @@ export const main = async () => {
 		// 대시보드 소셜 알림 구독 추가 → notifier → Redis → 봇이 대상 채널에 웹훅 1회 생성.
 		// 실패해도 부팅은 계속돼요 — 구독 추가만 타임아웃 폴백해요 (기존 알림 전송은 웹훅이라 무관해요).
 		await container.socialWebhookResponder?.start(envParseString('REDIS_URL'));
-
+		await container.botAdminResponder?.start(envParseString('REDIS_URL'));
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
 

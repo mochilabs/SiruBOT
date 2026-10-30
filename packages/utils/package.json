@@ -96,6 +96,16 @@
             "types": "./dist/ticket.d.ts",
             "import": "./dist/ticket.js",
             "require": "./dist/ticket.cjs"
+        },
+        "./botAdmin": {
+            "types": "./dist/botAdmin.d.ts",
+            "import": "./dist/botAdmin.js",
+            "require": "./dist/botAdmin.cjs"
+        },
+        "./memoryFile": {
+            "types": "./dist/memoryFile.d.ts",
+            "import": "./dist/memoryFile.js",
+            "require": "./dist/memoryFile.cjs"
         }
     },
     "scripts": {
