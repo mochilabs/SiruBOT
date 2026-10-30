@@ -46,9 +46,10 @@ export class NodeSessionStore {
 		const key = this.getKey(nodeId, shardKey);
 		this.logger.debug(`Saving session for node ${nodeId} shards [${shardKey}]: ${sessionId}`);
 
-		if (!this.isRedisConnected) return false;
+		if (!this.isRedisConnected && !this.redis.isReady) return false;
 		try {
 			await this.redis.set(key, sessionId, { EX: SESSION_TTL_SECONDS });
+			this.isRedisConnected = true;
 			this.logger.trace(`Session saved to Redis: ${key}`);
 			return true;
 		} catch (error) {
@@ -63,8 +64,9 @@ export class NodeSessionStore {
 		const key = this.getKey(nodeId, shardKey);
 
 		try {
-			if (this.isRedisConnected) {
+			if (this.isRedisConnected || this.redis.isReady) {
 				const sessionId = await this.redis.get(key);
+				this.isRedisConnected = true;
 				this.logger.debug(`Session lookup for ${key}: ${sessionId ?? '(not found)'}`);
 				return sessionId;
 			}
@@ -81,8 +83,9 @@ export class NodeSessionStore {
 		const key = this.getKey(nodeId, shardKey);
 
 		try {
-			if (this.isRedisConnected) {
+			if (this.isRedisConnected || this.redis.isReady) {
 				await this.redis.del(key);
+				this.isRedisConnected = true;
 				this.logger.trace(`Session deleted: ${key}`);
 			}
 		} catch (error) {
@@ -361,9 +364,13 @@ export class RedisStore {
 	}
 
 	private handleReady() {
+		const wasReady = this.isReady;
 		this.isReady = true;
 		this.logger.info('Redis ready!');
 		this.reconnectTryCount = 0;
+		if (!wasReady) {
+			this.nodeSessionStore.onConnect();
+		}
 	}
 
 	private handleError(err: Error) {
