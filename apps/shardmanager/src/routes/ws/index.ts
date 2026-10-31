@@ -75,13 +75,10 @@ export default async function routes(fastify: FastifyInstance) {
 
 		socket.on('close', () => {
 			logger.info(`[${wsId}] WebSocket connection closed`);
-			// Get hostname before releasing
-			const processInfo = registry.getProcess(wsId);
-			const hostname = processInfo?.hostname;
-			const released = registry.release(wsId);
+			const released = registry.detach(wsId);
 			if (released) {
-				logger.info(`[${wsId}] Released shards: [${released.join(', ')}]`);
-				notifier.shardDisconnected(wsId, released, hostname);
+				logger.info(`[${wsId}] Released shards: [${released.shardIds.join(', ')}]`);
+				notifier.shardDisconnected(wsId, released.shardIds, released.hostname);
 			}
 		});
 
@@ -92,32 +89,23 @@ export default async function routes(fastify: FastifyInstance) {
 		// --- Handlers ---
 
 		function handleIdentify(id: string, ws: WebSocket, payload: IdentifyPayload) {
-			let shardIds: number[] | null;
+			// Re-identify: the client claims its existing shards. First time: no claim means "give me free ones".
+			const claim = payload.shardIds && payload.shardIds.length > 0 ? { shardIds: payload.shardIds, hostname: payload.hostname } : undefined;
+			const result = registry.identify(id, ws, claim);
 
-			// Re-identification: bot sends its current shard IDs
-			if (payload.shardIds && payload.shardIds.length > 0) {
-				logger.info(`[${id}] Re-identifying with existing shards [${payload.shardIds.join(', ')}]`);
-				// Mark these shards as allocated
-				for (const shardId of payload.shardIds) {
-					registry.forceAllocate(shardId);
-				}
-				shardIds = payload.shardIds;
-			} else {
-				// First-time identification: allocate new shards
-				shardIds = registry.allocateShardIds();
-			}
-
-			if (!shardIds) {
-				logger.warn(`[${id}] No shards available, closing connection`);
+			if (result.kind === 'no-shards' || result.kind === 'conflict') {
+				logger.warn(
+					`[${id}] ${result.kind === 'conflict' ? `Shard conflict: [${result.shardIds.join(', ')}]` : 'No shards available'}, closing connection`
+				);
 				send(ws, {
 					op: WsOp.IDENTIFY_ACK,
 					payload: { shardIds: [], shardCount: 0 }
 				});
-				ws.close(4000, 'No shards available');
+				ws.close(4000, result.kind === 'conflict' ? 'Shard conflict' : 'No shards available');
 				return;
 			}
 
-			registry.register(id, shardIds, ws, payload.hostname);
+			const { shardIds } = result;
 
 			send(ws, {
 				op: WsOp.IDENTIFY_ACK,
@@ -146,10 +134,9 @@ export default async function routes(fastify: FastifyInstance) {
 			registry.updateStatus(id, payload.status);
 
 			if (payload.status === 'ready') {
-				const allProcesses = registry.getAllProcesses();
-				const matched = allProcesses.find((p: { wsId: string; shardIds: number[] }) => p.wsId === id);
-				if (matched) {
-					notifier.shardReady(id, matched.shardIds, matched.hostname);
+				const process = registry.getProcess(id);
+				if (process) {
+					notifier.shardReady(id, process.shardIds, process.hostname);
 				}
 			}
 		}

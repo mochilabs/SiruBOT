@@ -8,9 +8,11 @@ const logger = getLogger('shardRegistry');
 const HEARTBEAT_TIMEOUT_MS = 60_000;
 const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 
-export interface ShardProcessInfo {
-	shardIds: number[];
-	status: ShardStatus;
+/** A live process is never disconnected. The terminal state is absence from the registry. */
+export type ProcessPhase = 'connecting' | 'ready' | 'errored';
+
+interface ProcessRecord {
+	phase: ProcessPhase;
 	hostname?: string;
 	guilds: number;
 	players: number;
@@ -21,14 +23,43 @@ export interface ShardProcessInfo {
 	wsConnection: WebSocket;
 }
 
+/** Wire-facing read view. Matches the existing API JSON shape exactly. */
+export interface ProcessView {
+	wsId: string;
+	shardIds: number[];
+	status: ProcessPhase;
+	hostname?: string;
+	guilds: number;
+	players: number;
+	memoryUsage: number;
+	uptime: number;
+	lastHeartbeat: number;
+	connectedAt: number;
+}
+
+export type IdentifyResult =
+	| { readonly kind: 'bound'; readonly shardIds: number[] }
+	| { readonly kind: 'no-shards' }
+	| { readonly kind: 'conflict'; readonly shardIds: number[] };
+
+export interface Detached {
+	shardIds: number[];
+	hostname?: string;
+}
+
 export class ShardRegistry {
-	private processes: Map<string, ShardProcessInfo> = new Map(); // wsId -> info
-	private allocatedShards: Set<number> = new Set();
+	/**
+	 * Single source of truth for ownership. Each shard ID maps to at most one
+	 * holder. Absence means free. There is no second store to desync.
+	 */
+	private readonly ownership = new Map<number, string>();
+
+	private readonly processes = new Map<string, ProcessRecord>();
 	private shardCount: number;
 	private shardsPerProcess: number;
-	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+	private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 	private notifier: DiscordNotifier;
-	private previouslyAllReady: boolean = false;
+	private previouslyAllReady = false;
 
 	constructor(shardCount: number, shardsPerProcess: number = 5, notifier: DiscordNotifier) {
 		this.shardCount = shardCount;
@@ -38,46 +69,54 @@ export class ShardRegistry {
 	}
 
 	/**
-	 * Allocate the next available batch of shard IDs
+	 * Bind a process to shards, either fresh (no claim) or by reclaiming shards
+	 * a re-identifying client reports. Reclaiming a shard held by a different
+	 * live process is a hard conflict, never a silent takeover.
 	 */
-	public allocateShardIds(): number[] | null {
-		const available: number[] = [];
+	public identify(wsId: string, ws: WebSocket, claim?: { shardIds: number[]; hostname?: string }): IdentifyResult {
+		const existing = this.processes.get(wsId);
 
-		for (let i = 0; i < this.shardCount; i++) {
-			if (!this.allocatedShards.has(i)) {
-				available.push(i);
-				if (available.length >= this.shardsPerProcess) break;
+		if (existing) {
+			if (!claim || claim.shardIds.length === 0) {
+				return { kind: 'bound', shardIds: this.shardIdsOf(wsId) };
 			}
+			const result = this.claimBatch(wsId, claim.shardIds);
+			if ('conflict' in result) {
+				return { kind: 'conflict', shardIds: [result.conflict] };
+			}
+			this.releaseOwnedShards(wsId);
+			for (const id of claim.shardIds) this.ownership.set(id, wsId);
+			existing.phase = 'connecting';
+			existing.hostname = claim.hostname ?? existing.hostname;
+			existing.wsConnection = ws;
+			return { kind: 'bound', shardIds: result.shardIds };
 		}
 
-		if (available.length === 0) {
-			logger.warn('No available shard IDs to allocate');
-			return null;
+		if (claim && claim.shardIds.length > 0) {
+			const result = this.claimBatch(wsId, claim.shardIds);
+			if ('conflict' in result) {
+				return { kind: 'conflict', shardIds: [result.conflict] };
+			}
+			this.processes.set(wsId, {
+				phase: 'connecting',
+				hostname: claim.hostname,
+				guilds: 0,
+				players: 0,
+				memoryUsage: 0,
+				uptime: 0,
+				lastHeartbeat: Date.now(),
+				connectedAt: Date.now(),
+				wsConnection: ws
+			});
+			return { kind: 'bound', shardIds: result.shardIds };
 		}
 
-		for (const id of available) {
-			this.allocatedShards.add(id);
-		}
+		const allocated = this.allocateBatch(wsId);
+		if (allocated === null) return { kind: 'no-shards' };
 
-		logger.info(`Allocated shard IDs: [${available.join(', ')}]`);
-		return available;
-	}
-
-	/**
-	 * Force-allocate a specific shard ID (for re-identification)
-	 */
-	public forceAllocate(shardId: number): void {
-		this.allocatedShards.add(shardId);
-	}
-
-	/**
-	 * Register a new process connection
-	 */
-	public register(wsId: string, shardIds: number[], ws: WebSocket, hostname?: string): void {
 		this.processes.set(wsId, {
-			shardIds,
-			status: 'connecting',
-			hostname,
+			phase: 'connecting',
+			hostname: claim?.hostname,
 			guilds: 0,
 			players: 0,
 			memoryUsage: 0,
@@ -87,38 +126,26 @@ export class ShardRegistry {
 			wsConnection: ws
 		});
 
-		logger.info(`Registered process ${wsId}${hostname ? ` (${hostname})` : ''} with shards [${shardIds.join(', ')}]`);
+		return { kind: 'bound', shardIds: allocated };
 	}
 
-	/**
-	 * Get process info by wsId
-	 */
-	public getProcess(wsId: string): ShardProcessInfo | undefined {
-		return this.processes.get(wsId);
-	}
-
-	/**
-	 * Release shards when a process disconnects
-	 */
-	public release(wsId: string): number[] | undefined {
+	/** Remove the process. Ownership is released by absence, so a shard can never be freed for the wrong holder. */
+	public detach(wsId: string): Detached | undefined {
 		const process = this.processes.get(wsId);
 		if (!process) return undefined;
 
-		for (const id of process.shardIds) {
-			this.allocatedShards.delete(id);
-		}
-
-		const released = process.shardIds;
+		const shardIds = this.shardIdsOf(wsId);
+		this.releaseOwnedShards(wsId);
 		this.processes.delete(wsId);
-
-		logger.info(`Released process ${wsId}, freed shards [${released.join(', ')}]`);
 		this.checkAllShardsReady();
-		return released;
+
+		return { shardIds, hostname: process.hostname };
 	}
 
-	/**
-	 * Update heartbeat timestamp
-	 */
+	public getProcess(wsId: string): ProcessView | undefined {
+		return this.processes.has(wsId) ? this.viewOf(wsId) : undefined;
+	}
+
 	public heartbeat(wsId: string): void {
 		const process = this.processes.get(wsId);
 		if (process) {
@@ -126,37 +153,19 @@ export class ShardRegistry {
 		}
 	}
 
-	/**
-	 * Update process status
-	 */
 	public updateStatus(wsId: string, status: ShardStatus): void {
-		const process = this.processes.get(wsId);
-		if (process) {
-			process.status = status;
-			logger.info(`Process ${wsId} status: ${status}`);
+		if (status === 'disconnected') {
+			this.detach(wsId);
+			return;
+		}
+		if (status === 'ready' || status === 'errored') {
+			const process = this.processes.get(wsId);
+			if (!process) return;
+			process.phase = status;
 			this.checkAllShardsReady();
 		}
 	}
 
-	private checkAllShardsReady(): void {
-		let readyShards = 0;
-		for (const process of this.processes.values()) {
-			if (process.status === 'ready') {
-				readyShards += process.shardIds.length;
-			}
-		}
-
-		const isAllReady = readyShards === this.shardCount;
-		if (isAllReady && !this.previouslyAllReady) {
-			logger.info(`All ${this.shardCount} shards are now ready!`);
-			this.notifier.allShardsReady(this.shardCount).catch((err) => logger.error('Failed to notify all shards ready', err));
-		}
-		this.previouslyAllReady = isAllReady;
-	}
-
-	/**
-	 * Update process stats
-	 */
 	public updateStats(wsId: string, stats: ShardStatsPayload): void {
 		const process = this.processes.get(wsId);
 		if (process) {
@@ -167,39 +176,19 @@ export class ShardRegistry {
 		}
 	}
 
-	/**
-	 * Get all process infos (without ws connections)
-	 */
-	public getAllProcesses(): Array<Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }> {
-		return Array.from(this.processes.entries()).map(([wsId, info]) => {
-			const { wsConnection, ...rest } = info;
-			return { wsId, ...rest };
-		});
+	public getAllProcesses(): ProcessView[] {
+		return Array.from(this.processes.keys()).map((wsId) => this.viewOf(wsId));
 	}
 
-	/**
-	 * Get a specific shard's process info
-	 */
-	public getProcessByShardId(shardId: number): (Omit<ShardProcessInfo, 'wsConnection'> & { wsId: string }) | null {
-		for (const [wsId, info] of this.processes.entries()) {
-			if (info.shardIds.includes(shardId)) {
-				const { wsConnection, ...rest } = info;
-				return { wsId, ...rest };
-			}
-		}
-		return null;
+	public getProcessByShardId(shardId: number): ProcessView | null {
+		const owner = this.ownership.get(shardId);
+		return owner === undefined ? null : this.viewOf(owner);
 	}
 
-	/**
-	 * Get all WebSocket connections for broadcasting
-	 */
 	public getAllConnections(): WebSocket[] {
 		return Array.from(this.processes.values()).map((p) => p.wsConnection);
 	}
 
-	/**
-	 * Send a message to all connected processes
-	 */
 	public broadcast<T>(message: WsMessage<T>): void {
 		const payload = JSON.stringify(message);
 		for (const process of this.processes.values()) {
@@ -211,9 +200,6 @@ export class ShardRegistry {
 		}
 	}
 
-	/**
-	 * Get aggregate stats
-	 */
 	public getAggregateStats() {
 		let totalGuilds = 0;
 		let totalPlayers = 0;
@@ -229,7 +215,7 @@ export class ShardRegistry {
 			shardCount: this.shardCount,
 			shardsPerProcess: this.shardsPerProcess,
 			processCount: this.processes.size,
-			allocatedShards: this.allocatedShards.size,
+			allocatedShards: this.ownership.size,
 			totalGuilds,
 			totalPlayers,
 			totalMemoryMB: Math.round(totalMemory / 1024 / 1024)
@@ -244,31 +230,88 @@ export class ShardRegistry {
 		return this.shardsPerProcess;
 	}
 
-	/**
-	 * Monitor heartbeats and mark dead processes
-	 */
+	private allocateBatch(wsId: string): number[] | null {
+		const batch: number[] = [];
+		for (let id = 0; id < this.shardCount && batch.length < this.shardsPerProcess; id++) {
+			if (!this.ownership.has(id)) {
+				this.ownership.set(id, wsId);
+				batch.push(id);
+			}
+		}
+
+		if (batch.length === 0) {
+			logger.warn('No available shard IDs to allocate');
+			return null;
+		}
+
+		logger.info(`Allocated shard IDs: [${batch.join(', ')}]`);
+		return batch;
+	}
+
+	private claimBatch(wsId: string, requested: number[]): { shardIds: number[] } | { conflict: number } {
+		for (const id of requested) {
+			if (id < 0 || id >= this.shardCount) return { conflict: id };
+			const owner = this.ownership.get(id);
+			if (owner !== undefined && owner !== wsId) return { conflict: id };
+		}
+
+		for (const id of requested) this.ownership.set(id, wsId);
+		return { shardIds: Array.from(new Set(requested)) };
+	}
+
+	private releaseOwnedShards(wsId: string): void {
+		for (const [shardId, owner] of this.ownership) {
+			if (owner === wsId) this.ownership.delete(shardId);
+		}
+	}
+
+	private shardIdsOf(wsId: string): number[] {
+		const ids: number[] = [];
+		for (const [shardId, owner] of this.ownership) {
+			if (owner === wsId) ids.push(shardId);
+		}
+		return ids;
+	}
+
+	private viewOf(wsId: string): ProcessView {
+		const process = this.processes.get(wsId)!;
+		const { wsConnection, phase, ...rest } = process;
+		return { wsId, shardIds: this.shardIdsOf(wsId), status: phase, ...rest };
+	}
+
+	private checkAllShardsReady(): void {
+		const ready = new Set<number>();
+		for (const [shardId, owner] of this.ownership) {
+			if (this.processes.get(owner)?.phase === 'ready') ready.add(shardId);
+		}
+
+		const isAllReady = ready.size === this.shardCount;
+		if (isAllReady && !this.previouslyAllReady) {
+			logger.info(`All ${this.shardCount} shards are now ready!`);
+			this.notifier.allShardsReady(this.shardCount).catch((err) => logger.error('Failed to notify all shards ready', err));
+		}
+		this.previouslyAllReady = isAllReady;
+	}
+
 	private startHeartbeatMonitor(): void {
 		this.heartbeatTimer = setInterval(() => {
 			const now = Date.now();
 			for (const [wsId, process] of this.processes.entries()) {
 				if (now - process.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
-					logger.warn(`Process ${wsId} heartbeat timeout (shards: [${process.shardIds.join(', ')}])`);
-					this.notifier.shardHeartbeatTimeout(wsId, process.shardIds);
-					process.status = 'disconnected';
+					logger.warn(`Process ${wsId} heartbeat timeout (shards: [${this.shardIdsOf(wsId).join(', ')}])`);
+					this.notifier.shardHeartbeatTimeout(wsId, this.shardIdsOf(wsId));
 					try {
 						process.wsConnection.close();
 					} catch {
 						// ignore
 					}
-					this.release(wsId);
+					this.detach(wsId);
 				}
 			}
 		}, HEARTBEAT_CHECK_INTERVAL_MS);
 	}
 
 	public destroy(): void {
-		if (this.heartbeatTimer) {
-			clearInterval(this.heartbeatTimer);
-		}
+		clearInterval(this.heartbeatTimer);
 	}
 }
