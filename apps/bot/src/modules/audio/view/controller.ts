@@ -227,7 +227,7 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 function footerRequesterMention(track: Track): string | null {
 	const requester = track.requester;
 	const id = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
-	if (id === RELATED_TRACK_REQUESTER_ID) return `${emoji('sparkle')} 추천곡`;
+	if (id === RELATED_TRACK_REQUESTER_ID) return `${emoji('sparkle')} 추천 곡`;
 	if (typeof id !== 'string' || !id || id === TTS_CLIP_REQUESTER_ID) return null;
 	return `${emoji('user')} <@${id}>`;
 }

@@ -205,10 +205,10 @@ describe('controllerView 라벨·타이틀', () => {
 		expect(artistLine).toBeDefined();
 		expect(artistLine).not.toContain('추천곡');
 
-		// footer에 추천곡 인디케이터가 붙는다
-		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('추천곡'));
+		// footer에 추천 곡 인디케이터가 붙는다
+		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('추천 곡'));
 		expect(footer).toBeDefined();
-		expect(footer?.trimEnd().endsWith('sparkle 추천곡')).toBe(true);
+		expect(footer?.trimEnd().endsWith('sparkle 추천 곡')).toBe(true);
 	});
 
 	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
