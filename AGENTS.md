@@ -8,6 +8,8 @@ Every code change must start on a feature/fix/refactor branch created from `beta
 
 ## PR rules
 
+PR은 **항상 `beta`를 base로 열어요.** `main`은 배포 스냅샷이고, 모든 변경은 `beta`를 거쳐 머지돼요. `gh pr create`의 base를 `beta`로 지정하고, 이미 `main`으로 연 PR은 `gh pr edit <N> --base beta`로 옮겨요. base를 확인하지 않고 main으로 열지 마세요.
+
 PR 제목·본문 작성 규칙은 [`docs/pr-message-rule.md`](docs/pr-message-rule.md)를 따르세요. 본문에는 항상 실행한 검증과 미검증 항목을 남기고, UI 변경에는 스크린샷을 포함해요.
 
 ## Skills
