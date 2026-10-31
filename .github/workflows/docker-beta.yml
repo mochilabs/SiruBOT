@@ -82,21 +82,22 @@ jobs:
 
           BASE="${{ github.event.before }}"
           HEAD="${{ github.sha }}"
-          if [[ "$BASE" == 0000000000000000000000000000000000000000* ]]; then
-            echo "First push to branch, building all apps"
-            echo "bot=true" >> "$GITHUB_OUTPUT"
-            echo "dashboard=true" >> "$GITHUB_OUTPUT"
-            echo "shardmanager=true" >> "$GITHUB_OUTPUT"
-            echo "data-api=true" >> "$GITHUB_OUTPUT"
-            echo "storage=true" >> "$GITHUB_OUTPUT"
-            echo "notifier=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          if [[ "$BASE" == "$ZERO_SHA" ]] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "Previous commit unavailable, building all apps"
+            FILES=""
+            FORCE_ALL=true
+          else
+            # Compare against the merge base so force-pushes and multi-commit updates
+            # don't lose changes present in the new beta history.
+            MERGE_BASE="$(git merge-base "$BASE" "$HEAD")"
+            FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD")"
+            FORCE_ALL=false
           fi
-          FILES=$(git diff --name-only "$BASE" "$HEAD")
           echo "Changed files:"
           echo "$FILES"
           check() {
-            echo "$FILES" | grep -qE "$1"
+            [[ "$FORCE_ALL" == true ]] || echo "$FILES" | grep -qE "$1"
           }
           SHARED='packages/|scripts/|Dockerfile|package\.json|yarn\.lock|turbo\.json'
           if check "^(apps/bot/|$SHARED)"; then BOT=true; else BOT=false; fi
