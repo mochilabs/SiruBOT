@@ -9,15 +9,15 @@ type QueueViewProps = {
 	authorId: string;
 };
 
-const QUEUE_PAGE_SIZE = 10;
+export const queuePageSize = 10;
 
 export const queueCustomIdPrefix = 'queue:page:';
 
 export function queueList({ player, page, totalPages, authorId }: QueueViewProps) {
 	const containerComponent = createContainer();
 	const tracks = player.queue.tracks;
-	const start = (page - 1) * QUEUE_PAGE_SIZE;
-	const pageTracks = tracks.slice(start, start + QUEUE_PAGE_SIZE);
+	const start = (page - 1) * queuePageSize;
+	const pageTracks = tracks.slice(start, start + queuePageSize);
 
 	const lines = pageTracks.map((track, index) => {
 		return `\`#${start + index + 1}\` ${formatTrack(track as Track, {

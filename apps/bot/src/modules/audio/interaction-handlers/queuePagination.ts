@@ -1,8 +1,6 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { type ButtonInteraction, MessageFlags } from 'discord.js';
-import { queueCustomIdPrefix, queueList, queueEmpty } from '../view/queue.ts';
-
-const QUEUE_PAGE_SIZE = 10;
+import { queueCustomIdPrefix, queueList, queueEmpty, queuePageSize } from '../view/queue.ts';
 
 export default class QueuePaginationHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -41,7 +39,7 @@ export default class QueuePaginationHandler extends InteractionHandler {
 			return;
 		}
 
-		const totalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_SIZE);
+		const totalPages = Math.ceil(player.queue.tracks.length / queuePageSize);
 		const safePage = Math.max(1, Math.min(page, totalPages));
 
 		await interaction.update({

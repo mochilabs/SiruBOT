@@ -2,8 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import * as view from '../view/queue.ts';
-
-const QUEUE_PAGE_SIZE = 10;
+import { queuePageSize } from '../view/queue.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -128,7 +127,7 @@ export class QueueCommand extends Command {
 			return;
 		}
 
-		const totalPages = Math.ceil(player.queue.tracks.length / QUEUE_PAGE_SIZE);
+		const totalPages = Math.ceil(player.queue.tracks.length / queuePageSize);
 		const page = Math.min(interaction.options.getInteger('page') ?? 1, totalPages);
 
 		await interaction.reply({
