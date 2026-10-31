@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo,useState } from "react";
+import { memo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Image from "next/image";
 import { Track as TrackType } from "@sirubot/prisma";

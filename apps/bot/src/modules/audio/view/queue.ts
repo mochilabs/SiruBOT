@@ -84,5 +84,3 @@ export function queueMoved({ track, from, to }: { track: Track; from: number; to
 		new TextDisplayBuilder().setContent(`↕️ **${track.info.title}**을(를) \`#${from}\` → \`#${to}\`(으)로 이동했어요.`)
 	);
 }
-
-export const QUEUE_PAGE_SIZE_EXPORT = QUEUE_PAGE_SIZE;
