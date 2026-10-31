@@ -88,10 +88,7 @@ jobs:
             FILES=""
             FORCE_ALL=true
           else
-            # Compare against the merge base so force-pushes and multi-commit updates
-            # don't lose changes present in the new beta history.
-            MERGE_BASE="$(git merge-base "$BASE" "$HEAD")"
-            FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD")"
+            FILES="$(git diff --name-only "$BASE" "$HEAD")"
             FORCE_ALL=false
           fi
           echo "Changed files:"
