@@ -17,7 +17,21 @@ on:
       - 'yarn.lock'
       - 'turbo.json'
       - '.github/workflows/docker-beta.yml'
-
+  workflow_dispatch:
+    inputs:
+      app:
+        description: '빌드할 앱 선택 (all 선택 시 전체 빌드)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - bot
+          - dashboard
+          - shardmanager
+          - data-api
+          - storage
+          - notifier
 env:
   REGISTRY: ghcr.io
 
@@ -46,6 +60,26 @@ jobs:
       - name: Detect changed apps
         id: filter
         run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TARGET="${{ inputs.app }}"
+            echo "Manual trigger for target: $TARGET"
+            set_app() {
+              local name="$1"
+              if [[ "$TARGET" == "all" || "$TARGET" == "$name" ]]; then
+                echo "$name=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "$name=false" >> "$GITHUB_OUTPUT"
+              fi
+            }
+            set_app bot
+            set_app dashboard
+            set_app shardmanager
+            set_app data-api
+            set_app storage
+            set_app notifier
+            exit 0
+          fi
+
           BASE="${{ github.event.before }}"
           HEAD="${{ github.sha }}"
           if [[ "$BASE" == 0000000000000000000000000000000000000000* ]]; then
