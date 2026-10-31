@@ -36,7 +36,7 @@ export function trackAdded({ track, queued, position, totalDuration }: playViewP
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	const requesterLabel =
 		requesterId === RELATED_TRACK_REQUESTER_ID
-			? `${emoji('sparkle')} 추천곡`
+			? `${emoji('sparkle')} 추천 곡`
 			: requesterId === TTS_CLIP_REQUESTER_ID
 				? '채팅 TTS'
 				: typeof requesterId === 'string' && requesterId

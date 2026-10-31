@@ -204,6 +204,7 @@ describe('controllerView 라벨·타이틀', () => {
 		const artistLine = texts.find((text) => text.includes('artist 아티스트'));
 		expect(artistLine).toBeDefined();
 		expect(artistLine).not.toContain('추천곡');
+		expect(artistLine).not.toContain('추천 곡');
 
 		// footer에 추천 곡 인디케이터가 붙는다
 		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('추천 곡'));
