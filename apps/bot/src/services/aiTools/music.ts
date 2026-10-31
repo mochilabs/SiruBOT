@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import type { RepeatMode, SearchPlatform } from 'lavalink-client';
+import type { RepeatMode, SearchPlatform, Track, UnresolvedTrack } from 'lavalink-client';
 import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { checkDJOrAlone } from '../../modules/audio/utils/permissionCheck.ts';
@@ -12,6 +12,8 @@ import {
 } from '../../modules/audio/utils/filterPresets.ts';
 import { parseTimeToMs } from '../../modules/audio/utils/timeParse.ts';
 import type { CustomPlayer } from '../../modules/audio/lavalink/player/customPlayer.ts';
+import { nowPlayingTrack } from '../../modules/audio/lavalink/player/nowPlaying.ts';
+import { isSameTrack } from '../../modules/audio/lavalink/handlers/playbackWatchdog.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { searchLyrics } from '../dataApiClient.ts';
 
@@ -21,7 +23,7 @@ const PLATFORM_MAP: Record<string, SearchPlatform> = {
 	soundcloud: 'scsearch'
 };
 
-type EnqueueableTrack = Parameters<typeof container.audioService.enqueueTrack>[1];
+type EnqueueableTrack = Track | UnresolvedTrack;
 
 function requireGuild(ctx: AiToolContext): string {
 	if (!ctx.guildId) throw new Error('서버 채널에서만 음악을 사용할 수 있어요.');
@@ -48,8 +50,14 @@ function requirePlayer(guildId: string) {
 	return player;
 }
 
-function trackInfo(track: { info: { title?: string; author?: string; duration?: number } }) {
-	return { title: track.info.title ?? '(제목 미상)', author: track.info.author ?? '', length_ms: track.info.duration ?? 0 };
+function trackInfo(track: { info: { title?: string; author?: string; duration?: number; uri?: string; artworkUrl?: string | null } }) {
+	return {
+		title: track.info.title ?? '(제목 미상)',
+		author: track.info.author ?? '',
+		length_ms: track.info.duration ?? 0,
+		url: track.info.uri ?? '',
+		thumbnail: track.info.artworkUrl ?? ''
+	};
 }
 
 const musicPlayTool: AiTool = {
@@ -93,11 +101,19 @@ const musicPlayTool: AiTool = {
 		}
 		await container.audioService.ensurePlayback(player);
 
-		const current = player.queue.current;
+		// wasIdle만으로는 판별할 수 없다 — 추천곡 크로스페이드 중 유저 요청이면 enqueueTrack이
+		// wasIdle:false를 돌려주면서도 곡을 맨 앞으로 잘라 즉시 재생(PLAY_NOW)하므로, 확정된
+		// nowPlaying과 신청 곡을 직접 비교해 "지금 재생"인지 판별한다.
+		const played = tracks[0]!;
+		const nowPlaying = nowPlayingTrack(player as CustomPlayer);
+		const isPlayingNow = nowPlaying !== null && isSameTrack(nowPlaying, played);
+		const queueSize = player.queue.tracks.length;
 		return JSON.stringify({
 			status: 'ok',
-			playing: current ? trackInfo(current) : { title: query, author: '', length_ms: 0 },
-			queued: Math.max(tracks.length - 1, 0)
+			action: isPlayingNow ? 'playing' : 'queued',
+			track: trackInfo(played),
+			queue_size: queueSize,
+			queue_position: isPlayingNow ? null : Math.max(1, queueSize - limit + 1)
 		});
 	}
 };
@@ -131,11 +147,11 @@ const musicSkipTool: AiTool = {
 		await requireDjOrAlone(ctx);
 		const guildId = requireGuild(ctx);
 		const player = requirePlayer(guildId);
-		if (!player.queue.current) throw new Error('건너뛸 곡이 없어요.');
+		if (!nowPlayingTrack(player)) throw new Error('건너뛸 곡이 없어요.');
 		// /스킵 커맨드와 동일한 경로 — 스킵 전 mixer 예열 슬롯을 비워야
 		// stale 슬롯 관망(trackEnd consumePreloaded)으로 무음/공백이 생기지 않는다.
 		await container.mixerService.skip(player);
-		const next = player.queue.current;
+		const next = nowPlayingTrack(player);
 		return JSON.stringify({ status: 'ok', now_playing: next ? trackInfo(next) : null });
 	}
 };
@@ -165,7 +181,7 @@ const musicQueueTool: AiTool = {
 		const guildId = requireGuild(ctx);
 		const player = container.audio.getPlayer(guildId);
 		if (!player) throw new Error('현재 재생 중인 곡이 없어요.');
-		const current = player.queue.current;
+		const current = nowPlayingTrack(player);
 		const upcoming = player.queue.tracks.slice(0, 15);
 		return JSON.stringify({
 			playing: current ? trackInfo(current) : null,
