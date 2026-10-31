@@ -49,12 +49,86 @@ packages/
 - Localize with `ko` (primary) and `en-US` (fallback)
 - Always `deferReply()` before async operations
 - Throw `UserError` for user-facing errors
+- Music commands: `apps/bot/src/modules/audio/commands/`
+- General commands: `apps/bot/src/modules/general/commands/`
+- Dev commands: `apps/bot/src/modules/general/commands/development/`
+
+Command template:
+
+```ts
+import { ApplyOptions } from '@sapphire/decorators';
+import { Command, UserError } from '@sapphire/framework';
+import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
+
+@ApplyOptions<Command.Options>({
+	enabled: true,
+	name: 'commandname',
+	description: 'Korean description.',
+	fullCategory: ['모듈명'] // e.g. ['음악'], ['일반'], ['개발']
+	// preconditions: ['PreconditionName'] // if needed
+})
+export class CommandNameCommand extends Command {
+	public override registerApplicationCommands(registry: Command.Registry) {
+		registry.registerChatInputCommand((builder) => {
+			builder
+				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+				.setName('commandname')
+				.setNameLocalizations({ ko: '한글명' })
+				.setDescription(this.description)
+				.setDescriptionLocalizations({ ko: '한글 설명.' });
+		});
+	}
+
+	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
+		if (!interaction.inCachedGuild()) {
+			throw new UserError({
+				identifier: 'commandname_not_in_guild',
+				message: '❌ 길드 안에서만 사용할 수 있어요.',
+				context: { ephemeral: true }
+			});
+		}
+		await interaction.deferReply();
+		await interaction.editReply({ content: 'Done!' });
+	}
+}
+```
+
+Command naming: file `commandName.ts` (camelCase), class `CommandNameCommand` (PascalCase + `Command`). Autocomplete via `autocompleteRun` override, max 25 choices, truncate names to 100 chars.
 
 ### Preconditions
 - File: `apps/bot/src/modules/<module>/preconditions/<Name>.ts`
 - Extend `AllFlowsPrecondition`
 - Implement `chatInputRun`, `contextMenuRun`, `messageRun`
 - Return `this.ok()` or `this.error({ message, context: { ephemeral } })`
+- Audio preconditions: `apps/bot/src/modules/audio/preconditions/`
+- General preconditions: `apps/bot/src/modules/general/preconditions/`
+
+Precondition template:
+
+```ts
+import { AllFlowsPrecondition } from '@sapphire/framework';
+import type { CommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
+
+export class PreconditionName extends AllFlowsPrecondition {
+	#message = '🚫 Korean error message shown to user.';
+	#ephemeral = true; // whether error is ephemeral
+
+	public override chatInputRun(interaction: CommandInteraction) {
+		return condition ? this.ok() : this.createError();
+	}
+	public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
+		return condition ? this.ok() : this.createError();
+	}
+	public override messageRun(message: Message) {
+		return condition ? this.ok() : this.createError();
+	}
+	private createError() {
+		return this.error({ message: this.#message, context: { ephemeral: this.#ephemeral } });
+	}
+}
+```
+
+Existing preconditions — Audio: `TextChannelAllowed`, `NodeAvailable`, `VoiceConnected`, `SameVoiceChannel`, `MemberListenable`, `ClientVoiceConnectable`, `ClientVoiceSpeakable`, `DJOrAlone`, `SongPlaying`. General: `OwnerOnly` (OWNERS env array), `ManageGuild`. Attach via `preconditions: [...]` in `@ApplyOptions<Command.Options>`; they run in order, first failure blocks the command.
 
 ### Listeners
 - File: `apps/bot/src/modules/<module>/listeners/<name>.ts`
