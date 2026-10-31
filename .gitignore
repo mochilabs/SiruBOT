@@ -41,3 +41,7 @@ dist/
 
 # prisma generated files
 packages/prisma/src/client/
+
+# local agent dirs (skills, index) — not for the repo
+.pi/
+.codebase-index/
