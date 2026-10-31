@@ -195,6 +195,22 @@ describe('controllerView 라벨·타이틀', () => {
 		expect(footer).toContain('user');
 	});
 
+	it('추천곡 인디케이터는 아티스트 줄이 아닌 footer에 표시한다', () => {
+		const relatedTrack = { ...TRACK, requester: { id: 'related_track' } };
+		mocks.nowPlaying.mockReturnValue(relatedTrack);
+		const texts = collectTexts(controllerJson({ player: player({ queue: { current: relatedTrack, previous: [], tracks: [] } }) }));
+
+		// 아티스트 줄에는 라벨이 없다
+		const artistLine = texts.find((text) => text.includes('artist 아티스트'));
+		expect(artistLine).toBeDefined();
+		expect(artistLine).not.toContain('추천곡');
+
+		// footer에 추천곡 인디케이터가 붙는다
+		const footer = texts.find((text) => text.startsWith('-# ') && text.includes('추천곡'));
+		expect(footer).toBeDefined();
+		expect(footer?.trimEnd().endsWith('sparkle 추천곡')).toBe(true);
+	});
+
 	it('짧은 URL이면 타이틀에 원본 링크를 건다', () => {
 		const texts = collectTexts(controllerJson());
 

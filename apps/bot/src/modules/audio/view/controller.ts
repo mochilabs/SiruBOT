@@ -167,10 +167,10 @@ export function controllerView({ player, volume, nowPlayingCardUrl }: controller
 			containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(viewQueueButton));
 		}
 		const footerSegments = buildFooterSegments(player, volume);
-		// 신청자는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다 — 추천곡/채팅 TTS는 아티스트 줄 라벨을 유지한다.
+		// 신청자·추천곡 인디케이터는 footer 맨 마지막(볼륨 바로 뒤)에 아이콘과 함께 표시한다.
 		const requesterMention = current ? footerRequesterMention(current) : null;
 		if (requesterMention) {
-			footerSegments.push(`${emoji('user')} ${requesterMention}`);
+			footerSegments.push(requesterMention);
 		}
 		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footerSegments.join(' ')}`));
 	}
@@ -201,10 +201,9 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	const trackTitle = removeEmojis(track.info.title);
 	const hasValidUrl = track.info.uri && track.info.uri.length <= MAX_TRACK_URL_LENGTH;
 	contents.push(`### **${hasValidUrl ? `[${trackTitle}](${track.info.uri})` : trackTitle}**`);
-	// 신청자 멘션은 footer로 옮겼고, 여기서는 추천곡/채팅 TTS 라벨만 남긴다.
+	// 신청자 멘션·추천곡 인디케이터는 footer로 옮겼고, 여기서는 채팅 TTS 라벨만 남긴다.
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
-	const requesterLabel =
-		requesterId === RELATED_TRACK_REQUESTER_ID ? `${emoji('sparkle')} 추천곡` : requesterId === TTS_CLIP_REQUESTER_ID ? '채팅 TTS' : null;
+	const requesterLabel = requesterId === TTS_CLIP_REQUESTER_ID ? '채팅 TTS' : null;
 	contents.push(requesterLabel ? `-# ${emoji('artist')} ${track.info.author} ${requesterLabel}` : `-# ${emoji('artist')} ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
@@ -224,12 +223,13 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	return contents;
 }
 
-/** footer용 신청자 멘션 — 사람이 신청한 곡만 멘션, 추천곡/채팅 TTS 센티널은 null. */
+/** footer용 신청자·추천곡 인디케이터 — 사람이 신청한 곡은 멘션, 추천곡은 sparkle 라벨, 채팅 TTS 센티널은 null. */
 function footerRequesterMention(track: Track): string | null {
 	const requester = track.requester;
 	const id = requester && typeof requester === 'object' ? (requester as Record<string, unknown>).id : undefined;
-	if (typeof id !== 'string' || !id || id === RELATED_TRACK_REQUESTER_ID || id === TTS_CLIP_REQUESTER_ID) return null;
-	return `<@${id}>`;
+	if (id === RELATED_TRACK_REQUESTER_ID) return `${emoji('sparkle')} 추천곡`;
+	if (typeof id !== 'string' || !id || id === TTS_CLIP_REQUESTER_ID) return null;
+	return `${emoji('user')} <@${id}>`;
 }
 
 /** Footer segments: 음성 서버(node), 볼륨. */
