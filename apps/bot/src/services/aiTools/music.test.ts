@@ -1,14 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AiToolContext } from './types.ts';
 
-const { getPlayer, checkDJOrAlone, reapplyMixerFilter } = vi.hoisted(() => ({
-	getPlayer: vi.fn(),
-	checkDJOrAlone: vi.fn(),
-	reapplyMixerFilter: vi.fn()
-}));
+const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOrCreatePlayer, connectPlayer, ensurePlayback, search } = vi.hoisted(
+	() => ({
+		getPlayer: vi.fn(),
+		checkDJOrAlone: vi.fn(),
+		reapplyMixerFilter: vi.fn(),
+		enqueueTrack: vi.fn(),
+		skip: vi.fn(),
+		getOrCreatePlayer: vi.fn(),
+		connectPlayer: vi.fn(),
+		ensurePlayback: vi.fn(),
+		search: vi.fn()
+	})
+);
 
 vi.mock('@sapphire/framework', () => ({
-	container: { audio: { getPlayer }, mixerService: { reapplyMixerFilter }, guildService: {} }
+	container: {
+		audio: { getPlayer },
+		mixerService: { reapplyMixerFilter, skip },
+		guildService: {},
+		audioService: { enqueueTrack, getOrCreatePlayer, connectPlayer, ensurePlayback, search }
+	}
 }));
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
 vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: vi.fn(), removeStaleRelatedTracks: vi.fn() }));
@@ -118,6 +131,79 @@ describe('music_filter ai tool (프리셋 적용 계약)', () => {
 
 		checkDJOrAlone.mockResolvedValue(false);
 		await expect(filterTool.execute({ preset: '8d' }, ctx)).rejects.toThrow('DJ 역할을 가지고 있거나');
+	});
+});
+
+describe('music_play ai tool (재생/대기열 신호 계약)', () => {
+	const playTool = tool('music_play');
+
+	const requested = {
+		info: {
+			title: '제목',
+			author: '가수',
+			duration: 180_000,
+			uri: 'https://youtu.be/x',
+			artworkUrl: 'https://img/x.jpg',
+			identifier: 'req-1'
+		}
+	};
+
+	// nowPlayingTrack()이 읽는 단일 소스 — confirmedNowPlaying 우선, 없으면 queue.current 폴백
+	function makePlayer(overrides: Record<string, unknown> = {}) {
+		return {
+			guildId: 'g1',
+			queue: { tracks: [], current: null },
+			transitionState: { confirmedNowPlaying: null },
+			...overrides
+		} as Record<string, any>;
+	}
+
+	beforeEach(() => {
+		getOrCreatePlayer.mockResolvedValue(makePlayer());
+		connectPlayer.mockResolvedValue(undefined);
+		ensurePlayback.mockResolvedValue(undefined);
+		search.mockResolvedValue({ loadType: 'track', tracks: [requested] });
+	});
+
+	it('확정된 nowPlaying이 신청 곡이면 action: playing과 전체 메타데이터를 돌려준다', async () => {
+		enqueueTrack.mockResolvedValue({ wasIdle: true });
+		getOrCreatePlayer.mockResolvedValue(makePlayer({ transitionState: { confirmedNowPlaying: requested } }));
+
+		const result = JSON.parse(await playTool.execute({ query: '곡' }, ctx));
+
+		expect(result).toEqual({
+			status: 'ok',
+			action: 'playing',
+			track: { title: '제목', author: '가수', length_ms: 180_000, url: 'https://youtu.be/x', thumbnail: 'https://img/x.jpg' },
+			queue_size: 0,
+			queue_position: null
+		});
+	});
+
+	it('다른 곡이 재생 중이고 신청 곡이 대기열에만 있으면 action: queued와 위치를 돌려준다', async () => {
+		enqueueTrack.mockResolvedValue({ wasIdle: false });
+		getOrCreatePlayer.mockResolvedValue(
+			makePlayer({
+				queue: { tracks: [{ info: { identifier: 'other-2' } }, requested] },
+				transitionState: { confirmedNowPlaying: { info: { identifier: 'other-1' } } }
+			})
+		);
+
+		const result = JSON.parse(await playTool.execute({ query: '곡' }, ctx));
+
+		expect(result.action).toBe('queued');
+		expect(result.queue_position).toBe(2);
+		expect(result.track.title).toBe('제목');
+	});
+
+	it('추천곡 크로스페이드를 끊고 즉시 재생하는 경우에도(wasIdle:false) action: playing을 돌려준다', async () => {
+		enqueueTrack.mockResolvedValue({ wasIdle: false });
+		getOrCreatePlayer.mockResolvedValue(makePlayer({ transitionState: { confirmedNowPlaying: requested } }));
+
+		const result = JSON.parse(await playTool.execute({ query: '곡' }, ctx));
+
+		expect(result.action).toBe('playing');
+		expect(result.queue_position).toBeNull();
 	});
 });
 
