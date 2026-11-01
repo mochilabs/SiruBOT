@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessageFlags, SlashCommandBuilder, SlashCommandSubcommandGroupBuilder } from 'discord.js';
 import { MixerCommand, withMixerSubcommands } from './mixer.ts';
+import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 const mocks = vi.hoisted(() => ({
-	guildService: { hasDJRole: vi.fn(), setAutomix: vi.fn(), setTransitionMode: vi.fn() },
-	mixerService: { setAutomix: vi.fn() },
+	guildService: { hasDJRole: vi.fn(), setAutomix: vi.fn(), setTransitionMode: vi.fn(), setGapless: vi.fn() },
+	mixerService: { setAutomix: vi.fn(), setSilence: vi.fn(), clearNext: vi.fn(), preloadUpcoming: vi.fn() },
 	audio: { getPlayer: vi.fn() }
 }));
 vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => () => undefined }));
@@ -123,5 +124,35 @@ describe('Mixer transition command', () => {
 			identifier: 'mixer_automix_failed',
 			message: expect.stringContaining('설정은 저장했지만')
 		});
+	});
+});
+
+describe('Mixer gapless command', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.guildService.hasDJRole.mockResolvedValue(true);
+		mocks.mixerService.setSilence.mockResolvedValue({});
+		mocks.mixerService.preloadUpcoming.mockResolvedValue(undefined);
+		mocks.mixerService.clearNext.mockResolvedValue(undefined);
+	});
+
+	it('syncs silence when toggling gapless with an active player', async () => {
+		const player = {} as unknown as CustomPlayer;
+		mocks.audio.getPlayer.mockReturnValue(player);
+		const cmd = new MixerCommand({} as unknown as ConstructorParameters<typeof MixerCommand>[0], { name: 'mixer' });
+		const input = {
+			guildId: 'guild',
+			member: {},
+			inCachedGuild: () => true,
+			deferReply: vi.fn().mockResolvedValue(undefined),
+			editReply: vi.fn().mockResolvedValue(undefined),
+			options: {
+				getBoolean: () => true
+			}
+		};
+		await cmd.handleGapless(input as unknown as Parameters<typeof cmd.handleGapless>[0], player);
+		expect(mocks.guildService.setGapless).toHaveBeenCalledWith('guild', true);
+		expect(mocks.mixerService.setSilence).toHaveBeenCalledWith(player, true);
+		expect(mocks.mixerService.preloadUpcoming).toHaveBeenCalledWith(player, { force: true });
 	});
 });

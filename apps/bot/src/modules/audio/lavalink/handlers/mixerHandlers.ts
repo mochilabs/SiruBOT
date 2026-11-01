@@ -120,6 +120,42 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 	container.playerNotifier.updateController(player);
 }
 
+/** 트랙에서 앨범명을 안전하게 추출해요 (pluginInfo.albumName 또는 userData.album) */
+function getTrackAlbum(track: Track | null | undefined): string | null {
+	if (!track) return null;
+	if (track.userData && typeof track.userData === 'object' && 'album' in track.userData && typeof track.userData.album === 'string') {
+		return track.userData.album;
+	}
+	if ('pluginInfo' in track && track.pluginInfo && typeof track.pluginInfo === 'object') {
+		if ('albumName' in track.pluginInfo && typeof track.pluginInfo.albumName === 'string') {
+			return track.pluginInfo.albumName;
+		}
+	}
+	return null;
+}
+
+/**
+ * 연속 트랙 간 자연스러운 전환을 보존할지 결정해요 (명시적 플래그 또는 동일 앨범 연속 재생).
+ * preserveTransition이 true이면 플러그인은 crossfade와 silence trim을 건너뛰어요.
+ */
+export function shouldPreserveTransition(current: Track | null | undefined, next: Track | null | undefined): boolean {
+	if (!current || !next) return false;
+	if (
+		next.userData &&
+		typeof next.userData === 'object' &&
+		'preserveTransition' in next.userData &&
+		(next.userData.preserveTransition === 'true' || next.userData.preserveTransition === 1)
+	) {
+		return true;
+	}
+	const currentAlbum = getTrackAlbum(current);
+	const nextAlbum = getTrackAlbum(next);
+	if (currentAlbum && nextAlbum && currentAlbum === nextAlbum) {
+		return true;
+	}
+	return false;
+}
+
 /* ------------------------------------------------------------------ */
 /* 1. MixerNeedNextTrackEvent Handler                                 */
 /* ------------------------------------------------------------------ */
@@ -157,11 +193,11 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 			{
 				epoch: player.currentEpoch,
 				encodedTrack: target?.encoded ? normalizeTrackEncoded(target.encoded) : null,
-				isEmpty: !target
+				isEmpty: !target,
+				preserveTransition: target ? shouldPreserveTransition(player.queue.current, target) : undefined
 			},
 			key
 		);
-		// 아밍한 헤드를 기록해 notifyQueueMutated가 null==null blind spot으로
 		// invalidate를 누락하는 일을 막는다 (F3).
 		player.mixerRuntime.lastTargetUid = getTrackUid(target);
 	} catch (error: unknown) {
@@ -186,15 +222,12 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 		try {
 			const latestTarget = shouldArm ? getTargetNextTrack(player) : null;
 			cancelPendingInvalidate(player);
-			await container.mixerService.arm(
-				player,
-				{
-					epoch: player.currentEpoch,
-					encodedTrack: latestTarget?.encoded ? normalizeTrackEncoded(latestTarget.encoded) : null,
-					isEmpty: !latestTarget
-				},
-				randomUUID()
-			);
+			await container.mixerService.arm(player, {
+				epoch: player.currentEpoch,
+				encodedTrack: latestTarget?.encoded ? normalizeTrackEncoded(latestTarget.encoded) : null,
+				isEmpty: !latestTarget,
+				preserveTransition: latestTarget ? shouldPreserveTransition(player.queue.current, latestTarget) : undefined
+			});
 			player.mixerRuntime.lastTargetUid = getTrackUid(latestTarget);
 		} catch (retryError) {
 			container.logger.error(
