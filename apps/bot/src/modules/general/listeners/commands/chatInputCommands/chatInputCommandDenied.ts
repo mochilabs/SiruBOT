@@ -25,7 +25,7 @@ export async function sendComponent(
 	if (interaction.deferred || interaction.replied) {
 		// defer 후 ephemeral 요청:
 		// - 이미 ephemeral로 defer된 경우: editReply로 그대로 수정 가능해요
-		// - 공개 defer된 경우: editReply로는 ephemeral로 바꿀 수 없으므로 followUp으로 보내고 대기 중이던 공개 메시지를 삭제해요
+		// - 공개 defer된 경우: followUp을 먼저 호출하면 Discord가 첫 followUp으로 @original을 채운 뒤 deleteReply가 그 에러 메시지 자체를 지워버리므로, 반드시 @original(생각 중 자리표시자)을 먼저 삭제한 뒤 ephemeral followUp을 보내요
 		if (options.ephemeral) {
 			if (interaction.ephemeral) {
 				await interaction
@@ -38,6 +38,10 @@ export async function sendComponent(
 				return;
 			}
 
+			await interaction.deleteReply().catch((error: unknown) => {
+				container.logger.warn(`[command-error] placeholder deleteReply failed (user ${interaction.user.id}): ${String(error)}`);
+				return undefined;
+			});
 			await interaction
 				.followUp({
 					components: [component],
@@ -45,14 +49,9 @@ export async function sendComponent(
 					allowedMentions: { users: [interaction.user.id], roles: [] }
 				})
 				.catch((error: unknown) => {
-					// 에러가 "즉시 사라지는" 원인을 찾기 위해 조용히 삼키던 실패를 로깅해요.
 					container.logger.warn(`[command-error] ephemeral followUp failed (user ${interaction.user.id}): ${String(error)}`);
 					return undefined;
 				});
-			await interaction.deleteReply().catch((error: unknown) => {
-				container.logger.warn(`[command-error] placeholder deleteReply failed (user ${interaction.user.id}): ${String(error)}`);
-				return undefined;
-			});
 			return;
 		}
 
