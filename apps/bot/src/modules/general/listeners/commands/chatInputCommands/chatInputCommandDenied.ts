@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { ChatInputCommandDeniedPayload, Events } from '@sapphire/framework';
-import { Listener, UserError } from '@sapphire/framework';
+import { Listener, UserError, container } from '@sapphire/framework';
 import { DEFAULT_COLOR } from '@sirubot/utils';
 import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags } from 'discord.js';
 
@@ -44,8 +44,15 @@ export async function sendComponent(
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
 					allowedMentions: { users: [interaction.user.id], roles: [] }
 				})
-				.catch(() => undefined);
-			await interaction.deleteReply().catch(() => undefined);
+				.catch((error: unknown) => {
+					// 에러가 "즉시 사라지는" 원인을 찾기 위해 조용히 삼키던 실패를 로깅해요.
+					container.logger.warn(`[command-error] ephemeral followUp failed (user ${interaction.user.id}): ${String(error)}`);
+					return undefined;
+				});
+			await interaction.deleteReply().catch((error: unknown) => {
+				container.logger.warn(`[command-error] placeholder deleteReply failed (user ${interaction.user.id}): ${String(error)}`);
+				return undefined;
+			});
 			return;
 		}
 

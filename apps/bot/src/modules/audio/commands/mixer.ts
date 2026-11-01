@@ -50,6 +50,24 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 							{ name: 'AutoMix', value: 'automix' }
 						)
 				)
+				.addNumberOption((opt) =>
+					opt
+						.setName('max-tempo-change')
+						.setNameLocalizations({ ko: '최대템포변경' })
+						.setDescription('Maximum tempo change in percent (0-12) for AutoMix. Omit to keep the current value.')
+						.setDescriptionLocalizations({ ko: 'AutoMix 허용 템포 변경 비율(0~12%). 생략하면 기존 값을 유지해요.' })
+						.setMinValue(0)
+						.setMaxValue(12)
+				)
+				.addNumberOption((opt) =>
+					opt
+						.setName('min-confidence')
+						.setNameLocalizations({ ko: '최소신뢰도' })
+						.setDescription('Minimum beat confidence (0-1) for AutoMix. Omit to keep the current value.')
+						.setDescriptionLocalizations({ ko: 'AutoMix 박자 분석 최소 신뢰도(0~1). 생략하면 기존 값을 유지해요.' })
+						.setMinValue(0)
+						.setMaxValue(1)
+				)
 		)
 		.addSubcommand((sub) =>
 			sub
@@ -82,39 +100,6 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 						.setMinValue(500)
 						.setMaxValue(15000)
 						.setRequired(false)
-				)
-		)
-		.addSubcommand((sub) =>
-			sub
-				.setName('automix')
-				.setNameLocalizations({ ko: '오토믹스' })
-				.setDescription('Match beats between tracks when possible.')
-				.setDescriptionLocalizations({ ko: '가능한 곡끼리 박자를 맞춰 전환해요.', 'en-US': 'Match beats between tracks when possible.' })
-				.addBooleanOption((opt) =>
-					opt
-						.setName('enabled')
-						.setNameLocalizations({ ko: '켜기' })
-						.setDescription('Enable or disable AutoMix.')
-						.setDescriptionLocalizations({ ko: '오토믹스를 켜거나 꺼요.' })
-						.setRequired(true)
-				)
-				.addNumberOption((opt) =>
-					opt
-						.setName('max-tempo-change')
-						.setNameLocalizations({ ko: '최대템포변경' })
-						.setDescription('Maximum tempo change in percent (0-12). Omit to keep the current value.')
-						.setDescriptionLocalizations({ ko: '허용할 템포 변경 비율(0~12%). 생략하면 기존 값을 유지해요.' })
-						.setMinValue(0)
-						.setMaxValue(12)
-				)
-				.addNumberOption((opt) =>
-					opt
-						.setName('min-confidence')
-						.setNameLocalizations({ ko: '최소신뢰도' })
-						.setDescription('Minimum beat confidence (0-1). Omit to keep the current value.')
-						.setDescriptionLocalizations({ ko: '박자 분석 최소 신뢰도(0~1). 생략하면 기존 값을 유지해요.' })
-						.setMinValue(0)
-						.setMaxValue(1)
 				)
 		)
 		.addSubcommand((sub) =>
@@ -202,8 +187,6 @@ export class MixerCommand extends Command {
 				return this.handleCrossfade(interaction, player);
 			case 'transition':
 				return this.handleTransition(interaction, player);
-			case 'automix':
-				return this.handleAutomix(interaction, player);
 			case 'normalization':
 				return this.handleNormalization(interaction, player);
 			case 'announce-mode':
@@ -235,8 +218,6 @@ export class MixerCommand extends Command {
 				return command.handleCrossfade(interaction, player);
 			case 'transition':
 				return command.handleTransition(interaction, player);
-			case 'automix':
-				return command.handleAutomix(interaction, player);
 			case 'normalization':
 				return command.handleNormalization(interaction, player);
 			case 'announce-mode':
@@ -326,56 +307,46 @@ export class MixerCommand extends Command {
 		await this.checkDJ(interaction);
 		const mode = interaction.options.getString('mode', true);
 		if (!isTransitionMode(mode)) throw new UserError({ identifier: 'mixer_transition_invalid', message: '올바른 전환 방식을 선택해 주세요.' });
-		const saved = await this.container.guildService.setTransitionMode(interaction.guildId, mode);
+
+		const tempoPercent = interaction.options.getNumber('max-tempo-change');
+		const minConfidence = interaction.options.getNumber('min-confidence') ?? undefined;
+
+		// AutoMix 모드만 템포 변경·신뢰도 파라미터를 함께 저장해요. 나머지 모드에선 무시돼요.
+		const saved =
+			mode === 'automix'
+				? await this.container.guildService.setAutomix(
+						interaction.guildId,
+						true,
+						tempoPercent === null ? undefined : tempoPercent / 100,
+						minConfidence
+					)
+				: await this.container.guildService.setTransitionMode(interaction.guildId, mode);
+
 		if (player) {
 			try {
 				await this.container.mixerService.setAutomix(player, saved);
 			} catch {
 				throw new UserError({
-					identifier: 'mixer_transition_failed',
-					message: '전환 방식은 저장했지만 현재 플레이어에 적용하지 못했어요. 믹서 플러그인 지원 여부를 확인해 주세요.',
+					identifier: mode === 'automix' ? 'mixer_automix_failed' : 'mixer_transition_failed',
+					message:
+						mode === 'automix'
+							? `${emoji('tools')} 오토믹스 설정은 저장했지만 현재 플레이어에 적용하지 못했어요. Lavalink 서버의 mixer 플러그인이 오토믹스를 지원하는지 확인해 주세요.`
+							: '전환 방식은 저장했지만 현재 플레이어에 적용하지 못했어요. 믹서 플러그인 지원 여부를 확인해 주세요.',
 					context: { ephemeral: true }
 				});
 			}
 		}
+
+		const message =
+			mode === 'automix'
+				? `${emoji('shuffle')} 곡 전환 방식을 AutoMix로 설정했어요. 최대 템포 변경 ${(saved.automixMaxTempoChange * 100).toFixed(1)}%, 최소 신뢰도 ${saved.automixMinConfidence.toFixed(2)}로 박자를 맞춰요. 분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 전환해요. 갭리스 설정은 유지해요.`
+				: `곡 전환 방식을 ${TRANSITION_LABELS[mode]}로 설정했어요. 갭리스 설정은 유지해요.`;
 		await interaction.editReply({
 			components: [
 				view.mixerUpdated({
-					message: `곡 전환 방식을 ${TRANSITION_LABELS[mode]}로 설정했어요. 갭리스 설정은 유지해요.${player ? '' : ' 다음 재생부터 적용돼요.'}`
+					message: player ? message : `${message} 다음 재생부터 적용돼요.`
 				})
 			],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
-		});
-	}
-
-	async handleAutomix(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
-		await this.checkDJ(interaction);
-		const enabled = interaction.options.getBoolean('enabled', true);
-		const tempoPercent = interaction.options.getNumber('max-tempo-change');
-		const minConfidence = interaction.options.getNumber('min-confidence') ?? undefined;
-		const saved = await this.container.guildService.setAutomix(
-			interaction.guildId,
-			enabled,
-			tempoPercent === null ? undefined : tempoPercent / 100,
-			minConfidence
-		);
-		if (player) {
-			try {
-				await this.container.mixerService.setAutomix(player, saved);
-			} catch {
-				throw new UserError({
-					identifier: 'mixer_automix_failed',
-					message: `${emoji('tools')} 오토믹스 설정은 저장했지만 현재 플레이어에 적용하지 못했어요. Lavalink 서버의 mixer 플러그인이 오토믹스를 지원하는지 확인해 주세요.`,
-					context: { ephemeral: true }
-				});
-			}
-		}
-		const base = saved.automixEnabled
-			? `${emoji('shuffle')} 오토믹스와 크로스페이드를 켰어요. 최대 템포 변경 ${(saved.automixMaxTempoChange * 100).toFixed(1)}%, 최소 신뢰도 ${saved.automixMinConfidence.toFixed(2)}로 박자를 맞춰요. 분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 전환해요.`
-			: `${emoji('shuffle')} 오토믹스를 껐어요. 크로스페이드 설정은 유지해요.`;
-		await interaction.editReply({
-			components: [view.mixerUpdated({ message: player ? base : `${base} 다음에 재생할 때부터 적용돼요.` })],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});
