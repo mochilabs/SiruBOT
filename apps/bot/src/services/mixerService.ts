@@ -485,6 +485,12 @@ export class MixerService {
 			body: JSON.stringify({ guildId: String(player.guildId), enabled })
 		})) as MixerStateResponse;
 	}
+	public async setSilence(player: Player, enabled: boolean): Promise<MixerStateResponse> {
+		return (await this.rawCall(player, '/mixer/silence', {
+			method: 'POST',
+			body: JSON.stringify({ guildId: String(player.guildId), enabled })
+		})) as MixerStateResponse;
+	}
 
 	public async reapplyMixerFilter(player: Player): Promise<void> {
 		this.filterReady.delete(String(player.guildId));
@@ -517,14 +523,23 @@ export class MixerService {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.crossfadeEnabled, durationMs })
 		});
-		await this.pushNormalizationConfig(player);
+		await this.pushNormalizationConfig(player, settings.normalizationEnabled);
+		await this.pushSilenceConfig(player, settings.gaplessEnabled);
 	}
 
-	public async pushNormalizationConfig(player: Player): Promise<void> {
-		const settings = await container.guildService.getMixerSettings(player.guildId);
+	public async pushNormalizationConfig(player: Player, enabled?: boolean): Promise<void> {
+		const normEnabled = enabled ?? (await container.guildService.getMixerSettings(player.guildId)).normalizationEnabled;
 		await this.rawCall(player, '/mixer/normalization', {
 			method: 'POST',
-			body: JSON.stringify({ guildId: String(player.guildId), enabled: settings.normalizationEnabled })
+			body: JSON.stringify({ guildId: String(player.guildId), enabled: normEnabled })
+		});
+	}
+
+	public async pushSilenceConfig(player: Player, enabled?: boolean): Promise<void> {
+		const silenceEnabled = enabled ?? (await container.guildService.getMixerSettings(player.guildId)).gaplessEnabled;
+		await this.rawCall(player, '/mixer/silence', {
+			method: 'POST',
+			body: JSON.stringify({ guildId: String(player.guildId), enabled: silenceEnabled })
 		});
 	}
 

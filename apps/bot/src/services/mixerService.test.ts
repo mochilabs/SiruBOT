@@ -629,7 +629,12 @@ describe('AutoMix configuration', () => {
 		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
 		await new MixerService().pushCrossfadeConfig(fakePlayer());
-		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/mixer/state', '/mixer/crossfade', '/mixer/normalization']);
+		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+			'/mixer/state',
+			'/mixer/crossfade',
+			'/mixer/normalization',
+			'/mixer/silence'
+		]);
 	});
 
 	it('restores persisted AutoMix settings through the player initialization path', async () => {
@@ -641,8 +646,18 @@ describe('AutoMix configuration', () => {
 			'/mixer/state',
 			'/mixer/bpm',
 			'/mixer/crossfade',
-			'/mixer/normalization'
+			'/mixer/normalization',
+			'/mixer/silence'
 		]);
 		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ enabled: true, beatmatchEnabled: true });
 	});
+});
+
+it('sends silence config matching gapless setting', async () => {
+	const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
+	vi.stubGlobal('fetch', fetchMock);
+	const service = new MixerService();
+	await service.setSilence(fakePlayer(), true);
+	expect(fetchMock.mock.calls[0][0]).toContain('/mixer/silence');
+	expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ guildId: '123456789012345678', enabled: true });
 });
