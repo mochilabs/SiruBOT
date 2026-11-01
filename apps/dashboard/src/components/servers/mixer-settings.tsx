@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
+import { normalizeMixerToggles } from "@/lib/mixer-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { GuildSettings } from "@/types/settings";
 
@@ -18,6 +19,9 @@ import { PanelError, PanelHeader, PanelLoading, SaveBar } from "./settings-share
 interface MixerForm {
   gaplessEnabled: boolean;
   crossfadeEnabled: boolean;
+  automixEnabled: boolean;
+  automixMaxTempoChange: number;
+  automixMinConfidence: number;
   crossfadeMs: number;
   normalizationEnabled: boolean;
   ttsAnnounceMode: GuildSettings["ttsAnnounceMode"];
@@ -33,6 +37,9 @@ const ANNOUNCE_MODE_OPTIONS = [
 const toMixerForm = (settings: GuildSettings): MixerForm => ({
   gaplessEnabled: settings.gaplessEnabled,
   crossfadeEnabled: settings.crossfadeEnabled,
+  automixEnabled: settings.automixEnabled,
+  automixMaxTempoChange: settings.automixMaxTempoChange,
+  automixMinConfidence: settings.automixMinConfidence,
   crossfadeMs: settings.crossfadeMs,
   normalizationEnabled: settings.normalizationEnabled,
   ttsAnnounceMode: settings.ttsAnnounceMode,
@@ -84,7 +91,7 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
           <div className="flex items-center justify-between gap-2">
             <Switch
               checked={form.crossfadeEnabled}
-              onChange={(checked) => patch({ crossfadeEnabled: checked })}
+              onChange={(checked) => patch(normalizeMixerToggles({ crossfadeEnabled: checked }))}
               disabled={saving}
               label="크로스페이드"
               labelPosition="left"
@@ -142,6 +149,30 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
             </Select>
           </Field>
         </div>
+      </div>
+
+      <div className="space-y-4">
+        <Switch
+          checked={form.automixEnabled}
+          onChange={(checked) => patch(normalizeMixerToggles({ automixEnabled: checked }))}
+          disabled={saving}
+          label="AutoMix (비트 맞춤)"
+        />
+        <p className="text-sm text-muted-foreground">
+          두 곡의 박자와 템포를 맞춰 이어요. 켜면 크로스페이드도 켜지며, 분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 전환해요.
+        </p>
+        <Field label="최대 템포 변경" description="0% ~ 12%. 다음 곡의 템포를 조절할 수 있는 범위예요.">
+          <Slider value={form.automixMaxTempoChange * 100}
+            onChange={(value) => patch({ automixMaxTempoChange: value / 100 })}
+            min={0} max={12} step={1} label="최대 템포 변경" showValue
+            formatValue={(value) => `${value.toFixed(0)}%`} disabled={saving || !form.automixEnabled} />
+        </Field>
+        <Field label="최소 분석 신뢰도" description="높일수록 박자가 확실한 곡에만 비트 맞춤을 적용해요.">
+          <Slider value={form.automixMinConfidence}
+            onChange={(value) => patch({ automixMinConfidence: value })}
+            min={0} max={1} step={0.05} label="최소 분석 신뢰도" showValue
+            formatValue={(value) => value.toFixed(2)} disabled={saving || !form.automixEnabled} />
+        </Field>
       </div>
 
       <Field

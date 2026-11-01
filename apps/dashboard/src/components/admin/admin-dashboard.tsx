@@ -61,6 +61,7 @@ import { toast } from "@/components/ui/toast";
 import { VoiceServerSection } from "@/components/voice-server-section";
 import type { DataApiStatus } from "@/lib/data-api/types";
 import { formatMemory, formatRelativeTime } from "@/lib/format";
+import { normalizeMixerToggles } from "@/lib/mixer-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { ShardsResponse } from "@/lib/shard-api";
 import { createApiFetcher } from "@/lib/swr";
@@ -108,6 +109,9 @@ interface AdminGuildSummary {
 	jtcEnabled: boolean;
 	gaplessEnabled: boolean;
 	crossfadeEnabled: boolean;
+	automixEnabled: boolean;
+	automixMaxTempoChange: number;
+	automixMinConfidence: number;
 	crossfadeMs: number;
 	normalizationEnabled: boolean;
 	countingEnabled: boolean;
@@ -144,6 +148,9 @@ interface AdminGuildDetail {
 	jtcUserLimit: number;
 	gaplessEnabled: boolean;
 	crossfadeEnabled: boolean;
+	automixEnabled: boolean;
+	automixMaxTempoChange: number;
+	automixMinConfidence: number;
 	crossfadeMs: number;
 	normalizationEnabled: boolean;
 	ttsAnnounceMode: "sequential" | "parallel" | "interrupt";
@@ -820,6 +827,9 @@ function GuildEditDialog({
 				jtcUserLimit: current.jtcUserLimit,
 				gaplessEnabled: current.gaplessEnabled,
 				crossfadeEnabled: current.crossfadeEnabled,
+				automixEnabled: current.automixEnabled,
+				automixMaxTempoChange: current.automixMaxTempoChange,
+				automixMinConfidence: current.automixMinConfidence,
 				crossfadeMs: current.crossfadeMs,
 				normalizationEnabled: current.normalizationEnabled,
 				ttsAnnounceMode: current.ttsAnnounceMode,
@@ -1138,8 +1148,14 @@ function GuildEditDialog({
 								label="크로스페이드"
 								size="sm"
 								checked={current.crossfadeEnabled}
-								onChange={(checked) => setDraft((prev) => ({ ...prev, crossfadeEnabled: checked }))}
+								onChange={(checked) => setDraft((prev) => ({ ...prev, ...normalizeMixerToggles({ crossfadeEnabled: checked }) }))}
 							/>
+                            <Switch
+                                label="AutoMix (비트 맞춤)"
+                                size="sm"
+                                checked={current.automixEnabled}
+                                onChange={(checked) => setDraft((prev) => ({ ...prev, ...normalizeMixerToggles({ automixEnabled: checked }) }))}
+                            />
 							<Switch
 								label="볼륨 정규화"
 								size="sm"
@@ -1153,6 +1169,19 @@ function GuildEditDialog({
 								onChange={(checked) => setDraft((prev) => ({ ...prev, jtcEnabled: checked }))}
 							/>
 						</div>
+
+                        <Field label="AutoMix 최대 템포 변경" description="비트 맞춤에 허용할 템포 변경 범위예요.">
+                            <Slider value={current.automixMaxTempoChange * 100} min={0} max={12} step={1}
+                                label="AutoMix 최대 템포 변경" showValue formatValue={(value) => `${value.toFixed(0)}%`}
+                                disabled={saving || !current.automixEnabled}
+                                onChange={(value) => setDraft((prev) => ({ ...prev, automixMaxTempoChange: value / 100 }))} />
+                        </Field>
+                        <Field label="AutoMix 최소 분석 신뢰도" description="높일수록 박자가 확실한 곡에만 적용해요.">
+                            <Slider value={current.automixMinConfidence} min={0} max={1} step={0.05}
+                                label="AutoMix 최소 분석 신뢰도" showValue formatValue={(value) => value.toFixed(2)}
+                                disabled={saving || !current.automixEnabled}
+                                onChange={(value) => setDraft((prev) => ({ ...prev, automixMinConfidence: value }))} />
+                        </Field>
 
 						<div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-2 p-3">
 							<div className="space-y-0.5 text-xs">

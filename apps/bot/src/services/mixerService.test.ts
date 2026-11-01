@@ -493,3 +493,76 @@ describe('MixerService v2 Protocol Tests', () => {
 		vi.useRealTimers();
 	});
 });
+
+describe('AutoMix configuration', () => {
+	const settings = {
+		gaplessEnabled: true,
+		crossfadeEnabled: true,
+		crossfadeMs: 5000,
+		normalizationEnabled: false,
+		automixEnabled: true,
+		automixMaxTempoChange: 0.06,
+		automixMinConfidence: 0.3
+	};
+	const supported = { bpmDetectionEnabled: false, beatmatchEnabled: false };
+
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('enables analysis and beat matching before configuring the overlap', async () => {
+		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
+		vi.stubGlobal('fetch', fetchMock);
+		await new MixerService().setAutomix(fakePlayer(), settings);
+		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/mixer/state', '/mixer/bpm', '/mixer/crossfade']);
+		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+			guildId: fakePlayer().guildId,
+			enabled: true,
+			beatmatchEnabled: true,
+			maxTempoChange: 0.06,
+			minConfidence: 0.3
+		});
+	});
+
+	it('keeps ordinary crossfades working on an older plugin when AutoMix is off', async () => {
+		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
+		vi.stubGlobal('fetch', fetchMock);
+		await new MixerService().setAutomix(fakePlayer(), { ...settings, automixEnabled: false });
+		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/mixer/state', '/mixer/crossfade']);
+	});
+
+	it('rejects enabling AutoMix on an older plugin before changing crossfade settings', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response('{}'));
+		vi.stubGlobal('fetch', fetchMock);
+		await expect(new MixerService().setAutomix(fakePlayer(), settings)).rejects.toThrow('AutoMix를 지원하지');
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it('disables both analysis gates before disabling crossfade', async () => {
+		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
+		vi.stubGlobal('fetch', fetchMock);
+		await new MixerService().setCrossfade(fakePlayer(), false);
+		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ enabled: false, beatmatchEnabled: false });
+		expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toMatchObject({ enabled: false });
+	});
+
+	it('restores ordinary mixer settings when a saved AutoMix preference meets an older node', async () => {
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
+		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
+		vi.stubGlobal('fetch', fetchMock);
+		await new MixerService().pushCrossfadeConfig(fakePlayer());
+		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/mixer/state', '/mixer/crossfade', '/mixer/normalization']);
+	});
+
+	it('restores persisted AutoMix settings through the player initialization path', async () => {
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
+		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
+		vi.stubGlobal('fetch', fetchMock);
+		await new MixerService().pushCrossfadeConfig(fakePlayer());
+		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+			'/mixer/state',
+			'/mixer/bpm',
+			'/mixer/crossfade',
+			'/mixer/normalization'
+		]);
+		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ enabled: true, beatmatchEnabled: true });
+	});
+});

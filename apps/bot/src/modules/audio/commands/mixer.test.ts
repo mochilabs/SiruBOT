@@ -1,0 +1,114 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MessageFlags, SlashCommandBuilder, SlashCommandSubcommandGroupBuilder } from 'discord.js';
+import { MixerCommand, withMixerSubcommands } from './mixer.ts';
+
+const mocks = vi.hoisted(() => ({
+	guildService: { hasDJRole: vi.fn(), setAutomix: vi.fn() },
+	mixerService: { setAutomix: vi.fn() },
+	audio: { getPlayer: vi.fn() }
+}));
+vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => () => undefined }));
+vi.mock('@sapphire/framework', () => ({
+	Command: class {
+		container = mocks;
+	},
+	container: mocks,
+	UserError: class extends Error {
+		identifier: string;
+		constructor(options: { identifier: string; message: string }) {
+			super(options.message);
+			this.identifier = options.identifier;
+		}
+	}
+}));
+vi.mock('../lavalink/player/customPlayer.ts', () => ({ CustomPlayer: class {} }));
+vi.mock('@sirubot/utils', () => ({ DEFAULT_COLOR: 0, emoji: (name: string) => name }));
+
+const saved = {
+	gaplessEnabled: true,
+	crossfadeEnabled: true,
+	crossfadeMs: 5000,
+	normalizationEnabled: false,
+	automixEnabled: true,
+	automixMaxTempoChange: 0.06,
+	automixMinConfidence: 0.3
+};
+function interaction(tempo: number | null = null, confidence: number | null = null) {
+	return {
+		guildId: 'guild',
+		member: {},
+		inCachedGuild: () => true,
+		deferReply: vi.fn().mockResolvedValue(undefined),
+		editReply: vi.fn().mockResolvedValue(undefined),
+		options: {
+			getSubcommand: () => 'automix',
+			getBoolean: () => true,
+			getNumber: (name: string) => (name === 'max-tempo-change' ? tempo : confidence)
+		}
+	};
+}
+
+describe('AutoMix command', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mocks.guildService.hasDJRole.mockResolvedValue(true);
+		mocks.guildService.setAutomix.mockResolvedValue(saved);
+	});
+
+	it('registers the same bounded options for mixer and settings audio', () => {
+		for (const builder of [
+			new SlashCommandBuilder().setName('mixer').setDescription('Mixer'),
+			new SlashCommandSubcommandGroupBuilder().setName('audio').setDescription('Audio')
+		]) {
+			withMixerSubcommands(builder);
+			expect(builder.toJSON().options).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						name: 'automix',
+						options: expect.arrayContaining([
+							expect.objectContaining({ name: 'enabled', required: true }),
+							expect.objectContaining({ name: 'max-tempo-change', min_value: 0, max_value: 12 }),
+							expect.objectContaining({ name: 'min-confidence', min_value: 0, max_value: 1 })
+						])
+					})
+				])
+			);
+		}
+	});
+
+	it('defers and saves percent as a ratio before applying to the player', async () => {
+		const input = interaction(6, 0.4);
+		const player = {};
+		mocks.audio.getPlayer.mockReturnValue(player);
+		const command = Object.create(MixerCommand.prototype, { container: { value: mocks } });
+		await Reflect.apply(MixerCommand.prototype.chatInputRun, command, [input]);
+		expect(mocks.guildService.setAutomix).toHaveBeenCalledWith('guild', true, 0.06, 0.4);
+		expect(mocks.mixerService.setAutomix).toHaveBeenCalledWith(player, saved);
+		expect(input.deferReply.mock.invocationCallOrder[0]).toBeLessThan(mocks.guildService.setAutomix.mock.invocationCallOrder[0]!);
+		expect(mocks.guildService.setAutomix.mock.invocationCallOrder[0]).toBeLessThan(mocks.mixerService.setAutomix.mock.invocationCallOrder[0]!);
+		expect(input.editReply).toHaveBeenCalledWith(expect.objectContaining({ flags: [MessageFlags.IsComponentsV2] }));
+	});
+
+	it('routes settings audio and preserves omitted options without a player', async () => {
+		const input = interaction();
+		await Reflect.apply(MixerCommand.runFor, MixerCommand, [input]);
+		expect(mocks.guildService.setAutomix).toHaveBeenCalledWith('guild', true, undefined, undefined);
+		expect(mocks.mixerService.setAutomix).not.toHaveBeenCalled();
+		expect(JSON.stringify(input.editReply.mock.calls)).toContain('다음에 재생할 때부터 적용돼요');
+	});
+
+	it('rejects non-DJs before saving', async () => {
+		mocks.guildService.hasDJRole.mockResolvedValue(false);
+		await expect(Reflect.apply(MixerCommand.runFor, MixerCommand, [interaction()])).rejects.toMatchObject({ identifier: 'mixer_no_permission' });
+		expect(mocks.guildService.setAutomix).not.toHaveBeenCalled();
+	});
+
+	it('reports that settings were saved when runtime application fails', async () => {
+		mocks.audio.getPlayer.mockReturnValue({});
+		mocks.mixerService.setAutomix.mockRejectedValue(new Error('unsupported'));
+		await expect(Reflect.apply(MixerCommand.runFor, MixerCommand, [interaction()])).rejects.toMatchObject({
+			identifier: 'mixer_automix_failed',
+			message: expect.stringContaining('설정은 저장했지만')
+		});
+	});
+});

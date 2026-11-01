@@ -109,4 +109,7 @@ export interface MixerSettings {
 	crossfadeEnabled: boolean;
 	crossfadeMs: number;
 	normalizationEnabled: boolean;
+	automixEnabled: boolean;
+	automixMaxTempoChange: number;
+	automixMinConfidence: number;
 }

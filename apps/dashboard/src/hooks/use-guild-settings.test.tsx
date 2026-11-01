@@ -17,7 +17,7 @@ const saved: GuildSettings = {
   voiceChannelId: null, pinnedChannelId: null, pinnedChannelMode: "play",
   pinnedChannelDeleteInput: false, jtcEnabled: false, jtcCategoryId: null,
   jtcMarkerChannelId: null, jtcTemplate: "{user}의 방", jtcUserLimit: 0,
-  gaplessEnabled: false, crossfadeEnabled: false, crossfadeMs: 500,
+  gaplessEnabled: false, crossfadeEnabled: false, automixEnabled: false, automixMaxTempoChange: 0.06, automixMinConfidence: 0.30, crossfadeMs: 500,
   normalizationEnabled: false, ttsAnnounceMode: "sequential", ttsParallelEnabled: false,
   emojiEnlargeMode: "off", emojiEnlargeChannelIds: [], quoteMode: "off", quoteChannelIds: [],
   embedFixMode: "off", embedFixChannelIds: [],

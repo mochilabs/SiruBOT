@@ -6,9 +6,10 @@ import { z } from "zod";
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
+import { MIXER_SETTING_KEYS, normalizeMixerToggles } from "@/lib/mixer-settings";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-import { normalizeAiMode, parseSettingBody } from "@/lib/schemas";
+import { guildSettingsSchema, normalizeAiMode, parseSettingBody } from "@/lib/schemas";
 
 const snowflakeSchema = z.string().regex(/^\d{17,20}$/, "올바른 Discord 서버 ID 형식이 아니에요.");
 const nullableSnowflake = snowflakeSchema.nullable();
@@ -33,6 +34,9 @@ const adminGuildPatchSchema = z.object({
 	jtcUserLimit: z.number().int().min(0).max(99).optional(),
 	gaplessEnabled: z.boolean().optional(),
 	crossfadeEnabled: z.boolean().optional(),
+	automixEnabled: guildSettingsSchema.shape.automixEnabled,
+	automixMaxTempoChange: guildSettingsSchema.shape.automixMaxTempoChange,
+	automixMinConfidence: guildSettingsSchema.shape.automixMinConfidence,
 	crossfadeMs: z.number().int().min(1000).max(10000).optional(),
 	normalizationEnabled: z.boolean().optional(),
 	ttsAnnounceMode: z.enum(["sequential", "parallel", "interrupt"]).optional(),
@@ -101,6 +105,9 @@ async function loadGuildDetail(guildId: string) {
 		jtcUserLimit: guild.jtcUserLimit,
 		gaplessEnabled: guild.gaplessEnabled,
 		crossfadeEnabled: guild.crossfadeEnabled,
+		automixEnabled: guild.automixEnabled,
+		automixMaxTempoChange: guild.automixMaxTempoChange,
+		automixMinConfidence: guild.automixMinConfidence,
 		crossfadeMs: guild.crossfadeMs,
 		normalizationEnabled: guild.normalizationEnabled,
 		ttsAnnounceMode: ["sequential", "parallel", "interrupt"].includes(guild.ttsAnnounceMode)
@@ -166,7 +173,7 @@ export const PATCH = createGuildApiHandler({
 		if (!parsed.ok) return parsed.response;
 
 		const { clearChatHistory, ...fields } = parsed.data;
-		const updateData: Record<string, unknown> = { ...fields };
+		const updateData: Record<string, unknown> = { ...normalizeMixerToggles(fields) };
 
 		if (fields.ttsAnnounceMode !== undefined) {
 			updateData.ttsParallelEnabled = fields.ttsAnnounceMode === "parallel";
@@ -188,7 +195,7 @@ export const PATCH = createGuildApiHandler({
 				await db.channelChatHistory.deleteMany({ where: { guildId } });
 			}
 
-			const touchesMixer = ["gaplessEnabled", "crossfadeEnabled", "crossfadeMs", "normalizationEnabled"].some(
+			const touchesMixer = MIXER_SETTING_KEYS.some(
 				(key) => key in updateData,
 			);
 			notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : undefined).catch((error) => {

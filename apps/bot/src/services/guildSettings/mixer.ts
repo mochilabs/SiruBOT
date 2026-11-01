@@ -14,7 +14,10 @@ export async function getMixerSettings(store: GuildSettingsStore, guildId: strin
 		gaplessEnabled: guild.gaplessEnabled,
 		crossfadeEnabled: guild.crossfadeEnabled,
 		crossfadeMs: guild.crossfadeMs,
-		normalizationEnabled: guild.normalizationEnabled
+		normalizationEnabled: guild.normalizationEnabled,
+		automixEnabled: guild.automixEnabled,
+		automixMaxTempoChange: guild.automixMaxTempoChange,
+		automixMinConfidence: guild.automixMinConfidence
 	};
 }
 
@@ -33,8 +36,32 @@ export async function setCrossfade(store: GuildSettingsStore, guildId: string, e
 	const clamped = durationMs === undefined ? undefined : Math.round(Math.min(15000, Math.max(500, durationMs)));
 	const guild = await store.getGuild(guildId);
 	const data: Prisma.GuildUpdateInput = { crossfadeEnabled: enabled };
+	if (!enabled) data.automixEnabled = false;
 	if (clamped !== undefined) data.crossfadeMs = clamped;
 	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
 	store.updateCache(updated);
 	return { crossfadeEnabled: updated.crossfadeEnabled, crossfadeMs: updated.crossfadeMs };
+}
+
+export async function setAutomix(
+	store: GuildSettingsStore,
+	guildId: string,
+	enabled: boolean,
+	maxTempoChange?: number,
+	minConfidence?: number
+): Promise<MixerSettings> {
+	if (maxTempoChange !== undefined && (!Number.isFinite(maxTempoChange) || maxTempoChange < 0 || maxTempoChange > 0.12)) {
+		throw new RangeError('오토믹스 최대 템포 변경 비율은 0~0.12여야 해요.');
+	}
+	if (minConfidence !== undefined && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
+		throw new RangeError('오토믹스 최소 신뢰도는 0~1이어야 해요.');
+	}
+	const guild = await store.getGuild(guildId);
+	const data: Prisma.GuildUpdateInput = { automixEnabled: enabled };
+	if (enabled) data.crossfadeEnabled = true;
+	if (maxTempoChange !== undefined) data.automixMaxTempoChange = maxTempoChange;
+	if (minConfidence !== undefined) data.automixMinConfidence = minConfidence;
+	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+	store.updateCache(updated);
+	return getMixerSettings(store, guildId);
 }
