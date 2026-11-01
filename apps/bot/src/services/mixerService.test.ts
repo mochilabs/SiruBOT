@@ -36,6 +36,86 @@ describe('MixerService v2 Protocol Tests', () => {
 		vi.restoreAllMocks();
 	});
 
+	it('retries busy analysis and clears a removed target', async () => {
+		const service = new MixerService();
+		const player = fakePlayer() as CustomPlayer;
+		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({ automixEnabled: true } as any);
+		fetchMock.mockImplementation(
+			async (url: string) =>
+				new Response(JSON.stringify(url.includes('/state') ? { adaptiveTransitionsSupported: true } : { accepted: false }), { status: 202 })
+		);
+		await service.prepareNextAnalysis(player, track);
+		await service.prepareNextAnalysis(player, track);
+		expect(fetchMock).toHaveBeenCalledTimes(4);
+		fetchMock.mockImplementation(
+			async (url: string) =>
+				new Response(JSON.stringify(url.includes('/state') ? { adaptiveTransitionsSupported: true } : { accepted: true }), { status: 202 })
+		);
+		await service.prepareNextAnalysis(player, track);
+		await service.prepareNextAnalysis(player, null);
+		await service.prepareNextAnalysis(player, track);
+		expect(fetchMock).toHaveBeenCalledTimes(8);
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({ automixEnabled: false } as any);
+	});
+
+	it('does not POST to a different node after an awaited capability response', async () => {
+		const service = new MixerService();
+		const player = fakePlayer() as CustomPlayer;
+		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		const response = new Response(JSON.stringify({ adaptiveTransitionsSupported: true }));
+		const result = Promise.withResolvers<typeof response>();
+		fetchMock.mockReturnValueOnce(result.promise);
+		const analysis = service.prepareNextAnalysis(player, track);
+		await Promise.resolve();
+		Object.assign(player, { node: { options: { host: 'new', port: 2333 } } });
+		result.resolve(response);
+		await analysis;
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it('sends preservation only when explicitly supplied to arm', async () => {
+		fetchMock.mockImplementation(async () => new Response('{}'));
+		const service = new MixerService();
+		const player = fakePlayer() as CustomPlayer;
+		await service.arm(player, { epoch: 1, encodedTrack: 'next' });
+		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty('preserveTransition');
+		await service.arm(player, { epoch: 2, encodedTrack: 'next', preserveTransition: true });
+		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toHaveProperty('preserveTransition', true);
+	});
+
+	it('warms analysis once per target only with AutoMix and server support', async () => {
+		const service = new MixerService();
+		const player = fakePlayer() as CustomPlayer;
+		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ adaptiveTransitionsSupported: true })));
+		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ accepted: true }), { status: 202 }));
+		await Promise.all([service.prepareNextAnalysis(player, track), service.prepareNextAnalysis(player, track)]);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(fetchMock.mock.calls[1][0]).toContain('/mixer/analyze');
+		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ guildId: player.guildId, encodedTrack: 'next' });
+		await service.prepareNextAnalysis(player, track);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it('skips early analysis for disabled settings, streams, unsupported servers and errors', async () => {
+		const player = fakePlayer() as CustomPlayer;
+		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
+		await new MixerService().prepareNextAnalysis(player, track);
+		expect(fetchMock).not.toHaveBeenCalled();
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		fetchMock.mockResolvedValueOnce(new Response('{}'));
+		await new MixerService().prepareNextAnalysis(player, track);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		fetchMock.mockRejectedValueOnce(new Error('offline'));
+		await expect(new MixerService().prepareNextAnalysis(player, track)).resolves.toBeUndefined();
+		await new MixerService().prepareNextAnalysis(player, { ...track, info: { ...track.info, isStream: true } });
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
 	it('returns the 202 enqueue receipt for announce', async () => {
 		fetchMock.mockResolvedValueOnce(
 			new Response(JSON.stringify({ guildId: '123', id: 42, position: 1, queueLength: 1 }), {
@@ -154,7 +234,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			},
 			queue: {
 				current: { encoded: 'cur', userData: { uid: 'uid-cur' } },
-				tracks: [{ encoded: 'next-new', userData: { uid: 'uid-new' } }],
+				tracks: [{ encoded: 'next-new', info: { isSeekable: true, isStream: false }, userData: { uid: 'uid-new' } }],
 				previous: []
 			}
 		} as unknown as CustomPlayer;

@@ -1,3 +1,4 @@
+import type { TransitionMode } from '@sirubot/utils/mixerTransition';
 /**
  * GuildService — 길드 설정 서비스 퍼사드. 구현은 ./guildSettings/ 하위 모듈로 분리돼 있고,
  * 소비자 계약(모듈 경로·export 목록·메서드 시그니처)은 이 파일이 그대로 유지해요.
@@ -170,6 +171,10 @@ export class GuildService extends GuildSettingsStore {
 
 	public async setCrossfade(guildId: string, enabled: boolean, durationMs?: number) {
 		return mixer.setCrossfade(this, guildId, enabled, durationMs);
+	}
+
+	public async setTransitionMode(guildId: string, mode: TransitionMode): Promise<MixerSettings> {
+		return mixer.setTransitionMode(this, guildId, mode);
 	}
 
 	public async setAutomix(guildId: string, enabled: boolean, maxTempoChange?: number, minConfidence?: number): Promise<MixerSettings> {

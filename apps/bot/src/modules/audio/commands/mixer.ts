@@ -1,3 +1,4 @@
+import { isTransitionMode, TRANSITION_LABELS } from '@sirubot/utils/mixerTransition';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError, container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
@@ -30,6 +31,25 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 				.setNameLocalizations({ ko: '상태' })
 				.setDescription('Show mixer settings and state.')
 				.setDescriptionLocalizations({ ko: '믹서 설정과 상태를 보여줘요.' })
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('transition')
+				.setNameLocalizations({ ko: '전환' })
+				.setDescription('Choose off, crossfade, or AutoMix.')
+				.setDescriptionLocalizations({ ko: '곡 전환 방식을 선택해요. 갭리스 설정은 그대로 유지해요.' })
+				.addStringOption((opt) =>
+					opt
+						.setName('mode')
+						.setNameLocalizations({ ko: '방식' })
+						.setDescription('Track transition style.')
+						.setRequired(true)
+						.addChoices(
+							{ name: '끄기', value: 'off' },
+							{ name: '크로스페이드', value: 'crossfade' },
+							{ name: 'AutoMix', value: 'automix' }
+						)
+				)
 		)
 		.addSubcommand((sub) =>
 			sub
@@ -180,6 +200,8 @@ export class MixerCommand extends Command {
 				return this.handleGapless(interaction, player);
 			case 'crossfade':
 				return this.handleCrossfade(interaction, player);
+			case 'transition':
+				return this.handleTransition(interaction, player);
 			case 'automix':
 				return this.handleAutomix(interaction, player);
 			case 'normalization':
@@ -211,6 +233,8 @@ export class MixerCommand extends Command {
 				return command.handleGapless(interaction, player);
 			case 'crossfade':
 				return command.handleCrossfade(interaction, player);
+			case 'transition':
+				return command.handleTransition(interaction, player);
 			case 'automix':
 				return command.handleAutomix(interaction, player);
 			case 'normalization':
@@ -291,6 +315,33 @@ export class MixerCommand extends Command {
 			components: [
 				view.mixerUpdated({
 					message: player ? base : `${base} 다음에 재생할 때부터 적용돼요.`
+				})
+			],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { roles: [], users: [] }
+		});
+	}
+
+	async handleTransition(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+		await this.checkDJ(interaction);
+		const mode = interaction.options.getString('mode', true);
+		if (!isTransitionMode(mode)) throw new UserError({ identifier: 'mixer_transition_invalid', message: '올바른 전환 방식을 선택해 주세요.' });
+		const saved = await this.container.guildService.setTransitionMode(interaction.guildId, mode);
+		if (player) {
+			try {
+				await this.container.mixerService.setAutomix(player, saved);
+			} catch {
+				throw new UserError({
+					identifier: 'mixer_transition_failed',
+					message: '전환 방식은 저장했지만 현재 플레이어에 적용하지 못했어요. 믹서 플러그인 지원 여부를 확인해 주세요.',
+					context: { ephemeral: true }
+				});
+			}
+		}
+		await interaction.editReply({
+			components: [
+				view.mixerUpdated({
+					message: `곡 전환 방식을 ${TRANSITION_LABELS[mode]}로 설정했어요. 갭리스 설정은 유지해요.${player ? '' : ' 다음 재생부터 적용돼요.'}`
 				})
 			],
 			flags: [MessageFlags.IsComponentsV2],

@@ -21,9 +21,9 @@ SiruBOT 웹 대시보드 (Next.js 16 App Router). 서버 설정·플레이리스
 
 ## AutoMix
 
-서버 설정의 **오디오 엔진**에서 **AutoMix (비트 맞춤)**을 켜고 저장하면 재생 중인 믹서에도 적용돼요. 관리자 길드 상세 화면에서도 같은 설정을 바꿀 수 있어요.
+서버 설정의 **오디오 엔진 → 곡 전환 방식**에서 **끄기 / 크로스페이드 / AutoMix**를 선택해 저장하면 재생 중인 믹서에도 적용돼요. 관리자 길드 상세 화면에서도 같은 설정을 바꿀 수 있어요.
 
-- AutoMix를 켜면 크로스페이드도 함께 켜져요. 크로스페이드를 끄면 AutoMix도 꺼지고, AutoMix만 끄면 크로스페이드는 유지돼요.
+- 전환 방식은 기존 `crossfadeEnabled`·`automixEnabled` 필드를 함께 저장해요. 끄기는 둘 다 꺼지고, 크로스페이드는 비트 맞춤 없이 겹쳐요. AutoMix는 둘 다 켜요. 갭리스는 별도 설정으로 유지돼요. 기존 API의 AutoMix 단독 끄기는 크로스페이드를 유지해요.
 - 최대 템포 변경은 0~12% (기본 6%), 최소 분석 신뢰도는 0~1 (기본 0.30)이에요. 비트 분석이 어렵거나 템포 차이가 범위를 넘으면 일반 크로스페이드로 전환해요.
 - 서버 설정 PUT과 관리자 PATCH는 `automixEnabled`, `automixMaxTempoChange`, `automixMinConfidence`를 받아요. 템포는 비율로 전달해요 (`0.06` = 6%). 동일 요청에 `crossfadeEnabled: false`가 있으면 AutoMix도 꺼져요.
 

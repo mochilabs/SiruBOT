@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { BotAdminEmojiItem, BotAdminNodeItem, BotAdminReloadStore } from "@sirubot/utils/botAdmin";
+import { isTransitionMode, TRANSITION_LABELS, TRANSITION_MODES, transitionFlags, transitionMode } from "@sirubot/utils/mixerTransition";
 import { formatUptime } from "@sirubot/utils/time";
 import {
 	Activity,
@@ -61,7 +62,6 @@ import { toast } from "@/components/ui/toast";
 import { VoiceServerSection } from "@/components/voice-server-section";
 import type { DataApiStatus } from "@/lib/data-api/types";
 import { formatMemory, formatRelativeTime } from "@/lib/format";
-import { normalizeMixerToggles } from "@/lib/mixer-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { ShardsResponse } from "@/lib/shard-api";
 import { createApiFetcher } from "@/lib/swr";
@@ -1145,18 +1145,6 @@ function GuildEditDialog({
 								onChange={(checked) => setDraft((prev) => ({ ...prev, gaplessEnabled: checked }))}
 							/>
 							<Switch
-								label="크로스페이드"
-								size="sm"
-								checked={current.crossfadeEnabled}
-								onChange={(checked) => setDraft((prev) => ({ ...prev, ...normalizeMixerToggles({ crossfadeEnabled: checked }) }))}
-							/>
-                            <Switch
-                                label="AutoMix (비트 맞춤)"
-                                size="sm"
-                                checked={current.automixEnabled}
-                                onChange={(checked) => setDraft((prev) => ({ ...prev, ...normalizeMixerToggles({ automixEnabled: checked }) }))}
-                            />
-							<Switch
 								label="볼륨 정규화"
 								size="sm"
 								checked={current.normalizationEnabled}
@@ -1169,6 +1157,14 @@ function GuildEditDialog({
 								onChange={(checked) => setDraft((prev) => ({ ...prev, jtcEnabled: checked }))}
 							/>
 						</div>
+
+                        <Field label="곡 전환 방식">
+                            <Select value={transitionMode(current)} disabled={saving}
+                                onValueChange={(value) => { if (isTransitionMode(value)) setDraft((prev) => ({ ...prev, ...transitionFlags(value) })); }}>
+                                <SelectTrigger aria-label="곡 전환 방식"><SelectValue>{(value) => isTransitionMode(value) ? TRANSITION_LABELS[value] : "끄기"}</SelectValue></SelectTrigger>
+                                <SelectContent>{TRANSITION_MODES.map((mode) => <SelectItem key={mode} value={mode}>{TRANSITION_LABELS[mode]}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </Field>
 
                         <Field label="AutoMix 최대 템포 변경" description="비트 맞춤에 허용할 템포 변경 범위예요.">
                             <Slider value={current.automixMaxTempoChange * 100} min={0} max={12} step={1}

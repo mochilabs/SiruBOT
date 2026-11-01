@@ -11,7 +11,7 @@ vi.mock('@sirubot/utils', async () => {
 	return { MemoryCache, normalizeCustomCommandPrefix, normalizeEmbedFixSites };
 });
 
-import { getMixerSettings, setAutomix, setCrossfade, setGapless, setNormalization } from './mixer.ts';
+import { getMixerSettings, setAutomix, setCrossfade, setGapless, setNormalization, setTransitionMode } from './mixer.ts';
 import { GuildSettingsStore } from './store.ts';
 
 function guild(id = 'guild', overrides: Partial<Guild> = {}): Guild {
@@ -32,6 +32,14 @@ describe('mixer 도메인 CRUD', () => {
 	beforeEach(() => {
 		upsert.mockReset();
 		update.mockReset();
+	});
+
+	it.each(['off', 'crossfade', 'automix'] as const)('전환 방식 %s는 두 플래그만 원자적으로 저장해요', async (mode) => {
+		const store = new GuildSettingsStore();
+		upsert.mockResolvedValueOnce(guild('guild'));
+		update.mockResolvedValueOnce(guild('guild'));
+		await setTransitionMode(store, 'guild', mode);
+		expect(update.mock.calls[0][0].data).toEqual({ crossfadeEnabled: mode !== 'off', automixEnabled: mode === 'automix' });
 	});
 
 	it('갭리스·크로스페이드 설정을 한 번에 읽어요', async () => {

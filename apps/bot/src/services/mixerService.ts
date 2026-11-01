@@ -34,6 +34,9 @@ export interface MixerStateResponse {
 	beatmatchEnabled?: boolean;
 	maxTempoChange?: number;
 	beatmatchMinConfidence?: number;
+	adaptiveTransitionsSupported?: boolean;
+	currentTrackBpm?: number | null;
+	currentTrackBpmIdentifier?: string | null;
 	silenceEnabled?: boolean;
 	silenceThresholdDb?: number;
 	tailConfirmMs?: number;
@@ -54,6 +57,7 @@ export interface ArmRequestOptions {
 	epoch: number;
 	encodedTrack: string | null;
 	isEmpty?: boolean;
+	preserveTransition?: boolean;
 }
 
 export interface OverrideRequestOptions {
@@ -83,6 +87,7 @@ export class MixerRequestError extends Error {
  * All v2 state transitions and audio controls route through this service.
  */
 export class MixerService {
+	private readonly analysisTargets = new WeakMap<Player, { encoded: string; node: object }>();
 	private readonly filterReady = new Set<string>();
 	/** Active overlap state per guild (value = incoming sub track identifier, or null if unknown). */
 	private readonly activeOverlaps = new Map<string, string | null>();
@@ -195,7 +200,8 @@ export class MixerService {
 					guildId: gid,
 					epoch: opts.epoch,
 					encodedTrack: opts.encodedTrack,
-					isEmpty: !!opts.isEmpty
+					isEmpty: !!opts.isEmpty,
+					...(opts.preserveTransition === undefined ? {} : { preserveTransition: opts.preserveTransition })
 				}),
 				headers: { 'Idempotency-Key': idemKey },
 				signal
@@ -318,9 +324,47 @@ export class MixerService {
 		);
 	}
 
-	public async getState(player: Player): Promise<MixerStateResponse> {
+	public async getState(player: Player, signal?: AbortSignal): Promise<MixerStateResponse> {
 		const gid = encodeURIComponent(String(player.guildId));
-		return (await this.rawCall(player, `/mixer/state?guildId=${gid}`)) as MixerStateResponse;
+		return (await this.rawCall(player, `/mixer/state?guildId=${gid}`, { signal })) as MixerStateResponse;
+	}
+
+	public async prepareNextAnalysis(player: CustomPlayer, track: Track | null): Promise<void> {
+		if (!track?.encoded || track.info.isStream || !track.info.isSeekable) {
+			this.analysisTargets.delete(player);
+			return;
+		}
+		const previous = this.analysisTargets.get(player);
+		if (previous?.encoded === track.encoded && previous.node === player.node) return;
+		const target = { encoded: track.encoded, node: player.node };
+		this.analysisTargets.set(player, target);
+		try {
+			const settings = await container.guildService.getMixerSettings(player.guildId);
+			if (!settings.automixEnabled) {
+				if (this.analysisTargets.get(player) === target) this.analysisTargets.delete(player);
+				return;
+			}
+			if (this.analysisTargets.get(player) !== target || player.node !== target.node) return;
+			const state = await this.getState(player, AbortSignal.timeout(750));
+			if (this.analysisTargets.get(player) !== target || player.node !== target.node) return;
+			if (state.adaptiveTransitionsSupported !== true) {
+				this.analysisTargets.delete(player);
+				return;
+			}
+			const receipt: unknown = await this.rawCall(player, '/mixer/analyze', {
+				method: 'POST',
+				body: JSON.stringify({ guildId: String(player.guildId), encodedTrack: track.encoded }),
+				signal: AbortSignal.timeout(750)
+			});
+			if (
+				(!receipt || typeof receipt !== 'object' || !('accepted' in receipt) || receipt.accepted !== true) &&
+				this.analysisTargets.get(player) === target
+			) {
+				this.analysisTargets.delete(player);
+			}
+		} catch {
+			if (this.analysisTargets.get(player) === target) this.analysisTargets.delete(player);
+		}
 	}
 
 	public async getInfo(player: Player): Promise<{ protocolVersion: number; version: string }> {

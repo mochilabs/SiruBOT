@@ -1,3 +1,4 @@
+import { transitionFlags, type TransitionMode } from '@sirubot/utils/mixerTransition';
 import { container } from '@sapphire/framework';
 import type { Prisma } from '@sirubot/prisma';
 import type { GuildSettingsStore } from './store.ts';
@@ -62,6 +63,13 @@ export async function setAutomix(
 	if (maxTempoChange !== undefined) data.automixMaxTempoChange = maxTempoChange;
 	if (minConfidence !== undefined) data.automixMinConfidence = minConfidence;
 	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+	store.updateCache(updated);
+	return getMixerSettings(store, guildId);
+}
+
+export async function setTransitionMode(store: GuildSettingsStore, guildId: string, mode: TransitionMode): Promise<MixerSettings> {
+	const guild = await store.getGuild(guildId);
+	const updated = await container.db.guild.update({ where: { id: guild.id }, data: transitionFlags(mode) });
 	store.updateCache(updated);
 	return getMixerSettings(store, guildId);
 }
