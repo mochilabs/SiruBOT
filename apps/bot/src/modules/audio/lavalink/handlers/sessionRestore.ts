@@ -188,7 +188,11 @@ export class SessionRestoreEngine {
 		startTime: number
 	) {
 		// 다른 경로에서 이미 복구됐으면 재생성하지 않는다.
-		if (this.container.audio.players.has(lavalinkPlayer.guildId)) {
+		const existingPlayer = this.container.audio.players.get(lavalinkPlayer.guildId);
+		if (existingPlayer) {
+			await this.container.mixerService.ensureMixerFilter(existingPlayer).catch((error) => {
+				this.logger.warn(`Failed to restore mixer config at ${lavalinkPlayer.guildId}: ${error}`);
+			});
 			this.logger.debug(`Client player already exists at ${lavalinkPlayer.guildId}, skipping resume recreate`);
 			return;
 		}

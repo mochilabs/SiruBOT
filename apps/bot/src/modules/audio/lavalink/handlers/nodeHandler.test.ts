@@ -190,6 +190,17 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		reportNodeEvent.mockClear();
 	});
 
+	it('기존 플레이어도 resume 시 저장된 믹서 설정을 복원한다', async () => {
+		const handler = makeHandler();
+		const player = { guildId: 'g1' };
+		const ensureMixerFilter = vi.fn().mockResolvedValue(undefined);
+		const playerSaver = { get: vi.fn() };
+		Object.assign(container, { audio: { players: new Map([['g1', player]]) }, mixerService: { ensureMixerFilter } });
+		await handler.sessionRestore.resumeSinglePlayer({}, { guildId: 'g1' }, playerSaver, NOW);
+		expect(ensureMixerFilter).toHaveBeenCalledWith(player);
+		expect(playerSaver.get).not.toHaveBeenCalled();
+	});
+
 	it('session resume 복구가 끝나면 mixer 상태를 서버와 맞춘다', async () => {
 		const handler = makeHandler();
 		const createdPlayer = { queue: { current: null }, paused: false, playing: false, lastPosition: 0, lastPositionChange: 0, ping: {} };
@@ -197,7 +208,7 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		const reconcile = vi.fn().mockResolvedValue(undefined);
 		Object.assign(container, {
 			audio: {
-				players: { has: () => false },
+				players: new Map(),
 				options: {},
 				utils: { buildTrack: vi.fn().mockReturnValue({ info: { identifier: 'a' }, requester: {} }) }
 			},
@@ -228,7 +239,7 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		const reconcile = vi.fn().mockRejectedValue(new Error('mixer unreachable'));
 		Object.assign(container, {
 			audio: {
-				players: { has: () => false },
+				players: new Map(),
 				options: {},
 				utils: { buildTrack: vi.fn().mockReturnValue({ info: { identifier: 'a' }, requester: {} }) }
 			},
@@ -326,7 +337,7 @@ describe('fresh 복구 신선도 판정 (세션 시작 시점 기준)', () => {
 
 	beforeEach(() => {
 		getSubLogger.mockReturnValue(stubLogger);
-		Object.assign(container, { audio: { players: { has: () => false } } });
+		Object.assign(container, { audio: { players: new Map() } });
 	});
 
 	function stubRestore(handler: ReturnType<typeof makeHandler>) {

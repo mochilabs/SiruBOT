@@ -10,8 +10,15 @@ import {
 	type QueueMutationOptions
 } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import type { MixerSettings } from './guildSettings/types.ts';
 const MIXER_FILTER_KEY = 'mixer';
 const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
+
+class AutomixUnsupportedError extends Error {
+	constructor() {
+		super('이 Lavalink 서버는 AutoMix를 지원하지 않아요. 믹서 플러그인을 업데이트해 주세요.');
+	}
+}
 
 export interface MixerStateResponse {
 	guildId: string;
@@ -23,6 +30,10 @@ export interface MixerStateResponse {
 	fadeInMs: number;
 	duckLevel: number;
 	normalizationEnabled?: boolean;
+	bpmDetectionEnabled?: boolean;
+	beatmatchEnabled?: boolean;
+	maxTempoChange?: number;
+	beatmatchMinConfidence?: number;
 	silenceEnabled?: boolean;
 	silenceThresholdDb?: number;
 	tailConfirmMs?: number;
@@ -377,6 +388,7 @@ export class MixerService {
 	}
 
 	public async setCrossfade(player: Player, enabled: boolean, durationMs?: number): Promise<MixerStateResponse> {
+		if (!enabled) await this.pushAutomixConfig(player, { automixEnabled: false, automixMaxTempoChange: 0.06, automixMinConfidence: 0.3 });
 		const res = (await this.rawCall(player, '/mixer/crossfade', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled, durationMs })
@@ -385,6 +397,42 @@ export class MixerService {
 			notifyQueueMutated(player as CustomPlayer, { force: true });
 		}
 		return res;
+	}
+
+	private async pushAutomixConfig(
+		player: Player,
+		settings: Pick<MixerSettings, 'automixEnabled' | 'automixMaxTempoChange' | 'automixMinConfidence'>
+	): Promise<void> {
+		const state = await this.getState(player);
+		if (typeof state.bpmDetectionEnabled !== 'boolean' || typeof state.beatmatchEnabled !== 'boolean') {
+			if (settings.automixEnabled) throw new AutomixUnsupportedError();
+			return;
+		}
+		await this.rawCall(player, '/mixer/bpm', {
+			method: 'POST',
+			body: JSON.stringify({
+				guildId: String(player.guildId),
+				enabled: settings.automixEnabled,
+				beatmatchEnabled: settings.automixEnabled,
+				maxTempoChange: settings.automixMaxTempoChange,
+				minConfidence: settings.automixMinConfidence
+			})
+		});
+	}
+
+	public async setAutomix(player: Player, settings: MixerSettings): Promise<void> {
+		await this.pushAutomixConfig(player, settings);
+		await this.rawCall(player, '/mixer/crossfade', {
+			method: 'POST',
+			body: JSON.stringify({
+				guildId: String(player.guildId),
+				enabled: settings.crossfadeEnabled || settings.automixEnabled,
+				durationMs: Math.min(15000, Math.max(500, settings.crossfadeMs))
+			})
+		});
+		if ((player as CustomPlayer).mixerRuntime && (player.playing || player.paused || player.queue?.current)) {
+			notifyQueueMutated(player as CustomPlayer, { force: true });
+		}
 	}
 
 	public async setNormalization(player: Player, enabled: boolean): Promise<MixerStateResponse> {
@@ -416,6 +464,10 @@ export class MixerService {
 
 	public async pushCrossfadeConfig(player: Player): Promise<void> {
 		const settings = await container.guildService.getMixerSettings(player.guildId);
+		await this.pushAutomixConfig(player, settings).catch((error: unknown) => {
+			if (!(error instanceof AutomixUnsupportedError)) throw error;
+			container.logger.warn(`[mixer] AutoMix unavailable (guild ${player.guildId}): ${error.message}`);
+		});
 		const durationMs = Math.min(15000, Math.max(500, settings.crossfadeMs));
 		await this.rawCall(player, '/mixer/crossfade', {
 			method: 'POST',

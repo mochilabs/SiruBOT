@@ -5,6 +5,7 @@ import { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTransla
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
+import { MIXER_SETTING_KEYS, normalizeMixerToggles } from "@/lib/mixer-settings";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
 import {
   GUILD_SETTING_KEYS,
@@ -43,6 +44,9 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     jtcUserLimit: guild.jtcUserLimit,
     gaplessEnabled: guild.gaplessEnabled,
     crossfadeEnabled: guild.crossfadeEnabled,
+    automixEnabled: guild.automixEnabled,
+    automixMaxTempoChange: guild.automixMaxTempoChange,
+    automixMinConfidence: guild.automixMinConfidence,
     crossfadeMs: guild.crossfadeMs,
     normalizationEnabled: guild.normalizationEnabled,
     ttsAnnounceMode: (["sequential", "parallel", "interrupt"].includes(guild.ttsAnnounceMode)
@@ -90,7 +94,7 @@ export const PUT = createGuildApiHandler({
       const body = await parseSettingBody(request, guildSettingsSchema, GUILD_SETTING_KEYS);
       if (!body.ok) return body.response;
 
-      const data = body.data;
+      const data = normalizeMixerToggles(body.data);
       // 모드가 바뀌면 레거시 불리언도 함께 맞춰요 — 두 필드가 갈라지면 안내 방식이 엇갈려요
       if (data.ttsAnnounceMode !== undefined) {
         data.ttsParallelEnabled = data.ttsAnnounceMode === "parallel";
@@ -110,7 +114,7 @@ export const PUT = createGuildApiHandler({
       // 저장 성공 후 모든 봇 프로세스의 설정 캐시를 무효화해요 (fire-and-forget).
       // 실패해도 봇은 60초 TTL 폴백으로 결국 최신 설정을 읽으므로 응답을 막지 않아요.
       // 믹서(갭리스·크로스페이드) 저장이면 reason을 실어 봇이 재생 중인 플레이어에 바로 적용하게 해요.
-      const touchesMixer = ["gaplessEnabled", "crossfadeEnabled", "crossfadeMs", "normalizationEnabled"].some((key) => key in data);
+      const touchesMixer = MIXER_SETTING_KEYS.some((key) => key in data);
       notifyGuildSettingsChanged(guildId, touchesMixer ? "mixer" : undefined).catch((error) => {
         console.warn(`Failed to notify guild settings change (guild ${guildId}):`, error);
       });

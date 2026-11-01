@@ -48,6 +48,9 @@ export const guildSettingsSchema = z.object({
 	jtcUserLimit: z.number().int("인원 제한은 정수여야 해요.").min(0, "인원 제한은 0 이상이에요.").max(99, "인원 제한은 99 이하여야 해요.").optional(),
 	gaplessEnabled: z.boolean().optional(),
 	crossfadeEnabled: z.boolean().optional(),
+	automixEnabled: z.boolean().optional(),
+	automixMaxTempoChange: z.number().min(0, "템포 변경은 0% 이상이에요.").max(0.12, "템포 변경은 12% 이하여야 해요.").optional(),
+	automixMinConfidence: z.number().min(0, "분석 신뢰도는 0 이상이에요.").max(1, "분석 신뢰도는 1 이하여야 해요.").optional(),
 	crossfadeMs: z
 		.number()
 		.int("크로스페이드는 정수여야 해요.")
@@ -108,6 +111,9 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	jtcUserLimit: 0,
 	gaplessEnabled: true,
 	crossfadeEnabled: true,
+	automixEnabled: false,
+	automixMaxTempoChange: 0.06,
+	automixMinConfidence: 0.30,
 	crossfadeMs: 5000,
 	normalizationEnabled: false,
 	ttsAnnounceMode: "sequential",

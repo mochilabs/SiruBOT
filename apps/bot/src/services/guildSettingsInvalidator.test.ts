@@ -7,7 +7,7 @@ const { bindings, clearGuildCustomCommandsCache, syncGuildSlashCommands, contain
 	containerStub: {
 		audio: { getPlayer: vi.fn() },
 		guildService: { getMixerSettings: vi.fn() },
-		mixerService: { setCrossfade: vi.fn(), setNormalization: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
+		mixerService: { pushCrossfadeConfig: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
 	}
 }));
 
@@ -85,9 +85,26 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g2', reason: 'mixer' }));
 
 		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g2'));
-		await vi.waitFor(() => expect(containerStub.mixerService.setCrossfade).toHaveBeenCalledWith(player, true, 600));
-		await vi.waitFor(() => expect(containerStub.mixerService.setNormalization).toHaveBeenCalledWith(player, false));
-		await vi.waitFor(() => expect(containerStub.mixerService.preloadUpcoming).toHaveBeenCalledWith(player));
+		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
+		await vi.waitFor(() => expect(containerStub.mixerService.preloadUpcoming).toHaveBeenCalledWith(player, { force: true }));
+	});
+
+	it('모든 설정 적용이 끝난 뒤 같은 다음 곡도 강제로 다시 준비한다', async () => {
+		const service = makeService();
+		await service.start('redis://localhost:6379', { invalidate: vi.fn() } as never);
+		const player = { guildId: 'g2' };
+		containerStub.audio.getPlayer.mockReturnValue(player);
+		let finishConfig!: () => void;
+		containerStub.mixerService.pushCrossfadeConfig.mockReturnValueOnce(
+			new Promise<void>((resolve) => {
+				finishConfig = resolve;
+			})
+		);
+		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g2', reason: 'mixer' }));
+		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
+		expect(containerStub.mixerService.preloadUpcoming).not.toHaveBeenCalled();
+		finishConfig();
+		await vi.waitFor(() => expect(containerStub.mixerService.preloadUpcoming).toHaveBeenCalledWith(player, { force: true }));
 	});
 
 	it('믹서 사유가 아니면 플레이어에는 손대지 않는다', async () => {
@@ -99,7 +116,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		expect(containerStub.guildService.getMixerSettings).not.toHaveBeenCalled();
-		expect(containerStub.mixerService.setCrossfade).not.toHaveBeenCalled();
+		expect(containerStub.mixerService.pushCrossfadeConfig).not.toHaveBeenCalled();
 	});
 
 	it('REDIS_URL 미설정이면 구독 없이 조용히 시작한다', async () => {

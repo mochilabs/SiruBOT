@@ -100,12 +100,11 @@ export class GuildSettingsInvalidator {
 			const player = container.audio.getPlayer(guildId);
 			if (!player) return;
 			const settings = await container.guildService.getMixerSettings(guildId);
-			await container.mixerService.setCrossfade(player, settings.crossfadeEnabled, settings.crossfadeMs);
-			await container.mixerService.setNormalization(player, settings.normalizationEnabled);
+			await container.mixerService.pushCrossfadeConfig(player);
 			if (settings.gaplessEnabled) {
-				await container.mixerService.preloadUpcoming(player).catch(() => null);
+				await container.mixerService.preloadUpcoming(player, { force: true }).catch(() => null);
 			} else {
-				await container.mixerService.clearNext(player).catch(() => null);
+				await container.mixerService.clearNext(player, { force: true }).catch(() => null);
 			}
 			this.logger.debug(`믹서 설정을 재생 중 플레이어에 적용: ${guildId}`);
 		} catch (error) {
