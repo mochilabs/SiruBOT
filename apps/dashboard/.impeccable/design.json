@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T00:00:00.000Z",
+  "title": "Design System: SiruBOT Dashboard",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Soft Pink Surface",
+        "canonical": "#ffdada",
+        "tonalRamp": ["#fff9f9", "#ffe6e8", "#ffdada", "#ffc3c9", "#ee6f8b"]
+      },
+      "primary-control": {
+        "role": "primary",
+        "displayName": "Brand Action Pink",
+        "canonical": "#ee6f8b / #f98aa0",
+        "tonalRamp": ["#f98aa0", "#f27c96", "#ee6f8b", "#c4476a", "#4f1c2a"]
+      },
+      "neutral-background": {
+        "role": "neutral",
+        "displayName": "Page Canvas Background",
+        "canonical": "#fff9f9 / #1f1618",
+        "tonalRamp": ["#ffffff", "#fff9f9", "#fff0f0", "#ffe6e8", "#3a2c30", "#1f1618"]
+      },
+      "neutral-foreground": {
+        "role": "neutral",
+        "displayName": "Deep Maroon Text",
+        "canonical": "#3a2c30 / #fbeeee",
+        "tonalRamp": ["#7d686d", "#4f1c2a", "#3a2c30", "#1f1618"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display Hero",
+        "purpose": "랜딩 및 메인 헤드라인 전용."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "서버 대시보드 뷰 및 모달 타이틀."
+      },
+      "body": {
+        "displayName": "Body Sans",
+        "purpose": "본문 설명, 폼 컨트롤, 데이터 테이블."
+      },
+      "label": {
+        "displayName": "Micro Label",
+        "purpose": "배지, 탭바 라벨, 워터마크."
+      }
+    },
+    "shadows": [
+      {
+        "name": "elev-1",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.08)",
+        "purpose": "카드 및 패널 기본 안착 그림자."
+      },
+      {
+        "name": "elev-2",
+        "value": "0 2px 6px -2px rgb(0 0 0 / 0.1)",
+        "purpose": "호버 카드, 인라인 툴팁."
+      },
+      {
+        "name": "elev-3",
+        "value": "0 6px 20px -8px rgb(0 0 0 / 0.16)",
+        "purpose": "드롭다운 메뉴, 팝오버, 자동완성 창."
+      },
+      {
+        "name": "elev-5",
+        "value": "0 28px 64px -24px rgb(0 0 0 / 0.35)",
+        "purpose": "모달 대화상자(Dialog), 플로팅 SaveBar."
+      }
+    ],
+    "motion": [
+      {
+        "name": "motion-fast",
+        "value": "150ms",
+        "purpose": "버튼 및 폼 컨트롤 인터랙션 트랜지션."
+      },
+      {
+        "name": "motion-base",
+        "value": "300ms",
+        "purpose": "모달 페이드, 시트 슬라이드, 페이지 전환."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "표준 모션 이징 커브."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "소프트 핑크 톤의 기본 액션 버튼.",
+      "html": "<button class=\"bg-primary text-primary-foreground h-9 px-4 rounded-control font-medium\">확인</button>",
+      "css": "button { background: var(--primary); color: var(--primary-foreground); border-radius: var(--r-control); height: 2.25rem; padding: 0 1rem; font-weight: 500; border: 0; }"
+    },
+    {
+      "name": "CTA Button",
+      "kind": "button",
+      "refersTo": "button-cta",
+      "description": "브랜드 포인트 핑크 채움의 고대비 저장/실행 액션 버튼.",
+      "html": "<button class=\"bg-primary-control text-primary-control-text h-9 px-4 rounded-control font-semibold shadow-sm\">저장하기</button>",
+      "css": "button { background: var(--primary-control); color: var(--primary-control-text); border-radius: var(--r-control); height: 2.25rem; padding: 0 1rem; font-weight: 600; box-shadow: var(--elev-1); border: 0; }"
+    },
+    {
+      "name": "Notice Box",
+      "kind": "card",
+      "refersTo": "notice-box",
+      "description": "안내 및 경고 콜아웃 박스 프리미티브.",
+      "html": "<div class=\"rounded-menu px-4 py-3 text-sm bg-muted/20 text-muted-foreground\">안내 문구</div>",
+      "css": "div { border-radius: var(--r-menu); padding: 0.75rem 1rem; font-size: 0.875rem; }"
+    },
+    {
+      "name": "Standard Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "3:1 인셋 경계와 포커스 링을 지원하는 텍스트 입력창.",
+      "html": "<input class=\"h-9 rounded-control bg-input px-3 py-1 text-sm shadow-control-boundary\" placeholder=\"입력...\" />",
+      "css": "input { height: 2.25rem; border-radius: var(--r-control); background: var(--input); padding: 0.25rem 0.75rem; box-shadow: var(--control-boundary); border: 0; outline: none; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Cozy Pink Salon",
+    "overview": "디스코드 음악 봇과 서버 관리 기능을 하나의 아늑하고 정돈된 살롱 공간처럼 경험하게 돕는 대시보드 시스템입니다. 소프트 핑크 표면과 딥 마룬 텍스트의 대비를 중심으로 설계되었습니다.",
+    "keyCharacteristics": [
+      "Cozy & High-Contrast (WCAG AA 통과)",
+      "Borderless Depth (표면 계층과 고해상도 그림자)",
+      "Tactile & Confident (3:1 인셋 경계와 빠른 트랜지션)"
+    ],
+    "rules": [
+      {
+        "name": "The Surface-Driven Contrast Rule",
+        "body": "컴포넌트 내부에서 dark: 분기를 남발하지 않고 globals.css 표면 토큰을 단일 소스로 사용한다.",
+        "section": "colors"
+      },
+      {
+        "name": "The Borderless Depth Rule",
+        "body": "카드는 두꺼운 테두리 대신 Surface 단계와 Elevation 그림자만으로 입체감을 나타낸다.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "컨트롤 요소에 shadow-control-boundary를 사용하여 3:1 이상의 비텍스트 대비를 충족하세요.",
+      "색상 또는 표면 토큰을 수정한 후에는 반드시 python3 scripts/wcag-contrast-audit.py를 실행하여 Unexpected failures: 0을 확인하세요.",
+      "트랜지션 효과에 transition-control duration-fast를 일관되게 사용하세요."
+    ],
+    "donts": [
+      "카드 좌측에 border-l-4 같은 두꺼운 단측 강조선을 두지 마세요.",
+      "중립 배경 위에서 text-primary를 직접 사용하지 마세요 (text-primary-text 사용)."
+    ]
+  }
+}

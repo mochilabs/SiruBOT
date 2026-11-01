@@ -164,7 +164,7 @@ export function HeroSection() {
 				>
 					<m.h1
 						variants={shouldReduce ? itemVariants : headlineVariants}
-						className="text-[1.75rem] font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
+						className="text-3xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl lg:text-6xl"
 					>
 						{shouldReduce ? (
 							// 접근성 폴백 — reduced-motion 환경에선 단어 분해·회전 없이 정적 헤드라인으로 표시해요

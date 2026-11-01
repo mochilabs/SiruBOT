@@ -47,13 +47,13 @@ export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureS
 								onClick={() => onSelect(item.key)}
 								aria-current={isActive ? "true" : undefined}
 								className={cn(
-									"relative z-10 flex w-full items-center gap-2.5 rounded-menu border-0 px-3 py-2.5 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+									"relative z-10 flex w-full items-center gap-3 rounded-menu border-0 px-3.5 py-2.5 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
 									isActive
-										? "font-bold text-primary-text"
-										: "font-medium text-muted-foreground hover:bg-accent/10 hover:text-foreground",
+										? "font-extrabold text-primary-text"
+										: "font-medium text-foreground/70 hover:bg-accent/15 hover:text-foreground",
 								)}
 							>
-								<span aria-hidden className={isActive ? "text-primary-text" : "text-muted-foreground"}>
+								<span aria-hidden className={cn("shrink-0 transition-colors duration-fast", isActive ? "text-primary-text" : "text-muted-foreground group-hover:text-foreground")}>
 									{item.icon}
 								</span>
 								<span className="truncate">{item.label}</span>
