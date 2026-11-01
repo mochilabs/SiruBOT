@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
@@ -20,26 +21,53 @@ import {
   Volume2,
 } from "lucide-react";
 
-import PlayerLiveTab from "@/components/player/player-live-tab";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { AiSettings } from "./ai-settings";
-import { AssetsSettings } from "./assets-settings";
-import { BotProfileSettings } from "./bot-profile-settings";
-import { ChannelSettings } from "./channel-settings";
-import { ChatToolsSettings } from "./chat-tools-settings";
-import { CustomCommandsSettings } from "./custom-commands-settings";
-import { JtcSettings } from "./jtc-settings";
-import { MemberGreetingSettings } from "./member-greeting-settings";
-import { MixerSettings } from "./mixer-settings";
-import { MusicSettings } from "./music-settings";
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
-import ServerStatsTab from "./server-stats-tab";
 import { SERVER_TABS, type ServerTabKey } from "./server-tabs";
 import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
-import SocialAlertsSettings from "./social-alerts-settings";
-import { TicketSettings } from "./ticket-settings";
+
+function TabLoadingFallback() {
+  return (
+    <Card aria-hidden padding="lg">
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-control" />
+          <div className="min-w-0 space-y-1.5">
+            <Skeleton.Line width="9rem" height="h-5" />
+            <Skeleton.Line width="16rem" height="h-4" />
+          </div>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {[0, 1, 2, 3].map((field) => (
+            <div key={field} className="space-y-2">
+              <Skeleton.Line width="5rem" height="h-4" />
+              <Skeleton.Line width="100%" height="h-9" />
+              <Skeleton.Line width="65%" height="h-3.5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+const AiSettings = dynamic(() => import("./ai-settings").then((m) => m.AiSettings), { loading: TabLoadingFallback });
+const CustomCommandsSettings = dynamic(() => import("./custom-commands-settings").then((m) => m.CustomCommandsSettings), { loading: TabLoadingFallback });
+const AssetsSettings = dynamic(() => import("./assets-settings").then((m) => m.AssetsSettings), { loading: TabLoadingFallback });
+const BotProfileSettings = dynamic(() => import("./bot-profile-settings").then((m) => m.BotProfileSettings), { loading: TabLoadingFallback });
+const MusicSettings = dynamic(() => import("./music-settings").then((m) => m.MusicSettings), { loading: TabLoadingFallback });
+const PlayerLiveTab = dynamic(() => import("@/components/player/player-live-tab"), { loading: TabLoadingFallback });
+const ServerStatsTab = dynamic(() => import("./server-stats-tab"), { loading: TabLoadingFallback });
+const ChannelSettings = dynamic(() => import("./channel-settings").then((m) => m.ChannelSettings), { loading: TabLoadingFallback });
+const ChatToolsSettings = dynamic(() => import("./chat-tools-settings").then((m) => m.ChatToolsSettings), { loading: TabLoadingFallback });
+const JtcSettings = dynamic(() => import("./jtc-settings").then((m) => m.JtcSettings), { loading: TabLoadingFallback });
+const MixerSettings = dynamic(() => import("./mixer-settings").then((m) => m.MixerSettings), { loading: TabLoadingFallback });
+const SocialAlertsSettings = dynamic(() => import("./social-alerts-settings"), { loading: TabLoadingFallback });
+const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings").then((m) => m.MemberGreetingSettings), { loading: TabLoadingFallback });
+const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
 const ICONS = {
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
@@ -97,25 +125,27 @@ export function ServerDashboard({
   const searchParams = useSearchParams();
   const tabFromUrl = (value: string | null): ServerTabKey =>
     TABS.some((item) => item.key === value) ? (value as ServerTabKey) : "ai";
-  const [tab, setTab] = useState<ServerTabKey>(() =>
-    tabFromUrl(searchParams.get("tab")),
-  );
+  const initialTab = tabFromUrl(searchParams.get("tab"));
+  const [tab, setTab] = useState<ServerTabKey>(initialTab);
+  // 한 번이라도 방문한 탭만 마운트하여 초기 진입 번들/요청을 최소화하고, 방문한 탭은 상태를 보존해요
+  const [visitedTabs, setVisitedTabs] = useState<Set<ServerTabKey>>(() => new Set([initialTab]));
   const mobileTabsRef = useRef<HTMLDivElement>(null);
   const nudgeTimerRef = useRef<number | null>(null);
-
   useEffect(() => {
     // 뒤로가기 등으로 URL이 바뀌면 대기 중이던 nudge 전환 타이머가 오래된 탭을 덮어쓰지 않도록 취소해요
     if (nudgeTimerRef.current) {
       window.clearTimeout(nudgeTimerRef.current);
       nudgeTimerRef.current = null;
     }
-    setTab(tabFromUrl(searchParams.get("tab")));
+    const next = tabFromUrl(searchParams.get("tab"));
+    setTab(next);
+    setVisitedTabs((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   }, [searchParams]);
-
   const selectTab = (value: string) => {
     const nextTab = tabFromUrl(value);
     const commit = () => {
       setTab(nextTab);
+      setVisitedTabs((prev) => (prev.has(nextTab) ? prev : new Set(prev).add(nextTab)));
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", nextTab);
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -189,7 +219,7 @@ export function ServerDashboard({
                       key={item.key}
                       value={item.key}
                       data-mobile-tab={item.key}
-                      className="min-h-11 min-w-max flex-none gap-2 rounded-menu px-3.5 py-2.5 text-sm font-medium transition-colors duration-fast after:hidden hover:bg-accent/10 hover:text-foreground data-active:bg-primary-control/10 data-active:font-bold data-active:text-primary-text"
+                      className="min-h-11 min-w-max flex-none gap-2 rounded-menu px-4 py-2.5 text-sm font-semibold transition-colors duration-fast after:hidden hover:bg-accent/15 hover:text-foreground data-active:bg-primary-control/15 data-active:font-extrabold data-active:text-primary-text"
                     >
                       <span aria-hidden className="shrink-0">{item.icon}</span>
                       <span>{item.label}</span>
@@ -206,42 +236,46 @@ export function ServerDashboard({
                 keepMounted
               >
                 <SettingsPanelActive.Provider value={tab === item.key}>
-                {item.key === "ai" && <AiSettings guildId={guildId} />}
-                {item.key === "custom-commands" && (
-                  <CustomCommandsSettings guildId={guildId} />
-                )}
-                {item.key === "assets" && <AssetsSettings guildId={guildId} />}
-                {item.key === "profile" && (
-                  <BotProfileSettings guildId={guildId} />
-                )}
-                {item.key === "music" && <MusicSettings guildId={guildId} />}
-                {item.key === "player-live" && (
-                  <PlayerLiveTab guildId={guildId} />
-                )}
-                {item.key === "stats" && <ServerStatsTab guildId={guildId} />}
-                {item.key === "channels" && (
-                  <ChannelSettings guildId={guildId} />
-                )}
-                {item.key === "chat-tools" && (
-                  <ChatToolsSettings guildId={guildId} />
-                )}
-                {item.key === "jtc" && <JtcSettings guildId={guildId} />}
-                {item.key === "mixer" && <MixerSettings guildId={guildId} />}
-                {item.key === "social" && (
-                  <SocialAlertsSettings
-                    guildId={guildId}
-                    visible={tab === "social"}
-                  />
-                )}
-                {item.key === "greeting" && (
-                  <MemberGreetingSettings
-                    guildId={guildId}
-                    visible={tab === "greeting"}
-                    guildName={guildName}
-                  />
-                )}
-                {item.key === "ticket" && (
-                  <TicketSettings guildId={guildId} />
+                {visitedTabs.has(item.key) && (
+                  <>
+                    {item.key === "ai" && <AiSettings guildId={guildId} />}
+                    {item.key === "custom-commands" && (
+                      <CustomCommandsSettings guildId={guildId} />
+                    )}
+                    {item.key === "assets" && <AssetsSettings guildId={guildId} />}
+                    {item.key === "profile" && (
+                      <BotProfileSettings guildId={guildId} />
+                    )}
+                    {item.key === "music" && <MusicSettings guildId={guildId} />}
+                    {item.key === "player-live" && (
+                      <PlayerLiveTab guildId={guildId} />
+                    )}
+                    {item.key === "stats" && <ServerStatsTab guildId={guildId} />}
+                    {item.key === "channels" && (
+                      <ChannelSettings guildId={guildId} />
+                    )}
+                    {item.key === "chat-tools" && (
+                      <ChatToolsSettings guildId={guildId} />
+                    )}
+                    {item.key === "jtc" && <JtcSettings guildId={guildId} />}
+                    {item.key === "mixer" && <MixerSettings guildId={guildId} />}
+                    {item.key === "social" && (
+                      <SocialAlertsSettings
+                        guildId={guildId}
+                        visible={tab === "social"}
+                      />
+                    )}
+                    {item.key === "greeting" && (
+                      <MemberGreetingSettings
+                        guildId={guildId}
+                        visible={tab === "greeting"}
+                        guildName={guildName}
+                      />
+                    )}
+                    {item.key === "ticket" && (
+                      <TicketSettings guildId={guildId} />
+                    )}
+                  </>
                 )}
                 </SettingsPanelActive.Provider>
               </TabsContent>

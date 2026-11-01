@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/components/home/discord-command-animation.tsx",
+          "src/components/servers/custom-command/custom-command-designer.tsx"
+        ],
+        "createdAt": "2026-11-01T09:03:35.385Z"
+      }
+    ]
+  }
+}

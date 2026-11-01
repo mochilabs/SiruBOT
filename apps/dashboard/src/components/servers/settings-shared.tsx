@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AlertCircle, Check, LogIn, Save, X } from "lucide-react";
 
 import { Portal } from "@/components/overlay/portal";
+import { InfoBox, NoticeBox, WarningBox } from "@/components/primitives/notice-box";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,13 +27,13 @@ export function PanelHeader({
 }) {
   return (
     <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/15 text-primary-text">
+      <div className="flex min-w-0 items-start gap-3.5">
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary/20 text-primary-text shadow-xs">
           {icon}
         </span>
         <div className="min-w-0 break-words">
-          <h2 className="text-lg font-bold text-foreground">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <h2 className="text-xl font-black tracking-tight text-foreground">{title}</h2>
+          <p className="text-sm font-medium text-muted-foreground/90">{description}</p>
         </div>
       </div>
       {action && <div className="flex max-w-full flex-wrap gap-2 sm:shrink-0">{action}</div>}
@@ -40,23 +41,7 @@ export function PanelHeader({
   );
 }
 
-/** 토큰 기반 안내 박스 */
-export function InfoBox({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-menu bg-muted/20 px-4 py-3 text-sm text-muted-foreground space-y-1 break-words">
-      {children}
-    </div>
-  );
-}
-
-/** 경고 박스 (상태 색상 관례: amber) */
-export function WarningBox({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-menu border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning break-words">
-      {children}
-    </div>
-  );
-}
+export { InfoBox, NoticeBox, WarningBox };
 
 /** 경고 박스 안 쓰는 공용 재시도 링크 — 모든 설정 패널이 같은 형태로 다시 시도해요 */
 export function RetryLink({ onRetry, className }: { onRetry: () => void; className?: string }) {
@@ -423,9 +408,18 @@ export function SaveBar({
           }}
           className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-(--z-savebar) flex flex-col gap-2.5 rounded-card bg-surface-3 px-4 py-2.5 text-foreground shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-fast md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)] md:flex-row md:items-center md:justify-between"
           style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
-          <p role="status" className="min-w-0 text-sm font-medium">
-            {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}
-          </p>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span
+              aria-hidden
+              className={cn(
+                "h-2 w-2 shrink-0 rounded-full transition-colors duration-fast",
+                saving || submitting ? "bg-warning animate-pulse" : "bg-primary-control",
+              )}
+            />
+            <p role="status" className="min-w-0 text-sm font-semibold text-foreground">
+              {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}
+            </p>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             {children}
       <Button
