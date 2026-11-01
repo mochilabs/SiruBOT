@@ -12,6 +12,11 @@
             "import": "./dist/index.js",
             "require": "./dist/index.cjs"
         },
+        "./mixerTransition": {
+            "types": "./dist/mixerTransition.d.ts",
+            "import": "./dist/mixerTransition.js",
+            "require": "./dist/mixerTransition.cjs"
+        },
         "./time": {
             "types": "./dist/time.d.ts",
             "import": "./dist/time.js",

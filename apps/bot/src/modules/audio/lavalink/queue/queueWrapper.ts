@@ -75,6 +75,7 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
 		return;
 	}
 
+	void container.mixerService.prepareNextAnalysis(player, target);
 	player.mixerRuntime.lastTargetUid = targetUid;
 	if (opts.bumpEpoch !== false) {
 		player.currentEpoch++;

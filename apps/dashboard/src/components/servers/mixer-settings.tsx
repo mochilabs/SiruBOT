@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { isTransitionMode, TRANSITION_LABELS, TRANSITION_MODES, transitionFlags, transitionMode } from "@sirubot/utils/mixerTransition";
 import { SlidersHorizontal } from "lucide-react";
 
 import { Field } from "@/components/primitives/field";
@@ -9,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsForm } from "@/hooks/use-guild-settings";
-import { normalizeMixerToggles } from "@/lib/mixer-settings";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { GuildSettings } from "@/types/settings";
 
@@ -88,19 +88,13 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
         </div>
 
         <div className="space-y-4 rounded-card bg-surface-2 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <Switch
-              checked={form.crossfadeEnabled}
-              onChange={(checked) => patch(normalizeMixerToggles({ crossfadeEnabled: checked }))}
-              disabled={saving}
-              label="크로스페이드"
-              labelPosition="left"
-            />
-            <MixerInfoTip kind="crossfade" />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            곡 끝과 다음 곡 시작을 겹쳐서 이어요.
-          </p>
+          <Field label="곡 전환 방식" description="끄기는 겹치기 없이, 크로스페이드는 고정 길이로, AutoMix는 분석에 맞춰 이어줘요.">
+            <Select value={transitionMode(form)} disabled={saving}
+              onValueChange={(value) => { if (isTransitionMode(value)) patch(transitionFlags(value)); }}>
+              <SelectTrigger className="w-full" aria-label="곡 전환 방식"><SelectValue>{(value) => isTransitionMode(value) ? TRANSITION_LABELS[value] : "끄기"}</SelectValue></SelectTrigger>
+              <SelectContent>{TRANSITION_MODES.map((mode) => <SelectItem key={mode} value={mode}>{TRANSITION_LABELS[mode]}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
         </div>
 
         <div className="space-y-4 rounded-card bg-surface-2 p-4">
@@ -152,14 +146,8 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
       </div>
 
       <div className="space-y-4">
-        <Switch
-          checked={form.automixEnabled}
-          onChange={(checked) => patch(normalizeMixerToggles({ automixEnabled: checked }))}
-          disabled={saving}
-          label="AutoMix (비트 맞춤)"
-        />
         <p className="text-sm text-muted-foreground">
-          두 곡의 박자와 템포를 맞춰 이어요. 켜면 크로스페이드도 켜지며, 분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 전환해요.
+          AutoMix는 두 곡의 박자와 템포를 맞춰 이어요. 분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 전환해요.
         </p>
         <Field label="최대 템포 변경" description="0% ~ 12%. 다음 곡의 템포를 조절할 수 있는 범위예요.">
           <Slider value={form.automixMaxTempoChange * 100}

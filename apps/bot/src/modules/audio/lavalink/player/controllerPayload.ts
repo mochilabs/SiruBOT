@@ -8,6 +8,8 @@ import type { AttachmentBuilder, ContainerBuilder, Message } from 'discord.js';
 import { getDisplayNowPlayingCard, type NowPlayingCardAttachment } from './nowPlayingCard.ts';
 import { controllerView } from '../../view/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
+import { currentBpmCache } from './currentBpm.ts';
+import { nowPlayingTrack } from './nowPlaying.ts';
 
 export interface ControllerCardPayloadOptions {
 	/** 컨트롤러에 표시할 볼륨 */
@@ -42,10 +44,23 @@ export async function buildControllerCardPayload(player: CustomPlayer, options: 
 	const pinned = Boolean(options.textChannelId) && options.textChannelId === pinnedChannelId;
 	const card = pinned ? getDisplayNowPlayingCard(player) : null;
 
+	const currentIdentifier = nowPlayingTrack(player)?.info.identifier;
+	const currentNode = player.node;
 	const components = controllerView({
 		player,
 		volume: options.volume,
-		nowPlayingCardUrl: card?.url
+		nowPlayingCardUrl: card?.url,
+		currentBpm: currentBpmCache.read(
+			player,
+			currentNode,
+			currentIdentifier,
+			(signal) => container.mixerService.getState(player, signal),
+			() => {
+				if (player.node === currentNode && nowPlayingTrack(player)?.info.identifier === currentIdentifier) {
+					container.playerNotifier.updateController(player);
+				}
+			}
+		)
 	});
 
 	const cardNeedsUpload = card !== null && options.previousTrackKey !== undefined && options.previousTrackKey !== card.trackKey;

@@ -35,10 +35,12 @@ describe("AutoMix 설정 화면", () => {
       expect(host.textContent).toContain("6%");
       expect(host.textContent).toContain("0.30");
       expect(host.querySelectorAll('[data-slot="slider"][data-disabled]')).toHaveLength(3);
-      const autoSwitch = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="switch"]'))
-        .find((element) => element.closest("label")?.textContent?.includes("AutoMix"));
-      expect(autoSwitch).toBeDefined();
-      await act(async () => { autoSwitch?.click(); });
+      const modeSelect = host.querySelector<HTMLButtonElement>('[aria-label="곡 전환 방식"]');
+      expect(modeSelect).toBeDefined();
+      await act(async () => { modeSelect?.click(); });
+      const autoOption = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find((element) => element.textContent === 'AutoMix');
+      expect(autoOption).toBeDefined();
+      await act(async () => { autoOption?.click(); });
       expect(patch).toHaveBeenCalledWith({ automixEnabled: true, crossfadeEnabled: true });
     } finally {
       await act(async () => { root.unmount(); });

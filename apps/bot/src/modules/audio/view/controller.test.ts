@@ -20,6 +20,7 @@ vi.mock('../lavalink/requester.ts', () => ({ RELATED_TRACK_REQUESTER_ID: 'relate
 
 const TRACK = {
 	info: {
+		identifier: 'track-a',
 		title: '테스트 곡',
 		author: '아티스트',
 		duration: 180_000,
@@ -59,11 +60,14 @@ function actionRows(json: PlainComponent): PlainComponent[][] {
 	return (json.components ?? []).filter((component) => component.type === 1).map((row) => row.components ?? []);
 }
 
-function controllerJson(options: { player?: CustomPlayer; nowPlayingCardUrl?: string } = {}): PlainComponent {
+function controllerJson(
+	options: { player?: CustomPlayer; nowPlayingCardUrl?: string; currentBpm?: { identifier: string; bpm: number } } = {}
+): PlainComponent {
 	return controllerView({
 		player: options.player ?? player(),
 		volume: 50,
-		nowPlayingCardUrl: options.nowPlayingCardUrl
+		nowPlayingCardUrl: options.nowPlayingCardUrl,
+		currentBpm: options.currentBpm
 	}).toJSON() as unknown as PlainComponent;
 }
 
@@ -294,5 +298,26 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		expect(texts.some((text) => text.includes('chapter 2화 (01:00~02:00)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(01:00)'))).toBe(false);
+	});
+});
+
+describe('controller BPM footer', () => {
+	beforeEach(() => {
+		mocks.nowPlaying.mockReturnValue(TRACK);
+		mocks.queued.mockReturnValue([]);
+		mocks.remaining.mockReturnValue(0);
+		mocks.chapter.mockReturnValue(null);
+	});
+	it.each([
+		[120, '120 BPM'],
+		[123.456, '123.5 BPM']
+	])('formats BPM %s before the requester', (bpm, label) => {
+		const texts = collectTexts(controllerJson({ currentBpm: { identifier: 'track-a', bpm: Number(bpm) } }));
+		const footer = texts.find((text) => text.startsWith('-# ') && text.includes(String(label)));
+		expect(footer).toContain(label);
+		expect(footer?.endsWith('<@user-1>')).toBe(true);
+	});
+	it('does not render a stale track BPM', () => {
+		expect(collectTexts(controllerJson({ currentBpm: { identifier: 'other', bpm: 120 } })).join(' ')).not.toContain('BPM');
 	});
 });

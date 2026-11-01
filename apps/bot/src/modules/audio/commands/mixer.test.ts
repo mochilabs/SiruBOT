@@ -3,7 +3,7 @@ import { MessageFlags, SlashCommandBuilder, SlashCommandSubcommandGroupBuilder }
 import { MixerCommand, withMixerSubcommands } from './mixer.ts';
 
 const mocks = vi.hoisted(() => ({
-	guildService: { hasDJRole: vi.fn(), setAutomix: vi.fn() },
+	guildService: { hasDJRole: vi.fn(), setAutomix: vi.fn(), setTransitionMode: vi.fn() },
 	mixerService: { setAutomix: vi.fn() },
 	audio: { getPlayer: vi.fn() }
 }));
@@ -53,6 +53,16 @@ describe('AutoMix command', () => {
 		vi.resetAllMocks();
 		mocks.guildService.hasDJRole.mockResolvedValue(true);
 		mocks.guildService.setAutomix.mockResolvedValue(saved);
+	});
+
+	it('routes transition mode as one atomic settings update', async () => {
+		const input = interaction();
+		input.options.getSubcommand = () => 'transition';
+		Object.assign(input.options, { getString: () => 'crossfade' });
+		mocks.guildService.setTransitionMode.mockResolvedValue({ ...saved, automixEnabled: false });
+		await Reflect.apply(MixerCommand.runFor, MixerCommand, [input]);
+		expect(mocks.guildService.setTransitionMode).toHaveBeenCalledWith('guild', 'crossfade');
+		expect(mocks.guildService.setAutomix).not.toHaveBeenCalled();
 	});
 
 	it('registers the same bounded options for mixer and settings audio', () => {
