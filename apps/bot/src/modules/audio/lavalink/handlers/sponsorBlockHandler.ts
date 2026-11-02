@@ -1,4 +1,11 @@
-import { LavalinkManager, SponsorBlockChaptersLoaded, SponsorBlockSegmentSkipped, Track, UnresolvedTrack } from 'lavalink-client';
+import {
+	LavalinkManager,
+	SponsorBlockChaptersLoaded,
+	SponsorBlockSegmentsLoaded,
+	SponsorBlockSegmentSkipped,
+	Track,
+	UnresolvedTrack
+} from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { ContainerBuilder, MessageFlags } from 'discord.js';
@@ -9,6 +16,7 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 		super('sponsorBlockHandler');
 
 		this.lavalinkManager.on('ChaptersLoaded', this.wrapAsyncHandler(this.handleChaptersLoaded.bind(this), 'ChaptersLoaded'));
+		this.lavalinkManager.on('SegmentsLoaded', this.wrapAsyncHandler(this.handleSegmentsLoaded.bind(this), 'SegmentsLoaded'));
 		this.lavalinkManager.on('SegmentSkipped', this.wrapAsyncHandler(this.handleSponsorBlock.bind(this), 'SegmentSkipped'));
 	}
 
@@ -18,6 +26,12 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 		const videoId = resolveYouTubeVideoId(_track);
 		if (videoId) player.chaptersTrackIdentifier = videoId;
 		player.chapters = payload.chapters;
+	}
+
+	private async handleSegmentsLoaded(player: CustomPlayer, _track: Track | UnresolvedTrack | null, payload: SponsorBlockSegmentsLoaded) {
+		this.logger.debug(`Segments loaded: ${player.guildId} ${payload.segments.length} segment(s)`);
+		player.sponsorBlockSegments = payload.segments;
+		player.sponsorBlockCrossfadeSuppressed = false;
 	}
 
 	private async handleSponsorBlock(player: CustomPlayer, _track: Track | UnresolvedTrack | null, payload: SponsorBlockSegmentSkipped) {
@@ -55,6 +69,7 @@ export class SponsorBlockHandler extends BaseLavalinkHandler {
 
 	public cleanup() {
 		this.lavalinkManager.removeAllListeners('ChaptersLoaded');
+		this.lavalinkManager.removeAllListeners('SegmentsLoaded');
 		this.lavalinkManager.removeAllListeners('SegmentSkipped');
 	}
 }

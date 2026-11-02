@@ -279,6 +279,31 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		expect(reconcile).toHaveBeenCalledTimes(1);
 		expect(reconcile).toHaveBeenCalledWith(createdPlayer);
 	});
+
+	it('fresh 복구 시 recreateSavedPlayer에 resetVoiceState 옵션을 넘긴다', async () => {
+		const handler = makeHandler();
+		const createdPlayer = {
+			queue: { current: { info: { duration: 100_000 } } },
+			play: vi.fn().mockResolvedValue(null),
+			seek: vi.fn().mockResolvedValue(null),
+			pause: vi.fn().mockResolvedValue(null),
+			destroy: vi.fn()
+		};
+		handler.sessionRestore.recreateSavedPlayer = vi.fn().mockResolvedValue(createdPlayer);
+		Object.assign(container, {
+			mixerService: {
+				reconcileAfterResume: vi.fn().mockResolvedValue(undefined),
+				markFiltersStale: vi.fn(),
+				primeForPlay: vi.fn().mockResolvedValue(null)
+			},
+			redisStore: { getPlayerSaver: vi.fn() }
+		});
+		const saved = { paused: false, position: 0, lastPosition: 0, lastPositionChange: NOW, savedAt: NOW };
+
+		await handler.sessionRestore.restoreFreshPlayer({ options: { id: 'main' } }, 'g1', saved);
+
+		expect(handler.sessionRestore.recreateSavedPlayer).toHaveBeenCalledWith({ options: { id: 'main' } }, 'g1', saved, { resetVoiceState: true });
+	});
 });
 
 describe('restoreFreshSession (샤드 소유 필터 · 병렬 복구)', () => {
