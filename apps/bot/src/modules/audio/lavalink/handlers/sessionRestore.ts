@@ -323,6 +323,14 @@ export class SessionRestoreEngine {
 		saved: SavedPlayer,
 		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean; resetVoiceState?: boolean } = {}
 	): Promise<CustomPlayer> {
+		if (options.resetVoiceState) {
+			// Fresh 복구 경로: createPlayer 이전에 Discord Gateway의 음성 세션을 먼저 완전 정리한다.
+			// createPlayer 이후에 channel_id: null이 오면 lavalink-client의 sendRawData가
+			// onDisconnect.autoReconnect에 반응하여 player.connect()를 선제 발화(레이스)하므로,
+			// 플레이어가 생성되기 전에 Discord 측 voiceState를 비우고 확인한 뒤 생성·연결한다.
+			await this.resetVoiceSession(guildId);
+		}
+
 		const createdPlayer = await this.container.audio.createPlayer({
 			guildId,
 			voiceChannelId: saved.voiceChannelId,
@@ -341,14 +349,6 @@ export class SessionRestoreEngine {
 		});
 
 		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId}`);
-
-		if (options.resetVoiceState) {
-			// Fresh 복구 경로: 이전 Lavalink 세션이 죽고 새로 떴을 때, Discord Gateway는
-			// 봇이 이미 음성 채널에 있다고 여겨 같은 채널로 op 4를 보내도 VOICE_STATE_UPDATE /
-			// VOICE_SERVER_UPDATE를 재발급하지 않는다. 먼저 op 4(null)로 채널을 비우고,
-			// 봇의 voice.channelId가 비워질 때까지 대기한 뒤 connect()해야 새 세션 토큰이 발급된다.
-			await this.resetVoiceSession(guildId);
-		}
 		await createdPlayer.connect();
 		if (options.restoreFilters) createdPlayer.filterManager.data = saved.filters;
 		const sync = createdPlayer.queue.utils.sync(true, false);

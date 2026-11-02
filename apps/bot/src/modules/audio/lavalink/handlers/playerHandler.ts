@@ -104,19 +104,18 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		const crossfadeBoundary = Math.max(0, duration - settings.crossfadeMs);
 		const currentPosition = player.position ?? 0;
 
-		// 1) 재생 헤드가 크로스페이드 전이 구간에 이미 진입한 경우
-		// 2) 등록된 SponsorBlock 세그먼트 중 크로스페이드 구간(boundary ~ duration)과 겹치는 구간이 있고 재생 헤드가 접근한 경우
+		// 등록된 SponsorBlock 세그먼트 중 크로스페이드 구간(boundary ~ duration)과 겹치는 구간이 있는지 확인
 		const hasOverlappingSegment = player.sponsorBlockSegments.some((seg) => seg.start < duration && seg.end > crossfadeBoundary);
+		if (!hasOverlappingSegment) return;
 
-		if (
-			(currentPosition >= crossfadeBoundary && hasOverlappingSegment) ||
-			(currentPosition >= crossfadeBoundary - 1000 && hasOverlappingSegment)
-		) {
+		// 크로스페이드 경계 1초 전(여유 마진)부터 억제 실행
+		if (currentPosition >= crossfadeBoundary - 1000) {
 			player.sponsorBlockCrossfadeSuppressed = true;
 			this.logger.debug(
 				`[SponsorBlock] Suppressing SponsorBlock for guild ${player.guildId} during crossfade overlap (position: ${currentPosition}ms, boundary: ${crossfadeBoundary}ms)`
 			);
 			await player.deleteSponsorBlock().catch((error) => {
+				player.sponsorBlockCrossfadeSuppressed = false;
 				this.logger.debug(`[SponsorBlock] Failed to delete sponsorblock during crossfade: ${error}`);
 			});
 		}
