@@ -52,3 +52,4 @@ export {
 } from './aiChat/turnControl.ts';
 export { extractThinkTokens, streamChatCompletion } from './aiChat/completion.ts';
 export { collectImageUrls, runChatTurn } from './aiChat/agentLoop.ts';
+export { appendCitedSources, extractWebSearchSources, normalizeCommaCitations } from './aiChat/traceCitation.ts';

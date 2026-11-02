@@ -70,10 +70,12 @@ export function TicketSettings({ guildId }: { guildId: string }) {
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
+      const payload = { ...form } as Record<string, unknown>;
+      delete payload.guildId;
       const res = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         throw await toApiError(res, "티켓 설정을 저장하지 못했어요.");

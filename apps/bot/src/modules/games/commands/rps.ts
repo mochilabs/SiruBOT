@@ -12,9 +12,9 @@ function choiceContainer(displayName: string) {
 	);
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId('game:rps:0').setLabel('가위 ✌️').setStyle(ButtonStyle.Primary),
-			new ButtonBuilder().setCustomId('game:rps:1').setLabel('바위 ✊').setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId('game:rps:2').setLabel('보 🖐').setStyle(ButtonStyle.Danger)
+			new ButtonBuilder().setCustomId('game:rps:0').setLabel('가위').setEmoji(emoji('scissors')).setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId('game:rps:1').setLabel('바위').setEmoji(emoji('fist')).setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder().setCustomId('game:rps:2').setLabel('보').setEmoji(emoji('wave')).setStyle(ButtonStyle.Danger)
 		)
 	);
 	return container;

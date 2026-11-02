@@ -65,6 +65,9 @@ const botEnvSchema = z.object({
 	SIRU_TTS_URL: z.string().optional(),
 	SIRU_TTS_API_KEY: z.string().optional(),
 	SIRU_TTS_DEFAULT_VOICE: z.string().optional(),
+	SEARXNG_BASE_URL: z.string().optional(),
+	SEARXNG_MAX_RESULTS: optionalNumber,
+	ENABLE_SEARXNG: z.string().optional(),
 
 	// 숫자형 tunable (선택, 미설정이면 각 소비 모듈의 기본값)
 	LOGLEVEL: logLevel,

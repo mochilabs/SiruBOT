@@ -5,7 +5,7 @@ import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
 import { getRpsStats, recordGameResult, type GameResult } from '../utils/gameRecords.ts';
 import { textContainer } from '../utils/textContainer.ts';
 
-const RPS_ICONS = ['✌️', '✊', '🖐'];
+const rpsIcons = () => [emoji('scissors'), emoji('fist'), emoji('wave')] as const;
 
 /** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
 async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {
@@ -33,8 +33,8 @@ function rpsResultContainer(displayName: string, userPick: number, botPick: numb
 
 	const lines = [
 		`### ${emoji('fist')} 가위바위보 결과`,
-		`**${displayName}** 님: ${RPS_ICONS[userPick]} ${rpsLabels[userPick]}`,
-		`**봇**: ${RPS_ICONS[botPick]} ${rpsLabels[botPick]}`,
+		`**${displayName}** 님: ${rpsIcons()[userPick]} ${rpsLabels[userPick]}`,
+		`**봇**: ${rpsIcons()[botPick]} ${rpsLabels[botPick]}`,
 		'',
 		`**${resultEmoji} ${resultText}**`
 	];
@@ -43,10 +43,7 @@ function rpsResultContainer(displayName: string, userPick: number, botPick: numb
 	const container = textContainer(lines);
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder()
-				.setCustomId('game:rps:again')
-				.setLabel(`다시하기 ${emoji('repeat')}`)
-				.setStyle(ButtonStyle.Secondary)
+			new ButtonBuilder().setCustomId('game:rps:again').setLabel('다시하기').setEmoji(emoji('repeat')).setStyle(ButtonStyle.Secondary)
 		)
 	);
 	return container;
