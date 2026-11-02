@@ -47,15 +47,15 @@ export function ticketPanelView(config: TicketConfig): { flags: number; componen
  */
 export function ticketWelcomeView(ticket: Ticket): { flags: number; components: [ContainerBuilder, ActionRowBuilder<ButtonBuilder>] } {
 	const container = new ContainerBuilder().setAccentColor(DEFAULT_COLOR);
-
 	const lines = [
+		`<@${ticket.ownerId}> 님의 티켓이 생성되었어요.`,
+		'',
 		`### ${emoji('ticket', '🎫')} 티켓 #${String(ticket.ticketNumber).padStart(4, '0')}`,
 		`- **신청자**: <@${ticket.ownerId}>`,
 		`- **담당자**: ${ticket.claimedById ? `<@${ticket.claimedById}>` : '미배정'}`,
 		'',
 		'문의하실 내용을 남겨주시면 스태프가 확인 후 답변해 드려요.'
 	];
-
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
 
 	const closeButton = new ButtonBuilder()

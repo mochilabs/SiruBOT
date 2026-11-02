@@ -142,12 +142,7 @@ export class TicketService {
 
 		// 채널 첫 메시지 전송
 		const welcomePayload = ticketWelcomeView(ticket);
-		await channel
-			.send({
-				content: `<@${member.id}> 님의 티켓이 생성되었어요.`,
-				...welcomePayload
-			})
-			.catch((err) => container.logger.warn(`[ticket] Failed to send welcome in channel ${channel.id}: ${err}`));
+		await channel.send(welcomePayload).catch((err) => container.logger.warn(`[ticket] Failed to send welcome in channel ${channel.id}: ${err}`));
 
 		return { ok: true, ticket, channel };
 	}
