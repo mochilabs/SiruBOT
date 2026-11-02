@@ -1,3 +1,4 @@
+import { notice } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
@@ -31,7 +32,10 @@ export class NodesCommand extends Command {
 
 		const audio = this.container.audio;
 		if (!audio) {
-			await interaction.editReply({ content: `${emoji('error')} 오디오 시스템이 초기화되지 않았어요.` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				components: [notice(`${emoji('error')} 오디오 시스템이 초기화되지 않았어요.`)]
+			});
 			return;
 		}
 

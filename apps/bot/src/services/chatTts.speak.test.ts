@@ -22,7 +22,7 @@ vi.mock('@sapphire/framework', () => ({
 		},
 		audioService: { ensurePlayback: mocks.ensurePlayback },
 		guildService: { getTtsDuck: async () => 0.35, getTtsAnnounceMode: async () => 'sequential' },
-		logger: { debug: vi.fn(), error: vi.fn() }
+		logger: { debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 	}
 }));
 
@@ -41,6 +41,12 @@ function playerWith(tracks: unknown[], current: unknown = null) {
 }
 
 describe('speakNow', () => {
+	it('오버레이 예약 실패를 성공으로 알리지 않아요', async () => {
+		mocks.synthesize.mockResolvedValue({ url: 'https://tts.example/clip' });
+		mocks.announce.mockRejectedValue(new Error('offline'));
+		const service = new ChatTtsService();
+		await expect(service.speakNow(playerWith([], { info: { identifier: 'music' } }) as never, '안녕', preset)).rejects.toThrow();
+	});
 	it('음악이 재생 중이면 오버레이로 문장을 읽어요', async () => {
 		mocks.synthesize.mockResolvedValue({ url: 'https://tts.example/clip', expiresIn: 600, format: 'wav', cache: 'miss' });
 		mocks.announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });

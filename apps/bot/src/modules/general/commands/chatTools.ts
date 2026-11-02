@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError, container } from '@sapphire/framework';
 import {
@@ -169,7 +170,7 @@ export class ChatToolsCommand extends Command {
 					content += `\n-# ${emoji('info')} 복구할 사이트가 전부 꺼져 있어요. 대시보드 채팅 유틸 탭에서 사이트를 골라 주세요.`;
 				}
 			}
-			await interaction.editReply({ allowedMentions: { parse: [] }, content });
+			await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
 			return;
 		}
 
@@ -177,7 +178,7 @@ export class ChatToolsCommand extends Command {
 			result.mode === 'off'
 				? `${emoji('sparkle')} 이 채널의 ${label}를 껐어요. 허용된 채널이 더 없어서 서버에서 ${label}가 모두 꺼졌어요.`
 				: `${emoji('sparkle')} 이 채널의 ${label}를 껐어요. (남은 허용 채널 ${result.channelIds.length}개)`;
-		await interaction.editReply({ allowedMentions: { parse: [] }, content });
+		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
 	}
 
 	/** 카운팅 서브커맨드 — 채널 지정(기본: 이 채널) 또는 끄기. 상태는 새로 시작해요 */
@@ -185,7 +186,11 @@ export class ChatToolsCommand extends Command {
 		if (interaction.options.getString('state') === 'off') {
 			await this.container.guildService.setCountingEnabled(interaction.guildId, false);
 			await resetCountingState(interaction.guildId);
-			await interaction.editReply({ allowedMentions: { parse: [] }, content: `${emoji('crown')} 카운팅을 껐어요.` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] },
+				components: [notice(`${emoji('crown')} 카운팅을 껐어요.`)]
+			});
 			return;
 		}
 
@@ -194,8 +199,9 @@ export class ChatToolsCommand extends Command {
 		await this.container.guildService.setCountingChannel(interaction.guildId, channelId);
 		await resetCountingState(interaction.guildId);
 		await interaction.editReply({
+			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] },
-			content: `${emoji('crown')} <#${channelId}>을(를) 카운팅 채널로 지정했어요. 1부터 차례로 숫자를 세어 보세요!`
+			components: [notice(`${emoji('crown')} <#${channelId}>을(를) 카운팅 채널로 지정했어요. 1부터 차례로 숫자를 세어 보세요!`)]
 		});
 	}
 }

@@ -4,7 +4,14 @@ import { MixerCommand, withMixerSubcommands } from './mixer.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 const mocks = vi.hoisted(() => ({
-	guildService: { hasDJRole: vi.fn(), setAutomix: vi.fn(), setTransitionMode: vi.fn(), setGapless: vi.fn() },
+	guildService: {
+		hasDJRole: vi.fn(),
+		setAutomix: vi.fn(),
+		setTransitionMode: vi.fn(),
+		setGapless: vi.fn(),
+		getMixerSettings: vi.fn(),
+		setCrossfadeDuration: vi.fn()
+	},
 	mixerService: { setAutomix: vi.fn(), setSilence: vi.fn(), clearNext: vi.fn(), preloadUpcoming: vi.fn() },
 	audio: { getPlayer: vi.fn() }
 }));
@@ -55,6 +62,8 @@ describe('Mixer transition command', () => {
 		vi.resetAllMocks();
 		mocks.guildService.hasDJRole.mockResolvedValue(true);
 		mocks.guildService.setAutomix.mockResolvedValue(saved);
+		mocks.guildService.getMixerSettings.mockResolvedValue(saved);
+		mocks.guildService.setTransitionMode.mockResolvedValue(saved);
 	});
 
 	it('routes off/crossfade as one atomic settings update', async () => {
@@ -75,9 +84,8 @@ describe('Mixer transition command', () => {
 			expect(options).toEqual(
 				expect.arrayContaining([
 					expect.objectContaining({
-						name: 'transition',
+						name: 'tuning',
 						options: expect.arrayContaining([
-							expect.objectContaining({ name: 'mode', required: true }),
 							expect.objectContaining({ name: 'max-tempo-change', min_value: 0, max_value: 12 }),
 							expect.objectContaining({ name: 'min-confidence', min_value: 0, max_value: 1 })
 						])
@@ -90,6 +98,7 @@ describe('Mixer transition command', () => {
 
 	it('AutoMix mode defers and saves percent as a ratio before applying to the player', async () => {
 		const input = interaction({ mode: 'automix', tempo: 6, confidence: 0.4 });
+		input.options.getSubcommand = () => 'tuning';
 		const player = {};
 		mocks.audio.getPlayer.mockReturnValue(player);
 		const command = Object.create(MixerCommand.prototype, { container: { value: mocks } });
@@ -104,7 +113,7 @@ describe('Mixer transition command', () => {
 	it('routes settings audio and preserves omitted options without a player', async () => {
 		const input = interaction({ mode: 'automix' });
 		await Reflect.apply(MixerCommand.runFor, MixerCommand, [input]);
-		expect(mocks.guildService.setAutomix).toHaveBeenCalledWith('guild', true, undefined, undefined);
+		expect(mocks.guildService.setTransitionMode).toHaveBeenCalledWith('guild', 'automix');
 		expect(mocks.mixerService.setAutomix).not.toHaveBeenCalled();
 		expect(JSON.stringify(input.editReply.mock.calls)).toContain('다음 재생부터 적용돼요');
 	});

@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, ModalSubmitInteraction, TextDisplayBuilder } from 'discord.js';
@@ -16,7 +17,10 @@ export class EvalModalHandler extends InteractionHandler {
 
 	public override async run(interaction: ModalSubmitInteraction) {
 		if (!OWNERS.includes(interaction.user.id)) {
-			await interaction.reply({ content: '봇 소유자만 사용할 수 있어요.', ephemeral: true });
+			await interaction.reply({
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+				components: [notice('봇 소유자만 사용할 수 있어요.')]
+			});
 			return;
 		}
 

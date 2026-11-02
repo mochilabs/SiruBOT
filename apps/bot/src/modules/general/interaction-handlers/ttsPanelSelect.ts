@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
@@ -20,18 +21,19 @@ export class TtsPanelSelectHandler extends InteractionHandler {
 
 	public override async run(interaction: StringSelectMenuInteraction<'cached'>, { voice }: { voice: string }) {
 		const { guildId, user } = interaction;
+		await interaction.deferUpdate();
 		const ok = await this.container.ttsUserSettings.set(guildId, user.id, {
 			voice: voice === TTS_VOICE_DEFAULT_VALUE ? null : voice
 		});
 		if (!ok) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: `${emoji('error')} 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`
+			await interaction.followUp({
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+				components: [notice(`${emoji('error')} 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`)]
 			});
 			return;
 		}
-		await interaction.update({
-			components: [await buildTtsPanel(this.container, guildId, user.id)],
+		await interaction.editReply({
+			components: [await buildTtsPanel(this.container, guildId, user.id, interaction.channelId)],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] }
 		});

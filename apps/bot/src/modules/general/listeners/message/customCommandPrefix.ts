@@ -1,3 +1,4 @@
+import { notice as noticeView } from '../../view/notice.ts';
 /**
  * 커스텀 명령어 접두사 리스너 — "접두사 + 이름" 메시지로 길드 커스텀 명령어를 실행해요.
  *
@@ -57,8 +58,8 @@ export class CustomCommandPrefixListener extends Listener {
 		if (this.cooldowns.has(cooldownKey)) {
 			await message
 				.reply({
-					content: `-# ${emoji('hourglass')} 잠시 후 다시 시도해 주세요.`,
-					flags: [MessageFlags.SuppressNotifications],
+					components: [noticeView(`-# ${emoji('hourglass')} 잠시 후 다시 시도해 주세요.`)],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
 				.catch(() => undefined);
@@ -104,8 +105,8 @@ export class CustomCommandPrefixListener extends Listener {
 		if (notice) {
 			await message
 				.reply({
-					content: notice,
-					flags: [MessageFlags.SuppressNotifications],
+					components: [noticeView(notice)],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
 				.catch(() => undefined);

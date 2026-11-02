@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
@@ -44,16 +45,17 @@ export class TtsPanelButtonHandler extends InteractionHandler {
 		patch: Partial<Omit<TtsUserPreset, 'enabled'>> & { enabled?: boolean }
 	): Promise<void> {
 		const { guildId, user } = interaction;
+		await interaction.deferUpdate();
 		const ok = await this.container.ttsUserSettings.set(guildId, user.id, patch);
 		if (!ok) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: `${emoji('error')} 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`
+			await interaction.followUp({
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+				components: [notice(`${emoji('error')} 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`)]
 			});
 			return;
 		}
-		await interaction.update({
-			components: [await buildTtsPanel(this.container, guildId, user.id)],
+		await interaction.editReply({
+			components: [await buildTtsPanel(this.container, guildId, user.id, interaction.channelId)],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] }
 		});

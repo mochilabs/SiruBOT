@@ -5,7 +5,7 @@ import * as view from '../view/volume.ts';
 
 export const name = 'volume';
 export const ko = '볼륨';
-export const description = '플레이어의 볼륨을 설정해요.';
+export const description = '볼륨을 설정해요. 볼륨을 비우면 현재 설정만 보여줘요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Set the player volume.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
@@ -15,7 +15,7 @@ type VolumeTarget = 'music' | 'tts' | 'duck';
 const TARGET_LABEL: Record<VolumeTarget, string> = {
 	music: '노래 볼륨',
 	tts: 'TTS 볼륨',
-	duck: 'TTS 덕킹 볼륨'
+	duck: '낭독 중 음악 볼륨'
 };
 
 /** 각 target별 최대치 — music/tts는 Lavalink 0..150%, duck은 0..100% (stored as 0..1) */
@@ -40,7 +40,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.addChoices(
 					{ name: 'Music', name_localizations: { ko: '노래' }, value: 'music' },
 					{ name: 'TTS', name_localizations: { ko: 'TTS' }, value: 'tts' },
-					{ name: 'TTS Ducking', name_localizations: { ko: 'TTS 덕킹' }, value: 'duck' }
+					{ name: 'TTS Ducking', name_localizations: { ko: '낭독중음악' }, value: 'duck' }
 				)
 		)
 		.addIntegerOption((option) =>

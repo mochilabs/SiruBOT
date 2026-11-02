@@ -40,7 +40,7 @@ function subcommandMention(commandName: string, subcommandName: string, index: R
  * AI 섹션에 따로 적어 일반 목록에서는 제외하는 명령어들.
  * 관리자 설정 커맨드(settings·mixer·chattools·config)는 `/설정` 그룹으로 안내해 일반 목록에서 빼요.
  */
-const AI_COMMAND_NAMES = new Set(['chat', 'chat-settings']);
+const AI_COMMAND_NAMES = new Set(['chat-settings']);
 const ADMIN_COMMAND_NAMES = new Set(['settings', 'mixer', 'chattools', 'config']);
 
 @ApplyOptions<Command.Options>({
@@ -128,7 +128,7 @@ export class HelpCommand extends Command {
 			'음악 재생부터 AI 대화까지, 제가 할 수 있는 것들을 알려드릴게요.',
 			'',
 			`${emoji('robot')} **AI로 이런 것들**`,
-			'- `/채팅`으로 질문·요약·번역 뭐든 시켜요. 사진을 함께 보내면 그것도 봐요.',
+			'- 봇을 멘션해서 질문·요약·번역을 요청해요. 사진을 함께 보내면 그것도 봐요.',
 			'- 채널에서 저를 멘션하면 어디서든 바로 답해줘요.',
 			'- 기억할 일은 알아서 남겼다가 다음에 또 말해요. "이거 기억해줘", "이거 잊어줘"로 직접 관리할 수 있고, `/채팅설정`에서 서버별로 켜고 끌 수 있어요.',
 			'- 답이 늘어지면 "중지" 버튼으로 바로 끊어요.',

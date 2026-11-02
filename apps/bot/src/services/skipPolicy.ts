@@ -1,3 +1,4 @@
+import { resolveQueueSelection } from '../modules/audio/utils/queueSelection.ts';
 import { container, UserError } from '@sapphire/framework';
 import { APIUser, ChatInputCommandInteraction, Collection, GuildMember, MessageFlags, VoiceBasedChannel } from 'discord.js';
 import { Player, Queue, Track } from 'lavalink-client';
@@ -10,6 +11,7 @@ import * as skipView from '../modules/audio/view/skip.ts';
 
 /** 스킵 판정 컨텍스트 — /건너뛰기와 그 하위 흐름(투표·강제·곡 지정)이 공유하는 재생 상태 스냅샷 */
 export interface SkipContext {
+	queueSelection?: string;
 	player: Player;
 	queue: Queue;
 	currentTrack: Track;
@@ -169,6 +171,7 @@ export class SkipPolicy {
 
 	private async handleSkipTo(context: SkipContext, to: number): Promise<void> {
 		const { player, interaction } = context;
+		if (context.queueSelection) to = resolveQueueSelection(player, context.queueSelection) + 1;
 		if (to > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'skipto_invalid_index',

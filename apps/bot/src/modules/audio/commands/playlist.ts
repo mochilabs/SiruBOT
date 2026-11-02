@@ -1,20 +1,12 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
+import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { emoji, createContainer, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
-import { Track } from 'lavalink-client';
-import { getErrorMessage } from '../utils/error.ts';
-import { lookupSource } from '../utils/source.ts';
-import { errorView } from '../../../lib/errorView.ts';
 import { respondPlaylistNames, respondPlaylistTrackPositions } from '../../../lib/autocomplete.ts';
+import { openPlaylistPanel, addPlaylistQuery } from '../utils/playlistPanel.ts';
+import { playSavedTracks } from '../../../services/playlistPlayback.ts';
+import { notice } from '../../general/view/notice.ts';
 
-@ApplyOptions<Command.Options>({
-	enabled: true,
-	name: 'playlist',
-	description: 'Manage your custom playlists.',
-	fullCategory: ['음악'],
-	preconditions: ['TextChannelAllowed', 'NodeAvailable']
-})
+@ApplyOptions<Command.Options>({ name: 'playlist', description: 'Manage your playlists.', fullCategory: ['음악'] })
 export class PlaylistCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
 		registry.registerChatInputCommand((builder) => {
@@ -35,6 +27,8 @@ export class PlaylistCommand extends Command {
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
 								.setDescription('Playlist name.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setMaxLength(80)
 								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
 								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
 								.setRequired(true)
@@ -98,6 +92,8 @@ export class PlaylistCommand extends Command {
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
 								.setDescription('Playlist name.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setMaxLength(80)
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -121,6 +117,8 @@ export class PlaylistCommand extends Command {
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
 								.setDescription('Playlist name.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setMaxLength(80)
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -136,15 +134,17 @@ export class PlaylistCommand extends Command {
 								.setName('name')
 								.setNameLocalizations({ ko: '이름' })
 								.setDescription('Playlist name.')
+								.setDescriptionLocalizations({ ko: '플레이리스트 이름이에요.' })
+								.setMaxLength(80)
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
-						.addIntegerOption((opt) =>
+						.addStringOption((opt) =>
 							opt
-								.setName('position')
-								.setNameLocalizations({ ko: '번호' })
+								.setName('track')
+								.setNameLocalizations({ ko: '곡' })
 								.setDescription('Track number to remove.')
-								.setDescriptionLocalizations({ ko: '제거할 곡의 번호예요.' })
+								.setDescriptionLocalizations({ ko: '제거할 곡을 선택해요. 삭제 전에 다시 확인해요.' })
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -179,7 +179,7 @@ export class PlaylistCommand extends Command {
 		}
 
 		const focused = interaction.options.getFocused(true);
-		if (focused.name === 'position') {
+		if (focused.name === 'track') {
 			// 번호 후보는 이미 고른 플레이리스트의 곡 목록이에요
 			return respondPlaylistTrackPositions(interaction, interaction.options.getString('name'));
 		}
@@ -191,313 +191,54 @@ export class PlaylistCommand extends Command {
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (!interaction.inCachedGuild()) return;
-
-		const subcommand = interaction.options.getSubcommand(true);
-
-		switch (subcommand) {
-			case 'create':
-				return this.handleCreate(interaction);
-			case 'delete':
-				return this.handleDelete(interaction);
-			case 'list':
-				return this.handleList(interaction);
-			case 'view':
-				return this.handleView(interaction);
-			case 'add':
-				return this.handleAdd(interaction);
-			case 'add-current':
-				return this.handleAddCurrent(interaction);
-			case 'remove':
-				return this.handleRemove(interaction);
-			case 'play':
-				return this.handlePlay(interaction);
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+		const sub = interaction.options.getSubcommand(true);
+		const name = interaction.options.getString('name') ?? undefined;
+		if (sub === 'create') {
+			const created = await this.container.playlistService.createPlaylist(
+				interaction.user.id,
+				interaction.options.getString('name', true).trim(),
+				interaction.options.getString('description') ?? undefined
+			);
+			return openPlaylistPanel(interaction, { name: created.name });
 		}
-	}
-
-	private async handleCreate(interaction: ChatInputCommandInteraction<'cached'>) {
-		const name = interaction.options.getString('name', true);
-		const description = interaction.options.getString('description');
-
-		try {
-			await this.container.playlistService.createPlaylist(interaction.user.id, name, description ?? undefined);
-			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('success')} 플레이리스트 **${name}**을(를) 생성했어요.`))
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.reply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
-			});
-		}
-	}
-
-	private async handleDelete(interaction: ChatInputCommandInteraction<'cached'>) {
-		const name = interaction.options.getString('name', true);
-
-		try {
-			await this.container.playlistService.deletePlaylist(interaction.user.id, name);
-			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('trash')} 플레이리스트 **${name}**을(를) 삭제했어요.`))
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.reply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
-			});
-		}
-	}
-
-	private async handleList(interaction: ChatInputCommandInteraction<'cached'>) {
-		// "즐겨찾기" 기본 플레이리스트의 항시 존재를 보장합니다.
-		await this.container.playlistService.getOrCreateFavoritesPlaylist(interaction.user.id);
-
-		const playlists = await this.container.playlistService.getUserPlaylists(interaction.user.id);
-
-		if (playlists.length === 0) {
-			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('inbox_tray')} 생성된 플레이리스트가 없어요.`))],
-				flags: [MessageFlags.IsComponentsV2]
-			});
+		if (sub === 'list') return openPlaylistPanel(interaction);
+		if (sub === 'view') return openPlaylistPanel(interaction, { name });
+		if (sub === 'delete') return openPlaylistPanel(interaction, { name, action: 'delete' });
+		if (sub === 'remove')
+			return openPlaylistPanel(interaction, { name, action: 'remove', entryId: interaction.options.getString('track', true) });
+		if (sub === 'add') {
+			const feedback = await addPlaylistQuery(
+				interaction.user.id,
+				interaction.options.getString('name', true),
+				interaction.options.getString('query', true)
+			);
+			await interaction.editReply({ components: [notice(feedback)], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } });
 			return;
 		}
-
-		const list = playlists.map((p) => `**${p.name}** - ${p._count.tracks}곡 ${p.description ? `\n-# ${p.description}` : ''}`).join('\n\n');
-
-		await interaction.reply({
-			components: [createContainer().addTextDisplayComponents((t) => t.setContent(`### ${emoji('folder')} 나의 플레이리스트\n${list}`))],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-	}
-
-	private async handleView(interaction: ChatInputCommandInteraction<'cached'>) {
-		const name = interaction.options.getString('name', true);
-
-		try {
-			const { playlist, tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, name);
-
-			if (tracks.length === 0) {
-				await interaction.reply({
-					components: [
-						createContainer().addTextDisplayComponents((t) =>
-							t.setContent(`${emoji('inbox_tray')} **${playlist.name}** 플레이리스트가 비어있어요.`)
-						)
-					],
-					flags: [MessageFlags.IsComponentsV2]
+		if (sub === 'add-current') {
+			const track = this.container.audio.getPlayer(interaction.guildId)?.queue.current;
+			if (!track || !('encoded' in track))
+				throw new UserError({
+					identifier: 'playlist_no_track',
+					message: '현재 곡이 없어요. /플레이리스트 추가로 제목이나 주소를 입력해 주세요.',
+					context: { ephemeral: true }
 				});
-				return;
-			}
-
-			const list = tracks.map((t, index) => `\`#${index + 1}\` **[${t.track.title}](${t.track.url})** - ${t.track.artist}`).join('\n');
-
-			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`### ${emoji('clipboard')} 플레이리스트: ${playlist.name}\n${list}`)
-					)
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.reply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
-			});
-		}
-	}
-
-	private async handleAdd(interaction: ChatInputCommandInteraction<'cached'>) {
-		const voiceChannelId = interaction.member.voice.channelId;
-		if (!voiceChannelId) {
-			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`))],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
+			await this.container.playlistService.addTrack(interaction.user.id, interaction.options.getString('name', true), track);
+			await interaction.editReply({
+				components: [notice(`**${track.info.title}**을(를) 목록에 추가했어요.`)],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] }
 			});
 			return;
 		}
-
-		await interaction.deferReply();
-
-		const name = interaction.options.getString('name', true);
-		const query = interaction.options.getString('query', true);
-
-		let player = this.container.audio.getPlayer(interaction.guildId);
-		if (!player) {
-			player = this.container.audio.createPlayer({
-				guildId: interaction.guildId,
-				voiceChannelId: voiceChannelId,
-				textChannelId: interaction.channelId,
-				selfDeaf: true
-			});
-		}
-
-		const result = await player.search({ query }, interaction.user);
-		if (result.tracks.length === 0) {
-			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 곡을 찾을 수 없어요.`))],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-			return;
-		}
-
-		const track = result.tracks[0];
-
-		try {
-			await this.container.playlistService.addTrack(interaction.user.id, name, track as Track);
-			await interaction.editReply({
-				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${emoji('success')} **${track.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
-					)
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.editReply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		}
-	}
-
-	private async handleAddCurrent(interaction: ChatInputCommandInteraction<'cached'>) {
-		const name = interaction.options.getString('name', true);
-		const player = this.container.audio.getPlayer(interaction.guildId);
-		const current = player?.queue.current;
-
-		if (!player || !current) {
-			await interaction.reply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} 현재 재생 중인 곡이 없어요.`))],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
-			});
-			return;
-		}
-
-		try {
-			await this.container.playlistService.addTrack(interaction.user.id, name, current as Track);
-			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${emoji('success')} **${current.info.title}**을(를) **${name}** 플레이리스트에 추가했어요.`)
-					)
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.reply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
-			});
-		}
-	}
-
-	private async handleRemove(interaction: ChatInputCommandInteraction<'cached'>) {
-		const name = interaction.options.getString('name', true);
-		const position = interaction.options.getInteger('position', true);
-
-		try {
-			const { tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, name);
-			const target = tracks[position - 1]; // 1-based index to array index
-
-			if (!target) {
-				throw new Error('해당 번호의 곡이 없어요.');
-			}
-
-			await this.container.playlistService.removeTrack(interaction.user.id, name, target.position);
-			await interaction.reply({
-				components: [
-					createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('trash')} **${name}** 플레이리스트에서 곡을 제거했어요.`))
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.reply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
-			});
-		}
-	}
-
-	private async handlePlay(interaction: ChatInputCommandInteraction<'cached'>) {
-		await interaction.deferReply();
-
-		const member = interaction.member;
-		const voiceChannel = member.voice.channel;
-		const name = interaction.options.getString('name', true);
-
-		if (!voiceChannel) {
-			await interaction.editReply({
-				components: [createContainer().addTextDisplayComponents((t) => t.setContent(`${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`))],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-			return;
-		}
-
-		try {
-			const { playlist, tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, name);
-
-			if (tracks.length === 0) {
-				await interaction.editReply({
-					components: [
-						createContainer().addTextDisplayComponents((t) =>
-							t.setContent(`${emoji('inbox_tray')} **${playlist.name}** 플레이리스트가 비어있어요.`)
-						)
-					],
-					flags: [MessageFlags.IsComponentsV2]
-				});
-				return;
-			}
-
-			let player = this.container.audio.getPlayer(interaction.guildId);
-			if (!player) {
-				player = this.container.audio.createPlayer({
-					guildId: interaction.guildId,
-					voiceChannelId: voiceChannel.id,
-					textChannelId: interaction.channelId,
-					selfDeaf: true
-				});
-				await player.connect();
-			}
-
-			let addedCount = 0;
-			const resolvedTracks: Track[] = [];
-			const CONCURRENCY = 5;
-			for (let i = 0; i < tracks.length; i += CONCURRENCY) {
-				const batch = tracks.slice(i, i + CONCURRENCY);
-				const searchResults = await Promise.allSettled(
-					batch.map((t) => player.search({ query: t.track.url, source: lookupSource(t.track.source) }, interaction.user))
-				);
-				for (const result of searchResults) {
-					if (result.status === 'fulfilled' && result.value.tracks.length > 0) {
-						resolvedTracks.push(result.value.tracks[0] as Track);
-						addedCount++;
-					}
-				}
-			}
-
-			if (resolvedTracks.length > 0) {
-				await this.container.audioService.enqueueTrack(player, resolvedTracks);
-				await this.container.audioService.ensurePlayback(player);
-			}
-
-			await interaction.editReply({
-				components: [
-					createContainer().addTextDisplayComponents((t) =>
-						t.setContent(`${emoji('music_note')} **${playlist.name}** 플레이리스트에서 **${addedCount}곡**을 대기열에 추가했어요.`)
-					)
-				],
-				flags: [MessageFlags.IsComponentsV2]
-			});
-		} catch (error: unknown) {
-			await interaction.editReply({
-				components: [errorView(`${emoji('error')} ${getErrorMessage(error)}`)],
-				flags: [MessageFlags.IsComponentsV2]
-			});
+		if (sub === 'play') {
+			const { tracks } = await this.container.playlistService.getPlaylistTracks(
+				interaction.user.id,
+				interaction.options.getString('name', true)
+			);
+			const feedback = await playSavedTracks(interaction, tracks);
+			await interaction.editReply({ components: [notice(feedback)], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } });
 		}
 	}
 }

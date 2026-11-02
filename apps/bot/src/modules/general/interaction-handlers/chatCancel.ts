@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
@@ -23,7 +24,9 @@ export class ChatCancelHandler extends InteractionHandler {
 				result === 'forbidden'
 					? `${emoji('warning')} 이 답변은 다른 사용자의 대화예요.`
 					: `${emoji('warning')} 이미 완료되었거나 만료된 요청이에요.`;
-			await interaction.reply({ flags: [MessageFlags.Ephemeral], content: message }).catch(() => undefined);
+			await interaction
+				.reply({ flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral], components: [notice(message)] })
+				.catch(() => undefined);
 			return;
 		}
 

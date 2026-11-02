@@ -54,7 +54,7 @@ export class ProfileCommand extends Command {
 								.setName('private')
 								.setNameLocalizations({ ko: '나만보기' })
 								.setDescription('Show the response only to you.')
-								.setDescriptionLocalizations({ ko: '다른 사람에게 안 보이게 나만 보여줘요.' })
+								.setDescriptionLocalizations({ ko: '이번 조회 결과만 나에게 보여줘요. 프로필 공개 범위는 바뀌지 않아요.' })
 								.setRequired(false)
 						)
 						.addStringOption((option) =>
@@ -218,9 +218,9 @@ export class ProfileCommand extends Command {
 			return;
 		}
 
-		// view — 기본 공개. 나만보기(true)면 ephemeral. 생일은 여전히 본인 조회 때만 데이터에 실어요.
+		// 본인 조회는 기본 비공개이고 생일은 비공개 응답에만 넣어요.
 		const target = interaction.options.getUser('user') ?? interaction.user;
-		const showPrivate = interaction.options.getBoolean('private') ?? false;
+		const showPrivate = interaction.options.getBoolean('private') ?? target.id === interaction.user.id;
 		const preset = (interaction.options.getString('style') ?? 'dark') as 'dark' | 'ticket';
 		await interaction.deferReply({ flags: showPrivate ? [MessageFlags.Ephemeral] : undefined });
 
@@ -304,8 +304,8 @@ export class ProfileCommand extends Command {
 			zodiacCode: data.zodiacCode,
 			zodiacKo: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.ko ?? '별자리 없음') : '별자리 없음',
 			zodiacJp: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.jp ?? null) : null,
-			birthMonth: data.birthMonth,
-			birthDay: data.birthDay,
+			birthMonth: showPrivate ? data.birthMonth : null,
+			birthDay: showPrivate ? data.birthDay : null,
 			playlistCount: data.playlistCount,
 			requestedCount: data.requestedCount,
 			listenText: formatTimeToKorean(Math.floor(data.listenMs / 1000)),
@@ -330,17 +330,15 @@ export class ProfileCommand extends Command {
 		if (cardPng) {
 			const { AttachmentBuilder } = await import('discord.js');
 			const attachment = new AttachmentBuilder(cardPng, { name: `profile-${target.id}.png` });
-			if (showPrivate) {
-				await interaction.editReply({
-					files: [attachment],
-					flags: [MessageFlags.IsComponentsV2],
-					components: [createContainer()]
-				});
-			} else {
-				await interaction.editReply({
-					files: [attachment]
-				});
-			}
+			await interaction.editReply({
+				files: [attachment],
+				flags: [MessageFlags.IsComponentsV2],
+				components: [
+					createContainer().addMediaGalleryComponents((gallery) =>
+						gallery.addItems((item) => item.setURL(`attachment://profile-${target.id}.png`))
+					)
+				]
+			});
 			return;
 		}
 
@@ -353,7 +351,7 @@ export class ProfileCommand extends Command {
 		}
 
 		// 생일·별자리 — 생일은 본인에게만
-		if (data.isSelf) {
+		if (data.isSelf && showPrivate) {
 			if (data.birthMonth != null && data.birthDay != null) {
 				lines.push(`${emoji('cake')} **생일**: ${data.birthMonth}월 ${data.birthDay}일`);
 				lines.push(`${emoji('crystal_ball')} **별자리**: ${data.zodiacCode ? zodiacLabel(data.zodiacCode) : '알 수 없음'}`);

@@ -1,3 +1,4 @@
+import { notice } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
@@ -59,8 +60,8 @@ export class MentionReplyListener extends Listener {
 		if (!prompt && images.length === 0) {
 			await message
 				.reply({
-					content: `-# ${emoji('bulb')} 질문을 멘션 뒤에 이어서 써 주세요. 예: \`@시루 내일 날씨 어때?\``,
-					flags: [MessageFlags.SuppressNotifications],
+					components: [notice(`-# ${emoji('bulb')} 질문을 멘션 뒤에 이어서 써 주세요. 예: \`@시루 내일 날씨 어때?\``)],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
 				.catch(() => undefined);
@@ -77,8 +78,8 @@ export class MentionReplyListener extends Listener {
 					: `-# ${emoji('hourglass')} AI 대화 10분 사용량을 모두 썼어요. 잠시 후 다시 멘션해 주세요.`;
 			await message
 				.reply({
-					content: text,
-					flags: [MessageFlags.SuppressNotifications],
+					components: [notice(text)],
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
 				.catch(() => undefined);

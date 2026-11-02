@@ -1,3 +1,4 @@
+import { resolveQueueSelection } from '../utils/queueSelection.ts';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
@@ -360,9 +361,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const currentPage = player.queuePage;
-		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_SIZE;
-		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
+		const token = interaction.customId.split(':')[3] ?? '';
+		const trackIndex = resolveQueueSelection(player, token);
+		const currentPage = Math.floor(trackIndex / QUEUE_PAGE_SIZE) + 1;
 
 		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
@@ -373,6 +374,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		await interaction.deferUpdate();
+		resolveQueueSelection(player, token);
 		await player.queue.splice(trackIndex, 1);
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		player.queueSelectedIndex = null;
@@ -398,9 +400,8 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async handleQueueJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const currentPage = player.queuePage;
-		const defaultTrackIndex = (currentPage - 1) * QUEUE_PAGE_SIZE;
-		const trackIndex = player.queueSelectedIndex ?? defaultTrackIndex;
+		const token = interaction.customId.split(':')[3] ?? '';
+		const trackIndex = resolveQueueSelection(player, token);
 
 		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
@@ -415,6 +416,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await interaction.deferUpdate();
 		player.queuePage = 1;
 		player.queueSelectedIndex = null;
+		resolveQueueSelection(player, token);
 		await this.container.mixerService.skip(player, trackIndex + 1);
 
 		const remaining = getUserQueuedTracks(player);

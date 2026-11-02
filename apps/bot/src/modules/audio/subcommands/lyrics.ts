@@ -9,7 +9,7 @@ export const ko = '가사';
 export const description = '가사를 검색해요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Search the lyrics of a song.';
-export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying'];
+export const preconditions = ['TextChannelAllowed'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub

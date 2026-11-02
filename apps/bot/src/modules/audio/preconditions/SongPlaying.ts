@@ -5,7 +5,7 @@ import { emoji } from '@sirubot/utils';
 export class SongPlaying extends AllFlowsPrecondition {
 	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
-		return `${emoji('music_note')} 이 명령어는 노래 재생 중에만 사용이 가능해요.`;
+		return `${emoji('music_note')} 현재 곡이 없어요. 먼저 /재생으로 곡을 추가해 주세요.`;
 	}
 	#ephemeral = true;
 
@@ -27,7 +27,7 @@ export class SongPlaying extends AllFlowsPrecondition {
 	public check(guildId: string) {
 		const player = this.container.audio.getPlayer(guildId);
 		if (!player) return false;
-		if (player.queue.current && !player.paused) return true;
+		if (player.queue.current) return true;
 
 		return false;
 	}

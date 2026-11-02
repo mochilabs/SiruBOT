@@ -4,7 +4,7 @@ import type { ChatAbortResult } from './types.ts';
 // 응답 중지 레지스트리
 const chatAborts = new Map<string, { controller: AbortController; userId: string }>();
 
-/** 채널별 동시 턴 잠금 — /채팅과 멘션 답변이 같은 채널 히스토리를 경쟁하지 않도록 해요 */
+/** 채널별 동시 턴 잠금 — 멘션 답변과 관리자 초기화가 같은 채널 기록을 동시에 변경하지 않도록 해요 */
 const activeChannelTurns = new Set<string>();
 
 /** 채널 턴 점유 시도 — 이미 진행 중이면 false */

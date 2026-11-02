@@ -1,3 +1,4 @@
+import { notice } from '../../view/notice.ts';
 /**
  * 카운팅 채널 리스너 — 지정 채널에서 숫자를 순서대로 세요.
  *
@@ -66,8 +67,8 @@ export class CountingChannelListener extends Listener {
 	private announce(message: Message, content: string): Promise<unknown> {
 		return message
 			.reply({
-				content,
-				flags: [MessageFlags.SuppressNotifications],
+				components: [notice(content)],
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 				allowedMentions: { parse: [] }
 			})
 			.catch(() => undefined);

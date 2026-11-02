@@ -108,7 +108,7 @@ describe('handleCustomCommandSlashInteraction', () => {
 			}
 		});
 		await handleCustomCommandSlashInteraction(fakeInteraction({ roles: [] }));
-		expect(editReply).toHaveBeenCalledWith(expect.stringContaining('권한이 없어요'));
+		expect(JSON.stringify(editReply.mock.calls)).toContain('권한이 없어요');
 		expect(addRole).not.toHaveBeenCalled();
 	});
 
@@ -126,6 +126,6 @@ describe('handleCustomCommandSlashInteraction', () => {
 		});
 		await handleCustomCommandSlashInteraction(fakeInteraction({ roles: ['999000000000000001'] }));
 		expect(addRole).toHaveBeenCalledWith('123456789012345678');
-		expect(editReply).toHaveBeenCalledWith(expect.stringContaining('처리했어요'));
+		expect(JSON.stringify(editReply.mock.calls)).toContain('처리했어요');
 	});
 });

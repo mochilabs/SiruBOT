@@ -32,6 +32,12 @@ export async function setNormalization(store: GuildSettingsStore, guildId: strin
 	return guild.normalizationEnabled;
 }
 
+export async function setCrossfadeDuration(store: GuildSettingsStore, guildId: string, seconds: number): Promise<MixerSettings> {
+	if (!Number.isFinite(seconds) || seconds < 0.5 || seconds > 15) throw new RangeError('겹치는 시간은 0.5~15초로 입력해 주세요.');
+	await store.upsertField(guildId, 'crossfadeMs', Math.round(seconds * 1000));
+	return getMixerSettings(store, guildId);
+}
+
 export async function setCrossfade(store: GuildSettingsStore, guildId: string, enabled: boolean, durationMs?: number) {
 	// Lavalink mixer 플러그인의 겹치기 상한은 15초(15000ms)라 여기서 잘라요
 	const clamped = durationMs === undefined ? undefined : Math.round(Math.min(15000, Math.max(500, durationMs)));

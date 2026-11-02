@@ -1,8 +1,10 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { purgeUserData, summarizeUserData } from '../../../services/userDataService.ts';
+import { confirmAction } from '../../../lib/confirmation.ts';
 
 /**
  * `/개인정보` — 내 데이터 열람·삭제 (PIPA/GDPR 삭제권 경로).
@@ -48,14 +50,6 @@ export class PrivacyCommand extends Subcommand {
 						.setNameLocalizations({ ko: '삭제' })
 						.setDescription('Delete my stored data.')
 						.setDescriptionLocalizations({ ko: '저장된 내 데이터를 지워요. 되돌릴 수 없어요.' })
-						.addBooleanOption((option) =>
-							option
-								.setName('confirm')
-								.setNameLocalizations({ ko: '확인' })
-								.setDescription('Confirm deletion (irreversible).')
-								.setDescriptionLocalizations({ ko: '삭제를 확정해요. 되돌릴 수 없어요.' })
-								.setRequired(true)
-						)
 				);
 		});
 	}
@@ -75,31 +69,37 @@ export class PrivacyCommand extends Subcommand {
 			`${emoji('gamepad')} 게임 전적: ${summary.gameRecords}건`,
 			'',
 			'-# 채널 AI 대화 기록에는 회원님 발화가 섞여 있어요. 이 기록은 서버 단위로만 지울 수 있어요',
-			'-# (서버 관리자 → 대시보드 서버 설정의 AI 기록 삭제). 지금 지우려면 `/개인정보 삭제 확인:True`.'
+			'-# 채널 기록은 서버 관리자에게 /채팅설정 초기화를 요청해 주세요.',
+			'-# 플레이리스트·즐겨찾기·음악 이용 기록은 이 삭제에 포함되지 않아요. 아래 개인 설정을 지우려면 /개인정보 삭제를 실행해 주세요.'
 		];
 
-		await interaction.editReply({ allowedMentions: { parse: [] }, content: lines.join('\n') });
+		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(lines.join('\n'))] });
 	}
 
 	public async chatInputForget(interaction: ChatInputCommandInteraction<'cached'>) {
-		const confirmed = interaction.options.getBoolean('confirm', true);
-		if (!confirmed) {
-			await interaction.reply({
-				content: `${emoji('bulb')} 삭제를 확정하려면 \`확인:True\`로 실행해 주세요. 되돌릴 수 없어요.`,
-				flags: [MessageFlags.Ephemeral]
-			});
-			return;
-		}
-
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+		const summary = await summarizeUserData(interaction.user.id);
+		if (
+			!(await confirmAction(
+				interaction,
+				'내 개인 설정을 삭제할까요?',
+				`AI 장기 기억 ${summary.memoryFacts}개 · 단기 기억 ${summary.shortTermTurns}개\n생일·소개 · TTS 설정 ${summary.ttsSettings}개 서버 · 게임 전적 ${summary.gameRecords}건\n\n모든 서버에 걸친 위 데이터를 삭제하며 되돌릴 수 없어요.\n채널 AI 기록·플레이리스트·즐겨찾기·음악 이용 기록은 유지돼요.`
+			))
+		)
+			return;
 		const result = await purgeUserData(interaction.user.id);
 
 		await interaction.editReply({
+			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] },
-			content: [
-				`${emoji('trash')} 내 데이터를 지웠어요.`,
-				`-# AI 기억 ${result.memoryRows} · 프로필 ${result.profileRows} · TTS 설정 ${result.ttsRows} · 게임 전적 ${result.gameRecords}건 삭제`
-			].join('\n')
+			components: [
+				notice(
+					[
+						`${emoji('trash')} 확인한 개인 설정과 AI 기억·게임 전적을 지웠어요.`,
+						`-# AI 기억 ${result.memoryRows} · 프로필 ${result.profileRows} · TTS 설정 ${result.ttsRows} · 게임 전적 ${result.gameRecords}건 삭제`
+					].join('\n')
+				)
+			]
 		});
 	}
 }

@@ -1,3 +1,4 @@
+import { notice } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, ContainerBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
@@ -49,7 +50,10 @@ export class EmojisCommand extends Command {
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 		const manager = this.container.appEmojiManager;
 		if (!manager) {
-			await interaction.editReply({ content: `${emoji('error')} 이모지 매니저가 아직 초기화되지 않았어요.` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				components: [notice(`${emoji('error')} 이모지 매니저가 아직 초기화되지 않았어요.`)]
+			});
 			return;
 		}
 		const subcommand = interaction.options.getSubcommand();
@@ -71,16 +75,25 @@ export class EmojisCommand extends Command {
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error) {
-			await interaction.editReply({ content: `${emoji('error')} 조회 실패: ${error instanceof Error ? error.message : String(error)}` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				components: [notice(`${emoji('error')} 조회 실패: ${error instanceof Error ? error.message : String(error)}`)]
+			});
 		}
 	}
 
 	private async handleSync(interaction: ChatInputCommandInteraction, manager: AppEmojiManager) {
 		try {
 			await manager.sync(true);
-			await interaction.editReply({ content: `${emoji('success')} 동기화 완료 — 미등록 PNG 업로드 및 캐시 갱신됨.` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				components: [notice(`${emoji('success')} 동기화 완료 — 미등록 PNG 업로드 및 캐시 갱신됨.`)]
+			});
 		} catch (error) {
-			await interaction.editReply({ content: `${emoji('error')} 동기화 실패: ${error instanceof Error ? error.message : String(error)}` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				components: [notice(`${emoji('error')} 동기화 실패: ${error instanceof Error ? error.message : String(error)}`)]
+			});
 		}
 	}
 
@@ -98,7 +111,10 @@ export class EmojisCommand extends Command {
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error) {
-			await interaction.editReply({ content: `${emoji('error')} 재업로드 실패: ${error instanceof Error ? error.message : String(error)}` });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				components: [notice(`${emoji('error')} 재업로드 실패: ${error instanceof Error ? error.message : String(error)}`)]
+			});
 		}
 	}
 }

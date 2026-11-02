@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
@@ -110,7 +111,7 @@ export class TtsCommand extends Command {
 
 		if (subcommand === 'settings') {
 			await interaction.editReply({
-				components: [await buildTtsPanel(this.container, interaction.guildId, interaction.user.id)],
+				components: [await buildTtsPanel(this.container, interaction.guildId, interaction.user.id, interaction.channelId)],
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] }
 			});
@@ -132,7 +133,7 @@ export class TtsCommand extends Command {
 				result.mode === 'off'
 					? `${emoji('speech')} 이 채널의 채팅 낭독을 껐어요. 허용된 채널이 더 없어서 서버에서 낭독이 모두 꺼졌어요.`
 					: `${emoji('speech')} 이 채널의 채팅 낭독을 껐어요. (남은 허용 채널 ${result.channelIds.length}개)`;
-			await interaction.editReply({ allowedMentions: { parse: [] }, content });
+			await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
 			return;
 		}
 
@@ -142,7 +143,7 @@ export class TtsCommand extends Command {
 		const content = saved
 			? `${emoji('speech')} 지금부터 <#${interaction.channelId}>에서 보낸 메시지를 읽어드릴게요. 다른 분들의 메시지도 읽으려면 각자 \`/tts 설정\`에서 낭독을 켜 주세요.`
 			: `${emoji('error')} 채널 낭독은 켰지만 내 낭독 설정을 저장하지 못했어요. \`/tts 설정\`에서 낭독을 직접 켜 주세요.`;
-		await interaction.editReply({ allowedMentions: { parse: [] }, content });
+		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
 	}
 
 	/**
@@ -162,7 +163,7 @@ export class TtsCommand extends Command {
 		if (!this.container.ttsService.isEnabled()) {
 			throw new UserError({
 				identifier: 'tts_say_not_configured',
-				message: `${emoji('error')} TTS 서버가 연결되어 있지 않아요. (SIRU_TTS_URL·SIRU_TTS_API_KEY·SIRU_TTS_DEFAULT_VOICE 설정 필요)`,
+				message: `${emoji('error')} 음성 낭독을 아직 사용할 수 없어요. 봇 운영자에게 문의해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -177,20 +178,31 @@ export class TtsCommand extends Command {
 		}
 
 		const preset = await this.container.ttsUserSettings.get(interaction.guildId, interaction.user.id);
+		if (interaction.member.voice.channelId !== player.voiceChannelId) {
+			throw new UserError({
+				identifier: 'tts_say_wrong_channel',
+				message: '봇과 같은 음성 채널에 들어온 뒤 말하기를 실행해 주세요.',
+				context: { ephemeral: true }
+			});
+		}
 		try {
 			const mode = await this.container.chatTtsService.speakNow(player, text, preset);
 			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] },
-				content:
-					mode === 'overlay'
-						? `${emoji('volume_up')} 재생 중인 곡 위에 문장을 읽어드려요.`
-						: `${emoji('volume_up')} 읽어드릴게요. (음악이 시작되면 남은 문장은 곡 위로 옮겨 읽어요.)`
+				components: [
+					notice(
+						mode === 'overlay'
+							? `${emoji('volume_up')} 재생 중인 곡 위에 문장을 읽어드려요.`
+							: `${emoji('volume_up')} 읽어드릴게요. (음악이 시작되면 남은 문장은 곡 위로 옮겨 읽어요.)`
+					)
+				]
 			});
 		} catch (error) {
 			if (error instanceof TtsError) {
 				throw new UserError({
 					identifier: `tts_say_${error.code}`,
-					message: `${emoji('error')} 음성을 만들지 못했어요. (${error.code}) 잠시 후 다시 시도해 주세요.`,
+					message: `${emoji('error')} ${error.code === 'queue_full' || error.code === 'playback_failed' ? error.message : '음성을 만들지 못했어요. 잠시 후 다시 시도해 주세요.'}`,
 					context: { ephemeral: true }
 				});
 			}

@@ -172,6 +172,9 @@ export class GuildService extends GuildSettingsStore {
 	public async setCrossfade(guildId: string, enabled: boolean, durationMs?: number) {
 		return mixer.setCrossfade(this, guildId, enabled, durationMs);
 	}
+	public async setCrossfadeDuration(guildId: string, seconds: number) {
+		return mixer.setCrossfadeDuration(this, guildId, seconds);
+	}
 
 	public async setTransitionMode(guildId: string, mode: TransitionMode): Promise<MixerSettings> {
 		return mixer.setTransitionMode(this, guildId, mode);

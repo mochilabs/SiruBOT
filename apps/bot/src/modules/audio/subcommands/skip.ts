@@ -1,3 +1,5 @@
+import { resolveQueueSelection } from '../utils/queueSelection.ts';
+import { respondQueuedTracks } from '../../../lib/autocomplete.ts';
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import {
@@ -7,7 +9,6 @@ import {
 	type SlashCommandOptionsOnlyBuilder,
 	SlashCommandSubcommandBuilder
 } from 'discord.js';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { skipPolicy, type SkipContext } from '../../../services/skipPolicy.ts';
 
 export const name = 'skip';
@@ -15,15 +16,7 @@ export const ko = '건너뛰기';
 export const description = '현재 재생 중인 곡을 건너뛰어요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Skip the current track.';
-export const preconditions = [
-	'TextChannelAllowed',
-	'NodeAvailable',
-	'VoiceConnected',
-	'SameVoiceChannel',
-	'MemberListenable',
-	'SongPlaying',
-	'DJOrAlone'
-];
+export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'MemberListenable', 'SongPlaying'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	const named = sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
@@ -42,39 +35,20 @@ export function withOptions<T extends SlashCommandSubcommandBuilder | SlashComma
 				.setDescriptionLocalizations({ ko: '투표 없이 강제로 곡을 건너뛰어요.' })
 				.setRequired(false)
 		)
-		.addIntegerOption((option) =>
+		.addStringOption((option) =>
 			option
 				.setName('to')
 				.setDescription('Skip forward to the given queue position.')
 				.setNameLocalizations({ ko: '곡' })
-				.setDescriptionLocalizations({ ko: '건너뛸 곡의 번호를 입력해 주세요.' })
-				.setMinValue(1)
+				.setDescriptionLocalizations({ ko: '이 번호의 곡부터 재생해요. 앞의 대기곡은 건너뛰어요.' })
+
 				.setRequired(false)
 				.setAutocomplete(true)
 		);
 }
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-	if (!interaction.inCachedGuild()) return;
-
-	const option = interaction.options.get('to', false);
-	const to = typeof option?.value === 'string' ? (option.value.trim().length < 1 ? 1 : parseInt(option.value)) : 1;
-
-	const player = container.audio.getPlayer(interaction.guildId);
-	if (!player) return interaction.respond([]);
-
-	const queue = player.queue;
-	if (!queue) return interaction.respond([]);
-
-	const toIndex = to - 1;
-	const data = getUserQueuedTracks(player)
-		.slice(toIndex, toIndex + 25)
-		.map((track, index) => ({
-			name: `#${toIndex + index + 1} ${track.info.title.slice(0, 100)}`,
-			value: toIndex + index + 1
-		}));
-
-	await interaction.respond(data);
+	await respondQueuedTracks(interaction);
 }
 
 async function buildSkipContext(interaction: ChatInputCommandInteraction<'cached'>): Promise<SkipContext | null> {
@@ -107,7 +81,9 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	const force = interaction.options.getBoolean('force') ?? false;
-	const to = interaction.options.getInteger('to') ?? 0;
+	const selection = interaction.options.getString('to');
+	if (selection) context.queueSelection = selection;
+	const to = selection ? resolveQueueSelection(context.player, selection) + 1 : 0;
 
 	await skipPolicy.handleSkip(context, force, to);
 }
