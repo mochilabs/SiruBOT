@@ -7,6 +7,8 @@ import { buildDiscordContextBlock, buildRecentChannelBlock, buildSystemContent }
 import { scheduleMemoryPromotion } from './memoryPromotion.ts';
 import { scheduleSummary } from './summarizer.ts';
 import { ChatServiceError, type ChatConfig, type ChatContent, type ChatContentPart, type ChatMessage, type ChatTurnResult } from './types.ts';
+import { appendCitedSources } from './traceCitation.ts';
+import { resolveFallbackTextFromToolResults } from './agentFallback.ts';
 const MAX_TOOL_ROUNDS = 5;
 
 // 멀티모달 이미지
@@ -95,18 +97,26 @@ export async function runChatTurn(options: {
 
 	let answer = '';
 	let memoryUpdated = false;
+	let forceNoTools = false;
 	for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
 		throwIfCancelled();
 		const result = await streamChatCompletion({
 			messages,
 			config,
-			tools: round < MAX_TOOL_ROUNDS ? getAiToolDefinitions() : undefined,
+			tools: round < MAX_TOOL_ROUNDS && !forceNoTools ? getAiToolDefinitions() : undefined,
 			signal: options.signal,
 			onDelta: options.onDelta
 		});
 
 		if (result.toolCalls.length === 0) {
-			answer = result.content;
+			const content = result.content.trim();
+			if (!content && round > 0 && round < MAX_TOOL_ROUNDS && !forceNoTools) {
+				// 도구 실행 이후 모델이 빈 응답을 반환한 경우 도구 정의 없이 최종 답변 생성을 1회 유도해요
+				container.logger.warn('[aiChat] empty content after tool calls, retrying final answer without tools');
+				forceNoTools = true;
+				continue;
+			}
+			answer = content;
 			break;
 		}
 
@@ -117,7 +127,8 @@ export async function runChatTurn(options: {
 			const output = await executeAiTool(toolCall.name, toolCall.arguments, options.toolContext);
 			if (toolCall.name.startsWith('memory_') && !memoryUpdated) {
 				try {
-					memoryUpdated = (JSON.parse(output) as { status?: string }).status === 'ok';
+					const parsed: unknown = JSON.parse(output);
+					memoryUpdated = Boolean(parsed && typeof parsed === 'object' && 'status' in parsed && parsed.status === 'ok');
 				} catch {
 					memoryUpdated = false;
 				}
@@ -127,8 +138,14 @@ export async function runChatTurn(options: {
 	}
 
 	if (!answer) {
-		throw new ChatServiceError('chat_empty_response', 'AI가 빈 답장을 보냈어요. 잠시 후 다시 시도해 주세요.');
+		const fallback = resolveFallbackTextFromToolResults(messages);
+		if (fallback) {
+			answer = fallback;
+		} else {
+			throw new ChatServiceError('chat_empty_response', 'AI가 빈 답장을 보냈어요. 잠시 후 다시 시도해 주세요.');
+		}
 	}
+	answer = appendCitedSources(answer, messages);
 	// 턴 저장 직전 중지 클릭도 반영해요 — 저장 후 취소가 무시되는 창을 닫아요
 	throwIfCancelled();
 

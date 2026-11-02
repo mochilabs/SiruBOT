@@ -766,4 +766,53 @@ describe('runChatTurn agent loop', () => {
 			{ type: 'image_url', image_url: { url: 'http://x/cat.png' } }
 		]);
 	});
+
+	it('retries without tools when model returns empty content after tool execution', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(
+				Response.json({
+					choices: [
+						{ message: { content: '', tool_calls: [{ id: 'c1', function: { name: 'memory_save', arguments: '{"facts":["x"]}' } }] } }
+					]
+				})
+			)
+			.mockResolvedValueOnce(Response.json({ choices: [{ message: { content: '' } }] }))
+			.mockResolvedValueOnce(Response.json({ choices: [{ message: { content: '재시도로 완성된 응답' } }] }));
+		vi.stubGlobal('fetch', fetchMock);
+		vi.mocked(executeAiTool).mockResolvedValue('{"status":"ok"}');
+
+		const result = await runChatTurn({
+			...options,
+			channelId: 'agent-retry',
+			toolContext: { ...options.toolContext, channelId: 'agent-retry' }
+		});
+		expect(result.answer).toBe('재시도로 완성된 응답');
+		expect(fetchMock).toHaveBeenCalledTimes(3);
+		const [, thirdRequest] = fetchMock.mock.calls[2]!;
+		expect(JSON.parse(thirdRequest?.body as string).tools).toBeUndefined();
+	});
+
+	it('uses fallback text from tool results when model keeps returning empty content', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(
+				Response.json({
+					choices: [
+						{ message: { content: '', tool_calls: [{ id: 'c1', function: { name: 'memory_save', arguments: '{"facts":["x"]}' } }] } }
+					]
+				})
+			)
+			.mockResolvedValueOnce(Response.json({ choices: [{ message: { content: '' } }] }))
+			.mockResolvedValueOnce(Response.json({ choices: [{ message: { content: '' } }] }));
+		vi.stubGlobal('fetch', fetchMock);
+		vi.mocked(executeAiTool).mockResolvedValue('{"status":"ok","message":"기억을 완료했어요."}');
+
+		const result = await runChatTurn({
+			...options,
+			channelId: 'agent-fallback',
+			toolContext: { ...options.toolContext, channelId: 'agent-fallback' }
+		});
+		expect(result.answer).toBe('기억을 완료했어요.');
+	});
 });

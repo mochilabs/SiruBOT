@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { TICKET_CONFIG_DEFAULTS,ticketConfigPatchSchema } from '@sirubot/utils/ticket';
+import { TICKET_CONFIG_DEFAULTS, ticketConfigPatchSchema } from '@sirubot/utils/ticket';
 
 import { createGuildApiHandler } from '@/lib/api-handler';
+import { notifyGuildSettingsChanged } from '@/lib/data-api/client';
 import { db } from '@/lib/db';
 import { READ_RATE, WRITE_RATE } from '@/lib/rate-limit';
 import { parseSettingBody } from '@/lib/schemas';
@@ -14,7 +15,8 @@ const ALLOWED_PATCH_KEYS = [
 	'maxOpenPerUser',
 	'panelTitle',
 	'panelDescription',
-	'panelChannelId'
+	'panelChannelId',
+	'panelMessageId'
 ];
 
 export const GET = createGuildApiHandler({
@@ -24,7 +26,18 @@ export const GET = createGuildApiHandler({
 	handler: async ({ guildId }) => {
 		try {
 			const config = await db.ticketConfig.findUnique({
-				where: { guildId }
+				where: { guildId },
+				select: {
+					enabled: true,
+					categoryId: true,
+					supportRoleIds: true,
+					logChannelId: true,
+					maxOpenPerUser: true,
+					panelTitle: true,
+					panelDescription: true,
+					panelChannelId: true,
+					panelMessageId: true
+				}
 			});
 
 			if (!config) {
@@ -67,6 +80,10 @@ export const PUT = createGuildApiHandler({
 					...data
 				},
 				update: data
+			});
+
+			notifyGuildSettingsChanged(guildId).catch((error) => {
+				console.warn(`Failed to notify ticket config change (guild ${guildId}):`, error);
 			});
 
 			return NextResponse.json(updated);

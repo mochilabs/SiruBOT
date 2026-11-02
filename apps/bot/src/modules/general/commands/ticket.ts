@@ -1,8 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
+import { UserError } from '@sapphire/framework';
 import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits, TextChannel } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { ticketPanelView } from '../view/ticket.ts';
+import { ticketMessageView, ticketPanelView } from '../view/ticket.ts';
 
 @ApplyOptions<Subcommand.Options>({
 	enabled: true,
@@ -92,31 +93,36 @@ export class TicketCommand extends Subcommand {
 	 * /ticket panel — 패널 게시 (ManageGuild or ManageChannels 필요)
 	 */
 	public async chatInputPanel(interaction: ChatInputCommandInteraction<'cached'>) {
-		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-
 		if (
 			!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) &&
 			!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
 		) {
-			await interaction.editReply({
-				content: `${emoji('error')} 이 명령어를 실행하려면 서버 관리(Manage Server) 또는 채널 관리(Manage Channels) 권한이 필요해요.`
+			throw new UserError({
+				identifier: 'ticket_panel_no_permission',
+				message: `${emoji('error')} 이 명령어를 실행하려면 서버 관리(Manage Server) 또는 채널 관리(Manage Channels) 권한이 필요해요.`,
+				context: { ephemeral: true }
 			});
-			return;
 		}
 
 		const targetChannel = (interaction.options.getChannel('channel') ?? interaction.channel) as TextChannel | null;
 		if (!targetChannel || !targetChannel.isTextBased() || !('send' in targetChannel)) {
-			await interaction.editReply({ content: `${emoji('error')} 올바른 텍스트 채널을 지정해 주세요.` });
-			return;
+			throw new UserError({
+				identifier: 'ticket_panel_invalid_channel',
+				message: `${emoji('error')} 올바른 텍스트 채널을 지정해 주세요.`,
+				context: { ephemeral: true }
+			});
 		}
 
 		const config = await this.container.ticketService.getConfig(interaction.guildId);
 		if (!config || !config.enabled) {
-			await interaction.editReply({
-				content: `${emoji('error')} 먼저 티켓 기능이 활성화되어 있어야 해요. 대시보드 또는 설정에서 티켓을 활성화해 주세요.`
+			throw new UserError({
+				identifier: 'ticket_disabled',
+				message: `${emoji('error')} 먼저 티켓 기능이 활성화되어 있어야 해요. 대시보드 또는 설정에서 티켓을 활성화해 주세요.`,
+				context: { ephemeral: true }
 			});
-			return;
 		}
+
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
 		try {
 			const panelPayload = ticketPanelView(config);
@@ -130,10 +136,14 @@ export class TicketCommand extends Subcommand {
 				}
 			});
 
-			await interaction.editReply({ content: `${emoji('success')} <#${targetChannel.id}> 채널에 티켓 오픈 패널을 게시했어요.` });
+			await interaction.editReply(ticketMessageView(`${emoji('success')} <#${targetChannel.id}> 채널에 티켓 오픈 패널을 게시했어요.`));
 		} catch (error) {
 			this.container.logger.error(`[ticket] Failed to send panel in guild ${interaction.guildId}: ${error}`);
-			await interaction.editReply({ content: `${emoji('error')} 패널을 전송하지 못했어요. 채널 권한(메시지 전송)을 확인해 주세요.` });
+			throw new UserError({
+				identifier: 'ticket_panel_send_failed',
+				message: `${emoji('error')} 패널을 전송하지 못했어요. 채널 권한(메시지 전송)을 확인해 주세요.`,
+				context: { ephemeral: true }
+			});
 		}
 	}
 
@@ -147,11 +157,14 @@ export class TicketCommand extends Subcommand {
 		const result = await this.container.ticketService.closeTicket(interaction.guild, interaction.channelId, interaction.member, reason);
 
 		if (!result.ok) {
-			await interaction.editReply({ content: `${emoji('error')} ${result.reason}` });
-			return;
+			throw new UserError({
+				identifier: 'ticket_close_failed',
+				message: `${emoji('error')} ${result.reason}`,
+				context: { ephemeral: true }
+			});
 		}
 
-		await interaction.editReply({ content: `${emoji('success')} 티켓이 닫혔어요.` });
+		await interaction.editReply(ticketMessageView(`${emoji('success')} 티켓이 닫혔어요.`));
 	}
 
 	/**
@@ -170,13 +183,15 @@ export class TicketCommand extends Subcommand {
 		);
 
 		if (!result.ok) {
-			await interaction.editReply({ content: `${emoji('error')} ${result.reason}` });
-			return;
+			throw new UserError({
+				identifier: 'ticket_add_failed',
+				message: `${emoji('error')} ${result.reason}`,
+				context: { ephemeral: true }
+			});
 		}
 
-		await interaction.editReply({ content: `${emoji('success')} <@${user.id}> 님을 티켓에 초대했어요.` });
+		await interaction.editReply(ticketMessageView(`${emoji('success')} <@${user.id}> 님을 티켓에 초대했어요.`));
 	}
-
 	/**
 	 * /ticket remove — 유저 제외
 	 */
@@ -193,10 +208,13 @@ export class TicketCommand extends Subcommand {
 		);
 
 		if (!result.ok) {
-			await interaction.editReply({ content: `${emoji('error')} ${result.reason}` });
-			return;
+			throw new UserError({
+				identifier: 'ticket_remove_failed',
+				message: `${emoji('error')} ${result.reason}`,
+				context: { ephemeral: true }
+			});
 		}
 
-		await interaction.editReply({ content: `${emoji('success')} <@${user.id}> 님을 티켓에서 제외했어요.` });
+		await interaction.editReply(ticketMessageView(`${emoji('success')} <@${user.id}> 님을 티켓에서 제외했어요.`));
 	}
 }

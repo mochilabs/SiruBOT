@@ -39,7 +39,7 @@ const SUBCOMMANDS: SubcommandModule[] = [
  * `/음악`의 서브커맨드 중 top-level로 승격한 것들 — `/재생`·`/건너뛰기`가 같은 동작을 해요.
  * `/도움말`은 이 목록을 빼고 그리므로 옵션 정의(SUBCOMMANDS)와 표시가 어긋나지 않아요.
  */
-const PROMOTED_SUBCOMMAND_NAMES = new Set(['play', 'skip']);
+const PROMOTED_SUBCOMMAND_NAMES = new Set(['play', 'skip', 'stop']);
 
 /** /도움말에서 서브커맨드 멘션을 그릴 때 써요 (승격된 항목 제외) */
 export const MUSIC_SUBCOMMANDS = subcommandSummaries(SUBCOMMANDS.filter((sub) => !PROMOTED_SUBCOMMAND_NAMES.has(sub.name)));
@@ -51,8 +51,8 @@ export const MUSIC_PROMOTED_COMMANDS = SUBCOMMANDS.filter((sub) => PROMOTED_SUBC
 	description: sub.description
 }));
 
-/** `/재생`·`/건너뛰기`가 승격됐다는 안내 문구 — 도움말과 커맨드 설명이 같은 문장을 써요 */
-export const MUSIC_PROMOTED_NOTE = '재생·건너뛰기는 `/재생`, `/건너뛰기`로 바로 쓸 수 있어요.';
+/** `/재생`·`/건너뛰기`·`/정지`가 승격됐다는 안내 문구 — 도움말과 커맨드 설명이 같은 문장을 써요 */
+export const MUSIC_PROMOTED_NOTE = '재생·건너뛰기·정지는 `/재생`, `/건너뛰기`, `/정지`로 바로 쓸 수 있어요.';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
