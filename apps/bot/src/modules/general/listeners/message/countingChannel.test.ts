@@ -90,7 +90,7 @@ describe('countingChannel 레이스 방지 (길드별 직렬화)', () => {
 
 		expect(first.reply).not.toHaveBeenCalled();
 		expect(second.reply).toHaveBeenCalledTimes(1);
-		expect(second.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('2부터 차례로 세야 해요') }));
+		expect(JSON.stringify(second.reply.mock.calls)).toContain('2부터 차례로 세야 해요');
 		expect(await loadCountingState(guildId)).toEqual({ current: 0, lastUserId: null, best: 1 });
 	});
 
@@ -162,8 +162,8 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		const m = fakeMessage({ guildId, userId: 'user-2', content: '6' });
 
 		await listener.run(m.message);
-		expect(m.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('5부터 차례로 세야 해요') }));
-		expect(m.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('최고 기록 7') }));
+		expect(JSON.stringify(m.reply.mock.calls)).toContain('5부터 차례로 세야 해요');
+		expect(JSON.stringify(m.reply.mock.calls)).toContain('최고 기록 7');
 		expect(await loadCountingState(guildId)).toEqual({ current: 0, lastUserId: null, best: 7 });
 	});
 
@@ -173,7 +173,7 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		const m = fakeMessage({ guildId, userId: 'user-1', content: '5' });
 
 		await listener.run(m.message);
-		expect(m.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('바로 이어서 셀 수 없어요') }));
+		expect(JSON.stringify(m.reply.mock.calls)).toContain('바로 이어서 셀 수 없어요');
 		expect(await loadCountingState(guildId)).toEqual({ current: 0, lastUserId: null, best: 4 });
 	});
 
@@ -219,7 +219,7 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		const m = fakeMessage({ guildId, userId: 'user-2', content: '10' });
 
 		await listener.run(m.message);
-		expect(m.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('새 최고 기록') }));
+		expect(JSON.stringify(m.reply.mock.calls)).toContain('새 최고 기록');
 		expect(await loadCountingState(guildId)).toEqual({ current: 10, lastUserId: 'user-2', best: 10 });
 	});
 

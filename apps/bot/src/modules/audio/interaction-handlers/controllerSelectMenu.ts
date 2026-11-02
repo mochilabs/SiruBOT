@@ -6,6 +6,7 @@ import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { errorView } from '../../../lib/errorView.ts';
 import { checkDJOrAlone } from '../utils/permissionCheck.ts';
+import { resolveQueueSelection } from '../utils/queueSelection.ts';
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -53,7 +54,7 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 			return;
 		}
 
-		const trackIndex = parseInt(selectedValue, 10) - 1;
+		const trackIndex = resolveQueueSelection(player, selectedValue);
 		if (isNaN(trackIndex) || trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],

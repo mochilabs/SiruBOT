@@ -6,10 +6,10 @@ import * as view from '../view/repeat.ts';
 
 export const name = 'repeat';
 export const ko = '반복';
-export const description = '반복 모드를 설정해요.';
+export const description = '반복 모드를 설정해요. 모드를 비우면 현재 설정만 보여줘요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Set the repeat mode.';
-export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
+export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
 const VALID_REPEAT_MODES = ['off', 'track', 'queue'] as const;
 
@@ -24,7 +24,7 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 				.setName('mode')
 				.setDescription('Set the repeat mode.')
 				.setNameLocalizations({ ko: '모드' })
-				.setDescriptionLocalizations({ ko: '반복 모드를 설정해요.' })
+				.setDescriptionLocalizations({ ko: '반복 모드를 설정해요. 모드를 비우면 현재 설정만 보여줘요.' })
 				.addChoices([
 					{ name: 'off', name_localizations: { ko: '끄기' }, value: 'off' },
 					{ name: 'queue', name_localizations: { ko: '전체 곡' }, value: 'queue' },

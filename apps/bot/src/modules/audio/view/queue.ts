@@ -3,6 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, 
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { truncateText } from '../../../lib/text.ts';
+import { queueSelectionValue } from '../utils/queueSelection.ts';
 
 type QueueViewProps = {
 	player: Player;
@@ -62,7 +63,7 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 				const globalIndex = start + index;
 				return {
 					label: truncateText(`#${globalIndex + 1} ${(track as Track).info.title ?? '(제목 없음)'}`, 100),
-					value: String(globalIndex + 1),
+					value: queueSelectionValue(player, globalIndex),
 					description: truncateText(
 						`${(track as Track).info.author ?? '알 수 없음'} · ${formatTime(((track as Track).info.duration ?? 0) / 1000)}`,
 						100
@@ -76,12 +77,18 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	// 선택된 곡에 대한 액션 버튼 (controllerButton의 queue:jumpTo / queue:remove)
 	const jumpButton = new ButtonBuilder()
-		.setCustomId(queueJumpCustomId)
+		.setCustomId(`${queueJumpCustomId}:${selectedIndex === null ? 'none' : queueSelectionValue(player, selectedIndex)}`)
 		.setEmoji(emoji('arrow_forward'))
-		.setLabel('점프')
+		.setLabel('선택한 곡부터 재생')
+		.setDisabled(selectedIndex === null)
 		.setStyle(ButtonStyle.Secondary);
 
-	const removeButton = new ButtonBuilder().setCustomId(queueRemoveCustomId).setEmoji(emoji('trash')).setLabel('삭제').setStyle(ButtonStyle.Danger);
+	const removeButton = new ButtonBuilder()
+		.setCustomId(`${queueRemoveCustomId}:${selectedIndex === null ? 'none' : queueSelectionValue(player, selectedIndex)}`)
+		.setDisabled(selectedIndex === null)
+		.setEmoji(emoji('trash'))
+		.setLabel('선택한 곡 제거')
+		.setStyle(ButtonStyle.Danger);
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(jumpButton, removeButton));
 

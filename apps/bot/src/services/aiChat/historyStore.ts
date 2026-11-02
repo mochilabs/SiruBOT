@@ -104,16 +104,17 @@ export function getChannelHistoryState(channelId: string): ChannelHistoryState {
 	return channelHistories.get(channelId) ?? defaultHistoryState();
 }
 
-export function clearChannelHistory(channelId: string): number {
+export async function clearChannelHistory(channelId: string): Promise<number> {
 	const length = getChannelHistory(channelId).length;
 	// 삭제가 방금 예약된 변경을 덮어쓰므로 대기 중 persist를 버려요
 	cancelPendingPersist(channelId);
-	channelHistories.set(channelId, defaultHistoryState());
 	try {
-		void container.db.channelChatHistory.delete({ where: { channelId } }).catch(() => undefined);
-	} catch {
-		// client 미초기화 등은 무시
+		await container.db.channelChatHistory.deleteMany({ where: { channelId } });
+	} catch (error) {
+		persistChannelHistory(channelId);
+		throw error;
 	}
+	channelHistories.set(channelId, defaultHistoryState());
 	return length;
 }
 

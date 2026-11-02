@@ -43,6 +43,7 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 						.setName('mode')
 						.setNameLocalizations({ ko: '방식' })
 						.setDescription('Track transition style.')
+						.setDescriptionLocalizations({ ko: '곡 전환 방식을 선택해 주세요.' })
 						.setRequired(true)
 						.addChoices(
 							{ name: '끄기', value: 'off' },
@@ -50,6 +51,13 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 							{ name: 'AutoMix', value: 'automix' }
 						)
 				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('tuning')
+				.setNameLocalizations({ ko: '고급설정' })
+				.setDescription('Tune AutoMix without changing the transition mode.')
+				.setDescriptionLocalizations({ ko: '오토믹스의 박자 분석 기준을 조절해요. 전환 방식은 유지해요.' })
 				.addNumberOption((opt) =>
 					opt
 						.setName('max-tempo-change')
@@ -80,6 +88,7 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 						.setName('enabled')
 						.setNameLocalizations({ ko: '켜기' })
 						.setDescription('Enable or disable gapless playback.')
+						.setDescriptionLocalizations({ ko: '곡 사이의 무음을 없애거나 유지해요.' })
 						.setRequired(true)
 				)
 		)
@@ -87,19 +96,17 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 			sub
 				.setName('crossfade')
 				.setNameLocalizations({ ko: '크로스페이드' })
-				.setDescription('Toggle overlap crossfade.')
-				.setDescriptionLocalizations({ ko: '곡 사이 겹치기(크로스페이드)를 설정해요.' })
-				.addBooleanOption((opt) =>
-					opt.setName('enabled').setNameLocalizations({ ko: '켜기' }).setDescription('Enable or disable crossfade.').setRequired(true)
-				)
-				.addIntegerOption((opt) =>
+				.setDescription('Set the overlap duration.')
+				.setDescriptionLocalizations({ ko: '겹치는 시간만 조절해요. 켜고 끄기는 /믹서 전환에서 선택해요.' })
+				.addNumberOption((opt) =>
 					opt
 						.setName('duration')
-						.setNameLocalizations({ ko: '길이' })
-						.setDescription('Overlap length in ms (500-15000). Omit to keep the current value.')
-						.setMinValue(500)
-						.setMaxValue(15000)
-						.setRequired(false)
+						.setNameLocalizations({ ko: '초' })
+						.setDescription('Overlap in seconds (0.5-15).')
+						.setDescriptionLocalizations({ ko: '곡이 겹치는 시간(0.5~15초). 전환 방식은 바뀌지 않아요.' })
+						.setMinValue(0.5)
+						.setMaxValue(15)
+						.setRequired(true)
 				)
 		)
 		.addSubcommand((sub) =>
@@ -113,6 +120,7 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 						.setName('enabled')
 						.setNameLocalizations({ ko: '켜기' })
 						.setDescription('Enable or disable volume normalization.')
+						.setDescriptionLocalizations({ ko: '곡마다 다른 볼륨을 자동으로 맞춰요.' })
 						.setRequired(true)
 				)
 		)
@@ -155,7 +163,7 @@ export function withMixerSubcommands(builder: SlashCommandSubcommandsOnlyBuilder
 	name: 'mixer',
 	description: 'Configure gapless playback and crossfade.',
 	fullCategory: ['음악'],
-	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel']
+	preconditions: ['TextChannelAllowed']
 })
 export class MixerCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
@@ -185,6 +193,8 @@ export class MixerCommand extends Command {
 				return this.handleGapless(interaction, player);
 			case 'crossfade':
 				return this.handleCrossfade(interaction, player);
+			case 'tuning':
+				return this.handleTuning(interaction, player);
 			case 'transition':
 				return this.handleTransition(interaction, player);
 			case 'normalization':
@@ -216,6 +226,8 @@ export class MixerCommand extends Command {
 				return command.handleGapless(interaction, player);
 			case 'crossfade':
 				return command.handleCrossfade(interaction, player);
+			case 'tuning':
+				return command.handleTuning(interaction, player);
 			case 'transition':
 				return command.handleTransition(interaction, player);
 			case 'normalization':
@@ -257,9 +269,17 @@ export class MixerCommand extends Command {
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await this.container.guildService.setGapless(interaction.guildId, enabled);
 		if (player) {
-			await this.container.mixerService.setSilence(player, enabled).catch(() => null);
-			if (!enabled) await this.container.mixerService.clearNext(player, { force: true }).catch(() => null);
-			else await this.container.mixerService.preloadUpcoming(player, { force: true }).catch(() => null);
+			try {
+				await this.container.mixerService.setSilence(player, enabled);
+				if (!enabled) await this.container.mixerService.clearNext(player, { force: true });
+				else await this.container.mixerService.preloadUpcoming(player, { force: true });
+			} catch {
+				throw new UserError({
+					identifier: 'mixer_gapless_failed',
+					message: '갭리스 설정은 저장했지만 현재 재생에 적용하지 못했어요. 잠시 후 다시 시도해 주세요.',
+					context: { ephemeral: true }
+				});
+			}
 		}
 		let message: string;
 		if (player) {
@@ -276,31 +296,59 @@ export class MixerCommand extends Command {
 
 	async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
-		const enabled = interaction.options.getBoolean('enabled', true);
-		const duration = interaction.options.getInteger('duration') ?? undefined;
-		const saved = await this.container.guildService.setCrossfade(interaction.guildId, enabled, duration);
+		const seconds = interaction.options.getNumber('duration', true);
+		const saved = await this.container.guildService.setCrossfadeDuration(interaction.guildId, seconds);
 		if (player) {
 			try {
-				await this.container.mixerService.setCrossfade(player, saved.crossfadeEnabled, saved.crossfadeMs);
+				await this.container.mixerService.setAutomix(player, saved);
 			} catch {
 				throw new UserError({
 					identifier: 'mixer_crossfade_failed',
-					message: `${emoji('tools')} 크로스페이드 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.`,
+					message: '겹치는 시간은 저장했지만 현재 재생에 적용하지 못했어요. 잠시 후 다시 시도해 주세요.',
 					context: { ephemeral: true }
 				});
 			}
 		}
-		const base = saved.crossfadeEnabled
-			? `${emoji('shuffle')} 크로스페이드를 켰어요. (${(saved.crossfadeMs / 1000).toFixed(1)}초 겹치기)`
-			: `${emoji('shuffle')} 크로스페이드를 껐어요.`;
 		await interaction.editReply({
 			components: [
 				view.mixerUpdated({
-					message: player ? base : `${base} 다음에 재생할 때부터 적용돼요.`
+					message: `겹치는 시간을 **${seconds}초**로 저장했어요. 전환 방식은 ${saved.automixEnabled ? 'AutoMix' : saved.crossfadeEnabled ? '크로스페이드' : '끄기'}로 유지돼요.${saved.crossfadeEnabled ? '' : ' 사용하려면 /믹서 전환에서 방식을 선택해 주세요.'}`
 				})
 			],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
+			flags: [MessageFlags.IsComponentsV2]
+		});
+	}
+
+	async handleTuning(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+		await this.checkDJ(interaction);
+		const current = await this.container.guildService.getMixerSettings(interaction.guildId);
+		const tempo = interaction.options.getNumber('max-tempo-change');
+		const confidence = interaction.options.getNumber('min-confidence');
+		if (tempo === null && confidence === null) return this.handleStatus(interaction, player);
+		const saved = await this.container.guildService.setAutomix(
+			interaction.guildId,
+			current.automixEnabled,
+			tempo === null ? undefined : tempo / 100,
+			confidence ?? undefined
+		);
+		if (player) {
+			try {
+				await this.container.mixerService.setAutomix(player, saved);
+			} catch {
+				throw new UserError({
+					identifier: 'mixer_tuning_failed',
+					message: '고급 설정은 저장했지만 현재 재생에 적용하지 못했어요.',
+					context: { ephemeral: true }
+				});
+			}
+		}
+		await interaction.editReply({
+			components: [
+				view.mixerUpdated({
+					message: `박자 분석 기준을 저장했어요. 허용 템포 변경 ${(saved.automixMaxTempoChange * 100).toFixed(1)}%, 최소 신뢰도 ${saved.automixMinConfidence}. 전환 방식은 유지돼요.`
+				})
+			],
+			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
 
@@ -309,19 +357,7 @@ export class MixerCommand extends Command {
 		const mode = interaction.options.getString('mode', true);
 		if (!isTransitionMode(mode)) throw new UserError({ identifier: 'mixer_transition_invalid', message: '올바른 전환 방식을 선택해 주세요.' });
 
-		const tempoPercent = interaction.options.getNumber('max-tempo-change');
-		const minConfidence = interaction.options.getNumber('min-confidence') ?? undefined;
-
-		// AutoMix 모드만 템포 변경·신뢰도 파라미터를 함께 저장해요. 나머지 모드에선 무시돼요.
-		const saved =
-			mode === 'automix'
-				? await this.container.guildService.setAutomix(
-						interaction.guildId,
-						true,
-						tempoPercent === null ? undefined : tempoPercent / 100,
-						minConfidence
-					)
-				: await this.container.guildService.setTransitionMode(interaction.guildId, mode);
+		const saved = await this.container.guildService.setTransitionMode(interaction.guildId, mode);
 
 		if (player) {
 			try {

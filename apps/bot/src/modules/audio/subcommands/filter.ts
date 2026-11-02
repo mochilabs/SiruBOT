@@ -7,7 +7,7 @@ import * as view from '../view/filter.ts';
 
 export const name = 'filter';
 export const ko = '필터';
-export const description = '오디오 필터를 적용하거나 해제해요.';
+export const description = '필터를 적용하거나 해제해요. 프리셋을 비우면 선택 화면을 열어요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Apply or clear an audio filter preset.';
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];

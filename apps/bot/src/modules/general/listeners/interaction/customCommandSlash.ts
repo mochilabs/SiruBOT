@@ -7,9 +7,10 @@
  *   이후 메시지는 채널로 전송해요. 보낼 메시지가 전혀 없으면 '처리했어요' 한 줄로 마무리해요.
  * - delete_trigger는 응답 삭제(deleteReply)로 동작해요.
  */
+import { notice as noticeView } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
-import type { ChatInputCommandInteraction, Interaction, MessageCreateOptions } from 'discord.js';
+import { MessageFlags, type ChatInputCommandInteraction, type Interaction, type MessageCreateOptions } from 'discord.js';
 import { CUSTOM_COMMAND_MAX_ARGS, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../../../services/customCommands/context.ts';
@@ -28,15 +29,21 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 
 	const member = guild.members.cache.get(interaction.user.id) ?? (await guild.members.fetch(interaction.user.id).catch(() => null));
 	if (!member) {
-		await interaction.editReply(`-# ${emoji('error')} 실행자를 찾지 못했어요. 잠시 후 다시 시도해 주세요.`).catch(() => undefined);
+		await interaction
+			.editReply({
+				components: [noticeView(`-# ${emoji('error')} 실행자를 찾지 못했어요. 잠시 후 다시 시도해 주세요.`)],
+				flags: [MessageFlags.IsComponentsV2]
+			})
+			.catch(() => undefined);
 		return true;
 	}
 	const me = guild.members.me;
 
 	let replied = false;
 	const notify = async (text: string): Promise<void> => {
-		if (replied) await interaction.channel?.send({ content: text, allowedMentions: { parse: [] } }).catch(() => undefined);
-		else await interaction.editReply(text).catch(() => undefined);
+		const payload = { components: [noticeView(text)], flags: MessageFlags.IsComponentsV2 as const, allowedMentions: { parse: [] } };
+		if (replied) await interaction.channel?.send(payload).catch(() => undefined);
+		else await interaction.editReply(payload).catch(() => undefined);
 	};
 
 	const args = Array.from({ length: CUSTOM_COMMAND_MAX_ARGS }, (_unused, index) => interaction.options.getString(`argument${index + 1}`) ?? '');
@@ -65,7 +72,8 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 	const result = await runCustomCommandSpec(entry.spec, ctx);
 	const notice = customCommandNotice(result, `\`/${entry.name}\``);
 	if (notice) await notify(notice);
-	else if (!replied) await interaction.editReply('처리했어요.').catch(() => undefined);
+	else if (!replied)
+		await interaction.editReply({ components: [noticeView('처리했어요.')], flags: [MessageFlags.IsComponentsV2] }).catch(() => undefined);
 	return true;
 }
 

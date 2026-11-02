@@ -30,6 +30,9 @@ export class PlaylistService {
 	}
 
 	public async createPlaylist(userId: string, name: string, description?: string) {
+		name = name.trim();
+		if (!name || name.length > 80) throw new Error('플레이리스트 이름은 1~80자로 입력해 주세요.');
+		await container.db.user.upsert({ where: { id: userId }, create: { id: userId }, update: {} });
 		if (name === FAVORITES_PLAYLIST_NAME) {
 			throw new Error('이름으로 "즐겨찾기"는 사용할 수 없어요. 이건 기본 제공되는 플레이리스트예요.');
 		}

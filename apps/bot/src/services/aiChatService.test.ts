@@ -48,6 +48,7 @@ vi.mock('@sapphire/framework', () => ({
 				findUnique: mocks.history,
 				upsert: mocks.persist,
 				delete: mocks.deleteRow,
+				deleteMany: mocks.deleteRow,
 				update: mocks.updateRow
 			}
 		},
@@ -462,7 +463,7 @@ describe('channel history store', () => {
 			}
 		});
 		await loadChannelHistory(channelId);
-		expect(clearChannelHistory(channelId)).toBe(2);
+		expect(await clearChannelHistory(channelId)).toBe(2);
 		expect(mocks.deleteRow).toHaveBeenCalledWith({ where: { channelId } });
 	});
 
@@ -538,7 +539,7 @@ describe('channel history persist coalescing', () => {
 	it('clearChannelHistory cancels a scheduled write instead of resurrecting the row', async () => {
 		const channelId = 'coalesce-clear';
 		pushChannelHistory(channelId, { role: 'user', content: '지울 대화' });
-		clearChannelHistory(channelId);
+		await clearChannelHistory(channelId);
 		await flushChannelHistoryPersist(channelId);
 		expect(mocks.persist).not.toHaveBeenCalled();
 		expect(mocks.deleteRow).toHaveBeenCalledWith({ where: { channelId } });

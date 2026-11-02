@@ -1,3 +1,4 @@
+import { notice } from '../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ModalSubmitInteraction } from 'discord.js';
@@ -36,8 +37,8 @@ export class TtsPanelModalHandler extends InteractionHandler {
 			const range = RANGES[action];
 			if (!Number.isFinite(parsed) || parsed < range.min || parsed > range.max) {
 				await interaction.reply({
-					flags: [MessageFlags.Ephemeral],
-					content: `${emoji('error')} ${range.label}로 입력해 주세요. 비워 두면 기본값으로 돌아가요.`
+					flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+					components: [notice(`${emoji('error')} ${range.label}로 입력해 주세요. 비워 두면 기본값으로 돌아가요.`)]
 				});
 				return;
 			}
@@ -45,18 +46,18 @@ export class TtsPanelModalHandler extends InteractionHandler {
 		}
 
 		const patch = action === 'speed' ? { speed: value } : { pitch: value };
+		await interaction.deferUpdate();
 		const ok = await this.container.ttsUserSettings.set(interaction.guildId, interaction.user.id, patch);
 		if (!ok) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral],
-				content: `${emoji('error')} 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`
+			await interaction.followUp({
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+				components: [notice(`${emoji('error')} 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`)]
 			});
 			return;
 		}
 
-		await interaction.deferUpdate();
 		await interaction.editReply({
-			components: [await buildTtsPanel(this.container, interaction.guildId, interaction.user.id)],
+			components: [await buildTtsPanel(this.container, interaction.guildId, interaction.user.id, interaction.channelId)],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] }
 		});

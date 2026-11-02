@@ -9,7 +9,7 @@ export const ko = '정지';
 export const description = '대기열을 정리하고 노래를 멈춰요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Clear the queue and stop playing.';
-export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying', 'DJOrAlone'];
+export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'SongPlaying', 'DJOrAlone'];
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
 	return sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
@@ -33,10 +33,10 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	await interaction.reply({
+	await interaction.deferReply();
+	await container.audioService.stopPlayback(player);
+	await interaction.editReply({
 		components: [view.stop()],
 		flags: [MessageFlags.IsComponentsV2]
 	});
-
-	await container.audioService.stopPlayback(player);
 }

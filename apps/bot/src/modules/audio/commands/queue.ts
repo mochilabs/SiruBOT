@@ -1,3 +1,5 @@
+import { queueSelectionValue, resolveQueueSelection } from '../utils/queueSelection.ts';
+import { confirmAction } from '../../../lib/confirmation.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
@@ -5,13 +7,14 @@ import { emoji } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/queue.ts';
 import { respondQueuedTracks } from '../../../lib/autocomplete.ts';
+import { runSubcommandPreconditions } from '../../../lib/subcommandDispatcher.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'queue',
 	description: 'View and manage the music queue.',
 	fullCategory: ['음악'],
-	preconditions: ['TextChannelAllowed', 'NodeAvailable', 'SongPlaying']
+	preconditions: ['TextChannelAllowed']
 })
 export class QueueCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
@@ -31,10 +34,10 @@ export class QueueCommand extends Command {
 						.addIntegerOption((option) =>
 							option
 								.setName('page')
+								.setMinValue(1)
 								.setNameLocalizations({ ko: '페이지' })
 								.setDescription('Page number to display.')
 								.setDescriptionLocalizations({ ko: '표시할 페이지 번호에요.' })
-								.setMinValue(1)
 						)
 				)
 				.addSubcommand((sub) =>
@@ -57,13 +60,13 @@ export class QueueCommand extends Command {
 						.setNameLocalizations({ ko: '제거' })
 						.setDescription('Remove a track from the queue.')
 						.setDescriptionLocalizations({ ko: '대기열에서 곡을 제거해요.' })
-						.addIntegerOption((option) =>
+						.addStringOption((option) =>
 							option
 								.setName('position')
 								.setNameLocalizations({ ko: '번호' })
 								.setDescription('The position of the track to remove.')
-								.setDescriptionLocalizations({ ko: '제거할 곡의 번호에요.' })
-								.setMinValue(1)
+								.setDescriptionLocalizations({ ko: '제거할 곡을 선택해 주세요. 번호나 제목으로 찾을 수 있어요.' })
+
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -74,23 +77,23 @@ export class QueueCommand extends Command {
 						.setNameLocalizations({ ko: '이동' })
 						.setDescription('Move a track to a different position.')
 						.setDescriptionLocalizations({ ko: '곡의 위치를 이동해요.' })
-						.addIntegerOption((option) =>
+						.addStringOption((option) =>
 							option
 								.setName('from')
 								.setNameLocalizations({ ko: '원래위치' })
 								.setDescription('Current position of the track.')
 								.setDescriptionLocalizations({ ko: '이동할 곡의 현재 위치에요.' })
-								.setMinValue(1)
+
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
-						.addIntegerOption((option) =>
+						.addStringOption((option) =>
 							option
 								.setName('to')
 								.setNameLocalizations({ ko: '이동위치' })
 								.setDescription('New position for the track.')
-								.setDescriptionLocalizations({ ko: '곡을 이동할 위치에요.' })
-								.setMinValue(1)
+								.setDescriptionLocalizations({ ko: '선택한 곡의 현재 위치로 옮겨요.' })
+
 								.setRequired(true)
 								.setAutocomplete(true)
 						)
@@ -107,6 +110,9 @@ export class QueueCommand extends Command {
 		if (!interaction.inCachedGuild()) return;
 
 		const subcommand = interaction.options.getSubcommand(true);
+		if (subcommand !== 'list') {
+			await runSubcommandPreconditions(this, interaction, ['NodeAvailable', 'VoiceConnected', 'SameVoiceChannel', 'DJOrAlone']);
+		}
 
 		switch (subcommand) {
 			case 'list':
@@ -179,10 +185,22 @@ export class QueueCommand extends Command {
 
 		// 유저가 추가한 곡만 비운다 — 선예열한 추천곡은 대기열이 아니므로 남긴다.
 		const count = getUserQueuedTracks(player).length;
+		const selection = queueSelectionValue(player, 0);
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+		if (
+			!(await confirmAction(
+				interaction,
+				'대기열을 비울까요?',
+				`대기 중인 ${count}곡을 제거해요. 현재 곡은 계속 재생하고, 자동재생 설정도 유지해요.`
+			))
+		)
+			return;
+		await runSubcommandPreconditions(this, interaction, ['VoiceConnected', 'SameVoiceChannel', 'DJOrAlone']);
+		resolveQueueSelection(player, selection);
 		await player.queue.splice(0, count);
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 
-		await interaction.reply({
+		await interaction.editReply({
 			components: [view.queueCleared({ count })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
@@ -192,7 +210,7 @@ export class QueueCommand extends Command {
 		const player = this.container.audio.getPlayer(interaction.guildId);
 		if (!player) return;
 
-		const position = interaction.options.getInteger('position', true);
+		const position = resolveQueueSelection(player, interaction.options.getString('position', true)) + 1;
 		if (position > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'queue_invalid_position',
@@ -222,8 +240,8 @@ export class QueueCommand extends Command {
 		const player = this.container.audio.getPlayer(interaction.guildId);
 		if (!player) return;
 
-		const from = interaction.options.getInteger('from', true);
-		const to = interaction.options.getInteger('to', true);
+		const from = resolveQueueSelection(player, interaction.options.getString('from', true)) + 1;
+		const to = resolveQueueSelection(player, interaction.options.getString('to', true)) + 1;
 		const queueLength = getUserQueuedTracks(player).length;
 
 		if (from > queueLength || to > queueLength) {

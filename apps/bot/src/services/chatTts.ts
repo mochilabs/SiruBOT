@@ -241,30 +241,22 @@ export class ChatTtsService {
 		});
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
-			await this.dispatchOverlay(player, clip);
+			await this.dispatchOverlay(player, clip, true);
 			return 'overlay';
 		}
-		await this.dispatchSolo(player, { url: clip.url, text });
+		await this.dispatchSolo(player, { url: clip.url, text }, true);
 		return 'solo';
 	}
 
 	/** 오버레이: mixer announce로 음악 위에 겹쳐 읽는다 (큐잉·순차는 mixer가 담당). */
-	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip): Promise<void> {
-		try {
-			const state = await container.mixerService.getState(player);
-			if ((state.announcementsQueued ?? 0) > TTS_OVERLAY_QUEUE_MAX) {
-				this.warnOnce(
-					player.guildId,
-					'overlay_overflow',
-					`[chatTts] 오버레이 대기(${state.announcementsQueued})가 많아 새 안내를 버렸어요 (guild ${player.guildId})`
-				);
-				return;
-			}
-		} catch (error) {
-			// state 조회 실패는 거절 근거가 없다 — announce를 시도하고, 그것도 실패하면 조용히 버린다
-			container.logger.debug(`[chatTts] mixer state unavailable, trying announce (guild ${player.guildId}): ${error}`);
+	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip, reportFailure = false): Promise<void> {
+		const state = await container.mixerService.getState(player).catch(() => null);
+		if ((state?.announcementsQueued ?? 0) >= TTS_OVERLAY_QUEUE_MAX) {
+			this.warnOnce(player.guildId, 'overlay_overflow', `[chatTts] 안내 대기열 초과 (guild ${player.guildId})`);
+			if (reportFailure) throw new TtsError('queue_full', '음성 안내가 밀려 있어요. 잠시 후 다시 말하기를 실행해 주세요.');
+			return;
 		}
-		await this.speakOverlay(player, clip.url);
+		await this.speakOverlay(player, clip.url, reportFailure);
 	}
 
 	/**
@@ -273,26 +265,29 @@ export class ChatTtsService {
 	 * - parallel: 겹쳐서 재생
 	 * - interrupt: 대기분을 먼저 비워 "가장 최근 안내만" 남겨요 (재생 중인 안내는 그대로 끝나요)
 	 */
-	private async speakOverlay(player: CustomPlayer, url: string): Promise<void> {
+	private async speakOverlay(player: CustomPlayer, url: string, reportFailure = false): Promise<void> {
 		try {
 			const [duckLevel, mode] = await Promise.all([
 				container.guildService.getTtsDuck(player.guildId),
 				container.guildService.getTtsAnnounceMode(player.guildId)
 			]);
 			if (mode === 'interrupt') {
-				await container.mixerService.clearAnnounceQueue(player).catch(() => 0);
+				await container.mixerService.clearAnnounceQueue(player);
 			}
 			await container.mixerService.announce(player, url, duckLevel, mode === 'parallel' ? 'parallel' : 'sequential');
 		} catch (error) {
-			this.warnOnce(player.guildId, 'announce_failed', `[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
+			container.logger.warn(`[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
+			if (reportFailure) throw new TtsError('playback_failed', '음성을 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
 	}
 
 	/** 단독: 클립을 메인 플레이어 트랙으로 재생한다. 이미 클립이 이어지는 중이면 내부 큐에 쌓는다. */
-	private async dispatchSolo(player: CustomPlayer, clip: SoloClip): Promise<void> {
+	private async dispatchSolo(player: CustomPlayer, clip: SoloClip, reportFailure = false): Promise<void> {
 		const state = this.getGuildState(player.guildId);
 		const soloActive = isTtsClip(player.queue.current) || state.soloQueue.length > 0;
 		if (soloActive) {
+			if (reportFailure && state.soloQueue.length >= TTS_SOLO_QUEUE_MAX)
+				throw new TtsError('queue_full', '음성 안내가 밀려 있어요. 잠시 후 다시 시도해 주세요.');
 			state.soloQueue.push(clip);
 			while (state.soloQueue.length > TTS_SOLO_QUEUE_MAX) {
 				state.soloQueue.shift();
@@ -305,12 +300,16 @@ export class ChatTtsService {
 			return;
 		}
 		const track = await this.resolveTtsClip(player, clip);
-		if (!track) return;
+		if (!track) {
+			if (reportFailure) throw new TtsError('playback_failed', '음성을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+			return;
+		}
 		try {
 			await player.queue.add(track);
 			await container.audioService.ensurePlayback(player);
 		} catch (error) {
-			this.warnOnce(player.guildId, 'solo_start_failed', `[chatTts] 단독 재생 시작 실패 (guild ${player.guildId}): ${error}`);
+			container.logger.warn(`[chatTts] 단독 재생 시작 실패 (guild ${player.guildId}): ${error}`);
+			if (reportFailure) throw new TtsError('playback_failed', '음성을 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
 	}
 

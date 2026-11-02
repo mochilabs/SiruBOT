@@ -13,6 +13,7 @@ import { createContainer, emoji } from '@sirubot/utils';
 import type { TtsService, TtsVoice } from '../../../services/ttsService.ts';
 import type { TtsUserPreset, TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
 import { truncateText } from '../../../lib/text.ts';
+import type { GuildService } from '../../../services/guildService.ts';
 
 /**
  * /tts 설정 패널(Components V2) 뷰와 컴포넌트 customId 계약.
@@ -167,10 +168,22 @@ export function ttsPanelView({ preset, voices, serviceReady }: TtsPanelProps): C
 export interface TtsPanelDeps {
 	ttsUserSettings: TtsUserSettingsService;
 	ttsService: TtsService;
+	guildService: GuildService;
 }
 
 /** 패널에 표시할 최신 설정·음성 목록을 모아 뷰를 만든다. 명령어와 버튼/셀렉트/모달 핸들러가 함께 쓴다. */
-export async function buildTtsPanel(deps: TtsPanelDeps, guildId: string, userId: string): Promise<ContainerBuilder> {
-	const [preset, voices] = await Promise.all([deps.ttsUserSettings.get(guildId, userId), deps.ttsService.listVoices()]);
-	return ttsPanelView({ preset, voices, serviceReady: deps.ttsService.isEnabled() });
+export async function buildTtsPanel(deps: TtsPanelDeps, guildId: string, userId: string, channelId: string | null): Promise<ContainerBuilder> {
+	const [preset, voices, policy] = await Promise.all([
+		deps.ttsUserSettings.get(guildId, userId),
+		deps.ttsService.listVoices(),
+		deps.guildService.getTtsSettings(guildId)
+	]);
+	const active = policy.mode === 'all' || (policy.mode === 'channels' && channelId !== null && policy.channelIds.includes(channelId));
+	const view = ttsPanelView({ preset, voices, serviceReady: deps.ttsService.isEnabled() });
+	view.addTextDisplayComponents((text) =>
+		text.setContent(
+			`**현재 채널** · ${active ? '낭독 허용' : '낭독 꺼짐'}\n${!active ? '개인 낭독을 켜도 이 채널에서는 읽지 않아요. 관리자에게 /tts 켜기를 요청해 주세요.' : !preset.enabled ? '내 메시지를 읽으려면 낭독 켜기를 눌러 주세요.' : '봇과 같은 음성 채널에 들어가면 내 메시지를 읽어요.'}`
+		)
+	);
+	return view;
 }

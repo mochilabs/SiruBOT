@@ -96,7 +96,7 @@ export class DeliveryCommand extends Command {
 			});
 		}
 
-		await interaction.deferReply();
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
 		try {
 			const result = await trackDelivery(carrierHint, trackingNumber);

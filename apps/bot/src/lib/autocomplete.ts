@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { AutocompleteInteraction } from 'discord.js';
 import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { queueSelectionValue } from '../modules/audio/utils/queueSelection.ts';
 
 /** 자동완성 선택지 이름 길이 상한 (Discord: 100자) */
 const CHOICE_NAME_MAX = 100;
@@ -30,10 +31,14 @@ export async function respondQueuedTracks(interaction: AutocompleteInteraction):
 	const offset = Number.isInteger(parsed) && parsed > 0 ? parsed - 1 : 0;
 
 	await interaction.respond(
-		tracks.slice(offset, offset + CHOICE_LIMIT).map((track, index) => ({
-			name: clipChoiceName(`#${offset + index + 1} ${track.info.title}`),
-			value: offset + index + 1
-		}))
+		player
+			? tracks
+					.map((track, index) => ({ name: clipChoiceName(`#${index + 1} ${track.info.title}`), value: queueSelectionValue(player, index) }))
+					.filter((entry, index) =>
+						Number.isInteger(parsed) ? index >= offset : entry.name.toLocaleLowerCase().includes(typed.toLocaleLowerCase())
+					)
+					.slice(0, CHOICE_LIMIT)
+			: []
 	);
 }
 
@@ -64,9 +69,9 @@ export async function respondPlaylistTrackPositions(interaction: AutocompleteInt
 	if (!result) return interaction.respond([]);
 
 	await interaction.respond(
-		result.tracks.slice(0, CHOICE_LIMIT).map((entry, index) => ({
-			name: clipChoiceName(`#${index + 1} ${entry.track.title}`),
-			value: index + 1
-		}))
+		result.tracks
+			.map((entry, index) => ({ name: clipChoiceName(`#${index + 1} ${entry.track.title}`), value: entry.id }))
+			.filter((entry) => entry.name.toLocaleLowerCase().includes(String(interaction.options.getFocused()).toLocaleLowerCase()))
+			.slice(0, CHOICE_LIMIT)
 	);
 }

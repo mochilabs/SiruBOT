@@ -8,6 +8,7 @@ import * as filter from '../subcommands/filter.ts';
 import * as history from '../subcommands/history.ts';
 import * as lyrics from '../subcommands/lyrics.ts';
 import * as pause from '../subcommands/pause.ts';
+import * as resume from '../subcommands/resume.ts';
 import * as play from '../subcommands/play.ts';
 import * as previous from '../subcommands/previous.ts';
 import * as recommend from '../subcommands/recommend.ts';
@@ -21,6 +22,7 @@ import * as volume from '../subcommands/volume.ts';
 const SUBCOMMANDS: SubcommandModule[] = [
 	play,
 	pause,
+	resume,
 	skip,
 	stop,
 	previous,
