@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Track } from 'lavalink-client';
+import { LavalinkManager, type Track } from 'lavalink-client';
 import { normalizeTitle, titleSimilarity, pickBySimilarity, fetchRelatedCandidate, autoPlayRelated, isRelatedTrack } from './autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID } from './requester.ts';
+import { RelatedTrackHistory } from './player/relatedTrackHistory.ts';
+import { CustomPlayer } from './player/customPlayer.ts';
 
 const { container } = vi.hoisted(() => ({
 	container: {
@@ -15,7 +17,7 @@ vi.mock('@sapphire/framework', () => ({ container }));
 
 function track(title: string, identifier: string, duration = 100_000, extra: Record<string, unknown> = {}): Track {
 	return {
-		info: { title, identifier, duration },
+		info: { title, identifier, duration, sourceName: 'youtube' },
 		encoded: `enc-${identifier}`,
 		...extra
 	} as unknown as Track;
@@ -116,6 +118,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		const search = vi.fn(async () => searchResult);
 		return {
 			node: { search },
+			relatedTrackHistory: new RelatedTrackHistory(),
 			queue: {
 				current: track('current song', 'current-id', 90_000),
 				previous: [track('past song', 'previous-id', 80_000)],
@@ -167,11 +170,118 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		expect(await fetchRelatedCandidate(player, reference)).toBeNull();
 	});
 
+	it('does not recommend a played track after it leaves the 25-track queue history', async () => {
+		const played = track('first song', 'first-id');
+		const player = makePlayer({ loadType: 'playlist', tracks: [played] });
+		player.queue.current = null;
+		player.queue.previous.splice(0);
+		await fetchRelatedCandidate(player, played);
+
+		player.queue.previous.push(...Array.from({ length: 25 }, (_, i) => track(`later song ${i}`, `later-${i}`)));
+		expect(await fetchRelatedCandidate(player, player.queue.previous[0])).toBeNull();
+	});
+
+	it('excludes another upload of a played recording before similarity fallbacks', async () => {
+		const played = track('Siru - Blue Hour (Official Video)', 'original-id');
+		played.info.author = 'Siru - Topic';
+		const otherUpload = track('Siru - Blue Hour [Lyrics]', 'other-upload-id');
+		otherUpload.info.author = 'SIRU';
+		const player = makePlayer({ loadType: 'playlist', tracks: [otherUpload] });
+		player.queue.previous.splice(0, player.queue.previous.length, played);
+
+		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBeNull();
+	});
+
+	it('keeps distinct songs with the same artist prefix eligible', async () => {
+		const played = track('Siru - Blue Hour', 'original-id');
+		played.info.author = 'Siru';
+		const differentSong = track('Siru - Afterglow', 'new-id');
+		differentSong.info.author = 'Siru';
+		const player = makePlayer({ loadType: 'playlist', tracks: [differentSong] });
+		player.queue.previous.splice(0, player.queue.previous.length, played);
+
+		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBe(differentSong);
+	});
+
+	it.each([
+		{ title: 'Blue Hour (Live)', author: 'Siru', duration: 100_000 },
+		{ title: 'Blue Hour', author: 'Another Artist', duration: 100_000 },
+		{ title: 'Blue Hour', author: 'Siru', duration: 200_000 }
+	])('keeps distinct recordings eligible: %j', async ({ title, author, duration }) => {
+		const played = track('Blue Hour', 'original-id');
+		played.info.author = 'Siru';
+		const differentRecording = track(title, 'other-id', duration);
+		differentRecording.info.author = author;
+		const player = makePlayer({ loadType: 'playlist', tracks: [differentRecording] });
+		player.queue.previous.splice(0, player.queue.previous.length, played);
+		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBe(differentRecording);
+	});
+
+	it('excludes the same ISRC even when the upload metadata differs', async () => {
+		const played = track('Blue Hour', 'original-id');
+		played.info.isrc = 'US-AAA-26-00001';
+		const otherUpload = track('another upload title', 'other-id');
+		otherUpload.info.isrc = 'usaaa2600001';
+		const player = makePlayer({ loadType: 'playlist', tracks: [otherUpload] });
+		player.queue.previous.splice(0, player.queue.previous.length, played);
+		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBeNull();
+	});
+
+	it('allows a removed, unplayed queued track to be recommended later', async () => {
+		const waiting = track('waiting song', 'waiting-id');
+		const player = makePlayer({ loadType: 'playlist', tracks: [waiting] });
+		const reference = track('another song', 'ref');
+		expect(await fetchRelatedCandidate(player, reference)).toBeNull();
+		player.queue.tracks.splice(0);
+		expect(await fetchRelatedCandidate(player, reference)).toBe(waiting);
+	});
+
+	it('does not permanently exclude an unplayed current track from a queue shift', async () => {
+		const waiting = track('waiting song', 'waiting-id');
+		const player = makePlayer({ loadType: 'playlist', tracks: [waiting] });
+		player.queue.current = waiting;
+		player.queue.tracks.splice(0);
+		const reference = track('another song', 'ref');
+		expect(await fetchRelatedCandidate(player, reference)).toBeNull();
+		player.queue.current = null;
+		expect(await fetchRelatedCandidate(player, reference)).toBe(waiting);
+	});
+
+	it.each([undefined, null, ['invalid', 123]])('accepts legacy or malformed saved history: %j', async (saved) => {
+		const candidate = track('new song', 'new-id');
+		const player = makePlayer({ loadType: 'playlist', tracks: [candidate] });
+		player.relatedTrackHistory.restore(saved);
+		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBe(candidate);
+	});
+
+	it('retains session exclusions through real queue truncation and player serialization', async () => {
+		const manager = new LavalinkManager<CustomPlayer>({
+			nodes: [{ id: 'test', host: 'localhost', port: 2333, authorization: 'test' }],
+			sendToShard: () => undefined,
+			client: { id: '123456789012345678' },
+			playerClass: CustomPlayer
+		});
+		const original = manager.createPlayer({ guildId: '123456789012345679', voiceChannelId: '123456789012345680', node: 'test' });
+		const played = track('first song', 'first-id');
+		original.relatedTrackHistory.remember(played);
+		original.queue.previous.push(...Array.from({ length: 25 }, (_, i) => track(`later song ${i}`, `later-${i}`)), played);
+		await original.queue.utils.save();
+		expect(original.queue.previous).toHaveLength(25);
+		expect(original.queue.previous).not.toContain(played);
+
+		const restored = makePlayer({ loadType: 'playlist', tracks: [played] });
+		restored.relatedTrackHistory.restore(JSON.parse(JSON.stringify(original.toJSON().relatedTrackHistory)));
+		expect(await fetchRelatedCandidate(restored, track('another song', 'ref'))).toBeNull();
+		const nextSession = makePlayer({ loadType: 'playlist', tracks: [played] });
+		expect(await fetchRelatedCandidate(nextSession, track('another song', 'ref'))).toBe(played);
+	});
+
 	it('returns null on error or empty search results', async () => {
 		const reference = track('abcd', 'ref', 100_000);
 		expect(await fetchRelatedCandidate(makePlayer({ loadType: 'empty', tracks: [] }), reference)).toBeNull();
 
 		const errorPlayer = {
+			relatedTrackHistory: new RelatedTrackHistory(),
 			node: {
 				search: vi.fn(async () => {
 					throw new Error('node down');

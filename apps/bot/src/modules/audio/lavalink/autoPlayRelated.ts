@@ -5,6 +5,7 @@ import { isYouTubeSource } from '@sirubot/utils';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { notifyQueueMutated } from './queue/queueWrapper.ts';
 import { isSameEncodedTrack } from './handlers/playbackWatchdog.ts';
+import { RelatedTrackHistory } from './player/relatedTrackHistory.ts';
 
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
@@ -201,24 +202,17 @@ export function pickBySimilarity(candidates: Track[], reference: Track): Track |
 }
 
 /**
- * 큐 트랙에서 식별자를 안전하게 추출한다.
- * Queue.tracks는 (Track | UnresolvedTrack)[]이고 UnresolvedTrack.info는 Partial이라
- * identifier가 없을 수 있다 — 그런 곡은 식별자로 제외할 수 없으므로 건너뛴다.
- */
-function getTrackIdentifier(track: Track | UnresolvedTrack): string | null {
-	const identifier = (track as { info?: { identifier?: unknown } })?.info?.identifier;
-	return typeof identifier === 'string' && identifier.length > 0 ? identifier : null;
-}
-
-/**
  * 현재 곡의 YouTube RD(Radio) 플레이리스트를 검색해 유사도 기반으로 추천곡을 고른다.
- * 순수 검색+선택만 담당하며 큐 상태 검사는 호출부에서 fetch 완료 후 한다. 실패 시 null.
+ * 재생 이력을 보존하고 후보를 고르며, 큐 상태 검사는 호출부에서 fetch 완료 후 한다. 실패 시 null.
  * extraExcludes: 같은 요청에서 여러 곡을 연속으로 뽑을 때 이미 선택된 곡을 제외한다.
- * 이미 재생했던 곡(previous + current)과 대기 중인 곡(queue.tracks)은 순위 감점이 아니라
+ * 세션에서 재생했던 곡과 대기 중인 곡(queue.tracks)은 순위 감점이 아니라
  * 하드 제외한다 — 감점만으로는 폴백 경로에서 다시 뽑혀 같은 곡이 반복되었다.
  */
-export async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
+export async function fetchRelatedCandidate(player: CustomPlayer, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
 	const RD_PLAYLIST_ID = 'RD' + lastPlayedTrack.info.identifier;
+	const history = player.relatedTrackHistory;
+	history.remember(lastPlayedTrack);
+	for (const track of player.queue.previous) history.remember(track);
 
 	try {
 		const searchResult = await player.node.search('https://youtube.com/playlist?list=' + RD_PLAYLIST_ID, {
@@ -232,23 +226,16 @@ export async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Tra
 			return null;
 		}
 
-		// 하드 제외 대상: 마지막 재생 곡, 현재 재생 곡, 재생 이력, 대기열 전체(사용자 추가 + 선예열 추천곡), 연속 선출 제외
+		// 검색 중 시작한 곡도 제외한다. 대기 곡은 제거 후 다시 추천할 수 있게 세션 이력과 분리한다.
 		const excludedIdentifiers = new Set<string>(extraExcludes);
-		excludedIdentifiers.add(lastPlayedTrack.info.identifier);
-		if (player.queue.current) {
-			const currentIdentifier = getTrackIdentifier(player.queue.current);
-			if (currentIdentifier) excludedIdentifiers.add(currentIdentifier);
-		}
-		for (const track of player.queue.previous) {
-			const identifier = getTrackIdentifier(track);
-			if (identifier) excludedIdentifiers.add(identifier);
-		}
-		for (const track of player.queue.tracks) {
-			const identifier = getTrackIdentifier(track);
-			if (identifier) excludedIdentifiers.add(identifier);
-		}
+		for (const track of player.queue.previous) history.remember(track);
+		const queued = new RelatedTrackHistory();
+		if (player.queue.current) queued.remember(player.queue.current);
+		for (const track of player.queue.tracks) queued.remember(track);
 
-		const availableTracks = searchResult.tracks.filter((track) => !excludedIdentifiers.has(track.info.identifier));
+		const availableTracks = searchResult.tracks.filter(
+			(track) => !excludedIdentifiers.has(track.info.identifier) && !history.has(track) && !queued.has(track)
+		);
 
 		if (availableTracks.length > 0) {
 			const selectedTrack = pickBySimilarity(availableTracks, lastPlayedTrack);
@@ -256,7 +243,7 @@ export async function fetchRelatedCandidate(player: Player, lastPlayedTrack: Tra
 		}
 
 		container.logger.debug(
-			`No eligible related tracks found for: ${lastPlayedTrack.info.identifier} (candidates: ${searchResult.tracks.length}, excluded: ${excludedIdentifiers.size})`
+			`No eligible related tracks found for: ${lastPlayedTrack.info.identifier} (candidates: ${searchResult.tracks.length})`
 		);
 		return null;
 	} catch (error) {
@@ -360,7 +347,7 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 	}
 };
 
-export const autoPlayRelated = async (player: Player, lastPlayedTrack: Track): Promise<void> => {
+export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack: Track): Promise<void> => {
 	// 서버 예열 전이가 진행 중이면 관망한다 — 이 시점의 queue.add는 라이브러리
 	// queueEnd 안에서 current를 새 추천곡으로 시프트해 표시가 실제 재생과 어긋난다
 	// (서버가 이미 예열곡을 시작한 β 시나리오). 정상 전이는 trackStart가 이어준다.

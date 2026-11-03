@@ -30,6 +30,7 @@ export class TrackStartOrchestrator {
 		// 예열 소비 후 이어지는 trackStart에서 서버가 시작한 트랙을 대조한다.
 		const preloadedIdentifier = this.container.mixerService.takePreloadedIdentifier(player.guildId);
 		const startedTrack = this.resolveStartedTrack(player, track, payload, preloadedIdentifier);
+		if (startedTrack && !isTtsClip(startedTrack)) player.relatedTrackHistory.remember(startedTrack);
 		syncQueueToNowPlaying(player, startedTrack);
 		// 표시 확정 — 모든 NOWPLAYING 렌더러는 이 값을 그린다.
 		// (queue.current는 lavalink-client 전이 기계가 뒤늦게 덮어쓸 수 있다.)

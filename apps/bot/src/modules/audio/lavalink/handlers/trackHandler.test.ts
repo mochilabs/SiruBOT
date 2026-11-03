@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
 import type { Track, TrackEndEvent, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
+import { RelatedTrackHistory } from '../player/relatedTrackHistory.ts';
 
 const {
 	getSubLogger,
@@ -473,6 +474,7 @@ function ttsTrack(encoded: string, identifier?: string): Track {
 
 function fullPlayer(overrides: Record<string, unknown> = {}) {
 	return {
+		relatedTrackHistory: new RelatedTrackHistory(),
 		guildId: 'g-1',
 		consecutiveErrors: 0,
 		playing: false,
@@ -579,6 +581,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		await handler.handleTrackStart(player, started, startEvent('a-enc', 'id-a'));
 
 		expect(player.transitionState.confirmedNowPlaying).toBe(started);
+		expect(player.relatedTrackHistory.has(started)).toBe(true);
 		expect(player.transitionState.serverConsumedTrack).toBeNull();
 		expect(player.transitionState.stopByCommand).toBe(false);
 		expect(player.transitionState.preloadConsumedAt).toBeNull();
@@ -625,6 +628,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		expect(notifier.onTrackStart).not.toHaveBeenCalled();
 		expect(chatTts.drainSoloQueueToAnnounce).not.toHaveBeenCalled();
 		expect(tracks.increasePlays).not.toHaveBeenCalled();
+		expect(player.relatedTrackHistory.toJSON()).toEqual([]);
 		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', clip);
 	});
 });
