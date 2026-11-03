@@ -41,7 +41,7 @@ sirubot/
 
 - **Music playback**: Audio playback through Lavalink.
 - **Web Dashboard**: Music controls, server settings, and shard status monitoring.
-- **Data API Gateway**: Caches external API calls (weather, lyrics, horoscopes, delivery tracking, YouTube chapters) and runs scheduled LLM jobs for the bot services.
+- **Data API Gateway**: Caches external API calls (weather, lyrics, horoscopes, delivery tracking, SponsorBlock segments, YouTube.js chapters and suggestions) and runs scheduled LLM jobs for the bot services.
 - **Profile Card**: A rendered image card for user profiles with a zodiac constellation background, banner, avatar, and music stats.
 - **Custom Playlists**: Create, manage, and load personalized music playlists directly from the bot or dashboard.
 - **Smart Auto-complete**: Real-time track search suggestions inside Discord slash commands.
@@ -119,7 +119,9 @@ The gateway centralizes external API access so bot shards never call third-party
 | `/v1/ohaasa` | GET | Daily horoscope (Asahi Ohaasa / TV Asahi), LLM-translated to Korean | 7 days |
 | `/v1/lyrics?q=` | GET | Lyrics search (lrclib.net) | 30 days |
 | `/v1/weather?location=&scope=` | GET | Geocoding + forecast + air quality (Open-Meteo) | 15 min |
-| `/v1/chapters?videoId=&durationMs=` | GET | YouTube chapter markers for long videos | 12 h |
+| `/v1/chapters?videoId=&durationMs=` | GET | YouTube.js chapter markers | 12 h; empty 1 h |
+| `/v1/youtube/suggestions?q=` | GET | YouTube.js search suggestions | 10 min |
+| `/v1/sponsorblock/segments?videoId=` | GET | SponsorBlock skip segments (`startMs`, `endMs`) | 24 h; empty 1 h; positive stale 7 d |
 | `/v1/delivery/track?carrier=&number=` | GET | Parcel tracking (tracker.delivery), carrier alias resolution server-side | 5 min |
 | `/v1/playback/events` | POST | Playback event ingestion from bot shards (start/end/stuck/error/abort) | N/A |
 | `/v1/playback/recent?limit=` | GET | Recent playback events, including errors | N/A |

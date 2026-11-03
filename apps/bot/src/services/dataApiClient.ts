@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import type { GreetingConfig, GreetingKind } from '@sirubot/utils';
+import type { GreetingConfig, GreetingKind, SponsorBlockSkipSegment } from '@sirubot/utils';
 import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
 import type { DeliveryCarrier } from '@sirubot/utils/delivery';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
@@ -100,6 +100,22 @@ export async function fetchYouTubeChapters(videoId: string, durationMs: number):
 	const data = await gatewayGet<{ chapters: YouTubeChapter[] }>(`/v1/chapters?videoId=${encodeURIComponent(videoId)}&durationMs=${durationMs}`);
 	if (!Array.isArray(data.chapters)) throw new Error('invalid chapters response');
 	return data.chapters;
+}
+
+/** SponsorBlock skip 구간 — data-api가 공식 API를 조회하고 캐시해요. */
+export async function fetchSponsorBlockSegments(videoId: string): Promise<SponsorBlockSkipSegment[]> {
+	const data = await gatewayGet<{ segments: SponsorBlockSkipSegment[] }>(`/v1/sponsorblock/segments?videoId=${encodeURIComponent(videoId)}`);
+	if (!Array.isArray(data.segments)) throw new Error('invalid SponsorBlock response');
+	return data.segments;
+}
+
+export async function getSimpleYouTubeSuggestions(query: string, maxResults: number = 10): Promise<string[]> {
+	try {
+		const data = await gatewayGet<{ suggestions: string[] }>(`/v1/youtube/suggestions?q=${encodeURIComponent(query)}`);
+		return Array.isArray(data.suggestions) ? data.suggestions.slice(0, maxResults) : [];
+	} catch {
+		return [];
+	}
 }
 
 /** 택배 조회 — 게이트웨이 (5분 캐시). 별칭 해석도 서버에서 해요. */

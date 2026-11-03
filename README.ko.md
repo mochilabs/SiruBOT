@@ -119,7 +119,9 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
 | `/v1/ohaasa` | GET | 오늘의 운세 (오하아사/TV아사히), LLM 한국어 번역 | 7일 |
 | `/v1/lyrics?q=` | GET | 가사 검색 (lrclib.net) | 30일 |
 | `/v1/weather?location=&scope=` | GET | 지오코딩 + 예보 + 대기질 (Open-Meteo) | 15분 |
-| `/v1/chapters?videoId=&durationMs=` | GET | 장문 유튜브 영상의 챕터 마커 | 12시간 |
+| `/v1/chapters?videoId=&durationMs=` | GET | YouTube.js 챕터 마커 | 12시간, 빈 결과 1시간 |
+| `/v1/youtube/suggestions?q=` | GET | YouTube.js 검색 자동완성 | 10분 |
+| `/v1/sponsorblock/segments?videoId=` | GET | SponsorBlock 건너뛸 구간 (`startMs`, `endMs`) | 24시간, 빈 결과 1시간, 양성 stale 7일 |
 | `/v1/delivery/track?carrier=&number=` | GET | 택배 조회 (tracker.delivery), 별칭 해석은 서버가 처리 | 5분 |
 | `/v1/playback/events` | POST | 봇 샤드의 재생 이벤트 수집 (시작/종료/끊김/오류/중단) | 해당 없음 |
 | `/v1/playback/recent?limit=` | GET | 최근 재생 이벤트 및 오류 조회 | 해당 없음 |

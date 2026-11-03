@@ -209,6 +209,23 @@ describe('non-blocking player notifications', () => {
 		expect(mocks.edits).toHaveBeenCalledTimes(1);
 	});
 
+	it('keeps the newest controller state when an older update is waiting on settings', async () => {
+		vi.useFakeTimers();
+		const notifier = new PlayerNotifier();
+		const current = player();
+		await notifier.sendController(current);
+		const firstSettings = pending<{ enableController: boolean; volume: number }>();
+		mocks.guild.mockReturnValueOnce(firstSettings.promise);
+		notifier.updateController(current);
+		await vi.advanceTimersByTimeAsync(300);
+		current.paused = true;
+		notifier.updateController(current);
+		await vi.advanceTimersByTimeAsync(300);
+		firstSettings.resolve({ enableController: true, volume: 10 });
+		await vi.waitFor(() => expect(mocks.edits).toHaveBeenCalledTimes(1));
+		expect(mocks.edits.mock.calls[0]![1].components[0].toJSON().paused).toBe(true);
+	});
+
 	it('does not re-upload a cached attachment on every update', async () => {
 		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();

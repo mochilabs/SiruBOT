@@ -28,7 +28,7 @@
 | 3RD-01 | `mixer-plugin` (`lavalink_mixer`) | Lavalink server plugin | Sibling project `../lavalink_mixer`, v1.0.0 | REST `/mixer/*`, `pluginFilters.mixer` | Enable the filter **before** `player.play()` |
 | 3RD-02 | `youtube-file-cache` (`lavalink_file_cache`) | Lavalink server plugin | Sibling project `../lavalink_file_cache`, v0.1.0 | lavaplayer `AudioSourceManager`, REST `/youtube-file-cache/stats` | Cache key = YouTube `identifier` (videoId) |
 | 3RD-03 | `youtube-plugin` (official `youtube-source`) | Lavalink server plugin | `dev.lavalink.youtube:youtube-plugin:1.18.2` | Track loading / format resolution | 3RD-02 depends on its **internal APIs** |
-| 3RD-04 | SponsorBlock plugin | Lavalink server plugin | Installed separately on nodes | `SegmentSkipped` / `ChaptersLoaded` events | Guilds without registered categories receive no chapter events |
+| 3RD-04 | SponsorBlock API | data-api external HTTP | `sponsor.ajay.app/api/skipSegments` | millisecond skip segments | BOT controls current-track seek; mixer receives incoming start |
 | 3RD-05 | `lavalink-client` | Bot client library | `^2.10.0` (`apps/bot/package.json`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
 | 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.3.6` | Slash command and precondition registration | Bot conventions are in `.pi/skills/sapphire-command` |
 | 3RD-07 | Prisma, Redis, Fastify, Next.js, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
@@ -111,14 +111,11 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **SiruBOT integration:** Indirect. `apps/data-api/src/providers/lavalinkSearch.ts` delegates search to Lavalink REST `GET /v4/loadtracks?identifier=ytsearch:...`; this plugin provides the underlying source implementation.
 - **Fragile Rule:** 3RD-02 depends on **private internal APIs** of this plugin, including `YoutubeAudioSourceManager.getClients()`, `getCipherManager()`, and `buildAudioTrack()` (for example, `YoutubeFileCacheSourceManager.java:390`). Whenever 3RD-03 is upgraded, **rebuild and retest 3RD-02**. Upgrading 3RD-03 alone while leaving the old 3RD-02 JAR in place can cause runtime linkage errors.
 
-### 3RD-04. SponsorBlock Plugin
+### 3RD-04. SponsorBlock API
 
-- **Purpose:** Provides segment skipping (sponsors, intros, etc.) and chapter information.
-- **SiruBOT integration:**
-  - Registration: `apps/bot/src/modules/audio/lavalink/handlers/playerHandler.ts:39` (`player.setSponsorBlock(validSegments)`); guild segment selection is in `apps/bot/src/modules/audio/interaction-handlers/settings.ts:192-194`.
-  - Events: `apps/bot/src/modules/audio/lavalink/handlers/sponsorBlockHandler.ts:11-12` (`ChaptersLoaded`, `SegmentSkipped`); user notification message at `sponsorBlockHandler.ts:46`.
-  - `ChaptersLoaded` is emitted only for guilds that have registered categories (`trackHandler.ts:416` comment). An empty chapter UI may therefore be expected behavior.
-- **Fragile Rule:** Event names must match `lavalink-client` types (`SponsorBlockChaptersLoaded`, `SponsorBlockSegmentSkipped`). When upgrading 3RD-05, verify event payload and type changes.
+- `apps/data-api/src/providers/sponsorblock.ts` requests only `actionType=skip`, validates the response, and converts seconds to integer milliseconds. `routes/cache-providers.ts` caches positive results for 24 hours, empty results for one hour, and serves a positive seven-day stale copy during upstream failure.
+- `apps/bot/src/services/sponsorBlockService.ts` selects each guild's categories and seeks the current player. It suppresses seeks across an active crossfade boundary.
+- For the next track, BOT passes the leading skip end as `startPositionMs` in `POST /mixer/queue/arm` when `/mixer/info` reports `incomingStartPositionSupported`. For an outgoing outro, BOT sends `outgoingEndPositionMs` when the node reports `outgoingEndPositionSupported`; the mixer ends its fade at that position. Deploy the updated mixer before BOT. Remove the old Lavalink SponsorBlock plugin after BOT and data-api are live.
 
 ---
 
@@ -170,7 +167,7 @@ All providers are called from `apps/data-api/src/providers/*`. **TTL behavior, e
 | 3RD-08b | Open-Meteo (weather, air quality, geocoding) | `api.open-meteo.com`, `air-quality-api.open-meteo.com`, `geocoding-api.open-meteo.com` | `providers/weather.ts:3-5` | Public API; free-tier policies may change. |
 | 3RD-08c | tracker.delivery (parcel tracking) | `https://apis.tracker.delivery` | `providers/delivery.ts:1` | API-key and pricing-plan contract. |
 | 3RD-08d | TV Asahi / Asahi horoscope | `tv-asahi.co.jp/goodmorning/uranai/`, `asahi.co.jp/data/ohaasa2020/horoscope.json` | `providers/ohaasa.ts:99,131` | **Scraping / unofficial JSON.** Breaks if page structure changes; keep the parser isolated. |
-| 3RD-08e | YouTube internal API | `youtube.com/youtubei/v1/search`, watch page, `suggestqueries-clients6.youtube.com` | `providers/chapters.ts:77,109`, `packages/utils/src/youtube.ts:21` | **Unofficial internal API.** May change without notice. Preserve the search-to-watch fallback in `chapters.ts`. |
+| 3RD-08e | YouTube.js | `youtubei.js` package | `providers/youtubeClient.ts`, `providers/chapters.ts`, `providers/youtubeSuggestions.ts` | The library wraps unofficial YouTube endpoints; parser/API changes require provider tests and manual chapter checks. |
 | 3RD-08f | OpenAI-compatible LLM | `OPENAI_COMPATIBLE_API_URL` (default `http://127.0.0.1:8080/v1`, `apps/data-api/src/config/env.ts:10`) | Translation / AI batch providers, including `providers/translate.ts` | Assumes self-hosting; model and key are configured via environment variables. |
 | 3RD-08g | Lavalink REST (search proxy) | `GET {LAVALINK_REST_URL}/v4/loadtracks` | `providers/lavalinkSearch.ts` | Depends on 3RD-03. Sends the node password verbatim in `Authorization`. |
 

@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { RepeatMode } from 'lavalink-client';
 import { queueRelatedUpfront } from '../../modules/audio/lavalink/autoPlayRelated.ts';
+import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
 import type { TtsAnnounceMode } from '../guildSettings/playback.ts';
 import type { AiTool, AiToolContext } from './types.ts';
@@ -236,6 +237,8 @@ export const musicSettingsSetTool: AiTool = {
 			const sponsorblock = Boolean(args.sponsorblock);
 			const segments = sponsorblock ? ['sponsor', 'selfpromo'] : [];
 			await container.guildService.setSponsorBlockSegments(guildId, segments);
+			const player = container.audio.players.get(guildId);
+			if (player) sponsorBlockService.refreshSettings(player);
 			updated.sponsorblock = sponsorblock;
 		}
 

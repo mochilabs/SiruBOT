@@ -1,5 +1,6 @@
 import { container, UserError } from '@sapphire/framework';
-import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE, getSimpleYouTubeSuggestions } from '@sirubot/utils';
+import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
+import { getSimpleYouTubeSuggestions } from '../../../services/dataApiClient.ts';
 import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,

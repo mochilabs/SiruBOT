@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAPTER_FETCH_MIN_DURATION_MS, isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.ts';
-
+import { isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.ts';
 describe('isYouTubeSource', () => {
 	it('youtube 계열 소스만 true예요 (접미사 prefix 판별)', () => {
 		expect(isYouTubeSource('youtube')).toBe(true);
@@ -32,11 +31,5 @@ describe('resolveYouTubeVideoId', () => {
 
 	it('빈 identifier는 null이에요', () => {
 		expect(resolveYouTubeVideoId({ info: { sourceName: 'youtube', identifier: '' } })).toBeNull();
-	});
-});
-
-describe('CHAPTER_FETCH_MIN_DURATION_MS', () => {
-	it('15분이에요', () => {
-		expect(CHAPTER_FETCH_MIN_DURATION_MS).toBe(15 * 60 * 1000);
 	});
 });

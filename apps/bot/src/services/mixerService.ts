@@ -58,6 +58,8 @@ export interface ArmRequestOptions {
 	encodedTrack: string | null;
 	isEmpty?: boolean;
 	preserveTransition?: boolean;
+	startPositionMs?: number;
+	outgoingEndPositionMs?: number;
 }
 
 export interface OverrideRequestOptions {
@@ -88,6 +90,13 @@ export class MixerRequestError extends Error {
  */
 export class MixerService {
 	private readonly analysisTargets = new WeakMap<Player, { encoded: string; node: object }>();
+	private readonly transitionCapabilities = new WeakMap<
+		object,
+		{
+			until: number;
+			promise: Promise<{ incomingStartPositionSupported?: boolean; outgoingEndPositionSupported?: boolean }>;
+		}
+	>();
 	private readonly filterReady = new Set<string>();
 	/** Active overlap state per guild (value = incoming sub track identifier, or null if unknown). */
 	private readonly activeOverlaps = new Map<string, string | null>();
@@ -201,7 +210,9 @@ export class MixerService {
 					epoch: opts.epoch,
 					encodedTrack: opts.encodedTrack,
 					isEmpty: !!opts.isEmpty,
-					...(opts.preserveTransition === undefined ? {} : { preserveTransition: opts.preserveTransition })
+					...(opts.preserveTransition === undefined ? {} : { preserveTransition: opts.preserveTransition }),
+					...(opts.startPositionMs === undefined ? {} : { startPositionMs: opts.startPositionMs }),
+					...(opts.outgoingEndPositionMs === undefined ? {} : { outgoingEndPositionMs: opts.outgoingEndPositionMs })
 				}),
 				headers: { 'Idempotency-Key': idemKey },
 				signal
@@ -367,8 +378,36 @@ export class MixerService {
 		}
 	}
 
-	public async getInfo(player: Player): Promise<{ protocolVersion: number; version: string }> {
-		return (await this.rawCall(player, '/mixer/info')) as { protocolVersion: number; version: string };
+	public async getInfo(
+		player: Player
+	): Promise<{ protocolVersion: number; version: string; incomingStartPositionSupported?: boolean; outgoingEndPositionSupported?: boolean }> {
+		return (await this.rawCall(player, '/mixer/info')) as {
+			protocolVersion: number;
+			version: string;
+			incomingStartPositionSupported?: boolean;
+			outgoingEndPositionSupported?: boolean;
+		};
+	}
+
+	private async capabilities(player: Player): Promise<{ incomingStartPositionSupported?: boolean; outgoingEndPositionSupported?: boolean }> {
+		const node = player.node;
+		if (!node) return {};
+		const cached = this.transitionCapabilities.get(node);
+		if (cached && cached.until > Date.now()) return cached.promise;
+		const promise = this.getInfo(player).catch((error: unknown) => {
+			this.transitionCapabilities.delete(node);
+			throw error;
+		});
+		this.transitionCapabilities.set(node, { until: Date.now() + 60_000, promise });
+		return promise;
+	}
+
+	public async supportsIncomingStart(player: Player): Promise<boolean> {
+		return (await this.capabilities(player)).incomingStartPositionSupported === true;
+	}
+
+	public async supportsOutgoingEnd(player: Player): Promise<boolean> {
+		return (await this.capabilities(player)).outgoingEndPositionSupported === true;
 	}
 	public async clearNext(player: Player, opts?: QueueMutationOptions): Promise<void> {
 		// v2: slot is managed by JIT; clearNext triggers queue mutation observation
