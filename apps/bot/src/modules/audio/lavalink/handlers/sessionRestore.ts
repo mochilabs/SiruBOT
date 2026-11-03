@@ -28,6 +28,14 @@ const GUILD_WAIT_POLL_MS = 3_000;
 const RESUME_STALE_THRESHOLD_MS = 5 * 60 * 1000;
 /** 복구 동시성 — Discord 음성 연결/REST에 과부하를 주지 않도록 제한한다. */
 const RESTORE_BATCH_SIZE = 10;
+/** Discord 음성 세션 해제가 캐시에 반영될 때까지 대기하는 시간 */
+const VOICE_LEAVE_TIMEOUT_MS = 5_000;
+const VOICE_LEAVE_POLL_MS = 100;
+function delay(ms: number): Promise<void> {
+	const { promise, resolve } = Promise.withResolvers<void>();
+	setTimeout(resolve, ms);
+	return promise;
+}
 
 /**
  * 세션 저장·복원 엔진 — lavalink 노드 이벤트 핸들러(NodeHandler)에서 분리한
@@ -313,8 +321,16 @@ export class SessionRestoreEngine {
 		node: LavalinkNode,
 		guildId: string,
 		saved: SavedPlayer,
-		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean } = {}
+		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean; resetVoiceState?: boolean } = {}
 	): Promise<CustomPlayer> {
+		if (options.resetVoiceState) {
+			// Fresh 복구 경로: createPlayer 이전에 Discord Gateway의 음성 세션을 먼저 완전 정리한다.
+			// createPlayer 이후에 channel_id: null이 오면 lavalink-client의 sendRawData가
+			// onDisconnect.autoReconnect에 반응하여 player.connect()를 선제 발화(레이스)하므로,
+			// 플레이어가 생성되기 전에 Discord 측 voiceState를 비우고 확인한 뒤 생성·연결한다.
+			await this.resetVoiceSession(guildId);
+		}
+
 		const createdPlayer = await this.container.audio.createPlayer({
 			guildId,
 			voiceChannelId: saved.voiceChannelId,
@@ -333,7 +349,6 @@ export class SessionRestoreEngine {
 		});
 
 		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId}`);
-
 		await createdPlayer.connect();
 		if (options.restoreFilters) createdPlayer.filterManager.data = saved.filters;
 		const sync = createdPlayer.queue.utils.sync(true, false);
@@ -477,9 +492,39 @@ export class SessionRestoreEngine {
 		const deadline = Date.now() + GUILD_WAIT_TIMEOUT_MS;
 		while (Date.now() < deadline) {
 			if (this.container.client.guilds.cache.has(guildId)) return true;
-			await new Promise((resolve) => setTimeout(resolve, GUILD_WAIT_POLL_MS));
+			await delay(GUILD_WAIT_POLL_MS);
 		}
 		return this.container.client.guilds.cache.has(guildId);
+	}
+
+	/**
+	 * Fresh 복구 전 음성 세션 완전 초기화 — Discord Gateway에 channel_id: null을 보내고
+	 * guild.members.me?.voice.channelId가 null로 반영될 때까지 대기한다.
+	 */
+	private async resetVoiceSession(guildId: string): Promise<void> {
+		try {
+			const guild = this.container.client.guilds.cache.get(guildId);
+			if (!guild?.members.me?.voice.channelId) return;
+
+			this.logger.debug(`Resetting Discord voice state for guild ${guildId} before fresh connect`);
+			await this.container.audio.options.sendToShard(guildId, {
+				op: 4,
+				d: {
+					guild_id: guildId,
+					channel_id: null,
+					self_mute: false,
+					self_deaf: false
+				}
+			});
+
+			const deadline = Date.now() + VOICE_LEAVE_TIMEOUT_MS;
+			while (Date.now() < deadline) {
+				if (!guild.members.me?.voice.channelId) break;
+				await delay(VOICE_LEAVE_POLL_MS);
+			}
+		} catch (error) {
+			this.logger.warn(`Failed to reset voice session for guild ${guildId}: ${error}`);
+		}
 	}
 
 	/** 음성 채널에 봇이 아닌 멤버가 최소 1명 있는지 — 없으면 재연결하지 않는다. */
@@ -527,7 +572,7 @@ export class SessionRestoreEngine {
 
 	/** fresh 세션에서 단일 플레이어를 재구성하고 재생을 재개한다. */
 	public async restoreFreshPlayer(node: LavalinkNode, guildId: string, saved: SavedPlayer): Promise<void> {
-		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved);
+		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved, { resetVoiceState: true });
 
 		// 새 세션에는 이전 필터/예열 슬롯이 없다 — 다음 play에서 다시 prime 하도록 표시한다.
 		this.container.mixerService.markFiltersStale(guildId);

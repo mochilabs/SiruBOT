@@ -85,6 +85,40 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		await Promise.all([this.container.redisStore.getPlayerSaver().set(newPlayer), this.container.playerNotifier.onPlayerUpdate(newPlayer)]);
 		// 대시보드 라이브 뷰 — playerUpdate는 볼륨/seek/큐 변경까지 커버해요 (fire-and-forget)
 		publishPlayerState(newPlayer);
+
+		// 크로스페이드가 활성화되어 있고 현재 위치가 크로스페이드 구간에 진입했거나
+		// 크로스페이드 구간 내에 SponsorBlock 세그먼트가 겹치는 경우,
+		// 크로스페이드 전이 중 오작동(seekTo로 인한 전이 깨짐)을 방지하기 위해 일시적으로 SponsorBlock을 해제한다.
+		await this.checkSponsorBlockCrossfadeOverlap(newPlayer);
+	}
+
+	private async checkSponsorBlockCrossfadeOverlap(player: CustomPlayer): Promise<void> {
+		if (player.sponsorBlockCrossfadeSuppressed) return;
+		const currentTrack = player.queue.current;
+		const duration = currentTrack?.info?.duration ?? 0;
+		if (duration <= 0) return;
+
+		const settings = await this.container.guildService.getMixerSettings(player.guildId).catch(() => null);
+		if (!settings?.crossfadeEnabled || settings.crossfadeMs <= 0) return;
+
+		const crossfadeBoundary = Math.max(0, duration - settings.crossfadeMs);
+		const currentPosition = player.position ?? 0;
+
+		// 등록된 SponsorBlock 세그먼트 중 크로스페이드 구간(boundary ~ duration)과 겹치는 구간이 있는지 확인
+		const hasOverlappingSegment = player.sponsorBlockSegments.some((seg) => seg.start < duration && seg.end > crossfadeBoundary);
+		if (!hasOverlappingSegment) return;
+
+		// 크로스페이드 경계 1초 전(여유 마진)부터 억제 실행
+		if (currentPosition >= crossfadeBoundary - 1000) {
+			player.sponsorBlockCrossfadeSuppressed = true;
+			this.logger.debug(
+				`[SponsorBlock] Suppressing SponsorBlock for guild ${player.guildId} during crossfade overlap (position: ${currentPosition}ms, boundary: ${crossfadeBoundary}ms)`
+			);
+			await player.deleteSponsorBlock().catch((error) => {
+				player.sponsorBlockCrossfadeSuppressed = false;
+				this.logger.debug(`[SponsorBlock] Failed to delete sponsorblock during crossfade: ${error}`);
+			});
+		}
 	}
 
 	public cleanup() {

@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { LavalinkManager, Track, TrackStartEvent } from 'lavalink-client';
+import { LavalinkManager, SponsorBlockSegment, Track, TrackStartEvent } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
 import { CHAPTER_FETCH_MIN_DURATION_MS, resolveYouTubeVideoId } from '@sirubot/utils';
 import { queueRelatedUpfront } from '../autoPlayRelated.ts';
@@ -51,6 +51,8 @@ export class TrackStartOrchestrator {
 		this.host.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
+		// 이전 트랙의 크로스페이드 지점에서 SponsorBlock이 일시 해제되었을 수 있으므로 복원
+		this.restoreSponsorBlockIfSuppressed(player);
 		const startedKey = startedTrack
 			? ((startedTrack.encoded ? normalizeTrackEncoded(startedTrack.encoded) : null) ??
 				startedTrack.info?.identifier ??
@@ -254,5 +256,24 @@ export class TrackStartOrchestrator {
 				this.container.playerNotifier.updateController(player);
 			})
 			.catch((error) => this.logger.debug(`[chapters] failed for ${videoId}: ${error}`));
+	}
+
+	/** 이전 트랙 크로스페이드에서 일시 해제(deleteSponsorBlock)된 경우 길드 설정값으로 다시 복원 */
+	private restoreSponsorBlockIfSuppressed(player: CustomPlayer): void {
+		player.sponsorBlockSegments = [];
+		if (!player.sponsorBlockCrossfadeSuppressed) return;
+		player.sponsorBlockCrossfadeSuppressed = false;
+
+		void this.container.guildService
+			.getGuild(player.guildId)
+			.then((guildConfig) => {
+				const segments = guildConfig.sponsorBlockSegments;
+				if (Array.isArray(segments) && segments.length > 0) {
+					void player.setSponsorBlock(segments as SponsorBlockSegment[]).catch((error: unknown) => {
+						this.logger.debug(`[SponsorBlock] Failed to restore categories on trackStart: ${error}`);
+					});
+				}
+			})
+			.catch(() => null);
 	}
 }
