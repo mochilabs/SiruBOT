@@ -348,6 +348,7 @@ export class SessionRestoreEngine {
 			vcRegion: saved.options.vcRegion
 		});
 
+		createdPlayer.relatedTrackHistory.restore(saved.relatedTrackHistory);
 		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId}`);
 		await createdPlayer.connect();
 		if (options.restoreFilters) createdPlayer.filterManager.data = saved.filters;
@@ -455,10 +456,27 @@ export class SessionRestoreEngine {
 		sessionStartedAt: number,
 		arrived: Promise<boolean>
 	): Promise<void> {
-		// 다른 경로(재접속 등)에서 이미 복구됐으면 건너뛴다.
-		if (this.container.audio.players.has(guildId)) return;
 		const saved = await playerSaver.get(guildId);
 		if (!saved) return;
+
+		// 단일 노드 비정상 종료 시 메모리에 고아 플레이어 객체가 남아 있을 수 있다.
+		// 고아 플레이어가 남아 있으면 복구가 스킵되거나 sendRawData의 autoReconnect 레이스가 발생하므로,
+		// 먼저 고아 플레이어의 disconnect + deletePlayer를 수행하여 메모리를 비운다.
+		const existingPlayer = this.container.audio.players.get(guildId);
+		if (existingPlayer) {
+			if (existingPlayer.node?.connected && existingPlayer.node?.sessionId === node.sessionId) {
+				// 이미 새 세션에서 완전히 복구된 정상 플레이어인 경우에만 스킵
+				return;
+			}
+			this.logger.info(`Dropping orphan player at ${guildId} before fresh session restore`);
+			try {
+				await existingPlayer.disconnect().catch(() => null);
+				existingPlayer.setData('internal_destroywithoutdisconnect', true);
+				this.container.audio.deletePlayer(guildId);
+			} catch (err) {
+				this.logger.debug(`Error while dropping orphan player at ${guildId}: ${err}`);
+			}
+		}
 
 		// 오래된 잔재는 복구하지 않고 정리한다. 신선도는 복구 작업이 밀려도 세션 시작
 		// 시점 기준으로 판정한다 — 대기 줄 밀림이 6h 한도를 넘겨 복구 기회를 영구 잃지 않게.
@@ -595,21 +613,33 @@ export class SessionRestoreEngine {
 		// mixer 필터는 play보다 먼저 보내야 이 트랙의 필터 체인에 포함된다(lavaplayer는
 		// 트랙 시작 시점에만 필터를 읽음) — primeForPlay가 내부에서 실패를 삼키므로
 		// 필터 재적용에 실패해도 재생 복구 자체는 계속 진행된다.
-		await this.container.mixerService.primeForPlay(createdPlayer);
+		// 1) 이전 세션에 저장된 커스텀 오디오 필터가 있다면 데이터 병합
+		// enableMixerFilter 이전에 data를 병합해야 mixer 플러그인 필터 키가 지워지지 않고
+		// enableMixerFilter의 applyPlayerFilters 1회 호출로 커스텀 필터와 믹서 필터가 원자적으로 함께 반영된다.
+		if (saved.filters && Object.keys(saved.filters).length > 0) {
+			createdPlayer.filterManager.data = {
+				...createdPlayer.filterManager.data,
+				...saved.filters
+			};
+		}
+
+		// 2) mixer 필터 활성화 & crossfade/automix 설정 전송
+		await this.container.mixerService.enableMixerFilter(createdPlayer).catch(() => null);
+		await this.container.mixerService.pushCrossfadeConfig(createdPlayer).catch(() => null);
 		await this.container.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch(() => null);
 
-		await createdPlayer.play({ noReplace: true });
-
-		// 위치·일시정지 상태를 되살린다.
+		// 3) 위치 추정 및 play 실행:
+		// seek을 따로 부르면 곡이 처음부터 시작되었다가 뒤늦게 seek되는 깜빡임/버그가 생기므로,
+		// play의 position 옵션에 직접 전달하여 목표 위치부터 즉시 재생한다.
 		const duration = createdPlayer.queue.current.info.duration ?? 0;
 		let position = this.estimatePosition(saved);
 		if (duration > 0) position = Math.min(position, Math.max(0, duration - 1500));
-		if (position > 1000) {
-			await createdPlayer.seek(position).catch((error) => this.logger.debug(`Fresh restore seek failed at ${guildId}: ${error}`));
-		}
-		if (saved.paused) {
-			await createdPlayer.pause().catch(() => null);
-		}
+
+		await createdPlayer.play({
+			noReplace: false,
+			position: position > 0 ? position : undefined,
+			paused: saved.paused
+		});
 
 		// 서버 플레이어가 살아 있어 noReplace play가 trackStart를 발화하지 않으면
 		// 예열 슬롯 복구가 빠진다. 여기서 확인해 두면 새 세션(trackStart 경로)과

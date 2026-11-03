@@ -49,6 +49,7 @@ export interface MixerOverriddenEventPayload {
 
 function recordTrackPlayIfNeeded(player: CustomPlayer, track: Track | null): void {
 	if (!track || track.info?.isStream || isTtsClip(track)) return;
+	player.relatedTrackHistory.remember(track);
 	const key = (track.encoded ? normalizeTrackEncoded(track.encoded) : null) ?? track.info?.identifier ?? track.info?.uri ?? null;
 	if (!key) return;
 	if (player.transitionState && player.transitionState.lastRecordedKey === key && player.repeatMode !== 'track') {

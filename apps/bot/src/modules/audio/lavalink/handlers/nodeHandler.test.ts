@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
 import { NodeHandler } from './nodeHandler.ts';
+import { RelatedTrackHistory } from '../player/relatedTrackHistory.ts';
+import type { Track } from 'lavalink-client';
 
 const { getSubLogger, reportNodeEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportNodeEvent: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -190,6 +192,43 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		reportNodeEvent.mockClear();
 	});
 
+	it.each([true, false])('restores session song exclusions before connecting (resume=%s)', async (restoreFilters) => {
+		const handler = makeHandler();
+		const history = new RelatedTrackHistory();
+		const played: Track = {
+			encoded: 'played',
+			pluginInfo: {},
+			info: {
+				identifier: 'played-id',
+				title: 'Played',
+				author: 'Siru',
+				duration: 100_000,
+				sourceName: 'youtube',
+				uri: 'https://youtube.com/watch?v=played-id',
+				artworkUrl: null,
+				isrc: null,
+				isStream: false,
+				isSeekable: true
+			}
+		};
+		history.remember(played);
+		const restoredHistory = new RelatedTrackHistory();
+		const player = {
+			relatedTrackHistory: restoredHistory,
+			connect: vi.fn(async () => expect(restoredHistory.has(played)).toBe(true)),
+			queue: { utils: { sync: vi.fn(async () => undefined) } },
+			filterManager: { data: {} }
+		};
+		Object.assign(container, { audio: { createPlayer: vi.fn(() => player) } });
+		await handler.sessionRestore.recreateSavedPlayer(
+			{ id: 'main' },
+			'g1',
+			{ options: {}, relatedTrackHistory: history.toJSON(), filters: {} },
+			{ restoreFilters }
+		);
+		expect(player.connect).toHaveBeenCalledOnce();
+	});
+
 	it('기존 플레이어도 resume 시 저장된 믹서 설정을 복원한다', async () => {
 		const handler = makeHandler();
 		const player = { guildId: 'g1' };
@@ -267,7 +306,12 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		handler.sessionRestore.recreateSavedPlayer = vi.fn().mockResolvedValue(createdPlayer);
 		const reconcile = vi.fn().mockResolvedValue(undefined);
 		Object.assign(container, {
-			mixerService: { reconcileAfterResume: reconcile, markFiltersStale: vi.fn(), primeForPlay: vi.fn().mockResolvedValue(null) },
+			mixerService: {
+				reconcileAfterResume: reconcile,
+				markFiltersStale: vi.fn(),
+				enableMixerFilter: vi.fn().mockResolvedValue(null),
+				pushCrossfadeConfig: vi.fn().mockResolvedValue(null)
+			},
 			redisStore: { getPlayerSaver: vi.fn() }
 		});
 
@@ -275,7 +319,11 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 
 		await handler.sessionRestore.restoreFreshPlayer({ options: { id: 'main' } }, 'g1', saved);
 
-		expect(createdPlayer.play).toHaveBeenCalledWith({ noReplace: true });
+		expect(createdPlayer.play).toHaveBeenCalledWith({
+			noReplace: false,
+			position: 50_000,
+			paused: false
+		});
 		expect(reconcile).toHaveBeenCalledTimes(1);
 		expect(reconcile).toHaveBeenCalledWith(createdPlayer);
 	});
@@ -294,7 +342,8 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 			mixerService: {
 				reconcileAfterResume: vi.fn().mockResolvedValue(undefined),
 				markFiltersStale: vi.fn(),
-				primeForPlay: vi.fn().mockResolvedValue(null)
+				enableMixerFilter: vi.fn().mockResolvedValue(null),
+				pushCrossfadeConfig: vi.fn().mockResolvedValue(null)
 			},
 			redisStore: { getPlayerSaver: vi.fn() }
 		});

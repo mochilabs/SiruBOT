@@ -1,5 +1,6 @@
 import { Message } from 'discord.js';
 import { LavalinkManager, Player, PlayerJson, PlayerOptions, Track } from 'lavalink-client';
+import { RelatedTrackHistory } from './relatedTrackHistory.ts';
 
 type Chapter = {
 	name: string;
@@ -11,6 +12,7 @@ type Chapter = {
 export type CustomPlayerJson = PlayerJson & {
 	messageId: string | null;
 	currentEpoch?: number;
+	relatedTrackHistory?: string[];
 };
 
 /** 예열 소비 확인 창(ms) — TrackHandler의 watchdog·reconcile과 autoPlayRelated 게이트가 공유한다. */
@@ -57,6 +59,7 @@ export interface MixerRuntime {
 }
 
 export class CustomPlayer extends Player {
+	public readonly relatedTrackHistory = new RelatedTrackHistory();
 	public messageId: string | null = null;
 	public controller: Message | null = null;
 	public chapters: Chapter[] = [];
@@ -95,7 +98,9 @@ export class CustomPlayer extends Player {
 		return {
 			...super.toJSON(),
 			messageId: this.messageId,
-			currentEpoch: this.currentEpoch
+			currentEpoch: this.currentEpoch,
+			// Player takes a snapshot before subclass fields initialize.
+			relatedTrackHistory: this.relatedTrackHistory?.toJSON() ?? []
 		};
 	}
 }

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
 import type { Player, Track, TrackEndEvent } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import { RelatedTrackHistory } from '../modules/audio/lavalink/player/relatedTrackHistory.ts';
 import { commitLocal, handleMixerAdvanced, handleMixerOverridden, handleMixerTrackEnd } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
 import { getTargetNextTrack } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { MixerService } from './mixerService.ts';
@@ -19,6 +20,7 @@ vi.mock('@sapphire/framework', () => ({
 
 function fakePlayer(): Player {
 	return {
+		relatedTrackHistory: new RelatedTrackHistory(),
 		guildId: '123456789012345678',
 		node: { options: { host: 'localhost', port: 2333, authorization: 'node-pw' } }
 	} as unknown as Player;
@@ -371,6 +373,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		// Normal advance from A to B in repeatMode=queue rotates A to the back of tracks without bumping epoch
 		commitLocal(player, trackB, { invalidate: false, bumpEpoch: false });
 		expect(player.queue.current).toBe(trackB);
+		expect(player.relatedTrackHistory.has(trackB)).toBe(true);
 		expect(player.queue.tracks).toEqual([trackA]);
 		expect(player.currentEpoch).toBe(1);
 		expect(saveMock).toHaveBeenCalled();
@@ -401,6 +404,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 		await handleMixerAdvanced(player, { epoch: 5, encodedTrack: 'enc-b', handoffType: 'CROSSFADE', handoffId: 'h-1' });
 		expect(player.queue.current).toBe(trackB);
+		expect(player.relatedTrackHistory.has(trackB)).toBe(true);
 		expect(player.queue.tracks).toEqual([trackC]);
 		expect(player.currentEpoch).toBe(5);
 		expect(player.mixerRuntime.lastTargetUid).toBe('uid-c');
