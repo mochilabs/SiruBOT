@@ -3,9 +3,6 @@
  * 챕터 fetch/파싱은 data-api 게이트웨이(apps/data-api/src/providers/chapters.ts)가 담당해요.
  */
 
-/** 장문 영상에서만 챕터가 의미 있으므로 이 미만은 조회하지 않는다. */
-export const CHAPTER_FETCH_MIN_DURATION_MS = 15 * 60 * 1000;
-
 /**
  * 유튜브 계열 소스인지.
  * 소스 플러그인은 base 이름 뒤에 접미사를 붙여 내려주므로 prefix로 판별한다.

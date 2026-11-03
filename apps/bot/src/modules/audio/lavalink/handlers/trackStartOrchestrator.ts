@@ -1,10 +1,11 @@
 import { container } from '@sapphire/framework';
-import { LavalinkManager, SponsorBlockSegment, Track, TrackStartEvent } from 'lavalink-client';
+import { LavalinkManager, Track, TrackStartEvent } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
-import { CHAPTER_FETCH_MIN_DURATION_MS, resolveYouTubeVideoId } from '@sirubot/utils';
+import { resolveYouTubeVideoId } from '@sirubot/utils';
 import { queueRelatedUpfront } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
+import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
@@ -52,8 +53,8 @@ export class TrackStartOrchestrator {
 		this.host.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
-		// 이전 트랙의 크로스페이드 지점에서 SponsorBlock이 일시 해제되었을 수 있으므로 복원
-		this.restoreSponsorBlockIfSuppressed(player);
+		sponsorBlockService.startTrack(player, startedTrack);
+		void this.container.mixerService.supportsIncomingStart?.(player).catch(() => null);
 		const startedKey = startedTrack
 			? ((startedTrack.encoded ? normalizeTrackEncoded(startedTrack.encoded) : null) ??
 				startedTrack.info?.identifier ??
@@ -234,9 +235,7 @@ export class TrackStartOrchestrator {
 	/**
 	 * YouTube 챕터(에피소드)를 REST로 직접 조회해 `player.chapters`에 넣는다.
 	 *
-	 * SponsorBlock 플러그인은 `categories`가 등록된 길드에서만 `ChaptersLoaded`를 보내고
-	 * (기본값 `[]`이면 아예 조회하지 않으므로), lavaplayer는 그 조회가 실패하면
-	 * 챕터를 내려주지 않는다. 대부분의 길드는 여기서 챕터를 채운다.
+	 * data-api의 YouTube.js 조회 결과가 현재 트랙과 일치할 때만 표시한다.
 	 */
 	private loadChapters(player: CustomPlayer, track: Track | null): void {
 		const videoId = resolveYouTubeVideoId(track);
@@ -247,8 +246,6 @@ export class TrackStartOrchestrator {
 		if (!videoId || player.chapters.length > 0) return;
 
 		const duration = track?.info?.duration ?? 0;
-		if (duration < CHAPTER_FETCH_MIN_DURATION_MS) return;
-
 		void fetchYouTubeChapters(videoId, duration)
 			.then((chapters) => {
 				// 그 사이에 다른 트랙으로 바뀌었다면 버린다.
@@ -257,24 +254,5 @@ export class TrackStartOrchestrator {
 				this.container.playerNotifier.updateController(player);
 			})
 			.catch((error) => this.logger.debug(`[chapters] failed for ${videoId}: ${error}`));
-	}
-
-	/** 이전 트랙 크로스페이드에서 일시 해제(deleteSponsorBlock)된 경우 길드 설정값으로 다시 복원 */
-	private restoreSponsorBlockIfSuppressed(player: CustomPlayer): void {
-		player.sponsorBlockSegments = [];
-		if (!player.sponsorBlockCrossfadeSuppressed) return;
-		player.sponsorBlockCrossfadeSuppressed = false;
-
-		void this.container.guildService
-			.getGuild(player.guildId)
-			.then((guildConfig) => {
-				const segments = guildConfig.sponsorBlockSegments;
-				if (Array.isArray(segments) && segments.length > 0) {
-					void player.setSponsorBlock(segments as SponsorBlockSegment[]).catch((error: unknown) => {
-						this.logger.debug(`[SponsorBlock] Failed to restore categories on trackStart: ${error}`);
-					});
-				}
-			})
-			.catch(() => null);
 	}
 }

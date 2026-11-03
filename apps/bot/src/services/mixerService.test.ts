@@ -87,6 +87,21 @@ describe('MixerService v2 Protocol Tests', () => {
 		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toHaveProperty('preserveTransition', true);
 	});
 
+	it('serializes incoming and outgoing SponsorBlock boundary positions', async () => {
+		fetchMock.mockResolvedValue(new Response('{}'));
+		const service = new MixerService();
+		await service.arm(fakePlayer() as CustomPlayer, {
+			epoch: 3,
+			encodedTrack: 'next',
+			startPositionMs: 12000,
+			outgoingEndPositionMs: 54000
+		});
+		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+			startPositionMs: 12000,
+			outgoingEndPositionMs: 54000
+		});
+	});
+
 	it('warms analysis once per target only with AutoMix and server support', async () => {
 		const service = new MixerService();
 		const player = fakePlayer() as CustomPlayer;

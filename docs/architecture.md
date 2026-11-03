@@ -212,7 +212,9 @@ graph TB
 | `GET /v1/ohaasa` | 오하아사 운세 + LLM 한국어 번역 | 7일(스케줄러 선-채움) |
 | `GET /v1/lyrics?q=` | 가사 검색(lrclib.net) | **30일** (`routes/index.ts:43`) |
 | `GET /v1/weather` | 지오코딩+예보+대기질(Open-Meteo) | **15분** (`routes/index.ts:44`) |
-| `GET /v1/chapters` | 장문 YouTube 챕터 마커 | 12시간 |
+| `GET /v1/chapters` | YouTube.js 챕터 마커 | 12시간, 빈 결과 1시간 |
+| `GET /v1/youtube/suggestions` | YouTube.js 검색 자동완성 | 10분 |
+| `GET /v1/sponsorblock/segments` | SponsorBlock skip 구간 | 24시간, 빈 결과 1시간, 양성 stale 7일 |
 | `GET /v1/delivery/track` | 택배 조회(tracker.delivery) | 5분 |
 | `POST /v1/playback/events` · `GET /v1/playback/recent` | 샤드 재생 이벤트 수집/조회 (`services/playbackStore.ts`) | — |
 | `POST /v1/image/profile` 등 | canvas PNG 렌더(프로필·인사·운세·Now Playing 카드) | — |

@@ -21,7 +21,7 @@ export class DataApiError extends Error {
 export async function serveCached<T>(options: {
 	route: string;
 	key: string;
-	ttlSeconds: number;
+	ttlSeconds: number | ((data: T) => number);
 	provider: string;
 	fetchFresh: () => Promise<T>;
 	validate?: (data: T) => boolean;
@@ -47,7 +47,7 @@ export async function serveCached<T>(options: {
 		try {
 			const fresh = await fetchFresh();
 			if (validate && !validate(fresh)) throw new Error('response validation failed');
-			await sharedCache.set(key, JSON.stringify(fresh), ttlSeconds);
+			await sharedCache.set(key, JSON.stringify(fresh), typeof ttlSeconds === 'number' ? ttlSeconds : ttlSeconds(fresh));
 			breaker.recordSuccess(provider);
 			metrics.upstream(route, Date.now() - start, true);
 			return fresh;

@@ -17,6 +17,9 @@ export class PlayerNotifier {
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 	/** 전송/수정은 길드별로 직렬화하고, 이미지 렌더는 이 체인 밖에서 수행한다. */
 	private readonly sendChains: Map<string, Promise<void>> = new Map();
+	private readonly pendingUpdates = new Map<string, CustomPlayer>();
+	private readonly updateDrainQueued = new Set<string>();
+	private readonly updateRevisions = new Map<string, number>();
 	private readonly cardRefreshes = new Map<string, { messageId: string; trackKey: string }>();
 	private readonly renderedSignatures = new WeakMap<Message, string>();
 	/** 메시지에 붙어 있는 카드의 키 — 새 카드(볼륨/챕터/일시정지 상태)로 바뀌면 같은 파일명으로 교체 첨부한다. */
@@ -152,15 +155,33 @@ export class PlayerNotifier {
 
 	public updateController(player: CustomPlayer): void {
 		this.clearDebounceTimer(player.guildId);
+		this.updateRevisions.set(player.guildId, (this.updateRevisions.get(player.guildId) ?? 0) + 1);
+		this.pendingUpdates.set(player.guildId, player);
 
 		const timer = setTimeout(() => {
 			this.debounceTimers.delete(player.guildId);
-			void this.enqueueControllerOperation(player.guildId, () => this.updateControllerNow(player)).catch((error) => {
-				this.logger.error(`Failed to update controller for guild ${player.guildId}:`, error);
-			});
+			this.scheduleUpdateDrain(player.guildId);
 		}, this.DEBOUNCE_MS);
 
 		this.debounceTimers.set(player.guildId, timer);
+	}
+
+	private scheduleUpdateDrain(guildId: string): void {
+		if (this.updateDrainQueued.has(guildId)) return;
+		this.updateDrainQueued.add(guildId);
+		void this.enqueueControllerOperation(guildId, async () => {
+			try {
+				while (this.pendingUpdates.has(guildId)) {
+					const player = this.pendingUpdates.get(guildId)!;
+					const revision = this.updateRevisions.get(guildId) ?? 0;
+					this.pendingUpdates.delete(guildId);
+					await this.updateControllerNow(player, false, revision);
+				}
+			} finally {
+				this.updateDrainQueued.delete(guildId);
+				if (this.pendingUpdates.has(guildId) && !this.debounceTimers.has(guildId)) this.scheduleUpdateDrain(guildId);
+			}
+		}).catch((error) => this.logger.error(`Failed to update controller for guild ${guildId}:`, error));
 	}
 
 	/**
@@ -172,7 +193,7 @@ export class PlayerNotifier {
 		return `${nowPlayingTrack(player)?.encoded ?? ''}::${JSON.stringify(components.toJSON())}`;
 	}
 
-	private async updateControllerNow(player: CustomPlayer, allowDisabled = false): Promise<void> {
+	private async updateControllerNow(player: CustomPlayer, allowDisabled = false, revision?: number): Promise<void> {
 		const message = player.controller;
 		const version = this.controllerVersions.get(player) ?? 0;
 		if (!message || player.messageId !== message.id || !this.canSend(player, version)) return;
@@ -194,6 +215,7 @@ export class PlayerNotifier {
 				message,
 				previousTrackKey: this.cardTrackKeys.get(message) ?? ''
 			});
+			if (revision !== undefined && this.updateRevisions.get(player.guildId) !== revision) return;
 			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(player) === null;
 			const signature = this.renderSignature(player, components);
 			if (files.length === 0 && this.renderedSignatures.get(message) === signature) {
@@ -299,6 +321,8 @@ export class PlayerNotifier {
 
 	private async removeController(player: CustomPlayer): Promise<void> {
 		this.clearDebounceTimer(player.guildId);
+		this.pendingUpdates.delete(player.guildId);
+		this.updateRevisions.set(player.guildId, (this.updateRevisions.get(player.guildId) ?? 0) + 1);
 		this.cardRefreshes.delete(player.guildId);
 		this.stopProgressTick(player.guildId);
 

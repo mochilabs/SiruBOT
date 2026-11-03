@@ -1,7 +1,8 @@
-import { DestroyReasonsType, LavalinkManager, PlayerJson, RepeatMode, SponsorBlockSegment } from 'lavalink-client';
+import { DestroyReasonsType, LavalinkManager, PlayerJson, RepeatMode } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
+import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 
 export class PlayerHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -19,26 +20,8 @@ export class PlayerHandler extends BaseLavalinkHandler {
 
 		this.logger.trace(`Setting volume and repeat mode for player: ${player.guildId}`);
 		const guildConfig = await this.container.guildService.getGuild(player.guildId);
-
-		// SponsorBlock 조건부 활성화
-		const VALID_SPONSORBLOCK_SEGMENTS: SponsorBlockSegment[] = [
-			'sponsor',
-			'selfpromo',
-			'interaction',
-			'intro',
-			'outro',
-			'preview',
-			'music_offtopic',
-			'filler'
-		];
-		if (guildConfig.sponsorBlockSegments.length > 0) {
-			const validSegments = guildConfig.sponsorBlockSegments.filter((s): s is SponsorBlockSegment =>
-				VALID_SPONSORBLOCK_SEGMENTS.includes(s as SponsorBlockSegment)
-			);
-			if (validSegments.length > 0) {
-				player.setSponsorBlock(validSegments);
-			}
-		}
+		// 재시작 전 세션에 남은 Lavalink SponsorBlock 자동 seek 설정을 비운다.
+		void player.deleteSponsorBlock().catch(() => null);
 
 		const VALID_REPEAT_MODES = ['off', 'track', 'queue'] as const;
 		const repeatMode: RepeatMode = VALID_REPEAT_MODES.includes(guildConfig.repeat as (typeof VALID_REPEAT_MODES)[number])
@@ -64,6 +47,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		this.container.redisStore.getQueueStore().delete(player.guildId);
 		// 파괴된 플레이어의 서버 필터 상태도 사라진다 — 다음 play 전에 다시 prime해야 한다.
 		this.container.mixerService.markFiltersStale(player.guildId);
+		sponsorBlockService.stop(player);
 		// 파괴된 플레이어는 재생 중이 아니다 — 마지막 프레임을 '정지 상태'로 남기면 대시보드가
 		// 유령 상태(stale 창 60초)에 갇히므로, 확정 종료 신호(ended)를 보내 허브가 엔트리를 비우게 한다.
 		player.playing = false;
@@ -86,39 +70,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		// 대시보드 라이브 뷰 — playerUpdate는 볼륨/seek/큐 변경까지 커버해요 (fire-and-forget)
 		publishPlayerState(newPlayer);
 
-		// 크로스페이드가 활성화되어 있고 현재 위치가 크로스페이드 구간에 진입했거나
-		// 크로스페이드 구간 내에 SponsorBlock 세그먼트가 겹치는 경우,
-		// 크로스페이드 전이 중 오작동(seekTo로 인한 전이 깨짐)을 방지하기 위해 일시적으로 SponsorBlock을 해제한다.
-		await this.checkSponsorBlockCrossfadeOverlap(newPlayer);
-	}
-
-	private async checkSponsorBlockCrossfadeOverlap(player: CustomPlayer): Promise<void> {
-		if (player.sponsorBlockCrossfadeSuppressed) return;
-		const currentTrack = player.queue.current;
-		const duration = currentTrack?.info?.duration ?? 0;
-		if (duration <= 0) return;
-
-		const settings = await this.container.guildService.getMixerSettings(player.guildId).catch(() => null);
-		if (!settings?.crossfadeEnabled || settings.crossfadeMs <= 0) return;
-
-		const crossfadeBoundary = Math.max(0, duration - settings.crossfadeMs);
-		const currentPosition = player.position ?? 0;
-
-		// 등록된 SponsorBlock 세그먼트 중 크로스페이드 구간(boundary ~ duration)과 겹치는 구간이 있는지 확인
-		const hasOverlappingSegment = player.sponsorBlockSegments.some((seg) => seg.start < duration && seg.end > crossfadeBoundary);
-		if (!hasOverlappingSegment) return;
-
-		// 크로스페이드 경계 1초 전(여유 마진)부터 억제 실행
-		if (currentPosition >= crossfadeBoundary - 1000) {
-			player.sponsorBlockCrossfadeSuppressed = true;
-			this.logger.debug(
-				`[SponsorBlock] Suppressing SponsorBlock for guild ${player.guildId} during crossfade overlap (position: ${currentPosition}ms, boundary: ${crossfadeBoundary}ms)`
-			);
-			await player.deleteSponsorBlock().catch((error) => {
-				player.sponsorBlockCrossfadeSuppressed = false;
-				this.logger.debug(`[SponsorBlock] Failed to delete sponsorblock during crossfade: ${error}`);
-			});
-		}
+		sponsorBlockService.tick(newPlayer);
 	}
 
 	public cleanup() {

@@ -263,6 +263,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@bufbuild/protobuf@npm:^2.0.0":
+  version: 2.16.0
+  resolution: "@bufbuild/protobuf@npm:2.16.0"
+  checksum: 10c0/ba3bc677e801a71d9cf0bdc138174144e493706efec3a47865eb07e956423315a80ff12301f6835d352202ae4d6599f2946a7c67338cf0079ed2a06af1a18097
+  languageName: node
+  linkType: hard
+
 "@discordjs/builders@npm:^1.13.0, @discordjs/builders@npm:^1.14.1":
   version: 1.14.1
   resolution: "@discordjs/builders@npm:1.14.1"
@@ -3590,6 +3597,7 @@ __metadata:
     skia-canvas: "npm:^3.0.8"
     tslog: "npm:^4.11.0"
     undici: "npm:^7.30.1"
+    youtubei.js: "npm:18.3.0"
     zod: "npm:^4.6.7"
   languageName: unknown
   linkType: soft
@@ -7038,6 +7046,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fflate@npm:^0.8.2":
+  version: 0.8.3
+  resolution: "fflate@npm:0.8.3"
+  checksum: 10c0/eab181ca37f5348ae76d4b6f840e0026e30220e33153289ac942222d8b9638237d486507dbcc09878d724095bd354993a2ee48bbee99c8f2c6440d4448719aa7
+  languageName: node
+  linkType: hard
+
 "figlet@npm:^1.12.0":
   version: 1.12.0
   resolution: "figlet@npm:1.12.0"
@@ -8633,6 +8648,13 @@ __metadata:
   version: 1.4.1
   resolution: "merge2@npm:1.4.1"
   checksum: 10c0/254a8a4605b58f450308fc474c82ac9a094848081bf4c06778200207820e5193726dc563a0d2c16468810516a5c97d9d3ea0ca6585d23c58ccfff2403e8dbbeb
+  languageName: node
+  linkType: hard
+
+"meriyah@npm:^7.3.1":
+  version: 7.4.1
+  resolution: "meriyah@npm:7.4.1"
+  checksum: 10c0/0608450f1b7d2b4be40e1211ae1040d94c400b865a224d0dfc012ffa9855121c9bf7503c19ff256194bb907d174b6509154bf8b33fc121f37bc7855fbd16cf1c
   languageName: node
   linkType: hard
 
@@ -12121,6 +12143,17 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: 10c0/dceb44c28578b31641e13695d200d34ec4ab3966a5729814d5445b194933c096b7ced71494ce53a0e8820685d1d010df8b2422e5bf2cdea7e469d97ffbea306f
+  languageName: node
+  linkType: hard
+
+"youtubei.js@npm:18.3.0":
+  version: 18.3.0
+  resolution: "youtubei.js@npm:18.3.0"
+  dependencies:
+    "@bufbuild/protobuf": "npm:^2.0.0"
+    fflate: "npm:^0.8.2"
+    meriyah: "npm:^7.3.1"
+  checksum: 10c0/5c99266f727c5e8600f8204d860755fa630504e95d49589c3bf91f328233fc9df81196af3c2a4e8dc637a27e660ec6ff2ee198dabc281108fb415da418c4aad1
   languageName: node
   linkType: hard
 

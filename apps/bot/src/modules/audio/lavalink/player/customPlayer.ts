@@ -65,10 +65,6 @@ export class CustomPlayer extends Player {
 	public chapters: Chapter[] = [];
 	/** `chapters`가 어느 트랙의 것인지 — 트랙이 바뀌면 이전 챕터를 버린다. */
 	public chaptersTrackIdentifier: string | null = null;
-	/** 현재 트랙의 SponsorBlock 세그먼트 (밀리초 단위 start/end) */
-	public sponsorBlockSegments: { category: string; start: number; end: number }[] = [];
-	/** 크로스페이드 구간과 겹쳐 일시 해제(deleteSponsorBlock) 상태인지 */
-	public sponsorBlockCrossfadeSuppressed: boolean = false;
 	public queuePage: number = 1;
 	public queueSelectedIndex: number | null = null;
 	public activeFilters: string[] = [];

@@ -16,6 +16,7 @@ import { RepeatMode } from 'lavalink-client';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
 import { errorView } from '../../../lib/errorView.ts';
+import { sponsorBlockService } from '../../../services/sponsorBlockService.ts';
 
 export default class SettingsInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -189,8 +190,12 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		// SponsorBlock actions
 		if (interaction.isStringSelectMenu() && action === 'select:sponsorblock') {
 			await this.container.guildService.setSponsorBlockSegments(interaction.guildId, interaction.values);
+			const player = this.container.audio.players.get(interaction.guildId);
+			if (player) sponsorBlockService.refreshSettings(player);
 		} else if (action === 'reset:sponsorblock') {
 			await this.container.guildService.setSponsorBlockSegments(interaction.guildId, []);
+			const player = this.container.audio.players.get(interaction.guildId);
+			if (player) sponsorBlockService.refreshSettings(player);
 		}
 
 		// Re-render

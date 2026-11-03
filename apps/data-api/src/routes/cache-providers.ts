@@ -8,6 +8,9 @@ import { fetchLyrics, lyricsCacheKey } from '../providers/lyrics.ts';
 import { fetchWeather, weatherCacheKey } from '../providers/weather.ts';
 import { deliveryTrackCacheKey, searchDeliveryCarriers, trackDelivery } from '../providers/delivery.ts';
 import { chaptersCacheKey, fetchYouTubeChaptersFresh } from '../providers/chapters.ts';
+import { fetchSponsorBlockSegmentsFresh, sponsorBlockCacheKey, sponsorBlockSegmentsSchema } from '../providers/sponsorblock.ts';
+import { sharedCache } from '../utils/cache.ts';
+import { fetchYouTubeSuggestionsFresh, youtubeSuggestionsCacheKey } from '../providers/youtubeSuggestions.ts';
 
 /** 캐시형 외부 프로바이더 읽기 — 가사(lrclib)·날씨(Open-Meteo)·택배(tracker.delivery)·유튜브 챕터. TTL은 라우트 단위 상수로 여기에 둬요. */
 
@@ -93,7 +96,7 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance): void {
 
 	// 유튜브 챕터
 	const chaptersQuery = z.object({
-		videoId: z.string().trim().min(5).max(20),
+		videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
 		durationMs: z.coerce
 			.number()
 			.int()
@@ -106,12 +109,63 @@ export function registerCacheProviderRoutes(fastify: FastifyInstance): void {
 			const { data, cached } = await serveCached({
 				route: 'chapters',
 				key: chaptersCacheKey(videoId, durationMs),
-				ttlSeconds: 12 * 3600,
+				ttlSeconds: (chapters) => (chapters.length > 0 ? 12 * 3600 : 3600),
 				provider: 'youtube',
 				fetchFresh: () => fetchYouTubeChaptersFresh(videoId, durationMs),
 				validate: (d) => Array.isArray(d)
 			});
 			return reply.send({ chapters: data, _cached: cached });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	fastify.get('/v1/youtube/suggestions', async (request, reply) => {
+		try {
+			const { q } = z.object({ q: z.string().trim().min(2).max(100) }).parse(request.query);
+			const { data, cached } = await serveCached({
+				route: 'youtube-suggestions',
+				key: youtubeSuggestionsCacheKey(q),
+				ttlSeconds: 10 * 60,
+				provider: 'youtube',
+				fetchFresh: () => fetchYouTubeSuggestionsFresh(q),
+				validate: (suggestions) => Array.isArray(suggestions)
+			});
+			return reply.send({ suggestions: data, _cached: cached });
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	const sponsorBlockQuery = z.object({ videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/) });
+	fastify.get('/v1/sponsorblock/segments', async (request, reply) => {
+		try {
+			const { videoId } = sponsorBlockQuery.parse(request.query);
+			const key = sponsorBlockCacheKey(videoId);
+			const staleKey = `${key}:stale`;
+			try {
+				const { data, cached } = await serveCached({
+					route: 'sponsorblock',
+					key,
+					ttlSeconds: (segments) => (segments.length > 0 ? 24 * 3600 : 3600),
+					provider: 'sponsorblock',
+					fetchFresh: () => fetchSponsorBlockSegmentsFresh(videoId),
+					validate: (segments) => sponsorBlockSegmentsSchema.safeParse(segments).success
+				});
+				if (!cached) await sharedCache.set(staleKey, JSON.stringify(data), 7 * 24 * 3600);
+				return reply.send({ segments: data, _cached: cached, stale: false });
+			} catch (error) {
+				const stale = await sharedCache.get(staleKey);
+				if (stale) {
+					try {
+						const segments = sponsorBlockSegmentsSchema.parse(JSON.parse(stale));
+						if (segments.length > 0) return reply.send({ segments, _cached: true, stale: true });
+					} catch {
+						// 손상된 stale 캐시는 원래 upstream 오류를 반환해요.
+					}
+				}
+				throw error;
+			}
 		} catch (error) {
 			return sendError(reply, error);
 		}

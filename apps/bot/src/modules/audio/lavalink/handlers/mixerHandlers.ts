@@ -6,6 +6,8 @@ import { cancelPendingInvalidate, getTargetNextTrack, getTrackUid, notifyQueueMu
 import { isTtsClip } from '../requester.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
 import { MixerRequestError } from '../../../../services/mixerService.ts';
+import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
+import type { ArmRequestOptions } from '../../../../services/mixerService.ts';
 
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
 const TRACK_END_CONFIRM_MS = 200; // S1 confirmed B-plan (EventEmitter replaced reason dispatch)
@@ -157,6 +159,30 @@ export function shouldPreserveTransition(current: Track | null | undefined, next
 	return false;
 }
 
+async function armOptions(player: CustomPlayer, target: Track | null): Promise<ArmRequestOptions> {
+	const options: ArmRequestOptions = {
+		epoch: player.currentEpoch,
+		encodedTrack: target?.encoded ? normalizeTrackEncoded(target.encoded) : null,
+		isEmpty: !target,
+		preserveTransition: target ? shouldPreserveTransition(player.queue.current, target) : undefined
+	};
+	if (!target) return options;
+	const outgoingEnd = options.preserveTransition ? undefined : sponsorBlockService.outgoingEndPositionMs(player);
+	try {
+		const start = await Promise.race([sponsorBlockService.incomingStartPositionMs(player, target), sleep(2_000).then(() => undefined)]);
+		if (start && (await container.mixerService.supportsIncomingStart(player))) options.startPositionMs = start;
+	} catch (error) {
+		container.logger.debug(`[SponsorBlock] incoming start unavailable for ${player.guildId}: ${String(error)}`);
+	}
+	try {
+		if (outgoingEnd && outgoingEnd > (player.position ?? 0) + 500 && (await container.mixerService.supportsOutgoingEnd(player)))
+			options.outgoingEndPositionMs = outgoingEnd;
+	} catch (error) {
+		container.logger.debug(`[SponsorBlock] outgoing end unavailable for ${player.guildId}: ${String(error)}`);
+	}
+	return options;
+}
+
 /* ------------------------------------------------------------------ */
 /* 1. MixerNeedNextTrackEvent Handler                                 */
 /* ------------------------------------------------------------------ */
@@ -188,17 +214,11 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	const key = randomUUID();
 
 	try {
+		const options = await armOptions(player, target);
+		if (stale() || getTrackUid(shouldArm ? getTargetNextTrack(player) : null) !== getTrackUid(target)) return;
 		cancelPendingInvalidate(player);
-		await container.mixerService.arm(
-			player,
-			{
-				epoch: player.currentEpoch,
-				encodedTrack: target?.encoded ? normalizeTrackEncoded(target.encoded) : null,
-				isEmpty: !target,
-				preserveTransition: target ? shouldPreserveTransition(player.queue.current, target) : undefined
-			},
-			key
-		);
+		options.epoch = player.currentEpoch;
+		await container.mixerService.arm(player, options, key);
 		// invalidate를 누락하는 일을 막는다 (F3).
 		player.mixerRuntime.lastTargetUid = getTrackUid(target);
 	} catch (error: unknown) {
@@ -222,13 +242,11 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 
 		try {
 			const latestTarget = shouldArm ? getTargetNextTrack(player) : null;
+			const options = await armOptions(player, latestTarget);
+			if (stale() || getTrackUid(shouldArm ? getTargetNextTrack(player) : null) !== getTrackUid(latestTarget)) return;
 			cancelPendingInvalidate(player);
-			await container.mixerService.arm(player, {
-				epoch: player.currentEpoch,
-				encodedTrack: latestTarget?.encoded ? normalizeTrackEncoded(latestTarget.encoded) : null,
-				isEmpty: !latestTarget,
-				preserveTransition: latestTarget ? shouldPreserveTransition(player.queue.current, latestTarget) : undefined
-			});
+			options.epoch = player.currentEpoch;
+			await container.mixerService.arm(player, options);
 			player.mixerRuntime.lastTargetUid = getTrackUid(latestTarget);
 		} catch (retryError) {
 			container.logger.error(

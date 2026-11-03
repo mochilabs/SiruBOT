@@ -48,7 +48,9 @@
 | GET `/v1/greeting/state/:guildId` | 인사 테스트 결과 폴링 | — | `routes/index.ts:897` |
 | GET `/v1/guilds/:guildId/channels` | 봇 캐시 채널 목록 | — | `routes/index.ts:912` |
 | GET `/v1/guilds/:guildId/roles` | 봇 캐시 역할 목록 | — | `routes/index.ts:924` |
-| GET `/v1/chapters?videoId=&durationMs=` | 유튜브 챕터 | 12시간 | `routes/index.ts:945-960` |
+| GET `/v1/chapters?videoId=&durationMs=` | YouTube.js 챕터 | 12시간, 빈 결과 1시간 | `routes/cache-providers.ts` |
+| GET `/v1/youtube/suggestions?q=` | YouTube.js 검색 자동완성 | 10분 | `routes/cache-providers.ts` |
+| GET `/v1/sponsorblock/segments?videoId=` | SponsorBlock skip 구간 (ms) | 24시간, 빈 결과 1시간, 양성 stale 7일 | `routes/cache-providers.ts` |
 
 ## 에러 매핑
 

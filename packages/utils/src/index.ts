@@ -8,7 +8,6 @@ export { versionInfo } from './version.js';
 export { BOT_NAME, DEFAULT_COLOR, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';
 export { emojiProgressBar, formatTrack, getRequesterText, removeEmojis, volumeToEmoji } from './format.js';
 export { formatTime, formatTimeToKorean } from './time.js';
-export { getSimpleYouTubeSuggestions } from './youtube.js';
 export { addSeparator, createContainer, createSeparator, createThumbnail } from './embed.js';
 export { MemoryCache } from './memoryCache.js';
 export {
@@ -39,7 +38,8 @@ export {
 } from './redisChannels.js';
 export { type PlayerStatePayload, type PlayerStateResponse, playerStateSchema, type QueuedTrackSummary } from './playerState.js';
 export { parseLavalinkHosts } from './lavalinkHosts.js';
-export { CHAPTER_FETCH_MIN_DURATION_MS, isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.js';
+export { isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.js';
+export { SPONSORBLOCK_SKIP_CATEGORIES, type SponsorBlockSkipCategory, type SponsorBlockSkipSegment } from './sponsorblock.js';
 export { ManagedRedisSubscriber } from './redisSubscriber.js';
 export { getLoggerSettings } from './logger.js';
 export { type AppEmojiFallbackKey, emoji, ensureAppEmojisLoaded, setAppEmojiIdMap } from './appEmoji.js';
