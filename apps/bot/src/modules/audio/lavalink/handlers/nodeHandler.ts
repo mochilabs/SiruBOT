@@ -94,6 +94,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			.filter((player) => player.node.id === node.options.id)
 			.values()
 			.toArray();
+		this.sessionRestore.markOrphanPlayers(orphanPlayers);
 
 		const leastUsedNode = this.container.audio.nodeManager.leastUsedNodes('playingPlayers');
 
@@ -111,6 +112,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
 				.then(async () => {
+					this.sessionRestore.clearOrphanPlayer(player);
 					// 마이그레이션한 신노드의 플러그인은 필터·설정·슬롯 상태를 모른다 —
 					// 필터와 DB 설정을 재전송하고 에폭을 맞추기 위해 리셋한다 (B-10).
 					await Promise.resolve(this.container.mixerService?.ensureMixerFilter?.(player)).catch(() => null);

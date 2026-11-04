@@ -44,11 +44,20 @@ function delay(ms: number): Promise<void> {
 export class SessionRestoreEngine {
 	/** 복구 대기/재시도 타이머 — cleanup 시 일괄 해제한다. */
 	private readonly restoreTimers = new Set<NodeJS.Timeout>();
+	private readonly orphanPlayers = new WeakSet<CustomPlayer>();
 
 	constructor(private readonly logger: Logger<ILogObj>) {}
 
 	private get container() {
 		return container;
+	}
+
+	public markOrphanPlayers(players: Iterable<CustomPlayer>): void {
+		for (const player of players) this.orphanPlayers.add(player);
+	}
+
+	public clearOrphanPlayer(player: CustomPlayer): void {
+		this.orphanPlayers.delete(player);
 	}
 
 	/** ready op 도착 시점의 sessionId는 확정값 — 크래시 재시작 후 세션 복구가 가능하도록 저장한다. */
@@ -202,6 +211,7 @@ export class SessionRestoreEngine {
 				this.logger.warn(`Failed to restore mixer config at ${lavalinkPlayer.guildId}: ${error}`);
 			});
 			this.logger.debug(`Client player already exists at ${lavalinkPlayer.guildId}, skipping resume recreate`);
+			this.orphanPlayers.delete(existingPlayer);
 			return;
 		}
 
@@ -323,14 +333,6 @@ export class SessionRestoreEngine {
 		saved: SavedPlayer,
 		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean; resetVoiceState?: boolean } = {}
 	): Promise<CustomPlayer> {
-		if (options.resetVoiceState) {
-			// Fresh 복구 경로: createPlayer 이전에 Discord Gateway의 음성 세션을 먼저 완전 정리한다.
-			// createPlayer 이후에 channel_id: null이 오면 lavalink-client의 sendRawData가
-			// onDisconnect.autoReconnect에 반응하여 player.connect()를 선제 발화(레이스)하므로,
-			// 플레이어가 생성되기 전에 Discord 측 voiceState를 비우고 확인한 뒤 생성·연결한다.
-			await this.resetVoiceSession(guildId);
-		}
-
 		const createdPlayer = await this.container.audio.createPlayer({
 			guildId,
 			voiceChannelId: saved.voiceChannelId,
@@ -348,6 +350,15 @@ export class SessionRestoreEngine {
 			vcRegion: saved.options.vcRegion
 		});
 
+		if (options.resetVoiceState) {
+			try {
+				await this.resetVoiceSession(createdPlayer);
+			} catch (error) {
+				createdPlayer.setData('internal_destroywithoutdisconnect', true);
+				this.container.audio.deletePlayer(guildId);
+				throw error;
+			}
+		}
 		createdPlayer.relatedTrackHistory.restore(saved.relatedTrackHistory);
 		await this.restoreControllerRef(createdPlayer, saved.textChannelId, saved.messageId, `guild ${guildId}`);
 		await createdPlayer.connect();
@@ -464,17 +475,20 @@ export class SessionRestoreEngine {
 		// 먼저 고아 플레이어의 disconnect + deletePlayer를 수행하여 메모리를 비운다.
 		const existingPlayer = this.container.audio.players.get(guildId);
 		if (existingPlayer) {
-			if (existingPlayer.node?.connected && existingPlayer.node?.sessionId === node.sessionId) {
-				// 이미 새 세션에서 완전히 복구된 정상 플레이어인 경우에만 스킵
+			if (existingPlayer.node?.connected && !this.orphanPlayers.has(existingPlayer)) {
+				// node는 재연결 때 같은 객체의 sessionId가 바뀐다. 끊길 때 남은 플레이어는 별도로 추적한다.
 				return;
 			}
 			this.logger.info(`Dropping orphan player at ${guildId} before fresh session restore`);
+			existingPlayer.resettingVoice = true;
 			try {
 				await existingPlayer.disconnect().catch(() => null);
 				existingPlayer.setData('internal_destroywithoutdisconnect', true);
 				this.container.audio.deletePlayer(guildId);
 			} catch (err) {
 				this.logger.debug(`Error while dropping orphan player at ${guildId}: ${err}`);
+			} finally {
+				existingPlayer.resettingVoice = false;
 			}
 		}
 
@@ -516,24 +530,27 @@ export class SessionRestoreEngine {
 	}
 
 	/**
-	 * Fresh 복구 전 음성 세션 완전 초기화 — Discord Gateway에 channel_id: null을 보내고
-	 * guild.members.me?.voice.channelId가 null로 반영될 때까지 대기한다.
+	 * 새 플레이어에서 disconnect한 뒤 Discord의 퇴장 확인을 기다린다.
+	 * resettingVoice 동안 raw 리스너가 의도한 퇴장의 자동 파괴·재연결을 막는다.
 	 */
-	private async resetVoiceSession(guildId: string): Promise<void> {
+	private async resetVoiceSession(player: CustomPlayer): Promise<void> {
+		const guildId = player.guildId;
 		const guild = this.container.client.guilds.cache.get(guildId);
 		if (!guild?.members.me) throw new Error(`Cannot confirm Discord voice state for guild ${guildId}`);
-		if (guild.members.me.voice.channelId === null) return;
 
-		this.logger.debug(`Resetting Discord voice state for guild ${guildId} before fresh connect`);
-		await this.container.audio.options.sendToShard(guildId, {
-			op: 4,
-			d: { guild_id: guildId, channel_id: null, self_mute: false, self_deaf: false }
-		});
+		player.resettingVoice = true;
+		try {
+			this.logger.debug(`Resetting Discord voice state for guild ${guildId} before fresh connect`);
+			await player.disconnect();
 
-		const deadline = Date.now() + VOICE_LEAVE_TIMEOUT_MS;
-		while (guild.members.me?.voice.channelId !== null) {
-			if (Date.now() >= deadline) throw new Error(`Discord voice leave not confirmed for guild ${guildId} within ${VOICE_LEAVE_TIMEOUT_MS}ms`);
-			await delay(VOICE_LEAVE_POLL_MS);
+			const deadline = Date.now() + VOICE_LEAVE_TIMEOUT_MS;
+			while (guild.members.me?.voice.channelId !== null) {
+				if (Date.now() >= deadline)
+					throw new Error(`Discord voice leave not confirmed for guild ${guildId} within ${VOICE_LEAVE_TIMEOUT_MS}ms`);
+				await delay(VOICE_LEAVE_POLL_MS);
+			}
+		} finally {
+			player.resettingVoice = false;
 		}
 	}
 
