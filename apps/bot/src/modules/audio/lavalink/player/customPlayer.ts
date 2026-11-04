@@ -60,6 +60,7 @@ export interface MixerRuntime {
 
 export class CustomPlayer extends Player {
 	public readonly relatedTrackHistory = new RelatedTrackHistory();
+	public resettingVoice = false;
 	public messageId: string | null = null;
 	public controller: Message | null = null;
 	public chapters: Chapter[] = [];
