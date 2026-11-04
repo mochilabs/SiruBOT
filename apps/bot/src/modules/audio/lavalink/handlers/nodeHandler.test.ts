@@ -480,3 +480,54 @@ describe('fresh 복구 신선도 판정 (세션 시작 시점 기준)', () => {
 		expect(playerSaver.delete).not.toHaveBeenCalled();
 	});
 });
+
+describe('fresh restore voice leave', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		getSubLogger.mockReturnValue(stubLogger);
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+	function setup(channelId: string | null) {
+		const voice = { channelId };
+		const sendToShard = vi.fn().mockResolvedValue(undefined);
+		const player = { relatedTrackHistory: new RelatedTrackHistory(), connect: vi.fn(), queue: { utils: { sync: vi.fn() } } };
+		const createPlayer = vi.fn(() => player);
+		Object.assign(container, {
+			client: { guilds: { cache: new Map([['g1', { members: { me: { voice } } }]]) } },
+			audio: { options: { sendToShard }, createPlayer }
+		});
+		const restore = () => makeHandler().sessionRestore.recreateSavedPlayer({ id: 'node' }, 'g1', { options: {} }, { resetVoiceState: true });
+		return { voice, sendToShard, createPlayer, restore, player };
+	}
+	it('stops before player creation when Discord never confirms the leave', async () => {
+		const { restore, createPlayer } = setup('old');
+		const error = expect(restore()).rejects.toThrow('voice leave not confirmed');
+		await vi.advanceTimersByTimeAsync(5000);
+		await error;
+		expect(createPlayer).not.toHaveBeenCalled();
+	});
+	it('propagates a failed leave request without creating a player', async () => {
+		const { restore, sendToShard, createPlayer } = setup('old');
+		sendToShard.mockRejectedValueOnce(new Error('shard offline'));
+		await expect(restore()).rejects.toThrow('shard offline');
+		expect(createPlayer).not.toHaveBeenCalled();
+	});
+	it('connects only after Discord confirms the leave', async () => {
+		const { restore, voice, createPlayer, player } = setup('old');
+		const pending = restore();
+		await vi.advanceTimersByTimeAsync(500);
+		expect(createPlayer).not.toHaveBeenCalled();
+		voice.channelId = null;
+		await vi.advanceTimersByTimeAsync(100);
+		await pending;
+		expect(player.connect).toHaveBeenCalledOnce();
+	});
+	it('connects immediately if already disconnected', async () => {
+		const { restore, sendToShard, player } = setup(null);
+		await restore();
+		expect(sendToShard).not.toHaveBeenCalled();
+		expect(player.connect).toHaveBeenCalledOnce();
+	});
+});
