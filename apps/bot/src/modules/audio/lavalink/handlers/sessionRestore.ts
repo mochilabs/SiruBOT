@@ -421,7 +421,7 @@ export class SessionRestoreEngine {
 				try {
 					await this.restoreFreshGuild(node, task.guildId, playerSaver, sessionStartedAt, task.arrived);
 				} catch (error) {
-					this.logger.error(`Fresh restore failed: ${error}`);
+					this.logger.error(`Fresh restore failed for guild ${task.guildId}: ${error}`);
 				}
 			}
 		});
@@ -520,28 +520,20 @@ export class SessionRestoreEngine {
 	 * guild.members.me?.voice.channelId가 null로 반영될 때까지 대기한다.
 	 */
 	private async resetVoiceSession(guildId: string): Promise<void> {
-		try {
-			const guild = this.container.client.guilds.cache.get(guildId);
-			if (!guild?.members.me?.voice.channelId) return;
+		const guild = this.container.client.guilds.cache.get(guildId);
+		if (!guild?.members.me) throw new Error(`Cannot confirm Discord voice state for guild ${guildId}`);
+		if (guild.members.me.voice.channelId === null) return;
 
-			this.logger.debug(`Resetting Discord voice state for guild ${guildId} before fresh connect`);
-			await this.container.audio.options.sendToShard(guildId, {
-				op: 4,
-				d: {
-					guild_id: guildId,
-					channel_id: null,
-					self_mute: false,
-					self_deaf: false
-				}
-			});
+		this.logger.debug(`Resetting Discord voice state for guild ${guildId} before fresh connect`);
+		await this.container.audio.options.sendToShard(guildId, {
+			op: 4,
+			d: { guild_id: guildId, channel_id: null, self_mute: false, self_deaf: false }
+		});
 
-			const deadline = Date.now() + VOICE_LEAVE_TIMEOUT_MS;
-			while (Date.now() < deadline) {
-				if (!guild.members.me?.voice.channelId) break;
-				await delay(VOICE_LEAVE_POLL_MS);
-			}
-		} catch (error) {
-			this.logger.warn(`Failed to reset voice session for guild ${guildId}: ${error}`);
+		const deadline = Date.now() + VOICE_LEAVE_TIMEOUT_MS;
+		while (guild.members.me?.voice.channelId !== null) {
+			if (Date.now() >= deadline) throw new Error(`Discord voice leave not confirmed for guild ${guildId} within ${VOICE_LEAVE_TIMEOUT_MS}ms`);
+			await delay(VOICE_LEAVE_POLL_MS);
 		}
 	}
 
