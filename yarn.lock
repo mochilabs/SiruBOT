@@ -3530,7 +3530,7 @@ __metadata:
     colorette: "npm:^2.0.20"
     discord.js: "npm:^14.27.0"
     figlet: "npm:^1.12.0"
-    lavalink-client: "npm:^2.11.0"
+    lavalink-client: "patch:lavalink-client@npm%3A2.11.0#~/patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch"
     tslog: "npm:^4.11.0"
     undici: "npm:^7.30.1"
     zod: "npm:^4.6.7"
@@ -8204,13 +8204,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lavalink-client@npm:^2.11.0":
+"lavalink-client@npm:2.11.0":
   version: 2.11.0
   resolution: "lavalink-client@npm:2.11.0"
   dependencies:
     tslib: "npm:^2.8.1"
     ws: "npm:^8.21.3"
   checksum: 10c0/105b130a641d9e6f6d7401727aa994aafc16978b3575fdf9e2f32c410f6c21ca0015bec0672ec9cc332a062de88631b38463b1cbcdef9d48ae08a6a642f47cc2
+  languageName: node
+  linkType: hard
+
+"lavalink-client@patch:lavalink-client@npm%3A2.11.0#~/patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch":
+  version: 2.11.0
+  resolution: "lavalink-client@patch:lavalink-client@npm%3A2.11.0#~/patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch::version=2.11.0&hash=4e34ee"
+  dependencies:
+    tslib: "npm:^2.8.1"
+    ws: "npm:^8.21.3"
+  checksum: 10c0/2d0342f09417eb16f1185a332ddf5702969ab4fc1097b7199c6daf22160e610b13f53dc1168830d946956bcf6cbd9d4f23542e9cc8dc33da24f1d8a388c3df5d
   languageName: node
   linkType: hard
 

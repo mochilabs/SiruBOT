@@ -20,6 +20,7 @@ WORKDIR /app
 
 # Copy workspace configuration
 COPY package.json yarn.lock turbo.json .yarnrc.yml ./
+COPY patches ./patches
 
 # Copy all package.json files to establish workspace structure
 COPY apps/bot/package.json ./apps/bot/
@@ -47,6 +48,7 @@ COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/yarn.lock ./yarn.lock
 COPY --from=deps /app/turbo.json ./turbo.json
 COPY --from=deps /app/.yarnrc.yml ./.yarnrc.yml
+COPY --from=deps /app/patches ./patches
 
 # Copy all source files
 COPY tsconfig.json ./

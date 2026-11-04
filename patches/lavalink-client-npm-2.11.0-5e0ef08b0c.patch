@@ -1,0 +1,24 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 0321722b74dea5f81acd8bc2eb8432c32c545961..93202184237c3194831fbd79eee6e2e6edb4b6a8 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -3218,6 +3218,7 @@ var LavalinkNode = class LavalinkNode {
+ 			}
+ 		}
+ 		this._LManager.emit("trackStuck", player, track || this.getTrackOfPayload(payload), payload);
++		if (!this._LManager.options.autoSkip) return;
+ 		if (!player.queue.tracks.length && (player.repeatMode === "off" || player.getData("internal_stopPlaying"))) try {
+ 			await player.node.updatePlayer({
+ 				guildId: player.guildId,
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 6fa7262fef2d704e739344c92eba595daabb6471..93de3b235606b7c71a3de999cc4b555049e12938 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -3189,6 +3189,7 @@ var LavalinkNode = class LavalinkNode {
+ 			}
+ 		}
+ 		this._LManager.emit("trackStuck", player, track || this.getTrackOfPayload(payload), payload);
++		if (!this._LManager.options.autoSkip) return;
+ 		if (!player.queue.tracks.length && (player.repeatMode === "off" || player.getData("internal_stopPlaying"))) try {
+ 			await player.node.updatePlayer({
+ 				guildId: player.guildId,
