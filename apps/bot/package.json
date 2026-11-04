@@ -37,7 +37,7 @@
     "colorette": "^2.0.20",
     "discord.js": "^14.27.0",
     "figlet": "^1.12.0",
-    "lavalink-client": "^2.11.0",
+    "lavalink-client": "patch:lavalink-client@npm%3A2.11.0#~/patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch",
     "tslog": "^4.11.0",
     "undici": "^7.30.1",
     "zod": "^4.6.7"

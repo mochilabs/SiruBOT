@@ -29,7 +29,7 @@
 | 3RD-02 | `youtube-file-cache` (`lavalink_file_cache`) | Lavalink server plugin | Sibling project `../lavalink_file_cache`, v0.1.0 | lavaplayer `AudioSourceManager`, REST `/youtube-file-cache/stats` | Cache key = YouTube `identifier` (videoId) |
 | 3RD-03 | `youtube-plugin` (official `youtube-source`) | Lavalink server plugin | `dev.lavalink.youtube:youtube-plugin:1.18.2` | Track loading / format resolution | 3RD-02 depends on its **internal APIs** |
 | 3RD-04 | SponsorBlock API | data-api external HTTP | `sponsor.ajay.app/api/skipSegments` | millisecond skip segments | BOT controls current-track seek; mixer receives incoming start |
-| 3RD-05 | `lavalink-client` | Bot client library | `^2.10.0` (`apps/bot/package.json`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
+| 3RD-05 | `lavalink-client` | Bot client library | Patched `2.11.0` (`apps/bot/package.json:40`) | `LavalinkManager`, Player / QueueStore hooks | `autoSkip: false` is required |
 | 3RD-06 | `discord.js` + `@sapphire/framework` | Bot framework | `^14.27.0` / `^5.3.6` | Slash command and precondition registration | Bot conventions are in `.pi/skills/sapphire-command` |
 | 3RD-07 | Prisma, Redis, Fastify, Next.js, Sentry, etc. | Runtime dependencies | See table in Section 2 | Type and client contracts | Run `yarn generate` first |
 | 3RD-08 | lrclib, Open-Meteo, tracker.delivery, TV Asahi, YouTube internal API, OpenAI-compatible LLM | External HTTP | `apps/data-api/src/providers/*` | REST, including unofficial APIs | YouTube's internal API can change without notice |
@@ -123,14 +123,14 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 
 ### 3RD-05. `lavalink-client`
 
-- **Version:** `^2.10.0` (`apps/bot/package.json`). Lavalink v4 client built around `LavalinkManager`, `Player`, and queue-store hooks.
+- **Version:** `2.11.0` with a Yarn patch (`apps/bot/package.json:40`). Lavalink v4 client built around `LavalinkManager`, `Player`, and queue-store hooks.
 - **SiruBOT integration:**
   - Initialization/configuration: `apps/bot/src/core/botApplication.ts`, `setupAudio()` (`playerClass: CustomPlayer`, `queueOptions.queueStore`, `sendToShard`, node `retryAmount: 9999`)
   - Extension: `apps/bot/src/modules/audio/lavalink/player/customPlayer.ts` (`TransitionState {stopByCommand, lastStartedEncoded, preloadConsumedAt}`, chapters, error counts)
   - Queue persistence: `apps/bot/src/modules/audio/lavalink/queue/queueStore.ts` (`CachedQueueStore`)
   - Node lifecycle: `apps/bot/src/modules/audio/lavalink/handlers/nodeHandler.ts`; session recovery keys `lavalink/session/{nodeId}/shards:{0,1}` (`redisStore.ts:23,39`)
 - **Fragile Rules:**
-  1. **`autoSkip: false` is required** (`botApplication.ts:141`). If enabled, it conflicts with the server-side auto-start behavior in 3RD-01.
+  1. **`autoSkip: false` is required** (`apps/bot/src/core/botApplication.ts:161`). If enabled, it conflicts with the server-side auto-start behavior in 3RD-01. Upstream 2.11.0 still shifts the queue or sends a stop after emitting `trackStuck` with this option disabled. The Yarn patch returns after the event so the bot owns recovery in both CJS and ESM (`patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch:9`, `patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch:21`). Without it, a mixer skip can be followed by another queue shift or a stop of the replacement track.
   2. **Route skips through the mixer, not `player.skip()`.** See the related rule in 3RD-01.
   3. **Custom Player/QueueStore hooks are internal APIs.** For major upgrades, review `customPlayer.ts`, `queueStore.ts`, and `trackHandler.ts` first.
   4. **Session resume:** Store session IDs in Redis when a node becomes `ready` and restore them after restart. This interacts with Lavalink's five-minute resume window; follow the shutdown order in `docs/runbook-production.md`.
@@ -188,7 +188,7 @@ Authentication conventions (raw HTTP `Authorization` header and Redis hub channe
 ### B. Upgrading `lavalink-client` (3RD-05)
 
 1. Review `customPlayer.ts`, `queueStore.ts`, `trackHandler.ts`, and `sponsorBlockHandler.ts` first; they depend on internal APIs and event payloads.
-2. Regression-test `autoSkip: false` behavior and the mixer-mediated skip sequence.
+2. Run `yarn vitest run --config vitest.config.ts apps/bot/src/modules/audio/lavalink/handlers/trackStuckRecovery.test.ts`. Keep the `trackStuck` patch until the replacement version passes this regression suite without it. The suite exercises the installed CJS and ESM handlers with the real mixer skip, checks that recovery advances once, and preserves `autoSkip: true` behavior (`apps/bot/src/modules/audio/lavalink/handlers/trackStuckRecovery.test.ts:81`).
 3. Measure the node session-resume scenario in practice, including recovery of session IDs from Redis.
 
 ### C. Upgrading Prisma, Redis, Next.js, and Other 3RD-07 Dependencies
