@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { m } from "framer-motion";
 import { RadioTower, ShieldCheck } from "lucide-react";
 import useSWR from "swr";
@@ -19,6 +20,9 @@ import { VoiceServerSection } from "@/components/voice-server-section";
 import type { ShardsResponse } from "@/lib/shard-api";
 
 export default function ShardsPage() {
+    const { data: session } = useSession();
+    const isAdmin = Boolean(session?.user?.isAdmin);
+
     const { data, error, isLoading, isValidating, mutate } = useSWR<ShardsResponse>("/api/shards", {
         refreshInterval: 11000,
         revalidateOnFocus: true,
@@ -71,13 +75,15 @@ export default function ShardsPage() {
                                 </button>
                             </>
                         )}
-                        <Link
-                            href="/admin"
-                            className={buttonVariants({ variant: "secondary", size: "sm" })}
-                        >
-                            <ShieldCheck size={14} />
-                            <span>봇 관리자 패널</span>
-                        </Link>
+                        {isAdmin && (
+                            <Link
+                                href="/admin"
+                                className={buttonVariants({ variant: "secondary", size: "sm" })}
+                            >
+                                <ShieldCheck size={14} />
+                                <span>봇 관리자 패널</span>
+                            </Link>
+                        )}
                     </div>
                 </PageHeader>
                 <div className="grid gap-8">
@@ -85,7 +91,7 @@ export default function ShardsPage() {
                         <ShardStats stats={stats} />
                     </section>
 
-                    <DataApiSection />
+                    {isAdmin && <DataApiSection />}
 
                     <VoiceServerSection />
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aggregateVoiceServerHistory, parseVoiceServerRows } from "./voice-server-stats";
+import { aggregateVoiceServerHistory, parseVoiceServerRows, toPublicVoiceServerHistory, toPublicVoiceServerSummary } from "./voice-server-stats";
 
 // 통계 서버는 외부 서비스라 응답을 신뢰하지 않고 검증해요 — 이 테스트는 검증·집계 계약을 잠가요.
 // measuredRow는 2026-10-17 실측 응답(GET /api/stats/latest)의 한 행이에요.
@@ -129,5 +129,68 @@ describe("aggregateVoiceServerHistory 집계", () => {
 
 	it("행이 없으면 빈 시계열이에요", () => {
 		expect(aggregateVoiceServerHistory([])).toEqual([]);
+	});
+});
+
+describe("공개용 축약 (민감 필드 제거)", () => {
+	it("toPublicVoiceServerSummary는 host·name·CPU·메모리·uptime 없이 합계만 내려줘요", () => {
+		const rows = [
+			{
+				host: "10.0.0.21:2333",
+				name: "SRV 1",
+				timestamp: "2026-10-17 07:43:22",
+				players: 6,
+				playingPlayers: 4,
+				uptime: 343872432,
+				memoryUsed: 430664096,
+				memoryAllocated: 536870912,
+				cpuCores: 16,
+				cpuSystemLoad: 0.0881,
+				cpuLavalinkLoad: 0.006,
+			},
+			{
+				host: "10.0.0.21:2334",
+				name: "SRV 2",
+				timestamp: "2026-10-17 07:43:58",
+				players: 4,
+				playingPlayers: 2,
+				uptime: 343872432,
+				memoryUsed: 430664096,
+				memoryAllocated: 536870912,
+				cpuCores: 16,
+				cpuSystemLoad: 0.2,
+				cpuLavalinkLoad: 0.04,
+			},
+		];
+
+		const result = toPublicVoiceServerSummary(rows);
+		expect(result).toEqual({ nodeCount: 2, totalPlayers: 10, totalPlaying: 6 });
+		expect(Object.keys(result).sort()).toEqual(["nodeCount", "totalPlayers", "totalPlaying"]);
+	});
+
+	it("노드가 없으면 nodeCount 0 합계를 돌려줘요", () => {
+		expect(toPublicVoiceServerSummary([])).toEqual({ nodeCount: 0, totalPlayers: 0, totalPlaying: 0 });
+	});
+
+	it("toPublicVoiceServerHistory는 CPU 부하를 절대 내려주지 않아요", () => {
+		const points = aggregateVoiceServerHistory([
+			{
+				host: "10.0.0.21:2333",
+				name: "SRV 1",
+				timestamp: "2026-10-17 07:43:22",
+				players: 6,
+				playingPlayers: 4,
+				uptime: 1000,
+				memoryUsed: 1,
+				memoryAllocated: 2,
+				cpuCores: 16,
+				cpuSystemLoad: 0.1,
+				cpuLavalinkLoad: 0.02,
+			},
+		]);
+
+		const result = toPublicVoiceServerHistory(points);
+		expect(result).toEqual([{ time: "2026-10-17 07:43", players: 6, playingPlayers: 4 }]);
+		expect(Object.keys(result[0]).sort()).toEqual(["players", "playingPlayers", "time"]);
 	});
 });

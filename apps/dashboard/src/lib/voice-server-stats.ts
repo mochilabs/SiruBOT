@@ -30,6 +30,51 @@ export interface VoiceServerHistoryPoint {
 	cpuLavalinkLoad: number;
 }
 
+/**
+ * 공개용 음성 서버 요약 — `/api/voice-servers`가 비로그인에게도 내려주는 안전한 합계예요.
+ * host(Lavalink 노드 주소)·name(노드 별칭)·CPU 부하·메모리 등 인프라 텔레메트리는 공격 표면이라
+ * 제거하고 스트리밍 개수(플레이어 합계)만 노출해요. 노드별 카드는 토폴로지를 드러내므로 내리지 않아요.
+ */
+export interface PublicVoiceServerSummary {
+	/** 활성 노드 수 — "노드 없음" 표시와 안내용 */
+	nodeCount: number;
+	/** 접속 중인 플레이어 합계 */
+	totalPlayers: number;
+	/** 재생 중인 플레이어 합계 */
+	totalPlaying: number;
+}
+
+/** 원격 노드 통계 목록에서 공개 가능한 합계만 계산해요 — host/name/cpu/memory/uptime은 절대 복사하지 않아요. */
+export function toPublicVoiceServerSummary(rows: VoiceServerNode[]): PublicVoiceServerSummary {
+	let totalPlayers = 0;
+	let totalPlaying = 0;
+	for (const row of rows) {
+		totalPlayers += row.players;
+		totalPlaying += row.playingPlayers;
+	}
+	return {
+		nodeCount: rows.length,
+		totalPlayers,
+		totalPlaying,
+	};
+}
+
+/** 공개용 시계열 포인트 — 플레이어 수만 남기고 CPU 부하(시스템/Lavalink)를 제거한 축약형이에요. */
+export interface PublicVoiceServerHistoryPoint {
+	time: string;
+	players: number;
+	playingPlayers: number;
+}
+
+/** 시계열 집계 결과에서 공개용 포인트만 남겨요 — CPU 필드는 절대 복사하지 않아요. */
+export function toPublicVoiceServerHistory(points: VoiceServerHistoryPoint[]): PublicVoiceServerHistoryPoint[] {
+	return points.map((point) => ({
+		time: point.time,
+		players: point.players,
+		playingPlayers: point.playingPlayers,
+	}));
+}
+
 const voiceServerNodeSchema = z
 	.object({
 		host: z.string(),
