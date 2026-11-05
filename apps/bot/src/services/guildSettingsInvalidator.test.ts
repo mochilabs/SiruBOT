@@ -126,4 +126,48 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 		expect(bindings).toHaveLength(0);
 		expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('REDIS_URL 미설정'));
 	});
+
+	it('gapless=false, automix=true 설정 시 preloadUpcoming이 발생하고 clearNext는 호출되지 않는다', async () => {
+		const service = makeService();
+		await service.start('redis://localhost:6379', { invalidate: vi.fn() } as never);
+		const player = { guildId: 'g-automix' };
+		containerStub.audio.getPlayer.mockReturnValue(player);
+		containerStub.guildService.getMixerSettings.mockResolvedValueOnce({
+			gaplessEnabled: false,
+			crossfadeEnabled: false,
+			automixEnabled: true,
+			crossfadeMs: 600,
+			normalizationEnabled: false
+		});
+
+		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g-automix', reason: 'mixer' }));
+
+		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g-automix'));
+		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
+		await vi.waitFor(() => {
+			expect(containerStub.mixerService.clearNext).not.toHaveBeenCalled();
+			expect(containerStub.mixerService.preloadUpcoming).toHaveBeenCalledWith(player, { force: true });
+		});
+	});
+
+	it('모든 전환 설정이 꺼져 있으면 clearNext가 발생하고 preloadUpcoming은 호출되지 않는다', async () => {
+		const service = makeService();
+		await service.start('redis://localhost:6379', { invalidate: vi.fn() } as never);
+		const player = { guildId: 'g-all-off' };
+		containerStub.audio.getPlayer.mockReturnValue(player);
+		containerStub.guildService.getMixerSettings.mockResolvedValueOnce({
+			gaplessEnabled: false,
+			crossfadeEnabled: false,
+			automixEnabled: false,
+			crossfadeMs: 600,
+			normalizationEnabled: false
+		});
+
+		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g-all-off', reason: 'mixer' }));
+
+		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g-all-off'));
+		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
+		await vi.waitFor(() => expect(containerStub.mixerService.clearNext).toHaveBeenCalledWith(player, { force: true }));
+		expect(containerStub.mixerService.preloadUpcoming).not.toHaveBeenCalled();
+	});
 });

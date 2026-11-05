@@ -13,6 +13,7 @@
  * - 절대 프로세스를 크래시시키지 않아요.
  */
 import { GUILD_SETTINGS_INVALIDATE_CHANNEL, ManagedRedisSubscriber } from '@sirubot/utils';
+import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import { container } from '@sapphire/framework';
 
 import { clearGuildCustomCommandsCache } from './customCommands/store.ts';
@@ -101,7 +102,7 @@ export class GuildSettingsInvalidator {
 			if (!player) return;
 			const settings = await container.guildService.getMixerSettings(guildId);
 			await container.mixerService.pushCrossfadeConfig(player);
-			if (settings.gaplessEnabled) {
+			if (needsUpcomingTrack(settings)) {
 				await container.mixerService.preloadUpcoming(player, { force: true }).catch(() => null);
 			} else {
 				await container.mixerService.clearNext(player, { force: true }).catch(() => null);

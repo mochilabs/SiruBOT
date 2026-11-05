@@ -670,6 +670,27 @@ describe('AutoMix configuration', () => {
 		]);
 		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ enabled: true, beatmatchEnabled: true });
 	});
+
+	it('pushCrossfadeConfig sends enabled: false to /mixer/silence when gapless is false and automix is true', async () => {
+		const customSettings = {
+			gaplessEnabled: false,
+			crossfadeEnabled: true,
+			automixEnabled: true,
+			crossfadeMs: 3000,
+			normalizationEnabled: false,
+			automixMaxTempoChange: 0.06,
+			automixMinConfidence: 0.3
+		};
+		vi.mocked(container.guildService.getMixerSettings).mockReset();
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue(customSettings);
+		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
+		vi.stubGlobal('fetch', fetchMock);
+		const service = new MixerService();
+		await service.pushCrossfadeConfig(fakePlayer());
+		const silenceCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/mixer/silence'));
+		expect(silenceCall).toBeDefined();
+		expect(JSON.parse(silenceCall![1].body)).toEqual({ guildId: '123456789012345678', enabled: false });
+	});
 });
 
 it('sends silence config matching gapless setting', async () => {

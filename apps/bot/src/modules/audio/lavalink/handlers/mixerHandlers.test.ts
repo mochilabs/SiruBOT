@@ -1,7 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from 'lavalink-client';
-import { shouldPreserveTransition } from './mixerHandlers.ts';
+import { handleMixerNeedNext, shouldPreserveTransition } from './mixerHandlers.ts';
 
+const { container } = vi.hoisted(() => ({
+	container: {
+		logger: { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		mixerService: {
+			arm: vi.fn(async () => undefined),
+			supportsOutgoingEnd: vi.fn(async () => false)
+		},
+		guildService: {
+			getMixerSettings: vi.fn(async () => ({
+				gaplessEnabled: false,
+				crossfadeEnabled: false,
+				automixEnabled: true
+			}))
+		}
+	}
+}));
+
+vi.mock('@sapphire/framework', () => ({ container }));
+vi.mock('../../../../services/sponsorBlockService.ts', () => ({
+	sponsorBlockService: {
+		prefetch: vi.fn(),
+		queueChanged: vi.fn(),
+		outgoingEndPositionMs: vi.fn(() => undefined)
+	}
+}));
 function createTrack(overrides: Partial<Track> = {}): Track {
 	return {
 		encoded: 'enc',
@@ -60,5 +85,75 @@ describe('shouldPreserveTransition', () => {
 		const current = createTrack();
 		const next = createTrack();
 		expect(shouldPreserveTransition(current, next)).toBe(false);
+	});
+});
+
+describe('handleMixerNeedNext with AutoMix (gapless=false)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({
+			gaplessEnabled: false,
+			crossfadeEnabled: false,
+			automixEnabled: true
+		});
+	});
+
+	it('gapless=false, automix=true이고 큐에 다음 곡이 있을 때 비어있지 않게 arm한다', async () => {
+		const current = createTrack({
+			encoded: 'enc-current',
+			info: {
+				identifier: 'id-current',
+				title: 'Current',
+				author: 'Author',
+				duration: 180000,
+				isSeekable: true,
+				isStream: false,
+				uri: 'https://example.com',
+				artworkUrl: null,
+				sourceName: 'youtube'
+			} as never
+		});
+		const next = createTrack({
+			encoded: 'enc-next',
+			info: {
+				identifier: 'id-next',
+				title: 'Next',
+				author: 'Author',
+				duration: 180000,
+				isSeekable: true,
+				isStream: false,
+				uri: 'https://example.com',
+				artworkUrl: null,
+				sourceName: 'youtube'
+			} as never
+		});
+		const player = {
+			guildId: 'g-mixer-handler',
+			playing: true,
+			currentEpoch: 1,
+			mixerRuntime: {
+				pending: new Map(),
+				lastTargetUid: null,
+				invalidateTimer: null
+			},
+			queue: {
+				current,
+				tracks: [next]
+			}
+		};
+
+		await handleMixerNeedNext(player as never, {
+			remainingMs: 2000,
+			currentTrackEncoded: current.encoded!
+		});
+
+		expect(container.mixerService.arm).toHaveBeenCalledWith(
+			player,
+			expect.objectContaining({
+				isEmpty: false,
+				encodedTrack: next.encoded
+			}),
+			expect.any(String)
+		);
 	});
 });
