@@ -50,6 +50,8 @@ export class MentionReplyListener extends Listener {
 		try {
 			assertChatEnabled(policy, channelId);
 		} catch (error) {
+			// 기능을 끈 서버/채널은 아무 안내 없이 조용히 무시해요.
+			if (error instanceof ChatServiceError && error.identifier === 'chat_disabled') return;
 			const text = error instanceof ChatServiceError ? error.message : '이 채널에서는 AI 채팅을 사용할 수 없어요.';
 			await message.reply(errorPayload(text)).catch(() => undefined);
 			return;

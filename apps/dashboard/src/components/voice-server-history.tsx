@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Cpu, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, type TooltipContentProps, XAxis, YAxis } from "recharts";
 import useSWR from "swr";
 
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import type { VoiceServerHistoryPoint } from "@/lib/voice-server-stats";
+import type { PublicVoiceServerHistoryPoint } from "@/lib/voice-server-stats";
 
 /** 조회 기간 (hours 쿼리 파라미터, 1~168) */
 const RANGE_OPTIONS = [
@@ -22,8 +22,6 @@ interface ChartPoint {
 	time: string;
 	players: number;
 	playing: number;
-	system: number;
-	lavalink: number;
 }
 
 interface SeriesConfig {
@@ -36,11 +34,6 @@ interface SeriesConfig {
 const PLAYER_SERIES: SeriesConfig[] = [
 	{ key: "players", name: "총 플레이어", color: "var(--brand)", format: (value) => value.toLocaleString() },
 	{ key: "playing", name: "재생 중", color: "var(--warning)", format: (value) => value.toLocaleString() },
-];
-
-const CPU_SERIES: SeriesConfig[] = [
-	{ key: "system", name: "시스템 CPU (%)", color: "var(--warning)", format: (value) => `${value.toFixed(1)}%` },
-	{ key: "lavalink", name: "Lavalink CPU (%)", color: "var(--brand)", format: (value) => `${value.toFixed(1)}%` },
 ];
 
 /** 축 눈금·툴팁 라벨 — "YYYY-MM-DD HH:mm"과 ISO 문자열 모두에서 HH:mm만 안전하게 뽑아요 */
@@ -140,15 +133,15 @@ function ChartCard({
 	);
 }
 
-/** 음성 서버 추이 — 플레이어 수와 CPU 사용률을 기간별로 보여줘요. 기간 셀렉터가 두 차트를 함께 제어요. */
+/** 음성 서버 추이 — 플레이어 수를 기간별로 보여줘요. CPU 부하 등 인프라 텔레메트리는 공개하지 않아요. */
 export function VoiceServerHistory() {
 	const [hours, setHours] = useState(24);
-	const { data, isLoading } = useSWR<VoiceServerHistoryPoint[]>(`/api/voice-servers/history?hours=${hours}`, {
+	const { data, isLoading } = useSWR<PublicVoiceServerHistoryPoint[]>(`/api/voice-servers/history?hours=${hours}`, {
 		refreshInterval: 60000,
 		dedupingInterval: 10000,
 	});
 
-	// 섹션 헤더(제목+기간 셀렉터)는 계속 마운트해 두고 차트 영역만 상태로 갈아끼워요 (VoiceServerSection과 같은 처리).
+	// 섹션 헤더(제목+기간 셀렉터)는 계속 마운트해 두고 차트 영역만 상태로 갈아끼워요.
 	const rangeSelector = (
 		<Select
 			value={String(hours)}
@@ -174,8 +167,7 @@ export function VoiceServerHistory() {
 	let chartArea: React.ReactNode;
 	if (!data) {
 		chartArea = isLoading ? (
-			<div className="grid gap-4 lg:grid-cols-2">
-				<SkeletonCard lines={4} avatar={false} />
+			<div className="grid gap-4 lg:grid-cols-1">
 				<SkeletonCard lines={4} avatar={false} />
 			</div>
 		) : (
@@ -194,13 +186,10 @@ export function VoiceServerHistory() {
 			time: point.time,
 			players: point.players,
 			playing: point.playingPlayers,
-			system: point.cpuSystemLoad * 100,
-			lavalink: point.cpuLavalinkLoad * 100,
 		}));
 		chartArea = (
-			<div className="grid gap-4 lg:grid-cols-2">
+			<div className="grid gap-4 lg:grid-cols-1">
 				<ChartCard title="플레이어 수 추이" icon={TrendingUp} series={PLAYER_SERIES} points={points} yTickFormat={(value) => value.toLocaleString()} />
-				<ChartCard title="CPU 사용률" icon={Cpu} series={CPU_SERIES} points={points} yTickFormat={(value) => `${value}%`} />
 			</div>
 		);
 	}
@@ -215,4 +204,3 @@ export function VoiceServerHistory() {
 		</section>
 	);
 }
-
