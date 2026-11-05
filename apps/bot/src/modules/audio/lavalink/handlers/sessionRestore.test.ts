@@ -151,7 +151,7 @@ describe('fresh restore voice reconnect', () => {
 		saved.lastPositionChange = Date.now();
 		saved.paused = true;
 		saved.filters.volume = 0.5;
-		const restoring = engine.restoreFreshPlayer(node, GUILD_ID, saved);
+		const restoring = engine.restoreFreshPlayer(node, GUILD_ID, saved, { resetVoiceState: true });
 		await vi.advanceTimersByTimeAsync(0);
 		expect(updatePlayer).not.toHaveBeenCalled();
 
@@ -256,6 +256,26 @@ describe('fresh restore voice reconnect', () => {
 		Object.assign(container, { redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [GUILD_ID], get: async () => saved }) } });
 		await handler.sessionRestore.restoreFreshSession(node);
 		expect(manager.getPlayer(GUILD_ID)).toBe(player);
+		handler.cleanup();
+	});
+	it('does not reset voice state on bot restart fresh restore when there is no orphan player', async () => {
+		const { manager, node, saved, queueStore, sends } = setup();
+		queueStore.set(GUILD_ID, { current: track('current'), tracks: [], previous: [] });
+		const handler = new NodeHandler(manager.nodeManager);
+		vi.spyOn(node, 'connected', 'get').mockReturnValue(true);
+		node.sessionId = 'new-session';
+		Object.assign(container, { redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [GUILD_ID], get: async () => saved }) } });
+		vi.spyOn(handler.sessionRestore, 'isVoiceChannelOccupied').mockResolvedValue(true);
+
+		// 봇 재시작 직후: manager.players는 비어 있음 (orphan 없음)
+		expect(manager.players.size).toBe(0);
+
+		await handler.sessionRestore.restoreFreshSession(node);
+
+		// 음성 퇴장(null) 전송 없이 바로 음성 채널(VOICE_ID)로 연결한다
+		expect(sends.map((s) => s.channelId)).toEqual([VOICE_ID]);
+		expect(manager.getPlayer(GUILD_ID)).toBeDefined();
+		expect(manager.getPlayer(GUILD_ID)?.voiceChannelId).toBe(VOICE_ID);
 		handler.cleanup();
 	});
 

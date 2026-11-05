@@ -474,8 +474,9 @@ export class SessionRestoreEngine {
 		// 고아 플레이어가 남아 있으면 복구가 스킵되거나 sendRawData의 autoReconnect 레이스가 발생하므로,
 		// 먼저 고아 플레이어의 disconnect + deletePlayer를 수행하여 메모리를 비운다.
 		const existingPlayer = this.container.audio.players.get(guildId);
+		const isOrphan = Boolean(existingPlayer && this.orphanPlayers.has(existingPlayer));
 		if (existingPlayer) {
-			if (existingPlayer.node?.connected && !this.orphanPlayers.has(existingPlayer)) {
+			if (existingPlayer.node?.connected && !isOrphan) {
 				// node는 재연결 때 같은 객체의 sessionId가 바뀐다. 끊길 때 남은 플레이어는 별도로 추적한다.
 				return;
 			}
@@ -515,8 +516,7 @@ export class SessionRestoreEngine {
 			await this.discardSavedPlayer(guildId, saved, playerSaver);
 			return;
 		}
-
-		await this.restoreFreshPlayer(node, guildId, saved);
+		await this.restoreFreshPlayer(node, guildId, saved, { resetVoiceState: isOrphan });
 	}
 
 	/** 길드가 캐시에 올 때까지 폴링한다. */
@@ -598,9 +598,13 @@ export class SessionRestoreEngine {
 	}
 
 	/** fresh 세션에서 단일 플레이어를 재구성하고 재생을 재개한다. */
-	public async restoreFreshPlayer(node: LavalinkNode, guildId: string, saved: SavedPlayer): Promise<void> {
-		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved, { resetVoiceState: true });
-
+	public async restoreFreshPlayer(
+		node: LavalinkNode,
+		guildId: string,
+		saved: SavedPlayer,
+		options: { resetVoiceState?: boolean } = {}
+	): Promise<void> {
+		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved, { resetVoiceState: options.resetVoiceState ?? false });
 		// 새 세션에는 이전 필터/예열 슬롯이 없다 — 다음 play에서 다시 prime 하도록 표시한다.
 		this.container.mixerService.markFiltersStale(guildId);
 
