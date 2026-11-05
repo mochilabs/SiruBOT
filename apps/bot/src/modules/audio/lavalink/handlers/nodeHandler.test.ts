@@ -328,7 +328,7 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		expect(reconcile).toHaveBeenCalledWith(createdPlayer);
 	});
 
-	it('fresh 복구 시 recreateSavedPlayer에 resetVoiceState 옵션을 넘긴다', async () => {
+	it('fresh 복구 시 recreateSavedPlayer에 resetVoiceState 옵션을 전달한다', async () => {
 		const handler = makeHandler();
 		const createdPlayer = {
 			queue: { current: { info: { duration: 100_000 } } },
@@ -349,9 +349,14 @@ describe('mixer reconcile after restore (재시작 뒤 예열 슬롯 복구)', (
 		});
 		const saved = { paused: false, position: 0, lastPosition: 0, lastPositionChange: NOW, savedAt: NOW };
 
-		await handler.sessionRestore.restoreFreshPlayer({ options: { id: 'main' } }, 'g1', saved);
+		await handler.sessionRestore.restoreFreshPlayer({ options: { id: 'main' } }, 'g1', saved, { resetVoiceState: true });
 
 		expect(handler.sessionRestore.recreateSavedPlayer).toHaveBeenCalledWith({ options: { id: 'main' } }, 'g1', saved, { resetVoiceState: true });
+
+		await handler.sessionRestore.restoreFreshPlayer({ options: { id: 'main' } }, 'g1', saved);
+		expect(handler.sessionRestore.recreateSavedPlayer).toHaveBeenLastCalledWith({ options: { id: 'main' } }, 'g1', saved, {
+			resetVoiceState: false
+		});
 	});
 });
 
