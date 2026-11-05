@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LavalinkManager, type Track } from 'lavalink-client';
-import { normalizeTitle, titleSimilarity, pickBySimilarity, fetchRelatedCandidate, autoPlayRelated, isRelatedTrack } from './autoPlayRelated.ts';
+import {
+	normalizeTitle,
+	titleSimilarity,
+	pickBySimilarity,
+	fetchRelatedCandidate,
+	autoPlayRelated,
+	isRelatedTrack,
+	queueRelatedUpfront
+} from './autoPlayRelated.ts';
+import { handleMixerNeedNext } from './handlers/mixerHandlers.ts';
 import { RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { RelatedTrackHistory } from './player/relatedTrackHistory.ts';
 import { CustomPlayer } from './player/customPlayer.ts';
@@ -8,12 +17,32 @@ import { CustomPlayer } from './player/customPlayer.ts';
 const { container } = vi.hoisted(() => ({
 	container: {
 		logger: { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-		mixerService: { isPreloaded: vi.fn(() => false) },
-		guildService: { getRelated: vi.fn(async () => false) }
+		mixerService: {
+			isPreloaded: vi.fn(() => false),
+			preloadUpcoming: vi.fn(async () => undefined),
+			prepareNextAnalysis: vi.fn(async () => undefined),
+			arm: vi.fn(async () => undefined),
+			supportsOutgoingEnd: vi.fn(async () => false)
+		},
+		guildService: {
+			getRelated: vi.fn(async () => false),
+			getMixerSettings: vi.fn(async () => ({
+				gaplessEnabled: true,
+				crossfadeEnabled: false,
+				automixEnabled: false
+			}))
+		}
 	}
 }));
 
 vi.mock('@sapphire/framework', () => ({ container }));
+vi.mock('../../../services/sponsorBlockService.ts', () => ({
+	sponsorBlockService: {
+		prefetch: vi.fn(),
+		queueChanged: vi.fn(),
+		outgoingEndPositionMs: vi.fn(() => undefined)
+	}
+}));
 
 function track(title: string, identifier: string, duration = 100_000, extra: Record<string, unknown> = {}): Track {
 	return {
@@ -322,5 +351,83 @@ describe('autoPlayRelated transition gate', () => {
 	it('runs normally outside the confirm window', async () => {
 		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() - 60_000 }), track('Current', 'current-id'));
 		expect(container.guildService.getRelated).toHaveBeenCalled();
+	});
+});
+
+describe('queueRelatedUpfront with AutoMix (gapless=false)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(container.guildService.getRelated).mockResolvedValue(true);
+		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({
+			gaplessEnabled: false,
+			crossfadeEnabled: true,
+			automixEnabled: true
+		});
+		vi.mocked(container.mixerService.isPreloaded).mockReturnValue(false);
+	});
+
+	function createPlayerWithCandidate(recommendedTrack: Track) {
+		const currentTrack = track('abcd', 'ref-1', 100_000);
+		const tracks: Track[] = [];
+		const player = {
+			guildId: 'g-upfront',
+			playing: true,
+			repeatMode: 'off',
+			transitionState: { stopByCommand: false },
+			currentEpoch: 1,
+			mixerRuntime: {
+				pending: new Map(),
+				lastTargetUid: null,
+				invalidateTimer: null
+			},
+			relatedTrackHistory: new RelatedTrackHistory(),
+			node: {
+				search: vi.fn(async () => ({
+					loadType: 'playlist',
+					tracks: [recommendedTrack]
+				}))
+			},
+			queue: {
+				current: currentTrack,
+				previous: [] as Track[],
+				tracks,
+				add: vi.fn(async (t: Track) => {
+					tracks.push(t);
+				})
+			}
+		};
+		return { player, currentTrack };
+	}
+
+	it('gapless=false, crossfade=true, automix=true이고 빈 큐일 때 추천곡을 큐에 추가하고 예열한다', async () => {
+		const recommended = track('abce', 'rec-1', 200_000);
+		const { player, currentTrack } = createPlayerWithCandidate(recommended);
+
+		const added = await queueRelatedUpfront(player as never, currentTrack);
+
+		expect(added).toBe(recommended);
+		expect(player.queue.tracks).toHaveLength(1);
+		expect(player.queue.tracks[0]).toBe(recommended);
+		expect(container.mixerService.preloadUpcoming).toHaveBeenCalledWith(player);
+	});
+
+	it('같은 조건에서 handleMixerNeedNext 호출 시 추천곡으로 비어있지 않게 arm한다', async () => {
+		const recommended = track('abce', 'rec-1', 200_000);
+		const { player, currentTrack } = createPlayerWithCandidate(recommended);
+
+		await queueRelatedUpfront(player as never, currentTrack);
+		await handleMixerNeedNext(player as never, {
+			remainingMs: 2000,
+			currentTrackEncoded: currentTrack.encoded!
+		});
+
+		expect(container.mixerService.arm).toHaveBeenCalledWith(
+			player,
+			expect.objectContaining({
+				isEmpty: false,
+				encodedTrack: recommended.encoded
+			}),
+			expect.any(String)
+		);
 	});
 });

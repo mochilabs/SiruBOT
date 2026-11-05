@@ -8,6 +8,7 @@ import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playba
 import { MixerRequestError } from '../../../../services/mixerService.ts';
 import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import type { ArmRequestOptions } from '../../../../services/mixerService.ts';
+import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
 const TRACK_END_CONFIRM_MS = 200; // S1 confirmed B-plan (EventEmitter replaced reason dispatch)
@@ -195,12 +196,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	// 스킵/콜드스타트/오버라이드/트랙스타트가 끼어들면 stale로 판정해 아밍하지 않는다.
 	const triggerEncoded = player.queue.current?.encoded ?? null;
 	const settings = await container.guildService.getMixerSettings(player.guildId).catch(() => null);
-	const gapless = settings?.gaplessEnabled ?? true;
-	const crossfade = settings?.crossfadeEnabled ?? false;
-
-	// gapless/crossfade가 모두 꺼져 있으면 NO_NEXT(isEmpty: true)로 아밍해 서버가 TrackEndEvent를
-	// 내보낸 뒤 cold start를 봇에게 맡긴다. 아밍 경로 자체는 항상 같다 (409 재시도 공유).
-	const shouldArm = gapless || crossfade;
+	const shouldArm = settings ? needsUpcomingTrack(settings) : true;
 
 	const stale = () =>
 		isTtsClip(player.queue.current) ||

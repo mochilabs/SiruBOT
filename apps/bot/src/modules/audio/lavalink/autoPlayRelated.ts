@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from './player/customPlayer.ts';
 import { isYouTubeSource } from '@sirubot/utils';
+import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { notifyQueueMutated } from './queue/queueWrapper.ts';
 import { isSameEncodedTrack } from './handlers/playbackWatchdog.ts';
@@ -269,7 +270,7 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 		if (!currentTrack.info.identifier || !isYouTubeSource(currentTrack.info.sourceName)) return null;
 
 		const settings = await container.guildService.getMixerSettings(gid);
-		if (!settings.gaplessEnabled) return null;
+		if (!needsUpcomingTrack(settings)) return null;
 
 		const selectedTrack = await fetchRelatedCandidate(player, currentTrack);
 		if (!selectedTrack) return null;
