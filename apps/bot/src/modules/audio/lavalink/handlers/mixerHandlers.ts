@@ -6,6 +6,7 @@ import { cancelPendingInvalidate, getTargetNextTrack, getTrackUid, notifyQueueMu
 import { isTtsClip } from '../requester.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
 import { MixerRequestError } from '../../../../services/mixerService.ts';
+import { formatRecordError } from '../../../../services/trackService.ts';
 import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import type { ArmRequestOptions } from '../../../../services/mixerService.ts';
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
@@ -62,11 +63,11 @@ function recordTrackPlayIfNeeded(player: CustomPlayer, track: Track | null): voi
 		player.transitionState.lastRecordedKey = key;
 	}
 	const trackSvc = container.trackService;
-	if (!trackSvc?.increasePlays) return;
-	void trackSvc
-		.increasePlays(track)
-		.then(() => trackSvc.addHistory?.(player.guildId, track))
-		.catch((error) => container.logger?.error?.(`Failed to record track history: ${error}`));
+	if (!trackSvc?.recordPlay) return;
+	// 곡 upsert와 히스토리를 단일 트랜잭션으로 기록한다 — abort 시 함께 롤백되어 FK 위반을 막는다.
+	void trackSvc.recordPlay(player.guildId, track).catch((error) => {
+		container.logger?.error?.(`Failed to record track history: ${formatRecordError(error)}`);
+	});
 }
 
 /**

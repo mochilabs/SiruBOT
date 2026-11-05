@@ -7,6 +7,7 @@ import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
+import { formatRecordError } from '../../../../services/trackService.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { isSameEncodedTrack, normalizeTrackEncoded, syncQueueToNowPlaying } from './playbackWatchdog.ts';
@@ -64,11 +65,10 @@ export class TrackStartOrchestrator {
 		if (startedTrack && !startedTrack.info.isStream && !isTtsClip(startedTrack) && startedKey !== player.transitionState.lastRecordedKey) {
 			player.transitionState.lastRecordedKey = startedKey;
 			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
-			// fire-and-forget
-			this.container.trackService
-				.increasePlays(startedTrack)
-				.then(() => this.container.trackService.addHistory(player.guildId, startedTrack))
-				.catch((error) => this.logger.error(`Failed to record track history: ${error}`));
+			// fire-and-forget — 곡 upsert와 히스토리를 단일 트랜잭션으로 기록(recordPlay)한다.
+			void this.container.trackService.recordPlay(player.guildId, startedTrack).catch((error) => {
+				this.logger.error(`Failed to record track history: ${formatRecordError(error)}`);
+			});
 		}
 
 		// mixer: 필터 보장(정상 경로에서는 primeForPlay가 play 이전에 이미 보낸다 → 여기서는 no-op,
