@@ -100,8 +100,8 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
 	player.mixerRuntime.invalidateTimer = setTimeout(() => {
 		player.mixerRuntime.invalidateTimer = null;
 		void container.mixerService
-			.invalidate(player, epochToInvalidate)
-			.catch((err) => container.logger.warn(`[mixer] invalidate failed (guild ${player.guildId}): ${err}`));
+			?.invalidate?.(player, epochToInvalidate)
+			?.catch((err: unknown) => container.logger?.warn?.(`[mixer] invalidate failed (guild ${player.guildId}): ${err}`));
 	}, 50);
 }
 

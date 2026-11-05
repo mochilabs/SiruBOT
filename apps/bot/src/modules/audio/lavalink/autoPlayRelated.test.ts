@@ -22,7 +22,8 @@ const { container } = vi.hoisted(() => ({
 			preloadUpcoming: vi.fn(async () => undefined),
 			prepareNextAnalysis: vi.fn(async () => undefined),
 			arm: vi.fn(async () => undefined),
-			supportsOutgoingEnd: vi.fn(async () => false)
+			supportsOutgoingEnd: vi.fn(async () => false),
+			invalidate: vi.fn(async () => undefined)
 		},
 		guildService: {
 			getRelated: vi.fn(async () => false),

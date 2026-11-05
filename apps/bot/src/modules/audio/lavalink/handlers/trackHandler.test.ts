@@ -524,7 +524,7 @@ function stubPlaybackContainer(mixerOverrides: Record<string, unknown> = {}) {
 			primeForPlay: vi.fn(async () => undefined),
 			...mixerOverrides
 		},
-		trackService: { increasePlays: vi.fn(async () => undefined), addHistory: vi.fn(async () => undefined) },
+		trackService: { recordPlay: vi.fn(async () => undefined) },
 		playerNotifier: {
 			updateController: playerNotifierUpdate,
 			onTrackStart: vi.fn(async () => undefined),
@@ -594,8 +594,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		expect(queueRelatedUpfront).not.toHaveBeenCalled();
 		expect(notifier.onTrackStart).toHaveBeenCalledWith(player);
 		expect(chatTts.drainSoloQueueToAnnounce).toHaveBeenCalledWith(player);
-		expect(tracks.increasePlays).toHaveBeenCalledWith(started);
-		await vi.waitFor(() => expect(tracks.addHistory).toHaveBeenCalledWith('g-1', started));
+		expect(tracks.recordPlay).toHaveBeenCalledWith('g-1', started);
 	});
 
 	it('이전 전이에서 남은 watchdog과 advance-pending 타이머를 정리한다', async () => {
@@ -627,7 +626,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		expect(player.transitionState.lastStartedEncoded).toBe('tts-enc');
 		expect(notifier.onTrackStart).not.toHaveBeenCalled();
 		expect(chatTts.drainSoloQueueToAnnounce).not.toHaveBeenCalled();
-		expect(tracks.increasePlays).not.toHaveBeenCalled();
+		expect(tracks.recordPlay).not.toHaveBeenCalled();
 		expect(player.relatedTrackHistory.toJSON()).toEqual([]);
 		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', clip);
 	});
