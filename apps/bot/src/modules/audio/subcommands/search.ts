@@ -3,8 +3,8 @@ import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getSimpleYouTubeSuggestions } from '../../../services/dataApiClient.ts';
 import {
 	AutocompleteInteraction,
+	ButtonInteraction,
 	ChatInputCommandInteraction,
-	ComponentType,
 	Message,
 	MessageFlags,
 	SlashCommandSubcommandBuilder,
@@ -97,12 +97,15 @@ async function runSelection(
 	selectMessage: Message
 ): Promise<void> {
 	const collector = selectMessage.createMessageComponentCollector({
-		filter: (i) => i.user.id === interaction.user.id && i.customId === view.searchSelectCustomId,
-		componentType: ComponentType.StringSelect,
+		filter: (i) => i.user.id === interaction.user.id && (i.customId === view.searchSelectCustomId || i.customId === view.searchCancelCustomId),
 		time: SELECT_TIMEOUT_MS
 	});
 
+	let settled = false;
+
 	const handleTimeout = async () => {
+		if (settled) return;
+		settled = true;
 		await interaction
 			.editReply({
 				components: [view.searchTimeout()],
@@ -112,10 +115,24 @@ async function runSelection(
 			.catch(() => null);
 	};
 
+	const handleCancel = async (collected: ButtonInteraction<'cached'>) => {
+		if (settled) return;
+		settled = true;
+		collector.stop('cancel');
+		await collected
+			.update({
+				components: [view.searchCancelled()],
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { users: [], roles: [] }
+			})
+			.catch(() => null);
+	};
+
 	const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>) => {
 		await selectInteraction.deferUpdate();
-		collector.off('collect', handleSelect);
-		collector.off('end', handleTimeout);
+		if (settled) return;
+		settled = true;
+		collector.stop('select');
 
 		const index = Number.parseInt(selectInteraction.values[0], 10);
 		const selected = tracks[index];
@@ -141,7 +158,13 @@ async function runSelection(
 		}
 	};
 
-	collector.once('collect', handleSelect);
+	collector.on('collect', (collected) => {
+		if (collected.customId === view.searchCancelCustomId) {
+			void handleCancel(collected as ButtonInteraction<'cached'>);
+			return;
+		}
+		void handleSelect(collected as StringSelectMenuInteraction<'cached'>);
+	});
 	collector.once('end', handleTimeout);
 }
 

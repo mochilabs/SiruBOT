@@ -1,10 +1,12 @@
 import { addSeparator, emoji, createContainer, formatTime } from '@sirubot/utils';
-import { ActionRowBuilder, ContainerBuilder, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Track, UnresolvedTrack } from 'lavalink-client';
 import { truncateText } from '../../../lib/text.ts';
 
 /** /검색 결과 셀렉트 메뉴의 customId — 신규 핸들러는 이 값으로 파싱한다. */
 export const searchSelectCustomId = 'search:select';
+/** 검색 결과 취소 버튼의 customId. */
+export const searchCancelCustomId = 'search:cancel';
 
 /** 트랙 길이(ms)를 formatTime이 기대하는 초 단위로 넘겨 m:ss 포맷으로 만든다. */
 function trackDurationText(track: Track | UnresolvedTrack): string {
@@ -48,6 +50,14 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 
 	container.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
 
+	// 취소 버튼 — 원하는 결과가 없을 때 검색을 취소한다.
+	const cancelButton = new ButtonBuilder()
+		.setCustomId(searchCancelCustomId)
+		.setLabel('취소')
+		.setEmoji(emoji('error'))
+		.setStyle(ButtonStyle.Secondary);
+	container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(cancelButton));
+
 	return container;
 }
 
@@ -55,5 +65,12 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 export function searchTimeout(): ContainerBuilder {
 	return createContainer().addTextDisplayComponents(
 		new TextDisplayBuilder().setContent(`${emoji('hourglass')} 시간이 지나 검색을 취소했어요. 다시 /검색을 사용해 주세요.`)
+	);
+}
+
+/** 검색 취소 안내 — 사용자가 취소 버튼을 눌렀을 때. */
+export function searchCancelled(): ContainerBuilder {
+	return createContainer().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`${emoji('stop')} 검색을 취소했어요. 다시 /검색을 사용해 주세요.`)
 	);
 }

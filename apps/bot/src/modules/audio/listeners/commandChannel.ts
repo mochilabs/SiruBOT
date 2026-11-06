@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { emoji } from '@sirubot/utils';
 import { Events, Listener, UserError } from '@sapphire/framework';
-import { ChannelType, ComponentType, Message, MessageFlags, StringSelectMenuInteraction } from 'discord.js';
+import { ButtonInteraction, ChannelType, Message, MessageFlags, StringSelectMenuInteraction } from 'discord.js';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
@@ -209,20 +209,39 @@ export class CommandChannelListener extends Listener {
 		if (!selectMessage) return;
 
 		const collector = selectMessage.createMessageComponentCollector({
-			filter: (i) => i.user.id === message.author.id && i.customId === searchView.searchSelectCustomId,
-			componentType: ComponentType.StringSelect,
+			filter: (i) =>
+				i.user.id === message.author.id && (i.customId === searchView.searchSelectCustomId || i.customId === searchView.searchCancelCustomId),
 			time: SELECT_TIMEOUT_MS
 		});
 
+		let settled = false;
+
 		const handleTimeout = async () => {
+			if (settled) return;
+			settled = true;
 			await selectMessage.edit({ components: [searchView.searchTimeout()], flags: [MessageFlags.IsComponentsV2] }).catch(() => null);
+			await this.resolveInputMessage(message, player.guildId);
+		};
+
+		const handleCancel = async (collected: ButtonInteraction<'cached'>) => {
+			if (settled) return;
+			settled = true;
+			collector.stop('cancel');
+			await collected
+				.update({
+					components: [searchView.searchCancelled()],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { users: [], roles: [] }
+				})
+				.catch(() => null);
 			await this.resolveInputMessage(message, player.guildId);
 		};
 
 		const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>) => {
 			await selectInteraction.deferUpdate();
-			collector.off('collect', handleSelect);
-			collector.off('end', handleTimeout);
+			if (settled) return;
+			settled = true;
+			collector.stop('select');
 
 			const index = Number.parseInt(selectInteraction.values[0], 10);
 			const selected = tracks[index];
@@ -254,7 +273,13 @@ export class CommandChannelListener extends Listener {
 			}
 		};
 
-		collector.once('collect', handleSelect);
+		collector.on('collect', (collected) => {
+			if (collected.customId === searchView.searchCancelCustomId) {
+				void handleCancel(collected as ButtonInteraction<'cached'>);
+				return;
+			}
+			void handleSelect(collected as StringSelectMenuInteraction<'cached'>);
+		});
 		collector.once('end', handleTimeout);
 	}
 
