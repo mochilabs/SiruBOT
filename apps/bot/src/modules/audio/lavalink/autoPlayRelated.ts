@@ -348,7 +348,15 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 	}
 };
 
-export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack: Track): Promise<void> => {
+export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack?: Track | null): Promise<void> => {
+	// lavalink-client의 queueEnd 호출 시점에 직전 곡이 null로 전달될 수 있으므로
+	// lastPlayedTrack이 없으면 player.queue.previous[0] 또는 player.queue.current를 폴백으로 사용한다
+	const referenceTrack = lastPlayedTrack ?? player.queue.previous?.[0] ?? player.queue.current ?? null;
+	if (!referenceTrack?.info) {
+		container.logger.debug('[autoPlayRelated] No reference track available, skipping fallback');
+		return;
+	}
+
 	// 서버 예열 전이가 진행 중이면 관망한다 — 이 시점의 queue.add는 라이브러리
 	// queueEnd 안에서 current를 새 추천곡으로 시프트해 표시가 실제 재생과 어긋난다
 	// (서버가 이미 예열곡을 시작한 β 시나리오). 정상 전이는 trackStart가 이어준다.
@@ -361,7 +369,7 @@ export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack: Tra
 	}
 	const relatedOn = await container.guildService.getRelated(player.guildId);
 	if (player.repeatMode == 'off' && relatedOn) {
-		if (lastPlayedTrack.info.identifier && isYouTubeSource(lastPlayedTrack.info.sourceName)) {
+		if (referenceTrack.info.identifier && isYouTubeSource(referenceTrack.info.sourceName)) {
 			// trackStart 선예열이 진행 중이면 이중 추가 방지 (선예열쪽이 재생을 이어준다)
 			if (relatedFetchInFlight.has(String(player.guildId))) {
 				container.logger.debug('[autoPlayRelated] Pre-add in flight, skipping fallback');
@@ -375,7 +383,7 @@ export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack: Tra
 				return;
 			}
 
-			const selectedTrack = await fetchRelatedCandidate(player, lastPlayedTrack);
+			const selectedTrack = await fetchRelatedCandidate(player, referenceTrack);
 			if (!selectedTrack) {
 				// 추천 곡을 찾지 못하면 조용히 종료한다.
 				// 종료 안내는 queueEnd 핸들러(handleQueueEnd)가 한 번만 보낸다. (2연타 방지)

@@ -329,13 +329,13 @@ describe('autoPlayRelated transition gate', () => {
 		(container.mixerService.isPreloaded as ReturnType<typeof vi.fn>).mockReturnValue(false);
 	});
 
-	function gatePlayer(transitionState: Record<string, unknown> = {}) {
+	function gatePlayer(transitionState: Record<string, unknown> = {}, previous: unknown[] = []) {
 		return {
 			guildId: 'g',
 			repeatMode: 'off',
 			transitionState,
-			queue: { current: null, tracks: [], previous: [] }
-		} as never;
+			queue: { current: null, tracks: [], previous }
+		} as unknown as CustomPlayer;
 	}
 
 	it('skips while the server-side transition is in flight (preheated slot)', async () => {
@@ -351,6 +351,19 @@ describe('autoPlayRelated transition gate', () => {
 
 	it('runs normally outside the confirm window', async () => {
 		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() - 60_000 }), track('Current', 'current-id'));
+		expect(container.guildService.getRelated).toHaveBeenCalled();
+	});
+
+	it('safely handles null lastPlayedTrack when no reference track is available in queue', async () => {
+		const player = gatePlayer();
+		await expect(autoPlayRelated(player, null)).resolves.not.toThrow();
+		expect(container.guildService.getRelated).not.toHaveBeenCalled();
+	});
+
+	it('falls back to player.queue.previous[0] when lastPlayedTrack is null', async () => {
+		const prev = track('Previous', 'prev-id');
+		const player = gatePlayer({}, [prev]);
+		await autoPlayRelated(player, null);
 		expect(container.guildService.getRelated).toHaveBeenCalled();
 	});
 });

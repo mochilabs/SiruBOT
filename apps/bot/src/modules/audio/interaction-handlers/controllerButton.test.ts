@@ -28,7 +28,15 @@ function context() {
 	const edit = vi.fn().mockResolvedValue(updated);
 	const interaction = {
 		guildId: 'guild',
-		member: { voice: { channel: { id: 'voice' } } },
+		guild: {
+			members: {
+				me: { voice: { channelId: 'voice' } }
+			}
+		},
+		member: {
+			permissions: { has: vi.fn(() => false) },
+			voice: { channel: { id: 'voice' }, channelId: 'voice' }
+		},
 		deferred: true,
 		message: { ...original, edit },
 		deferUpdate: vi.fn().mockResolvedValue(undefined),
@@ -130,10 +138,21 @@ describe('controller button cached rendering', () => {
 
 	it('rejects button interaction when member is in a different voice channel', async () => {
 		const { interaction, player, handler } = context();
-		(interaction.member.voice.channel as any).id = 'other-voice';
+		interaction.member.voice.channelId = 'other-voice';
+		interaction.member.voice.channel.id = 'other-voice';
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 		expect(player.pause).not.toHaveBeenCalled();
+	});
+
+	it('allows administrators to use controller buttons even when not in voice channel', async () => {
+		const { interaction, player, handler } = context();
+		interaction.member.permissions.has.mockReturnValue(true);
+		interaction.member.voice.channelId = null as unknown as string;
+		interaction.member.voice.channel = null as unknown as { id: string };
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		expect(interaction.reply).not.toHaveBeenCalled();
+		expect(player.pause).toHaveBeenCalledTimes(1);
 	});
 
 	it('rejects button interaction when player does not exist', async () => {

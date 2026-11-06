@@ -1,6 +1,6 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits, type StringSelectMenuInteraction } from 'discord.js';
 import { queueList, queueSelectCustomId, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -25,18 +25,19 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 	}
 
 	public async run(interaction: StringSelectMenuInteraction<'cached'>, { selectedValue }: { selectedValue: string }) {
-		// 음성 채널 참여 체크
-		const memberVoice = interaction.member.voice.channel;
+		const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
+		const botVoiceChannelId = interaction.guild.members.me?.voice.channelId ?? player?.voiceChannelId ?? null;
+		const memberVoiceChannelId = interaction.member.voice.channelId;
 
-		if (!memberVoice || (player && memberVoice.id !== player.voiceChannelId)) {
+		// 관리자는 음성 채널에 없어도 사용 가능. 일반 유저는 봇과 같은 음성 채널에 있어야 함
+		if (!isAdmin && (!memberVoiceChannelId || (botVoiceChannelId !== null && memberVoiceChannelId !== botVoiceChannelId))) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
 				components: [errorView(`${emoji('volume_muted')} 봇과 같은 음성 채널에 있어야 사용할 수 있어요.`)]
 			});
 			return;
 		}
-
 		// DJ/Alone 권한 체크
 		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
 			await interaction.reply({
