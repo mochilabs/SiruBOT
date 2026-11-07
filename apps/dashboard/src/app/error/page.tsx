@@ -30,39 +30,21 @@ export default async function ErrorPage({ searchParams }: ErrorPageProps) {
 
 	return (
 		<FocusPageShell>
-			<div className="relative z-10 flex flex-col items-center text-center">
-				<div className="space-y-8">
-					<div className="space-y-3">
-						<h1 className="text-4xl font-black tracking-tighter text-foreground break-keep sm:text-5xl md:text-6xl">
-							{content.title}
-						</h1>
-						<p className="mx-auto max-w-md text-base font-medium leading-relaxed text-muted-foreground break-keep sm:text-lg">
-							{content.description}
-						</p>
-						{error && (
-							<p className="pt-1 font-mono text-2xs text-muted-foreground">
-							코드: {error}
-							</p>
-						)}
-					</div>
+			<div className="space-y-3">
+				<h1 className="break-keep text-4xl font-black tracking-tighter text-foreground sm:text-5xl">{content.title}</h1>
+				<p className="max-w-md break-keep text-base font-medium leading-relaxed text-muted-foreground sm:text-lg">{content.description}</p>
+				{error && <p className="pt-1 font-mono text-2xs text-muted-foreground">코드: {error}</p>}
+			</div>
 
-					<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-						<Link
-							href="/login"
-							className={cn(buttonVariants({ variant: "cta" }), "h-11 w-full gap-2 px-6 text-base font-bold sm:w-auto")}
-						>
-							<RefreshCw className="h-4 w-4" aria-hidden />
-							다시 로그인하기
-						</Link>
-						<Link
-							href="/"
-							className={cn(buttonVariants({ variant: "secondary" }), "h-11 w-full gap-2 px-6 text-base sm:w-auto")}
-						>
-							<ChevronLeft className="h-4 w-4" aria-hidden />
-							홈으로 가기
-						</Link>
-					</div>
-				</div>
+			<div className="flex w-full flex-col items-start gap-3 sm:flex-row">
+				<Link href="/login" className={cn(buttonVariants({ variant: "cta" }), "h-11 w-full gap-2 px-6 text-base font-bold sm:w-auto")}>
+					<RefreshCw className="h-4 w-4" aria-hidden />
+					다시 로그인하기
+				</Link>
+				<Link href="/" className={cn(buttonVariants({ variant: "secondary" }), "h-11 w-full gap-2 px-6 text-base sm:w-auto")}>
+					<ChevronLeft className="h-4 w-4" aria-hidden />
+					홈으로 가기
+				</Link>
 			</div>
 		</FocusPageShell>
 	);
