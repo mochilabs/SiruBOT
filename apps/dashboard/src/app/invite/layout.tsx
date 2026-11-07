@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 
+import { DiscordEmbedLink } from "@/components/discord-embed";
+
 export const metadata: Metadata = {
   title: "봇 초대하기",
   description: "시루봇을 내 Discord 서버에 초대해요.",
@@ -8,5 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function InviteLayout({ children }: { children: ReactNode }) {
-  return children;
+  return (
+    <>
+      <DiscordEmbedLink name="invite" />
+      {children}
+    </>
+  );
 }
