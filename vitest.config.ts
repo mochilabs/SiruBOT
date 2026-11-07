@@ -22,5 +22,7 @@ export default defineConfig({
     include: ["**/*.{test,spec}.ts"],
     exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
     testTimeout: 10_000,
+    // 동시 워커 수를 제한해요 — turbo가 여러 패키지 테스트를 한꺼번에 돌릴 때 시스템 메모리·CPU가 고갈되는 걸 막아요
+    maxWorkers: 2,
   },
 });
