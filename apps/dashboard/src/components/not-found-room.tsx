@@ -72,9 +72,9 @@ export function NotFoundRoom({ className }: { className?: string }) {
 			{/* 음표 */}
 			<g className="fill-primary-control" opacity="0.7">
 				<circle cx="196" cy="128" r="6" />
-				<rect x="200" y="106" width="3" height="23" rx="1.5" />
+				<rect x="198.5" y="106" width="3" height="23" rx="1.5" />
 				<circle cx="238" cy="104" r="5" />
-				<rect x="242" y="86" width="3" height="19" rx="1.5" />
+				<rect x="240" y="86" width="3" height="19" rx="1.5" />
 			</g>
 		</svg>
 
