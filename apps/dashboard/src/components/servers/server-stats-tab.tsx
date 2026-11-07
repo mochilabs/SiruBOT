@@ -12,7 +12,7 @@ import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toError } from "@/lib/api-error";
 import { useAuthedSWR } from "@/lib/swr";
@@ -25,6 +25,9 @@ const RANGE_TABS = [
 ] as const;
 
 type RangeKey = (typeof RANGE_TABS)[number]["key"];
+
+/** 패널 카드 안의 지표 타일 — 카드 위에 카드를 올리지 않고 surface-2 인셋으로 구분해요 */
+const INSET_TILE = "bg-surface-2 shadow-none";
 
 function rangeLabel(range: RangeKey): string {
   return RANGE_TABS.find((item) => item.key === range)?.label ?? range;
@@ -208,55 +211,52 @@ function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey
   if (error) {
     const apiError = toError(error, "통계를 불러오지 못했어요.");
     return (
-      <Card padding="lg">
-        <EmptyState
-          icon={BarChart3}
-          title="통계를 불러오지 못했어요"
-          description={apiError.message}
-          action={
-            <Button size="sm" variant="secondary" onClick={() => mutate()}>
-              다시 시도
-            </Button>
-          }
-        />
-      </Card>
+      <EmptyState
+        icon={BarChart3}
+        title="통계를 불러오지 못했어요"
+        description={apiError.message}
+        action={
+          <Button size="sm" variant="secondary" onClick={() => mutate()}>
+            다시 시도
+          </Button>
+        }
+      />
     );
   }
   if (isLoading || !data) {
     return (
-      <div className="space-y-4">
-        <SkeletonCard lines={2} />
-        <SkeletonCard lines={4} />
+      <div role="status" aria-label="로딩 중" className="space-y-3">
+        <Skeleton.Line width="100%" height="h-20" />
+        <Skeleton.Line width="100%" height="h-40" />
       </div>
     );
   }
 
   if (data.totalPlays === 0) {
     return (
-      <Card padding="lg">
-        <EmptyState
-          icon={BarChart3}
-          title="이 기간에 재생 기록이 없어요"
-          description="기간을 바꾸거나, Discord에서 곡을 재생하면 통계가 쌓여요."
-        />
-      </Card>
+      <EmptyState
+        icon={BarChart3}
+        title="이 기간에 재생 기록이 없어요"
+        description="기간을 바꾸거나, Discord에서 곡을 재생하면 통계가 쌓여요."
+      />
     );
   }
 
   return (
-    <div className="space-y-4 animate-page-in">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={Play} label="총 재생" value={data.totalPlays} />
+    <div className="space-y-6 animate-page-in">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard className={INSET_TILE} icon={Play} label="총 재생" value={data.totalPlays} />
         <StatCard
+          className={INSET_TILE}
           icon={BarChart3}
           label="재생한 날"
           value={`${data.dailyCounts.length}일`}
           sub={data.period.first && data.period.last ? `${formatDate(data.period.first)} ~ ${formatDate(data.period.last)}` : undefined}
         />
-        <StatCard icon={Music} label="기간" value={rangeLabel(range)} />
+        <StatCard className={INSET_TILE} icon={Music} label="기간" value={rangeLabel(range)} />
       </div>
 
-      <Card padding="lg" className="gap-4">
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground">많이 재생된 트랙</h3>
           <Badge variant="primary" size="sm">
@@ -264,17 +264,17 @@ function ServerStatsPanel({ guildId, range }: { guildId: string; range: RangeKey
           </Badge>
         </div>
         <TopTrackList tracks={data.topTracks} />
-      </Card>
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card padding="lg" className="gap-4">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="space-y-3">
           <h3 className="text-sm font-bold text-foreground">요청자 순위</h3>
           <RequesterList requesters={data.topRequesters} />
-        </Card>
-        <Card padding="lg" className="gap-4">
+        </section>
+        <section className="space-y-3">
           <h3 className="text-sm font-bold text-foreground">일별 재생</h3>
           <DailyBars dailyCounts={data.dailyCounts} />
-        </Card>
+        </section>
       </div>
     </div>
   );
@@ -284,13 +284,13 @@ export default function ServerStatsTab({ guildId }: { guildId: string }) {
   const [range, setRange] = useState<RangeKey>("7");
 
   return (
-    <div className="space-y-2">
+    <Card padding="lg" className="gap-6 overflow-visible">
       <PanelHeader
         icon={<BarChart3 className="h-5 w-5" />}
         title="통계"
         description="기간별 재생 기록과 요청자 순위를 확인해요."
       />
-      <Tabs value={range} onValueChange={(key) => setRange(key as RangeKey)} aria-label="통계 기간 필터" className="mb-4">
+      <Tabs value={range} onValueChange={(key) => setRange(key as RangeKey)} aria-label="통계 기간 필터">
         <TabsList>
           {RANGE_TABS.map((item) => (
             <TabsTrigger key={item.key} value={item.key}>
@@ -302,6 +302,6 @@ export default function ServerStatsTab({ guildId }: { guildId: string }) {
       <div role="tabpanel" className="outline-none">
         <ServerStatsPanel guildId={guildId} range={range} />
       </div>
-    </div>
+    </Card>
   );
 }

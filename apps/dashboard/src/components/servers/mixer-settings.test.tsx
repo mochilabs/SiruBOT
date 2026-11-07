@@ -24,7 +24,7 @@ import { MixerSettings } from "./mixer-settings";
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 describe("AutoMix 설정 화면", () => {
-  it("기본값과 비활성 조절기를 표시하고 AutoMix 활성화는 크로스페이드와 함께 저장해요", async () => {
+  it("꺼짐 상태에서는 조절기를 숨기고 AutoMix 활성화는 크로스페이드와 함께 저장해요", async () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
     const host = document.createElement("div");
@@ -32,9 +32,9 @@ describe("AutoMix 설정 화면", () => {
     const root = createRoot(host);
     try {
       await act(async () => { root.render(<MixerSettings guildId="fixture" />); });
-      expect(host.textContent).toContain("6%");
-      expect(host.textContent).toContain("0.30");
-      expect(host.querySelectorAll('[data-slot="slider"][data-disabled]')).toHaveLength(3);
+      // 전환 방식이 꺼짐이면 길이·AutoMix 조절기는 아예 그리지 않아요
+      expect(host.querySelector('[aria-label="겹치기 길이"]')).toBeNull();
+      expect(host.querySelector('[aria-label="최대 템포 변경"]')).toBeNull();
       const modeSelect = host.querySelector<HTMLButtonElement>('[aria-label="곡 전환 방식"]');
       expect(modeSelect).toBeDefined();
       await act(async () => { modeSelect?.click(); });

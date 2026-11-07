@@ -10,7 +10,6 @@ import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { RoleSelect } from "@/components/discord/role-select";
 import { Field } from "@/components/primitives/field";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -19,14 +18,9 @@ import { toApiError, toError } from "@/lib/api-error";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import { createApiFetcher } from "@/lib/swr";
 
-import {
-  ChannelListError,
-  InfoBox,
-  PanelError,
-  PanelHeader,
-  PanelLoading,
-  SaveBar,
-} from "./settings-shared";
+import { SettingsPanel } from "./settings-panel";
+import { SettingsSection } from "./settings-section";
+import { ChannelListError, InfoBox } from "./settings-shared";
 import { TicketManagePanel } from "./ticket-manage-panel";
 
 const ticketFetcher = createApiFetcher<TicketConfig>(
@@ -91,27 +85,26 @@ export function TicketSettings({ guildId }: { guildId: string }) {
     }
   }, [url, form, mutate]);
 
-  if (isLoading) return <PanelLoading label="티켓 설정 불러오는 중" />;
-  if (error) {
-    return (
-      <PanelError
-        error={toError(error, "티켓 설정을 불러오지 못했어요.")}
-        onRetry={() => mutate()}
-      />
-    );
-  }
-
-  const dirty = dirtyRef.current;
+  const panel = {
+    form: isLoading ? null : form,
+    isLoading,
+    error: error ? toError(error, "티켓 설정을 불러오지 못했어요.") : null,
+    dirty: dirtyRef.current,
+    saving,
+    handleSave,
+    reload: () => void mutate(),
+  };
 
   return (
-    <div className="space-y-6">
-      <PanelHeader
-        icon={<TicketIcon size={20} />}
-        title="티켓 시스템"
-        description="유저가 비공개 상담 채널을 열어 관리자/스태프와 1:1로 소통할 수 있는 기능이에요."
-      />
-
-      <Card padding="lg" className="space-y-6">
+    <SettingsPanel
+      panel={panel}
+      icon={<TicketIcon size={20} />}
+      title="티켓 시스템"
+      description="유저가 비공개 상담 채널을 열어 관리자/스태프와 1:1로 소통할 수 있는 기능이에요."
+    >
+      {() => (
+        <>
+        <SettingsSection title="기본" summary={form.enabled ? "켬" : "끔"} defaultOpen>
         <Field
           label="티켓 기능 활성화"
           description="티켓 생성 패널과 오픈 버튼 동작을 활성화해요."
@@ -189,11 +182,14 @@ export function TicketSettings({ guildId }: { guildId: string }) {
           )}
         </Field>
 
+        </SettingsSection>
+
+        <SettingsSection title="제한" summary={`유저당 ${form.maxOpenPerUser}개`}>
         <Field
           label="유저당 동시 오픈 티켓 수"
           description="유저 한 명이 동시에 열어둘 수 있는 최대 티켓 개수예요 (도배 방지)."
         >
-          <Slider
+          <Slider hideLabel
             value={form.maxOpenPerUser}
             onChange={(val) => patch({ maxOpenPerUser: val })}
             min={1}
@@ -204,6 +200,9 @@ export function TicketSettings({ guildId }: { guildId: string }) {
           />
         </Field>
 
+        </SettingsSection>
+
+        <SettingsSection title="패널 문구" summary={form.panelTitle || undefined}>
         <Field
           label="패널 제목"
           description="디스코드 채널에 게시될 티켓 오픈 패널의 제목이에요."
@@ -229,17 +228,13 @@ export function TicketSettings({ guildId }: { guildId: string }) {
             placeholder="아래 버튼을 눌러 담당자와 1:1 비공개 상담 채널을 개설해요."
           />
         </Field>
-      </Card>
+        </SettingsSection>
 
-      <SaveBar
-        dirty={dirty}
-        saving={saving}
-        onSave={handleSave}
-      />
-
-      <Card>
-        <TicketManagePanel guildId={guildId} />
-      </Card>
-    </div>
+          <SettingsSection title="티켓 목록">
+            <TicketManagePanel guildId={guildId} />
+          </SettingsSection>
+        </>
+      )}
+    </SettingsPanel>
   );
 }

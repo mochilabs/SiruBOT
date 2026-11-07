@@ -23,6 +23,8 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
   }
   return {
     volume: guild.volume,
+    ttsVolume: guild.ttsVolume,
+    ttsDuckLevel: guild.ttsDuckLevel,
     repeat: (["off", "track", "queue"].includes(guild.repeat)
       ? guild.repeat
       : "off") as GuildSettings["repeat"],

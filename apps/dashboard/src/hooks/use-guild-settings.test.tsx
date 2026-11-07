@@ -12,7 +12,7 @@ vi.mock("swr", () => ({ default: () => ({ data: remote.settings, mutate: remote.
 vi.mock("@/hooks/use-session-redirect", () => ({ useSessionExpiredRedirect: () => vi.fn() }));
 
 const saved: GuildSettings = {
-  volume: 100, repeat: "off", related: false, enableController: true,
+  volume: 100, ttsVolume: 100, ttsDuckLevel: 0.2, repeat: "off", related: false, enableController: true,
   sponsorBlockSegments: ["sponsor", "intro"], djRoleId: null, textChannelId: null,
   voiceChannelId: null, pinnedChannelId: null, pinnedChannelMode: "play",
   pinnedChannelDeleteInput: false, jtcEnabled: false, jtcCategoryId: null,
