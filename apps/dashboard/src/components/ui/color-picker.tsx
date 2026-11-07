@@ -1,6 +1,7 @@
 "use client";
 
 import { type KeyboardEvent,useCallback, useEffect, useRef, useState } from "react";
+import { Popover } from "@base-ui/react/popover";
 
 import { Input } from "@/components/ui/input";
 import { clamp01, HEX_COLOR_PATTERN, hexToHsv, type Hsv,hsvToHex, normalizeHex } from "@/lib/color";
@@ -88,102 +89,116 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 	const swatchStyle = { backgroundColor: hsvToHex(hsv.h, hsv.s, hsv.v) };
 
 	return (
-		<div className={cn("space-y-2", className)}>
-			<div className="flex items-stretch gap-2">
-				{/* 채도·명도 표면 — 가로는 채도, 세로는 명도 */}
-				<div
-					ref={svRef}
-					role="slider"
-					tabIndex={disabled ? -1 : 0}
-					aria-label={`${label} 채도와 명도`}
-					aria-valuemin={0}
-					aria-valuemax={100}
-					aria-valuenow={Math.round(hsv.s * 100)}
-					aria-valuetext={`채도 ${Math.round(hsv.s * 100)}%, 명도 ${Math.round(hsv.v * 100)}%`}
-					aria-disabled={disabled}
-					onKeyDown={onSvKeyDown}
-					onPointerDown={(event) => {
-						if (disabled) return;
-						event.currentTarget.setPointerCapture(event.pointerId);
-						draggingRef.current = true;
-						pickFromSv(event.clientX, event.clientY, false);
-					}}
-					onPointerMove={(event) => {
-						if (!draggingRef.current || disabled) return;
-						pickFromSv(event.clientX, event.clientY, false);
-					}}
-					onPointerUp={(event) => {
-						if (!draggingRef.current) return;
-						draggingRef.current = false;
-						pickFromSv(event.clientX, event.clientY, true);
-					}}
-					onPointerCancel={() => {
-						draggingRef.current = false;
-					}}
-					className={cn(
-						"relative h-36 w-full max-w-56 touch-none rounded-control shadow-control-boundary select-none",
-						disabled ? "cursor-not-allowed opacity-50" : "cursor-crosshair",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					)}
-					style={{
-						background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent), hsl(${hsv.h} 100% 50%)`
-					}}
-				>
-					<span
-						aria-hidden
-						className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md ring-1 ring-black/25"
-						style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, ...swatchStyle }}
-					/>
-				</div>
+		<div className={cn("flex flex-wrap items-center gap-2", className)}>
+			<Popover.Root>
+				<Popover.Trigger
+					disabled={disabled}
+					aria-label={`${label} 색 선택기 열기`}
+					className="h-9 w-9 shrink-0 cursor-pointer rounded-control shadow-control-boundary transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+					style={swatchStyle}
+				/>
+				<Popover.Portal>
+					<Popover.Positioner sideOffset={8} align="start" className="z-(--z-overlay)">
+						<Popover.Popup className="w-72 max-w-[calc(100vw-2rem)] origin-(--transform-origin) rounded-menu bg-popover p-3 shadow-2xl outline-none">
+							<Popover.Title className="sr-only">{label} 색 선택</Popover.Title>
+							<div className="flex items-stretch gap-2">
+							{/* 채도·명도 표면 — 가로는 채도, 세로는 명도 */}
+							<div
+								ref={svRef}
+								role="slider"
+								tabIndex={disabled ? -1 : 0}
+								aria-label={`${label} 채도와 명도`}
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={Math.round(hsv.s * 100)}
+								aria-valuetext={`채도 ${Math.round(hsv.s * 100)}%, 명도 ${Math.round(hsv.v * 100)}%`}
+								aria-disabled={disabled}
+								onKeyDown={onSvKeyDown}
+								onPointerDown={(event) => {
+									if (disabled) return;
+									event.currentTarget.setPointerCapture(event.pointerId);
+									draggingRef.current = true;
+									pickFromSv(event.clientX, event.clientY, false);
+								}}
+								onPointerMove={(event) => {
+									if (!draggingRef.current || disabled) return;
+									pickFromSv(event.clientX, event.clientY, false);
+								}}
+								onPointerUp={(event) => {
+									if (!draggingRef.current) return;
+									draggingRef.current = false;
+									pickFromSv(event.clientX, event.clientY, true);
+								}}
+								onPointerCancel={() => {
+									draggingRef.current = false;
+								}}
+								className={cn(
+									"relative h-40 w-full touch-none rounded-control shadow-control-boundary select-none",
+									disabled ? "cursor-not-allowed opacity-50" : "cursor-crosshair",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								)}
+								style={{
+									background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent), hsl(${hsv.h} 100% 50%)`
+								}}
+							>
+								<span
+									aria-hidden
+									className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md ring-1 ring-black/25"
+									style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, ...swatchStyle }}
+								/>
+							</div>
 
-				{/* 색상 바 — 위에서 아래로 0°→360° */}
-				<div
-					ref={hueRef}
-					role="slider"
-					tabIndex={disabled ? -1 : 0}
-					aria-label={`${label} 색상`}
-					aria-valuemin={0}
-					aria-valuemax={360}
-					aria-valuenow={Math.round(hsv.h)}
-					aria-valuetext={`${Math.round(hsv.h)}도`}
-					aria-disabled={disabled}
-					onKeyDown={onHueKeyDown}
-					onPointerDown={(event) => {
-						if (disabled) return;
-						event.currentTarget.setPointerCapture(event.pointerId);
-						draggingRef.current = true;
-						pickFromHue(event.clientY, false);
-					}}
-					onPointerMove={(event) => {
-						if (!draggingRef.current || disabled) return;
-						pickFromHue(event.clientY, false);
-					}}
-					onPointerUp={(event) => {
-						if (!draggingRef.current) return;
-						draggingRef.current = false;
-						pickFromHue(event.clientY, true);
-					}}
-					onPointerCancel={() => {
-						draggingRef.current = false;
-					}}
-					className={cn(
-						"relative w-4 shrink-0 rounded-full shadow-control-boundary select-none",
-						disabled ? "cursor-not-allowed opacity-50" : "cursor-ns-resize",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					)}
-					style={{
-						background: "linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)"
-					}}
-				>
-					<span
-						aria-hidden
-						className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md ring-1 ring-black/25"
-						style={{ top: `${(hsv.h / 360) * 100}%`, ...swatchStyle }}
-					/>
-				</div>
-			</div>
+							{/* 색상 바 — 위에서 아래로 0°→360° */}
+							<div
+								ref={hueRef}
+								role="slider"
+								tabIndex={disabled ? -1 : 0}
+								aria-label={`${label} 색상`}
+								aria-valuemin={0}
+								aria-valuemax={360}
+								aria-valuenow={Math.round(hsv.h)}
+								aria-valuetext={`${Math.round(hsv.h)}도`}
+								aria-disabled={disabled}
+								onKeyDown={onHueKeyDown}
+								onPointerDown={(event) => {
+									if (disabled) return;
+									event.currentTarget.setPointerCapture(event.pointerId);
+									draggingRef.current = true;
+									pickFromHue(event.clientY, false);
+								}}
+								onPointerMove={(event) => {
+									if (!draggingRef.current || disabled) return;
+									pickFromHue(event.clientY, false);
+								}}
+								onPointerUp={(event) => {
+									if (!draggingRef.current) return;
+									draggingRef.current = false;
+									pickFromHue(event.clientY, true);
+								}}
+								onPointerCancel={() => {
+									draggingRef.current = false;
+								}}
+								className={cn(
+									"relative w-4 shrink-0 rounded-full shadow-control-boundary select-none",
+									disabled ? "cursor-not-allowed opacity-50" : "cursor-ns-resize",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								)}
+								style={{
+									background: "linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)"
+								}}
+							>
+								<span
+									aria-hidden
+									className="pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md ring-1 ring-black/25"
+									style={{ top: `${(hsv.h / 360) * 100}%`, ...swatchStyle }}
+								/>
+							</div>
+						</div>
 
-			<div className="flex flex-wrap items-center gap-2">
+						</Popover.Popup>
+					</Popover.Positioner>
+				</Popover.Portal>
+			</Popover.Root>
 				<HexInput value={normalized} label={label} disabled={disabled} onChange={onChange} onCommit={onCommit} />
 				{presets.length > 0 && (
 					<div role="radiogroup" aria-label={`${label} 색 프리셋`} className="flex items-center gap-2.5">
@@ -213,7 +228,6 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 						))}
 					</div>
 				)}
-			</div>
 		</div>
 	);
 }
