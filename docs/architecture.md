@@ -1,6 +1,7 @@
 # SiruBOT 아키텍처
 
-> **문서 기준일**: 2026-10-15 (2026-10-20 추기) · 검증 방식: 각 섹션에 명시한 소스 경로의 **실제 라인**을 읽고 작성했습니다.
+> **문서 기준일**: 2026-11-07 (2026-10-15 최초 작성, 2026-11-07 갱신) · 검증 방식: 각 섹션에 명시한 소스 경로를 읽고 작성했습니다.
+> **갱신 노트(2026-11-07)**: 티켓·역할 패널·소셜 알림·TTS·관리자 패널·임베드 복구 등 이후 추가분을 반영했습니다. 모델 수·서비스 목록·채널 맵·허브 목록은 현재 코드로 다시 확인했고, 본문의 `파일:라인` 인용은 최초 작성 시점 기준이라 **경로는 유효하지만 라인 번호는 어긋났을 수 있습니다**(경로로 찾으세요).
 > 코드가 우선입니다. 인용된 `파일경로:라인범위`는 코드 변경 시 함께 갱신해 주세요.
 > 각 앱은 독립 프로세스이며, 서로는 아래 "공유 계약"(Redis 채널·HTTP 인증·WS 프로토콜)으로만 통신합니다.
 
@@ -33,7 +34,7 @@ SiruBOT은 단일 저장소(모노레포)에 6개의 독립 프로세스 앱과 
 | 앱 | `apps/shardmanager` | 봇 프로세스(샤드) 할당·헬스 집계 WS 서버 | Fastify 5 + @fastify/websocket |
 | 앱 | `apps/storage` | 오브젝트 스토리지 — 인증 업로드·공개 GET(디스코드 임베드 에셋 서빙) | Fastify 5 (포트 3003) |
 | 앱 | `apps/notifier` | 소셜 알림 — YouTube·트위치·치지직 구독 폴링·디스코드 웹훅 발행 | Fastify 5 (포트 3004) |
-| 패키지 | `packages/prisma` | PostgreSQL 스키마·Prisma 클라이언트 (10모델) | Prisma 7 + PrismaPg |
+| 패키지 | `packages/prisma` | PostgreSQL 스키마·Prisma 클라이언트 (19모델) | Prisma 7 + PrismaPg |
 | 패키지 | `packages/shardclient` | shardmanager 접속용 WS 클라이언트(재시도·백오프 내장) | ws |
 | 패키지 | `packages/utils` | Redis 채널 상수·페이로드 스키마·공용 유틸 | zod |
 
@@ -160,27 +161,30 @@ graph BT
 - `setupAudio()` — LavalinkManager 조립, Redis에서 이전 노드 세션 ID를 읽어 **resume** 준비 (`:115-120`)
 - `setupStore()` — `src/modules/{audio,general,voice,games}` 패키지 스토어 등록 (`:39-42`, 디렉터리 실존 확인)
 
-**서비스 인벤토리** (`src/services/`, 24파일 — `botApplication.ts:90-113` 등록 기준):
+**서비스 인벤토리** (`src/services/`, `botApplication.ts` `setupServices()` 등록 기준):
 
 | 그룹 | 서비스 | 역할 |
 |---|---|---|
-| 도메인 | `guildService` `trackService` `playlistService` `audioService` `mixerService` `tempVoiceService` `aiMemoryService` `trackData` | 길드 설정 캐시·트랙/플레이리스트·오디오·믹싱·임시방(JTC)·AI 장기기억 |
-| Redis 구독 응답자 | `guildSettingsInvalidator` `guildDataResponder` `playerWebResponder` `jtcSetupResponder` `botProfileService` `memberGreetingService` | data-api 허브 요청에 답장하거나 브로드캐스트를 소비 (§5.2 채널 맵) |
-| 리포트/연동 | `playbackReporter` `dataApiClient` `ohaasaTranslate` `appEmojiManager` | 재생 이벤트 리포트, data-api HTTP 클라이언트, 운세 번역, 길드 이모지 |
-| 모듈(컨테이너 미등록) | `customCommands/{store,interpreter,slashRegistry}` + 접두사 리스너(`general/listeners/message/customCommandPrefix.ts`) + 슬래시 핸들러(`general/listeners/interaction/customCommandSlash.ts`) | 스펙 v2(메시지·CV2 디자인·대기·역할 부여/제거·리액트·고정·지연 삭제·if 분기·인수 치환 `{argv0}`~) + 실행 제한(access). `CustomCommand` 테이블 + 길드별 메모리 캐시(TTL 60초), 실행 전 spec zod 재검증·역할 위계 재검증. 실행 방식(method)이 'prefix'면 "접두사+이름" 트리거(3초 쿨다운·`!도움말` 목록), 'slash'면 길드 애플리케이션 커맨드로 등록(ID 기반 증분 동기화, 길드당 20슬롯) 후 슬래시로 실행 (`customCommand.ts`, `interpreter.ts`, `slashRegistry.ts`, `customCommandPrefix.ts`, `customCommandSlash.ts`) |
+| 도메인 | `guildService` `trackService` `playlistService` `audioService` `mixerService` `tempVoiceService` `aiMemoryService` `ticketService` `rolePanelService` | 길드 설정 캐시·트랙/플레이리스트·오디오·믹싱(크로스페이드·AutoMix)·임시방(JTC)·AI 장기기억·티켓·역할 패널 |
+| TTS | `ttsService` `ttsUserSettings` `chatTtsService` | 채팅 TTS(siru_tts) 합성 요청·유저별 설정·채팅 읽기 |
+| Redis 구독 응답자 | `guildSettingsInvalidator` `guildDataResponder` `playerWebResponder` `jtcSetupResponder` `botProfileService` `memberGreetingService` `socialWebhookResponder` `botAdminResponder` `panelPostResponder` `roleValidationResponder` | data-api·notifier 허브 요청에 답장하거나 브로드캐스트를 소비 (§5.2 채널 맵). 서명 키는 `REDIS_AUTH_KEY ?? AUTH_KEY` |
+| 리포트/연동 | `playbackReporter` `dataApiClient` `embedFixGateway` `appEmojiManager` | 재생 이벤트 리포트, data-api HTTP 클라이언트, 임베드 복구 메타데이터(data-api 대행), 길드 이모지 |
+| 보조(파일 단위) | `sponsorBlockService` `skipPolicy` `playlistPlayback` `countingState` `webhookRelay` `userDataService` `ticketTranscript` | SponsorBlock 스킵·스킵 판정·플레이리스트 재생·카운팅 채널 상태·원작자 이름 웹훅 릴레이·`/개인정보` 열람·삭제·티켓 대화 기록 |
+| 모듈(컨테이너 미등록) | `customCommands/{store,interpreter,slashRegistry}` + 접두사 리스너(`general/listeners/message/customCommandPrefix.ts`) + 슬래시 핸들러(`general/listeners/interaction/customCommandSlash.ts`) | 스펙 v2(메시지·CV2 디자인·대기·역할 부여/제거·리액트·고정·지연 삭제·if 분기·인수 치환 `{argv0}`~) + 실행 제한(access). `CustomCommand` 테이블 + 길드별 메모리 캐시(TTL 60초), 실행 전 spec zod 재검증·역할 위계 재검증. 실행 방식(method)이 'prefix'면 "접두사+이름" 트리거(3초 쿨다운·`!도움말` 목록), 'slash'면 길드 애플리케이션 커맨드로 등록(ID 기반 증분 동기화, 길드당 20슬롯) 후 슬래시로 실행 |
+| 역할 패널 모듈 | `general/commands/rolepanel.ts` `general/interaction-handlers/rolePanelButton.ts` `general/listeners/reaction/rolePanelReaction.ts` `general/view/rolePanel.ts` | `/역할패널` 게시·목록·삭제, 버튼 클릭 처리, 반응 추가/제거 처리 (§6.5) |
 
 **오디오 이벤트 경로**: 재생 상태는 봇이 `sirubot:player:{guildId}` 채널로 퍼블리시하고, 유일 구독자인 data-api `playerHub`가 SSE로 대시보드에 중계합니다(`packages/utils/src/redisChannels.ts:68-80`, `apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts`).
 
-**종료 순서**(`core/bootstrap.ts:99-118`): health 서버 close → **Lavalink 노드 세션을 Redis에 저장**(Redis가 끊기면 저장 스킵 — 거짓 성공 로그 방지) → 리스너·구독 정리 → Redis → DB → 게이트웨이 destroy. data-api 쪽 close 순서는 `apps/data-api/src/server.ts:71-83`: 스케줄러 stop → 6개 허브 stop → Redis → DB → Fastify.
+**종료 순서**(`core/bootstrap.ts:99-118`): health 서버 close → **Lavalink 노드 세션을 Redis에 저장**(Redis가 끊기면 저장 스킵 — 거짓 성공 로그 방지) → 리스너·구독 정리 → Redis → DB → 게이트웨이 destroy. data-api 쪽 close 순서는 `apps/data-api/src/server.ts:71-83`: 스케줄러 stop → 8개 허브 stop(panelHub 포함) → Redis → DB → Fastify.
 
 ### 4.2 apps/data-api
 
 `buildServer()` 조립 순서(`src/server.ts:19-86`):
 
-1. Redis 연결 + **6개 허브 기동**: playerHub · botProfileHub · memberGreetingHub · guildDataHub · playerWebHub · jtcSetupHub (`:22-28`)
+1. Redis 연결 + **8개 허브 기동**: playerHub · botProfileHub · memberGreetingHub · guildDataHub · playerWebHub · jtcSetupHub · botAdminHub · panelHub(패널 게시 + 역할 검증) (`src/server.ts` 상단 `start*Hub` 호출)
 2. canvas 한글 폰트 프리로드 (첫 렌더가 폰트 로드로 지연되지 않도록) (`:30-32`)
 3. OpenAI 호환 번역 프로바이더 (미설정 시 원문 운세 서빙 경고) (`:34-41`)
-4. auth 플러그인 + 라우트 등록 — Lavalink REST 주소/비밀번호 주입 (검색 프록시용) (`:51-58`)
+4. auth 플러그인 + 라우트 등록 — Lavalink REST 주소/비밀번호(검색 프록시용), notifier·storage 주소/키(소셜 구독·티켓 대화 기록 프록시용) 주입
 5. 운세 스케줄러 (매일 KST 06:50 캐시 선-채움) (`:60`)
 6. DB 연결 + **메모리 정리 nightly 스케줄러** — DB+프로바이더가 있을 때만 활성 (`:64-69`)
 
@@ -188,14 +192,14 @@ graph BT
 
 ```mermaid
 graph TB
-    R1["routes/<br/>index · dashboard · serveCached"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · lavalinkSearch · translate"]
-    R1 --> S["services/ 허브 6종 +<br/>ohaasaScheduler · memoryTidy · playbackStore · db · memoryFile"]
+    R1["routes/<br/>index · dashboard · serveCached · panel · social · storage · bot-admin · ai · embed-fix"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · lavalinkSearch · translate"]
+    R1 --> S["services/ 허브 8종 +<br/>ohaasaScheduler · memoryTidy · playbackStore · db · memoryFile"]
     R1 --> RD["renderers/<br/>profileCard(Ticket/Dark) · memberGreetingCard · ohaasaCard · nowPlayingCard · canvasUtils"]
     P --> U["utils/<br/>sharedCache · dedup · breaker · metrics · hubSubscriber"]
     S --> U
 ```
 
-**봇 릴레이 실패 매핑**(`src/routes/index.ts:72-101`, 3개 릴레이 흐름(guild-data·player-web·jtc-setup) 공통):
+**봇 릴레이 실패 매핑**(`src/routes/common.ts` `replyBotRelayFailure`, guild-data·player-web·jtc-setup·bot-admin·panel-post·role-validation 릴레이 공통):
 
 | 사유 | HTTP | 의미 |
 |---|---|---|
@@ -216,6 +220,13 @@ graph TB
 | `GET /v1/youtube/suggestions` | YouTube.js 검색 자동완성 | 10분 |
 | `GET /v1/sponsorblock/segments` | SponsorBlock skip 구간 | 24시간, 빈 결과 1시간, 양성 stale 7일 |
 | `GET /v1/delivery/track` | 택배 조회(tracker.delivery) | 5분 |
+| `POST /v1/internal/panel/post` | 티켓·역할 패널 게시를 봇에 위임 (panelHub, Redis request/reply) | — |
+| `POST /v1/internal/role-panel/validate-roles` | 저장 전 역할 부여 가능 여부 검증을 봇에 위임 | — |
+| `POST /v1/internal/bot-admin` | 관리자 패널의 봇 제어(Lavalink 노드·앱 이모지·스토어 리로드) | — |
+| `GET·POST·PATCH·DELETE /v1/guilds/:guildId/social/subscriptions` 외 | 소셜 알림 구독 CRUD·채널 해석(YouTube·트위치·치지직)을 notifier에 프록시 | — |
+| `POST /v1/embed-fix/metadata` | X·인스타그램·BOOTH 임베드 복구 메타데이터 | 프로바이더 캐시 |
+| `POST /v1/ai/custom-command-draft` · `-refine` | 커스텀 명령어 AI 초안·반복 수정 | — |
+| storage 프록시(`routes/storage.ts`) | 티켓 대화 기록(transcript) 업로드·다운로드 — 비공개 버킷 하나로 고정 | — |
 | `POST /v1/playback/events` · `GET /v1/playback/recent` | 샤드 재생 이벤트 수집/조회 (`services/playbackStore.ts`) | — |
 | `POST /v1/image/profile` 등 | canvas PNG 렌더(프로필·인사·운세·Now Playing 카드) | — |
 | `/dashboard` | 내장 모니터링 대시보드(서드파티 0) — 인증 면제 대상 (`routes/index.ts:110-111`) | — |
@@ -315,6 +326,12 @@ sequenceDiagram
 | `sirubot:player-web:response` | 봇 | data-api playerWebHub | requestId 상관 응답(타임아웃 포함) | `:104-115` |
 | `sirubot:jtc-setup:request` | data-api | 해당 길드 봇 | JTC 마커 채널 생성·이동 — 유저 OAuth 토큰으로 불가한 봇 토큰 작업 | `:117-127` |
 | `sirubot:jtc-setup:response` | 봇 | data-api jtcSetupHub | requestId 상관 응답 | `:126-127` |
+| `sirubot:social:webhook-create:request` / `:response` | notifier ⇄ 해당 길드 봇 | notifier 웹훅 생성 허브 | 소셜 구독 생성 중 채널 웹훅 생성(Manage Webhooks는 봇만 보유). requestId 상관 | `redisChannels.ts` `SOCIAL_WEBHOOK_CREATE_*` |
+| `sirubot:bot-admin:request` / `:response` | data-api ⇄ 봇 | data-api botAdminHub | 관리자 패널(/admin)의 Lavalink 노드 상태·재연결·앱 이모지 동기화·스토어 리로드 | `BOT_ADMIN_*` |
+| `sirubot:panel-post:request` / `:response` | data-api ⇄ 해당 길드 봇 | data-api panelHub | 티켓·역할 패널 메시지 게시(봇 토큰 필요) → messageId 응답. `refresh` 플래그로 게시 메시지 제자리 갱신 | `PANEL_POST_*`, `packages/utils/src/panelPost.ts` |
+| `sirubot:role-validation:request` / `:response` | data-api ⇄ 해당 길드 봇 | data-api panelHub | 역할 패널 저장 전 roleIds 부여 가능 여부 검증 → invalidRoleIds 응답 | `ROLE_VALIDATION_*`, `packages/utils/src/rolePanel.ts` |
+
+> **메시지 서명**: 위 request/reply 채널의 메시지는 `wrapRedisMessage`/`unwrapRedisMessage`(`packages/utils/src/redisEnvelope.ts`) envelope로 서명됩니다. 키는 `REDIS_AUTH_KEY ?? AUTH_KEY`이며 둘 다 없으면 서명 없는 구버전 모드입니다. `guild-settings:invalidate`는 대시보드가 직접 퍼블리시해서 서명 대상이 아닙니다.
 
 ### 5.3 HTTP 인증 규약
 
@@ -397,6 +414,43 @@ flowchart LR
 
 대시보드 설정 저장(API Route → DB) → data-api가 `sirubot:guild-settings:invalidate` 퍼블리시 → **모든** 봇 프로세스가 구독, 자기 캐시의 해당 길드만 비움 → 다음 조회가 DB에서 재-읽기(`redisChannels.ts:6-13`). 플레이어 실시간 상태는 이와 반대 방향(봇 → data-api → SSE)으로 흐르는데, **봇의 데이터 캐시에 대한 유일한 외부 수정 경로**가 이 무효화 브로드캐스트입니다.
 
+### 6.5 역할 패널: 게시와 역할 부여 (버튼 · 반응)
+
+패널 메시지는 봇 토큰으로만 보낼 수 있어 §6.2 패턴을 그대로 씁니다.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as 대시보드 API Route
+    participant DA as data-api panelHub
+    participant R as Redis
+    participant B as 봇 panelPostResponder
+    participant D as Discord
+    actor U as 사용자
+
+    W->>W: 길드 소유 확인 (panel.guildId == guildId)
+    W->>DA: POST /v1/internal/panel/post {guildId, type:rolePanel, panelId, channelId}
+    DA->>R: PUBLISH sirubot:panel-post:request (서명)
+    R-->>B: 해당 길드 보유 프로세스만 수신
+    B->>D: 메시지 게시 (mode=reaction이면 버튼 순서대로 반응 추가)
+    B->>B: DB에 channelId/messageId 기록 후 이전 메시지 삭제
+    B-->>R: PUBLISH sirubot:panel-post:response {messageId}
+    R-->>DA: requestId 상관
+    DA-->>W: 200 {messageId, channelId}
+    U->>D: 버튼 클릭 또는 반응 추가/제거
+    D->>B: interaction / messageReactionAdd·Remove
+    B->>B: DB 검증 후 역할 부여·해제
+```
+
+- **방식(`RolePanel.mode`)**: `button`(버튼 클릭 토글, 최대 25개) 또는 `reaction`(반응 추가=부여·제거=해제, 이모지 필수·중복 불가·최대 20개). 한 패널은 하나만 씁니다.
+- **DB가 진실의 원천**: 버튼은 길드·현재 게시 메시지·customId의 roleId가 DB와 모두 맞아야 동작하고(낡은 메시지는 거부), 반응은 DB의 이모지→역할 매핑으로만 동작합니다.
+- **안전장치**: 모든 조회·게시·삭제는 길드 소유를 함께 검사합니다. Administrator·서버/역할/채널 관리 등 위험 권한이 있는 역할, 관리형·@everyone·봇보다 높은 역할은 부여를 거부합니다(`RolePanelService.isRoleAssignable`).
+- **편집 반영**: 대시보드 PUT은 버튼을 id 기준 upsert해 기존 id를 유지하고, 게시된 패널이 있으면 `refresh` 요청으로 메시지를 제자리 갱신(반응은 목록과 동기화)합니다.
+- **캐시**: 반응 이벤트가 메시지마다 DB를 치지 않도록 `findReactionPanel`이 30초 캐시를 두고, 게시·갱신·삭제 때 무효화합니다(같은 봇 프로세스 한정).
+- **한계**: 봇이 꺼져 있던 동안의 반응은 놓치며 재동기화하지 않습니다. 반응 모드는 봇의 반응 추가·메시지 관리 권한이 필요하고, `Partials.Reaction`·`Partials.User`가 켜져 있어야 재시작 전 메시지의 반응도 받습니다(`core/bootstrap.ts`).
+
+근거: `apps/bot/src/services/{rolePanelService,panelPostResponder,roleValidationResponder}.ts`, `apps/bot/src/modules/general/{commands/rolepanel.ts,interaction-handlers/rolePanelButton.ts,listeners/reaction/rolePanelReaction.ts}`, `apps/data-api/src/{routes/panel.ts,services/panelHub.ts}`, `apps/dashboard/src/app/api/servers/[id]/role-panels/**`, `packages/utils/src/{rolePanel.ts,panelPost.ts}`.
+
 ---
 
 ## 7. 부팅·종료 시퀀스 (봇)
@@ -426,20 +480,25 @@ flowchart TD
 
 **PostgreSQL + Prisma 7 (PrismaPg 어댑터)** — `packages/prisma/src/schema.prisma:11-13`(provider postgresql), 클라이언트 생성 `botApplication.ts:71-76`(봇)·`apps/data-api/src/services/db.ts`(data-api). **⚠️ 루트 `package.json:10`의 `mysql2` resolution은 레거시 잔재입니다** — 실제 프로바이더는 postgresql이므로 정리 후보입니다.
 
-**모델 11개**(`schema.prisma`):
+**모델 19개**(`schema.prisma`, 라인은 2026-11-07 기준):
 
 | 모델 | 라인 | 대략의 역할 |
 |---|---|---|
-| `Guild` | 15 | 서버 설정 원장 — 볼륨·컨트롤러·DJ·JTC·크로스페이드·AI 채팅 범위 등 |
-| `Track` | 73 | 트랙 메타 |
-| `User` | 92 | 유저 |
-| `UserToken` | 108 | 유저 토큰(대시보드 OAuth 연동 추정 — 사용처 확인 필요) |
-| `GameRecord` | 123 | 게임 기록 |
-| `GuildTrackHistory` | 136 | 길드별 재생 이력 |
-| `Playlist` / `PlaylistTrack` | 150 / 165 | 커스텀 플레이리스트 |
-| `ChannelChatHistory` | 180 | AI 채널 대화 이력 |
-| `UserMemory` | 190 | AI 장기 기억(data-api nightly 정리 대상) |
-| `CustomCommand` | 57 | 길드별 커스텀 명령어 정의 (스펙 JSON + 실행 방식 method('prefix'/'slash', 생성 후 불변) + 슬래시 등록 ID, §4.1 customCommands 참조) |
+| `Guild` | 10 | 서버 설정 원장 — 볼륨·컨트롤러·DJ·JTC·크로스페이드·AutoMix·AI 채팅 범위 등 |
+| `CustomCommand` | 86 | 길드별 커스텀 명령어 정의 (스펙 JSON + 실행 방식 method('prefix'/'slash', 생성 후 불변) + 슬래시 등록 ID, §4.1 customCommands 참조) |
+| `GuildAsset` | 108 | 길드 이미지 에셋 메타데이터(apps/storage 파일, 커스텀 명령어의 썸네일·미디어 갤러리가 url로 참조) |
+| `Track` | 128 | 트랙 메타 |
+| `User` | 145 | 유저 |
+| `UserToken` | 162 | 유저 토큰(대시보드 OAuth 연동 추정 — 사용처 확인 필요) |
+| `GameRecord` | 177 | 게임 기록 |
+| `GuildTrackHistory` | 190 | 길드별 재생 이력 |
+| `Playlist` / `PlaylistTrack` | 204 / 219 | 커스텀 플레이리스트 |
+| `ChannelChatHistory` | 234 | AI 채널 대화 이력 |
+| `TtsUserSetting` | 244 | 유저별 채팅 TTS 설정 |
+| `UserMemory` | 261 | AI 장기 기억(data-api nightly 정리 대상) |
+| `SocialSubscription` / `SocialEventLog` | 277 / 311 | 소셜 알림 구독(YouTube·트위치·치지직)과 발행 이력 (notifier가 사용) |
+| `TicketConfig` / `Ticket` | 325 / 343 | 티켓 기능 설정과 개별 티켓 (대화 기록은 storage 비공개 버킷) |
+| `RolePanel` / `RolePanelButton` | 369 / 389 | 길드당 여러 개의 셀프 역할 패널(`mode`: button·reaction)과 버튼(역할·라벨·이모지·스타일·순서), 마이그레이션 `20261106000000_role_panel`·`20261107000000_role_panel_mode` |
 
 **Redis**는 세 계열로 씁니다: ① Lavalink 노드 세션·큐 영속(`modules/audio/lavalink/redisStore.ts`, 종료 저장 `bootstrap.ts:100-118`), ② §5.2 허브 채널, ③ data-api 공유 캐시(`sharedCache`).
 
@@ -449,7 +508,7 @@ flowchart TD
 
 - **Turborepo 파이프라인**(`turbo.json`): `build` = `^typecheck ^generate ^build` 의존(`:4-8`), `typecheck` = `^build ^generate`(`:31-35`), `test` = `^generate ^build`(`:36-39`), `dev`은 캐시 비활성+persistent(`:12-15`). Prisma 클라이언트 생성(`yarn generate`)이 typecheck/build/test의 선행 조건입니다.
 - **CI(`.github/workflows/lint.yml`)**: push/PR 트리거(`:3`), Node 22(`:24-27`), `yarn install --immutable`(`:30`) → `yarn lint`(`:33`) → `yarn typecheck`(`:36`) → `yarn test`(`:39`). 이미지 파이프라인: `docker-publish.yml`, `docker-beta.yml`.
-- **Docker**: 루트 Dockerfile이 봇·대시보드·shardmanager·data-api·storage·notifier 6개 타겟을 각각 빌드(`Dockerfile`, `README.ko.md:186-196` 동기화됨). 컴포즈: `docker/docker-compose.yml`, `docker-stack.yml`, `docker-stack-infra.yml`.
+- **Docker**: 루트 Dockerfile이 봇·대시보드·shardmanager·data-api·storage·notifier 6개 타겟을 각각 빌드(`Dockerfile`, `README.ko.md:186-196` 동기화됨). 컴포즈: `docker/docker-compose.yml`, `docker-stack.yml`(bot·shardmanager·dashboard·data-api·storage, 이미지 `ghcr.io/mochilabs/sirubot-*:beta`), `docker-stack-infra.yml`(redis 8·postgres 볼륨). 2026-11-07 기준 `docker-stack.yml`에는 notifier 서비스가 없습니다(Dockerfile 타겟은 존재).
 - **테스트**: 워크스페이스별 vitest(`--passWithNoTests`). 봇·data-api·utils·dashboard·storage·notifier·shardclient·shardmanager에 테스트 존재, prisma는 없음.
 
 ---
@@ -473,6 +532,11 @@ flowchart TD
 | `OPENAI_COMPATIBLE_API_URL` / `OPENAI_API_KEY` / `TRANSLATION_MODEL` | — | — | 🔸 운세 번역·기억 정리 | — |
 | `CUSTOM_COMMAND_DRAFT_MODEL` | — | — | 🔸 초안·반복 수정 모델, 미설정 시 `TRANSLATION_MODEL`로 폴백 (`config/env.ts:13-14`, `server.ts:42-47`) | — |
 | `PORT` · `HOSTNAME` · `DISCORD_WEBHOOK_URL` (shardmanager) | — | — | — | ✅ `server.ts:25,28` |
+| `REDIS_AUTH_KEY` (없으면 `AUTH_KEY`) | ✅ Redis 메시지 서명 | — | ✅ 같은 키 공유 (`redisEnvelope.ts`) | — |
+| `LAVALINK_REST_URL` / `LAVALINK_PASSWORD` | — | — | 🔸 YouTube 검색 프록시 | — |
+| `NOTIFIER_URL` / `NOTIFIER_AUTH_KEY` | — | — | 🔸 소셜 구독 프록시 (기본 `http://localhost:3004`, 키는 `AUTH_KEY` 폴백) | — |
+| `STORAGE_URL` / `STORAGE_AUTH_KEY` | — | — | 🔸 티켓 대화 기록 프록시 (기본 `http://localhost:3003`, 키는 `AUTH_KEY` 폴백) | — |
+| `MEMORY_TIDY_ENABLED` / `MEMORY_TIDY_AT` / `MEMORY_TIDY_BATCH_SIZE` | — | — | 🔸 기억 정리 스케줄(기본 켜짐·`00:00`·40) | — |
 
 ---
 

@@ -1,6 +1,6 @@
 # data-api HTTP 계약
 
-> **기준일**: 2026-10-15
+> **기준일**: 2026-11-07 (엔드포인트 표는 2026-11-07에 현재 라우트 파일 기준으로 보강, `코드` 열의 라인은 최초 작성 시점 기준이라 어긋났을 수 있음)
 
 공유 채널·플로우 상위는 `./architecture.md` (`5.2 Redis Pub/Sub 채널 맵`, `6.2 Redis request/reply`, `6.3 외부 제공자 캐싱`) 참조. 본 문서는 HTTP 라우트 실측 기준이다.
 
@@ -48,13 +48,22 @@
 | GET `/v1/greeting/state/:guildId` | 인사 테스트 결과 폴링 | — | `routes/index.ts:897` |
 | GET `/v1/guilds/:guildId/channels` | 봇 캐시 채널 목록 | — | `routes/index.ts:912` |
 | GET `/v1/guilds/:guildId/roles` | 봇 캐시 역할 목록 | — | `routes/index.ts:924` |
+| POST `/v1/internal/panel/post` | 티켓·역할 패널 게시를 봇에 위임 (body: guildId·type·panelId?·channelId?·refresh?) | request/reply, 실패 매핑은 아래 | `routes/panel.ts` |
+| POST `/v1/internal/role-panel/validate-roles` | 저장 전 역할 부여 가능 여부 검증 (body: guildId·roleIds ≤25 → invalidRoleIds) | request/reply | `routes/panel.ts` |
+| POST `/v1/internal/bot-admin` | 관리자 패널 봇 제어 (Lavalink 노드·앱 이모지·스토어 리로드) | request/reply | `routes/bot-admin.ts` |
+| GET `/v1/guilds/:guildId/members` | 봇 캐시 멤버 조회 | — | `routes/guild-data.ts` |
+| GET·POST·PATCH·DELETE `/v1/guilds/:guildId/social/subscriptions[/:id]` | 소셜 알림 구독 CRUD (notifier 프록시) | — | `routes/social.ts` |
+| POST `/v1/social/{youtube,twitch}/resolve` · `/v1/social/chzzk/profile` · GET `/v1/social/chzzk/search` | 소셜 채널 식별자 해석·치지직 검색 (notifier 프록시) | — | `routes/social.ts` |
+| POST `/v1/embed-fix/metadata` | X(fxtwitter)·인스타그램·BOOTH 임베드 복구 메타데이터 | 프로바이더 캐시 | `routes/embed-fix.ts` |
+| GET `/v1/delivery/carriers` | 택배사 목록 | — | `routes/cache-providers.ts` |
+| storage 프록시 | 티켓 대화 기록 업로드·다운로드 (비공개 버킷 고정, 키 `{guildId}/{ticketId}.json.gz`) | — | `routes/storage.ts` |
 | GET `/v1/chapters?videoId=&durationMs=` | YouTube.js 챕터 | 12시간, 빈 결과 1시간 | `routes/cache-providers.ts` |
 | GET `/v1/youtube/suggestions?q=` | YouTube.js 검색 자동완성 | 10분 | `routes/cache-providers.ts` |
 | GET `/v1/sponsorblock/segments?videoId=` | SponsorBlock skip 구간 (ms) | 24시간, 빈 결과 1시간, 양성 stale 7일 | `routes/cache-providers.ts` |
 
 ## 에러 매핑
 
-릴레이 3종(길드 데이터·플레이어 웹·JTC)이 같은 규칙 (`routes/index.ts:75-98`):
+릴레이(길드 데이터·플레이어 웹·JTC·봇 관리·패널 게시·역할 검증)가 같은 규칙 (`routes/index.ts:75-98`):
 
 | 사유 | HTTP | 코드 |
 |---|---|---|
