@@ -58,6 +58,7 @@ declare module '@sapphire/pieces' {
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		ticketService: import('../services/ticketService.ts').TicketService;
+		rolePanelService: import('../services/rolePanelService.ts').RolePanelService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
 		playerWebResponder?: import('../services/playerWebResponder.ts').PlayerWebResponder;
 		jtcSetupResponder?: import('../services/jtcSetupResponder.ts').JtcSetupResponder;
@@ -67,6 +68,8 @@ declare module '@sapphire/pieces' {
 		socialWebhookResponder?: import('../services/socialWebhookResponder.ts').SocialWebhookResponder;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
 		botAdminResponder?: BotAdminResponder;
+		panelPostResponder?: import('../services/panelPostResponder.ts').PanelPostResponder;
+		roleValidationResponder?: import('../services/roleValidationResponder.ts').RoleValidationResponder;
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };
 	}

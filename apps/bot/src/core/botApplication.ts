@@ -22,6 +22,7 @@ import { ChatTtsService } from '../services/chatTts.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { TicketService } from '../services/ticketService.ts';
+import { RolePanelService } from '../services/rolePanelService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { PlayerWebResponder } from '../services/playerWebResponder.ts';
 import { JtcSetupResponder } from '../services/jtcSetupResponder.ts';
@@ -31,6 +32,8 @@ import { MemberGreetingService } from '../services/memberGreetingService.ts';
 import { GuildDataResponder } from '../services/guildDataResponder.ts';
 import { AppEmojiManager } from '../services/appEmojiManager.ts';
 import { BotAdminResponder } from '../services/botAdminResponder.ts';
+import { PanelPostResponder } from '../services/panelPostResponder.ts';
+import { RoleValidationResponder } from '../services/roleValidationResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -110,6 +113,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.tempVoiceService = new TempVoiceService();
 		container.aiMemoryService = new AiMemoryService();
 		container.ticketService = new TicketService();
+		container.rolePanelService = new RolePanelService();
 
 		// Redis 구독 서비스군 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
 		const subscriberLogger = {
@@ -129,6 +133,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.guildDataResponder = new GuildDataResponder(subscriberLogger, redisSigningKey);
 		container.socialWebhookResponder = new SocialWebhookResponder(subscriberLogger, redisSigningKey);
 		container.botAdminResponder = new BotAdminResponder(subscriberLogger, redisSigningKey);
+		container.panelPostResponder = new PanelPostResponder(subscriberLogger, redisSigningKey);
+		container.roleValidationResponder = new RoleValidationResponder(subscriberLogger, redisSigningKey);
 		container.appEmojiManager = new AppEmojiManager();
 	}
 

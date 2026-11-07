@@ -24,6 +24,8 @@ export default createConfig({
 		'src/delivery.ts',
 		'src/client.ts',
 		'src/ticket.ts',
+		'src/rolePanel.ts',
+		'src/panelPost.ts',
 		'src/botAdmin.ts',
 		'src/memoryFile.ts'
 	],

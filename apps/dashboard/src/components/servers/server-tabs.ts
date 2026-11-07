@@ -18,5 +18,6 @@ export const SERVER_TABS = [
   { key: "social", label: "소셜 알림" },
   { key: "greeting", label: "멤버" },
   { key: "ticket", label: "티켓" },
+  { key: "role-panels", label: "역할 패널" },
 ] as const;
 export type ServerTabKey = (typeof SERVER_TABS)[number]["key"];

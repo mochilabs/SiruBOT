@@ -102,6 +102,16 @@
             "import": "./dist/ticket.js",
             "require": "./dist/ticket.cjs"
         },
+        "./rolePanel": {
+            "types": "./dist/rolePanel.d.ts",
+            "import": "./dist/rolePanel.js",
+            "require": "./dist/rolePanel.cjs"
+        },
+        "./panelPost": {
+            "types": "./dist/panelPost.d.ts",
+            "import": "./dist/panelPost.js",
+            "require": "./dist/panelPost.cjs"
+        },
         "./botAdmin": {
             "types": "./dist/botAdmin.d.ts",
             "import": "./dist/botAdmin.js",

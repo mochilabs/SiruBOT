@@ -90,7 +90,8 @@ export const main = async () => {
 			// 고정 채널(commandChannel) 입력을 받으려면 메시지 본문이 필요 — 프리빌리지 인텐트, 개발자 포털에서도 활성화해야 함
 			GatewayIntentBits.MessageContent
 		],
-		partials: [Partials.Channel, Partials.GuildMember, Partials.Message]
+		// Reaction·User: 재시작 전에 게시한 역할 패널 메시지의 반응 이벤트도 받으려면 partial이 필요해요
+		partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User]
 	});
 
 	// Handle graceful shutdown — 셋업 성공 여부와 무관하게 즉시 등록한다.
@@ -139,6 +140,8 @@ export const main = async () => {
 		await container.guildDataResponder?.stop().catch(() => null);
 		await container.socialWebhookResponder?.stop().catch(() => null);
 		await container.botAdminResponder?.stop().catch(() => null);
+		await container.panelPostResponder?.stop().catch(() => null);
+		await container.roleValidationResponder?.stop().catch(() => null);
 		// 종료 전에 저널을 비운다 — Redis를 끊은 뒤엔 pending 큐/플레이어 변경이 소실된다.
 		// 세션 저장(위)은 Redis 연결이 필요한 첫 단계고, 여기서 남은 저널을 마저 민 뒤 끊는다.
 		if (container.redisStore) {
@@ -208,6 +211,12 @@ export const main = async () => {
 		// 실패해도 부팅은 계속돼요 — 구독 추가만 타임아웃 폴백해요 (기존 알림 전송은 웹훅이라 무관해요).
 		await container.socialWebhookResponder?.start(envParseString('REDIS_URL'));
 		await container.botAdminResponder?.start(envParseString('REDIS_URL'));
+		// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
+		// 실패해도 부팅은 계속돼요 — 대시보드 직접 게시만 타임아웃 폴백해요.
+		await container.panelPostResponder?.start(envParseString('REDIS_URL'));
+		// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
+		// 실패해도 부팅은 계속돼요 — 대시보드 저장 전 검증만 타임아웃 폴백해요.
+		await container.roleValidationResponder?.start(envParseString('REDIS_URL'));
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
 

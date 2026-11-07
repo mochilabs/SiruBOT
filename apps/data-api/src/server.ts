@@ -18,6 +18,7 @@ import { startGuildDataHub, stopGuildDataHub } from './services/guildDataHub.ts'
 import { startPlayerWebHub, stopPlayerWebHub } from './services/playerWebHub.ts';
 import { startJtcSetupHub, stopJtcSetupHub } from './services/jtcSetupHub.ts';
 import { startBotAdminHub, stopBotAdminHub } from './services/botAdminHub.ts';
+import { startPanelHub, stopPanelHub } from './services/panelHub.ts';
 
 export async function buildServer(env: Env) {
 	const logger = getLogger('server');
@@ -30,6 +31,7 @@ export async function buildServer(env: Env) {
 	await startPlayerWebHub(env.REDIS_URL);
 	await startJtcSetupHub(env.REDIS_URL);
 	await startBotAdminHub(env.REDIS_URL);
+	await startPanelHub(env.REDIS_URL);
 
 	// 이미지 렌더 폰트는 부팅 시 1회 로드 — 첫 카드 요청이 폰트 로드에 막히지 않아요.
 	// (렌더러의 ensureKoreanFont() 호출은 안전망으로 남아 있어요)
@@ -96,6 +98,7 @@ export async function buildServer(env: Env) {
 		await stopPlayerWebHub();
 		await stopJtcSetupHub();
 		await stopBotAdminHub();
+		await stopPanelHub();
 		await sharedCache.disconnect();
 		await disconnectDb();
 		await fastify.close();
