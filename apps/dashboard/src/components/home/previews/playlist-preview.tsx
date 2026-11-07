@@ -32,7 +32,7 @@ export function PlaylistPreview() {
 	const equalizerAnimating = inView && !shouldReduce;
 
 	return (
-		<div ref={ref} className="relative pb-10 pr-2">
+		<div ref={ref}>
 			<div className="space-y-3 rounded-card bg-surface-2 p-3">
 				<div className="flex items-center gap-3 pb-3">
 					{/* 앨범아트 2×2 스택 */}
@@ -78,17 +78,6 @@ export function PlaylistPreview() {
 						</m.div>
 					))}
 				</m.div>
-			</div>
-			{/* 재생 중 상태 — 보관함 데모의 이퀄라이저와 같은 모티프 (실제 상태: 보관함을 채널에서 이어재생) */}
-			<div
-				aria-hidden
-				className="absolute bottom-0 left-2 flex w-52 -rotate-2 items-center gap-2.5 rounded-card bg-surface-1 p-3 shadow-lg sm:left-8"
-			>
-				<Equalizer animate={equalizerAnimating} />
-				<div className="min-w-0">
-					<p className="truncate text-2xs font-bold text-foreground">내 노래모음 재생 중</p>
-					<p className="text-2xs text-muted-foreground">채널에서 이어서 재생</p>
-				</div>
 			</div>
 		</div>
 	);

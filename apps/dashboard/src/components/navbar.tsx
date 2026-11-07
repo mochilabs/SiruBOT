@@ -98,7 +98,7 @@ export function Navbar() {
         루트의 overflow-x-clip은 스크롤 컨테이너를 만들지 않으므로 sticky가 깨지지 않아요 */}
     <div
       className={`sticky top-0 z-(--z-overlay) flex flex-col border-b border-transparent transition-colors duration-base ${scrolled
-          ? "bg-background/70 backdrop-blur-xl border-border-subtle shadow-sm"
+          ? "bg-background border-border-subtle shadow-sm"
           : "bg-transparent"
         }`}
     >
@@ -122,7 +122,7 @@ export function Navbar() {
             {/* Desktop Menu — 브랜드 옆에 붙여 왼쪽에 모아요 (가운데는 여백, 액션은 우측 밀착) */}
             <div className="relative ml-6 hidden md:flex items-center gap-1 lg:ml-8 lg:gap-2">
               {indicator && (
-                // transform x로만 이동해요 — left/width를 애니메이션하면 backdrop-blur 레이어가
+                // transform x로만 이동해요 — left/width를 애니메이션하면 레이어가
                 // 매 프레임 재계산되며 텍스트가 세로로 겹쳐 보이는 잔상이 생겨요
                 <m.div
                   className="absolute top-0 bottom-0 left-0 rounded-menu bg-primary-control/10 will-change-transform"

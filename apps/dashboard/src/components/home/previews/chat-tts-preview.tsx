@@ -170,7 +170,6 @@ export function ChatTtsPreview() {
 			<div className="flex items-center justify-between gap-3 border-t border-discord-btn-active px-4 py-3">
 				<div className="min-w-0">
 					<p className="truncate text-sm font-medium text-discord-text">채팅 읽어주기</p>
-					<p className="text-2xs text-discord-text-muted">켜두면 새 채팅을 순서대로 읽어줘요</p>
 				</div>
 				<Switch size="sm" checked={ttsOn} onChange={setTtsOn} aria-label="채팅 읽어주기" />
 			</div>
