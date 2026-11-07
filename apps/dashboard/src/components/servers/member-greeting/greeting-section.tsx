@@ -123,32 +123,27 @@ export function GreetingSection({
   return (
     <TabsContent
       value={asTabContent}
-      className="mt-5 min-w-0 space-y-5"
+      className="mt-1 min-w-0 space-y-5"
       keepMounted
     >
       <section
         aria-label={`${meta.heading} 인사 설정`}
         className="min-w-0 space-y-5"
       >
-        <div>
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-foreground">
-              {meta.heading}
-            </h3>
-            <div className="flex items-center gap-2">
-              {dirty && <Badge size="sm">변경됨</Badge>}
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<RotateCcw size={14} />}
-                onClick={onReset}
-                disabled={saving || !dirty}
-              >
-                초기화
-              </Button>
-            </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 text-xs text-muted-foreground sm:text-sm">{meta.description}</p>
+          <div className="flex shrink-0 items-center gap-2">
+            {dirty && <Badge size="sm">변경됨</Badge>}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<RotateCcw size={14} />}
+              onClick={onReset}
+              disabled={saving || !dirty}
+            >
+              초기화
+            </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{meta.description}</p>
         </div>
 
         <div className="grid min-w-0 gap-3 sm:grid-cols-2">
