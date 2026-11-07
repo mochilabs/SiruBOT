@@ -8,7 +8,7 @@
 
 - 키: `DATA_API_AUTH_KEY ?? AUTH_KEY` 폴백. 둘 다 없으면 **기동 거부(fail-closed)** — `process.exit(1)` (`apps/data-api/src/plugins/auth.ts:17-22`).
 - 인증 면제는 `/api/health`뿐 (`apps/data-api/src/plugins/auth.ts:8`). 비교는 sha256 `timingSafeEqual` (`auth.ts:11-15`).
-- 호출 측은 `Authorization` 헤더에 **Bearer 없이 키 원문** (`apps/dashboard/src/lib/data-api.ts:38-57`). data-api·봇·대시보드 3개 앱이 같은 키 공유.
+- 호출 측은 `Authorization` 헤더에 **Bearer 없이 키 원문** (`apps/dashboard/src/lib/data-api/client.ts`). data-api·봇·대시보드 3개 앱이 같은 키 공유.
 - 키 미설정 시 대시보드는 호출 전면 스킵 → 채널/역할/플레이어 연동이 502처럼 보인다.
 
 ## 엔드포인트 (전수: `apps/data-api/src/routes/index.ts`)

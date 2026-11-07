@@ -31,7 +31,7 @@
 
 - `LAVALINK_HOSTS`: `id_host_port[_password]` 콤마 목록 (예 `main_localhost_2333_youshallnotpass`). 파서는 `packages/utils/src/lavalinkHosts.ts:4-34`, 형식 오류 시 기동 전 throw.
 - data-api 키: `DATA_API_AUTH_KEY ?? AUTH_KEY` — 3개 앱이 같은 키 공유, `Authorization` 헤더에 Bearer 없이 원문. 값 예시는 각 `.env.example` 참조 (본 문서에 비밀값 기재 금지).
-- 키 미설정 시 대시보드는 data-api 호출을 전면 스킵한다 (`apps/dashboard/src/lib/data-api.ts:38-57`).
+- 키 미설정 시 대시보드는 data-api 호출을 전면 스킵한다 (`apps/dashboard/src/lib/data-api/client.ts`).
 
 ## 수동 명령어 동기화
 

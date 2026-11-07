@@ -8,7 +8,7 @@ const logger = getLogger('dispatcher');
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks';
 const WEBHOOK_TIMEOUT_MS = 10_000;
-// 배달 실패 연속 5회 → 구독을 FAILED로 표시하고 재시도를 멈춰요 (plan §8).
+// 배달 실패 연속 5회 → 구독을 FAILED로 표시하고 재시도를 멈춰요.
 const MAX_CONSECUTIVE_FAILURES = 5;
 const FAILURE_COUNTER_TTL_SECONDS = 30 * 24 * 60 * 60;
 const RETRY_AFTER_MAX_SECONDS = 60;
@@ -70,7 +70,7 @@ export class SocialDispatcher {
 
 		// 팬아웃: 해당 소스를 구독 중인 활성 구독만.
 		// 구독 생성 시점보다 오래된 콘텐츠는 알림에서 제외해요.
-		// 신규 구독 직후 RSS 감사가 과거 영상 15개를 전부 뿜는 백필 폭발을 막아요 (plan §7).
+		// 신규 구독 직후 RSS 감사가 과거 영상 15개를 전부 뿜는 백필 폭발을 막아요.
 		const subscriptions = await db.socialSubscription
 			.findMany({
 				where: {

@@ -18,7 +18,7 @@ export interface GreetingPresetGradient {
 }
 
 /**
- * 브랜드 프리셋 hex 12값 — DESIGN.md 브랜드 팔레트(로즈 핑크/플럼 다크/골드 secondary)의 그라디언트라서
+ * 브랜드 프리셋 hex 12값 — 브랜드 팔레트 그라디언트라서
  * 프리셋 자체가 브랜드 정체성이에요. 사진 배경이 아니라 브랜드 그라디언트를 제공하는 이유. 값 변경은 시각적 계약 변경이에요.
  */
 export const GREETING_PRESET_GRADIENTS: Record<string, GreetingPresetGradient> = {

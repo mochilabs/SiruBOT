@@ -1,71 +1,95 @@
-# SiruBOT: Agent Instructions
+# SiruBOT Agent Instructions
 
-Monorepo (Turborepo + Yarn v4 workspaces): `apps/bot` (Sapphire/Discord.js music bot), `apps/dashboard` (Next.js 16), `apps/data-api` (Fastify 게이트웨이 — canvas 이미지 렌더링·외부 프로바이더 캐시·Redis 허브·LLM 배치·길드 데이터 request/reply(채널/역할 봇 캐시 프록시)), `apps/shardmanager` (Fastify WS), `apps/storage` (Fastify 오브젝트 스토리지), `apps/notifier` (Fastify 소셜 알림 웹훅·스케줄러); `packages/prisma|shardclient|utils|app-kit`.
+Discord music bot platform monorepo (Turborepo + Yarn 4 workspaces, Node 22+, ESM).
 
-## Branch rule
+| Workspace | Role | Port |
+|---|---|---|
+| `apps/bot` | Music bot: Sapphire (discord.js) + lavalink-client | — |
+| `apps/dashboard` | Web dashboard, Next.js 16 App Router | 3000 |
+| `apps/shardmanager` | Shard assignment WS server for bot processes (Fastify) | 3001 |
+| `apps/data-api` | Gateway: external API cache, Redis hub, canvas rendering, LLM batch jobs (Fastify) | 3002 |
+| `apps/storage` | Object storage with public URLs for Discord embeds (Fastify, no DB) | 3003 |
+| `apps/notifier` | Polls YouTube/Twitch/Chzzk and posts Discord webhooks (Fastify) | 3004 |
+| `packages/prisma` | PostgreSQL schema + client (`src/schema.prisma`) | |
+| `packages/utils` | Redis channels, zod contracts, shared utilities | |
+| `packages/app-kit` | Shared Fastify auth, env validation, logger | |
+| `packages/shardclient` | shardmanager WS client | |
 
-Every code change must start on a feature/fix/refactor branch created from `beta` (or `main`). Never commit directly to `beta`/`main`.
+Write everything under `docs/` in English. In docs, cite file paths only, never line numbers.
 
-## PR rules
+Deeper references: architecture `docs/architecture.md`, API contracts `docs/api-{dashboard,data-api}.md`, local setup `docs/setup-dev.md`, operations `docs/runbook-production.md`.
 
-PR은 **항상 `beta`를 base로 열어요.** `main`은 배포 스냅샷이고, 모든 변경은 `beta`를 거쳐 머지돼요. `gh pr create`의 base를 `beta`로 지정하고, 이미 `main`으로 연 PR은 `gh pr edit <N> --base beta`로 옮겨요. base를 확인하지 않고 main으로 열지 마세요.
+## Branches and PRs
 
-PR 제목·본문 작성 규칙은 [`docs/pr-message-rule.md`](docs/pr-message-rule.md)를 따르세요. 본문에는 항상 실행한 검증과 미검증 항목을 남기고, UI 변경에는 스크린샷을 포함해요.
+- Work on a feature/fix/refactor branch cut from `beta`. Never commit directly to `beta` or `main`.
+- PR base is **always `beta`** (`main` is the deploy snapshot). Fix a wrong base with `gh pr edit <N> --base beta`.
+- Titles and bodies follow `docs/pr-message-rule.md`. The body lists verification run and anything left unverified; UI changes include screenshots.
 
 ## Skills
 
-Load the matching skill (`.pi/skills/<id>/SKILL.md`) before starting work in its domain — don't recreate its templates inline:
+Read `.pi/skills/<id>/SKILL.md` before working in its area. Don't recreate a skill's templates or rules here or in code.
 
-- `sapphire-command` — bot slash commands and preconditions (precondition chain order is a fragile contract); `component-view` — Components V2 view files
-- `bot-features` — AI chat/aiTools/memory, TTS·mixer·lyrics, temp voice channels, games; `bot-ops` — playback/Lavalink/session/shard operations
-- `dashboard-conventions` — Next.js dashboard code (SWR/fetcher, zustand, API routes + zod, next-auth, security); `repo-infra` — prisma, utils subpaths, yarn/turbo, CI, Sentry/logging
-- `dashboard-ui` — dashboard visual work: design tokens, primitives, Discord-style specs, scroll/motion effects; load `antislop-ui` (anti-slop filter) first
-- `security-audit` — evidence-driven vulnerability review
-- `ai-slop-cleaner` — deletion-first cleanup of duplicated/dead/over-abstracted code and AI-slop comments
+- Bot: `sapphire-command` (slash commands, preconditions), `component-view` (Components V2 view files), `discord-components-v2` (V2 component API), `bot-features` (AI chat, TTS, mixer, lyrics, temp voice channels, games), `bot-ops` (playback, Lavalink, sessions, shards, shutdown order)
+- Dashboard: `dashboard-conventions` (SWR, zustand, API routes + zod, next-auth), `dashboard-ui` (visual work; load `antislop-ui` first)
+- General: `repo-infra` (prisma, utils subpaths, yarn/turbo, CI, Sentry), `security-audit`, `ai-slop-cleaner`
 
 ## Commands
 
 ```bash
-yarn install                          # Corepack Yarn 4, node-modules linker, Node 22+
-yarn generate                         # REQUIRED before typecheck/build (Prisma client)
+yarn install        # Corepack Yarn 4, node-modules linker
+yarn generate       # Prisma client; required before typecheck/build
 yarn workspace @sirubot/prisma migrate:dev
-yarn dev                              # dashboard dev server only (the only `dev` script in the repo)
-yarn watch                            # rebuild bot/data-api/notifier/storage/shardmanager + packages on change
-yarn lint / yarn lint:fix             # turbo fan-out; pre-push hook runs lint:fix + typecheck
-yarn typecheck                        # turbo; dependsOn ^build ^generate — don't run bare tsc first
+yarn dev            # dashboard dev server only (the repo's only dev script)
+yarn watch          # watch-build every app/package except the dashboard
+yarn lint / yarn lint:fix / yarn typecheck / yarn test
 ```
 
-- Lint differs per package: bot/data-api/shardmanager/storage/notifier/packages(utils·shardclient·app-kit) = `prettier --check "src/**/*.ts"`; **dashboard = `eslint . --max-warnings=0`** (not prettier).
-- Prettier style: tabs, single quotes, `printWidth: 150`, `trailingComma: none`.
-- CI (`lint.yml`) runs `yarn install --immutable` + `yarn lint` + `yarn typecheck` + `yarn test`. Vitest suites live at the **root `vitest.config.ts`** — every workspace test script runs with `--config ../../vitest.config.ts` (dashboard만 예외 — 자체 `vitest.config.ts`로 `*.test.tsx` 포함), so `@sirubot/utils` (and subpaths like `@sirubot/utils/redisEnvelope`) resolve to **source** via aliases. Tests therefore run without building `packages/utils` dist: raw `vitest` runs can never see a stale dist artifact. Per-workspace: `yarn workspace @sirubot/bot test` etc. (bot ×36 files, data-api ×17, utils ×15, dashboard ×21, storage ×6, notifier ×6, shardclient ×1, shardmanager ×1 as of 2026-10-20; root-wide `yarn test` = 103 files); prisma has no tests yet.
-- Dashboard quirk: `dev` uses `--webpack`, `build` uses `--turbopack`.
-- Turbo `build` depends on `^typecheck ^generate ^build` (not `^lint:fix`) — building one app rebuilds deps.
+- Single test: `yarn workspace @sirubot/bot test src/path/file.test.ts`, or `-t "name"`.
+- Tests share the root `vitest.config.ts` (`--config ../../vitest.config.ts`), which aliases `@sirubot/utils`, its subpaths, and `@sirubot/app-kit` to **source**. No package dist build is needed and stale dist can't leak in. Exception: the dashboard has its own `apps/dashboard/vitest.config.ts` (includes `*.test.tsx`).
+- `typecheck` runs `^build ^generate` first via turbo. Don't run bare `tsc`.
+- Lint: dashboard only uses `eslint . --max-warnings=0`; everything else is prettier `--check` (tabs, single quotes, `printWidth: 150`, `trailingComma: none`).
+- Dashboard `dev` uses `--webpack`, `build` uses `--turbopack`.
+- CI (`lint.yml`): `yarn install --immutable` → lint → typecheck → build → test. The pre-push hook runs `lint:fix` + typecheck.
 
-## Bot conventions (see skills first)
+## Cross-app communication
 
-- Load the matching skill before writing bot code: `sapphire-command` (covers preconditions), `component-view`, `bot-features`, `bot-ops` (in `.pi/skills/`). Don't duplicate their templates here.
-- Modules are `audio`, `general`, `voice`, and `games` — registered via `setupStore()` in `apps/bot/src/core/bootstrap.ts`. Place files under `apps/bot/src/modules/<audio|general|voice|games>/{commands,preconditions,listeners,interaction-handlers}/`.
-- TS: `allowImportingTsExtensions` — **always use `.ts` extension in bot relative imports** (e.g. `./logger.ts`). ESM (`type: module`), strict + decorators.
-- Slash commands: `registerApplicationCommands` + `GuildInstall` integration, `ko` primary / `en-US` fallback localizations, `fullCategory: ['음악'|'일반'|'개발'|'게임']`, `deferReply()` before async work, throw `UserError({ identifier, message, context: { ephemeral: true } })` for user errors. All user-facing strings in Korean.
-- Preconditions referenced by string name in `preconditions: [...]`; common audio set: `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel, MemberListenable, ClientVoiceConnectable, ClientVoiceSpeakable`.
-- 커스텀 명령어(예전 봇 스타일 메시지 트리거): 접두사 메시지 리스너 `modules/general/listeners/message/customCommandPrefix.ts`가 "접두사+이름" 메시지를 실행 (`!도움말`은 예약어 목록 조회). 스펙·이름·접두사 규칙의 단일 계약은 `packages/utils/src/customCommand.ts`, 실행 엔진·캐시는 `apps/bot/src/services/customCommands/`(`interpreter.ts`, `store.ts` — 실행 전 spec zod 재검증 필수). 생성·수정·삭제는 대시보드(관리자) 전용이고 저장 시 `GUILD_SETTINGS_INVALIDATE_CHANNEL`로 봇 캐시가 무효화돼요.
-- Command registration behavior: `REGISTER_COMMANDS=true` → `Overwrite`, else `LogToConsole` (`core/setup.ts`). Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]` (guild defaults to `GUILD_ID`/`DEV_GUILD_IDS` env).
-- Container services: `container.db` (Prisma), `container.redisStore`, `container.audio` (LavalinkManager), `container.logger`, `container.shardInfo`, `container.{guildService,trackService,playlistService,audioService,mixerService,tempVoiceService,aiMemoryService}`, `container.{playerNotifier,playerWebResponder,guildDataResponder,guildSettingsInvalidator,jtcSetupResponder,appEmojiManager,botProfileService,memberGreetingService,socialWebhookResponder}` — 대부분 `core/botApplication.ts`에서 할당, `container.lavalinkHandler`·`container.shardClient`는 `core/bootstrap.ts`에서.
-- UI: Discord Components V2 (`MessageFlags.IsComponentsV2`, `ContainerBuilder`/`TextDisplayBuilder`), color via `DEFAULT_COLOR` from `@sirubot/utils`.
+Apps never import each other. The only contact points are Redis pub/sub, HTTP with a shared key, and the shardmanager WS protocol.
 
-## `@sirubot/utils` 배럴 vs 서브패스
+- **Redis channel names and payload schemas live only in `packages/utils/src/redisChannels.ts`** (plus zod schemas). Never hardcode them as string literals in an app.
+- **The dashboard never talks to the bot directly.** It reads/writes the DB via Prisma and uses Redis only for its own needs (rate limits, token store). Anything bound for the bot goes dashboard API route → data-api (HTTP) → Redis → bot.
+- Work that needs the bot token or gateway cache (channel/role lists, voice context and DJ permissions, JTC channel setup, bot admin) uses **request/reply**: the publisher sends `*:request` with a `requestId`, only the bot process owning that guild replies on `*:response`, and the publisher's `*Hub` handles correlation and timeouts. Copy an existing pair: data-api `playerWebHub`/`guildDataHub`/`jtcSetupHub`/`botAdminHub`, notifier `webhookHub` ↔ bot `services/*Responder.ts`.
+- Live player: bot publishes snapshots on `sirubot:player:{guildId}` → data-api `playerHub` (sole subscriber) → SSE → dashboard.
+- After a settings save, data-api broadcasts `sirubot:guild-settings:invalidate` and every bot process drops that guild's cache (settings and custom commands).
+- Large bodies (e.g. avatar data URIs) go in a pending key, not the pub/sub message; the channel message is only a trigger.
 
-- 루트 배럴(`@sirubot/utils`)은 node 전용 모듈(version·appEmoji·redisSubscriber·youtube·embed·logger)을 함께 노출하므로 **서버 앱 전용**이에요. 클라이언트 번들(대시보드)은 서브패스만 임포트해요 — `apps/dashboard/eslint.config.mjs`의 `no-restricted-imports`가 루트 임포트를 에러로 막아요.
-- 순수 계약(zod 스키마·타입·상수·에러 클래스)은 서브패스로 노출해요. 서브패스를 추가(또는 제거)할 때는 `packages/utils/package.json`의 `exports`와 `tsup.config.ts`의 `entry`를 **함께** 수정해야 `dist/*.{js,cjs,d.ts}`가 생성돼요 (선례: `/time` `/storage` `/playerWeb` `/weather` `/delivery` `/client`).
-- 도메인 계약의 이중 정의 금지 — 날씨(`@sirubot/utils/weather`)·택배(`@sirubot/utils/delivery`) 타입·에러 클래스·운송장 정규화의 단일 홈은 `packages/utils/src/{weather,delivery}.ts`이고 봇·data-api는 import만 해요.
+## Auth and env gotchas
 
-## Env / runtime gotchas
+- Each app has its own `.env` (`apps/bot/.env`, `apps/dashboard/.env`, …). The bot loads it from CWD. Never print or commit secrets.
+- **data-api**: refuses to start without `DATA_API_AUTH_KEY ?? AUTH_KEY` (fail-closed). Only exactly `/api/health` is exempt. bot, dashboard, and data-api share the same key. Without a key the dashboard skips every call, so channel/role/player features all look like 502s.
+- `Authorization` carries the **raw key, no `Bearer`**.
+- **notifier**: refuses to start without `NOTIFIER_AUTH_KEY ?? AUTH_KEY`. The webhook-token encryption key is derived from `AUTH_KEY` when unset, so when rotating `AUTH_KEY` keep the old value separately or existing rows can't be decrypted (`apps/notifier/src/config/env.ts`).
+- **storage**: refuses to start without `STORAGE_AUTH_KEY ?? AUTH_KEY`. Exempt: `/health` and public GETs. `STORAGE_PUBLIC_URL` (required; must be a public https domain, but the schema only checks it's a URL) is baked into issued URLs, so changing the domain means bulk-rewriting existing asset URLs. Persist the `STORAGE_DATA_DIR` volume.
+- **shardmanager**: the dashboard uses `SHARD_MANAGER_AUTH_KEY` with no fallback. Production bots retry `ShardClient.identify()` against `SHARD_MANAGER_URL` + `AUTH_KEY`. An empty assignment (`NoShardsAvailableError`) is normal during rolling updates. Dev runs standalone (`shards: [0]`).
+- **LLM**: data-api's `OPENAI_COMPATIBLE_API_URL` + `OPENAI_API_KEY` serve both translation (`TRANSLATION_MODEL`) and custom-command drafts (`CUSTOM_COMMAND_DRAFT_MODEL`, falls back to the translation model). Without a key, translation serves the original text and the draft API returns 503.
+- `LAVALINK_HOSTS`: comma-separated `id_host_port[_password]` (e.g. `main_localhost_2333_youshallnotpass`). Parsed with zod by `packages/utils/src/lavalinkHosts.ts`, which throws before connecting on malformed entries.
+- Shared Fastify auth/env/logger lives in `packages/app-kit`. Its logger config hand-mirrors utils `createLogger`; change both together.
 
-- Per-app `.env` files (`apps/bot/.env`, `apps/dashboard/.env`); bot loads via `@skyra/env-utilities` from CWD. Never print or commit secrets.
-- `LAVALINK_HOSTS` format (`parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts`): comma-separated `id_host_port[_password]`, e.g. `main_localhost_2333_youshallnotpass`.
-- data-api 키 계약: data-api는 `DATA_API_AUTH_KEY ?? AUTH_KEY`가 없으면 **기동 거부(fail-closed)**, 인증 면제는 `/api/health`뿐. 대시보드는 `DATA_API_URL`(기본 `http://localhost:3002`) + 같은 폴백 체인의 키로 호출하며, 키 미설정 시 호출 전면 스킵 → 길드 채널/역할/플레이어 연동이 전부 502처럼 보인다. `Authorization` 헤더는 `Bearer` 없이 **키 원문 그대로**. 대시보드/봇/data-api 세 앱이 같은 키를 공유해야 한다.
-- data-api의 OpenAI 호환 LLM 계약: `OPENAI_COMPATIBLE_API_URL` + `OPENAI_API_KEY`로 번역(`TRANSLATION_MODEL`)과 커스텀 명령어 초안 생성(`CUSTOM_COMMAND_DRAFT_MODEL`, 미설정 시 TRANSLATION_MODEL 폴백)이 함께 쓰인다. 키 없으면 번역은 원문 served, 초안 생성(`/v1/ai/custom-command-draft`)은 503 안내.
-- storage 키·공개 URL 계약: `apps/storage`(3003)는 `STORAGE_AUTH_KEY ?? AUTH_KEY`가 없으면 **기동 거부(fail-closed)**, 인증 면제는 `/health`와 공개 오브젝트 GET뿐. `STORAGE_PUBLIC_URL`(필수, https)은 디스코드가 임베드로 fetch하는 공개 주소이며 발급 URL 스냅샷이라 도메인 변경 시 기존 에셋 URL 일괄 치환이 필요하다. 저장소는 로컬 볼륨(무DB)이라 `STORAGE_DATA_DIR`(컨테이너 `/data`)를 `storage-data` 볼륨으로 영속화해야 한다.
-- Fastify 인증·로거·env 검증 공용은 `packages/app-kit`(`createKeyAuthHook`/`createKeyPreHandler`/`timingSafeKeyEqual`, `parseEnvOrExit`/`authKeyChain`, `getAppLogger`) — data-api·shardmanager·storage·notifier가 사용. app-kit 로거 설정은 `packages/utils` `createLogger`의 수동 미러라 utils 쪽 변경 시 함께 갱신.
-- Dev runs standalone (`shards: [0]`); production requires `SHARD_MANAGER_URL` + `AUTH_KEY` and does blocking `ShardClient.identify()` with retry. Redis (`REDIS_URL`) holds Lavalink sessions + queue; shutdown order is save-sessions → audio listener cleanup → Redis subscriber services stop (guildSettingsInvalidator·playerWebResponder·jtcSetupResponder·botProfileService·memberGreetingService·guildDataResponder·socialWebhookResponder) → pending-journal flush (queueStore/playerSaver) → redis disconnect → db disconnect → gateway destroy. `LAVALINK_HOSTS` is parsed by `parseLavalinkHosts` in `packages/utils/src/lavalinkHosts.ts` (zod; throws on malformed entries before Lavalink connect).
-- Key entrypoints: `apps/bot/src/index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`; env/Sentry handlers in `core/environment.ts`; Prisma schema at `packages/prisma/src/schema.prisma`; shared tsup base at `scripts/tsup.config.ts` (ESM, `src/**/*.ts` entry).
+## `@sirubot/utils`
+
+- The root barrel mixes in node-only modules, so it's **server apps only**. The dashboard imports subpaths only (eslint `no-restricted-imports` enforces this).
+- Pure contracts (zod, types, constants, error classes) are exposed as subpaths. Adding or removing one means editing both `package.json` `exports` and `tsup.config.ts` `entry`.
+- Each domain contract is defined in one place (e.g. weather and delivery in `packages/utils/src/{weather,delivery}.ts`). bot and data-api only import them.
+
+## Bot rules
+
+- Relative imports **always include the `.ts` extension** (`allowImportingTsExtensions`). strict + decorators.
+- Modules are `audio`, `general`, `voice`, `games`, registered with `setupStore()` in `core/bootstrap.ts`. Files go in `apps/bot/src/modules/<module>/{commands,subcommands,preconditions,listeners,interaction-handlers,view}/`.
+- Entry chain: `index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`. Most container services are assigned in `botApplication.ts`.
+- All user-facing strings are Korean. Slash-command details follow `sapphire-command`; UI follows `component-view`.
+- Command registration: `REGISTER_COMMANDS=true` overwrites, otherwise it only logs to console. Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]`.
+- Custom commands:
+  - Two kinds: prefix messages (listener `modules/general/listeners/message/customCommandPrefix.ts`; `!도움말` is reserved) and slash (`slashRegistry.ts`, incrementally synced as guild commands).
+  - The spec/name/prefix contract lives only in `packages/utils/src/customCommand.ts`.
+  - Engine and cache: `apps/bot/src/services/customCommands/`. Re-validate the spec with zod before running it (`interpreter.ts`).
+  - Create/edit/delete only from the dashboard with guild manage permission (`role: "manage"`). Saving triggers the invalidate broadcast, which clears the cache and re-syncs slash commands.
+- Shutdown order directly affects session loss. Read `bot-ops` before touching it.

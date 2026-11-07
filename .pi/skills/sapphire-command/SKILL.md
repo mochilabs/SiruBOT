@@ -9,7 +9,7 @@ description: Author Sapphire Framework slash commands and preconditions (guards)
 
 - Locations: `apps/bot/src/modules/<module>/commands/` — audio, general (`development/` for dev), games. Voice module has only `listeners/`, no commands.
 - File `commandName.ts` (camelCase), class `CommandNameCommand`, `name` lowercase no spaces.
-- Stack: `@sapphire/framework` v5 + `@sapphire/decorators`; services registered in `core/botApplication.ts:90-113`, typed in `apps/bot/src/types/global.d.ts`.
+- Stack: `@sapphire/framework` v5 + `@sapphire/decorators`; services registered in `core/botApplication.ts` (`setupServices()`), typed in `apps/bot/src/types/global.d.ts`.
 
 ### Template
 
@@ -51,7 +51,7 @@ export class CommandNameCommand extends Command {
 - Components V2: `MessageFlags.IsComponentsV2`, `ContainerBuilder`/`TextDisplayBuilder`, `DEFAULT_COLOR` from `@sirubot/utils` (see component-view skill).
 
 ### Subcommand pattern (main pattern)
-Subcommand logic lives in `apps/bot/src/modules/audio/subcommands/*.ts` (or `modules/general/subcommands/*.ts`), exporting `name` / `ko` / `description` / `preconditions` / `build(sub)` / `run(interaction)`. Command keeps a `SUBCOMMANDS` array, registers each entry in `registerApplicationCommands`, and routes + runs each subcommand's preconditions itself via `PreconditionContainerArray` in `chatInputRun` — see `modules/audio/commands/music.ts:22-48,86-116` and `modules/general/commands/info.ts:9-72`. Add new subcommands as a `subcommands/` module + one array entry; don't create a separate top-level command unless it stands alone.
+Subcommand logic lives in `apps/bot/src/modules/audio/subcommands/*.ts` (or `modules/general/subcommands/*.ts`), exporting `name` / `ko` / `description` / `preconditions` / `build(sub)` / `run(interaction)`. Command keeps a `SUBCOMMANDS` array, registers each entry in `registerApplicationCommands`, and routes + runs each subcommand's preconditions via `runSubcommandPreconditions` (`lib/subcommandDispatcher.ts`, wraps `PreconditionContainerArray`) in `chatInputRun` — see `modules/audio/commands/music.ts` and `modules/general/commands/info.ts`. Add new subcommands as a `subcommands/` module + one array entry; don't create a separate top-level command unless it stands alone.
 
 ### Container services
 `audioService` (playback), `guildService` (settings, 60s TTL cache), `trackService`, `playlistService`, `mixerService` (Lavalink filters/gapless preload), `tempVoiceService` (create/delete/ownership/marker), `aiMemoryService` (Prisma only), `redisStore` (queue/player/session stores, pendingWrites journal), `playerNotifier` (controller embed), `lavalinkHandler` (node/track handler registry, `cleanup()` at shutdown), `appEmojiManager`, `guildSettingsInvalidator` + Redis subscribers, `audio` (LavalinkManager).
@@ -67,9 +67,9 @@ Build: TypeScript + tsup (`scripts/tsup.config.ts`), extends root `tsconfig.base
 - Extend `AllFlowsPrecondition` (works for chat input, context menu, message). Must implement `chatInputRun(interaction)`, `contextMenuRun(interaction)`, `messageRun(message)`.
 - Return `this.ok()` or `this.error({ message, context })`; `context.ephemeral: true` = show only to user; `context.silent: true` = don't show (e.g. OwnerOnly).
 - File `PreconditionName.ts` (PascalCase). Sapphire resolves by **piece name = file name** (without `.ts`), not class name: `OwnerOnly.ts` exports `OwnerOnlyPrecondition`, `ManageGuild.ts` exports `ManageGuildPrecondition`, yet referenced as `'OwnerOnly'` / `'ManageGuild'`.
-- Use `get #message()` getter for the message (class field would evaluate before app emoji mapping loads; convention from `VoiceConnected.ts:7-9`); `TextChannelAllowed` builds messages inline instead. Private `createError()` helper per class (`NodeAvailable.ts:27-29`); omit if calling `this.error(...)` directly.
+- Use `get #message()` getter for the message (class field would evaluate before app emoji mapping loads; convention from `VoiceConnected.ts`); `TextChannelAllowed` builds messages inline instead. Private `createError()` helper per class (`NodeAvailable.ts`); omit if calling `this.error(...)` directly.
 - Container access: `db` (PrismaClient), `audio` (LavalinkManager), `client`, `logger`, `redisStore`.
-- Reuse `guildService.getDefaultTextChannel(guildId)` (60s TTL cache) instead of hitting Prisma per command (`TextChannelAllowed.ts:20-21`).
+- Reuse `guildService.getDefaultTextChannel(guildId)` (60s TTL cache) instead of hitting Prisma per command (see `TextChannelAllowed.ts`).
 - Env check: `envParseArray('OWNERS')` from `@skyra/env-utilities`.
 - Voice checks: `interaction.member.voice.channelId`; bot perms via `channel.permissionsFor(interaction.guild.members.me).has(PermissionsBitField.Flags.Connect)`.
 
@@ -80,6 +80,6 @@ General: `OwnerOnly` (OWNERS env), `ManageGuild`.
 ### Attaching — order is a fragile contract, run in array order
 Common audio chain, in order:
 `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel, MemberListenable, ClientVoiceConnectable, ClientVoiceSpeakable`
-- Subcommand-level `export const preconditions` (main path; `music.ts:107-115` runs each via `PreconditionContainerArray`, e.g. `subcommands/play.ts:10-18`).
-- Command-level `preconditions` in `@ApplyOptions` — some commands only (`mixer.ts:13`, `queue.ts:15`, `playlist.ts`, `favorites.ts`, `nowplaying.ts`), often the shorter chain `TextChannelAllowed, NodeAvailable, VoiceConnected, SameVoiceChannel`.
+- Subcommand-level `export const preconditions` (main path; `music.ts` `chatInputRun` runs each via `runSubcommandPreconditions`, e.g. `subcommands/play.ts`).
+- Command-level `preconditions` in `@ApplyOptions` — few commands: `queue.ts`/`mixer.ts` (`TextChannelAllowed`), `nowplaying.ts` (`TextChannelAllowed, NodeAvailable, SongPlaying`).
 If any fails, the command is blocked.

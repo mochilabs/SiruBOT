@@ -56,7 +56,7 @@ export async function subscribeYouTubeChannel(options: {
 	}
 }
 
-/** X-Hub-Signature: sha256=<hex> 검증: 등록 시 보낸 hub.secret의 HMAC이에요 (plan §8). */
+/** X-Hub-Signature: sha256=<hex> 검증: 등록 시 보낸 hub.secret의 HMAC이에요. */
 export function verifyWebSubSignature(rawBody: string, header: string | undefined, secret: string): boolean {
 	if (!header?.startsWith('sha256=')) return false;
 	const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest();
@@ -65,7 +65,7 @@ export function verifyWebSubSignature(rawBody: string, header: string | undefine
 	return timingSafeEqual(actual, expected);
 }
 
-/** 업로드 피드(ATOM) 1회 fetch: RSS 감사 폴링이 써요 (WebSub 유실 보강, plan §8). */
+/** 업로드 피드(ATOM) 1회 fetch: RSS 감사 폴링이 써요 (WebSub 유실 보강). */
 export async function fetchYouTubeUploadsFeed(channelId: string, fetchFn: YouTubeFetchFn = fetch): Promise<string> {
 	const response = await fetchFn(uploadsFeedUrl(channelId), {
 		headers: { 'User-Agent': USER_AGENT, Accept: 'application/atom+xml, application/xml, text/xml, */*' },
@@ -80,7 +80,7 @@ export interface ResolvedYouTubeChannel {
 	channelName: string | null;
 }
 
-/** UC id / @핸들 / 채널 URL을 UC 채널 ID로 정귬화해요 (plan §5: 핸들은 채널 페이지 1회 fetch로 해석). */
+/** UC id / @핸들 / 채널 URL을 UC 채널 ID로 정규화해요 (핸들은 채널 페이지 1회 fetch로 해석). */
 export async function resolveYouTubeChannel(input: string, fetchFn: YouTubeFetchFn = fetch): Promise<ResolvedYouTubeChannel> {
 	const trimmed = input.trim();
 	const direct = trimmed.match(/(UC[\w-]{22})/);

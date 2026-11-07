@@ -35,9 +35,9 @@ Every route, in order:
 - Admin-only infra routes (`api/shards/route.ts`): `isDashboardAdmin` from `DASHBOARD_ADMIN_IDS`, **fail-closed** — unset blocks everyone.
 - Refs: `api/servers/[id]/channels/route.ts`, `api/servers/[id]/settings/route.ts`.
 
-## data-api proxy — src/lib/data-api.ts
+## data-api proxy — src/lib/data-api/ (`client.ts`, `player-web.ts`, `jtc.ts`, `guild-members.ts`)
 
-- All Discord/bot access via data-api (Fastify); never call Discord directly with the user token.
+- Bot-scope Discord data (channels, roles, members, player, JTC) goes through data-api. The user OAuth token is only for user-scope Discord calls: `users/@me/guilds` (`lib/guild-permissions.ts`, `api/servers`), token refresh (`lib/discord-token.ts`), and greeting-preview guild meta.
 - Env: `DATA_API_URL` (default `http://localhost:3002`) + `DATA_API_AUTH_KEY` (falls back to `AUTH_KEY`). No dashboard key → skip call (null/503); data-api refuses to start without a key (fail-closed). `Authorization` = raw key, no `Bearer` (sha256+timingSafeEqual, `apps/data-api/src/plugins/auth.ts`).
 - Helpers: `fetchDataApi`/`postDataApi`/`forwardDataApi*`/`openDataApiStream`; hub: `requestPlayerSearch/Play/Control`, `fetchPlayerVoiceContext`, `requestJtcSetup`, `notifyGuildSettingsChanged`.
 - Channel/role lookups (`/v1/guilds/:id/channels`, `/roles`) use Redis request/reply (`sirubot:guild-data:*`); 3s timeout, no reply = 502 `bot_timeout`.
