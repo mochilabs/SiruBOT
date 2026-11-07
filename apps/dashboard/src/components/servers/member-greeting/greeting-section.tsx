@@ -123,12 +123,12 @@ export function GreetingSection({
   return (
     <TabsContent
       value={asTabContent}
-      className="min-w-0 space-y-5"
+      className="min-w-0 space-y-5 pt-0"
       keepMounted
     >
       <section
         aria-label={`${meta.heading} 인사 설정`}
-        className="min-w-0 space-y-5"
+        className="min-w-0 space-y-5 pt-0"
       >
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 text-xs text-muted-foreground sm:text-sm">{meta.description}</p>
