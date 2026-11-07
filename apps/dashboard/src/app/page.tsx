@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { DiscordEmbedLink } from "@/components/discord-embed";
 import { CommandListSection } from "@/components/home/command-list-section";
 import { FeaturesSection } from "@/components/home/features-section";
 import { HeroSection } from "@/components/home/hero-section";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default function Home() {
 	return (
 		<div className="w-full relative min-h-[calc(100svh-var(--navbar-h))]">
+			<DiscordEmbedLink name="home" />
 			<HeroSection />
 
 			<FeaturesSection />
