@@ -18,7 +18,7 @@ const HEAT_CLASSES = ["bg-surface-2", "bg-primary/25", "bg-primary/50", "bg-prim
 
 /**
  * 주간 커밋 히트맵 그리드 — 오래된 주 → 최신 주 순서로 열이 늘어서요.
- * 좁은 화면(모바일)에서는 컨테이너가 최신 주 쪽 끝으로 초기 스크롤돼요:
+ * 넓은 화면에선 열이 카드 폭을 꽉 채우도록 셀이 늘어나고, 좁은 화면(모바일)에서는 컨테이너가 최신 주 쪽 끝으로 초기 스크롤돼요:
  * 첫 화면에 "가장 최근 활동"이 보이게 하기 위해서고, 왼쪽으로 밀면 과거를 볼 수 있어요.
  */
 export function CommitHeatmapGrid({ weeks }: { weeks: CommitWeek[] }) {
@@ -31,14 +31,14 @@ export function CommitHeatmapGrid({ weeks }: { weeks: CommitWeek[] }) {
 				if (el) el.scrollLeft = el.scrollWidth;
 			}}
 		>
-			<div className="flex w-max gap-[3px]">
+			<div className="flex min-w-[690px] gap-[3px]">
 				{weeks.map((week) => (
-					<div key={week.week} className="flex flex-col gap-[3px]">
+					<div key={week.week} className="flex min-w-0 flex-1 flex-col gap-[3px]">
 						{week.days.map((commits, dayIndex) => (
 							<span
 								key={dayIndex}
 								title={`${new Date((week.week + dayIndex * 86400) * 1000).toLocaleDateString("ko-KR")} · ${commits}커밋`}
-								className={`size-[10px] rounded-[2px] ${HEAT_CLASSES[heatLevel(commits)]}`}
+								className={`aspect-square w-full rounded-[2px] ${HEAT_CLASSES[heatLevel(commits)]}`}
 							/>
 						))}
 					</div>
