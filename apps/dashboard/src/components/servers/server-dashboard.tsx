@@ -13,6 +13,7 @@ import {
   Music,
   Radio,
   ShieldAlert,
+  ShieldCheck,
   SlidersHorizontal,
   SquareSlash,
   Ticket,
@@ -71,6 +72,7 @@ const MixerSettings = dynamic(() => import("./mixer-settings").then((m) => m.Mix
 const SocialAlertsSettings = dynamic(() => import("./social-alerts-settings"), { loading: TabLoadingFallback });
 const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings").then((m) => m.MemberGreetingSettings), { loading: TabLoadingFallback });
 const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
+const RolePanelsSettings = dynamic(() => import("./role-panels-settings").then((m) => m.RolePanelsSettings), { loading: TabLoadingFallback });
 const ICONS = {
   ai: <Bot size={14} />,
   "custom-commands": <SquareSlash size={14} />,
@@ -86,6 +88,7 @@ const ICONS = {
   social: <Bell size={14} />,
   greeting: <UserPlus size={14} />,
   ticket: <Ticket size={14} />,
+  "role-panels": <ShieldCheck size={14} />,
 } as const;
 // 탭 목록(키·라벨)은 server-tabs.ts가 단일 소스예요 — loading.tsx 스켈레톤도 여기를 따라가요
 const TABS = SERVER_TABS.map((item) => ({ ...item, icon: ICONS[item.key] }));
@@ -252,6 +255,9 @@ export function ServerDashboard({
                     )}
                     {item.key === "ticket" && (
                       <TicketSettings guildId={guildId} />
+                    )}
+                    {item.key === "role-panels" && (
+                      <RolePanelsSettings guildId={guildId} />
                     )}
                   </Fragment>
                 )}

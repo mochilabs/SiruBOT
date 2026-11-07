@@ -8,6 +8,12 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 describe('app emoji id map', () => {
+	it('uses a standard emoji sequence for repeat-off fallback buttons', async () => {
+		vi.resetModules();
+		const { emoji } = await import('./appEmoji.ts');
+		expect(emoji('repeat_off')).toMatch(new RegExp('^\\p{RGI_Emoji}$', 'v'));
+	});
+
 	it('keeps cached ids when a later sync returns a partial map and prefers refreshed ids', async () => {
 		vi.resetModules();
 		const { emoji, setAppEmojiIdMap } = await import('./appEmoji.ts');

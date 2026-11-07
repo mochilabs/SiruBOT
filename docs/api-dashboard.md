@@ -1,8 +1,8 @@
 # dashboard API Route 계약
 
-> **기준일**: 2026-10-15
+> **기준일**: 2026-11-07 (라우트 수·그룹은 2026-11-07 기준으로 갱신, 본문의 `파일:라인` 인용은 최초 작성 시점 기준)
 
-상위 흐름은 `./architecture.md` (`4.3 apps/dashboard`, `6.2 Redis request/reply`) 참조. 본 문서는 `apps/dashboard/src/app/api/**/route.ts` 실측 **35개** 기준이다 (이전 조사 32개는 stale).
+상위 흐름은 `./architecture.md` (`4.3 apps/dashboard`, `6.2 Redis request/reply`) 참조. 본 문서는 `apps/dashboard/src/app/api/**/route.ts` 실측 **61개** 기준이다 (이전 조사 32개는 stale).
 
 ## 3계층 구조
 
@@ -23,6 +23,12 @@
 | 그리팅 (6) | `greeting`, `greeting/background`, `greeting/layer-image`, `greeting/preview`, `greeting/status`, `greeting/test` | 이미지·테스트는 data-api 경유 |
 | JTC (1) | `jtc/setup` | data-api→봇 수행 (마커 채널은 봇 토큰 필수) |
 | 플레이어·라이브 (7) | `live`, `live/stream`, `player`, `player/command`, `player/play`, `player/search`, `player/voice-context` | data-api request/reply 프록시 |
+| 에셋 (2) | `servers/[id]/assets`, `assets/[assetId]` | 길드 이미지 에셋 — 대시보드가 storage 공개 버킷에 직접 업로드·삭제 |
+| 소셜 알림 (6) | `servers/[id]/social/subscriptions`, `subscriptions/[subId]`, `social/{youtube,twitch}/resolve`, `social/chzzk/{profile,search}` | data-api가 notifier에 프록시 |
+| 티켓 (4) | `servers/[id]/ticket`, `ticket/post`, `ticket/tickets`, `ticket/[ticketId]/transcript` | 설정은 DB 직결, 게시는 data-api→봇(`ticket/post`), 대화 기록은 data-api storage 프록시 |
+| 역할 패널 (3) | `servers/[id]/role-panels`, `role-panels/[panelId]`, `role-panels/[panelId]/post` | 목록·생성·수정·삭제는 DB 직결(생성·수정 시 봇에 역할 검증 위임, 수정 시 게시 메시지 `refresh`), 게시는 data-api→봇. 모든 조회·수정·게시가 `panel.guildId == [id]`를 확인해요 |
+| 관리자 (8) | `admin/{overview,guilds,guilds/[id],users,users/[id],social,social/[subId],bot-control}` | 운영자 allowlist(`DASHBOARD_ADMIN_IDS`) 전용. `bot-control`은 data-api `bot-admin`으로 위임 |
+| 음성 서버 (2) | `voice-servers`, `voice-servers/history` | Lavalink 스트리밍 개수 공개 API(비로그인 허용, 인프라 텔레메트리는 제거) |
 | 기타 (3) | `tracks`, `data-api` (상태 프록시), `shards` (관리자 전용) | — |
 
 ## 권한·rate-limit·zod

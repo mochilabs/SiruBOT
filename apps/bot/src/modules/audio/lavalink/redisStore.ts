@@ -5,8 +5,10 @@ import {
 	GUILD_DATA_RESPONSE_CHANNEL,
 	JTC_SETUP_RESPONSE_CHANNEL,
 	memberGreetingStateChannel,
+	PANEL_POST_RESPONSE_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
 	playerStateChannel,
+	ROLE_VALIDATION_RESPONSE_CHANNEL,
 	SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL
 } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
@@ -309,6 +311,22 @@ export class RedisStore {
 	 */
 	public publishBotAdminResponse(payload: string): void {
 		this.publish(BOT_ADMIN_RESPONSE_CHANNEL, payload, 'Bot admin response');
+	}
+
+	/**
+	 * 패널 메시지(티켓·역할 패널) 게시 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:panel-post:response`). data-api panelPostHub가 requestId 상관으로 구독해요.
+	 */
+	public publishPanelPostResponse(payload: string): void {
+		this.publish(PANEL_POST_RESPONSE_CHANNEL, payload, 'Panel post response');
+	}
+
+	/**
+	 * 역할 부여 가능 여부 검증 결과를 Redis Pub/Sub으로 퍼블리시해요
+	 * (채널: `sirubot:role-validation:response`). data-api가 requestId 상관으로 구독해요.
+	 */
+	public publishRoleValidationResponse(payload: string): void {
+		this.publish(ROLE_VALIDATION_RESPONSE_CHANNEL, payload, 'Role validation response');
 	}
 
 	public async connect() {

@@ -33,7 +33,7 @@ SiruBOT is a Discord music bot platform: one monorepo with 6 independent process
 | App | `apps/shardmanager` | Shard assignment and health aggregation WS server for bot processes | Fastify 5 + @fastify/websocket (port 3001) |
 | App | `apps/storage` | Object storage — authenticated upload, public GET (Discord embed assets), private bucket (ticket transcripts) | Fastify 5 (port 3003) |
 | App | `apps/notifier` | Social alerts — YouTube (WebSub + RSS), Twitch (EventSub), Chzzk (polling) → Discord webhooks | Fastify 5 (port 3004) |
-| Package | `packages/prisma` | PostgreSQL schema + Prisma client (17 models) | Prisma 7 + PrismaPg |
+| Package | `packages/prisma` | PostgreSQL schema + Prisma client (19 models) | Prisma 7 + PrismaPg |
 | Package | `packages/shardclient` | WS client for shardmanager (retry and backoff built in) | ws |
 | Package | `packages/utils` | Redis channel constants, signed envelopes, zod contracts, shared utilities | zod |
 | Package | `packages/app-kit` | Shared auth hooks, env validation, logger, error handler for the 4 Fastify apps | Fastify |
@@ -471,13 +471,14 @@ During rolling updates the new process retries identify until a shard slot frees
 
 **PostgreSQL + Prisma 7 (PrismaPg adapter)** — `packages/prisma/src/schema.prisma`. Clients are created in bot `core/botApplication.ts`, data-api `services/db.ts`, notifier `services/db.ts`, dashboard `src/lib/db.ts`. The `mysql2` resolution in the root `package.json` is a leftover (the real provider is postgresql).
 
-**17 models**:
+**19 models**:
 
 | Area | Model | Role · main writer |
 |---|---|---|
 | Guild | `Guild` | Server settings ledger (volume, controller, DJ, JTC, mixer, AI chat scope, …) — dashboard, bot |
 | | `CustomCommand` | Custom command spec (JSON) + method (`prefix`/`slash`, immutable after creation) + slash registration ID — dashboard |
 | | `GuildAsset` | Metadata for guild images uploaded to storage — dashboard |
+| | `RolePanel` / `RolePanelButton` | Role self-assignment panels (button or reaction mode) and their buttons — bot, dashboard |
 | | `TicketConfig` / `Ticket` | Ticket system config (one per guild) / individual ticket state and history — bot, dashboard |
 | Music | `Track` · `GuildTrackHistory` | Track metadata · per-guild play history — bot |
 | | `Playlist` / `PlaylistTrack` | Custom playlists — bot, dashboard |

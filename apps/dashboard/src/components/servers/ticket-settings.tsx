@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TicketConfig, TicketConfigPatch } from "@sirubot/utils/ticket";
 import { TICKET_CONFIG_DEFAULTS } from "@sirubot/utils/ticket";
-import { Ticket as TicketIcon } from "lucide-react";
+import { Send, Ticket as TicketIcon } from "lucide-react";
 import useSWR from "swr";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { RoleSelect } from "@/components/discord/role-select";
 import { Field } from "@/components/primitives/field";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -48,6 +49,7 @@ export function TicketSettings({ guildId }: { guildId: string }) {
 
   const [form, setForm] = useState<TicketConfig>(TICKET_CONFIG_DEFAULTS);
   const [saving, setSaving] = useState(false);
+  const [posting, setPosting] = useState(false);
   const dirtyRef = useRef(false);
 
   useEffect(() => {
@@ -84,6 +86,26 @@ export function TicketSettings({ guildId }: { guildId: string }) {
       setSaving(false);
     }
   }, [url, form, mutate]);
+
+  const handlePost = useCallback(async () => {
+    setPosting(true);
+    try {
+      const res = await fetch(`/api/servers/${guildId}/ticket/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          form.panelChannelId ? { channelId: form.panelChannelId } : {},
+        ),
+      });
+      if (!res.ok) throw await toApiError(res, "티켓 패널을 게시하지 못했어요.");
+      await mutate();
+      notifySaved("티켓 패널을 게시했어요.");
+    } catch (err) {
+      notifyApiError(err, "게시에 실패했어요.");
+    } finally {
+      setPosting(false);
+    }
+  }, [guildId, form.panelChannelId, mutate]);
 
   const panel = {
     form: isLoading ? null : form,
@@ -229,6 +251,35 @@ export function TicketSettings({ guildId }: { guildId: string }) {
           />
         </Field>
         </SettingsSection>
+
+          <SettingsSection title="패널 게시" summary={form.panelChannelId ? "채널 지정됨" : "채널 미지정"}>
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 text-xs text-muted-foreground sm:text-sm">
+                선택한 채널에 티켓 오픈 패널을 게시해요. 이미 게시된 패널이 있으면 이전 메시지는 지워져요.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handlePost}
+                disabled={posting || !form.enabled || !form.panelChannelId}
+              >
+                <Send size={14} /> {posting ? "게시 중..." : "게시"}
+              </Button>
+            </div>
+            {channelsError ? (
+              <ChannelListError error={channelsError} onRetry={reloadChannels} />
+            ) : (
+              <ChannelSelect
+                channels={channels}
+                value={form.panelChannelId ?? ""}
+                onChange={(val) => patch({ panelChannelId: val || null })}
+                types={CHANNEL_TYPE_GROUP.chat}
+                noneLabel="채널 선택 안 함"
+                disabled={saving || posting || !form.enabled}
+                placeholder="패널을 게시할 채널을 선택해 주세요"
+              />
+            )}
+          </SettingsSection>
 
           <SettingsSection title="티켓 목록">
             <TicketManagePanel guildId={guildId} />
