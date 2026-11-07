@@ -105,7 +105,7 @@ function MemberGreetingPanel({
   }
 
   return (
-    <Card padding="lg" className="gap-8 overflow-visible">
+    <Card padding="lg" className="gap-6 overflow-visible">
       <PanelHeader
         icon={<UserPlus className="h-5 w-5" />}
         title="멤버 인사"
