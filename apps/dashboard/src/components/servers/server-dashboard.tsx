@@ -192,7 +192,7 @@ export function ServerDashboard({
   return (
     <div className="animate-page-in">
       <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-        <ServerFeatureSidebar items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
+        <ServerFeatureSidebar items={TABS} active={tab} onSelect={selectTab} />
 
         <div className="w-full min-w-0 flex-1">
           <Tabs
