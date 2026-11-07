@@ -34,7 +34,7 @@ export default function NotFound() {
         </div>
       </div>
 
-      <NotFoundRoom className="order-first mx-auto w-full max-w-sm lg:order-none lg:max-w-none" />
+      <NotFoundRoom className="mx-auto w-full max-w-sm lg:max-w-none" />
     </main>
   );
 }
