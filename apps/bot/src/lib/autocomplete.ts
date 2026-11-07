@@ -75,3 +75,24 @@ export async function respondPlaylistTrackPositions(interaction: AutocompleteInt
 			.slice(0, CHOICE_LIMIT)
 	);
 }
+
+/**
+ * 역할 패널 이름 자동완성 — 해당 길드의 역할 패널만 후보예요.
+ * 값은 패널 id 그대로 내려요 (핸들러가 id로 조회해요).
+ */
+export async function respondRolePanelNames(interaction: AutocompleteInteraction): Promise<void> {
+	if (!interaction.inCachedGuild()) return interaction.respond([]);
+
+	const typed = interaction.options.getFocused().trim().toLowerCase();
+	const panels = await container.rolePanelService.getPanels(interaction.guildId).catch(() => []);
+
+	await interaction.respond(
+		panels
+			.filter((panel) => panel.name.toLowerCase().includes(typed))
+			.slice(0, CHOICE_LIMIT)
+			.map((panel) => ({
+				name: clipChoiceName(panel.name),
+				value: panel.id
+			}))
+	);
+}

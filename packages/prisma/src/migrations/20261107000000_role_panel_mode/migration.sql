@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "RolePanel" ADD COLUMN IF NOT EXISTS "mode" TEXT NOT NULL DEFAULT 'button';

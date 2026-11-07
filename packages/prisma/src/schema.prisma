@@ -78,6 +78,7 @@ model Guild {
   assets        GuildAsset[]
   ticketConfig  TicketConfig?
   tickets       Ticket[]
+  rolePanels    RolePanel[]
 }
 
 // 커스텀 명령어 — 대시보드(관리자)가 만드는 접두사 메시지 명령어. 봇의 접두사 리스너가 spec(JSON 스텝 체인)을 순차 실행해요.
@@ -360,4 +361,41 @@ model Ticket {
 
   @@index([guildId, ownerId, status])
   @@index([guildId, status])
+}
+
+// 역할 패널(Role Panel) — 길드당 여러 개(1:N)의 셀프 역할 부여 패널. 유저가 버튼을 눌러 자기 역할을 토글해요.
+// 게시된 Discord 메시지(channelId/messageId)는 패널당 1개. clickCount는 패널 단위 총 클릭 수(부여·제거 무관).
+// 계약·customId 규칙은 packages/utils/src/rolePanel.ts.
+model RolePanel {
+  id          String   @id @default(uuid())
+  guildId     String
+  name        String   /// 관리자 식별용 패널 이름 (대시보드 목록·autocomplete에 표시)
+  title       String   /// 패널 메시지 제목
+  description String   @default("") /// 패널 안내문
+  mode        String   @default("button") /// button | reaction — 역할을 받는 방식 (버튼 클릭 / 이모지 반응)
+  clickCount  Int      @default(0) /// 패널 단위 총 클릭 수 (성공한 토글마다 +1)
+  channelId   String?  /// 게시된 채널 ID
+  messageId   String?  /// 게시된 패널 메시지 ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  guild       Guild             @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  buttons     RolePanelButton[]
+
+  @@index([guildId])
+}
+
+// 역할 패널의 역할 버튼 — 패널에 노출할 역할 하나와 표시 메타데이터(라벨·이모지·스타일·순서).
+model RolePanelButton {
+  id       String   @id @default(uuid())
+  panelId  String
+  roleId   String   /// 부여/제거할 역할 snowflake
+  label    String   /// 버튼 라벨
+  emoji    String?  /// 커스텀/유니코드 이모지 (프리렌더 emoji("") 계약)
+  style    String   @default("secondary") /// secondary | primary | success | danger
+  position Int      @default(0) /// 정렬 순서
+
+  panel    RolePanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
+
+  @@index([panelId])
 }

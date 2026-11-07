@@ -160,3 +160,24 @@ export const SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL = 'sirubot:social:webhook-cr
  */
 export const BOT_ADMIN_REQUEST_CHANNEL = 'sirubot:bot-admin:request';
 export const BOT_ADMIN_RESPONSE_CHANNEL = 'sirubot:bot-admin:response';
+
+/**
+ * 패널 메시지(티켓·역할 패널) 게시 request/reply 브로드캐스트 — 대시보드가 직접 패널을 게시할 때.
+ * 패널 메시지(커스텀 ID 버튼 포함)는 봇 토큰으로만 보낼 수 있어요. data-api panelPostHub가 REQUEST
+ * 채널로 퍼블리시하면 해당 길드를 보유한 봇 프로세스가 메시지를 게시하고 RESPONSE 채널로 messageId를
+ * 응답해요.
+ *
+ * 페이로드: panelPostRequestSchema / panelPostResponseSchema (panelPost.ts)
+ */
+export const PANEL_POST_REQUEST_CHANNEL = 'sirubot:panel-post:request';
+export const PANEL_POST_RESPONSE_CHANNEL = 'sirubot:panel-post:response';
+
+/**
+ * 역할 패널 부여 가능 여부 검증 request/reply 브로드캐스트 — 대시보드가 패널 저장 전에 roleIds를
+ * 봇에 보내 부여 가능한 역할인지(관리형·위계 초과·@everyone 제외) 확인해요. rolePanelResponder가
+ * REQUEST 채널로 받아 RESPONSE 채널로 invalidRoleIds를 응답해요.
+ *
+ * 페이로드: roleValidationRequestSchema / roleValidationResponseSchema (rolePanel.ts)
+ */
+export const ROLE_VALIDATION_REQUEST_CHANNEL = 'sirubot:role-validation:request';
+export const ROLE_VALIDATION_RESPONSE_CHANNEL = 'sirubot:role-validation:response';
