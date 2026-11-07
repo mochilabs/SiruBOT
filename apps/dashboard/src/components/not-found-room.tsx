@@ -1,11 +1,21 @@
+"use client";
+
+import { useState } from "react";
+
+import { NotFoundGame } from "@/components/not-found-game";
+
 /**
  * 404 일러스트 — 시루의 방. 모니터에 404가 떠 있는 책상 장면이에요.
  * 색은 전부 디자인 토큰 클래스(fill·stroke)라 라이트·다크 테마를 자동으로 따라가요.
+ * 모니터 화면을 누르면 미니게임이 켜져요(이스터에그, 힌트는 두지 않아요).
  * 도형은 브랜드 모티프(원·둥근 사각형·반원)만 써요. 장식용이라 대체 텍스트는 한 줄로 둬요.
  */
 export function NotFoundRoom({ className }: { className?: string }) {
+	const [playing, setPlaying] = useState(false);
+
 	return (
-		<svg viewBox="0 0 480 380" role="img" aria-label="모니터에 404가 떠 있는 시루의 방 일러스트" className={className}>
+		<div className={`relative ${className ?? ""}`}>
+		<svg viewBox="0 0 480 380" role="img" aria-label="모니터에 404가 떠 있는 시루의 방 일러스트" className="block h-auto w-full">
 			{/* 벽과 바닥 */}
 			<rect x="0" y="0" width="480" height="380" rx="28" className="fill-surface-1" />
 			<path d="M0 330 H480 V352 a28 28 0 0 1 -28 28 H28 a28 28 0 0 1 -28 -28 Z" className="fill-surface-2" />
@@ -60,12 +70,22 @@ export function NotFoundRoom({ className }: { className?: string }) {
 			<path d="M376 250 q-4 -8 0 -14 M388 250 q-4 -8 0 -14" fill="none" strokeWidth="2.5" strokeLinecap="round" className="stroke-foreground/30" />
 
 			{/* 음표 */}
-			<g className="fill-primary-control/70">
+			<g className="fill-primary-control" opacity="0.7">
 				<circle cx="196" cy="128" r="6" />
 				<rect x="200" y="106" width="3" height="23" rx="1.5" />
 				<circle cx="238" cy="104" r="5" />
 				<rect x="242" y="86" width="3" height="19" rx="1.5" />
 			</g>
 		</svg>
+
+		{/* 모니터 화면 위치(viewBox 148,184 · 184×84)에 맞춘 오버레이 */}
+		<div className="absolute" style={{ left: "30.83%", top: "48.42%", width: "38.33%", height: "22.11%" }}>
+			{playing ? (
+				<NotFoundGame onExit={() => setPlaying(false)} />
+			) : (
+				<button type="button" onClick={() => setPlaying(true)} aria-label="모니터 화면 켜기" className="h-full w-full cursor-pointer rounded-[7px]" />
+			)}
+		</div>
+		</div>
 	);
 }
