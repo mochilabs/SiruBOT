@@ -1,20 +1,18 @@
 "use client";
 
-import { useCallback } from "react";
-import { Calculator, Globe, Hash, Link2, MessageSquare, PowerOff, Quote, Smile } from "lucide-react";
+import { Globe, Hash, MessageSquare, PowerOff } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
-import { SectionLabel } from "@/components/primitives/section-label";
-import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useGuildChannels, useSettingsForm } from "@/hooks/use-guild-settings";
-import { notifyApiError, notifySaved } from "@/lib/notify";
+import { useGuildChannels } from "@/hooks/use-guild-settings";
 import type { ChatToolMode, GuildSettings } from "@/types/settings";
 
-import { ChannelListError, InfoBox, type ModeCardOption, ModePicker, PanelError, PanelHeader, PanelLoading, SaveBar, WarningBox } from "./settings-shared";
+import { SettingsPanel, useSettingsPanel } from "./settings-panel";
+import { SettingsSection, SettingsToggleRow } from "./settings-section";
+import { ChannelListError, InfoBox, type ModeCardOption, ModePicker, WarningBox } from "./settings-shared";
 
 // 임베드 복구 사이트 — 봇 계약(packages/utils/src/chatTools.ts)과 같은 순서를 지켜요
 const SITE_TOGGLES = [
@@ -62,6 +60,8 @@ const toChatToolsForm = (settings: GuildSettings): ChatToolsForm => ({
 });
 
 // 채널 정책 카드 데이터만 여기 두고 마크업은 settings-shared의 ModePicker를 써요
+const MODE_LABEL: Record<ChatToolMode, string> = { all: "모든 채널", channels: "특정 채널", off: "끄기" };
+
 const MODE_CARDS: ModeCardOption<ChatToolMode>[] = [
 	{ value: "all", label: "모든 채널", description: "어떤 텍스트 채널에서든 동작해요.", icon: <Globe size={16} /> },
 	{ value: "channels", label: "특정 채널", description: "아래에서 선택한 채널에서만 동작해요.", icon: <Hash size={16} /> },
@@ -69,32 +69,10 @@ const MODE_CARDS: ModeCardOption<ChatToolMode>[] = [
 ];
 
 function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
-	const { form, isLoading, error, saving, dirty, patch, submit, reload } = useSettingsForm(guildId, toChatToolsForm);
+	const panel = useSettingsPanel(guildId, toChatToolsForm, "채팅 유틸 설정을 저장했어요.");
+	const { patch, saving } = panel;
 	const { channels, error: channelsError, reload: reloadChannels } = useGuildChannels(guildId, true);
-
-	const handleSave = useCallback(async () => {
-		try {
-			await submit();
-			notifySaved("채팅 유틸 설정을 저장했어요.");
-		} catch (err) {
-			notifyApiError(err, "저장에 실패했어요.");
-		}
-	}, [submit]);
-
-	if (isLoading) return <PanelLoading label="채팅 유틸 설정 불러오는 중…" />;
-	if (error) return <PanelError error={error} onRetry={reload} />;
-	if (!form) return <PanelLoading label="채팅 유틸 설정 불러오는 중…" />;
-
 	const listUnavailable = channels === null;
-
-	const toggleSite = (site: string, checked: boolean) => {
-		const selected = new Set<string>(form.embedFixSites);
-		if (checked) selected.add(site);
-		else selected.delete(site);
-		// 계약 순서(x → instagram → booth)를 유지해요
-		const sites = SITE_TOGGLES.map((toggle) => toggle.value).filter((value) => selected.has(value));
-		patch({ embedFixSites: sites });
-	};
 
 	const renderChannelPicker = (mode: ChatToolMode, channelIds: string[], onChannelIds: (ids: string[]) => void) => {
 		if (mode !== "channels") return null;
@@ -118,21 +96,33 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 	};
 
 	return (
-		<Card padding="lg" className="gap-6 border-0 overflow-visible">
-			<PanelHeader
-				icon={<MessageSquare className="h-5 w-5" />}
-				title="채팅 유틸"
-				description="메시지에 자동으로 반응하는 편의 기능을 채널 단위로 관리해요."
-			/>
+		<SettingsPanel
+			panel={panel}
+			icon={<MessageSquare className="h-5 w-5" />}
+			title="채팅 유틸"
+			description="메시지에 자동으로 반응하는 편의 기능을 채널 단위로 관리해요."
+			notice={
+			<InfoBox>
+					<p>채팅 유틸은 봇이 메시지를 보낸 뒤 잠시 뒤(최대 1분) 반영돼요. 디스코드에서 /채팅유틸 커맨드로도 채널을 켜고 끌 수 있어요.</p>
+				</InfoBox>
+			}
+		>
+			{(form) => {
+				const toggleSite = (site: string, checked: boolean) => {
+					const selected = new Set<string>(form.embedFixSites);
+					if (checked) selected.add(site);
+					else selected.delete(site);
+					// 계약 순서(x → instagram → booth)를 유지해요
+					const sites = SITE_TOGGLES.map((toggle) => toggle.value).filter((value) => selected.has(value));
+					patch({ embedFixSites: sites });
+				};
 
+				return (
+					<>
 			{channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
 
-			<div className="flex flex-col gap-3">
-				<SectionLabel>
-					<span className="inline-flex items-center gap-1.5">
-						<Smile size={14} aria-hidden /> 이모지 확대
-					</span>
-				</SectionLabel>
+			<div>
+		<SettingsSection title="이모지 확대" summary={MODE_LABEL[form.emojiEnlargeMode]}>
 				<ModePicker
 					label="이모지 확대 모드"
 					value={form.emojiEnlargeMode}
@@ -144,14 +134,9 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				<p className="text-sm font-medium text-muted-foreground">
 					커스텀 이모지만으로 보낸 메시지를 큰 이미지로 다시 보내줘요. 이모지 디테일을 자세히 볼 수 있어요.
 				</p>
-			</div>
+		</SettingsSection>
 
-			<div className="flex flex-col gap-3">
-				<SectionLabel>
-					<span className="inline-flex items-center gap-1.5">
-						<Quote size={14} aria-hidden /> 메시지 인용
-					</span>
-				</SectionLabel>
+		<SettingsSection title="메시지 인용" summary={MODE_LABEL[form.quoteMode]}>
 				<ModePicker
 					label="메시지 인용 모드"
 					value={form.quoteMode}
@@ -163,14 +148,9 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 				<p className="text-sm font-medium text-muted-foreground">
 					디스코드 메시지 링크를 보내면 내용을 카드로 인용해요. 같은 서버의 공개 채널만 인용하고, 비공개·연령 제한 채널은 건너뛰어요.
 				</p>
-			</div>
+		</SettingsSection>
 
-			<div className="flex flex-col gap-3">
-				<SectionLabel>
-					<span className="inline-flex items-center gap-1.5">
-						<Link2 size={14} aria-hidden /> 임베드 복구
-					</span>
-				</SectionLabel>
+		<SettingsSection title="임베드 복구" summary={form.embedFixMode === "off" ? "끄기" : `${MODE_LABEL[form.embedFixMode]} · ${form.embedFixSites.length}개 사이트`}>
 				<ModePicker
 					label="임베드 복구 모드"
 					value={form.embedFixMode}
@@ -196,16 +176,11 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 							</div>
 						</Field>
 						{form.embedFixSites.length === 0 && <WarningBox>선택된 사이트가 없으면 임베드 복구가 동작하지 않아요. 최소 1개는 남겨 주세요.</WarningBox>}
-						<Field
-							label="원본 임베드 숨기기"
+						<SettingsToggleRow
+							title="원본 임베드 숨기기"
 							description="고친 임베드를 보여줄 때 원본 메시지의 미리보기를 숨겨요. 봇에게 메시지 관리 권한이 있어야 해요."
-						>
-							<Switch
-								checked={form.embedFixSuppressOriginal}
-								onChange={(checked: boolean) => patch({ embedFixSuppressOriginal: checked })}
-								disabled={saving}
-							/>
-						</Field>
+							control={<Switch checked={form.embedFixSuppressOriginal} onChange={(checked: boolean) => patch({ embedFixSuppressOriginal: checked })} disabled={saving} aria-label="원본 임베드 숨기기" />}
+						/>
 						<Field
 							label="임베드 자동 번역"
 							description="외국어 게시글을 선택한 언어로 번역해 함께 보여줘요. 이미 해당 언어인 게시글은 번역하지 않고, 번역 결과는 캐싱돼요."
@@ -237,20 +212,14 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 						</Field>
 					</>
 				)}
-			</div>
+		</SettingsSection>
 
-			<div className="flex flex-col gap-2">
-				<SectionLabel>
-					<span className="inline-flex items-center gap-1.5">
-						<Calculator size={14} aria-hidden /> 카운팅 채널
-					</span>
-				</SectionLabel>
-				<Field
-					label="카운팅 채널"
-					description="지정 채널에서 숫자를 순서대로 세요. 1부터 시작하고, 같은 사람이 연속으로 세거나 틀리면 1부터 다시 시작해요. 최고 기록은 남아요."
-				>
-					<Switch checked={form.countingEnabled} onChange={(checked: boolean) => patch({ countingEnabled: checked })} disabled={saving} />
-				</Field>
+		<SettingsSection title="카운팅 채널" summary={form.countingEnabled ? "켬" : "끔"}>
+				<SettingsToggleRow
+						title="카운팅 채널"
+						description="지정 채널에서 숫자를 순서대로 세요. 1부터 시작하고, 같은 사람이 연속으로 세거나 틀리면 1부터 다시 시작해요. 최고 기록은 남아요."
+						control={<Switch checked={form.countingEnabled} onChange={(checked: boolean) => patch({ countingEnabled: checked })} disabled={saving} aria-label="카운팅 채널" />}
+					/>
 				<Field
 					label="카운팅할 채널"
 					description={form.countingEnabled ? "이 채널에서만 카운팅이 동작해요. 잡담(숫자가 아닌 메시지)은 무시해요." : "카운팅 채널을 켜면 지정할 수 있어요."}
@@ -265,14 +234,13 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 						disabled={saving || listUnavailable || !form.countingEnabled}
 					/>
 				</Field>
+		</SettingsSection>
+
 			</div>
-
-			<InfoBox>
-				<p>채팅 유틸은 봇이 메시지를 보낸 뒤 잠시 뒤(최대 1분) 반영돼요. 디스코드에서 /채팅유틸 커맨드로도 채널을 켜고 끌 수 있어요.</p>
-			</InfoBox>
-
-			<SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-		</Card>
+					</>
+				);
+			}}
+		</SettingsPanel>
 	);
 }
 

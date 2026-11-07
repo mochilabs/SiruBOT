@@ -59,13 +59,11 @@ export default function ServersPage() {
             </PageHeader>
 
             {error ? (
-                <div className="py-12">
-                    <ErrorPanel 
+                <ErrorPanel 
                         title="서버 목록 오류" 
                         message="서버 목록을 불러오는데 실패했어요." 
                         onRetry={() => mutate()} 
                     />
-                </div>
             ) : isLoading ? (
                 <ServersGridSkeleton />
             ) : guilds.length === 0 ? (

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_GOODBYE_GREETING, DEFAULT_WELCOME_GREETING, renderGreetingTemplate, validateGreetingConfig } from './memberGreeting.ts';
+import {
+	DEFAULT_WELCOME_GREETING,
+	DEFAULT_GOODBYE_GREETING,
+	GREETING_TEMPLATES,
+	PRESET_BACKGROUNDS,
+	renderGreetingTemplate,
+	validateGreetingConfig
+} from './memberGreeting.ts';
 
 /** v2 초창기에 저장됐던 모양 — layout·accentColor 필드가 없어요 */
 const LEGACY_CONFIG = {
@@ -95,5 +102,20 @@ describe('greetingImageSchema — 레이어 경계값', () => {
 	it('알 수 없는 배경 프리셋은 거부한다', () => {
 		expect(withImage({ background: { presetId: 'nope', dataUri: null }, layers: [textLayer] })).toBeNull();
 		expect(withImage({ background: { presetId: 'rose', dataUri: null }, layers: [textLayer] })).not.toBeNull();
+	});
+});
+
+describe('GREETING_TEMPLATES', () => {
+	it('모든 템플릿이 스키마를 통과하고 존재하는 배경 프리셋만 써요', () => {
+		const presetIds = PRESET_BACKGROUNDS.map((preset) => preset.id);
+		const ids = new Set<string>();
+		for (const template of GREETING_TEMPLATES) {
+			expect(ids.has(template.id)).toBe(false);
+			ids.add(template.id);
+			expect(presetIds).toContain(template.image.background.presetId);
+			expect(validateGreetingConfig({ ...DEFAULT_WELCOME_GREETING, image: template.image })).not.toBeNull();
+			const layerIds = template.image.layers.map((layer) => layer.id);
+			expect(new Set(layerIds).size).toBe(layerIds.length);
+		}
 	});
 });

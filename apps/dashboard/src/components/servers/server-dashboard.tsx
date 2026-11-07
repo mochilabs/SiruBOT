@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -22,13 +22,16 @@ import {
   Volume2,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import { ServerFeatureSidebar } from "./server-feature-sidebar";
-import { SERVER_TABS, type ServerTabKey } from "./server-tabs";
-import { hasUnsavedActiveSettings, nudgeSaveBar, SettingsPanelActive } from "./settings-shared";
+import { ServerMobileNav } from "./server-mobile-nav";
+import { SERVER_TAB_GROUPS, SERVER_TABS, type ServerTabKey } from "./server-tabs";
+import { hasUnsavedActiveSettings, registerSettingsDiscardHandler, saveActiveSettings, SettingsPanelActive } from "./settings-shared";
 
 function TabLoadingFallback() {
   return (
@@ -132,66 +135,60 @@ export function ServerDashboard({
   const [tab, setTab] = useState<ServerTabKey>(initialTab);
   // 한 번이라도 방문한 탭만 마운트하여 초기 진입 번들/요청을 최소화하고, 방문한 탭은 상태를 보존해요
   const [visitedTabs, setVisitedTabs] = useState<Set<ServerTabKey>>(() => new Set([initialTab]));
-  const mobileTabsRef = useRef<HTMLDivElement>(null);
-  const nudgeTimerRef = useRef<number | null>(null);
+  /** 저장하지 않은 변경이 있어 이동이 보류된 대상 탭 — 값이 있으면 확인 다이얼로그가 떠요 */
+  const [pendingTab, setPendingTab] = useState<ServerTabKey | null>(null);
+  const [savingBeforeLeave, setSavingBeforeLeave] = useState(false);
+  /** 변경 취소 시 해당 탭 패널을 새로 마운트해 편집 중이던 값을 버려요 */
+  const [panelResets, setPanelResets] = useState<Partial<Record<ServerTabKey, number>>>({});
   useEffect(() => {
-    // 뒤로가기 등으로 URL이 바뀌면 대기 중이던 nudge 전환 타이머가 오래된 탭을 덮어쓰지 않도록 취소해요
-    if (nudgeTimerRef.current) {
-      window.clearTimeout(nudgeTimerRef.current);
-      nudgeTimerRef.current = null;
-    }
     const next = tabFromUrl(searchParams.get("tab"));
     setTab(next);
     setVisitedTabs((prev) => (prev.has(next) ? prev : new Set(prev).add(next)));
   }, [searchParams]);
+  const commitTab = (nextTab: ServerTabKey) => {
+    setTab(nextTab);
+    setVisitedTabs((prev) => (prev.has(nextTab) ? prev : new Set(prev).add(nextTab)));
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", nextTab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
   const selectTab = (value: string) => {
     const nextTab = tabFromUrl(value);
-    const commit = () => {
-      setTab(nextTab);
-      setVisitedTabs((prev) => (prev.has(nextTab) ? prev : new Set(prev).add(nextTab)));
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", nextTab);
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-    if (nextTab === tab || !hasUnsavedActiveSettings()) {
-      commit();
+    if (nextTab === tab) return;
+    // 저장하지 않은 변경이 있으면 저장하거나 취소하기 전에는 다른 탭으로 못 가요
+    if (hasUnsavedActiveSettings()) {
+      setPendingTab(nextTab);
       return;
     }
-    // 저장하지 않은 채 다른 탭으로 떠나려 하면 막지 말고 저장 바를 흔들어 알려줘요 (모달 대신)
-    nudgeSaveBar();
-    if (nudgeTimerRef.current) window.clearTimeout(nudgeTimerRef.current);
-    nudgeTimerRef.current = window.setTimeout(() => {
-      nudgeTimerRef.current = null;
-      commit();
-    }, 480);
+    commitTab(nextTab);
   };
-
-  useEffect(() => () => {
-    if (nudgeTimerRef.current) window.clearTimeout(nudgeTimerRef.current);
-  }, []);
-
-  useEffect(() => {
-    const container = mobileTabsRef.current;
-    const item = container?.querySelector<HTMLElement>(
-      `[data-mobile-tab="${tab}"]`,
-    );
-    if (!container || !item) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const itemRect = item.getBoundingClientRect();
-    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
-    if (itemRect.left < containerRect.left) {
-      container.scrollBy({
-        left: itemRect.left - containerRect.left - 8,
-        behavior,
-      });
-    } else if (itemRect.right > containerRect.right) {
-      container.scrollBy({
-        left: itemRect.right - containerRect.right + 8,
-        behavior,
-      });
+  // 저장 바의 "취소" — 현재 탭 패널을 새로 마운트해 편집 중이던 값을 버려요
+  useEffect(
+    () => registerSettingsDiscardHandler(() => setPanelResets((prev) => ({ ...prev, [tab]: (prev[tab] ?? 0) + 1 }))),
+    [tab],
+  );
+  const discardAndLeave = () => {
+    if (!pendingTab) return;
+    setPanelResets((prev) => ({ ...prev, [tab]: (prev[tab] ?? 0) + 1 }));
+    commitTab(pendingTab);
+    setPendingTab(null);
+  };
+  const saveAndLeave = async () => {
+    if (!pendingTab || savingBeforeLeave) return;
+    setSavingBeforeLeave(true);
+    try {
+      const saved = await saveActiveSettings();
+      if (saved) {
+        commitTab(pendingTab);
+        setPendingTab(null);
+      } else {
+        // 저장 실패는 각 패널이 토스트로 알렸어요 — 이동하지 않고 편집 상태를 유지해요
+        setPendingTab(null);
+      }
+    } finally {
+      setSavingBeforeLeave(false);
     }
-  }, [tab]);
+  };
 
   if (!manageable) return <NotManageable />;
 
@@ -211,26 +208,7 @@ export function ServerDashboard({
                 Card 서피스 + rounded-menu 언어를 써서 부유하는 맨 요소 대신 안정된 표면을 제공해요.
                 가로 스크롤은 카드 내부로 격리되고 활성 탭은 ServerFeatureSidebar와 일치하는
                 primary-control/10 알약 스타일로 표시돼요. */}
-            <Card padding="none" className="mb-4 overflow-hidden lg:hidden">
-              <div
-                ref={mobileTabsRef}
-                className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-none p-1.5"
-              >
-                <TabsList className="w-max min-w-full justify-start gap-1 whitespace-nowrap bg-transparent p-0">
-                  {TABS.map((item) => (
-                    <TabsTrigger
-                      key={item.key}
-                      value={item.key}
-                      data-mobile-tab={item.key}
-                      className="min-h-11 min-w-max flex-none gap-2 rounded-menu px-4 py-2.5 text-sm font-semibold transition-colors duration-fast after:hidden hover:bg-accent/15 hover:text-foreground data-active:bg-primary-control/15 data-active:font-extrabold data-active:text-primary-text"
-                    >
-                      <span aria-hidden className="shrink-0">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-            </Card>
+            <ServerMobileNav items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
             {TABS.map((item) => (
               <TabsContent
                 key={item.key}
@@ -240,7 +218,7 @@ export function ServerDashboard({
               >
                 <SettingsPanelActive.Provider value={tab === item.key}>
                 {visitedTabs.has(item.key) && (
-                  <>
+                  <Fragment key={panelResets[item.key] ?? 0}>
                     {item.key === "ai" && <AiSettings guildId={guildId} />}
                     {item.key === "custom-commands" && (
                       <CustomCommandsSettings guildId={guildId} />
@@ -281,7 +259,7 @@ export function ServerDashboard({
                     {item.key === "role-panels" && (
                       <RolePanelsSettings guildId={guildId} />
                     )}
-                  </>
+                  </Fragment>
                 )}
                 </SettingsPanelActive.Provider>
               </TabsContent>
@@ -289,6 +267,25 @@ export function ServerDashboard({
           </Tabs>
         </div>
       </div>
+      <Dialog open={pendingTab !== null} onOpenChange={(open) => { if (!open && !savingBeforeLeave) setPendingTab(null); }}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>저장하지 않은 변경 사항이 있어요</DialogTitle>
+            <DialogDescription>다른 탭으로 이동하기 전에 변경 사항을 저장하거나 취소해 주세요.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" className="min-h-11" disabled={savingBeforeLeave} onClick={() => setPendingTab(null)}>
+              계속 편집
+            </Button>
+            <Button variant="secondary" className="min-h-11" disabled={savingBeforeLeave} onClick={discardAndLeave}>
+              변경 취소
+            </Button>
+            <Button variant="cta" className="min-h-11" loading={savingBeforeLeave} onClick={() => void saveAndLeave()}>
+              저장하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

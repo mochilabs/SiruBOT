@@ -6,7 +6,7 @@
 
 ## 3계층 구조
 
-브라우저 → **API Route** (인증·권한·rate-limit·zod) → **DB 직결 / data-api / shardmanager**. 비밀 키는 서버 전용 — 클라이언트 번들에 절대 노출하지 않는다 (`apps/dashboard/src/lib/data-api.ts:38-57`).
+브라우저 → **API Route** (인증·권한·rate-limit·zod) → **DB 직결 / data-api / shardmanager**. 비밀 키는 서버 전용 — 클라이언트 번들에 절대 노출하지 않는다 (`apps/dashboard/src/lib/data-api/client.ts`).
 
 인증은 next-auth Discord OAuth (`apps/dashboard/src/lib/auth.ts`): `identify guilds` 스코프, JWT 세션 24시간, `issuer: https://discord.com` 고정.
 
@@ -39,7 +39,7 @@
 
 ## SSE 프록시 특성
 
-`live/stream`은 인가 뒤 data-api SSE를 그대로 relay — **rate-limit 미적용**(장기 연결), 미설정/장애는 502로 통일해 클라이언트가 폴링 폴백 (`apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts:6-12`). data-api 클라이언트도 SSE에 `AbortSignal.timeout`을 걸지 않는다 — 타임아웃이 연결 전체를 잘라버리기 때문 (`apps/dashboard/src/lib/data-api.ts:72-75`).
+`live/stream`은 인가 뒤 data-api SSE를 그대로 relay — **rate-limit 미적용**(장기 연결), 미설정/장애는 502로 통일해 클라이언트가 폴링 폴백 (`apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts:6-12`). data-api 클라이언트도 SSE에 `AbortSignal.timeout`을 걸지 않는다 — 타임아웃이 연결 전체를 잘라버리기 때문 (`apps/dashboard/src/lib/data-api/client.ts`).
 
 ## SHARD_MANAGER_AUTH_KEY 규칙
 

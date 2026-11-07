@@ -14,7 +14,6 @@ import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useConfirmDelete } from "@/hooks/use-confirm-delete";
 import { useGuildChannels } from "@/hooks/use-guild-settings";
@@ -22,15 +21,13 @@ import { ApiError, toApiError, toError } from "@/lib/api-error";
 import { notifyApiError, notifySaved } from "@/lib/notify";
 import type { AiMode, AiPolicy } from "@/types/settings";
 
+import { SettingsPanel } from "./settings-panel";
+import { SettingsSection } from "./settings-section";
 import {
   ChannelListError,
   InfoBox,
   type ModeCardOption,
   ModePicker,
-  PanelError,
-  PanelHeader,
-  PanelLoading,
-  SaveBar,
   WarningBox,
 } from "./settings-shared";
 
@@ -150,109 +147,77 @@ function AiSettingsPanel({ guildId }: { guildId: string }) {
     }
   };
 
-  if (loading) return <PanelLoading label="AI 설정 불러오는 중…" />;
-  if (loadError)
-    return (
-      <PanelError
-        error={loadError}
-        onRetry={() => {
-          setLoading(true);
-          setRetryToken((t) => t + 1);
-        }}
-      />
-    );
+  const reload = () => {
+    setLoading(true);
+    setRetryToken((t) => t + 1);
+  };
+  const panel = { form: policy, isLoading: loading, error: loadError, dirty, saving, handleSave, reload };
 
   return (
-    <Card padding="lg" className="gap-6 overflow-visible">
-      <PanelHeader
-        icon={<Bot className="h-5 w-5" />}
-        title="AI 채팅 설정"
-        description="응답할 채널 범위와 지침을 관리해요."
-        action={
-          <Button
-            variant="icon"
-            size="sm"
-            aria-label="설정 새로고침"
-            disabled={dirty || saving}
-            icon={<RefreshCw size={16} />}
-            onClick={() => {
-              setLoading(true);
-              setRetryToken((t) => t + 1);
-            }}
-          />
-        }
-      />
-
-      {/* 모드 선택 */}
-      <ModePicker
-        label="AI 채팅 모드"
-        value={mode}
-        options={MODE_CARDS}
-        disabled={saving}
-        onChange={setMode}
-      />
-
-      {/* 특정 채널 선택 */}
-      {mode === "channels" && (
-        <div className="space-y-3">
-          <Field
-            label="허용 채널"
-            description="선택한 텍스트 채널에서만 AI가 답해요. 여러 개를 고를 수 있어요."
+    <SettingsPanel
+      panel={panel}
+      icon={<Bot className="h-5 w-5" />}
+      title="AI 채팅 설정"
+      description="응답할 채널 범위와 지침을 관리해요."
+      action={
+        <Button variant="icon" size="sm" aria-label="설정 새로고침" disabled={dirty || saving} icon={<RefreshCw size={16} />} onClick={reload} />
+      }
+      notice={
+        <InfoBox>
+          <p>
+            디스코드에서 <span className="font-semibold text-foreground">/채팅설정</span> 커맨드로도 바꿀 수 있어요.
+          </p>
+        </InfoBox>
+      }
+    >
+      {(current) => (
+        <>
+          <SettingsSection
+            title="응답 범위"
+            summary={`${MODE_CARDS.find((card) => card.value === mode)?.label ?? mode}${mode === "channels" ? ` · ${channelIds.length}개 채널` : ""}`}
+            defaultOpen
           >
-            <ChannelSelect
-              multiple
-              channels={channels}
-              types={CHANNEL_TYPE_GROUP.chat}
-              searchPlaceholder="채널 검색…"
-              placeholder="채널을 선택해 주세요"
-              value={channelIds}
-              onChange={setChannelIds}
-              disabled={saving}
-            />
-          </Field>
-          {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
-          {!channelsError && channelIds.length === 0 && (
-            <WarningBox>
-              허용 채널이 0개면 어디서도 응답하지 않아요. 채널을 최소 1개 선택해
-              주세요.
-            </WarningBox>
-          )}
-        </div>
+            <ModePicker label="AI 채팅 모드" value={mode} options={MODE_CARDS} disabled={saving} onChange={setMode} />
+
+            {mode === "channels" && (
+              <div className="space-y-3">
+                <Field label="허용 채널" description="선택한 텍스트 채널에서만 AI가 답해요. 여러 개를 고를 수 있어요.">
+                  <ChannelSelect
+                    multiple
+                    channels={channels}
+                    types={CHANNEL_TYPE_GROUP.chat}
+                    searchPlaceholder="채널 검색…"
+                    placeholder="채널을 선택해 주세요"
+                    value={channelIds}
+                    onChange={setChannelIds}
+                    disabled={saving}
+                  />
+                </Field>
+                {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
+                {!channelsError && channelIds.length === 0 && (
+                  <WarningBox>허용 채널이 0개면 어디서도 응답하지 않아요. 채널을 최소 1개 선택해 주세요.</WarningBox>
+                )}
+              </div>
+            )}
+          </SettingsSection>
+
+          <SettingsSection title="대화 기록" summary={`${current.historyCount}개 채널`}>
+            <Field label="대화 기록 삭제" description="AI가 기억하는 이 서버의 대화 기록을 전부 지워요.">
+              <Button
+                variant="danger"
+                loading={deleting}
+                disabled={current.historyCount === 0}
+                icon={deleting ? undefined : <Trash2 size={16} />}
+                onClick={handleDeleteHistory}
+                className={confirmDelete ? "ring-2 ring-destructive/50" : ""}
+              >
+                {confirmDelete ? "정말 삭제할까요?" : "대화 기록 전체 삭제"}
+              </Button>
+            </Field>
+          </SettingsSection>
+        </>
       )}
-
-      <InfoBox>
-        <p>
-          디스코드에서{" "}
-          <span className="font-semibold text-foreground">/채팅설정</span>{" "}
-          커맨드로도 바꿀 수 있어요.
-        </p>
-        <p>
-          저장된 대화 기록:{" "}
-          <span className="font-semibold text-foreground">
-            {policy?.historyCount ?? 0}
-          </span>
-          개 채널 · 허용 채널{" "}
-          <span className="font-semibold text-foreground">
-            {channelIds.length}
-          </span>
-          개
-        </p>
-      </InfoBox>
-
-      <Field label="대화 기록" description="AI가 기억하는 이 서버의 대화 기록을 전부 지워요.">
-        <Button
-          variant="danger"
-          loading={deleting}
-          disabled={(policy?.historyCount ?? 0) === 0}
-          icon={deleting ? undefined : <Trash2 size={16} />}
-          onClick={handleDeleteHistory}
-          className={confirmDelete ? "ring-2 ring-destructive/50" : ""}
-        >
-          {confirmDelete ? "정말 삭제할까요?" : "대화 기록 전체 삭제"}
-        </Button>
-      </Field>
-      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-    </Card>
+    </SettingsPanel>
   );
 }
 

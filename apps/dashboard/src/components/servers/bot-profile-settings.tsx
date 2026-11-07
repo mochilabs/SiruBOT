@@ -15,12 +15,13 @@ import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
 import { notifyApiError } from "@/lib/notify";
 
+import { SettingsPanel } from "./settings-panel";
+import { SettingsSection } from "./settings-section";
 import {
   PanelError,
   PanelHeader,
   PanelLoading,
   RetryLink,
-  SaveBar,
   WarningBox,
 } from "./settings-shared";
 
@@ -241,24 +242,25 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
     handleNicknameChange("");
   };
 
-  const handleFormRevert = () => {
-    setNicknameTouched(false);
-    setNickname(originalNickname);
-    setAvatarFile(null);
-    setAvatarReset(false);
-    setBannerFile(null);
-    setBannerReset(false);
-    setCropSource(null);
-  };
+  const panel = { form: profile, isLoading: false, error: null, dirty, saving, handleSave, reload };
 
   return (
-    <Card padding="lg" className="gap-6 overflow-visible">
-      <PanelHeader
-        icon={<UserRoundCog className="h-5 w-5" />}
-        title="봇 프로필"
-        description="봇이 이 서버에서 보여질 이름과 프로필 사진을 관리해요. 다른 서버에는 영향이 없어요."
-      />
-
+    <SettingsPanel
+      panel={panel}
+      icon={<UserRoundCog className="h-5 w-5" />}
+      title="봇 프로필"
+      description="봇이 이 서버에서 보여질 이름과 프로필 사진을 관리해요. 다른 서버에는 영향이 없어요."
+      notice={
+        <AvatarCropModal
+          source={cropSource?.file ?? null}
+          shape={cropSource?.shape ?? "avatar"}
+          onClose={() => setCropSource(null)}
+          onApply={handleCropApply}
+        />
+      }
+    >
+      {() => (
+        <>
       {lastApplyError && (
         <WarningBox>
           봇이 마지막 프로필 적용에 실패했어요: {lastApplyError}
@@ -273,66 +275,8 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
         </WarningBox>
       )}
 
-      <Field label="배너" description={bannerCaption}>
-        <div className="space-y-2">
-          <div className="relative h-[150px] max-w-lg overflow-hidden rounded-card bg-surface-2">
-            {bannerPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={bannerPreview}
-                alt="봇 배너 미리보기"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                <ImagePlus className="h-5 w-5" aria-hidden />
-                <span className="text-xs">
-                  배너 없음, 공개 서버 목록 등에 떠요
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col items-start gap-2">
-            <input
-              ref={bannerInputRef}
-              type="file"
-              accept={ACCEPTED_IMAGE_TYPES}
-              className="sr-only"
-              onChange={(event) => {
-                handleBannerPick(event.target.files?.[0] ?? null);
-                event.target.value = "";
-              }}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<ImagePlus size={14} />}
-                onClick={() => bannerInputRef.current?.click()}
-                disabled={saving}
-              >
-                배너 선택
-              </Button>
-              {profile.guildBannerUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<RotateCcw size={14} />}
-                  onClick={() => {
-                    setBannerFile(null);
-                    setBannerReset(true);
-                  }}
-                  disabled={saving}
-                >
-                  배너 제거
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </Field>
+          <SettingsSection title="이름과 사진" summary={nickname.trim() || profile.nickname || profile.username} defaultOpen>
 
-      <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
         <Field label="프로필 사진" description={previewCaption}>
           <div className="flex items-center gap-3">
             <span className="relative inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-full bg-surface-2">
@@ -423,29 +367,71 @@ function BotProfileSettingsPanel({ guildId }: { guildId: string }) {
             </Button>
           </div>
         </Field>
-      </div>
+          </SettingsSection>
 
-      <SaveBar dirty={dirty} saving={saving} onSave={handleSave}>
-        {dirty && (
-          <Button
-            variant="ghost"
-            size="md"
-            onClick={handleFormRevert}
-            disabled={saving}
-            className="min-h-11"
-          >
-            되돌리기
-          </Button>
-        )}
-      </SaveBar>
-
-      <AvatarCropModal
-        source={cropSource?.file ?? null}
-        shape={cropSource?.shape ?? "avatar"}
-        onClose={() => setCropSource(null)}
-        onApply={handleCropApply}
-      />
-    </Card>
+          <SettingsSection title="배너" summary={bannerPreview ? "설정됨" : "없음"}>
+      <Field label="배너 이미지" description={bannerCaption}>
+        <div className="space-y-2">
+          <div className="relative h-[150px] max-w-lg overflow-hidden rounded-card bg-surface-2">
+            {bannerPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={bannerPreview}
+                alt="봇 배너 미리보기"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                <ImagePlus className="h-5 w-5" aria-hidden />
+                <span className="text-xs">
+                  배너 없음, 공개 서버 목록 등에 떠요
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-start gap-2">
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept={ACCEPTED_IMAGE_TYPES}
+              className="sr-only"
+              onChange={(event) => {
+                handleBannerPick(event.target.files?.[0] ?? null);
+                event.target.value = "";
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<ImagePlus size={14} />}
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={saving}
+              >
+                배너 선택
+              </Button>
+              {profile.guildBannerUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<RotateCcw size={14} />}
+                  onClick={() => {
+                    setBannerFile(null);
+                    setBannerReset(true);
+                  }}
+                  disabled={saving}
+                >
+                  배너 제거
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Field>
+          </SettingsSection>
+        </>
+      )}
+    </SettingsPanel>
   );
 }
 

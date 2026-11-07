@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import { Hash, ListChecks, Play } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
@@ -11,25 +10,13 @@ import {
   type SearchableOption,
   SearchableSelect,
 } from "@/components/servers/searchable-select";
-import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import {
-  useGuildChannels,
-  useGuildRoles,
-  useSettingsForm,
-} from "@/hooks/use-guild-settings";
-import { notifyApiError, notifySaved } from "@/lib/notify";
+import { useGuildChannels, useGuildRoles } from "@/hooks/use-guild-settings";
 import type { GuildSettings } from "@/types/settings";
 
-import {
-  InfoBox,
-  PanelError,
-  PanelHeader,
-  PanelLoading,
-  RetryLink,
-  SaveBar,
-  WarningBox,
-} from "./settings-shared";
+import { SettingsPanel, useSettingsPanel } from "./settings-panel";
+import { SettingsSection, SettingsToggleRow } from "./settings-section";
+import { InfoBox, RetryLink, WarningBox } from "./settings-shared";
 
 const PINNED_MODE_OPTIONS: SearchableOption[] = [
   {
@@ -65,8 +52,8 @@ const toChannelForm = (settings: GuildSettings): ChannelForm => ({
 });
 
 function ChannelSettingsPanel({ guildId }: { guildId: string }) {
-  const { form, isLoading, error, saving, dirty, patch, submit, reload } =
-    useSettingsForm(guildId, toChannelForm);
+  const panel = useSettingsPanel(guildId, toChannelForm, "채널·권한 설정을 저장했어요.");
+  const { patch, saving } = panel;
   const {
     channels,
     error: channelsError,
@@ -78,29 +65,26 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
     reload: reloadRoles,
   } = useGuildRoles(guildId, true);
 
-  const handleSave = useCallback(async () => {
-    try {
-      await submit();
-      notifySaved("채널·권한 설정을 저장했어요.");
-    } catch (err) {
-      notifyApiError(err, "저장에 실패했어요.");
-    }
-  }, [submit]);
-
-  if (isLoading) return <PanelLoading label="채널·권한 설정 불러오는 중…" />;
-  if (error) return <PanelError error={error} onRetry={reload} />;
-  if (!form) return <PanelLoading label="채널·권한 설정 불러오는 중…" />;
-
   const listUnavailable = channels === null;
+  const nameOf = (id: string | null) => (id ? `#${channels?.find((channel) => channel.id === id)?.name ?? "알 수 없음"}` : "사용 안 함");
 
   return (
-    <Card padding="lg" className="gap-6 border-0 overflow-visible">
-      <PanelHeader
-        icon={<Hash className="h-5 w-5" />}
-        title="채널·권한 설정"
-        description="기본 채널, 고정 채널 동작, DJ 역할을 관리해요."
-      />
-
+    <SettingsPanel
+      panel={panel}
+      icon={<Hash className="h-5 w-5" />}
+      title="채널·권한 설정"
+      description="기본 채널, 고정 채널 동작, DJ 역할을 관리해요."
+      notice={
+      <InfoBox>
+          <p>
+            채널·역할은 디스코드에서 삭제되면 자동으로 무시돼요. 목록이 비어
+            있으면 새로고침해 주세요.
+          </p>
+        </InfoBox>
+      }
+    >
+      {(form) => (
+        <>
       {(channelsError || rolesError) && (
         <WarningBox>
           일부 목록을 불러오지 못했어요. (
@@ -114,7 +98,8 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         </WarningBox>
       )}
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div>
+        <SettingsSection title="기본 채널" summary={`텍스트 ${nameOf(form.textChannelId)} · 음성 ${nameOf(form.voiceChannelId)}`} defaultOpen>
         <Field
           label="기본 텍스트 채널"
           description="미설정이면 입력이 온 채널을 그대로 사용해요."
@@ -144,8 +129,9 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
             disabled={saving || listUnavailable}
           />
         </Field>
-      </div>
+        </SettingsSection>
 
+        <SettingsSection title="고정 채널" summary={form.pinnedChannelId ? nameOf(form.pinnedChannelId) : "사용 안 함"}>
       <Field
         label="고정 채널"
         description="이 채널에 입력한 텍스트를 검색어로 재생해요. 전체 채널에서 고정 채널을 하나만 지정할 수 있어요."
@@ -179,19 +165,15 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         />
       </Field>
 
-      <Field
-        label="입력 메시지 자동 삭제"
-        description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 봇에게 메시지 관리 권한이 필요해요."
-      >
-        <Switch
-          checked={form.pinnedChannelDeleteInput}
-          onChange={(checked: boolean) =>
-            patch({ pinnedChannelDeleteInput: checked })
-          }
-          disabled={saving || !form.pinnedChannelId}
+      <SettingsToggleRow
+          title="입력 메시지 자동 삭제"
+          description="봇이 재생을 시작한 뒤 입력 메시지를 지워요. 봇에게 메시지 관리 권한이 필요해요."
+          control={<Switch checked={form.pinnedChannelDeleteInput} onChange={(checked: boolean) => patch({ pinnedChannelDeleteInput: checked })} disabled={saving || !form.pinnedChannelId} aria-label="입력 메시지 자동 삭제" />}
         />
-      </Field>
 
+        </SettingsSection>
+
+        <SettingsSection title="권한" summary={form.djRoleId ? `DJ ${roles?.find((role) => role.id === form.djRoleId)?.name ?? "알 수 없음"}` : "DJ 역할 없음"}>
       <Field
         label="DJ 역할"
         description="이 역할을 가진 멤버만 정지·스킵·볼륨 등 컨트롤 커맨드를 쓸 수 있어요. 관리자는 항상 가능해요."
@@ -206,15 +188,11 @@ function ChannelSettingsPanel({ guildId }: { guildId: string }) {
         />
       </Field>
 
-      <InfoBox>
-        <p>
-          채널·역할은 디스코드에서 삭제되면 자동으로 무시돼요. 목록이 비어
-          있으면 새로고침해 주세요.
-        </p>
-      </InfoBox>
-
-      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-    </Card>
+        </SettingsSection>
+      </div>
+        </>
+      )}
+    </SettingsPanel>
   );
 }
 

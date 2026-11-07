@@ -128,7 +128,11 @@ function AssetsPanel({ guildId }: { guildId: string }) {
       <PanelHeader
         icon={<Images className="h-5 w-5" />}
         title="이미지 에셋"
-        description="커스텀 명령어의 썸네일·갤러리에 쓰는 이미지를 한곳에서 관리해요."
+        description={
+          assets.length > 0
+            ? `커스텀 명령어의 썸네일·갤러리에 쓰는 이미지 ${assets.length}개를 관리해요.`
+            : "커스텀 명령어의 썸네일·갤러리에 쓰는 이미지를 한곳에서 관리해요."
+        }
         action={
           <>
             <input
@@ -172,8 +176,8 @@ function AssetsPanel({ guildId }: { guildId: string }) {
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {assets.map((asset) => (
             <li key={asset.id}>
-              <Card padding="sm" className="h-full gap-3">
-                <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-control bg-surface-2">
+              <div className="flex h-full flex-col gap-3 rounded-card bg-surface-2 p-3">
+                <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-control bg-surface-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={asset.url}
@@ -265,7 +269,7 @@ function AssetsPanel({ guildId }: { guildId: string }) {
                     onClick={() => void handleDelete(asset)}
                   />
                 </div>
-              </Card>
+              </div>
             </li>
           ))}
         </ul>

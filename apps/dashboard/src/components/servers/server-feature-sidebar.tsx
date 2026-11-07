@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { Fragment, useCallback, useRef } from "react";
 
 import { SidebarIndicatorOverlay, useSidebarIndicator } from "@/components/primitives/sidebar-indicator";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,8 @@ export interface ServerFeatureItem {
 	key: string;
 	label: string;
 	icon?: React.ReactNode;
+	/** group이 바뀌는 지점에는 헤더 없이 얇은 구분선만 그려요 */
+	group?: string;
 }
 
 interface ServerFeatureSidebarProps {
@@ -20,8 +22,8 @@ interface ServerFeatureSidebarProps {
 
 /**
  * PC(lg+) 전용 기능 사이드바 — 플레이리스트 사이드바와 같은 "카드 + 목록" 언어를 써서
- * 대시보드 안에서 새 패턴을 만들지 않아요. 활성 항목은 spring 인디케이터로 표시해
- * 지금 어느 기능을 보고 있는지 한눈에 읽히게 해요.
+ * 대시보드 안에서 새 패턴을 만들지 않아요. 모든 메뉴를 평평하게 보여주고 그룹 경계만
+ * 구분선으로 나눠요. 활성 항목은 spring 인디케이터로 표시해요.
  */
 export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureSidebarProps) {
 	const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -36,28 +38,29 @@ export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureS
 					<SidebarIndicatorOverlay indicator={indicator} />
 
 					{items.map((item, idx) => {
+						const startsGroup = idx !== 0 && item.group !== items[idx - 1]?.group;
 						const isActive = item.key === active;
 						return (
-							<button
-								key={item.key}
-								type="button"
-								ref={(el) => {
-									itemRefs.current[idx] = el;
-								}}
-								onClick={() => onSelect(item.key)}
-								aria-current={isActive ? "true" : undefined}
-								className={cn(
-									"relative z-10 flex w-full items-center gap-3 rounded-menu border-0 px-3.5 py-2.5 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-									isActive
-										? "font-extrabold text-primary-text"
-										: "font-medium text-foreground/70 hover:bg-accent/15 hover:text-foreground",
-								)}
-							>
-								<span aria-hidden className={cn("shrink-0 transition-colors duration-fast", isActive ? "text-primary-text" : "text-muted-foreground group-hover:text-foreground")}>
-									{item.icon}
-								</span>
-								<span className="truncate">{item.label}</span>
-							</button>
+							<Fragment key={item.key}>
+								{startsGroup && <div role="separator" className="mx-3 my-1 h-px bg-border" />}
+								<button
+									type="button"
+									ref={(el) => {
+										itemRefs.current[idx] = el;
+									}}
+									onClick={() => onSelect(item.key)}
+									aria-current={isActive ? "true" : undefined}
+									className={cn(
+										"relative z-10 flex w-full items-center gap-3 rounded-menu border-0 px-3.5 py-2 text-left text-sm transition-colors duration-fast focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+										isActive ? "font-extrabold text-primary-text" : "font-medium text-foreground/70 hover:bg-accent/15 hover:text-foreground",
+									)}
+								>
+									<span aria-hidden className={cn("shrink-0 transition-colors duration-fast", isActive ? "text-primary-text" : "text-muted-foreground")}>
+										{item.icon}
+									</span>
+									<span className="truncate">{item.label}</span>
+								</button>
+							</Fragment>
 						);
 					})}
 				</div>

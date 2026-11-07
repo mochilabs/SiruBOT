@@ -4,7 +4,7 @@ import type { NotifierRedis } from './redis.ts';
 
 const logger = getLogger('pollingLoop');
 
-// plan §8: 폴링 실패 5회 연속 → 30분 봉쇄 (half-open: 이후 틱에서 자동 재시도)
+// 폴링 실패 5회 연속 → 30분 봉쇄 (half-open: 이후 틱에서 자동 재시도)
 export const BREAKER_THRESHOLD = 5;
 export const BREAKER_COOLDOWN_MS = 30 * 60 * 1000;
 
@@ -32,7 +32,7 @@ export interface PollingLoopOptions {
 	tick: () => Promise<void>;
 }
 
-/** interval 폴링 루프의 공용 골격 (plan §2.5): 스케줄링·타이머 정리·재입장 방지를 담당해요. */
+/** interval 폴링 루프의 공용 골격: 스케줄링·타이머 정리·재입장 방지를 담당해요. */
 export class PollingLoop {
 	private readonly options: PollingLoopOptions;
 	private timer: ReturnType<typeof setTimeout> | null = null;
@@ -130,7 +130,7 @@ export interface SubscriptionPollerConfig {
 }
 
 /**
- * "구독 목록 조회 → 플랫폼별 상태 확인 → 이벤트 발행" 폴링 스케줄러의 공통 골격 (plan §2.5).
+ * "구독 목록 조회 → 플랫폼별 상태 확인 → 이벤트 발행" 폴링 스케줄러의 공통 골격.
  * 서킷 브레이커·분산 락·DB 가드·틱 실패 계정을 소유하고, 도메인 작업은 pollOnce 훅으로 남겨요.
  */
 export abstract class SubscriptionPoller {

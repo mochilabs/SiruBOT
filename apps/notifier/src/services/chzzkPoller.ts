@@ -13,7 +13,7 @@ const LOCK_KEY = 'sirubot:social:chzzk:poll-lock';
 const LOCK_TTL_SECONDS = 25;
 const STATE_KEY_PREFIX = 'sirubot:social:chzzk:live:';
 const STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
-// plan §8: 라이브 중 2분, 오프라인 5분 (적응형 폴링)
+// 라이브 중 2분, 오프라인 5분 (적응형 폴링)
 const INTERVAL_ONLINE_MS = 2 * 60 * 1000;
 const INTERVAL_OFFLINE_MS = 5 * 60 * 1000;
 // 구독 목록 캐시: 매 틱마다 DB를 때리지 않아요.

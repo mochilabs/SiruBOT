@@ -140,8 +140,7 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 		<section className="space-y-4">
 			<header className="flex flex-wrap items-center justify-between gap-2">
 				<div>
-					<h3 className="text-sm font-semibold">티켓 목록</h3>
-					<p className="text-xs text-muted-foreground">마감된 티켓의 대화 기록은 여기서만 볼 수 있어요 (채널은 삭제돼요).</p>
+					<p className="text-xs text-muted-foreground sm:text-sm">마감된 티켓의 대화 기록은 여기서만 볼 수 있어요 (채널은 삭제돼요).</p>
 				</div>
 				<div className="flex gap-2">
 					{(["open", "closed"] as const).map((value) => (
@@ -149,7 +148,8 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 							key={value}
 							type="button"
 							onClick={() => setStatus(value)}
-							className={`rounded-md border px-3 py-1 text-xs ${status === value ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+							aria-pressed={status === value}
+							className={`rounded-control px-3 py-1.5 text-xs font-semibold transition-colors duration-fast ${status === value ? "bg-primary-control/15 text-primary-text" : "bg-surface-2 text-muted-foreground hover:text-foreground"}`}
 						>
 							{value === "open" ? "진행 중" : "마감"}
 						</button>
@@ -162,9 +162,9 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 			{!loading && tickets?.length === 0 ? <p className="text-xs text-muted-foreground">티켓이 없어요.</p> : null}
 
 			{tickets && tickets.length > 0 ? (
-				<ul className="divide-y rounded-lg border">
+				<ul className="space-y-2">
 					{tickets.map((ticket) => (
-						<li key={ticket.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+						<li key={ticket.id} className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface-2 px-4 py-3 text-sm">
 							<div className="flex min-w-0 flex-col gap-0.5">
 								<span className="flex items-center gap-2 font-medium">
 									#{String(ticket.ticketNumber).padStart(4, "0")}
@@ -180,7 +180,7 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 									<button
 										type="button"
 										onClick={() => void closeTicket(ticket)}
-										className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+										className="rounded-control bg-surface-3 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors duration-fast hover:bg-accent/30"
 									>
 										마감
 									</button>
@@ -189,7 +189,7 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 									type="button"
 									onClick={() => void openTranscript(ticket)}
 									disabled={!ticket.transcriptKey || transcriptLoading}
-									className="rounded-md border px-2 py-1 text-xs disabled:opacity-40"
+									className="rounded-control bg-surface-3 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors duration-fast hover:bg-accent/30 disabled:opacity-40"
 								>
 									대화 기록
 								</button>
@@ -202,16 +202,16 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 			{transcriptLoading ? <p className="text-xs text-muted-foreground">대화 기록을 불러오는 중…</p> : null}
 			{transcriptError ? <p className="text-xs text-destructive">{transcriptError}</p> : null}
 			{transcript ? (
-				<div className="space-y-2 rounded-lg border p-3">
+				<div className="space-y-2 rounded-card bg-surface-2 p-4">
 					<div className="flex items-center justify-between gap-2">
 						<h4 className="text-sm font-semibold">
 							#{String(transcript.ticketNumber).padStart(4, "0")} 대화 기록 ({transcript.messageCount}개{transcript.truncated ? ", 일부" : ""})
 						</h4>
 						<div className="flex gap-2">
-							<button type="button" onClick={() => downloadTranscript()} className="rounded-md border px-2 py-1 text-xs">
+							<button type="button" onClick={() => downloadTranscript()} className="rounded-control bg-surface-3 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors duration-fast hover:bg-accent/30">
 								JSON 내려받기
 							</button>
-							<button type="button" onClick={() => setTranscript(null)} className="rounded-md border px-2 py-1 text-xs">
+							<button type="button" onClick={() => setTranscript(null)} className="rounded-control bg-surface-3 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors duration-fast hover:bg-accent/30">
 								닫기
 							</button>
 						</div>
