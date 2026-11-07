@@ -33,6 +33,9 @@ const ROLES = [
 	{ id: "302", name: "멤버", color: null, position: 1, managed: false }
 ];
 
+const stubIso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
+const STUB_IMAGE = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#8a7bff"/><circle cx="160" cy="90" r="40" fill="#fff" opacity=".6"/></svg>');
+
 const day = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
 function stubGet(path: string): unknown | undefined {
@@ -46,9 +49,23 @@ function stubGet(path: string): unknown | undefined {
 		case "/ai":
 			return { mode: "off", channelIds: [], historyCount: 0 };
 		case "/custom-commands":
-			return { ok: true, prefix: "!", commands: [], slashCount: 0 };
+			return {
+					ok: true,
+					prefix: "!",
+					slashCount: 1,
+					commands: [
+						{ id: "cc1", name: "아침브리핑", description: "오늘 일정과 인사를 보내요", method: "prefix", spec: { steps: [{}, {}, {}] }, createdAt: stubIso(9), updatedAt: stubIso(2) },
+						{ id: "cc2", name: "공지", description: "", method: "slash", spec: { steps: [{}] }, createdAt: stubIso(5), updatedAt: stubIso(5) }
+					]
+				};
 		case "/assets":
-			return { assets: [] };
+			return {
+					assets: [
+						{ id: "as1", name: "welcome-banner.png", url: STUB_IMAGE, mimeType: "image/png", sizeBytes: 482_000, createdAt: stubIso(12) },
+						{ id: "as2", name: "logo.webp", url: STUB_IMAGE, mimeType: "image/webp", sizeBytes: 96_000, createdAt: stubIso(4) },
+						{ id: "as3", name: "event-poster.gif", url: STUB_IMAGE, mimeType: "image/gif", sizeBytes: 2_300_000, createdAt: stubIso(1) }
+					]
+				};
 		case "/bot-profile":
 			return {
 				profile: {
@@ -70,7 +87,13 @@ function stubGet(path: string): unknown | undefined {
 		case "/greeting":
 			return { welcome: null, goodbye: null };
 		case "/social/subscriptions":
-			return { subscriptions: [] };
+			return {
+					subscriptions: [
+						{ id: "sub1", guildId: STUB_GUILD_ID, platform: "youtube", sourcePlatformId: "UC1", sourceName: "시루 공식 채널", targetChannelId: "203", messageTemplate: null, webhookName: null, webhookAvatarUrl: null, showThumbnail: true, status: "active", createdAt: stubIso(8), updatedAt: stubIso(8) },
+						{ id: "sub2", guildId: STUB_GUILD_ID, platform: "chzzk", sourcePlatformId: "c2", sourceName: "시루 라이브", targetChannelId: "203", messageTemplate: "{channel} 방송 시작!", webhookName: "방송알림", webhookAvatarUrl: null, showThumbnail: false, status: "disabled", createdAt: stubIso(6), updatedAt: stubIso(3) },
+						{ id: "sub3", guildId: STUB_GUILD_ID, platform: "twitch", sourcePlatformId: "t3", sourceName: "sirulive", targetChannelId: "203", messageTemplate: null, webhookName: null, webhookAvatarUrl: null, showThumbnail: true, status: "failed", createdAt: stubIso(3), updatedAt: stubIso(1) }
+					]
+				};
 		case "/ticket":
 			return { guildId: STUB_GUILD_ID, ...TICKET_CONFIG_DEFAULTS };
 		case "/ticket/tickets":

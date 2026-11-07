@@ -7,7 +7,6 @@ import { ChannelSelect } from "@/components/discord/channel-select";
 import { Field } from "@/components/primitives/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useBotProfile } from "@/hooks/use-bot-profile";
@@ -270,7 +269,7 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 	};
 
 	return (
-		<Card variant="muted" padding="lg" className="gap-4 overflow-visible">
+		<div className="flex flex-col gap-4 rounded-card bg-surface-2 p-4">
 			<div className="flex items-center justify-between">
 				<h3 className="text-sm font-semibold text-foreground">알림 추가</h3>
 				<Button
@@ -365,6 +364,6 @@ export function AddSubscriptionForm({ guildId, onDone }: AddSubscriptionFormProp
 					추가
 				</Button>
 			</div>
-		</Card>
+		</div>
 	);
 }
