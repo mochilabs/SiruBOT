@@ -11,12 +11,10 @@ export function InviteTicketSection() {
     <section className="pb-16 sm:pb-24">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative flex flex-col gap-8 overflow-hidden rounded-card bg-primary-control/10 p-8 text-foreground sm:p-12 lg:flex-row lg:items-center lg:justify-between">
-          {/* 장식 도형 — 단색 반투명 면만 써요(그라디언트·테두리 없음). 스크린리더에선 숨겨요 */}
+          {/* 장식 도형 2개 — 단색 반투명 면만 써요(그라디언트·테두리 없음). 스크린리더에선 숨겨요 */}
           <div aria-hidden className="pointer-events-none absolute inset-0">
             <span className="absolute -top-24 -right-16 h-72 w-72 rounded-full bg-primary-control/15 sm:h-96 sm:w-96" />
             <span className="absolute -right-6 -bottom-20 h-48 w-48 rotate-12 rounded-[2.5rem] bg-primary-control/10 sm:right-40 sm:h-56 sm:w-56" />
-            <span className="absolute top-8 right-[38%] hidden h-5 w-5 rounded-full bg-primary-control/25 lg:block" />
-            <span className="absolute -bottom-10 left-[44%] hidden h-24 w-24 rounded-full bg-primary-control/10 lg:block" />
           </div>
           <div className="relative flex min-w-0 flex-col gap-3">
             <h2 className="break-keep text-balance text-3xl font-black tracking-tighter sm:text-5xl">
