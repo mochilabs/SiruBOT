@@ -160,11 +160,6 @@ export function CustomCommandPreview() {
           </div>
         </div>
       </div>
-
-      {/* 푸터 */}
-      <p className="border-t border-discord-btn-active px-4 py-2 text-2xs text-discord-text-muted">
-        대시보드 블록 빌더로 만들고, AI에게 설명하면 초안이 만들어져요.
-      </p>
     </div>
   );
 }

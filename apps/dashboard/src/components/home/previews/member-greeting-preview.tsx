@@ -14,20 +14,20 @@ const CARD_PRESETS = [
   {
     label: "기본",
     className:
-      "bg-gradient-to-br from-primary/60 via-primary-control/40 to-primary/60",
+      "bg-primary/60",
     title: "서름님을 환영해요",
     sub: "1,234번째 멤버",
   },
   {
     label: "파티",
     className:
-      "bg-gradient-to-tr from-primary-control/60 via-primary/40 to-primary-control/30",
+      "bg-primary-control/40",
     title: "다들 박수!",
     sub: "서름님이 새 친구로 합류했어요",
   },
   {
     label: "따뜻",
-    className: "bg-gradient-to-b from-primary/50 to-primary-control/50",
+    className: "bg-accent",
     title: "오늘의 첫 방문이예요",
     sub: "서름님이 문을 두드렸어요",
   },
@@ -44,13 +44,11 @@ const CARD_PRESETS = [
  */
 export function MemberGreetingPreview() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
-  const [runId, setRunId] = useState(0);
   const [presetIndex, setPresetIndex] = useState(0);
   const preset = CARD_PRESETS[presetIndex];
   /** 0: 대기, 1: 참여 시스템 메시지, 2: 시루 인사 + 인사 카드 */
   const [phase, setPhase] = useState(0);
 
-  // 테스트 전송(다시 재생)을 누르면 runId만 올려 시퀀스를 처음부터 재생해요
   useEffect(() => {
     if (!inView) return undefined;
     setPhase(0);
@@ -65,10 +63,7 @@ export function MemberGreetingPreview() {
       clearTimeout(joinTimer);
       clearTimeout(greetTimer);
     };
-  }, [inView, runId]);
-
-  /** 테스트 전송 버튼 — 실제 대시보드의 테스트 전송 기능을 딴 리플레이 */
-  const replay = () => setRunId((prev) => prev + 1);
+  }, [inView]);
 
   return (
     <div
@@ -88,7 +83,7 @@ export function MemberGreetingPreview() {
       <div className="relative h-[300px] overflow-hidden sm:h-[360px]">
         <AnimatePresence mode="wait" initial={false}>
           <m.div
-            key={runId}
+            key="greeting"
             className="absolute inset-x-3.5 top-3.5 space-y-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -199,18 +194,6 @@ export function MemberGreetingPreview() {
             )}
           </m.div>
         </AnimatePresence>
-      </div>
-      <div className="flex items-center justify-between gap-2 border-t border-discord-btn-active px-4 py-2">
-        <button
-          type="button"
-          onClick={replay}
-          className="cursor-pointer rounded-control bg-surface-1 px-3 py-1.5 text-2xs font-bold text-foreground transition-colors duration-fast hover:bg-surface-3"
-        >
-          테스트 전송
-        </button>
-        <p className="text-2xs text-discord-text-muted">
-          템플릿·채널은 대시보드에서 정해요.
-        </p>
       </div>
     </div>
   );

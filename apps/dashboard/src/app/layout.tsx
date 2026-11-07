@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
-import { BackgroundShapes } from "@/components/background-shapes";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import { GlobalCommandPalette } from "@/components/overlay/global-command-palette";
@@ -81,7 +80,6 @@ export default function RootLayout({
 			<body>
 				<Providers>
 				<div className="min-h-svh flex flex-col relative overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0">
-					<BackgroundShapes />
 					<Navbar />
 						<div className="flex-1 relative z-10">
 							{children}

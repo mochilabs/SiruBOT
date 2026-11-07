@@ -3,39 +3,51 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
-import { Bot, Brain, CloudSun, Music2 } from "lucide-react";
+import { Bot } from "lucide-react";
 
 import { motionBase, motionFast } from "@/components/motion/durations";
 import { StreamingTypeText } from "@/components/streaming-type-text";
 import { TypingText } from "@/components/typing-text";
 import { cn } from "@/lib/utils";
 
-/** AI 채팅 데모가 순환하는 도구 3종 — 봇의 실제 도구(음악 제어·생활 정보·장기 기억) */
+/** AI 채팅 데모가 순환하는 도구 3종 — 봇의 실제 도구(음악 제어·날씨·장기 기억) */
 const utilities = [
 	{
-		icon: Music2,
 		title: "음악 재생",
-		desc: "\"노래 틀어줘\" 한마디로 대기열에 추가해요.",
 		prompt: "즛토마요 노래 틀어줘",
 		status: "시루가 음악을 찾는 중..",
 		reply: "즛토마요 노래를 대기열에 추가했어요. 지금 음성 채널에서 재생 중이에요.",
 	},
 	{
-		icon: CloudSun,
 		title: "생활 정보",
-		desc: "/날씨 · /택배 · 오늘의 운세까지 챙겨드려요.",
 		prompt: "내일 아침 비 와?",
 		status: "시루가 날씨를 확인하는 중..",
 		reply: "내일 서울은 이슬비 소식이 있고, 강수확률이 92%로 매우 높아요!",
 	},
 	{
-		icon: Brain,
 		title: "장기 기억",
-		desc: "시루가 사용자님의 취향을 기억해요.",
 		prompt: "난 햄버거가 좋아 기억해줘",
 		status: "시루가 메모리를 업데이트 하는중",
 		reply: "알겠어! 햄버거 좋아하는구나? 딱 기억해둘게! 🍔",
 	},
+];
+
+/**
+ * 시루가 쓸 수 있는 도구 전체 — apps/bot/src/services/aiTools/index.ts의 도구 묶음이에요.
+ * demo가 있는 칩은 눌러서 해당 도구의 대화 예시를 볼 수 있고, 나머지는 목록으로만 보여줘요.
+ */
+const TOOL_CHIPS: { label: string; demo?: number }[] = [
+	{ label: "음악 제어", demo: 0 },
+	{ label: "날씨", demo: 1 },
+	{ label: "장기 기억", demo: 2 },
+	{ label: "웹 검색" },
+	{ label: "웹 페이지 읽기" },
+	{ label: "택배 조회" },
+	{ label: "오늘의 운세" },
+	{ label: "음악 설정" },
+	{ label: "봇 설정" },
+	{ label: "서버 정보" },
+	{ label: "봇 도움말" },
 ];
 
 /**
@@ -98,31 +110,35 @@ function ChatPreview() {
 
 	return (
 		<div className="flex flex-col gap-3 p-3 sm:p-4">
-			{/* 도구 인디케이터 */}
-			<div className="flex items-center justify-between gap-2" role="tablist" aria-label="도구 예시">
-				<p className="text-2xs font-semibold uppercase tracking-widest text-discord-text-muted">도구 예시</p>
-				<div className="flex items-center gap-1.5">
-					{utilities.map((utility, index) => (
-						<button
-							key={utility.title}
-							type="button"
-							role="tab"
-							id="ai-chat-preview-tool-tab"
-							aria-selected={activeTool === index}
-							aria-controls="ai-chat-preview-tool-panel"
-							aria-label={utility.title}
-							onClick={() => selectTool(index)}
-							className="group flex h-4 w-4 cursor-pointer items-center justify-center"
-						>
-							<span
-								className={cn(
-									"rounded-full transition-all duration-base",
-									activeTool === index ? "h-2 w-2 bg-primary-control" : "h-1.5 w-1.5 bg-discord-btn-active group-hover:bg-discord-text-muted",
-								)}
-							/>
-						</button>
-					))}
-				</div>
+			{/* 사용 가능한 도구 — 데모가 있는 칩은 눌러서 예시를 바꿔 볼 수 있어요 */}
+			<div className="space-y-2">
+				<p className="text-2xs font-semibold text-discord-text-muted">사용 가능한 도구</p>
+				<ul className="flex flex-wrap gap-1.5">
+					{TOOL_CHIPS.map((chip) => {
+						const active = chip.demo === activeTool;
+						const base = "rounded-control-inner px-2 py-1 text-2xs font-semibold";
+						return (
+							<li key={chip.label}>
+								{chip.demo === undefined ? (
+									<span className={cn(base, "block bg-discord-bg text-discord-text")}>{chip.label}</span>
+								) : (
+									<button
+										type="button"
+										aria-pressed={active}
+										onClick={() => selectTool(chip.demo as number)}
+										className={cn(
+											base,
+											"cursor-pointer transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring",
+											active ? "bg-discord-primary text-white" : "bg-discord-bg text-discord-text hover:bg-discord-btn-active",
+									)}
+								>
+									{chip.label}
+								</button>
+							)}
+						</li>
+					);
+				})}
+				</ul>
 			</div>
 
 			{/* 본문 높이는 이 컨테이너의 고정값 — 봇 메시지가 절대 배치라 도구가 바뀌어도 아래가 밀리지 않아요 */}
@@ -130,9 +146,6 @@ function ChatPreview() {
 				<AnimatePresence mode="wait" initial={false}>
 					<m.div
 						key={current.title}
-						role="tabpanel"
-						id="ai-chat-preview-tool-panel"
-						aria-labelledby="ai-chat-preview-tool-tab"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
@@ -234,7 +247,6 @@ export function AiChatPreview() {
 				<span className="ml-auto text-2xs text-discord-text-muted">시루 · 멘션 응답</span>
 			</div>
 			<ChatPreview />
-			<p className="border-t border-discord-btn-active px-4 py-2 text-2xs text-discord-text-muted">@시루 멘션으로 말 걸면 도구를 골라 써요.</p>
 		</div>
 	);
 }

@@ -49,8 +49,8 @@ export function PlayerPreview() {
 	}, [advancing, inView, shouldReduce, trackIndex]);
 
 	return (
-		// 데모 패널을 여러 겹으로 쌓아 depth를 만들어요 — 부유 카드는 실제 제품 상태(대기열 1곡 추가)예요
-		<div ref={ref} className="relative pb-16 pr-2">
+		// 아래 카드는 실제 제품 상태(대기열 1곡 추가)예요
+		<div ref={ref} className="space-y-3">
 			<div className="flex flex-col gap-3 rounded-card bg-discord-embed p-3 sm:p-4">
 				<div className="flex gap-3">
 					<div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
@@ -132,25 +132,6 @@ export function PlayerPreview() {
 						{fmtTime(seconds)} / {track.duration}
 					</span>
 				</div>
-			</div>
-			<div
-				aria-hidden
-				className="absolute bottom-0 left-2 w-60 -rotate-2 space-y-1.5 rounded-card bg-surface-1 p-3 shadow-lg sm:left-6"
-			>
-				<p className="text-2xs font-medium text-muted-foreground">대기열에 추가됨</p>
-				<div className="flex items-center gap-2">
-					<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-sm">
-						<Image src={PLAYLIST_TRACKS[2].thumbnail} alt="" fill className="object-cover" sizes="32px" unoptimized />
-					</span>
-					<div className="min-w-0">
-						<p className="truncate text-xs font-bold text-foreground">아이돌 (Idol)</p>
-						<p className="truncate text-2xs text-muted-foreground">YOASOBI</p>
-					</div>
-					<span className="ml-auto shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-2xs font-bold text-primary-text">+1곡</span>
-				</div>
-			</div>
-			<div aria-hidden className="absolute -top-4 right-3 rotate-2 rounded-card bg-surface-1 p-2.5 shadow-lg sm:right-5">
-				<span className="text-xs font-bold text-primary-text sm:text-sm">/재생</span>
 			</div>
 		</div>
 	);

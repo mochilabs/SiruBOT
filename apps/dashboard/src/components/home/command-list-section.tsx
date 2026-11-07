@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { m } from "framer-motion";
-import { Gamepad2, type LucideIcon, MessageCircle, Music2, Terminal, Wrench } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
+import { ChevronDown, Gamepad2, type LucideIcon, MessageCircle, Music2, Wrench } from "lucide-react";
 
-import { sectionVariants } from "@/components/home/section-variants";
-import { SectionLabel } from "@/components/primitives/section-label";
 import { cn } from "@/lib/utils";
 
 /**
- * 명령어 사전: 연출 없이 실제 슬래시 커맨드를 카테고리 탭으로 골라 훑게 하는 정보 섹션이에요.
+ * 명령어 섹션: Discord 슬래시 자동완성 팝업을 흉내 내요. 카테고리 탭으로 고르면 대표 명령어 몇 개만 보이고,
+ * 입력창에 선택한 명령어가 타이핑돼요. 나머지는 "더 보기"로 펼쳐요(전체 목록은 문서처럼 읽히지 않게 접어 둬요).
  *
  * cmd/desc는 봇 커맨드 정의의 **ko 로캘 문구를 그대로** 옮겨 적어요 —
  * `apps/bot/src/modules/<모듈>/commands/*.ts`의 `setNameLocalizations({ ko })` / `setDescriptionLocalizations({ ko })`,
@@ -85,65 +84,124 @@ const CATEGORIES: Array<{ key: CategoryKey; label: string; icon: LucideIcon; com
 	{ key: "games", label: "게임", icon: Gamepad2, commands: GAME_COMMANDS }
 ];
 
-/** 하단 안내의 개수는 목록에서 파생해요 — 커맨드가 늘고 줄 때 문구가 어긋나지 않게 */
-const TOTAL_COMMAND_COUNT = CATEGORIES.reduce((sum, category) => sum + category.commands.length, 0);
+const COLLAPSED_COUNT = 6;
+const TYPE_MS = 70;
+const HOLD_MS = 1800;
 
 export function CommandListSection() {
 	const [activeCategory, setActiveCategory] = useState<CategoryKey>("music");
+	const [selected, setSelected] = useState(0);
+	const [typed, setTyped] = useState(0);
+	const [expanded, setExpanded] = useState(false);
+	const [autoPlay, setAutoPlay] = useState(true);
+	const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.3 });
 
 	const active = CATEGORIES.find((category) => category.key === activeCategory) ?? CATEGORIES[0];
+	const visible = expanded ? active.commands : active.commands.slice(0, COLLAPSED_COUNT);
+	const current = visible[Math.min(selected, visible.length - 1)];
+	const hiddenCount = active.commands.length - COLLAPSED_COUNT;
+
+	// 선택된 명령어를 입력창에 한 글자씩 타이핑하고, 다 치면 잠시 머문 뒤 다음 명령어로 넘어가요
+	useEffect(() => {
+		if (!inView) return undefined;
+		const fullLength = current.cmd.length - 1;
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+			setTyped(fullLength);
+			return undefined;
+		}
+		setTyped(0);
+		const typer = setInterval(() => setTyped((count) => Math.min(count + 1, fullLength)), TYPE_MS);
+		const advance = autoPlay ? setTimeout(() => setSelected((index) => (index + 1) % Math.min(visible.length, COLLAPSED_COUNT)), fullLength * TYPE_MS + HOLD_MS) : undefined;
+		return () => {
+			clearInterval(typer);
+			if (advance) clearTimeout(advance);
+		};
+	}, [inView, current.cmd, autoPlay, visible.length]);
+
+	const handleCategory = (key: CategoryKey) => {
+		setActiveCategory(key);
+		setSelected(0);
+		setExpanded(false);
+		setAutoPlay(true);
+	};
+
+	const handlePick = (index: number) => {
+		setSelected(index);
+		setAutoPlay(false);
+	};
 
 	return (
 		<section id="commands" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
-				<m.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-80px" }} variants={sectionVariants} className="max-w-2xl space-y-3">
-				<div className="flex items-center gap-2.5">
-					<Terminal size={18} className="shrink-0 text-primary-text" aria-hidden />
-					<SectionLabel as="p" className="px-0 py-0 text-primary-text">
-						슬래시 커맨드
-					</SectionLabel>
-				</div>
-				<h2 className="text-3xl font-black tracking-tighter text-foreground sm:text-4xl">필요한 기능, 슬래시 한 번이면 충분해요.</h2>
-					<p className="text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
+				<div className="space-y-3">
+					<h2 className="break-keep text-balance text-3xl font-black tracking-tighter text-foreground sm:text-5xl">필요한 기능, 슬래시 한 번이면 충분해요.</h2>
+					<p className="break-keep text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 						음악 재생부터 AI 대화, 게임, 각종 편의 기능까지. 직관적인 슬래시 커맨드로 간편하게 이용하세요.
 					</p>
-					<p className="text-xs font-medium text-muted-foreground mt-1">{`대표 슬래시 커맨드 ${TOTAL_COMMAND_COUNT}개 · 모든 기능 무료`}</p>
-				</m.div>
-
-				{/* 카테고리 탭 — 이 섹션의 유일한 인터랙션. 가로 넘침은 스크롤로 흘려보내요 */}
-				<div role="tablist" aria-label="명령어 카테고리" className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-					{CATEGORIES.map((category) => {
-						const isActive = category.key === activeCategory;
-						return (
-							<button
-								key={category.key}
-								type="button"
-								role="tab"
-								aria-selected={isActive}
-								onClick={() => setActiveCategory(category.key)}
-								className={cn(
-									"flex shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-3 py-2 text-sm font-bold transition-colors duration-fast",
-									isActive ? "bg-primary/10 text-primary-text" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-								)}
-							>
-								<category.icon size={14} className="shrink-0 opacity-60" aria-hidden />
-								{category.label}
-							</button>
-						);
-					})}
 				</div>
 
-				{/* 명령어 보드 — 카드가 아니라 헤어라인으로 나뉜 메뉴판. gap-px + 보드 배경(border-subtle)이
-				    셀 사이 1px 줄이 되고, 셀만 surface-2를 채워요. 카테고리 셀 수가 달라도 min 높이 없이
-				    자연 높이로 흐르게 둬요 */}
-				<div role="tabpanel" aria-label={active.label} className="grid grid-cols-1 overflow-hidden gap-px rounded-card border border-border-subtle bg-border-subtle sm:grid-cols-2">
-					{active.commands.map((command) => (
-						<div key={command.cmd} className="flex flex-col gap-1 bg-surface-2 px-3.5 py-3.5 transition-colors hover:bg-surface-1">
-							{/* 명령어 텍스트는 code가 아닌 Pretendard 그대로 — 한글이 mono 스택으로 폴백하지 않게 해요 */}
-							<p className="text-base font-bold text-primary-text sm:text-lg">{command.cmd}</p>
-							<p className="text-xs font-medium leading-relaxed text-muted-foreground sm:text-sm">{command.desc}</p>
+				<div ref={ref} className="space-y-3">
+					<div role="tablist" aria-label="명령어 카테고리" className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+						{CATEGORIES.map((category) => {
+							const isActive = category.key === activeCategory;
+							return (
+								<button
+									key={category.key}
+									type="button"
+									role="tab"
+									aria-selected={isActive}
+									onClick={() => handleCategory(category.key)}
+									className={cn(
+										"flex shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-3 py-2 text-sm font-bold transition-colors duration-fast",
+										isActive ? "bg-primary/10 text-primary-text" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+									)}
+								>
+									<category.icon size={14} className="shrink-0 opacity-60" aria-hidden />
+									{category.label}
+								</button>
+							);
+						})}
+					</div>
+
+					{/* Discord 자동완성 팝업 + 입력창 */}
+					<div role="tabpanel" aria-label={active.label} className="overflow-hidden rounded-card bg-discord-embed">
+						<div className="px-3 pt-3 pb-1 text-2xs font-bold tracking-wide text-discord-text-muted">{active.label} 명령어</div>
+						<ul className={cn("space-y-0.5 px-2 pb-2", expanded && "max-h-[22rem] overflow-y-auto")}>
+							{visible.map((command, index) => (
+								<li key={command.cmd}>
+									<button
+										type="button"
+										onClick={() => handlePick(index)}
+										className={cn(
+											"flex w-full min-w-0 cursor-pointer items-baseline gap-3 rounded-control px-2.5 py-2 text-left transition-colors duration-fast",
+											index === selected ? "bg-discord-btn-active" : "hover:bg-discord-btn-active/50"
+										)}
+									>
+										<span className="shrink-0 text-sm font-bold text-discord-text">{command.cmd}</span>
+										<span className="min-w-0 truncate text-xs font-medium text-discord-text-muted">{command.desc}</span>
+									</button>
+								</li>
+							))}
+						</ul>
+						{hiddenCount > 0 && (
+							<button
+								type="button"
+								aria-expanded={expanded}
+								onClick={() => setExpanded((value) => !value)}
+								className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-discord-btn-active px-3 py-2 text-xs font-bold text-discord-text-muted transition-colors duration-fast hover:text-discord-text"
+							>
+								{expanded ? "접기" : `나머지 ${hiddenCount}개 더 보기`}
+								<ChevronDown size={14} className={cn("transition-transform duration-fast", expanded && "rotate-180")} aria-hidden />
+							</button>
+						)}
+						<div className="border-t border-discord-btn-active p-3">
+							<div className="flex items-center rounded-control bg-discord-btn-active/60 px-3 py-2.5 text-sm text-discord-text">
+								<span className="text-discord-text-muted">/</span>
+								<span aria-live="off">{current.cmd.slice(1, 1 + typed)}</span>
+								<span aria-hidden className="ml-px h-4 w-0.5 bg-discord-text motion-safe:animate-pulse" />
+							</div>
 						</div>
-					))}
+					</div>
 				</div>
 			</div>
 		</section>

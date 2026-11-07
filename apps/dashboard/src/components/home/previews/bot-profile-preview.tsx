@@ -21,7 +21,7 @@ export function BotProfilePreview() {
   return (
     <div className="relative pr-2">
       <div className="overflow-hidden rounded-card bg-surface-1 shadow-md">
-        <div className="h-16 bg-gradient-to-r from-primary/50 via-primary-control/40 to-primary/50" />
+        <div className="h-16 bg-primary/50" />
         <div className="relative ml-4 -mt-7 h-14 w-14 overflow-hidden rounded-full ring-4 ring-surface-1">
           <Image
             key={avatar}
@@ -44,9 +44,6 @@ export function BotProfilePreview() {
             </span>
           </div>
         </div>
-        <p className="border-t border-border-subtle px-4 py-2 text-2xs text-muted-foreground">
-          이 길드에만 적용된 프로필이에요.
-        </p>
       </div>
       <div className="mt-3 rounded-card bg-surface-2 p-3">
         <p className="text-2xs font-medium text-muted-foreground">
