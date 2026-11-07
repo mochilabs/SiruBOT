@@ -9,7 +9,7 @@ export function SectionHeader({ id, title, description }: { id: string; title: s
 			<div className="flex items-center gap-6">
 				<div className="h-0.5 w-12 bg-primary/40 rounded-full" />
 				<h2 className="text-2xl font-black tracking-tighter text-foreground whitespace-nowrap">{title}</h2>
-				<div className="h-px flex-1 bg-gradient-to-r from-border/80 to-transparent" />
+				<div className="h-px flex-1 bg-border" />
 			</div>
 			<p className="text-sm text-muted-foreground font-medium ml-[72px]">{description}</p>
 		</div>
