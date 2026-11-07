@@ -326,7 +326,12 @@ export type PresetBackground = { id: string; name: string };
 export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
 	{ id: 'rose', name: '로즈' },
 	{ id: 'plum', name: '플럼' },
-	{ id: 'gold', name: '골드' }
+	{ id: 'gold', name: '골드' },
+	{ id: 'ocean', name: '오션' },
+	{ id: 'mint', name: '민트' },
+	{ id: 'sunset', name: '선셋' },
+	{ id: 'lavender', name: '라벤더' },
+	{ id: 'midnight', name: '미드나잇' }
 ];
 
 const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);

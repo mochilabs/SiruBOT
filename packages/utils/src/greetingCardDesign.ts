@@ -1,7 +1,7 @@
 /**
  * 인사 카드 배경 디자인 공용 계약 — data-api skia 렌더러와 dashboard 브라우저 미리보기가
  * 같은 브랜드 프리셋 hex·그라데이션 파라미터를 써요. 브랜드 색이 갈라지면 시각적 계약이
- * 깨지므로 프리셋 hex 12값과 스크림 색의 단일 출처예요. canvas 호출은 각 런타임이 유지하고
+ * 깨지므로 프리셋 hex 값과 스크림 색의 단일 출처예요. canvas 호출은 각 런타임이 유지하고
  * 이 모듈은 데이터·순수 함수만 담아요. dashboard는 서브패스(@sirubot/utils/greetingCardDesign)로만 import해요.
  */
 
@@ -18,13 +18,18 @@ export interface GreetingPresetGradient {
 }
 
 /**
- * 브랜드 프리셋 hex 12값 — 브랜드 팔레트 그라디언트라서
+ * 브랜드 프리셋 hex 값 — 브랜드 팔레트 그라디언트라서
  * 프리셋 자체가 브랜드 정체성이에요. 사진 배경이 아니라 브랜드 그라디언트를 제공하는 이유. 값 변경은 시각적 계약 변경이에요.
  */
 export const GREETING_PRESET_GRADIENTS: Record<string, GreetingPresetGradient> = {
 	rose: { base: '#3d2328', from: '#d1608a', to: '#ff85c1', glow: '#ffe4f0' },
 	plum: { base: '#1a0e12', from: '#231317', to: '#4d2a35', glow: '#ffb3d9' },
-	gold: { base: '#231a10', from: '#8a6a44', to: '#d4a574', glow: '#f0e2cf' }
+	gold: { base: '#231a10', from: '#8a6a44', to: '#d4a574', glow: '#f0e2cf' },
+	ocean: { base: '#0e1a24', from: '#1f4f73', to: '#5fb0d9', glow: '#d6f0ff' },
+	mint: { base: '#10211c', from: '#2f7a62', to: '#7fd6b0', glow: '#e0fff2' },
+	sunset: { base: '#2a1410', from: '#c4533a', to: '#ffb36b', glow: '#fff0d6' },
+	lavender: { base: '#1a1428', from: '#6a4fb0', to: '#b9a3ff', glow: '#efe8ff' },
+	midnight: { base: '#07090f', from: '#101827', to: '#2b3a5c', glow: '#9db4ff' }
 };
 
 /** 그라디언트 위에서 흰 텍스트가 읽히도록 프리셋 배경에 까는 은은한 어두운 스크림 */
