@@ -1,6 +1,6 @@
 /**
  * 오류 일러스트 — 책상에 커피를 엎은 장면. 404의 방(NotFoundRoom)과 같은 방·같은 토큰 색을 쓰고,
- * 쓰러진 머그컵에서 커피가 책상을 타고 흘러내려 바닥에 고여 있어요. 모니터에는 경고가 떠 있어요.
+ * 쓰러진 머그컵에서 커피가 책상을 타고 흘러내려 바닥에 고여 있어요. 모니터에는 텍스트 줄만 켜져 있어요.
  * 커피색만 테마 토큰에 없어 고정 갈색을 써요. 깜빡임은 motion-safe일 때만 움직여요.
  */
 export function ErrorRoom({ className }: { className?: string }) {
@@ -50,12 +50,9 @@ export function ErrorRoom({ className }: { className?: string }) {
 			<rect x="208" y="280" width="64" height="6" rx="3" className="fill-surface-3" />
 			<rect x="160" y="176" width="160" height="100" rx="12" className="fill-surface-3" />
 			<rect x="168" y="184" width="144" height="84" rx="7" className="fill-background" />
-			<path d="M200 206 L222 244 H178 Z" strokeWidth="7" strokeLinejoin="round" className="fill-destructive/25 stroke-destructive" />
-			<rect x="197.5" y="217" width="5" height="13" rx="2.5" className="fill-destructive" />
-			<circle cx="200" cy="236" r="3" className="fill-destructive" />
-			<rect x="236" y="212" width="58" height="5" rx="2.5" className="fill-foreground/25" />
-			<rect x="236" y="224" width="40" height="5" rx="2.5" className="fill-foreground/15" />
-			<rect x="236" y="236" width="48" height="5" rx="2.5" className="fill-foreground/15" />
+			<rect x="188" y="206" width="100" height="6" rx="3" className="fill-foreground/25" />
+			<rect x="188" y="222" width="70" height="6" rx="3" className="fill-foreground/15" />
+			<rect x="188" y="238" width="86" height="6" rx="3" className="fill-foreground/15" />
 
 			{/* 스탠드 조명 */}
 			<ellipse cx="86" cy="282" rx="22" ry="5" className="fill-surface-2" />
