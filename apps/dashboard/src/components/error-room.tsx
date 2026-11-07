@@ -22,14 +22,14 @@ export function ErrorRoom({ className }: { className?: string }) {
 			<rect x="52" y="98" width="108" height="4" className="fill-surface-3" />
 
 			{/* 선반 */}
-			<rect x="296" y="178" width="148" height="8" rx="4" className="fill-surface-3" />
-			<rect x="308" y="150" width="14" height="28" rx="3" className="fill-primary-control" />
-			<rect x="324" y="156" width="12" height="22" rx="3" className="fill-foreground/25" />
-			<rect x="338" y="146" width="14" height="32" rx="3" className="fill-primary" />
-			<path d="M392 178 h30 l-4 -22 h-22 Z" className="fill-primary-control" />
-			<circle cx="407" cy="140" r="10" className="fill-success" />
-			<circle cx="397" cy="148" r="8" className="fill-success/80" />
-			<circle cx="417" cy="148" r="8" className="fill-success/80" />
+			<rect x="296" y="138" width="148" height="8" rx="4" className="fill-surface-3" />
+			<rect x="308" y="110" width="14" height="28" rx="3" className="fill-primary-control" />
+			<rect x="324" y="116" width="12" height="22" rx="3" className="fill-foreground/25" />
+			<rect x="338" y="106" width="14" height="32" rx="3" className="fill-primary" />
+			<path d="M392 138 h30 l-4 -22 h-22 Z" className="fill-primary-control" />
+			<circle cx="407" cy="100" r="10" className="fill-success" />
+			<circle cx="397" cy="108" r="8" className="fill-success/80" />
+			<circle cx="417" cy="108" r="8" className="fill-success/80" />
 
 			{/* 바닥에 고인 커피 */}
 			<ellipse cx="322" cy="348" rx="48" ry="9" className="fill-[#7a4e3a]" />
@@ -48,14 +48,14 @@ export function ErrorRoom({ className }: { className?: string }) {
 			{/* 모니터 — 경고 */}
 			<rect x="228" y="270" width="24" height="14" className="fill-surface-3" />
 			<rect x="208" y="280" width="64" height="6" rx="3" className="fill-surface-3" />
-			<rect x="140" y="176" width="200" height="100" rx="12" className="fill-surface-3" />
-			<rect x="148" y="184" width="184" height="84" rx="7" className="fill-background" />
-			<path d="M200 204 L226 248 H174 Z" strokeWidth="7" strokeLinejoin="round" className="fill-destructive/25 stroke-destructive" />
-			<rect x="197.5" y="217" width="5" height="14" rx="2.5" className="fill-destructive" />
-			<circle cx="200" cy="238" r="3" className="fill-destructive" />
-			<rect x="244" y="212" width="64" height="5" rx="2.5" className="fill-foreground/25" />
-			<rect x="244" y="224" width="44" height="5" rx="2.5" className="fill-foreground/15" />
-			<rect x="244" y="236" width="54" height="5" rx="2.5" className="fill-foreground/15" />
+			<rect x="160" y="176" width="160" height="100" rx="12" className="fill-surface-3" />
+			<rect x="168" y="184" width="144" height="84" rx="7" className="fill-background" />
+			<path d="M200 206 L222 244 H178 Z" strokeWidth="7" strokeLinejoin="round" className="fill-destructive/25 stroke-destructive" />
+			<rect x="197.5" y="217" width="5" height="13" rx="2.5" className="fill-destructive" />
+			<circle cx="200" cy="236" r="3" className="fill-destructive" />
+			<rect x="236" y="212" width="58" height="5" rx="2.5" className="fill-foreground/25" />
+			<rect x="236" y="224" width="40" height="5" rx="2.5" className="fill-foreground/15" />
+			<rect x="236" y="236" width="48" height="5" rx="2.5" className="fill-foreground/15" />
 
 			{/* 스탠드 조명 */}
 			<ellipse cx="86" cy="282" rx="22" ry="5" className="fill-surface-2" />
