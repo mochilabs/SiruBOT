@@ -23,7 +23,9 @@ export const metadata: Metadata = {
   },
   description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
   applicationName: "시루봇",
+  keywords: ["시루봇", "디스코드 음악봇", "Discord 음악 봇", "디스코드 봇", "AI 채팅", "서버 관리"],
   openGraph: {
+    title: "시루봇 | Discord 음악·AI·서버 관리 봇",
     description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
     url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     siteName: "시루봇",
