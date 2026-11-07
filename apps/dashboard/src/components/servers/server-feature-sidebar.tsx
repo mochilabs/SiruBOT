@@ -24,13 +24,13 @@ interface ServerFeatureSidebarProps {
 
 /**
  * PC(lg+) 전용 기능 사이드바 — 플레이리스트 사이드바와 같은 "카드 + 목록" 언어를 써서
- * 대시보드 안에서 새 패턴을 만들지 않아요. 그룹은 폴더처럼 접고 펼 수 있고, 지금 보는 기능의
- * 그룹은 항상 펼쳐져 시작해요. 활성 항목은 spring 인디케이터로 표시해요.
+ * 대시보드 안에서 새 패턴을 만들지 않아요. 그룹은 모두 펼쳐진 채 시작하고, 길면 폴더처럼 접을 수 있어요(보는 기능의
+ * 그룹은 다른 경로로 이동해도 다시 펼쳐져요). 활성 항목은 spring 인디케이터로 표시해요.
  */
 export function ServerFeatureSidebar({ items, active, onSelect, groupLabels }: ServerFeatureSidebarProps) {
 	const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 	const activeGroup = items.find((item) => item.key === active)?.group;
-	const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(() => new Set(activeGroup ? [activeGroup] : []));
+	const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(() => new Set(items.flatMap((item) => (item.group ? [item.group] : []))));
 
 	// 다른 경로(모바일 내비, URL)로 활성 기능이 바뀌어도 그 그룹은 펼쳐 둬요
 	useEffect(() => {
@@ -69,12 +69,14 @@ export function ServerFeatureSidebar({ items, active, onSelect, groupLabels }: S
 								aria-expanded={isOpen}
 								onClick={() => toggleGroup(item.group as string)}
 								className={cn(
-									"relative z-10 flex w-full items-center gap-1.5 rounded-menu px-3 py-1.5 text-left text-xs font-bold text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-									idx !== 0 && "mt-1",
+									"relative z-10 flex w-full items-center gap-2 rounded-menu px-3.5 py-2.5 text-left text-sm font-bold text-foreground transition-colors duration-fast hover:bg-accent/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
 								)}
 							>
-								<ChevronRight size={12} aria-hidden className={cn("shrink-0 transition-transform duration-fast", isOpen && "rotate-90")} />
+								<ChevronRight size={14} aria-hidden className={cn("shrink-0 text-muted-foreground transition-transform duration-fast", isOpen && "rotate-90")} />
 								<span>{groupLabels?.[item.group] ?? item.group}</span>
+								{!isOpen && item.group === activeGroup && (
+									<span className="ml-auto truncate text-xs font-semibold text-primary-text">{items.find((entry) => entry.key === active)?.label}</span>
+								)}
 							</button>
 						) : null;
 
