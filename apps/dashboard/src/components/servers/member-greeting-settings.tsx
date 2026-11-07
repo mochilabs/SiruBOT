@@ -106,22 +106,20 @@ function MemberGreetingPanel({
 
   return (
     <Card padding="lg" className="gap-6 overflow-visible">
-      <PanelHeader
-        icon={<UserPlus className="h-5 w-5" />}
-        title="멤버 인사"
-        description="멤버가 입장·퇴장할 때 환영·작별 메시지와 카드 이미지를 보내요."
-      />
+      <Tabs defaultValue="welcome" className="contents">
+        <PanelHeader
+          icon={<UserPlus className="h-5 w-5" />}
+          title="멤버 인사"
+          description="멤버가 입장·퇴장할 때 환영·작별 메시지와 카드 이미지를 보내요."
+          action={
+            <TabsList variant="default" aria-label="멤버 인사 유형">
+              <TabsTrigger value="welcome">환영</TabsTrigger>
+              <TabsTrigger value="goodbye">작별</TabsTrigger>
+            </TabsList>
+          }
+        />
 
-      {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
-      <Tabs defaultValue="welcome" className="min-w-0">
-        <TabsList className="w-full sm:w-fit" aria-label="멤버 인사 유형">
-          <TabsTrigger value="welcome" className="flex-1 sm:flex-none">
-            환영
-          </TabsTrigger>
-          <TabsTrigger value="goodbye" className="flex-1 sm:flex-none">
-            작별
-          </TabsTrigger>
-        </TabsList>
+        {channelsError && <ChannelListError error={channelsError} onRetry={reloadChannels} />}
         <GreetingSection
           asTabContent="welcome"
           kind="welcome"

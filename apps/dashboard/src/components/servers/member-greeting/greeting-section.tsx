@@ -123,7 +123,7 @@ export function GreetingSection({
   return (
     <TabsContent
       value={asTabContent}
-      className="mt-1 min-w-0 space-y-5"
+      className="min-w-0 space-y-5"
       keepMounted
     >
       <section
