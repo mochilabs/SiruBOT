@@ -67,11 +67,6 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
           <BirthdayCard birthday={birthday} />
         </RevealItem>
 
-        {/* 서버별 TTS 음성 */}
-        <RevealItem className="md:col-span-2">
-          <TtsVoiceCard />
-        </RevealItem>
-
         {/* 출석 카드 — 슬림하게 */}
         <RevealItem className="h-full">
           <Card padding="sm" className="h-full min-h-24">
@@ -132,6 +127,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               )}
             </CardContent>
           </Card>
+        </RevealItem>
+
+        {/* 서버별 TTS 음성 — 생일 카드처럼 보기/변경 */}
+        <RevealItem className="md:col-span-2">
+          <TtsVoiceCard />
         </RevealItem>
 
         {/* 게임 전적 카드 */}
