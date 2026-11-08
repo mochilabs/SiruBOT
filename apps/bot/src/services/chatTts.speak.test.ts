@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		ttsService: { synthesize: mocks.synthesize },
+		ttsPronunciation: { apply: async (_guildId: string, text: string) => text },
 		mixerService: {
 			announce: mocks.announce,
 			getState: async () => ({ announcementsQueued: 0 })

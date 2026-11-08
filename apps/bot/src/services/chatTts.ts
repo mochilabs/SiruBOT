@@ -202,8 +202,11 @@ export class ChatTtsService {
 			return;
 		}
 
-		const synth = this.withSynthSlot(state, () =>
-			container.ttsService.synthesize(text, { voice: preset?.voice ?? undefined, emotion: preset?.emotion })
+		const synth = this.withSynthSlot(state, async () =>
+			container.ttsService.synthesize(await container.ttsPronunciation.apply(guildId, text), {
+				voice: preset?.voice ?? undefined,
+				emotion: preset?.emotion
+			})
 		);
 		// dispatch는 seq 순서로 이어 붙인다 — 합성은 병렬로 끝나도 재생 순서는 메시지 순서를 지킨다
 		state.dispatchChain = state.dispatchChain
@@ -258,7 +261,8 @@ export class ChatTtsService {
 	 * (dispatchClip의 판단을 그대로 재사용). 반환값은 예약/단독 재생 결과예요.
 	 */
 	public async speakNow(player: CustomPlayer, text: string, preset: TtsUserPreset): Promise<'overlay' | 'solo'> {
-		const clip = await container.ttsService.synthesize(text, { voice: preset.voice ?? undefined, emotion: preset.emotion });
+		const spoken = await container.ttsPronunciation.apply(player.guildId, text);
+		const clip = await container.ttsService.synthesize(spoken, { voice: preset.voice ?? undefined, emotion: preset.emotion });
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
 			await this.dispatchOverlay(player, clip, preset.channel, true);

@@ -245,6 +245,17 @@ model ChannelChatHistory {
 }
 
 // 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in(off 기본)과 음성 프리셋(voice/channel)
+// 길드별 발음 사전: term(채팅에 나오는 표기)을 reading(읽을 소리)으로 바꿔서 합성해요. 길드당 상한은 앱에서 지켜요.
+model TtsPronunciation {
+  guildId String
+  term    String
+  reading String
+
+  updatedAt DateTime @updatedAt
+
+  @@id([guildId, term])
+}
+
 model TtsUserSetting {
   guildId String
   userId  String

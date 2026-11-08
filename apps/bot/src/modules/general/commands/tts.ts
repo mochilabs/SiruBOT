@@ -6,6 +6,7 @@ import { emoji } from '@sirubot/utils';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import { buildTtsPanel } from '../utils/ttsView.ts';
 import { TtsError } from '../../../services/ttsService.ts';
+import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../../services/ttsPronunciation.ts';
 
 /** `/tts 말하기` 문장 상한 — 채팅 낭독 클립 상한과 같은 값으로 맞춰요 */
 const MAX_SAY_LENGTH = 200;
@@ -97,6 +98,57 @@ export class TtsCommand extends Command {
 				)
 				.addSubcommand((sub) =>
 					sub
+						.setName('pronounce-add')
+						.setNameLocalizations({ ko: '발음추가' })
+						.setDescription('Teach the bot how to read a word in this server.')
+						.setDescriptionLocalizations({ ko: '서버에서 특정 단어를 어떻게 읽을지 알려줘요.' })
+						.addStringOption((option) =>
+							option
+								.setName('word')
+								.setNameLocalizations({ ko: '단어' })
+								.setDescription('Word as written in chat.')
+								.setDescriptionLocalizations({ ko: '채팅에 나오는 표기예요.' })
+								.setMinLength(1)
+								.setMaxLength(TTS_PRONUNCIATION_TERM_MAX)
+								.setRequired(true)
+						)
+						.addStringOption((option) =>
+							option
+								.setName('reading')
+								.setNameLocalizations({ ko: '읽기' })
+								.setDescription('How it should sound.')
+								.setDescriptionLocalizations({ ko: '실제로 읽을 소리예요.' })
+								.setMinLength(1)
+								.setMaxLength(TTS_PRONUNCIATION_READING_MAX)
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('pronounce-remove')
+						.setNameLocalizations({ ko: '발음삭제' })
+						.setDescription('Remove a pronunciation entry.')
+						.setDescriptionLocalizations({ ko: '등록한 발음을 지워요.' })
+						.addStringOption((option) =>
+							option
+								.setName('word')
+								.setNameLocalizations({ ko: '단어' })
+								.setDescription('Registered word to remove.')
+								.setDescriptionLocalizations({ ko: '지울 단어예요.' })
+								.setMinLength(1)
+								.setMaxLength(TTS_PRONUNCIATION_TERM_MAX)
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('pronounce-list')
+						.setNameLocalizations({ ko: '발음목록' })
+						.setDescription('List the pronunciation entries of this server.')
+						.setDescriptionLocalizations({ ko: '이 서버에 등록된 발음을 보여줘요.' })
+				)
+				.addSubcommand((sub) =>
+					sub
 						.setName('settings')
 						.setNameLocalizations({ ko: '설정' })
 						.setDescription('Open your personal TTS settings panel.')
@@ -165,6 +217,11 @@ export class TtsCommand extends Command {
 			return;
 		}
 
+		if (subcommand === 'pronounce-add' || subcommand === 'pronounce-remove' || subcommand === 'pronounce-list') {
+			await this.pronunciation(interaction, subcommand);
+			return;
+		}
+
 		if (subcommand === 'settings') {
 			await interaction.editReply({
 				components: [await buildTtsPanel(this.container, interaction.guildId, interaction.user.id, interaction.channelId)],
@@ -200,6 +257,50 @@ export class TtsCommand extends Command {
 			? `${emoji('speech')} 지금부터 <#${interaction.channelId}>에서 보낸 메시지를 읽어드릴게요. 다른 분들의 메시지도 읽으려면 각자 \`/tts 설정\`에서 낭독을 켜 주세요.`
 			: `${emoji('error')} 채널 낭독은 켰지만 내 낭독 설정을 저장하지 못했어요. \`/tts 설정\`에서 낭독을 직접 켜 주세요.`;
 		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+	}
+
+	/** 발음 사전 — 길드 전체에 적용되므로 서버 관리 권한 검사를 이미 통과한 상태로 들어와요. */
+	private async pronunciation(
+		interaction: ChatInputCommandInteraction<'cached'>,
+		subcommand: 'pronounce-add' | 'pronounce-remove' | 'pronounce-list'
+	): Promise<void> {
+		const service = this.container.ttsPronunciation;
+		const reply = (content: string) =>
+			interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+
+		if (subcommand === 'pronounce-list') {
+			const entries = await service.list(interaction.guildId);
+			await reply(
+				entries.length === 0
+					? `${emoji('speech')} 등록된 발음이 없어요. \`/tts 발음추가\`로 알려주세요.`
+					: `${emoji('speech')} **발음 사전** (${entries.length}/${TTS_PRONUNCIATION_MAX_ENTRIES})\n${entries.map((entry) => `• ${entry.term} → ${entry.reading}`).join('\n')}`
+			);
+			return;
+		}
+
+		const term = interaction.options.getString('word', true).trim();
+		if (subcommand === 'pronounce-remove') {
+			await reply(
+				(await service.remove(interaction.guildId, term))
+					? `${emoji('speech')} \`${term}\` 발음을 지웠어요.`
+					: `${emoji('error')} 등록되지 않은 단어예요.`
+			);
+			return;
+		}
+
+		const reading = interaction.options.getString('reading', true).trim();
+		if (!term || !reading) {
+			await reply(`${emoji('error')} 단어와 읽기를 모두 입력해 주세요.`);
+			return;
+		}
+		const result = await service.set(interaction.guildId, term, reading);
+		await reply(
+			result === 'ok'
+				? `${emoji('speech')} 앞으로 \`${term}\`은(는) "${reading}"(으)로 읽을게요.`
+				: result === 'limit'
+					? `${emoji('error')} 발음은 서버당 ${TTS_PRONUNCIATION_MAX_ENTRIES}개까지 등록할 수 있어요. 안 쓰는 항목을 먼저 지워 주세요.`
+					: `${emoji('error')} 발음을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.`
+		);
 	}
 
 	/**

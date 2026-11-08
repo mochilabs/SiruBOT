@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
 	mixerService: { getState: vi.fn(), announce: vi.fn(), clearAnnounceQueue: vi.fn() },
 	audioService: { ensurePlayback: vi.fn() },
 	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn(), getTtsAnnounceMode: vi.fn() },
-	audio: { getPlayer: vi.fn() }
+	audio: { getPlayer: vi.fn() },
+	ttsPronunciation: { apply: vi.fn() }
 }));
 
 vi.mock('@sapphire/framework', () => ({ container: mocks }));
@@ -94,6 +95,7 @@ beforeEach(() => {
 	mocks.ttsService.synthesize.mockImplementation(async (text: string) =>
 		clip(`https://tts.example/v1/shared/${encodeURIComponent(text.slice(0, 8))}`)
 	);
+	mocks.ttsPronunciation.apply.mockImplementation(async (_guildId: string, text: string) => text);
 	mocks.audio.getPlayer.mockReturnValue(undefined);
 	mocks.guildService.getTtsAnnounceMode.mockResolvedValue('sequential');
 	mocks.mixerService.clearAnnounceQueue.mockResolvedValue(0);
