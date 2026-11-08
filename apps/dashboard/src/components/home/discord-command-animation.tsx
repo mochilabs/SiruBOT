@@ -69,7 +69,7 @@ const BOT_ACCENT_COLOR = "#ff85c0";
 /** Container — 좌측 accent 바 + 둥근 면. 실제 봇의 createContainer와 같은 모양 */
 function Container({ children }: { children: ReactNode }) {
 	return (
-		<div className="w-full max-w-md space-y-2.5 rounded-lg border-l-4 bg-discord-embed p-3.5" style={{ borderLeftColor: BOT_ACCENT_COLOR }}>
+		<div className="w-full max-w-lg space-y-2.5 rounded-lg border-l-4 bg-discord-embed p-3.5" style={{ borderLeftColor: BOT_ACCENT_COLOR }}>
 			{children}
 		</div>
 	);
@@ -560,7 +560,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 
 			{/* 메시지 영역 — flex-1로 높이를 채워 응답이 나와도 카드가 늘어나지 않아요.
 			    aria-live 미사용: 데모가 자동 순환해 스크린 리더를 계속 방해해요. */}
-			<div className="min-h-[400px] flex-1 space-y-4 p-4 sm:p-6 lg:min-h-[440px]">
+			<div className="min-h-[320px] flex-1 space-y-4 p-4 sm:p-5">
 				{reached("sent") && (
 					<m.div
 						key={`user-${safeIndex}`}
