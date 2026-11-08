@@ -210,6 +210,10 @@ export class PlaybackWatchdog {
 		try {
 			const serverPlayer = await player.node.fetchPlayer(String(player.guildId));
 			if (!serverPlayer || 'status' in serverPlayer || !serverPlayer.track) return { known: true, track: null };
+			// 서버가 곡을 들고 있다는 확인은 곧 '재생 중' 신호다. β 순서(queueEnd)나 무시된 noReplace play 뒤에는
+			// trackStart가 오지 않아 playing 플래그가 false로 굳는다 — 그 상태를 믿고 play()를 보내면
+			// 재생 중인 곡이 0초로 되감긴다. 서버를 확인한 모든 경로에서 플래그를 서버에 맞춘다.
+			player.playing = !serverPlayer.paused;
 			return { known: true, track: this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined) };
 		} catch (error) {
 			this.logger.debug(`[mixer] fetchPlayer failed (guild ${player.guildId}): ${error}`);

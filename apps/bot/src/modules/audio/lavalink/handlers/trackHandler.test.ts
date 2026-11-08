@@ -352,6 +352,18 @@ describe('startClientOwnedTrack race handling', () => {
 		expect(player.play).not.toHaveBeenCalled();
 	});
 
+	it('서버가 곡을 재생 중이면 어긋난 playing 플래그를 서버에 맞춘다', async () => {
+		const { handler } = makeHandler();
+		const player = transitionPlayer({ track: { encoded: 'server-enc', info: { identifier: 'id-b' } }, paused: false });
+		player.queue.current = track('client-enc', 'id-b');
+		player.playing = false;
+
+		await handler.startClientOwnedTrack(player);
+
+		expect(player.playing).toBe(true);
+		expect(player.play).not.toHaveBeenCalled();
+	});
+
 	it('play가 거부되면 오류는 던지되 복구용 watchdog은 남긴다 (무음 정체 방지)', async () => {
 		const { handler } = makeHandler();
 		resetSpies();
