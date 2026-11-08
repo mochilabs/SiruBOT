@@ -108,7 +108,7 @@ export function Navbar() {
           <Link href="/" className="flex shrink-0 items-center gap-2 group">
             <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0">
               <Image
-                src="/images/profile.png"
+                src="/images/siru-profile.png"
                 alt="시루봇"
                 fill
                 sizes="32px"

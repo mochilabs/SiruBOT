@@ -1,7 +1,7 @@
 /**
  * 오류 일러스트 — 책상에 커피를 엎은 장면. 404의 방(NotFoundRoom)과 같은 방·같은 토큰 색을 쓰고,
  * 쓰러진 머그컵에서 커피가 책상을 타고 흘러내려 바닥에 고여 있어요. 모니터에는 텍스트 줄만 켜져 있어요.
- * 커피색만 테마 토큰에 없어 고정 갈색을 써요. 깜빡임은 motion-safe일 때만 움직여요.
+ * 커피색만 테마 토큰에 없어 고정 갈색을 써요. 방울 깜빡임은 motion-safe일 때만 움직여요.
  */
 export function ErrorRoom({ className }: { className?: string }) {
 	return (
@@ -59,23 +59,18 @@ export function ErrorRoom({ className }: { className?: string }) {
 			<path d="M86 280 V226 L112 196" fill="none" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" className="stroke-foreground/40" />
 			<path d="M96 188 a20 20 0 0 1 32 16 Z" className="fill-primary-control" />
 
-			{/* 쓰러진 머그컵 */}
-			<g transform="rotate(-14 372 272)">
-				<rect x="356" y="262" width="38" height="24" rx="8" className="fill-primary" />
-				<ellipse cx="356" cy="274" rx="5" ry="11" className="fill-[#7a4e3a]" />
-				<path d="M370 262 c0 -12 22 -12 22 0" fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-primary" />
+			{/* 쓰러진 머그컵 — 입구가 왼쪽, 손잡이가 위로 오게 책상 위에 옆으로 누워 있어요 */}
+			<g transform="rotate(-3 377 272)">
+				<path d="M372 262 c0 -13 22 -13 22 0" fill="none" strokeWidth="4.5" strokeLinecap="round" className="stroke-primary" />
+				<rect x="358" y="260" width="38" height="25" rx="7" className="fill-primary" />
+				<ellipse cx="358" cy="272.5" rx="5.5" ry="12.5" className="fill-surface-3" />
+				<ellipse cx="357" cy="273" rx="3.6" ry="9.5" className="fill-[#7a4e3a]" />
 			</g>
-			{/* 튄 방울과 놀람 표시 */}
+			{/* 튄 방울 */}
 			<g className="fill-[#7a4e3a]">
 				<circle cx="344" cy="262" r="3" />
 				<circle cx="332" cy="270" r="2.2" />
 				<circle cx="352" cy="250" r="2" />
-			</g>
-			<g className="stroke-destructive motion-safe:animate-pulse" strokeWidth="4" strokeLinecap="round">
-				<path d="M396 236 v-14" />
-				<path d="M396 246 v0.5" />
-				<path d="M410 240 l10 -10" />
-				<path d="M380 238 l-10 -10" />
 			</g>
 		</svg>
 	);

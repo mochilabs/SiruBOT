@@ -3,13 +3,13 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, ListMusic, MousePointer2, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListMusic, MousePointer2, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
 
 import { motionBase, motionFast } from "@/components/motion/durations";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const BOT_AVATAR = "/images/profile.png";
+const BOT_AVATAR = "/images/siru-profile.png";
 
 interface TrackInfo {
 	title: string;
@@ -28,7 +28,7 @@ interface SlideConfig {
 export const slideConfigs: SlideConfig[] = [
 	{ command: "/재생", args: "Lemon", hasTarget: true },
 	{ command: "/현재곡", args: "", hasTarget: true },
-	{ command: "/채팅", args: "비 오는 날 들을 노래 추천해줘", hasTarget: true },
+	{ command: "/채팅", args: "비 오는 날 들을 노래 하나 틀어줘", hasTarget: false },
 	{ command: "/추천", args: "", hasTarget: false },
 	{ command: "/날씨", args: "지금 위치:서울", hasTarget: false },
 	{ command: "/플레이리스트", args: "재생 내 노래모음", hasTarget: false },
@@ -302,33 +302,14 @@ function QueueResult({ clicked }: { clicked: boolean }) {
 	);
 }
 
-/** /채팅 — AI 응답. 버튼을 누르면 추천곡이 대기열에 들어가요 */
-function ChatResult({ clicked }: { clicked: boolean }) {
-	const picks = [
-		{ track: LEMON, note: "가라앉은 분위기가 빗소리와 잘 어울려요." },
-		{ track: PRETENDER, note: "잔잔하게 시작해서 끝까지 차분히 이어져요." },
-	];
+/** /채팅 — AI 응답. 실제로는 music_play 도구를 호출하고 결과를 텍스트로 알려줘요 (버튼 없음) */
+function ChatResult() {
 	return (
 		<Container>
-			<p className="text-sm leading-snug text-discord-text">비 오는 날엔 차분한 곡이 잘 어울려요. 이런 곡은 어때요?</p>
-			<ul className="space-y-1.5">
-				{picks.map(({ track, note }) => (
-					<li key={track.title} className="text-xs leading-snug text-discord-text">
-						<strong className="font-semibold">{track.title}</strong>
-						<span className="text-discord-text-muted"> ({track.artist})</span>
-						<br />
-						<span className="text-discord-text-muted">{note}</span>
-					</li>
-				))}
-			</ul>
-			<div className="flex">
-				<DiscordButton target pressed={clicked} className="px-3">
-					{clicked ? <Check size={12} aria-hidden /> : <ListMusic size={12} aria-hidden />}
-					{clicked ? "2곡을 대기열에 추가했어요" : "둘 다 대기열에 추가"}
-				</DiscordButton>
-			</div>
-			<Separator />
-			<Footer left="💬 대화 기록은 채널 단위로 기억해요" />
+			<p className="text-sm leading-snug text-discord-text">
+				비 오는 날 듣기 좋은 <strong className="font-semibold">{LEMON.title}</strong>
+				<span className="text-discord-text-muted"> ({LEMON.artist})</span>를 대기열에 추가했어요.
+			</p>
 		</Container>
 	);
 }
@@ -383,7 +364,7 @@ function commandResult(slide: SlideConfig, clicked: boolean): ReactNode {
 		case "/대기열":
 			return <QueueResult clicked={clicked} />;
 		case "/채팅":
-			return <ChatResult clicked={clicked} />;
+			return <ChatResult />;
 		case "/날씨":
 			return <WeatherResult />;
 		case "/주사위":
@@ -402,6 +383,68 @@ const TYPE_MS = 80;
 const CURSOR_MOVE_S = 0.7;
 const HOLD_AFTER_CLICK_MS = 2600;
 const HOLD_NO_TARGET_MS = 3800;
+
+interface ExchangeProps {
+	slide: SlideConfig;
+	phase: Phase;
+	clicked: boolean;
+	/** 직전 예시 — 등장 애니메이션 없이 흐리게 위에 남아 새 대화에 시선을 넘겨요 */
+	muted?: boolean;
+}
+
+/** 명령 한 번의 주고받기 — 사용자 메시지(전송 후)와 봇 메시지(생각 중 → 응답) */
+function Exchange({ slide, phase, clicked, muted = false }: ExchangeProps) {
+	const reached = (target: Phase) => PHASES.indexOf(phase) >= PHASES.indexOf(target);
+	const enter = muted ? false : { opacity: 0, y: 8 };
+	return (
+		<div data-current={muted ? undefined : ""} className={cn("space-y-4 transition-opacity duration-base", muted && "opacity-50")}>
+			{reached("sent") && (
+				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: "easeOut" }} className="flex gap-3">
+					<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text">사</div>
+					<div className="min-w-0">
+						<div className="flex items-baseline gap-2">
+							<span className="text-sm font-semibold text-discord-text">사용자</span>
+							<span className="text-2xs text-discord-text-muted">오후 8:12</span>
+						</div>
+						<p className="mt-1 text-sm text-discord-text">
+							<span className={COMMAND_MENTION}>{slide.command}</span>
+							{slide.args && <span> {slide.args}</span>}
+						</p>
+					</div>
+				</m.div>
+			)}
+
+			{reached("thinking") && (
+				<m.div initial={enter} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionFast, ease: "easeOut" }} className="flex gap-3">
+					<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
+						<Image src={BOT_AVATAR} alt="시루" fill className="object-cover" sizes="36px" />
+					</div>
+					<div className="min-w-0 flex-1">
+						<div className="mb-1.5 flex items-center gap-2">
+							<span className="text-sm font-semibold text-discord-text">시루</span>
+							<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-control-text">앱</span>
+							<span className="text-2xs text-discord-text-muted">오후 8:12</span>
+						</div>
+						{phase === "thinking" ? (
+							<p className="flex items-center gap-1 text-sm text-discord-text-muted">
+								시루가 생각하는 중
+								<span aria-hidden className="flex gap-0.5">
+									{[0, 1, 2].map((dot) => (
+										<span key={dot} className="h-1 w-1 rounded-full bg-discord-text-muted motion-safe:animate-pulse" style={{ animationDelay: `${dot * 180}ms` }} />
+									))}
+								</span>
+							</p>
+						) : (
+							<m.div initial={muted ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionBase, ease: "easeOut" }}>
+								{commandResult(slide, clicked)}
+							</m.div>
+						)}
+					</div>
+				</m.div>
+			)}
+		</div>
+	);
+}
 
 interface CursorState {
 	x: number;
@@ -430,6 +473,12 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 	const currentSlide = slideConfigs[safeIndex];
 	const shouldReduce = useReducedMotion();
 	const fullText = currentSlide.args ? `${currentSlide.command} ${currentSlide.args}` : currentSlide.command;
+
+	// 직전 예시 — 슬라이드가 바뀌는 렌더에서 바로 기록해요 (effect를 기다리면 한 프레임 비어 보여요)
+	const [slideTrail, setSlideTrail] = useState<{ current: number; previous: number | null }>({ current: safeIndex, previous: null });
+	if (slideTrail.current !== safeIndex) setSlideTrail({ current: safeIndex, previous: slideTrail.current });
+	const previousIndex = slideTrail.current === safeIndex ? slideTrail.previous : slideTrail.current;
+	const previousSlide = previousIndex === null ? null : slideConfigs[previousIndex];
 
 	const [phase, setPhase] = useState<Phase>("typing");
 	const [typed, setTyped] = useState(0);
@@ -508,7 +557,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 		t += 900;
 
 		if (currentSlide.hasTarget) {
-			at(t, () => moveTo(cardRef.current?.querySelector("[data-target]")));
+			at(t, () => moveTo(cardRef.current?.querySelector("[data-current] [data-target]")));
 			t += CURSOR_MOVE_S * 1000 + 250;
 			at(t, () => {
 				click();
@@ -524,78 +573,24 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 		return () => timers.forEach(clearTimeout);
 	}, [safeIndex, active, shouldReduce, fullText, currentSlide.hasTarget]);
 
-	const reached = (target: Phase) => PHASES.indexOf(phase) >= PHASES.indexOf(target);
 	const composing = phase === "typing";
 	const commandLength = currentSlide.command.length;
 	const typedCommand = fullText.slice(0, Math.min(typed, commandLength));
 	const typedArgs = fullText.slice(commandLength, typed);
 
 	return (
-		<Card ref={cardRef} variant="raised" padding="none" className="relative h-full gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
+		<Card ref={cardRef} variant="raised" padding="none" className="relative gap-0 overflow-hidden border-0 bg-discord-bg font-sans">
 			<div className="flex items-center gap-2 border-b border-discord-btn-active px-4 py-3">
 				<Volume2 size={15} className="text-discord-text-muted" aria-hidden />
 				<span className="text-sm font-semibold text-discord-text">음악-라운지</span>
 			</div>
 
-			{/* 메시지 영역 — flex-1로 높이를 채워 응답이 나와도 카드가 늘어나지 않아요.
+			{/* 메시지 영역 — 높이는 고정이고 Discord처럼 아래(입력창 쪽)부터 쌓여요. 직전 예시의 대화가 위에 남아
+			    새 명령을 입력하는 동안에도 빈 화면이 되지 않고, 긴 응답은 오래된 메시지부터 위로 밀려나요.
 			    aria-live 미사용: 데모가 자동 순환해 스크린 리더를 계속 방해해요. */}
-			<div className="min-h-[320px] flex-1 space-y-4 p-4 sm:p-5">
-				{reached("sent") && (
-					<m.div
-						key={`user-${safeIndex}`}
-						initial={{ opacity: 0, y: 8 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: motionFast, ease: "easeOut" }}
-						className="flex gap-3"
-					>
-						<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text">사</div>
-						<div className="min-w-0">
-							<div className="flex items-baseline gap-2">
-								<span className="text-sm font-semibold text-discord-text">사용자</span>
-								<span className="text-2xs text-discord-text-muted">오후 8:12</span>
-							</div>
-							<p className="mt-1 text-sm text-discord-text">
-								<span className={COMMAND_MENTION}>{currentSlide.command}</span>
-								{currentSlide.args && <span> {currentSlide.args}</span>}
-							</p>
-						</div>
-					</m.div>
-				)}
-
-				{reached("thinking") && (
-					<m.div
-						key={`bot-${safeIndex}`}
-						initial={{ opacity: 0, y: 8 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: motionFast, ease: "easeOut" }}
-						className="flex gap-3"
-					>
-						<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
-							<Image src={BOT_AVATAR} alt="시루" fill className="object-cover" sizes="36px" />
-						</div>
-						<div className="min-w-0 flex-1">
-							<div className="mb-1.5 flex items-center gap-2">
-								<span className="text-sm font-semibold text-discord-text">시루</span>
-								<span className="rounded-sm bg-discord-primary px-1 py-0.5 text-2xs font-bold leading-none text-primary-control-text">앱</span>
-								<span className="text-2xs text-discord-text-muted">오후 8:12</span>
-							</div>
-							{phase === "thinking" ? (
-								<p className="flex items-center gap-1 text-sm text-discord-text-muted">
-									시루가 생각하는 중
-									<span aria-hidden className="flex gap-0.5">
-										{[0, 1, 2].map((dot) => (
-											<span key={dot} className="h-1 w-1 rounded-full bg-discord-text-muted motion-safe:animate-pulse" style={{ animationDelay: `${dot * 180}ms` }} />
-										))}
-									</span>
-								</p>
-							) : (
-								<m.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionBase, ease: "easeOut" }}>
-									{commandResult(currentSlide, clicked)}
-								</m.div>
-							)}
-						</div>
-					</m.div>
-				)}
+			<div className="flex h-[22rem] shrink-0 flex-col justify-end gap-4 overflow-hidden p-4 sm:h-[21rem] sm:p-5">
+				{previousSlide && <Exchange key={`prev-${previousIndex}`} slide={previousSlide} phase="reply" clicked muted />}
+				<Exchange key={`current-${safeIndex}`} slide={currentSlide} phase={phase} clicked={clicked} />
 			</div>
 
 			{/* 입력창 — 커서가 눌러 포커스하고, 전송하면 비워져요 */}

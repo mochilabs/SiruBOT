@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Cake, CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from "lucide-react";
+import { CalendarCheck, Gamepad2, ListMusic, Music4, Send, Sparkles } from "lucide-react";
 
 import { StatCard } from "@/components/data/stat-card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -20,6 +20,8 @@ import type {
   ProfileHoroscope,
   ProfileMusicStats,
 } from "@/lib/profile-stats";
+
+import { BirthdayCard } from "./birthday-card";
 
 export interface ProfileViewProps {
   user: { id: string; name: string; image: string | null };
@@ -61,19 +63,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
       <RevealGroup className="grid gap-4 md:grid-cols-2" stagger={0.1}>
         {/* 생일 카드 */}
         <RevealItem className="h-full">
-          <Card padding="sm" className="h-full min-h-24">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cake className="h-4 w-4 text-primary-text" aria-hidden />
-                생일
-              </CardTitle>
-              <CardDescription className="text-xs leading-tight">
-                {hasBirthday
-                  ? `${birthday.month}월 ${birthday.day}일 · ${birthday.zodiac?.ko ?? "별자리 없음"}`
-                  : "봇 `/프로필 생일 등록` 커맨드로 등록할 수 있어요."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <BirthdayCard birthday={birthday} />
         </RevealItem>
 
         {/* 출석 카드 — 슬림하게 */}
@@ -107,7 +97,7 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               <CardDescription>
                 {hasBirthday && birthday.zodiac
                   ? `${birthday.zodiac.ko} 오늘의 별자리 운세`
-                  : "봇 `/프로필 생일 등록` 커맨드로 등록하면 오늘의 운세가 표시돼요."}
+                  : "생일을 등록하면 오늘의 운세가 표시돼요."}
               </CardDescription>
             </CardHeader>
             <CardContent>

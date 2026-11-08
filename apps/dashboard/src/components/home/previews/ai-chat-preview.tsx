@@ -180,7 +180,7 @@ function ChatPreview() {
 								className="flex gap-2.5"
 							>
 								<div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
-									<Image src="/images/profile.png" alt="시루" fill className="object-cover" sizes="32px" />
+									<Image src="/images/siru-profile.png" alt="시루" fill className="object-cover" sizes="32px" />
 								</div>
 								<div className="flex min-w-0 flex-1 flex-col gap-1">
 									<div className="flex items-center gap-2">

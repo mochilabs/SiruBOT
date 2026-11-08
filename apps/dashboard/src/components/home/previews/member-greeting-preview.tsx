@@ -9,25 +9,26 @@ import { Bot, CornerDownRight } from "lucide-react";
 import { motionBase, motionFast } from "@/components/motion/durations";
 import { cn } from "@/lib/utils";
 
-/** 인사 카드 프리셋 — 에디터가 완성형 디자인을 먼저 고르고, 위에 자유 레이어를 덧칠하는 실제 흐름을 딴 것 */
+/**
+ * 인사 카드 프리셋 — 에디터가 완성형 디자인을 먼저 고르고, 위에 자유 레이어를 덧칠하는 실제 흐름을 딴 것.
+ * 반투명 배경은 어두운 임베드 위에서 탁해져서 불투명 면 + 짝이 맞는 글자색 토큰을 써요.
+ */
 const CARD_PRESETS = [
   {
     label: "기본",
-    className:
-      "bg-primary/60",
+    className: "bg-primary-control text-primary-control-text",
     title: "서름님을 환영해요",
     sub: "1,234번째 멤버",
   },
   {
     label: "파티",
-    className:
-      "bg-primary-control/40",
+    className: "bg-discord-primary text-white",
     title: "다들 박수!",
     sub: "서름님이 새 친구로 합류했어요",
   },
   {
     label: "따뜻",
-    className: "bg-accent",
+    className: "bg-accent text-accent-foreground",
     title: "오늘의 첫 방문이예요",
     sub: "서름님이 문을 두드렸어요",
   },
@@ -119,7 +120,7 @@ export function MemberGreetingPreview() {
               >
                 <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
                   <Image
-                    src="/images/profile.png"
+                    src="/images/siru-profile.png"
                     alt="시루"
                     fill
                     className="object-cover"
@@ -150,13 +151,13 @@ export function MemberGreetingPreview() {
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-discord-btn-active text-xs font-bold text-discord-text ring-2 ring-background/40 ring-offset-2 ring-offset-transparent">
                         서름
                       </div>
-                      <p className="text-base font-black tracking-tighter text-foreground">
+                      <p className="text-base font-black tracking-tighter">
                         {preset.title}
                       </p>
                       <AnimatePresence mode="wait" initial={false}>
                         <m.p
                           key={preset.sub}
-                          className="text-2xs font-medium text-foreground/70"
+                          className="text-2xs font-semibold opacity-80"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}

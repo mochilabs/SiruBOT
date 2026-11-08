@@ -134,7 +134,7 @@ export function CommandListSection() {
 		<section id="commands" className="py-14 sm:py-20 lg:py-24">
 			<div className="mx-auto w-full max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
 				<div className="space-y-3">
-					<h2 className="break-keep text-balance text-3xl font-black tracking-tighter text-foreground sm:text-5xl">필요한 기능, 슬래시 한 번이면 충분해요.</h2>
+					<h2 className="break-keep text-balance text-2xl font-black tracking-tighter text-foreground sm:text-4xl">명령어는 슬래시 한 번으로 시작해요.</h2>
 					<p className="break-keep text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
 						음악 재생부터 AI 대화, 게임, 각종 편의 기능까지. 직관적인 슬래시 커맨드로 간편하게 이용하세요.
 					</p>
