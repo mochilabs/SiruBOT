@@ -24,7 +24,6 @@
         "fastify": "^5.12.7",
         "skia-canvas": "^3.0.8",
         "tslog": "^4.11.0",
-        "undici": "^7.30.1",
         "youtubei.js": "18.3.0",
         "zod": "^4.6.7"
     }
