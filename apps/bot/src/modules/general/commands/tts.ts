@@ -11,10 +11,10 @@ import { TtsError } from '../../../services/ttsService.ts';
 const MAX_SAY_LENGTH = 200;
 
 /**
- * /tts — 채널 낭독 on/off + 사용자 TTS 설정 패널 + 즉석 발화.
+ * /tts — 채널 낭독 on/off + 입장 알림 + 사용자 TTS 설정 패널 + 즉석 발화.
  * - 켜기/끄기: 현재 채널의 낭독 정책(길드 ttsMode)을 바꿔요. 채널 전체에 영향을 주므로
  *   서버 관리 권한이 필요해요. 켜기는 실행한 본인의 낭독 opt-in도 함께 켜요.
- * - 설정: 낭독 on/off·음성·속도·피치 패널(Components V2 ephemeral). 자기 자신 설정이라
+ * - 설정: 낭독 on/off·음성·위치(왼쪽/가운데/오른쪽) 패널(Components V2 ephemeral). 자기 자신 설정이라
  *   권한이 필요 없어요.
  * - 말하기: 재생 중인 곡 위에(없으면 단독으로) 입력한 문장을 읽어요. /음악 음성 서브커맨드를
  *   TTS 도메인으로 옮긴 것이고, 채팅 낭독과 같은 siru_tts·사용자 프리셋을 씁니다.
@@ -67,10 +67,25 @@ export class TtsCommand extends Command {
 				)
 				.addSubcommand((sub) =>
 					sub
+						.setName('join')
+						.setNameLocalizations({ ko: '입장알림' })
+						.setDescription('Announce members who join the bot voice channel.')
+						.setDescriptionLocalizations({ ko: '음성 채널에 누군가 입장하면 이름을 읽어줘요.' })
+						.addBooleanOption((option) =>
+							option
+								.setName('enabled')
+								.setNameLocalizations({ ko: '사용' })
+								.setDescription('Turn join announcements on or off.')
+								.setDescriptionLocalizations({ ko: '입장 알림을 켤지 꺼요.' })
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
 						.setName('settings')
 						.setNameLocalizations({ ko: '설정' })
 						.setDescription('Open your personal TTS settings panel.')
-						.setDescriptionLocalizations({ ko: '내 낭독 on/off·음성·속도·피치 패널을 열어요.' })
+						.setDescriptionLocalizations({ ko: '내 낭독 on/off·음성·위치 패널을 열어요.' })
 				);
 		});
 	}
@@ -106,6 +121,30 @@ export class TtsCommand extends Command {
 
 		if (subcommand === 'say') {
 			await this.speak(interaction);
+			return;
+		}
+
+		if (subcommand === 'join') {
+			const enabled = interaction.options.getBoolean('enabled', true);
+			if (enabled && !this.container.ttsService.isEnabled()) {
+				throw new UserError({
+					identifier: 'tts_service_disabled',
+					message: `${emoji('error')} TTS 서버가 연결되어 있지 않아서 입장 알림을 켤 수 없어요.`,
+					context: { ephemeral: true }
+				});
+			}
+			await this.container.guildService.setTtsJoinAnnounce(interaction.guildId, enabled);
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] },
+				components: [
+					notice(
+						enabled
+							? `${emoji('speech')} 봇이 있는 음성 채널에 누군가 들어오면 이름을 읽어드릴게요.`
+							: `${emoji('speech')} 음성 채널 입장 알림을 껐어요.`
+					)
+				]
+			});
 			return;
 		}
 

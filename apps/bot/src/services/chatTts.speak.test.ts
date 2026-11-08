@@ -28,7 +28,7 @@ vi.mock('@sapphire/framework', () => ({
 
 import { ChatTtsService } from './chatTts.ts';
 
-const preset = { enabled: false, voice: null, speed: null, pitch: null };
+const preset = { enabled: false, voice: null, channel: 'both' as const };
 
 function playerWith(tracks: unknown[], current: unknown = null) {
 	return {
@@ -48,18 +48,32 @@ describe('speakNow', () => {
 		await expect(service.speakNow(playerWith([], { info: { identifier: 'music' } }) as never, '안녕', preset)).rejects.toThrow();
 	});
 	it('음악이 재생 중이면 오버레이로 문장을 읽어요', async () => {
-		mocks.synthesize.mockResolvedValue({ url: 'https://tts.example/clip', expiresIn: 600, format: 'wav', cache: 'miss' });
+		mocks.synthesize.mockResolvedValue({
+			url: 'https://tts.example/clip',
+			expiresIn: 600,
+			format: 'wav',
+			cache: 'miss',
+			durationMs: 100,
+			warnings: []
+		});
 		mocks.announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });
 
 		const service = new ChatTtsService();
 		const player = playerWith([], { info: { identifier: 'music-track' } });
 
 		await expect(service.speakNow(player as never, '안녕하세요', preset)).resolves.toBe('overlay');
-		expect(mocks.announce).toHaveBeenCalledWith(player, 'https://tts.example/clip', 0.35, 'sequential');
+		expect(mocks.announce).toHaveBeenCalledWith(player, 'https://tts.example/clip', 0.35, 'sequential', 'both');
 	});
 
 	it('음악이 없으면 단독 재생으로 큐에 넣어요', async () => {
-		mocks.synthesize.mockResolvedValue({ url: 'https://tts.example/clip', expiresIn: 600, format: 'wav', cache: 'miss' });
+		mocks.synthesize.mockResolvedValue({
+			url: 'https://tts.example/clip',
+			expiresIn: 600,
+			format: 'wav',
+			cache: 'miss',
+			durationMs: 100,
+			warnings: []
+		});
 		mocks.search.mockResolvedValue({ tracks: [{ info: { title: 'clip' } }] });
 		mocks.queueAdd.mockResolvedValue(undefined);
 

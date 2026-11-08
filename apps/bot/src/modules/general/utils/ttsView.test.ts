@@ -3,11 +3,13 @@ import { ButtonStyle } from 'discord.js';
 import {
 	TTS_VOICE_DEFAULT_VALUE,
 	buildVoiceOptions,
-	ttsModalPrefix,
 	ttsPanelView,
-	ttsPitchCustomId,
+	ttsChannelSelectCustomId,
+	ttsLangSelectCustomId,
+	splitPanelLang,
+	withPanelLang,
+	normalizePanelLang,
 	ttsResetCustomId,
-	ttsSpeedCustomId,
 	ttsToggleCustomId,
 	ttsVoiceSelectCustomId,
 	type TtsPanelProps
@@ -15,7 +17,7 @@ import {
 import type { TtsUserPreset } from '../../../services/ttsUserSettings.ts';
 import type { TtsVoice } from '../../../services/ttsService.ts';
 
-const DEFAULT_PRESET: TtsUserPreset = { enabled: false, voice: null, speed: null, pitch: null };
+const DEFAULT_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both' };
 
 function voice(id: string, name = id, engine = 'edge'): TtsVoice {
 	return { id, engine, name, languages: ['ko-KR'] };
@@ -46,51 +48,52 @@ function rowsOf(json: PlainComponent): PlainComponent[][] {
 
 describe('ttsPanelView', () => {
 	it('꺼짐 상태에서는 켜기 버튼을 Success로 보이고, 기본 프리셋이면 복구 버튼을 비활성화한다', () => {
-		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true });
-		const [selectRow, actionRow, resetRow] = rowsOf(json);
+		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' });
+		const [langRow, selectRow, channelRow, actionRow, resetRow] = rowsOf(json);
 
-		expect(selectRow[0].custom_id).toBe(ttsVoiceSelectCustomId);
-		expect(actionRow[0].custom_id).toBe(ttsToggleCustomId);
+		expect(langRow[0].custom_id).toBe(withPanelLang(ttsLangSelectCustomId, 'ko'));
+		expect(langRow[0].options?.find((option) => option.default)?.value).toBe('ko');
+		expect(selectRow[0].custom_id).toBe(withPanelLang(ttsVoiceSelectCustomId, 'ko'));
+		expect(channelRow[0].custom_id).toBe(withPanelLang(ttsChannelSelectCustomId, 'ko'));
+		expect(actionRow[0].custom_id).toBe(withPanelLang(ttsToggleCustomId, 'ko'));
 		expect(actionRow[0].label).toBe('낭독 켜기');
 		expect(actionRow[0].style).toBe(ButtonStyle.Success);
-		expect(actionRow[1].custom_id).toBe(ttsSpeedCustomId);
-		expect(actionRow[2].custom_id).toBe(ttsPitchCustomId);
-		expect(resetRow[0].custom_id).toBe(ttsResetCustomId);
+		expect(resetRow[0].custom_id).toBe(withPanelLang(ttsResetCustomId, 'ko'));
 		expect(resetRow[0].disabled).toBe(true);
 	});
 
 	it('켜짐 상태와 커스텀 프리셋이면 끄기 버튼(Danger)과 활성화된 복구 버튼을 보인다', () => {
-		const json = panelJson({ preset: { enabled: true, voice: 'edge:ko-1', speed: 1.5, pitch: -2 }, voices: [], serviceReady: true });
-		const [, actionRow, resetRow] = rowsOf(json);
+		const json = panelJson({ preset: { enabled: true, voice: 'edge:ko-1', channel: 'left' }, voices: [], serviceReady: true, lang: 'ko' });
+		const [, , , actionRow, resetRow] = rowsOf(json);
 
 		expect(actionRow[0].label).toBe('낭독 끄기');
 		expect(actionRow[0].style).toBe(ButtonStyle.Danger);
 		expect(resetRow[0].disabled).toBe(false);
 	});
 
-	it('상태 본문에 음성·속도·피치 값을 보여 준다', () => {
+	it('상태 본문에 음성·위치 값을 보여 준다', () => {
 		const withValues = textsOf(
 			panelJson({
-				preset: { enabled: true, voice: 'edge:ko-1', speed: 1.5, pitch: -2 },
+				preset: { enabled: true, voice: 'edge:ko-1', channel: 'right' },
 				voices: [voice('edge:ko-1', 'Nayeon')],
-				serviceReady: true
+				serviceReady: true,
+				lang: 'ko'
 			})
 		).join('\n');
 		expect(withValues).toContain('켜짐');
 		expect(withValues).toContain('Nayeon (edge)');
-		expect(withValues).toContain('1.5x');
-		expect(withValues).toContain('-2');
+		expect(withValues).toContain('오른쪽');
 
-		const withDefaults = textsOf(panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true })).join('\n');
+		const withDefaults = textsOf(panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' })).join('\n');
 		expect(withDefaults).toContain('꺼짐');
-		expect(withDefaults).toContain('기본값');
+		expect(withDefaults).toContain('가운데');
 	});
 
 	it('서비스가 준비되지 않았을 때만 준비 안내를 붙인다', () => {
-		const ready = textsOf(panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true })).join('\n');
+		const ready = textsOf(panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' })).join('\n');
 		expect(ready).not.toContain('준비되지 않았어요');
 
-		const notReady = textsOf(panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: false })).join('\n');
+		const notReady = textsOf(panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: false, lang: 'ko' })).join('\n');
 		expect(notReady).toContain('준비되지 않았어요');
 	});
 });
@@ -127,18 +130,27 @@ describe('buildVoiceOptions', () => {
 
 describe('customId 계약', () => {
 	it('패널 컴포넌트 customId가 핸들러 prefix 계약과 맞는다', () => {
-		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true });
+		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' });
 		const customIds = rowsOf(json)
 			.flat()
 			.map((component) => component.custom_id ?? '');
 
-		expect(customIds).toContain(ttsVoiceSelectCustomId);
-		expect(customIds).toContain(ttsToggleCustomId);
-		expect(customIds).toContain(ttsSpeedCustomId);
-		expect(customIds).toContain(ttsPitchCustomId);
-		expect(customIds).toContain(ttsResetCustomId);
-		for (const customId of customIds) {
-			expect(customId.startsWith('tts:panel:') || customId.startsWith(ttsModalPrefix)).toBe(true);
+		for (const base of [ttsLangSelectCustomId, ttsVoiceSelectCustomId, ttsChannelSelectCustomId, ttsToggleCustomId, ttsResetCustomId]) {
+			expect(customIds).toContain(withPanelLang(base, 'ko'));
 		}
+		for (const customId of customIds) {
+			expect(customId.startsWith('tts:panel:')).toBe(true);
+		}
+	});
+});
+
+describe('패널 언어 customId', () => {
+	it('언어를 customId에 붙였다가 그대로 되돌려 읽는다', () => {
+		expect(splitPanelLang(withPanelLang(ttsVoiceSelectCustomId, 'ja'))).toEqual({ base: ttsVoiceSelectCustomId, lang: 'ja' });
+	});
+
+	it('알 수 없거나 없는 언어는 기본 언어로 되돌린다', () => {
+		expect(normalizePanelLang('xx')).toBe('ko');
+		expect(splitPanelLang(ttsToggleCustomId)).toEqual({ base: ttsToggleCustomId, lang: 'ko' });
 	});
 });

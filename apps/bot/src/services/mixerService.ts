@@ -612,10 +612,22 @@ export class MixerService {
 		await this.rawCall(player, '/mixer/announce/cancel', { method: 'POST' });
 	}
 
-	public async announce(player: Player, identifier: string, duckLevel: number, mode?: 'sequential' | 'parallel'): Promise<MixerAnnounceReceipt> {
+	public async announce(
+		player: Player,
+		identifier: string,
+		duckLevel: number,
+		mode?: 'sequential' | 'parallel',
+		channel?: 'both' | 'left' | 'right'
+	): Promise<MixerAnnounceReceipt> {
 		return (await this.rawCall(player, '/mixer/announce', {
 			method: 'POST',
-			body: JSON.stringify({ guildId: String(player.guildId), identifier, duckLevel, ...(mode ? { mode } : {}) })
+			body: JSON.stringify({
+				guildId: String(player.guildId),
+				identifier,
+				duckLevel,
+				...(mode ? { mode } : {}),
+				...(channel && channel !== 'both' ? { channel } : {})
+			})
 		})) as MixerAnnounceReceipt;
 	}
 }

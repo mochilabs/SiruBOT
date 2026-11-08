@@ -50,6 +50,8 @@ model Guild {
   // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요. 오케스트레이션은 apps/bot/src/services/chatTts.ts.
   ttsMode              String   @default("off")
   ttsChannelIds        String[] @default([])
+  // 음성 채널 입장 알림: 봇이 있는 음성 채널에 사용자가 들어오면 "OO님이 입장했어요"를 읽어요.
+  ttsJoinAnnounce      Boolean  @default(false)
   // 커스텀 명령어 접두사 — 메시지가 이 문자열로 시작하면 길드 커스텀 명령어로 처리해요. 규칙은 packages/utils/src/customCommand.ts.
   customCommandPrefix String @default("!")
   // 채팅 유틸: 이모지 확대 — 커스텀 이모지만으로 구성된 메시지를 큰 이미지로 다시 보여줘요 (all | channels | off)
@@ -240,7 +242,7 @@ model ChannelChatHistory {
   @@index([guildId])
 }
 
-// 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in(off 기본)과 음성 프리셋(voice/speed/pitch)
+// 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in(off 기본)과 음성 프리셋(voice/channel)
 model TtsUserSetting {
   guildId String
   userId  String
@@ -248,9 +250,8 @@ model TtsUserSetting {
   enabled Boolean @default(false)
   // 음성 프리셋: engine:voice 식별자. null이면 봇 기본 음성 사용
   voice   String?
-  // 속도 0.25~4, 피치 -12~12. null이면 엔진 기본값
-  speed   Float?
-  pitch   Float?
+  // 스테레오 위치: "both"(가운데) | "left" | "right". lavalink_mixer announce의 channel 값과 1:1이에요.
+  channel String  @default("both")
 
   updatedAt DateTime @updatedAt
 

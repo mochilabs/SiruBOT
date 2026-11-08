@@ -37,6 +37,17 @@ export async function getTtsSettings(store: GuildSettingsStore, guildId: string)
 	};
 }
 
+/** 음성 채널 입장 알림 on/off — 켠 길드만 읽어요 */
+export async function getTtsJoinAnnounce(store: GuildSettingsStore, guildId: string): Promise<boolean> {
+	const guild = await store.getGuild(guildId);
+	return guild.ttsJoinAnnounce;
+}
+
+export async function setTtsJoinAnnounce(store: GuildSettingsStore, guildId: string, enabled: boolean): Promise<boolean> {
+	const guild = await store.upsertField(guildId, 'ttsJoinAnnounce', enabled);
+	return guild.ttsJoinAnnounce;
+}
+
 /** 커스텀 명령어 접두사 — DB에 옛/깨린 값이 있어도 안전한 기본값('!')으로 되돌려요 */
 export async function getCustomCommandPrefix(store: GuildSettingsStore, guildId: string): Promise<string> {
 	const guild = await store.getGuild(guildId);

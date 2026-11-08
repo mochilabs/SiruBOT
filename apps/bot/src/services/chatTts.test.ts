@@ -64,7 +64,7 @@ function makeMessage(overrides: { guildId?: string; channelId?: string; userId?:
 }
 
 function clip(url: string) {
-	return { url, expires_in: 600, format: 'wav', cache: 'miss', duration_ms: 100 };
+	return { url, expiresIn: 600, format: 'wav', cache: 'miss', durationMs: 100, warnings: [] as string[] };
 }
 
 /** 비동기 체인(dispatch chain)을 비운다 — fake 타이머 여부에 맞춰 동작한다 */
@@ -165,7 +165,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		await service.handleMessage(makeMessage(), '첫 메시지');
 		await flushAsync();
 
-		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('첫 메시지', { voice: undefined, speed: undefined, pitch: undefined });
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('첫 메시지', { voice: undefined });
 	});
 
 	it('merges messages arriving inside the 3s window into one clip', async () => {
@@ -182,18 +182,18 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 		await vi.advanceTimersByTimeAsync(TTS_MERGE_WINDOW_MS);
 		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(2);
-		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('두 번째 세 번째', { voice: undefined, speed: undefined, pitch: undefined });
+		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('두 번째 세 번째', { voice: undefined });
 	});
 
-	it('passes the user preset through to synthesize (voice/speed/pitch)', async () => {
+	it('passes the user voice to synthesize', async () => {
 		const service = new ChatTtsService();
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
-		await service.handleMessage(makeMessage(), '프리셋 적용', { enabled: true, voice: 'edge:ko-KR-YoonNeural', speed: 1.25, pitch: -2 });
+		await service.handleMessage(makeMessage(), '프리셋 적용', { enabled: true, voice: 'edge:ko-KR-YoonNeural', channel: 'both' });
 		await flushAsync();
 
-		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('프리셋 적용', { voice: 'edge:ko-KR-YoonNeural', speed: 1.25, pitch: -2 });
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('프리셋 적용', { voice: 'edge:ko-KR-YoonNeural' });
 	});
 
 	it('carries the preset of the batch-seeding message through a merge batch', async () => {
@@ -205,14 +205,12 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		// 첫 메시지는 즉시 합성(프리셋 없음) — 두 번째가 병합 창을 여는데, 이때 프리셋이 배치에 저장된다
 		await service.handleMessage(makeMessage(), '첫 발화');
 		await flushAsync();
-		await service.handleMessage(makeMessage(), '배치 시작', { enabled: true, voice: 'melo:KR', speed: null, pitch: null });
+		await service.handleMessage(makeMessage(), '배치 시작', { enabled: true, voice: 'melo:KR', channel: 'both' });
 		await service.handleMessage(makeMessage(), '이어 말하기');
 		await vi.advanceTimersByTimeAsync(TTS_MERGE_WINDOW_MS);
 
 		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('배치 시작 이어 말하기', {
-			voice: 'melo:KR',
-			speed: undefined,
-			pitch: undefined
+			voice: 'melo:KR'
 		});
 	});
 
@@ -259,9 +257,22 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		await service.handleMessage(makeMessage(), '읽어줘');
 		await flushAsync();
 
-		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential');
+		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential', 'both');
 		expect(mocks.guildService.getTtsDuck).toHaveBeenCalledWith('guild-1');
 		expect(player.search).not.toHaveBeenCalled();
+	});
+
+	it('passes the user stereo position to the mixer announce', async () => {
+		mocks.guildService.getTtsDuck.mockResolvedValue(0.35);
+		const service = new ChatTtsService();
+		const player = makePlayer();
+		player.queue.current = musicTrack('music');
+		mocks.audio.getPlayer.mockReturnValue(player);
+
+		await service.handleMessage(makeMessage(), '왼쪽에서 읽어줘', { enabled: true, voice: null, channel: 'left' });
+		await flushAsync();
+
+		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential', 'left');
 	});
 
 	it('rejects overlay clips when too many announcements are queued', async () => {
