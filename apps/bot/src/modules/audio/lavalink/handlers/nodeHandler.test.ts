@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
-import { NodeHandler } from './nodeHandler.ts';
+import { NodeHandler, guardIdleCarrierEvents, MIXER_IDLE_CARRIER_ID } from './nodeHandler.ts';
 import { RelatedTrackHistory } from '../player/relatedTrackHistory.ts';
 import type { Track } from 'lavalink-client';
 
@@ -483,5 +483,29 @@ describe('fresh 복구 신선도 판정 (세션 시작 시점 기준)', () => {
 		expect(handler.sessionRestore.restoreFreshPlayer).not.toHaveBeenCalled();
 		expect(handler.sessionRestore.discardSavedPlayer).not.toHaveBeenCalled();
 		expect(playerSaver.delete).not.toHaveBeenCalled();
+	});
+});
+
+describe('guardIdleCarrierEvents (mixer 무음 캐리어)', () => {
+	function makeNode() {
+		const handleEvent = vi.fn().mockResolvedValue(undefined);
+		const node = { handleEvent } as never as { handleEvent: (payload: unknown) => Promise<void> };
+		guardIdleCarrierEvents(node as never);
+		return { node, handleEvent };
+	}
+
+	it('캐리어의 Track* 이벤트는 라이브러리로 넘기지 않는다', async () => {
+		const { node, handleEvent } = makeNode();
+		for (const type of ['TrackStartEvent', 'TrackEndEvent', 'TrackStuckEvent', 'TrackExceptionEvent']) {
+			await node.handleEvent({ type, guildId: '1', track: { info: { identifier: MIXER_IDLE_CARRIER_ID } } });
+		}
+		expect(handleEvent).not.toHaveBeenCalled();
+	});
+
+	it('일반 트랙과 다른 이벤트는 그대로 통과시킨다', async () => {
+		const { node, handleEvent } = makeNode();
+		await node.handleEvent({ type: 'TrackStartEvent', guildId: '1', track: { info: { identifier: 'abc' } } });
+		await node.handleEvent({ type: 'WebSocketClosedEvent', guildId: '1' });
+		expect(handleEvent).toHaveBeenCalledTimes(2);
 	});
 });

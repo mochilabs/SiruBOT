@@ -28,7 +28,9 @@ const envSchema = z
 		NOTIFIER_AUTH_KEY: z.string().optional(),
 		// 티켓 transcript 같은 비공개 오브젝트를 중계할 storage 주소·키 (봇·대시보드는 이 값을 몰라요)
 		STORAGE_URL: z.string().url().default('http://localhost:3003'),
-		STORAGE_AUTH_KEY: z.string().optional()
+		STORAGE_AUTH_KEY: z.string().optional(),
+		// siru_tts 주소 — 대시보드 음성 목록 프록시용. 봇의 SIRU_TTS_URL과 같은 값이에요 (미설정이면 목록 API가 503)
+		SIRU_TTS_URL: z.union([z.string().url(), z.literal('').transform(() => undefined)]).optional()
 	})
 	// 폴백 체인(DATA_API_AUTH_KEY ?? AUTH_KEY)을 스키마 안에서 정규화해요.
 	.transform((env) => ({

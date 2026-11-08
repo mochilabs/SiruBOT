@@ -17,10 +17,6 @@ function respondJson(status: number, body: unknown, headers?: Record<string, str
 function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesize?: () => any; voices?: () => any }): void {
 	fetchMock.mockImplementation(async (input: string | URL | Request) => {
 		const url = String(input instanceof Request ? input.url : input);
-		if (url.includes('/v1/usage'))
-			return handlers.usage
-				? handlers.usage()
-				: respondJson(200, { resets_at: '2026-10-19T00:00:00+09:00', owner: { enabled: true, limit: 1000, used_chars: 10 }, user: null });
 		if (url.includes('/readyz')) return handlers.readyz ? handlers.readyz() : new Response('', { status: 200 });
 		if (url.includes('/v1/voices'))
 			return handlers.voices ? handlers.voices() : respondJson(200, { items: [], total: 0, page: 1, page_size: 25 });
@@ -40,13 +36,11 @@ function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesiz
 
 function envOn(): void {
 	process.env.SIRU_TTS_URL = 'http://tts.invalid';
-	process.env.SIRU_TTS_API_KEY = 'key';
 	process.env.SIRU_TTS_DEFAULT_VOICE = 'edge:ko-KR-SunHiNeural';
 }
 
 function envOff(): void {
 	delete process.env.SIRU_TTS_URL;
-	delete process.env.SIRU_TTS_API_KEY;
 	delete process.env.SIRU_TTS_DEFAULT_VOICE;
 }
 
@@ -62,12 +56,11 @@ afterEach(() => {
 });
 
 describe('getTtsConfig', () => {
-	it('requires url, key and voice — anything missing disables the feature', () => {
-		expect(getTtsConfig()).not.toBeNull();
-		delete process.env.SIRU_TTS_API_KEY;
-		expect(getTtsConfig()).toBeNull();
-		envOn();
+	it('requires only the url — the default voice is optional', () => {
+		expect(getTtsConfig()).toEqual({ url: 'http://tts.invalid', defaultVoice: 'edge:ko-KR-SunHiNeural' });
 		delete process.env.SIRU_TTS_DEFAULT_VOICE;
+		expect(getTtsConfig()).toEqual({ url: 'http://tts.invalid', defaultVoice: null });
+		delete process.env.SIRU_TTS_URL;
 		expect(getTtsConfig()).toBeNull();
 	});
 
@@ -90,12 +83,12 @@ describe('TtsService disabled state', () => {
 describe('TtsService synthesize', () => {
 	it('parses the return_url response and sends the documented request body', async () => {
 		let sentBody: unknown;
-		let auth: string | null = null;
+		let headers: Record<string, string> = {};
 		routeFetch({
 			synthesize: () => {
 				const init = fetchMock.mock.calls.at(-1)?.[1] as RequestInit;
 				sentBody = JSON.parse(String(init.body));
-				auth = (init.headers as Record<string, string>).Authorization;
+				headers = init.headers as Record<string, string>;
 				return respondJson(200, {
 					url: 'https://tts.example.com/v1/shared/Ab3',
 					expires_in: 600,
@@ -106,12 +99,20 @@ describe('TtsService synthesize', () => {
 			}
 		});
 		const clip = await new TtsService().synthesize('안녕하세요');
-		expect(clip).toEqual({ url: 'https://tts.example.com/v1/shared/Ab3', expiresIn: 600, format: 'wav', cache: 'hit', durationMs: 120 });
-		expect(sentBody).toEqual({ text: '안녕하세요', voice: 'edge:ko-KR-SunHiNeural', format: 'wav', return_url: true });
-		expect(auth).toBe('Bearer key');
+		expect(clip).toEqual({
+			url: 'https://tts.example.com/v1/shared/Ab3',
+			expiresIn: 600,
+			format: 'wav',
+			cache: 'hit',
+			durationMs: 120,
+			warnings: []
+		});
+		expect(sentBody).toEqual({ text: '안녕하세요', voice: 'edge:ko-KR-SunHiNeural', voice_fallback: true, return_url: true });
+		// siru_tts 2.0은 인증 헤더가 없다
+		expect(headers).toEqual({ 'Content-Type': 'application/json' });
 	});
 
-	it('merges the user preset (voice/speed/pitch) into the request body', async () => {
+	it('sends the user voice and a non-neutral emotion', async () => {
 		let sentBody: Record<string, unknown> = {};
 		routeFetch({
 			synthesize: () => {
@@ -126,11 +127,11 @@ describe('TtsService synthesize', () => {
 				});
 			}
 		});
-		await new TtsService().synthesize('안녕', { voice: 'melo:KR', speed: 1.5, pitch: -3 });
-		expect(sentBody).toEqual({ text: '안녕', voice: 'melo:KR', format: 'wav', return_url: true, speed: 1.5, pitch: -3 });
+		await new TtsService().synthesize('안녕', { voice: 'melo:KR', emotion: 'happy' });
+		expect(sentBody).toEqual({ text: '안녕', voice: 'melo:KR', voice_fallback: true, return_url: true, emotion: 'happy' });
 	});
 
-	it('omits speed/pitch when the preset leaves them unset', async () => {
+	it('omits emotion when neutral and omits voice when no default is configured', async () => {
 		let sentBody: Record<string, unknown> = {};
 		routeFetch({
 			synthesize: () => {
@@ -145,17 +146,18 @@ describe('TtsService synthesize', () => {
 				});
 			}
 		});
-		await new TtsService().synthesize('안녕', { voice: 'melo:KR', speed: undefined, pitch: undefined });
-		expect(sentBody).toEqual({ text: '안녕', voice: 'melo:KR', format: 'wav', return_url: true });
+		delete process.env.SIRU_TTS_DEFAULT_VOICE;
+		await new TtsService().synthesize('안녕', { emotion: 'neutral' });
+		expect(sentBody).toEqual({ text: '안녕', return_url: true });
 	});
 
-	it('retries once on 429 honoring Retry-After', async () => {
+	it('retries once on 503 honoring Retry-After', async () => {
 		let calls = 0;
 		routeFetch({
 			synthesize: () => {
 				calls++;
 				return calls === 1
-					? respondJson(429, { error: { code: 'rate_limited', message: 'slow down' } }, { 'Retry-After': '0' })
+					? respondJson(503, { error: { code: 'queue_full', message: 'slow down' } }, { 'Retry-After': '0' })
 					: respondJson(200, { url: 'https://tts.example.com/v1/shared/x', expires_in: 600, format: 'wav', cache: 'miss', duration_ms: 1 });
 			}
 		});
@@ -168,10 +170,10 @@ describe('TtsService synthesize', () => {
 		routeFetch({
 			synthesize: () => {
 				calls++;
-				return respondJson(429, { error: { code: 'rate_limited', message: 'slow down' } }, { 'Retry-After': '3600' });
+				return respondJson(503, { error: { code: 'queue_full', message: 'slow down' } }, { 'Retry-After': '3600' });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'rate_limited' });
+		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'queue_full' });
 		expect(calls).toBe(1);
 	});
 
@@ -187,15 +189,42 @@ describe('TtsService synthesize', () => {
 		expect(calls).toBe(2);
 	});
 
+	it('exposes server warnings such as voice_language_mismatch', async () => {
+		routeFetch({
+			synthesize: () =>
+				respondJson(200, {
+					url: 'https://tts.example.com/v1/shared/w',
+					expires_in: 600,
+					format: 'mp3',
+					cache: 'miss',
+					duration_ms: 5,
+					warnings: ['voice_language_mismatch:ja', 7]
+				})
+		});
+		await expect(new TtsService().synthesize('こんにちは')).resolves.toMatchObject({ warnings: ['voice_language_mismatch:ja'] });
+	});
+
+	it('does not retry 504 timeouts', async () => {
+		let calls = 0;
+		routeFetch({
+			synthesize: () => {
+				calls++;
+				return respondJson(504, { error: { code: 'engine_timeout', message: 'slow' } });
+			}
+		});
+		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'engine_timeout' });
+		expect(calls).toBe(1);
+	});
+
 	it('discards 4xx validation errors immediately', async () => {
 		let calls = 0;
 		routeFetch({
 			synthesize: () => {
 				calls++;
-				return respondJson(400, { error: { code: 'public_base_unset', message: 'set SIRU_PUBLIC_BASE_URL' } });
+				return respondJson(400, { error: { code: 'ambiguous_routing', message: 'voice and language' } });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'public_base_unset' });
+		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'ambiguous_routing' });
 		expect(calls).toBe(1);
 	});
 
@@ -228,44 +257,6 @@ describe('TtsService synthesize', () => {
 	});
 });
 
-describe('TtsService quota guard', () => {
-	it('stops synthesizing when the owner quota is nearly exhausted and caches the snapshot', async () => {
-		let usageCalls = 0;
-		routeFetch({
-			usage: () => {
-				usageCalls++;
-				return respondJson(200, {
-					resets_at: '2026-10-19T00:00:00+09:00',
-					owner: { enabled: true, limit: 1000, used_chars: 950 },
-					user: null
-				});
-			}
-		});
-		const service = new TtsService();
-		await expect(service.synthesize('안녕')).rejects.toMatchObject({ code: 'quota_blocked' });
-		await expect(service.synthesize('또')).rejects.toMatchObject({ code: 'quota_blocked' });
-		expect(usageCalls).toBe(1);
-		expect(fetchMock.mock.calls.filter(([u]) => String(u).includes('/v1/synthesize'))).toHaveLength(0);
-	});
-
-	it('also blocks when the per-user quota is nearly exhausted', async () => {
-		routeFetch({
-			usage: () =>
-				respondJson(200, {
-					resets_at: null,
-					owner: { enabled: true, limit: 1000, used_chars: 1 },
-					user: { enabled: true, limit: 10, used_chars: 9 }
-				})
-		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'quota_blocked' });
-	});
-
-	it('fails open when the usage snapshot cannot be fetched', async () => {
-		routeFetch({ usage: () => Promise.reject(new Error('network down')) });
-		await expect(new TtsService().synthesize('안녕')).resolves.toMatchObject({ url: 'https://tts.example.com/v1/shared/token' });
-	});
-});
-
 describe('TtsService listVoices', () => {
 	it('parses catalog items and passes the query through', async () => {
 		let requestedUrl = '';
@@ -292,7 +283,7 @@ describe('TtsService listVoices', () => {
 				});
 			}
 		});
-		const voices = await new TtsService().listVoices('ko-KR');
+		const voices = await new TtsService().listVoices({ query: 'ko-KR' });
 		expect(requestedUrl).toContain('/v1/voices?');
 		expect(requestedUrl).toContain('q=ko-KR');
 		expect(voices).toEqual([
@@ -301,9 +292,43 @@ describe('TtsService listVoices', () => {
 		]);
 	});
 
+	it('passes the language filter and caches successful lists', async () => {
+		let calls = 0;
+		let requestedUrl = '';
+		routeFetch({
+			voices: () => {
+				calls++;
+				requestedUrl = String(fetchMock.mock.calls.at(-1)?.[0]);
+				return respondJson(200, { items: [{ id: 'voicevox:3', engine: 'voicevox', name: 'ずんだもん', languages: ['ja'] }] });
+			}
+		});
+		const service = new TtsService();
+		await expect(service.listVoices({ lang: 'JA' })).resolves.toHaveLength(1);
+		await service.listVoices({ lang: 'ja' });
+		expect(requestedUrl).toContain('lang=ja');
+		expect(calls).toBe(1);
+		// 다른 언어는 별도 캐시 키
+		await service.listVoices({ lang: 'ko' });
+		expect(calls).toBe(2);
+	});
+
+	it('does not cache empty results', async () => {
+		let calls = 0;
+		routeFetch({
+			voices: () => {
+				calls++;
+				return respondJson(200, { items: [] });
+			}
+		});
+		const service = new TtsService();
+		await service.listVoices({ lang: 'ko' });
+		await service.listVoices({ lang: 'ko' });
+		expect(calls).toBe(2);
+	});
+
 	it('returns an empty list when disabled, on error, or on a bad body', async () => {
 		envOff();
-		expect(await new TtsService().listVoices('x')).toEqual([]);
+		expect(await new TtsService().listVoices({ query: 'x' })).toEqual([]);
 		envOn();
 		routeFetch({ voices: () => Promise.reject(new Error('down')) });
 		expect(await new TtsService().listVoices()).toEqual([]);

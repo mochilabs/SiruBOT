@@ -603,8 +603,8 @@ export class MixerService {
 	 * (플러그인 `DELETE /mixer/announce/queue`: 활성 안내는 건드리지 않고 대기분만 드롭해요)
 	 */
 	public async clearAnnounceQueue(player: Player): Promise<number> {
-		const result = (await this.rawCall(player, '/mixer/announce/queue', { method: 'DELETE' })) as { dropped?: number } | null;
-		return typeof result?.dropped === 'number' ? result.dropped : 0;
+		const result = (await this.rawCall(player, '/mixer/announce/queue', { method: 'DELETE' })) as { cleared?: number } | null;
+		return typeof result?.cleared === 'number' ? result.cleared : 0;
 	}
 
 	/** 현재 재생 중인 안내를 즉시 멈춰요 (`POST /mixer/announce/cancel`). */
@@ -612,10 +612,22 @@ export class MixerService {
 		await this.rawCall(player, '/mixer/announce/cancel', { method: 'POST' });
 	}
 
-	public async announce(player: Player, identifier: string, duckLevel: number, mode?: 'sequential' | 'parallel'): Promise<MixerAnnounceReceipt> {
+	public async announce(
+		player: Player,
+		identifier: string,
+		duckLevel: number,
+		mode?: 'sequential' | 'parallel',
+		channel?: 'both' | 'left' | 'right'
+	): Promise<MixerAnnounceReceipt> {
 		return (await this.rawCall(player, '/mixer/announce', {
 			method: 'POST',
-			body: JSON.stringify({ guildId: String(player.guildId), identifier, duckLevel, ...(mode ? { mode } : {}) })
+			body: JSON.stringify({
+				guildId: String(player.guildId),
+				identifier,
+				duckLevel,
+				...(mode ? { mode } : {}),
+				...(channel && channel !== 'both' ? { channel } : {})
+			})
 		})) as MixerAnnounceReceipt;
 	}
 }
