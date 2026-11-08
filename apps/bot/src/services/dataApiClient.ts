@@ -2,7 +2,7 @@ import { container } from '@sapphire/framework';
 import type { GreetingConfig, GreetingKind, SponsorBlockSkipSegment } from '@sirubot/utils';
 import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
 import type { DeliveryCarrier } from '@sirubot/utils/delivery';
-import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
+import type { AirQualityInfo, WeatherResult, WeatherScope } from '@sirubot/utils/weather';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 import type { DailyHoroscope } from './types.ts';
 
@@ -250,6 +250,38 @@ interface NowPlayingCardRequest {
  */
 export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise<Buffer | null> {
 	return renderImage('/v1/image/nowplaying', data);
+}
+
+/** 날씨 카드 요청 — WeatherResult에서 표시용 필드만 골라 보내요 (data-api weatherCardSchema와 같은 모양). */
+export interface WeatherCardRequest {
+	scope: WeatherScope;
+	locationLabel: string;
+	observedAt: string;
+	weatherCode: number | null;
+	weatherText: string;
+	isDay: boolean | null;
+	temperatureC: number | null;
+	feelsLikeC: number | null;
+	humidityPercent: number | null;
+	windSpeedKmh: number | null;
+	cloudCoverPercent: number | null;
+	precipitationMm: number | null;
+	airQuality: AirQualityInfo | null;
+	daily: Array<{
+		date: string;
+		weatherCode: number | null;
+		weatherText: string;
+		tempMin: number | null;
+		tempMax: number | null;
+		precipitationProbabilityMaxPct: number | null;
+		precipitationSumMm: number | null;
+		windSpeedMaxKmh: number | null;
+	}>;
+}
+
+/** 날씨 카드 PNG — 실패하면 null이라 호출부가 텍스트 카드로 폴백해요. */
+export async function renderWeatherCard(data: WeatherCardRequest): Promise<Buffer | null> {
+	return renderImage('/v1/image/weather', data);
 }
 
 /**
