@@ -19,21 +19,30 @@ const base = { zodiacCode: '07', rank: 1, date: '2026/10/09' } as const;
 describe('renderOhaasaCard', () => {
 	it('아이템+열쇠 요약 카드를 920폭 PNG로 렌더해요', async () => {
 		const buffer = await renderOhaasaCard({ ...base, luckyItem: '핑크색', luckyKey: '친구' });
-		expectPngSize(buffer, 920, 396);
+		expectPngSize(buffer, 920, 230);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
-	it('아이템만 있으면 와이드 박스 1개로 렌더해요', async () => {
-		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: '타올' }), 920, 396);
+	it('아이템만 있으면 한 칸만 렌더해요', async () => {
+		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: '타올' }), 920, 230);
 	});
 
-	it('럭키 정보가 없으면 박스 없이 축약 렌더해요', async () => {
-		expectPngSize(await renderOhaasaCard({ ...base }), 920, 300);
+	it('럭키 정보가 없으면 칸 없이 축약 렌더해요', async () => {
+		expectPngSize(await renderOhaasaCard({ ...base }), 920, 150);
 		expect((await renderOhaasaCard({ ...base })).length).toBeGreaterThan(1_000);
 	});
 
+	it('배경을 칠하지 않는 투명 PNG예요', async () => {
+		const { loadImage, Canvas } = await import('skia-canvas');
+		const img = await loadImage(await renderOhaasaCard({ ...base, luckyItem: '핑크색' }));
+		const ctx = new Canvas(920, 230).getContext('2d');
+		ctx.drawImage(img, 0, 0);
+		// 좌하단 모서리에는 텍스트가 없어서 완전 투명이어야 해요
+		expect(ctx.getImageData(2, 226, 1, 1).data[3]).toBe(0);
+	});
+
 	it('일본어로 넘어온 아이템도 그대로 그려요 (주말 원문 폴백)', async () => {
-		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: 'タオル', luckyKey: '手紙' }), 920, 396);
+		expectPngSize(await renderOhaasaCard({ ...base, luckyItem: 'タオル', luckyKey: '手紙' }), 920, 230);
 	});
 });
 
