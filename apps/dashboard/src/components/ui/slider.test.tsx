@@ -32,4 +32,24 @@ describe("slider geometry and keyboard", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("keeps the thumb and fill visible even when layout cannot be measured", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      // happy-dom은 레이아웃이 없어 폭이 0이에요 — 접힌 구획에서 마운트된 상황과 같아요
+      await act(async () => { root.render(<Slider value={60} min={0} max={150} label="음악 볼륨" />); });
+      const thumb = host.querySelector<HTMLElement>('[data-slot="slider-thumb"]')!;
+      const range = host.querySelector<HTMLElement>('[data-slot="slider-range"]')!;
+      expect(thumb.style.visibility).not.toBe("hidden");
+      expect(range.style.visibility).not.toBe("hidden");
+      expect(thumb.style.insetInlineStart).toBe("40%");
+    } finally {
+      await act(async () => { root.unmount(); });
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
 });

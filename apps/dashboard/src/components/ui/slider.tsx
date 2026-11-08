@@ -49,6 +49,8 @@ function Slider({
 		onCommit(typeof committed === "number" ? committed : (committed[0] ?? min));
 	};
 
+	// thumbAlignment="edge"는 썸 위치를 JS로 측정해서, 측정이 안 된 채 남으면 썸·채움이 visibility:hidden으로 영영 사라져요.
+	// "center"는 값 퍼센트만으로 위치가 정해져 측정 상태에 기대지 않아요. 썸이 양 끝에서 반지름만큼 삐져나오는 건 Control 패딩(px-2.5)으로 흡수해요.
 	return (
 		<div className={cn("w-full space-y-1.5", className)}>
 			{label && !hideLabel && <span className="block text-sm font-medium text-foreground">{label}</span>}
@@ -65,10 +67,10 @@ function Slider({
 					onValueChange={handleValueChange}
 					onValueCommitted={handleValueCommitted}
 					disabled={disabled}
-					thumbAlignment="edge"
+					thumbAlignment="center"
 					{...props}
 				>
-					<SliderPrimitive.Control className="relative flex h-8 w-full touch-none items-center select-none data-disabled:opacity-50">
+					<SliderPrimitive.Control className="relative flex h-8 w-full touch-none items-center px-2.5 select-none data-disabled:opacity-50">
 						<SliderPrimitive.Track
 							data-slot="slider-track"
 							className="relative grow rounded-full bg-foreground/15 select-none data-horizontal:h-2 data-horizontal:w-full"
