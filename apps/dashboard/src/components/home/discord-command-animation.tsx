@@ -560,7 +560,7 @@ export function DiscordCommandAnimation({ activeSlide = 0, active = true, onDone
 
 			{/* 메시지 영역 — flex-1로 높이를 채워 응답이 나와도 카드가 늘어나지 않아요.
 			    aria-live 미사용: 데모가 자동 순환해 스크린 리더를 계속 방해해요. */}
-			<div className="min-h-[380px] flex-1 space-y-4 p-4 sm:p-5">
+			<div className="min-h-[400px] flex-1 space-y-4 p-4 sm:p-6 lg:min-h-[440px]">
 				{reached("sent") && (
 					<m.div
 						key={`user-${safeIndex}`}
