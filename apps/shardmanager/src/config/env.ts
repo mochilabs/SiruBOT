@@ -21,6 +21,8 @@ const envSchema = z.object({
 	DISCORD_WEBHOOK_URL: z.string().url().optional(),
 	SHARD_COUNT: shardCountSchema,
 	SHARDS_PER_PROCESS: z.coerce.number().int().positive().default(5),
+	// 시작 직후 신규 할당 보류 시간(ms). 0이면 끔. 재연결 백오프(최대 30s) 안에 기존 봇이 돌아오게 기본 40s
+	ALLOCATION_GRACE_MS: z.coerce.number().int().min(0).default(40_000),
 	AUTH_KEY: z.string().optional()
 });
 

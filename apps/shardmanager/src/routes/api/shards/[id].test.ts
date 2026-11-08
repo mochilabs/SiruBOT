@@ -30,6 +30,12 @@ describe('GET /api/shards/:id', () => {
 		expect(response.json()).toEqual({ error: 'Invalid shard ID' });
 	});
 
+	it('returns 400 for a partially numeric shard ID', async () => {
+		const app = await startServer([{ wsId: 'ws-1', shardIds: [3] }]);
+		const response = await app.inject({ method: 'GET', url: '/3abc' });
+		expect(response.statusCode).toBe(400);
+	});
+
 	it('returns 404 for an unassigned shard', async () => {
 		const app = await startServer([{ wsId: 'ws-1', shardIds: [0] }]);
 		const response = await app.inject({ method: 'GET', url: '/3' });

@@ -4,9 +4,10 @@ export default async function routes(fastify: FastifyInstance) {
 	// GET /api/shards/:id - Get info for a specific shard
 	fastify.get('/:id', async (req, reply) => {
 		const { id } = req.params as { id: string };
-		const shardId = parseInt(id, 10);
+		// parseInt는 "3abc"를 3으로 받아들여서 숫자만 허용해요
+		const shardId = /^\d+$/.test(id) ? Number(id) : NaN;
 
-		if (isNaN(shardId)) {
+		if (!Number.isSafeInteger(shardId)) {
 			return reply.code(400).send({ error: 'Invalid shard ID' });
 		}
 

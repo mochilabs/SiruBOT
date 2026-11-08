@@ -31,4 +31,17 @@ describe('WsMessageSchema', () => {
 		expect(() => WsMessageSchema.parse(null)).toThrow();
 		expect(() => WsMessageSchema.parse('not-an-object')).toThrow();
 	});
+
+	it('rejects malformed shard IDs and stats in client-sent payloads', () => {
+		const identify = (payload: unknown) => WsMessageSchema.parse({ op: WsOp.IDENTIFY, payload });
+		expect(() => identify({ token: 't', shardIds: [1.5] })).toThrow();
+		expect(() => identify({ token: 't', shardIds: [-1] })).toThrow();
+		expect(() => identify({ token: 't', shardIds: Array.from({ length: 1025 }, (_, i) => i) })).toThrow();
+		expect(() => identify({ token: 't', shardIds: [0, 1] })).not.toThrow();
+
+		const stats = (memoryUsage: number) =>
+			WsMessageSchema.parse({ op: WsOp.SHARD_STATS, payload: { shardIds: [0], guilds: 1, players: 0, memoryUsage, uptime: 12.5 } });
+		expect(() => stats(-1)).toThrow();
+		expect(() => stats(1024)).not.toThrow();
+	});
 });

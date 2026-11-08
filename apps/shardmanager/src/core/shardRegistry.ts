@@ -12,6 +12,14 @@ const HEARTBEAT_CHECK_INTERVAL_MS = 15_000;
 const WS_CLOSING = 2;
 const WS_CLOSED = 3;
 
+export interface ShardRegistryOptions {
+	/**
+	 * 서버 시작 직후 신규 샤드 할당을 보류하는 시간(ms). 매니저가 재시작되면 레지스트리가 비어서, 재연결 백오프 중인 기존 봇들의
+	 * 샤드를 신규 프로세스가 먼저 가져가 이중 점유가 생길 수 있어요. 기존 봇의 re-identify(claimShards)는 이 시간에도 허용해요.
+	 */
+	allocationGraceMs?: number;
+}
+
 interface ShardProcessInfo {
 	shardIds: number[];
 	status: ShardStatus;
@@ -33,15 +41,22 @@ export class ShardRegistry {
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private notifier: DiscordNotifier;
 	private previouslyAllReady: boolean = false;
+	private readonly allocationGraceUntil: number;
 
-	constructor(shardCount: number, shardsPerProcess: number = 5, notifier: DiscordNotifier) {
+	constructor(shardCount: number, shardsPerProcess: number = 5, notifier: DiscordNotifier, options: ShardRegistryOptions = {}) {
 		this.shardCount = shardCount;
 		this.shardsPerProcess = shardsPerProcess;
 		this.notifier = notifier;
+		this.allocationGraceUntil = Date.now() + (options.allocationGraceMs ?? 0);
 		this.startHeartbeatMonitor();
 	}
 
 	public allocateShardIds(): number[] | null {
+		if (Date.now() < this.allocationGraceUntil) {
+			logger.info('New shard allocation deferred: startup grace period (existing processes may still be re-identifying)');
+			return null;
+		}
+
 		const available: number[] = [];
 
 		for (let i = 0; i < this.shardCount; i++) {

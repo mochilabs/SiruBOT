@@ -262,6 +262,8 @@ graph LR
 - Core: `ShardRegistry(shardCount, shardsPerProcess)` — the shard ↔ process assignment ledger — and `DiscordNotifier` (webhook) for failure alerts.
 - Endpoints: REST `/api/health` · `/api/shards` · `/api/shards/:id` · `/api/shard/count`, WS `/ws` (`src/routes/`).
 - The auth key is `AUTH_KEY`. The dashboard sends `SHARD_MANAGER_AUTH_KEY`, so the two values must match.
+- Startup grace: for `ALLOCATION_GRACE_MS` (default 40 s, `0` disables) after boot, brand-new shard allocation is deferred (`NoShardsAvailableError` on the client) while re-identify claims of existing shards are still accepted. This keeps a new process from taking shards that bots still in reconnect backoff are about to reclaim after a manager restart.
+- Client liveness: `ShardClient` terminates the socket and reconnects when a HEARTBEAT gets no `HEARTBEAT_ACK` within one interval, so a half-open connection can't leave a bot believing it still owns shards the manager already released.
 - Graceful stop: registry destroy → Fastify close.
 
 ### 4.5 apps/storage

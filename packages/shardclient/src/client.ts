@@ -25,6 +25,9 @@ export class ShardClient {
 	private identity: ShardIdentity | null = null;
 	private statsCallback: (() => Omit<ShardStatsPayload, 'shardIds'>) | null = null;
 	private isReconnecting = false;
+	private isDestroyed = false;
+	/** 직전 HEARTBEAT에 대한 ACK를 아직 못 받았는지: 다음 틱까지 못 받으면 소켓이 반쯤 끊긴 거예요 */
+	private awaitingHeartbeatAck = false;
 
 	constructor(options: ShardClientOptions) {
 		this.logger = options.logger;
@@ -40,8 +43,7 @@ export class ShardClient {
 	 * Connect to shard manager and receive shard assignment
 	 */
 	public async identify(): Promise<ShardIdentity> {
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
+		while (!this.isDestroyed) {
 			try {
 				this.ws.removeAllListeners();
 				await this.ws.connect();
@@ -59,6 +61,7 @@ export class ShardClient {
 				await new Promise((resolve) => setTimeout(resolve, 5_000));
 			}
 		}
+		throw new Error('ShardClient is destroyed');
 	}
 
 	/**
@@ -85,7 +88,14 @@ export class ShardClient {
 				this.logger.info('Successfully re-identified with shard manager');
 				return;
 			} catch (error) {
-				this.logger.warn(`Reconnect attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+				// 재식별 거부(다른 프로세스가 점유 중이거나 ID가 유효하지 않음)도 계속 재시도하되, 원인을 구분해서 남겨요.
+				const cause =
+					error instanceof NoShardsAvailableError
+						? 'shard manager rejected the shard claim (still held by another process, or invalid IDs)'
+						: error instanceof Error
+							? error.message
+							: String(error);
+				this.logger.warn(`Reconnect attempt ${attempt} failed: ${cause}`);
 			}
 		}
 	}
@@ -116,6 +126,10 @@ export class ShardClient {
 						? { token: this.authToken, shardIds: this.identity?.shardIds, hostname: hostname() }
 						: { token: this.authToken, hostname: hostname() }
 				});
+			});
+
+			this.ws.on(WsOp.HEARTBEAT_ACK, () => {
+				this.awaitingHeartbeatAck = false;
 			});
 
 			this.ws.on(WsOp.IDENTIFY_ACK, (msg) => {
@@ -171,7 +185,18 @@ export class ShardClient {
 
 	private startHeartbeat(): void {
 		this.stopHeartbeat();
+		this.awaitingHeartbeatAck = false;
 		this.heartbeatInterval = setInterval(() => {
+			// 직전 HEARTBEAT의 ACK가 한 주기(30s) 동안 오지 않았다면 연결이 반쯤 끊긴 거예요.
+			// 그대로 두면 서버는 하트비트 타임아웃으로 샤드를 회수해 다른 프로세스에 줄 수 있는데
+			// 이쪽은 계속 샤드를 가진 줄 알아요(이중 점유). 소켓을 끊어 close 콜백의 재연결로 보내요.
+			if (this.awaitingHeartbeatAck) {
+				this.logger.warn('HEARTBEAT_ACK not received within one interval. Terminating connection to force reconnect...');
+				this.awaitingHeartbeatAck = false;
+				this.ws.terminate();
+				return;
+			}
+			this.awaitingHeartbeatAck = true;
 			this.ws.send({
 				op: WsOp.HEARTBEAT,
 				payload: { timestamp: Date.now() }
@@ -207,6 +232,7 @@ export class ShardClient {
 	}
 
 	public destroy(): void {
+		this.isDestroyed = true;
 		this.isReconnecting = false;
 		this.stopHeartbeat();
 		if (this.statsInterval) clearInterval(this.statsInterval);

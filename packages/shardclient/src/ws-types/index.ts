@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const MAX_SHARD_IDS = 1024;
+
 export enum WsOp {
 	HELLO = 'HELLO',
 	IDENTIFY = 'IDENTIFY',
@@ -27,10 +29,14 @@ export const HelloPayloadSchema = z.object({
 
 export type HelloPayload = z.infer<typeof HelloPayloadSchema>;
 
+/** 샤드 ID: 0 이상의 정수. 배열 길이 상한은 비정상 요청을 스키마에서 걸러내요 */
+const shardIdSchema = z.number().int().nonnegative();
+const shardIdsSchema = z.array(shardIdSchema).max(MAX_SHARD_IDS);
+
 export const IdentifyPayloadSchema = z.object({
 	token: z.string(), // Auth token for verification
-	shardIds: z.array(z.number()).optional(), // Existing shard IDs for re-identification
-	hostname: z.string().optional() // Container/process hostname
+	shardIds: shardIdsSchema.optional(), // Existing shard IDs for re-identification
+	hostname: z.string().max(255).optional() // Container/process hostname
 });
 
 export type IdentifyPayload = z.infer<typeof IdentifyPayloadSchema>;
@@ -54,17 +60,17 @@ export type ShardStatus = z.infer<typeof shardStatusSchema>;
 
 export const ShardStatusPayloadSchema = z.object({
 	status: shardStatusSchema,
-	shardIds: z.array(z.number())
+	shardIds: shardIdsSchema
 });
 
 export type ShardStatusPayload = z.infer<typeof ShardStatusPayloadSchema>;
 
 export const ShardStatsPayloadSchema = z.object({
-	shardIds: z.array(z.number()),
-	guilds: z.number(),
-	players: z.number(),
-	memoryUsage: z.number(),
-	uptime: z.number()
+	shardIds: shardIdsSchema,
+	guilds: z.number().nonnegative(),
+	players: z.number().nonnegative(),
+	memoryUsage: z.number().nonnegative(),
+	uptime: z.number().nonnegative()
 });
 
 export type ShardStatsPayload = z.infer<typeof ShardStatsPayloadSchema>;
