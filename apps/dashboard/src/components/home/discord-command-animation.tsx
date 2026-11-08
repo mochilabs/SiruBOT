@@ -30,7 +30,7 @@ export const slideConfigs: SlideConfig[] = [
 	{ command: "/현재곡", args: "", hasTarget: true },
 	{ command: "/채팅", args: "비 오는 날 들을 노래 추천해줘", hasTarget: true },
 	{ command: "/추천", args: "", hasTarget: false },
-	{ command: "/날씨", args: "서울", hasTarget: false },
+	{ command: "/날씨", args: "지금 위치:서울", hasTarget: false },
 	{ command: "/플레이리스트", args: "재생 내 노래모음", hasTarget: false },
 	{ command: "/주사위", args: "개수:2", hasTarget: true },
 	{ command: "/대기열", args: "", hasTarget: true },
@@ -333,35 +333,14 @@ function ChatResult({ clicked }: { clicked: boolean }) {
 	);
 }
 
-/** /날씨 — 현재 날씨와 예보. 데모용 값이에요 */
+/** /날씨 — 실제 봇이 data-api로 그려 첨부하는 날씨 카드 이미지(MediaGallery)와 푸터 한 줄. 데모용 값이에요 */
 function WeatherResult() {
-	const forecast = [
-		{ day: "내일", icon: "⛅", high: 20, low: 12 },
-		{ day: "모레", icon: "🌧️", high: 17, low: 11 },
-		{ day: "토요일", icon: "☀️", high: 22, low: 13 },
-	];
 	return (
 		<Container>
-			<Subtext>서울특별시 현재 날씨</Subtext>
-			<div className="flex items-end gap-3">
-				<span className="text-4xl font-black leading-none tabular-nums text-discord-text">18°</span>
-				<div className="pb-0.5">
-					<p className="text-sm font-bold leading-snug text-discord-text">☀️ 맑음</p>
-					<Subtext>체감 17° · 습도 45% · 바람 2.1m/s</Subtext>
-				</div>
+			<div className="relative aspect-[960/440] w-full overflow-hidden rounded-md">
+				<Image src="/images/demo-weather.png" alt="서울 현재 날씨 18도, 맑음, 체감 17도, 습도 45%" fill className="object-cover" sizes="(min-width: 1024px) 480px, 90vw" unoptimized />
 			</div>
-			<Separator />
-			<div className="grid grid-cols-3 gap-2">
-				{forecast.map((day) => (
-					<div key={day.day} className="rounded-md bg-discord-btn-active/40 px-2 py-1.5 text-center">
-						<p className="text-2xs text-discord-text-muted">{day.day}</p>
-						<p className="text-base leading-snug">{day.icon}</p>
-						<p className="text-2xs tabular-nums text-discord-text">
-							{day.high}° <span className="text-discord-text-muted">/ {day.low}°</span>
-						</p>
-					</div>
-				))}
-			</div>
+			<Subtext>서울, 대한민국 · 지금 날씨 · Open-Meteo 기준</Subtext>
 		</Container>
 	);
 }
