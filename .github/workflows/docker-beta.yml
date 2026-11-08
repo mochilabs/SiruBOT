@@ -136,6 +136,7 @@ jobs:
         # 명령 주입이 됩니다. env:로만 넘겨 스크립트 안에서는 따옴표 감싼 변수로만 사용해요.
         env:
           REF_NAME: ${{ github.ref_name }}
+          APP: ${{ matrix.app }}
         run: |
           if [[ "$REF_NAME" == "beta" ]]; then
             PREFIX="beta"
@@ -144,6 +145,8 @@ jobs:
             PREFIX="$(echo "$REF_NAME" | tr '/' '-')"
           fi
           echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          # 레지스트리 참조는 소문자여야 해요 (저장소 이름에 대문자가 있어도 안전하게)
+          echo "cache_ref=${REGISTRY}/${GITHUB_REPOSITORY,,}-${APP}:buildcache" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         if: needs.changes.outputs[matrix.app] == 'true'
@@ -186,5 +189,6 @@ jobs:
             NEXT_PUBLIC_SUPPORT_SERVER=${{ vars.NEXT_PUBLIC_SUPPORT_SERVER }}
             NEXT_PUBLIC_TOS_URL=${{ vars.NEXT_PUBLIC_TOS_URL }}
             NEXT_PUBLIC_PRIVACY_POLICY_URL=${{ vars.NEXT_PUBLIC_PRIVACY_POLICY_URL }}
-          cache-from: type=gha,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
+          # 레지스트리 캐시: GHA 캐시(저장소당 10GB, 6개 앱이 나눠 쓰다 밀려남) 대신 GHCR에 앱별 캐시 이미지를 둬요
+          cache-from: type=registry,ref=${{ steps.tag.outputs.cache_ref }}
+          cache-to: type=registry,ref=${{ steps.tag.outputs.cache_ref }},mode=max,image-manifest=true,oci-mediatypes=true
