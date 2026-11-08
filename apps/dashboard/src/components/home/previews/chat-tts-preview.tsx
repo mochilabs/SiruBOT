@@ -84,7 +84,7 @@ export function ChatTtsPreview() {
 							)}
 						/>
 						<span className="absolute inset-0 overflow-hidden rounded-full">
-							<Image src="/images/profile.png" alt="시루" fill className="object-cover" sizes="32px" />
+							<Image src="/images/siru-profile.png" alt="시루" fill className="object-cover" sizes="32px" />
 						</span>
 					</span>
 					<div className="min-w-0 flex-1">

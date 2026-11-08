@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { AnimatePresence, m } from "framer-motion";
-import { ChevronDown, MousePointer2 } from "lucide-react";
+import { ChevronDown, LayoutDashboard, MousePointer2 } from "lucide-react";
 
 import { motionBase } from "@/components/motion/durations";
 import { Switch } from "@/components/ui/switch";
@@ -206,8 +206,14 @@ export function DashboardPreview() {
 	}, [activeTab, inView]);
 
 	return (
-		<div ref={ref} className="relative">
-			<div className="flex flex-col gap-3 sm:flex-row">
+		// 다른 기능 프리뷰와 같은 바깥 프레임(테두리 + 머리줄)에 담아요. 안은 Discord가 아니라 웹 대시보드라 surface 토큰을 써요
+		<div ref={ref} className="relative overflow-hidden rounded-card border border-border-subtle bg-card">
+			<div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2.5">
+				<LayoutDashboard size={14} className="text-muted-foreground" aria-hidden />
+				<span className="text-xs font-semibold text-foreground">서버 설정</span>
+				<span className="ml-auto text-2xs text-muted-foreground">웹 대시보드</span>
+			</div>
+			<div className="flex flex-col gap-3 p-3 sm:flex-row sm:p-4">
 				<div className="flex min-w-0 shrink-0 flex-wrap gap-1.5 sm:flex-col" role="tablist" aria-label="설정 예시">
 					{SETTING_TABS.map((candidate, index) => (
 						<button

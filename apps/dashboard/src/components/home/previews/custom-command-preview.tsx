@@ -102,7 +102,7 @@ export function CustomCommandPreview() {
         <div className="flex gap-2.5">
           <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
             <Image
-              src="/images/profile.png"
+              src="/images/siru-profile.png"
               alt="시루"
               fill
               className="object-cover"
