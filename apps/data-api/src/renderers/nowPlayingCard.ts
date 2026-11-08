@@ -275,6 +275,10 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	const PAD = 16;
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
+	// 라이트 테마에서도 글자가 읽히도록 옅은 그림자를 깔아요(다크에서는 거의 보이지 않아요).
+	ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+	ctx.shadowBlur = 4;
+	ctx.shadowOffsetY = 1;
 
 	const artImg = input.artworkUrl ? await loadImageAllowed(input.artworkUrl) : null;
 	let accent: { primary: string };
