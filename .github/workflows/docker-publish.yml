@@ -39,6 +39,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve cache reference
+        id: cache
+        # 레지스트리 참조는 소문자여야 해요. beta 빌드가 만든 캐시를 읽기 전용으로 재사용하고, 쓰기는 release 전용 태그에 해요.
+        env:
+          APP: ${{ matrix.app }}
+        run: |
+          BASE="${REGISTRY}/${GITHUB_REPOSITORY,,}-${APP}"
+          echo "write=${BASE}:buildcache-release" >> "$GITHUB_OUTPUT"
+          echo "beta=${BASE}:buildcache" >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
@@ -69,5 +79,7 @@ jobs:
             NEXT_PUBLIC_SUPPORT_SERVER=${{ vars.NEXT_PUBLIC_SUPPORT_SERVER }}
             NEXT_PUBLIC_TOS_URL=${{ vars.NEXT_PUBLIC_TOS_URL }}
             NEXT_PUBLIC_PRIVACY_POLICY_URL=${{ vars.NEXT_PUBLIC_PRIVACY_POLICY_URL }}
-          cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+          cache-from: |
+            type=registry,ref=${{ steps.cache.outputs.write }}
+            type=registry,ref=${{ steps.cache.outputs.beta }}
+          cache-to: type=registry,ref=${{ steps.cache.outputs.write }},mode=max,image-manifest=true,oci-mediatypes=true
