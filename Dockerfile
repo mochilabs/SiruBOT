@@ -79,6 +79,17 @@ RUN yarn workspaces focus @sirubot/bot --production
 
 # Build dashboard
 FROM builder AS builder-dashboard
+# NEXT_PUBLIC_* 값은 빌드 시점에 번들에 인라인돼요. CI가 build-arg로 넘기고, 비어 있으면 코드의 폴백(요청 origin 등)을 써요.
+ARG NEXT_PUBLIC_APP_URL=
+ARG NEXT_PUBLIC_DISCORD_CLIENT_ID=
+ARG NEXT_PUBLIC_SUPPORT_SERVER=
+ARG NEXT_PUBLIC_TOS_URL=
+ARG NEXT_PUBLIC_PRIVACY_POLICY_URL=
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_DISCORD_CLIENT_ID=$NEXT_PUBLIC_DISCORD_CLIENT_ID \
+    NEXT_PUBLIC_SUPPORT_SERVER=$NEXT_PUBLIC_SUPPORT_SERVER \
+    NEXT_PUBLIC_TOS_URL=$NEXT_PUBLIC_TOS_URL \
+    NEXT_PUBLIC_PRIVACY_POLICY_URL=$NEXT_PUBLIC_PRIVACY_POLICY_URL
 RUN --mount=type=cache,target=/app/.turbo \
     yarn turbo run build --filter=@sirubot/dashboard...
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDiscordEmbed, DISCORD_EMBED_MAX_BYTES, serializeDiscordEmbed } from "./discord-embed";
+import { buildDiscordEmbed, DISCORD_EMBED_MAX_BYTES, getDiscordEmbedInput, getRequestOrigin, serializeDiscordEmbed } from "./discord-embed";
 
 const input = {
 	title: "시루봇",
@@ -30,5 +30,21 @@ describe("discord component embed", () => {
 
 	it("3,000바이트를 넘으면 에러를 던져요", () => {
 		expect(() => serializeDiscordEmbed(buildDiscordEmbed({ ...input, description: "가".repeat(DISCORD_EMBED_MAX_BYTES) }))).toThrow();
+	});
+
+	it("요청 헤더에서 origin을 만들어요", () => {
+		const h = (o: Record<string, string>) => ({ get: (k: string) => o[k] ?? null });
+		expect(getRequestOrigin(h({ host: "siru.example" }))).toBe("https://siru.example");
+		expect(getRequestOrigin(h({ host: "localhost:3000" }))).toBe("http://localhost:3000");
+		expect(getRequestOrigin(h({ host: "internal:3000", "x-forwarded-host": "siru.example", "x-forwarded-proto": "http" }))).toBe("https://siru.example");
+		expect(getRequestOrigin(h({ host: "bad host/<x>" }))).toMatch(/^http/);
+	});
+
+	it("모든 링크와 이미지가 주어진 origin을 써요", () => {
+		for (const name of ["home", "invite", "track"]) {
+			const json = serializeDiscordEmbed(buildDiscordEmbed(getDiscordEmbedInput(name, "https://siru.example")!));
+			expect(json.match(/https?:\/\/[^"\\]+/g)!.every((u) => u.startsWith("https://siru.example"))).toBe(true);
+		}
+		expect(getDiscordEmbedInput("nope", "https://siru.example")).toBeNull();
 	});
 });

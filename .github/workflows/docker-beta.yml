@@ -113,6 +113,8 @@ jobs:
   build-beta:
     needs: changes
     runs-on: ubuntu-latest
+    # 대시보드 NEXT_PUBLIC_* 변수를 beta 환경 값으로 읽어요 (환경 변수가 없으면 저장소 변수로 폴백)
+    environment: beta
     strategy:
       matrix:
         app: [bot, dashboard, shardmanager, data-api, storage, notifier]
@@ -179,5 +181,10 @@ jobs:
             GIT_BRANCH=${{ github.ref_name }}
             VERSION=${{ steps.tag.outputs.prefix }}
             SENTRY_RELEASE=${{ steps.tag.outputs.prefix }}-${{ github.sha }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_DISCORD_CLIENT_ID=${{ vars.NEXT_PUBLIC_DISCORD_CLIENT_ID }}
+            NEXT_PUBLIC_SUPPORT_SERVER=${{ vars.NEXT_PUBLIC_SUPPORT_SERVER }}
+            NEXT_PUBLIC_TOS_URL=${{ vars.NEXT_PUBLIC_TOS_URL }}
+            NEXT_PUBLIC_PRIVACY_POLICY_URL=${{ vars.NEXT_PUBLIC_PRIVACY_POLICY_URL }}
           cache-from: type=gha,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ steps.tag.outputs.prefix }}-${{ matrix.app }}

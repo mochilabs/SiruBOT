@@ -26,6 +26,18 @@ export interface DiscordEmbedInput {
 	buttons: DiscordEmbedButton[];
 }
 
+/**
+ * 요청이 들어온 origin을 돌려줘요. NEXT_PUBLIC_APP_URL은 빌드 시점에 인라인되는데 Docker 빌드에서는 설정되지 않아
+ * localhost로 굳어요. Discord는 링크와 이미지가 페이지와 같은 도메인이어야 읽으므로 요청 헤더를 우선해요.
+ */
+export function getRequestOrigin(headers: { get(name: string): string | null }) {
+	const host = headers.get("x-forwarded-host")?.split(",")[0]?.trim() || headers.get("host");
+	if (!host || !/^[a-z0-9.-]+(:\d+)?$/i.test(host)) return getAppBaseUrl();
+	// 프록시가 proto를 http로 넘겨도 공개 도메인은 https로 서비스되므로, 로컬 호스트만 http로 둬요
+	const proto = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host) ? "http" : "https";
+	return `${proto}://${host}`;
+}
+
 export function getAppBaseUrl() {
 	return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
 }
@@ -62,8 +74,7 @@ export function serializeDiscordEmbed(payload: ReturnType<typeof buildDiscordEmb
 const DESCRIPTION = "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.";
 
 /** 페이지별 임베드 정의 — 키는 /embeds/<key>.json 경로와 DiscordEmbedLink의 name이에요 */
-export function getDiscordEmbedInput(name: string): DiscordEmbedInput | null {
-	const base = getAppBaseUrl();
+export function getDiscordEmbedInput(name: string, base: string): DiscordEmbedInput | null {
 	const imageUrl = `${base}/images/og-image.png`;
 	const invite = { label: "봇 초대하기", url: `${base}/invite` };
 	const dashboard = { label: "대시보드 가기", url: `${base}/servers` };
