@@ -1,11 +1,5 @@
 import { container } from '@sapphire/framework';
-import {
-	emoji,
-	ManagedRedisSubscriber,
-	ROLE_VALIDATION_REQUEST_CHANNEL,
-	roleValidationRequestSchema,
-	type RoleValidationResponse
-} from '@sirubot/utils';
+import { ManagedRedisSubscriber, ROLE_VALIDATION_REQUEST_CHANNEL, roleValidationRequestSchema, type RoleValidationResponse } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { ServiceLogger } from './types.ts';
 
@@ -85,7 +79,7 @@ export class RoleValidationResponder {
 			this.respond({
 				requestId: request.data.requestId,
 				guildId,
-				error: `${emoji('error')} 역할을 검증하지 못했어요. 잠시 후 다시 시도해 주세요.`
+				error: `역할을 검증하지 못했어요. 잠시 후 다시 시도해 주세요.`
 			});
 		}
 	}

@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import type { Guild } from 'discord.js';
-import { emoji, PANEL_POST_REQUEST_CHANNEL, ManagedRedisSubscriber, panelPostRequestSchema, type PanelPostResponse } from '@sirubot/utils';
+import { PANEL_POST_REQUEST_CHANNEL, ManagedRedisSubscriber, panelPostRequestSchema, type PanelPostResponse } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { ticketPanelView } from '../modules/general/view/ticket.ts';
 import { discordApiErrorText } from '../lib/discordErrorText.ts';
@@ -81,7 +81,7 @@ export class PanelPostResponder {
 			this.respond({
 				requestId: request.data.requestId,
 				guildId,
-				error: `${emoji('warning')} 이 서버의 이전 패널 게시 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `이 서버의 이전 패널 게시 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -106,7 +106,7 @@ export class PanelPostResponder {
 				guildId,
 				error: discordApiErrorText(error, {
 					permission: '메시지 전송 권한이 봇에 없어요. 서버 설정에서 봇 역할 권한을 확인해 주세요.',
-					fallback: `${emoji('error')} 패널을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.`
+					fallback: `패널을 게시하지 못했어요. 잠시 후 다시 시도해 주세요.`
 				})
 			});
 		} finally {
@@ -126,17 +126,17 @@ export class PanelPostResponder {
 		refresh: boolean
 	): Promise<{ messageId: string; channelId: string } | null> {
 		if (type === 'rolePanel') {
-			if (!panelId) throw new PanelPostError(`${emoji('error')} 게시할 역할 패널을 지정해 주세요.`);
+			if (!panelId) throw new PanelPostError(`게시할 역할 패널을 지정해 주세요.`);
 			return container.rolePanelService.publishPanel(guild, panelId, channelId, { refresh });
 		}
 
 		const config = await container.db.ticketConfig.findUnique({ where: { guildId: guild.id } });
 		if (!config || !config.enabled) {
-			throw new PanelPostError(`${emoji('error')} 티켓 기능이 꺼져 있어요. 먼저 티켓을 활성화해 주세요.`);
+			throw new PanelPostError(`티켓 기능이 꺼져 있어요. 먼저 티켓을 활성화해 주세요.`);
 		}
 		const channel = resolvePanelChannel(guild, channelId ?? config.panelChannelId);
 		if (!channel) {
-			throw new PanelPostError(`${emoji('error')} 게시할 텍스트 채널을 찾을 수 없어요. 채널을 선택해 주세요.`);
+			throw new PanelPostError(`게시할 텍스트 채널을 찾을 수 없어요. 채널을 선택해 주세요.`);
 		}
 
 		const message = await channel.send(ticketPanelView(config));

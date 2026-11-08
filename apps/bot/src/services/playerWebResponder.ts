@@ -15,7 +15,6 @@
  */
 import { container, UserError } from '@sapphire/framework';
 import {
-	emoji,
 	ManagedRedisSubscriber,
 	PLAYER_WEB_REQUEST_CHANNEL,
 	VOICE_CHANNEL_REQUIRED_MESSAGE,
@@ -170,14 +169,14 @@ export class PlayerWebResponder {
 			this.logger.error(
 				`웹 플레이어 요청 처리 실패 (guild ${guildId}, kind ${kind}): ${error instanceof Error ? error.message : String(error)}`
 			);
-			this.respond({ requestId, guildId, kind, error: `${emoji('error')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.` });
+			this.respond({ requestId, guildId, kind, error: `처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.` });
 		}
 	}
 
 	/** kind별 상세 스키마 검증 실패 — 봇 검증 실패로 응답해 대시보드가 타임아웃 대신 안내문을 봐요 */
 	private rejectPayload(requestId: string, guildId: string, kind: PlayerWebRequestBase['kind']): void {
 		this.logger.debug(`웹 플레이어 ${kind} 요청 본문 검증 실패 (guild ${guildId})`);
-		this.respond({ requestId, guildId, kind, error: `${emoji('error')} 요청 형식이 올바르지 않아요.` });
+		this.respond({ requestId, guildId, kind, error: `요청 형식이 올바르지 않아요.` });
 	}
 
 	// kind: voice-context, 사용자 음성·권한 상태만 돌려줘요 (권한 제한 없음)
@@ -219,7 +218,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId: request.guildId,
 				kind: 'search',
-				error: `${emoji('error')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`
+				error: `현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -230,7 +229,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId: request.guildId,
 				kind: 'search',
-				error: `${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`
+				error: `검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -250,7 +249,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId,
 				kind: 'play',
-				error: `${emoji('warning')} 이 서버의 이전 재생 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `이 서버의 이전 재생 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -262,7 +261,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId,
 				kind: 'play',
-				error: `${emoji('warning')} 너무 빠르게 연속 요청하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `너무 빠르게 연속 요청하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -338,7 +337,7 @@ export class PlayerWebResponder {
 					requestId: request.requestId,
 					guildId,
 					kind: 'control',
-					error: `${emoji('error')} 재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.`
+					error: `재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.`
 				});
 				return;
 			}
@@ -374,7 +373,7 @@ export class PlayerWebResponder {
 					requestId: request.requestId,
 					guildId,
 					kind: 'control',
-					error: `${emoji('link')} 이 동작은 봇과 같은 음성 채널에 연결해야 해요.`
+					error: `이 동작은 봇과 같은 음성 채널에 연결해야 해요.`
 				});
 				return;
 			}
@@ -383,7 +382,7 @@ export class PlayerWebResponder {
 					requestId: request.requestId,
 					guildId,
 					kind: 'control',
-					error: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`
+					error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}`
 				});
 				return;
 			}
@@ -424,16 +423,16 @@ export class PlayerWebResponder {
 		if (!member) return { error: '서버에서 회원님을 찾을 수 없어요.' };
 
 		if (!(await this.hasControlPermission(guild.id, member))) {
-			return { error: `${emoji('error')} 재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.` };
+			return { error: `재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.` };
 		}
 
 		const voiceChannelId = member.voice?.channelId ?? null;
-		if (!voiceChannelId) return { error: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
+		if (!voiceChannelId) return { error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
 
 		const player = container.audio.getPlayer(guild.id);
 		if (player?.voiceChannelId && player.voiceChannelId !== voiceChannelId) {
 			return {
-				error: `${emoji('error')} 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
+				error: `다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
 			};
 		}
 
