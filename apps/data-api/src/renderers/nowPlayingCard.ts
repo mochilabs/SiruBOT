@@ -1,15 +1,16 @@
 /**
- * NowPlaying 카드 렌더러 — skia-canvas로 현재 재생 곡을 카드 이미지로 그려요.
- * 아트워크(16:9 블러 배경 + 썸네일) + 제목 + 아티스트 + 챕터/신청자/추천·일시정지 뱃지 +
- * 다음 곡 목록 + 하단 메타(대기열) + 브랜드줄(노드·볼륨·봇이름/버전).
- * 배경 액센트는 아트워크의 도미넌트 컬러.
+ * NowPlaying 카드 렌더러 — skia-canvas로 현재 재생 곡을 투명 배경 PNG로 그려요.
+ * 고정 컨트롤러 채널의 Discord 컨테이너 위에 그대로 얹히므로 배경·블러·테두리 없이
+ * 정사각 아트워크 + 제목 + 아티스트 + 상태 텍스트(일시정지·봇 추천·반복) + 챕터 + 다음 곡 +
+ * 하단 한 줄(브랜드줄·대기열 메타)만 그려요. 아트워크의 도미넌트 컬러는 라벨·번호·브랜드줄에만 써요.
+ * 글자색은 Discord 다크 테마 기준이에요.
  *
  * 카드는 정적 — 진행바가 이미지에 들어가지 않아요. 동적 시간은 디스코드 타임스탬프로
  * 커버돼요. 갱신 주기는 봇이 트랙/볼륨/챕터/일시정지/반복 변경을 감지해 다시 렌더.
  */
 import type { Canvas, CanvasDrawable, CanvasRenderingContext2D } from 'skia-canvas';
 import { BOT_NAME } from '@sirubot/utils';
-import { drawCircleImage, drawIcon, ensureKoreanFont, formatClock, hashString, loadImageAllowed, truncate, type IconName } from './canvasUtils.ts';
+import { drawCircleImage, drawIcon, ensureKoreanFont, formatClock, hashString, loadImageAllowed, truncate } from './canvasUtils.ts';
 
 export interface NowPlayingCardInput {
 	/** 캐시/dedup 키 — lavalink track.info.identifier */
@@ -153,137 +154,116 @@ function fallbackAccent(trackId: string): { primary: string } {
 	return { primary: FALLBACK_ACCENTS[hashString(trackId) % FALLBACK_ACCENTS.length]! };
 }
 
-/** 아트워크를 주어진 완전한 영역에 16:9 비율로 cover-fit */
-function drawCoverFitWide(ctx: CanvasRenderingContext2D, img: CanvasDrawable, x: number, y: number, w: number, h: number, radius: number): void {
+const FONT = '"Pretendard JP", "Twemoji Mozilla", sans-serif';
+const TEXT = '#f2f3f5';
+const MUTED = '#949ba4';
+
+/**
+ * 썸네일 가장자리의 검은 띠(레터박스·필러박스) 영역을 잘라낸 원본 좌표를 돌려줘요.
+ * YouTube 썸네일은 4:3 영상이 16:9 틀 안에 검은 띠로 들어 있는 경우가 많아서, 그대로 cover하면 띠가 보여요.
+ * 잘라낸 결과가 원본의 40% 미만이면(어두운 아트워크) 자르지 않아요.
+ */
+export async function contentBounds(img: CanvasDrawable): Promise<{ sx: number; sy: number; sw: number; sh: number }> {
+	const iw = (img as { width: number }).width;
+	const ih = (img as { height: number }).height;
+	const full = { sx: 0, sy: 0, sw: iw, sh: ih };
+	if (!iw || !ih) return full;
+	try {
+		const { Canvas } = await import('skia-canvas');
+		const probe: Canvas = new Canvas(iw, ih);
+		const pctx = probe.getContext('2d');
+		pctx.drawImage(img, 0, 0);
+		const { data } = pctx.getImageData(0, 0, iw, ih);
+		const dark = (x: number, y: number) => {
+			const i = (y * iw + x) * 4;
+			return (data[i]! + data[i + 1]! + data[i + 2]!) / 3 < 14;
+		};
+		const lineDark = (fixed: number, length: number, vertical: boolean) => {
+			let count = 0;
+			for (let k = 0; k < length; k += 2) if (vertical ? dark(fixed, k) : dark(k, fixed)) count++;
+			return count / Math.ceil(length / 2) > 0.97;
+		};
+		let top = 0;
+		let bottom = ih - 1;
+		let left = 0;
+		let right = iw - 1;
+		while (top < bottom && lineDark(top, iw, false)) top++;
+		while (bottom > top && lineDark(bottom, iw, false)) bottom--;
+		while (left < right && lineDark(left, ih, true)) left++;
+		while (right > left && lineDark(right, ih, true)) right--;
+		const sw = right - left + 1;
+		const sh = bottom - top + 1;
+		if (sw * sh < iw * ih * 0.4) return full;
+		return { sx: left, sy: top, sw, sh };
+	} catch {
+		return full;
+	}
+}
+
+/** 아트워크를 정사각 영역에 cover-fit(검은 띠 제거 후 가운데 정사각) */
+async function drawSquareArtwork(
+	ctx: CanvasRenderingContext2D,
+	img: CanvasDrawable,
+	x: number,
+	y: number,
+	size: number,
+	radius: number
+): Promise<void> {
+	const { sx, sy, sw, sh } = await contentBounds(img);
+	const side = Math.min(sw, sh);
 	ctx.save();
 	ctx.beginPath();
-	ctx.roundRect(x, y, w, h, radius);
+	ctx.roundRect(x, y, size, size, radius);
 	ctx.clip();
-	const iw = (img as { width: number }).width;
-	const ih = (img as { height: number }).height;
-	const scale = Math.max(w / iw, h / ih);
-	ctx.drawImage(img, x + w / 2 - (iw * scale) / 2, y + h / 2 - (ih * scale) / 2, iw * scale, ih * scale);
+	ctx.drawImage(img, sx + (sw - side) / 2, sy + (sh - side) / 2, side, side, x, y, size, size);
 	ctx.restore();
 }
 
-/** 카드 전체 배경용 블러 cover */
-function drawBackgroundCover(ctx: CanvasRenderingContext2D, img: CanvasDrawable, x: number, y: number, w: number, h: number): void {
-	ctx.save();
-	const iw = (img as { width: number }).width;
-	const ih = (img as { height: number }).height;
-	const scale = Math.max(w / iw, h / ih);
-	const dw = iw * scale;
-	const dh = ih * scale;
-	ctx.globalAlpha = 0.18;
-	ctx.filter = 'blur(36px)';
-	ctx.drawImage(img, x + w / 2 - dw / 2, y + h / 2 - dh / 2, dw, dh);
-	ctx.restore();
-}
-
-/** 아트워크 없을 때 폴백 — 바이닐 느낌의 기하학 디자인 (폰트 리스크 없는 도형만) */
+/** 아트워크 없을 때 폴백 — 단색 면 위의 동심원(바이닐) */
 function drawArtworkFallback(ctx: CanvasRenderingContext2D, accent: { primary: string }, x: number, y: number, size: number, radius: number): void {
 	ctx.save();
 	ctx.beginPath();
 	ctx.roundRect(x, y, size, size, radius);
 	ctx.clip();
-	const grad = ctx.createLinearGradient(x, y, x + size, y + size);
-	grad.addColorStop(0, '#1a2030');
-	grad.addColorStop(1, '#0d1117');
-	ctx.fillStyle = grad;
+	ctx.fillStyle = 'rgba(255,255,255,0.06)';
 	ctx.fillRect(x, y, size, size);
-	// 바이닐 동심원
 	const cx = x + size / 2;
 	const cy = y + size / 2;
-	for (let r = size * 0.44; r > size * 0.1; r -= size * 0.055) {
+	for (let r = size * 0.44; r > size * 0.1; r -= size * 0.07) {
 		ctx.beginPath();
 		ctx.arc(cx, cy, r, 0, Math.PI * 2);
-		ctx.strokeStyle = `${accent.primary}29`;
+		ctx.strokeStyle = 'rgba(255,255,255,0.1)';
 		ctx.lineWidth = 2;
 		ctx.stroke();
 	}
-	// 센터 라벨
 	ctx.beginPath();
 	ctx.arc(cx, cy, size * 0.1, 0, Math.PI * 2);
 	ctx.fillStyle = accent.primary;
 	ctx.fill();
-	ctx.beginPath();
-	ctx.arc(cx, cy, size * 0.028, 0, Math.PI * 2);
-	ctx.fillStyle = '#0d1117';
-	ctx.fill();
-	ctx.restore();
-	// 테두리
-	ctx.save();
-	ctx.beginPath();
-	ctx.roundRect(x, y, size, size, radius);
-	ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-	ctx.lineWidth = 1.5;
-	ctx.stroke();
 	ctx.restore();
 }
 
-/** 뱃지/pill 공통 — (x, y) 좌상단 박스에 icon+label을 그리고 끝 x를 돌려줘요. */
-function drawPill(
-	ctx: CanvasRenderingContext2D,
-	options: { x: number; y: number; icon: IconName; label: string; bg: string; border?: string; fg?: string }
-): number {
-	const { x, y, icon, label, bg } = options;
-	const H = 28;
-	ctx.save();
-	ctx.font = '500 14px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	const labelW = ctx.measureText(label).width;
-	const w = 12 + 16 + 5 + labelW + 12;
-	ctx.beginPath();
-	ctx.roundRect(x, y, w, H, H / 2);
-	ctx.fillStyle = bg;
-	ctx.fill();
-	if (options.border) {
-		ctx.beginPath();
-		ctx.roundRect(x, y, w, H, H / 2);
-		ctx.strokeStyle = options.border;
-		ctx.lineWidth = 1;
-		ctx.stroke();
-	}
-	drawIcon(ctx, icon, x + 11, y + (H - 14) / 2, 14, options.fg ?? 'rgba(255,255,255,0.85)');
-	ctx.fillStyle = options.fg ?? 'rgba(255,255,255,0.85)';
-	ctx.textBaseline = 'middle';
-	ctx.fillText(label, x + 12 + 16 + 5, y + H / 2 + 0.5);
-	ctx.textBaseline = 'alphabetic';
-	ctx.restore();
-	return x + w;
-}
-
-/** 텍스트를 최대 maxLines 줄로 줄바꿈 — 마지막 줄이 넘치면 말줄임표로 잘라요 */
+/** 텍스트를 최대 maxLines 줄로 줄바꿈 — 공백이 있으면 단어 단위로, 없으면(한·일 문장) 글자 단위로 끊고 마지막 줄이 넘치면 말줄임표로 잘라요 */
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
 	if (maxLines <= 0 || !text) return [];
-	if (ctx.measureText(text).width <= maxWidth || maxLines === 1) {
-		return [maxLines === 1 && ctx.measureText(text).width > maxWidth ? truncate(ctx, text, maxWidth) : text];
-	}
+	const fits = (value: string) => ctx.measureText(value).width <= maxWidth;
+	if (fits(text)) return [text];
+	if (maxLines === 1) return [truncate(ctx, text, maxWidth)];
+
 	const lines: string[] = [];
-	let current = '';
-	let lineCount = 1;
-	for (let i = 0; i < text.length; i++) {
-		const char = text[i]!;
-		const test = current + char;
-		if (ctx.measureText(test).width > maxWidth && current.length > 0) {
-			lines.push(current);
-			current = char;
-			lineCount++;
-			if (lineCount >= maxLines) {
-				const remaining = text.slice(i + 1);
-				current += remaining;
-				break;
-			}
-		} else {
-			current = test;
-		}
+	let rest = text;
+	while (lines.length < maxLines - 1 && rest.length > 0) {
+		if (fits(rest)) break;
+		// 들어가는 가장 긴 접두를 찾고, 그 안에서 마지막 공백에서 끊어요(공백이 너무 앞이면 글자 단위)
+		let cut = rest.length;
+		while (cut > 1 && !fits(rest.slice(0, cut))) cut--;
+		const space = rest.lastIndexOf(' ', cut);
+		if (space > cut * 0.5) cut = space;
+		lines.push(rest.slice(0, cut).trimEnd());
+		rest = rest.slice(cut).trimStart();
 	}
-	if (current) {
-		if (ctx.measureText(current).width > maxWidth) {
-			current = truncate(ctx, current, maxWidth);
-		}
-		lines.push(current);
-	}
-	return lines.slice(0, maxLines);
+	if (rest) lines.push(fits(rest) ? rest : truncate(ctx, rest, maxWidth));
+	return lines;
 }
 
 export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<Buffer> {
@@ -291,11 +271,15 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 	await ensureKoreanFont();
 
 	const W = 960;
-	const H = 400;
+	const H = 300;
+	const PAD = 16;
 	const canvas: Canvas = new Canvas(W, H);
 	const ctx = canvas.getContext('2d');
+	// 라이트 테마에서도 글자가 읽히도록 옅은 그림자를 깔아요(다크에서는 거의 보이지 않아요).
+	ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+	ctx.shadowBlur = 4;
+	ctx.shadowOffsetY = 1;
 
-	// 액센트: 아트워크 도미넌트 컬러
 	const artImg = input.artworkUrl ? await loadImageAllowed(input.artworkUrl) : null;
 	let accent: { primary: string };
 	if (artImg) {
@@ -305,186 +289,132 @@ export async function renderNowPlayingCard(input: NowPlayingCardInput): Promise<
 		accent = fallbackAccent(input.trackId);
 	}
 
-	// 배경: 아트워크 기반 블러 + 딤 그라디언트
-	const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-	bgGrad.addColorStop(0, '#141a26');
-	bgGrad.addColorStop(1, '#0d1117');
-	ctx.fillStyle = bgGrad;
-	ctx.fillRect(0, 0, W, H);
-	if (artImg) drawBackgroundCover(ctx, artImg, 0, 0, W, H);
+	// 아트워크: 정사각 200px, 라벨 줄과 윗선을 맞춰요
+	const ART = 200;
+	const artY = 18;
+	if (artImg) await drawSquareArtwork(ctx, artImg, PAD, artY, ART, 14);
+	else drawArtworkFallback(ctx, accent, PAD, artY, ART, 14);
 
-	// 액센트 글로우 (우상단)
-	const glow = ctx.createRadialGradient(W - 120, 40, 10, W - 120, 40, 420);
-	glow.addColorStop(0, `${accent.primary}38`);
-	glow.addColorStop(1, 'transparent');
-	ctx.fillStyle = glow;
-	ctx.fillRect(0, 0, W, H);
-
-	// 아트워크: 16:9 비율, 높이 기준 180px
-	const THUMB_H = 180;
-	const THUMB_W = Math.round(THUMB_H * (16 / 9)); // 320
-	const artX = 28;
-	const artY = (H - THUMB_H) / 2;
-	if (artImg) drawCoverFitWide(ctx, artImg, artX, artY, THUMB_W, THUMB_H, 20);
-	else drawArtworkFallback(ctx, accent, artX, artY, THUMB_H, 20);
-
-	// 텍스트 영역
-	const tx = artX + THUMB_W + 28;
-	const right = W - 32;
+	const tx = PAD + ART + 28;
+	const right = W - PAD;
 	const textW = right - tx;
-
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
 
-	// NOW PLAYING 라벨 + 상태 뱃지들 (LIVE · 일시정지 · 봇 추천)
+	// 상단 줄: "재생 중" + 상태 텍스트(LIVE · 일시정지 · 봇 추천 · 반복). 알약 대신 구분점으로 이어요.
+	const flags: Array<{ text: string; color: string }> = [];
+	if (input.isStream) flags.push({ text: 'LIVE', color: '#f23f43' });
+	if (input.isPaused) flags.push({ text: '일시정지', color: MUTED });
+	if (input.isRecommended) flags.push({ text: '봇 추천', color: MUTED });
+	if (input.repeatMode === 'track') flags.push({ text: '반복: 현재 곡', color: MUTED });
+	else if (input.repeatMode === 'queue') flags.push({ text: '반복: 대기열', color: MUTED });
+
+	let labelX = tx;
+	ctx.font = `800 17px ${FONT}`;
 	ctx.fillStyle = accent.primary;
-	ctx.font = '700 20px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillText('NOW PLAYING', tx, 56);
-	let badgeX = tx + ctx.measureText('NOW PLAYING').width + 14;
-	if (input.isStream) {
-		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'radio', label: 'LIVE', bg: '#d11f3f', fg: '#ffffff' }) + 8;
-	}
-	if (input.isPaused) {
-		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'pause', label: '일시정지', bg: 'rgba(255,255,255,0.13)' }) + 8;
-	}
-	if (input.isRecommended) {
-		// 봇 추천 뱃지: sparkle는 '봇이 고른 곡' 상태 표시라 라벨과 짝으로만 써요.
-		badgeX =
-			drawPill(ctx, {
-				x: badgeX,
-				y: 32,
-				icon: 'sparkle',
-				label: '봇 추천',
-				bg: `${accent.primary}2e`,
-				border: `${accent.primary}66`
-			}) + 8;
-	}
-	// 반복 상태도 뱃지로 — 하단 메타 폭이 좁으면 잘려서 안 보이므로 위쪽에 고정해요.
-	if (input.repeatMode === 'track') {
-		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'repeat-1', label: '반복: 현재 곡', bg: 'rgba(255,255,255,0.13)' }) + 8;
-	} else if (input.repeatMode === 'queue') {
-		badgeX = drawPill(ctx, { x: badgeX, y: 32, icon: 'repeat', label: '반복: 대기열', bg: 'rgba(255,255,255,0.13)' }) + 8;
+	ctx.fillText('재생 중', labelX, 34);
+	labelX += ctx.measureText('재생 중').width;
+	let labelEnd = labelX;
+	for (const flag of flags) {
+		ctx.font = `600 17px ${FONT}`;
+		ctx.fillStyle = MUTED;
+		ctx.fillText(' · ', labelX, 34);
+		labelX += ctx.measureText(' · ').width;
+		ctx.fillStyle = flag.color;
+		ctx.fillText(flag.text, labelX, 34);
+		labelX += ctx.measureText(flag.text).width;
+		labelEnd = labelX;
 	}
 
-	// 신청자 pill: 상단 우측, 뱃지와 겹치면 생략, 텍스트 라인 멘션이 폴백
-	const reqImg = input.requester?.avatarUrl ? await loadImageAllowed(input.requester.avatarUrl) : null;
+	// 신청자: 상단 우측에 작은 아바타 + 이름 (상단 줄과 겹치면 생략, 텍스트 라인 멘션이 폴백)
 	if (input.requester?.name) {
-		ctx.save();
-		ctx.font = '600 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		const nameText = input.requester.name;
-		const nameW = ctx.measureText(nameText).width;
-		const AV = 26;
-		const pillH = 36;
-		const pillW = 12 + AV + 8 + nameW + 14;
-		const pillX = right - pillW;
-		if (pillX > badgeX + 20) {
-			const pillY = 35;
-			ctx.beginPath();
-			ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-			ctx.fillStyle = 'rgba(255,255,255,0.10)';
-			ctx.fill();
-			ctx.beginPath();
-			ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-			ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-			ctx.lineWidth = 1;
-			ctx.stroke();
+		const reqImg = input.requester.avatarUrl ? await loadImageAllowed(input.requester.avatarUrl) : null;
+		ctx.font = `600 17px ${FONT}`;
+		const AV = 24;
+		const nameW = ctx.measureText(input.requester.name).width;
+		const blockW = AV + 8 + nameW;
+		const blockX = right - blockW;
+		if (blockX > labelEnd + 24) {
 			if (reqImg) {
-				drawCircleImage(ctx, reqImg, pillX + 12 + AV / 2, pillY + pillH / 2, AV / 2);
+				drawCircleImage(ctx, reqImg, blockX + AV / 2, 27, AV / 2);
 			} else {
 				ctx.beginPath();
-				ctx.arc(pillX + 12 + AV / 2, pillY + pillH / 2, AV / 2, 0, Math.PI * 2);
+				ctx.arc(blockX + AV / 2, 27, AV / 2, 0, Math.PI * 2);
 				ctx.fillStyle = 'rgba(255,255,255,0.12)';
 				ctx.fill();
-				drawIcon(ctx, 'users', pillX + 12 + AV / 2 - 7, pillY + pillH / 2 - 7, 14, 'rgba(255,255,255,0.55)');
+				drawIcon(ctx, 'users', blockX + AV / 2 - 7, 20, 14, MUTED);
 			}
-			ctx.font = '600 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-			ctx.fillStyle = 'rgba(255,255,255,0.82)';
-			ctx.textBaseline = 'middle';
-			ctx.fillText(nameText, pillX + 12 + AV + 8, pillY + pillH / 2 + 0.5);
+			ctx.fillStyle = MUTED;
+			ctx.fillText(input.requester.name, blockX + AV + 8, 34);
 		}
-		ctx.restore();
-		ctx.textAlign = 'left';
-		ctx.textBaseline = 'alphabetic';
 	}
 
-	// 제목: 카드에는 곡 제목 크게, textW를 넘으면 최대 2줄로 줄바꿈해요 (말줄임표 없음)
-	const titleSize = 40;
-	ctx.fillStyle = '#ffffff';
-	ctx.font = `700 ${titleSize}px "Pretendard JP", "Twemoji Mozilla", sans-serif`;
+	// 제목: 최대 2줄
+	ctx.fillStyle = TEXT;
+	ctx.font = `800 38px ${FONT}`;
 	const titleLines = wrapText(ctx, input.title, textW, 2);
-	let titleY = 112;
+	let y = 84;
 	for (const line of titleLines) {
-		ctx.fillText(line, tx, titleY);
-		titleY += 46;
+		ctx.fillText(line, tx, y);
+		y += 44;
 	}
+	y -= 44;
 
-	// 아티스트 / 챕터
-	const titleBottom = titleY;
-	let cursorY = titleBottom;
-
-	// 아티스트 — 제목 아래 (없으면 생략)
-	let artCursorY = cursorY;
+	// 아티스트
 	if (input.artist) {
-		const artistY = titleBottom + 36;
-		ctx.fillStyle = 'rgba(255,255,255,0.62)';
-		ctx.font = '600 23px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText(input.artist, tx, artistY);
-		artCursorY = artistY;
+		y += 36;
+		ctx.fillStyle = MUTED;
+		ctx.font = `600 22px ${FONT}`;
+		ctx.fillText(truncate(ctx, input.artist, textW), tx, y);
 	}
 
+	// 챕터
 	if (input.chapter) {
-		const chapterY = artCursorY + 42;
-		// lucide 챕터 표시용 아이콘 (`corner-down-right`)
-		drawIcon(ctx, 'corner-down-right', tx, chapterY - 16, 18, accent.primary);
-		ctx.fillStyle = 'rgba(255,255,255,0.85)';
-		ctx.font = '600 23px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		const iconPad = 28;
-		const rangeText = `${input.chapter.name} (${formatClock(input.chapter.startMs)} - ${formatClock(input.chapter.endMs)})`;
-		ctx.fillText(rangeText, tx + iconPad, chapterY);
-		artCursorY = chapterY;
+		y += 34;
+		drawIcon(ctx, 'corner-down-right', tx, y - 16, 18, accent.primary);
+		ctx.fillStyle = TEXT;
+		ctx.font = `600 19px ${FONT}`;
+		const range = `${input.chapter.name} (${formatClock(input.chapter.startMs)} - ${formatClock(input.chapter.endMs)})`;
+		ctx.fillText(truncate(ctx, range, textW - 28), tx + 28, y);
 	}
 
-	// 다음 곡 목록: 유저 대기열 기준, 공간이 허용되는 만큼(최대 3)
+	// 다음 곡: 하단 줄(H-34) 위에 들어가는 만큼만
+	const FOOT_Y = H - 18;
 	const nextList = (input.nextTracks ?? []).slice(0, 3);
 	if (nextList.length > 0) {
-		const headerBase = artCursorY + 44;
-		drawIcon(ctx, 'list-music', tx, headerBase - 15, 18, 'rgba(255,255,255,0.6)');
-		ctx.fillStyle = 'rgba(255,255,255,0.72)';
-		ctx.font = '800 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		ctx.fillText('다음 곡', tx + 26, headerBase);
-		const maxLines = Math.min(nextList.length, Math.max(0, Math.floor((H - 52 - headerBase) / 22)));
-		for (let i = 0; i < maxLines; i++) {
-			const lineY = headerBase + 28 + 22 * i;
-			cursorY = lineY;
-			const text = `${nextList[i]!.title}${nextList[i]!.artist ? ` · ${nextList[i]!.artist}` : ''}`;
-			ctx.font = '600 15px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-			ctx.fillStyle = `${accent.primary}cc`;
-			ctx.fillText(`${i + 1}.`, tx, lineY);
-			const numW = ctx.measureText(`${i + 1}.`).width;
-			ctx.font = '500 18px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-			ctx.fillStyle = 'rgba(255,255,255,0.78)';
-			ctx.fillText(truncate(ctx, text, right - (tx + numW + 10)), tx + numW + 10, lineY);
+		const headerY = y + 38;
+		const rows = Math.min(nextList.length, Math.max(0, Math.floor((FOOT_Y - 30 - headerY) / 25)));
+		if (rows > 0) {
+			ctx.fillStyle = MUTED;
+			ctx.font = `700 15px ${FONT}`;
+			ctx.fillText('다음 곡', tx, headerY);
+			for (let i = 0; i < rows; i++) {
+				const lineY = headerY + 26 + 25 * i;
+				ctx.font = `700 15px ${FONT}`;
+				ctx.fillStyle = accent.primary;
+				ctx.fillText(`${i + 1}`, tx, lineY);
+				ctx.font = `500 17px ${FONT}`;
+				ctx.fillStyle = TEXT;
+				const text = `${nextList[i]!.title}${nextList[i]!.artist ? ` · ${nextList[i]!.artist}` : ''}`;
+				ctx.fillText(truncate(ctx, text, textW - 24), tx + 20, lineY);
+			}
 		}
 	}
 
-	// 하단 푸터: 대기열 메타(위) + 브랜드줄(아래). 같은 위치에 겹치지 않게 별도 베이스라인으로 나눠요.
-	const brandY = H - 22;
-	const metaY = Math.min(brandY - 28, Math.max(cursorY + 64, artCursorY + 128));
-
-	// 대기열 메타 — 브랜드줄 바로 위 한 줄에 표시.
+	// 하단 한 줄: 브랜드줄(좌) + 대기열 메타(우). 같은 베이스라인이라 겹치지 않게 폭을 나눠요.
+	ctx.font = `500 15px ${FONT}`;
+	let metaW = 0;
 	if (input.queueCount > 0) {
 		const remaining = input.queueRemainingMs > 0 ? ` (${Math.floor(input.queueRemainingMs / 60000)}분 남음)` : '';
-		ctx.font = '500 19px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-		drawIcon(ctx, 'list', tx, metaY - 15, 18, 'rgba(255,255,255,0.55)');
-		ctx.fillStyle = 'rgba(255,255,255,0.55)';
-		ctx.fillText(`대기열 ${input.queueCount}곡${remaining}`, tx + 25, metaY);
+		const meta = `대기열 ${input.queueCount}곡${remaining}`;
+		metaW = ctx.measureText(meta).width;
+		ctx.textAlign = 'right';
+		ctx.fillStyle = MUTED;
+		ctx.fillText(meta, right, FOOT_Y);
+		ctx.textAlign = 'left';
 	}
-
-	// The bot-supplied brandLine includes node, volume, bot name and version/hash.
-	ctx.textAlign = 'left';
-	ctx.fillStyle = `${accent.primary}bf`;
-	ctx.font = '700 17px "Pretendard JP", "Twemoji Mozilla", sans-serif';
-	ctx.fillText(input.brandLine ?? BOT_NAME, tx, brandY);
+	ctx.fillStyle = MUTED;
+	ctx.fillText(truncate(ctx, input.brandLine ?? BOT_NAME, textW - metaW - (metaW > 0 ? 24 : 0)), tx, FOOT_Y);
 
 	return (await canvas.toBuffer('png')) as Buffer;
 }
