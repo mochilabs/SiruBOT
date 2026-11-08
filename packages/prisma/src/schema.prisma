@@ -52,6 +52,8 @@ model Guild {
   ttsChannelIds        String[] @default([])
   // 음성 채널 입장 알림: 봇이 있는 음성 채널에 사용자가 들어오면 "OO님이 입장했어요"를 읽어요.
   ttsJoinAnnounce      Boolean  @default(false)
+  // 음성 채널 퇴장 알림: 봇이 있는 음성 채널에서 사용자가 나가면 "OO님이 퇴장했어요"를 읽어요.
+  ttsLeaveAnnounce     Boolean  @default(false)
   // 커스텀 명령어 접두사 — 메시지가 이 문자열로 시작하면 길드 커스텀 명령어로 처리해요. 규칙은 packages/utils/src/customCommand.ts.
   customCommandPrefix String @default("!")
   // 채팅 유틸: 이모지 확대 — 커스텀 이모지만으로 구성된 메시지를 큰 이미지로 다시 보여줘요 (all | channels | off)
@@ -252,6 +254,8 @@ model TtsUserSetting {
   voice   String?
   // 스테레오 위치: "both"(가운데) | "left" | "right". lavalink_mixer announce의 channel 값과 1:1이에요.
   channel String  @default("both")
+  // 감정: "neutral" | "happy" | "sad" | "angry" | "whisper". 엔진이 지원하지 않으면 siru_tts가 중립으로 폴백해요.
+  emotion String  @default("neutral")
 
   updatedAt DateTime @updatedAt
 

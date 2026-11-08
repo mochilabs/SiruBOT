@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import { MemoryCache } from '@sirubot/utils';
+import type { TtsEmotion } from './ttsService.ts';
 
 /**
  * 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in과 음성 프리셋(voice/스테레오 위치) CRUD.
@@ -17,14 +18,21 @@ export function normalizeTtsChannel(value: string | null | undefined): TtsChanne
 	return TTS_CHANNELS.includes(value as TtsChannel) ? (value as TtsChannel) : 'both';
 }
 
+export const TTS_EMOTIONS: readonly TtsEmotion[] = ['neutral', 'happy', 'sad', 'angry', 'whisper'];
+
+export function normalizeTtsEmotion(value: string | null | undefined): TtsEmotion {
+	return TTS_EMOTIONS.includes(value as TtsEmotion) ? (value as TtsEmotion) : 'neutral';
+}
+
 export interface TtsUserPreset {
 	enabled: boolean;
 	voice: string | null;
 	channel: TtsChannel;
+	emotion: TtsEmotion;
 }
 
 /** DB에 행이 없을 때의 기본값 — opt-in off, 기본 음성, 가운데 */
-export const DEFAULT_TTS_USER_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both' };
+export const DEFAULT_TTS_USER_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both', emotion: 'neutral' };
 
 const CACHE_TTL_MS = 60_000;
 
@@ -39,7 +47,13 @@ export class TtsUserSettingsService {
 		let preset: TtsUserPreset = DEFAULT_TTS_USER_PRESET;
 		try {
 			const row = await container.db.ttsUserSetting.findUnique({ where: { guildId_userId: { guildId, userId } } });
-			if (row) preset = { enabled: row.enabled, voice: row.voice, channel: normalizeTtsChannel(row.channel) };
+			if (row)
+				preset = {
+					enabled: row.enabled,
+					voice: row.voice,
+					channel: normalizeTtsChannel(row.channel),
+					emotion: normalizeTtsEmotion(row.emotion)
+				};
 		} catch (error) {
 			container.logger.error(
 				`[ttsUserSettings] 조회 실패 guild=${guildId} user=${userId}: ${error instanceof Error ? error.message : String(error)}`
@@ -56,7 +70,8 @@ export class TtsUserSettingsService {
 			const next: TtsUserPreset = {
 				enabled: patch.enabled ?? current.enabled,
 				voice: patch.voice !== undefined ? patch.voice : current.voice,
-				channel: patch.channel ?? current.channel
+				channel: patch.channel ?? current.channel,
+				emotion: patch.emotion ?? current.emotion
 			};
 			await container.db.ttsUserSetting.upsert({
 				where: { guildId_userId: { guildId, userId } },

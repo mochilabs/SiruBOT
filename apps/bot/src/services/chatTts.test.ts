@@ -190,10 +190,32 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
-		await service.handleMessage(makeMessage(), '프리셋 적용', { enabled: true, voice: 'edge:ko-KR-YoonNeural', channel: 'both' });
+		await service.handleMessage(makeMessage(), '프리셋 적용', {
+			enabled: true,
+			voice: 'edge:ko-KR-YoonNeural',
+			channel: 'both',
+			emotion: 'happy'
+		});
 		await flushAsync();
 
-		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('프리셋 적용', { voice: 'edge:ko-KR-YoonNeural' });
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledWith('프리셋 적용', { voice: 'edge:ko-KR-YoonNeural', emotion: 'happy' });
+	});
+
+	it('drops a user message once their per-minute character budget is spent, without affecting others', async () => {
+		const service = new ChatTtsService();
+		const player = makePlayer();
+		mocks.audio.getPlayer.mockReturnValue(player);
+		const long = '가'.repeat(200);
+
+		await service.handleMessage(makeMessage({ userId: 'spammer' }), long);
+		await flushAsync();
+		await service.handleMessage(makeMessage({ userId: 'spammer' }), long);
+		await flushAsync();
+		await service.handleMessage(makeMessage({ userId: 'other' }), '다른 사람');
+		await flushAsync();
+
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(2);
+		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('다른 사람', { voice: undefined });
 	});
 
 	it('carries the preset of the batch-seeding message through a merge batch', async () => {
@@ -205,12 +227,13 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		// 첫 메시지는 즉시 합성(프리셋 없음) — 두 번째가 병합 창을 여는데, 이때 프리셋이 배치에 저장된다
 		await service.handleMessage(makeMessage(), '첫 발화');
 		await flushAsync();
-		await service.handleMessage(makeMessage(), '배치 시작', { enabled: true, voice: 'melo:KR', channel: 'both' });
+		await service.handleMessage(makeMessage(), '배치 시작', { enabled: true, voice: 'melo:KR', channel: 'both', emotion: 'neutral' });
 		await service.handleMessage(makeMessage(), '이어 말하기');
 		await vi.advanceTimersByTimeAsync(TTS_MERGE_WINDOW_MS);
 
 		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('배치 시작 이어 말하기', {
-			voice: 'melo:KR'
+			voice: 'melo:KR',
+			emotion: 'neutral'
 		});
 	});
 
@@ -269,7 +292,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		player.queue.current = musicTrack('music');
 		mocks.audio.getPlayer.mockReturnValue(player);
 
-		await service.handleMessage(makeMessage(), '왼쪽에서 읽어줘', { enabled: true, voice: null, channel: 'left' });
+		await service.handleMessage(makeMessage(), '왼쪽에서 읽어줘', { enabled: true, voice: null, channel: 'left', emotion: 'neutral' });
 		await flushAsync();
 
 		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential', 'left');

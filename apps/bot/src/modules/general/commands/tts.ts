@@ -82,6 +82,21 @@ export class TtsCommand extends Command {
 				)
 				.addSubcommand((sub) =>
 					sub
+						.setName('leave')
+						.setNameLocalizations({ ko: '퇴장알림' })
+						.setDescription('Announce members who leave the bot voice channel.')
+						.setDescriptionLocalizations({ ko: '음성 채널에서 누군가 나가면 이름을 읽어줘요.' })
+						.addBooleanOption((option) =>
+							option
+								.setName('enabled')
+								.setNameLocalizations({ ko: '사용' })
+								.setDescription('Turn leave announcements on or off.')
+								.setDescriptionLocalizations({ ko: '퇴장 알림을 켤지 꺼요.' })
+								.setRequired(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
 						.setName('settings')
 						.setNameLocalizations({ ko: '설정' })
 						.setDescription('Open your personal TTS settings panel.')
@@ -124,24 +139,26 @@ export class TtsCommand extends Command {
 			return;
 		}
 
-		if (subcommand === 'join') {
+		if (subcommand === 'join' || subcommand === 'leave') {
 			const enabled = interaction.options.getBoolean('enabled', true);
+			const label = subcommand === 'join' ? '입장' : '퇴장';
 			if (enabled && !this.container.ttsService.isEnabled()) {
 				throw new UserError({
 					identifier: 'tts_service_disabled',
-					message: `${emoji('error')} TTS 서버가 연결되어 있지 않아서 입장 알림을 켤 수 없어요.`,
+					message: `${emoji('error')} TTS 서버가 연결되어 있지 않아서 ${label} 알림을 켤 수 없어요.`,
 					context: { ephemeral: true }
 				});
 			}
-			await this.container.guildService.setTtsJoinAnnounce(interaction.guildId, enabled);
+			if (subcommand === 'join') await this.container.guildService.setTtsJoinAnnounce(interaction.guildId, enabled);
+			else await this.container.guildService.setTtsLeaveAnnounce(interaction.guildId, enabled);
 			await interaction.editReply({
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] },
 				components: [
 					notice(
 						enabled
-							? `${emoji('speech')} 봇이 있는 음성 채널에 누군가 들어오면 이름을 읽어드릴게요.`
-							: `${emoji('speech')} 음성 채널 입장 알림을 껐어요.`
+							? `${emoji('speech')} 봇이 있는 음성 채널에서 누군가 ${subcommand === 'join' ? '들어오면' : '나가면'} 이름을 읽어드릴게요.`
+							: `${emoji('speech')} 음성 채널 ${label} 알림을 껐어요.`
 					)
 				]
 			});

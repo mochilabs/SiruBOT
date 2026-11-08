@@ -31,7 +31,7 @@ export class TtsPanelButtonHandler extends InteractionHandler {
 		}
 
 		if (action === 'reset') {
-			await this.save(interaction, { voice: null, channel: 'both' }, lang);
+			await this.save(interaction, { voice: null, channel: 'both', emotion: 'neutral' }, lang);
 		}
 	}
 

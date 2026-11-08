@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 import { createContainer, emoji } from '@sirubot/utils';
 import type { TtsService, TtsVoice } from '../../../services/ttsService.ts';
+import type { TtsEmotion } from '../../../services/ttsService.ts';
 import type { TtsChannel, TtsUserPreset, TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
 import { truncateText } from '../../../lib/text.ts';
 import type { GuildService } from '../../../services/guildService.ts';
@@ -25,6 +26,7 @@ import type { GuildService } from '../../../services/guildService.ts';
 export const ttsPanelPrefix = 'tts:panel:';
 export const ttsToggleCustomId = `${ttsPanelPrefix}toggle`;
 export const ttsChannelSelectCustomId = `${ttsPanelPrefix}channel`;
+export const ttsEmotionSelectCustomId = `${ttsPanelPrefix}emotion`;
 export const ttsResetCustomId = `${ttsPanelPrefix}reset`;
 export const ttsVoiceSelectCustomId = `${ttsPanelPrefix}voice`;
 export const ttsLangSelectCustomId = `${ttsPanelPrefix}lang`;
@@ -79,6 +81,24 @@ const CHANNEL_LABELS: Record<TtsChannel, { label: string; description: string }>
 	both: { label: '가운데', description: '양쪽 스피커로 똑같이 들려요' },
 	right: { label: '오른쪽', description: '오른쪽 스피커로만 들려요' }
 };
+
+const EMOTION_LABELS: Record<TtsEmotion, { label: string; description: string }> = {
+	neutral: { label: '중립', description: '기본 말투로 읽어요' },
+	happy: { label: '기쁨', description: '밝은 말투로 읽어요' },
+	sad: { label: '슬픔', description: '가라앉은 말투로 읽어요' },
+	angry: { label: '화남', description: '거친 말투로 읽어요' },
+	whisper: { label: '속삭임', description: '작게 속삭이듯 읽어요' }
+};
+
+export function buildEmotionOptions(preset: TtsUserPreset): StringSelectMenuOptionBuilder[] {
+	return (Object.keys(EMOTION_LABELS) as TtsEmotion[]).map((emotion) =>
+		new StringSelectMenuOptionBuilder()
+			.setLabel(EMOTION_LABELS[emotion].label)
+			.setValue(emotion)
+			.setDescription(EMOTION_LABELS[emotion].description)
+			.setDefault(preset.emotion === emotion)
+	);
+}
 
 function channelLabel(channel: TtsChannel): string {
 	return CHANNEL_LABELS[channel].label;
@@ -145,7 +165,8 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	const statusLines = [
 		`${preset.enabled ? '🟢' : '⚪'} **낭독** · ${preset.enabled ? '켜짐' : '꺼짐'}`,
 		`**음성** · ${voiceLabel(preset, voices)}`,
-		`**위치** · ${channelLabel(preset.channel)}`
+		`**위치** · ${channelLabel(preset.channel)}`,
+		`**감정** · ${EMOTION_LABELS[preset.emotion].label}`
 	];
 
 	container.addTextDisplayComponents(
@@ -202,6 +223,17 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	);
 
 	container.addActionRowComponents(
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId(withPanelLang(ttsEmotionSelectCustomId, lang))
+				.setPlaceholder('말투(감정)를 선택하세요')
+				.setMinValues(1)
+				.setMaxValues(1)
+				.addOptions(buildEmotionOptions(preset))
+		)
+	);
+
+	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(withPanelLang(ttsToggleCustomId, lang))
@@ -211,7 +243,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 		)
 	);
 
-	const isDefaultPreset = preset.voice === null && preset.channel === 'both';
+	const isDefaultPreset = preset.voice === null && preset.channel === 'both' && preset.emotion === 'neutral';
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
@@ -224,7 +256,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	);
 
 	const notes = [
-		'-# 서버 정책에 따라 읽지 않는 채널에서는 읽히지 않아요. 위치는 음악 위에 겹쳐 읽을 때 적용돼요.',
+		'-# 서버 정책에 따라 읽지 않는 채널에서는 읽히지 않아요. 위치는 음악 위에 겹쳐 읽을 때 적용돼요. 감정은 지원하는 음성에서만 반영돼요.',
 		'-# 고른 음성이 읽을 수 없는 언어의 글은 그 언어에 맞는 다른 음성으로 읽어요.',
 		...(serviceReady ? [] : ['-# 봇의 TTS 서비스가 아직 준비되지 않았어요. 관리자가 설정 중이에요.'])
 	];

@@ -216,6 +216,14 @@ export class GuildService extends GuildSettingsStore {
 		return chatPolicy.getTtsJoinAnnounce(this, guildId);
 	}
 
+	public async getTtsLeaveAnnounce(guildId: string): Promise<boolean> {
+		return chatPolicy.getTtsLeaveAnnounce(this, guildId);
+	}
+
+	public async setTtsLeaveAnnounce(guildId: string, enabled: boolean): Promise<boolean> {
+		return chatPolicy.setTtsLeaveAnnounce(this, guildId, enabled);
+	}
+
 	public async setTtsJoinAnnounce(guildId: string, enabled: boolean): Promise<boolean> {
 		return chatPolicy.setTtsJoinAnnounce(this, guildId, enabled);
 	}

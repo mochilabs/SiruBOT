@@ -28,6 +28,8 @@ export const TTS_OVERLAY_QUEUE_MAX = 5;
 const TTS_GUILD_CONCURRENT_SYNTH = 2;
 /** 길드 분당 합성 글자 수 — 초과 시 클립을 버린다 */
 export const TTS_GUILD_CHARS_PER_MIN = 1000;
+/** 한 사람이 도배해도 다른 사람 차례가 밀리지 않게 하는 사용자당 분당 글자 한도 */
+export const TTS_USER_CHARS_PER_MIN = 300;
 
 interface TtsTextResolvers {
 	memberName(id: string): string | null;
@@ -98,6 +100,8 @@ interface GuildTtsState {
 	/** key: userId — 같은 길드에서의 마지막 합성 시각 */
 	lastSynthAt: Map<string, number>;
 	charWindow: { start: number; chars: number };
+	/** key: userId — 사용자당 분당 글자 창 */
+	userWindows: Map<string, { start: number; chars: number }>;
 	synthActive: number;
 	synthWaiters: Array<() => void>;
 	dispatchChain: Promise<void>;
@@ -121,6 +125,15 @@ export class ChatTtsService {
 		const state = this.getGuildState(guildId);
 		const now = Date.now();
 		const batchKey = `${channelId}:${userId}`;
+
+		if (!this.consumeUserChars(state, userId, Math.min(text.length, TTS_CLIP_MAX_CHARS), now)) {
+			this.warnOnce(
+				guildId,
+				`user_bucket:${userId}`,
+				`[chatTts] 사용자 분당 글자 한도(${TTS_USER_CHARS_PER_MIN}자) 초과 — 메시지를 버렸어요 (guild ${guildId})`
+			);
+			return;
+		}
 
 		const batch = state.batches.get(batchKey);
 		if (batch) {
@@ -146,6 +159,18 @@ export class ChatTtsService {
 		// 첫 메시지는 지연 없이 바로 합성한다
 		state.lastSynthAt.set(userId, now);
 		this.enqueueSynthesis(guildId, text.slice(0, TTS_CLIP_MAX_CHARS), preset);
+	}
+
+	/** 사용자당 분당 글자 예산을 차감한다 — 초과하면 false(메시지를 읽지 않는다) */
+	private consumeUserChars(state: GuildTtsState, userId: string, chars: number, now: number): boolean {
+		let window = state.userWindows.get(userId);
+		if (!window || now - window.start >= 60_000) {
+			window = { start: now, chars: 0 };
+			state.userWindows.set(userId, window);
+		}
+		if (window.chars + chars > TTS_USER_CHARS_PER_MIN) return false;
+		window.chars += chars;
+		return true;
 	}
 
 	/** 병합 창 종료 — 모인 메시지를 한 발화로 합성한다. */
@@ -177,7 +202,9 @@ export class ChatTtsService {
 			return;
 		}
 
-		const synth = this.withSynthSlot(state, () => container.ttsService.synthesize(text, { voice: preset?.voice ?? undefined }));
+		const synth = this.withSynthSlot(state, () =>
+			container.ttsService.synthesize(text, { voice: preset?.voice ?? undefined, emotion: preset?.emotion })
+		);
 		// dispatch는 seq 순서로 이어 붙인다 — 합성은 병렬로 끝나도 재생 순서는 메시지 순서를 지킨다
 		state.dispatchChain = state.dispatchChain
 			.then(async () => {
@@ -231,7 +258,7 @@ export class ChatTtsService {
 	 * (dispatchClip의 판단을 그대로 재사용). 반환값은 예약/단독 재생 결과예요.
 	 */
 	public async speakNow(player: CustomPlayer, text: string, preset: TtsUserPreset): Promise<'overlay' | 'solo'> {
-		const clip = await container.ttsService.synthesize(text, { voice: preset.voice ?? undefined });
+		const clip = await container.ttsService.synthesize(text, { voice: preset.voice ?? undefined, emotion: preset.emotion });
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
 			await this.dispatchOverlay(player, clip, preset.channel, true);
@@ -436,6 +463,7 @@ export class ChatTtsService {
 				batches: new Map(),
 				lastSynthAt: new Map(),
 				charWindow: { start: Date.now(), chars: 0 },
+				userWindows: new Map(),
 				synthActive: 0,
 				synthWaiters: [],
 				dispatchChain: Promise.resolve(),

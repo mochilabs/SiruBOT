@@ -4,11 +4,12 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import type { TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
-import { normalizeTtsChannel } from '../../../services/ttsUserSettings.ts';
+import { normalizeTtsChannel, normalizeTtsEmotion } from '../../../services/ttsUserSettings.ts';
 import {
 	buildTtsPanel,
 	splitPanelLang,
 	ttsChannelSelectCustomId,
+	ttsEmotionSelectCustomId,
 	ttsLangSelectCustomId,
 	ttsVoiceSelectCustomId,
 	TTS_VOICE_DEFAULT_VALUE
@@ -30,6 +31,7 @@ export class TtsPanelSelectHandler extends InteractionHandler {
 		if (base === ttsLangSelectCustomId) return this.some({ patch: null, lang: value });
 		if (base === ttsVoiceSelectCustomId) return this.some({ patch: { voice: value === TTS_VOICE_DEFAULT_VALUE ? null : value }, lang });
 		if (base === ttsChannelSelectCustomId) return this.some({ patch: { channel: normalizeTtsChannel(value) }, lang });
+		if (base === ttsEmotionSelectCustomId) return this.some({ patch: { emotion: normalizeTtsEmotion(value) }, lang });
 		return this.none();
 	}
 

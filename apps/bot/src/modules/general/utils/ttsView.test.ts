@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ButtonStyle } from 'discord.js';
 import {
+	ttsEmotionSelectCustomId,
 	TTS_VOICE_DEFAULT_VALUE,
 	buildVoiceOptions,
 	ttsPanelView,
@@ -17,7 +18,7 @@ import {
 import type { TtsUserPreset } from '../../../services/ttsUserSettings.ts';
 import type { TtsVoice } from '../../../services/ttsService.ts';
 
-const DEFAULT_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both' };
+const DEFAULT_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both', emotion: 'neutral' };
 
 function voice(id: string, name = id, engine = 'edge'): TtsVoice {
 	return { id, engine, name, languages: ['ko-KR'] };
@@ -49,12 +50,14 @@ function rowsOf(json: PlainComponent): PlainComponent[][] {
 describe('ttsPanelView', () => {
 	it('꺼짐 상태에서는 켜기 버튼을 Success로 보이고, 기본 프리셋이면 복구 버튼을 비활성화한다', () => {
 		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' });
-		const [langRow, selectRow, channelRow, actionRow, resetRow] = rowsOf(json);
+		const [langRow, selectRow, channelRow, emotionRow, actionRow, resetRow] = rowsOf(json);
 
 		expect(langRow[0].custom_id).toBe(withPanelLang(ttsLangSelectCustomId, 'ko'));
 		expect(langRow[0].options?.find((option) => option.default)?.value).toBe('ko');
 		expect(selectRow[0].custom_id).toBe(withPanelLang(ttsVoiceSelectCustomId, 'ko'));
 		expect(channelRow[0].custom_id).toBe(withPanelLang(ttsChannelSelectCustomId, 'ko'));
+		expect(emotionRow[0].custom_id).toBe(withPanelLang(ttsEmotionSelectCustomId, 'ko'));
+		expect(emotionRow[0].options?.find((option) => option.default)?.value).toBe('neutral');
 		expect(actionRow[0].custom_id).toBe(withPanelLang(ttsToggleCustomId, 'ko'));
 		expect(actionRow[0].label).toBe('낭독 켜기');
 		expect(actionRow[0].style).toBe(ButtonStyle.Success);
@@ -63,8 +66,13 @@ describe('ttsPanelView', () => {
 	});
 
 	it('켜짐 상태와 커스텀 프리셋이면 끄기 버튼(Danger)과 활성화된 복구 버튼을 보인다', () => {
-		const json = panelJson({ preset: { enabled: true, voice: 'edge:ko-1', channel: 'left' }, voices: [], serviceReady: true, lang: 'ko' });
-		const [, , , actionRow, resetRow] = rowsOf(json);
+		const json = panelJson({
+			preset: { enabled: true, voice: 'edge:ko-1', channel: 'left', emotion: 'neutral' },
+			voices: [],
+			serviceReady: true,
+			lang: 'ko'
+		});
+		const [, , , , actionRow, resetRow] = rowsOf(json);
 
 		expect(actionRow[0].label).toBe('낭독 끄기');
 		expect(actionRow[0].style).toBe(ButtonStyle.Danger);
@@ -74,7 +82,7 @@ describe('ttsPanelView', () => {
 	it('상태 본문에 음성·위치 값을 보여 준다', () => {
 		const withValues = textsOf(
 			panelJson({
-				preset: { enabled: true, voice: 'edge:ko-1', channel: 'right' },
+				preset: { enabled: true, voice: 'edge:ko-1', channel: 'right', emotion: 'neutral' },
 				voices: [voice('edge:ko-1', 'Nayeon')],
 				serviceReady: true,
 				lang: 'ko'

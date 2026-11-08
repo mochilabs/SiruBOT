@@ -24,9 +24,16 @@ describe('TtsUserSettingsService', () => {
 	});
 
 	it('maps an existing row and caches it (single DB read)', async () => {
-		mocks.db.ttsUserSetting.findUnique.mockResolvedValue({ guildId: 'g1', userId: 'u1', enabled: true, voice: 'melo:KR', channel: 'left' });
+		mocks.db.ttsUserSetting.findUnique.mockResolvedValue({
+			guildId: 'g1',
+			userId: 'u1',
+			enabled: true,
+			voice: 'melo:KR',
+			channel: 'left',
+			emotion: 'whisper'
+		});
 		const service = new TtsUserSettingsService();
-		await expect(service.get('g1', 'u1')).resolves.toEqual({ enabled: true, voice: 'melo:KR', channel: 'left' });
+		await expect(service.get('g1', 'u1')).resolves.toEqual({ enabled: true, voice: 'melo:KR', channel: 'left', emotion: 'whisper' });
 		await service.get('g1', 'u1');
 		expect(mocks.db.ttsUserSetting.findUnique).toHaveBeenCalledTimes(1);
 	});
@@ -37,13 +44,20 @@ describe('TtsUserSettingsService', () => {
 	});
 
 	it('upserts the merged preset and refreshes the cache', async () => {
-		mocks.db.ttsUserSetting.findUnique.mockResolvedValue({ guildId: 'g1', userId: 'u1', enabled: true, voice: 'melo:KR', channel: 'left' });
+		mocks.db.ttsUserSetting.findUnique.mockResolvedValue({
+			guildId: 'g1',
+			userId: 'u1',
+			enabled: true,
+			voice: 'melo:KR',
+			channel: 'left',
+			emotion: 'whisper'
+		});
 		const service = new TtsUserSettingsService();
 		await expect(service.set('g1', 'u1', { channel: 'right' })).resolves.toBe(true);
 		expect(mocks.db.ttsUserSetting.upsert).toHaveBeenCalledWith({
 			where: { guildId_userId: { guildId: 'g1', userId: 'u1' } },
-			create: { guildId: 'g1', userId: 'u1', enabled: true, voice: 'melo:KR', channel: 'right' },
-			update: { enabled: true, voice: 'melo:KR', channel: 'right' }
+			create: { guildId: 'g1', userId: 'u1', enabled: true, voice: 'melo:KR', channel: 'right', emotion: 'whisper' },
+			update: { enabled: true, voice: 'melo:KR', channel: 'right', emotion: 'whisper' }
 		});
 		// 캐시가 갱신됐는지 — DB를 다시 읽지 않는다
 		await expect(service.get('g1', 'u1')).resolves.toMatchObject({ channel: 'right' });

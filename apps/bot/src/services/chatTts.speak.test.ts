@@ -28,7 +28,7 @@ vi.mock('@sapphire/framework', () => ({
 
 import { ChatTtsService } from './chatTts.ts';
 
-const preset = { enabled: false, voice: null, channel: 'both' as const };
+const preset = { enabled: false, voice: null, channel: 'both' as const, emotion: 'neutral' as const };
 
 function playerWith(tracks: unknown[], current: unknown = null) {
 	return {
