@@ -37,21 +37,21 @@ function pngSize(buffer: Buffer): [number, number] {
 }
 
 describe('renderWeatherCard', () => {
-	it('renders the current-weather card as a 960x440 PNG', async () => {
+	it('renders the current-weather card as a 960x320 PNG', async () => {
 		const buffer = await renderWeatherCard(weatherCardSchema.parse({ ...base, scope: 'now' }));
-		expect(pngSize(buffer)).toEqual([960, 440]);
+		expect(pngSize(buffer)).toEqual([960, 320]);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
 	it('renders today/tomorrow cards from the first daily entry', async () => {
 		const buffer = await renderWeatherCard(weatherCardSchema.parse({ ...base, scope: 'tomorrow', daily: [day('2026-11-09', 2, 20, 11)] }));
-		expect(pngSize(buffer)).toEqual([960, 440]);
+		expect(pngSize(buffer)).toEqual([960, 320]);
 	});
 
-	it('renders the week strip as a 960x470 PNG', async () => {
+	it('renders the week strip as a 960x330 PNG', async () => {
 		const daily = Array.from({ length: 7 }, (_, i) => day(`2026-11-${String(8 + i).padStart(2, '0')}`, i * 10, 20 - i, 8 - i));
 		const buffer = await renderWeatherCard(weatherCardSchema.parse({ ...base, scope: 'week', daily }));
-		expect(pngSize(buffer)).toEqual([960, 470]);
+		expect(pngSize(buffer)).toEqual([960, 330]);
 	});
 
 	it('still renders when the provider returns no numbers or no forecast', async () => {
@@ -64,8 +64,8 @@ describe('renderWeatherCard', () => {
 			cloudCoverPercent: null,
 			precipitationMm: null
 		};
-		expect(pngSize(await renderWeatherCard(weatherCardSchema.parse({ ...empty, scope: 'now' })))).toEqual([960, 440]);
-		expect(pngSize(await renderWeatherCard(weatherCardSchema.parse({ ...empty, scope: 'week' })))).toEqual([960, 470]);
+		expect(pngSize(await renderWeatherCard(weatherCardSchema.parse({ ...empty, scope: 'now' })))).toEqual([960, 320]);
+		expect(pngSize(await renderWeatherCard(weatherCardSchema.parse({ ...empty, scope: 'week' })))).toEqual([960, 330]);
 	});
 });
 
