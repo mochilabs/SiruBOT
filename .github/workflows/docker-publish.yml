@@ -62,5 +62,10 @@ jobs:
             GIT_BRANCH=${{ github.ref_name }}
             VERSION=${{ github.event.release.tag_name }}
             SENTRY_RELEASE=${{ github.event.release.tag_name }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_DISCORD_CLIENT_ID=${{ vars.NEXT_PUBLIC_DISCORD_CLIENT_ID }}
+            NEXT_PUBLIC_SUPPORT_SERVER=${{ vars.NEXT_PUBLIC_SUPPORT_SERVER }}
+            NEXT_PUBLIC_TOS_URL=${{ vars.NEXT_PUBLIC_TOS_URL }}
+            NEXT_PUBLIC_PRIVACY_POLICY_URL=${{ vars.NEXT_PUBLIC_PRIVACY_POLICY_URL }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
