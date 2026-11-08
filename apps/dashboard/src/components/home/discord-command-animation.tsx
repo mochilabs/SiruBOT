@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ListMusic, MousePointer2, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ListMusic, MousePointer2, Pause, Repeat, SkipBack, SkipForward, Square, Volume2 } from "lucide-react";
 
 import { motionBase, motionFast } from "@/components/motion/durations";
 import { Card } from "@/components/ui/card";
@@ -28,8 +28,11 @@ interface SlideConfig {
 export const slideConfigs: SlideConfig[] = [
 	{ command: "/재생", args: "Lemon", hasTarget: true },
 	{ command: "/현재곡", args: "", hasTarget: true },
+	{ command: "/채팅", args: "비 오는 날 들을 노래 추천해줘", hasTarget: true },
 	{ command: "/추천", args: "", hasTarget: false },
+	{ command: "/날씨", args: "서울", hasTarget: false },
 	{ command: "/플레이리스트", args: "재생 내 노래모음", hasTarget: false },
+	{ command: "/주사위", args: "개수:2", hasTarget: true },
 	{ command: "/대기열", args: "", hasTarget: true },
 ];
 
@@ -299,6 +302,97 @@ function QueueResult({ clicked }: { clicked: boolean }) {
 	);
 }
 
+/** /채팅 — AI 응답. 버튼을 누르면 추천곡이 대기열에 들어가요 */
+function ChatResult({ clicked }: { clicked: boolean }) {
+	const picks = [
+		{ track: LEMON, note: "가라앉은 분위기가 빗소리와 잘 어울려요." },
+		{ track: PRETENDER, note: "잔잔하게 시작해서 끝까지 차분히 이어져요." },
+	];
+	return (
+		<Container>
+			<p className="text-sm leading-snug text-discord-text">비 오는 날엔 차분한 곡이 잘 어울려요. 이런 곡은 어때요?</p>
+			<ul className="space-y-1.5">
+				{picks.map(({ track, note }) => (
+					<li key={track.title} className="text-xs leading-snug text-discord-text">
+						<strong className="font-semibold">{track.title}</strong>
+						<span className="text-discord-text-muted"> ({track.artist})</span>
+						<br />
+						<span className="text-discord-text-muted">{note}</span>
+					</li>
+				))}
+			</ul>
+			<div className="flex">
+				<DiscordButton target pressed={clicked} className="px-3">
+					{clicked ? <Check size={12} aria-hidden /> : <ListMusic size={12} aria-hidden />}
+					{clicked ? "2곡을 대기열에 추가했어요" : "둘 다 대기열에 추가"}
+				</DiscordButton>
+			</div>
+			<Separator />
+			<Footer left="💬 대화 기록은 채널 단위로 기억해요" />
+		</Container>
+	);
+}
+
+/** /날씨 — 현재 날씨와 예보. 데모용 값이에요 */
+function WeatherResult() {
+	const forecast = [
+		{ day: "내일", icon: "⛅", high: 20, low: 12 },
+		{ day: "모레", icon: "🌧️", high: 17, low: 11 },
+		{ day: "토요일", icon: "☀️", high: 22, low: 13 },
+	];
+	return (
+		<Container>
+			<Subtext>서울특별시 현재 날씨</Subtext>
+			<div className="flex items-end gap-3">
+				<span className="text-4xl font-black leading-none tabular-nums text-discord-text">18°</span>
+				<div className="pb-0.5">
+					<p className="text-sm font-bold leading-snug text-discord-text">☀️ 맑음</p>
+					<Subtext>체감 17° · 습도 45% · 바람 2.1m/s</Subtext>
+				</div>
+			</div>
+			<Separator />
+			<div className="grid grid-cols-3 gap-2">
+				{forecast.map((day) => (
+					<div key={day.day} className="rounded-md bg-discord-btn-active/40 px-2 py-1.5 text-center">
+						<p className="text-2xs text-discord-text-muted">{day.day}</p>
+						<p className="text-base leading-snug">{day.icon}</p>
+						<p className="text-2xs tabular-nums text-discord-text">
+							{day.high}° <span className="text-discord-text-muted">/ {day.low}°</span>
+						</p>
+					</div>
+				))}
+			</div>
+		</Container>
+	);
+}
+
+/** /주사위 — 2d6. 버튼을 누르면 다시 굴려 값이 바뀌어요 */
+function DiceResult({ clicked }: { clicked: boolean }) {
+	const [a, b] = clicked ? [6, 4] : [3, 5];
+	return (
+		<Container>
+			<Subtext>🎲 주사위를 굴렸어요 (2d6)</Subtext>
+			<AnimatePresence mode="wait" initial={false}>
+				<m.p
+					key={`${a}-${b}`}
+					initial={{ opacity: 0, y: 4 }}
+					animate={{ opacity: 1, y: 0 }}
+					exit={{ opacity: 0 }}
+					transition={{ duration: motionFast }}
+					className="text-2xl font-black tabular-nums text-discord-text"
+				>
+					{a} + {b} = <span className="text-discord-light">{a + b}</span>
+				</m.p>
+			</AnimatePresence>
+			<div className="flex">
+				<DiscordButton target pressed={clicked} className="px-3">
+					🎲 다시 굴리기
+				</DiscordButton>
+			</div>
+		</Container>
+	);
+}
+
 function commandResult(slide: SlideConfig, clicked: boolean): ReactNode {
 	switch (slide.command) {
 		case "/재생":
@@ -309,6 +403,12 @@ function commandResult(slide: SlideConfig, clicked: boolean): ReactNode {
 			return <PlaylistResult />;
 		case "/대기열":
 			return <QueueResult clicked={clicked} />;
+		case "/채팅":
+			return <ChatResult clicked={clicked} />;
+		case "/날씨":
+			return <WeatherResult />;
+		case "/주사위":
+			return <DiceResult clicked={clicked} />;
 		default:
 			return <NowPlayingResult clicked={clicked} />;
 	}
