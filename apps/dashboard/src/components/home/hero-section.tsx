@@ -10,7 +10,6 @@ import { SectionLabel } from "@/components/primitives/section-label";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const SLIDE_INTERVAL = 7000;
 // 헤드라인 회전 단어 — "음악부터 AI까지, ___ 시루봇 하나면 돼요"의 빈칸에 아래에서 위로 밀려 올라와 교체돼요
 const ROTATING_WORDS = ['서버에 필요한 모든 걸', 'Discord 안에서, 웹에서', '게임부터 서버 꾸미기까지'] as const;
 const ROTATE_INTERVAL_MS = 2600;
@@ -59,11 +58,10 @@ export function HeroSection() {
 	// 히어로가 보이기 시작하면 데모 슬라이드 자동 재생을 시작해요.
 	const heroInView = useInView(heroRef, { once: true, amount: 0.2 });
 
-	useEffect(() => {
-		if (!autoPlay || !heroInView || shouldReduce) return undefined;
-		const timer = setInterval(() => setActiveSlide((prev) => (prev + 1) % slideConfigs.length), SLIDE_INTERVAL);
-		return () => clearInterval(timer);
-	}, [autoPlay, heroInView, shouldReduce]);
+	// 한 예시(타이핑 → 전송 → 응답)가 끝나면 다음 예시로 넘겨요. 직접 고른 뒤에는 멈춰요.
+	const handleDone = () => {
+		if (autoPlay) setActiveSlide((prev) => (prev + 1) % slideConfigs.length);
+	};
 
 	const handleSlideChange = (index: number) => {
 		setAutoPlay(false);
@@ -100,18 +98,6 @@ export function HeroSection() {
 							대시보드 시작하기
 						</Link>
 					</div>
-
-					<dl className="grid w-full grid-cols-2 gap-4 pt-2 sm:max-w-lg lg:max-w-none">
-						<div>
-							<dt className="text-xs font-medium text-muted-foreground">슬래시 명령어</dt>
-							{/* 실측: 2026-10-09, 톱레벨 extends Command 23 + 서브커맨드 49(인라인 31 + 파일 18) */}
-							<dd className="mt-1 text-lg font-black tracking-tighter tabular-nums text-foreground sm:text-xl">72개</dd>
-						</div>
-						<div>
-							<dt className="text-xs font-medium text-muted-foreground">기능 카테고리</dt>
-							<dd className="mt-1 text-lg font-black tracking-tighter tabular-nums text-foreground sm:text-xl">4종</dd>
-						</div>
-					</dl>
 				</div>
 
 				{/* 우측 목업 컬럼 — self-stretch으로 그리드 행 높이를 가득 채우고, xl 이상에서 폭도 넓혀 대형 헤드라인과 균형을 맞춰요 */}
@@ -134,24 +120,13 @@ export function HeroSection() {
 									onClick={() => handleSlideChange(index)}
 									aria-pressed={activeSlide === index}
 									className={cn(
-										"relative cursor-pointer overflow-hidden rounded-control border-0 min-h-11 px-3 py-2 sm:min-h-0 sm:py-1.5 text-xs font-bold transition-colors duration-fast",
+										"cursor-pointer rounded-control border-0 min-h-11 px-3 py-2 sm:min-h-0 sm:py-1.5 text-xs font-bold transition-colors duration-fast",
 										activeSlide === index
 											? "bg-primary-control text-primary-control-text"
 											: "bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground",
 									)}
 								>
-									{/* 자동 재생 진행률 — 활성 버튼이 7초에 걸쳐 차오르고, 차면 다음 예시로 넘어가요 */}
-									{activeSlide === index && autoPlay && heroInView ? (
-										<m.span
-											aria-hidden
-											className="absolute inset-0 bg-white/25"
-											initial={{ scaleX: 0 }}
-											animate={{ scaleX: 1 }}
-											transition={{ duration: SLIDE_INTERVAL / 1000, ease: "linear" }}
-											style={{ originX: 0, originY: 0.5 }}
-										/>
-									) : null}
-									<span className="relative z-10">{slide.command}</span>
+									{slide.command}
 								</button>
 							))}
 						</div>
@@ -160,7 +135,7 @@ export function HeroSection() {
 						className="flex min-h-0 min-w-0 flex-1 flex-col"
 					>
 						<div className="h-full min-w-0">
-							<DiscordCommandAnimation activeSlide={activeSlide} />
+							<DiscordCommandAnimation activeSlide={activeSlide} active={heroInView} onDone={handleDone} />
 						</div>
 					</div>
 				</div>
