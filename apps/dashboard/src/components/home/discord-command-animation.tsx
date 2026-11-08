@@ -337,8 +337,8 @@ function ChatResult({ clicked }: { clicked: boolean }) {
 function WeatherResult() {
 	return (
 		<Container>
-			<div className="relative aspect-[960/440] w-full overflow-hidden rounded-md">
-				<Image src="/images/demo-weather.png" alt="서울 현재 날씨 18도, 맑음, 체감 17도, 습도 45%" fill className="object-cover" sizes="(min-width: 1024px) 480px, 90vw" unoptimized />
+			<div className="relative aspect-[960/320] w-full">
+				<Image src="/images/demo-weather.png" alt="서울 현재 날씨 18도, 맑음, 체감 17도, 습도 45%" fill className="object-contain" sizes="(min-width: 1024px) 480px, 90vw" unoptimized />
 			</div>
 			<Subtext>서울, 대한민국 · 지금 날씨 · Open-Meteo 기준</Subtext>
 		</Container>
