@@ -25,7 +25,7 @@ export function HeroSection() {
 	return (
 		<section ref={heroRef} id="hero-section" className="relative overflow-hidden">
 			{/* 화면 높이를 억지로 채우지 않아요: 내용 높이 + 여백만 두고, 두 컬럼은 세로 중앙 정렬 */}
-			<div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:gap-14 lg:px-8 lg:py-20">
+			<div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-20 lg:px-8 lg:py-24 xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
 				<div className="flex min-w-0 flex-col items-center gap-6 text-center lg:items-start lg:text-left">
 					<h1 className="text-3xl font-black leading-tight tracking-tighter text-foreground break-keep sm:text-5xl xl:text-6xl">
 						음악부터 AI까지,
