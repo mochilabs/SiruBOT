@@ -14,7 +14,7 @@
  */
 import { discordApiErrorText } from '../lib/discordErrorText.ts';
 import { container } from '@sapphire/framework';
-import { emoji, JTC_SETUP_REQUEST_CHANNEL, jtcSetupRequestSchema, ManagedRedisSubscriber } from '@sirubot/utils';
+import { JTC_SETUP_REQUEST_CHANNEL, jtcSetupRequestSchema, ManagedRedisSubscriber } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { JtcSetupResponse } from '@sirubot/utils';
 import type { ServiceLogger } from './types.ts';
@@ -24,11 +24,11 @@ const NOT_CATEGORY_MESSAGE = 'selected channel is not a category';
 /** 처리 흐름의 실패를 한국어 안내로 바꿔요 — 사용자가 고칠 수 있는 행동별로 구분해요 */
 function toKoreanError(error: unknown): string {
 	if (error instanceof Error && error.message.includes(NOT_CATEGORY_MESSAGE)) {
-		return `${emoji('error')} 카테고리 채널만 선택할 수 있어요.`;
+		return `카테고리 채널만 선택할 수 있어요.`;
 	}
 	return discordApiErrorText(error, {
 		permission: '채널 생성·이동 권한이 봇에 없어요. 서버 설정에서 봇 역할 권한을 확인해 주세요.',
-		fallback: `${emoji('error')} 마커 채널을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.`
+		fallback: `마커 채널을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.`
 	});
 }
 
@@ -102,7 +102,7 @@ export class JtcSetupResponder {
 			this.respond({
 				requestId: request.data.requestId,
 				guildId,
-				error: `${emoji('warning')} 이 서버의 이전 마커 채널 설정 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `이 서버의 이전 마커 채널 설정 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}

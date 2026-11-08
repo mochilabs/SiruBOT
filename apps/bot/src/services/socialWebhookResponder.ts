@@ -14,7 +14,7 @@
  */
 import { DiscordAPIError } from 'discord.js';
 import { container } from '@sapphire/framework';
-import { emoji, ManagedRedisSubscriber, SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL, socialWebhookCreateRequestSchema } from '@sirubot/utils';
+import { ManagedRedisSubscriber, SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL, socialWebhookCreateRequestSchema } from '@sirubot/utils';
 import { discordApiErrorText } from '../lib/discordErrorText.ts';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { SocialWebhookCreateResponse } from '@sirubot/utils';
@@ -26,11 +26,11 @@ const DISCORD_MAX_WEBHOOKS = 220001;
 /** 처리 흐름의 실패를 한국어 안내로 바꿔요 — 사용자가 고칠 수 있는 행동별로 구분해요 */
 function toKoreanError(error: unknown): string {
 	if (error instanceof DiscordAPIError && error.code === DISCORD_MAX_WEBHOOKS) {
-		return `${emoji('error')} 이 채널의 웹훅 한도(10개)가 가득 찼어요. 사용하지 않는 웹훅을 삭제한 뒤 다시 시도해 주세요.`;
+		return `이 채널의 웹훅 한도(10개)가 가득 찼어요. 사용하지 않는 웹훅을 삭제한 뒤 다시 시도해 주세요.`;
 	}
 	return discordApiErrorText(error, {
 		permission: '웹훅 생성 권한이 봇에 없어요. 서버 설정에서 봇 역할의 웹훅 관리 권한을 확인해 주세요.',
-		fallback: `${emoji('error')} 웹훅을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`
+		fallback: `웹훅을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`
 	});
 }
 
@@ -104,7 +104,7 @@ export class SocialWebhookResponder {
 			this.respond({
 				requestId,
 				guildId,
-				error: `${emoji('warning')} 이 서버의 이전 웹훅 생성 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `이 서버의 이전 웹훅 생성 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -113,20 +113,20 @@ export class SocialWebhookResponder {
 		try {
 			const channel = guild.channels.cache.get(targetChannelId);
 			if (!channel) {
-				this.respond({ requestId, guildId, error: `${emoji('error')} 채널을 찾을 수 없어요.` });
+				this.respond({ requestId, guildId, error: `채널을 찾을 수 없어요.` });
 				return;
 			}
 			if (!('createWebhook' in channel)) {
 				this.respond({
 					requestId,
 					guildId,
-					error: `${emoji('error')} 이 채널 종류에는 웹훅을 만들 수 없어요. 텍스트·음성 채널에서 선택해 주세요.`
+					error: `이 채널 종류에는 웹훅을 만들 수 없어요. 텍스트·음성 채널에서 선택해 주세요.`
 				});
 				return;
 			}
 			const webhook = await channel.createWebhook({ name, reason: '대시보드 소셜 알림 구독 추가' });
 			if (!webhook.token) {
-				this.respond({ requestId, guildId, error: `${emoji('error')} 웹훅 토큰을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.` });
+				this.respond({ requestId, guildId, error: `웹훅 토큰을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.` });
 				return;
 			}
 			this.logger.info(`소셜 알림 웹훅 생성 완료 (guild ${guildId}, channel ${targetChannelId}, webhook ${webhook.id})`);
