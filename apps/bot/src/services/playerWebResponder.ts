@@ -431,8 +431,11 @@ export class PlayerWebResponder {
 
 		const player = container.audio.getPlayer(guild.id);
 		if (player?.voiceChannelId && player.voiceChannelId !== voiceChannelId) {
+			// 웹에서는 <#id> 멘션이 렌더되지 않으므로 채널 이름으로 풀어서 보내요.
+			const playingChannelName = guild.channels.cache.get(player.voiceChannelId)?.name;
+			const where = playingChannelName ? `다른 음성 채널(${playingChannelName})` : '다른 음성 채널';
 			return {
-				error: `다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
+				error: `${where}에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
 			};
 		}
 
