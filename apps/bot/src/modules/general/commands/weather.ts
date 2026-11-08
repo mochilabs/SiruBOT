@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, createContainer } from '@sirubot/utils';
-import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchWeather, GatewayDomainError } from '../../../services/dataApiClient.ts';
+import { ApplicationIntegrationType, AttachmentBuilder, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { fetchWeather, GatewayDomainError, renderWeatherCard, type WeatherCardRequest } from '../../../services/dataApiClient.ts';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
 
 /** 채널별 최근 조회 위치 — 자동완성 후보 상한 (길드 공용 기록이에요) */
@@ -92,6 +92,55 @@ function buildContainer(result: WeatherResult) {
 	const container = createContainer();
 	container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
 	return container;
+}
+
+/** 이미지 카드에 그릴 필드만 추려요 — data-api weatherCardSchema 입력 모양이에요. */
+function toCardRequest(result: WeatherResult): WeatherCardRequest {
+	return {
+		scope: result.scope,
+		locationLabel: [result.localityName, result.country].filter(Boolean).join(', ') || result.query,
+		observedAt: result.observedAt,
+		weatherCode: result.weatherCode,
+		weatherText: result.weatherTextKo,
+		isDay: result.isDay,
+		temperatureC: result.temperatureC,
+		feelsLikeC: result.feelsLikeC,
+		humidityPercent: result.humidityPercent,
+		windSpeedKmh: result.windSpeedKmh,
+		cloudCoverPercent: result.cloudCoverPercent,
+		precipitationMm: result.precipitationMm,
+		airQuality: result.airQuality,
+		daily: result.daily.map((day) => ({
+			date: day.date,
+			weatherCode: day.weatherCode,
+			weatherText: day.weatherTextKo,
+			tempMin: day.tempMin,
+			tempMax: day.tempMax,
+			precipitationProbabilityMaxPct: day.precipitationProbabilityMaxPct,
+			precipitationSumMm: day.precipitationSumMm,
+			windSpeedMaxKmh: day.windSpeedMaxKmh
+		}))
+	};
+}
+
+/** 이미지 대체 텍스트(스크린 리더용) — 텍스트 카드의 핵심 줄을 그대로 써요. */
+function buildAltText(result: WeatherResult): string {
+	const lines = result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result);
+	return lines.join('\n').slice(0, 1000);
+}
+
+/** 이미지 카드 — 제목 한 줄은 텍스트로 두고(검색·복사용), 본문은 이미지로 보여요. 렌더 실패 시 null. */
+async function buildImageReply(result: WeatherResult) {
+	const png = await renderWeatherCard(toCardRequest(result)).catch(() => null);
+	if (!png) return null;
+	const filename = `weather-${result.scope}.png`;
+	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
+	const container = createContainer();
+	container.addMediaGalleryComponents((gallery) =>
+		gallery.addItems((item) => item.setURL(`attachment://${filename}`).setDescription(buildAltText(result)))
+	);
+	container.addTextDisplayComponents((t) => t.setContent(`-# ${locationLine} · ${SCOPE_LABELS[result.scope]} · Open-Meteo 기준`));
+	return { files: [new AttachmentBuilder(png, { name: filename })], container };
 }
 
 @ApplyOptions<Command.Options>({
@@ -206,6 +255,12 @@ export class WeatherCommand extends Command {
 		// 성공한 조회만 자동완성 후보로 남겨요 — 오타·없는 지명이 후보에 섞이지 않게
 		rememberLocation(interaction.channelId, location);
 
+		// 이미지 카드가 기본이고, data-api가 렌더에 실패하면 기존 텍스트 카드로 폴백해요
+		const image = await buildImageReply(result);
+		if (image) {
+			await interaction.editReply({ files: image.files, components: [image.container], flags: [MessageFlags.IsComponentsV2] });
+			return;
+		}
 		await interaction.editReply({
 			components: [buildContainer(result)],
 			flags: [MessageFlags.IsComponentsV2]

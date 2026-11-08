@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderNowPlayingCard } from './nowPlayingCard.ts';
+import { contentBounds, renderNowPlayingCard } from './nowPlayingCard.ts';
 
 /** NowPlaying 카드 렌더 스모크 — 정적 카드(진행바 없음) 크기/타이틀/브랜드를 검증해요. */
 
@@ -40,47 +40,31 @@ function expectPngSize(buffer: Buffer, width: number, height: number): void {
 const luma = ([r, g, b]: number[]) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 
 describe('renderNowPlayingCard', () => {
-	it('renders a 960x400 PNG', async () => {
+	it('renders a 960x300 PNG', async () => {
 		const buffer = await renderNowPlayingCard(fullInput());
-		expectPngSize(buffer, 960, 400);
+		expectPngSize(buffer, 960, 300);
 		expect(buffer.length).toBeGreaterThan(1_000);
 	});
 
-	it('renders the title and brand on the card', async () => {
+	it('is a transparent PNG with the title and footer text drawn in light colors', async () => {
 		const buffer = await renderNowPlayingCard(fullInput());
 		const { loadImage, Canvas } = await import('skia-canvas');
 		const img = await loadImage(buffer);
-		const canvas = new Canvas(960, 400);
+		const canvas = new Canvas(960, 300);
 		const ctx = canvas.getContext('2d');
 		ctx.drawImage(img, 0, 0);
-		// 제목은 썸네일(28+320+28=376) 오른쪽, 상단 112px 기준선에 흰색으로 그려져요.
-		// 단일 픽셀은 안티앨리어싱 때문에 회색일 수 있어 40×40 영역 평균 밝기로 검증한다.
-		const titleRegion = ctx.getImageData(380, 75, 40, 40);
-		const titleLumas = Array.from({ length: titleRegion.data.length / 4 }, (_, i) =>
-			luma([titleRegion.data[i * 4]!, titleRegion.data[i * 4 + 1]!, titleRegion.data[i * 4 + 2]!])
-		);
-		const avgTitleLuma = titleLumas.reduce((a, b) => a + b, 0) / titleLumas.length;
-		expect(avgTitleLuma).toBeGreaterThan(0.25);
-		// 브랜드는 좌측 하단(baseline H-22=378)에 액센트 색으로 그려져요.
-		// 대기열 메타는 그 위 한 줄(metaY≈350)에 그려지므로 브랜드 줄만 담기는 영역으로 검증한다.
-		const brandRegion = ctx.getImageData(376, 355, 552, 35);
-		const brandPixels = Array.from({ length: brandRegion.data.length / 4 }, (_, i) =>
-			luma([brandRegion.data[i * 4]!, brandRegion.data[i * 4 + 1]!, brandRegion.data[i * 4 + 2]!])
-		);
-		expect(Math.max(...brandPixels)).toBeGreaterThan(0.25);
-	});
-
-	it('does not draw a progress bar for non-stream tracks', async () => {
-		const buffer = await renderNowPlayingCard(fullInput());
-		const { loadImage, Canvas } = await import('skia-canvas');
-		const img = await loadImage(buffer);
-		const canvas = new Canvas(960, 400);
-		const ctx = canvas.getContext('2d');
-		ctx.drawImage(img, 0, 0);
-		// 예전 진행바가 있던 영역(artCursorY+44 ≈ 184)은 이제 배경/다음 곡 텍스트만 있어야 해요.
-		// 어두운 배경과 텍스트 외에는 밝은 액센트 막대가 없어야 한다 — 밝기가 0.3 이하여야 해요.
-		const barArea = Array.from(ctx.getImageData(400, 184, 1, 1).data.slice(0, 3));
-		expect(luma(barArea as never)).toBeLessThan(0.3);
+		// 우하단 모서리(텍스트 없음)는 완전 투명이어야 해요 — 배경을 칠하지 않아요.
+		expect(ctx.getImageData(958, 120, 1, 1).data[3]).toBe(0);
+		// 제목 영역(x≥244, y 55~95)에 밝은 불투명 픽셀이 있어야 해요.
+		const title = ctx.getImageData(244, 55, 400, 40).data;
+		let bright = 0;
+		for (let i = 0; i < title.length; i += 4) if (title[i + 3]! > 200 && luma([title[i]!, title[i + 1]!, title[i + 2]!]) > 0.8) bright++;
+		expect(bright).toBeGreaterThan(50);
+		// 하단 한 줄(브랜드줄)에도 글자가 그려져 있어야 해요.
+		const footer = ctx.getImageData(244, 280, 400, 20).data;
+		let ink = 0;
+		for (let i = 0; i < footer.length; i += 4) if (footer[i + 3]! > 100) ink++;
+		expect(ink).toBeGreaterThan(30);
 	});
 
 	it('renders the stream card without a progress bar', async () => {
@@ -89,6 +73,37 @@ describe('renderNowPlayingCard', () => {
 		input.positionMs = 0;
 		input.durationMs = 0;
 		const buffer = await renderNowPlayingCard(input);
-		expectPngSize(buffer, 960, 400);
+		expectPngSize(buffer, 960, 300);
+	});
+});
+
+describe('contentBounds', () => {
+	it('trims black pillarbox bars from a thumbnail', async () => {
+		const { Canvas, loadImage } = await import('skia-canvas');
+		const canvas = new Canvas(480, 360);
+		const ctx = canvas.getContext('2d');
+		ctx.fillStyle = '#000000';
+		ctx.fillRect(0, 0, 480, 360);
+		ctx.fillStyle = '#3a7bd5';
+		ctx.fillRect(100, 0, 280, 360);
+		const bounds = await contentBounds(await loadImage(await canvas.toBuffer('png')));
+		expect(bounds.sx).toBeGreaterThanOrEqual(98);
+		expect(bounds.sx).toBeLessThanOrEqual(102);
+		expect(bounds.sw).toBeGreaterThanOrEqual(276);
+		expect(bounds.sw).toBeLessThanOrEqual(284);
+		expect(bounds.sy).toBe(0);
+		expect(bounds.sh).toBe(360);
+	});
+
+	it('keeps the whole image when it is mostly dark artwork', async () => {
+		const { Canvas, loadImage } = await import('skia-canvas');
+		const canvas = new Canvas(480, 360);
+		const ctx = canvas.getContext('2d');
+		ctx.fillStyle = '#000000';
+		ctx.fillRect(0, 0, 480, 360);
+		ctx.fillStyle = '#ffffff';
+		ctx.fillRect(230, 170, 20, 20);
+		const bounds = await contentBounds(await loadImage(await canvas.toBuffer('png')));
+		expect(bounds).toEqual({ sx: 0, sy: 0, sw: 480, sh: 360 });
 	});
 });

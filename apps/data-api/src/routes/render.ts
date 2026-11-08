@@ -12,8 +12,10 @@ import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayer
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
 import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
 import { ohaasaCardSchema } from './ohaasaCardSchema.ts';
+import { renderWeatherCard } from '../renderers/weatherCard.ts';
+import { weatherCardSchema } from './weatherCardSchema.ts';
 
-/** 이미지 렌더 라우트 — 프로필 카드(dark/ticket)·멤버 인사 카드·NowPlaying·운세 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
+/** 이미지 렌더 라우트 — 프로필 카드(dark/ticket)·멤버 인사 카드·NowPlaying·운세 카드·날씨 카드 + 인사 이미지 정규화. 렌더러 본체는 renderers/에 있어요. */
 
 /** dedup 키용 페이로드 해시 — 같은 유저의 다른 요청(preset·설정·배경 변경)이 첫 렌더를 공유하지 않게 키에 섞어 넣어요 */
 function payloadHash(payload: unknown): string {
@@ -274,6 +276,19 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const body = ohaasaCardSchema.parse(request.body);
 			const buffer = await deduped(`img:ohaasa:${body.date || 'nodate'}:${body.zodiacCode}`, () => renderOhaasaCard(body));
 			metrics.request('image-ohaasa');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// 날씨 카드 이미지
+	// 봇이 /v1/weather 결과에서 표시 필드만 골라 POST해요. 같은 위치·범위·관측 시각이면 렌더를 공유해요.
+	fastify.post('/v1/image/weather', async (request, reply) => {
+		try {
+			const body = weatherCardSchema.parse(request.body);
+			const buffer = await deduped(`img:weather:${body.scope}:${payloadHash(body)}`, () => renderWeatherCard(body));
+			metrics.request('image-weather');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
 			return sendError(reply, error);
