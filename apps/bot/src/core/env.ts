@@ -63,7 +63,6 @@ const botEnvSchema = z.object({
 	CHAT_STREAM_UPDATE_MS: optionalNumber,
 	ENABLE_THINK_TOKEN: z.string().optional(),
 	SIRU_TTS_URL: z.string().optional(),
-	SIRU_TTS_API_KEY: z.string().optional(),
 	SIRU_TTS_DEFAULT_VOICE: z.string().optional(),
 	SEARXNG_BASE_URL: z.string().optional(),
 	SEARXNG_MAX_RESULTS: optionalNumber,
