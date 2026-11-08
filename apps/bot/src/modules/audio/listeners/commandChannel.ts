@@ -5,6 +5,7 @@ import { ButtonInteraction, ChannelType, Message, MessageFlags, StringSelectMenu
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
+import { ownerOnly } from '../../../lib/ownerOnlyFilter.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
@@ -32,7 +33,7 @@ export class CommandChannelListener extends Listener {
 			this.container.logger.error(`[commandChannel] unhandled error (guild ${message.guildId}): ${error}`);
 			await message
 				.reply({
-					components: [errorView(`${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`)],
+					components: [errorView(`${emoji('error')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -54,7 +55,7 @@ export class CommandChannelListener extends Listener {
 		if (content.length > MAX_QUERY_LENGTH) {
 			await message
 				.reply({
-					components: [errorView(`${emoji('scissors')} 검색어는 ${MAX_QUERY_LENGTH}자까지만 입력할 수 있어요.`)],
+					components: [errorView(`${emoji('error')} 검색어는 ${MAX_QUERY_LENGTH}자까지만 입력할 수 있어요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -67,7 +68,7 @@ export class CommandChannelListener extends Listener {
 		if (!voiceChannelId) {
 			await message
 				.reply({
-					components: [errorView(`${emoji('bulb')} 재생하려면 음성 채널에 접속한 상태에서 입력해 주세요.`)],
+					components: [errorView(`${emoji('error')} 재생하려면 음성 채널에 접속한 상태에서 입력해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -78,7 +79,7 @@ export class CommandChannelListener extends Listener {
 		if (this.container.audio.nodeManager.nodes.filter((node) => node.connected).size === 0) {
 			await message
 				.reply({
-					components: [errorView(`${emoji('bulb')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`)],
+					components: [errorView(`${emoji('error')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`)],
 					flags: [MessageFlags.IsComponentsV2],
 					allowedMentions: { repliedUser: false }
 				})
@@ -141,7 +142,7 @@ export class CommandChannelListener extends Listener {
 				await this.resolveInputMessage(message, guildId);
 				await message
 					.reply({
-						components: [errorView(`${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
+						components: [errorView(`${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
 						flags: [MessageFlags.IsComponentsV2],
 						allowedMentions: { repliedUser: false }
 					})
@@ -209,8 +210,10 @@ export class CommandChannelListener extends Listener {
 		if (!selectMessage) return;
 
 		const collector = selectMessage.createMessageComponentCollector({
-			filter: (i) =>
-				i.user.id === message.author.id && (i.customId === searchView.searchSelectCustomId || i.customId === searchView.searchCancelCustomId),
+			filter: ownerOnly(
+				message.author.id,
+				(i) => i.customId === searchView.searchSelectCustomId || i.customId === searchView.searchCancelCustomId
+			),
 			time: SELECT_TIMEOUT_MS
 		});
 

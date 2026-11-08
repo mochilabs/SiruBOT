@@ -399,7 +399,7 @@ export class MixerCommand extends Command {
 			} catch {
 				throw new UserError({
 					identifier: 'mixer_normalization_failed',
-					message: `${emoji('tools')} 볼륨 정규화 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.`,
+					message: `${emoji('error')} 볼륨 정규화 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.`,
 					context: { ephemeral: true }
 				});
 			}

@@ -12,6 +12,7 @@ import {
 } from 'discord.js';
 import { Player, SearchPlatform, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
 import * as view from '../view/search.ts';
+import { ownerOnly } from '../../../lib/ownerOnlyFilter.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'search';
@@ -97,7 +98,7 @@ async function runSelection(
 	selectMessage: Message
 ): Promise<void> {
 	const collector = selectMessage.createMessageComponentCollector({
-		filter: (i) => i.user.id === interaction.user.id && (i.customId === view.searchSelectCustomId || i.customId === view.searchCancelCustomId),
+		filter: ownerOnly(interaction.user.id, (i) => i.customId === view.searchSelectCustomId || i.customId === view.searchCancelCustomId),
 		time: SELECT_TIMEOUT_MS
 	});
 
@@ -205,7 +206,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const tracks = searchRes.tracks.slice(0, RESULT_LIMIT);
 	if (tracks.length === 0) {
 		await interaction.editReply({
-			components: [errorView(`${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
+			components: [errorView(`${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 		return;

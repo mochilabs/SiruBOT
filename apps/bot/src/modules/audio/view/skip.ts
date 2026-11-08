@@ -8,11 +8,13 @@ type voteSkipProps = {
 	voteUsers: Set<string>;
 	trackToSkip: Track;
 	nextTrack?: Track;
+	/** 투표 메시지마다 고유한 customId — 같은 채널의 투표가 서로 섞이지 않게 해요. */
+	customId: string;
 };
 
 const formatOptions = { showLength: true, withMarkdownURL: true, timeType: 'seconds', cleanTitle: true } as const;
 
-export function voteSkip({ requiredVotes, voteUsers, trackToSkip, nextTrack }: voteSkipProps) {
+export function voteSkip({ requiredVotes, voteUsers, trackToSkip, nextTrack, customId }: voteSkipProps) {
 	const containerComponent = createContainer();
 	const totalVotes = voteUsers.size;
 	addTextWithThumbnail(
@@ -22,7 +24,7 @@ export function voteSkip({ requiredVotes, voteUsers, trackToSkip, nextTrack }: v
 	);
 
 	const voteSkipButton = new ButtonBuilder()
-		.setCustomId('skip_vote')
+		.setCustomId(customId)
 		.setEmoji(emoji('arrow_forward'))
 		.setStyle(ButtonStyle.Secondary)
 		.setLabel(`건너뛰기 (${totalVotes}/${requiredVotes})`);

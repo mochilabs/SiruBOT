@@ -1,4 +1,4 @@
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -12,21 +12,20 @@ import {
 type FilterPreset = {
 	name: string;
 	label: string;
-	unicode: string;
-	appEmojiName: string;
+	appEmojiName: AppEmojiFallbackKey;
 	description: string;
 };
 
 // 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 emoji()로 평가한다.
 export const FILTER_PRESETS: FilterPreset[] = [
-	{ name: 'bassboost', label: '베이스부스트', unicode: '🔊', appEmojiName: 'volume_up', description: '저음을 강하게 부스트해요.' },
-	{ name: 'nightcore', label: '나이트코어', unicode: '🌙', appEmojiName: 'sleep', description: '고속 + 고음으로 재생해요.' },
-	{ name: 'vaporwave', label: '베이퍼웨이브', unicode: '🌊', appEmojiName: 'wave', description: '저속 + 저음으로 재생해요.' },
-	{ name: '8d', label: '8D', unicode: '🎧', appEmojiName: 'headphone', description: '입체감 있는 사운드로 재생해요.' },
-	{ name: 'karaoke', label: '노래방', unicode: '🎤', appEmojiName: 'mic', description: '보컬을 제거하고 재생해요.' }
+	{ name: 'bassboost', label: '베이스부스트', appEmojiName: 'volume_up', description: '저음을 강하게 부스트해요.' },
+	{ name: 'nightcore', label: '나이트코어', appEmojiName: 'sleep', description: '고속 + 고음으로 재생해요.' },
+	{ name: 'vaporwave', label: '베이퍼웨이브', appEmojiName: 'wave', description: '저속 + 저음으로 재생해요.' },
+	{ name: '8d', label: '8D', appEmojiName: 'headphone', description: '입체감 있는 사운드로 재생해요.' },
+	{ name: 'karaoke', label: '노래방', appEmojiName: 'mic', description: '보컬을 제거하고 재생해요.' }
 ];
 
-export const filterPresetEmoji = (preset: FilterPreset) => emoji(preset.appEmojiName, preset.unicode);
+export const filterPresetEmoji = (preset: FilterPreset) => emoji(preset.appEmojiName);
 
 // 프리셋 이름→표시 라벨 매핑: 카탈로그에 없는 이름은 원문을 유지한다.
 const presetLabel = (name: string): string => {

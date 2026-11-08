@@ -36,7 +36,10 @@ export default class RolePanelButtonHandler extends InteractionHandler {
 		const live =
 			button !== null && button.panel.guildId === guild.id && button.panel.messageId === interaction.message.id && button.roleId === roleId;
 		if (!button || !live) {
-			await interaction.reply({ ...ticketMessageView(`${emoji('error')} 이 버튼은 더 이상 사용할 수 없어요.`), flags: MessageFlags.Ephemeral });
+			await interaction.reply({
+				...ticketMessageView(`${emoji('error')} 이 버튼은 더 이상 사용할 수 없어요.`),
+				flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2
+			});
 			return;
 		}
 
@@ -44,7 +47,7 @@ export default class RolePanelButtonHandler extends InteractionHandler {
 
 		const result = await service.toggleRole(guild, interaction.member, button.panelId, button.roleId);
 		if (!result.ok) {
-			await interaction.editReply(ticketMessageView(result.reason));
+			await interaction.editReply(ticketMessageView(`${emoji('error')} ${result.reason}`));
 			return;
 		}
 

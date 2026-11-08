@@ -8,6 +8,7 @@ export const TICKET_OPEN_CUSTOM_ID = 'ticket:open';
 export const TICKET_CLOSE_CUSTOM_ID = 'ticket:close';
 export const TICKET_CLAIM_CUSTOM_ID = 'ticket:claim';
 export const TICKET_CONFIRM_CLOSE_CUSTOM_ID = 'ticket:confirm_close';
+export const TICKET_CANCEL_CLOSE_CUSTOM_ID = 'ticket:cancel_close';
 
 export const ticketStatusSchema = z.enum(['open', 'closed']);
 export type TicketStatus = z.infer<typeof ticketStatusSchema>;

@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { WARN_COLOR, emoji } from '@sirubot/utils';
-import { ChannelType, ContainerBuilder, GuildMember, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
+import { ChannelType, ContainerBuilder, GuildMember, MessageFlags, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
 
 interface RoomInfo {
 	guildId: string;
@@ -227,7 +227,8 @@ export class TempVoiceService {
 								.addTextDisplayComponents((textDisplay) =>
 									textDisplay.setContent(`${emoji('error')} 임시 음성 채널을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`)
 								)
-						]
+						],
+						flags: [MessageFlags.IsComponentsV2]
 					});
 				}
 			} catch (notifyError) {
