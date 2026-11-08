@@ -8,6 +8,9 @@ export type WebsocketOptions = {
 	authKey?: string;
 };
 
+/** 서버 연결(open)까지 기다리는 최대 시간 */
+const CONNECT_TIMEOUT_MS = 10_000;
+
 export type WsEventHandler = (message: WsMessage) => void;
 
 export class ShardWebSocket {
@@ -36,7 +39,8 @@ export class ShardWebSocket {
 			if (this.ws) {
 				try {
 					this.ws.removeAllListeners();
-					this.ws.close();
+					this.ws.on('error', () => {}); // 후행 에러가 unhandled 'error'로 터지지 않게 흡수해요
+					this.ws.terminate();
 				} catch {
 					// ignore close errors on old socket
 				}
@@ -48,14 +52,25 @@ export class ShardWebSocket {
 				if (this.authKey) {
 					options.headers = { Authorization: this.authKey };
 				}
-				this.ws = new WebSocket(this.serverURL, options);
+				const socket = new WebSocket(this.serverURL, options);
+				this.ws = socket;
 
-				this.ws.on('open', () => {
+				// open 이전에 close만 오거나(error 없이) 응답이 없으면 Promise가 영원히 pending이라 상한을 둬요.
+				let opened = false;
+				const connectTimeout = setTimeout(() => {
+					if (opened) return;
+					reject(new Error(`WebSocket connect timeout (${CONNECT_TIMEOUT_MS / 1000}s)`));
+					socket.terminate();
+				}, CONNECT_TIMEOUT_MS);
+
+				socket.on('open', () => {
+					opened = true;
+					clearTimeout(connectTimeout);
 					this.logger.info(`Connected to shard manager: ${this.serverURL}`);
 					resolve();
 				});
 
-				this.ws.on('message', (data) => {
+				socket.on('message', (data) => {
 					try {
 						const parsed: unknown = JSON.parse(data.toString());
 						// manager와 동일하게 zod 스키마로 검증: 깨진/악의적 payload가
@@ -67,17 +82,20 @@ export class ShardWebSocket {
 					}
 				});
 
-				this.ws.on('close', (code, reason) => {
+				socket.on('close', (code, reason) => {
+					clearTimeout(connectTimeout);
 					const reasonStr = reason.toString();
 					this.logger.warn(`WebSocket closed: ${code} ${reasonStr}`);
+					if (!opened) reject(new Error(`WebSocket closed before open: ${code} ${reasonStr}`));
 					// Do NOT auto-reconnect. Let the caller handle reconnection.
-					if (this.onCloseCallback) {
+					if (opened && this.onCloseCallback) {
 						this.onCloseCallback(code, reasonStr);
 					}
 				});
 
-				this.ws.on('error', (error) => {
+				socket.on('error', (error) => {
 					this.logger.error('WebSocket error:', error);
+					clearTimeout(connectTimeout);
 					reject(error);
 				});
 			} catch (error) {
@@ -100,6 +118,11 @@ export class ShardWebSocket {
 		} else {
 			this.logger.warn('WebSocket not connected, cannot send message');
 		}
+	}
+
+	/** 응답 없는 반쯤 끊긴(half-open) 소켓을 강제로 끊어요. 이후 close 이벤트로 재연결 흐름이 이어져요. */
+	public terminate(): void {
+		this.ws?.terminate();
 	}
 
 	public on(op: string, handler: WsEventHandler): void {

@@ -75,7 +75,7 @@ export default async function routes(fastify: FastifyInstance) {
 						handleShardStats(wsId, message.payload as ShardStatsPayload);
 						break;
 					default:
-						logger.warn(`[${wsId}] Unknown op: ${(message as any).op}`);
+						logger.warn(`[${wsId}] Unknown op: ${(message as { op: string }).op}`);
 				}
 			} catch (error) {
 				logger.error(`[${wsId}] Message parse error:`, error);

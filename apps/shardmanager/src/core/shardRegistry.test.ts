@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WebSocket } from '@fastify/websocket';
-import { ShardRegistry, HEARTBEAT_TIMEOUT_MS } from './shardRegistry.ts';
+import { ShardRegistry, HEARTBEAT_TIMEOUT_MS, type ShardRegistryOptions } from './shardRegistry.ts';
 import type { DiscordNotifier } from '../utils/discordNotifier.ts';
 
 function createNotifierStub() {
@@ -18,8 +18,8 @@ describe('ShardRegistry', () => {
 	let notifier: ReturnType<typeof createNotifierStub>;
 	let registries: ShardRegistry[];
 
-	function makeRegistry(shardCount: number, shardsPerProcess = 5): ShardRegistry {
-		const registry = new ShardRegistry(shardCount, shardsPerProcess, notifier as unknown as DiscordNotifier);
+	function makeRegistry(shardCount: number, shardsPerProcess = 5, options: ShardRegistryOptions = {}): ShardRegistry {
+		const registry = new ShardRegistry(shardCount, shardsPerProcess, notifier as unknown as DiscordNotifier, options);
 		registries.push(registry);
 		return registry;
 	}
@@ -38,6 +38,19 @@ describe('ShardRegistry', () => {
 	afterEach(() => {
 		for (const registry of registries) registry.destroy();
 		vi.useRealTimers();
+	});
+
+	describe('allocation grace period', () => {
+		it('defers new allocation but still allows re-identify claims until the grace ends', () => {
+			vi.useFakeTimers();
+			const registry = makeRegistry(4, 2, { allocationGraceMs: 40_000 });
+
+			expect(registry.allocateShardIds()).toBeNull();
+			expect(registry.claimShards('ws-1', [0, 1])).toEqual([0, 1]);
+
+			vi.advanceTimersByTime(40_000);
+			expect(registry.allocateShardIds()).toEqual([2, 3]);
+		});
 	});
 
 	describe('allocateShardIds', () => {

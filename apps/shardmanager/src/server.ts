@@ -28,7 +28,7 @@ export class ShardManagerServer {
 		this.shardCount = shardCount;
 		this.shardsPerProcess = shardsPerProcess;
 		this.notifier = new DiscordNotifier(env.DISCORD_WEBHOOK_URL);
-		this.registry = new ShardRegistry(shardCount, shardsPerProcess, this.notifier);
+		this.registry = new ShardRegistry(shardCount, shardsPerProcess, this.notifier, { allocationGraceMs: env.ALLOCATION_GRACE_MS });
 	}
 
 	public async setupRoutes() {

@@ -17,6 +17,7 @@ const wsState = vi.hoisted(() => ({
 	closeCallback: null as ((code: number, reason: string) => void) | null,
 	connectCalls: 0,
 	connectFailures: 0,
+	terminated: 0,
 	sent: [] as Array<{ op: string; payload: unknown }>
 }));
 
@@ -49,6 +50,11 @@ vi.mock('./core/ws.ts', () => ({
 
 		onClose(callback: (code: number, reason: string) => void): void {
 			wsState.closeCallback = callback;
+		}
+
+		terminate(): void {
+			wsState.terminated += 1;
+			wsState.closeCallback?.(1006, 'terminated');
 		}
 
 		destroy(): void {
@@ -87,6 +93,7 @@ beforeEach(() => {
 	wsState.closeCallback = null;
 	wsState.connectCalls = 0;
 	wsState.connectFailures = 0;
+	wsState.terminated = 0;
 	wsState.sent.length = 0;
 	logCalls = [];
 	logger = {
@@ -167,5 +174,63 @@ describe('ShardClient.identify', () => {
 		emit(WsOp.IDENTIFY_ACK, { shardIds: [0], shardCount: 4 });
 		await flush();
 		expect(hasLog('info', 'Successfully re-identified with shard manager')).toBe(true);
+	});
+});
+
+describe('ShardClient 하트비트 ACK 감시', () => {
+	async function identified(): Promise<ShardClient> {
+		const instance = makeClient();
+		const promise = instance.identify();
+		await flush();
+		emit(WsOp.HELLO, HELLO);
+		emit(WsOp.IDENTIFY_ACK, { shardIds: [0], shardCount: 4 });
+		await promise;
+		return instance;
+	}
+
+	it('ACK가 오면 연결을 유지해요', async () => {
+		vi.useFakeTimers();
+		await identified();
+
+		for (let i = 0; i < 3; i += 1) {
+			await vi.advanceTimersByTimeAsync(30_000);
+			emit(WsOp.HEARTBEAT_ACK, { timestamp: 1 });
+		}
+		expect(wsState.terminated).toBe(0);
+		expect(wsState.sent.filter((message) => message.op === WsOp.HEARTBEAT)).toHaveLength(3);
+	});
+
+	it('ACK가 한 주기 동안 없으면 소켓을 끊고 재연결해요', async () => {
+		vi.useFakeTimers();
+		await identified();
+
+		await vi.advanceTimersByTimeAsync(30_000); // HEARTBEAT 전송, ACK 없음
+		expect(wsState.terminated).toBe(0);
+		await vi.advanceTimersByTimeAsync(30_000); // 다음 틱: 미수신 감지
+		expect(wsState.terminated).toBe(1);
+		expect(hasLog('warn', 'HEARTBEAT_ACK not received')).toBe(true);
+
+		await vi.advanceTimersByTimeAsync(1_000); // close 콜백이 시작한 재연결
+		await flush();
+		expect(wsState.connectCalls).toBe(2);
+	});
+});
+
+describe('ShardClient.destroy', () => {
+	it('destroy 후에는 identify 재시도 루프가 끝나요', async () => {
+		vi.useFakeTimers();
+		wsState.connectFailures = 100;
+		const instance = makeClient();
+		const promise = instance.identify();
+		const assertion = expect(promise).rejects.toThrow('destroyed');
+
+		await vi.advanceTimersByTimeAsync(5_000);
+		instance.destroy();
+		await vi.advanceTimersByTimeAsync(5_000);
+		await assertion;
+
+		const calls = wsState.connectCalls;
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(wsState.connectCalls).toBe(calls);
 	});
 });
