@@ -10,6 +10,7 @@ vi.mock("@/components/motion/reveal", () => ({
 vi.mock("@/hooks/use-count-up", () => ({ useCountUp: ({ end }: { end: number }) => ({ value: end, ref: null }) }));
 vi.mock("@/components/data/stat-card", () => ({ StatCard: () => null }));
 vi.mock("@/hooks/use-playlists", () => ({ formatTotalDuration: () => "0분" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
 
 const props: ProfileViewProps = {
   user: { id: "fixture", name: "검증용 프로필", image: null },
@@ -31,6 +32,19 @@ describe("profile copy", () => {
     const html = renderToStaticMarkup(<ProfileView {...props} />);
     expect(html).toContain("오늘 미출석 · /출석");
     expect(html).not.toContain("`/출석`");
+  });
+
+  it("shows the saved birthday with an edit button instead of a bot command hint", () => {
+    const html = renderToStaticMarkup(<ProfileView {...props} />);
+    expect(html).toContain("10월 14일 · 천칭자리");
+    expect(html).toContain("수정");
+    expect(html).not.toContain("/프로필 생일 등록");
+  });
+
+  it("offers registration when no birthday is saved", () => {
+    const html = renderToStaticMarkup(<ProfileView {...props} birthday={{ month: null, day: null, zodiac: null }} fortune={null} />);
+    expect(html).toContain("등록");
+    expect(html).toContain("생일을 등록하면 오늘의 운세가 표시돼요.");
   });
 
   it("also formats the documented hyphenated date without leading zeroes", () => {

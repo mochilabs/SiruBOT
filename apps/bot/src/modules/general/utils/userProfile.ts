@@ -1,14 +1,8 @@
 import { container } from '@sapphire/framework';
+import { isValidBirthday } from '@sirubot/utils/birthday';
 
-/** 월별 최대 일수 — 2/29(윤년 생일) 허용 */
-const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-/** 생일(월/일) 유효성. 연도는 저장하지 않아요. */
-export function isValidBirthday(month: number, day: number): boolean {
-	if (!Number.isInteger(month) || !Number.isInteger(day)) return false;
-	if (month < 1 || month > 12) return false;
-	return day >= 1 && day <= DAYS_IN_MONTH[month - 1]!;
-}
+// 생일 유효성 규칙은 대시보드와 함께 쓰려고 @sirubot/utils/birthday에 있어요
+export { isValidBirthday };
 
 /** 프로필 행 조회. 없으면 null (행은 생일 저장 시 만들어져요) */
 export function getUserProfile(userId: string) {

@@ -92,6 +92,11 @@
             "import": "./dist/delivery.js",
             "require": "./dist/delivery.cjs"
         },
+        "./birthday": {
+            "types": "./dist/birthday.d.ts",
+            "import": "./dist/birthday.js",
+            "require": "./dist/birthday.cjs"
+        },
         "./client": {
             "types": "./dist/client.d.ts",
             "import": "./dist/client.js",
