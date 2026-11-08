@@ -22,6 +22,7 @@ import type {
 } from "@/lib/profile-stats";
 
 import { BirthdayCard } from "./birthday-card";
+import { TtsVoiceCard } from "./tts-voice-card";
 
 export interface ProfileViewProps {
   user: { id: string; name: string; image: string | null };
@@ -64,6 +65,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
         {/* 생일 카드 */}
         <RevealItem className="h-full">
           <BirthdayCard birthday={birthday} />
+        </RevealItem>
+
+        {/* 서버별 TTS 음성 */}
+        <RevealItem className="md:col-span-2">
+          <TtsVoiceCard />
         </RevealItem>
 
         {/* 출석 카드 — 슬림하게 */}
