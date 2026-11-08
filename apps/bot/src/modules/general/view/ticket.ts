@@ -13,6 +13,7 @@ import {
 	TICKET_OPEN_CUSTOM_ID,
 	TICKET_CLOSE_CUSTOM_ID,
 	TICKET_CLAIM_CUSTOM_ID,
+	TICKET_CANCEL_CLOSE_CUSTOM_ID,
 	TICKET_CONFIRM_CLOSE_CUSTOM_ID,
 	type TicketConfig
 } from '@sirubot/utils/ticket';
@@ -24,14 +25,14 @@ import type { Ticket } from '@sirubot/prisma';
 export function ticketPanelView(config: TicketConfig): { flags: number; components: [ContainerBuilder, ActionRowBuilder<ButtonBuilder>] } {
 	const container = new ContainerBuilder()
 		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('ticket', '🎫')} ${config.panelTitle}`))
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('ticket')} ${config.panelTitle}`))
 		.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small))
 		.addTextDisplayComponents(new TextDisplayBuilder().setContent(config.panelDescription));
 
 	const openButton = new ButtonBuilder()
 		.setCustomId(TICKET_OPEN_CUSTOM_ID)
 		.setLabel('티켓 생성하기')
-		.setEmoji(emoji('inbox_tray', '📩'))
+		.setEmoji(emoji('inbox_tray'))
 		.setStyle(ButtonStyle.Primary);
 
 	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(openButton);
@@ -50,7 +51,7 @@ export function ticketWelcomeView(ticket: Ticket): { flags: number; components: 
 	const lines = [
 		`<@${ticket.ownerId}> 님의 티켓이 생성되었어요.`,
 		'',
-		`### ${emoji('ticket', '🎫')} 티켓 #${String(ticket.ticketNumber).padStart(4, '0')}`,
+		`### ${emoji('ticket')} 티켓 #${String(ticket.ticketNumber).padStart(4, '0')}`,
 		`- **신청자**: <@${ticket.ownerId}>`,
 		`- **담당자**: ${ticket.claimedById ? `<@${ticket.claimedById}>` : '미배정'}`,
 		'',
@@ -67,7 +68,7 @@ export function ticketWelcomeView(ticket: Ticket): { flags: number; components: 
 	const claimButton = new ButtonBuilder()
 		.setCustomId(TICKET_CLAIM_CUSTOM_ID)
 		.setLabel(ticket.claimedById ? '담당 취소' : '담당하기')
-		.setEmoji(emoji('user', '🙋'))
+		.setEmoji(emoji('user'))
 		.setStyle(ButtonStyle.Secondary);
 
 	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton, claimButton);
@@ -94,7 +95,8 @@ export function ticketCloseConfirmView(): { flags: number; components: [Containe
 		.setLabel('확인하고 닫기')
 		.setEmoji(emoji('lock'))
 		.setStyle(ButtonStyle.Danger);
-	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton);
+	const cancelButton = new ButtonBuilder().setCustomId(TICKET_CANCEL_CLOSE_CUSTOM_ID).setLabel('취소').setStyle(ButtonStyle.Secondary);
+	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton);
 
 	return {
 		flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,

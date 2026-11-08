@@ -1,6 +1,12 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { ButtonInteraction, MessageFlags } from 'discord.js';
-import { TICKET_OPEN_CUSTOM_ID, TICKET_CLOSE_CUSTOM_ID, TICKET_CLAIM_CUSTOM_ID, TICKET_CONFIRM_CLOSE_CUSTOM_ID } from '@sirubot/utils/ticket';
+import {
+	TICKET_OPEN_CUSTOM_ID,
+	TICKET_CLOSE_CUSTOM_ID,
+	TICKET_CLAIM_CUSTOM_ID,
+	TICKET_CONFIRM_CLOSE_CUSTOM_ID,
+	TICKET_CANCEL_CLOSE_CUSTOM_ID
+} from '@sirubot/utils/ticket';
 import { emoji } from '@sirubot/utils';
 import { ticketCloseConfirmView, ticketMessageView } from '../view/ticket.ts';
 
@@ -19,7 +25,8 @@ export default class TicketButtonHandler extends InteractionHandler {
 			customId === TICKET_OPEN_CUSTOM_ID ||
 			customId === TICKET_CLOSE_CUSTOM_ID ||
 			customId === TICKET_CLAIM_CUSTOM_ID ||
-			customId === TICKET_CONFIRM_CLOSE_CUSTOM_ID
+			customId === TICKET_CONFIRM_CLOSE_CUSTOM_ID ||
+			customId === TICKET_CANCEL_CLOSE_CUSTOM_ID
 		) {
 			return this.some({ action: customId });
 		}
@@ -50,8 +57,14 @@ export default class TicketButtonHandler extends InteractionHandler {
 				return;
 			}
 
+			case TICKET_CANCEL_CLOSE_CUSTOM_ID: {
+				await interaction.update(ticketMessageView('티켓 닫기를 취소했어요.'));
+				return;
+			}
+
 			case TICKET_CONFIRM_CLOSE_CUSTOM_ID: {
-				await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+				// 확인 프롬프트 자체를 결과로 교체해 버튼이 남아 재클릭되지 않게 해요.
+				await interaction.deferUpdate();
 				const result = await ticketService.closeTicket(guild, interaction.channelId, member);
 				if (!result.ok) {
 					await interaction.editReply(ticketMessageView(`${emoji('error')} ${result.reason}`));

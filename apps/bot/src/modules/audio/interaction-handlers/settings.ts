@@ -43,7 +43,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		if (!checkManageGuild(interaction.member)) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('tools')} 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.`)]
+				components: [errorView(`${emoji('error')} 서버 설정은 서버 관리 권한이 있는 멤버만 변경할 수 있어요.`)]
 			});
 			return;
 		}

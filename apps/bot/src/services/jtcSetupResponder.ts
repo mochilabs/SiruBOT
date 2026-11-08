@@ -102,7 +102,7 @@ export class JtcSetupResponder {
 			this.respond({
 				requestId: request.data.requestId,
 				guildId,
-				error: `${emoji('bulb')} 이 서버의 이전 마커 채널 설정 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `${emoji('warning')} 이 서버의 이전 마커 채널 설정 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}

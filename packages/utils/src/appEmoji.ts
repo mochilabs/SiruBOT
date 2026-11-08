@@ -78,7 +78,7 @@ const APP_EMOJI_FALLBACKS = {
 	key: '🔑',
 	link: '🔗',
 	lock: '🔒',
-	magnet: '🔎',
+	mag: '🔍',
 	megaphone: '📢',
 	mic: '🎤',
 	money: '💰',
@@ -103,6 +103,8 @@ const APP_EMOJI_FALLBACKS = {
 	shuffle: '🔀',
 	stop: '⏹️',
 	sleep: '😴',
+	melt: '🫠', // PNG 없음 — 유니코드 폴백 전용
+	sad: '😭', // PNG 없음 — 유니코드 폴백 전용
 	smile: '😀',
 	sparkle: '✨',
 	spectrum: '📊',
@@ -112,6 +114,7 @@ const APP_EMOJI_FALLBACKS = {
 	success: '✅',
 	sun_cloud: '⛅',
 	thermo: '🌡️',
+	ticket: '🎫', // PNG 없음 — 유니코드 폴백 전용
 	tools: '🛠️',
 	trash: '🗑️',
 	trophy: '🏆',

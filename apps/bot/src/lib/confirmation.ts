@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { ComponentType, MessageFlags, type ChatInputCommandInteraction } from 'discord.js';
 import { confirmationView } from '../modules/general/view/confirmation.ts';
+import { ownerOnly } from './ownerOnlyFilter.ts';
 import { notice } from '../modules/general/view/notice.ts';
 
 export async function confirmAction(interaction: ChatInputCommandInteraction, title: string, description: string): Promise<boolean> {
@@ -15,7 +16,7 @@ export async function confirmAction(interaction: ChatInputCommandInteraction, ti
 		selection = await message.awaitMessageComponent({
 			componentType: ComponentType.Button,
 			time: 60_000,
-			filter: (button) => button.user.id === interaction.user.id && button.customId.startsWith(`${id}:`)
+			filter: ownerOnly(interaction.user.id, (button) => button.customId.startsWith(`${id}:`))
 		});
 	} catch {
 		await interaction

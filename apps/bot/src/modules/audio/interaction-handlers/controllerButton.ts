@@ -1,7 +1,7 @@
 import { resolveQueueSelection } from '../utils/queueSelection.ts';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { MessageFlags, PermissionFlagsBits, type ButtonInteraction, type Message } from 'discord.js';
+import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
 import { queueEmpty, queueList, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { RepeatMode } from 'lavalink-client';
 import { stop } from '../view/stop.ts';
@@ -9,8 +9,8 @@ import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { buildControllerCardPayload } from '../lavalink/player/controllerPayload.ts';
 import { currentChapterIndex } from '../lavalink/player/chapters.ts';
-import { checkDJOrAlone } from '../utils/permissionCheck.ts';
 import { errorView } from '../../../lib/errorView.ts';
+import { GUARD_MESSAGES, guardPlayerAccess } from '../utils/interactionGuards.ts';
 
 export default class ControllerButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -36,41 +36,15 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	private static readonly DJ_QUEUE_SUBS = new Set(['remove', 'jumpTo']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
-		const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
-		const botVoiceChannelId = interaction.guild.members.me?.voice.channelId ?? player?.voiceChannelId ?? null;
-		const memberVoiceChannelId = interaction.member.voice.channelId;
-
-		// 관리자는 음성 채널에 없어도 컨트롤러 사용 가능. 일반 유저는 봇과 같은 음성 채널에 있어야 함
-		if (!isAdmin && (!memberVoiceChannelId || (botVoiceChannelId !== null && memberVoiceChannelId !== botVoiceChannelId))) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('volume_muted')} 봇과 같은 음성 채널에 있어야 사용할 수 있어요.`)]
-			});
-			return;
-		}
-		// DJ/Alone 권한 체크 (재생 제어 버튼만)
 		const needsDJ =
 			ControllerButtonHandler.DJ_COMMANDS.has(command) || (command === 'queue' && ControllerButtonHandler.DJ_QUEUE_SUBS.has(subcommand ?? ''));
-
-		if (needsDJ) {
-			const allowed = await checkDJOrAlone(interaction.guildId, interaction.member);
-			if (!allowed) {
-				await interaction.reply({
-					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('volume_muted')} 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.`)]
-				});
-				return;
-			}
-		}
-
-		if (!player) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 현재 재생 중인 플레이어가 없어요.`)]
-			});
-			return;
-		}
+		const guarded = await guardPlayerAccess(
+			interaction,
+			this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined,
+			needsDJ ? GUARD_MESSAGES.djOnlyControl : undefined
+		);
+		if (!guarded) return;
+		const player = guarded;
 
 		switch (command) {
 			case 'pause':
@@ -104,7 +78,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('tools')} 알 수 없는 버튼 명령어예요. (${command})`)]
+					components: [errorView(`${emoji('error')} 알 수 없는 버튼 명령어예요. (${command})`)]
 				});
 				break;
 		}
@@ -185,7 +159,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (chapters.length === 0) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('cd')} 이 곡에는 챕터가 없어요.`)]
+				components: [errorView(`${emoji('info')} 이 곡에는 챕터가 없어요.`)]
 			});
 			return;
 		}
@@ -209,7 +183,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		if (target === null) {
 			await interaction.reply({
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('cd')} 건너뛸 챕터가 더 없어요.`)]
+				components: [errorView(`${emoji('info')} 건너뛸 챕터가 더 없어요.`)]
 			});
 			return;
 		}
@@ -227,7 +201,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			await interaction
 				.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('volume_muted')} 볼륨은 **0**부터 **150**까지 설정할 수 있어요.`)]
+					components: [errorView(`${emoji('error')} 볼륨은 **0**부터 **150**까지 설정할 수 있어요.`)]
 				})
 				.catch(() => null);
 			return;

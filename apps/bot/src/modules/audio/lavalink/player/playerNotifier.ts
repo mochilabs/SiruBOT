@@ -58,7 +58,7 @@ export class PlayerNotifier {
 		if (interaction) {
 			throw new UserError({
 				identifier: 'nowplaying_state_changed',
-				message: `${emoji('music_note')} 재생 상태가 바뀌었어요. \`/현재곡\`으로 다시 확인해 주세요.`,
+				message: `${emoji('info')} 재생 상태가 바뀌었어요. \`/현재곡\`으로 다시 확인해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}

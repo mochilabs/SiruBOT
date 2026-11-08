@@ -219,7 +219,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId: request.guildId,
 				kind: 'search',
-				error: `${emoji('bulb')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`
+				error: `${emoji('error')} 현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -230,7 +230,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId: request.guildId,
 				kind: 'search',
-				error: `${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`
+				error: `${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -250,7 +250,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId,
 				kind: 'play',
-				error: `${emoji('bulb')} 이 서버의 이전 재생 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `${emoji('warning')} 이 서버의 이전 재생 요청을 아직 처리하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -262,7 +262,7 @@ export class PlayerWebResponder {
 				requestId: request.requestId,
 				guildId,
 				kind: 'play',
-				error: `${emoji('bulb')} 너무 빠르게 연속 요청하고 있어요. 잠시 후 다시 시도해 주세요.`
+				error: `${emoji('warning')} 너무 빠르게 연속 요청하고 있어요. 잠시 후 다시 시도해 주세요.`
 			});
 			return;
 		}
@@ -379,7 +379,12 @@ export class PlayerWebResponder {
 				return;
 			}
 			if (request.action === 'stop' && !voiceChannelId) {
-				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: `${emoji('bulb')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}` });
+				this.respond({
+					requestId: request.requestId,
+					guildId,
+					kind: 'control',
+					error: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`
+				});
 				return;
 			}
 
@@ -423,12 +428,12 @@ export class PlayerWebResponder {
 		}
 
 		const voiceChannelId = member.voice?.channelId ?? null;
-		if (!voiceChannelId) return { error: `${emoji('bulb')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
+		if (!voiceChannelId) return { error: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
 
 		const player = container.audio.getPlayer(guild.id);
 		if (player?.voiceChannelId && player.voiceChannelId !== voiceChannelId) {
 			return {
-				error: `${emoji('headphone')} 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
+				error: `${emoji('error')} 다른 음성 채널(<#${player.voiceChannelId}>)에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
 			};
 		}
 

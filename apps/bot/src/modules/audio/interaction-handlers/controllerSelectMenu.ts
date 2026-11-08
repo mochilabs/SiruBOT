@@ -1,11 +1,9 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
-import { MessageFlags, PermissionFlagsBits, type StringSelectMenuInteraction } from 'discord.js';
+import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { queueList, queueSelectCustomId, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { errorView } from '../../../lib/errorView.ts';
-import { checkDJOrAlone } from '../utils/permissionCheck.ts';
+import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { resolveQueueSelection } from '../utils/queueSelection.ts';
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {
@@ -25,42 +23,16 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 	}
 
 	public async run(interaction: StringSelectMenuInteraction<'cached'>, { selectedValue }: { selectedValue: string }) {
-		const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
-		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
-		const botVoiceChannelId = interaction.guild.members.me?.voice.channelId ?? player?.voiceChannelId ?? null;
-		const memberVoiceChannelId = interaction.member.voice.channelId;
-
-		// 관리자는 음성 채널에 없어도 사용 가능. 일반 유저는 봇과 같은 음성 채널에 있어야 함
-		if (!isAdmin && (!memberVoiceChannelId || (botVoiceChannelId !== null && memberVoiceChannelId !== botVoiceChannelId))) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('volume_muted')} 봇과 같은 음성 채널에 있어야 사용할 수 있어요.`)]
-			});
-			return;
-		}
-		// DJ/Alone 권한 체크
-		if (!(await checkDJOrAlone(interaction.guildId, interaction.member))) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('volume_muted')} 이 버튼은 DJ 역할이 있거나 채널에 혼자 있을 때만 사용 가능해요.`)]
-			});
-			return;
-		}
-
-		if (!player) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 현재 재생 중인 플레이어가 없어요.`)]
-			});
-			return;
-		}
+		const player = await guardPlayerAccess(
+			interaction,
+			this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined,
+			GUARD_MESSAGES.djOnlyControl
+		);
+		if (!player) return;
 
 		const trackIndex = resolveQueueSelection(player, selectedValue);
 		if (isNaN(trackIndex) || trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 해당 번호의 곡이 대기열에 없어요.`)]
-			});
+			await replyGuardError(interaction, '해당 번호의 곡이 대기열에 없어요.');
 			return;
 		}
 

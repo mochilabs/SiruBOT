@@ -18,9 +18,7 @@ export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]
 	// createContainer()가 DEFAULT_COLOR로 accent color를 설정한다.
 	const container = createContainer();
 
-	container.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${emoji('magnet')} **${query}** 검색 결과예요. 재생할 곡을 선택해 주세요.`)
-	);
+	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('mag')} **${query}** 검색 결과예요. 재생할 곡을 선택해 주세요.`));
 	addSeparator(container);
 
 	// 곡 목록 — 제목 60자, 아티스트 40자에서 절단

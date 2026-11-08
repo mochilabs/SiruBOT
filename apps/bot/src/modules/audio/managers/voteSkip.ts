@@ -36,10 +36,12 @@ export function requiredSkipVotes(members: Collection<string, GuildMember>): num
 
 export class VoteSkip {
 	private options: VoteSkipOptions;
+	private readonly customId: string;
 	private voteState: VoteState;
 
 	constructor(options: VoteSkipOptions) {
 		this.options = options;
+		this.customId = `skip_vote:${options.interaction.id}`;
 		this.voteState = {
 			currentTrackId: options.currentTrack.info.identifier,
 			voteUsers: new Set<string>([options.interaction.user.id]),
@@ -56,7 +58,7 @@ export class VoteSkip {
 		if (!this.options.interaction.channel) return;
 
 		const collector = this.options.interaction.channel.createMessageComponentCollector({
-			filter: (i) => i.customId === 'skip_vote' && this.options.voiceChannelMembers.has(i.user.id),
+			filter: (i) => i.customId === this.customId,
 			componentType: ComponentType.Button,
 			time: 30_000
 		});
@@ -71,15 +73,14 @@ export class VoteSkip {
 			requiredVotes: this.voteState.requiredVotes,
 			voteUsers: this.voteState.voteUsers,
 			trackToSkip: this.options.currentTrack,
-			nextTrack: this.options.nextTrack
+			nextTrack: this.options.nextTrack,
+			customId: this.customId
 		});
 	}
 
 	private async handleVoteButton(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
-		if (!this.options.player.connected) return;
-
-		if (this.hasTrackChanged()) {
-			await this.updateToAlreadySkipped(collector);
+		if (!this.options.player.connected || this.hasTrackChanged()) {
+			await this.updateToAlreadySkipped(buttonInteraction, collector);
 			return;
 		}
 
@@ -116,8 +117,9 @@ export class VoteSkip {
 		return null;
 	}
 
-	private async updateToAlreadySkipped(collector: InteractionCollector<ButtonInteraction>): Promise<void> {
-		await this.options.interaction.editReply({
+	private async updateToAlreadySkipped(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
+		// 클릭한 인터랙션을 직접 갱신해야 "상호작용 실패"가 뜨지 않아요.
+		await buttonInteraction.update({
 			components: [view.alreadySkipped()],
 			flags: [MessageFlags.IsComponentsV2]
 		});
