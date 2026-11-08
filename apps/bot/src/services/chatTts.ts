@@ -247,7 +247,7 @@ export class ChatTtsService {
 			await this.dispatchOverlay(player, clip, channel);
 			return;
 		}
-		await this.dispatchSolo(player, { url: clip.url, text, channel });
+		await this.dispatchIdle(player, clip, text, channel);
 	}
 
 	/**
@@ -264,7 +264,7 @@ export class ChatTtsService {
 			await this.dispatchOverlay(player, clip, preset.channel, true);
 			return 'overlay';
 		}
-		await this.dispatchSolo(player, { url: clip.url, text, channel: preset.channel }, true);
+		await this.dispatchIdle(player, clip, text, preset.channel, true);
 		return 'solo';
 	}
 
@@ -299,6 +299,20 @@ export class ChatTtsService {
 			container.logger.warn(`[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
 			if (reportFailure) throw new TtsError('playback_failed', '음성을 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
+	}
+
+	/**
+	 * 메인이 빈 상태 — mixer 0.5+는 무음 캐리어로 공지를 흘려 스테레오 위치까지 지킨다.
+	 * 이미 단독 클립이 이어지는 중이면 기존 단독 경로로 이어 붙인다.
+	 */
+	private async dispatchIdle(player: CustomPlayer, clip: TtsClip, text: string, channel: TtsChannel, reportFailure = false): Promise<void> {
+		const state = this.getGuildState(player.guildId);
+		const soloActive = isTtsClip(player.queue.current) || state.soloQueue.length > 0;
+		if (!soloActive) {
+			await this.dispatchOverlay(player, clip, channel, reportFailure);
+			return;
+		}
+		await this.dispatchSolo(player, { url: clip.url, text, channel }, reportFailure);
 	}
 
 	/** 단독: 클립을 메인 플레이어 트랙으로 재생한다. 이미 클립이 이어지는 중이면 내부 큐에 쌓는다. */

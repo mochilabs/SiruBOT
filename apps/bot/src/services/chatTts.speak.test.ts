@@ -65,7 +65,7 @@ describe('speakNow', () => {
 		expect(mocks.announce).toHaveBeenCalledWith(player, 'https://tts.example/clip', 0.35, 'sequential', 'both');
 	});
 
-	it('음악이 없으면 단독 재생으로 큐에 넣어요', async () => {
+	it('음악이 없으면 mixer announce(무음 캐리어)로 읽어요', async () => {
 		mocks.synthesize.mockResolvedValue({
 			url: 'https://tts.example/clip',
 			expiresIn: 600,
@@ -82,7 +82,7 @@ describe('speakNow', () => {
 		(player.queue as { add: unknown }).add = mocks.queueAdd;
 
 		await expect(service.speakNow(player as never, '안녕하세요', preset)).resolves.toBe('solo');
-		expect(mocks.announce).not.toHaveBeenCalled();
-		expect(mocks.queueAdd).toHaveBeenCalled();
+		expect(mocks.announce).toHaveBeenCalledWith(player, 'https://tts.example/clip', 0.35, 'sequential', 'both');
+		expect(mocks.queueAdd).not.toHaveBeenCalled();
 	});
 });

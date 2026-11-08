@@ -325,32 +325,18 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		expect(mocks.mixerService.announce).toHaveBeenCalled();
 	});
 
-	it('plays the clip as a main-player track when no music is playing', async () => {
+	it('announces through the mixer (idle carrier) when no music is playing, keeping the stereo position', async () => {
 		const service = new ChatTtsService();
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
+		mocks.guildService.getTtsDuck.mockResolvedValue(0.35);
 
-		await service.handleMessage(makeMessage(), '노래 없이 읽기');
+		await service.handleMessage(makeMessage(), '노래 없이 읽기', { enabled: true, voice: null, channel: 'right', emotion: 'neutral' });
 		await flushAsync();
 
-		expect(player.search).toHaveBeenCalledWith(
-			{ query: expect.stringContaining('https://tts.example') },
-			{ id: TTS_CLIP_REQUESTER_ID, username: '채팅 TTS' }
-		);
-		expect(mocks.audioService.ensurePlayback).toHaveBeenCalledWith(player);
-		expect(mocks.mixerService.announce).not.toHaveBeenCalled();
-		expect(player.queue.add.mock.calls[0][0].info.title).toBe('TTS: 노래 없이 읽기');
-	});
-
-	it('titles solo clips with the first 20 chars of the message', async () => {
-		const service = new ChatTtsService();
-		const player = makePlayer();
-		mocks.audio.getPlayer.mockReturnValue(player);
-
-		await service.handleMessage(makeMessage(), '012345678901234567890123456789');
-		await flushAsync();
-
-		expect(player.queue.add.mock.calls[0][0].info.title).toBe('TTS: 01234567890123456789');
+		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential', 'right');
+		expect(player.search).not.toHaveBeenCalled();
+		expect(player.queue.add).not.toHaveBeenCalled();
 	});
 
 	it('queues solo clips while a TTS clip is active and drops the oldest beyond 5', async () => {
