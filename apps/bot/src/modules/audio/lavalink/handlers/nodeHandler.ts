@@ -12,6 +12,30 @@ import {
 	type MixerAdvancedEventPayload,
 	type MixerOverriddenEventPayload
 } from './mixerHandlers.ts';
+/** lavalink_mixer 0.5+가 메인이 빌 때 공지를 흘리려고 재생하는 내부 무음 트랙 식별자 */
+export const MIXER_IDLE_CARRIER_ID = 'lavalink-mixer:idle-carrier';
+
+interface IdleCarrierPayload {
+	type: string;
+	track?: { info?: { identifier?: string } };
+}
+
+const TRACK_EVENT_TYPES = new Set(['TrackStartEvent', 'TrackEndEvent', 'TrackStuckEvent', 'TrackExceptionEvent']);
+
+/**
+ * 무음 캐리어의 Track* 이벤트를 lavalink-client가 처리하기 전에 버린다.
+ * 그대로 두면 라이브러리가 캐리어를 queue.current로 올리고, 종료 시 queueEnd(자동 재생·대기 종료)를 태운다.
+ */
+export function guardIdleCarrierEvents(node: LavalinkNode): void {
+	// handleEvent는 라이브러리 내부(private) 진입점이라 최소 형태로만 좁혀서 감싼다
+	const target = node as unknown as { handleEvent: (payload: IdleCarrierPayload) => Promise<void> };
+	const original = target.handleEvent.bind(node);
+	target.handleEvent = (payload) => {
+		if (TRACK_EVENT_TYPES.has(payload.type) && payload.track?.info?.identifier === MIXER_IDLE_CARRIER_ID) return Promise.resolve();
+		return original(payload);
+	};
+}
+
 /**
  * lavalink 노드 이벤트 핸들러 — 세션 저장/복원 엔진(SessionRestoreEngine)과
  * 노드 수명주기 로깅·고아 플레이어 마이그레이션만 담당한다.
@@ -41,6 +65,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeCreate(node: LavalinkNode) {
 		this.logger.info(`Node created: ${node.options.id}`);
+		guardIdleCarrierEvents(node);
 	}
 
 	private async handleNodeConnect(node: LavalinkNode) {

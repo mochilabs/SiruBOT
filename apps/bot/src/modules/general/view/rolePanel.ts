@@ -36,7 +36,7 @@ export function rolePanelView(
 ): { flags: number; components: (ContainerBuilder | ActionRowBuilder<ButtonBuilder>)[] } {
 	const container = new ContainerBuilder()
 		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('ticket', '🎫')} ${panel.title}`));
+		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('ticket')} ${panel.title}`));
 
 	if (panel.description) {
 		container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));

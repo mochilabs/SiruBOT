@@ -74,7 +74,8 @@ export async function buildServer(env: Env) {
 		notifierUrl: env.NOTIFIER_URL,
 		notifierAuthKey: env.notifierAuthKey,
 		storageUrl: env.STORAGE_URL,
-		storageAuthKey: env.storageAuthKey
+		storageAuthKey: env.storageAuthKey,
+		ttsUrl: env.SIRU_TTS_URL
 	});
 
 	const stopScheduler = startOhaasaScheduler(env, translationProvider);

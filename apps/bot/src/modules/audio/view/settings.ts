@@ -12,7 +12,7 @@ import {
 	TextDisplayBuilder
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
 import { jtcEmptyGraceText } from '../../../services/tempVoiceService.ts';
 
 export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock' | 'jtc';
@@ -24,24 +24,23 @@ const wrapPrefix = (id: string) => prefix + id;
 type SegmentType = {
 	name: string;
 	label: string;
-	unicode: string;
-	appEmojiName: string;
+	appEmojiName: AppEmojiFallbackKey;
 	description: string;
 };
 
 // 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 emoji()로 평가한다.
 export const SPONSORBLOCK_SEGMENTS: SegmentType[] = [
-	{ name: 'sponsor', label: '스폰서', unicode: '💰', appEmojiName: 'money', description: '유료 홍보 및 광고 구간' },
-	{ name: 'selfpromo', label: '자기 홍보', unicode: '📢', appEmojiName: 'megaphone', description: '채널 홍보, 구독 요청 등' },
-	{ name: 'interaction', label: '상호작용', unicode: '💬', appEmojiName: 'speech', description: '좋아요, 댓글 요청 등' },
-	{ name: 'intro', label: '인트로', unicode: '🎬', appEmojiName: 'film', description: '반복되는 인트로 영상' },
-	{ name: 'outro', label: '아웃트로', unicode: '🔚', appEmojiName: 'end_flag', description: '엔딩 카드, 크레딧 등' },
-	{ name: 'preview', label: '미리보기', unicode: '👀', appEmojiName: 'eye', description: '이전 영상 요약 또는 미리보기' },
-	{ name: 'music_offtopic', label: '음악 외 구간', unicode: '🎵', appEmojiName: 'music_note', description: '음악 영상에서 음악이 아닌 부분' },
-	{ name: 'filler', label: '필러', unicode: '⏭️', appEmojiName: 'arrow_forward', description: '주제와 관련 없는 장면' }
+	{ name: 'sponsor', label: '스폰서', appEmojiName: 'money', description: '유료 홍보 및 광고 구간' },
+	{ name: 'selfpromo', label: '자기 홍보', appEmojiName: 'megaphone', description: '채널 홍보, 구독 요청 등' },
+	{ name: 'interaction', label: '상호작용', appEmojiName: 'speech', description: '좋아요, 댓글 요청 등' },
+	{ name: 'intro', label: '인트로', appEmojiName: 'film', description: '반복되는 인트로 영상' },
+	{ name: 'outro', label: '아웃트로', appEmojiName: 'end_flag', description: '엔딩 카드, 크레딧 등' },
+	{ name: 'preview', label: '미리보기', appEmojiName: 'eye', description: '이전 영상 요약 또는 미리보기' },
+	{ name: 'music_offtopic', label: '음악 외 구간', appEmojiName: 'music_note', description: '음악 영상에서 음악이 아닌 부분' },
+	{ name: 'filler', label: '필러', appEmojiName: 'arrow_forward', description: '주제와 관련 없는 장면' }
 ];
 
-const sponsorBlockSegmentEmoji = (segment: SegmentType) => emoji(segment.appEmojiName, segment.unicode);
+const sponsorBlockSegmentEmoji = (segment: SegmentType) => emoji(segment.appEmojiName);
 
 const repeatLabels: Record<string, string> = {
 	off: '반복 없음',

@@ -11,6 +11,7 @@ vi.mock("@/hooks/use-count-up", () => ({ useCountUp: ({ end }: { end: number }) 
 vi.mock("@/components/data/stat-card", () => ({ StatCard: () => null }));
 vi.mock("@/hooks/use-playlists", () => ({ formatTotalDuration: () => "0분" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
+vi.mock("./tts-voice-card", () => ({ TtsVoiceCard: () => null }));
 
 const props: ProfileViewProps = {
   user: { id: "fixture", name: "검증용 프로필", image: null },

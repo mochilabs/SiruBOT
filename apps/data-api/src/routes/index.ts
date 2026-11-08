@@ -19,6 +19,7 @@ import { registerAiRoutes } from './ai.ts';
 import { registerPlayerRoutes } from './player.ts';
 import { registerGuildDataRoutes } from './guild-data.ts';
 import { registerStorageProxyRoutes } from './storage.ts';
+import { registerTtsRoutes } from './tts.ts';
 import { registerBotAdminRoutes } from './bot-admin.ts';
 import { registerPanelRoutes } from './panel.ts';
 
@@ -35,6 +36,8 @@ export interface RouteDeps {
 	/** storage base URL·키 — 비공개 오브젝트(티켓 transcript) 중계용. 미설정이면 503 */
 	storageUrl?: string;
 	storageAuthKey?: string;
+	/** siru_tts base URL — 음성 카탈로그 프록시용, 미설정이면 503 */
+	ttsUrl?: string;
 }
 
 /**
@@ -78,6 +81,7 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 	registerPlayerRoutes(fastify, deps);
 	registerGuildDataRoutes(fastify);
 	registerStorageProxyRoutes(fastify, { storageUrl: deps.storageUrl, storageAuthKey: deps.storageAuthKey });
+	registerTtsRoutes(fastify, { ttsUrl: deps.ttsUrl });
 	registerBotAdminRoutes(fastify);
 	registerPanelRoutes(fastify);
 

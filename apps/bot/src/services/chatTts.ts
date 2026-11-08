@@ -4,7 +4,7 @@ import type { Track, UnresolvedTrack } from 'lavalink-client';
 import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { TtsClip, TtsError, getTtsConfig } from './ttsService.ts';
-import type { TtsUserPreset } from './ttsUserSettings.ts';
+import type { TtsChannel, TtsUserPreset } from './ttsUserSettings.ts';
 
 /**
  * 채팅 TTS 오케스트레이터 — 메시지 전처리·병합·스로틀 후 클립을 재생 모드(오버레이/단독)로 dispatch한다.
@@ -28,6 +28,8 @@ export const TTS_OVERLAY_QUEUE_MAX = 5;
 const TTS_GUILD_CONCURRENT_SYNTH = 2;
 /** 길드 분당 합성 글자 수 — 초과 시 클립을 버린다 */
 export const TTS_GUILD_CHARS_PER_MIN = 1000;
+/** 한 사람이 도배해도 다른 사람 차례가 밀리지 않게 하는 사용자당 분당 글자 한도 */
+export const TTS_USER_CHARS_PER_MIN = 300;
 
 interface TtsTextResolvers {
 	memberName(id: string): string | null;
@@ -88,6 +90,8 @@ interface MergeBatch {
 interface SoloClip {
 	url: string;
 	text: string;
+	/** 단독 재생은 메인 트랙이라 위치를 줄 수 없다 — 음악이 시작돼 오버레이로 넘어갈 때 쓴다 */
+	channel: TtsChannel;
 }
 
 interface GuildTtsState {
@@ -96,6 +100,8 @@ interface GuildTtsState {
 	/** key: userId — 같은 길드에서의 마지막 합성 시각 */
 	lastSynthAt: Map<string, number>;
 	charWindow: { start: number; chars: number };
+	/** key: userId — 사용자당 분당 글자 창 */
+	userWindows: Map<string, { start: number; chars: number }>;
 	synthActive: number;
 	synthWaiters: Array<() => void>;
 	dispatchChain: Promise<void>;
@@ -119,6 +125,15 @@ export class ChatTtsService {
 		const state = this.getGuildState(guildId);
 		const now = Date.now();
 		const batchKey = `${channelId}:${userId}`;
+
+		if (!this.consumeUserChars(state, userId, Math.min(text.length, TTS_CLIP_MAX_CHARS), now)) {
+			this.warnOnce(
+				guildId,
+				`user_bucket:${userId}`,
+				`[chatTts] 사용자 분당 글자 한도(${TTS_USER_CHARS_PER_MIN}자) 초과 — 메시지를 버렸어요 (guild ${guildId})`
+			);
+			return;
+		}
 
 		const batch = state.batches.get(batchKey);
 		if (batch) {
@@ -144,6 +159,18 @@ export class ChatTtsService {
 		// 첫 메시지는 지연 없이 바로 합성한다
 		state.lastSynthAt.set(userId, now);
 		this.enqueueSynthesis(guildId, text.slice(0, TTS_CLIP_MAX_CHARS), preset);
+	}
+
+	/** 사용자당 분당 글자 예산을 차감한다 — 초과하면 false(메시지를 읽지 않는다) */
+	private consumeUserChars(state: GuildTtsState, userId: string, chars: number, now: number): boolean {
+		let window = state.userWindows.get(userId);
+		if (!window || now - window.start >= 60_000) {
+			window = { start: now, chars: 0 };
+			state.userWindows.set(userId, window);
+		}
+		if (window.chars + chars > TTS_USER_CHARS_PER_MIN) return false;
+		window.chars += chars;
+		return true;
 	}
 
 	/** 병합 창 종료 — 모인 메시지를 한 발화로 합성한다. */
@@ -175,11 +202,10 @@ export class ChatTtsService {
 			return;
 		}
 
-		const synth = this.withSynthSlot(state, () =>
-			container.ttsService.synthesize(text, {
+		const synth = this.withSynthSlot(state, async () =>
+			container.ttsService.synthesize(await container.ttsPronunciation.apply(guildId, text), {
 				voice: preset?.voice ?? undefined,
-				speed: preset?.speed ?? undefined,
-				pitch: preset?.pitch ?? undefined
+				emotion: preset?.emotion
 			})
 		);
 		// dispatch는 seq 순서로 이어 붙인다 — 합성은 병렬로 끝나도 재생 순서는 메시지 순서를 지킨다
@@ -193,7 +219,8 @@ export class ChatTtsService {
 					this.warnOnce(guildId, `synth:${code}`, `[chatTts] 합성 실패(${code}) — 클립을 버렸어요 (guild ${guildId}): ${error}`);
 					return;
 				}
-				await this.dispatchClip(guildId, clip, text);
+				this.logWarnings(guildId, clip);
+				await this.dispatchClip(guildId, clip, text, preset?.channel ?? 'both');
 			})
 			.catch((error) => {
 				container.logger.error(`[chatTts] dispatch failed (guild ${guildId}): ${error}`);
@@ -215,15 +242,15 @@ export class ChatTtsService {
 	}
 
 	/** 모드를 dispatch 시점에 재판정한다 (명세 4.2) — 메인 트랙 유무로 오버레이/단독을 가른다. */
-	private async dispatchClip(guildId: string, clip: TtsClip, text: string): Promise<void> {
+	private async dispatchClip(guildId: string, clip: TtsClip, text: string, channel: TtsChannel): Promise<void> {
 		const player = container.audio.getPlayer(guildId) as CustomPlayer | null | undefined;
 		if (!player) return; // 플레이어가 사라졌으면 클립은 조용히 소멸한다
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
-			await this.dispatchOverlay(player, clip);
+			await this.dispatchOverlay(player, clip, channel);
 			return;
 		}
-		await this.dispatchSolo(player, { url: clip.url, text });
+		await this.dispatchIdle(player, clip, text, channel);
 	}
 
 	/**
@@ -234,29 +261,26 @@ export class ChatTtsService {
 	 * (dispatchClip의 판단을 그대로 재사용). 반환값은 예약/단독 재생 결과예요.
 	 */
 	public async speakNow(player: CustomPlayer, text: string, preset: TtsUserPreset): Promise<'overlay' | 'solo'> {
-		const clip = await container.ttsService.synthesize(text, {
-			voice: preset.voice ?? undefined,
-			speed: preset.speed ?? undefined,
-			pitch: preset.pitch ?? undefined
-		});
+		const spoken = await container.ttsPronunciation.apply(player.guildId, text);
+		const clip = await container.ttsService.synthesize(spoken, { voice: preset.voice ?? undefined, emotion: preset.emotion });
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
-			await this.dispatchOverlay(player, clip, true);
+			await this.dispatchOverlay(player, clip, preset.channel, true);
 			return 'overlay';
 		}
-		await this.dispatchSolo(player, { url: clip.url, text }, true);
+		await this.dispatchIdle(player, clip, text, preset.channel, true);
 		return 'solo';
 	}
 
 	/** 오버레이: mixer announce로 음악 위에 겹쳐 읽는다 (큐잉·순차는 mixer가 담당). */
-	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip, reportFailure = false): Promise<void> {
+	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip, channel: TtsChannel, reportFailure = false): Promise<void> {
 		const state = await container.mixerService.getState(player).catch(() => null);
 		if ((state?.announcementsQueued ?? 0) >= TTS_OVERLAY_QUEUE_MAX) {
 			this.warnOnce(player.guildId, 'overlay_overflow', `[chatTts] 안내 대기열 초과 (guild ${player.guildId})`);
 			if (reportFailure) throw new TtsError('queue_full', '음성 안내가 밀려 있어요. 잠시 후 다시 말하기를 실행해 주세요.');
 			return;
 		}
-		await this.speakOverlay(player, clip.url, reportFailure);
+		await this.speakOverlay(player, clip.url, channel, reportFailure);
 	}
 
 	/**
@@ -265,7 +289,7 @@ export class ChatTtsService {
 	 * - parallel: 겹쳐서 재생
 	 * - interrupt: 대기분을 먼저 비워 "가장 최근 안내만" 남겨요 (재생 중인 안내는 그대로 끝나요)
 	 */
-	private async speakOverlay(player: CustomPlayer, url: string, reportFailure = false): Promise<void> {
+	private async speakOverlay(player: CustomPlayer, url: string, channel: TtsChannel, reportFailure = false): Promise<void> {
 		try {
 			const [duckLevel, mode] = await Promise.all([
 				container.guildService.getTtsDuck(player.guildId),
@@ -274,11 +298,25 @@ export class ChatTtsService {
 			if (mode === 'interrupt') {
 				await container.mixerService.clearAnnounceQueue(player);
 			}
-			await container.mixerService.announce(player, url, duckLevel, mode === 'parallel' ? 'parallel' : 'sequential');
+			await container.mixerService.announce(player, url, duckLevel, mode === 'parallel' ? 'parallel' : 'sequential', channel);
 		} catch (error) {
 			container.logger.warn(`[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
 			if (reportFailure) throw new TtsError('playback_failed', '음성을 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
+	}
+
+	/**
+	 * 메인이 빈 상태 — mixer 0.5+는 무음 캐리어로 공지를 흘려 스테레오 위치까지 지킨다.
+	 * 이미 단독 클립이 이어지는 중이면 기존 단독 경로로 이어 붙인다.
+	 */
+	private async dispatchIdle(player: CustomPlayer, clip: TtsClip, text: string, channel: TtsChannel, reportFailure = false): Promise<void> {
+		const state = this.getGuildState(player.guildId);
+		const soloActive = isTtsClip(player.queue.current) || state.soloQueue.length > 0;
+		if (!soloActive) {
+			await this.dispatchOverlay(player, clip, channel, reportFailure);
+			return;
+		}
+		await this.dispatchSolo(player, { url: clip.url, text, channel }, reportFailure);
 	}
 
 	/** 단독: 클립을 메인 플레이어 트랙으로 재생한다. 이미 클립이 이어지는 중이면 내부 큐에 쌓는다. */
@@ -341,7 +379,7 @@ export class ChatTtsService {
 		if (!state || state.soloQueue.length === 0) return;
 		const clips = state.soloQueue.splice(0, state.soloQueue.length);
 		for (const clip of clips) {
-			await this.speakOverlay(player, clip.url);
+			await this.speakOverlay(player, clip.url, clip.channel);
 		}
 	}
 
@@ -443,6 +481,7 @@ export class ChatTtsService {
 				batches: new Map(),
 				lastSynthAt: new Map(),
 				charWindow: { start: Date.now(), chars: 0 },
+				userWindows: new Map(),
 				synthActive: 0,
 				synthWaiters: [],
 				dispatchChain: Promise.resolve(),
@@ -451,6 +490,13 @@ export class ChatTtsService {
 			this.guildStates.set(guildId, state);
 		}
 		return state;
+	}
+
+	/** 서버가 알려 준 폴백(다른 언어 목소리·엔진 교체)은 원인별로 1회만 warn한다 */
+	private logWarnings(guildId: string, clip: TtsClip): void {
+		for (const warning of clip.warnings) {
+			this.warnOnce(guildId, `tts_warning:${warning}`, `[chatTts] siru_tts 폴백: ${warning} (guild ${guildId})`);
+		}
 	}
 
 	private warnOnce(guildId: string, cause: string, message: string): void {

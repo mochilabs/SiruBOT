@@ -186,7 +186,7 @@ const EMOJI_LUCIDE_MAP = {
   plus: "plus",
   pin: "pin",
   globe: "globe",
-  magnet: "magnet",
+  mag: "search",
   frame: "frame",
   box: "box",
   id: "badge",

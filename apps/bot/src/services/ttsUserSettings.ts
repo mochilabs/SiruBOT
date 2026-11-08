@@ -1,22 +1,38 @@
 import { container } from '@sapphire/framework';
 import { MemoryCache } from '@sirubot/utils';
+import type { TtsEmotion } from './ttsService.ts';
 
 /**
- * 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in과 음성 프리셋(voice/speed/pitch) CRUD.
+ * 채팅 TTS 사용자 설정 — 길드별 사용자 opt-in과 음성 프리셋(voice/스테레오 위치) CRUD.
  *
  * 저장은 Prisma `TtsUserSetting`(복합 PK guildId+userId). 커맨드 쓰기 시 같은 프로세스의
  * 캐시를 무효화한다 — 길드는 샤드에 고정이라 다른 프로세스는 각자 TTL(60s)로 만료된다.
  */
 
+/** 스테레오 위치 — lavalink_mixer announce의 channel 값과 1:1 (both = 가운데) */
+export type TtsChannel = 'both' | 'left' | 'right';
+
+export const TTS_CHANNELS: readonly TtsChannel[] = ['left', 'both', 'right'];
+
+export function normalizeTtsChannel(value: string | null | undefined): TtsChannel {
+	return TTS_CHANNELS.includes(value as TtsChannel) ? (value as TtsChannel) : 'both';
+}
+
+export const TTS_EMOTIONS: readonly TtsEmotion[] = ['neutral', 'happy', 'sad', 'angry', 'whisper'];
+
+export function normalizeTtsEmotion(value: string | null | undefined): TtsEmotion {
+	return TTS_EMOTIONS.includes(value as TtsEmotion) ? (value as TtsEmotion) : 'neutral';
+}
+
 export interface TtsUserPreset {
 	enabled: boolean;
 	voice: string | null;
-	speed: number | null;
-	pitch: number | null;
+	channel: TtsChannel;
+	emotion: TtsEmotion;
 }
 
-/** DB에 행이 없을 때의 기본값 — opt-in off, 프리셋 전부 미설정 */
-export const DEFAULT_TTS_USER_PRESET: TtsUserPreset = { enabled: false, voice: null, speed: null, pitch: null };
+/** DB에 행이 없을 때의 기본값 — opt-in off, 기본 음성, 가운데 */
+export const DEFAULT_TTS_USER_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both', emotion: 'neutral' };
 
 const CACHE_TTL_MS = 60_000;
 
@@ -31,7 +47,13 @@ export class TtsUserSettingsService {
 		let preset: TtsUserPreset = DEFAULT_TTS_USER_PRESET;
 		try {
 			const row = await container.db.ttsUserSetting.findUnique({ where: { guildId_userId: { guildId, userId } } });
-			if (row) preset = { enabled: row.enabled, voice: row.voice, speed: row.speed, pitch: row.pitch };
+			if (row)
+				preset = {
+					enabled: row.enabled,
+					voice: row.voice,
+					channel: normalizeTtsChannel(row.channel),
+					emotion: normalizeTtsEmotion(row.emotion)
+				};
 		} catch (error) {
 			container.logger.error(
 				`[ttsUserSettings] 조회 실패 guild=${guildId} user=${userId}: ${error instanceof Error ? error.message : String(error)}`
@@ -48,8 +70,8 @@ export class TtsUserSettingsService {
 			const next: TtsUserPreset = {
 				enabled: patch.enabled ?? current.enabled,
 				voice: patch.voice !== undefined ? patch.voice : current.voice,
-				speed: patch.speed !== undefined ? patch.speed : current.speed,
-				pitch: patch.pitch !== undefined ? patch.pitch : current.pitch
+				channel: patch.channel ?? current.channel,
+				emotion: patch.emotion ?? current.emotion
 			};
 			await container.db.ttsUserSetting.upsert({
 				where: { guildId_userId: { guildId, userId } },

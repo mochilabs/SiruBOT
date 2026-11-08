@@ -22,6 +22,7 @@ import type {
 } from "@/lib/profile-stats";
 
 import { BirthdayCard } from "./birthday-card";
+import { TtsVoiceCard } from "./tts-voice-card";
 
 export interface ProfileViewProps {
   user: { id: string; name: string; image: string | null };
@@ -126,6 +127,11 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
               )}
             </CardContent>
           </Card>
+        </RevealItem>
+
+        {/* 서버별 TTS 음성 — 생일 카드처럼 보기/변경 */}
+        <RevealItem className="md:col-span-2">
+          <TtsVoiceCard />
         </RevealItem>
 
         {/* 게임 전적 카드 */}

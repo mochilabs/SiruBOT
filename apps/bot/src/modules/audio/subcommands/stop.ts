@@ -19,7 +19,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!interaction.member.voice.channelId) {
 		await interaction.reply({
 			flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-			components: [errorView(`${emoji('volume_muted')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`)]
+			components: [errorView(`${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`)]
 		});
 		return;
 	}

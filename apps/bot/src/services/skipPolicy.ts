@@ -93,7 +93,7 @@ export class SkipPolicy {
 		} else {
 			throw new UserError({
 				identifier: 'skip_no_more_tracks',
-				message: `${emoji('magnet')} 건너뛸 노래가 없어요.`,
+				message: `${emoji('info')} 건너뛸 노래가 없어요.`,
 				context: {
 					...context,
 					ephemeral: true
@@ -175,7 +175,7 @@ export class SkipPolicy {
 		if (to > getUserQueuedTracks(player).length) {
 			throw new UserError({
 				identifier: 'skipto_invalid_index',
-				message: `${emoji('music_note')} 건너뛸 곡이 대기열에 존재하지 않아요.`,
+				message: `${emoji('info')} 건너뛸 곡이 대기열에 존재하지 않아요.`,
 				context: { ephemeral: true }
 			});
 		}

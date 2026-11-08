@@ -47,7 +47,7 @@ export class AudioService {
 		if (!voiceChannelId) {
 			throw new UserError({
 				identifier: 'play_voice_channel_not_found',
-				message: `${emoji('headphone')} 음성 채널 정보를 찾을 수 없어요.`,
+				message: `${emoji('error')} 음성 채널 정보를 찾을 수 없어요.`,
 				context
 			});
 		}
@@ -55,7 +55,7 @@ export class AudioService {
 		if (!voiceChannel || !voiceChannel.isVoiceBased()) {
 			throw new UserError({
 				identifier: 'play_channel_not_found',
-				message: `${emoji('headphone')} 음성 채널을 찾을 수 없어요.`,
+				message: `${emoji('error')} 음성 채널을 찾을 수 없어요.`,
 				context
 			});
 		}
@@ -66,14 +66,14 @@ export class AudioService {
 			if (!permissions?.has(PermissionsBitField.Flags.Connect)) {
 				throw new UserError({
 					identifier: 'play_no_connect_permission',
-					message: `${emoji('lock')} 봇이 음성 채널에 접속할 권한이 없어요.`,
+					message: `${emoji('error')} 봇이 음성 채널에 접속할 권한이 없어요.`,
 					context
 				});
 			}
 			if (!permissions?.has(PermissionsBitField.Flags.Speak)) {
 				throw new UserError({
 					identifier: 'play_no_speak_permission',
-					message: `${emoji('volume_muted')} 봇이 음성 채널에서 말할 권한이 없어요.`,
+					message: `${emoji('error')} 봇이 음성 채널에서 말할 권한이 없어요.`,
 					context
 				});
 			}
@@ -90,7 +90,7 @@ export class AudioService {
 			});
 			throw new UserError({
 				identifier: 'play_connect_error',
-				message: `${emoji('tools')} 음성 채널에 접속할 수 없어요.`,
+				message: `${emoji('error')} 음성 채널에 접속할 수 없어요.`,
 				context
 			});
 		}
@@ -112,7 +112,7 @@ export class AudioService {
 			});
 			throw new UserError({
 				identifier: 'play_search_error',
-				message: `${emoji('tools')} 음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`,
+				message: `${emoji('error')} 음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`,
 				context
 			});
 		}
@@ -120,7 +120,7 @@ export class AudioService {
 		if (searchRes.loadType === 'empty') {
 			throw new UserError({
 				identifier: 'play_search_empty',
-				message: `${emoji('magnet')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`,
+				message: `${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`,
 				context
 			});
 		}

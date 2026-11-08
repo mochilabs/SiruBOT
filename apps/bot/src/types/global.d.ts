@@ -33,7 +33,6 @@ declare module '@skyra/env-utilities' {
 		AUTH_KEY?: string;
 		SENTRY_DSN?: string;
 		SIRU_TTS_URL?: string;
-		SIRU_TTS_API_KEY?: string;
 		SIRU_TTS_DEFAULT_VOICE?: string;
 	}
 }
@@ -54,6 +53,7 @@ declare module '@sapphire/pieces' {
 		mixerService: import('../services/mixerService.ts').MixerService;
 		ttsService: import('../services/ttsService.ts').TtsService;
 		ttsUserSettings: import('../services/ttsUserSettings.ts').TtsUserSettingsService;
+		ttsPronunciation: import('../services/ttsPronunciation.ts').TtsPronunciationService;
 		chatTtsService: import('../services/chatTts.ts').ChatTtsService;
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;

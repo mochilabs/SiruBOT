@@ -57,6 +57,7 @@
 | POST `/v1/social/{youtube,twitch}/resolve` · `/v1/social/chzzk/profile` · GET `/v1/social/chzzk/search` | 소셜 채널 식별자 해석·치지직 검색 (notifier 프록시) | — | `routes/social.ts` |
 | POST `/v1/embed-fix/metadata` | X(fxtwitter)·인스타그램·BOOTH 임베드 복구 메타데이터 | 프로바이더 캐시 | `routes/embed-fix.ts` |
 | GET `/v1/delivery/carriers` | 택배사 목록 | — | `routes/cache-providers.ts` |
+| GET `/v1/tts/voices?lang=&q=` | siru_tts voice catalog proxy (first 200 voices, 503 without `SIRU_TTS_URL`) | 5 minutes in memory | `routes/tts.ts` |
 | storage 프록시 | 티켓 대화 기록 업로드·다운로드 (비공개 버킷 고정, 키 `{guildId}/{ticketId}.json.gz`) | — | `routes/storage.ts` |
 | GET `/v1/chapters?videoId=&durationMs=` | YouTube.js 챕터 | 12시간, 빈 결과 1시간 | `routes/cache-providers.ts` |
 | GET `/v1/youtube/suggestions?q=` | YouTube.js 검색 자동완성 | 10분 | `routes/cache-providers.ts` |

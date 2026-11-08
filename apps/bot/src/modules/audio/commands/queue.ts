@@ -157,7 +157,7 @@ export class QueueCommand extends Command {
 		if (!player || getUserQueuedTracks(player).length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
-				message: `${emoji('inbox_tray')} 대기열이 비어있어요.`,
+				message: `${emoji('info')} 대기열이 비어있어요.`,
 				context: { ephemeral: true }
 			});
 		}
@@ -178,7 +178,7 @@ export class QueueCommand extends Command {
 		if (!player || getUserQueuedTracks(player).length === 0) {
 			throw new UserError({
 				identifier: 'queue_empty',
-				message: `${emoji('inbox_tray')} 대기열이 비어있어요.`,
+				message: `${emoji('info')} 대기열이 비어있어요.`,
 				context: { ephemeral: true }
 			});
 		}
