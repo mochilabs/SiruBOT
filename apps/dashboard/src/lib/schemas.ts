@@ -31,6 +31,9 @@ export const aiSettingsSchema = z.object({
 /** PUT /api/servers/[id]/settings */
 export const guildSettingsSchema = z.object({
 	volume: z.number().int("볼륨은 정수여야 해요.").min(0, "볼륨은 0 이상이에요.").max(PLAYER_VOLUME_MAX, `볼륨은 ${PLAYER_VOLUME_MAX} 이하여야 해요.`).optional(),
+	ttsVolume: z.number().int("볼륨은 정수여야 해요.").min(0, "볼륨은 0 이상이에요.").max(PLAYER_VOLUME_MAX, `볼륨은 ${PLAYER_VOLUME_MAX} 이하여야 해요.`).optional(),
+	/** TTS 낭독 중 음악 볼륨 비율(0~1) — 1이면 낮추지 않아요 */
+	ttsDuckLevel: z.number().min(0, "덕킹 비율은 0 이상이에요.").max(1, "덕킹 비율은 1 이하여야 해요.").optional(),
 	repeat: z.enum(REPEAT_MODES, "반복 모드가 잘못됐어요.").optional(),
 	related: z.boolean().optional(),
 	enableController: z.boolean().optional(),
@@ -94,6 +97,8 @@ export type GuildSettings = Required<z.infer<typeof guildSettingsSchema>>;
  */
 export const GUILD_SETTINGS_DEFAULTS = {
 	volume: 10,
+	ttsVolume: 100,
+	ttsDuckLevel: 0.2,
 	repeat: "off",
 	related: false,
 	enableController: true,

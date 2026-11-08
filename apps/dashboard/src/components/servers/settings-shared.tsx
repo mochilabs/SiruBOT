@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertCircle, Check, LogIn, Save, X } from "lucide-react";
+import { AlertCircle, Check, LogIn, X } from "lucide-react";
 
 import { Portal } from "@/components/overlay/portal";
 import { InfoBox, NoticeBox, WarningBox } from "@/components/primitives/notice-box";
@@ -28,12 +28,12 @@ export function PanelHeader({
   return (
     <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div className="flex min-w-0 items-start gap-3.5">
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary/20 text-primary-text shadow-xs">
+        <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-control sm:inline-flex bg-primary/20 text-primary-text shadow-xs">
           {icon}
         </span>
         <div className="min-w-0 break-words">
           <h2 className="text-xl font-black tracking-tight text-foreground">{title}</h2>
-          <p className="text-sm font-medium text-muted-foreground/90">{description}</p>
+          <p className="hidden text-sm font-medium text-muted-foreground/90 sm:block">{description}</p>
         </div>
       </div>
       {action && <div className="flex max-w-full flex-wrap gap-2 sm:shrink-0">{action}</div>}
@@ -260,7 +260,7 @@ export function PanelError({
   );
 }
 
-const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean }>();
+const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean; save: () => Promise<void> }>();
 
 const saveBarListeners = new Set<() => void>();
 
@@ -278,6 +278,18 @@ export function hasUnsavedActiveSettings(): boolean {
   return [...dirtySaveBars.values()].some((entry) => entry.dirty && entry.active);
 }
 
+/**
+ * 지금 보이는 패널의 저장하지 않은 변경을 모두 저장해요. 각 패널의 저장 핸들러는 실패를 토스트로만 알리고
+ * 던지지 않으므로, 저장 뒤에도 변경이 남아 있는지로 성공 여부를 판단해요.
+ */
+export async function saveActiveSettings(): Promise<boolean> {
+  const entries = [...dirtySaveBars.values()].filter((entry) => entry.dirty && entry.active);
+  await Promise.all(entries.map((entry) => entry.save()));
+  // dirty 상태는 저장 완료 뒤 렌더·이펙트를 거쳐 갱신되므로 한 틱 기다려요
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  return !hasUnsavedActiveSettings();
+}
+
 export function useHasUnsavedActiveSettings(): boolean {
   const [hasUnsaved, setHasUnsaved] = useState(() => hasUnsavedActiveSettings());
 
@@ -293,6 +305,16 @@ export function useHasUnsavedActiveSettings(): boolean {
   return hasUnsaved;
 }
 
+let discardHandler: (() => void) | null = null;
+
+/** 저장 바의 "취소"가 부르는 폐기 동작 — 대시보드 셸이 현재 탭 패널을 새로 마운트하는 함수를 등록해요 */
+export function registerSettingsDiscardHandler(handler: () => void): () => void {
+  discardHandler = handler;
+  return () => {
+    if (discardHandler === handler) discardHandler = null;
+  };
+}
+
 const nudgeListeners = new Set<() => void>();
 
 /** 저장하지 않은 채 떠나려 할 때 모달 없이 저장 바를 흔들어 주의를 끌어요 */
@@ -304,12 +326,15 @@ export function SaveBar({
   dirty,
   saving,
   onSave,
+  onDiscard,
   children,
   active: activeProp,
 }: {
   dirty: boolean;
   saving: boolean;
   onSave: () => void | Promise<void>;
+  /** 변경 취소 — 넘기지 않으면 대시보드 셸이 등록한 폐기 동작(패널 새로 마운트)을 써요 */
+  onDiscard?: () => void;
   children?: ReactNode;
   active?: boolean;
 }) {
@@ -365,8 +390,11 @@ export function SaveBar({
     finally { savingRef.current = false; setSubmitting(false); }
   };
 
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
   useEffect(() => {
-    dirtySaveBars.set(id, { dirty: dirty || saving || submitting, active });
+    dirtySaveBars.set(id, { dirty: dirty || saving || submitting, active, save: () => handleSaveRef.current() });
     notifySaveBarListeners();
     return () => {
       dirtySaveBars.delete(id);
@@ -399,40 +427,42 @@ export function SaveBar({
   }, [visible]);
 
   return (
-    <div ref={anchorRef} data-slot="settings-save-island-anchor">
+    <div ref={anchorRef} data-slot="settings-save-island-anchor" aria-hidden className="pointer-events-none absolute inset-x-6 bottom-0 h-0">
       {visible && <Portal>
         <div ref={setIslandRef} data-slot="settings-save-island"
           onFocusCapture={() => { islandHadFocusRef.current = true; }}
           onBlurCapture={(event) => {
             if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) islandHadFocusRef.current = false;
           }}
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-(--z-savebar) flex flex-col gap-2.5 rounded-card bg-surface-3 px-4 py-2.5 text-foreground shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-fast md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)] md:flex-row md:items-center md:justify-between"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-(--z-savebar) flex items-center justify-between gap-3 rounded-card bg-surface-3 py-2 pl-4 pr-2 text-foreground shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-fast md:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:left-[var(--island-left)] md:right-auto md:w-[var(--island-width)]"
           style={{ "--island-left": `${geometry.left}px`, "--island-width": `${geometry.width}px` } as React.CSSProperties}>
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span
-              aria-hidden
-              className={cn(
-                "h-2 w-2 shrink-0 rounded-full transition-colors duration-fast",
-                saving || submitting ? "bg-warning animate-pulse" : "bg-primary-control",
-              )}
-            />
-            <p role="status" className="min-w-0 text-sm font-semibold text-foreground">
-              {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <p role="status" className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground sm:text-sm">
+            {saving || submitting ? "변경 사항을 저장하고 있어요…" : "저장하지 않은 변경 사항이 있어요!"}
+          </p>
+          <div className="flex shrink-0 items-center gap-1.5">
             {children}
-      <Button
-        variant="cta"
-        size="sm"
-        className="h-8 px-3.5"
-        loading={saving || submitting}
-        disabled={!dirty}
-        icon={saving ? undefined : <Save size={15} />}
-        onClick={handleSave}
-      >
-        {saving || submitting ? "저장 중…" : "변경 사항 저장"}
-      </Button>
+            {(onDiscard || discardHandler) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3"
+                disabled={saving || submitting}
+                onClick={() => (onDiscard ?? discardHandler)?.()}
+              >
+                취소
+              </Button>
+            )}
+            <Button
+              variant="cta"
+              size="sm"
+              className="h-8 px-3.5"
+              loading={saving || submitting}
+              disabled={!dirty}
+              onClick={handleSave}
+            >
+              <span className="sm:hidden">저장</span>
+              <span className="hidden sm:inline">{saving || submitting ? "저장 중…" : "변경 사항 저장"}</span>
+            </Button>
           </div>
         </div>
       </Portal>}

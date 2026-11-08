@@ -34,7 +34,11 @@ describe("color-picker keyboard and commit contract", () => {
 			({ container, root } = await mount(
 				<ColorPicker value="#ff8888" label="강조색" onChange={onChange} onCommit={onCommit} />,
 			));
-			const sv = container.querySelector<HTMLElement>('[aria-label="강조색 채도와 명도"]')!;
+			// 팔레트는 팝오버 안에 있어서 트리거를 눌러 연 뒤에 찾아요(포털이라 document 기준)
+			await act(async () => {
+				container!.querySelector<HTMLElement>('[aria-label="강조색 색 선택기 열기"]')!.click();
+			});
+			const sv = document.querySelector<HTMLElement>('[aria-label="강조색 채도와 명도"]')!;
 			expect(sv.getAttribute("role")).toBe("slider");
 			await act(async () => {
 				sv.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));

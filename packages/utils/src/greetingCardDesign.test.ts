@@ -19,11 +19,16 @@ function colorSequence(plan: GreetingPresetBackgroundPlan): string[] {
 }
 
 describe('greetingCardDesign — 브랜드 시각 계약', () => {
-	it('프리셋 그라디언트 hex 12값과 스크림 색은 시각 계약이에요 — 값 변경은 렌더가 달라져요', () => {
+	it('프리셋 그라디언트 hex 값과 스크림 색은 시각 계약이에요 — 값 변경은 렌더가 달라져요', () => {
 		expect(GREETING_PRESET_GRADIENTS).toEqual({
 			rose: { base: '#3d2328', from: '#d1608a', to: '#ff85c1', glow: '#ffe4f0' },
 			plum: { base: '#1a0e12', from: '#231317', to: '#4d2a35', glow: '#ffb3d9' },
-			gold: { base: '#231a10', from: '#8a6a44', to: '#d4a574', glow: '#f0e2cf' }
+			gold: { base: '#231a10', from: '#8a6a44', to: '#d4a574', glow: '#f0e2cf' },
+			ocean: { base: '#0e1a24', from: '#1f4f73', to: '#5fb0d9', glow: '#d6f0ff' },
+			mint: { base: '#10211c', from: '#2f7a62', to: '#7fd6b0', glow: '#e0fff2' },
+			sunset: { base: '#2a1410', from: '#c4533a', to: '#ffb36b', glow: '#fff0d6' },
+			lavender: { base: '#1a1428', from: '#6a4fb0', to: '#b9a3ff', glow: '#efe8ff' },
+			midnight: { base: '#07090f', from: '#101827', to: '#2b3a5c', glow: '#9db4ff' }
 		});
 		expect(GREETING_PRESET_SCRIM).toBe('rgba(26,14,18,0.32)');
 	});

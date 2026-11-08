@@ -4,11 +4,10 @@ import { ListMusic } from "lucide-react";
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 
 export function QueueList({ state }: { state: LivePlayerState }) {
   return (
-    <Card padding="lg" className="gap-4">
+    <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-foreground">대기열</h3>
         <Badge variant="primary" size="sm">
@@ -64,6 +63,6 @@ export function QueueList({ state }: { state: LivePlayerState }) {
           ))}
         </ol>
       )}
-    </Card>
+    </section>
   );
 }

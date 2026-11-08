@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode,useEffect, useState } from "react";
 import Link from "next/link";
 import { Radio } from "lucide-react";
 
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { EmptyState } from "@/components/primitives/empty-state";
-import { PanelError } from "@/components/servers/settings-shared";
+import { PanelError, PanelHeader } from "@/components/servers/settings-shared";
 import { Card } from "@/components/ui/card";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { toError } from "@/lib/api-error";
@@ -15,9 +15,20 @@ import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import { QueueList } from "./live-queue-list";
 import { NowPlaying } from "./now-playing-card";
 
+/** 라이브 탭 공통 셸 — 다른 설정 탭과 같은 패널 카드 + 헤더 */
+function LivePanel({ children }: { children: ReactNode }) {
+  return (
+    <Card padding="lg" className="gap-6 overflow-visible">
+      <PanelHeader icon={<Radio className="h-5 w-5" />} title="라이브" description="지금 재생 중인 곡과 대기열을 실시간으로 확인해요." />
+      {children}
+    </Card>
+  );
+}
+
 function LiveLoading() {
   return (
-    <Card padding="lg" className="gap-4">
+    <LivePanel>
+      <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Radio size={14} /> 라이브 상태 불러오는 중…
       </div>
@@ -26,14 +37,15 @@ function LiveLoading() {
         <SkeletonLine width="40%" height="h-4" />
         <SkeletonLine width="100%" height="h-2" />
       </div>
-    </Card>
+      </div>
+    </LivePanel>
   );
 }
 
 /** 데이터가 없는 상태 — 길드에 플레이어가 없거나 playerHub 미구독 */
 function LiveEmpty({ detail }: { detail?: string }) {
   return (
-    <Card padding="lg">
+    <LivePanel>
       <EmptyState
         icon={Radio}
         title="지금은 재생 정보가 없어요"
@@ -42,7 +54,7 @@ function LiveEmpty({ detail }: { detail?: string }) {
           "봇이 이 서버에서 음악을 재생하면 여기에 실시간 상태가 표시돼요."
         }
       />
-    </Card>
+    </LivePanel>
   );
 }
 
@@ -129,7 +141,7 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
 
   if (error && (mode === "polling" || !liveData)) {
     const apiError = toError(error, "라이브 상태를 불러오지 못했어요.");
-    return <PanelError error={apiError} onRetry={() => { void mutate(); }} />;
+    return <LivePanel><PanelError error={apiError} onRetry={() => { void mutate(); }} /></LivePanel>;
   }
   if (mode === "polling" && isLoading) return <LiveLoading />;
   if (!data) return <LiveLoading />;
@@ -146,7 +158,7 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
   }
 
   return (
-    <div className="grid gap-6">
+    <LivePanel>
       {(data.player.stale || (mode === "stream" && !connected)) && (
         <p role="status" className="rounded-control bg-warning/5 px-4 py-3 text-sm text-warning">
           마지막으로 확인한 재생 정보예요. 연결을 확인하는 동안 재생 제어는 사용할 수 없어요.
@@ -171,6 +183,6 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
         </Link>
         에서 할 수 있어요.
       </p>
-    </div>
+    </LivePanel>
   );
 }

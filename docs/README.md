@@ -1,6 +1,6 @@
 # SiruBOT 문서 인덱스
 
-> **기준일**: 2026-11-07 (`architecture.md`·`api-data-api.md`·`api-dashboard.md` 갱신, 나머지 파일은 2026-10-22 기준)
+> **기준일**: 2026-11-07 (파일 목록 검증)
 
 ## 파일 목록
 
@@ -14,11 +14,6 @@
 | `api-data-api.md` | data-api HTTP 계약: 인증·엔드포인트·TTL·에러 매핑·스케줄러 |
 | `api-dashboard.md` | dashboard API Route 계약: 3계층·라우트 그룹·권한/rate-limit/zod |
 | `3rdparty.md` | 서드파티 컴포넌트 계약: Lavalink 플러그인·클라이언트 라이브러리·외부 HTTP 서비스의 계약면과 업데이트 플레이북 |
-| `codebase-audit.md` | 코드베이스 감사 리포트(2026-10-21): 154건 발견의 우선순위 통합·파일:라인 근거·수정 로드맵 |
-| `performance-audit.md` | 성능 감사 리포트(2026-10-21): 병목 발견·파일:라인 근거·개선 로드맵 |
-| `refactor-plan.md` | 리팩토링 계획: 크로스커팅 중복 제거·워크스페이스별 분리·게이트웨이 잔재 정리의 단계별 로드맵 |
-| `security/` | 보안 감사 기록(2026-10-17): SEC-001~010의 증거·영향·대응 권고 |
-| `2026-10-22-feature-batch-plan.md` | 기능 배치 계획: 게임 정리·음악 커맨드 분리·서버 관리 강화·인사 이미지 비율·Sentry (티켓 보류) |
 
 ## 역할 분담
 

@@ -38,13 +38,11 @@ function TrackContent() {
   if (error) {
     return (
       <Container>
-        <div className="pt-20">
-          <ErrorPanel 
+        <ErrorPanel 
             title="차트 오류" 
             message="데이터를 불러오지 못했어요." 
             onRetry={() => mutate()} 
           />
-        </div>
       </Container>
     );
   }

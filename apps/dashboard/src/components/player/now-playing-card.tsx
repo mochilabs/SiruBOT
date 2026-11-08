@@ -7,7 +7,6 @@ import { ListMusic, Pause, Play, Repeat, SkipForward, Square, Volume2 } from "lu
 import type { LivePlayerState } from "@/app/api/servers/[id]/live/route";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
@@ -162,7 +161,7 @@ export function NowPlaying({
   );
 
   return (
-    <Card padding="lg" className="gap-4">
+    <section className="flex flex-col gap-4 rounded-card bg-surface-2 p-4 sm:p-5">
       <div className="flex min-w-0 items-center gap-2 text-sm">
         <StatusDot
           status={
@@ -337,6 +336,6 @@ export function NowPlaying({
           </div>
         </div>
       </div>
-    </Card>
+    </section>
   );
 }

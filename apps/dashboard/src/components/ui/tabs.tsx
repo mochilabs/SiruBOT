@@ -57,6 +57,8 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
 				// Base UI의 Tab은 활성일 때 data-active=""(존재 매칭)를 심는다 — [data-active=true]는 절대 매치되지 않아요.
 				"data-active:text-foreground",
 				"after:absolute after:bottom-[-5px] after:inset-x-0 after:h-0.5 after:bg-primary-control after:opacity-0 after:transition-opacity data-active:after:opacity-100",
+				// 알약(default) 목록은 밑줄 대신 활성 항목 배경으로 표시해요
+				"group-data-[variant=default]/tabs-list:after:hidden group-data-[variant=default]/tabs-list:data-active:bg-background group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=default]/tabs-list:rounded-control",
 				className,
 			)}
 			{...props}

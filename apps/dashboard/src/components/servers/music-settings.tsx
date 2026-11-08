@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import {
   CircleDollarSign,
   Eye,
@@ -21,21 +20,13 @@ import {
   type SearchableOption,
   SearchableSelect,
 } from "@/components/servers/searchable-select";
-import { Card } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { useSettingsForm } from "@/hooks/use-guild-settings";
-import { notifyApiError, notifySaved } from "@/lib/notify";
 import { SPONSORBLOCK_SEGMENTS, type SponsorBlockSegment } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
-import {
-  InfoBox,
-  PanelError,
-  PanelHeader,
-  PanelLoading,
-  SaveBar,
-} from "./settings-shared";
+import { SettingsPanel, useSettingsPanel } from "./settings-panel";
+import { SettingsSection, SettingsToggleRow } from "./settings-section";
+import { InfoBox } from "./settings-shared";
 
 const REPEAT_OPTIONS: SearchableOption[] = [
   { value: "off", label: "반복 없음", icon: <Repeat size={16} aria-hidden /> },
@@ -95,102 +86,66 @@ const toMusicForm = (settings: GuildSettings): MusicForm => ({
 });
 
 function MusicSettingsPanel({ guildId }: { guildId: string }) {
-  const { form, isLoading, error, saving, dirty, patch, submit, reload } =
-    useSettingsForm(guildId, toMusicForm);
-
-  const handleSave = useCallback(async () => {
-    try {
-      await submit();
-      notifySaved("음악 설정을 저장했어요.");
-    } catch (err) {
-      notifyApiError(err, "저장에 실패했어요.");
-    }
-  }, [submit]);
-
-  if (isLoading) return <PanelLoading label="음악 설정 불러오는 중…" />;
-  if (error) return <PanelError error={error} onRetry={reload} />;
-  if (!form) return <PanelLoading label="음악 설정 불러오는 중…" />;
+  const panel = useSettingsPanel(guildId, toMusicForm, "음악 설정을 저장했어요.");
+  const { patch, saving } = panel;
 
   return (
-    <Card padding="lg" className="gap-6 border-0 overflow-visible">
-      <PanelHeader
-        icon={<Music className="h-5 w-5" />}
-        title="음악 설정"
-        description="기본 볼륨·반복·관련곡·SponsorBlock을 관리해요."
-      />
+    <SettingsPanel
+      panel={panel}
+      icon={<Music className="h-5 w-5" />}
+      title="음악 설정"
+      description="반복·관련곡·SponsorBlock을 관리해요. 볼륨은 오디오 엔진 탭에서 바꿔요."
+      notice={
+        <InfoBox>
+          <p>변경 사항은 다음 곡부터 적용돼요. 지금 재생 중인 곡의 볼륨은 /볼륨 커맨드로 바로 바꿀 수 있어요.</p>
+        </InfoBox>
+      }
+    >
+      {(form) => (
+        <>
+          <SettingsSection
+            title="재생"
+            summary={REPEAT_OPTIONS.find((option) => option.value === form.repeat)?.label ?? form.repeat}
+            defaultOpen
+          >
+            <Field label="반복 모드">
+              <SearchableSelect
+                options={REPEAT_OPTIONS}
+                value={form.repeat}
+                onChange={(value: string) => patch({ repeat: value as MusicForm["repeat"] })}
+                disabled={saving}
+              />
+            </Field>
+            <SettingsToggleRow
+              title="재생 컨트롤러 메시지"
+              description="재생 중에 컨트롤러 메시지를 띄워요."
+              control={<Switch checked={form.enableController} onChange={(checked: boolean) => patch({ enableController: checked })} disabled={saving} aria-label="재생 컨트롤러 메시지" />}
+            />
+            <SettingsToggleRow
+              title="관련곡 자동 추천"
+              description="대기열이 끝나면 비슷한 곡을 이어서 재생해요."
+              control={<Switch checked={form.related} onChange={(checked: boolean) => patch({ related: checked })} disabled={saving} aria-label="관련곡 자동 추천" />}
+            />
+          </SettingsSection>
 
-      <Field label="기본 볼륨">
-        <Slider
-          value={form.volume}
-          onChange={(value: number) => patch({ volume: value })}
-          min={0}
-          max={150}
-          label="서버 기본 볼륨"
-          showValue
-          formatValue={(v) => `${v}%`}
-          disabled={saving}
-        />
-      </Field>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="반복 모드">
-          <SearchableSelect
-            options={REPEAT_OPTIONS}
-            value={form.repeat}
-            onChange={(value: string) =>
-              patch({ repeat: value as MusicForm["repeat"] })
-            }
-            disabled={saving}
-          />
-        </Field>
-
-        <div className="flex flex-col items-start gap-4">
-          <Switch
-            checked={form.enableController}
-            onChange={(checked: boolean) =>
-              patch({ enableController: checked })
-            }
-            disabled={saving}
-            label="재생 컨트롤러 메시지"
-            labelPosition="left"
-          />
-          <Switch
-            checked={form.related}
-            onChange={(checked: boolean) => patch({ related: checked })}
-            disabled={saving}
-            label="관련곡 자동 추천"
-            labelPosition="left"
-          />
-        </div>
-      </div>
-
-      <Field
-        label="SponsorBlock 건너뛰기 구간"
-        description="YouTube 영상에서 선택한 구간을 자동으로 건너겨요. 재생 중인 곡에는 다음 곡부터 반영돼요."
-      >
-        <SearchableSelect
-          multiple
-          options={SEGMENT_OPTIONS}
-          value={form.sponsorBlockSegments}
-          onChange={(value: string[]) =>
-            patch({
-              sponsorBlockSegments: value as MusicForm["sponsorBlockSegments"],
-            })
-          }
-          placeholder="구간을 선택하지 않으면 건너뛰지 않아요"
-          disabled={saving}
-        />
-      </Field>
-
-      <InfoBox>
-        <p>
-          변경 사항은 다음 곡부터 적용돼요. 지금 재생 중인 곡의 볼륨은 /볼륨
-          커맨드로 바로 바꿀 수 있어요.
-        </p>
-      </InfoBox>
-
-      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} />
-    </Card>
+          <SettingsSection title="SponsorBlock" summary={form.sponsorBlockSegments.length > 0 ? `${form.sponsorBlockSegments.length}개 구간` : "사용 안 함"}>
+            <Field
+              label="건너뛸 구간"
+              description="YouTube 영상에서 선택한 구간을 자동으로 건너뛰어요. 재생 중인 곡에는 다음 곡부터 반영돼요."
+            >
+              <SearchableSelect
+                multiple
+                options={SEGMENT_OPTIONS}
+                value={form.sponsorBlockSegments}
+                onChange={(value: string[]) => patch({ sponsorBlockSegments: value as MusicForm["sponsorBlockSegments"] })}
+                placeholder="구간을 선택하지 않으면 건너뛰지 않아요"
+                disabled={saving}
+              />
+            </Field>
+          </SettingsSection>
+        </>
+      )}
+    </SettingsPanel>
   );
 }
 

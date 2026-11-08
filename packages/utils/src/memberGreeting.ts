@@ -307,6 +307,145 @@ export const GREETING_TEMPLATES: readonly GreetingTemplate[] = [
 				}
 			]
 		}
+	},
+	{
+		id: 'ocean-left-panel',
+		name: '오션 사이드 패널',
+		image: {
+			background: { presetId: 'ocean', dataUri: null },
+			layers: [
+				{ id: 'panel', type: 'shape', shape: 'rect', x: 22, y: 50, width: 480, height: 675, color: '#07121c', opacity: 0.5 },
+				{ id: 'avatar', type: 'avatar', x: 22, y: 42, size: 220, ringColor: '#d6f0ff' },
+				{ id: 'name', type: 'text', x: 22, y: 72, size: 30, color: '#ffffff', bold: true, align: 'center', text: '{유저이름}' },
+				{ id: 'title', type: 'text', x: 62, y: 42, size: 52, color: '#ffffff', bold: true, align: 'left', text: '어서 와요!' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 62,
+					y: 60,
+					size: 26,
+					color: '#d6f0ff',
+					bold: false,
+					align: 'left',
+					text: '{서버}에서 {멤버수}번째로 만났어요'
+				}
+			]
+		}
+	},
+	{
+		id: 'sunset-circle',
+		name: '선셋 서클',
+		image: {
+			background: { presetId: 'sunset', dataUri: null },
+			layers: [
+				{ id: 'halo', type: 'shape', shape: 'circle', x: 50, y: 38, width: 360, height: 360, color: '#fff0d6', opacity: 0.25 },
+				{ id: 'avatar', type: 'avatar', x: 50, y: 38, size: 240, ringColor: '#fff0d6' },
+				{ id: 'title', type: 'text', x: 50, y: 70, size: 46, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 환영해요!' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 50,
+					y: 84,
+					size: 24,
+					color: '#fff0d6',
+					bold: false,
+					align: 'center',
+					text: '{서버} · {멤버수}번째 멤버'
+				}
+			]
+		}
+	},
+	{
+		id: 'mint-ribbon',
+		name: '민트 리본',
+		image: {
+			background: { presetId: 'mint', dataUri: null },
+			layers: [
+				{ id: 'ribbon', type: 'shape', shape: 'rect', x: 50, y: 80, width: 1200, height: 150, color: '#0a1a15', opacity: 0.6 },
+				{ id: 'avatar', type: 'avatar', x: 50, y: 34, size: 200, ringColor: '#e0fff2' },
+				{ id: 'title', type: 'text', x: 50, y: 77, size: 40, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님, 반가워요' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 50,
+					y: 89,
+					size: 22,
+					color: '#e0fff2',
+					bold: false,
+					align: 'center',
+					text: '{서버}의 {멤버수}번째 멤버'
+				}
+			]
+		}
+	},
+	{
+		id: 'lavender-right',
+		name: '라벤더 우측 아바타',
+		image: {
+			background: { presetId: 'lavender', dataUri: null },
+			layers: [
+				{ id: 'title', type: 'text', x: 8, y: 38, size: 54, color: '#ffffff', bold: true, align: 'left', text: '환영해요,' },
+				{ id: 'name', type: 'text', x: 8, y: 56, size: 44, color: '#efe8ff', bold: true, align: 'left', text: '{유저이름} 님' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 8,
+					y: 74,
+					size: 24,
+					color: '#efe8ff',
+					bold: false,
+					align: 'left',
+					text: '{서버} · {멤버수}번째 멤버'
+				},
+				{ id: 'avatar', type: 'avatar', x: 78, y: 50, size: 260, ringColor: '#efe8ff' }
+			]
+		}
+	},
+	{
+		id: 'midnight-quiet',
+		name: '미드나잇 심플',
+		image: {
+			background: { presetId: 'midnight', dataUri: null },
+			layers: [
+				{ id: 'avatar', type: 'avatar', x: 50, y: 28, size: 160, ringColor: '#9db4ff' },
+				{ id: 'title', type: 'text', x: 50, y: 56, size: 38, color: '#ffffff', bold: true, align: 'center', text: '{유저이름}' },
+				{ id: 'line', type: 'shape', shape: 'rect', x: 50, y: 66, width: 120, height: 3, color: '#9db4ff', opacity: 0.9 },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 50,
+					y: 76,
+					size: 22,
+					color: '#9db4ff',
+					bold: false,
+					align: 'center',
+					text: '{서버}에 오신 것을 환영해요'
+				}
+			]
+		}
+	},
+	{
+		id: 'plum-double-ring',
+		name: '플럼 더블 링',
+		image: {
+			background: { presetId: 'plum', dataUri: null },
+			layers: [
+				{ id: 'ring', type: 'shape', shape: 'circle', x: 50, y: 38, width: 330, height: 330, color: '#ffb3d9', opacity: 0.22 },
+				{ id: 'avatar', type: 'avatar', x: 50, y: 38, size: 230, ringColor: '#ffb3d9' },
+				{ id: 'title', type: 'text', x: 50, y: 72, size: 44, color: '#ffffff', bold: true, align: 'center', text: '{유저이름} 님 반가워요!' },
+				{
+					id: 'subtitle',
+					type: 'text',
+					x: 50,
+					y: 86,
+					size: 24,
+					color: '#ffb3d9',
+					bold: false,
+					align: 'center',
+					text: '{멤버수}번째 멤버가 되었어요'
+				}
+			]
+		}
 	}
 ];
 
@@ -326,7 +465,12 @@ export type PresetBackground = { id: string; name: string };
 export const PRESET_BACKGROUNDS: readonly PresetBackground[] = [
 	{ id: 'rose', name: '로즈' },
 	{ id: 'plum', name: '플럼' },
-	{ id: 'gold', name: '골드' }
+	{ id: 'gold', name: '골드' },
+	{ id: 'ocean', name: '오션' },
+	{ id: 'mint', name: '민트' },
+	{ id: 'sunset', name: '선셋' },
+	{ id: 'lavender', name: '라벤더' },
+	{ id: 'midnight', name: '미드나잇' }
 ];
 
 const PRESET_BACKGROUND_IDS: readonly string[] = PRESET_BACKGROUNDS.map((preset) => preset.id);

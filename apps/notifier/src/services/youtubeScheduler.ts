@@ -17,11 +17,11 @@ const TICK_MS = 5 * 60 * 1000;
 const LOCK_KEY = 'sirubot:social:youtube:scheduler-lock';
 const LOCK_TTL_SECONDS = 270; // 틱(5분)보다 짧게: 다음 틱이 다시 잡을 수 있게
 const LEASE_KEY_PREFIX = 'sirubot:social:youtube:lease:';
-// lease가 하루보다 적게 남으면 재등록해요 (유튜브 lease 최대 5일, plan §8)
+// lease가 하루보다 적게 남으면 재등록해요 (유튜브 lease 최대 5일)
 const RENEW_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 const LEASE_TTL_SECONDS = YOUTUBE_LEASE_SECONDS + 60;
 const AUDIT_KEY_PREFIX = 'sirubot:social:youtube:audit:';
-// plan §8: RSS 감사 폴링은 채널당 30분~1시간 (지터 포함). WebSub 푸시가 유실된 영상을 회수해요.
+// RSS 감사 폴링은 채널당 30분~1시간 (지터 포함). WebSub 푸시가 유실된 영상을 회수해요.
 const AUDIT_INTERVAL_BASE_SECONDS = 30 * 60;
 const AUDIT_JITTER_SECONDS = 30 * 60;
 
@@ -29,7 +29,7 @@ interface LeaseState {
 	leaseUntil: number;
 }
 
-/** 유튜브 WebSub lease 갱신 + RSS 감사 폴링 스케줄러 (plan §10 ⑤). */
+/** 유튜브 WebSub lease 갱신 + RSS 감사 폴링 스케줄러. */
 export class YouTubeScheduler extends SubscriptionPoller {
 	private readonly fetchFn: YouTubeFetchFn;
 	private readonly dispatcher: { dispatch(event: SocialEvent): Promise<void> };
