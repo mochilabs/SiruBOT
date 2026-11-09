@@ -33,7 +33,7 @@ export function lastGoodDaily(): DailyHoroscope | null {
 	return lastGood;
 }
 
-async function refreshOnce(provider: TranslationProvider | null): Promise<DailyHoroscope> {
+export async function refreshOnce(provider: TranslationProvider | null): Promise<DailyHoroscope> {
 	const raw = await fetchOhaasaRaw();
 	const key = ohaasaCacheKey(raw.date);
 	// 세 갱신 경로(원문·번역·폴백)가 같은 규칙으로 마지막 기록과 Redis 캐시를 함께 남겨요.
@@ -118,8 +118,4 @@ export function startOhaasaScheduler(env: Env, provider: TranslationProvider | n
 		stopped = true;
 		if (timer) clearTimeout(timer);
 	};
-}
-
-export async function refreshOhaasaNow(provider: TranslationProvider | null): Promise<DailyHoroscope> {
-	return refreshOnce(provider);
 }

@@ -53,9 +53,6 @@ export const MUSIC_PROMOTED_COMMANDS = SUBCOMMANDS.filter((sub) => PROMOTED_SUBC
 	description: sub.description
 }));
 
-/** `/재생`·`/건너뛰기`·`/정지`가 승격됐다는 안내 문구 — 도움말과 커맨드 설명이 같은 문장을 써요 */
-export const MUSIC_PROMOTED_NOTE = '재생·건너뛰기·정지는 `/재생`, `/건너뛰기`, `/정지`로 바로 쓸 수 있어요.';
-
 @ApplyOptions<Command.Options>({
 	enabled: true,
 	name: 'music',

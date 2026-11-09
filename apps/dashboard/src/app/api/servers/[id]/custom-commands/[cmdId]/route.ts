@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import {
   customCommandPatchSchema,
+  normalizeCustomCommandName,
   validateCustomCommandName,
 } from "@sirubot/utils/customCommand";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
-import { normalizedCommandName, readCustomCommandsState } from "@/lib/custom-commands";
+import { readCustomCommandsState } from "@/lib/custom-commands";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { WRITE_RATE } from "@/lib/rate-limit";
@@ -46,7 +47,7 @@ export const PATCH = createGuildApiHandler({
         spec?: object;
       } = {};
       if (body.data.name !== undefined) {
-        const name = normalizedCommandName(body.data.name);
+        const name = normalizeCustomCommandName(body.data.name);
         const method = existing.method === "slash" ? "slash" : "prefix";
         const nameError = validateCustomCommandName(name, method);
         if (nameError) {

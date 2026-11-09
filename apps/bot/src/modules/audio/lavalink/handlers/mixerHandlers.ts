@@ -14,7 +14,6 @@ import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
 const TRACK_END_CONFIRM_MS = 200; // S1 confirmed B-plan (EventEmitter replaced reason dispatch)
 const PROBE_DELAY_MS = 3_000;
-const SAMPLE_PROBE_INTERVAL_MS = 60_000;
 
 function sleep(ms: number): Promise<void> {
 	const { promise, resolve } = Promise.withResolvers<void>();
@@ -667,30 +666,4 @@ function scheduleRecoveryProbe(player: CustomPlayer): void {
 		container.logger.error(`[mixer] post-recovery desync detected on guild ${player.guildId}, forcing hardResync`);
 		await hardResync(player);
 	}, PROBE_DELAY_MS);
-}
-
-/**
- * Background sampling probe for 1% of active guilds to detect silent desyncs.
- */
-export function startSamplingProbe(allGuildIds: string[]): NodeJS.Timeout {
-	return setInterval(async () => {
-		const count = Math.max(Math.ceil(allGuildIds.length * 0.01), 5);
-		const sample = allGuildIds.slice(0, count);
-
-		for (const gid of sample) {
-			const player = container.audio.getPlayer(gid) as CustomPlayer | null;
-			if (!player || !player.playing) continue;
-			const serverPlayer = (await player.node?.fetchPlayer(String(gid)).catch(() => null)) as {
-				track?: { encoded?: string; info?: { identifier?: string } };
-			} | null;
-			const serverTrack = serverPlayer?.track ?? null;
-			const clientTrack = player.queue.current ?? null;
-			const ok = (!serverTrack && !clientTrack) || isSameTrack(serverTrack, clientTrack);
-			player.mixerRuntime.sampleMiss = ok ? 0 : player.mixerRuntime.sampleMiss + 1;
-			if (player.mixerRuntime.sampleMiss >= 2) {
-				container.logger.warn(`[mixer] sampling desync probe warning on guild ${gid}`);
-				player.mixerRuntime.sampleMiss = 0;
-			}
-		}
-	}, SAMPLE_PROBE_INTERVAL_MS);
 }

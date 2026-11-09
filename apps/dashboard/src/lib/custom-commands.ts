@@ -5,7 +5,6 @@ import type {
 import {
 	CUSTOM_COMMAND_MAX_PER_GUILD,
 	CUSTOM_COMMAND_MAX_SLASH_PER_GUILD,
-	normalizeCustomCommandName,
 	normalizeCustomCommandPrefix,
 } from "@sirubot/utils/customCommand";
 
@@ -61,11 +60,6 @@ export async function readCustomCommandsState(
       updatedAt: row.updatedAt.toISOString(),
     })),
   };
-}
-
-/** 이름을 매칭용으로 정규화해 저장해요 — 'Greet'와 'greet'가 같은 명령어가 돼요 */
-export function normalizedCommandName(name: string): string {
-  return normalizeCustomCommandName(name);
 }
 
 /** 커스텀 명령어 개수 상한 — 서버당 */

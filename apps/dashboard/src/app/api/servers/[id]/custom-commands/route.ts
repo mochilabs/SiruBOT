@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   customCommandPayloadSchema,
+  normalizeCustomCommandName,
   validateCustomCommandName,
   validateCustomCommandPrefix,
 } from "@sirubot/utils/customCommand";
@@ -10,7 +11,6 @@ import { createGuildApiHandler } from "@/lib/api-handler";
 import {
   MAX_CUSTOM_COMMANDS_PER_GUILD,
   MAX_SLASH_COMMANDS_PER_GUILD,
-  normalizedCommandName,
   readCustomCommandsState,
 } from "@/lib/custom-commands";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
@@ -49,7 +49,7 @@ export const POST = createGuildApiHandler({
       );
       if (!body.ok) return body.response;
 
-      const name = normalizedCommandName(body.data.name);
+      const name = normalizeCustomCommandName(body.data.name);
       const nameError = validateCustomCommandName(name, body.data.method);
       if (nameError) {
         return NextResponse.json({ error: nameError }, { status: 400 });
