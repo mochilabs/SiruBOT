@@ -42,7 +42,8 @@ export function splitOhaasaLucky(lucky: string): { item: string; key: string } {
 		}
 		unlabeled.push(text);
 	}
-	if (unlabeled.length > 0) item = unlabeled.join(' / ');
+	// 라벨 있는 아이템이 우선이고, 라벨 없는 조각은 아이템이 없을 때만 써요.
+	if (!item && unlabeled.length > 0) item = unlabeled.join(' / ');
 	return { item, key };
 }
 
