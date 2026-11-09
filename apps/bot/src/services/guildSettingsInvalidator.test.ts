@@ -6,7 +6,8 @@ const { bindings, clearGuildCustomCommandsCache, syncGuildSlashCommands, contain
 	syncGuildSlashCommands: vi.fn(async () => undefined),
 	containerStub: {
 		audio: { getPlayer: vi.fn() },
-		guildService: { getMixerSettings: vi.fn() },
+		guildService: {},
+		guildMixer: { getMixerSettings: vi.fn() },
 		mixerService: { pushCrossfadeConfig: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
 	}
 }));
@@ -23,6 +24,7 @@ vi.mock('@sirubot/utils', () => ({
 }));
 vi.mock('@sapphire/framework', () => ({ container: containerStub }));
 vi.mock('./customCommands/store.ts', () => ({ clearGuildCustomCommandsCache }));
+vi.mock('./guildSettings/mixer.ts', () => containerStub.guildMixer);
 vi.mock('./customCommands/slashRegistry.ts', () => ({ syncGuildSlashCommands }));
 
 import { GuildSettingsInvalidator } from './guildSettingsInvalidator.ts';
@@ -37,7 +39,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	bindings.length = 0;
 	containerStub.audio.getPlayer.mockReturnValue(null);
-	containerStub.guildService.getMixerSettings.mockResolvedValue({
+	containerStub.guildMixer.getMixerSettings.mockResolvedValue({
 		gaplessEnabled: true,
 		crossfadeEnabled: true,
 		crossfadeMs: 600,
@@ -84,7 +86,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 
 		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g2', reason: 'mixer' }));
 
-		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g2'));
+		await vi.waitFor(() => expect(containerStub.guildMixer.getMixerSettings).toHaveBeenCalledWith(expect.anything(), 'g2'));
 		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
 		await vi.waitFor(() => expect(containerStub.mixerService.preloadUpcoming).toHaveBeenCalledWith(player, { force: true }));
 	});
@@ -115,7 +117,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g3' }));
 		await new Promise((resolve) => setTimeout(resolve, 0));
 
-		expect(containerStub.guildService.getMixerSettings).not.toHaveBeenCalled();
+		expect(containerStub.guildMixer.getMixerSettings).not.toHaveBeenCalled();
 		expect(containerStub.mixerService.pushCrossfadeConfig).not.toHaveBeenCalled();
 	});
 
@@ -132,7 +134,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 		await service.start('redis://localhost:6379', { invalidate: vi.fn() } as never);
 		const player = { guildId: 'g-automix' };
 		containerStub.audio.getPlayer.mockReturnValue(player);
-		containerStub.guildService.getMixerSettings.mockResolvedValueOnce({
+		containerStub.guildMixer.getMixerSettings.mockResolvedValueOnce({
 			gaplessEnabled: false,
 			crossfadeEnabled: false,
 			automixEnabled: true,
@@ -142,7 +144,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 
 		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g-automix', reason: 'mixer' }));
 
-		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g-automix'));
+		await vi.waitFor(() => expect(containerStub.guildMixer.getMixerSettings).toHaveBeenCalledWith(expect.anything(), 'g-automix'));
 		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
 		await vi.waitFor(() => {
 			expect(containerStub.mixerService.clearNext).not.toHaveBeenCalled();
@@ -155,7 +157,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 		await service.start('redis://localhost:6379', { invalidate: vi.fn() } as never);
 		const player = { guildId: 'g-all-off' };
 		containerStub.audio.getPlayer.mockReturnValue(player);
-		containerStub.guildService.getMixerSettings.mockResolvedValueOnce({
+		containerStub.guildMixer.getMixerSettings.mockResolvedValueOnce({
 			gaplessEnabled: false,
 			crossfadeEnabled: false,
 			automixEnabled: false,
@@ -165,7 +167,7 @@ describe('GuildSettingsInvalidator (pub/sub 캐시 무효화)', () => {
 
 		bindings[0]!.onMessage(JSON.stringify({ guildId: 'g-all-off', reason: 'mixer' }));
 
-		await vi.waitFor(() => expect(containerStub.guildService.getMixerSettings).toHaveBeenCalledWith('g-all-off'));
+		await vi.waitFor(() => expect(containerStub.guildMixer.getMixerSettings).toHaveBeenCalledWith(expect.anything(), 'g-all-off'));
 		await vi.waitFor(() => expect(containerStub.mixerService.pushCrossfadeConfig).toHaveBeenCalledWith(player));
 		await vi.waitFor(() => expect(containerStub.mixerService.clearNext).toHaveBeenCalledWith(player, { force: true }));
 		expect(containerStub.mixerService.preloadUpcoming).not.toHaveBeenCalled();

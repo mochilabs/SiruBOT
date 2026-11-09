@@ -1,4 +1,5 @@
 import { notice as noticeView } from '../../view/notice.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 /**
  * 커스텀 명령어 접두사 리스너 — "접두사 + 이름" 메시지로 길드 커스텀 명령어를 실행해요.
  *
@@ -44,7 +45,7 @@ export class CustomCommandPrefixListener extends Listener {
 		if (!message.channel.isSendable()) return;
 
 		// 접두사 자체가 길드 설정이라 캐시에서 빠르게 읽혀요 (DB 미스는 여기서만 일어나요)
-		const prefix = await this.container.guildService.getCustomCommandPrefix(message.guildId).catch(() => null);
+		const prefix = await guildChatPolicy.getCustomCommandPrefix(this.container.guildService, message.guildId).catch(() => null);
 		if (!prefix || !message.content.startsWith(prefix)) return;
 
 		const rest = message.content.slice(prefix.length).trimStart();

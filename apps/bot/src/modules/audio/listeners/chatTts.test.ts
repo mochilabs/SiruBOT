@@ -5,7 +5,8 @@ const mocks = vi.hoisted(() => ({
 		logger: { error: vi.fn() },
 		audio: { getPlayer: vi.fn() },
 		ttsService: { isEnabled: vi.fn() },
-		guildService: { getTtsSettings: vi.fn(), getCustomCommandPrefix: vi.fn() },
+		guildService: {},
+		guildChatPolicy: { getTtsSettings: vi.fn(), getCustomCommandPrefix: vi.fn() },
 		ttsUserSettings: { get: vi.fn() },
 		chatTtsService: { handleMessage: vi.fn() }
 	}
@@ -21,6 +22,7 @@ vi.mock('@sapphire/framework', () => ({
 vi.mock('../../../services/chatTts.ts', () => ({ preprocessTtsMessage: (message: { content: string }) => message.content }));
 
 import { ChatTtsListener } from './chatTts.ts';
+vi.mock('../../../services/guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), ...mocks.container.guildChatPolicy }));
 
 const PRESET = { enabled: true, voice: null, channel: 'both', emotion: 'neutral' };
 
@@ -44,8 +46,8 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mocks.container.audio.getPlayer.mockReturnValue({ connected: true, voiceChannelId: 'vc-1', textChannelId: 'session-text' });
 	mocks.container.ttsService.isEnabled.mockReturnValue(true);
-	mocks.container.guildService.getTtsSettings.mockResolvedValue({ mode: 'channels', channelIds: ['allowed'] });
-	mocks.container.guildService.getCustomCommandPrefix.mockResolvedValue('!');
+	mocks.container.guildChatPolicy.getTtsSettings.mockResolvedValue({ mode: 'channels', channelIds: ['allowed'] });
+	mocks.container.guildChatPolicy.getCustomCommandPrefix.mockResolvedValue('!');
 	mocks.container.ttsUserSettings.get.mockResolvedValue(PRESET);
 });
 
@@ -66,7 +68,7 @@ describe('ChatTtsListener 채널 정책', () => {
 	});
 
 	it('길드 TTS가 꺼져 있으면 세션 채널도 읽지 않는다', async () => {
-		mocks.container.guildService.getTtsSettings.mockResolvedValue({ mode: 'off', channelIds: [] });
+		mocks.container.guildChatPolicy.getTtsSettings.mockResolvedValue({ mode: 'off', channelIds: [] });
 		await run(message('session-text'));
 		expect(mocks.container.chatTtsService.handleMessage).not.toHaveBeenCalled();
 	});

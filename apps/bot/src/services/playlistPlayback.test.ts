@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { playSavedTracks, type PlaylistPlaybackContext } from './playlistPlayback.ts';
+vi.mock('./guildSettings/channels.ts', () => mocks.guildChannels);
 
 const mocks = vi.hoisted(() => ({
 	audio: { getPlayer: vi.fn(), nodeManager: { leastUsedNodes: vi.fn() } },
-	guildService: { getDefaultTextChannel: vi.fn() },
+	guildService: {},
+	guildChannels: { getDefaultTextChannel: vi.fn() },
 	audioService: { getOrCreatePlayer: vi.fn(), connectPlayer: vi.fn(), enqueueTrack: vi.fn(), ensurePlayback: vi.fn() },
 	search: vi.fn()
 }));

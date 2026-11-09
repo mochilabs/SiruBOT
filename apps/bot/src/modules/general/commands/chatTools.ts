@@ -14,6 +14,7 @@ import { emoji } from '@sirubot/utils';
 import { type ChatToolName } from '../../../services/guildService.ts';
 import { resetCountingState } from '../../../services/countingState.ts';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
+import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * /채팅유틸 — 채팅 유틸 기능의 채널 단위 on/off + 카운팅 채널 지정.
@@ -150,7 +151,8 @@ export class ChatToolsCommand extends Command {
 
 		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
 		const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
-		const result = await this.container.guildService.setChannelChatToolEnabled(
+		const result = await guildChatPolicy.setChannelChatToolEnabled(
+			this.container.guildService,
 			interaction.guildId,
 			tool,
 			interaction.channelId,
@@ -165,7 +167,7 @@ export class ChatToolsCommand extends Command {
 					? `${emoji('sparkle')} ${label}는 이미 서버의 모든 채널에서 켜져 있어요.`
 					: `${emoji('sparkle')} 지금부터 <#${interaction.channelId}>에서 ${label}를 켰어요.`;
 			if (tool === 'embedFix') {
-				const settings = await this.container.guildService.getChatToolSettings(interaction.guildId);
+				const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, interaction.guildId);
 				if (settings.embedFixSites.length === 0) {
 					content += `\n-# ${emoji('info')} 복구할 사이트가 전부 꺼져 있어요. 대시보드 채팅 유틸 탭에서 사이트를 골라 주세요.`;
 				}
@@ -184,7 +186,7 @@ export class ChatToolsCommand extends Command {
 	/** 카운팅 서브커맨드 — 채널 지정(기본: 이 채널) 또는 끄기. 상태는 새로 시작해요 */
 	async runCounting(interaction: ChatInputCommandInteraction<'cached'>) {
 		if (interaction.options.getString('state') === 'off') {
-			await this.container.guildService.setCountingEnabled(interaction.guildId, false);
+			await guildChatPolicy.setCountingEnabled(this.container.guildService, interaction.guildId, false);
 			await resetCountingState(interaction.guildId);
 			await interaction.editReply({
 				flags: [MessageFlags.IsComponentsV2],
@@ -196,7 +198,7 @@ export class ChatToolsCommand extends Command {
 
 		const channel = interaction.options.getChannel('channel');
 		const channelId = channel?.id ?? interaction.channelId;
-		await this.container.guildService.setCountingChannel(interaction.guildId, channelId);
+		await guildChatPolicy.setCountingChannel(this.container.guildService, interaction.guildId, channelId);
 		await resetCountingState(interaction.guildId);
 		await interaction.editReply({
 			flags: [MessageFlags.IsComponentsV2],

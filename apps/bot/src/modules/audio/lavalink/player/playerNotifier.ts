@@ -9,6 +9,7 @@ import { nowPlayingTrack } from './nowPlaying.ts';
 import { buildControllerCardPayload } from './controllerPayload.ts';
 import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
 import { Guild } from '@sirubot/prisma';
+import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
 
@@ -415,7 +416,7 @@ export class PlayerNotifier {
 	/** 컨트롤러가 떠 있는 채널이 길드의 고정 채널인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
 	private async isPinnedChannel(guildId: string, textChannelId: string): Promise<boolean> {
 		try {
-			const pinned = await this.container.guildService.getPinnedChannel(guildId);
+			const pinned = await guildChannels.getPinnedChannel(this.container.guildService, guildId);
 			return Boolean(pinned) && pinned === textChannelId;
 		} catch {
 			return false;

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { run } from './volume.ts';
+vi.mock('../../../services/guildSettings/playback.ts', () => ({ getVolume, getTtsVolume, getTtsDuck, updateTtsDuck, updateVolume, updateTtsVolume }));
 
 const { deferReply, editReply, getVolume, getTtsVolume, getTtsDuck, updateTtsDuck, updateVolume, updateTtsVolume, getPlayer } = vi.hoisted(() => ({
 	deferReply: vi.fn(),
@@ -16,7 +17,7 @@ const { deferReply, editReply, getVolume, getTtsVolume, getTtsDuck, updateTtsDuc
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
-		guildService: { getVolume, getTtsVolume, getTtsDuck, updateTtsDuck, updateVolume, updateTtsVolume },
+		guildService: {},
 		audio: { getPlayer }
 	},
 	UserError: class extends Error {
@@ -56,12 +57,12 @@ describe('volume subcommand run', () => {
 
 	it('target=duck 입력(0~100)은 DB에 0~1 실수로 저장해요', async () => {
 		await run(interaction('duck', 30) as unknown as Parameters<typeof run>[0]);
-		expect(updateTtsDuck).toHaveBeenCalledWith('guild', 0.3);
+		expect(updateTtsDuck).toHaveBeenCalledWith(expect.anything(), 'guild', 0.3);
 	});
 
 	it('target 없이 값만 주면 music으로 처리해요', async () => {
 		await run(interaction(null, 30) as unknown as Parameters<typeof run>[0]);
-		expect(updateVolume).toHaveBeenCalledWith('guild', 30);
+		expect(updateVolume).toHaveBeenCalledWith(expect.anything(), 'guild', 30);
 		expect(updateTtsDuck).not.toHaveBeenCalled();
 	});
 

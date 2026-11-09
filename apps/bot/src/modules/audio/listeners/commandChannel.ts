@@ -7,6 +7,7 @@ import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
 import { ownerOnly } from '../../../lib/ownerOnlyFilter.ts';
 import { errorView } from '../../../lib/errorView.ts';
+import * as guildChannels from '../../../services/guildSettings/channels.ts';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;
@@ -49,7 +50,7 @@ export class CommandChannelListener extends Listener {
 		if (!content) return;
 
 		const guildId = message.guildId;
-		const pinned = await this.container.guildService.getPinnedChannel(guildId);
+		const pinned = await guildChannels.getPinnedChannel(this.container.guildService, guildId);
 		if (!pinned || pinned !== message.channelId) return;
 
 		if (content.length > MAX_QUERY_LENGTH) {
@@ -150,7 +151,7 @@ export class CommandChannelListener extends Listener {
 				return;
 			}
 
-			const mode = await this.container.guildService.getPinnedChannelMode(guildId);
+			const mode = await guildChannels.getPinnedChannelMode(this.container.guildService, guildId);
 			if (mode === 'select') {
 				await this.runSelect(message, activePlayer, content, tracks);
 			} else {
@@ -176,7 +177,7 @@ export class CommandChannelListener extends Listener {
 	/** 고정 채널 입력 메시지 삭제 설정 — 켜져 있으면 봇이 처리를 마친 뒤 입력 메시지를 지운다 (Manage Messages 권한 필요). */
 	private async resolveInputMessage(message: Message, guildId: string): Promise<void> {
 		try {
-			if (!(await this.container.guildService.getPinnedChannelDeleteInput(guildId))) return;
+			if (!(await guildChannels.getPinnedChannelDeleteInput(this.container.guildService, guildId))) return;
 			if (message.deletable) await message.delete().catch(() => null);
 		} catch (error) {
 			this.container.logger.warn(`[commandChannel] failed to delete input message (guild ${guildId}): ${error}`);

@@ -5,7 +5,8 @@ const mocks = vi.hoisted(() => ({
 		logger: { warn: vi.fn() },
 		audio: { getPlayer: vi.fn() },
 		ttsService: { isEnabled: vi.fn() },
-		guildService: { getTtsJoinAnnounce: vi.fn(), getTtsLeaveAnnounce: vi.fn() },
+		guildService: {},
+		guildChatPolicy: { getTtsJoinAnnounce: vi.fn(), getTtsLeaveAnnounce: vi.fn() },
 		ttsUserSettings: { get: vi.fn() },
 		chatTtsService: { speakNow: vi.fn() }
 	}
@@ -20,6 +21,7 @@ vi.mock('@sapphire/framework', () => ({
 }));
 
 import { TtsMemberAnnounceListener } from './ttsMemberAnnounce.ts';
+vi.mock('../../../services/guildSettings/chatPolicy.ts', () => mocks.container.guildChatPolicy);
 
 const PRESET = { enabled: false, voice: null, channel: 'left', emotion: 'neutral' };
 
@@ -35,8 +37,8 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mocks.container.audio.getPlayer.mockReturnValue({ connected: true, voiceChannelId: 'vc-bot' });
 	mocks.container.ttsService.isEnabled.mockReturnValue(true);
-	mocks.container.guildService.getTtsJoinAnnounce.mockResolvedValue(true);
-	mocks.container.guildService.getTtsLeaveAnnounce.mockResolvedValue(true);
+	mocks.container.guildChatPolicy.getTtsJoinAnnounce.mockResolvedValue(true);
+	mocks.container.guildChatPolicy.getTtsLeaveAnnounce.mockResolvedValue(true);
 	mocks.container.ttsUserSettings.get.mockResolvedValue(PRESET);
 	mocks.container.chatTtsService.speakNow.mockResolvedValue('overlay');
 });
@@ -53,7 +55,7 @@ describe('TtsMemberAnnounceListener', () => {
 	});
 
 	it('길드 설정이 꺼져 있으면 읽지 않는다', async () => {
-		mocks.container.guildService.getTtsJoinAnnounce.mockResolvedValue(false);
+		mocks.container.guildChatPolicy.getTtsJoinAnnounce.mockResolvedValue(false);
 		await run(state(null), state('vc-bot'));
 		expect(mocks.container.chatTtsService.speakNow).not.toHaveBeenCalled();
 	});

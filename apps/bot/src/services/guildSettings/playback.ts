@@ -58,14 +58,6 @@ export async function setTtsAnnounceMode(store: GuildSettingsStore, guildId: str
 	return normalizeAnnounceMode(guild.ttsAnnounceMode);
 }
 
-export async function getTtsParallel(store: GuildSettingsStore, guildId: string): Promise<boolean> {
-	return (await getTtsAnnounceMode(store, guildId)) === 'parallel';
-}
-
-export async function setTtsParallel(store: GuildSettingsStore, guildId: string, enabled: boolean): Promise<boolean> {
-	return (await setTtsAnnounceMode(store, guildId, enabled ? 'parallel' : 'sequential')) === 'parallel';
-}
-
 export async function getDJRole(store: GuildSettingsStore, guildId: string): Promise<string | null> {
 	const guild = await store.getGuild(guildId);
 	return guild.djRoleId;

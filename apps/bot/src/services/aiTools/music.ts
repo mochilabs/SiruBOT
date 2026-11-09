@@ -16,6 +16,7 @@ import { nowPlayingTrack } from '../../modules/audio/lavalink/player/nowPlaying.
 import { isSameTrack } from '../../modules/audio/lavalink/handlers/playbackWatchdog.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { searchLyrics } from '../dataApiClient.ts';
+import * as guildPlayback from '../guildSettings/playback.ts';
 
 const PLATFORM_MAP: Record<string, SearchPlatform> = {
 	youtube: 'ytsearch',
@@ -212,13 +213,13 @@ const musicVolumeTool: AiTool = {
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
 		if (args.volume === undefined || args.volume === null) {
-			const saved = await container.guildService.getVolume(guildId);
+			const saved = await guildPlayback.getVolume(container.guildService, guildId);
 			return JSON.stringify({ status: 'ok', volume: saved });
 		}
 		await requireDjOrAlone(ctx);
 		const volume = Math.round(Number(args.volume));
 		if (!Number.isFinite(volume) || volume < 0 || volume > 150) throw new Error('볼륨은 0~150 사이로 설정할 수 있어요.');
-		const { volume: updated } = await container.guildService.updateVolume(guildId, volume);
+		const { volume: updated } = await guildPlayback.updateVolume(container.guildService, guildId, volume);
 		const player = container.audio.getPlayer(guildId);
 		if (player) player.setVolume(updated);
 		return JSON.stringify({ status: 'ok', volume: updated, is_playing: !!player });
@@ -278,12 +279,12 @@ const musicRepeatTool: AiTool = {
 		const guildId = requireGuild(ctx);
 		const mode = args.mode === undefined || args.mode === null ? null : String(args.mode);
 		if (mode === null) {
-			const current = await container.guildService.getRepeat(guildId);
+			const current = await guildPlayback.getRepeat(container.guildService, guildId);
 			return JSON.stringify({ status: 'ok', mode: current });
 		}
 		await requireDjOrAlone(ctx);
 		if (!['off', 'track', 'queue'].includes(mode)) throw new Error('반복 모드는 off/track/queue 중 하나예요.');
-		const updated = await container.guildService.setRepeat(guildId, mode as RepeatMode);
+		const updated = await guildPlayback.setRepeat(container.guildService, guildId, mode as RepeatMode);
 		const player = container.audio.getPlayer(guildId);
 		await player?.setRepeatMode(updated);
 		if (player) await container.mixerService.clearNext(player).catch(() => null);

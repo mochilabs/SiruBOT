@@ -14,6 +14,7 @@ import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import { confirmAction } from '../../../lib/confirmation.ts';
 import { acquireChannelTurn, releaseChannelTurn, clearChannelHistory } from '../../../services/aiChatService.ts';
 import { notice } from '../view/notice.ts';
+import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * AI 채팅 설정 서브커맨드 정의 — `/채팅설정`과 `/ai`가 같은 옵션을 써요.
@@ -138,7 +139,7 @@ export class ChatSettingsCommand extends Command {
 			return;
 		}
 		if (subcommand === 'status') {
-			const current = await this.container.guildService.getAiSettings(guildId);
+			const current = await guildChatPolicy.getAiSettings(this.container.guildService, guildId);
 			const active = current.mode === 'all' || (current.mode === 'channels' && current.channelIds.includes(interaction.channelId));
 			await interaction.editReply({
 				components: [
@@ -153,8 +154,8 @@ export class ChatSettingsCommand extends Command {
 
 		if (subcommand === 'server') {
 			const mode = normalizeAiMode(interaction.options.getString('mode', true));
-			await this.container.guildService.setAiMode(guildId, mode);
-			const current = await this.container.guildService.getAiSettings(guildId);
+			await guildChatPolicy.setAiMode(this.container.guildService, guildId, mode);
+			const current = await guildChatPolicy.getAiSettings(this.container.guildService, guildId);
 			const content =
 				mode === 'all'
 					? `${emoji('robot')} 이 서버의 AI 채팅을 **모든 채널**에서 켰어요.`
@@ -171,7 +172,13 @@ export class ChatSettingsCommand extends Command {
 			const enabled = interaction.options.getBoolean('enabled', true);
 			// 끄기로 인해 목록을 만들어야 하는(all → channels) 경우를 위한 서버의 나머지 텍스트 채널
 			const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
-			const result = await this.container.guildService.setChannelAiEnabled(guildId, interaction.channelId, enabled, otherTextChannelIds);
+			const result = await guildChatPolicy.setChannelAiEnabled(
+				this.container.guildService,
+				guildId,
+				interaction.channelId,
+				enabled,
+				otherTextChannelIds
+			);
 			const content = enabled
 				? `${emoji('speech')} 이 채널에서 AI 채팅을 **${result.mode === 'all' ? '켰어요 (서버 전체 켜짐)' : '켰어요'}**. (허용 채널 ${
 						result.channelIds.length

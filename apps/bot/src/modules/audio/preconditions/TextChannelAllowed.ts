@@ -1,5 +1,6 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message } from 'discord.js';
+import * as guildChannels from '../../../services/guildSettings/channels.ts';
 
 export class TextChannelAllowed extends AllFlowsPrecondition {
 	public override async messageRun(message: Message) {
@@ -18,7 +19,7 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 		if (!guildId || !channelId) return this.ok(); // DMs are handled by other preconditions if needed
 
 		// 길드 설정은 GuildService의 60초 TTL 캐시를 재사용 — 매 명령어마다 DB 조회 방지
-		const configuredChannelId = await this.container.guildService.getDefaultTextChannel(guildId);
+		const configuredChannelId = await guildChannels.getDefaultTextChannel(this.container.guildService, guildId);
 
 		// 1. 설정된 텍스트 채널이 없으면 통과
 		if (!configuredChannelId) return this.ok();
@@ -41,7 +42,7 @@ export class TextChannelAllowed extends AllFlowsPrecondition {
 			if (!channelExists) {
 				// 채널이 삭제되었거나 봇이 볼 수 없는 경우: 설정을 초기화하고 통과시킴
 				this.container.logger.info(`Configured text channel [${configuredChannelId}] is missing in guild [${guildId}]. Resetting config.`);
-				await this.container.guildService.setDefaultTextChannel(guildId, null);
+				await guildChannels.setDefaultTextChannel(this.container.guildService, guildId, null);
 				return this.ok();
 			}
 

@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { WARN_COLOR, emoji } from '@sirubot/utils';
 import { ChannelType, ContainerBuilder, GuildMember, MessageFlags, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
+import * as guildJtc from './guildSettings/jtc.ts';
 
 interface RoomInfo {
 	guildId: string;
@@ -43,7 +44,7 @@ export class TempVoiceService {
 			const guildId = newState.guild.id;
 			await this.handleRoomTransitions(oldState, newState);
 
-			const settings = await container.guildService.getJtcSettings(guildId);
+			const settings = await guildJtc.getJtcSettings(container.guildService, guildId);
 			if (!settings.enabled || !settings.markerChannelId) return;
 
 			const member = newState.member;
@@ -61,10 +62,6 @@ export class TempVoiceService {
 		this.clearEmptyTimer(channelId);
 	}
 
-	public async createRoomFromMarker(member: GuildMember, settings: JtcSettings): Promise<VoiceBasedChannel | null> {
-		return this.createRoom(member, settings);
-	}
-
 	public async setupMarkerChannel(guildId: string, categoryId: string): Promise<string> {
 		const guild = await container.client.guilds.fetch(guildId);
 		const category = await guild.channels.fetch(categoryId);
@@ -72,7 +69,7 @@ export class TempVoiceService {
 			throw new Error('selected channel is not a category');
 		}
 
-		const settings = await container.guildService.getJtcSettings(guildId);
+		const settings = await guildJtc.getJtcSettings(container.guildService, guildId);
 		let marker = settings.markerChannelId ? await guild.channels.fetch(settings.markerChannelId).catch(() => null) : null;
 
 		if (marker && marker.isVoiceBased()) {
@@ -81,7 +78,7 @@ export class TempVoiceService {
 			marker = await guild.channels.create({ name: MARKER_CHANNEL_NAME, type: ChannelType.GuildVoice, parent: categoryId });
 		}
 
-		await container.guildService.setJtcCategory(guildId, categoryId, marker.id);
+		await guildJtc.setJtcCategory(container.guildService, guildId, categoryId, marker.id);
 		return marker.id;
 	}
 
@@ -217,7 +214,7 @@ export class TempVoiceService {
 			container.logger.error(`[tempVoice] failed to create room for guild ${guildId}: ${error}`);
 			// 마커 채널 진입자에게 실패 사실을 알려요 — 무응답 두면 "왜 안 만들어지지?" 상태가 돼요.
 			try {
-				const settings = await container.guildService.getJtcSettings(guildId);
+				const settings = await guildJtc.getJtcSettings(container.guildService, guildId);
 				const marker = settings.markerChannelId ? member.guild.channels.cache.get(settings.markerChannelId) : undefined;
 				if (marker?.isTextBased()) {
 					await marker.send({

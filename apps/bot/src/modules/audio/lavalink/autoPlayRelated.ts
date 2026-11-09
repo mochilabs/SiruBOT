@@ -7,6 +7,8 @@ import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { notifyQueueMutated } from './queue/queueWrapper.ts';
 import { isSameEncodedTrack } from './handlers/playbackWatchdog.ts';
 import { RelatedTrackHistory } from './player/relatedTrackHistory.ts';
+import * as guildMixer from '../../../services/guildSettings/mixer.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 // Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
 // Below LOW_SIMILARITY: Unrelated tracks (exclude)
@@ -265,11 +267,11 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 	if (relatedFetchInFlight.has(gid)) return null;
 	const currentEncoded = (currentTrack as { encoded?: unknown }).encoded;
 	const operation = (async (): Promise<Track | null> => {
-		const relatedOn = await container.guildService.getRelated(player.guildId);
+		const relatedOn = await guildPlayback.getRelated(container.guildService, player.guildId);
 		if (!relatedOn || player.repeatMode !== 'off') return null;
 		if (!currentTrack.info.identifier || !isYouTubeSource(currentTrack.info.sourceName)) return null;
 
-		const settings = await container.guildService.getMixerSettings(gid);
+		const settings = await guildMixer.getMixerSettings(container.guildService, gid);
 		if (!needsUpcomingTrack(settings)) return null;
 
 		const selectedTrack = await fetchRelatedCandidate(player, currentTrack);
@@ -367,7 +369,7 @@ export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack?: Tr
 		container.logger.debug('[autoPlayRelated] Server-side transition in flight, skipping fallback');
 		return;
 	}
-	const relatedOn = await container.guildService.getRelated(player.guildId);
+	const relatedOn = await guildPlayback.getRelated(container.guildService, player.guildId);
 	if (player.repeatMode == 'off' && relatedOn) {
 		if (referenceTrack.info.identifier && isYouTubeSource(referenceTrack.info.sourceName)) {
 			// trackStart 선예열이 진행 중이면 이중 추가 방지 (선예열쪽이 재생을 이어준다)

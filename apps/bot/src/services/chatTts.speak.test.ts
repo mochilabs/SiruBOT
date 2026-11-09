@@ -22,12 +22,16 @@ vi.mock('@sapphire/framework', () => ({
 			getState: async () => ({ announcementsQueued: 0 })
 		},
 		audioService: { ensurePlayback: mocks.ensurePlayback },
-		guildService: { getTtsDuck: async () => 0.35, getTtsAnnounceMode: async () => 'sequential' },
+		guildService: {},
 		logger: { debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
 	}
 }));
 
 import { ChatTtsService } from './chatTts.ts';
+vi.mock('./guildSettings/playback.ts', async (orig) => ({
+	...(await orig<Record<string, unknown>>()),
+	...{ getTtsDuck: async () => 0.35, getTtsAnnounceMode: async () => 'sequential' }
+}));
 
 const preset = { enabled: false, voice: null, channel: 'both' as const, emotion: 'neutral' as const };
 

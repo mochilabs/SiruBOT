@@ -26,6 +26,7 @@ import {
 } from './aiChatService.ts';
 import { getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
 import { executeAiTool, getAiToolStatus } from './aiTools/index.ts';
+vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));
 
 const mocks = vi.hoisted(() => ({
 	policy: vi.fn(),
@@ -42,7 +43,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
-		guildService: { getAiSettings: mocks.policy },
+		guildService: {},
 		db: {
 			channelChatHistory: {
 				findUnique: mocks.history,
@@ -299,7 +300,7 @@ describe('ai chat policy', () => {
 	it('delegates to guildService when a guild is present', async () => {
 		mocks.policy.mockResolvedValue({ mode: 'channels', channelIds: ['c1'] });
 		await expect(getAiChatPolicy('g1')).resolves.toEqual({ mode: 'channels', channelIds: ['c1'] });
-		expect(mocks.policy).toHaveBeenCalledWith('g1');
+		expect(mocks.policy).toHaveBeenCalledWith(expect.anything(), 'g1');
 	});
 
 	it('falls back and logs when the settings lookup fails', async () => {

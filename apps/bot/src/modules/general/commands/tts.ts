@@ -7,6 +7,7 @@ import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import { buildTtsPanel } from '../utils/ttsView.ts';
 import { TtsError } from '../../../services/ttsService.ts';
 import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../../services/ttsPronunciation.ts';
+import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /** `/tts 말하기` 문장 상한 — 채팅 낭독 클립 상한과 같은 값으로 맞춰요 */
 const MAX_SAY_LENGTH = 200;
@@ -201,8 +202,8 @@ export class TtsCommand extends Command {
 					context: { ephemeral: true }
 				});
 			}
-			if (subcommand === 'join') await this.container.guildService.setTtsJoinAnnounce(interaction.guildId, enabled);
-			else await this.container.guildService.setTtsLeaveAnnounce(interaction.guildId, enabled);
+			if (subcommand === 'join') await guildChatPolicy.setTtsJoinAnnounce(this.container.guildService, interaction.guildId, enabled);
+			else await guildChatPolicy.setTtsLeaveAnnounce(this.container.guildService, interaction.guildId, enabled);
 			await interaction.editReply({
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] },
@@ -234,7 +235,8 @@ export class TtsCommand extends Command {
 		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
 		const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
 		const enabled = subcommand === 'on';
-		const result = await this.container.guildService.setChannelTtsEnabled(
+		const result = await guildChatPolicy.setChannelTtsEnabled(
+			this.container.guildService,
 			interaction.guildId,
 			interaction.channelId,
 			enabled,

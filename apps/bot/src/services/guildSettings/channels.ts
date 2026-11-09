@@ -21,11 +21,6 @@ export async function setDefaultVoiceChannel(store: GuildSettingsStore, guildId:
 	return guild.voiceChannelId;
 }
 
-export async function getDefaultVoiceChannel(store: GuildSettingsStore, guildId: string): Promise<string | null> {
-	const guild = await store.getGuild(guildId);
-	return guild.voiceChannelId;
-}
-
 export async function getPinnedChannel(store: GuildSettingsStore, guildId: string): Promise<string | null> {
 	const guild = await store.getGuild(guildId);
 	return guild.pinnedChannelId;

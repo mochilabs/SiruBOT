@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { AttachmentBuilder, Collection, MessagePayload, type ChatInputCommandInteraction, type Message } from 'discord.js';
 import type { CustomPlayer } from './customPlayer.ts';
 import { PlayerNotifier } from './playerNotifier.ts';
+vi.mock('../../../../services/guildSettings/channels.ts', async (orig) => ({
+	...(await orig<Record<string, unknown>>()),
+	...{ getPinnedChannel: mocks.pinned }
+}));
 
 const mocks = vi.hoisted(() => ({
 	send: vi.fn(),
@@ -22,7 +26,7 @@ vi.mock('@sapphire/framework', () => ({
 	},
 	container: {
 		logger: { getSubLogger: () => mocks.logger },
-		guildService: { getGuild: mocks.guild, getPinnedChannel: mocks.pinned },
+		guildService: { getGuild: mocks.guild },
 		client: { channels: { cache: new Map([['channel', { isSendable: () => true, send: mocks.send }]]) } }
 	}
 }));

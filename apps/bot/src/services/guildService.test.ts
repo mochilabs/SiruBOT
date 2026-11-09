@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Guild } from '@sirubot/prisma';
 import { GuildService, isChannelToggleEnabled, isTtsEnabled } from './guildService.ts';
+import * as guildPlayback from './guildSettings/playback.ts';
+import * as guildChatPolicy from './guildSettings/chatPolicy.ts';
 
 const { upsert } = vi.hoisted(() => ({ upsert: vi.fn() }));
 
@@ -27,7 +29,11 @@ describe('GuildService concurrent reads', () => {
 		const row = guild();
 		upsert.mockResolvedValue(row);
 		const service = new GuildService();
-		const result = await Promise.all([service.getGuild('guild'), service.getVolume('guild'), service.getRepeat('guild')]);
+		const result = await Promise.all([
+			service.getGuild('guild'),
+			guildPlayback.getVolume(service, 'guild'),
+			guildPlayback.getRepeat(service, 'guild')
+		]);
 		expect(result).toEqual([row, 10, 'off']);
 		expect(upsert).toHaveBeenCalledTimes(1);
 		expect(await service.getGuild('guild')).toBe(row);
@@ -48,7 +54,7 @@ describe('GuildService concurrent reads', () => {
 		const results = await Promise.allSettled([service.getGuild('guild'), service.getGuild('guild')]);
 		expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected']);
 		expect(upsert).toHaveBeenCalledTimes(1);
-		expect(await service.getVolume('guild')).toBe(10);
+		expect(await guildPlayback.getVolume(service, 'guild')).toBe(10);
 		expect(upsert).toHaveBeenCalledTimes(2);
 	});
 
@@ -57,10 +63,10 @@ describe('GuildService concurrent reads', () => {
 		upsert.mockReturnValueOnce(new Promise<Guild>((resolve) => (finishRead = resolve))).mockResolvedValueOnce(guild('guild', 25));
 		const service = new GuildService();
 		const pending = service.getGuild('guild');
-		await service.updateVolume('guild', 25);
+		await guildPlayback.updateVolume(service, 'guild', 25);
 		finishRead(guild('guild', 10));
 		expect((await pending).volume).toBe(25);
-		expect(await service.getVolume('guild')).toBe(25);
+		expect(await guildPlayback.getVolume(service, 'guild')).toBe(25);
 		expect(upsert).toHaveBeenCalledTimes(2);
 	});
 });
@@ -133,10 +139,10 @@ describe('GuildService TTS settings', () => {
 	it('reads ttsMode/ttsChannelIds and falls back to off when the stored mode is invalid', async () => {
 		upsert.mockResolvedValueOnce({ ...guild(), ttsMode: 'channels', ttsChannelIds: ['chan'] } as Guild);
 		const service = new GuildService();
-		await expect(service.getTtsSettings('guild')).resolves.toEqual({ mode: 'channels', channelIds: ['chan'] });
+		await expect(guildChatPolicy.getTtsSettings(service, 'guild')).resolves.toEqual({ mode: 'channels', channelIds: ['chan'] });
 
 		upsert.mockResolvedValueOnce({ ...guild(), ttsMode: 'bogus', ttsChannelIds: [] } as Guild);
-		await expect(service.getTtsSettings('guild2')).resolves.toEqual({ mode: 'off', channelIds: [] });
+		await expect(guildChatPolicy.getTtsSettings(service, 'guild2')).resolves.toEqual({ mode: 'off', channelIds: [] });
 	});
 
 	it('allows reading only for enabled policies', () => {
@@ -164,7 +170,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 	it('켜기: off → channels + [채널]', async () => {
 		seed({ ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'channels', ttsChannelIds: ['chan'] } as Guild);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'chan', true, []);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'chan', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['chan'] });
 	});
@@ -179,14 +185,14 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 			} as Guild
 		);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'c', true, []);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'c', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'b', 'c'] });
 	});
 
 	it('켜기: all이면 그대로 (이미 전체 허용)', async () => {
 		seed({ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'chan', true, []);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'chan', true, []);
 		expect(result).toEqual({ mode: 'all', channelIds: [] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'all', ttsChannelIds: [] });
 	});
@@ -201,7 +207,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 			} as Guild
 		);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'a', false, []);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'a', false, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['b'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['b'] });
 	});
@@ -209,7 +215,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 	it('끄기: 목록이 비면 off', async () => {
 		seed({ ...guild(), ttsMode: 'channels', ttsChannelIds: ['a'] } as Guild, { ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'a', false, []);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'a', false, []);
 		expect(result).toEqual({ mode: 'off', channelIds: [] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'off', ttsChannelIds: [] });
 	});
@@ -224,7 +230,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 			} as Guild
 		);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'b', false, ['a', 'b', 'c']);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'b', false, ['a', 'b', 'c']);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'c'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['a', 'c'] });
 	});
@@ -232,7 +238,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 	it('끄기: all인데 남는 채널이 없으면 off', async () => {
 		seed({ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild);
 		const service = new GuildService();
-		const result = await service.setChannelTtsEnabled('guild', 'a', false, ['a']);
+		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'a', false, ['a']);
 		expect(result).toEqual({ mode: 'off', channelIds: [] });
 	});
 
@@ -246,7 +252,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 			} as Guild
 		);
 		const service = new GuildService();
-		const result = await service.setChannelAiEnabled('guild', 'chan', true, []);
+		const result = await guildChatPolicy.setChannelAiEnabled(service, 'guild', 'chan', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ aiMode: 'channels', aiChannelIds: ['chan'] });
 	});
@@ -277,7 +283,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			countingChannelId: 'c'
 		} as Guild);
 		const service = new GuildService();
-		await expect(service.getChatToolSettings('guild')).resolves.toEqual({
+		await expect(guildChatPolicy.getChatToolSettings(service, 'guild')).resolves.toEqual({
 			emojiEnlarge: { mode: 'channels', channelIds: ['a'] },
 			quote: { mode: 'all', channelIds: [] },
 			embedFix: { mode: 'off', channelIds: [] },
@@ -302,7 +308,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			{ ...guild(), emojiEnlargeMode: 'channels', emojiEnlargeChannelIds: ['chan'] } as Guild
 		);
 		const service = new GuildService();
-		const result = await service.setChannelChatToolEnabled('guild', 'emojiEnlarge', 'chan', true, []);
+		const result = await guildChatPolicy.setChannelChatToolEnabled(service, 'guild', 'emojiEnlarge', 'chan', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ emojiEnlargeMode: 'channels', emojiEnlargeChannelIds: ['chan'] });
 	});
@@ -310,7 +316,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 	it('setChannelChatToolEnabled: 인용 끄기 목록이 비면 off', async () => {
 		seed({ ...guild(), quoteMode: 'channels', quoteChannelIds: ['a'] } as Guild, { ...guild(), quoteMode: 'off', quoteChannelIds: [] } as Guild);
 		const service = new GuildService();
-		const result = await service.setChannelChatToolEnabled('guild', 'quote', 'a', false, []);
+		const result = await guildChatPolicy.setChannelChatToolEnabled(service, 'guild', 'quote', 'a', false, []);
 		expect(result).toEqual({ mode: 'off', channelIds: [] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ quoteMode: 'off', quoteChannelIds: [] });
 	});
@@ -321,7 +327,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			{ ...guild(), embedFixMode: 'channels', embedFixChannelIds: ['a', 'c'] } as Guild
 		);
 		const service = new GuildService();
-		const result = await service.setChannelChatToolEnabled('guild', 'embedFix', 'b', false, ['a', 'b', 'c']);
+		const result = await guildChatPolicy.setChannelChatToolEnabled(service, 'guild', 'embedFix', 'b', false, ['a', 'b', 'c']);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'c'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ embedFixMode: 'channels', embedFixChannelIds: ['a', 'c'] });
 	});
@@ -329,19 +335,25 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 	it('setCountingChannel: 지정하면 켜지고 null을 넘기면 꺼요', async () => {
 		upsert.mockResolvedValueOnce({ ...guild(), countingEnabled: true, countingChannelId: 'chan' } as Guild);
 		const service = new GuildService();
-		await expect(service.setCountingChannel('guild', 'chan')).resolves.toEqual({ countingEnabled: true, countingChannelId: 'chan' });
+		await expect(guildChatPolicy.setCountingChannel(service, 'guild', 'chan')).resolves.toEqual({
+			countingEnabled: true,
+			countingChannelId: 'chan'
+		});
 		expect(upsert.mock.calls[0][0].update).toEqual({ countingChannelId: 'chan', countingEnabled: true });
 
 		upsert.mockReset();
 		upsert.mockResolvedValueOnce({ ...guild(), countingEnabled: false, countingChannelId: null } as Guild);
-		await expect(service.setCountingChannel('guild', null)).resolves.toEqual({ countingEnabled: false, countingChannelId: null });
+		await expect(guildChatPolicy.setCountingChannel(service, 'guild', null)).resolves.toEqual({
+			countingEnabled: false,
+			countingChannelId: null
+		});
 		expect(upsert.mock.calls[0][0].update).toEqual({ countingChannelId: null, countingEnabled: false });
 	});
 
 	it('setCountingEnabled: on/off만 바꿔요', async () => {
 		upsert.mockResolvedValueOnce({ ...guild(), countingEnabled: true, countingChannelId: 'chan' } as Guild);
 		const service = new GuildService();
-		await expect(service.setCountingEnabled('guild', true)).resolves.toBe(true);
+		await expect(guildChatPolicy.setCountingEnabled(service, 'guild', true)).resolves.toBe(true);
 		expect(upsert.mock.calls[0][0].update).toEqual({ countingEnabled: true });
 	});
 });

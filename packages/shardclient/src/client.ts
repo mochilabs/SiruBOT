@@ -83,7 +83,7 @@ export class ShardClient {
 			try {
 				this.ws.removeAllListeners();
 				await this.ws.connect();
-				await this.reidentify();
+				await this.sendIdentify({ withShardIds: true });
 				this.isReconnecting = false;
 				this.logger.info('Successfully re-identified with shard manager');
 				return;
@@ -98,10 +98,6 @@ export class ShardClient {
 				this.logger.warn(`Reconnect attempt ${attempt} failed: ${cause}`);
 			}
 		}
-	}
-
-	private reidentify(): Promise<void> {
-		return this.sendIdentify({ withShardIds: true }).then(() => undefined);
 	}
 
 	/**

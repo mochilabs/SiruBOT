@@ -10,6 +10,7 @@ import { formatRecordError } from '../../../../services/trackService.ts';
 import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import type { ArmRequestOptions } from '../../../../services/mixerService.ts';
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
+import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
 
 const OVERRIDDEN_TIMEOUT_MS = 5_000;
 const TRACK_END_CONFIRM_MS = 200; // S1 confirmed B-plan (EventEmitter replaced reason dispatch)
@@ -196,7 +197,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	// 이벤트가 이 곡의 전이를 묘사한다고 가정한다 — DB await·REST 왕복 사이에
 	// 스킵/콜드스타트/오버라이드/트랙스타트가 끼어들면 stale로 판정해 아밍하지 않는다.
 	const triggerEncoded = player.queue.current?.encoded ?? null;
-	const settings = await container.guildService.getMixerSettings(player.guildId).catch(() => null);
+	const settings = await guildMixer.getMixerSettings(container.guildService, player.guildId).catch(() => null);
 	const shouldArm = settings ? needsUpcomingTrack(settings) : true;
 
 	const stale = () =>

@@ -11,6 +11,7 @@ import {
 } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import type { MixerSettings } from './guildSettings/types.ts';
+import * as guildMixer from './guildSettings/mixer.ts';
 const MIXER_FILTER_KEY = 'mixer';
 const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
 
@@ -350,7 +351,7 @@ export class MixerService {
 		const target = { encoded: track.encoded, node: player.node };
 		this.analysisTargets.set(player, target);
 		try {
-			const settings = await container.guildService.getMixerSettings(player.guildId);
+			const settings = await guildMixer.getMixerSettings(container.guildService, player.guildId);
 			if (!settings.automixEnabled) {
 				if (this.analysisTargets.get(player) === target) this.analysisTargets.delete(player);
 				return;
@@ -552,7 +553,7 @@ export class MixerService {
 	}
 
 	public async pushCrossfadeConfig(player: Player): Promise<void> {
-		const settings = await container.guildService.getMixerSettings(player.guildId);
+		const settings = await guildMixer.getMixerSettings(container.guildService, player.guildId);
 		await this.pushAutomixConfig(player, settings).catch((error: unknown) => {
 			if (!(error instanceof AutomixUnsupportedError)) throw error;
 			container.logger.warn(`[mixer] AutoMix unavailable (guild ${player.guildId}): ${error.message}`);
@@ -567,7 +568,7 @@ export class MixerService {
 	}
 
 	public async pushNormalizationConfig(player: Player, enabled?: boolean): Promise<void> {
-		const normEnabled = enabled ?? (await container.guildService.getMixerSettings(player.guildId)).normalizationEnabled;
+		const normEnabled = enabled ?? (await guildMixer.getMixerSettings(container.guildService, player.guildId)).normalizationEnabled;
 		await this.rawCall(player, '/mixer/normalization', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: normEnabled })
@@ -575,7 +576,7 @@ export class MixerService {
 	}
 
 	public async pushSilenceConfig(player: Player, enabled?: boolean): Promise<void> {
-		const silenceEnabled = enabled ?? (await container.guildService.getMixerSettings(player.guildId)).gaplessEnabled;
+		const silenceEnabled = enabled ?? (await guildMixer.getMixerSettings(container.guildService, player.guildId)).gaplessEnabled;
 		await this.rawCall(player, '/mixer/silence', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: silenceEnabled })

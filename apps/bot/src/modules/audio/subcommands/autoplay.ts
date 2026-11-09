@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
 import * as view from '../view/related.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 /** 기존 /related(추천 곡)에서 개명 — /recommend(추천)와 헷갈린다는 지적 반영 */
 export const name = 'autoplay';
@@ -31,7 +32,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const enabled = interaction.options.getBoolean('enabled');
 	if (enabled === null) {
-		const current = await container.guildService.getRelated(interaction.guildId);
+		const current = await guildPlayback.getRelated(container.guildService, interaction.guildId);
 		await interaction.editReply({
 			components: [view.relatedCurrent(current)],
 			flags: [MessageFlags.IsComponentsV2],
@@ -40,7 +41,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	const updated = await container.guildService.setRelated(interaction.guildId, enabled);
+	const updated = await guildPlayback.setRelated(container.guildService, interaction.guildId, enabled);
 	const player = container.audio.getPlayer(interaction.guildId);
 	const currentTrack = player?.queue.current;
 	if (updated && player?.playing && currentTrack && player.queue.tracks.length === 0) {

@@ -5,6 +5,8 @@ import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requ
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { TtsClip, TtsError, getTtsConfig } from './ttsService.ts';
 import type { TtsChannel, TtsUserPreset } from './ttsUserSettings.ts';
+import * as guildPlayback from './guildSettings/playback.ts';
+import * as guildChatPolicy from './guildSettings/chatPolicy.ts';
 
 /**
  * 채팅 TTS 오케스트레이터 — 메시지 전처리·병합·스로틀 후 클립을 재생 모드(오버레이/단독)로 dispatch한다.
@@ -292,8 +294,8 @@ export class ChatTtsService {
 	private async speakOverlay(player: CustomPlayer, url: string, channel: TtsChannel, reportFailure = false): Promise<void> {
 		try {
 			const [duckLevel, mode] = await Promise.all([
-				container.guildService.getTtsDuck(player.guildId),
-				container.guildService.getTtsAnnounceMode(player.guildId)
+				guildPlayback.getTtsDuck(container.guildService, player.guildId),
+				guildPlayback.getTtsAnnounceMode(container.guildService, player.guildId)
 			]);
 			if (mode === 'interrupt') {
 				await container.mixerService.clearAnnounceQueue(player);
@@ -428,7 +430,7 @@ export class ChatTtsService {
 	public async keepAliveForTts(player: CustomPlayer): Promise<void> {
 		try {
 			if (!getTtsConfig()) return;
-			const settings = await container.guildService.getTtsSettings(player.guildId);
+			const settings = await guildChatPolicy.getTtsSettings(container.guildService, player.guildId);
 			if (settings.mode === 'off') return;
 			const handle = player.getData<ReturnType<typeof setTimeout> | null | undefined>('internal_queueempty');
 			if (handle !== undefined && handle !== null) clearTimeout(handle);

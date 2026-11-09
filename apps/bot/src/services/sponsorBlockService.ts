@@ -5,6 +5,7 @@ import type { Track } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { getTargetNextTrack, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { fetchSponsorBlockSegments } from './dataApiClient.ts';
+import * as guildMixer from './guildSettings/mixer.ts';
 
 const LOOKUP_TTL_MS = 10 * 60_000;
 const INTRO_TOLERANCE_MS = 500;
@@ -118,7 +119,7 @@ export class SponsorBlockService {
 		void Promise.all([
 			container.guildService.getGuild(player.guildId),
 			this.lookup(videoId),
-			container.guildService.getMixerSettings(player.guildId).catch(() => null)
+			guildMixer.getMixerSettings(container.guildService, player.guildId).catch(() => null)
 		])
 			.then(([guild, segments, mixer]) => {
 				if (this.playback.get(player) !== state) return;

@@ -12,6 +12,8 @@ import {
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
 import { normalizeAnnounceMode, type TtsAnnounceMode } from '../../../services/guildSettings/playback.ts';
+import * as guildMixer from '../../../services/guildSettings/mixer.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 /** 안내 방식 문구 — 커맨드 응답과 뷰가 같은 말을 써요 */
 const ANNOUNCE_MODE_LABELS: Record<TtsAnnounceMode, string> = {
@@ -244,7 +246,7 @@ export class MixerCommand extends Command {
 	}
 
 	async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
-		const settings = await this.container.guildService.getMixerSettings(interaction.guildId);
+		const settings = await guildMixer.getMixerSettings(this.container.guildService, interaction.guildId);
 		const state = player ? await this.container.mixerService.getState(player).catch(() => null) : null;
 		await interaction.editReply({
 			components: [view.mixerStatus({ settings, state, noPlayer: !player })],
@@ -254,7 +256,7 @@ export class MixerCommand extends Command {
 	}
 
 	async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
-		const allowed = await this.container.guildService.hasDJRole(interaction.guildId, interaction.member);
+		const allowed = await guildPlayback.hasDJRole(this.container.guildService, interaction.guildId, interaction.member);
 		if (!allowed) {
 			throw new UserError({
 				identifier: 'mixer_no_permission',
@@ -267,7 +269,7 @@ export class MixerCommand extends Command {
 	async handleGapless(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
-		await this.container.guildService.setGapless(interaction.guildId, enabled);
+		await guildMixer.setGapless(this.container.guildService, interaction.guildId, enabled);
 		if (player) {
 			try {
 				await this.container.mixerService.setSilence(player, enabled);
@@ -297,7 +299,7 @@ export class MixerCommand extends Command {
 	async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const seconds = interaction.options.getNumber('duration', true);
-		const saved = await this.container.guildService.setCrossfadeDuration(interaction.guildId, seconds);
+		const saved = await guildMixer.setCrossfadeDuration(this.container.guildService, interaction.guildId, seconds);
 		if (player) {
 			try {
 				await this.container.mixerService.setAutomix(player, saved);
@@ -321,11 +323,12 @@ export class MixerCommand extends Command {
 
 	async handleTuning(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
-		const current = await this.container.guildService.getMixerSettings(interaction.guildId);
+		const current = await guildMixer.getMixerSettings(this.container.guildService, interaction.guildId);
 		const tempo = interaction.options.getNumber('max-tempo-change');
 		const confidence = interaction.options.getNumber('min-confidence');
 		if (tempo === null && confidence === null) return this.handleStatus(interaction, player);
-		const saved = await this.container.guildService.setAutomix(
+		const saved = await guildMixer.setAutomix(
+			this.container.guildService,
 			interaction.guildId,
 			current.automixEnabled,
 			tempo === null ? undefined : tempo / 100,
@@ -357,7 +360,7 @@ export class MixerCommand extends Command {
 		const mode = interaction.options.getString('mode', true);
 		if (!isTransitionMode(mode)) throw new UserError({ identifier: 'mixer_transition_invalid', message: '올바른 전환 방식을 선택해 주세요.' });
 
-		const saved = await this.container.guildService.setTransitionMode(interaction.guildId, mode);
+		const saved = await guildMixer.setTransitionMode(this.container.guildService, interaction.guildId, mode);
 
 		if (player) {
 			try {
@@ -392,7 +395,7 @@ export class MixerCommand extends Command {
 	async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
-		await this.container.guildService.setNormalization(interaction.guildId, enabled);
+		await guildMixer.setNormalization(this.container.guildService, interaction.guildId, enabled);
 		if (player) {
 			try {
 				await this.container.mixerService.setNormalization(player, enabled);
@@ -422,7 +425,7 @@ export class MixerCommand extends Command {
 	async handleAnnounceMode(interaction: ChatInputCommandInteraction<'cached'>) {
 		await this.checkDJ(interaction);
 		const mode = normalizeAnnounceMode(interaction.options.getString('mode', true));
-		await this.container.guildService.setTtsAnnounceMode(interaction.guildId, mode);
+		await guildPlayback.setTtsAnnounceMode(this.container.guildService, interaction.guildId, mode);
 		const label = ANNOUNCE_MODE_LABELS[mode];
 		await interaction.editReply({
 			components: [view.mixerUpdated({ message: `${emoji('volume_up')} ${label}` })],

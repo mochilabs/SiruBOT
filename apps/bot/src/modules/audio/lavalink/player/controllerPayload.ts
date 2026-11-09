@@ -10,6 +10,7 @@ import { controllerView } from '../../view/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import { currentBpmCache } from './currentBpm.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
+import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 export interface ControllerCardPayloadOptions {
 	/** 컨트롤러에 표시할 볼륨 */
@@ -40,7 +41,7 @@ export interface ControllerCardPayload {
 
 /** 고정 채널 판정 → 카드 해석 → 컨트롤러 컴포넌트/첨부 조립까지 한 번에. */
 export async function buildControllerCardPayload(player: CustomPlayer, options: ControllerCardPayloadOptions): Promise<ControllerCardPayload> {
-	const pinnedChannelId = await container.guildService.getPinnedChannel(player.guildId).catch(() => null);
+	const pinnedChannelId = await guildChannels.getPinnedChannel(container.guildService, player.guildId).catch(() => null);
 	const pinned = Boolean(options.textChannelId) && options.textChannelId === pinnedChannelId;
 	const card = pinned ? getDisplayNowPlayingCard(player) : null;
 

@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { AiMode } from '../guildService.ts';
 import { ChatServiceError, type ChatConfig } from './types.ts';
+import * as guildChatPolicy from '../guildSettings/chatPolicy.ts';
 
 /** .env에서 채팅 설정을 읽어요. 필수값이 없으면 null */
 export function getChatConfig(): ChatConfig | null {
@@ -32,7 +33,7 @@ export async function getAiChatPolicy(guildId: string | null): Promise<AiChatPol
 	const fallback: AiChatPolicy = { mode: 'all', channelIds: [] };
 	if (!guildId) return fallback;
 	try {
-		return await container.guildService.getAiSettings(guildId);
+		return await guildChatPolicy.getAiSettings(container.guildService, guildId);
 	} catch (error) {
 		container.logger.error('[aiChat] failed to load ai policy:', error);
 		return fallback;

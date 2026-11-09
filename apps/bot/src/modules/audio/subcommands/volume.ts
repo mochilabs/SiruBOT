@@ -2,6 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/volume.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 export const name = 'volume';
 export const ko = '볼륨';
@@ -62,9 +63,9 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	if (volume === null) {
 		const [musicVolume, ttsVolume, ttsDuck] = await Promise.all([
-			container.guildService.getVolume(interaction.guildId),
-			container.guildService.getTtsVolume(interaction.guildId),
-			container.guildService.getTtsDuck(interaction.guildId)
+			guildPlayback.getVolume(container.guildService, interaction.guildId),
+			guildPlayback.getTtsVolume(container.guildService, interaction.guildId),
+			guildPlayback.getTtsDuck(container.guildService, interaction.guildId)
 		]);
 
 		await interaction.editReply({
@@ -86,7 +87,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	if (target === 'music') {
-		const { volume: updated } = await container.guildService.updateVolume(interaction.guildId, volume);
+		const { volume: updated } = await guildPlayback.updateVolume(container.guildService, interaction.guildId, volume);
 		const player = container.audio.getPlayer(interaction.guildId);
 		if (player) player.setVolume(updated);
 
@@ -99,7 +100,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	}
 
 	if (target === 'tts') {
-		const { ttsVolume: updated } = await container.guildService.updateTtsVolume(interaction.guildId, volume);
+		const { ttsVolume: updated } = await guildPlayback.updateTtsVolume(container.guildService, interaction.guildId, volume);
 
 		await interaction.editReply({
 			components: [view.volumeUpdated({ volume: updated, target, isPlaying: !!container.audio.getPlayer(interaction.guildId) })],
@@ -109,7 +110,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	const { ttsDuckLevel: updatedDuck } = await container.guildService.updateTtsDuck(interaction.guildId, volume / 100);
+	const { ttsDuckLevel: updatedDuck } = await guildPlayback.updateTtsDuck(container.guildService, interaction.guildId, volume / 100);
 
 	await interaction.editReply({
 		components: [

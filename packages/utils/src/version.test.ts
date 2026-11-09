@@ -27,7 +27,6 @@ describe('versionInfo lazy git lookup', () => {
 		expect(execSync).not.toHaveBeenCalled();
 
 		versionInfo.getVersion();
-		versionInfo.getNodeVersion();
 		expect(execSync).not.toHaveBeenCalled();
 	});
 

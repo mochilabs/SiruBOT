@@ -4,6 +4,8 @@ import { TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import type { Message, User } from 'discord.js';
 import type { Track } from 'lavalink-client';
+vi.mock('./guildSettings/playback.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildPlayback }));
+vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildChatPolicy }));
 
 const mocks = vi.hoisted(() => ({
 	logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -11,7 +13,9 @@ const mocks = vi.hoisted(() => ({
 	// announce 방식은 길드 설정 3택으로 결정돼요 — clearAnnounceQueue는 interrupt 모드 전용이에요
 	mixerService: { getState: vi.fn(), announce: vi.fn(), clearAnnounceQueue: vi.fn() },
 	audioService: { ensurePlayback: vi.fn() },
-	guildService: { getTtsSettings: vi.fn(), getTtsDuck: vi.fn(), getTtsAnnounceMode: vi.fn() },
+	guildService: {},
+	guildPlayback: { getTtsDuck: vi.fn(), getTtsAnnounceMode: vi.fn() },
+	guildChatPolicy: { getTtsSettings: vi.fn() },
 	audio: { getPlayer: vi.fn() },
 	ttsPronunciation: { apply: vi.fn() }
 }));
@@ -97,7 +101,7 @@ beforeEach(() => {
 	);
 	mocks.ttsPronunciation.apply.mockImplementation(async (_guildId: string, text: string) => text);
 	mocks.audio.getPlayer.mockReturnValue(undefined);
-	mocks.guildService.getTtsAnnounceMode.mockResolvedValue('sequential');
+	mocks.guildPlayback.getTtsAnnounceMode.mockResolvedValue('sequential');
 	mocks.mixerService.clearAnnounceQueue.mockResolvedValue(0);
 });
 
@@ -273,7 +277,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	it('overlays via mixer announce when music is playing', async () => {
-		mocks.guildService.getTtsDuck.mockResolvedValue(0.35);
+		mocks.guildPlayback.getTtsDuck.mockResolvedValue(0.35);
 		const service = new ChatTtsService();
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
@@ -283,12 +287,12 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		await flushAsync();
 
 		expect(mocks.mixerService.announce).toHaveBeenCalledWith(player, expect.stringContaining('https://tts.example'), 0.35, 'sequential', 'both');
-		expect(mocks.guildService.getTtsDuck).toHaveBeenCalledWith('guild-1');
+		expect(mocks.guildPlayback.getTtsDuck).toHaveBeenCalledWith(expect.anything(), 'guild-1');
 		expect(player.search).not.toHaveBeenCalled();
 	});
 
 	it('passes the user stereo position to the mixer announce', async () => {
-		mocks.guildService.getTtsDuck.mockResolvedValue(0.35);
+		mocks.guildPlayback.getTtsDuck.mockResolvedValue(0.35);
 		const service = new ChatTtsService();
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
@@ -331,7 +335,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 		const service = new ChatTtsService();
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
-		mocks.guildService.getTtsDuck.mockResolvedValue(0.35);
+		mocks.guildPlayback.getTtsDuck.mockResolvedValue(0.35);
 
 		await service.handleMessage(makeMessage(), '노래 없이 읽기', { enabled: true, voice: null, channel: 'right', emotion: 'neutral' });
 		await flushAsync();
@@ -521,7 +525,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 			const player = makePlayer();
 			const handle = setTimeout(() => null, 10_000);
 			player.getData.mockReturnValue(handle);
-			mocks.guildService.getTtsSettings.mockResolvedValue({ mode: 'all', channelIds: [] });
+			mocks.guildChatPolicy.getTtsSettings.mockResolvedValue({ mode: 'all', channelIds: [] });
 
 			await service.keepAliveForTts(player);
 
@@ -541,7 +545,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 		try {
 			const service = new ChatTtsService();
 			const player = makePlayer();
-			mocks.guildService.getTtsSettings.mockResolvedValue({ mode: 'off', channelIds: [] });
+			mocks.guildChatPolicy.getTtsSettings.mockResolvedValue({ mode: 'off', channelIds: [] });
 
 			await service.keepAliveForTts(player);
 

@@ -4,7 +4,8 @@ import { checkDJOrAlone, checkManageGuild } from './permissionCheck.ts';
 
 const { getDJRole } = vi.hoisted(() => ({ getDJRole: vi.fn() }));
 
-vi.mock('@sapphire/framework', () => ({ container: { guildService: { getDJRole } } }));
+vi.mock('@sapphire/framework', () => ({ container: { guildService: {} } }));
+vi.mock('../../../services/guildSettings/playback.ts', () => ({ getDJRole }));
 
 function member(options: { admin?: boolean; djRole?: boolean; voiceMemberIds?: string[] | null }) {
 	return {

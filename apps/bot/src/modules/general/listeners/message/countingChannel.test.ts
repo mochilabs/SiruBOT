@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => () => undefined }));
 vi.mock('@sapphire/framework', () => {
 	const containerMock = {
-		guildService: { getChatToolSettings: mocks.getChatToolSettings },
+		guildService: {},
 		logger: { error: mocks.loggerError },
 		redisStore: {
 			getCacheHashFields: mocks.getCacheHashFields,
@@ -31,6 +31,10 @@ vi.mock('@sapphire/framework', () => {
 
 import { CountingChannelListener } from './countingChannel.ts';
 import { countingStateKey, loadCountingState } from '../../../../services/countingState.ts';
+vi.mock('../../../../services/guildSettings/chatPolicy.ts', async (orig) => ({
+	...(await orig<Record<string, unknown>>()),
+	...{ getChatToolSettings: mocks.getChatToolSettings }
+}));
 
 type FakeOverrides = {
 	content?: string;
@@ -113,7 +117,7 @@ describe('countingChannel 레이스 방지 (길드별 직렬화)', () => {
 		const slowGate = new Promise<void>((resolve) => {
 			releaseSlow = resolve;
 		});
-		mocks.getChatToolSettings.mockImplementation(async (guildId: string) => {
+		mocks.getChatToolSettings.mockImplementation(async (_store: unknown, guildId: string) => {
 			if (guildId === 'slow-guild') await slowGate;
 			return { countingEnabled: true, countingChannelId: 'counting-channel' };
 		});

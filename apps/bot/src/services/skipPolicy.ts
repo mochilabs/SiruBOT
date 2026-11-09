@@ -8,6 +8,7 @@ import { emoji } from '@sirubot/utils';
 import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
+import * as guildPlayback from './guildSettings/playback.ts';
 
 /** 스킵 판정 컨텍스트 — /건너뛰기와 그 하위 흐름(투표·강제·곡 지정)이 공유하는 재생 상태 스냅샷 */
 export interface SkipContext {
@@ -154,7 +155,7 @@ export class SkipPolicy {
 
 	private async checkDJRole(context: SkipContext): Promise<void> {
 		const { interaction } = context;
-		const hasPermission = await container.guildService.hasDJRole(interaction.guildId, interaction.member);
+		const hasPermission = await guildPlayback.hasDJRole(container.guildService, interaction.guildId, interaction.member);
 
 		if (!hasPermission) {
 			throw new UserError({

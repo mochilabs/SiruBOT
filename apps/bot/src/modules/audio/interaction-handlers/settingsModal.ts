@@ -5,6 +5,7 @@ import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { settingsView } from '../view/settings.ts';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { errorView } from '../../../lib/errorView.ts';
+import * as guildJtc from '../../../services/guildSettings/jtc.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.ModalSubmit
@@ -35,7 +36,7 @@ export class SettingsModalHandler extends InteractionHandler {
 			return;
 		}
 
-		await this.container.guildService.setJtcTemplate(interaction.guildId, template.slice(0, 100));
+		await guildJtc.setJtcTemplate(this.container.guildService, interaction.guildId, template.slice(0, 100));
 		await interaction.deferUpdate();
 
 		const guild = await this.container.guildService.getGuild(interaction.guildId);

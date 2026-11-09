@@ -20,6 +20,7 @@ import { clearGuildCustomCommandsCache } from './customCommands/store.ts';
 import { syncGuildSlashCommands } from './customCommands/slashRegistry.ts';
 import type { ServiceLogger } from './types.ts';
 import { GuildService } from './guildService.ts';
+import * as guildMixer from './guildSettings/mixer.ts';
 
 interface InvalidationPayload {
 	guildId?: unknown;
@@ -100,7 +101,7 @@ export class GuildSettingsInvalidator {
 		try {
 			const player = container.audio.getPlayer(guildId);
 			if (!player) return;
-			const settings = await container.guildService.getMixerSettings(guildId);
+			const settings = await guildMixer.getMixerSettings(container.guildService, guildId);
 			await container.mixerService.pushCrossfadeConfig(player);
 			if (needsUpcomingTrack(settings)) {
 				await container.mixerService.preloadUpcoming(player, { force: true }).catch(() => null);

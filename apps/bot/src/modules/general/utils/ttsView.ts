@@ -15,6 +15,7 @@ import type { TtsEmotion } from '../../../services/ttsService.ts';
 import type { TtsChannel, TtsUserPreset, TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
 import { truncateText } from '../../../lib/text.ts';
 import type { GuildService } from '../../../services/guildService.ts';
+import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * /tts 설정 패널(Components V2) 뷰와 컴포넌트 customId 계약.
@@ -283,7 +284,7 @@ export async function buildTtsPanel(
 	const [preset, voices, policy] = await Promise.all([
 		deps.ttsUserSettings.get(guildId, userId),
 		deps.ttsService.listVoices({ lang: panelLang }),
-		deps.guildService.getTtsSettings(guildId)
+		guildChatPolicy.getTtsSettings(deps.guildService, guildId)
 	]);
 	const active = policy.mode === 'all' || (policy.mode === 'channels' && channelId !== null && policy.channelIds.includes(channelId));
 	const view = ttsPanelView({ preset, voices, serviceReady: deps.ttsService.isEnabled(), lang: panelLang });
