@@ -12,3 +12,17 @@ export const ohaasaCardSchema = z.object({
 	luckyKey: z.string().trim().max(300).optional(),
 	date: z.string().trim().max(40).default('')
 });
+
+/** TOP 3 카드 입력 — 순위·별자리만 받아요. 운세 설명은 봇이 텍스트로 내려요. */
+export const ohaasaTopCardSchema = z.object({
+	items: z
+		.array(
+			z.object({
+				zodiacCode: z.string().regex(/^(0[1-9]|1[0-2])$/),
+				rank: z.number().int().min(1).max(12)
+			})
+		)
+		.min(1)
+		.max(3),
+	date: z.string().trim().max(40).default('')
+});
