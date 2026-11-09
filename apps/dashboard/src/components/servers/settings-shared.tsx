@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { AlertCircle, Check, LogIn, X } from "lucide-react";
 
 import { Portal } from "@/components/overlay/portal";
-import { InfoBox, NoticeBox, WarningBox } from "@/components/primitives/notice-box";
+import { InfoBox, WarningBox } from "@/components/primitives/notice-box";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +41,7 @@ export function PanelHeader({
   );
 }
 
-export { InfoBox, NoticeBox, WarningBox };
+export { InfoBox, WarningBox };
 
 /** 경고 박스 안 쓰는 공용 재시도 링크 — 모든 설정 패널이 같은 형태로 다시 시도해요 */
 export function RetryLink({ onRetry, className }: { onRetry: () => void; className?: string }) {

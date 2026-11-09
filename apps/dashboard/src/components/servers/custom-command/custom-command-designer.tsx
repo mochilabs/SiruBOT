@@ -45,11 +45,11 @@ const KIND_OPTIONS: Array<{ value: CustomCommandDesignItem["kind"]; label: strin
 ];
 
 /** 팔레트 색 → CSS hex — 봇이 보내는 컨테이너 색과 같은 값이에요 */
-export function accentHex(color: CustomCommandAccentColor): string {
+function accentHex(color: CustomCommandAccentColor): string {
 	return `#${CUSTOM_COMMAND_ACCENT_COLOR_VALUES[color].toString(16).padStart(6, "0")}`;
 }
 
-export function createDesignItem(kind: CustomCommandDesignItem["kind"]): CustomCommandDesignItem {
+function createDesignItem(kind: CustomCommandDesignItem["kind"]): CustomCommandDesignItem {
 	switch (kind) {
 		case "text":
 			return { kind: "text", content: "" };

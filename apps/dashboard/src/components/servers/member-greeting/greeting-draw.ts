@@ -24,7 +24,7 @@ const TEXT_MARGIN = 64;
 const FONT_FAMILY = '"Pretendard JP", "Twemoji Mozilla", sans-serif';
 
 /** 템플릿 변수 치환 — 미리보기용 샘플 값. {서버}는 호출부가 준 이름(없으면 빈 문자열), {멤버수}는 "1"이에요 */
-export function sampleGreetingText(text: string, guildName = ""): string {
+function sampleGreetingText(text: string, guildName = ""): string {
 	return text
 		.replaceAll("{유저}", "유저")
 		.replaceAll("{유저이름}", "유저")
