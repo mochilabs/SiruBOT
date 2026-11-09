@@ -22,7 +22,12 @@ const showHelp = args.includes("--help") || args.includes("-h");
 const confirmed = args.includes("--yes") || args.includes("-y");
 
 const guildIdx = args.findIndex((arg) => arg === "--guild");
-const onlyGuildId = guildIdx !== -1 ? args[guildIdx + 1] : undefined;
+const guildArg = guildIdx !== -1 ? args[guildIdx + 1] : undefined;
+if (guildIdx !== -1 && (!guildArg || guildArg.startsWith("-") || !/^\d+$/.test(guildArg))) {
+  console.error(red("에러: --guild 뒤에 길드 ID(숫자)를 지정해 주세요. 값이 없으면 전체 삭제로 넘어가지 않도록 중단합니다."));
+  process.exit(1);
+}
+const onlyGuildId = guildArg;
 const skipGlobal = args.includes("--no-global");
 const skipGuilds = args.includes("--no-guilds");
 
