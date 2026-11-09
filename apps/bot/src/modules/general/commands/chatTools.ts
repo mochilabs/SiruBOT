@@ -1,4 +1,4 @@
-import { notice } from '../view/notice.ts';
+import { channelToggleView, settingResultView } from '../view/settingResult.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError, container } from '@sapphire/framework';
 import {
@@ -161,26 +161,26 @@ export class ChatToolsCommand extends Command {
 		);
 		const label = FEATURE_LABELS[tool];
 
-		if (enable) {
-			let content =
-				result.mode === 'all'
-					? `${emoji('sparkle')} ${label}는 이미 서버의 모든 채널에서 켜져 있어요.`
-					: `${emoji('sparkle')} 지금부터 <#${interaction.channelId}>에서 ${label}를 켰어요.`;
-			if (tool === 'embedFix') {
-				const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, interaction.guildId);
-				if (settings.embedFixSites.length === 0) {
-					content += `\n-# ${emoji('info')} 복구할 사이트가 전부 꺼져 있어요. 대시보드 채팅 유틸 탭에서 사이트를 골라 주세요.`;
-				}
-			}
-			await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
-			return;
+		let hint: string | undefined;
+		if (enable && tool === 'embedFix') {
+			const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, interaction.guildId);
+			if (settings.embedFixSites.length === 0) hint = '복구할 사이트가 전부 꺼져 있어요. 대시보드 채팅 유틸 탭에서 사이트를 골라 주세요.';
 		}
-
-		const content =
-			result.mode === 'off'
-				? `${emoji('sparkle')} 이 채널의 ${label}를 껐어요. 허용된 채널이 더 없어서 서버에서 ${label}가 모두 꺼졌어요.`
-				: `${emoji('sparkle')} 이 채널의 ${label}를 껐어요. (남은 허용 채널 ${result.channelIds.length}개)`;
-		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+		await interaction.editReply({
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { parse: [] },
+			components: [
+				channelToggleView({
+					icon: 'sparkle',
+					label,
+					enabled: enable,
+					channelId: interaction.channelId,
+					mode: result.mode,
+					channelCount: result.channelIds.length,
+					hint
+				})
+			]
+		});
 	}
 
 	/** 카운팅 서브커맨드 — 채널 지정(기본: 이 채널) 또는 끄기. 상태는 새로 시작해요 */
@@ -191,7 +191,7 @@ export class ChatToolsCommand extends Command {
 			await interaction.editReply({
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] },
-				components: [notice(`${emoji('crown')} 카운팅을 껐어요.`)]
+				components: [settingResultView({ icon: 'crown', title: '카운팅 꺼짐', hint: '지정한 채널의 숫자 기록은 초기화했어요.' })]
 			});
 			return;
 		}
@@ -203,7 +203,14 @@ export class ChatToolsCommand extends Command {
 		await interaction.editReply({
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] },
-			components: [notice(`${emoji('crown')} <#${channelId}>을(를) 카운팅 채널로 지정했어요. 1부터 차례로 숫자를 세어 보세요!`)]
+			components: [
+				settingResultView({
+					icon: 'crown',
+					title: '카운팅 채널 지정',
+					details: [`<#${channelId}> 채널에서 1부터 차례로 숫자를 세어 보세요!`],
+					hint: '새로 시작해서 기록이 0으로 돌아갔어요.'
+				})
+			]
 		});
 	}
 }

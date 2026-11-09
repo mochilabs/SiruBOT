@@ -112,7 +112,11 @@ export class RolePanelCommand extends Subcommand {
 			await interaction.editReply(ticketMessageView(`${emoji('success')} <#${posted?.channelId}> 채널에 역할 패널을 게시했어요.`));
 		} catch (error) {
 			if (error instanceof PanelPostError) {
-				throw new UserError({ identifier: 'rolepanel_post_rejected', message: error.message, context: { ephemeral: true } });
+				throw new UserError({
+					identifier: 'rolepanel_post_rejected',
+					message: `${emoji('error')} ${error.message}`,
+					context: { ephemeral: true }
+				});
 			}
 			this.container.logger.error(`[rolepanel] Failed to post panel ${panelId} in guild ${interaction.guildId}: ${error}`);
 			throw new UserError({
@@ -142,7 +146,7 @@ export class RolePanelCommand extends Subcommand {
 			return `- **${panel.name}** · 역할 ${panel.buttons.length}개 · ${location} · 총 ${panel.clickCount}회 클릭`;
 		});
 
-		await interaction.editReply(ticketMessageView(`${emoji('info')} **역할 패널 목록**\n${lines.join('\n')}`));
+		await interaction.editReply(ticketMessageView(`### ${emoji('info')} 역할 패널 ${panels.length}개\n${lines.join('\n')}`));
 	}
 
 	/**

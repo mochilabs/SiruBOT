@@ -1,4 +1,5 @@
 import { notice } from '../view/notice.ts';
+import { channelToggleView, settingResultView, settingWarningView } from '../view/settingResult.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
@@ -208,11 +209,11 @@ export class TtsCommand extends Command {
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] },
 				components: [
-					notice(
-						enabled
-							? `${emoji('speech')} 봇이 있는 음성 채널에서 누군가 ${subcommand === 'join' ? '들어오면' : '나가면'} 이름을 읽어드릴게요.`
-							: `${emoji('speech')} 음성 채널 ${label} 알림을 껐어요.`
-					)
+					settingResultView({
+						icon: 'speech',
+						title: `음성 채널 ${label} 알림 ${enabled ? '켜짐' : '꺼짐'}`,
+						details: enabled ? [`봇이 있는 음성 채널에서 누군가 ${subcommand === 'join' ? '들어오면' : '나가면'} 이름을 읽어드려요.`] : []
+					})
 				]
 			});
 			return;
@@ -244,21 +245,45 @@ export class TtsCommand extends Command {
 		);
 
 		if (!enabled) {
-			const content =
-				result.mode === 'off'
-					? `${emoji('speech')} 이 채널의 채팅 낭독을 껐어요. 허용된 채널이 더 없어서 서버에서 낭독이 모두 꺼졌어요.`
-					: `${emoji('speech')} 이 채널의 채팅 낭독을 껐어요. (남은 허용 채널 ${result.channelIds.length}개)`;
-			await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] },
+				components: [
+					channelToggleView({
+						icon: 'speech',
+						label: '채팅 낭독',
+						enabled: false,
+						channelId: interaction.channelId,
+						mode: result.mode,
+						channelCount: result.channelIds.length
+					})
+				]
+			});
 			return;
 		}
 
 		// 낭독은 채널 정책과 사용자 opt-in이 둘 다 켜져야 해요 — 켜기를 실행한 본인의
 		// opt-in도 함께 켜서 "켰는데 왜 안 읽어요?"가 생기지 않게 해요.
 		const saved = await this.container.ttsUserSettings.set(interaction.guildId, interaction.user.id, { enabled: true });
-		const content = saved
-			? `${emoji('speech')} 지금부터 <#${interaction.channelId}>에서 보낸 메시지를 읽어드릴게요. 다른 분들의 메시지도 읽으려면 각자 \`/tts 설정\`에서 낭독을 켜 주세요.`
-			: `${emoji('error')} 채널 낭독은 켰지만 내 낭독 설정을 저장하지 못했어요. \`/tts 설정\`에서 낭독을 직접 켜 주세요.`;
-		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+		const components = saved
+			? [
+					channelToggleView({
+						icon: 'speech',
+						label: '채팅 낭독',
+						enabled: true,
+						channelId: interaction.channelId,
+						mode: result.mode,
+						channelCount: result.channelIds.length,
+						hint: '다른 분들의 메시지도 읽으려면 각자 `/tts 설정`에서 낭독을 켜 주세요.'
+					})
+				]
+			: [
+					settingWarningView('채팅 낭독은 켰지만 내 설정을 저장하지 못했어요', [
+						`<#${interaction.channelId}> 채널의 낭독은 켜졌어요.`,
+						'`/tts 설정`에서 내 낭독을 직접 켜 주세요.'
+					])
+				];
+		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components });
 	}
 
 	/** 발음 사전 — 길드 전체에 적용되므로 서버 관리 권한 검사를 이미 통과한 상태로 들어와요. */
@@ -340,7 +365,7 @@ export class TtsCommand extends Command {
 		if (interaction.member.voice.channelId !== player.voiceChannelId) {
 			throw new UserError({
 				identifier: 'tts_say_wrong_channel',
-				message: '봇과 같은 음성 채널에 들어온 뒤 말하기를 실행해 주세요.',
+				message: `${emoji('error')} 봇과 같은 음성 채널에 들어온 뒤 말하기를 실행해 주세요.`,
 				context: { ephemeral: true }
 			});
 		}

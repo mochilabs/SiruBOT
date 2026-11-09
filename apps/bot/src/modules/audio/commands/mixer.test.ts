@@ -27,7 +27,7 @@ vi.mock('@sapphire/framework', () => ({
 	}
 }));
 vi.mock('../lavalink/player/customPlayer.ts', () => ({ CustomPlayer: class {} }));
-vi.mock('@sirubot/utils', () => ({ DEFAULT_COLOR: 0, emoji: (name: string) => name }));
+vi.mock('@sirubot/utils', () => ({ DEFAULT_COLOR: 0, WARN_COLOR: 1, emoji: (name: string) => name }));
 
 const saved = {
 	gaplessEnabled: true,
@@ -123,13 +123,13 @@ describe('Mixer transition command', () => {
 		expect(mocks.guildMixer.setAutomix).not.toHaveBeenCalled();
 	});
 
-	it('reports that settings were saved when AutoMix runtime application fails', async () => {
+	it('shows a saved-but-not-applied warning instead of an error when AutoMix runtime application fails', async () => {
 		mocks.audio.getPlayer.mockReturnValue({});
 		mocks.mixerService.setAutomix.mockRejectedValue(new Error('unsupported'));
-		await expect(Reflect.apply(MixerCommand.runFor, MixerCommand, [interaction({ mode: 'automix' })])).rejects.toMatchObject({
-			identifier: 'mixer_automix_failed',
-			message: expect.stringContaining('설정은 저장했지만')
-		});
+		const input = interaction({ mode: 'automix' });
+		await Reflect.apply(MixerCommand.runFor, MixerCommand, [input]);
+		expect(JSON.stringify(input.editReply.mock.calls)).toContain('설정은 저장했지만');
+		expect(input.editReply).toHaveBeenCalledWith(expect.objectContaining({ flags: [MessageFlags.IsComponentsV2] }));
 	});
 });
 

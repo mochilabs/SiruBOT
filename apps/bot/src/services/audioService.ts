@@ -3,6 +3,7 @@ import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, Un
 import * as Sentry from '@sentry/node';
 import { ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { emoji } from '@sirubot/utils';
+import { errorView } from '../lib/errorView.ts';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
@@ -139,7 +140,7 @@ export class AudioService {
 		const playlist = searchRes.playlist;
 		if (!playlist) {
 			await interaction.editReply({
-				content: `${emoji('tools')} 플레이리스트 정보를 불러올 수 없어요.`,
+				components: [errorView(`${emoji('tools')} 플레이리스트 정보를 불러올 수 없어요.`)],
 				flags: MessageFlags.IsComponentsV2
 			});
 			return;

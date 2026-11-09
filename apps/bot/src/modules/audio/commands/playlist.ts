@@ -1,4 +1,5 @@
 import { ApplyOptions } from '@sapphire/decorators';
+import { emoji } from '@sirubot/utils';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { respondPlaylistNames, respondPlaylistTrackPositions } from '../../../lib/autocomplete.ts';
@@ -221,12 +222,12 @@ export class PlaylistCommand extends Command {
 			if (!track || !('encoded' in track))
 				throw new UserError({
 					identifier: 'playlist_no_track',
-					message: '현재 곡이 없어요. /플레이리스트 추가로 제목이나 주소를 입력해 주세요.',
+					message: `${emoji('error')} 현재 곡이 없어요. /플레이리스트 추가로 제목이나 주소를 입력해 주세요.`,
 					context: { ephemeral: true }
 				});
 			await this.container.playlistService.addTrack(interaction.user.id, interaction.options.getString('name', true), track);
 			await interaction.editReply({
-				components: [notice(`**${track.info.title}**을(를) 목록에 추가했어요.`)],
+				components: [notice(`${emoji('success')} **${track.info.title}**을(를) 목록에 추가했어요.`)],
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] }
 			});

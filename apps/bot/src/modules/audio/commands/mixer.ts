@@ -5,6 +5,7 @@ import { emoji } from '@sirubot/utils';
 import {
 	ApplicationIntegrationType,
 	ChatInputCommandInteraction,
+	type ContainerBuilder,
 	MessageFlags,
 	type SlashCommandSubcommandGroupBuilder,
 	type SlashCommandSubcommandsOnlyBuilder
@@ -183,7 +184,8 @@ export class MixerCommand extends Command {
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (!interaction.inCachedGuild()) return;
 
-		await interaction.deferReply();
+		// 상태 조회는 본인만 보면 충분해요. 설정 변경은 서버 구성원이 이유를 알 수 있게 공개로 남겨요.
+		await interaction.deferReply(interaction.options.getSubcommand(true) === 'status' ? { flags: [MessageFlags.Ephemeral] } : undefined);
 
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 
@@ -245,14 +247,30 @@ export class MixerCommand extends Command {
 		}
 	}
 
-	async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
-		const settings = await guildMixer.getMixerSettings(this.container.guildService, interaction.guildId);
-		const state = player ? await this.container.mixerService.getState(player).catch(() => null) : null;
+	/** 플레이어가 있을 때 변경을 바로 적용해요. 실패해도 저장은 끝난 상태라 예외 대신 false를 돌려줘요. */
+	private async applyToPlayer(player: CustomPlayer | undefined, apply: () => Promise<unknown>): Promise<boolean> {
+		if (!player) return true;
+		try {
+			await apply();
+			return true;
+		} catch (error) {
+			this.container.logger?.warn?.(`[mixer] 플레이어에 설정을 적용하지 못했어요: ${error instanceof Error ? error.message : String(error)}`);
+			return false;
+		}
+	}
+
+	private async reply(interaction: ChatInputCommandInteraction<'cached'>, view: ContainerBuilder) {
 		await interaction.editReply({
-			components: [view.mixerStatus({ settings, state, noPlayer: !player })],
+			components: [view],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { roles: [], users: [] }
 		});
+	}
+
+	async handleStatus(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
+		const settings = await guildMixer.getMixerSettings(this.container.guildService, interaction.guildId);
+		const state = player ? await this.container.mixerService.getState(player).catch(() => null) : null;
+		await this.reply(interaction, view.mixerStatus({ settings, state, noPlayer: !player }));
 	}
 
 	async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
@@ -270,55 +288,37 @@ export class MixerCommand extends Command {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await guildMixer.setGapless(this.container.guildService, interaction.guildId, enabled);
-		if (player) {
-			try {
-				await this.container.mixerService.setSilence(player, enabled);
-				if (!enabled) await this.container.mixerService.clearNext(player, { force: true });
-				else await this.container.mixerService.preloadUpcoming(player, { force: true });
-			} catch {
-				throw new UserError({
-					identifier: 'mixer_gapless_failed',
-					message: '갭리스 설정은 저장했지만 현재 재생에 적용하지 못했어요. 잠시 후 다시 시도해 주세요.',
-					context: { ephemeral: true }
-				});
-			}
-		}
-		let message: string;
-		if (player) {
-			if (enabled) message = `${emoji('arrow_forward')} 갭리스 재생을 켰어요. 다음 곡부터 끊김 없이 이어져요.`;
-			else message = `${emoji('arrow_forward')} 갭리스 재생을 껐어요.`;
-		} else if (enabled) message = `${emoji('arrow_forward')} 갭리스 재생을 켰어요. 다음에 재생할 때부터 끊김 없이 이어져요.`;
-		else message = `${emoji('arrow_forward')} 갭리스 재생을 껐어요. 다음에 재생할 때부터 적용돼요.`;
-		await interaction.editReply({
-			components: [view.mixerUpdated({ message })],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
+		const title = `갭리스 재생 ${enabled ? '켜짐' : '꺼짐'}`;
+		const applied = await this.applyToPlayer(player, async () => {
+			await this.container.mixerService.setSilence(player!, enabled);
+			if (!enabled) await this.container.mixerService.clearNext(player!, { force: true });
+			else await this.container.mixerService.preloadUpcoming(player!, { force: true });
 		});
+		if (!applied) return this.reply(interaction, view.mixerSavedNotApplied({ title }));
+		const hint = !player
+			? '다음에 재생할 때부터 적용돼요.'
+			: enabled
+				? '다음 곡부터 곡 사이 무음 없이 이어져요.'
+				: '곡 사이에 기본 간격이 생겨요.';
+		return this.reply(interaction, view.mixerUpdated({ title, hint }));
 	}
 
 	async handleCrossfade(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const seconds = interaction.options.getNumber('duration', true);
 		const saved = await guildMixer.setCrossfadeDuration(this.container.guildService, interaction.guildId, seconds);
-		if (player) {
-			try {
-				await this.container.mixerService.setAutomix(player, saved);
-			} catch {
-				throw new UserError({
-					identifier: 'mixer_crossfade_failed',
-					message: '겹치는 시간은 저장했지만 현재 재생에 적용하지 못했어요. 잠시 후 다시 시도해 주세요.',
-					context: { ephemeral: true }
-				});
-			}
-		}
-		await interaction.editReply({
-			components: [
-				view.mixerUpdated({
-					message: `겹치는 시간을 **${seconds}초**로 저장했어요. 전환 방식은 ${saved.automixEnabled ? 'AutoMix' : saved.crossfadeEnabled ? '크로스페이드' : '끄기'}로 유지돼요.${saved.crossfadeEnabled ? '' : ' 사용하려면 /믹서 전환에서 방식을 선택해 주세요.'}`
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		const title = `크로스페이드 겹침 ${seconds}초`;
+		const details = [`곡 전환 방식: **${view.transitionLabel(saved)}**`];
+		const applied = await this.applyToPlayer(player, () => this.container.mixerService.setAutomix(player!, saved));
+		if (!applied) return this.reply(interaction, view.mixerSavedNotApplied({ title, details }));
+		return this.reply(
+			interaction,
+			view.mixerUpdated({
+				title,
+				details,
+				hint: saved.crossfadeEnabled || saved.automixEnabled ? undefined : '크로스페이드를 쓰려면 `/믹서 전환`에서 방식을 골라 주세요.'
+			})
+		);
 	}
 
 	async handleTuning(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
@@ -334,91 +334,62 @@ export class MixerCommand extends Command {
 			tempo === null ? undefined : tempo / 100,
 			confidence ?? undefined
 		);
-		if (player) {
-			try {
-				await this.container.mixerService.setAutomix(player, saved);
-			} catch {
-				throw new UserError({
-					identifier: 'mixer_tuning_failed',
-					message: '고급 설정은 저장했지만 현재 재생에 적용하지 못했어요.',
-					context: { ephemeral: true }
-				});
-			}
-		}
-		await interaction.editReply({
-			components: [
-				view.mixerUpdated({
-					message: `박자 분석 기준을 저장했어요. 허용 템포 변경 ${(saved.automixMaxTempoChange * 100).toFixed(1)}%, 최소 신뢰도 ${saved.automixMinConfidence}. 전환 방식은 유지돼요.`
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2]
-		});
+		const title = 'AutoMix 박자 분석 기준 저장';
+		const details = [
+			`최대 템포 변경 **${(saved.automixMaxTempoChange * 100).toFixed(1)}%**`,
+			`최소 신뢰도 **${saved.automixMinConfidence.toFixed(2)}**`
+		];
+		const applied = await this.applyToPlayer(player, () => this.container.mixerService.setAutomix(player!, saved));
+		if (!applied) return this.reply(interaction, view.mixerSavedNotApplied({ title, details }));
+		return this.reply(
+			interaction,
+			view.mixerUpdated({
+				title,
+				details,
+				hint: `곡 전환 방식(${view.transitionLabel(saved)})은 그대로예요.${player ? '' : ' 다음 재생부터 적용돼요.'}`
+			})
+		);
 	}
 
 	async handleTransition(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const mode = interaction.options.getString('mode', true);
-		if (!isTransitionMode(mode)) throw new UserError({ identifier: 'mixer_transition_invalid', message: '올바른 전환 방식을 선택해 주세요.' });
-
-		const saved = await guildMixer.setTransitionMode(this.container.guildService, interaction.guildId, mode);
-
-		if (player) {
-			try {
-				await this.container.mixerService.setAutomix(player, saved);
-			} catch {
-				throw new UserError({
-					identifier: mode === 'automix' ? 'mixer_automix_failed' : 'mixer_transition_failed',
-					message:
-						mode === 'automix'
-							? `${emoji('tools')} 오토믹스 설정은 저장했지만 현재 플레이어에 적용하지 못했어요. Lavalink 서버의 mixer 플러그인이 오토믹스를 지원하는지 확인해 주세요.`
-							: '전환 방식은 저장했지만 현재 플레이어에 적용하지 못했어요. 믹서 플러그인 지원 여부를 확인해 주세요.',
-					context: { ephemeral: true }
-				});
-			}
+		if (!isTransitionMode(mode)) {
+			throw new UserError({
+				identifier: 'mixer_transition_invalid',
+				message: `${emoji('error')} 올바른 전환 방식을 선택해 주세요.`,
+				context: { ephemeral: true }
+			});
 		}
 
-		const message =
+		const saved = await guildMixer.setTransitionMode(this.container.guildService, interaction.guildId, mode);
+		const title = `곡 전환 방식: ${TRANSITION_LABELS[mode]}`;
+		const details =
 			mode === 'automix'
-				? `${emoji('shuffle')} 곡 전환 방식을 AutoMix로 설정했어요. 최대 템포 변경 ${(saved.automixMaxTempoChange * 100).toFixed(1)}%, 최소 신뢰도 ${saved.automixMinConfidence.toFixed(2)}로 박자를 맞춰요. 분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 전환해요. 갭리스 설정은 유지해요.`
-				: `곡 전환 방식을 ${TRANSITION_LABELS[mode]}로 설정했어요. 갭리스 설정은 유지해요.`;
-		await interaction.editReply({
-			components: [
-				view.mixerUpdated({
-					message: player ? message : `${message} 다음 재생부터 적용돼요.`
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
-		});
+				? [
+						`최대 템포 변경 **${(saved.automixMaxTempoChange * 100).toFixed(1)}%**, 최소 신뢰도 **${saved.automixMinConfidence.toFixed(2)}**로 박자를 맞춰요.`
+					]
+				: [];
+		const applied = await this.applyToPlayer(player, () => this.container.mixerService.setAutomix(player!, saved));
+		if (!applied) return this.reply(interaction, view.mixerSavedNotApplied({ title, details }));
+
+		const hints = [
+			mode === 'automix' ? '분석이 어렵거나 템포 차이가 크면 일반 크로스페이드로 이어져요.' : '',
+			'갭리스 설정은 그대로예요.'
+		].filter(Boolean);
+		if (!player) hints.push('다음 재생부터 적용돼요.');
+		return this.reply(interaction, view.mixerUpdated({ title, details, hint: hints.join(' ') }));
 	}
 
 	async handleNormalization(interaction: ChatInputCommandInteraction<'cached'>, player?: CustomPlayer) {
 		await this.checkDJ(interaction);
 		const enabled = interaction.options.getBoolean('enabled', true);
 		await guildMixer.setNormalization(this.container.guildService, interaction.guildId, enabled);
-		if (player) {
-			try {
-				await this.container.mixerService.setNormalization(player, enabled);
-			} catch {
-				throw new UserError({
-					identifier: 'mixer_normalization_failed',
-					message: `${emoji('error')} 볼륨 정규화 설정 전달에 실패했어요. Lavalink 서버에 mixer 플러그인이 켜져 있는지 확인해 주세요.`,
-					context: { ephemeral: true }
-				});
-			}
-		}
-		const message = enabled
-			? `${emoji('arrow_forward')} 볼륨 정규화를 켰어요. 첫 곡 기준으로 다음 곡들의 볼륨을 맞춰요.`
-			: `${emoji('arrow_forward')} 볼륨 정규화를 껐어요.`;
-		await interaction.editReply({
-			components: [
-				view.mixerUpdated({
-					message: player ? message : `${message} 다음에 재생할 때부터 적용돼요.`
-				})
-			],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
-		});
+		const title = `볼륨 정규화 ${enabled ? '켜짐' : '꺼짐'}`;
+		const applied = await this.applyToPlayer(player, () => this.container.mixerService.setNormalization(player!, enabled));
+		if (!applied) return this.reply(interaction, view.mixerSavedNotApplied({ title }));
+		const hint = !player ? '다음에 재생할 때부터 적용돼요.' : enabled ? '첫 곡 기준으로 다음 곡들의 볼륨을 맞춰요.' : undefined;
+		return this.reply(interaction, view.mixerUpdated({ title, hint }));
 	}
 
 	/** TTS 안내 방식 — sequential(순서) / parallel(겹침) / interrupt(최신만) */
@@ -426,11 +397,6 @@ export class MixerCommand extends Command {
 		await this.checkDJ(interaction);
 		const mode = normalizeAnnounceMode(interaction.options.getString('mode', true));
 		await guildPlayback.setTtsAnnounceMode(this.container.guildService, interaction.guildId, mode);
-		const label = ANNOUNCE_MODE_LABELS[mode];
-		await interaction.editReply({
-			components: [view.mixerUpdated({ message: `${emoji('volume_up')} ${label}` })],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { roles: [], users: [] }
-		});
+		return this.reply(interaction, view.mixerUpdated({ title: '음성 안내 방식', details: [ANNOUNCE_MODE_LABELS[mode]] }));
 	}
 }

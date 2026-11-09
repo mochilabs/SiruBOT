@@ -13,7 +13,7 @@ import { normalizeAiMode } from '../../../services/guildService.ts';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import { confirmAction } from '../../../lib/confirmation.ts';
 import { acquireChannelTurn, releaseChannelTurn, clearChannelHistory } from '../../../services/aiChatService.ts';
-import { notice } from '../view/notice.ts';
+import { channelToggleView, settingResultView } from '../view/settingResult.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
@@ -109,7 +109,11 @@ export class ChatSettingsCommand extends Command {
 
 		const guildId = interaction.guildId;
 		if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild))
-			throw new UserError({ identifier: 'chat_settings_permission', message: '서버 관리 권한이 필요해요.', context: { ephemeral: true } });
+			throw new UserError({
+				identifier: 'chat_settings_permission',
+				message: `${emoji('error')} 서버 관리 권한이 필요해요.`,
+				context: { ephemeral: true }
+			});
 		const subcommand = interaction.options.getSubcommand(true);
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 		if (subcommand === 'reset') {
@@ -124,13 +128,20 @@ export class ChatSettingsCommand extends Command {
 			if (!acquireChannelTurn(interaction.channelId))
 				throw new UserError({
 					identifier: 'chat_busy',
-					message: '지금 답변 중이에요. 답변이 끝난 뒤 초기화를 다시 실행해 주세요.',
+					message: `${emoji('error')} 지금 답변 중이에요. 답변이 끝난 뒤 초기화를 다시 실행해 주세요.`,
 					context: { ephemeral: true }
 				});
 			try {
 				await clearChannelHistory(interaction.channelId);
 				await interaction.editReply({
-					components: [notice('이 채널의 AI 대화 기록을 초기화했어요. 봇을 멘션하면 새 대화를 시작해요.')],
+					components: [
+						settingResultView({
+							icon: 'trash',
+							title: 'AI 대화 기록 초기화',
+							details: ['이 채널의 AI 대화와 요약을 지웠어요.'],
+							hint: '봇을 멘션하면 새 대화를 시작해요.'
+						})
+					],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 			} finally {
@@ -143,9 +154,15 @@ export class ChatSettingsCommand extends Command {
 			const active = current.mode === 'all' || (current.mode === 'channels' && current.channelIds.includes(interaction.channelId));
 			await interaction.editReply({
 				components: [
-					notice(
-						`### AI 채팅 설정\n서버: ${current.mode === 'all' ? '모든 채널' : current.mode === 'off' ? '끄기' : `선택한 ${current.channelIds.length}개 채널`}\n현재 채널: **${active ? '사용 가능' : '꺼짐'}**\n\n봇을 멘션해서 대화를 시작해요. 이 채널의 대화 문맥은 참여자들이 함께 사용해요.`
-					)
+					settingResultView({
+						icon: 'robot',
+						title: 'AI 채팅 설정',
+						details: [
+							`**서버** ${current.mode === 'all' ? '모든 채널' : current.mode === 'off' ? '꺼짐' : `선택한 ${current.channelIds.length}개 채널`}`,
+							`**이 채널** ${active ? '🟢 사용 가능' : '🔴 꺼짐'}`
+						],
+						hint: '봇을 멘션해서 대화를 시작해요. 이 채널의 대화 문맥은 참여자들이 함께 사용해요.'
+					})
 				],
 				flags: [MessageFlags.IsComponentsV2]
 			});
@@ -156,15 +173,25 @@ export class ChatSettingsCommand extends Command {
 			const mode = normalizeAiMode(interaction.options.getString('mode', true));
 			await guildChatPolicy.setAiMode(this.container.guildService, guildId, mode);
 			const current = await guildChatPolicy.getAiSettings(this.container.guildService, guildId);
-			const content =
+			const scope =
 				mode === 'all'
-					? `${emoji('robot')} 이 서버의 AI 채팅을 **모든 채널**에서 켰어요.`
+					? '서버의 모든 채널에서 사용할 수 있어요.'
 					: mode === 'off'
-						? `${emoji('robot')} 이 서버의 AI 채팅을 **껐어요**.`
-						: current.channelIds.length > 0
-							? `${emoji('robot')} 이 서버의 AI 채팅을 **특정 채널**에서만 켜기로 바꿨어요. (허용 채널 ${current.channelIds.length}개)`
-							: `${emoji('robot')} **특정 채널** 모드로 바꿨어요. 아직 허용된 채널이 없어서 지금은 아무 데서도 안 써요. \`/채팅설정 채널 켜기\`로 켜 주세요.`;
-			await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+						? '서버 어디에서도 사용할 수 없어요.'
+						: `선택한 채널 ${current.channelIds.length}개에서만 사용할 수 있어요.`;
+			const noChannel = mode === 'channels' && current.channelIds.length === 0;
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] },
+				components: [
+					settingResultView({
+						icon: 'robot',
+						title: `AI 채팅 ${mode === 'all' ? '모든 채널' : mode === 'off' ? '꺼짐' : '선택한 채널만'}`,
+						details: [noChannel ? '아직 허용된 채널이 없어서 지금은 어디서도 쓸 수 없어요.' : scope],
+						hint: noChannel ? '`/채팅설정 채널 켜기`로 사용할 채널을 추가해 주세요.' : undefined
+					})
+				]
+			});
 			return;
 		}
 
@@ -179,14 +206,20 @@ export class ChatSettingsCommand extends Command {
 				enabled,
 				otherTextChannelIds
 			);
-			const content = enabled
-				? `${emoji('speech')} 이 채널에서 AI 채팅을 **${result.mode === 'all' ? '켰어요 (서버 전체 켜짐)' : '켰어요'}**. (허용 채널 ${
-						result.channelIds.length
-					}개)`
-				: result.mode === 'off'
-					? `${emoji('speech')} 이 채널에서 AI 채팅을 껐고, 남은 허용 채널이 없어 **서버 전체를 껐어요**.`
-					: `${emoji('speech')} 이 채널에서 AI 채팅을 **껐어요**. (남은 허용 채널 ${result.channelIds.length}개)`;
-			await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(content)] });
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] },
+				components: [
+					channelToggleView({
+						icon: 'robot',
+						label: 'AI 채팅',
+						enabled,
+						channelId: interaction.channelId,
+						mode: result.mode,
+						channelCount: result.channelIds.length
+					})
+				]
+			});
 			return;
 		}
 	}

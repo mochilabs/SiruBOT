@@ -37,7 +37,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!player || !current) {
 		throw new UserError({
 			identifier: 'RecommendCommandNoPlayer',
-			message: '현재 재생 중인 곡이 없어요.',
+			message: `${emoji('error')} 현재 재생 중인 곡이 없어요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -45,7 +45,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (getInFlightRelatedFetch(interaction.guildId)) {
 		throw new UserError({
 			identifier: 'RecommendCommandBusy',
-			message: '추천 곡을 이미 준비 중이에요. 잠시 후 다시 시도해요.',
+			message: `${emoji('error')} 추천 곡을 이미 준비 중이에요. 잠시 후 다시 시도해 주세요.`,
 			context: { ephemeral: true }
 		});
 	}

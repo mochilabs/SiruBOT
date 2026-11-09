@@ -1,3 +1,4 @@
+import { emoji } from '@sirubot/utils';
 import { notice } from '../view/notice.ts';
 import { evalResultView } from '../view/eval.ts';
 import { ApplyOptions } from '@sapphire/decorators';
@@ -19,7 +20,7 @@ export class EvalModalHandler extends InteractionHandler {
 		if (!OWNERS.includes(interaction.user.id)) {
 			await interaction.reply({
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
-				components: [notice('봇 소유자만 사용할 수 있어요.')]
+				components: [notice(`${emoji('error')} 봇 소유자만 사용할 수 있어요.`)]
 			});
 			return;
 		}
