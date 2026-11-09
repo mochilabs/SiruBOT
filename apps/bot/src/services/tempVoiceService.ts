@@ -19,6 +19,10 @@ interface JtcSettings {
 
 const MARKER_CHANNEL_NAME = '🔊 임시방 만들기';
 
+/** 재시작 후에도 방을 추적하도록 길드별 방 목록을 Redis 해시(채널 ID → 소유자 ID)로 남겨요. */
+const ROOMS_KEY_PREFIX = 'jtc:rooms:';
+const roomsKey = (guildId: string) => `${ROOMS_KEY_PREFIX}${guildId}`;
+
 /** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS 환경변수, 기본 30초 */
 function jtcEmptyGraceMs(): number {
 	return Number(process.env.JTC_EMPTY_GRACE_MS) || 30_000;
@@ -59,8 +63,30 @@ export class TempVoiceService {
 	}
 
 	public handleChannelDelete(channelId: string): void {
-		this.rooms.delete(channelId);
-		this.clearEmptyTimer(channelId);
+		this.untrack(channelId);
+	}
+
+	/**
+	 * 시작 시 Redis에 남은 방 기록을 읽어 추적을 되살려요. 빈 방은 유예 확인을 다시 걸고,
+	 * 채널이 이미 없으면 기록만 지워요. Redis가 아직 연결 전이면 false를 돌려줘 호출부가 재시도해요.
+	 */
+	public async restoreRooms(): Promise<boolean> {
+		for (const guild of container.client.guilds.cache.values()) {
+			const records = await container.redisStore.getCacheHashFields(roomsKey(guild.id));
+			if (records === null) return false;
+
+			for (const [channelId, ownerId] of Object.entries(records)) {
+				const channel = await container.client.channels.fetch(channelId).catch(() => null);
+				if (!channel || !channel.isVoiceBased()) {
+					await container.redisStore.deleteCacheHashField(roomsKey(guild.id), channelId);
+					continue;
+				}
+				if (this.rooms.has(channelId)) continue;
+				this.rooms.set(channelId, { guildId: guild.id, ownerId });
+				await this.checkEmpty(channelId, channel);
+			}
+		}
+		return true;
 	}
 
 	public async setupMarkerChannel(guildId: string, categoryId: string): Promise<string> {
@@ -106,7 +132,7 @@ export class TempVoiceService {
 	private async handleOwnerLeave(channelId: string, room: RoomInfo, member: GuildMember): Promise<void> {
 		const channel = member.guild.channels.cache.get(channelId);
 		if (!channel || !channel.isVoiceBased()) {
-			this.rooms.delete(channelId);
+			this.untrack(channelId);
 			return;
 		}
 
@@ -119,12 +145,12 @@ export class TempVoiceService {
 		await channel.permissionOverwrites.delete(member.id).catch(() => null);
 		await channel.permissionOverwrites.edit(successor.id, { ManageChannels: true, MoveMembers: true }).catch(() => null);
 		room.ownerId = successor.id;
+		await this.persistRoom(room.guildId, channelId, successor.id);
 	}
 
 	private async checkEmpty(channelId: string, channel: VoiceState['channel']): Promise<void> {
 		if (!channel || !channel.isVoiceBased()) {
-			this.rooms.delete(channelId);
-			this.clearEmptyTimer(channelId);
+			this.untrack(channelId);
 			return;
 		}
 
@@ -152,7 +178,7 @@ export class TempVoiceService {
 		// 유예 시점에 사람이 있었는데 untrack해 버리면 그 방은 영구 고아가 된다(JTC 고아 채널 버그).
 		const channel = await container.client.channels.fetch(channelId).catch(() => null);
 		if (!channel || !channel.isVoiceBased()) {
-			this.rooms.delete(channelId);
+			this.untrack(channelId);
 			return;
 		}
 
@@ -165,7 +191,7 @@ export class TempVoiceService {
 
 		try {
 			await channel.delete(`임시 음성 채널: ${jtcEmptyGraceText()}간 비어 있음`);
-			this.rooms.delete(channelId);
+			this.untrack(channelId);
 		} catch (error) {
 			container.logger.error(`[tempVoice] failed to delete empty room ${channelId}: ${error}`);
 			// 삭제 실패(권한 등) — 추적을 유지해 다음 유예마다 재시도한다.
@@ -188,7 +214,7 @@ export class TempVoiceService {
 				this.clearEmptyTimer(owned[0]);
 				return ownedChannel;
 			}
-			this.rooms.delete(owned[0]);
+			this.untrack(owned[0]);
 		}
 
 		this.creating.add(createKey);
@@ -201,6 +227,7 @@ export class TempVoiceService {
 				permissionOverwrites: [{ id: member.id, allow: [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers] }]
 			});
 			this.rooms.set(channel.id, { guildId, ownerId: member.id });
+			await this.persistRoom(guildId, channel.id, member.id);
 			try {
 				await member.voice.setChannel(channel);
 			} catch (moveError) {
@@ -236,6 +263,18 @@ export class TempVoiceService {
 		const sanitized = displayName.replace(/["*`|\\]/g, '').trim() || '사용자';
 		const rendered = template.replaceAll('{user}', sanitized).trim() || `${sanitized}의 방`;
 		return rendered.slice(0, 100);
+	}
+
+	/** 추적을 끊고(메모리·타이머·Redis 기록) 정리해요. 방 삭제·채널 삭제·소유 불일치 모두 여기로 모아요. */
+	private untrack(channelId: string): void {
+		const room = this.rooms.get(channelId);
+		this.rooms.delete(channelId);
+		this.clearEmptyTimer(channelId);
+		if (room) void container.redisStore.deleteCacheHashField(roomsKey(room.guildId), channelId);
+	}
+
+	private async persistRoom(guildId: string, channelId: string, ownerId: string): Promise<void> {
+		await container.redisStore.setCacheHashFields(roomsKey(guildId), { [channelId]: ownerId });
 	}
 
 	private clearEmptyTimer(channelId: string): void {
