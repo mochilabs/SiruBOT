@@ -3,7 +3,7 @@ import { createConfig } from '../../scripts/tsup.config.js';
 export default createConfig({
 	entry: ['src/**/*.ts', '!src/**/*.test.ts', '!src/**/*.spec.ts'],
 	dts: false,
-	splitting: false,
+	splitting: true,
 	// CJS로 번들링되는 workspace 패키지(예: @sirubot/prisma)가 ESM 안에서
 	// 동적 require("...")를 호출할 때 node_modules를 정상 참조하도록 보장
 	banner: {
