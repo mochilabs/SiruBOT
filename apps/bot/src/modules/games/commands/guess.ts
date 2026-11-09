@@ -3,7 +3,7 @@ import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { getGuessBest, recordGameResult } from '../utils/gameRecords.ts';
-import { textContainer } from '../utils/textContainer.ts';
+import { textContainer } from '../view/textContainer.ts';
 
 interface GuessSession {
 	target: number;

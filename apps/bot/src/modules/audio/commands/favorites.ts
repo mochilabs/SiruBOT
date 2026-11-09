@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { openPlaylistPanel } from '../utils/playlistPanel.ts';
+import { openPlaylistPanel } from '../view/playlistPanel.ts';
 import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 import { notice } from '../../general/view/notice.ts';
 

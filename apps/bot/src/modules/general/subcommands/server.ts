@@ -1,16 +1,6 @@
-import { emoji, createContainer } from '@sirubot/utils';
-import {
-	ChannelType,
-	ChatInputCommandInteraction,
-	GuildPremiumTier,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	MessageFlags,
-	SectionBuilder,
-	SlashCommandSubcommandBuilder,
-	TextDisplayBuilder,
-	ThumbnailBuilder
-} from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { serverInfoView } from '../view/server.ts';
+import { ChannelType, ChatInputCommandInteraction, GuildPremiumTier, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 
 export const name = 'server';
 export const ko = '서버';
@@ -101,24 +91,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		`${emoji('sleep')} **AFK 채널**: ${guild.afkChannelId ? `<#${guild.afkChannelId}> · ${guild.afkTimeout / 60}분 후 이동` : '없음'}`
 	];
 
-	const containerComponent = createContainer();
-
-	if (guild.iconURL()) {
-		const section = new SectionBuilder()
-			.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')))
-			.setThumbnailAccessory(new ThumbnailBuilder().setURL(guild.iconURL({ size: 256 })!));
-		containerComponent.addSectionComponents(section);
-	} else {
-		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
-	}
-
-	const bannerUrl = guild.bannerURL({ size: 1024 });
-	if (bannerUrl) {
-		containerComponent.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(bannerUrl)));
-	}
-
 	await interaction.editReply({
-		components: [containerComponent],
+		components: [serverInfoView(lines, guild.iconURL() ? guild.iconURL({ size: 256 }) : null, guild.bannerURL({ size: 1024 }))],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

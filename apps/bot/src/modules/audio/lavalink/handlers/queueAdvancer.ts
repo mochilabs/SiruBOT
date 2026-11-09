@@ -1,8 +1,9 @@
 import { container } from '@sapphire/framework';
-import { ContainerBuilder, MessageFlags } from 'discord.js';
+import { MessageFlags } from 'discord.js';
+import { notice } from '../../../general/view/notice.ts';
 import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
-import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { getInFlightRelatedFetch } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
@@ -320,11 +321,7 @@ export class QueueAdvancer {
 			const channel = this.container.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
 				await channel.send({
-					components: [
-						new ContainerBuilder()
-							.setAccentColor(DEFAULT_COLOR)
-							.addTextDisplayComponents((textDisplay) => textDisplay.setContent(message))
-					],
+					components: [notice(message)],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 			}

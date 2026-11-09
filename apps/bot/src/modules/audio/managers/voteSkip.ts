@@ -10,7 +10,8 @@ import {
 import { Player, Track } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import * as view from '../view/skip.ts';
-import { createContainer, emoji } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../../general/view/notice.ts';
 
 interface VoteSkipOptions {
 	player: Player;
@@ -87,7 +88,7 @@ export class VoteSkip {
 		const validationError = this.validateVote(buttonInteraction.user.id);
 		if (validationError) {
 			await buttonInteraction.reply({
-				components: [createContainer().addTextDisplayComponents((textDisplay) => textDisplay.setContent(validationError))],
+				components: [notice(validationError)],
 				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
 			});
 			return;

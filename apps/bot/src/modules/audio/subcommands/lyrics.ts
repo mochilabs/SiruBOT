@@ -1,7 +1,8 @@
 import { container, UserError } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { searchLyrics } from '../../../services/dataApiClient.ts';
+import { lyricsView } from '../view/lyrics.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'lyrics';
@@ -72,13 +73,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			lyrics = lyrics.substring(0, maxLength) + '\n\n*... (가사가 너무 길어 잘렸어요)*';
 		}
 
-		const containerComponent = createContainer();
-		containerComponent.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(`### ${emoji('music_notes')} ${result.trackName} · ${result.artistName}\n\n${lyrics}`)
-		);
-
 		await interaction.editReply({
-			components: [containerComponent],
+			components: [lyricsView(result.trackName, result.artistName, lyrics)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	} catch (error) {

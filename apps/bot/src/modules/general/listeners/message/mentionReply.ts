@@ -15,7 +15,7 @@ import {
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
 import { emoji } from '@sirubot/utils';
 import { runChatTurnToScreen } from '../../utils/chatTurnRunner.ts';
-import { errorPayload, livePayload } from '../../utils/chatView.ts';
+import { errorPayload, livePayload } from '../../view/chatView.ts';
 @ApplyOptions<Listener.Options>({
 	event: Events.MessageCreate
 })

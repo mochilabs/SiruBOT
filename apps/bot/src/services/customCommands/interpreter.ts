@@ -10,24 +10,9 @@
  * - 슬래시 실행도 같은 엔진을 써요 — 호출부(리스너)가 ctx.channel을 interaction 응답으로
  *   감싸서 넘기고, delete_trigger는 ctx.triggerMessage.delete()로 동작해요 (슬래시에선 응답 삭제).
  */
-import {
-	ContainerBuilder,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	MessageFlags,
-	SectionBuilder,
-	SeparatorBuilder,
-	TextDisplayBuilder
-} from 'discord.js';
-import {
-	CUSTOM_COMMAND_ACCENT_COLOR_VALUES,
-	CUSTOM_COMMAND_MAX_ARGS,
-	createThumbnail,
-	customCommandSpecSchema,
-	type CustomCommandAccess,
-	type CustomCommandDesign,
-	type CustomCommandStep
-} from '@sirubot/utils';
+import { MessageFlags } from 'discord.js';
+import { customCommandDesignView } from '../../modules/general/view/customCommand.ts';
+import { CUSTOM_COMMAND_MAX_ARGS, customCommandSpecSchema, type CustomCommandAccess, type CustomCommandStep } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 
 export interface CustomCommandSendPayload {
@@ -131,37 +116,6 @@ function checkRoleAction(roleId: string, ctx: CustomCommandContext): string | nu
 	return null;
 }
 
-/** CV2 디자인 → 컨테이너 컴포넌트 */
-function buildDesignContainer(design: CustomCommandDesign, args: string[]): ContainerBuilder {
-	const container = new ContainerBuilder();
-	container.setAccentColor(CUSTOM_COMMAND_ACCENT_COLOR_VALUES[design.accentColor ?? 'blue']);
-	for (const item of design.items) {
-		switch (item.kind) {
-			case 'text':
-				container.addTextDisplayComponents(new TextDisplayBuilder().setContent(substituteArgs(item.content, args)));
-				break;
-			case 'separator':
-				container.addSeparatorComponents(new SeparatorBuilder());
-				break;
-			case 'section': {
-				const section = new SectionBuilder().addTextDisplayComponents(
-					new TextDisplayBuilder().setContent(substituteArgs(item.content, args))
-				);
-				section.setThumbnailAccessory(createThumbnail(item.thumbnailUrl));
-				container.addSectionComponents(section);
-				break;
-			}
-			case 'media': {
-				const gallery = new MediaGalleryBuilder();
-				for (const url of item.urls) gallery.addItems(new MediaGalleryItemBuilder().setURL(url));
-				container.addMediaGalleryComponents(gallery);
-				break;
-			}
-		}
-	}
-	return container;
-}
-
 interface RunState {
 	sent: number;
 	failed: { stepIndex: number; reason: string } | null;
@@ -181,7 +135,7 @@ async function runSteps(steps: readonly CustomCommandStep[], ctx: CustomCommandC
 				try {
 					if (step.design) {
 						await ctx.channel.send({
-							components: [buildDesignContainer(step.design, ctx.args)],
+							components: [customCommandDesignView(step.design, (text) => substituteArgs(text, ctx.args))],
 							flags: [MessageFlags.IsComponentsV2],
 							allowedMentions: { parse: [] }
 						});

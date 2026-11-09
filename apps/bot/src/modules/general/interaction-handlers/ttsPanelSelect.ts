@@ -13,7 +13,7 @@ import {
 	ttsLangSelectCustomId,
 	ttsVoiceSelectCustomId,
 	TTS_VOICE_DEFAULT_VALUE
-} from '../utils/ttsView.ts';
+} from '../view/ttsView.ts';
 
 /**
  * /tts 패널의 음성·위치 셀렉트 핸들러. 선택한 음성을 저장하고 패널을 다시 그려 현재 선택을 표시한다.

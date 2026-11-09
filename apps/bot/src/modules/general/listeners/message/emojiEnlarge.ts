@@ -8,8 +8,9 @@
  */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
-import { MediaGalleryBuilder, MediaGalleryItemBuilder, Message, MessageFlags } from 'discord.js';
-import { MemoryCache, createContainer, customEmojiUrl, parseEmojiOnlyMessage } from '@sirubot/utils';
+import { Message, MessageFlags } from 'discord.js';
+import { MemoryCache, customEmojiUrl, parseEmojiOnlyMessage } from '@sirubot/utils';
+import { emojiEnlargeView } from '../../view/emojiEnlarge.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import { relayViaWebhook } from '../../../../services/webhookRelay.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
@@ -37,12 +38,7 @@ export class EmojiEnlargeListener extends Listener {
 			if (this.cooldowns.has(cooldownKey)) return;
 			this.cooldowns.set(cooldownKey, true);
 
-			const container = createContainer();
-			const gallery = new MediaGalleryBuilder();
-			for (const item of emojis) {
-				gallery.addItems(new MediaGalleryItemBuilder().setURL(customEmojiUrl(item)));
-			}
-			container.addMediaGalleryComponents(gallery);
+			const container = emojiEnlargeView(emojis.map((item) => customEmojiUrl(item)));
 
 			const relayed = await relayViaWebhook(message, {
 				username: message.member?.displayName ?? message.author.displayName,

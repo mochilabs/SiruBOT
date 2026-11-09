@@ -1,7 +1,6 @@
 import { container, UserError } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
-import { createContainer } from '@sirubot/utils';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { previousReplayed } from '../view/previous.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 export const name = 'previous';
@@ -38,13 +37,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const previousTrack = await container.audioService.playPrevious(player);
 
-	const containerComponent = createContainer();
-	containerComponent.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${emoji('arrow_back')} 이전곡 **${previousTrack.info.title}**을(를) 다시 재생해요.`)
-	);
-
 	await interaction.editReply({
-		components: [containerComponent],
+		components: [previousReplayed(previousTrack.info.title)],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

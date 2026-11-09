@@ -1,8 +1,9 @@
 import { container, UserError } from '@sapphire/framework';
-import { createContainer, emoji } from '@sirubot/utils';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { addManualRecommendation, getInFlightRelatedFetch } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { recommendAdded } from '../view/related.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'recommend';
@@ -66,14 +67,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	const listLines = added.map((track, index) => `${index + 1}. **${track.info.title}**`);
-	const containerComponent = createContainer();
-	containerComponent.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent([`${emoji('sparkle')} 추천 곡 **${added.length}곡**을 대기열에 추가했어요.`, ...listLines].join('\n'))
-	);
-
 	await interaction.editReply({
-		components: [containerComponent],
+		components: [recommendAdded(added.map((track) => track.info.title))],
 		flags: [MessageFlags.IsComponentsV2],
 		allowedMentions: { users: [], roles: [] }
 	});

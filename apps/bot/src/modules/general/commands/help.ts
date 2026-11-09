@@ -1,17 +1,17 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { emoji, createContainer, DEFAULT_COLOR } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand, type ContainerBuilder } from 'discord.js';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand } from 'discord.js';
 import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
+import { helpView } from '../view/help.ts';
 import { INFO_SUBCOMMANDS } from './info.ts';
 
 /** 조각 간 간격 — webhook 편집 제한(5/2초) 여유 있게 유지해요 */
 const TYPING_STEP_MIN_MS = 420;
 const TYPING_STEP_MAX_MS = 560;
 const MAX_TYPING_STEPS = 10;
-const TYPING_CURSOR = '▍';
 
 /** 편집 레이트리밋을 피해 목록 줄들을 단계 조각으로 뻗어요 */
 function splitForTyping(lines: string[]): string[] {
@@ -21,13 +21,6 @@ function splitForTyping(lines: string[]): string[] {
 		segments.push(lines.slice(i, i + size).join('\n'));
 	}
 	return segments;
-}
-
-function buildHelpContainer(content: string, typing: boolean): ContainerBuilder {
-	const container = createContainer();
-	container.setAccentColor(DEFAULT_COLOR);
-	container.addTextDisplayComponents((t) => t.setContent(typing ? `${content}${TYPING_CURSOR}` : content));
-	return container;
 }
 
 /** 서브커맨드 클릭 멘션 — </music play:ID> 형태. ID를 못 찾으면 인라인 코드로 대체해요 */
@@ -65,7 +58,7 @@ export class HelpCommand extends Command {
 		const segments = splitForTyping(this.collectHelpLines(index));
 
 		await interaction.reply({
-			components: [buildHelpContainer(segments[0] ?? '', true)],
+			components: [helpView(segments[0] ?? '', true)],
 			flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 		});
 
@@ -74,13 +67,13 @@ export class HelpCommand extends Command {
 			await sleep(TYPING_STEP_MIN_MS + Math.random() * (TYPING_STEP_MAX_MS - TYPING_STEP_MIN_MS));
 			shown = `${shown}\n${segments[i]}`;
 			// 한 번 실패해도 다음 조각이 전체 누적 본문을 다시 쓰므로 자연스럽게 복구돼요
-			await interaction.editReply({ components: [buildHelpContainer(shown, true)] }).catch(() => undefined);
+			await interaction.editReply({ components: [helpView(shown, true)] }).catch(() => undefined);
 		}
 
 		await sleep(TYPING_STEP_MIN_MS);
 		// 마지막 커서 제거가 한 번 실패하면 화면에 커서가 영구히 남으니 1회 재시도해요
-		await interaction.editReply({ components: [buildHelpContainer(shown, false)] }).catch(async () => {
-			await interaction.editReply({ components: [buildHelpContainer(shown, false)] }).catch(() => undefined);
+		await interaction.editReply({ components: [helpView(shown, false)] }).catch(async () => {
+			await interaction.editReply({ components: [helpView(shown, false)] }).catch(() => undefined);
 		});
 	}
 

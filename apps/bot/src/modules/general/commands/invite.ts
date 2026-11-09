@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer, BOT_NAME } from '@sirubot/utils';
-import { ApplicationIntegrationType, ButtonStyle, ChatInputCommandInteraction, MessageFlags, PermissionsBitField } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { inviteView } from '../view/invite.ts';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionsBitField } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -46,16 +47,8 @@ export class InviteCommand extends Command {
 		const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=${permissions.bitfield}&scope=bot%20applications.commands`;
 		const avatarUrl = this.container.client.user?.displayAvatarURL({ size: 256 }) ?? '';
 
-		const containerComponent = createContainer();
-		containerComponent.addSectionComponents((s) =>
-			s
-				.addTextDisplayComponents((t) => t.setContent(`### ${emoji('link')} ${BOT_NAME} 초대\n\n아래 버튼을 눌러 봇을 서버에 초대하세요!`))
-				.setThumbnailAccessory((t) => t.setURL(avatarUrl))
-				.setButtonAccessory((b) => b.setLabel('초대하기').setStyle(ButtonStyle.Link).setURL(inviteUrl))
-		);
-
 		await interaction.reply({
-			components: [containerComponent],
+			components: [inviteView(avatarUrl, inviteUrl)],
 			flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
 		});
 	}

@@ -4,7 +4,7 @@ import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
-import { buildTtsPanel } from '../utils/ttsView.ts';
+import { buildTtsPanel } from '../view/ttsView.ts';
 import { TtsError } from '../../../services/ttsService.ts';
 import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../../services/ttsPronunciation.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';

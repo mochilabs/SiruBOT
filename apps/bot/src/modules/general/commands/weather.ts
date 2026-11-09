@@ -1,6 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../view/notice.ts';
+import { weatherImageView } from '../view/weather.ts';
 import { ApplicationIntegrationType, AttachmentBuilder, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchWeather, GatewayDomainError, renderWeatherCard, type WeatherCardRequest } from '../../../services/dataApiClient.ts';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
@@ -89,9 +91,7 @@ function buildContainer(result: WeatherResult) {
 	lines.push('');
 	lines.push(`-# Open-Meteo 기준 · 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);
 
-	const container = createContainer();
-	container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
-	return container;
+	return notice(lines.join('\n'));
 }
 
 /** 이미지 카드에 그릴 필드만 추려요 — data-api weatherCardSchema 입력 모양이에요. */
@@ -135,11 +135,7 @@ async function buildImageReply(result: WeatherResult) {
 	if (!png) return null;
 	const filename = `weather-${result.scope}.png`;
 	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
-	const container = createContainer();
-	container.addMediaGalleryComponents((gallery) =>
-		gallery.addItems((item) => item.setURL(`attachment://${filename}`).setDescription(buildAltText(result)))
-	);
-	container.addTextDisplayComponents((t) => t.setContent(`-# ${locationLine} · ${SCOPE_LABELS[result.scope]} · Open-Meteo 기준`));
+	const container = weatherImageView(filename, buildAltText(result), `-# ${locationLine} · ${SCOPE_LABELS[result.scope]} · Open-Meteo 기준`);
 	return { files: [new AttachmentBuilder(png, { name: filename })], container };
 }
 

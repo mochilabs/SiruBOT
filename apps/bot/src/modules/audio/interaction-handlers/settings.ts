@@ -1,17 +1,13 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import {
-	ActionRowBuilder,
 	MessageFlags,
-	ModalBuilder,
-	TextInputBuilder,
-	TextInputStyle,
 	type ButtonInteraction,
 	type StringSelectMenuInteraction,
 	type RoleSelectMenuInteraction,
 	type ChannelSelectMenuInteraction
 } from 'discord.js';
-import { settingsView, SettingsMode } from '../view/settings.ts';
+import { settingsView, jtcTemplateModal, SettingsMode } from '../view/settings.ts';
 import { RepeatMode } from 'lavalink-client';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
@@ -56,23 +52,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		// 방 이름 템플릿 모달은 응답 자체여야 하므로 deferUpdate 전에 연다.
 		if (action === 'jtctemplate') {
 			const settings = await guildJtc.getJtcSettings(this.container.guildService, interaction.guildId);
-			await interaction.showModal(
-				new ModalBuilder()
-					.setCustomId('settings:jtc-template')
-					.setTitle('방 이름 템플릿')
-					.addComponents(
-						new ActionRowBuilder<TextInputBuilder>().addComponents(
-							new TextInputBuilder()
-								.setCustomId('settings:jtc-template-input')
-								.setLabel('방 이름 템플릿')
-								.setPlaceholder('{user}의 방')
-								.setStyle(TextInputStyle.Short)
-								.setRequired(true)
-								.setMaxLength(100)
-								.setValue(settings.template)
-						)
-					)
-			);
+			await interaction.showModal(jtcTemplateModal(settings.template));
 			return;
 		}
 

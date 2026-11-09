@@ -9,7 +9,7 @@ import {
 	type ChatInputCommandInteraction,
 	type ButtonInteraction
 } from 'discord.js';
-import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from '../view/playlist.ts';
+import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from './playlist.ts';
 import { notice } from '../../general/view/notice.ts';
 import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 

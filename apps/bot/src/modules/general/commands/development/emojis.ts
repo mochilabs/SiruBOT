@@ -1,8 +1,8 @@
 import { notice } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, ContainerBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
-import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js';
+import { emoji } from '@sirubot/utils';
 import { envParseArray } from '@skyra/env-utilities';
 import type { AppEmojiManager } from '../../../../services/appEmojiManager.ts';
 
@@ -69,9 +69,7 @@ export class EmojisCommand extends Command {
 			const lines = emojis.map((e) => `${e.name} — \`${e.id}\``);
 			const content = [`### ${emoji('info')} 앱 이모지 ${emojis.length}개`, ...lines].join('\n');
 			await interaction.editReply({
-				components: [
-					new ContainerBuilder().setAccentColor(DEFAULT_COLOR).addTextDisplayComponents((t) => t.setContent(content.slice(0, 3900)))
-				],
+				components: [notice(content.slice(0, 3900))],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error) {
@@ -101,13 +99,7 @@ export class EmojisCommand extends Command {
 		try {
 			const { created, failed } = await manager.forceReupload();
 			await interaction.editReply({
-				components: [
-					new ContainerBuilder()
-						.setAccentColor(DEFAULT_COLOR)
-						.addTextDisplayComponents((t) =>
-							t.setContent(`### ${emoji('success')} 전체 재업로드 완료\n신규 ${created}개 / 실패 ${failed}개 — ID 갱신됨`)
-						)
-				],
+				components: [notice(`### ${emoji('success')} 전체 재업로드 완료\n신규 ${created}개 / 실패 ${failed}개 — ID 갱신됨`)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 		} catch (error) {

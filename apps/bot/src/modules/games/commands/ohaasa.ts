@@ -5,7 +5,7 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags }
 import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../utils/ohaasaService.ts';
-import { textContainer } from '../utils/textContainer.ts';
+import { textContainer } from '../view/textContainer.ts';
 import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
 
 function formatDate(raw: string): string {

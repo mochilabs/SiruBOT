@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
-import { DEFAULT_COLOR, emoji, resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sirubot/utils';
-import { ContainerBuilder, MessageFlags } from 'discord.js';
+import { emoji, resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sirubot/utils';
+import { MessageFlags } from 'discord.js';
+import { notice } from '../modules/general/view/notice.ts';
 import type { Track } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { getTargetNextTrack, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
@@ -44,13 +45,7 @@ export class SponsorBlockService {
 		};
 		void channel
 			.send({
-				components: [
-					new ContainerBuilder()
-						.setAccentColor(DEFAULT_COLOR)
-						.addTextDisplayComponents((text) =>
-							text.setContent(`${emoji('arrow_forward')} [SponsorBlock] **${names[category] ?? category}** 구간을 건너뛰었어요.`)
-						)
-				],
+				components: [notice(`${emoji('arrow_forward')} [SponsorBlock] **${names[category] ?? category}** 구간을 건너뛰었어요.`)],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications]
 			})
 			.then((message) => setTimeout(() => void message.delete().catch(() => null), 3_000))

@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { respondPlaylistNames, respondPlaylistTrackPositions } from '../../../lib/autocomplete.ts';
-import { openPlaylistPanel, addPlaylistQuery } from '../utils/playlistPanel.ts';
+import { openPlaylistPanel, addPlaylistQuery } from '../view/playlistPanel.ts';
 import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 import { notice } from '../../general/view/notice.ts';
 

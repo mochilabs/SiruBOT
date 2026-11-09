@@ -1,8 +1,8 @@
 import { notice } from '../view/notice.ts';
+import { evalResultView } from '../view/eval.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { MessageFlags, ModalSubmitInteraction, TextDisplayBuilder } from 'discord.js';
-import { emoji, createContainer } from '@sirubot/utils';
+import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { inspect } from 'node:util';
 import { OWNERS } from '../../../lib/owners.ts';
 
@@ -47,15 +47,8 @@ export class EvalModalHandler extends InteractionHandler {
 			result = result.substring(0, 3800) + '\n... (truncated)';
 		}
 
-		const containerComponent = createContainer();
-		containerComponent.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(
-				`### ${success ? emoji('success') : emoji('error')} Eval\n**Input:**\n\`\`\`js\n${code}\n\`\`\`\n**Output:**\n\`\`\`js\n${result}\n\`\`\``
-			)
-		);
-
 		await interaction.editReply({
-			components: [containerComponent],
+			components: [evalResultView(code, result, success)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}
