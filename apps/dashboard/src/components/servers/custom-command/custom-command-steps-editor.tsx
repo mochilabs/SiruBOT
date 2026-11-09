@@ -64,7 +64,7 @@ const PERMISSION_OPTIONS: Array<{ value: "ManageRoles" | "ManageChannels" | "Man
 export { PERMISSION_OPTIONS };
 
 /** 스텝 종류별 시작값 */
-export function createStep(type: EditorStep["type"]): EditorStep {
+function createStep(type: EditorStep["type"]): EditorStep {
 	switch (type) {
 		case "send_message":
 			return { type: "send_message", text: "" };

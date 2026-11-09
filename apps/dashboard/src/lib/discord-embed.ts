@@ -38,7 +38,7 @@ export function getRequestOrigin(headers: { get(name: string): string | null }) 
 	return `${proto}://${host}`;
 }
 
-export function getAppBaseUrl() {
+function getAppBaseUrl() {
 	return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
 }
 
