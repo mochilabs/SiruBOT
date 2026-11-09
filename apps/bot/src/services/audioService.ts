@@ -291,9 +291,18 @@ export class AudioService {
 	public async ensurePlayback(player: Player): Promise<void> {
 		if (player.playing) return;
 		// 클라 playing 플래그는 서버 주도 전이(크로스페이드) 뒤에 false로 굳을 수 있다. 이미 서버가 곡을
-		// 재생 중인데 인자 없는 play()를 보내면 현재 곡이 0초로 되감긴다 — 서버를 확인해 살아 있으면 보정만 한다.
+		// 재생 중인데 인자 없는 play()를 보내면 현재 곡이 0초로 되감긴다 — 서버가 큐의 현재 곡을 재생 중일 때만 보정만 한다.
+		// 서버에 이전 곡이 남아 있으면 보정하지 않고 play()로 큐의 현재 곡을 시작해야 새 곡이 막히지 않는다.
 		const serverPlayer = await player.node.fetchPlayer(String(player.guildId)).catch(() => null);
-		if (serverPlayer && !('status' in serverPlayer) && serverPlayer.track && !serverPlayer.paused) {
+		const queued = player.queue.current?.encoded;
+		if (
+			serverPlayer &&
+			!('status' in serverPlayer) &&
+			serverPlayer.track &&
+			!serverPlayer.paused &&
+			queued &&
+			serverPlayer.track.encoded === queued
+		) {
 			player.playing = true;
 			return;
 		}

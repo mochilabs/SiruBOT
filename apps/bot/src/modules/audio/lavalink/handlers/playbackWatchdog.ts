@@ -9,7 +9,12 @@ import { getTargetNextTrack, getTrackUid, notifyQueueMutated } from '../queue/qu
 /** 라이브러리의 지연 continuation(trackEnd 후속 처리)이 settle된 뒤 현재 상태를 복원하는 지연 시간. */
 const TRANSITION_RECONCILE_MS = 800;
 
-export type ServerTrackProbe = { known: true; track: Track | null } | { known: false };
+export type ServerTrackProbe = { known: true; track: Track | null; paused: boolean } | { known: false };
+
+/** 서버 확인 결과로 클라 playing 플래그를 맞춘다 — 서버가 곡을 들고 있을 때만 보정한다 (이전 곡이 없는 경우는 건드리지 않는다). */
+export function syncPlayingFlagFromProbe(player: { playing: boolean }, probe: ServerTrackProbe): void {
+	if (probe.known && probe.track) player.playing = !probe.paused;
+}
 
 /**
  * Lavaplayer base64 트랙의 마지막 8바이트(track.getPosition())를 0으로 정규화한다.
@@ -157,6 +162,8 @@ export class PlaybackWatchdog {
 		if (isSameEncodedTrack(currentEncoded, encoded) || isSameTrack(player.queue.current, track)) return;
 
 		const probe = await this.fetchServerTrack(player);
+		// 서버가 곡을 들고 있다는 확인은 곧 '재생 중' 신호다 (β 순서·무시된 noReplace play 뒤 플래그 고착 방지).
+		syncPlayingFlagFromProbe(player, probe);
 		if (!probe.known) {
 			// 서버 확인 불가 — 기존 신호로 판단: 재생도 멈췄고 대기열도 비면 정상 종료로 보고 복원하지 않는다.
 			if (!player.playing && player.queue.tracks.length === 0) return;
@@ -209,12 +216,13 @@ export class PlaybackWatchdog {
 	public async fetchServerTrack(player: CustomPlayer): Promise<ServerTrackProbe> {
 		try {
 			const serverPlayer = await player.node.fetchPlayer(String(player.guildId));
-			if (!serverPlayer || 'status' in serverPlayer || !serverPlayer.track) return { known: true, track: null };
-			// 서버가 곡을 들고 있다는 확인은 곧 '재생 중' 신호다. β 순서(queueEnd)나 무시된 noReplace play 뒤에는
-			// trackStart가 오지 않아 playing 플래그가 false로 굳는다 — 그 상태를 믿고 play()를 보내면
-			// 재생 중인 곡이 0초로 되감긴다. 서버를 확인한 모든 경로에서 플래그를 서버에 맞춘다.
-			player.playing = !serverPlayer.paused;
-			return { known: true, track: this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined) };
+			if (!serverPlayer || 'status' in serverPlayer || !serverPlayer.track) return { known: true, track: null, paused: false };
+			// 순수 조회: playing 플래그 보정은 호출부가 syncPlayingFlagFromProbe로 명시적으로 한다.
+			return {
+				known: true,
+				track: this.lavalinkManager.utils.buildTrack(serverPlayer.track, undefined),
+				paused: Boolean(serverPlayer.paused)
+			};
 		} catch (error) {
 			this.logger.debug(`[mixer] fetchPlayer failed (guild ${player.guildId}): ${error}`);
 			return { known: false };
@@ -224,6 +232,7 @@ export class PlaybackWatchdog {
 	/** 서버에 재생 중인 트랙이 있는지 — 확인 불가하면 보수적으로 '있다'로 본다 (play 무음 거부 방지). */
 	private async isServerTrackActive(player: CustomPlayer): Promise<boolean> {
 		const probe = await this.fetchServerTrack(player);
+		syncPlayingFlagFromProbe(player, probe);
 		return probe.known ? probe.track !== null : true;
 	}
 

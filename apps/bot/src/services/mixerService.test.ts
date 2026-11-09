@@ -247,8 +247,7 @@ describe('MixerService v2 Protocol Tests', () => {
 				pending: new Map(),
 				transitionSeq: 0,
 				lastTargetUid: 'uid-old',
-				invalidateTimer: null,
-				sampleMiss: 0
+				invalidateTimer: null
 			},
 			queue: {
 				current: { encoded: 'cur', userData: { uid: 'uid-cur' } },
@@ -275,7 +274,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			...fakePlayer(),
 			repeatMode: 'off',
 			currentEpoch: 5,
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null },
 			queue: {
 				current: { encoded: 'tts-enc', requester: { id: TTS_CLIP_REQUESTER_ID } },
 				tracks: [{ encoded: 'song-a', info: { identifier: 'a' } }],
@@ -310,7 +309,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			repeatMode: 'off',
 			playing: true,
 			currentEpoch: 5,
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null },
 			queue: {
 				current: { encoded: 'song-cur', requester: { id: 'user-1' } },
 				tracks: [{ encoded: 'song-next', requester: { id: 'user-1' } }],
@@ -349,7 +348,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			repeatMode: 'off',
 			playing: true,
 			currentEpoch: 5,
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: null, invalidateTimer: null },
 			queue: {
 				current: { encoded: 'song-a', requester: { id: 'user-1' } },
 				tracks: [{ encoded: 'song-b', requester: { id: 'user-1' } }],
@@ -377,7 +376,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			repeatMode: 'queue',
 			currentEpoch: 1,
 			transitionState: { confirmedNowPlaying: trackA },
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null },
 			queue: {
 				current: trackA,
 				tracks: [trackB],
@@ -409,7 +408,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			repeatMode: 'off',
 			currentEpoch: 5,
 			transitionState: { confirmedNowPlaying: trackA },
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null },
 			queue: {
 				current: trackA,
 				tracks: [trackB, trackC],
@@ -453,7 +452,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			repeatMode: 'off',
 			currentEpoch: 3,
 			transitionState: { confirmedNowPlaying: trackA, lastStartedEncoded: 'enc-a' },
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null },
 			queue: {
 				current: trackB,
 				tracks: [trackC],
@@ -563,7 +562,7 @@ describe('MixerService v2 Protocol Tests', () => {
 				serverConsumedTrack: null,
 				lastRecordedKey: null
 			},
-			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null, sampleMiss: 0 },
+			mixerRuntime: { pending: new Map(), transitionSeq: 0, lastTargetUid: 'uid-b', invalidateTimer: null },
 			queue: {
 				current: trackB,
 				previous: [trackA],

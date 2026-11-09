@@ -55,7 +55,6 @@ export interface MixerRuntime {
 	transitionSeq: number;
 	lastTargetUid: string | null;
 	invalidateTimer: NodeJS.Timeout | null;
-	sampleMiss: number;
 }
 
 export class CustomPlayer extends Player {
@@ -83,8 +82,7 @@ export class CustomPlayer extends Player {
 		pending: new Map(),
 		transitionSeq: 0,
 		lastTargetUid: null,
-		invalidateTimer: null,
-		sampleMiss: 0
+		invalidateTimer: null
 	};
 
 	constructor(options: PlayerOptions, LavalinkManager: LavalinkManager, dontEmitPlayerCreateEvent?: boolean) {

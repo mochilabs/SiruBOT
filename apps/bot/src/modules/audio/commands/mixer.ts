@@ -184,8 +184,13 @@ export class MixerCommand extends Command {
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		if (!interaction.inCachedGuild()) return;
 
-		// 상태 조회는 본인만 보면 충분해요. 설정 변경은 서버 구성원이 이유를 알 수 있게 공개로 남겨요.
-		await interaction.deferReply(interaction.options.getSubcommand(true) === 'status' ? { flags: [MessageFlags.Ephemeral] } : undefined);
+		// 상태 조회(무인자 고급 포함)는 본인만 보면 충분해요. 설정 변경은 서버 구성원이 이유를 알 수 있게 공개로 남겨요.
+		const isStatusQuery =
+			interaction.options.getSubcommand(true) === 'status' ||
+			(interaction.options.getSubcommand(true) === 'tuning' &&
+				interaction.options.getNumber('max-tempo-change') === null &&
+				interaction.options.getNumber('min-confidence') === null);
+		await interaction.deferReply(isStatusQuery ? { flags: [MessageFlags.Ephemeral] } : undefined);
 
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 

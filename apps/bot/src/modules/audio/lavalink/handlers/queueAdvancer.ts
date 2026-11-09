@@ -9,7 +9,7 @@ import { isTtsClip } from '../requester.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
-import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncQueueToNowPlaying } from './playbackWatchdog.ts';
+import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncPlayingFlagFromProbe, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
 import { cancelPendingInvalidate, getTargetNextTrack } from '../queue/queueWrapper.ts';
@@ -354,6 +354,7 @@ export class QueueAdvancer {
 		// 조용히 무시되고 클라 큐만 한 칸 소비된다 — NOWPLAYING과 출력이 어긋나는 원인.
 		// 진행 전 서버 트랙을 확인해 살아 있으면 클라 상태 동기화와 관망으로 끝낸다.
 		const probe = await this.host.fetchServerTrack(player);
+		syncPlayingFlagFromProbe(player, probe);
 		if (probe.known ? probe.track !== null : true) {
 			if (this.clientAdvancePending.get(player.guildId)?.token === token) this.clearAdvancePending(player.guildId);
 			this.container.mixerService.markUnmanaged(player.guildId);
