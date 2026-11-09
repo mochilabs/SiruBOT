@@ -26,25 +26,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
-		guildService: {
-			getVolume: mocks.getVolume,
-			updateVolume: mocks.updateVolume,
-			getRepeat: mocks.getRepeat,
-			setRepeat: mocks.setRepeat,
-			getRelated: mocks.getRelated,
-			setRelated: mocks.setRelated,
-			getMixerSettings: mocks.getMixerSettings,
-			setGapless: mocks.setGapless,
-			setCrossfade: mocks.setCrossfade,
-			setNormalization: mocks.setNormalization,
-			getTtsAnnounceMode: mocks.getTtsAnnounceMode,
-			setTtsAnnounceMode: mocks.setTtsAnnounceMode,
-			getEnableController: mocks.getEnableController,
-			setEnableController: mocks.setEnableController,
-			getGuild: mocks.getGuild,
-			setSponsorBlockSegments: mocks.setSponsorBlockSegments,
-			hasDJRole: mocks.hasDJRole
-		},
+		guildService: { getGuild: mocks.getGuild },
 		audio: {
 			getPlayer: mocks.getPlayer
 		},
@@ -66,6 +48,28 @@ vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({
 }));
 
 import { musicSettingsGetTool, musicSettingsSetTool } from './musicSettings.ts';
+vi.mock('../guildSettings/playback.ts', async (orig) => ({
+	...(await orig()),
+	getVolume: mocks.getVolume,
+	updateVolume: mocks.updateVolume,
+	getRepeat: mocks.getRepeat,
+	setRepeat: mocks.setRepeat,
+	getRelated: mocks.getRelated,
+	setRelated: mocks.setRelated,
+	getTtsAnnounceMode: mocks.getTtsAnnounceMode,
+	setTtsAnnounceMode: mocks.setTtsAnnounceMode,
+	getEnableController: mocks.getEnableController,
+	setEnableController: mocks.setEnableController,
+	setSponsorBlockSegments: mocks.setSponsorBlockSegments,
+	hasDJRole: mocks.hasDJRole
+}));
+vi.mock('../guildSettings/mixer.ts', async (orig) => ({
+	...(await orig()),
+	getMixerSettings: mocks.getMixerSettings,
+	setGapless: mocks.setGapless,
+	setCrossfade: mocks.setCrossfade,
+	setNormalization: mocks.setNormalization
+}));
 
 function createMockContext(overrides: Partial<AiToolContext> = {}): AiToolContext {
 	return {
@@ -171,7 +175,7 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setGapless).toHaveBeenCalledWith('test-guild', true);
+		expect(mocks.setGapless).toHaveBeenCalledWith(expect.anything(), 'test-guild', true);
 		expect(res.updated).toEqual({ gapless: true });
 	});
 
@@ -184,8 +188,8 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setRelated).toHaveBeenCalledWith('test-guild', true);
-		expect(mocks.setRepeat).toHaveBeenCalledWith('test-guild', 'track');
+		expect(mocks.setRelated).toHaveBeenCalledWith(expect.anything(), 'test-guild', true);
+		expect(mocks.setRepeat).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'track');
 		expect(res.updated).toEqual({ autoplay: true, repeat: 'track' });
 	});
 

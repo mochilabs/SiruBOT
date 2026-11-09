@@ -17,6 +17,9 @@ import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
 import { errorView } from '../../../lib/errorView.ts';
 import { sponsorBlockService } from '../../../services/sponsorBlockService.ts';
+import * as guildChannels from '../../../services/guildSettings/channels.ts';
+import * as guildJtc from '../../../services/guildSettings/jtc.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 export default class SettingsInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -52,7 +55,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 
 		// 방 이름 템플릿 모달은 응답 자체여야 하므로 deferUpdate 전에 연다.
 		if (action === 'jtctemplate') {
-			const settings = await this.container.guildService.getJtcSettings(interaction.guildId);
+			const settings = await guildJtc.getJtcSettings(this.container.guildService, interaction.guildId);
 			await interaction.showModal(
 				new ModalBuilder()
 					.setCustomId('settings:jtc-template')
@@ -102,11 +105,11 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 		// Music toggles
 		if (action === 'toggle:controller') {
 			const guild = await this.container.guildService.getGuild(interaction.guildId);
-			await this.container.guildService.setEnableController(interaction.guildId, !guild.enableController);
+			await guildPlayback.setEnableController(this.container.guildService, interaction.guildId, !guild.enableController);
 		} else if (action === 'toggle:related') {
 			const guild = await this.container.guildService.getGuild(interaction.guildId);
 			const next = !guild.related;
-			await this.container.guildService.setRelated(interaction.guildId, next);
+			await guildPlayback.setRelated(this.container.guildService, interaction.guildId, next);
 			// /추천곡 커맨드와 동일하게, 켰을 때는 현재 곡의 다음 추천을 미리 준비해 둔다.
 			if (next) {
 				const player = this.container.audio.getPlayer(interaction.guildId);
@@ -121,7 +124,7 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 			const guild = await this.container.guildService.getGuild(interaction.guildId);
 			const current = guild.repeat as RepeatMode;
 			const next: RepeatMode = current === 'off' ? 'track' : current === 'track' ? 'queue' : 'off';
-			await this.container.guildService.setRepeat(interaction.guildId, next);
+			await guildPlayback.setRepeat(this.container.guildService, interaction.guildId, next);
 
 			const player = this.container.audio.players.get(interaction.guildId);
 			if (player) {
@@ -132,46 +135,50 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 
 		// DJ actions
 		if (action === 'remove:dj') {
-			await this.container.guildService.setDJRole(interaction.guildId, null);
+			await guildPlayback.setDJRole(this.container.guildService, interaction.guildId, null);
 		} else if (interaction.isRoleSelectMenu() && action === 'select:dj') {
 			const roleId = interaction.values[0];
-			await this.container.guildService.setDJRole(interaction.guildId, roleId);
+			await guildPlayback.setDJRole(this.container.guildService, interaction.guildId, roleId);
 		}
 
 		// Channel actions
 		if (action === 'remove:text') {
-			await this.container.guildService.setDefaultTextChannel(interaction.guildId, null);
+			await guildChannels.setDefaultTextChannel(this.container.guildService, interaction.guildId, null);
 		} else if (action === 'remove:voice') {
-			await this.container.guildService.setDefaultVoiceChannel(interaction.guildId, null);
+			await guildChannels.setDefaultVoiceChannel(this.container.guildService, interaction.guildId, null);
 		} else if (action === 'remove:pin') {
-			await this.container.guildService.setPinnedChannel(interaction.guildId, null);
+			await guildChannels.setPinnedChannel(this.container.guildService, interaction.guildId, null);
 		} else if (interaction.isChannelSelectMenu()) {
 			const channelId = interaction.values[0];
 			if (action === 'select:text') {
-				await this.container.guildService.setDefaultTextChannel(interaction.guildId, channelId);
+				await guildChannels.setDefaultTextChannel(this.container.guildService, interaction.guildId, channelId);
 			} else if (action === 'select:voice') {
-				await this.container.guildService.setDefaultVoiceChannel(interaction.guildId, channelId);
+				await guildChannels.setDefaultVoiceChannel(this.container.guildService, interaction.guildId, channelId);
 			} else if (action === 'select:pin') {
-				await this.container.guildService.setPinnedChannel(interaction.guildId, channelId);
+				await guildChannels.setPinnedChannel(this.container.guildService, interaction.guildId, channelId);
 			}
 		}
 
 		// 고정 채널 입력 동작 (play: 즉시 재생 / select: 5개 선택)
 		if (interaction.isStringSelectMenu() && action === 'select:pinmode') {
-			await this.container.guildService.setPinnedChannelMode(interaction.guildId, interaction.values[0] === 'select' ? 'select' : 'play');
+			await guildChannels.setPinnedChannelMode(
+				this.container.guildService,
+				interaction.guildId,
+				interaction.values[0] === 'select' ? 'select' : 'play'
+			);
 		}
 
 		// 고정 채널 입력 메시지 삭제 토글
 		if (action === 'toggle:pindelete') {
 			const guild = await this.container.guildService.getGuild(interaction.guildId);
-			await this.container.guildService.setPinnedChannelDeleteInput(interaction.guildId, !guild.pinnedChannelDeleteInput);
+			await guildChannels.setPinnedChannelDeleteInput(this.container.guildService, interaction.guildId, !guild.pinnedChannelDeleteInput);
 		}
 
 		// JTC actions
 		if (action === 'toggle:jtc') {
-			const settings = await this.container.guildService.getJtcSettings(interaction.guildId);
+			const settings = await guildJtc.getJtcSettings(this.container.guildService, interaction.guildId);
 			if (settings.enabled || settings.markerChannelId) {
-				await this.container.guildService.setJtcEnabled(interaction.guildId, !settings.enabled);
+				await guildJtc.setJtcEnabled(this.container.guildService, interaction.guildId, !settings.enabled);
 			}
 		} else if (interaction.isChannelSelectMenu() && action === 'select:jtccategory') {
 			try {
@@ -184,16 +191,16 @@ export default class SettingsInteractionHandler extends InteractionHandler {
 				});
 			}
 		} else if (interaction.isStringSelectMenu() && action === 'select:jtclimit') {
-			await this.container.guildService.setJtcUserLimit(interaction.guildId, Number(interaction.values[0]));
+			await guildJtc.setJtcUserLimit(this.container.guildService, interaction.guildId, Number(interaction.values[0]));
 		}
 
 		// SponsorBlock actions
 		if (interaction.isStringSelectMenu() && action === 'select:sponsorblock') {
-			await this.container.guildService.setSponsorBlockSegments(interaction.guildId, interaction.values);
+			await guildPlayback.setSponsorBlockSegments(this.container.guildService, interaction.guildId, interaction.values);
 			const player = this.container.audio.players.get(interaction.guildId);
 			if (player) sponsorBlockService.refreshSettings(player);
 		} else if (action === 'reset:sponsorblock') {
-			await this.container.guildService.setSponsorBlockSegments(interaction.guildId, []);
+			await guildPlayback.setSponsorBlockSegments(this.container.guildService, interaction.guildId, []);
 			const player = this.container.audio.players.get(interaction.guildId);
 			if (player) sponsorBlockService.refreshSettings(player);
 		}

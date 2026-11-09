@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PlayerWebResponder } from './playerWebResponder.ts';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+vi.mock('./guildSettings/playback.ts', async (orig) => ({ ...(await orig()), hasDJRole: vi.fn().mockResolvedValue(false) }));
 
 const harness = vi.hoisted(() => ({ receive: null as null | ((raw: string) => void) }));
 vi.mock('@sirubot/utils', async (original) => ({
@@ -31,7 +32,7 @@ describe('web player permissions', () => {
 		const member = { permissions: new PermissionsBitField(flags), voice: { channelId: null } };
 		Object.assign(container, {
 			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
-			guildService: { hasDJRole: vi.fn().mockResolvedValue(false) },
+			guildService: {},
 			redisStore: { publishPlayerWebResponse: publish }
 		});
 		await new PlayerWebResponder(logger).start('redis://fixture');
@@ -49,7 +50,7 @@ describe('web player permissions', () => {
 		Object.assign(container, {
 			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
-			guildService: { hasDJRole: vi.fn().mockResolvedValue(false) },
+			guildService: {},
 			redisStore: { publishPlayerWebResponse: publish }
 		});
 		await new PlayerWebResponder(logger).start('redis://fixture');
@@ -72,7 +73,7 @@ describe('web player permissions', () => {
 		const member = { permissions: new PermissionsBitField(PermissionsBitField.Flags.ManageGuild), voice: { channelId: null } };
 		Object.assign(container, {
 			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
-			guildService: { hasDJRole: vi.fn().mockResolvedValue(false) },
+			guildService: {},
 			redisStore: { publishPlayerWebResponse: publish }
 		});
 		await new PlayerWebResponder(logger, 'test-key').start('redis://fixture');

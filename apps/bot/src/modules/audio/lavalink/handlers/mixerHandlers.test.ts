@@ -9,7 +9,8 @@ const { container } = vi.hoisted(() => ({
 			arm: vi.fn(async () => undefined),
 			supportsOutgoingEnd: vi.fn(async () => false)
 		},
-		guildService: {
+		guildService: {},
+		guildMixer: {
 			getMixerSettings: vi.fn(async () => ({
 				gaplessEnabled: false,
 				crossfadeEnabled: false,
@@ -20,6 +21,7 @@ const { container } = vi.hoisted(() => ({
 }));
 
 vi.mock('@sapphire/framework', () => ({ container }));
+vi.mock('../../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...container.guildMixer }));
 vi.mock('../../../../services/sponsorBlockService.ts', () => ({
 	sponsorBlockService: {
 		prefetch: vi.fn(),
@@ -91,7 +93,7 @@ describe('shouldPreserveTransition', () => {
 describe('handleMixerNeedNext with AutoMix (gapless=false)', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({
+		vi.mocked(container.guildMixer.getMixerSettings).mockResolvedValue({
 			gaplessEnabled: false,
 			crossfadeEnabled: false,
 			automixEnabled: true

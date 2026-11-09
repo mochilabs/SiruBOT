@@ -33,29 +33,7 @@ const mockRoles = new Map<string, unknown>();
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
-		guildService: {
-			getGuild: mocks.getGuild,
-			getJtcSettings: mocks.getJtcSettings,
-			getAiSettings: mocks.getAiSettings,
-			getTtsSettings: mocks.getTtsSettings,
-			getChatToolSettings: mocks.getChatToolSettings,
-			setDefaultTextChannel: mocks.setDefaultTextChannel,
-			setDefaultVoiceChannel: mocks.setDefaultVoiceChannel,
-			setPinnedChannel: mocks.setPinnedChannel,
-			setPinnedChannelMode: mocks.setPinnedChannelMode,
-			setPinnedChannelDeleteInput: mocks.setPinnedChannelDeleteInput,
-			setDJRole: mocks.setDJRole,
-			setJtcEnabled: mocks.setJtcEnabled,
-			setJtcTemplate: mocks.setJtcTemplate,
-			setJtcUserLimit: mocks.setJtcUserLimit,
-			setAiMode: mocks.setAiMode,
-			setChannelAiEnabled: mocks.setChannelAiEnabled,
-			updateTtsVolume: mocks.updateTtsVolume,
-			updateTtsDuck: mocks.updateTtsDuck,
-			setChannelTtsEnabled: mocks.setChannelTtsEnabled,
-			setCountingEnabled: mocks.setCountingEnabled,
-			setCountingChannel: mocks.setCountingChannel
-		},
+		guildService: { getGuild: mocks.getGuild },
 		tempVoiceService: {
 			setupMarkerChannel: mocks.setupMarkerChannel
 		},
@@ -91,6 +69,38 @@ vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({
 }));
 
 import { botSettingsGetTool, botSettingsSetTool } from './botSettings.ts';
+vi.mock('../guildSettings/jtc.ts', async (orig) => ({
+	...(await orig()),
+	getJtcSettings: mocks.getJtcSettings,
+	setJtcEnabled: mocks.setJtcEnabled,
+	setJtcTemplate: mocks.setJtcTemplate,
+	setJtcUserLimit: mocks.setJtcUserLimit
+}));
+vi.mock('../guildSettings/chatPolicy.ts', async (orig) => ({
+	...(await orig()),
+	getAiSettings: mocks.getAiSettings,
+	getTtsSettings: mocks.getTtsSettings,
+	getChatToolSettings: mocks.getChatToolSettings,
+	setAiMode: mocks.setAiMode,
+	setChannelAiEnabled: mocks.setChannelAiEnabled,
+	setChannelTtsEnabled: mocks.setChannelTtsEnabled,
+	setCountingEnabled: mocks.setCountingEnabled,
+	setCountingChannel: mocks.setCountingChannel
+}));
+vi.mock('../guildSettings/channels.ts', async (orig) => ({
+	...(await orig()),
+	setDefaultTextChannel: mocks.setDefaultTextChannel,
+	setDefaultVoiceChannel: mocks.setDefaultVoiceChannel,
+	setPinnedChannel: mocks.setPinnedChannel,
+	setPinnedChannelMode: mocks.setPinnedChannelMode,
+	setPinnedChannelDeleteInput: mocks.setPinnedChannelDeleteInput
+}));
+vi.mock('../guildSettings/playback.ts', async (orig) => ({
+	...(await orig()),
+	setDJRole: mocks.setDJRole,
+	updateTtsVolume: mocks.updateTtsVolume,
+	updateTtsDuck: mocks.updateTtsDuck
+}));
 
 function createMockContext(overrides: Partial<AiToolContext> = {}): AiToolContext {
 	return {
@@ -222,7 +232,7 @@ describe('botSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setDefaultTextChannel).toHaveBeenCalledWith('test-guild', 'c-text-1');
+		expect(mocks.setDefaultTextChannel).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'c-text-1');
 		expect(res.updated.default_text_channel).toEqual({ id: 'c-text-1', name: '채팅' });
 	});
 
@@ -237,7 +247,7 @@ describe('botSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setDefaultTextChannel).toHaveBeenCalledWith('test-guild', null);
+		expect(mocks.setDefaultTextChannel).toHaveBeenCalledWith(expect.anything(), 'test-guild', null);
 		expect(res.updated.default_text_channel).toBeNull();
 	});
 
@@ -247,11 +257,11 @@ describe('botSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setDJRole).toHaveBeenCalledWith('test-guild', 'r-dj-1');
+		expect(mocks.setDJRole).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'r-dj-1');
 		expect(res.updated.dj_role).toEqual({ id: 'r-dj-1', name: 'DJ' });
 
 		await botSettingsSetTool.execute({ dj_role: '해제' }, ctx);
-		expect(mocks.setDJRole).toHaveBeenCalledWith('test-guild', null);
+		expect(mocks.setDJRole).toHaveBeenCalledWith(expect.anything(), 'test-guild', null);
 	});
 
 	it('임시 음성방(JTC) 카테고리 지정 시 카테고리 유효성을 검사하고 marker를 생성한다', async () => {
@@ -264,9 +274,9 @@ describe('botSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 
 		expect(res.status).toBe('ok');
 		expect(mocks.setupMarkerChannel).toHaveBeenCalledWith('test-guild', 'c-cat-1');
-		expect(mocks.setJtcEnabled).toHaveBeenCalledWith('test-guild', true);
-		expect(mocks.setJtcTemplate).toHaveBeenCalledWith('test-guild', '{user}의 아지트');
-		expect(mocks.setJtcUserLimit).toHaveBeenCalledWith('test-guild', 6);
+		expect(mocks.setJtcEnabled).toHaveBeenCalledWith(expect.anything(), 'test-guild', true);
+		expect(mocks.setJtcTemplate).toHaveBeenCalledWith(expect.anything(), 'test-guild', '{user}의 아지트');
+		expect(mocks.setJtcUserLimit).toHaveBeenCalledWith(expect.anything(), 'test-guild', 6);
 	});
 
 	it('JTC 카테고리에 일반 텍스트 채널을 지정하면 에러를 던진다', async () => {
@@ -287,9 +297,9 @@ describe('botSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setChannelAiEnabled).toHaveBeenCalledWith('test-guild', 'c-text-1', true, ['c-text-1']);
-		expect(mocks.setChannelTtsEnabled).toHaveBeenCalledWith('test-guild', 'c-text-1', false, ['c-text-1']);
-		expect(mocks.updateTtsVolume).toHaveBeenCalledWith('test-guild', 85);
+		expect(mocks.setChannelAiEnabled).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'c-text-1', true, ['c-text-1']);
+		expect(mocks.setChannelTtsEnabled).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'c-text-1', false, ['c-text-1']);
+		expect(mocks.updateTtsVolume).toHaveBeenCalledWith(expect.anything(), 'test-guild', 85);
 	});
 
 	it('카운팅 채널 설정 및 활성화를 처리한다', async () => {
@@ -304,8 +314,8 @@ describe('botSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		const res = JSON.parse(raw);
 
 		expect(res.status).toBe('ok');
-		expect(mocks.setCountingEnabled).toHaveBeenCalledWith('test-guild', true);
-		expect(mocks.setCountingChannel).toHaveBeenCalledWith('test-guild', 'c-text-1');
+		expect(mocks.setCountingEnabled).toHaveBeenCalledWith(expect.anything(), 'test-guild', true);
+		expect(mocks.setCountingChannel).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'c-text-1');
 	});
 
 	it('변경할 항목이 없을 때 에러를 던진다', async () => {

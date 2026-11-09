@@ -3,6 +3,7 @@ import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { RepeatMode } from 'lavalink-client';
 import * as view from '../view/repeat.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 export const name = 'repeat';
 export const ko = '반복';
@@ -37,7 +38,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const mode = interaction.options.getString('mode');
 
 	if (mode == null) {
-		const repeat = await container.guildService.getRepeat(interaction.guildId);
+		const repeat = await guildPlayback.getRepeat(container.guildService, interaction.guildId);
 		await interaction.reply({
 			components: [view.repeatCurrent({ mode: repeat })],
 			flags: [MessageFlags.IsComponentsV2],
@@ -55,7 +56,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		});
 	}
 
-	const repeatUpdated = await container.guildService.setRepeat(interaction.guildId, mode as RepeatMode);
+	const repeatUpdated = await guildPlayback.setRepeat(container.guildService, interaction.guildId, mode as RepeatMode);
 	const player = container.audio.getPlayer(interaction.guildId);
 	await player?.setRepeatMode(repeatUpdated);
 	// 반복 모드는 클라이언트가 전이를 소유하므로 mixer 예열 슬롯을 비운다.

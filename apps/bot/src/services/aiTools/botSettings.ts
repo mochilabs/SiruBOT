@@ -3,6 +3,10 @@ import { ChannelType, type Guild, type GuildBasedChannel, type Role } from 'disc
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
 import type { AiMode, PinnedChannelMode } from '../guildSettings/types.ts';
 import type { AiTool, AiToolContext } from './types.ts';
+import * as guildChannels from '../guildSettings/channels.ts';
+import * as guildJtc from '../guildSettings/jtc.ts';
+import * as guildPlayback from '../guildSettings/playback.ts';
+import * as guildChatPolicy from '../guildSettings/chatPolicy.ts';
 
 function requireGuild(ctx: AiToolContext): string {
 	if (!ctx.guildId) throw new Error('서버 채널에서만 봇 설정을 사용할 수 있어요.');
@@ -108,10 +112,10 @@ export const botSettingsGetTool: AiTool = {
 
 		const [guildConfig, jtcSettings, aiSettings, ttsSettings, chatToolSettings] = await Promise.all([
 			container.guildService.getGuild(guildId),
-			container.guildService.getJtcSettings(guildId),
-			container.guildService.getAiSettings(guildId),
-			container.guildService.getTtsSettings(guildId),
-			container.guildService.getChatToolSettings(guildId)
+			guildJtc.getJtcSettings(container.guildService, guildId),
+			guildChatPolicy.getAiSettings(container.guildService, guildId),
+			guildChatPolicy.getTtsSettings(container.guildService, guildId),
+			guildChatPolicy.getChatToolSettings(container.guildService, guildId)
 		]);
 
 		const defaultText = guildConfig.textChannelId ? guild?.channels?.cache?.get(guildConfig.textChannelId) : null;
@@ -289,33 +293,33 @@ export const botSettingsSetTool: AiTool = {
 		// 1. 채널 설정
 		if (args.default_text_channel !== undefined) {
 			if (isNoneValue(args.default_text_channel)) {
-				await container.guildService.setDefaultTextChannel(guildId, null);
+				await guildChannels.setDefaultTextChannel(container.guildService, guildId, null);
 				updated.default_text_channel = null;
 			} else {
 				const ch = resolveTextChannel(guild, String(args.default_text_channel));
-				await container.guildService.setDefaultTextChannel(guildId, ch.id);
+				await guildChannels.setDefaultTextChannel(container.guildService, guildId, ch.id);
 				updated.default_text_channel = { id: ch.id, name: ch.name };
 			}
 		}
 
 		if (args.default_voice_channel !== undefined) {
 			if (isNoneValue(args.default_voice_channel)) {
-				await container.guildService.setDefaultVoiceChannel(guildId, null);
+				await guildChannels.setDefaultVoiceChannel(container.guildService, guildId, null);
 				updated.default_voice_channel = null;
 			} else {
 				const ch = resolveVoiceChannel(guild, String(args.default_voice_channel));
-				await container.guildService.setDefaultVoiceChannel(guildId, ch.id);
+				await guildChannels.setDefaultVoiceChannel(container.guildService, guildId, ch.id);
 				updated.default_voice_channel = { id: ch.id, name: ch.name };
 			}
 		}
 
 		if (args.pinned_channel !== undefined) {
 			if (isNoneValue(args.pinned_channel)) {
-				await container.guildService.setPinnedChannel(guildId, null);
+				await guildChannels.setPinnedChannel(container.guildService, guildId, null);
 				updated.pinned_channel = null;
 			} else {
 				const ch = resolveTextChannel(guild, String(args.pinned_channel));
-				await container.guildService.setPinnedChannel(guildId, ch.id);
+				await guildChannels.setPinnedChannel(container.guildService, guildId, ch.id);
 				updated.pinned_channel = { id: ch.id, name: ch.name };
 			}
 		}
@@ -325,24 +329,24 @@ export const botSettingsSetTool: AiTool = {
 			if (!['play', 'select'].includes(mode)) {
 				throw new Error('고정 채널 모드는 play 또는 select 중 하나여야 해요.');
 			}
-			const savedMode = await container.guildService.setPinnedChannelMode(guildId, mode as PinnedChannelMode);
+			const savedMode = await guildChannels.setPinnedChannelMode(container.guildService, guildId, mode as PinnedChannelMode);
 			updated.pinned_mode = savedMode;
 		}
 
 		if (args.pinned_delete_input !== undefined && args.pinned_delete_input !== null) {
 			const deleteInput = Boolean(args.pinned_delete_input);
-			await container.guildService.setPinnedChannelDeleteInput(guildId, deleteInput);
+			await guildChannels.setPinnedChannelDeleteInput(container.guildService, guildId, deleteInput);
 			updated.pinned_delete_input = deleteInput;
 		}
 
 		// 2. DJ 역할
 		if (args.dj_role !== undefined) {
 			if (isNoneValue(args.dj_role)) {
-				await container.guildService.setDJRole(guildId, null);
+				await guildPlayback.setDJRole(container.guildService, guildId, null);
 				updated.dj_role = null;
 			} else {
 				const role = resolveRole(guild, String(args.dj_role));
-				await container.guildService.setDJRole(guildId, role.id);
+				await guildPlayback.setDJRole(container.guildService, guildId, role.id);
 				updated.dj_role = { id: role.id, name: role.name };
 			}
 		}
@@ -356,19 +360,19 @@ export const botSettingsSetTool: AiTool = {
 
 		if (args.jtc_enabled !== undefined && args.jtc_enabled !== null) {
 			const enabled = Boolean(args.jtc_enabled);
-			await container.guildService.setJtcEnabled(guildId, enabled);
+			await guildJtc.setJtcEnabled(container.guildService, guildId, enabled);
 			updated.jtc_enabled = enabled;
 		}
 
 		if (args.jtc_template !== undefined && args.jtc_template !== null) {
 			const template = String(args.jtc_template).slice(0, 100);
-			await container.guildService.setJtcTemplate(guildId, template);
+			await guildJtc.setJtcTemplate(container.guildService, guildId, template);
 			updated.jtc_template = template;
 		}
 
 		if (args.jtc_user_limit !== undefined && args.jtc_user_limit !== null) {
 			const limit = Math.max(0, Math.min(99, Math.round(Number(args.jtc_user_limit))));
-			await container.guildService.setJtcUserLimit(guildId, limit);
+			await guildJtc.setJtcUserLimit(container.guildService, guildId, limit);
 			updated.jtc_user_limit = limit;
 		}
 
@@ -378,7 +382,7 @@ export const botSettingsSetTool: AiTool = {
 			if (!['disabled', 'all', 'channels'].includes(mode)) {
 				throw new Error('AI 모드는 disabled, all, channels 중 하나여야 해요.');
 			}
-			const saved = await container.guildService.setAiMode(guildId, mode as AiMode);
+			const saved = await guildChatPolicy.setAiMode(container.guildService, guildId, mode as AiMode);
 			updated.ai_mode = saved;
 		}
 
@@ -387,7 +391,13 @@ export const botSettingsSetTool: AiTool = {
 			if (toggle.channel) {
 				const targetChannel = resolveTextChannel(guild, String(toggle.channel));
 				const allText = guild.channels.cache.filter((c) => c.isTextBased()).map((c) => c.id);
-				const res = await container.guildService.setChannelAiEnabled(guildId, targetChannel.id, Boolean(toggle.enabled), allText);
+				const res = await guildChatPolicy.setChannelAiEnabled(
+					container.guildService,
+					guildId,
+					targetChannel.id,
+					Boolean(toggle.enabled),
+					allText
+				);
 				updated.ai_channel_toggle = {
 					channel: { id: targetChannel.id, name: targetChannel.name },
 					enabled: Boolean(toggle.enabled),
@@ -399,13 +409,13 @@ export const botSettingsSetTool: AiTool = {
 		// 5. 채팅 TTS
 		if (args.tts_volume !== undefined && args.tts_volume !== null) {
 			const vol = Math.max(0, Math.min(150, Math.round(Number(args.tts_volume))));
-			const { volume: savedVol } = await container.guildService.updateTtsVolume(guildId, vol);
+			const { volume: savedVol } = await guildPlayback.updateTtsVolume(container.guildService, guildId, vol);
 			updated.tts_volume = savedVol;
 		}
 
 		if (args.tts_duck !== undefined && args.tts_duck !== null) {
 			const duck = Math.max(0, Math.min(100, Math.round(Number(args.tts_duck))));
-			const { ttsDuckLevel: savedDuck } = await container.guildService.updateTtsDuck(guildId, duck);
+			const { ttsDuckLevel: savedDuck } = await guildPlayback.updateTtsDuck(container.guildService, guildId, duck);
 			updated.tts_duck = savedDuck;
 		}
 
@@ -414,7 +424,13 @@ export const botSettingsSetTool: AiTool = {
 			if (toggle.channel) {
 				const targetChannel = resolveTextChannel(guild, String(toggle.channel));
 				const allText = guild.channels.cache.filter((c) => c.isTextBased()).map((c) => c.id);
-				const res = await container.guildService.setChannelTtsEnabled(guildId, targetChannel.id, Boolean(toggle.enabled), allText);
+				const res = await guildChatPolicy.setChannelTtsEnabled(
+					container.guildService,
+					guildId,
+					targetChannel.id,
+					Boolean(toggle.enabled),
+					allText
+				);
 				updated.tts_channel_toggle = {
 					channel: { id: targetChannel.id, name: targetChannel.name },
 					enabled: Boolean(toggle.enabled),
@@ -426,17 +442,17 @@ export const botSettingsSetTool: AiTool = {
 		// 6. 카운팅 채널
 		if (args.counting_enabled !== undefined && args.counting_enabled !== null) {
 			const enabled = Boolean(args.counting_enabled);
-			const saved = await container.guildService.setCountingEnabled(guildId, enabled);
+			const saved = await guildChatPolicy.setCountingEnabled(container.guildService, guildId, enabled);
 			updated.counting_enabled = saved;
 		}
 
 		if (args.counting_channel !== undefined) {
 			if (isNoneValue(args.counting_channel)) {
-				await container.guildService.setCountingChannel(guildId, null);
+				await guildChatPolicy.setCountingChannel(container.guildService, guildId, null);
 				updated.counting_channel = null;
 			} else {
 				const ch = resolveTextChannel(guild, String(args.counting_channel));
-				await container.guildService.setCountingChannel(guildId, ch.id);
+				await guildChatPolicy.setCountingChannel(container.guildService, guildId, ch.id);
 				updated.counting_channel = { id: ch.id, name: ch.name };
 			}
 		}

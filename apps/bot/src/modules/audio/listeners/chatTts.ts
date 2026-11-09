@@ -4,6 +4,7 @@ import { ChannelType, Message } from 'discord.js';
 import { isTtsEnabled } from '../../../services/guildService.ts';
 import { preprocessTtsMessage } from '../../../services/chatTts.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * 채팅 TTS 리스너 — 설정된 채널의 메시지를 음성으로 읽는다 (명세 4.1 트리거).
@@ -37,7 +38,7 @@ export class ChatTtsListener extends Listener {
 
 		// 정책: 길드 켜짐 + siru_tts 설정 — 채널은 허용 목록이거나 이 플레이어 세션의 텍스트 채널이면 된다
 		if (!this.container.ttsService.isEnabled()) return;
-		const settings = await this.container.guildService.getTtsSettings(message.guildId);
+		const settings = await guildChatPolicy.getTtsSettings(this.container.guildService, message.guildId);
 		const isSessionChannel = settings.mode !== 'off' && player.textChannelId === message.channelId;
 		if (!isSessionChannel && !isTtsEnabled(settings, message.channelId)) return;
 
@@ -46,7 +47,7 @@ export class ChatTtsListener extends Listener {
 		if (!preset.enabled) return;
 
 		// 접두사(기본 '!')·슬래시 명령어는 읽지 않는다
-		const prefix = await this.container.guildService.getCustomCommandPrefix(message.guildId);
+		const prefix = await guildChatPolicy.getCustomCommandPrefix(this.container.guildService, message.guildId);
 		if (content.startsWith(prefix) || content.startsWith('/')) return;
 
 		// 전처리 후 비어 있으면(첨부/스티커만 있는 메시지 등) 무시한다

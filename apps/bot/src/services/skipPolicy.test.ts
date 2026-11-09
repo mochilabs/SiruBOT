@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GuildMember, Collection as DiscordCollection, VoiceBasedChannel } from 'discord.js';
 import type { Player, Queue, Track } from 'lavalink-client';
 import { SkipPolicy, type SkipContext } from './skipPolicy.ts';
+vi.mock('./guildSettings/playback.ts', () => ({ hasDJRole }));
 
 const { hasDJRole, mixerSkip } = vi.hoisted(() => ({ hasDJRole: vi.fn(), mixerSkip: vi.fn() }));
 
@@ -16,7 +17,7 @@ vi.mock('@sapphire/framework', () => ({
 			this.context = options.context;
 		}
 	},
-	container: { guildService: { hasDJRole }, mixerService: { skip: mixerSkip }, client: { user: { id: 'bot-self' } } }
+	container: { guildService: {}, mixerService: { skip: mixerSkip }, client: { user: { id: 'bot-self' } } }
 }));
 
 function track(requesterId: string, identifier = `id-${requesterId}`): Track {

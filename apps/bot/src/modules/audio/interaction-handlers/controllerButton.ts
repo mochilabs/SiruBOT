@@ -11,6 +11,7 @@ import { buildControllerCardPayload } from '../lavalink/player/controllerPayload
 import { currentChapterIndex } from '../lavalink/player/chapters.ts';
 import { errorView } from '../../../lib/errorView.ts';
 import { GUARD_MESSAGES, guardPlayerAccess } from '../utils/interactionGuards.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 export default class ControllerButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -143,7 +144,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
 		await interaction.deferUpdate();
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
-		const repeatUpdated = await this.container.guildService.setRepeat(interaction.guildId, toSet);
+		const repeatUpdated = await guildPlayback.setRepeat(this.container.guildService, interaction.guildId, toSet);
 		await player.setRepeatMode(repeatUpdated);
 		await this.container.mixerService.clearNext(player).catch(() => null);
 		await this.updateControllerOrFail(interaction, player);
@@ -208,7 +209,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		await interaction.deferUpdate();
-		const { volume: updated } = await this.container.guildService.updateVolume(interaction.guildId, next);
+		const { volume: updated } = await guildPlayback.updateVolume(this.container.guildService, interaction.guildId, next);
 		player.setVolume(updated);
 		await this.updateControllerOrFail(interaction, player);
 	}

@@ -5,17 +5,19 @@ import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer
 import { fetchSponsorBlockSegments } from './dataApiClient.ts';
 import { SponsorBlockService } from './sponsorBlockService.ts';
 
+const guildMixerMock = vi.hoisted(() => ({ getMixerSettings: vi.fn().mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 5000 }) }));
+
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn() },
 		guildService: {
-			getGuild: vi.fn().mockResolvedValue({ sponsorBlockSegments: ['intro', 'sponsor', 'outro'] }),
-			getMixerSettings: vi.fn().mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 5000 })
+			getGuild: vi.fn().mockResolvedValue({ sponsorBlockSegments: ['intro', 'sponsor', 'outro'] })
 		},
 		mixerService: { isOverlapActive: vi.fn().mockReturnValue(false) }
 	}
 }));
 vi.mock('./dataApiClient.ts', () => ({ fetchSponsorBlockSegments: vi.fn() }));
+vi.mock('./guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...guildMixerMock }));
 
 function track(id: string = 'dQw4w9WgXcQ'): Track {
 	return { encoded: `encoded-${id}`, info: { sourceName: 'youtube', identifier: id, duration: 60000, isSeekable: true, isStream: false } } as Track;

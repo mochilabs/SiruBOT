@@ -25,8 +25,9 @@ const { container } = vi.hoisted(() => ({
 			supportsOutgoingEnd: vi.fn(async () => false),
 			invalidate: vi.fn(async () => undefined)
 		},
-		guildService: {
-			getRelated: vi.fn(async () => false),
+		guildService: {},
+		guildPlayback: { getRelated: vi.fn(async () => false) },
+		guildMixer: {
 			getMixerSettings: vi.fn(async () => ({
 				gaplessEnabled: true,
 				crossfadeEnabled: false,
@@ -37,6 +38,8 @@ const { container } = vi.hoisted(() => ({
 }));
 
 vi.mock('@sapphire/framework', () => ({ container }));
+vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({ ...(await orig()), ...container.guildPlayback }));
+vi.mock('../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...container.guildMixer }));
 vi.mock('../../../services/sponsorBlockService.ts', () => ({
 	sponsorBlockService: {
 		prefetch: vi.fn(),
@@ -341,38 +344,38 @@ describe('autoPlayRelated transition gate', () => {
 	it('skips while the server-side transition is in flight (preheated slot)', async () => {
 		(container.mixerService.isPreloaded as ReturnType<typeof vi.fn>).mockReturnValue(true);
 		await autoPlayRelated(gatePlayer(), track('Current', 'current-id'));
-		expect(container.guildService.getRelated).not.toHaveBeenCalled();
+		expect(container.guildPlayback.getRelated).not.toHaveBeenCalled();
 	});
 
 	it('skips right after a preheated slot was consumed', async () => {
 		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() }), track('Current', 'current-id'));
-		expect(container.guildService.getRelated).not.toHaveBeenCalled();
+		expect(container.guildPlayback.getRelated).not.toHaveBeenCalled();
 	});
 
 	it('runs normally outside the confirm window', async () => {
 		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() - 60_000 }), track('Current', 'current-id'));
-		expect(container.guildService.getRelated).toHaveBeenCalled();
+		expect(container.guildPlayback.getRelated).toHaveBeenCalled();
 	});
 
 	it('safely handles null lastPlayedTrack when no reference track is available in queue', async () => {
 		const player = gatePlayer();
 		await expect(autoPlayRelated(player, null)).resolves.not.toThrow();
-		expect(container.guildService.getRelated).not.toHaveBeenCalled();
+		expect(container.guildPlayback.getRelated).not.toHaveBeenCalled();
 	});
 
 	it('falls back to player.queue.previous[0] when lastPlayedTrack is null', async () => {
 		const prev = track('Previous', 'prev-id');
 		const player = gatePlayer({}, [prev]);
 		await autoPlayRelated(player, null);
-		expect(container.guildService.getRelated).toHaveBeenCalled();
+		expect(container.guildPlayback.getRelated).toHaveBeenCalled();
 	});
 });
 
 describe('queueRelatedUpfront with AutoMix (gapless=false)', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(container.guildService.getRelated).mockResolvedValue(true);
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({
+		vi.mocked(container.guildPlayback.getRelated).mockResolvedValue(true);
+		vi.mocked(container.guildMixer.getMixerSettings).mockResolvedValue({
 			gaplessEnabled: false,
 			crossfadeEnabled: true,
 			automixEnabled: true

@@ -3,6 +3,7 @@ import { PermissionFlagsBits } from 'discord.js';
 import { historyLine } from './historyStore.ts';
 import { estimateTokens, getContextTokenBudget } from './tokenBudget.ts';
 import type { ChannelHistoryState, ChatMessage } from './types.ts';
+import * as guildPlayback from '../guildSettings/playback.ts';
 
 const CHANNEL_CONTEXT_LIMIT = 20;
 
@@ -107,7 +108,7 @@ export async function buildDiscordContextBlock(guildId?: string | null, userId?:
 			} catch {
 				isManager = false;
 			}
-			const djRoleId = await container.guildService?.getDJRole?.(guildId).catch(() => null);
+			const djRoleId = await guildPlayback.getDJRole(container.guildService, guildId).catch(() => null);
 			const hasDj = !djRoleId || isManager || Boolean(member.roles?.cache?.has?.(djRoleId));
 			const perms: string[] = [];
 			if (isManager) perms.push('서버 관리(ManageGuild)');

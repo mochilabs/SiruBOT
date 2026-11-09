@@ -5,6 +5,8 @@ import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
 import type { TtsAnnounceMode } from '../guildSettings/playback.ts';
 import type { AiTool, AiToolContext } from './types.ts';
+import * as guildMixer from '../guildSettings/mixer.ts';
+import * as guildPlayback from '../guildSettings/playback.ts';
 
 function requireGuild(ctx: AiToolContext): string {
 	if (!ctx.guildId) throw new Error('서버 채널에서만 음악 설정을 사용할 수 있어요.');
@@ -23,7 +25,7 @@ function checkMemberManageGuild(ctx: AiToolContext): boolean {
 async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
 	if (!ctx.member) return false;
 	try {
-		return await container.guildService.hasDJRole(guildId, ctx.member);
+		return await guildPlayback.hasDJRole(container.guildService, guildId, ctx.member);
 	} catch {
 		return false;
 	}
@@ -50,12 +52,12 @@ export const musicSettingsGetTool: AiTool = {
 	execute: async (_args, ctx) => {
 		const guildId = requireGuild(ctx);
 		const [volume, repeat, autoplay, mixerSettings, announceMode, controllerEnabled, guild] = await Promise.all([
-			container.guildService.getVolume(guildId),
-			container.guildService.getRepeat(guildId),
-			container.guildService.getRelated(guildId),
-			container.guildService.getMixerSettings(guildId),
-			container.guildService.getTtsAnnounceMode(guildId),
-			container.guildService.getEnableController(guildId),
+			guildPlayback.getVolume(container.guildService, guildId),
+			guildPlayback.getRepeat(container.guildService, guildId),
+			guildPlayback.getRelated(container.guildService, guildId),
+			guildMixer.getMixerSettings(container.guildService, guildId),
+			guildPlayback.getTtsAnnounceMode(container.guildService, guildId),
+			guildPlayback.getEnableController(container.guildService, guildId),
 			container.guildService.getGuild(guildId)
 		]);
 
@@ -146,7 +148,7 @@ export const musicSettingsSetTool: AiTool = {
 			if (!Number.isFinite(vol) || vol < 0 || vol > 150) {
 				throw new Error('볼륨은 0~150 사이의 정수여야 해요.');
 			}
-			const { volume: updatedVol } = await container.guildService.updateVolume(guildId, vol);
+			const { volume: updatedVol } = await guildPlayback.updateVolume(container.guildService, guildId, vol);
 			const player = container.audio?.getPlayer?.(guildId);
 			if (player) player.setVolume(updatedVol);
 			updated.volume = updatedVol;
@@ -157,7 +159,7 @@ export const musicSettingsSetTool: AiTool = {
 			if (!['off', 'track', 'queue'].includes(repeat)) {
 				throw new Error('반복 모드는 off, track, queue 중 하나여야 해요.');
 			}
-			const updatedRepeat = await container.guildService.setRepeat(guildId, repeat as RepeatMode);
+			const updatedRepeat = await guildPlayback.setRepeat(container.guildService, guildId, repeat as RepeatMode);
 			const player = container.audio?.getPlayer?.(guildId);
 			if (player) {
 				await player.setRepeatMode(updatedRepeat);
@@ -168,7 +170,7 @@ export const musicSettingsSetTool: AiTool = {
 
 		if (args.autoplay !== undefined && args.autoplay !== null) {
 			const autoplay = Boolean(args.autoplay);
-			const updatedAutoplay = await container.guildService.setRelated(guildId, autoplay);
+			const updatedAutoplay = await guildPlayback.setRelated(container.guildService, guildId, autoplay);
 			if (updatedAutoplay) {
 				const player = container.audio?.getPlayer?.(guildId);
 				const currentTrack = player?.queue?.current;
@@ -181,7 +183,7 @@ export const musicSettingsSetTool: AiTool = {
 
 		if (args.gapless !== undefined && args.gapless !== null) {
 			const gapless = Boolean(args.gapless);
-			await container.guildService.setGapless(guildId, gapless);
+			await guildMixer.setGapless(container.guildService, guildId, gapless);
 			const player = container.audio?.getPlayer?.(guildId);
 			if (player) {
 				if (!gapless) await container.mixerService?.clearNext?.(player, { force: true }).catch(() => null);
@@ -191,13 +193,13 @@ export const musicSettingsSetTool: AiTool = {
 		}
 
 		if (args.crossfade_enabled !== undefined || args.crossfade_duration_seconds !== undefined) {
-			const currentMixer = await container.guildService.getMixerSettings(guildId);
+			const currentMixer = await guildMixer.getMixerSettings(container.guildService, guildId);
 			const enabled = args.crossfade_enabled !== undefined ? Boolean(args.crossfade_enabled) : currentMixer.crossfadeEnabled;
 			const durationMs = args.crossfade_duration_seconds !== undefined ? Math.round(Number(args.crossfade_duration_seconds) * 1000) : undefined;
 			if (durationMs !== undefined && (durationMs < 1000 || durationMs > 10000)) {
 				throw new Error('크로스페이드 지속 시간은 1초에서 10초 사이여야 해요.');
 			}
-			const saved = await container.guildService.setCrossfade(guildId, enabled, durationMs);
+			const saved = await guildMixer.setCrossfade(container.guildService, guildId, enabled, durationMs);
 			const player = container.audio?.getPlayer?.(guildId);
 			if (player) {
 				await container.mixerService?.setCrossfade?.(player, saved.crossfadeEnabled, saved.crossfadeMs).catch(() => null);
@@ -210,7 +212,7 @@ export const musicSettingsSetTool: AiTool = {
 
 		if (args.normalization !== undefined && args.normalization !== null) {
 			const normalization = Boolean(args.normalization);
-			await container.guildService.setNormalization(guildId, normalization);
+			await guildMixer.setNormalization(container.guildService, guildId, normalization);
 			const player = container.audio?.getPlayer?.(guildId);
 			if (player) {
 				await container.mixerService?.setNormalization?.(player, normalization).catch(() => null);
@@ -223,20 +225,20 @@ export const musicSettingsSetTool: AiTool = {
 			if (!['sequential', 'parallel', 'interrupt'].includes(mode)) {
 				throw new Error('곡 안내 모드는 sequential, parallel, interrupt 중 하나여야 해요.');
 			}
-			const savedMode = await container.guildService.setTtsAnnounceMode(guildId, mode as TtsAnnounceMode);
+			const savedMode = await guildPlayback.setTtsAnnounceMode(container.guildService, guildId, mode as TtsAnnounceMode);
 			updated.announce_mode = savedMode;
 		}
 
 		if (args.controller !== undefined && args.controller !== null) {
 			const controller = Boolean(args.controller);
-			await container.guildService.setEnableController(guildId, controller);
+			await guildPlayback.setEnableController(container.guildService, guildId, controller);
 			updated.controller = controller;
 		}
 
 		if (args.sponsorblock !== undefined && args.sponsorblock !== null) {
 			const sponsorblock = Boolean(args.sponsorblock);
 			const segments = sponsorblock ? ['sponsor', 'selfpromo'] : [];
-			await container.guildService.setSponsorBlockSegments(guildId, segments);
+			await guildPlayback.setSponsorBlockSegments(container.guildService, guildId, segments);
 			const player = container.audio.players.get(guildId);
 			if (player) sponsorBlockService.refreshSettings(player);
 			updated.sponsorblock = sponsorblock;

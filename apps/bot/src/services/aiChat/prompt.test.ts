@@ -10,9 +10,7 @@ const mockGuildMembers = new Map<string, unknown>();
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
-		guildService: {
-			getDJRole: mocks.getDJRole
-		},
+		guildService: {},
 		audio: {
 			getPlayer: mocks.getPlayer
 		},
@@ -37,6 +35,7 @@ vi.mock('@sapphire/framework', () => ({
 }));
 
 import { buildDiscordContextBlock, buildSystemContent } from './prompt.ts';
+vi.mock('../guildSettings/playback.ts', async (orig) => ({ ...(await orig()), getDJRole: mocks.getDJRole }));
 
 describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () => {
 	beforeEach(() => {

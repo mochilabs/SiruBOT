@@ -42,6 +42,7 @@ import {
 import { fetchEmbedFixMetadata } from '../../../../services/embedFixGateway.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import { relayViaWebhook } from '../../../../services/webhookRelay.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 const EMBED_FIX_COOLDOWN_MS = 3_000;
 const BOOTH_FETCH_TIMEOUT_MS = 10_000;
@@ -91,7 +92,7 @@ export class EmbedFixListener extends Listener {
 		if (!message.channel.isSendable()) return;
 
 		try {
-			const settings = await this.container.guildService.getChatToolSettings(message.guildId);
+			const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, message.guildId);
 			if (!isChannelToggleEnabled(settings.embedFix, message.channelId)) return;
 
 			const links = findEmbedFixLinks(message.content, settings.embedFixSites);

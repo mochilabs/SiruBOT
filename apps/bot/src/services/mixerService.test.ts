@@ -6,14 +6,15 @@ import { RelatedTrackHistory } from '../modules/audio/lavalink/player/relatedTra
 import { commitLocal, handleMixerAdvanced, handleMixerOverridden, handleMixerTrackEnd } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
 import { getTargetNextTrack } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { MixerService } from './mixerService.ts';
+import * as guildMixer from './guildSettings/mixer.ts';
+
+vi.mock('./guildSettings/mixer.ts', () => ({
+	getMixerSettings: vi.fn().mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 3000, normalizationEnabled: false })
+}));
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-		guildService: {
-			getMixerSettings: vi
-				.fn()
-				.mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 3000, normalizationEnabled: false })
-		},
+		guildService: {},
 		playerNotifier: { updateController: vi.fn() }
 	}
 }));
@@ -42,7 +43,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		const service = new MixerService();
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({ automixEnabled: true } as any);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue({ automixEnabled: true } as any);
 		fetchMock.mockImplementation(
 			async (url: string) =>
 				new Response(JSON.stringify(url.includes('/state') ? { adaptiveTransitionsSupported: true } : { accepted: false }), { status: 202 })
@@ -58,14 +59,14 @@ describe('MixerService v2 Protocol Tests', () => {
 		await service.prepareNextAnalysis(player, null);
 		await service.prepareNextAnalysis(player, track);
 		expect(fetchMock).toHaveBeenCalledTimes(8);
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue({ automixEnabled: false } as any);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue({ automixEnabled: false } as any);
 	});
 
 	it('does not POST to a different node after an awaited capability response', async () => {
 		const service = new MixerService();
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
 		const response = new Response(JSON.stringify({ adaptiveTransitionsSupported: true }));
 		const result = Promise.withResolvers<typeof response>();
 		fetchMock.mockReturnValueOnce(result.promise);
@@ -106,7 +107,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		const service = new MixerService();
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
 		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ adaptiveTransitionsSupported: true })));
 		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ accepted: true }), { status: 202 }));
 		await Promise.all([service.prepareNextAnalysis(player, track), service.prepareNextAnalysis(player, track)]);
@@ -122,11 +123,11 @@ describe('MixerService v2 Protocol Tests', () => {
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
 		await new MixerService().prepareNextAnalysis(player, track);
 		expect(fetchMock).not.toHaveBeenCalled();
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
 		fetchMock.mockResolvedValueOnce(new Response('{}'));
 		await new MixerService().prepareNextAnalysis(player, track);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
 		fetchMock.mockRejectedValueOnce(new Error('offline'));
 		await expect(new MixerService().prepareNextAnalysis(player, track)).resolves.toBeUndefined();
 		await new MixerService().prepareNextAnalysis(player, { ...track, info: { ...track.info, isStream: true } });
@@ -286,7 +287,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 
 		// Now test Crossfade OFF + Gapless OFF with 409 epoch sync retry
-		(container.guildService.getMixerSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+		(guildMixer.getMixerSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			gaplessEnabled: false,
 			crossfadeEnabled: false
 		});
@@ -337,7 +338,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 		// DB 조회가 지연되는 동안 전이가 진행돼 current가 바뀐다.
 		let releaseSettings!: () => void;
-		(container.guildService.getMixerSettings as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+		(guildMixer.getMixerSettings as ReturnType<typeof vi.fn>).mockReturnValueOnce(
 			new Promise((resolve) => {
 				releaseSettings = () => resolve({ gaplessEnabled: true, crossfadeEnabled: true });
 			})
@@ -644,7 +645,7 @@ describe('AutoMix configuration', () => {
 	});
 
 	it('restores ordinary mixer settings when a saved AutoMix preference meets an older node', async () => {
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
 		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
 		await new MixerService().pushCrossfadeConfig(fakePlayer());
@@ -657,7 +658,7 @@ describe('AutoMix configuration', () => {
 	});
 
 	it('restores persisted AutoMix settings through the player initialization path', async () => {
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
 		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
 		vi.stubGlobal('fetch', fetchMock);
 		await new MixerService().pushCrossfadeConfig(fakePlayer());
@@ -681,8 +682,8 @@ describe('AutoMix configuration', () => {
 			automixMaxTempoChange: 0.06,
 			automixMinConfidence: 0.3
 		};
-		vi.mocked(container.guildService.getMixerSettings).mockReset();
-		vi.mocked(container.guildService.getMixerSettings).mockResolvedValue(customSettings);
+		vi.mocked(guildMixer.getMixerSettings).mockReset();
+		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue(customSettings);
 		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
 		const service = new MixerService();

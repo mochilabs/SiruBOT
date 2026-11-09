@@ -2,6 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import type { GuildMember, User } from 'discord.js';
 import type { Track } from 'lavalink-client';
 import { lookupSource } from '../modules/audio/utils/source.ts';
+import * as guildChannels from './guildSettings/channels.ts';
 
 type SavedTrack = { track: { title: string; url: string; source: string } };
 export type PlaylistPlaybackContext = { guildId: string; channelId: string; member: GuildMember; user: User };
@@ -19,7 +20,7 @@ export async function playSavedTracks(context: PlaylistPlaybackContext, tracks: 
 		return voice.channelId;
 	};
 	const voiceChannelId = checkVoice();
-	const textChannel = await container.guildService.getDefaultTextChannel(context.guildId);
+	const textChannel = await guildChannels.getDefaultTextChannel(container.guildService, context.guildId);
 	if (textChannel && textChannel !== context.channelId) return deny(`재생은 <#${textChannel}>에서 실행해 주세요.`);
 	if (!tracks.length) return deny('목록이 비어 있어요. 먼저 곡을 추가해 주세요.');
 	const node = container.audio.nodeManager.leastUsedNodes('players')[0];

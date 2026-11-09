@@ -1,18 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AttachmentBuilder, Collection, MessagePayload, type ButtonInteraction, type InteractionUpdateOptions, type Message } from 'discord.js';
 import ControllerButtonHandler from './controllerButton.ts';
+vi.mock('../../../services/guildSettings/channels.ts', async (orig) => ({
+	...(await orig<Record<string, unknown>>()),
+	...{ getPinnedChannel: mocks.pinned }
+}));
+vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({
+	...(await orig<Record<string, unknown>>()),
+	...{ updateVolume: mocks.updateVolume }
+}));
 
 const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), cached: vi.fn(), render: vi.fn(), updateVolume: vi.fn(), pinned: vi.fn() }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
 		container = {
 			audio: { getPlayer: mocks.getPlayer },
-			guildService: { updateVolume: mocks.updateVolume }
+			guildService: {}
 		};
 	},
 	InteractionHandlerTypes: { Button: 'button' },
 	// controllerPayload 빌더가 직접 import하는 전역 container — pinned 조회만 필요하다.
-	container: { guildService: { getPinnedChannel: mocks.pinned } }
+	container: { guildService: {} }
 }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkDJOrAlone: mocks.allowed }));
 vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({
@@ -75,7 +83,7 @@ describe('controller button cached rendering', () => {
 		mocks.render.mockImplementation(() => {
 			throw new Error('button must not request an image');
 		});
-		mocks.updateVolume.mockImplementation(async (_guildId: string, volume: number) => ({ volume }));
+		mocks.updateVolume.mockImplementation(async (_store: unknown, _guildId: string, volume: number) => ({ volume }));
 	});
 
 	it('updates a pause button without starting or waiting for image rendering', async () => {
@@ -179,7 +187,7 @@ describe('controller button cached rendering', () => {
 	it('raises volume by the step and applies it', async () => {
 		const { edit, interaction, player, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
-		expect(mocks.updateVolume).toHaveBeenCalledWith('guild', 50);
+		expect(mocks.updateVolume).toHaveBeenCalledWith(expect.anything(), 'guild', 50);
 		expect(player.setVolume).toHaveBeenCalledWith(50);
 		expect(edit).toHaveBeenCalledTimes(1);
 	});
@@ -187,7 +195,7 @@ describe('controller button cached rendering', () => {
 	it('lowers volume by the step and applies it', async () => {
 		const { edit, interaction, player, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
-		expect(mocks.updateVolume).toHaveBeenCalledWith('guild', 30);
+		expect(mocks.updateVolume).toHaveBeenCalledWith(expect.anything(), 'guild', 30);
 		expect(player.setVolume).toHaveBeenCalledWith(30);
 		expect(edit).toHaveBeenCalledTimes(1);
 	});

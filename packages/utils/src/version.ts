@@ -76,10 +76,6 @@ class VersionInfo {
 		return this.gitBranch;
 	}
 
-	public getNodeVersion(): string {
-		return process.version;
-	}
-
 	private resolveGitHash(): string {
 		this.gitHash ??= getGitHash();
 		return this.gitHash;

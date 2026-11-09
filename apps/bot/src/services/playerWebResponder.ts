@@ -38,6 +38,8 @@ import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelo
 import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../modules/audio/view/play.ts';
 import type { ServiceLogger } from './types.ts';
+import * as guildChannels from './guildSettings/channels.ts';
+import * as guildPlayback from './guildSettings/playback.ts';
 
 /** 검색 결과로 돌려줄 최대 트랙 수 — 웹 선택 UI 목록 크기 */
 const MAX_TRACKS = 5;
@@ -348,7 +350,7 @@ export class PlayerWebResponder {
 			// 볼륨은 플레이어 유무와 무관하게 저장 길드 설정에 반영 — 기존 라이브 컨트롤러와 같은 동작이에요.
 			if (request.action === 'volume') {
 				if (typeof request.value !== 'number') throw new Error(`control volume: value 누락 (guild ${guildId})`);
-				const { volume } = await container.guildService.updateVolume(guildId, request.value);
+				const { volume } = await guildPlayback.updateVolume(container.guildService, guildId, request.value);
 				if (player) player.setVolume(volume);
 				this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 				return;
@@ -361,7 +363,7 @@ export class PlayerWebResponder {
 
 			if (request.action === 'repeat') {
 				const nextMode = player.repeatMode === 'off' ? 'track' : player.repeatMode === 'track' ? 'queue' : 'off';
-				const repeatMode = await container.guildService.setRepeat(guildId, nextMode);
+				const repeatMode = await guildPlayback.setRepeat(container.guildService, guildId, nextMode);
 				await player.setRepeatMode(repeatMode);
 				await container.mixerService.clearNext(player).catch(() => null);
 				this.respond({ requestId: request.requestId, guildId, kind: 'control' });
@@ -440,7 +442,7 @@ export class PlayerWebResponder {
 		}
 
 		// 텍스트 채널 정책: 고정 채널 우선, 없으면 시스템 채널 (컨트롤러/피드백 메시지 대상)
-		const pinned = await container.guildService.getPinnedChannel(guild.id);
+		const pinned = await guildChannels.getPinnedChannel(container.guildService, guild.id);
 		return {
 			voiceChannelId,
 			textChannelId: pinned ?? guild.systemChannelId ?? null,
@@ -459,7 +461,7 @@ export class PlayerWebResponder {
 	private async hasControlPermission(guildId: string, member: GuildMember): Promise<boolean> {
 		if (member.permissions.has(PermissionsBitField.Flags.ManageGuild) || member.permissions.has(PermissionsBitField.Flags.Administrator))
 			return true;
-		return container.guildService.hasDJRole(guildId, member);
+		return guildPlayback.hasDJRole(container.guildService, guildId, member);
 	}
 
 	/** 재생 피드백 컨테이너 — commandChannel buildFeedback과 동일한 분기(시작/추가)예요 */
