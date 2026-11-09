@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { createContainer } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, SeparatorBuilder, SeparatorSpacingSize } from 'discord.js';
+import { pingView } from '../view/ping.ts';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 /** ms → 표기 (정수, 하단 콤마 제거) */
 function ms(value: number): string {
@@ -97,13 +97,8 @@ export class PingCommand extends Command {
 		const redis = this.container.redisStore;
 		lines.push(metricLine(redis.ready ? '🟢' : '🔴', 'Redis', redis.ready ? '정상' : '미연결'));
 
-		const containerComponent = createContainer();
-		containerComponent.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
-		containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
-		containerComponent.addTextDisplayComponents((t) => t.setContent(`-# 처리 시작 ~ 응답 전송까지 \`${deferOverhead}ms\``));
-
 		await interaction.editReply({
-			components: [containerComponent],
+			components: [pingView(lines, deferOverhead)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

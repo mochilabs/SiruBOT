@@ -1,14 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer, formatTimeToKorean } from '@sirubot/utils';
-import {
-	ApplicationIntegrationType,
-	ChatInputCommandInteraction,
-	MessageFlags,
-	SectionBuilder,
-	TextDisplayBuilder,
-	ThumbnailBuilder
-} from 'discord.js';
+import { emoji, formatTimeToKorean } from '@sirubot/utils';
+import { birthdayClearedView, birthdaySavedView, introClearedView, introSavedView, profileCardView, profileTextView } from '../view/profile.ts';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { getZodiacFromDate, ZODIAC_MAP } from '../../games/utils/ohaasaService.ts';
 import { clearUserBirthday, clearUserIntro, isValidBirthday, setUserBirthday, setUserIntro } from '../utils/userProfile.ts';
 import { buildProfileCardData, formatGameStatsLines } from '../utils/profileCardData.ts';
@@ -146,21 +140,8 @@ export class ProfileCommand extends Command {
 			}
 			await setUserBirthday(interaction.user.id, month, day);
 			const zodiacCode = getZodiacFromDate(month, day);
-			const containerComponent = createContainer();
-			containerComponent.addTextDisplayComponents((t) =>
-				t.setContent(
-					[
-						`### ${emoji('cake')} 생일을 저장했어요`,
-						'',
-						`**${month}월 ${day}일**: 별자리는 **${zodiacCode ? zodiacLabel(zodiacCode) : '알 수 없음'}**예요.`,
-						'',
-						'-# 생일은 본인에게만 보여요. 다른 사람에게는 별자리만 공개돼요.',
-						'-# 이제 `/오하아사`에서 지정 없이도 내 운세를 바로 보여줘요.'
-					].join('\n')
-				)
-			);
 			await interaction.editReply({
-				components: [containerComponent],
+				components: [birthdaySavedView(month, day, zodiacCode ? zodiacLabel(zodiacCode) : '알 수 없음')],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -169,12 +150,8 @@ export class ProfileCommand extends Command {
 		if (subcommand === 'clear-birthday') {
 			await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 			const cleared = await clearUserBirthday(interaction.user.id);
-			const containerComponent = createContainer();
-			containerComponent.addTextDisplayComponents((t) =>
-				t.setContent(cleared ? `${emoji('trash')} 등록된 생일을 지웠어요.` : `${emoji('info')} 등록된 생일이 없어요.`)
-			);
 			await interaction.editReply({
-				components: [containerComponent],
+				components: [birthdayClearedView(cleared)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -191,14 +168,8 @@ export class ProfileCommand extends Command {
 					context: { ephemeral: true }
 				});
 			}
-			const containerComponent = createContainer();
-			containerComponent.addTextDisplayComponents((t) =>
-				t.setContent(
-					[`### ${emoji('speech')} 소개를 저장했어요`, '', `> ${intro.trim()}`, '', '-# `/프로필 보기`의 프로필 카드에 보여요.'].join('\n')
-				)
-			);
 			await interaction.editReply({
-				components: [containerComponent],
+				components: [introSavedView(intro)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -207,12 +178,8 @@ export class ProfileCommand extends Command {
 		if (subcommand === 'clear-intro') {
 			await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 			const cleared = await clearUserIntro(interaction.user.id);
-			const containerComponent = createContainer();
-			containerComponent.addTextDisplayComponents((t) =>
-				t.setContent(cleared ? `${emoji('trash')} 등록한 소개를 지웠어요.` : `${emoji('info')} 등록한 소개가 없어요.`)
-			);
 			await interaction.editReply({
-				components: [containerComponent],
+				components: [introClearedView(cleared)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;
@@ -333,11 +300,7 @@ export class ProfileCommand extends Command {
 			await interaction.editReply({
 				files: [attachment],
 				flags: [MessageFlags.IsComponentsV2],
-				components: [
-					createContainer().addMediaGalleryComponents((gallery) =>
-						gallery.addItems((item) => item.setURL(`attachment://profile-${target.id}.png`))
-					)
-				]
+				components: [profileCardView(`profile-${target.id}.png`)]
 			});
 			return;
 		}
@@ -433,14 +396,8 @@ export class ProfileCommand extends Command {
 		}
 
 		const avatarUrl = target.displayAvatarURL({ size: 256 });
-		const containerComponent = createContainer();
-		const section = new SectionBuilder()
-			.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')))
-			.setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl));
-		containerComponent.addSectionComponents(section);
-
 		await interaction.editReply({
-			components: [containerComponent],
+			components: [profileTextView(lines, avatarUrl)],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

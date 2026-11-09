@@ -1,13 +1,5 @@
-import { emoji, createContainer } from '@sirubot/utils';
-import {
-	ChatInputCommandInteraction,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	MessageFlags,
-	SlashCommandOptionsOnlyBuilder,
-	SlashCommandSubcommandBuilder,
-	TextDisplayBuilder
-} from 'discord.js';
+import { avatarView } from '../view/avatar.ts';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandBuilder } from 'discord.js';
 
 export const name = 'avatar';
 export const ko = '아바타';
@@ -57,14 +49,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		label = `${user.tag}의 아바타`;
 	}
 
-	const containerComponent = createContainer();
-	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('frame')} ${label}`));
-
-	const gallery = new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(avatarUrl));
-	containerComponent.addMediaGalleryComponents(gallery);
-
 	await interaction.reply({
-		components: [containerComponent],
+		components: [avatarView(label, avatarUrl)],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

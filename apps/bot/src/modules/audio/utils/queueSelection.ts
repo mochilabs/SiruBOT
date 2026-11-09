@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { emoji } from '@sirubot/utils';
 import { UserError } from '@sapphire/framework';
 import type { Player } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
@@ -20,8 +21,7 @@ export function resolveQueueSelection(player: Player, value: string): number {
 	if (!match || match[2] !== version(player) || position < 1 || position > getUserQueuedTracks(player).length) {
 		throw new UserError({
 			identifier: 'queue_selection_changed',
-			message:
-				'대기열이 바뀌었거나 선택 시간이 지났어요. /대기열 목록을 새로 열거나 곡 선택지를 다시 골라 주세요. 아무 곡도 변경하지 않았어요.',
+			message: `${emoji('error')} 대기열이 바뀌었거나 선택 시간이 지났어요. /대기열 목록을 새로 열거나 곡 선택지를 다시 골라 주세요. 아무 곡도 변경하지 않았어요.`,
 			context: { ephemeral: true }
 		});
 	}

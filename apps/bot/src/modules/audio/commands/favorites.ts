@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
+import { emoji } from '@sirubot/utils';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { openPlaylistPanel } from '../utils/playlistPanel.ts';
+import { openPlaylistPanel } from '../view/playlistPanel.ts';
 import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 import { notice } from '../../general/view/notice.ts';
 
@@ -66,12 +67,12 @@ export class FavoritesCommand extends Command {
 			if (!current || !('encoded' in current))
 				throw new UserError({
 					identifier: 'favorites_no_track',
-					message: '현재 곡이 없어요. /즐겨찾기 목록의 곡 추가 버튼으로 제목이나 주소를 입력해 주세요.',
+					message: `${emoji('error')} 현재 곡이 없어요. /즐겨찾기 목록의 곡 추가 버튼으로 제목이나 주소를 입력해 주세요.`,
 					context: { ephemeral: true }
 				});
 			await this.container.playlistService.addTrack(interaction.user.id, '즐겨찾기', current);
 			await interaction.editReply({
-				components: [notice(`**${current.info.title}**을(를) 즐겨찾기에 추가했어요.`)],
+				components: [notice(`${emoji('success')} **${current.info.title}**을(를) 즐겨찾기에 추가했어요.`)],
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] }
 			});

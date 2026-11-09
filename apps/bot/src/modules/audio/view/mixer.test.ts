@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mixerStatus } from './mixer.ts';
-vi.mock('@sirubot/utils', () => ({ DEFAULT_COLOR: 0, emoji: (name: string) => name }));
+vi.mock('@sirubot/utils', () => ({ DEFAULT_COLOR: 0, WARN_COLOR: 1, emoji: (name: string) => name }));
 const settings = {
 	gaplessEnabled: true,
 	crossfadeEnabled: true,
@@ -15,7 +15,7 @@ const state = { guildId: 'guild', crossfadeEnabled: true, crossfadeMs: 5000, fad
 describe('AutoMix status', () => {
 	it('shows desired settings and pending application without a player', () => {
 		const output = JSON.stringify(mixerStatus({ settings, state: null, noPlayer: true }).toJSON());
-		expect(output).toContain('6.0%, 최소 신뢰도 0.30');
+		expect(output).toContain('최대 템포 변경 6.0%, 최소 신뢰도 0.30');
 		expect(output).toContain('다음 재생에 적용 예정');
 	});
 	it('does not infer beat readiness from a preloaded track on an older server', () => {

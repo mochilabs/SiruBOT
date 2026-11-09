@@ -1,4 +1,5 @@
 import { container, UserError } from '@sapphire/framework';
+import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/pause.ts';
 import { preconditions as pausePreconditions } from './pause.ts';
@@ -20,7 +21,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!player.queue.current && !player.queue.tracks.length)
 		throw new UserError({
 			identifier: 'resume_empty',
-			message: '이어 재생할 곡이 없어요. /재생으로 곡을 추가해 주세요.',
+			message: `${emoji('error')} 이어 재생할 곡이 없어요. /재생으로 곡을 추가해 주세요.`,
 			context: { ephemeral: true }
 		});
 	if (player.paused) await player.resume();

@@ -28,4 +28,4 @@ export type {
 } from './guildSettings/types.ts';
 export { isChannelToggleEnabled, isTtsEnabled, normalizeAiMode, normalizeChatToolMode } from './guildSettings/types.ts';
 
-export class GuildService extends GuildSettingsStore {}
+export { GuildSettingsStore as GuildService };

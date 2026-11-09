@@ -1,6 +1,6 @@
 import { ChatServiceError, registerChatAbort, releaseChatAbort, runChatTurn, type ChatConfig } from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
-import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from './chatView.ts';
+import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from '../view/chatView.ts';
 
 /** 예상 밖 오류가 났을 때 사용자 화면에 남기는 안내 — 진입점 2곳이 같은 문구를 쓴다. */
 const GENERIC_ERROR_TEXT = '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';

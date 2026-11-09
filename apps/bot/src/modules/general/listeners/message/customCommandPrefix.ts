@@ -10,15 +10,9 @@ import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.
  */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
-import { ContainerBuilder, Message, MessageCreateOptions, MessageFlags, TextDisplayBuilder } from 'discord.js';
-import {
-	CUSTOM_COMMAND_MAX_ARGS,
-	CUSTOM_COMMAND_RESERVED_NAMES,
-	DEFAULT_COLOR,
-	MemoryCache,
-	emoji,
-	normalizeCustomCommandName
-} from '@sirubot/utils';
+import { Message, MessageCreateOptions, MessageFlags } from 'discord.js';
+import { customCommandListView } from '../../view/customCommand.ts';
+import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_RESERVED_NAMES, MemoryCache, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../../../services/customCommands/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../../../services/customCommands/interpreter.ts';
@@ -117,32 +111,13 @@ export class CustomCommandPrefixListener extends Listener {
 	/** !도움말 — 이 길드의 커스텀 명령어 목록 (Components V2 컨테이너) */
 	private async sendList(message: Message, prefix: string, guildId: string) {
 		const commands = await getGuildCustomCommands(guildId);
-		const container = new ContainerBuilder().setAccentColor(DEFAULT_COLOR);
-		container.addTextDisplayComponents(new TextDisplayBuilder().setContent('## 커스텀 명령어'));
-
-		if (commands.ordered.length === 0) {
-			container.addTextDisplayComponents(
-				new TextDisplayBuilder().setContent('아직 등록된 커스텀 명령어가 없어요.\n-# 서버 관리자가 대시보드에서 만들 수 있어요.')
-			);
-		} else {
-			const lines = commands.ordered
-				.filter((command) => command.method === 'prefix')
-				.map((command) => `\`${prefix}${command.name}\` · ${command.description || '설명 없음'}`);
-			if (lines.length === 0) {
-				container.addTextDisplayComponents(
-					new TextDisplayBuilder().setContent(
-						'이 서버의 커스텀 명령어는 슬래시로 등록되어 있어요.\n-# 슬래시 명령어 목록에서 확인해 주세요.'
-					)
-				);
-			} else {
-				container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
-			}
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent('-# 생성·수정·삭제는 대시보드에서 관리해요.'));
-		}
+		const lines = commands.ordered
+			.filter((command) => command.method === 'prefix')
+			.map((command) => `\`${prefix}${command.name}\` · ${command.description || '설명 없음'}`);
 
 		await message
 			.reply({
-				components: [container],
+				components: [customCommandListView({ hasCommands: commands.ordered.length > 0 }, lines)],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 				allowedMentions: { parse: [] }
 			})

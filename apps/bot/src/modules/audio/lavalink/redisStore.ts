@@ -224,6 +224,15 @@ export class RedisStore {
 		}
 	}
 
+	/** 범용 해시 필드 삭제 — 미연결/오류 시 조용히 스킵해요 */
+	public async deleteCacheHashField(key: string, field: string): Promise<void> {
+		try {
+			if (this.isReady) await this.redis.hDel(key, field);
+		} catch (error) {
+			this.logger.warn(`Cache hDel failed (${key}): ${error}`);
+		}
+	}
+
 	/**
 	 * isReady 가드 + fire-and-forget 퍼블리시 공용 헬퍼 — Redis 미연결/오류 시 조용히 스킵하고
 	 * 재생 경로를 절대 블로킹하지 않아요. label은 스킵/실패 로그 구분에만 쓰여요.

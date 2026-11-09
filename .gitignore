@@ -50,3 +50,6 @@ packages/prisma/src/client/
 
 # Playwright MCP 스냅샷 산출물
 .playwright-mcp/
+
+# local-only skill
+.pi/skills/impeccable/

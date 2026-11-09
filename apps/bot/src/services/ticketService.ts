@@ -1,9 +1,10 @@
 import { container } from '@sapphire/framework';
-import { ChannelType, Guild, GuildMember, OverwriteType, PermissionFlagsBits, TextChannel } from 'discord.js';
+import { ChannelType, Guild, MessageFlags, GuildMember, OverwriteType, PermissionFlagsBits, TextChannel } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { formatTicketChannelName } from '@sirubot/utils/ticket';
 import type { Ticket } from '@sirubot/prisma';
 import { ticketWelcomeView } from '../modules/general/view/ticket.ts';
+import { notice } from '../modules/general/view/notice.ts';
 import { saveTicketTranscript } from './ticketTranscript.ts';
 export class TicketService {
 	private get db() {
@@ -192,7 +193,9 @@ export class TicketService {
 		// 채널 삭제 (스케줄링 또는 즉시 삭제)
 		const channel = guild.channels.cache.get(channelId);
 		if (channel && channel.isTextBased()) {
-			await channel.send(`${emoji('lock')} 티켓이 마감되었어요. 5초 뒤 채널이 정리돼요.`).catch(() => null);
+			await channel
+				.send({ components: [notice(`${emoji('lock')} 티켓이 마감되었어요. 5초 뒤 채널이 정리돼요.`)], flags: [MessageFlags.IsComponentsV2] })
+				.catch(() => null);
 			setTimeout(() => {
 				channel.delete('티켓 마감 및 채널 정리').catch((err) => {
 					container.logger.warn(`[ticket] Failed to delete channel ${channelId}: ${err}`);
@@ -206,7 +209,18 @@ export class TicketService {
 			if (logChannel && logChannel.isTextBased() && 'send' in logChannel) {
 				await (logChannel as TextChannel)
 					.send({
-						content: `${emoji('clipboard')} **[티켓 마감 #${String(ticket.ticketNumber).padStart(4, '0')}]**\n- 신청자: <@${ticket.ownerId}>\n- 종료자: <@${closedByMember.id}>\n- 사유: ${updatedTicket.closeReason}`
+						components: [
+							notice(
+								[
+									`### ${emoji('clipboard')} 티켓 마감 #${String(ticket.ticketNumber).padStart(4, '0')}`,
+									`- **신청자**: <@${ticket.ownerId}>`,
+									`- **종료자**: <@${closedByMember.id}>`,
+									`- **사유**: ${updatedTicket.closeReason}`
+								].join('\n')
+							)
+						],
+						flags: [MessageFlags.IsComponentsV2],
+						allowedMentions: { parse: [] }
 					})
 					.catch(() => null);
 			}
@@ -250,7 +264,9 @@ export class TicketService {
 			const msg = nextClaimedById
 				? `${emoji('user')} <@${member.id}> 님이 이 티켓의 담당자로 지정되었어요.`
 				: `${emoji('repeat')} <@${member.id}> 님이 티켓 담당을 해제했어요.`;
-			await (channel as TextChannel).send(msg).catch(() => null);
+			await (channel as TextChannel)
+				.send({ components: [notice(msg)], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } })
+				.catch(() => null);
 		}
 
 		return { ok: true, ticket: updated };
@@ -295,10 +311,18 @@ export class TicketService {
 					AttachFiles: true,
 					ReadMessageHistory: true
 				});
-				await channel.send(`${emoji('wave')} <@${targetMemberId}> 님이 티켓에 초대되었어요.`);
+				await channel.send({
+					components: [notice(`${emoji('wave')} <@${targetMemberId}> 님이 티켓에 초대되었어요.`)],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { parse: [] }
+				});
 			} else {
 				await channel.permissionOverwrites.delete(targetMemberId);
-				await channel.send(`${emoji('arrow_forward')} <@${targetMemberId}> 님이 티켓에서 제외되었어요.`);
+				await channel.send({
+					components: [notice(`${emoji('arrow_forward')} <@${targetMemberId}> 님이 티켓에서 제외되었어요.`)],
+					flags: [MessageFlags.IsComponentsV2],
+					allowedMentions: { parse: [] }
+				});
 			}
 			return { ok: true };
 		} catch (error) {

@@ -7,20 +7,12 @@
  */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
-import {
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	Message,
-	MessageFlags,
-	PermissionFlagsBits,
-	SectionBuilder,
-	TextDisplayBuilder
-} from 'discord.js';
-import { type MessageLinkTarget, MemoryCache, addSeparator, createContainer, createThumbnail, emoji, parseMessageLinks } from '@sirubot/utils';
+import { Message, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { type MessageLinkTarget, MemoryCache, parseMessageLinks } from '@sirubot/utils';
+import { messageQuoteView } from '../../view/messageQuote.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
-const QUOTE_SNIPPET_MAX = 500;
 const QUOTE_IMAGE_MAX = 4;
 const QUOTE_COOLDOWN_MS = 3_000;
 
@@ -46,33 +38,23 @@ export class MessageQuoteListener extends Listener {
 			if (this.cooldowns.has(cooldownKey)) return;
 			this.cooldowns.set(cooldownKey, true);
 
-			const container = createContainer();
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('link')} 메시지 인용`));
+			const sources: Message[] = [];
 			const images: string[] = [];
-			let quoted = 0;
 
 			for (const target of targets) {
 				const source = await this.findQuotableMessage(message, target);
 				if (!source) continue;
-				if (quoted > 0) addSeparator(container);
-				container.addSectionComponents(this.buildQuoteSection(source));
+				sources.push(source);
 				for (const attachment of source.attachments.values()) {
 					if (images.length >= QUOTE_IMAGE_MAX) break;
 					if (attachment.contentType?.startsWith('image/')) images.push(attachment.url);
 				}
-				quoted += 1;
 			}
-			if (quoted === 0) return;
-
-			if (images.length > 0) {
-				const gallery = new MediaGalleryBuilder();
-				for (const url of images) gallery.addItems(new MediaGalleryItemBuilder().setURL(url));
-				container.addMediaGalleryComponents(gallery);
-			}
+			if (sources.length === 0) return;
 
 			await message
 				.reply({
-					components: [container],
+					components: [messageQuoteView(sources, images)],
 					flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications],
 					allowedMentions: { parse: [] }
 				})
@@ -91,18 +73,5 @@ export class MessageQuoteListener extends Listener {
 		const everyoneOverwrite = channel.permissionOverwrites.cache.get(message.guild.roles.everyone.id);
 		if (everyoneOverwrite?.deny.has(PermissionFlagsBits.ViewChannel)) return null;
 		return channel.messages.fetch(target.messageId).catch(() => null);
-	}
-
-	private buildQuoteSection(source: Message): SectionBuilder {
-		const content = source.content.trim();
-		const snippet = content.length > QUOTE_SNIPPET_MAX ? `${content.slice(0, QUOTE_SNIPPET_MAX - 1)}…` : content;
-		const postedAt = Math.floor(source.createdTimestamp / 1_000);
-		return new SectionBuilder()
-			.addTextDisplayComponents(
-				new TextDisplayBuilder().setContent(`**${source.author.username}** · <t:${postedAt}:R>`),
-				new TextDisplayBuilder().setContent(content.length > 0 ? snippet : '*(미디어만 있는 메시지)*'),
-				new TextDisplayBuilder().setContent(`-# ${source.channel}`)
-			)
-			.setThumbnailAccessory(createThumbnail(source.author.displayAvatarURL({ size: 256 })));
 	}
 }

@@ -279,6 +279,31 @@ export interface WeatherCardRequest {
 	}>;
 }
 
+/** 운세 카드 이미지 입력 — data-api POST /v1/image/ohaasa 바디와 같은 형식이에요. 운세 설명·럭키 컬러는 텍스트 본문 전용이라 보내지 않아요. */
+export interface OhaasaCardRequest {
+	zodiacCode: string;
+	rank: number;
+	luckyItem?: string;
+	luckyKey?: string;
+	date: string;
+}
+
+/** 운세 TOP 3 카드 입력 — data-api POST /v1/image/ohaasa/top 바디와 같은 형식이에요. */
+export interface OhaasaTopCardRequest {
+	items: Array<{ zodiacCode: string; rank: number }>;
+	date: string;
+}
+
+/** 운세 카드 PNG — 실패하면 null이라 호출부가 텍스트만으로 폴백해요. */
+export async function renderOhaasaCard(data: OhaasaCardRequest): Promise<Buffer | null> {
+	return renderImage('/v1/image/ohaasa', data);
+}
+
+/** 운세 TOP 3 카드 PNG — 실패하면 null. */
+export async function renderOhaasaTopCard(data: OhaasaTopCardRequest): Promise<Buffer | null> {
+	return renderImage('/v1/image/ohaasa/top', data);
+}
+
 /** 날씨 카드 PNG — 실패하면 null이라 호출부가 텍스트 카드로 폴백해요. */
 export async function renderWeatherCard(data: WeatherCardRequest): Promise<Buffer | null> {
 	return renderImage('/v1/image/weather', data);

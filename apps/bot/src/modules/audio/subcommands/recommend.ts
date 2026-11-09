@@ -1,8 +1,9 @@
 import { container, UserError } from '@sapphire/framework';
-import { createContainer, emoji } from '@sirubot/utils';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { addManualRecommendation, getInFlightRelatedFetch } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { recommendAdded } from '../view/related.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'recommend';
@@ -36,7 +37,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!player || !current) {
 		throw new UserError({
 			identifier: 'RecommendCommandNoPlayer',
-			message: '현재 재생 중인 곡이 없어요.',
+			message: `${emoji('error')} 현재 재생 중인 곡이 없어요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -44,7 +45,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (getInFlightRelatedFetch(interaction.guildId)) {
 		throw new UserError({
 			identifier: 'RecommendCommandBusy',
-			message: '추천 곡을 이미 준비 중이에요. 잠시 후 다시 시도해요.',
+			message: `${emoji('error')} 추천 곡을 이미 준비 중이에요. 잠시 후 다시 시도해 주세요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -66,14 +67,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
-	const listLines = added.map((track, index) => `${index + 1}. **${track.info.title}**`);
-	const containerComponent = createContainer();
-	containerComponent.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent([`${emoji('sparkle')} 추천 곡 **${added.length}곡**을 대기열에 추가했어요.`, ...listLines].join('\n'))
-	);
-
 	await interaction.editReply({
-		components: [containerComponent],
+		components: [recommendAdded(added.map((track) => track.info.title))],
 		flags: [MessageFlags.IsComponentsV2],
 		allowedMentions: { users: [], roles: [] }
 	});

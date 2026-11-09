@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
-import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
-import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { historyView } from '../view/history.ts';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'history';
@@ -45,12 +46,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return `\`${timeStr}\` **[${h.track.title}](${h.track.url})** - ${h.track.artist}${requesterStr}`;
 	});
 
-	const containerComponent = new ContainerBuilder()
-		.setAccentColor(DEFAULT_COLOR)
-		.addTextDisplayComponents((textDisplay) => textDisplay.setContent(`### ${emoji('scroll')} 최근 재생 기록\n\n${lines.join('\n')}`));
-
 	await interaction.editReply({
-		components: [containerComponent],
+		components: [historyView(lines)],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

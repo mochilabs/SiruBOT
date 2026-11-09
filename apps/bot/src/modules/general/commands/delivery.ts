@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
-import { emoji, createContainer } from '@sirubot/utils';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../view/notice.ts';
 import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '@sirubot/utils/delivery';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
@@ -32,9 +33,7 @@ function buildContainer(result: DeliveryTrackResult, trackingNumber: string) {
 
 	lines.push('', `-# tracker.delivery 기준 · 운송장번호 \`${trackingNumber}\``);
 
-	const container = createContainer();
-	container.addTextDisplayComponents((t) => t.setContent(lines.join('\n')));
-	return container;
+	return notice(lines.join('\n'));
 }
 
 @ApplyOptions<Command.Options>({

@@ -19,9 +19,6 @@
  */
 import { container } from '@sapphire/framework';
 import {
-	createContainer,
-	createSeparator,
-	createThumbnail,
 	DEFAULT_GREETINGS,
 	GreetingConfig,
 	GreetingKind,
@@ -32,37 +29,10 @@ import {
 	validateGreetingConfig
 } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import {
-	AttachmentBuilder,
-	ContainerBuilder,
-	Guild,
-	GuildMember,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	MessageFlags,
-	PermissionFlagsBits,
-	SectionBuilder,
-	SeparatorBuilder,
-	SendableChannels,
-	TextDisplayBuilder
-} from 'discord.js';
+import { AttachmentBuilder, Guild, GuildMember, MessageFlags, PermissionFlagsBits, SendableChannels } from 'discord.js';
+import { greetingComponents } from '../modules/general/view/greeting.ts';
 import { renderMemberCard } from './dataApiClient.ts';
 import type { ServiceLogger } from './types.ts';
-
-/** 인사 메시지를 이루는 최상위 컴포넌트 조각 — 컨테이너에 담거나 목록으로 그대로 보내요 */
-type GreetingMessagePart = TextDisplayBuilder | SectionBuilder | MediaGalleryBuilder | SeparatorBuilder;
-
-/** 조각 목록을 컨테이너 1개로 묶어요 — 조각 종류마다 컨테이너 add 메서드가 갈려요 */
-function partsToContainer(parts: GreetingMessagePart[], accentColor: string | null): ContainerBuilder {
-	const container = createContainer(accentColor);
-	for (const part of parts) {
-		if (part instanceof TextDisplayBuilder) container.addTextDisplayComponents(part);
-		else if (part instanceof SectionBuilder) container.addSectionComponents(part);
-		else if (part instanceof MediaGalleryBuilder) container.addMediaGalleryComponents(part);
-		else if (part instanceof SeparatorBuilder) container.addSeparatorComponents(part);
-	}
-	return container;
-}
 
 /** 멤버 인사에 필요한 멤버 정보 — 리스너/테스트 흐름이 만들어 전달해요 */
 export interface GreetingMemberInfo {
@@ -337,34 +307,17 @@ export class MemberGreetingService {
 			this.logger.warn(`멤버 인사 카드 렌더 실패, 텍스트로 폴백 (guild ${guildId}, kind ${kind})`);
 		}
 
-		// 본문·이미지를 컴포넌트 조각으로 쌓고, 레이아웃에 따라 컨테이너에 담거나 목록으로 보내요.
-		const parts: GreetingMessagePart[] = [];
-		if (opts.isTest) {
-			parts.push(new TextDisplayBuilder().setContent(`-# ${kind === 'welcome' ? '확인용 환영 메시지예요' : '확인용 작별 메시지예요'}`));
-			parts.push(createSeparator());
-		}
-		if (hasContent) {
-			if (png) {
-				parts.push(new TextDisplayBuilder().setContent(content));
-			} else if (member.avatarUrl) {
-				const section = new SectionBuilder().addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
-				section.setThumbnailAccessory(createThumbnail(member.avatarUrl));
-				parts.push(section);
-			} else {
-				parts.push(new TextDisplayBuilder().setContent(content));
-			}
-		}
-
 		const filename = `greeting-${kind}.png`;
-		const files: AttachmentBuilder[] = [];
-		if (png) {
-			files.push(new AttachmentBuilder(png, { name: filename }));
-			parts.push(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(`attachment://${filename}`)));
-		}
-
-		// 강조색은 컨테이너 전용 속성이라 'components' 레이아웃에서는 들어가지 않아요.
-		const components: (ContainerBuilder | GreetingMessagePart)[] =
-			config.layout === 'container' ? [partsToContainer(parts, config.accentColor)] : parts;
+		const files: AttachmentBuilder[] = png ? [new AttachmentBuilder(png, { name: filename })] : [];
+		const components = greetingComponents({
+			kind,
+			isTest: opts.isTest,
+			content,
+			imageFilename: png ? filename : null,
+			avatarUrl: member.avatarUrl,
+			layout: config.layout,
+			accentColor: config.accentColor
+		});
 
 		try {
 			await channel.send({

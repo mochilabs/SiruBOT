@@ -70,7 +70,7 @@ export class PrivacyCommand extends Subcommand {
 			'',
 			'-# 채널 AI 대화 기록에는 회원님 발화가 섞여 있어요. 이 기록은 서버 단위로만 지울 수 있어요',
 			'-# 채널 기록은 서버 관리자에게 /채팅설정 초기화를 요청해 주세요.',
-			'-# 플레이리스트·즐겨찾기·음악 이용 기록은 이 삭제에 포함되지 않아요. 아래 개인 설정을 지우려면 /개인정보 삭제를 실행해 주세요.'
+			'-# 플레이리스트·즐겨찾기·음악 이용 기록은 이 삭제에 포함되지 않아요. 개인 설정(AI 기억·생일·소개·TTS 설정·게임 전적)을 지우려면 /개인정보 삭제를 실행해 주세요.'
 		];
 
 		await interaction.editReply({ flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] }, components: [notice(lines.join('\n'))] });

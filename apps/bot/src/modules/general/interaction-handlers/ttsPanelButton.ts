@@ -4,7 +4,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import type { TtsUserPreset } from '../../../services/ttsUserSettings.ts';
-import { buildTtsPanel, splitPanelLang, ttsPanelPrefix } from '../utils/ttsView.ts';
+import { buildTtsPanel, splitPanelLang, ttsPanelPrefix } from '../view/ttsView.ts';
 
 /**
  * /tts 패널의 버튼 핸들러 — 낭독 토글, 기본값 복구.

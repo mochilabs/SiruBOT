@@ -1,0 +1,29 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "dashboard",
+			"runtimeExecutable": "yarn",
+			"runtimeArgs": [
+				"workspace",
+				"@sirubot/dashboard",
+				"dev"
+			],
+			"port": 3000
+		},
+		{
+			"name": "dashboard-dead-code",
+			"runtimeExecutable": "yarn",
+			"runtimeArgs": [
+				"--cwd",
+				"/home/seonu/projects/SiruBOT-dead-code",
+				"workspace",
+				"@sirubot/dashboard",
+				"dev",
+				"-p",
+				"3001"
+			],
+			"port": 3001
+		}
+	]
+}

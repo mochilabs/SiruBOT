@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { createContainer } from '@sirubot/utils';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder, TextDisplayBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { previousReplayed } from '../view/previous.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 export const name = 'previous';
@@ -20,7 +20,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (!player) {
 		throw new UserError({
 			identifier: 'PreviousCommandNoPlayer',
-			message: '현재 재생 중인 플레이어가 없어요.',
+			message: `${emoji('error')} 현재 재생 중인 플레이어가 없어요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -28,7 +28,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (player.queue.previous.length === 0) {
 		throw new UserError({
 			identifier: 'PreviousCommandEmptyHistory',
-			message: '이전에 재생한 곡이 없어요.',
+			message: `${emoji('error')} 이전에 재생한 곡이 없어요.`,
 			context: { ephemeral: true }
 		});
 	}
@@ -38,13 +38,8 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 
 	const previousTrack = await container.audioService.playPrevious(player);
 
-	const containerComponent = createContainer();
-	containerComponent.addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`${emoji('arrow_back')} 이전곡 **${previousTrack.info.title}**을(를) 다시 재생해요.`)
-	);
-
 	await interaction.editReply({
-		components: [containerComponent],
+		components: [previousReplayed(previousTrack.info.title)],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

@@ -13,32 +13,18 @@
  */
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
-import {
-	ButtonBuilder,
-	ButtonStyle,
-	type ContainerBuilder,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	Message,
-	MessageFlags,
-	PermissionFlagsBits,
-	SectionBuilder,
-	TextDisplayBuilder
-} from 'discord.js';
+import { type ContainerBuilder, Message, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import {
 	type EmbedFixBoothLink,
 	type EmbedFixLink,
 	type EmbedFixResult,
-	type EmbedFixSite,
 	type EmbedFixSwapLink,
 	type EmbedFixTranslateLang,
 	MemoryCache,
-	createContainer,
-	createThumbnail,
-	emoji,
 	findEmbedFixLinks,
 	parseBoothOg
 } from '@sirubot/utils';
+import { boothCard, embedFixCard } from '../../view/embedFix.ts';
 import { fetchEmbedFixMetadata } from '../../../../services/embedFixGateway.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import { relayViaWebhook } from '../../../../services/webhookRelay.ts';
@@ -48,33 +34,6 @@ const EMBED_FIX_COOLDOWN_MS = 3_000;
 const BOOTH_FETCH_TIMEOUT_MS = 10_000;
 /** BOOTH OG 서버는 Discord 봇 UA에만 메타를 내려줘요 */
 const BOOTH_USER_AGENT = 'Discordbot/2.0';
-/** CV2 텍스트 표시 상한 — 트윗 본문보다 넉넉하게 */
-const CARD_TEXT_MAX = 1_000;
-/** 미디어 갤러리 항목 상한 (Components V2 제한) */
-const CARD_IMAGE_MAX = 10;
-
-/** OG 카드 사이트(Instagram·TikTok·Reddit·Pixiv·Threads) 헤더 문구와 이모지 */
-const OG_CARD_SITE_HEADERS = {
-	instagram: { label: 'Instagram 게시물', emoji: 'frame' },
-	tiktok: { label: 'TikTok 영상', emoji: 'link' },
-	reddit: { label: 'Reddit 게시물', emoji: 'link' },
-	pixiv: { label: 'Pixiv 작품', emoji: 'frame' },
-	threads: { label: 'Threads 게시물', emoji: 'link' }
-} as const;
-type OgCardSiteKey = keyof typeof OG_CARD_SITE_HEADERS;
-type OgCardSiteHeader = (typeof OG_CARD_SITE_HEADERS)[OgCardSiteKey];
-
-/** 플랫폼 브랜드색(HEX) — 카드 accent color. Threads 브랜드는 검정이에요. */
-const SITE_ACCENT_COLORS: Record<EmbedFixSite, string> = {
-	x: '#1DA1F2',
-	instagram: '#E1306C',
-	booth: '#FC4F4F',
-	tiktok: '#FE2C55',
-	reddit: '#FF4500',
-	pixiv: '#0096FA',
-	threads: '#000000'
-};
-
 /** 전송 가능한 결과 한 건 — content(레거시 스왑 링크) 또는 components(CV2 카드) */
 interface EmbedFixPayload {
 	content?: string;
@@ -136,7 +95,7 @@ export class EmbedFixListener extends Listener {
 				if (result.fixedUrl) fixedUrls.push(result.fixedUrl);
 				continue;
 			}
-			const container = this.buildResultCard(result);
+			const container = embedFixCard(result);
 			if (container) payloads.push({ components: container });
 		}
 		if (fixedUrls.length > 0) payloads.push({ content: fixedUrls.join('\n') });
@@ -154,7 +113,7 @@ export class EmbedFixListener extends Listener {
 		if (boothLink) {
 			const meta = await this.fetchBoothOg(boothLink.original);
 			if (meta) {
-				const container = this.buildBoothCard({
+				const container = boothCard({
 					site: 'booth',
 					mode: 'card',
 					title: meta.title,
@@ -167,130 +126,6 @@ export class EmbedFixListener extends Listener {
 		}
 
 		return payloads;
-	}
-
-	private buildResultCard(result: EmbedFixResult): ContainerBuilder | null {
-		if (result.site === 'x') return this.buildXCard(result);
-		if (result.site === 'booth') return this.buildBoothCard(result);
-		const header = OG_CARD_SITE_HEADERS[result.site as OgCardSiteKey];
-		return header ? this.buildOgCard(result, header) : null;
-	}
-
-	/** OG 카드 — 제목·본문·미디어 뒤 마지막 섹션에 사이트 라벨과 원문 버튼을 놓아요 */
-	private buildOgCard(result: EmbedFixResult, header: OgCardSiteHeader): ContainerBuilder | null {
-		if (!result.sourceUrl) return null;
-		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
-
-		if (result.title) {
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${result.title}`));
-		}
-		if (result.description && result.description.length > 0) {
-			const text = result.description.length > CARD_TEXT_MAX ? `${result.description.slice(0, CARD_TEXT_MAX - 1)}…` : result.description;
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text));
-		}
-		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
-		// og:video(TikTok 등)를 우선으로 깔고 나머지 이미지를 이어요
-		const mediaUrls = [...(result.videoUrl ? [result.videoUrl] : []), ...(result.images ?? [])].slice(0, CARD_IMAGE_MAX);
-		if (mediaUrls.length > 0) {
-			const gallery = new MediaGalleryBuilder();
-			for (const url of mediaUrls) gallery.addItems(new MediaGalleryItemBuilder().setURL(url));
-			container.addMediaGalleryComponents(gallery);
-		}
-
-		container.addSectionComponents(
-			new SectionBuilder()
-				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji(header.emoji)} ${header.label}`))
-				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
-		);
-		return container;
-	}
-
-	/** X 카드 — 작성자 섹션(프사 썸네일) + 본문 + 사진 + 참여 수 + 원문 버튼 */
-	private buildXCard(result: EmbedFixResult): ContainerBuilder | null {
-		if (!result.sourceUrl) return null;
-		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
-
-		const headerComponents = [
-			new TextDisplayBuilder().setContent(`**${result.authorName ?? 'X 게시물'}**`),
-			...(result.authorHandle ? [new TextDisplayBuilder().setContent(`-# @${result.authorHandle}`)] : [])
-		];
-		if (result.authorAvatar) {
-			container.addSectionComponents(
-				new SectionBuilder().addTextDisplayComponents(...headerComponents).setThumbnailAccessory(createThumbnail(result.authorAvatar))
-			);
-		} else {
-			container.addTextDisplayComponents(...headerComponents);
-		}
-
-		if (result.description && result.description.length > 0) {
-			const text = result.description.length > CARD_TEXT_MAX ? `${result.description.slice(0, CARD_TEXT_MAX - 1)}…` : result.description;
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text));
-		}
-		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
-		this.addImageGallery(container, result.images);
-
-		const stats = `-# ${emoji('speech')} ${result.replyCount ?? 0} · ${emoji('repeat')} ${result.retweetCount ?? 0} · ${emoji('heart')} ${result.likeCount ?? 0}${
-			result.createdAt ? ` · <t:${result.createdAt}:R>` : ''
-		}`;
-		container.addSectionComponents(
-			new SectionBuilder()
-				.addTextDisplayComponents(new TextDisplayBuilder().setContent(stats))
-				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
-		);
-		return container;
-	}
-
-	/** BOOTH 상품 카드 — 원본 해상도 상품 이미지로 마지막 섹션에 라벨과 원문 버튼을 놓아요 */
-	private buildBoothCard(result: EmbedFixResult): ContainerBuilder | null {
-		if (!result.sourceUrl || !result.title) return null;
-		const image = result.images?.[0];
-		const container = createContainer(SITE_ACCENT_COLORS[result.site]);
-
-		const titleComponents = [new TextDisplayBuilder().setContent(`## ${result.title}`)];
-		if (image) {
-			container.addSectionComponents(
-				new SectionBuilder().addTextDisplayComponents(...titleComponents).setThumbnailAccessory(createThumbnail(image))
-			);
-		} else {
-			container.addTextDisplayComponents(...titleComponents);
-		}
-
-		if (result.description && result.description.length > 0) {
-			container.addTextDisplayComponents(new TextDisplayBuilder().setContent(result.description));
-		}
-		this.addTranslationBlock(container, result.translatedTitle, result.translatedDescription);
-		this.addImageGallery(container, result.images);
-
-		container.addSectionComponents(
-			new SectionBuilder()
-				.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('link')} BOOTH 상품`))
-				.setButtonAccessory(this.buildSourceButton(result.sourceUrl))
-		);
-		return container;
-	}
-
-	private addTranslationBlock(container: ContainerBuilder, translatedTitle: string | undefined, translatedDescription: string | undefined): void {
-		const lines: string[] = [];
-		if (translatedTitle && translatedTitle.length > 0) {
-			lines.push(`**${translatedTitle}**`);
-		}
-		if (translatedDescription && translatedDescription.length > 0) {
-			const text =
-				translatedDescription.length > CARD_TEXT_MAX ? `${translatedDescription.slice(0, CARD_TEXT_MAX - 1)}…` : translatedDescription;
-			lines.push(text);
-		}
-		if (lines.length === 0) return;
-		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${emoji('globe')} 번역\n${lines.join('\n')}`));
-	}
-	private buildSourceButton(url: string): ButtonBuilder {
-		return new ButtonBuilder().setLabel('원문 보기').setStyle(ButtonStyle.Link).setURL(url);
-	}
-
-	private addImageGallery(container: ContainerBuilder, images: string[] | undefined): void {
-		if (!images || images.length === 0) return;
-		const gallery = new MediaGalleryBuilder();
-		for (const url of images.slice(0, CARD_IMAGE_MAX)) gallery.addItems(new MediaGalleryItemBuilder().setURL(url));
-		container.addMediaGalleryComponents(gallery);
 	}
 
 	/** 웹훅 릴레이(원작자 이름·프사) → 실패 시 봇 아이디 리플라이 폴백 */

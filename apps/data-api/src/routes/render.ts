@@ -10,8 +10,8 @@ import { renderProfileCardDark } from '../renderers/profileCardDark.ts';
 import { renderProfileCardTicket } from '../renderers/profileCardTicket.ts';
 import { renderGreetingCard, normalizeGreetingBackground, normalizeGreetingLayerImage } from '../renderers/memberGreetingCard.ts';
 import { renderNowPlayingCard } from '../renderers/nowPlayingCard.ts';
-import { renderOhaasaCard } from '../renderers/ohaasaCard.ts';
-import { ohaasaCardSchema } from './ohaasaCardSchema.ts';
+import { renderOhaasaCard, renderOhaasaTopCard } from '../renderers/ohaasaCard.ts';
+import { ohaasaCardSchema, ohaasaTopCardSchema } from './ohaasaCardSchema.ts';
 import { renderWeatherCard } from '../renderers/weatherCard.ts';
 import { weatherCardSchema } from './weatherCardSchema.ts';
 
@@ -276,6 +276,19 @@ export function registerRenderRoutes(fastify: FastifyInstance): void {
 			const body = ohaasaCardSchema.parse(request.body);
 			const buffer = await deduped(`img:ohaasa:${body.date || 'nodate'}:${body.zodiacCode}`, () => renderOhaasaCard(body));
 			metrics.request('image-ohaasa');
+			return reply.type('image/png').send(buffer);
+		} catch (error) {
+			return sendError(reply, error);
+		}
+	});
+
+	// 운세 TOP 3 카드 이미지 — 별자리 미지정 조회용. 같은 날짜·같은 구성이면 렌더를 공유해요.
+	fastify.post('/v1/image/ohaasa/top', async (request, reply) => {
+		try {
+			const body = ohaasaTopCardSchema.parse(request.body);
+			const key = body.items.map((item) => `${item.rank}-${item.zodiacCode}`).join(',');
+			const buffer = await deduped(`img:ohaasa-top:${body.date || 'nodate'}:${key}`, () => renderOhaasaTopCard(body));
+			metrics.request('image-ohaasa-top');
 			return reply.type('image/png').send(buffer);
 		} catch (error) {
 			return sendError(reply, error);

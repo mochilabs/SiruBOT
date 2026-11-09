@@ -1,8 +1,8 @@
 import { notice } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
-import { emoji, createContainer } from '@sirubot/utils';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { emoji } from '@sirubot/utils';
 import { envParseArray } from '@skyra/env-utilities';
 import { formatDayHourMinute } from '../../utils/uptime.ts';
 
@@ -67,11 +67,8 @@ export class NodesCommand extends Command {
 			}
 		}
 
-		const containerComponent = createContainer();
-		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
-
 		await interaction.editReply({
-			components: [containerComponent],
+			components: [notice(lines.join('\n'))],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

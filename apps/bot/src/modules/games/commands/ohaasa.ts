@@ -1,43 +1,13 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchOhaasaKo } from '../../../services/dataApiClient.ts';
+import { ApplicationIntegrationType, AttachmentBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { fetchOhaasaKo, renderOhaasaCard, renderOhaasaTopCard } from '../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../general/utils/userProfile.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../utils/ohaasaService.ts';
-import { textContainer } from '../utils/textContainer.ts';
+import { ohaasaSingleLines, ohaasaTopLines, ohaasaView, formatOhaasaDate } from '../view/ohaasa.ts';
+import { buildOhaasaCardRequest, buildOhaasaTopCardRequest } from '../utils/ohaasaCardPayload.ts';
 import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
-
-function formatDate(raw: string): string {
-	const compact = raw.replace(/\//g, '');
-	if (/^\d{8}$/.test(compact)) return `${compact.slice(0, 4)}/${compact.slice(4, 6)}/${compact.slice(6, 8)}`;
-	return raw;
-}
-
-function buildSingleLines(daily: DailyHoroscope, target: HoroscopeData): string[] {
-	return [
-		`### ${emoji('crystal_ball')} 오늘의 오하아사 (${formatDate(daily.date)})`,
-		'',
-		`**${target.rank}위 · ${target.zodiac.ko} (${target.zodiac.jp})**`,
-		target.content || '오늘의 운세 정보가 없어요.',
-		`${emoji('clover')} ${target.lucky || '럭키 정보 없음'}`,
-		'',
-		`-# 출처: ${daily.source === 'ohaasa' ? '아사히 방송 오하아사' : 'TV 아사히'}`
-	];
-}
-
-function buildTopLines(daily: DailyHoroscope): string[] {
-	const top = daily.horoscopes.slice(0, 3);
-	const lines = [`### ${emoji('crystal_ball')} 오늘의 오하아사 TOP 3 (${formatDate(daily.date)})`, ''];
-	for (const item of top) {
-		lines.push(`**${item.rank}위 ${item.zodiac.ko}** · ${item.content || '정보 없음'}`);
-	}
-	lines.push(
-		'',
-		'-# 생일이나 별자리를 지정하면 내 운세만 볼 수 있어요. 예: `/오하아사 별자리:양자리` · `/프로필 생일설정`에 등록하면 지정 없이도 자동으로 보여줘요.'
-	);
-	return lines;
-}
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -136,11 +106,19 @@ export class OhaasaCommand extends Command {
 			target = this.resolveTarget(daily, targetZodiacCode);
 		}
 
-		const lines = target ? buildSingleLines(daily, target) : buildTopLines(daily);
+		// 카드 이미지는 요약(별자리·순위·럭키)만 그려요. 렌더에 실패하면 전부 텍스트로 보여줘요.
+		const date = formatOhaasaDate(daily.date);
+		const png = target
+			? await renderOhaasaCard(buildOhaasaCardRequest(target, date)).catch(() => null)
+			: await renderOhaasaTopCard(buildOhaasaTopCardRequest(daily.horoscopes, date)).catch(() => null);
+		const filename = target ? `ohaasa-${target.zodiacCode}.png` : 'ohaasa-top.png';
+
+		const lines = target ? ohaasaSingleLines(daily, target, !!png) : ohaasaTopLines(daily, !!png);
 		if (autoNote) lines.push('', autoNote);
 
 		await interaction.editReply({
-			components: [textContainer(lines)],
+			components: [ohaasaView(lines, png ? filename : null)],
+			...(png ? { files: [new AttachmentBuilder(png, { name: filename })] } : {}),
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

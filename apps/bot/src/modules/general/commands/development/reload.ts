@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior, UserError } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, ContainerBuilder, MessageFlags } from 'discord.js';
-import { emoji, DEFAULT_COLOR } from '@sirubot/utils';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../../view/notice.ts';
 import { envParseArray } from '@skyra/env-utilities';
 
 @ApplyOptions<Command.Options>({
@@ -66,11 +67,7 @@ export class ReloadCommand extends Command {
 		});
 
 		await interaction.reply({
-			components: [
-				new ContainerBuilder()
-					.setAccentColor(DEFAULT_COLOR)
-					.addTextDisplayComponents((textDisplay) => textDisplay.setContent(storesRes.join('\n')))
-			],
+			components: [notice(storesRes.join('\n'))],
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { users: [interaction.user.id], roles: [] }
 		});

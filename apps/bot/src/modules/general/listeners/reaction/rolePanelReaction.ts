@@ -1,6 +1,8 @@
 import { container, Events, Listener } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
-import type { MessageReaction, PartialMessageReaction, PartialUser, User } from 'discord.js';
+import { MessageFlags, type MessageReaction, type PartialMessageReaction, type PartialUser, type User } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../../view/notice.ts';
 import { rolePanelEmojiKey } from '@sirubot/utils/rolePanel';
 
 /** 같은 유저의 연속 반응(추가→제거)이 뒤섞이지 않게 (길드, 유저) 단위로 순서를 보장하는 큐. */
@@ -61,7 +63,12 @@ async function handleReaction(reaction: MessageReaction | PartialMessageReaction
 
 		selfRemoved.add(selfKey);
 		await resolved.users.remove(user.id).catch(() => selfRemoved.delete(selfKey));
-		await user.send(`**${guild.name}** 역할 패널: ${result.reason}`).catch(() => null);
+		await user
+			.send({
+				components: [notice(`${emoji('error')} **${guild.name}** 역할 패널: ${result.reason}`)],
+				flags: [MessageFlags.IsComponentsV2]
+			})
+			.catch(() => null);
 	} catch (error) {
 		container.logger.warn(`[rolePanel] reaction ${action} failed: ${error instanceof Error ? error.message : String(error)}`);
 	}

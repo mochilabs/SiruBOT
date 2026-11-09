@@ -1,3 +1,4 @@
+import { emoji } from '@sirubot/utils';
 import { randomUUID } from 'node:crypto';
 import { ComponentType, MessageFlags, type ChatInputCommandInteraction } from 'discord.js';
 import { confirmationView } from '../modules/general/view/confirmation.ts';
@@ -20,7 +21,10 @@ export async function confirmAction(interaction: ChatInputCommandInteraction, ti
 		});
 	} catch {
 		await interaction
-			.editReply({ components: [notice('시간이 지나 취소했어요. 변경한 내용은 없어요.')], flags: [MessageFlags.IsComponentsV2] })
+			.editReply({
+				components: [notice(`${emoji('info')} 시간이 지나 취소했어요. 변경한 내용은 없어요.`)],
+				flags: [MessageFlags.IsComponentsV2]
+			})
 			.catch(() => undefined);
 		return false;
 	}

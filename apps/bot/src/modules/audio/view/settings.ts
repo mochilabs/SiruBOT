@@ -5,11 +5,14 @@ import {
 	ChannelSelectMenuBuilder,
 	ChannelType,
 	ContainerBuilder,
+	ModalBuilder,
 	RoleSelectMenuBuilder,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
 	StringSelectMenuBuilder,
-	TextDisplayBuilder
+	TextDisplayBuilder,
+	TextInputBuilder,
+	TextInputStyle
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
 import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
@@ -424,4 +427,22 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 	);
 
 	return container;
+}
+
+export function jtcTemplateModal(template: string) {
+	return new ModalBuilder()
+		.setCustomId('settings:jtc-template')
+		.setTitle('방 이름 템플릿')
+		.addComponents(
+			new ActionRowBuilder<TextInputBuilder>().addComponents(
+				new TextInputBuilder()
+					.setCustomId('settings:jtc-template-input')
+					.setLabel('방 이름 템플릿')
+					.setPlaceholder('{user}의 방')
+					.setStyle(TextInputStyle.Short)
+					.setRequired(true)
+					.setMaxLength(100)
+					.setValue(template)
+			)
+		);
 }

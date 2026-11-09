@@ -4,7 +4,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { abortChatTurn } from '../../../services/aiChatService.ts';
 import { emoji } from '@sirubot/utils';
-import { CHAT_CANCEL_PREFIX } from '../utils/chatView.ts';
+import { CHAT_CANCEL_PREFIX } from '../view/chatView.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.MessageComponent

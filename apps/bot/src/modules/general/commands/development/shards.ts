@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
-import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, TextDisplayBuilder } from 'discord.js';
-import { emoji, createContainer } from '@sirubot/utils';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../../view/notice.ts';
 import { envParseArray } from '@skyra/env-utilities';
 
 @ApplyOptions<Command.Options>({
@@ -58,11 +59,8 @@ export class ShardsCommand extends Command {
 		lines.push(`${emoji('music_note')} **플레이어**: ${this.container.audio?.players?.size ?? 0}개`);
 		lines.push(`${emoji('disk')} **메모리**: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`);
 
-		const containerComponent = createContainer();
-		containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
-
 		await interaction.editReply({
-			components: [containerComponent],
+			components: [notice(lines.join('\n'))],
 			flags: [MessageFlags.IsComponentsV2]
 		});
 	}

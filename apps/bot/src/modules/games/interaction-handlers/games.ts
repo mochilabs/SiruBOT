@@ -1,11 +1,9 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction } from 'discord.js';
-import { rpsChoiceContainer, rpsLabels } from '../commands/rps.ts';
+import { MessageFlags, type ButtonInteraction } from 'discord.js';
+import { rpsChoiceView, rpsResultView } from '../view/rps.ts';
 import { getRpsStats, recordGameResult, type GameResult } from '../utils/gameRecords.ts';
-import { textContainer } from '../utils/textContainer.ts';
-
-const rpsIcons = () => [emoji('scissors'), emoji('fist'), emoji('wave')] as const;
+import { textContainer } from '../view/textContainer.ts';
 
 /** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
 async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {
@@ -23,30 +21,6 @@ async function resolveStreakLine(userId: string, outcome: number): Promise<strin
 		return broken;
 	}
 	return before.streak >= 2 ? `${emoji('fist_bump')} ${before.streak}연승 유지 중 (최고 ${before.best}연승)` : null;
-}
-
-function rpsResultContainer(displayName: string, userPick: number, botPick: number, streakLine: string | null) {
-	const outcome = (userPick - botPick + 3) % 3;
-	// 승·무는 앱 이모지를 쓰지만, 앱 이모지 표(emoji-ids.json)에 패배 계열 이모지가 없어 패만 유니코드를 유지해요
-	const resultText = outcome === 0 ? `${emoji('cd')} 비겼어요!` : outcome === 1 ? `${emoji('party')} 이겼어요!` : `${emoji('sad')} 졌어요!`;
-	const resultEmoji = outcome === 0 ? emoji('fist_bump') : outcome === 1 ? emoji('smile') : emoji('melt');
-
-	const lines = [
-		`### ${emoji('fist')} 가위바위보 결과`,
-		`**${displayName}** 님: ${rpsIcons()[userPick]} ${rpsLabels[userPick]}`,
-		`**봇**: ${rpsIcons()[botPick]} ${rpsLabels[botPick]}`,
-		'',
-		`**${resultEmoji} ${resultText}**`
-	];
-	if (streakLine) lines.push(streakLine);
-
-	const container = textContainer(lines);
-	container.addActionRowComponents(
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId('game:rps:again').setLabel('다시하기').setEmoji(emoji('repeat')).setStyle(ButtonStyle.Secondary)
-		)
-	);
-	return container;
 }
 
 export default class GamesInteractionHandler extends InteractionHandler {
@@ -70,7 +44,7 @@ export default class GamesInteractionHandler extends InteractionHandler {
 
 			if (arg === 'again') {
 				await interaction.editReply({
-					components: [rpsChoiceContainer(interaction.user.displayName)],
+					components: [rpsChoiceView(interaction.user.displayName)],
 					flags: [MessageFlags.IsComponentsV2]
 				});
 				return;
@@ -89,7 +63,7 @@ export default class GamesInteractionHandler extends InteractionHandler {
 			const outcome = (userPick - botPick + 3) % 3;
 			const streakLine = await resolveStreakLine(interaction.user.id, outcome);
 			await interaction.editReply({
-				components: [rpsResultContainer(interaction.user.displayName, userPick, botPick, streakLine)],
+				components: [rpsResultView(interaction.user.displayName, userPick, botPick, streakLine)],
 				flags: [MessageFlags.IsComponentsV2]
 			});
 			return;

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { emoji } from '@sirubot/utils';
 import { container, UserError } from '@sapphire/framework';
 import {
 	ActionRowBuilder,
@@ -9,7 +10,7 @@ import {
 	type ChatInputCommandInteraction,
 	type ButtonInteraction
 } from 'discord.js';
-import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from '../view/playlist.ts';
+import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from './playlist.ts';
 import { notice } from '../../general/view/notice.ts';
 import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 
@@ -18,7 +19,7 @@ export async function addPlaylistQuery(userId: string, name: string, query: stri
 	if (!node)
 		throw new UserError({
 			identifier: 'playlist_search_unavailable',
-			message: '지금 음악을 검색할 수 없어요. 잠시 후 다시 추가해 주세요.',
+			message: `${emoji('error')} 지금 음악을 검색할 수 없어요. 잠시 후 다시 추가해 주세요.`,
 			context: { ephemeral: true }
 		});
 	const result = await node.search({ query, source: 'ytsearch' }, { id: userId });
@@ -26,7 +27,7 @@ export async function addPlaylistQuery(userId: string, name: string, query: stri
 	if (!track)
 		throw new UserError({
 			identifier: 'playlist_search_empty',
-			message: '곡을 찾지 못했어요. 제목이나 주소를 확인해 주세요.',
+			message: `${emoji('error')} 곡을 찾지 못했어요. 제목이나 주소를 확인해 주세요.`,
 			context: { ephemeral: true }
 		});
 	await container.playlistService.addTrack(userId, name, track);
@@ -43,7 +44,7 @@ export async function openPlaylistPanel(
 	if (options.name && !initial)
 		throw new UserError({
 			identifier: 'playlist_missing',
-			message: '플레이리스트를 찾을 수 없어요. /플레이리스트 목록에서 다시 골라 주세요.',
+			message: `${emoji('error')} 플레이리스트를 찾을 수 없어요. /플레이리스트 목록에서 다시 골라 주세요.`,
 			context: { ephemeral: true }
 		});
 	let state: LibraryState = initial
@@ -128,14 +129,14 @@ export async function openPlaylistPanel(
 	collector.on('collect', async (component) => {
 		if (component.user.id !== interaction.user.id || !component.inCachedGuild()) {
 			await component.reply({
-				components: [notice('본인의 /플레이리스트 목록을 열어 주세요.')],
+				components: [notice(`${emoji('error')} 본인의 /플레이리스트 목록을 열어 주세요.`)],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
 		}
 		if (busy || expired) {
 			await component.reply({
-				components: [notice('이전 요청을 처리 중이에요. 잠시 후 다시 선택해 주세요.')],
+				components: [notice(`${emoji('error')} 이전 요청을 처리 중이에요. 잠시 후 다시 선택해 주세요.`)],
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral]
 			});
 			return;
@@ -187,7 +188,7 @@ export async function openPlaylistPanel(
 		expired = true;
 		void interaction
 			.editReply({
-				components: [notice('보관함 사용 시간이 지났어요. /플레이리스트 목록 또는 /즐겨찾기 목록으로 다시 열어 주세요.')],
+				components: [notice(`${emoji('error')} 보관함 사용 시간이 지났어요. /플레이리스트 목록 또는 /즐겨찾기 목록으로 다시 열어 주세요.`)],
 				flags: [MessageFlags.IsComponentsV2]
 			})
 			.catch(() => undefined);

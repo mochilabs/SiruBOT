@@ -12,11 +12,12 @@ vi.mock('@sapphire/framework', async (importOriginal) => {
 
 import { AudioService } from './audioService.ts';
 
-function makePlayer(serverPlayer: unknown) {
+function makePlayer(serverPlayer: unknown, queuedEncoded: string | null = 'x') {
 	return {
 		guildId: 'g',
 		playing: false,
 		paused: false,
+		queue: { current: queuedEncoded === null ? null : { encoded: queuedEncoded } },
 		node: { fetchPlayer: vi.fn(async () => serverPlayer) },
 		play: vi.fn()
 	} as any;
@@ -41,5 +42,12 @@ describe('ensurePlayback', () => {
 		player.paused = true;
 		await new AudioService().ensurePlayback(player);
 		expect(player.play).toHaveBeenCalledWith({ paused: false });
+	});
+
+	it('서버에 이전 곡이 남아 있으면 보정하지 않고 큐의 현재 곡을 play()로 시작한다', async () => {
+		const player = makePlayer({ track: { encoded: 'old' }, paused: false }, 'new');
+		await new AudioService().ensurePlayback(player);
+		expect(player.play).toHaveBeenCalledTimes(1);
+		expect(player.playing).toBe(false);
 	});
 });

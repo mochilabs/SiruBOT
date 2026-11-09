@@ -26,7 +26,22 @@ export type IconName =
 	| 'volume-x'
 	| 'volume-1'
 	| 'volume-2'
-	| 'key';
+	| 'key'
+	| 'gift'
+	| 'star'
+	| 'crown'
+	| 'zodiac-aries'
+	| 'zodiac-taurus'
+	| 'zodiac-gemini'
+	| 'zodiac-cancer'
+	| 'zodiac-leo'
+	| 'zodiac-virgo'
+	| 'zodiac-libra'
+	| 'zodiac-scorpio'
+	| 'zodiac-sagittarius'
+	| 'zodiac-capricorn'
+	| 'zodiac-aquarius'
+	| 'zodiac-pisces';
 
 interface IconDef {
 	subpaths?: string[];
@@ -123,6 +138,46 @@ const ICONS: Record<IconName, IconDef> = {
 	key: {
 		subpaths: ['m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4', 'm21 2-9.6 9.6'],
 		circles: [[7.5, 15.5, 5.5]]
+	},
+	gift: {
+		subpaths: ['M12 7v14', 'M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8', 'M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5'],
+		rects: [[3, 7, 18, 4, 1]]
+	},
+	star: {
+		subpaths: [
+			'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z'
+		]
+	},
+	'zodiac-aries': { subpaths: ['M12 21V9', 'M12 9a4.5 4.5 0 0 0-4.5-4.5A3.5 3.5 0 0 0 4 8', 'M12 9a4.5 4.5 0 0 1 4.5-4.5A3.5 3.5 0 0 1 20 8'] },
+	'zodiac-taurus': { subpaths: ['M5 3a7 7 0 0 0 14 0'], circles: [[12, 15, 5]] },
+	'zodiac-gemini': { subpaths: ['M5 4c4 2.2 10 2.2 14 0', 'M5 20c4-2.2 10-2.2 14 0', 'M9 3.5v17', 'M15 3.5v17'] },
+	'zodiac-cancer': {
+		subpaths: ['M4.5 10C4.5 6 8 5 12 5s7 1 9 4', 'M19.5 14c0 4-3.5 5-7.5 5s-7-1-9-4'],
+		circles: [
+			[7, 10, 2.5],
+			[17, 14, 2.5]
+		]
+	},
+	'zodiac-leo': { subpaths: ['M10 16V8a4.5 4.5 0 0 1 9 0c0 4-2 6-2 10a2.5 2.5 0 0 0 4.5 1.5'], circles: [[7, 16, 3]] },
+	'zodiac-virgo': { subpaths: ['M3 6c1.5 0 2 1 2 3v10', 'M5 9c0-2 1.5-3 3-3s3 1 3 3v10', 'M11 9c0-2 1.5-3 3-3s3 1 3 3v8c0 3 1.5 5 4 5'] },
+	'zodiac-libra': { subpaths: ['M3 17h4.8a5 5 0 1 1 8.4 0H21', 'M3 21h18'] },
+	'zodiac-scorpio': {
+		subpaths: [
+			'M4 5v13',
+			'M4 9c0-2 1.5-3.5 3.2-3.5S10.5 7 10.5 9v9',
+			'M10.5 9c0-2 1.5-3.5 3.2-3.5S17 7 17 9v9c0 2 1 3 3 3h1',
+			'M19 18.5l2.5 2.5-2.5 2.5'
+		]
+	},
+	'zodiac-sagittarius': { subpaths: ['M4 20L20 4', 'M10 4h10v10', 'M6 12l6 6'] },
+	'zodiac-capricorn': { subpaths: ['M3 5c2.5 0 3.5 2 4 4v8', 'M7 9c0-2 2-4 4-4s3.5 2 3.5 4v8', 'M14.5 17c0-2.5 2-4.5 4-4.5a3 3 0 0 1 0 6'] },
+	'zodiac-aquarius': { subpaths: ['M3 9c2-2.5 3.5-2.5 5.5 0s3.5 2.5 5.5 0 3.5-2.5 6 0', 'M3 16c2-2.5 3.5-2.5 5.5 0s3.5 2.5 5.5 0 3.5-2.5 6 0'] },
+	'zodiac-pisces': { subpaths: ['M6 3a14 14 0 0 1 0 18', 'M18 3a14 14 0 0 0 0 18', 'M4 12h16'] },
+	crown: {
+		subpaths: [
+			'M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z',
+			'M5 21h14'
+		]
 	}
 };
 
