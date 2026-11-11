@@ -12,12 +12,12 @@
  *   data-api가 그대로 400으로 전달해 대시보드에서 안내해요.
  * - 어떤 경우에도 절대 throw하지 않아요 — 처리 실패는 대시보드의 타임아웃 폴백으로 이어져요.
  */
-import { discordApiErrorText } from '../lib/discordErrorText.ts';
+import { discordApiErrorText } from '../../../lib/discordErrorText.ts';
 import { container } from '@sapphire/framework';
 import { JTC_SETUP_REQUEST_CHANNEL, jtcSetupRequestSchema, ManagedRedisSubscriber } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import type { JtcSetupResponse } from '@sirubot/utils';
-import type { ServiceLogger } from './types.ts';
+import type { ServiceLogger } from '../../../services/types.ts';
 
 /** 카테고리 채널이 아니거나 존재하지 않을 때 tempVoiceService가 던지는 오류 메시지 */
 const NOT_CATEGORY_MESSAGE = 'selected channel is not a category';

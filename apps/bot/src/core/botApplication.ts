@@ -26,7 +26,7 @@ import { TicketService } from '../features/tickets/index.ts';
 import { RolePanelService, RoleValidationResponder } from '../features/role-panels/index.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { PlayerWebResponder } from '../services/playerWebResponder.ts';
-import { JtcSetupResponder } from '../services/jtcSetupResponder.ts';
+import { JtcSetupResponder } from '../features/temp-voice/index.ts';
 import { SocialWebhookResponder } from '../services/socialWebhookResponder.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../services/memberGreetingService.ts';

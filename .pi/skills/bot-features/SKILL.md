@@ -15,8 +15,8 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 - Lavalink filters/playback internals belong to bot-ops; here only cover pipeline impact of these features.
 
 ## Temp voice channels
-- Core: `services/tempVoiceService.ts` (create/delete, ownership, settings). Listeners: `modules/voice/listeners/tempVoiceState.ts` (VoiceState → delegates to service), `tempVoiceChannelDelete.ts` (delete cleanup).
-- JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts:178`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `services/jtcSetupResponder.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
+- Core: `services/tempVoiceService.ts` (create/delete, ownership, settings). Listeners: `features/temp-voice/discord/listeners/tempVoiceState.ts` (VoiceState → delegates to service), `tempVoiceChannelDelete.ts` (delete cleanup).
+- JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts:178`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetupResponder.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
 
 ## Games
 - `modules/games/commands/`: dice, rps, ohaasa, guess, checkin. Single interaction handler `modules/games/interaction-handlers/games.ts` — customId `game:<type>:<args>` convention; new games use this pattern. Ohaasa: zodiac mapping in `games/utils/ohaasaService.ts`; translated horoscope data comes from data-api `/v1/ohaasa` (`services/dataApiClient.ts`).
