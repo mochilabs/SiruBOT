@@ -140,13 +140,13 @@ const musicPauseTool: AiTool = {
 
 const musicSkipTool: AiTool = {
 	name: 'music_skip',
-	description: '현재 재생 중인 곡을 건너뛰고 다음 곡을 재생해요.',
+	description: '현재 재생 중인 곡을 건너뛰고 다음 곡을 재생해요. 대기열이 비어 있으면 현재 곡을 끝내요.',
 	properties: {},
 	required: [],
 	status: '시루가 다음 곡으로 넘기는 중..',
 	execute: async (_args, ctx) => {
 		const actor = musicActor(ctx);
-		// 인가·현재 곡·다음 곡 확인과 mixer 예열 슬롯 정리를 포함한 건너뛰기는 공용 유스케이스가 맡아요.
+		// 인가·현재 곡 확인과 mixer 예열 슬롯 정리를 포함한 건너뛰기는 공용 유스케이스가 맡아요.
 		await withAppError(() => container.music.skipNow(actor));
 		const player = container.audio.getPlayer(actor.guildId);
 		const next = player ? nowPlayingTrack(player) : null;

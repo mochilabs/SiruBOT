@@ -1,8 +1,7 @@
 import { emoji } from '@sirubot/utils';
-import { MessageFlags, PermissionFlagsBits, type ButtonInteraction, type GuildMember, type StringSelectMenuInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction } from 'discord.js';
 import { errorView } from '../../../lib/errorView.ts';
-import { checkDJOrAlone } from './permissionCheck.ts';
-import { isInBotVoice as isActorInBotVoice } from '../../../features/music/application/access.ts';
+import { checkDJOrAlone, checkInBotVoice } from './permissionCheck.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 type ControllerInteraction = ButtonInteraction<'cached'> | StringSelectMenuInteraction<'cached'>;
@@ -23,16 +22,8 @@ export async function replyGuardError(interaction: ControllerInteraction, messag
 	});
 }
 
-/** 관리자는 음성 채널 밖에서도 허용, 일반 유저는 봇과 같은 음성 채널이어야 해요. (판정은 음악 제어 인가 정책과 같은 구현을 써요.) */
-export function isInBotVoice(member: GuildMember, botVoiceChannelId: string | null): boolean {
-	return isActorInBotVoice(
-		{ isAdministrator: member.permissions.has(PermissionFlagsBits.Administrator), voiceChannelId: member.voice.channelId },
-		botVoiceChannelId
-	);
-}
-
 /**
- * 음성 채널 → DJ → 플레이어 존재 순으로 검사해요. 거절하면 이미 응답했으니 `null`을 돌려줘요.
+ * 음성 채널(원격 권한자는 면제) → DJ → 플레이어 존재 순으로 검사해요. 거절하면 이미 응답했으니 `null`을 돌려줘요.
  * `djMessage`가 없으면 DJ 검사를 건너뛰어요.
  */
 export async function guardPlayerAccess(
@@ -41,7 +32,7 @@ export async function guardPlayerAccess(
 	djMessage?: string
 ): Promise<CustomPlayer | null> {
 	const botVoiceChannelId = interaction.guild.members.me?.voice.channelId ?? player?.voiceChannelId ?? null;
-	if (!isInBotVoice(interaction.member, botVoiceChannelId)) {
+	if (!(await checkInBotVoice(interaction.guildId, interaction.member, botVoiceChannelId))) {
 		await replyGuardError(interaction, GUARD_MESSAGES.notInSameVoice);
 		return null;
 	}

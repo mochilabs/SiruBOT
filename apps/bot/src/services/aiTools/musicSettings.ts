@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 import { queueRelatedUpfront } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
@@ -139,20 +140,34 @@ export const musicSettingsSetTool: AiTool = {
 	status: '시루가 음악 설정을 변경하는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
-		// 볼륨·반복은 공용 유스케이스가 인가해요 — 그 외 설정 항목이 함께 오면 설정 권한(서버 관리자 또는 DJ 역할)도 요구해요.
+		// 볼륨·반복은 재생 중인 플레이어가 있으면 듣는 사람에게 바로 영향을 주므로 공용 유스케이스(재생 제어 정책)가 인가해요.
+		// 플레이어가 없으면 저장된 기본값만 바꾸는 것이라 다른 설정 항목처럼 설정 권한(서버 관리자 또는 DJ 역할)을 요구해요.
 		const settingKeys = Object.keys(args).filter((key) => args[key] !== undefined && args[key] !== null);
-		if (settingKeys.some((key) => key !== 'volume' && key !== 'repeat')) await requireMusicSettingsPermission(ctx);
+		const hasPlayer = Boolean(container.audio?.getPlayer?.(guildId));
+		if (!hasPlayer || settingKeys.some((key) => key !== 'volume' && key !== 'repeat')) await requireMusicSettingsPermission(ctx);
 
 		const updated: Record<string, unknown> = {};
 
 		if (args.volume !== undefined && args.volume !== null) {
-			const { volume: updatedVol } = await withAppError(() => container.music.setVolume(musicActor(ctx), Math.round(Number(args.volume))));
-			updated.volume = updatedVol;
+			const volume = Math.round(Number(args.volume));
+			if (hasPlayer) {
+				updated.volume = (await withAppError(() => container.music.setVolume(musicActor(ctx), volume))).volume;
+			} else {
+				if (!Number.isInteger(volume) || volume < MUSIC_VOLUME_MIN || volume > MUSIC_VOLUME_MAX) {
+					throw new Error(`노래 볼륨은 ${MUSIC_VOLUME_MIN}부터 ${MUSIC_VOLUME_MAX}까지 설정할 수 있어요.`);
+				}
+				updated.volume = (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume;
+			}
 		}
 
 		if (args.repeat !== undefined && args.repeat !== null) {
-			const { mode: updatedRepeat } = await withAppError(() => container.music.setRepeat(musicActor(ctx), String(args.repeat)));
-			updated.repeat = updatedRepeat;
+			const repeat = String(args.repeat);
+			if (hasPlayer) {
+				updated.repeat = (await withAppError(() => container.music.setRepeat(musicActor(ctx), repeat))).mode;
+			} else {
+				if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('잘못된 반복 모드 값이에요.');
+				updated.repeat = await guildPlayback.setRepeat(container.guildService, guildId, repeat);
+			}
 		}
 
 		if (args.autoplay !== undefined && args.autoplay !== null) {

@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '../lib/appError.ts';
 import { PlayerWebResponder } from './playerWebResponder.ts';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-vi.mock('./guildSettings/playback.ts', async (orig) => ({ ...(await orig()), hasDJRole: vi.fn().mockResolvedValue(false) }));
+vi.mock('./guildSettings/playback.ts', async (orig) => ({
+	...(await orig()),
+	hasDJRole: vi.fn().mockResolvedValue(false),
+	getDJRole: vi.fn().mockResolvedValue(null)
+}));
 
 const harness = vi.hoisted(() => ({ receive: null as null | ((raw: string) => void) }));
 vi.mock('@sirubot/utils', async (original) => ({
@@ -27,15 +31,38 @@ describe('web player permissions', () => {
 		vi.restoreAllMocks();
 	});
 	it.each([
-		['manager', PermissionsBitField.Flags.ManageGuild, true],
-		['administrator', PermissionsBitField.Flags.Administrator, true],
-		['member', 0n, false]
-	])('responds to voice context for a real %s permission object without throwing', async (_, flags, canControl) => {
+		// 봇이 음성 채널에 없고 요청자도 미접속 — 원격 권한자는 제어는 되지만 곡 추가는 들어갈 채널이 없어 안 돼요
+		['manager', PermissionsBitField.Flags.ManageGuild, null, null, { canControl: true, canPlay: false, inVoice: false }],
+		['administrator', PermissionsBitField.Flags.Administrator, null, null, { canControl: true, canPlay: false, inVoice: false }],
+		['member', 0n, null, null, { canControl: false, canPlay: false, inVoice: false }],
+		// 봇이 재생 중 — 원격 권한자는 채널 밖에서도 둘 다, 일반 사용자는 같은 채널에서만 돼요
+		['remote manager', PermissionsBitField.Flags.ManageGuild, null, 'vc-bot', { canControl: true, canPlay: true, inVoice: false }],
+		['member in the bot channel', 0n, 'vc-bot', 'vc-bot', { canControl: true, canPlay: true, inVoice: true }],
+		['member in another channel', 0n, 'vc-other', 'vc-bot', { canControl: false, canPlay: false, inVoice: true }]
+	])('responds to voice context for a real %s permission object without throwing', async (_, flags, memberChannel, botChannel, voice) => {
 		const publish = vi.fn();
 		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
-		const member = { ...memberBase, permissions: new PermissionsBitField(flags) };
+		const member = {
+			...memberBase,
+			voice: { channelId: memberChannel, channel: memberChannel ? { members: { filter: () => ({ size: 2 }) } } : null },
+			permissions: new PermissionsBitField(flags)
+		};
 		Object.assign(container, {
-			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
+			client: {
+				guilds: {
+					cache: new Map([
+						[
+							'guild',
+							{
+								id: 'guild',
+								members: { cache: new Map([['user', member]]), me: { voice: { channelId: botChannel } } },
+								channels: { cache: new Map() }
+							}
+						]
+					])
+				}
+			},
+			audio: { getPlayer: vi.fn().mockReturnValue(null) },
 			guildService: {},
 			redisStore: { publishPlayerWebResponse: publish }
 		});
@@ -44,7 +71,7 @@ describe('web player permissions', () => {
 			JSON.stringify({ requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'guild', userId: 'user', kind: 'voice-context' })
 		);
 		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
-		expect(JSON.parse(publish.mock.calls[0][0])).toMatchObject({ voice: { canControl, inVoice: false } });
+		expect(JSON.parse(publish.mock.calls[0][0])).toMatchObject({ voice });
 		expect(logger.error).not.toHaveBeenCalled();
 	});
 	it.each(['search', 'play', 'control'] as const)('checks real permissions before %s without the generic exception', async (kind) => {
@@ -52,7 +79,11 @@ describe('web player permissions', () => {
 		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 		const member = { ...memberBase, permissions: new PermissionsBitField(PermissionsBitField.Flags.ManageGuild) };
 		Object.assign(container, {
-			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
+			client: {
+				guilds: {
+					cache: new Map([['guild', { id: 'guild', members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]])
+				}
+			},
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
 			music: { skipNow: vi.fn().mockRejectedValue(new AppError('not_found', '현재 곡이 없어요.')) },
 			guildService: {},
@@ -77,7 +108,12 @@ describe('web player permissions', () => {
 		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 		const member = { ...memberBase, permissions: new PermissionsBitField(PermissionsBitField.Flags.ManageGuild) };
 		Object.assign(container, {
-			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
+			client: {
+				guilds: {
+					cache: new Map([['guild', { id: 'guild', members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]])
+				}
+			},
+			audio: { getPlayer: vi.fn().mockReturnValue(null) },
 			guildService: {},
 			redisStore: { publishPlayerWebResponse: publish }
 		});
@@ -103,7 +139,9 @@ describe('web player permissions', () => {
 			const member = { ...memberBase, permissions: new PermissionsBitField(0n) };
 			Object.assign(container, {
 				client: {
-					guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) }
+					guilds: {
+						cache: new Map([['guild', { id: 'guild', members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]])
+					}
 				},
 				audio: { getPlayer: vi.fn().mockReturnValue(player) },
 				guildService: {},

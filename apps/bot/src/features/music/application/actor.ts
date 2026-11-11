@@ -9,8 +9,10 @@ export interface Actor {
 	userId: string;
 	/** 요청자가 접속한 음성 채널 (미접속이면 null) */
 	voiceChannelId: string | null;
-	/** Administrator 권한 보유 여부 — 음성 채널 조건을 면제받는 유일한 경우예요 */
+	/** Administrator 권한 보유 여부 */
 	isAdministrator: boolean;
+	/** 서버 관리(ManageGuild) 권한 보유 여부 — Administrator·DJ 역할과 함께 음성 채널 밖 원격 제어가 허용돼요 */
+	canManageGuild: boolean;
 	/** 요청자가 가진 역할 ID (DJ 역할 판정용) */
 	roleIds: ReadonlySet<string>;
 	/** 요청자의 음성 채널에 있는 봇이 아닌 참가자 수 (미접속이면 0) — '혼자 있을 때' 판정용 */
@@ -25,6 +27,7 @@ export function actorFromMember(member: GuildMember): Actor {
 		userId: member.id,
 		voiceChannelId: member.voice.channelId,
 		isAdministrator: member.permissions.has(PermissionFlagsBits.Administrator),
+		canManageGuild: member.permissions.has(PermissionFlagsBits.ManageGuild),
 		roleIds: new Set(member.roles.cache.keys()),
 		humansInVoiceChannel: voiceChannel ? voiceChannel.members.filter((voiceMember) => !voiceMember.user.bot).size : 0
 	};

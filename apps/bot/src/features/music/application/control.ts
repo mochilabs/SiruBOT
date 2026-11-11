@@ -98,8 +98,8 @@ export interface MusicControl {
 	/** 컨트롤러를 지우고 대기열을 비운 뒤 재생을 멈추고 음성 채널에서 나가요. 플레이어가 없으면 거절해요. */
 	stop(actor: Actor): Promise<{ stopped: true }>;
 	/**
-	 * 투표 없이 현재 곡을 바로 건너뛰어요. 현재 곡과 다음에 재생할 대기곡이 있어야 해요.
-	 * `to`가 있으면 그 번호(1부터)의 대기곡부터 재생해요. 투표 건너뛰기(/건너뛰기)는 이 유스케이스가 아니라 skipPolicy가 맡아요.
+	 * 투표 없이 현재 곡을 바로 건너뛰어요. 대기열이 비어 있으면 현재 곡을 끝내요 (추천곡이 예열돼 있으면 그 곡으로 넘어가요).
+	 * `to`가 있으면 그 번호(1부터)의 대기곡부터 재생해요 — 이때는 대기열에 곡이 있어야 해요. 투표 건너뛰기(/건너뛰기)는 이 유스케이스가 아니라 skipPolicy가 맡아요.
 	 */
 	skipNow(actor: Actor, options?: { to?: number }): Promise<{ skipped: true }>;
 	/** 이전에 재생한 곡을 다시 재생해요. 플레이어가 없거나 재생 기록이 비어 있으면 거절해요. 현재 곡이 없어도 돼요. */
@@ -201,7 +201,7 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 			if (to !== undefined && (!Number.isInteger(to) || to < 1)) {
 				throw new AppError('invalid_input', `${emoji('error')} 건너뛸 곡 번호가 올바르지 않아요.`, { ephemeral: true });
 			}
-			if (player.queue.tracks.length === 0) {
+			if (to !== undefined && player.queue.tracks.length === 0) {
 				throw new AppError('not_found', `${emoji('error')} 대기열에 곡이 없어요.`, { ephemeral: true });
 			}
 			await mixer.skip(player, to);

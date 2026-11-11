@@ -51,7 +51,15 @@ vi.mock('@sapphire/framework', () => ({
 	// controllerPayload 빌더가 직접 import하는 전역 container — pinned 조회만 필요하다.
 	container: { guildService: {} }
 }));
-vi.mock('../utils/permissionCheck.ts', () => ({ checkDJOrAlone: mocks.allowed }));
+// 음성 채널 조건은 픽스처 멤버로 판정해요 — 권한 보유자(permissions.has)는 원격 권한자로 면제돼요. 정책 자체는 access.test.ts가 검증해요.
+vi.mock('../utils/permissionCheck.ts', () => ({
+	checkDJOrAlone: mocks.allowed,
+	checkInBotVoice: async (
+		_guildId: string,
+		member: { permissions: { has(): boolean }; voice: { channelId: string | null } },
+		botVoiceChannelId: string | null
+	) => member.permissions.has() || (member.voice.channelId !== null && (botVoiceChannelId === null || member.voice.channelId === botVoiceChannelId))
+}));
 vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({
 	getCachedNowPlayingCard: mocks.cached,
 	getDisplayNowPlayingCard: mocks.cached,

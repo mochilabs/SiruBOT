@@ -16,20 +16,9 @@ import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { playerErrorMessage } from "@/lib/player-error";
-import { createApiFetcher, useGuildResource } from "@/lib/swr";
 import { prettySourceName } from "@/utils";
-interface VoiceContext {
-	inVoice: boolean;
-	voiceChannelName: string | null;
-	canControl: boolean;
-}
 
-interface VoiceContextResponse {
-	voice: VoiceContext | null;
-}
-
-const voiceContextFetcher = createApiFetcher<VoiceContextResponse>("음성 연결 상태를 불러오지 못했어요.");
-
+import { useVoiceContext } from "./voice-context";
 interface TrackSummary {
 	title: string;
 	author: string;
@@ -43,7 +32,7 @@ interface TrackSummary {
 const isPlayableUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
 function VoiceStatusBadge({ guildId }: { guildId: string }) {
-	const { data, error, isLoading } = useGuildResource<VoiceContextResponse>(guildId, "/player/voice-context", { fetcher: voiceContextFetcher });
+	const { data, error, isLoading } = useVoiceContext(guildId);
 
 	if (isLoading) return <SkeletonLine width="72px" height="h-6" />;
 	if (error || !data?.voice) {
@@ -68,7 +57,7 @@ function VoiceStatusBadge({ guildId }: { guildId: string }) {
 				</Badge>
 			)}
 			{!voice.canControl && (
-				<Badge variant="warning">재생 제어는 관리자 또는 DJ 역할이 필요해요</Badge>
+				<Badge variant="warning">제어는 봇과 같은 음성 채널에서 할 수 있어요</Badge>
 			)}
 		</span>
 	);
@@ -146,9 +135,9 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const playPendingRef = useRef(false);
 	const searchAbortRef = useRef<AbortController | null>(null);
 	const lastSearchedRef = useRef<string>("");
-	const { data: voiceData } = useGuildResource<VoiceContextResponse>(guildId, "/player/voice-context", { fetcher: voiceContextFetcher });
-	const canControl = voiceData?.voice?.canControl ?? true;
-	const inVoice = voiceData?.voice?.inVoice ?? true;
+	const { data: voiceData } = useVoiceContext(guildId);
+	// 곡 추가 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요. 값을 모르면(로딩·이전 버전 봇) 열어 두고 봇의 거절 안내에 맡겨요.
+	const canPlay = voiceData?.voice?.canPlay ?? true;
 
 	const showToastError = useCallback(
 		(message: string | null | undefined, fallback: string) => {
@@ -160,8 +149,8 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const playTrack = useCallback(
 		async (uri: string) => {
 			if (playPendingRef.current) return;
-			if (!canControl) {
-				showToastError("재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.", "재생 제어 권한이 없어요.");
+			if (!canPlay) {
+				showToastError("봇과 같은 음성 채널에 접속하면 곡을 추가할 수 있어요.", "지금은 곡을 추가할 수 없어요.");
 				return;
 			}
 			playPendingRef.current = true;
@@ -185,7 +174,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				setPlayingUri(null);
 			}
 		},
-		[canControl, guildId, showToastError, toast],
+		[canPlay, guildId, showToastError, toast],
 	);
 
 	const runSearch = useCallback(
@@ -251,11 +240,11 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 			return;
 		}
 		if (!debouncedQuery || isPlayableUrl(debouncedQuery)) return;
-		if (!inVoice || !canControl) return;
+		if (!canPlay) return;
 		if (lastSearchedRef.current === debouncedQuery) return;
 
 		void runSearch(debouncedQuery, { notifyOnError: false });
-	}, [canControl, debouncedQuery, inVoice, runSearch, trimmedQuery]);
+	}, [canPlay, debouncedQuery, runSearch, trimmedQuery]);
 
 	useEffect(() => {
 		return () => {
@@ -287,7 +276,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	);
 
 	const isUrl = isPlayableUrl(trimmedQuery);
-	const isTypingDebounce = Boolean(trimmedQuery && !isUrl && inVoice && canControl && trimmedQuery !== debouncedQuery);
+	const isTypingDebounce = Boolean(trimmedQuery && !isUrl && canPlay && trimmedQuery !== debouncedQuery);
 	const showLoading = searching || isTypingDebounce;
 
 	return (
@@ -343,14 +332,9 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 					)}
 				</form>
 
-				{!inVoice && (
+				{!canPlay && (
 					<p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
-						음성 채널에 접속한 상태라면 검색 결과에서 바로 재생할 수 있어요.
-					</p>
-				)}
-				{!canControl && (
-					<p className="rounded-card border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
-						재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.
+						봇과 같은 음성 채널에 접속하면 검색 결과에서 바로 재생할 수 있어요.
 					</p>
 				)}
 				{searchNotice && (

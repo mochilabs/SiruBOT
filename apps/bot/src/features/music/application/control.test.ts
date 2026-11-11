@@ -10,6 +10,7 @@ const actor: Actor = {
 	userId: 'user',
 	voiceChannelId: 'vc',
 	isAdministrator: false,
+	canManageGuild: false,
 	roleIds: new Set<string>(),
 	humansInVoiceChannel: 1
 };
@@ -381,11 +382,19 @@ describe('skipNow', () => {
 		expect(skip).not.toHaveBeenCalled();
 	});
 
-	it('대기열이 비어 있으면 건너뛰지 않고 대기열 없음 문구로 거절해요', async () => {
+	it('대기열이 비어 있어도 현재 곡을 건너뛰어요 (재생 종료 또는 추천곡으로 이동)', async () => {
 		const player = new FakePlayer();
 		player.queue = { current: track(), tracks: [], previous: [] };
 		const { control, skip } = harness({ player });
-		const error = await rejection(control.skipNow(actor));
+		await expect(control.skipNow(actor)).resolves.toEqual({ skipped: true });
+		expect(skip).toHaveBeenCalledWith(player, undefined);
+	});
+
+	it('번호를 지정했는데 대기열이 비어 있으면 대기열 없음 문구로 거절해요', async () => {
+		const player = new FakePlayer();
+		player.queue = { current: track(), tracks: [], previous: [] };
+		const { control, skip } = harness({ player });
+		const error = await rejection(control.skipNow(actor, { to: 1 }));
 		expect(error.kind).toBe('not_found');
 		expect(error.ephemeral).toBe(true);
 		expect(error.userMessage).toContain('대기열에 곡이 없어요.');

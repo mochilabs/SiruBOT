@@ -246,7 +246,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handleNext(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		// 인가·현재 곡·다음 곡 확인과 건너뛰기는 유스케이스가 맡아요. 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략해요.
+		// 인가·현재 곡 확인과 건너뛰기는 유스케이스가 맡아요. 다음 곡이 있으면 곧 trackStart가 새 컨트롤러를 보내고, 없으면 mixer가 컨트롤러를 갱신하므로 edit는 생략해요.
 		await this.container.music.skipNow(actorFromMember(interaction.member));
 	}
 

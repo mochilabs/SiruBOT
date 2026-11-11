@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from '../../../lib/appError.ts';
-import { createMusicAccess, isDjOrAlone, isInBotVoice, MUSIC_ACCESS_MESSAGES } from './access.ts';
+import { canAddTracks, canControlMusic, createMusicAccess, hasRemoteControl, isDjOrAlone, isInBotVoice, MUSIC_ACCESS_MESSAGES } from './access.ts';
 import type { Actor } from './actor.ts';
 
 function actor(overrides: Partial<Actor> = {}): Actor {
@@ -9,6 +9,7 @@ function actor(overrides: Partial<Actor> = {}): Actor {
 		userId: 'user',
 		voiceChannelId: 'vc-bot',
 		isAdministrator: false,
+		canManageGuild: false,
 		roleIds: new Set<string>(),
 		humansInVoiceChannel: 3,
 		...overrides
@@ -63,8 +64,13 @@ describe('음성 채널 조건', () => {
 		await expect(access().authorize(actor({ isAdministrator: true, voiceChannelId: 'vc-other' }))).resolves.toBeUndefined();
 	});
 
-	it('DJ 역할이 있어도 음성 채널 조건은 면제되지 않아요', async () => {
-		const error = await rejection(access({ djRole: 'dj' }).authorize(actor({ voiceChannelId: 'vc-other', roleIds: new Set(['dj']) })));
+	it('서버 관리 권한자와 DJ 역할 보유자도 음성 채널 밖에서 통과해요 (원격 제어)', async () => {
+		await expect(access({ djRole: 'dj' }).authorize(actor({ canManageGuild: true, voiceChannelId: null }))).resolves.toBeUndefined();
+		await expect(access({ djRole: 'dj' }).authorize(actor({ voiceChannelId: 'vc-other', roleIds: new Set(['dj']) }))).resolves.toBeUndefined();
+	});
+
+	it('역할이 없는 사용자는 다른 채널에서 거절돼요 (DJ 역할 미설정이어도)', async () => {
+		const error = await rejection(access({ djRole: null }).authorize(actor({ voiceChannelId: 'vc-other' })));
 		expect(error.userMessage).toBe(MUSIC_ACCESS_MESSAGES.sameVoiceRequired());
 	});
 });
@@ -109,7 +115,33 @@ describe('순수 판정 함수', () => {
 	});
 
 	it('isInBotVoice는 같은 채널만 통과시켜요', () => {
-		expect(isInBotVoice(actor(), 'vc-bot')).toBe(true);
-		expect(isInBotVoice(actor(), 'vc-x')).toBe(false);
+		expect(isInBotVoice(actor(), 'vc-bot', null)).toBe(true);
+		expect(isInBotVoice(actor(), 'vc-x', null)).toBe(false);
+	});
+
+	it('hasRemoteControl은 Administrator·서버 관리·DJ 역할만 인정해요', () => {
+		expect(hasRemoteControl(actor(), 'dj')).toBe(false);
+		expect(hasRemoteControl(actor({ isAdministrator: true }), null)).toBe(true);
+		expect(hasRemoteControl(actor({ canManageGuild: true }), null)).toBe(true);
+		expect(hasRemoteControl(actor({ roleIds: new Set(['dj']) }), 'dj')).toBe(true);
+		expect(hasRemoteControl(actor({ roleIds: new Set(['dj']) }), null)).toBe(false);
+	});
+
+	it('canControlMusic은 authorize와 같은 결론을 내요', () => {
+		expect(canControlMusic(actor(), 'vc-bot', null)).toBe(true);
+		expect(canControlMusic(actor(), 'vc-bot', 'dj')).toBe(false);
+		expect(canControlMusic(actor({ humansInVoiceChannel: 1 }), 'vc-bot', 'dj')).toBe(true);
+		expect(canControlMusic(actor({ voiceChannelId: null, canManageGuild: true }), 'vc-bot', 'dj')).toBe(true);
+		expect(canControlMusic(actor({ voiceChannelId: 'vc-x' }), 'vc-bot', null)).toBe(false);
+	});
+
+	it('canAddTracks는 같은 채널이면 누구나, 원격 권한자는 봇이 채널에 있을 때만 밖에서 허용해요', () => {
+		expect(canAddTracks(actor(), 'vc-bot', 'dj')).toBe(true);
+		expect(canAddTracks(actor({ voiceChannelId: 'vc-any' }), null, 'dj')).toBe(true);
+		expect(canAddTracks(actor({ voiceChannelId: 'vc-x' }), 'vc-bot', 'dj')).toBe(false);
+		expect(canAddTracks(actor({ voiceChannelId: null }), 'vc-bot', 'dj')).toBe(false);
+		expect(canAddTracks(actor({ voiceChannelId: null, roleIds: new Set(['dj']) }), 'vc-bot', 'dj')).toBe(true);
+		expect(canAddTracks(actor({ voiceChannelId: 'vc-x', canManageGuild: true }), 'vc-bot', null)).toBe(true);
+		expect(canAddTracks(actor({ voiceChannelId: null, isAdministrator: true }), null, null)).toBe(false);
 	});
 });

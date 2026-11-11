@@ -33,12 +33,13 @@ import type {
 	PlayerWebTrack,
 	PlayerWebVoiceContextRequest
 } from '@sirubot/utils';
-import { MessageFlags, PermissionsBitField, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
+import { MessageFlags, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../modules/audio/view/play.ts';
 import { AppError, plainUserMessage } from '../lib/appError.ts';
 import { actorFromMember } from '../features/music/application/actor.ts';
+import { canAddTracks, canControlMusic } from '../features/music/application/access.ts';
 import type { ServiceLogger } from './types.ts';
 import * as guildChannels from './guildSettings/channels.ts';
 import * as guildPlayback from './guildSettings/playback.ts';
@@ -204,7 +205,7 @@ export class PlayerWebResponder {
 			voice: {
 				inVoice: Boolean(voiceChannelId),
 				voiceChannelName: voiceChannel?.name ?? null,
-				canControl: await this.hasControlPermission(request.guildId, member)
+				...(await this.musicCapabilities(guild, member))
 			}
 		});
 	}
@@ -388,7 +389,7 @@ export class PlayerWebResponder {
 	}
 
 	/**
-	 * 재생 계열(search/play) 공통 검증 — 멤버·권한·음성 접속·채널 충돌.
+	 * 재생 계열(search/play) 공통 검증 — 멤버·곡 추가 정책(음성 접속·채널 충돌).
 	 * 성공 시 재생에 필요한 식별자와 요청자 표시를 돌려줘요.
 	 */
 	private async verifyPlaybackRequest(
@@ -398,22 +399,22 @@ export class PlayerWebResponder {
 		const member = await this.fetchMember(guild, userId);
 		if (!member) return { error: '서버에서 회원님을 찾을 수 없어요.' };
 
-		if (!(await this.hasControlPermission(guild.id, member))) {
-			return { error: `재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.` };
-		}
-
-		const voiceChannelId = member.voice?.channelId ?? null;
-		if (!voiceChannelId) return { error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
-
-		const player = container.audio.getPlayer(guild.id);
-		if (player?.voiceChannelId && player.voiceChannelId !== voiceChannelId) {
+		// 곡 추가 정책(슬래시 /재생과 동일): 봇과 같은 음성 채널이면 누구나, 원격 권한자는 봇이 채널에 있으면 밖에서도 추가할 수 있어요.
+		const actor = actorFromMember(member);
+		const botVoiceChannelId = this.botVoiceChannelId(guild);
+		const djRoleId = await guildPlayback.getDJRole(container.guildService, guild.id);
+		if (!canAddTracks(actor, botVoiceChannelId, djRoleId)) {
+			if (!actor.voiceChannelId) return { error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
 			// 웹에서는 <#id> 멘션이 렌더되지 않으므로 채널 이름으로 풀어서 보내요.
-			const playingChannelName = guild.channels.cache.get(player.voiceChannelId)?.name;
+			const playingChannelName = botVoiceChannelId ? guild.channels.cache.get(botVoiceChannelId)?.name : undefined;
 			const where = playingChannelName ? `다른 음성 채널(${playingChannelName})` : '다른 음성 채널';
 			return {
 				error: `${where}에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
 			};
 		}
+		// 봇이 이미 채널에 있으면 그 채널에 추가하고(원격 권한자 포함), 없으면 요청자의 채널로 들어가요.
+		const voiceChannelId = botVoiceChannelId ?? actor.voiceChannelId;
+		if (!voiceChannelId) return { error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
 
 		// 텍스트 채널 정책: 고정 채널 우선, 없으면 시스템 채널 (컨트롤러/피드백 메시지 대상)
 		const pinned = await guildChannels.getPinnedChannel(container.guildService, guild.id);
@@ -431,11 +432,20 @@ export class PlayerWebResponder {
 		return guild.members.fetch(userId).catch(() => null);
 	}
 
-	/** 재생 제어 권한 — Manage Guild/Administrator 또는 DJ 역할 (봇 캐시가 유일한 판정 근거예요) */
-	private async hasControlPermission(guildId: string, member: GuildMember): Promise<boolean> {
-		if (member.permissions.has(PermissionsBitField.Flags.ManageGuild) || member.permissions.has(PermissionsBitField.Flags.Administrator))
-			return true;
-		return guildPlayback.hasDJRole(container.guildService, guildId, member);
+	/** 봇이 접속한 음성 채널 — 음악 제어 인가 정책(`container.music`)과 같은 기준이에요. */
+	private botVoiceChannelId(guild: Guild): string | null {
+		return guild.members.me?.voice.channelId ?? container.audio.getPlayer(guild.id)?.voiceChannelId ?? null;
+	}
+
+	/** 대시보드가 버튼을 미리 비활성화하는 데 쓰는 플래그 — 실제 인가와 같은 정책 함수로 계산해요. */
+	private async musicCapabilities(guild: Guild, member: GuildMember): Promise<{ canPlay: boolean; canControl: boolean }> {
+		const actor = actorFromMember(member);
+		const botVoiceChannelId = this.botVoiceChannelId(guild);
+		const djRoleId = await guildPlayback.getDJRole(container.guildService, guild.id);
+		return {
+			canPlay: canAddTracks(actor, botVoiceChannelId, djRoleId),
+			canControl: canControlMusic(actor, botVoiceChannelId, djRoleId)
+		};
 	}
 
 	/** 재생 피드백 컨테이너 — commandChannel buildFeedback과 동일한 분기(시작/추가)예요 */
