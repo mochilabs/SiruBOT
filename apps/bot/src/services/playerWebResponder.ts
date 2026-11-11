@@ -323,11 +323,10 @@ export class PlayerWebResponder {
 		}
 	}
 
-	// kind: control, 볼륨·일시정지·재생·스킵·정지·반복, 봇 슬래시 커맨드 가드를 웹에 맞게 단순화해요
-	//   volume: 공용 유스케이스 (봇과 같은 음성 채널 + DJ 조건, Administrator만 음성 조건 면제)
-	//   pause/resume/repeat: 공용 유스케이스 (음성 채널 + DJ 조건, repeat는 웹에서 off → track → queue 순환)
-	//   skip: 활성 플레이어 + 봇과 같은 음성 채널 (Discord /skip의 SameVoiceChannel에 대응)
-	//   stop: 활성 플레이어 + 음성 채널 접속 (Discord /stop과 같은 조건)
+	// kind: control, 볼륨·일시정지·재생·스킵·정지·반복
+	//   volume/pause/resume/repeat/stop: 공용 유스케이스(container.music) — 봇과 같은 음성 채널 + DJ 조건, Administrator만 음성 조건 면제.
+	//     repeat는 웹에서 off → track → queue 순으로 순환해요.
+	//   skip: 이번 통합 범위 밖이라 기존 그대로 — 서버 관리자·DJ 역할 + 활성 플레이어 + 봇과 같은 음성 채널
 	private async handleControl(guild: Guild, request: PlayerWebControlRequest): Promise<void> {
 		const { guildId } = request;
 		try {
@@ -376,22 +375,8 @@ export class PlayerWebResponder {
 				});
 				return;
 			}
-			if (request.action === 'stop' && !voiceChannelId) {
-				this.respond({
-					requestId: request.requestId,
-					guildId,
-					kind: 'control',
-					error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}`
-				});
-				return;
-			}
 
-			if (request.action === 'skip') {
-				await container.mixerService.skip(player);
-			} else if (request.action === 'stop') {
-				// 봇 /stop과 같은 공용 흐름 (queueEnd 안내 억제 + mixer 슬롯 정리)
-				await container.audioService.stopPlayback(player);
-			}
+			await container.mixerService.skip(player);
 			this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 		} catch (error) {
 			this.logger.error(
@@ -419,6 +404,9 @@ export class PlayerWebResponder {
 				return true;
 			case 'resume':
 				await container.music.resume(actor);
+				return true;
+			case 'stop':
+				await container.music.stop(actor);
 				return true;
 			case 'repeat': {
 				// 웹 버튼은 모드를 고르지 않고 off → track → queue 순으로 순환해요. 플레이어가 없으면 저장된 길드 설정을 기준으로 해요.

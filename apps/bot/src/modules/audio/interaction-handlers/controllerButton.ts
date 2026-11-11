@@ -36,7 +36,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
-	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'volume']);
+	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
@@ -66,7 +66,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				await this.handleRepeat(interaction, player, subcommand);
 				break;
 			case 'stop':
-				await this.handleStop(interaction, player);
+				await this.handleStop(interaction);
 				break;
 			case 'prev':
 				await this.handlePrev(interaction, player);
@@ -219,9 +219,10 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await this.updateControllerOrFail(interaction, player);
 	}
 
-	private async handleStop(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
+	private async handleStop(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		await this.container.playerNotifier.deleteController(player).catch(() => null);
+		// 인가·컨트롤러 삭제·정지는 유스케이스가 맡아요. 여기서는 눌린 메시지를 정지 화면으로 바꿔요.
+		await this.container.music.stop(actorFromMember(interaction.member));
 		try {
 			await interaction.message.edit({
 				components: [stop()],
@@ -235,7 +236,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				})
 				.catch(() => null);
 		}
-		await this.container.audioService.stopPlayback(player);
 	}
 
 	private async handlePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {

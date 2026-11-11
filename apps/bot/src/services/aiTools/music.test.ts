@@ -4,7 +4,7 @@ import type { AiToolContext } from './types.ts';
 
 const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOrCreatePlayer, connectPlayer, ensurePlayback, search, music, actor } =
 	vi.hoisted(() => ({
-		music: { seek: vi.fn(), pause: vi.fn(), resume: vi.fn(), setVolume: vi.fn(), setRepeat: vi.fn() },
+		music: { seek: vi.fn(), pause: vi.fn(), resume: vi.fn(), setVolume: vi.fn(), setRepeat: vi.fn(), stop: vi.fn() },
 		actor: { guildId: 'g1', userId: 'u1' },
 		getPlayer: vi.fn(),
 		checkDJOrAlone: vi.fn(),
@@ -260,6 +260,19 @@ describe('music_pause ai tool (토글 어댑터)', () => {
 		getPlayer.mockReturnValue({ paused: false });
 		music.pause.mockRejectedValue(new AppError('forbidden', '<:volume_muted:1> DJ 역할이 필요해요.'));
 		await expect(pauseTool.execute({}, ctx)).rejects.toThrow(new Error('DJ 역할이 필요해요.'));
+	});
+});
+
+describe('music_stop ai tool', () => {
+	it('유스케이스에 위임하고 stopped를 돌려준다', async () => {
+		music.stop.mockResolvedValue({ stopped: true });
+		expect(JSON.parse(await tool('music_stop').execute({}, ctx))).toEqual({ status: 'stopped' });
+		expect(music.stop).toHaveBeenCalledWith(actor);
+	});
+
+	it('유스케이스의 거절을 안내 문구 Error로 전달한다', async () => {
+		music.stop.mockRejectedValue(new AppError('not_found', '<:error:1> 재생 중인 곡이 없어요.'));
+		await expect(tool('music_stop').execute({}, ctx)).rejects.toThrow(new Error('재생 중인 곡이 없어요.'));
 	});
 });
 

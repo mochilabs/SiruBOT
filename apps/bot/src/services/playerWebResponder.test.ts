@@ -123,8 +123,12 @@ describe('web player permissions', () => {
 			expect(logger.error).not.toHaveBeenCalled();
 		});
 
-		it.each(['pause', 'resume'] as const)('%s는 해당 유스케이스 하나만 호출하고 성공 응답을 보내요', async (action) => {
-			const music = { pause: vi.fn().mockResolvedValue({ paused: true }), resume: vi.fn().mockResolvedValue({ resumed: true }) };
+		it.each(['pause', 'resume', 'stop'] as const)('%s는 해당 유스케이스 하나만 호출하고 성공 응답을 보내요', async (action) => {
+			const music = {
+				pause: vi.fn().mockResolvedValue({ paused: true }),
+				resume: vi.fn().mockResolvedValue({ resumed: true }),
+				stop: vi.fn().mockResolvedValue({ stopped: true })
+			};
 			const { response } = await control({ action }, music);
 			expect(music[action]).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ guildId: 'guild', userId: 'user' }));
 			expect(response.error).toBeUndefined();

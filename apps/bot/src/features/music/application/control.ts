@@ -60,6 +60,10 @@ export interface MusicControlDeps<P extends PlayerPort> {
 	playback: {
 		/** 멈춰 있던 플레이어가 대기열을 다시 재생하게 해요. */
 		ensurePlayback(player: P): Promise<unknown>;
+		/** 정지 공용 흐름 — queueEnd 안내를 억제하고 대기열·mixer 슬롯을 비운 뒤 재생을 끊고 음성 채널에서 나가요. */
+		stopPlayback(player: P): Promise<unknown>;
+		/** 컨트롤러 메시지를 지워요. */
+		removeController(player: P): Promise<unknown>;
 	};
 }
 
@@ -74,6 +78,8 @@ export interface MusicControl {
 	setRepeat(actor: Actor, mode: string): Promise<{ mode: MusicRepeatMode; playing: boolean }>;
 	/** 현재 곡의 특정 위치(ms)로 이동해요. 실시간 스트림, 음수·비정상 값, 곡 길이 초과는 거절해요. */
 	seek(actor: Actor, positionMs: number): Promise<{ positionMs: number; track: TrackPort }>;
+	/** 컨트롤러를 지우고 대기열을 비운 뒤 재생을 멈추고 음성 채널에서 나가요. 플레이어가 없으면 거절해요. */
+	stop(actor: Actor): Promise<{ stopped: true }>;
 }
 
 export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<P>): MusicControl {
@@ -152,6 +158,16 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 			}
 			await player.seek(positionMs);
 			return { positionMs, track: current };
+		},
+
+		async stop(actor) {
+			await access.authorize(actor);
+			// 현재 곡이 없어도 플레이어가 있으면 멈출 수 있어요 (예: 채팅 TTS만 켜져 음성 채널에 남아 있는 경우).
+			const player = getPlayer(actor.guildId);
+			if (!player) throw new AppError('not_found', `${emoji('error')} 재생 중인 곡이 없어요.`, { ephemeral: true });
+			await playback.removeController(player).catch(() => null);
+			await playback.stopPlayback(player);
+			return { stopped: true };
 		}
 	};
 }

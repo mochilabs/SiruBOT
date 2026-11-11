@@ -42,14 +42,16 @@ function harness(options: { player?: FakePlayer | null; denied?: AppError } = {}
 	const saveRepeat = vi.fn(async (_guildId: string, mode: MusicRepeatMode) => mode);
 	const clearNext = vi.fn(async (_player: FakePlayer) => undefined);
 	const ensurePlayback = vi.fn(async (_player: FakePlayer) => undefined);
+	const stopPlayback = vi.fn(async (_player: FakePlayer) => undefined);
+	const removeController = vi.fn(async (_player: FakePlayer) => undefined);
 	const control = createMusicControl<FakePlayer>({
 		access: { authorize },
 		getPlayer: () => player ?? undefined,
 		settings: { saveVolume, saveRepeat },
 		mixer: { clearNext },
-		playback: { ensurePlayback }
+		playback: { ensurePlayback, stopPlayback, removeController }
 	});
-	return { control, player, authorize, saveVolume, saveRepeat, clearNext, ensurePlayback };
+	return { control, player, authorize, saveVolume, saveRepeat, clearNext, ensurePlayback, stopPlayback, removeController };
 }
 
 async function rejection(promise: Promise<unknown>): Promise<AppError> {
@@ -290,5 +292,50 @@ describe('seek', () => {
 		const { control, player } = harness({ denied });
 		await expect(control.seek(actor, 10)).rejects.toBe(denied);
 		expect(player!.seek).not.toHaveBeenCalled();
+	});
+});
+
+describe('stop', () => {
+	it('인가 뒤 컨트롤러를 지우고 정지해요', async () => {
+		const { control, player, authorize, stopPlayback, removeController } = harness();
+		const order: string[] = [];
+		removeController.mockImplementation(async () => void order.push('removeController'));
+		stopPlayback.mockImplementation(async () => void order.push('stopPlayback'));
+		await expect(control.stop(actor)).resolves.toEqual({ stopped: true });
+		expect(authorize).toHaveBeenCalledWith(actor);
+		expect(removeController).toHaveBeenCalledWith(player);
+		expect(stopPlayback).toHaveBeenCalledWith(player);
+		expect(order).toEqual(['removeController', 'stopPlayback']);
+	});
+
+	it('컨트롤러 삭제가 실패해도 정지는 진행해요', async () => {
+		const { control, removeController, stopPlayback } = harness();
+		removeController.mockRejectedValueOnce(new Error('missing message'));
+		await expect(control.stop(actor)).resolves.toEqual({ stopped: true });
+		expect(stopPlayback).toHaveBeenCalledOnce();
+	});
+
+	it('현재 곡이 없어도 플레이어가 있으면 정지해요 (채팅 TTS만 켜진 경우)', async () => {
+		const player = new FakePlayer();
+		player.queue = { current: null, tracks: [] };
+		const { control, stopPlayback } = harness({ player });
+		await control.stop(actor);
+		expect(stopPlayback).toHaveBeenCalledWith(player);
+	});
+
+	it('플레이어가 없으면 거절해요', async () => {
+		const { control, stopPlayback } = harness({ player: null });
+		const error = await rejection(control.stop(actor));
+		expect(error.kind).toBe('not_found');
+		expect(error.userMessage).toContain('재생 중인 곡이 없어요.');
+		expect(stopPlayback).not.toHaveBeenCalled();
+	});
+
+	it('인가에 실패하면 컨트롤러도 지우지 않아요', async () => {
+		const denied = new AppError('forbidden', 'DJ만 가능해요.');
+		const { control, removeController, stopPlayback } = harness({ denied });
+		await expect(control.stop(actor)).rejects.toBe(denied);
+		expect(removeController).not.toHaveBeenCalled();
+		expect(stopPlayback).not.toHaveBeenCalled();
 	});
 });

@@ -25,14 +25,15 @@ const mocks = vi.hoisted(() => ({
 	setVolume: vi.fn(),
 	pause: vi.fn(),
 	resume: vi.fn(),
-	setRepeat: vi.fn()
+	setRepeat: vi.fn(),
+	stop: vi.fn()
 }));
 const actor = vi.hoisted(() => ({ guildId: 'guild', userId: 'user' }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
 		container = {
 			audio: { getPlayer: mocks.getPlayer },
-			music: { setVolume: mocks.setVolume, pause: mocks.pause, resume: mocks.resume, setRepeat: mocks.setRepeat },
+			music: { setVolume: mocks.setVolume, pause: mocks.pause, resume: mocks.resume, setRepeat: mocks.setRepeat, stop: mocks.stop },
 			guildService: {}
 		};
 	},
@@ -180,10 +181,10 @@ describe('controller button cached rendering', () => {
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
-	it('checks DJ permission for DJ commands (stop, next, prev)', async () => {
+	it('checks DJ permission for DJ commands (next, prev)', async () => {
 		mocks.allowed.mockResolvedValue(false);
 		const { interaction, handler } = context();
-		for (const cmd of ['stop', 'prev', 'next']) {
+		for (const cmd of ['prev', 'next']) {
 			vi.clearAllMocks();
 			mocks.allowed.mockResolvedValue(false);
 			await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: cmd, subcommand: null });
@@ -241,6 +242,29 @@ describe('controller button cached rendering', () => {
 		expect(mocks.setRepeat).toHaveBeenCalledExactlyOnceWith(actor, expected);
 		expect(mocks.allowed).not.toHaveBeenCalled();
 		expect(edit).toHaveBeenCalledTimes(1);
+	});
+
+	it('stop button delegates stopping to the use case and replaces the clicked message with the stop view', async () => {
+		const { edit, interaction, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'stop', subcommand: null });
+		expect(mocks.stop).toHaveBeenCalledExactlyOnceWith(actor);
+		expect(mocks.allowed).not.toHaveBeenCalled();
+		expect(edit).toHaveBeenCalledTimes(1);
+	});
+
+	it('stop button falls back to a follow-up when the controller message is already gone', async () => {
+		const { edit, interaction, handler } = context();
+		edit.mockRejectedValue(Object.assign(new Error('Unknown Message'), { code: 10008 }));
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'stop', subcommand: null });
+		expect(interaction.followUp).toHaveBeenCalledTimes(1);
+	});
+
+	it('stop button does not touch the message when the use case refuses', async () => {
+		const refusal = new AppError('forbidden', 'DJ만 가능해요.', { ephemeral: true });
+		mocks.stop.mockRejectedValue(refusal);
+		const { edit, interaction, handler } = context();
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'stop', subcommand: null })).rejects.toBe(refusal);
+		expect(edit).not.toHaveBeenCalled();
 	});
 
 	it('opens the queue view with every control bound to the opener', async () => {

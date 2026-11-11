@@ -1,8 +1,7 @@
 import { container } from '@sapphire/framework';
-import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { errorView } from '../../../lib/errorView.ts';
 import * as view from '../view/stop.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
 
 export const name = 'stop';
 export const ko = '정지';
@@ -16,25 +15,9 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	if (!interaction.member.voice.channelId) {
-		await interaction.reply({
-			flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-			components: [errorView(`${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`)]
-		});
-		return;
-	}
-
-	const player = container.audio.getPlayer(interaction.guildId);
-	if (!player) {
-		await interaction.reply({
-			flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-			components: [errorView(`${emoji('error')} 재생 중인 곡이 없어요.`)]
-		});
-		return;
-	}
-
 	await interaction.deferReply();
-	await container.audioService.stopPlayback(player);
+	// 인가·플레이어 확인·컨트롤러 삭제·정지는 유스케이스가 맡아요.
+	await container.music.stop(actorFromMember(interaction.member));
 	await interaction.editReply({
 		components: [view.stop()],
 		flags: [MessageFlags.IsComponentsV2]

@@ -164,10 +164,8 @@ const musicStopTool: AiTool = {
 	required: [],
 	status: '시루가 재생을 멈추고 퇴장하는 중..',
 	execute: async (_args, ctx) => {
-		await requireDjOrAlone(ctx);
-		const guildId = requireGuild(ctx);
-		const player = requirePlayer(guildId);
-		await container.audioService.stopPlayback(player);
+		// 인가·플레이어 확인·컨트롤러 삭제·정지는 공용 유스케이스가 맡아요.
+		await withAppError(() => container.music.stop(musicActor(ctx)));
 		return JSON.stringify({ status: 'stopped' });
 	}
 };
