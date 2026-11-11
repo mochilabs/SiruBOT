@@ -27,6 +27,11 @@ const { container } = vi.hoisted(() => ({
 			supportsOutgoingEnd: vi.fn(async () => false),
 			invalidate: vi.fn(async () => undefined)
 		},
+		sponsorBlockService: {
+			prefetch: vi.fn(),
+			queueChanged: vi.fn(),
+			outgoingEndPositionMs: vi.fn(() => undefined)
+		},
 		guildService: {},
 		guildPlayback: { getRelated: vi.fn(async () => false) },
 		guildMixer: {
@@ -42,13 +47,6 @@ const { container } = vi.hoisted(() => ({
 vi.mock('@sapphire/framework', () => ({ container }));
 vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({ ...(await orig()), ...container.guildPlayback }));
 vi.mock('../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...container.guildMixer }));
-vi.mock('../../../services/sponsorBlockService.ts', () => ({
-	sponsorBlockService: {
-		prefetch: vi.fn(),
-		queueChanged: vi.fn(),
-		outgoingEndPositionMs: vi.fn(() => undefined)
-	}
-}));
 
 function track(title: string, identifier: string, duration = 100_000, extra: Record<string, unknown> = {}): Track {
 	return {

@@ -1,12 +1,14 @@
-import { container } from '@sapphire/framework';
 import { emoji, resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sirubot/utils';
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, type Client } from 'discord.js';
 import { notice } from '../modules/general/view/notice.ts';
 import type { Track } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { getTargetNextTrack, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { fetchSponsorBlockSegments } from './dataApiClient.ts';
 import * as guildMixer from './guildSettings/mixer.ts';
+import type { AppLogger } from '../lib/appLogger.ts';
+import type { GuildService } from './guildService.ts';
+import type { MixerService } from './mixerService.ts';
 
 const LOOKUP_TTL_MS = 10 * 60_000;
 const INTRO_TOLERANCE_MS = 500;
@@ -24,14 +26,25 @@ interface PlaybackState {
 	lastOutroArmKey: string | null;
 }
 
+export interface SponsorBlockServiceDeps {
+	logger: AppLogger;
+	guildService: GuildService;
+	/** client는 로그인 뒤에 준비돼서 호출 시점에 읽어요 */
+	getClient: () => Client;
+	/** mixerService와 서로 얽혀 있어서 호출 시점에 읽어요 */
+	getMixerService: () => MixerService;
+}
+
 /** Segment lookup, live skipping, and incoming mixer start all use the same source. */
 export class SponsorBlockService {
 	private readonly lookups = new Map<string, { expiresAt: number; promise: Promise<SponsorBlockSkipSegment[]> }>();
 	private readonly playback = new WeakMap<CustomPlayer, PlaybackState>();
 
+	public constructor(private readonly deps: SponsorBlockServiceDeps) {}
+
 	private notifySkip(player: CustomPlayer, category: string): void {
 		if (!player.textChannelId) return;
-		const channel = container.client.channels.cache.get(player.textChannelId);
+		const channel = this.deps.getClient().channels.cache.get(player.textChannelId);
 		if (!channel?.isSendable()) return;
 		const names: Record<string, string> = {
 			sponsor: '프로모션',
@@ -72,7 +85,7 @@ export class SponsorBlockService {
 	public async incomingStartPositionMs(player: CustomPlayer, track: Track): Promise<number | undefined> {
 		const videoId = resolveYouTubeVideoId(track);
 		if (!videoId || track.info.isStream || !track.info.isSeekable) return undefined;
-		const [guild, segments] = await Promise.all([container.guildService.getGuild(player.guildId), this.lookup(videoId)]);
+		const [guild, segments] = await Promise.all([this.deps.guildService.getGuild(player.guildId), this.lookup(videoId)]);
 		const categories = new Set<string>(guild.sponsorBlockSegments);
 		if (!categories.size) return undefined;
 		let end = 0;
@@ -112,9 +125,9 @@ export class SponsorBlockService {
 		};
 		this.playback.set(player, state);
 		void Promise.all([
-			container.guildService.getGuild(player.guildId),
+			this.deps.guildService.getGuild(player.guildId),
 			this.lookup(videoId),
-			guildMixer.getMixerSettings(container.guildService, player.guildId).catch(() => null)
+			guildMixer.getMixerSettings(this.deps.guildService, player.guildId).catch(() => null)
 		])
 			.then(([guild, segments, mixer]) => {
 				if (this.playback.get(player) !== state) return;
@@ -124,13 +137,13 @@ export class SponsorBlockService {
 				this.tick(player);
 				this.queueChanged(player);
 			})
-			.catch((error: unknown) => container.logger.debug(`[SponsorBlock] lookup failed for ${videoId}: ${String(error)}`));
+			.catch((error: unknown) => this.deps.logger.debug(`[SponsorBlock] lookup failed for ${videoId}: ${String(error)}`));
 	}
 
 	public refreshSettings(player: CustomPlayer): void {
 		const state = this.playback.get(player);
 		if (!state) return;
-		void container.guildService
+		void this.deps.guildService
 			.getGuild(player.guildId)
 			.then((guild) => {
 				if (this.playback.get(player) !== state) return;
@@ -162,7 +175,7 @@ export class SponsorBlockService {
 		const target = getTargetNextTrack(player);
 		const currentEncoded = state.track.encoded;
 		const end = target && this.outgoingEndPositionMs(player);
-		if (!target?.encoded || !currentEncoded || !end || container.mixerService.isOverlapActive(player.guildId)) return;
+		if (!target?.encoded || !currentEncoded || !end || this.deps.getMixerService().isOverlapActive(player.guildId)) return;
 		const key = `${player.currentEpoch}:${target.encoded}:${end}`;
 		if (key === state.lastOutroArmKey) return;
 		state.outroArmTimer = setTimeout(() => {
@@ -181,7 +194,7 @@ export class SponsorBlockService {
 						currentTrackEncoded: currentEncoded
 					})
 				)
-				.catch((error: unknown) => container.logger.warn(`[SponsorBlock] early outro arm failed in ${player.guildId}: ${String(error)}`));
+				.catch((error: unknown) => this.deps.logger.warn(`[SponsorBlock] early outro arm failed in ${player.guildId}: ${String(error)}`));
 		}, 75);
 	}
 
@@ -200,7 +213,7 @@ export class SponsorBlockService {
 		if (!segment) return;
 		if (segment.startMs <= position + 150) {
 			if (
-				container.mixerService.isOverlapActive(player.guildId) ||
+				this.deps.getMixerService().isOverlapActive(player.guildId) ||
 				(state.crossfadeMs > 0 && getTargetNextTrack(player) && segment.endMs > boundary)
 			)
 				return;
@@ -210,13 +223,13 @@ export class SponsorBlockService {
 				.seek(segment.endMs)
 				.then(() => {
 					if (this.playback.get(player) === state) {
-						container.logger.info(`[SponsorBlock] skipped ${segment.category} in ${player.guildId}`);
+						this.deps.logger.info(`[SponsorBlock] skipped ${segment.category} in ${player.guildId}`);
 						this.notifySkip(player, segment.category);
 					}
 				})
 				.catch((error: unknown) => {
 					state.lastSkipEnd = -1;
-					container.logger.warn(`[SponsorBlock] seek failed in ${player.guildId}: ${String(error)}`);
+					this.deps.logger.warn(`[SponsorBlock] seek failed in ${player.guildId}: ${String(error)}`);
 				})
 				.finally(() => {
 					state.busy = false;
@@ -227,5 +240,3 @@ export class SponsorBlockService {
 		state.timer = setTimeout(() => this.tick(player), Math.min(30_000, Math.max(100, segment.startMs - position)));
 	}
 }
-
-export const sponsorBlockService = new SponsorBlockService();

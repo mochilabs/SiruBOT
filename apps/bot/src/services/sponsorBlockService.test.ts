@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { container } from '@sapphire/framework';
 import type { Track } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { fetchSponsorBlockSegments } from './dataApiClient.ts';
@@ -7,15 +6,17 @@ import { SponsorBlockService } from './sponsorBlockService.ts';
 
 const guildMixerMock = vi.hoisted(() => ({ getMixerSettings: vi.fn().mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 5000 }) }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn() },
-		guildService: {
-			getGuild: vi.fn().mockResolvedValue({ sponsorBlockSegments: ['intro', 'sponsor', 'outro'] })
-		},
-		mixerService: { isOverlapActive: vi.fn().mockReturnValue(false) }
-	}
-}));
+const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const guildService = { getGuild: vi.fn() };
+const mixerService = { isOverlapActive: vi.fn().mockReturnValue(false) };
+const makeService = () =>
+	new SponsorBlockService({
+		logger,
+		guildService: guildService as never,
+		getClient: () => ({ channels: { cache: new Map() } }) as never,
+		getMixerService: () => mixerService as never
+	});
+
 vi.mock('./dataApiClient.ts', () => ({ fetchSponsorBlockSegments: vi.fn() }));
 vi.mock('./guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...guildMixerMock }));
 
@@ -40,7 +41,7 @@ function player(current: Track): CustomPlayer {
 
 beforeEach(() => {
 	vi.mocked(fetchSponsorBlockSegments).mockReset();
-	vi.mocked(container.guildService.getGuild).mockResolvedValue({ sponsorBlockSegments: ['intro', 'sponsor', 'outro'] } as never);
+	guildService.getGuild.mockResolvedValue({ sponsorBlockSegments: ['intro', 'sponsor', 'outro'] } as never);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -51,13 +52,13 @@ describe('BOT SponsorBlock ownership', () => {
 			{ category: 'sponsor', startMs: 12000, endMs: 16000 },
 			{ category: 'sponsor', startMs: 30000, endMs: 35000 }
 		]);
-		const service = new SponsorBlockService();
+		const service = makeService();
 		await expect(service.incomingStartPositionMs(player(track()), track())).resolves.toBe(16000);
 	});
 
 	it('does not seek across an outgoing crossfade boundary', async () => {
 		vi.mocked(fetchSponsorBlockSegments).mockResolvedValue([{ category: 'outro', startMs: 54000, endMs: 59000 }]);
-		const service = new SponsorBlockService();
+		const service = makeService();
 		const current = track();
 		const playing = player(current);
 		Object.assign(playing, { position: 55000 });
@@ -73,7 +74,7 @@ describe('BOT SponsorBlock ownership', () => {
 
 	it('offers an outro start as mixer end only while there is enough fade time', async () => {
 		vi.mocked(fetchSponsorBlockSegments).mockResolvedValue([{ category: 'outro', startMs: 54000, endMs: 60000 }]);
-		const service = new SponsorBlockService();
+		const service = makeService();
 		const current = track();
 		const playing = player(current);
 		Object.assign(playing, { position: 45000 });
@@ -87,7 +88,7 @@ describe('BOT SponsorBlock ownership', () => {
 	it('discards a lookup completed after the player changes tracks', async () => {
 		const pending = Promise.withResolvers<Awaited<ReturnType<typeof fetchSponsorBlockSegments>>>();
 		vi.mocked(fetchSponsorBlockSegments).mockReturnValue(pending.promise);
-		const service = new SponsorBlockService();
+		const service = makeService();
 		const current = track();
 		const playing = player(current);
 		service.startTrack(playing, current);
@@ -96,5 +97,23 @@ describe('BOT SponsorBlock ownership', () => {
 		await Promise.resolve();
 		await Promise.resolve();
 		expect(playing.seek).not.toHaveBeenCalled();
+	});
+
+	it('can be constructed before the mixer exists and reads it when queue changes are checked', async () => {
+		let lateMixer: typeof mixerService | undefined;
+		const lazy = new SponsorBlockService({
+			logger,
+			guildService: guildService as never,
+			getClient: () => ({ channels: { cache: new Map() } }) as never,
+			getMixerService: () => lateMixer as never
+		});
+		lateMixer = mixerService;
+		vi.mocked(fetchSponsorBlockSegments).mockResolvedValue([{ category: 'sponsor', startMs: 0, endMs: 5000 }]);
+		const current = track();
+		const playing = player(current);
+		lazy.startTrack(playing, current);
+		await vi.waitFor(() => expect(playing.seek).toHaveBeenCalledWith(5000));
+		expect(mixerService.isOverlapActive).toHaveBeenCalledWith('guild');
+		lazy.stop(playing);
 	});
 });

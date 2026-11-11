@@ -10,6 +10,7 @@ import type { AudioService } from '../audioService.ts';
 import type { GuildService } from '../guildService.ts';
 import type { MixerService } from '../mixerService.ts';
 import type { PlaylistService } from '../playlistService.ts';
+import type { SponsorBlockService } from '../sponsorBlockService.ts';
 
 /**
  * AI 도구가 쓰는 의존성 — BotApplication.setupServices가 한 번 엮어 createAiTools(deps)에 넘겨요.
@@ -22,6 +23,7 @@ export interface AiToolDeps {
 	aiMemory: AiMemoryService;
 	audioService: AudioService;
 	mixerService: MixerService;
+	sponsorBlock: Pick<SponsorBlockService, 'refreshSettings'>;
 	playlistService: PlaylistService;
 	tempVoice: Pick<TempVoiceService, 'setupMarkerChannel'>;
 	getMusic: () => MusicControl;

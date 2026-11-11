@@ -29,10 +29,7 @@ import { describe, expect, it } from 'vitest';
 const SRC_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 /** Allowed import cycles; each entry is the sorted file list of one strongly connected component, joined by ' <-> '. */
-const ALLOWED_CYCLES: string[] = [
-	'modules/audio/lavalink/handlers/mixerHandlers.ts <-> services/mixerService.ts',
-	'modules/audio/lavalink/queue/queueWrapper.ts <-> services/sponsorBlockService.ts'
-];
+const ALLOWED_CYCLES: string[] = ['modules/audio/lavalink/handlers/mixerHandlers.ts <-> services/mixerService.ts'];
 
 /** `services/` -> `modules/` edges that exist today. Only delete from this list. */
 const ALLOWED_SERVICES_TO_MODULES: string[] = [
@@ -103,8 +100,7 @@ const ENV_UTILITIES_ALLOWED: Record<string, string> = {
 const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
 	'services/audioService.ts': 'audio playback owner; converted in the later audio stage',
 	'services/mixerService.ts': 'audio playback owner; converted in the later audio stage',
-	'services/playlistPlayback.ts': 'audio playback; converted in the later audio stage',
-	'services/sponsorBlockService.ts': 'audio playback; converted in the later audio stage'
+	'services/playlistPlayback.ts': 'audio playback; converted in the later audio stage'
 };
 
 function listSourceFiles(dir: string): string[] {

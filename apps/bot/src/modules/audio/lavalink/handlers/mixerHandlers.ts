@@ -7,7 +7,6 @@ import { isTtsClip } from '../requester.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
 import { MixerRequestError } from '../../../../services/mixerService.ts';
 import { formatRecordError } from '../../../../services/trackService.ts';
-import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import type { ArmRequestOptions } from '../../../../services/mixerService.ts';
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
@@ -169,9 +168,9 @@ async function armOptions(player: CustomPlayer, target: Track | null): Promise<A
 		preserveTransition: target ? shouldPreserveTransition(player.queue.current, target) : undefined
 	};
 	if (!target) return options;
-	const outgoingEnd = options.preserveTransition ? undefined : sponsorBlockService.outgoingEndPositionMs(player);
+	const outgoingEnd = options.preserveTransition ? undefined : container.sponsorBlockService.outgoingEndPositionMs(player);
 	try {
-		const start = await Promise.race([sponsorBlockService.incomingStartPositionMs(player, target), sleep(2_000).then(() => undefined)]);
+		const start = await Promise.race([container.sponsorBlockService.incomingStartPositionMs(player, target), sleep(2_000).then(() => undefined)]);
 		if (start && (await container.mixerService.supportsIncomingStart(player))) options.startPositionMs = start;
 	} catch (error) {
 		container.logger.debug(`[SponsorBlock] incoming start unavailable for ${player.guildId}: ${String(error)}`);

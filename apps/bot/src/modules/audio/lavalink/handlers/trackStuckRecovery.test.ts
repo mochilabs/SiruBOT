@@ -9,11 +9,9 @@ import { clearMixerRuntime } from './mixerHandlers.ts';
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-		playerNotifier: { updateController: vi.fn() }
+		playerNotifier: { updateController: vi.fn() },
+		sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
 	}
-}));
-vi.mock('../../../../services/sponsorBlockService.ts', () => ({
-	sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
 }));
 
 const cjs: typeof import('lavalink-client') = createRequire(import.meta.url)('lavalink-client');

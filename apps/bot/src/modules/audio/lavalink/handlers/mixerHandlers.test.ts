@@ -9,6 +9,11 @@ const { container } = vi.hoisted(() => ({
 			arm: vi.fn(async () => undefined),
 			supportsOutgoingEnd: vi.fn(async () => false)
 		},
+		sponsorBlockService: {
+			prefetch: vi.fn(),
+			queueChanged: vi.fn(),
+			outgoingEndPositionMs: vi.fn(() => undefined)
+		},
 		guildService: {},
 		guildMixer: {
 			getMixerSettings: vi.fn(async () => ({
@@ -22,13 +27,6 @@ const { container } = vi.hoisted(() => ({
 
 vi.mock('@sapphire/framework', () => ({ container }));
 vi.mock('../../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...container.guildMixer }));
-vi.mock('../../../../services/sponsorBlockService.ts', () => ({
-	sponsorBlockService: {
-		prefetch: vi.fn(),
-		queueChanged: vi.fn(),
-		outgoingEndPositionMs: vi.fn(() => undefined)
-	}
-}));
 function createTrack(overrides: Partial<Track> = {}): Track {
 	return {
 		encoded: 'enc',

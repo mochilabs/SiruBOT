@@ -5,7 +5,6 @@ import { resolveYouTubeVideoId } from '@sirubot/utils';
 import { queueRelatedUpfront } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
-import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 import { formatRecordError } from '../../../../services/trackService.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
@@ -53,7 +52,7 @@ export class TrackStartOrchestrator {
 		this.host.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
-		sponsorBlockService.startTrack(player, startedTrack);
+		container.sponsorBlockService.startTrack(player, startedTrack);
 		void this.container.mixerService.supportsIncomingStart?.(player).catch(() => null);
 		const startedKey = startedTrack
 			? ((startedTrack.encoded ? normalizeTrackEncoded(startedTrack.encoded) : null) ??

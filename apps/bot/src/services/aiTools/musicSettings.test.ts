@@ -33,6 +33,7 @@ const deps = {
 	guildService: { getGuild: mocks.getGuild } as never,
 	getMusic: () => ({ setVolume: mocks.setVolume, setRepeat: mocks.setRepeatUseCase }) as never,
 	getAudio: () => ({ getPlayer: mocks.getPlayer }) as never,
+	sponsorBlock: { refreshSettings: vi.fn() } as never,
 	mixerService: {
 		clearNext: vi.fn(),
 		preloadUpcoming: vi.fn(),

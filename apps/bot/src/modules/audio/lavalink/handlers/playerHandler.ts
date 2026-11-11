@@ -2,7 +2,6 @@ import { DestroyReasonsType, LavalinkManager, PlayerJson, RepeatMode } from 'lav
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
-import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 
 export class PlayerHandler extends BaseLavalinkHandler {
 	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
@@ -47,7 +46,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		this.container.redisStore.getQueueStore().delete(player.guildId);
 		// 파괴된 플레이어의 서버 필터 상태도 사라진다 — 다음 play 전에 다시 prime해야 한다.
 		this.container.mixerService.markFiltersStale(player.guildId);
-		sponsorBlockService.stop(player);
+		this.container.sponsorBlockService.stop(player);
 		// 파괴된 플레이어는 재생 중이 아니다 — 마지막 프레임을 '정지 상태'로 남기면 대시보드가
 		// 유령 상태(stale 창 60초)에 갇히므로, 확정 종료 신호(ended)를 보내 허브가 엔트리를 비우게 한다.
 		player.playing = false;
@@ -70,7 +69,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		// 대시보드 라이브 뷰 — playerUpdate는 볼륨/seek/큐 변경까지 커버해요 (fire-and-forget)
 		publishPlayerState(newPlayer);
 
-		sponsorBlockService.tick(newPlayer);
+		this.container.sponsorBlockService.tick(newPlayer);
 	}
 
 	public cleanup() {

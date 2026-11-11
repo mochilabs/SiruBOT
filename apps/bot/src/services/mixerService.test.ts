@@ -17,7 +17,9 @@ vi.mock('@sapphire/framework', () => ({
 	container: {
 		logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
 		guildService: {},
-		playerNotifier: { updateController: vi.fn() }
+		playerNotifier: { updateController: vi.fn() },
+		// queueWrapper가 container.sponsorBlockService를 거쳐요 — 이 테스트의 곡은 유튜브가 아니라 동작이 없어요
+		sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
 	}
 }));
 

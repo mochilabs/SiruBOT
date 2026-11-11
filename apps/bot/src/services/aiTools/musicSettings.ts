@@ -1,6 +1,5 @@
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 import { queueRelatedUpfront } from '../../modules/audio/lavalink/autoPlayRelated.ts';
-import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
 import type { TtsAnnounceMode } from '../guildSettings/playback.ts';
 import type { AiToolDeps } from './deps.ts';
@@ -24,7 +23,9 @@ function checkMemberManageGuild(ctx: AiToolContext): boolean {
 }
 
 /** 음악 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
-export function createMusicSettingsTools(deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'getMusic' | 'getAudio'>): AiTool[] {
+export function createMusicSettingsTools(
+	deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'sponsorBlock' | 'getMusic' | 'getAudio'>
+): AiTool[] {
 	async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
 		if (!ctx.member) return false;
 		try {
@@ -245,7 +246,7 @@ export function createMusicSettingsTools(deps: Pick<AiToolDeps, 'guildService' |
 				const segments = sponsorblock ? ['sponsor', 'selfpromo'] : [];
 				await guildPlayback.setSponsorBlockSegments(deps.guildService, guildId, segments);
 				const player = deps.getAudio()!.players.get(guildId);
-				if (player) sponsorBlockService.refreshSettings(player);
+				if (player) deps.sponsorBlock.refreshSettings(player);
 				updated.sponsorblock = sponsorblock;
 			}
 

@@ -17,6 +17,7 @@ import { PlaylistService } from '../services/playlistService.ts';
 import { AudioService } from '../services/audioService.ts';
 import { MixerService } from '../services/mixerService.ts';
 import { SkipPolicy } from '../services/skipPolicy.ts';
+import { SponsorBlockService } from '../services/sponsorBlockService.ts';
 import { TtsService } from '../services/ttsService.ts';
 import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
@@ -144,6 +145,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
+		container.sponsorBlockService = new SponsorBlockService({
+			logger: appLogger,
+			guildService: container.guildService,
+			getClient: () => container.client,
+			getMixerService: () => container.mixerService
+		});
 		container.skipPolicy = new SkipPolicy({
 			guildService: container.guildService,
 			mixerService: container.mixerService,
@@ -201,6 +208,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			aiMemory: container.aiMemoryService,
 			audioService: container.audioService,
 			mixerService: container.mixerService,
+			sponsorBlock: container.sponsorBlockService,
 			playlistService: container.playlistService,
 			tempVoice: container.tempVoiceService,
 			// music은 setupServices 끝(setupMusicControl)에, audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요

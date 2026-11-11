@@ -3,7 +3,6 @@ import { Track, UnresolvedTrack } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import type { CustomPlayer } from '../player/customPlayer.ts';
 import { isTtsClip } from '../requester.ts';
-import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 
 /**
  * Ensures every track has a stable unique identifier stored in track.userData.uid.
@@ -77,12 +76,12 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
 	}
 
 	void container.mixerService.prepareNextAnalysis(player, target);
-	sponsorBlockService.prefetch(target);
+	container.sponsorBlockService.prefetch(target);
 	player.mixerRuntime.lastTargetUid = targetUid;
 	if (opts.bumpEpoch !== false) {
 		player.currentEpoch++;
 	}
-	sponsorBlockService.queueChanged(player);
+	container.sponsorBlockService.queueChanged(player);
 
 	// Cancel any pending debounced invalidate
 	if (player.mixerRuntime.invalidateTimer) {
