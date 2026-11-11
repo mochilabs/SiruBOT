@@ -9,7 +9,8 @@ import {
 	TextDisplayBuilder
 } from 'discord.js';
 import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
-import { buildRolePanelCustomId, isValidRolePanelEmoji } from '@sirubot/utils/rolePanel';
+import { isValidRolePanelEmoji } from '@sirubot/utils/rolePanel';
+import { rolePanelId } from '../customIds.ts';
 import type { RolePanel, RolePanelButton } from '@sirubot/prisma';
 
 /** 버튼 스타일 문자열 → Discord ButtonStyle 매핑. */
@@ -27,7 +28,7 @@ const BUTTONS_PER_ROW = 5;
  * 길드 유저들이 자기 역할을 토글할 수 있는 공개 역할 패널 메시지 뷰 (Components V2).
  *
  * - 제목·안내문 + 역할 버튼(5개/행).
- * - customId: `rolepanel:grant:<buttonId>:<roleId>` — roleId 스냅샷 (게시 당시 역할 고정).
+ * - customId: `role-panel:v1:grant:<buttonId>:<roleId>` — roleId 스냅샷 (게시 당시 역할 고정).
  * - 버튼은 최대 25개(5행) → 제목·안내문·구분선을 더해도 40 컴포넌트 상한 아래.
  */
 export function rolePanelView(
@@ -58,7 +59,7 @@ export function rolePanelView(
 		const row = new ActionRowBuilder<ButtonBuilder>();
 		for (const button of chunk) {
 			const builder = new ButtonBuilder()
-				.setCustomId(buildRolePanelCustomId(button.id, button.roleId))
+				.setCustomId(rolePanelId.encode('grant', { buttonId: button.id, roleId: button.roleId }))
 				.setLabel(button.label)
 				.setStyle(BUTTON_STYLES[button.style] ?? ButtonStyle.Secondary);
 			// 저장된 값이 깨졌어도(구버전 데이터 등) 메시지 전체가 실패하지 않게 이모지만 건너뛰어요.

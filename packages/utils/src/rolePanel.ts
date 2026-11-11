@@ -12,9 +12,6 @@ import { redisIdSchema } from './redisChannels.js';
  *   request/reply로 우회해요 — 채널·스키마는 redisChannels.ts / panelPost.ts 계약이에요.
  */
 
-/** 버튼·역할 customId 접두사 — 핸들러가 이 prefix로 파싱해요. */
-export const ROLE_PANEL_CUSTOM_ID_PREFIX = 'rolepanel:grant:';
-
 /** 패널당 최대 역할 버튼 수 — Discord 버튼 5개/행 × 5행 = 25개. */
 export const ROLE_PANEL_MAX_BUTTONS = 25;
 /** 버튼 라벨 최대 길이 (Discord 버튼 라벨 상한 80자). */
@@ -38,23 +35,6 @@ export type RolePanelButtonStyle = (typeof rolePanelButtonStyles)[number];
 
 const snowflake = z.string().regex(/^\d{17,20}$/, '올바른 ID 형식이 아니에요.');
 const nullableSnowflake = snowflake.nullable();
-
-/**
- * customId 빌더 — `rolepanel:grant:<buttonId>:<roleId>`.
- * buttonId는 uuid(36자), roleId는 snowflake(최대 20자) → 전체 ≈ 15 + 36 + 1 + 20 = 72자 < 100자 상한.
- */
-export function buildRolePanelCustomId(buttonId: string, roleId: string): string {
-	return `${ROLE_PANEL_CUSTOM_ID_PREFIX}${buttonId}:${roleId}`;
-}
-
-/** customId 파서 — 이 prefix가 아니면 null, 맞으면 { buttonId, roleId }. */
-export function parseRolePanelCustomId(customId: string): { buttonId: string; roleId: string } | null {
-	if (!customId.startsWith(ROLE_PANEL_CUSTOM_ID_PREFIX)) return null;
-	const rest = customId.slice(ROLE_PANEL_CUSTOM_ID_PREFIX.length);
-	const sep = rest.indexOf(':');
-	if (sep === -1 || sep === 0 || sep === rest.length - 1) return null;
-	return { buttonId: rest.slice(0, sep), roleId: rest.slice(sep + 1) };
-}
 
 // 유니코드 이모지(RGI) — v 플래그 리터럴은 낮은 target에서 파싱이 깨져 생성자로 만들어요.
 const UNICODE_EMOJI = new RegExp('^\\p{RGI_Emoji}$', 'v');

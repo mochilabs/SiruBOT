@@ -17,10 +17,12 @@ vi.mock('@sapphire/framework', () => ({
 	},
 	InteractionHandlerTypes: { Button: 'Button' }
 }));
-vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => `:${name}:` }));
+vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => `:${name}:`, DEFAULT_COLOR: 0 }));
 vi.mock('../../../tickets/index.ts', () => ({ ticketMessageView: (text: string) => ({ text }) }));
 
 import RolePanelButtonHandler from './rolePanelButton.ts';
+import { rolePanelView } from '../views/rolePanel.ts';
+import { rolePanelId } from '../customIds.ts';
 
 const GUILD = '100000000000000001';
 const MESSAGE = '900000000000000001';
@@ -71,5 +73,31 @@ describe('RolePanelButtonHandler.run', () => {
 		await run(i);
 		expect(mocks.toggleRole).toHaveBeenCalledWith(i.guild, i.member, 'p1', ROLE);
 		expect(i.editReply).toHaveBeenCalledOnce();
+	});
+});
+
+describe('RolePanelButtonHandler.parse', () => {
+	const handler = new (RolePanelButtonHandler as never as new (ctx: unknown, opts: unknown) => RolePanelButtonHandler)({}, {});
+	const parse = (customId: string) => handler.parse({ customId, inCachedGuild: () => true } as never) as unknown;
+
+	it('parses the ids the panel view renders', () => {
+		const buttons = [
+			{ id: '123e4567-e89b-12d3-a456-426614174000', roleId: ROLE, label: '게임', style: 'primary', emoji: null },
+			{ id: '123e4567-e89b-12d3-a456-426614174001', roleId: '300000000000000002', label: '음악', style: 'secondary', emoji: null }
+		];
+		const view = rolePanelView({ title: '패널', description: '', mode: 'button' } as never, buttons as never);
+		const rendered = [...JSON.stringify(view.components.map((component) => component.toJSON())).matchAll(/"custom_id":"([^"]+)"/g)].map(
+			(match) => match[1]!
+		);
+		expect(rendered.map(parse)).toEqual(buttons.map((button) => ({ buttonId: button.id, roleId: button.roleId })));
+	});
+
+	it('stays within the custom id limit and ignores other or legacy ids', () => {
+		expect(rolePanelId.encode('grant', { buttonId: '123e4567-e89b-12d3-a456-426614174000', roleId: '9'.repeat(20) }).length).toBeLessThanOrEqual(
+			100
+		);
+		for (const legacy of ['rolepanel:grant:b1:' + ROLE, 'ticket:v1:open', 'role-panel:v1:grant:b1', `role-panel:v2:grant:b1:${ROLE}`]) {
+			expect(parse(legacy)).toBeNull();
+		}
 	});
 });

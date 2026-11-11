@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	buildRolePanelCustomId,
-	parseRolePanelCustomId,
-	ROLE_PANEL_CUSTOM_ID_PREFIX,
 	ROLE_PANEL_MAX_BUTTONS,
 	rolePanelButtonsSchema,
 	rolePanelUpdateSchema,
@@ -16,31 +13,6 @@ import {
 
 const BUTTON_ID = '123e4567-e89b-12d3-a456-426614174000';
 const ROLE_ID = '123456789012345678';
-
-describe('buildRolePanelCustomId / parseRolePanelCustomId', () => {
-	it('빌드한 customId를 왕복 파싱한다', () => {
-		const customId = buildRolePanelCustomId(BUTTON_ID, ROLE_ID);
-		expect(customId).toBe(`${ROLE_PANEL_CUSTOM_ID_PREFIX}${BUTTON_ID}:${ROLE_ID}`);
-		expect(parseRolePanelCustomId(customId)).toEqual({ buttonId: BUTTON_ID, roleId: ROLE_ID });
-	});
-
-	it('customId 길이가 100자 상한 아래다', () => {
-		const customId = buildRolePanelCustomId(BUTTON_ID, ROLE_ID);
-		expect(customId.length).toBeLessThanOrEqual(100);
-	});
-
-	it('다른 prefix면 null을 돌려준다', () => {
-		expect(parseRolePanelCustomId('ticket:open')).toBeNull();
-		expect(parseRolePanelCustomId('settings:mixer')).toBeNull();
-	});
-
-	it('형식이 깨진 customId는 null을 돌려준다', () => {
-		expect(parseRolePanelCustomId(ROLE_PANEL_CUSTOM_ID_PREFIX)).toBeNull();
-		expect(parseRolePanelCustomId(`${ROLE_PANEL_CUSTOM_ID_PREFIX}buttonid`)).toBeNull();
-		expect(parseRolePanelCustomId(`${ROLE_PANEL_CUSTOM_ID_PREFIX}:roleid`)).toBeNull();
-		expect(parseRolePanelCustomId(`${ROLE_PANEL_CUSTOM_ID_PREFIX}buttonid:`)).toBeNull();
-	});
-});
 
 describe('rolePanelSchema', () => {
 	it('기본값으로 올바르게 파싱된다', () => {

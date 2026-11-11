@@ -108,10 +108,7 @@ export {
 } from './guildData.js';
 export { jtcSetupRequestSchema, type JtcSetupResponse, jtcSetupResponseSchema } from './jtcSetup.js';
 export {
-	buildRolePanelCustomId,
-	parseRolePanelCustomId,
 	ROLE_PANEL_BUTTON_LABEL_MAX,
-	ROLE_PANEL_CUSTOM_ID_PREFIX,
 	ROLE_PANEL_DEFAULTS,
 	ROLE_PANEL_DESCRIPTION_MAX,
 	ROLE_PANEL_MAX_BUTTONS,
