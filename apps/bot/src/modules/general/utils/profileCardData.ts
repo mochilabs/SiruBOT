@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { getCheckinState, getGuessBest, getRpsStats, getZodiacFromDate } from '../../../features/games/index.ts';
+import { getZodiacFromDate } from '../../../features/games/index.ts';
 import { getUserProfile } from './userProfile.ts';
 
 interface ProfileRecentTrack {
@@ -80,9 +80,9 @@ export async function buildProfileCardData(targetUserId: string, viewerUserId: s
 			orderBy: { _count: { trackId: 'desc' } },
 			take: 5
 		}),
-		getRpsStats(targetUserId),
-		getGuessBest(targetUserId),
-		getCheckinState(targetUserId)
+		container.gameRecords.getRpsStats(targetUserId),
+		container.gameRecords.getGuessBest(targetUserId),
+		container.gameRecords.getCheckinState(targetUserId)
 	]);
 
 	const listenMs = sample.reduce((acc, h) => acc + (h.track?.duration ?? 0), 0);

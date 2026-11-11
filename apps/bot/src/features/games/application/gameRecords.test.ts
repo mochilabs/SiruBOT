@@ -8,11 +8,12 @@ const { db, redisStore } = vi.hoisted(() => ({
 	redisStore: { setCacheValueNX: vi.fn() }
 }));
 
-vi.mock('@sapphire/framework', () => ({ container: { db, redisStore } }));
 // 이모지 매핑은 스토어 로드 후에야 채워진다. 뱃지 판정 테스트는 이름만 보게 한다
 vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => name }));
 
-import { doCheckin, getCheckinState, getGuessBest, getRpsStats, streakBadge } from './gameRecords.ts';
+import { createGameRecords, streakBadge } from './gameRecords.ts';
+
+const { doCheckin, getCheckinState, getGuessBest, getRpsStats } = createGameRecords({ db: db as never, getLockStore: () => redisStore });
 
 beforeEach(() => {
 	vi.clearAllMocks();

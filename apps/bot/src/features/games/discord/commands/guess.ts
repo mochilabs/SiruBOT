@@ -2,7 +2,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { getGuessBest, recordGameResult } from '../../application/gameRecords.ts';
 import { textContainer } from '../views/textContainer.ts';
 
 interface GuessSession {
@@ -93,9 +92,9 @@ export class GuessCommand extends Command {
 			const used = MAX_ATTEMPTS - session.attempts + 1;
 			sessions.delete(sessionKey);
 
-			const prevBest = await getGuessBest(interaction.user.id);
+			const prevBest = await this.container.gameRecords.getGuessBest(interaction.user.id);
 			const isNewBest = prevBest == null || used < prevBest;
-			await recordGameResult(interaction.user.id, 'guess', 'win', { attempts: used });
+			await this.container.gameRecords.recordGameResult(interaction.user.id, 'guess', 'win', { attempts: used });
 
 			const recordLine = isNewBest
 				? `${emoji('trophy')} ${prevBest == null ? `개인 기록으로 **${used}번** 저장했어요!` : `개인 최고 기록 갱신! (${prevBest}번 → **${used}번**)`}`
@@ -121,7 +120,7 @@ export class GuessCommand extends Command {
 
 		if (session.attempts <= 0) {
 			sessions.delete(sessionKey);
-			await recordGameResult(interaction.user.id, 'guess', 'loss', { target: session.target });
+			await this.container.gameRecords.recordGameResult(interaction.user.id, 'guess', 'loss', { target: session.target });
 			await interaction.reply({
 				components: [
 					textContainer([

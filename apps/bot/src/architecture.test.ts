@@ -97,9 +97,7 @@ const APPLICATION_LAYER_DEBT: Record<string, string> = {
 	'features/greeting/application/memberGreetingService.ts -> ../discord/views/greeting.ts':
 		'builds the greeting message with greetingComponents. Remove by injecting a "render greeting message" port implemented in features/greeting/discord.',
 	'features/greeting/application/greetingDispatch.ts -> @sapphire/framework':
-		'uses the `container` service locator (memberGreetingService, logger). Remove by passing the service and logger in, or by moving this helper into features/greeting/discord.',
-	'features/games/application/gameRecords.ts -> @sapphire/framework':
-		'uses the `container` service locator (db, redisStore). Remove by passing db/redisStore in through a deps object, as features/music/application does.'
+		'uses the `container` service locator (memberGreetingService, logger). Remove by passing the service and logger in, or by moving this helper into features/greeting/discord.'
 };
 
 /** Non-test files that may contain `process.env`, each with the reason. Only delete from this list. */

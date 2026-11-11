@@ -2,15 +2,15 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceView, rpsResultView } from '../views/rps.ts';
-import { getRpsStats, recordGameResult, type GameResult } from '../../application/gameRecords.ts';
+import type { GameRecords, GameResult } from '../../application/gameRecords.ts';
 import { textContainer } from '../views/textContainer.ts';
 import { gameId } from '../customIds.ts';
 
 /** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
-async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {
-	const before = await getRpsStats(userId);
+async function resolveStreakLine(records: GameRecords, userId: string, outcome: number): Promise<string | null> {
+	const before = await records.getRpsStats(userId);
 	const result: GameResult = outcome === 1 ? 'win' : outcome === 2 ? 'loss' : 'draw';
-	await recordGameResult(userId, 'rps', result);
+	await records.recordGameResult(userId, 'rps', result);
 
 	if (outcome === 1) {
 		const streak = before.streak + 1;
@@ -63,7 +63,7 @@ export default class GamesInteractionHandler extends InteractionHandler {
 
 			const botPick = Math.floor(Math.random() * 3);
 			const outcome = (userPick - botPick + 3) % 3;
-			const streakLine = await resolveStreakLine(interaction.user.id, outcome);
+			const streakLine = await resolveStreakLine(this.container.gameRecords, interaction.user.id, outcome);
 			await interaction.editReply({
 				components: [rpsResultView(interaction.user.displayName, userPick, botPick, streakLine)],
 				flags: [MessageFlags.IsComponentsV2]

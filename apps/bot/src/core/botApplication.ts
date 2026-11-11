@@ -28,6 +28,7 @@ import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
 import { uploadObject } from '../services/dataApiClient.ts';
+import { createGameRecords } from '../features/games/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
@@ -171,6 +172,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.stoppables.push(container.countingState);
 		container.playbackReporter = new PlaybackReporter();
 		container.stoppables.push(container.playbackReporter);
+		container.gameRecords = createGameRecords({ db: container.db, getLockStore: () => container.redisStore });
 		container.ticketService = createTicketService({ db: container.db, logger: appLogger, messages: ticketMessages, uploadObject });
 		container.rolePanelService = createRolePanelService({ db: container.db, logger: appLogger, messages: rolePanelMessages });
 		container.stoppables.push(container.ticketService);

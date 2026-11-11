@@ -42,6 +42,7 @@ declare module '@sapphire/pieces' {
 		/** 봇 상태 메시지 순환 인터벌 소유자 */
 		botActivity: import('../services/botActivity.ts').BotActivityService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
+		gameRecords: import('../features/games/index.ts').GameRecords;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;

@@ -1,5 +1,4 @@
-import { container } from '@sapphire/framework';
-import { Prisma } from '@sirubot/prisma';
+import { Prisma, type PrismaClient } from '@sirubot/prisma';
 import { emoji } from '@sirubot/utils';
 
 /** 지원하는 게임 ID (기록을 쓰는 게임만) */
@@ -45,117 +44,134 @@ function kstYesterdayKey(): string {
 	return kstDayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
 }
 
-/** GameRecord의 FK(User) 보장을 위해 유저 행이 없으면 생성해요. */
-async function ensureUser(userId: string): Promise<void> {
-	await container.db.user.upsert({
-		where: { id: userId },
-		create: { id: userId },
-		update: {}
-	});
+/** 출석 중복 방지 락에 쓰는 Redis 면 — 연결 전(또는 없음)이면 보호 없이 락을 획득한 것으로 봐요. */
+export interface GameLockStore {
+	setCacheValueNX(key: string, value: string, ttlSeconds: number): Promise<boolean>;
 }
 
-/** 게임 결과 1건을 기록해요. */
-export async function recordGameResult(userId: string, game: GameId, result: GameResult, meta?: Prisma.InputJsonValue): Promise<void> {
-	await ensureUser(userId);
-	await container.db.gameRecord.create({
-		data: { userId, game, result, meta: meta ?? Prisma.DbNull }
-	});
+export interface GameRecordsDeps {
+	db: PrismaClient;
+	/** redisStore는 부팅 중 늦게 만들어지므로 호출 시점에 읽어요 */
+	getLockStore: () => GameLockStore | undefined;
 }
 
-/** 가위바위보 전적 집계 (최근 5000건 기준) */
-export async function getRpsStats(userId: string): Promise<RpsStats> {
-	const records = await container.db.gameRecord.findMany({
-		where: { userId, game: 'rps' },
-		orderBy: { playedAt: 'desc' },
-		take: 5000,
-		select: { result: true }
-	});
-
-	let wins = 0;
-	let losses = 0;
-	let draws = 0;
-	for (const r of records) {
-		if (r.result === 'win') wins += 1;
-		else if (r.result === 'loss') losses += 1;
-		else if (r.result === 'draw') draws += 1;
+export function createGameRecords({ db, getLockStore }: GameRecordsDeps) {
+	/** GameRecord의 FK(User) 보장을 위해 유저 행이 없으면 생성해요. */
+	async function ensureUser(userId: string): Promise<void> {
+		await db.user.upsert({
+			where: { id: userId },
+			create: { id: userId },
+			update: {}
+		});
 	}
 
-	let streak = 0;
-	for (const r of records) {
-		if (r.result !== 'win') break;
-		streak += 1;
+	/** 게임 결과 1건을 기록해요. */
+	async function recordGameResult(userId: string, game: GameId, result: GameResult, meta?: Prisma.InputJsonValue): Promise<void> {
+		await ensureUser(userId);
+		await db.gameRecord.create({
+			data: { userId, game, result, meta: meta ?? Prisma.DbNull }
+		});
 	}
 
-	let best = 0;
-	let run = 0;
-	for (let i = records.length - 1; i >= 0; i -= 1) {
-		if (records[i]!.result === 'win') {
-			run += 1;
-			if (run > best) best = run;
-		} else {
-			run = 0;
+	/** 가위바위보 전적 집계 (최근 5000건 기준) */
+	async function getRpsStats(userId: string): Promise<RpsStats> {
+		const records = await db.gameRecord.findMany({
+			where: { userId, game: 'rps' },
+			orderBy: { playedAt: 'desc' },
+			take: 5000,
+			select: { result: true }
+		});
+
+		let wins = 0;
+		let losses = 0;
+		let draws = 0;
+		for (const r of records) {
+			if (r.result === 'win') wins += 1;
+			else if (r.result === 'loss') losses += 1;
+			else if (r.result === 'draw') draws += 1;
 		}
-	}
 
-	return { wins, losses, draws, streak, best };
-}
-
-/** 숫자맞히기 개인 최고 기록 (몇 번 만에 맞혔는지). 없으면 null */
-export async function getGuessBest(userId: string): Promise<number | null> {
-	const wins = await container.db.gameRecord.findMany({
-		where: { userId, game: 'guess', result: 'win' },
-		orderBy: { playedAt: 'desc' },
-		take: 1000,
-		select: { meta: true }
-	});
-	let best: number | null = null;
-	for (const w of wins) {
-		const attempts = (w.meta as { attempts?: unknown } | null)?.attempts;
-		if (typeof attempts === 'number' && Number.isInteger(attempts) && attempts > 0) {
-			best = best == null ? attempts : Math.min(best, attempts);
+		let streak = 0;
+		for (const r of records) {
+			if (r.result !== 'win') break;
+			streak += 1;
 		}
-	}
-	return best;
-}
 
-/** 출석 상태 조회 */
-export async function getCheckinState(userId: string): Promise<CheckinState> {
-	const last = await container.db.gameRecord.findFirst({
-		where: { userId, game: 'attendance' },
-		orderBy: { playedAt: 'desc' },
-		select: { meta: true }
-	});
-	const meta = (last?.meta as { streak?: unknown; day?: unknown } | null) ?? {};
-	const streak = typeof meta.streak === 'number' ? meta.streak : 0;
-	const lastDay = typeof meta.day === 'string' ? meta.day : null;
-	return { checkedIn: lastDay === kstDayKey(), streak, lastDay };
-}
+		let best = 0;
+		let run = 0;
+		for (let i = records.length - 1; i >= 0; i -= 1) {
+			if (records[i]!.result === 'win') {
+				run += 1;
+				if (run > best) best = run;
+			} else {
+				run = 0;
+			}
+		}
 
-/**
- * 출석 체크. 오늘 이미 했으면 { checkedIn: true }.
- * 연속 출석이면 streak+1, 끊겼으면 1부터.
- * 읽기→쓰기 사이 동시 실행이 중복 streak을 부여할 수 있어 Redis NX 락으로 원자화한다.
- * Redis 없으면 보호 불가. 기존 동작(락 획득한 것으로 간주)을 유지한다.
- */
-export async function doCheckin(userId: string): Promise<{ checkedIn: boolean; streak: number }> {
-	const today = kstDayKey();
-	const state = await getCheckinState(userId);
-	if (state.lastDay === today) return { checkedIn: true, streak: state.streak };
-
-	// 이미 오늘 락이 선점됐으면 중복 기록 방지
-	const store = container.redisStore;
-	const lockKey = `attendance/lock/${userId}/${today}`;
-	const acquired = (await store?.setCacheValueNX(lockKey, '1', 60 * 60 * 24 * 2)) ?? true;
-	if (!acquired) {
-		// 락은 선점됐지만 레코드가 아직 안 보이는 진행 중 구간. 기록된 streak로 응답
-		const retry = await getCheckinState(userId);
-		return { checkedIn: true, streak: retry.streak };
+		return { wins, losses, draws, streak, best };
 	}
 
-	const streak = state.lastDay === kstYesterdayKey() ? state.streak + 1 : 1;
-	await recordGameResult(userId, 'attendance', 'checkin', { streak, day: today });
-	return { checkedIn: false, streak };
+	/** 숫자맞히기 개인 최고 기록 (몇 번 만에 맞혔는지). 없으면 null */
+	async function getGuessBest(userId: string): Promise<number | null> {
+		const wins = await db.gameRecord.findMany({
+			where: { userId, game: 'guess', result: 'win' },
+			orderBy: { playedAt: 'desc' },
+			take: 1000,
+			select: { meta: true }
+		});
+		let best: number | null = null;
+		for (const w of wins) {
+			const attempts = (w.meta as { attempts?: unknown } | null)?.attempts;
+			if (typeof attempts === 'number' && Number.isInteger(attempts) && attempts > 0) {
+				best = best == null ? attempts : Math.min(best, attempts);
+			}
+		}
+		return best;
+	}
+
+	/** 출석 상태 조회 */
+	async function getCheckinState(userId: string): Promise<CheckinState> {
+		const last = await db.gameRecord.findFirst({
+			where: { userId, game: 'attendance' },
+			orderBy: { playedAt: 'desc' },
+			select: { meta: true }
+		});
+		const meta = (last?.meta as { streak?: unknown; day?: unknown } | null) ?? {};
+		const streak = typeof meta.streak === 'number' ? meta.streak : 0;
+		const lastDay = typeof meta.day === 'string' ? meta.day : null;
+		return { checkedIn: lastDay === kstDayKey(), streak, lastDay };
+	}
+
+	/**
+	 * 출석 체크. 오늘 이미 했으면 { checkedIn: true }.
+	 * 연속 출석이면 streak+1, 끊겼으면 1부터.
+	 * 읽기→쓰기 사이 동시 실행이 중복 streak을 부여할 수 있어 Redis NX 락으로 원자화한다.
+	 * Redis 없으면 보호 불가. 기존 동작(락 획득한 것으로 간주)을 유지한다.
+	 */
+	async function doCheckin(userId: string): Promise<{ checkedIn: boolean; streak: number }> {
+		const today = kstDayKey();
+		const state = await getCheckinState(userId);
+		if (state.lastDay === today) return { checkedIn: true, streak: state.streak };
+
+		// 이미 오늘 락이 선점됐으면 중복 기록 방지
+		const store = getLockStore();
+		const lockKey = `attendance/lock/${userId}/${today}`;
+		const acquired = (await store?.setCacheValueNX(lockKey, '1', 60 * 60 * 24 * 2)) ?? true;
+		if (!acquired) {
+			// 락은 선점됐지만 레코드가 아직 안 보이는 진행 중 구간. 기록된 streak로 응답
+			const retry = await getCheckinState(userId);
+			return { checkedIn: true, streak: retry.streak };
+		}
+
+		const streak = state.lastDay === kstYesterdayKey() ? state.streak + 1 : 1;
+		await recordGameResult(userId, 'attendance', 'checkin', { streak, day: today });
+		return { checkedIn: false, streak };
+	}
+
+	return { recordGameResult, getRpsStats, getGuessBest, getCheckinState, doCheckin };
 }
+
+export type GameRecords = ReturnType<typeof createGameRecords>;
 
 /** 출석 스트릭 뱃지 이모지 */
 export function streakBadge(streak: number): string {

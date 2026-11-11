@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { doCheckin, streakBadge } from '../../application/gameRecords.ts';
+import { streakBadge } from '../../application/gameRecords.ts';
 import { textContainer } from '../views/textContainer.ts';
 
 // 모듈 평가 시점엔 이모지 매핑이 로드 전일 수 있어 렌더 시점 함수로 만든다
@@ -36,7 +36,7 @@ export class CheckinCommand extends Command {
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply();
 
-		const { checkedIn, streak } = await doCheckin(interaction.user.id);
+		const { checkedIn, streak } = await this.container.gameRecords.doCheckin(interaction.user.id);
 		const badge = streakBadge(streak);
 
 		if (checkedIn) {

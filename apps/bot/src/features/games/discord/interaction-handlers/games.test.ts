@@ -5,14 +5,13 @@ import { gameId } from '../customIds.ts';
 
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
+		container = {
+			gameRecords: { getRpsStats: vi.fn(async () => ({ streak: 0, best: 0 })), recordGameResult: vi.fn(async () => undefined) }
+		};
 		some = (value?: unknown) => ({ isSome: () => true, unwrap: () => value });
 		none = () => ({ isSome: () => false });
 	},
 	InteractionHandlerTypes: { MessageComponent: 'message-component' }
-}));
-vi.mock('../../application/gameRecords.ts', () => ({
-	getRpsStats: vi.fn(async () => ({ streak: 0, best: 0 })),
-	recordGameResult: vi.fn(async () => undefined)
 }));
 
 function ids(container: { toJSON(): unknown }): string[] {
