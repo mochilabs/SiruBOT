@@ -85,14 +85,7 @@ const ALLOWED_MODULES_TO_CORE: string[] = [
  * Imports in `features/<name>/application/` that break the application-layer rule today, as `<file> -> <specifier>`, each with the reason and what
  * removal takes. Only delete from this list.
  */
-const APPLICATION_LAYER_DEBT: Record<string, string> = {
-	'features/greeting/application/memberGreetingService.ts -> @sapphire/framework':
-		'uses the `container` service locator (client). Remove by passing the Discord client in through a deps object, as features/music/application does.',
-	'features/greeting/application/memberGreetingService.ts -> ../discord/views/greeting.ts':
-		'builds the greeting message with greetingComponents. Remove by injecting a "render greeting message" port implemented in features/greeting/discord.',
-	'features/greeting/application/greetingDispatch.ts -> @sapphire/framework':
-		'uses the `container` service locator (memberGreetingService, logger). Remove by passing the service and logger in, or by moving this helper into features/greeting/discord.'
-};
+const APPLICATION_LAYER_DEBT: Record<string, string> = {};
 
 /** Non-test files that may contain `process.env`, each with the reason. Only delete from this list. */
 const PROCESS_ENV_ALLOWED: Record<string, string> = {

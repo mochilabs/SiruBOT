@@ -1,17 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ComponentType } from 'discord.js';
-
-import { MemberGreetingService } from './memberGreetingService.ts';
-import { DEFAULT_COLOR } from '@sirubot/utils';
+import { createMemberGreetingService } from './memberGreetingService.ts';
 import type { GreetingConfig, GreetingKind } from '@sirubot/utils';
 
-const { channelSend, containerMock } = vi.hoisted(() => {
-	const channelSend = vi.fn(async (_payload: unknown) => undefined);
-	const containerMock = { client: { guilds: { cache: { get: vi.fn() } } } };
-	return { channelSend, containerMock };
-});
-
-vi.mock('@sapphire/framework', () => ({ container: containerMock }));
+const { channelSend, getGuild, components } = vi.hoisted(() => ({
+	channelSend: vi.fn(async (_payload: unknown) => undefined),
+	getGuild: vi.fn(),
+	components: vi.fn((_input: unknown) => [{ fake: true }])
+}));
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
@@ -51,11 +46,20 @@ const member = {
 };
 
 function makeService() {
-	return new MemberGreetingService(logger, '', { publish: vi.fn() });
+	return createMemberGreetingService({
+		logger,
+		signingKey: '',
+		publisher: { publish: vi.fn() },
+		getPendingStore: () => undefined,
+		getGuild,
+		getGuildSettings: vi.fn(),
+		renderMemberCard: vi.fn(async () => null),
+		messages: { components: components as never }
+	});
 }
 
 async function sendGreeting(kind: GreetingKind = 'welcome') {
-	containerMock.client.guilds.cache.get.mockReturnValue(fakeGuild());
+	getGuild.mockReturnValue(fakeGuild());
 	channelSend.mockClear();
 	const result = await makeService().send('guild-1', kind, member, 42, config(), { isTest: false });
 	return result;
@@ -78,37 +82,26 @@ describe('MemberGreetingService.send', () => {
 	});
 });
 
-describe('MemberGreetingService.send — 메시지 레이아웃', () => {
-	async function sendWith(overrides: Partial<GreetingConfig>, isTest = false) {
-		containerMock.client.guilds.cache.get.mockReturnValue(fakeGuild());
+describe('MemberGreetingService.send — 렌더링 포트 호출', () => {
+	it('렌더링 포트에 치환된 본문·레이아웃·강조색을 넘기고 결과를 그대로 전송한다', async () => {
+		getGuild.mockReturnValue(fakeGuild());
 		channelSend.mockClear();
-		const result = await makeService().send('guild-1', 'welcome', member, 42, config(overrides), { isTest });
+		components.mockClear();
+		const result = await makeService().send('guild-1', 'goodbye', member, 42, config({ layout: 'components', accentColor: '#123456' }), {
+			isTest: true
+		});
 		expect(result.ok).toBe(true);
-		const payload = channelSend.mock.calls[0]![0] as { components: { toJSON(): unknown }[] };
-		return payload.components.map((component) => component.toJSON() as Record<string, unknown>);
-	}
-
-	it('container 레이아웃은 컴포넌트를 컨테이너 1개에 담아 보낸다', async () => {
-		const components = await sendWith({ layout: 'container' });
-		expect(components).toHaveLength(1);
-		expect(components[0]!.type).toBe(ComponentType.Container);
-	});
-
-	it('components 레이아웃은 컨테이너 없이 컴포넌트 목록을 그대로 보낸다', async () => {
-		// isTest일 때 안내 문구 + 구분선이 붙어 조각이 2개 이상이 돼요
-		const components = await sendWith({ layout: 'components' }, true);
-		expect(components.length).toBeGreaterThan(1);
-		expect(components.some((component) => component.type === ComponentType.Container)).toBe(false);
-		expect(components[0]!.type).toBe(ComponentType.TextDisplay);
-	});
-
-	it('container 레이아웃의 기본 강조색은 봇 기본색이다', async () => {
-		const components = await sendWith({ layout: 'container', accentColor: null });
-		expect(components[0]!.accent_color).toBe(DEFAULT_COLOR);
-	});
-
-	it('container 레이아웃에서 강조색을 지정하면 그 색을 쓴다', async () => {
-		const components = await sendWith({ layout: 'container', accentColor: '#123456' });
-		expect(components[0]!.accent_color).toBe(0x123456);
+		expect(components).toHaveBeenCalledWith({
+			kind: 'goodbye',
+			isTest: true,
+			content: '@everyone <@member-1>님 환영해요!',
+			imageFilename: null,
+			avatarUrl: null,
+			layout: 'components',
+			accentColor: '#123456'
+		});
+		const payload = channelSend.mock.calls[0]![0] as { components: unknown; files: unknown[] };
+		expect(payload.components).toEqual([{ fake: true }]);
+		expect(payload.files).toEqual([]);
 	});
 });

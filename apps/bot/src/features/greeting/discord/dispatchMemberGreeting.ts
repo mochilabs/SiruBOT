@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { GreetingKind } from '@sirubot/utils';
 import type { Guild, GuildMember, PartialGuildMember } from 'discord.js';
-import type { GreetingMemberInfo } from './memberGreetingService.ts';
+import type { GreetingMemberInfo } from '../application/memberGreetingService.ts';
 
 const KIND_LABELS: Record<GreetingKind, string> = { welcome: '환영', goodbye: '작별' };
 

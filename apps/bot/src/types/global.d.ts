@@ -50,7 +50,7 @@ declare module '@sapphire/pieces' {
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
-		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
+		memberGreetingService: import('../features/greeting/index.ts').MemberGreetingService;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
 		/** 종료 시 stop()이 필요한 상태 소유자 레지스트리 — setupServices가 채우고 shutdown이 Redis/DB를 닫기 전에 실행해요 */
 		stoppables: import('../lib/lifecycle.ts').Stoppable[];

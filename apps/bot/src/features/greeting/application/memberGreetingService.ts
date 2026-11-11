@@ -18,7 +18,6 @@
  * - 테스트 전송은 폴백 없이 결과를 있는 그대로 상태로 알려요.
  * - pending 키는 TTL(120초)이 있어 봇이 모두 무시해도 자동 정리돼요.
  */
-import { container } from '@sapphire/framework';
 import {
 	DEFAULT_GREETINGS,
 	GreetingConfig,
@@ -29,11 +28,17 @@ import {
 	validateGreetingConfig
 } from '@sirubot/utils';
 import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import { AttachmentBuilder, Guild, GuildMember, MessageFlags, PermissionFlagsBits, SendableChannels } from 'discord.js';
-import { greetingComponents } from '../discord/views/greeting.ts';
+import {
+	AttachmentBuilder,
+	Guild,
+	GuildMember,
+	MessageFlags,
+	PermissionFlagsBits,
+	type MessageCreateOptions,
+	type SendableChannels
+} from 'discord.js';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { RedisPublisher } from '../../../lib/redisPublisher.ts';
-import { renderMemberCard } from '../../../services/dataApiClient.ts';
-import type { ServiceLogger } from '../../../services/types.ts';
 
 /** 멤버 인사에 필요한 멤버 정보 — 리스너/테스트 흐름이 만들어 전달해요 */
 export interface GreetingMemberInfo {
@@ -70,23 +75,71 @@ interface PendingPayload {
 	requestId?: unknown;
 }
 
+/** 메시지 컴포넌트 렌더링 입력 — 구현(features/greeting/discord/views/greeting.ts)의 입력과 같은 모양이에요 */
+export interface GreetingMessageInput {
+	kind: GreetingKind;
+	isTest: boolean;
+	content: string;
+	/** 카드 이미지 첨부 파일 이름 — 이미지가 없으면 null */
+	imageFilename: string | null;
+	avatarUrl: string | null;
+	layout: 'container' | 'components';
+	accentColor: string | null;
+}
+
+/** 인사 메시지 렌더링 포트 — 실제 구현은 features/greeting/discord/greetingMessages.ts예요. */
+export interface GreetingMessagePort {
+	components(input: GreetingMessageInput): NonNullable<MessageCreateOptions['components']>;
+}
+
+/** 멤버 인사 카드 렌더에 박을 멤버/서버 컨텍스트 */
+export interface GreetingCardContext {
+	userId: string;
+	username: string;
+	displayName: string;
+	guildName: string | null;
+	avatarUrl: string | null;
+	memberCount: number;
+}
+
+/** pending 키 읽기·삭제에 쓰는 Redis 면 */
+export interface GreetingPendingStore {
+	getCacheValue(key: string): Promise<string | null>;
+	deleteCacheValue(key: string): Promise<void>;
+}
+
+export interface MemberGreetingServiceDeps {
+	logger: AppLogger;
+	/** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용). */
+	signingKey: string;
+	/** 테스트 전송 결과 퍼블리시 — 서명 봉투는 publisher가 감싸요 */
+	publisher: Pick<RedisPublisher, 'publish'>;
+	/** 호출 시점에 읽어요 — redisStore는 setupServices 뒤에 만들어져요 */
+	getPendingStore: () => GreetingPendingStore | undefined;
+	/** 이 프로세스가 보유한 길드(캐시)만 돌려줘요 */
+	getGuild(guildId: string): Guild | undefined;
+	/** 길드 설정 캐시에서 welcome/goodbye 원본을 읽어요 */
+	getGuildSettings(guildId: string): Promise<{ welcome: unknown; goodbye: unknown }>;
+	/** 카드 이미지 렌더(data-api) — 실패·미설정이면 null */
+	renderMemberCard(guildId: string, kind: GreetingKind, config: GreetingConfig, context: GreetingCardContext): Promise<Buffer | null>;
+	messages: GreetingMessagePort;
+}
+
 export class MemberGreetingService {
-	public constructor(
-		private readonly logger: ServiceLogger,
-		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
-		private readonly signingKey: string = '',
-		/** 테스트 전송 결과 퍼블리시 — 서명 봉투는 publisher가 감싸요 */
-		private readonly publisher: Pick<RedisPublisher, 'publish'>
-	) {}
+	public constructor(private readonly deps: MemberGreetingServiceDeps) {}
+
+	private get logger(): AppLogger {
+		return this.deps.logger;
+	}
 
 	/** 이 프로세스가 길드를 보유하면 pending 키를 읽어 테스트 인사를 보내고, 결과를 상태로 퍼블리시해요 */
 	public async applyForGuild(guildId: string, broadcastRequestId: string | null): Promise<void> {
-		const store = container.redisStore;
+		const store = this.deps.getPendingStore();
 		if (!store) {
 			this.logger.warn(`멤버 인사 테스트 전송을 위한 redisStore가 없어요 (guild ${guildId})`);
 			return;
 		}
-		const guild = container.client.guilds.cache.get(guildId);
+		const guild = this.deps.getGuild(guildId);
 		if (!guild) return; // 다른 레플리카가 보유한 길드 — pending 키는 그쪽이 읽어요
 
 		let rawPending: string | null = null;
@@ -103,7 +156,7 @@ export class MemberGreetingService {
 		}
 
 		let pending: PendingPayload | null = null;
-		const pendingBody = unwrapRedisMessage(this.signingKey, rawPending);
+		const pendingBody = unwrapRedisMessage(this.deps.signingKey, rawPending);
 		if (pendingBody === null) {
 			this.logger.warn(`멤버 인사 pending 페이로드 서명 검증 실패, 무시 (guild ${guildId})`);
 		} else {
@@ -167,7 +220,7 @@ export class MemberGreetingService {
 		};
 		if (result.error) state.error = result.error;
 		// SEC-006: data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
-		this.publisher.publish(memberGreetingStateEvent.channel(guildId), state, `Member greeting state (guild ${guildId})`);
+		this.deps.publisher.publish(memberGreetingStateEvent.channel(guildId), state, `Member greeting state (guild ${guildId})`);
 		this.logger.debug(`멤버 인사 테스트 결과 퍼블리시 (guild ${guildId}, kind ${kind}, ok ${result.ok})`);
 	}
 
@@ -177,7 +230,7 @@ export class MemberGreetingService {
 	 * guildSettingsInvalidator가 캐시를 비워 다음 조회에서 최신 값을 읽어요.
 	 */
 	public async getConfig(guildId: string, kind: GreetingKind): Promise<GreetingConfig> {
-		const guild = await container.guildService.getGuild(guildId);
+		const guild = await this.deps.getGuildSettings(guildId);
 		const raw = kind === 'welcome' ? guild.welcome : guild.goodbye;
 		return validateGreetingConfig(raw) ?? DEFAULT_GREETINGS[kind];
 	}
@@ -212,7 +265,7 @@ export class MemberGreetingService {
 		config: GreetingConfig,
 		opts: { isTest: boolean }
 	): Promise<GreetingSendResult> {
-		const guild = container.client.guilds.cache.get(guildId);
+		const guild = this.deps.getGuild(guildId);
 		if (!guild) return { ok: false, error: '봇이 그 서버의 최신 정보를 갖고 있지 않아요' };
 
 		const channelOrError = await this.resolveSendableChannel(guild, config);
@@ -228,7 +281,7 @@ export class MemberGreetingService {
 
 		let png: Buffer | null = null;
 		if (config.useImage && config.image) {
-			png = await renderMemberCard(guildId, kind, config, {
+			png = await this.deps.renderMemberCard(guildId, kind, config, {
 				userId: member.user.id,
 				username: member.user.username,
 				displayName: member.displayName,
@@ -250,7 +303,7 @@ export class MemberGreetingService {
 
 		const filename = `greeting-${kind}.png`;
 		const files: AttachmentBuilder[] = png ? [new AttachmentBuilder(png, { name: filename })] : [];
-		const components = greetingComponents({
+		const components = this.deps.messages.components({
 			kind,
 			isTest: opts.isTest,
 			content,
@@ -295,4 +348,8 @@ export class MemberGreetingService {
 		}
 		return channel;
 	}
+}
+
+export function createMemberGreetingService(deps: MemberGreetingServiceDeps): MemberGreetingService {
+	return new MemberGreetingService(deps);
 }

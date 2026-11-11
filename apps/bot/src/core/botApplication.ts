@@ -27,14 +27,14 @@ import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
-import { uploadObject } from '../services/dataApiClient.ts';
+import { renderMemberCard, uploadObject } from '../services/dataApiClient.ts';
 import { createCustomCommandStore, createSlashRegistry } from '../features/custom-commands/index.ts';
 import { createGameRecords } from '../features/games/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
-import { MemberGreetingService, createMemberGreetingSendListener } from '../features/greeting/index.ts';
+import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
 import {
 	createBotAdminResponder,
 	createBotProfileListeners,
@@ -189,7 +189,16 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		const redisSigningKey = getConfig().redis.signingKey;
 		const redisPublisher = new RedisPublisher({ getStore: () => container.redisStore, signingKey: redisSigningKey, logger: subscriberLogger });
 		container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey, redisPublisher);
-		container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey, redisPublisher);
+		container.memberGreetingService = createMemberGreetingService({
+			logger: subscriberLogger,
+			signingKey: redisSigningKey,
+			publisher: redisPublisher,
+			getPendingStore: () => container.redisStore,
+			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
+			getGuildSettings: (guildId) => container.guildService.getGuild(guildId),
+			renderMemberCard,
+			messages: greetingMessages
+		});
 
 		const redisRuntime: RedisRuntime = {
 			logger: subscriberLogger,
