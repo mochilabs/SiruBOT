@@ -205,7 +205,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			playback: {
 				ensurePlayback: (player) => container.audioService.ensurePlayback(player),
 				stopPlayback: (player) => container.audioService.stopPlayback(player),
-				removeController: (player) => container.playerNotifier.deleteController(player)
+				removeController: (player) => container.playerNotifier.deleteController(player),
+				playPrevious: (player) => container.audioService.playPrevious(player)
 			}
 		});
 	}

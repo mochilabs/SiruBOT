@@ -36,7 +36,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
-	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume', 'next']);
+	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume', 'next', 'prev']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
@@ -69,7 +69,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				await this.handleStop(interaction);
 				break;
 			case 'prev':
-				await this.handlePrev(interaction, player);
+				await this.handlePrev(interaction);
 				break;
 			case 'next':
 				await this.handleNext(interaction);
@@ -238,19 +238,10 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 	}
 
-	private async handlePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		if (player.queue.previous.length === 0) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 이전에 재생한 곡이 없어요.`)]
-			});
-			return;
-		}
-
+	private async handlePrev(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		await this.container.audioService.playPrevious(player);
-
-		// 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략 (edit→삭제 churn 방지)
+		// 인가·재생 기록 확인과 이전곡 재생은 유스케이스가 맡아요. 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략해요 (edit→삭제 churn 방지).
+		await this.container.music.previous(actorFromMember(interaction.member));
 	}
 
 	private async handleNext(interaction: ButtonInteraction<'cached'>) {

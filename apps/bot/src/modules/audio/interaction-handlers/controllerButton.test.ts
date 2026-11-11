@@ -27,7 +27,8 @@ const mocks = vi.hoisted(() => ({
 	resume: vi.fn(),
 	setRepeat: vi.fn(),
 	stop: vi.fn(),
-	skipNow: vi.fn()
+	skipNow: vi.fn(),
+	previous: vi.fn()
 }));
 const actor = vi.hoisted(() => ({ guildId: 'guild', userId: 'user' }));
 vi.mock('@sapphire/framework', () => ({
@@ -40,7 +41,8 @@ vi.mock('@sapphire/framework', () => ({
 				resume: mocks.resume,
 				setRepeat: mocks.setRepeat,
 				stop: mocks.stop,
-				skipNow: mocks.skipNow
+				skipNow: mocks.skipNow,
+				previous: mocks.previous
 			},
 			guildService: {}
 		};
@@ -189,11 +191,20 @@ describe('controller button cached rendering', () => {
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
-	it('checks DJ permission itself for prev, which is not on the use case yet', async () => {
-		mocks.allowed.mockResolvedValue(false);
-		const { interaction, handler } = context();
+	it('prev button delegates to the use case without checking DJ permission itself and without editing the controller', async () => {
+		const { edit, interaction, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'prev', subcommand: null });
-		expect(interaction.reply).toHaveBeenCalledTimes(1);
+		expect(mocks.previous).toHaveBeenCalledExactlyOnceWith(actor);
+		expect(mocks.allowed).not.toHaveBeenCalled();
+		expect(interaction.deferUpdate).toHaveBeenCalledOnce();
+		expect(edit).not.toHaveBeenCalled();
+	});
+
+	it('lets the use case refusal of a prev press reach the central error listener', async () => {
+		const refusal = new AppError('not_found', '이전에 재생한 곡이 없어요.', { ephemeral: true });
+		mocks.previous.mockRejectedValue(refusal);
+		const { interaction, handler } = context();
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'prev', subcommand: null })).rejects.toBe(refusal);
 	});
 
 	it('next button delegates skipping to the use case without checking DJ permission itself', async () => {

@@ -4,7 +4,16 @@ import type { AiToolContext } from './types.ts';
 
 const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOrCreatePlayer, connectPlayer, ensurePlayback, search, music, actor } =
 	vi.hoisted(() => ({
-		music: { skipNow: vi.fn(), seek: vi.fn(), pause: vi.fn(), resume: vi.fn(), setVolume: vi.fn(), setRepeat: vi.fn(), stop: vi.fn() },
+		music: {
+			skipNow: vi.fn(),
+			previous: vi.fn(),
+			seek: vi.fn(),
+			pause: vi.fn(),
+			resume: vi.fn(),
+			setVolume: vi.fn(),
+			setRepeat: vi.fn(),
+			stop: vi.fn()
+		},
 		actor: { guildId: 'g1', userId: 'u1' },
 		getPlayer: vi.fn(),
 		checkDJOrAlone: vi.fn(),
@@ -307,5 +316,22 @@ describe('music_skip ai tool (즉시 건너뛰기 유스케이스 위임)', () =
 	it('유스케이스의 거절은 안내 문구 그대로 도구 오류가 된다', async () => {
 		music.skipNow.mockRejectedValue(new AppError('not_found', '<:error:1> 대기열에 곡이 없어요.'));
 		await expect(skipTool.execute({}, ctx)).rejects.toThrow('대기열에 곡이 없어요.');
+	});
+});
+
+describe('music_previous ai tool (이전곡 유스케이스 위임)', () => {
+	const previousTool = tool('music_previous');
+
+	it('유스케이스로 이전곡을 재생하고 그 곡을 알려준다', async () => {
+		music.previous.mockResolvedValue({ track: { info: { title: '이전 곡', author: '가수', duration: 1000, uri: 'u', artworkUrl: null } } });
+		const result = JSON.parse(await previousTool.execute({}, ctx));
+		expect(music.previous).toHaveBeenCalledExactlyOnceWith(actor);
+		expect(checkDJOrAlone).not.toHaveBeenCalled();
+		expect(result).toMatchObject({ status: 'ok', playing: { title: '이전 곡' } });
+	});
+
+	it('유스케이스의 거절은 안내 문구 그대로 도구 오류가 된다', async () => {
+		music.previous.mockRejectedValue(new AppError('not_found', '<:error:1> 이전에 재생한 곡이 없어요.'));
+		await expect(previousTool.execute({}, ctx)).rejects.toThrow('이전에 재생한 곡이 없어요.');
 	});
 });

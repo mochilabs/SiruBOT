@@ -1,8 +1,7 @@
-import { container, UserError } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { container } from '@sapphire/framework';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { previousReplayed } from '../view/previous.ts';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
 
 export const name = 'previous';
 export const ko = '이전곡';
@@ -16,30 +15,13 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	const player = container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
-	if (!player) {
-		throw new UserError({
-			identifier: 'PreviousCommandNoPlayer',
-			message: `${emoji('error')} 현재 재생 중인 플레이어가 없어요.`,
-			context: { ephemeral: true }
-		});
-	}
-
-	if (player.queue.previous.length === 0) {
-		throw new UserError({
-			identifier: 'PreviousCommandEmptyHistory',
-			message: `${emoji('error')} 이전에 재생한 곡이 없어요.`,
-			context: { ephemeral: true }
-		});
-	}
-
 	// 복원/필터 준비는 Lavalink REST 왕복이므로 3초 응답 제한에 걸리기 전에 defer한다.
 	await interaction.deferReply();
-
-	const previousTrack = await container.audioService.playPrevious(player);
+	// 인가·플레이어 확인·재생 기록 확인·이전곡 재생은 유스케이스가 맡아요.
+	const { track } = await container.music.previous(actorFromMember(interaction.member));
 
 	await interaction.editReply({
-		components: [previousReplayed(previousTrack.info.title)],
+		components: [previousReplayed(track.info.title ?? '알 수 없는 곡')],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

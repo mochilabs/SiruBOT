@@ -280,11 +280,9 @@ const musicPreviousTool: AiTool = {
 	required: [],
 	status: '시루가 이전 곡으로 돌아가는 중..',
 	execute: async (_args, ctx) => {
-		await requireDjOrAlone(ctx);
-		const player = requireCustomPlayer(requireGuild(ctx));
-		if (player.queue.previous.length === 0) throw new Error('이전에 재생한 곡이 없어요.');
-		const previousTrack = await container.audioService.playPrevious(player);
-		return JSON.stringify({ status: 'ok', playing: trackInfo(previousTrack) });
+		// 인가·플레이어 확인·재생 기록 확인·이전곡 재생은 공용 유스케이스가 맡아요.
+		const { track } = await withAppError(() => container.music.previous(musicActor(ctx)));
+		return JSON.stringify({ status: 'ok', playing: trackInfo(track) });
 	}
 };
 

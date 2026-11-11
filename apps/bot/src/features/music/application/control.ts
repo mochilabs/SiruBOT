@@ -25,6 +25,8 @@ export interface PlayerPort {
 	readonly queue: {
 		readonly current: TrackPort | null;
 		readonly tracks: readonly unknown[];
+		/** 이미 재생한 곡 기록 — 이전곡 재생 가능 여부 판단용 */
+		readonly previous: readonly unknown[];
 	};
 	pause(): Promise<unknown>;
 	resume(): Promise<unknown>;
@@ -37,6 +39,17 @@ export interface TrackPort {
 	readonly info: {
 		readonly duration: number;
 		readonly isStream: boolean;
+		readonly title?: string;
+		readonly author?: string;
+		readonly uri?: string;
+		readonly artworkUrl?: string | null;
+	};
+}
+
+/** 해석되지 않은 트랙(UnresolvedTrack)도 담을 수 있는 느슨한 트랙 면 — 곡 정보를 보여주는 용도예요. */
+export interface TrackSummaryPort {
+	readonly info: {
+		readonly duration?: number;
 		readonly title?: string;
 		readonly author?: string;
 		readonly uri?: string;
@@ -66,6 +79,8 @@ export interface MusicControlDeps<P extends PlayerPort> {
 		stopPlayback(player: P): Promise<unknown>;
 		/** 컨트롤러 메시지를 지워요. */
 		removeController(player: P): Promise<unknown>;
+		/** 이전곡 재생 공용 흐름 — 현재 곡을 대기열 선두로 되돌리고 마지막으로 재생한 곡을 시작해 그 곡을 돌려줘요. */
+		playPrevious(player: P): Promise<TrackSummaryPort>;
 	};
 }
 
@@ -87,6 +102,8 @@ export interface MusicControl {
 	 * `to`가 있으면 그 번호(1부터)의 대기곡부터 재생해요. 투표 건너뛰기(/건너뛰기)는 이 유스케이스가 아니라 skipPolicy가 맡아요.
 	 */
 	skipNow(actor: Actor, options?: { to?: number }): Promise<{ skipped: true }>;
+	/** 이전에 재생한 곡을 다시 재생해요. 플레이어가 없거나 재생 기록이 비어 있으면 거절해요. 현재 곡이 없어도 돼요. */
+	previous(actor: Actor): Promise<{ track: TrackSummaryPort }>;
 }
 
 export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<P>): MusicControl {
@@ -189,6 +206,17 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 			}
 			await mixer.skip(player, to);
 			return { skipped: true };
+		},
+
+		async previous(actor) {
+			await access.authorize(actor);
+			const player = getPlayer(actor.guildId);
+			if (!player) throw new AppError('not_found', `${emoji('error')} 현재 재생 중인 플레이어가 없어요.`, { ephemeral: true });
+			if (player.queue.previous.length === 0) {
+				throw new AppError('not_found', `${emoji('error')} 이전에 재생한 곡이 없어요.`, { ephemeral: true });
+			}
+			const track = await playback.playPrevious(player);
+			return { track };
 		}
 	};
 }
