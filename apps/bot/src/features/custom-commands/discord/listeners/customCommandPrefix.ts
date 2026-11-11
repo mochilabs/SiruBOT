@@ -11,12 +11,11 @@ import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageCreateOptions, MessageFlags } from 'discord.js';
-import { customCommandListView } from '../views/customCommand.ts';
+import { customCommandDesignView, customCommandListView } from '../views/customCommand.ts';
 import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_RESERVED_NAMES, MemoryCache, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
-import { findCustomCommand, getGuildCustomCommands } from '../../application/store.ts';
 
 /** 유저별 실행 쿨다운 (ms) — 길드+유저 키 */
 const EXECUTE_COOLDOWN_MS = 3_000;
@@ -67,7 +66,7 @@ export class CustomCommandPrefixListener extends Listener {
 			return;
 		}
 
-		const entry = await findCustomCommand(message.guildId, name);
+		const entry = await this.container.customCommandStore.findCustomCommand(message.guildId, name);
 		if (!entry || entry.method !== 'prefix') return; // 등록되지 않은 이름·슬래시형 — 조용히 무시
 
 		const member = message.member;
@@ -83,6 +82,7 @@ export class CustomCommandPrefixListener extends Listener {
 			guild: buildCustomCommandGuildContext(message.guild, me),
 			channelId: message.channel.id,
 			args,
+			renderDesign: customCommandDesignView,
 			triggerMessage: {
 				react: (emojiInput) => message.react(emojiInput),
 				pin: () => message.pin(),
@@ -110,7 +110,7 @@ export class CustomCommandPrefixListener extends Listener {
 
 	/** !도움말 — 이 길드의 커스텀 명령어 목록 (Components V2 컨테이너) */
 	private async sendList(message: Message, prefix: string, guildId: string) {
-		const commands = await getGuildCustomCommands(guildId);
+		const commands = await this.container.customCommandStore.getGuildCustomCommands(guildId);
 		const lines = commands.ordered
 			.filter((command) => command.method === 'prefix')
 			.map((command) => `\`${prefix}${command.name}\` · ${command.description || '설명 없음'}`);

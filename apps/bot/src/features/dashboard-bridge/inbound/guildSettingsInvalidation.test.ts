@@ -1,20 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { clearGuildCustomCommandsCache, syncGuildSlashCommands, containerStub } = vi.hoisted(() => ({
-	clearGuildCustomCommandsCache: vi.fn(),
-	syncGuildSlashCommands: vi.fn(async () => undefined),
-	containerStub: {
-		audio: { getPlayer: vi.fn() },
-		guildService: { invalidate: vi.fn() },
-		guildMixer: { getMixerSettings: vi.fn() },
-		mixerService: { pushCrossfadeConfig: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
-	}
-}));
+const { clearGuildCustomCommandsCache, syncGuildSlashCommands, containerStub } = vi.hoisted(() => {
+	const clearGuildCustomCommandsCache = vi.fn();
+	const syncGuildSlashCommands = vi.fn(async () => undefined);
+	return {
+		clearGuildCustomCommandsCache,
+		syncGuildSlashCommands,
+		containerStub: {
+			customCommandStore: { clearGuildCustomCommandsCache },
+			customSlashRegistry: { syncGuildSlashCommands },
+			audio: { getPlayer: vi.fn() },
+			guildService: { invalidate: vi.fn() },
+			guildMixer: { getMixerSettings: vi.fn() },
+			mixerService: { pushCrossfadeConfig: vi.fn(), preloadUpcoming: vi.fn(), clearNext: vi.fn() }
+		}
+	};
+});
 
 vi.mock('@sapphire/framework', () => ({ container: containerStub }));
-vi.mock('../../custom-commands/application/store.ts', () => ({ clearGuildCustomCommandsCache }));
 vi.mock('../../../services/guildSettings/mixer.ts', () => containerStub.guildMixer);
-vi.mock('../../custom-commands/application/slashRegistry.ts', () => ({ syncGuildSlashCommands }));
 
 import type { RedisRuntime } from '../../../lib/redisResponder.ts';
 import { createGuildSettingsInvalidationListener } from './guildSettingsInvalidation.ts';

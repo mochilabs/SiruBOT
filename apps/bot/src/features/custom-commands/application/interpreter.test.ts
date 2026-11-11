@@ -13,6 +13,7 @@ interface FakeHarness {
 	react: ReturnType<typeof vi.fn>;
 	pin: ReturnType<typeof vi.fn>;
 	delete: ReturnType<typeof vi.fn>;
+	renderDesign: ReturnType<typeof vi.fn>;
 }
 
 function fakeHarness(overrides: { args?: string[]; roles?: string[]; permissions?: bigint } = {}): FakeHarness {
@@ -23,7 +24,9 @@ function fakeHarness(overrides: { args?: string[]; roles?: string[]; permissions
 	const pin = vi.fn(async () => undefined);
 	const del = vi.fn(async () => undefined);
 	const memberRoles = new Set(overrides.roles ?? []);
+	const renderDesign = vi.fn((_design: unknown, substitute: (text: string) => string) => ({ rendered: substitute('{argv0}') }));
 	const ctx: CustomCommandContext = {
+		renderDesign,
 		channel: { send: async (payload) => (sent.push(payload), undefined) },
 		member: {
 			id: 'user-1',
@@ -41,7 +44,7 @@ function fakeHarness(overrides: { args?: string[]; roles?: string[]; permissions
 		args: overrides.args ?? [],
 		triggerMessage: { react, pin, delete: del }
 	};
-	return { ctx, sent, addRole, removeRole, react, pin, delete: del };
+	return { ctx, sent, addRole, removeRole, react, pin, delete: del, renderDesign };
 }
 
 function spec(steps: unknown[], access?: unknown): unknown {
@@ -273,6 +276,9 @@ describe('runCustomCommandSpec — CV2 디자인', () => {
 		expect(payload.flags).toContain(MessageFlags.IsComponentsV2);
 		expect(payload.allowedMentions).toEqual({ parse: [] });
 		expect(payload.components).toHaveLength(1);
+		// 렌더링은 ctx.renderDesign 포트가 맡고, 인터프리터는 인수 치환 함수만 넘겨요
+		expect(h.renderDesign).toHaveBeenCalledOnce();
+		expect(h.renderDesign.mock.calls[0]![0]).toMatchObject({ accentColor: 'blue' });
 	});
 });
 

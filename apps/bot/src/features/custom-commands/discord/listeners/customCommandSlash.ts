@@ -9,20 +9,20 @@
  */
 import { notice as noticeView } from '../../../../modules/general/view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
-import { Events, Listener } from '@sapphire/framework';
+import { Events, Listener, container } from '@sapphire/framework';
 import { MessageFlags, type ChatInputCommandInteraction, type Interaction, type MessageCreateOptions } from 'discord.js';
 import { CUSTOM_COMMAND_MAX_ARGS, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
 import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
 import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
-import { findCustomCommand } from '../../application/store.ts';
+import { customCommandDesignView } from '../views/customCommand.ts';
 
 /** 인터랙션 1건을 처리해요. 이 봇의 슬래시형 커스텀 명령어가 아니면 false를 돌려줘요. */
 export async function handleCustomCommandSlashInteraction(interaction: ChatInputCommandInteraction): Promise<boolean> {
 	if (!interaction.inGuild()) return false;
 	const guild = interaction.guild;
 	if (!guild) return false;
-	const entry = await findCustomCommand(interaction.guildId, normalizeCustomCommandName(interaction.commandName));
+	const entry = await container.customCommandStore.findCustomCommand(interaction.guildId, normalizeCustomCommandName(interaction.commandName));
 	if (!entry || entry.method !== 'slash') return false;
 
 	await interaction.deferReply();
@@ -62,6 +62,7 @@ export async function handleCustomCommandSlashInteraction(interaction: ChatInput
 		guild: buildCustomCommandGuildContext(guild, me),
 		channelId: interaction.channelId,
 		args,
+		renderDesign: customCommandDesignView,
 		triggerMessage: {
 			react: async (emojiInput) => (await interaction.fetchReply()).react(emojiInput),
 			pin: async () => (await interaction.fetchReply()).pin(),

@@ -13,14 +13,12 @@ const { deferReply, editReply, deleteReply, channelSend, addRole, react, pin } =
 	pin: vi.fn(async () => undefined)
 }));
 
+const { findCustomCommand } = vi.hoisted(() => ({ findCustomCommand: vi.fn(async () => null) }));
+
 vi.mock('@sapphire/framework', () => ({
-	container: {},
+	container: { customCommandStore: { findCustomCommand } },
 	Events: { InteractionCreate: 'interactionCreate' },
 	Listener: class {}
-}));
-vi.mock('../../application/store.ts', () => ({
-	findCustomCommand: vi.fn(async () => null),
-	getGuildCustomCommands: vi.fn()
 }));
 
 function fakeInteraction(overrides: { commandName?: string; roles?: string[]; args?: Record<string, string> } = {}) {
@@ -59,7 +57,6 @@ function fakeInteraction(overrides: { commandName?: string; roles?: string[]; ar
 }
 
 async function mockEntry(entry: unknown) {
-	const { findCustomCommand } = await import('../../application/store.ts');
 	vi.mocked(findCustomCommand).mockResolvedValue(entry as never);
 }
 

@@ -28,6 +28,7 @@ import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
 import { uploadObject } from '../services/dataApiClient.ts';
+import { createCustomCommandStore, createSlashRegistry } from '../features/custom-commands/index.ts';
 import { createGameRecords } from '../features/games/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
@@ -172,6 +173,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.stoppables.push(container.countingState);
 		container.playbackReporter = new PlaybackReporter();
 		container.stoppables.push(container.playbackReporter);
+		container.customCommandStore = createCustomCommandStore({ db: container.db, logger: appLogger });
+		container.customSlashRegistry = createSlashRegistry({
+			db: container.db,
+			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
+			getCoreCommandNames: () => container.stores.get('commands').keys()
+		});
 		container.gameRecords = createGameRecords({ db: container.db, getLockStore: () => container.redisStore });
 		container.ticketService = createTicketService({ db: container.db, logger: appLogger, messages: ticketMessages, uploadObject });
 		container.rolePanelService = createRolePanelService({ db: container.db, logger: appLogger, messages: rolePanelMessages });

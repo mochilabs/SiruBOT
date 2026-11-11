@@ -86,12 +86,6 @@ const ALLOWED_MODULES_TO_CORE: string[] = [
  * removal takes. Only delete from this list.
  */
 const APPLICATION_LAYER_DEBT: Record<string, string> = {
-	'features/custom-commands/application/interpreter.ts -> ../discord/views/customCommand.ts':
-		'renders the design-review message with customCommandDesignView. Remove by returning the design data and letting features/custom-commands/discord render it, or by injecting a render port.',
-	'features/custom-commands/application/slashRegistry.ts -> @sapphire/framework':
-		'uses the `container` service locator (db, client, logger). Remove by passing them in through a deps object, as features/music/application does.',
-	'features/custom-commands/application/store.ts -> @sapphire/framework':
-		'uses the `container` service locator (db, redisStore). Remove by passing them in through a deps object, as features/music/application does.',
 	'features/greeting/application/memberGreetingService.ts -> @sapphire/framework':
 		'uses the `container` service locator (client). Remove by passing the Discord client in through a deps object, as features/music/application does.',
 	'features/greeting/application/memberGreetingService.ts -> ../discord/views/greeting.ts':

@@ -11,8 +11,13 @@
  *   감싸서 넘기고, delete_trigger는 ctx.triggerMessage.delete()로 동작해요 (슬래시에선 응답 삭제).
  */
 import { MessageFlags } from 'discord.js';
-import { customCommandDesignView } from '../discord/views/customCommand.ts';
-import { CUSTOM_COMMAND_MAX_ARGS, customCommandSpecSchema, type CustomCommandAccess, type CustomCommandStep } from '@sirubot/utils';
+import {
+	CUSTOM_COMMAND_MAX_ARGS,
+	customCommandSpecSchema,
+	type CustomCommandAccess,
+	type CustomCommandDesign,
+	type CustomCommandStep
+} from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 
 export interface CustomCommandSendPayload {
@@ -59,6 +64,8 @@ export interface CustomCommandMemberContext {
 
 export interface CustomCommandContext {
 	channel: CustomCommandChannel;
+	/** 디자인 메시지(send_message의 design)를 Discord 컴포넌트로 만드는 포트 — 구현은 features/custom-commands/discord/views/customCommand.ts예요. */
+	renderDesign(design: CustomCommandDesign, substitute: (text: string) => string): unknown;
 	member: CustomCommandMemberContext;
 	guild: CustomCommandGuildContext;
 	channelId: string;
@@ -135,7 +142,7 @@ async function runSteps(steps: readonly CustomCommandStep[], ctx: CustomCommandC
 				try {
 					if (step.design) {
 						await ctx.channel.send({
-							components: [customCommandDesignView(step.design, (text) => substituteArgs(text, ctx.args))],
+							components: [ctx.renderDesign(step.design, (text) => substituteArgs(text, ctx.args))],
 							flags: [MessageFlags.IsComponentsV2],
 							allowedMentions: { parse: [] }
 						});

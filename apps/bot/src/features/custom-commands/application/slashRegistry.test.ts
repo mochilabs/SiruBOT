@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildSlashOptions, countArgOptions, syncGuildSlashCommands } from './slashRegistry.ts';
+import { buildSlashOptions, countArgOptions, createSlashRegistry } from './slashRegistry.ts';
 
-const { containerMock, findMany, dbUpdate, commandCreate, commandEdit, commandDelete, commandFetch, logger } = vi.hoisted(() => ({
-	containerMock: {} as Record<string, unknown>,
+const { findMany, dbUpdate, commandCreate, commandEdit, commandDelete, commandFetch, logger } = vi.hoisted(() => ({
 	findMany: vi.fn(async () => [] as unknown[]),
 	dbUpdate: vi.fn(async () => undefined),
 	commandCreate: vi.fn(async () => ({ id: 'created-1' })),
@@ -12,8 +11,6 @@ const { containerMock, findMany, dbUpdate, commandCreate, commandEdit, commandDe
 	commandFetch: vi.fn(async () => new Map()),
 	logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 }));
-
-vi.mock('@sapphire/framework', () => ({ container: containerMock }));
 
 function rows(...entries: Array<{ id: string; name: string; description?: string; applicationCommandId?: string | null; spec: unknown }>) {
 	return entries.map((entry) => ({ createdBy: 'admin', ...entry }));
@@ -30,21 +27,15 @@ function fakeGuild() {
 	};
 }
 
+const registry = createSlashRegistry({
+	db: { customCommand: { findMany, update: dbUpdate } } as never,
+	getGuild: () => fakeGuild() as never,
+	getCoreCommandNames: () => ['ping', 'play']
+});
+const { syncGuildSlashCommands } = registry;
+
 beforeEach(() => {
 	vi.clearAllMocks();
-	Object.assign(containerMock, {
-		db: { customCommand: { findMany, update: dbUpdate } },
-		client: { guilds: { cache: { get: vi.fn(() => fakeGuild()) } } },
-		stores: {
-			get: vi.fn(
-				() =>
-					new Map([
-						['ping', {}],
-						['play', {}]
-					])
-			)
-		}
-	});
 });
 
 describe('countArgOptions / buildSlashOptions', () => {

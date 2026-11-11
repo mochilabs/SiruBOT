@@ -7,8 +7,9 @@
  *   guildSettingsInvalidator가 받아 clearGuildCustomCommandsCache()로 이 캐시도 함께 비워요.
  * - 브로드캐스트가 끊겨도 TTL(60초) 폴백으로 결국 최신을 봐요 (guildService 캐시와 같은 계약).
  */
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
 import { MemoryCache, normalizeCustomCommandName, type CustomCommandMethod } from '@sirubot/utils';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 
 export interface CustomCommandEntry {
 	id: string;
@@ -27,55 +28,65 @@ export interface GuildCustomCommands {
 	ordered: CustomCommandEntry[];
 }
 
+export interface CustomCommandStoreDeps {
+	db: PrismaClient;
+	logger: AppLogger;
+}
+
 const EMPTY: GuildCustomCommands = { byName: new Map(), ordered: [] };
 
-const cache = new MemoryCache<string, GuildCustomCommands>({ ttl: 60_000, maxSize: 500 });
-const pendingReads = new Map<string, Promise<GuildCustomCommands | null>>();
+/** 캐시와 진행 중 읽기는 인스턴스가 소유해요 — BotApplication.setupServices가 한 번 만들어 container.customCommandStore로 노출해요. */
+export function createCustomCommandStore({ db, logger }: CustomCommandStoreDeps) {
+	const cache = new MemoryCache<string, GuildCustomCommands>({ ttl: 60_000, maxSize: 500 });
+	const pendingReads = new Map<string, Promise<GuildCustomCommands | null>>();
 
-async function load(guildId: string): Promise<GuildCustomCommands | null> {
-	const rows = await container.db.customCommand.findMany({ where: { guildId }, orderBy: { createdAt: 'asc' } });
-	const byName = new Map<string, CustomCommandEntry>();
-	for (const row of rows) {
-		const name = normalizeCustomCommandName(row.name);
-		if (!name) continue;
-		const method: CustomCommandMethod = row.method === 'slash' ? 'slash' : 'prefix';
-		byName.set(name, { id: row.id, name, description: row.description, method, spec: row.spec });
+	async function load(guildId: string): Promise<GuildCustomCommands | null> {
+		const rows = await db.customCommand.findMany({ where: { guildId }, orderBy: { createdAt: 'asc' } });
+		const byName = new Map<string, CustomCommandEntry>();
+		for (const row of rows) {
+			const name = normalizeCustomCommandName(row.name);
+			if (!name) continue;
+			const method: CustomCommandMethod = row.method === 'slash' ? 'slash' : 'prefix';
+			byName.set(name, { id: row.id, name, description: row.description, method, spec: row.spec });
+		}
+		return { byName, ordered: [...byName.values()] };
 	}
-	return { byName, ordered: [...byName.values()] };
-}
 
-/** 길드 커스텀 명령어 목록 — DB 오류면 빈 목록(조용히 무시 정책 유지) */
-export async function getGuildCustomCommands(guildId: string): Promise<GuildCustomCommands> {
-	const cached = cache.get(guildId);
-	if (cached) return cached;
+	/** 길드 커스텀 명령어 목록 — DB 오류면 빈 목록(조용히 무시 정책 유지) */
+	async function getGuildCustomCommands(guildId: string): Promise<GuildCustomCommands> {
+		const cached = cache.get(guildId);
+		if (cached) return cached;
 
-	const pending = pendingReads.get(guildId);
-	// 선점한 호출자만 catch로 빈 목록을 받고 대기자는 예외를 받으면 정책이 갈린다 —
-	// 같은 Promise를 기다린 쪽도 같은 정책(DB 오류면 빈 목록)으로 통일한다.
-	if (pending) return (await pending.catch(() => null)) ?? EMPTY;
+		const pending = pendingReads.get(guildId);
+		// 선점한 호출자만 catch로 빈 목록을 받고 대기자는 예외를 받으면 정책이 갈린다 —
+		// 같은 Promise를 기다린 쪽도 같은 정책(DB 오류면 빈 목록)으로 통일한다.
+		if (pending) return (await pending.catch(() => null)) ?? EMPTY;
 
-	const read = load(guildId);
-	pendingReads.set(guildId, read);
-	try {
-		const data = await read;
-		if (data) cache.set(guildId, data);
-		return data ?? EMPTY;
-	} catch (error) {
-		container.logger.error(
-			`[customCommands] 길드 커스텀 명령어 조회 실패 (${guildId}): ${error instanceof Error ? error.message : String(error)}`
-		);
-		return EMPTY;
-	} finally {
-		if (pendingReads.get(guildId) === read) pendingReads.delete(guildId);
+		const read = load(guildId);
+		pendingReads.set(guildId, read);
+		try {
+			const data = await read;
+			if (data) cache.set(guildId, data);
+			return data ?? EMPTY;
+		} catch (error) {
+			logger.error(`[customCommands] 길드 커스텀 명령어 조회 실패 (${guildId}): ${error instanceof Error ? error.message : String(error)}`);
+			return EMPTY;
+		} finally {
+			if (pendingReads.get(guildId) === read) pendingReads.delete(guildId);
+		}
 	}
+
+	async function findCustomCommand(guildId: string, normalizedName: string): Promise<CustomCommandEntry | null> {
+		const commands = await getGuildCustomCommands(guildId);
+		return commands.byName.get(normalizedName) ?? null;
+	}
+
+	/** 대시보드 저장 브로드캐스트 수신 시 캐시를 비워요 — 다음 조회가 DB에서 다시 읽어요 */
+	function clearGuildCustomCommandsCache(guildId: string): void {
+		cache.delete(guildId);
+	}
+
+	return { getGuildCustomCommands, findCustomCommand, clearGuildCustomCommandsCache };
 }
 
-export async function findCustomCommand(guildId: string, normalizedName: string): Promise<CustomCommandEntry | null> {
-	const commands = await getGuildCustomCommands(guildId);
-	return commands.byName.get(normalizedName) ?? null;
-}
-
-/** 대시보드 저장 브로드캐스트 수신 시 캐시를 비워요 — 다음 조회가 DB에서 다시 읽어요 */
-export function clearGuildCustomCommandsCache(guildId: string): void {
-	cache.delete(guildId);
-}
+export type CustomCommandStore = ReturnType<typeof createCustomCommandStore>;
