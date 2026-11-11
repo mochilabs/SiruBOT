@@ -7,6 +7,9 @@
  * reason; move the code or depend in the other direction instead. When a violation is fixed,
  * delete its entry (the test fails on stale entries to force that).
  *
+ * `features/<name>/application/` is the framework-free application layer: it may not import `@sapphire/*`, view files, or Sapphire
+ * pieces (`modules/<name>/{interaction-handlers,commands,subcommands,listeners}`). That rule has no allowlist.
+ *
  * Limits: only static `import`/`export ... from` statements are parsed. `import type` / `export type`
  * and dynamic `import()` are ignored.
  */
@@ -95,6 +98,29 @@ function listSourceFiles(dir: string): string[] {
 const toRel = (file: string) => path.relative(SRC_ROOT, file).split(path.sep).join('/');
 // Matches `import ... from '...'`, `export ... from '...'` and side-effect `import '...'`; group 1 is the `type` modifier, group 3 the specifier.
 const IMPORT_RE = /^\s*(?:import|export)\s+(type\s+)?([^'";]*?\s+from\s+)?['"]([^'"]+)['"]/gm;
+
+/** Every static runtime import specifier (relative or bare) per file, relative path from src. Used by the application-layer rule. */
+function collectSpecifiers(): Map<string, string[]> {
+	const specifiers = new Map<string, string[]>();
+	for (const file of listSourceFiles(SRC_ROOT)) {
+		const list: string[] = [];
+		for (const match of readFileSync(file, 'utf8').matchAll(IMPORT_RE)) {
+			if (!match[1]) list.push(match[3]);
+		}
+		specifiers.set(toRel(file), list);
+	}
+	return specifiers;
+}
+
+/** Why an import from `features/<name>/application/` is forbidden, or null when it is fine. */
+function applicationImportViolation(file: string, specifier: string): string | null {
+	if (specifier === '@sapphire/framework' || specifier.startsWith('@sapphire/')) return 'imports @sapphire/*';
+	if (!specifier.startsWith('.')) return null;
+	const target = toRel(path.resolve(path.dirname(path.join(SRC_ROOT, file)), specifier));
+	if (/(^|\/)view\//.test(target)) return 'imports a view file';
+	if (/^modules\/[^/]+\/(interaction-handlers|commands|subcommands|listeners)\//.test(target)) return 'imports a Sapphire piece';
+	return null;
+}
 
 /** Runtime import graph: relative path (from src) -> set of relative paths it imports. */
 function buildGraph(): Map<string, Set<string>> {
@@ -199,5 +225,31 @@ describe('bot architecture guard rails', () => {
 			ALLOWED_MODULES_TO_CORE,
 			'Move the shared code (for example the logger) out of core/ into lib/, or receive it via the container; core/ wires modules, so modules must not depend on it.'
 		);
+	});
+
+	it('features/*/application/ stays free of Sapphire, views and pieces', () => {
+		const violations: string[] = [];
+		for (const [file, list] of collectSpecifiers()) {
+			if (!/^features\/[^/]+\/application\//.test(file)) continue;
+			for (const specifier of list) {
+				const reason = applicationImportViolation(file, specifier);
+				if (reason) violations.push(`${file} -> ${specifier} (${reason})`);
+			}
+		}
+		expect(violations, `The application layer must not depend on frameworks, views or Sapphire pieces:\n  ${violations.join('\n  ')}`).toEqual(
+			[]
+		);
+	});
+
+	it('the application-layer rule catches forbidden imports', () => {
+		const file = 'features/music/application/control.ts';
+		expect(applicationImportViolation(file, '@sapphire/framework')).not.toBeNull();
+		expect(applicationImportViolation(file, '@sapphire/pieces')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../modules/audio/view/volume.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../modules/audio/subcommands/volume.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../modules/audio/interaction-handlers/controllerButton.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../modules/general/listeners/message/mentionReply.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../lib/appError.ts')).toBeNull();
+		expect(applicationImportViolation(file, 'discord.js')).toBeNull();
 	});
 });

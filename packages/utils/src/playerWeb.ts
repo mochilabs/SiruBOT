@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from './playerLimits.js';
 import { redisIdSchema } from './redisChannels.js';
 
 /**
@@ -62,10 +63,10 @@ export const playerWebControlRequestSchema = playerWebRequestBase
 	.extend({
 		kind: z.literal('control'),
 		action: playerWebControlActionSchema,
-		value: z.number().int().min(0).max(150).optional()
+		value: z.number().int().min(MUSIC_VOLUME_MIN).max(MUSIC_VOLUME_MAX).optional()
 	})
 	.refine((body) => body.action !== 'volume' || typeof body.value === 'number', {
-		message: 'volume 제어에는 value(0~150)가 필요해요.'
+		message: `volume 제어에는 value(${MUSIC_VOLUME_MIN}~${MUSIC_VOLUME_MAX})가 필요해요.`
 	});
 export type PlayerWebControlRequest = z.infer<typeof playerWebControlRequestSchema>;
 

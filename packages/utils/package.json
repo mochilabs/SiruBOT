@@ -122,6 +122,11 @@
             "import": "./dist/botAdmin.js",
             "require": "./dist/botAdmin.cjs"
         },
+        "./playerLimits": {
+            "types": "./dist/playerLimits.d.ts",
+            "import": "./dist/playerLimits.js",
+            "require": "./dist/playerLimits.cjs"
+        },
         "./memoryFile": {
             "types": "./dist/memoryFile.d.ts",
             "import": "./dist/memoryFile.js",

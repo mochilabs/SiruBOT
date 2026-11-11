@@ -1,11 +1,11 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowflake } from 'discord.js';
-import { emoji } from '@sirubot/utils';
+import { MUSIC_ACCESS_MESSAGES } from '../../../features/music/application/access.ts';
 
 export class SameVoiceChannel extends AllFlowsPrecondition {
 	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
-		return `${emoji('link')} 이 명령어를 사용하려면 봇과 같은 음성 채널에 연결해야 해요.`;
+		return MUSIC_ACCESS_MESSAGES.sameVoiceRequired();
 	}
 	#ephemeral = true;
 

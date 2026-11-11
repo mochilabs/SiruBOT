@@ -9,9 +9,12 @@ vi.mock('../../../services/guildSettings/playback.ts', () => ({ getDJRole }));
 
 function member(options: { admin?: boolean; djRole?: boolean; voiceMemberIds?: string[] | null }) {
 	return {
+		id: 'user',
+		guild: { id: 'g' },
 		permissions: { has: vi.fn((flag: bigint) => (options.admin ? flag === PermissionFlagsBits.Administrator : false)) },
-		roles: { cache: { has: vi.fn(() => options.djRole === true) } },
+		roles: { cache: new Map(options.djRole ? [['dj-role', {}]] : []) },
 		voice: {
+			channelId: options.voiceMemberIds === null ? null : 'voice',
 			channel:
 				options.voiceMemberIds === null
 					? null

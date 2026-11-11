@@ -1,11 +1,11 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import type { CommandInteraction, ContextMenuCommandInteraction, Message, Snowflake } from 'discord.js';
-import { emoji } from '@sirubot/utils';
+import { MUSIC_ACCESS_MESSAGES } from '../../../features/music/application/access.ts';
 
 export class VoiceConnected extends AllFlowsPrecondition {
 	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
 	get #message() {
-		return `${emoji('music_note')} 이 명령어는 음성 채널에 접속한 사용자만 사용 가능해요.`;
+		return MUSIC_ACCESS_MESSAGES.voiceRequired();
 	}
 	#ephemeral = true;
 
