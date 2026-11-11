@@ -25,6 +25,14 @@ type LogLevelName = keyof typeof LOG_LEVEL_BY_NAME;
 const LOG_LEVEL_NAMES = Object.keys(LOG_LEVEL_BY_NAME) as [LogLevelName, ...LogLevelName[]];
 const DEFAULT_LOG_LEVEL = LOG_LEVEL_BY_NAME.info;
 
+/**
+ * DB 쿼리 로그를 붙일지 정해요 — debug(2) 이하(더 자세한 레벨)일 때만 붙여요.
+ * tslog 레벨은 숫자가 작을수록 자세해요. 쿼리는 debug로 찍히므로 그보다 높은 레벨에서는 붙여도 걸러져요.
+ */
+export function shouldLogQueries(logLevel: number): boolean {
+	return logLevel <= LOG_LEVEL_BY_NAME.debug;
+}
+
 /** 로그 레벨 — 숫자(0~6) 또는 레벨 이름. 빈 값은 미설정으로 봐요. */
 const logLevel = z.preprocess(
 	(value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),

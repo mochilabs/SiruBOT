@@ -4,7 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 import { SapphireClient } from '@sapphire/framework';
 import { RootData, container, getRootData } from '@sapphire/pieces';
-import { getConfig } from '../lib/config.ts';
+import { getConfig, shouldLogQueries } from '../lib/config.ts';
 
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
@@ -77,16 +77,16 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public async setupDatabase(): Promise<PrismaClient> {
-		// 쿼리 이벤트는 쿼리마다 파라미터까지 구성된다 — LOGLEVEL 4(디버그) 이상에서만 붙인다.
+		// 쿼리 이벤트는 쿼리마다 파라미터까지 구성된다 — LOGLEVEL이 debug(2) 이하일 때만 붙인다.
 		// (data-api 쪽 클라이언트도 쿼리 로깅을 안 쓴다: apps/data-api/src/services/db.ts)
 		const config = getConfig();
-		const logLevel = config.logLevel;
+		const logQueries = shouldLogQueries(config.logLevel);
 		const prismaEventLog: Array<{ level: 'error' | 'warn' | 'info' | 'query'; emit: 'event' }> = [
 			{ level: 'error', emit: 'event' },
 			{ level: 'warn', emit: 'event' },
 			{ level: 'info', emit: 'event' }
 		];
-		if (logLevel >= 4) prismaEventLog.push({ level: 'query', emit: 'event' });
+		if (logQueries) prismaEventLog.push({ level: 'query', emit: 'event' });
 
 		const db = new PrismaClient({
 			adapter: new PrismaPg({
@@ -96,7 +96,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 
 		const subLogger = (this.logger as SapphireInterfaceLogger).getSubLogger({ name: 'prisma' });
-		if (logLevel >= 4) db.$on('query', (e) => subLogger.debug(e.query));
+		if (logQueries) db.$on('query', (e) => subLogger.debug(e.query));
 		db.$on('info', (e) => subLogger.info(e.message));
 		db.$on('warn', (e) => subLogger.warn(e.message));
 		db.$on('error', (e) => subLogger.error(e.message));

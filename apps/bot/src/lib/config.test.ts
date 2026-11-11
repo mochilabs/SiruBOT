@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getConfig, isConfigLoaded, loadConfig, setConfigForTesting, validateEnv, type Config, type RawEnv } from './config.ts';
+import { getConfig, isConfigLoaded, loadConfig, setConfigForTesting, shouldLogQueries, validateEnv, type Config, type RawEnv } from './config.ts';
 import { makeTestConfig, minimalTestEnv } from './config.testing.ts';
 
 const validEnv = minimalTestEnv;
@@ -172,6 +172,13 @@ describe('loadConfig — `parseInt(x ?? 기본값, 10)` 계열 (0은 그대로, 
 		expect(configWith({ LOGLEVEL: '  ' }).logLevel).toBe(3);
 		expect(configWith({ LOGLEVEL: 'debug' }).logLevel).toBe(2);
 		expect(configWith({ LOGLEVEL: 'warn' }).logLevel).toBe(4);
+	});
+
+	it('DB 쿼리 로그는 debug(2) 이하에서만 붙여요 (info 이상에서는 debug 줄이 걸러져요)', () => {
+		expect(shouldLogQueries(0)).toBe(true);
+		expect(shouldLogQueries(2)).toBe(true);
+		expect(shouldLogQueries(3)).toBe(false);
+		expect(shouldLogQueries(4)).toBe(false);
 	});
 
 	it('HEALTH_PORT — 0은 0, 미설정·빈 값은 8080', () => {
