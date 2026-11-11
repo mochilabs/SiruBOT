@@ -4,6 +4,7 @@ import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { rpsChoiceView, rpsResultView } from '../views/rps.ts';
 import { getRpsStats, recordGameResult, type GameResult } from '../../application/gameRecords.ts';
 import { textContainer } from '../views/textContainer.ts';
+import { gameId } from '../customIds.ts';
 
 /** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
 async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {
@@ -23,6 +24,8 @@ async function resolveStreakLine(userId: string, outcome: number): Promise<strin
 	return before.streak >= 2 ? `${emoji('fist_bump')} ${before.streak}연승 유지 중 (최고 ${before.best}연승)` : null;
 }
 
+type GameButtonId = NonNullable<ReturnType<typeof gameId.decode>>;
+
 export default class GamesInteractionHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
 		super(ctx, {
@@ -32,25 +35,24 @@ export default class GamesInteractionHandler extends InteractionHandler {
 	}
 
 	public override parse(interaction: ButtonInteraction) {
-		if (!interaction.customId.startsWith('game:')) return this.none();
-		return this.some();
+		const decoded = gameId.decode(interaction.customId);
+		return decoded ? this.some(decoded) : this.none();
 	}
 
-	public override async run(interaction: ButtonInteraction<'cached'>) {
-		const [, kind, arg] = interaction.customId.split(':');
+	public override async run(interaction: ButtonInteraction<'cached'>, decoded: GameButtonId) {
+		if (decoded.action === 'rpsAgain') {
+			await interaction.deferUpdate();
+			await interaction.editReply({
+				components: [rpsChoiceView(interaction.user.displayName)],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		}
 
-		if (kind === 'rps') {
+		if (decoded.action === 'rps') {
 			await interaction.deferUpdate();
 
-			if (arg === 'again') {
-				await interaction.editReply({
-					components: [rpsChoiceView(interaction.user.displayName)],
-					flags: [MessageFlags.IsComponentsV2]
-				});
-				return;
-			}
-
-			const userPick = Number(arg);
+			const userPick = decoded.pick;
 			if (!Number.isInteger(userPick) || userPick < 0 || userPick > 2) {
 				await interaction.editReply({
 					components: [textContainer([`${emoji('error')} 잘못된 가위바위보 선택이에요.`])],
