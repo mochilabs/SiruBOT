@@ -26,7 +26,8 @@ import {
 } from './aiChatService.ts';
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
-import { getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
+import { ChannelHistoryStore, getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
+import { container } from '@sapphire/framework';
 import { executeAiTool, getAiToolStatus } from './aiTools/index.ts';
 vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));
 
@@ -91,6 +92,8 @@ function sseResponse(events: string[]) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// 기록 상태의 소유자는 container.aiChatHistory — 테스트마다 새로 만들어 상태가 새지 않게 해요
+	container.aiChatHistory = new ChannelHistoryStore();
 	setConfigForTesting(makeTestConfig());
 	mocks.policy.mockResolvedValue({ mode: 'all', channelIds: [] });
 	mocks.history.mockResolvedValue(null);

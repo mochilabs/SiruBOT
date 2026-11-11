@@ -31,6 +31,8 @@ declare module '@sapphire/pieces' {
 		ttsPronunciation: import('../services/ttsPronunciation.ts').TtsPronunciationService;
 		chatTtsService: import('../services/chatTts.ts').ChatTtsService;
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
+		/** AI 채팅 기록 인메모리 상태 + 디바운스 DB 저장 소유자 (종료 시 stop()이 flush) */
+		aiChatHistory: import('../services/aiChat/historyStore.ts').ChannelHistoryStore;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
@@ -38,7 +40,7 @@ declare module '@sapphire/pieces' {
 		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
 		/** 종료 시 stop()이 필요한 상태 소유자 레지스트리 — setupServices가 채우고 shutdown이 Redis/DB를 닫기 전에 실행해요 */
-		stoppables?: import('../core/lifecycle.ts').Stoppable[];
+		stoppables: import('../core/lifecycle.ts').Stoppable[];
 		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };
