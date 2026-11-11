@@ -183,6 +183,8 @@ Source: `@sirubot/*` dependencies in each app's `package.json`. shardmanager dep
 
 **Audio event path**: the bot publishes snapshots on `sirubot:player:{guildId}`; data-api `playerHub`, the only subscriber, relays them to the dashboard over SSE (§6.1). Lavalink session restore lives in `modules/audio/lavalink/handlers/sessionRestore.ts`. Queue list view state (page, selected index) is carried in custom IDs (`modules/audio/utils/queueViewId.ts`, handler `modules/audio/interaction-handlers/queueViewButton.ts`), not on the player.
 
+**Custom IDs**: every button, select menu and modal ID in the bot is declared once with `defineCustomId` (`lib/customId.ts`) next to its owner (`modules/audio/customIds.ts`, `modules/general/customIds.ts`, `features/*/discord/customIds.ts`, `lib/confirmationId.ts`). The format is `{namespace}:v{version}:{action}[:{field}...]` with typed fields that cannot contain the delimiter. Views call `encode`, interaction handlers call `decode` in `parse()` and return `none()` for anything the declaration does not recognise, so IDs from messages posted before a format change simply stop working. Worst-case length is checked against Discord's 100-character limit when the declaration is created, and `lib/customId.namespaces.test.ts` asserts that namespaces are unique.
+
 ### 4.2 apps/data-api
 
 **Assembly order** (`src/server.ts`):

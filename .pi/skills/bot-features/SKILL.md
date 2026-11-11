@@ -19,7 +19,7 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 - JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetup.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
 
 ## Games
-- `features/games/discord/commands/`: dice, rps, ohaasa, guess, checkin. Single interaction handler `features/games/discord/interaction-handlers/games.ts` — customId `game:<type>:<args>` convention; new games use this pattern. Ohaasa: zodiac mapping in `features/games/application/ohaasaService.ts`; translated horoscope data comes from data-api `/v1/ohaasa` (`services/dataApiClient.ts`).
+- `features/games/discord/commands/`: dice, rps, ohaasa, guess, checkin. Single interaction handler `features/games/discord/interaction-handlers/games.ts` — customIds declared in `features/games/discord/customIds.ts` (`game:v1:<action>[:<field>]`); new games add actions there. Ohaasa: zodiac mapping in `features/games/application/ohaasaService.ts`; translated horoscope data comes from data-api `/v1/ohaasa` (`services/dataApiClient.ts`).
 - State: streaks/records/checkin persist via `features/games/application/gameRecords.ts` in Prisma (`gameRecord`/`user`) — survive restarts. Only in-progress rounds live in customIds and are lost (no games resume after restart, by design).
 
 ## Conventions

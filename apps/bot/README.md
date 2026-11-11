@@ -102,6 +102,10 @@ apps/bot/
 └── package.json
 ```
 
+### 컴포넌트 customId
+
+버튼·셀렉트 메뉴·모달의 customId는 `src/lib/customId.ts`의 `defineCustomId`로 소유 모듈 옆(`modules/audio/customIds.ts`, `modules/general/customIds.ts`, `features/<name>/discord/customIds.ts`, `lib/confirmationId.ts`)에 한 번만 선언해요. 형식은 `{namespace}:v{version}:{action}[:{field}...]`이고, 뷰는 `encode`, 인터랙션 핸들러는 `decode`로 같은 선언을 써요. 길이가 Discord 한도(100자)를 넘을 수 있는 선언은 만들 때 바로 오류가 나고, 형식을 알아보지 못하는 ID(예전 형식 포함)는 `decode`가 `null`을 돌려줘서 핸들러가 `none()`으로 넘겨요.
+
 ---
 
 ## 🚀 시작하기

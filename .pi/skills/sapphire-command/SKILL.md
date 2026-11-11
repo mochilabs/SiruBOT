@@ -63,7 +63,7 @@ Build: TypeScript + tsup (`scripts/tsup.config.ts`), extends root `tsconfig.base
 
 ## Preconditions
 
-- Locations: `apps/bot/src/modules/audio/preconditions/`, `apps/bot/src/modules/general/preconditions/`. Piece roots are listed in `PIECE_ROOTS` (`core/pieceRoots.ts`); new pieces for a feature go under `features/<name>/discord/{commands,listeners,interaction-handlers}`, and a new piece name must be unique per store (`core/pieceInventory.test.ts` snapshots every piece).
+- Locations: `apps/bot/src/modules/audio/preconditions/`, `apps/bot/src/modules/general/preconditions/`. Piece roots are listed in `PIECE_ROOTS` (`core/pieceRoots.ts`); new pieces for a feature go under `features/<name>/discord/{commands,listeners,interaction-handlers}`, and a new piece name must be unique per store (`core/pieceInventory.test.ts` snapshots every piece). Interaction handlers claim an ID by calling `decode` from the owning module's `defineCustomId` declaration in `parse()` (`this.some(...)` on a match, `this.none()` otherwise); see `component-view` for the format.
 - Music control policy (same voice channel, DJ or alone) lives once in `features/music/application/access.ts`; the `SameVoiceChannel`/`DJOrAlone` preconditions only gate slash entry. User-facing failures inside use cases are `AppError`, not `UserError`.
 - Extend `AllFlowsPrecondition` (works for chat input, context menu, message). Must implement `chatInputRun(interaction)`, `contextMenuRun(interaction)`, `messageRun(message)`.
 - Return `this.ok()` or `this.error({ message, context })`; `context.ephemeral: true` = show only to user; `context.silent: true` = don't show (e.g. OwnerOnly).
