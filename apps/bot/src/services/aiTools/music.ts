@@ -15,6 +15,7 @@ import type { CustomPlayer } from '../../modules/audio/lavalink/player/customPla
 import { nowPlayingTrack } from '../../modules/audio/lavalink/player/nowPlaying.ts';
 import { isSameTrack } from '../../modules/audio/lavalink/handlers/playbackWatchdog.ts';
 import type { AiTool, AiToolContext } from './types.ts';
+import { musicActor, withAppError } from './musicControlBridge.ts';
 import { searchLyrics } from '../dataApiClient.ts';
 import * as guildPlayback from '../guildSettings/playback.ts';
 
@@ -216,13 +217,9 @@ const musicVolumeTool: AiTool = {
 			const saved = await guildPlayback.getVolume(container.guildService, guildId);
 			return JSON.stringify({ status: 'ok', volume: saved });
 		}
-		await requireDjOrAlone(ctx);
-		const volume = Math.round(Number(args.volume));
-		if (!Number.isFinite(volume) || volume < 0 || volume > 150) throw new Error('볼륨은 0~150 사이로 설정할 수 있어요.');
-		const { volume: updated } = await guildPlayback.updateVolume(container.guildService, guildId, volume);
-		const player = container.audio.getPlayer(guildId);
-		if (player) player.setVolume(updated);
-		return JSON.stringify({ status: 'ok', volume: updated, is_playing: !!player });
+		// 인가·범위 검증·저장·플레이어 반영은 공용 유스케이스가 맡아요.
+		const { volume: updated, playing } = await withAppError(() => container.music.setVolume(musicActor(ctx), Math.round(Number(args.volume))));
+		return JSON.stringify({ status: 'ok', volume: updated, is_playing: playing });
 	}
 };
 

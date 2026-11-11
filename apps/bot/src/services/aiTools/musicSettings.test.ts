@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '../../lib/appError.ts';
 import type { AiToolContext } from './types.ts';
 
 const mocks = vi.hoisted(() => ({
 	getVolume: vi.fn(),
-	updateVolume: vi.fn(),
 	getRepeat: vi.fn(),
 	setRepeat: vi.fn(),
 	getRelated: vi.fn(),
@@ -21,12 +21,16 @@ const mocks = vi.hoisted(() => ({
 	hasDJRole: vi.fn(),
 	getPlayer: vi.fn(),
 	checkManageGuild: vi.fn(),
-	queueRelatedUpfront: vi.fn()
+	queueRelatedUpfront: vi.fn(),
+	setVolume: vi.fn()
 }));
+const actor = vi.hoisted(() => ({ guildId: 'test-guild', userId: 'user-1' }));
+vi.mock('../../features/music/application/actor.ts', () => ({ actorFromMember: () => actor }));
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		guildService: { getGuild: mocks.getGuild },
+		music: { setVolume: mocks.setVolume },
 		audio: {
 			getPlayer: mocks.getPlayer
 		},
@@ -51,7 +55,6 @@ import { musicSettingsGetTool, musicSettingsSetTool } from './musicSettings.ts';
 vi.mock('../guildSettings/playback.ts', async (orig) => ({
 	...(await orig()),
 	getVolume: mocks.getVolume,
-	updateVolume: mocks.updateVolume,
 	getRepeat: mocks.getRepeat,
 	setRepeat: mocks.setRepeat,
 	getRelated: mocks.getRelated,
@@ -148,7 +151,7 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 			crossfadeMs: 3000,
 			normalizationEnabled: false
 		});
-		mocks.updateVolume.mockResolvedValue({ volume: 90 });
+		mocks.setVolume.mockResolvedValue({ volume: 90, playing: false });
 		mocks.setRepeat.mockResolvedValue('track');
 		mocks.setRelated.mockResolvedValue(true);
 		mocks.setCrossfade.mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 4000 });
@@ -193,12 +196,37 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		expect(res.updated).toEqual({ autoplay: true, repeat: 'track' });
 	});
 
-	it('볼륨 범위(0~150) 유효성 검사', async () => {
-		mocks.checkManageGuild.mockReturnValue(true);
-		const ctx = createMockContext();
+	it('볼륨만 바꾸는 요청은 공용 유스케이스가 인가하고, 설정 권한(2차 검사)은 요구하지 않는다', async () => {
+		mocks.checkManageGuild.mockReturnValue(false);
+		mocks.hasDJRole.mockResolvedValue(false);
 
-		await expect(musicSettingsSetTool.execute({ volume: 200 }, ctx)).rejects.toThrow('0~150 사이의 정수');
-		await expect(musicSettingsSetTool.execute({ volume: -5 }, ctx)).rejects.toThrow('0~150 사이의 정수');
+		const raw = await musicSettingsSetTool.execute({ volume: 90.4 }, createMockContext());
+
+		expect(mocks.setVolume).toHaveBeenCalledWith(actor, 90);
+		expect(JSON.parse(raw).updated).toEqual({ volume: 90 });
+	});
+
+	it('볼륨과 다른 설정을 함께 바꾸면 설정 권한도 요구한다', async () => {
+		mocks.checkManageGuild.mockReturnValue(false);
+		mocks.hasDJRole.mockResolvedValue(false);
+
+		await expect(musicSettingsSetTool.execute({ volume: 90, gapless: true }, createMockContext())).rejects.toThrow(
+			'음악 설정을 변경할 권한이 없어요'
+		);
+		expect(mocks.setVolume).not.toHaveBeenCalled();
+	});
+
+	it('유스케이스의 인가·범위 거절은 앱 이모지 마크업을 뗀 안내 문구의 Error로 전달한다', async () => {
+		mocks.setVolume.mockRejectedValueOnce(new AppError('forbidden', '<:volume_muted:123> 이 명령어는 DJ 역할이 필요해요.'));
+		await expect(musicSettingsSetTool.execute({ volume: 90 }, createMockContext())).rejects.toThrow(new Error('이 명령어는 DJ 역할이 필요해요.'));
+
+		mocks.setVolume.mockRejectedValueOnce(new AppError('invalid_input', '노래 볼륨은(는) **0**부터 **150**까지 설정할 수 있어요.'));
+		await expect(musicSettingsSetTool.execute({ volume: 200 }, createMockContext())).rejects.toThrow('0**부터 **150');
+	});
+
+	it('서버 채널의 멤버가 아니면 볼륨 변경을 거절한다', async () => {
+		await expect(musicSettingsSetTool.execute({ volume: 90 }, createMockContext({ member: null }))).rejects.toThrow('DM에서는');
+		expect(mocks.setVolume).not.toHaveBeenCalled();
 	});
 
 	it('반복 모드 유효성 검사', async () => {

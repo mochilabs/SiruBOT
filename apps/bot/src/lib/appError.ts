@@ -23,3 +23,11 @@ export class AppError extends Error {
 		this.ephemeral = options.ephemeral;
 	}
 }
+
+/** 디스코드 앱 이모지 마크업(`<:name:id>`, `<a:name:id>`)과 그 뒤 공백 — 웹·AI처럼 마크업이 렌더되지 않는 곳에서는 지워요. */
+const CUSTOM_EMOJI_MARKUP = /<a?:\w+:\d+>\s*/g;
+
+/** 디스코드 밖(대시보드, AI 도구 결과)에 보여줄 안내 문구 — `userMessage`에서 앱 이모지 마크업만 제거해요. */
+export function plainUserMessage(error: AppError): string {
+	return error.userMessage.replace(CUSTOM_EMOJI_MARKUP, '').trim();
+}

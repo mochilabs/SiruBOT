@@ -8,21 +8,28 @@ import {
 	type InteractionUpdateOptions,
 	type Message
 } from 'discord.js';
+import { AppError } from '../../../lib/appError.ts';
 import ControllerButtonHandler from './controllerButton.ts';
 vi.mock('../../../services/guildSettings/channels.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getPinnedChannel: mocks.pinned }
 }));
-vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({
-	...(await orig<Record<string, unknown>>()),
-	...{ updateVolume: mocks.updateVolume }
-}));
+vi.mock('../../../features/music/application/actor.ts', () => ({ actorFromMember: () => actor }));
 
-const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), cached: vi.fn(), render: vi.fn(), updateVolume: vi.fn(), pinned: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+	getPlayer: vi.fn(),
+	allowed: vi.fn(),
+	cached: vi.fn(),
+	render: vi.fn(),
+	pinned: vi.fn(),
+	setVolume: vi.fn()
+}));
+const actor = vi.hoisted(() => ({ guildId: 'guild', userId: 'user' }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
 		container = {
 			audio: { getPlayer: mocks.getPlayer },
+			music: { setVolume: mocks.setVolume },
 			guildService: {}
 		};
 	},
@@ -91,7 +98,7 @@ describe('controller button cached rendering', () => {
 		mocks.render.mockImplementation(() => {
 			throw new Error('button must not request an image');
 		});
-		mocks.updateVolume.mockImplementation(async (_store: unknown, _guildId: string, volume: number) => ({ volume }));
+		mocks.setVolume.mockImplementation(async (_actor: unknown, volume: number) => ({ volume, playing: true }));
 	});
 
 	it('updates a pause button without starting or waiting for image rendering', async () => {
@@ -178,33 +185,30 @@ describe('controller button cached rendering', () => {
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
-	it('checks DJ permission for DJ commands (stop, next, prev, repeat, volume)', async () => {
+	it('checks DJ permission for DJ commands (resume, stop, next, prev, repeat)', async () => {
 		mocks.allowed.mockResolvedValue(false);
 		const { interaction, player, handler } = context();
-		for (const cmd of ['resume', 'stop', 'prev', 'next', 'repeat', 'volume']) {
+		for (const cmd of ['resume', 'stop', 'prev', 'next', 'repeat']) {
 			vi.clearAllMocks();
 			mocks.allowed.mockResolvedValue(false);
 			await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: cmd, subcommand: null });
 			expect(interaction.reply).toHaveBeenCalledTimes(1);
 			expect(player.pause).not.toHaveBeenCalled();
 			expect(player.resume).not.toHaveBeenCalled();
-			expect(player.setVolume).not.toHaveBeenCalled();
 		}
 	});
 
 	it('raises volume by the step and applies it', async () => {
-		const { edit, interaction, player, handler } = context();
+		const { edit, interaction, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
-		expect(mocks.updateVolume).toHaveBeenCalledWith(expect.anything(), 'guild', 50);
-		expect(player.setVolume).toHaveBeenCalledWith(50);
+		expect(mocks.setVolume).toHaveBeenCalledWith(actor, 50);
 		expect(edit).toHaveBeenCalledTimes(1);
 	});
 
 	it('lowers volume by the step and applies it', async () => {
-		const { edit, interaction, player, handler } = context();
+		const { edit, interaction, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
-		expect(mocks.updateVolume).toHaveBeenCalledWith(expect.anything(), 'guild', 30);
-		expect(player.setVolume).toHaveBeenCalledWith(30);
+		expect(mocks.setVolume).toHaveBeenCalledWith(actor, 30);
 		expect(edit).toHaveBeenCalledTimes(1);
 	});
 
@@ -212,9 +216,24 @@ describe('controller button cached rendering', () => {
 		const { interaction, player, handler } = context();
 		player.volume = 0;
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
-		expect(mocks.updateVolume).not.toHaveBeenCalled();
-		expect(player.setVolume).not.toHaveBeenCalled();
+		expect(mocks.setVolume).not.toHaveBeenCalled();
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
+	});
+
+	it('lets the use case refusal of a volume press reach the central error listener without touching the controller', async () => {
+		const refusal = new AppError('forbidden', 'DJ만 가능해요.', { ephemeral: true });
+		mocks.setVolume.mockRejectedValue(refusal);
+		const { edit, interaction, handler } = context();
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' })).rejects.toBe(
+			refusal
+		);
+		expect(edit).not.toHaveBeenCalled();
+	});
+
+	it('does not check DJ permission itself for volume, the use case owns authorization', async () => {
+		const { interaction, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
+		expect(mocks.allowed).not.toHaveBeenCalled();
 	});
 
 	it('opens the queue view with every control bound to the opener', async () => {

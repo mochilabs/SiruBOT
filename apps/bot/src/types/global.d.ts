@@ -46,6 +46,8 @@ declare module '@sapphire/pieces' {
 		playerNotifier: PlayerNotifier;
 		nowPlayingCardStore?: import('../modules/audio/lavalink/player/nowPlayingCard.ts').NowPlayingCardStore;
 		playerStatePublishTracker?: Map<string, { at: number; fingerprint: string }>;
+		/** 음악 제어 유스케이스 (features/music/application) — 어댑터는 container.music.<op>(actor, ...)로 호출해요 */
+		music: import('../features/music/application/control.ts').MusicControl;
 		guildService: GuildService;
 		trackService: TrackService;
 		playlistService: import('../services/playlistService.ts').PlaylistService;

@@ -37,6 +37,9 @@ import { PanelPostResponder } from '../services/panelPostResponder.ts';
 import { RoleValidationResponder } from '../services/roleValidationResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import type { RedisSubscriberEntry } from './redisSubscribers.ts';
+import { createMusicAccess } from '../features/music/application/access.ts';
+import { createMusicControl } from '../features/music/application/control.ts';
+import * as guildPlayback from '../services/guildSettings/playback.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
@@ -176,6 +179,25 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			{ name: 'roleValidationResponder', start: (url) => roleValidationResponder.start(url), stop: () => roleValidationResponder.stop() }
 		] satisfies RedisSubscriberEntry[];
 		container.appEmojiManager = new AppEmojiManager();
+		this.setupMusicControl();
+	}
+
+	/**
+	 * 음악 제어 유스케이스를 한 번만 만들어 container.music으로 노출해요.
+	 * 슬래시·버튼·대시보드·AI 도구가 같은 인가 정책과 부수 효과를 거치도록 의존성을 여기서만 엮어요 (container는 호출 시점에 읽어요).
+	 */
+	private setupMusicControl() {
+		container.music = createMusicControl<CustomPlayer>({
+			access: createMusicAccess({
+				getBotVoiceChannelId: (guildId) =>
+					this.guilds.cache.get(guildId)?.members.me?.voice.channelId ?? container.audio.getPlayer(guildId)?.voiceChannelId ?? null,
+				getDjRoleId: (guildId) => guildPlayback.getDJRole(container.guildService, guildId)
+			}),
+			getPlayer: (guildId) => container.audio.getPlayer(guildId),
+			settings: {
+				saveVolume: async (guildId, volume) => (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume
+			}
+		});
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[], shardInfo: { shardIds: number[]; shardCount: number }) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AppError } from './appError.ts';
+import { AppError, plainUserMessage } from './appError.ts';
 
 describe('AppError', () => {
 	it('kind와 userMessage를 보존하고 Error를 상속해요', () => {
@@ -18,5 +18,13 @@ describe('AppError', () => {
 		const error = new AppError('internal', '오류예요.', { cause, ephemeral: false });
 		expect(error.cause).toBe(cause);
 		expect(error.ephemeral).toBe(false);
+	});
+});
+
+describe('plainUserMessage', () => {
+	it('앱 이모지 마크업을 지우고 유니코드 이모지와 본문은 그대로 둬요', () => {
+		expect(plainUserMessage(new AppError('forbidden', '<:link:123456789> 같은 채널에 있어야 해요.'))).toBe('같은 채널에 있어야 해요.');
+		expect(plainUserMessage(new AppError('forbidden', '<a:spin:42> 잠시만요'))).toBe('잠시만요');
+		expect(plainUserMessage(new AppError('forbidden', '🔗 같은 채널에 있어야 해요.'))).toBe('🔗 같은 채널에 있어야 해요.');
 	});
 });

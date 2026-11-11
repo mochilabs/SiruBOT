@@ -10,7 +10,9 @@ import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { buildControllerCardPayload } from '../lavalink/player/controllerPayload.ts';
 import { currentChapterIndex } from '../lavalink/player/chapters.ts';
 import { errorView } from '../../../lib/errorView.ts';
-import { GUARD_MESSAGES, guardPlayerAccess } from '../utils/interactionGuards.ts';
+import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
+import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 export default class ControllerButtonHandler extends InteractionHandler {
@@ -34,16 +36,25 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
+	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
+	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['volume']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
-		const needsDJ = ControllerButtonHandler.DJ_COMMANDS.has(command);
-		const guarded = await guardPlayerAccess(
-			interaction,
-			this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined,
-			needsDJ ? GUARD_MESSAGES.djOnlyControl : undefined
-		);
-		if (!guarded) return;
-		const player = guarded;
+		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
+		let player: CustomPlayer;
+		if (ControllerButtonHandler.MUSIC_USE_CASE_COMMANDS.has(command)) {
+			// 음성 채널·DJ 인가는 유스케이스가 검사해요. 여기서는 컨트롤러 갱신에 쓸 플레이어만 확인해요.
+			if (!existing) {
+				await replyGuardError(interaction, GUARD_MESSAGES.noPlayer);
+				return;
+			}
+			player = existing;
+		} else {
+			const needsDJ = ControllerButtonHandler.DJ_COMMANDS.has(command);
+			const guarded = await guardPlayerAccess(interaction, existing, needsDJ ? GUARD_MESSAGES.djOnlyControl : undefined);
+			if (!guarded) return;
+			player = guarded;
+		}
 
 		switch (command) {
 			case 'pause':
@@ -195,20 +206,19 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	private async handleVolume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: string | null) {
 		const VOLUME_STEP = 10;
 		const current = player.volume ?? 0;
-		const next = Math.max(0, Math.min(150, current + (direction === 'up' ? VOLUME_STEP : -VOLUME_STEP)));
+		const next = Math.max(MUSIC_VOLUME_MIN, Math.min(MUSIC_VOLUME_MAX, current + (direction === 'up' ? VOLUME_STEP : -VOLUME_STEP)));
 		if (next === current) {
 			await interaction
 				.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('error')} 볼륨은 **0**부터 **150**까지 설정할 수 있어요.`)]
+					components: [errorView(`${emoji('error')} 볼륨은 **${MUSIC_VOLUME_MIN}**부터 **${MUSIC_VOLUME_MAX}**까지 설정할 수 있어요.`)]
 				})
 				.catch(() => null);
 			return;
 		}
 
 		await interaction.deferUpdate();
-		const { volume: updated } = await guildPlayback.updateVolume(this.container.guildService, interaction.guildId, next);
-		player.setVolume(updated);
+		await this.container.music.setVolume(actorFromMember(interaction.member), next);
 		await this.updateControllerOrFail(interaction, player);
 	}
 

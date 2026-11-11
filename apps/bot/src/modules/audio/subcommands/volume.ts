@@ -3,6 +3,7 @@ import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/volume.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
 
 export const name = 'volume';
 export const ko = '볼륨';
@@ -19,9 +20,8 @@ const TARGET_LABEL: Record<VolumeTarget, string> = {
 	duck: '낭독 중 음악 볼륨'
 };
 
-/** 각 target별 최대치 — music/tts는 Lavalink 0..150%, duck은 0..100% (stored as 0..1) */
-const TARGET_MAX: Record<VolumeTarget, number> = {
-	music: 150,
+/** music은 유스케이스(`container.music`)가 검증해요 — 이 표는 아직 어댑터가 직접 처리하는 TTS 계열 최대치예요. tts는 0..150%, duck은 0..100% (stored as 0..1) */
+const TARGET_MAX: Record<Exclude<VolumeTarget, 'music'>, number> = {
 	tts: 150,
 	duck: 100
 };
@@ -76,6 +76,18 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		return;
 	}
 
+	if (target === 'music') {
+		// 인가·범위 검증·저장·플레이어 반영은 유스케이스가 맡아요.
+		const { volume: updated, playing } = await container.music.setVolume(actorFromMember(interaction.member), volume);
+
+		await interaction.editReply({
+			components: [view.volumeUpdated({ volume: updated, target, isPlaying: playing })],
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { users: [interaction.user.id], roles: [] }
+		});
+		return;
+	}
+
 	// Discord 옵션 제약(setMinValue/setMaxValue) 밖 값은 사실상 불가능하지만, 방어로 한 번 더 검증한다.
 	const max = TARGET_MAX[target];
 	if (volume < 0 || volume > max) {
@@ -84,19 +96,6 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 			message: `${emoji('error')} ${TARGET_LABEL[target]}은(는) **0**부터 **${max}**까지 설정할 수 있어요.`,
 			context: { volume }
 		});
-	}
-
-	if (target === 'music') {
-		const { volume: updated } = await guildPlayback.updateVolume(container.guildService, interaction.guildId, volume);
-		const player = container.audio.getPlayer(interaction.guildId);
-		if (player) player.setVolume(updated);
-
-		await interaction.editReply({
-			components: [view.volumeUpdated({ volume: updated, target, isPlaying: !!player })],
-			flags: [MessageFlags.IsComponentsV2],
-			allowedMentions: { users: [interaction.user.id], roles: [] }
-		});
-		return;
 	}
 
 	if (target === 'tts') {

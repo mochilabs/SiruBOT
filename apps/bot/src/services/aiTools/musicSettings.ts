@@ -5,6 +5,7 @@ import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
 import type { TtsAnnounceMode } from '../guildSettings/playback.ts';
 import type { AiTool, AiToolContext } from './types.ts';
+import { musicActor, withAppError } from './musicControlBridge.ts';
 import * as guildMixer from '../guildSettings/mixer.ts';
 import * as guildPlayback from '../guildSettings/playback.ts';
 
@@ -139,18 +140,14 @@ export const musicSettingsSetTool: AiTool = {
 	status: '시루가 음악 설정을 변경하는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
-		await requireMusicSettingsPermission(ctx);
+		// 볼륨은 공용 유스케이스가 인가해요 — 그 외 설정 항목이 함께 오면 설정 권한(서버 관리자 또는 DJ 역할)도 요구해요.
+		const settingKeys = Object.keys(args).filter((key) => args[key] !== undefined && args[key] !== null);
+		if (settingKeys.some((key) => key !== 'volume')) await requireMusicSettingsPermission(ctx);
 
 		const updated: Record<string, unknown> = {};
 
 		if (args.volume !== undefined && args.volume !== null) {
-			const vol = Math.round(Number(args.volume));
-			if (!Number.isFinite(vol) || vol < 0 || vol > 150) {
-				throw new Error('볼륨은 0~150 사이의 정수여야 해요.');
-			}
-			const { volume: updatedVol } = await guildPlayback.updateVolume(container.guildService, guildId, vol);
-			const player = container.audio?.getPlayer?.(guildId);
-			if (player) player.setVolume(updatedVol);
+			const { volume: updatedVol } = await withAppError(() => container.music.setVolume(musicActor(ctx), Math.round(Number(args.volume))));
 			updated.volume = updatedVol;
 		}
 
