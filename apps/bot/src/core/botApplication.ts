@@ -16,6 +16,7 @@ import { TrackService } from '../services/trackService.ts';
 import { PlaylistService } from '../services/playlistService.ts';
 import { AudioService } from '../services/audioService.ts';
 import { MixerService } from '../services/mixerService.ts';
+import { SkipPolicy } from '../services/skipPolicy.ts';
 import { TtsService } from '../services/ttsService.ts';
 import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
@@ -143,6 +144,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
+		container.skipPolicy = new SkipPolicy({
+			guildService: container.guildService,
+			mixerService: container.mixerService,
+			getClient: () => container.client
+		});
 		container.ttsService = new TtsService({ logger: appLogger, getTtsConfig });
 		container.ttsUserSettings = new TtsUserSettingsService({ db: container.db, logger: appLogger });
 		container.ttsPronunciation = new TtsPronunciationService({ db: container.db, logger: appLogger });

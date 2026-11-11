@@ -1,6 +1,6 @@
 import { resolveQueueSelection } from '../modules/audio/utils/queueSelection.ts';
-import { container, UserError } from '@sapphire/framework';
-import { APIUser, ChatInputCommandInteraction, Collection, GuildMember, MessageFlags, VoiceBasedChannel } from 'discord.js';
+import { UserError } from '@sapphire/framework';
+import { APIUser, ChatInputCommandInteraction, Client, Collection, GuildMember, MessageFlags, VoiceBasedChannel } from 'discord.js';
 import { Player, Queue, Track } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { VoteSkip, requiredSkipVotes } from '../modules/audio/managers/voteSkip.ts';
@@ -9,6 +9,8 @@ import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.t
 import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 import * as guildPlayback from './guildSettings/playback.ts';
+import type { GuildService } from './guildService.ts';
+import type { MixerService } from './mixerService.ts';
 
 /** 스킵 판정 컨텍스트 — /건너뛰기와 그 하위 흐름(투표·강제·곡 지정)이 공유하는 재생 상태 스냅샷 */
 export interface SkipContext {
@@ -21,11 +23,20 @@ export interface SkipContext {
 	voiceChannelMembers: Collection<string, GuildMember>;
 }
 
+export interface SkipPolicyDeps {
+	guildService: GuildService;
+	mixerService: MixerService;
+	/** client는 로그인 뒤에 준비돼서 호출 시점에 읽어요 */
+	getClient: () => Client;
+}
+
 /**
  * 스킵 정책 — 재생 흐름(AudioService)과 분리한 단위 판단 모듈.
  * DJ 역할 게이트·요청자/추천곡/단독/투표 판정과 mixer 경유 스킵 실행을 담당한다.
  */
 export class SkipPolicy {
+	public constructor(private readonly deps: SkipPolicyDeps) {}
+
 	public async handleSkip(context: SkipContext, force: boolean, to: number): Promise<void> {
 		if (force || to) {
 			await this.checkDJRole(context);
@@ -75,7 +86,7 @@ export class SkipPolicy {
 	private isTrackRequestedByBot(track: Track): boolean {
 		if (typeof track.requester === 'string') return false;
 		const requesterId = (track.requester as APIUser).id;
-		return requesterId === container.client.user?.id || requesterId === RELATED_TRACK_REQUESTER_ID;
+		return requesterId === this.deps.getClient().user?.id || requesterId === RELATED_TRACK_REQUESTER_ID;
 	}
 
 	private isUserAlone(context: SkipContext): boolean {
@@ -131,7 +142,7 @@ export class SkipPolicy {
 	 */
 	private async skipViaMixer(player: Player, position?: number): Promise<void> {
 		try {
-			await container.mixerService.skip(player as CustomPlayer, position);
+			await this.deps.mixerService.skip(player as CustomPlayer, position);
 		} catch {
 			throw new UserError({
 				identifier: 'skip_mixer_failed',
@@ -155,7 +166,7 @@ export class SkipPolicy {
 
 	private async checkDJRole(context: SkipContext): Promise<void> {
 		const { interaction } = context;
-		const hasPermission = await guildPlayback.hasDJRole(container.guildService, interaction.guildId, interaction.member);
+		const hasPermission = await guildPlayback.hasDJRole(this.deps.guildService, interaction.guildId, interaction.member);
 
 		if (!hasPermission) {
 			throw new UserError({
@@ -195,6 +206,3 @@ export class SkipPolicy {
 		});
 	}
 }
-
-/** 컨테이너 등록 없이 공유하는 단일 인스턴스 — 상태가 없어 어디서 불러도 같다. */
-export const skipPolicy = new SkipPolicy();

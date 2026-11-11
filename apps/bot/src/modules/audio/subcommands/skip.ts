@@ -9,7 +9,7 @@ import {
 	type SlashCommandOptionsOnlyBuilder,
 	SlashCommandSubcommandBuilder
 } from 'discord.js';
-import { skipPolicy, type SkipContext } from '../../../services/skipPolicy.ts';
+import type { SkipContext } from '../../../services/skipPolicy.ts';
 
 export const name = 'skip';
 export const ko = '건너뛰기';
@@ -85,5 +85,5 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	if (selection) context.queueSelection = selection;
 	const to = selection ? resolveQueueSelection(context.player, selection) + 1 : 0;
 
-	await skipPolicy.handleSkip(context, force, to);
+	await container.skipPolicy.handleSkip(context, force, to);
 }

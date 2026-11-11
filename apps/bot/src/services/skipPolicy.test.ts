@@ -16,8 +16,7 @@ vi.mock('@sapphire/framework', () => ({
 			this.identifier = options.identifier;
 			this.context = options.context;
 		}
-	},
-	container: { guildService: {}, mixerService: { skip: mixerSkip }, client: { user: { id: 'bot-self' } } }
+	}
 }));
 
 function track(requesterId: string, identifier = `id-${requesterId}`): Track {
@@ -49,7 +48,9 @@ function makeContext(overrides: { requesterId?: string; queueTracks?: Track[]; m
 	};
 }
 
-const policy = new SkipPolicy();
+const guildService = {};
+const client = { user: { id: 'bot-self' } };
+const policy = new SkipPolicy({ guildService: guildService as never, mixerService: { skip: mixerSkip } as never, getClient: () => client as never });
 
 async function expectUserError(promise: Promise<unknown>, identifier: string) {
 	await expect(promise).rejects.toMatchObject({ identifier, context: { ephemeral: true } });
@@ -198,5 +199,28 @@ describe('DJ 역할 게이트·강제 스킵 규칙 (단위)', () => {
 		await unchecked.handleForceSkip(context);
 		expect(mixerSkip).toHaveBeenCalledWith(context.player, undefined);
 		expect(context.interaction.reply).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('deps 주입', () => {
+	it('client가 아직 없을 때 만들어도 호출 시점에 client를 읽는다', async () => {
+		mixerSkip.mockReset().mockResolvedValue(undefined);
+		let lateClient: typeof client | undefined;
+		const lazy = new SkipPolicy({
+			guildService: guildService as never,
+			mixerService: { skip: mixerSkip } as never,
+			getClient: () => lateClient as never
+		});
+		lateClient = client;
+		const context = makeContext({ requesterId: 'bot-self' });
+		await lazy.handleSkip(context, false, 0);
+		expect(mixerSkip).toHaveBeenCalledOnce();
+	});
+
+	it('DJ 역할 확인에 주입한 guildService를 넘긴다', async () => {
+		hasDJRole.mockReset().mockResolvedValue(true);
+		mixerSkip.mockReset().mockResolvedValue(undefined);
+		await policy.handleSkip(makeContext({ queueTracks: [track('other')] }), true, 0);
+		expect(hasDJRole).toHaveBeenCalledWith(guildService, 'g1', expect.anything());
 	});
 });

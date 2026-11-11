@@ -26,6 +26,8 @@ declare module '@sapphire/pieces' {
 		playlistService: import('../services/playlistService.ts').PlaylistService;
 		audioService: import('../services/audioService.ts').AudioService;
 		mixerService: import('../services/mixerService.ts').MixerService;
+		/** 스킵 판정(DJ·요청자·투표) 소유자 — 상태 없이 mixer 경유 스킵만 실행해요 */
+		skipPolicy: import('../services/skipPolicy.ts').SkipPolicy;
 		ttsService: import('../services/ttsService.ts').TtsService;
 		ttsUserSettings: import('../services/ttsUserSettings.ts').TtsUserSettingsService;
 		ttsPronunciation: import('../services/ttsPronunciation.ts').TtsPronunciationService;
