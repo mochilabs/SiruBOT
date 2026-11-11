@@ -13,17 +13,14 @@
  * - REQUEST 퍼블리시는 sharedCache 클라이언트로 해요 (guildData·playerWeb과 같은 방식).
  * - RESPONSE 구독은 pub/sub 전용 연결이 필요하므로 guildDataHub와 같은 연결 라이프사이클을 따라요.
  */
-import { sharedCache } from '../utils/cache.ts';
-import { correlateHubResponse } from '../utils/hubCorrelate.ts';
+import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import { getLogger } from '../utils/logger.ts';
-import { HubSubscriber } from '../utils/hubSubscriber.ts';
-import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import {
 	JTC_SETUP_REQUEST_CHANNEL,
 	JTC_SETUP_RESPONSE_CHANNEL,
-	PendingRequestPool,
 	jtcSetupResponseSchema,
-	type JtcSetupResponse
+	type JtcSetupResponse,
+	type PendingRequestPool
 } from '@sirubot/utils';
 
 const logger = getLogger('jtcSetupHub');
@@ -41,102 +38,60 @@ export interface JtcSetupPendingMeta {
 	guildId: string;
 }
 
+/** 대기·상관·구독·퍼블리시 배선은 공용 팩토리가, 이 허브의 채널·기준·결과 매핑은 아래 설정이 정해요 */
+const hub = createRequestReplyHub<JtcSetupResponse, JtcSetupPendingMeta, JtcSetupResult>({
+	name: 'jtc setup hub',
+	label: 'jtc setup',
+	mismatch: 'guildId mismatch',
+	requestLabel: 'JTC setup request',
+	logger,
+	requestChannel: JTC_SETUP_REQUEST_CHANNEL,
+	responseChannel: JTC_SETUP_RESPONSE_CHANNEL,
+	responseSchema: jtcSetupResponseSchema,
+	capacity: PENDING_LIMIT,
+	matches: (response, meta) => response.guildId === meta.guildId,
+	toResult: (response) => {
+		if (response.error) {
+			// 봇이 검증 실패(카테고리 아님·권한 부족 등)를 한국어로 실어 보낸 경우: 실제 사유를 그대로 전달해요.
+			return { ok: false, reason: 'bot_error', message: response.error };
+		}
+		return { ok: true, markerChannelId: response.markerChannelId };
+	},
+	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
+	unavailableResult: () => ({ ok: false, reason: 'redis_unavailable', message: null })
+});
+
 /**
  * RESPONSE 채널 raw 메시지를 대기 중 요청과 상관해요. requestId의 메타데이터와 guildId가 일치하면
  * 풀을 완료하고, 그 외(잘못된 본문, 대기 중이 아닌 requestId, 불일치)는 무시해요.
- * 파싱·검증·메타 대조·결과 매핑 순서는 공용 correlateHubResponse가, 이 허브의 기준과 결과는 아래 콜백이 정해요.
  */
 export function correlateJtcSetupResponse(
 	raw: string,
 	pending: PendingRequestPool<JtcSetupResult>,
 	pendingMeta: Map<string, JtcSetupPendingMeta>
 ): 'resolved' | 'unmatched' | 'malformed' {
-	return correlateHubResponse<JtcSetupResponse, JtcSetupPendingMeta, JtcSetupResult>({
-		raw,
-		hub: 'jtc setup',
-		mismatch: 'guildId mismatch',
-		logger,
-		schema: jtcSetupResponseSchema,
-		pending,
-		pendingMeta,
-		matches: (response, meta) => response.guildId === meta.guildId,
-		toResult: (response) => {
-			if (response.error) {
-				// 봇이 검증 실패(카테고리 아님·권한 부족 등)를 한국어로 실어 보낸 경우: 실제 사유를 그대로 전달해요.
-				return { ok: false, reason: 'bot_error', message: response.error };
-			}
-			return { ok: true, markerChannelId: response.markerChannelId };
-		}
-	});
+	return hub.correlate(raw, pending, pendingMeta);
 }
-
-/** requestId별 대기 요청 메타데이터 — 타임아웃 회수(onTimeout)와 상관 완료(correlate)에서 함께 정리해 누수를 막아요 */
-const pendingMeta = new Map<string, JtcSetupPendingMeta>();
-
-/** 동시 대기 요청 상한·타임아웃 회수는 공용 풀에 위임해요 — 봇 응답 없음과 타임아웃은 같은 실패로 매핑해요 */
-const pending = new PendingRequestPool<JtcSetupResult>({
-	capacity: PENDING_LIMIT,
-	logger,
-	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
-	onTimeout: (requestId) => pendingMeta.delete(requestId)
-});
-
-/** Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (봇과 공유). 없으면 서명 없는 구버전 모드. */
-const redisSigningKey = resolveRedisSigningKey(process.env);
-
-/** Pub/Sub 구독자 — 공용 라이프사이클(HubSubscriber)에 연결·구독·재시도·종료를 위임해요. */
-const subscriber = new HubSubscriber({
-	name: 'jtc setup hub',
-	channel: JTC_SETUP_RESPONSE_CHANNEL,
-	// 응답은 서명 검증을 통과한 본문만 상관해요 (SEC-006).
-	onMessage: (message) => {
-		const body = unwrapRedisMessage(redisSigningKey, message);
-		if (body === null) {
-			logger.warn('Rejected jtc setup response with invalid signature');
-			return;
-		}
-		correlateJtcSetupResponse(body, pending, pendingMeta);
-	},
-	logger
-});
 
 /**
  * RESPONSE 채널 구독자 연결을 시작해요.
  * REDIS_URL이 없으면 구독 없이 시작해요 — 요청은 redis_unavailable로 즉시 실패해요 (guildDataHub 선례).
  */
-export async function startJtcSetupHub(redisUrl: string | undefined): Promise<void> {
-	if (!redisUrl) {
-		logger.warn('REDIS_URL is not set, jtc setup hub will not receive responses (all requests fail as redis_unavailable)');
-		return;
-	}
-	await subscriber.start(redisUrl);
-}
+export const startJtcSetupHub = (redisUrl: string | undefined): Promise<void> => hub.start(redisUrl);
 
-export async function stopJtcSetupHub(): Promise<void> {
-	await subscriber.stop();
-}
+export const stopJtcSetupHub = (): Promise<void> => hub.stop();
 
 /**
  * JTC 마커 채널 셋업 요청을 봇에 전달하고 응답을 기다려요. Redis 클라이언트가 없으면 즉시 redis_unavailable,
  * REQUEST 채널을 퍼블리시하고 대기 시간 안에 응답이 없으면 timeout으로 실패해요.
  * 봇은 보유 길드에만 응답하므로 응답 없음은 봇 미보유·미연결과 같은 실패로 매핑돼요.
  */
-export async function requestJtcSetup(payload: { requestId: string; guildId: string; userId: string; categoryId: string }): Promise<JtcSetupResult> {
-	const client = sharedCache.getClient();
-	if (!client) {
-		return { ok: false, reason: 'redis_unavailable', message: null };
-	}
-	// 용량 초과 등 즉시 실패 경로에서도 onTimeout이 메타데이터를 정리할 수 있게 register 전에 심어요
-	pendingMeta.set(payload.requestId, { guildId: payload.guildId });
-	const promise = pending.register(payload.requestId, SETUP_TIMEOUT_MS);
-	try {
-		await client.publish(JTC_SETUP_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, payload));
-	} catch (error) {
-		// publish 실패 — 응답이 절대 오지 않으니 즉시 실패로 정리해요
-		if (pending.fail(payload.requestId, { ok: false, reason: 'redis_unavailable', message: null })) {
-			pendingMeta.delete(payload.requestId);
-		}
-		logger.warn(`JTC setup request publish failed (${payload.guildId}): ${error instanceof Error ? error.message : String(error)}`);
-	}
-	return promise;
+export function requestJtcSetup(payload: { requestId: string; guildId: string; userId: string; categoryId: string }): Promise<JtcSetupResult> {
+	return hub.request({
+		requestId: payload.requestId,
+		payload,
+		meta: { guildId: payload.guildId },
+		timeoutMs: SETUP_TIMEOUT_MS,
+		logContext: payload.guildId
+	});
 }
