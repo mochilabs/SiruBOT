@@ -44,7 +44,7 @@ yarn watch          # watch-build every app/package except the dashboard
 yarn lint / yarn lint:fix / yarn typecheck / yarn test
 ```
 
-- Single test: `yarn workspace @sirubot/bot test src/path/file.test.ts`, or `-t "name"`.
+- Single test: `yarn workspace @sirubot/bot test src/path/file.test.ts`, or `-t "name"`. If that prints `command not found: vitest` (seen in fresh worktrees), use `yarn turbo test --filter=@sirubot/bot -- src/path/file.test.ts`.
 - Tests share the root `vitest.config.ts` (`--config ../../vitest.config.ts`), which aliases `@sirubot/utils`, its subpaths, and `@sirubot/app-kit` to **source**. No package dist build is needed and stale dist can't leak in. Exception: the dashboard has its own `apps/dashboard/vitest.config.ts` (includes `*.test.tsx`).
 - `typecheck` runs `^build ^generate` first via turbo. Don't run bare `tsc`.
 - Lint: dashboard only uses `eslint . --max-warnings=0`; everything else is prettier `--check` (tabs, single quotes, `printWidth: 150`, `trailingComma: none`).
@@ -57,7 +57,7 @@ Apps never import each other. The only contact points are Redis pub/sub, HTTP wi
 
 - **Redis channel names and payload schemas live only in `packages/utils/src/redisChannels.ts`** (plus zod schemas). Never hardcode them as string literals in an app.
 - **The dashboard never talks to the bot directly.** It reads/writes the DB via Prisma and uses Redis only for its own needs (rate limits, token store). Anything bound for the bot goes dashboard API route → data-api (HTTP) → Redis → bot.
-- Work that needs the bot token or gateway cache (channel/role lists, voice context and DJ permissions, JTC channel setup, bot admin) uses **request/reply**: the publisher sends `*:request` with a `requestId`, only the bot process owning that guild replies on `*:response`, and the publisher's `*Hub` handles correlation and timeouts. Copy an existing pair: data-api `playerWebHub`/`guildDataHub`/`jtcSetupHub`/`botAdminHub`, notifier `webhookHub` ↔ bot `services/*Responder.ts`.
+- Work that needs the bot token or gateway cache (channel/role lists, voice context and DJ permissions, JTC channel setup, bot admin) uses **request/reply**: the publisher sends `*:request` with a `requestId`, only the bot process owning that guild replies on `*:response`, and the publisher's `*Hub` handles correlation and timeouts. Copy an existing pair: data-api `playerWebHub`/`guildDataHub`/`jtcSetupHub`/`botAdminHub`/`panelHub` (built with `createRequestReplyHub` in `utils/requestReplyHub.ts`), notifier `webhookHub` ↔ bot Redis responders (`services/*Responder.ts`, `features/*/inbound/`).
 - Live player: bot publishes snapshots on `sirubot:player:{guildId}` → data-api `playerHub` (sole subscriber) → SSE → dashboard.
 - After a settings save, data-api broadcasts `sirubot:guild-settings:invalidate` and every bot process drops that guild's cache (settings and custom commands).
 - Large bodies (e.g. avatar data URIs) go in a pending key, not the pub/sub message; the channel message is only a trigger.
@@ -83,8 +83,8 @@ Apps never import each other. The only contact points are Redis pub/sub, HTTP wi
 ## Bot rules
 
 - Relative imports **always include the `.ts` extension** (`allowImportingTsExtensions`). strict + decorators.
-- Modules are `audio` and `general`, registered with `setupStore()` from the `PIECE_ROOTS` list in `core/pieceRoots.ts` (used by `core/bootstrap.ts`). Feature folders (`features/<name>/discord/{commands,listeners,interaction-handlers}`, e.g. `tickets`, `role-panels`) are added to the same list. Files go in `apps/bot/src/modules/<module>/{commands,subcommands,preconditions,listeners,interaction-handlers,view}/`.
-- Entry chain: `index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`. Most container services are assigned in `botApplication.ts`.
+- Code lives in `modules/{audio,general}` (Sapphire pieces: `commands,subcommands,preconditions,listeners,interaction-handlers,view`) and `features/<name>/` (`music` application layer only, `tickets`, `role-panels`, `temp-voice`, `games`, `custom-commands`, `greeting`). Every store root is listed once in `PIECE_ROOTS` in `core/pieceRoots.ts` (read by `core/bootstrap.ts` and the piece inventory test); a new root goes there.
+- Entry chain: `index.ts → core/setup.ts → core/bootstrap.ts` (a short step list over `core/{shardIdentity,botClient,healthServer,lavalinkSetup,shutdown,redisSubscribers}.ts`) `→ core/botApplication.ts`. Container services are assigned in `BotApplication.setupServices`, which also registers every Redis subscriber service in `container.redisSubscribers` (bootstrap starts and shutdown stops them in that order).
 - All user-facing strings are Korean. Slash-command details follow `sapphire-command`; UI follows `component-view`.
 - Command registration: `REGISTER_COMMANDS=true` overwrites, otherwise it only logs to console. Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]`.
 - Custom commands:
@@ -93,3 +93,12 @@ Apps never import each other. The only contact points are Redis pub/sub, HTTP wi
   - Engine and cache: `apps/bot/src/features/custom-commands/application/`. Re-validate the spec with zod before running it (`interpreter.ts`).
   - Create/edit/delete only from the dashboard with guild manage permission (`role: "manage"`). Saving triggers the invalidate broadcast, which clears the cache and re-syncs slash commands.
 - Shutdown order directly affects session loss. Read `bot-ops` before touching it.
+
+### Where new code goes
+
+- New feature code goes in `features/<name>/`: `index.ts` (public surface), `application/` (use cases), `discord/{commands,listeners,interaction-handlers,views}`, `inbound/` (Redis responders). Entry points (slash, buttons, listeners, dashboard responders, AI tools) are thin adapters over the use cases.
+- `application/` must not import Sapphire, discord interactions, views, pieces or config; it receives config values and collaborators through deps. Music controls (`container.music`) are the reference.
+- Other code imports a feature only through its `index.ts`.
+- Config is read with `getConfig()` (`core/config.ts`; `lib/configAccess.ts` from `modules/`), never `process.env`. Tests pass a Config (`makeTestConfig`, `setConfigForTesting`).
+- User-facing failures in use cases are thrown as `AppError` (`lib/appError.ts`); the central error listeners render them via `lib/errorPresenter.ts`. `UserError` stays for Sapphire preconditions and code not yet migrated.
+- `apps/bot/src/architecture.test.ts` (import-rule ratchet) and `core/pieceInventory.test.ts` (snapshot of every piece name and command category) guard this. Allowlists may only shrink; fix the violation instead of growing a list. An intended piece change updates the snapshot in the same commit.

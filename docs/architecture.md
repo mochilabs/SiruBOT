@@ -1,6 +1,6 @@
 # SiruBOT Architecture
 
-> **As of**: 2026-11-07 · Verified by reading the source files cited in each section.
+> **As of**: 2026-11-11 · Verified by reading the source files cited in each section.
 > Code wins. Citations give file paths only, never line numbers (they drift as soon as code changes).
 > Each app is an independent process; they talk only through the "shared contracts" below (Redis channels, HTTP auth, WS protocol).
 
@@ -152,56 +152,62 @@ Source: `@sirubot/*` dependencies in each app's `package.json`. shardmanager dep
 
 ### 4.1 apps/bot
 
-**Boot chain**: `src/index.ts` → `setup()` (env, Sentry; `core/setup.ts`) → `main()` (shard identify + app assembly; `core/bootstrap.ts`). Assembly methods live in `core/botApplication.ts`.
+**Boot chain**: `src/index.ts` → `setup()` (`.env`, Sentry; `core/setup.ts`) → `main()` (`core/bootstrap.ts`, a short step list). The steps live in `core/{shardIdentity,botClient,healthServer,lavalinkSetup,shutdown,redisSubscribers,pieceRoots}.ts`; assembly methods live in `core/botApplication.ts`.
 
-**Shard identify** (`core/bootstrap.ts`):
+**Config**: bot env values are parsed once into a typed Config in `core/config.ts` (`loadConfig`, `getConfig()`); `process.env` is read nowhere else (`core/environment.ts` only loads `.env`). `modules/` reads it through `lib/configAccess.ts`, `features/*/application/` receives values through deps, and tests pass a Config (`makeTestConfig` in `core/config.testing.ts`, `setConfigForTesting`).
+
+**Shard identify** (`core/shardIdentity.ts`):
 
 | Mode | Behavior |
 |---|---|
 | Dev (`NODE_ENV != production`) | Standalone, `shards: [0]` |
 | Production | Exits immediately without `SHARD_MANAGER_URL` or `AUTH_KEY`. Gets shards from `ShardClient.identify()`; on `NoShardsAvailableError` retries forever at the retry interval (rolling updates) |
 
-**Assembly order** (`core/bootstrap.ts`): `setupStore()` ×4 (`audio`, `general`, `voice`, `games`) → `setupDatabase()` (PrismaPg) → `setupServices()` → `setupRedis()` (on failure **keeps booting memory-only**; queue and sessions become volatile) → `start()` on the 8 Redis responders (each may fail without stopping boot) → Discord login → `parseLavalinkHosts` → `setupAudio()` → register `LavalinkHandler` + connect nodes.
+**Assembly order** (`core/bootstrap.ts`): `setupStore()` for each root in `PIECE_ROOTS` (`core/pieceRoots.ts`: `modules/audio`, `modules/general`, then the `features/*/discord` roots) → `setupDatabase()` (PrismaPg) → `setupServices()` → `setupRedis()` (on failure **keeps booting memory-only**; queue and sessions become volatile) → `startRedisSubscribers()` over `container.redisSubscribers`, the 10 Redis subscriber services (each may fail without stopping boot) → Discord login → `setupLavalink()` (`parseLavalinkHosts` → `setupAudio()` → register `LavalinkHandler` + connect nodes) → health server.
 
-**Service inventory** (`src/services/`; container assignment in `core/botApplication.ts`):
+**Code layout**: `modules/{audio,general}` hold Sapphire pieces. Feature folders `features/<name>/` (`tickets`, `role-panels`, `temp-voice`, `games`, `custom-commands`, `greeting`, plus `music` with the application layer only) each have `index.ts` (public surface), `application/` (use cases, no Sapphire/views/config), `discord/{commands,listeners,interaction-handlers,views}` and, where needed, `inbound/` (Redis responders). Other code imports a feature only through its `index.ts`. Import rules and the Sapphire piece inventory are guarded by `src/architecture.test.ts` and `core/pieceInventory.test.ts` (allowlists may only shrink).
+
+**Music application layer** (`features/music/application/{actor,access,control}.ts`, exposed as `container.music`): `setVolume`, `pause`, `resume`, `setRepeat`, `seek`, `stop`, `skipNow`, `previous`. Slash subcommands, controller buttons, the dashboard web player responder and AI tools are adapters over it, under one policy in `access.ts`: same voice channel as the bot (only Administrator exempt) plus "DJ role or alone". Slash vote-skip (`services/skipPolicy.ts`) and play/search are not part of it yet. Use cases throw `AppError` (`lib/appError.ts`); `lib/errorPresenter.ts` renders it in both central error listeners. The music volume limit is shared with the dashboard via `@sirubot/utils/playerLimits`.
+
+**Service inventory** (`src/services/` unless a feature path is shown; container assignment in `BotApplication.setupServices`, `core/botApplication.ts`):
 
 | Group | Services | Role |
 |---|---|---|
-| Domain | `guildService` (+ split stores in `guildSettings/`) `trackService` `playlistService` `audioService` `mixerService` `tempVoiceService` `ticketService` | Guild settings cache (60 s TTL), tracks/playlists, audio, mixer (AutoMix), temp voice channels (JTC), tickets |
+| Domain | `guildService` (+ split stores in `guildSettings/`) `trackService` `playlistService` `audioService` `mixerService` `tempVoiceService` `features/tickets/application/ticketService` `features/role-panels/application/rolePanelService` | Guild settings cache (60 s TTL), tracks/playlists, audio, mixer (AutoMix), temp voice channels (JTC), tickets, role panels |
 | AI | `aiChatService` + `aiChat/` (agent loop, summarizer, token budget, memory promotion) `aiTools/` `aiMemoryService` | Mention-triggered AI chat (`general/listeners/message/mentionReply.ts`), tool calls, long-term memory |
 | Voice | `ttsService` `ttsUserSettings` `chatTts` | siru-tts synthesis, per-user voice settings, read-aloud of chat |
 | Playback helpers | `sponsorBlockService` `skipPolicy` `playlistPlayback` `trackData` | SponsorBlock segment skipping (via data-api), skip policy, playlist playback |
-| Redis responders | `guildSettingsInvalidator` `playerWebResponder` `jtcSetupResponder` `botProfileService` `memberGreetingService` `guildDataResponder` `socialWebhookResponder` `botAdminResponder` | Answer hub requests or consume broadcasts (§5.2) |
+| Redis responders (10, registered in `container.redisSubscribers`) | `guildSettingsInvalidator` `playerWebResponder` `botProfileService` `guildDataResponder` `socialWebhookResponder` `botAdminResponder` `panelPostResponder` in `services/`; `jtcSetupResponder` (`features/temp-voice/inbound/`), `roleValidationResponder` (`features/role-panels/inbound/`), `memberGreetingService` (`features/greeting/application/`) | Answer hub requests or consume broadcasts (§5.2) |
 | Integrations | `dataApiClient` `playbackReporter` `embedFixGateway` `webhookRelay` `appEmojiManager` `userDataService` `countingState` | data-api HTTP client (horoscope, storage upload), playback event reports, embed fixing, webhook relay, app emojis, user data deletion, counting game state |
-| Module (not in container) | `features/custom-commands/application/{store,interpreter,slashRegistry}` + `features/custom-commands/discord/listeners/{customCommandPrefix,customCommandSlash}.ts` | Custom commands. Spec contract in `packages/utils/src/customCommand.ts`; spec is zod-revalidated before running. `prefix` method = "prefix+name" trigger (`!도움말` reserved); `slash` method = guild command, ID-based incremental sync |
+| Feature (not in container) | `features/custom-commands/application/{store,interpreter,slashRegistry}` + `features/custom-commands/discord/listeners/{customCommandPrefix,customCommandSlash}.ts` | Custom commands. Spec contract in `packages/utils/src/customCommand.ts`; spec is zod-revalidated before running. `prefix` method = "prefix+name" trigger (`!도움말` reserved); `slash` method = guild command, ID-based incremental sync |
 
-**Audio event path**: the bot publishes snapshots on `sirubot:player:{guildId}`; data-api `playerHub`, the only subscriber, relays them to the dashboard over SSE (§6.1). Lavalink session restore lives in `modules/audio/lavalink/handlers/sessionRestore.ts`.
+**Audio event path**: the bot publishes snapshots on `sirubot:player:{guildId}`; data-api `playerHub`, the only subscriber, relays them to the dashboard over SSE (§6.1). Lavalink session restore lives in `modules/audio/lavalink/handlers/sessionRestore.ts`. Queue list view state (page, selected index) is carried in custom IDs (`modules/audio/utils/queueViewId.ts`, handler `modules/audio/interaction-handlers/queueViewButton.ts`), not on the player.
 
 ### 4.2 apps/data-api
 
 **Assembly order** (`src/server.ts`):
 
-1. Connect the shared-cache Redis + **start 7 hubs**: `playerHub`, `botProfileHub`, `memberGreetingHub`, `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub`
+1. Connect the shared-cache Redis + **start 8 hubs** from one array in `server.ts`: `playerHub`, `botProfileHub`, `memberGreetingHub`, `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub`, `panelHub`
 2. Preload the Korean canvas font
 3. Two OpenAI-compatible providers — translation (`TRANSLATION_MODEL`; without it, raw horoscopes are served) and custom-command drafts (`CUSTOM_COMMAND_DRAFT_MODEL ?? TRANSLATION_MODEL`)
 4. Shared error handler (`app-kit`) → auth hook → route registration (Lavalink REST, notifier, and storage addresses/keys injected)
 5. Start the horoscope scheduler
 6. Connect DB + nightly memory-tidy scheduler (`MEMORY_TIDY_*`; only with DB and a provider)
 
-Shutdown: stop schedulers → stop 7 hubs → cache Redis → DB → Fastify.
+Shutdown: stop schedulers → stop 8 hubs → cache Redis → DB → Fastify.
 
 **Layers**:
 
 ```mermaid
 graph TB
     R1["routes/<br/>index · cache-providers · ohaasa · embed-fix · render · ai<br/>player · guild-data · social · storage · bot-admin · dashboard"] --> P["providers/<br/>weather · lyrics · ohaasa · chapters · delivery · sponsorblock<br/>youtubeSuggestions · lavalinkSearch · embedFix · translate"]
-    R1 --> S["services/<br/>7 hubs · ohaasaScheduler · memoryTidy · playbackStore · db"]
+    R1 --> S["services/<br/>8 hubs · ohaasaScheduler · memoryTidy · playbackStore · db"]
     R1 --> RD["renderers/<br/>profileCard(Ticket/Dark) · memberGreetingCard · ohaasaCard · nowPlayingCard"]
-    P --> U["utils/<br/>cache · dedup · breaker · metrics · hubSubscriber · hubCorrelate"]
+    P --> U["utils/<br/>cache · dedup · breaker · metrics · hubSubscriber · hubCorrelate · requestReplyHub"]
     S --> U
 ```
 
-**Bot relay failure mapping** (`routes/common.ts` `replyBotRelayFailure`; shared by guild-data, player-web, jtc-setup, bot-admin):
+**Bot relay failure mapping** (`routes/common.ts` `replyBotRelayFailure`; shared by guild-data, player-web, jtc-setup, bot-admin, panel):
 
 | Reason | HTTP | Meaning |
 |---|---|---|
@@ -314,7 +320,7 @@ sequenceDiagram
     Note over SC,SM: on disconnect, exponential backoff reconnect - 1s→2s→...→30s cap<br/>re-identify with current shardIds
 ```
 
-Source: `client.ts` (10 s ACK timeout, empty shardIds → `NoShardsAvailableError`, backoff reconnect capped at 30 s, re-identify, 5 s retry on network errors), `bootstrap.ts` (outer retry interval).
+Source: `client.ts` (10 s ACK timeout, empty shardIds → `NoShardsAvailableError`, backoff reconnect capped at 30 s, re-identify, 5 s retry on network errors), bot `core/shardIdentity.ts` (outer retry interval).
 
 ### 5.2 Redis pub/sub channel map
 
@@ -332,6 +338,8 @@ Constants live in one place: `packages/utils/src/redisChannels.ts`. Every messag
 | `sirubot:player-web:request` / `:response` | data-api / bot | owning bot / playerWebHub | Web player `search`, `play`, `control`, `voice-context` (voice channel and DJ checks need the bot's cache) |
 | `sirubot:jtc-setup:request` / `:response` | data-api / bot | owning bot / jtcSetupHub | Create/move the JTC marker channel (bot-token work) |
 | `sirubot:bot-admin:request` / `:response` | data-api / bot | bot / botAdminHub | Operator panel actions such as node reconnect and player control |
+| `sirubot:panel-post:request` / `:response` | data-api / bot | owning bot / panelHub | Post or refresh a ticket/role panel message (needs the bot token) |
+| `sirubot:role-validation:request` / `:response` | data-api / bot | owning bot / panelHub | Check that a role can be granted (not managed, within hierarchy, not @everyone) |
 | `sirubot:social:webhook-create:request` / `:response` | notifier / bot | owning bot / notifier webhookHub | Create a webhook in the target channel once, when a social subscription is added |
 
 Every request/response pair uses `requestId` correlation plus a timeout (§6.2).
@@ -346,7 +354,7 @@ Every header is `Authorization: <raw key>` (no Bearer). Server-side checks come 
 | dashboard → storage, data-api → storage | `STORAGE_AUTH_KEY ?? AUTH_KEY` | |
 | data-api → notifier | `NOTIFIER_AUTH_KEY ?? AUTH_KEY` | |
 | dashboard → shardmanager | dashboard `SHARD_MANAGER_AUTH_KEY` = shardmanager `AUTH_KEY` | No fallback on the dashboard side |
-| bot → shardmanager (WS) | `AUTH_KEY` (connection header) + Discord token in IDENTIFY | `client.ts`, `bootstrap.ts` |
+| bot → shardmanager (WS) | `AUTH_KEY` (connection header) + Discord token in IDENTIFY | `client.ts`, bot `core/shardIdentity.ts` |
 | Redis message signing | `REDIS_AUTH_KEY ?? AUTH_KEY` | Shared by bot, data-api, notifier |
 
 ---
@@ -379,7 +387,7 @@ Source: `redisChannels.ts`, `apps/dashboard/src/app/api/servers/[id]/live/stream
 
 ### 6.2 Redis request/reply: the standard "ask the bot" pattern
 
-guild-data, player-web, jtc-setup, bot-admin (published by data-api) and social webhook-create (published by notifier) all use this pattern. Shared hub parts in data-api: `utils/hubCorrelate.ts`, `utils/hubSubscriber.ts`.
+guild-data, player-web, jtc-setup, bot-admin, panel-post and role-validation (published by data-api) and social webhook-create (published by notifier) all use this pattern. In data-api, `utils/requestReplyHub.ts` (`createRequestReplyHub`) backs `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub` and `panelHub` on top of `utils/hubCorrelate.ts` and `utils/hubSubscriber.ts`.
 
 ```mermaid
 sequenceDiagram
@@ -451,19 +459,19 @@ Source: `apps/data-api/src/routes/social.ts`, `apps/notifier/src/{routes/social.
 
 ```mermaid
 flowchart TD
-    A["index.ts: setup() + main()"] --> B["setup.ts · load env · Sentry handlers"]
+    A["index.ts: setup() + main()"] --> B["setup.ts · load .env · Sentry handlers"]
     B --> C{"NODE_ENV"}
     C -->|production| D["ShardClient.identify()<br/>retry on NoShardsAvailable<br/>exit without SHARD_MANAGER_URL"]
     C -->|dev| E["shards = [0] standalone"]
     D --> F["create BotApplication"]
     E --> F
-    F --> G["setupStore ×4 → setupDatabase<br/>→ setupServices → setupRedis (memory on failure)<br/>→ start 8 Redis responders"]
+    F --> G["setupStore per PIECE_ROOTS → setupDatabase<br/>→ setupServices → setupRedis (memory on failure)<br/>→ start 10 Redis subscribers"]
     G --> H["Discord login → setupAudio<br/>→ LavalinkHandler · connect nodes · resume sessions"]
     H --> I["SIGINT / SIGTERM"]
-    I --> N["close health server → save node sessions to Redis<br/>→ clean up Lavalink listeners → stop 8 responders<br/>→ flush pending journal → Redis → DB<br/>→ destroy gateway → destroy shardClient → Sentry flush"]
+    I --> N["close health server → save node sessions to Redis<br/>→ clean up Lavalink listeners → stop 10 subscribers<br/>→ flush pending journal → Redis → DB<br/>→ destroy gateway → destroy shardClient → Sentry flush"]
 ```
 
-Source: `index.ts`, `core/bootstrap.ts` (re-entry guard `shutdownStarted`; if Redis is down, session save is skipped and logged as a failure), `core/botApplication.ts`. Reordering shutdown loses sessions — read `.pi/skills/bot-ops/SKILL.md` before changing it.
+Source: `index.ts`, `core/bootstrap.ts`, `core/shutdown.ts` (re-entry guard in `createShutdownHandler`; if Redis is down, session save is skipped and logged as a failure), `core/botApplication.ts`. Reordering shutdown loses sessions — read `.pi/skills/bot-ops/SKILL.md` before changing it.
 
 During rolling updates the new process retries identify until a shard slot frees up; after connecting, shardclient self-heals WS drops with backoff and re-identifies with its current shardIds (`client.ts`).
 
@@ -511,7 +519,7 @@ During rolling updates the new process retries identify until a shard slot frees
 
 | App | Schema |
 |---|---|
-| bot | `apps/bot/src/core/env.ts` |
+| bot | `apps/bot/src/core/config.ts` |
 | dashboard | `apps/dashboard/src/lib/env.ts` (+ next-auth `src/lib/auth.ts`) |
 | data-api | `apps/data-api/src/config/env.ts` |
 | storage | `apps/storage/src/config/env.ts` |

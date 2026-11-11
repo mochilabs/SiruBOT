@@ -5,7 +5,7 @@ description: Create or modify SiruBOT Components V2 views (playback notification
 
 # Component Views (Discord Components V2)
 
-All views live as functions in `apps/bot/src/modules/<audio|general>/view/`. Never write new views with legacy Embeds (`ExtendedEmbedBuilder`).
+Views live as functions in `apps/bot/src/modules/<audio|general>/view/`, or in `apps/bot/src/features/<name>/discord/views/` for feature folders (tickets, role-panels, games, custom-commands, greeting). Never write new views with legacy Embeds (`ExtendedEmbedBuilder`).
 
 1. Start with helpers from `@sirubot/utils`: `createContainer()` (auto DEFAULT_COLOR accent), then `addSeparator(container)` and `createThumbnail(url)` — prefer these over `new`. Thumbnail+text combo: follow the `addTextWithThumbnail` pattern from `view/play.ts` (SectionBuilder + setThumbnailAccessory; TextDisplay alone if no URL).
 2. Assembly order: TextDisplay/Section → ActionRow (buttons/selects) → Separator → footer. Put buttons/selects inside `container.addActionRowComponents()`. Always send with `flags: [MessageFlags.IsComponentsV2]` — omitting it breaks rendering; check the call site too.

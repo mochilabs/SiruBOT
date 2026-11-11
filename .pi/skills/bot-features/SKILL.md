@@ -6,7 +6,7 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 # Bot Features (AI, voice, games)
 
 ## AI chat
-- Pipeline: mention trigger `modules/general/listeners/message/mentionReply.ts` (settings via `commands/chatSettings.ts`) → `services/aiChatService.ts` → `services/aiTools/` (`TOOLS` array in `aiTools/index.ts`): web_search, web_fetch, weather_get, delivery_track, get_ohaasa_horoscope, bot_help, server_info, music_* (`music.ts`), music_settings_get/set, bot_settings_get/set, memory_save/memory_forget.
+- Pipeline: mention trigger `modules/general/listeners/message/mentionReply.ts` (settings via `commands/chatSettings.ts`) → `services/aiChatService.ts` → `services/aiTools/` (`TOOLS` array in `aiTools/index.ts`): web_search, web_fetch, weather_get, delivery_track, get_ohaasa_horoscope, bot_help, server_info, music_* (`music.ts`; control tools call `container.music`), music_settings_get/set, bot_settings_get/set, memory_save/memory_forget.
 - `services/aiMemoryService.ts`: per-user long-term memory — Prisma only (`container.db.userMemory`), no Redis. New tools: register in `aiTools/index.ts` and follow the `types.ts` interface contract.
 
 ## Audio extras
@@ -16,7 +16,7 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 
 ## Temp voice channels
 - Core: `services/tempVoiceService.ts` (create/delete, ownership, settings). Listeners: `features/temp-voice/discord/listeners/tempVoiceState.ts` (VoiceState → delegates to service), `tempVoiceChannelDelete.ts` (delete cleanup).
-- JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts:178`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetupResponder.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
+- JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetupResponder.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
 
 ## Games
 - `features/games/discord/commands/`: dice, rps, ohaasa, guess, checkin. Single interaction handler `features/games/discord/interaction-handlers/games.ts` — customId `game:<type>:<args>` convention; new games use this pattern. Ohaasa: zodiac mapping in `features/games/application/ohaasaService.ts`; translated horoscope data comes from data-api `/v1/ohaasa` (`services/dataApiClient.ts`).

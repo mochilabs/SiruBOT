@@ -54,23 +54,24 @@ export class CommandNameCommand extends Command {
 Subcommand logic lives in `apps/bot/src/modules/audio/subcommands/*.ts` (or `modules/general/subcommands/*.ts`), exporting `name` / `ko` / `description` / `preconditions` / `build(sub)` / `run(interaction)`. Command keeps a `SUBCOMMANDS` array, registers each entry in `registerApplicationCommands`, and routes + runs each subcommand's preconditions via `runSubcommandPreconditions` (`lib/subcommandDispatcher.ts`, wraps `PreconditionContainerArray`) in `chatInputRun` — see `modules/audio/commands/music.ts` and `modules/general/commands/info.ts`. Add new subcommands as a `subcommands/` module + one array entry; don't create a separate top-level command unless it stands alone.
 
 ### Container services
-`audioService` (playback), `guildService` (settings, 60s TTL cache), `trackService`, `playlistService`, `mixerService` (Lavalink filters/gapless preload), `tempVoiceService` (create/delete/ownership/marker), `aiMemoryService` (Prisma only), `redisStore` (queue/player/session stores, pendingWrites journal), `playerNotifier` (controller embed), `lavalinkHandler` (node/track handler registry, `cleanup()` at shutdown), `appEmojiManager`, `guildSettingsInvalidator` + Redis subscribers, `audio` (LavalinkManager).
+`audioService` (playback), `guildService` (settings, 60s TTL cache), `trackService`, `playlistService`, `mixerService` (Lavalink filters/gapless preload), `tempVoiceService` (create/delete/ownership/marker), `aiMemoryService` (Prisma only), `music` (playback control use cases, `features/music/application/`), `ticketService`/`rolePanelService` (feature application services), `redisStore` (queue/player/session stores, pendingWrites journal), `playerNotifier` (controller embed), `lavalinkHandler` (node/track handler registry, `cleanup()` at shutdown), `appEmojiManager`, `guildSettingsInvalidator` + Redis subscribers, `audio` (LavalinkManager).
 
 ### `@sirubot/utils`
-`DEFAULT_COLOR`; `emoji(name, fallback?)` (app emoji, `packages/utils/src/appEmoji.ts`); `createContainer()` (`packages/utils/src/embed.ts`); `pickRandom(array)`; `formatTime(seconds)` — seconds, not ms (`packages/utils/src/time.ts:1-13`); `getSimpleYouTubeSuggestions(query)`.
+`DEFAULT_COLOR`; `emoji(name, fallback?)` (app emoji, `packages/utils/src/appEmoji.ts`); `createContainer()` (`packages/utils/src/embed.ts`); `pickRandom(array)`; `formatTime(seconds)` — seconds, not ms (`packages/utils/src/time.ts`); `getSimpleYouTubeSuggestions(query)`.
 
 Build: TypeScript + tsup (`scripts/tsup.config.ts`), extends root `tsconfig.base.json`, ESM.
 
 ## Preconditions
 
-- Locations: `apps/bot/src/modules/audio/preconditions/`, `apps/bot/src/modules/general/preconditions/`.
+- Locations: `apps/bot/src/modules/audio/preconditions/`, `apps/bot/src/modules/general/preconditions/`. Piece roots are listed in `PIECE_ROOTS` (`core/pieceRoots.ts`); new pieces for a feature go under `features/<name>/discord/{commands,listeners,interaction-handlers}`, and a new piece name must be unique per store (`core/pieceInventory.test.ts` snapshots every piece).
+- Music control policy (same voice channel, DJ or alone) lives once in `features/music/application/access.ts`; the `SameVoiceChannel`/`DJOrAlone` preconditions only gate slash entry. User-facing failures inside use cases are `AppError`, not `UserError`.
 - Extend `AllFlowsPrecondition` (works for chat input, context menu, message). Must implement `chatInputRun(interaction)`, `contextMenuRun(interaction)`, `messageRun(message)`.
 - Return `this.ok()` or `this.error({ message, context })`; `context.ephemeral: true` = show only to user; `context.silent: true` = don't show (e.g. OwnerOnly).
 - File `PreconditionName.ts` (PascalCase). Sapphire resolves by **piece name = file name** (without `.ts`), not class name: `OwnerOnly.ts` exports `OwnerOnlyPrecondition`, `ManageGuild.ts` exports `ManageGuildPrecondition`, yet referenced as `'OwnerOnly'` / `'ManageGuild'`.
 - Use `get #message()` getter for the message (class field would evaluate before app emoji mapping loads; convention from `VoiceConnected.ts`); `TextChannelAllowed` builds messages inline instead. Private `createError()` helper per class (`NodeAvailable.ts`); omit if calling `this.error(...)` directly.
 - Container access: `db` (PrismaClient), `audio` (LavalinkManager), `client`, `logger`, `redisStore`.
 - Reuse `guildService.getDefaultTextChannel(guildId)` (60s TTL cache) instead of hitting Prisma per command (see `TextChannelAllowed.ts`).
-- Env check: `envParseArray('OWNERS')` from `@skyra/env-utilities`.
+- Owner check: `isOwner(userId)` from `lib/owners.ts` (reads `getConfig().discord.owners`). Never read `process.env` or call `envParse*` in a piece; use `getConfig()` through `lib/configAccess.ts`.
 - Voice checks: `interaction.member.voice.channelId`; bot perms via `channel.permissionsFor(interaction.guild.members.me).has(PermissionsBitField.Flags.Connect)`.
 
 ### Existing preconditions
