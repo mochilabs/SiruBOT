@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { playSavedTracks, type PlaylistPlaybackContext } from './playlistPlayback.ts';
+import { createPlaylistPlayback, type PlaylistPlaybackContext } from './playlistPlayback.ts';
 vi.mock('./guildSettings/channels.ts', () => mocks.guildChannels);
 
 const mocks = vi.hoisted(() => ({
@@ -10,13 +10,18 @@ const mocks = vi.hoisted(() => ({
 	search: vi.fn()
 }));
 vi.mock('@sapphire/framework', () => ({
-	container: mocks,
 	UserError: class extends Error {
 		constructor(options: { message: string }) {
 			super(options.message);
 		}
 	}
 }));
+const playlistPlayback = createPlaylistPlayback({
+	guildService: mocks.guildService as never,
+	audioService: mocks.audioService as never,
+	getAudio: () => mocks.audio as never
+});
+const { playSavedTracks } = playlistPlayback;
 const tracks = [{ track: { title: '곡', url: 'https://example.com/song', source: 'youtube' } }];
 const context = () =>
 	({
@@ -62,6 +67,18 @@ describe('저장한 목록 재생', () => {
 	it('추가 후 재생 실패는 중복 추가 대신 재개로 안내해요', async () => {
 		mocks.audioService.ensurePlayback.mockRejectedValue(new Error('offline'));
 		await expect(playSavedTracks(context(), tracks)).resolves.toContain('곡은 이미 추가');
+		expect(mocks.audioService.enqueueTrack).toHaveBeenCalledOnce();
+	});
+	it('audio가 아직 없을 때 만들어도 호출 시점에 audio를 읽어요', async () => {
+		let lateAudio: typeof mocks.audio | undefined;
+		const lazy = createPlaylistPlayback({
+			guildService: mocks.guildService as never,
+			audioService: mocks.audioService as never,
+			getAudio: () => lateAudio as never
+		});
+		lateAudio = mocks.audio;
+		mocks.audio.getPlayer.mockReturnValue(undefined);
+		await expect(lazy.playSavedTracks(context(), tracks)).resolves.toContain('1곡 중 1곡');
 		expect(mocks.audioService.enqueueTrack).toHaveBeenCalledOnce();
 	});
 });

@@ -16,6 +16,7 @@ import { TrackService } from '../services/trackService.ts';
 import { PlaylistService } from '../services/playlistService.ts';
 import { AudioService } from '../services/audioService.ts';
 import { MixerService } from '../services/mixerService.ts';
+import { createPlaylistPlayback } from '../services/playlistPlayback.ts';
 import { SkipPolicy } from '../services/skipPolicy.ts';
 import { SponsorBlockService } from '../services/sponsorBlockService.ts';
 import { TtsService } from '../services/ttsService.ts';
@@ -155,6 +156,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			guildService: container.guildService,
 			mixerService: container.mixerService,
 			getClient: () => container.client
+		});
+		container.playlistPlayback = createPlaylistPlayback({
+			guildService: container.guildService,
+			audioService: container.audioService,
+			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+			getAudio: () => container.audio
 		});
 		container.ttsService = new TtsService({ logger: appLogger, getTtsConfig });
 		container.ttsUserSettings = new TtsUserSettingsService({ db: container.db, logger: appLogger });

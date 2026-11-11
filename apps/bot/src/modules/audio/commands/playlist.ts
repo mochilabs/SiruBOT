@@ -4,7 +4,6 @@ import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { respondPlaylistNames, respondPlaylistTrackPositions } from '../../../lib/autocomplete.ts';
 import { openPlaylistPanel, addPlaylistQuery } from '../view/playlistPanel.ts';
-import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 import { notice } from '../../general/view/notice.ts';
 
 @ApplyOptions<Command.Options>({ name: 'playlist', description: 'Manage your playlists.', fullCategory: ['음악'] })
@@ -238,7 +237,7 @@ export class PlaylistCommand extends Command {
 				interaction.user.id,
 				interaction.options.getString('name', true)
 			);
-			const feedback = await playSavedTracks(interaction, tracks);
+			const feedback = await this.container.playlistPlayback.playSavedTracks(interaction, tracks);
 			await interaction.editReply({ components: [notice(feedback)], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } });
 		}
 	}

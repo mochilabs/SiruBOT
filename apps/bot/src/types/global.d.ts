@@ -29,6 +29,8 @@ declare module '@sapphire/pieces' {
 		/** 스킵 판정(DJ·요청자·투표) 소유자 — 상태 없이 mixer 경유 스킵만 실행해요 */
 		/** SponsorBlock 구간 조회·건너뛰기 소유자 (플레이어별 상태는 WeakMap) */
 		sponsorBlockService: import('../services/sponsorBlockService.ts').SponsorBlockService;
+		/** 저장한 플레이리스트·즐겨찾기 재생 (services/playlistPlayback.ts) */
+		playlistPlayback: import('../services/playlistPlayback.ts').PlaylistPlayback;
 		skipPolicy: import('../services/skipPolicy.ts').SkipPolicy;
 		ttsService: import('../services/ttsService.ts').TtsService;
 		ttsUserSettings: import('../services/ttsUserSettings.ts').TtsUserSettingsService;

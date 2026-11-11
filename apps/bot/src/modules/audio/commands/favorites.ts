@@ -3,7 +3,6 @@ import { emoji } from '@sirubot/utils';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { openPlaylistPanel } from '../view/playlistPanel.ts';
-import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 import { notice } from '../../general/view/notice.ts';
 
 @ApplyOptions<Command.Options>({ name: 'favorites', description: 'Manage your favorite tracks.', fullCategory: ['음악'] })
@@ -79,7 +78,7 @@ export class FavoritesCommand extends Command {
 			return;
 		}
 		const { tracks } = await this.container.playlistService.getPlaylistTracks(interaction.user.id, '즐겨찾기');
-		const feedback = await playSavedTracks(interaction, tracks);
+		const feedback = await this.container.playlistPlayback.playSavedTracks(interaction, tracks);
 		await interaction.editReply({ components: [notice(feedback)], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } });
 	}
 }

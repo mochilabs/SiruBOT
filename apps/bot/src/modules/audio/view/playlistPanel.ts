@@ -13,7 +13,6 @@ import {
 import { libraryId } from '../customIds.ts';
 import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from './playlist.ts';
 import { notice } from '../../general/view/notice.ts';
-import { playSavedTracks } from '../../../services/playlistPlayback.ts';
 
 export async function addPlaylistQuery(userId: string, name: string, query: string): Promise<string> {
 	const node = container.audio.nodeManager.leastUsedNodes('players')[0];
@@ -179,7 +178,7 @@ export async function openPlaylistPanel(
 					feedback = removed.count ? '선택한 곡을 목록에서 뺐어요.' : '이미 삭제된 곡이에요. 현재 목록을 보여드릴게요.';
 				} else if (action === 'play') {
 					const { tracks } = await container.playlistService.getPlaylistTracks(interaction.user.id, playlist.name);
-					feedback = await playSavedTracks(component, tracks);
+					feedback = await container.playlistPlayback.playSavedTracks(component, tracks);
 				}
 			}
 			if (!expired) await interaction.editReply({ components: [await render(feedback)] });
