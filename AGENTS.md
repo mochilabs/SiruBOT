@@ -83,7 +83,7 @@ Apps never import each other. The only contact points are Redis pub/sub, HTTP wi
 ## Bot rules
 
 - Relative imports **always include the `.ts` extension** (`allowImportingTsExtensions`). strict + decorators.
-- Modules are `audio`, `general`, `voice`, `games`, registered with `setupStore()` from the `PIECE_ROOTS` list in `core/pieceRoots.ts` (used by `core/bootstrap.ts`). Feature folders (`features/<name>/discord/{commands,listeners,interaction-handlers}`, e.g. `tickets`, `role-panels`) are added to the same list. Files go in `apps/bot/src/modules/<module>/{commands,subcommands,preconditions,listeners,interaction-handlers,view}/`.
+- Modules are `audio` and `general`, registered with `setupStore()` from the `PIECE_ROOTS` list in `core/pieceRoots.ts` (used by `core/bootstrap.ts`). Feature folders (`features/<name>/discord/{commands,listeners,interaction-handlers}`, e.g. `tickets`, `role-panels`) are added to the same list. Files go in `apps/bot/src/modules/<module>/{commands,subcommands,preconditions,listeners,interaction-handlers,view}/`.
 - Entry chain: `index.ts → core/setup.ts → core/bootstrap.ts → core/botApplication.ts`. Most container services are assigned in `botApplication.ts`.
 - All user-facing strings are Korean. Slash-command details follow `sapphire-command`; UI follows `component-view`.
 - Command registration: `REGISTER_COMMANDS=true` overwrites, otherwise it only logs to console. Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]`.

@@ -44,7 +44,6 @@ const ALLOWED_SERVICES_TO_MODULES: string[] = [
 	'services/aiTools/music.ts -> modules/audio/utils/timeParse.ts',
 	'services/aiTools/musicSettings.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/aiTools/musicSettings.ts -> modules/audio/utils/permissionCheck.ts',
-	'services/aiTools/ohaasa.ts -> modules/games/utils/ohaasaService.ts',
 	'services/aiTools/ohaasa.ts -> modules/general/utils/userProfile.ts',
 	'services/audioService.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/audioService.ts -> modules/audio/lavalink/handlers/mixerHandlers.ts',
@@ -102,6 +101,8 @@ const APPLICATION_LAYER_DEBT: Record<string, string> = {
 		'uses the `container` service locator (db, logger). Remove by passing db/logger in through a deps object, as features/music/application does.',
 	'features/role-panels/application/rolePanelService.ts -> ../discord/views/rolePanel.ts':
 		'renders the panel message with rolePanelView when posting/refreshing. Remove by injecting a "render panel message" port implemented in features/role-panels/discord.',
+	'features/games/application/gameRecords.ts -> @sapphire/framework':
+		'uses the `container` service locator (db, redisStore). Remove by passing db/redisStore in through a deps object, as features/music/application does.',
 	'features/tickets/application/ticketTranscript.ts -> @sapphire/framework':
 		'uses `container` for the logger and Discord client. Remove by passing them in through deps.'
 };

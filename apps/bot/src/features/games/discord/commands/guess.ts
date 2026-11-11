@@ -2,8 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { getGuessBest, recordGameResult } from '../utils/gameRecords.ts';
-import { textContainer } from '../view/textContainer.ts';
+import { getGuessBest, recordGameResult } from '../../application/gameRecords.ts';
+import { textContainer } from '../views/textContainer.ts';
 
 interface GuessSession {
 	target: number;

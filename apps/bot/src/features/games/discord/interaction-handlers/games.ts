@@ -1,9 +1,9 @@
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
-import { rpsChoiceView, rpsResultView } from '../view/rps.ts';
-import { getRpsStats, recordGameResult, type GameResult } from '../utils/gameRecords.ts';
-import { textContainer } from '../view/textContainer.ts';
+import { rpsChoiceView, rpsResultView } from '../views/rps.ts';
+import { getRpsStats, recordGameResult, type GameResult } from '../../application/gameRecords.ts';
+import { textContainer } from '../views/textContainer.ts';
 
 /** outcome: 0 = 비김, 1 = 승, 2 = 패. 표시할 연승 문구가 있으면 반환 */
 async function resolveStreakLine(userId: string, outcome: number): Promise<string | null> {

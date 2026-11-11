@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { rpsChoiceView } from '../view/rps.ts';
+import { rpsChoiceView } from '../views/rps.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,

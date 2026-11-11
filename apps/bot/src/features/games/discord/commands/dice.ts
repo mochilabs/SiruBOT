@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { textContainer } from '../view/textContainer.ts';
+import { textContainer } from '../views/textContainer.ts';
 
 /**
  * `2d20+3` / `d20` / `20` 표기 → { count, sides, modifier }.

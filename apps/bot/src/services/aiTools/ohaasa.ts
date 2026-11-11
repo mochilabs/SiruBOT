@@ -1,5 +1,5 @@
 import { getUserProfile } from '../../modules/general/utils/userProfile.ts';
-import { getZodiacFromDate } from '../../modules/games/utils/ohaasaService.ts';
+import { getZodiacFromDate } from '../../features/games/index.ts';
 import { fetchOhaasaKo } from '../dataApiClient.ts';
 import type { AiTool } from './types.ts';
 

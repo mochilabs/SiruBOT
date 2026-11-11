@@ -1,5 +1,5 @@
 import { createContainer, emoji } from '@sirubot/utils';
-import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
+import type { DailyHoroscope, HoroscopeData } from '../../../../services/types.ts';
 
 export function formatOhaasaDate(raw: string): string {
 	const compact = raw.replace(/\//g, '');

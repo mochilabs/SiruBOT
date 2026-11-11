@@ -2,8 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { doCheckin, streakBadge } from '../utils/gameRecords.ts';
-import { textContainer } from '../view/textContainer.ts';
+import { doCheckin, streakBadge } from '../../application/gameRecords.ts';
+import { textContainer } from '../views/textContainer.ts';
 
 // 모듈 평가 시점엔 이모지 매핑이 로드 전일 수 있어 렌더 시점 함수로 만든다
 function getMilestones(): Record<number, string> {

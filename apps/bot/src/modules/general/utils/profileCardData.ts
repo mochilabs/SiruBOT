@@ -1,7 +1,6 @@
 import { container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { getZodiacFromDate } from '../../games/utils/ohaasaService.ts';
-import { getCheckinState, getGuessBest, getRpsStats } from '../../games/utils/gameRecords.ts';
+import { getCheckinState, getGuessBest, getRpsStats, getZodiacFromDate } from '../../../features/games/index.ts';
 import { getUserProfile } from './userProfile.ts';
 
 interface ProfileRecentTrack {

@@ -2,12 +2,12 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, AttachmentBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchOhaasaKo, renderOhaasaCard, renderOhaasaTopCard } from '../../../services/dataApiClient.ts';
-import { getUserProfile } from '../../general/utils/userProfile.ts';
-import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../utils/ohaasaService.ts';
-import { ohaasaSingleLines, ohaasaTopLines, ohaasaView, formatOhaasaDate } from '../view/ohaasa.ts';
-import { buildOhaasaCardRequest, buildOhaasaTopCardRequest } from '../utils/ohaasaCardPayload.ts';
-import type { DailyHoroscope, HoroscopeData } from '../../../services/types.ts';
+import { fetchOhaasaKo, renderOhaasaCard, renderOhaasaTopCard } from '../../../../services/dataApiClient.ts';
+import { getUserProfile } from '../../../../modules/general/utils/userProfile.ts';
+import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../../application/ohaasaService.ts';
+import { ohaasaSingleLines, ohaasaTopLines, ohaasaView, formatOhaasaDate } from '../views/ohaasa.ts';
+import { buildOhaasaCardRequest, buildOhaasaTopCardRequest } from '../../application/ohaasaCardPayload.ts';
+import type { DailyHoroscope, HoroscopeData } from '../../../../services/types.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
