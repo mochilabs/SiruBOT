@@ -6,8 +6,8 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 # Bot Features (AI, voice, games)
 
 ## AI chat
-- Pipeline: mention trigger `modules/general/listeners/message/mentionReply.ts` (settings via `commands/chatSettings.ts`) → `services/aiChatService.ts` → `services/aiTools/` (`TOOLS` array in `aiTools/index.ts`): web_search, web_fetch, weather_get, delivery_track, get_ohaasa_horoscope, bot_help, server_info, music_* (`music.ts`; control tools call `container.music`), music_settings_get/set, bot_settings_get/set, memory_save/memory_forget.
-- `services/aiMemoryService.ts`: per-user long-term memory — Prisma only (`container.db.userMemory`), no Redis. New tools: register in `aiTools/index.ts` and follow the `types.ts` interface contract.
+- Pipeline: mention trigger `modules/general/listeners/message/mentionReply.ts` (settings via `commands/chatSettings.ts`) → `services/aiChatService.ts` → `services/aiTools/` (tool list in `createAiTools(deps)`, `aiTools/index.ts`; entry points `container.aiChat`): web_search, web_fetch, weather_get, delivery_track, get_ohaasa_horoscope, bot_help, server_info, music_* (`music.ts`; control tools call `deps.getMusic()`, which is `container.music`), music_settings_get/set, bot_settings_get/set, memory_save/memory_forget.
+- `services/aiMemoryService.ts`: per-user long-term memory — Prisma only (`deps.db.userMemory`), no Redis. New tools: add a factory that takes `Pick<AiToolDeps, ...>` (`aiTools/deps.ts`), register it in `createAiTools` and follow the `types.ts` interface contract; never import `container` in a tool.
 
 ## Audio extras
 - `mixerService.ts` + `modules/audio/commands/mixer.ts`, `commands/favorites.ts`, subcommands `subcommands/{lyrics,recommend}.ts` (registered in the `SUBCOMMANDS` array of `commands/music.ts`). TTS: `modules/general/commands/tts.ts` + `services/ttsService.ts`, chat-to-speech listener `modules/audio/listeners/chatTts.ts`.
