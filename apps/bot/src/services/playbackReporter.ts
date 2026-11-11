@@ -1,5 +1,6 @@
 import { container } from '@sapphire/framework';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
+import type { Stoppable } from '../core/lifecycle.ts';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 
 type PlaybackReportType = 'track_start' | 'track_end' | 'track_stuck' | 'track_error' | 'queue_end' | 'playback_abort';
@@ -10,20 +11,42 @@ const REPORT_TIMEOUT_MS = 5_000;
 
 /**
  * data-api로 재생 이벤트 본문을 보내요. fire-and-forget: 실패해도 재생 경로에 영향 없어요.
- * DATA_API_URL 미설정 시 아무 일도 안 해요.
+ * DATA_API_URL 미설정 시 아무 일도 안 해요. 진행 중인 요청을 추적해서 종료 때 stop()이 끝날 때까지 기다려요
+ * (container.playbackReporter가 소유해요). stop() 뒤의 보고는 보내지 않아요.
  */
-function postPlaybackEvent(body: Record<string, unknown>): void {
-	const base = gatewayBaseUrl();
-	if (!base) return;
-	void fetch(`${base}/v1/playback/events`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
-		body: JSON.stringify(body),
-		signal: AbortSignal.timeout(REPORT_TIMEOUT_MS)
-	}).catch((error) => {
-		container.logger.debug(`[playback-report] failed: ${error instanceof Error ? error.message : String(error)}`);
-	});
+export class PlaybackReporter implements Stoppable {
+	public readonly name = '재생 리포트';
+	private readonly inFlight = new Set<Promise<void>>();
+	private stopped = false;
+
+	public post(body: Record<string, unknown>): void {
+		if (this.stopped) return;
+		const base = gatewayBaseUrl();
+		if (!base) return;
+		const request: Promise<void> = fetch(`${base}/v1/playback/events`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', ...dataApiAuthHeaders() },
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(REPORT_TIMEOUT_MS)
+		})
+			.then(() => undefined)
+			.catch((error) => {
+				container.logger.debug(`[playback-report] failed: ${error instanceof Error ? error.message : String(error)}`);
+			})
+			.finally(() => {
+				this.inFlight.delete(request);
+			});
+		this.inFlight.add(request);
+	}
+
+	/** 종료: 이미 보낸 요청이 끝날 때까지(최대 REPORT_TIMEOUT_MS) 기다리고, 이후 보고는 받지 않아요. */
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		await Promise.all([...this.inFlight]);
+	}
 }
+
+const postPlaybackEvent = (body: Record<string, unknown>): void => container.playbackReporter.post(body);
 
 export function reportPlaybackEvent(
 	guildId: string,

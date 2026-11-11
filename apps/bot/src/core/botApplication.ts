@@ -22,6 +22,8 @@ import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
+import { CountingStateStore } from '../services/countingState.ts';
+import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { TicketService } from '../features/tickets/index.ts';
 import { RolePanelService, createRoleValidationResponder } from '../features/role-panels/index.ts';
@@ -129,6 +131,10 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.aiMemoryService = new AiMemoryService();
 		container.aiChatHistory = new ChannelHistoryStore();
 		container.stoppables.push(container.aiChatHistory);
+		container.countingState = new CountingStateStore();
+		container.stoppables.push(container.countingState);
+		container.playbackReporter = new PlaybackReporter();
+		container.stoppables.push(container.playbackReporter);
 		container.ticketService = new TicketService();
 		container.rolePanelService = new RolePanelService();
 

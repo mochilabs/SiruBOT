@@ -6,12 +6,15 @@ vi.mock('@sapphire/framework', () => ({
 
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
-import { reportNodeEvent, reportPlaybackEvent } from './playbackReporter.ts';
+import { container } from '@sapphire/framework';
+import { PlaybackReporter, reportNodeEvent, reportPlaybackEvent } from './playbackReporter.ts';
 
 describe('playbackReporter', () => {
 	const fetchMock = vi.fn();
 
 	beforeEach(() => {
+		// 리포터 소유자는 container.playbackReporter — 테스트마다 새로 만들어요
+		container.playbackReporter = new PlaybackReporter();
 		fetchMock.mockReset();
 		fetchMock.mockResolvedValue({ ok: true });
 		vi.stubGlobal('fetch', fetchMock);
@@ -49,6 +52,28 @@ describe('playbackReporter', () => {
 	it('does not call data-api when DATA_API_URL is not configured', () => {
 		setConfigForTesting(makeTestConfig({ DATA_API_AUTH_KEY: 'test-key' }));
 		reportNodeEvent('main', 'node_disconnect', null);
+		reportPlaybackEvent('guild-1', 'track_start', null);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('stop() waits for reports already in flight', async () => {
+		let finish!: () => void;
+		fetchMock.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+		reportNodeEvent('main', 'node_error', 'boom');
+		expect(fetchMock).toHaveBeenCalledOnce();
+
+		let stopped = false;
+		const stopping = container.playbackReporter.stop().then(() => (stopped = true));
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(stopped).toBe(false);
+		finish();
+		await stopping;
+		expect(stopped).toBe(true);
+	});
+
+	it('sends nothing after stop()', async () => {
+		await container.playbackReporter.stop();
+		reportNodeEvent('main', 'node_error', 'late');
 		reportPlaybackEvent('guild-1', 'track_start', null);
 		expect(fetchMock).not.toHaveBeenCalled();
 	});

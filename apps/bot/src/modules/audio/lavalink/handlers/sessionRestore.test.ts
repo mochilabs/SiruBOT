@@ -85,6 +85,8 @@ function setup(destroyPlayer = true) {
 	Object.assign(container, {
 		audio: manager,
 		logger,
+		// nodeHandler가 노드 끊김을 data-api로 보고해요 — 이 테스트는 보고 자체를 보지 않아요
+		playbackReporter: { post: vi.fn() },
 		client: { user: { id: BOT_ID }, guilds: { cache: new Map([[GUILD_ID, { members: { me: { voice } } }]]) } },
 		mixerService: {
 			markFiltersStale: vi.fn(),

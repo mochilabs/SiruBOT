@@ -33,6 +33,10 @@ declare module '@sapphire/pieces' {
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		/** AI 채팅 기록 인메모리 상태 + 디바운스 DB 저장 소유자 (종료 시 stop()이 flush) */
 		aiChatHistory: import('../services/aiChat/historyStore.ts').ChannelHistoryStore;
+		/** 카운팅 채널 상태(샤드 메모리 + Redis write-behind) 소유자 */
+		countingState: import('../services/countingState.ts').CountingStateStore;
+		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
+		playbackReporter: import('../services/playbackReporter.ts').PlaybackReporter;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;

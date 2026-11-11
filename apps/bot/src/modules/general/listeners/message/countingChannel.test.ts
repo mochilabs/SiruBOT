@@ -29,8 +29,9 @@ vi.mock('@sapphire/framework', () => {
 	};
 });
 
+import { container } from '@sapphire/framework';
 import { CountingChannelListener } from './countingChannel.ts';
-import { countingStateKey, loadCountingState } from '../../../../services/countingState.ts';
+import { CountingStateStore, countingStateKey, loadCountingState } from '../../../../services/countingState.ts';
 vi.mock('../../../../services/guildSettings/chatPolicy.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getChatToolSettings: mocks.getChatToolSettings }
@@ -76,6 +77,8 @@ beforeEach(async () => {
 	// 이전 테스트의 pending flush/체인이 새 테스트의 호출 기록을 더럽히지 않게 비워요
 	await flushTick();
 	vi.resetAllMocks();
+	// 카운팅 상태 소유자는 container.countingState — 테스트마다 새로 만들어요
+	container.countingState = new CountingStateStore();
 	listener = createListener();
 	mocks.getChatToolSettings.mockResolvedValue({ countingEnabled: true, countingChannelId: 'counting-channel' });
 	mocks.getCacheHashFields.mockResolvedValue(null);
