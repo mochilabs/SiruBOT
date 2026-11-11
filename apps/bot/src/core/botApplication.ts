@@ -196,6 +196,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getPlayer: (guildId) => container.audio.getPlayer(guildId),
 			settings: {
 				saveVolume: async (guildId, volume) => (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume
+			},
+			playback: {
+				ensurePlayback: (player) => container.audioService.ensurePlayback(player)
 			}
 		});
 	}

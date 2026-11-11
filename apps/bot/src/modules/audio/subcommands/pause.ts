@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/pause.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
 
 export const name = 'pause';
 export const ko = '일시정지';
@@ -14,10 +15,8 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	const player = container.audio.getPlayer(interaction.guildId);
-	if (!player) return;
-
 	await interaction.deferReply();
-	if (!player.paused) await player.pause();
+	// 인가·현재 곡 확인·일시정지는 유스케이스가 맡아요.
+	await container.music.pause(actorFromMember(interaction.member));
 	await interaction.editReply({ components: [view.paused()], flags: [MessageFlags.IsComponentsV2] });
 }

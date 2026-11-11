@@ -2,7 +2,7 @@ import { emoji } from '@sirubot/utils';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 import { AppError } from '../../../lib/appError.ts';
 import type { Actor } from './actor.ts';
-import type { MusicAccess } from './access.ts';
+import { MUSIC_ACCESS_MESSAGES, type MusicAccess } from './access.ts';
 
 /**
  * 음악 제어 유스케이스 — 슬래시, 컨트롤러 버튼, 대시보드 웹 플레이어, AI 도구가 함께 쓰는 단일 구현이에요.
@@ -45,15 +45,30 @@ export interface MusicControlDeps<P extends PlayerPort> {
 		/** 길드 기본 볼륨을 저장하고 저장된 값을 돌려줘요. */
 		saveVolume(guildId: string, volume: number): Promise<number>;
 	};
+	playback: {
+		/** 멈춰 있던 플레이어가 대기열을 다시 재생하게 해요. */
+		ensurePlayback(player: P): Promise<unknown>;
+	};
 }
 
 export interface MusicControl {
 	/** 길드 볼륨을 저장하고 플레이어가 있으면 바로 반영해요. */
 	setVolume(actor: Actor, volume: number): Promise<{ volume: number; playing: boolean }>;
+	/** 현재 곡을 일시정지해요. 이미 일시정지 상태여도 오류 없이 성공해요. */
+	pause(actor: Actor): Promise<{ paused: true }>;
+	/** 일시정지를 풀어요. 일시정지가 아니지만 멈춰 있으면 대기열 재생을 다시 시작해요. */
+	resume(actor: Actor): Promise<{ resumed: true }>;
 }
 
 export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<P>): MusicControl {
-	const { access, getPlayer, settings } = deps;
+	const { access, getPlayer, settings, playback } = deps;
+
+	/** 재생 중인 곡(현재 곡)이 있는 플레이어 — 없으면 슬래시 SongPlaying과 같은 문구로 거절해요. */
+	function requireSong(guildId: string): P {
+		const player = getPlayer(guildId);
+		if (!player?.queue.current) throw new AppError('not_found', MUSIC_ACCESS_MESSAGES.noSong(), { ephemeral: true });
+		return player;
+	}
 
 	return {
 		async setVolume(actor, volume) {
@@ -71,6 +86,24 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 			const player = getPlayer(actor.guildId);
 			if (player) await player.setVolume(saved);
 			return { volume: saved, playing: player !== undefined };
+		},
+
+		async pause(actor) {
+			await access.authorize(actor);
+			const player = requireSong(actor.guildId);
+			if (!player.paused) await player.pause();
+			return { paused: true };
+		},
+
+		async resume(actor) {
+			await access.authorize(actor);
+			const player = getPlayer(actor.guildId);
+			if (!player || (!player.queue.current && player.queue.tracks.length === 0)) {
+				throw new AppError('not_found', `${emoji('error')} 이어 재생할 곡이 없어요. /재생으로 곡을 추가해 주세요.`, { ephemeral: true });
+			}
+			if (player.paused) await player.resume();
+			else if (!player.playing) await playback.ensurePlayback(player);
+			return { resumed: true };
 		}
 	};
 }

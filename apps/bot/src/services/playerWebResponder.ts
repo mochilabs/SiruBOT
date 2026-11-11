@@ -325,7 +325,7 @@ export class PlayerWebResponder {
 
 	// kind: control, 볼륨·일시정지·재생·스킵·정지·반복, 봇 슬래시 커맨드 가드를 웹에 맞게 단순화해요
 	//   volume: 공용 유스케이스 (봇과 같은 음성 채널 + DJ 조건, Administrator만 음성 조건 면제)
-	//   pause/resume: 활성 플레이어 필요 (Discord /pause의 DJOrAlone·SongPlaying에 대응)
+	//   pause/resume: 공용 유스케이스 (음성 채널 + DJ 조건 + 곡 존재)
 	//   skip: 활성 플레이어 + 봇과 같은 음성 채널 (Discord /skip의 SameVoiceChannel에 대응)
 	//   stop: 활성 플레이어 + 음성 채널 접속 (Discord /stop과 같은 조건)
 	private async handleControl(guild: Guild, request: PlayerWebControlRequest): Promise<void> {
@@ -337,17 +337,15 @@ export class PlayerWebResponder {
 				return;
 			}
 
-			// 볼륨 인가·검증·저장·반영은 공용 유스케이스(container.music)가 맡아요 — 슬래시·버튼·AI와 같은 정책이에요.
-			if (request.action === 'volume') {
-				if (typeof request.value !== 'number') throw new Error(`control volume: value 누락 (guild ${guildId})`);
-				try {
-					await container.music.setVolume(actorFromMember(member), request.value);
-				} catch (error) {
-					if (!(error instanceof AppError)) throw error;
-					this.respond({ requestId: request.requestId, guildId, kind: 'control', error: plainUserMessage(error) });
+			// 공용 유스케이스(container.music)가 다루는 동작 — 슬래시·버튼·AI와 같은 인가 정책과 부수 효과를 거쳐요.
+			try {
+				if (await this.applyMusicControl(request, member)) {
+					this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 					return;
 				}
-				this.respond({ requestId: request.requestId, guildId, kind: 'control' });
+			} catch (error) {
+				if (!(error instanceof AppError)) throw error;
+				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: plainUserMessage(error) });
 				return;
 			}
 
@@ -397,11 +395,7 @@ export class PlayerWebResponder {
 				return;
 			}
 
-			if (request.action === 'pause') {
-				if (!player.paused) await player.pause();
-			} else if (request.action === 'resume') {
-				if (player.paused) await player.resume();
-			} else if (request.action === 'skip') {
+			if (request.action === 'skip') {
 				await container.mixerService.skip(player);
 			} else if (request.action === 'stop') {
 				// 봇 /stop과 같은 공용 흐름 (queueEnd 안내 억제 + mixer 슬롯 정리)
@@ -418,6 +412,25 @@ export class PlayerWebResponder {
 				kind: 'control',
 				error: '제어를 적용하지 못했어요. 잠시 후 다시 시도해 주세요.'
 			});
+		}
+	}
+
+	/** 유스케이스가 맡는 제어 동작을 실행해요. 유스케이스 대상이 아니면 false를 돌려줘요 (AppError는 호출자가 응답으로 바꿔요). */
+	private async applyMusicControl(request: PlayerWebControlRequest, member: GuildMember): Promise<boolean> {
+		const actor = actorFromMember(member);
+		switch (request.action) {
+			case 'volume':
+				if (typeof request.value !== 'number') throw new Error(`control volume: value 누락 (guild ${request.guildId})`);
+				await container.music.setVolume(actor, request.value);
+				return true;
+			case 'pause':
+				await container.music.pause(actor);
+				return true;
+			case 'resume':
+				await container.music.resume(actor);
+				return true;
+			default:
+				return false;
 		}
 	}
 

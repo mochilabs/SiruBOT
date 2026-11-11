@@ -1,7 +1,7 @@
-import { container, UserError } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { container } from '@sapphire/framework';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import * as view from '../view/pause.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
 import { preconditions as pausePreconditions } from './pause.ts';
 
 export const preconditions = pausePreconditions.filter((condition) => condition !== 'SongPlaying');
@@ -15,16 +15,8 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	const player = container.audio.getPlayer(interaction.guildId);
-	if (!player) return;
 	await interaction.deferReply();
-	if (!player.queue.current && !player.queue.tracks.length)
-		throw new UserError({
-			identifier: 'resume_empty',
-			message: `${emoji('error')} 이어 재생할 곡이 없어요. /재생으로 곡을 추가해 주세요.`,
-			context: { ephemeral: true }
-		});
-	if (player.paused) await player.resume();
-	else if (!player.playing) await container.audioService.ensurePlayback(player);
+	// 인가·재생할 곡 확인·재개는 유스케이스가 맡아요.
+	await container.music.resume(actorFromMember(interaction.member));
 	await interaction.editReply({ components: [view.resumed()], flags: [MessageFlags.IsComponentsV2] });
 }

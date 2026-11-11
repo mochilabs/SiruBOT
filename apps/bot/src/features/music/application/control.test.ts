@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../../lib/appError.ts';
 import type { MusicAccess } from './access.ts';
 import type { Actor } from './actor.ts';
+import { MUSIC_ACCESS_MESSAGES } from './access.ts';
 import { createMusicControl, type MusicRepeatMode, type PlayerPort, type TrackPort } from './control.ts';
 
 const actor: Actor = {
@@ -38,12 +39,14 @@ function harness(options: { player?: FakePlayer | null; denied?: AppError } = {}
 		if (options.denied) throw options.denied;
 	});
 	const saveVolume = vi.fn(async (_guildId: string, volume: number) => volume);
+	const ensurePlayback = vi.fn(async (_player: FakePlayer) => undefined);
 	const control = createMusicControl<FakePlayer>({
 		access: { authorize },
 		getPlayer: () => player ?? undefined,
-		settings: { saveVolume }
+		settings: { saveVolume },
+		playback: { ensurePlayback }
 	});
-	return { control, player, authorize, saveVolume };
+	return { control, player, authorize, saveVolume, ensurePlayback };
 }
 
 async function rejection(promise: Promise<unknown>): Promise<AppError> {
@@ -97,5 +100,96 @@ describe('setVolume', () => {
 		await expect(control.setVolume(actor, 50)).rejects.toBe(denied);
 		expect(saveVolume).not.toHaveBeenCalled();
 		expect(player!.setVolume).not.toHaveBeenCalled();
+	});
+});
+
+describe('pause', () => {
+	it('인가 뒤 재생 중인 곡을 일시정지해요', async () => {
+		const { control, player, authorize } = harness();
+		await expect(control.pause(actor)).resolves.toEqual({ paused: true });
+		expect(authorize).toHaveBeenCalledWith(actor);
+		expect(player!.pause).toHaveBeenCalledOnce();
+	});
+
+	it('이미 일시정지면 다시 호출하지 않고 성공해요', async () => {
+		const player = new FakePlayer();
+		player.paused = true;
+		const { control } = harness({ player });
+		await expect(control.pause(actor)).resolves.toEqual({ paused: true });
+		expect(player.pause).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		['플레이어가 없으면', null],
+		['현재 곡이 없으면', (() => Object.assign(new FakePlayer(), { queue: { current: null, tracks: [] } }))()]
+	])('%s 곡 없음 문구로 거절해요', async (_label, player) => {
+		const { control } = harness({ player });
+		const error = await rejection(control.pause(actor));
+		expect(error.kind).toBe('not_found');
+		expect(error.userMessage).toBe(MUSIC_ACCESS_MESSAGES.noSong());
+	});
+
+	it('인가에 실패하면 플레이어를 건드리지 않아요', async () => {
+		const denied = new AppError('forbidden', 'DJ만 가능해요.');
+		const { control, player } = harness({ denied });
+		await expect(control.pause(actor)).rejects.toBe(denied);
+		expect(player!.pause).not.toHaveBeenCalled();
+	});
+});
+
+describe('resume', () => {
+	it('일시정지 중이면 재개해요', async () => {
+		const player = new FakePlayer();
+		player.paused = true;
+		const { control, authorize, ensurePlayback } = harness({ player });
+		await expect(control.resume(actor)).resolves.toEqual({ resumed: true });
+		expect(authorize).toHaveBeenCalledWith(actor);
+		expect(player.resume).toHaveBeenCalledOnce();
+		expect(ensurePlayback).not.toHaveBeenCalled();
+	});
+
+	it('일시정지가 아닌데 재생도 안 하면 대기열 재생을 다시 시작해요', async () => {
+		const player = new FakePlayer();
+		player.playing = false;
+		const { control, ensurePlayback } = harness({ player });
+		await control.resume(actor);
+		expect(ensurePlayback).toHaveBeenCalledWith(player);
+		expect(player.resume).not.toHaveBeenCalled();
+	});
+
+	it('이미 재생 중이면 아무것도 하지 않고 성공해요', async () => {
+		const { control, player, ensurePlayback } = harness();
+		await expect(control.resume(actor)).resolves.toEqual({ resumed: true });
+		expect(player!.resume).not.toHaveBeenCalled();
+		expect(ensurePlayback).not.toHaveBeenCalled();
+	});
+
+	it('대기열이 비어 있으면 현재 곡이 없어도 대기열 곡으로 재생해요', async () => {
+		const player = new FakePlayer();
+		player.playing = false;
+		player.queue = { current: null, tracks: [{}] };
+		const { control, ensurePlayback } = harness({ player });
+		await control.resume(actor);
+		expect(ensurePlayback).toHaveBeenCalledWith(player);
+	});
+
+	it.each([
+		['플레이어가 없으면', null],
+		['현재 곡도 대기열도 없으면', (() => Object.assign(new FakePlayer(), { queue: { current: null, tracks: [] } }))()]
+	])('%s 이어 재생할 곡이 없다고 거절해요', async (_label, player) => {
+		const { control, ensurePlayback } = harness({ player });
+		const error = await rejection(control.resume(actor));
+		expect(error.kind).toBe('not_found');
+		expect(error.userMessage).toContain('이어 재생할 곡이 없어요');
+		expect(ensurePlayback).not.toHaveBeenCalled();
+	});
+
+	it('인가에 실패하면 플레이어를 건드리지 않아요', async () => {
+		const denied = new AppError('forbidden', 'DJ만 가능해요.');
+		const player = new FakePlayer();
+		player.paused = true;
+		const { control } = harness({ player, denied });
+		await expect(control.resume(actor)).rejects.toBe(denied);
+		expect(player.resume).not.toHaveBeenCalled();
 	});
 });

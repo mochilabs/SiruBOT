@@ -64,7 +64,7 @@ describe('web player permissions', () => {
 				guildId: 'guild',
 				userId: 'user',
 				kind,
-				...(kind === 'search' ? { query: 'test' } : kind === 'play' ? { uri: 'https://example.com/track' } : { action: 'pause' })
+				...(kind === 'search' ? { query: 'test' } : kind === 'play' ? { uri: 'https://example.com/track' } : { action: 'skip' })
 			})
 		);
 		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
@@ -121,6 +121,13 @@ describe('web player permissions', () => {
 			expect(setVolume).toHaveBeenCalledWith(expect.objectContaining({ guildId: 'guild', userId: 'user' }), 90);
 			expect(response.error).toBeUndefined();
 			expect(logger.error).not.toHaveBeenCalled();
+		});
+
+		it.each(['pause', 'resume'] as const)('%s는 해당 유스케이스 하나만 호출하고 성공 응답을 보내요', async (action) => {
+			const music = { pause: vi.fn().mockResolvedValue({ paused: true }), resume: vi.fn().mockResolvedValue({ resumed: true }) };
+			const { response } = await control({ action }, music);
+			expect(music[action]).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ guildId: 'guild', userId: 'user' }));
+			expect(response.error).toBeUndefined();
 		});
 
 		it('유스케이스의 AppError는 앱 이모지 마크업을 뗀 같은 안내 문구로 응답해요', async () => {

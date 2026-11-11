@@ -37,7 +37,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
-	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['volume']);
+	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'volume']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
@@ -140,13 +140,13 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private async handlePause(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		await interaction.deferUpdate();
-		await player.pause();
+		await this.container.music.pause(actorFromMember(interaction.member));
 		await this.updateControllerOrFail(interaction, player);
 	}
 
 	private async handleResume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
 		await interaction.deferUpdate();
-		await player.resume();
+		await this.container.music.resume(actorFromMember(interaction.member));
 		await this.updateControllerOrFail(interaction, player);
 	}
 

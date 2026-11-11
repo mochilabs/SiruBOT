@@ -127,14 +127,13 @@ const musicPauseTool: AiTool = {
 	required: [],
 	status: '시루가 재생 상태를 바꾸는 중..',
 	execute: async (_args, ctx) => {
-		await requireDjOrAlone(ctx);
-		const guildId = requireGuild(ctx);
-		const player = requirePlayer(guildId);
-		if (player.paused) {
-			await player.resume();
+		const actor = musicActor(ctx);
+		// 토글 — 일시정지 중이면 재개, 아니면 일시정지. 인가·현재 곡 확인은 각 유스케이스가 맡아요.
+		if (container.audio.getPlayer(actor.guildId)?.paused) {
+			await withAppError(() => container.music.resume(actor));
 			return JSON.stringify({ status: 'resumed' });
 		}
-		await player.pause();
+		await withAppError(() => container.music.pause(actor));
 		return JSON.stringify({ status: 'paused' });
 	}
 };
