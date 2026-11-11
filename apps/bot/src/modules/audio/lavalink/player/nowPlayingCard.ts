@@ -7,7 +7,6 @@
 import { container } from '@sapphire/framework';
 import { AttachmentBuilder } from 'discord.js';
 import { BOT_NAME, emoji, isDev, versionInfo } from '@sirubot/utils';
-import { renderNowPlayingCard } from '../../../../services/dataApiClient.ts';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../autoPlayRelated.ts';
 import { RELATED_TRACK_REQUESTER_ID, requesterIdOf } from '../requester.ts';
 import { currentChapterIndex, currentChapter } from './chapters.ts';
@@ -87,33 +86,35 @@ function brandLine(player: CustomPlayer): string {
 async function renderCard(player: CustomPlayer, current: Track, trackKey: string): Promise<CachedCard | null> {
 	const queuedTracks = getUserQueuedTracks(player);
 	const requesterId = requesterIdOf(current ?? undefined);
-	const buffer = await renderNowPlayingCard({
-		trackId: current.info.identifier || current.info.title,
-		title: current.info.title,
-		artist: current.info.author,
-		artworkUrl: current.info.artworkUrl ?? null,
-		positionMs: Math.min(player.position ?? 0, current.info.duration || 0),
-		durationMs: current.info.duration ?? 0,
-		isStream: current.info.isStream ?? false,
-		isPaused: player.paused ?? false,
-		repeatMode: player.repeatMode ?? 'off',
-		isRecommended: requesterId === RELATED_TRACK_REQUESTER_ID,
-		nextTracks: queuedTracks.slice(0, 3).map((track) => ({ title: track.info.title, artist: track.info.author || null })),
-		queueCount: queuedTracks.length,
-		queueRemainingMs: remainingUntilQueueEnd(player, queuedTracks),
-		volume: player.volume ?? null,
-		nodeId: player.node?.id ?? null,
-		brandLine: brandLine(player),
-		chapter: (() => {
-			const chapter = currentChapter(player);
-			return chapter ? { name: chapter.name, startMs: chapter.start, endMs: chapter.end } : null;
-		})(),
-		requester: (() => {
-			const info = requesterInfo(player);
-			return info ? { name: info.truncatedName, avatarUrl: info.avatarUrl } : null;
-		})(),
-		trackUrl: current.info.uri ?? null
-	}).catch(() => null);
+	const buffer = await container.dataApi
+		.renderNowPlayingCard({
+			trackId: current.info.identifier || current.info.title,
+			title: current.info.title,
+			artist: current.info.author,
+			artworkUrl: current.info.artworkUrl ?? null,
+			positionMs: Math.min(player.position ?? 0, current.info.duration || 0),
+			durationMs: current.info.duration ?? 0,
+			isStream: current.info.isStream ?? false,
+			isPaused: player.paused ?? false,
+			repeatMode: player.repeatMode ?? 'off',
+			isRecommended: requesterId === RELATED_TRACK_REQUESTER_ID,
+			nextTracks: queuedTracks.slice(0, 3).map((track) => ({ title: track.info.title, artist: track.info.author || null })),
+			queueCount: queuedTracks.length,
+			queueRemainingMs: remainingUntilQueueEnd(player, queuedTracks),
+			volume: player.volume ?? null,
+			nodeId: player.node?.id ?? null,
+			brandLine: brandLine(player),
+			chapter: (() => {
+				const chapter = currentChapter(player);
+				return chapter ? { name: chapter.name, startMs: chapter.start, endMs: chapter.end } : null;
+			})(),
+			requester: (() => {
+				const info = requesterInfo(player);
+				return info ? { name: info.truncatedName, avatarUrl: info.avatarUrl } : null;
+			})(),
+			trackUrl: current.info.uri ?? null
+		})
+		.catch(() => null);
 	if (!buffer) return null;
 
 	return { trackKey, buffer, filename: safeFilename(trackKey) };

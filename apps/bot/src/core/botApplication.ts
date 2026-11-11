@@ -27,7 +27,8 @@ import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
-import { renderMemberCard, uploadObject } from '../services/dataApiClient.ts';
+import { createDataApiClient } from '../services/dataApiClient.ts';
+import { WebhookRelay } from '../services/webhookRelay.ts';
 import { createCustomCommandStore, createSlashRegistry } from '../features/custom-commands/index.ts';
 import { createGameRecords } from '../features/games/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
@@ -132,6 +133,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			debug: (msg: string) => container.logger.debug(msg)
 		};
 		const subscriberLogger = appLogger;
+		container.dataApi = createDataApiClient({ logger: appLogger });
+		container.webhookRelay = new WebhookRelay({ logger: appLogger, getBotUser: () => container.client.user });
 		container.guildService = new GuildService({ db: container.db });
 		container.trackService = new TrackService({ db: container.db });
 		container.playlistService = new PlaylistService({ db: container.db });
@@ -164,12 +167,17 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 		container.stoppables.push(container.chatTtsService, container.tempVoiceService);
 		container.voiceLeaveTimers = new KeyedTimers('빈 음성 채널 퇴장 타이머');
-		container.botActivity = new BotActivityService();
+		container.botActivity = new BotActivityService({
+			activity: getConfig().discord.botActivity,
+			getClient: () => container.client,
+			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+			getPlayerCount: () => container.audio?.players?.size ?? 0
+		});
 		container.stoppables.push(container.voiceLeaveTimers, container.botActivity);
 		container.aiMemoryService = new AiMemoryService();
 		container.aiChatHistory = new ChannelHistoryStore();
 		container.stoppables.push(container.aiChatHistory);
-		container.countingState = new CountingStateStore();
+		container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 		container.stoppables.push(container.countingState);
 		container.playbackReporter = new PlaybackReporter();
 		container.stoppables.push(container.playbackReporter);
@@ -180,7 +188,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getCoreCommandNames: () => container.stores.get('commands').keys()
 		});
 		container.gameRecords = createGameRecords({ db: container.db, getLockStore: () => container.redisStore });
-		container.ticketService = createTicketService({ db: container.db, logger: appLogger, messages: ticketMessages, uploadObject });
+		container.ticketService = createTicketService({
+			db: container.db,
+			logger: appLogger,
+			messages: ticketMessages,
+			uploadObject: container.dataApi.uploadObject
+		});
 		container.rolePanelService = createRolePanelService({ db: container.db, logger: appLogger, messages: rolePanelMessages });
 		container.stoppables.push(container.ticketService);
 
@@ -188,7 +201,15 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		// (설정 무효화 채널은 대시보드 저장 흐름이 서명 없이 퍼블리시해서 이벤트 계약이 signed: false로 받아요)
 		const redisSigningKey = getConfig().redis.signingKey;
 		const redisPublisher = new RedisPublisher({ getStore: () => container.redisStore, signingKey: redisSigningKey, logger: subscriberLogger });
-		container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey, redisPublisher);
+		container.botProfileService = new BotProfileService({
+			logger: subscriberLogger,
+			signingKey: redisSigningKey,
+			publisher: redisPublisher,
+			// redisStore는 setupServices 뒤(setupRedis)에 만들어지므로 호출 시점에 읽어요
+			getRedisStore: () => container.redisStore,
+			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
+			getBotUsername: () => container.client.user?.username
+		});
 		container.memberGreetingService = createMemberGreetingService({
 			logger: subscriberLogger,
 			signingKey: redisSigningKey,
@@ -196,7 +217,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getPendingStore: () => container.redisStore,
 			getGuild: (guildId) => container.client.guilds.cache.get(guildId),
 			getGuildSettings: (guildId) => container.guildService.getGuild(guildId),
-			renderMemberCard,
+			renderMemberCard: container.dataApi.renderMemberCard,
 			messages: greetingMessages
 		});
 
@@ -233,7 +254,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.redisSubscribers = [
 			createSharedRedisSubscriber({ name: '대시보드 연동', logger: subscriberLogger, runtime: redisRuntime, bindings: redisBindings })
 		] satisfies RedisSubscriberEntry[];
-		container.appEmojiManager = new AppEmojiManager();
+		container.appEmojiManager = new AppEmojiManager({ logger: appLogger, getApplication: () => container.client.application });
 		container.stoppables.push(container.appEmojiManager);
 		this.setupMusicControl();
 	}

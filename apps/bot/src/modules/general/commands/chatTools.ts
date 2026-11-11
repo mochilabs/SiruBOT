@@ -12,7 +12,6 @@ import {
 } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { type ChatToolName } from '../../../services/guildService.ts';
-import { resetCountingState } from '../../../services/countingState.ts';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
@@ -187,7 +186,7 @@ export class ChatToolsCommand extends Command {
 	async runCounting(interaction: ChatInputCommandInteraction<'cached'>) {
 		if (interaction.options.getString('state') === 'off') {
 			await guildChatPolicy.setCountingEnabled(this.container.guildService, interaction.guildId, false);
-			await resetCountingState(interaction.guildId);
+			await this.container.countingState.reset(interaction.guildId);
 			await interaction.editReply({
 				flags: [MessageFlags.IsComponentsV2],
 				allowedMentions: { parse: [] },
@@ -199,7 +198,7 @@ export class ChatToolsCommand extends Command {
 		const channel = interaction.options.getChannel('channel');
 		const channelId = channel?.id ?? interaction.channelId;
 		await guildChatPolicy.setCountingChannel(this.container.guildService, interaction.guildId, channelId);
-		await resetCountingState(interaction.guildId);
+		await this.container.countingState.reset(interaction.guildId);
 		await interaction.editReply({
 			flags: [MessageFlags.IsComponentsV2],
 			allowedMentions: { parse: [] },

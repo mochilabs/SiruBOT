@@ -1,14 +1,20 @@
-import { container } from '@sapphire/framework';
 import { ensureAppEmojisLoaded, setAppEmojiIdMap } from '@sirubot/utils';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { ClientApplication } from 'discord.js';
+import type { AppLogger } from '../lib/appLogger.ts';
 import type { Stoppable } from '../lib/lifecycle.ts';
 
 /** 이모지 이름 규칙 — Discord 앱 이모지 이름 (2~32자, 소문자/숫자/언더스코어) */
 const NAME_REGEX = /^[a-z0-9_]{2,32}$/;
 /** 앱 이모지 PNG 최대 크기 (Discord 제한 256KiB) */
 const MAX_PNG_BYTES = 256 * 1024;
+
+/** 앱 이모지 매니저가 쓰는 의존성 — client.application은 로그인 뒤에야 생겨서 호출 시점에 읽어요 */
+export interface AppEmojiManagerDeps {
+	logger: AppLogger;
+	getApplication: () => ClientApplication | null | undefined;
+}
 
 /**
  * 앱 이모지 매니저 — 부팅 시 앱 이모지(application emoji)를 조회하고,
@@ -27,6 +33,8 @@ export class AppEmojiManager implements Stoppable {
 	private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 	private stopped = false;
 
+	public constructor(private readonly deps: AppEmojiManagerDeps) {}
+
 	/**
 	 * 앱 이모지를 동기화한다.
 	 * @param upload true면 미등록 PNG를 업로드한다 (shard 0만). false면 조회·캐시만.
@@ -35,7 +43,7 @@ export class AppEmojiManager implements Stoppable {
 		// 커밋 매핑 먼저, API가 없어도 emoji()가 커밋된 87종 이상은 즉시 동작한다(오프라인 폴백).
 		await ensureAppEmojisLoaded();
 
-		const application = container.client.application;
+		const application = this.deps.getApplication();
 		if (!application) return;
 
 		// API로 최신 앱 이모지 조회 → 이름→ID 맵 (커밋 매핑보다 우선, 미등록분 포함)
@@ -45,7 +53,7 @@ export class AppEmojiManager implements Stoppable {
 			for (const emoji of emojis.values()) map[emoji.name] = emoji.id;
 		} catch (error) {
 			// API 실패 — 커밋 매핑은 이미 반영됐으니 업로드 없이 종료.
-			container.logger.warn(`[appEmoji] 앱 이모지 조회 실패 (${this.describe(error)}) — 커밋 매핑으로 진행`);
+			this.deps.logger.warn(`[appEmoji] 앱 이모지 조회 실패 (${this.describe(error)}) — 커밋 매핑으로 진행`);
 			if (!upload) this.scheduleRefresh();
 			return;
 		}
@@ -100,13 +108,13 @@ export class AppEmojiManager implements Stoppable {
 				const createdEmoji = await application.emojis.create({ name, attachment: buffer });
 				map[createdEmoji.name] = createdEmoji.id;
 				created++;
-				container.logger.info(`[appEmoji] :${name}: 등록 (id ${createdEmoji.id})`);
+				this.deps.logger.info(`[appEmoji] :${name}: 등록 (id ${createdEmoji.id})`);
 			} catch (error) {
 				// 이름 중복 레이스(멀티 인스턴스)나 요청 실패 — 다음 배포/재시작에서 재시도.
-				container.logger.warn(`[appEmoji] :${name}: 업로드 실패 (${this.describe(error)})`);
+				this.deps.logger.warn(`[appEmoji] :${name}: 업로드 실패 (${this.describe(error)})`);
 			}
 		}
-		if (created > 0) container.logger.info(`[appEmoji] 미등록 이모지 ${created}개 자동 등록 완료`);
+		if (created > 0) this.deps.logger.info(`[appEmoji] 미등록 이모지 ${created}개 자동 등록 완료`);
 	}
 
 	/** PNG 소스 디렉터리 — 존재하는 후보 중 첫 번째를 반환한다. */
@@ -134,7 +142,7 @@ export class AppEmojiManager implements Stoppable {
 
 	/** 현재 등록된 앱 이모지 목록을 이름순으로 반환한다. */
 	public async list(): Promise<Array<{ id: string; name: string }>> {
-		const application = container.client.application;
+		const application = this.deps.getApplication();
 		if (!application) return [];
 		const emojis = await application.emojis.fetch();
 		return [...emojis.values()].map((emoji) => ({ id: emoji.id, name: emoji.name })).sort((a, b) => a.name.localeCompare(b.name));
@@ -145,7 +153,7 @@ export class AppEmojiManager implements Stoppable {
 	 * 완료 후 이름→ID 매핑을 캐시에 주입하고, 커밋 대상 `emoji-ids.json` 두 본에 저장한다.
 	 */
 	public async forceReupload(): Promise<{ created: number; failed: number; map: Record<string, string> }> {
-		const application = container.client.application;
+		const application = this.deps.getApplication();
 		if (!application) throw new Error('application unavailable');
 		const dir = await this.sourceDir();
 		if (!dir) throw new Error('emoji source dir not found');
@@ -158,7 +166,7 @@ export class AppEmojiManager implements Stoppable {
 				await application.emojis.delete(emoji.id);
 				deleted++;
 			} catch (error) {
-				container.logger.warn(`[appEmoji] :${emoji.name}: 삭제 실패 (${this.describe(error)})`);
+				this.deps.logger.warn(`[appEmoji] :${emoji.name}: 삭제 실패 (${this.describe(error)})`);
 			}
 		}
 
@@ -180,7 +188,7 @@ export class AppEmojiManager implements Stoppable {
 				created++;
 			} catch (error) {
 				failed++;
-				container.logger.warn(`[appEmoji] :${name}: 재등록 실패 (${this.describe(error)})`);
+				this.deps.logger.warn(`[appEmoji] :${name}: 재등록 실패 (${this.describe(error)})`);
 			}
 		}
 
@@ -188,7 +196,7 @@ export class AppEmojiManager implements Stoppable {
 		setAppEmojiIdMap(map);
 		await this.saveIdMap(map);
 
-		container.logger.info(`[appEmoji] 강제 재업로드 완료: 삭제 ${deleted} / 생성 ${created} / 실패 ${failed}`);
+		this.deps.logger.info(`[appEmoji] 강제 재업로드 완료: 삭제 ${deleted} / 생성 ${created} / 실패 ${failed}`);
 		return { created, failed, map };
 	}
 
@@ -204,7 +212,7 @@ export class AppEmojiManager implements Stoppable {
 		for (const path of targets) {
 			try {
 				await writeFile(path, payload, 'utf-8');
-				container.logger.info(`[appEmoji] 매핑 저장: ${path}`);
+				this.deps.logger.info(`[appEmoji] 매핑 저장: ${path}`);
 			} catch {
 				// 존재하지 않는 후보 경로는 무시 (CWD/컨테이너 환경 차이)
 			}

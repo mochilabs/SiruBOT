@@ -1,22 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setConfigForTesting } from '../lib/config.ts';
+import { getConfig, setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
 
 const mocks = vi.hoisted(() => ({
 	setActivity: vi.fn()
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		client: {
-			isReady: () => true,
-			guilds: { cache: { size: 2, reduce: () => 10 } },
-			ws: { ping: 12 },
-			user: { username: 'bot', setActivity: mocks.setActivity }
-		},
-		audio: { players: new Map() }
-	}
-}));
+const client = {
+	isReady: () => true,
+	guilds: { cache: { size: 2, reduce: () => 10 } },
+	ws: { ping: 12 },
+	user: { username: 'bot', setActivity: mocks.setActivity }
+};
 
 import { BotActivityService } from './botActivity.ts';
 
@@ -33,7 +28,11 @@ describe('BotActivityService', () => {
 	});
 
 	it('start()는 즉시 한 번 갱신하고 주기마다 다시 갱신해요', async () => {
-		const service = new BotActivityService();
+		const service = new BotActivityService({
+			activity: getConfig().discord.botActivity,
+			getClient: () => client as never,
+			getPlayerCount: () => 0
+		});
 		service.start();
 		expect(mocks.setActivity).toHaveBeenCalledTimes(1);
 		expect(mocks.setActivity).toHaveBeenLastCalledWith('서버 2개');
@@ -43,7 +42,11 @@ describe('BotActivityService', () => {
 	});
 
 	it('stop()은 인터벌을 해제하고 이후 start는 무시해요', async () => {
-		const service = new BotActivityService();
+		const service = new BotActivityService({
+			activity: getConfig().discord.botActivity,
+			getClient: () => client as never,
+			getPlayerCount: () => 0
+		});
 		service.start();
 		expect(vi.getTimerCount()).toBe(1);
 

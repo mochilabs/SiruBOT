@@ -10,8 +10,10 @@ import {
 	sameNowPlayingTrackIdentity
 } from './nowPlayingCard.ts';
 
-const { render, sharedContainer } = vi.hoisted(() => ({ render: vi.fn(), sharedContainer: {} }));
-vi.mock('../../../../services/dataApiClient.ts', () => ({ renderNowPlayingCard: render }));
+const { render, sharedContainer } = vi.hoisted(() => {
+	const render = vi.fn();
+	return { render, sharedContainer: { dataApi: { renderNowPlayingCard: render } } };
+});
 vi.mock('@sapphire/framework', () => ({ container: sharedContainer }));
 
 function track(id: string): Track {

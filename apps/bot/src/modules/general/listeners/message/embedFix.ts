@@ -27,7 +27,6 @@ import {
 import { boothCard, embedFixCard } from '../../view/embedFix.ts';
 import { fetchEmbedFixMetadata } from '../../../../services/embedFixGateway.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
-import { relayViaWebhook } from '../../../../services/webhookRelay.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 const EMBED_FIX_COOLDOWN_MS = 3_000;
@@ -74,7 +73,7 @@ export class EmbedFixListener extends Listener {
 
 	/** 우선 data-api 카드(메타 캐싱은 data-api 계층), data-api를 못 쓰면 레거시 도메인 스왑으로 폴백해요 */
 	private async buildPayloads(links: EmbedFixLink[], translateTo: EmbedFixTranslateLang = 'off'): Promise<EmbedFixPayload[]> {
-		const gatewayResults = await fetchEmbedFixMetadata({
+		const gatewayResults = await fetchEmbedFixMetadata(this.container.logger, {
 			links: links.map((link) =>
 				link.site === 'booth' ? { site: link.site, url: link.original } : { site: link.site, url: link.original, fixedUrl: link.fixed }
 			),
@@ -134,7 +133,7 @@ export class EmbedFixListener extends Listener {
 		const avatarURL = message.author.displayAvatarURL({ size: 256, extension: 'png' });
 
 		for (const payload of payloads) {
-			const relayed = await relayViaWebhook(message, {
+			const relayed = await this.container.webhookRelay.relay(message, {
 				username,
 				avatarURL,
 				content: payload.content,

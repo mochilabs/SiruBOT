@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, AttachmentBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchOhaasaKo, renderOhaasaCard, renderOhaasaTopCard } from '../../../../services/dataApiClient.ts';
+import { fetchOhaasaKo } from '../../../../services/dataApiClient.ts';
 import { getUserProfile } from '../../../../modules/general/utils/userProfile.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../../application/ohaasaService.ts';
 import { ohaasaSingleLines, ohaasaTopLines, ohaasaView, formatOhaasaDate } from '../views/ohaasa.ts';
@@ -109,8 +109,8 @@ export class OhaasaCommand extends Command {
 		// 카드 이미지는 요약(별자리·순위·럭키)만 그려요. 렌더에 실패하면 전부 텍스트로 보여줘요.
 		const date = formatOhaasaDate(daily.date);
 		const png = target
-			? await renderOhaasaCard(buildOhaasaCardRequest(target, date)).catch(() => null)
-			: await renderOhaasaTopCard(buildOhaasaTopCardRequest(daily.horoscopes, date)).catch(() => null);
+			? await this.container.dataApi.renderOhaasaCard(buildOhaasaCardRequest(target, date)).catch(() => null)
+			: await this.container.dataApi.renderOhaasaTopCard(buildOhaasaTopCardRequest(daily.horoscopes, date)).catch(() => null);
 		const filename = target ? `ohaasa-${target.zodiacCode}.png` : 'ohaasa-top.png';
 
 		const lines = target ? ohaasaSingleLines(daily, target, !!png) : ohaasaTopLines(daily, !!png);

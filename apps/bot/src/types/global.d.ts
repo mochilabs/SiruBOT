@@ -49,6 +49,10 @@ declare module '@sapphire/pieces' {
 		gameRecords: import('../features/games/index.ts').GameRecords;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
+		/** 로거가 필요한 data-api 호출(이미지 렌더·업로드) — services/dataApiClient.ts */
+		dataApi: import('../services/dataApiClient.ts').DataApiClient;
+		/** 임베드 복구용 채널 웹훅 릴레이(웹훅 캐시 소유자) */
+		webhookRelay: import('../services/webhookRelay.ts').WebhookRelay;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../features/greeting/index.ts').MemberGreetingService;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;

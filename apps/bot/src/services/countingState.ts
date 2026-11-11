@@ -4,7 +4,7 @@
  * - 카운팅 리스너와 /채팅유틸 카운팅 설정 명령어가 같은 상태를 다뤄요.
  * - 채널을 다시 지정하거나 카운팅을 끄면 상태를 초기화해 새로 1부터 시작해요.
  */
-import { container } from '@sapphire/framework';
+import type { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
 import type { Stoppable } from '../lib/lifecycle.ts';
 import { type CountingState, COUNTING_STATE_DEFAULT } from '@sirubot/utils';
 
@@ -13,6 +13,11 @@ const COUNTING_KEY_PREFIX = 'sirubot:counting:';
 /** Redis 해시 키 — 길드당 하나의 카운팅 상태예요 */
 export function countingStateKey(guildId: string): string {
 	return `${COUNTING_KEY_PREFIX}${guildId}`;
+}
+
+/** 카운팅 상태 저장소가 쓰는 의존성 — redisStore는 setupServices 뒤(setupRedis)에 만들어져서 호출 시점에 읽어요 */
+export interface CountingStateDeps {
+	getRedisStore: () => Pick<RedisStore, 'getCacheHashFields' | 'setCacheHashFields' | 'deleteCacheValue'>;
 }
 
 /**
@@ -31,12 +36,17 @@ export class CountingStateStore implements Stoppable {
 	private readonly inFlight = new Set<Promise<void>>();
 	private stopped = false;
 
+	public constructor(private readonly deps: CountingStateDeps) {}
+
 	/** 카운팅 상태 조회 — 메모리에 없으면 Redis에서 복구해요 */
 	public async load(guildId: string): Promise<CountingState> {
 		const cached = this.memory.get(guildId);
 		if (cached) return cached;
 
-		const fields = await container.redisStore.getCacheHashFields(countingStateKey(guildId)).catch(() => null);
+		const fields = await this.deps
+			.getRedisStore()
+			.getCacheHashFields(countingStateKey(guildId))
+			.catch(() => null);
 		if (fields && fields.current !== undefined) {
 			const state: CountingState = {
 				current: Number.parseInt(fields.current, 10) || 0,
@@ -71,7 +81,8 @@ export class CountingStateStore implements Stoppable {
 		const state = this.memory.get(guildId);
 		if (!state) return Promise.resolve(); // 그 사이에 초기화됐어요 — 쓸 상태 없음
 		const write: Promise<void> = (async () => {
-			await container.redisStore
+			await this.deps
+				.getRedisStore()
 				.setCacheHashFields(countingStateKey(guildId), {
 					current: String(state.current),
 					lastUserId: state.lastUserId ?? '',
@@ -86,7 +97,10 @@ export class CountingStateStore implements Stoppable {
 	/** 카운팅 상태 초기화 — 채널 재지정·카운팅 비활성화 시 새로 1부터 시작해요 */
 	public async reset(guildId: string): Promise<void> {
 		this.memory.delete(guildId);
-		await container.redisStore.deleteCacheValue(countingStateKey(guildId)).catch(() => undefined);
+		await this.deps
+			.getRedisStore()
+			.deleteCacheValue(countingStateKey(guildId))
+			.catch(() => undefined);
 	}
 
 	/** 종료: 예약된 flush를 지금 보내고 진행 중인 쓰기를 기다려요. 이후 저장은 Redis로 보내지 않아요. */
@@ -96,9 +110,3 @@ export class CountingStateStore implements Stoppable {
 		await Promise.all([...this.inFlight]);
 	}
 }
-
-// 아래 함수들은 호출자가 쓰던 시그니처를 유지하는 위임이에요 — 상태는 container.countingState(CountingStateStore)가 소유해요.
-
-export const loadCountingState = (guildId: string): Promise<CountingState> => container.countingState.load(guildId);
-export const saveCountingState = (guildId: string, state: CountingState): void => container.countingState.save(guildId, state);
-export const resetCountingState = (guildId: string): Promise<void> => container.countingState.reset(guildId);

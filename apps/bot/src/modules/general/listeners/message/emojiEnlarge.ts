@@ -12,7 +12,6 @@ import { Message, MessageFlags } from 'discord.js';
 import { MemoryCache, customEmojiUrl, parseEmojiOnlyMessage } from '@sirubot/utils';
 import { emojiEnlargeView } from '../../view/emojiEnlarge.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
-import { relayViaWebhook } from '../../../../services/webhookRelay.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 const ENLARGE_COOLDOWN_MS = 5_000;
@@ -40,7 +39,7 @@ export class EmojiEnlargeListener extends Listener {
 
 			const container = emojiEnlargeView(emojis.map((item) => customEmojiUrl(item)));
 
-			const relayed = await relayViaWebhook(message, {
+			const relayed = await this.container.webhookRelay.relay(message, {
 				username: message.member?.displayName ?? message.author.displayName,
 				avatarURL: message.author.displayAvatarURL({ size: 256, extension: 'png' }),
 				components: [container]

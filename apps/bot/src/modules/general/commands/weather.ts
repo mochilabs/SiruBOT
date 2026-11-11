@@ -4,7 +4,7 @@ import { emoji } from '@sirubot/utils';
 import { notice } from '../view/notice.ts';
 import { weatherImageView } from '../view/weather.ts';
 import { ApplicationIntegrationType, AttachmentBuilder, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { fetchWeather, GatewayDomainError, renderWeatherCard, type WeatherCardRequest } from '../../../services/dataApiClient.ts';
+import { fetchWeather, GatewayDomainError, type DataApiClient, type WeatherCardRequest } from '../../../services/dataApiClient.ts';
 import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
 
 /** 채널별 최근 조회 위치 — 자동완성 후보 상한 (길드 공용 기록이에요) */
@@ -130,8 +130,8 @@ function buildAltText(result: WeatherResult): string {
 }
 
 /** 이미지 카드 — 제목 한 줄은 텍스트로 두고(검색·복사용), 본문은 이미지로 보여요. 렌더 실패 시 null. */
-async function buildImageReply(result: WeatherResult) {
-	const png = await renderWeatherCard(toCardRequest(result)).catch(() => null);
+async function buildImageReply(dataApi: DataApiClient, result: WeatherResult) {
+	const png = await dataApi.renderWeatherCard(toCardRequest(result)).catch(() => null);
 	if (!png) return null;
 	const filename = `weather-${result.scope}.png`;
 	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
@@ -252,7 +252,7 @@ export class WeatherCommand extends Command {
 		rememberLocation(interaction.channelId, location);
 
 		// 이미지 카드가 기본이고, data-api가 렌더에 실패하면 기존 텍스트 카드로 폴백해요
-		const image = await buildImageReply(result);
+		const image = await buildImageReply(this.container.dataApi, result);
 		if (image) {
 			await interaction.editReply({ files: image.files, components: [image.container], flags: [MessageFlags.IsComponentsV2] });
 			return;

@@ -116,14 +116,8 @@ const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
 	'services/aiTools/music.ts': 'stage 4b conversion pending',
 	'services/aiTools/musicSettings.ts': 'stage 4b conversion pending',
 	'services/aiTools/serverInfo.ts': 'stage 4b conversion pending',
-	'services/appEmojiManager.ts': 'stage 4b conversion pending',
 	'services/audioService.ts': 'audio playback owner; converted in the later audio stage',
-	'services/botActivity.ts': 'stage 4b conversion pending',
-	'services/botProfileService.ts': 'stage 4b conversion pending',
 	'services/chatTts.ts': 'stage 4b conversion pending',
-	'services/countingState.ts': 'stage 4b conversion pending',
-	'services/dataApiClient.ts': 'stage 4b conversion pending',
-	'services/embedFixGateway.ts': 'stage 4b conversion pending',
 	'services/mixerService.ts': 'audio playback owner; converted in the later audio stage',
 	'services/playbackReporter.ts': 'audio playback; converted in the later audio stage',
 	'services/playlistPlayback.ts': 'audio playback; converted in the later audio stage',
@@ -131,8 +125,7 @@ const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
 	'services/sponsorBlockService.ts': 'audio playback; converted in the later audio stage',
 	'services/ttsPronunciation.ts': 'stage 4b conversion pending',
 	'services/ttsService.ts': 'stage 4b conversion pending',
-	'services/ttsUserSettings.ts': 'stage 4b conversion pending',
-	'services/webhookRelay.ts': 'stage 4b conversion pending'
+	'services/ttsUserSettings.ts': 'stage 4b conversion pending'
 };
 
 function listSourceFiles(dir: string): string[] {

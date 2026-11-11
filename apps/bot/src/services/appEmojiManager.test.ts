@@ -4,12 +4,8 @@ const mocks = vi.hoisted(() => ({
 	fetch: vi.fn()
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		client: { application: { emojis: { fetch: mocks.fetch } } },
-		logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }
-	}
-}));
+const logger = { warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() };
+const deps = { logger, getApplication: () => ({ emojis: { fetch: mocks.fetch } }) as never };
 
 import { AppEmojiManager } from './appEmojiManager.ts';
 
@@ -23,7 +19,7 @@ describe('AppEmojiManager 재동기화 타이머', () => {
 	afterEach(() => vi.useRealTimers());
 
 	it('조회에 실패한 비업로드 샤드는 30초 뒤 재동기화를 예약해요', async () => {
-		const manager = new AppEmojiManager();
+		const manager = new AppEmojiManager(deps);
 		await manager.sync(false);
 		expect(vi.getTimerCount()).toBe(1);
 		await vi.advanceTimersByTimeAsync(30_000);
@@ -32,7 +28,7 @@ describe('AppEmojiManager 재동기화 타이머', () => {
 	});
 
 	it('stop()은 예약된 재동기화를 해제하고 이후 예약도 만들지 않아요', async () => {
-		const manager = new AppEmojiManager();
+		const manager = new AppEmojiManager(deps);
 		await manager.sync(false);
 		expect(vi.getTimerCount()).toBe(1);
 

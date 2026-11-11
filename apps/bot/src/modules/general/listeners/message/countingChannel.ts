@@ -13,7 +13,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
 import { emoji, enqueueOperation, evaluateCounting, parseCountingMessage } from '@sirubot/utils';
-import { loadCountingState, saveCountingState } from '../../../../services/countingState.ts';
 
 /** 최고 기록 알림 기준 — 매 숫자마다 알리면 시끄러워요 */
 const COUNTING_ANNOUNCE_MIN = 10;
@@ -43,9 +42,9 @@ export class CountingChannelListener extends Listener {
 			const attempt = parseCountingMessage(message.content);
 			if (attempt === null) return;
 
-			const state = await loadCountingState(guildId);
+			const state = await this.container.countingState.load(guildId);
 			const result = evaluateCounting(state, attempt, message.author.id);
-			saveCountingState(guildId, result.state);
+			this.container.countingState.save(guildId, result.state);
 
 			// 성공은 조용히 — 새 최고 기록만 알려줘요
 			if (result.ok) {

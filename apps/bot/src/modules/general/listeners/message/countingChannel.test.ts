@@ -31,7 +31,7 @@ vi.mock('@sapphire/framework', () => {
 
 import { container } from '@sapphire/framework';
 import { CountingChannelListener } from './countingChannel.ts';
-import { CountingStateStore, countingStateKey, loadCountingState } from '../../../../services/countingState.ts';
+import { CountingStateStore, countingStateKey } from '../../../../services/countingState.ts';
 vi.mock('../../../../services/guildSettings/chatPolicy.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getChatToolSettings: mocks.getChatToolSettings }
@@ -78,7 +78,7 @@ beforeEach(async () => {
 	await flushTick();
 	vi.resetAllMocks();
 	// 카운팅 상태 소유자는 container.countingState — 테스트마다 새로 만들어요
-	container.countingState = new CountingStateStore();
+	container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 	listener = createListener();
 	mocks.getChatToolSettings.mockResolvedValue({ countingEnabled: true, countingChannelId: 'counting-channel' });
 	mocks.getCacheHashFields.mockResolvedValue(null);
@@ -98,7 +98,7 @@ describe('countingChannel 레이스 방지 (길드별 직렬화)', () => {
 		expect(first.reply).not.toHaveBeenCalled();
 		expect(second.reply).toHaveBeenCalledTimes(1);
 		expect(JSON.stringify(second.reply.mock.calls)).toContain('2부터 차례로 세야 해요');
-		expect(await loadCountingState(guildId)).toEqual({ current: 0, lastUserId: null, best: 1 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 0, lastUserId: null, best: 1 });
 	});
 
 	it('동시에 도착한 숫자 메시지는 도착 순서대로 처리돼요', async () => {
@@ -112,7 +112,7 @@ describe('countingChannel 레이스 방지 (길드별 직렬화)', () => {
 		expect(a.reply).not.toHaveBeenCalled();
 		expect(b.reply).not.toHaveBeenCalled();
 		expect(c.reply).not.toHaveBeenCalled();
-		expect(await loadCountingState(guildId)).toEqual({ current: 3, lastUserId: 'u3', best: 3 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 3, lastUserId: 'u3', best: 3 });
 	});
 
 	it('다른 길드의 메시지는 앞길드 처리를 기다리지 않아요', async () => {
@@ -130,11 +130,11 @@ describe('countingChannel 레이스 방지 (길드별 직렬화)', () => {
 		const runSlow = listener.run(slow.message);
 
 		await listener.run(fast.message);
-		expect(await loadCountingState('fast-guild')).toEqual({ current: 1, lastUserId: 'user-1', best: 1 });
+		expect(await container.countingState.load('fast-guild')).toEqual({ current: 1, lastUserId: 'user-1', best: 1 });
 
 		releaseSlow();
 		await runSlow;
-		expect(await loadCountingState('slow-guild')).toEqual({ current: 1, lastUserId: 'user-1', best: 1 });
+		expect(await container.countingState.load('slow-guild')).toEqual({ current: 1, lastUserId: 'user-1', best: 1 });
 	});
 });
 
@@ -152,7 +152,7 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		await listener.run(m.message);
 
 		expect(m.reply).not.toHaveBeenCalled();
-		expect(await loadCountingState(guildId)).toEqual({ current: 1, lastUserId: 'user-1', best: 1 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 1, lastUserId: 'user-1', best: 1 });
 
 		release();
 		await flushTick();
@@ -171,7 +171,7 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 		await listener.run(m.message);
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('5부터 차례로 세야 해요');
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('최고 기록 7');
-		expect(await loadCountingState(guildId)).toEqual({ current: 0, lastUserId: null, best: 7 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 0, lastUserId: null, best: 7 });
 	});
 
 	it('같은 사람이 연속으로 세면 막아요', async () => {
@@ -181,7 +181,7 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 
 		await listener.run(m.message);
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('바로 이어서 셀 수 없어요');
-		expect(await loadCountingState(guildId)).toEqual({ current: 0, lastUserId: null, best: 4 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 0, lastUserId: null, best: 4 });
 	});
 
 	it('숫자가 아닌 메시지는 조용히 무시해요', async () => {
@@ -227,7 +227,7 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 
 		await listener.run(m.message);
 		expect(JSON.stringify(m.reply.mock.calls)).toContain('새 최고 기록');
-		expect(await loadCountingState(guildId)).toEqual({ current: 10, lastUserId: 'user-2', best: 10 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 10, lastUserId: 'user-2', best: 10 });
 	});
 
 	it('10 미만의 새 최고 기록은 조용히 넘겨요', async () => {
@@ -237,6 +237,6 @@ describe('countingChannel 카운팅 규칙 (행동 보존)', () => {
 
 		await listener.run(m.message);
 		expect(m.reply).not.toHaveBeenCalled();
-		expect(await loadCountingState(guildId)).toEqual({ current: 3, lastUserId: 'user-2', best: 3 });
+		expect(await container.countingState.load(guildId)).toEqual({ current: 3, lastUserId: 'user-2', best: 3 });
 	});
 });

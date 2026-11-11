@@ -6,7 +6,6 @@ import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags }
 import { getZodiacFromDate, streakBadge, ZODIAC_MAP } from '../../../features/games/index.ts';
 import { clearUserBirthday, clearUserIntro, isValidBirthday, setUserBirthday, setUserIntro } from '../utils/userProfile.ts';
 import { buildProfileCardData, formatGameStatsLines } from '../utils/profileCardData.ts';
-import { renderProfileCard } from '../../../services/dataApiClient.ts';
 
 function zodiacLabel(code: string): string {
 	const info = ZODIAC_MAP[code];
@@ -260,38 +259,40 @@ export class ProfileCommand extends Command {
 					? 'invisible'
 					: null;
 
-		const cardPng = await renderProfileCard({
-			preset,
-			userId: target.id,
-			displayName: target.displayName ?? target.username,
-			username: target.username,
-			avatarUrl: target.displayAvatarURL({ size: 256, extension: 'png' }),
-			bannerUrl,
-			zodiacCode: data.zodiacCode,
-			zodiacKo: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.ko ?? '별자리 없음') : '별자리 없음',
-			zodiacJp: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.jp ?? null) : null,
-			birthMonth: showPrivate ? data.birthMonth : null,
-			birthDay: showPrivate ? data.birthDay : null,
-			playlistCount: data.playlistCount,
-			requestedCount: data.requestedCount,
-			listenText: formatTimeToKorean(Math.floor(data.listenMs / 1000)),
-			accountCreated: new Date(target.createdTimestamp).toISOString(),
-			guildJoinedAt,
-			topTracks: data.topTracks.slice(0, 3).map((t) => ({
-				title: t.title,
-				artist: t.artist,
-				thumbnailUrl: t.artworkUrl ?? null
-			})),
-			gameStats: data.gameStats,
-			checkinStreak: data.checkinStreak,
-			status: derivedStatus ?? 'invisible',
-			statusLabel: derivedStatus ? '' : '상태 알 수 없음',
-			intro: data.intro,
-			roleChips,
-			guildTag,
-			guildTagBadgeUrl,
-			nowPlaying
-		}).catch(() => null);
+		const cardPng = await this.container.dataApi
+			.renderProfileCard({
+				preset,
+				userId: target.id,
+				displayName: target.displayName ?? target.username,
+				username: target.username,
+				avatarUrl: target.displayAvatarURL({ size: 256, extension: 'png' }),
+				bannerUrl,
+				zodiacCode: data.zodiacCode,
+				zodiacKo: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.ko ?? '별자리 없음') : '별자리 없음',
+				zodiacJp: data.zodiacCode ? (ZODIAC_MAP[data.zodiacCode]?.jp ?? null) : null,
+				birthMonth: showPrivate ? data.birthMonth : null,
+				birthDay: showPrivate ? data.birthDay : null,
+				playlistCount: data.playlistCount,
+				requestedCount: data.requestedCount,
+				listenText: formatTimeToKorean(Math.floor(data.listenMs / 1000)),
+				accountCreated: new Date(target.createdTimestamp).toISOString(),
+				guildJoinedAt,
+				topTracks: data.topTracks.slice(0, 3).map((t) => ({
+					title: t.title,
+					artist: t.artist,
+					thumbnailUrl: t.artworkUrl ?? null
+				})),
+				gameStats: data.gameStats,
+				checkinStreak: data.checkinStreak,
+				status: derivedStatus ?? 'invisible',
+				statusLabel: derivedStatus ? '' : '상태 알 수 없음',
+				intro: data.intro,
+				roleChips,
+				guildTag,
+				guildTagBadgeUrl,
+				nowPlaying
+			})
+			.catch(() => null);
 
 		if (cardPng) {
 			const { AttachmentBuilder } = await import('discord.js');

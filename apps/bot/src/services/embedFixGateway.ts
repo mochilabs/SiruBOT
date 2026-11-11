@@ -5,14 +5,14 @@
  *   외부 프로바이더 캐시·서킷브레이커가 data-api에 있어서 샤드들이 결과를 공유해요.
  * - DATA_API_URL 미설정·실패·응답 검증 실패면 null — 호출자는 레거시 경로(도메인 스왑)로 폴백해요.
  */
-import { container } from '@sapphire/framework';
 import { embedFixMetadataResponseSchema, type EmbedFixMetadataRequest, type EmbedFixResult } from '@sirubot/utils';
+import type { AppLogger } from '../lib/appLogger.ts';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 
 const METADATA_TIMEOUT_MS = 10_000;
 
 /** 링크들의 임베드 메타데이터를 물어봐요 — 실패는 null (레거시 폴백) */
-export async function fetchEmbedFixMetadata(request: EmbedFixMetadataRequest): Promise<EmbedFixResult[] | null> {
+export async function fetchEmbedFixMetadata(logger: AppLogger, request: EmbedFixMetadataRequest): Promise<EmbedFixResult[] | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
 
@@ -27,12 +27,12 @@ export async function fetchEmbedFixMetadata(request: EmbedFixMetadataRequest): P
 
 		const payload = embedFixMetadataResponseSchema.safeParse(await response.json().catch(() => null));
 		if (!payload.success) {
-			container.logger.debug('[embedFixGateway] response schema mismatch');
+			logger.debug('[embedFixGateway] response schema mismatch');
 			return null;
 		}
 		return payload.data.results;
 	} catch (error) {
-		container.logger.debug(`[embedFixGateway] request failed: ${error instanceof Error ? error.message : String(error)}`);
+		logger.debug(`[embedFixGateway] request failed: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
 	}
 }
