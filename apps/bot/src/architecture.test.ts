@@ -13,6 +13,8 @@
  *
  * `features/<a>/` may import another feature `features/<b>/` only through `features/<b>/index.ts` (its public surface). No allowlist.
  *
+ * `services/` must not import `container` (see `SERVICES_CONTAINER_ALLOWED`); services receive deps from `BotApplication.setupServices`.
+ *
  * Environment access: no non-test file may contain `process.env` or import `@skyra/env-utilities` except the short, reasoned lists below (see
  * `PROCESS_ENV_ALLOWED` / `ENV_UTILITIES_ALLOWED`). Everything else reads `getConfig()` (lib/config.ts); `features/<name>/application/` takes values via `deps`.
  *
@@ -95,6 +97,47 @@ const PROCESS_ENV_ALLOWED: Record<string, string> = {
 /** Non-test files that may import `@skyra/env-utilities`, each with the reason. Only delete from this list. */
 const ENV_UTILITIES_ALLOWED: Record<string, string> = {
 	'core/environment.ts': 'setup() loads .env into the process environment; it must run before the first getConfig()'
+};
+
+/** Non-test files under `services/` that still import `container`, each with the reason. Only delete from this list. */
+const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
+	'services/aiChat/agentLoop.ts': 'stage 4b conversion pending',
+	'services/aiChat/completion.ts': 'stage 4b conversion pending',
+	'services/aiChat/config.ts': 'stage 4b conversion pending',
+	'services/aiChat/historyStore.ts': 'stage 4b conversion pending',
+	'services/aiChat/memoryPromotion.ts': 'stage 4b conversion pending',
+	'services/aiChat/prompt.ts': 'stage 4b conversion pending',
+	'services/aiChat/summarizer.ts': 'stage 4b conversion pending',
+	'services/aiChat/turnControl.ts': 'stage 4b conversion pending',
+	'services/aiMemoryService.ts': 'stage 4b conversion pending',
+	'services/aiTools/botHelp.ts': 'stage 4b conversion pending',
+	'services/aiTools/botSettings.ts': 'stage 4b conversion pending',
+	'services/aiTools/memory.ts': 'stage 4b conversion pending',
+	'services/aiTools/music.ts': 'stage 4b conversion pending',
+	'services/aiTools/musicSettings.ts': 'stage 4b conversion pending',
+	'services/aiTools/serverInfo.ts': 'stage 4b conversion pending',
+	'services/appEmojiManager.ts': 'stage 4b conversion pending',
+	'services/audioService.ts': 'audio playback owner; converted in the later audio stage',
+	'services/botActivity.ts': 'stage 4b conversion pending',
+	'services/botProfileService.ts': 'stage 4b conversion pending',
+	'services/chatTts.ts': 'stage 4b conversion pending',
+	'services/countingState.ts': 'stage 4b conversion pending',
+	'services/dataApiClient.ts': 'stage 4b conversion pending',
+	'services/embedFixGateway.ts': 'stage 4b conversion pending',
+	'services/guildSettings/mixer.ts': 'stage 4b conversion pending',
+	'services/guildSettings/store.ts': 'stage 4b conversion pending',
+	'services/mixerService.ts': 'audio playback owner; converted in the later audio stage',
+	'services/playbackReporter.ts': 'audio playback; converted in the later audio stage',
+	'services/playlistPlayback.ts': 'audio playback; converted in the later audio stage',
+	'services/playlistService.ts': 'stage 4b conversion pending',
+	'services/skipPolicy.ts': 'audio playback; converted in the later audio stage',
+	'services/sponsorBlockService.ts': 'audio playback; converted in the later audio stage',
+	'services/trackService.ts': 'stage 4b conversion pending',
+	'services/ttsPronunciation.ts': 'stage 4b conversion pending',
+	'services/ttsService.ts': 'stage 4b conversion pending',
+	'services/ttsUserSettings.ts': 'stage 4b conversion pending',
+	'services/userDataService.ts': 'stage 4b conversion pending',
+	'services/webhookRelay.ts': 'stage 4b conversion pending'
 };
 
 function listSourceFiles(dir: string): string[] {
@@ -235,6 +278,22 @@ describe('bot architecture guard rails', () => {
 			edgesBetween(graph, 'services', 'modules'),
 			ALLOWED_SERVICES_TO_MODULES,
 			'Move the needed code into services/ or lib/, or have the module call the service instead (modules depend on services, not the reverse).'
+		);
+	});
+
+	it('services/ does not import container beyond the allowlist', () => {
+		const importsContainer = (file: string) =>
+			/^\s*import\s+(?!type\b)\{[^}]*\bcontainer\b[^}]*\}\s+from\s+['"]@sapphire\/(framework|pieces)['"]/m.test(
+				readFileSync(path.join(SRC_ROOT, file), 'utf8')
+			);
+		const actual = listSourceFiles(SRC_ROOT)
+			.map(toRel)
+			.filter((file) => file.startsWith('services/') && importsContainer(file))
+			.sort();
+		expectRatchet(
+			actual,
+			Object.keys(SERVICES_CONTAINER_ALLOWED).sort(),
+			'Services take their dependencies through deps; BotApplication.setupServices is the only place that reads container.'
 		);
 	});
 
