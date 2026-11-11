@@ -21,7 +21,7 @@ function track(overrides: Partial<TrackPort['info']> = {}): TrackPort {
 class FakePlayer implements PlayerPort {
 	public paused = false;
 	public playing = true;
-	public queue: { current: TrackPort | null; tracks: unknown[] } = { current: track(), tracks: [] };
+	public queue: { current: TrackPort | null; tracks: unknown[] } = { current: track(), tracks: [{}] };
 	public readonly pause = vi.fn(async () => {
 		this.paused = true;
 	});
@@ -44,14 +44,15 @@ function harness(options: { player?: FakePlayer | null; denied?: AppError } = {}
 	const ensurePlayback = vi.fn(async (_player: FakePlayer) => undefined);
 	const stopPlayback = vi.fn(async (_player: FakePlayer) => undefined);
 	const removeController = vi.fn(async (_player: FakePlayer) => undefined);
+	const skip = vi.fn(async (_player: FakePlayer, _position?: number) => undefined);
 	const control = createMusicControl<FakePlayer>({
 		access: { authorize },
 		getPlayer: () => player ?? undefined,
 		settings: { saveVolume, saveRepeat },
-		mixer: { clearNext },
+		mixer: { clearNext, skip },
 		playback: { ensurePlayback, stopPlayback, removeController }
 	});
-	return { control, player, authorize, saveVolume, saveRepeat, clearNext, ensurePlayback, stopPlayback, removeController };
+	return { control, player, authorize, saveVolume, saveRepeat, clearNext, ensurePlayback, stopPlayback, removeController, skip };
 }
 
 async function rejection(promise: Promise<unknown>): Promise<AppError> {
@@ -337,5 +338,59 @@ describe('stop', () => {
 		await expect(control.stop(actor)).rejects.toBe(denied);
 		expect(removeController).not.toHaveBeenCalled();
 		expect(stopPlayback).not.toHaveBeenCalled();
+	});
+});
+
+describe('skipNow', () => {
+	it('인가 뒤 mixer 건너뛰기를 인자 없이 호출해요 (컨트롤러 버튼과 같은 호출)', async () => {
+		const { control, player, authorize, skip } = harness();
+		await expect(control.skipNow(actor)).resolves.toEqual({ skipped: true });
+		expect(authorize).toHaveBeenCalledWith(actor);
+		expect(skip).toHaveBeenCalledExactlyOnceWith(player, undefined);
+	});
+
+	it('to를 주면 그 번호를 mixer에 넘겨요', async () => {
+		const player = new FakePlayer();
+		player.queue = { current: track(), tracks: [{}, {}, {}] };
+		const { control, skip } = harness({ player });
+		await control.skipNow(actor, { to: 3 });
+		expect(skip).toHaveBeenCalledExactlyOnceWith(player, 3);
+	});
+
+	it.each([0, -1, 1.5, Number.NaN])('올바르지 않은 to %s는 invalid_input으로 거절해요', async (to) => {
+		const { control, skip } = harness();
+		const error = await rejection(control.skipNow(actor, { to }));
+		expect(error.kind).toBe('invalid_input');
+		expect(error.userMessage).toContain('건너뛸 곡 번호가 올바르지 않아요.');
+		expect(skip).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		['플레이어가 없으면', null],
+		['현재 곡이 없으면', (() => Object.assign(new FakePlayer(), { queue: { current: null, tracks: [{}] } }))()]
+	])('%s 곡 없음 문구로 거절해요', async (_label, player) => {
+		const { control, skip } = harness({ player });
+		const error = await rejection(control.skipNow(actor));
+		expect(error.kind).toBe('not_found');
+		expect(error.userMessage).toBe(MUSIC_ACCESS_MESSAGES.noSong());
+		expect(skip).not.toHaveBeenCalled();
+	});
+
+	it('대기열이 비어 있으면 건너뛰지 않고 대기열 없음 문구로 거절해요', async () => {
+		const player = new FakePlayer();
+		player.queue = { current: track(), tracks: [] };
+		const { control, skip } = harness({ player });
+		const error = await rejection(control.skipNow(actor));
+		expect(error.kind).toBe('not_found');
+		expect(error.ephemeral).toBe(true);
+		expect(error.userMessage).toContain('대기열에 곡이 없어요.');
+		expect(skip).not.toHaveBeenCalled();
+	});
+
+	it('인가에 실패하면 건너뛰지 않아요', async () => {
+		const denied = new AppError('forbidden', 'DJ만 가능해요.');
+		const { control, skip } = harness({ denied });
+		await expect(control.skipNow(actor)).rejects.toBe(denied);
+		expect(skip).not.toHaveBeenCalled();
 	});
 });

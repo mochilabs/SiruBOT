@@ -54,6 +54,7 @@ describe('web player permissions', () => {
 		Object.assign(container, {
 			client: { guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) } },
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
+			music: { skipNow: vi.fn().mockRejectedValue(new AppError('not_found', '현재 곡이 없어요.')) },
 			guildService: {},
 			redisStore: { publishPlayerWebResponse: publish }
 		});
@@ -120,6 +121,20 @@ describe('web player permissions', () => {
 			const { response, logger } = await control({ action: 'volume', value: 90 }, { setVolume });
 			expect(setVolume).toHaveBeenCalledWith(expect.objectContaining({ guildId: 'guild', userId: 'user' }), 90);
 			expect(response.error).toBeUndefined();
+			expect(logger.error).not.toHaveBeenCalled();
+		});
+
+		it('skip은 즉시 건너뛰기 유스케이스 하나만 호출하고 성공 응답을 보내요 (투표·관리 권한 선검사 없음)', async () => {
+			const skipNow = vi.fn().mockResolvedValue({ skipped: true });
+			const { response } = await control({ action: 'skip' }, { skipNow });
+			expect(skipNow).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ guildId: 'guild', userId: 'user' }));
+			expect(response.error).toBeUndefined();
+		});
+
+		it('skip의 거절은 앱 이모지 마크업을 뗀 안내 문구로 응답해요', async () => {
+			const skipNow = vi.fn().mockRejectedValue(new AppError('not_found', '<:error:1> 대기열에 곡이 없어요.'));
+			const { response, logger } = await control({ action: 'skip' }, { skipNow });
+			expect(response.error).toBe('대기열에 곡이 없어요.');
 			expect(logger.error).not.toHaveBeenCalled();
 		});
 

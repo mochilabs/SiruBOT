@@ -36,7 +36,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
-	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume']);
+	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume', 'next']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
@@ -72,7 +72,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				await this.handlePrev(interaction, player);
 				break;
 			case 'next':
-				await this.handleNext(interaction, player);
+				await this.handleNext(interaction);
 				break;
 			case 'queue':
 				await this.handleQueue(interaction, player, subcommand);
@@ -253,17 +253,10 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		// 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략 (edit→삭제 churn 방지)
 	}
 
-	private async handleNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		if (player.queue.tracks.length === 0) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 대기열에 곡이 없어요.`)]
-			});
-			return;
-		}
-
+	private async handleNext(interaction: ButtonInteraction<'cached'>) {
 		await interaction.deferUpdate();
-		await this.container.mixerService.skip(player);
+		// 인가·현재 곡·다음 곡 확인과 건너뛰기는 유스케이스가 맡아요. 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략해요.
+		await this.container.music.skipNow(actorFromMember(interaction.member));
 	}
 
 	private async handleQueue(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {

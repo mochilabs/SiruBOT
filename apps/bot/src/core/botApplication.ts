@@ -199,7 +199,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				saveRepeat: (guildId, mode) => guildPlayback.setRepeat(container.guildService, guildId, mode)
 			},
 			mixer: {
-				clearNext: (player) => container.mixerService.clearNext(player)
+				clearNext: (player) => container.mixerService.clearNext(player),
+				skip: (player, position) => container.mixerService.skip(player, position)
 			},
 			playback: {
 				ensurePlayback: (player) => container.audioService.ensurePlayback(player),

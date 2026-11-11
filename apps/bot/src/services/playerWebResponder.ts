@@ -324,9 +324,8 @@ export class PlayerWebResponder {
 	}
 
 	// kind: control, 볼륨·일시정지·재생·스킵·정지·반복
-	//   volume/pause/resume/repeat/stop: 공용 유스케이스(container.music) — 봇과 같은 음성 채널 + DJ 조건, Administrator만 음성 조건 면제.
-	//     repeat는 웹에서 off → track → queue 순으로 순환해요.
-	//   skip: 이번 통합 범위 밖이라 기존 그대로 — 서버 관리자·DJ 역할 + 활성 플레이어 + 봇과 같은 음성 채널
+	//   모든 동작은 공용 유스케이스(container.music) — 봇과 같은 음성 채널 + DJ 조건, Administrator만 음성 조건 면제.
+	//     repeat는 웹에서 off → track → queue 순으로 순환해요. skip은 투표 없는 즉시 건너뛰기예요.
 	private async handleControl(guild: Guild, request: PlayerWebControlRequest): Promise<void> {
 		const { guildId } = request;
 		try {
@@ -336,48 +335,14 @@ export class PlayerWebResponder {
 				return;
 			}
 
-			// 공용 유스케이스(container.music)가 다루는 동작 — 슬래시·버튼·AI와 같은 인가 정책과 부수 효과를 거쳐요.
+			// 슬래시·버튼·AI와 같은 인가 정책과 부수 효과를 거쳐요.
 			try {
-				if (await this.applyMusicControl(request, member)) {
-					this.respond({ requestId: request.requestId, guildId, kind: 'control' });
-					return;
-				}
+				await this.applyMusicControl(request, member);
+				this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 			} catch (error) {
 				if (!(error instanceof AppError)) throw error;
 				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: plainUserMessage(error) });
-				return;
 			}
-
-			if (!(await this.hasControlPermission(guildId, member))) {
-				this.respond({
-					requestId: request.requestId,
-					guildId,
-					kind: 'control',
-					error: `재생 제어는 서버 관리자 또는 DJ 역할이 필요해요.`
-				});
-				return;
-			}
-
-			const player = container.audio.getPlayer(guildId);
-			const voiceChannelId = member.voice?.channelId ?? null;
-
-			if (!player) {
-				this.respond({ requestId: request.requestId, guildId, kind: 'control', error: '재생 중인 곡이 없어요.' });
-				return;
-			}
-
-			if (request.action === 'skip' && player.voiceChannelId !== voiceChannelId) {
-				this.respond({
-					requestId: request.requestId,
-					guildId,
-					kind: 'control',
-					error: `이 동작은 봇과 같은 음성 채널에 연결해야 해요.`
-				});
-				return;
-			}
-
-			await container.mixerService.skip(player);
-			this.respond({ requestId: request.requestId, guildId, kind: 'control' });
 		} catch (error) {
 			this.logger.error(
 				`웹 플레이어 제어 적용 실패 (guild ${guildId}, action ${request.action}): ${error instanceof Error ? error.message : String(error)}`
@@ -391,33 +356,34 @@ export class PlayerWebResponder {
 		}
 	}
 
-	/** 유스케이스가 맡는 제어 동작을 실행해요. 유스케이스 대상이 아니면 false를 돌려줘요 (AppError는 호출자가 응답으로 바꿔요). */
-	private async applyMusicControl(request: PlayerWebControlRequest, member: GuildMember): Promise<boolean> {
+	/** 제어 동작을 유스케이스로 실행해요 (AppError는 호출자가 응답으로 바꿔요). */
+	private async applyMusicControl(request: PlayerWebControlRequest, member: GuildMember): Promise<void> {
 		const actor = actorFromMember(member);
 		switch (request.action) {
 			case 'volume':
 				if (typeof request.value !== 'number') throw new Error(`control volume: value 누락 (guild ${request.guildId})`);
 				await container.music.setVolume(actor, request.value);
-				return true;
+				return;
 			case 'pause':
 				await container.music.pause(actor);
-				return true;
+				return;
 			case 'resume':
 				await container.music.resume(actor);
-				return true;
+				return;
 			case 'stop':
 				await container.music.stop(actor);
-				return true;
+				return;
 			case 'repeat': {
 				// 웹 버튼은 모드를 고르지 않고 off → track → queue 순으로 순환해요. 플레이어가 없으면 저장된 길드 설정을 기준으로 해요.
 				const current =
 					container.audio.getPlayer(request.guildId)?.repeatMode ??
 					(await guildPlayback.getRepeat(container.guildService, request.guildId));
 				await container.music.setRepeat(actor, current === 'off' ? 'track' : current === 'track' ? 'queue' : 'off');
-				return true;
+				return;
 			}
-			default:
-				return false;
+			case 'skip':
+				await container.music.skipNow(actor);
+				return;
 		}
 	}
 

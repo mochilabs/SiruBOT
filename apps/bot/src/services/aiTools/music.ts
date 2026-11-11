@@ -145,14 +145,11 @@ const musicSkipTool: AiTool = {
 	required: [],
 	status: '시루가 다음 곡으로 넘기는 중..',
 	execute: async (_args, ctx) => {
-		await requireDjOrAlone(ctx);
-		const guildId = requireGuild(ctx);
-		const player = requirePlayer(guildId);
-		if (!nowPlayingTrack(player)) throw new Error('건너뛸 곡이 없어요.');
-		// /스킵 커맨드와 동일한 경로 — 스킵 전 mixer 예열 슬롯을 비워야
-		// stale 슬롯 관망(trackEnd consumePreloaded)으로 무음/공백이 생기지 않는다.
-		await container.mixerService.skip(player);
-		const next = nowPlayingTrack(player);
+		const actor = musicActor(ctx);
+		// 인가·현재 곡·다음 곡 확인과 mixer 예열 슬롯 정리를 포함한 건너뛰기는 공용 유스케이스가 맡아요.
+		await withAppError(() => container.music.skipNow(actor));
+		const player = container.audio.getPlayer(actor.guildId);
+		const next = player ? nowPlayingTrack(player) : null;
 		return JSON.stringify({ status: 'ok', now_playing: next ? trackInfo(next) : null });
 	}
 };

@@ -56,6 +56,8 @@ export interface MusicControlDeps<P extends PlayerPort> {
 	mixer: {
 		/** mixer 예열 슬롯을 비워요. 반복 모드 전이는 클라이언트가 소유하므로 모드가 바뀔 때마다 필요해요. */
 		clearNext(player: P): Promise<unknown>;
+		/** 현재 곡을 건너뛰어요. position이 있으면 그 번호의 대기곡부터 재생해요 (앞의 대기곡은 건너뜀). */
+		skip(player: P, position?: number): Promise<unknown>;
 	};
 	playback: {
 		/** 멈춰 있던 플레이어가 대기열을 다시 재생하게 해요. */
@@ -80,6 +82,11 @@ export interface MusicControl {
 	seek(actor: Actor, positionMs: number): Promise<{ positionMs: number; track: TrackPort }>;
 	/** 컨트롤러를 지우고 대기열을 비운 뒤 재생을 멈추고 음성 채널에서 나가요. 플레이어가 없으면 거절해요. */
 	stop(actor: Actor): Promise<{ stopped: true }>;
+	/**
+	 * 투표 없이 현재 곡을 바로 건너뛰어요. 현재 곡과 다음에 재생할 대기곡이 있어야 해요.
+	 * `to`가 있으면 그 번호(1부터)의 대기곡부터 재생해요. 투표 건너뛰기(/건너뛰기)는 이 유스케이스가 아니라 skipPolicy가 맡아요.
+	 */
+	skipNow(actor: Actor, options?: { to?: number }): Promise<{ skipped: true }>;
 }
 
 export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<P>): MusicControl {
@@ -168,6 +175,20 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 			await playback.removeController(player).catch(() => null);
 			await playback.stopPlayback(player);
 			return { stopped: true };
+		},
+
+		async skipNow(actor, options = {}) {
+			await access.authorize(actor);
+			const { player } = requireSong(actor.guildId);
+			const { to } = options;
+			if (to !== undefined && (!Number.isInteger(to) || to < 1)) {
+				throw new AppError('invalid_input', `${emoji('error')} 건너뛸 곡 번호가 올바르지 않아요.`, { ephemeral: true });
+			}
+			if (player.queue.tracks.length === 0) {
+				throw new AppError('not_found', `${emoji('error')} 대기열에 곡이 없어요.`, { ephemeral: true });
+			}
+			await mixer.skip(player, to);
+			return { skipped: true };
 		}
 	};
 }
