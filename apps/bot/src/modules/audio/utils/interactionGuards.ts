@@ -2,6 +2,7 @@ import { emoji } from '@sirubot/utils';
 import { MessageFlags, PermissionFlagsBits, type ButtonInteraction, type GuildMember, type StringSelectMenuInteraction } from 'discord.js';
 import { errorView } from '../../../lib/errorView.ts';
 import { checkDJOrAlone } from './permissionCheck.ts';
+import { isInBotVoice as isActorInBotVoice } from '../../../features/music/application/access.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 
 type ControllerInteraction = ButtonInteraction<'cached'> | StringSelectMenuInteraction<'cached'>;
@@ -22,11 +23,12 @@ export async function replyGuardError(interaction: ControllerInteraction, messag
 	});
 }
 
-/** 관리자는 음성 채널 밖에서도 허용, 일반 유저는 봇과 같은 음성 채널이어야 해요. */
+/** 관리자는 음성 채널 밖에서도 허용, 일반 유저는 봇과 같은 음성 채널이어야 해요. (판정은 음악 제어 인가 정책과 같은 구현을 써요.) */
 export function isInBotVoice(member: GuildMember, botVoiceChannelId: string | null): boolean {
-	if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-	const memberVoiceChannelId = member.voice.channelId;
-	return Boolean(memberVoiceChannelId) && (botVoiceChannelId === null || memberVoiceChannelId === botVoiceChannelId);
+	return isActorInBotVoice(
+		{ isAdministrator: member.permissions.has(PermissionFlagsBits.Administrator), voiceChannelId: member.voice.channelId },
+		botVoiceChannelId
+	);
 }
 
 /**

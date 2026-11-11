@@ -39,7 +39,7 @@ export function isDjOrAlone(actor: Actor, djRoleId: string | null): boolean {
  * 봇과 같은 음성 채널에 있어야 해요. 봇이 채널에 없으면 아무 음성 채널에 있으면 돼요.
  * Administrator만 이 조건을 면제받아요.
  */
-export function isInBotVoice(actor: Actor, botVoiceChannelId: string | null): boolean {
+export function isInBotVoice(actor: Pick<Actor, 'isAdministrator' | 'voiceChannelId'>, botVoiceChannelId: string | null): boolean {
 	if (actor.isAdministrator) return true;
 	return actor.voiceChannelId !== null && (botVoiceChannelId === null || actor.voiceChannelId === botVoiceChannelId);
 }
