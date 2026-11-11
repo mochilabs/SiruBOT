@@ -12,17 +12,7 @@
  */
 import { getLogger } from '../utils/logger.ts';
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
-import {
-	PANEL_POST_REQUEST_CHANNEL,
-	PANEL_POST_RESPONSE_CHANNEL,
-	ROLE_VALIDATION_REQUEST_CHANNEL,
-	ROLE_VALIDATION_RESPONSE_CHANNEL,
-	panelPostResponseSchema,
-	type PanelPostResponse,
-	roleValidationResponseSchema,
-	type RoleValidationResponse,
-	type PendingRequestPool
-} from '@sirubot/utils';
+import { panelPostRpc, roleValidationRpc, type PendingRequestPool } from '@sirubot/utils';
 
 const logger = getLogger('panelHub');
 
@@ -42,15 +32,13 @@ interface PanelPendingMeta {
 }
 
 /** 패널 게시 — guildId 일치 시 messageId를 결과로 매핑해요. */
-const panelPostHub = createRequestReplyHub<PanelPostResponse, PanelPendingMeta, PanelPostResult>({
+const panelPostHub = createRequestReplyHub<typeof panelPostRpc, PanelPendingMeta, PanelPostResult>({
 	name: 'panel post hub',
 	label: 'panel post',
 	mismatch: 'guildId mismatch',
 	requestLabel: 'Panel post request',
 	logger,
-	requestChannel: PANEL_POST_REQUEST_CHANNEL,
-	responseChannel: PANEL_POST_RESPONSE_CHANNEL,
-	responseSchema: panelPostResponseSchema,
+	contract: panelPostRpc,
 	capacity: PENDING_LIMIT,
 	matches: (response, meta) => response.guildId === meta.guildId,
 	toResult: (response) => {
@@ -62,15 +50,13 @@ const panelPostHub = createRequestReplyHub<PanelPostResponse, PanelPendingMeta, 
 });
 
 /** 역할 검증 — guildId 일치 시 invalidRoleIds를 결과로 매핑해요. */
-const roleValidationHub = createRequestReplyHub<RoleValidationResponse, PanelPendingMeta, RoleValidationResult>({
+const roleValidationHub = createRequestReplyHub<typeof roleValidationRpc, PanelPendingMeta, RoleValidationResult>({
 	name: 'role validation hub',
 	label: 'role validation',
 	mismatch: 'guildId mismatch',
 	requestLabel: 'Role validation request',
 	logger,
-	requestChannel: ROLE_VALIDATION_REQUEST_CHANNEL,
-	responseChannel: ROLE_VALIDATION_RESPONSE_CHANNEL,
-	responseSchema: roleValidationResponseSchema,
+	contract: roleValidationRpc,
 	capacity: PENDING_LIMIT,
 	matches: (response, meta) => response.guildId === meta.guildId,
 	toResult: (response) => {

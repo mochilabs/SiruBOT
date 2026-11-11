@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { defineRedisRpc } from '@sirubot/utils/redisContract';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { sharedCache } from './cache.ts';
 import { createRequestReplyHub } from './requestReplyHub.ts';
@@ -22,7 +23,13 @@ vi.mock('./hubSubscriber.ts', () => ({
 }));
 
 const responseSchema = z.object({ requestId: z.string(), guildId: z.string(), error: z.string().optional() });
-type Response = z.infer<typeof responseSchema>;
+const testRpc = defineRedisRpc({
+	name: 'test',
+	requestChannel: 'test:request',
+	responseChannel: 'test:response',
+	requestSchema: z.object({ requestId: z.string(), guildId: z.string() }),
+	responseSchema
+});
 type Meta = { guildId: string };
 type Result = { ok: true } | { ok: false; reason: 'redis_unavailable' | 'timeout' | 'bot_error' };
 
@@ -32,16 +39,14 @@ const GUILD_ID = '123456789012345678';
 const logger = { warn: vi.fn(), debug: vi.fn(), info: vi.fn(), error: vi.fn() };
 
 function makeHub(capacity = 10) {
-	return createRequestReplyHub<Response, Meta, Result>({
+	return createRequestReplyHub<typeof testRpc, Meta, Result>({
 		name: 'test hub',
 		label: 'test',
 		mismatch: 'guildId mismatch',
 		requestLabel: 'Test request',
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		logger: logger as any,
-		requestChannel: 'test:request',
-		responseChannel: 'test:response',
-		responseSchema,
+		contract: testRpc,
 		capacity,
 		matches: (response, meta) => response.guildId === meta.guildId,
 		toResult: (response) => (response.error ? { ok: false, reason: 'bot_error' } : { ok: true }),

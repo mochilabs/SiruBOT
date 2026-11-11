@@ -15,13 +15,7 @@
  */
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import { getLogger } from '../utils/logger.ts';
-import {
-	JTC_SETUP_REQUEST_CHANNEL,
-	JTC_SETUP_RESPONSE_CHANNEL,
-	jtcSetupResponseSchema,
-	type JtcSetupResponse,
-	type PendingRequestPool
-} from '@sirubot/utils';
+import { jtcSetupRpc, type PendingRequestPool } from '@sirubot/utils';
 
 const logger = getLogger('jtcSetupHub');
 
@@ -39,15 +33,13 @@ export interface JtcSetupPendingMeta {
 }
 
 /** 대기·상관·구독·퍼블리시 배선은 공용 팩토리가, 이 허브의 채널·기준·결과 매핑은 아래 설정이 정해요 */
-const hub = createRequestReplyHub<JtcSetupResponse, JtcSetupPendingMeta, JtcSetupResult>({
+const hub = createRequestReplyHub<typeof jtcSetupRpc, JtcSetupPendingMeta, JtcSetupResult>({
 	name: 'jtc setup hub',
 	label: 'jtc setup',
 	mismatch: 'guildId mismatch',
 	requestLabel: 'JTC setup request',
 	logger,
-	requestChannel: JTC_SETUP_REQUEST_CHANNEL,
-	responseChannel: JTC_SETUP_RESPONSE_CHANNEL,
-	responseSchema: jtcSetupResponseSchema,
+	contract: jtcSetupRpc,
 	capacity: PENDING_LIMIT,
 	matches: (response, meta) => response.guildId === meta.guildId,
 	toResult: (response) => {

@@ -15,14 +15,11 @@
 import { getLogger } from '../utils/logger.ts';
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import {
-	PLAYER_WEB_REQUEST_CHANNEL,
-	PLAYER_WEB_RESPONSE_CHANNEL,
-	playerWebResponseSchema,
+	playerWebRpc,
 	type PlayerVoiceContext,
 	type PlayerWebControlRequest,
 	type PlayerWebKind,
 	type PlayerWebPlayRequest,
-	type PlayerWebResponse,
 	type PlayerWebSearchRequest,
 	type PlayerWebTrack,
 	type PlayerWebVoiceContextRequest,
@@ -55,15 +52,13 @@ export interface PlayerWebPendingMeta {
 }
 
 /** 대기·상관·구독·퍼블리시 배선은 공용 팩토리가, 이 허브의 채널·기준·결과 매핑은 아래 설정이 정해요 */
-const hub = createRequestReplyHub<PlayerWebResponse, PlayerWebPendingMeta, PlayerWebResult>({
+const hub = createRequestReplyHub<typeof playerWebRpc, PlayerWebPendingMeta, PlayerWebResult>({
 	name: 'player web hub',
 	label: 'player web',
 	mismatch: 'guildId/kind mismatch',
 	requestLabel: 'Player web request',
 	logger,
-	requestChannel: PLAYER_WEB_REQUEST_CHANNEL,
-	responseChannel: PLAYER_WEB_RESPONSE_CHANNEL,
-	responseSchema: playerWebResponseSchema,
+	contract: playerWebRpc,
 	capacity: PENDING_LIMIT,
 	matches: (response, meta) => response.guildId === meta.guildId && response.kind === meta.kind,
 	toResult: (response) => {

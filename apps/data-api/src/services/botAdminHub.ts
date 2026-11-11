@@ -5,15 +5,12 @@
 import { getLogger } from '../utils/logger.ts';
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import {
-	BOT_ADMIN_REQUEST_CHANNEL,
-	BOT_ADMIN_RESPONSE_CHANNEL,
-	botAdminResponseSchema,
+	botAdminRpc,
 	type BotAdminEmojiItem,
 	type BotAdminKind,
 	type BotAdminNodeItem,
 	type BotAdminReloadStore,
 	type BotAdminRequest,
-	type BotAdminResponse,
 	type PendingRequestPool
 } from '@sirubot/utils';
 
@@ -45,15 +42,13 @@ export interface BotAdminPendingMeta {
 	kind: BotAdminKind;
 }
 
-const hub = createRequestReplyHub<BotAdminResponse, BotAdminPendingMeta, BotAdminResult>({
+const hub = createRequestReplyHub<typeof botAdminRpc, BotAdminPendingMeta, BotAdminResult>({
 	name: 'bot admin hub',
 	label: 'bot admin',
 	mismatch: 'kind mismatch',
 	requestLabel: 'Bot admin request',
 	logger,
-	requestChannel: BOT_ADMIN_REQUEST_CHANNEL,
-	responseChannel: BOT_ADMIN_RESPONSE_CHANNEL,
-	responseSchema: botAdminResponseSchema,
+	contract: botAdminRpc,
 	capacity: PENDING_LIMIT,
 	matches: (response, meta) => response.kind === meta.kind,
 	toResult: (response) => {

@@ -13,13 +13,10 @@
 import { getLogger } from '../utils/logger.ts';
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import {
-	GUILD_DATA_REQUEST_CHANNEL,
-	GUILD_DATA_RESPONSE_CHANNEL,
-	guildDataResponseSchema,
+	guildDataRpc,
 	type GuildChannelItem,
 	type GuildDataKind,
 	type GuildDataRequest,
-	type GuildDataResponse,
 	type GuildMemberItem,
 	type GuildRoleItem,
 	type PendingRequestPool
@@ -43,15 +40,13 @@ export interface GuildDataPendingMeta {
 }
 
 /** 대기·상관·구독·퍼블리시 배선은 공용 팩토리가, 이 허브의 채널·기준·결과 매핑은 아래 설정이 정해요 */
-const hub = createRequestReplyHub<GuildDataResponse, GuildDataPendingMeta, GuildDataResult>({
+const hub = createRequestReplyHub<typeof guildDataRpc, GuildDataPendingMeta, GuildDataResult>({
 	name: 'guild data hub',
 	label: 'guild data',
 	mismatch: 'guildId/kind mismatch',
 	requestLabel: 'Guild data request',
 	logger,
-	requestChannel: GUILD_DATA_REQUEST_CHANNEL,
-	responseChannel: GUILD_DATA_RESPONSE_CHANNEL,
-	responseSchema: guildDataResponseSchema,
+	contract: guildDataRpc,
 	capacity: PENDING_LIMIT,
 	matches: (response, meta) => response.guildId === meta.guildId && response.kind === meta.kind,
 	toResult: (response) => {

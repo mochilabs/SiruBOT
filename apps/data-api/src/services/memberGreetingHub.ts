@@ -7,8 +7,12 @@
  * - botProfileHub와 같은 구조예요 — 대시보드가 send 응답의 requestId를 갖고 이 허브를 폴링해요.
  * - 결과는 requestId로 매칭해요 — 마지막 결과가 이전 테스트의 것일 수 있어요 (폴링 쪽 책임).
  */
-import { z } from 'zod';
-import { MEMBER_GREETING_STATE_CHANNEL_PREFIX } from '@sirubot/utils';
+import {
+	MEMBER_GREETING_STATE_CHANNEL_PREFIX,
+	memberGreetingStateEvent,
+	memberGreetingTestStateSchema,
+	type GreetingTestResult
+} from '@sirubot/utils';
 import { resolveRedisSigningKey, unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 
 import { getLogger } from '../utils/logger.ts';
@@ -19,34 +23,10 @@ const logger = getLogger('memberGreetingHub');
 /** 길드 상태 엔트리 최대 보관 수 (장기 비활성 길드 누수 방지) */
 const MAX_ENTRIES = 5_000;
 /** 구독 채널 패턴 — 봇 퍼블리셔와 계약이에요 */
-const CHANNEL_PATTERN = `${MEMBER_GREETING_STATE_CHANNEL_PREFIX}*`;
+const CHANNEL_PATTERN = memberGreetingStateEvent.pattern;
 
-/**
- * 봇이 state 채널로 퍼블리시하는 테스트 전송 결과 — 봇의 MemberGreetingTestState와 같은 계약이에요.
- * sentAt은 epoch milliseconds(number)가 계약이에요 — 레거시 ISO 문자열은 number로 정규화하고,
- * 없거나 깨졌으면 수신 시각으로 대체해요 (값 타입이 이상해도 결과 전체를 버리지 않게).
- */
-export const memberGreetingTestStateSchema = z.object({
-	requestId: z.string().min(1).max(64),
-	kind: z.enum(['welcome', 'goodbye']),
-	ok: z.boolean(),
-	/** 실패 사유 — 봇이 실패 때만 담고, 없으면 null이에요 */
-	error: z.string().nullable().default(null),
-	sentAt: z
-		.union([
-			z.number(),
-			z.string().transform((value, ctx) => {
-				const at = Date.parse(value);
-				if (Number.isNaN(at)) {
-					ctx.addIssue({ code: 'custom', message: 'ISO8601 날짜 형식이 아니에요' });
-					return z.NEVER;
-				}
-				return at;
-			})
-		])
-		.catch(() => Date.now())
-});
-export type GreetingTestResult = z.infer<typeof memberGreetingTestStateSchema>;
+/** 봇이 state 채널로 퍼블리시하는 테스트 전송 결과 — 스키마는 @sirubot/utils 이벤트 계약(memberGreetingStateEvent)이 단일 소스예요. */
+export { memberGreetingTestStateSchema, type GreetingTestResult };
 
 /** 보관 단위 — 용량 상한 도달 시 갱신 도착 순과 무관하게 가장 오래 도착한 엔트리부터 비워요 */
 interface Entry {
