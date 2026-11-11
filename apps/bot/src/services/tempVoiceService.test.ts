@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setConfigForTesting } from '../core/config.ts';
-import { makeTestConfig } from '../core/config.testing.ts';
+import { setConfigForTesting } from '../lib/config.ts';
+import { makeTestConfig } from '../lib/config.testing.ts';
 
 const mocks = vi.hoisted(() => ({
 	getCacheHashFields: vi.fn(),

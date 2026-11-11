@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { sleep } from '@sirubot/utils/time';
-import type { Config } from './config.ts';
+import type { Config } from '../lib/config.ts';
 
 export interface ShardIdentity {
 	shardIds: number[] | 'auto';

@@ -1,7 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
-import { getConfig } from '../../../../lib/configAccess.ts';
+import { getConfig } from '../../../../lib/config.ts';
 import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord.js';
 import { emoji, enqueueOperation } from '@sirubot/utils';
 

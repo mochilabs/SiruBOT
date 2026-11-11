@@ -4,8 +4,8 @@ vi.mock('@sapphire/framework', () => ({
 	container: { logger: { debug: vi.fn() }, client: { guilds: { cache: new Map() } } }
 }));
 
-import { setConfigForTesting } from '../core/config.ts';
-import { makeTestConfig } from '../core/config.testing.ts';
+import { setConfigForTesting } from '../lib/config.ts';
+import { makeTestConfig } from '../lib/config.testing.ts';
 import { reportNodeEvent, reportPlaybackEvent } from './playbackReporter.ts';
 
 describe('playbackReporter', () => {

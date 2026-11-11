@@ -2,7 +2,7 @@ import { container } from '@sapphire/framework';
 import { parseLavalinkHosts } from '@sirubot/utils';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import type { BotApplication } from './botApplication.ts';
-import { getConfig } from './config.ts';
+import { getConfig } from '../lib/config.ts';
 
 /** LAVALINK_HOSTS 파싱 → setupAudio → 핸들러 등록 → 노드 연결. (로그인 이후에 호출해요) */
 export const setupLavalink = async (client: BotApplication<boolean>, shardIds: number[] | 'auto', shardCount: number): Promise<void> => {

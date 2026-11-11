@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import { LavalinkManager, Player, PlayerJson, PlayerOptions, Track } from 'lavalink-client';
 import { RelatedTrackHistory } from './relatedTrackHistory.ts';
-import { getConfig } from '../../../../lib/configAccess.ts';
+import { getConfig } from '../../../../lib/config.ts';
 
 type Chapter = {
 	name: string;

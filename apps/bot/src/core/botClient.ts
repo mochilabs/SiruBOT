@@ -1,6 +1,6 @@
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
-import { getConfig } from './config.ts';
+import { getConfig } from '../lib/config.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 
 export const createBotClient = (shardIds: number[] | 'auto', shardCount: number) => {

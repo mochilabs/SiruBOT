@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import { setConfigForTesting } from '../../../core/config.ts';
-import { makeTestConfig } from '../../../core/config.testing.ts';
+import { setConfigForTesting } from '../../../lib/config.ts';
+import { makeTestConfig } from '../../../lib/config.testing.ts';
 import { buildPlayerStatePayload, publishPlayerState, publishPlayerEnded, clearPlayerStateTracker } from './playerStatePublisher.ts';
 
 const { store } = vi.hoisted(() => ({ store: { ready: true, publishRawPlayerState: vi.fn() } }));

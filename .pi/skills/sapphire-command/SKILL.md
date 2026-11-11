@@ -71,7 +71,7 @@ Build: TypeScript + tsup (`scripts/tsup.config.ts`), extends root `tsconfig.base
 - Use `get #message()` getter for the message (class field would evaluate before app emoji mapping loads; convention from `VoiceConnected.ts`); `TextChannelAllowed` builds messages inline instead. Private `createError()` helper per class (`NodeAvailable.ts`); omit if calling `this.error(...)` directly.
 - Container access: `db` (PrismaClient), `audio` (LavalinkManager), `client`, `logger`, `redisStore`.
 - Reuse `guildService.getDefaultTextChannel(guildId)` (60s TTL cache) instead of hitting Prisma per command (see `TextChannelAllowed.ts`).
-- Owner check: `isOwner(userId)` from `lib/owners.ts` (reads `getConfig().discord.owners`). Never read `process.env` or call `envParse*` in a piece; use `getConfig()` through `lib/configAccess.ts`.
+- Owner check: `isOwner(userId)` from `lib/owners.ts` (reads `getConfig().discord.owners`). Never read `process.env` or call `envParse*` in a piece; use `getConfig()` from `lib/config.ts`.
 - Voice checks: `interaction.member.voice.channelId`; bot perms via `channel.permissionsFor(interaction.guild.members.me).has(PermissionsBitField.Flags.Connect)`.
 
 ### Existing preconditions

@@ -12,7 +12,7 @@ import { CustomPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncPlayingFlagFromProbe, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
-import { getConfig } from '../../../../lib/configAccess.ts';
+import { getConfig } from '../../../../lib/config.ts';
 import { cancelPendingInvalidate, getTargetNextTrack } from '../queue/queueWrapper.ts';
 const maxConsecutiveErrors = (): number => getConfig().playback.maxConsecutiveErrors;
 

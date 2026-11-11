@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { evalModal } from '../../view/eval.ts';
-import { getConfig } from '../../../../lib/configAccess.ts';
+import { getConfig } from '../../../../lib/config.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,

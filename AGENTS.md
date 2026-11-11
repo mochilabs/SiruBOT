@@ -99,6 +99,6 @@ Apps never import each other. The only contact points are Redis pub/sub, HTTP wi
 - New feature code goes in `features/<name>/`: `index.ts` (public surface), `application/` (use cases), `discord/{commands,listeners,interaction-handlers,views}`, `inbound/` (Redis responders). Entry points (slash, buttons, listeners, dashboard responders, AI tools) are thin adapters over the use cases.
 - `application/` must not import Sapphire, discord interactions, views, pieces or config; it receives config values and collaborators through deps. Music controls (`container.music`) are the reference.
 - Other code imports a feature only through its `index.ts`.
-- Config is read with `getConfig()` (`core/config.ts`; `lib/configAccess.ts` from `modules/`), never `process.env`. Tests pass a Config (`makeTestConfig`, `setConfigForTesting`).
+- Config is read with `getConfig()` (`lib/config.ts`), never `process.env`. Tests pass a Config (`makeTestConfig`, `setConfigForTesting`).
 - User-facing failures in use cases are thrown as `AppError` (`lib/appError.ts`); the central error listeners render them via `lib/errorPresenter.ts`. `UserError` stays for Sapphire preconditions and code not yet migrated.
 - `apps/bot/src/architecture.test.ts` (import-rule ratchet) and `core/pieceInventory.test.ts` (snapshot of every piece name and command category) guard this. Allowlists may only shrink; fix the violation instead of growing a list. An intended piece change updates the snapshot in the same commit.

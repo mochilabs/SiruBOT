@@ -154,7 +154,7 @@ Source: `@sirubot/*` dependencies in each app's `package.json`. shardmanager dep
 
 **Boot chain**: `src/index.ts` → `setup()` (`.env`, Sentry; `core/setup.ts`) → `main()` (`core/bootstrap.ts`, a short step list). The steps live in `core/{shardIdentity,botClient,healthServer,lavalinkSetup,shutdown,redisSubscribers,pieceRoots}.ts`; assembly methods live in `core/botApplication.ts`.
 
-**Config**: bot env values are parsed once into a typed Config in `core/config.ts` (`loadConfig`, `getConfig()`); `process.env` is read nowhere else (`core/environment.ts` only loads `.env`). `modules/` reads it through `lib/configAccess.ts`, `features/*/application/` receives values through deps, and tests pass a Config (`makeTestConfig` in `core/config.testing.ts`, `setConfigForTesting`).
+**Config**: bot env values are parsed once into a typed Config in `lib/config.ts` (`loadConfig`, `getConfig()`); `process.env` is read nowhere else (`core/environment.ts` only loads `.env`). `features/*/application/` receives values through deps, and tests pass a Config (`makeTestConfig` in `lib/config.testing.ts`, `setConfigForTesting`).
 
 **Shard identify** (`core/shardIdentity.ts`):
 
@@ -519,7 +519,7 @@ During rolling updates the new process retries identify until a shard slot frees
 
 | App | Schema |
 |---|---|
-| bot | `apps/bot/src/core/config.ts` |
+| bot | `apps/bot/src/lib/config.ts` |
 | dashboard | `apps/dashboard/src/lib/env.ts` (+ next-auth `src/lib/auth.ts`) |
 | data-api | `apps/data-api/src/config/env.ts` |
 | storage | `apps/storage/src/config/env.ts` |

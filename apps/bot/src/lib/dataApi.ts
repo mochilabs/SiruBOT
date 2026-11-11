@@ -1,4 +1,4 @@
-import { getConfig } from '../core/config.ts';
+import { getConfig } from './config.ts';
 
 /**
  * data-api(게이트웨이) 호출 계약 — baseURL 해석과 인증 헤더를 한곳에서 관리해요.

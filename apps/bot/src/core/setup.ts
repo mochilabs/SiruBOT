@@ -4,7 +4,7 @@ import '@sapphire/plugin-subcommands/register';
 import { ApplicationCommandRegistries, RegisterBehavior } from '@sapphire/framework';
 import * as colorette from 'colorette';
 import { inspect } from 'util';
-import { getConfig } from './config.ts';
+import { getConfig } from '../lib/config.ts';
 
 export const setup = () => {
 	ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(

@@ -3,7 +3,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { getConfig } from '../../../../lib/configAccess.ts';
+import { getConfig } from '../../../../lib/config.ts';
 import type { AppEmojiManager } from '../../../../services/appEmojiManager.ts';
 
 @ApplyOptions<Command.Options>({

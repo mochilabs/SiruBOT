@@ -24,8 +24,8 @@ import {
 	tryConsumeUserTurn,
 	updateChannelHistoryMessage
 } from './aiChatService.ts';
-import { setConfigForTesting } from '../core/config.ts';
-import { makeTestConfig } from '../core/config.testing.ts';
+import { setConfigForTesting } from '../lib/config.ts';
+import { makeTestConfig } from '../lib/config.testing.ts';
 import { getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
 import { executeAiTool, getAiToolStatus } from './aiTools/index.ts';
 vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));

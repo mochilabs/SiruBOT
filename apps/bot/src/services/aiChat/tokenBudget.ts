@@ -1,4 +1,4 @@
-import { getConfig } from '../../core/config.ts';
+import { getConfig } from '../../lib/config.ts';
 
 /**
  * 토큰 추정 — 컨텍스트 예산 계산에 쓰는 근사치예요.
@@ -26,7 +26,7 @@ export function estimateTokens(text: string): number {
 	return Math.ceil(dense * 0.7 + (text.length - dense) * 0.28);
 }
 
-/** 시스템 프롬프트 전체 토큰 예산 — 환경변수 CHAT_CONTEXT_TOKEN_BUDGET로 조정해요 (기본값·클램프는 core/config.ts) */
+/** 시스템 프롬프트 전체 토큰 예산 — 환경변수 CHAT_CONTEXT_TOKEN_BUDGET로 조정해요 (기본값·클램프는 lib/config.ts) */
 export function getContextTokenBudget(): number {
 	return getConfig().aiChat.contextTokenBudget;
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
-import { setConfigForTesting } from '../../core/config.ts';
-import { makeTestConfig } from '../../core/config.testing.ts';
+import { setConfigForTesting } from '../../lib/config.ts';
+import { makeTestConfig } from '../../lib/config.testing.ts';
 import { PermissionFlagsBits } from 'discord.js';
 
 const mocks = vi.hoisted(() => ({

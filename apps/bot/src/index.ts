@@ -1,6 +1,6 @@
 import { setup } from './core/setup.ts';
 import { main } from './core/bootstrap.ts';
-import { getConfig } from './core/config.ts';
+import { getConfig } from './lib/config.ts';
 
 // 환경 변수 fail-closed 검증 — 필수 키 누락/형식 오류면 로그를 남기고 즉시 종료해요.
 // (parseEnvOrExit 체계와 동일한 방향. bootstrap main() 안에서 throw하면 unhandledRejection로만 남아

@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { getConfig } from '../../core/config.ts';
+import { getConfig } from '../../lib/config.ts';
 import type { AiMode } from '../guildService.ts';
 import { ChatServiceError, type ChatConfig } from './types.ts';
 import * as guildChatPolicy from '../guildSettings/chatPolicy.ts';

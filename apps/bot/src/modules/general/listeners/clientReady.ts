@@ -1,7 +1,7 @@
 import { Events, version as frameworkVersion, Listener } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
-import { getConfig } from '../../../lib/configAccess.ts';
+import { getConfig } from '../../../lib/config.ts';
 import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 

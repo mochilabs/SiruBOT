@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import type { Server } from 'node:http';
-import { getConfig } from './config.ts';
+import { getConfig } from '../lib/config.ts';
 import { createBotClient } from './botClient.ts';
 import { startHealthServer } from './healthServer.ts';
 import { PIECE_ROOTS } from './pieceRoots.ts';

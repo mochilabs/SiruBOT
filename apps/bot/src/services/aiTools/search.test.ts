@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { performWebSearch, searchLite, searchSearxng } from './searchEngine.ts';
 import { webSearchTool } from './search.ts';
 import type { AiToolContext } from './types.ts';
-import { setConfigForTesting } from '../../core/config.ts';
-import { makeTestConfig } from '../../core/config.testing.ts';
+import { setConfigForTesting } from '../../lib/config.ts';
+import { makeTestConfig } from '../../lib/config.testing.ts';
 
 describe('searchEngine', () => {
 	beforeEach(() => {

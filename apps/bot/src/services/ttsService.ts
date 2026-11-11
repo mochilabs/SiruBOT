@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
-import { getConfig } from '../core/config.ts';
+import { getConfig } from '../lib/config.ts';
 
 /**
  * 채팅 TTS(siru_tts 2.0) 클라이언트 — 합성 요청·공개 URL 수신·재시도.

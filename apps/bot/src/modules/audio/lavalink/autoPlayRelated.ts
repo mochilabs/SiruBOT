@@ -7,7 +7,7 @@ import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { notifyQueueMutated } from './queue/queueWrapper.ts';
 import { isSameEncodedTrack } from './handlers/playbackWatchdog.ts';
 import { RelatedTrackHistory } from './player/relatedTrackHistory.ts';
-import { getConfig } from '../../../lib/configAccess.ts';
+import { getConfig } from '../../../lib/config.ts';
 import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 

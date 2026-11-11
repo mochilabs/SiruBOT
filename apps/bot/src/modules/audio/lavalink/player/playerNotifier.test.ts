@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { setConfigForTesting } from '../../../../core/config.ts';
-import { makeTestConfig } from '../../../../core/config.testing.ts';
+import { setConfigForTesting } from '../../../../lib/config.ts';
+import { makeTestConfig } from '../../../../lib/config.testing.ts';
 import { AttachmentBuilder, Collection, MessagePayload, type ChatInputCommandInteraction, type Message } from 'discord.js';
 import type { CustomPlayer } from './customPlayer.ts';
 import { PlayerNotifier } from './playerNotifier.ts';

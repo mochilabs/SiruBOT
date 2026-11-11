@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setConfigForTesting } from '../core/config.ts';
-import { makeTestConfig } from '../core/config.testing.ts';
+import { setConfigForTesting } from '../lib/config.ts';
+import { makeTestConfig } from '../lib/config.testing.ts';
 import { container } from '@sapphire/framework';
 import type { Player, Track, TrackEndEvent } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';

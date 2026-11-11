@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { WARN_COLOR, emoji } from '@sirubot/utils';
 import { ChannelType, GuildMember, MessageFlags, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
-import { getConfig } from '../core/config.ts';
+import { getConfig } from '../lib/config.ts';
 import { notice } from '../modules/general/view/notice.ts';
 import * as guildJtc from './guildSettings/jtc.ts';
 
@@ -24,7 +24,7 @@ const MARKER_CHANNEL_NAME = '🔊 임시방 만들기';
 const ROOMS_KEY_PREFIX = 'jtc:rooms:';
 const roomsKey = (guildId: string) => `${ROOMS_KEY_PREFIX}${guildId}`;
 
-/** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS 환경변수, 기본 30초 (core/config.ts) */
+/** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS 환경변수, 기본 30초 (lib/config.ts) */
 function jtcEmptyGraceMs(): number {
 	return getConfig().tempVoice.emptyGraceMs;
 }

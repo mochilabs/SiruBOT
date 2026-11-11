@@ -7,14 +7,14 @@ import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 import { Logger, ILogObj } from 'tslog';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { emoji } from '@sirubot/utils';
-import { getConfig } from '../../../lib/configAccess.ts';
+import { getConfig } from '../../../lib/config.ts';
 
 @ApplyOptions<Listener.Options>({
 	event: Events.VoiceStateUpdate
 })
 export class VoiceStateUpdateListener extends Listener {
 	private leaveTimers = new Map<string, NodeJS.Timeout>();
-	/** 음성 채널이 비었을 때 퇴장 유예(ms) — 기본 5분, core/config.ts */
+	/** 음성 채널이 비었을 때 퇴장 유예(ms) — 기본 5분, lib/config.ts */
 	private get LEAVE_TIMEOUT_MS(): number {
 		return getConfig().playback.leaveTimeoutMs;
 	}

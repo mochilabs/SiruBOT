@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setConfigForTesting } from '../core/config.ts';
-import { makeTestConfig } from '../core/config.testing.ts';
+import { setConfigForTesting } from '../lib/config.ts';
+import { makeTestConfig } from '../lib/config.testing.ts';
 import { TtsService, getTtsConfig } from './ttsService.ts';
 
 const mocks = vi.hoisted(() => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));

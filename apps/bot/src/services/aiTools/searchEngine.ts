@@ -1,4 +1,4 @@
-import { getConfig } from '../../core/config.ts';
+import { getConfig } from '../../lib/config.ts';
 
 export interface WebSearchResultItem {
 	id: string;

@@ -10,7 +10,7 @@
 import { container } from '@sapphire/framework';
 import type { PlayerStatePayload, QueuedTrackSummary } from '@sirubot/utils';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import { getConfig } from '../../../lib/configAccess.ts';
+import { getConfig } from '../../../lib/config.ts';
 import type { Track } from 'lavalink-client';
 import { getUserQueuedTracks } from './autoPlayRelated.ts';
 import { nowPlayingTrack } from './player/nowPlaying.ts';

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setConfigForTesting } from '../../../../core/config.ts';
-import { makeTestConfig } from '../../../../core/config.testing.ts';
+import { setConfigForTesting } from '../../../../lib/config.ts';
+import { makeTestConfig } from '../../../../lib/config.testing.ts';
 import { container, ListenerStore } from '@sapphire/framework';
 import { GatewayDispatchEvents, type GatewayDispatchPayload } from 'discord.js';
 import { DefaultQueueStore, LavalinkManager, type Track } from 'lavalink-client';

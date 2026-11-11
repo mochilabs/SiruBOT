@@ -26,7 +26,7 @@ description: Conventions for packages/prisma schema and migrations, packages/uti
 - `docker-beta.yml` / `docker-publish.yml`: image matrix `bot, dashboard, shardmanager, data-api` — review fully on Dockerfile, secret injection, or tag-rule changes. Never commit plaintext secrets.
 
 ## Sentry / Logging
-- Real init lives in `packages/utils/src/sentry.ts`; `apps/bot/src/core/sentry.ts` is a re-export shell + shard-tag helper. `apps/bot/src/core/environment.ts` loads `.env` and registers the process-level handlers; bot env values are parsed only in `apps/bot/src/core/config.ts` (`getConfig()`).
+- Real init lives in `packages/utils/src/sentry.ts`; `apps/bot/src/core/sentry.ts` is a re-export shell + shard-tag helper. `apps/bot/src/core/environment.ts` loads `.env` and registers the process-level handlers; bot env values are parsed only in `apps/bot/src/lib/config.ts` (`getConfig()`).
 - Standard logger: `@sirubot/utils` logger — no direct `console.log`. Non-`UserError` exceptions go to Sentry.
 
 Always state how a change affects turbo cache/build order/pre-push/deployment first; for protocol/schema changes, specify old/new coexistence strategy during rolling updates.

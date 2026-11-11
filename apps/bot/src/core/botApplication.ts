@@ -4,7 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 import { SapphireClient } from '@sapphire/framework';
 import { RootData, container, getRootData } from '@sapphire/pieces';
-import { getConfig } from './config.ts';
+import { getConfig } from '../lib/config.ts';
 
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';

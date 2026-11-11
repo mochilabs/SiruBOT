@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { getConfig } from '../core/config.ts';
+import { getConfig } from '../lib/config.ts';
 import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
 import type { CustomPlayer, OverrideAction } from '../modules/audio/lavalink/player/customPlayer.ts';

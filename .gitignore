@@ -19,7 +19,7 @@ config.ts
 # 단, 봇 AI 채팅 설정 모듈은 소스 코드 — 위 규칙의 함정을 우회해 트랙에 포함해요 (#125)
 !apps/bot/src/services/aiChat/config.ts
 # 봇 타입드 Config 모듈도 소스 코드예요 (같은 함정)
-!apps/bot/src/core/config.ts
+!apps/bot/src/lib/config.ts
 
 # Ignore heapsnapshot and log files
 *.heapsnapshot
