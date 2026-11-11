@@ -2,22 +2,19 @@
  * 봇 관리자(운영자) 제어 request/reply 허브 — 대시보드 관리자 패널(/admin)의
  * 노드 상태 조회·노드 재연결·앱 이모지 조회/동기화·스토어 리로드 요청을 봇에 전달해 응답을 상관해요.
  */
-import { sharedCache } from '../utils/cache.ts';
-import { correlateHubResponse } from '../utils/hubCorrelate.ts';
 import { getLogger } from '../utils/logger.ts';
-import { HubSubscriber } from '../utils/hubSubscriber.ts';
-import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import {
 	BOT_ADMIN_REQUEST_CHANNEL,
 	BOT_ADMIN_RESPONSE_CHANNEL,
-	PendingRequestPool,
 	botAdminResponseSchema,
 	type BotAdminEmojiItem,
 	type BotAdminKind,
 	type BotAdminNodeItem,
 	type BotAdminReloadStore,
 	type BotAdminRequest,
-	type BotAdminResponse
+	type BotAdminResponse,
+	type PendingRequestPool
 } from '@sirubot/utils';
 
 const logger = getLogger('botAdminHub');
@@ -48,86 +45,51 @@ export interface BotAdminPendingMeta {
 	kind: BotAdminKind;
 }
 
+const hub = createRequestReplyHub<BotAdminResponse, BotAdminPendingMeta, BotAdminResult>({
+	name: 'bot admin hub',
+	label: 'bot admin',
+	mismatch: 'kind mismatch',
+	requestLabel: 'Bot admin request',
+	logger,
+	requestChannel: BOT_ADMIN_REQUEST_CHANNEL,
+	responseChannel: BOT_ADMIN_RESPONSE_CHANNEL,
+	responseSchema: botAdminResponseSchema,
+	capacity: PENDING_LIMIT,
+	matches: (response, meta) => response.kind === meta.kind,
+	toResult: (response) => {
+		if (response.error) {
+			return { ok: false, reason: 'bot_error', message: response.error };
+		}
+		return {
+			ok: true,
+			nodes: response.nodes,
+			emojis: response.emojis,
+			stores: response.stores,
+			message: response.message
+		};
+	},
+	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
+	unavailableResult: () => ({ ok: false, reason: 'redis_unavailable', message: null })
+});
+
 export function correlateBotAdminResponse(
 	raw: string,
 	pending: PendingRequestPool<BotAdminResult>,
 	pendingMeta: Map<string, BotAdminPendingMeta>
 ): 'resolved' | 'unmatched' | 'malformed' {
-	return correlateHubResponse<BotAdminResponse, BotAdminPendingMeta, BotAdminResult>({
-		raw,
-		hub: 'bot admin',
-		mismatch: 'kind mismatch',
-		logger,
-		schema: botAdminResponseSchema,
-		pending,
-		pendingMeta,
-		matches: (response, meta) => response.kind === meta.kind,
-		toResult: (response) => {
-			if (response.error) {
-				return { ok: false, reason: 'bot_error', message: response.error };
-			}
-			return {
-				ok: true,
-				nodes: response.nodes,
-				emojis: response.emojis,
-				stores: response.stores,
-				message: response.message
-			};
-		}
+	return hub.correlate(raw, pending, pendingMeta);
+}
+
+export const startBotAdminHub = (redisUrl: string | undefined): Promise<void> => hub.start(redisUrl);
+
+export const stopBotAdminHub = (): Promise<void> => hub.stop();
+
+export function requestBotAdmin(payload: BotAdminRequest): Promise<BotAdminResult> {
+	return hub.request({
+		requestId: payload.requestId,
+		payload,
+		meta: { kind: payload.kind },
+		timeoutMs: KIND_TIMEOUT_MS[payload.kind],
+		logContext: payload.kind
 	});
-}
-
-const pendingMeta = new Map<string, BotAdminPendingMeta>();
-
-const pending = new PendingRequestPool<BotAdminResult>({
-	capacity: PENDING_LIMIT,
-	logger,
-	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
-	onTimeout: (requestId) => pendingMeta.delete(requestId)
-});
-
-const redisSigningKey = resolveRedisSigningKey(process.env);
-
-const subscriber = new HubSubscriber({
-	name: 'bot admin hub',
-	channel: BOT_ADMIN_RESPONSE_CHANNEL,
-	onMessage: (message) => {
-		const body = unwrapRedisMessage(redisSigningKey, message);
-		if (body === null) {
-			logger.warn('Rejected bot admin response with invalid signature');
-			return;
-		}
-		correlateBotAdminResponse(body, pending, pendingMeta);
-	},
-	logger
-});
-
-export async function startBotAdminHub(redisUrl: string | undefined): Promise<void> {
-	if (!redisUrl) {
-		logger.warn('REDIS_URL is not set, bot admin hub will not receive responses (all requests fail as redis_unavailable)');
-		return;
-	}
-	await subscriber.start(redisUrl);
-}
-
-export async function stopBotAdminHub(): Promise<void> {
-	await subscriber.stop();
-}
-
-export async function requestBotAdmin(payload: BotAdminRequest): Promise<BotAdminResult> {
-	const client = sharedCache.getClient();
-	if (!client) {
-		return { ok: false, reason: 'redis_unavailable', message: null };
-	}
-	pendingMeta.set(payload.requestId, { kind: payload.kind });
-	const promise = pending.register(payload.requestId, KIND_TIMEOUT_MS[payload.kind]);
-	try {
-		await client.publish(BOT_ADMIN_REQUEST_CHANNEL, wrapRedisMessage(redisSigningKey, payload));
-	} catch (error) {
-		if (pending.fail(payload.requestId, { ok: false, reason: 'redis_unavailable', message: null })) {
-			pendingMeta.delete(payload.requestId);
-		}
-		logger.warn(`Bot admin request publish failed (${payload.kind}): ${error instanceof Error ? error.message : String(error)}`);
-	}
-	return promise;
 }

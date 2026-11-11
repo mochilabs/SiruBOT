@@ -20,18 +20,23 @@ import { startJtcSetupHub, stopJtcSetupHub } from './services/jtcSetupHub.ts';
 import { startBotAdminHub, stopBotAdminHub } from './services/botAdminHub.ts';
 import { startPanelHub, stopPanelHub } from './services/panelHub.ts';
 
+/** Redis 허브 — start와 stop 모두 이 배열 순서대로 불러요 (기존 server.ts의 start·stop 순서와 같아요) */
+const HUBS: { start: (redisUrl: string | undefined) => Promise<void>; stop: () => Promise<void> }[] = [
+	{ start: startPlayerHub, stop: stopPlayerHub },
+	{ start: startBotProfileHub, stop: stopBotProfileHub },
+	{ start: startMemberGreetingHub, stop: stopMemberGreetingHub },
+	{ start: startGuildDataHub, stop: stopGuildDataHub },
+	{ start: startPlayerWebHub, stop: stopPlayerWebHub },
+	{ start: startJtcSetupHub, stop: stopJtcSetupHub },
+	{ start: startBotAdminHub, stop: stopBotAdminHub },
+	{ start: startPanelHub, stop: stopPanelHub }
+];
+
 export async function buildServer(env: Env) {
 	const logger = getLogger('server');
 
 	await sharedCache.connect(env.REDIS_URL);
-	await startPlayerHub(env.REDIS_URL);
-	await startBotProfileHub(env.REDIS_URL);
-	await startMemberGreetingHub(env.REDIS_URL);
-	await startGuildDataHub(env.REDIS_URL);
-	await startPlayerWebHub(env.REDIS_URL);
-	await startJtcSetupHub(env.REDIS_URL);
-	await startBotAdminHub(env.REDIS_URL);
-	await startPanelHub(env.REDIS_URL);
+	for (const hub of HUBS) await hub.start(env.REDIS_URL);
 
 	// 이미지 렌더 폰트는 부팅 시 1회 로드 — 첫 카드 요청이 폰트 로드에 막히지 않아요.
 	// (렌더러의 ensureKoreanFont() 호출은 안전망으로 남아 있어요)
@@ -92,14 +97,7 @@ export async function buildServer(env: Env) {
 	const close = async () => {
 		stopScheduler();
 		stopTidy();
-		await stopPlayerHub();
-		await stopBotProfileHub();
-		await stopMemberGreetingHub();
-		await stopGuildDataHub();
-		await stopPlayerWebHub();
-		await stopJtcSetupHub();
-		await stopBotAdminHub();
-		await stopPanelHub();
+		for (const hub of HUBS) await hub.stop();
 		await sharedCache.disconnect();
 		await disconnectDb();
 		await fastify.close();
