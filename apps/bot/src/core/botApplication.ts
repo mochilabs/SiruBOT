@@ -145,7 +145,12 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.trackService = new TrackService({ db: container.db });
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService();
-		container.mixerService = new MixerService();
+		container.mixerService = new MixerService({
+			logger: appLogger,
+			guildService: container.guildService,
+			// playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요
+			getPlayerNotifier: () => container.playerNotifier
+		});
 		container.sponsorBlockService = new SponsorBlockService({
 			logger: appLogger,
 			guildService: container.guildService,

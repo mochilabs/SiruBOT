@@ -37,7 +37,11 @@ describe.each([
 		});
 		const player = manager.createPlayer({ guildId: '123456789012345679', voiceChannelId: '123456789012345680', node: 'test' });
 		players.push(player);
-		const mixer = new MixerService();
+		const mixer = new MixerService({
+			logger: container.logger as never,
+			guildService: {} as never,
+			getPlayerNotifier: () => container.playerNotifier
+		});
 		Object.assign(container, { mixerService: mixer });
 		vi.spyOn(mixer, 'prepareNextAnalysis').mockResolvedValue(undefined);
 		const override = vi.spyOn(mixer, 'override').mockResolvedValue({ duplicate: true });

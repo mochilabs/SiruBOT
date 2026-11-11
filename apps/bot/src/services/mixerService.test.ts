@@ -23,6 +23,14 @@ vi.mock('@sapphire/framework', () => ({
 	}
 }));
 
+/** 서비스 deps는 아래 container 모의 객체를 그대로 넘겨요 — 서비스가 읽는 값은 같아요 */
+const makeMixerService = () =>
+	new MixerService({
+		logger: container.logger as never,
+		guildService: container.guildService,
+		getPlayerNotifier: () => container.playerNotifier
+	});
+
 function fakePlayer(): Player {
 	return {
 		relatedTrackHistory: new RelatedTrackHistory(),
@@ -47,8 +55,21 @@ describe('MixerService v2 Protocol Tests', () => {
 		vi.restoreAllMocks();
 	});
 
+	it('can be constructed before the player notifier exists and reads it when skip stops playback', async () => {
+		let notifier: { updateController: ReturnType<typeof vi.fn> } | undefined;
+		const service = new MixerService({
+			logger: container.logger as never,
+			guildService: container.guildService,
+			getPlayerNotifier: () => notifier as never
+		});
+		notifier = { updateController: vi.fn() };
+		const player = { ...fakePlayer(), queue: { current: { encoded: 'a' }, tracks: [] } } as unknown as CustomPlayer;
+		await service.skip(player);
+		expect(notifier.updateController).toHaveBeenCalledWith(player);
+	});
+
 	it('retries busy analysis and clears a removed target', async () => {
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue({ automixEnabled: true } as any);
@@ -71,7 +92,7 @@ describe('MixerService v2 Protocol Tests', () => {
 	});
 
 	it('does not POST to a different node after an awaited capability response', async () => {
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
@@ -88,7 +109,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 	it('sends preservation only when explicitly supplied to arm', async () => {
 		fetchMock.mockImplementation(async () => new Response('{}'));
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		await service.arm(player, { epoch: 1, encodedTrack: 'next' });
 		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty('preserveTransition');
@@ -98,7 +119,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 	it('serializes incoming and outgoing SponsorBlock boundary positions', async () => {
 		fetchMock.mockResolvedValue(new Response('{}'));
-		const service = new MixerService();
+		const service = makeMixerService();
 		await service.arm(fakePlayer() as CustomPlayer, {
 			epoch: 3,
 			encodedTrack: 'next',
@@ -112,7 +133,7 @@ describe('MixerService v2 Protocol Tests', () => {
 	});
 
 	it('warms analysis once per target only with AutoMix and server support', async () => {
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
@@ -129,16 +150,16 @@ describe('MixerService v2 Protocol Tests', () => {
 	it('skips early analysis for disabled settings, streams, unsupported servers and errors', async () => {
 		const player = fakePlayer() as CustomPlayer;
 		const track = { encoded: 'next', info: { isSeekable: true, isStream: false } } as Track;
-		await new MixerService().prepareNextAnalysis(player, track);
+		await makeMixerService().prepareNextAnalysis(player, track);
 		expect(fetchMock).not.toHaveBeenCalled();
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
 		fetchMock.mockResolvedValueOnce(new Response('{}'));
-		await new MixerService().prepareNextAnalysis(player, track);
+		await makeMixerService().prepareNextAnalysis(player, track);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce({ automixEnabled: true } as any);
 		fetchMock.mockRejectedValueOnce(new Error('offline'));
-		await expect(new MixerService().prepareNextAnalysis(player, track)).resolves.toBeUndefined();
-		await new MixerService().prepareNextAnalysis(player, { ...track, info: { ...track.info, isStream: true } });
+		await expect(makeMixerService().prepareNextAnalysis(player, track)).resolves.toBeUndefined();
+		await makeMixerService().prepareNextAnalysis(player, { ...track, info: { ...track.info, isStream: true } });
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
@@ -150,7 +171,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			})
 		);
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		const result = await service.announce(fakePlayer(), 'https://tts.example/clip.mp3', 0.2);
 		expect(result).toEqual({ guildId: '123', id: 42, position: 1, queueLength: 1 });
 	});
@@ -158,7 +179,7 @@ describe('MixerService v2 Protocol Tests', () => {
 	it('throws MixerRequestError on non-2xx', async () => {
 		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ message: 'bad input' }), { status: 400 }));
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		await expect(service.announce(fakePlayer(), 'clip', 0.2)).rejects.toMatchObject({
 			name: 'MixerRequestError',
 			status: 400
@@ -173,7 +194,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			})
 		);
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		await service.arm(player, { epoch: 42, encodedTrack: 'enc-abc' }, 'test-key-123');
 
@@ -198,7 +219,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			})
 		);
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		await service.override(player, { epoch: 43, action: 'PLAY_NOW', encodedTrack: 'enc-xyz' }, 'test-key-456');
 
@@ -222,7 +243,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			})
 		);
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = fakePlayer() as CustomPlayer;
 		await service.reset(player, 100, 'test-reset-key');
 
@@ -245,7 +266,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			})
 		);
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		(await import('@sapphire/framework')).container.mixerService = service as any;
 		const player = {
 			...fakePlayer(),
@@ -275,7 +296,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		const { handleMixerNeedNext } = await import('../modules/audio/lavalink/handlers/mixerHandlers.ts');
 		const { TTS_CLIP_REQUESTER_ID } = await import('../modules/audio/lavalink/requester.ts');
 		const { container } = await import('@sapphire/framework');
-		const service = new MixerService();
+		const service = makeMixerService();
 		container.mixerService = service as any;
 
 		const ttsPlayer = {
@@ -340,7 +361,7 @@ describe('MixerService v2 Protocol Tests', () => {
 	it('handleMixerNeedNext aborts when the trigger track changes during the settings await (F1)', async () => {
 		const { handleMixerNeedNext } = await import('../modules/audio/lavalink/handlers/mixerHandlers.ts');
 		const { container } = await import('@sapphire/framework');
-		const service = new MixerService();
+		const service = makeMixerService();
 		container.mixerService = service as any;
 
 		// DB 조회가 지연되는 동안 전이가 진행돼 current가 바뀐다.
@@ -436,7 +457,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 	it('handleMixerTrackEnd coldStart plays pre-shifted current track when lavalink-client queueTrackEnd already shifted queue (C-03)', async () => {
 		vi.useFakeTimers();
-		const service = new MixerService();
+		const service = makeMixerService();
 		container.mixerService = service;
 
 		fetchMock.mockResolvedValueOnce(
@@ -507,7 +528,7 @@ describe('MixerService v2 Protocol Tests', () => {
 				})
 			);
 
-		const service = new MixerService();
+		const service = makeMixerService();
 		const player = {
 			...fakePlayer(),
 			currentEpoch: 4
@@ -530,7 +551,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 	it('handleMixerTrackEnd coldStart matches ended track even when Lavaplayer TrackEndEvent encodes non-zero end position', async () => {
 		vi.useFakeTimers();
-		const service = new MixerService();
+		const service = makeMixerService();
 		container.mixerService = service;
 		fetchMock.mockResolvedValueOnce(
 			new Response(JSON.stringify({ state: 'PLAYING', epoch: 3, duplicate: false }), {
@@ -618,7 +639,7 @@ describe('AutoMix configuration', () => {
 	it('enables analysis and beat matching before configuring the overlap', async () => {
 		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
 		vi.stubGlobal('fetch', fetchMock);
-		await new MixerService().setAutomix(fakePlayer(), settings);
+		await makeMixerService().setAutomix(fakePlayer(), settings);
 		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/mixer/state', '/mixer/bpm', '/mixer/crossfade']);
 		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
 			guildId: fakePlayer().guildId,
@@ -632,21 +653,21 @@ describe('AutoMix configuration', () => {
 	it('keeps ordinary crossfades working on an older plugin when AutoMix is off', async () => {
 		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
-		await new MixerService().setAutomix(fakePlayer(), { ...settings, automixEnabled: false });
+		await makeMixerService().setAutomix(fakePlayer(), { ...settings, automixEnabled: false });
 		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/mixer/state', '/mixer/crossfade']);
 	});
 
 	it('rejects enabling AutoMix on an older plugin before changing crossfade settings', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
-		await expect(new MixerService().setAutomix(fakePlayer(), settings)).rejects.toThrow('AutoMix를 지원하지');
+		await expect(makeMixerService().setAutomix(fakePlayer(), settings)).rejects.toThrow('AutoMix를 지원하지');
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
 	it('disables both analysis gates before disabling crossfade', async () => {
 		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
 		vi.stubGlobal('fetch', fetchMock);
-		await new MixerService().setCrossfade(fakePlayer(), false);
+		await makeMixerService().setCrossfade(fakePlayer(), false);
 		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ enabled: false, beatmatchEnabled: false });
 		expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toMatchObject({ enabled: false });
 	});
@@ -655,7 +676,7 @@ describe('AutoMix configuration', () => {
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
 		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
-		await new MixerService().pushCrossfadeConfig(fakePlayer());
+		await makeMixerService().pushCrossfadeConfig(fakePlayer());
 		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
 			'/mixer/state',
 			'/mixer/crossfade',
@@ -668,7 +689,7 @@ describe('AutoMix configuration', () => {
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValueOnce(settings).mockResolvedValueOnce(settings);
 		const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(supported)));
 		vi.stubGlobal('fetch', fetchMock);
-		await new MixerService().pushCrossfadeConfig(fakePlayer());
+		await makeMixerService().pushCrossfadeConfig(fakePlayer());
 		expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
 			'/mixer/state',
 			'/mixer/bpm',
@@ -693,7 +714,7 @@ describe('AutoMix configuration', () => {
 		vi.mocked(guildMixer.getMixerSettings).mockResolvedValue(customSettings);
 		const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 		vi.stubGlobal('fetch', fetchMock);
-		const service = new MixerService();
+		const service = makeMixerService();
 		await service.pushCrossfadeConfig(fakePlayer());
 		const silenceCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/mixer/silence'));
 		expect(silenceCall).toBeDefined();
@@ -704,7 +725,7 @@ describe('AutoMix configuration', () => {
 it('sends silence config matching gapless setting', async () => {
 	const fetchMock = vi.fn().mockImplementation(async () => new Response('{}'));
 	vi.stubGlobal('fetch', fetchMock);
-	const service = new MixerService();
+	const service = makeMixerService();
 	await service.setSilence(fakePlayer(), true);
 	expect(fetchMock.mock.calls[0][0]).toContain('/mixer/silence');
 	expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ guildId: '123456789012345678', enabled: true });

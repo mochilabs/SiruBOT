@@ -1,4 +1,3 @@
-import { container } from '@sapphire/framework';
 import { getConfig } from '../lib/config.ts';
 import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
@@ -13,6 +12,9 @@ import {
 import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import type { MixerSettings } from './guildSettings/types.ts';
 import * as guildMixer from './guildSettings/mixer.ts';
+import type { AppLogger } from '../lib/appLogger.ts';
+import type { GuildService } from './guildService.ts';
+import type { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 const MIXER_FILTER_KEY = 'mixer';
 
 class AutomixUnsupportedError extends Error {
@@ -85,6 +87,13 @@ export class MixerRequestError extends Error {
 	}
 }
 
+export interface MixerServiceDeps {
+	logger: AppLogger;
+	guildService: GuildService;
+	/** playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요 */
+	getPlayerNotifier: () => PlayerNotifier;
+}
+
 /**
  * Lavalink mixer-plugin REST client (v2 Protocol).
  * All v2 state transitions and audio controls route through this service.
@@ -105,6 +114,8 @@ export class MixerService {
 	private readonly chains = new Map<string, Promise<unknown>>();
 	/** Pending invalidate coalescence per guild. */
 	private readonly pendingInvalidate = new Map<string, { epoch: number; resolve: () => void; reject: (e: Error) => void }>();
+	public constructor(private readonly deps: MixerServiceDeps) {}
+
 	private nodeRest(player: Player): { base: string; auth: string } {
 		const o = (player.node?.options ?? {}) as { host?: string; port?: number; authorization?: string; secure?: boolean };
 		const proto = o.secure ? 'https' : 'http';
@@ -269,7 +280,7 @@ export class MixerService {
 				item.reject(err instanceof Error ? err : new Error(String(err)));
 			}
 		}).catch((err) => {
-			container.logger.debug(`[mixer] invalidate queue task error (guild ${gid}): ${err}`);
+			this.deps.logger.debug(`[mixer] invalidate queue task error (guild ${gid}): ${err}`);
 		});
 		return promise;
 	}
@@ -314,7 +325,7 @@ export class MixerService {
 			notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
 			cancelPendingInvalidate(player);
 			void player.queue?.utils?.save?.()?.catch(() => null);
-			container.playerNotifier.updateController(player);
+			this.deps.getPlayerNotifier().updateController(player);
 			await sendOverride(player, 'STOP', null);
 			return;
 		}
@@ -351,7 +362,7 @@ export class MixerService {
 		const target = { encoded: track.encoded, node: player.node };
 		this.analysisTargets.set(player, target);
 		try {
-			const settings = await guildMixer.getMixerSettings(container.guildService, player.guildId);
+			const settings = await guildMixer.getMixerSettings(this.deps.guildService, player.guildId);
 			if (!settings.automixEnabled) {
 				if (this.analysisTargets.get(player) === target) this.analysisTargets.delete(player);
 				return;
@@ -535,7 +546,7 @@ export class MixerService {
 	public async reapplyMixerFilter(player: Player): Promise<void> {
 		this.filterReady.delete(String(player.guildId));
 		await this.ensureMixerFilter(player).catch((error) => {
-			container.logger.warn(`[mixer] mixer filter re-apply failed (guild ${player.guildId}): ${error}`);
+			this.deps.logger.warn(`[mixer] mixer filter re-apply failed (guild ${player.guildId}): ${error}`);
 		});
 	}
 
@@ -553,10 +564,10 @@ export class MixerService {
 	}
 
 	public async pushCrossfadeConfig(player: Player): Promise<void> {
-		const settings = await guildMixer.getMixerSettings(container.guildService, player.guildId);
+		const settings = await guildMixer.getMixerSettings(this.deps.guildService, player.guildId);
 		await this.pushAutomixConfig(player, settings).catch((error: unknown) => {
 			if (!(error instanceof AutomixUnsupportedError)) throw error;
-			container.logger.warn(`[mixer] AutoMix unavailable (guild ${player.guildId}): ${error.message}`);
+			this.deps.logger.warn(`[mixer] AutoMix unavailable (guild ${player.guildId}): ${error.message}`);
 		});
 		const durationMs = Math.min(15000, Math.max(500, settings.crossfadeMs));
 		await this.rawCall(player, '/mixer/crossfade', {
@@ -568,7 +579,7 @@ export class MixerService {
 	}
 
 	public async pushNormalizationConfig(player: Player, enabled?: boolean): Promise<void> {
-		const normEnabled = enabled ?? (await guildMixer.getMixerSettings(container.guildService, player.guildId)).normalizationEnabled;
+		const normEnabled = enabled ?? (await guildMixer.getMixerSettings(this.deps.guildService, player.guildId)).normalizationEnabled;
 		await this.rawCall(player, '/mixer/normalization', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: normEnabled })
@@ -576,7 +587,7 @@ export class MixerService {
 	}
 
 	public async pushSilenceConfig(player: Player, enabled?: boolean): Promise<void> {
-		const silenceEnabled = enabled ?? (await guildMixer.getMixerSettings(container.guildService, player.guildId)).gaplessEnabled;
+		const silenceEnabled = enabled ?? (await guildMixer.getMixerSettings(this.deps.guildService, player.guildId)).gaplessEnabled;
 		await this.rawCall(player, '/mixer/silence', {
 			method: 'POST',
 			body: JSON.stringify({ guildId: String(player.guildId), enabled: silenceEnabled })
