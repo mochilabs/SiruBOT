@@ -36,7 +36,6 @@ declare module '@sapphire/pieces' {
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
-		playerWebResponder?: import('../services/playerWebResponder.ts').PlayerWebResponder;
 		jtcSetupResponder?: import('../features/temp-voice/inbound/jtcSetupResponder.ts').JtcSetupResponder;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;

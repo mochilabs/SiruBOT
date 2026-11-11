@@ -25,7 +25,7 @@ import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { TicketService } from '../features/tickets/index.ts';
 import { RolePanelService, RoleValidationResponder } from '../features/role-panels/index.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
-import { PlayerWebResponder } from '../services/playerWebResponder.ts';
+import { createPlayerWebResponder } from '../features/music/index.ts';
 import { JtcSetupResponder } from '../features/temp-voice/index.ts';
 import { SocialWebhookResponder } from '../services/socialWebhookResponder.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
@@ -35,7 +35,9 @@ import { AppEmojiManager } from '../services/appEmojiManager.ts';
 import { BotAdminResponder } from '../services/botAdminResponder.ts';
 import { PanelPostResponder } from '../services/panelPostResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
-import type { RedisSubscriberEntry } from './redisSubscribers.ts';
+import { RedisPublisher } from '../lib/redisPublisher.ts';
+import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
+import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisSubscribers.ts';
 import { createMusicAccess } from '../features/music/application/access.ts';
 import { createMusicControl } from '../features/music/application/control.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
@@ -133,7 +135,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		// (guildSettingsInvalidator는 대시보드가 직접 퍼블리시하는 채널이라 서명 대상이 아니에요)
 		const redisSigningKey = getConfig().redis.signingKey;
 		const guildSettingsInvalidator = (container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger));
-		const playerWebResponder = (container.playerWebResponder = new PlayerWebResponder(subscriberLogger, redisSigningKey));
 		const jtcSetupResponder = (container.jtcSetupResponder = new JtcSetupResponder(subscriberLogger, redisSigningKey));
 		const botProfileService = (container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey));
 		const memberGreetingService = (container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey));
@@ -145,7 +146,19 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 
 		// Redis 구독 서비스 레지스트리 — 새 서비스는 여기에 한 줄만 추가하면 start/stop이 따라와요.
 		// 배열 순서가 start 순서예요 (stop도 같은 순서). 모든 start는 실패해도 부팅을 막지 않아요 (자체 재연결).
+		const redisRuntime: RedisRuntime = {
+			logger: subscriberLogger,
+			signingKey: redisSigningKey,
+			publisher: new RedisPublisher({ getStore: () => container.redisStore, signingKey: redisSigningKey, logger: subscriberLogger }),
+			resolveGuild: (guildId) => container.client.guilds.cache.get(guildId)
+		};
+		// 공유 구독 연결 하나에 묶이는 응답자·이벤트 리스너 — 새 응답자는 여기에 추가해요.
+		const redisBindings: RedisBinding[] = [
+			// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
+			createPlayerWebResponder()
+		];
 		container.redisSubscribers = [
+			createSharedRedisSubscriber({ name: '대시보드 연동', logger: subscriberLogger, runtime: redisRuntime, bindings: redisBindings }),
 			// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
 			// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
 			{
@@ -153,9 +166,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				start: (url) => guildSettingsInvalidator.start(url, container.guildService),
 				stop: () => guildSettingsInvalidator.stop()
 			},
-			// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
-			// 실패해도 부팅은 계속돼요 — 대시보드 플레이어 요청이 타임아웃 폴백으로 끝나요.
-			{ name: 'playerWebResponder', start: (url) => playerWebResponder.start(url), stop: () => playerWebResponder.stop() },
 			// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
 			// 실패해도 부팅은 계속돼요 — 대시보드 설정 요청만 타임아웃 폴백해요.
 			{ name: 'jtcSetupResponder', start: (url) => jtcSetupResponder.start(url), stop: () => jtcSetupResponder.stop() },

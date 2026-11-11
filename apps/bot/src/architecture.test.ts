@@ -54,7 +54,6 @@ const ALLOWED_SERVICES_TO_MODULES: string[] = [
 	'services/mixerService.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/mixerService.ts -> modules/audio/lavalink/handlers/mixerHandlers.ts',
 	'services/mixerService.ts -> modules/audio/lavalink/queue/queueWrapper.ts',
-	'services/playerWebResponder.ts -> modules/audio/view/play.ts',
 	'services/playlistPlayback.ts -> modules/audio/utils/source.ts',
 	'services/skipPolicy.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/skipPolicy.ts -> modules/audio/lavalink/requester.ts',

@@ -1,27 +1,32 @@
 import { container } from '@sapphire/framework';
 import { PermissionsBitField } from 'discord.js';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
-import { AppError } from '../lib/appError.ts';
-import { PlayerWebResponder } from './playerWebResponder.ts';
+import { AppError } from '../../../lib/appError.ts';
+import type { RedisRuntime } from '../../../lib/redisResponder.ts';
+import { createPlayerWebResponder } from './playerWeb.ts';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-vi.mock('./guildSettings/playback.ts', async (orig) => ({
+vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({
 	...(await orig()),
 	hasDJRole: vi.fn().mockResolvedValue(false),
 	getDJRole: vi.fn().mockResolvedValue(null)
 }));
 
-const harness = vi.hoisted(() => ({ receive: null as null | ((raw: string) => void) }));
-vi.mock('@sirubot/utils', async (original) => ({
-	...(await original<typeof import('@sirubot/utils')>()),
-	ManagedRedisSubscriber: class {
-		constructor(options: { bindings: { onMessage: (raw: string) => void }[] }) {
-			harness.receive = options.bindings[0].onMessage;
-		}
-		async start() {}
-	}
-}));
-vi.mock('../modules/audio/view/play.ts', () => ({}));
+/** 응답자 바인딩에 요청을 흘려 넣고 퍼블리시된 응답을 관찰하는 하네스 — publish는 (채널, 본문, 라벨)로 받아요 */
+const harness = {
+	receive: null as null | ((raw: string) => void)
+};
+function start(logger: RedisRuntime['logger'], publish: Mock, signingKey = '') {
+	const binding = createPlayerWebResponder();
+	const runtime: RedisRuntime = {
+		logger,
+		signingKey,
+		publisher: { publish: publish as RedisRuntime['publisher']['publish'] },
+		resolveGuild: (id) => container.client.guilds.cache.get(id)
+	};
+	harness.receive = (raw) => void binding.handle(raw, runtime);
+}
+vi.mock('../../../modules/audio/view/play.ts', () => ({}));
 
 /** actorFromMember가 읽는 필드까지 갖춘 최소 멤버 */
 const memberBase = { id: 'user', guild: { id: 'guild' }, roles: { cache: new Map() }, voice: { channelId: null, channel: null } };
@@ -63,15 +68,14 @@ describe('web player permissions', () => {
 				}
 			},
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
-			guildService: {},
-			redisStore: { publishPlayerWebResponse: publish }
+			guildService: {}
 		});
-		await new PlayerWebResponder(logger).start('redis://fixture');
+		start(logger, publish);
 		harness.receive!(
 			JSON.stringify({ requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'guild', userId: 'user', kind: 'voice-context' })
 		);
 		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
-		expect(JSON.parse(publish.mock.calls[0][0])).toMatchObject({ voice });
+		expect(publish.mock.calls[0][1]).toMatchObject({ voice });
 		expect(logger.error).not.toHaveBeenCalled();
 	});
 	it.each(['search', 'play', 'control'] as const)('checks real permissions before %s without the generic exception', async (kind) => {
@@ -86,10 +90,9 @@ describe('web player permissions', () => {
 			},
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
 			music: { skipNow: vi.fn().mockRejectedValue(new AppError('not_found', '현재 곡이 없어요.')) },
-			guildService: {},
-			redisStore: { publishPlayerWebResponse: publish }
+			guildService: {}
 		});
-		await new PlayerWebResponder(logger).start('redis://fixture');
+		start(logger, publish);
 		harness.receive!(
 			JSON.stringify({
 				requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e',
@@ -100,7 +103,7 @@ describe('web player permissions', () => {
 			})
 		);
 		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
-		expect(JSON.parse(publish.mock.calls[0][0]).error).not.toContain('처리 중 오류가 발생');
+		expect(publish.mock.calls[0][1].error).not.toContain('처리 중 오류가 발생');
 		expect(logger.error).not.toHaveBeenCalled();
 	});
 	it('rejects unsigned requests and accepts signed ones when the signing key is set (SEC-006)', async () => {
@@ -114,10 +117,9 @@ describe('web player permissions', () => {
 				}
 			},
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
-			guildService: {},
-			redisStore: { publishPlayerWebResponse: publish }
+			guildService: {}
 		});
-		await new PlayerWebResponder(logger, 'test-key').start('redis://fixture');
+		start(logger, publish, 'test-key');
 		const payload = { requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'guild', userId: 'user', kind: 'voice-context' };
 
 		// 서명 없는 메시지는 처리 자체가 되지 않아요 (Redis 쓰기 권한 보유자의 위조 요청 거부)
@@ -128,6 +130,37 @@ describe('web player permissions', () => {
 		// 서명된 메시지는 처리돼요
 		harness.receive!(wrapRedisMessage('test-key', payload));
 		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
+	});
+
+	it('kind별 상세 스키마가 어긋나면 요청 형식 안내로 응답해요 (타임아웃 대신)', async () => {
+		const publish = vi.fn();
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+		Object.assign(container, {
+			client: { guilds: { cache: new Map([['guild', { id: 'guild', members: { cache: new Map() }, channels: { cache: new Map() } }]]) } },
+			guildService: {}
+		});
+		start(logger, publish);
+		harness.receive!(JSON.stringify({ requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'guild', userId: 'user', kind: 'search' }));
+		await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
+		expect(publish.mock.calls[0][0]).toBe('sirubot:player-web:response');
+		expect(publish.mock.calls[0][1]).toEqual({
+			requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e',
+			guildId: 'guild',
+			kind: 'search',
+			error: '요청 형식이 올바르지 않아요.'
+		});
+	});
+
+	it('보유하지 않은 길드의 요청은 응답하지 않아요', async () => {
+		const publish = vi.fn();
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+		Object.assign(container, { client: { guilds: { cache: new Map() } } });
+		start(logger, publish);
+		harness.receive!(
+			JSON.stringify({ requestId: 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e', guildId: 'other', userId: 'user', kind: 'voice-context' })
+		);
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		expect(publish).not.toHaveBeenCalled();
 	});
 
 	describe('control (공용 음악 제어 유스케이스 경유)', () => {
@@ -145,13 +178,12 @@ describe('web player permissions', () => {
 				},
 				audio: { getPlayer: vi.fn().mockReturnValue(player) },
 				guildService: {},
-				music,
-				redisStore: { publishPlayerWebResponse: publish }
+				music
 			});
-			await new PlayerWebResponder(logger).start('redis://fixture');
+			start(logger, publish);
 			harness.receive!(JSON.stringify({ requestId: REQUEST_ID, guildId: 'guild', userId: 'user', kind: 'control', ...request }));
 			await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
-			return { response: JSON.parse(publish.mock.calls[0][0]), logger };
+			return { response: publish.mock.calls[0][1], logger };
 		}
 
 		it('volume은 일반 멤버의 요청도 유스케이스에 맡기고 성공 응답을 보내요 (관리 권한 선검사 없음)', async () => {
