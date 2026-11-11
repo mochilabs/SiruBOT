@@ -128,13 +128,8 @@ function collectPieces(): Piece[] {
 	return pieces;
 }
 
-/**
- * 이름이 겹치는데 지금 그대로 배포되는 피스. 줄이기만 해요.
- * - listeners:rolePanelReaction: rolePanelReaction.ts의 Add/Remove 리스너 두 클래스가 모두 파일 이름을 이름으로 써서,
- *   나중에 로드된 쪽이 앞의 쪽을 unload해요 (Store.insert의 충돌 처리). 이동 PR은 동작을 바꾸지 않으므로 그대로 두고 여기 기록만 해요.
- *   해결하려면 두 리스너에 서로 다른 name 옵션을 주세요 (동작 변경이라 별도 PR).
- */
-const KNOWN_DUPLICATES: string[] = ['listeners:rolePanelReaction'];
+/** 이름이 겹치는데 지금 그대로 배포되는 피스. 줄이기만 해요 (현재 없음). */
+const KNOWN_DUPLICATES: string[] = [];
 
 /** 이동 전 트리에서 만든 `<스토어>:<이름>` 스냅샷. 피스를 일부러 추가/삭제할 때만 고쳐요. */
 const EXPECTED_PIECES: string[] = [
@@ -215,8 +210,8 @@ const EXPECTED_PIECES: string[] = [
 	'listeners:messageDeleted',
 	'listeners:messageQuote',
 	'listeners:raw',
-	'listeners:rolePanelReaction',
-	'listeners:rolePanelReaction',
+	'listeners:rolePanelReactionAdd',
+	'listeners:rolePanelReactionRemove',
 	'listeners:shardDisconnect',
 	'listeners:shardError',
 	'listeners:shardReady',

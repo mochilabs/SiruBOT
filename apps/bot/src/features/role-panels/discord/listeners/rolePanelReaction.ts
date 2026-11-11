@@ -74,14 +74,15 @@ async function handleReaction(reaction: MessageReaction | PartialMessageReaction
 	}
 }
 
-@ApplyOptions<Listener.Options>({ event: Events.MessageReactionAdd })
+// 한 파일에 리스너가 둘이라 이름을 따로 줘요 — 이름이 같으면 나중에 로드된 쪽이 앞의 쪽을 unload해요 (Sapphire Store.insert).
+@ApplyOptions<Listener.Options>({ name: 'rolePanelReactionAdd', event: Events.MessageReactionAdd })
 export class RolePanelReactionAddListener extends Listener {
 	public override run(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void> {
 		return enqueue(`${reaction.message.guildId}:${user.id}`, () => handleReaction(reaction, user, 'grant'));
 	}
 }
 
-@ApplyOptions<Listener.Options>({ event: Events.MessageReactionRemove })
+@ApplyOptions<Listener.Options>({ name: 'rolePanelReactionRemove', event: Events.MessageReactionRemove })
 export class RolePanelReactionRemoveListener extends Listener {
 	public override run(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void> {
 		return enqueue(`${reaction.message.guildId}:${user.id}`, () => handleReaction(reaction, user, 'revoke'));
