@@ -44,6 +44,7 @@ describe('validateEnv — 봇 env 스키마 (fail-closed)', () => {
 	it('LOGLEVEL은 숫자·레벨 이름 둘 다 허용하고, 오타는 차단해요', () => {
 		expect(validateEnv({ ...validEnv(), LOGLEVEL: '3' })).toMatchObject({ LOGLEVEL: 3 });
 		expect(validateEnv({ ...validEnv(), LOGLEVEL: 'debug' })).toMatchObject({ LOGLEVEL: 'debug' });
+		expect(validateEnv({ ...validEnv(), LOGLEVEL: '' }).LOGLEVEL).toBeUndefined();
 		expect(() => validateEnv({ ...validEnv(), LOGLEVEL: 'verbose' })).toThrow(/LOGLEVEL/);
 	});
 
@@ -163,25 +164,31 @@ describe('loadConfig — `Number(x) || 기본값` 계열 (0·빈 값·공백은 
 });
 
 describe('loadConfig — `parseInt(x ?? 기본값, 10)` 계열 (0은 그대로, 빈 값은 NaN)', () => {
-	it('LOGLEVEL — 0은 0, 빈 문자열·레벨 이름은 NaN', () => {
+	it('LOGLEVEL — 숫자는 그대로, 레벨 이름은 tslog 숫자로, 미설정·빈 값은 3(info)', () => {
 		expect(configWith({ LOGLEVEL: '0' }).logLevel).toBe(0);
 		expect(configWith({ LOGLEVEL: '4' }).logLevel).toBe(4);
-		expect(configWith({ LOGLEVEL: '' }).logLevel).toBeNaN();
-		expect(configWith({ LOGLEVEL: 'debug' }).logLevel).toBeNaN();
+		expect(configWith({}).logLevel).toBe(3);
+		expect(configWith({ LOGLEVEL: '' }).logLevel).toBe(3);
+		expect(configWith({ LOGLEVEL: '  ' }).logLevel).toBe(3);
+		expect(configWith({ LOGLEVEL: 'debug' }).logLevel).toBe(2);
+		expect(configWith({ LOGLEVEL: 'warn' }).logLevel).toBe(4);
 	});
 
-	it('HEALTH_PORT — 0은 0, 빈 문자열은 NaN', () => {
+	it('HEALTH_PORT — 0은 0, 미설정·빈 값은 8080', () => {
 		expect(configWith({ HEALTH_PORT: '9000' }).health.port).toBe(9000);
 		expect(configWith({ HEALTH_PORT: '0' }).health.port).toBe(0);
-		expect(configWith({ HEALTH_PORT: '' }).health.port).toBeNaN();
+		expect(configWith({}).health.port).toBe(8080);
+		expect(configWith({ HEALTH_PORT: '' }).health.port).toBe(8080);
+		expect(configWith({ HEALTH_PORT: ' ' }).health.port).toBe(8080);
 	});
 
-	it('SHARD_IDENTIFY_RETRY_MS — 하한 1000, 0·음수도 1000, 빈 문자열은 NaN (Math.max(NaN, 1000))', () => {
+	it('SHARD_IDENTIFY_RETRY_MS — 하한 1000, 0·음수도 1000, 미설정·빈 값은 5000', () => {
 		expect(configWith({ SHARD_IDENTIFY_RETRY_MS: '7000' }).shard.identifyRetryMs).toBe(7000);
 		expect(configWith({ SHARD_IDENTIFY_RETRY_MS: '500' }).shard.identifyRetryMs).toBe(1000);
 		expect(configWith({ SHARD_IDENTIFY_RETRY_MS: '0' }).shard.identifyRetryMs).toBe(1000);
 		expect(configWith({ SHARD_IDENTIFY_RETRY_MS: '-1' }).shard.identifyRetryMs).toBe(1000);
-		expect(configWith({ SHARD_IDENTIFY_RETRY_MS: '' }).shard.identifyRetryMs).toBeNaN();
+		expect(configWith({}).shard.identifyRetryMs).toBe(5000);
+		expect(configWith({ SHARD_IDENTIFY_RETRY_MS: '' }).shard.identifyRetryMs).toBe(5000);
 	});
 
 	it('LLM_API_TIMEOUT_MS — 0·빈 값은 기본 120000, 하한 1000', () => {

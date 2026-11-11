@@ -19,8 +19,17 @@ import { resolveRedisSigningKey } from '@sirubot/utils/redisEnvelope';
 /** 숫자형 tunable — 빈 문자열/공백은 '미설정'으로, 설정됐으면 숫자여야 해요 (오타는 기동 차단). */
 const optionalNumber = z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), z.coerce.number().optional());
 
-/** 로그 레벨 — 봇은 parseInt로 읽으니 숫자를 주로 쓰지만, 이름 설정이 깨지지 않도록 이름도 허용해요. */
-const logLevel = z.union([z.coerce.number(), z.enum(['silly', 'trace', 'debug', 'info', 'warn', 'error', 'fatal'])]).optional();
+/** tslog 레벨 이름 → 숫자 (0 silly … 6 fatal). LOGLEVEL은 숫자와 이름 둘 다 받아요. */
+const LOG_LEVEL_BY_NAME = { silly: 0, trace: 1, debug: 2, info: 3, warn: 4, error: 5, fatal: 6 } as const;
+type LogLevelName = keyof typeof LOG_LEVEL_BY_NAME;
+const LOG_LEVEL_NAMES = Object.keys(LOG_LEVEL_BY_NAME) as [LogLevelName, ...LogLevelName[]];
+const DEFAULT_LOG_LEVEL = LOG_LEVEL_BY_NAME.info;
+
+/** 로그 레벨 — 숫자(0~6) 또는 레벨 이름. 빈 값은 미설정으로 봐요. */
+const logLevel = z.preprocess(
+	(value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+	z.union([z.coerce.number(), z.enum(LOG_LEVEL_NAMES)]).optional()
+);
 
 const botEnvSchema = z.object({
 	// 필수: 없으면 기동 불가. 예전에도 기동 중에 throw하던 키들이에요.
@@ -69,7 +78,6 @@ const botEnvSchema = z.object({
 	SIRU_TTS_URL: z.string().optional(),
 	SIRU_TTS_DEFAULT_VOICE: z.string().optional(),
 	SEARXNG_BASE_URL: z.string().optional(),
-	SEARXNG_MAX_RESULTS: optionalNumber,
 	ENABLE_SEARXNG: z.string().optional(),
 
 	// 숫자형 tunable (선택, 미설정이면 loadConfig의 기본값)
@@ -106,7 +114,7 @@ export interface Config {
 	/** NODE_ENV === 'production' (샤드매니저 모드·로거 위치 표기 판별). setup()이 미설정 NODE_ENV를 'development'로 채우므로 그 외는 전부 dev. */
 	readonly isProduction: boolean;
 	/**
-	 * LOGLEVEL — `parseInt(LOGLEVEL ?? '3', 10)`. 빈 문자열·레벨 이름('debug')은 NaN이 돼요 (기존 동작 그대로).
+	 * LOGLEVEL — tslog 숫자 레벨(0 silly … 6 fatal). 숫자나 레벨 이름('debug')으로 설정하고, 미설정·빈 값이면 3(info)이에요.
 	 * botClient(로거 minLevel)와 BotApplication.setupDatabase(쿼리 로그 on/off)가 같은 표현식을 써서 한 필드로 합쳤어요.
 	 */
 	readonly logLevel: number;
@@ -144,11 +152,11 @@ export interface Config {
 		 * 같은 AUTH_KEY를 dataApi.authKey / redis.signingKey는 trim해서 쓰므로 일부러 별도 필드로 뒀어요.
 		 */
 		readonly authKey: string | undefined;
-		/** Math.max(parseInt(SHARD_IDENTIFY_RETRY_MS ?? '5000', 10), 1000) — 빈 문자열이면 NaN이 돼요 (기존 동작 그대로). */
+		/** SHARD_IDENTIFY_RETRY_MS — 미설정·빈 값이면 5000, 하한은 1000이에요. */
 		readonly identifyRetryMs: number;
 	};
 	readonly health: {
-		/** parseInt(HEALTH_PORT ?? '8080', 10) — 빈 문자열이면 NaN. */
+		/** HEALTH_PORT — 미설정·빈 값이면 8080이에요. */
 		readonly port: number;
 	};
 	readonly dataApi: {
@@ -233,6 +241,20 @@ function parseContextTokenBudget(raw: string | undefined): number {
 	return Number.isFinite(parsed) ? Math.min(100_000, Math.max(1500, parsed)) : 60_000;
 }
 
+/** 정수 env 값을 읽어요. 미설정·빈 값(공백만)·숫자가 아닌 값이면 기본값을 써요 — `KEY=`처럼 비워 둔 줄이 NaN으로 새지 않게 해요. */
+function intOrDefault(raw: string | undefined, fallback: number): number {
+	if (raw === undefined || raw.trim() === '') return fallback;
+	const parsed = parseInt(raw, 10);
+	return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+/** LOGLEVEL을 tslog 숫자 레벨로 바꿔요 — 레벨 이름('debug')도 받고, 미설정·빈 값이면 info예요. */
+function parseLogLevel(raw: string | undefined): number {
+	const value = raw?.trim() ?? '';
+	if (value in LOG_LEVEL_BY_NAME) return LOG_LEVEL_BY_NAME[value as LogLevelName];
+	return intOrDefault(raw, DEFAULT_LOG_LEVEL);
+}
+
 /** env를 검증하고 Config를 만들어요 (순수 함수 — process.env를 읽지 않아요). 잘못된 env면 throw해요. */
 export function loadConfig(env: RawEnv): Config {
 	validateEnv(env);
@@ -241,7 +263,7 @@ export function loadConfig(env: RawEnv): Config {
 
 	return Object.freeze({
 		isProduction: env.NODE_ENV === 'production',
-		logLevel: parseInt(env.LOGLEVEL ?? '3', 10),
+		logLevel: parseLogLevel(env.LOGLEVEL),
 		registerCommands: env.REGISTER_COMMANDS === 'true',
 		discord: Object.freeze({
 			token: requiredRaw(env, 'DISCORD_TOKEN'),
@@ -263,10 +285,10 @@ export function loadConfig(env: RawEnv): Config {
 		shard: Object.freeze({
 			managerUrl: env.SHARD_MANAGER_URL,
 			authKey: env.AUTH_KEY,
-			identifyRetryMs: Math.max(parseInt(env.SHARD_IDENTIFY_RETRY_MS ?? '5000', 10), 1000)
+			identifyRetryMs: Math.max(intOrDefault(env.SHARD_IDENTIFY_RETRY_MS, 5000), 1000)
 		}),
 		health: Object.freeze({
-			port: parseInt(env.HEALTH_PORT ?? '8080', 10)
+			port: intOrDefault(env.HEALTH_PORT, 8080)
 		}),
 		dataApi: Object.freeze({
 			baseUrl: trimUrl(env.DATA_API_URL ?? '') || null,
