@@ -23,9 +23,9 @@ vi.mock('@sirubot/utils', () => ({
 	}
 }));
 vi.mock('@sapphire/framework', () => ({ container: containerStub }));
-vi.mock('./customCommands/store.ts', () => ({ clearGuildCustomCommandsCache }));
+vi.mock('../features/custom-commands/application/store.ts', () => ({ clearGuildCustomCommandsCache }));
 vi.mock('./guildSettings/mixer.ts', () => containerStub.guildMixer);
-vi.mock('./customCommands/slashRegistry.ts', () => ({ syncGuildSlashCommands }));
+vi.mock('../features/custom-commands/application/slashRegistry.ts', () => ({ syncGuildSlashCommands }));
 
 import { GuildSettingsInvalidator } from './guildSettingsInvalidator.ts';
 

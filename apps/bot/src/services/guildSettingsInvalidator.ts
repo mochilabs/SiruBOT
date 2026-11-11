@@ -16,8 +16,7 @@ import { GUILD_SETTINGS_INVALIDATE_CHANNEL, ManagedRedisSubscriber } from '@siru
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import { container } from '@sapphire/framework';
 
-import { clearGuildCustomCommandsCache } from './customCommands/store.ts';
-import { syncGuildSlashCommands } from './customCommands/slashRegistry.ts';
+import { clearGuildCustomCommandsCache, syncGuildSlashCommands } from '../features/custom-commands/index.ts';
 import type { ServiceLogger } from './types.ts';
 import { GuildService } from './guildService.ts';
 import * as guildMixer from './guildSettings/mixer.ts';

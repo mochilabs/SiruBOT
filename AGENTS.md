@@ -88,8 +88,8 @@ Apps never import each other. The only contact points are Redis pub/sub, HTTP wi
 - All user-facing strings are Korean. Slash-command details follow `sapphire-command`; UI follows `component-view`.
 - Command registration: `REGISTER_COMMANDS=true` overwrites, otherwise it only logs to console. Manual sync: `yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]`.
 - Custom commands:
-  - Two kinds: prefix messages (listener `modules/general/listeners/message/customCommandPrefix.ts`; `!도움말` is reserved) and slash (`slashRegistry.ts`, incrementally synced as guild commands).
+  - Two kinds: prefix messages (listener `features/custom-commands/discord/listeners/customCommandPrefix.ts`; `!도움말` is reserved) and slash (`slashRegistry.ts`, incrementally synced as guild commands).
   - The spec/name/prefix contract lives only in `packages/utils/src/customCommand.ts`.
-  - Engine and cache: `apps/bot/src/services/customCommands/`. Re-validate the spec with zod before running it (`interpreter.ts`).
+  - Engine and cache: `apps/bot/src/features/custom-commands/application/`. Re-validate the spec with zod before running it (`interpreter.ts`).
   - Create/edit/delete only from the dashboard with guild manage permission (`role: "manage"`). Saving triggers the invalidate broadcast, which clears the cache and re-syncs slash commands.
 - Shutdown order directly affects session loss. Read `bot-ops` before touching it.

@@ -51,7 +51,6 @@ const ALLOWED_SERVICES_TO_MODULES: string[] = [
 	'services/audioService.ts -> modules/audio/view/play.ts',
 	'services/botAdminResponder.ts -> modules/audio/lavalink/redisStore.ts',
 	'services/chatTts.ts -> modules/audio/lavalink/requester.ts',
-	'services/customCommands/interpreter.ts -> modules/general/view/customCommand.ts',
 	'services/memberGreetingService.ts -> modules/general/view/greeting.ts',
 	'services/mixerService.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/mixerService.ts -> modules/audio/lavalink/handlers/mixerHandlers.ts',
@@ -101,6 +100,12 @@ const APPLICATION_LAYER_DEBT: Record<string, string> = {
 		'uses the `container` service locator (db, logger). Remove by passing db/logger in through a deps object, as features/music/application does.',
 	'features/role-panels/application/rolePanelService.ts -> ../discord/views/rolePanel.ts':
 		'renders the panel message with rolePanelView when posting/refreshing. Remove by injecting a "render panel message" port implemented in features/role-panels/discord.',
+	'features/custom-commands/application/interpreter.ts -> ../discord/views/customCommand.ts':
+		'renders the design-review message with customCommandDesignView. Remove by returning the design data and letting features/custom-commands/discord render it, or by injecting a render port.',
+	'features/custom-commands/application/slashRegistry.ts -> @sapphire/framework':
+		'uses the `container` service locator (db, client, logger). Remove by passing them in through a deps object, as features/music/application does.',
+	'features/custom-commands/application/store.ts -> @sapphire/framework':
+		'uses the `container` service locator (db, redisStore). Remove by passing them in through a deps object, as features/music/application does.',
 	'features/games/application/gameRecords.ts -> @sapphire/framework':
 		'uses the `container` service locator (db, redisStore). Remove by passing db/redisStore in through a deps object, as features/music/application does.',
 	'features/tickets/application/ticketTranscript.ts -> @sapphire/framework':

@@ -11,7 +11,7 @@
  *   감싸서 넘기고, delete_trigger는 ctx.triggerMessage.delete()로 동작해요 (슬래시에선 응답 삭제).
  */
 import { MessageFlags } from 'discord.js';
-import { customCommandDesignView } from '../../modules/general/view/customCommand.ts';
+import { customCommandDesignView } from '../discord/views/customCommand.ts';
 import { CUSTOM_COMMAND_MAX_ARGS, customCommandSpecSchema, type CustomCommandAccess, type CustomCommandStep } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 

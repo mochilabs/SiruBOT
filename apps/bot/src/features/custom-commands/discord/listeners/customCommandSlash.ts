@@ -7,15 +7,15 @@
  *   이후 메시지는 채널로 전송해요. 보낼 메시지가 전혀 없으면 '처리했어요' 한 줄로 마무리해요.
  * - delete_trigger는 응답 삭제(deleteReply)로 동작해요.
  */
-import { notice as noticeView } from '../../view/notice.ts';
+import { notice as noticeView } from '../../../../modules/general/view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { MessageFlags, type ChatInputCommandInteraction, type Interaction, type MessageCreateOptions } from 'discord.js';
 import { CUSTOM_COMMAND_MAX_ARGS, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
-import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../../../services/customCommands/context.ts';
-import { runCustomCommandSpec, type CustomCommandContext } from '../../../../services/customCommands/interpreter.ts';
-import { findCustomCommand } from '../../../../services/customCommands/store.ts';
+import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
+import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
+import { findCustomCommand } from '../../application/store.ts';
 
 /** 인터랙션 1건을 처리해요. 이 봇의 슬래시형 커스텀 명령어가 아니면 false를 돌려줘요. */
 export async function handleCustomCommandSlashInteraction(interaction: ChatInputCommandInteraction): Promise<boolean> {

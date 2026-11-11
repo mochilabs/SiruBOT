@@ -11,5 +11,6 @@ export const PIECE_ROOTS = [
 	'features/games/discord',
 	'features/tickets/discord',
 	'features/role-panels/discord',
-	'features/temp-voice/discord'
+	'features/temp-voice/discord',
+	'features/custom-commands/discord'
 ] as const;

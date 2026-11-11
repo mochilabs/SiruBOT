@@ -13,7 +13,7 @@
 import { container } from '@sapphire/framework';
 import { ApplicationCommandOptionType, type ApplicationCommandOptionData } from 'discord.js';
 import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_MAX_SLASH_PER_GUILD, normalizeCustomCommandName } from '@sirubot/utils';
-import type { ServiceLogger } from '../types.ts';
+import type { ServiceLogger } from '../../../services/types.ts';
 
 /** 문자열·조건의 {argvN}/index에서 인수 사용처를 모아요 */
 function collectArgIndexes(node: unknown, into: number[]): void {

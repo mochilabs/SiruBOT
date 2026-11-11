@@ -1,4 +1,4 @@
-import { notice as noticeView } from '../../view/notice.ts';
+import { notice as noticeView } from '../../../../modules/general/view/notice.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 /**
  * 커스텀 명령어 접두사 리스너 — "접두사 + 이름" 메시지로 길드 커스텀 명령어를 실행해요.
@@ -11,12 +11,12 @@ import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageCreateOptions, MessageFlags } from 'discord.js';
-import { customCommandListView } from '../../view/customCommand.ts';
+import { customCommandListView } from '../views/customCommand.ts';
 import { CUSTOM_COMMAND_MAX_ARGS, CUSTOM_COMMAND_RESERVED_NAMES, MemoryCache, emoji, normalizeCustomCommandName } from '@sirubot/utils';
 
-import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../../../services/customCommands/context.ts';
-import { runCustomCommandSpec, type CustomCommandContext } from '../../../../services/customCommands/interpreter.ts';
-import { findCustomCommand, getGuildCustomCommands } from '../../../../services/customCommands/store.ts';
+import { buildCustomCommandGuildContext, buildCustomCommandMemberContext, customCommandNotice } from '../../application/context.ts';
+import { runCustomCommandSpec, type CustomCommandContext } from '../../application/interpreter.ts';
+import { findCustomCommand, getGuildCustomCommands } from '../../application/store.ts';
 
 /** 유저별 실행 쿨다운 (ms) — 길드+유저 키 */
 const EXECUTE_COOLDOWN_MS = 3_000;
