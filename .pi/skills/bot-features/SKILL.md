@@ -15,12 +15,12 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 - Lavalink filters/playback internals belong to bot-ops; here only cover pipeline impact of these features.
 
 ## Temp voice channels
-- Core: `services/tempVoiceService.ts` (create/delete, ownership, settings). Listeners: `features/temp-voice/discord/listeners/tempVoiceState.ts` (VoiceState → delegates to service), `tempVoiceChannelDelete.ts` (delete cleanup).
+- Core: `features/temp-voice/application/tempVoiceService.ts` (create/delete, ownership, settings; deps incl. `emptyGraceMs` come from `setupServices`, the marker-channel failure notice is rendered by `features/temp-voice/discord/tempVoiceMessages.ts`). Listeners: `features/temp-voice/discord/listeners/tempVoiceState.ts` (VoiceState → delegates to service), `tempVoiceChannelDelete.ts` (delete cleanup).
 - JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetup.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
 
 ## Games
 - `features/games/discord/commands/`: dice, rps, ohaasa, guess, checkin. Single interaction handler `features/games/discord/interaction-handlers/games.ts` — customIds declared in `features/games/discord/customIds.ts` (`game:v1:<action>[:<field>]`); new games add actions there. Ohaasa: zodiac mapping in `features/games/application/ohaasaService.ts`; translated horoscope data comes from data-api `/v1/ohaasa` (`services/dataApiClient.ts`).
-- State: streaks/records/checkin persist via `features/games/application/gameRecords.ts` in Prisma (`gameRecord`/`user`) — survive restarts. Only in-progress rounds live in customIds and are lost (no games resume after restart, by design).
+- State: streaks/records/checkin persist via `features/games/application/gameRecords.ts` (`container.gameRecords`) in Prisma (`gameRecord`/`user`) — survive restarts. Only in-progress rounds live in customIds and are lost (no games resume after restart, by design).
 
 ## Conventions
 - `.ts` extension relative imports, `ko` locale, user errors via `UserError` (see sapphire-command skill). Reuse existing retry/timeout/error patterns for external APIs (weather, delivery, YouTube, lyrics); never expose API keys.
