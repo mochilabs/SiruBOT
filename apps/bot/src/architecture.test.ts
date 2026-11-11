@@ -87,10 +87,6 @@ const ALLOWED_MODULES_TO_CORE: string[] = [
  * removal takes. Only delete from this list.
  */
 const APPLICATION_LAYER_DEBT: Record<string, string> = {
-	'features/role-panels/application/rolePanelService.ts -> @sapphire/framework':
-		'uses the `container` service locator (db, logger). Remove by passing db/logger in through a deps object, as features/music/application does.',
-	'features/role-panels/application/rolePanelService.ts -> ../discord/views/rolePanel.ts':
-		'renders the panel message with rolePanelView when posting/refreshing. Remove by injecting a "render panel message" port implemented in features/role-panels/discord.',
 	'features/custom-commands/application/interpreter.ts -> ../discord/views/customCommand.ts':
 		'renders the design-review message with customCommandDesignView. Remove by returning the design data and letting features/custom-commands/discord render it, or by injecting a render port.',
 	'features/custom-commands/application/slashRegistry.ts -> @sapphire/framework':

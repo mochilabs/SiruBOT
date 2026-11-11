@@ -6,14 +6,15 @@ const mocks = vi.hoisted(() => ({
 		rolePanel: { findFirst: vi.fn(), update: vi.fn().mockResolvedValue(undefined), delete: vi.fn() },
 		rolePanelButton: { findUnique: vi.fn() }
 	},
-	logger: { error: vi.fn(), warn: vi.fn() }
+	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+	messages: { panel: vi.fn(() => ({ view: true })) }
 }));
 
-vi.mock('@sapphire/framework', () => ({ container: { db: mocks.db, logger: mocks.logger } }));
 vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => `:${name}:` }));
-vi.mock('../discord/views/rolePanel.ts', () => ({ rolePanelView: vi.fn(() => ({ view: true })) }));
 
-import { PanelPostError, RolePanelService } from './rolePanelService.ts';
+import { PanelPostError, createRolePanelService } from './rolePanelService.ts';
+
+const makeService = () => createRolePanelService({ db: mocks.db as never, logger: mocks.logger, messages: mocks.messages as never });
 
 const GUILD_ID = '100000000000000001';
 const BOT_TOP = 10;
@@ -39,7 +40,7 @@ function makeGuild(roles: ReturnType<typeof role>[], channels: Record<string, un
 }
 
 describe('RolePanelService.validateRoles', () => {
-	const service = new RolePanelService();
+	const service = makeService();
 
 	it('일반 역할은 부여 가능하다', () => {
 		expect(service.validateRoles(makeGuild([role('1', { position: 2 })]), ['1'])).toEqual([]);
@@ -65,7 +66,7 @@ describe('RolePanelService.getPanel', () => {
 
 	it('panelId와 guildId를 함께 조건으로 조회한다 (다른 길드 패널 차단)', async () => {
 		mocks.db.rolePanel.findFirst.mockResolvedValue(null);
-		await new RolePanelService().getPanel('panel-1', GUILD_ID);
+		await makeService().getPanel('panel-1', GUILD_ID);
 		expect(mocks.db.rolePanel.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'panel-1', guildId: GUILD_ID } }));
 	});
 });
@@ -93,35 +94,34 @@ describe('RolePanelService.publishPanel', () => {
 
 	it('다른 길드의 패널이면 PanelPostError로 거부한다', async () => {
 		mocks.db.rolePanel.findFirst.mockResolvedValue(null);
-		await expect(new RolePanelService().publishPanel(makeGuild([]), 'x', undefined)).rejects.toBeInstanceOf(PanelPostError);
+		await expect(makeService().publishPanel(makeGuild([]), 'x', undefined)).rejects.toBeInstanceOf(PanelPostError);
 	});
 
 	it('채널이 없으면 패널에 저장된 채널로 폴백한다', async () => {
 		const channel = textChannel('200000000000000001');
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel({ channelId: channel.id }));
-		const result = await new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', undefined);
+		const result = await makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', undefined);
 		expect(channel.send).toHaveBeenCalledOnce();
+		expect(channel.send).toHaveBeenCalledWith({ view: true });
 		expect(result).toEqual({ messageId: '900000000000000001', channelId: channel.id });
 	});
 
 	it('저장된 채널도 요청 채널도 없으면 안내 오류를 던진다', async () => {
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel());
-		await expect(new RolePanelService().publishPanel(makeGuild([]), 'panel-1', undefined)).rejects.toBeInstanceOf(PanelPostError);
+		await expect(makeService().publishPanel(makeGuild([]), 'panel-1', undefined)).rejects.toBeInstanceOf(PanelPostError);
 	});
 
 	it('텍스트 채널이 아니면 거부한다', async () => {
 		const voice = { id: '200000000000000002', type: ChannelType.GuildVoice, send: vi.fn() };
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel());
-		await expect(new RolePanelService().publishPanel(makeGuild([], { [voice.id]: voice }), 'panel-1', voice.id)).rejects.toBeInstanceOf(
-			PanelPostError
-		);
+		await expect(makeService().publishPanel(makeGuild([], { [voice.id]: voice }), 'panel-1', voice.id)).rejects.toBeInstanceOf(PanelPostError);
 		expect(voice.send).not.toHaveBeenCalled();
 	});
 
 	it('재게시하면 DB를 갱신한 뒤 이전 메시지를 삭제한다', async () => {
 		const channel = textChannel('200000000000000001');
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel({ channelId: channel.id, messageId: '800000000000000001' }));
-		await new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id);
+		await makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id);
 		expect(mocks.db.rolePanel.update).toHaveBeenCalledWith({
 			where: { id: 'panel-1' },
 			data: { channelId: channel.id, messageId: '900000000000000001' }
@@ -134,15 +134,16 @@ describe('RolePanelService.publishPanel', () => {
 		const existing = { id: '800000000000000001', edit: vi.fn().mockResolvedValue(undefined), reactions: { cache: new Map() } };
 		channel.messages.fetch.mockResolvedValue(existing);
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel({ channelId: channel.id, messageId: existing.id }));
-		const result = await new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', undefined, { refresh: true });
+		const result = await makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', undefined, { refresh: true });
 		expect(existing.edit).toHaveBeenCalledOnce();
+		expect(existing.edit).toHaveBeenCalledWith({ view: true });
 		expect(channel.send).not.toHaveBeenCalled();
 		expect(result).toEqual({ messageId: existing.id, channelId: channel.id });
 	});
 
 	it('refresh할 게시물이 없으면 null을 돌려준다', async () => {
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel());
-		expect(await new RolePanelService().publishPanel(makeGuild([]), 'panel-1', undefined, { refresh: true })).toBeNull();
+		expect(await makeService().publishPanel(makeGuild([]), 'panel-1', undefined, { refresh: true })).toBeNull();
 	});
 });
 
@@ -177,14 +178,14 @@ describe('RolePanelService.publishPanel — 반응 모드', () => {
 				{ id: 'b2', roleId: '2', emoji: '🎵' }
 			])
 		);
-		await new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id);
+		await makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id);
 		expect(message.react.mock.calls.map((call) => call[0])).toEqual(['🎮', '🎵']);
 	});
 
 	it('이모지가 없는 버튼이 있으면 보내기 전에 거부한다', async () => {
 		const channel = channelWith({ id: '900000000000000001' });
 		mocks.db.rolePanel.findFirst.mockResolvedValue(reactionPanel([{ id: 'b1', roleId: '1', emoji: null }]));
-		await expect(new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id)).rejects.toBeInstanceOf(
+		await expect(makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id)).rejects.toBeInstanceOf(
 			PanelPostError
 		);
 		expect(channel.send).not.toHaveBeenCalled();
@@ -199,7 +200,7 @@ describe('RolePanelService.publishPanel — 반응 모드', () => {
 		};
 		const channel = channelWith(message);
 		mocks.db.rolePanel.findFirst.mockResolvedValue(reactionPanel([{ id: 'b1', roleId: '1', emoji: '🎮' }]));
-		await expect(new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id)).rejects.toBeInstanceOf(
+		await expect(makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', channel.id)).rejects.toBeInstanceOf(
 			PanelPostError
 		);
 		expect(message.delete).toHaveBeenCalledOnce();
@@ -231,7 +232,7 @@ describe('RolePanelService.publishPanel — 반응 모드', () => {
 				{ channelId: channel.id, messageId: existing.id }
 			)
 		);
-		await new RolePanelService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', undefined, { refresh: true });
+		await makeService().publishPanel(makeGuild([], { [channel.id]: channel }), 'panel-1', undefined, { refresh: true });
 		expect(stale.remove).toHaveBeenCalledOnce();
 		expect(keep.remove).not.toHaveBeenCalled();
 		expect(existing.react.mock.calls.map((call) => call[0])).toEqual(['🎵']);
@@ -247,7 +248,7 @@ describe('RolePanelService.applyRole', () => {
 	const guild = () => makeGuild([role('1', { position: 2 }), role('9', { permissions: PermissionFlagsBits.Administrator })]);
 
 	it('grant: 없으면 부여, 이미 있으면 아무것도 하지 않는다', async () => {
-		const service = new RolePanelService();
+		const service = makeService();
 		const without = member(false);
 		expect(await service.applyRole(guild(), without as never, 'p', '1', 'grant')).toEqual({ ok: true, added: true, changed: true });
 		expect(without.roles.add).toHaveBeenCalledWith('1');
@@ -258,13 +259,13 @@ describe('RolePanelService.applyRole', () => {
 
 	it('grant: 위험 권한 역할은 거부하고 부여하지 않는다', async () => {
 		const target = member(false);
-		const result = await new RolePanelService().applyRole(guild(), target as never, 'p', '9', 'grant');
+		const result = await makeService().applyRole(guild(), target as never, 'p', '9', 'grant');
 		expect(result.ok).toBe(false);
 		expect(target.roles.add).not.toHaveBeenCalled();
 	});
 
 	it('revoke: 보유 중일 때만 제거한다 (위험 권한 역할도 해제는 가능)', async () => {
-		const service = new RolePanelService();
+		const service = makeService();
 		const holder = member(true);
 		expect(await service.applyRole(guild(), holder as never, 'p', '9', 'revoke')).toEqual({ ok: true, added: false, changed: true });
 		expect(holder.roles.remove).toHaveBeenCalledWith('9');
@@ -279,7 +280,7 @@ describe('RolePanelService.findReactionPanel', () => {
 
 	it('같은 메시지는 캐시해서 DB를 한 번만 조회하고, 다른 길드 요청에는 내주지 않는다', async () => {
 		mocks.db.rolePanel.findFirst.mockResolvedValue({ id: 'p', guildId: GUILD_ID, buttons: [] });
-		const service = new RolePanelService();
+		const service = makeService();
 		expect(await service.findReactionPanel(GUILD_ID, 'm1')).not.toBeNull();
 		expect(await service.findReactionPanel(GUILD_ID, 'm1')).not.toBeNull();
 		expect(await service.findReactionPanel('200000000000000002', 'm1')).toBeNull();

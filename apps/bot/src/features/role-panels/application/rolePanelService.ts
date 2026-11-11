@@ -1,9 +1,18 @@
-import { container } from '@sapphire/framework';
-import { ChannelType, PermissionFlagsBits, type Guild, type GuildMember, type Message, type Role, type TextChannel } from 'discord.js';
+import {
+	ChannelType,
+	PermissionFlagsBits,
+	type Guild,
+	type GuildMember,
+	type Message,
+	type MessageCreateOptions,
+	type MessageEditOptions,
+	type Role,
+	type TextChannel
+} from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { rolePanelEmojiKey, validateReactionButtons } from '@sirubot/utils/rolePanel';
-import type { RolePanel } from '@sirubot/prisma';
-import { rolePanelView } from '../discord/views/rolePanel.ts';
+import type { PrismaClient, RolePanel, RolePanelButton } from '@sirubot/prisma';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 
 /** 사용자에게 그대로 보여줄 수 있는 한국어 사유가 담긴 게시 실패 — 그 외 예외는 일반 문구로 가려요. */
 export class PanelPostError extends Error {}
@@ -55,11 +64,24 @@ const REACTION_PANEL_CACHE_MAX = 5000;
 
 type PanelWithButtons = NonNullable<Awaited<ReturnType<RolePanelService['getPanel']>>>;
 
+/** 패널 메시지(게시·제자리 갱신 공용) 렌더링 포트 — 실제 구현은 features/role-panels/discord/rolePanelMessages.ts예요. */
+export interface RolePanelMessagePort {
+	panel(panel: RolePanel, buttons: RolePanelButton[]): MessageCreateOptions & MessageEditOptions;
+}
+
+export interface RolePanelServiceDeps {
+	db: PrismaClient;
+	logger: AppLogger;
+	messages: RolePanelMessagePort;
+}
+
 export class RolePanelService {
 	private readonly reactionPanelCache = new Map<string, { expiresAt: number; panel: PanelWithButtons | null }>();
 
+	public constructor(private readonly deps: RolePanelServiceDeps) {}
+
 	private get db() {
-		return container.db;
+		return this.deps.db;
 	}
 
 	/** 이 메시지가 반응 모드 역할 패널이면 패널(버튼 포함)을, 아니면 null. 부정 결과도 잠깐 캐시해요. */
@@ -129,7 +151,7 @@ export class RolePanelService {
 			if (!posted || !panel.messageId) return null;
 			const existing: Message | null = await posted.messages.fetch(panel.messageId).catch(() => null);
 			if (!existing) return null;
-			await existing.edit(rolePanelView(panel, panel.buttons));
+			await existing.edit(this.deps.messages.panel(panel, panel.buttons));
 			// 반응 모드는 달아 둔 반응을 버튼 목록과 맞추고, 버튼 모드로 바뀌었다면 반응을 모두 치워요.
 			await this.syncReactions(existing, panel.mode === 'reaction' ? panel.buttons : []);
 			this.invalidateReactionPanel(existing.id);
@@ -148,7 +170,7 @@ export class RolePanelService {
 			throw new PanelPostError(`${emoji('error')} 게시할 텍스트 채널을 찾을 수 없어요. 채널을 선택해 주세요.`);
 		}
 
-		const message = await channel.send(rolePanelView(panel, panel.buttons));
+		const message = await channel.send(this.deps.messages.panel(panel, panel.buttons));
 		if (panel.mode === 'reaction') {
 			try {
 				await this.syncReactions(message, panel.buttons);
@@ -292,7 +314,7 @@ export class RolePanelService {
 				await member.roles.remove(roleId);
 			}
 		} catch (error) {
-			container.logger.error(
+			this.deps.logger.error(
 				`[rolePanel] ${action} role failed (guild ${guild.id}, role ${roleId}): ${error instanceof Error ? error.message : String(error)}`
 			);
 			return { ok: false, reason: `${emoji('error')} 역할을 변경하지 못했어요. 봇 권한을 확인해 주세요.` };
@@ -302,7 +324,7 @@ export class RolePanelService {
 		await this.db.rolePanel
 			.update({ where: { id: panelId }, data: { clickCount: { increment: 1 } } })
 			.catch((error) =>
-				container.logger.warn(
+				this.deps.logger.warn(
 					`[rolePanel] clickCount increment failed (panel ${panelId}): ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
@@ -319,6 +341,10 @@ export class RolePanelService {
 	): Promise<{ ok: true; added: boolean } | { ok: false; reason: string }> {
 		return this.applyRole(guild, member, panelId, roleId, 'toggle');
 	}
+}
+
+export function createRolePanelService(deps: RolePanelServiceDeps): RolePanelService {
+	return new RolePanelService(deps);
 }
 
 export type { RolePanel };

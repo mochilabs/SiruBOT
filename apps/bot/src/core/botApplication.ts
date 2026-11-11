@@ -29,7 +29,7 @@ import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
 import { uploadObject } from '../services/dataApiClient.ts';
-import { RolePanelService, createRoleValidationResponder } from '../features/role-panels/index.ts';
+import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
 import { createJtcSetupResponder } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
@@ -152,7 +152,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.playbackReporter = new PlaybackReporter();
 		container.stoppables.push(container.playbackReporter);
 		container.ticketService = createTicketService({ db: container.db, logger: appLogger, messages: ticketMessages, uploadObject });
-		container.rolePanelService = new RolePanelService();
+		container.rolePanelService = createRolePanelService({ db: container.db, logger: appLogger, messages: rolePanelMessages });
 		container.stoppables.push(container.ticketService);
 
 		// 서비스 간 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (data-api와 공유). 없으면 서명 없는 구버전 모드.
