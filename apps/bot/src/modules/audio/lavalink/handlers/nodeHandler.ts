@@ -1,7 +1,6 @@
 import { LavalinkNode, NodeManager } from 'lavalink-client';
 import { BaseLavalinkHandler } from './base.ts';
 import { RESUME_TIMEOUT_SECONDS, SessionRestoreEngine } from './sessionRestore.ts';
-import { reportNodeEvent } from '../../../../services/playbackReporter.ts';
 import * as Sentry from '@sentry/node';
 import type { CustomPlayer } from '../player/customPlayer.ts';
 import {
@@ -114,7 +113,11 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeDisconnect(node: LavalinkNode, reason: { code?: number | undefined; reason?: string | undefined }) {
 		this.logger.info(`Node disconnected: ${node.options.id} | ${reason.reason}`);
-		reportNodeEvent(node.id, 'node_disconnect', reason.reason ?? (reason.code != null ? `code ${reason.code}` : null));
+		this.container.playbackReporter.reportNodeEvent(
+			node.id,
+			'node_disconnect',
+			reason.reason ?? (reason.code != null ? `code ${reason.code}` : null)
+		);
 		const orphanPlayers = this.container.audio.players
 			.filter((player) => player.node.id === node.options.id)
 			.values()
@@ -166,7 +169,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return;
 		}
 		this.logger.error(`Node error: ${node.options.id}`, error, payload);
-		reportNodeEvent(node.id, 'node_error', error.message);
+		this.container.playbackReporter.reportNodeEvent(node.id, 'node_error', error.message);
 
 		// 재생 상태 페이지(reportNodeEvent)는 요약만 남겨요 — 원인 추적용 스택은 Sentry로 보내요
 		Sentry.withScope((scope) => {

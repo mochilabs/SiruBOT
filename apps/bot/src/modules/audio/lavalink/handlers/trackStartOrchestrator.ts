@@ -6,7 +6,6 @@ import { queueRelatedUpfront } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
 import { sponsorBlockService } from '../../../../services/sponsorBlockService.ts';
-import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { formatRecordError } from '../../../../services/trackService.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
@@ -42,7 +41,7 @@ export class TrackStartOrchestrator {
 			player.mixerRuntime.transitionSeq++;
 		}
 		player.consecutiveErrors = 0;
-		reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
+		container.playbackReporter.reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
 		publishPlayerState(player);
 		player.transitionState.stopByCommand = false;

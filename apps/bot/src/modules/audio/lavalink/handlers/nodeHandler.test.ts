@@ -7,8 +7,7 @@ import type { Track } from 'lavalink-client';
 const { getSubLogger, reportNodeEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportNodeEvent: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger } } }));
-vi.mock('../../../../services/playbackReporter.ts', () => ({ reportNodeEvent }));
+vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger }, playbackReporter: { reportNodeEvent } } }));
 
 function makeHandler() {
 	const nodeManager = { on: vi.fn() };

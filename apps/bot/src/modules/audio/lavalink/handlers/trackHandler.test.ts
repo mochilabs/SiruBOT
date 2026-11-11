@@ -39,9 +39,13 @@ const {
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 vi.mock('@sapphire/framework', () => ({
-	container: { logger: { getSubLogger }, playerNotifier: { updateController: playerNotifierUpdate }, mixerService }
+	container: {
+		logger: { getSubLogger },
+		playerNotifier: { updateController: playerNotifierUpdate },
+		mixerService,
+		playbackReporter: { reportPlaybackEvent }
+	}
 }));
-vi.mock('../../../../services/playbackReporter.ts', () => ({ reportPlaybackEvent }));
 vi.mock('../playerStatePublisher.ts', () => ({ publishPlayerState, publishPlayerEnded, clearPlayerStateTracker }));
 vi.mock('../autoPlayRelated.ts', () => ({ getInFlightRelatedFetch, queueRelatedUpfront }));
 vi.mock('../../../../services/dataApiClient.ts', () => ({ fetchYouTubeChapters }));

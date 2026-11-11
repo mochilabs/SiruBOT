@@ -6,7 +6,6 @@ import { ILogObj, Logger } from 'tslog';
 import { emoji } from '@sirubot/utils';
 import { getInFlightRelatedFetch } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
-import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncPlayingFlagFromProbe, syncQueueToNowPlaying } from './playbackWatchdog.ts';
@@ -58,7 +57,7 @@ export class QueueAdvancer {
 		this.logger.info(
 			`Track ended: ${ended?.info?.title ?? track?.info.title} by ${ended?.info?.author ?? track?.info.author} (reason: ${payload.reason})`
 		);
-		reportPlaybackEvent(player.guildId, 'track_end', ended, { reason: payload.reason });
+		container.playbackReporter.reportPlaybackEvent(player.guildId, 'track_end', ended, { reason: payload.reason });
 
 		// 채팅 TTS 클립 전용 진행 — 명세 4.2 (다른 경로와 섞지 않는다).
 		if (this.container.chatTtsService.isTtsEnded(player, ended)) {
@@ -116,14 +115,14 @@ export class QueueAdvancer {
 		this.logger.warn(
 			`Track ${kind} (${player.consecutiveErrors}/${maxConsecutiveErrors()}): ${track?.info.title} by ${track?.info.author}${reason ? ` (${reason})` : ''}`
 		);
-		reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, {
+		container.playbackReporter.reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, {
 			...(reason ? { reason } : {}),
 			consecutiveErrors: player.consecutiveErrors
 		});
 
 		if (player.consecutiveErrors >= maxConsecutiveErrors()) {
 			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
-			reportPlaybackEvent(player.guildId, 'playback_abort', track, {
+			container.playbackReporter.reportPlaybackEvent(player.guildId, 'playback_abort', track, {
 				reason: 'max_consecutive_errors',
 				consecutiveErrors: player.consecutiveErrors
 			});
@@ -180,7 +179,7 @@ export class QueueAdvancer {
 		_payload: TrackEndEvent | TrackStuckEvent | TrackExceptionEvent
 	) {
 		this.logger.info(`Queue ended for guild: ${player.guildId}`);
-		reportPlaybackEvent(player.guildId, 'queue_end', track);
+		container.playbackReporter.reportPlaybackEvent(player.guildId, 'queue_end', track);
 		// 대시보드 라이브 뷰 — 큐 종료 상태를 즉시 반영 (fire-and-forget)
 		publishPlayerState(player);
 

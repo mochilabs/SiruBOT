@@ -217,7 +217,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 		container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 		container.stoppables.push(container.countingState);
-		container.playbackReporter = new PlaybackReporter();
+		container.playbackReporter = new PlaybackReporter({ logger: appLogger, getClient: () => container.client });
 		container.stoppables.push(container.playbackReporter);
 		container.customCommandStore = createCustomCommandStore({ db: container.db, logger: appLogger });
 		container.customSlashRegistry = createSlashRegistry({
