@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@sapphire/framework', () => ({ container: { db: mocks.db, logger: mocks.logger } }));
 vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => `:${name}:` }));
-vi.mock('../modules/general/view/rolePanel.ts', () => ({ rolePanelView: vi.fn(() => ({ view: true })) }));
+vi.mock('../discord/views/rolePanel.ts', () => ({ rolePanelView: vi.fn(() => ({ view: true })) }));
 
 import { PanelPostError, RolePanelService } from './rolePanelService.ts';
 

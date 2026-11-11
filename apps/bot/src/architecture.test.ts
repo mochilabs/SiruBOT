@@ -57,7 +57,6 @@ const ALLOWED_SERVICES_TO_MODULES: string[] = [
 	'services/mixerService.ts -> modules/audio/lavalink/queue/queueWrapper.ts',
 	'services/playerWebResponder.ts -> modules/audio/view/play.ts',
 	'services/playlistPlayback.ts -> modules/audio/utils/source.ts',
-	'services/rolePanelService.ts -> modules/general/view/rolePanel.ts',
 	'services/skipPolicy.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/skipPolicy.ts -> modules/audio/lavalink/requester.ts',
 	'services/skipPolicy.ts -> modules/audio/managers/voteSkip.ts',
@@ -97,6 +96,10 @@ const APPLICATION_LAYER_DEBT: Record<string, string> = {
 		'builds user-facing notice messages itself. Remove by returning result/error codes and letting features/tickets/discord render them.',
 	'features/tickets/application/ticketService.ts -> ../discord/views/ticket.ts':
 		'posts the welcome message with ticketWelcomeView. Remove by injecting a "send welcome message" port implemented in features/tickets/discord.',
+	'features/role-panels/application/rolePanelService.ts -> @sapphire/framework':
+		'uses the `container` service locator (db, logger). Remove by passing db/logger in through a deps object, as features/music/application does.',
+	'features/role-panels/application/rolePanelService.ts -> ../discord/views/rolePanel.ts':
+		'renders the panel message with rolePanelView when posting/refreshing. Remove by injecting a "render panel message" port implemented in features/role-panels/discord.',
 	'features/tickets/application/ticketTranscript.ts -> @sapphire/framework':
 		'uses `container` for the logger and Discord client. Remove by passing them in through deps.'
 };

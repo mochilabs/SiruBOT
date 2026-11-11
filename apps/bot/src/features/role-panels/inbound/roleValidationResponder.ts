@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { ManagedRedisSubscriber, ROLE_VALIDATION_REQUEST_CHANNEL, roleValidationRequestSchema, type RoleValidationResponse } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import type { ServiceLogger } from './types.ts';
+import type { ServiceLogger } from '../../../services/types.ts';
 
 /**
  * 역할 부여 가능 여부 검증 응답자 — 대시보드가 패널 저장 전에 roleIds를 보내 부여 가능한 역할인지 확인해요.

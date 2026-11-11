@@ -3,7 +3,7 @@ import { ChannelType, PermissionFlagsBits, type Guild, type GuildMember, type Me
 import { emoji } from '@sirubot/utils';
 import { rolePanelEmojiKey, validateReactionButtons } from '@sirubot/utils/rolePanel';
 import type { RolePanel } from '@sirubot/prisma';
-import { rolePanelView } from '../modules/general/view/rolePanel.ts';
+import { rolePanelView } from '../discord/views/rolePanel.ts';
 
 /** 사용자에게 그대로 보여줄 수 있는 한국어 사유가 담긴 게시 실패 — 그 외 예외는 일반 문구로 가려요. */
 export class PanelPostError extends Error {}

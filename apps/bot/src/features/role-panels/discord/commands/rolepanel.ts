@@ -3,9 +3,9 @@ import { UserError } from '@sapphire/framework';
 import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { PanelPostError } from '../../../services/rolePanelService.ts';
-import { ticketMessageView } from '../../../features/tickets/index.ts';
-import { respondRolePanelNames } from '../../../lib/autocomplete.ts';
+import { PanelPostError } from '../../application/rolePanelService.ts';
+import { ticketMessageView } from '../../../tickets/index.ts';
+import { respondRolePanelNames } from '../../../../lib/autocomplete.ts';
 
 /**
  * /rolepanel — 역할 패널 게시·목록·삭제 (관리자 전용).

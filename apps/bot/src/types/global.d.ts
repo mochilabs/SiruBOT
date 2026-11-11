@@ -34,7 +34,7 @@ declare module '@sapphire/pieces' {
 		tempVoiceService: import('../services/tempVoiceService.ts').TempVoiceService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		ticketService: import('../features/tickets/index.ts').TicketService;
-		rolePanelService: import('../services/rolePanelService.ts').RolePanelService;
+		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
 		playerWebResponder?: import('../services/playerWebResponder.ts').PlayerWebResponder;
 		jtcSetupResponder?: import('../services/jtcSetupResponder.ts').JtcSetupResponder;
@@ -45,7 +45,7 @@ declare module '@sapphire/pieces' {
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
 		botAdminResponder?: BotAdminResponder;
 		panelPostResponder?: import('../services/panelPostResponder.ts').PanelPostResponder;
-		roleValidationResponder?: import('../services/roleValidationResponder.ts').RoleValidationResponder;
+		roleValidationResponder?: import('../features/role-panels/index.ts').RoleValidationResponder;
 		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };

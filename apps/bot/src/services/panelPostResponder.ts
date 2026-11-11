@@ -4,7 +4,7 @@ import { PANEL_POST_REQUEST_CHANNEL, ManagedRedisSubscriber, panelPostRequestSch
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { ticketPanelView } from '../features/tickets/index.ts';
 import { discordApiErrorText } from '../lib/discordErrorText.ts';
-import { deletePostedMessage, PanelPostError, resolvePanelChannel } from './rolePanelService.ts';
+import { deletePostedMessage, PanelPostError, resolvePanelChannel } from '../features/role-panels/index.ts';
 import type { ServiceLogger } from './types.ts';
 
 /**
