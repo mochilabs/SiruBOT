@@ -1,11 +1,12 @@
 import type { Server } from 'node:http';
 import { Events } from 'discord.js';
 import type { Client } from 'discord.js';
+import { getConfig } from './config.ts';
 
 /** Docker 헬스체크용 HTTP 서버를 만들고 listen해요. */
 export const startHealthServer = async (client: Client): Promise<Server> => {
 	const { createServer } = await import('node:http');
-	const healthPort = parseInt(process.env.HEALTH_PORT ?? '8080', 10);
+	const healthPort = getConfig().health.port;
 	let everReady = false;
 	let unreadySince: number | null = null;
 	client.once(Events.ClientReady, () => {

@@ -4,7 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 import { SapphireClient } from '@sapphire/framework';
 import { RootData, container, getRootData } from '@sapphire/pieces';
-import { resolveRedisSigningKey } from '@sirubot/utils/redisEnvelope';
+import { getConfig } from './config.ts';
 
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
@@ -79,7 +79,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	public async setupDatabase(): Promise<PrismaClient> {
 		// 쿼리 이벤트는 쿼리마다 파라미터까지 구성된다 — LOGLEVEL 4(디버그) 이상에서만 붙인다.
 		// (data-api 쪽 클라이언트도 쿼리 로깅을 안 쓴다: apps/data-api/src/services/db.ts)
-		const logLevel = parseInt(process.env.LOGLEVEL ?? '3', 10);
+		const config = getConfig();
+		const logLevel = config.logLevel;
 		const prismaEventLog: Array<{ level: 'error' | 'warn' | 'info' | 'query'; emit: 'event' }> = [
 			{ level: 'error', emit: 'event' },
 			{ level: 'warn', emit: 'event' },
@@ -89,7 +90,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 
 		const db = new PrismaClient({
 			adapter: new PrismaPg({
-				connectionString: process.env.DATABASE_URL
+				connectionString: config.database.url
 			}),
 			log: prismaEventLog
 		});
@@ -130,7 +131,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		};
 		// 서비스 간 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (data-api와 공유). 없으면 서명 없는 구버전 모드.
 		// (guildSettingsInvalidator는 대시보드가 직접 퍼블리시하는 채널이라 서명 대상이 아니에요)
-		const redisSigningKey = resolveRedisSigningKey(process.env);
+		const redisSigningKey = getConfig().redis.signingKey;
 		const guildSettingsInvalidator = (container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger));
 		const playerWebResponder = (container.playerWebResponder = new PlayerWebResponder(subscriberLogger, redisSigningKey));
 		const jtcSetupResponder = (container.jtcSetupResponder = new JtcSetupResponder(subscriberLogger, redisSigningKey));

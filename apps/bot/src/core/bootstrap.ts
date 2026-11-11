@@ -1,6 +1,6 @@
-import { envParseString } from '@skyra/env-utilities';
 import { container } from '@sapphire/framework';
 import type { Server } from 'node:http';
+import { getConfig } from './config.ts';
 import { createBotClient } from './botClient.ts';
 import { startHealthServer } from './healthServer.ts';
 import { setupLavalink } from './lavalinkSetup.ts';
@@ -11,9 +11,10 @@ import { setSentryShardTags } from './sentry.ts';
 import * as Sentry from '@sentry/node';
 
 export const main = async () => {
-	const isDevMode = process.env.NODE_ENV !== 'production';
+	const config = getConfig();
+	const isDevMode = !config.isProduction;
 
-	const { shardIds, shardCount } = await resolveShardIdentity(isDevMode);
+	const { shardIds, shardCount } = await resolveShardIdentity(isDevMode, config.shard);
 
 	setSentryShardTags(shardIds);
 
@@ -57,13 +58,13 @@ export const main = async () => {
 		client.setupServices();
 
 		client.logger.debug('Setting up redis store manager... (optional)');
-		await client.setupRedis(envParseString('REDIS_URL'));
+		await client.setupRedis(config.redis.url);
 
 		// Redis 구독 서비스군 start — 등록 순서와 서비스별 설명은 BotApplication.setupServices의 레지스트리에 있어요.
-		await startRedisSubscribers(container.redisSubscribers, envParseString('REDIS_URL'));
+		await startRedisSubscribers(container.redisSubscribers, config.redis.url);
 
 		client.logger.info('Logging into discord...');
-		await client.login(envParseString('DISCORD_TOKEN'));
+		await client.login(config.discord.token);
 
 		await setupLavalink(client, shardIds, shardCount);
 

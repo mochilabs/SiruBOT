@@ -1,15 +1,17 @@
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplication } from './botApplication.ts';
+import { getConfig } from './config.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 
-export const createBotClient = (shardIds: number[] | 'auto', shardCount: number) =>
-	new BotApplication({
+export const createBotClient = (shardIds: number[] | 'auto', shardCount: number) => {
+	const config = getConfig();
+	return new BotApplication({
 		logger: {
 			instance: new SapphireInterfaceLogger({
 				name: 'SiruBOT',
-				minLevel: parseInt(process.env.LOGLEVEL ?? '3', 10),
+				minLevel: config.logLevel,
 				type: 'pretty',
-				hideLogPositionForProduction: process.env.NODE_ENV === 'production'
+				hideLogPositionForProduction: config.isProduction
 			})
 		},
 		shards: shardIds,
@@ -27,3 +29,4 @@ export const createBotClient = (shardIds: number[] | 'auto', shardCount: number)
 		// Reaction·User: 재시작 전에 게시한 역할 패널 메시지의 반응 이벤트도 받으려면 partial이 필요해요
 		partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User]
 	});
+};
