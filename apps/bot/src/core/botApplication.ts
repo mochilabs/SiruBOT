@@ -20,7 +20,6 @@ import { TtsService } from '../services/ttsService.ts';
 import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
-import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
 import { CountingStateStore } from '../services/countingState.ts';
 import { PlaybackReporter } from '../services/playbackReporter.ts';
@@ -31,7 +30,7 @@ import { createTicketService, ticketMessages } from '../features/tickets/index.t
 import { uploadObject } from '../services/dataApiClient.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
-import { createJtcSetupResponder } from '../features/temp-voice/index.ts';
+import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService, createMemberGreetingSendListener } from '../features/greeting/index.ts';
 import {
@@ -51,6 +50,7 @@ import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisS
 import { createMusicAccess } from '../features/music/application/access.ts';
 import { createMusicControl } from '../features/music/application/control.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
+import * as guildJtc from '../services/guildSettings/jtc.ts';
 import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
@@ -139,7 +139,27 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.ttsUserSettings = new TtsUserSettingsService();
 		container.ttsPronunciation = new TtsPronunciationService();
 		container.chatTtsService = new ChatTtsService();
-		container.tempVoiceService = new TempVoiceService();
+		container.tempVoiceService = createTempVoiceService({
+			logger: appLogger,
+			settings: {
+				getJtcSettings: (guildId) => guildJtc.getJtcSettings(container.guildService, guildId),
+				setJtcCategory: (guildId, categoryId, markerChannelId) =>
+					guildJtc.setJtcCategory(container.guildService, guildId, categoryId, markerChannelId)
+			},
+			// redisStore는 setupServices 뒤(setupRedis)에 만들어지므로 호출 시점에 읽어요
+			roomStore: {
+				getFields: (key) => container.redisStore.getCacheHashFields(key),
+				setFields: (key, fields) => container.redisStore.setCacheHashFields(key, fields),
+				deleteField: (key, field) => container.redisStore.deleteCacheHashField(key, field)
+			},
+			discord: {
+				guildIds: () => [...container.client.guilds.cache.keys()],
+				fetchGuild: (guildId) => container.client.guilds.fetch(guildId),
+				fetchChannel: (channelId) => container.client.channels.fetch(channelId)
+			},
+			messages: tempVoiceMessages,
+			emptyGraceMs: getConfig().tempVoice.emptyGraceMs
+		});
 		container.stoppables.push(container.chatTtsService, container.tempVoiceService);
 		container.voiceLeaveTimers = new KeyedTimers('빈 음성 채널 퇴장 타이머');
 		container.botActivity = new BotActivityService();

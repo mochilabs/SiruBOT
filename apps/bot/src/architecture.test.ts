@@ -61,7 +61,6 @@ const ALLOWED_SERVICES_TO_MODULES: string[] = [
 	'services/skipPolicy.ts -> modules/audio/view/skip.ts',
 	'services/sponsorBlockService.ts -> modules/audio/lavalink/queue/queueWrapper.ts',
 	'services/sponsorBlockService.ts -> modules/general/view/notice.ts',
-	'services/tempVoiceService.ts -> modules/general/view/notice.ts',
 	'services/trackService.ts -> modules/audio/lavalink/requester.ts'
 ];
 
