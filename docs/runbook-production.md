@@ -25,7 +25,7 @@
 
 ## 종료 순서
 
-- 봇 (`apps/bot/src/core/shutdown.ts`): 헬스 서버 close → Lavalink 세션 저장 → 오디오 리스너·Redis 구독 서비스 10개(`container.redisSubscribers`) 정지 → pending 저널 flush → Redis 해제 → DB 해제 → 게이트웨이 destroy → shardClient destroy.
+- 봇 (`apps/bot/src/core/shutdown.ts`): 헬스 서버 close → Lavalink 세션 저장 → 오디오 리스너·공유 Redis 구독 1개(`container.redisSubscribers`) 정지 → pending 저널 flush → Redis 해제 → DB 해제 → 게이트웨이 destroy → shardClient destroy.
 - data-api (`apps/data-api/src/server.ts`): 스케줄러 2종 정지 → player/bot-profile/greeting/guild-data/player-web/jtc/bot-admin/panel 8개 허브 정지 → Redis 해제 → DB 해제 → Fastify close.
 - shardmanager (`apps/shardmanager/src/server.ts:69-77`): registry destroy → Fastify close.
 - storage (`apps/storage/src/index.ts:16-20`): Fastify close만 — 로컬 볼륨(무DB)·외부 연결 없음.
@@ -34,7 +34,7 @@
 ## Redis 미연결 시 메모리 폴백의 의미
 
 - data-api `sharedCache`는 Redis 없으면 프로세스 내 `Map` 폴백 (`apps/data-api/src/utils/cache.ts:11,25`) — **큐·세션·캐시가 휘발**된다. 다중 레플리카면 인스턴스마다 따로 논다.
-- 봇 Redis 구독 서비스는 실패해도 부팅 계속 — 해당 대시보드 연동만 타임아웃 폴백 (`apps/bot/src/core/redisSubscribers.ts`). 장애 대응 시 "봇은 살아 있으나 연동이 끊긴 상태"임을 인지할 것.
+- 봇 Redis 공유 구독(모든 응답자·이벤트 리스너가 연결 하나를 공유)은 실패해도 부팅 계속 — 해당 대시보드 연동만 타임아웃 폴백 (`apps/bot/src/core/redisSubscribers.ts`). 장애 대응 시 "봇은 살아 있으나 연동이 끊긴 상태"임을 인지할 것.
 
 ## 헬스체크
 

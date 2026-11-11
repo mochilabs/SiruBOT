@@ -163,9 +163,9 @@ Source: `@sirubot/*` dependencies in each app's `package.json`. shardmanager dep
 | Dev (`NODE_ENV != production`) | Standalone, `shards: [0]` |
 | Production | Exits immediately without `SHARD_MANAGER_URL` or `AUTH_KEY`. Gets shards from `ShardClient.identify()`; on `NoShardsAvailableError` retries forever at the retry interval (rolling updates) |
 
-**Assembly order** (`core/bootstrap.ts`): `setupStore()` for each root in `PIECE_ROOTS` (`core/pieceRoots.ts`: `modules/audio`, `modules/general`, then the `features/*/discord` roots) → `setupDatabase()` (PrismaPg) → `setupServices()` → `setupRedis()` (on failure **keeps booting memory-only**; queue and sessions become volatile) → `startRedisSubscribers()` over `container.redisSubscribers`, the 10 Redis subscriber services (each may fail without stopping boot) → Discord login → `setupLavalink()` (`parseLavalinkHosts` → `setupAudio()` → register `LavalinkHandler` + connect nodes) → health server.
+**Assembly order** (`core/bootstrap.ts`): `setupStore()` for each root in `PIECE_ROOTS` (`core/pieceRoots.ts`: `modules/audio`, `modules/general`, then the `features/*/discord` roots) → `setupDatabase()` (PrismaPg) → `setupServices()` → `setupRedis()` (on failure **keeps booting memory-only**; queue and sessions become volatile) → `startRedisSubscribers()` over `container.redisSubscribers`, which holds one shared Redis subscription for all responders and event listeners (start never throws; it reconnects with backoff) → Discord login → `setupLavalink()` (`parseLavalinkHosts` → `setupAudio()` → register `LavalinkHandler` + connect nodes) → health server.
 
-**Code layout**: `modules/{audio,general}` hold Sapphire pieces. Feature folders `features/<name>/` (`tickets`, `role-panels`, `temp-voice`, `games`, `custom-commands`, `greeting`, plus `music` with the application layer only) each have `index.ts` (public surface), `application/` (use cases, no Sapphire/views/config), `discord/{commands,listeners,interaction-handlers,views}` and, where needed, `inbound/` (Redis responders). Other code imports a feature only through its `index.ts`. Import rules and the Sapphire piece inventory are guarded by `src/architecture.test.ts` and `core/pieceInventory.test.ts` (allowlists may only shrink).
+**Code layout**: `modules/{audio,general}` hold Sapphire pieces. Feature folders `features/<name>/` (`tickets`, `role-panels`, `temp-voice`, `games`, `custom-commands`, `greeting`, `dashboard-bridge`, plus `music` with the application layer and the web player responder) each have `index.ts` (public surface), `application/` (use cases, no Sapphire/views/config), `discord/{commands,listeners,interaction-handlers,views}` and, where needed, `inbound/` (Redis responders and event listeners). Other code imports a feature only through its `index.ts`. Import rules and the Sapphire piece inventory are guarded by `src/architecture.test.ts` and `core/pieceInventory.test.ts` (allowlists may only shrink).
 
 **Music application layer** (`features/music/application/{actor,access,control}.ts`, exposed as `container.music`): `setVolume`, `pause`, `resume`, `setRepeat`, `seek`, `stop`, `skipNow`, `previous`. Slash subcommands, controller buttons, the dashboard web player responder and AI tools are adapters over it, under one policy in `access.ts`: same voice channel as the bot plus "DJ role or alone"; Administrator, ManageGuild and DJ-role holders (`hasRemoteControl`) are exempt from both and may control from outside voice. Adding tracks follows `canAddTracks` (same voice channel for anyone; remote controllers from anywhere while the bot is in a channel), and the dashboard's `canPlay`/`canControl` flags are computed with the same functions. Slash vote-skip (`services/skipPolicy.ts`) and play/search are not part of it yet. Use cases throw `AppError` (`lib/appError.ts`); `lib/errorPresenter.ts` renders it in both central error listeners. The music volume limit is shared with the dashboard via `@sirubot/utils/playerLimits`.
 
@@ -177,7 +177,7 @@ Source: `@sirubot/*` dependencies in each app's `package.json`. shardmanager dep
 | AI | `aiChatService` + `aiChat/` (agent loop, summarizer, token budget, memory promotion) `aiTools/` `aiMemoryService` | Mention-triggered AI chat (`general/listeners/message/mentionReply.ts`), tool calls, long-term memory |
 | Voice | `ttsService` `ttsUserSettings` `chatTts` | siru-tts synthesis, per-user voice settings, read-aloud of chat |
 | Playback helpers | `sponsorBlockService` `skipPolicy` `playlistPlayback` `trackData` | SponsorBlock segment skipping (via data-api), skip policy, playlist playback |
-| Redis responders (10, registered in `container.redisSubscribers`) | `guildSettingsInvalidator` `playerWebResponder` `botProfileService` `guildDataResponder` `socialWebhookResponder` `botAdminResponder` `panelPostResponder` in `services/`; `jtcSetupResponder` (`features/temp-voice/inbound/`), `roleValidationResponder` (`features/role-panels/inbound/`), `memberGreetingService` (`features/greeting/application/`) | Answer hub requests or consume broadcasts (§5.2) |
+| Redis responders and listeners (one shared subscription in `container.redisSubscribers`) | Built with `createRedisResponder` / `createGlobalRedisResponder` / `createRedisEventListener` (`lib/redisResponder.ts`) and published through `RedisPublisher` (`lib/redisPublisher.ts`). Handlers: `features/dashboard-bridge/inbound/{guildData,botAdmin,socialWebhook,panelPost,guildSettingsInvalidation,botProfile}.ts`, `features/music/inbound/playerWeb.ts`, `features/temp-voice/inbound/jtcSetup.ts`, `features/role-panels/inbound/{roleValidation,rolePanelPost}.ts`, `features/tickets/inbound/ticketPanelPost.ts`, `features/greeting/inbound/memberGreetingSend.ts`. State owners stay in `services/botProfileService.ts` and `features/greeting/application/memberGreetingService.ts` | Answer hub requests or consume broadcasts (§5.2) |
 | Integrations | `dataApiClient` `playbackReporter` `embedFixGateway` `webhookRelay` `appEmojiManager` `userDataService` `countingState` | data-api HTTP client (horoscope, storage upload), playback event reports, embed fixing, webhook relay, app emojis, user data deletion, counting game state |
 | Feature (not in container) | `features/custom-commands/application/{store,interpreter,slashRegistry}` + `features/custom-commands/discord/listeners/{customCommandPrefix,customCommandSlash}.ts` | Custom commands. Spec contract in `packages/utils/src/customCommand.ts`; spec is zod-revalidated before running. `prefix` method = "prefix+name" trigger (`!도움말` reserved); `slash` method = guild command, ID-based incremental sync |
 
@@ -287,7 +287,7 @@ graph LR
   - Twitch: `twitchScheduler` + EventSub callback `routes/eventsub.ts`. Enabled only with client ID/secret, EventSub secret, and public URL all set.
   - Chzzk: `chzzkPoller` (adaptive: 2 min live / 5 min offline). Off when `CHZZK_POLLING_ENABLED=false`.
   - Shared polling skeleton: `services/pollingLoop.ts` (5 consecutive failures → 30 min block).
-- Delivery: `services/dispatcher.ts` dedupes (`SocialEventLog`), marks a subscription `FAILED` after 5 consecutive delivery failures, and posts straight to the webhook. Creating the webhook in the target channel when a subscription is added needs the bot token, so it's requested through `services/webhookHub.ts` → Redis `sirubot:social:webhook-create:*` → bot `socialWebhookResponder` (§5.2).
+- Delivery: `services/dispatcher.ts` dedupes (`SocialEventLog`), marks a subscription `FAILED` after 5 consecutive delivery failures, and posts straight to the webhook. Creating the webhook in the target channel when a subscription is added needs the bot token, so it's requested through `services/webhookHub.ts` → Redis `sirubot:social:webhook-create:*` → bot `features/dashboard-bridge/inbound/socialWebhook.ts` (§5.2).
 - Stored secrets such as webhook tokens are encrypted by `services/secretStorage.ts` (`DATA_ENCRYPTION_KEY`, otherwise derived from `AUTH_KEY`).
 - Optional dependencies: without `DATABASE_URL` the social worker is disabled (`services/db.ts`); without Redis it falls back to process memory (single-replica assumption, `services/redis.ts`).
 
@@ -324,7 +324,7 @@ Source: `client.ts` (10 s ACK timeout, empty shardIds → `NoShardsAvailableErro
 
 ### 5.2 Redis pub/sub channel map
 
-Constants live in one place: `packages/utils/src/redisChannels.ts`. Every message is wrapped in a signed envelope (`redisEnvelope.ts`).
+Constants live in one place: `packages/utils/src/redisChannels.ts`; `packages/utils/src/redisContract.ts` bundles them with their schemas into RPC and event contracts that the bot responders and the data-api hubs both import. Every message is wrapped in a signed envelope (`redisEnvelope.ts`).
 
 | Channel | Publisher | Subscriber | Purpose · notes |
 |---|---|---|---|
@@ -387,7 +387,7 @@ Source: `redisChannels.ts`, `apps/dashboard/src/app/api/servers/[id]/live/stream
 
 ### 6.2 Redis request/reply: the standard "ask the bot" pattern
 
-guild-data, player-web, jtc-setup, bot-admin, panel-post and role-validation (published by data-api) and social webhook-create (published by notifier) all use this pattern. In data-api, `utils/requestReplyHub.ts` (`createRequestReplyHub`) backs `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub` and `panelHub` on top of `utils/hubCorrelate.ts` and `utils/hubSubscriber.ts`.
+guild-data, player-web, jtc-setup, bot-admin, panel-post and role-validation (published by data-api) and social webhook-create (published by notifier) all use this pattern. In data-api, `utils/requestReplyHub.ts` (`createRequestReplyHub`, which takes the same RPC contract object the bot responder uses from `packages/utils/src/redisContract.ts`) backs `guildDataHub`, `playerWebHub`, `jtcSetupHub`, `botAdminHub` and `panelHub` on top of `utils/hubCorrelate.ts` and `utils/hubSubscriber.ts`.
 
 ```mermaid
 sequenceDiagram
@@ -451,7 +451,7 @@ sequenceDiagram
     N->>D: webhook POST (bypasses the bot)
 ```
 
-Source: `apps/data-api/src/routes/social.ts`, `apps/notifier/src/{routes/social.ts,services/webhookHub.ts,services/dispatcher.ts}`, bot `services/socialWebhookResponder.ts`. Subscription contract: `packages/utils/src/social.ts`. Delivery uses webhooks, so alerts keep flowing even while the bot is down.
+Source: `apps/data-api/src/routes/social.ts`, `apps/notifier/src/{routes/social.ts,services/webhookHub.ts,services/dispatcher.ts}`, bot `features/dashboard-bridge/inbound/socialWebhook.ts`. Subscription contract: `packages/utils/src/social.ts`. Delivery uses webhooks, so alerts keep flowing even while the bot is down.
 
 ---
 
@@ -465,10 +465,10 @@ flowchart TD
     C -->|dev| E["shards = [0] standalone"]
     D --> F["create BotApplication"]
     E --> F
-    F --> G["setupStore per PIECE_ROOTS → setupDatabase<br/>→ setupServices → setupRedis (memory on failure)<br/>→ start 10 Redis subscribers"]
+    F --> G["setupStore per PIECE_ROOTS → setupDatabase<br/>→ setupServices → setupRedis (memory on failure)<br/>→ start the shared Redis subscriber"]
     G --> H["Discord login → setupAudio<br/>→ LavalinkHandler · connect nodes · resume sessions"]
     H --> I["SIGINT / SIGTERM"]
-    I --> N["close health server → save node sessions to Redis<br/>→ clean up Lavalink listeners → stop 10 subscribers<br/>→ flush pending journal → Redis → DB<br/>→ destroy gateway → destroy shardClient → Sentry flush"]
+    I --> N["close health server → save node sessions to Redis<br/>→ clean up Lavalink listeners → stop the shared subscriber<br/>→ flush pending journal → Redis → DB<br/>→ destroy gateway → destroy shardClient → Sentry flush"]
 ```
 
 Source: `index.ts`, `core/bootstrap.ts`, `core/shutdown.ts` (re-entry guard in `createShutdownHandler`; if Redis is down, session save is skipped and logged as a failure), `core/botApplication.ts`. Reordering shutdown loses sessions — read `.pi/skills/bot-ops/SKILL.md` before changing it.

@@ -9,8 +9,8 @@ description: Conventions for packages/prisma schema and migrations, packages/uti
 - Schema `src/schema.prisma`, migrations `src/migrations/`. After schema changes run `yarn workspace @sirubot/prisma migrate:dev`. `yarn generate` is required before typecheck/build. No lint script for prisma.
 
 ## Utils (`packages/utils`)
-- Add shared helpers here (`src/`: format, time, embed, logger, memoryCache, env, constants, youtube, array, version, sentry, lavalinkHosts/Track, appEmoji, guildData, jtcSetup, memberGreeting, playerLimits, playerState, playerWeb, redisChannels, redisSubscriber); apps import from it — grep before duplicating inside an app.
-- Subpath rule: adding/removing a subpath (precedents: `/time` `/storage` `/playerWeb` `/playerLimits` `/weather` `/delivery` `/client`) requires editing `package.json` **exports** AND `tsup.config.ts` **entry** together (emits `dist/*.{js,cjs,d.ts}`).
+- Add shared helpers here (`src/`: format, time, embed, logger, memoryCache, env, constants, youtube, array, version, sentry, lavalinkHosts/Track, appEmoji, guildData, jtcSetup, memberGreeting, playerLimits, playerState, playerWeb, redisChannels, redisContract, redisSubscriber); apps import from it — grep before duplicating inside an app.
+- Subpath rule: adding/removing a subpath (precedents: `/time` `/storage` `/playerWeb` `/playerLimits` `/weather` `/delivery` `/client` `/redisContract`) requires editing `package.json` **exports** AND `tsup.config.ts` **entry** together (emits `dist/*.{js,cjs,d.ts}`).
 
 ## Monorepo
 - Workspace deps use `"*"`, never `"workspace:*"` (corepack Yarn v4).

@@ -88,8 +88,8 @@ apps/bot/
 │   │       ├── commands/     # 일반 명령어
 │   │       └── listeners/    # 이벤트 리스너
 │   │
-│   ├── features/              # 기능 폴더 (tickets, role-panels, temp-voice, games, custom-commands, greeting, music)
-│   │   └── <name>/           # index.ts · application/ (유스케이스) · discord/{commands,listeners,interaction-handlers,views} · inbound/ (Redis 응답기)
+│   ├── features/              # 기능 폴더 (tickets, role-panels, temp-voice, games, custom-commands, greeting, music, dashboard-bridge)
+│   │   └── <name>/           # index.ts · application/ (유스케이스) · discord/{commands,listeners,interaction-handlers,views} · inbound/ (Redis 응답기·이벤트 리스너)
 │   │
 │   ├── services/             # 서비스 레이어
 │   │   ├── guildService.ts   # 길드 설정 관리
