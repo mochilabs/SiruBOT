@@ -127,6 +127,11 @@
             "import": "./dist/playerLimits.js",
             "require": "./dist/playerLimits.cjs"
         },
+        "./redisContract": {
+            "types": "./dist/redisContract.d.ts",
+            "import": "./dist/redisContract.js",
+            "require": "./dist/redisContract.cjs"
+        },
         "./memoryFile": {
             "types": "./dist/memoryFile.d.ts",
             "import": "./dist/memoryFile.js",
