@@ -9,14 +9,8 @@ import {
 	TextDisplayBuilder
 } from 'discord.js';
 import { DEFAULT_COLOR, emoji } from '@sirubot/utils';
-import {
-	TICKET_OPEN_CUSTOM_ID,
-	TICKET_CLOSE_CUSTOM_ID,
-	TICKET_CLAIM_CUSTOM_ID,
-	TICKET_CANCEL_CLOSE_CUSTOM_ID,
-	TICKET_CONFIRM_CLOSE_CUSTOM_ID,
-	type TicketConfig
-} from '@sirubot/utils/ticket';
+import type { TicketConfig } from '@sirubot/utils/ticket';
+import { ticketId } from '../customIds.ts';
 import type { Ticket } from '@sirubot/prisma';
 
 /**
@@ -30,7 +24,7 @@ export function ticketPanelView(config: TicketConfig): { flags: number; componen
 		.addTextDisplayComponents(new TextDisplayBuilder().setContent(config.panelDescription));
 
 	const openButton = new ButtonBuilder()
-		.setCustomId(TICKET_OPEN_CUSTOM_ID)
+		.setCustomId(ticketId.encode('open'))
 		.setLabel('티켓 생성하기')
 		.setEmoji(emoji('inbox_tray'))
 		.setStyle(ButtonStyle.Primary);
@@ -60,13 +54,13 @@ export function ticketWelcomeView(ticket: Ticket): { flags: number; components: 
 	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join('\n')));
 
 	const closeButton = new ButtonBuilder()
-		.setCustomId(TICKET_CLOSE_CUSTOM_ID)
+		.setCustomId(ticketId.encode('close'))
 		.setLabel('티켓 닫기')
 		.setEmoji(emoji('lock'))
 		.setStyle(ButtonStyle.Danger);
 
 	const claimButton = new ButtonBuilder()
-		.setCustomId(TICKET_CLAIM_CUSTOM_ID)
+		.setCustomId(ticketId.encode('claim'))
 		.setLabel(ticket.claimedById ? '담당 취소' : '담당하기')
 		.setEmoji(emoji('user'))
 		.setStyle(ButtonStyle.Secondary);
@@ -91,11 +85,11 @@ export function ticketCloseConfirmView(): { flags: number; components: [Containe
 			)
 		);
 	const confirmButton = new ButtonBuilder()
-		.setCustomId(TICKET_CONFIRM_CLOSE_CUSTOM_ID)
+		.setCustomId(ticketId.encode('confirmClose'))
 		.setLabel('확인하고 닫기')
 		.setEmoji(emoji('lock'))
 		.setStyle(ButtonStyle.Danger);
-	const cancelButton = new ButtonBuilder().setCustomId(TICKET_CANCEL_CLOSE_CUSTOM_ID).setLabel('취소').setStyle(ButtonStyle.Secondary);
+	const cancelButton = new ButtonBuilder().setCustomId(ticketId.encode('cancelClose')).setLabel('취소').setStyle(ButtonStyle.Secondary);
 	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton);
 
 	return {
