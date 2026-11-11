@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { GuildMember } from 'discord.js';
 
-import { dispatchMemberGreeting } from '../../utils/greetingDispatch.ts';
+import { dispatchMemberGreeting } from '../../application/greetingDispatch.ts';
 
 /**
  * 입장 — 환영 인사를 보내요. 설정은 GuildService 캐시(Guild.welcome)에서 읽어요.

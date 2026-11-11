@@ -29,7 +29,7 @@ import { PlayerWebResponder } from '../services/playerWebResponder.ts';
 import { JtcSetupResponder } from '../features/temp-voice/index.ts';
 import { SocialWebhookResponder } from '../services/socialWebhookResponder.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
-import { MemberGreetingService } from '../services/memberGreetingService.ts';
+import { MemberGreetingService } from '../features/greeting/index.ts';
 import { GuildDataResponder } from '../services/guildDataResponder.ts';
 import { AppEmojiManager } from '../services/appEmojiManager.ts';
 import { BotAdminResponder } from '../services/botAdminResponder.ts';

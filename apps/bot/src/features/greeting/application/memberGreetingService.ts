@@ -30,9 +30,9 @@ import {
 } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { AttachmentBuilder, Guild, GuildMember, MessageFlags, PermissionFlagsBits, SendableChannels } from 'discord.js';
-import { greetingComponents } from '../modules/general/view/greeting.ts';
-import { renderMemberCard } from './dataApiClient.ts';
-import type { ServiceLogger } from './types.ts';
+import { greetingComponents } from '../discord/views/greeting.ts';
+import { renderMemberCard } from '../../../services/dataApiClient.ts';
+import type { ServiceLogger } from '../../../services/types.ts';
 
 /** 멤버 인사에 필요한 멤버 정보 — 리스너/테스트 흐름이 만들어 전달해요 */
 export interface GreetingMemberInfo {

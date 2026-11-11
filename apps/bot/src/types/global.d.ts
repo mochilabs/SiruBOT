@@ -39,7 +39,7 @@ declare module '@sapphire/pieces' {
 		playerWebResponder?: import('../services/playerWebResponder.ts').PlayerWebResponder;
 		jtcSetupResponder?: import('../features/temp-voice/inbound/jtcSetupResponder.ts').JtcSetupResponder;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
-		memberGreetingService: import('../services/memberGreetingService.ts').MemberGreetingService;
+		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
 		guildDataResponder?: import('../services/guildDataResponder.ts').GuildDataResponder;
 		socialWebhookResponder?: import('../services/socialWebhookResponder.ts').SocialWebhookResponder;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;

@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { GuildMember, PartialGuildMember } from 'discord.js';
 
-import { dispatchMemberGreeting } from '../../utils/greetingDispatch.ts';
+import { dispatchMemberGreeting } from '../../application/greetingDispatch.ts';
 
 /**
  * 퇴장 — 작별 인사를 보내요. 떠난 멤버는 캐시에서 사라질 수 있으므로 표시 이름은
