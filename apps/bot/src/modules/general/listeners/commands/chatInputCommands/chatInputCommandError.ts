@@ -1,18 +1,18 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { ChatInputCommandErrorPayload, Events } from '@sapphire/framework';
-import { Listener, UserError } from '@sapphire/framework';
+import { Listener } from '@sapphire/framework';
 import { emoji, DEFAULT_COLOR, WARN_COLOR } from '@sirubot/utils';
 import { notice } from '../../../view/notice.ts';
 import { sendComponent } from './chatInputCommandDenied.ts';
-import { resolveErrorEphemeral } from '../../../../../lib/errorView.ts';
+import { presentError } from '../../../../../lib/errorPresenter.ts';
 import * as Sentry from '@sentry/node';
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandError })
 export class ChatInputCommandError extends Listener {
 	public override async run(error: Error, { interaction, command }: ChatInputCommandErrorPayload) {
-		const userError = error instanceof UserError;
+		const presentation = presentError(error, `${emoji('tools')} 명령어를 실행하는 도중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`);
 
-		if (!userError) {
+		if (presentation.report) {
 			Sentry.withScope((scope) => {
 				scope.setUser({ id: interaction.user.id });
 				scope.setTag('command', command.name);
@@ -32,15 +32,8 @@ export class ChatInputCommandError extends Listener {
 			});
 		}
 
-		const ephemeral = resolveErrorEphemeral(error);
-
-		await sendComponent(
-			interaction,
-			notice(
-				!userError ? `${emoji('tools')} 명령어를 실행하는 도중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.` : error.message,
-				userError ? DEFAULT_COLOR : WARN_COLOR
-			),
-			{ ephemeral }
-		);
+		await sendComponent(interaction, notice(presentation.message, presentation.report ? WARN_COLOR : DEFAULT_COLOR), {
+			ephemeral: presentation.ephemeral
+		});
 	}
 }
