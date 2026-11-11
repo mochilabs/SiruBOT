@@ -10,6 +10,9 @@
  * `features/<name>/application/` is the framework-free application layer: it may not import `@sapphire/*`, view files, or Sapphire
  * pieces (`modules/<name>/{interaction-handlers,commands,subcommands,listeners}`). That rule has no allowlist.
  *
+ * Environment access: no non-test file may contain `process.env` or import `@skyra/env-utilities` except the short, reasoned lists below (see
+ * `PROCESS_ENV_ALLOWED` / `ENV_UTILITIES_ALLOWED`). Everything else reads `getConfig()` (core/config.ts); `features/<name>/application/` takes values via `deps`.
+ *
  * Limits: only static `import`/`export ... from` statements are parsed. `import type` / `export type`
  * and dynamic `import()` are ignored.
  */
@@ -84,6 +87,16 @@ const ALLOWED_MODULES_TO_CORE: string[] = [
 	'modules/audio/lavalink/redisStore.ts -> core/logger.ts',
 	'modules/audio/listeners/voiceStateUpdate.ts -> core/logger.ts'
 ];
+
+/** Non-test files that may contain `process.env`, each with the reason. Only delete from this list. */
+const PROCESS_ENV_ALLOWED: Record<string, string> = {
+	'core/config.ts': 'loadConfig(env) is pure; getConfig() is the single place that hands it process.env'
+};
+
+/** Non-test files that may import `@skyra/env-utilities`, each with the reason. Only delete from this list. */
+const ENV_UTILITIES_ALLOWED: Record<string, string> = {
+	'core/environment.ts': 'setup() loads .env into the process environment; it must run before the first getConfig()'
+};
 
 function listSourceFiles(dir: string): string[] {
 	const result: string[] = [];
@@ -251,5 +264,35 @@ describe('bot architecture guard rails', () => {
 		expect(applicationImportViolation(file, '../../../modules/general/listeners/message/mentionReply.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../../../lib/appError.ts')).toBeNull();
 		expect(applicationImportViolation(file, 'discord.js')).toBeNull();
+	});
+
+	it('process.env is only touched by the allowed files', () => {
+		const offenders = listSourceFiles(SRC_ROOT)
+			.filter((file) => /process\.env/.test(readFileSync(file, 'utf8')))
+			.map(toRel)
+			.filter((file) => !(file in PROCESS_ENV_ALLOWED));
+		expect(offenders, `Read configuration through getConfig() (core/config.ts) instead of process.env:\n  ${offenders.join('\n  ')}`).toEqual([]);
+		const stale = Object.keys(PROCESS_ENV_ALLOWED).filter((file) => !/process\.env/.test(readFileSync(path.join(SRC_ROOT, file), 'utf8')));
+		expect(stale, `PROCESS_ENV_ALLOWED entry no longer contains process.env, delete it:\n  ${stale.join('\n  ')}`).toEqual([]);
+	});
+
+	it('@skyra/env-utilities is only imported by the allowed files', () => {
+		const offenders = [...collectSpecifiers()]
+			.filter(([file, list]) => list.includes('@skyra/env-utilities') && !(file in ENV_UTILITIES_ALLOWED))
+			.map(([file]) => file);
+		expect(offenders, `envParse* is gone; read values from getConfig() (core/config.ts):\n  ${offenders.join('\n  ')}`).toEqual([]);
+		const stale = Object.keys(ENV_UTILITIES_ALLOWED).filter((file) => !collectSpecifiers().get(file)?.includes('@skyra/env-utilities'));
+		expect(stale, `ENV_UTILITIES_ALLOWED entry no longer imports it, delete it:\n  ${stale.join('\n  ')}`).toEqual([]);
+	});
+
+	it('features/*/application/ never calls getConfig() — values arrive through deps', () => {
+		const offenders = listSourceFiles(SRC_ROOT)
+			.map(toRel)
+			.filter((file) => /^features\/[^/]+\/application\//.test(file))
+			.filter((file) => /\bgetConfig\b|core\/config\.ts|lib\/configAccess\.ts/.test(readFileSync(path.join(SRC_ROOT, file), 'utf8')));
+		expect(
+			offenders,
+			`The application layer must receive config values through its deps, not call getConfig():\n  ${offenders.join('\n  ')}`
+		).toEqual([]);
 	});
 });
