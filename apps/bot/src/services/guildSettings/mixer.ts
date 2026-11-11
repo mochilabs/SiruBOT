@@ -1,5 +1,4 @@
 import { transitionFlags, type TransitionMode } from '@sirubot/utils/mixerTransition';
-import { container } from '@sapphire/framework';
 import type { Prisma } from '@sirubot/prisma';
 import type { GuildSettingsStore } from './store.ts';
 import type { MixerSettings } from './types.ts';
@@ -45,7 +44,7 @@ export async function setCrossfade(store: GuildSettingsStore, guildId: string, e
 	const data: Prisma.GuildUpdateInput = { crossfadeEnabled: enabled };
 	if (!enabled) data.automixEnabled = false;
 	if (clamped !== undefined) data.crossfadeMs = clamped;
-	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+	const updated = await store.updateRow(guild.id, data);
 	store.updateCache(updated);
 	return { crossfadeEnabled: updated.crossfadeEnabled, crossfadeMs: updated.crossfadeMs };
 }
@@ -68,14 +67,14 @@ export async function setAutomix(
 	if (enabled) data.crossfadeEnabled = true;
 	if (maxTempoChange !== undefined) data.automixMaxTempoChange = maxTempoChange;
 	if (minConfidence !== undefined) data.automixMinConfidence = minConfidence;
-	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+	const updated = await store.updateRow(guild.id, data);
 	store.updateCache(updated);
 	return getMixerSettings(store, guildId);
 }
 
 export async function setTransitionMode(store: GuildSettingsStore, guildId: string, mode: TransitionMode): Promise<MixerSettings> {
 	const guild = await store.getGuild(guildId);
-	const updated = await container.db.guild.update({ where: { id: guild.id }, data: transitionFlags(mode) });
+	const updated = await store.updateRow(guild.id, transitionFlags(mode));
 	store.updateCache(updated);
 	return getMixerSettings(store, guildId);
 }

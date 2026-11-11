@@ -1,18 +1,25 @@
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
 import { Track } from 'lavalink-client';
 import { extractTrackData } from './trackData.ts';
 
 const FAVORITES_PLAYLIST_NAME = '즐겨찾기';
 
+/** PlaylistService가 쓰는 의존성 — DB 접근만 받아요 */
+export interface PlaylistServiceDeps {
+	db: PrismaClient;
+}
+
 export class PlaylistService {
+	constructor(private readonly deps: PlaylistServiceDeps) {}
+
 	public async getOrCreateFavoritesPlaylist(userId: string) {
-		await container.db.user.upsert({
+		await this.deps.db.user.upsert({
 			where: { id: userId },
 			create: { id: userId },
 			update: {}
 		});
 
-		const playlist = await container.db.playlist.findFirst({
+		const playlist = await this.deps.db.playlist.findFirst({
 			where: { userId, name: '즐겨찾기' }
 		});
 
@@ -20,7 +27,7 @@ export class PlaylistService {
 			return playlist;
 		}
 
-		return await container.db.playlist.create({
+		return await this.deps.db.playlist.create({
 			data: {
 				userId,
 				name: FAVORITES_PLAYLIST_NAME,
@@ -32,12 +39,12 @@ export class PlaylistService {
 	public async createPlaylist(userId: string, name: string, description?: string) {
 		name = name.trim();
 		if (!name || name.length > 80) throw new Error('플레이리스트 이름은 1~80자로 입력해 주세요.');
-		await container.db.user.upsert({ where: { id: userId }, create: { id: userId }, update: {} });
+		await this.deps.db.user.upsert({ where: { id: userId }, create: { id: userId }, update: {} });
 		if (name === FAVORITES_PLAYLIST_NAME) {
 			throw new Error('이름으로 "즐겨찾기"는 사용할 수 없어요. 이건 기본 제공되는 플레이리스트예요.');
 		}
 
-		const existing = await container.db.playlist.count({
+		const existing = await this.deps.db.playlist.count({
 			where: { userId, name }
 		});
 
@@ -45,7 +52,7 @@ export class PlaylistService {
 			throw new Error('이미 같은 이름의 플레이리스트가 존재해요.');
 		}
 
-		return await container.db.playlist.create({
+		return await this.deps.db.playlist.create({
 			data: {
 				userId,
 				name,
@@ -64,7 +71,7 @@ export class PlaylistService {
 			throw new Error('플레이리스트를 찾을 수 없어요.');
 		}
 
-		await container.db.playlist.delete({
+		await this.deps.db.playlist.delete({
 			where: { id: playlist.id }
 		});
 	}
@@ -82,7 +89,7 @@ export class PlaylistService {
 		const data = extractTrackData(track);
 
 		if (playlist.name === FAVORITES_PLAYLIST_NAME) {
-			const existingTrack = await container.db.playlistTrack.count({
+			const existingTrack = await this.deps.db.playlistTrack.count({
 				where: {
 					playlistId: playlist.id,
 					trackId: data.id
@@ -94,14 +101,14 @@ export class PlaylistService {
 			}
 		}
 
-		await container.db.track.upsert({
+		await this.deps.db.track.upsert({
 			where: { id: data.id },
 			create: { ...data },
 			update: {}
 		});
 
 		// max(position)+1 조회와 생성을 한 트랜잭션으로 묶어 동시 추가 시 unique 충돌 방지
-		await container.db.$transaction(async (tx) => {
+		await this.deps.db.$transaction(async (tx) => {
 			const maxPositionResult = await tx.playlistTrack.aggregate({
 				where: { playlistId: playlist.id },
 				_max: { position: true }
@@ -127,7 +134,7 @@ export class PlaylistService {
 			throw new Error('플레이리스트를 찾을 수 없어요.');
 		}
 
-		const track = await container.db.playlistTrack.findUnique({
+		const track = await this.deps.db.playlistTrack.findUnique({
 			where: {
 				playlistId_position: {
 					playlistId: playlist.id,
@@ -140,13 +147,13 @@ export class PlaylistService {
 			throw new Error('해당 위치에 곡이 없어요.');
 		}
 
-		await container.db.playlistTrack.delete({
+		await this.deps.db.playlistTrack.delete({
 			where: { id: track.id }
 		});
 	}
 
 	public async getUserPlaylists(userId: string) {
-		return await container.db.playlist.findMany({
+		return await this.deps.db.playlist.findMany({
 			where: { userId },
 			include: {
 				_count: {
@@ -163,7 +170,7 @@ export class PlaylistService {
 			throw new Error('플레이리스트를 찾을 수 없어요.');
 		}
 
-		const tracks = await container.db.playlistTrack.findMany({
+		const tracks = await this.deps.db.playlistTrack.findMany({
 			where: { playlistId: playlist.id },
 			include: { track: true },
 			orderBy: { position: 'asc' }
@@ -173,7 +180,7 @@ export class PlaylistService {
 	}
 
 	private async getPlaylistByName(userId: string, name: string) {
-		return await container.db.playlist.findFirst({
+		return await this.deps.db.playlist.findFirst({
 			where: { userId, name }
 		});
 	}

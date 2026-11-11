@@ -1,5 +1,4 @@
-import { container } from '@sapphire/framework';
-import { Guild, Prisma } from '@sirubot/prisma';
+import { Guild, Prisma, type PrismaClient } from '@sirubot/prisma';
 import { MemoryCache } from '@sirubot/utils';
 
 /**
@@ -11,12 +10,19 @@ import { MemoryCache } from '@sirubot/utils';
  * - 무효화 1회마다 세대를 1 올려, 무효화 "이전"에 시작된 in-flight 조회가 완료돼도
  *   stale 값을 캐시에 다시 심지 않게 해요.
  */
+/** 길드 설정 저장소가 쓰는 의존성 — DB 접근만 받아요 */
+export interface GuildSettingsStoreDeps {
+	db: Pick<PrismaClient, 'guild'>;
+}
+
 export class GuildSettingsStore {
 	// Guild settings cache (60s TTL, max 500)
 	private cache = new MemoryCache<string, Guild>({ ttl: 60_000, maxSize: 500 });
 	private readonly pendingReads = new Map<string, Promise<Guild>>();
 	/** 길드별 무효화 세대 — 무효화 1회마다 1씩 증가해요 (단조 증가, 삭제하지 않아요) */
 	private readonly invalidationGeneration = new Map<string, number>();
+
+	constructor(private readonly deps: GuildSettingsStoreDeps) {}
 
 	public async getGuild(guildId: string): Promise<Guild> {
 		const cached = this.cache.get(guildId);
@@ -37,7 +43,7 @@ export class GuildSettingsStore {
 	private async loadGuild(guildId: string): Promise<Guild> {
 		/** DB 조회 시작 시점의 무효화 세대 — 완료 시점과 비교해 stale 재심기를 막아요 */
 		const myGeneration = this.invalidationGeneration.get(guildId) ?? 0;
-		const guild = await container.db.guild.upsert({
+		const guild = await this.deps.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId },
 			update: {}
@@ -79,9 +85,14 @@ export class GuildSettingsStore {
 		return this.upsertData(guildId, data);
 	}
 
+	/** 행 id로 직접 update — 캐시는 건드리지 않으니 호출한 도메인 모듈이 updateCache로 갱신해요 (도메인 모듈 공용 헬퍼) */
+	public updateRow(guildId: string, data: Prisma.GuildUpdateInput): Promise<Guild> {
+		return this.deps.db.guild.update({ where: { id: guildId }, data });
+	}
+
 	/** 여러 필드 upsert — upsertField와 같은 캐시 갱신 규칙을 따라요 (도메인 모듈 공용 헬퍼) */
 	public async upsertData(guildId: string, data: Prisma.GuildUpdateInput): Promise<Guild> {
-		const guild = await container.db.guild.upsert({
+		const guild = await this.deps.db.guild.upsert({
 			where: { id: guildId },
 			create: { id: guildId, ...data } as Prisma.GuildCreateInput,
 			update: data

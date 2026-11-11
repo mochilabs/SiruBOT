@@ -11,19 +11,15 @@ const mocks = vi.hoisted(() => ({
 	historyCreate: vi.fn()
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		db: {
-			$transaction: mocks.$transaction,
-			track: { upsert: mocks.trackUpsert },
-			guild: { upsert: mocks.guildUpsert },
-			user: { upsert: mocks.userUpsert },
-			guildTrackHistory: { create: mocks.historyCreate }
-		}
-	}
-}));
+const db = {
+	$transaction: mocks.$transaction,
+	track: { upsert: mocks.trackUpsert },
+	guild: { upsert: mocks.guildUpsert },
+	user: { upsert: mocks.userUpsert },
+	guildTrackHistory: { create: mocks.historyCreate }
+} as never;
 
-// $transaction 콜백의 tx는 container.db와 동일한 모델 계층을 노출한다.
+// $transaction 콜백의 tx는 db와 동일한 모델 계층을 노출한다.
 const txShape = {
 	track: { upsert: mocks.trackUpsert },
 	guild: { upsert: mocks.guildUpsert },
@@ -59,7 +55,7 @@ describe('TrackService.recordPlay', () => {
 		vi.clearAllMocks();
 		// $transaction은 콜백을 받아 즉시 실행하고, tx는 db 모델 계층을 그대로 노출한다.
 		mocks.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txShape));
-		svc = new TrackService();
+		svc = new TrackService({ db });
 	});
 
 	it('곡 upsert·길드/유저 upsert·히스토리 생성을 단일 $transaction 안에서 수행한다', async () => {

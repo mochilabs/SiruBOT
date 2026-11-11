@@ -56,7 +56,7 @@ export class PrivacyCommand extends Subcommand {
 
 	public async chatInputView(interaction: ChatInputCommandInteraction<'cached'>) {
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-		const summary = await summarizeUserData(interaction.user.id);
+		const summary = await summarizeUserData(this.container.db, interaction.user.id);
 
 		const lines = [
 			`### ${emoji('lock')} 저장 중인 내 데이터`,
@@ -78,7 +78,7 @@ export class PrivacyCommand extends Subcommand {
 
 	public async chatInputForget(interaction: ChatInputCommandInteraction<'cached'>) {
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-		const summary = await summarizeUserData(interaction.user.id);
+		const summary = await summarizeUserData(this.container.db, interaction.user.id);
 		if (
 			!(await confirmAction(
 				interaction,
@@ -87,7 +87,7 @@ export class PrivacyCommand extends Subcommand {
 			))
 		)
 			return;
-		const result = await purgeUserData(interaction.user.id);
+		const result = await purgeUserData(this.container.db, interaction.user.id);
 
 		await interaction.editReply({
 			flags: [MessageFlags.IsComponentsV2],

@@ -124,19 +124,14 @@ const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
 	'services/countingState.ts': 'stage 4b conversion pending',
 	'services/dataApiClient.ts': 'stage 4b conversion pending',
 	'services/embedFixGateway.ts': 'stage 4b conversion pending',
-	'services/guildSettings/mixer.ts': 'stage 4b conversion pending',
-	'services/guildSettings/store.ts': 'stage 4b conversion pending',
 	'services/mixerService.ts': 'audio playback owner; converted in the later audio stage',
 	'services/playbackReporter.ts': 'audio playback; converted in the later audio stage',
 	'services/playlistPlayback.ts': 'audio playback; converted in the later audio stage',
-	'services/playlistService.ts': 'stage 4b conversion pending',
 	'services/skipPolicy.ts': 'audio playback; converted in the later audio stage',
 	'services/sponsorBlockService.ts': 'audio playback; converted in the later audio stage',
-	'services/trackService.ts': 'stage 4b conversion pending',
 	'services/ttsPronunciation.ts': 'stage 4b conversion pending',
 	'services/ttsService.ts': 'stage 4b conversion pending',
 	'services/ttsUserSettings.ts': 'stage 4b conversion pending',
-	'services/userDataService.ts': 'stage 4b conversion pending',
 	'services/webhookRelay.ts': 'stage 4b conversion pending'
 };
 

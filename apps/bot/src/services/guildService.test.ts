@@ -6,7 +6,7 @@ import * as guildChatPolicy from './guildSettings/chatPolicy.ts';
 
 const { upsert } = vi.hoisted(() => ({ upsert: vi.fn() }));
 
-vi.mock('@sapphire/framework', () => ({ container: { db: { guild: { upsert } } } }));
+const db = { guild: { upsert } } as never;
 vi.mock('@sirubot/utils', async () => {
 	const { MemoryCache } = await import('../../../../packages/utils/src/memoryCache.ts');
 	const { normalizeCustomCommandPrefix } = await import('../../../../packages/utils/src/customCommand.ts');
@@ -28,7 +28,7 @@ describe('GuildService concurrent reads', () => {
 	it('shares a cold lookup across concurrent commands and then uses the cache', async () => {
 		const row = guild();
 		upsert.mockResolvedValue(row);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await Promise.all([
 			service.getGuild('guild'),
 			guildPlayback.getVolume(service, 'guild'),
@@ -42,7 +42,7 @@ describe('GuildService concurrent reads', () => {
 
 	it('does not share reads between different guilds', async () => {
 		upsert.mockImplementation(({ where }: { where: { id: string } }) => Promise.resolve(guild(where.id)));
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await Promise.all([service.getGuild('one'), service.getGuild('two')]);
 		expect(result.map((row) => row.id)).toEqual(['one', 'two']);
 		expect(upsert).toHaveBeenCalledTimes(2);
@@ -50,7 +50,7 @@ describe('GuildService concurrent reads', () => {
 
 	it('allows a new lookup after a shared lookup fails', async () => {
 		upsert.mockRejectedValueOnce(new Error('database unavailable')).mockResolvedValue(guild());
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const results = await Promise.allSettled([service.getGuild('guild'), service.getGuild('guild')]);
 		expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected']);
 		expect(upsert).toHaveBeenCalledTimes(1);
@@ -61,7 +61,7 @@ describe('GuildService concurrent reads', () => {
 	it('keeps a setter result when an older read completes later', async () => {
 		let finishRead!: (row: Guild) => void;
 		upsert.mockReturnValueOnce(new Promise<Guild>((resolve) => (finishRead = resolve))).mockResolvedValueOnce(guild('guild', 25));
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const pending = service.getGuild('guild');
 		await guildPlayback.updateVolume(service, 'guild', 25);
 		finishRead(guild('guild', 10));
@@ -78,7 +78,7 @@ describe('GuildService invalidation', () => {
 
 	it('invalidates cached guild so the next get re-reads from DB', async () => {
 		upsert.mockResolvedValue(guild());
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		await service.getGuild('guild'); // 캐시 웜 (read 1)
 		service.invalidate('guild');
 		await service.getGuild('guild'); // 캐시 미스 → read 2
@@ -89,7 +89,7 @@ describe('GuildService invalidation', () => {
 		// 조회 시작 → DB 응답 전에 무효화 → 완료된 조회 결과는 캐시에 심지 않아야 해요.
 		let finishRead!: (row: Guild) => void;
 		upsert.mockReturnValueOnce(new Promise<Guild>((resolve) => (finishRead = resolve))).mockResolvedValueOnce(guild('guild', 30));
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const pending = service.getGuild('guild'); // 무효화 이전 read 시작
 		service.invalidate('guild'); // DB 응답 도착 전 무효화
 		finishRead(guild('guild', 10)); // stale 값 도착
@@ -106,7 +106,7 @@ describe('GuildService invalidation', () => {
 		// 그 결과가 캐시에 심기지 않아 다음 조회는 DB에서 다시 읽어야 해요.
 		let finishRead!: (row: Guild) => void;
 		upsert.mockReturnValueOnce(new Promise<Guild>((resolve) => (finishRead = resolve))).mockResolvedValueOnce(guild('guild', 30));
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const pendingA = service.getGuild('guild'); // 무효화 이전 read 시작
 		service.invalidate('guild');
 		const sharedPromise = service.getGuild('guild'); // pendingReads 공유 (새 read 아님)
@@ -122,7 +122,7 @@ describe('GuildService invalidation', () => {
 
 	it('caches the result of a read started after invalidation', async () => {
 		upsert.mockResolvedValue(guild('guild', 20));
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		await service.getGuild('guild');
 		service.invalidate('guild');
 		await service.getGuild('guild'); // 무효화 이후 시작 → 캐시 심기 정상
@@ -138,7 +138,7 @@ describe('GuildService TTS settings', () => {
 
 	it('reads ttsMode/ttsChannelIds and falls back to off when the stored mode is invalid', async () => {
 		upsert.mockResolvedValueOnce({ ...guild(), ttsMode: 'channels', ttsChannelIds: ['chan'] } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		await expect(guildChatPolicy.getTtsSettings(service, 'guild')).resolves.toEqual({ mode: 'channels', channelIds: ['chan'] });
 
 		upsert.mockResolvedValueOnce({ ...guild(), ttsMode: 'bogus', ttsChannelIds: [] } as Guild);
@@ -169,7 +169,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 
 	it('켜기: off → channels + [채널]', async () => {
 		seed({ ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'channels', ttsChannelIds: ['chan'] } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'chan', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['chan'] });
@@ -184,14 +184,14 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 				ttsChannelIds: ['a', 'b', 'c']
 			} as Guild
 		);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'c', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'b', 'c'] });
 	});
 
 	it('켜기: all이면 그대로 (이미 전체 허용)', async () => {
 		seed({ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'chan', true, []);
 		expect(result).toEqual({ mode: 'all', channelIds: [] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'all', ttsChannelIds: [] });
@@ -206,7 +206,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 				ttsChannelIds: ['b']
 			} as Guild
 		);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'a', false, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['b'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['b'] });
@@ -214,7 +214,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 
 	it('끄기: 목록이 비면 off', async () => {
 		seed({ ...guild(), ttsMode: 'channels', ttsChannelIds: ['a'] } as Guild, { ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'a', false, []);
 		expect(result).toEqual({ mode: 'off', channelIds: [] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'off', ttsChannelIds: [] });
@@ -229,7 +229,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 				ttsChannelIds: ['a', 'c']
 			} as Guild
 		);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'b', false, ['a', 'b', 'c']);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'c'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ ttsMode: 'channels', ttsChannelIds: ['a', 'c'] });
@@ -237,7 +237,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 
 	it('끄기: all인데 남는 채널이 없으면 off', async () => {
 		seed({ ...guild(), ttsMode: 'all', ttsChannelIds: [] } as Guild, { ...guild(), ttsMode: 'off', ttsChannelIds: [] } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelTtsEnabled(service, 'guild', 'a', false, ['a']);
 		expect(result).toEqual({ mode: 'off', channelIds: [] });
 	});
@@ -251,7 +251,7 @@ describe('GuildService.setChannelTtsEnabled (채널 낭독 토글)', () => {
 				aiChannelIds: ['chan']
 			} as Guild
 		);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelAiEnabled(service, 'guild', 'chan', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ aiMode: 'channels', aiChannelIds: ['chan'] });
@@ -282,7 +282,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			countingEnabled: true,
 			countingChannelId: 'c'
 		} as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		await expect(guildChatPolicy.getChatToolSettings(service, 'guild')).resolves.toEqual({
 			emojiEnlarge: { mode: 'channels', channelIds: ['a'] },
 			quote: { mode: 'all', channelIds: [] },
@@ -307,7 +307,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			{ ...guild(), emojiEnlargeMode: 'off', emojiEnlargeChannelIds: [] } as Guild,
 			{ ...guild(), emojiEnlargeMode: 'channels', emojiEnlargeChannelIds: ['chan'] } as Guild
 		);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelChatToolEnabled(service, 'guild', 'emojiEnlarge', 'chan', true, []);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['chan'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ emojiEnlargeMode: 'channels', emojiEnlargeChannelIds: ['chan'] });
@@ -315,7 +315,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 
 	it('setChannelChatToolEnabled: 인용 끄기 목록이 비면 off', async () => {
 		seed({ ...guild(), quoteMode: 'channels', quoteChannelIds: ['a'] } as Guild, { ...guild(), quoteMode: 'off', quoteChannelIds: [] } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelChatToolEnabled(service, 'guild', 'quote', 'a', false, []);
 		expect(result).toEqual({ mode: 'off', channelIds: [] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ quoteMode: 'off', quoteChannelIds: [] });
@@ -326,7 +326,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 			{ ...guild(), embedFixMode: 'all', embedFixChannelIds: [] } as Guild,
 			{ ...guild(), embedFixMode: 'channels', embedFixChannelIds: ['a', 'c'] } as Guild
 		);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		const result = await guildChatPolicy.setChannelChatToolEnabled(service, 'guild', 'embedFix', 'b', false, ['a', 'b', 'c']);
 		expect(result).toEqual({ mode: 'channels', channelIds: ['a', 'c'] });
 		expect(upsert.mock.calls[1][0].update).toEqual({ embedFixMode: 'channels', embedFixChannelIds: ['a', 'c'] });
@@ -334,7 +334,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 
 	it('setCountingChannel: 지정하면 켜지고 null을 넘기면 꺼요', async () => {
 		upsert.mockResolvedValueOnce({ ...guild(), countingEnabled: true, countingChannelId: 'chan' } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		await expect(guildChatPolicy.setCountingChannel(service, 'guild', 'chan')).resolves.toEqual({
 			countingEnabled: true,
 			countingChannelId: 'chan'
@@ -352,7 +352,7 @@ describe('GuildService chat tools (채팅 유틸)', () => {
 
 	it('setCountingEnabled: on/off만 바꿔요', async () => {
 		upsert.mockResolvedValueOnce({ ...guild(), countingEnabled: true, countingChannelId: 'chan' } as Guild);
-		const service = new GuildService();
+		const service = new GuildService({ db });
 		await expect(guildChatPolicy.setCountingEnabled(service, 'guild', true)).resolves.toBe(true);
 		expect(upsert.mock.calls[0][0].update).toEqual({ countingEnabled: true });
 	});

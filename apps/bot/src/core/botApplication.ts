@@ -132,9 +132,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			debug: (msg: string) => container.logger.debug(msg)
 		};
 		const subscriberLogger = appLogger;
-		container.guildService = new GuildService();
-		container.trackService = new TrackService();
-		container.playlistService = new PlaylistService();
+		container.guildService = new GuildService({ db: container.db });
+		container.trackService = new TrackService({ db: container.db });
+		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
 		container.ttsService = new TtsService();

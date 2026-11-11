@@ -1,4 +1,4 @@
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
 import { Track } from 'lavalink-client';
 import { extractTrackData } from './trackData.ts';
 import { isTtsClip, RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
@@ -16,13 +16,20 @@ export function formatRecordError(error: unknown): string {
 	return `${error.message}${codeText}${metaText}`;
 }
 
+/** TrackService가 쓰는 의존성 — DB 접근만 받아요 */
+export interface TrackServiceDeps {
+	db: PrismaClient;
+}
+
 export class TrackService {
+	constructor(private readonly deps: TrackServiceDeps) {}
+
 	public async increasePlays(track: Track) {
 		const data = extractTrackData(track);
 		// 식별자도 uri도 없는 곡은 랭킹·히스토리 모두 기록할 수 없다 — 조용히 건너뛴다.
 		if (!data.id) return;
 
-		const newTrack = await container.db.track.upsert({
+		const newTrack = await this.deps.db.track.upsert({
 			where: { id: data.id },
 			create: {
 				...data,
@@ -48,13 +55,13 @@ export class TrackService {
 		const userId = resolveRequesterId(track);
 
 		await Promise.all([
-			container.db.guild.upsert({
+			this.deps.db.guild.upsert({
 				where: { id: guildId },
 				create: { id: guildId },
 				update: {}
 			}),
 			userId
-				? container.db.user.upsert({
+				? this.deps.db.user.upsert({
 						where: { id: userId },
 						create: { id: userId },
 						update: {}
@@ -62,7 +69,7 @@ export class TrackService {
 				: Promise.resolve()
 		]);
 
-		await container.db.guildTrackHistory.create({
+		await this.deps.db.guildTrackHistory.create({
 			data: {
 				guildId,
 				trackId: data.id,
@@ -84,7 +91,7 @@ export class TrackService {
 		if (!data.id) return;
 		const userId = resolveRequesterId(track);
 
-		await container.db.$transaction(async (tx) => {
+		await this.deps.db.$transaction(async (tx) => {
 			await tx.track.upsert({
 				where: { id: data.id },
 				create: {

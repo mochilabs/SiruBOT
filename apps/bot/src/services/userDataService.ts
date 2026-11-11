@@ -1,5 +1,4 @@
-import { container } from '@sapphire/framework';
-import { Prisma } from '@sirubot/prisma';
+import { Prisma, type PrismaClient } from '@sirubot/prisma';
 import type { MemoryCategory } from '@sirubot/utils';
 import { MEMORY_CATEGORIES, parseMemoryMarkdown } from '@sirubot/utils';
 
@@ -32,12 +31,12 @@ export interface PurgeResult {
 }
 
 /** 열람 — 저장된 것들을 종류별 개수로만 보여줘요(내용 자체는 노출하지 않아요) */
-export async function summarizeUserData(userId: string): Promise<UserDataSummary> {
+export async function summarizeUserData(db: PrismaClient, userId: string): Promise<UserDataSummary> {
 	const [memory, profile, ttsSettings, gameRecords] = await Promise.all([
-		container.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true } }),
-		container.db.user.findUnique({ where: { id: userId }, select: { birthMonth: true, birthDay: true, intro: true } }),
-		container.db.ttsUserSetting.count({ where: { userId } }),
-		container.db.gameRecord.count({ where: { userId } })
+		db.userMemory.findUnique({ where: { userId }, select: { longTerm: true, shortTerm: true } }),
+		db.user.findUnique({ where: { id: userId }, select: { birthMonth: true, birthDay: true, intro: true } }),
+		db.ttsUserSetting.count({ where: { userId } }),
+		db.gameRecord.count({ where: { userId } })
 	]);
 
 	const sections = parseMemoryMarkdown(typeof memory?.longTerm === 'string' ? memory.longTerm : '', { strictSections: false });
@@ -55,8 +54,8 @@ export async function summarizeUserData(userId: string): Promise<UserDataSummary
 }
 
 /** 삭제 — 트랜잭션 없이 순차 실행해요(부분 실패해도 사용자에게 삭제된 개수를 정직하게 알려요) */
-export async function purgeUserData(userId: string): Promise<PurgeResult> {
-	const memory = await container.db.userMemory.findUnique({ where: { userId }, select: { userId: true, shortTerm: true } });
+export async function purgeUserData(db: PrismaClient, userId: string): Promise<PurgeResult> {
+	const memory = await db.userMemory.findUnique({ where: { userId }, select: { userId: true, shortTerm: true } });
 
 	let memoryRows = 0;
 	let shortTermCleared = false;
@@ -64,17 +63,17 @@ export async function purgeUserData(userId: string): Promise<PurgeResult> {
 		// 단기 기억은 행을 지우는 대신 비워요 — 장기 기억 파일이 같은 행에 있어요
 		shortTermCleared = Array.isArray(memory.shortTerm) && memory.shortTerm.length > 0;
 		// Prisma Json 컬럼은 JS null 대신 DbNull을 써야 실제 NULL이 돼요
-		await container.db.userMemory.update({ where: { userId }, data: { longTerm: Prisma.DbNull, shortTerm: [] } });
+		await db.userMemory.update({ where: { userId }, data: { longTerm: Prisma.DbNull, shortTerm: [] } });
 		memoryRows = 1;
 	}
 
-	const profileUpdate = await container.db.user.updateMany({
+	const profileUpdate = await db.user.updateMany({
 		where: { id: userId },
 		data: { birthMonth: null, birthDay: null, intro: null }
 	});
 
-	const tts = await container.db.ttsUserSetting.deleteMany({ where: { userId } });
-	const games = await container.db.gameRecord.deleteMany({ where: { userId } });
+	const tts = await db.ttsUserSetting.deleteMany({ where: { userId } });
+	const games = await db.gameRecord.deleteMany({ where: { userId } });
 
 	return {
 		memoryRows,
