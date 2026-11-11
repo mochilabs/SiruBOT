@@ -1,11 +1,11 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, TextDisplayBuilder } from 'discord.js';
 import { emoji } from '@sirubot/utils';
+import { chatCancelId } from '../customIds.ts';
 
 const FINAL_SEGMENT_LIMIT = 3_900;
 const MAX_FINAL_SEGMENTS = 4;
 /** 생성 중 화면에 붙이는 타이핑 커서 — 최종 답변(finalPayload)에는 없어요 */
 const TYPING_CURSOR = '▍';
-export const CHAT_CANCEL_PREFIX = 'chatcancel:';
 
 interface ChatPayload {
 	components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilder>)[];
@@ -57,7 +57,10 @@ function payload(components: (TextDisplayBuilder | ActionRowBuilder<ButtonBuilde
 
 /** 중지 버튼 행 — 컨테이너 없이 TextDisplay 바로 아래 최상단 ActionRow로 붙여요 */
 function runningStopRow(cancelKey: string): ActionRowBuilder<ButtonBuilder> {
-	const stopButton = new ButtonBuilder().setCustomId(`${CHAT_CANCEL_PREFIX}${cancelKey}`).setLabel('생성 중지').setStyle(ButtonStyle.Secondary);
+	const stopButton = new ButtonBuilder()
+		.setCustomId(chatCancelId.encode('stop', { cancelKey }))
+		.setLabel('생성 중지')
+		.setStyle(ButtonStyle.Secondary);
 	return new ActionRowBuilder<ButtonBuilder>().addComponents(stopButton);
 }
 

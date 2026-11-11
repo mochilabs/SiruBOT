@@ -13,24 +13,18 @@ import { createContainer, emoji } from '@sirubot/utils';
 import type { TtsService, TtsVoice } from '../../../services/ttsService.ts';
 import type { TtsEmotion } from '../../../services/ttsService.ts';
 import type { TtsChannel, TtsUserPreset, TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
+import { ttsId } from '../customIds.ts';
 import { truncateText } from '../../../lib/text.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
- * /tts 설정 패널(Components V2) 뷰와 컴포넌트 customId 계약.
+ * /tts 설정 패널(Components V2) 뷰.
+ * customId는 `modules/general/customIds.ts`의 `ttsId`로 만들어요.
  * 상호작용은 `modules/general/interaction-handlers/ttsPanelButton.ts`(버튼),
  * `ttsPanelSelect.ts`(음성·위치 셀렉트)가 파싱한다.
  * 패널 응답은 전부 ephemeral이라 상호작용은 작성자만 가능하다.
  */
-
-export const ttsPanelPrefix = 'tts:panel:';
-export const ttsToggleCustomId = `${ttsPanelPrefix}toggle`;
-export const ttsChannelSelectCustomId = `${ttsPanelPrefix}channel`;
-export const ttsEmotionSelectCustomId = `${ttsPanelPrefix}emotion`;
-export const ttsResetCustomId = `${ttsPanelPrefix}reset`;
-export const ttsVoiceSelectCustomId = `${ttsPanelPrefix}voice`;
-export const ttsLangSelectCustomId = `${ttsPanelPrefix}lang`;
 
 /** 음성 목록 언어 선택지 — siru_tts `/v1/voices?lang=`에 그대로 넘기는 코드 */
 export const TTS_PANEL_LANGUAGES: ReadonlyArray<{ code: string; label: string }> = [
@@ -47,18 +41,6 @@ export const TTS_PANEL_DEFAULT_LANG = 'ko';
 
 export function normalizePanelLang(value: string | null | undefined): string {
 	return TTS_PANEL_LANGUAGES.some((language) => language.code === value) ? (value as string) : TTS_PANEL_DEFAULT_LANG;
-}
-
-/** 패널을 다시 그려도 보던 언어가 유지되도록 customId 끝에 언어 코드를 붙인다 (`tts:panel:voice:ja`) */
-export function withPanelLang(customId: string, lang: string): string {
-	return `${customId}:${normalizePanelLang(lang)}`;
-}
-
-/** `withPanelLang`의 역 — 접두 customId와 언어 코드를 분리한다 */
-export function splitPanelLang(customId: string): { base: string; lang: string } {
-	const index = customId.lastIndexOf(':');
-	if (index <= ttsPanelPrefix.length - 1) return { base: customId, lang: TTS_PANEL_DEFAULT_LANG };
-	return { base: customId.slice(0, index), lang: normalizePanelLang(customId.slice(index + 1)) };
 }
 
 /** 셀렉트에서 "기본 음성(preset.voice = null)"을 나타내는 값. 실제 음성 id와 겹치지 않도록 밑줄로 감싼다. */
@@ -186,7 +168,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(withPanelLang(ttsLangSelectCustomId, lang))
+				.setCustomId(ttsId.encode('lang', { lang: normalizePanelLang(lang) }))
 				.setPlaceholder('음성 목록의 언어를 선택하세요')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -204,7 +186,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(withPanelLang(ttsVoiceSelectCustomId, lang))
+				.setCustomId(ttsId.encode('voice', { lang: normalizePanelLang(lang) }))
 				.setPlaceholder('낭독에 사용할 음성을 선택하세요')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -215,7 +197,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(withPanelLang(ttsChannelSelectCustomId, lang))
+				.setCustomId(ttsId.encode('channel', { lang: normalizePanelLang(lang) }))
 				.setPlaceholder('음성이 들릴 위치를 선택하세요')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -226,7 +208,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(withPanelLang(ttsEmotionSelectCustomId, lang))
+				.setCustomId(ttsId.encode('emotion', { lang: normalizePanelLang(lang) }))
 				.setPlaceholder('말투(감정)를 선택하세요')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -237,7 +219,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(withPanelLang(ttsToggleCustomId, lang))
+				.setCustomId(ttsId.encode('toggle', { lang: normalizePanelLang(lang) }))
 				.setEmoji(emoji(preset.enabled ? 'volume_muted' : 'volume_up'))
 				.setLabel(preset.enabled ? '낭독 끄기' : '낭독 켜기')
 				.setStyle(preset.enabled ? ButtonStyle.Danger : ButtonStyle.Success)
@@ -248,7 +230,7 @@ export function ttsPanelView({ preset, voices, serviceReady, lang }: TtsPanelPro
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(withPanelLang(ttsResetCustomId, lang))
+				.setCustomId(ttsId.encode('reset', { lang: normalizePanelLang(lang) }))
 				.setEmoji(emoji('repeat'))
 				.setLabel('기본값 복구')
 				.setStyle(ButtonStyle.Secondary)

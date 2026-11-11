@@ -1,20 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ButtonStyle } from 'discord.js';
-import {
-	ttsEmotionSelectCustomId,
-	TTS_VOICE_DEFAULT_VALUE,
-	buildVoiceOptions,
-	ttsPanelView,
-	ttsChannelSelectCustomId,
-	ttsLangSelectCustomId,
-	splitPanelLang,
-	withPanelLang,
-	normalizePanelLang,
-	ttsResetCustomId,
-	ttsToggleCustomId,
-	ttsVoiceSelectCustomId,
-	type TtsPanelProps
-} from './ttsView.ts';
+import { TTS_VOICE_DEFAULT_VALUE, buildVoiceOptions, ttsPanelView, normalizePanelLang, type TtsPanelProps } from './ttsView.ts';
+import { ttsId } from '../customIds.ts';
 import type { TtsUserPreset } from '../../../services/ttsUserSettings.ts';
 import type { TtsVoice } from '../../../services/ttsService.ts';
 
@@ -52,16 +39,16 @@ describe('ttsPanelView', () => {
 		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' });
 		const [langRow, selectRow, channelRow, emotionRow, actionRow, resetRow] = rowsOf(json);
 
-		expect(langRow[0].custom_id).toBe(withPanelLang(ttsLangSelectCustomId, 'ko'));
+		expect(langRow[0].custom_id).toBe(ttsId.encode('lang', { lang: 'ko' }));
 		expect(langRow[0].options?.find((option) => option.default)?.value).toBe('ko');
-		expect(selectRow[0].custom_id).toBe(withPanelLang(ttsVoiceSelectCustomId, 'ko'));
-		expect(channelRow[0].custom_id).toBe(withPanelLang(ttsChannelSelectCustomId, 'ko'));
-		expect(emotionRow[0].custom_id).toBe(withPanelLang(ttsEmotionSelectCustomId, 'ko'));
+		expect(selectRow[0].custom_id).toBe(ttsId.encode('voice', { lang: 'ko' }));
+		expect(channelRow[0].custom_id).toBe(ttsId.encode('channel', { lang: 'ko' }));
+		expect(emotionRow[0].custom_id).toBe(ttsId.encode('emotion', { lang: 'ko' }));
 		expect(emotionRow[0].options?.find((option) => option.default)?.value).toBe('neutral');
-		expect(actionRow[0].custom_id).toBe(withPanelLang(ttsToggleCustomId, 'ko'));
+		expect(actionRow[0].custom_id).toBe(ttsId.encode('toggle', { lang: 'ko' }));
 		expect(actionRow[0].label).toBe('낭독 켜기');
 		expect(actionRow[0].style).toBe(ButtonStyle.Success);
-		expect(resetRow[0].custom_id).toBe(withPanelLang(ttsResetCustomId, 'ko'));
+		expect(resetRow[0].custom_id).toBe(ttsId.encode('reset', { lang: 'ko' }));
 		expect(resetRow[0].disabled).toBe(true);
 	});
 
@@ -137,28 +124,25 @@ describe('buildVoiceOptions', () => {
 });
 
 describe('customId 계약', () => {
-	it('패널 컴포넌트 customId가 핸들러 prefix 계약과 맞는다', () => {
-		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ko' });
+	it('패널 컴포넌트 customId를 ttsId 선언이 모두 해석한다', () => {
+		const json = panelJson({ preset: DEFAULT_PRESET, voices: [], serviceReady: true, lang: 'ja' });
 		const customIds = rowsOf(json)
 			.flat()
 			.map((component) => component.custom_id ?? '');
 
-		for (const base of [ttsLangSelectCustomId, ttsVoiceSelectCustomId, ttsChannelSelectCustomId, ttsToggleCustomId, ttsResetCustomId]) {
-			expect(customIds).toContain(withPanelLang(base, 'ko'));
-		}
-		for (const customId of customIds) {
-			expect(customId.startsWith('tts:panel:')).toBe(true);
-		}
+		expect(customIds.map((customId) => ttsId.decode(customId))).toEqual(
+			['lang', 'voice', 'channel', 'emotion', 'toggle', 'reset'].map((action) => ({ action, lang: 'ja' }))
+		);
 	});
 });
 
 describe('패널 언어 customId', () => {
-	it('언어를 customId에 붙였다가 그대로 되돌려 읽는다', () => {
-		expect(splitPanelLang(withPanelLang(ttsVoiceSelectCustomId, 'ja'))).toEqual({ base: ttsVoiceSelectCustomId, lang: 'ja' });
+	it('언어를 customId에 실었다가 그대로 되돌려 읽는다', () => {
+		expect(ttsId.decode(ttsId.encode('voice', { lang: 'ja' }))).toEqual({ action: 'voice', lang: 'ja' });
 	});
 
-	it('알 수 없거나 없는 언어는 기본 언어로 되돌린다', () => {
+	it('알 수 없는 언어는 기본 언어로 되돌린다', () => {
 		expect(normalizePanelLang('xx')).toBe('ko');
-		expect(splitPanelLang(ttsToggleCustomId)).toEqual({ base: ttsToggleCustomId, lang: 'ko' });
+		expect(normalizePanelLang(undefined)).toBe('ko');
 	});
 });

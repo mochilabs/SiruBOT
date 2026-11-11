@@ -5,6 +5,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { inspect } from 'node:util';
+import { evalId } from '../customIds.ts';
 import { isOwner } from '../../../lib/owners.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -12,7 +13,7 @@ import { isOwner } from '../../../lib/owners.ts';
 })
 export class EvalModalHandler extends InteractionHandler {
 	public override parse(interaction: ModalSubmitInteraction) {
-		if (interaction.customId !== 'eval-modal') return this.none();
+		if (evalId.decode(interaction.customId)?.action !== 'modal') return this.none();
 		return this.some();
 	}
 
@@ -25,7 +26,7 @@ export class EvalModalHandler extends InteractionHandler {
 			return;
 		}
 
-		const code = interaction.fields.getTextInputValue('eval-code');
+		const code = interaction.fields.getTextInputValue(evalId.encode('code'));
 		// eval 결과(환경값·토큰 등 컨테이너 값)가 채널 전체에 보이지 않도록 임시 메시지로만 게시해요
 		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 

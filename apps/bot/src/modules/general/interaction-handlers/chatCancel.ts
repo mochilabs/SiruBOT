@@ -4,20 +4,19 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { abortChatTurn } from '../../../services/aiChatService.ts';
 import { emoji } from '@sirubot/utils';
-import { CHAT_CANCEL_PREFIX } from '../view/chatView.ts';
+import { chatCancelId } from '../customIds.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.MessageComponent
 })
 export class ChatCancelHandler extends InteractionHandler {
 	public override parse(interaction: ButtonInteraction) {
-		if (!interaction.customId.startsWith(CHAT_CANCEL_PREFIX)) return this.none();
-		return this.some();
+		const decoded = chatCancelId.decode(interaction.customId);
+		return decoded ? this.some({ cancelKey: decoded.cancelKey }) : this.none();
 	}
 
-	public override async run(interaction: ButtonInteraction) {
-		const key = interaction.customId.slice(CHAT_CANCEL_PREFIX.length);
-		const result = abortChatTurn(key, interaction.user.id);
+	public override async run(interaction: ButtonInteraction, { cancelKey }: { cancelKey: string }) {
+		const result = abortChatTurn(cancelKey, interaction.user.id);
 
 		if (result !== 'ok') {
 			const message =
