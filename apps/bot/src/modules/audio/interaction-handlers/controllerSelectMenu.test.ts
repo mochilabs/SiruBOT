@@ -1,35 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type StringSelectMenuInteraction } from 'discord.js';
 import ControllerSelectMenuHandler from './controllerSelectMenu.ts';
+import { encodeQueueViewId, parseQueueViewId } from '../utils/queueViewId.ts';
 
 const mocks = vi.hoisted(() => ({
 	getPlayer: vi.fn(),
 	allowed: vi.fn(),
 	resolveQueueSelection: vi.fn(),
-	getUserQueuedTracks: vi.fn()
+	getUserQueuedTracks: vi.fn(),
+	queueList: vi.fn(() => ({}))
 }));
 
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
+		some = (value: unknown) => ({ isSome: () => true, unwrap: () => value });
+		none = () => ({ isSome: () => false });
 		container = {
 			audio: { getPlayer: mocks.getPlayer }
 		};
 	},
-	InteractionHandlerTypes: { SelectMenu: 'select-menu' }
+	InteractionHandlerTypes: { SelectMenu: 'select-menu' },
+	UserError: class UserError extends Error {}
 }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkDJOrAlone: mocks.allowed }));
 vi.mock('../utils/queueSelection.ts', () => ({ resolveQueueSelection: mocks.resolveQueueSelection }));
 vi.mock('../lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: mocks.getUserQueuedTracks }));
 vi.mock('../view/queue.ts', () => ({
-	queueList: () => ({}),
-	queueSelectCustomId: 'queue:select',
+	queueList: mocks.queueList,
 	QUEUE_PAGE_SIZE: 10
 }));
 
 function context() {
 	const interaction = {
+		customId: encodeQueueViewId({ action: 'sel', ownerId: '123456789012345678', page: 1 }),
+		values: ['1.0123456789abcdef'],
 		guildId: 'guild',
-		user: { id: 'user-id' },
+		user: { id: '123456789012345678' },
 		guild: {
 			members: {
 				me: { voice: { channelId: 'voice' } }
@@ -43,9 +49,7 @@ function context() {
 		update: vi.fn().mockResolvedValue(undefined)
 	};
 	const player = {
-		voiceChannelId: 'voice',
-		queueSelectedIndex: null,
-		queuePage: 1
+		voiceChannelId: 'voice'
 	};
 	mocks.getPlayer.mockReturnValue(player);
 	mocks.allowed.mockResolvedValue(true);
@@ -69,7 +73,10 @@ describe('controller select menu voice & admin checks', () => {
 		interaction.member.voice.channelId = 'other-voice';
 		interaction.member.voice.channel.id = 'other-voice';
 
-		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, { selectedValue: '0' });
+		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
+			view: parseQueueViewId(interaction.customId),
+			selectedValue: '1.0123456789abcdef'
+		});
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 		expect(interaction.update).not.toHaveBeenCalled();
 	});
@@ -80,8 +87,50 @@ describe('controller select menu voice & admin checks', () => {
 		interaction.member.voice.channelId = null as unknown as string;
 		interaction.member.voice.channel = null as unknown as { id: string };
 
-		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, { selectedValue: '0' });
+		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
+			view: parseQueueViewId(interaction.customId),
+			selectedValue: '1.0123456789abcdef'
+		});
 		expect(interaction.reply).not.toHaveBeenCalled();
 		expect(interaction.update).toHaveBeenCalledTimes(1);
+	});
+
+	it('renders the page of the selected track and carries the owner in the new view', async () => {
+		const { interaction, handler } = context();
+		mocks.getUserQueuedTracks.mockReturnValue(Array.from({ length: 25 }, () => ({ info: { title: 't' } })));
+		mocks.resolveQueueSelection.mockReturnValue(14);
+
+		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
+			view: parseQueueViewId(interaction.customId),
+			selectedValue: 'x'
+		});
+		expect(mocks.queueList).toHaveBeenCalledWith(
+			expect.objectContaining({ page: 2, totalPages: 3, authorId: '123456789012345678', selectedIndex: 14 })
+		);
+	});
+
+	it('rejects a select from someone who did not open the view, without touching the player', async () => {
+		const { interaction, handler } = context();
+		interaction.customId = encodeQueueViewId({ action: 'sel', ownerId: 'someone-else', page: 1 });
+
+		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
+			view: parseQueueViewId(interaction.customId),
+			selectedValue: 'x'
+		});
+		expect(interaction.reply).toHaveBeenCalledTimes(1);
+		expect(interaction.update).not.toHaveBeenCalled();
+		expect(mocks.resolveQueueSelection).not.toHaveBeenCalled();
+	});
+
+	it('tells the user to reopen the queue for a legacy custom id', async () => {
+		const { interaction, handler } = context();
+		interaction.customId = 'controller:queue:select';
+
+		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
+			view: parseQueueViewId(interaction.customId),
+			selectedValue: 'x'
+		});
+		expect(interaction.reply).toHaveBeenCalledTimes(1);
+		expect(interaction.update).not.toHaveBeenCalled();
 	});
 });

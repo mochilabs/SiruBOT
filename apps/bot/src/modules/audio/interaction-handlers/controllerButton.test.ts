@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AttachmentBuilder, Collection, MessagePayload, type ButtonInteraction, type InteractionUpdateOptions, type Message } from 'discord.js';
+import {
+	AttachmentBuilder,
+	Collection,
+	MessageFlags,
+	MessagePayload,
+	type ButtonInteraction,
+	type InteractionUpdateOptions,
+	type Message
+} from 'discord.js';
 import ControllerButtonHandler from './controllerButton.ts';
 vi.mock('../../../services/guildSettings/channels.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
@@ -207,5 +215,30 @@ describe('controller button cached rendering', () => {
 		expect(mocks.updateVolume).not.toHaveBeenCalled();
 		expect(player.setVolume).not.toHaveBeenCalled();
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
+	});
+
+	it('opens the queue view with every control bound to the opener', async () => {
+		const { interaction, player, handler } = context();
+		const tracks = Array.from({ length: 12 }, (_, index) => ({
+			info: { identifier: `id-${index}`, uri: `https://music/${index}`, title: `t${index}`, author: 'a', duration: 1000 },
+			requester: { id: 'u' }
+		}));
+		Object.assign(player, { queue: { tracks, current: null, previous: [] } });
+		Object.assign(interaction, { user: { id: '123456789012345678' } });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'queue', subcommand: 'view' });
+
+		const json = JSON.stringify(interaction.reply.mock.calls[0]![0].components.map((component: { toJSON(): unknown }) => component.toJSON()));
+		const ids = [...json.matchAll(/"custom_id":"([^"]+)"/g)].map((match) => match[1]!);
+		expect(ids).toContain('queue:v1:sel:123456789012345678:1');
+		expect(ids).toContain('queue:v1:page:123456789012345678:2');
+		expect(ids.filter((id) => id.startsWith('queue:v1:') && id !== 'queue:v1:ind').every((id) => id.includes('123456789012345678'))).toBe(true);
+	});
+
+	it.each(['prev', 'next', 'remove', 'jumpTo'])('tells the user to reopen the queue for a legacy queue:%s button', async (subcommand) => {
+		const { interaction, player, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'queue', subcommand });
+		expect(interaction.reply).toHaveBeenCalledTimes(1);
+		expect(interaction.reply.mock.calls[0]![0].flags).toContain(MessageFlags.Ephemeral);
+		expect(player.pause).not.toHaveBeenCalled();
 	});
 });
