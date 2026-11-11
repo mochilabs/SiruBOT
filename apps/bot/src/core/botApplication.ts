@@ -55,9 +55,10 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 	}
 
-	public setupStore(name: string) {
-		this.logger.debug(`Setting up module store: ${name}`);
-		this.stores.registerPath(join(this.rootData.root, 'modules', name));
+	/** `root`는 PIECE_ROOTS의 항목처럼 src 기준 상대 경로예요 (예: `modules/audio`). */
+	public setupStore(root: string) {
+		this.logger.debug(`Setting up piece root: ${root}`);
+		this.stores.registerPath(join(this.rootData.root, root));
 	}
 
 	public async setupRedis(url: string) {

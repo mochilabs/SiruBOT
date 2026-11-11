@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { getConfig } from './config.ts';
 import { createBotClient } from './botClient.ts';
 import { startHealthServer } from './healthServer.ts';
+import { PIECE_ROOTS } from './pieceRoots.ts';
 import { setupLavalink } from './lavalinkSetup.ts';
 import { startRedisSubscribers } from './redisSubscribers.ts';
 import { resolveShardIdentity } from './shardIdentity.ts';
@@ -46,10 +47,7 @@ export const main = async () => {
 		container.logger = client.logger;
 
 		// Audio -> General -> Voice -> Games -> RedisStore -> Login -> Lavalink (After ready event)
-		client.setupStore('audio');
-		client.setupStore('general');
-		client.setupStore('voice');
-		client.setupStore('games');
+		for (const root of PIECE_ROOTS) client.setupStore(root);
 
 		client.logger.debug('Setting up database...');
 		await client.setupDatabase();
