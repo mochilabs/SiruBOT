@@ -3,4 +3,4 @@
  * (Sapphire 피스는 features/role-panels/discord 아래에서 스토어가 직접 읽어요.)
  */
 export { deletePostedMessage, PanelPostError, resolvePanelChannel, RolePanelService } from './application/rolePanelService.ts';
-export { RoleValidationResponder } from './inbound/roleValidationResponder.ts';
+export { createRoleValidationResponder } from './inbound/roleValidation.ts';

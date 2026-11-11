@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockPublishBotAdminResponse, mockGetSession, mockContainer } = vi.hoisted(() => {
+const { mockPublish, mockGetSession, mockContainer } = vi.hoisted(() => {
 	const publishFn = vi.fn();
 	const getSessionFn = vi.fn();
 	return {
-		mockPublishBotAdminResponse: publishFn,
+		mockPublish: publishFn,
 		mockGetSession: getSessionFn,
 		mockContainer: {
 			shardInfo: { shardIds: [0], shardCount: 1 },
@@ -12,7 +12,6 @@ const { mockPublishBotAdminResponse, mockGetSession, mockContainer } = vi.hoiste
 			appEmojiManager: null as unknown,
 			stores: new Map(),
 			redisStore: {
-				publishBotAdminResponse: publishFn,
 				getNodeSessionStore: () => ({ get: getSessionFn })
 			}
 		}
@@ -22,22 +21,25 @@ vi.mock('@sapphire/framework', () => ({
 	container: mockContainer
 }));
 
-import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import { BotAdminResponder } from './botAdminResponder.ts';
+import type { RedisRuntime } from '../../../lib/redisResponder.ts';
+import { createBotAdminResponder } from './botAdmin.ts';
 
 const REQUEST_ID = 'c9d3a1b2-4e5f-4a6b-8c7d-2b1e3f4a5c61';
 
-function createResponder(signingKey = 'secret-key') {
+/** 서명 없는(개발용) 모드로 요청을 흘려 넣어요 — 서명 검증 자체는 lib/redisResponder.test.ts가 잠가요 */
+function createResponder() {
 	const logger = {
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
 		debug: vi.fn()
 	};
-	return { responder: new BotAdminResponder(logger, signingKey), logger, signingKey };
+	const binding = createBotAdminResponder();
+	const runtime: RedisRuntime = { logger, signingKey: '', publisher: { publish: mockPublish }, resolveGuild: () => undefined };
+	return { responder: { handleRequest: (raw: string) => binding.handle(raw, runtime) }, logger };
 }
 
-describe('BotAdminResponder', () => {
+describe('봇 관리자 응답자', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockContainer.shardInfo = { shardIds: [0], shardCount: 1 };
@@ -69,7 +71,7 @@ describe('BotAdminResponder', () => {
 		]);
 		mockContainer.audio = { nodeManager: { nodes } };
 
-		const { responder, signingKey } = createResponder();
+		const { responder } = createResponder();
 		await responder.handleRequest(
 			JSON.stringify({
 				requestId: REQUEST_ID,
@@ -80,10 +82,10 @@ describe('BotAdminResponder', () => {
 
 		expect(disconnect).toHaveBeenCalledWith('Admin panel manual reconnect');
 		expect(connect).toHaveBeenCalledWith('sess-existing');
-		expect(mockPublishBotAdminResponse).toHaveBeenCalledTimes(1);
+		expect(mockPublish).toHaveBeenCalledTimes(1);
 
-		const unwrapped = unwrapRedisMessage(signingKey, mockPublishBotAdminResponse.mock.calls[0]![0] as string);
-		expect(JSON.parse(unwrapped!)).toEqual(
+		expect(mockPublish.mock.calls[0]![0]).toBe('sirubot:bot-admin:response');
+		expect(mockPublish.mock.calls[0]![1]).toEqual(
 			expect.objectContaining({
 				requestId: REQUEST_ID,
 				kind: 'node-reconnect',
@@ -156,6 +158,6 @@ describe('BotAdminResponder', () => {
 		);
 
 		expect(connect).toHaveBeenCalledWith('sess-1');
-		expect(mockPublishBotAdminResponse).not.toHaveBeenCalled();
+		expect(mockPublish).not.toHaveBeenCalled();
 	});
 });

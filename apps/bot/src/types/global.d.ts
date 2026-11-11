@@ -9,7 +9,6 @@ import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
-import type { BotAdminResponder } from '../services/botAdminResponder.ts';
 
 declare module '@sapphire/pieces' {
 	interface Container {
@@ -36,15 +35,10 @@ declare module '@sapphire/pieces' {
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
 		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
-		jtcSetupResponder?: import('../features/temp-voice/inbound/jtcSetupResponder.ts').JtcSetupResponder;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
-		guildDataResponder?: import('../services/guildDataResponder.ts').GuildDataResponder;
-		socialWebhookResponder?: import('../services/socialWebhookResponder.ts').SocialWebhookResponder;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
-		botAdminResponder?: BotAdminResponder;
 		panelPostResponder?: import('../services/panelPostResponder.ts').PanelPostResponder;
-		roleValidationResponder?: import('../features/role-panels/index.ts').RoleValidationResponder;
 		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };

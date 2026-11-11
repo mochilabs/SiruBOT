@@ -23,16 +23,14 @@ import { ChatTtsService } from '../services/chatTts.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { TicketService } from '../features/tickets/index.ts';
-import { RolePanelService, RoleValidationResponder } from '../features/role-panels/index.ts';
+import { RolePanelService, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
-import { JtcSetupResponder } from '../features/temp-voice/index.ts';
-import { SocialWebhookResponder } from '../services/socialWebhookResponder.ts';
+import { createJtcSetupResponder } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { MemberGreetingService } from '../features/greeting/index.ts';
-import { GuildDataResponder } from '../services/guildDataResponder.ts';
+import { createBotAdminResponder, createGuildDataResponder, createSocialWebhookResponder } from '../features/dashboard-bridge/index.ts';
 import { AppEmojiManager } from '../services/appEmojiManager.ts';
-import { BotAdminResponder } from '../services/botAdminResponder.ts';
 import { PanelPostResponder } from '../services/panelPostResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { RedisPublisher } from '../lib/redisPublisher.ts';
@@ -135,14 +133,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		// (guildSettingsInvalidator는 대시보드가 직접 퍼블리시하는 채널이라 서명 대상이 아니에요)
 		const redisSigningKey = getConfig().redis.signingKey;
 		const guildSettingsInvalidator = (container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger));
-		const jtcSetupResponder = (container.jtcSetupResponder = new JtcSetupResponder(subscriberLogger, redisSigningKey));
 		const botProfileService = (container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey));
 		const memberGreetingService = (container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey));
-		const guildDataResponder = (container.guildDataResponder = new GuildDataResponder(subscriberLogger, redisSigningKey));
-		const socialWebhookResponder = (container.socialWebhookResponder = new SocialWebhookResponder(subscriberLogger, redisSigningKey));
-		const botAdminResponder = (container.botAdminResponder = new BotAdminResponder(subscriberLogger, redisSigningKey));
 		const panelPostResponder = (container.panelPostResponder = new PanelPostResponder(subscriberLogger, redisSigningKey));
-		const roleValidationResponder = (container.roleValidationResponder = new RoleValidationResponder(subscriberLogger, redisSigningKey));
 
 		// Redis 구독 서비스 레지스트리 — 새 서비스는 여기에 한 줄만 추가하면 start/stop이 따라와요.
 		// 배열 순서가 start 순서예요 (stop도 같은 순서). 모든 start는 실패해도 부팅을 막지 않아요 (자체 재연결).
@@ -155,7 +148,17 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		// 공유 구독 연결 하나에 묶이는 응답자·이벤트 리스너 — 새 응답자는 여기에 추가해요.
 		const redisBindings: RedisBinding[] = [
 			// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
-			createPlayerWebResponder()
+			createPlayerWebResponder(),
+			// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
+			createJtcSetupResponder(),
+			// 대시보드 채널/역할 목록 요청 → data-api → Redis → 봇 응답.
+			createGuildDataResponder(),
+			// 대시보드 소셜 알림 구독 추가 → notifier → Redis → 봇이 대상 채널에 웹훅 1회 생성.
+			createSocialWebhookResponder(),
+			// 대시보드 관리자 패널(/admin) 제어 → data-api → Redis → 봇 수행 (대표 프로세스만 응답).
+			createBotAdminResponder(),
+			// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
+			createRoleValidationResponder()
 		];
 		container.redisSubscribers = [
 			createSharedRedisSubscriber({ name: '대시보드 연동', logger: subscriberLogger, runtime: redisRuntime, bindings: redisBindings }),
@@ -166,28 +169,15 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				start: (url) => guildSettingsInvalidator.start(url, container.guildService),
 				stop: () => guildSettingsInvalidator.stop()
 			},
-			// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
-			// 실패해도 부팅은 계속돼요 — 대시보드 설정 요청만 타임아웃 폴백해요.
-			{ name: 'jtcSetupResponder', start: (url) => jtcSetupResponder.start(url), stop: () => jtcSetupResponder.stop() },
 			// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
 			// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
 			{ name: 'botProfileService', start: (url) => botProfileService.start(url), stop: () => botProfileService.stop() },
 			// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
 			// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
 			{ name: 'memberGreetingService', start: (url) => memberGreetingService.start(url), stop: () => memberGreetingService.stop() },
-			// 대시보드 채널/역할 목록 요청 → data-api → Redis → 봇 응답.
-			// 실패해도 부팅은 계속돼요 — 대시보드 패널 조회만 타임아웃 폴백으로 끝나요.
-			{ name: 'guildDataResponder', start: (url) => guildDataResponder.start(url), stop: () => guildDataResponder.stop() },
-			// 대시보드 소셜 알림 구독 추가 → notifier → Redis → 봇이 대상 채널에 웹훅 1회 생성.
-			// 실패해도 부팅은 계속돼요 — 구독 추가만 타임아웃 폴백해요 (기존 알림 전송은 웹훅이라 무관해요).
-			{ name: 'socialWebhookResponder', start: (url) => socialWebhookResponder.start(url), stop: () => socialWebhookResponder.stop() },
-			{ name: 'botAdminResponder', start: (url) => botAdminResponder.start(url), stop: () => botAdminResponder.stop() },
 			// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
 			// 실패해도 부팅은 계속돼요 — 대시보드 직접 게시만 타임아웃 폴백해요.
-			{ name: 'panelPostResponder', start: (url) => panelPostResponder.start(url), stop: () => panelPostResponder.stop() },
-			// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
-			// 실패해도 부팅은 계속돼요 — 대시보드 저장 전 검증만 타임아웃 폴백해요.
-			{ name: 'roleValidationResponder', start: (url) => roleValidationResponder.start(url), stop: () => roleValidationResponder.stop() }
+			{ name: 'panelPostResponder', start: (url) => panelPostResponder.start(url), stop: () => panelPostResponder.stop() }
 		] satisfies RedisSubscriberEntry[];
 		container.appEmojiManager = new AppEmojiManager();
 		this.setupMusicControl();

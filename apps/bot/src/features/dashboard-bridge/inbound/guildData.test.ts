@@ -7,7 +7,7 @@ vi.mock('@sapphire/framework', () => ({
 	}
 }));
 
-import { mapGuildMemberToItem } from './guildDataResponder.ts';
+import { createGuildDataResponder, mapGuildMemberToItem } from './guildData.ts';
 
 function member(overrides: Record<string, unknown> = {}) {
 	return {
@@ -45,5 +45,46 @@ describe('mapGuildMemberToItem', () => {
 		const item = mapGuildMemberToItem(member({ displayAvatarURL }));
 		expect(displayAvatarURL).toHaveBeenCalledWith({ size: 64 });
 		expect(item.avatarUrl).toBe('https://cdn.discordapp.com/avatars/9/9.png?size=64');
+	});
+});
+
+describe('길드 데이터 응답자', () => {
+	const REQUEST_ID = 'c9d3a1b2-4e5f-4a6b-8c7d-2b1e3f4a5c61';
+	const run = async (kind: 'channels' | 'roles') => {
+		const publish = vi.fn();
+		const guild = {
+			id: '123',
+			channels: { cache: new Map([['c1', { id: 'c1', name: '일반', type: 0, parentId: null, position: 2 }]]) },
+			roles: { cache: new Map([['r1', { id: 'r1', name: '역할', color: 5, position: 1, managed: false }]]) }
+		};
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+		await createGuildDataResponder().handle(JSON.stringify({ requestId: REQUEST_ID, guildId: '123', kind }), {
+			logger,
+			signingKey: '',
+			publisher: { publish },
+			resolveGuild: (id) => (id === '123' ? (guild as never) : undefined)
+		});
+		return publish.mock.calls[0];
+	};
+
+	it('channels 요청은 채널 목록을 같은 requestId·kind로 응답해요', async () => {
+		const [channel, body] = (await run('channels'))!;
+		expect(channel).toBe('sirubot:guild-data:response');
+		expect(body).toEqual({
+			requestId: REQUEST_ID,
+			guildId: '123',
+			kind: 'channels',
+			channels: [{ id: 'c1', name: '일반', type: 0, parentId: null, position: 2 }]
+		});
+	});
+
+	it('roles 요청은 역할 목록을 응답해요', async () => {
+		const [, body] = (await run('roles'))!;
+		expect(body).toEqual({
+			requestId: REQUEST_ID,
+			guildId: '123',
+			kind: 'roles',
+			roles: [{ id: 'r1', name: '역할', color: 5, position: 1, managed: false }]
+		});
 	});
 });
