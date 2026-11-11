@@ -1,169 +1,39 @@
 import { envParseString } from '@skyra/env-utilities';
 import { container } from '@sapphire/framework';
-import { Events, GatewayIntentBits, Partials } from 'discord.js';
-import { BotApplication } from './botApplication.ts';
-import { SapphireInterfaceLogger } from './logger.ts';
-import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
-import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
+import type { Server } from 'node:http';
+import { createBotClient } from './botClient.ts';
+import { startHealthServer } from './healthServer.ts';
+import { setupLavalink } from './lavalinkSetup.ts';
+import { startRedisSubscribers } from './redisSubscribers.ts';
+import { resolveShardIdentity } from './shardIdentity.ts';
+import { createShutdownHandler } from './shutdown.ts';
 import { setSentryShardTags } from './sentry.ts';
-import { parseLavalinkHosts } from '@sirubot/utils';
-import { sleep } from '@sirubot/utils/time';
 import * as Sentry from '@sentry/node';
 
 export const main = async () => {
 	const isDevMode = process.env.NODE_ENV !== 'production';
 
-	// 시그널 핸들러용 상태 — 핸들러를 셋업 "이전"에 등록하기 위해 바깥에 둔다.
-	// (기존에는 try 블록 마지막에 등록해 셋업 실패/중단 구간에서 SIGTERM이 무시됐다.)
-	let shutdownStarted = false;
-	let healthServer: import('node:http').Server | null = null;
-
-	let shardIds: number[] | 'auto' = isDevMode ? [0] : 'auto';
-	let shardCount: number = 1;
-
-	if (!isDevMode) {
-		// Production: Get shard ID assigned from manager via ShardClient
-		const shardManagerUrl = process.env.SHARD_MANAGER_URL;
-		if (!shardManagerUrl) {
-			console.error('SHARD_MANAGER_URL is required in production mode. Exiting...');
-			process.exit(1);
-		}
-
-		// 샤드매니저 연결에는 인증 키가 필요하다 — 미설정 시 빈 키로 통과(fail-open)하지 않고 즉시 종료(data-api/storage와 동일한 fail-closed 정책).
-		// 개발 모드(단독 실행, 샤드매니저 미사용)에서는 이 블록 자체를 건너뛰므로 AUTH_KEY 없이도 계속 기동한다.
-		const authKey = process.env.AUTH_KEY;
-		if (!authKey) {
-			console.error('AUTH_KEY is required when SHARD_MANAGER_URL is set. Exiting...');
-			process.exit(1);
-		}
-
-		const { ShardClient, NoShardsAvailableError } = await import('@sirubot/shardclient');
-		const shardClient = new ShardClient({
-			serverURL: shardManagerUrl,
-			authKey,
-			logger: console
-		});
-
-		const identifyRetryMs = Math.max(parseInt(process.env.SHARD_IDENTIFY_RETRY_MS ?? '5000', 10), 1000);
-		// During rolling updates, shard slots can be temporarily unavailable.
-		// Keep retrying instead of exiting so the new process can pick up shards once old process releases.
-		while (true) {
-			try {
-				const identity = await shardClient.identify();
-				shardIds = identity.shardIds;
-				shardCount = identity.shardCount;
-				break;
-			} catch (error) {
-				if (error instanceof NoShardsAvailableError) {
-					console.warn(`No shards available from shard manager. Retrying in ${identifyRetryMs}ms...`);
-					await sleep(identifyRetryMs);
-					continue;
-				}
-				throw error;
-			}
-		}
-
-		// Store shardClient in container (for stats reporting)
-		container.shardClient = shardClient;
-	}
+	const { shardIds, shardCount } = await resolveShardIdentity(isDevMode);
 
 	setSentryShardTags(shardIds);
 
-	const client = new BotApplication({
-		logger: {
-			instance: new SapphireInterfaceLogger({
-				name: 'SiruBOT',
-				minLevel: parseInt(process.env.LOGLEVEL ?? '3', 10),
-				type: 'pretty',
-				hideLogPositionForProduction: process.env.NODE_ENV === 'production'
-			})
-		},
-		shards: shardIds,
-		shardCount,
-		intents: [
-			GatewayIntentBits.GuildModeration,
-			GatewayIntentBits.GuildMembers,
-			GatewayIntentBits.GuildMessageReactions,
-			GatewayIntentBits.GuildMessages,
-			GatewayIntentBits.Guilds,
-			GatewayIntentBits.GuildVoiceStates,
-			// 고정 채널(commandChannel) 입력을 받으려면 메시지 본문이 필요 — 프리빌리지 인텐트, 개발자 포털에서도 활성화해야 함
-			GatewayIntentBits.MessageContent
-		],
-		// Reaction·User: 재시작 전에 게시한 역할 패널 메시지의 반응 이벤트도 받으려면 partial이 필요해요
-		partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User]
-	});
+	const client = createBotClient(shardIds, shardCount);
+
+	// 시그널 핸들러용 상태 — 핸들러를 셋업 "이전"에 등록하기 위해 바깥에 둔다.
+	// (기존에는 try 블록 마지막에 등록해 셋업 실패/중단 구간에서 SIGTERM이 무시됐다.)
+	let healthServer: Server | null = null;
 
 	// Handle graceful shutdown — 셋업 성공 여부와 무관하게 즉시 등록한다.
-	// 재진입 가드: SIGINT/SIGTERM 중복 도착이나 핸들러 이중 실행을 막는다.
-	const shutdown = async (signal: string) => {
-		if (shutdownStarted) return;
-		shutdownStarted = true;
-		client.logger.info(`${signal} received. Shutting down gracefully...`);
-		if (healthServer) {
-			healthServer.close();
-		}
-
-		// 종료 순서: 세션 저장 → 리스너 정리 → Redis → DB → 샤드 클라이언트 (세션 저장은 Redis 끊기 전에)
-		if (container.audio && container.redisStore) {
-			try {
-				const sessionStore = container.redisStore.getNodeSessionStore();
-				const shardKey = NodeSessionStore.makeShardKey(Array.isArray(shardIds) ? shardIds : [0]);
-				for (const node of container.audio.nodeManager.nodes.values()) {
-					if (node.sessionId) {
-						// save는 Redis가 끊겨 있으면 실제로 기록하지 않는다 — 거짓 성공 로그를 내지 않는다.
-						const saved = await sessionStore.save(node.id, node.sessionId, shardKey);
-						if (saved) {
-							client.logger.info(`Saved session for node ${node.id}: ${node.sessionId}`);
-						} else {
-							client.logger.warn(`Session save skipped/failed for node ${node.id} (redis unavailable)`);
-						}
-					}
-				}
-			} catch (error) {
-				client.logger.error(`Failed to save node sessions during shutdown: ${error}`);
-			}
-		}
-
-		// Audio listeners 정리 (+ 설정 무효화 구독 해제)
-		// lavalink 핸들러의 watchdog/reconcile/복구 타이머를 먼저 해제한다 — 남은 타이머가
-		// 종료 절차 중에 발화해 mixer REST/play를 시도하는 것을 막는다.
-		container.lavalinkHandler?.cleanup();
-		if (container.audio) {
-			container.audio.removeAllListeners();
-		}
-		await container.guildSettingsInvalidator?.stop().catch(() => null);
-		await container.playerWebResponder?.stop().catch(() => null);
-		await container.jtcSetupResponder?.stop().catch(() => null);
-		await container.botProfileService?.stop().catch(() => null);
-		await container.memberGreetingService?.stop().catch(() => null);
-		await container.guildDataResponder?.stop().catch(() => null);
-		await container.socialWebhookResponder?.stop().catch(() => null);
-		await container.botAdminResponder?.stop().catch(() => null);
-		await container.panelPostResponder?.stop().catch(() => null);
-		await container.roleValidationResponder?.stop().catch(() => null);
-		// 종료 전에 저널을 비운다 — Redis를 끊은 뒤엔 pending 큐/플레이어 변경이 소실된다.
-		// 세션 저장(위)은 Redis 연결이 필요한 첫 단계고, 여기서 남은 저널을 마저 민 뒤 끊는다.
-		if (container.redisStore) {
-			await container.redisStore.flushPendingWrites().catch(() => null);
-			await container.redisStore.disconnect().catch(() => null);
-		}
-
-		if (container.db) {
-			await container.db.$disconnect().catch(() => null);
-		}
-
-		// 게이트웨이 정리 — 이 시점부터 새 이벤트가 유출되지 않는다.
-		await client.destroy().catch(() => null);
-
-		if (container.shardClient) {
-			container.shardClient.destroy();
-		}
-		// Flush unsent Sentry events
-		await Sentry.close(2000);
-		process.exit(0);
-	};
-
+	// 재진입 가드는 createShutdownHandler 안에 있다 (SIGINT/SIGTERM 중복 도착이나 핸들러 이중 실행 방지).
+	const shutdown = createShutdownHandler({
+		logger: client.logger,
+		container,
+		client,
+		getHealthServer: () => healthServer,
+		shardIds,
+		closeSentry: (timeoutMs) => Sentry.close(timeoutMs),
+		exit: (code) => process.exit(code)
+	});
 	process.once('SIGINT', () => void shutdown('SIGINT'));
 	process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
@@ -189,82 +59,18 @@ export const main = async () => {
 		client.logger.debug('Setting up redis store manager... (optional)');
 		await client.setupRedis(envParseString('REDIS_URL'));
 
-		// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
-		// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
-		await container.guildSettingsInvalidator?.start(envParseString('REDIS_URL'), container.guildService);
-		// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
-		// 실패해도 부팅은 계속돼요 — 대시보드 플레이어 요청이 타임아웃 폴백으로 끝나요.
-		await container.playerWebResponder?.start(envParseString('REDIS_URL'));
-		// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
-		// 실패해도 부팅은 계속돼요 — 대시보드 설정 요청만 타임아웃 폴백해요.
-		await container.jtcSetupResponder?.start(envParseString('REDIS_URL'));
-		// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
-		// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
-		await container.botProfileService?.start(envParseString('REDIS_URL'));
-		// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
-		// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
-		await container.memberGreetingService?.start(envParseString('REDIS_URL'));
-		// 대시보드 채널/역할 목록 요청 → data-api → Redis → 봇 응답.
-		// 실패해도 부팅은 계속돼요 — 대시보드 패널 조회만 타임아웃 폴백으로 끝나요.
-		await container.guildDataResponder?.start(envParseString('REDIS_URL'));
-		// 대시보드 소셜 알림 구독 추가 → notifier → Redis → 봇이 대상 채널에 웹훅 1회 생성.
-		// 실패해도 부팅은 계속돼요 — 구독 추가만 타임아웃 폴백해요 (기존 알림 전송은 웹훅이라 무관해요).
-		await container.socialWebhookResponder?.start(envParseString('REDIS_URL'));
-		await container.botAdminResponder?.start(envParseString('REDIS_URL'));
-		// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
-		// 실패해도 부팅은 계속돼요 — 대시보드 직접 게시만 타임아웃 폴백해요.
-		await container.panelPostResponder?.start(envParseString('REDIS_URL'));
-		// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
-		// 실패해도 부팅은 계속돼요 — 대시보드 저장 전 검증만 타임아웃 폴백해요.
-		await container.roleValidationResponder?.start(envParseString('REDIS_URL'));
+		// Redis 구독 서비스군 start — 등록 순서와 서비스별 설명은 BotApplication.setupServices의 레지스트리에 있어요.
+		await startRedisSubscribers(container.redisSubscribers, envParseString('REDIS_URL'));
+
 		client.logger.info('Logging into discord...');
 		await client.login(envParseString('DISCORD_TOKEN'));
 
-		client.logger.debug('Setting up lavalink...');
-		const { hosts: lavalinkHosts, defaultPasswordUsed } = parseLavalinkHosts(
-			envParseString('LAVALINK_HOSTS'),
-			envParseString('LAVALINK_DEFAULT_PASSWORD', '')
-		);
-		if (defaultPasswordUsed) {
-			client.logger.warn(
-				'Some LAVALINK_HOSTS entries have no password; using the default "youshallnotpass". Set the node password explicitly or provide LAVALINK_DEFAULT_PASSWORD.'
-			);
-		}
-		await client.setupAudio(lavalinkHosts, { shardIds: Array.isArray(shardIds) ? shardIds : [0], shardCount });
-
-		// Lavalink 핸들러 등록 및 노드 연결 (setupAudio 직후, 순서 보장)
-		container.lavalinkHandler = new LavalinkHandler(container.audio);
-		await container.audio.init({ id: client.user!.id });
+		await setupLavalink(client, shardIds, shardCount);
 
 		client.logger.info('Logged in as ' + client.user!.tag);
 
 		// Health check HTTP server for Docker
-		const { createServer } = await import('node:http');
-		const healthPort = parseInt(process.env.HEALTH_PORT ?? '8080', 10);
-		let everReady = false;
-		let unreadySince: number | null = null;
-		client.once(Events.ClientReady, () => {
-			everReady = true;
-			unreadySince = null;
-		});
-		healthServer = createServer((_req, res) => {
-			const ready = client.isReady();
-			if (ready) {
-				everReady = true;
-				unreadySince = null;
-			} else if (everReady && unreadySince === null) {
-				unreadySince = Date.now();
-			}
-			// 부팅 구간(READY 이전)은 503, 준비 완료 후의 일시 재연결은 200을 유지해
-			// 게이트웨이 재연결 중 restart가 증폭되는 것을 막는다. 2분 내 복구 실패 시 다시 503.
-			const reconnectingWithinGrace = everReady && unreadySince !== null && Date.now() - unreadySince < 120_000;
-			const isHealthy = ready || reconnectingWithinGrace;
-			res.writeHead(isHealthy ? 200 : 503, { 'Content-Type': 'application/json' });
-			res.end(JSON.stringify({ ok: isHealthy, ready, everReady, wsStatus: client.ws.status }));
-		});
-		healthServer.listen(healthPort, '0.0.0.0', () => {
-			client.logger.info(`Health check server listening on :${healthPort}`);
-		});
+		healthServer = await startHealthServer(client);
 
 		// Production: report ready status + collect stats
 		if (!isDevMode && container.shardClient) {
