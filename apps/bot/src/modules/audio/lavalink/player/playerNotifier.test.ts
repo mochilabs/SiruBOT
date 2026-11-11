@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { setConfigForTesting } from '../../../../core/config.ts';
+import { makeTestConfig } from '../../../../core/config.testing.ts';
 import { AttachmentBuilder, Collection, MessagePayload, type ChatInputCommandInteraction, type Message } from 'discord.js';
 import type { CustomPlayer } from './customPlayer.ts';
 import { PlayerNotifier } from './playerNotifier.ts';
@@ -118,6 +120,10 @@ function card(trackKey = 'a') {
 		file: new AttachmentBuilder(Buffer.from('card'), { name: 'card.png' })
 	};
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('non-blocking player notifications', () => {
 	beforeEach(() => {

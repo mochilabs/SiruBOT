@@ -1,7 +1,7 @@
 import { Events, version as frameworkVersion, Listener } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
-import { envParseString } from '@skyra/env-utilities';
+import { getConfig } from '../../../lib/configAccess.ts';
 import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
@@ -38,7 +38,7 @@ export class ReadyEvent extends Listener {
 	}
 
 	private startActivityInterval() {
-		const activitySettings = envParseString('BOT_ACTIVITY');
+		const activitySettings = getConfig().discord.botActivity;
 		if (!activitySettings) return;
 
 		const activityTemplates = activitySettings

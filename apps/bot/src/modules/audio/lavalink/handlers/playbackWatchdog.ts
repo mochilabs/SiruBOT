@@ -2,7 +2,7 @@ import { container } from '@sapphire/framework';
 import { LavalinkManager, Track, UnresolvedTrack } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
 import * as Sentry from '@sentry/node';
-import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
+import { CustomPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 import { getTargetNextTrack, getTrackUid, notifyQueueMutated } from '../queue/queueWrapper.ts';
 
@@ -114,7 +114,9 @@ export class PlaybackWatchdog {
 	private readonly watchdogs = new Map<string, ReturnType<typeof setTimeout>>();
 	/** 전이 확정 리커널 — 지연 도착한 trackEnd/queueEnd가 current를 덮어쓸 때 실제 재생 곡으로 복원한다. */
 	private readonly reconcileTimers = new Map<string, ReturnType<typeof setTimeout>>();
-	private readonly confirmTimeoutMs = TRANSITION_CONFIRM_TIMEOUT_MS;
+	private get confirmTimeoutMs(): number {
+		return transitionConfirmTimeoutMs();
+	}
 
 	constructor(
 		private readonly host: TrackTransitionHost,

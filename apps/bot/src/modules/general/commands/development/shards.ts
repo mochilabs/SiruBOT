@@ -3,7 +3,7 @@ import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { notice } from '../../view/notice.ts';
-import { envParseArray } from '@skyra/env-utilities';
+import { getConfig } from '../../../../lib/configAccess.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -22,7 +22,7 @@ export class ShardsCommand extends Command {
 					.setDescription('Show shard status (bot owner only).')
 					.setDescriptionLocalizations({ ko: '샤드 상태를 보여줘요. (봇 소유자 전용)' });
 			},
-			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
+			{ guildIds: [...getConfig().discord.devGuildIds], behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);
 	}
 

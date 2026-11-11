@@ -8,12 +8,13 @@ import { getInFlightRelatedFetch } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { reportPlaybackEvent } from '../../../../services/playbackReporter.ts';
 import { clearPlayerStateTracker, publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
-import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from '../player/customPlayer.ts';
+import { CustomPlayer, transitionConfirmTimeoutMs } from '../player/customPlayer.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded, syncPlayingFlagFromProbe, syncQueueToNowPlaying } from './playbackWatchdog.ts';
 import type { TrackTransitionHost } from './trackHandler.ts';
 import { clearMixerRuntime, handleMixerTrackEnd, sendOverride } from './mixerHandlers.ts';
+import { getConfig } from '../../../../lib/configAccess.ts';
 import { cancelPendingInvalidate, getTargetNextTrack } from '../queue/queueWrapper.ts';
-const MAX_CONSECUTIVE_ERRORS = Number(process.env.MAX_CONSECUTIVE_ERRORS) || 3;
+const maxConsecutiveErrors = (): number => getConfig().playback.maxConsecutiveErrors;
 
 /**
  * TrackExceptionEvent에서 사람이 읽을 사유를 뽑아요 (연령 제한, 삭제된 영상 등).
@@ -38,7 +39,9 @@ export class QueueAdvancer {
 	 */
 	private readonly clientAdvancePending = new Map<string, { token: number; timer: ReturnType<typeof setTimeout> }>();
 	private advanceTokenSeq = 0;
-	private readonly confirmTimeoutMs = TRANSITION_CONFIRM_TIMEOUT_MS;
+	private get confirmTimeoutMs(): number {
+		return transitionConfirmTimeoutMs();
+	}
 
 	constructor(
 		private readonly host: TrackTransitionHost,
@@ -111,14 +114,14 @@ export class QueueAdvancer {
 		this.clearAdvancePending(player.guildId);
 		player.consecutiveErrors++;
 		this.logger.warn(
-			`Track ${kind} (${player.consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${track?.info.title} by ${track?.info.author}${reason ? ` (${reason})` : ''}`
+			`Track ${kind} (${player.consecutiveErrors}/${maxConsecutiveErrors()}): ${track?.info.title} by ${track?.info.author}${reason ? ` (${reason})` : ''}`
 		);
 		reportPlaybackEvent(player.guildId, kind === 'stuck' ? 'track_stuck' : 'track_error', track, {
 			...(reason ? { reason } : {}),
 			consecutiveErrors: player.consecutiveErrors
 		});
 
-		if (player.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+		if (player.consecutiveErrors >= maxConsecutiveErrors()) {
 			this.logger.warn(`Max consecutive errors reached for guild ${player.guildId}, aborting playback`);
 			reportPlaybackEvent(player.guildId, 'playback_abort', track, {
 				reason: 'max_consecutive_errors',
@@ -126,7 +129,7 @@ export class QueueAdvancer {
 			});
 			await this.sendNotification(
 				player,
-				`🚫 연속 재생 오류가 ${MAX_CONSECUTIVE_ERRORS}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
+				`🚫 연속 재생 오류가 ${maxConsecutiveErrors()}회 발생했어요. 음성 서버에 문제가 있을 수 있어요. 재생을 중단했어요.`
 			);
 			player.transitionState.stopByCommand = true;
 			this.container.mixerService.markUnmanaged(player.guildId);

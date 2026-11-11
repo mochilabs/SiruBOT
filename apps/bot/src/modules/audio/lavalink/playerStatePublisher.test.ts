@@ -1,5 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { resolveRedisSigningKey, unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { setConfigForTesting } from '../../../core/config.ts';
+import { makeTestConfig } from '../../../core/config.testing.ts';
 import { buildPlayerStatePayload, publishPlayerState, publishPlayerEnded, clearPlayerStateTracker } from './playerStatePublisher.ts';
 
 const { store } = vi.hoisted(() => ({ store: { ready: true, publishRawPlayerState: vi.fn() } }));
@@ -28,6 +30,10 @@ function player(overrides: Record<string, unknown> = {}) {
 		...overrides
 	};
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('statusFingerprint-driven publish throttling', () => {
 	beforeEach(() => {
@@ -169,23 +175,17 @@ describe('now-playing source', () => {
 });
 
 describe('SEC-006 서명 봉투', () => {
-	const savedEnv = { redis: process.env.REDIS_AUTH_KEY, auth: process.env.AUTH_KEY };
-
 	afterEach(() => {
-		if (savedEnv.redis === undefined) delete process.env.REDIS_AUTH_KEY;
-		else process.env.REDIS_AUTH_KEY = savedEnv.redis;
-		if (savedEnv.auth === undefined) delete process.env.AUTH_KEY;
-		else process.env.AUTH_KEY = savedEnv.auth;
+		setConfigForTesting(null);
 		store.publishRawPlayerState.mockClear();
 		container.playerStatePublishTracker = new Map();
 	});
 
 	it('서명 키가 있으면 검증 가능한 봉투로 감싸 발행해요', () => {
-		process.env.REDIS_AUTH_KEY = '';
-		process.env.AUTH_KEY = 'test-signing-key';
+		setConfigForTesting(makeTestConfig({ REDIS_AUTH_KEY: '', AUTH_KEY: 'test-signing-key' }));
 		publishPlayerState(player() as never);
 		const [, payload] = store.publishRawPlayerState.mock.calls[0] as [string, string];
-		const body = unwrapRedisMessage(resolveRedisSigningKey(process.env), payload);
+		const body = unwrapRedisMessage('test-signing-key', payload);
 		expect(body).not.toBeNull();
 		expect(JSON.parse(body as string)).toMatchObject({ guildId: 'g1' });
 		// 봉투가 아니면(평문) unwrap 실패해야 해요 — 서명 없는 발행이 섞이지 않는지 확인.
@@ -193,8 +193,7 @@ describe('SEC-006 서명 봉투', () => {
 	});
 
 	it('키가 없으면 구버전 평문으로 발행해요', () => {
-		process.env.REDIS_AUTH_KEY = '';
-		process.env.AUTH_KEY = '';
+		setConfigForTesting(makeTestConfig({ REDIS_AUTH_KEY: '', AUTH_KEY: '' }));
 		publishPlayerState(player() as never);
 		const [, payload] = store.publishRawPlayerState.mock.calls[0] as [string, string];
 		expect(JSON.parse(payload)).toMatchObject({ guildId: 'g1' });

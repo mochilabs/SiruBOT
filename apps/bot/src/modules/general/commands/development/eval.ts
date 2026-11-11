@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction } from 'discord.js';
 import { evalModal } from '../../view/eval.ts';
-import { envParseArray } from '@skyra/env-utilities';
+import { getConfig } from '../../../../lib/configAccess.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -21,7 +21,7 @@ export class EvalCommand extends Command {
 					.setDescription('Evaluate code (bot owner only).')
 					.setDescriptionLocalizations({ ko: '코드를 실행해요. (봇 소유자 전용)' });
 			},
-			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
+			{ guildIds: [...getConfig().discord.devGuildIds], behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);
 	}
 

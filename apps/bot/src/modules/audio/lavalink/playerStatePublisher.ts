@@ -9,7 +9,8 @@
  */
 import { container } from '@sapphire/framework';
 import type { PlayerStatePayload, QueuedTrackSummary } from '@sirubot/utils';
-import { resolveRedisSigningKey, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { getConfig } from '../../../lib/configAccess.ts';
 import type { Track } from 'lavalink-client';
 import { getUserQueuedTracks } from './autoPlayRelated.ts';
 import { nowPlayingTrack } from './player/nowPlaying.ts';
@@ -101,7 +102,7 @@ export function publishPlayerState(player: CustomPlayer): void {
 
 	tracker.set(player.guildId, { at: now, fingerprint });
 	// SEC-006: state 허브가 fail-closed 검증을 하므로 서명 봉투로 감싸 보내요 (키 없으면 구버전 평문).
-	store.publishRawPlayerState(player.guildId, wrapRedisMessage(resolveRedisSigningKey(process.env), payload));
+	store.publishRawPlayerState(player.guildId, wrapRedisMessage(getConfig().redis.signingKey, payload));
 }
 
 /**
@@ -117,7 +118,7 @@ export function publishPlayerEnded(player: CustomPlayer): void {
 	const payload: PlayerStatePayload = { ...buildPlayerStatePayload(player), ended: true };
 	// 종료 프레임은 이후 상태와 비교할 대상이 아니에요 — 스로틀 추적기를 비워요.
 	getPublishTracker().delete(player.guildId);
-	store.publishRawPlayerState(player.guildId, wrapRedisMessage(resolveRedisSigningKey(process.env), payload));
+	store.publishRawPlayerState(player.guildId, wrapRedisMessage(getConfig().redis.signingKey, payload));
 }
 
 /** 플레이어 파괴 시 마지막 퍼블리시 상태 정리 */

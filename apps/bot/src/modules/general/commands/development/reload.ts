@@ -3,7 +3,7 @@ import { Command, RegisterBehavior, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { notice } from '../../view/notice.ts';
-import { envParseArray } from '@skyra/env-utilities';
+import { getConfig } from '../../../../lib/configAccess.ts';
 
 @ApplyOptions<Command.Options>({
 	enabled: true,
@@ -22,7 +22,7 @@ export class ReloadCommand extends Command {
 					.setDescription('Reload commands.')
 					.setDescriptionLocalizations({ ko: '명령어를 리로드해요.' });
 			},
-			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
+			{ guildIds: [...getConfig().discord.devGuildIds], behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);
 	}
 

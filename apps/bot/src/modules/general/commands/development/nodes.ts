@@ -3,7 +3,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { envParseArray } from '@skyra/env-utilities';
+import { getConfig } from '../../../../lib/configAccess.ts';
 import { formatDayHourMinute } from '../../utils/uptime.ts';
 
 @ApplyOptions<Command.Options>({
@@ -23,7 +23,7 @@ export class NodesCommand extends Command {
 					.setDescription('Show Lavalink node status (bot owner only).')
 					.setDescriptionLocalizations({ ko: 'Lavalink 노드 상태를 보여줘요. (봇 소유자 전용)' });
 			},
-			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
+			{ guildIds: [...getConfig().discord.devGuildIds], behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);
 	}
 

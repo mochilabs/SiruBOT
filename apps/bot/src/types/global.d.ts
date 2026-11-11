@@ -1,6 +1,3 @@
-// General
-import { ArrayString } from '@skyra/env-utilities';
-
 // Audio
 import { LavalinkManager } from 'lavalink-client';
 import { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
@@ -13,29 +10,6 @@ import { TrackService } from '../services/trackService.ts';
 import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
 import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import type { BotAdminResponder } from '../services/botAdminResponder.ts';
-/**
- * @skyra/env-utilities의 envParse* 타입 선언 — 호출부(envParseString/envParseArray)의 타입용이에요.
- * 키 목록·형식·필수 여부의 단일 원본은 core/env.ts의 zod 스키마예요 — 키를 추가·수정할 땐 두 곳을 함께 고쳐요.
- */
-declare module '@skyra/env-utilities' {
-	interface Env {
-		DISCORD_TOKEN: string;
-		OWNERS: ArrayString;
-		LAVALINK_HOSTS: string;
-		LAVALINK_DEFAULT_PASSWORD?: string;
-		BOT_ACTIVITY: string;
-		LOGLEVEL: string;
-		REDIS_URL: string;
-		DATABASE_URL: string;
-		DEV_GUILD_IDS: ArrayString;
-		REGISTER_COMMANDS?: string;
-		SHARD_MANAGER_URL?: string;
-		AUTH_KEY?: string;
-		SENTRY_DSN?: string;
-		SIRU_TTS_URL?: string;
-		SIRU_TTS_DEFAULT_VOICE?: string;
-	}
-}
 
 declare module '@sapphire/pieces' {
 	interface Container {

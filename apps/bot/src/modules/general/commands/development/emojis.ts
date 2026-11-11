@@ -3,7 +3,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { envParseArray } from '@skyra/env-utilities';
+import { getConfig } from '../../../../lib/configAccess.ts';
 import type { AppEmojiManager } from '../../../../services/appEmojiManager.ts';
 
 @ApplyOptions<Command.Options>({
@@ -42,7 +42,7 @@ export class EmojisCommand extends Command {
 							.setDescriptionLocalizations({ ko: '전체 이모지를 삭제 후 재업로드해요 (ID 갱신).' })
 					);
 			},
-			{ guildIds: envParseArray('DEV_GUILD_IDS'), behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
+			{ guildIds: [...getConfig().discord.devGuildIds], behaviorWhenNotIdentical: RegisterBehavior.Overwrite }
 		);
 	}
 

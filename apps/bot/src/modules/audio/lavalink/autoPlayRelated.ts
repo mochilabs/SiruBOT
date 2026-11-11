@@ -1,19 +1,20 @@
 import { container } from '@sapphire/framework';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
-import { CustomPlayer, TRANSITION_CONFIRM_TIMEOUT_MS } from './player/customPlayer.ts';
+import { CustomPlayer, transitionConfirmTimeoutMs } from './player/customPlayer.ts';
 import { isYouTubeSource } from '@sirubot/utils';
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
 import { notifyQueueMutated } from './queue/queueWrapper.ts';
 import { isSameEncodedTrack } from './handlers/playbackWatchdog.ts';
 import { RelatedTrackHistory } from './player/relatedTrackHistory.ts';
+import { getConfig } from '../../../lib/configAccess.ts';
 import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
-// Above HIGH_SIMILARITY: Too similar tracks like translated versions, covers (exclude)
-// Below LOW_SIMILARITY: Unrelated tracks (exclude)
-const HIGH_SIMILARITY = Number(process.env.AUTOPLAY_HIGH_SIM) || 0.75;
-const LOW_SIMILARITY = Number(process.env.AUTOPLAY_LOW_SIM) || 0.2;
+// Above highSimilarity: Too similar tracks like translated versions, covers (exclude)
+// Below lowSimilarity: Unrelated tracks (exclude)
+const highSimilarity = (): number => getConfig().autoplay.highSimilarity;
+const lowSimilarity = (): number => getConfig().autoplay.lowSimilarity;
 
 // Similarity weights (sum = 1.0)
 const TITLE_WEIGHT = 0.6;
@@ -187,10 +188,10 @@ export function pickBySimilarity(candidates: Track[], reference: Track): Track |
 	}));
 
 	// 중간 밴드만 후보로 삼는다 (너무 유사/너무 무관한 곡 배제)
-	let pool = scored.filter((s) => s.similarity > LOW_SIMILARITY && s.similarity < HIGH_SIMILARITY);
+	let pool = scored.filter((s) => s.similarity > lowSimilarity() && s.similarity < highSimilarity());
 
 	// 밴드에 드는 곡이 없으면 하한만 완화한다 (커버·번역곡 배제는 유지)
-	if (pool.length === 0) pool = scored.filter((s) => s.similarity < HIGH_SIMILARITY);
+	if (pool.length === 0) pool = scored.filter((s) => s.similarity < highSimilarity());
 
 	// 전부 너무 유사하면 그래도 재생을 이어가기 위해 전체를 후보로 쓴다
 	if (pool.length === 0) pool = scored;
@@ -364,7 +365,7 @@ export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack?: Tr
 	// (서버가 이미 예열곡을 시작한 β 시나리오). 정상 전이는 trackStart가 이어준다.
 	const transitionState = (player as CustomPlayer).transitionState;
 	const consumedRecently =
-		transitionState?.preloadConsumedAt != null && Date.now() - transitionState.preloadConsumedAt < TRANSITION_CONFIRM_TIMEOUT_MS;
+		transitionState?.preloadConsumedAt != null && Date.now() - transitionState.preloadConsumedAt < transitionConfirmTimeoutMs();
 	if (container.mixerService.isPreloaded(String(player.guildId)) || consumedRecently) {
 		container.logger.debug('[autoPlayRelated] Server-side transition in flight, skipping fallback');
 		return;

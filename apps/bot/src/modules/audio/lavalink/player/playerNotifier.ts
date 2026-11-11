@@ -1,6 +1,7 @@
 import { container, UserError } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
+import { getConfig } from '../../../../lib/configAccess.ts';
 import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord.js';
 import { emoji, enqueueOperation } from '@sirubot/utils';
 
@@ -34,8 +35,12 @@ export class PlayerNotifier {
 	private readonly controllerVersions = new WeakMap<CustomPlayer, number>();
 	private readonly destroyedPlayers = new WeakSet<CustomPlayer>();
 
-	private readonly DEBOUNCE_MS = Number(process.env.NOTIFIER_DEBOUNCE_MS) || 300;
-	private readonly PROGRESS_TICK_MS = Number(process.env.NOTIFIER_PROGRESS_TICK_MS) || 5000;
+	private get DEBOUNCE_MS(): number {
+		return getConfig().notifier.debounceMs;
+	}
+	private get PROGRESS_TICK_MS(): number {
+		return getConfig().notifier.progressTickMs;
+	}
 
 	constructor() {
 		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerNotifier' });
