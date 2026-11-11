@@ -8,7 +8,7 @@ import {
 	TICKET_CANCEL_CLOSE_CUSTOM_ID
 } from '@sirubot/utils/ticket';
 import { emoji } from '@sirubot/utils';
-import { ticketCloseConfirmView, ticketMessageView } from '../view/ticket.ts';
+import { ticketCloseConfirmView, ticketMessageView } from '../views/ticket.ts';
 
 export default class TicketButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {

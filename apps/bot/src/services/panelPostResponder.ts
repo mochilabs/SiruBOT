@@ -2,7 +2,7 @@ import { container } from '@sapphire/framework';
 import type { Guild } from 'discord.js';
 import { PANEL_POST_REQUEST_CHANNEL, ManagedRedisSubscriber, panelPostRequestSchema, type PanelPostResponse } from '@sirubot/utils';
 import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
-import { ticketPanelView } from '../modules/general/view/ticket.ts';
+import { ticketPanelView } from '../features/tickets/index.ts';
 import { discordApiErrorText } from '../lib/discordErrorText.ts';
 import { deletePostedMessage, PanelPostError, resolvePanelChannel } from './rolePanelService.ts';
 import type { ServiceLogger } from './types.ts';

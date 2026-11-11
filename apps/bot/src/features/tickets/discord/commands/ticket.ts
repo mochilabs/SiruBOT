@@ -3,7 +3,7 @@ import { UserError } from '@sapphire/framework';
 import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits, TextChannel } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { ticketMessageView, ticketPanelView } from '../view/ticket.ts';
+import { ticketMessageView, ticketPanelView } from '../views/ticket.ts';
 
 @ApplyOptions<Subcommand.Options>({
 	enabled: true,

@@ -22,7 +22,7 @@ import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
-import { TicketService } from '../services/ticketService.ts';
+import { TicketService } from '../features/tickets/index.ts';
 import { RolePanelService } from '../services/rolePanelService.ts';
 import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { PlayerWebResponder } from '../services/playerWebResponder.ts';

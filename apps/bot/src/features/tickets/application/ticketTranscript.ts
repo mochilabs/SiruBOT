@@ -3,7 +3,7 @@ import { TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 import { gzipSync } from 'node:zlib';
 import type { Guild, TextChannel } from 'discord.js';
 import type { Ticket } from '@sirubot/prisma';
-import { uploadObject } from './dataApiClient.ts';
+import { uploadObject } from '../../../services/dataApiClient.ts';
 
 /**
  * 티켓 대화 기록(transcript) 저장 — 마감 5초 뒤 채널이 삭제되므로 그 전에 원문을 남겨요.

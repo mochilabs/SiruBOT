@@ -2,7 +2,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { ButtonInteraction, MessageFlags } from 'discord.js';
 import { parseRolePanelCustomId } from '@sirubot/utils/rolePanel';
 import { emoji } from '@sirubot/utils';
-import { ticketMessageView } from '../view/ticket.ts';
+import { ticketMessageView } from '../../../features/tickets/index.ts';
 
 /**
  * 역할 패널 버튼 핸들러 — `rolepanel:grant:<buttonId>:<roleId>` customId를 파싱해 역할을 토글해요.

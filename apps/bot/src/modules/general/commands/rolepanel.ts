@@ -4,7 +4,7 @@ import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { PanelPostError } from '../../../services/rolePanelService.ts';
-import { ticketMessageView } from '../view/ticket.ts';
+import { ticketMessageView } from '../../../features/tickets/index.ts';
 import { respondRolePanelNames } from '../../../lib/autocomplete.ts';
 
 /**

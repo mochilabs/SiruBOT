@@ -3,8 +3,8 @@ import { ChannelType, Guild, MessageFlags, GuildMember, OverwriteType, Permissio
 import { emoji } from '@sirubot/utils';
 import { formatTicketChannelName } from '@sirubot/utils/ticket';
 import type { Ticket } from '@sirubot/prisma';
-import { ticketWelcomeView } from '../modules/general/view/ticket.ts';
-import { notice } from '../modules/general/view/notice.ts';
+import { ticketWelcomeView } from '../discord/views/ticket.ts';
+import { notice } from '../../../modules/general/view/notice.ts';
 import { saveTicketTranscript } from './ticketTranscript.ts';
 export class TicketService {
 	private get db() {
