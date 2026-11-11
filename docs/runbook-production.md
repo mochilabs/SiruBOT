@@ -25,7 +25,7 @@
 
 ## 종료 순서
 
-- 봇 (`apps/bot/src/core/shutdown.ts`): 헬스 서버 close → Lavalink 세션 저장 → 오디오 리스너·공유 Redis 구독 1개(`container.redisSubscribers`) 정지 → pending 저널 flush → Redis 해제 → DB 해제 → 게이트웨이 destroy → shardClient destroy.
+- 봇 (`apps/bot/src/core/shutdown.ts`): 헬스 서버 close → Lavalink 세션 저장 → 오디오 리스너·공유 Redis 구독 1개(`container.redisSubscribers`) 정지 → 상태 소유자 `container.stoppables` stop(대기 중 저장 flush·타이머 해제, 5초 상한) → pending 저널 flush → Redis 해제 → DB 해제 → 게이트웨이 destroy → shardClient destroy.
 - data-api (`apps/data-api/src/server.ts`): 스케줄러 2종 정지 → player/bot-profile/greeting/guild-data/player-web/jtc/bot-admin/panel 8개 허브 정지 → Redis 해제 → DB 해제 → Fastify close.
 - shardmanager (`apps/shardmanager/src/server.ts:69-77`): registry destroy → Fastify close.
 - storage (`apps/storage/src/index.ts:16-20`): Fastify close만 — 로컬 볼륨(무DB)·외부 연결 없음.

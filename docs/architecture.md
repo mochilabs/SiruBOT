@@ -470,10 +470,10 @@ flowchart TD
     F --> G["setupStore per PIECE_ROOTS → setupDatabase<br/>→ setupServices → setupRedis (memory on failure)<br/>→ start the shared Redis subscriber"]
     G --> H["Discord login → setupAudio<br/>→ LavalinkHandler · connect nodes · resume sessions"]
     H --> I["SIGINT / SIGTERM"]
-    I --> N["close health server → save node sessions to Redis<br/>→ clean up Lavalink listeners → stop the shared subscriber<br/>→ flush pending journal → Redis → DB<br/>→ destroy gateway → destroy shardClient → Sentry flush"]
+    I --> N["close health server → save node sessions to Redis<br/>→ clean up Lavalink listeners → stop the shared subscriber<br/>→ stop state owners in container.stoppables (flush pending saves, clear timers; 5 s bound)<br/>→ flush pending journal → Redis → DB<br/>→ destroy gateway → destroy shardClient → Sentry flush"]
 ```
 
-Source: `index.ts`, `core/bootstrap.ts`, `core/shutdown.ts` (re-entry guard in `createShutdownHandler`; if Redis is down, session save is skipped and logged as a failure), `core/botApplication.ts`. Reordering shutdown loses sessions — read `.pi/skills/bot-ops/SKILL.md` before changing it.
+Source: `index.ts`, `core/bootstrap.ts`, `core/shutdown.ts` (re-entry guard in `createShutdownHandler`; if Redis is down, session save is skipped and logged as a failure), `core/botApplication.ts`. State owners (`container.stoppables`, contract in `lib/lifecycle.ts`) run their `stop()` in parallel after the Redis subscribers stop and before the journal flush, Redis and DB are closed; a failing `stop()` is logged without blocking the others and the step is capped by `STOPPABLES_TIMEOUT_MS`. Reordering shutdown loses sessions — read `.pi/skills/bot-ops/SKILL.md` before changing it.
 
 During rolling updates the new process retries identify until a shard slot frees up; after connecting, shardclient self-heals WS drops with backoff and re-identifies with its current shardIds (`client.ts`).
 
