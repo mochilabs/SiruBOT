@@ -271,7 +271,7 @@ graph LR
 - Fastify 5, no DB — files on a local volume (`STORAGE_DATA_DIR`; in the container `/data` = the `storage-data` volume).
 - Auth: refuses to start without `STORAGE_AUTH_KEY ?? AUTH_KEY`. Exempt: `/health` and public object GETs (`src/plugins/auth.ts`). The private bucket (`ticket-transcripts/`) returns 404 on public GET.
 - `STORAGE_PUBLIC_URL` (required) is the public https address Discord embeds fetch from, and it's **snapshotted into issued URLs** — changing the domain means bulk-rewriting existing asset URLs. The schema only checks URL format.
-- Consumers: dashboard `src/lib/storage.ts` (guild image assets; metadata in `GuildAsset`), and the bot's ticket transcripts (`services/ticketTranscript.ts` → via data-api `/v1/storage/*`).
+- Consumers: dashboard `src/lib/storage.ts` (guild image assets; metadata in `GuildAsset`), and the bot's ticket transcripts (`features/tickets/application/ticketTranscript.ts` → via data-api `/v1/storage/*`).
 
 ### 4.6 apps/notifier
 

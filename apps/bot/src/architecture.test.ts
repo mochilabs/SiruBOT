@@ -11,6 +11,8 @@
  * pieces (`{modules/<name>,features/<name>/discord}/{interaction-handlers,commands,subcommands,listeners}`). Existing violations are listed in
  * `APPLICATION_LAYER_DEBT` with the reason and what removing each takes; that list may only shrink.
  *
+ * `features/<a>/` may import another feature `features/<b>/` only through `features/<b>/index.ts` (its public surface). No allowlist.
+ *
  * Environment access: no non-test file may contain `process.env` or import `@skyra/env-utilities` except the short, reasoned lists below (see
  * `PROCESS_ENV_ALLOWED` / `ENV_UTILITIES_ALLOWED`). Everything else reads `getConfig()` (core/config.ts); `features/<name>/application/` takes values via `deps`.
  *
@@ -207,6 +209,20 @@ function findCycles(graph: Map<string, Set<string>>): string[] {
 	return cycles.sort();
 }
 
+/** Cross-feature edges that bypass the other feature's `index.ts` (`features/<a>/... -> features/<b>/<not index.ts>`). */
+function crossFeatureViolations(graph: Map<string, Set<string>>): string[] {
+	const violations: string[] = [];
+	for (const [from, targets] of graph) {
+		const fromFeature = /^features\/([^/]+)\//.exec(from)?.[1];
+		if (!fromFeature) continue;
+		for (const to of targets) {
+			const toFeature = /^features\/([^/]+)\//.exec(to)?.[1];
+			if (toFeature && toFeature !== fromFeature && to !== `features/${toFeature}/index.ts`) violations.push(`${from} -> ${to}`);
+		}
+	}
+	return violations.sort();
+}
+
 function edgesBetween(graph: Map<string, Set<string>>, fromDir: string, toDir: string): string[] {
 	const edges: string[] = [];
 	for (const [from, targets] of graph) {
@@ -270,6 +286,22 @@ describe('bot architecture guard rails', () => {
 			Object.keys(APPLICATION_LAYER_DEBT).sort(),
 			'The application layer must not depend on frameworks, views or Sapphire pieces; pass what it needs through deps instead.'
 		);
+	});
+
+	it('features/<a>/ imports features/<b>/ only through its index.ts', () => {
+		const violations = crossFeatureViolations(graph);
+		expect(
+			violations,
+			`Import the other feature through features/<name>/index.ts, and export what you need from there:\n  ${violations.join('\n  ')}`
+		).toEqual([]);
+	});
+
+	it('the cross-feature rule catches deep imports', () => {
+		const fake = new Map([
+			['features/a/discord/x.ts', new Set(['features/b/application/y.ts'])],
+			['features/c/discord/x.ts', new Set(['features/d/index.ts', 'features/c/application/z.ts'])]
+		]);
+		expect(crossFeatureViolations(fake)).toEqual(['features/a/discord/x.ts -> features/b/application/y.ts']);
 	});
 
 	it('the application-layer rule catches forbidden imports', () => {
