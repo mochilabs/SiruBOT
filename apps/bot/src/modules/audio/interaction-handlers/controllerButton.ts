@@ -1,4 +1,4 @@
-import { resolveQueueSelection } from '../utils/queueSelection.ts';
+import { QUEUE_VIEW_MESSAGES } from '../utils/queueViewId.ts';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
@@ -34,11 +34,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
-	private static readonly DJ_QUEUE_SUBS = new Set(['remove', 'jumpTo']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
-		const needsDJ =
-			ControllerButtonHandler.DJ_COMMANDS.has(command) || (command === 'queue' && ControllerButtonHandler.DJ_QUEUE_SUBS.has(subcommand ?? ''));
+		const needsDJ = ControllerButtonHandler.DJ_COMMANDS.has(command);
 		const guarded = await guardPlayerAccess(
 			interaction,
 			this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined,
@@ -245,7 +243,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await interaction.deferUpdate();
 		await this.container.audioService.playPrevious(player);
 
-		player.queuePage = 1;
 		// 곧 trackStart가 새 컨트롤러를 보내므로 edit는 생략 (edit→삭제 churn 방지)
 	}
 
@@ -259,7 +256,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		}
 
 		await interaction.deferUpdate();
-		player.queuePage = 1;
 		await this.container.mixerService.skip(player);
 	}
 
@@ -268,22 +264,11 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			case 'view':
 				await this.handleQueueView(interaction, player);
 				break;
-			case 'prev':
-				await this.handleQueuePrev(interaction, player);
-				break;
-			case 'next':
-				await this.handleQueueNext(interaction, player);
-				break;
-			case 'remove':
-				await this.handleQueueRemove(interaction, player);
-				break;
-			case 'jumpTo':
-				await this.handleQueueJumpTo(interaction, player);
-				break;
 			default:
+				// 개편 전 대기열 목록의 prev/next/remove/jumpTo 버튼 — 새로 열도록 안내한다.
 				await interaction.reply({
 					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('error')} 알 수 없는 큐 명령어예요.`)]
+					components: [errorView(QUEUE_VIEW_MESSAGES.expired)]
 				});
 				break;
 		}
@@ -305,104 +290,5 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			components: [queueList({ player, page: 1, totalPages, authorId: interaction.user.id })],
 			flags: [MessageFlags.IsComponentsV2]
 		});
-	}
-
-	private async handleQueuePrev(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const currentPage = player.queuePage;
-		if (currentPage <= 1) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 이미 첫 번째 페이지에요.`)]
-			});
-			return;
-		}
-		player.queuePage = currentPage - 1;
-		player.queueSelectedIndex = null;
-		await this.safeUpdate(interaction, player);
-	}
-
-	private async handleQueueNext(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const totalPages = Math.ceil(getUserQueuedTracks(player).length / QUEUE_PAGE_SIZE);
-		const currentPage = player.queuePage;
-		if (currentPage >= totalPages) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 이미 마지막 페이지에요.`)]
-			});
-			return;
-		}
-		player.queuePage = currentPage + 1;
-		player.queueSelectedIndex = null;
-		await this.safeUpdate(interaction, player);
-	}
-
-	private async handleQueueRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const token = interaction.customId.split(':')[3] ?? '';
-		const trackIndex = resolveQueueSelection(player, token);
-		const currentPage = Math.floor(trackIndex / QUEUE_PAGE_SIZE) + 1;
-
-		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 제거할 곡이 없어요.`)]
-			});
-			return;
-		}
-
-		await interaction.deferUpdate();
-		resolveQueueSelection(player, token);
-		await player.queue.splice(trackIndex, 1);
-		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
-		player.queueSelectedIndex = null;
-
-		const remaining = getUserQueuedTracks(player);
-		const newTotalPages = Math.max(1, Math.ceil(remaining.length / QUEUE_PAGE_SIZE));
-		if (currentPage > newTotalPages) {
-			player.queuePage = newTotalPages;
-		}
-
-		// 대기열 목록(ephemeral) 메시지를 갱신한다 (컨트롤러가 아님).
-		await interaction
-			.editReply({
-				components: [
-					remaining.length === 0
-						? queueEmpty()
-						: queueList({ player, page: player.queuePage, totalPages: newTotalPages, authorId: interaction.user.id })
-				],
-				flags: [MessageFlags.IsComponentsV2],
-				allowedMentions: { roles: [], users: [] }
-			})
-			.catch(() => null);
-	}
-
-	private async handleQueueJumpTo(interaction: ButtonInteraction<'cached'>, player: CustomPlayer) {
-		const token = interaction.customId.split(':')[3] ?? '';
-		const trackIndex = resolveQueueSelection(player, token);
-
-		if (trackIndex < 0 || trackIndex >= getUserQueuedTracks(player).length) {
-			await interaction.reply({
-				flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-				components: [errorView(`${emoji('error')} 이동할 곡이 없어요.`)]
-			});
-			return;
-		}
-
-		// 새 곡의 trackStart가 컨트롤러를 새로 보내므로 컨트롤러 edit는 생략하고,
-		// 대기열 목록(ephemeral) 메시지만 새로고침한다.
-		await interaction.deferUpdate();
-		player.queuePage = 1;
-		player.queueSelectedIndex = null;
-		resolveQueueSelection(player, token);
-		await this.container.mixerService.skip(player, trackIndex + 1);
-
-		const remaining = getUserQueuedTracks(player);
-		const totalPages = Math.max(1, Math.ceil(remaining.length / QUEUE_PAGE_SIZE));
-		await interaction
-			.editReply({
-				components: [remaining.length === 0 ? queueEmpty() : queueList({ player, page: 1, totalPages, authorId: interaction.user.id })],
-				flags: [MessageFlags.IsComponentsV2],
-				allowedMentions: { roles: [], users: [] }
-			})
-			.catch(() => null);
 	}
 }

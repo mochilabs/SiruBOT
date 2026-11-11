@@ -4,6 +4,7 @@ import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { truncateText } from '../../../lib/text.ts';
 import { queueSelectionValue } from '../utils/queueSelection.ts';
+import { encodeQueueViewId, QUEUE_VIEW_INDICATOR_ID } from '../utils/queueViewId.ts';
 
 type QueueViewProps = {
 	player: Player;
@@ -15,14 +16,6 @@ type QueueViewProps = {
 };
 
 export const QUEUE_PAGE_SIZE = 10;
-
-export const queueCustomIdPrefix = 'queue:page:';
-
-/** 대기열 곡 선택 셀렉트 메뉴 — controllerSelectMenu 핸들러가 파싱한다. */
-export const queueSelectCustomId = 'controller:queue:select';
-/** 대기열 목록에서 쓰는 점프/삭제 버튼 — controllerButton 핸들러의 queue 서브커맨드와 같다. */
-const queueJumpCustomId = 'controller:queue:jumpTo';
-const queueRemoveCustomId = 'controller:queue:remove';
 
 export function queueList({ player, page, totalPages, authorId, selectedIndex = null }: QueueViewProps) {
 	const containerComponent = createContainer();
@@ -52,9 +45,9 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
-	// 곡 선택 셀렉트 메뉴 — 선택 후 점프/삭제 버튼으로 액션 수행 (controller:queue:select)
+	// 곡 선택 셀렉트 메뉴 — 선택 후 점프/삭제 버튼으로 액션 수행 (queue:v1:sel)
 	const selectMenu = new StringSelectMenuBuilder()
-		.setCustomId(queueSelectCustomId)
+		.setCustomId(encodeQueueViewId({ action: 'sel', ownerId: authorId, page }))
 		.setPlaceholder('곡을 선택하세요')
 		.setMinValues(1)
 		.setMaxValues(1)
@@ -75,16 +68,17 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	containerComponent.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
 
-	// 선택된 곡에 대한 액션 버튼 (controllerButton의 queue:jumpTo / queue:remove)
+	// 선택된 곡에 대한 액션 버튼 (queueViewButton의 queue:v1:jump / queue:v1:rm)
+	const selectedToken = selectedIndex === null ? null : queueSelectionValue(player, selectedIndex);
 	const jumpButton = new ButtonBuilder()
-		.setCustomId(`${queueJumpCustomId}:${selectedIndex === null ? 'none' : queueSelectionValue(player, selectedIndex)}`)
+		.setCustomId(encodeQueueViewId({ action: 'jump', ownerId: authorId, page, token: selectedToken }))
 		.setEmoji(emoji('arrow_forward'))
 		.setLabel('선택한 곡부터 재생')
 		.setDisabled(selectedIndex === null)
 		.setStyle(ButtonStyle.Secondary);
 
 	const removeButton = new ButtonBuilder()
-		.setCustomId(`${queueRemoveCustomId}:${selectedIndex === null ? 'none' : queueSelectionValue(player, selectedIndex)}`)
+		.setCustomId(encodeQueueViewId({ action: 'rm', ownerId: authorId, page, token: selectedToken }))
 		.setDisabled(selectedIndex === null)
 		.setEmoji(emoji('trash'))
 		.setLabel('선택한 곡 제거')
@@ -94,19 +88,19 @@ export function queueList({ player, page, totalPages, authorId, selectedIndex = 
 
 	if (totalPages > 1) {
 		const prevButton = new ButtonBuilder()
-			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page - 1}`)
+			.setCustomId(encodeQueueViewId({ action: 'page', ownerId: authorId, page: page - 1 }))
 			.setEmoji(emoji('arrow_back'))
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page <= 1);
 
 		const nextButton = new ButtonBuilder()
-			.setCustomId(`${queueCustomIdPrefix}${authorId}:${page + 1}`)
+			.setCustomId(encodeQueueViewId({ action: 'page', ownerId: authorId, page: page + 1 }))
 			.setEmoji(emoji('arrow_forward'))
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(page >= totalPages);
 
 		const pageIndicator = new ButtonBuilder()
-			.setCustomId('queue:page:indicator')
+			.setCustomId(QUEUE_VIEW_INDICATOR_ID)
 			.setLabel(`${page} / ${totalPages}`)
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(true);
