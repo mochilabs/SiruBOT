@@ -236,3 +236,59 @@ describe('setRepeat', () => {
 		expect(saveRepeat).not.toHaveBeenCalled();
 	});
 });
+
+describe('seek', () => {
+	it('인가 뒤 곡 길이 안의 위치로 이동해요', async () => {
+		const { control, player, authorize } = harness();
+		const result = await control.seek(actor, 90_000);
+		expect(authorize).toHaveBeenCalledWith(actor);
+		expect(player!.seek).toHaveBeenCalledWith(90_000);
+		expect(result).toEqual({ positionMs: 90_000, track: player!.queue.current });
+	});
+
+	it('곡 길이와 같은 위치와 0은 허용해요', async () => {
+		const { control, player } = harness();
+		await control.seek(actor, 200_000);
+		await control.seek(actor, 0);
+		expect(player!.seek).toHaveBeenCalledTimes(2);
+	});
+
+	it('곡 길이를 넘으면 거절해요', async () => {
+		const { control, player } = harness();
+		const error = await rejection(control.seek(actor, 200_001));
+		expect(error.kind).toBe('invalid_input');
+		expect(error.userMessage).toContain('곡의 길이를 초과하는 시간이에요.');
+		expect(player!.seek).not.toHaveBeenCalled();
+	});
+
+	it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])('비정상 값 %s는 시간 형식 오류로 거절해요', async (value) => {
+		const { control, player } = harness();
+		const error = await rejection(control.seek(actor, value));
+		expect(error.kind).toBe('invalid_input');
+		expect(error.userMessage).toContain('올바른 시간 형식이 아니에요.');
+		expect(player!.seek).not.toHaveBeenCalled();
+	});
+
+	it('실시간 스트림은 시간 값보다 먼저 거절해요', async () => {
+		const player = new FakePlayer();
+		player.queue = { current: track({ isStream: true, duration: 0 }), tracks: [] };
+		const { control } = harness({ player });
+		const error = await rejection(control.seek(actor, Number.NaN));
+		expect(error.userMessage).toContain('실시간 스트리밍에서는 탐색을 사용할 수 없어요.');
+		expect(player.seek).not.toHaveBeenCalled();
+	});
+
+	it('현재 곡이 없으면 곡 없음 문구로 거절해요', async () => {
+		const { control } = harness({ player: null });
+		const error = await rejection(control.seek(actor, 10));
+		expect(error.kind).toBe('not_found');
+		expect(error.userMessage).toBe(MUSIC_ACCESS_MESSAGES.noSong());
+	});
+
+	it('인가에 실패하면 이동하지 않아요', async () => {
+		const denied = new AppError('forbidden', 'DJ만 가능해요.');
+		const { control, player } = harness({ denied });
+		await expect(control.seek(actor, 10)).rejects.toBe(denied);
+		expect(player!.seek).not.toHaveBeenCalled();
+	});
+});

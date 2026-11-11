@@ -231,16 +231,10 @@ const musicSeekTool: AiTool = {
 	required: ['time'],
 	status: '시루가 곡을 이동하는 중..',
 	execute: async (args, ctx) => {
-		await requireDjOrAlone(ctx);
-		const player = requirePlayer(requireGuild(ctx));
-		const current = player.queue.current;
-		if (!current) throw new Error('현재 재생 중인 곡이 없어요.');
-		if (current.info.isStream) throw new Error('실시간 스트리밍에서는 이동할 수 없어요.');
-		const ms = parseTimeToMs(String(args.time ?? ''));
-		if (ms === null || ms < 0) throw new Error('시간 형식이 잘못됐어요. (예: 90, 1:30)');
-		if (ms > current.info.duration) throw new Error('곡의 길이를 초과하는 시간이에요.');
-		await player.seek(ms);
-		return JSON.stringify({ status: 'ok', seeked_to_ms: ms, track: trackInfo(current) });
+		// 파싱 실패는 NaN으로 넘겨요 — 인가·스트림·형식·범위 검증은 공용 유스케이스가 맡아요.
+		const ms = parseTimeToMs(String(args.time ?? '')) ?? Number.NaN;
+		const { positionMs, track } = await withAppError(() => container.music.seek(musicActor(ctx), ms));
+		return JSON.stringify({ status: 'ok', seeked_to_ms: positionMs, track: trackInfo(track) });
 	}
 };
 

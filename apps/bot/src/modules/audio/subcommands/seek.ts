@@ -1,8 +1,8 @@
-import { container, UserError } from '@sapphire/framework';
-import { emoji } from '@sirubot/utils';
+import { container } from '@sapphire/framework';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
 import { parseTimeToMs } from '../utils/timeParse.ts';
 import * as view from '../view/seek.ts';
+import { actorFromMember } from '../../../features/music/application/actor.ts';
 
 export const name = 'seek';
 export const ko = '시간이동';
@@ -28,39 +28,12 @@ export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcomman
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	const player = container.audio.getPlayer(interaction.guildId);
-	const current = player?.queue.current;
-
-	if (!player || !current) return;
-
-	if (current.info.isStream) {
-		throw new UserError({
-			identifier: 'seek_live_stream',
-			message: `${emoji('error')} 실시간 스트리밍에서는 탐색을 사용할 수 없어요.`
-		});
-	}
-
-	const timeStr = interaction.options.getString('time', true);
-	const positionMs = parseTimeToMs(timeStr);
-
-	if (positionMs === null || positionMs < 0) {
-		throw new UserError({
-			identifier: 'seek_invalid_time',
-			message: `${emoji('error')} 올바른 시간 형식이 아니에요. (예: \`1:30\`, \`90\`, \`0:45\`)`
-		});
-	}
-
-	if (positionMs > current.info.duration) {
-		throw new UserError({
-			identifier: 'seek_out_of_range',
-			message: `${emoji('error')} 곡의 길이를 초과하는 시간이에요.`
-		});
-	}
-
-	await player.seek(positionMs);
+	// 파싱에 실패하면 NaN으로 넘겨요 — 유스케이스가 스트림·형식·범위 검증을 같은 문구로 거절해요.
+	const positionMs = parseTimeToMs(interaction.options.getString('time', true)) ?? Number.NaN;
+	const { positionMs: seeked } = await container.music.seek(actorFromMember(interaction.member), positionMs);
 
 	await interaction.reply({
-		components: [view.seekSuccess({ position: positionMs })],
+		components: [view.seekSuccess({ position: seeked })],
 		flags: [MessageFlags.IsComponentsV2]
 	});
 }

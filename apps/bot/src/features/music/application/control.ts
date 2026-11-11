@@ -72,16 +72,19 @@ export interface MusicControl {
 	resume(actor: Actor): Promise<{ resumed: true }>;
 	/** 반복 모드(off|track|queue)를 길드에 저장하고 플레이어가 있으면 반영해요. 알 수 없는 값은 invalid_input이에요. */
 	setRepeat(actor: Actor, mode: string): Promise<{ mode: MusicRepeatMode; playing: boolean }>;
+	/** 현재 곡의 특정 위치(ms)로 이동해요. 실시간 스트림, 음수·비정상 값, 곡 길이 초과는 거절해요. */
+	seek(actor: Actor, positionMs: number): Promise<{ positionMs: number; track: TrackPort }>;
 }
 
 export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<P>): MusicControl {
 	const { access, getPlayer, settings, mixer, playback } = deps;
 
 	/** 재생 중인 곡(현재 곡)이 있는 플레이어 — 없으면 슬래시 SongPlaying과 같은 문구로 거절해요. */
-	function requireSong(guildId: string): P {
+	function requireSong(guildId: string): { player: P; current: TrackPort } {
 		const player = getPlayer(guildId);
-		if (!player?.queue.current) throw new AppError('not_found', MUSIC_ACCESS_MESSAGES.noSong(), { ephemeral: true });
-		return player;
+		const current = player?.queue.current;
+		if (!player || !current) throw new AppError('not_found', MUSIC_ACCESS_MESSAGES.noSong(), { ephemeral: true });
+		return { player, current };
 	}
 
 	return {
@@ -104,7 +107,7 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 
 		async pause(actor) {
 			await access.authorize(actor);
-			const player = requireSong(actor.guildId);
+			const { player } = requireSong(actor.guildId);
 			if (!player.paused) await player.pause();
 			return { paused: true };
 		},
@@ -131,6 +134,24 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 				await mixer.clearNext(player).catch(() => null);
 			}
 			return { mode: saved, playing: player !== undefined };
+		},
+
+		async seek(actor, positionMs) {
+			await access.authorize(actor);
+			const { player, current } = requireSong(actor.guildId);
+			if (current.info.isStream) {
+				throw new AppError('invalid_input', `${emoji('error')} 실시간 스트리밍에서는 탐색을 사용할 수 없어요.`, { ephemeral: true });
+			}
+			if (!Number.isFinite(positionMs) || positionMs < 0) {
+				throw new AppError('invalid_input', `${emoji('error')} 올바른 시간 형식이 아니에요. (예: \`1:30\`, \`90\`, \`0:45\`)`, {
+					ephemeral: true
+				});
+			}
+			if (positionMs > current.info.duration) {
+				throw new AppError('invalid_input', `${emoji('error')} 곡의 길이를 초과하는 시간이에요.`, { ephemeral: true });
+			}
+			await player.seek(positionMs);
+			return { positionMs, track: current };
 		}
 	};
 }

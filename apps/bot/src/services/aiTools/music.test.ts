@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '../../lib/appError.ts';
 import type { AiToolContext } from './types.ts';
 
-const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOrCreatePlayer, connectPlayer, ensurePlayback, search } = vi.hoisted(
-	() => ({
+const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOrCreatePlayer, connectPlayer, ensurePlayback, search, music, actor } =
+	vi.hoisted(() => ({
+		music: { seek: vi.fn(), pause: vi.fn(), resume: vi.fn(), setVolume: vi.fn(), setRepeat: vi.fn() },
+		actor: { guildId: 'g1', userId: 'u1' },
 		getPlayer: vi.fn(),
 		checkDJOrAlone: vi.fn(),
 		reapplyMixerFilter: vi.fn(),
@@ -12,12 +15,12 @@ const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOr
 		connectPlayer: vi.fn(),
 		ensurePlayback: vi.fn(),
 		search: vi.fn()
-	})
-);
+	}));
 
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		audio: { getPlayer },
+		music,
 		mixerService: { reapplyMixerFilter, skip },
 		guildService: {},
 		audioService: { enqueueTrack, getOrCreatePlayer, connectPlayer, ensurePlayback, search }
@@ -25,6 +28,7 @@ vi.mock('@sapphire/framework', () => ({
 }));
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
 vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: vi.fn(), removeStaleRelatedTracks: vi.fn() }));
+vi.mock('../../features/music/application/actor.ts', () => ({ actorFromMember: () => actor }));
 vi.mock('../dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
 
 import { musicTools } from './music.ts';
@@ -207,40 +211,68 @@ describe('music_play ai tool (재생/대기열 신호 계약)', () => {
 	});
 });
 
-describe('music_seek ai tool (시간 파싱 계약)', () => {
+describe('music_seek ai tool (시간 파싱 후 유스케이스 위임)', () => {
 	const seekTool = tool('music_seek');
+	const track = { info: { duration: 7_200_000, isStream: false, title: 't', author: 'a' } };
 
-	function makePlayer(overrides: Record<string, unknown> = {}) {
-		return {
-			guildId: 'g1',
-			queue: { current: { info: { duration: 7_200_000, isStream: false, title: 't', author: 'a' } } },
-			seek: vi.fn(async () => undefined),
-			...overrides
-		} as Record<string, any>;
-	}
-
-	it('"1:30"과 "90"을 밀리초로 해석해 이동한다', async () => {
-		const player = makePlayer();
-		getPlayer.mockReturnValue(player);
+	it('"1:30"과 "90"을 밀리초로 해석해 유스케이스에 넘긴다', async () => {
+		music.seek.mockImplementation(async (_actor: unknown, positionMs: number) => ({ positionMs, track }));
 
 		expect(JSON.parse(await seekTool.execute({ time: '1:30' }, ctx))).toMatchObject({ status: 'ok', seeked_to_ms: 90_000 });
-		expect(player.seek).toHaveBeenCalledWith(90_000);
+		expect(music.seek).toHaveBeenLastCalledWith(actor, 90_000);
 
 		expect(JSON.parse(await seekTool.execute({ time: '0:45' }, ctx))).toMatchObject({ seeked_to_ms: 45_000 });
 		expect(JSON.parse(await seekTool.execute({ time: '1:02:03' }, ctx))).toMatchObject({ seeked_to_ms: 3_723_000 });
 	});
 
-	it('잘못된 형식·곡 길이 초과·스트리밍·플레이어 부재를 거절한다', async () => {
-		const player = makePlayer();
-		getPlayer.mockReturnValue(player);
+	it('파싱에 실패한 시간은 NaN으로 넘겨 유스케이스가 거절하게 한다', async () => {
+		music.seek.mockRejectedValue(new AppError('invalid_input', '<:error:1> 올바른 시간 형식이 아니에요.'));
+		await expect(seekTool.execute({ time: 'abc' }, ctx)).rejects.toThrow(new Error('올바른 시간 형식이 아니에요.'));
+		expect(music.seek).toHaveBeenLastCalledWith(actor, Number.NaN);
+	});
 
-		await expect(seekTool.execute({ time: 'abc' }, ctx)).rejects.toThrow('시간 형식이 잘못됐어요.');
-		await expect(seekTool.execute({ time: '4:00:00' }, ctx)).rejects.toThrow('곡의 길이를 초과하는 시간이에요.');
+	it('DM이나 멤버 없는 컨텍스트에서는 유스케이스를 부르지 않는다', async () => {
+		await expect(seekTool.execute({ time: '10' }, { ...ctx, member: null })).rejects.toThrow('DM에서는');
+		expect(music.seek).not.toHaveBeenCalled();
+	});
+});
 
-		getPlayer.mockReturnValue(makePlayer({ queue: { current: { info: { duration: 0, isStream: true } } } }));
-		await expect(seekTool.execute({ time: '10' }, ctx)).rejects.toThrow('실시간 스트리밍에서는 이동할 수 없어요.');
+describe('music_pause ai tool (토글 어댑터)', () => {
+	const pauseTool = tool('music_pause');
 
-		getPlayer.mockReturnValue(undefined);
-		await expect(seekTool.execute({ time: '10' }, ctx)).rejects.toThrow('현재 재생 중인 곡이 없어요.');
+	it('재생 중이면 pause 유스케이스를 호출한다', async () => {
+		getPlayer.mockReturnValue({ paused: false });
+		music.pause.mockResolvedValue({ paused: true });
+		expect(JSON.parse(await pauseTool.execute({}, ctx))).toEqual({ status: 'paused' });
+		expect(music.pause).toHaveBeenCalledWith(actor);
+		expect(music.resume).not.toHaveBeenCalled();
+	});
+
+	it('일시정지 중이면 resume 유스케이스를 호출한다', async () => {
+		getPlayer.mockReturnValue({ paused: true });
+		music.resume.mockResolvedValue({ resumed: true });
+		expect(JSON.parse(await pauseTool.execute({}, ctx))).toEqual({ status: 'resumed' });
+		expect(music.resume).toHaveBeenCalledWith(actor);
+		expect(music.pause).not.toHaveBeenCalled();
+	});
+
+	it('유스케이스의 인가 거절을 안내 문구 Error로 전달한다', async () => {
+		getPlayer.mockReturnValue({ paused: false });
+		music.pause.mockRejectedValue(new AppError('forbidden', '<:volume_muted:1> DJ 역할이 필요해요.'));
+		await expect(pauseTool.execute({}, ctx)).rejects.toThrow(new Error('DJ 역할이 필요해요.'));
+	});
+});
+
+describe('music_volume / music_repeat ai tools', () => {
+	it('볼륨을 주면 반올림해 유스케이스에 넘기고 결과를 돌려준다', async () => {
+		music.setVolume.mockResolvedValue({ volume: 70, playing: true });
+		expect(JSON.parse(await tool('music_volume').execute({ volume: 69.6 }, ctx))).toEqual({ status: 'ok', volume: 70, is_playing: true });
+		expect(music.setVolume).toHaveBeenCalledWith(actor, 70);
+	});
+
+	it('반복 모드를 주면 유스케이스에 넘기고 저장된 모드를 돌려준다', async () => {
+		music.setRepeat.mockResolvedValue({ mode: 'queue', playing: true });
+		expect(JSON.parse(await tool('music_repeat').execute({ mode: 'queue' }, ctx))).toEqual({ status: 'ok', mode: 'queue' });
+		expect(music.setRepeat).toHaveBeenCalledWith(actor, 'queue');
 	});
 });
