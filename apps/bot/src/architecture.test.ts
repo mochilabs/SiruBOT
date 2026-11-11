@@ -97,9 +97,7 @@ const ENV_UTILITIES_ALLOWED: Record<string, string> = {
 };
 
 /** Non-test files under `services/` that still import `container`, each with the reason. Only delete from this list. */
-const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
-	'services/audioService.ts': 'audio playback owner; converted in the later audio stage'
-};
+const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {};
 
 function listSourceFiles(dir: string): string[] {
 	const result: string[] = [];

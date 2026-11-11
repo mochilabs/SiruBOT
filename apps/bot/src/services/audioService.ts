@@ -1,7 +1,7 @@
-import { container, UserError } from '@sapphire/framework';
-import { Player, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
+import { UserError } from '@sapphire/framework';
+import { Player, type LavalinkManager, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import * as Sentry from '@sentry/node';
-import { ButtonInteraction, ChatInputCommandInteraction, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
+import { ButtonInteraction, ChatInputCommandInteraction, Client, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { errorView } from '../lib/errorView.ts';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
@@ -9,6 +9,9 @@ import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/la
 import { sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import * as view from '../modules/audio/view/play.ts';
+import type { AppLogger } from '../lib/appLogger.ts';
+import type { GuildService } from './guildService.ts';
+import type { MixerService } from './mixerService.ts';
 
 interface CommandErrorContext extends Record<string, unknown> {
 	interaction?: ChatInputCommandInteraction<'cached'> | ButtonInteraction<'cached'> | ChatInputCommandInteraction;
@@ -16,11 +19,24 @@ interface CommandErrorContext extends Record<string, unknown> {
 	ephemeral?: boolean;
 }
 
+export interface AudioServiceDeps {
+	logger: AppLogger;
+	guildService: GuildService;
+	/** audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요 */
+	getAudio: () => LavalinkManager<CustomPlayer>;
+	/** client는 로그인 뒤에 준비돼서 호출 시점에 읽어요 */
+	getClient: () => Client;
+	/** mixerService는 audioService 뒤에 만들어지고 서로 얽혀 있어서 호출 시점에 읽어요 */
+	getMixerService: () => MixerService;
+}
+
 export class AudioService {
+	public constructor(private readonly deps: AudioServiceDeps) {}
+
 	public async getOrCreatePlayer(guildId: string, voiceChannelId: string, textChannelId: string | null): Promise<Player> {
 		return (
-			container.audio.getPlayer(guildId) ||
-			(await container.audio.createPlayer({
+			this.deps.getAudio().getPlayer(guildId) ||
+			(await this.deps.getAudio().createPlayer({
 				guildId,
 				voiceChannelId,
 				textChannelId: textChannelId ?? undefined,
@@ -43,7 +59,7 @@ export class AudioService {
 		if (player.connected) return;
 
 		// Check if the bot can actually join the voice channel
-		const guild = container.client.guilds.cache.get(player.guildId);
+		const guild = this.deps.getClient().guilds.cache.get(player.guildId);
 		const voiceChannelId = player.voiceChannelId;
 		if (!voiceChannelId) {
 			throw new UserError({
@@ -84,7 +100,8 @@ export class AudioService {
 			await player.connect();
 		} catch (error) {
 			if (error instanceof UserError) throw error;
-			container.logger.error(error);
+			// Sapphire 로거는 오류 객체도 그대로 받아서 AppLogger 타입에만 맞춰요
+			this.deps.logger.error(error as never);
 			// 인프라 실패는 사용자 메시지(UserError)와 별개로 추적 가능해야 해요 — 원인을 Sentry로 남겨요.
 			Sentry.captureException(error, {
 				tags: { layer: 'player_connect', guild_id: String(player.guildId) }
@@ -162,7 +179,7 @@ export class AudioService {
 						components: [view.playStarted({ track: playlist.selectedTrack as Track, userId: interaction.user.id })],
 						allowedMentions: { users: [], roles: [] }
 					})
-					.catch((error) => container.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
+					.catch((error) => this.deps.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
 			} else {
 				await interaction.editReply({
 					flags: MessageFlags.IsComponentsV2,
@@ -221,7 +238,7 @@ export class AudioService {
 					components: [trackAdded],
 					allowedMentions: { users: [], roles: [] }
 				})
-				.catch((error) => container.logger.warn(`[audio] trackAdded edit failed (guild ${player.guildId}): ${error}`));
+				.catch((error) => this.deps.logger.warn(`[audio] trackAdded edit failed (guild ${player.guildId}): ${error}`));
 		};
 
 		const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>) => {
@@ -279,7 +296,7 @@ export class AudioService {
 					components: [view.playStarted({ track: searchRes.tracks[0] as Track, userId: interaction.user.id })],
 					allowedMentions: { users: [], roles: [] }
 				})
-				.catch((error) => container.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
+				.catch((error) => this.deps.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
 			return;
 		}
 
@@ -309,7 +326,7 @@ export class AudioService {
 			return;
 		}
 		// mixer 필터는 play op보다 먼저 도착해야 트랙 시작 시의 필터 체인에 포함된다.
-		await container.mixerService.primeForPlay(player);
+		await this.deps.getMixerService().primeForPlay(player);
 		await player.play(player.paused ? { paused: false } : undefined);
 	}
 
@@ -330,7 +347,7 @@ export class AudioService {
 		notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
 		void player.queue?.utils?.save?.()?.catch(() => null);
-		await container.mixerService.primeForPlay(player);
+		await this.deps.getMixerService().primeForPlay(player);
 		try {
 			await sendOverride(player, 'PLAY_NOW', previousTrack.encoded ?? null);
 		} catch (error: unknown) {
@@ -370,13 +387,13 @@ export class AudioService {
 		// 지금 크로스페이드로 들어오고 있는 곡이 추천곡인지 판단하려고 추가 전 큐 상태를 잰다.
 		const firstBeforeAdd = player.queue.tracks[0];
 		const consumedTrack = customPlayer.transitionState?.serverConsumedTrack ?? null;
-		const overlapTrackId = container.mixerService.getOverlapTrackIdentifier(String(player.guildId));
+		const overlapTrackId = this.deps.getMixerService().getOverlapTrackIdentifier(String(player.guildId));
 		const firstIsRelated =
 			isRelatedTrack(firstBeforeAdd) ||
 			isRelatedTrack(consumedTrack) ||
 			(overlapTrackId !== null && firstBeforeAdd?.info?.identifier === overlapTrackId && isRelatedTrack(firstBeforeAdd));
 		const inCrossfadeTransition =
-			container.mixerService.isOverlapActive(String(player.guildId)) || customPlayer.transitionState?.preloadConsumedAt != null;
+			this.deps.getMixerService().isOverlapActive(String(player.guildId)) || customPlayer.transitionState?.preloadConsumedAt != null;
 		const shouldInterruptRelatedCrossfade = !wasIdle && firstIsRelated && inCrossfadeTransition;
 
 		await player.queue.add(track);
@@ -399,7 +416,7 @@ export class AudioService {
 				}
 				notifyQueueMutated(customPlayer, { invalidate: false, bumpEpoch: true, force: true });
 				cancelPendingInvalidate(customPlayer);
-				await container.mixerService.primeForPlay(player);
+				await this.deps.getMixerService().primeForPlay(player);
 				try {
 					await sendOverride(customPlayer, 'PLAY_NOW', (nextTrack as Track).encoded ?? null);
 				} catch {
@@ -414,7 +431,7 @@ export class AudioService {
 
 	public async isControllerEnabled(guildId: string): Promise<boolean> {
 		try {
-			const guild = await container.guildService.getGuild(guildId);
+			const guild = await this.deps.guildService.getGuild(guildId);
 			return guild?.enableController !== false;
 		} catch {
 			return false;
@@ -429,8 +446,11 @@ export class AudioService {
 	 */
 	private preloadAfterQueueChange(player: Player): void {
 		if (!player.queue.current || (!player.playing && !player.paused)) return;
-		void container.mixerService.preloadUpcoming(player).catch((error) => {
-			container.logger.warn(`[mixer] preload after queue change failed (guild ${player.guildId}): ${error}`);
-		});
+		void this.deps
+			.getMixerService()
+			.preloadUpcoming(player)
+			.catch((error) => {
+				this.deps.logger.warn(`[mixer] preload after queue change failed (guild ${player.guildId}): ${error}`);
+			});
 	}
 }

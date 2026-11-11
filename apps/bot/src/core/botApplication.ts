@@ -144,7 +144,14 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.guildService = new GuildService({ db: container.db });
 		container.trackService = new TrackService({ db: container.db });
 		container.playlistService = new PlaylistService({ db: container.db });
-		container.audioService = new AudioService();
+		container.audioService = new AudioService({
+			logger: appLogger,
+			guildService: container.guildService,
+			// audio는 setupAudio 뒤에, client는 로그인 뒤에, mixerService는 이 서비스 뒤에 만들어져서 호출 시점에 읽어요
+			getAudio: () => container.audio,
+			getClient: () => container.client,
+			getMixerService: () => container.mixerService
+		});
 		container.mixerService = new MixerService({
 			logger: appLogger,
 			guildService: container.guildService,
