@@ -13,7 +13,6 @@ import { getConfig } from '../../../lib/config.ts';
 	event: Events.VoiceStateUpdate
 })
 export class VoiceStateUpdateListener extends Listener {
-	private leaveTimers = new Map<string, NodeJS.Timeout>();
 	/** 음성 채널이 비었을 때 퇴장 유예(ms) — 기본 5분, lib/config.ts */
 	private get LEAVE_TIMEOUT_MS(): number {
 		return getConfig().playback.leaveTimeoutMs;
@@ -61,31 +60,32 @@ export class VoiceStateUpdateListener extends Listener {
 
 			this.clearTimer(guildId);
 
-			const timer = setTimeout(async () => {
-				try {
-					this.logger.info(`Leaving empty voice channel in guild ${guildId} after 5 minutes.`);
-					if (player.textChannelId) {
-						const textChannel = this.container.client.channels.cache.get(player.textChannelId);
-						if (textChannel?.isSendable()) {
-							await textChannel.send({
-								components: [notice(`${emoji('sleep')} 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.`)],
-								flags: [MessageFlags.IsComponentsV2]
-							});
+			// 타이머 소유자는 container.voiceLeaveTimers — 종료 때 stop()이 남은 퇴장 타이머를 해제해요
+			this.container.voiceLeaveTimers.set(
+				guildId,
+				async () => {
+					try {
+						this.logger.info(`Leaving empty voice channel in guild ${guildId} after 5 minutes.`);
+						if (player.textChannelId) {
+							const textChannel = this.container.client.channels.cache.get(player.textChannelId);
+							if (textChannel?.isSendable()) {
+								await textChannel.send({
+									components: [notice(`${emoji('sleep')} 장시간 아무도 음악을 듣지 않아서 음성 채널에서 퇴장했어요.`)],
+									flags: [MessageFlags.IsComponentsV2]
+								});
+							}
 						}
+						// Do not display additional message
+						player.transitionState.stopByCommand = true;
+						await player.destroy();
+					} catch (error) {
+						this.logger.error(`Failed to leave empty voice channel in guild ${guildId}:`, error);
 					}
-					// Do not display additional message
-					player.transitionState.stopByCommand = true;
-					await player.destroy();
-				} catch (error) {
-					this.logger.error(`Failed to leave empty voice channel in guild ${guildId}:`, error);
-				} finally {
-					this.leaveTimers.delete(guildId);
-				}
-			}, this.LEAVE_TIMEOUT_MS);
-
-			this.leaveTimers.set(guildId, timer);
+				},
+				this.LEAVE_TIMEOUT_MS
+			);
 		} else {
-			if (this.leaveTimers.has(guildId)) {
+			if (this.container.voiceLeaveTimers.has(guildId)) {
 				this.logger.debug(`User joined channel ${channel.id}. Cancelling leave timer for guild ${guildId}.`);
 				this.clearTimer(guildId);
 			}
@@ -93,10 +93,6 @@ export class VoiceStateUpdateListener extends Listener {
 	}
 
 	private clearTimer(guildId: string) {
-		const timer = this.leaveTimers.get(guildId);
-		if (timer) {
-			clearTimeout(timer);
-			this.leaveTimers.delete(guildId);
-		}
+		this.container.voiceLeaveTimers.clear(guildId);
 	}
 }

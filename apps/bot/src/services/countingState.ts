@@ -5,7 +5,7 @@
  * - 채널을 다시 지정하거나 카운팅을 끄면 상태를 초기화해 새로 1부터 시작해요.
  */
 import { container } from '@sapphire/framework';
-import type { Stoppable } from '../core/lifecycle.ts';
+import type { Stoppable } from '../lib/lifecycle.ts';
 import { type CountingState, COUNTING_STATE_DEFAULT } from '@sirubot/utils';
 
 const COUNTING_KEY_PREFIX = 'sirubot:counting:';

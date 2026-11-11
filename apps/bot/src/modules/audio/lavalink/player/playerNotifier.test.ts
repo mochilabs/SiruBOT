@@ -219,6 +219,24 @@ describe('non-blocking player notifications', () => {
 		expect(mocks.edits).toHaveBeenCalledTimes(1);
 	});
 
+	it('stop() clears debounce timers and the progress tick, and later updates create no timers', async () => {
+		vi.useFakeTimers();
+		const notifier = new PlayerNotifier();
+		const current = player();
+		await notifier.sendController(current);
+		notifier.updateController(current);
+		// debounce 타이머 1개 + 진행 틱 인터벌 1개가 걸려 있어요
+		expect(vi.getTimerCount()).toBeGreaterThanOrEqual(2);
+
+		await notifier.stop();
+		expect(vi.getTimerCount()).toBe(0);
+
+		notifier.updateController(current);
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(10_000);
+		expect(mocks.edits).not.toHaveBeenCalled();
+	});
+
 	it('keeps the newest controller state when an older update is waiting on settings', async () => {
 		vi.useFakeTimers();
 		const notifier = new PlayerNotifier();

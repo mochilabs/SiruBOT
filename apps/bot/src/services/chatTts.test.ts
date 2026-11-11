@@ -194,6 +194,26 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		expect(mocks.ttsService.synthesize).toHaveBeenLastCalledWith('두 번째 세 번째', { voice: undefined });
 	});
 
+	it('stop() clears pending merge-window timers and ignores later messages', async () => {
+		vi.useFakeTimers();
+		const service = new ChatTtsService();
+		const player = makePlayer();
+		mocks.audio.getPlayer.mockReturnValue(player);
+
+		await service.handleMessage(makeMessage(), '첫 번째');
+		await flushAsync();
+		await service.handleMessage(makeMessage(), '두 번째');
+		expect(vi.getTimerCount()).toBeGreaterThan(0);
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(1);
+
+		await service.stop();
+		expect(vi.getTimerCount()).toBe(0);
+		await service.handleMessage(makeMessage(), '세 번째');
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(TTS_MERGE_WINDOW_MS * 2);
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(1);
+	});
+
 	it('passes the user voice to synthesize', async () => {
 		const service = new ChatTtsService();
 		const player = makePlayer();

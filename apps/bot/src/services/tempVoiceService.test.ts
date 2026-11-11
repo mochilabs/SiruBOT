@@ -107,4 +107,19 @@ describe('TempVoiceService room restore', () => {
 
 		expect(mocks.deleteCacheHashField).toHaveBeenCalledWith('jtc:rooms:g1', 'room3');
 	});
+
+	it('stop()은 빈방 확인 타이머를 해제해서 종료 뒤에 방을 지우지 않고, 이후 타이머도 만들지 않는다', async () => {
+		const channel = voiceChannel('room4', 0);
+		mocks.getCacheHashFields.mockResolvedValueOnce({ room4: 'owner4' });
+		mocks.fetchChannel.mockResolvedValue(channel);
+		const service = new TempVoiceService();
+
+		await service.restoreRooms();
+		expect(vi.getTimerCount()).toBe(1);
+
+		await service.stop();
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(channel.delete).not.toHaveBeenCalled();
+	});
 });

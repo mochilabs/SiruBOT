@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import type { Container } from '@sapphire/pieces';
 import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
-import { stopAll } from './lifecycle.ts';
+import { stopAll } from '../lib/lifecycle.ts';
 import { stopRedisSubscribers } from './redisSubscribers.ts';
 
 type ShutdownLogger = { info: (msg: string) => unknown; warn: (msg: string) => unknown; error: (msg: string) => unknown };

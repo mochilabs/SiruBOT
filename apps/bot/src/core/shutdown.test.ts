@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { STOPPABLES_TIMEOUT_MS } from './lifecycle.ts';
+import { STOPPABLES_TIMEOUT_MS } from '../lib/lifecycle.ts';
 import { createShutdownHandler, runShutdown, type ShutdownDeps } from './shutdown.ts';
 
 const makeDeps = (calls: string[]) => {

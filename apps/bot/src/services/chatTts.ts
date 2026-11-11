@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import type { Message } from 'discord.js';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
+import type { Stoppable } from '../lib/lifecycle.ts';
 import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { TtsClip, TtsError, getTtsConfig } from './ttsService.ts';
@@ -110,7 +111,9 @@ interface GuildTtsState {
 	soloQueue: SoloClip[];
 }
 
-export class ChatTtsService {
+export class ChatTtsService implements Stoppable {
+	public readonly name = '채팅 TTS 병합 타이머';
+	private stopped = false;
 	private readonly guildStates = new Map<string, GuildTtsState>();
 	/** 원인별 1회만 warn — 반복되는 동일 원인은 debug로 낮춘다 (명세 4.6) */
 	private readonly warned = new Set<string>();
@@ -121,6 +124,7 @@ export class ChatTtsService {
 	 * 실패는 전부 조용히 스킵하고 로그만 남긴다 (명세 4.6).
 	 */
 	public async handleMessage(message: Message<true>, text: string, preset?: TtsUserPreset): Promise<void> {
+		if (this.stopped) return;
 		const guildId = message.guildId;
 		const channelId = message.channelId;
 		const userId = message.author.id;
@@ -439,6 +443,18 @@ export class ChatTtsService {
 		} catch (error) {
 			container.logger.debug(`[chatTts] keep-alive failed (guild ${player.guildId}): ${error}`);
 		}
+	}
+
+	/**
+	 * 종료: 대기 중인 병합 창 타이머를 모두 해제하고 길드 상태를 버려요. 읽다 만 채팅은 영속 대상이 아니에요.
+	 * 이후 메시지는 받지 않아서 새 타이머가 생기지 않아요.
+	 */
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		for (const state of this.guildStates.values()) {
+			for (const batch of state.batches.values()) clearTimeout(batch.timer);
+		}
+		this.guildStates.clear();
 	}
 
 	/** 플레이어 소멸 시 대기 병합·단독 큐를 버린다. 합성 중인 작업은 끝나면 플레이어 부재로 조용히 소멸한다. */

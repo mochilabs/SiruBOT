@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import type { Stoppable } from '../../core/lifecycle.ts';
+import type { Stoppable } from '../../lib/lifecycle.ts';
 import { estimateTokens, getContextTokenBudget } from './tokenBudget.ts';
 import { contentText, type ChannelHistoryState, type ChatMessage } from './types.ts';
 

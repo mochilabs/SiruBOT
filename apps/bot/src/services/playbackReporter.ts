@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
-import type { Stoppable } from '../core/lifecycle.ts';
+import type { Stoppable } from '../lib/lifecycle.ts';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 
 type PlaybackReportType = 'track_start' | 'track_end' | 'track_stuck' | 'track_error' | 'queue_end' | 'playback_abort';

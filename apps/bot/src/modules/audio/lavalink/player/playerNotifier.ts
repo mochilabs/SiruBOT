@@ -2,6 +2,7 @@ import { container, UserError } from '@sapphire/framework';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
 import { getConfig } from '../../../../lib/config.ts';
+import type { Stoppable } from '../../../../lib/lifecycle.ts';
 import { ChatInputCommandInteraction, MessageFlags, type Message } from 'discord.js';
 import { emoji, enqueueOperation } from '@sirubot/utils';
 
@@ -14,7 +15,9 @@ import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
 type ControllerOptions = Pick<Guild, 'enableController' | 'volume'>;
 
-export class PlayerNotifier {
+export class PlayerNotifier implements Stoppable {
+	public readonly name = '플레이어 컨트롤러 갱신';
+	private stopped = false;
 	private logger: Logger<ILogObj>;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 	/** 전송/수정은 길드별로 직렬화하고, 이미지 렌더는 이 체인 밖에서 수행한다. */
@@ -159,7 +162,21 @@ export class PlayerNotifier {
 		}
 	}
 
+	/**
+	 * 종료: 컨트롤러 갱신 디바운스 타이머와 주기 갱신 인터벌을 모두 해제하고 대기 중인 갱신을 버려요.
+	 * 컨트롤러 메시지는 다음 부팅의 복구 경로가 다시 맞추므로 flush할 데이터는 없어요. 이후 갱신 요청은 타이머를 만들지 않아요.
+	 */
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		for (const timer of this.debounceTimers.values()) clearTimeout(timer);
+		this.debounceTimers.clear();
+		for (const timer of this.progressTicks.values()) clearInterval(timer);
+		this.progressTicks.clear();
+		this.pendingUpdates.clear();
+	}
+
 	public updateController(player: CustomPlayer): void {
+		if (this.stopped) return;
 		this.clearDebounceTimer(player.guildId);
 		this.updateRevisions.set(player.guildId, (this.updateRevisions.get(player.guildId) ?? 0) + 1);
 		this.pendingUpdates.set(player.guildId, player);
@@ -299,7 +316,7 @@ export class PlayerNotifier {
 	 * 경계 미도달이면 updateController가 시그니처 비교로 no-op으로 끝난다.
 	 */
 	private ensureProgressTick(player: CustomPlayer): void {
-		if (this.progressTicks.has(player.guildId)) return;
+		if (this.stopped || this.progressTicks.has(player.guildId)) return;
 		if (player.queue.current?.info.isStream === true) return;
 		const timer = setInterval(() => {
 			if (!player.queue.current || this.destroyedPlayers.has(player)) {

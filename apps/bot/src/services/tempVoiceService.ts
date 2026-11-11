@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { WARN_COLOR, emoji } from '@sirubot/utils';
 import { ChannelType, GuildMember, MessageFlags, PermissionFlagsBits, VoiceBasedChannel, VoiceState } from 'discord.js';
 import { getConfig } from '../lib/config.ts';
+import type { Stoppable } from '../lib/lifecycle.ts';
 import { notice } from '../modules/general/view/notice.ts';
 import * as guildJtc from './guildSettings/jtc.ts';
 
@@ -39,7 +40,9 @@ export function jtcEmptyGraceText(): string {
 	return `${minutes}분 ${seconds}초`;
 }
 
-export class TempVoiceService {
+export class TempVoiceService implements Stoppable {
+	public readonly name = '임시 음성 채널 빈방 타이머';
+	private stopped = false;
 	private readonly rooms = new Map<string, RoomInfo>();
 	private readonly emptyTimers = new Map<string, NodeJS.Timeout>();
 	private readonly creating = new Set<string>();
@@ -167,6 +170,7 @@ export class TempVoiceService {
 
 	/** 유예 시간 후 빈방 확인(deleteIfEmpty)을 다시 건다 — 중복 타이머 없음. */
 	private scheduleEmptyCheck(channelId: string): void {
+		if (this.stopped) return;
 		const timer = setTimeout(() => void this.deleteIfEmpty(channelId), this.EMPTY_GRACE_MS);
 		this.emptyTimers.set(channelId, timer);
 	}
@@ -276,6 +280,16 @@ export class TempVoiceService {
 
 	private async persistRoom(guildId: string, channelId: string, ownerId: string): Promise<void> {
 		await container.redisStore.setCacheHashFields(roomsKey(guildId), { [channelId]: ownerId });
+	}
+
+	/**
+	 * 종료: 빈방 확인 타이머를 모두 해제해요. 방 목록은 Redis에 이미 기록돼 있어서 flush할 데이터는 없고,
+	 * 남은 방은 다음 부팅의 고아 정리가 처리해요. 이후에는 새 타이머를 만들지 않아요.
+	 */
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		for (const timer of this.emptyTimers.values()) clearTimeout(timer);
+		this.emptyTimers.clear();
 	}
 
 	private clearEmptyTimer(channelId: string): void {

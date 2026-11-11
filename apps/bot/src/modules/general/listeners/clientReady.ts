@@ -1,8 +1,7 @@
 import { Events, version as frameworkVersion, Listener } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import type { StoreRegistryValue } from '@sapphire/pieces';
-import { getConfig } from '../../../lib/config.ts';
-import { versionInfo, isDev, BOT_NAME, formatTime } from '@sirubot/utils';
+import { versionInfo, isDev } from '@sirubot/utils';
 import { Prisma } from '@sirubot/prisma';
 
 import { version as discordJsVersion } from 'discord.js';
@@ -14,8 +13,6 @@ import figlet from 'figlet';
 @ApplyOptions<Listener.Options>({ event: Events.ClientReady })
 export class ReadyEvent extends Listener {
 	private readonly style = isDev ? yellow : blue;
-	/** 상태 갱신 인터벌 — 종료/언로드 때 정리할 수 있게 핸들을 보관한다. */
-	private activityTimer: ReturnType<typeof setInterval> | null = null;
 
 	public override async run() {
 		// Disable self after first run instead of using `once: true`.
@@ -34,61 +31,8 @@ export class ReadyEvent extends Listener {
 		const shouldUpload = !shard || shard.ids.includes(0);
 		await this.container.appEmojiManager?.sync(shouldUpload);
 
-		this.startActivityInterval();
-	}
-
-	private startActivityInterval() {
-		const activitySettings = getConfig().discord.botActivity;
-		if (!activitySettings) return;
-
-		const activityTemplates = activitySettings
-			.split(',')
-			.map((s) => s.trim())
-			.filter(Boolean);
-		if (activityTemplates.length === 0) return;
-
-		const updateActivity = () => {
-			const { client, audio } = this.container;
-
-			// 종료 진행 중(게이트웨이 파괴 후)에는 갱신하지 않는다 — 새 연결 없이
-			// 파괴된 클라이언트에만 호출이 쌓인다.
-			if (!client.isReady()) return;
-
-			const guilds = client.guilds.cache.size;
-			const users = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
-			const ping = client.ws.ping;
-			const uptime = formatTime(process.uptime());
-			const players = audio?.players?.size ?? 0;
-
-			const activityTemplate = activityTemplates[Math.floor(Math.random() * activityTemplates.length)];
-
-			const parsedActivity = activityTemplate
-				.replace(/%guilds%/g, guilds.toString())
-				.replace(/%users%/g, users.toString())
-				.replace(/%players%/g, players.toString())
-				.replace(/%ping%/g, Math.round(ping).toString())
-				.replace(/%uptime%/g, uptime)
-				.replace(/%version%/g, versionInfo.getVersion())
-				.replace(/%branch%/g, versionInfo.getGitBranch())
-				.replace(/%bot_name%/g, BOT_NAME || client.user?.username);
-
-			client.user?.setActivity(parsedActivity);
-		};
-
-		updateActivity();
-		// 중복 호출 시 이전 인터벌이 고아가 되지 않게 정리한다
-		if (this.activityTimer) clearInterval(this.activityTimer);
-		this.activityTimer = setInterval(updateActivity, 60_000); // 1 minute
-		// 인터벌이 프로세스 종료를 붙잡지 않도록 한다 (프로세스 수명은 게이트웨이 소켓이 붙잡는다)
-		this.activityTimer.unref();
-	}
-
-	/** 조각 언로드/리로드 시 상태 갱신 인터벌을 정리한다 — 남기면 프로세스가 종료돼도 루돈다. */
-	public override onUnload(): void {
-		if (this.activityTimer) {
-			clearInterval(this.activityTimer);
-			this.activityTimer = null;
-		}
+		// 상태 메시지 순환은 container.botActivity가 소유해요 — 종료 때 stop()이 인터벌을 해제해요
+		this.container.botActivity.start();
 	}
 
 	private async printBanner() {

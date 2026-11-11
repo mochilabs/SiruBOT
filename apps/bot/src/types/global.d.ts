@@ -37,6 +37,10 @@ declare module '@sapphire/pieces' {
 		countingState: import('../services/countingState.ts').CountingStateStore;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
 		playbackReporter: import('../services/playbackReporter.ts').PlaybackReporter;
+		/** 빈 음성 채널 퇴장 유예 타이머 소유자 (길드별) */
+		voiceLeaveTimers: import('../lib/keyedTimers.ts').KeyedTimers;
+		/** 봇 상태 메시지 순환 인터벌 소유자 */
+		botActivity: import('../services/botActivity.ts').BotActivityService;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
@@ -44,7 +48,7 @@ declare module '@sapphire/pieces' {
 		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
 		/** 종료 시 stop()이 필요한 상태 소유자 레지스트리 — setupServices가 채우고 shutdown이 Redis/DB를 닫기 전에 실행해요 */
-		stoppables: import('../core/lifecycle.ts').Stoppable[];
+		stoppables: import('../lib/lifecycle.ts').Stoppable[];
 		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };

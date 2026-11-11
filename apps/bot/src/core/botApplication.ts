@@ -24,6 +24,8 @@ import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
 import { CountingStateStore } from '../services/countingState.ts';
 import { PlaybackReporter } from '../services/playbackReporter.ts';
+import { BotActivityService } from '../services/botActivity.ts';
+import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { TicketService } from '../features/tickets/index.ts';
 import { RolePanelService, createRoleValidationResponder } from '../features/role-panels/index.ts';
@@ -128,6 +130,10 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.ttsPronunciation = new TtsPronunciationService();
 		container.chatTtsService = new ChatTtsService();
 		container.tempVoiceService = new TempVoiceService();
+		container.stoppables.push(container.chatTtsService, container.tempVoiceService);
+		container.voiceLeaveTimers = new KeyedTimers('빈 음성 채널 퇴장 타이머');
+		container.botActivity = new BotActivityService();
+		container.stoppables.push(container.voiceLeaveTimers, container.botActivity);
 		container.aiMemoryService = new AiMemoryService();
 		container.aiChatHistory = new ChannelHistoryStore();
 		container.stoppables.push(container.aiChatHistory);
@@ -186,6 +192,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			createSharedRedisSubscriber({ name: '대시보드 연동', logger: subscriberLogger, runtime: redisRuntime, bindings: redisBindings })
 		] satisfies RedisSubscriberEntry[];
 		container.appEmojiManager = new AppEmojiManager();
+		container.stoppables.push(container.appEmojiManager);
 		this.setupMusicControl();
 	}
 
@@ -266,6 +273,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 
 		container.shardInfo = shardInfo;
 		container.playerNotifier = new PlayerNotifier();
+		container.stoppables.push(container.playerNotifier);
 		container.audio = audio;
 
 		return audio;

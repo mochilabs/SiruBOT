@@ -3,6 +3,7 @@ import { ensureAppEmojisLoaded, setAppEmojiIdMap } from '@sirubot/utils';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { ClientApplication } from 'discord.js';
+import type { Stoppable } from '../lib/lifecycle.ts';
 
 /** 이모지 이름 규칙 — Discord 앱 이모지 이름 (2~32자, 소문자/숫자/언더스코어) */
 const NAME_REGEX = /^[a-z0-9_]{2,32}$/;
@@ -20,8 +21,11 @@ const MAX_PNG_BYTES = 256 * 1024;
  * - 조회·업로드 실패 시에도 예외를 던지지 않는다(emoji()가 유니코드 폴백으로 동작).
  * - 업로드는 이름 기준으로 idempotent — 이미 있으면 건너뛰어 멀티 인스턴스 재시작에도 안전.
  */
-export class AppEmojiManager {
+export class AppEmojiManager implements Stoppable {
+	public readonly name = '앱 이모지 재동기화';
 	private refreshScheduled = false;
+	private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+	private stopped = false;
 
 	/**
 	 * 앱 이모지를 동기화한다.
@@ -60,9 +64,17 @@ export class AppEmojiManager {
 	}
 
 	private scheduleRefresh(): void {
-		if (this.refreshScheduled) return;
+		if (this.stopped || this.refreshScheduled) return;
 		this.refreshScheduled = true;
-		setTimeout(() => void this.sync(false), 30_000).unref?.();
+		this.refreshTimer = setTimeout(() => void this.sync(false), 30_000);
+		this.refreshTimer.unref?.();
+	}
+
+	/** 종료: 예약된 재동기화 타이머를 해제하고 이후 예약은 받지 않아요. */
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		if (this.refreshTimer) clearTimeout(this.refreshTimer);
+		this.refreshTimer = null;
 	}
 
 	private async uploadMissing(application: ClientApplication, map: Record<string, string>): Promise<void> {
