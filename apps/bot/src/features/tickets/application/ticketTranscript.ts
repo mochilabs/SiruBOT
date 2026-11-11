@@ -1,9 +1,8 @@
-import { container } from '@sapphire/framework';
 import { TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 import { gzipSync } from 'node:zlib';
 import type { Guild, TextChannel } from 'discord.js';
 import type { Ticket } from '@sirubot/prisma';
-import { uploadObject } from '../../../services/dataApiClient.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 
 /**
  * 티켓 대화 기록(transcript) 저장 — 마감 5초 뒤 채널이 삭제되므로 그 전에 원문을 남겨요.
@@ -14,6 +13,18 @@ import { uploadObject } from '../../../services/dataApiClient.ts';
  *
  * 실패해도 마감 자체는 계속돼요(티켓 상태는 이미 closed). 실패 사유는 로그·Sentry에만 남겨요.
  */
+
+export type UploadObject = (
+	bucket: string,
+	key: string,
+	bytes: Uint8Array,
+	contentType: string
+) => Promise<{ key: string; url: string | null } | null>;
+
+export interface TicketTranscriptDeps {
+	logger: AppLogger;
+	uploadObject: UploadObject;
+}
 
 /** 한 티켓에서 저장하는 최대 메시지 수 — 오래 걸린 채널도 상한을 둬 transcript 폭주를 막아요 */
 const MAX_TRANSCRIPT_MESSAGES = 500;
@@ -95,6 +106,7 @@ async function collectMessages(channel: TextChannel): Promise<{ messages: Transc
  * 호출부(closeTicket)는 이 값을 `Ticket.transcriptKey`에 기록해요.
  */
 export async function saveTicketTranscript(
+	deps: TicketTranscriptDeps,
 	guild: Guild,
 	ticket: Ticket,
 	closedById: string | null,
@@ -102,7 +114,7 @@ export async function saveTicketTranscript(
 ): Promise<string | null> {
 	const channel = guild.channels.cache.get(ticket.channelId);
 	if (!channel || !channel.isTextBased()) {
-		container.logger.warn(`[ticket] transcript skipped: channel ${ticket.channelId} not available`);
+		deps.logger.warn(`[ticket] transcript skipped: channel ${ticket.channelId} not available`);
 		return null;
 	}
 
@@ -125,14 +137,14 @@ export async function saveTicketTranscript(
 
 		const key = ticketTranscriptKey(ticket.guildId, ticket.id);
 		const payload = gzipSync(Buffer.from(JSON.stringify(file), 'utf8'));
-		const saved = await uploadObject(TICKET_TRANSCRIPT_BUCKET, key, payload, 'application/gzip');
+		const saved = await deps.uploadObject(TICKET_TRANSCRIPT_BUCKET, key, payload, 'application/gzip');
 		if (!saved) {
-			container.logger.warn(`[ticket] transcript upload skipped/failed for ${ticket.id} (storage 미설정 또는 오류)`);
+			deps.logger.warn(`[ticket] transcript upload skipped/failed for ${ticket.id} (storage 미설정 또는 오류)`);
 			return null;
 		}
 		return key;
 	} catch (error) {
-		container.logger.error(`[ticket] transcript failed for ${ticket.id}: ${error instanceof Error ? error.message : String(error)}`);
+		deps.logger.error(`[ticket] transcript failed for ${ticket.id}: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
 	}
 }

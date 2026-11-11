@@ -87,12 +87,6 @@ const ALLOWED_MODULES_TO_CORE: string[] = [
  * removal takes. Only delete from this list.
  */
 const APPLICATION_LAYER_DEBT: Record<string, string> = {
-	'features/tickets/application/ticketService.ts -> @sapphire/framework':
-		'uses the `container` service locator (db, logger, Discord client). Remove by passing db/logger/client in through a deps object, as features/music/application does.',
-	'features/tickets/application/ticketService.ts -> ../../../modules/general/view/notice.ts':
-		'builds user-facing notice messages itself. Remove by returning result/error codes and letting features/tickets/discord render them.',
-	'features/tickets/application/ticketService.ts -> ../discord/views/ticket.ts':
-		'posts the welcome message with ticketWelcomeView. Remove by injecting a "send welcome message" port implemented in features/tickets/discord.',
 	'features/role-panels/application/rolePanelService.ts -> @sapphire/framework':
 		'uses the `container` service locator (db, logger). Remove by passing db/logger in through a deps object, as features/music/application does.',
 	'features/role-panels/application/rolePanelService.ts -> ../discord/views/rolePanel.ts':
@@ -110,9 +104,7 @@ const APPLICATION_LAYER_DEBT: Record<string, string> = {
 	'features/greeting/application/greetingDispatch.ts -> @sapphire/framework':
 		'uses the `container` service locator (memberGreetingService, logger). Remove by passing the service and logger in, or by moving this helper into features/greeting/discord.',
 	'features/games/application/gameRecords.ts -> @sapphire/framework':
-		'uses the `container` service locator (db, redisStore). Remove by passing db/redisStore in through a deps object, as features/music/application does.',
-	'features/tickets/application/ticketTranscript.ts -> @sapphire/framework':
-		'uses `container` for the logger and Discord client. Remove by passing them in through deps.'
+		'uses the `container` service locator (db, redisStore). Remove by passing db/redisStore in through a deps object, as features/music/application does.'
 };
 
 /** Non-test files that may contain `process.env`, each with the reason. Only delete from this list. */

@@ -27,7 +27,8 @@ import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
-import { TicketService } from '../features/tickets/index.ts';
+import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
+import { uploadObject } from '../services/dataApiClient.ts';
 import { RolePanelService, createRoleValidationResponder } from '../features/role-panels/index.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
 import { createJtcSetupResponder } from '../features/temp-voice/index.ts';
@@ -43,6 +44,7 @@ import {
 } from '../features/dashboard-bridge/index.ts';
 import { AppEmojiManager } from '../services/appEmojiManager.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
+import type { AppLogger } from '../lib/appLogger.ts';
 import { RedisPublisher } from '../lib/redisPublisher.ts';
 import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
 import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisSubscribers.ts';
@@ -120,6 +122,14 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	public setupServices() {
 		// 종료 시 stop()이 필요한 상태 소유자 레지스트리 — 소유자를 만들면 container.stoppables에 push해요 (종료 때 병렬로 stop, core/shutdown.ts)
 		container.stoppables = [];
+		// 애플리케이션 계층과 Redis 수신 계층이 함께 쓰는 로거 — 호출 시점에 container.logger를 읽어요
+		const appLogger: AppLogger = {
+			info: (msg: string) => container.logger.info(msg),
+			warn: (msg: string) => container.logger.warn(msg),
+			error: (msg: string) => container.logger.error(msg),
+			debug: (msg: string) => container.logger.debug(msg)
+		};
+		const subscriberLogger = appLogger;
 		container.guildService = new GuildService();
 		container.trackService = new TrackService();
 		container.playlistService = new PlaylistService();
@@ -141,17 +151,10 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.stoppables.push(container.countingState);
 		container.playbackReporter = new PlaybackReporter();
 		container.stoppables.push(container.playbackReporter);
-		container.ticketService = new TicketService();
+		container.ticketService = createTicketService({ db: container.db, logger: appLogger, messages: ticketMessages, uploadObject });
 		container.rolePanelService = new RolePanelService();
 		container.stoppables.push(container.ticketService);
 
-		// Redis 수신 계층 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
-		const subscriberLogger = {
-			info: (msg: string) => container.logger.info(msg),
-			warn: (msg: string) => container.logger.warn(msg),
-			error: (msg: string) => container.logger.error(msg),
-			debug: (msg: string) => container.logger.debug(msg)
-		};
 		// 서비스 간 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (data-api와 공유). 없으면 서명 없는 구버전 모드.
 		// (설정 무효화 채널은 대시보드 저장 흐름이 서명 없이 퍼블리시해서 이벤트 계약이 signed: false로 받아요)
 		const redisSigningKey = getConfig().redis.signingKey;

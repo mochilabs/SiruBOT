@@ -1,15 +1,29 @@
-import { container } from '@sapphire/framework';
-import { ChannelType, Guild, MessageFlags, GuildMember, OverwriteType, PermissionFlagsBits, TextChannel } from 'discord.js';
+import { ChannelType, Guild, GuildMember, OverwriteType, PermissionFlagsBits, TextChannel, type MessageCreateOptions } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { formatTicketChannelName } from '@sirubot/utils/ticket';
-import type { Ticket } from '@sirubot/prisma';
-import { ticketWelcomeView } from '../discord/views/ticket.ts';
-import { notice } from '../../../modules/general/view/notice.ts';
-import { saveTicketTranscript } from './ticketTranscript.ts';
+import type { PrismaClient, Ticket } from '@sirubot/prisma';
+import { saveTicketTranscript, type UploadObject } from './ticketTranscript.ts';
 import type { Stoppable } from '../../../lib/lifecycle.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 
 /** 티켓 마감 안내 후 채널을 지우기까지의 유예(ms) */
 const CHANNEL_DELETE_DELAY_MS = 5000;
+
+/** 티켓 채널에 직접 올리는 메시지를 만드는 포트 — 실제 구현은 features/tickets/discord/ticketMessages.ts예요. */
+export interface TicketMessagePort {
+	/** 새 티켓 채널 첫 메시지(환영·관리 버튼) */
+	welcome(ticket: Ticket): MessageCreateOptions;
+	/** 텍스트 안내 한 블록(Components V2). 멘션 억제 같은 전송 옵션은 서비스가 덧붙여요. */
+	notice(message: string): MessageCreateOptions;
+}
+
+export interface TicketServiceDeps {
+	db: PrismaClient;
+	logger: AppLogger;
+	messages: TicketMessagePort;
+	/** 티켓 대화 기록 업로드 (data-api storage) */
+	uploadObject: UploadObject;
+}
 
 export class TicketService implements Stoppable {
 	public readonly name = '티켓 채널 정리 예약';
@@ -17,8 +31,10 @@ export class TicketService implements Stoppable {
 	private readonly pendingChannelDeletes = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => Promise<void> }>();
 	private stopped = false;
 
+	public constructor(private readonly deps: TicketServiceDeps) {}
+
 	private get db() {
-		return container.db;
+		return this.deps.db;
 	}
 
 	/**
@@ -160,7 +176,7 @@ export class TicketService implements Stoppable {
 				permissionOverwrites
 			})) as TextChannel;
 		} catch (error) {
-			container.logger.error(`[ticket] Failed to create channel for guild ${guild.id}: ${error}`);
+			this.deps.logger.error(`[ticket] Failed to create channel for guild ${guild.id}: ${error}`);
 			return { ok: false, reason: '채널을 생성하지 못했어요. 봇의 권한(Manage Channels)을 확인해 주세요.' };
 		}
 
@@ -176,8 +192,8 @@ export class TicketService implements Stoppable {
 		});
 
 		// 채널 첫 메시지 전송
-		const welcomePayload = ticketWelcomeView(ticket);
-		await channel.send(welcomePayload).catch((err) => container.logger.warn(`[ticket] Failed to send welcome in channel ${channel.id}: ${err}`));
+		const welcomePayload = this.deps.messages.welcome(ticket);
+		await channel.send(welcomePayload).catch((err) => this.deps.logger.warn(`[ticket] Failed to send welcome in channel ${channel.id}: ${err}`));
 
 		return { ok: true, ticket, channel };
 	}
@@ -219,7 +235,9 @@ export class TicketService implements Stoppable {
 		});
 
 		// 채널이 사라지기 전에 대화 기록을 비공개 버킷에 남겨요 — 실패해도 마감은 계속돼요
-		const transcriptKey = await saveTicketTranscript(guild, updatedTicket, closedByMember.id, updatedTicket.closeReason).catch(() => null);
+		const transcriptKey = await saveTicketTranscript(this.deps, guild, updatedTicket, closedByMember.id, updatedTicket.closeReason).catch(
+			() => null
+		);
 		const ticketWithTranscript = transcriptKey
 			? await this.db.ticket.update({ where: { id: ticket.id }, data: { transcriptKey, transcribedAt: new Date() } })
 			: updatedTicket;
@@ -227,14 +245,12 @@ export class TicketService implements Stoppable {
 		// 채널 삭제 (스케줄링 또는 즉시 삭제)
 		const channel = guild.channels.cache.get(channelId);
 		if (channel && channel.isTextBased()) {
-			await channel
-				.send({ components: [notice(`${emoji('lock')} 티켓이 마감되었어요. 5초 뒤 채널이 정리돼요.`)], flags: [MessageFlags.IsComponentsV2] })
-				.catch(() => null);
+			await channel.send(this.deps.messages.notice(`${emoji('lock')} 티켓이 마감되었어요. 5초 뒤 채널이 정리돼요.`)).catch(() => null);
 			this.scheduleChannelDelete(channelId, () =>
 				channel.delete('티켓 마감 및 채널 정리').then(
 					() => undefined,
 					(err) => {
-						container.logger.warn(`[ticket] Failed to delete channel ${channelId}: ${err}`);
+						this.deps.logger.warn(`[ticket] Failed to delete channel ${channelId}: ${err}`);
 					}
 				)
 			);
@@ -246,17 +262,14 @@ export class TicketService implements Stoppable {
 			if (logChannel && logChannel.isTextBased() && 'send' in logChannel) {
 				await (logChannel as TextChannel)
 					.send({
-						components: [
-							notice(
-								[
-									`### ${emoji('clipboard')} 티켓 마감 #${String(ticket.ticketNumber).padStart(4, '0')}`,
-									`- **신청자**: <@${ticket.ownerId}>`,
-									`- **종료자**: <@${closedByMember.id}>`,
-									`- **사유**: ${updatedTicket.closeReason}`
-								].join('\n')
-							)
-						],
-						flags: [MessageFlags.IsComponentsV2],
+						...this.deps.messages.notice(
+							[
+								`### ${emoji('clipboard')} 티켓 마감 #${String(ticket.ticketNumber).padStart(4, '0')}`,
+								`- **신청자**: <@${ticket.ownerId}>`,
+								`- **종료자**: <@${closedByMember.id}>`,
+								`- **사유**: ${updatedTicket.closeReason}`
+							].join('\n')
+						),
 						allowedMentions: { parse: [] }
 					})
 					.catch(() => null);
@@ -301,9 +314,7 @@ export class TicketService implements Stoppable {
 			const msg = nextClaimedById
 				? `${emoji('user')} <@${member.id}> 님이 이 티켓의 담당자로 지정되었어요.`
 				: `${emoji('repeat')} <@${member.id}> 님이 티켓 담당을 해제했어요.`;
-			await (channel as TextChannel)
-				.send({ components: [notice(msg)], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } })
-				.catch(() => null);
+			await (channel as TextChannel).send({ ...this.deps.messages.notice(msg), allowedMentions: { parse: [] } }).catch(() => null);
 		}
 
 		return { ok: true, ticket: updated };
@@ -349,22 +360,24 @@ export class TicketService implements Stoppable {
 					ReadMessageHistory: true
 				});
 				await channel.send({
-					components: [notice(`${emoji('wave')} <@${targetMemberId}> 님이 티켓에 초대되었어요.`)],
-					flags: [MessageFlags.IsComponentsV2],
+					...this.deps.messages.notice(`${emoji('wave')} <@${targetMemberId}> 님이 티켓에 초대되었어요.`),
 					allowedMentions: { parse: [] }
 				});
 			} else {
 				await channel.permissionOverwrites.delete(targetMemberId);
 				await channel.send({
-					components: [notice(`${emoji('arrow_forward')} <@${targetMemberId}> 님이 티켓에서 제외되었어요.`)],
-					flags: [MessageFlags.IsComponentsV2],
+					...this.deps.messages.notice(`${emoji('arrow_forward')} <@${targetMemberId}> 님이 티켓에서 제외되었어요.`),
 					allowedMentions: { parse: [] }
 				});
 			}
 			return { ok: true };
 		} catch (error) {
-			container.logger.error(`[ticket] Failed to ${action} member ${targetMemberId} in channel ${channelId}: ${error}`);
+			this.deps.logger.error(`[ticket] Failed to ${action} member ${targetMemberId} in channel ${channelId}: ${error}`);
 			return { ok: false, reason: '채널 권한 수정에 실패했어요.' };
 		}
 	}
+}
+
+export function createTicketService(deps: TicketServiceDeps): TicketService {
+	return new TicketService(deps);
 }
