@@ -123,3 +123,37 @@ describe('TempVoiceService room restore', () => {
 		expect(channel.delete).not.toHaveBeenCalled();
 	});
 });
+
+describe('TempVoiceService 복원 재시도', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('Redis가 늦게 연결되면 5초 간격으로 재시도해 복원해요', async () => {
+		mocks.getCacheHashFields.mockResolvedValueOnce(null).mockResolvedValueOnce({});
+		const service = new TempVoiceService();
+		await service.restoreWithRetry();
+		expect(mocks.getCacheHashFields).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(5_000);
+		expect(mocks.getCacheHashFields).toHaveBeenCalledTimes(2);
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('stop()은 대기 중인 재시도 타이머를 해제해요', async () => {
+		mocks.getCacheHashFields.mockResolvedValue(null);
+		const service = new TempVoiceService();
+		await service.restoreWithRetry();
+		expect(vi.getTimerCount()).toBe(1);
+
+		await service.stop();
+		expect(vi.getTimerCount()).toBe(0);
+		mocks.getCacheHashFields.mockClear();
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(mocks.getCacheHashFields).not.toHaveBeenCalled();
+	});
+});

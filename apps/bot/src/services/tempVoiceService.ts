@@ -40,9 +40,14 @@ export function jtcEmptyGraceText(): string {
 	return `${minutes}분 ${seconds}초`;
 }
 
+/** Redis 연결이 늦으면 복원을 재시도하는 간격과 최대 횟수 (5초 × 12회 = 약 1분) */
+const RESTORE_RETRY_MS = 5_000;
+const RESTORE_MAX_ATTEMPTS = 12;
+
 export class TempVoiceService implements Stoppable {
 	public readonly name = '임시 음성 채널 빈방 타이머';
 	private stopped = false;
+	private restoreRetryTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly rooms = new Map<string, RoomInfo>();
 	private readonly emptyTimers = new Map<string, NodeJS.Timeout>();
 	private readonly creating = new Set<string>();
@@ -283,11 +288,35 @@ export class TempVoiceService implements Stoppable {
 	}
 
 	/**
+	 * 부팅 직후 임시방 추적을 Redis 기록으로 복원해요. Redis가 아직 연결 전이면 5초 간격으로 최대 12회(약 1분) 재시도해요.
+	 * 재시도 타이머는 이 서비스가 소유해서 stop()이 해제해요.
+	 */
+	public async restoreWithRetry(attempt = 1): Promise<void> {
+		if (this.stopped) return;
+		const restored = await this.restoreRooms().catch((error: unknown) => {
+			container.logger.error(`[tempVoice] room restore failed: ${error}`);
+			return false;
+		});
+		if (restored) {
+			container.logger.debug('[tempVoice] 임시방 추적 복원 완료');
+			return;
+		}
+		if (attempt >= RESTORE_MAX_ATTEMPTS) {
+			container.logger.warn('[tempVoice] Redis 미연결로 임시방 추적을 복원하지 못했어요 (메모리 전용 모드)');
+			return;
+		}
+		if (this.stopped) return;
+		this.restoreRetryTimer = setTimeout(() => void this.restoreWithRetry(attempt + 1), RESTORE_RETRY_MS);
+	}
+
+	/**
 	 * 종료: 빈방 확인 타이머를 모두 해제해요. 방 목록은 Redis에 이미 기록돼 있어서 flush할 데이터는 없고,
 	 * 남은 방은 다음 부팅의 고아 정리가 처리해요. 이후에는 새 타이머를 만들지 않아요.
 	 */
 	public async stop(): Promise<void> {
 		this.stopped = true;
+		if (this.restoreRetryTimer) clearTimeout(this.restoreRetryTimer);
+		this.restoreRetryTimer = null;
 		for (const timer of this.emptyTimers.values()) clearTimeout(timer);
 		this.emptyTimers.clear();
 	}

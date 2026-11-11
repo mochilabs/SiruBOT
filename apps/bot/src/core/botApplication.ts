@@ -143,6 +143,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.stoppables.push(container.playbackReporter);
 		container.ticketService = new TicketService();
 		container.rolePanelService = new RolePanelService();
+		container.stoppables.push(container.ticketService);
 
 		// Redis 수신 계층 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
 		const subscriberLogger = {

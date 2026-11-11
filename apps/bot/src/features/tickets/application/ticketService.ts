@@ -6,9 +6,43 @@ import type { Ticket } from '@sirubot/prisma';
 import { ticketWelcomeView } from '../discord/views/ticket.ts';
 import { notice } from '../../../modules/general/view/notice.ts';
 import { saveTicketTranscript } from './ticketTranscript.ts';
-export class TicketService {
+import type { Stoppable } from '../../../lib/lifecycle.ts';
+
+/** 티켓 마감 안내 후 채널을 지우기까지의 유예(ms) */
+const CHANNEL_DELETE_DELAY_MS = 5000;
+
+export class TicketService implements Stoppable {
+	public readonly name = '티켓 채널 정리 예약';
+	/** 마감됐지만 아직 지우지 않은 채널의 예약 삭제 — 종료 때 stop()이 남은 삭제를 지금 실행해요 */
+	private readonly pendingChannelDeletes = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => Promise<void> }>();
+	private stopped = false;
+
 	private get db() {
 		return container.db;
+	}
+
+	/**
+	 * 마감된 티켓 채널의 삭제를 유예 시간 뒤로 예약해요. DB는 이미 마감 상태라 예약이 사라지면 채널만 고아로 남아요 —
+	 * stop()이 남은 삭제를 기다리지 않고 지금 실행하고, 종료 뒤에 마감된 티켓은 유예 없이 바로 지워요.
+	 */
+	public scheduleChannelDelete(channelId: string, run: () => Promise<void>): void {
+		if (this.stopped) {
+			void run();
+			return;
+		}
+		const timer = setTimeout(() => {
+			this.pendingChannelDeletes.delete(channelId);
+			void run();
+		}, CHANNEL_DELETE_DELAY_MS);
+		this.pendingChannelDeletes.set(channelId, { timer, run });
+	}
+
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		const pending = [...this.pendingChannelDeletes.values()];
+		this.pendingChannelDeletes.clear();
+		for (const entry of pending) clearTimeout(entry.timer);
+		await Promise.all(pending.map((entry) => entry.run()));
 	}
 
 	public async getConfig(guildId: string) {
@@ -196,11 +230,14 @@ export class TicketService {
 			await channel
 				.send({ components: [notice(`${emoji('lock')} 티켓이 마감되었어요. 5초 뒤 채널이 정리돼요.`)], flags: [MessageFlags.IsComponentsV2] })
 				.catch(() => null);
-			setTimeout(() => {
-				channel.delete('티켓 마감 및 채널 정리').catch((err) => {
-					container.logger.warn(`[ticket] Failed to delete channel ${channelId}: ${err}`);
-				});
-			}, 5000);
+			this.scheduleChannelDelete(channelId, () =>
+				channel.delete('티켓 마감 및 채널 정리').then(
+					() => undefined,
+					(err) => {
+						container.logger.warn(`[ticket] Failed to delete channel ${channelId}: ${err}`);
+					}
+				)
+			);
 		}
 
 		// 로그 채널 알림 (설정되어 있다면)
