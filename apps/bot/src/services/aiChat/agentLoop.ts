@@ -1,8 +1,7 @@
-import { container } from '@sapphire/framework';
-import { executeAiTool, getAiToolDefinitions, getAiToolStatus, type AiToolContext } from '../aiTools/index.ts';
+import type { AiToolContext } from '../aiTools/types.ts';
+import type { AiChatDeps } from './deps.ts';
 import { assertChatEnabled, getAiChatPolicy } from './config.ts';
 import { streamChatCompletion } from './completion.ts';
-import { getChannelHistoryState, loadChannelHistory, pushChannelHistory, setChannelGuild } from './historyStore.ts';
 import { buildDiscordContextBlock, buildRecentChannelBlock, buildSystemContent } from './prompt.ts';
 import { scheduleMemoryPromotion } from './memoryPromotion.ts';
 import { scheduleSummary } from './summarizer.ts';
@@ -49,49 +48,55 @@ function buildUserContent(prompt: string, images?: string[]): ChatContent {
  *
  * 히스토리에는 사용자/어시스턴트 텍스트만 저장하고 도구 흔적은 남기지 않아요.
  */
-export async function runChatTurn(options: {
-	channelId: string;
-	prompt: string;
-	config: ChatConfig;
-	toolContext: AiToolContext;
-	/** 사용자 메시지에 함께 보낼 이미지 URL (미지정 시 텍스트만 전송) */
-	images?: string[];
-	/** 대화 기록에 남길 화자 표시명 (미지정 시 '사용자') */
-	author?: string;
-	/** 원문 Discord 메시지 ID — 삭제/편집 시 기록도 동기화돼요 */
-	userMessageId?: string;
-	/** 봇 답변 메시지 ID (중간에 보이는 라이브 메시지) — 삭제 시 기록에서 빠져요 */
-	assistantMessageId?: string;
-	/** 방금 입력한 메시지 등 채널 최근 채팅 블록에서 제외할 메시지 ID */
-	excludeMessageId?: string;
-	/** 중지 버튼용 사용자 취소 신호 — abort되면 chat_cancelled 오류로 멈춰요 */
-	signal?: AbortSignal;
-	onDelta?: (fullText: string) => void | Promise<void>;
-	onStatus?: (status: string) => void | Promise<void>;
-}): Promise<ChatTurnResult> {
+export async function runChatTurn(
+	deps: AiChatDeps,
+	options: {
+		channelId: string;
+		prompt: string;
+		config: ChatConfig;
+		toolContext: AiToolContext;
+		/** 사용자 메시지에 함께 보낼 이미지 URL (미지정 시 텍스트만 전송) */
+		images?: string[];
+		/** 대화 기록에 남길 화자 표시명 (미지정 시 '사용자') */
+		author?: string;
+		/** 원문 Discord 메시지 ID — 삭제/편집 시 기록도 동기화돼요 */
+		userMessageId?: string;
+		/** 봇 답변 메시지 ID (중간에 보이는 라이브 메시지) — 삭제 시 기록에서 빠져요 */
+		assistantMessageId?: string;
+		/** 방금 입력한 메시지 등 채널 최근 채팅 블록에서 제외할 메시지 ID */
+		excludeMessageId?: string;
+		/** 중지 버튼용 사용자 취소 신호 — abort되면 chat_cancelled 오류로 멈춰요 */
+		signal?: AbortSignal;
+		onDelta?: (fullText: string) => void | Promise<void>;
+		onStatus?: (status: string) => void | Promise<void>;
+	}
+): Promise<ChatTurnResult> {
 	const { channelId, config } = options;
 	const userId = options.toolContext.userId;
 	const throwIfCancelled = () => {
 		if (options.signal?.aborted) throw new ChatServiceError('chat_cancelled', '응답 생성을 중지했어요.');
 	};
 
-	const policy = await getAiChatPolicy(options.toolContext.guildId);
+	const policy = await getAiChatPolicy(deps, options.toolContext.guildId);
 	assertChatEnabled(policy, channelId);
 
-	setChannelGuild(channelId, options.toolContext.guildId);
+	deps.history.setChannelGuild(channelId, options.toolContext.guildId);
 	// 정책 확인 후, 서로 독립적인 맥락 조회를 함께 시작한다.
 	const [, channelBlock, memoryBlock, discordContextBlock] = await Promise.all([
-		loadChannelHistory(channelId),
-		buildRecentChannelBlock(channelId, options.excludeMessageId),
-		container.aiMemoryService.buildPromptBlock(userId).catch((error) => {
-			container.logger.error('[aiChat] failed to load user memory:', error);
+		deps.history.loadChannelHistory(channelId),
+		buildRecentChannelBlock(deps, channelId, options.excludeMessageId),
+		deps.memory.buildPromptBlock(userId).catch((error) => {
+			deps.logger.error('[aiChat] failed to load user memory:', error);
 			return null;
 		}),
-		buildDiscordContextBlock(options.toolContext.guildId, userId)
+		buildDiscordContextBlock(deps, options.toolContext.guildId, userId)
 	]);
 
 	const messages: ChatMessage[] = [
-		{ role: 'system', content: buildSystemContent(getChannelHistoryState(channelId), channelBlock, memoryBlock, discordContextBlock) },
+		{
+			role: 'system',
+			content: buildSystemContent(deps.history.getChannelHistoryState(channelId), channelBlock, memoryBlock, discordContextBlock)
+		},
 		{ role: 'user', content: buildUserContent(options.prompt, options.images) }
 	];
 
@@ -100,10 +105,10 @@ export async function runChatTurn(options: {
 	let forceNoTools = false;
 	for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
 		throwIfCancelled();
-		const result = await streamChatCompletion({
+		const result = await streamChatCompletion(deps.logger, {
 			messages,
 			config,
-			tools: round < MAX_TOOL_ROUNDS && !forceNoTools ? getAiToolDefinitions() : undefined,
+			tools: round < MAX_TOOL_ROUNDS && !forceNoTools ? deps.tools.getDefinitions() : undefined,
 			signal: options.signal,
 			onDelta: options.onDelta
 		});
@@ -112,7 +117,7 @@ export async function runChatTurn(options: {
 			const content = result.content.trim();
 			if (!content && round > 0 && round < MAX_TOOL_ROUNDS && !forceNoTools) {
 				// 도구 실행 이후 모델이 빈 응답을 반환한 경우 도구 정의 없이 최종 답변 생성을 1회 유도해요
-				container.logger.warn('[aiChat] empty content after tool calls, retrying final answer without tools');
+				deps.logger.warn('[aiChat] empty content after tool calls, retrying final answer without tools');
 				forceNoTools = true;
 				continue;
 			}
@@ -123,8 +128,8 @@ export async function runChatTurn(options: {
 		messages.push({ role: 'assistant', content: result.content, tool_calls: result.toolCalls });
 		for (const toolCall of result.toolCalls) {
 			throwIfCancelled();
-			await options.onStatus?.(getAiToolStatus(toolCall.name, toolCall.arguments));
-			const output = await executeAiTool(toolCall.name, toolCall.arguments, options.toolContext);
+			await options.onStatus?.(deps.tools.getStatus(toolCall.name, toolCall.arguments));
+			const output = await deps.tools.execute(toolCall.name, toolCall.arguments, options.toolContext);
 			if (toolCall.name.startsWith('memory_') && !memoryUpdated) {
 				try {
 					const parsed: unknown = JSON.parse(output);
@@ -167,17 +172,17 @@ export async function runChatTurn(options: {
 					}
 				]
 			: [];
-	pushChannelHistory(channelId, ...userTurn, { role: 'assistant', content: answer, at, messageId: options.assistantMessageId });
+	deps.history.pushChannelHistory(channelId, ...userTurn, { role: 'assistant', content: answer, at, messageId: options.assistantMessageId });
 
 	// 넘친 오래된 대화가 있으면 백그라운드에서 요약으로 압축해요
-	scheduleSummary(channelId, config);
+	scheduleSummary(deps, channelId, config);
 
 	if (hasPrompt) {
-		await container.aiMemoryService.pushTurn(userId, channelId, options.prompt, answer).catch((error) => {
-			container.logger.error('[aiChat] failed to push short-term memory:', error);
+		await deps.memory.pushTurn(userId, channelId, options.prompt, answer).catch((error) => {
+			deps.logger.error('[aiChat] failed to push short-term memory:', error);
 		});
 		// 단기 기억이 충분히 쌓이면 백그라운드에서 장기 기억으로 승격해요 (응답 지연 없음, 배치 단위라 비용 낮음)
-		scheduleMemoryPromotion(userId, config);
+		scheduleMemoryPromotion(deps, userId, config);
 	}
 
 	return { answer, memoryUpdated };

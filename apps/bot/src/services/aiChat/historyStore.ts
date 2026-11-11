@@ -1,4 +1,5 @@
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
+import type { AppLogger } from '../../lib/appLogger.ts';
 import type { Stoppable } from '../../lib/lifecycle.ts';
 import { estimateTokens, getContextTokenBudget } from './tokenBudget.ts';
 import { contentText, type ChannelHistoryState, type ChatMessage } from './types.ts';
@@ -115,6 +116,12 @@ function trimHistoryState(state: ChannelHistoryState): void {
  * persist가 예약된 채널은 dirty예요 — stop()이 예약을 취소하고 지금 바로 써서 종료 때 마지막 턴이 사라지지 않게 해요.
  * stop() 뒤의 persist 요청은 DB가 닫힐 수 있어 예약하지 않아요.
  */
+/** 채널 기록 저장소가 쓰는 의존성 — DB와 로거예요 */
+export interface ChannelHistoryStoreDeps {
+	db: Pick<PrismaClient, 'channelChatHistory'>;
+	logger: AppLogger;
+}
+
 export class ChannelHistoryStore implements Stoppable {
 	public readonly name = 'AI 채팅 기록';
 
@@ -128,6 +135,8 @@ export class ChannelHistoryStore implements Stoppable {
 	/** 진행 중인 DB 기록 — stop()이 끝까지 기다려요 */
 	private readonly inFlightWrites = new Set<Promise<void>>();
 	private stopped = false;
+
+	public constructor(private readonly deps: ChannelHistoryStoreDeps) {}
 
 	private getOrCreateHistory(channelId: string): ChannelHistoryState {
 		let state = this.channelHistories.get(channelId);
@@ -155,7 +164,7 @@ export class ChannelHistoryStore implements Stoppable {
 		try {
 			// persist가 대기 중이면 먼저 기록하고 읽어요 — 방금 쓴 턴이 로드에 밀려 유실되지 않게
 			await this.flushChannelHistoryPersist(channelId);
-			const row = await container.db.channelChatHistory.findUnique({ where: { channelId } });
+			const row = await this.deps.db.channelChatHistory.findUnique({ where: { channelId } });
 			if (!row) {
 				this.channelHistories.delete(channelId);
 				this.emptyChannelIds.add(channelId);
@@ -166,11 +175,11 @@ export class ChannelHistoryStore implements Stoppable {
 			// 옛 기록에 guildId가 없으면 백필 (서버 단위 기록 삭제용)
 			const knownGuildId = this.channelGuilds.get(channelId);
 			if (knownGuildId && row.guildId !== knownGuildId) {
-				void container.db.channelChatHistory.update({ where: { channelId }, data: { guildId: knownGuildId } }).catch(() => undefined);
+				void this.deps.db.channelChatHistory.update({ where: { channelId }, data: { guildId: knownGuildId } }).catch(() => undefined);
 			}
 		} catch (error) {
 			// DB 오류 시 기존 캐시 유지
-			container.logger.error('[aiChat] failed to load channel history:', error);
+			this.deps.logger.error('[aiChat] failed to load channel history:', error);
 		}
 	}
 
@@ -187,7 +196,7 @@ export class ChannelHistoryStore implements Stoppable {
 		// 삭제가 방금 예약된 변경을 덮어쓰므로 대기 중 persist를 버려요
 		this.cancelPendingPersist(channelId);
 		try {
-			await container.db.channelChatHistory.deleteMany({ where: { channelId } });
+			await this.deps.db.channelChatHistory.deleteMany({ where: { channelId } });
 		} catch (error) {
 			this.persistChannelHistory(channelId);
 			throw error;
@@ -203,7 +212,7 @@ export class ChannelHistoryStore implements Stoppable {
 		this.channelGuilds.delete(channelId);
 		this.emptyChannelIds.delete(channelId);
 		try {
-			void container.db.channelChatHistory.delete({ where: { channelId } }).catch(() => undefined);
+			void this.deps.db.channelChatHistory.delete({ where: { channelId } }).catch(() => undefined);
 		} catch {
 			// client 미초기화 등은 무시
 		}
@@ -246,13 +255,13 @@ export class ChannelHistoryStore implements Stoppable {
 		const payload: any = { messages: state.messages, summary: state.summary, pending: state.pending };
 		const guildId = this.channelGuilds.get(channelId) ?? null;
 		try {
-			await container.db.channelChatHistory.upsert({
+			await this.deps.db.channelChatHistory.upsert({
 				where: { channelId },
 				create: { channelId, guildId, messages: payload },
 				update: { messages: payload, ...(guildId ? { guildId } : {}) }
 			});
 		} catch (error) {
-			container.logger.error('[aiChat] failed to persist channel history:', error);
+			this.deps.logger.error('[aiChat] failed to persist channel history:', error);
 		}
 	}
 
@@ -329,7 +338,7 @@ export class ChannelHistoryStore implements Stoppable {
 			if (removed + pendingRemoved > 0) this.persistChannelHistory(channelId);
 			return removed + pendingRemoved;
 		} catch (error) {
-			container.logger.error('[aiChat] failed to remove history messages:', error);
+			this.deps.logger.error('[aiChat] failed to remove history messages:', error);
 			return 0;
 		}
 	}
@@ -363,7 +372,7 @@ export class ChannelHistoryStore implements Stoppable {
 			this.persistChannelHistory(channelId);
 			return true;
 		} catch (error) {
-			container.logger.error('[aiChat] failed to update history message:', error);
+			this.deps.logger.error('[aiChat] failed to update history message:', error);
 			return false;
 		}
 	}
@@ -385,21 +394,3 @@ export class ChannelHistoryStore implements Stoppable {
 		}
 	}
 }
-
-// 아래 함수들은 호출자가 쓰던 시그니처를 유지하는 위임이에요 — 상태는 container.aiChatHistory(ChannelHistoryStore)가 소유해요.
-
-export const getStoredHistoryState = (channelId: string) => container.aiChatHistory.getStoredHistoryState(channelId);
-export const setChannelGuild = (channelId: string, guildId: string | null | undefined) => container.aiChatHistory.setChannelGuild(channelId, guildId);
-export const loadChannelHistory = (channelId: string) => container.aiChatHistory.loadChannelHistory(channelId);
-export const getChannelHistoryState = (channelId: string) => container.aiChatHistory.getChannelHistoryState(channelId);
-export const clearChannelHistory = (channelId: string) => container.aiChatHistory.clearChannelHistory(channelId);
-export const dropChannelHistory = (channelId: string) => container.aiChatHistory.dropChannelHistory(channelId);
-export const persistChannelHistory = (channelId: string) => container.aiChatHistory.persistChannelHistory(channelId);
-export const flushChannelHistoryPersist = (channelId?: string) => container.aiChatHistory.flushChannelHistoryPersist(channelId);
-export const pushChannelHistory = (channelId: string, ...messages: ChatMessage[]) =>
-	container.aiChatHistory.pushChannelHistory(channelId, ...messages);
-export const removeFromChannelHistory = (channelId: string, messageIds: ReadonlySet<string>) =>
-	container.aiChatHistory.removeFromChannelHistory(channelId, messageIds);
-export const updateChannelHistoryMessage = (channelId: string, messageId: string, newContent: string) =>
-	container.aiChatHistory.updateChannelHistoryMessage(channelId, messageId, newContent);
-export const isAiAssistantMessage = (channelId: string, messageId: string) => container.aiChatHistory.isAiAssistantMessage(channelId, messageId);

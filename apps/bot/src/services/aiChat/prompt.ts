@@ -1,11 +1,14 @@
-import { container } from '@sapphire/framework';
 import { PermissionFlagsBits } from 'discord.js';
 import { historyLine } from './historyStore.ts';
 import { estimateTokens, getContextTokenBudget } from './tokenBudget.ts';
+import type { AiChatDeps } from './deps.ts';
 import type { ChannelHistoryState, ChatMessage } from './types.ts';
 import * as guildPlayback from '../guildSettings/playback.ts';
 
 const CHANNEL_CONTEXT_LIMIT = 20;
+
+/** 프롬프트 맥락 조립이 쓰는 의존성 — client·플레이어는 호출 시점에 읽어요 */
+type PromptDeps = Pick<AiChatDeps, 'getClient' | 'guildService' | 'getPlayer'>;
 
 /**
  * 기본 페르소나 — 페르소나 교체/유저 커스텀 기능 없이 고정된 시루 캐릭터 프롬프트만 사용합니다.
@@ -55,9 +58,16 @@ function formatAgo(timestamp: number): string {
 }
 
 /** 채널에서 오가는 최근 대화(봇 제외)를 시스템 프롬프트용 블록으로 만들어요. 실패하면 null. */
-export async function buildRecentChannelBlock(channelId: string, excludeMessageId?: string): Promise<string | null> {
+export async function buildRecentChannelBlock(
+	deps: Pick<PromptDeps, 'getClient'>,
+	channelId: string,
+	excludeMessageId?: string
+): Promise<string | null> {
 	try {
-		const channel = await container.client.channels.fetch(channelId).catch(() => null);
+		const channel = await deps
+			.getClient()
+			.channels.fetch(channelId)
+			.catch(() => null);
 		if (!channel || !('messages' in channel)) return null;
 		const fetched = await channel.messages.fetch({ limit: CHANNEL_CONTEXT_LIMIT });
 		const lines: string[] = [];
@@ -81,9 +91,9 @@ export async function buildRecentChannelBlock(channelId: string, excludeMessageI
 }
 
 /** 질문 유저의 음성 채널 상태, 권한 및 서버 음악 재생 상황을 간결하게 컨텍스트로 제공해요 */
-export async function buildDiscordContextBlock(guildId?: string | null, userId?: string | null): Promise<string | null> {
+export async function buildDiscordContextBlock(deps: PromptDeps, guildId?: string | null, userId?: string | null): Promise<string | null> {
 	if (!guildId) return null;
-	const client = container.client;
+	const client = deps.getClient();
 	const guild = client?.guilds?.cache?.get(guildId);
 	if (!guild) return null;
 	const lines: string[] = [];
@@ -108,7 +118,7 @@ export async function buildDiscordContextBlock(guildId?: string | null, userId?:
 			} catch {
 				isManager = false;
 			}
-			const djRoleId = await guildPlayback.getDJRole(container.guildService, guildId).catch(() => null);
+			const djRoleId = await guildPlayback.getDJRole(deps.guildService, guildId).catch(() => null);
 			const hasDj = !djRoleId || isManager || Boolean(member.roles?.cache?.has?.(djRoleId));
 			const perms: string[] = [];
 			if (isManager) perms.push('서버 관리(ManageGuild)');
@@ -120,7 +130,7 @@ export async function buildDiscordContextBlock(guildId?: string | null, userId?:
 		}
 	}
 
-	const player = container.audio?.getPlayer?.(guildId);
+	const player = deps.getPlayer(guildId);
 	if (player && player.queue?.current) {
 		const track = player.queue.current;
 		const status = player.paused ? '일시정지' : '재생 중';

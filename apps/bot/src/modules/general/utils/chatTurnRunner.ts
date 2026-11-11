@@ -1,4 +1,4 @@
-import { ChatServiceError, registerChatAbort, releaseChatAbort, runChatTurn, type ChatConfig } from '../../../services/aiChatService.ts';
+import { ChatServiceError, registerChatAbort, releaseChatAbort, type AiChat, type ChatConfig } from '../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../services/aiTools/index.ts';
 import { errorPayload, finalPayload, livePayload, statusPayload, stoppedPayload } from '../view/chatView.ts';
 
@@ -14,6 +14,8 @@ export interface ChatTurnScreen {
 }
 
 export interface ChatTurnInvocation {
+	/** 턴 실행기 — container.aiChat.runChatTurn을 진입점이 넘겨요 */
+	runChatTurn: AiChat['runChatTurn'];
 	config: ChatConfig;
 	userId: string;
 	channelId: string;
@@ -60,7 +62,7 @@ export async function runChatTurnToScreen(invocation: ChatTurnInvocation): Promi
 		let answer: string;
 		let memoryUpdated = false;
 		try {
-			const turn = await runChatTurn({
+			const turn = await invocation.runChatTurn({
 				channelId: invocation.channelId,
 				prompt: invocation.prompt,
 				config: invocation.config,

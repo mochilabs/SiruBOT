@@ -5,12 +5,10 @@ const mocks = vi.hoisted(() => ({
 	logger: { error: vi.fn(), warn: vi.fn() }
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		db: { channelChatHistory: { upsert: mocks.upsert, findUnique: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() } },
-		logger: mocks.logger
-	}
-}));
+const deps = {
+	db: { channelChatHistory: { upsert: mocks.upsert, findUnique: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() } } as never,
+	logger: { ...mocks.logger, info: vi.fn(), debug: vi.fn() }
+};
 
 import { setConfigForTesting } from '../../lib/config.ts';
 import { makeTestConfig } from '../../lib/config.testing.ts';
@@ -32,7 +30,7 @@ describe('ChannelHistoryStore 수명주기', () => {
 	});
 
 	it('stop()은 디바운스 중인 기록을 기다리지 않고 지금 써요', async () => {
-		const store = new ChannelHistoryStore();
+		const store = new ChannelHistoryStore(deps);
 		store.setChannelGuild('c1', 'g1');
 		store.pushChannelHistory('c1', user('안녕', 'm1'));
 		store.pushChannelHistory('c2', user('반가워', 'm2'));
@@ -50,7 +48,7 @@ describe('ChannelHistoryStore 수명주기', () => {
 	});
 
 	it('stop() 뒤에는 새 저장을 예약하지도 쓰지도 않아요', async () => {
-		const store = new ChannelHistoryStore();
+		const store = new ChannelHistoryStore(deps);
 		store.pushChannelHistory('c1', user('안녕', 'm1'));
 		await store.stop();
 		mocks.upsert.mockClear();
@@ -63,7 +61,7 @@ describe('ChannelHistoryStore 수명주기', () => {
 	});
 
 	it('stop()은 이미 진행 중인 기록이 끝날 때까지 기다려요', async () => {
-		const store = new ChannelHistoryStore();
+		const store = new ChannelHistoryStore(deps);
 		let finish!: () => void;
 		mocks.upsert.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
 		store.pushChannelHistory('c1', user('안녕', 'm1'));
@@ -80,7 +78,7 @@ describe('ChannelHistoryStore 수명주기', () => {
 	});
 
 	it('예약된 저장이 없으면 stop()은 아무것도 쓰지 않아요', async () => {
-		const store = new ChannelHistoryStore();
+		const store = new ChannelHistoryStore(deps);
 		await store.stop();
 		expect(mocks.upsert).not.toHaveBeenCalled();
 	});

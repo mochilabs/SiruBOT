@@ -29,27 +29,42 @@ export {
 	type ChatTurnResult
 } from './aiChat/types.ts';
 export { estimateTokens, getContextTokenBudget } from './aiChat/tokenBudget.ts';
-export { getChatConfig, getAiChatPolicy, assertChatEnabled, type AiChatPolicy } from './aiChat/config.ts';
-export {
-	loadChannelHistory,
-	clearChannelHistory,
-	dropChannelHistory,
-	removeFromChannelHistory,
-	updateChannelHistoryMessage,
-	isAiAssistantMessage,
-	flushChannelHistoryPersist
-} from './aiChat/historyStore.ts';
+export { getChatConfig } from '../lib/aiChatConfig.ts';
+export { assertChatEnabled, type AiChatPolicy } from './aiChat/config.ts';
 export {
 	acquireChannelTurn,
-	acquireChatTurn,
 	releaseChannelTurn,
-	tryConsumeUserTurn,
 	registerChatAbort,
 	releaseChatAbort,
 	abortChatTurn,
 	type ChatTurnDenial,
-	type ChatTurnGrant
+	type ChatTurnGrant,
+	type TurnCounterStore
 } from './aiChat/turnControl.ts';
-export { extractThinkTokens, streamChatCompletion } from './aiChat/completion.ts';
-export { collectImageUrls, runChatTurn } from './aiChat/agentLoop.ts';
+export { extractThinkTokens } from './aiChat/completion.ts';
+export { collectImageUrls } from './aiChat/agentLoop.ts';
+export type { AiChatDeps, AiToolRegistry } from './aiChat/deps.ts';
 export { appendCitedSources, extractWebSearchSources, normalizeCommaCitations } from './aiChat/traceCitation.ts';
+
+import { getAiChatPolicy } from './aiChat/config.ts';
+import { acquireChatTurn, tryConsumeUserTurn } from './aiChat/turnControl.ts';
+import { streamChatCompletion } from './aiChat/completion.ts';
+import { runChatTurn } from './aiChat/agentLoop.ts';
+import type { AiChatDeps } from './aiChat/deps.ts';
+
+/**
+ * 의존성이 필요한 AI 채팅 진입점을 deps에 묶어 한 번 만들어요 (container.aiChat).
+ * 채널 기록(로드·삭제·편집 동기화)은 container.aiChatHistory가 맡고, 의존성이 필요 없는 잠금·중지 함수는 위에서 그대로 내보내요.
+ */
+export function createAiChat(deps: AiChatDeps) {
+	return {
+		getAiChatPolicy: (guildId: string | null) => getAiChatPolicy(deps, guildId),
+		runChatTurn: (options: Parameters<typeof runChatTurn>[1]) => runChatTurn(deps, options),
+		streamChatCompletion: (options: Parameters<typeof streamChatCompletion>[1]) => streamChatCompletion(deps.logger, options),
+		/** 채널 턴 확보 → 유저 턴 소모 (Redis는 연결 전이면 undefined라 호출 시점에 읽어요) */
+		acquireChatTurn: (channelId: string, userId: string) => acquireChatTurn(deps.getRedisStore(), channelId, userId),
+		tryConsumeUserTurn: (userId: string) => tryConsumeUserTurn(deps.getRedisStore(), userId)
+	};
+}
+
+export type AiChat = ReturnType<typeof createAiChat>;

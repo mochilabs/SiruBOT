@@ -1,7 +1,10 @@
-import { container } from '@sapphire/framework';
 import { streamChatCompletion } from './completion.ts';
-import { getStoredHistoryState, historyLine, persistChannelHistory } from './historyStore.ts';
+import { historyLine } from './historyStore.ts';
+import type { AiChatDeps } from './deps.ts';
 import type { ChatConfig, ChatMessage } from './types.ts';
+
+/** 롤링 요약이 쓰는 의존성 — 로거와 채널 기록 저장소예요 */
+type SummarizerDeps = Pick<AiChatDeps, 'logger' | 'history'>;
 
 // 롤링 요약
 const SUMMARY_SYSTEM_PROMPT = [
@@ -31,22 +34,22 @@ function buildSummaryPrompt(existing: string | null, batch: ChatMessage[]): stri
  * 요약 대기가 쌓이면 백그라운드에서 오래된 대화를 요약으로 압축해요.
  * 응답을 지연시키지 않도록 agentLoop에서 fire-and-forget으로 호출해요.
  */
-export function scheduleSummary(channelId: string, config: ChatConfig): void {
+export function scheduleSummary(deps: SummarizerDeps, channelId: string, config: ChatConfig): void {
 	if (summaryJobs.has(channelId)) return;
-	const state = getStoredHistoryState(channelId);
+	const state = deps.history.getStoredHistoryState(channelId);
 	if (!state || state.pending.length < SUMMARY_MIN_BATCH) return;
 	summaryJobs.add(channelId);
-	void runSummaryJob(channelId, config).finally(() => summaryJobs.delete(channelId));
+	void runSummaryJob(deps, channelId, config).finally(() => summaryJobs.delete(channelId));
 }
 
-async function runSummaryJob(channelId: string, config: ChatConfig): Promise<void> {
+async function runSummaryJob(deps: SummarizerDeps, channelId: string, config: ChatConfig): Promise<void> {
 	for (;;) {
-		const state = getStoredHistoryState(channelId);
+		const state = deps.history.getStoredHistoryState(channelId);
 		if (!state || state.pending.length < SUMMARY_MIN_BATCH) return;
 
 		const batch = state.pending.splice(0, SUMMARY_BATCH_SIZE);
 		try {
-			const result = await streamChatCompletion({
+			const result = await streamChatCompletion(deps.logger, {
 				messages: [
 					{ role: 'system', content: SUMMARY_SYSTEM_PROMPT },
 					{ role: 'user', content: buildSummaryPrompt(state.summary, batch) }
@@ -58,15 +61,15 @@ async function runSummaryJob(channelId: string, config: ChatConfig): Promise<voi
 
 			// 대기 중 턴이 끝나 기록이 교체됐을 수 있으니 최신 상태에만 써요.
 			// (교체됐으면 batch는 DB에 그대로 남아 다음 사이클에서 재요약돼요)
-			const current = getStoredHistoryState(channelId);
+			const current = deps.history.getStoredHistoryState(channelId);
 			if (!current) return;
 			current.summary = summary;
-			persistChannelHistory(channelId);
+			deps.history.persistChannelHistory(channelId);
 		} catch (error) {
 			// 실패하면 같은 상태 객체에 되돌려 다음 턴에 재시도해요
 			state.pending.unshift(...batch);
-			persistChannelHistory(channelId);
-			container.logger.warn('[aiChat] rolling summary failed:', error);
+			deps.history.persistChannelHistory(channelId);
+			deps.logger.warn('[aiChat] rolling summary failed:', error);
 			return;
 		}
 	}

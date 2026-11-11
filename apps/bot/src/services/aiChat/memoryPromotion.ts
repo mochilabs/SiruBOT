@@ -1,7 +1,10 @@
-import { container } from '@sapphire/framework';
 import { MEMORY_CATEGORIES, type MemoryCategory } from '@sirubot/utils';
 import { streamChatCompletion } from './completion.ts';
+import type { AiChatDeps } from './deps.ts';
 import type { ChatConfig } from './types.ts';
+
+/** 기억 승격이 쓰는 의존성 — 로거와 기억 서비스예요 */
+type PromotionDeps = Pick<AiChatDeps, 'logger' | 'memory'>;
 
 /**
  * 단기 기억 컨텍스트 압축 + 장기 기억 승격(promotion) — 단기 기억(최근 대화)이 가득 차면
@@ -85,26 +88,23 @@ function parseCompressResult(raw: string): CompressResult {
  * 단기 기억이 충분히 쌓이면 백그라운드에서 압축·승격해요.
  * agentLoop에서 fire-and-forget으로 호출 — 응답 지연 없음.
  */
-export function scheduleMemoryPromotion(userId: string, config: ChatConfig): void {
+export function scheduleMemoryPromotion(deps: PromotionDeps, userId: string, config: ChatConfig): void {
 	if (promotionJobs.has(userId)) return;
 	promotionJobs.add(userId);
-	void runPromotion(userId, config)
+	void runPromotion(deps, userId, config)
 		.catch((error) => {
-			container.logger.warn('[aiChat] memory compression/promotion failed:', error);
+			deps.logger.warn('[aiChat] memory compression/promotion failed:', error);
 		})
 		.finally(() => promotionJobs.delete(userId));
 }
 
-async function runPromotion(userId: string, config: ChatConfig): Promise<void> {
-	const turns = await container.aiMemoryService.getShortTermTurns(userId);
+async function runPromotion(deps: PromotionDeps, userId: string, config: ChatConfig): Promise<void> {
+	const turns = await deps.memory.getShortTermTurns(userId);
 	if (turns.length < PROMOTION_MIN_TURNS) return;
 
-	const [existingSummary, existingFile] = await Promise.all([
-		container.aiMemoryService.getShortTermSummary(userId),
-		container.aiMemoryService.readFile(userId)
-	]);
+	const [existingSummary, existingFile] = await Promise.all([deps.memory.getShortTermSummary(userId), deps.memory.readFile(userId)]);
 
-	const result = await streamChatCompletion({
+	const result = await streamChatCompletion(deps.logger, {
 		messages: [
 			{ role: 'system', content: COMPRESS_SYSTEM_PROMPT },
 			{
@@ -120,15 +120,15 @@ async function runPromotion(userId: string, config: ChatConfig): Promise<void> {
 	// 장기 기억에 새 사실 병합
 	let added = 0;
 	if (entries.length > 0) {
-		added = await container.aiMemoryService.mergeLongTerm(userId, entries);
+		added = await deps.memory.mergeLongTerm(userId, entries);
 	}
 
 	// 단기 기억 원본을 비우고, 압축 요약을 새 것으로 교체해요
 	if (summary) {
-		await container.aiMemoryService.compactShortTerm(userId, summary);
+		await deps.memory.compactShortTerm(userId, summary);
 	} else {
-		await container.aiMemoryService.clearShortTerm(userId);
+		await deps.memory.clearShortTerm(userId);
 	}
 
-	container.logger.info(`[aiChat] memory compression done for user ${userId} (summary: ${summary.length} chars, added ${added} entries)`);
+	deps.logger.info(`[aiChat] memory compression done for user ${userId} (summary: ${summary.length} chars, added ${added} entries)`);
 }

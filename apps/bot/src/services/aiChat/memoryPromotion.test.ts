@@ -11,19 +11,17 @@ const mocks = vi.hoisted(() => ({
 	streamChatCompletion: vi.fn()
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		aiMemoryService: {
-			getShortTermTurns: mocks.getShortTermTurns,
-			getShortTermSummary: mocks.getShortTermSummary,
-			readFile: mocks.readFile,
-			mergeLongTerm: mocks.mergeLongTerm,
-			compactShortTerm: mocks.compactShortTerm,
-			clearShortTerm: mocks.clearShortTerm
-		},
-		logger: { warn: vi.fn(), info: vi.fn() }
-	}
-}));
+const deps = {
+	memory: {
+		getShortTermTurns: mocks.getShortTermTurns,
+		getShortTermSummary: mocks.getShortTermSummary,
+		readFile: mocks.readFile,
+		mergeLongTerm: mocks.mergeLongTerm,
+		compactShortTerm: mocks.compactShortTerm,
+		clearShortTerm: mocks.clearShortTerm
+	} as never,
+	logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+};
 
 vi.mock('./completion.ts', () => ({ streamChatCompletion: mocks.streamChatCompletion }));
 
@@ -52,7 +50,7 @@ describe('scheduleMemoryPromotion', () => {
 	it('단기 기억이 최소 턴 미만이면 압축·승격하지 않는다 (LLM 미호출)', async () => {
 		mocks.getShortTermTurns.mockResolvedValue(turns(PROMOTION_MIN_TURNS - 1));
 
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
 		await flushPromises();
 
@@ -72,7 +70,7 @@ describe('scheduleMemoryPromotion', () => {
 			toolCalls: []
 		});
 
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
 		await flushPromises();
 
@@ -91,7 +89,7 @@ describe('scheduleMemoryPromotion', () => {
 			toolCalls: []
 		});
 
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
 		await flushPromises();
 
@@ -103,7 +101,7 @@ describe('scheduleMemoryPromotion', () => {
 		mocks.getShortTermTurns.mockResolvedValue(turns(PROMOTION_MIN_TURNS));
 		mocks.streamChatCompletion.mockResolvedValue({ content: '그냥 텍스트 응답', toolCalls: [] });
 
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
 		await flushPromises();
 
@@ -126,7 +124,7 @@ describe('scheduleMemoryPromotion', () => {
 			toolCalls: []
 		});
 
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
 		await flushPromises();
 
@@ -138,9 +136,9 @@ describe('scheduleMemoryPromotion', () => {
 		let resolveCompletion!: (value: unknown) => void;
 		mocks.streamChatCompletion.mockReturnValue(new Promise((resolve) => (resolveCompletion = resolve)));
 
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
-		scheduleMemoryPromotion('user-1', config);
+		scheduleMemoryPromotion(deps, 'user-1', config);
 		await flushPromises();
 
 		expect(mocks.streamChatCompletion).toHaveBeenCalledTimes(1);

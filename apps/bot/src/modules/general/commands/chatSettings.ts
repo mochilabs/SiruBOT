@@ -12,7 +12,7 @@ import { emoji } from '@sirubot/utils';
 import { normalizeAiMode } from '../../../services/guildService.ts';
 import { collectOtherTextChannelIds } from '../utils/channels.ts';
 import { confirmAction } from '../../../lib/confirmation.ts';
-import { acquireChannelTurn, releaseChannelTurn, clearChannelHistory } from '../../../services/aiChatService.ts';
+import { acquireChannelTurn, releaseChannelTurn } from '../../../services/aiChatService.ts';
 import { channelToggleView, settingResultView } from '../view/settingResult.ts';
 import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
@@ -132,7 +132,7 @@ export class ChatSettingsCommand extends Command {
 					context: { ephemeral: true }
 				});
 			try {
-				await clearChannelHistory(interaction.channelId);
+				await this.container.aiChatHistory.clearChannelHistory(interaction.channelId);
 				await interaction.editReply({
 					components: [
 						settingResultView({

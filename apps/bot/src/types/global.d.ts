@@ -41,6 +41,8 @@ declare module '@sapphire/pieces' {
 		voiceLeaveTimers: import('../lib/keyedTimers.ts').KeyedTimers;
 		/** 봇 상태 메시지 순환 인터벌 소유자 */
 		botActivity: import('../services/botActivity.ts').BotActivityService;
+		/** AI 채팅 진입점 묶음(턴 실행·정책·턴 확보) — services/aiChatService.ts */
+		aiChat: import('../services/aiChatService.ts').AiChat;
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		/** 커스텀 명령어 캐시 소유자 (features/custom-commands/application/store.ts) */
 		customCommandStore: import('../features/custom-commands/index.ts').CustomCommandStore;

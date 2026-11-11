@@ -101,15 +101,6 @@ const ENV_UTILITIES_ALLOWED: Record<string, string> = {
 
 /** Non-test files under `services/` that still import `container`, each with the reason. Only delete from this list. */
 const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
-	'services/aiChat/agentLoop.ts': 'stage 4b conversion pending',
-	'services/aiChat/completion.ts': 'stage 4b conversion pending',
-	'services/aiChat/config.ts': 'stage 4b conversion pending',
-	'services/aiChat/historyStore.ts': 'stage 4b conversion pending',
-	'services/aiChat/memoryPromotion.ts': 'stage 4b conversion pending',
-	'services/aiChat/prompt.ts': 'stage 4b conversion pending',
-	'services/aiChat/summarizer.ts': 'stage 4b conversion pending',
-	'services/aiChat/turnControl.ts': 'stage 4b conversion pending',
-	'services/aiMemoryService.ts': 'stage 4b conversion pending',
 	'services/aiTools/botHelp.ts': 'stage 4b conversion pending',
 	'services/aiTools/botSettings.ts': 'stage 4b conversion pending',
 	'services/aiTools/memory.ts': 'stage 4b conversion pending',

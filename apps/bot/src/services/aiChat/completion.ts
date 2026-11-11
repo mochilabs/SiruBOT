@@ -1,4 +1,4 @@
-import { container } from '@sapphire/framework';
+import type { AppLogger } from '../../lib/appLogger.ts';
 import type { AiToolDefinition } from '../aiTools/index.ts';
 import { ChatServiceError, contentText, type ChatConfig, type ChatMessage, type StreamCompletionResult, type ToolCallRequest } from './types.ts';
 
@@ -59,13 +59,16 @@ function toApiMessage(message: ChatMessage) {
  * OpenAI compatible `/chat/completions` 를 스트리밍으로 호출해요.
  * onDelta에는 지금까지 누적된 본문이 전달돼요. tool_calls가 있으면 함께 돌려줘요.
  */
-export async function streamChatCompletion(options: {
-	messages: ChatMessage[];
-	config: ChatConfig;
-	tools?: AiToolDefinition[];
-	signal?: AbortSignal;
-	onDelta?: (fullText: string) => void | Promise<void>;
-}): Promise<StreamCompletionResult> {
+export async function streamChatCompletion(
+	logger: AppLogger,
+	options: {
+		messages: ChatMessage[];
+		config: ChatConfig;
+		tools?: AiToolDefinition[];
+		signal?: AbortSignal;
+		onDelta?: (fullText: string) => void | Promise<void>;
+	}
+): Promise<StreamCompletionResult> {
 	const { config } = options;
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), config.timeoutMs);
@@ -184,7 +187,7 @@ export async function streamChatCompletion(options: {
 			if (e instanceof ChatServiceError) throw e;
 			if (controller.signal.aborted) throw abortError();
 			if (fullText) {
-				container.logger.warn('chat.stream_interrupted', { error: String(e) });
+				logger.warn('chat.stream_interrupted', { error: String(e) });
 				return { content: finalizeText(fullText, config), toolCalls: [] };
 			}
 			throw new ChatServiceError('chat_stream_failed', 'AI 응답을 받는 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');

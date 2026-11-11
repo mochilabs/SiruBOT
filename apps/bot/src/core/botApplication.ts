@@ -21,6 +21,8 @@ import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
+import { createAiChat } from '../services/aiChatService.ts';
+import { executeAiTool, getAiToolDefinitions, getAiToolStatus } from '../services/aiTools/index.ts';
 import { CountingStateStore } from '../services/countingState.ts';
 import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { BotActivityService } from '../services/botActivity.ts';
@@ -128,10 +130,10 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.stoppables = [];
 		// 애플리케이션 계층과 Redis 수신 계층이 함께 쓰는 로거 — 호출 시점에 container.logger를 읽어요
 		const appLogger: AppLogger = {
-			info: (msg: string) => container.logger.info(msg),
-			warn: (msg: string) => container.logger.warn(msg),
-			error: (msg: string) => container.logger.error(msg),
-			debug: (msg: string) => container.logger.debug(msg)
+			info: (msg: string, ...values: unknown[]) => container.logger.info(msg, ...values),
+			warn: (msg: string, ...values: unknown[]) => container.logger.warn(msg, ...values),
+			error: (msg: string, ...values: unknown[]) => container.logger.error(msg, ...values),
+			debug: (msg: string, ...values: unknown[]) => container.logger.debug(msg, ...values)
 		};
 		const subscriberLogger = appLogger;
 		container.dataApi = createDataApiClient({ logger: appLogger });
@@ -184,9 +186,21 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getPlayerCount: () => container.audio?.players?.size ?? 0
 		});
 		container.stoppables.push(container.voiceLeaveTimers, container.botActivity);
-		container.aiMemoryService = new AiMemoryService();
-		container.aiChatHistory = new ChannelHistoryStore();
+		container.aiMemoryService = new AiMemoryService({ db: container.db });
+		container.aiChatHistory = new ChannelHistoryStore({ db: container.db, logger: appLogger });
 		container.stoppables.push(container.aiChatHistory);
+		container.aiChat = createAiChat({
+			logger: appLogger,
+			guildService: container.guildService,
+			memory: container.aiMemoryService,
+			history: container.aiChatHistory,
+			tools: { getDefinitions: getAiToolDefinitions, getStatus: getAiToolStatus, execute: executeAiTool },
+			getClient: () => container.client,
+			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+			getPlayer: (guildId) => container.audio?.getPlayer?.(guildId),
+			// redisStore는 setupRedis 뒤에 생겨서 호출 시점에 읽어요
+			getRedisStore: () => container.redisStore
+		});
 		container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 		container.stoppables.push(container.countingState);
 		container.playbackReporter = new PlaybackReporter();

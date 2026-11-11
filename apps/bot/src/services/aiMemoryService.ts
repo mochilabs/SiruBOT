@@ -1,4 +1,4 @@
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
 import {
 	MEMORY_CATEGORIES,
 	createEmptyMemorySections,
@@ -71,10 +71,17 @@ function legacyToMarkdown(facts: unknown[]): string {
  * 장기 기억은 Muse식 MEMORY.md 파일(마크다운)으로 저장하고, 단기 기억은 매 턴 자동으로 쌓여요.
  * 옛 구조로 저장된 데이터는 읽을 때 자동으로 파일 형식으로 변환돼요.
  */
+/** 기억 서비스가 쓰는 의존성 — DB 접근만 받아요 */
+export interface AiMemoryServiceDeps {
+	db: Pick<PrismaClient, 'userMemory'>;
+}
+
 export class AiMemoryService {
+	public constructor(private readonly deps: AiMemoryServiceDeps) {}
+
 	/** 장기 기억 파일(MEMORY.md) 마크다운을 불러와요. 아직 없으면 빈 파일 형태 */
 	public async readFile(userId: string): Promise<string> {
-		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true } });
+		const row = await this.deps.db.userMemory.findUnique({ where: { userId }, select: { longTerm: true } });
 		return this.storedFileToMarkdown(row?.longTerm);
 	}
 
@@ -95,7 +102,7 @@ export class AiMemoryService {
 	}
 
 	public async writeFile(userId: string, markdown: string): Promise<void> {
-		await container.db.userMemory.upsert({
+		await this.deps.db.userMemory.upsert({
 			where: { userId },
 			create: { userId, longTerm: markdown, shortTerm: [] },
 			update: { longTerm: markdown }
@@ -146,10 +153,10 @@ export class AiMemoryService {
 		q: string,
 		a: string
 	): Promise<void> {
-		const row = await container.db.userMemory.findUnique({ where: { userId } });
+		const row = await this.deps.db.userMemory.findUnique({ where: { userId } });
 		const shortTerm = Array.isArray(row?.shortTerm) ? (row.shortTerm as MemoryTurn[]).filter((t) => t && typeof t.q === 'string') : [];
 		const turn: MemoryTurn = { q: clip(q, PROMPT_TURN_CHARS), a: clip(a, PROMPT_TURN_CHARS), at: Date.now(), channelId };
-		await container.db.userMemory.upsert({
+		await this.deps.db.userMemory.upsert({
 			where: { userId },
 			create: { userId, shortTerm: [...shortTerm, turn].slice(-SHORT_TERM_MAX) },
 			update: { shortTerm: [...shortTerm, turn].slice(-SHORT_TERM_MAX) }
@@ -158,7 +165,7 @@ export class AiMemoryService {
 
 	/** 단기 기억(최근 대화) 턴 목록을 읽어요 — 장기 기억 승격(promotion)의 원재료. */
 	public async getShortTermTurns(userId: string): Promise<MemoryTurn[]> {
-		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { shortTerm: true } });
+		const row = await this.deps.db.userMemory.findUnique({ where: { userId }, select: { shortTerm: true } });
 		return Array.isArray(row?.shortTerm) ? (row.shortTerm as MemoryTurn[]).filter((t) => t && typeof t.q === 'string') : [];
 	}
 
@@ -183,7 +190,7 @@ export class AiMemoryService {
 
 	/** 압축된 단기 기억 요약을 읽어요. 없으면 null. */
 	public async getShortTermSummary(userId: string): Promise<string | null> {
-		const row = await container.db.userMemory.findUnique({ where: { userId }, select: { shortTermSummary: true } });
+		const row = await this.deps.db.userMemory.findUnique({ where: { userId }, select: { shortTermSummary: true } });
 		const summary = row?.shortTermSummary?.trim();
 		return summary ? summary : null;
 	}
@@ -191,7 +198,7 @@ export class AiMemoryService {
 	/** 승격/압축 후 단기 기억 원본 턴을 비우고, 압축 요약을 새 것으로 교체해요. */
 	public async compactShortTerm(userId: string, summary: string): Promise<void> {
 		const trimmed = summary.trim();
-		await container.db.userMemory.upsert({
+		await this.deps.db.userMemory.upsert({
 			where: { userId },
 			create: { userId, shortTerm: [], shortTermSummary: trimmed },
 			update: { shortTerm: [], shortTermSummary: trimmed }
@@ -200,7 +207,7 @@ export class AiMemoryService {
 
 	/** 압축할 게 없을 때 단기 기억 원본만 비워요 (요약은 유지). */
 	public async clearShortTerm(userId: string): Promise<void> {
-		await container.db.userMemory.upsert({
+		await this.deps.db.userMemory.upsert({
 			where: { userId },
 			create: { userId, shortTerm: [] },
 			update: { shortTerm: [] }
@@ -209,7 +216,7 @@ export class AiMemoryService {
 
 	/** 시스템 프롬프트에 넣을 기억 블록 — MEMORY.md 파일 + 압축 요약 + 단기 기억. 셋 다 없으면 null. */
 	public async buildPromptBlock(userId: string): Promise<string | null> {
-		const row = await container.db.userMemory.findUnique({
+		const row = await this.deps.db.userMemory.findUnique({
 			where: { userId },
 			select: { longTerm: true, shortTerm: true, shortTermSummary: true }
 		});

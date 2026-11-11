@@ -10,13 +10,11 @@ const mocks = vi.hoisted(() => ({
 
 const mockGuildMembers = new Map<string, unknown>();
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		guildService: {},
-		audio: {
-			getPlayer: mocks.getPlayer
-		},
-		client: {
+const deps = {
+	guildService: {} as never,
+	getPlayer: (guildId: string) => mocks.getPlayer(guildId),
+	getClient: () =>
+		({
 			guilds: {
 				cache: {
 					get: vi.fn((guildId: string) => {
@@ -32,9 +30,8 @@ vi.mock('@sapphire/framework', () => ({
 					})
 				}
 			}
-		}
-	}
-}));
+		}) as never
+};
 
 import { buildDiscordContextBlock, buildSystemContent } from './prompt.ts';
 vi.mock('../guildSettings/playback.ts', async (orig) => ({ ...(await orig()), getDJRole: mocks.getDJRole }));
@@ -62,7 +59,7 @@ describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () =
 			voice: null
 		});
 
-		const block = await buildDiscordContextBlock('g-1', 'u-admin');
+		const block = await buildDiscordContextBlock(deps, 'g-1', 'u-admin');
 		expect(block).toContain('# 현재 상황 컨텍스트');
 		expect(block).toContain('- 사용자(서버장) 권한: 서버 관리(ManageGuild), DJ 역할');
 	});
@@ -77,7 +74,7 @@ describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () =
 			voice: null
 		});
 
-		const block = await buildDiscordContextBlock('g-1', 'u-dj');
+		const block = await buildDiscordContextBlock(deps, 'g-1', 'u-dj');
 		expect(block).toContain('- 사용자(디제이) 권한: DJ 역할');
 	});
 
@@ -91,7 +88,7 @@ describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () =
 			voice: null
 		});
 
-		const block = await buildDiscordContextBlock('g-1', 'u-normal');
+		const block = await buildDiscordContextBlock(deps, 'g-1', 'u-normal');
 		expect(block).toContain('- 사용자(일반유저) 권한: 일반 권한(설정 변경 권한 없음)');
 	});
 
@@ -105,7 +102,7 @@ describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () =
 			voice: null
 		});
 
-		const block = await buildDiscordContextBlock('g-1', 'u-guest');
+		const block = await buildDiscordContextBlock(deps, 'g-1', 'u-guest');
 		expect(block).toContain('- 사용자(게스트) 권한: DJ 권한(서버 DJ 미설정으로 음악 제어 가능)');
 	});
 
@@ -136,7 +133,7 @@ describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () =
 			}
 		});
 
-		const block = await buildDiscordContextBlock('g-1', 'u-voice');
+		const block = await buildDiscordContextBlock(deps, 'g-1', 'u-voice');
 		expect(block).toContain('- 사용자 음성 채널: #음악감상실 (참여 2명: 청취자, 친구)');
 		expect(block).toContain('- 현재 음악: 좋은 날 (아이유) [재생 중]');
 	});

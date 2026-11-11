@@ -2,16 +2,7 @@ import { notice } from '../../view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';
-import {
-	ChatServiceError,
-	acquireChatTurn,
-	collectImageUrls,
-	getAiChatPolicy,
-	assertChatEnabled,
-	getChatConfig,
-	isAiAssistantMessage,
-	type ChatConfig
-} from '../../../../services/aiChatService.ts';
+import { ChatServiceError, collectImageUrls, assertChatEnabled, getChatConfig, type ChatConfig } from '../../../../services/aiChatService.ts';
 import type { AiToolContext } from '../../../../services/aiTools/index.ts';
 import { emoji } from '@sirubot/utils';
 import { runChatTurnToScreen } from '../../utils/chatTurnRunner.ts';
@@ -35,7 +26,7 @@ export class MentionReplyListener extends Listener {
 		// 답장 대상 메시지가 실제 "AI 어시스턴트의 답변"일 때만 대화로 인정해요.
 		// (컨트롤러 버튼, 슬래시 커맨드 응답, 임베드 등에 답장했을 때 AI가 끼어드는 것을 차단)
 		if (!hasExplicitMention && message.reference?.messageId) {
-			const isAiMessage = await isAiAssistantMessage(message.channelId, message.reference.messageId);
+			const isAiMessage = await this.container.aiChatHistory.isAiAssistantMessage(message.channelId, message.reference.messageId);
 			if (!isAiMessage) return;
 		}
 
@@ -46,7 +37,7 @@ export class MentionReplyListener extends Listener {
 		const channelId = message.channelId;
 
 		// 꺼진 서버/채널이면 라이브 메시지 없이 바로 오류로 알려요
-		const policy = await getAiChatPolicy(message.guildId);
+		const policy = await this.container.aiChat.getAiChatPolicy(message.guildId);
 		try {
 			assertChatEnabled(policy, channelId);
 		} catch (error) {
@@ -72,7 +63,7 @@ export class MentionReplyListener extends Listener {
 
 		// 같은 채널 턴이 진행 중이면 조용히 무시하지 않고 안내해요.
 		// 채널 턴을 확보한 뒤에 유저 사용량을 소모하고, 소모에 실패하면 채널 턴도 바로 돌려줘요.
-		const turn = await acquireChatTurn(channelId, message.author.id);
+		const turn = await this.container.aiChat.acquireChatTurn(channelId, message.author.id);
 		if (!turn.ok) {
 			const text =
 				turn.denial === 'channel_busy'
@@ -110,6 +101,7 @@ export class MentionReplyListener extends Listener {
 
 		let live: Message | null = null;
 		await runChatTurnToScreen({
+			runChatTurn: this.container.aiChat.runChatTurn,
 			config,
 			userId: message.author.id,
 			channelId,

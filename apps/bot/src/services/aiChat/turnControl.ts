@@ -1,5 +1,8 @@
-import { container } from '@sapphire/framework';
+import type { RedisStore } from '../../modules/audio/lavalink/redisStore.ts';
 import type { ChatAbortResult } from './types.ts';
+
+/** 유저 턴 한도 카운터가 쓰는 Redis 저장소 — 아직 연결 전이면 undefined(보호 없이 통과)예요 */
+export type TurnCounterStore = Pick<RedisStore, 'incrementCacheCounter'> | undefined;
 
 // 응답 중지 레지스트리
 const chatAborts = new Map<string, { controller: AbortController; userId: string }>();
@@ -28,9 +31,9 @@ export type ChatTurnGrant = { ok: true; release: () => void } | { ok: false; den
  * 소모에 실패하면 채널 턴을 바로 돌려줘야 해요 (진행 중인 채널에서 응답도 못 받고 사용량만
  * 빠지는 일을 막기 위해). 성공 시 반환된 release()를 finally에서 호출해요.
  */
-export async function acquireChatTurn(channelId: string, userId: string): Promise<ChatTurnGrant> {
+export async function acquireChatTurn(store: TurnCounterStore, channelId: string, userId: string): Promise<ChatTurnGrant> {
 	if (!acquireChannelTurn(channelId)) return { ok: false, denial: 'channel_busy' };
-	if (!(await tryConsumeUserTurn(userId))) {
+	if (!(await tryConsumeUserTurn(store, userId))) {
 		releaseChannelTurn(channelId);
 		return { ok: false, denial: 'rate_limited' };
 	}
@@ -48,8 +51,7 @@ const userTurnCounterTtl = USER_TURN_WINDOW_SECONDS;
  * 유저 턴 소비 시도 — 10분 윈도우당 상한(USER_TURN_LIMIT) 초과 시 false.
  * Redis 카운터로 셰드 간 공유되며, Redis가 없으면 보호 없이 통과해요. (가용성 우선)
  */
-export async function tryConsumeUserTurn(userId: string): Promise<boolean> {
-	const store = container.redisStore;
+export async function tryConsumeUserTurn(store: TurnCounterStore, userId: string): Promise<boolean> {
 	if (!store) return true;
 
 	const window = Math.floor(Date.now() / (USER_TURN_WINDOW_SECONDS * 1000));

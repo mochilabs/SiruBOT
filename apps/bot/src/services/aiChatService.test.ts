@@ -4,31 +4,21 @@ import {
 	abortChatTurn,
 	acquireChannelTurn,
 	assertChatEnabled,
-	clearChannelHistory,
 	collectImageUrls,
 	contentText,
-	dropChannelHistory,
+	createAiChat,
 	estimateTokens,
 	extractThinkTokens,
-	flushChannelHistoryPersist,
-	getAiChatPolicy,
 	getChatConfig,
 	getContextTokenBudget,
-	loadChannelHistory,
 	registerChatAbort,
 	releaseChannelTurn,
-	releaseChatAbort,
-	removeFromChannelHistory,
-	runChatTurn,
-	streamChatCompletion,
-	tryConsumeUserTurn,
-	updateChannelHistoryMessage
+	releaseChatAbort
 } from './aiChatService.ts';
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
-import { ChannelHistoryStore, getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
-import { container } from '@sapphire/framework';
-import { executeAiTool, getAiToolStatus } from './aiTools/index.ts';
+import { ChannelHistoryStore, historyLine } from './aiChat/historyStore.ts';
+import { executeAiTool, getAiToolDefinitions, getAiToolStatus } from './aiTools/index.ts';
 vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));
 
 const mocks = vi.hoisted(() => ({
@@ -44,26 +34,6 @@ const mocks = vi.hoisted(() => ({
 	logger: { error: vi.fn(), warn: vi.fn() }
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		guildService: {},
-		db: {
-			channelChatHistory: {
-				findUnique: mocks.history,
-				upsert: mocks.persist,
-				delete: mocks.deleteRow,
-				deleteMany: mocks.deleteRow,
-				update: mocks.updateRow
-			}
-		},
-		client: { channels: { fetch: mocks.channel } },
-		aiMemoryService: { buildPromptBlock: mocks.memory, pushTurn: mocks.pushTurn },
-		logger: mocks.logger,
-		get redisStore() {
-			return mocks.redisStore;
-		}
-	}
-}));
 vi.mock('./aiTools/index.ts', () => ({ getAiToolDefinitions: () => [], executeAiTool: vi.fn(), getAiToolStatus: vi.fn(() => '도구 실행 중이에요') }));
 
 function deferred<T>() {
@@ -71,6 +41,35 @@ function deferred<T>() {
 	const promise = new Promise<T>((done) => (resolve = done));
 	return { promise, resolve };
 }
+
+const fakeDb = {
+	channelChatHistory: {
+		findUnique: mocks.history,
+		upsert: mocks.persist,
+		delete: mocks.deleteRow,
+		deleteMany: mocks.deleteRow,
+		update: mocks.updateRow
+	}
+};
+const fakeLogger = { ...mocks.logger, info: vi.fn(), debug: vi.fn() };
+
+// 기록 상태의 소유자와 AI 채팅 진입점은 테스트마다 새로 만들어 상태가 새지 않게 해요
+let history: ChannelHistoryStore;
+let aiChat: ReturnType<typeof createAiChat>;
+const runChatTurn = (...args: Parameters<typeof aiChat.runChatTurn>) => aiChat.runChatTurn(...args);
+const streamChatCompletion = (...args: Parameters<typeof aiChat.streamChatCompletion>) => aiChat.streamChatCompletion(...args);
+const getAiChatPolicy = (guildId: string | null) => aiChat.getAiChatPolicy(guildId);
+const tryConsumeUserTurn = (userId: string) => aiChat.tryConsumeUserTurn(userId);
+const loadChannelHistory = (channelId: string) => history.loadChannelHistory(channelId);
+const clearChannelHistory = (channelId: string) => history.clearChannelHistory(channelId);
+const dropChannelHistory = (channelId: string) => history.dropChannelHistory(channelId);
+const flushChannelHistoryPersist = (channelId?: string) => history.flushChannelHistoryPersist(channelId);
+const removeFromChannelHistory = (channelId: string, messageIds: ReadonlySet<string>) => history.removeFromChannelHistory(channelId, messageIds);
+const updateChannelHistoryMessage = (channelId: string, messageId: string, newContent: string) =>
+	history.updateChannelHistoryMessage(channelId, messageId, newContent);
+const getChannelHistoryState = (channelId: string) => history.getChannelHistoryState(channelId);
+const pushChannelHistory = (channelId: string, ...messages: Parameters<ChannelHistoryStore['pushChannelHistory']>[1][]) =>
+	history.pushChannelHistory(channelId, ...messages);
 
 const options = {
 	channelId: 'channel',
@@ -92,8 +91,17 @@ function sseResponse(events: string[]) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	// 기록 상태의 소유자는 container.aiChatHistory — 테스트마다 새로 만들어 상태가 새지 않게 해요
-	container.aiChatHistory = new ChannelHistoryStore();
+	history = new ChannelHistoryStore({ db: fakeDb as never, logger: fakeLogger });
+	aiChat = createAiChat({
+		logger: fakeLogger,
+		guildService: {} as never,
+		memory: { buildPromptBlock: mocks.memory, pushTurn: mocks.pushTurn } as never,
+		history,
+		tools: { getDefinitions: getAiToolDefinitions, getStatus: getAiToolStatus, execute: executeAiTool },
+		getClient: () => ({ channels: { fetch: mocks.channel } }) as never,
+		getPlayer: () => undefined,
+		getRedisStore: () => mocks.redisStore
+	});
 	setConfigForTesting(makeTestConfig());
 	mocks.policy.mockResolvedValue({ mode: 'all', channelIds: [] });
 	mocks.history.mockResolvedValue(null);
