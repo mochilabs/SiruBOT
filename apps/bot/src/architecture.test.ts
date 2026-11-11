@@ -117,15 +117,11 @@ const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
 	'services/aiTools/musicSettings.ts': 'stage 4b conversion pending',
 	'services/aiTools/serverInfo.ts': 'stage 4b conversion pending',
 	'services/audioService.ts': 'audio playback owner; converted in the later audio stage',
-	'services/chatTts.ts': 'stage 4b conversion pending',
 	'services/mixerService.ts': 'audio playback owner; converted in the later audio stage',
 	'services/playbackReporter.ts': 'audio playback; converted in the later audio stage',
 	'services/playlistPlayback.ts': 'audio playback; converted in the later audio stage',
 	'services/skipPolicy.ts': 'audio playback; converted in the later audio stage',
-	'services/sponsorBlockService.ts': 'audio playback; converted in the later audio stage',
-	'services/ttsPronunciation.ts': 'stage 4b conversion pending',
-	'services/ttsService.ts': 'stage 4b conversion pending',
-	'services/ttsUserSettings.ts': 'stage 4b conversion pending'
+	'services/sponsorBlockService.ts': 'audio playback; converted in the later audio stage'
 };
 
 function listSourceFiles(dir: string): string[] {

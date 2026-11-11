@@ -1,5 +1,6 @@
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
 import { MemoryCache } from '@sirubot/utils';
+import type { AppLogger } from '../lib/appLogger.ts';
 import type { TtsEmotion } from './ttsService.ts';
 
 /**
@@ -36,8 +37,16 @@ export const DEFAULT_TTS_USER_PRESET: TtsUserPreset = { enabled: false, voice: n
 
 const CACHE_TTL_MS = 60_000;
 
+/** 사용자 설정 서비스가 쓰는 의존성 */
+export interface TtsUserSettingsDeps {
+	db: Pick<PrismaClient, 'ttsUserSetting'>;
+	logger: AppLogger;
+}
+
 export class TtsUserSettingsService {
 	private readonly cache = new MemoryCache<string, TtsUserPreset>({ ttl: CACHE_TTL_MS, maxSize: 500 });
+
+	public constructor(private readonly deps: TtsUserSettingsDeps) {}
 
 	/** 설정 조회 — 행이 없으면 기본값(off). DB 실패 시에도 기본값(fail-safe off). */
 	public async get(guildId: string, userId: string): Promise<TtsUserPreset> {
@@ -46,7 +55,7 @@ export class TtsUserSettingsService {
 		if (cached) return cached;
 		let preset: TtsUserPreset = DEFAULT_TTS_USER_PRESET;
 		try {
-			const row = await container.db.ttsUserSetting.findUnique({ where: { guildId_userId: { guildId, userId } } });
+			const row = await this.deps.db.ttsUserSetting.findUnique({ where: { guildId_userId: { guildId, userId } } });
 			if (row)
 				preset = {
 					enabled: row.enabled,
@@ -55,7 +64,7 @@ export class TtsUserSettingsService {
 					emotion: normalizeTtsEmotion(row.emotion)
 				};
 		} catch (error) {
-			container.logger.error(
+			this.deps.logger.error(
 				`[ttsUserSettings] 조회 실패 guild=${guildId} user=${userId}: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
@@ -73,7 +82,7 @@ export class TtsUserSettingsService {
 				channel: patch.channel ?? current.channel,
 				emotion: patch.emotion ?? current.emotion
 			};
-			await container.db.ttsUserSetting.upsert({
+			await this.deps.db.ttsUserSetting.upsert({
 				where: { guildId_userId: { guildId, userId } },
 				create: { guildId, userId, ...next },
 				update: { ...next }
@@ -81,7 +90,7 @@ export class TtsUserSettingsService {
 			this.cache.set(`${guildId}:${userId}`, next);
 			return true;
 		} catch (error) {
-			container.logger.error(
+			this.deps.logger.error(
 				`[ttsUserSettings] 저장 실패 guild=${guildId} user=${userId}: ${error instanceof Error ? error.message : String(error)}`
 			);
 			return false;

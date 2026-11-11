@@ -4,6 +4,7 @@ import { TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
+import { getTtsConfig } from '../lib/ttsConfig.ts';
 import type { Message, User } from 'discord.js';
 import type { Track } from 'lavalink-client';
 vi.mock('./guildSettings/playback.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildPlayback }));
@@ -22,7 +23,15 @@ const mocks = vi.hoisted(() => ({
 	ttsPronunciation: { apply: vi.fn() }
 }));
 
-vi.mock('@sapphire/framework', () => ({ container: mocks }));
+const deps = {
+	logger: mocks.logger,
+	tts: { synthesize: mocks.ttsService.synthesize, isEnabled: () => getTtsConfig() !== null },
+	pronunciation: mocks.ttsPronunciation,
+	mixer: mocks.mixerService,
+	playback: mocks.audioService,
+	guildService: mocks.guildService as never,
+	getPlayer: (guildId: string) => mocks.audio.getPlayer(guildId)
+};
 
 function ttsTrack(encoded: string, title = 'x'): Track {
 	return {
@@ -167,7 +176,7 @@ describe('preprocessTtsText (명세 4.5 전처리 표)', () => {
 
 describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 	it('synthesizes the first message immediately without a merge delay', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -179,7 +188,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 	it('merges messages arriving inside the 3s window into one clip', async () => {
 		vi.useFakeTimers();
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -196,7 +205,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 	it('stop() clears pending merge-window timers and ignores later messages', async () => {
 		vi.useFakeTimers();
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -215,7 +224,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 	});
 
 	it('passes the user voice to synthesize', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -231,7 +240,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 	});
 
 	it('drops a user message once their per-minute character budget is spent, without affecting others', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 		const long = '가'.repeat(200);
@@ -249,7 +258,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 	it('carries the preset of the batch-seeding message through a merge batch', async () => {
 		vi.useFakeTimers();
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -268,7 +277,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 
 	it('drops messages arriving after the merge window closed (late input race)', async () => {
 		vi.useFakeTimers();
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -286,7 +295,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 	});
 
 	it('truncates clips to 300 characters', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -301,7 +310,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	it('overlays via mixer announce when music is playing', async () => {
 		mocks.guildPlayback.getTtsDuck.mockResolvedValue(0.35);
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -316,7 +325,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 
 	it('passes the user stereo position to the mixer announce', async () => {
 		mocks.guildPlayback.getTtsDuck.mockResolvedValue(0.35);
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -328,7 +337,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	});
 
 	it('rejects overlay clips when too many announcements are queued', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -342,7 +351,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	});
 
 	it('still announces when mixer state lookup fails', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -355,7 +364,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	});
 
 	it('announces through the mixer (idle carrier) when no music is playing, keeping the stereo position', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 		mocks.guildPlayback.getTtsDuck.mockResolvedValue(0.35);
@@ -369,7 +378,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 	});
 
 	it('queues solo clips while a TTS clip is active and drops the oldest beyond 5', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = ttsTrack('enc-playing');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -388,7 +397,7 @@ describe('ChatTtsService — 모드 결정 (명세 4.2)', () => {
 
 describe('ChatTtsService — 스로틀·주문 (명세 4.4)', () => {
 	it('drops clips over the guild per-minute character budget', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -404,7 +413,7 @@ describe('ChatTtsService — 스로틀·주문 (명세 4.4)', () => {
 	});
 
 	it('dispatches clips in message order even when synthesis finishes out of order', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = musicTrack('music');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -430,7 +439,7 @@ describe('ChatTtsService — 스로틀·주문 (명세 4.4)', () => {
 	});
 
 	it('runs at most 2 syntheses concurrently per guild', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 
@@ -450,7 +459,7 @@ describe('ChatTtsService — 스로틀·주문 (명세 4.4)', () => {
 	});
 
 	it('silently drops the clip when synthesis fails', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
 		mocks.ttsService.synthesize.mockRejectedValue(new Error('quota'));
@@ -465,7 +474,7 @@ describe('ChatTtsService — 스로틀·주문 (명세 4.4)', () => {
 
 describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	it('drains remaining solo clips to overlay announces in order when music starts', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = ttsTrack('enc-playing');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -483,7 +492,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	});
 
 	it('seeds the next solo clip into the queue and skips unresolvable clips', async () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		player.queue.current = ttsTrack('enc-playing');
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -502,7 +511,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	});
 
 	it('scrubs TTS leftovers and promotes the next track when current ended', () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		const ended = ttsTrack('enc-ended');
 		const nextMusic = musicTrack('music');
@@ -519,7 +528,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	});
 
 	it('keeps current when a duplicate event arrives after the next clip started', () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		const nextClip = ttsTrack('enc-next');
 		player.queue.current = nextClip;
@@ -530,7 +539,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	});
 
 	it('detects TTS ends by event track or confirmed now-playing', () => {
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 
 		expect(service.isTtsEnded(player, ttsTrack('enc-a'))).toBe(true);
@@ -542,7 +551,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	it('cancels the idle destroy timer when TTS is enabled for the guild', async () => {
 		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid', SIRU_TTS_DEFAULT_VOICE: 'edge:ko-KR-SunHiNeural' }));
 		try {
-			const service = new ChatTtsService();
+			const service = new ChatTtsService(deps);
 			const player = makePlayer();
 			const handle = setTimeout(() => null, 10_000);
 			player.getData.mockReturnValue(handle);
@@ -560,7 +569,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	it('does not touch the idle timer when TTS is off for the guild', async () => {
 		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid', SIRU_TTS_DEFAULT_VOICE: 'edge:ko-KR-SunHiNeural' }));
 		try {
-			const service = new ChatTtsService();
+			const service = new ChatTtsService(deps);
 			const player = makePlayer();
 			mocks.guildChatPolicy.getTtsSettings.mockResolvedValue({ mode: 'off', channelIds: [] });
 

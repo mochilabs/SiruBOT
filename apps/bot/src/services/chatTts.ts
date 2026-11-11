@@ -1,10 +1,14 @@
-import { container } from '@sapphire/framework';
 import type { Message } from 'discord.js';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
+import type { AppLogger } from '../lib/appLogger.ts';
 import type { Stoppable } from '../lib/lifecycle.ts';
 import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
-import { TtsClip, TtsError, getTtsConfig } from './ttsService.ts';
+import { TtsClip, TtsError, type TtsService } from './ttsService.ts';
+import type { TtsPronunciationService } from './ttsPronunciation.ts';
+import type { GuildService } from './guildService.ts';
+import type { MixerService } from './mixerService.ts';
+import type { AudioService } from './audioService.ts';
 import type { TtsChannel, TtsUserPreset } from './ttsUserSettings.ts';
 import * as guildPlayback from './guildSettings/playback.ts';
 import * as guildChatPolicy from './guildSettings/chatPolicy.ts';
@@ -111,12 +115,25 @@ interface GuildTtsState {
 	soloQueue: SoloClip[];
 }
 
+/** 채팅 TTS가 쓰는 의존성 — 플레이어 매니저(audio)는 setupAudio 뒤에 생겨서 getPlayer로 호출 시점에 읽어요 */
+export interface ChatTtsDeps {
+	logger: AppLogger;
+	tts: Pick<TtsService, 'synthesize' | 'isEnabled'>;
+	pronunciation: Pick<TtsPronunciationService, 'apply'>;
+	mixer: Pick<MixerService, 'getState' | 'clearAnnounceQueue' | 'announce'>;
+	playback: Pick<AudioService, 'ensurePlayback'>;
+	guildService: GuildService;
+	getPlayer: (guildId: string) => CustomPlayer | null | undefined;
+}
+
 export class ChatTtsService implements Stoppable {
 	public readonly name = '채팅 TTS 병합 타이머';
 	private stopped = false;
 	private readonly guildStates = new Map<string, GuildTtsState>();
 	/** 원인별 1회만 warn — 반복되는 동일 원인은 debug로 낮춘다 (명세 4.6) */
 	private readonly warned = new Set<string>();
+
+	public constructor(private readonly deps: ChatTtsDeps) {}
 
 	/**
 	 * 채팅 메시지를 받아 스로틀/병합을 거쳐 합성 → dispatch까지 보낸다.
@@ -209,7 +226,7 @@ export class ChatTtsService implements Stoppable {
 		}
 
 		const synth = this.withSynthSlot(state, async () =>
-			container.ttsService.synthesize(await container.ttsPronunciation.apply(guildId, text), {
+			this.deps.tts.synthesize(await this.deps.pronunciation.apply(guildId, text), {
 				voice: preset?.voice ?? undefined,
 				emotion: preset?.emotion
 			})
@@ -229,7 +246,7 @@ export class ChatTtsService implements Stoppable {
 				await this.dispatchClip(guildId, clip, text, preset?.channel ?? 'both');
 			})
 			.catch((error) => {
-				container.logger.error(`[chatTts] dispatch failed (guild ${guildId}): ${error}`);
+				this.deps.logger.error(`[chatTts] dispatch failed (guild ${guildId}): ${error}`);
 			});
 	}
 
@@ -249,7 +266,7 @@ export class ChatTtsService implements Stoppable {
 
 	/** 모드를 dispatch 시점에 재판정한다 (명세 4.2) — 메인 트랙 유무로 오버레이/단독을 가른다. */
 	private async dispatchClip(guildId: string, clip: TtsClip, text: string, channel: TtsChannel): Promise<void> {
-		const player = container.audio.getPlayer(guildId) as CustomPlayer | null | undefined;
+		const player = this.deps.getPlayer(guildId);
 		if (!player) return; // 플레이어가 사라졌으면 클립은 조용히 소멸한다
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
@@ -267,8 +284,8 @@ export class ChatTtsService implements Stoppable {
 	 * (dispatchClip의 판단을 그대로 재사용). 반환값은 예약/단독 재생 결과예요.
 	 */
 	public async speakNow(player: CustomPlayer, text: string, preset: TtsUserPreset): Promise<'overlay' | 'solo'> {
-		const spoken = await container.ttsPronunciation.apply(player.guildId, text);
-		const clip = await container.ttsService.synthesize(spoken, { voice: preset.voice ?? undefined, emotion: preset.emotion });
+		const spoken = await this.deps.pronunciation.apply(player.guildId, text);
+		const clip = await this.deps.tts.synthesize(spoken, { voice: preset.voice ?? undefined, emotion: preset.emotion });
 		const hasMusic = (!!player.queue.current && !isTtsClip(player.queue.current)) || player.queue.tracks.some((track) => !isTtsClip(track));
 		if (hasMusic) {
 			await this.dispatchOverlay(player, clip, preset.channel, true);
@@ -280,7 +297,7 @@ export class ChatTtsService implements Stoppable {
 
 	/** 오버레이: mixer announce로 음악 위에 겹쳐 읽는다 (큐잉·순차는 mixer가 담당). */
 	private async dispatchOverlay(player: CustomPlayer, clip: TtsClip, channel: TtsChannel, reportFailure = false): Promise<void> {
-		const state = await container.mixerService.getState(player).catch(() => null);
+		const state = await this.deps.mixer.getState(player).catch(() => null);
 		if ((state?.announcementsQueued ?? 0) >= TTS_OVERLAY_QUEUE_MAX) {
 			this.warnOnce(player.guildId, 'overlay_overflow', `[chatTts] 안내 대기열 초과 (guild ${player.guildId})`);
 			if (reportFailure) throw new TtsError('queue_full', '음성 안내가 밀려 있어요. 잠시 후 다시 말하기를 실행해 주세요.');
@@ -298,15 +315,15 @@ export class ChatTtsService implements Stoppable {
 	private async speakOverlay(player: CustomPlayer, url: string, channel: TtsChannel, reportFailure = false): Promise<void> {
 		try {
 			const [duckLevel, mode] = await Promise.all([
-				guildPlayback.getTtsDuck(container.guildService, player.guildId),
-				guildPlayback.getTtsAnnounceMode(container.guildService, player.guildId)
+				guildPlayback.getTtsDuck(this.deps.guildService, player.guildId),
+				guildPlayback.getTtsAnnounceMode(this.deps.guildService, player.guildId)
 			]);
 			if (mode === 'interrupt') {
-				await container.mixerService.clearAnnounceQueue(player);
+				await this.deps.mixer.clearAnnounceQueue(player);
 			}
-			await container.mixerService.announce(player, url, duckLevel, mode === 'parallel' ? 'parallel' : 'sequential', channel);
+			await this.deps.mixer.announce(player, url, duckLevel, mode === 'parallel' ? 'parallel' : 'sequential', channel);
 		} catch (error) {
-			container.logger.warn(`[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
+			this.deps.logger.warn(`[chatTts] 오버레이 예약 실패 (guild ${player.guildId}): ${error}`);
 			if (reportFailure) throw new TtsError('playback_failed', '음성을 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
 	}
@@ -350,9 +367,9 @@ export class ChatTtsService implements Stoppable {
 		}
 		try {
 			await player.queue.add(track);
-			await container.audioService.ensurePlayback(player);
+			await this.deps.playback.ensurePlayback(player);
 		} catch (error) {
-			container.logger.warn(`[chatTts] 단독 재생 시작 실패 (guild ${player.guildId}): ${error}`);
+			this.deps.logger.warn(`[chatTts] 단독 재생 시작 실패 (guild ${player.guildId}): ${error}`);
 			if (reportFailure) throw new TtsError('playback_failed', '음성을 재생하지 못했어요. 잠시 후 다시 시도해 주세요.');
 		}
 	}
@@ -433,15 +450,15 @@ export class ChatTtsService implements Stoppable {
 	 */
 	public async keepAliveForTts(player: CustomPlayer): Promise<void> {
 		try {
-			if (!getTtsConfig()) return;
-			const settings = await guildChatPolicy.getTtsSettings(container.guildService, player.guildId);
+			if (!this.deps.tts.isEnabled()) return;
+			const settings = await guildChatPolicy.getTtsSettings(this.deps.guildService, player.guildId);
 			if (settings.mode === 'off') return;
 			const handle = player.getData<ReturnType<typeof setTimeout> | null | undefined>('internal_queueempty');
 			if (handle !== undefined && handle !== null) clearTimeout(handle);
 			player.setData('internal_queueempty', undefined);
-			container.logger.debug(`[chatTts] idle destroy를 취소하고 음성에 남았어요 (guild ${player.guildId})`);
+			this.deps.logger.debug(`[chatTts] idle destroy를 취소하고 음성에 남았어요 (guild ${player.guildId})`);
 		} catch (error) {
-			container.logger.debug(`[chatTts] keep-alive failed (guild ${player.guildId}): ${error}`);
+			this.deps.logger.debug(`[chatTts] keep-alive failed (guild ${player.guildId}): ${error}`);
 		}
 	}
 
@@ -520,10 +537,10 @@ export class ChatTtsService implements Stoppable {
 	private warnOnce(guildId: string, cause: string, message: string): void {
 		const key = `${guildId}:${cause}`;
 		if (this.warned.has(key)) {
-			container.logger.debug(message);
+			this.deps.logger.debug(message);
 			return;
 		}
 		this.warned.add(key);
-		container.logger.warn(message);
+		this.deps.logger.warn(message);
 	}
 }

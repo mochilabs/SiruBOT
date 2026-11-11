@@ -13,19 +13,19 @@ const mocks = vi.hoisted(() => ({
 	search: vi.fn()
 }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		ttsService: { synthesize: mocks.synthesize },
-		ttsPronunciation: { apply: async (_guildId: string, text: string) => text },
-		mixerService: {
-			announce: mocks.announce,
-			getState: async () => ({ announcementsQueued: 0 })
-		},
-		audioService: { ensurePlayback: mocks.ensurePlayback },
-		guildService: {},
-		logger: { debug: vi.fn(), error: vi.fn(), warn: vi.fn() }
-	}
-}));
+const deps = {
+	logger: { debug: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+	tts: { synthesize: mocks.synthesize, isEnabled: () => true },
+	pronunciation: { apply: async (_guildId: string, text: string) => text },
+	mixer: {
+		announce: mocks.announce,
+		getState: async () => ({ announcementsQueued: 0 }),
+		clearAnnounceQueue: vi.fn()
+	} as never,
+	playback: { ensurePlayback: mocks.ensurePlayback },
+	guildService: {} as never,
+	getPlayer: () => undefined
+};
 
 import { ChatTtsService } from './chatTts.ts';
 vi.mock('./guildSettings/playback.ts', async (orig) => ({
@@ -49,7 +49,7 @@ describe('speakNow', () => {
 	it('오버레이 예약 실패를 성공으로 알리지 않아요', async () => {
 		mocks.synthesize.mockResolvedValue({ url: 'https://tts.example/clip' });
 		mocks.announce.mockRejectedValue(new Error('offline'));
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		await expect(service.speakNow(playerWith([], { info: { identifier: 'music' } }) as never, '안녕', preset)).rejects.toThrow();
 	});
 	it('음악이 재생 중이면 오버레이로 문장을 읽어요', async () => {
@@ -63,7 +63,7 @@ describe('speakNow', () => {
 		});
 		mocks.announce.mockResolvedValue({ guildId: 'g1', id: 1, position: 1, queueLength: 1 });
 
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = playerWith([], { info: { identifier: 'music-track' } });
 
 		await expect(service.speakNow(player as never, '안녕하세요', preset)).resolves.toBe('overlay');
@@ -82,7 +82,7 @@ describe('speakNow', () => {
 		mocks.search.mockResolvedValue({ tracks: [{ info: { title: 'clip' } }] });
 		mocks.queueAdd.mockResolvedValue(undefined);
 
-		const service = new ChatTtsService();
+		const service = new ChatTtsService(deps);
 		const player = playerWith([]) as unknown as { queue: { tracks: unknown[]; add: unknown }; search: unknown };
 		(player.queue as { add: unknown }).add = mocks.queueAdd;
 

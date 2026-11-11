@@ -1,5 +1,6 @@
-import { container } from '@sapphire/framework';
+import type { PrismaClient } from '@sirubot/prisma';
 import { MemoryCache } from '@sirubot/utils';
+import type { AppLogger } from '../lib/appLogger.ts';
 
 /**
  * 길드별 TTS 발음 사전 — 채팅·알림 문장을 합성하기 전에 term을 reading으로 바꿔요.
@@ -28,18 +29,26 @@ export function applyPronunciations(text: string, entries: readonly TtsPronuncia
 	return text.replace(pattern, (match) => readings.get(match.toLowerCase()) ?? match);
 }
 
+/** 발음 사전 서비스가 쓰는 의존성 */
+export interface TtsPronunciationDeps {
+	db: Pick<PrismaClient, 'ttsPronunciation'>;
+	logger: AppLogger;
+}
+
 export class TtsPronunciationService {
 	private readonly cache = new MemoryCache<string, TtsPronunciationEntry[]>({ ttl: 60_000, maxSize: 500 });
+
+	public constructor(private readonly deps: TtsPronunciationDeps) {}
 
 	public async list(guildId: string): Promise<TtsPronunciationEntry[]> {
 		const cached = this.cache.get(guildId);
 		if (cached) return cached;
 		let entries: TtsPronunciationEntry[] = [];
 		try {
-			const rows = await container.db.ttsPronunciation.findMany({ where: { guildId }, orderBy: { term: 'asc' } });
+			const rows = await this.deps.db.ttsPronunciation.findMany({ where: { guildId }, orderBy: { term: 'asc' } });
 			entries = rows.map((row) => ({ term: row.term, reading: row.reading }));
 		} catch (error) {
-			container.logger.error(`[ttsPronunciation] 조회 실패 guild=${guildId}: ${error instanceof Error ? error.message : String(error)}`);
+			this.deps.logger.error(`[ttsPronunciation] 조회 실패 guild=${guildId}: ${error instanceof Error ? error.message : String(error)}`);
 			return [];
 		}
 		this.cache.set(guildId, entries);
@@ -53,9 +62,9 @@ export class TtsPronunciationService {
 	/** 추가·수정 — 새 단어일 때만 상한(50개)을 본다 */
 	public async set(guildId: string, term: string, reading: string): Promise<SetPronunciationResult> {
 		try {
-			const existing = await container.db.ttsPronunciation.findUnique({ where: { guildId_term: { guildId, term } } });
-			if (!existing && (await container.db.ttsPronunciation.count({ where: { guildId } })) >= TTS_PRONUNCIATION_MAX_ENTRIES) return 'limit';
-			await container.db.ttsPronunciation.upsert({
+			const existing = await this.deps.db.ttsPronunciation.findUnique({ where: { guildId_term: { guildId, term } } });
+			if (!existing && (await this.deps.db.ttsPronunciation.count({ where: { guildId } })) >= TTS_PRONUNCIATION_MAX_ENTRIES) return 'limit';
+			await this.deps.db.ttsPronunciation.upsert({
 				where: { guildId_term: { guildId, term } },
 				create: { guildId, term, reading },
 				update: { reading }
@@ -63,7 +72,7 @@ export class TtsPronunciationService {
 			this.cache.delete(guildId);
 			return 'ok';
 		} catch (error) {
-			container.logger.error(`[ttsPronunciation] 저장 실패 guild=${guildId}: ${error instanceof Error ? error.message : String(error)}`);
+			this.deps.logger.error(`[ttsPronunciation] 저장 실패 guild=${guildId}: ${error instanceof Error ? error.message : String(error)}`);
 			return 'error';
 		}
 	}
@@ -71,11 +80,11 @@ export class TtsPronunciationService {
 	/** 삭제 — 지워진 항목이 있으면 true */
 	public async remove(guildId: string, term: string): Promise<boolean> {
 		try {
-			const result = await container.db.ttsPronunciation.deleteMany({ where: { guildId, term } });
+			const result = await this.deps.db.ttsPronunciation.deleteMany({ where: { guildId, term } });
 			this.cache.delete(guildId);
 			return result.count > 0;
 		} catch (error) {
-			container.logger.error(`[ttsPronunciation] 삭제 실패 guild=${guildId}: ${error instanceof Error ? error.message : String(error)}`);
+			this.deps.logger.error(`[ttsPronunciation] 삭제 실패 guild=${guildId}: ${error instanceof Error ? error.message : String(error)}`);
 			return false;
 		}
 	}

@@ -1,7 +1,7 @@
-import { container } from '@sapphire/framework';
 import { MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
-import { getConfig } from '../lib/config.ts';
+import type { AppLogger } from '../lib/appLogger.ts';
+import type { TtsConfig } from '../lib/ttsConfig.ts';
 
 /**
  * 채팅 TTS(siru_tts 2.0) 클라이언트 — 합성 요청·공개 URL 수신·재시도.
@@ -26,12 +26,6 @@ const TTS_BACKOFF_BASE_MS = 300;
 
 /** 재생 URL 포맷 — 엔진이 결정한다(Edge/ElevenLabs는 mp3, VOICEVOX/Typecast/CLOVA는 wav) */
 type TtsShareFormat = 'wav' | 'mp3';
-
-export interface TtsConfig {
-	url: string;
-	/** 선택 — 비어 있으면 voice를 생략하고 서버가 텍스트 언어로 고른다 */
-	defaultVoice: string | null;
-}
 
 export interface TtsClip {
 	/** 무인증 공개 URL — 만료(expiresIn) 전에 재생/announce를 시작해야 한다 */
@@ -71,11 +65,10 @@ export class TtsError extends Error {
 	}
 }
 
-/** env에서 siru_tts 접속 정보를 읽는다 — SIRU_TTS_URL이 없으면 기능 off. */
-export function getTtsConfig(): TtsConfig | null {
-	const { url, defaultVoice } = getConfig().tts;
-	if (!url) return null;
-	return { url, defaultVoice };
+/** TTS 서비스가 쓰는 의존성 — 설정은 호출할 때마다 읽어요 (SIRU_TTS_URL이 없으면 null) */
+export interface TtsServiceDeps {
+	logger: AppLogger;
+	getTtsConfig: () => TtsConfig | null;
 }
 
 export class TtsService {
@@ -83,14 +76,14 @@ export class TtsService {
 	private ready = false;
 	private readonly voiceCache = new MemoryCache<string, TtsVoice[]>({ ttl: TTS_VOICES_TTL_MS, maxSize: 50 });
 
-	public constructor() {
-		if (!getTtsConfig()) {
-			container.logger.warn('[tts] SIRU_TTS_URL 미설정 — 채팅 TTS가 꺼져 있어요.');
+	public constructor(private readonly deps: TtsServiceDeps) {
+		if (!deps.getTtsConfig()) {
+			deps.logger.warn('[tts] SIRU_TTS_URL 미설정 — 채팅 TTS가 꺼져 있어요.');
 		}
 	}
 
 	public isEnabled(): boolean {
-		return getTtsConfig() !== null;
+		return this.deps.getTtsConfig() !== null;
 	}
 
 	/**
@@ -98,7 +91,7 @@ export class TtsService {
 	 * 실패는 전부 TtsError로 던진다 — 호출부는 채널에 알리지 않고 조용히 스킵한다(명세 4.6).
 	 */
 	public async synthesize(text: string, options?: TtsSynthOptions): Promise<TtsClip> {
-		const config = getTtsConfig();
+		const config = this.deps.getTtsConfig();
 		if (!config) throw new TtsError('not_configured', 'siru_tts is not configured');
 		await this.ensureReady(config);
 
@@ -143,7 +136,7 @@ export class TtsService {
 	 * 실패 시 빈 배열 — autocomplete는 조용히 빈 선택지만 보여준다.
 	 */
 	public async listVoices(options: { lang?: string; query?: string } = {}): Promise<TtsVoice[]> {
-		const config = getTtsConfig();
+		const config = this.deps.getTtsConfig();
 		if (!config) return [];
 		const params = new URLSearchParams({ page_size: '25' });
 		const q = (options.query ?? '').trim();

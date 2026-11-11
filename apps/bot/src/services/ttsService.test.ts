@@ -1,11 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
-import { TtsService, getTtsConfig } from './ttsService.ts';
+import { TtsService } from './ttsService.ts';
+import { getTtsConfig } from '../lib/ttsConfig.ts';
 
 const mocks = vi.hoisted(() => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
-
-vi.mock('@sapphire/framework', () => ({ container: { logger: mocks.logger } }));
 
 const fetchMock = vi.hoisted(() => vi.fn());
 vi.stubGlobal('fetch', fetchMock);
@@ -75,7 +74,7 @@ describe('getTtsConfig', () => {
 describe('TtsService disabled state', () => {
 	it('warns once at startup and refuses to synthesize', async () => {
 		envOff();
-		const service = new TtsService();
+		const service = new TtsService({ logger: mocks.logger, getTtsConfig });
 		expect(mocks.logger.warn).toHaveBeenCalledOnce();
 		expect(service.isEnabled()).toBe(false);
 		await expect(service.synthesize('안녕')).rejects.toMatchObject({ name: 'TtsError', code: 'not_configured' });
@@ -100,7 +99,7 @@ describe('TtsService synthesize', () => {
 				});
 			}
 		});
-		const clip = await new TtsService().synthesize('안녕하세요');
+		const clip = await new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕하세요');
 		expect(clip).toEqual({
 			url: 'https://tts.example.com/v1/shared/Ab3',
 			expiresIn: 600,
@@ -129,7 +128,7 @@ describe('TtsService synthesize', () => {
 				});
 			}
 		});
-		await new TtsService().synthesize('안녕', { voice: 'melo:KR', emotion: 'happy' });
+		await new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕', { voice: 'melo:KR', emotion: 'happy' });
 		expect(sentBody).toEqual({ text: '안녕', voice: 'melo:KR', voice_fallback: true, return_url: true, emotion: 'happy' });
 	});
 
@@ -149,7 +148,7 @@ describe('TtsService synthesize', () => {
 			}
 		});
 		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid' }));
-		await new TtsService().synthesize('안녕', { emotion: 'neutral' });
+		await new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕', { emotion: 'neutral' });
 		expect(sentBody).toEqual({ text: '안녕', return_url: true });
 	});
 
@@ -163,7 +162,9 @@ describe('TtsService synthesize', () => {
 					: respondJson(200, { url: 'https://tts.example.com/v1/shared/x', expires_in: 600, format: 'wav', cache: 'miss', duration_ms: 1 });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).resolves.toMatchObject({ url: 'https://tts.example.com/v1/shared/x' });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕')).resolves.toMatchObject({
+			url: 'https://tts.example.com/v1/shared/x'
+		});
 		expect(calls).toBe(2);
 	});
 
@@ -175,7 +176,7 @@ describe('TtsService synthesize', () => {
 				return respondJson(503, { error: { code: 'queue_full', message: 'slow down' } }, { 'Retry-After': '3600' });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'queue_full' });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕')).rejects.toMatchObject({ code: 'queue_full' });
 		expect(calls).toBe(1);
 	});
 
@@ -187,7 +188,9 @@ describe('TtsService synthesize', () => {
 				return respondJson(503, { error: { code: 'engine_circuit_open', message: 'warming up' } }, { 'Retry-After': '0' });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'engine_circuit_open' });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕')).rejects.toMatchObject({
+			code: 'engine_circuit_open'
+		});
 		expect(calls).toBe(2);
 	});
 
@@ -203,7 +206,9 @@ describe('TtsService synthesize', () => {
 					warnings: ['voice_language_mismatch:ja', 7]
 				})
 		});
-		await expect(new TtsService().synthesize('こんにちは')).resolves.toMatchObject({ warnings: ['voice_language_mismatch:ja'] });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('こんにちは')).resolves.toMatchObject({
+			warnings: ['voice_language_mismatch:ja']
+		});
 	});
 
 	it('does not retry 504 timeouts', async () => {
@@ -214,7 +219,7 @@ describe('TtsService synthesize', () => {
 				return respondJson(504, { error: { code: 'engine_timeout', message: 'slow' } });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'engine_timeout' });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕')).rejects.toMatchObject({ code: 'engine_timeout' });
 		expect(calls).toBe(1);
 	});
 
@@ -226,7 +231,7 @@ describe('TtsService synthesize', () => {
 				return respondJson(400, { error: { code: 'ambiguous_routing', message: 'voice and language' } });
 			}
 		});
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'ambiguous_routing' });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕')).rejects.toMatchObject({ code: 'ambiguous_routing' });
 		expect(calls).toBe(1);
 	});
 
@@ -238,7 +243,7 @@ describe('TtsService synthesize', () => {
 				return new Response('', { status: 503 });
 			}
 		});
-		const service = new TtsService();
+		const service = new TtsService({ logger: mocks.logger, getTtsConfig });
 		await expect(service.synthesize('안녕')).rejects.toMatchObject({ code: 'not_ready' });
 		expect(fetchMock.mock.calls.filter(([u]) => String(u).includes('/v1/synthesize'))).toHaveLength(0);
 
@@ -255,7 +260,7 @@ describe('TtsService synthesize', () => {
 
 	it('rejects malformed success bodies', async () => {
 		routeFetch({ synthesize: () => respondJson(200, { expires_in: 600, format: 'wav' }) });
-		await expect(new TtsService().synthesize('안녕')).rejects.toMatchObject({ code: 'bad_response' });
+		await expect(new TtsService({ logger: mocks.logger, getTtsConfig }).synthesize('안녕')).rejects.toMatchObject({ code: 'bad_response' });
 	});
 });
 
@@ -285,7 +290,7 @@ describe('TtsService listVoices', () => {
 				});
 			}
 		});
-		const voices = await new TtsService().listVoices({ query: 'ko-KR' });
+		const voices = await new TtsService({ logger: mocks.logger, getTtsConfig }).listVoices({ query: 'ko-KR' });
 		expect(requestedUrl).toContain('/v1/voices?');
 		expect(requestedUrl).toContain('q=ko-KR');
 		expect(voices).toEqual([
@@ -304,7 +309,7 @@ describe('TtsService listVoices', () => {
 				return respondJson(200, { items: [{ id: 'voicevox:3', engine: 'voicevox', name: 'ずんだもん', languages: ['ja'] }] });
 			}
 		});
-		const service = new TtsService();
+		const service = new TtsService({ logger: mocks.logger, getTtsConfig });
 		await expect(service.listVoices({ lang: 'JA' })).resolves.toHaveLength(1);
 		await service.listVoices({ lang: 'ja' });
 		expect(requestedUrl).toContain('lang=ja');
@@ -322,7 +327,7 @@ describe('TtsService listVoices', () => {
 				return respondJson(200, { items: [] });
 			}
 		});
-		const service = new TtsService();
+		const service = new TtsService({ logger: mocks.logger, getTtsConfig });
 		await service.listVoices({ lang: 'ko' });
 		await service.listVoices({ lang: 'ko' });
 		expect(calls).toBe(2);
@@ -330,11 +335,11 @@ describe('TtsService listVoices', () => {
 
 	it('returns an empty list when disabled, on error, or on a bad body', async () => {
 		envOff();
-		expect(await new TtsService().listVoices({ query: 'x' })).toEqual([]);
+		expect(await new TtsService({ logger: mocks.logger, getTtsConfig }).listVoices({ query: 'x' })).toEqual([]);
 		envOn();
 		routeFetch({ voices: () => Promise.reject(new Error('down')) });
-		expect(await new TtsService().listVoices()).toEqual([]);
+		expect(await new TtsService({ logger: mocks.logger, getTtsConfig }).listVoices()).toEqual([]);
 		routeFetch({ voices: () => respondJson(200, { items: 'nope' }) });
-		expect(await new TtsService().listVoices()).toEqual([]);
+		expect(await new TtsService({ logger: mocks.logger, getTtsConfig }).listVoices()).toEqual([]);
 	});
 });

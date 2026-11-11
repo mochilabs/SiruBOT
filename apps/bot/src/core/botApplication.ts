@@ -24,6 +24,7 @@ import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
 import { CountingStateStore } from '../services/countingState.ts';
 import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { BotActivityService } from '../services/botActivity.ts';
+import { getTtsConfig } from '../lib/ttsConfig.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
@@ -140,10 +141,19 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.playlistService = new PlaylistService({ db: container.db });
 		container.audioService = new AudioService();
 		container.mixerService = new MixerService();
-		container.ttsService = new TtsService();
-		container.ttsUserSettings = new TtsUserSettingsService();
-		container.ttsPronunciation = new TtsPronunciationService();
-		container.chatTtsService = new ChatTtsService();
+		container.ttsService = new TtsService({ logger: appLogger, getTtsConfig });
+		container.ttsUserSettings = new TtsUserSettingsService({ db: container.db, logger: appLogger });
+		container.ttsPronunciation = new TtsPronunciationService({ db: container.db, logger: appLogger });
+		container.chatTtsService = new ChatTtsService({
+			logger: appLogger,
+			tts: container.ttsService,
+			pronunciation: container.ttsPronunciation,
+			mixer: container.mixerService,
+			playback: container.audioService,
+			guildService: container.guildService,
+			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+			getPlayer: (guildId) => container.audio.getPlayer(guildId)
+		});
 		container.tempVoiceService = createTempVoiceService({
 			logger: appLogger,
 			settings: {
