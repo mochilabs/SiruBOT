@@ -16,12 +16,10 @@ import {
 } from 'discord.js';
 import { Guild } from '@sirubot/prisma';
 import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
+import { settingsId } from '../customIds.ts';
 import { jtcEmptyGraceText } from '../../../services/tempVoiceService.ts';
 
 export type SettingsMode = 'main' | 'dj' | 'music' | 'channel' | 'sponsorblock' | 'jtc';
-
-const prefix = 'settings:';
-const wrapPrefix = (id: string) => prefix + id;
 
 // SponsorBlock 세그먼트 정의
 type SegmentType = {
@@ -104,7 +102,7 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(wrapPrefix('navigate'))
+				.setCustomId(settingsId.encode('navigate'))
 				.setPlaceholder('설정할 기능을 선택하세요')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -138,15 +136,15 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('toggle:controller'))
+				.setCustomId(settingsId.encode('toggleController'))
 				.setLabel(guild.enableController ? `${emoji('spectrum')} 컨트롤러 끄기` : `${emoji('spectrum')} 컨트롤러 켜기`)
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('toggle:related'))
+				.setCustomId(settingsId.encode('toggleRelated'))
 				.setLabel(guild.related ? `${emoji('sparkle')} 추천 곡 끄기` : `${emoji('sparkle')} 추천 곡 켜기`)
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('toggle:repeat'))
+				.setCustomId(settingsId.encode('toggleRepeat'))
 				.setLabel(`${emoji('repeat')} ${repeatNextLabel}`)
 				.setStyle(ButtonStyle.Secondary)
 		)
@@ -155,7 +153,7 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('back'))
+				.setCustomId(settingsId.encode('back'))
 				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
 				.setStyle(ButtonStyle.Primary)
 		)
@@ -184,7 +182,7 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 	container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
 
 	const selectMenu = new StringSelectMenuBuilder()
-		.setCustomId(wrapPrefix('select:sponsorblock'))
+		.setCustomId(settingsId.encode('selectSponsorblock'))
 		.setPlaceholder('건너뛸 구간 유형을 선택하세요')
 		.setMinValues(0)
 		.setMaxValues(SPONSORBLOCK_SEGMENTS.length)
@@ -202,11 +200,11 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('back'))
+				.setCustomId(settingsId.encode('back'))
 				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
 				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('reset:sponsorblock'))
+				.setCustomId(settingsId.encode('resetSponsorblock'))
 				.setLabel(`${emoji('repeat')} 전체 해제`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(activeSegments.length === 0)
@@ -229,18 +227,18 @@ function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilde
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
-			new RoleSelectMenuBuilder().setCustomId(wrapPrefix('select:dj')).setPlaceholder('DJ 역할을 선택하세요')
+			new RoleSelectMenuBuilder().setCustomId(settingsId.encode('selectDj')).setPlaceholder('DJ 역할을 선택하세요')
 		)
 	);
 
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('back'))
+				.setCustomId(settingsId.encode('back'))
 				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
 				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('remove:dj'))
+				.setCustomId(settingsId.encode('removeDj'))
 				.setLabel(`${emoji('trash')} DJ 역할 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.djRoleId)
@@ -267,7 +265,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	container.addActionRowComponents(
 		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
 			new ChannelSelectMenuBuilder()
-				.setCustomId(wrapPrefix('select:text'))
+				.setCustomId(settingsId.encode('selectText'))
 				.setPlaceholder('기본 텍스트 채널을 선택하세요')
 				.setChannelTypes(ChannelType.GuildText)
 		)
@@ -276,7 +274,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	container.addActionRowComponents(
 		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
 			new ChannelSelectMenuBuilder()
-				.setCustomId(wrapPrefix('select:voice'))
+				.setCustomId(settingsId.encode('selectVoice'))
 				.setPlaceholder('기본 음성 채널을 선택하세요')
 				.setChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice)
 		)
@@ -293,7 +291,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	container.addActionRowComponents(
 		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
 			new ChannelSelectMenuBuilder()
-				.setCustomId(wrapPrefix('select:pin'))
+				.setCustomId(settingsId.encode('selectPin'))
 				.setPlaceholder('고정 채널을 선택하세요')
 				.setChannelTypes(ChannelType.GuildText)
 		)
@@ -302,7 +300,7 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(wrapPrefix('select:pinmode'))
+				.setCustomId(settingsId.encode('selectPinMode'))
 				.setPlaceholder('입력 동작 선택')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -324,26 +322,26 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('back'))
+				.setCustomId(settingsId.encode('back'))
 				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
 				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('toggle:pindelete'))
+				.setCustomId(settingsId.encode('togglePinDelete'))
 				.setLabel(guild.pinnedChannelDeleteInput ? '입력 메시지 보존' : '입력 메시지 삭제')
 				.setStyle(ButtonStyle.Secondary)
 				.setDisabled(!guild.pinnedChannelId),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('remove:text'))
+				.setCustomId(settingsId.encode('removeText'))
 				.setLabel(`${emoji('trash')} 텍스트 채널 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.textChannelId),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('remove:voice'))
+				.setCustomId(settingsId.encode('removeVoice'))
 				.setLabel(`${emoji('trash')} 음성 채널 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.voiceChannelId),
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('remove:pin'))
+				.setCustomId(settingsId.encode('removePin'))
 				.setLabel(`${emoji('trash')} 고정 채널 제거`)
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.pinnedChannelId)
@@ -375,7 +373,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('toggle:jtc'))
+				.setCustomId(settingsId.encode('toggleJtc'))
 				.setLabel(guild.jtcEnabled ? '설정 끄기' : '설정 켜기')
 				.setStyle(guild.jtcEnabled ? ButtonStyle.Danger : ButtonStyle.Success)
 				.setDisabled(!guild.jtcMarkerChannelId && !guild.jtcEnabled)
@@ -385,7 +383,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 	container.addActionRowComponents(
 		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
 			new ChannelSelectMenuBuilder()
-				.setCustomId(wrapPrefix('select:jtccategory'))
+				.setCustomId(settingsId.encode('selectJtcCategory'))
 				.setChannelTypes(ChannelType.GuildCategory)
 				.setPlaceholder('방을 만들 카테고리를 선택하세요')
 		)
@@ -394,7 +392,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('jtctemplate'))
+				.setCustomId(settingsId.encode('jtcTemplate'))
 				.setLabel(`${emoji('bell')} 방 이름 수정`)
 				.setStyle(ButtonStyle.Secondary)
 		)
@@ -409,7 +407,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 	container.addActionRowComponents(
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
-				.setCustomId(wrapPrefix('select:jtclimit'))
+				.setCustomId(settingsId.encode('selectJtcLimit'))
 				.setPlaceholder('입장 인원 제한')
 				.setMinValues(1)
 				.setMaxValues(1)
@@ -420,7 +418,7 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 	container.addActionRowComponents(
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
-				.setCustomId(wrapPrefix('back'))
+				.setCustomId(settingsId.encode('back'))
 				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
 				.setStyle(ButtonStyle.Primary)
 		)
@@ -431,12 +429,12 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 
 export function jtcTemplateModal(template: string) {
 	return new ModalBuilder()
-		.setCustomId('settings:jtc-template')
+		.setCustomId(settingsId.encode('jtcTemplateModal'))
 		.setTitle('방 이름 템플릿')
 		.addComponents(
 			new ActionRowBuilder<TextInputBuilder>().addComponents(
 				new TextInputBuilder()
-					.setCustomId('settings:jtc-template-input')
+					.setCustomId(settingsId.encode('jtcTemplateInput'))
 					.setLabel('방 이름 템플릿')
 					.setPlaceholder('{user}의 방')
 					.setStyle(TextInputStyle.Short)

@@ -36,6 +36,7 @@ function makeContext(overrides: { requesterId?: string; queueTracks?: Track[]; m
 		queue: { tracks: queueTracks } as unknown as Queue,
 		currentTrack,
 		interaction: {
+			id: '100000000000000001',
 			guildId: 'g1',
 			user: { id: 'requester' },
 			member: {} as GuildMember,

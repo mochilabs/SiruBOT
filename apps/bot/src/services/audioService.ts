@@ -209,7 +209,7 @@ export class AudioService {
 		const trackAdded = view.trackAdded(view.trackAddedProps(player, selectedTrack));
 
 		const collector = askReply.createMessageComponentCollector({
-			filter: (i) => i.user.id === interaction.user.id && i.customId.includes('playlist_'),
+			filter: (i) => i.user.id === interaction.user.id && view.decodePlaylistAddId(i.customId) !== null,
 			time: 30000,
 			componentType: ComponentType.Button
 		});
@@ -230,7 +230,9 @@ export class AudioService {
 			collector.off('collect', handleButtonAction);
 			collector.off('end', handleEndAction);
 
-			if (collectorInteraction.customId === 'playlist_add_remaining') {
+			const action = view.decodePlaylistAddId(collectorInteraction.customId)?.action;
+
+			if (action === 'addRemaining') {
 				await this.enqueueTrack(player, remainingTracks);
 
 				await collectorInteraction.editReply({
@@ -243,7 +245,7 @@ export class AudioService {
 					],
 					allowedMentions: { users: [], roles: [] }
 				});
-			} else if (collectorInteraction.customId === 'playlist_skip_remaining') {
+			} else if (action === 'skipRemaining') {
 				await collectorInteraction.editReply({
 					flags: MessageFlags.IsComponentsV2,
 					components: [trackAdded],

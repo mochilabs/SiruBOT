@@ -13,7 +13,7 @@ function makeVoteSkip(memberCount: number, voterIds: string[] = ['starter']) {
 		player: { connected: true, queue: { current: { info: { identifier: 'track-1' } } } } as never,
 		currentTrack: { info: { identifier: 'track-1' } } as never,
 		voiceChannelMembers,
-		interaction: { user: { id: 'starter' } } as never
+		interaction: { id: '100000000000000001', user: { id: 'starter' } } as never
 	});
 	return { voteSkip: voteSkip as unknown as { [key: string]: any }, voterIds, voiceChannelMembers };
 }

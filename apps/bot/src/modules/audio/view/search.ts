@@ -2,11 +2,12 @@ import { addSeparator, emoji, createContainer, formatTime } from '@sirubot/utils
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Track, UnresolvedTrack } from 'lavalink-client';
 import { truncateText } from '../../../lib/text.ts';
+import { searchId } from '../customIds.ts';
 
-/** /검색 결과 셀렉트 메뉴의 customId — 신규 핸들러는 이 값으로 파싱한다. */
-export const searchSelectCustomId = 'search:select';
+/** /검색 결과 셀렉트 메뉴의 customId — 메시지 컬렉터가 이 값으로 가려내요. */
+export const searchSelectCustomId = searchId.encode('select');
 /** 검색 결과 취소 버튼의 customId. */
-export const searchCancelCustomId = 'search:cancel';
+export const searchCancelCustomId = searchId.encode('cancel');
 
 /** 트랙 길이(ms)를 formatTime이 기대하는 초 단위로 넘겨 m:ss 포맷으로 만든다. */
 function trackDurationText(track: Track | UnresolvedTrack): string {

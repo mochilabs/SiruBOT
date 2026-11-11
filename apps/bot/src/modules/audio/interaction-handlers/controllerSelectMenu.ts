@@ -6,12 +6,9 @@ import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { resolveQueueSelection } from '../utils/queueSelection.ts';
-import { clampQueuePage, parseQueueViewId, QUEUE_VIEW_MESSAGES, QUEUE_VIEW_PREFIX, type QueueViewId } from '../utils/queueViewId.ts';
+import { clampQueuePage, decodeQueueSelectId, QUEUE_VIEW_MESSAGES, type QueueSelectView } from '../utils/queueViewId.ts';
 
-/** 대기열 개편 전 customId — 형식이 달라 처리할 수 없으니 새로 열도록 안내만 해요. */
-const LEGACY_QUEUE_SELECT_ID = 'controller:queue:select';
-
-type ParsedSelect = { view: QueueViewId | null; selectedValue: string | undefined };
+type ParsedSelect = { view: QueueSelectView; selectedValue: string | undefined };
 
 export default class ControllerSelectMenuHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -23,10 +20,9 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 
 	public override parse(interaction: StringSelectMenuInteraction) {
 		if (!interaction.inCachedGuild()) return this.none();
-		if (interaction.customId === LEGACY_QUEUE_SELECT_ID || interaction.customId.startsWith(QUEUE_VIEW_PREFIX)) {
-			return this.some<ParsedSelect>({ view: parseQueueViewId(interaction.customId), selectedValue: interaction.values[0] });
-		}
-		return this.none();
+		const view = decodeQueueSelectId(interaction.customId);
+		if (!view) return this.none();
+		return this.some<ParsedSelect>({ view, selectedValue: interaction.values[0] });
 	}
 
 	private async replyEphemeral(interaction: StringSelectMenuInteraction<'cached'>, message: string) {
@@ -37,10 +33,6 @@ export default class ControllerSelectMenuHandler extends InteractionHandler {
 	}
 
 	public async run(interaction: StringSelectMenuInteraction<'cached'>, { view, selectedValue }: ParsedSelect) {
-		if (!view || view.action !== 'sel') {
-			await this.replyEphemeral(interaction, QUEUE_VIEW_MESSAGES.expired);
-			return;
-		}
 		// 대기열 목록은 연 사람만 쓸 수 있어요.
 		if (view.ownerId !== interaction.user.id) {
 			await this.replyEphemeral(interaction, QUEUE_VIEW_MESSAGES.notOwner);

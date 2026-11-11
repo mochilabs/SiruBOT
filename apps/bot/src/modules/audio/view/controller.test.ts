@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { controllerView } from './controller.ts';
 import { repeatEmoji } from './repeat.ts';
+import { controllerId } from '../customIds.ts';
 
 const mocks = vi.hoisted(() => ({ queued: vi.fn(), remaining: vi.fn(), nowPlaying: vi.fn(), chapter: vi.fn(), chapterIndex: vi.fn() }));
 
@@ -113,7 +114,7 @@ describe('controllerView action rows', () => {
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(2);
-		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:queue:view']);
+		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:v1:queueView']);
 	});
 
 	it('챕터가 있으면 챕터 행을 추가한다', () => {
@@ -122,7 +123,7 @@ describe('controllerView action rows', () => {
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(2);
-		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:chapter:prev', 'controller:chapter:next']);
+		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:v1:chapter:prev', 'controller:v1:chapter:next']);
 		expect(rows[1]!.map((button) => button.emoji?.name)).toEqual(['arrow_back', 'arrow_forward']);
 	});
 
@@ -133,8 +134,8 @@ describe('controllerView action rows', () => {
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(3);
-		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:chapter:prev', 'controller:chapter:next']);
-		expect(rows[2]!.map((button) => button.custom_id)).toEqual(['controller:queue:view']);
+		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:v1:chapter:prev', 'controller:v1:chapter:next']);
+		expect(rows[2]!.map((button) => button.custom_id)).toEqual(['controller:v1:queueView']);
 	});
 
 	it('카드 모드에서도 ActionRow 길이 제약을 지킨다', () => {
@@ -319,5 +320,33 @@ describe('controller BPM footer', () => {
 	});
 	it('does not render a stale track BPM', () => {
 		expect(collectTexts(controllerJson({ currentBpm: { identifier: 'other', bpm: 120 } })).join(' ')).not.toContain('BPM');
+	});
+});
+
+describe('controllerView customId round trip', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mocks.nowPlaying.mockReturnValue(TRACK);
+		mocks.queued.mockReturnValue([TRACK]);
+		mocks.remaining.mockReturnValue(0);
+		mocks.chapter.mockReturnValue(null);
+		mocks.chapterIndex.mockReturnValue(0);
+	});
+
+	it('모든 버튼의 customId를 controllerId 선언이 해석해요', () => {
+		const json = controllerView({ player: player({ chapters: CHAPTERS, repeatMode: 'track' }) }).toJSON() as unknown as PlainComponent;
+		const ids = actionRows(json)
+			.flat()
+			.map((button) => button.custom_id!);
+		expect(ids.map((id) => controllerId.decode(id))).toEqual([
+			{ action: 'prev' },
+			{ action: 'pause' },
+			{ action: 'next' },
+			{ action: 'stop' },
+			{ action: 'repeat', mode: 'track' },
+			{ action: 'chapter', direction: 'prev' },
+			{ action: 'chapter', direction: 'next' },
+			{ action: 'queueView' }
+		]);
 	});
 });

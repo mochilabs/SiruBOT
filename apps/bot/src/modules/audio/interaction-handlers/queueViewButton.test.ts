@@ -4,7 +4,7 @@ import QueueViewButtonHandler from './queueViewButton.ts';
 import ControllerSelectMenuHandler from './controllerSelectMenu.ts';
 import { queueList } from '../view/queue.ts';
 import { queueSelectionValue } from '../utils/queueSelection.ts';
-import { encodeQueueViewId } from '../utils/queueViewId.ts';
+import { queueViewId } from '../utils/queueViewId.ts';
 
 const mocks = vi.hoisted(() => ({ getPlayer: vi.fn(), allowed: vi.fn(), skip: vi.fn(), preload: vi.fn() }));
 
@@ -197,20 +197,20 @@ describe('queue view state is per view, not per player', () => {
 	});
 
 	it('clamps a page past the end after the queue shrank', async () => {
-		const stale = encodeQueueViewId({ action: 'page', ownerId: USER_A, page: 9 });
+		const stale = queueViewId.encode('page', { ownerId: USER_A, page: 9 });
 		const interaction = await click(USER_A, stale);
 		expect(pageOf(interaction.update.mock.calls[0]![0].components[0].toJSON())).toBe(4);
 	});
 
 	it('shows the empty view when paging an emptied queue', async () => {
 		player.queue.tracks.length = 0;
-		const interaction = await click(USER_A, encodeQueueViewId({ action: 'page', ownerId: USER_A, page: 2 }));
+		const interaction = await click(USER_A, queueViewId.encode('page', { ownerId: USER_A, page: 2 }));
 		expect(interaction.update).toHaveBeenCalledTimes(1);
 	});
 
 	it('asks for a selection when remove or jump is pressed without one', async () => {
 		for (const action of ['rm', 'jump'] as const) {
-			const interaction = await click(USER_A, encodeQueueViewId({ action, ownerId: USER_A, page: 1 }));
+			const interaction = await click(USER_A, queueViewId.encode(action, { ownerId: USER_A, page: 1, token: null }));
 			expect(interaction.reply).toHaveBeenCalledTimes(1);
 			expect(JSON.stringify(interaction.reply.mock.calls[0]![0])).toContain('먼저 목록에서 곡을 선택');
 		}
@@ -221,20 +221,25 @@ describe('queue view state is per view, not per player', () => {
 	it('rejects a selection whose track no longer exists', async () => {
 		const token = queueSelectionValue(player as never, 34);
 		player.queue.tracks.length = 20;
-		const interaction = await click(USER_A, encodeQueueViewId({ action: 'rm', ownerId: USER_A, page: 4, token }));
+		const interaction = await click(USER_A, queueViewId.encode('rm', { ownerId: USER_A, page: 4, token }));
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 		expect(player.queue.tracks).toHaveLength(20);
 	});
 
-	it.each(['queue:page:111111111111111111:2', 'queue:v1:garbage', 'queue:v1:page:abc:2'])(
-		'replies with a reopen notice for %s',
-		async (customId) => {
-			const interaction = await click(USER_A, customId);
-			expect(interaction.reply).toHaveBeenCalledTimes(1);
-			expect(JSON.stringify(interaction.reply.mock.calls[0]![0])).toContain('대기열 목록');
-			expect(interaction.update).not.toHaveBeenCalled();
+	it.each(['queue:page:111111111111111111:2', 'queue:v1:garbage', 'queue:v1:page:abc:2', 'queue:v2:page:111111111111111111:2'])(
+		'does not claim legacy or malformed id %s',
+		(customId) => {
+			expect(buttons.parse(baseInteraction(USER_A, customId) as unknown as ButtonInteraction).isSome()).toBe(false);
 		}
 	);
+
+	it('claims every button id the view renders and no select id', () => {
+		const rendered = render(player, USER_A, 2, 14);
+		for (const id of customIds(rendered)) {
+			const claimed = buttons.parse(baseInteraction(USER_A, id) as unknown as ButtonInteraction).isSome();
+			expect(claimed).toBe(!id.startsWith('queue:v1:sel:') && id !== 'queue:v1:ind');
+		}
+	});
 
 	it('ignores the disabled page indicator', () => {
 		const interaction = baseInteraction(USER_A, 'queue:v1:ind');

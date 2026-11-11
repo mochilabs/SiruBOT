@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type StringSelectMenuInteraction } from 'discord.js';
 import ControllerSelectMenuHandler from './controllerSelectMenu.ts';
-import { encodeQueueViewId, parseQueueViewId } from '../utils/queueViewId.ts';
+import { decodeQueueSelectId, queueViewId } from '../utils/queueViewId.ts';
 
 const mocks = vi.hoisted(() => ({
 	getPlayer: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock('../view/queue.ts', () => ({
 
 function context() {
 	const interaction = {
-		customId: encodeQueueViewId({ action: 'sel', ownerId: '123456789012345678', page: 1 }),
+		customId: queueViewId.encode('sel', { ownerId: '123456789012345678', page: 1 }),
 		values: ['1.0123456789abcdef'],
 		guildId: 'guild',
 		user: { id: '123456789012345678' },
@@ -82,7 +82,7 @@ describe('controller select menu voice & admin checks', () => {
 		interaction.member.voice.channel.id = 'other-voice';
 
 		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
-			view: parseQueueViewId(interaction.customId),
+			view: decodeQueueSelectId(interaction.customId)!,
 			selectedValue: '1.0123456789abcdef'
 		});
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
@@ -96,7 +96,7 @@ describe('controller select menu voice & admin checks', () => {
 		interaction.member.voice.channel = null as unknown as { id: string };
 
 		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
-			view: parseQueueViewId(interaction.customId),
+			view: decodeQueueSelectId(interaction.customId)!,
 			selectedValue: '1.0123456789abcdef'
 		});
 		expect(interaction.reply).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ describe('controller select menu voice & admin checks', () => {
 		mocks.resolveQueueSelection.mockReturnValue(14);
 
 		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
-			view: parseQueueViewId(interaction.customId),
+			view: decodeQueueSelectId(interaction.customId)!,
 			selectedValue: 'x'
 		});
 		expect(mocks.queueList).toHaveBeenCalledWith(
@@ -119,10 +119,10 @@ describe('controller select menu voice & admin checks', () => {
 
 	it('rejects a select from someone who did not open the view, without touching the player', async () => {
 		const { interaction, handler } = context();
-		interaction.customId = encodeQueueViewId({ action: 'sel', ownerId: 'someone-else', page: 1 });
+		interaction.customId = queueViewId.encode('sel', { ownerId: '987654321098765432', page: 1 });
 
 		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
-			view: parseQueueViewId(interaction.customId),
+			view: decodeQueueSelectId(interaction.customId)!,
 			selectedValue: 'x'
 		});
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
@@ -130,15 +130,13 @@ describe('controller select menu voice & admin checks', () => {
 		expect(mocks.resolveQueueSelection).not.toHaveBeenCalled();
 	});
 
-	it('tells the user to reopen the queue for a legacy custom id', async () => {
-		const { interaction, handler } = context();
-		interaction.customId = 'controller:queue:select';
-
-		await handler.run(interaction as unknown as StringSelectMenuInteraction<'cached'>, {
-			view: parseQueueViewId(interaction.customId),
-			selectedValue: 'x'
-		});
-		expect(interaction.reply).toHaveBeenCalledTimes(1);
-		expect(interaction.update).not.toHaveBeenCalled();
+	it('parses the id the view encodes and ignores legacy ids', () => {
+		const { handler } = context();
+		const parse = (customId: string) =>
+			handler.parse({ customId, values: ['x'], inCachedGuild: () => true } as unknown as StringSelectMenuInteraction);
+		const parsed = parse(queueViewId.encode('sel', { ownerId: '123456789012345678', page: 2 }));
+		expect(parsed.isSome() && parsed.unwrap()).toEqual({ view: { action: 'sel', ownerId: '123456789012345678', page: 2 }, selectedValue: 'x' });
+		expect(parse('controller:queue:select').isSome()).toBe(false);
+		expect(parse(queueViewId.encode('page', { ownerId: '123456789012345678', page: 2 })).isSome()).toBe(false);
 	});
 });

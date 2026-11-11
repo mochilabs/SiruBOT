@@ -1,4 +1,4 @@
-import { QUEUE_VIEW_MESSAGES } from '../utils/queueViewId.ts';
+import { controllerId } from '../customIds.ts';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
@@ -14,6 +14,8 @@ import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/int
 import { actorFromMember } from '../../../features/music/application/actor.ts';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 
+type ControllerButtonId = NonNullable<ReturnType<typeof controllerId.decode>>;
+
 export default class ControllerButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
 		super(ctx, {
@@ -24,21 +26,16 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	public override parse(interaction: ButtonInteraction) {
 		if (!interaction.inCachedGuild()) return this.none();
-		if (interaction.customId.startsWith('controller:')) {
-			const parts = interaction.customId.replace('controller:', '').split(':');
-			return this.some({
-				command: parts[0],
-				subcommand: parts[1] ?? null
-			});
-		}
-		return this.none();
+		const decoded = controllerId.decode(interaction.customId);
+		return decoded ? this.some(decoded) : this.none();
 	}
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
 	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'stop', 'volume', 'next', 'prev']);
 
-	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
+	public async run(interaction: ButtonInteraction<'cached'>, decoded: ControllerButtonId) {
+		const command = decoded.action;
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 		let player: CustomPlayer;
 		if (ControllerButtonHandler.MUSIC_USE_CASE_COMMANDS.has(command)) {
@@ -63,7 +60,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				await this.handleResume(interaction, player);
 				break;
 			case 'repeat':
-				await this.handleRepeat(interaction, player, subcommand);
+				await this.handleRepeat(interaction, player, decoded.mode);
 				break;
 			case 'stop':
 				await this.handleStop(interaction);
@@ -74,21 +71,14 @@ export default class ControllerButtonHandler extends InteractionHandler {
 			case 'next':
 				await this.handleNext(interaction);
 				break;
-			case 'queue':
-				await this.handleQueue(interaction, player, subcommand);
+			case 'queueView':
+				await this.handleQueueView(interaction, player);
 				break;
 			case 'chapter':
-				await this.handleChapter(interaction, player, subcommand);
+				await this.handleChapter(interaction, player, decoded.direction);
 				break;
 			case 'volume':
-				await this.handleVolume(interaction, player, subcommand);
-				break;
-			default:
-				this.container.logger.warn(`Unknown controller command: ${command}:${subcommand ?? ''}`);
-				await interaction.reply({
-					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(`${emoji('error')} 알 수 없는 버튼 명령어예요. (${command})`)]
-				});
+				await this.handleVolume(interaction, player, decoded.direction);
 				break;
 		}
 	}
@@ -149,10 +139,9 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await this.updateControllerOrFail(interaction, player);
 	}
 
-	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
+	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: RepeatMode) {
 		await interaction.deferUpdate();
-		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
-		await this.container.music.setRepeat(actorFromMember(interaction.member), toSet);
+		await this.container.music.setRepeat(actorFromMember(interaction.member), mode);
 		await this.updateControllerOrFail(interaction, player);
 	}
 
@@ -160,7 +149,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	 * 챕터 건너뛰기 — 현재 위치 기준으로 이전·다음 챕터 시작으로 seek해요.
 	 * '이전'은 현재 챕터를 5초 이상 들었으면 그 챕터 처음으로 되돌려요 (Discord 건너뛰기 관습).
 	 */
-	private async handleChapter(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
+	private async handleChapter(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: 'prev' | 'next') {
 		const chapters = player.chapters ?? [];
 		const index = currentChapterIndex(player);
 		if (chapters.length === 0) {
@@ -173,7 +162,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 		const position = player.position ?? 0;
 		let target: number | null = null;
-		if (subcommand === 'prev') {
+		if (direction === 'prev') {
 			if (index !== null && position - chapters[index]!.start > 5_000) {
 				target = chapters[index]!.start;
 			} else if (index !== null && index > 0) {
@@ -182,7 +171,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 				// 챕터 경계 밖(보간 지연 등) — 위치보다 앞선 마지막 챕터로 되돌려요.
 				target = [...chapters].reverse().find((chapter) => chapter.start < position)?.start ?? chapters[0]!.start;
 			}
-		} else if (subcommand === 'next') {
+		} else if (direction === 'next') {
 			// 현재 챕터 다음 또는 경계 밖이면 위치보다 뒤인 첫 챕터로 건너뛰어요.
 			target = chapters.find((chapter) => chapter.start > position)?.start ?? null;
 		}
@@ -200,7 +189,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await this.updateControllerOrFail(interaction, player);
 	}
 
-	private async handleVolume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: string | null) {
+	private async handleVolume(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, direction: 'up' | 'down') {
 		const VOLUME_STEP = 10;
 		const current = player.volume ?? 0;
 		const next = Math.max(MUSIC_VOLUME_MIN, Math.min(MUSIC_VOLUME_MAX, current + (direction === 'up' ? VOLUME_STEP : -VOLUME_STEP)));
@@ -248,21 +237,6 @@ export default class ControllerButtonHandler extends InteractionHandler {
 		await interaction.deferUpdate();
 		// 인가·현재 곡 확인과 건너뛰기는 유스케이스가 맡아요. 다음 곡이 있으면 곧 trackStart가 새 컨트롤러를 보내고, 없으면 mixer가 컨트롤러를 갱신하므로 edit는 생략해요.
 		await this.container.music.skipNow(actorFromMember(interaction.member));
-	}
-
-	private async handleQueue(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, subcommand: string | null) {
-		switch (subcommand) {
-			case 'view':
-				await this.handleQueueView(interaction, player);
-				break;
-			default:
-				// 개편 전 대기열 목록의 prev/next/remove/jumpTo 버튼 — 새로 열도록 안내한다.
-				await interaction.reply({
-					flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-					components: [errorView(QUEUE_VIEW_MESSAGES.expired)]
-				});
-				break;
-		}
 	}
 
 	/** 컨트롤러의 '대기열 보기' 버튼 — 새 메시지로 queueList(10곡/쪽)를 연다. 컨트롤러는 유지한다. */

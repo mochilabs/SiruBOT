@@ -1,5 +1,6 @@
 import { ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, escapeMarkdown } from 'discord.js';
 import { createContainer, emoji } from '@sirubot/utils';
+import { libraryId } from '../customIds.ts';
 import type { PlaylistService } from '../../../services/playlistService.ts';
 
 type Playlist = Awaited<ReturnType<PlaylistService['getUserPlaylists']>>[number];
@@ -12,8 +13,9 @@ export type LibraryState =
 	| { kind: 'delete'; playlistId: string; page: number };
 
 const label = (text: string, limit = 80) => escapeMarkdown(text.slice(0, limit));
-const button = (id: string, action: string, text: string, style = ButtonStyle.Secondary) =>
-	new ButtonBuilder().setCustomId(`${id}:${action}`).setLabel(text).setStyle(style);
+type ButtonAction = 'prev' | 'next' | 'create' | 'add' | 'home' | 'delete' | 'cancel' | 'confirm' | 'play';
+const button = (sessionId: string, action: ButtonAction, text: string, style = ButtonStyle.Secondary) =>
+	new ButtonBuilder().setCustomId(libraryId.encode(action, { sessionId })).setLabel(text).setStyle(style);
 
 export function playlistLibraryView(id: string, state: LibraryState, playlists: Playlist[], detail: Detail | null, feedback = '') {
 	const view = createContainer();
@@ -35,7 +37,7 @@ export function playlistLibraryView(id: string, state: LibraryState, playlists: 
 			view.addActionRowComponents((row) =>
 				row.addComponents(
 					new StringSelectMenuBuilder()
-						.setCustomId(`${id}:open`)
+						.setCustomId(libraryId.encode('open', { sessionId: id }))
 						.setPlaceholder('플레이리스트 선택')
 						.addOptions(shown.map((item) => ({ label: item.name.slice(0, 100), description: `${item._count.tracks}곡`, value: item.id })))
 				)
@@ -85,7 +87,7 @@ export function playlistLibraryView(id: string, state: LibraryState, playlists: 
 		view.addActionRowComponents((row) =>
 			row.addComponents(
 				new StringSelectMenuBuilder()
-					.setCustomId(`${id}:remove`)
+					.setCustomId(libraryId.encode('remove', { sessionId: id }))
 					.setPlaceholder('목록에서 뺄 곡 선택')
 					.addOptions(
 						shown.map((entry) => ({

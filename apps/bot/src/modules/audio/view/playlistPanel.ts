@@ -10,6 +10,7 @@ import {
 	type ChatInputCommandInteraction,
 	type ButtonInteraction
 } from 'discord.js';
+import { libraryId } from '../customIds.ts';
 import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from './playlist.ts';
 import { notice } from '../../general/view/notice.ts';
 import { playSavedTracks } from '../../../services/playlistPlayback.ts';
@@ -54,7 +55,12 @@ export async function openPlaylistPanel(
 				? { kind: 'remove', playlistId: initial.id, entryId: options.entryId, page: 0 }
 				: { kind: 'tracks', playlistId: initial.id, page: Math.max(0, (options.page ?? 1) - 1) }
 		: { kind: 'list', page: 0 };
-	const id = `library:${randomUUID()}`;
+	const id = randomUUID();
+	/** 이 보관함 패널의 컴포넌트 customId만 해석해요 (모달·다른 패널의 ID는 null). */
+	const decodeOwn = (customId: string) => {
+		const decoded = libraryId.decode(customId);
+		return decoded && decoded.action !== 'form' && decoded.action !== 'formValue' && decoded.sessionId === id ? decoded : null;
+	};
 	let busy = false;
 	let expired = false;
 	async function render(feedback = '') {
@@ -80,17 +86,17 @@ export async function openPlaylistPanel(
 	const collector = message.createMessageComponentCollector({
 		time: 10 * 60_000,
 		idle: 3 * 60_000,
-		filter: (component) => component.customId.startsWith(`${id}:`)
+		filter: (component) => decodeOwn(component.customId) !== null
 	});
 	async function form(button: ButtonInteraction<'cached'>, create: boolean, playlistId?: string) {
-		const formId = `library-form:${randomUUID()}`;
+		const formId = libraryId.encode('form', { formId: randomUUID() });
 		const modal = new ModalBuilder()
 			.setCustomId(formId)
 			.setTitle(create ? '새 플레이리스트' : '곡 추가')
 			.addComponents(
 				new ActionRowBuilder<TextInputBuilder>().addComponents(
 					new TextInputBuilder()
-						.setCustomId('value')
+						.setCustomId(libraryId.encode('formValue'))
 						.setLabel(create ? '플레이리스트 이름' : '곡 제목 또는 주소')
 						.setStyle(TextInputStyle.Short)
 						.setRequired(true)
@@ -105,7 +111,7 @@ export async function openPlaylistPanel(
 		await submitted.deferReply({ flags: [MessageFlags.Ephemeral] });
 		try {
 			if (expired) throw new Error('보관함 사용 시간이 지났어요. /플레이리스트 목록을 다시 열어 주세요.');
-			const value = submitted.fields.getTextInputValue('value').trim();
+			const value = submitted.fields.getTextInputValue(libraryId.encode('formValue')).trim();
 			if (!value) throw new Error('내용을 입력해 주세요.');
 			let feedback;
 			if (create) {
@@ -143,7 +149,7 @@ export async function openPlaylistPanel(
 		}
 		busy = true;
 		try {
-			const action = component.customId.slice(id.length + 1);
+			const action = decodeOwn(component.customId)?.action;
 			if ((action === 'create' || action === 'add') && component.isButton()) {
 				await form(component, action === 'create', state.kind === 'list' ? undefined : state.playlistId);
 				return;

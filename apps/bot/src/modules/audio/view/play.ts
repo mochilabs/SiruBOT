@@ -2,6 +2,7 @@ import { addSeparator, emoji, createContainer, createThumbnail, formatTime, form
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, PlaylistInfo, Track } from 'lavalink-client';
 import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { playlistAddId } from '../customIds.ts';
 import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
 
 type playViewProps = {
@@ -151,12 +152,12 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 		new ButtonBuilder()
 			.setLabel(`나머지 ${remainTracks.length}곡 추가`)
 			.setStyle(ButtonStyle.Success)
-			.setCustomId('playlist_add_remaining')
+			.setCustomId(playlistAddId.encode('addRemaining'))
 			.setEmoji(emoji('plus')),
 		new ButtonBuilder()
 			.setLabel('현재 곡만 재생')
 			.setStyle(ButtonStyle.Secondary)
-			.setCustomId('playlist_skip_remaining')
+			.setCustomId(playlistAddId.encode('skipRemaining'))
 			.setEmoji(emoji('arrow_forward'))
 	];
 
@@ -164,4 +165,9 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 	container.addActionRowComponents(actionRow);
 
 	return container;
+}
+
+/** 플레이리스트 '나머지 곡 추가' 질문 버튼의 customId인지 확인해요 — 메시지 컬렉터의 필터에서 써요. */
+export function decodePlaylistAddId(customId: string) {
+	return playlistAddId.decode(customId);
 }

@@ -1,3 +1,4 @@
+import { filterId } from '../customIds.ts';
 import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -33,8 +34,6 @@ const presetLabel = (name: string): string => {
 	return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
 };
 
-export const filterCustomIdPrefix = 'filter:';
-
 type FilterViewProps = {
 	activeFilters: string[];
 };
@@ -57,7 +56,7 @@ export function filterView({ activeFilters }: FilterViewProps) {
 
 	// 프리셋 선택 메뉴
 	const selectMenu = new StringSelectMenuBuilder()
-		.setCustomId(filterCustomIdPrefix + 'select')
+		.setCustomId(filterId.encode('select'))
 		.setPlaceholder('적용할 프리셋을 선택하세요')
 		.setMinValues(0)
 		.setMaxValues(FILTER_PRESETS.length)
@@ -78,7 +77,7 @@ export function filterView({ activeFilters }: FilterViewProps) {
 
 	// 초기화 버튼
 	const resetButton = new ButtonBuilder()
-		.setCustomId(filterCustomIdPrefix + 'reset')
+		.setCustomId(filterId.encode('reset'))
 		.setLabel('필터 초기화')
 		.setEmoji(emoji('repeat'))
 		.setStyle(ButtonStyle.Danger)

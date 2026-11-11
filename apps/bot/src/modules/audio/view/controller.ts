@@ -15,6 +15,7 @@ import {
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPlayRelated.ts';
 import { repeatEmoji } from './repeat.ts';
+import { controllerId } from '../customIds.ts';
 import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { nowPlayingTrack } from '../lavalink/player/nowPlaying.ts';
@@ -33,13 +34,8 @@ type controllerViewProps = {
 	currentBpm?: CurrentBpm | null;
 };
 
-const customIdPrefix = 'controller:';
-const wrapPrefix = (customId: string) => {
-	return customIdPrefix + customId;
-};
-
-/** 컨트롤러 미리보기 아래 '대기열 보기' 버튼 — controllerButton 핸들러의 queue:view 서브커맨드로 파싱한다. */
-const queueViewCustomId = wrapPrefix('queue:view');
+/** 컨트롤러 미리보기 아래 '대기열 보기' 버튼 — controllerButton 핸들러의 queueView 액션으로 파싱한다. */
+const queueViewCustomId = controllerId.encode('queueView');
 
 export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }: controllerViewProps) {
 	const containerComponent = createContainer();
@@ -59,29 +55,29 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 	const thumbnail = new ThumbnailBuilder();
 
 	const prevButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('prev'))
+		.setCustomId(controllerId.encode('prev'))
 		.setEmoji(emoji('arrow_back'))
 		.setDisabled(player.queue.previous.length === 0);
 
 	const pauseButton = new ButtonBuilder()
-		.setCustomId(player.paused ? wrapPrefix('resume') : wrapPrefix('pause'))
+		.setCustomId(player.paused ? controllerId.encode('resume') : controllerId.encode('pause'))
 		.setEmoji(player.paused ? emoji('play') : emoji('pause'));
 
 	const nextButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('next'))
+		.setCustomId(controllerId.encode('next'))
 		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(player.queue.tracks.length === 0);
 
-	const stopButton = new ButtonBuilder().setCustomId(wrapPrefix('stop')).setEmoji(emoji('stop'));
+	const stopButton = new ButtonBuilder().setCustomId(controllerId.encode('stop')).setEmoji(emoji('stop'));
 
 	// 반복 상태 아이콘 바꾸기
 	const repeatButton = new ButtonBuilder()
 		.setCustomId(
 			player.repeatMode === 'off'
-				? wrapPrefix('repeat:queue')
+				? controllerId.encode('repeat', { mode: 'queue' })
 				: player.repeatMode === 'track'
-					? wrapPrefix('repeat:track')
-					: wrapPrefix('repeat:off')
+					? controllerId.encode('repeat', { mode: 'track' })
+					: controllerId.encode('repeat', { mode: 'off' })
 		)
 		.setEmoji(repeatEmoji(player.repeatMode));
 
@@ -99,12 +95,12 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 	const chapterIndex = chapters.length > 0 ? currentChapterIndex(player) : null;
 	const atChapterStart = chapterIndex !== null && (player.position ?? 0) - chapters[chapterIndex]!.start < 5_000;
 	const chapterPrevButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('chapter:prev'))
+		.setCustomId(controllerId.encode('chapter', { direction: 'prev' }))
 		.setLabel('이전 챕터')
 		.setEmoji(emoji('arrow_back'))
 		.setDisabled(chapterIndex === null || (chapterIndex === 0 && atChapterStart));
 	const chapterNextButton = new ButtonBuilder()
-		.setCustomId(wrapPrefix('chapter:next'))
+		.setCustomId(controllerId.encode('chapter', { direction: 'next' }))
 		.setLabel('다음 챕터')
 		.setEmoji(emoji('arrow_forward'))
 		.setDisabled(chapterIndex === null || chapterIndex >= chapters.length - 1);

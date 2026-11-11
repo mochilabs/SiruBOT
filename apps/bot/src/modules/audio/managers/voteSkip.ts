@@ -11,6 +11,7 @@ import { Player, Track } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import * as view from '../view/skip.ts';
 import { emoji } from '@sirubot/utils';
+import { voteSkipId } from '../customIds.ts';
 import { notice } from '../../general/view/notice.ts';
 
 interface VoteSkipOptions {
@@ -42,7 +43,7 @@ export class VoteSkip {
 
 	constructor(options: VoteSkipOptions) {
 		this.options = options;
-		this.customId = `skip_vote:${options.interaction.id}`;
+		this.customId = voteSkipId.encode('vote', { interactionId: options.interaction.id });
 		this.voteState = {
 			currentTrackId: options.currentTrack.info.identifier,
 			voteUsers: new Set<string>([options.interaction.user.id]),

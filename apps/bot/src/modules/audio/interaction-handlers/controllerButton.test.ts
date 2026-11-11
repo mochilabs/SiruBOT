@@ -1,15 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-	AttachmentBuilder,
-	Collection,
-	MessageFlags,
-	MessagePayload,
-	type ButtonInteraction,
-	type InteractionUpdateOptions,
-	type Message
-} from 'discord.js';
+import { AttachmentBuilder, Collection, MessagePayload, type ButtonInteraction, type InteractionUpdateOptions, type Message } from 'discord.js';
 import { AppError } from '../../../lib/appError.ts';
 import ControllerButtonHandler from './controllerButton.ts';
+import { controllerId } from '../customIds.ts';
 vi.mock('../../../services/guildSettings/channels.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getPinnedChannel: mocks.pinned }
@@ -33,6 +26,8 @@ const mocks = vi.hoisted(() => ({
 const actor = vi.hoisted(() => ({ guildId: 'guild', userId: 'user' }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
+		some = (value: unknown) => ({ isSome: () => true, unwrap: () => value });
+		none = () => ({ isSome: () => false });
 		container = {
 			audio: { getPlayer: mocks.getPlayer },
 			music: {
@@ -125,7 +120,7 @@ describe('controller button cached rendering', () => {
 
 	it('updates a pause button without starting or waiting for image rendering', async () => {
 		const { edit, updated, interaction, player, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' });
 		expect(mocks.pause).toHaveBeenCalledExactlyOnceWith(actor);
 		expect(player.pause).not.toHaveBeenCalled();
 		expect(edit).toHaveBeenCalledTimes(1);
@@ -138,17 +133,15 @@ describe('controller button cached rendering', () => {
 		const refusal = new AppError('forbidden', 'DJ만 가능해요.', { ephemeral: true });
 		mocks.pause.mockRejectedValue(refusal);
 		const { edit, interaction, handler } = context();
-		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null })).rejects.toBe(
-			refusal
-		);
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' })).rejects.toBe(refusal);
 		expect(edit).not.toHaveBeenCalled();
 		expect(mocks.cached).not.toHaveBeenCalled();
 	});
 
 	it('does not check DJ permission itself for pause and resume, the use case owns authorization', async () => {
 		const { interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'resume', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'resume' });
 		expect(mocks.allowed).not.toHaveBeenCalled();
 	});
 
@@ -159,7 +152,7 @@ describe('controller button cached rendering', () => {
 		const { edit, interaction, handler } = context();
 		const original = (interaction as unknown as { message: { attachments: Collection<string, { id: string; name: string }> } }).message;
 		original.attachments.set('attachment', { id: 'attachment', name: 'card.png' });
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' });
 		expect(edit.mock.calls[0]![0].files).toEqual([]);
 		expect(attachmentIds(edit.mock.calls[0]![0])).toEqual(['attachment']);
 		expect(mocks.render).not.toHaveBeenCalled();
@@ -169,7 +162,7 @@ describe('controller button cached rendering', () => {
 		mocks.cached.mockReturnValue({ url: 'attachment://card.png', filename: 'card.png', file: new AttachmentBuilder(Buffer.from('card')) });
 		mocks.pinned.mockResolvedValue('controller-channel');
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' });
 		expect(edit.mock.calls[0]![0].files).toHaveLength(1);
 	});
 
@@ -179,13 +172,13 @@ describe('controller button cached rendering', () => {
 		const { edit, interaction, handler } = context();
 		const original = (interaction as unknown as { message: { attachments: Collection<string, { id: string; name: string }> } }).message;
 		original.attachments.set('old', { id: 'old', name: 'old.png' });
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' });
 		expect(attachmentIds(edit.mock.calls[0]![0])).toEqual(['0']);
 	});
 
 	it('handles resume button correctly', async () => {
 		const { edit, updated, interaction, player, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'resume', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'resume' });
 		expect(mocks.resume).toHaveBeenCalledExactlyOnceWith(actor);
 		expect(player.resume).not.toHaveBeenCalled();
 		expect(edit).toHaveBeenCalledTimes(1);
@@ -195,13 +188,13 @@ describe('controller button cached rendering', () => {
 	it('rejects button interaction when player does not exist', async () => {
 		const { interaction, handler } = context();
 		mocks.getPlayer.mockReturnValue(undefined);
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'pause', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'pause' });
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
 	it('prev button delegates to the use case without checking DJ permission itself and without editing the controller', async () => {
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'prev', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'prev' });
 		expect(mocks.previous).toHaveBeenCalledExactlyOnceWith(actor);
 		expect(mocks.allowed).not.toHaveBeenCalled();
 		expect(interaction.deferUpdate).toHaveBeenCalledOnce();
@@ -212,12 +205,12 @@ describe('controller button cached rendering', () => {
 		const refusal = new AppError('not_found', '이전에 재생한 곡이 없어요.', { ephemeral: true });
 		mocks.previous.mockRejectedValue(refusal);
 		const { interaction, handler } = context();
-		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'prev', subcommand: null })).rejects.toBe(refusal);
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'prev' })).rejects.toBe(refusal);
 	});
 
 	it('next button delegates skipping to the use case without checking DJ permission itself', async () => {
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'next', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'next' });
 		expect(mocks.skipNow).toHaveBeenCalledExactlyOnceWith(actor);
 		expect(mocks.allowed).not.toHaveBeenCalled();
 		expect(interaction.deferUpdate).toHaveBeenCalledOnce();
@@ -228,27 +221,27 @@ describe('controller button cached rendering', () => {
 		const refusal = new AppError('not_found', '대기열에 곡이 없어요.', { ephemeral: true });
 		mocks.skipNow.mockRejectedValue(refusal);
 		const { interaction, handler } = context();
-		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'next', subcommand: null })).rejects.toBe(refusal);
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'next' })).rejects.toBe(refusal);
 	});
 
 	it('next button answers with the no-player guard message when the player is gone', async () => {
 		const { interaction, handler } = context();
 		mocks.getPlayer.mockReturnValue(undefined);
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'next', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'next' });
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 		expect(mocks.skipNow).not.toHaveBeenCalled();
 	});
 
 	it('raises volume by the step and applies it', async () => {
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'volume', direction: 'up' });
 		expect(mocks.setVolume).toHaveBeenCalledWith(actor, 50);
 		expect(edit).toHaveBeenCalledTimes(1);
 	});
 
 	it('lowers volume by the step and applies it', async () => {
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'volume', direction: 'down' });
 		expect(mocks.setVolume).toHaveBeenCalledWith(actor, 30);
 		expect(edit).toHaveBeenCalledTimes(1);
 	});
@@ -256,7 +249,7 @@ describe('controller button cached rendering', () => {
 	it('clamps volume at the lower bound without applying a change', async () => {
 		const { interaction, player, handler } = context();
 		player.volume = 0;
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'down' });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'volume', direction: 'down' });
 		expect(mocks.setVolume).not.toHaveBeenCalled();
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
@@ -265,27 +258,23 @@ describe('controller button cached rendering', () => {
 		const refusal = new AppError('forbidden', 'DJ만 가능해요.', { ephemeral: true });
 		mocks.setVolume.mockRejectedValue(refusal);
 		const { edit, interaction, handler } = context();
-		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' })).rejects.toBe(
-			refusal
-		);
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'volume', direction: 'up' })).rejects.toBe(refusal);
 		expect(edit).not.toHaveBeenCalled();
 	});
 
 	it('does not check DJ permission itself for volume, the use case owns authorization', async () => {
 		const { interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'volume', direction: 'up' });
 		expect(mocks.allowed).not.toHaveBeenCalled();
 	});
 
 	it.each([
 		['track', 'track'],
 		['queue', 'queue'],
-		['off', 'off'],
-		[null, 'off'],
-		['bogus', 'off']
-	])('repeat button %s sets the %s mode through the use case', async (subcommand, expected) => {
+		['off', 'off']
+	] as const)('repeat button %s sets the %s mode through the use case', async (mode, expected) => {
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'repeat', subcommand });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'repeat', mode });
 		expect(mocks.setRepeat).toHaveBeenCalledExactlyOnceWith(actor, expected);
 		expect(mocks.allowed).not.toHaveBeenCalled();
 		expect(edit).toHaveBeenCalledTimes(1);
@@ -293,7 +282,7 @@ describe('controller button cached rendering', () => {
 
 	it('stop button delegates stopping to the use case and replaces the clicked message with the stop view', async () => {
 		const { edit, interaction, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'stop', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'stop' });
 		expect(mocks.stop).toHaveBeenCalledExactlyOnceWith(actor);
 		expect(mocks.allowed).not.toHaveBeenCalled();
 		expect(edit).toHaveBeenCalledTimes(1);
@@ -302,7 +291,7 @@ describe('controller button cached rendering', () => {
 	it('stop button falls back to a follow-up when the controller message is already gone', async () => {
 		const { edit, interaction, handler } = context();
 		edit.mockRejectedValue(Object.assign(new Error('Unknown Message'), { code: 10008 }));
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'stop', subcommand: null });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'stop' });
 		expect(interaction.followUp).toHaveBeenCalledTimes(1);
 	});
 
@@ -310,7 +299,7 @@ describe('controller button cached rendering', () => {
 		const refusal = new AppError('forbidden', 'DJ만 가능해요.', { ephemeral: true });
 		mocks.stop.mockRejectedValue(refusal);
 		const { edit, interaction, handler } = context();
-		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'stop', subcommand: null })).rejects.toBe(refusal);
+		await expect(handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'stop' })).rejects.toBe(refusal);
 		expect(edit).not.toHaveBeenCalled();
 	});
 
@@ -322,7 +311,7 @@ describe('controller button cached rendering', () => {
 		}));
 		Object.assign(player, { queue: { tracks, current: null, previous: [] } });
 		Object.assign(interaction, { user: { id: '123456789012345678' } });
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'queue', subcommand: 'view' });
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { action: 'queueView' });
 
 		const json = JSON.stringify(interaction.reply.mock.calls[0]![0].components.map((component: { toJSON(): unknown }) => component.toJSON()));
 		const ids = [...json.matchAll(/"custom_id":"([^"]+)"/g)].map((match) => match[1]!);
@@ -330,12 +319,24 @@ describe('controller button cached rendering', () => {
 		expect(ids).toContain('queue:v1:page:123456789012345678:2');
 		expect(ids.filter((id) => id.startsWith('queue:v1:') && id !== 'queue:v1:ind').every((id) => id.includes('123456789012345678'))).toBe(true);
 	});
+});
 
-	it.each(['prev', 'next', 'remove', 'jumpTo'])('tells the user to reopen the queue for a legacy queue:%s button', async (subcommand) => {
-		const { interaction, player, handler } = context();
-		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'queue', subcommand });
-		expect(interaction.reply).toHaveBeenCalledTimes(1);
-		expect(interaction.reply.mock.calls[0]![0].flags).toContain(MessageFlags.Ephemeral);
-		expect(player.pause).not.toHaveBeenCalled();
+describe('controller button custom id parsing', () => {
+	it('parses the ids the view encodes and ignores everything else', () => {
+		const { handler } = context();
+		const parse = (customId: string) => handler.parse({ customId, inCachedGuild: () => true } as unknown as ButtonInteraction);
+		const parsed = parse(controllerId.encode('repeat', { mode: 'track' }));
+		expect(parsed.isSome() && parsed.unwrap()).toEqual({ action: 'repeat', mode: 'track' });
+		expect(parse(controllerId.encode('queueView')).isSome()).toBe(true);
+		for (const legacy of [
+			'controller:pause',
+			'controller:queue:view',
+			'controller:repeat:queue',
+			'controller:queue:select',
+			'controller:v2:pause',
+			'other:v1:pause'
+		]) {
+			expect(parse(legacy).isSome()).toBe(false);
+		}
 	});
 });

@@ -6,9 +6,9 @@ import { queueList, queueEmpty, QUEUE_PAGE_SIZE } from '../view/queue.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { GUARD_MESSAGES, guardPlayerAccess } from '../utils/interactionGuards.ts';
 import { resolveQueueSelection } from '../utils/queueSelection.ts';
-import { clampQueuePage, isQueueViewCustomId, parseQueueViewId, QUEUE_VIEW_MESSAGES, type QueueViewId } from '../utils/queueViewId.ts';
+import { clampQueuePage, decodeQueueButtonId, QUEUE_VIEW_MESSAGES, type QueueButtonView } from '../utils/queueViewId.ts';
 
-type ParsedQueueButton = { view: QueueViewId | null };
+type ParsedQueueButton = { view: QueueButtonView };
 
 /**
  * 대기열 목록(ephemeral)의 버튼 — 이전/다음 페이지, 선택한 곡 재생, 선택한 곡 제거.
@@ -23,9 +23,9 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 	}
 
 	public override parse(interaction: ButtonInteraction) {
-		if (!isQueueViewCustomId(interaction.customId)) return this.none();
-		// 해석할 수 없는 예전 형식도 핸들러로 보내 안내해요 — none()이면 클릭한 사람 화면에 "상호작용 실패"만 떠요.
-		return this.some<ParsedQueueButton>({ view: parseQueueViewId(interaction.customId) });
+		const view = decodeQueueButtonId(interaction.customId);
+		if (!view) return this.none();
+		return this.some<ParsedQueueButton>({ view });
 	}
 
 	private async replyEphemeral(interaction: ButtonInteraction<'cached'>, message: string) {
@@ -36,10 +36,6 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 	}
 
 	public async run(interaction: ButtonInteraction<'cached'>, { view }: ParsedQueueButton) {
-		if (!view || view.action === 'sel') {
-			await this.replyEphemeral(interaction, QUEUE_VIEW_MESSAGES.expired);
-			return;
-		}
 		// 다른 사람의 클릭도 안내해요 — 대기열 목록은 연 사람만 쓸 수 있어요.
 		if (view.ownerId !== interaction.user.id) {
 			await this.replyEphemeral(interaction, QUEUE_VIEW_MESSAGES.notOwner);
@@ -75,7 +71,7 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 		else await this.handleJumpTo(interaction, player, trackIndex);
 	}
 
-	private async handlePage(interaction: ButtonInteraction<'cached'>, view: QueueViewId) {
+	private async handlePage(interaction: ButtonInteraction<'cached'>, view: QueueButtonView) {
 		const player = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
 		const tracks = player ? getUserQueuedTracks(player) : [];
 		if (!player || tracks.length === 0) {
@@ -94,7 +90,7 @@ export default class QueueViewButtonHandler extends InteractionHandler {
 		});
 	}
 
-	private async handleRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, view: QueueViewId, trackIndex: number) {
+	private async handleRemove(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, view: QueueButtonView, trackIndex: number) {
 		await interaction.deferUpdate();
 		await player.queue.splice(trackIndex, 1);
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
