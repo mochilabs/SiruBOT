@@ -13,7 +13,6 @@ import { errorView } from '../../../lib/errorView.ts';
 import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { actorFromMember } from '../../../features/music/application/actor.ts';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
-import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 export default class ControllerButtonHandler extends InteractionHandler {
 	public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
@@ -37,7 +36,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 
 	private static readonly DJ_COMMANDS = new Set(['pause', 'resume', 'stop', 'prev', 'next', 'repeat', 'chapter', 'volume']);
 	/** 인가를 `container.music` 유스케이스가 맡는 명령 — 어댑터는 `guardPlayerAccess`를 거치지 않아요. */
-	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'volume']);
+	private static readonly MUSIC_USE_CASE_COMMANDS = new Set(['pause', 'resume', 'repeat', 'volume']);
 
 	public async run(interaction: ButtonInteraction<'cached'>, { command, subcommand }: { command: string; subcommand: string | null }) {
 		const existing = this.container.audio.getPlayer(interaction.guildId) as CustomPlayer | undefined;
@@ -153,9 +152,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	private async handleRepeat(interaction: ButtonInteraction<'cached'>, player: CustomPlayer, mode: string | null) {
 		await interaction.deferUpdate();
 		const toSet: RepeatMode = mode === 'track' ? 'track' : mode === 'queue' ? 'queue' : 'off';
-		const repeatUpdated = await guildPlayback.setRepeat(this.container.guildService, interaction.guildId, toSet);
-		await player.setRepeatMode(repeatUpdated);
-		await this.container.mixerService.clearNext(player).catch(() => null);
+		await this.container.music.setRepeat(actorFromMember(interaction.member), toSet);
 		await this.updateControllerOrFail(interaction, player);
 	}
 

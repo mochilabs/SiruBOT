@@ -22,7 +22,8 @@ const mocks = vi.hoisted(() => ({
 	getPlayer: vi.fn(),
 	checkManageGuild: vi.fn(),
 	queueRelatedUpfront: vi.fn(),
-	setVolume: vi.fn()
+	setVolume: vi.fn(),
+	setRepeatUseCase: vi.fn()
 }));
 const actor = vi.hoisted(() => ({ guildId: 'test-guild', userId: 'user-1' }));
 vi.mock('../../features/music/application/actor.ts', () => ({ actorFromMember: () => actor }));
@@ -30,7 +31,7 @@ vi.mock('../../features/music/application/actor.ts', () => ({ actorFromMember: (
 vi.mock('@sapphire/framework', () => ({
 	container: {
 		guildService: { getGuild: mocks.getGuild },
-		music: { setVolume: mocks.setVolume },
+		music: { setVolume: mocks.setVolume, setRepeat: mocks.setRepeatUseCase },
 		audio: {
 			getPlayer: mocks.getPlayer
 		},
@@ -152,7 +153,7 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 			normalizationEnabled: false
 		});
 		mocks.setVolume.mockResolvedValue({ volume: 90, playing: false });
-		mocks.setRepeat.mockResolvedValue('track');
+		mocks.setRepeatUseCase.mockResolvedValue({ mode: 'track', playing: false });
 		mocks.setRelated.mockResolvedValue(true);
 		mocks.setCrossfade.mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 4000 });
 		mocks.setTtsAnnounceMode.mockResolvedValue('parallel');
@@ -192,7 +193,7 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 
 		expect(res.status).toBe('ok');
 		expect(mocks.setRelated).toHaveBeenCalledWith(expect.anything(), 'test-guild', true);
-		expect(mocks.setRepeat).toHaveBeenCalledWith(expect.anything(), 'test-guild', 'track');
+		expect(mocks.setRepeatUseCase).toHaveBeenCalledWith(actor, 'track');
 		expect(res.updated).toEqual({ autoplay: true, repeat: 'track' });
 	});
 
@@ -224,6 +225,16 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		await expect(musicSettingsSetTool.execute({ volume: 200 }, createMockContext())).rejects.toThrow('0**부터 **150');
 	});
 
+	it('반복 모드만 바꾸는 요청도 공용 유스케이스가 인가하고 설정 권한(2차 검사)은 요구하지 않는다', async () => {
+		mocks.checkManageGuild.mockReturnValue(false);
+		mocks.hasDJRole.mockResolvedValue(false);
+
+		const raw = await musicSettingsSetTool.execute({ repeat: 'track' }, createMockContext());
+
+		expect(mocks.setRepeatUseCase).toHaveBeenCalledWith(actor, 'track');
+		expect(JSON.parse(raw).updated).toEqual({ repeat: 'track' });
+	});
+
 	it('서버 채널의 멤버가 아니면 볼륨 변경을 거절한다', async () => {
 		await expect(musicSettingsSetTool.execute({ volume: 90 }, createMockContext({ member: null }))).rejects.toThrow('DM에서는');
 		expect(mocks.setVolume).not.toHaveBeenCalled();
@@ -233,7 +244,9 @@ describe('musicSettingsSetTool (2차 권한 검사 및 설정 변경)', () => {
 		mocks.checkManageGuild.mockReturnValue(true);
 		const ctx = createMockContext();
 
-		await expect(musicSettingsSetTool.execute({ repeat: 'invalid' }, ctx)).rejects.toThrow('off, track, queue 중 하나');
+		mocks.setRepeatUseCase.mockRejectedValueOnce(new AppError('invalid_input', '<:error:1> 잘못된 반복 모드 값이에요.'));
+
+		await expect(musicSettingsSetTool.execute({ repeat: 'invalid' }, ctx)).rejects.toThrow(new Error('잘못된 반복 모드 값이에요.'));
 	});
 
 	it('크로스페이드 지속 시간 유효성 검사 (1초~10초)', async () => {

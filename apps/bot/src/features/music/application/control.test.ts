@@ -39,14 +39,17 @@ function harness(options: { player?: FakePlayer | null; denied?: AppError } = {}
 		if (options.denied) throw options.denied;
 	});
 	const saveVolume = vi.fn(async (_guildId: string, volume: number) => volume);
+	const saveRepeat = vi.fn(async (_guildId: string, mode: MusicRepeatMode) => mode);
+	const clearNext = vi.fn(async (_player: FakePlayer) => undefined);
 	const ensurePlayback = vi.fn(async (_player: FakePlayer) => undefined);
 	const control = createMusicControl<FakePlayer>({
 		access: { authorize },
 		getPlayer: () => player ?? undefined,
-		settings: { saveVolume },
+		settings: { saveVolume, saveRepeat },
+		mixer: { clearNext },
 		playback: { ensurePlayback }
 	});
-	return { control, player, authorize, saveVolume, ensurePlayback };
+	return { control, player, authorize, saveVolume, saveRepeat, clearNext, ensurePlayback };
 }
 
 async function rejection(promise: Promise<unknown>): Promise<AppError> {
@@ -191,5 +194,45 @@ describe('resume', () => {
 		const { control } = harness({ player, denied });
 		await expect(control.resume(actor)).rejects.toBe(denied);
 		expect(player.resume).not.toHaveBeenCalled();
+	});
+});
+
+describe('setRepeat', () => {
+	it.each(['off', 'track', 'queue'] as const)('%s를 저장하고 플레이어에 반영한 뒤 mixer 슬롯을 비워요', async (mode) => {
+		const { control, player, authorize, saveRepeat, clearNext } = harness();
+		await expect(control.setRepeat(actor, mode)).resolves.toEqual({ mode, playing: true });
+		expect(authorize).toHaveBeenCalledWith(actor);
+		expect(saveRepeat).toHaveBeenCalledWith('guild', mode);
+		expect(player!.setRepeatMode).toHaveBeenCalledWith(mode);
+		expect(clearNext).toHaveBeenCalledWith(player);
+	});
+
+	it('mixer 슬롯 정리가 실패해도 성공해요', async () => {
+		const { control, clearNext } = harness();
+		clearNext.mockRejectedValueOnce(new Error('mixer down'));
+		await expect(control.setRepeat(actor, 'track')).resolves.toMatchObject({ mode: 'track' });
+	});
+
+	it('플레이어가 없으면 길드 설정만 저장해요', async () => {
+		const { control, saveRepeat, clearNext } = harness({ player: null });
+		await expect(control.setRepeat(actor, 'queue')).resolves.toEqual({ mode: 'queue', playing: false });
+		expect(saveRepeat).toHaveBeenCalledWith('guild', 'queue');
+		expect(clearNext).not.toHaveBeenCalled();
+	});
+
+	it('알 수 없는 모드는 invalid_input으로 거절하고 저장하지 않아요', async () => {
+		const { control, saveRepeat, player } = harness();
+		const error = await rejection(control.setRepeat(actor, 'shuffle'));
+		expect(error.kind).toBe('invalid_input');
+		expect(error.userMessage).toContain('잘못된 반복 모드 값이에요.');
+		expect(saveRepeat).not.toHaveBeenCalled();
+		expect(player!.setRepeatMode).not.toHaveBeenCalled();
+	});
+
+	it('인가에 실패하면 아무것도 저장하지 않아요', async () => {
+		const denied = new AppError('forbidden', 'DJ만 가능해요.');
+		const { control, saveRepeat } = harness({ denied });
+		await expect(control.setRepeat(actor, 'track')).rejects.toBe(denied);
+		expect(saveRepeat).not.toHaveBeenCalled();
 	});
 });

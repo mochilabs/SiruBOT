@@ -24,14 +24,15 @@ const mocks = vi.hoisted(() => ({
 	pinned: vi.fn(),
 	setVolume: vi.fn(),
 	pause: vi.fn(),
-	resume: vi.fn()
+	resume: vi.fn(),
+	setRepeat: vi.fn()
 }));
 const actor = vi.hoisted(() => ({ guildId: 'guild', userId: 'user' }));
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
 		container = {
 			audio: { getPlayer: mocks.getPlayer },
-			music: { setVolume: mocks.setVolume, pause: mocks.pause, resume: mocks.resume },
+			music: { setVolume: mocks.setVolume, pause: mocks.pause, resume: mocks.resume, setRepeat: mocks.setRepeat },
 			guildService: {}
 		};
 	},
@@ -179,10 +180,10 @@ describe('controller button cached rendering', () => {
 		expect(interaction.reply).toHaveBeenCalledTimes(1);
 	});
 
-	it('checks DJ permission for DJ commands (stop, next, prev, repeat)', async () => {
+	it('checks DJ permission for DJ commands (stop, next, prev)', async () => {
 		mocks.allowed.mockResolvedValue(false);
 		const { interaction, handler } = context();
-		for (const cmd of ['stop', 'prev', 'next', 'repeat']) {
+		for (const cmd of ['stop', 'prev', 'next']) {
 			vi.clearAllMocks();
 			mocks.allowed.mockResolvedValue(false);
 			await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: cmd, subcommand: null });
@@ -226,6 +227,20 @@ describe('controller button cached rendering', () => {
 		const { interaction, handler } = context();
 		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'volume', subcommand: 'up' });
 		expect(mocks.allowed).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		['track', 'track'],
+		['queue', 'queue'],
+		['off', 'off'],
+		[null, 'off'],
+		['bogus', 'off']
+	])('repeat button %s sets the %s mode through the use case', async (subcommand, expected) => {
+		const { edit, interaction, handler } = context();
+		await handler.run(interaction as unknown as ButtonInteraction<'cached'>, { command: 'repeat', subcommand });
+		expect(mocks.setRepeat).toHaveBeenCalledExactlyOnceWith(actor, expected);
+		expect(mocks.allowed).not.toHaveBeenCalled();
+		expect(edit).toHaveBeenCalledTimes(1);
 	});
 
 	it('opens the queue view with every control bound to the opener', async () => {

@@ -195,7 +195,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			}),
 			getPlayer: (guildId) => container.audio.getPlayer(guildId),
 			settings: {
-				saveVolume: async (guildId, volume) => (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume
+				saveVolume: async (guildId, volume) => (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume,
+				saveRepeat: (guildId, mode) => guildPlayback.setRepeat(container.guildService, guildId, mode)
+			},
+			mixer: {
+				clearNext: (player) => container.mixerService.clearNext(player)
 			},
 			playback: {
 				ensurePlayback: (player) => container.audioService.ensurePlayback(player)

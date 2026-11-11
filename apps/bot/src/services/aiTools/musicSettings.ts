@@ -1,5 +1,4 @@
 import { container } from '@sapphire/framework';
-import type { RepeatMode } from 'lavalink-client';
 import { queueRelatedUpfront } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
@@ -140,9 +139,9 @@ export const musicSettingsSetTool: AiTool = {
 	status: '시루가 음악 설정을 변경하는 중..',
 	execute: async (args, ctx) => {
 		const guildId = requireGuild(ctx);
-		// 볼륨은 공용 유스케이스가 인가해요 — 그 외 설정 항목이 함께 오면 설정 권한(서버 관리자 또는 DJ 역할)도 요구해요.
+		// 볼륨·반복은 공용 유스케이스가 인가해요 — 그 외 설정 항목이 함께 오면 설정 권한(서버 관리자 또는 DJ 역할)도 요구해요.
 		const settingKeys = Object.keys(args).filter((key) => args[key] !== undefined && args[key] !== null);
-		if (settingKeys.some((key) => key !== 'volume')) await requireMusicSettingsPermission(ctx);
+		if (settingKeys.some((key) => key !== 'volume' && key !== 'repeat')) await requireMusicSettingsPermission(ctx);
 
 		const updated: Record<string, unknown> = {};
 
@@ -152,16 +151,7 @@ export const musicSettingsSetTool: AiTool = {
 		}
 
 		if (args.repeat !== undefined && args.repeat !== null) {
-			const repeat = String(args.repeat);
-			if (!['off', 'track', 'queue'].includes(repeat)) {
-				throw new Error('반복 모드는 off, track, queue 중 하나여야 해요.');
-			}
-			const updatedRepeat = await guildPlayback.setRepeat(container.guildService, guildId, repeat as RepeatMode);
-			const player = container.audio?.getPlayer?.(guildId);
-			if (player) {
-				await player.setRepeatMode(updatedRepeat);
-				await container.mixerService?.clearNext?.(player).catch(() => null);
-			}
+			const { mode: updatedRepeat } = await withAppError(() => container.music.setRepeat(musicActor(ctx), String(args.repeat)));
 			updated.repeat = updatedRepeat;
 		}
 

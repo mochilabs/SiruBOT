@@ -12,6 +12,12 @@ import { MUSIC_ACCESS_MESSAGES, type MusicAccess } from './access.ts';
 
 export type MusicRepeatMode = 'off' | 'track' | 'queue';
 
+const REPEAT_MODES: readonly MusicRepeatMode[] = ['off', 'track', 'queue'];
+
+function isRepeatMode(value: string): value is MusicRepeatMode {
+	return REPEAT_MODES.some((mode) => mode === value);
+}
+
 /** 유스케이스가 플레이어에서 쓰는 최소 면 — 실제 구현은 CustomPlayer, 테스트는 평범한 가짜예요. */
 export interface PlayerPort {
 	readonly paused: boolean;
@@ -44,6 +50,12 @@ export interface MusicControlDeps<P extends PlayerPort> {
 	settings: {
 		/** 길드 기본 볼륨을 저장하고 저장된 값을 돌려줘요. */
 		saveVolume(guildId: string, volume: number): Promise<number>;
+		/** 길드 반복 모드를 저장하고 저장된 값을 돌려줘요. */
+		saveRepeat(guildId: string, mode: MusicRepeatMode): Promise<MusicRepeatMode>;
+	};
+	mixer: {
+		/** mixer 예열 슬롯을 비워요. 반복 모드 전이는 클라이언트가 소유하므로 모드가 바뀔 때마다 필요해요. */
+		clearNext(player: P): Promise<unknown>;
 	};
 	playback: {
 		/** 멈춰 있던 플레이어가 대기열을 다시 재생하게 해요. */
@@ -58,10 +70,12 @@ export interface MusicControl {
 	pause(actor: Actor): Promise<{ paused: true }>;
 	/** 일시정지를 풀어요. 일시정지가 아니지만 멈춰 있으면 대기열 재생을 다시 시작해요. */
 	resume(actor: Actor): Promise<{ resumed: true }>;
+	/** 반복 모드(off|track|queue)를 길드에 저장하고 플레이어가 있으면 반영해요. 알 수 없는 값은 invalid_input이에요. */
+	setRepeat(actor: Actor, mode: string): Promise<{ mode: MusicRepeatMode; playing: boolean }>;
 }
 
 export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<P>): MusicControl {
-	const { access, getPlayer, settings, playback } = deps;
+	const { access, getPlayer, settings, mixer, playback } = deps;
 
 	/** 재생 중인 곡(현재 곡)이 있는 플레이어 — 없으면 슬래시 SongPlaying과 같은 문구로 거절해요. */
 	function requireSong(guildId: string): P {
@@ -104,6 +118,19 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 			if (player.paused) await player.resume();
 			else if (!player.playing) await playback.ensurePlayback(player);
 			return { resumed: true };
+		},
+
+		async setRepeat(actor, mode) {
+			await access.authorize(actor);
+			if (!isRepeatMode(mode)) throw new AppError('invalid_input', `${emoji('error')} 잘못된 반복 모드 값이에요.`, { ephemeral: true });
+			const saved = await settings.saveRepeat(actor.guildId, mode);
+			const player = getPlayer(actor.guildId);
+			if (player) {
+				await player.setRepeatMode(saved);
+				// 'off'로 바뀔 때도 슬롯을 비워야 해요 — track-repeat 중 예열된 현재 곡이 off 전환 뒤에도 남아 ghost-repeat으로 재생되는 것을 막아요.
+				await mixer.clearNext(player).catch(() => null);
+			}
+			return { mode: saved, playing: player !== undefined };
 		}
 	};
 }

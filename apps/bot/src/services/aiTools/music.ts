@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import type { RepeatMode, SearchPlatform, Track, UnresolvedTrack } from 'lavalink-client';
+import type { SearchPlatform, Track, UnresolvedTrack } from 'lavalink-client';
 import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { checkDJOrAlone } from '../../modules/audio/utils/permissionCheck.ts';
@@ -278,12 +278,8 @@ const musicRepeatTool: AiTool = {
 			const current = await guildPlayback.getRepeat(container.guildService, guildId);
 			return JSON.stringify({ status: 'ok', mode: current });
 		}
-		await requireDjOrAlone(ctx);
-		if (!['off', 'track', 'queue'].includes(mode)) throw new Error('반복 모드는 off/track/queue 중 하나예요.');
-		const updated = await guildPlayback.setRepeat(container.guildService, guildId, mode as RepeatMode);
-		const player = container.audio.getPlayer(guildId);
-		await player?.setRepeatMode(updated);
-		if (player) await container.mixerService.clearNext(player).catch(() => null);
+		// 인가·값 검증·저장·플레이어 반영은 공용 유스케이스가 맡아요.
+		const { mode: updated } = await withAppError(() => container.music.setRepeat(musicActor(ctx), mode));
 		return JSON.stringify({ status: 'ok', mode: updated });
 	}
 };

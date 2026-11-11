@@ -96,7 +96,7 @@ describe('web player permissions', () => {
 	describe('control (공용 음악 제어 유스케이스 경유)', () => {
 		const REQUEST_ID = 'ecbbfba6-987c-46fa-b7b2-49f517db1c1e';
 
-		async function control(request: Record<string, unknown>, music: Record<string, unknown>) {
+		async function control(request: Record<string, unknown>, music: Record<string, unknown>, player: unknown = null) {
 			const publish = vi.fn();
 			const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 			const member = { ...memberBase, permissions: new PermissionsBitField(0n) };
@@ -104,7 +104,7 @@ describe('web player permissions', () => {
 				client: {
 					guilds: { cache: new Map([['guild', { members: { cache: new Map([['user', member]]) }, channels: { cache: new Map() } }]]) }
 				},
-				audio: { getPlayer: vi.fn().mockReturnValue(null) },
+				audio: { getPlayer: vi.fn().mockReturnValue(player) },
 				guildService: {},
 				music,
 				redisStore: { publishPlayerWebResponse: publish }
@@ -127,6 +127,17 @@ describe('web player permissions', () => {
 			const music = { pause: vi.fn().mockResolvedValue({ paused: true }), resume: vi.fn().mockResolvedValue({ resumed: true }) };
 			const { response } = await control({ action }, music);
 			expect(music[action]).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ guildId: 'guild', userId: 'user' }));
+			expect(response.error).toBeUndefined();
+		});
+
+		it.each([
+			['off', 'track'],
+			['track', 'queue'],
+			['queue', 'off']
+		])('repeat는 플레이어의 반복 모드가 %s이면 %s로 순환시켜요', async (current, expected) => {
+			const setRepeat = vi.fn().mockResolvedValue({ mode: expected, playing: true });
+			const { response } = await control({ action: 'repeat' }, { setRepeat }, { repeatMode: current });
+			expect(setRepeat).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ guildId: 'guild' }), expected);
 			expect(response.error).toBeUndefined();
 		});
 
