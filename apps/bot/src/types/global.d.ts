@@ -70,6 +70,7 @@ declare module '@sapphire/pieces' {
 		botAdminResponder?: BotAdminResponder;
 		panelPostResponder?: import('../services/panelPostResponder.ts').PanelPostResponder;
 		roleValidationResponder?: import('../services/roleValidationResponder.ts').RoleValidationResponder;
+		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };
 	}

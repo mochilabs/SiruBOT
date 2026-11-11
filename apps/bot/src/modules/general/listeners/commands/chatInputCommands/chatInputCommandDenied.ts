@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { ChatInputCommandDeniedPayload, Events } from '@sapphire/framework';
 import { Listener, UserError, container } from '@sapphire/framework';
 import { notice } from '../../../view/notice.ts';
-import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags, RESTJSONErrorCodes } from 'discord.js';
+import { ignoreDiscord } from '../../../../../lib/ignoreDiscord.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandDenied })
 export class ChatInputCommandDenied extends Listener {
@@ -24,13 +25,14 @@ export async function sendComponent(
 		// - 공개 defer된 경우: followUp을 먼저 호출하면 Discord가 첫 followUp으로 @original을 채운 뒤 deleteReply가 그 에러 메시지 자체를 지워버리므로, 반드시 @original(생각 중 자리표시자)을 먼저 삭제한 뒤 ephemeral followUp을 보내요
 		if (options.ephemeral) {
 			if (interaction.ephemeral) {
-				await interaction
-					.editReply({
+				await ignoreDiscord(
+					interaction.editReply({
 						components: [component],
 						flags: [MessageFlags.IsComponentsV2],
 						allowedMentions: { users: [interaction.user.id], roles: [] }
-					})
-					.catch(() => undefined);
+					}),
+					[RESTJSONErrorCodes.UnknownMessage, RESTJSONErrorCodes.UnknownInteraction]
+				);
 				return;
 			}
 

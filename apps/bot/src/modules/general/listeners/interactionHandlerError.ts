@@ -3,15 +3,16 @@ import { Events, InteractionHandlerError as InteractionHandlerErrorPayload, List
 import { MessageFlags, InteractionReplyOptions } from 'discord.js';
 import * as Sentry from '@sentry/node';
 import { emoji } from '@sirubot/utils';
-import { errorView, resolveErrorEphemeral } from '../../../lib/errorView.ts';
+import { errorView } from '../../../lib/errorView.ts';
+import { presentError } from '../../../lib/errorPresenter.ts';
 
 @ApplyOptions<Listener.Options>({ event: Events.InteractionHandlerError })
 export class InteractionHandlerError extends Listener {
 	public override async run(error: Error, { handler, interaction }: InteractionHandlerErrorPayload) {
-		const userError = error instanceof UserError;
+		const presentation = presentError(error, `${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`);
 
-		// UserError는 의도된 사용자 안내이므로 Sentry에 적재하지 않아요.
-		if (!userError) {
+		// UserError 같은 의도된 안내는 Sentry에 적재하지 않아요.
+		if (presentation.report) {
 			Sentry.withScope((scope) => {
 				scope.setTag('handler', handler.name);
 				scope.setTag('type', 'interactionHandlerError');
@@ -24,13 +25,13 @@ export class InteractionHandlerError extends Listener {
 
 			this.container.logger.error(`InteractionHandlerError in ${handler.name}:`, error);
 		} else {
-			this.container.logger.warn(`InteractionHandlerError (UserError) in ${handler.name}: ${error.identifier}`);
+			const label = error instanceof UserError ? `UserError: ${error.identifier}` : String(error.name);
+			this.container.logger.warn(`InteractionHandlerError (${label}) in ${handler.name}`);
 		}
 
 		if (interaction.isRepliable()) {
 			try {
-				const ephemeral = resolveErrorEphemeral(error);
-				const message = userError ? error.message : `${emoji('tools')} 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`;
+				const { ephemeral, message } = presentation;
 
 				const payload = ephemeral
 					? ({
