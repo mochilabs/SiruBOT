@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setConfigForTesting } from '../../../../core/config.ts';
+import { makeTestConfig } from '../../../../core/config.testing.ts';
 import { container } from '@sapphire/framework';
 import type { Track, TrackEndEvent, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
@@ -66,6 +68,10 @@ function track(encoded: string, identifier?: string): Track {
 function startEvent(encoded?: string, identifier?: string): TrackStartEvent {
 	return { track: encoded ? { encoded, info: { identifier } } : null } as unknown as TrackStartEvent;
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('resolveStartedTrack', () => {
 	beforeEach(() => {

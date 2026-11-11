@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
+import { setConfigForTesting } from '../../core/config.ts';
+import { makeTestConfig } from '../../core/config.testing.ts';
 import { PermissionFlagsBits } from 'discord.js';
 
 const mocks = vi.hoisted(() => ({
@@ -36,6 +38,10 @@ vi.mock('@sapphire/framework', () => ({
 
 import { buildDiscordContextBlock, buildSystemContent } from './prompt.ts';
 vi.mock('../guildSettings/playback.ts', async (orig) => ({ ...(await orig()), getDJRole: mocks.getDJRole }));
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('buildDiscordContextBlock (사용자 권한 컨텍스트 주입)', () => {
 	beforeEach(() => {

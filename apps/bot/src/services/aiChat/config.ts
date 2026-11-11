@@ -1,23 +1,15 @@
 import { container } from '@sapphire/framework';
+import { getConfig } from '../../core/config.ts';
 import type { AiMode } from '../guildService.ts';
 import { ChatServiceError, type ChatConfig } from './types.ts';
 import * as guildChatPolicy from '../guildSettings/chatPolicy.ts';
 
 /** .env에서 채팅 설정을 읽어요. 필수값이 없으면 null */
 export function getChatConfig(): ChatConfig | null {
-	const apiUrl = (process.env.OPENAI_COMPATIBLE_API_URL ?? 'http://127.0.0.1:8080/v1').trim().replace(/\/+$/, '');
-	const model = (process.env.CHAT_MODEL ?? '').trim();
+	const { apiUrl, apiKey, model, timeoutMs, streamUpdateMs, thinkToken } = getConfig().aiChat;
 	if (!apiUrl || !model) return null;
 
-	return {
-		apiUrl,
-		apiKey: (process.env.OPENAI_API_KEY ?? '').trim(),
-		model,
-		timeoutMs: Math.max(1000, parseInt(process.env.LLM_API_TIMEOUT_MS ?? '120000', 10) || 120_000),
-		// help 커맨드의 타이핑 단계(420~560ms)와 맞춘 기본값 — webhook 편집 제한(5/2초) 여유 내
-		streamUpdateMs: Math.max(200, parseInt(process.env.CHAT_STREAM_UPDATE_MS ?? '450', 10) || 450),
-		thinkToken: (process.env.ENABLE_THINK_TOKEN ?? 'false').toLowerCase() === 'true'
-	};
+	return { apiUrl, apiKey, model, timeoutMs, streamUpdateMs, thinkToken };
 }
 
 // 서버/채널 AI 설정

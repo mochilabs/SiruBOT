@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 import { MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
+import { getConfig } from '../core/config.ts';
 
 /**
  * 채팅 TTS(siru_tts 2.0) 클라이언트 — 합성 요청·공개 URL 수신·재시도.
@@ -72,10 +73,9 @@ export class TtsError extends Error {
 
 /** env에서 siru_tts 접속 정보를 읽는다 — SIRU_TTS_URL이 없으면 기능 off. */
 export function getTtsConfig(): TtsConfig | null {
-	const url = (process.env.SIRU_TTS_URL ?? '').trim().replace(/\/+$/, '');
+	const { url, defaultVoice } = getConfig().tts;
 	if (!url) return null;
-	const defaultVoice = (process.env.SIRU_TTS_DEFAULT_VOICE ?? '').trim();
-	return { url, defaultVoice: defaultVoice || null };
+	return { url, defaultVoice };
 }
 
 export class TtsService {

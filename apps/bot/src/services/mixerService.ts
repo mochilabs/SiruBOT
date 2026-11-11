@@ -1,4 +1,5 @@
 import { container } from '@sapphire/framework';
+import { getConfig } from '../core/config.ts';
 import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
 import type { CustomPlayer, OverrideAction } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -13,7 +14,6 @@ import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRela
 import type { MixerSettings } from './guildSettings/types.ts';
 import * as guildMixer from './guildSettings/mixer.ts';
 const MIXER_FILTER_KEY = 'mixer';
-const MIXER_CALL_TIMEOUT_MS = Number(process.env.MIXER_CALL_TIMEOUT_MS) || 5_000;
 
 class AutomixUnsupportedError extends Error {
 	constructor() {
@@ -127,7 +127,7 @@ export class MixerService {
 					'Content-Type': 'application/json',
 					...(init?.headers ?? {})
 				},
-				signal: init?.signal ?? AbortSignal.timeout(MIXER_CALL_TIMEOUT_MS)
+				signal: init?.signal ?? AbortSignal.timeout(getConfig().mixer.callTimeoutMs)
 			});
 		} catch (error: any) {
 			if (error?.name === 'AbortError') {
@@ -262,7 +262,7 @@ export class MixerService {
 						}
 					}
 					const retryEpoch = Math.max(item.epoch, player.currentEpoch ?? item.epoch);
-					await sendInvalidate(retryEpoch, AbortSignal.timeout(MIXER_CALL_TIMEOUT_MS));
+					await sendInvalidate(retryEpoch, AbortSignal.timeout(getConfig().mixer.callTimeoutMs));
 				}
 				item.resolve();
 			} catch (err: unknown) {

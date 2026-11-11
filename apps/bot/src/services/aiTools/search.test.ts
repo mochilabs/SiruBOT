@@ -2,17 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { performWebSearch, searchLite, searchSearxng } from './searchEngine.ts';
 import { webSearchTool } from './search.ts';
 import type { AiToolContext } from './types.ts';
+import { setConfigForTesting } from '../../core/config.ts';
+import { makeTestConfig } from '../../core/config.testing.ts';
 
 describe('searchEngine', () => {
-	const originalEnv = { ...process.env };
-
 	beforeEach(() => {
 		vi.resetModules();
-		process.env = { ...originalEnv };
+		setConfigForTesting(makeTestConfig());
 	});
 
 	afterEach(() => {
-		process.env = originalEnv;
+		setConfigForTesting(null);
 		vi.unstubAllGlobals();
 	});
 
@@ -76,8 +76,7 @@ describe('searchEngine', () => {
 	});
 
 	it('falls back to searchLite if SearXNG fails', async () => {
-		process.env.ENABLE_SEARXNG = 'true';
-		process.env.SEARXNG_BASE_URL = 'http://localhost:8888';
+		setConfigForTesting(makeTestConfig({ ENABLE_SEARXNG: 'true', SEARXNG_BASE_URL: 'http://localhost:8888' }));
 
 		const mockHtml = `
 			<table>

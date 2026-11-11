@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setConfigForTesting } from '../core/config.ts';
+import { makeTestConfig } from '../core/config.testing.ts';
 import { TtsService, getTtsConfig } from './ttsService.ts';
 
 const mocks = vi.hoisted(() => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
@@ -34,14 +36,14 @@ function routeFetch(handlers: { usage?: () => any; readyz?: () => any; synthesiz
 	});
 }
 
+const TTS_ON = { SIRU_TTS_URL: 'http://tts.invalid', SIRU_TTS_DEFAULT_VOICE: 'edge:ko-KR-SunHiNeural' };
+
 function envOn(): void {
-	process.env.SIRU_TTS_URL = 'http://tts.invalid';
-	process.env.SIRU_TTS_DEFAULT_VOICE = 'edge:ko-KR-SunHiNeural';
+	setConfigForTesting(makeTestConfig(TTS_ON));
 }
 
 function envOff(): void {
-	delete process.env.SIRU_TTS_URL;
-	delete process.env.SIRU_TTS_DEFAULT_VOICE;
+	setConfigForTesting(makeTestConfig());
 }
 
 beforeEach(() => {
@@ -50,7 +52,7 @@ beforeEach(() => {
 	routeFetch({});
 });
 afterEach(() => {
-	envOff();
+	setConfigForTesting(null);
 	vi.unstubAllGlobals();
 	vi.stubGlobal('fetch', fetchMock);
 });
@@ -58,14 +60,14 @@ afterEach(() => {
 describe('getTtsConfig', () => {
 	it('requires only the url — the default voice is optional', () => {
 		expect(getTtsConfig()).toEqual({ url: 'http://tts.invalid', defaultVoice: 'edge:ko-KR-SunHiNeural' });
-		delete process.env.SIRU_TTS_DEFAULT_VOICE;
+		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid' }));
 		expect(getTtsConfig()).toEqual({ url: 'http://tts.invalid', defaultVoice: null });
-		delete process.env.SIRU_TTS_URL;
+		setConfigForTesting(makeTestConfig());
 		expect(getTtsConfig()).toBeNull();
 	});
 
 	it('trims trailing slashes from the url', () => {
-		process.env.SIRU_TTS_URL = 'http://tts.invalid///';
+		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid///' }));
 		expect(getTtsConfig()?.url).toBe('http://tts.invalid');
 	});
 });
@@ -146,7 +148,7 @@ describe('TtsService synthesize', () => {
 				});
 			}
 		});
-		delete process.env.SIRU_TTS_DEFAULT_VOICE;
+		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid' }));
 		await new TtsService().synthesize('안녕', { emotion: 'neutral' });
 		expect(sentBody).toEqual({ text: '안녕', return_url: true });
 	});

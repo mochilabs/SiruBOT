@@ -5,7 +5,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
 import { inspect } from 'node:util';
-import { OWNERS } from '../../../lib/owners.ts';
+import { isOwner } from '../../../lib/owners.ts';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.ModalSubmit
@@ -17,7 +17,7 @@ export class EvalModalHandler extends InteractionHandler {
 	}
 
 	public override async run(interaction: ModalSubmitInteraction) {
-		if (!OWNERS.includes(interaction.user.id)) {
+		if (!isOwner(interaction.user.id)) {
 			await interaction.reply({
 				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
 				components: [notice(`${emoji('error')} 봇 소유자만 사용할 수 있어요.`)]

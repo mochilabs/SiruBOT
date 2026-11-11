@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
+import { setConfigForTesting } from '../../../core/config.ts';
+import { makeTestConfig } from '../../../core/config.testing.ts';
 import { LavalinkManager, type Track } from 'lavalink-client';
 import {
 	normalizeTitle,
@@ -55,6 +57,10 @@ function track(title: string, identifier: string, duration = 100_000, extra: Rec
 		...extra
 	} as unknown as Track;
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('isRelatedTrack', () => {
 	it('null/undefined는 추천곡이 아니다', () => {

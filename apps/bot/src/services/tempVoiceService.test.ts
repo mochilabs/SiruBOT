@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setConfigForTesting } from '../core/config.ts';
+import { makeTestConfig } from '../core/config.testing.ts';
 
 const mocks = vi.hoisted(() => ({
 	getCacheHashFields: vi.fn(),
@@ -39,6 +41,10 @@ function voiceChannel(id: string, humanCount: number) {
 		delete: vi.fn(async () => undefined)
 	};
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('TempVoiceService room restore', () => {
 	beforeEach(() => {

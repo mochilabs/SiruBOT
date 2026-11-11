@@ -1,3 +1,5 @@
+import { getConfig } from '../../core/config.ts';
+
 export interface WebSearchResultItem {
 	id: string;
 	title: string;
@@ -113,8 +115,7 @@ export async function searchLite(query: string, maxResults: number): Promise<Web
 
 /** SearXNG 우선, 실패 시 DuckDuckGo 폴백 검색 실행기 */
 export async function performWebSearch(query: string, maxResults: number, language = 'ko-KR'): Promise<WebSearchResultItem[]> {
-	const enableSearxng = (process.env.ENABLE_SEARXNG ?? 'true').toLowerCase() !== 'false';
-	const searxngBaseUrl = process.env.SEARXNG_BASE_URL?.trim();
+	const { searxngEnabled: enableSearxng, searxngBaseUrl } = getConfig().search;
 
 	if (enableSearxng && searxngBaseUrl) {
 		try {

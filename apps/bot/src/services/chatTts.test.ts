@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatTtsService, preprocessTtsText, TTS_CLIP_MAX_CHARS, TTS_MERGE_WINDOW_MS, TTS_OVERLAY_QUEUE_MAX, TTS_SOLO_QUEUE_MAX } from './chatTts.ts';
 import { TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import { setConfigForTesting } from '../core/config.ts';
+import { makeTestConfig } from '../core/config.testing.ts';
 import type { Message, User } from 'discord.js';
 import type { Track } from 'lavalink-client';
 vi.mock('./guildSettings/playback.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildPlayback }));
@@ -106,6 +108,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	setConfigForTesting(null);
 	vi.useRealTimers();
 });
 
@@ -517,9 +520,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 	});
 
 	it('cancels the idle destroy timer when TTS is enabled for the guild', async () => {
-		process.env.SIRU_TTS_URL = 'http://tts.invalid';
-		process.env.SIRU_TTS_API_KEY = 'key';
-		process.env.SIRU_TTS_DEFAULT_VOICE = 'edge:ko-KR-SunHiNeural';
+		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid', SIRU_TTS_DEFAULT_VOICE: 'edge:ko-KR-SunHiNeural' }));
 		try {
 			const service = new ChatTtsService();
 			const player = makePlayer();
@@ -532,16 +533,12 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 			expect(player.setData).toHaveBeenCalledWith('internal_queueempty', undefined);
 			clearTimeout(handle);
 		} finally {
-			delete process.env.SIRU_TTS_URL;
-			delete process.env.SIRU_TTS_API_KEY;
-			delete process.env.SIRU_TTS_DEFAULT_VOICE;
+			setConfigForTesting(null);
 		}
 	});
 
 	it('does not touch the idle timer when TTS is off for the guild', async () => {
-		process.env.SIRU_TTS_URL = 'http://tts.invalid';
-		process.env.SIRU_TTS_API_KEY = 'key';
-		process.env.SIRU_TTS_DEFAULT_VOICE = 'edge:ko-KR-SunHiNeural';
+		setConfigForTesting(makeTestConfig({ SIRU_TTS_URL: 'http://tts.invalid', SIRU_TTS_DEFAULT_VOICE: 'edge:ko-KR-SunHiNeural' }));
 		try {
 			const service = new ChatTtsService();
 			const player = makePlayer();
@@ -551,9 +548,7 @@ describe('ChatTtsService — 단독 큐 drain·scrub·keep-alive', () => {
 
 			expect(player.setData).not.toHaveBeenCalled();
 		} finally {
-			delete process.env.SIRU_TTS_URL;
-			delete process.env.SIRU_TTS_API_KEY;
-			delete process.env.SIRU_TTS_DEFAULT_VOICE;
+			setConfigForTesting(null);
 		}
 	});
 });

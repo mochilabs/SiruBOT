@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setConfigForTesting } from '../../../../core/config.ts';
+import { makeTestConfig } from '../../../../core/config.testing.ts';
 import { container, ListenerStore } from '@sapphire/framework';
 import { GatewayDispatchEvents, type GatewayDispatchPayload } from 'discord.js';
 import { DefaultQueueStore, LavalinkManager, type Track } from 'lavalink-client';
@@ -100,6 +102,10 @@ function setup(destroyPlayer = true) {
 	const restore = () => engine.recreateSavedPlayer(node, GUILD_ID, saved, { resetVoiceState: true });
 	return { voice, sends, manager, node, raw, saved, engine, restore, queueStore, updatePlayer };
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('fresh restore voice reconnect', () => {
 	beforeEach(() => vi.useFakeTimers());

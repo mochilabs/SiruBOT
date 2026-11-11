@@ -4,6 +4,8 @@ vi.mock('@sapphire/framework', () => ({
 	container: { logger: { debug: vi.fn() }, client: { guilds: { cache: new Map() } } }
 }));
 
+import { setConfigForTesting } from '../core/config.ts';
+import { makeTestConfig } from '../core/config.testing.ts';
 import { reportNodeEvent, reportPlaybackEvent } from './playbackReporter.ts';
 
 describe('playbackReporter', () => {
@@ -13,14 +15,12 @@ describe('playbackReporter', () => {
 		fetchMock.mockReset();
 		fetchMock.mockResolvedValue({ ok: true });
 		vi.stubGlobal('fetch', fetchMock);
-		process.env.DATA_API_URL = 'http://data-api:3002';
-		process.env.DATA_API_AUTH_KEY = 'test-key';
+		setConfigForTesting(makeTestConfig({ DATA_API_URL: 'http://data-api:3002', DATA_API_AUTH_KEY: 'test-key' }));
 	});
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
-		delete process.env.DATA_API_URL;
-		delete process.env.DATA_API_AUTH_KEY;
+		setConfigForTesting(null);
 	});
 
 	it('reports node events without a guild id', async () => {
@@ -47,7 +47,7 @@ describe('playbackReporter', () => {
 	});
 
 	it('does not call data-api when DATA_API_URL is not configured', () => {
-		delete process.env.DATA_API_URL;
+		setConfigForTesting(makeTestConfig({ DATA_API_AUTH_KEY: 'test-key' }));
 		reportNodeEvent('main', 'node_disconnect', null);
 		reportPlaybackEvent('guild-1', 'track_start', null);
 		expect(fetchMock).not.toHaveBeenCalled();

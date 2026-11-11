@@ -24,6 +24,8 @@ import {
 	tryConsumeUserTurn,
 	updateChannelHistoryMessage
 } from './aiChatService.ts';
+import { setConfigForTesting } from '../core/config.ts';
+import { makeTestConfig } from '../core/config.testing.ts';
 import { getChannelHistoryState, historyLine, pushChannelHistory } from './aiChat/historyStore.ts';
 import { executeAiTool, getAiToolStatus } from './aiTools/index.ts';
 vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));
@@ -89,6 +91,7 @@ function sseResponse(events: string[]) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	setConfigForTesting(makeTestConfig());
 	mocks.policy.mockResolvedValue({ mode: 'all', channelIds: [] });
 	mocks.history.mockResolvedValue(null);
 	mocks.persist.mockResolvedValue({});
@@ -102,7 +105,7 @@ afterEach(async () => {
 	// debounce로 예약된 persist가 다음 테스트로 새지 않도록 비우고
 	await flushChannelHistoryPersist();
 	vi.unstubAllGlobals();
-	vi.unstubAllEnvs();
+	setConfigForTesting(null);
 });
 
 describe('AI context preparation', () => {
@@ -230,39 +233,41 @@ describe('estimateTokens', () => {
 
 describe('getContextTokenBudget', () => {
 	it('returns the default when the env is unset', () => {
-		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', undefined);
 		expect(getContextTokenBudget()).toBe(60_000);
 	});
 
 	it('clamps values into the 1500..100000 range', () => {
-		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', '3000');
+		setConfigForTesting(makeTestConfig({ CHAT_CONTEXT_TOKEN_BUDGET: '3000' }));
 		expect(getContextTokenBudget()).toBe(3000);
-		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', '100');
+		setConfigForTesting(makeTestConfig({ CHAT_CONTEXT_TOKEN_BUDGET: '100' }));
 		expect(getContextTokenBudget()).toBe(1500);
-		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', '999999');
+		setConfigForTesting(makeTestConfig({ CHAT_CONTEXT_TOKEN_BUDGET: '999999' }));
 		expect(getContextTokenBudget()).toBe(100_000);
 	});
 
-	it('falls back to the default on non-numeric input', () => {
-		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', 'abc');
+	it('falls back to the default when the value is blank', () => {
+		setConfigForTesting(makeTestConfig({ CHAT_CONTEXT_TOKEN_BUDGET: '  ' }));
 		expect(getContextTokenBudget()).toBe(60_000);
 	});
 });
 
 describe('getChatConfig', () => {
 	it('returns null when the model is not configured', () => {
-		vi.stubEnv('CHAT_MODEL', undefined);
-		vi.stubEnv('OPENAI_COMPATIBLE_API_URL', 'http://x/v1');
+		setConfigForTesting(makeTestConfig({ OPENAI_COMPATIBLE_API_URL: 'http://x/v1' }));
 		expect(getChatConfig()).toBeNull();
 	});
 
 	it('reads endpoints, credentials and knobs from the environment', () => {
-		vi.stubEnv('OPENAI_COMPATIBLE_API_URL', ' http://x/v1/ ');
-		vi.stubEnv('CHAT_MODEL', ' chat-model ');
-		vi.stubEnv('OPENAI_API_KEY', ' key ');
-		vi.stubEnv('LLM_API_TIMEOUT_MS', '500');
-		vi.stubEnv('CHAT_STREAM_UPDATE_MS', '100');
-		vi.stubEnv('ENABLE_THINK_TOKEN', 'TRUE');
+		setConfigForTesting(
+			makeTestConfig({
+				OPENAI_COMPATIBLE_API_URL: ' http://x/v1/ ',
+				CHAT_MODEL: ' chat-model ',
+				OPENAI_API_KEY: ' key ',
+				LLM_API_TIMEOUT_MS: '500',
+				CHAT_STREAM_UPDATE_MS: '100',
+				ENABLE_THINK_TOKEN: 'TRUE'
+			})
+		);
 		expect(getChatConfig()).toEqual({
 			apiUrl: 'http://x/v1',
 			apiKey: 'key',
@@ -274,12 +279,7 @@ describe('getChatConfig', () => {
 	});
 
 	it('uses defaults when optional values are absent', () => {
-		vi.stubEnv('OPENAI_COMPATIBLE_API_URL', undefined);
-		vi.stubEnv('CHAT_MODEL', 'm');
-		vi.stubEnv('OPENAI_API_KEY', undefined);
-		vi.stubEnv('LLM_API_TIMEOUT_MS', undefined);
-		vi.stubEnv('CHAT_STREAM_UPDATE_MS', undefined);
-		vi.stubEnv('ENABLE_THINK_TOKEN', undefined);
+		setConfigForTesting(makeTestConfig({ CHAT_MODEL: 'm' }));
 		expect(getChatConfig()).toEqual({
 			apiUrl: 'http://127.0.0.1:8080/v1',
 			apiKey: '',
@@ -549,7 +549,7 @@ describe('channel history persist coalescing', () => {
 
 describe('incremental history token accounting', () => {
 	it('keeps state.tokens equal to a full recompute across load, pushes and trims', async () => {
-		vi.stubEnv('CHAT_CONTEXT_TOKEN_BUDGET', '2000');
+		setConfigForTesting(makeTestConfig({ CHAT_CONTEXT_TOKEN_BUDGET: '2000' }));
 		const channelId = 'tokens-sync';
 		mocks.history.mockResolvedValueOnce({
 			channelId,

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setConfigForTesting } from '../core/config.ts';
+import { makeTestConfig } from '../core/config.testing.ts';
 import { container } from '@sapphire/framework';
 import type { Player, Track, TrackEndEvent } from 'lavalink-client';
 import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
@@ -26,6 +28,10 @@ function fakePlayer(): Player {
 		node: { options: { host: 'localhost', port: 2333, authorization: 'node-pw' } }
 	} as unknown as Player;
 }
+
+// Config는 테스트마다 기본값으로 초기화해요 (환경 변수는 건드리지 않아요)
+beforeEach(() => setConfigForTesting(makeTestConfig()));
+afterEach(() => setConfigForTesting(null));
 
 describe('MixerService v2 Protocol Tests', () => {
 	let fetchMock: ReturnType<typeof vi.fn>;

@@ -1,3 +1,5 @@
+import { getConfig } from '../../core/config.ts';
+
 /**
  * 토큰 추정 — 컨텍스트 예산 계산에 쓰는 근사치예요.
  */
@@ -24,20 +26,7 @@ export function estimateTokens(text: string): number {
 	return Math.ceil(dense * 0.7 + (text.length - dense) * 0.28);
 }
 
-/** 시스템 프롬프트 전체 토큰 예산 기본값 (64k 윈도우 기준, 나머지는 대화·도구·출력 여유) — CHAT_CONTEXT_TOKEN_BUDGET로 덮어써요 */
-const DEFAULT_CONTEXT_TOKEN_BUDGET = 60_000;
-
-/** 마지막으로 파싱한 환경변수 원문 — 값이 바뀔 때만 다시 파싱해요 (런타임에는 부팅 시 1회) */
-let cachedBudgetRaw: string | undefined;
-let cachedBudget = DEFAULT_CONTEXT_TOKEN_BUDGET;
-
-/** 시스템 프롬프트 전체 토큰 예산 — 환경변수 CHAT_CONTEXT_TOKEN_BUDGET로 조정해요 */
+/** 시스템 프롬프트 전체 토큰 예산 — 환경변수 CHAT_CONTEXT_TOKEN_BUDGET로 조정해요 (기본값·클램프는 core/config.ts) */
 export function getContextTokenBudget(): number {
-	const raw = process.env.CHAT_CONTEXT_TOKEN_BUDGET;
-	if (raw !== cachedBudgetRaw) {
-		cachedBudgetRaw = raw;
-		const parsed = parseInt(raw ?? '', 10);
-		cachedBudget = Number.isFinite(parsed) ? Math.min(100_000, Math.max(1500, parsed)) : DEFAULT_CONTEXT_TOKEN_BUDGET;
-	}
-	return cachedBudget;
+	return getConfig().aiChat.contextTokenBudget;
 }
