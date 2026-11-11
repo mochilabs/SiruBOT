@@ -45,7 +45,7 @@ export { type PlayerStatePayload, type PlayerStateResponse, playerStateSchema, t
 export { parseLavalinkHosts } from './lavalinkHosts.js';
 export { isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.js';
 export { SPONSORBLOCK_SKIP_CATEGORIES, type SponsorBlockSkipCategory, type SponsorBlockSkipSegment } from './sponsorblock.js';
-export { ManagedRedisSubscriber } from './redisSubscriber.js';
+export { ManagedRedisSubscriber, type ManagedRedisSubscriberOptions } from './redisSubscriber.js';
 export {
 	botAdminRpc,
 	botProfileRefreshEvent,
