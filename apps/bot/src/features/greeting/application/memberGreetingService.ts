@@ -11,7 +11,8 @@
  *   pending 키를 읽고(즉시 삭제해 선점) 멤버를 실제로 조회해 카드를 렌더링해 전송한 뒤
  *   결과를 `sirubot:member-greeting:state:{guildId}`로 퍼블리시해요.
  *
- * - 구독/전송은 실패해도 프로세스를 크래시시키지 않아요 — 재구성·로그로만 남겨요.
+ * - 트리거 구독은 features/dashboard-bridge가 아니라 features/greeting/inbound가 공유 구독 연결 위에서 받아 이 서비스를 호출해요.
+ * - 전송은 실패해도 프로세스를 크래시시키지 않아요 — 로그로만 남겨요.
  * - 실제 입퇴장 이벤트에서는 문제를 사용자에게 알리지 않고 로그로만 남겨요.
  *   (이미지 렌더 실패 시에는 텍스트 메시지로 폴백해요 — 인사 자체는 이어가요)
  * - 테스트 전송은 폴백 없이 결과를 있는 그대로 상태로 알려요.
@@ -22,15 +23,15 @@ import {
 	DEFAULT_GREETINGS,
 	GreetingConfig,
 	GreetingKind,
-	MEMBER_GREETING_SEND_CHANNEL,
-	ManagedRedisSubscriber,
 	memberGreetingPendingKey,
+	memberGreetingStateEvent,
 	renderGreetingTemplate,
 	validateGreetingConfig
 } from '@sirubot/utils';
-import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { AttachmentBuilder, Guild, GuildMember, MessageFlags, PermissionFlagsBits, SendableChannels } from 'discord.js';
 import { greetingComponents } from '../discord/views/greeting.ts';
+import type { RedisPublisher } from '../../../lib/redisPublisher.ts';
 import { renderMemberCard } from '../../../services/dataApiClient.ts';
 import type { ServiceLogger } from '../../../services/types.ts';
 
@@ -63,11 +64,6 @@ interface MemberGreetingTestState {
 	sentAt: number;
 }
 
-interface SendBroadcastPayload {
-	guildId?: unknown;
-	requestId?: unknown;
-}
-
 interface PendingPayload {
 	kind?: unknown;
 	userId?: unknown;
@@ -75,66 +71,16 @@ interface PendingPayload {
 }
 
 export class MemberGreetingService {
-	private subscriber: ManagedRedisSubscriber | null = null;
-
 	public constructor(
 		private readonly logger: ServiceLogger,
 		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
-		private readonly signingKey: string = ''
+		private readonly signingKey: string = '',
+		/** 테스트 전송 결과 퍼블리시 — 서명 봉투는 publisher가 감싸요 */
+		private readonly publisher: Pick<RedisPublisher, 'publish'>
 	) {}
 
-	/** 구독을 시작해요. 실패해도 throw하지 않아요 — 재연결을 시도하고 테스트 전송만 비활성돼요. */
-	public async start(redisUrl: string | undefined): Promise<void> {
-		const url = redisUrl?.trim() || null;
-		if (!url) {
-			this.logger.warn('REDIS_URL 미설정: 멤버 인사 테스트 전송 구독 없이 동작해요 (실제 입퇴장 인사는 계속돼요)');
-			return;
-		}
-		this.subscriber = new ManagedRedisSubscriber({
-			name: '멤버 인사',
-			url,
-			logger: this.logger,
-			// 트리거·pending 페이로드 모두 서명 검증을 통과한 것만 처리해요 (SEC-006).
-			bindings: [
-				{
-					channel: MEMBER_GREETING_SEND_CHANNEL,
-					onMessage: (raw) => {
-						const body = unwrapRedisMessage(this.signingKey, raw);
-						if (body === null) return this.logger.warn('인사 테스트 전송 트리거 거부: 서명 검증 실패');
-						void this.handleSendBroadcast(body);
-					}
-				}
-			]
-		});
-		await this.subscriber.start();
-	}
-
-	private async handleSendBroadcast(raw: string): Promise<void> {
-		let guildId: string | null = null;
-		let broadcastRequestId: string | null = null;
-		try {
-			const parsed = JSON.parse(raw) as SendBroadcastPayload;
-			if (typeof parsed?.guildId === 'string' && parsed.guildId.length > 0 && parsed.guildId.length <= 32) {
-				guildId = parsed.guildId;
-			}
-			if (typeof parsed?.requestId === 'string' && parsed.requestId.length > 0 && parsed.requestId.length <= 64) {
-				broadcastRequestId = parsed.requestId;
-			}
-		} catch {
-			guildId = null;
-		}
-		if (!guildId) {
-			this.logger.debug(`멤버 인사 페이로드 형식 불일치, 무시: ${raw.slice(0, 100)}`);
-			return;
-		}
-
-		await this.applyForGuild(guildId, broadcastRequestId).catch((error) => {
-			this.logger.error(`멤버 인사 테스트 전송 중 예기치 못한 오류 (guild ${guildId}): ${error}`);
-		});
-	}
-
 	/** 이 프로세스가 길드를 보유하면 pending 키를 읽어 테스트 인사를 보내고, 결과를 상태로 퍼블리시해요 */
-	private async applyForGuild(guildId: string, broadcastRequestId: string | null): Promise<void> {
+	public async applyForGuild(guildId: string, broadcastRequestId: string | null): Promise<void> {
 		const store = container.redisStore;
 		if (!store) {
 			this.logger.warn(`멤버 인사 테스트 전송을 위한 redisStore가 없어요 (guild ${guildId})`);
@@ -211,13 +157,8 @@ export class MemberGreetingService {
 		this.publishTestResult(guildId, requestId, kind, result);
 	}
 
-	/** 테스트 전송 결과를 상태 채널로 퍼블리시해요 (redisStore 없으면 로그만 남겨요) */
+	/** 테스트 전송 결과를 상태 채널로 퍼블리시해요 */
 	private publishTestResult(guildId: string, requestId: string, kind: GreetingKind, result: GreetingSendResult): void {
-		const store = container.redisStore;
-		if (!store) {
-			this.logger.warn(`멤버 인사 테스트 결과 퍼블리시를 위한 redisStore가 없어요 (guild ${guildId})`);
-			return;
-		}
 		const state: MemberGreetingTestState = {
 			requestId,
 			kind,
@@ -225,8 +166,8 @@ export class MemberGreetingService {
 			sentAt: Date.now()
 		};
 		if (result.error) state.error = result.error;
-		// SEC-006: data-api 허브가 fail-closed 검증을 하므로 서명 봉투로 감싸 보내요.
-		store.publishMemberGreetingState(guildId, wrapRedisMessage(this.signingKey, state));
+		// SEC-006: data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
+		this.publisher.publish(memberGreetingStateEvent.channel(guildId), state, `Member greeting state (guild ${guildId})`);
 		this.logger.debug(`멤버 인사 테스트 결과 퍼블리시 (guild ${guildId}, kind ${kind}, ok ${result.ok})`);
 	}
 
@@ -353,12 +294,5 @@ export class MemberGreetingService {
 			return '봇이 그 채널에 파일을 첨부할 권한이 없어요. 권한을 주거나 설정에서 이미지 사용을 꺼 주세요';
 		}
 		return channel;
-	}
-
-	/** 종료 — 구독 해제 후 연결을 닫아요. shutdown에서 redisStore.disconnect() 전에 불러야 해요. */
-	public async stop(): Promise<void> {
-		const subscriber = this.subscriber;
-		this.subscriber = null;
-		await subscriber?.stop();
 	}
 }

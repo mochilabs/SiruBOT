@@ -13,13 +13,15 @@
  * - nick: CHANGE_NICKNAME 필요 (자기 닉네임 — MANAGE_NICKNAMES도 허용으로 봐요)
  * - avatar·banner: 권한 불요 (길드 멤버 프로필 이미지·배너 — 이 프로세스에서 검증하지 않아요)
  *
- * - 구독/적용은 실패해도 프로세스를 크래시시키지 않아요 — 상태 퍼블리시에 실패 사유를 담아요.
+ * - 트리거(set/refresh) 구독은 features/dashboard-bridge가 공유 구독 연결 위에서 받아 이 서비스를 호출해요.
+ * - 적용은 실패해도 프로세스를 크래시시키지 않아요 — 상태 퍼블리시에 실패 사유를 담아요.
  * - pending 키는 TTL(120초)이 있어 봇이 모두 무시해도 자동 정리돼요.
  */
 import { container } from '@sapphire/framework';
-import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_SET_CHANNEL, botProfilePendingKey, ManagedRedisSubscriber } from '@sirubot/utils';
-import { unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
+import { botProfilePendingKey, botProfileStateEvent } from '@sirubot/utils';
+import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { Guild, PermissionFlagsBits } from 'discord.js';
+import type { RedisPublisher } from '../lib/redisPublisher.ts';
 import type { ServiceLogger } from './types.ts';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
@@ -52,58 +54,17 @@ export class BotProfileService {
 	/** 길드별 마지막 적용 결과 — 멤버 업데이트 리스너가 상태를 다시 퍼블리시할 때도 유지해요 */
 	private readonly lastApplies = new Map<string, { ok: boolean; error: string | null; at: number }>();
 	private readonly maxLastApplies = 2_000;
-	private subscriber: ManagedRedisSubscriber | null = null;
 
 	public constructor(
 		private readonly logger: ServiceLogger,
 		// Redis 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY. 비어 있으면 서명 없는 구버전 모드(개발용).
-		private readonly signingKey: string = ''
+		private readonly signingKey: string = '',
+		/** 상태 퍼블리시 — 서명 봉투는 publisher가 감싸요 */
+		private readonly publisher: Pick<RedisPublisher, 'publish'>
 	) {}
 
-	/** 구독을 시작해요. 실패해도 throw하지 않아요 — 재연결을 시도하고 기능만 비활성돼요. */
-	public async start(redisUrl: string | undefined): Promise<void> {
-		const url = redisUrl?.trim() || null;
-		if (!url) {
-			this.logger.warn('REDIS_URL 미설정: 봇 프로필 적용/최신 상태 요청을 구독하지 못해요 (상태 퍼블리시는 계속돼요)');
-			return;
-		}
-		this.subscriber = new ManagedRedisSubscriber({
-			name: '봇 프로필',
-			url,
-			logger: this.logger,
-			bindings: [
-				// 트리거·pending 페이로드 모두 서명 검증을 통과한 것만 처리해요 (SEC-006).
-				{
-					channel: BOT_PROFILE_SET_CHANNEL,
-					onMessage: (raw) => {
-						const body = unwrapRedisMessage(this.signingKey, raw);
-						if (body === null) return this.logger.warn('봇 프로필 set 트리거 거부: 서명 검증 실패');
-						void this.handleSetMessage(body);
-					}
-				},
-				{
-					channel: BOT_PROFILE_REFRESH_CHANNEL,
-					onMessage: (raw) => {
-						const body = unwrapRedisMessage(this.signingKey, raw);
-						if (body === null) return this.logger.warn('봇 프로필 refresh 트리거 거부: 서명 검증 실패');
-						void this.handleRefreshMessage(body);
-					}
-				}
-			]
-		});
-		await this.subscriber.start();
-	}
-
-	private async handleRefreshMessage(raw: string): Promise<void> {
-		let guildId: string;
-		try {
-			const parsed = JSON.parse(raw) as { guildId?: unknown };
-			if (typeof parsed.guildId !== 'string' || parsed.guildId.length === 0 || parsed.guildId.length > 32) return;
-			guildId = parsed.guildId;
-		} catch {
-			return;
-		}
-
+	/** 최신 상태 요청 — 이 프로세스가 길드를 보유하면 Discord에서 봇 멤버를 새로 읽어 상태를 퍼블리시해요 */
+	public async refreshForGuild(guildId: string): Promise<void> {
 		const guild = container.client.guilds.cache.get(guildId);
 		if (!guild) return;
 		try {
@@ -114,28 +75,8 @@ export class BotProfileService {
 		}
 	}
 
-	private async handleSetMessage(raw: string): Promise<void> {
-		let guildId: string | null = null;
-		try {
-			const parsed = JSON.parse(raw) as { guildId?: unknown };
-			if (typeof parsed?.guildId === 'string' && parsed.guildId.length > 0 && parsed.guildId.length <= 32) {
-				guildId = parsed.guildId;
-			}
-		} catch {
-			guildId = null;
-		}
-		if (!guildId) {
-			this.logger.debug(`봇 프로필 페이로드 형식 불일치, 무시: ${raw.slice(0, 100)}`);
-			return;
-		}
-
-		await this.applyForGuild(guildId).catch((error) => {
-			this.logger.error(`봇 프로필 적용 중 예기치 못한 오류 (guild ${guildId}): ${error}`);
-		});
-	}
-
 	/** 이 프로세스가 길드를 보유하면 pending 키를 읽어 적용하고, 결과를 상태로 퍼블리시해요 */
-	private async applyForGuild(guildId: string): Promise<void> {
+	public async applyForGuild(guildId: string): Promise<void> {
 		const publish = container.redisStore;
 		if (!publish) {
 			this.logger.warn(`봇 프로필 적용을 위한 redisStore가 없어요 (guild ${guildId})`);
@@ -225,9 +166,6 @@ export class BotProfileService {
 
 	/** 리스너(멤버 업데이트·길드 생성)에서 Guild 객체를 곧장 받아 퍼블리시해요 */
 	public publishGuildProfileFromGuild(guild: Guild): void {
-		const publish = container.redisStore;
-		if (!publish) return;
-
 		try {
 			const me = guild.members.me;
 			if (!me) {
@@ -248,17 +186,10 @@ export class BotProfileService {
 				updatedAt: Date.now()
 			};
 
-			// SEC-006: data-api 허브가 fail-closed 검증을 하므로 서명 봉투로 감싸 보내요.
-			publish.publishBotProfileState(guild.id, wrapRedisMessage(this.signingKey, state));
+			// SEC-006: data-api 허브가 fail-closed 검증을 하므로 publisher가 서명 봉투로 감싸 보내요.
+			this.publisher.publish(botProfileStateEvent.channel(guild.id), state, `Bot profile state (guild ${guild.id})`);
 		} catch (error) {
 			this.logger.debug(`봇 프로필 상태 퍼블리시 실패 (guild ${guild.id}): ${error}`);
 		}
-	}
-
-	/** 종료 — 구독 해제 후 연결을 닫아요. shutdown에서 redisStore.disconnect() 전에 불러야 해요. */
-	public async stop(): Promise<void> {
-		const subscriber = this.subscriber;
-		this.subscriber = null;
-		await subscriber?.stop();
 	}
 }

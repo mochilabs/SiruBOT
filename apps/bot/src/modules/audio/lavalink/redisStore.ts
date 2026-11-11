@@ -1,16 +1,5 @@
 import { container } from '@sapphire/framework';
-import {
-	BOT_ADMIN_RESPONSE_CHANNEL,
-	botProfileStateChannel,
-	GUILD_DATA_RESPONSE_CHANNEL,
-	JTC_SETUP_RESPONSE_CHANNEL,
-	memberGreetingStateChannel,
-	PANEL_POST_RESPONSE_CHANNEL,
-	PLAYER_WEB_RESPONSE_CHANNEL,
-	playerStateChannel,
-	ROLE_VALIDATION_RESPONSE_CHANNEL,
-	SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL
-} from '@sirubot/utils';
+import { playerStateChannel } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
@@ -234,8 +223,9 @@ export class RedisStore {
 	}
 
 	/**
-	 * isReady 가드 + fire-and-forget 퍼블리시 공용 헬퍼 — Redis 미연결/오류 시 조용히 스킵하고
+	 * isReady 가드 + fire-and-forget 퍼블리시 — Redis 미연결/오류 시 조용히 스킵하고
 	 * 재생 경로를 절대 블로킹하지 않아요. label은 스킵/실패 로그 구분에만 쓰여요.
+	 * 응답자·상태 퍼블리시는 lib/redisPublisher.ts의 RedisPublisher가 이 메서드로 같은 연결에 실어 보내요.
 	 */
 	public publish(channel: string, payload: string, label: string): void {
 		try {
@@ -258,84 +248,6 @@ export class RedisStore {
 	 */
 	public publishRawPlayerState(guildId: string, payload: string): void {
 		this.publish(playerStateChannel(guildId), payload, `Player state (guild ${guildId})`);
-	}
-
-	/**
-	 * 봇 프로필 상태(길드 닉네임·아바타·변경 권한)를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:bot-profile:state:{guildId}` — botProfileStateChannel 접두사).
-	 * data-api의 botProfileHub가 구독해 대시보드 봇 프로필 패널에 서빙해요.
-	 */
-	public publishBotProfileState(guildId: string, payload: string): void {
-		this.publish(botProfileStateChannel(guildId), payload, `Bot profile state (guild ${guildId})`);
-	}
-
-	/**
-	 * 멤버 인사 테스트 전송 결과를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:member-greeting:state:{guildId}` — memberGreetingStateChannel 접두사).
-	 * data-api가 구독해 대시보드 환영/작별 설정 패널에 서빙해요.
-	 */
-	public publishMemberGreetingState(guildId: string, payload: string): void {
-		this.publish(memberGreetingStateChannel(guildId), payload, `Member greeting state (guild ${guildId})`);
-	}
-
-	/**
-	 * 길드 데이터(채널·역할 목록) 응답을 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:guild-data:response` — guildId 접두사 없는 고정 채널이에요).
-	 * data-api의 guildDataHub가 requestId 상관으로 구독해 대시보드 채널/역할 패널에 서빙해요.
-	 */
-	public publishGuildDataResponse(payload: string): void {
-		this.publish(GUILD_DATA_RESPONSE_CHANNEL, payload, 'Guild data response');
-	}
-
-	/**
-	 * 웹 플레이어(검색·재생·제어·음성 상태) 응답을 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:player-web:response` — guildId 접두사 없는 고정 채널이에요).
-	 * data-api의 playerWebHub가 requestId 상관으로 구독해 대시보드 player 페이지에 서빙해요.
-	 */
-	public publishPlayerWebResponse(payload: string): void {
-		this.publish(PLAYER_WEB_RESPONSE_CHANNEL, payload, 'Player web response');
-	}
-
-	/**
-	 * JTC 마커 채널 셋업 결과를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:jtc-setup:response` — guildId 접두사 없는 고정 채널이에요).
-	 * data-api의 jtcSetupHub가 requestId 상관으로 구독해 대시보드 설정 화면에 서빙해요.
-	 */
-	public publishJtcSetupResponse(payload: string): void {
-		this.publish(JTC_SETUP_RESPONSE_CHANNEL, payload, 'JTC setup response');
-	}
-
-	/**
-	 * 소셜 알림 웹훅 생성 결과를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:social:webhook-create:response` — guildId 접두사 없는 고정 채널이에요).
-	 * notifier의 웹훅 생성 허브가 requestId 상관으로 구독해 구독 추가 절차를 마무리해요.
-	 */
-	public publishSocialWebhookCreateResponse(payload: string): void {
-		this.publish(SOCIAL_WEBHOOK_CREATE_RESPONSE_CHANNEL, payload, 'Social webhook create response');
-	}
-
-	/**
-	 * 봇 관리자 제어 결과를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:bot-admin:response`).
-	 */
-	public publishBotAdminResponse(payload: string): void {
-		this.publish(BOT_ADMIN_RESPONSE_CHANNEL, payload, 'Bot admin response');
-	}
-
-	/**
-	 * 패널 메시지(티켓·역할 패널) 게시 결과를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:panel-post:response`). data-api panelPostHub가 requestId 상관으로 구독해요.
-	 */
-	public publishPanelPostResponse(payload: string): void {
-		this.publish(PANEL_POST_RESPONSE_CHANNEL, payload, 'Panel post response');
-	}
-
-	/**
-	 * 역할 부여 가능 여부 검증 결과를 Redis Pub/Sub으로 퍼블리시해요
-	 * (채널: `sirubot:role-validation:response`). data-api가 requestId 상관으로 구독해요.
-	 */
-	public publishRoleValidationResponse(payload: string): void {
-		this.publish(ROLE_VALIDATION_RESPONSE_CHANNEL, payload, 'Role validation response');
 	}
 
 	public async connect() {

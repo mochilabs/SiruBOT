@@ -24,14 +24,19 @@ import { TempVoiceService } from '../services/tempVoiceService.ts';
 import { AiMemoryService } from '../services/aiMemoryService.ts';
 import { TicketService } from '../features/tickets/index.ts';
 import { RolePanelService, createRoleValidationResponder } from '../features/role-panels/index.ts';
-import { GuildSettingsInvalidator } from '../services/guildSettingsInvalidator.ts';
 import { createPlayerWebResponder } from '../features/music/index.ts';
 import { createJtcSetupResponder } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
-import { MemberGreetingService } from '../features/greeting/index.ts';
-import { createBotAdminResponder, createGuildDataResponder, createSocialWebhookResponder } from '../features/dashboard-bridge/index.ts';
+import { MemberGreetingService, createMemberGreetingSendListener } from '../features/greeting/index.ts';
+import {
+	createBotAdminResponder,
+	createBotProfileListeners,
+	createGuildDataResponder,
+	createGuildSettingsInvalidationListener,
+	createPanelPostResponder,
+	createSocialWebhookResponder
+} from '../features/dashboard-bridge/index.ts';
 import { AppEmojiManager } from '../services/appEmojiManager.ts';
-import { PanelPostResponder } from '../services/panelPostResponder.ts';
 import { SapphireInterfaceLogger } from './logger.ts';
 import { RedisPublisher } from '../lib/redisPublisher.ts';
 import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
@@ -122,7 +127,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.ticketService = new TicketService();
 		container.rolePanelService = new RolePanelService();
 
-		// Redis 구독 서비스군 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
+		// Redis 수신 계층 공용 로거. bootstrap이 start하고 shutdown이 stop한다 (레지스트리 하나로 모은다)
 		const subscriberLogger = {
 			info: (msg: string) => container.logger.info(msg),
 			warn: (msg: string) => container.logger.warn(msg),
@@ -130,23 +135,27 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			debug: (msg: string) => container.logger.debug(msg)
 		};
 		// 서비스 간 메시지 서명 키 — REDIS_AUTH_KEY ?? AUTH_KEY (data-api와 공유). 없으면 서명 없는 구버전 모드.
-		// (guildSettingsInvalidator는 대시보드가 직접 퍼블리시하는 채널이라 서명 대상이 아니에요)
+		// (설정 무효화 채널은 대시보드 저장 흐름이 서명 없이 퍼블리시해서 이벤트 계약이 signed: false로 받아요)
 		const redisSigningKey = getConfig().redis.signingKey;
-		const guildSettingsInvalidator = (container.guildSettingsInvalidator = new GuildSettingsInvalidator(subscriberLogger));
-		const botProfileService = (container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey));
-		const memberGreetingService = (container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey));
-		const panelPostResponder = (container.panelPostResponder = new PanelPostResponder(subscriberLogger, redisSigningKey));
+		const redisPublisher = new RedisPublisher({ getStore: () => container.redisStore, signingKey: redisSigningKey, logger: subscriberLogger });
+		container.botProfileService = new BotProfileService(subscriberLogger, redisSigningKey, redisPublisher);
+		container.memberGreetingService = new MemberGreetingService(subscriberLogger, redisSigningKey, redisPublisher);
 
-		// Redis 구독 서비스 레지스트리 — 새 서비스는 여기에 한 줄만 추가하면 start/stop이 따라와요.
-		// 배열 순서가 start 순서예요 (stop도 같은 순서). 모든 start는 실패해도 부팅을 막지 않아요 (자체 재연결).
 		const redisRuntime: RedisRuntime = {
 			logger: subscriberLogger,
 			signingKey: redisSigningKey,
-			publisher: new RedisPublisher({ getStore: () => container.redisStore, signingKey: redisSigningKey, logger: subscriberLogger }),
+			publisher: redisPublisher,
 			resolveGuild: (guildId) => container.client.guilds.cache.get(guildId)
 		};
-		// 공유 구독 연결 하나에 묶이는 응답자·이벤트 리스너 — 새 응답자는 여기에 추가해요.
+		// 공유 구독 연결 하나에 묶이는 응답자·이벤트 리스너 — 새 응답자는 각 feature의 index.ts에서 내보내 여기에 한 줄만 추가하면 돼요.
+		// 모든 start는 실패해도 부팅을 막지 않아요 (공유 구독이 자체 재연결). 연결이 끊기면 대시보드 요청은 타임아웃 폴백으로 끝나요.
 		const redisBindings: RedisBinding[] = [
+			// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService·커스텀 명령어 캐시 무효화 (60초 TTL 폴백이 있어요).
+			createGuildSettingsInvalidationListener(),
+			// 대시보드 봇 프로필(닉네임·아바타) 저장·최신 상태 조회 → data-api → Redis → 봇 적용·상태 퍼블리시.
+			...createBotProfileListeners(),
+			// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
+			createMemberGreetingSendListener(),
 			// 대시보드 웹 플레이어(검색·재생·제어·음성 상태) 요청 → data-api → Redis → 봇 응답.
 			createPlayerWebResponder(),
 			// 대시보드 JTC 마커 채널 셋업(생성·이동) → data-api → Redis → 봇 tempVoiceService 수행.
@@ -157,27 +166,13 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			createSocialWebhookResponder(),
 			// 대시보드 관리자 패널(/admin) 제어 → data-api → Redis → 봇 수행 (대표 프로세스만 응답).
 			createBotAdminResponder(),
+			// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
+			createPanelPostResponder(),
 			// 대시보드 역할 부여 가능 여부 검증 → data-api → Redis → 봇 검증.
 			createRoleValidationResponder()
 		];
 		container.redisSubscribers = [
-			createSharedRedisSubscriber({ name: '대시보드 연동', logger: subscriberLogger, runtime: redisRuntime, bindings: redisBindings }),
-			// 대시보드 설정 저장 → data-api Redis 브로드캐스트 → 봇 GuildService 캐시 무효화.
-			// 실패해도 부팅은 계속돼요 — 60초 TTL 폴백이 있어요.
-			{
-				name: 'guildSettingsInvalidator',
-				start: (url) => guildSettingsInvalidator.start(url, container.guildService),
-				stop: () => guildSettingsInvalidator.stop()
-			},
-			// 대시보드 봇 프로필(닉네임·아바타) 저장 → data-api → Redis → 봇 적용.
-			// 실패해도 부팅은 계속돼요 — 패널이 상태를 못 받을 뿐이에요.
-			{ name: 'botProfileService', start: (url) => botProfileService.start(url), stop: () => botProfileService.stop() },
-			// 대시보드 멤버 인사(환영/작별) 테스트 전송 → data-api → Redis → 봇 전송.
-			// 실패해도 부팅은 계속돼요 — 실제 입퇴장 인사는 리스너가 이어서 처리해요.
-			{ name: 'memberGreetingService', start: (url) => memberGreetingService.start(url), stop: () => memberGreetingService.stop() },
-			// 대시보드 패널 메시지(티켓·역할 패널) 직접 게시 → data-api → Redis → 봇 게시.
-			// 실패해도 부팅은 계속돼요 — 대시보드 직접 게시만 타임아웃 폴백해요.
-			{ name: 'panelPostResponder', start: (url) => panelPostResponder.start(url), stop: () => panelPostResponder.stop() }
+			createSharedRedisSubscriber({ name: '대시보드 연동', logger: subscriberLogger, runtime: redisRuntime, bindings: redisBindings })
 		] satisfies RedisSubscriberEntry[];
 		container.appEmojiManager = new AppEmojiManager();
 		this.setupMusicControl();

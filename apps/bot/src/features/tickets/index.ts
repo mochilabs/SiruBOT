@@ -4,3 +4,4 @@
  */
 export { TicketService } from './application/ticketService.ts';
 export { ticketMessageView, ticketPanelView } from './discord/views/ticket.ts';
+export { postTicketPanel } from './inbound/ticketPanelPost.ts';

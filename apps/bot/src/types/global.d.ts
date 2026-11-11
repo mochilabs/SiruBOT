@@ -34,11 +34,9 @@ declare module '@sapphire/pieces' {
 		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
 		ticketService: import('../features/tickets/index.ts').TicketService;
 		rolePanelService: import('../features/role-panels/index.ts').RolePanelService;
-		guildSettingsInvalidator: import('../services/guildSettingsInvalidator.ts').GuildSettingsInvalidator;
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
-		panelPostResponder?: import('../services/panelPostResponder.ts').PanelPostResponder;
 		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };

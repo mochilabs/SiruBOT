@@ -3,3 +3,4 @@
  * (Sapphire 리스너는 features/greeting/discord 아래에서 스토어가 직접 읽어요.)
  */
 export { MemberGreetingService } from './application/memberGreetingService.ts';
+export { createMemberGreetingSendListener } from './inbound/memberGreetingSend.ts';

@@ -51,7 +51,7 @@ const member = {
 };
 
 function makeService() {
-	return new MemberGreetingService(logger);
+	return new MemberGreetingService(logger, '', { publish: vi.fn() });
 }
 
 async function sendGreeting(kind: GreetingKind = 'welcome') {
