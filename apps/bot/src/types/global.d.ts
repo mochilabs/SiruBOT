@@ -37,6 +37,8 @@ declare module '@sapphire/pieces' {
 		botProfileService: import('../services/botProfileService.ts').BotProfileService;
 		memberGreetingService: import('../features/greeting/application/memberGreetingService.ts').MemberGreetingService;
 		appEmojiManager?: import('../services/appEmojiManager.ts').AppEmojiManager;
+		/** 종료 시 stop()이 필요한 상태 소유자 레지스트리 — setupServices가 채우고 shutdown이 Redis/DB를 닫기 전에 실행해요 */
+		stoppables?: import('../core/lifecycle.ts').Stoppable[];
 		redisSubscribers?: import('../core/redisSubscribers.ts').RedisSubscriberEntry[];
 		shardClient?: import('@sirubot/shardclient').ShardClient;
 		shardInfo: { shardIds: number[]; shardCount: number };

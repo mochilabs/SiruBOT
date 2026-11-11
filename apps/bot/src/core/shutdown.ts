@@ -1,13 +1,14 @@
 import type { Server } from 'node:http';
 import type { Container } from '@sapphire/pieces';
 import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
+import { stopAll } from './lifecycle.ts';
 import { stopRedisSubscribers } from './redisSubscribers.ts';
 
 type ShutdownLogger = { info: (msg: string) => unknown; warn: (msg: string) => unknown; error: (msg: string) => unknown };
 
 export interface ShutdownDeps {
 	logger: ShutdownLogger;
-	container: Partial<Pick<Container, 'audio' | 'redisStore' | 'lavalinkHandler' | 'redisSubscribers' | 'db' | 'shardClient'>>;
+	container: Partial<Pick<Container, 'audio' | 'redisStore' | 'lavalinkHandler' | 'redisSubscribers' | 'stoppables' | 'db' | 'shardClient'>>;
 	client: { destroy: () => Promise<void> };
 	getHealthServer: () => Pick<Server, 'close'> | null;
 	shardIds: number[] | 'auto';
@@ -18,7 +19,7 @@ export interface ShutdownDeps {
 /**
  * 종료 시퀀스 (순서가 곧 Lavalink 세션 보존 계약이에요 — bot-ops 스킬 참고).
  * 헬스 서버 → 노드 세션 Redis 저장 → Lavalink 핸들러/리스너 정리 → Redis 구독 서비스 stop
- * → 저널 flush → Redis disconnect → DB disconnect → client.destroy → shardClient.destroy → Sentry flush → exit.
+ * → 소유자 stop(대기 중인 저장 flush·타이머 해제) → 저널 flush → Redis disconnect → DB disconnect → client.destroy → shardClient.destroy → Sentry flush → exit.
  * 단계마다 실패 처리 방식이 달라서(로그/무시/전파) Lifecycle 대신 명시적인 순서로 둬요.
  */
 export const runShutdown = async (deps: ShutdownDeps, signal: string): Promise<void> => {
@@ -58,6 +59,9 @@ export const runShutdown = async (deps: ShutdownDeps, signal: string): Promise<v
 		container.audio.removeAllListeners();
 	}
 	await stopRedisSubscribers(container.redisSubscribers);
+	// 새 일이 더 들어오지 않는 시점에 상태 소유자를 stop한다 — 대기 중인 저장을 지금 쓰고 타이머를 해제한다.
+	// 쓰기 대상(Redis/DB)을 닫기 전이어야 하므로 아래 flush/disconnect보다 앞이다. 전체 단계는 STOPPABLES_TIMEOUT_MS로 묶인다.
+	await stopAll(container.stoppables, logger);
 	// 종료 전에 저널을 비운다 — Redis를 끊은 뒤엔 pending 큐/플레이어 변경이 소실된다.
 	// 세션 저장(위)은 Redis 연결이 필요한 첫 단계고, 여기서 남은 저널을 마저 민 뒤 끊는다.
 	if (container.redisStore) {

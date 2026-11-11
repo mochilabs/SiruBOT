@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { STOPPABLES_TIMEOUT_MS } from './lifecycle.ts';
 import { createShutdownHandler, runShutdown, type ShutdownDeps } from './shutdown.ts';
 
 const makeDeps = (calls: string[]) => {
@@ -26,6 +27,10 @@ const makeDeps = (calls: string[]) => {
 				start: async () => {},
 				stop: async () => void calls.push(`subscriber.stop:${name}`)
 			})),
+			stoppables: ['o1', 'o2'].map((name) => ({
+				name,
+				stop: async () => void calls.push(`stoppable.stop:${name}`)
+			})),
 			db: { $disconnect: async () => void calls.push('db.$disconnect') },
 			shardClient: { destroy: () => void calls.push('shardClient.destroy') }
 		},
@@ -45,6 +50,8 @@ const EXPECTED_ORDER = [
 	'audio.removeAllListeners',
 	'subscriber.stop:s1',
 	'subscriber.stop:s2',
+	'stoppable.stop:o1',
+	'stoppable.stop:o2',
 	'redis.flushPendingWrites',
 	'redis.disconnect',
 	'db.$disconnect',
@@ -55,7 +62,7 @@ const EXPECTED_ORDER = [
 ];
 
 describe('shutdown 시퀀스', () => {
-	it('종료 순서가 세션 저장 → 정리 → 구독 stop → Redis → DB → 게이트웨이 → 샤드 → Sentry → exit 예요', async () => {
+	it('종료 순서가 세션 저장 → 정리 → 구독 stop → 소유자 stop → Redis → DB → 게이트웨이 → 샤드 → Sentry → exit 예요', async () => {
 		const calls: string[] = [];
 		const { deps } = makeDeps(calls);
 		await runShutdown(deps, 'SIGTERM');
@@ -79,6 +86,33 @@ describe('shutdown 시퀀스', () => {
 		expect(calls).toEqual(
 			EXPECTED_ORDER.filter((c) => c !== 'session.save:n1' && c !== 'subscriber.stop:s1' && c !== 'redis.flushPendingWrites')
 		);
+	});
+
+	it('소유자 stop이 던져도 나머지 stop과 이후 단계를 계속 진행해요', async () => {
+		const calls: string[] = [];
+		const { deps, logger } = makeDeps(calls);
+		deps.container.stoppables![0].stop = async () => {
+			throw new Error('flush failed');
+		};
+		await runShutdown(deps, 'SIGTERM');
+		expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to stop o1 during shutdown'));
+		expect(calls).toEqual(EXPECTED_ORDER.filter((c) => c !== 'stoppable.stop:o1'));
+	});
+
+	it('소유자 stop이 멈춰도 상한 시간 뒤에 다음 단계로 넘어가요', async () => {
+		vi.useFakeTimers();
+		try {
+			const calls: string[] = [];
+			const { deps, logger } = makeDeps(calls);
+			deps.container.stoppables![0].stop = () => new Promise<void>(() => {});
+			const done = runShutdown(deps, 'SIGTERM');
+			await vi.advanceTimersByTimeAsync(STOPPABLES_TIMEOUT_MS);
+			await done;
+			expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(`${STOPPABLES_TIMEOUT_MS}ms`));
+			expect(calls).toEqual(EXPECTED_ORDER.filter((c) => c !== 'stoppable.stop:o1'));
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('재진입 가드: 시그널이 중복 도착해도 한 번만 실행해요', async () => {

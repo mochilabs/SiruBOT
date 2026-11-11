@@ -113,6 +113,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public setupServices() {
+		// 종료 시 stop()이 필요한 상태 소유자 레지스트리 — 소유자를 만들면 container.stoppables에 push해요 (종료 때 병렬로 stop, core/shutdown.ts)
+		container.stoppables = [];
 		container.guildService = new GuildService();
 		container.trackService = new TrackService();
 		container.playlistService = new PlaylistService();
