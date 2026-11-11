@@ -26,21 +26,26 @@ const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOr
 		search: vi.fn()
 	}));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		audio: { getPlayer },
-		music,
-		mixerService: { reapplyMixerFilter, skip },
-		guildService: {},
-		audioService: { enqueueTrack, getOrCreatePlayer, connectPlayer, ensurePlayback, search }
-	}
-}));
+// 필터 프리셋(modules/audio/utils/filterPresets.ts)은 아직 container.mixerService를 직접 읽어요
+vi.mock('@sapphire/framework', () => ({ container: { mixerService: { reapplyMixerFilter } } }));
+
+const deps = {
+	db: {} as never,
+	guildService: {} as never,
+	audioService: { enqueueTrack, getOrCreatePlayer, connectPlayer, ensurePlayback, search } as never,
+	mixerService: { reapplyMixerFilter, skip } as never,
+	playlistService: {} as never,
+	getMusic: () => music as never,
+	getAudio: () => ({ getPlayer }) as never
+};
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
 vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: vi.fn(), removeStaleRelatedTracks: vi.fn() }));
 vi.mock('../../features/music/application/actor.ts', () => ({ actorFromMember: () => actor }));
 vi.mock('../dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
 
-import { musicTools } from './music.ts';
+import { createMusicTools } from './music.ts';
+
+const musicTools = createMusicTools(deps);
 
 function tool(name: string) {
 	const found = musicTools.find((entry) => entry.name === name);

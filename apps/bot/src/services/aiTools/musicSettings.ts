@@ -1,9 +1,9 @@
-import { container } from '@sapphire/framework';
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 import { queueRelatedUpfront } from '../../modules/audio/lavalink/autoPlayRelated.ts';
 import { sponsorBlockService } from '../sponsorBlockService.ts';
 import { checkManageGuild } from '../../modules/audio/utils/permissionCheck.ts';
 import type { TtsAnnounceMode } from '../guildSettings/playback.ts';
+import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';
 import * as guildMixer from '../guildSettings/mixer.ts';
@@ -23,238 +23,242 @@ function checkMemberManageGuild(ctx: AiToolContext): boolean {
 	}
 }
 
-async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
-	if (!ctx.member) return false;
-	try {
-		return await guildPlayback.hasDJRole(container.guildService, guildId, ctx.member);
-	} catch {
-		return false;
+/** 음악 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
+export function createMusicSettingsTools(deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'getMusic' | 'getAudio'>): AiTool[] {
+	async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
+		if (!ctx.member) return false;
+		try {
+			return await guildPlayback.hasDJRole(deps.guildService, guildId, ctx.member);
+		} catch {
+			return false;
+		}
 	}
-}
 
-/** 음악 설정 변경을 위한 2차 권한 검사 (서버 관리자 또는 DJ 역할 필요) */
-async function requireMusicSettingsPermission(ctx: AiToolContext): Promise<void> {
-	const guildId = requireGuild(ctx);
-	if (!ctx.member) throw new Error('사용자 권한을 확인할 수 없어요.');
-	const isManager = checkMemberManageGuild(ctx);
-	const isDj = await checkMemberDJRole(guildId, ctx);
-	if (!isManager && !isDj) {
-		throw new Error('음악 설정을 변경할 권한이 없어요. DJ 역할을 가지고 있거나 서버 관리 권한이 필요해요.');
-	}
-}
-
-export const musicSettingsGetTool: AiTool = {
-	name: 'music_settings_get',
-	description:
-		'현재 서버의 음악 재생 설정(기본 볼륨, 반복 모드, 추천곡 자동재생, 갭리스, 크로스페이드, 음량 평준화, 곡 안내 낭독 모드, 컨트롤러 카드 표시 여부, 스폰서블록 건너뛰기)을 조회해요. 모든 사용자가 조회할 수 있어요.',
-	properties: {},
-	required: [],
-	status: '시루가 음악 설정을 확인하는 중..',
-	execute: async (_args, ctx) => {
+	/** 음악 설정 변경을 위한 2차 권한 검사 (서버 관리자 또는 DJ 역할 필요) */
+	async function requireMusicSettingsPermission(ctx: AiToolContext): Promise<void> {
 		const guildId = requireGuild(ctx);
-		const [volume, repeat, autoplay, mixerSettings, announceMode, controllerEnabled, guild] = await Promise.all([
-			guildPlayback.getVolume(container.guildService, guildId),
-			guildPlayback.getRepeat(container.guildService, guildId),
-			guildPlayback.getRelated(container.guildService, guildId),
-			guildMixer.getMixerSettings(container.guildService, guildId),
-			guildPlayback.getTtsAnnounceMode(container.guildService, guildId),
-			guildPlayback.getEnableController(container.guildService, guildId),
-			container.guildService.getGuild(guildId)
-		]);
+		if (!ctx.member) throw new Error('사용자 권한을 확인할 수 없어요.');
+		const isManager = checkMemberManageGuild(ctx);
+		const isDj = await checkMemberDJRole(guildId, ctx);
+		if (!isManager && !isDj) {
+			throw new Error('음악 설정을 변경할 권한이 없어요. DJ 역할을 가지고 있거나 서버 관리 권한이 필요해요.');
+		}
+	}
 
-		const player = container.audio?.getPlayer?.(guildId);
+	const musicSettingsGetTool: AiTool = {
+		name: 'music_settings_get',
+		description:
+			'현재 서버의 음악 재생 설정(기본 볼륨, 반복 모드, 추천곡 자동재생, 갭리스, 크로스페이드, 음량 평준화, 곡 안내 낭독 모드, 컨트롤러 카드 표시 여부, 스폰서블록 건너뛰기)을 조회해요. 모든 사용자가 조회할 수 있어요.',
+		properties: {},
+		required: [],
+		status: '시루가 음악 설정을 확인하는 중..',
+		execute: async (_args, ctx) => {
+			const guildId = requireGuild(ctx);
+			const [volume, repeat, autoplay, mixerSettings, announceMode, controllerEnabled, guild] = await Promise.all([
+				guildPlayback.getVolume(deps.guildService, guildId),
+				guildPlayback.getRepeat(deps.guildService, guildId),
+				guildPlayback.getRelated(deps.guildService, guildId),
+				guildMixer.getMixerSettings(deps.guildService, guildId),
+				guildPlayback.getTtsAnnounceMode(deps.guildService, guildId),
+				guildPlayback.getEnableController(deps.guildService, guildId),
+				deps.guildService.getGuild(guildId)
+			]);
 
-		return JSON.stringify({
-			status: 'ok',
-			volume,
-			repeat,
-			autoplay,
-			gapless: mixerSettings.gaplessEnabled,
-			crossfade: {
-				enabled: mixerSettings.crossfadeEnabled,
-				duration_seconds: mixerSettings.crossfadeMs / 1000
+			const player = deps.getAudio()?.getPlayer?.(guildId);
+
+			return JSON.stringify({
+				status: 'ok',
+				volume,
+				repeat,
+				autoplay,
+				gapless: mixerSettings.gaplessEnabled,
+				crossfade: {
+					enabled: mixerSettings.crossfadeEnabled,
+					duration_seconds: mixerSettings.crossfadeMs / 1000
+				},
+				normalization: mixerSettings.normalizationEnabled,
+				announce_mode: announceMode,
+				controller: controllerEnabled,
+				sponsorblock: {
+					enabled: (guild.sponsorBlockSegments ?? []).length > 0,
+					segments: guild.sponsorBlockSegments ?? []
+				},
+				is_playing: Boolean(player?.playing)
+			});
+		}
+	};
+
+	const musicSettingsSetTool: AiTool = {
+		name: 'music_settings_set',
+		description:
+			'서버의 음악 재생 설정을 변경해요. DJ 역할 또는 서버 관리자 권한이 필요해요. ' +
+			'지정한 항목만 변경돼요. 볼륨, 반복(off|track|queue), 연관재생(autoplay), 갭리스(gapless), 크로스페이드(crossfade_enabled, crossfade_duration_seconds), ' +
+			'음량 평준화(normalization), 곡 안내 낭독(announce_mode: sequential|parallel|interrupt), 컨트롤러(controller), 스폰서블록(sponsorblock).',
+		properties: {
+			volume: {
+				type: 'integer',
+				description: '서버 기본 볼륨 (0~150)'
 			},
-			normalization: mixerSettings.normalizationEnabled,
-			announce_mode: announceMode,
-			controller: controllerEnabled,
+			repeat: {
+				type: 'string',
+				enum: ['off', 'track', 'queue'],
+				description: '반복 재생 모드 (off: 끄기, track: 한 곡 반복, queue: 전체 반복)'
+			},
+			autoplay: {
+				type: 'boolean',
+				description: '대기열 종료 시 유튜브 추천곡 자동 재생(연관 재생) 활성화 여부'
+			},
+			gapless: {
+				type: 'boolean',
+				description: '무음 구간 제거(갭리스 재생) 활성화 여부'
+			},
+			crossfade_enabled: {
+				type: 'boolean',
+				description: '곡 전환 크로스페이드 활성화 여부'
+			},
+			crossfade_duration_seconds: {
+				type: 'number',
+				description: '크로스페이드 지속 시간 (초 단위, 1~10초)'
+			},
+			normalization: {
+				type: 'boolean',
+				description: '음량 평준화(오디오 노멀라이제이션) 활성화 여부'
+			},
+			announce_mode: {
+				type: 'string',
+				enum: ['sequential', 'parallel', 'interrupt'],
+				description: '곡 시작 TTS 안내 모드 (sequential: 곡 전 순차 안내, parallel: 재생과 동시 낭독, interrupt: 최신 안내만 낭독)'
+			},
+			controller: {
+				type: 'boolean',
+				description: '곡 재생 시 컨트롤러 카드(버튼 UI) 메시지 전송 여부'
+			},
 			sponsorblock: {
-				enabled: (guild.sponsorBlockSegments ?? []).length > 0,
-				segments: guild.sponsorBlockSegments ?? []
-			},
-			is_playing: Boolean(player?.playing)
-		});
-	}
-};
-
-export const musicSettingsSetTool: AiTool = {
-	name: 'music_settings_set',
-	description:
-		'서버의 음악 재생 설정을 변경해요. DJ 역할 또는 서버 관리자 권한이 필요해요. ' +
-		'지정한 항목만 변경돼요. 볼륨, 반복(off|track|queue), 연관재생(autoplay), 갭리스(gapless), 크로스페이드(crossfade_enabled, crossfade_duration_seconds), ' +
-		'음량 평준화(normalization), 곡 안내 낭독(announce_mode: sequential|parallel|interrupt), 컨트롤러(controller), 스폰서블록(sponsorblock).',
-	properties: {
-		volume: {
-			type: 'integer',
-			description: '서버 기본 볼륨 (0~150)'
-		},
-		repeat: {
-			type: 'string',
-			enum: ['off', 'track', 'queue'],
-			description: '반복 재생 모드 (off: 끄기, track: 한 곡 반복, queue: 전체 반복)'
-		},
-		autoplay: {
-			type: 'boolean',
-			description: '대기열 종료 시 유튜브 추천곡 자동 재생(연관 재생) 활성화 여부'
-		},
-		gapless: {
-			type: 'boolean',
-			description: '무음 구간 제거(갭리스 재생) 활성화 여부'
-		},
-		crossfade_enabled: {
-			type: 'boolean',
-			description: '곡 전환 크로스페이드 활성화 여부'
-		},
-		crossfade_duration_seconds: {
-			type: 'number',
-			description: '크로스페이드 지속 시간 (초 단위, 1~10초)'
-		},
-		normalization: {
-			type: 'boolean',
-			description: '음량 평준화(오디오 노멀라이제이션) 활성화 여부'
-		},
-		announce_mode: {
-			type: 'string',
-			enum: ['sequential', 'parallel', 'interrupt'],
-			description: '곡 시작 TTS 안내 모드 (sequential: 곡 전 순차 안내, parallel: 재생과 동시 낭독, interrupt: 최신 안내만 낭독)'
-		},
-		controller: {
-			type: 'boolean',
-			description: '곡 재생 시 컨트롤러 카드(버튼 UI) 메시지 전송 여부'
-		},
-		sponsorblock: {
-			type: 'boolean',
-			description: '유튜브 스폰서/광고 구간 건너뛰기 활성화 여부'
-		}
-	},
-	required: [],
-	status: '시루가 음악 설정을 변경하는 중..',
-	execute: async (args, ctx) => {
-		const guildId = requireGuild(ctx);
-		// 볼륨·반복은 재생 중인 플레이어가 있으면 듣는 사람에게 바로 영향을 주므로 공용 유스케이스(재생 제어 정책)가 인가해요.
-		// 플레이어가 없으면 저장된 기본값만 바꾸는 것이라 다른 설정 항목처럼 설정 권한(서버 관리자 또는 DJ 역할)을 요구해요.
-		const settingKeys = Object.keys(args).filter((key) => args[key] !== undefined && args[key] !== null);
-		const hasPlayer = Boolean(container.audio?.getPlayer?.(guildId));
-		if (!hasPlayer || settingKeys.some((key) => key !== 'volume' && key !== 'repeat')) await requireMusicSettingsPermission(ctx);
-
-		const updated: Record<string, unknown> = {};
-
-		if (args.volume !== undefined && args.volume !== null) {
-			const volume = Math.round(Number(args.volume));
-			if (hasPlayer) {
-				updated.volume = (await withAppError(() => container.music.setVolume(musicActor(ctx), volume))).volume;
-			} else {
-				if (!Number.isInteger(volume) || volume < MUSIC_VOLUME_MIN || volume > MUSIC_VOLUME_MAX) {
-					throw new Error(`노래 볼륨은 ${MUSIC_VOLUME_MIN}부터 ${MUSIC_VOLUME_MAX}까지 설정할 수 있어요.`);
-				}
-				updated.volume = (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume;
+				type: 'boolean',
+				description: '유튜브 스폰서/광고 구간 건너뛰기 활성화 여부'
 			}
-		}
+		},
+		required: [],
+		status: '시루가 음악 설정을 변경하는 중..',
+		execute: async (args, ctx) => {
+			const guildId = requireGuild(ctx);
+			// 볼륨·반복은 재생 중인 플레이어가 있으면 듣는 사람에게 바로 영향을 주므로 공용 유스케이스(재생 제어 정책)가 인가해요.
+			// 플레이어가 없으면 저장된 기본값만 바꾸는 것이라 다른 설정 항목처럼 설정 권한(서버 관리자 또는 DJ 역할)을 요구해요.
+			const settingKeys = Object.keys(args).filter((key) => args[key] !== undefined && args[key] !== null);
+			const hasPlayer = Boolean(deps.getAudio()?.getPlayer?.(guildId));
+			if (!hasPlayer || settingKeys.some((key) => key !== 'volume' && key !== 'repeat')) await requireMusicSettingsPermission(ctx);
 
-		if (args.repeat !== undefined && args.repeat !== null) {
-			const repeat = String(args.repeat);
-			if (hasPlayer) {
-				updated.repeat = (await withAppError(() => container.music.setRepeat(musicActor(ctx), repeat))).mode;
-			} else {
-				if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('잘못된 반복 모드 값이에요.');
-				updated.repeat = await guildPlayback.setRepeat(container.guildService, guildId, repeat);
-			}
-		}
+			const updated: Record<string, unknown> = {};
 
-		if (args.autoplay !== undefined && args.autoplay !== null) {
-			const autoplay = Boolean(args.autoplay);
-			const updatedAutoplay = await guildPlayback.setRelated(container.guildService, guildId, autoplay);
-			if (updatedAutoplay) {
-				const player = container.audio?.getPlayer?.(guildId);
-				const currentTrack = player?.queue?.current;
-				if (player?.playing && currentTrack && player.queue.tracks.length === 0) {
-					void queueRelatedUpfront(player, currentTrack).catch(() => null);
+			if (args.volume !== undefined && args.volume !== null) {
+				const volume = Math.round(Number(args.volume));
+				if (hasPlayer) {
+					updated.volume = (await withAppError(() => deps.getMusic().setVolume(musicActor(ctx), volume))).volume;
+				} else {
+					if (!Number.isInteger(volume) || volume < MUSIC_VOLUME_MIN || volume > MUSIC_VOLUME_MAX) {
+						throw new Error(`노래 볼륨은 ${MUSIC_VOLUME_MIN}부터 ${MUSIC_VOLUME_MAX}까지 설정할 수 있어요.`);
+					}
+					updated.volume = (await guildPlayback.updateVolume(deps.guildService, guildId, volume)).volume;
 				}
 			}
-			updated.autoplay = updatedAutoplay;
-		}
 
-		if (args.gapless !== undefined && args.gapless !== null) {
-			const gapless = Boolean(args.gapless);
-			await guildMixer.setGapless(container.guildService, guildId, gapless);
-			const player = container.audio?.getPlayer?.(guildId);
-			if (player) {
-				if (!gapless) await container.mixerService?.clearNext?.(player, { force: true }).catch(() => null);
-				else await container.mixerService?.preloadUpcoming?.(player, { force: true }).catch(() => null);
+			if (args.repeat !== undefined && args.repeat !== null) {
+				const repeat = String(args.repeat);
+				if (hasPlayer) {
+					updated.repeat = (await withAppError(() => deps.getMusic().setRepeat(musicActor(ctx), repeat))).mode;
+				} else {
+					if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('잘못된 반복 모드 값이에요.');
+					updated.repeat = await guildPlayback.setRepeat(deps.guildService, guildId, repeat);
+				}
 			}
-			updated.gapless = gapless;
-		}
 
-		if (args.crossfade_enabled !== undefined || args.crossfade_duration_seconds !== undefined) {
-			const currentMixer = await guildMixer.getMixerSettings(container.guildService, guildId);
-			const enabled = args.crossfade_enabled !== undefined ? Boolean(args.crossfade_enabled) : currentMixer.crossfadeEnabled;
-			const durationMs = args.crossfade_duration_seconds !== undefined ? Math.round(Number(args.crossfade_duration_seconds) * 1000) : undefined;
-			if (durationMs !== undefined && (durationMs < 1000 || durationMs > 10000)) {
-				throw new Error('크로스페이드 지속 시간은 1초에서 10초 사이여야 해요.');
+			if (args.autoplay !== undefined && args.autoplay !== null) {
+				const autoplay = Boolean(args.autoplay);
+				const updatedAutoplay = await guildPlayback.setRelated(deps.guildService, guildId, autoplay);
+				if (updatedAutoplay) {
+					const player = deps.getAudio()?.getPlayer?.(guildId);
+					const currentTrack = player?.queue?.current;
+					if (player?.playing && currentTrack && player.queue.tracks.length === 0) {
+						void queueRelatedUpfront(player, currentTrack).catch(() => null);
+					}
+				}
+				updated.autoplay = updatedAutoplay;
 			}
-			const saved = await guildMixer.setCrossfade(container.guildService, guildId, enabled, durationMs);
-			const player = container.audio?.getPlayer?.(guildId);
-			if (player) {
-				await container.mixerService?.setCrossfade?.(player, saved.crossfadeEnabled, saved.crossfadeMs).catch(() => null);
+
+			if (args.gapless !== undefined && args.gapless !== null) {
+				const gapless = Boolean(args.gapless);
+				await guildMixer.setGapless(deps.guildService, guildId, gapless);
+				const player = deps.getAudio()?.getPlayer?.(guildId);
+				if (player) {
+					if (!gapless) await deps.mixerService?.clearNext?.(player, { force: true }).catch(() => null);
+					else await deps.mixerService?.preloadUpcoming?.(player, { force: true }).catch(() => null);
+				}
+				updated.gapless = gapless;
 			}
-			updated.crossfade = {
-				enabled: saved.crossfadeEnabled,
-				duration_seconds: saved.crossfadeMs / 1000
-			};
-		}
 
-		if (args.normalization !== undefined && args.normalization !== null) {
-			const normalization = Boolean(args.normalization);
-			await guildMixer.setNormalization(container.guildService, guildId, normalization);
-			const player = container.audio?.getPlayer?.(guildId);
-			if (player) {
-				await container.mixerService?.setNormalization?.(player, normalization).catch(() => null);
+			if (args.crossfade_enabled !== undefined || args.crossfade_duration_seconds !== undefined) {
+				const currentMixer = await guildMixer.getMixerSettings(deps.guildService, guildId);
+				const enabled = args.crossfade_enabled !== undefined ? Boolean(args.crossfade_enabled) : currentMixer.crossfadeEnabled;
+				const durationMs =
+					args.crossfade_duration_seconds !== undefined ? Math.round(Number(args.crossfade_duration_seconds) * 1000) : undefined;
+				if (durationMs !== undefined && (durationMs < 1000 || durationMs > 10000)) {
+					throw new Error('크로스페이드 지속 시간은 1초에서 10초 사이여야 해요.');
+				}
+				const saved = await guildMixer.setCrossfade(deps.guildService, guildId, enabled, durationMs);
+				const player = deps.getAudio()?.getPlayer?.(guildId);
+				if (player) {
+					await deps.mixerService?.setCrossfade?.(player, saved.crossfadeEnabled, saved.crossfadeMs).catch(() => null);
+				}
+				updated.crossfade = {
+					enabled: saved.crossfadeEnabled,
+					duration_seconds: saved.crossfadeMs / 1000
+				};
 			}
-			updated.normalization = normalization;
-		}
 
-		if (args.announce_mode !== undefined && args.announce_mode !== null) {
-			const mode = String(args.announce_mode);
-			if (!['sequential', 'parallel', 'interrupt'].includes(mode)) {
-				throw new Error('곡 안내 모드는 sequential, parallel, interrupt 중 하나여야 해요.');
+			if (args.normalization !== undefined && args.normalization !== null) {
+				const normalization = Boolean(args.normalization);
+				await guildMixer.setNormalization(deps.guildService, guildId, normalization);
+				const player = deps.getAudio()?.getPlayer?.(guildId);
+				if (player) {
+					await deps.mixerService?.setNormalization?.(player, normalization).catch(() => null);
+				}
+				updated.normalization = normalization;
 			}
-			const savedMode = await guildPlayback.setTtsAnnounceMode(container.guildService, guildId, mode as TtsAnnounceMode);
-			updated.announce_mode = savedMode;
+
+			if (args.announce_mode !== undefined && args.announce_mode !== null) {
+				const mode = String(args.announce_mode);
+				if (!['sequential', 'parallel', 'interrupt'].includes(mode)) {
+					throw new Error('곡 안내 모드는 sequential, parallel, interrupt 중 하나여야 해요.');
+				}
+				const savedMode = await guildPlayback.setTtsAnnounceMode(deps.guildService, guildId, mode as TtsAnnounceMode);
+				updated.announce_mode = savedMode;
+			}
+
+			if (args.controller !== undefined && args.controller !== null) {
+				const controller = Boolean(args.controller);
+				await guildPlayback.setEnableController(deps.guildService, guildId, controller);
+				updated.controller = controller;
+			}
+
+			if (args.sponsorblock !== undefined && args.sponsorblock !== null) {
+				const sponsorblock = Boolean(args.sponsorblock);
+				const segments = sponsorblock ? ['sponsor', 'selfpromo'] : [];
+				await guildPlayback.setSponsorBlockSegments(deps.guildService, guildId, segments);
+				const player = deps.getAudio()!.players.get(guildId);
+				if (player) sponsorBlockService.refreshSettings(player);
+				updated.sponsorblock = sponsorblock;
+			}
+
+			if (Object.keys(updated).length === 0) {
+				throw new Error('변경할 음악 설정 항목이 지정되지 않았어요.');
+			}
+
+			return JSON.stringify({
+				status: 'ok',
+				updated
+			});
 		}
+	};
 
-		if (args.controller !== undefined && args.controller !== null) {
-			const controller = Boolean(args.controller);
-			await guildPlayback.setEnableController(container.guildService, guildId, controller);
-			updated.controller = controller;
-		}
-
-		if (args.sponsorblock !== undefined && args.sponsorblock !== null) {
-			const sponsorblock = Boolean(args.sponsorblock);
-			const segments = sponsorblock ? ['sponsor', 'selfpromo'] : [];
-			await guildPlayback.setSponsorBlockSegments(container.guildService, guildId, segments);
-			const player = container.audio.players.get(guildId);
-			if (player) sponsorBlockService.refreshSettings(player);
-			updated.sponsorblock = sponsorblock;
-		}
-
-		if (Object.keys(updated).length === 0) {
-			throw new Error('변경할 음악 설정 항목이 지정되지 않았어요.');
-		}
-
-		return JSON.stringify({
-			status: 'ok',
-			updated
-		});
-	}
-};
-
-export const musicSettingsTools: AiTool[] = [musicSettingsGetTool, musicSettingsSetTool];
+	return [musicSettingsGetTool, musicSettingsSetTool];
+}

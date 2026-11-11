@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../lib/appError.ts';
-import type { AiToolContext } from './types.ts';
+import type { AiTool, AiToolContext } from './types.ts';
 
 const mocks = vi.hoisted(() => ({
 	getVolume: vi.fn(),
@@ -29,21 +29,17 @@ const mocks = vi.hoisted(() => ({
 const actor = vi.hoisted(() => ({ guildId: 'test-guild', userId: 'user-1' }));
 vi.mock('../../features/music/application/actor.ts', () => ({ actorFromMember: () => actor }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		guildService: { getGuild: mocks.getGuild },
-		music: { setVolume: mocks.setVolume, setRepeat: mocks.setRepeatUseCase },
-		audio: {
-			getPlayer: mocks.getPlayer
-		},
-		mixerService: {
-			clearNext: vi.fn(),
-			preloadUpcoming: vi.fn(),
-			setCrossfade: vi.fn(),
-			setNormalization: vi.fn()
-		}
-	}
-}));
+const deps = {
+	guildService: { getGuild: mocks.getGuild } as never,
+	getMusic: () => ({ setVolume: mocks.setVolume, setRepeat: mocks.setRepeatUseCase }) as never,
+	getAudio: () => ({ getPlayer: mocks.getPlayer }) as never,
+	mixerService: {
+		clearNext: vi.fn(),
+		preloadUpcoming: vi.fn(),
+		setCrossfade: vi.fn(),
+		setNormalization: vi.fn()
+	} as never
+};
 
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({
 	checkManageGuild: mocks.checkManageGuild
@@ -53,7 +49,9 @@ vi.mock('../../modules/audio/lavalink/autoPlayRelated.ts', () => ({
 	queueRelatedUpfront: mocks.queueRelatedUpfront
 }));
 
-import { musicSettingsGetTool, musicSettingsSetTool } from './musicSettings.ts';
+import { createMusicSettingsTools } from './musicSettings.ts';
+
+const [musicSettingsGetTool, musicSettingsSetTool] = createMusicSettingsTools(deps) as [AiTool, AiTool];
 vi.mock('../guildSettings/playback.ts', async (orig) => ({
 	...(await orig()),
 	getVolume: mocks.getVolume,

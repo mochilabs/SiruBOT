@@ -1,33 +1,20 @@
-import { botHelpTool } from './botHelp.ts';
+import { createBotHelpTool } from './botHelp.ts';
 import { deliveryTool } from './delivery.ts';
-import { memoryTools } from './memory.ts';
-import { musicTools } from './music.ts';
+import { createMemoryTools } from './memory.ts';
+import { createMusicTools } from './music.ts';
 import { ohaasaTool } from './ohaasa.ts';
 import { webSearchTool } from './search.ts';
+import type { AiToolRegistry } from '../aiChat/deps.ts';
+import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext, AiToolDefinition } from './types.ts';
 import { weatherTool } from './weather.ts';
 import { webFetchTool } from './webFetch.ts';
-import { serverInfoTool } from './serverInfo.ts';
-import { musicSettingsTools } from './musicSettings.ts';
-import { botSettingsTools } from './botSettings.ts';
+import { createServerInfoTool } from './serverInfo.ts';
+import { createMusicSettingsTools } from './musicSettings.ts';
+import { createBotSettingsTools } from './botSettings.ts';
 
-const TOOLS: AiTool[] = [
-	webSearchTool,
-	webFetchTool,
-	weatherTool,
-	deliveryTool,
-	ohaasaTool,
-	botHelpTool,
-	serverInfoTool,
-	...musicTools,
-	...musicSettingsTools,
-	...botSettingsTools,
-	...memoryTools
-];
-const TOOL_MAP = new Map<string, AiTool>(TOOLS.map((tool) => [tool.name, tool]));
-
-export function getAiToolDefinitions(): AiToolDefinition[] {
-	return TOOLS.map((tool) => ({
+function toolDefinitions(tools: AiTool[]): AiToolDefinition[] {
+	return tools.map((tool) => ({
 		type: 'function',
 		function: {
 			name: tool.name,
@@ -54,16 +41,16 @@ function parseArguments(rawArguments: string): Record<string, unknown> | null {
 }
 
 /** 도구 실행 중 표시할 행동 멘트를 찾아요. */
-export function getAiToolStatus(name: string, rawArguments = ''): string {
-	const tool = TOOL_MAP.get(name);
+function toolStatus(toolMap: Map<string, AiTool>, name: string, rawArguments = ''): string {
+	const tool = toolMap.get(name);
 	if (!tool?.status) return `${name} 사용 중..`;
 	if (typeof tool.status === 'string') return tool.status;
 	return tool.status(parseArguments(rawArguments) ?? {});
 }
 
 /** 도구를 실행해요. 절대 throw 하지 않고 항상 LLM이 읽을 수 있는 문자열을 돌려줘요. */
-export async function executeAiTool(name: string, rawArguments: string, ctx: AiToolContext): Promise<string> {
-	const tool = TOOL_MAP.get(name);
+async function executeTool(toolMap: Map<string, AiTool>, name: string, rawArguments: string, ctx: AiToolContext): Promise<string> {
+	const tool = toolMap.get(name);
 	if (!tool) return JSON.stringify({ error: `알 수 없는 도구예요: ${name}` });
 
 	const args = parseArguments(rawArguments);
@@ -76,4 +63,31 @@ export async function executeAiTool(name: string, rawArguments: string, ctx: AiT
 	}
 }
 
+/**
+ * AI 도구 레지스트리를 deps로 한 번 만들어요 (BotApplication.setupServices). 도구 이름·설명·스키마는 LLM 계약이라 순서까지 그대로예요.
+ * 날씨·택배·검색처럼 container가 필요 없는 도구는 모듈 상수를 그대로 써요.
+ */
+export function createAiTools(deps: AiToolDeps): AiToolRegistry {
+	const tools: AiTool[] = [
+		webSearchTool,
+		webFetchTool,
+		weatherTool,
+		deliveryTool,
+		ohaasaTool,
+		createBotHelpTool(deps),
+		createServerInfoTool(deps),
+		...createMusicTools(deps),
+		...createMusicSettingsTools(deps),
+		...createBotSettingsTools(deps),
+		...createMemoryTools(deps)
+	];
+	const toolMap = new Map<string, AiTool>(tools.map((tool) => [tool.name, tool]));
+	return {
+		getDefinitions: () => toolDefinitions(tools),
+		getStatus: (name, rawArguments = '') => toolStatus(toolMap, name, rawArguments),
+		execute: (name, rawArguments, ctx) => executeTool(toolMap, name, rawArguments, ctx)
+	};
+}
+
 export type { AiTool, AiToolContext, AiToolDefinition } from './types.ts';
+export type { AiToolDeps } from './deps.ts';

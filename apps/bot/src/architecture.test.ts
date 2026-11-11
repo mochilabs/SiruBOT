@@ -101,12 +101,6 @@ const ENV_UTILITIES_ALLOWED: Record<string, string> = {
 
 /** Non-test files under `services/` that still import `container`, each with the reason. Only delete from this list. */
 const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {
-	'services/aiTools/botHelp.ts': 'stage 4b conversion pending',
-	'services/aiTools/botSettings.ts': 'stage 4b conversion pending',
-	'services/aiTools/memory.ts': 'stage 4b conversion pending',
-	'services/aiTools/music.ts': 'stage 4b conversion pending',
-	'services/aiTools/musicSettings.ts': 'stage 4b conversion pending',
-	'services/aiTools/serverInfo.ts': 'stage 4b conversion pending',
 	'services/audioService.ts': 'audio playback owner; converted in the later audio stage',
 	'services/mixerService.ts': 'audio playback owner; converted in the later audio stage',
 	'services/playbackReporter.ts': 'audio playback; converted in the later audio stage',

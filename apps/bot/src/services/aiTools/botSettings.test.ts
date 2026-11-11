@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChannelType } from 'discord.js';
-import type { AiToolContext } from './types.ts';
+import type { AiTool, AiToolContext } from './types.ts';
 
 const mocks = vi.hoisted(() => ({
 	getGuild: vi.fn(),
@@ -31,13 +31,11 @@ const mocks = vi.hoisted(() => ({
 const mockChannels = new Map<string, unknown>();
 const mockRoles = new Map<string, unknown>();
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		guildService: { getGuild: mocks.getGuild },
-		tempVoiceService: {
-			setupMarkerChannel: mocks.setupMarkerChannel
-		},
-		client: {
+const deps = {
+	guildService: { getGuild: mocks.getGuild } as never,
+	tempVoice: { setupMarkerChannel: mocks.setupMarkerChannel },
+	getClient: () =>
+		({
 			guilds: {
 				cache: {
 					get: vi.fn(() => ({
@@ -60,15 +58,16 @@ vi.mock('@sapphire/framework', () => ({
 					}))
 				}
 			}
-		}
-	}
-}));
+		}) as never
+};
 
 vi.mock('../../modules/audio/utils/permissionCheck.ts', () => ({
 	checkManageGuild: mocks.checkManageGuild
 }));
 
-import { botSettingsGetTool, botSettingsSetTool } from './botSettings.ts';
+import { createBotSettingsTools } from './botSettings.ts';
+
+const [botSettingsGetTool, botSettingsSetTool] = createBotSettingsTools(deps) as [AiTool, AiTool];
 vi.mock('../guildSettings/jtc.ts', async (orig) => ({
 	...(await orig()),
 	getJtcSettings: mocks.getJtcSettings,

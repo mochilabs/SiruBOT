@@ -22,7 +22,7 @@ import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
 import { createAiChat } from '../services/aiChatService.ts';
-import { executeAiTool, getAiToolDefinitions, getAiToolStatus } from '../services/aiTools/index.ts';
+import { createAiTools } from '../services/aiTools/index.ts';
 import { CountingStateStore } from '../services/countingState.ts';
 import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { BotActivityService } from '../services/botActivity.ts';
@@ -189,12 +189,26 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.aiMemoryService = new AiMemoryService({ db: container.db });
 		container.aiChatHistory = new ChannelHistoryStore({ db: container.db, logger: appLogger });
 		container.stoppables.push(container.aiChatHistory);
+		const aiTools = createAiTools({
+			db: container.db,
+			guildService: container.guildService,
+			aiMemory: container.aiMemoryService,
+			audioService: container.audioService,
+			mixerService: container.mixerService,
+			playlistService: container.playlistService,
+			tempVoice: container.tempVoiceService,
+			// music은 setupServices 끝(setupMusicControl)에, audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+			getMusic: () => container.music,
+			getAudio: () => container.audio,
+			getClient: () => container.client,
+			getCommands: () => container.stores.get('commands')
+		});
 		container.aiChat = createAiChat({
 			logger: appLogger,
 			guildService: container.guildService,
 			memory: container.aiMemoryService,
 			history: container.aiChatHistory,
-			tools: { getDefinitions: getAiToolDefinitions, getStatus: getAiToolStatus, execute: executeAiTool },
+			tools: aiTools,
 			getClient: () => container.client,
 			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getPlayer: (guildId) => container.audio?.getPlayer?.(guildId),

@@ -18,7 +18,6 @@ import {
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
 import { ChannelHistoryStore, historyLine } from './aiChat/historyStore.ts';
-import { executeAiTool, getAiToolDefinitions, getAiToolStatus } from './aiTools/index.ts';
 vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));
 
 const mocks = vi.hoisted(() => ({
@@ -34,7 +33,9 @@ const mocks = vi.hoisted(() => ({
 	logger: { error: vi.fn(), warn: vi.fn() }
 }));
 
-vi.mock('./aiTools/index.ts', () => ({ getAiToolDefinitions: () => [], executeAiTool: vi.fn(), getAiToolStatus: vi.fn(() => '도구 실행 중이에요') }));
+const toolMocks = vi.hoisted(() => ({ getDefinitions: vi.fn(() => []), getStatus: vi.fn(() => '도구 실행 중이에요'), execute: vi.fn() }));
+const executeAiTool = toolMocks.execute;
+const getAiToolStatus = toolMocks.getStatus;
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;
@@ -97,7 +98,7 @@ beforeEach(() => {
 		guildService: {} as never,
 		memory: { buildPromptBlock: mocks.memory, pushTurn: mocks.pushTurn } as never,
 		history,
-		tools: { getDefinitions: getAiToolDefinitions, getStatus: getAiToolStatus, execute: executeAiTool },
+		tools: toolMocks,
 		getClient: () => ({ channels: { fetch: mocks.channel } }) as never,
 		getPlayer: () => undefined,
 		getRedisStore: () => mocks.redisStore
