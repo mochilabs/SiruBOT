@@ -14,7 +14,7 @@ import {
 } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPlayRelated.ts';
-import { repeatEmoji } from './repeat.ts';
+import { nextRepeatMode, repeatEmoji } from './repeat.ts';
 import { controllerId } from '../customIds.ts';
 import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
 import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -70,15 +70,9 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 
 	const stopButton = new ButtonBuilder().setCustomId(controllerId.encode('stop')).setEmoji(emoji('stop'));
 
-	// 반복 상태 아이콘 바꾸기
+	// 반복 상태 아이콘 바꾸기 — 버튼 ID에는 누르면 바뀔 다음 모드를 담아요
 	const repeatButton = new ButtonBuilder()
-		.setCustomId(
-			player.repeatMode === 'off'
-				? controllerId.encode('repeat', { mode: 'queue' })
-				: player.repeatMode === 'track'
-					? controllerId.encode('repeat', { mode: 'track' })
-					: controllerId.encode('repeat', { mode: 'off' })
-		)
+		.setCustomId(controllerId.encode('repeat', { mode: nextRepeatMode(player.repeatMode) }))
 		.setEmoji(repeatEmoji(player.repeatMode));
 
 	// 핵심 조작만 한 행에 둬 모바일에서도 버튼 라벨이 눌리지 않게 한다.

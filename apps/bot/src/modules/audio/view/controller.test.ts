@@ -333,6 +333,15 @@ describe('controllerView customId round trip', () => {
 		mocks.chapterIndex.mockReturnValue(0);
 	});
 
+	it.each([
+		['off', 'queue'],
+		['queue', 'track'],
+		['track', 'off']
+	] as const)('반복 버튼은 %s 상태에서 누르면 %s 로 바뀌는 ID를 담아요', (current, next) => {
+		const json = controllerView({ player: player({ repeatMode: current }) }).toJSON() as unknown as PlainComponent;
+		expect(controllerId.decode(actionRows(json)[0]![4]!.custom_id!)).toEqual({ action: 'repeat', mode: next });
+	});
+
 	it('모든 버튼의 customId를 controllerId 선언이 해석해요', () => {
 		const json = controllerView({ player: player({ chapters: CHAPTERS, repeatMode: 'track' }) }).toJSON() as unknown as PlainComponent;
 		const ids = actionRows(json)
@@ -343,7 +352,7 @@ describe('controllerView customId round trip', () => {
 			{ action: 'pause' },
 			{ action: 'next' },
 			{ action: 'stop' },
-			{ action: 'repeat', mode: 'track' },
+			{ action: 'repeat', mode: 'off' },
 			{ action: 'chapter', direction: 'prev' },
 			{ action: 'chapter', direction: 'next' },
 			{ action: 'queueView' }
