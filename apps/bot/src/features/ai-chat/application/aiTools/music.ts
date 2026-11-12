@@ -47,7 +47,10 @@ async function requireDjOrAlone(ctx: AiToolContext): Promise<void> {
 
 /** 음악 제어 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMusicTools(
-	deps: Pick<AiToolDeps, 'db' | 'guildService' | 'audioService' | 'mixerService' | 'playlistService' | 'getMusic' | 'getMusicPlay' | 'getAudio'>
+	deps: Pick<
+		AiToolDeps,
+		'db' | 'guildService' | 'audioService' | 'mixerService' | 'playlistService' | 'lavalink' | 'getMusic' | 'getMusicPlay' | 'getAudio'
+	>
 ): AiTool[] {
 	function requirePlayer(guildId: string) {
 		const player = deps.getAudio()!.getPlayer(guildId);
@@ -244,7 +247,7 @@ export function createMusicTools(
 			const player = requirePlayer(guildId);
 			const queueLength = getUserQueuedTracks(player).length;
 			if (queueLength === 0) throw new Error('섞을 대기열 곡이 없어요.');
-			await removeStaleRelatedTracks(player);
+			await removeStaleRelatedTracks(deps.lavalink, player);
 			await player.queue.shuffle();
 			void deps.mixerService.preloadUpcoming(player).catch(() => null);
 			return JSON.stringify({ status: 'ok', queue_size: queueLength });

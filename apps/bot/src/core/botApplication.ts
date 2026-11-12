@@ -43,7 +43,11 @@ import {
 	RELATED_TRACK_REQUESTER_ID,
 	type MusicPlayServiceDeps,
 	createPlaylistPlayback,
-	playbackMessages
+	playbackMessages,
+	handleMixerNeedNext,
+	type LavalinkDeps,
+	type LavalinkLogger,
+	type LavalinkShardInfo
 } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
@@ -84,9 +88,16 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	}
 
 	public async setupRedis(url: string) {
-		const redisStore = new RedisStore({
-			url
-		});
+		const redisStore = new RedisStore(
+			{
+				url
+			},
+			{
+				logger: this.logger as SapphireInterfaceLogger,
+				// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
+				getAudio: () => container.audio
+			}
+		);
 		try {
 			await redisStore.connect();
 		} catch (error) {
@@ -141,6 +152,53 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			debug: (msg: string, ...values: unknown[]) => container.logger.debug(msg, ...values)
 		};
 		const subscriberLogger = appLogger;
+		// Lavalink 계층 의존성 — 서비스보다 먼저 만들고 getter로 호출 시점에 읽어요 (mixer·sponsorBlock·playerNotifier는 아래에서 생겨요).
+		const lavalinkLogger: LavalinkLogger = {
+			...appLogger,
+			getSubLogger: (settings) => (container.logger as SapphireInterfaceLogger).getSubLogger(settings)
+		};
+		const lavalink: LavalinkDeps = {
+			logger: lavalinkLogger,
+			get guildService() {
+				return container.guildService;
+			},
+			get trackService() {
+				return container.trackService;
+			},
+			get dataApi() {
+				return container.dataApi;
+			},
+			get chatTtsService() {
+				return container.chatTtsService;
+			},
+			get playbackReporter() {
+				return container.playbackReporter;
+			},
+			get sponsorBlockService() {
+				return container.sponsorBlockService;
+			},
+			get mixerService() {
+				return container.mixerService;
+			},
+			get playerNotifier() {
+				return container.playerNotifier;
+			},
+			get audio() {
+				return container.audio;
+			},
+			get client() {
+				return container.client;
+			},
+			get redisStore() {
+				return container.redisStore;
+			},
+			get shardInfo(): LavalinkShardInfo | undefined {
+				return container.shardInfo;
+			},
+			nowPlayingCards: { cache: new Map(), pending: new Map(), retryAfter: new Map() },
+			playerStatePublishTracker: new Map()
+		};
+		container.lavalink = lavalink;
 		container.dataApi = createDataApiClient({ logger: appLogger });
 		container.webhookRelay = new WebhookRelay({ logger: appLogger, getBotUser: () => container.client.user });
 		container.guildService = new GuildService({ db: container.db });
@@ -149,6 +207,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.audioService = new AudioService({
 			logger: appLogger,
 			guildService: container.guildService,
+			lavalink,
 			// audio는 setupAudio 뒤에, client는 로그인 뒤에, mixerService는 이 서비스 뒤에 만들어져서 호출 시점에 읽어요
 			getAudio: () => container.audio,
 			getClient: () => container.client,
@@ -157,6 +216,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.mixerService = new MixerService({
 			logger: appLogger,
 			guildService: container.guildService,
+			lavalink,
 			callTimeoutMs: getConfig().mixer.callTimeoutMs,
 			// playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요
 			getPlayerNotifier: () => container.playerNotifier
@@ -166,7 +226,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			guildService: container.guildService,
 			messages: playbackMessages,
 			getClient: () => container.client,
-			getMixerService: () => container.mixerService
+			getMixerService: () => container.mixerService,
+			lavalink,
+			armNextTrack: (player, event) => handleMixerNeedNext(lavalink, player, event)
 		});
 		container.playlistPlayback = createPlaylistPlayback({
 			guildService: container.guildService,
@@ -228,6 +290,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		const aiTools = createAiTools({
 			db: container.db,
 			guildService: container.guildService,
+			lavalink,
 			aiMemory: container.aiMemoryService,
 			audioService: container.audioService,
 			mixerService: container.mixerService,
@@ -449,7 +512,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				},
 				onEmptyQueue: {
 					destroyAfterMs: 10000,
-					autoPlayFunction: autoPlayRelated
+					autoPlayFunction: (player, lastPlayedTrack) => autoPlayRelated(container.lavalink, player, lastPlayedTrack)
 				},
 				maxErrorsPerTime: {
 					maxAmount: 3,
@@ -463,7 +526,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 
 		container.shardInfo = shardInfo;
-		container.playerNotifier = new PlayerNotifier();
+		container.playerNotifier = new PlayerNotifier(container.lavalink);
 		container.stoppables.push(container.playerNotifier);
 		container.audio = audio;
 

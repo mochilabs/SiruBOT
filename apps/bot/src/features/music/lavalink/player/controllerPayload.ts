@@ -3,11 +3,11 @@
  * 카드 첨부 유지/재업로드 정책을 한 곳에서 다룬다.
  * playerNotifier(전송/수정)와 controllerButton(버튼 갱신)이 공유한다.
  */
-import { container } from '@sapphire/framework';
 import type { AttachmentBuilder, ContainerBuilder, Message } from 'discord.js';
 import { getDisplayNowPlayingCard, type NowPlayingCardAttachment } from './nowPlayingCard.ts';
 import { controllerView } from '../../discord/views/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import { currentBpmCache } from './currentBpm.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
@@ -40,10 +40,14 @@ export interface ControllerCardPayload {
 }
 
 /** 고정 채널 판정 → 카드 해석 → 컨트롤러 컴포넌트/첨부 조립까지 한 번에. */
-export async function buildControllerCardPayload(player: CustomPlayer, options: ControllerCardPayloadOptions): Promise<ControllerCardPayload> {
-	const pinnedChannelId = await guildChannels.getPinnedChannel(container.guildService, player.guildId).catch(() => null);
+export async function buildControllerCardPayload(
+	deps: LavalinkDeps,
+	player: CustomPlayer,
+	options: ControllerCardPayloadOptions
+): Promise<ControllerCardPayload> {
+	const pinnedChannelId = await guildChannels.getPinnedChannel(deps.guildService, player.guildId).catch(() => null);
 	const pinned = Boolean(options.textChannelId) && options.textChannelId === pinnedChannelId;
-	const card = pinned ? getDisplayNowPlayingCard(player) : null;
+	const card = pinned ? getDisplayNowPlayingCard(deps, player) : null;
 
 	const currentIdentifier = nowPlayingTrack(player)?.info.identifier;
 	const currentNode = player.node;
@@ -55,10 +59,10 @@ export async function buildControllerCardPayload(player: CustomPlayer, options: 
 			player,
 			currentNode,
 			currentIdentifier,
-			(signal) => container.mixerService.getState(player, signal),
+			(signal) => deps.mixerService.getState(player, signal),
 			() => {
 				if (player.node === currentNode && nowPlayingTrack(player)?.info.identifier === currentIdentifier) {
-					container.playerNotifier.updateController(player);
+					deps.playerNotifier.updateController(player);
 				}
 			}
 		)

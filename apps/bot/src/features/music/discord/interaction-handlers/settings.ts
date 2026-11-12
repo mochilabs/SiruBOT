@@ -1,4 +1,4 @@
-import { InteractionHandler, InteractionHandlerTypes, type container } from '@sapphire/framework';
+import { InteractionHandler, InteractionHandlerTypes, container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import {
 	MessageFlags,
@@ -75,7 +75,7 @@ export const SETTINGS_ACTIONS = {
 				const player = services.audio.getPlayer(guildId);
 				const currentTrack = player?.queue.current;
 				if (player?.playing && currentTrack && player.queue.tracks.length === 0) {
-					void queueRelatedUpfront(player, currentTrack).catch((error) => {
+					void queueRelatedUpfront(container.lavalink, player, currentTrack).catch((error) => {
 						services.logger.warn(`[mixer] related pre-add failed (guild ${guildId}): ${error}`);
 					});
 				}

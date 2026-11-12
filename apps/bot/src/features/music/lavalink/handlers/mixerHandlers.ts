@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { container } from '@sapphire/framework';
 import { Track, TrackEndEvent } from 'lavalink-client';
 import { CustomPlayer, OverrideAction } from '../player/customPlayer.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import { cancelPendingInvalidate, getTargetNextTrack, getTrackUid, notifyQueueMutated, type QueueMutationOptions } from '../queue/queueWrapper.ts';
 import { isTtsClip } from '../requester.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
@@ -49,7 +49,7 @@ export interface MixerOverriddenEventPayload {
 	action: OverrideAction;
 }
 
-function recordTrackPlayIfNeeded(player: CustomPlayer, track: Track | null): void {
+function recordTrackPlayIfNeeded(deps: LavalinkDeps, player: CustomPlayer, track: Track | null): void {
 	if (!track || track.info?.isStream || isTtsClip(track)) return;
 	player.relatedTrackHistory.remember(track);
 	const key = (track.encoded ? normalizeTrackEncoded(track.encoded) : null) ?? track.info?.identifier ?? track.info?.uri ?? null;
@@ -60,18 +60,18 @@ function recordTrackPlayIfNeeded(player: CustomPlayer, track: Track | null): voi
 	if (player.transitionState) {
 		player.transitionState.lastRecordedKey = key;
 	}
-	const trackSvc = container.trackService;
+	const trackSvc = deps.trackService;
 	if (!trackSvc?.recordPlay) return;
 	// 곡 upsert와 히스토리를 단일 트랜잭션으로 기록한다 — abort 시 함께 롤백되어 FK 위반을 막는다.
 	void trackSvc.recordPlay(player.guildId, track).catch((error) => {
-		container.logger?.error?.(`Failed to record track history: ${formatRecordError(error)}`);
+		deps.logger?.error?.(`Failed to record track history: ${formatRecordError(error)}`);
 	});
 }
 
 /**
  * Common local commit function shared by normal advance, user skip, recovery, and rehydration.
  */
-export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutationOptions = {}): void {
+export function commitLocal(deps: LavalinkDeps, player: CustomPlayer, track: Track, opts: QueueMutationOptions = {}): void {
 	const mutationOpts: QueueMutationOptions = { invalidate: false, bumpEpoch: false, ...opts };
 	const tracks = player.queue.tracks;
 	const headTrack = tracks[0] as Track | undefined;
@@ -82,10 +82,10 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = track;
 		}
-		recordTrackPlayIfNeeded(player, track);
-		notifyQueueMutated(player, mutationOpts);
+		recordTrackPlayIfNeeded(deps, player, track);
+		notifyQueueMutated(deps, player, mutationOpts);
 		void player.queue?.utils?.save?.()?.catch(() => null);
-		container.playerNotifier.updateController(player);
+		deps.playerNotifier.updateController(player);
 		return;
 	}
 
@@ -94,10 +94,10 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = track;
 		}
-		recordTrackPlayIfNeeded(player, track);
-		notifyQueueMutated(player, mutationOpts);
+		recordTrackPlayIfNeeded(deps, player, track);
+		notifyQueueMutated(deps, player, mutationOpts);
 		void player.queue?.utils?.save?.()?.catch(() => null);
-		container.playerNotifier.updateController(player);
+		deps.playerNotifier.updateController(player);
 		return;
 	}
 
@@ -117,10 +117,10 @@ export function commitLocal(player: CustomPlayer, track: Track, opts: QueueMutat
 	if (player.transitionState) {
 		player.transitionState.confirmedNowPlaying = nextCurrent;
 	}
-	recordTrackPlayIfNeeded(player, nextCurrent);
-	notifyQueueMutated(player, mutationOpts);
+	recordTrackPlayIfNeeded(deps, player, nextCurrent);
+	notifyQueueMutated(deps, player, mutationOpts);
 	void player.queue?.utils?.save?.()?.catch(() => null);
-	container.playerNotifier.updateController(player);
+	deps.playerNotifier.updateController(player);
 }
 
 /** 트랙에서 앨범명을 안전하게 추출해요 (pluginInfo.albumName 또는 userData.album) */
@@ -159,7 +159,7 @@ export function shouldPreserveTransition(current: Track | null | undefined, next
 	return false;
 }
 
-async function armOptions(player: CustomPlayer, target: Track | null): Promise<ArmRequestOptions> {
+async function armOptions(deps: LavalinkDeps, player: CustomPlayer, target: Track | null): Promise<ArmRequestOptions> {
 	const options: ArmRequestOptions = {
 		epoch: player.currentEpoch,
 		encodedTrack: target?.encoded ? normalizeTrackEncoded(target.encoded) : null,
@@ -167,18 +167,18 @@ async function armOptions(player: CustomPlayer, target: Track | null): Promise<A
 		preserveTransition: target ? shouldPreserveTransition(player.queue.current, target) : undefined
 	};
 	if (!target) return options;
-	const outgoingEnd = options.preserveTransition ? undefined : container.sponsorBlockService.outgoingEndPositionMs(player);
+	const outgoingEnd = options.preserveTransition ? undefined : deps.sponsorBlockService.outgoingEndPositionMs(player);
 	try {
-		const start = await Promise.race([container.sponsorBlockService.incomingStartPositionMs(player, target), sleep(2_000).then(() => undefined)]);
-		if (start && (await container.mixerService.supportsIncomingStart(player))) options.startPositionMs = start;
+		const start = await Promise.race([deps.sponsorBlockService.incomingStartPositionMs(player, target), sleep(2_000).then(() => undefined)]);
+		if (start && (await deps.mixerService.supportsIncomingStart(player))) options.startPositionMs = start;
 	} catch (error) {
-		container.logger.debug(`[SponsorBlock] incoming start unavailable for ${player.guildId}: ${String(error)}`);
+		deps.logger.debug(`[SponsorBlock] incoming start unavailable for ${player.guildId}: ${String(error)}`);
 	}
 	try {
-		if (outgoingEnd && outgoingEnd > (player.position ?? 0) + 500 && (await container.mixerService.supportsOutgoingEnd(player)))
+		if (outgoingEnd && outgoingEnd > (player.position ?? 0) + 500 && (await deps.mixerService.supportsOutgoingEnd(player)))
 			options.outgoingEndPositionMs = outgoingEnd;
 	} catch (error) {
-		container.logger.debug(`[SponsorBlock] outgoing end unavailable for ${player.guildId}: ${String(error)}`);
+		deps.logger.debug(`[SponsorBlock] outgoing end unavailable for ${player.guildId}: ${String(error)}`);
 	}
 	return options;
 }
@@ -186,7 +186,7 @@ async function armOptions(player: CustomPlayer, target: Track | null): Promise<A
 /* ------------------------------------------------------------------ */
 /* 1. MixerNeedNextTrackEvent Handler                                 */
 /* ------------------------------------------------------------------ */
-export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNeedNextEventPayload): Promise<void> {
+export async function handleMixerNeedNext(deps: LavalinkDeps, player: CustomPlayer, _event: MixerNeedNextEventPayload): Promise<void> {
 	// 단독 TTS 클립 재생 중엔 DB 조회·REST 아밍을 하지 않는다 (명세 4.2) —
 	// 클립은 1~4초마다 끝나므로 이벤트가 매번 오고, 음악 슬롯은 continueAfterTtsClip이 소유한다.
 	if (isTtsClip(player.queue?.current)) return;
@@ -194,7 +194,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	// 이벤트가 이 곡의 전이를 묘사한다고 가정한다 — DB await·REST 왕복 사이에
 	// 스킵/콜드스타트/오버라이드/트랙스타트가 끼어들면 stale로 판정해 아밍하지 않는다.
 	const triggerEncoded = player.queue.current?.encoded ?? null;
-	const settings = await guildMixer.getMixerSettings(container.guildService, player.guildId).catch(() => null);
+	const settings = await guildMixer.getMixerSettings(deps.guildService, player.guildId).catch(() => null);
 	const shouldArm = settings ? needsUpcomingTrack(settings) : true;
 
 	const stale = () =>
@@ -209,16 +209,16 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 	const key = randomUUID();
 
 	try {
-		const options = await armOptions(player, target);
+		const options = await armOptions(deps, player, target);
 		if (stale() || getTrackUid(shouldArm ? getTargetNextTrack(player) : null) !== getTrackUid(target)) return;
 		cancelPendingInvalidate(player);
 		options.epoch = player.currentEpoch;
-		await container.mixerService.arm(player, options, key);
+		await deps.mixerService.arm(player, options, key);
 		// invalidate를 누락하는 일을 막는다 (F3).
 		player.mixerRuntime.lastTargetUid = getTrackUid(target);
 	} catch (error: unknown) {
 		if (!(error instanceof MixerRequestError) || error.status !== 409) {
-			container.logger.warn(`[mixer] arm failed on guild ${player.guildId}: ${error instanceof Error ? error.message : String(error)}`);
+			deps.logger.warn(`[mixer] arm failed on guild ${player.guildId}: ${error instanceof Error ? error.message : String(error)}`);
 			return;
 		}
 
@@ -237,14 +237,14 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 
 		try {
 			const latestTarget = shouldArm ? getTargetNextTrack(player) : null;
-			const options = await armOptions(player, latestTarget);
+			const options = await armOptions(deps, player, latestTarget);
 			if (stale() || getTrackUid(shouldArm ? getTargetNextTrack(player) : null) !== getTrackUid(latestTarget)) return;
 			cancelPendingInvalidate(player);
 			options.epoch = player.currentEpoch;
-			await container.mixerService.arm(player, options);
+			await deps.mixerService.arm(player, options);
 			player.mixerRuntime.lastTargetUid = getTrackUid(latestTarget);
 		} catch (retryError) {
-			container.logger.error(
+			deps.logger.error(
 				`[mixer] arm retry failed on guild ${player.guildId}: ${retryError instanceof Error ? retryError.message : String(retryError)}`
 			);
 		}
@@ -254,7 +254,7 @@ export async function handleMixerNeedNext(player: CustomPlayer, _event: MixerNee
 /* ------------------------------------------------------------------ */
 /* 2. MixerAdvancedEvent Handler                                      */
 /* ------------------------------------------------------------------ */
-export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdvancedEventPayload): Promise<void> {
+export async function handleMixerAdvanced(deps: LavalinkDeps, player: CustomPlayer, event: MixerAdvancedEventPayload): Promise<void> {
 	const target = getTargetNextTrack(player);
 	const confirmedEncoded = player.transitionState?.confirmedNowPlaying?.encoded ?? player.queue.current?.encoded ?? null;
 	const alreadyCurrent =
@@ -277,11 +277,11 @@ export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdva
 			// epoch만 재동기화하고 정상 commit한다 (S11).
 			player.currentEpoch = Math.max(player.currentEpoch, event.epoch);
 			rt(player).transitionSeq++;
-			commitLocal(player, target as Track, { invalidate: false });
+			commitLocal(deps, player, target as Track, { invalidate: false });
 			return;
 		}
-		container.logger.warn(`[mixer] stale advanced event (got ${event.epoch}, current ${player.currentEpoch}) on guild ${player.guildId}`);
-		await recover(player, 'stale', event.encodedTrack);
+		deps.logger.warn(`[mixer] stale advanced event (got ${event.epoch}, current ${player.currentEpoch}) on guild ${player.guildId}`);
+		await recover(deps, player, 'stale', event.encodedTrack);
 		return;
 	}
 
@@ -296,17 +296,17 @@ export async function handleMixerAdvanced(player: CustomPlayer, event: MixerAdva
 
 	// (3) Desync: Epoch matches but encoded track does not match target head
 	if (!target || !isSameEncodedTrack(target.encoded, event.encodedTrack)) {
-		container.logger.error(`[mixer] desync assert failed: plugin=${event.encodedTrack}, target=${target?.encoded} on guild ${player.guildId}`);
-		await recover(player, 'desync', event.encodedTrack);
+		deps.logger.error(`[mixer] desync assert failed: plugin=${event.encodedTrack}, target=${target?.encoded} on guild ${player.guildId}`);
+		await recover(deps, player, 'desync', event.encodedTrack);
 		return;
 	}
 
 	// (4) Normal Commit: Advance 1 track without firing invalidate
 	rt(player).transitionSeq++;
-	commitLocal(player, target as Track, { invalidate: false });
+	commitLocal(deps, player, target as Track, { invalidate: false });
 }
 
-async function recover(player: CustomPlayer, reason: 'stale' | 'desync', serverEncoded?: string): Promise<void> {
+async function recover(deps: LavalinkDeps, player: CustomPlayer, reason: 'stale' | 'desync', serverEncoded?: string): Promise<void> {
 	if (isOverrideInFlight(player)) {
 		// An override is already in flight; its own handleMixerOverridden / onOverriddenTimeout
 		// will verify server state via scheduleRecoveryProbe. Never schedule a blind delayed
@@ -323,35 +323,35 @@ async function recover(player: CustomPlayer, reason: 'stale' | 'desync', serverE
 			if (isSameTrack(serverTrack, player.queue.current) || isSameTrack(serverTrack, player.transitionState?.confirmedNowPlaying)) {
 				rt(player).transitionSeq++;
 				player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
-				container.logger.info(`[mixer] recovery (${reason}) reconciled to current playing track on guild ${player.guildId}`);
+				deps.logger.info(`[mixer] recovery (${reason}) reconciled to current playing track on guild ${player.guildId}`);
 				return;
 			}
 			if (head && (isSameTrack(serverTrack, head) || isSameEncodedTrack(serverTrack.encoded, serverEncoded))) {
 				rt(player).transitionSeq++;
-				commitLocal(player, head, { invalidate: false, bumpEpoch: false });
-				container.logger.info(`[mixer] recovery (${reason}) reconciled to server head track on guild ${player.guildId}`);
+				commitLocal(deps, player, head, { invalidate: false, bumpEpoch: false });
+				deps.logger.info(`[mixer] recovery (${reason}) reconciled to server head track on guild ${player.guildId}`);
 				return;
 			}
 			if (isSameTrack(serverTrack, { encoded: serverEncoded })) {
-				commitLocalIfMatches(player, serverEncoded);
-				container.logger.info(`[mixer] recovery (${reason}) reconciled to server track on guild ${player.guildId}`);
+				commitLocalIfMatches(deps, player, serverEncoded);
+				deps.logger.info(`[mixer] recovery (${reason}) reconciled to server track on guild ${player.guildId}`);
 				return;
 			}
 		}
 	}
 
 	if (head) {
-		commitLocal(player, head, { invalidate: false, bumpEpoch: false });
-		await sendOverride(player, 'PLAY_NOW', head.encoded ?? null, { recovery: true });
+		commitLocal(deps, player, head, { invalidate: false, bumpEpoch: false });
+		await sendOverride(deps, player, 'PLAY_NOW', head.encoded ?? null, { recovery: true });
 	} else {
 		player.queue.current = null;
-		notifyQueueMutated(player, { invalidate: false, bumpEpoch: false, force: true });
+		notifyQueueMutated(deps, player, { invalidate: false, bumpEpoch: false, force: true });
 		cancelPendingInvalidate(player);
 		void player.queue?.utils?.save?.()?.catch(() => null);
-		container.playerNotifier.updateController(player);
-		await sendOverride(player, 'STOP', null, { recovery: true });
+		deps.playerNotifier.updateController(player);
+		await sendOverride(deps, player, 'STOP', null, { recovery: true });
 	}
-	container.logger.info(`[mixer] recovery (${reason}) executed on guild ${player.guildId}`);
+	deps.logger.info(`[mixer] recovery (${reason}) executed on guild ${player.guildId}`);
 }
 
 /** REST 프로브로 서버 재생 트랙을 조회한다 (실패 시 null). */
@@ -368,18 +368,18 @@ async function fetchServerTrackById(player: CustomPlayer): Promise<{ encoded?: s
 }
 
 /** 서버가 이미 재생 중인 트랙이면 큐 선두가 그 트랙일 때만 commit한다 (그 외엔 손대지 않는다). */
-function commitLocalIfMatches(player: CustomPlayer, serverEncoded: string): void {
+function commitLocalIfMatches(deps: LavalinkDeps, player: CustomPlayer, serverEncoded: string): void {
 	const head = getTargetNextTrack(player) ?? (player.queue.tracks[0] as Track | undefined);
 	if (head && isSameEncodedTrack(head.encoded, serverEncoded)) {
 		rt(player).transitionSeq++;
-		commitLocal(player, head, { invalidate: false, bumpEpoch: false });
+		commitLocal(deps, player, head, { invalidate: false, bumpEpoch: false });
 	}
 }
 
 /* ------------------------------------------------------------------ */
 /* 3. TrackEndEvent Handler                                           */
 /* ------------------------------------------------------------------ */
-export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndEvent): Promise<void> {
+export async function handleMixerTrackEnd(deps: LavalinkDeps, player: CustomPlayer, event: TrackEndEvent): Promise<void> {
 	if (event.reason !== 'finished' && event.reason !== 'loadFailed') return;
 
 	const endedTrack = event.track ?? null;
@@ -423,12 +423,12 @@ export async function handleMixerTrackEnd(player: CustomPlayer, event: TrackEndE
 		}
 	}
 
-	await coldStart(player, ended, preShiftedByLibrary);
+	await coldStart(deps, player, ended, preShiftedByLibrary);
 }
 
-async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrary: boolean = false): Promise<void> {
+async function coldStart(deps: LavalinkDeps, player: CustomPlayer, ended: string, preShiftedByLibrary: boolean = false): Promise<void> {
 	if (player.repeatMode === 'track') {
-		await sendOverride(player, 'PLAY_NOW', ended);
+		await sendOverride(deps, player, 'PLAY_NOW', ended);
 		return;
 	}
 
@@ -442,10 +442,10 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 		player.queue.current = null;
 		player.playing = false;
 		player.lastPositionChange = null;
-		notifyQueueMutated(player, { invalidate: false, bumpEpoch: false, force: true });
+		notifyQueueMutated(deps, player, { invalidate: false, bumpEpoch: false, force: true });
 		cancelPendingInvalidate(player);
 		void player.queue?.utils?.save?.()?.catch(() => null);
-		container.playerNotifier.updateController(player);
+		deps.playerNotifier.updateController(player);
 		return;
 	}
 
@@ -460,10 +460,10 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 	}
 	if (!isSameEncodedTrack(next.encoded, ended) && serverTrack && isSameTrack(serverTrack, next)) {
 		if (!isSameEncodedTrack(player.queue.current?.encoded, next.encoded)) {
-			commitLocal(player, next, { invalidate: false, bumpEpoch: false });
+			commitLocal(deps, player, next, { invalidate: false, bumpEpoch: false });
 		} else {
-			notifyQueueMutated(player, { invalidate: false, bumpEpoch: false });
-			container.playerNotifier.updateController(player);
+			notifyQueueMutated(deps, player, { invalidate: false, bumpEpoch: false });
+			deps.playerNotifier.updateController(player);
 		}
 		return;
 	}
@@ -472,21 +472,21 @@ async function coldStart(player: CustomPlayer, ended: string, preShiftedByLibrar
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = next;
 		}
-		recordTrackPlayIfNeeded(player, next);
-		notifyQueueMutated(player, { invalidate: false, bumpEpoch: false });
-		container.playerNotifier.updateController(player);
+		recordTrackPlayIfNeeded(deps, player, next);
+		notifyQueueMutated(deps, player, { invalidate: false, bumpEpoch: false });
+		deps.playerNotifier.updateController(player);
 	} else {
-		commitLocal(player, next, { invalidate: false, bumpEpoch: false });
+		commitLocal(deps, player, next, { invalidate: false, bumpEpoch: false });
 	}
-	await sendOverride(player, 'PLAY_NOW', next.encoded ?? null);
+	await sendOverride(deps, player, 'PLAY_NOW', next.encoded ?? null);
 }
 /* ------------------------------------------------------------------ */
 /* 4. MixerOverriddenEvent Handler                                    */
 /* ------------------------------------------------------------------ */
-export function handleMixerOverridden(player: CustomPlayer, event: MixerOverriddenEventPayload): void {
+export function handleMixerOverridden(deps: LavalinkDeps, player: CustomPlayer, event: MixerOverriddenEventPayload): void {
 	const pending = rt(player).pending.get(event.requestId);
 	if (!pending) {
-		container.logger.debug(`[mixer] overridden received without pending record: req=${event.requestId} on guild ${player.guildId}`);
+		deps.logger.debug(`[mixer] overridden received without pending record: req=${event.requestId} on guild ${player.guildId}`);
 		return;
 	}
 
@@ -494,7 +494,7 @@ export function handleMixerOverridden(player: CustomPlayer, event: MixerOverridd
 	rt(player).pending.delete(event.requestId);
 
 	if (pending.recovery) {
-		scheduleRecoveryProbe(player);
+		scheduleRecoveryProbe(deps, player);
 	}
 }
 
@@ -502,6 +502,7 @@ export function handleMixerOverridden(player: CustomPlayer, event: MixerOverridd
 /* 5. sendOverride Command & Recovery Dispatcher                      */
 /* ------------------------------------------------------------------ */
 export async function sendOverride(
+	deps: LavalinkDeps,
 	player: CustomPlayer,
 	action: OverrideAction,
 	encodedTrack: string | null,
@@ -518,7 +519,7 @@ export async function sendOverride(
 	}
 
 	let activeIdemKey = randomUUID();
-	const timer = setTimeout(() => onOverriddenTimeout(player, activeIdemKey), OVERRIDDEN_TIMEOUT_MS);
+	const timer = setTimeout(() => onOverriddenTimeout(deps, player, activeIdemKey), OVERRIDDEN_TIMEOUT_MS);
 	state.pending.set(activeIdemKey, {
 		epoch: player.currentEpoch,
 		action,
@@ -529,7 +530,7 @@ export async function sendOverride(
 	state.transitionSeq++;
 
 	const execute = (epoch: number, key: string) =>
-		container.mixerService.override(
+		deps.mixerService.override(
 			player,
 			{
 				epoch,
@@ -578,7 +579,7 @@ export async function sendOverride(
 				clearTimeout(rec.timer);
 				state.pending.delete(activeIdemKey);
 				if (rec.recovery) {
-					scheduleRecoveryProbe(player);
+					scheduleRecoveryProbe(deps, player);
 				}
 			}
 		}
@@ -586,26 +587,26 @@ export async function sendOverride(
 	} catch (fatalError: unknown) {
 		clearTimeout(timer);
 		state.pending.delete(activeIdemKey);
-		container.logger.error(
+		deps.logger.error(
 			`[mixer] override failed twice on guild ${player.guildId}: ${fatalError instanceof Error ? fatalError.message : String(fatalError)}`
 		);
-		await hardResync(player);
+		await hardResync(deps, player);
 		return 'resynced';
 	}
 }
 
-function onOverriddenTimeout(player: CustomPlayer, idemKey: string): void {
+function onOverriddenTimeout(deps: LavalinkDeps, player: CustomPlayer, idemKey: string): void {
 	if (!rt(player).pending.delete(idemKey)) return;
-	container.logger.warn(`[mixer] overridden timeout for req=${idemKey} on guild ${player.guildId}`);
-	scheduleRecoveryProbe(player);
+	deps.logger.warn(`[mixer] overridden timeout for req=${idemKey} on guild ${player.guildId}`);
+	scheduleRecoveryProbe(deps, player);
 }
 
-export async function hardResync(player: CustomPlayer): Promise<void> {
+export async function hardResync(deps: LavalinkDeps, player: CustomPlayer): Promise<void> {
 	try {
 		clearMixerRuntime(player);
-		const state = await container.mixerService.getState(player).catch(() => null);
+		const state = await deps.mixerService.getState(player).catch(() => null);
 		player.currentEpoch = Math.max(player.currentEpoch, state?.lastKnownEpoch ?? 0) + 100;
-		await container.mixerService.reset(player, player.currentEpoch, randomUUID());
+		await deps.mixerService.reset(player, player.currentEpoch, randomUUID());
 
 		// Wait past plugin's windowOpenGraceMs (default 1500ms) so the follow-up override isn't rejected with 409 PRE_RESET_ARRIVAL
 		await sleep(1600);
@@ -613,7 +614,7 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 		// 재-결정 시점의 epoch와 큐를 다시 읽는다 — sleep 사이에 notifyQueueMutated가
 		// epoch를 또 올리거나 current가 바뀌었을 수 있다 (F7). sendOverride를 재호출하면
 		// 실패 시 hardResync 재귀가 발생할 수 있으므로 직접 override를 호출하고 409만 1회 재시도한다.
-		const freshEpoch = await container.mixerService
+		const freshEpoch = await deps.mixerService
 			.getState(player)
 			.then((s) => s.lastKnownEpoch)
 			.catch(() => null);
@@ -625,7 +626,7 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 		const encodedTrack = current?.encoded ?? null;
 		const resyncKey = randomUUID();
 		try {
-			await container.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, resyncKey);
+			await deps.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, resyncKey);
 		} catch (err: unknown) {
 			if (err instanceof MixerRequestError && err.status === 409) {
 				if (typeof err.lastKnownEpoch === 'number') {
@@ -635,20 +636,20 @@ export async function hardResync(player: CustomPlayer): Promise<void> {
 					const waitMs = err.v2WindowOpenAt - Date.now() + 50;
 					if (waitMs > 0) await sleep(waitMs);
 				}
-				await container.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, randomUUID());
+				await deps.mixerService.override(player, { epoch: player.currentEpoch, action, encodedTrack }, randomUUID());
 			} else {
 				throw err;
 			}
 		}
 		player.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(player));
 	} catch (resyncError: unknown) {
-		container.logger.error(
+		deps.logger.error(
 			`[mixer] hard resync failed on guild ${player.guildId}: ${resyncError instanceof Error ? resyncError.message : String(resyncError)}`
 		);
 	}
 }
 
-function scheduleRecoveryProbe(player: CustomPlayer): void {
+function scheduleRecoveryProbe(deps: LavalinkDeps, player: CustomPlayer): void {
 	setTimeout(async () => {
 		if (isOverrideInFlight(player)) return;
 
@@ -662,7 +663,7 @@ function scheduleRecoveryProbe(player: CustomPlayer): void {
 			if ((!serverTrack && !clientTrack) || isSameTrack(serverTrack, clientTrack)) return;
 			if (i < 2) await sleep(300);
 		}
-		container.logger.error(`[mixer] post-recovery desync detected on guild ${player.guildId}, forcing hardResync`);
-		await hardResync(player);
+		deps.logger.error(`[mixer] post-recovery desync detected on guild ${player.guildId}, forcing hardResync`);
+		await hardResync(deps, player);
 	}, PROBE_DELAY_MS);
 }

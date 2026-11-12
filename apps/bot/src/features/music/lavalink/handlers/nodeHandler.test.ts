@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { container } from '@sapphire/framework';
 import { NodeHandler, guardIdleCarrierEvents, MIXER_IDLE_CARRIER_ID } from './nodeHandler.ts';
 import { RelatedTrackHistory } from '../player/relatedTrackHistory.ts';
 import type { Track } from 'lavalink-client';
@@ -7,11 +6,12 @@ import type { Track } from 'lavalink-client';
 const { getSubLogger, reportNodeEvent } = vi.hoisted(() => ({ getSubLogger: vi.fn(), reportNodeEvent: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger }, playbackReporter: { reportNodeEvent } } }));
+/** 핸들러가 받는 LavalinkDeps 역할 — 테스트마다 필요한 필드를 Object.assign으로 채워요 */
+const container: Record<string, any> = { logger: { getSubLogger }, playbackReporter: { reportNodeEvent } };
 
 function makeHandler() {
 	const nodeManager = { on: vi.fn() };
-	return new NodeHandler(nodeManager as never) as unknown as { [key: string]: any };
+	return new NodeHandler(container as never, nodeManager as never) as unknown as { [key: string]: any };
 }
 
 const NOW = new Date('2026-10-14T12:00:00Z').getTime();

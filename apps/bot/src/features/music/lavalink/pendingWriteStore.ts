@@ -1,9 +1,8 @@
 import { type RedisClientType } from '@redis/client';
-import { container } from '@sapphire/framework';
 import { MemoryCache } from '@sirubot/utils';
 import { syncPendingWrites } from './pendingWriteSync.ts';
-import { SapphireInterfaceLogger } from '../../../core/logger.ts';
-import { ILogObj, Logger } from 'tslog';
+import type { ILogObj, Logger } from 'tslog';
+import type { LavalinkLogger } from './deps.ts';
 
 /**
  * Redis 단절·장애에 대비해 쓰기를 메모리 저널(pendingWrites)에 남겼다가 재연결 때 밀어 넣는
@@ -38,7 +37,8 @@ export abstract class PendingWriteStore {
 		protected readonly redis: RedisClientType,
 		private readonly storeName: string,
 		cacheOptions: { ttl: number; maxSize: number },
-		coalesceMs = 0
+		coalesceMs = 0,
+		private readonly baseLogger: LavalinkLogger
 	) {
 		this.cache = new MemoryCache<string, string>(cacheOptions);
 		this.coalesceMs = coalesceMs;
@@ -46,7 +46,7 @@ export abstract class PendingWriteStore {
 
 	protected get logger(): Logger<ILogObj> {
 		if (!this._logger) {
-			this._logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: this.storeName });
+			this._logger = this.baseLogger.getSubLogger({ name: this.storeName });
 		}
 		return this._logger;
 	}

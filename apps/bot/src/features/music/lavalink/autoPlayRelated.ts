@@ -1,6 +1,6 @@
-import { container } from '@sapphire/framework';
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import { CustomPlayer, transitionConfirmTimeoutMs } from './player/customPlayer.ts';
+import type { LavalinkDeps } from './deps.ts';
 import { isYouTubeSource } from '@sirubot/utils';
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import { requesterIdOf, RELATED_TRACK_REQUESTER_ID } from './requester.ts';
@@ -44,7 +44,7 @@ export function isRelatedTrack(track: Track | UnresolvedTrack | null | undefined
  * fetch가 다시 추가할 수 있다). 제거한 개수를 반환하며, 서버 예열 슬롯 갱신은
  * 호출부의 preload가 담당한다.
  */
-export async function removeStaleRelatedTracks(player: Player): Promise<number> {
+export async function removeStaleRelatedTracks(deps: LavalinkDeps, player: Player): Promise<number> {
 	const tracks = player.queue.tracks;
 	const relatedIndexes: number[] = [];
 	for (let i = 0; i < tracks.length; i++) {
@@ -65,7 +65,7 @@ export async function removeStaleRelatedTracks(player: Player): Promise<number> 
 			await player.queue.splice(relatedIndexes[i], 1);
 		}
 	}
-	container.logger.debug(`[autoPlayRelated] Removed ${relatedIndexes.length} pre-added related track(s) (guild ${player.guildId})`);
+	deps.logger.debug(`[autoPlayRelated] Removed ${relatedIndexes.length} pre-added related track(s) (guild ${player.guildId})`);
 	return relatedIndexes.length;
 }
 
@@ -179,7 +179,7 @@ function trackSimilarity(trackA: Track, trackB: Track): number {
  * - Select the most appropriate track from the medium similarity range
  * 이미 재생했거나 대기 중인 곡은 fetchRelatedCandidate에서 하드 제외되므로 여기서 다루지 않는다.
  */
-export function pickBySimilarity(candidates: Track[], reference: Track): Track | null {
+export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], reference: Track): Track | null {
 	if (candidates.length === 0) return null;
 
 	const scored = candidates.map((track) => ({
@@ -201,7 +201,7 @@ export function pickBySimilarity(candidates: Track[], reference: Track): Track |
 	const topN = pool.slice(0, Math.min(3, pool.length));
 	const pick = topN[Math.floor(Math.random() * topN.length)];
 
-	container.logger.debug(`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
+	deps.logger.debug(`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
 	return pick.track;
 }
 
@@ -212,7 +212,12 @@ export function pickBySimilarity(candidates: Track[], reference: Track): Track |
  * 세션에서 재생했던 곡과 대기 중인 곡(queue.tracks)은 순위 감점이 아니라
  * 하드 제외한다 — 감점만으로는 폴백 경로에서 다시 뽑혀 같은 곡이 반복되었다.
  */
-export async function fetchRelatedCandidate(player: CustomPlayer, lastPlayedTrack: Track, extraExcludes: string[] = []): Promise<Track | null> {
+export async function fetchRelatedCandidate(
+	deps: LavalinkDeps,
+	player: CustomPlayer,
+	lastPlayedTrack: Track,
+	extraExcludes: string[] = []
+): Promise<Track | null> {
 	const RD_PLAYLIST_ID = 'RD' + lastPlayedTrack.info.identifier;
 	const history = player.relatedTrackHistory;
 	history.remember(lastPlayedTrack);
@@ -223,10 +228,10 @@ export async function fetchRelatedCandidate(player: CustomPlayer, lastPlayedTrac
 			id: RELATED_TRACK_REQUESTER_ID,
 			username: null
 		});
-		container.logger.debug(`Search result loadType: ${searchResult.loadType}, tracks: ${searchResult.tracks.length}`);
+		deps.logger.debug(`Search result loadType: ${searchResult.loadType}, tracks: ${searchResult.tracks.length}`);
 
 		if (searchResult.loadType === 'error' || searchResult.loadType === 'empty') {
-			container.logger.debug(`Related search failed (${searchResult.loadType}): ${lastPlayedTrack.info.identifier}`);
+			deps.logger.debug(`Related search failed (${searchResult.loadType}): ${lastPlayedTrack.info.identifier}`);
 			return null;
 		}
 
@@ -242,16 +247,14 @@ export async function fetchRelatedCandidate(player: CustomPlayer, lastPlayedTrac
 		);
 
 		if (availableTracks.length > 0) {
-			const selectedTrack = pickBySimilarity(availableTracks, lastPlayedTrack);
+			const selectedTrack = pickBySimilarity(deps, availableTracks, lastPlayedTrack);
 			if (selectedTrack) return selectedTrack;
 		}
 
-		container.logger.debug(
-			`No eligible related tracks found for: ${lastPlayedTrack.info.identifier} (candidates: ${searchResult.tracks.length})`
-		);
+		deps.logger.debug(`No eligible related tracks found for: ${lastPlayedTrack.info.identifier} (candidates: ${searchResult.tracks.length})`);
 		return null;
 	} catch (error) {
-		container.logger.error(`Error fetching related tracks: ${error}`);
+		deps.logger.error(`Error fetching related tracks: ${error}`);
 		return null;
 	}
 }
@@ -263,19 +266,19 @@ export async function fetchRelatedCandidate(player: CustomPlayer, lastPlayedTrac
  * 큐에 추가된 곡을 직접 시작한다 — 예열하면 서버가 같은 곡을 다시 틀린다.
  * 반환값: 추가한 추천곡 (추가하지 않았으면 null)
  */
-export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Track): Promise<Track | null> => {
+export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlayer, currentTrack: Track): Promise<Track | null> => {
 	const gid = String(player.guildId);
 	if (relatedFetchInFlight.has(gid)) return null;
 	const currentEncoded = (currentTrack as { encoded?: unknown }).encoded;
 	const operation = (async (): Promise<Track | null> => {
-		const relatedOn = await guildPlayback.getRelated(container.guildService, player.guildId);
+		const relatedOn = await guildPlayback.getRelated(deps.guildService, player.guildId);
 		if (!relatedOn || player.repeatMode !== 'off') return null;
 		if (!currentTrack.info.identifier || !isYouTubeSource(currentTrack.info.sourceName)) return null;
 
-		const settings = await guildMixer.getMixerSettings(container.guildService, gid);
+		const settings = await guildMixer.getMixerSettings(deps.guildService, gid);
 		if (!needsUpcomingTrack(settings)) return null;
 
-		const selectedTrack = await fetchRelatedCandidate(player, currentTrack);
+		const selectedTrack = await fetchRelatedCandidate(deps, player, currentTrack);
 		if (!selectedTrack) return null;
 
 		const activeEncoded = (player.queue.current as { encoded?: unknown } | null)?.encoded;
@@ -289,10 +292,10 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
 
 		await player.queue.add(selectedTrack);
 		// 빈 큐 선두에 추천곡을 넣었다 — 타깃 헤드가 바뀌므로 큐 관측을 태운다.
-		if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(player as CustomPlayer);
+		if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(deps, player as CustomPlayer);
 		if (player.playing) {
 			// 서버가 재생 중 → 슬롯에 예열 (trackEnd 관망은 TrackHandler가 처리)
-			await container.mixerService.preloadUpcoming(player).catch(() => null);
+			await deps.mixerService.preloadUpcoming(player).catch(() => null);
 		}
 		return selectedTrack;
 	})();
@@ -309,7 +312,7 @@ export const queueRelatedUpfront = async (player: CustomPlayer, currentTrack: Tr
  * 대기열 끝에 추가한다. 자동 프리페치와 같은 in-flight 가드를 공유해 이중 추가를 막는다.
  * 반환: 실제로 추가한 곡들 (지원하지 않는 소스/진행 중 충돌/후보 없음이면 빈 배열)
  */
-export const addManualRecommendation = async (player: CustomPlayer, reference: Track, count: number): Promise<Track[]> => {
+export const addManualRecommendation = async (deps: LavalinkDeps, player: CustomPlayer, reference: Track, count: number): Promise<Track[]> => {
 	const gid = String(player.guildId);
 	if (relatedFetchInFlight.has(gid)) return [];
 
@@ -320,7 +323,7 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 		const added: Track[] = [];
 		const pickedIds: string[] = [];
 		for (let i = 0; i < count; i++) {
-			const selected = await fetchRelatedCandidate(player, reference, pickedIds);
+			const selected = await fetchRelatedCandidate(deps, player, reference, pickedIds);
 			if (!selected) break;
 
 			// fetch 동안 정지/전이됐으면 이 기준의 추천을 더 넣지 않는다.
@@ -334,7 +337,7 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 
 		if (added.length > 0 && player.playing) {
 			// 다음 곡 슬롯을 다시 예열한다 (선두 예열 상태가 바뀐다)
-			await container.mixerService.preloadUpcoming(player).catch(() => null);
+			await deps.mixerService.preloadUpcoming(player).catch(() => null);
 		}
 		return added;
 	};
@@ -351,12 +354,12 @@ export const addManualRecommendation = async (player: CustomPlayer, reference: T
 	}
 };
 
-export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack?: Track | null): Promise<void> => {
+export const autoPlayRelated = async (deps: LavalinkDeps, player: CustomPlayer, lastPlayedTrack?: Track | null): Promise<void> => {
 	// lavalink-client의 queueEnd 호출 시점에 직전 곡이 null로 전달될 수 있으므로
 	// lastPlayedTrack이 없으면 player.queue.previous[0] 또는 player.queue.current를 폴백으로 사용한다
 	const referenceTrack = lastPlayedTrack ?? player.queue.previous?.[0] ?? player.queue.current ?? null;
 	if (!referenceTrack?.info) {
-		container.logger.debug('[autoPlayRelated] No reference track available, skipping fallback');
+		deps.logger.debug('[autoPlayRelated] No reference track available, skipping fallback');
 		return;
 	}
 
@@ -366,27 +369,27 @@ export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack?: Tr
 	const transitionState = (player as CustomPlayer).transitionState;
 	const consumedRecently =
 		transitionState?.preloadConsumedAt != null && Date.now() - transitionState.preloadConsumedAt < transitionConfirmTimeoutMs();
-	if (container.mixerService.isPreloaded(String(player.guildId)) || consumedRecently) {
-		container.logger.debug('[autoPlayRelated] Server-side transition in flight, skipping fallback');
+	if (deps.mixerService.isPreloaded(String(player.guildId)) || consumedRecently) {
+		deps.logger.debug('[autoPlayRelated] Server-side transition in flight, skipping fallback');
 		return;
 	}
-	const relatedOn = await guildPlayback.getRelated(container.guildService, player.guildId);
+	const relatedOn = await guildPlayback.getRelated(deps.guildService, player.guildId);
 	if (player.repeatMode == 'off' && relatedOn) {
 		if (referenceTrack.info.identifier && isYouTubeSource(referenceTrack.info.sourceName)) {
 			// trackStart 선예열이 진행 중이면 이중 추가 방지 (선예열쪽이 재생을 이어준다)
 			if (relatedFetchInFlight.has(String(player.guildId))) {
-				container.logger.debug('[autoPlayRelated] Pre-add in flight, skipping fallback');
+				deps.logger.debug('[autoPlayRelated] Pre-add in flight, skipping fallback');
 				return;
 			}
 
 			// Prevent race condition
 			const currentRequesterId = requesterIdOf(player.queue.current ?? undefined);
 			if ((player.queue.current && currentRequesterId !== null) || player.queue.tracks.length > 0) {
-				container.logger.debug('[autoPlayRelated] Prevent race condition: user added track');
+				deps.logger.debug('[autoPlayRelated] Prevent race condition: user added track');
 				return;
 			}
 
-			const selectedTrack = await fetchRelatedCandidate(player, referenceTrack);
+			const selectedTrack = await fetchRelatedCandidate(deps, player, referenceTrack);
 			if (!selectedTrack) {
 				// 추천 곡을 찾지 못하면 조용히 종료한다.
 				// 종료 안내는 queueEnd 핸들러(handleQueueEnd)가 한 번만 보낸다. (2연타 방지)
@@ -396,13 +399,13 @@ export const autoPlayRelated = async (player: CustomPlayer, lastPlayedTrack?: Tr
 			// 검색 동안 상태가 변했는지 재확인 (사용자가 곡을 추가했으면 넘어간다)
 			const recheckRequesterId = requesterIdOf(player.queue.current ?? undefined);
 			if ((player.queue.current && recheckRequesterId !== null) || player.queue.tracks.length > 0) {
-				container.logger.debug('[autoPlayRelated] Prevent race condition after search: user added track');
+				deps.logger.debug('[autoPlayRelated] Prevent race condition after search: user added track');
 				return;
 			}
 
 			await player.queue.add(selectedTrack);
 			// 빈 큐 선두에 추천곡을 넣었다 — 타깃 헤드가 바뀌므로 큐 관측을 태운다.
-			if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(player as CustomPlayer);
+			if ((player as CustomPlayer).mixerRuntime) notifyQueueMutated(deps, player as CustomPlayer);
 		}
 	}
 };

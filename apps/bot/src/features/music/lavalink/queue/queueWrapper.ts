@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Track, UnresolvedTrack } from 'lavalink-client';
-import { container } from '@sapphire/framework';
 import type { CustomPlayer } from '../player/customPlayer.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import { isTtsClip } from '../requester.ts';
 
 /**
@@ -65,7 +65,7 @@ export interface QueueMutationOptions {
  * Only increments player.currentEpoch when the head's uid actually changes (or force=true)
  * and bumpEpoch is not false.
  */
-export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOptions = {}): void {
+export function notifyQueueMutated(deps: LavalinkDeps, player: CustomPlayer, opts: QueueMutationOptions = {}): void {
 	if (!player.mixerRuntime) return;
 	const target = getTargetNextTrack(player);
 	const targetUid = getTrackUid(target);
@@ -75,13 +75,13 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
 		return;
 	}
 
-	void container.mixerService.prepareNextAnalysis(player, target);
-	container.sponsorBlockService.prefetch(target);
+	void deps.mixerService.prepareNextAnalysis(player, target);
+	deps.sponsorBlockService.prefetch(target);
 	player.mixerRuntime.lastTargetUid = targetUid;
 	if (opts.bumpEpoch !== false) {
 		player.currentEpoch++;
 	}
-	container.sponsorBlockService.queueChanged(player);
+	deps.sponsorBlockService.queueChanged(player);
 
 	// Cancel any pending debounced invalidate
 	if (player.mixerRuntime.invalidateTimer) {
@@ -98,9 +98,9 @@ export function notifyQueueMutated(player: CustomPlayer, opts: QueueMutationOpti
 	const epochToInvalidate = player.currentEpoch;
 	player.mixerRuntime.invalidateTimer = setTimeout(() => {
 		player.mixerRuntime.invalidateTimer = null;
-		void container.mixerService
+		void deps.mixerService
 			?.invalidate?.(player, epochToInvalidate)
-			?.catch((err: unknown) => container.logger?.warn?.(`[mixer] invalidate failed (guild ${player.guildId}): ${err}`));
+			?.catch((err: unknown) => deps.logger?.warn?.(`[mixer] invalidate failed (guild ${player.guildId}): ${err}`));
 	}, 50);
 }
 

@@ -1,9 +1,9 @@
-import { container } from '@sapphire/framework';
 import { ChannelType } from 'discord.js';
 import { InvalidLavalinkRestRequest, LavalinkNode, LavalinkPlayer, type Track } from 'lavalink-client';
 import type { ILogObj, Logger } from 'tslog';
 import { NodeSessionStore } from '../redisStore.ts';
 import type { CustomPlayer } from '../player/customPlayer.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import type { CachedPlayerSaver } from '../player/playerSaver.ts';
 import { getTargetNextTrack, getTrackUid } from '../queue/queueWrapper.ts';
 import { commitLocal } from './mixerHandlers.ts';
@@ -46,11 +46,10 @@ export class SessionRestoreEngine {
 	private readonly restoreTimers = new Set<NodeJS.Timeout>();
 	private readonly orphanPlayers = new WeakSet<CustomPlayer>();
 
-	constructor(private readonly logger: Logger<ILogObj>) {}
-
-	private get container() {
-		return container;
-	}
+	constructor(
+		private readonly deps: LavalinkDeps,
+		private readonly logger: Logger<ILogObj>
+	) {}
 
 	public markOrphanPlayers(players: Iterable<CustomPlayer>): void {
 		for (const player of players) this.orphanPlayers.add(player);
@@ -62,10 +61,10 @@ export class SessionRestoreEngine {
 
 	/** ready op 도착 시점의 sessionId는 확정값 — 크래시 재시작 후 세션 복구가 가능하도록 저장한다. */
 	public async saveNodeSession(node: LavalinkNode): Promise<void> {
-		if (!node.sessionId || !this.container.shardInfo) return;
+		if (!node.sessionId || !this.deps.shardInfo) return;
 		try {
-			const shardKey = NodeSessionStore.makeShardKey(this.container.shardInfo.shardIds);
-			await this.container.redisStore.getNodeSessionStore().save(node.id, node.sessionId, shardKey);
+			const shardKey = NodeSessionStore.makeShardKey(this.deps.shardInfo.shardIds);
+			await this.deps.redisStore.getNodeSessionStore().save(node.id, node.sessionId, shardKey);
 		} catch (error) {
 			this.logger.warn(`Failed to save session for node ${node.id}: ${error}`);
 		}
@@ -109,7 +108,7 @@ export class SessionRestoreEngine {
 		}
 		this.logger.debug(`Resuming players on node (${node.options.id}) session id (${payload.sessionId}) with ${players.length} players`);
 		const startTime = Date.now();
-		const playerSaver = this.container.redisStore.getPlayerSaver();
+		const playerSaver = this.deps.redisStore.getPlayerSaver();
 		const BATCH_SIZE = RESTORE_BATCH_SIZE;
 
 		// 유효한 플레이어만 필터링
@@ -122,7 +121,7 @@ export class SessionRestoreEngine {
 				return;
 			}
 
-			if (!this.container.client.guilds.cache.has(lavalinkPlayer.guildId)) {
+			if (!this.deps.client.guilds.cache.has(lavalinkPlayer.guildId)) {
 				// READY 직후에는 대형 봇의 GUILD_CREATE가 아직 스트리밍 중일 수 있다 —
 				// 길드가 캐시에 오기를 기다렸다가 복구한다(즉시 버리지 않는다).
 				pendingGuildPlayers.push(lavalinkPlayer);
@@ -171,14 +170,14 @@ export class SessionRestoreEngine {
 	public scheduleResumeRetry(
 		node: LavalinkNode,
 		lavalinkPlayer: LavalinkPlayer,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
+		playerSaver: ReturnType<typeof this.deps.redisStore.getPlayerSaver>,
 		startTime: number,
 		attempt: number
 	): void {
 		const guildId = lavalinkPlayer.guildId;
 		// 이미 복구됐거나(다른 경로) 길드가 도착했다면 즉시 시도한다.
-		if (this.container.audio.players.has(guildId)) return;
-		if (this.container.client.guilds.cache.has(guildId)) {
+		if (this.deps.audio.players.has(guildId)) return;
+		if (this.deps.client.guilds.cache.has(guildId)) {
 			this.resumeSinglePlayer(node, lavalinkPlayer, playerSaver, startTime).catch((error) => {
 				this.logger.error(`Failed to resume player at ${guildId} (retry): ${error}`);
 				this.scheduleResumeRetry(node, lavalinkPlayer, playerSaver, startTime, attempt + 1);
@@ -201,13 +200,13 @@ export class SessionRestoreEngine {
 	public async resumeSinglePlayer(
 		node: LavalinkNode,
 		lavalinkPlayer: LavalinkPlayer,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
+		playerSaver: ReturnType<typeof this.deps.redisStore.getPlayerSaver>,
 		startTime: number
 	) {
 		// 다른 경로에서 이미 복구됐으면 재생성하지 않는다.
-		const existingPlayer = this.container.audio.players.get(lavalinkPlayer.guildId);
+		const existingPlayer = this.deps.audio.players.get(lavalinkPlayer.guildId);
 		if (existingPlayer) {
-			await this.container.mixerService.ensureMixerFilter(existingPlayer).catch((error) => {
+			await this.deps.mixerService.ensureMixerFilter(existingPlayer).catch((error) => {
 				this.logger.warn(`Failed to restore mixer config at ${lavalinkPlayer.guildId}: ${error}`);
 			});
 			this.logger.debug(`Client player already exists at ${lavalinkPlayer.guildId}, skipping resume recreate`);
@@ -234,8 +233,8 @@ export class SessionRestoreEngine {
 		}
 
 		const createdPlayer = await this.recreateSavedPlayer(node, lavalinkPlayer.guildId, savedPlayer, {
-			volume: this.container.audio.options.playerOptions?.volumeDecrementer
-				? Math.round(lavalinkPlayer.volume / this.container.audio.options.playerOptions.volumeDecrementer)
+			volume: this.deps.audio.options.playerOptions?.volumeDecrementer
+				? Math.round(lavalinkPlayer.volume / this.deps.audio.options.playerOptions.volumeDecrementer)
 				: lavalinkPlayer.volume,
 			restoreFilters: true,
 			silentSync: true
@@ -259,9 +258,9 @@ export class SessionRestoreEngine {
 				createdPlayer.queue.current = matched ?? null;
 				void createdPlayer.queue?.utils?.save?.()?.catch(() => null);
 			} else if (!createdPlayer.queue.current || !isSameTrack(createdPlayer.queue.current, lavalinkPlayer.track)) {
-				createdPlayer.queue.current = this.container.audio.utils.buildTrack(
+				createdPlayer.queue.current = this.deps.audio.utils.buildTrack(
 					lavalinkPlayer.track,
-					createdPlayer.queue.current?.requester || this.container.client.user
+					createdPlayer.queue.current?.requester || this.deps.client.user
 				);
 			}
 		}
@@ -282,11 +281,11 @@ export class SessionRestoreEngine {
 		// v2 Rehydration: fetch plugin state and advance currentEpoch with safe margin
 		let pluginState: { lastKnownEpoch?: number } | null = null;
 		try {
-			pluginState = await this.container.mixerService.getState(createdPlayer);
+			pluginState = await this.deps.mixerService.getState(createdPlayer);
 		} catch {
 			this.logger.warn(`Mixer state query failed at ${lavalinkPlayer.guildId}`);
 		}
-		const queueStore = this.container.redisStore?.getQueueStore?.();
+		const queueStore = this.deps.redisStore?.getQueueStore?.();
 		const savedQueue = queueStore ? await queueStore.get(lavalinkPlayer.guildId).catch(() => null) : null;
 		const rawParsed = typeof savedQueue === 'string' ? JSON.parse(savedQueue) : savedQueue;
 		const savedEpoch =
@@ -301,7 +300,7 @@ export class SessionRestoreEngine {
 		if (serverTrack && Array.isArray(createdPlayer.queue?.tracks)) {
 			const head = createdPlayer.queue.tracks[0] as Track | undefined;
 			if (head && isSameEncodedTrack(head.encoded, serverTrack) && !isSameEncodedTrack(createdPlayer.queue.current?.encoded, serverTrack)) {
-				commitLocal(createdPlayer, head, { invalidate: false, bumpEpoch: false });
+				commitLocal(this.deps, createdPlayer, head, { invalidate: false, bumpEpoch: false });
 			}
 		}
 
@@ -309,13 +308,13 @@ export class SessionRestoreEngine {
 		createdPlayer.mixerRuntime.lastTargetUid = getTrackUid(getTargetNextTrack(createdPlayer));
 
 		// Force-reset mixer plugin to wipe stale sub slots and sync lastKnownEpoch
-		await this.container.mixerService?.ensureMixerFilter?.(createdPlayer)?.catch(() => null);
-		await this.container.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch((error: unknown) => {
+		await this.deps.mixerService?.ensureMixerFilter?.(createdPlayer)?.catch(() => null);
+		await this.deps.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch((error: unknown) => {
 			this.logger.warn(
 				`Mixer reset after resume failed at ${lavalinkPlayer.guildId}: ${error instanceof Error ? error.message : String(error)}`
 			);
 		});
-		await this.container.mixerService?.reconcileAfterResume?.(createdPlayer)?.catch(() => null);
+		await this.deps.mixerService?.reconcileAfterResume?.(createdPlayer)?.catch(() => null);
 
 		this.logger.debug(`Finished resuming player at ${lavalinkPlayer.guildId} (epoch: ${createdPlayer.currentEpoch})`);
 	}
@@ -333,7 +332,7 @@ export class SessionRestoreEngine {
 		saved: SavedPlayer,
 		options: { volume?: number; restoreFilters?: boolean; silentSync?: boolean; resetVoiceState?: boolean } = {}
 	): Promise<CustomPlayer> {
-		const createdPlayer = await this.container.audio.createPlayer({
+		const createdPlayer = await this.deps.audio.createPlayer({
 			guildId,
 			voiceChannelId: saved.voiceChannelId,
 			textChannelId: saved.textChannelId,
@@ -355,7 +354,7 @@ export class SessionRestoreEngine {
 				await this.resetVoiceSession(createdPlayer);
 			} catch (error) {
 				createdPlayer.setData('internal_destroywithoutdisconnect', true);
-				this.container.audio.deletePlayer(guildId);
+				this.deps.audio.deletePlayer(guildId);
 				throw error;
 			}
 		}
@@ -378,7 +377,7 @@ export class SessionRestoreEngine {
 	): Promise<void> {
 		if (!textChannelId || !messageId) return;
 		this.logger.debug(`Setting cached controller message and message id for ${label}`);
-		const fetchedChannel = await this.container.client.channels.fetch(textChannelId).catch(() => null);
+		const fetchedChannel = await this.deps.client.channels.fetch(textChannelId).catch(() => null);
 		if (fetchedChannel && fetchedChannel.isTextBased()) {
 			const message = await fetchedChannel.messages.fetch(messageId).catch(() => null);
 			this.logger.debug(`Fetched controller message for ${label}`);
@@ -400,7 +399,7 @@ export class SessionRestoreEngine {
 	 *   복구 전체로 누적되지 않게 한다.
 	 */
 	public async restoreFreshSession(node: LavalinkNode): Promise<void> {
-		const playerSaver = this.container.redisStore.getPlayerSaver();
+		const playerSaver = this.deps.redisStore.getPlayerSaver();
 		// 신선도 판정 기준 시각 — 복구 작업이 밀려 늦어져도 세션 시작 시점 기준으로 본다.
 		const sessionStartedAt = Date.now();
 		const savedGuildIds = await playerSaver.listGuildIds();
@@ -421,7 +420,7 @@ export class SessionRestoreEngine {
 		const ready: RestoreTask[] = [];
 		const pending: RestoreTask[] = [];
 		for (const guildId of guildIds) {
-			const cached = this.container.client.guilds.cache.has(guildId);
+			const cached = this.deps.client.guilds.cache.has(guildId);
 			const arrived = cached ? Promise.resolve(true) : this.waitForGuild(guildId);
 			(cached ? ready : pending).push({ guildId, arrived });
 		}
@@ -445,7 +444,7 @@ export class SessionRestoreEngine {
 	 * 샤드 정보가 없거나 길드 id를 판별할 수 없으면 보수적으로 모두 후보로 남긴다.
 	 */
 	private isOwnedByThisShard(guildId: string): boolean {
-		const shardInfo = this.container.shardInfo;
+		const shardInfo = this.deps.shardInfo;
 		if (!shardInfo || shardInfo.shardCount <= 1 || shardInfo.shardIds.length === 0) return true;
 		try {
 			const shardId = Number((BigInt(guildId) >> 22n) % BigInt(shardInfo.shardCount));
@@ -463,7 +462,7 @@ export class SessionRestoreEngine {
 	public async restoreFreshGuild(
 		node: LavalinkNode,
 		guildId: string,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>,
+		playerSaver: ReturnType<typeof this.deps.redisStore.getPlayerSaver>,
 		sessionStartedAt: number,
 		arrived: Promise<boolean>
 	): Promise<void> {
@@ -473,7 +472,7 @@ export class SessionRestoreEngine {
 		// 단일 노드 비정상 종료 시 메모리에 고아 플레이어 객체가 남아 있을 수 있다.
 		// 고아 플레이어가 남아 있으면 복구가 스킵되거나 sendRawData의 autoReconnect 레이스가 발생하므로,
 		// 먼저 고아 플레이어의 disconnect + deletePlayer를 수행하여 메모리를 비운다.
-		const existingPlayer = this.container.audio.players.get(guildId);
+		const existingPlayer = this.deps.audio.players.get(guildId);
 		const isOrphan = Boolean(existingPlayer && this.orphanPlayers.has(existingPlayer));
 		if (existingPlayer) {
 			if (existingPlayer.node?.connected && !isOrphan) {
@@ -485,7 +484,7 @@ export class SessionRestoreEngine {
 			try {
 				await existingPlayer.disconnect().catch(() => null);
 				existingPlayer.setData('internal_destroywithoutdisconnect', true);
-				this.container.audio.deletePlayer(guildId);
+				this.deps.audio.deletePlayer(guildId);
 			} catch (err) {
 				this.logger.debug(`Error while dropping orphan player at ${guildId}: ${err}`);
 			} finally {
@@ -523,10 +522,10 @@ export class SessionRestoreEngine {
 	private async waitForGuild(guildId: string): Promise<boolean> {
 		const deadline = Date.now() + GUILD_WAIT_TIMEOUT_MS;
 		while (Date.now() < deadline) {
-			if (this.container.client.guilds.cache.has(guildId)) return true;
+			if (this.deps.client.guilds.cache.has(guildId)) return true;
 			await delay(GUILD_WAIT_POLL_MS);
 		}
-		return this.container.client.guilds.cache.has(guildId);
+		return this.deps.client.guilds.cache.has(guildId);
 	}
 
 	/**
@@ -535,7 +534,7 @@ export class SessionRestoreEngine {
 	 */
 	private async resetVoiceSession(player: CustomPlayer): Promise<void> {
 		const guildId = player.guildId;
-		const guild = this.container.client.guilds.cache.get(guildId);
+		const guild = this.deps.client.guilds.cache.get(guildId);
 		if (!guild?.members.me) throw new Error(`Cannot confirm Discord voice state for guild ${guildId}`);
 
 		player.resettingVoice = true;
@@ -558,8 +557,7 @@ export class SessionRestoreEngine {
 	public async isVoiceChannelOccupied(channelId: string | null | undefined): Promise<boolean> {
 		if (!channelId) return false;
 		try {
-			const channel =
-				this.container.client.channels.cache.get(channelId) ?? (await this.container.client.channels.fetch(channelId).catch(() => null));
+			const channel = this.deps.client.channels.cache.get(channelId) ?? (await this.deps.client.channels.fetch(channelId).catch(() => null));
 			if (channel?.type !== ChannelType.GuildVoice && channel?.type !== ChannelType.GuildStageVoice) return false;
 			return channel.members.some((member) => !member.user.bot);
 		} catch {
@@ -571,17 +569,17 @@ export class SessionRestoreEngine {
 	public async discardSavedPlayer(
 		guildId: string,
 		saved: { textChannelId?: string | null; messageId?: string | null } | null,
-		playerSaver: ReturnType<typeof this.container.redisStore.getPlayerSaver>
+		playerSaver: ReturnType<typeof this.deps.redisStore.getPlayerSaver>
 	): Promise<void> {
 		if (saved?.textChannelId && saved.messageId) {
-			const channel = await this.container.client.channels.fetch(saved.textChannelId).catch(() => null);
+			const channel = await this.deps.client.channels.fetch(saved.textChannelId).catch(() => null);
 			const message = channel?.isTextBased() ? await channel.messages.fetch(saved.messageId).catch(() => null) : null;
 			if (message?.deletable) {
 				await message.delete().catch(() => null);
 			}
 		}
 		await playerSaver.delete(guildId).catch(() => null);
-		await this.container.redisStore
+		await this.deps.redisStore
 			.getQueueStore()
 			.delete(guildId)
 			.catch(() => null);
@@ -606,7 +604,7 @@ export class SessionRestoreEngine {
 	): Promise<void> {
 		const createdPlayer = await this.recreateSavedPlayer(node, guildId, saved, { resetVoiceState: options.resetVoiceState ?? false });
 		// 새 세션에는 이전 필터/예열 슬롯이 없다 — 다음 play에서 다시 prime 하도록 표시한다.
-		this.container.mixerService.markFiltersStale(guildId);
+		this.deps.mixerService.markFiltersStale(guildId);
 
 		// 큐(current/대기열/이전곡)은 recreateSavedPlayer가 Redis 큐 저장소에서 되살렸다.
 
@@ -614,7 +612,7 @@ export class SessionRestoreEngine {
 			// 복구할 재생 상태가 없음 → 기록과 컨트롤러를 정리한다.
 			this.logger.info(`Fresh restore: no queue to restore at ${guildId}, discarding`);
 			await createdPlayer.destroy('FreshRestoreEmpty').catch(() => null);
-			await this.discardSavedPlayer(guildId, saved, this.container.redisStore.getPlayerSaver());
+			await this.discardSavedPlayer(guildId, saved, this.deps.redisStore.getPlayerSaver());
 			return;
 		}
 		if (typeof saved.currentEpoch === 'number') {
@@ -637,9 +635,9 @@ export class SessionRestoreEngine {
 		}
 
 		// 2) mixer 필터 활성화 & crossfade/automix 설정 전송
-		await this.container.mixerService.enableMixerFilter(createdPlayer).catch(() => null);
-		await this.container.mixerService.pushCrossfadeConfig(createdPlayer).catch(() => null);
-		await this.container.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch(() => null);
+		await this.deps.mixerService.enableMixerFilter(createdPlayer).catch(() => null);
+		await this.deps.mixerService.pushCrossfadeConfig(createdPlayer).catch(() => null);
+		await this.deps.mixerService?.reset?.(createdPlayer, createdPlayer.currentEpoch)?.catch(() => null);
 
 		// 3) 위치 추정 및 play 실행:
 		// seek을 따로 부르면 곡이 처음부터 시작되었다가 뒤늦게 seek되는 깜빡임/버그가 생기므로,
@@ -657,7 +655,7 @@ export class SessionRestoreEngine {
 		// 서버 플레이어가 살아 있어 noReplace play가 trackStart를 발화하지 않으면
 		// 예열 슬롯 복구가 빠진다. 여기서 확인해 두면 새 세션(trackStart 경로)과
 		// 서버 생존(noReplace 경로) 모두 슬롯이 이어진다(slot 직렬화로 idempotent).
-		await this.container.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
+		await this.deps.mixerService.reconcileAfterResume(createdPlayer).catch((error) => {
 			this.logger.warn(`Mixer reconcile after fresh restore failed at ${guildId}: ${error}`);
 		});
 		this.logger.info(`Fresh restore finished at ${guildId} (position ${Math.round(position / 1000)}s${saved.paused ? ', paused' : ''})`);

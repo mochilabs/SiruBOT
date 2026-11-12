@@ -5,8 +5,8 @@ import type {
 	CustomPlayer,
 	LavalinkHandler,
 	MixerService,
+	LavalinkDeps,
 	MusicControl,
-	NowPlayingCardStore,
 	PlaybackReporter,
 	PlayerNotifier,
 	PlaylistPlayback,
@@ -28,8 +28,8 @@ declare module '@sapphire/pieces' {
 		db: PrismaClient;
 		redisStore: RedisStore;
 		playerNotifier: PlayerNotifier;
-		nowPlayingCardStore?: NowPlayingCardStore;
-		playerStatePublishTracker?: Map<string, { at: number; fingerprint: string }>;
+		/** Lavalink 계층(핸들러·플레이어 알림·Redis 저장소)의 명시적 의존성 묶음 — features/music/lavalink/deps.ts */
+		lavalink: LavalinkDeps;
 		/** 음악 제어 유스케이스 (features/music/application) — 어댑터는 container.music.<op>(actor, ...)로 호출해요 */
 		music: MusicControl;
 		/** 곡 검색·대기열 추가 유스케이스 (features/music/application/play.ts) — 진입점(슬래시·고정 채널·웹·AI)이 같이 써요 */

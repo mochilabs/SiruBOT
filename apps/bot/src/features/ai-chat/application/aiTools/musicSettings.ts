@@ -23,7 +23,7 @@ function checkMemberManageGuild(ctx: AiToolContext): boolean {
 
 /** 음악 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMusicSettingsTools(
-	deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'sponsorBlock' | 'getMusic' | 'getAudio'>
+	deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'sponsorBlock' | 'lavalink' | 'getMusic' | 'getAudio'>
 ): AiTool[] {
 	async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
 		if (!ctx.member) return false;
@@ -179,7 +179,7 @@ export function createMusicSettingsTools(
 					const player = deps.getAudio()?.getPlayer?.(guildId);
 					const currentTrack = player?.queue?.current;
 					if (player?.playing && currentTrack && player.queue.tracks.length === 0) {
-						void queueRelatedUpfront(player, currentTrack).catch(() => null);
+						void queueRelatedUpfront(deps.lavalink, player, currentTrack).catch(() => null);
 					}
 				}
 				updated.autoplay = updatedAutoplay;

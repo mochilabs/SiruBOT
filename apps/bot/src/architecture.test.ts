@@ -15,6 +15,8 @@
  *
  * `services/` must not import `container` (see `SERVICES_CONTAINER_ALLOWED`); services receive deps from `BotApplication.setupServices`.
  *
+ * `features/music/lavalink/` must not import `container` (see `LAVALINK_CONTAINER_ALLOWED`); its modules take `LavalinkDeps` (lavalink/deps.ts).
+ *
  * Environment access: no non-test file may contain `process.env` or import `@skyra/env-utilities` except the short, reasoned lists below (see
  * `PROCESS_ENV_ALLOWED` / `ENV_UTILITIES_ALLOWED`). Everything else reads `getConfig()` (lib/config.ts); `features/<name>/application/` takes values via `deps`.
  *
@@ -61,6 +63,9 @@ const ENV_UTILITIES_ALLOWED: Record<string, string> = {
 
 /** Non-test files under `services/` that still import `container`, each with the reason. Only delete from this list. */
 const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {};
+
+/** Non-test files under `features/music/lavalink/` that still import `container`, each with the reason. Only delete from this list. */
+const LAVALINK_CONTAINER_ALLOWED: Record<string, string> = {};
 
 function listSourceFiles(dir: string): string[] {
 	const result: string[] = [];
@@ -216,6 +221,22 @@ describe('bot architecture guard rails', () => {
 			actual,
 			Object.keys(SERVICES_CONTAINER_ALLOWED).sort(),
 			'Services take their dependencies through deps; BotApplication.setupServices is the only place that reads container.'
+		);
+	});
+
+	it('features/music/lavalink/ does not import container beyond the allowlist', () => {
+		const importsContainer = (file: string) =>
+			/^\s*import\s+(?!type\b)\{[^}]*\bcontainer\b[^}]*\}\s+from\s+['"]@sapphire\/(framework|pieces)['"]/m.test(
+				readFileSync(path.join(SRC_ROOT, file), 'utf8')
+			);
+		const actual = listSourceFiles(SRC_ROOT)
+			.map(toRel)
+			.filter((file) => file.startsWith('features/music/lavalink/') && importsContainer(file))
+			.sort();
+		expectRatchet(
+			actual,
+			Object.keys(LAVALINK_CONTAINER_ALLOWED).sort(),
+			'Lavalink modules take their dependencies through LavalinkDeps (features/music/lavalink/deps.ts); BotApplication.setupServices builds them.'
 		);
 	});
 

@@ -4,6 +4,7 @@ import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { commitLocal, sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
 import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type QueueMutationOptions } from '../lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
+import type { LavalinkDeps } from '../lavalink/deps.ts';
 import {
 	MixerRequestError,
 	type ArmRequestOptions,
@@ -32,6 +33,8 @@ export interface MixerServiceDeps {
 	callTimeoutMs: number;
 	/** playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요 */
 	getPlayerNotifier: () => PlayerNotifier;
+	/** 믹서 전이·큐 관측 헬퍼가 쓰는 lavalink 의존성 (container.lavalink) */
+	lavalink: LavalinkDeps;
 }
 
 /**
@@ -251,7 +254,7 @@ export class MixerService {
 		if (typeof position === 'number' && position > 1) {
 			// position은 getUserQueuedTracks 기준 사용자 번호다 — 선예열 추천곡이 남아 있으면
 			// 인덱스가 밀리므로 스플라이스 전에 걷어낸다.
-			await removeStaleRelatedTracks(player);
+			await removeStaleRelatedTracks(this.deps.lavalink, player);
 			const dropCount = Math.min(position - 1, player.queue.tracks.length);
 			player.queue.tracks.splice(0, dropCount);
 		}
@@ -262,17 +265,17 @@ export class MixerService {
 			: ((player.queue.tracks[0] as Track | undefined) ?? getTargetNextTrack(player) ?? undefined);
 		if (!next) {
 			player.queue.current = null;
-			notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
+			notifyQueueMutated(this.deps.lavalink, player, { invalidate: false, bumpEpoch: true, force: true });
 			cancelPendingInvalidate(player);
 			void player.queue?.utils?.save?.()?.catch(() => null);
 			this.deps.getPlayerNotifier().updateController(player);
-			await sendOverride(player, 'STOP', null);
+			await sendOverride(this.deps.lavalink, player, 'STOP', null);
 			return;
 		}
 
-		commitLocal(player, next, { invalidate: false, bumpEpoch: true, force: true });
+		commitLocal(this.deps.lavalink, player, next, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
-		await sendOverride(player, 'PLAY_NOW', next.encoded ?? null);
+		await sendOverride(this.deps.lavalink, player, 'PLAY_NOW', next.encoded ?? null);
 	}
 	public async reset(player: CustomPlayer, epoch: number, idemKey: string = randomUUID()): Promise<unknown> {
 		const gid = String(player.guildId);
@@ -363,11 +366,11 @@ export class MixerService {
 	}
 	public async clearNext(player: Player, opts?: QueueMutationOptions): Promise<void> {
 		// v2: slot is managed by JIT; clearNext triggers queue mutation observation
-		notifyQueueMutated(player as CustomPlayer, opts);
+		notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, opts);
 	}
 	public async preloadUpcoming(player: Player, opts?: QueueMutationOptions): Promise<void> {
 		// v2: preloading is JIT-driven via MixerNeedNextTrackEvent
-		notifyQueueMutated(player as CustomPlayer, opts);
+		notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, opts);
 	}
 
 	public async primeForPlay(player: Player): Promise<void> {
@@ -376,7 +379,7 @@ export class MixerService {
 
 	public async clearNextLenient(player: Player, opts?: QueueMutationOptions): Promise<void> {
 		// v2: slot is JIT-managed
-		notifyQueueMutated(player as CustomPlayer, opts);
+		notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, opts);
 	}
 	public async reconcileAfterResume(_player: Player): Promise<void> {
 		// v2: handled by sessionRestore.ts resetV2 call
@@ -429,7 +432,7 @@ export class MixerService {
 			body: JSON.stringify({ guildId: String(player.guildId), enabled, durationMs })
 		})) as MixerStateResponse;
 		if ((player as CustomPlayer).mixerRuntime && (player.playing || player.paused || player.queue?.current)) {
-			notifyQueueMutated(player as CustomPlayer, { force: true });
+			notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, { force: true });
 		}
 		return res;
 	}
@@ -466,7 +469,7 @@ export class MixerService {
 			})
 		});
 		if ((player as CustomPlayer).mixerRuntime && (player.playing || player.paused || player.queue?.current)) {
-			notifyQueueMutated(player as CustomPlayer, { force: true });
+			notifyQueueMutated(this.deps.lavalink, player as CustomPlayer, { force: true });
 		}
 	}
 

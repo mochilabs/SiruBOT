@@ -6,7 +6,7 @@ import type { CustomPlayer } from './customPlayer.ts';
 const { getSubLogger } = vi.hoisted(() => ({ getSubLogger: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger } } }));
+const logger = { getSubLogger, info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
 function makeRedis(get: () => Promise<string | null> = async () => null) {
 	const redis = {
@@ -46,7 +46,7 @@ describe('CachedPlayerSaver pending writes', () => {
 			stored = null;
 			return 1;
 		});
-		const store = new CachedPlayerSaver(handle);
+		const store = new CachedPlayerSaver(handle, logger);
 		store.onDisconnect();
 		await store.delete('g1');
 
@@ -61,7 +61,7 @@ describe('CachedPlayerSaver pending writes', () => {
 
 	it('lets a delete during an outage override an earlier pending set', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedPlayerSaver(handle);
+		const store = new CachedPlayerSaver(handle, logger);
 		store.onDisconnect();
 		await store.set(makePlayer('g1'));
 		await store.delete('g1');

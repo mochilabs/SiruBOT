@@ -2,10 +2,14 @@ import { DestroyReasonsType, LavalinkManager, PlayerJson, RepeatMode } from 'lav
 import { BaseLavalinkHandler } from './base.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { publishPlayerEnded, publishPlayerState } from '../playerStatePublisher.ts';
+import type { LavalinkDeps } from '../deps.ts';
 
 export class PlayerHandler extends BaseLavalinkHandler {
-	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
-		super('playerHandler');
+	constructor(
+		deps: LavalinkDeps,
+		private readonly lavalinkManager: LavalinkManager<CustomPlayer>
+	) {
+		super(deps, 'playerHandler');
 
 		this.lavalinkManager.on('playerCreate', this.wrapAsyncHandler(this.handlePlayerCreate.bind(this), 'playerCreate'));
 		this.lavalinkManager.on('playerDestroy', this.wrapAsyncHandler(this.handlePlayerDestroy.bind(this), 'playerDestroy'));
@@ -18,7 +22,7 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		this.logger.info(`Player created: ${player.guildId}`);
 
 		this.logger.trace(`Setting volume and repeat mode for player: ${player.guildId}`);
-		const guildConfig = await this.container.guildService.getGuild(player.guildId);
+		const guildConfig = await this.deps.guildService.getGuild(player.guildId);
 		// 재시작 전 세션에 남은 Lavalink SponsorBlock 자동 seek 설정을 비운다.
 		void player.deleteSponsorBlock().catch(() => null);
 
@@ -30,10 +34,10 @@ export class PlayerHandler extends BaseLavalinkHandler {
 		await Promise.all([
 			player.setVolume(guildConfig.volume),
 			player.setRepeatMode(repeatMode),
-			this.container.redisStore.getPlayerSaver().set(player),
+			this.deps.redisStore.getPlayerSaver().set(player),
 			// mixer 필터 자체는 play 이전에 primeForPlay가 보낸다(트랙 시작 시 체인을 만드는 시점이
 			// play이므로 그 뒤의 필터 op는 현재 트랙에 반영되지 않는다). 여기서는 crossfade 설정만 밀어둔다.
-			this.container.mixerService.pushCrossfadeConfig(player).catch((error) => {
+			this.deps.mixerService.pushCrossfadeConfig(player).catch((error) => {
 				this.logger.warn(`[mixer] crossfade config push failed (guild ${player.guildId}): ${error}`);
 			})
 		]);
@@ -41,19 +45,19 @@ export class PlayerHandler extends BaseLavalinkHandler {
 
 	private async handlePlayerDestroy(player: CustomPlayer, _reason: DestroyReasonsType | undefined) {
 		this.logger.info(`Player destroyed: ${player.guildId}`);
-		this.container.redisStore.getPlayerSaver().delete(player.guildId);
+		this.deps.redisStore.getPlayerSaver().delete(player.guildId);
 		// 큐 키도 함께 삭제 — TTL(7일)이 있어도 정상 종료 시에는 즉시 정리해 Redis 키 누수를 막는다.
-		this.container.redisStore.getQueueStore().delete(player.guildId);
+		this.deps.redisStore.getQueueStore().delete(player.guildId);
 		// 파괴된 플레이어의 서버 필터 상태도 사라진다 — 다음 play 전에 다시 prime해야 한다.
-		this.container.mixerService.markFiltersStale(player.guildId);
-		this.container.sponsorBlockService.stop(player);
+		this.deps.mixerService.markFiltersStale(player.guildId);
+		this.deps.sponsorBlockService.stop(player);
 		// 파괴된 플레이어는 재생 중이 아니다 — 마지막 프레임을 '정지 상태'로 남기면 대시보드가
 		// 유령 상태(stale 창 60초)에 갇히므로, 확정 종료 신호(ended)를 보내 허브가 엔트리를 비우게 한다.
 		player.playing = false;
 		player.paused = false;
 		// 대시보드 라이브 뷰 — 소멸은 tombstone으로 알린다 (fire-and-forget)
-		publishPlayerEnded(player);
-		await this.container.playerNotifier.onPlayerDestroy(player);
+		publishPlayerEnded(this.deps, player);
+		await this.deps.playerNotifier.onPlayerDestroy(player);
 	}
 
 	private handlePlayerDisconnect(_player: CustomPlayer, _voiceChannelId: string) {
@@ -65,11 +69,11 @@ export class PlayerHandler extends BaseLavalinkHandler {
 	}
 
 	private async handlePlayerUpdate(_oldPlayerJson: PlayerJson, newPlayer: CustomPlayer) {
-		await Promise.all([this.container.redisStore.getPlayerSaver().set(newPlayer), this.container.playerNotifier.onPlayerUpdate(newPlayer)]);
+		await Promise.all([this.deps.redisStore.getPlayerSaver().set(newPlayer), this.deps.playerNotifier.onPlayerUpdate(newPlayer)]);
 		// 대시보드 라이브 뷰 — playerUpdate는 볼륨/seek/큐 변경까지 커버해요 (fire-and-forget)
-		publishPlayerState(newPlayer);
+		publishPlayerState(this.deps, newPlayer);
 
-		this.container.sponsorBlockService.tick(newPlayer);
+		this.deps.sponsorBlockService.tick(newPlayer);
 	}
 
 	public cleanup() {

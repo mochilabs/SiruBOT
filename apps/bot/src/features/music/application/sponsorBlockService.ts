@@ -8,6 +8,8 @@ import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import type { MixerService } from './mixerService.ts';
+import type { LavalinkDeps } from '../lavalink/deps.ts';
+import type { MixerNeedNextEventPayload } from '../lavalink/handlers/mixerHandlers.ts';
 
 const LOOKUP_TTL_MS = 10 * 60_000;
 const INTRO_TOLERANCE_MS = 500;
@@ -40,6 +42,10 @@ export interface SponsorBlockServiceDeps {
 	getClient: () => Client;
 	/** mixerService와 서로 얽혀 있어서 호출 시점에 읽어요 */
 	getMixerService: () => MixerService;
+	/** 큐 관측 헬퍼가 쓰는 lavalink 의존성 (container.lavalink) */
+	lavalink: LavalinkDeps;
+	/** 조기 아웃로 다음 곡을 아밍하는 믹서 이벤트 처리 — mixerHandlers.handleMixerNeedNext를 주입받아요 (순환 import 회피) */
+	armNextTrack: (player: CustomPlayer, event: MixerNeedNextEventPayload) => Promise<void>;
 }
 
 /** Segment lookup, live skipping, and incoming mixer start all use the same source. */
@@ -146,7 +152,7 @@ export class SponsorBlockService {
 				this.tick(player);
 				if (hadOutroArm && !state.categories.has('outro')) {
 					state.lastOutroArmKey = null;
-					notifyQueueMutated(player, { force: true });
+					notifyQueueMutated(this.deps.lavalink, player, { force: true });
 				} else {
 					this.queueChanged(player);
 				}
@@ -181,13 +187,11 @@ export class SponsorBlockService {
 			)
 				return;
 			state.lastOutroArmKey = key;
-			void import('../lavalink/handlers/mixerHandlers.ts')
-				.then(({ handleMixerNeedNext }) =>
-					handleMixerNeedNext(player, {
-						remainingMs: (state.track.info.duration ?? 0) - (player.position ?? 0),
-						currentTrackEncoded: currentEncoded
-					})
-				)
+			void this.deps
+				.armNextTrack(player, {
+					remainingMs: (state.track.info.duration ?? 0) - (player.position ?? 0),
+					currentTrackEncoded: currentEncoded
+				})
 				.catch((error: unknown) => this.deps.logger.warn(`[SponsorBlock] early outro arm failed in ${player.guildId}: ${String(error)}`));
 		}, 75);
 	}

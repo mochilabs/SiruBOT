@@ -3,6 +3,7 @@ import { BaseLavalinkHandler } from './base.ts';
 import { RESUME_TIMEOUT_SECONDS, SessionRestoreEngine } from './sessionRestore.ts';
 import * as Sentry from '@sentry/node';
 import type { CustomPlayer } from '../player/customPlayer.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import {
 	handleMixerNeedNext,
 	handleMixerAdvanced,
@@ -43,9 +44,12 @@ export class NodeHandler extends BaseLavalinkHandler {
 	/** 세션 저장·복원 엔진 — ready/resumed 위임과 크래시 복구 전체를 담는다. */
 	public readonly sessionRestore: SessionRestoreEngine;
 
-	constructor(private readonly nodeManager: NodeManager) {
-		super('nodeHandler');
-		this.sessionRestore = new SessionRestoreEngine(this.logger);
+	constructor(
+		deps: LavalinkDeps,
+		private readonly nodeManager: NodeManager
+	) {
+		super(deps, 'nodeHandler');
+		this.sessionRestore = new SessionRestoreEngine(this.deps, this.logger);
 
 		this.nodeManager.on('create', this.handleNodeCreate.bind(this));
 		this.nodeManager.on('connect', this.wrapAsyncHandler(this.handleNodeConnect.bind(this), 'handleNodeConnect'));
@@ -94,16 +98,16 @@ export class NodeHandler extends BaseLavalinkHandler {
 			const mixerMsg = payload as { type?: string; guildId?: string };
 			const gid = mixerMsg.guildId;
 			if (!gid) return;
-			this.container.mixerService?.observeMixerEvent?.(payload);
-			const player = this.container.audio?.getPlayer?.(gid) as CustomPlayer | null;
+			this.deps.mixerService?.observeMixerEvent?.(payload);
+			const player = this.deps.audio?.getPlayer?.(gid) as CustomPlayer | null;
 			if (!player) return;
 
 			if (mixerMsg.type === 'MixerNeedNextTrackEvent') {
-				void handleMixerNeedNext(player, payload as unknown as MixerNeedNextEventPayload);
+				void handleMixerNeedNext(this.deps, player, payload as unknown as MixerNeedNextEventPayload);
 			} else if (mixerMsg.type === 'MixerAdvancedEvent') {
-				void handleMixerAdvanced(player, payload as unknown as MixerAdvancedEventPayload);
+				void handleMixerAdvanced(this.deps, player, payload as unknown as MixerAdvancedEventPayload);
 			} else if (mixerMsg.type === 'MixerOverriddenEvent') {
-				handleMixerOverridden(player, payload as unknown as MixerOverriddenEventPayload);
+				handleMixerOverridden(this.deps, player, payload as unknown as MixerOverriddenEventPayload);
 			}
 			return;
 		}
@@ -113,18 +117,14 @@ export class NodeHandler extends BaseLavalinkHandler {
 
 	private handleNodeDisconnect(node: LavalinkNode, reason: { code?: number | undefined; reason?: string | undefined }) {
 		this.logger.info(`Node disconnected: ${node.options.id} | ${reason.reason}`);
-		this.container.playbackReporter.reportNodeEvent(
-			node.id,
-			'node_disconnect',
-			reason.reason ?? (reason.code != null ? `code ${reason.code}` : null)
-		);
-		const orphanPlayers = this.container.audio.players
+		this.deps.playbackReporter.reportNodeEvent(node.id, 'node_disconnect', reason.reason ?? (reason.code != null ? `code ${reason.code}` : null));
+		const orphanPlayers = this.deps.audio.players
 			.filter((player) => player.node.id === node.options.id)
 			.values()
 			.toArray();
 		this.sessionRestore.markOrphanPlayers(orphanPlayers);
 
-		const leastUsedNode = this.container.audio.nodeManager.leastUsedNodes('playingPlayers');
+		const leastUsedNode = this.deps.audio.nodeManager.leastUsedNodes('playingPlayers');
 
 		if (leastUsedNode.length === 0) {
 			this.logger.warn(`Node disconnected: ${node.options.id} | no available nodes to move ${orphanPlayers.length} orphan players`);
@@ -136,15 +136,15 @@ export class NodeHandler extends BaseLavalinkHandler {
 			// Simple cycling through available nodes
 			// changeNode 실패(레이스로 신노드에 플레이어 미존재 등)를 두면 unhandled rejection + 오펜 플레이어가 남는다.
 			const player = orphanPlayers[idx];
-			this.container.mixerService?.markFiltersStale?.(player.guildId);
+			this.deps.mixerService?.markFiltersStale?.(player.guildId);
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
 				.then(async () => {
 					this.sessionRestore.clearOrphanPlayer(player);
 					// 마이그레이션한 신노드의 플러그인은 필터·설정·슬롯 상태를 모른다 —
 					// 필터와 DB 설정을 재전송하고 에폭을 맞추기 위해 리셋한다 (B-10).
-					await Promise.resolve(this.container.mixerService?.ensureMixerFilter?.(player)).catch(() => null);
-					const reset = this.container.mixerService?.reset?.(player as CustomPlayer, (player as CustomPlayer).currentEpoch ?? 1);
+					await Promise.resolve(this.deps.mixerService?.ensureMixerFilter?.(player)).catch(() => null);
+					const reset = this.deps.mixerService?.reset?.(player as CustomPlayer, (player as CustomPlayer).currentEpoch ?? 1);
 					return Promise.resolve(reset).catch(() => null);
 				})
 				.catch((error) => this.logger.warn(`Node migration failed at guild ${player.guildId}: ${error}`));
@@ -155,7 +155,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 		this.logger.info(`Node reconnecting: ${node.options.id}`);
 		// Lavalink 재시작 뒤 플러그인 필터 상태가 사라질 수 있다. 예열 슬롯은
 		// session resume 시 여전히 유효할 수 있으므로 보존하고, 다음 play 이전에만 필터를 재적용한다.
-		this.container.mixerService.resetFilterReadiness();
+		this.deps.mixerService.resetFilterReadiness();
 	}
 
 	private handleNodeDestroy(node: LavalinkNode) {
@@ -169,7 +169,7 @@ export class NodeHandler extends BaseLavalinkHandler {
 			return;
 		}
 		this.logger.error(`Node error: ${node.options.id}`, error, payload);
-		this.container.playbackReporter.reportNodeEvent(node.id, 'node_error', error.message);
+		this.deps.playbackReporter.reportNodeEvent(node.id, 'node_error', error.message);
 
 		// 재생 상태 페이지(reportNodeEvent)는 요약만 남겨요 — 원인 추적용 스택은 Sentry로 보내요
 		Sentry.withScope((scope) => {

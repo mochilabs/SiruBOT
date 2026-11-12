@@ -1,4 +1,4 @@
-import { container } from '@sapphire/framework';
+import type { LavalinkDeps } from '../deps.ts';
 import { LavalinkManager, Track, UnresolvedTrack } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
 import * as Sentry from '@sentry/node';
@@ -121,12 +121,9 @@ export class PlaybackWatchdog {
 	constructor(
 		private readonly host: TrackTransitionHost,
 		private readonly logger: Logger<ILogObj>,
-		private readonly lavalinkManager: LavalinkManager<CustomPlayer>
+		private readonly lavalinkManager: LavalinkManager<CustomPlayer>,
+		private readonly deps: LavalinkDeps
 	) {}
-
-	private get container() {
-		return container;
-	}
 
 	/**
 	 * 마지막으로 시작한 곡을 기록하고 전이 확정 리커널을 예약한다.
@@ -177,7 +174,7 @@ export class PlaybackWatchdog {
 			this.logger.warn(`[transition] client drifted from server (guild ${player.guildId}), following the server track`);
 			syncQueueToNowPlaying(player, probe.track);
 			this.setLastStarted(player, probe.track);
-			this.container.playerNotifier.updateController(player);
+			this.deps.playerNotifier.updateController(player);
 			return;
 		}
 
@@ -189,13 +186,13 @@ export class PlaybackWatchdog {
 			player.queue.tracks.unshift(displaced as (typeof player.queue.tracks)[number]);
 		}
 		if (player.mixerRuntime) {
-			notifyQueueMutated(player, { invalidate: false, bumpEpoch: false });
+			notifyQueueMutated(this.deps, player, { invalidate: false, bumpEpoch: false });
 		}
 		void player.queue?.utils?.save?.()?.catch(() => null);
 		// 뷰 복원 전용: 곡은 이미 재생 중이므로 새 컨트롤러를 보내지 않고(edit/send 없이)
 		// 기존 메시지 컴포넌트만 다시 그린다. sendController를 부르면 정상 trackStart가
 		// 보낸 컨트롤러와 중복 발송 레이스가 생긴다.
-		this.container.playerNotifier.updateController(player);
+		this.deps.playerNotifier.updateController(player);
 	}
 
 	/** 종료된 트랙이 이미 시작된(=전이 완료된) 상태인지 — β/중복 이벤트 판별용. */
@@ -258,7 +255,7 @@ export class PlaybackWatchdog {
 							this.armWatchdog(player, serverActiveObserved + 1);
 							return;
 						}
-						this.container.mixerService.markUnmanaged(guildId);
+						this.deps.mixerService.markUnmanaged(guildId);
 						// 서버가 자동 진행하지 않음 (예열 실패 등) → 수동 복구.
 						// current에 남은 곡을 직접 재생하는 쪽을 먼저 시도한다.
 						// 복구 명령도 조용히 무시되면 다음 주기에 다시 시도한다
@@ -274,10 +271,10 @@ export class PlaybackWatchdog {
 								this.armWatchdog(player, serverActiveObserved + 1);
 								return;
 							}
-							return this.container.mixerService
+							return this.deps.mixerService
 								.clearNext(player)
 								.catch(() => null)
-								.then(() => this.container.mixerService.primeForPlay(player).catch(() => null))
+								.then(() => this.deps.mixerService.primeForPlay(player).catch(() => null))
 								.then(() => player.play({ noReplace: true }))
 								.then(() => this.armWatchdogUnlessStarted(player));
 						}

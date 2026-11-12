@@ -30,7 +30,9 @@ export { applyFilterPreset, dropLoserFilters, FILTER_PRESET_NAMES, isFilterPrese
 export { checkDJOrAlone, checkManageGuild } from './discord/utils/permissionCheck.ts';
 export { parseTimeToMs } from './discord/utils/timeParse.ts';
 export { LavalinkHandler } from './lavalink/handlers/lavalinkHandler.ts';
+export { handleMixerNeedNext } from './lavalink/handlers/mixerHandlers.ts';
 export { isSameTrack } from './lavalink/handlers/playbackWatchdog.ts';
+export type { LavalinkDeps, LavalinkLogger, LavalinkShardInfo, PlayerStatePublishTracker } from './lavalink/deps.ts';
 export { autoPlayRelated, getUserQueuedTracks, queueRelatedUpfront, removeStaleRelatedTracks } from './lavalink/autoPlayRelated.ts';
 export { CustomPlayer } from './lavalink/player/customPlayer.ts';
 export { nowPlayingTrack } from './lavalink/player/nowPlaying.ts';

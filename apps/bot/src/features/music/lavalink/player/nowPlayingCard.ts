@@ -4,7 +4,6 @@
  * 카드는 정적(진행바 없음) — 동적인 시간/진행율은 디스코드 타임스탬프로 클라이언트가 갱신해요.
  * 카드 갱신 트리거는 트랙 변경 + 볼륨 변경 + 챕터 변경 + 일시정지/반복 상태 변경.
  */
-import { container } from '@sapphire/framework';
 import { AttachmentBuilder } from 'discord.js';
 import { BOT_NAME, emoji, isDev, versionInfo } from '@sirubot/utils';
 import { getUserQueuedTracks, remainingUntilQueueEnd } from '../autoPlayRelated.ts';
@@ -12,6 +11,7 @@ import { RELATED_TRACK_REQUESTER_ID, requesterIdOf } from '../requester.ts';
 import { currentChapterIndex, currentChapter } from './chapters.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
 import type { CustomPlayer } from './customPlayer.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import type { Track } from 'lavalink-client';
 
 export interface NowPlayingCardAttachment {
@@ -35,11 +35,9 @@ export interface NowPlayingCardStore {
 	retryAfter: Map<string, { player: CustomPlayer; trackKey: string; until: number }>;
 }
 
-function getStore(): NowPlayingCardStore {
-	// tsup이 여러 entry에 이 모듈을 복제해도 버튼과 알림이 같은 상태를 사용한다.
-	const store = (container.nowPlayingCardStore ??= { cache: new Map(), pending: new Map(), retryAfter: new Map() });
-	store.retryAfter ??= new Map();
-	return store;
+/** 카드 캐시는 deps.nowPlayingCards(setupServices가 한 번 만든 객체)에 있어요 — 버튼과 알림이 같은 상태를 써요. */
+function getStore(deps: LavalinkDeps): NowPlayingCardStore {
+	return deps.nowPlayingCards;
 }
 
 export function getNowPlayingCardKey(player: CustomPlayer): string | null {
@@ -58,10 +56,10 @@ export function sameNowPlayingTrackIdentity(a: string, b: string): boolean {
 }
 
 /** 신청자 — 카드에 박을 이름+아바타. 멤버 캐시에 없으면 null (텍스트 라인 멘션이 폴백) */
-function requesterInfo(player: CustomPlayer): { name: string; truncatedName: string; avatarUrl: string | null } | null {
+function requesterInfo(deps: LavalinkDeps, player: CustomPlayer): { name: string; truncatedName: string; avatarUrl: string | null } | null {
 	const id = requesterIdOf(nowPlayingTrack(player) ?? undefined);
 	if (!id) return null;
-	const member = container.client.guilds.cache.get(player.guildId)?.members.cache.get(id);
+	const member = deps.client.guilds.cache.get(player.guildId)?.members.cache.get(id);
 	if (!member) return null;
 	const name = member.displayName;
 	// 카드 UI에서 신청자 이름이 두 줄로 줄바꿈되지 않도록 12자에서 말줄임
@@ -83,10 +81,10 @@ function brandLine(player: CustomPlayer): string {
 	return `${emoji('radio_wave')} ${player.node?.id ?? 'BETA-1'} ${emoji(volume === 0 ? 'volume_muted' : volume < 50 ? 'volume_down' : 'volume_up')} ${volume}% ${emoji('info')} ${BOT_NAME} ${isDev ? `${versionInfo.getGitBranch()}/${versionInfo.getGitHash()}` : `${versionInfo.getVersion()} (${versionInfo.getGitHash()})`}`;
 }
 
-async function renderCard(player: CustomPlayer, current: Track, trackKey: string): Promise<CachedCard | null> {
+async function renderCard(deps: LavalinkDeps, player: CustomPlayer, current: Track, trackKey: string): Promise<CachedCard | null> {
 	const queuedTracks = getUserQueuedTracks(player);
 	const requesterId = requesterIdOf(current ?? undefined);
-	const buffer = await container.dataApi
+	const buffer = await deps.dataApi
 		.renderNowPlayingCard({
 			trackId: current.info.identifier || current.info.title,
 			title: current.info.title,
@@ -109,7 +107,7 @@ async function renderCard(player: CustomPlayer, current: Track, trackKey: string
 				return chapter ? { name: chapter.name, startMs: chapter.start, endMs: chapter.end } : null;
 			})(),
 			requester: (() => {
-				const info = requesterInfo(player);
+				const info = requesterInfo(deps, player);
 				return info ? { name: info.truncatedName, avatarUrl: info.avatarUrl } : null;
 			})(),
 			trackUrl: current.info.uri ?? null
@@ -130,11 +128,11 @@ function attachment(card: CachedCard, fresh: boolean): NowPlayingCardAttachment 
 	};
 }
 
-export async function resolveNowPlayingCard(player: CustomPlayer): Promise<NowPlayingCardAttachment | null> {
+export async function resolveNowPlayingCard(deps: LavalinkDeps, player: CustomPlayer): Promise<NowPlayingCardAttachment | null> {
 	const current = nowPlayingTrack(player);
 	const trackKey = getNowPlayingCardKey(player);
 	if (!current || !trackKey) return null;
-	const { cache: cardCache, pending: pendingCards, retryAfter } = getStore();
+	const { cache: cardCache, pending: pendingCards, retryAfter } = getStore(deps);
 
 	const cached = cardCache.get(player.guildId);
 	if (cached && cached.trackKey === trackKey) return attachment(cached, false);
@@ -146,7 +144,7 @@ export async function resolveNowPlayingCard(player: CustomPlayer): Promise<NowPl
 		const request: PendingCard = {
 			player,
 			trackKey,
-			promise: renderCard(player, current, trackKey)
+			promise: renderCard(deps, player, current, trackKey)
 				.then((card) => {
 					// 다른 곡/플레이어로 바뀌거나 destroy된 뒤 도착한 렌더 결과는 버린다.
 					if (pendingCards.get(player.guildId) !== request || getNowPlayingCardKey(player) !== trackKey) return null;
@@ -174,8 +172,8 @@ export async function resolveNowPlayingCard(player: CustomPlayer): Promise<NowPl
 }
 
 /** 초기 화면/버튼은 이미 준비된 카드만 사용하고 렌더 요청을 기다리지 않는다. */
-export function getCachedNowPlayingCard(player: CustomPlayer): NowPlayingCardAttachment | null {
-	const card = container.nowPlayingCardStore?.cache.get(player.guildId);
+export function getCachedNowPlayingCard(deps: LavalinkDeps, player: CustomPlayer): NowPlayingCardAttachment | null {
+	const card = getStore(deps).cache.get(player.guildId);
 	return card && card.trackKey === getNowPlayingCardKey(player) ? attachment(card, false) : null;
 }
 
@@ -183,17 +181,18 @@ export function getCachedNowPlayingCard(player: CustomPlayer): NowPlayingCardAtt
  * 메시지에 표시할 카드 — 캐시에 현재 키와 일치하는 카드가 있으면 반환한다.
  * 같은 곡이라도 볼륨/챕터/일시정지 상태가 바뀌면 새 키로 새 카드를 렌더한다.
  */
-export function getDisplayNowPlayingCard(player: CustomPlayer): NowPlayingCardAttachment | null {
+export function getDisplayNowPlayingCard(deps: LavalinkDeps, player: CustomPlayer): NowPlayingCardAttachment | null {
 	const currentKey = getNowPlayingCardKey(player);
-	const card = container.nowPlayingCardStore?.cache.get(player.guildId);
+	const card = getStore(deps).cache.get(player.guildId);
 	if (!card || !currentKey) return null;
 	if (card.trackKey === currentKey) return attachment(card, false);
 	return sameNowPlayingTrackIdentity(card.trackKey, currentKey) ? attachment(card, false) : null;
 }
 
 /** 플레이어 종료 시 캐시 정리 */
-export function clearNowPlayingCard(guildId: string): void {
-	container.nowPlayingCardStore?.cache.delete(guildId);
-	container.nowPlayingCardStore?.pending.delete(guildId);
-	container.nowPlayingCardStore?.retryAfter?.delete(guildId);
+export function clearNowPlayingCard(deps: LavalinkDeps, guildId: string): void {
+	const store = getStore(deps);
+	store.cache.delete(guildId);
+	store.pending.delete(guildId);
+	store.retryAfter.delete(guildId);
 }

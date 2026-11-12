@@ -1,18 +1,16 @@
-import { container } from '@sapphire/framework';
 import * as Sentry from '@sentry/node';
-import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { ILogObj, Logger } from 'tslog';
+import type { LavalinkDeps } from '../deps.ts';
 
 export abstract class BaseLavalinkHandler {
 	protected logger: Logger<ILogObj>;
 
-	constructor(name: string) {
-		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name });
+	constructor(
+		protected readonly deps: LavalinkDeps,
+		name: string
+	) {
+		this.logger = deps.logger.getSubLogger({ name });
 		this.logger.info(`Setup lavalink ${name}`);
-	}
-
-	protected get container() {
-		return container;
 	}
 
 	protected wrapAsyncHandler<T extends (...args: any[]) => Promise<any> | any>(handler: T, context?: string): T {

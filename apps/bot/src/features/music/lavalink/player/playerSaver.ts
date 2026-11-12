@@ -1,13 +1,20 @@
 import { type RedisClientType } from '@redis/client';
 import { PendingWriteStore } from '../pendingWriteStore.ts';
+import type { LavalinkLogger } from '../deps.ts';
 import { CustomPlayer, CustomPlayerJson } from './customPlayer.ts';
 
 export class CachedPlayerSaver extends PendingWriteStore {
-	constructor(redis: RedisClientType) {
-		super(redis, 'playerSaver', {
-			ttl: 30 * 60 * 1000, // 30분
-			maxSize: 500
-		});
+	constructor(redis: RedisClientType, logger: LavalinkLogger) {
+		super(
+			redis,
+			'playerSaver',
+			{
+				ttl: 30 * 60 * 1000, // 30분
+				maxSize: 500
+			},
+			0,
+			logger
+		);
 	}
 
 	protected getKey(guildId: string): string {

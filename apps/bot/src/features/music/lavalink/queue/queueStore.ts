@@ -1,7 +1,14 @@
-import { container } from '@sapphire/framework';
 import { type RedisClientType } from '@redis/client';
-import { Awaitable, QueueStoreManager, StoredQueue } from 'lavalink-client';
+import { Awaitable, LavalinkManager, QueueStoreManager, StoredQueue } from 'lavalink-client';
 import { PendingWriteStore } from '../pendingWriteStore.ts';
+import type { LavalinkLogger } from '../deps.ts';
+import type { CustomPlayer } from '../player/customPlayer.ts';
+
+export interface CachedQueueStoreDeps {
+	logger: LavalinkLogger;
+	/** audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요 (플레이어 epoch 기록용) */
+	getAudio: () => LavalinkManager<CustomPlayer> | undefined;
+}
 
 /**
  * write-behind 코레일스 윈도우 — 큐 변경 이벤트마다 전체 스냅샷을 Redis로 보내던 것을
@@ -16,7 +23,10 @@ export const QUEUE_WRITE_COALESCE_MS = 400;
  * 변경만 유실 가능하다. 정상 종료는 종료 순서의 drainPendingWrites가 저널을 모두 비운다.
  */
 export class CachedQueueStore extends PendingWriteStore implements QueueStoreManager {
-	constructor(redis: RedisClientType) {
+	constructor(
+		redis: RedisClientType,
+		private readonly queueDeps: CachedQueueStoreDeps
+	) {
 		super(
 			redis,
 			'queueStore',
@@ -24,7 +34,8 @@ export class CachedQueueStore extends PendingWriteStore implements QueueStoreMan
 				ttl: 30 * 60 * 1000,
 				maxSize: 1000
 			},
-			QUEUE_WRITE_COALESCE_MS
+			QUEUE_WRITE_COALESCE_MS,
+			queueDeps.logger
 		);
 	}
 
@@ -49,7 +60,7 @@ export class CachedQueueStore extends PendingWriteStore implements QueueStoreMan
 	/** 인메모리 반영은 즉시, Redis 기록은 코레일스 윈도우를 거친다(write-behind). */
 	public async set(guildId: string, value: StoredQueue | string): Promise<void | boolean> {
 		this.logger.trace(`Setting queue for guild ${guildId}`);
-		const player = container.audio?.getPlayer?.(guildId) as { currentEpoch?: number } | undefined;
+		const player = this.queueDeps.getAudio()?.getPlayer?.(guildId) as { currentEpoch?: number } | undefined;
 		const enriched =
 			typeof value === 'object' && value !== null && typeof player?.currentEpoch === 'number'
 				? ({ ...value, epoch: player.currentEpoch } as StoredQueue & { epoch: number })

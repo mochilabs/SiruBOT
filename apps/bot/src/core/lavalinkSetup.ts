@@ -17,6 +17,6 @@ export const setupLavalink = async (client: BotApplication<boolean>, shardIds: n
 	await client.setupAudio(lavalinkHosts, { shardIds: Array.isArray(shardIds) ? shardIds : [0], shardCount });
 
 	// Lavalink 핸들러 등록 및 노드 연결 (setupAudio 직후, 순서 보장)
-	container.lavalinkHandler = new LavalinkHandler(container.audio);
+	container.lavalinkHandler = new LavalinkHandler(container.audio, container.lavalink);
 	await container.audio.init({ id: client.user!.id });
 };

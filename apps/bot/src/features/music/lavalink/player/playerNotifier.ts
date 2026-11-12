@@ -1,5 +1,4 @@
-import { container, UserError } from '@sapphire/framework';
-import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
+import { UserError } from '@sapphire/framework';
 import { ILogObj, Logger } from 'tslog';
 import { getConfig } from '../../../../lib/config.ts';
 import type { Stoppable } from '../../../../lib/lifecycle.ts';
@@ -10,6 +9,7 @@ import { CustomPlayer } from './customPlayer.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
 import { buildControllerCardPayload } from './controllerPayload.ts';
 import { clearNowPlayingCard, getCachedNowPlayingCard, getNowPlayingCardKey, resolveNowPlayingCard } from './nowPlayingCard.ts';
+import type { LavalinkDeps } from '../deps.ts';
 import { Guild } from '@sirubot/prisma';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
@@ -45,12 +45,8 @@ export class PlayerNotifier implements Stoppable {
 		return getConfig().notifier.progressTickMs;
 	}
 
-	constructor() {
-		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'playerNotifier' });
-	}
-
-	private get container() {
-		return container;
+	constructor(private readonly deps: LavalinkDeps) {
+		this.logger = deps.logger.getSubLogger({ name: 'playerNotifier' });
 	}
 
 	public sendController(player: CustomPlayer, interaction?: ChatInputCommandInteraction): Promise<void> {
@@ -105,7 +101,7 @@ export class PlayerNotifier implements Stoppable {
 				card,
 				components,
 				files
-			} = await buildControllerCardPayload(player, {
+			} = await buildControllerCardPayload(this.deps, player, {
 				volume: options.volume,
 				textChannelId
 			});
@@ -131,7 +127,7 @@ export class PlayerNotifier implements Stoppable {
 				player.textChannelId = interaction.channelId;
 			} else {
 				if (!player.textChannelId) return;
-				const textChannel = this.container.client.channels.cache.get(player.textChannelId);
+				const textChannel = this.deps.client.channels.cache.get(player.textChannelId);
 				if (!textChannel?.isSendable()) return;
 				message = await textChannel.send({
 					components: [components],
@@ -150,7 +146,7 @@ export class PlayerNotifier implements Stoppable {
 			player.controller = message;
 			this.renderedSignatures.set(message, this.renderSignature(player, components));
 			this.cardTrackKeys.set(message, card ? card.trackKey : '');
-			if (pinnedChannel && !getCachedNowPlayingCard(player)) this.startCardRefresh(player, message.id, Boolean(interaction));
+			if (pinnedChannel && !getCachedNowPlayingCard(this.deps, player)) this.startCardRefresh(player, message.id, Boolean(interaction));
 			this.ensureProgressTick(player);
 			this.logger.debug(`Created new controller message for guild: ${player.guildId}`);
 		} catch (error) {
@@ -232,14 +228,14 @@ export class PlayerNotifier implements Stoppable {
 				components,
 				attachments,
 				files
-			} = await buildControllerCardPayload(player, {
+			} = await buildControllerCardPayload(this.deps, player, {
 				volume: options.volume,
 				textChannelId,
 				message,
 				previousTrackKey: this.cardTrackKeys.get(message) ?? ''
 			});
 			if (revision !== undefined && this.updateRevisions.get(player.guildId) !== revision) return;
-			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(player) === null;
+			const missingCurrent = pinnedChannel && getCachedNowPlayingCard(this.deps, player) === null;
 			const signature = this.renderSignature(player, components);
 			if (files.length === 0 && this.renderedSignatures.get(message) === signature) {
 				if (missingCurrent) this.startCardRefresh(player, message.id, allowDisabled);
@@ -287,7 +283,7 @@ export class PlayerNotifier implements Stoppable {
 		if (previous?.messageId === messageId && previous.trackKey === trackKey) return;
 		const request = { messageId, trackKey };
 		this.cardRefreshes.set(player.guildId, request);
-		void resolveNowPlayingCard(player)
+		void resolveNowPlayingCard(this.deps, player)
 			.then((card) => {
 				if (!card) return;
 				return this.enqueueControllerOperation(player.guildId, async () => {
@@ -368,7 +364,7 @@ export class PlayerNotifier implements Stoppable {
 
 		// controller 객체가 없지만 messageId가 남아있는 경우 (resume 등) fallback fetch
 		if (messageId && player.textChannelId) {
-			const channel = this.container.client.channels.cache.get(player.textChannelId);
+			const channel = this.deps.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
 				const message = await channel.messages.fetch(messageId).catch(() => null);
 				if (message?.deletable) {
@@ -391,7 +387,7 @@ export class PlayerNotifier implements Stoppable {
 				this.updateController(player);
 				return;
 			}
-			const channel = this.container.client.channels.cache.get(player.textChannelId);
+			const channel = this.deps.client.channels.cache.get(player.textChannelId);
 			if (channel?.isSendable()) {
 				// 만약 컨트롤러가 이미 마지막 메시지라면 굳이 다시 보낼 필요 없이 업데이트만 진행
 				if (channel.lastMessageId === player.messageId) {
@@ -420,13 +416,13 @@ export class PlayerNotifier implements Stoppable {
 	public async onPlayerDestroy(player: CustomPlayer): Promise<void> {
 		this.logger.debug(`Player destroyed in guild: ${player.guildId}`);
 		this.destroyedPlayers.add(player);
-		clearNowPlayingCard(player.guildId);
+		clearNowPlayingCard(this.deps, player.guildId);
 		await this.deleteController(player);
 	}
 
 	private async getControllerOptions(guildId: string): Promise<ControllerOptions | null> {
 		try {
-			const data = await this.container.guildService.getGuild(guildId);
+			const data = await this.deps.guildService.getGuild(guildId);
 
 			return data;
 		} catch (error) {
@@ -438,7 +434,7 @@ export class PlayerNotifier implements Stoppable {
 	/** 컨트롤러가 떠 있는 채널이 길드의 고정 채널인지 — 맞으면 핀 모드(edit 유지)로 다룬다. */
 	private async isPinnedChannel(guildId: string, textChannelId: string): Promise<boolean> {
 		try {
-			const pinned = await guildChannels.getPinnedChannel(this.container.guildService, guildId);
+			const pinned = await guildChannels.getPinnedChannel(this.deps.guildService, guildId);
 			return Boolean(pinned) && pinned === textChannelId;
 		} catch {
 			return false;

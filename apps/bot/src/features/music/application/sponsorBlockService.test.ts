@@ -8,14 +8,22 @@ const guildMixerMock = vi.hoisted(() => ({ getMixerSettings: vi.fn().mockResolve
 
 const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 const guildService = { getGuild: vi.fn() };
-const mixerService = { isOverlapActive: vi.fn().mockReturnValue(false) };
+const mixerService = {
+	isOverlapActive: vi.fn().mockReturnValue(false),
+	prepareNextAnalysis: vi.fn(async () => undefined),
+	invalidate: vi.fn(async () => undefined)
+};
+/** 큐 관측 헬퍼가 받는 lavalink 의존성 역할 */
+const lavalink = { mixerService, sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() } } as never;
 const makeService = () =>
 	new SponsorBlockService({
 		logger,
 		guildService: guildService as never,
 		getClient: () => ({ channels: { cache: new Map() } }) as never,
 		getMixerService: () => mixerService as never,
-		messages: { skipNotice: vi.fn(() => ({ components: [] })) }
+		messages: { skipNotice: vi.fn(() => ({ components: [] })) },
+		lavalink,
+		armNextTrack: vi.fn(async () => undefined)
 	});
 
 vi.mock('../../../services/dataApiClient.ts', () => ({ fetchSponsorBlockSegments: vi.fn() }));
@@ -107,7 +115,9 @@ describe('BOT SponsorBlock ownership', () => {
 			guildService: guildService as never,
 			getClient: () => ({ channels: { cache: new Map() } }) as never,
 			getMixerService: () => lateMixer as never,
-			messages: { skipNotice: vi.fn(() => ({ components: [] })) }
+			messages: { skipNotice: vi.fn(() => ({ components: [] })) },
+			lavalink,
+			armNextTrack: vi.fn(async () => undefined)
 		});
 		lateMixer = mixerService;
 		vi.mocked(fetchSponsorBlockSegments).mockResolvedValue([{ category: 'sponsor', startMs: 0, endMs: 5000 }]);

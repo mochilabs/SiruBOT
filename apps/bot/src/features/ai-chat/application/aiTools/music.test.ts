@@ -52,6 +52,7 @@ const musicPlay = createMusicPlay({
 });
 
 const deps = {
+	lavalink: {} as never,
 	db: {} as never,
 	guildService: {} as never,
 	audioService: { enqueueTrack, getOrCreatePlayer, connectPlayer, ensurePlayback, search } as never,

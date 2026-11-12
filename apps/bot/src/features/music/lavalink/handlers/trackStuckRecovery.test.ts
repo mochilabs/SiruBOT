@@ -1,18 +1,16 @@
 import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { container } from '@sapphire/framework';
 import { LavalinkManager, type LavalinkTrack, type TrackStuckEvent } from 'lavalink-client';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { MixerService } from '../../application/mixerService.ts';
 import { clearMixerRuntime } from './mixerHandlers.ts';
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-		playerNotifier: { updateController: vi.fn() },
-		sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
-	}
-}));
+/** 믹서·큐 헬퍼가 받는 LavalinkDeps 역할 — 테스트가 mixerService를 채워 넣어요 */
+const container: Record<string, any> = {
+	logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
+	playerNotifier: { updateController: vi.fn() },
+	sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
+};
 
 const cjs: typeof import('lavalink-client') = createRequire(import.meta.url)('lavalink-client');
 const players: CustomPlayer[] = [];
@@ -41,7 +39,8 @@ describe.each([
 			logger: container.logger as never,
 			guildService: {} as never,
 			callTimeoutMs: 5_000,
-			getPlayerNotifier: () => container.playerNotifier
+			getPlayerNotifier: () => container.playerNotifier,
+			lavalink: container as never
 		});
 		Object.assign(container, { mixerService: mixer });
 		vi.spyOn(mixer, 'prepareNextAnalysis').mockResolvedValue(undefined);

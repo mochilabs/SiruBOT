@@ -34,6 +34,7 @@ vi.mock('../../../music/index.ts', () => ({
 }));
 
 const deps = {
+	lavalink: {} as never,
 	guildService: { getGuild: mocks.getGuild } as never,
 	getMusic: () => ({ setVolume: mocks.setVolume, setRepeat: mocks.setRepeatUseCase }) as never,
 	getAudio: () => ({ getPlayer: mocks.getPlayer }) as never,

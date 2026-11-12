@@ -5,7 +5,8 @@ import { CachedQueueStore, QUEUE_WRITE_COALESCE_MS } from './queueStore.ts';
 const { getSubLogger } = vi.hoisted(() => ({ getSubLogger: vi.fn() }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-vi.mock('@sapphire/framework', () => ({ container: { logger: { getSubLogger } } }));
+const logger = { getSubLogger, info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+const deps = { logger, getAudio: () => undefined };
 
 function makeRedis(get: () => Promise<string | null> = async () => null) {
 	const redis = {
@@ -37,7 +38,7 @@ describe('CachedQueueStore pending writes', () => {
 		redis.set.mockImplementation(async (key: string) => {
 			if (key.endsWith('g1')) throw new Error('still down');
 		});
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		store.onDisconnect();
 		await store.set('g1', 'V1');
 		await store.set('g2', 'V2');
@@ -53,7 +54,7 @@ describe('CachedQueueStore pending writes', () => {
 		const { handle } = makeRedis(async () => {
 			throw new Error('boom');
 		});
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		const emptyQueue = JSON.stringify({ current: null, previous: [], tracks: [] });
 
 		await expect(store.get('g1')).resolves.toBe(emptyQueue);
@@ -73,7 +74,7 @@ describe('CachedQueueStore pending writes', () => {
 				release = resolve;
 			});
 		});
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		store.onDisconnect();
 		await store.set('g1', 'VNEW');
 
@@ -100,7 +101,7 @@ describe('CachedQueueStore pending writes', () => {
 				});
 			}
 		});
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		store.onDisconnect();
 		await store.set('g1', 'V1');
 
@@ -125,7 +126,7 @@ describe('CachedQueueStore pending writes', () => {
 			stored = null;
 			return 1;
 		});
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		store.onDisconnect();
 		await store.delete('g1');
 
@@ -142,7 +143,7 @@ describe('CachedQueueStore pending writes', () => {
 
 	it('lets a delete during an outage override an earlier pending set', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		store.onDisconnect();
 		await store.set('g1', 'V1');
 		await store.delete('g1');
@@ -158,7 +159,7 @@ describe('CachedQueueStore pending writes', () => {
 
 	it('lets a newer set override an earlier tombstone', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 		store.onDisconnect();
 		await store.delete('g1');
 		await store.set('g1', 'V2');
@@ -185,7 +186,7 @@ describe('CachedQueueStore cache-first reads', () => {
 
 	it('reads from memory after a single redis.get', async () => {
 		const { redis, handle } = makeRedis(async () => 'FROM-REDIS');
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		await expect(store.get('g1')).resolves.toBe('FROM-REDIS');
 		await expect(store.get('g1')).resolves.toBe('FROM-REDIS');
@@ -197,7 +198,7 @@ describe('CachedQueueStore cache-first reads', () => {
 	it('goes back to redis only after the memory ttl expires', async () => {
 		let reads = 0;
 		const { redis, handle } = makeRedis(async () => `FROM-REDIS-${++reads}`);
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		await expect(store.get('g1')).resolves.toBe('FROM-REDIS-1');
 		await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1);
@@ -208,7 +209,7 @@ describe('CachedQueueStore cache-first reads', () => {
 
 	it('serves the newest snapshot inside the coalesce window without redis', async () => {
 		const { redis, handle } = makeRedis(async () => 'STALE-REDIS');
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		await store.set('g1', 'V1');
 		await store.set('g1', 'V2');
@@ -227,7 +228,7 @@ describe('CachedQueueStore cache-first reads', () => {
 					releaseDelete = resolve;
 				})
 		);
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		const deleting = store.delete('g1');
 		await expect(store.get('g1')).resolves.toBe(EMPTY_QUEUE);
@@ -249,7 +250,7 @@ describe('CachedQueueStore write-behind coalesce', () => {
 
 	it('coalesces N sets into a single redis.set of the last snapshot', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		for (let i = 1; i <= 5; i++) {
 			await store.set('g1', `V${i}`);
@@ -265,7 +266,7 @@ describe('CachedQueueStore write-behind coalesce', () => {
 
 	it('opens a new window for writes that arrive after a flush', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		await store.set('g1', 'V1');
 		await vi.advanceTimersByTimeAsync(QUEUE_WRITE_COALESCE_MS);
@@ -281,7 +282,7 @@ describe('CachedQueueStore write-behind coalesce', () => {
 
 	it('flushes queued writes through the pending journal on shutdown drain', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		await store.set('g1', 'V1');
 		await store.set('g1', 'V2');
@@ -299,7 +300,7 @@ describe('CachedQueueStore write-behind coalesce', () => {
 
 	it('deletes immediately instead of coalescing it', async () => {
 		const { redis, handle } = makeRedis();
-		const store = new CachedQueueStore(handle);
+		const store = new CachedQueueStore(handle, deps);
 
 		await store.set('g1', 'V1');
 		await store.delete('g1');

@@ -25,7 +25,6 @@ const { container } = vi.hoisted(() => ({
 	}
 }));
 
-vi.mock('@sapphire/framework', () => ({ container }));
 vi.mock('../../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...container.guildMixer }));
 function createTrack(overrides: Partial<Track> = {}): Track {
 	return {
@@ -142,7 +141,7 @@ describe('handleMixerNeedNext with AutoMix (gapless=false)', () => {
 			}
 		};
 
-		await handleMixerNeedNext(player as never, {
+		await handleMixerNeedNext(container as never, player as never, {
 			remainingMs: 2000,
 			currentTrackEncoded: current.encoded!
 		});

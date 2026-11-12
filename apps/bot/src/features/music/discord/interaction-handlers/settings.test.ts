@@ -14,7 +14,7 @@ vi.mock('@sapphire/framework', () => ({
 		none = () => ({ isSome: () => false });
 	},
 	InteractionHandlerTypes: { MessageComponent: 'message-component' },
-	container: {}
+	container: { lavalink: { marker: 'lavalink' } }
 }));
 vi.mock('../../../../services/guildSettings/channels.ts');
 vi.mock('../../../../services/guildSettings/jtc.ts');
@@ -131,7 +131,7 @@ describe('settings 액션 표', () => {
 		vi.mocked(queueRelatedUpfront).mockResolvedValue(undefined as never);
 		const { services, player } = await run('toggleRelated', makeInteraction('button'));
 		expect(guildPlayback.setRelated).toHaveBeenCalledWith(services.guildService, 'g1', true);
-		expect(queueRelatedUpfront).toHaveBeenCalledWith(player, player.queue.current);
+		expect(queueRelatedUpfront).toHaveBeenCalledWith(expect.objectContaining({ marker: 'lavalink' }), player, player.queue.current);
 	});
 
 	it('toggleRelated를 끌 때는 미리 넣지 않아요', async () => {

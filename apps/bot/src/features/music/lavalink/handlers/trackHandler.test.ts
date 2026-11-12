@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfigForTesting } from '../../../../lib/config.ts';
 import { makeTestConfig } from '../../../../lib/config.testing.ts';
-import { container } from '@sapphire/framework';
 import type { Track, TrackEndEvent, TrackStartEvent } from 'lavalink-client';
 import { TrackHandler } from './trackHandler.ts';
 import { RelatedTrackHistory } from '../player/relatedTrackHistory.ts';
@@ -38,16 +37,6 @@ const {
 }));
 const stubLogger = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		logger: { getSubLogger },
-		playerNotifier: { updateController: playerNotifierUpdate },
-		mixerService,
-		playbackReporter: { reportPlaybackEvent },
-		// 이 테스트의 곡은 유튜브가 아니라 SponsorBlock이 아무 일도 하지 않아요
-		sponsorBlockService: { startTrack: vi.fn(), stop: vi.fn(), tick: vi.fn(), prefetch: vi.fn(), queueChanged: vi.fn() }
-	}
-}));
 vi.mock('../playerStatePublisher.ts', () => ({ publishPlayerState, publishPlayerEnded, clearPlayerStateTracker }));
 vi.mock('../autoPlayRelated.ts', () => ({ getInFlightRelatedFetch, queueRelatedUpfront }));
 vi.mock('../../../../services/dataApiClient.ts', () => ({ fetchYouTubeChapters }));
@@ -56,6 +45,16 @@ vi.mock('@sentry/node', () => ({
 	captureException: vi.fn()
 }));
 
+/** 핸들러가 받는 LavalinkDeps 역할 — 테스트 전체가 Object.assign으로 필요한 필드를 채워요 */
+const container: Record<string, any> = {
+	logger: { getSubLogger },
+	playerNotifier: { updateController: playerNotifierUpdate },
+	mixerService,
+	playbackReporter: { reportPlaybackEvent },
+	// 이 테스트의 곡은 유튜브가 아니라 SponsorBlock이 아무 일도 하지 않아요
+	sponsorBlockService: { startTrack: vi.fn(), stop: vi.fn(), tick: vi.fn(), prefetch: vi.fn(), queueChanged: vi.fn() }
+};
+
 function makeHandler() {
 	const buildTrack = vi.fn((payload: { encoded: string; info?: Record<string, unknown> }) => ({
 		encoded: payload.encoded,
@@ -63,7 +62,7 @@ function makeHandler() {
 		requester: undefined
 	}));
 	const manager = { on: vi.fn(), utils: { buildTrack }, removeAllListeners: vi.fn() };
-	const handler = new TrackHandler(manager as never);
+	const handler = new TrackHandler(container as never, manager as never);
 	return { handler: handler as unknown as { [key: string]: any }, buildTrack, manager };
 }
 
@@ -612,7 +611,7 @@ describe('handleTrackStart (시작 확정과 mixer wiring)', () => {
 		expect(player.transitionState.lastStartedEncoded).toBe('a-enc');
 		expect(player.consecutiveErrors).toBe(0);
 		expect(reportPlaybackEvent).toHaveBeenCalledWith('g-1', 'track_start', started);
-		expect(publishPlayerState).toHaveBeenCalledWith(player);
+		expect(publishPlayerState).toHaveBeenCalledWith(expect.anything(), player);
 		expect(mixer.ensureMixerFilter).toHaveBeenCalledWith(player);
 		expect(mixer.preloadUpcoming).toHaveBeenCalledWith(player);
 		expect(queueRelatedUpfront).not.toHaveBeenCalled();
@@ -759,7 +758,7 @@ describe('handleQueueEnd', () => {
 
 		await handler.handleQueueEnd(player, track('last-enc', 'id-l'), { reason: 'finished' });
 
-		expect(publishPlayerEnded).toHaveBeenCalledWith(player);
+		expect(publishPlayerEnded).toHaveBeenCalledWith(expect.anything(), player);
 		expect(notifier.deleteController).toHaveBeenCalledWith(player);
 		expect(channelSend).toHaveBeenCalledTimes(1);
 		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.'); // inbox_tray 폴백
@@ -846,7 +845,7 @@ describe('handlePlayerDestroy (타이머 정리)', () => {
 		expect(mixer.markUnmanaged).toHaveBeenCalledWith('g-1');
 		expect(chatTts.clearGuild).toHaveBeenCalledWith('g-1');
 		expect(mixer.clearNext).toHaveBeenCalledWith(player);
-		expect(clearPlayerStateTracker).toHaveBeenCalledWith('g-1');
+		expect(clearPlayerStateTracker).toHaveBeenCalledWith(expect.anything(), 'g-1');
 		expect(player.transitionState.lastStartedEncoded).toBeNull();
 	});
 
@@ -922,7 +921,7 @@ describe('watchdog 복구 루프', () => {
 		handler.armWatchdog(player);
 		await vi.advanceTimersByTimeAsync(5_000);
 
-		expect(publishPlayerEnded).toHaveBeenCalledWith(player);
+		expect(publishPlayerEnded).toHaveBeenCalledWith(expect.anything(), player);
 		expect(notifier.deleteController).toHaveBeenCalledWith(player);
 		expect(channelSend).toHaveBeenCalledTimes(1);
 		expect(JSON.stringify(channelSend.mock.calls[0][0])).toContain('📥 대기열의 모든 곡을 재생했어요.'); // inbox_tray 폴백

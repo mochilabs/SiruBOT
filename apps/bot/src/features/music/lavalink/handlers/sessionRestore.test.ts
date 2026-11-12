@@ -10,6 +10,8 @@ import { RawEvent } from '../../discord/listeners/raw.ts';
 import { SessionRestoreEngine } from './sessionRestore.ts';
 import { NodeHandler } from './nodeHandler.ts';
 
+// 엔진·핸들러는 LavalinkDeps로 이 container를 받아요 (RawEvent 피스도 같은 container를 읽어요)
+
 const BOT_ID = '123456789012345678';
 const GUILD_ID = '123456789012345679';
 const VOICE_ID = '123456789012345680';
@@ -100,7 +102,7 @@ function setup(destroyPlayer = true) {
 	const original = manager.createPlayer({ guildId: GUILD_ID, voiceChannelId: VOICE_ID, node: 'main' });
 	const saved = { ...original.toJSON(), savedAt: Date.now() };
 	manager.deletePlayer(GUILD_ID);
-	const engine = new SessionRestoreEngine(logger);
+	const engine = new SessionRestoreEngine(container as never, logger);
 	const restore = () => engine.recreateSavedPlayer(node, GUILD_ID, saved, { resetVoiceState: true });
 	return { voice, sends, manager, node, raw, saved, engine, restore, queueStore, updatePlayer };
 }
@@ -232,7 +234,7 @@ describe('fresh restore voice reconnect', () => {
 	it('recovers an orphan even when its shared node object already has the new session id', async () => {
 		const { manager, node, saved, voice, raw, queueStore, updatePlayer } = setup();
 		queueStore.set(GUILD_ID, { current: track('current'), tracks: [track('next')], previous: [] });
-		const handler = new NodeHandler(manager.nodeManager);
+		const handler = new NodeHandler(container as never, manager.nodeManager);
 		const orphan = manager.createPlayer({ guildId: GUILD_ID, voiceChannelId: VOICE_ID, node: 'main' });
 		vi.spyOn(manager.nodeManager, 'leastUsedNodes').mockReturnValue([]);
 		manager.nodeManager.emit('disconnect', node, { code: 1006, reason: 'offline' });
@@ -258,7 +260,7 @@ describe('fresh restore voice reconnect', () => {
 
 	it('does not replace a healthy player on a repeated fresh session restore', async () => {
 		const { manager, node, saved } = setup();
-		const handler = new NodeHandler(manager.nodeManager);
+		const handler = new NodeHandler(container as never, manager.nodeManager);
 		const player = manager.createPlayer({ guildId: GUILD_ID, voiceChannelId: VOICE_ID, node: 'main' });
 		vi.spyOn(node, 'connected', 'get').mockReturnValue(true);
 		Object.assign(container, { redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [GUILD_ID], get: async () => saved }) } });
@@ -269,7 +271,7 @@ describe('fresh restore voice reconnect', () => {
 	it('does not reset voice state on bot restart fresh restore when there is no orphan player', async () => {
 		const { manager, node, saved, queueStore, sends } = setup();
 		queueStore.set(GUILD_ID, { current: track('current'), tracks: [], previous: [] });
-		const handler = new NodeHandler(manager.nodeManager);
+		const handler = new NodeHandler(container as never, manager.nodeManager);
 		vi.spyOn(node, 'connected', 'get').mockReturnValue(true);
 		node.sessionId = 'new-session';
 		Object.assign(container, { redisStore: { getPlayerSaver: () => ({ listGuildIds: async () => [GUILD_ID], get: async () => saved }) } });
@@ -290,7 +292,7 @@ describe('fresh restore voice reconnect', () => {
 	it.each([true, false])('restores only players whose migration did not succeed (succeeded=%s)', async (migrationSucceeded) => {
 		const { manager, node, saved, voice, raw, queueStore, sends } = setup();
 		queueStore.set(GUILD_ID, { current: track('current'), tracks: [], previous: [] });
-		const handler = new NodeHandler(manager.nodeManager);
+		const handler = new NodeHandler(container as never, manager.nodeManager);
 		const player = manager.createPlayer({ guildId: GUILD_ID, voiceChannelId: VOICE_ID, node: 'main' });
 		const target = manager.nodeManager.createNode({ id: 'other', host: 'localhost', port: 2334, authorization: 'test' });
 		if (!target) throw new Error('Missing migration node');

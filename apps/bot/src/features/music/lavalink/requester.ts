@@ -2,8 +2,8 @@
  * track.requester 공용 파서 — 봇이 요청자를 user 객체로 넣어요 (related_track은 추천 곡 센티널).
  * playerStatePublisher / autoPlayRelated / controller 등이 함께 써요.
  */
-import { container } from '@sapphire/framework';
 import type { CustomPlayer } from './player/customPlayer.ts';
+import type { LavalinkDeps } from './deps.ts';
 import type { Track } from 'lavalink-client';
 
 /** 자동 추천곡 센티널 — requester.id로 흐르는 값. 오타 리터럴 재발을 막으려면 이 상수만 사용. */
@@ -28,8 +28,8 @@ export function requesterIdOf(track: Track | undefined | null): string | null {
 }
 
 /** userId로 길드 멤버 캐시에서 displayName을 찾아요 (비동기 fetch 없이 캐시만) */
-export function resolveRequesterName(player: CustomPlayer, requesterId: string | null): string | null {
+export function resolveRequesterName(deps: LavalinkDeps, player: CustomPlayer, requesterId: string | null): string | null {
 	if (!requesterId) return null;
-	const member = container.client.guilds.cache.get(player.guildId)?.members.cache.get(requesterId);
+	const member = deps.client.guilds.cache.get(player.guildId)?.members.cache.get(requesterId);
 	return member?.displayName ?? null;
 }

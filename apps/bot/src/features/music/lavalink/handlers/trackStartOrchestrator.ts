@@ -1,4 +1,4 @@
-import { container } from '@sapphire/framework';
+import type { LavalinkDeps } from '../deps.ts';
 import { LavalinkManager, Track, TrackStartEvent } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
 import { resolveYouTubeVideoId } from '@sirubot/utils';
@@ -19,16 +19,13 @@ export class TrackStartOrchestrator {
 	constructor(
 		private readonly host: TrackTransitionHost,
 		private readonly logger: Logger<ILogObj>,
-		private readonly lavalinkManager: LavalinkManager<CustomPlayer>
+		private readonly lavalinkManager: LavalinkManager<CustomPlayer>,
+		private readonly deps: LavalinkDeps
 	) {}
-
-	private get container() {
-		return container;
-	}
 
 	public async handleTrackStart(player: CustomPlayer, track: Track | null, payload: TrackStartEvent) {
 		// 예열 소비 후 이어지는 trackStart에서 서버가 시작한 트랙을 대조한다.
-		const preloadedIdentifier = this.container.mixerService.takePreloadedIdentifier(player.guildId);
+		const preloadedIdentifier = this.deps.mixerService.takePreloadedIdentifier(player.guildId);
 		const startedTrack = this.resolveStartedTrack(player, track, payload, preloadedIdentifier);
 		if (startedTrack && !isTtsClip(startedTrack)) player.relatedTrackHistory.remember(startedTrack);
 		syncQueueToNowPlaying(player, startedTrack);
@@ -40,9 +37,9 @@ export class TrackStartOrchestrator {
 			player.mixerRuntime.transitionSeq++;
 		}
 		player.consecutiveErrors = 0;
-		container.playbackReporter.reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
+		this.deps.playbackReporter.reportPlaybackEvent(player.guildId, 'track_start', startedTrack);
 		// 대시보드 라이브 뷰 — fire-and-forget (재생 경로 비블로킹)
-		publishPlayerState(player);
+		publishPlayerState(this.deps, player);
 		player.transitionState.stopByCommand = false;
 		// 예열 소비 확인 창(preloadConsumedAt)은 시작 확정과 함께 닫는다 — 남겨두면 창 안에
 		// 도착한 무관한 늦은 queueEnd를 defer해 실제 종료 처리(finishQueue)가 늦어진다.
@@ -52,8 +49,8 @@ export class TrackStartOrchestrator {
 		this.host.clearWatchdog(player.guildId);
 		// 챕터(에피소드) 조회는 네트워크가 필요하므로 재생/알림과 병렬로 돌린다.
 		this.loadChapters(player, startedTrack);
-		container.sponsorBlockService.startTrack(player, startedTrack);
-		void this.container.mixerService.supportsIncomingStart?.(player).catch(() => null);
+		this.deps.sponsorBlockService.startTrack(player, startedTrack);
+		void this.deps.mixerService.supportsIncomingStart?.(player).catch(() => null);
 		const startedKey = startedTrack
 			? ((startedTrack.encoded ? normalizeTrackEncoded(startedTrack.encoded) : null) ??
 				startedTrack.info?.identifier ??
@@ -64,7 +61,7 @@ export class TrackStartOrchestrator {
 			player.transitionState.lastRecordedKey = startedKey;
 			this.logger.trace(`Ensuring track and increasing plays: ${startedTrack.info.title} by ${startedTrack.info.author}`);
 			// fire-and-forget — 곡 upsert와 히스토리를 단일 트랜잭션으로 기록(recordPlay)한다.
-			void this.container.trackService.recordPlay(player.guildId, startedTrack).catch((error) => {
+			void this.deps.trackService.recordPlay(player.guildId, startedTrack).catch((error) => {
 				this.logger.error(`Failed to record track history: ${formatRecordError(error)}`);
 			});
 		}
@@ -76,12 +73,12 @@ export class TrackStartOrchestrator {
 		if (isTtsClip(startedTrack)) {
 			// 채팅 TTS 클립마다 컨트롤러를 다시 보내면 메시지마다 리센드 스팸이 된다 — 알림만 생략한다.
 		} else {
-			await this.container.playerNotifier.onTrackStart(player);
+			await this.deps.playerNotifier.onTrackStart(player);
 			// 음악이 시작되면 단독 대기 중이던 TTS 클립은 오버레이로 순서대로 넘어간다 (명세 4.3).
 			// 그 전에 시드만 되고 재생되지 않은 단독 TTS 클립 잔재를 큐에서 걷어낸다 (명세 4.2) —
 			// 남겨두면 곡 사이에 클립이 메인 트랙으로 재생될 수 있다.
-			this.container.chatTtsService.scrubTtsClips(player, null);
-			void this.container.chatTtsService
+			this.deps.chatTtsService.scrubTtsClips(player, null);
+			void this.deps.chatTtsService
 				.drainSoloQueueToAnnounce(player)
 				.catch((error) => this.logger.warn(`[chatTts] solo queue drain failed (guild ${player.guildId}): ${error}`));
 		}
@@ -91,23 +88,23 @@ export class TrackStartOrchestrator {
 	/** trackStart의 mixer 배선 — 예열 슬롯 갱신과 추천 선예열을 컨트롤러 알림과 병렬로 수행한다. */
 	private async runMixerWiring(player: CustomPlayer, startedTrack: Track | null): Promise<void> {
 		try {
-			await this.container.mixerService.ensureMixerFilter(player).catch((error) => {
+			await this.deps.mixerService.ensureMixerFilter(player).catch((error) => {
 				this.logger.warn(`[mixer] enableFilter failed for guild ${player.guildId}, will retry: ${error}`);
 			});
-			const preloaded = await this.container.mixerService.preloadUpcoming(player).catch((error) => {
+			const preloaded = await this.deps.mixerService.preloadUpcoming(player).catch((error) => {
 				this.logger.warn(`[mixer] preload failed (guild ${player.guildId}): ${error}`);
 				return false;
 			});
 			// 대기열이 비어 있으면(현재 곡이 마지막) 추천곡을 미리 큐에 추가해
 			// 갭리스 자동재생 체인을 유지한다 (repeat/갭리스 off는 헬퍼가 거름)
 			if (!preloaded && startedTrack && player.queue.tracks.length === 0) {
-				await queueRelatedUpfront(player, startedTrack).catch((error) => {
+				await queueRelatedUpfront(this.deps, player, startedTrack).catch((error) => {
 					this.logger.warn(`[mixer] related pre-add failed (guild ${player.guildId}): ${error}`);
 				});
 			}
 		} catch (error) {
 			this.logger.warn(`[mixer] trackStart wiring failed (guild ${player.guildId}): ${error}`);
-			this.container.mixerService.markUnmanaged(player.guildId);
+			this.deps.mixerService.markUnmanaged(player.guildId);
 		}
 	}
 
@@ -118,13 +115,13 @@ export class TrackStartOrchestrator {
 	 * 알림·컨트롤러 삭제는 하지 않는다 (TTS 조용한 스킵 규칙).
 	 */
 	public async continueAfterTtsClip(player: CustomPlayer, track: Track | null): Promise<void> {
-		this.container.chatTtsService.scrubTtsClips(player, track);
+		this.deps.chatTtsService.scrubTtsClips(player, track);
 		if (player.transitionState.stopByCommand) {
-			this.container.chatTtsService.clearSoloQueue(player.guildId);
+			this.deps.chatTtsService.clearSoloQueue(player.guildId);
 			return;
 		}
 		// mixer 예열 슬롯이 남아 있으면 서버가 다음 트랙을 시작한다 — bookkeeping만 하고 관망한다.
-		if (this.container.mixerService.consumePreloaded(player.guildId)) {
+		if (this.deps.mixerService.consumePreloaded(player.guildId)) {
 			player.transitionState.preloadConsumedAt = Date.now();
 			const preheated = player.queue.tracks[0] ?? null;
 			if (preheated) player.transitionState.serverConsumedTrack = preheated as Track;
@@ -143,7 +140,7 @@ export class TrackStartOrchestrator {
 			// 이미 다음 TTS 클립이 시작됐다 (중복 이벤트) — 건드리지 않는다
 			return;
 		}
-		const seeded = await this.container.chatTtsService.seedNextSoloClip(player);
+		const seeded = await this.deps.chatTtsService.seedNextSoloClip(player);
 		if (!seeded) {
 			await this.quietEndTts(player);
 			return;
@@ -164,8 +161,8 @@ export class TrackStartOrchestrator {
 		player.transitionState.confirmedNowPlaying = null;
 		player.transitionState.serverConsumedTrack = null;
 		player.playing = false;
-		publishPlayerState(player);
-		await this.container.chatTtsService.keepAliveForTts(player);
+		publishPlayerState(this.deps, player);
+		await this.deps.chatTtsService.keepAliveForTts(player);
 	}
 
 	/**
@@ -249,7 +246,7 @@ export class TrackStartOrchestrator {
 				// 그 사이에 다른 트랙으로 바뀌었다면 버린다.
 				if (player.chaptersTrackIdentifier !== videoId || chapters.length === 0) return;
 				player.chapters = chapters;
-				this.container.playerNotifier.updateController(player);
+				this.deps.playerNotifier.updateController(player);
 			})
 			.catch((error) => this.logger.debug(`[chapters] failed for ${videoId}: ${error}`));
 	}

@@ -6,15 +6,12 @@ import { buildPlayerStatePayload, publishPlayerState, publishPlayerEnded, clearP
 
 const { store } = vi.hoisted(() => ({ store: { ready: true, publishRawPlayerState: vi.fn() } }));
 
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		redisStore: store,
-		playerStatePublishTracker: undefined,
-		client: { guilds: { cache: new Map() } }
-	}
-}));
-
-const { container } = await import('@sapphire/framework');
+/** publisher가 받는 LavalinkDeps 역할 — 필요한 필드만 가진 객체예요 */
+const container: Record<string, any> = {
+	redisStore: store,
+	playerStatePublishTracker: new Map(),
+	client: { guilds: { cache: new Map() } }
+};
 
 const NOW = new Date('2026-10-14T12:00:00Z').getTime();
 
@@ -44,7 +41,7 @@ describe('statusFingerprint-driven publish throttling', () => {
 	});
 
 	it('publishes the first snapshot immediately and includes the core state', () => {
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(1);
 		const [channel, payload] = store.publishRawPlayerState.mock.calls[0] as [string, string];
 		expect(channel).toBe('g1');
@@ -52,48 +49,48 @@ describe('statusFingerprint-driven publish throttling', () => {
 	});
 
 	it('skips an unchanged snapshot inside the 5s window', () => {
-		publishPlayerState(player() as never);
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
+		publishPlayerState(container as never, player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(1);
 	});
 
 	it('republishes an unchanged snapshot after the 5s window', () => {
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
 		vi.setSystemTime(NOW + 5_000);
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
 	});
 
 	it('republishes immediately when the fingerprint changes (track/playing/volume)', () => {
-		publishPlayerState(player() as never);
-		publishPlayerState(player({ playing: true }) as never);
-		publishPlayerState(player({ playing: true, volume: 80 }) as never);
+		publishPlayerState(container as never, player() as never);
+		publishPlayerState(container as never, player({ playing: true }) as never);
+		publishPlayerState(container as never, player({ playing: true, volume: 80 }) as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(3);
 	});
 
 	it('treats a paused toggle as a fingerprint change even while playing stays true', () => {
-		publishPlayerState(player({ playing: true }) as never);
-		publishPlayerState(player({ playing: true, paused: true }) as never);
+		publishPlayerState(container as never, player({ playing: true }) as never);
+		publishPlayerState(container as never, player({ playing: true, paused: true }) as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
 	});
 
 	it('ignores position-only drift inside the window (no fingerprint change)', () => {
-		publishPlayerState(player({ position: 0 }) as never);
-		publishPlayerState(player({ position: 4_000 }) as never);
+		publishPlayerState(container as never, player({ position: 0 }) as never);
+		publishPlayerState(container as never, player({ position: 4_000 }) as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(1);
 	});
 
 	it('publishes nothing while redis is not ready', () => {
 		store.ready = false;
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
 		expect(store.publishRawPlayerState).not.toHaveBeenCalled();
 		store.ready = true;
 	});
 
 	it('clearPlayerStateTracker makes the next publish immediate', () => {
-		publishPlayerState(player() as never);
-		clearPlayerStateTracker('g1');
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
+		clearPlayerStateTracker(container as never, 'g1');
+		publishPlayerState(container as never, player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
 	});
 });
@@ -107,8 +104,8 @@ describe('publishPlayerEnded — 확정 종료 tombstone', () => {
 	});
 
 	it('bypasses the 5s throttle and publishes ended:true immediately', () => {
-		publishPlayerState(player() as never);
-		publishPlayerEnded(player() as never);
+		publishPlayerState(container as never, player() as never);
+		publishPlayerEnded(container as never, player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(2);
 		const [channel, payload] = store.publishRawPlayerState.mock.calls[1] as [string, string];
 		expect(channel).toBe('g1');
@@ -116,15 +113,15 @@ describe('publishPlayerEnded — 확정 종료 tombstone', () => {
 	});
 
 	it('clears the tracker so the next live snapshot publishes immediately', () => {
-		publishPlayerState(player() as never);
-		publishPlayerEnded(player() as never);
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
+		publishPlayerEnded(container as never, player() as never);
+		publishPlayerState(container as never, player() as never);
 		expect(store.publishRawPlayerState).toHaveBeenCalledTimes(3);
 	});
 
 	it('publishes nothing while redis is not ready', () => {
 		store.ready = false;
-		publishPlayerEnded(player() as never);
+		publishPlayerEnded(container as never, player() as never);
 		expect(store.publishRawPlayerState).not.toHaveBeenCalled();
 		store.ready = true;
 	});
@@ -146,7 +143,7 @@ describe('buildPlayerStatePayload', () => {
 		};
 		const p = player({ queue: { current, tracks: [userTrack, relatedTrack] } }) as never;
 
-		const payload = buildPlayerStatePayload(p);
+		const payload = buildPlayerStatePayload(container as never, p);
 		expect(payload.trackTitle).toBe('현재 곡');
 		expect(payload.queueLength).toBe(1); // 선예열 추천곡은 대기열 수에서 제외
 		expect(payload.queue).toHaveLength(1);
@@ -156,20 +153,23 @@ describe('buildPlayerStatePayload', () => {
 
 describe('now-playing source', () => {
 	it('renders the confirmed now-playing track over a displaced queue.current', () => {
-		const payload = buildPlayerStatePayload({
-			...player(),
-			queue: {
-				current: { encoded: 'enc-x', info: { title: 'displaced', identifier: 'id-x', duration: 1 } },
-				tracks: []
-			},
-			transitionState: {
-				stopByCommand: false,
-				lastStartedEncoded: null,
-				preloadConsumedAt: null,
-				confirmedNowPlaying: { encoded: 'enc-a', info: { title: 'confirmed', identifier: 'id-a', duration: 1000 } },
-				serverConsumedTrack: null
-			}
-		} as never);
+		const payload = buildPlayerStatePayload(
+			container as never,
+			{
+				...player(),
+				queue: {
+					current: { encoded: 'enc-x', info: { title: 'displaced', identifier: 'id-x', duration: 1 } },
+					tracks: []
+				},
+				transitionState: {
+					stopByCommand: false,
+					lastStartedEncoded: null,
+					preloadConsumedAt: null,
+					confirmedNowPlaying: { encoded: 'enc-a', info: { title: 'confirmed', identifier: 'id-a', duration: 1000 } },
+					serverConsumedTrack: null
+				}
+			} as never
+		);
 		expect(payload.trackTitle).toBe('confirmed');
 	});
 });
@@ -183,7 +183,7 @@ describe('SEC-006 서명 봉투', () => {
 
 	it('서명 키가 있으면 검증 가능한 봉투로 감싸 발행해요', () => {
 		setConfigForTesting(makeTestConfig({ REDIS_AUTH_KEY: '', AUTH_KEY: 'test-signing-key' }));
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
 		const [, payload] = store.publishRawPlayerState.mock.calls[0] as [string, string];
 		const body = unwrapRedisMessage('test-signing-key', payload);
 		expect(body).not.toBeNull();
@@ -194,7 +194,7 @@ describe('SEC-006 서명 봉투', () => {
 
 	it('키가 없으면 구버전 평문으로 발행해요', () => {
 		setConfigForTesting(makeTestConfig({ REDIS_AUTH_KEY: '', AUTH_KEY: '' }));
-		publishPlayerState(player() as never);
+		publishPlayerState(container as never, player() as never);
 		const [, payload] = store.publishRawPlayerState.mock.calls[0] as [string, string];
 		expect(JSON.parse(payload)).toMatchObject({ guildId: 'g1' });
 		expect(payload).not.toContain('"sig"');

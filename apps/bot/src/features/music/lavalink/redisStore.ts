@@ -1,9 +1,10 @@
-import { container } from '@sapphire/framework';
 import { playerStateChannel } from '@sirubot/utils';
 import { createClient, RedisClientType } from '@redis/client';
+import type { LavalinkManager } from 'lavalink-client';
 import { CachedPlayerSaver } from './player/playerSaver.ts';
 import { CachedQueueStore } from './queue/queueStore.ts';
-import { SapphireInterfaceLogger } from '../../../core/logger.ts';
+import type { CustomPlayer } from './player/customPlayer.ts';
+import type { LavalinkLogger } from './deps.ts';
 import { Logger, ILogObj } from 'tslog';
 
 /** Resume timeout과 동일 (sessionRestore의 RESUME_TIMEOUT_SECONDS=60 — 순환 import를 피해 리터럴로 둠) */
@@ -19,8 +20,11 @@ export class NodeSessionStore {
 	private isRedisConnected = true;
 	private logger: Logger<ILogObj>;
 
-	constructor(private readonly redis: RedisClientType) {
-		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'nodeSessionStore' });
+	constructor(
+		private readonly redis: RedisClientType,
+		logger: LavalinkLogger
+	) {
+		this.logger = logger.getSubLogger({ name: 'nodeSessionStore' });
 	}
 
 	/** shard ID 배열로부터 일관된 키 문자열 생성 (정렬) */
@@ -96,6 +100,12 @@ export class NodeSessionStore {
 
 type RedisClientOptionsType = Parameters<typeof createClient>[0];
 
+export interface RedisStoreDeps {
+	logger: LavalinkLogger;
+	/** audio는 setupAudio 뒤에 만들어져서 호출 시점에 읽어요 */
+	getAudio: () => LavalinkManager<CustomPlayer> | undefined;
+}
+
 export class RedisStore {
 	private redis: RedisClientType;
 	private queueStore: CachedQueueStore;
@@ -105,13 +115,13 @@ export class RedisStore {
 	private reconnectTryCount = 0;
 	private logger: Logger<ILogObj>;
 
-	constructor(options: RedisClientOptionsType) {
+	constructor(options: RedisClientOptionsType, deps: RedisStoreDeps) {
 		this.redis = createClient(options) as RedisClientType;
-		this.logger = (container.logger as SapphireInterfaceLogger).getSubLogger({ name: 'redisStore' });
+		this.logger = deps.logger.getSubLogger({ name: 'redisStore' });
 
-		this.queueStore = new CachedQueueStore(this.redis);
-		this.playerSaver = new CachedPlayerSaver(this.redis);
-		this.nodeSessionStore = new NodeSessionStore(this.redis);
+		this.queueStore = new CachedQueueStore(this.redis, { logger: deps.logger, getAudio: deps.getAudio });
+		this.playerSaver = new CachedPlayerSaver(this.redis, deps.logger);
+		this.nodeSessionStore = new NodeSessionStore(this.redis, deps.logger);
 
 		this.redis.on('error', this.handleError.bind(this));
 		this.redis.on('connect', this.handleConnect.bind(this));

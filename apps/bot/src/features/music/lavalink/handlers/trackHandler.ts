@@ -4,6 +4,7 @@ import { CustomPlayer } from '../player/customPlayer.ts';
 import { PlaybackWatchdog, ServerTrackProbe } from './playbackWatchdog.ts';
 import { QueueAdvancer } from './queueAdvancer.ts';
 import { TrackStartOrchestrator } from './trackStartOrchestrator.ts';
+import type { LavalinkDeps } from '../deps.ts';
 
 /**
  * 협력 클래스 간 위임 계약 — 분리 전 단일 클래스 안에서 서로를 부르던 private 메서드 호출을
@@ -40,12 +41,15 @@ export class TrackHandler extends BaseLavalinkHandler implements TrackTransition
 	private readonly queueAdvancer: QueueAdvancer;
 	private readonly trackStartOrchestrator: TrackStartOrchestrator;
 
-	constructor(private readonly lavalinkManager: LavalinkManager<CustomPlayer>) {
-		super('trackHandler');
+	constructor(
+		deps: LavalinkDeps,
+		private readonly lavalinkManager: LavalinkManager<CustomPlayer>
+	) {
+		super(deps, 'trackHandler');
 
-		this.playbackWatchdog = new PlaybackWatchdog(this, this.logger, lavalinkManager);
-		this.queueAdvancer = new QueueAdvancer(this, this.logger, lavalinkManager);
-		this.trackStartOrchestrator = new TrackStartOrchestrator(this, this.logger, lavalinkManager);
+		this.playbackWatchdog = new PlaybackWatchdog(this, this.logger, lavalinkManager, deps);
+		this.queueAdvancer = new QueueAdvancer(this, this.logger, lavalinkManager, deps);
+		this.trackStartOrchestrator = new TrackStartOrchestrator(this, this.logger, lavalinkManager, deps);
 
 		this.lavalinkManager.on('trackStart', this.wrapAsyncHandler(this.handleTrackStart.bind(this), 'trackStart'));
 		this.lavalinkManager.on('trackEnd', this.wrapAsyncHandler(this.handleTrackEnd.bind(this), 'trackEnd'));

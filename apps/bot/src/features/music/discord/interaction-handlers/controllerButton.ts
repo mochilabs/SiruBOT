@@ -1,5 +1,5 @@
 import { controllerId } from '../customIds.ts';
-import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
+import { InteractionHandler, InteractionHandlerTypes, container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type Message } from 'discord.js';
 import { queueEmpty, queueList, QUEUE_PAGE_SIZE } from '../views/queue.ts';
@@ -84,7 +84,7 @@ export default class ControllerButtonHandler extends InteractionHandler {
 	}
 
 	private async buildControllerPayload(player: CustomPlayer, message: Message) {
-		const { components, attachments, files } = await buildControllerCardPayload(player, {
+		const { components, attachments, files } = await buildControllerCardPayload(container.lavalink, player, {
 			volume: player.volume,
 			textChannelId: message.channelId,
 			message

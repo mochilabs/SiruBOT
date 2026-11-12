@@ -1,7 +1,7 @@
 import { queueSelectionValue, resolveQueueSelection } from '../utils/queueSelection.ts';
 import { confirmAction } from '../../../../lib/confirmation.ts';
 import { ApplyOptions } from '@sapphire/decorators';
-import { Command, UserError } from '@sapphire/framework';
+import { Command, UserError, container } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../lavalink/autoPlayRelated.ts';
@@ -164,7 +164,7 @@ export class QueueCommand extends Command {
 
 		// 선예열한 추천곡은 셔플 대상이 아니다 — 제거 후 유저 곡만 섞는다
 		// (다음 트랙 시작 시 큐가 비어 있으면 다시 예열된다).
-		await removeStaleRelatedTracks(player);
+		await removeStaleRelatedTracks(container.lavalink, player);
 		await player.queue.shuffle();
 		void this.container.mixerService.preloadUpcoming(player).catch(() => null);
 		await interaction.reply({

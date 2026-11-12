@@ -7,7 +7,6 @@
  * - 완전 fire-and-forget — 재생 경로를 절대 블로킹하지 않아요.
  * - 제어(일시정지/스킵 등)는 이 퍼블리시로 하지 않는다 — 제어는 bot RPC로 별도 구현 예정.
  */
-import { container } from '@sapphire/framework';
 import type { PlayerStatePayload, QueuedTrackSummary } from '@sirubot/utils';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { getConfig } from '../../../lib/config.ts';
@@ -16,15 +15,13 @@ import { getUserQueuedTracks } from './autoPlayRelated.ts';
 import { nowPlayingTrack } from './player/nowPlaying.ts';
 import { requesterIdOf, resolveRequesterName } from './requester.ts';
 import type { CustomPlayer } from './player/customPlayer.ts';
+import type { LavalinkDeps } from './deps.ts';
 
 const IMMEDIATE_INTERVAL_MS = 5_000;
 
-/** 길드별 마지막 퍼블리시 (주기 캐시 + 변경 감지 지문) */
-type PublishTracker = Map<string, { at: number; fingerprint: string }>;
-
-function getPublishTracker(): PublishTracker {
-	// tsup이 여러 entry에 이 모듈을 복제해도 trackHandler/playerHandler가 같은 스로틀 상태를 쓰게 컨테이너에 둬요
-	return (container.playerStatePublishTracker ??= new Map());
+/** 스로틀 상태는 deps.playerStatePublishTracker(setupServices가 한 번 만든 Map)에 있어요 — trackHandler/playerHandler가 같이 써요. */
+function getPublishTracker(deps: LavalinkDeps) {
+	return deps.playerStatePublishTracker;
 }
 
 function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: string | null): QueuedTrackSummary | null {
@@ -42,7 +39,7 @@ function summarizeTrack(track: CustomPlayer['queue']['current'], requesterName: 
 
 /** 유저 표시 이름 조회 — 캐시 미스 시 비동기 fetch지만 퍼블리시는 fire-and-forget이므로 무관해요 */
 /** 플레이어에서 상태 스냅샷을 만들어요 (동기 — 이벤트 훅에서 안전) */
-export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayload {
+export function buildPlayerStatePayload(deps: LavalinkDeps, player: CustomPlayer): PlayerStatePayload {
 	const current = nowPlayingTrack(player);
 	const queued = getUserQueuedTracks(player);
 	const requesterId = requesterIdOf(current ?? undefined);
@@ -59,12 +56,12 @@ export function buildPlayerStatePayload(player: CustomPlayer): PlayerStatePayloa
 		trackUri: current?.info.uri ?? null,
 		isStream: current?.info.isStream ?? false,
 		queue: queued.slice(0, 5).map((track) => {
-			return summarizeTrack(track as CustomPlayer['queue']['current'], resolveRequesterName(player, requesterIdOf(track as Track)))!;
+			return summarizeTrack(track as CustomPlayer['queue']['current'], resolveRequesterName(deps, player, requesterIdOf(track as Track)))!;
 		}),
 		queueLength: queued.length,
 		repeatMode: player.repeatMode,
 		volume: player.volume,
-		requesterName: resolveRequesterName(player, requesterId),
+		requesterName: resolveRequesterName(deps, player, requesterId),
 		sourceName: typeof current?.info.sourceName === 'string' ? current.info.sourceName : null,
 		updatedAt: Date.now()
 	};
@@ -88,13 +85,13 @@ function statusFingerprint(state: PlayerStatePayload): string {
  * 플레이어 상태를 퍼블리시해요. 상태 지문이 바뀌면 즉시, 아니면 5초 주기로 보내요.
  * fire-and-forget — Redis 미연결 시 redisStore가 조용히 스킵해요.
  */
-export function publishPlayerState(player: CustomPlayer): void {
-	const store = container.redisStore;
+export function publishPlayerState(deps: LavalinkDeps, player: CustomPlayer): void {
+	const store = deps.redisStore;
 	if (!store?.ready) return;
 
-	const payload = buildPlayerStatePayload(player);
+	const payload = buildPlayerStatePayload(deps, player);
 	const fingerprint = statusFingerprint(payload);
-	const tracker = getPublishTracker();
+	const tracker = getPublishTracker(deps);
 	const previous = tracker.get(player.guildId);
 	const now = Date.now();
 
@@ -111,17 +108,17 @@ export function publishPlayerState(player: CustomPlayer): void {
  * SSE에 player:null을 relay해 대시보드가 유령 상태 없이 빈 화면으로 돌아가요.
  * fire-and-forget — Redis 미연결 시 redisStore가 조용히 스킵해요.
  */
-export function publishPlayerEnded(player: CustomPlayer): void {
-	const store = container.redisStore;
+export function publishPlayerEnded(deps: LavalinkDeps, player: CustomPlayer): void {
+	const store = deps.redisStore;
 	if (!store?.ready) return;
 
-	const payload: PlayerStatePayload = { ...buildPlayerStatePayload(player), ended: true };
+	const payload: PlayerStatePayload = { ...buildPlayerStatePayload(deps, player), ended: true };
 	// 종료 프레임은 이후 상태와 비교할 대상이 아니에요 — 스로틀 추적기를 비워요.
-	getPublishTracker().delete(player.guildId);
+	getPublishTracker(deps).delete(player.guildId);
 	store.publishRawPlayerState(player.guildId, wrapRedisMessage(getConfig().redis.signingKey, payload));
 }
 
 /** 플레이어 파괴 시 마지막 퍼블리시 상태 정리 */
-export function clearPlayerStateTracker(guildId: string): void {
-	getPublishTracker().delete(guildId);
+export function clearPlayerStateTracker(deps: LavalinkDeps, guildId: string): void {
+	getPublishTracker(deps).delete(guildId);
 }

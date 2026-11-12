@@ -10,11 +10,13 @@ import {
 	sameNowPlayingTrackIdentity
 } from './nowPlayingCard.ts';
 
-const { render, sharedContainer } = vi.hoisted(() => {
-	const render = vi.fn();
-	return { render, sharedContainer: { dataApi: { renderNowPlayingCard: render } } };
-});
-vi.mock('@sapphire/framework', () => ({ container: sharedContainer }));
+const { render } = vi.hoisted(() => ({ render: vi.fn() }));
+/** 카드 함수가 받는 LavalinkDeps 역할 — 카드 캐시 상태도 여기 있어요 */
+const deps = {
+	dataApi: { renderNowPlayingCard: render },
+	client: { guilds: { cache: new Map() } },
+	nowPlayingCards: { cache: new Map(), pending: new Map(), retryAfter: new Map() }
+} as never;
 
 function track(id: string): Track {
 	return {
@@ -47,7 +49,7 @@ function pendingRender() {
 
 describe('now playing render sharing', () => {
 	beforeEach(() => {
-		clearNowPlayingCard('guild');
+		clearNowPlayingCard(deps, 'guild');
 		render.mockReset();
 	});
 	afterEach(() => {
@@ -58,8 +60,8 @@ describe('now playing render sharing', () => {
 		const pending = pendingRender();
 		render.mockReturnValue(pending.promise);
 		const current = player();
-		const first = resolveNowPlayingCard(current);
-		const second = resolveNowPlayingCard(current);
+		const first = resolveNowPlayingCard(deps, current);
+		const second = resolveNowPlayingCard(deps, current);
 		await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
 		pending.resolve(Buffer.from('image'));
 		const [a, b] = await Promise.all([first, second]);
@@ -67,7 +69,7 @@ describe('now playing render sharing', () => {
 		expect(b?.fresh).toBe(true);
 		expect(a?.url).toBe(b?.url);
 		expect(a?.file).not.toBe(b?.file);
-		expect((await resolveNowPlayingCard(current))?.fresh).toBe(false);
+		expect((await resolveNowPlayingCard(deps, current))?.fresh).toBe(false);
 		expect(render).toHaveBeenCalledTimes(1);
 	});
 
@@ -75,27 +77,27 @@ describe('now playing render sharing', () => {
 		const old = pendingRender();
 		render.mockReturnValueOnce(old.promise).mockResolvedValueOnce(Buffer.from('new'));
 		const current = player();
-		const first = resolveNowPlayingCard(current);
+		const first = resolveNowPlayingCard(deps, current);
 		await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
 		current.queue.current = track('b');
-		const second = await resolveNowPlayingCard(current);
+		const second = await resolveNowPlayingCard(deps, current);
 		old.resolve(Buffer.from('old'));
 		expect(await first).toBeNull();
 		expect(second?.file.attachment).toEqual(Buffer.from('new'));
-		expect((await resolveNowPlayingCard(current))?.file.attachment).toEqual(Buffer.from('new'));
+		expect((await resolveNowPlayingCard(deps, current))?.file.attachment).toEqual(Buffer.from('new'));
 		expect(render).toHaveBeenCalledTimes(2);
 	});
 
-	it('shares rendering between separately loaded copies of the module', async () => {
+	it('shares rendering through the deps store across reloaded module copies', async () => {
 		const pending = pendingRender();
 		render.mockReturnValue(pending.promise);
 		const current = player();
-		const first = resolveNowPlayingCard(current);
+		const first = resolveNowPlayingCard(deps, current);
 		await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
 		vi.resetModules();
 		const secondModule = await import('./nowPlayingCard.ts');
 		expect(secondModule.resolveNowPlayingCard).not.toBe(resolveNowPlayingCard);
-		const second = secondModule.resolveNowPlayingCard(current);
+		const second = secondModule.resolveNowPlayingCard(deps, current);
 		pending.resolve(Buffer.from('shared'));
 		const results = await Promise.all([first, second]);
 		expect(results.every((result) => result?.fresh)).toBe(true);
@@ -106,12 +108,12 @@ describe('now playing render sharing', () => {
 		const pending = pendingRender();
 		render.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(Buffer.from('retry'));
 		const current = player();
-		const result = resolveNowPlayingCard(current);
+		const result = resolveNowPlayingCard(deps, current);
 		await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
-		clearNowPlayingCard('guild');
+		clearNowPlayingCard(deps, 'guild');
 		pending.resolve(Buffer.from('old'));
 		expect(await result).toBeNull();
-		expect((await resolveNowPlayingCard(current))?.file.attachment).toEqual(Buffer.from('retry'));
+		expect((await resolveNowPlayingCard(deps, current))?.file.attachment).toEqual(Buffer.from('retry'));
 		expect(render).toHaveBeenCalledTimes(2);
 	});
 
@@ -119,20 +121,20 @@ describe('now playing render sharing', () => {
 		vi.useFakeTimers();
 		render.mockResolvedValueOnce(null).mockResolvedValueOnce(Buffer.from('retry'));
 		const current = player();
-		expect(await resolveNowPlayingCard(current)).toBeNull();
-		expect(await resolveNowPlayingCard(current)).toBeNull();
+		expect(await resolveNowPlayingCard(deps, current)).toBeNull();
+		expect(await resolveNowPlayingCard(deps, current)).toBeNull();
 		expect(render).toHaveBeenCalledTimes(1);
 		vi.setSystemTime(Date.now() + 5000);
-		expect((await resolveNowPlayingCard(current))?.fresh).toBe(true);
+		expect((await resolveNowPlayingCard(deps, current))?.fresh).toBe(true);
 		expect(render).toHaveBeenCalledTimes(2);
 	});
 
 	it('does not make a new track wait for the previous track failure backoff', async () => {
 		render.mockResolvedValueOnce(null).mockResolvedValueOnce(Buffer.from('next'));
 		const current = player();
-		await resolveNowPlayingCard(current);
+		await resolveNowPlayingCard(deps, current);
 		current.queue.current = track('b');
-		expect((await resolveNowPlayingCard(current))?.fresh).toBe(true);
+		expect((await resolveNowPlayingCard(deps, current))?.fresh).toBe(true);
 		expect(render).toHaveBeenCalledTimes(2);
 	});
 
@@ -140,26 +142,26 @@ describe('now playing render sharing', () => {
 		const pending = pendingRender();
 		render.mockReturnValue(pending.promise);
 		const current = player();
-		expect(getCachedNowPlayingCard(current)).toBeNull();
+		expect(getCachedNowPlayingCard(deps, current)).toBeNull();
 		expect(render).not.toHaveBeenCalled();
-		const result = resolveNowPlayingCard(current);
-		expect(getCachedNowPlayingCard(current)).toBeNull();
+		const result = resolveNowPlayingCard(deps, current);
+		expect(getCachedNowPlayingCard(deps, current)).toBeNull();
 		pending.resolve(Buffer.from('ready'));
 		await result;
-		expect(getCachedNowPlayingCard(current)?.file.attachment).toEqual(Buffer.from('ready'));
+		expect(getCachedNowPlayingCard(deps, current)?.file.attachment).toEqual(Buffer.from('ready'));
 		expect(render).toHaveBeenCalledTimes(1);
 	});
 
 	it('keeps a replacement player render when the old instance completes', async () => {
 		const old = pendingRender();
 		render.mockReturnValueOnce(old.promise).mockResolvedValueOnce(Buffer.from('replacement'));
-		const result = resolveNowPlayingCard(player());
+		const result = resolveNowPlayingCard(deps, player());
 		await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
 		const replacement = player();
-		await resolveNowPlayingCard(replacement);
+		await resolveNowPlayingCard(deps, replacement);
 		old.resolve(Buffer.from('old'));
 		expect(await result).toBeNull();
-		expect((await resolveNowPlayingCard(replacement))?.file.attachment).toEqual(Buffer.from('replacement'));
+		expect((await resolveNowPlayingCard(deps, replacement))?.file.attachment).toEqual(Buffer.from('replacement'));
 	});
 
 	it('does not bucket by position, but reacts to volume/chapter/pause/repeat', () => {
@@ -190,8 +192,8 @@ describe('now playing render sharing', () => {
 	it('stops reusing the displayed card once the track changes', async () => {
 		render.mockResolvedValueOnce(Buffer.from('bucket-0'));
 		const current = player();
-		await resolveNowPlayingCard(current);
+		await resolveNowPlayingCard(deps, current);
 		current.queue.current = track('b');
-		expect(getDisplayNowPlayingCard(current)).toBeNull();
+		expect(getDisplayNowPlayingCard(deps, current)).toBeNull();
 	});
 });

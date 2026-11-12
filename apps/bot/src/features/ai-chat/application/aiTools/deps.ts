@@ -4,6 +4,7 @@ import type { LavalinkManager } from 'lavalink-client';
 import type {
 	AudioService,
 	CustomPlayer,
+	LavalinkDeps,
 	MixerService,
 	MusicControl,
 	MusicPlayService,
@@ -40,6 +41,8 @@ export interface AiToolDeps {
 	audioService: AudioService;
 	mixerService: MixerService;
 	sponsorBlock: Pick<SponsorBlockService, 'refreshSettings'>;
+	/** 대기열 추천곡 정리·선예열 헬퍼가 쓰는 lavalink 의존성 (setupServices가 만든 container.lavalink) */
+	lavalink: LavalinkDeps;
 	playlistService: PlaylistService;
 	tempVoice: Pick<TempVoiceService, 'setupMarkerChannel'>;
 	getMusic: () => MusicControl;

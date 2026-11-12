@@ -9,6 +9,7 @@ import { MUSIC_SEARCH_MESSAGES, type PlaySearchOutcome } from './play.ts';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
+import type { LavalinkDeps } from '../lavalink/deps.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import type { MixerService } from './mixerService.ts';
 
@@ -21,6 +22,8 @@ export interface AudioServiceDeps {
 	getClient: () => Client;
 	/** mixerService는 audioService 뒤에 만들어지고 서로 얽혀 있어서 호출 시점에 읽어요 */
 	getMixerService: () => MixerService;
+	/** 큐 관측·선두 교체 헬퍼가 쓰는 lavalink 의존성 (container.lavalink) */
+	lavalink: LavalinkDeps;
 }
 
 type SearchedTrack = Track | UnresolvedTrack;
@@ -188,12 +191,12 @@ export class AudioService {
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = previousTrack as Track;
 		}
-		notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
+		notifyQueueMutated(this.deps.lavalink, player, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
 		void player.queue?.utils?.save?.()?.catch(() => null);
 		await this.deps.getMixerService().primeForPlay(player);
 		try {
-			await sendOverride(player, 'PLAY_NOW', previousTrack.encoded ?? null);
+			await sendOverride(this.deps.lavalink, player, 'PLAY_NOW', previousTrack.encoded ?? null);
 		} catch (error: unknown) {
 			// mixer 미설치/테스트 스텁 등 오버라이드 실패 시 라이브러리 play로 폴백한다.
 			await player.play({ clientTrack: previousTrack }).catch(() => {
@@ -213,9 +216,9 @@ export class AudioService {
 			player.queue.tracks.splice(0, player.queue.tracks.length);
 		}
 		player.queue.current = null;
-		notifyQueueMutated(player, { invalidate: false, bumpEpoch: true, force: true });
+		notifyQueueMutated(this.deps.lavalink, player, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
-		await sendOverride(player, 'STOP', null).catch(() => null);
+		await sendOverride(this.deps.lavalink, player, 'STOP', null).catch(() => null);
 		await player.stopPlaying().catch(() => null);
 		await player.disconnect().catch(() => null);
 	}
@@ -241,7 +244,7 @@ export class AudioService {
 		const shouldInterruptRelatedCrossfade = !wasIdle && firstIsRelated && inCrossfadeTransition;
 
 		await player.queue.add(track);
-		await removeStaleRelatedTracks(player);
+		await removeStaleRelatedTracks(this.deps.lavalink, player);
 
 		if (shouldInterruptRelatedCrossfade && player.queue.tracks.length > 0) {
 			// 추천곡 크로스페이드를 끊고 유저 곡으로 즉시 교체한다 — 이전 브랜치 없이
@@ -258,11 +261,11 @@ export class AudioService {
 					customPlayer.transitionState.serverConsumedTrack = null;
 					customPlayer.transitionState.confirmedNowPlaying = nextTrack as Track;
 				}
-				notifyQueueMutated(customPlayer, { invalidate: false, bumpEpoch: true, force: true });
+				notifyQueueMutated(this.deps.lavalink, customPlayer, { invalidate: false, bumpEpoch: true, force: true });
 				cancelPendingInvalidate(customPlayer);
 				await this.deps.getMixerService().primeForPlay(player);
 				try {
-					await sendOverride(customPlayer, 'PLAY_NOW', (nextTrack as Track).encoded ?? null);
+					await sendOverride(this.deps.lavalink, customPlayer, 'PLAY_NOW', (nextTrack as Track).encoded ?? null);
 				} catch {
 					await player.play({ clientTrack: nextTrack as Track, paused: false });
 				}

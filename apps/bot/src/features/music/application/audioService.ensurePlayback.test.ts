@@ -10,7 +10,8 @@ const makeAudioService = () =>
 		guildService: {} as never,
 		getAudio: () => ({}) as never,
 		getClient: () => ({}) as never,
-		getMixerService: () => ({ primeForPlay: mocks.primeForPlay }) as never
+		getMixerService: () => ({ primeForPlay: mocks.primeForPlay }) as never,
+		lavalink: {} as never
 	});
 
 function makePlayer(serverPlayer: unknown, queuedEncoded: string | null = 'x') {
@@ -62,7 +63,8 @@ describe('지연 deps', () => {
 			guildService: {} as never,
 			getAudio: () => audio as never,
 			getClient: () => ({}) as never,
-			getMixerService: () => mixer as never
+			getMixerService: () => mixer as never,
+			lavalink: {} as never
 		});
 		const created = { guildId: 'g' };
 		audio = { getPlayer: vi.fn(() => undefined), createPlayer: vi.fn(async () => created) };

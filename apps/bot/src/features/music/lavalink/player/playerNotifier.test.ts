@@ -25,13 +25,15 @@ vi.mock('@sapphire/framework', () => ({
 		constructor({ message }: { message: string }) {
 			super(message);
 		}
-	},
-	container: {
-		logger: { getSubLogger: () => mocks.logger },
-		guildService: { getGuild: mocks.guild },
-		client: { channels: { cache: new Map([['channel', { isSendable: () => true, send: mocks.send }]]) } }
 	}
 }));
+
+/** PlayerNotifier가 받는 LavalinkDeps 역할 */
+const deps = {
+	logger: { getSubLogger: () => mocks.logger },
+	guildService: { getGuild: mocks.guild },
+	client: { channels: { cache: new Map([['channel', { isSendable: () => true, send: mocks.send }]]) } }
+} as never;
 vi.mock('./nowPlayingCard.ts', () => ({
 	getCachedNowPlayingCard: mocks.cached,
 	getDisplayNowPlayingCard: mocks.cached,
@@ -148,7 +150,7 @@ describe('non-blocking player notifications', () => {
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
 		const current = player();
-		await new PlayerNotifier().sendController(current);
+		await new PlayerNotifier(deps).sendController(current);
 		expect(mocks.send).toHaveBeenCalledTimes(1);
 		expect(mocks.send.mock.calls[0]![0].files).toEqual([]);
 		expect(current.messageId).toBe('message-1');
@@ -168,7 +170,7 @@ describe('non-blocking player notifications', () => {
 		mocks.render.mockReturnValue(pending().promise);
 		const editReply = vi.fn().mockResolvedValue(message('slash'));
 		const interaction = { deferred: true, replied: false, editReply, reply: vi.fn(), fetchReply: vi.fn(), channelId: 'channel' };
-		await new PlayerNotifier().sendController(player(), interaction as unknown as ChatInputCommandInteraction);
+		await new PlayerNotifier(deps).sendController(player(), interaction as unknown as ChatInputCommandInteraction);
 		expect(editReply).toHaveBeenCalledTimes(1);
 		expect(interaction.reply).not.toHaveBeenCalled();
 		expect(interaction.fetchReply).not.toHaveBeenCalled();
@@ -177,7 +179,7 @@ describe('non-blocking player notifications', () => {
 	it('uses the callback message for a direct reply without an extra fetch', async () => {
 		const reply = vi.fn().mockResolvedValue({ resource: { message: message('slash') } });
 		const interaction = { deferred: false, replied: false, reply, fetchReply: vi.fn(), channelId: 'channel' };
-		await new PlayerNotifier().sendController(player(), interaction as unknown as ChatInputCommandInteraction);
+		await new PlayerNotifier(deps).sendController(player(), interaction as unknown as ChatInputCommandInteraction);
 		expect(reply.mock.calls[0]![0].withResponse).toBe(true);
 		expect(interaction.fetchReply).not.toHaveBeenCalled();
 	});
@@ -185,14 +187,14 @@ describe('non-blocking player notifications', () => {
 	it('attaches a prepared card to a new message without starting another render', async () => {
 		mocks.pinned.mockResolvedValue('channel');
 		mocks.cached.mockReturnValue(card());
-		await new PlayerNotifier().sendController(player());
+		await new PlayerNotifier(deps).sendController(player());
 		expect(mocks.send.mock.calls[0]![0].files).toHaveLength(1);
 		expect(mocks.render).not.toHaveBeenCalled();
 	});
 
 	it('does not render a card for controllers outside the configured channel', async () => {
 		mocks.render.mockReturnValue(pending<ReturnType<typeof card> | null>().promise);
-		await new PlayerNotifier().sendController(player());
+		await new PlayerNotifier(deps).sendController(player());
 		expect(mocks.render).not.toHaveBeenCalled();
 		expect(mocks.send.mock.calls[0]![0].files).toEqual([]);
 	});
@@ -201,7 +203,7 @@ describe('non-blocking player notifications', () => {
 		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();
 		mocks.render.mockReturnValue(pending().promise);
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		for (let i = 0; i < 5; i++) {
@@ -221,7 +223,7 @@ describe('non-blocking player notifications', () => {
 
 	it('stop() clears debounce timers and the progress tick, and later updates create no timers', async () => {
 		vi.useFakeTimers();
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		notifier.updateController(current);
@@ -239,7 +241,7 @@ describe('non-blocking player notifications', () => {
 
 	it('keeps the newest controller state when an older update is waiting on settings', async () => {
 		vi.useFakeTimers();
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		const firstSettings = pending<{ enableController: boolean; volume: number }>();
@@ -257,7 +259,7 @@ describe('non-blocking player notifications', () => {
 	it('does not re-upload a cached attachment on every update', async () => {
 		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		mocks.cached.mockReturnValue(card());
@@ -276,7 +278,7 @@ describe('non-blocking player notifications', () => {
 		mocks.pinned.mockResolvedValue('channel');
 		vi.useFakeTimers();
 		mocks.cached.mockReturnValue(card());
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		current.queue.current!.info.identifier = 'b';
@@ -296,7 +298,7 @@ describe('non-blocking player notifications', () => {
 		mocks.pinned.mockResolvedValue('channel');
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		await notifier.deleteController(current);
@@ -310,7 +312,7 @@ describe('non-blocking player notifications', () => {
 	it('does not revive a controller after deletion while the send is in flight', async () => {
 		const posting = pending<TestMessage>();
 		mocks.send.mockReturnValue(posting.promise);
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		const result = notifier.sendController(current);
 		await vi.waitFor(() => expect(mocks.send).toHaveBeenCalledTimes(1));
@@ -326,7 +328,7 @@ describe('non-blocking player notifications', () => {
 	it('skips queued controller sends after the player is destroyed', async () => {
 		const posting = pending<TestMessage>();
 		mocks.send.mockReturnValue(posting.promise);
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		const first = notifier.sendController(current);
 		await vi.waitFor(() => expect(mocks.send).toHaveBeenCalledTimes(1));
@@ -344,7 +346,7 @@ describe('non-blocking player notifications', () => {
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise); // 첫 카드 요청이 진행 중
 		const editing = pending<TestMessage>();
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		expect(mocks.render).toHaveBeenCalledTimes(1);
@@ -364,7 +366,7 @@ describe('non-blocking player notifications', () => {
 	it('recreates a missing pinned controller without blocking the next queued update', async () => {
 		vi.useFakeTimers();
 		mocks.pinned.mockResolvedValue('channel');
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		(current.controller!.edit as Mock).mockRejectedValue({ code: 10008 });
@@ -383,7 +385,7 @@ describe('non-blocking player notifications', () => {
 	it('does not recreate a pinned controller if it is cleared while checking the channel', async () => {
 		vi.useFakeTimers();
 		mocks.pinned.mockResolvedValue('channel');
-		const notifier = new PlayerNotifier();
+		const notifier = new PlayerNotifier(deps);
 		const current = player();
 		await notifier.sendController(current);
 		(current.controller!.edit as Mock).mockRejectedValue({ code: 10008 });
@@ -408,7 +410,7 @@ describe('non-blocking player notifications', () => {
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
 		const current = player();
-		await new PlayerNotifier().sendController(current);
+		await new PlayerNotifier(deps).sendController(current);
 		current.queue.current!.info.identifier = 'b';
 		mocks.cached.mockReturnValue(card());
 		rendering.resolve(card());
@@ -422,7 +424,7 @@ describe('non-blocking player notifications', () => {
 		const rendering = pending<ReturnType<typeof card> | null>();
 		mocks.render.mockReturnValue(rendering.promise);
 		const interaction = { deferred: true, editReply: vi.fn().mockResolvedValue(message('slash')), channelId: 'channel' };
-		await new PlayerNotifier().sendController(player(), interaction as unknown as ChatInputCommandInteraction);
+		await new PlayerNotifier(deps).sendController(player(), interaction as unknown as ChatInputCommandInteraction);
 		mocks.cached.mockReturnValue(card());
 		rendering.resolve(card());
 		await vi.waitFor(() => expect(mocks.edits).toHaveBeenCalledTimes(1));
@@ -431,7 +433,7 @@ describe('non-blocking player notifications', () => {
 	it('removes a deferred loading response and propagates a failed send', async () => {
 		const error = new Error('Discord request failed');
 		const interaction = { deferred: true, editReply: vi.fn().mockRejectedValue(error), deleteReply: vi.fn().mockResolvedValue(undefined) };
-		await expect(new PlayerNotifier().sendController(player(), interaction as unknown as ChatInputCommandInteraction)).rejects.toThrow(error);
+		await expect(new PlayerNotifier(deps).sendController(player(), interaction as unknown as ChatInputCommandInteraction)).rejects.toThrow(error);
 		expect(interaction.deleteReply).toHaveBeenCalledTimes(1);
 	});
 });

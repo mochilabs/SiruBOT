@@ -55,7 +55,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	// 추천 곡 검색은 YouTube RD 플레이리스트 조회라 네트워크 왕복이 필요하다.
 	await interaction.deferReply();
 
-	const added = await addManualRecommendation(player, current, count);
+	const added = await addManualRecommendation(container.lavalink, player, current, count);
 
 	if (added.length === 0) {
 		await interaction.editReply({

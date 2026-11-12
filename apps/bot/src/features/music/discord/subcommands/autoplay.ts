@@ -45,7 +45,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 	const player = container.audio.getPlayer(interaction.guildId);
 	const currentTrack = player?.queue.current;
 	if (updated && player?.playing && currentTrack && player.queue.tracks.length === 0) {
-		void queueRelatedUpfront(player, currentTrack).catch((error) => {
+		void queueRelatedUpfront(container.lavalink, player, currentTrack).catch((error) => {
 			container.logger.warn(`[mixer] related pre-add failed (guild ${interaction.guildId}): ${error}`);
 		});
 	}

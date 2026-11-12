@@ -44,7 +44,6 @@ const { container } = vi.hoisted(() => ({
 	}
 }));
 
-vi.mock('@sapphire/framework', () => ({ container }));
 vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({ ...(await orig()), ...container.guildPlayback }));
 vi.mock('../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...container.guildMixer }));
 
@@ -117,7 +116,7 @@ describe('pickBySimilarity bands', () => {
 	});
 
 	it('empty candidates → null', () => {
-		expect(pickBySimilarity([], track('abcd', 'ref'))).toBeNull();
+		expect(pickBySimilarity(container as never, [], track('abcd', 'ref'))).toBeNull();
 	});
 
 	it('picks the mid-band candidate and drops too-similar and too-different ones', () => {
@@ -129,20 +128,20 @@ describe('pickBySimilarity bands', () => {
 		// titleSim 0, durSim 0.1 → 0.04 (< LOW) → 하위 제외
 		const tooDifferent = track('wxyz', 'diff', 1_000_000);
 
-		const picked = pickBySimilarity([tooSimilar, mid, tooDifferent], reference);
+		const picked = pickBySimilarity(container as never, [tooSimilar, mid, tooDifferent], reference);
 		expect(picked).toBe(mid);
 	});
 
 	it('relaxes only the lower bound when no mid-band candidate exists', () => {
 		const reference = track('abcd', 'ref', 100_000);
 		const unrelated = track('wxyz', 'diff', 1_000_000); // 0.04 → 밴드1 제외, 밴드2(<HIGH)에는 포함
-		expect(pickBySimilarity([unrelated], reference)).toBe(unrelated);
+		expect(pickBySimilarity(container as never, [unrelated], reference)).toBe(unrelated);
 	});
 
 	it('falls back to all candidates when everything is too similar', () => {
 		const reference = track('abcd', 'ref', 100_000);
 		const identical = track('abcd', 'dup', 100_000); // 1.0 → 밴드1·2 모두 제외 → 밴드3(전체)
-		expect(pickBySimilarity([identical], reference)).toBe(identical);
+		expect(pickBySimilarity(container as never, [identical], reference)).toBe(identical);
 	});
 });
 
@@ -161,7 +160,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 				previous: [track('past song', 'previous-id', 80_000)],
 				tracks: [track('waiting song', 'waiting-id', 70_000)]
 			}
-		} as unknown as Parameters<typeof fetchRelatedCandidate>[0];
+		} as unknown as Parameters<typeof fetchRelatedCandidate>[1];
 	}
 
 	it('hard-excludes current/previous/queued identifiers from the search results', async () => {
@@ -178,7 +177,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 			]
 		});
 
-		const selected = await fetchRelatedCandidate(player, reference);
+		const selected = await fetchRelatedCandidate(container as never, player, reference);
 		expect(selected).toBe(midCandidate);
 	});
 
@@ -193,7 +192,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 			]
 		});
 
-		const selected = await fetchRelatedCandidate(player, reference, ['first']);
+		const selected = await fetchRelatedCandidate(container as never, player, reference, ['first']);
 		expect(selected).toBe(secondCandidate);
 	});
 
@@ -204,7 +203,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 			tracks: [track('current song', 'current-id', 90_000), track('past song', 'previous-id', 80_000)]
 		});
 
-		expect(await fetchRelatedCandidate(player, reference)).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, player, reference)).toBeNull();
 	});
 
 	it('does not recommend a played track after it leaves the 25-track queue history', async () => {
@@ -212,10 +211,10 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		const player = makePlayer({ loadType: 'playlist', tracks: [played] });
 		player.queue.current = null;
 		player.queue.previous.splice(0);
-		await fetchRelatedCandidate(player, played);
+		await fetchRelatedCandidate(container as never, player, played);
 
 		player.queue.previous.push(...Array.from({ length: 25 }, (_, i) => track(`later song ${i}`, `later-${i}`)));
-		expect(await fetchRelatedCandidate(player, player.queue.previous[0])).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, player, player.queue.previous[0])).toBeNull();
 	});
 
 	it('excludes another upload of a played recording before similarity fallbacks', async () => {
@@ -226,7 +225,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		const player = makePlayer({ loadType: 'playlist', tracks: [otherUpload] });
 		player.queue.previous.splice(0, player.queue.previous.length, played);
 
-		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, player, track('another song', 'ref'))).toBeNull();
 	});
 
 	it('keeps distinct songs with the same artist prefix eligible', async () => {
@@ -237,7 +236,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		const player = makePlayer({ loadType: 'playlist', tracks: [differentSong] });
 		player.queue.previous.splice(0, player.queue.previous.length, played);
 
-		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBe(differentSong);
+		expect(await fetchRelatedCandidate(container as never, player, track('another song', 'ref'))).toBe(differentSong);
 	});
 
 	it.each([
@@ -251,7 +250,7 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		differentRecording.info.author = author;
 		const player = makePlayer({ loadType: 'playlist', tracks: [differentRecording] });
 		player.queue.previous.splice(0, player.queue.previous.length, played);
-		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBe(differentRecording);
+		expect(await fetchRelatedCandidate(container as never, player, track('another song', 'ref'))).toBe(differentRecording);
 	});
 
 	it('excludes the same ISRC even when the upload metadata differs', async () => {
@@ -261,16 +260,16 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		otherUpload.info.isrc = 'usaaa2600001';
 		const player = makePlayer({ loadType: 'playlist', tracks: [otherUpload] });
 		player.queue.previous.splice(0, player.queue.previous.length, played);
-		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, player, track('another song', 'ref'))).toBeNull();
 	});
 
 	it('allows a removed, unplayed queued track to be recommended later', async () => {
 		const waiting = track('waiting song', 'waiting-id');
 		const player = makePlayer({ loadType: 'playlist', tracks: [waiting] });
 		const reference = track('another song', 'ref');
-		expect(await fetchRelatedCandidate(player, reference)).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, player, reference)).toBeNull();
 		player.queue.tracks.splice(0);
-		expect(await fetchRelatedCandidate(player, reference)).toBe(waiting);
+		expect(await fetchRelatedCandidate(container as never, player, reference)).toBe(waiting);
 	});
 
 	it('does not permanently exclude an unplayed current track from a queue shift', async () => {
@@ -279,16 +278,16 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 		player.queue.current = waiting;
 		player.queue.tracks.splice(0);
 		const reference = track('another song', 'ref');
-		expect(await fetchRelatedCandidate(player, reference)).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, player, reference)).toBeNull();
 		player.queue.current = null;
-		expect(await fetchRelatedCandidate(player, reference)).toBe(waiting);
+		expect(await fetchRelatedCandidate(container as never, player, reference)).toBe(waiting);
 	});
 
 	it.each([undefined, null, ['invalid', 123]])('accepts legacy or malformed saved history: %j', async (saved) => {
 		const candidate = track('new song', 'new-id');
 		const player = makePlayer({ loadType: 'playlist', tracks: [candidate] });
 		player.relatedTrackHistory.restore(saved);
-		expect(await fetchRelatedCandidate(player, track('another song', 'ref'))).toBe(candidate);
+		expect(await fetchRelatedCandidate(container as never, player, track('another song', 'ref'))).toBe(candidate);
 	});
 
 	it('retains session exclusions through real queue truncation and player serialization', async () => {
@@ -308,14 +307,14 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 
 		const restored = makePlayer({ loadType: 'playlist', tracks: [played] });
 		restored.relatedTrackHistory.restore(JSON.parse(JSON.stringify(original.toJSON().relatedTrackHistory)));
-		expect(await fetchRelatedCandidate(restored, track('another song', 'ref'))).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, restored, track('another song', 'ref'))).toBeNull();
 		const nextSession = makePlayer({ loadType: 'playlist', tracks: [played] });
-		expect(await fetchRelatedCandidate(nextSession, track('another song', 'ref'))).toBe(played);
+		expect(await fetchRelatedCandidate(container as never, nextSession, track('another song', 'ref'))).toBe(played);
 	});
 
 	it('returns null on error or empty search results', async () => {
 		const reference = track('abcd', 'ref', 100_000);
-		expect(await fetchRelatedCandidate(makePlayer({ loadType: 'empty', tracks: [] }), reference)).toBeNull();
+		expect(await fetchRelatedCandidate(container as never, makePlayer({ loadType: 'empty', tracks: [] }), reference)).toBeNull();
 
 		const errorPlayer = {
 			relatedTrackHistory: new RelatedTrackHistory(),
@@ -325,8 +324,8 @@ describe('fetchRelatedCandidate hard exclusions', () => {
 				})
 			},
 			queue: { current: null, previous: [], tracks: [] }
-		} as unknown as Parameters<typeof fetchRelatedCandidate>[0];
-		expect(await fetchRelatedCandidate(errorPlayer, reference)).toBeNull();
+		} as unknown as Parameters<typeof fetchRelatedCandidate>[1];
+		expect(await fetchRelatedCandidate(container as never, errorPlayer, reference)).toBeNull();
 	});
 });
 
@@ -347,30 +346,30 @@ describe('autoPlayRelated transition gate', () => {
 
 	it('skips while the server-side transition is in flight (preheated slot)', async () => {
 		(container.mixerService.isPreloaded as ReturnType<typeof vi.fn>).mockReturnValue(true);
-		await autoPlayRelated(gatePlayer(), track('Current', 'current-id'));
+		await autoPlayRelated(container as never, gatePlayer(), track('Current', 'current-id'));
 		expect(container.guildPlayback.getRelated).not.toHaveBeenCalled();
 	});
 
 	it('skips right after a preheated slot was consumed', async () => {
-		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() }), track('Current', 'current-id'));
+		await autoPlayRelated(container as never, gatePlayer({ preloadConsumedAt: Date.now() }), track('Current', 'current-id'));
 		expect(container.guildPlayback.getRelated).not.toHaveBeenCalled();
 	});
 
 	it('runs normally outside the confirm window', async () => {
-		await autoPlayRelated(gatePlayer({ preloadConsumedAt: Date.now() - 60_000 }), track('Current', 'current-id'));
+		await autoPlayRelated(container as never, gatePlayer({ preloadConsumedAt: Date.now() - 60_000 }), track('Current', 'current-id'));
 		expect(container.guildPlayback.getRelated).toHaveBeenCalled();
 	});
 
 	it('safely handles null lastPlayedTrack when no reference track is available in queue', async () => {
 		const player = gatePlayer();
-		await expect(autoPlayRelated(player, null)).resolves.not.toThrow();
+		await expect(autoPlayRelated(container as never, player, null)).resolves.not.toThrow();
 		expect(container.guildPlayback.getRelated).not.toHaveBeenCalled();
 	});
 
 	it('falls back to player.queue.previous[0] when lastPlayedTrack is null', async () => {
 		const prev = track('Previous', 'prev-id');
 		const player = gatePlayer({}, [prev]);
-		await autoPlayRelated(player, null);
+		await autoPlayRelated(container as never, player, null);
 		expect(container.guildPlayback.getRelated).toHaveBeenCalled();
 	});
 });
@@ -424,7 +423,7 @@ describe('queueRelatedUpfront with AutoMix (gapless=false)', () => {
 		const recommended = track('abce', 'rec-1', 200_000);
 		const { player, currentTrack } = createPlayerWithCandidate(recommended);
 
-		const added = await queueRelatedUpfront(player as never, currentTrack);
+		const added = await queueRelatedUpfront(container as never, player as never, currentTrack);
 
 		expect(added).toBe(recommended);
 		expect(player.queue.tracks).toHaveLength(1);
@@ -436,8 +435,8 @@ describe('queueRelatedUpfront with AutoMix (gapless=false)', () => {
 		const recommended = track('abce', 'rec-1', 200_000);
 		const { player, currentTrack } = createPlayerWithCandidate(recommended);
 
-		await queueRelatedUpfront(player as never, currentTrack);
-		await handleMixerNeedNext(player as never, {
+		await queueRelatedUpfront(container as never, player as never, currentTrack);
+		await handleMixerNeedNext(container as never, player as never, {
 			remainingMs: 2000,
 			currentTrackEncoded: currentTrack.encoded!
 		});

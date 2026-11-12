@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setConfigForTesting } from '../../../lib/config.ts';
 import { makeTestConfig } from '../../../lib/config.testing.ts';
-import { container } from '@sapphire/framework';
 import type { Player, Track, TrackEndEvent } from 'lavalink-client';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { RelatedTrackHistory } from '../lavalink/player/relatedTrackHistory.ts';
@@ -13,15 +12,14 @@ import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 vi.mock('../../../services/guildSettings/mixer.ts', () => ({
 	getMixerSettings: vi.fn().mockResolvedValue({ gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 3000, normalizationEnabled: false })
 }));
-vi.mock('@sapphire/framework', () => ({
-	container: {
-		logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-		guildService: {},
-		playerNotifier: { updateController: vi.fn() },
-		// queueWrapper가 container.sponsorBlockService를 거쳐요 — 이 테스트의 곡은 유튜브가 아니라 동작이 없어요
-		sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
-	}
-}));
+/** 서비스가 받는 lavalink 의존성 역할 — 큐 관측 헬퍼가 mixerService·sponsorBlockService를 여기서 읽어요 */
+const container: Record<string, any> = {
+	logger: { warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
+	guildService: {},
+	playerNotifier: { updateController: vi.fn() },
+	// 이 테스트의 곡은 유튜브가 아니라 동작이 없어요
+	sponsorBlockService: { prefetch: vi.fn(), queueChanged: vi.fn() }
+};
 
 /** 서비스 deps는 아래 container 모의 객체를 그대로 넘겨요 — 서비스가 읽는 값은 같아요 */
 const makeMixerService = () =>
@@ -29,7 +27,8 @@ const makeMixerService = () =>
 		logger: container.logger as never,
 		guildService: container.guildService,
 		callTimeoutMs: makeTestConfig().mixer.callTimeoutMs,
-		getPlayerNotifier: () => container.playerNotifier
+		getPlayerNotifier: () => container.playerNotifier,
+		lavalink: container as never
 	});
 
 function fakePlayer(): Player {
@@ -62,7 +61,8 @@ describe('MixerService v2 Protocol Tests', () => {
 			logger: container.logger as never,
 			guildService: container.guildService,
 			callTimeoutMs: makeTestConfig().mixer.callTimeoutMs,
-			getPlayerNotifier: () => notifier as never
+			getPlayerNotifier: () => notifier as never,
+			lavalink: container as never
 		});
 		notifier = { updateController: vi.fn() };
 		const player = { ...fakePlayer(), queue: { current: { encoded: 'a' }, tracks: [] } } as unknown as CustomPlayer;
@@ -269,7 +269,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		);
 
 		const service = makeMixerService();
-		(await import('@sapphire/framework')).container.mixerService = service as any;
+		container.mixerService = service as any;
 		const player = {
 			...fakePlayer(),
 			repeatMode: 'off',
@@ -313,7 +313,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			}
 		} as unknown as CustomPlayer;
 
-		await handleMixerNeedNext(ttsPlayer, { remainingMs: 2000, currentTrackEncoded: 'tts-enc' });
+		await handleMixerNeedNext(container as never, ttsPlayer, { remainingMs: 2000, currentTrackEncoded: 'tts-enc' });
 		expect(fetchMock).not.toHaveBeenCalled();
 
 		// Now test Crossfade OFF + Gapless OFF with 409 epoch sync retry
@@ -348,7 +348,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			}
 		} as unknown as CustomPlayer;
 
-		await handleMixerNeedNext(musicPlayer, { remainingMs: 5000, currentTrackEncoded: 'song-cur' });
+		await handleMixerNeedNext(container as never, musicPlayer, { remainingMs: 5000, currentTrackEncoded: 'song-cur' });
 		expect(musicPlayer.currentEpoch).toBe(12);
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		const retryBody = JSON.parse((fetchMock.mock.calls[1] as [string, RequestInit])[1].body as string);
@@ -387,7 +387,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			}
 		} as unknown as CustomPlayer;
 
-		const promise = handleMixerNeedNext(player, { remainingMs: 5000, currentTrackEncoded: 'song-a' });
+		const promise = handleMixerNeedNext(container as never, player, { remainingMs: 5000, currentTrackEncoded: 'song-a' });
 		// 전이 완료: current가 다음 곡으로 바뀐다.
 		player.queue.current = { encoded: 'song-b', requester: { id: 'user-1' } } as any;
 		player.queue.tracks.splice(0, player.queue.tracks.length, { encoded: 'song-c', requester: { id: 'user-1' } } as any);
@@ -417,7 +417,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		} as unknown as CustomPlayer;
 
 		// Normal advance from A to B in repeatMode=queue rotates A to the back of tracks without bumping epoch
-		commitLocal(player, trackB, { invalidate: false, bumpEpoch: false });
+		commitLocal(container as never, player, trackB, { invalidate: false, bumpEpoch: false });
 		expect(player.queue.current).toBe(trackB);
 		expect(player.relatedTrackHistory.has(trackB)).toBe(true);
 		expect(player.queue.tracks).toEqual([trackA]);
@@ -448,7 +448,7 @@ describe('MixerService v2 Protocol Tests', () => {
 			}
 		} as unknown as CustomPlayer;
 
-		await handleMixerAdvanced(player, { epoch: 5, encodedTrack: 'enc-b', handoffType: 'CROSSFADE', handoffId: 'h-1' });
+		await handleMixerAdvanced(container as never, player, { epoch: 5, encodedTrack: 'enc-b', handoffType: 'CROSSFADE', handoffId: 'h-1' });
 		expect(player.queue.current).toBe(trackB);
 		expect(player.relatedTrackHistory.has(trackB)).toBe(true);
 		expect(player.queue.tracks).toEqual([trackC]);
@@ -493,7 +493,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		} as unknown as CustomPlayer;
 
 		const endEvent = { reason: 'finished', track: { encoded: 'enc-a' } } as unknown as TrackEndEvent;
-		const endPromise = handleMixerTrackEnd(player, endEvent);
+		const endPromise = handleMixerTrackEnd(container as never, player, endEvent);
 		await vi.advanceTimersByTimeAsync(250);
 		await endPromise;
 
@@ -512,7 +512,7 @@ describe('MixerService v2 Protocol Tests', () => {
 
 		// Clean up pending timer
 		const reqId = (init.headers as Record<string, string>)['Idempotency-Key'];
-		handleMixerOverridden(player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
+		handleMixerOverridden(container as never, player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
 		vi.useRealTimers();
 	});
 	it('invalidate retries on 409 STALE_EPOCH and observeMixerEvent tracks overlap state (B-11, B-13)', async () => {
@@ -603,7 +603,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		} as unknown as CustomPlayer;
 
 		const endEvent = { reason: 'finished', track: { encoded: posEndA, info: { identifier: 'OWnKOYbG23A' } } } as unknown as TrackEndEvent;
-		const endPromise = handleMixerTrackEnd(player, endEvent);
+		const endPromise = handleMixerTrackEnd(container as never, player, endEvent);
 		await vi.advanceTimersByTimeAsync(250);
 		await endPromise;
 
@@ -619,7 +619,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		expect(player.transitionState.confirmedNowPlaying).toBe(trackB);
 
 		const reqId = (init.headers as Record<string, string>)['Idempotency-Key'];
-		handleMixerOverridden(player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
+		handleMixerOverridden(container as never, player, { epoch: 3, requestId: reqId, action: 'PLAY_NOW' });
 		vi.useRealTimers();
 	});
 });
