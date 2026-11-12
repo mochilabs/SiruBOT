@@ -136,8 +136,8 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const searchAbortRef = useRef<AbortController | null>(null);
 	const lastSearchedRef = useRef<string>("");
 	const { data: voiceData } = useVoiceContext(guildId);
-	// 곡 추가 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요. 값을 모르면(로딩·이전 버전 봇) 열어 두고 봇의 거절 안내에 맡겨요.
-	const canPlay = voiceData?.voice?.canPlay ?? true;
+	// 곡 추가 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요. 음성 상태를 아직 못 받은 로딩 중에만 열어 두고 봇의 거절 안내에 맡겨요.
+	const canPlay = voiceData?.voice ? voiceData.voice.canPlay : true;
 
 	const showToastError = useCallback(
 		(message: string | null | undefined, fallback: string) => {

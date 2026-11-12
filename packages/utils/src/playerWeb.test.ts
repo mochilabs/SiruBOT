@@ -114,11 +114,13 @@ describe('playerWeb response contract', () => {
 			requestId: REQUEST_ID,
 			guildId: VALID_BASE.guildId,
 			kind: 'voice-context',
-			voice: { inVoice: true, voiceChannelName: '음악', canControl: true }
+			voice: { inVoice: true, voiceChannelName: '음악', canControl: true, canPlay: true }
 		});
 		expect(result.success).toBe(true);
 
 		expect(playerVoiceContextSchema.safeParse({ inVoice: 'yes', voiceChannelName: null, canControl: false }).success).toBe(false);
+		// canPlay는 필수예요 — 이전 버전 봇처럼 빠진 응답은 거절해요
+		expect(playerVoiceContextSchema.safeParse({ inVoice: true, voiceChannelName: null, canControl: false }).success).toBe(false);
 		expect(playerWebTrackSchema.safeParse(null as unknown).success).toBe(false);
 	});
 

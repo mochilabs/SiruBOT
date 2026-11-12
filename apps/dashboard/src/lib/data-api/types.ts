@@ -85,8 +85,8 @@ export interface PlayerVoiceContextData {
   voiceChannelName: string | null;
   /** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 */
   canControl: boolean;
-  /** 곡 추가 가능 여부 — 이 필드를 보내지 않는 이전 버전 봇이면 없어요 */
-  canPlay?: boolean;
+  /** 곡 추가 가능 여부 */
+  canPlay: boolean;
 }
 
 export interface PlayerWebApiResult {

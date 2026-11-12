@@ -83,8 +83,8 @@ export const playerVoiceContextSchema = z.object({
 	voiceChannelName: z.string().nullable(),
 	/** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요 */
 	canControl: z.boolean(),
-	/** 곡 추가 가능 여부. 이 필드를 보내지 않는 이전 버전 봇과 섞여 배포될 수 있어 optional이에요 */
-	canPlay: z.boolean().optional()
+	/** 곡 추가 가능 여부 — 봇이 항상 보내요. 이 필드가 없는 이전 버전 봇 응답은 스키마 검증에서 거절돼요 */
+	canPlay: z.boolean()
 });
 export type PlayerVoiceContext = z.infer<typeof playerVoiceContextSchema>;
 
