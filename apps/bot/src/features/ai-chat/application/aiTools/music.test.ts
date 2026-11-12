@@ -14,7 +14,15 @@ const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOr
 			setRepeat: vi.fn(),
 			stop: vi.fn()
 		},
-		actor: { guildId: 'g1', userId: 'u1' },
+		actor: {
+			guildId: 'g1',
+			userId: 'u1',
+			voiceChannelId: 'v1',
+			isAdministrator: false,
+			canManageGuild: false,
+			roleIds: new Set<string>(),
+			humansInVoiceChannel: 1
+		},
 		getPlayer: vi.fn(),
 		checkDJOrAlone: vi.fn(),
 		reapplyMixerFilter: vi.fn(),
@@ -29,6 +37,20 @@ const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOr
 // 필터 프리셋(features/music/discord/utils/filterPresets.ts)은 아직 container.mixerService를 직접 읽어요
 vi.mock('@sapphire/framework', () => ({ container: { mixerService: { reapplyMixerFilter } } }));
 
+// 곡 추가 유스케이스는 실제 구현에 모의 audioService 함수를 꽂아서 쓴다 (정책 + 신호 계약을 함께 검증).
+const musicPlay = createMusicPlay({
+	access: { getBotVoiceChannelId: () => null, getDjRoleId: async () => null },
+	getOrCreatePlayer: (guildId, voiceChannelId, textChannelId, options) =>
+		getOrCreatePlayer(guildId, voiceChannelId, textChannelId, options) as Promise<never>,
+	search: (player, query, platform, requester) => search(player, query, platform, requester),
+	searchWithoutPlayer: async () => {
+		throw new Error('music_play 테스트에서는 쓰지 않아요');
+	},
+	connect: (player) => connectPlayer(player),
+	enqueue: (player, tracks) => enqueueTrack(player, tracks),
+	ensurePlayback: (player) => ensurePlayback(player)
+});
+
 const deps = {
 	db: {} as never,
 	guildService: {} as never,
@@ -36,6 +58,7 @@ const deps = {
 	mixerService: { reapplyMixerFilter, skip } as never,
 	playlistService: {} as never,
 	getMusic: () => music as never,
+	getMusicPlay: () => musicPlay as never,
 	getAudio: () => ({ getPlayer }) as never
 };
 vi.mock('../../../music/index.ts', async () => ({
@@ -51,6 +74,7 @@ vi.mock('../../../music/index.ts', async () => ({
 vi.mock('../../../../services/dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
 
 import { createMusicTools } from './music.ts';
+import { createMusicPlay } from '../../../music/application/play.ts';
 
 const musicTools = createMusicTools(deps);
 

@@ -1,24 +1,16 @@
-import { UserError } from '@sapphire/framework';
 import { Player, type LavalinkManager, SearchPlatform, Track, SearchResult, UnresolvedSearchResult, UnresolvedTrack } from 'lavalink-client';
 import * as Sentry from '@sentry/node';
-import { ButtonInteraction, ChatInputCommandInteraction, Client, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
+import { Client, PermissionsBitField } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { errorView } from '../../../lib/errorView.ts';
-import { createComponentSession, type ComponentSession } from '../../../lib/componentSession.ts';
+import { AppError } from '../../../lib/appError.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import type { GuildService } from '../../../services/guildService.ts';
+import { MUSIC_SEARCH_MESSAGES, type PlaySearchOutcome } from '../application/play.ts';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import * as view from '../discord/views/play.ts';
-import type { AppLogger } from '../../../lib/appLogger.ts';
-import type { GuildService } from '../../../services/guildService.ts';
 import type { MixerService } from './mixerService.ts';
-
-interface CommandErrorContext extends Record<string, unknown> {
-	interaction?: ChatInputCommandInteraction<'cached'> | ButtonInteraction<'cached'> | ChatInputCommandInteraction;
-	player?: Player;
-	ephemeral?: boolean;
-}
 
 export interface AudioServiceDeps {
 	logger: AppLogger;
@@ -31,283 +23,132 @@ export interface AudioServiceDeps {
 	getMixerService: () => MixerService;
 }
 
+type SearchedTrack = Track | UnresolvedTrack;
+type SearchedPlaylist = NonNullable<SearchResult['playlist']>;
+
+/**
+ * 검색 응답을 유스케이스용 결과로 바꾸고, 검색 오류·결과 없음은 AppError로 던져요.
+ * 플랫폼 쪽 조회 실패는 유저 메시지와 별개로 Sentry에 남겨요 (F-23).
+ */
+function toSearchOutcome(
+	searchRes: SearchResult | UnresolvedSearchResult,
+	context: { query: string; platform: SearchPlatform; guildId?: string }
+): PlaySearchOutcome<SearchedTrack, SearchedPlaylist> {
+	if (searchRes.loadType === 'error') {
+		Sentry.captureException(new Error(`search loadType error (${context.platform}): ${context.query}`), {
+			tags: { layer: 'player_search', ...(context.guildId ? { guild_id: context.guildId } : {}) }
+		});
+		throw new AppError('unavailable', MUSIC_SEARCH_MESSAGES.error(), { ephemeral: false });
+	}
+	if (searchRes.loadType === 'empty') throw new AppError('not_found', MUSIC_SEARCH_MESSAGES.empty());
+	return {
+		loadType: searchRes.loadType as PlaySearchOutcome<SearchedTrack, SearchedPlaylist>['loadType'],
+		tracks: searchRes.tracks as SearchedTrack[],
+		playlist: searchRes.playlist as SearchedPlaylist | null
+	};
+}
+
+/**
+ * 플레이어·검색·접속·대기열 같은 재생 메커니즘을 맡는 서비스예요.
+ * 누가 어느 채널에 넣을지 정하는 것은 `application/play.ts`가, 응답 문구와 선택 메뉴는 `discord/utils/playFeedback.ts`가 맡아요.
+ */
 export class AudioService {
 	public constructor(private readonly deps: AudioServiceDeps) {}
 
-	public async getOrCreatePlayer(guildId: string, voiceChannelId: string, textChannelId: string | null): Promise<Player> {
-		return (
-			this.deps.getAudio().getPlayer(guildId) ||
-			(await this.deps.getAudio().createPlayer({
-				guildId,
-				voiceChannelId,
-				textChannelId: textChannelId ?? undefined,
-				selfDeaf: true,
-				selfMute: false,
-				instaUpdateFiltersFix: true,
-				// volume을 filters로 보내면(부분 filters op) 서버의 필터 상태 전체를 덮어써
-				// mixer 플러그인 키가 지워진다. playerOptions.volume은 필터와 무관하므로
-				// 이쪽을 쓴다.
-				applyVolumeAsFilter: false
-			}))
-		);
+	/** 플레이어가 있으면 그대로 돌려줘요. `pinText`면 그 플레이어의 텍스트 채널도 `textChannelId`로 맞춰요. */
+	public async getOrCreatePlayer(
+		guildId: string,
+		voiceChannelId: string,
+		textChannelId: string | null,
+		options: { pinText?: boolean } = {}
+	): Promise<Player> {
+		const audio = this.deps.getAudio();
+		const existing = audio.getPlayer(guildId);
+		if (existing) {
+			if (options.pinText && textChannelId) existing.textChannelId = textChannelId;
+			return existing;
+		}
+		return audio.createPlayer({
+			guildId,
+			voiceChannelId,
+			textChannelId: textChannelId ?? undefined,
+			selfDeaf: true,
+			selfMute: false,
+			instaUpdateFiltersFix: true,
+			// volume을 filters로 보내면(부분 filters op) 서버의 필터 상태 전체를 덮어써
+			// mixer 플러그인 키가 지워진다. playerOptions.volume은 필터와 무관하므로
+			// 이쪽을 쓴다.
+			applyVolumeAsFilter: false
+		});
 	}
 
 	/**
 	 * Connects the player to the voice channel.
 	 * Checks Discord permissions before attempting connection.
 	 */
-	public async connectPlayer(player: Player, context: CommandErrorContext): Promise<void> {
+	public async connectPlayer(player: Player): Promise<void> {
 		if (player.connected) return;
 
 		// Check if the bot can actually join the voice channel
 		const guild = this.deps.getClient().guilds.cache.get(player.guildId);
 		const voiceChannelId = player.voiceChannelId;
-		if (!voiceChannelId) {
-			throw new UserError({
-				identifier: 'play_voice_channel_not_found',
-				message: `${emoji('error')} 음성 채널 정보를 찾을 수 없어요.`,
-				context
-			});
-		}
+		if (!voiceChannelId) throw new AppError('not_found', `${emoji('error')} 음성 채널 정보를 찾을 수 없어요.`);
 		const voiceChannel = guild?.channels.cache.get(voiceChannelId);
-		if (!voiceChannel || !voiceChannel.isVoiceBased()) {
-			throw new UserError({
-				identifier: 'play_channel_not_found',
-				message: `${emoji('error')} 음성 채널을 찾을 수 없어요.`,
-				context
-			});
-		}
+		if (!voiceChannel || !voiceChannel.isVoiceBased()) throw new AppError('not_found', `${emoji('error')} 음성 채널을 찾을 수 없어요.`);
 
 		const me = guild?.members.me;
 		if (me) {
 			const permissions = voiceChannel.permissionsFor(me);
 			if (!permissions?.has(PermissionsBitField.Flags.Connect)) {
-				throw new UserError({
-					identifier: 'play_no_connect_permission',
-					message: `${emoji('error')} 봇이 음성 채널에 접속할 권한이 없어요.`,
-					context
-				});
+				throw new AppError('forbidden', `${emoji('error')} 봇이 음성 채널에 접속할 권한이 없어요.`);
 			}
 			if (!permissions?.has(PermissionsBitField.Flags.Speak)) {
-				throw new UserError({
-					identifier: 'play_no_speak_permission',
-					message: `${emoji('error')} 봇이 음성 채널에서 말할 권한이 없어요.`,
-					context
-				});
+				throw new AppError('forbidden', `${emoji('error')} 봇이 음성 채널에서 말할 권한이 없어요.`);
 			}
 		}
 
 		try {
 			await player.connect();
 		} catch (error) {
-			if (error instanceof UserError) throw error;
+			if (error instanceof AppError) throw error;
 			// Sapphire 로거는 오류 객체도 그대로 받아서 AppLogger 타입에만 맞춰요
 			this.deps.logger.error(error as never);
-			// 인프라 실패는 사용자 메시지(UserError)와 별개로 추적 가능해야 해요 — 원인을 Sentry로 남겨요.
+			// 인프라 실패는 사용자 메시지와 별개로 추적 가능해야 해요 — 원인을 Sentry로 남겨요.
 			Sentry.captureException(error, {
 				tags: { layer: 'player_connect', guild_id: String(player.guildId) }
 			});
-			throw new UserError({
-				identifier: 'play_connect_error',
-				message: `${emoji('error')} 음성 채널에 접속할 수 없어요.`,
-				context
-			});
+			throw new AppError('unavailable', `${emoji('error')} 음성 채널에 접속할 수 없어요.`, { cause: error, ephemeral: false });
 		}
 	}
 
+	/** 플레이어로 검색해요. 검색 오류·결과 없음은 AppError로 던져요. */
 	public async search(
 		player: Player,
 		query: string,
 		platform: SearchPlatform,
-		user: { id: string; username: string },
-		context: CommandErrorContext
-	): Promise<SearchResult | UnresolvedSearchResult> {
-		const searchRes = await player.search({ query, source: platform }, user);
-
-		if (searchRes.loadType === 'error') {
-			// 플랫폼 쪽 조회 실패 — 유저 메시지는 그대로, 인프라 원인은 Sentry로 (F-23)
-			Sentry.captureException(new Error(`search loadType error (${platform}): ${query}`), {
-				tags: { layer: 'player_search', guild_id: String(player.guildId) }
-			});
-			throw new UserError({
-				identifier: 'play_search_error',
-				message: `${emoji('error')} 음악 검색 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.`,
-				context
-			});
-		}
-
-		if (searchRes.loadType === 'empty') {
-			throw new UserError({
-				identifier: 'play_search_empty',
-				message: `${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`,
-				context
-			});
-		}
-
-		return searchRes;
+		requester: { id: string; username: string }
+	): Promise<PlaySearchOutcome<SearchedTrack, SearchedPlaylist>> {
+		const searchRes = await player.search({ query, source: platform }, requester);
+		return toSearchOutcome(searchRes, { query, platform, guildId: String(player.guildId) });
 	}
 
-	/**
-	 * Handles adding a playlist to the queue, including interactive prompts if a specific track was selected
-	 */
-	public async handlePlaylistPlay(
-		interaction: ChatInputCommandInteraction<'cached'>,
-		player: Player,
-		searchRes: SearchResult | UnresolvedSearchResult
-	): Promise<void> {
-		const playlist = searchRes.playlist;
-		if (!playlist) {
-			await interaction.editReply({
-				components: [errorView(`${emoji('tools')} 플레이리스트 정보를 불러올 수 없어요.`)],
-				flags: MessageFlags.IsComponentsV2
-			});
-			return;
-		}
-
-		if (playlist.selectedTrack) {
-			const { wasIdle } = await this.enqueueTrack(player, playlist.selectedTrack);
-
-			const remainingTracks = searchRes.tracks.filter((track) => track.info.identifier !== playlist.selectedTrack!.info.identifier);
-			const remainingTracksCount = remainingTracks.length;
-
-			if (remainingTracksCount > 0) {
-				await this.promptRemainingPlaylist(interaction, player, playlist, playlist.selectedTrack, remainingTracks as Track[]);
-			} else if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
-				// 단일곡 + idle → 컨트롤러가 뒤따라오지만 누가 시작했는지는 남긴다
-				await interaction
-					.editReply({
-						flags: MessageFlags.IsComponentsV2,
-						components: [view.playStarted({ track: playlist.selectedTrack as Track, userId: interaction.user.id })],
-						allowedMentions: { users: [], roles: [] }
-					})
-					.catch((error) => this.deps.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
-			} else {
-				await interaction.editReply({
-					flags: MessageFlags.IsComponentsV2,
-					components: [view.trackAdded(view.trackAddedProps(player, playlist.selectedTrack as Track))],
-					allowedMentions: { users: [], roles: [] }
-				});
-			}
-		} else {
-			await this.enqueueTrack(player, searchRes.tracks);
-
-			await interaction.editReply({
-				flags: MessageFlags.IsComponentsV2,
-				components: [
-					view.playlistQueued({
-						playlist,
-						tracks: searchRes.tracks as Track[]
-					})
-				],
-				allowedMentions: { users: [], roles: [] }
-			});
-		}
+	/** 플레이어 없이 연결된 노드에서 검색해요 (웹 미리보기처럼 플레이어를 만들면 안 되는 곳에서 써요). */
+	public async searchWithoutPlayer(
+		query: string,
+		platform: SearchPlatform,
+		requester: { id: string; username: string }
+	): Promise<PlaySearchOutcome<SearchedTrack, SearchedPlaylist>> {
+		const node = this.findConnectedNode();
+		if (!node) throw new AppError('unavailable', MUSIC_SEARCH_MESSAGES.noNode(), { ephemeral: true });
+		const searchRes = await node.search({ query, source: platform }, requester);
+		return toSearchOutcome(searchRes, { query, platform });
 	}
 
-	private async promptRemainingPlaylist(
-		interaction: ChatInputCommandInteraction<'cached'>,
-		player: Player,
-		playlist: NonNullable<SearchResult['playlist']>,
-		selectedTrack: Track,
-		remainingTracks: Track[]
-	): Promise<void> {
-		const askReply = await interaction.editReply({
-			flags: MessageFlags.IsComponentsV2,
-			components: [
-				view.askPlaylistAdd({
-					playlist,
-					selectedTrack,
-					remainTracks: remainingTracks,
-					player
-				})
-			],
-			allowedMentions: { users: [], roles: [] }
-		});
-
-		const trackAdded = view.trackAdded(view.trackAddedProps(player, selectedTrack));
-
-		const handleEndAction = async () => {
-			await interaction
-				.editReply({
-					flags: MessageFlags.IsComponentsV2,
-					components: [trackAdded],
-					allowedMentions: { users: [], roles: [] }
-				})
-				.catch((error) => this.deps.logger.warn(`[audio] trackAdded edit failed (guild ${player.guildId}): ${error}`));
-		};
-
-		// 첫 입력만 처리해요 (플레이어가 끊겼으면 아무것도 하지 않고 시간 초과 때 trackAdded로 마무리해요).
-		let pressed = false;
-		const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>, session: ComponentSession) => {
-			if (pressed) return;
-			pressed = true;
-			await collectorInteraction.deferUpdate();
-			if (!player.connected) return;
-			session.settle();
-
-			const action = view.decodePlaylistAddId(collectorInteraction.customId)?.action;
-
-			if (action === 'addRemaining') {
-				await this.enqueueTrack(player, remainingTracks);
-
-				await collectorInteraction.editReply({
-					flags: MessageFlags.IsComponentsV2,
-					components: [
-						view.playlistQueued({
-							playlist,
-							tracks: remainingTracks
-						})
-					],
-					allowedMentions: { users: [], roles: [] }
-				});
-			} else if (action === 'skipRemaining') {
-				await collectorInteraction.editReply({
-					flags: MessageFlags.IsComponentsV2,
-					components: [trackAdded],
-					allowedMentions: { users: [], roles: [] }
-				});
-			}
-		};
-
-		createComponentSession<ButtonInteraction<'cached'>>(askReply, {
-			filter: (i) => i.user.id === interaction.user.id && view.decodePlaylistAddId(i.customId) !== null,
-			time: 30000,
-			componentType: ComponentType.Button,
-			onCollect: handleButtonAction,
-			onTimeout: handleEndAction
-		});
-	}
-
-	/**
-	 * Handles adding a single track or search result to the queue.
-	 * 플레이어가 idle 상태(곧바로 재생 시작 → 컨트롤러가 뒤따라 옴)이고
-	 * 컨트롤러가 켜져 있으면 trackAdded 메시지를 생략하고 컨트롤러만 남긴다.
-	 * (defer된 interaction은 deleteReply로 정리 → '/재생 추가 + 컨트롤러' 2연타 방지)
-	 */
-	public async handleTrackPlay(
-		interaction: ChatInputCommandInteraction<'cached'>,
-		player: Player,
-		searchRes: SearchResult | UnresolvedSearchResult
-	): Promise<void> {
-		const { wasIdle } = await this.enqueueTrack(player, searchRes.tracks[0]);
-
-		if (wasIdle && (await this.isControllerEnabled(player.guildId))) {
-			// 컨트롤러가 뒤따라 오지만, 누가 재생을 시작했는지는 채팅에도 남긴다.
-			await interaction
-				.editReply({
-					flags: MessageFlags.IsComponentsV2,
-					components: [view.playStarted({ track: searchRes.tracks[0] as Track, userId: interaction.user.id })],
-					allowedMentions: { users: [], roles: [] }
-				})
-				.catch((error) => this.deps.logger.warn(`[audio] playStarted edit failed (guild ${player.guildId}): ${error}`));
-			return;
+	private findConnectedNode() {
+		for (const node of this.deps.getAudio().nodeManager.nodes.values()) {
+			if (node.connected) return node;
 		}
-
-		await interaction.editReply({
-			flags: MessageFlags.IsComponentsV2,
-			components: [view.trackAdded(view.trackAddedProps(player, searchRes.tracks[0] as Track))],
-			allowedMentions: { users: [], roles: [] }
-		});
+		return null;
 	}
 
 	public async ensurePlayback(player: Player): Promise<void> {

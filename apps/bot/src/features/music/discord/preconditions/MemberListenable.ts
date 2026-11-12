@@ -1,7 +1,6 @@
 import { AllFlowsPrecondition } from '@sapphire/framework';
 import { CommandInteraction, ContextMenuCommandInteraction, GuildMember, Message } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { MUSIC_ACCESS_MESSAGES } from '../../application/access.ts';
 
 export class MemberListenable extends AllFlowsPrecondition {
 	// 클래스 필드 대신 getter로 렌더 시점에 평가해야 앱 이모지 매핑이 반영돼요.
@@ -10,8 +9,13 @@ export class MemberListenable extends AllFlowsPrecondition {
 	}
 	#ephemeral = true;
 
+	/**
+	 * 음성 채널에 들어가 있으면 듣기 상태(서버 음소거 아님)를 봐요.
+	 * 음성 채널 밖이면 통과해요 — 접속 여부와 원격 권한자 예외는 음성 프리컨디션이나 음악 유스케이스가 판정해요.
+	 */
 	public check(member: GuildMember | null) {
-		if (!member?.voice.channelId) return false;
+		if (!member) return false;
+		if (!member.voice.channelId) return true;
 		return !member.voice.deaf;
 	}
 
@@ -19,7 +23,7 @@ export class MemberListenable extends AllFlowsPrecondition {
 		if (!interaction.inCachedGuild()) return this.createError();
 
 		if (!this.check(interaction.member)) {
-			return this.createError(interaction.member);
+			return this.createError();
 		}
 
 		return this.ok();
@@ -29,7 +33,7 @@ export class MemberListenable extends AllFlowsPrecondition {
 		if (!interaction.inCachedGuild()) return this.createError();
 
 		if (!this.check(interaction.member)) {
-			return this.createError(interaction.member);
+			return this.createError();
 		}
 
 		return this.ok();
@@ -39,15 +43,13 @@ export class MemberListenable extends AllFlowsPrecondition {
 		if (!message.inGuild()) return this.createError();
 
 		if (!this.check(message.member)) {
-			return this.createError(message.member);
+			return this.createError();
 		}
 
 		return this.ok();
 	}
 
-	/** 음성 채널에 없어서 실패한 경우(원격 권한자가 채널 밖에서 듣기 전제 명령을 쓴 경우)엔 듣기 안내 대신 음성 채널 접속 안내를 보여줘요. */
-	private createError(member?: GuildMember | null) {
-		const message = member && !member.voice.channelId ? MUSIC_ACCESS_MESSAGES.voiceRequired() : this.#message;
-		return this.error({ message, context: { ephemeral: this.#ephemeral } });
+	private createError() {
+		return this.error({ message: this.#message, context: { ephemeral: this.#ephemeral } });
 	}
 }

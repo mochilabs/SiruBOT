@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { AppError } from '../../../lib/appError.ts';
 import type { RedisRuntime } from '../../../lib/redisResponder.ts';
 import { createPlayerWebResponder } from './playerWeb.ts';
+import { createMusicPlay } from '../application/play.ts';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({
 	...(await orig()),
@@ -90,7 +91,17 @@ describe('web player permissions', () => {
 			},
 			audio: { getPlayer: vi.fn().mockReturnValue(null) },
 			music: { skipNow: vi.fn().mockRejectedValue(new AppError('not_found', '현재 곡이 없어요.')) },
-			guildService: {}
+			// 실제 음악 유스케이스로 권한 판정을 해요 (봇 채널 없음 → 곡 추가는 음성 채널 안내로 거절)
+			musicPlay: createMusicPlay({
+				access: { getBotVoiceChannelId: () => null, getDjRoleId: async () => null },
+				getOrCreatePlayer: vi.fn(),
+				search: vi.fn(),
+				searchWithoutPlayer: vi.fn(),
+				connect: vi.fn(),
+				enqueue: vi.fn(),
+				ensurePlayback: vi.fn()
+			}),
+			guildService: { getGuild: vi.fn().mockResolvedValue({ pinnedChannelId: null, djRoleId: null }) }
 		});
 		start(logger, publish);
 		harness.receive!(

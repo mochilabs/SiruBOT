@@ -6,6 +6,7 @@ export { createPlayerWebResponder } from './inbound/playerWeb.ts';
 export { actorFromMember, type Actor } from './application/actor.ts';
 export { createMusicAccess } from './application/access.ts';
 export { createMusicControl, type MusicControl } from './application/control.ts';
+export { createMusicPlay, type MusicPlayService, type MusicPlayServiceDeps } from './application/play.ts';
 export { PlaybackReporter } from './application/playbackReporter.ts';
 export { PlaylistService } from './application/playlistService.ts';
 export { TrackService } from './application/trackService.ts';

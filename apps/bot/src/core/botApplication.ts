@@ -36,7 +36,9 @@ import {
 	autoPlayRelated,
 	createMusicAccess,
 	createMusicControl,
+	createMusicPlay,
 	createPlayerWebResponder,
+	type MusicPlayServiceDeps,
 	createPlaylistPlayback
 } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
@@ -233,6 +235,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			tempVoice: container.tempVoiceService,
 			// music은 setupServices 끝(setupMusicControl)에, audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getMusic: () => container.music,
+			getMusicPlay: () => container.musicPlay,
 			getAudio: () => container.audio,
 			getClient: () => container.client,
 			getCommands: () => container.stores.get('commands'),
@@ -332,6 +335,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.appEmojiManager = new AppEmojiManager({ logger: appLogger, getApplication: () => container.client.application });
 		container.stoppables.push(container.appEmojiManager);
 		this.setupMusicControl();
+		this.setupMusicPlay();
 	}
 
 	/**
@@ -340,11 +344,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	 */
 	private setupMusicControl() {
 		container.music = createMusicControl<CustomPlayer>({
-			access: createMusicAccess({
-				getBotVoiceChannelId: (guildId) =>
-					this.guilds.cache.get(guildId)?.members.me?.voice.channelId ?? container.audio.getPlayer(guildId)?.voiceChannelId ?? null,
-				getDjRoleId: (guildId) => guildPlayback.getDJRole(container.guildService, guildId)
-			}),
+			access: createMusicAccess(this.musicAccessDeps()),
 			getPlayer: (guildId) => container.audio.getPlayer(guildId),
 			settings: {
 				saveVolume: async (guildId, volume) => (await guildPlayback.updateVolume(container.guildService, guildId, volume)).volume,
@@ -361,6 +361,33 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				playPrevious: (player) => container.audioService.playPrevious(player)
 			}
 		});
+	}
+
+	/** 봇 음성 채널과 DJ 역할 조회 — 음악 제어·곡 추가 인가가 같은 원천을 써요. */
+	private musicAccessDeps() {
+		return {
+			getBotVoiceChannelId: (guildId: string) =>
+				this.guilds.cache.get(guildId)?.members.me?.voice.channelId ?? container.audio.getPlayer(guildId)?.voiceChannelId ?? null,
+			getDjRoleId: (guildId: string) => guildPlayback.getDJRole(container.guildService, guildId)
+		};
+	}
+
+	/**
+	 * 곡 검색·대기열 추가 유스케이스를 한 번만 만들어 container.musicPlay로 노출해요 (슬래시 /재생·/검색, 고정 채널, AI music_play, 웹 플레이어).
+	 * 플레이어·검색·접속 같은 재생 메커니즘은 audioService가 맡고, 여기서는 그 함수들을 좁은 포트로 넘겨요.
+	 */
+	private setupMusicPlay() {
+		const deps: MusicPlayServiceDeps = {
+			access: this.musicAccessDeps(),
+			getOrCreatePlayer: (guildId, voiceChannelId, textChannelId, options) =>
+				container.audioService.getOrCreatePlayer(guildId, voiceChannelId, textChannelId, options),
+			search: (player, query, platform, requester) => container.audioService.search(player, query, platform, requester),
+			searchWithoutPlayer: (query, platform, requester) => container.audioService.searchWithoutPlayer(query, platform, requester),
+			connect: (player) => container.audioService.connectPlayer(player),
+			enqueue: (player, tracks) => container.audioService.enqueueTrack(player, tracks),
+			ensurePlayback: (player) => container.audioService.ensurePlayback(player)
+		};
+		container.musicPlay = createMusicPlay(deps);
 	}
 
 	public async setupAudio(nodes: LavalinkNodeOptions[], shardInfo: { shardIds: number[]; shardCount: number }) {

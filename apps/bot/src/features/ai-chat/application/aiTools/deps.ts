@@ -1,7 +1,15 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import type { Client } from 'discord.js';
 import type { LavalinkManager } from 'lavalink-client';
-import type { AudioService, CustomPlayer, MixerService, MusicControl, PlaylistService, SponsorBlockService } from '../../../music/index.ts';
+import type {
+	AudioService,
+	CustomPlayer,
+	MixerService,
+	MusicControl,
+	MusicPlayService,
+	PlaylistService,
+	SponsorBlockService
+} from '../../../music/index.ts';
 import type { TempVoiceService } from '../../../temp-voice/index.ts';
 import type { AiMemoryService } from '../aiMemoryService.ts';
 import type { GuildService } from '../../../../services/guildService.ts';
@@ -35,6 +43,8 @@ export interface AiToolDeps {
 	playlistService: PlaylistService;
 	tempVoice: Pick<TempVoiceService, 'setupMarkerChannel'>;
 	getMusic: () => MusicControl;
+	/** 곡 검색·대기열 추가 유스케이스 (music_play) — setupServices 뒤에 생겨서 호출 시점에 읽어요 */
+	getMusicPlay: () => MusicPlayService;
 	/** setupAudio 뒤에 생겨요 — 아직 없으면 undefined */
 	getAudio: () => LavalinkManager<CustomPlayer> | undefined;
 	getClient: () => Client;

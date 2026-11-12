@@ -1,23 +1,17 @@
-import { container, UserError } from '@sapphire/framework';
-import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
+import { container } from '@sapphire/framework';
 import { getSimpleYouTubeSuggestions } from '../../../../services/dataApiClient.ts';
 import { AutocompleteInteraction, ChatInputCommandInteraction, type SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandBuilder } from 'discord.js';
 import { SearchPlatform } from 'lavalink-client';
+import { actorFromMember } from '../../application/actor.ts';
+import { editTrackPlayReply, replyPlaylistPlay } from '../utils/playFeedback.ts';
 
 export const name = 'play';
 export const ko = '재생';
 export const description = '음성 채널에서 노래를 재생해요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Play a track in your voice channel.';
-export const preconditions = [
-	'TextChannelAllowed',
-	'NodeAvailable',
-	'VoiceConnected',
-	'SameVoiceChannel',
-	'MemberListenable',
-	'ClientVoiceConnectable',
-	'ClientVoiceSpeakable'
-];
+/** 음성 채널 조건(봇과 같은 채널, 원격 권한자 예외)은 음악 유스케이스가 판정해요. */
+export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'MemberListenable'];
 
 const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 
@@ -82,50 +76,26 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	if (!interaction.member.voice.channelId) {
-		throw new UserError({
-			identifier: 'play_not_in_voice',
-			message: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`,
-			context: { ephemeral: true }
-		});
-	}
 	await interaction.deferReply();
 
-	const voiceChannel = interaction.member.voice.channelId;
 	const query = interaction.options.getString('query', true);
 	const platformInput = interaction.options.getString('platform') || 'ytsearch';
 	const platform: SearchPlatform = (VALID_PLATFORMS as readonly string[]).includes(platformInput) ? (platformInput as SearchPlatform) : 'ytsearch';
-	const context = {
-		command: name,
-		query,
-		platform,
-		voiceChannelId: voiceChannel,
-		textChannelId: interaction.channelId,
-		guildId: interaction.guildId
-	};
 
-	const player = await container.audioService.getOrCreatePlayer(interaction.guildId, voiceChannel, interaction.channelId);
-	const searchRes = await container.audioService.search(
-		player,
-		query,
-		platform,
-		{ id: interaction.user.id, username: interaction.user.username },
-		context
+	const result = await container.musicPlay.play(
+		actorFromMember(interaction.member),
+		{
+			query,
+			platform,
+			requester: { id: interaction.user.id, username: interaction.user.username },
+			textChannelId: interaction.channelId
+		},
+		{ kind: 'selected' }
 	);
 
-	await container.audioService.connectPlayer(player, context);
-
-	switch (searchRes.loadType) {
-		case 'playlist': {
-			await container.audioService.handlePlaylistPlay(interaction, player, searchRes);
-			break;
-		}
-		case 'track':
-		case 'search': {
-			await container.audioService.handleTrackPlay(interaction, player, searchRes);
-			break;
-		}
+	if (result.playlist) {
+		await replyPlaylistPlay(interaction, result);
+		return;
 	}
-
-	await container.audioService.ensurePlayback(player);
+	await editTrackPlayReply(interaction, result.player, result.queued[0]!, result.wasIdle);
 }

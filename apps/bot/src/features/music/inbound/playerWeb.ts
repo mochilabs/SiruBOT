@@ -12,14 +12,13 @@
  * - 검증 실패(음성 미접속·권한 없음·노드 없음·검색 결과 없음)는 한국어 error 메시지로 응답해요 —
  *   data-api가 그대로 400으로 전달해 대시보드에서 안내해요.
  */
-import { container, UserError } from '@sapphire/framework';
+import { container } from '@sapphire/framework';
 import {
 	playerWebControlRequestSchema,
 	playerWebPlayRequestSchema,
 	playerWebRpc,
 	playerWebSearchRequestSchema,
-	playerWebVoiceContextRequestSchema,
-	VOICE_CHANNEL_REQUIRED_MESSAGE
+	playerWebVoiceContextRequestSchema
 } from '@sirubot/utils';
 import type {
 	PlayerWebControlRequest,
@@ -29,14 +28,15 @@ import type {
 	PlayerWebVoiceContextRequest
 } from '@sirubot/utils';
 import { MessageFlags, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
-import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
-import * as playView from '../discord/views/play.ts';
+import type { Track, UnresolvedTrack } from 'lavalink-client';
+import { trackPlayFeedback } from '../discord/utils/playFeedback.ts';
 import { DEFAULT_RESPONDER_ERROR_MESSAGE, createRedisResponder, type RedisBinding, type RedisRpcPayload } from '../../../lib/redisResponder.ts';
 import type { RedisLogger } from '../../../lib/redisPublisher.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
-import { actorFromMember } from '../application/actor.ts';
+import { actorFromMember, type Actor } from '../application/actor.ts';
 import { canAddTracks, canControlMusic } from '../application/access.ts';
+import type { MusicRequester } from '../application/play.ts';
 
 type Payload = RedisRpcPayload<typeof playerWebRpc>;
 
@@ -45,24 +45,9 @@ const MAX_TRACKS = 5;
 /** 같은 유저의 재생 요청 쿨다운(ms) — commandChannel 고정 채널 리스너와 같은 도배 방지 */
 const PLAY_COOLDOWN_MS = 2_500;
 
-interface WebPlayerContext extends Record<string, unknown> {
-	command: string;
-	guildId: string;
-	voiceChannelId?: string;
-	textChannelId?: string;
-}
-
-/** 퍼블리시 가능한 연결된 노드 — NodeAvailable 프리컨디션과 같은 기준 */
-function findConnectedNode() {
-	for (const node of container.audio.nodeManager.nodes.values()) {
-		if (node.connected) return node;
-	}
-	return null;
-}
-
 /** 검색 결과를 웹 응답 요약으로 변환 — info 필드만 노출해요 (raw Track 객체는 스키마에 안 맞아요) */
-function toTrackSummaries(searchRes: SearchResult): PlayerWebTrack[] {
-	return searchRes.tracks.slice(0, MAX_TRACKS).map((track) => ({
+function toTrackSummaries(tracks: readonly (Track | UnresolvedTrack)[]): PlayerWebTrack[] {
+	return tracks.slice(0, MAX_TRACKS).map((track) => ({
 		title: track.info.title?.slice(0, 200) ?? '알 수 없는 곡',
 		author: track.info.author?.slice(0, 120) ?? '알 수 없는 아티스트',
 		durationMs: track.info.duration ?? 0,
@@ -104,18 +89,16 @@ export function createPlayerWebResponder(): RedisBinding {
 		};
 	};
 
-	// kind: search, 검색 결과 5개 요약. 재생 전제 검증(음성·권한·채널 충돌)을 미리 적용해요
+	// kind: search, 검색 결과 5개 요약. 음성 정책은 미리보기 유스케이스가 판정해요 (플레이어는 만들지 않아요)
 	const handleSearch = async (guild: Guild, request: PlayerWebSearchRequest): Promise<Payload> => {
-		const verified = await verifyPlaybackRequest(guild, request.userId);
-		if ('error' in verified) return { error: verified.error };
-		const node = findConnectedNode();
-		if (!node) return { error: `현재 사용 가능한 노드가 없어요. 잠시 후 다시 시도해 주세요.` };
-
-		const searchRes = await node.search({ query: request.query, source: 'ytsearch' as const }, verified.requester);
-		if (searchRes.loadType === 'error' || searchRes.tracks.length === 0) {
-			return { error: `검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.` };
-		}
-		return { tracks: toTrackSummaries(searchRes) };
+		const playback = await resolvePlaybackMember(guild, request.userId);
+		if ('error' in playback) return { error: playback.error };
+		const outcome = await container.musicPlay.preview(playback.actor, {
+			query: request.query,
+			platform: 'ytsearch',
+			requester: playback.requester
+		});
+		return { tracks: toTrackSummaries(outcome.tracks) };
 	};
 
 	// kind: play, 선택한 트랙 URI(또는 다시 재생 URL·플레이리스트)를 검색해 큐에 넣고 재생을 보장해요
@@ -131,48 +114,35 @@ export function createPlayerWebResponder(): RedisBinding {
 			return { error: `너무 빠르게 연속 요청하고 있어요. 잠시 후 다시 시도해 주세요.` };
 		}
 
-		const verified = await verifyPlaybackRequest(guild, request.userId);
-		if ('error' in verified) return { error: verified.error };
+		const playback = await resolvePlaybackMember(guild, request.userId);
+		if ('error' in playback) return { error: playback.error };
 
 		cooldowns.set(cooldownKey, Date.now());
 		pruneCooldowns();
 		inFlight.add(guildId);
 		try {
-			const context: WebPlayerContext = {
-				command: 'webPlayer',
+			// 곡 추가 정책·대상 음성 채널·접속·재생 보장은 유스케이스가 맡아요. 웹은 플레이리스트 URL이면 전체를 넣어요 (MVP 범위).
+			const result = await container.musicPlay.play(
+				playback.actor,
+				{
+					query: request.uri,
+					platform: 'ytsearch',
+					requester: playback.requester,
+					textChannelId: playback.textChannelId,
+					pinTextChannel: playback.textChannelId !== null
+				},
+				{ kind: 'all' }
+			);
+
+			const track = result.playlist?.selectedTrack ?? result.queued[0];
+			if (!track) throw new Error(`web play: 검색 결과 트랙이 없어요 (guild ${guildId}, uri ${request.uri})`);
+			await sendFeedbackMessage(
+				logger,
 				guildId,
-				voiceChannelId: verified.voiceChannelId,
-				textChannelId: verified.textChannelId ?? undefined
-			};
-
-			// commandChannel·/재생과 같은 순서: 생성 → 검색 → 접속 → 큐잉 → 재생 보장
-			const player = await container.audioService.getOrCreatePlayer(guildId, verified.voiceChannelId, verified.textChannelId);
-			if (verified.textChannelId) player.textChannelId = verified.textChannelId;
-
-			const searchRes = await container.audioService.search(player, request.uri, 'ytsearch', verified.requester, context);
-			await container.audioService.connectPlayer(player, context);
-
-			if (searchRes.playlist) {
-				// 플레이리스트 URL — 선택 UI가 없어 전체를 한 번에 큐에 넣어요 (웹 MVP 범위)
-				const tracks = searchRes.tracks as Track[];
-				const { wasIdle } = await container.audioService.enqueueTrack(player, tracks);
-				const track = searchRes.playlist.selectedTrack ?? tracks[0];
-				if (track) {
-					await sendFeedbackMessage(logger, guildId, player.textChannelId, await buildFeedback(player, track, request.userId, wasIdle));
-				}
-			} else {
-				const track = searchRes.tracks[0] as Track | UnresolvedTrack | undefined;
-				if (!track) throw new Error(`web play: 검색 결과 트랙이 없어요 (guild ${guildId}, uri ${request.uri})`);
-				const { wasIdle } = await container.audioService.enqueueTrack(player, track);
-				await sendFeedbackMessage(logger, guildId, player.textChannelId, await buildFeedback(player, track, request.userId, wasIdle));
-			}
-
-			await container.audioService.ensurePlayback(player);
+				result.player.textChannelId,
+				await trackPlayFeedback(result.player, track, request.userId, result.wasIdle)
+			);
 			return {};
-		} catch (error) {
-			// audioService가 던지는 UserError(검색 결과 없음·음성 접속 불가 등)는 검증 실패예요 — 안내 문구를 그대로 전달해요.
-			if (error instanceof UserError) return { error: error.message };
-			throw error;
 		} finally {
 			inFlight.delete(guildId);
 		}
@@ -255,39 +225,20 @@ async function applyMusicControl(request: PlayerWebControlRequest, member: Guild
 }
 
 /**
- * 재생 계열(search/play) 공통 검증 — 멤버·곡 추가 정책(음성 접속·채널 충돌).
- * 성공 시 재생에 필요한 식별자와 요청자 표시를 돌려줘요.
+ * 재생 계열(search/play) 요청자 해석 — 서버 멤버, 행위자 정보, 피드백을 보낼 텍스트 채널(고정 채널 우선, 없으면 시스템 채널)을 만들어요.
+ * 음성 채널 정책(누가 어디에 넣을 수 있는지)은 유스케이스가 판정하므로 여기서는 하지 않아요.
  */
-async function verifyPlaybackRequest(
+async function resolvePlaybackMember(
 	guild: Guild,
 	userId: string
-): Promise<{ error: string } | { voiceChannelId: string; textChannelId: string | null; requester: { id: string; username: string } }> {
+): Promise<{ error: string } | { actor: Actor; requester: MusicRequester; textChannelId: string | null }> {
 	const member = await fetchMember(guild, userId);
 	if (!member) return { error: MEMBER_NOT_FOUND_MESSAGE };
-
-	// 곡 추가 정책(슬래시 /재생과 동일): 봇과 같은 음성 채널이면 누구나, 원격 권한자는 봇이 채널에 있으면 밖에서도 추가할 수 있어요.
-	const actor = actorFromMember(member);
-	const botChannelId = botVoiceChannelId(guild);
-	const djRoleId = await guildPlayback.getDJRole(container.guildService, guild.id);
-	if (!canAddTracks(actor, botChannelId, djRoleId)) {
-		if (!actor.voiceChannelId) return { error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
-		// 웹에서는 <#id> 멘션이 렌더되지 않으므로 채널 이름으로 풀어서 보내요.
-		const playingChannelName = botChannelId ? guild.channels.cache.get(botChannelId)?.name : undefined;
-		const where = playingChannelName ? `다른 음성 채널(${playingChannelName})` : '다른 음성 채널';
-		return {
-			error: `${where}에서 재생 중이에요. 같은 채널에 접속하거나 정지한 뒤 시도해 주세요.`
-		};
-	}
-	// 봇이 이미 채널에 있으면 그 채널에 추가하고(원격 권한자 포함), 없으면 요청자의 채널로 들어가요.
-	const voiceChannelId = botChannelId ?? actor.voiceChannelId;
-	if (!voiceChannelId) return { error: `${VOICE_CHANNEL_REQUIRED_MESSAGE}` };
-
-	// 텍스트 채널 정책: 고정 채널 우선, 없으면 시스템 채널 (컨트롤러/피드백 메시지 대상)
 	const pinned = await guildChannels.getPinnedChannel(container.guildService, guild.id);
 	return {
-		voiceChannelId,
-		textChannelId: pinned ?? guild.systemChannelId ?? null,
-		requester: { id: userId, username: member.displayName }
+		actor: actorFromMember(member),
+		requester: { id: userId, username: member.displayName },
+		textChannelId: pinned ?? guild.systemChannelId ?? null
 	};
 }
 
@@ -312,14 +263,6 @@ async function musicCapabilities(guild: Guild, member: GuildMember): Promise<{ c
 		canPlay: canAddTracks(actor, botChannelId, djRoleId),
 		canControl: canControlMusic(actor, botChannelId, djRoleId)
 	};
-}
-
-/** 재생 피드백 컨테이너 — commandChannel buildFeedback과 동일한 분기(시작/추가)예요 */
-async function buildFeedback(player: Player, track: Track | UnresolvedTrack, userId: string, wasIdle: boolean) {
-	if (wasIdle && (await container.audioService.isControllerEnabled(player.guildId))) {
-		return [playView.playStarted({ track: track as Track, userId })];
-	}
-	return [playView.trackAdded(playView.trackAddedProps(player, track as Track))];
 }
 
 /** 고정 채널(또는 시스템 채널)에 재생 피드백을 보내요 — Discord 참여자가 웹에서의 재생을 볼 수 있게 해요 */

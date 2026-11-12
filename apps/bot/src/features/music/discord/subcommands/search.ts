@@ -1,5 +1,5 @@
-import { container, UserError } from '@sapphire/framework';
-import { emoji, VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
+import { container } from '@sapphire/framework';
+import { emoji } from '@sirubot/utils';
 import { getSimpleYouTubeSuggestions } from '../../../../services/dataApiClient.ts';
 import {
 	AutocompleteInteraction,
@@ -10,25 +10,20 @@ import {
 	SlashCommandSubcommandBuilder,
 	StringSelectMenuInteraction
 } from 'discord.js';
-import { Player, SearchPlatform, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
+import { Player, SearchPlatform, Track, UnresolvedTrack } from 'lavalink-client';
 import * as view from '../views/search.ts';
 import { createComponentSession, type ComponentSession } from '../../../../lib/componentSession.ts';
 import { errorView } from '../../../../lib/errorView.ts';
+import { actorFromMember } from '../../application/actor.ts';
+import { editTrackPlayReply } from '../utils/playFeedback.ts';
 
 export const name = 'search';
 export const ko = '검색';
 export const description = '곡을 검색해서 5개 결과 중 골라 재생해요.';
 /** en-US 기본 설명 (기본 로케일이 영어예요) */
 export const descriptionEn = 'Search tracks and pick one of five results to play.';
-export const preconditions = [
-	'TextChannelAllowed',
-	'NodeAvailable',
-	'VoiceConnected',
-	'SameVoiceChannel',
-	'MemberListenable',
-	'ClientVoiceConnectable',
-	'ClientVoiceSpeakable'
-];
+/** 음성 채널 조건(봇과 같은 채널, 원격 권한자 예외)은 음악 유스케이스가 판정해요. */
+export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'MemberListenable'];
 
 const RESULT_LIMIT = 5;
 const SELECT_TIMEOUT_MS = 30_000;
@@ -90,11 +85,11 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 	}
 }
 
-/** 셀렉트 메뉴 30초 수집 — 선택 시 첫 재생 흐름(handleTrackPlay)을 그대로 태운다. */
+/** 셀렉트 메뉴 30초 수집 — 선택한 곡은 유스케이스의 대기열 추가와 재생 보장을 그대로 태운다. */
 async function runSelection(
 	interaction: ChatInputCommandInteraction<'cached'>,
 	player: Player,
-	tracks: (SearchResult | UnresolvedSearchResult)['tracks'],
+	tracks: (Track | UnresolvedTrack)[],
 	selectMessage: Message
 ): Promise<void> {
 	const handleTimeout = async () => {
@@ -130,10 +125,10 @@ async function runSelection(
 		}
 
 		try {
-			// 선택한 1곡을 재생 흐름에 그대로 넣는다 (추가·예열·컨트롤러·피드백 일괄 처리).
-			const singleRes = { loadType: 'track', playlist: null, tracks: [selected] } as unknown as SearchResult;
-			await container.audioService.handleTrackPlay(interaction, player, singleRes);
-			await container.audioService.ensurePlayback(player);
+			// 선택한 1곡을 대기열에 넣고 재생을 보장한 뒤 같은 피드백을 보낸다.
+			const { wasIdle } = await container.musicPlay.enqueue(player, selected);
+			await editTrackPlayReply(interaction, player, selected, wasIdle);
+			await container.musicPlay.startPlayback(player);
 		} catch (error) {
 			container.logger.error(`[search] failed to play selected track (guild ${interaction.guildId}): ${error}`);
 			await interaction
@@ -164,55 +159,27 @@ async function runSelection(
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	const voiceChannel = interaction.member.voice.channelId;
-	if (!voiceChannel) {
-		throw new UserError({
-			identifier: 'search_not_in_voice',
-			message: `${emoji('error')} ${VOICE_CHANNEL_REQUIRED_MESSAGE}`,
-			context: { ephemeral: true }
-		});
-	}
-
 	// 검색(Lavalink REST)은 네트워크 왕복이므로 3초 응답 제한 전에 defer한다.
 	await interaction.deferReply();
 
 	const query = interaction.options.getString('query', true);
 	const platformInput = interaction.options.getString('platform') || 'ytsearch';
 	const platform: SearchPlatform = (VALID_PLATFORMS as readonly string[]).includes(platformInput) ? (platformInput as SearchPlatform) : 'ytsearch';
-	const context = {
-		command: name,
+
+	// 유스케이스가 음성 채널 정책·검색 결과 없음 안내를 맡고, 결과가 있으면 접속까지 끝낸 뒤 돌려줘요.
+	const found = await container.musicPlay.search(actorFromMember(interaction.member), {
 		query,
 		platform,
-		voiceChannelId: voiceChannel,
-		textChannelId: interaction.channelId,
-		guildId: interaction.guildId
-	};
+		requester: { id: interaction.user.id, username: interaction.user.username },
+		textChannelId: interaction.channelId
+	});
 
-	const player = await container.audioService.getOrCreatePlayer(interaction.guildId, voiceChannel, interaction.channelId);
-	const searchRes = await container.audioService.search(
-		player,
-		query,
-		platform,
-		{ id: interaction.user.id, username: interaction.user.username },
-		context
-	);
-
-	const tracks = searchRes.tracks.slice(0, RESULT_LIMIT);
-	if (tracks.length === 0) {
-		await interaction.editReply({
-			components: [errorView(`${emoji('mag')} 검색 결과가 없어요. 다른 검색어로 다시 시도해 주세요.`)],
-			flags: [MessageFlags.IsComponentsV2]
-		});
-		return;
-	}
-
-	await container.audioService.connectPlayer(player, context);
-
+	const tracks = found.tracks.slice(0, RESULT_LIMIT);
 	const selectMessage = await interaction.editReply({
 		components: [view.searchResults(query, tracks)],
 		flags: [MessageFlags.IsComponentsV2],
 		allowedMentions: { users: [], roles: [] }
 	});
 
-	await runSelection(interaction, player, tracks, selectMessage);
+	await runSelection(interaction, found.player, tracks, selectMessage);
 }

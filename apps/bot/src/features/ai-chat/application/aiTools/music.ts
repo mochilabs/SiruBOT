@@ -1,4 +1,4 @@
-import type { SearchPlatform, Track, UnresolvedTrack } from 'lavalink-client';
+import type { SearchPlatform } from 'lavalink-client';
 import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
 import {
 	applyFilterPreset,
@@ -26,8 +26,6 @@ const PLATFORM_MAP: Record<string, SearchPlatform> = {
 	soundcloud: 'scsearch'
 };
 
-type EnqueueableTrack = Track | UnresolvedTrack;
-
 function requireGuild(ctx: AiToolContext): string {
 	if (!ctx.guildId) throw new Error('서버 채널에서만 음악을 사용할 수 있어요.');
 	return ctx.guildId;
@@ -49,7 +47,7 @@ async function requireDjOrAlone(ctx: AiToolContext): Promise<void> {
 
 /** 음악 제어 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMusicTools(
-	deps: Pick<AiToolDeps, 'db' | 'guildService' | 'audioService' | 'mixerService' | 'playlistService' | 'getMusic' | 'getAudio'>
+	deps: Pick<AiToolDeps, 'db' | 'guildService' | 'audioService' | 'mixerService' | 'playlistService' | 'getMusic' | 'getMusicPlay' | 'getAudio'>
 ): AiTool[] {
 	function requirePlayer(guildId: string) {
 		const player = deps.getAudio()!.getPlayer(guildId);
@@ -70,7 +68,7 @@ export function createMusicTools(
 	const musicPlayTool: AiTool = {
 		name: 'music_play',
 		description:
-			'음성 채널에서 음악을 재생해요. 사용자가 음성 채널에 접속해 있어야 해요. 제목·아티스트·URL을 검색어로 넘기세요. 플레이리스트 결과는 앞 100곡까지 대기열에 넣어요. source: youtube(기본)|spotify|soundcloud.',
+			'음성 채널에서 음악을 재생해요. 봇이 있는 음성 채널에 곡을 넣고, 사용자는 그 채널에 있어야 해요 (관리자·서버 관리·DJ 역할은 밖에서도 가능). 제목·아티스트·URL을 검색어로 넘기세요. 플레이리스트 결과는 앞 100곡까지 대기열에 넣어요. source: youtube(기본)|spotify|soundcloud.',
 		properties: {
 			query: {
 				type: 'string',
@@ -85,42 +83,36 @@ export function createMusicTools(
 		required: ['query'],
 		status: '시루가 음악을 찾는 중..',
 		execute: async (args, ctx) => {
-			const { guildId, voiceChannelId } = requireVoice(ctx);
+			// 음성 채널 정책(어느 채널에 넣을지, 누가 넣을 수 있는지)은 공용 유스케이스가 맡아요.
+			const actor = musicActor(ctx);
 			const query = String(args.query ?? '').trim();
 			if (!query) throw new Error('검색어가 필요해요.');
 			const sourceKey = String(args.source ?? 'youtube');
 			const platform = PLATFORM_MAP[sourceKey] ?? 'ytsearch';
 
-			const player = await deps.audioService.getOrCreatePlayer(guildId, voiceChannelId, ctx.channelId);
-			const errorContext = { command: 'music_play', query, platform, voiceChannelId, textChannelId: ctx.channelId, guildId };
-			const searchRes = await deps.audioService.search(player, query, platform, { id: ctx.userId, username: ctx.username }, errorContext);
-			await deps.audioService.connectPlayer(player, errorContext);
-
-			let tracks: EnqueueableTrack[];
-			if (searchRes.loadType === 'track' || searchRes.loadType === 'search' || searchRes.loadType === 'playlist') tracks = searchRes.tracks;
-			else tracks = [];
-
-			if (tracks.length === 0) throw new Error('검색 결과가 없어요. 다른 검색어로 시도해 주세요.');
-
-			const limit = searchRes.loadType === 'playlist' ? 100 : 1;
-			for (const track of tracks.slice(0, limit)) {
-				await deps.audioService.enqueueTrack(player, track);
-			}
-			await deps.audioService.ensurePlayback(player);
+			const result = await withAppError(() =>
+				deps
+					.getMusicPlay()
+					.play(
+						actor,
+						{ query, platform, requester: { id: ctx.userId, username: ctx.username }, textChannelId: ctx.channelId },
+						{ kind: 'all', limit: 100 }
+					)
+			);
 
 			// wasIdle만으로는 판별할 수 없다 — 추천곡 크로스페이드 중 유저 요청이면 enqueueTrack이
 			// wasIdle:false를 돌려주면서도 곡을 맨 앞으로 잘라 즉시 재생(PLAY_NOW)하므로, 확정된
 			// nowPlaying과 신청 곡을 직접 비교해 "지금 재생"인지 판별한다.
-			const played = tracks[0]!;
-			const nowPlaying = nowPlayingTrack(player as CustomPlayer);
+			const played = result.queued[0]!;
+			const nowPlaying = nowPlayingTrack(result.player as CustomPlayer);
 			const isPlayingNow = nowPlaying !== null && isSameTrack(nowPlaying, played);
-			const queueSize = player.queue.tracks.length;
+			const queueSize = result.player.queue.tracks.length;
 			return JSON.stringify({
 				status: 'ok',
 				action: isPlayingNow ? 'playing' : 'queued',
 				track: trackInfo(played),
 				queue_size: queueSize,
-				queue_position: isPlayingNow ? null : Math.max(1, queueSize - limit + 1)
+				queue_position: isPlayingNow ? null : Math.max(1, queueSize - result.queued.length + 1)
 			});
 		}
 	};
@@ -456,15 +448,7 @@ export function createMusicTools(
 			if (tracks.length === 0) throw new Error(`**${playlist.name}** 플레이리스트가 비어있어요.`);
 
 			const player = await deps.audioService.getOrCreatePlayer(guildId, voiceChannelId, ctx.channelId);
-			const errorContext = {
-				command: 'music_playlist',
-				query: name,
-				platform: 'ytsearch',
-				voiceChannelId,
-				textChannelId: ctx.channelId,
-				guildId
-			};
-			await deps.audioService.connectPlayer(player, errorContext);
+			await deps.audioService.connectPlayer(player);
 
 			let added = 0;
 			const batchTracks = tracks.slice(0, 100);
@@ -473,13 +457,10 @@ export function createMusicTools(
 				const batch = batchTracks.slice(i, i + CONCURRENCY);
 				const results = await Promise.allSettled(
 					batch.map((t) =>
-						deps.audioService.search(
-							player,
-							t.track.url,
-							PLATFORM_MAP[String(t.track.source)] ?? 'ytsearch',
-							{ id: ctx.userId, username: ctx.username },
-							errorContext
-						)
+						deps.audioService.search(player, t.track.url, PLATFORM_MAP[String(t.track.source)] ?? 'ytsearch', {
+							id: ctx.userId,
+							username: ctx.username
+						})
 					)
 				);
 				for (const result of results) {

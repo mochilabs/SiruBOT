@@ -59,7 +59,7 @@ async function playSavedTracks(deps: PlaylistPlaybackDeps, context: PlaylistPlay
 		return deny(`${tracks.length}곡을 모두 불러오지 못했어요. 대기열에는 아무 곡도 추가하지 않았어요. 잠시 후 다시 시도해 주세요.`);
 	if (checkVoice() !== voiceChannelId) return deny('음성 채널이 바뀌었어요. 현재 채널에서 다시 실행해 주세요.');
 	const player = await deps.audioService.getOrCreatePlayer(context.guildId, voiceChannelId, context.channelId);
-	await deps.audioService.connectPlayer(player, { guildId: context.guildId, voiceChannelId, textChannelId: context.channelId });
+	await deps.audioService.connectPlayer(player);
 	if (checkVoice() !== voiceChannelId) return deny('음성 채널이 바뀌었어요. 현재 채널에서 다시 실행해 주세요.');
 	await deps.audioService.enqueueTrack(player, resolved);
 	const summary = `**${tracks.length}곡 중 ${resolved.length}곡**을 대기열에 추가했어요.${
