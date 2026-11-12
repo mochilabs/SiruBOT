@@ -20,8 +20,8 @@ import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.
 
 /**
  * /tts 설정 패널(Components V2) 뷰.
- * customId는 `modules/general/customIds.ts`의 `ttsId`로 만들어요.
- * 상호작용은 `modules/general/interaction-handlers/ttsPanelButton.ts`(버튼),
+ * customId는 `features/tts/discord/customIds.ts`의 `ttsId`로 만들어요.
+ * 상호작용은 `features/tts/discord/interaction-handlers/ttsPanelButton.ts`(버튼),
  * `ttsPanelSelect.ts`(음성·위치 셀렉트)가 파싱한다.
  * 패널 응답은 전부 ephemeral이라 상호작용은 작성자만 가능하다.
  */

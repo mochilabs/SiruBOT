@@ -65,7 +65,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 | `POST /mixer/announce` | TTS overlay and music ducking — **queued**, replies `202 {id, position, queueLength}` | `mixerService.ts:334` |
 | `POST /mixer/announce/cancel`, `DELETE /mixer/announce/queue`, `POST /mixer/silence`, `POST /mixer/fade-in` | Stop the active overlay, drop queued announcements, tune silence, fade in | Not called by the bot; intended for agents/manual use. See the plugin's `api/openapi.yaml`. |
 
-**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts:111`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts:298`) must run before `player.play()`. Current call sites include `apps/bot/src/services/audioService.ts:321` and `apps/bot/src/services/aiTools/music.ts:326`.
+**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts:111`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts:298`) must run before `player.play()`. Current call sites include `apps/bot/src/services/audioService.ts:321` and `apps/bot/src/features/ai-chat/application/aiTools/music.ts`.
 
 **Announce contract:** Announcements are **queued** — the old HTTP 409 "slot busy" response is gone, every request enqueues and the queue plays back to back in enqueue order through the hidden secondary player.
 

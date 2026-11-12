@@ -74,7 +74,7 @@ Challenge each finding: "strongest reason this is NOT exploitable?" Resolve or d
 - **Cross-service Redis** (`packages/utils/src/redisChannels.ts`): pub/sub + request/reply payloads attacker-controlled if any writer is compromised - check consumer-side validation, channel isolation.
 - **Guild isolation:** cache keys, player/queue state, DB queries per-guild; shared key or missing `guildId` filter = cross-tenant (Critical).
 - **Custom commands:** specs zod-revalidated at execution time (not just save); dynamic content must not reach raw SQL, shell, unrestricted fetches.
-- **LLM tools** (`services/aiTools/`): LLM output drives tool calls - untrusted; prompt injection must not reach privileged tools, cross-user memory, or unrestricted `web_fetch` (SSRF); user URLs need scheme/host allowlists, no internal endpoints.
+- **LLM tools** (`features/ai-chat/application/aiTools/`): LLM output drives tool calls - untrusted; prompt injection must not reach privileged tools, cross-user memory, or unrestricted `web_fetch` (SSRF); user URLs need scheme/host allowlists, no internal endpoints.
 - **Rendering/assets:** canvas/asset serving — path traversal in user filenames/keys, template injection, SSRF on remote image fetch.
 - **Prisma:** `$queryRaw`/`$executeRaw` interpolation; unchecked `where` from user input (IDOR).
 - **Secrets/telemetry:** `core/environment.ts`, `packages/utils/src/sentry.ts` - secrets in logs/Sentry breadcrumbs; CI: plaintext secrets, `pull_request_target`, PR title/branch script injection.

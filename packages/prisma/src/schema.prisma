@@ -47,7 +47,7 @@ model Guild {
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
-  // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요. 오케스트레이션은 apps/bot/src/services/chatTts.ts.
+  // 채팅 TTS: off(기본) | channels(특정 채널만) | all. 채팅 메시지를 음성으로 읽어요. 오케스트레이션은 apps/bot/src/features/tts/application/chatTts.ts.
   ttsMode              String   @default("off")
   ttsChannelIds        String[] @default([])
   // 음성 채널 입장 알림: 봇이 있는 음성 채널에 사용자가 들어오면 "OO님이 입장했어요"를 읽어요.
