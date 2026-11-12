@@ -35,7 +35,8 @@
 
 - 권한 (`apps/dashboard/src/lib/api-guards.ts`): `authorizeGuildManage` (관리 권한, 실패 401/403/502) · `authorizeGuildMember` (멤버) · `authorizeDashboardAdmin` (shards 전용). Discord 장애(429/5xx)는 `unavailable`→502로 분류해 404 오판 방지.
 - rate-limit (`apps/dashboard/src/lib/rate-limit.ts`): 쓰기 12/분·읽기 30/분·무거운 쓰기(채널 생성) 5/분·이미지 렌더 60/분. Redis 슬라이딩 윈도우, 서버 시각은 Lua `TIME`.
-- zod (`apps/dashboard/src/lib/schemas.ts`): snowflake 정규식 `^\d{17,20}$`, AI 모드·반복 모드 enum, 볼륨 상한 `PLAYER_VOLUME_MAX`. 대표 예시 `settings/route.ts` (`ALLOWED_KEYS` 화이트리스트).
+- zod (`apps/dashboard/src/lib/schemas.ts`): snowflake 정규식 `^\d{17,20}$`, 설정 enum·수치 범위·기본값은 봇과 함께 쓰는 `packages/utils/src/guildSettingsContract.ts`(서브패스 `@sirubot/utils/guildSettingsContract`)에서 가져와요. 볼륨 상한은 `@sirubot/utils/playerLimits`를 따라요. 대표 예시 `settings/route.ts` (`ALLOWED_KEYS` 화이트리스트).
+- `player/voice-context` 응답의 `canPlay`는 필수예요. 봇이 항상 보내며, `canPlay`가 빠진 이전 버전 봇 응답은 data-api 스키마 검증에서 거절돼요(롤링 배포 중 감수).
 
 ## SSE 프록시 특성
 

@@ -3,18 +3,13 @@ import type { ChatToolMode, EmbedFixSite, EmbedFixTranslateLang } from '@sirubot
 /** 채팅 유틸 모드 계약 — @sirubot/utils의 chatToolMode 단일 소스를 재수출해요 */
 export { normalizeChatToolMode, type ChatToolMode } from '@sirubot/utils';
 
-/** 고정 채널 입력 동작 — play: 첫 결과 즉시 재생 / select: 결과 5개 중 선택 */
-export type PinnedChannelMode = 'play' | 'select';
-
-/** AI 채팅 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기 */
-export type AiMode = 'all' | 'channels' | 'off';
-
-const AI_MODES: readonly string[] = ['all', 'channels', 'off'];
-
-/** DB에 잘못된 값이 들어와도 안전하게 기본값으로 되돌려요 */
-export function normalizeAiMode(value: string): AiMode {
-	return AI_MODES.includes(value) ? (value as AiMode) : 'all';
-}
+/** AI 채팅 모드·고정 채널 입력 동작 — 대시보드와 같은 길드 설정 계약(@sirubot/utils/guildSettingsContract)을 재수출해요 */
+export {
+	normalizeAiMode,
+	normalizePinnedChannelMode,
+	type AiMode,
+	type PinnedChannelModeSetting as PinnedChannelMode
+} from '@sirubot/utils/guildSettingsContract';
 
 /** 채팅 TTS 모드 — all: 모든 채널 / channels: 특정 채널만 / off: 끄기(기본). TTS는 명시적으로 켜야 해요 */
 export type TtsMode = 'all' | 'channels' | 'off';

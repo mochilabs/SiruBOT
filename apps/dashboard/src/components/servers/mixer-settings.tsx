@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  AUTOMIX_MAX_TEMPO_CHANGE_RANGE,
+  AUTOMIX_MIN_CONFIDENCE_RANGE,
+  CROSSFADE_MS_RANGE,
+  MUSIC_VOLUME_RANGE,
+  TTS_DUCK_LEVEL_RANGE,
+  TTS_VOLUME_RANGE,
+} from "@sirubot/utils/guildSettingsContract";
 import { isTransitionMode, TRANSITION_LABELS, TRANSITION_MODES, transitionFlags, transitionMode } from "@sirubot/utils/mixerTransition";
 import { SlidersHorizontal } from "lucide-react";
 
@@ -82,8 +90,8 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
               <Slider hideLabel
                 value={form.crossfadeMs}
                 onChange={(value) => patch({ crossfadeMs: value })}
-                min={500}
-                max={15000}
+                min={CROSSFADE_MS_RANGE.min}
+                max={CROSSFADE_MS_RANGE.max}
                 step={100}
                 label="겹치기 길이"
                 showValue
@@ -100,13 +108,13 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
               <Field label="최대 템포 변경" description="0% ~ 12%. 다음 곡의 템포를 조절할 수 있는 범위예요.">
                 <Slider hideLabel value={form.automixMaxTempoChange * 100}
                   onChange={(value) => patch({ automixMaxTempoChange: value / 100 })}
-                  min={0} max={12} step={1} label="최대 템포 변경" showValue
+                  min={0} max={Math.round(AUTOMIX_MAX_TEMPO_CHANGE_RANGE.max * 100)} step={1} label="최대 템포 변경" showValue
                   formatValue={(value) => `${value.toFixed(0)}%`} disabled={saving} />
               </Field>
               <Field label="최소 분석 신뢰도" description="높일수록 박자가 확실한 곡에만 비트 맞춤을 적용해요.">
                 <Slider hideLabel value={form.automixMinConfidence}
                   onChange={(value) => patch({ automixMinConfidence: value })}
-                  min={0} max={1} step={0.05} label="최소 분석 신뢰도" showValue
+                  min={AUTOMIX_MIN_CONFIDENCE_RANGE.min} max={AUTOMIX_MIN_CONFIDENCE_RANGE.max} step={0.05} label="최소 분석 신뢰도" showValue
                   formatValue={(value) => value.toFixed(2)} disabled={saving} />
               </Field>
             </>
@@ -119,15 +127,15 @@ function MixerSettingsPanel({ guildId }: { guildId: string }) {
         >
           <Field label="음악 볼륨" description="서버 기본 음악 볼륨이에요. 다음 곡부터 적용돼요.">
             <Slider hideLabel value={form.volume} onChange={(value) => patch({ volume: value })}
-              min={0} max={150} label="음악 볼륨" showValue formatValue={(v) => `${v}%`} disabled={saving} />
+              min={0} max={MUSIC_VOLUME_RANGE.max} label="음악 볼륨" showValue formatValue={(v) => `${v}%`} disabled={saving} />
           </Field>
           <Field label="TTS 볼륨" description="채팅 낭독과 안내 음성의 볼륨이에요.">
             <Slider hideLabel value={form.ttsVolume} onChange={(value) => patch({ ttsVolume: value })}
-              min={0} max={150} label="TTS 볼륨" showValue formatValue={(v) => `${v}%`} disabled={saving} />
+              min={0} max={TTS_VOLUME_RANGE.max} label="TTS 볼륨" showValue formatValue={(v) => `${v}%`} disabled={saving} />
           </Field>
           <Field label="덕킹 볼륨" description="TTS가 나오는 동안 음악을 이 비율로 낮춰요. 100%면 낮추지 않아요.">
             <Slider hideLabel value={Math.round(form.ttsDuckLevel * 100)} onChange={(value) => patch({ ttsDuckLevel: value / 100 })}
-              min={0} max={100} step={5} label="덕킹 볼륨" showValue formatValue={(v) => `${v}%`} disabled={saving} />
+              min={0} max={Math.round(TTS_DUCK_LEVEL_RANGE.max * 100)} step={5} label="덕킹 볼륨" showValue formatValue={(v) => `${v}%`} disabled={saving} />
           </Field>
         </SettingsSection>
 

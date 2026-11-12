@@ -1,3 +1,4 @@
+import { normalizePinnedChannelMode } from '@sirubot/utils/guildSettingsContract';
 import type { GuildSettingsStore } from './store.ts';
 import type { PinnedChannelMode } from './types.ts';
 
@@ -33,7 +34,7 @@ export async function setPinnedChannel(store: GuildSettingsStore, guildId: strin
 
 export async function getPinnedChannelMode(store: GuildSettingsStore, guildId: string): Promise<PinnedChannelMode> {
 	const guild = await store.getGuild(guildId);
-	return guild.pinnedChannelMode === 'select' ? 'select' : 'play';
+	return normalizePinnedChannelMode(guild.pinnedChannelMode);
 }
 
 export async function setPinnedChannelMode(store: GuildSettingsStore, guildId: string, mode: PinnedChannelMode) {

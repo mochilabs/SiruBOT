@@ -1,4 +1,5 @@
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
+import { isRepeatMode, REPEAT_MODES } from '@sirubot/utils/guildSettingsContract';
 import type { MusicToolPort } from '../../../music/index.ts';
 import type { TtsAnnounceMode } from '../../../../services/guildSettings/playback.ts';
 import { memberPermissionPort } from '../../../../lib/discordPorts.ts';
@@ -102,7 +103,7 @@ export function createMusicSettingsTools(
 			},
 			repeat: {
 				type: 'string',
-				enum: ['off', 'track', 'queue'],
+				enum: [...REPEAT_MODES],
 				description: '반복 재생 모드 (off: 끄기, track: 한 곡 반복, queue: 전체 반복)'
 			},
 			autoplay: {
@@ -168,7 +169,7 @@ export function createMusicSettingsTools(
 				if (hasPlayer) {
 					updated.repeat = (await withAppError(() => deps.getMusic().setRepeat(musicActor(ctx, deps.musicPort), repeat))).mode;
 				} else {
-					if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('잘못된 반복 모드 값이에요.');
+					if (!isRepeatMode(repeat)) throw new Error('잘못된 반복 모드 값이에요.');
 					updated.repeat = await guildPlayback.setRepeat(deps.guildService, guildId, repeat);
 				}
 			}

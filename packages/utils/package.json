@@ -127,6 +127,11 @@
             "import": "./dist/playerLimits.js",
             "require": "./dist/playerLimits.cjs"
         },
+        "./guildSettingsContract": {
+            "types": "./dist/guildSettingsContract.d.ts",
+            "import": "./dist/guildSettingsContract.js",
+            "require": "./dist/guildSettingsContract.cjs"
+        },
         "./redisContract": {
             "types": "./dist/redisContract.d.ts",
             "import": "./dist/redisContract.js",

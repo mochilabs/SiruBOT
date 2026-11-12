@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
 import { CHAT_TOOL_MODES, EMBED_FIX_SITES, EMBED_FIX_TRANSLATE_LANGS } from "@sirubot/utils/chatTools";
-import { MUSIC_VOLUME_MAX } from "@sirubot/utils/playerLimits";
+import {
+	AI_MODES,
+	AUTOMIX_MAX_TEMPO_CHANGE_RANGE,
+	AUTOMIX_MIN_CONFIDENCE_RANGE,
+	CROSSFADE_MS_RANGE,
+	JTC_TEMPLATE_MAX_LENGTH,
+	JTC_USER_LIMIT_RANGE,
+	MUSIC_VOLUME_RANGE,
+	PINNED_CHANNEL_MODE_DEFAULT,
+	PINNED_CHANNEL_MODES,
+	REPEAT_MODE_DEFAULT,
+	REPEAT_MODES,
+	SPONSORBLOCK_SEGMENTS,
+	TTS_ANNOUNCE_MODE_DEFAULT,
+	TTS_ANNOUNCE_MODES,
+	TTS_DUCK_LEVEL_RANGE,
+	TTS_VOLUME_RANGE,
+} from "@sirubot/utils/guildSettingsContract";
 import { z } from "zod";
-
-const AI_MODES = ["all", "channels", "off"] as const;
-const REPEAT_MODES = ["off", "track", "queue"] as const;
-const PINNED_MODES = ["play", "select"] as const;
-export const SPONSORBLOCK_SEGMENTS = [
-	"sponsor",
-	"selfpromo",
-	"interaction",
-	"intro",
-	"outro",
-	"preview",
-	"music_offtopic",
-	"filler",
-] as const;
-export type SponsorBlockSegment = (typeof SPONSORBLOCK_SEGMENTS)[number];
 
 const snowflake = z.string().regex(/^\d{17,20}$/, "올바른 ID 형식이 아니에요.");
 const nullableSnowflake = snowflake.nullable();
@@ -29,39 +31,70 @@ export const aiSettingsSchema = z.object({
 
 /** PUT /api/servers/[id]/settings */
 export const guildSettingsSchema = z.object({
-	volume: z.number().int("볼륨은 정수여야 해요.").min(0, "볼륨은 0 이상이에요.").max(MUSIC_VOLUME_MAX, `볼륨은 ${MUSIC_VOLUME_MAX} 이하여야 해요.`).optional(),
-	ttsVolume: z.number().int("볼륨은 정수여야 해요.").min(0, "볼륨은 0 이상이에요.").max(MUSIC_VOLUME_MAX, `볼륨은 ${MUSIC_VOLUME_MAX} 이하여야 해요.`).optional(),
+	volume: z
+		.number()
+		.int("볼륨은 정수여야 해요.")
+		.min(MUSIC_VOLUME_RANGE.min, `볼륨은 ${MUSIC_VOLUME_RANGE.min} 이상이에요.`)
+		.max(MUSIC_VOLUME_RANGE.max, `볼륨은 ${MUSIC_VOLUME_RANGE.max} 이하여야 해요.`)
+		.optional(),
+	ttsVolume: z
+		.number()
+		.int("볼륨은 정수여야 해요.")
+		.min(TTS_VOLUME_RANGE.min, `볼륨은 ${TTS_VOLUME_RANGE.min} 이상이에요.`)
+		.max(TTS_VOLUME_RANGE.max, `볼륨은 ${TTS_VOLUME_RANGE.max} 이하여야 해요.`)
+		.optional(),
 	/** TTS 낭독 중 음악 볼륨 비율(0~1) — 1이면 낮추지 않아요 */
-	ttsDuckLevel: z.number().min(0, "덕킹 비율은 0 이상이에요.").max(1, "덕킹 비율은 1 이하여야 해요.").optional(),
+	ttsDuckLevel: z
+		.number()
+		.min(TTS_DUCK_LEVEL_RANGE.min, "덕킹 비율은 0 이상이에요.")
+		.max(TTS_DUCK_LEVEL_RANGE.max, "덕킹 비율은 1 이하여야 해요.")
+		.optional(),
 	repeat: z.enum(REPEAT_MODES, "반복 모드가 잘못됐어요.").optional(),
 	related: z.boolean().optional(),
 	enableController: z.boolean().optional(),
-	sponsorBlockSegments: z.array(z.enum(SPONSORBLOCK_SEGMENTS, "SponsorBlock 구간이 잘못됐어요.")).max(8).optional(),
+	sponsorBlockSegments: z.array(z.enum(SPONSORBLOCK_SEGMENTS, "SponsorBlock 구간이 잘못됐어요.")).max(SPONSORBLOCK_SEGMENTS.length).optional(),
 	djRoleId: nullableSnowflake.optional(),
 	textChannelId: nullableSnowflake.optional(),
 	voiceChannelId: nullableSnowflake.optional(),
 	pinnedChannelId: nullableSnowflake.optional(),
-	pinnedChannelMode: z.enum(PINNED_MODES, "고정 채널 동작이 잘못됐어요.").optional(),
+	pinnedChannelMode: z.enum(PINNED_CHANNEL_MODES, "고정 채널 동작이 잘못됐어요.").optional(),
 	pinnedChannelDeleteInput: z.boolean().optional(),
 	jtcEnabled: z.boolean().optional(),
 	jtcCategoryId: nullableSnowflake.optional(),
 	jtcMarkerChannelId: nullableSnowflake.optional(),
-	jtcTemplate: z.string().min(1, "방 이름 템플릿은 비울 수 없어요.").max(100, "템플릿은 100자 이하여야 해요.").optional(),
-	jtcUserLimit: z.number().int("인원 제한은 정수여야 해요.").min(0, "인원 제한은 0 이상이에요.").max(99, "인원 제한은 99 이하여야 해요.").optional(),
+	jtcTemplate: z
+		.string()
+		.min(1, "방 이름 템플릿은 비울 수 없어요.")
+		.max(JTC_TEMPLATE_MAX_LENGTH, `템플릿은 ${JTC_TEMPLATE_MAX_LENGTH}자 이하여야 해요.`)
+		.optional(),
+	jtcUserLimit: z
+		.number()
+		.int("인원 제한은 정수여야 해요.")
+		.min(JTC_USER_LIMIT_RANGE.min, "인원 제한은 0 이상이에요.")
+		.max(JTC_USER_LIMIT_RANGE.max, `인원 제한은 ${JTC_USER_LIMIT_RANGE.max} 이하여야 해요.`)
+		.optional(),
 	gaplessEnabled: z.boolean().optional(),
 	crossfadeEnabled: z.boolean().optional(),
 	automixEnabled: z.boolean().optional(),
-	automixMaxTempoChange: z.number().min(0, "템포 변경은 0% 이상이에요.").max(0.12, "템포 변경은 12% 이하여야 해요.").optional(),
-	automixMinConfidence: z.number().min(0, "분석 신뢰도는 0 이상이에요.").max(1, "분석 신뢰도는 1 이하여야 해요.").optional(),
+	automixMaxTempoChange: z
+		.number()
+		.min(AUTOMIX_MAX_TEMPO_CHANGE_RANGE.min, "템포 변경은 0% 이상이에요.")
+		.max(AUTOMIX_MAX_TEMPO_CHANGE_RANGE.max, "템포 변경은 12% 이하여야 해요.")
+		.optional(),
+	automixMinConfidence: z
+		.number()
+		.min(AUTOMIX_MIN_CONFIDENCE_RANGE.min, "분석 신뢰도는 0 이상이에요.")
+		.max(AUTOMIX_MIN_CONFIDENCE_RANGE.max, "분석 신뢰도는 1 이하여야 해요.")
+		.optional(),
 	crossfadeMs: z
 		.number()
 		.int("크로스페이드는 정수여야 해요.")
-		.min(500, "크로스페이드는 0.5초 이상이에요.")
-		.max(15000, "크로스페이드는 15초 이하여야 해요.")
+		.min(CROSSFADE_MS_RANGE.min, "크로스페이드는 0.5초 이상이에요.")
+		.max(CROSSFADE_MS_RANGE.max, "크로스페이드는 15초 이하여야 해요.")
 		.optional(),
 	normalizationEnabled: z.boolean().optional(),
 	// TTS 안내 방식 3택 — 봇의 /믹서 안내방식·/설정 audio와 같은 값이에요
-	ttsAnnounceMode: z.enum(["sequential", "parallel", "interrupt"]).optional().default("sequential"),
+	ttsAnnounceMode: z.enum(TTS_ANNOUNCE_MODES).optional().default(TTS_ANNOUNCE_MODE_DEFAULT),
 	ttsParallelEnabled: z.boolean().optional(),
 	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts, 채널 토글: 봇 guildService의 ChatToolSettings
 	emojiEnlargeMode: z.enum(CHAT_TOOL_MODES, "이모지 확대 모드가 잘못됐어요.").optional(),
@@ -98,7 +131,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	volume: 10,
 	ttsVolume: 100,
 	ttsDuckLevel: 0.2,
-	repeat: "off",
+	repeat: REPEAT_MODE_DEFAULT,
 	related: false,
 	enableController: true,
 	sponsorBlockSegments: [],
@@ -106,7 +139,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	textChannelId: null,
 	voiceChannelId: null,
 	pinnedChannelId: null,
-	pinnedChannelMode: "play",
+	pinnedChannelMode: PINNED_CHANNEL_MODE_DEFAULT,
 	pinnedChannelDeleteInput: false,
 	jtcEnabled: false,
 	jtcCategoryId: null,
@@ -120,7 +153,7 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	automixMinConfidence: 0.30,
 	crossfadeMs: 5000,
 	normalizationEnabled: false,
-	ttsAnnounceMode: "sequential",
+	ttsAnnounceMode: TTS_ANNOUNCE_MODE_DEFAULT,
 	ttsParallelEnabled: false,
 	emojiEnlargeMode: "off",
 	emojiEnlargeChannelIds: [],
@@ -134,12 +167,6 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	countingEnabled: false,
 	countingChannelId: null,
 } satisfies GuildSettings;
-
-/** SponsorBlock 구간 정규화 — DB에 잘못된 구간이 섞여 있어도 계약에 있는 값만 남겨요 */
-export function normalizeSponsorBlockSegments(values: readonly string[]): SponsorBlockSegment[] {
-	const allowed = new Set<string>(SPONSORBLOCK_SEGMENTS);
-	return values.filter((value): value is SponsorBlockSegment => allowed.has(value));
-}
 
 /** POST /api/servers/[id]/jtc/setup */
 export const jtcSetupSchema = z.object({
@@ -194,9 +221,4 @@ export async function parseSettingBody<S extends z.ZodTypeAny>(
 		return { ok: false, response: NextResponse.json({ error: invalidMessage ?? zodError(parsed.error) }, { status: 400 }) };
 	}
 	return { ok: true, data: parsed.data };
-}
-
-/** DB에 저장된 모드 값을 안전하게 정규화해요 */
-export function normalizeAiMode(value: string | null | undefined): "all" | "channels" | "off" {
-	return value && (AI_MODES as readonly string[]).includes(value) ? (value as "all" | "channels" | "off") : "all";
 }

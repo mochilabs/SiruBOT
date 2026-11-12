@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import type { Guild as PrismaGuild } from "@sirubot/prisma";
 import { normalizeChatToolMode, normalizeEmbedFixSites, normalizeEmbedFixTranslateLang } from "@sirubot/utils/chatTools";
+import {
+  normalizePinnedChannelMode,
+  normalizeRepeatMode,
+  normalizeSponsorBlockSegments,
+  normalizeTtsAnnounceMode,
+} from "@sirubot/utils/guildSettingsContract";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
@@ -11,7 +17,6 @@ import {
   GUILD_SETTING_KEYS,
   GUILD_SETTINGS_DEFAULTS,
   guildSettingsSchema,
-  normalizeSponsorBlockSegments,
   parseSettingBody,
 } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
@@ -25,9 +30,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     volume: guild.volume,
     ttsVolume: guild.ttsVolume,
     ttsDuckLevel: guild.ttsDuckLevel,
-    repeat: (["off", "track", "queue"].includes(guild.repeat)
-      ? guild.repeat
-      : "off") as GuildSettings["repeat"],
+    repeat: normalizeRepeatMode(guild.repeat),
     related: guild.related,
     enableController: guild.enableController,
     sponsorBlockSegments: normalizeSponsorBlockSegments(guild.sponsorBlockSegments),
@@ -35,9 +38,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     textChannelId: guild.textChannelId,
     voiceChannelId: guild.voiceChannelId,
     pinnedChannelId: guild.pinnedChannelId,
-    pinnedChannelMode: (["play", "select"].includes(guild.pinnedChannelMode)
-      ? guild.pinnedChannelMode
-      : "play") as GuildSettings["pinnedChannelMode"],
+    pinnedChannelMode: normalizePinnedChannelMode(guild.pinnedChannelMode),
     pinnedChannelDeleteInput: guild.pinnedChannelDeleteInput,
     jtcEnabled: guild.jtcEnabled,
     jtcCategoryId: guild.jtcCategoryId,
@@ -51,9 +52,7 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     automixMinConfidence: guild.automixMinConfidence,
     crossfadeMs: guild.crossfadeMs,
     normalizationEnabled: guild.normalizationEnabled,
-    ttsAnnounceMode: (["sequential", "parallel", "interrupt"].includes(guild.ttsAnnounceMode)
-      ? guild.ttsAnnounceMode
-      : "sequential") as GuildSettings["ttsAnnounceMode"],
+    ttsAnnounceMode: normalizeTtsAnnounceMode(guild.ttsAnnounceMode),
     ttsParallelEnabled: guild.ttsParallelEnabled,
     emojiEnlargeMode: normalizeChatToolMode(guild.emojiEnlargeMode),
     emojiEnlargeChannelIds: guild.emojiEnlargeChannelIds,
