@@ -2,11 +2,11 @@ import { resolveQueueSelection } from '../modules/audio/utils/queueSelection.ts'
 import { UserError } from '@sapphire/framework';
 import { APIUser, ChatInputCommandInteraction, Client, Collection, GuildMember, MessageFlags, VoiceBasedChannel } from 'discord.js';
 import { Player, Queue, Track } from 'lavalink-client';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
 import { VoteSkip, requiredSkipVotes } from '../modules/audio/managers/voteSkip.ts';
 import { emoji } from '@sirubot/utils';
-import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
-import { RELATED_TRACK_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
+import { getUserQueuedTracks } from '../features/music/lavalink/autoPlayRelated.ts';
+import { RELATED_TRACK_REQUESTER_ID } from '../features/music/lavalink/requester.ts';
 import * as skipView from '../modules/audio/view/skip.ts';
 import * as guildPlayback from './guildSettings/playback.ts';
 import type { GuildService } from './guildService.ts';

@@ -9,8 +9,6 @@ import { getConfig, shouldLogQueries } from '../lib/config.ts';
 import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
-import { RedisStore, NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
-import { autoPlayRelated } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
 import { PlaylistService } from '../services/playlistService.ts';
@@ -31,7 +29,7 @@ import { WebhookRelay } from '../services/webhookRelay.ts';
 import { createCustomCommandStore, createSlashRegistry } from '../features/custom-commands/index.ts';
 import { createGameRecords } from '../features/games/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
-import { createPlayerWebResponder } from '../features/music/index.ts';
+import { CustomPlayer, NodeSessionStore, PlayerNotifier, RedisStore, autoPlayRelated, createPlayerWebResponder } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
@@ -53,8 +51,6 @@ import { createMusicAccess } from '../features/music/application/access.ts';
 import { createMusicControl } from '../features/music/application/control.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
 import * as guildJtc from '../services/guildSettings/jtc.ts';
-import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
-import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 export class BotApplication<T extends boolean> extends SapphireClient<T> {
 	private rootData: RootData = getRootData();

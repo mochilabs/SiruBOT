@@ -1,7 +1,7 @@
 import { emoji, createContainer, formatTrack, formatTimeToKorean, formatTime } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import { truncateText } from '../../../lib/text.ts';
 import { queueSelectionValue } from '../utils/queueSelection.ts';
 import { queueViewId, QUEUE_VIEW_INDICATOR_ID } from '../utils/queueViewId.ts';

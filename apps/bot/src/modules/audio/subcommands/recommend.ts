@@ -1,8 +1,8 @@
 import { container, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { addManualRecommendation, getInFlightRelatedFetch } from '../lavalink/autoPlayRelated.ts';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { addManualRecommendation, getInFlightRelatedFetch } from '../../../features/music/lavalink/autoPlayRelated.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import { recommendAdded } from '../view/related.ts';
 import { errorView } from '../../../lib/errorView.ts';
 

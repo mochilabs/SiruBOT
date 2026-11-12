@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
+import { queueRelatedUpfront } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import * as view from '../view/related.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 

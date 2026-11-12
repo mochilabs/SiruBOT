@@ -1,14 +1,11 @@
 // Audio
 import { LavalinkManager } from 'lavalink-client';
-import { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
-import { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
+import type { CustomPlayer, LavalinkHandler, NowPlayingCardStore, PlayerNotifier, RedisStore } from '../features/music/index.ts';
 
 // DB Services
 import { PrismaClient } from '@sirubot/prisma';
 import { GuildService } from '../services/guildService.ts';
 import { TrackService } from '../services/trackService.ts';
-import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
-import { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
 
 declare module '@sapphire/pieces' {
 	interface Container {
@@ -17,7 +14,7 @@ declare module '@sapphire/pieces' {
 		db: PrismaClient;
 		redisStore: RedisStore;
 		playerNotifier: PlayerNotifier;
-		nowPlayingCardStore?: import('../modules/audio/lavalink/player/nowPlayingCard.ts').NowPlayingCardStore;
+		nowPlayingCardStore?: NowPlayingCardStore;
 		playerStatePublishTracker?: Map<string, { at: number; fingerprint: string }>;
 		/** 음악 제어 유스케이스 (features/music/application) — 어댑터는 container.music.<op>(actor, ...)로 호출해요 */
 		music: import('../features/music/application/control.ts').MusicControl;

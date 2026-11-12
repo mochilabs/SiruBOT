@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessageFlags, SlashCommandBuilder, SlashCommandSubcommandGroupBuilder } from 'discord.js';
 import { MixerCommand, withMixerSubcommands } from './mixer.ts';
-import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({ ...(await orig()), ...mocks.guildPlayback }));
 vi.mock('../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...mocks.guildMixer }));
 
@@ -26,7 +26,7 @@ vi.mock('@sapphire/framework', () => ({
 		}
 	}
 }));
-vi.mock('../lavalink/player/customPlayer.ts', () => ({ CustomPlayer: class {} }));
+vi.mock('../../../features/music/lavalink/player/customPlayer.ts', () => ({ CustomPlayer: class {} }));
 vi.mock('@sirubot/utils', () => ({ DEFAULT_COLOR: 0, WARN_COLOR: 1, emoji: (name: string) => name }));
 
 const saved = {

@@ -4,7 +4,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import * as view from '../view/queue.ts';
 import { respondQueuedTracks } from '../../../lib/autocomplete.ts';
 import { runSubcommandPreconditions } from '../../../lib/subcommandDispatcher.ts';

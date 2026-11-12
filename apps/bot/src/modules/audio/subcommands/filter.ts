@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import { applyFilterPreset, dropLoserFilters, resetAllFilters } from '../utils/filterPresets.ts';
 import * as view from '../view/filter.ts';
 

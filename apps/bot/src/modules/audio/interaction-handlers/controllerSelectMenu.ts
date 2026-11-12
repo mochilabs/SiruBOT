@@ -2,8 +2,8 @@ import { InteractionHandler, InteractionHandlerTypes, UserError } from '@sapphir
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { errorView } from '../../../lib/errorView.ts';
 import { queueList, QUEUE_PAGE_SIZE } from '../view/queue.ts';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { getUserQueuedTracks } from '../../../features/music/lavalink/autoPlayRelated.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import { GUARD_MESSAGES, guardPlayerAccess, replyGuardError } from '../utils/interactionGuards.ts';
 import { resolveQueueSelection } from '../utils/queueSelection.ts';
 import { clampQueuePage, decodeQueueSelectId, QUEUE_VIEW_MESSAGES, type QueueSelectView } from '../utils/queueViewId.ts';

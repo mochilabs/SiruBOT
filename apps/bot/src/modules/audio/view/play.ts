@@ -1,9 +1,9 @@
 import { addSeparator, emoji, createContainer, createThumbnail, formatTime, formatTimeToKorean, formatTrack } from '@sirubot/utils';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, TextDisplayBuilder } from 'discord.js';
 import { Player, PlaylistInfo, Track } from 'lavalink-client';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import { playlistAddId } from '../customIds.ts';
-import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
+import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../../../features/music/lavalink/requester.ts';
 
 type playViewProps = {
 	track: Track;

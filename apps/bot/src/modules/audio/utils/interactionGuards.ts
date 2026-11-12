@@ -2,7 +2,7 @@ import { emoji } from '@sirubot/utils';
 import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction } from 'discord.js';
 import { errorView } from '../../../lib/errorView.ts';
 import { checkDJOrAlone, checkInBotVoice } from './permissionCheck.ts';
-import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 
 type ControllerInteraction = ButtonInteraction<'cached'> | StringSelectMenuInteraction<'cached'>;
 

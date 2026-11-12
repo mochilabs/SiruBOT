@@ -55,7 +55,7 @@ vi.mock('../utils/permissionCheck.ts', () => ({
 		botVoiceChannelId: string | null
 	) => member.permissions.has() || (member.voice.channelId !== null && (botVoiceChannelId === null || member.voice.channelId === botVoiceChannelId))
 }));
-vi.mock('../lavalink/player/nowPlayingCard.ts', () => ({
+vi.mock('../../../features/music/lavalink/player/nowPlayingCard.ts', () => ({
 	getCachedNowPlayingCard: mocks.cached,
 	getDisplayNowPlayingCard: mocks.cached,
 	resolveNowPlayingCard: mocks.render

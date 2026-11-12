@@ -13,7 +13,7 @@ import { container } from '@sapphire/framework';
 import { botAdminRpc, type BotAdminNodeItem, type BotAdminReloadStore, type BotAdminRequest } from '@sirubot/utils';
 import { createGlobalRedisResponder, type RedisBinding, type RedisRpcPayload } from '../../../lib/redisResponder.ts';
 import type { RedisLogger } from '../../../lib/redisPublisher.ts';
-import { NodeSessionStore } from '../../../modules/audio/lavalink/redisStore.ts';
+import { NodeSessionStore } from '../../music/index.ts';
 
 type Payload = RedisRpcPayload<typeof botAdminRpc>;
 

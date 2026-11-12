@@ -6,7 +6,7 @@ import { GatewayDispatchEvents, type GatewayDispatchPayload } from 'discord.js';
 import { DefaultQueueStore, LavalinkManager, type Track } from 'lavalink-client';
 import { Logger, type ILogObj } from 'tslog';
 import { CustomPlayer } from '../player/customPlayer.ts';
-import { RawEvent } from '../../listeners/raw.ts';
+import { RawEvent } from '../../../../modules/audio/listeners/raw.ts';
 import { SessionRestoreEngine } from './sessionRestore.ts';
 import { NodeHandler } from './nodeHandler.ts';
 

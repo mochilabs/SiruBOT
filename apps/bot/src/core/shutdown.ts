@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { Container } from '@sapphire/pieces';
-import { NodeSessionStore } from '../modules/audio/lavalink/redisStore.ts';
+import { NodeSessionStore } from '../features/music/index.ts';
 import { stopAll } from '../lib/lifecycle.ts';
 import { stopRedisSubscribers } from './redisSubscribers.ts';
 

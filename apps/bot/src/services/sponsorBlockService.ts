@@ -2,8 +2,8 @@ import { emoji, resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sir
 import { MessageFlags, type Client } from 'discord.js';
 import { notice } from '../modules/general/view/notice.ts';
 import type { Track } from 'lavalink-client';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
-import { getTargetNextTrack, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
+import { getTargetNextTrack, notifyQueueMutated } from '../features/music/lavalink/queue/queueWrapper.ts';
 import { fetchSponsorBlockSegments } from './dataApiClient.ts';
 import * as guildMixer from './guildSettings/mixer.ts';
 import type { AppLogger } from '../lib/appLogger.ts';
@@ -187,7 +187,7 @@ export class SponsorBlockService {
 			)
 				return;
 			state.lastOutroArmKey = key;
-			void import('../modules/audio/lavalink/handlers/mixerHandlers.ts')
+			void import('../features/music/lavalink/handlers/mixerHandlers.ts')
 				.then(({ handleMixerNeedNext }) =>
 					handleMixerNeedNext(player, {
 						remainingMs: (state.track.info.duration ?? 0) - (player.position ?? 0),

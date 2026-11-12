@@ -39,8 +39,13 @@ const deps = {
 	getAudio: () => ({ getPlayer }) as never
 };
 vi.mock('../../../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
-vi.mock('../../../../modules/audio/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: vi.fn(), removeStaleRelatedTracks: vi.fn() }));
-vi.mock('../../../music/index.ts', () => ({ actorFromMember: () => actor }));
+vi.mock('../../../music/index.ts', async () => ({
+	actorFromMember: () => actor,
+	getUserQueuedTracks: vi.fn(),
+	removeStaleRelatedTracks: vi.fn(),
+	nowPlayingTrack: (await import('../../../music/lavalink/player/nowPlaying.ts')).nowPlayingTrack,
+	isSameTrack: (await import('../../../music/lavalink/handlers/playbackWatchdog.ts')).isSameTrack
+}));
 vi.mock('../../../../services/dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
 
 import { createMusicTools } from './music.ts';

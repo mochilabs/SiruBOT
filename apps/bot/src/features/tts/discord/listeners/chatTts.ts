@@ -3,7 +3,7 @@ import { Events, Listener } from '@sapphire/framework';
 import { ChannelType, Message } from 'discord.js';
 import { isTtsEnabled } from '../../../../services/guildService.ts';
 import { preprocessTtsMessage } from '../../application/chatTts.ts';
-import type { CustomPlayer } from '../../../../modules/audio/lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../music/index.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /**

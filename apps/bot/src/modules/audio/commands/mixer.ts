@@ -10,7 +10,7 @@ import {
 	type SlashCommandSubcommandGroupBuilder,
 	type SlashCommandSubcommandsOnlyBuilder
 } from 'discord.js';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import * as view from '../view/mixer.ts';
 import { normalizeAnnounceMode, type TtsAnnounceMode } from '../../../services/guildSettings/playback.ts';
 import * as guildMixer from '../../../services/guildSettings/mixer.ts';

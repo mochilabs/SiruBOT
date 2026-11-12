@@ -3,7 +3,7 @@ import type { Client } from 'discord.js';
 import type { LavalinkManager } from 'lavalink-client';
 import type { MusicControl } from '../../../music/index.ts';
 import type { TempVoiceService } from '../../../temp-voice/index.ts';
-import type { CustomPlayer } from '../../../../modules/audio/lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../music/index.ts';
 import type { AiMemoryService } from '../aiMemoryService.ts';
 import type { AudioService } from '../../../../services/audioService.ts';
 import type { GuildService } from '../../../../services/guildService.ts';

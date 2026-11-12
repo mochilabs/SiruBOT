@@ -1,4 +1,4 @@
-import type { RedisStore } from '../../../../modules/audio/lavalink/redisStore.ts';
+import type { RedisStore } from '../../../music/index.ts';
 import type { ChatAbortResult } from './types.ts';
 
 /** 유저 턴 한도 카운터가 쓰는 Redis 저장소 — 아직 연결 전이면 undefined(보호 없이 통과)예요 */

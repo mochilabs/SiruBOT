@@ -1,4 +1,4 @@
-import type { CurrentBpm } from '../lavalink/player/currentBpm.ts';
+import type { CurrentBpm } from '../../../features/music/lavalink/player/currentBpm.ts';
 import { emoji, emojiProgressBar, createContainer, formatTrack, formatTime, formatTimeToKorean, removeEmojis, volumeToEmoji } from '@sirubot/utils';
 import {
 	ActionRowBuilder,
@@ -13,13 +13,13 @@ import {
 	ThumbnailBuilder
 } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
-import { getUserQueuedTracks, remainingUntilQueueEnd } from '../lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks, remainingUntilQueueEnd } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import { nextRepeatMode, repeatEmoji } from './repeat.ts';
 import { controllerId } from '../customIds.ts';
-import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../lavalink/requester.ts';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { nowPlayingTrack } from '../lavalink/player/nowPlaying.ts';
-import { currentChapter, currentChapterIndex } from '../lavalink/player/chapters.ts';
+import { RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from '../../../features/music/lavalink/requester.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
+import { nowPlayingTrack } from '../../../features/music/lavalink/player/nowPlaying.ts';
+import { currentChapter, currentChapterIndex } from '../../../features/music/lavalink/player/chapters.ts';
 
 // 타이틀 링크로 걸 수 있는 URL 최대 길이 (formatTrack의 제한과 같다).
 const MAX_TRACK_URL_LENGTH = 70;

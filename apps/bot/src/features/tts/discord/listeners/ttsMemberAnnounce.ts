@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import type { VoiceState } from 'discord.js';
 import { truncateText } from '../../../../lib/text.ts';
-import type { CustomPlayer } from '../../../../modules/audio/lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../music/index.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /** 읽을 이름 상한 — 긴 닉네임이 안내를 늘리지 않게 자른다 */

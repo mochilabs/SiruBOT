@@ -120,7 +120,7 @@ export class VoteSkip {
 	}
 
 	private async completeVoteSkip(buttonInteraction: ButtonInteraction, session: ComponentSession): Promise<void> {
-		await container.mixerService.skip(this.options.player as import('../lavalink/player/customPlayer.ts').CustomPlayer);
+		await container.mixerService.skip(this.options.player as import('../../../features/music/lavalink/player/customPlayer.ts').CustomPlayer);
 		await buttonInteraction.update({
 			components: [
 				view.trackSkippedByVote({

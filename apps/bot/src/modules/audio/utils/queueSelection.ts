@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { emoji } from '@sirubot/utils';
 import { UserError } from '@sapphire/framework';
 import type { Player } from 'lavalink-client';
-import { getUserQueuedTracks } from '../lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks } from '../../../features/music/lavalink/autoPlayRelated.ts';
 
 function version(player: Player): string {
 	return createHash('sha256')

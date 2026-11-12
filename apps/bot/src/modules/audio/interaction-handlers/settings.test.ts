@@ -4,7 +4,7 @@ import SettingsInteractionHandler, { SETTINGS_ACTIONS } from './settings.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
 import * as guildJtc from '../../../services/guildSettings/jtc.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
-import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
+import { queueRelatedUpfront } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
 import { settingsView } from '../view/settings.ts';
 
@@ -19,7 +19,7 @@ vi.mock('@sapphire/framework', () => ({
 vi.mock('../../../services/guildSettings/channels.ts');
 vi.mock('../../../services/guildSettings/jtc.ts');
 vi.mock('../../../services/guildSettings/playback.ts');
-vi.mock('../lavalink/autoPlayRelated.ts', () => ({ queueRelatedUpfront: vi.fn() }));
+vi.mock('../../../features/music/lavalink/autoPlayRelated.ts', () => ({ queueRelatedUpfront: vi.fn() }));
 vi.mock('../utils/permissionCheck.ts', () => ({ checkManageGuild: vi.fn(() => true) }));
 vi.mock('../view/settings.ts', async (importOriginal) => ({ ...(await importOriginal<object>()), settingsView: vi.fn(() => 'VIEW') }));
 

@@ -2,7 +2,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { filterView } from '../view/filter.ts';
 import { filterId } from '../customIds.ts';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import { GUARD_MESSAGES, guardPlayerAccess } from '../utils/interactionGuards.ts';
 
 export default class FilterInteractionHandler extends InteractionHandler {

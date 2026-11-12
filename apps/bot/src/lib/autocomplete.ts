@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import type { AutocompleteInteraction } from 'discord.js';
-import { getUserQueuedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks } from '../features/music/lavalink/autoPlayRelated.ts';
 import { queueSelectionValue } from '../modules/audio/utils/queueSelection.ts';
 
 /** 자동완성 선택지 이름 길이 상한 (Discord: 100자) */

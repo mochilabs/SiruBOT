@@ -20,7 +20,7 @@
 import { botProfilePendingKey, botProfileStateEvent } from '@sirubot/utils';
 import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { Guild, PermissionFlagsBits } from 'discord.js';
-import type { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
+import type { RedisStore } from '../features/music/index.ts';
 import type { RedisPublisher } from '../lib/redisPublisher.ts';
 import type { ServiceLogger } from './types.ts';
 

@@ -1,6 +1,6 @@
 import type { SearchPlatform, Track, UnresolvedTrack } from 'lavalink-client';
 import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
-import { getUserQueuedTracks, removeStaleRelatedTracks } from '../../../../modules/audio/lavalink/autoPlayRelated.ts';
+import { getUserQueuedTracks, removeStaleRelatedTracks, nowPlayingTrack, isSameTrack, type CustomPlayer } from '../../../music/index.ts';
 import { checkDJOrAlone } from '../../../../modules/audio/utils/permissionCheck.ts';
 import {
 	applyFilterPreset,
@@ -10,9 +10,6 @@ import {
 	resetAllFilters
 } from '../../../../modules/audio/utils/filterPresets.ts';
 import { parseTimeToMs } from '../../../../modules/audio/utils/timeParse.ts';
-import type { CustomPlayer } from '../../../../modules/audio/lavalink/player/customPlayer.ts';
-import { nowPlayingTrack } from '../../../../modules/audio/lavalink/player/nowPlaying.ts';
-import { isSameTrack } from '../../../../modules/audio/lavalink/handlers/playbackWatchdog.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatTtsService, preprocessTtsText, TTS_CLIP_MAX_CHARS, TTS_MERGE_WINDOW_MS, TTS_OVERLAY_QUEUE_MAX, TTS_SOLO_QUEUE_MAX } from './chatTts.ts';
-import { TTS_CLIP_REQUESTER_ID } from '../../../modules/audio/lavalink/requester.ts';
-import type { CustomPlayer } from '../../../modules/audio/lavalink/player/customPlayer.ts';
+import { TTS_CLIP_REQUESTER_ID, type CustomPlayer } from '../../music/index.ts';
 import { setConfigForTesting } from '../../../lib/config.ts';
 import { makeTestConfig } from '../../../lib/config.testing.ts';
 import { getTtsConfig } from '../ttsConfig.ts';

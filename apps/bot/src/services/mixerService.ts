@@ -1,20 +1,20 @@
 import { getConfig } from '../lib/config.ts';
 import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
-import type { CustomPlayer, OverrideAction } from '../modules/audio/lavalink/player/customPlayer.ts';
-import { commitLocal, sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
+import type { CustomPlayer, OverrideAction } from '../features/music/lavalink/player/customPlayer.ts';
+import { commitLocal, sendOverride } from '../features/music/lavalink/handlers/mixerHandlers.ts';
 import {
 	cancelPendingInvalidate,
 	getTargetNextTrack,
 	notifyQueueMutated,
 	type QueueMutationOptions
-} from '../modules/audio/lavalink/queue/queueWrapper.ts';
-import { removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
+} from '../features/music/lavalink/queue/queueWrapper.ts';
+import { removeStaleRelatedTracks } from '../features/music/lavalink/autoPlayRelated.ts';
 import type { MixerSettings } from './guildSettings/types.ts';
 import * as guildMixer from './guildSettings/mixer.ts';
 import type { AppLogger } from '../lib/appLogger.ts';
 import type { GuildService } from './guildService.ts';
-import type { PlayerNotifier } from '../modules/audio/lavalink/player/playerNotifier.ts';
+import type { PlayerNotifier } from '../features/music/lavalink/player/playerNotifier.ts';
 const MIXER_FILTER_KEY = 'mixer';
 
 class AutomixUnsupportedError extends Error {

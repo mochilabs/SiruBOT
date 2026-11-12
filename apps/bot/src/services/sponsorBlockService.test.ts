@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from 'lavalink-client';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
 import { fetchSponsorBlockSegments } from './dataApiClient.ts';
 import { SponsorBlockService } from './sponsorBlockService.ts';
 

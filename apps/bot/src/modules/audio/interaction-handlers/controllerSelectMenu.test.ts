@@ -32,7 +32,7 @@ vi.mock('../utils/permissionCheck.ts', () => ({
 	) => member.permissions.has() || (member.voice.channelId !== null && (botVoiceChannelId === null || member.voice.channelId === botVoiceChannelId))
 }));
 vi.mock('../utils/queueSelection.ts', () => ({ resolveQueueSelection: mocks.resolveQueueSelection }));
-vi.mock('../lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: mocks.getUserQueuedTracks }));
+vi.mock('../../../features/music/lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: mocks.getUserQueuedTracks }));
 vi.mock('../view/queue.ts', () => ({
 	queueList: mocks.queueList,
 	QUEUE_PAGE_SIZE: 10

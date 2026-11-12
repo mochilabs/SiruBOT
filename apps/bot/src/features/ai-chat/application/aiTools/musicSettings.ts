@@ -1,5 +1,5 @@
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
-import { queueRelatedUpfront } from '../../../../modules/audio/lavalink/autoPlayRelated.ts';
+import { queueRelatedUpfront } from '../../../music/index.ts';
 import { checkManageGuild } from '../../../../modules/audio/utils/permissionCheck.ts';
 import type { TtsAnnounceMode } from '../../../../services/guildSettings/playback.ts';
 import type { AiToolDeps } from './deps.ts';

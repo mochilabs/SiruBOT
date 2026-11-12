@@ -5,7 +5,7 @@ import { notice } from '../../general/view/notice.ts';
 import { container } from '@sapphire/pieces';
 import { SapphireInterfaceLogger } from '../../../core/logger.ts';
 import { Logger, ILogObj } from 'tslog';
-import { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import { emoji } from '@sirubot/utils';
 import { getConfig } from '../../../lib/config.ts';
 

@@ -1,23 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 import { controllerView } from './controller.ts';
 import { repeatEmoji } from './repeat.ts';
 import { controllerId } from '../customIds.ts';
 
 const mocks = vi.hoisted(() => ({ queued: vi.fn(), remaining: vi.fn(), nowPlaying: vi.fn(), chapter: vi.fn(), chapterIndex: vi.fn() }));
 
-vi.mock('../lavalink/player/customPlayer.ts', async (importOriginal) => ({
-	...(await importOriginal<typeof import('../lavalink/player/customPlayer.ts')>()),
+vi.mock('../../../features/music/lavalink/player/customPlayer.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../../features/music/lavalink/player/customPlayer.ts')>()),
 	CustomPlayer: class CustomPlayer {}
 }));
 vi.mock('@sirubot/utils', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@sirubot/utils')>()),
 	emoji: vi.fn((name: string) => name)
 }));
-vi.mock('../lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: mocks.queued, remainingUntilQueueEnd: mocks.remaining }));
-vi.mock('../lavalink/player/nowPlaying.ts', () => ({ nowPlayingTrack: mocks.nowPlaying }));
-vi.mock('../lavalink/player/chapters.ts', () => ({ currentChapter: mocks.chapter, currentChapterIndex: mocks.chapterIndex }));
-vi.mock('../lavalink/requester.ts', () => ({ RELATED_TRACK_REQUESTER_ID: 'related_track', TTS_CLIP_REQUESTER_ID: 'chat_tts_clip' }));
+vi.mock('../../../features/music/lavalink/autoPlayRelated.ts', () => ({
+	getUserQueuedTracks: mocks.queued,
+	remainingUntilQueueEnd: mocks.remaining
+}));
+vi.mock('../../../features/music/lavalink/player/nowPlaying.ts', () => ({ nowPlayingTrack: mocks.nowPlaying }));
+vi.mock('../../../features/music/lavalink/player/chapters.ts', () => ({ currentChapter: mocks.chapter, currentChapterIndex: mocks.chapterIndex }));
+vi.mock('../../../features/music/lavalink/requester.ts', () => ({
+	RELATED_TRACK_REQUESTER_ID: 'related_track',
+	TTS_CLIP_REQUESTER_ID: 'chat_tts_clip'
+}));
 
 const TRACK = {
 	info: {

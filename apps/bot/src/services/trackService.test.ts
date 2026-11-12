@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track, TrackInfo } from 'lavalink-client';
 import { TrackService, formatRecordError } from './trackService.ts';
-import { isTtsClip } from '../modules/audio/lavalink/requester.ts';
+import { isTtsClip } from '../features/music/lavalink/requester.ts';
 
 const mocks = vi.hoisted(() => ({
 	$transaction: vi.fn(),
@@ -26,7 +26,7 @@ const txShape = {
 	user: { upsert: mocks.userUpsert },
 	guildTrackHistory: { create: mocks.historyCreate }
 };
-vi.mock('../modules/audio/lavalink/requester.ts', () => ({
+vi.mock('../features/music/lavalink/requester.ts', () => ({
 	isTtsClip: vi.fn(() => false),
 	RELATED_TRACK_REQUESTER_ID: '__related__'
 }));

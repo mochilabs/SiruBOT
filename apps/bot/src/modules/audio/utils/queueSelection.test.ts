@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Player } from 'lavalink-client';
 import { queueSelectionValue, resolveQueueSelection } from './queueSelection.ts';
 
-vi.mock('../lavalink/autoPlayRelated.ts', () => ({ getUserQueuedTracks: (player: { queue: { tracks: unknown[] } }) => player.queue.tracks }));
+vi.mock('../../../features/music/lavalink/autoPlayRelated.ts', () => ({
+	getUserQueuedTracks: (player: { queue: { tracks: unknown[] } }) => player.queue.tracks
+}));
 
 describe('곡 선택 후 대기열 변경', () => {
 	const track = (id: string) => ({ info: { identifier: id, uri: `https://music/${id}` }, requester: { id: 'user' } });

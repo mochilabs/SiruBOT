@@ -3,10 +3,10 @@ import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
 import { container } from '@sapphire/framework';
 import type { Player, Track, TrackEndEvent } from 'lavalink-client';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
-import { RelatedTrackHistory } from '../modules/audio/lavalink/player/relatedTrackHistory.ts';
-import { commitLocal, handleMixerAdvanced, handleMixerOverridden, handleMixerTrackEnd } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
-import { getTargetNextTrack } from '../modules/audio/lavalink/queue/queueWrapper.ts';
+import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
+import { RelatedTrackHistory } from '../features/music/lavalink/player/relatedTrackHistory.ts';
+import { commitLocal, handleMixerAdvanced, handleMixerOverridden, handleMixerTrackEnd } from '../features/music/lavalink/handlers/mixerHandlers.ts';
+import { getTargetNextTrack } from '../features/music/lavalink/queue/queueWrapper.ts';
 import { MixerService } from './mixerService.ts';
 import * as guildMixer from './guildSettings/mixer.ts';
 
@@ -293,8 +293,8 @@ describe('MixerService v2 Protocol Tests', () => {
 	});
 
 	it('handleMixerNeedNext ignores solo TTS current track and retries 409 when gapless/crossfade are both off', async () => {
-		const { handleMixerNeedNext } = await import('../modules/audio/lavalink/handlers/mixerHandlers.ts');
-		const { TTS_CLIP_REQUESTER_ID } = await import('../modules/audio/lavalink/requester.ts');
+		const { handleMixerNeedNext } = await import('../features/music/lavalink/handlers/mixerHandlers.ts');
+		const { TTS_CLIP_REQUESTER_ID } = await import('../features/music/lavalink/requester.ts');
 		const { container } = await import('@sapphire/framework');
 		const service = makeMixerService();
 		container.mixerService = service as any;
@@ -359,7 +359,7 @@ describe('MixerService v2 Protocol Tests', () => {
 	});
 
 	it('handleMixerNeedNext aborts when the trigger track changes during the settings await (F1)', async () => {
-		const { handleMixerNeedNext } = await import('../modules/audio/lavalink/handlers/mixerHandlers.ts');
+		const { handleMixerNeedNext } = await import('../features/music/lavalink/handlers/mixerHandlers.ts');
 		const { container } = await import('@sapphire/framework');
 		const service = makeMixerService();
 		container.mixerService = service as any;

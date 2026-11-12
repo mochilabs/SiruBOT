@@ -4,7 +4,7 @@
  * - 카운팅 리스너와 /채팅유틸 카운팅 설정 명령어가 같은 상태를 다뤄요.
  * - 채널을 다시 지정하거나 카운팅을 끄면 상태를 초기화해 새로 1부터 시작해요.
  */
-import type { RedisStore } from '../modules/audio/lavalink/redisStore.ts';
+import type { RedisStore } from '../features/music/index.ts';
 import type { Stoppable } from '../lib/lifecycle.ts';
 import { type CountingState, COUNTING_STATE_DEFAULT } from '@sirubot/utils';
 

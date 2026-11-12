@@ -11,7 +11,7 @@ import { settingsId } from '../customIds.ts';
 import { settingsView, jtcTemplateModal, SettingsMode } from '../view/settings.ts';
 import { RepeatMode } from 'lavalink-client';
 import { checkManageGuild } from '../utils/permissionCheck.ts';
-import { queueRelatedUpfront } from '../lavalink/autoPlayRelated.ts';
+import { queueRelatedUpfront } from '../../../features/music/lavalink/autoPlayRelated.ts';
 import { errorView } from '../../../lib/errorView.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
 import * as guildJtc from '../../../services/guildSettings/jtc.ts';

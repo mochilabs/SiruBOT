@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { MessageFlags } from 'discord.js';
-import { notice } from '../../../general/view/notice.ts';
+import { notice } from '../../../../modules/general/view/notice.ts';
 import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
 import { emoji } from '@sirubot/utils';

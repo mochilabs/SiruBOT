@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { FILTER_PRESETS } from '../view/filter.ts';
-import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../../../features/music/lavalink/player/customPlayer.ts';
 
 /**
  * 오디오 필터 프리셋 적용 규칙의 단일 원본 — `/필터` 커맨드, 필터 셀렉트 메뉴,

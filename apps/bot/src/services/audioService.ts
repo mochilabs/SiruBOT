@@ -5,10 +5,10 @@ import { ButtonInteraction, ChatInputCommandInteraction, Client, ComponentType, 
 import { emoji } from '@sirubot/utils';
 import { errorView } from '../lib/errorView.ts';
 import { createComponentSession, type ComponentSession } from '../lib/componentSession.ts';
-import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
-import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
-import { sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import { isRelatedTrack, removeStaleRelatedTracks } from '../features/music/lavalink/autoPlayRelated.ts';
+import { cancelPendingInvalidate, notifyQueueMutated } from '../features/music/lavalink/queue/queueWrapper.ts';
+import { sendOverride } from '../features/music/lavalink/handlers/mixerHandlers.ts';
+import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
 import * as view from '../modules/audio/view/play.ts';
 import type { AppLogger } from '../lib/appLogger.ts';
 import type { GuildService } from './guildService.ts';

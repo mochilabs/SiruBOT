@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { parseLavalinkHosts } from '@sirubot/utils';
-import { LavalinkHandler } from '../modules/audio/lavalink/handlers/lavalinkHandler.ts';
+import { LavalinkHandler } from '../features/music/index.ts';
 import type { BotApplication } from './botApplication.ts';
 import { getConfig } from '../lib/config.ts';
 
