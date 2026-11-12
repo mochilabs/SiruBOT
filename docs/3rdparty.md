@@ -49,9 +49,9 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Purpose:** A standalone plugin that provides gapless playback, crossfade, TTS ducking, and silence skipping without modifying Lavalink itself. It mixes PCM from a hidden secondary player for each guild at the beginning of the main filter chain.
 - **Source:** Sibling project `../lavalink_mixer` (Kotlin, `dev.lavalink.mixer`). The JAR deployed to the server is a release/CI artifact from that repository.
 - **SiruBOT integration:**
-  - `apps/bot/src/services/mixerService.ts` (363 lines): complete REST wrapper for `/mixer/*`
-  - `apps/bot/src/modules/audio/commands/mixer.ts`: `/music mixer` slash command
-  - `apps/bot/src/modules/audio/lavalink/handlers/trackHandler.ts`: server-side auto-start and transition handling
+  - `apps/bot/src/features/music/playback/mixerService.ts` (363 lines): complete REST wrapper for `/mixer/*`
+  - `apps/bot/src/features/music/discord/commands/mixer.ts`: `/music mixer` slash command
+  - `apps/bot/src/features/music/lavalink/handlers/trackHandler.ts`: server-side auto-start and transition handling
   - `apps/bot/src/services/guildService.ts`, `getMixerSettings()`: `MixerSettings {gaplessEnabled, crossfadeEnabled, crossfadeMs}`
 
 **REST contract:** The node password is sent verbatim in the `Authorization` header. The timeout is `MIXER_CALL_TIMEOUT_MS` (default 5 seconds; `mixerService.ts:7,84`). Because these paths are outside `/v4/`, the implementation uses plain `fetch` rather than `player.node.request()`.
@@ -65,7 +65,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 | `POST /mixer/announce` | TTS overlay and music ducking — **queued**, replies `202 {id, position, queueLength}` | `mixerService.ts:334` |
 | `POST /mixer/announce/cancel`, `DELETE /mixer/announce/queue`, `POST /mixer/silence`, `POST /mixer/fade-in` | Stop the active overlay, drop queued announcements, tune silence, fade in | Not called by the bot; intended for agents/manual use. See the plugin's `api/openapi.yaml`. |
 
-**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts:111`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts:298`) must run before `player.play()`. Current call sites include `apps/bot/src/services/audioService.ts:321` and `apps/bot/src/features/ai-chat/application/aiTools/music.ts`.
+**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts:111`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts:298`) must run before `player.play()`. Current call sites include `apps/bot/src/features/music/playback/audioService.ts:321` and `apps/bot/src/features/ai-chat/application/aiTools/music.ts`.
 
 **Announce contract:** Announcements are **queued** — the old HTTP 409 "slot busy" response is gone, every request enqueues and the queue plays back to back in enqueue order through the hidden secondary player.
 
@@ -114,7 +114,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 ### 3RD-04. SponsorBlock API
 
 - `apps/data-api/src/providers/sponsorblock.ts` requests only `actionType=skip`, validates the response, and converts seconds to integer milliseconds. `routes/cache-providers.ts` caches positive results for 24 hours, empty results for one hour, and serves a positive seven-day stale copy during upstream failure.
-- `apps/bot/src/services/sponsorBlockService.ts` selects each guild's categories and seeks the current player. It suppresses seeks across an active crossfade boundary.
+- `apps/bot/src/features/music/playback/sponsorBlockService.ts` selects each guild's categories and seeks the current player. It suppresses seeks across an active crossfade boundary.
 - For the next track, BOT passes the leading skip end as `startPositionMs` in `POST /mixer/queue/arm` when `/mixer/info` reports `incomingStartPositionSupported`. For an outgoing outro, BOT sends `outgoingEndPositionMs` when the node reports `outgoingEndPositionSupported`; the mixer ends its fade at that position. Deploy the updated mixer before BOT. Remove the old Lavalink SponsorBlock plugin after BOT and data-api are live.
 
 ---
@@ -126,9 +126,9 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Version:** `2.11.0` with a Yarn patch (`apps/bot/package.json:40`). Lavalink v4 client built around `LavalinkManager`, `Player`, and queue-store hooks.
 - **SiruBOT integration:**
   - Initialization/configuration: `apps/bot/src/core/botApplication.ts`, `setupAudio()` (`playerClass: CustomPlayer`, `queueOptions.queueStore`, `sendToShard`, node `retryAmount: 9999`)
-  - Extension: `apps/bot/src/modules/audio/lavalink/player/customPlayer.ts` (`TransitionState {stopByCommand, lastStartedEncoded, preloadConsumedAt}`, chapters, error counts)
-  - Queue persistence: `apps/bot/src/modules/audio/lavalink/queue/queueStore.ts` (`CachedQueueStore`)
-  - Node lifecycle: `apps/bot/src/modules/audio/lavalink/handlers/nodeHandler.ts`; session recovery keys `lavalink/session/{nodeId}/shards:{0,1}` (`redisStore.ts:23,39`)
+  - Extension: `apps/bot/src/features/music/lavalink/player/customPlayer.ts` (`TransitionState {stopByCommand, lastStartedEncoded, preloadConsumedAt}`, chapters, error counts)
+  - Queue persistence: `apps/bot/src/features/music/lavalink/queue/queueStore.ts` (`CachedQueueStore`)
+  - Node lifecycle: `apps/bot/src/features/music/lavalink/handlers/nodeHandler.ts`; session recovery keys `lavalink/session/{nodeId}/shards:{0,1}` (`redisStore.ts:23,39`)
 - **Fragile Rules:**
   1. **`autoSkip: false` is required** (`apps/bot/src/core/botApplication.ts:161`). If enabled, it conflicts with the server-side auto-start behavior in 3RD-01. Upstream 2.11.0 still shifts the queue or sends a stop after emitting `trackStuck` with this option disabled. The Yarn patch returns after the event so the bot owns recovery in both CJS and ESM (`patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch:9`, `patches/lavalink-client-npm-2.11.0-5e0ef08b0c.patch:21`). Without it, a mixer skip can be followed by another queue shift or a stop of the replacement track.
   2. **Route skips through the mixer, not `player.skip()`.** See the related rule in 3RD-01.
@@ -188,7 +188,7 @@ Authentication conventions (raw HTTP `Authorization` header and Redis hub channe
 ### B. Upgrading `lavalink-client` (3RD-05)
 
 1. Review `customPlayer.ts`, `queueStore.ts`, `trackHandler.ts`, and `sponsorBlockHandler.ts` first; they depend on internal APIs and event payloads.
-2. Run `yarn vitest run --config vitest.config.ts apps/bot/src/modules/audio/lavalink/handlers/trackStuckRecovery.test.ts`. Keep the `trackStuck` patch until the replacement version passes this regression suite without it. The suite exercises the installed CJS and ESM handlers with the real mixer skip, checks that recovery advances once, and preserves `autoSkip: true` behavior (`apps/bot/src/modules/audio/lavalink/handlers/trackStuckRecovery.test.ts:81`).
+2. Run `yarn vitest run --config vitest.config.ts apps/bot/src/features/music/lavalink/handlers/trackStuckRecovery.test.ts`. Keep the `trackStuck` patch until the replacement version passes this regression suite without it. The suite exercises the installed CJS and ESM handlers with the real mixer skip, checks that recovery advances once, and preserves `autoSkip: true` behavior (`apps/bot/src/features/music/lavalink/handlers/trackStuckRecovery.test.ts:81`).
 3. Measure the node session-resume scenario in practice, including recovery of session IDs from Redis.
 
 ### C. Upgrading Prisma, Redis, Next.js, and Other 3RD-07 Dependencies

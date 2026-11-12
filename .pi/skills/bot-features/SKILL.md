@@ -10,13 +10,13 @@ description: Build or modify AI chat (chat/aiTools/memory), TTS/mixer/lyrics/rec
 - `features/ai-chat/application/aiMemoryService.ts`: per-user long-term memory — Prisma only (`deps.db.userMemory`), no Redis. New tools: add a factory that takes `Pick<AiToolDeps, ...>` (`aiTools/deps.ts`), register it in `createAiTools` and follow the `types.ts` interface contract; never import `container` in a tool.
 
 ## Audio extras
-- `mixerService.ts` + `modules/audio/commands/mixer.ts`, `commands/favorites.ts`, subcommands `subcommands/{lyrics,recommend}.ts` (registered in the `SUBCOMMANDS` array of `commands/music.ts`). TTS (feature `features/tts/`): `discord/commands/tts.ts` + `application/ttsService.ts`, panel handlers `discord/interaction-handlers/ttsPanel{Button,Select}.ts`, chat-to-speech listener `discord/listeners/chatTts.ts`, member announce `discord/listeners/ttsMemberAnnounce.ts`, queue-side logic `application/chatTts.ts`.
-- Autoplay is NOT a command: `modules/audio/view/related.ts` + `lavalink/autoPlayRelated.ts` — there is no related.ts command file.
+- `mixerService.ts` + `features/music/discord/commands/mixer.ts`, `commands/favorites.ts`, subcommands `subcommands/{lyrics,recommend}.ts` (registered in the `SUBCOMMANDS` array of `commands/music.ts`). TTS (feature `features/tts/`): `discord/commands/tts.ts` + `application/ttsService.ts`, panel handlers `discord/interaction-handlers/ttsPanel{Button,Select}.ts`, chat-to-speech listener `discord/listeners/chatTts.ts`, member announce `discord/listeners/ttsMemberAnnounce.ts`, queue-side logic `application/chatTts.ts`.
+- Autoplay is NOT a command: `features/music/discord/views/related.ts` + `lavalink/autoPlayRelated.ts` — there is no related.ts command file.
 - Lavalink filters/playback internals belong to bot-ops; here only cover pipeline impact of these features.
 
 ## Temp voice channels
 - Core: `features/temp-voice/application/tempVoiceService.ts` (create/delete, ownership, settings; deps incl. `emptyGraceMs` come from `setupServices`, the marker-channel failure notice is rendered by `features/temp-voice/discord/tempVoiceMessages.ts`). Listeners: `features/temp-voice/discord/listeners/tempVoiceState.ts` (VoiceState → delegates to service), `tempVoiceChannelDelete.ts` (delete cleanup).
-- JTC marker: interaction (`modules/audio/interaction-handlers/settings.ts`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetup.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
+- JTC marker: interaction (`features/music/discord/interaction-handlers/settings.ts`) → `tempVoiceService.setupMarkerChannel`; dashboard path goes through Redis-wired `features/temp-voice/inbound/jtcSetup.ts`. If a channel isn't deleted, trace the service lifecycle methods first; consider leaks/orphan channels.
 
 ## Games
 - `features/games/discord/commands/`: dice, rps, ohaasa, guess, checkin. Single interaction handler `features/games/discord/interaction-handlers/games.ts` — customIds declared in `features/games/discord/customIds.ts` (`game:v1:<action>[:<field>]`); new games add actions there. Ohaasa: zodiac mapping in `features/games/application/ohaasaService.ts`; translated horoscope data comes from data-api `/v1/ohaasa` (`services/dataApiClient.ts`).
