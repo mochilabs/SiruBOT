@@ -26,5 +26,5 @@
 ## "코드가 진실" 규칙
 
 1. 계약 변경 시 코드와 문서를 함께 갱신한다 — 한쪽만 고치지 않는다.
-2. docs의 동작 서술에는 코드 경로:라인 인용이 필수다 (`apps/data-api/src/routes/index.ts:107` 형식).
+2. docs의 동작 서술에는 코드 파일 경로를 인용한다. 줄 번호는 쓰지 않는다 (`apps/data-api/src/routes/index.ts` 형식).
 3. 중복 서술 금지 — `architecture.md`에 있는 내용은 복붙하지 말고 `./architecture.md#섹션` 링크로 참조한다.
