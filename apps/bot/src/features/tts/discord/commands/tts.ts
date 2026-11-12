@@ -1,10 +1,10 @@
 import { notice } from '../../../../lib/notice.ts';
-import { channelToggleView, settingResultView, settingWarningView } from '../../../../modules/general/view/settingResult.ts';
+import { channelToggleView, settingResultView, settingWarningView } from '../../../../discord/views/settingResult.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { collectOtherTextChannelIds } from '../../../../modules/general/utils/channels.ts';
+import { collectOtherTextChannelIds } from '../../../../discord/utils/channels.ts';
 import { buildTtsPanel } from '../views/ttsView.ts';
 import { TtsError } from '../../application/ttsService.ts';
 import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../application/ttsPronunciation.ts';

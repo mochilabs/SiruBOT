@@ -347,7 +347,7 @@ let current: Config | null = null;
 /**
  * 현재 Config — 처음 호출될 때 `loadConfig(process.env)`로 한 번 만들어요.
  *
- * 과도기용 전역이에요: 아직 의존성 주입이 안 된 Sapphire 시대 코드(modules/*, services/*, core/*, lib/*)를 위한 접근자예요.
+ * 과도기용 전역이에요: 아직 의존성 주입이 안 된 Sapphire 시대 코드(discord/*, services/*, core/*, lib/*)를 위한 접근자예요.
  * - 모듈 최상위(import 시점)에서 부르지 마세요 — `.env`는 core/environment.ts가 로드하므로, 첫 호출은 그 뒤여야 해요.
  *   함수/메서드 안에서 읽거나 지연 getter로 감싸요.
  * - `features/*\/application/` 코드는 getConfig()를 호출하면 안 돼요. 필요한 값은 deps로 받아요 (core/botApplication.ts가 주입).

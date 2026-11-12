@@ -1,4 +1,4 @@
-import { channelToggleView, settingResultView } from '../../../../modules/general/view/settingResult.ts';
+import { channelToggleView, settingResultView } from '../../../../discord/views/settingResult.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError, container } from '@sapphire/framework';
 import {
@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { type ChatToolName } from '../../../../services/guildService.ts';
-import { collectOtherTextChannelIds } from '../../../../modules/general/utils/channels.ts';
+import { collectOtherTextChannelIds } from '../../../../discord/utils/channels.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /**

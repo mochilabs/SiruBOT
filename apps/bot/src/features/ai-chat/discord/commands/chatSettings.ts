@@ -10,10 +10,10 @@ import {
 } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { normalizeAiMode } from '../../../../services/guildService.ts';
-import { collectOtherTextChannelIds } from '../../../../modules/general/utils/channels.ts';
+import { collectOtherTextChannelIds } from '../../../../discord/utils/channels.ts';
 import { confirmAction } from '../../../../lib/confirmation.ts';
 import { acquireChannelTurn, releaseChannelTurn } from '../../application/aiChatService.ts';
-import { channelToggleView, settingResultView } from '../../../../modules/general/view/settingResult.ts';
+import { channelToggleView, settingResultView } from '../../../../discord/views/settingResult.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /**

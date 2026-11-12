@@ -73,10 +73,14 @@ apps/bot/
 │   │   ├── pieceRoots.ts      # Sapphire 피스 루트 목록 (PIECE_ROOTS)
 │   │   └── logger.ts          # 로깅 시스템
 │   │
-│   ├── modules/               # 기능 모듈
-│   │   └── general/          # 일반 기능 모듈
-│   │       ├── commands/     # 일반 명령어
-│   │       └── listeners/    # 이벤트 리스너
+│   ├── discord/               # 전역 Discord 셸 (공용 명령·리스너·프리컨디션)
+│   │   ├── commands/         # 공용 명령어 (development/ 포함)
+│   │   ├── subcommands/      # 공용 명령의 서브커맨드
+│   │   ├── views/            # 공용 뷰 (Components V2 빌더)
+│   │   ├── interaction-handlers/ # 공용 인터랙션 핸들러 (eval 모달 등)
+│   │   ├── listeners/        # 전역 이벤트 리스너 (명령 오류, 셸 이벤트 등)
+│   │   ├── preconditions/    # ManageGuild·OwnerOnly 등 공용 프리컨디션
+│   │   └── utils/            # 공용 유틸
 │   │
 │   ├── features/              # 기능 폴더 (music, tickets, role-panels, temp-voice, games, custom-commands, greeting, dashboard-bridge, ai-chat, tts)
 │   │   ├── <name>/           # index.ts · application/ (유스케이스, deps로 의존성을 받아요 — Sapphire·뷰·config 금지) · discord/{commands,listeners,interaction-handlers,views} · inbound/ (Redis 응답기·이벤트 리스너)
@@ -94,7 +98,7 @@ apps/bot/
 
 ### 컴포넌트 customId
 
-버튼·셀렉트 메뉴·모달의 customId는 `src/lib/customId.ts`의 `defineCustomId`로 소유 모듈 옆(`features/music/discord/customIds.ts`, `modules/general/customIds.ts`, `features/<name>/discord/customIds.ts`, `lib/confirmationId.ts`)에 한 번만 선언해요. 형식은 `{namespace}:v{version}:{action}[:{field}...]`이고, 뷰는 `encode`, 인터랙션 핸들러는 `decode`로 같은 선언을 써요. 길이가 Discord 한도(100자)를 넘을 수 있는 선언은 만들 때 바로 오류가 나고, 형식을 알아보지 못하는 ID(예전 형식 포함)는 `decode`가 `null`을 돌려줘서 핸들러가 `none()`으로 넘겨요.
+버튼·셀렉트 메뉴·모달의 customId는 `src/lib/customId.ts`의 `defineCustomId`로 소유 모듈 옆(`features/music/discord/customIds.ts`, `discord/customIds.ts`, `features/<name>/discord/customIds.ts`, `lib/confirmationId.ts`)에 한 번만 선언해요. 형식은 `{namespace}:v{version}:{action}[:{field}...]`이고, 뷰는 `encode`, 인터랙션 핸들러는 `decode`로 같은 선언을 써요. 길이가 Discord 한도(100자)를 넘을 수 있는 선언은 만들 때 바로 오류가 나고, 형식을 알아보지 못하는 ID(예전 형식 포함)는 `decode`가 `null`을 돌려줘서 핸들러가 `none()`으로 넘겨요.
 
 ---
 
@@ -177,7 +181,7 @@ yarn start
 
 ### 새로운 명령어 추가
 
-1. `src/modules/general/commands/`에 파일 생성 (기능 폴더의 명령어는 `src/features/<name>/discord/commands/`)
+1. `src/discord/commands/`에 파일 생성 (기능 폴더의 명령어는 `src/features/<name>/discord/commands/`)
 2. Sapphire의 `Command` 클래스 확장
 3. `@ApplyOptions` 데코레이터로 설정 정의
 

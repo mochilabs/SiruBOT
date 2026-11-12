@@ -8,7 +8,7 @@
  * delete its entry (the test fails on stale entries to force that).
  *
  * `features/<name>/application/` is the framework-free application layer: it may not import `@sapphire/*`, view files (`view/` or `views/`), or Sapphire
- * pieces (`{modules/<name>,features/<name>/discord}/{interaction-handlers,commands,subcommands,listeners}`). Existing violations are listed in
+ * pieces (`{discord,features/<name>/discord}/{interaction-handlers,commands,subcommands,listeners}`). Existing violations are listed in
  * `APPLICATION_LAYER_DEBT` with the reason and what removing each takes; that list may only shrink.
  *
  * `features/<a>/` may import another feature `features/<b>/` only through `features/<b>/index.ts` (its public surface). No allowlist.
@@ -33,14 +33,14 @@ const SRC_ROOT = path.dirname(fileURLToPath(import.meta.url));
 /** Allowed import cycles; each entry is the sorted file list of one strongly connected component, joined by ' <-> '. */
 const ALLOWED_CYCLES: string[] = [];
 
-/** `services/` -> `modules/` edges that exist today. Only delete from this list. */
-const ALLOWED_SERVICES_TO_MODULES: string[] = [];
+/** `services/` -> `src/discord/` edges that exist today. Only delete from this list. */
+const ALLOWED_SERVICES_TO_DISCORD: string[] = [];
 
-/** `lib/` -> `modules/` edges that exist today. Only delete from this list. */
-const ALLOWED_LIB_TO_MODULES: string[] = [];
+/** `lib/` -> `src/discord/` edges that exist today. Only delete from this list. */
+const ALLOWED_LIB_TO_DISCORD: string[] = [];
 
-/** `modules/` -> `core/` edges that exist today. Only delete from this list. */
-const ALLOWED_MODULES_TO_CORE: string[] = [];
+/** `src/discord/` -> `core/` edges that exist today. Only delete from this list. */
+const ALLOWED_DISCORD_TO_CORE: string[] = [];
 
 /**
  * Imports in `features/<name>/application/` that break the application-layer rule today, as `<file> -> <specifier>`, each with the reason and what
@@ -97,7 +97,7 @@ function applicationImportViolation(file: string, specifier: string): string | n
 	if (!specifier.startsWith('.')) return null;
 	const target = toRel(path.resolve(path.dirname(path.join(SRC_ROOT, file)), specifier));
 	if (/(^|\/)views?\//.test(target)) return 'imports a view file';
-	if (/^(modules\/[^/]+|features\/[^/]+\/discord)\/(interaction-handlers|commands|subcommands|listeners)\//.test(target))
+	if (/^(discord|features\/[^/]+\/discord)\/(interaction-handlers|commands|subcommands|listeners)\//.test(target))
 		return 'imports a Sapphire piece';
 	return null;
 }
@@ -197,11 +197,11 @@ describe('bot architecture guard rails', () => {
 		expectRatchet(findCycles(graph), ALLOWED_CYCLES, 'Break the cycle by moving the shared code into a third file that both sides import.');
 	});
 
-	it('services/ does not import from modules/ beyond the allowlist', () => {
+	it('services/ does not import from src/discord/ beyond the allowlist', () => {
 		expectRatchet(
-			edgesBetween(graph, 'services', 'modules'),
-			ALLOWED_SERVICES_TO_MODULES,
-			'Move the needed code into services/ or lib/, or have the module call the service instead (modules depend on services, not the reverse).'
+			edgesBetween(graph, 'services', 'discord'),
+			ALLOWED_SERVICES_TO_DISCORD,
+			'Move the needed code into services/ or lib/, or have the Discord piece call the service instead (src/discord depends on services, not the reverse).'
 		);
 	});
 
@@ -237,19 +237,19 @@ describe('bot architecture guard rails', () => {
 		);
 	});
 
-	it('lib/ does not import from modules/ beyond the allowlist', () => {
+	it('lib/ does not import from src/discord/ beyond the allowlist', () => {
 		expectRatchet(
-			edgesBetween(graph, 'lib', 'modules'),
-			ALLOWED_LIB_TO_MODULES,
-			'Move the needed code into lib/, or have the module import lib instead (modules depend on lib, not the reverse).'
+			edgesBetween(graph, 'lib', 'discord'),
+			ALLOWED_LIB_TO_DISCORD,
+			'Move the needed code into lib/, or have the Discord piece import lib instead (src/discord depends on lib, not the reverse).'
 		);
 	});
 
-	it('modules/ does not import from core/ beyond the allowlist', () => {
+	it('src/discord/ does not import from core/ beyond the allowlist', () => {
 		expectRatchet(
-			edgesBetween(graph, 'modules', 'core'),
-			ALLOWED_MODULES_TO_CORE,
-			'Move the shared code (for example the logger) out of core/ into lib/, or receive it via the container; core/ wires modules, so modules must not depend on it.'
+			edgesBetween(graph, 'discord', 'core'),
+			ALLOWED_DISCORD_TO_CORE,
+			'Move the shared code (for example the logger) out of core/ into lib/, or receive it via the container; core/ wires src/discord, so src/discord must not depend on it.'
 		);
 	});
 
@@ -295,6 +295,7 @@ describe('bot architecture guard rails', () => {
 		expect(applicationImportViolation(file, '../discord/views/ticket.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/interaction-handlers/ticketButton.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/commands/ticket.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../discord/commands/ping.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../../../lib/appError.ts')).toBeNull();
 		expect(applicationImportViolation(file, 'discord.js')).toBeNull();
 	});

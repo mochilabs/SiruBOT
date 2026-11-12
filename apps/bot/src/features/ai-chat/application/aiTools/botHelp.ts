@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType, type ApplicationCommand } from 'discord.js';
-import { commandMention, fetchCommandIndex } from '../../../../modules/general/utils/commandMentions.ts';
+import { commandMention, fetchCommandIndex } from '../../../../discord/utils/commandMentions.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool } from './types.ts';
 

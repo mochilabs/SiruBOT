@@ -6,6 +6,7 @@ config();
 config({ path: join(process.cwd(), 'apps', 'bot', '.env') });
 
 import { BotApplication } from '../apps/bot/src/core/botApplication.ts';
+import { PIECE_ROOTS } from '../apps/bot/src/core/pieceRoots.ts';
 import { GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { ApplicationCommandRegistry } from '@sapphire/framework';
 import { blue, green, yellow, red, bold, gray, cyan } from 'colorette';
@@ -119,10 +120,8 @@ async function main() {
 
 	// 실행 디렉토리에 영향받지 않도록 절대경로 주입
 	const botSrcPath = join(process.cwd(), 'apps', 'bot', 'src');
-	client.stores.registerPath(join(botSrcPath, 'modules', 'audio'));
-	client.stores.registerPath(join(botSrcPath, 'modules', 'general'));
-	client.stores.registerPath(join(botSrcPath, 'modules', 'voice'));
-	client.stores.registerPath(join(botSrcPath, 'modules', 'games'));
+	// 봇 부팅과 같은 피스 루트 목록을 써요 (core/pieceRoots.ts).
+	for (const root of PIECE_ROOTS) client.stores.registerPath(join(botSrcPath, root));
 
 	try {
 		// Sapphire Store 내장 로더를 수동으로 기동하여 명령어를 로드합니다.

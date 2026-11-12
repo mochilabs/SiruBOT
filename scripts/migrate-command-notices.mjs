@@ -3,8 +3,8 @@ import path from "node:path";
 import ts from "typescript";
 
 // node scripts/migrate-command-notices.mjs [--check]
-const root = path.resolve("apps/bot/src/modules");
-const view = path.join(root, "general/view/notice.ts");
+const root = path.resolve("apps/bot/src/discord");
+const view = path.join(root, "views/notice.ts");
 const check = process.argv.includes("--check");
 let pending = 0;
 for (const entry of fs.readdirSync(root, {

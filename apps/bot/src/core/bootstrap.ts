@@ -46,7 +46,7 @@ export const main = async () => {
 		client.logger.debug('Setting up logger...');
 		container.logger = client.logger;
 
-		// Audio -> General -> Voice -> Games -> RedisStore -> Login -> Lavalink (After ready event)
+		// Audio -> discord (src/discord) -> Voice -> Games -> RedisStore -> Login -> Lavalink (After ready event)
 		for (const root of PIECE_ROOTS) client.setupStore(root);
 
 		client.logger.debug('Setting up database...');

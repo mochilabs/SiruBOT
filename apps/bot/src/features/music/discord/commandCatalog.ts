@@ -1,6 +1,6 @@
 /**
  * `/음악` 서브커맨드 요약 카탈로그 — Sapphire나 서브커맨드 모듈을 가져오지 않는 순수 데이터예요.
- * `/도움말`(modules/general)이 이 값을 읽으니 피스 클래스(commands/music.ts)를 불러오지 않아도 돼요.
+ * `/도움말`(discord)이 이 값을 읽으니 피스 클래스(commands/music.ts)를 불러오지 않아도 돼요.
  * 항목은 각 서브커맨드 모듈의 name·ko·description·descriptionEn과 같아야 해요 (commandCatalog.test.ts가 확인해요).
  */
 

@@ -24,7 +24,7 @@ Pause/resume/volume/repeat/seek/stop/skip-now/previous go through `container.mus
 
 ## Sharding
 8. Boot branch (`core/bootstrap.ts` → `core/shardIdentity.ts`): `NODE_ENV !== 'production'` → standalone shard `[0]`. Production requires `SHARD_MANAGER_URL`; on `NoShardsAvailableError`, infinite retry with `SHARD_IDENTIFY_RETRY_MS` (min 1000 ms) — slot contention during rolling updates is normal, do not "fix" with exit logic.
-9. Status: `reportStatus('ready')` + `onStats` (guild count, player count, heap, uptime). For dashboard/shardmanager count mismatches, check this callback first. 5 shard listeners (`modules/general/listeners/shard/`): disconnect, Error, Ready, Reconnecting, Resume.
+9. Status: `reportStatus('ready')` + `onStats` (guild count, player count, heap, uptime). For dashboard/shardmanager count mismatches, check this callback first. 5 shard listeners (`apps/bot/src/discord/listeners/shard/`): disconnect, Error, Ready, Reconnecting, Resume.
 10. Health (`core/healthServer.ts`): `HEALTH_PORT` (default 8080) HTTP 200/503 based on `client.isReady()` — 503 only before READY; temporary reconnects after READY get 200 for a 120 s grace. `wsStatus` is included in body but not used for the verdict. A 503 may be a Discord WS issue, not Lavalink — separate causes.
 
 ## Shutdown order (`core/shutdown.ts`, wired in `core/bootstrap.ts`) — violations lose sessions; flag in review
