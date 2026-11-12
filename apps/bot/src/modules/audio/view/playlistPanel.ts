@@ -8,11 +8,13 @@ import {
 	TextInputBuilder,
 	TextInputStyle,
 	type ChatInputCommandInteraction,
-	type ButtonInteraction
+	type ButtonInteraction,
+	type MessageComponentInteraction
 } from 'discord.js';
 import { libraryId } from '../customIds.ts';
 import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from './playlist.ts';
 import { notice } from '../../general/view/notice.ts';
+import { createComponentSession } from '../../../lib/componentSession.ts';
 
 export async function addPlaylistQuery(userId: string, name: string, query: string): Promise<string> {
 	const node = container.audio.nodeManager.leastUsedNodes('players')[0];
@@ -82,11 +84,6 @@ export async function openPlaylistPanel(
 		flags: [MessageFlags.IsComponentsV2],
 		allowedMentions: { parse: [] }
 	});
-	const collector = message.createMessageComponentCollector({
-		time: 10 * 60_000,
-		idle: 3 * 60_000,
-		filter: (component) => decodeOwn(component.customId) !== null
-	});
 	async function form(button: ButtonInteraction<'cached'>, create: boolean, playlistId?: string) {
 		const formId = libraryId.encode('form', { formId: randomUUID() });
 		const modal = new ModalBuilder()
@@ -131,7 +128,7 @@ export async function openPlaylistPanel(
 			});
 		}
 	}
-	collector.on('collect', async (component) => {
+	const onCollect = async (component: MessageComponentInteraction) => {
 		if (component.user.id !== interaction.user.id || !component.inCachedGuild()) {
 			await component.reply({
 				components: [notice(`${emoji('error')} 본인의 /플레이리스트 목록을 열어 주세요.`)],
@@ -188,14 +185,22 @@ export async function openPlaylistPanel(
 		} finally {
 			busy = false;
 		}
-	});
-	collector.once('end', () => {
-		expired = true;
-		void interaction
-			.editReply({
-				components: [notice(`${emoji('error')} 보관함 사용 시간이 지났어요. /플레이리스트 목록 또는 /즐겨찾기 목록으로 다시 열어 주세요.`)],
-				flags: [MessageFlags.IsComponentsV2]
-			})
-			.catch(() => undefined);
+	};
+	createComponentSession(message, {
+		time: 10 * 60_000,
+		idle: 3 * 60_000,
+		filter: (component) => decodeOwn(component.customId) !== null,
+		onCollect,
+		onTimeout: () => {
+			expired = true;
+			void interaction
+				.editReply({
+					components: [
+						notice(`${emoji('error')} 보관함 사용 시간이 지났어요. /플레이리스트 목록 또는 /즐겨찾기 목록으로 다시 열어 주세요.`)
+					],
+					flags: [MessageFlags.IsComponentsV2]
+				})
+				.catch(() => undefined);
+		}
 	});
 }

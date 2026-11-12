@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import { Player, SearchPlatform, SearchResult, UnresolvedSearchResult } from 'lavalink-client';
 import * as view from '../view/search.ts';
-import { ownerOnly } from '../../../lib/ownerOnlyFilter.ts';
+import { createComponentSession, type ComponentSession } from '../../../lib/componentSession.ts';
 import { errorView } from '../../../lib/errorView.ts';
 
 export const name = 'search';
@@ -97,16 +97,7 @@ async function runSelection(
 	tracks: (SearchResult | UnresolvedSearchResult)['tracks'],
 	selectMessage: Message
 ): Promise<void> {
-	const collector = selectMessage.createMessageComponentCollector({
-		filter: ownerOnly(interaction.user.id, (i) => i.customId === view.searchSelectCustomId || i.customId === view.searchCancelCustomId),
-		time: SELECT_TIMEOUT_MS
-	});
-
-	let settled = false;
-
 	const handleTimeout = async () => {
-		if (settled) return;
-		settled = true;
 		await interaction
 			.editReply({
 				components: [view.searchTimeout()],
@@ -116,10 +107,8 @@ async function runSelection(
 			.catch(() => null);
 	};
 
-	const handleCancel = async (collected: ButtonInteraction<'cached'>) => {
-		if (settled) return;
-		settled = true;
-		collector.stop('cancel');
+	const handleCancel = async (collected: ButtonInteraction<'cached'>, session: ComponentSession) => {
+		if (!session.settle('cancel')) return;
 		await collected
 			.update({
 				components: [view.searchCancelled()],
@@ -129,11 +118,9 @@ async function runSelection(
 			.catch(() => null);
 	};
 
-	const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>) => {
+	const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>, session: ComponentSession) => {
 		await selectInteraction.deferUpdate();
-		if (settled) return;
-		settled = true;
-		collector.stop('select');
+		if (!session.settle('select')) return;
 
 		const index = Number.parseInt(selectInteraction.values[0], 10);
 		const selected = tracks[index];
@@ -159,14 +146,21 @@ async function runSelection(
 		}
 	};
 
-	collector.on('collect', (collected) => {
-		if (collected.customId === view.searchCancelCustomId) {
-			void handleCancel(collected as ButtonInteraction<'cached'>);
-			return;
-		}
-		void handleSelect(collected as StringSelectMenuInteraction<'cached'>);
+	createComponentSession(selectMessage, {
+		owner: {
+			userId: interaction.user.id,
+			accept: (i) => i.customId === view.searchSelectCustomId || i.customId === view.searchCancelCustomId
+		},
+		time: SELECT_TIMEOUT_MS,
+		onCollect: (collected, session) => {
+			if (collected.customId === view.searchCancelCustomId) {
+				void handleCancel(collected as ButtonInteraction<'cached'>, session);
+				return;
+			}
+			void handleSelect(collected as StringSelectMenuInteraction<'cached'>, session);
+		},
+		onTimeout: handleTimeout
 	});
-	collector.once('end', handleTimeout);
 }
 
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {

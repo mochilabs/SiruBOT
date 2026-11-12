@@ -1,18 +1,11 @@
-import {
-	ButtonInteraction,
-	ChatInputCommandInteraction,
-	Collection,
-	ComponentType,
-	GuildMember,
-	InteractionCollector,
-	MessageFlags
-} from 'discord.js';
+import { ButtonInteraction, ChatInputCommandInteraction, Collection, ComponentType, GuildMember, MessageFlags } from 'discord.js';
 import { Player, Track } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import * as view from '../view/skip.ts';
 import { emoji } from '@sirubot/utils';
 import { voteSkipId } from '../customIds.ts';
 import { notice } from '../../general/view/notice.ts';
+import { createComponentSession, type ComponentSession } from '../../../lib/componentSession.ts';
 
 interface VoteSkipOptions {
 	player: Player;
@@ -59,15 +52,13 @@ export class VoteSkip {
 
 		if (!this.options.interaction.channel) return;
 
-		const collector = this.options.interaction.channel.createMessageComponentCollector({
+		createComponentSession<ButtonInteraction>(this.options.interaction.channel, {
 			filter: (i) => i.customId === this.customId,
 			componentType: ComponentType.Button,
-			time: 30_000
+			time: 30_000,
+			onCollect: (buttonInteraction, session) => this.handleVoteButton(buttonInteraction, session),
+			onTimeout: () => this.handleVoteTimeout()
 		});
-
-		collector.on('collect', (buttonInteraction) => this.handleVoteButton(buttonInteraction, collector));
-
-		collector.on('end', () => this.handleVoteTimeout());
 	}
 
 	private createVoteComponent() {
@@ -80,9 +71,9 @@ export class VoteSkip {
 		});
 	}
 
-	private async handleVoteButton(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
+	private async handleVoteButton(buttonInteraction: ButtonInteraction, session: ComponentSession): Promise<void> {
 		if (!this.options.player.connected || this.hasTrackChanged()) {
-			await this.updateToAlreadySkipped(buttonInteraction, collector);
+			await this.updateToAlreadySkipped(buttonInteraction, session);
 			return;
 		}
 
@@ -98,7 +89,7 @@ export class VoteSkip {
 		this.voteState.voteUsers.add(buttonInteraction.user.id);
 
 		if (this.voteState.voteUsers.size >= this.voteState.requiredVotes) {
-			await this.completeVoteSkip(buttonInteraction, collector);
+			await this.completeVoteSkip(buttonInteraction, session);
 		} else {
 			await this.updateVoteProgress(buttonInteraction);
 		}
@@ -119,17 +110,16 @@ export class VoteSkip {
 		return null;
 	}
 
-	private async updateToAlreadySkipped(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
+	private async updateToAlreadySkipped(buttonInteraction: ButtonInteraction, session: ComponentSession): Promise<void> {
 		// 클릭한 인터랙션을 직접 갱신해야 "상호작용 실패"가 뜨지 않아요.
 		await buttonInteraction.update({
 			components: [view.alreadySkipped()],
 			flags: [MessageFlags.IsComponentsV2]
 		});
-		collector.removeAllListeners();
-		collector.stop();
+		session.settle();
 	}
 
-	private async completeVoteSkip(buttonInteraction: ButtonInteraction, collector: InteractionCollector<ButtonInteraction>): Promise<void> {
+	private async completeVoteSkip(buttonInteraction: ButtonInteraction, session: ComponentSession): Promise<void> {
 		await container.mixerService.skip(this.options.player as import('../lavalink/player/customPlayer.ts').CustomPlayer);
 		await buttonInteraction.update({
 			components: [
@@ -140,8 +130,7 @@ export class VoteSkip {
 			],
 			flags: [MessageFlags.IsComponentsV2]
 		});
-		collector.removeAllListeners();
-		collector.stop();
+		session.settle();
 	}
 
 	private async updateVoteProgress(buttonInteraction: ButtonInteraction): Promise<void> {

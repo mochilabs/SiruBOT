@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/node';
 import { ButtonInteraction, ChatInputCommandInteraction, Client, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import { errorView } from '../lib/errorView.ts';
+import { createComponentSession, type ComponentSession } from '../lib/componentSession.ts';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../modules/audio/lavalink/autoPlayRelated.ts';
 import { cancelPendingInvalidate, notifyQueueMutated } from '../modules/audio/lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../modules/audio/lavalink/handlers/mixerHandlers.ts';
@@ -225,12 +226,6 @@ export class AudioService {
 
 		const trackAdded = view.trackAdded(view.trackAddedProps(player, selectedTrack));
 
-		const collector = askReply.createMessageComponentCollector({
-			filter: (i) => i.user.id === interaction.user.id && view.decodePlaylistAddId(i.customId) !== null,
-			time: 30000,
-			componentType: ComponentType.Button
-		});
-
 		const handleEndAction = async () => {
 			await interaction
 				.editReply({
@@ -241,11 +236,14 @@ export class AudioService {
 				.catch((error) => this.deps.logger.warn(`[audio] trackAdded edit failed (guild ${player.guildId}): ${error}`));
 		};
 
-		const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>) => {
+		// 첫 입력만 처리해요 (플레이어가 끊겼으면 아무것도 하지 않고 시간 초과 때 trackAdded로 마무리해요).
+		let pressed = false;
+		const handleButtonAction = async (collectorInteraction: ButtonInteraction<'cached'>, session: ComponentSession) => {
+			if (pressed) return;
+			pressed = true;
 			await collectorInteraction.deferUpdate();
 			if (!player.connected) return;
-			collector.off('collect', handleButtonAction);
-			collector.off('end', handleEndAction);
+			session.settle();
 
 			const action = view.decodePlaylistAddId(collectorInteraction.customId)?.action;
 
@@ -271,8 +269,13 @@ export class AudioService {
 			}
 		};
 
-		collector.once('collect', handleButtonAction);
-		collector.once('end', handleEndAction);
+		createComponentSession<ButtonInteraction<'cached'>>(askReply, {
+			filter: (i) => i.user.id === interaction.user.id && view.decodePlaylistAddId(i.customId) !== null,
+			time: 30000,
+			componentType: ComponentType.Button,
+			onCollect: handleButtonAction,
+			onTimeout: handleEndAction
+		});
 	}
 
 	/**

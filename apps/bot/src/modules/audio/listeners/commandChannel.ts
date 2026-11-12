@@ -5,7 +5,7 @@ import { ButtonInteraction, ChannelType, Message, MessageFlags, StringSelectMenu
 import { Player, Track, UnresolvedTrack } from 'lavalink-client';
 import * as playView from '../view/play.ts';
 import * as searchView from '../view/search.ts';
-import { ownerOnly } from '../../../lib/ownerOnlyFilter.ts';
+import { createComponentSession, type ComponentSession } from '../../../lib/componentSession.ts';
 import { errorView } from '../../../lib/errorView.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
 
@@ -210,27 +210,13 @@ export class CommandChannelListener extends Listener {
 			.catch(() => null);
 		if (!selectMessage) return;
 
-		const collector = selectMessage.createMessageComponentCollector({
-			filter: ownerOnly(
-				message.author.id,
-				(i) => i.customId === searchView.searchSelectCustomId || i.customId === searchView.searchCancelCustomId
-			),
-			time: SELECT_TIMEOUT_MS
-		});
-
-		let settled = false;
-
 		const handleTimeout = async () => {
-			if (settled) return;
-			settled = true;
 			await selectMessage.edit({ components: [searchView.searchTimeout()], flags: [MessageFlags.IsComponentsV2] }).catch(() => null);
 			await this.resolveInputMessage(message, player.guildId);
 		};
 
-		const handleCancel = async (collected: ButtonInteraction<'cached'>) => {
-			if (settled) return;
-			settled = true;
-			collector.stop('cancel');
+		const handleCancel = async (collected: ButtonInteraction<'cached'>, session: ComponentSession) => {
+			if (!session.settle('cancel')) return;
 			await collected
 				.update({
 					components: [searchView.searchCancelled()],
@@ -241,18 +227,14 @@ export class CommandChannelListener extends Listener {
 			await this.resolveInputMessage(message, player.guildId);
 		};
 
-		const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>) => {
+		const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>, session: ComponentSession) => {
 			await selectInteraction.deferUpdate();
-			if (settled) return;
-			settled = true;
-			collector.stop('select');
+			if (!session.settle('select')) return;
 
 			const index = Number.parseInt(selectInteraction.values[0], 10);
 			const selected = tracks[index];
-			if (!selected) {
-				await handleTimeout();
-				return;
-			}
+			// 이미 settle된 뒤라 예전 코드의 handleTimeout() 호출은 아무 일도 하지 않았어요. 동작 그대로 끝내요.
+			if (!selected) return;
 
 			try {
 				const { wasIdle } = await this.container.audioService.enqueueTrack(player, selected);
@@ -277,14 +259,21 @@ export class CommandChannelListener extends Listener {
 			}
 		};
 
-		collector.on('collect', (collected) => {
-			if (collected.customId === searchView.searchCancelCustomId) {
-				void handleCancel(collected as ButtonInteraction<'cached'>);
-				return;
-			}
-			void handleSelect(collected as StringSelectMenuInteraction<'cached'>);
+		createComponentSession(selectMessage, {
+			owner: {
+				userId: message.author.id,
+				accept: (i) => i.customId === searchView.searchSelectCustomId || i.customId === searchView.searchCancelCustomId
+			},
+			time: SELECT_TIMEOUT_MS,
+			onCollect: (collected, session) => {
+				if (collected.customId === searchView.searchCancelCustomId) {
+					void handleCancel(collected as ButtonInteraction<'cached'>, session);
+					return;
+				}
+				void handleSelect(collected as StringSelectMenuInteraction<'cached'>, session);
+			},
+			onTimeout: handleTimeout
 		});
-		collector.once('end', handleTimeout);
 	}
 
 	/** 재생 피드백 컨테이너 — handleTrackPlay와 동일한 분기(시작/추가)를 사용한다. */
