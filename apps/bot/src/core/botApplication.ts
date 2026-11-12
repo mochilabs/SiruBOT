@@ -30,7 +30,6 @@ import {
 	PlayerNotifier,
 	PlaylistService,
 	RedisStore,
-	SkipPolicy,
 	SponsorBlockService,
 	TrackService,
 	autoPlayRelated,
@@ -38,6 +37,10 @@ import {
 	createMusicControl,
 	createMusicPlay,
 	createPlayerWebResponder,
+	createVoteSkip,
+	getUserQueuedTracks,
+	requesterIdOf,
+	RELATED_TRACK_REQUESTER_ID,
 	type MusicPlayServiceDeps,
 	createPlaylistPlayback
 } from '../features/music/index.ts';
@@ -161,11 +164,6 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			guildService: container.guildService,
 			getClient: () => container.client,
 			getMixerService: () => container.mixerService
-		});
-		container.skipPolicy = new SkipPolicy({
-			guildService: container.guildService,
-			mixerService: container.mixerService,
-			getClient: () => container.client
 		});
 		container.playlistPlayback = createPlaylistPlayback({
 			guildService: container.guildService,
@@ -335,6 +333,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.appEmojiManager = new AppEmojiManager({ logger: appLogger, getApplication: () => container.client.application });
 		container.stoppables.push(container.appEmojiManager);
 		this.setupMusicControl();
+		this.setupVoteSkip();
 		this.setupMusicPlay();
 	}
 
@@ -360,6 +359,30 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				removeController: (player) => container.playerNotifier.deleteController(player),
 				playPrevious: (player) => container.audioService.playPrevious(player)
 			}
+		});
+	}
+
+	/**
+	 * 투표 건너뛰기 유스케이스를 한 번만 만들어 container.voteSkip으로 노출해요.
+	 * 허용 판정은 여기서, 실제 건너뛰기는 container.music.skipApproved(인가 없이 mixer 스킵)로 보내요. 플레이어 상태는 호출 시점에 읽어요.
+	 */
+	private setupVoteSkip() {
+		container.voteSkip = createVoteSkip({
+			playback: (guildId) => {
+				const player = container.audio.getPlayer(guildId);
+				if (!player) return undefined;
+				const current = player.queue.current;
+				return {
+					connected: player.connected ?? false,
+					current: current ? { identifier: current.info.identifier, requesterId: requesterIdOf(current) } : null,
+					queueLength: player.queue.tracks.length,
+					userQueuedCount: getUserQueuedTracks(player).length
+				};
+			},
+			getDjRoleId: (guildId) => guildPlayback.getDJRole(container.guildService, guildId),
+			getBotUserId: () => container.client.user?.id,
+			relatedRequesterId: RELATED_TRACK_REQUESTER_ID,
+			music: { skipApproved: (guildId, options) => container.music.skipApproved(guildId, options) }
 		});
 	}
 

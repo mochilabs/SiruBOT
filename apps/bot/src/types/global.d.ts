@@ -12,9 +12,9 @@ import type {
 	PlaylistPlayback,
 	PlaylistService,
 	RedisStore,
-	SkipPolicy,
 	SponsorBlockService,
-	TrackService
+	TrackService,
+	VoteSkipService
 } from '../features/music/index.ts';
 
 // DB Services
@@ -39,12 +39,12 @@ declare module '@sapphire/pieces' {
 		playlistService: PlaylistService;
 		audioService: AudioService;
 		mixerService: MixerService;
-		/** 스킵 판정(DJ·요청자·투표) 소유자 — 상태 없이 mixer 경유 스킵만 실행해요 */
 		/** SponsorBlock 구간 조회·건너뛰기 소유자 (플레이어별 상태는 WeakMap) */
 		sponsorBlockService: SponsorBlockService;
 		/** 저장한 플레이리스트·즐겨찾기 재생 (features/music/playback/playlistPlayback.ts) */
 		playlistPlayback: PlaylistPlayback;
-		skipPolicy: SkipPolicy;
+		/** 건너뛰기 허용 판정(강제·요청자·추천곡·단독·투표)과 진행 중인 투표 소유자 (features/music/application/voteSkip.ts) */
+		voteSkip: VoteSkipService;
 		ttsService: import('../features/tts/index.ts').TtsService;
 		ttsUserSettings: import('../features/tts/index.ts').TtsUserSettingsService;
 		ttsPronunciation: import('../features/tts/index.ts').TtsPronunciationService;

@@ -99,9 +99,14 @@ export interface MusicControl {
 	stop(actor: Actor): Promise<{ stopped: true }>;
 	/**
 	 * 투표 없이 현재 곡을 바로 건너뛰어요. 대기열이 비어 있으면 현재 곡을 끝내요 (추천곡이 예열돼 있으면 그 곡으로 넘어가요).
-	 * `to`가 있으면 그 번호(1부터)의 대기곡부터 재생해요 — 이때는 대기열에 곡이 있어야 해요. 투표 건너뛰기(/건너뛰기)는 이 유스케이스가 아니라 skipPolicy가 맡아요.
+	 * `to`가 있으면 그 번호(1부터)의 대기곡부터 재생해요 — 이때는 대기열에 곡이 있어야 해요. 투표 건너뛰기(/건너뛰기)의 허용 판정은 `createVoteSkip`(application/voteSkip.ts)이 맡고, 실제 건너뛰기만 `skipApproved`를 거쳐요.
 	 */
 	skipNow(actor: Actor, options?: { to?: number }): Promise<{ skipped: true }>;
+	/**
+	 * 인가 검사 없이 현재 곡을 건너뛰어요 — 투표 건너뛰기처럼 호출자가 자기 정책(요청자·단독·투표 통과)으로 허용을 이미 판정한 경우에만 써요.
+	 * 대기열·mixer 동작과 곡 번호 검증은 `skipNow`와 같아요.
+	 */
+	skipApproved(guildId: string, options?: { to?: number }): Promise<{ skipped: true }>;
 	/** 이전에 재생한 곡을 다시 재생해요. 플레이어가 없거나 재생 기록이 비어 있으면 거절해요. 현재 곡이 없어도 돼요. */
 	previous(actor: Actor): Promise<{ track: TrackSummaryPort }>;
 }
@@ -115,6 +120,20 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 		const current = player?.queue.current;
 		if (!player || !current) throw new AppError('not_found', MUSIC_ACCESS_MESSAGES.noSong(), { ephemeral: true });
 		return { player, current };
+	}
+
+	/** 현재 곡 건너뛰기 공용 흐름 — 인가는 호출자가 맡아요 (skipNow는 authorize 뒤에, skipApproved는 바로). */
+	async function skipCurrent(guildId: string, options: { to?: number }): Promise<{ skipped: true }> {
+		const { player } = requireSong(guildId);
+		const { to } = options;
+		if (to !== undefined && (!Number.isInteger(to) || to < 1)) {
+			throw new AppError('invalid_input', `${emoji('error')} 건너뛸 곡 번호가 올바르지 않아요.`, { ephemeral: true });
+		}
+		if (to !== undefined && player.queue.tracks.length === 0) {
+			throw new AppError('not_found', `${emoji('error')} 대기열에 곡이 없어요.`, { ephemeral: true });
+		}
+		await mixer.skip(player, to);
+		return { skipped: true };
 	}
 
 	return {
@@ -196,16 +215,11 @@ export function createMusicControl<P extends PlayerPort>(deps: MusicControlDeps<
 
 		async skipNow(actor, options = {}) {
 			await access.authorize(actor);
-			const { player } = requireSong(actor.guildId);
-			const { to } = options;
-			if (to !== undefined && (!Number.isInteger(to) || to < 1)) {
-				throw new AppError('invalid_input', `${emoji('error')} 건너뛸 곡 번호가 올바르지 않아요.`, { ephemeral: true });
-			}
-			if (to !== undefined && player.queue.tracks.length === 0) {
-				throw new AppError('not_found', `${emoji('error')} 대기열에 곡이 없어요.`, { ephemeral: true });
-			}
-			await mixer.skip(player, to);
-			return { skipped: true };
+			return skipCurrent(actor.guildId, options);
+		},
+
+		skipApproved(guildId, options = {}) {
+			return skipCurrent(guildId, options);
 		},
 
 		async previous(actor) {

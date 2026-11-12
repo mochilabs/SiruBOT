@@ -6,7 +6,7 @@ import * as skip from '../subcommands/skip.ts';
 import { musicMemberPreconditionError } from '../utils/preconditions.ts';
 
 /**
- * `/건너뛰기` — `/음악 건너뛰기`의 1급 승격. 투표/강제 스킵 정책(`skipPolicy`)과 곡 번호 자동완성을
+ * `/건너뛰기` — `/음악 건너뛰기`의 1급 승격. 투표/강제 스킵 판정(`container.voteSkip`)과 곡 번호 자동완성을
  * 서브커맨드 모듈에서 그대로 써요.
  */
 @ApplyOptions<Command.Options>({

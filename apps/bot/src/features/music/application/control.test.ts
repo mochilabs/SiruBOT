@@ -409,6 +409,22 @@ describe('skipNow', () => {
 	});
 });
 
+describe('skipApproved', () => {
+	it('인가 없이 mixer 건너뛰기만 호출해요 (투표 건너뛰기가 허용을 판정한 뒤 쓰는 경로)', async () => {
+		const { control, player, authorize, skip } = harness({ denied: new AppError('forbidden', 'DJ만 가능해요.') });
+		await expect(control.skipApproved('guild')).resolves.toEqual({ skipped: true });
+		expect(authorize).not.toHaveBeenCalled();
+		expect(skip).toHaveBeenCalledExactlyOnceWith(player, undefined);
+	});
+
+	it('곡 번호 검증과 현재 곡 없음 거절은 skipNow와 같아요', async () => {
+		const { control, skip } = harness();
+		const error = await rejection(control.skipApproved('guild', { to: 0 }));
+		expect(error.kind).toBe('invalid_input');
+		expect(skip).not.toHaveBeenCalled();
+	});
+});
+
 describe('previous', () => {
 	it('인가 뒤 이전곡 재생 흐름을 한 번 호출하고 그 곡을 돌려줘요', async () => {
 		const { control, player, authorize, playPrevious } = harness();

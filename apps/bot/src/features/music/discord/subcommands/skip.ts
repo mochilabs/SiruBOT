@@ -6,10 +6,14 @@ import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
 	GuildMember,
+	MessageFlags,
 	type SlashCommandOptionsOnlyBuilder,
 	SlashCommandSubcommandBuilder
 } from 'discord.js';
-import type { SkipContext } from '../../playback/skipPolicy.ts';
+import type { Track } from 'lavalink-client';
+import { actorFromMember } from '../../application/actor.ts';
+import * as skipView from '../views/skip.ts';
+import { showVoteSkip } from '../managers/voteSkip.ts';
 
 export const name = 'skip';
 export const ko = '건너뛰기';
@@ -51,28 +55,15 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 	await respondQueuedTracks(interaction);
 }
 
-async function buildSkipContext(interaction: ChatInputCommandInteraction<'cached'>): Promise<SkipContext | null> {
-	const player = container.audio.getPlayer(interaction.guildId);
-	if (!player) return null;
-
-	const queue = player.queue;
-	const currentTrack = queue.current;
-	if (!currentTrack) return null;
-
-	const member = interaction.member;
-	const voiceChannel = member?.voice.channel;
-	if (!voiceChannel) return null;
-
-	const voiceChannelMembers = voiceChannel.members.filter(
-		(member: GuildMember) => !member.user.bot && member.voice.selfDeaf === false && member.voice.serverDeaf === false
-	);
-
-	return { player, queue, currentTrack, interaction, voiceChannel, voiceChannelMembers };
-}
-
+/**
+ * `/건너뛰기` — 허용 판정과 투표는 `container.voteSkip`(application/voteSkip.ts)이 맡고,
+ * 여기서는 인터랙션을 평범한 요청으로 바꾸고 결과를 디스코드 메시지로 그려요.
+ */
 export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
-	const context = await buildSkipContext(interaction);
-	if (!context) {
+	const player = container.audio.getPlayer(interaction.guildId);
+	const currentTrack = player?.queue.current as Track | undefined;
+	const voiceChannel = interaction.member?.voice.channel;
+	if (!player || !currentTrack || !voiceChannel) {
 		throw new UserError({
 			identifier: 'skip_no_player',
 			message: `${emoji('error')} 재생 중인 곡이 없어요.`,
@@ -80,10 +71,49 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		});
 	}
 
+	const listenerIds = new Set(
+		voiceChannel.members
+			.filter((member: GuildMember) => !member.user.bot && member.voice.selfDeaf === false && member.voice.serverDeaf === false)
+			.keys()
+	);
 	const force = interaction.options.getBoolean('force') ?? false;
 	const selection = interaction.options.getString('to');
-	if (selection) context.queueSelection = selection;
-	const to = selection ? resolveQueueSelection(context.player, selection) + 1 : 0;
+	const to = selection ? resolveQueueSelection(player, selection) + 1 : null;
+	// 곡 번호 건너뛰기의 대상 곡은 스킵 전에 읽어 둬요 (스킵하면 대기열이 줄어요).
+	const targetTrack = to ? (player.queue.tracks[to - 1] as Track | undefined) : undefined;
 
-	await container.skipPolicy.handleSkip(context, force, to);
+	const outcome = await container.voteSkip.request({
+		requestId: interaction.id,
+		actor: actorFromMember(interaction.member),
+		listenerIds,
+		force,
+		to
+	});
+
+	switch (outcome.kind) {
+		case 'skipped':
+			await interaction.reply({
+				components: [
+					outcome.by === 'related' ? skipView.trackRelatedSkipped({ track: currentTrack }) : skipView.trackSkipped({ track: currentTrack })
+				],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		case 'skipped-to':
+			await interaction.reply({
+				components: [skipView.trackSkippedTo({ track: targetTrack as Track, to: outcome.to })],
+				flags: [MessageFlags.IsComponentsV2]
+			});
+			return;
+		case 'vote-started':
+			await showVoteSkip({
+				interaction,
+				voteId: outcome.voteId,
+				votes: outcome.votes,
+				requiredVotes: outcome.requiredVotes,
+				currentTrack,
+				nextTrack: player.queue.tracks[0] as Track | undefined
+			});
+			return;
+	}
 }

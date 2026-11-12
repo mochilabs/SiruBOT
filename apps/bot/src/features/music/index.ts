@@ -6,6 +6,15 @@ export { createPlayerWebResponder } from './inbound/playerWeb.ts';
 export { actorFromMember, type Actor } from './application/actor.ts';
 export { createMusicAccess } from './application/access.ts';
 export { createMusicControl, type MusicControl } from './application/control.ts';
+export {
+	createVoteSkip,
+	requiredSkipVotes,
+	type VoteSkipDeps,
+	type VoteSkipService,
+	type VoteSkipRequest,
+	type VoteSkipOutcome,
+	type VoteCastOutcome
+} from './application/voteSkip.ts';
 export { createMusicPlay, type MusicPlayService, type MusicPlayServiceDeps } from './application/play.ts';
 export { PlaybackReporter } from './application/playbackReporter.ts';
 export { PlaylistService } from './application/playlistService.ts';
@@ -13,7 +22,6 @@ export { TrackService } from './application/trackService.ts';
 export { AudioService } from './playback/audioService.ts';
 export { MixerService } from './playback/mixerService.ts';
 export { createPlaylistPlayback, type PlaylistPlayback } from './playback/playlistPlayback.ts';
-export { SkipPolicy } from './playback/skipPolicy.ts';
 export { SponsorBlockService } from './playback/sponsorBlockService.ts';
 export { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from './discord/commands/music.ts';
 export { applyFilterPreset, dropLoserFilters, FILTER_PRESET_NAMES, isFilterPreset, resetAllFilters } from './discord/utils/filterPresets.ts';
@@ -27,4 +35,4 @@ export { nowPlayingTrack } from './lavalink/player/nowPlaying.ts';
 export type { NowPlayingCardStore } from './lavalink/player/nowPlayingCard.ts';
 export { PlayerNotifier } from './lavalink/player/playerNotifier.ts';
 export { NodeSessionStore, RedisStore } from './lavalink/redisStore.ts';
-export { isTtsClip, TTS_CLIP_REQUESTER_ID } from './lavalink/requester.ts';
+export { isTtsClip, requesterIdOf, RELATED_TRACK_REQUESTER_ID, TTS_CLIP_REQUESTER_ID } from './lavalink/requester.ts';

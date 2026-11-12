@@ -146,7 +146,7 @@ describe('audio custom id round trips', () => {
 		const customId = voteSkipId.encode('vote', { interactionId: '100000000000000001' });
 		const view = voteSkip({
 			requiredVotes: 2,
-			voteUsers: new Set(['a']),
+			votes: 1,
 			trackToSkip: { info: { title: 't', author: 'a', duration: 1, uri: 'u', artworkUrl: null } } as never,
 			customId
 		});
