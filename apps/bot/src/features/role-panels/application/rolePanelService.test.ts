@@ -97,6 +97,11 @@ describe('RolePanelService.publishPanel', () => {
 		await expect(makeService().publishPanel(makeGuild([]), 'x', undefined)).rejects.toBeInstanceOf(PanelPostError);
 	});
 
+	it('거부 문구에는 디스코드 이모지 마크업이 없다 (대시보드에도 그대로 보여요)', async () => {
+		mocks.db.rolePanel.findFirst.mockResolvedValue(null);
+		await expect(makeService().publishPanel(makeGuild([]), 'x', undefined)).rejects.toThrow(/^역할 패널을 찾을 수 없어요\.$/);
+	});
+
 	it('채널이 없으면 패널에 저장된 채널로 폴백한다', async () => {
 		const channel = textChannel('200000000000000001');
 		mocks.db.rolePanel.findFirst.mockResolvedValue(panel({ channelId: channel.id }));

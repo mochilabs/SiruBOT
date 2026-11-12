@@ -9,7 +9,6 @@ import {
 	type Role,
 	type TextChannel
 } from 'discord.js';
-import { emoji } from '@sirubot/utils';
 import { rolePanelEmojiKey, validateReactionButtons } from '@sirubot/utils/rolePanel';
 import type { PrismaClient, RolePanel, RolePanelButton } from '@sirubot/prisma';
 import type { AppLogger } from '../../../lib/appLogger.ts';
@@ -144,7 +143,7 @@ export class RolePanelService {
 		options: { refresh?: boolean } = {}
 	): Promise<{ messageId: string; channelId: string } | null> {
 		const panel = await this.getPanel(panelId, guild.id);
-		if (!panel) throw new PanelPostError(`${emoji('error')} 역할 패널을 찾을 수 없어요.`);
+		if (!panel) throw new PanelPostError(`역할 패널을 찾을 수 없어요.`);
 
 		if (options.refresh) {
 			const posted = resolvePanelChannel(guild, panel.channelId);
@@ -159,15 +158,15 @@ export class RolePanelService {
 		}
 
 		if (panel.buttons.length === 0) {
-			throw new PanelPostError(`${emoji('error')} 역할 버튼이 하나도 없어요. 버튼을 추가하고 저장한 뒤 게시해 주세요.`);
+			throw new PanelPostError(`역할 버튼이 하나도 없어요. 버튼을 추가하고 저장한 뒤 게시해 주세요.`);
 		}
 		if (panel.mode === 'reaction') {
 			const reason = validateReactionButtons(panel.buttons);
-			if (reason) throw new PanelPostError(`${emoji('error')} ${reason}`);
+			if (reason) throw new PanelPostError(reason);
 		}
 		const channel = resolvePanelChannel(guild, requestedChannelId ?? panel.channelId);
 		if (!channel) {
-			throw new PanelPostError(`${emoji('error')} 게시할 텍스트 채널을 찾을 수 없어요. 채널을 선택해 주세요.`);
+			throw new PanelPostError(`게시할 텍스트 채널을 찾을 수 없어요. 채널을 선택해 주세요.`);
 		}
 
 		const message = await channel.send(this.deps.messages.panel(panel, panel.buttons));
@@ -177,7 +176,7 @@ export class RolePanelService {
 			} catch (error) {
 				await message.delete().catch(() => null);
 				throw new PanelPostError(
-					`${emoji('error')} 반응을 달지 못했어요. 봇이 해당 이모지를 쓸 수 있는지(다른 서버 이모지 등)와 '반응 추가' 권한을 확인해 주세요.`,
+					`반응을 달지 못했어요. 봇이 해당 이모지를 쓸 수 있는지(다른 서버 이모지 등)와 '반응 추가' 권한을 확인해 주세요.`,
 					{ cause: error }
 				);
 			}
@@ -240,29 +239,29 @@ export class RolePanelService {
 			return { ok: false, reason: '역할을 찾을 수 없어요. 역할이 삭제되었는지 확인해 주세요.' };
 		}
 		if (role.id === guild.roles.everyone.id) {
-			return { ok: false, reason: `${emoji('error')} @everyone 역할은 부여할 수 없어요.` };
+			return { ok: false, reason: `@everyone 역할은 부여할 수 없어요.` };
 		}
 		if (role.managed) {
-			return { ok: false, reason: `${emoji('error')} 봇·통합이 관리하는 역할(${role.name})은 부여할 수 없어요.` };
+			return { ok: false, reason: `봇·통합이 관리하는 역할(${role.name})은 부여할 수 없어요.` };
 		}
 
 		const dangerous = DANGEROUS_ROLE_PERMISSIONS.find(([flag]) => role.permissions.has(flag));
 		if (dangerous) {
 			return {
 				ok: false,
-				reason: `${emoji('error')} ${role.name} 역할은 '${dangerous[1]}' 같은 위험 권한이 있어 패널로 부여할 수 없어요.`
+				reason: `${role.name} 역할은 '${dangerous[1]}' 같은 위험 권한이 있어 패널로 부여할 수 없어요.`
 			};
 		}
 
 		const me = guild.members.me;
-		if (!me) return { ok: false, reason: `${emoji('error')} 봇의 멤버 정보를 읽지 못했어요.` };
+		if (!me) return { ok: false, reason: `봇의 멤버 정보를 읽지 못했어요.` };
 		// ADMINISTRATOR면 위계 무시. 아니면 봇 최상위 역할이 대상보다 높아야 해요.
 		if (!me.permissions.has(PermissionFlagsBits.Administrator)) {
 			const botTop = me.roles.highest;
 			if (botTop.position <= role.position) {
 				return {
 					ok: false,
-					reason: `${emoji('error')} 봇 역할(${botTop.name})이 ${role.name} 역할보다 낮아 부여할 수 없어요. 봇 역할을 더 높게 옮겨 주세요.`
+					reason: `봇 역할(${botTop.name})이 ${role.name} 역할보다 낮아 부여할 수 없어요. 봇 역할을 더 높게 옮겨 주세요.`
 				};
 			}
 		}
@@ -317,7 +316,7 @@ export class RolePanelService {
 			this.deps.logger.error(
 				`[rolePanel] ${action} role failed (guild ${guild.id}, role ${roleId}): ${error instanceof Error ? error.message : String(error)}`
 			);
-			return { ok: false, reason: `${emoji('error')} 역할을 변경하지 못했어요. 봇 권한을 확인해 주세요.` };
+			return { ok: false, reason: `역할을 변경하지 못했어요. 봇 권한을 확인해 주세요.` };
 		}
 
 		// 실제로 바뀐 경우만 카운트해요 (부여·제거 무관).
