@@ -21,13 +21,6 @@ export const ttsId = defineCustomId({
 	}
 });
 
-/** AI 채팅 '생성 중지' 버튼 — `view/chatView.ts` ↔ `interaction-handlers/chatCancel.ts`. cancelKey는 중지 컨트롤러를 가리키는 32자 키예요. */
-export const chatCancelId = defineCustomId({
-	namespace: 'chat-cancel',
-	version: 1,
-	actions: { stop: { cancelKey: field.token({ maxLength: 32 }) } }
-});
-
 /** 봇 소유자 eval 모달과 코드 입력칸 — `view/eval.ts` ↔ `interaction-handlers/evalModal.ts` */
 export const evalId = defineCustomId({
 	namespace: 'eval',

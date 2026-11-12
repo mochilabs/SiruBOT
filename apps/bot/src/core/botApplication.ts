@@ -23,16 +23,12 @@ import { TtsService } from '../services/ttsService.ts';
 import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
-import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
-import { MemoryPromotionJobs } from '../services/aiChat/memoryPromotion.ts';
-import { createAiChat } from '../services/aiChatService.ts';
-import { createAiTools } from '../services/aiTools/index.ts';
 import { CountingStateStore } from '../services/countingState.ts';
 import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { getTtsConfig } from '../lib/ttsConfig.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
-import { AiMemoryService } from '../services/aiMemoryService.ts';
+import { AiMemoryService, ChannelHistoryStore, MemoryPromotionJobs, createAiChat, createAiTools } from '../features/ai-chat/index.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
 import { createDataApiClient } from '../services/dataApiClient.ts';
 import { WebhookRelay } from '../services/webhookRelay.ts';
@@ -220,7 +216,11 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		});
 		container.stoppables.push(container.voiceLeaveTimers, container.botActivity);
 		container.aiMemoryService = new AiMemoryService({ db: container.db });
-		container.aiChatHistory = new ChannelHistoryStore({ db: container.db, logger: appLogger });
+		container.aiChatHistory = new ChannelHistoryStore({
+			db: container.db,
+			logger: appLogger,
+			getContextTokenBudget: () => getConfig().aiChat.contextTokenBudget
+		});
 		const memoryPromotions = new MemoryPromotionJobs();
 		container.stoppables.push(container.aiChatHistory, memoryPromotions);
 		const aiTools = createAiTools({
@@ -236,7 +236,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getMusic: () => container.music,
 			getAudio: () => container.audio,
 			getClient: () => container.client,
-			getCommands: () => container.stores.get('commands')
+			getCommands: () => container.stores.get('commands'),
+			getSearchConfig: () => getConfig().search
 		});
 		container.aiChat = createAiChat({
 			logger: appLogger,
@@ -249,7 +250,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요
 			getPlayer: (guildId) => container.audio?.getPlayer?.(guildId),
 			// redisStore는 setupRedis 뒤에 생겨서 호출 시점에 읽어요
-			getRedisStore: () => container.redisStore
+			getRedisStore: () => container.redisStore,
+			getContextTokenBudget: () => getConfig().aiChat.contextTokenBudget
 		});
 		container.countingState = new CountingStateStore({ getRedisStore: () => container.redisStore });
 		container.stoppables.push(container.countingState);

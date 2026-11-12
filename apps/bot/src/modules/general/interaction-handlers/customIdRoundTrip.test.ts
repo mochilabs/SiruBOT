@@ -1,14 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TtsPanelButtonHandler } from './ttsPanelButton.ts';
 import { TtsPanelSelectHandler } from './ttsPanelSelect.ts';
-import { ChatCancelHandler } from './chatCancel.ts';
 import { EvalModalHandler } from './evalModal.ts';
 import { ttsPanelView } from '../view/ttsView.ts';
-import { livePayload, statusPayload } from '../view/chatView.ts';
 import { evalModal } from '../view/eval.ts';
 import { confirmAction } from '../../../lib/confirmation.ts';
 import { confirmId } from '../../../lib/confirmationId.ts';
-import { chatCancelId, evalId } from '../customIds.ts';
+import { evalId } from '../customIds.ts';
 
 vi.mock('@sapphire/framework', () => ({
 	InteractionHandler: class {
@@ -18,7 +16,6 @@ vi.mock('@sapphire/framework', () => ({
 	InteractionHandlerTypes: { Button: 'button', SelectMenu: 'select-menu', MessageComponent: 'message-component', ModalSubmit: 'modal-submit' }
 }));
 vi.mock('@sapphire/decorators', () => ({ ApplyOptions: () => (target: unknown) => target }));
-vi.mock('../../../services/aiChatService.ts', () => ({ abortChatTurn: vi.fn() }));
 
 const ctx = {} as never;
 const ids = (rendered: unknown) => [...JSON.stringify(rendered).matchAll(/"custom_id":"([^"]+)"/g)].map((match) => match[1]!);
@@ -43,17 +40,6 @@ describe('general custom id round trips', () => {
 		expect(claimed[1]!.select).toMatchObject({ lang: 'ja' });
 		expect(claimed[0]!.select).toEqual({ patch: null, lang: 'ko' });
 		expect(parsedOf(button as never, { customId: 'tts:panel:toggle:ja', inCachedGuild: () => true })).toBeNull();
-	});
-
-	it('the chat stop button carries its cancel key to the handler', () => {
-		const key = 'a'.repeat(32);
-		const handler = new ChatCancelHandler(ctx, ctx);
-		for (const payload of [livePayload('답', key), statusPayload('검색 중', key)]) {
-			const [customId] = ids(payload.components.map((component) => component.toJSON()));
-			expect(chatCancelId.decode(customId!)).toEqual({ action: 'stop', cancelKey: key });
-			expect(parsedOf(handler as never, { customId })).toEqual({ cancelKey: key });
-		}
-		expect(parsedOf(handler as never, { customId: `chatcancel:${key}` })).toBeNull();
 	});
 
 	it('the eval modal and its input use the declared ids', () => {

@@ -1,0 +1,215 @@
+import { channelToggleView, settingResultView } from '../../../../modules/general/view/settingResult.ts';
+import { ApplyOptions } from '@sapphire/decorators';
+import { Command, UserError, container } from '@sapphire/framework';
+import {
+	ApplicationIntegrationType,
+	ChatInputCommandInteraction,
+	ChannelType,
+	MessageFlags,
+	PermissionFlagsBits,
+	type SlashCommandSubcommandGroupBuilder,
+	type SlashCommandSubcommandsOnlyBuilder
+} from 'discord.js';
+import { emoji } from '@sirubot/utils';
+import { type ChatToolName } from '../../../../services/guildService.ts';
+import { collectOtherTextChannelIds } from '../../../../modules/general/utils/channels.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
+
+/**
+ * /채팅유틸 — 채팅 유틸 기능의 채널 단위 on/off + 카운팅 채널 지정.
+ * - 채널: 이모지 확대·메시지 인용·임베드 복구를 이 채널에서 켜거나 꺼요. 길드 정책이라
+ *   서버 관리 권한이 필요해요 (토글 규칙은 AI 채팅·TTS와 같아요 — guildService.computeChannelToggle).
+ * - 카운팅: 카운팅 채널을 지정하거나(기본: 이 채널) 카운팅을 꺼요. 지정 순간 상태가 초기화돼요.
+ */
+const FEATURE_LABELS: Record<ChatToolName, string> = {
+	emojiEnlarge: '이모지 확대',
+	quote: '메시지 인용',
+	embedFix: '임베드 복구'
+};
+
+/**
+ * 채팅 유틸 서브커맨드 정의 — `/채팅유틸`과 `/설정 채팅유틸`이 같은 옵션을 써요.
+ */
+export function withChatToolsSubcommands(builder: SlashCommandSubcommandsOnlyBuilder | SlashCommandSubcommandGroupBuilder): void {
+	builder
+		.addSubcommand((sub) =>
+			sub
+				.setName('channel')
+				.setNameLocalizations({ ko: '채널' })
+				.setDescription('Toggle a chat tool for this channel.')
+				.setDescriptionLocalizations({ ko: '이 채널에서 채팅 유틸 기능을 켜거나 꺼요.' })
+				.addStringOption((option) =>
+					option
+						.setName('feature')
+						.setNameLocalizations({ ko: '기능' })
+						.setDescription('The chat tool to toggle.')
+						.setDescriptionLocalizations({ ko: '켜거나 끌 기능이에요.' })
+						.setRequired(true)
+						// 선택지는 FEATURE_LABELS에서 뽑는다 — 같은 목록을 두 번 선언하면 한쪽만 갱신돼 어긋난다.
+						.addChoices(
+							...(Object.keys(FEATURE_LABELS) as ChatToolName[]).map((value) => ({
+								name: value,
+								name_localizations: { ko: FEATURE_LABELS[value] },
+								value
+							}))
+						)
+				)
+				.addStringOption((option) =>
+					option
+						.setName('state')
+						.setNameLocalizations({ ko: '상태' })
+						.setDescription('Whether to enable or disable.')
+						.setDescriptionLocalizations({ ko: '켜기 또는 끄기예요.' })
+						.setRequired(true)
+						.addChoices(
+							{ name: 'On', name_localizations: { ko: '켜기' }, value: 'on' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('counting')
+				.setNameLocalizations({ ko: '카운팅' })
+				.setDescription('Designate the counting channel.')
+				.setDescriptionLocalizations({ ko: '카운팅 채널을 지정하거나 카운팅을 꺼요.' })
+				.addChannelOption((option) =>
+					option
+						.setName('channel')
+						.setNameLocalizations({ ko: '채널' })
+						.setDescription('Channel to count in.')
+						.setDescriptionLocalizations({ ko: '숫자를 셀 채널이에요. 비워 두면 이 채널로 지정해요.' })
+						.addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+				)
+				.addStringOption((option) =>
+					option
+						.setName('state')
+						.setNameLocalizations({ ko: '상태' })
+						.setDescription('Whether to enable or disable counting.')
+						.setDescriptionLocalizations({ ko: '지정 또는 끄기예요. 기본값은 지정이에요.' })
+						.addChoices(
+							{ name: 'Set', name_localizations: { ko: '지정' }, value: 'on' },
+							{ name: 'Off', name_localizations: { ko: '끄기' }, value: 'off' }
+						)
+				)
+		);
+}
+
+@ApplyOptions<Command.Options>({
+	enabled: true,
+	name: 'chattools',
+	description: 'Toggle chat tools per channel and set the counting channel.',
+	fullCategory: ['일반']
+})
+export class ChatToolsCommand extends Command {
+	public override registerApplicationCommands(registry: Command.Registry) {
+		registry.registerChatInputCommand((builder) => {
+			builder
+				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+				.setName(this.name)
+				.setNameLocalizations({ ko: '채팅유틸' })
+				.setDescription(this.description)
+				.setDescriptionLocalizations({ ko: '채팅 유틸 기능을 채널별로 켜고 끄고 카운팅 채널을 지정해요.' });
+			withChatToolsSubcommands(builder);
+		});
+	}
+
+	/** `/설정 채팅유틸`이 같은 검증·핸들러를 재사용해요 */
+	static async runFor(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
+		return new ChatToolsCommand(container.client as never).chatInputRun(interaction);
+	}
+
+	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
+		if (!interaction.inCachedGuild()) {
+			throw new UserError({
+				identifier: 'chattools_no_guild',
+				message: `${emoji('error')} 서버 안에서만 사용할 수 있어요.`,
+				context: { ephemeral: true }
+			});
+		}
+
+		// 두 서브커맨드 모두 채널 전체에 영향을 주는 길드 정책이에요.
+		if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
+			throw new UserError({
+				identifier: 'chattools_permission',
+				message: `${emoji('error')} 채팅 유틸 설정은 서버 관리 권한이 필요해요.`,
+				context: { ephemeral: true }
+			});
+		}
+
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+		const subcommand = interaction.options.getSubcommand(true);
+
+		if (subcommand === 'counting') {
+			await this.runCounting(interaction);
+			return;
+		}
+
+		const tool = interaction.options.getString('feature', true) as ChatToolName;
+		const enable = interaction.options.getString('state', true) === 'on';
+
+		// 끄기로 all → channels를 만들 때 남길 목록을 위해 서버의 나머지 텍스트 채널을 모아요.
+		const otherTextChannelIds = collectOtherTextChannelIds(interaction.guild, interaction.channelId);
+		const result = await guildChatPolicy.setChannelChatToolEnabled(
+			this.container.guildService,
+			interaction.guildId,
+			tool,
+			interaction.channelId,
+			enable,
+			otherTextChannelIds
+		);
+		const label = FEATURE_LABELS[tool];
+
+		let hint: string | undefined;
+		if (enable && tool === 'embedFix') {
+			const settings = await guildChatPolicy.getChatToolSettings(this.container.guildService, interaction.guildId);
+			if (settings.embedFixSites.length === 0) hint = '복구할 사이트가 전부 꺼져 있어요. 대시보드 채팅 유틸 탭에서 사이트를 골라 주세요.';
+		}
+		await interaction.editReply({
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { parse: [] },
+			components: [
+				channelToggleView({
+					icon: 'sparkle',
+					label,
+					enabled: enable,
+					channelId: interaction.channelId,
+					mode: result.mode,
+					channelCount: result.channelIds.length,
+					hint
+				})
+			]
+		});
+	}
+
+	/** 카운팅 서브커맨드 — 채널 지정(기본: 이 채널) 또는 끄기. 상태는 새로 시작해요 */
+	async runCounting(interaction: ChatInputCommandInteraction<'cached'>) {
+		if (interaction.options.getString('state') === 'off') {
+			await guildChatPolicy.setCountingEnabled(this.container.guildService, interaction.guildId, false);
+			await this.container.countingState.reset(interaction.guildId);
+			await interaction.editReply({
+				flags: [MessageFlags.IsComponentsV2],
+				allowedMentions: { parse: [] },
+				components: [settingResultView({ icon: 'crown', title: '카운팅 꺼짐', hint: '지정한 채널의 숫자 기록은 초기화했어요.' })]
+			});
+			return;
+		}
+
+		const channel = interaction.options.getChannel('channel');
+		const channelId = channel?.id ?? interaction.channelId;
+		await guildChatPolicy.setCountingChannel(this.container.guildService, interaction.guildId, channelId);
+		await this.container.countingState.reset(interaction.guildId);
+		await interaction.editReply({
+			flags: [MessageFlags.IsComponentsV2],
+			allowedMentions: { parse: [] },
+			components: [
+				settingResultView({
+					icon: 'crown',
+					title: '카운팅 채널 지정',
+					details: [`<#${channelId}> 채널에서 1부터 차례로 숫자를 세어 보세요!`],
+					hint: '새로 시작해서 기록이 0으로 돌아갔어요.'
+				})
+			]
+		});
+	}
+}

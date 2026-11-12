@@ -33,17 +33,6 @@ const ALLOWED_CYCLES: string[] = ['modules/audio/lavalink/handlers/mixerHandlers
 
 /** `services/` -> `modules/` edges that exist today. Only delete from this list. */
 const ALLOWED_SERVICES_TO_MODULES: string[] = [
-	'services/aiTools/botHelp.ts -> modules/general/utils/commandMentions.ts',
-	'services/aiTools/botSettings.ts -> modules/audio/utils/permissionCheck.ts',
-	'services/aiTools/music.ts -> modules/audio/lavalink/autoPlayRelated.ts',
-	'services/aiTools/music.ts -> modules/audio/lavalink/handlers/playbackWatchdog.ts',
-	'services/aiTools/music.ts -> modules/audio/lavalink/player/nowPlaying.ts',
-	'services/aiTools/music.ts -> modules/audio/utils/filterPresets.ts',
-	'services/aiTools/music.ts -> modules/audio/utils/permissionCheck.ts',
-	'services/aiTools/music.ts -> modules/audio/utils/timeParse.ts',
-	'services/aiTools/musicSettings.ts -> modules/audio/lavalink/autoPlayRelated.ts',
-	'services/aiTools/musicSettings.ts -> modules/audio/utils/permissionCheck.ts',
-	'services/aiTools/ohaasa.ts -> modules/general/utils/userProfile.ts',
 	'services/audioService.ts -> modules/audio/lavalink/autoPlayRelated.ts',
 	'services/audioService.ts -> modules/audio/lavalink/handlers/mixerHandlers.ts',
 	'services/audioService.ts -> modules/audio/lavalink/queue/queueWrapper.ts',
@@ -310,7 +299,7 @@ describe('bot architecture guard rails', () => {
 		expect(applicationImportViolation(file, '../../../modules/audio/view/volume.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../../../modules/audio/subcommands/volume.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../../../modules/audio/interaction-handlers/controllerButton.ts')).not.toBeNull();
-		expect(applicationImportViolation(file, '../../../modules/general/listeners/message/mentionReply.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../modules/general/listeners/message/embedFix.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/views/ticket.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/interaction-handlers/ticketButton.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/commands/ticket.ts')).not.toBeNull();

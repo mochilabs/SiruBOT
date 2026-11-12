@@ -38,7 +38,7 @@ declare module '@sapphire/pieces' {
 		chatTtsService: import('../services/chatTts.ts').ChatTtsService;
 		tempVoiceService: import('../features/temp-voice/index.ts').TempVoiceService;
 		/** AI 채팅 기록 인메모리 상태 + 디바운스 DB 저장 소유자 (종료 시 stop()이 flush) */
-		aiChatHistory: import('../services/aiChat/historyStore.ts').ChannelHistoryStore;
+		aiChatHistory: import('../features/ai-chat/index.ts').ChannelHistoryStore;
 		/** 카운팅 채널 상태(샤드 메모리 + Redis write-behind) 소유자 */
 		countingState: import('../services/countingState.ts').CountingStateStore;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
@@ -47,9 +47,9 @@ declare module '@sapphire/pieces' {
 		voiceLeaveTimers: import('../lib/keyedTimers.ts').KeyedTimers;
 		/** 봇 상태 메시지 순환 인터벌 소유자 */
 		botActivity: import('../services/botActivity.ts').BotActivityService;
-		/** AI 채팅 진입점 묶음(턴 실행·정책·턴 확보) — services/aiChatService.ts */
-		aiChat: import('../services/aiChatService.ts').AiChat;
-		aiMemoryService: import('../services/aiMemoryService.ts').AiMemoryService;
+		/** AI 채팅 진입점 묶음(턴 실행·정책·턴 확보) — features/ai-chat/application/aiChatService.ts */
+		aiChat: import('../features/ai-chat/index.ts').AiChat;
+		aiMemoryService: import('../features/ai-chat/index.ts').AiMemoryService;
 		/** 커스텀 명령어 캐시 소유자 (features/custom-commands/application/store.ts) */
 		customCommandStore: import('../features/custom-commands/index.ts').CustomCommandStore;
 		/** 커스텀 슬래시 명령어 길드 동기화 소유자 (features/custom-commands/application/slashRegistry.ts) */
