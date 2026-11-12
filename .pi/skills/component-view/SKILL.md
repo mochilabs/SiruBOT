@@ -14,5 +14,6 @@ Views live as functions in `apps/bot/src/modules/<audio|general>/view/`, or in `
 5. Text: Korean; keep existing tone (`-#` subtext, `###` headings, emoji like 🎵📄🔇). Reuse `formatTrack` / `formatTime` / `formatTimeToKorean` / `getRequesterText` / `emojiProgressBar` / `volumeToEmoji` — don't create new formatters. One-line errors: `errorView(message)`.
 6. Footer: playback views attach the `buildFooterSegments(player, volume)` pattern (playing server, volume, version).
 7. Interactive messages that wait for presses (select/cancel, vote, paged panels): use `createComponentSession` (`lib/componentSession.ts`) instead of a hand-written collector; call `session.settle(reason)` where the flow ends, and put the "time ran out" edit in `onTimeout`.
+8. Server settings actions: a new `settingsId` action needs one entry in `SETTINGS_ACTIONS` (`modules/audio/interaction-handlers/settings.ts`: the screen to redraw plus an `apply`), plus the control in `view/settings.ts`. Typecheck fails if the table lacks an action.
 
 Deliver: complete view function code + a table of required flags/customIds at each call site (handler/command). Flag Discord limits up front if hit (5 buttons per row, 25 select options, 4000 chars text).

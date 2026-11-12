@@ -3,7 +3,7 @@ import { setConfigForTesting } from '../../../lib/config.ts';
 import { makeTestConfig } from '../../../lib/config.testing.ts';
 import FilterButtonHandler from './filterButton.ts';
 import FilterSelectMenuHandler from './filterSelectMenu.ts';
-import SettingsInteractionHandler, { MODE_AFTER_ACTION } from './settings.ts';
+import SettingsInteractionHandler, { SETTINGS_ACTIONS } from './settings.ts';
 import { SettingsModalHandler } from './settingsModal.ts';
 import { filterView } from '../view/filter.ts';
 import { jtcTemplateModal, settingsView, type SettingsMode } from '../view/settings.ts';
@@ -92,7 +92,10 @@ describe('audio custom id round trips', () => {
 			jtcTemplate: '{user}',
 			jtcUserLimit: 0
 		};
-		for (const [action, mode] of Object.entries(MODE_AFTER_ACTION)) {
+		// 설정을 바꾸는 액션(고정 화면 + apply)만 검사해요. 화면 이동(navigate/back)과 모달(jtcTemplate)은 표의 다른 형태예요.
+		for (const [action, entry] of Object.entries(SETTINGS_ACTIONS)) {
+			if (!('apply' in entry) || typeof entry.mode !== 'string') continue;
+			const mode = entry.mode;
 			const actions = ids(settingsView(guild as never, mode).toJSON()).map((id) => settingsId.decode(id)?.action);
 			expect(actions, `${action} -> ${mode}`).toContain(action);
 		}
