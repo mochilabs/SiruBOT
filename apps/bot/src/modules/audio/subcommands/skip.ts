@@ -9,7 +9,7 @@ import {
 	type SlashCommandOptionsOnlyBuilder,
 	SlashCommandSubcommandBuilder
 } from 'discord.js';
-import type { SkipContext } from '../../../services/skipPolicy.ts';
+import type { SkipContext } from '../../../features/music/playback/skipPolicy.ts';
 
 export const name = 'skip';
 export const ko = '건너뛰기';

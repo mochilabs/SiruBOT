@@ -1,7 +1,7 @@
 import { ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, escapeMarkdown } from 'discord.js';
 import { createContainer, emoji } from '@sirubot/utils';
 import { libraryId } from '../customIds.ts';
-import type { PlaylistService } from '../../../services/playlistService.ts';
+import type { PlaylistService } from '../../../features/music/application/playlistService.ts';
 
 type Playlist = Awaited<ReturnType<PlaylistService['getUserPlaylists']>>[number];
 type Detail = Awaited<ReturnType<PlaylistService['getPlaylistTracks']>>;

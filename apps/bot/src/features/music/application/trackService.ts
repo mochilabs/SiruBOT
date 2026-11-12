@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { Track } from 'lavalink-client';
 import { extractTrackData } from './trackData.ts';
-import { isTtsClip, RELATED_TRACK_REQUESTER_ID } from '../features/music/lavalink/requester.ts';
+import { isTtsClip, RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
 
 /**
  * Prisma 오류를 진단 가능하게 직렬화한다 — code(P2003 등)와 meta(제약명)를 남겨

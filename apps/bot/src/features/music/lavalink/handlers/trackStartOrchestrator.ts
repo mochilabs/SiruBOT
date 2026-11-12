@@ -5,7 +5,7 @@ import { resolveYouTubeVideoId } from '@sirubot/utils';
 import { queueRelatedUpfront } from '../autoPlayRelated.ts';
 import { isTtsClip } from '../requester.ts';
 import { fetchYouTubeChapters } from '../../../../services/dataApiClient.ts';
-import { formatRecordError } from '../../../../services/trackService.ts';
+import { formatRecordError } from '../../application/trackService.ts';
 import { publishPlayerState } from '../playerStatePublisher.ts';
 import { CustomPlayer } from '../player/customPlayer.ts';
 import { isSameEncodedTrack, normalizeTrackEncoded, syncQueueToNowPlaying } from './playbackWatchdog.ts';

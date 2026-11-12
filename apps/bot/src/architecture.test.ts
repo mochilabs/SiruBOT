@@ -29,17 +29,10 @@ import { describe, expect, it } from 'vitest';
 const SRC_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 /** Allowed import cycles; each entry is the sorted file list of one strongly connected component, joined by ' <-> '. */
-const ALLOWED_CYCLES: string[] = ['features/music/lavalink/handlers/mixerHandlers.ts <-> services/mixerService.ts'];
+const ALLOWED_CYCLES: string[] = ['features/music/lavalink/handlers/mixerHandlers.ts <-> features/music/playback/mixerService.ts'];
 
 /** `services/` -> `modules/` edges that exist today. Only delete from this list. */
-const ALLOWED_SERVICES_TO_MODULES: string[] = [
-	'services/audioService.ts -> modules/audio/view/play.ts',
-	'services/playlistPlayback.ts -> modules/audio/utils/source.ts',
-	'services/skipPolicy.ts -> modules/audio/managers/voteSkip.ts',
-	'services/skipPolicy.ts -> modules/audio/utils/queueSelection.ts',
-	'services/skipPolicy.ts -> modules/audio/view/skip.ts',
-	'services/sponsorBlockService.ts -> modules/general/view/notice.ts'
-];
+const ALLOWED_SERVICES_TO_MODULES: string[] = [];
 
 /** `lib/` -> `modules/` edges that exist today. Only delete from this list. */
 const ALLOWED_LIB_TO_MODULES: string[] = [

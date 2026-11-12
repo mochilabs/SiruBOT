@@ -1,4 +1,4 @@
-import type { MixerStateResponse } from '../../../../services/mixerService.ts';
+import type { MixerStateResponse } from '../../playback/mixerService.ts';
 
 export interface CurrentBpm {
 	identifier: string;

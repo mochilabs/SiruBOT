@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GuildMember, Collection as DiscordCollection, VoiceBasedChannel } from 'discord.js';
 import type { Player, Queue, Track } from 'lavalink-client';
 import { SkipPolicy, type SkipContext } from './skipPolicy.ts';
-vi.mock('./guildSettings/playback.ts', () => ({ hasDJRole }));
+vi.mock('../../../services/guildSettings/playback.ts', () => ({ hasDJRole }));
 
 const { hasDJRole, mixerSkip } = vi.hoisted(() => ({ hasDJRole: vi.fn(), mixerSkip: vi.fn() }));
 

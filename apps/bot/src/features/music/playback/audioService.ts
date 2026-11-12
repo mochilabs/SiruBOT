@@ -3,15 +3,15 @@ import { Player, type LavalinkManager, SearchPlatform, Track, SearchResult, Unre
 import * as Sentry from '@sentry/node';
 import { ButtonInteraction, ChatInputCommandInteraction, Client, ComponentType, MessageFlags, PermissionsBitField } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { errorView } from '../lib/errorView.ts';
-import { createComponentSession, type ComponentSession } from '../lib/componentSession.ts';
-import { isRelatedTrack, removeStaleRelatedTracks } from '../features/music/lavalink/autoPlayRelated.ts';
-import { cancelPendingInvalidate, notifyQueueMutated } from '../features/music/lavalink/queue/queueWrapper.ts';
-import { sendOverride } from '../features/music/lavalink/handlers/mixerHandlers.ts';
-import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
-import * as view from '../modules/audio/view/play.ts';
-import type { AppLogger } from '../lib/appLogger.ts';
-import type { GuildService } from './guildService.ts';
+import { errorView } from '../../../lib/errorView.ts';
+import { createComponentSession, type ComponentSession } from '../../../lib/componentSession.ts';
+import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
+import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
+import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
+import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import * as view from '../../../modules/audio/view/play.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import type { GuildService } from '../../../services/guildService.ts';
 import type { MixerService } from './mixerService.ts';
 
 interface CommandErrorContext extends Record<string, unknown> {

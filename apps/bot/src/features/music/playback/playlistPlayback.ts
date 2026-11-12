@@ -1,11 +1,11 @@
 import { UserError } from '@sapphire/framework';
 import type { GuildMember, User } from 'discord.js';
 import type { LavalinkManager, Track } from 'lavalink-client';
-import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
-import { lookupSource } from '../modules/audio/utils/source.ts';
-import * as guildChannels from './guildSettings/channels.ts';
+import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { lookupSource } from '../../../modules/audio/utils/source.ts';
+import * as guildChannels from '../../../services/guildSettings/channels.ts';
 import type { AudioService } from './audioService.ts';
-import type { GuildService } from './guildService.ts';
+import type { GuildService } from '../../../services/guildService.ts';
 
 type SavedTrack = { track: { title: string; url: string; source: string } };
 export type PlaylistPlaybackContext = { guildId: string; channelId: string; member: GuildMember; user: User };

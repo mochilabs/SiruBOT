@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setConfigForTesting } from '../lib/config.ts';
-import { makeTestConfig } from '../lib/config.testing.ts';
+import { setConfigForTesting } from '../../../lib/config.ts';
+import { makeTestConfig } from '../../../lib/config.testing.ts';
 import { PlaybackReporter } from './playbackReporter.ts';
 
 describe('playbackReporter', () => {

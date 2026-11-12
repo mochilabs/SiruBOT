@@ -1,13 +1,13 @@
 import { emoji, resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sirubot/utils';
 import { MessageFlags, type Client } from 'discord.js';
-import { notice } from '../modules/general/view/notice.ts';
+import { notice } from '../../../modules/general/view/notice.ts';
 import type { Track } from 'lavalink-client';
-import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
-import { getTargetNextTrack, notifyQueueMutated } from '../features/music/lavalink/queue/queueWrapper.ts';
-import { fetchSponsorBlockSegments } from './dataApiClient.ts';
-import * as guildMixer from './guildSettings/mixer.ts';
-import type { AppLogger } from '../lib/appLogger.ts';
-import type { GuildService } from './guildService.ts';
+import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { getTargetNextTrack, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
+import { fetchSponsorBlockSegments } from '../../../services/dataApiClient.ts';
+import * as guildMixer from '../../../services/guildSettings/mixer.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import type { GuildService } from '../../../services/guildService.ts';
 import type { MixerService } from './mixerService.ts';
 
 const LOOKUP_TTL_MS = 10 * 60_000;
@@ -187,7 +187,7 @@ export class SponsorBlockService {
 			)
 				return;
 			state.lastOutroArmKey = key;
-			void import('../features/music/lavalink/handlers/mixerHandlers.ts')
+			void import('../lavalink/handlers/mixerHandlers.ts')
 				.then(({ handleMixerNeedNext }) =>
 					handleMixerNeedNext(player, {
 						remainingMs: (state.track.info.duration ?? 0) - (player.position ?? 0),

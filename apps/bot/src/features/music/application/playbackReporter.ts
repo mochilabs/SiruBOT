@@ -1,8 +1,8 @@
 import type { Client } from 'discord.js';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
-import type { AppLogger } from '../lib/appLogger.ts';
-import type { Stoppable } from '../lib/lifecycle.ts';
-import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import type { Stoppable } from '../../../lib/lifecycle.ts';
+import { dataApiAuthHeaders, gatewayBaseUrl } from '../../../lib/dataApi.ts';
 
 type PlaybackReportType = 'track_start' | 'track_end' | 'track_stuck' | 'track_error' | 'queue_end' | 'playback_abort';
 /** 음성 서버(라바링크) 노드 단위 이벤트. 길드가 아니라 노드로 식별해요. */

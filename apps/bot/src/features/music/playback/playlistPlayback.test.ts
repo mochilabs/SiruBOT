@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPlaylistPlayback, type PlaylistPlaybackContext } from './playlistPlayback.ts';
-vi.mock('./guildSettings/channels.ts', () => mocks.guildChannels);
+vi.mock('../../../services/guildSettings/channels.ts', () => mocks.guildChannels);
 
 const mocks = vi.hoisted(() => ({
 	audio: { getPlayer: vi.fn(), nodeManager: { leastUsedNodes: vi.fn() } },

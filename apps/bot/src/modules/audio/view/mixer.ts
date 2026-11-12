@@ -1,6 +1,6 @@
 import { DEFAULT_COLOR, WARN_COLOR, emoji } from '@sirubot/utils';
 import { ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
-import type { MixerStateResponse } from '../../../services/mixerService.ts';
+import type { MixerStateResponse } from '../../../features/music/playback/mixerService.ts';
 import type { MixerSettings } from '../../../services/guildService.ts';
 
 type MixerStatusProps = {

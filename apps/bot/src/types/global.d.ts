@@ -1,11 +1,25 @@
 // Audio
 import { LavalinkManager } from 'lavalink-client';
-import type { CustomPlayer, LavalinkHandler, NowPlayingCardStore, PlayerNotifier, RedisStore } from '../features/music/index.ts';
+import type {
+	AudioService,
+	CustomPlayer,
+	LavalinkHandler,
+	MixerService,
+	MusicControl,
+	NowPlayingCardStore,
+	PlaybackReporter,
+	PlayerNotifier,
+	PlaylistPlayback,
+	PlaylistService,
+	RedisStore,
+	SkipPolicy,
+	SponsorBlockService,
+	TrackService
+} from '../features/music/index.ts';
 
 // DB Services
 import { PrismaClient } from '@sirubot/prisma';
 import { GuildService } from '../services/guildService.ts';
-import { TrackService } from '../services/trackService.ts';
 
 declare module '@sapphire/pieces' {
 	interface Container {
@@ -17,18 +31,18 @@ declare module '@sapphire/pieces' {
 		nowPlayingCardStore?: NowPlayingCardStore;
 		playerStatePublishTracker?: Map<string, { at: number; fingerprint: string }>;
 		/** 음악 제어 유스케이스 (features/music/application) — 어댑터는 container.music.<op>(actor, ...)로 호출해요 */
-		music: import('../features/music/application/control.ts').MusicControl;
+		music: MusicControl;
 		guildService: GuildService;
 		trackService: TrackService;
-		playlistService: import('../services/playlistService.ts').PlaylistService;
-		audioService: import('../services/audioService.ts').AudioService;
-		mixerService: import('../services/mixerService.ts').MixerService;
+		playlistService: PlaylistService;
+		audioService: AudioService;
+		mixerService: MixerService;
 		/** 스킵 판정(DJ·요청자·투표) 소유자 — 상태 없이 mixer 경유 스킵만 실행해요 */
 		/** SponsorBlock 구간 조회·건너뛰기 소유자 (플레이어별 상태는 WeakMap) */
-		sponsorBlockService: import('../services/sponsorBlockService.ts').SponsorBlockService;
-		/** 저장한 플레이리스트·즐겨찾기 재생 (services/playlistPlayback.ts) */
-		playlistPlayback: import('../services/playlistPlayback.ts').PlaylistPlayback;
-		skipPolicy: import('../services/skipPolicy.ts').SkipPolicy;
+		sponsorBlockService: SponsorBlockService;
+		/** 저장한 플레이리스트·즐겨찾기 재생 (features/music/playback/playlistPlayback.ts) */
+		playlistPlayback: PlaylistPlayback;
+		skipPolicy: SkipPolicy;
 		ttsService: import('../features/tts/index.ts').TtsService;
 		ttsUserSettings: import('../features/tts/index.ts').TtsUserSettingsService;
 		ttsPronunciation: import('../features/tts/index.ts').TtsPronunciationService;
@@ -39,7 +53,7 @@ declare module '@sapphire/pieces' {
 		/** 카운팅 채널 상태(샤드 메모리 + Redis write-behind) 소유자 */
 		countingState: import('../services/countingState.ts').CountingStateStore;
 		/** 재생 이벤트 data-api 리포트 소유자 — 진행 중인 요청을 종료 때 기다려요 */
-		playbackReporter: import('../services/playbackReporter.ts').PlaybackReporter;
+		playbackReporter: PlaybackReporter;
 		/** 빈 음성 채널 퇴장 유예 타이머 소유자 (길드별) */
 		voiceLeaveTimers: import('../lib/keyedTimers.ts').KeyedTimers;
 		/** 봇 상태 메시지 순환 인터벌 소유자 */

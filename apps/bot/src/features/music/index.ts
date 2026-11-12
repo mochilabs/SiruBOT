@@ -4,7 +4,16 @@
  */
 export { createPlayerWebResponder } from './inbound/playerWeb.ts';
 export { actorFromMember, type Actor } from './application/actor.ts';
-export type { MusicControl } from './application/control.ts';
+export { createMusicAccess } from './application/access.ts';
+export { createMusicControl, type MusicControl } from './application/control.ts';
+export { PlaybackReporter } from './application/playbackReporter.ts';
+export { PlaylistService } from './application/playlistService.ts';
+export { TrackService } from './application/trackService.ts';
+export { AudioService } from './playback/audioService.ts';
+export { MixerService } from './playback/mixerService.ts';
+export { createPlaylistPlayback, type PlaylistPlayback } from './playback/playlistPlayback.ts';
+export { SkipPolicy } from './playback/skipPolicy.ts';
+export { SponsorBlockService } from './playback/sponsorBlockService.ts';
 export { LavalinkHandler } from './lavalink/handlers/lavalinkHandler.ts';
 export { isSameTrack } from './lavalink/handlers/playbackWatchdog.ts';
 export { autoPlayRelated, getUserQueuedTracks, queueRelatedUpfront, removeStaleRelatedTracks } from './lavalink/autoPlayRelated.ts';

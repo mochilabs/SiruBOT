@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from 'lavalink-client';
-import type { CustomPlayer } from '../features/music/lavalink/player/customPlayer.ts';
-import { fetchSponsorBlockSegments } from './dataApiClient.ts';
+import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { fetchSponsorBlockSegments } from '../../../services/dataApiClient.ts';
 import { SponsorBlockService } from './sponsorBlockService.ts';
 
 const guildMixerMock = vi.hoisted(() => ({ getMixerSettings: vi.fn().mockResolvedValue({ crossfadeEnabled: true, crossfadeMs: 5000 }) }));
@@ -17,8 +17,8 @@ const makeService = () =>
 		getMixerService: () => mixerService as never
 	});
 
-vi.mock('./dataApiClient.ts', () => ({ fetchSponsorBlockSegments: vi.fn() }));
-vi.mock('./guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...guildMixerMock }));
+vi.mock('../../../services/dataApiClient.ts', () => ({ fetchSponsorBlockSegments: vi.fn() }));
+vi.mock('../../../services/guildSettings/mixer.ts', async (orig) => ({ ...(await orig()), ...guildMixerMock }));
 
 function track(id: string = 'dQw4w9WgXcQ'): Track {
 	return { encoded: `encoded-${id}`, info: { sourceName: 'youtube', identifier: id, duration: 60000, isSeekable: true, isStream: false } } as Track;

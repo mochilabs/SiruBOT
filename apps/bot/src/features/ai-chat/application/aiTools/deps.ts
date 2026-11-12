@@ -1,15 +1,10 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import type { Client } from 'discord.js';
 import type { LavalinkManager } from 'lavalink-client';
-import type { MusicControl } from '../../../music/index.ts';
+import type { AudioService, CustomPlayer, MixerService, MusicControl, PlaylistService, SponsorBlockService } from '../../../music/index.ts';
 import type { TempVoiceService } from '../../../temp-voice/index.ts';
-import type { CustomPlayer } from '../../../music/index.ts';
 import type { AiMemoryService } from '../aiMemoryService.ts';
-import type { AudioService } from '../../../../services/audioService.ts';
 import type { GuildService } from '../../../../services/guildService.ts';
-import type { MixerService } from '../../../../services/mixerService.ts';
-import type { PlaylistService } from '../../../../services/playlistService.ts';
-import type { SponsorBlockService } from '../../../../services/sponsorBlockService.ts';
 
 /** bot_help가 읽는 슬래시 명령어 정보 — Sapphire Command의 일부라서 피스 클래스를 몰라도 되게 필요한 멤버만 둬요 */
 export interface AiToolCommandInfo {

@@ -10,16 +10,8 @@ import { ClientOptions } from 'discord.js';
 import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
 import { GuildService } from '../services/guildService.ts';
-import { TrackService } from '../services/trackService.ts';
-import { PlaylistService } from '../services/playlistService.ts';
-import { AudioService } from '../services/audioService.ts';
-import { MixerService } from '../services/mixerService.ts';
-import { createPlaylistPlayback } from '../services/playlistPlayback.ts';
-import { SkipPolicy } from '../services/skipPolicy.ts';
-import { SponsorBlockService } from '../services/sponsorBlockService.ts';
 import { ChatTtsService, TtsPronunciationService, TtsService, TtsUserSettingsService, getTtsConfig } from '../features/tts/index.ts';
 import { CountingStateStore } from '../services/countingState.ts';
-import { PlaybackReporter } from '../services/playbackReporter.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService, ChannelHistoryStore, MemoryPromotionJobs, createAiChat, createAiTools } from '../features/ai-chat/index.ts';
@@ -29,7 +21,24 @@ import { WebhookRelay } from '../services/webhookRelay.ts';
 import { createCustomCommandStore, createSlashRegistry } from '../features/custom-commands/index.ts';
 import { createGameRecords } from '../features/games/index.ts';
 import { createRolePanelService, rolePanelMessages, createRoleValidationResponder } from '../features/role-panels/index.ts';
-import { CustomPlayer, NodeSessionStore, PlayerNotifier, RedisStore, autoPlayRelated, createPlayerWebResponder } from '../features/music/index.ts';
+import {
+	AudioService,
+	CustomPlayer,
+	MixerService,
+	NodeSessionStore,
+	PlaybackReporter,
+	PlayerNotifier,
+	PlaylistService,
+	RedisStore,
+	SkipPolicy,
+	SponsorBlockService,
+	TrackService,
+	autoPlayRelated,
+	createMusicAccess,
+	createMusicControl,
+	createPlayerWebResponder,
+	createPlaylistPlayback
+} from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
@@ -47,8 +56,6 @@ import type { AppLogger } from '../lib/appLogger.ts';
 import { RedisPublisher } from '../lib/redisPublisher.ts';
 import type { RedisBinding, RedisRuntime } from '../lib/redisResponder.ts';
 import { createSharedRedisSubscriber, type RedisSubscriberEntry } from './redisSubscribers.ts';
-import { createMusicAccess } from '../features/music/application/access.ts';
-import { createMusicControl } from '../features/music/application/control.ts';
 import * as guildPlayback from '../services/guildSettings/playback.ts';
 import * as guildJtc from '../services/guildSettings/jtc.ts';
 

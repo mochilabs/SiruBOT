@@ -5,9 +5,9 @@ import { CustomPlayer, OverrideAction } from '../player/customPlayer.ts';
 import { cancelPendingInvalidate, getTargetNextTrack, getTrackUid, notifyQueueMutated, type QueueMutationOptions } from '../queue/queueWrapper.ts';
 import { isTtsClip } from '../requester.ts';
 import { isSameEncodedTrack, isSameTrack, normalizeTrackEncoded } from './playbackWatchdog.ts';
-import { MixerRequestError } from '../../../../services/mixerService.ts';
-import { formatRecordError } from '../../../../services/trackService.ts';
-import type { ArmRequestOptions } from '../../../../services/mixerService.ts';
+import { MixerRequestError } from '../../playback/mixerService.ts';
+import { formatRecordError } from '../../application/trackService.ts';
+import type { ArmRequestOptions } from '../../playback/mixerService.ts';
 import { needsUpcomingTrack } from '@sirubot/utils/mixerTransition';
 import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
 
