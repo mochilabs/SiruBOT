@@ -228,13 +228,22 @@ export class CommandChannelListener extends Listener {
 		};
 
 		const handleSelect = async (selectInteraction: StringSelectMenuInteraction<'cached'>, session: ComponentSession) => {
-			await selectInteraction.deferUpdate();
-			if (!session.settle('select')) return;
-
+			if (session.settled) return;
 			const index = Number.parseInt(selectInteraction.values[0], 10);
 			const selected = tracks[index];
-			// 이미 settle된 뒤라 예전 코드의 handleTimeout() 호출은 아무 일도 하지 않았어요. 동작 그대로 끝내요.
-			if (!selected) return;
+			// 범위 밖 번호는 임시 안내만 보내고 선택 대기는 유지해요 (settle하지 않아요).
+			if (!selected) {
+				await selectInteraction
+					.reply({
+						components: [errorView(`${emoji('error')} 1~${tracks.length}번 중에서 골라 주세요.`)],
+						flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+					})
+					.catch(() => null);
+				return;
+			}
+
+			await selectInteraction.deferUpdate();
+			if (!session.settle('select')) return;
 
 			try {
 				const { wasIdle } = await this.container.audioService.enqueueTrack(player, selected);
@@ -260,6 +269,7 @@ export class CommandChannelListener extends Listener {
 		};
 
 		createComponentSession(selectMessage, {
+			logger: this.container.logger,
 			owner: {
 				userId: message.author.id,
 				accept: (i) => i.customId === searchView.searchSelectCustomId || i.customId === searchView.searchCancelCustomId

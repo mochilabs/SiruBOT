@@ -97,14 +97,29 @@ describe('createComponentSession', () => {
 		expect(onTimeout).not.toHaveBeenCalled();
 	});
 
-	it('핸들러 오류는 삼키지 않고 Promise 거부로 그대로 돌려줘요 (세션 상태도 건드리지 않아요)', async () => {
+	it('핸들러가 거부하면 로거로 남기고 세션 상태는 그대로 둬요 (unhandled rejection 없음)', async () => {
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+		const boom = new Error('boom');
 		const { session, collector, onTimeout } = setup({
-			onCollect: () => Promise.reject(new Error('boom'))
+			logger,
+			onCollect: () => Promise.reject(boom)
 		});
-		await expect(collector.press(press('a'))).rejects.toThrow('boom');
+		collector.press(press('a'));
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(logger.error).toHaveBeenCalledTimes(1);
+		expect(logger.error.mock.calls[0]![1]).toBe(boom);
 		expect(session.settled).toBe(false);
 		collector.emit('end', new Map(), 'time');
 		expect(onTimeout).toHaveBeenCalledTimes(1);
+	});
+
+	it('onTimeout이 거부해도 로거로 남겨요', async () => {
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+		const { collector } = setup({ logger, onTimeout: () => Promise.reject(new Error('late')) });
+		collector.emit('end', new Map(), 'time');
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(logger.error).toHaveBeenCalledTimes(1);
+		expect(String(logger.error.mock.calls[0]![0])).toContain('onTimeout');
 	});
 
 	it('onCollect에서 settle하면 이후 시간 초과 처리는 건너뛰어요', () => {

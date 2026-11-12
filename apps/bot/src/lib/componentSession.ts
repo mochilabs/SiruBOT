@@ -1,4 +1,5 @@
 import type { CollectedInteraction, InteractionCollector, Message, MessageComponentInteraction, MessageComponentType } from 'discord.js';
+import type { AppLogger } from './appLogger.ts';
 import { ownerOnly } from './ownerOnlyFilter.ts';
 
 /** 컴포넌트 컬렉터를 만들 수 있는 곳 — 메시지나 채널이에요. */
@@ -12,10 +13,12 @@ interface SessionOptionsBase<I extends MessageComponentInteraction> {
 	/** 마지막 입력 뒤 이 시간이 지나면 끝나요. 없으면 쓰지 않아요. */
 	idle?: number;
 	componentType?: MessageComponentType;
-	/** 필터를 통과한 입력마다 불려요. 반환한 Promise는 잡지 않아요 (거부되면 기존 컬렉터처럼 그대로 전파돼요). */
+	/** 필터를 통과한 입력마다 불려요. 반환한 Promise가 거부되면 로그로 남기고 세션 상태는 그대로 둬요. */
 	onCollect: (interaction: I, session: ComponentSession) => void | Promise<void>;
-	/** 아무도 settle하지 않은 채 컬렉터가 끝났을 때만 한 번 불려요. 동기 구간에서 바로 불려요. */
+	/** 아무도 settle하지 않은 채 컬렉터가 끝났을 때만 한 번 불려요. 반환한 Promise가 거부되면 로그로 남겨요. */
 	onTimeout?: (session: ComponentSession) => void | Promise<void>;
+	/** 거부된 핸들러 오류를 기록할 로거. 없으면 console.error로 남겨요. */
+	logger?: AppLogger;
 }
 
 export type ComponentSessionOptions<I extends MessageComponentInteraction> = SessionOptionsBase<I> &
@@ -39,7 +42,7 @@ export interface ComponentSession {
 /**
  * 메시지(또는 채널)에 컴포넌트 컬렉터를 만들고 "한 번만 끝나는" 규칙을 맡아요.
  * settle은 한 번만 성공하고, 그 경우 `onTimeout`은 불리지 않아요.
- * 핸들러 오류는 삼키지 않아요 — 오류를 다루는 건 호출한 쪽 몫이에요.
+ * 핸들러가 거부한 Promise는 EventEmitter가 받아주지 않으므로 여기서 로그로 남겨요(unhandled rejection 방지).
  */
 export function createComponentSession<I extends MessageComponentInteraction = MessageComponentInteraction>(
 	source: CollectorSource,
@@ -66,11 +69,27 @@ export function createComponentSession<I extends MessageComponentInteraction = M
 		}
 	};
 
-	collector.on('collect', (interaction) => options.onCollect(interaction, session));
+	const report = (where: string) => (error: unknown) => {
+		const message = `[componentSession] ${where} handler failed: ${error}`;
+		if (options.logger) options.logger.error(message, error);
+		else console.error(message, error);
+	};
+
+	collector.on('collect', (interaction) => {
+		try {
+			void Promise.resolve(options.onCollect(interaction, session)).catch(report('onCollect'));
+		} catch (error) {
+			report('onCollect')(error);
+		}
+	});
 	collector.once('end', () => {
 		if (settled) return;
 		settled = true;
-		return options.onTimeout?.(session);
+		try {
+			void Promise.resolve(options.onTimeout?.(session)).catch(report('onTimeout'));
+		} catch (error) {
+			report('onTimeout')(error);
+		}
 	});
 	return session;
 }
