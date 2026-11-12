@@ -24,6 +24,7 @@ import { TtsUserSettingsService } from '../services/ttsUserSettings.ts';
 import { TtsPronunciationService } from '../services/ttsPronunciation.ts';
 import { ChatTtsService } from '../services/chatTts.ts';
 import { ChannelHistoryStore } from '../services/aiChat/historyStore.ts';
+import { MemoryPromotionJobs } from '../services/aiChat/memoryPromotion.ts';
 import { createAiChat } from '../services/aiChatService.ts';
 import { createAiTools } from '../services/aiTools/index.ts';
 import { CountingStateStore } from '../services/countingState.ts';
@@ -220,7 +221,8 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.stoppables.push(container.voiceLeaveTimers, container.botActivity);
 		container.aiMemoryService = new AiMemoryService({ db: container.db });
 		container.aiChatHistory = new ChannelHistoryStore({ db: container.db, logger: appLogger });
-		container.stoppables.push(container.aiChatHistory);
+		const memoryPromotions = new MemoryPromotionJobs();
+		container.stoppables.push(container.aiChatHistory, memoryPromotions);
 		const aiTools = createAiTools({
 			db: container.db,
 			guildService: container.guildService,
@@ -241,6 +243,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			guildService: container.guildService,
 			memory: container.aiMemoryService,
 			history: container.aiChatHistory,
+			promotions: memoryPromotions,
 			tools: aiTools,
 			getClient: () => container.client,
 			// audio는 setupAudio 뒤에 생겨서 호출 시점에 읽어요

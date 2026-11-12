@@ -18,6 +18,7 @@ import {
 import { setConfigForTesting } from '../lib/config.ts';
 import { makeTestConfig } from '../lib/config.testing.ts';
 import { ChannelHistoryStore, historyLine } from './aiChat/historyStore.ts';
+import { MemoryPromotionJobs } from './aiChat/memoryPromotion.ts';
 vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), getAiSettings: mocks.policy }));
 
 const mocks = vi.hoisted(() => ({
@@ -98,6 +99,7 @@ beforeEach(() => {
 		guildService: {} as never,
 		memory: { buildPromptBlock: mocks.memory, pushTurn: mocks.pushTurn } as never,
 		history,
+		promotions: new MemoryPromotionJobs(),
 		tools: toolMocks,
 		getClient: () => ({ channels: { fetch: mocks.channel } }) as never,
 		getPlayer: () => undefined,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PROMOTION_MIN_TURNS, scheduleMemoryPromotion } from './memoryPromotion.ts';
+import { MemoryPromotionJobs, PROMOTION_MIN_TURNS, scheduleMemoryPromotion } from './memoryPromotion.ts';
 
 const mocks = vi.hoisted(() => ({
 	getShortTermTurns: vi.fn(),
@@ -20,6 +20,7 @@ const deps = {
 		compactShortTerm: mocks.compactShortTerm,
 		clearShortTerm: mocks.clearShortTerm
 	} as never,
+	promotions: new MemoryPromotionJobs(),
 	logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
 };
 

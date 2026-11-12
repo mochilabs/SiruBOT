@@ -2,9 +2,10 @@ import { MEMORY_CATEGORIES, type MemoryCategory } from '@sirubot/utils';
 import { streamChatCompletion } from './completion.ts';
 import type { AiChatDeps } from './deps.ts';
 import type { ChatConfig } from './types.ts';
+import type { Stoppable } from '../../lib/lifecycle.ts';
 
-/** 기억 승격이 쓰는 의존성 — 로거와 기억 서비스예요 */
-type PromotionDeps = Pick<AiChatDeps, 'logger' | 'memory'>;
+/** 기억 승격이 쓰는 의존성 — 로거, 기억 서비스, 진행 중 작업 소유자예요 */
+type PromotionDeps = Pick<AiChatDeps, 'logger' | 'memory' | 'promotions'>;
 
 /**
  * 단기 기억 컨텍스트 압축 + 장기 기억 승격(promotion) — 단기 기억(최근 대화)이 가득 차면
@@ -20,8 +21,30 @@ type PromotionDeps = Pick<AiChatDeps, 'logger' | 'memory'>;
 /** 단기 기억이 이만큼 쌓여야 압축·승격을 시도해요 — 매 턴이 아니라 배치 단위로 돌려 비용을 낮춰요 */
 export const PROMOTION_MIN_TURNS = 8;
 
-/** 한 사용자에 동시에 압축·승격 작업이 하나만 돌게 해요 */
-const promotionJobs = new Set<string>();
+/**
+ * 진행 중인 압축·승격 작업의 소유자 — 한 사용자에 하나만 돌게 하고, 종료 때 끝나기를 기다려요
+ * (상한은 lib/lifecycle.ts의 stopAll이 걸어요). 시간 안에 못 끝나도 단기 기억 원본은 DB에 남아 있어서
+ * 다음 대화에서 다시 시도돼요.
+ */
+export class MemoryPromotionJobs implements Stoppable {
+	public readonly name = 'memoryPromotionJobs';
+	private readonly jobs = new Map<string, Promise<void>>();
+	private stopped = false;
+
+	/** 이미 돌고 있거나 종료 중이면 아무것도 하지 않아요 */
+	public run(userId: string, job: () => Promise<void>): void {
+		if (this.stopped || this.jobs.has(userId)) return;
+		this.jobs.set(
+			userId,
+			job().finally(() => this.jobs.delete(userId))
+		);
+	}
+
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		await Promise.allSettled([...this.jobs.values()]);
+	}
+}
 
 const COMPRESS_SYSTEM_PROMPT = [
 	'당신은 대화를 압축하고 오래갈 정보를 골라내는 기억 관리기예요.',
@@ -89,13 +112,11 @@ function parseCompressResult(raw: string): CompressResult {
  * agentLoop에서 fire-and-forget으로 호출 — 응답 지연 없음.
  */
 export function scheduleMemoryPromotion(deps: PromotionDeps, userId: string, config: ChatConfig): void {
-	if (promotionJobs.has(userId)) return;
-	promotionJobs.add(userId);
-	void runPromotion(deps, userId, config)
-		.catch((error) => {
+	deps.promotions.run(userId, () =>
+		runPromotion(deps, userId, config).catch((error) => {
 			deps.logger.warn('[aiChat] memory compression/promotion failed:', error);
 		})
-		.finally(() => promotionJobs.delete(userId));
+	);
 }
 
 async function runPromotion(deps: PromotionDeps, userId: string, config: ChatConfig): Promise<void> {
