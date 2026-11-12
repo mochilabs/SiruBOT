@@ -19,15 +19,12 @@ import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 
 type SettingsComponentAction = Exclude<NonNullable<ReturnType<typeof settingsId.decode>>['action'], 'jtcTemplateModal' | 'jtcTemplateInput'>;
 
-/**
- * 액션을 처리한 뒤 다시 그릴 화면. 표에 없으면 메인이에요.
- * 고정 채널 메시지 삭제 토글(togglePinDelete)은 채널 화면에 있지만 예전부터 음악 화면으로 돌아가요. 동작을 그대로 유지해요.
- */
-const MODE_AFTER_ACTION: Partial<Record<SettingsComponentAction, SettingsMode>> = {
+/** 액션을 처리한 뒤 다시 그릴 화면 — 그 액션의 버튼·셀렉트가 놓인 화면이에요. 표에 없으면 메인이에요. */
+export const MODE_AFTER_ACTION: Partial<Record<SettingsComponentAction, SettingsMode>> = {
 	toggleController: 'music',
 	toggleRelated: 'music',
 	toggleRepeat: 'music',
-	togglePinDelete: 'music',
+	togglePinDelete: 'channel',
 	toggleJtc: 'jtc',
 	selectJtcCategory: 'jtc',
 	selectJtcLimit: 'jtc',

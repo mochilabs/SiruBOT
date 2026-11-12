@@ -3,7 +3,7 @@ import { setConfigForTesting } from '../../../lib/config.ts';
 import { makeTestConfig } from '../../../lib/config.testing.ts';
 import FilterButtonHandler from './filterButton.ts';
 import FilterSelectMenuHandler from './filterSelectMenu.ts';
-import SettingsInteractionHandler from './settings.ts';
+import SettingsInteractionHandler, { MODE_AFTER_ACTION } from './settings.ts';
 import { SettingsModalHandler } from './settingsModal.ts';
 import { filterView } from '../view/filter.ts';
 import { jtcTemplateModal, settingsView, type SettingsMode } from '../view/settings.ts';
@@ -74,6 +74,29 @@ describe('audio custom id round trips', () => {
 			expect(claims(handler as never, 'settings:toggle:controller')).toBe(false);
 		}
 	);
+
+	it('every settings action redraws the screen that holds its own control', () => {
+		const guild = {
+			sponsorBlockSegments: ['sponsor'],
+			djRoleId: '1',
+			textChannelId: '2',
+			voiceChannelId: '3',
+			pinnedChannelId: '4',
+			pinnedChannelMode: 'play',
+			pinnedChannelDeleteInput: false,
+			enableController: true,
+			related: false,
+			repeat: 'off',
+			jtcEnabled: true,
+			jtcMarkerChannelId: '5',
+			jtcTemplate: '{user}',
+			jtcUserLimit: 0
+		};
+		for (const [action, mode] of Object.entries(MODE_AFTER_ACTION)) {
+			const actions = ids(settingsView(guild as never, mode).toJSON()).map((id) => settingsId.decode(id)?.action);
+			expect(actions, `${action} -> ${mode}`).toContain(action);
+		}
+	});
 
 	it('the jtc template modal is claimed by the modal handler only', () => {
 		const modal = JSON.stringify(jtcTemplateModal('방').toJSON());
