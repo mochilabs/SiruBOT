@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { MemoryCache } from '@sirubot/utils';
-import type { AppLogger } from '../lib/appLogger.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 
 /**
  * 길드별 TTS 발음 사전 — 채팅·알림 문장을 합성하기 전에 term을 reading으로 바꿔요.

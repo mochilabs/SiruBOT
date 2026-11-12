@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ButtonStyle } from 'discord.js';
 import { TTS_VOICE_DEFAULT_VALUE, buildVoiceOptions, ttsPanelView, normalizePanelLang, type TtsPanelProps } from './ttsView.ts';
 import { ttsId } from '../customIds.ts';
-import type { TtsUserPreset } from '../../../services/ttsUserSettings.ts';
-import type { TtsVoice } from '../../../services/ttsService.ts';
+import type { TtsUserPreset } from '../../application/ttsUserSettings.ts';
+import type { TtsVoice } from '../../application/ttsService.ts';
 
 const DEFAULT_PRESET: TtsUserPreset = { enabled: false, voice: null, channel: 'both', emotion: 'neutral' };
 

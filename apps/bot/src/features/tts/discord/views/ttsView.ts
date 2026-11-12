@@ -10,13 +10,13 @@ import {
 	type ContainerBuilder
 } from 'discord.js';
 import { createContainer, emoji } from '@sirubot/utils';
-import type { TtsService, TtsVoice } from '../../../services/ttsService.ts';
-import type { TtsEmotion } from '../../../services/ttsService.ts';
-import type { TtsChannel, TtsUserPreset, TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
+import type { TtsService, TtsVoice } from '../../application/ttsService.ts';
+import type { TtsEmotion } from '../../application/ttsService.ts';
+import type { TtsChannel, TtsUserPreset, TtsUserSettingsService } from '../../application/ttsUserSettings.ts';
 import { ttsId } from '../customIds.ts';
-import { truncateText } from '../../../lib/text.ts';
-import type { GuildService } from '../../../services/guildService.ts';
-import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
+import { truncateText } from '../../../../lib/text.ts';
+import type { GuildService } from '../../../../services/guildService.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * /tts 설정 패널(Components V2) 뷰.

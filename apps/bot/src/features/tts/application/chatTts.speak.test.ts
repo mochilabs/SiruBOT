@@ -28,7 +28,7 @@ const deps = {
 };
 
 import { ChatTtsService } from './chatTts.ts';
-vi.mock('./guildSettings/playback.ts', async (orig) => ({
+vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getTtsDuck: async () => 0.35, getTtsAnnounceMode: async () => 'sequential' }
 }));

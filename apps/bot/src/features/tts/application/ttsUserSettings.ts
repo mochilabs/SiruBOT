@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { MemoryCache } from '@sirubot/utils';
-import type { AppLogger } from '../lib/appLogger.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { TtsEmotion } from './ttsService.ts';
 
 /**

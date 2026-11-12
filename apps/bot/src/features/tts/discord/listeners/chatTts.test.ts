@@ -19,10 +19,10 @@ vi.mock('@sapphire/framework', () => ({
 		public container = mocks.container;
 	}
 }));
-vi.mock('../../../services/chatTts.ts', () => ({ preprocessTtsMessage: (message: { content: string }) => message.content }));
+vi.mock('../../application/chatTts.ts', () => ({ preprocessTtsMessage: (message: { content: string }) => message.content }));
 
 import { ChatTtsListener } from './chatTts.ts';
-vi.mock('../../../services/guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), ...mocks.container.guildChatPolicy }));
+vi.mock('../../../../services/guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig()), ...mocks.container.guildChatPolicy }));
 
 const PRESET = { enabled: true, voice: null, channel: 'both', emotion: 'neutral' };
 

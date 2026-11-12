@@ -1,14 +1,14 @@
-import { notice } from '../view/notice.ts';
-import { channelToggleView, settingResultView, settingWarningView } from '../view/settingResult.ts';
+import { notice } from '../../../../modules/general/view/notice.ts';
+import { channelToggleView, settingResultView, settingWarningView } from '../../../../modules/general/view/settingResult.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { collectOtherTextChannelIds } from '../utils/channels.ts';
-import { buildTtsPanel } from '../view/ttsView.ts';
-import { TtsError } from '../../../services/ttsService.ts';
-import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../../services/ttsPronunciation.ts';
-import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
+import { collectOtherTextChannelIds } from '../../../../modules/general/utils/channels.ts';
+import { buildTtsPanel } from '../views/ttsView.ts';
+import { TtsError } from '../../application/ttsService.ts';
+import { TTS_PRONUNCIATION_MAX_ENTRIES, TTS_PRONUNCIATION_READING_MAX, TTS_PRONUNCIATION_TERM_MAX } from '../../application/ttsPronunciation.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /** `/tts 말하기` 문장 상한 — 채팅 낭독 클립 상한과 같은 값으로 맞춰요 */
 const MAX_SAY_LENGTH = 200;

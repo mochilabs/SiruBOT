@@ -1,10 +1,10 @@
-import { notice } from '../view/notice.ts';
+import { notice } from '../../../../modules/general/view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import type { TtsUserPreset } from '../../../services/ttsUserSettings.ts';
-import { buildTtsPanel, normalizePanelLang } from '../view/ttsView.ts';
+import type { TtsUserPreset } from '../../application/ttsUserSettings.ts';
+import { buildTtsPanel, normalizePanelLang } from '../views/ttsView.ts';
 import { ttsId } from '../customIds.ts';
 
 /**

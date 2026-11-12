@@ -1,10 +1,10 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { ChannelType, Message } from 'discord.js';
-import { isTtsEnabled } from '../../../services/guildService.ts';
-import { preprocessTtsMessage } from '../../../services/chatTts.ts';
-import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
+import { isTtsEnabled } from '../../../../services/guildService.ts';
+import { preprocessTtsMessage } from '../../application/chatTts.ts';
+import type { CustomPlayer } from '../../../../modules/audio/lavalink/player/customPlayer.ts';
+import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * 채팅 TTS 리스너 — 설정된 채널의 메시지를 음성으로 읽는다 (명세 4.1 트리거).

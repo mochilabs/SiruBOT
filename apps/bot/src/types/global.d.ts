@@ -32,10 +32,10 @@ declare module '@sapphire/pieces' {
 		/** 저장한 플레이리스트·즐겨찾기 재생 (services/playlistPlayback.ts) */
 		playlistPlayback: import('../services/playlistPlayback.ts').PlaylistPlayback;
 		skipPolicy: import('../services/skipPolicy.ts').SkipPolicy;
-		ttsService: import('../services/ttsService.ts').TtsService;
-		ttsUserSettings: import('../services/ttsUserSettings.ts').TtsUserSettingsService;
-		ttsPronunciation: import('../services/ttsPronunciation.ts').TtsPronunciationService;
-		chatTtsService: import('../services/chatTts.ts').ChatTtsService;
+		ttsService: import('../features/tts/index.ts').TtsService;
+		ttsUserSettings: import('../features/tts/index.ts').TtsUserSettingsService;
+		ttsPronunciation: import('../features/tts/index.ts').TtsPronunciationService;
+		chatTtsService: import('../features/tts/index.ts').ChatTtsService;
 		tempVoiceService: import('../features/temp-voice/index.ts').TempVoiceService;
 		/** AI 채팅 기록 인메모리 상태 + 디바운스 DB 저장 소유자 (종료 시 stop()이 flush) */
 		aiChatHistory: import('../features/ai-chat/index.ts').ChannelHistoryStore;

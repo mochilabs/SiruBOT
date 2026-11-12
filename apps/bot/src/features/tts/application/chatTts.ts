@@ -1,17 +1,17 @@
 import type { Message } from 'discord.js';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
-import type { AppLogger } from '../lib/appLogger.ts';
-import type { Stoppable } from '../lib/lifecycle.ts';
-import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import type { Stoppable } from '../../../lib/lifecycle.ts';
+import { isTtsClip, TTS_CLIP_REQUESTER_ID } from '../../../modules/audio/lavalink/requester.ts';
+import type { CustomPlayer } from '../../../modules/audio/lavalink/player/customPlayer.ts';
 import { TtsClip, TtsError, type TtsService } from './ttsService.ts';
 import type { TtsPronunciationService } from './ttsPronunciation.ts';
-import type { GuildService } from './guildService.ts';
-import type { MixerService } from './mixerService.ts';
-import type { AudioService } from './audioService.ts';
+import type { GuildService } from '../../../services/guildService.ts';
+import type { MixerService } from '../../../services/mixerService.ts';
+import type { AudioService } from '../../../services/audioService.ts';
 import type { TtsChannel, TtsUserPreset } from './ttsUserSettings.ts';
-import * as guildPlayback from './guildSettings/playback.ts';
-import * as guildChatPolicy from './guildSettings/chatPolicy.ts';
+import * as guildPlayback from '../../../services/guildSettings/playback.ts';
+import * as guildChatPolicy from '../../../services/guildSettings/chatPolicy.ts';
 
 /**
  * 채팅 TTS 오케스트레이터 — 메시지 전처리·병합·스로틀 후 클립을 재생 모드(오버레이/단독)로 dispatch한다.

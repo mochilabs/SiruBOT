@@ -21,7 +21,7 @@ vi.mock('@sapphire/framework', () => ({
 }));
 
 import { TtsMemberAnnounceListener } from './ttsMemberAnnounce.ts';
-vi.mock('../../../services/guildSettings/chatPolicy.ts', () => mocks.container.guildChatPolicy);
+vi.mock('../../../../services/guildSettings/chatPolicy.ts', () => mocks.container.guildChatPolicy);
 
 const PRESET = { enabled: false, voice: null, channel: 'left', emotion: 'neutral' };
 

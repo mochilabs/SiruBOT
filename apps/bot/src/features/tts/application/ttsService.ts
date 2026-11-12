@@ -1,7 +1,6 @@
 import { MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
-import type { AppLogger } from '../lib/appLogger.ts';
-import type { TtsConfig } from '../lib/ttsConfig.ts';
+import type { AppLogger } from '../../../lib/appLogger.ts';
 
 /**
  * 채팅 TTS(siru_tts 2.0) 클라이언트 — 합성 요청·공개 URL 수신·재시도.
@@ -66,6 +65,12 @@ export class TtsError extends Error {
 }
 
 /** TTS 서비스가 쓰는 의존성 — 설정은 호출할 때마다 읽어요 (SIRU_TTS_URL이 없으면 null) */
+export interface TtsConfig {
+	url: string;
+	/** 선택 — 비어 있으면 voice를 생략하고 서버가 텍스트 언어로 고른다 */
+	defaultVoice: string | null;
+}
+
 export interface TtsServiceDeps {
 	logger: AppLogger;
 	getTtsConfig: () => TtsConfig | null;

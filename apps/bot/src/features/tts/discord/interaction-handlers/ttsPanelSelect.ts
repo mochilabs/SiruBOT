@@ -1,11 +1,11 @@
-import { notice } from '../view/notice.ts';
+import { notice } from '../../../../modules/general/view/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import type { TtsUserSettingsService } from '../../../services/ttsUserSettings.ts';
-import { normalizeTtsChannel, normalizeTtsEmotion } from '../../../services/ttsUserSettings.ts';
-import { buildTtsPanel, normalizePanelLang, TTS_VOICE_DEFAULT_VALUE } from '../view/ttsView.ts';
+import type { TtsUserSettingsService } from '../../application/ttsUserSettings.ts';
+import { normalizeTtsChannel, normalizeTtsEmotion } from '../../application/ttsUserSettings.ts';
+import { buildTtsPanel, normalizePanelLang, TTS_VOICE_DEFAULT_VALUE } from '../views/ttsView.ts';
 import { ttsId } from '../customIds.ts';
 
 /**

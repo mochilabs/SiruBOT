@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setConfigForTesting } from '../lib/config.ts';
-import { makeTestConfig } from '../lib/config.testing.ts';
+import { setConfigForTesting } from '../../../lib/config.ts';
+import { makeTestConfig } from '../../../lib/config.testing.ts';
 import { TtsService } from './ttsService.ts';
-import { getTtsConfig } from '../lib/ttsConfig.ts';
+import { getTtsConfig } from '../ttsConfig.ts';
 
 const mocks = vi.hoisted(() => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatTtsService, preprocessTtsText, TTS_CLIP_MAX_CHARS, TTS_MERGE_WINDOW_MS, TTS_OVERLAY_QUEUE_MAX, TTS_SOLO_QUEUE_MAX } from './chatTts.ts';
-import { TTS_CLIP_REQUESTER_ID } from '../modules/audio/lavalink/requester.ts';
-import type { CustomPlayer } from '../modules/audio/lavalink/player/customPlayer.ts';
-import { setConfigForTesting } from '../lib/config.ts';
-import { makeTestConfig } from '../lib/config.testing.ts';
-import { getTtsConfig } from '../lib/ttsConfig.ts';
+import { TTS_CLIP_REQUESTER_ID } from '../../../modules/audio/lavalink/requester.ts';
+import type { CustomPlayer } from '../../../modules/audio/lavalink/player/customPlayer.ts';
+import { setConfigForTesting } from '../../../lib/config.ts';
+import { makeTestConfig } from '../../../lib/config.testing.ts';
+import { getTtsConfig } from '../ttsConfig.ts';
 import type { Message, User } from 'discord.js';
 import type { Track } from 'lavalink-client';
-vi.mock('./guildSettings/playback.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildPlayback }));
-vi.mock('./guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildChatPolicy }));
+vi.mock('../../../services/guildSettings/playback.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildPlayback }));
+vi.mock('../../../services/guildSettings/chatPolicy.ts', async (orig) => ({ ...(await orig<Record<string, unknown>>()), ...mocks.guildChatPolicy }));
 
 const mocks = vi.hoisted(() => ({
 	logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
