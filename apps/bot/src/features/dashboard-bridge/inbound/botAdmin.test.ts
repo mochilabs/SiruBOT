@@ -20,6 +20,10 @@ const { mockPublish, mockGetSession, mockContainer } = vi.hoisted(() => {
 vi.mock('@sapphire/framework', () => ({
 	container: mockContainer
 }));
+// 공개 표면 전체(피스 포함)를 불러오지 않고 shard 키 계산만 실제 구현을 써요
+vi.mock('../../music/index.ts', async () => ({
+	NodeSessionStore: (await import('../../music/lavalink/redisStore.ts')).NodeSessionStore
+}));
 
 import type { RedisRuntime } from '../../../lib/redisResponder.ts';
 import { createBotAdminResponder } from './botAdmin.ts';

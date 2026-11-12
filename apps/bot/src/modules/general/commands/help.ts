@@ -3,7 +3,7 @@ import { Command } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand } from 'discord.js';
-import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from '../../audio/commands/music.ts';
+import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from '../../../features/music/index.ts';
 import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
 import { helpView } from '../view/help.ts';
 import { INFO_SUBCOMMANDS } from './info.ts';

@@ -9,7 +9,7 @@ import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRe
 import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import * as view from '../../../modules/audio/view/play.ts';
+import * as view from '../discord/views/play.ts';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import type { MixerService } from './mixerService.ts';

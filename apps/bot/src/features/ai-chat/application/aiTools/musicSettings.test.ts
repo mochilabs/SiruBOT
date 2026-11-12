@@ -27,7 +27,11 @@ const mocks = vi.hoisted(() => ({
 	updateVolume: vi.fn()
 }));
 const actor = vi.hoisted(() => ({ guildId: 'test-guild', userId: 'user-1' }));
-vi.mock('../../../music/index.ts', () => ({ actorFromMember: () => actor, queueRelatedUpfront: mocks.queueRelatedUpfront }));
+vi.mock('../../../music/index.ts', () => ({
+	actorFromMember: () => actor,
+	queueRelatedUpfront: mocks.queueRelatedUpfront,
+	checkManageGuild: mocks.checkManageGuild
+}));
 
 const deps = {
 	guildService: { getGuild: mocks.getGuild } as never,
@@ -41,10 +45,6 @@ const deps = {
 		setNormalization: vi.fn()
 	} as never
 };
-
-vi.mock('../../../../modules/audio/utils/permissionCheck.ts', () => ({
-	checkManageGuild: mocks.checkManageGuild
-}));
 
 import { createMusicSettingsTools } from './musicSettings.ts';
 

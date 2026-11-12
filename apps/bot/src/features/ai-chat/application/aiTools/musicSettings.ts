@@ -1,6 +1,5 @@
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
-import { queueRelatedUpfront } from '../../../music/index.ts';
-import { checkManageGuild } from '../../../../modules/audio/utils/permissionCheck.ts';
+import { checkManageGuild, queueRelatedUpfront } from '../../../music/index.ts';
 import type { TtsAnnounceMode } from '../../../../services/guildSettings/playback.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';

@@ -26,7 +26,7 @@ function start(logger: RedisRuntime['logger'], publish: Mock, signingKey = '') {
 	};
 	harness.receive = (raw) => void binding.handle(raw, runtime);
 }
-vi.mock('../../../modules/audio/view/play.ts', () => ({}));
+vi.mock('../discord/views/play.ts', () => ({}));
 
 /** actorFromMember가 읽는 필드까지 갖춘 최소 멤버 */
 const memberBase = { id: 'user', guild: { id: 'guild' }, roles: { cache: new Map() }, voice: { channelId: null, channel: null } };

@@ -39,7 +39,7 @@ vi.mock('./nowPlayingCard.ts', () => ({
 	resolveNowPlayingCard: mocks.render,
 	clearNowPlayingCard: mocks.clear
 }));
-vi.mock('../../../../modules/audio/view/controller.ts', () => ({
+vi.mock('../../discord/views/controller.ts', () => ({
 	controllerView: ({ player, volume, nowPlayingCardUrl }: { player: CustomPlayer; volume: number; nowPlayingCardUrl?: string }) => {
 		const snapshot = {
 			track: player.queue.current?.info.identifier,

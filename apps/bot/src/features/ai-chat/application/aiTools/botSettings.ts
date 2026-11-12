@@ -1,6 +1,6 @@
 import { ChannelType, type Guild, type GuildBasedChannel, type Role } from 'discord.js';
-import { checkManageGuild } from '../../../../modules/audio/utils/permissionCheck.ts';
 import type { AiMode, PinnedChannelMode } from '../../../../services/guildSettings/types.ts';
+import { checkManageGuild } from '../../../music/index.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';

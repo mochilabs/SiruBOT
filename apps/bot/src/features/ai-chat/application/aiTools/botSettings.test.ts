@@ -61,7 +61,7 @@ const deps = {
 		}) as never
 };
 
-vi.mock('../../../../modules/audio/utils/permissionCheck.ts', () => ({
+vi.mock('../../../music/index.ts', () => ({
 	checkManageGuild: mocks.checkManageGuild
 }));
 

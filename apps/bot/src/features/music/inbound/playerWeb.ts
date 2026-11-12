@@ -30,7 +30,7 @@ import type {
 } from '@sirubot/utils';
 import { MessageFlags, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
 import { type Player, type SearchResult, type Track, type UnresolvedTrack } from 'lavalink-client';
-import * as playView from '../../../modules/audio/view/play.ts';
+import * as playView from '../discord/views/play.ts';
 import { DEFAULT_RESPONDER_ERROR_MESSAGE, createRedisResponder, type RedisBinding, type RedisRpcPayload } from '../../../lib/redisResponder.ts';
 import type { RedisLogger } from '../../../lib/redisPublisher.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';

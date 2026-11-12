@@ -26,7 +26,7 @@ const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOr
 		search: vi.fn()
 	}));
 
-// 필터 프리셋(modules/audio/utils/filterPresets.ts)은 아직 container.mixerService를 직접 읽어요
+// 필터 프리셋(features/music/discord/utils/filterPresets.ts)은 아직 container.mixerService를 직접 읽어요
 vi.mock('@sapphire/framework', () => ({ container: { mixerService: { reapplyMixerFilter } } }));
 
 const deps = {
@@ -38,9 +38,11 @@ const deps = {
 	getMusic: () => music as never,
 	getAudio: () => ({ getPlayer }) as never
 };
-vi.mock('../../../../modules/audio/utils/permissionCheck.ts', () => ({ checkDJOrAlone }));
 vi.mock('../../../music/index.ts', async () => ({
 	actorFromMember: () => actor,
+	checkDJOrAlone,
+	...(await import('../../../music/discord/utils/filterPresets.ts')),
+	parseTimeToMs: (await import('../../../music/discord/utils/timeParse.ts')).parseTimeToMs,
 	getUserQueuedTracks: vi.fn(),
 	removeStaleRelatedTracks: vi.fn(),
 	nowPlayingTrack: (await import('../../../music/lavalink/player/nowPlaying.ts')).nowPlayingTrack,

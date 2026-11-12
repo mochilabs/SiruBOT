@@ -2,7 +2,7 @@ import { UserError } from '@sapphire/framework';
 import type { GuildMember, User } from 'discord.js';
 import type { LavalinkManager, Track } from 'lavalink-client';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import { lookupSource } from '../../../modules/audio/utils/source.ts';
+import { lookupSource } from '../discord/utils/source.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
 import type { AudioService } from './audioService.ts';
 import type { GuildService } from '../../../services/guildService.ts';

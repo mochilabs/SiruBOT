@@ -6,7 +6,7 @@
 import { container } from '@sapphire/framework';
 import type { AttachmentBuilder, ContainerBuilder, Message } from 'discord.js';
 import { getDisplayNowPlayingCard, type NowPlayingCardAttachment } from './nowPlayingCard.ts';
-import { controllerView } from '../../../../modules/audio/view/controller.ts';
+import { controllerView } from '../../discord/views/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import { currentBpmCache } from './currentBpm.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';

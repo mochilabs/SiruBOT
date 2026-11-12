@@ -36,13 +36,12 @@ const ALLOWED_SERVICES_TO_MODULES: string[] = [];
 
 /** `lib/` -> `modules/` edges that exist today. Only delete from this list. */
 const ALLOWED_LIB_TO_MODULES: string[] = [
-	'lib/autocomplete.ts -> modules/audio/utils/queueSelection.ts',
 	'lib/confirmation.ts -> modules/general/view/confirmation.ts',
 	'lib/confirmation.ts -> modules/general/view/notice.ts'
 ];
 
 /** `modules/` -> `core/` edges that exist today. Only delete from this list. */
-const ALLOWED_MODULES_TO_CORE: string[] = ['modules/audio/listeners/voiceStateUpdate.ts -> core/logger.ts'];
+const ALLOWED_MODULES_TO_CORE: string[] = [];
 
 /**
  * Imports in `features/<name>/application/` that break the application-layer rule today, as `<file> -> <specifier>`, each with the reason and what
@@ -271,9 +270,9 @@ describe('bot architecture guard rails', () => {
 		const file = 'features/music/application/control.ts';
 		expect(applicationImportViolation(file, '@sapphire/framework')).not.toBeNull();
 		expect(applicationImportViolation(file, '@sapphire/pieces')).not.toBeNull();
-		expect(applicationImportViolation(file, '../../../modules/audio/view/volume.ts')).not.toBeNull();
-		expect(applicationImportViolation(file, '../../../modules/audio/subcommands/volume.ts')).not.toBeNull();
-		expect(applicationImportViolation(file, '../../../modules/audio/interaction-handlers/controllerButton.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../discord/views/volume.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../discord/subcommands/volume.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../discord/interaction-handlers/controllerButton.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../../../modules/general/listeners/message/embedFix.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/views/ticket.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/interaction-handlers/ticketButton.ts')).not.toBeNull();
