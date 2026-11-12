@@ -1,4 +1,4 @@
-import { getUserProfile } from '../../../../modules/general/utils/userProfile.ts';
+import { getUserProfile } from '../../../user-data/index.ts';
 import { getZodiacFromDate } from '../../../../features/games/index.ts';
 import { fetchOhaasaKo } from '../../../../services/dataApiClient.ts';
 import type { AiTool } from './types.ts';

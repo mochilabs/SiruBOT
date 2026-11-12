@@ -3,7 +3,7 @@ import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
 import { ApplicationIntegrationType, AttachmentBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchOhaasaKo } from '../../../../services/dataApiClient.ts';
-import { getUserProfile } from '../../../../modules/general/utils/userProfile.ts';
+import { getUserProfile } from '../../../user-data/index.ts';
 import { getZodiacFromDate, ZODIAC_CHOICES, ZODIAC_MAP } from '../../application/ohaasaService.ts';
 import { ohaasaSingleLines, ohaasaTopLines, ohaasaView, formatOhaasaDate } from '../views/ohaasa.ts';
 import { buildOhaasaCardRequest, buildOhaasaTopCardRequest } from '../../application/ohaasaCardPayload.ts';

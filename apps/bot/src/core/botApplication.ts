@@ -11,7 +11,7 @@ import { LavalinkManager, LavalinkNodeOptions } from 'lavalink-client';
 
 import { GuildService } from '../services/guildService.ts';
 import { ChatTtsService, TtsPronunciationService, TtsService, TtsUserSettingsService, getTtsConfig } from '../features/tts/index.ts';
-import { CountingStateStore } from '../services/countingState.ts';
+import { CountingStateStore } from '../features/counting/index.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
 import { AiMemoryService, ChannelHistoryStore, MemoryPromotionJobs, createAiChat, createAiTools } from '../features/ai-chat/index.ts';
@@ -52,11 +52,10 @@ import {
 	type LavalinkShardInfo
 } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
-import { BotProfileService } from '../services/botProfileService.ts';
+import { BotProfileService, createBotProfileListeners } from '../features/bot-profile/index.ts';
 import { createMemberGreetingService, greetingMessages, createMemberGreetingSendListener } from '../features/greeting/index.ts';
 import {
 	createBotAdminResponder,
-	createBotProfileListeners,
 	createGuildDataResponder,
 	createGuildSettingsInvalidationListener,
 	createPanelPostResponder,

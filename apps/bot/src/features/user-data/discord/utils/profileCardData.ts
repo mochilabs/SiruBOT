@@ -1,6 +1,6 @@
 import { container } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { getZodiacFromDate } from '../../../features/games/index.ts';
+import { getZodiacFromDate } from '../../../games/index.ts';
 import { getUserProfile } from './userProfile.ts';
 
 interface ProfileRecentTrack {

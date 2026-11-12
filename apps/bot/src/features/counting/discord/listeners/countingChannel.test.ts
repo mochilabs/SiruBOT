@@ -31,7 +31,7 @@ vi.mock('@sapphire/framework', () => {
 
 import { container } from '@sapphire/framework';
 import { CountingChannelListener } from './countingChannel.ts';
-import { CountingStateStore, countingStateKey } from '../../../../services/countingState.ts';
+import { CountingStateStore, countingStateKey } from '../../application/countingState.ts';
 vi.mock('../../../../services/guildSettings/chatPolicy.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getChatToolSettings: mocks.getChatToolSettings }

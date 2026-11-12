@@ -4,7 +4,7 @@ import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.
  * 카운팅 채널 리스너 — 지정 채널에서 숫자를 순서대로 세요.
  *
  * - 규칙: 1부터 시작, 같은 사람이 연속으로 세면 실패(도배 방지), 틀리면 카운트가 초기화돼요.
- * - 상태는 services/countingState.ts가 관리해요 (Redis에 저장돼 재시작 뒤에도 이어져요).
+ * - 상태는 features/counting/application/countingState.ts가 관리해요 (Redis에 저장돼 재시작 뒤에도 이어져요).
  * - 같은 길드의 숫자 메시지는 도착 순서대로 하나씩 처리해요 — await 경계를 건너 뛴 같은 상태 읽기를 막아요.
  * - 숫자가 아닌 메시지는 조용히 무시해요 — 카운팅 채널에서 잡담도 할 수 있어요.
  * - 판정 계약은 packages/utils/src/chatTools.ts (evaluateCounting).

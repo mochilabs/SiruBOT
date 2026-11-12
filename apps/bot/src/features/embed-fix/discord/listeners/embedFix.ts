@@ -24,8 +24,9 @@ import {
 	findEmbedFixLinks,
 	parseBoothOg
 } from '@sirubot/utils';
-import { boothCard, embedFixCard } from '../../view/embedFix.ts';
-import { fetchEmbedFixMetadata } from '../../../../services/embedFixGateway.ts';
+import { boothCard, embedFixCard } from '../views/embedFix.ts';
+import { fetchEmbedFixMetadata } from '../../application/embedFixGateway.ts';
+import { dataApiAuthHeaders, gatewayBaseUrl } from '../../../../lib/dataApi.ts';
 import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 
@@ -73,12 +74,15 @@ export class EmbedFixListener extends Listener {
 
 	/** 우선 data-api 카드(메타 캐싱은 data-api 계층), data-api를 못 쓰면 레거시 도메인 스왑으로 폴백해요 */
 	private async buildPayloads(links: EmbedFixLink[], translateTo: EmbedFixTranslateLang = 'off'): Promise<EmbedFixPayload[]> {
-		const gatewayResults = await fetchEmbedFixMetadata(this.container.logger, {
-			links: links.map((link) =>
-				link.site === 'booth' ? { site: link.site, url: link.original } : { site: link.site, url: link.original, fixedUrl: link.fixed }
-			),
-			...(translateTo !== 'off' ? { translateTo } : {})
-		});
+		const gatewayResults = await fetchEmbedFixMetadata(
+			{ logger: this.container.logger, baseUrl: gatewayBaseUrl, authHeaders: dataApiAuthHeaders },
+			{
+				links: links.map((link) =>
+					link.site === 'booth' ? { site: link.site, url: link.original } : { site: link.site, url: link.original, fixedUrl: link.fixed }
+				),
+				...(translateTo !== 'off' ? { translateTo } : {})
+			}
+		);
 		if (gatewayResults) return this.payloadsFromResults(gatewayResults);
 
 		return this.buildLegacyPayloads(links);

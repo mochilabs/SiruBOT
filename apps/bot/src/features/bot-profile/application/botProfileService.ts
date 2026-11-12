@@ -13,16 +13,16 @@
  * - nick: CHANGE_NICKNAME 필요 (자기 닉네임 — MANAGE_NICKNAMES도 허용으로 봐요)
  * - avatar·banner: 권한 불요 (길드 멤버 프로필 이미지·배너 — 이 프로세스에서 검증하지 않아요)
  *
- * - 트리거(set/refresh) 구독은 features/dashboard-bridge가 공유 구독 연결 위에서 받아 이 서비스를 호출해요.
+ * - 트리거(set/refresh) 구독은 features/bot-profile/inbound가 공유 구독 연결 위에서 받아 이 서비스를 호출해요.
  * - 적용은 실패해도 프로세스를 크래시시키지 않아요 — 상태 퍼블리시에 실패 사유를 담아요.
  * - pending 키는 TTL(120초)이 있어 봇이 모두 무시해도 자동 정리돼요.
  */
 import { botProfilePendingKey, botProfileStateEvent } from '@sirubot/utils';
 import { unwrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { Guild, PermissionFlagsBits } from 'discord.js';
-import type { RedisStore } from '../features/music/index.ts';
-import type { RedisPublisher } from '../lib/redisPublisher.ts';
-import type { ServiceLogger } from './types.ts';
+import type { RedisStore } from '../../music/index.ts';
+import type { RedisPublisher } from '../../../lib/redisPublisher.ts';
+import type { ServiceLogger } from '../../../services/types.ts';
 
 /** 봇 프로필 상태 페이로드 — data-api botProfileHub/대시보드 패널과 계약이에요 */
 export interface BotProfileState {

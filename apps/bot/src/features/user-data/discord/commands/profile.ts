@@ -1,9 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji, formatTimeToKorean } from '@sirubot/utils';
-import { birthdayClearedView, birthdaySavedView, introClearedView, introSavedView, profileCardView, profileTextView } from '../view/profile.ts';
+import { birthdayClearedView, birthdaySavedView, introClearedView, introSavedView, profileCardView, profileTextView } from '../views/profile.ts';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { getZodiacFromDate, streakBadge, ZODIAC_MAP } from '../../../features/games/index.ts';
+import { getZodiacFromDate, streakBadge, ZODIAC_MAP } from '../../../games/index.ts';
 import { clearUserBirthday, clearUserIntro, isValidBirthday, setUserBirthday, setUserIntro } from '../utils/userProfile.ts';
 import { buildProfileCardData, formatGameStatsLines } from '../utils/profileCardData.ts';
 

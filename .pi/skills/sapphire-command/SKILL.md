@@ -7,7 +7,7 @@ description: Author Sapphire Framework slash commands and preconditions (guards)
 
 ## Commands
 
-- Locations: `apps/bot/src/modules/general/commands/` (`development/` for dev), `features/<name>/discord/commands/` (music, games, ...). Temp voice (`features/temp-voice`) has only listeners, no commands.
+- Locations: `apps/bot/src/modules/general/commands/` (`development/` for dev), `features/<name>/discord/commands/` (music, games, user-data for `/프로필` and `/개인정보`, ...). Temp voice (`features/temp-voice`) has only listeners, no commands.
 - File `commandName.ts` (camelCase), class `CommandNameCommand`, `name` lowercase no spaces.
 - Stack: `@sapphire/framework` v5 + `@sapphire/decorators`; services registered in `core/botApplication.ts` (`setupServices()`), typed in `apps/bot/src/types/global.d.ts`.
 

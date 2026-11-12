@@ -1,10 +1,10 @@
-import { notice } from '../../../lib/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Subcommand } from '@sapphire/plugin-subcommands';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { purgeUserData, summarizeUserData } from '../../../services/userDataService.ts';
-import { confirmAction } from '../../../lib/confirmation.ts';
+import { purgeUserData, summarizeUserData } from '../../application/userDataService.ts';
+import { confirmAction } from '../../../../lib/confirmation.ts';
 
 /**
  * `/개인정보` — 내 데이터 열람·삭제 (PIPA/GDPR 삭제권 경로).

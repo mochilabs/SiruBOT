@@ -291,7 +291,7 @@ describe('bot architecture guard rails', () => {
 		expect(applicationImportViolation(file, '../discord/views/volume.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/subcommands/volume.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/interaction-handlers/controllerButton.ts')).not.toBeNull();
-		expect(applicationImportViolation(file, '../../../modules/general/listeners/message/embedFix.ts')).not.toBeNull();
+		expect(applicationImportViolation(file, '../../../features/embed-fix/discord/listeners/embedFix.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/views/ticket.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/interaction-handlers/ticketButton.ts')).not.toBeNull();
 		expect(applicationImportViolation(file, '../discord/commands/ticket.ts')).not.toBeNull();
