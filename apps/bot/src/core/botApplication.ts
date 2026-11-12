@@ -45,6 +45,8 @@ import {
 	createPlaylistPlayback,
 	playbackMessages,
 	handleMixerNeedNext,
+	CurrentBpmCache,
+	createMusicToolPort,
 	type LavalinkDeps,
 	type LavalinkLogger,
 	type LavalinkShardInfo
@@ -196,7 +198,9 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 				return container.shardInfo;
 			},
 			nowPlayingCards: { cache: new Map(), pending: new Map(), retryAfter: new Map() },
-			playerStatePublishTracker: new Map()
+			playerStatePublishTracker: new Map(),
+			relatedFetchInFlight: new Map(),
+			currentBpm: new CurrentBpmCache()
 		};
 		container.lavalink = lavalink;
 		container.dataApi = createDataApiClient({ logger: appLogger });
@@ -290,7 +294,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		const aiTools = createAiTools({
 			db: container.db,
 			guildService: container.guildService,
-			lavalink,
+			musicPort: createMusicToolPort({ lavalink }),
 			aiMemory: container.aiMemoryService,
 			audioService: container.audioService,
 			mixerService: container.mixerService,

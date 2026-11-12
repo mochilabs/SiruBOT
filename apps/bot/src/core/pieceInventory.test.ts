@@ -222,8 +222,6 @@ const EXPECTED_PIECES: string[] = [
 	'listeners:tempVoiceState',
 	'listeners:ttsMemberAnnounce',
 	'listeners:voiceStateUpdate',
-	'preconditions:ClientVoiceConnectable',
-	'preconditions:ClientVoiceSpeakable',
 	'preconditions:DJOrAlone',
 	'preconditions:ManageGuild',
 	'preconditions:MemberListenable',

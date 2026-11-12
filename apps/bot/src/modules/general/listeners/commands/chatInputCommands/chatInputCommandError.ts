@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { ChatInputCommandErrorPayload, Events } from '@sapphire/framework';
 import { Listener } from '@sapphire/framework';
 import { emoji, DEFAULT_COLOR, WARN_COLOR } from '@sirubot/utils';
-import { notice } from '../../../view/notice.ts';
+import { notice } from '../../../../../lib/notice.ts';
 import { sendComponent } from './chatInputCommandDenied.ts';
 import { presentError } from '../../../../../lib/errorPresenter.ts';
 import * as Sentry from '@sentry/node';

@@ -32,6 +32,7 @@ const mockChannels = new Map<string, unknown>();
 const mockRoles = new Map<string, unknown>();
 
 const deps = {
+	musicPort: { checkManageGuild: mocks.checkManageGuild } as never,
 	guildService: { getGuild: mocks.getGuild } as never,
 	tempVoice: { setupMarkerChannel: mocks.setupMarkerChannel },
 	getClient: () =>
@@ -60,10 +61,6 @@ const deps = {
 			}
 		}) as never
 };
-
-vi.mock('../../../music/index.ts', () => ({
-	checkManageGuild: mocks.checkManageGuild
-}));
 
 import { createBotSettingsTools } from './botSettings.ts';
 

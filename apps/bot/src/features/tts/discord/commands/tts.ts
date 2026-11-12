@@ -1,4 +1,4 @@
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { channelToggleView, settingResultView, settingWarningView } from '../../../../modules/general/view/settingResult.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';

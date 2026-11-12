@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { notice } from '../view/notice.ts';
+import { notice } from '../../../lib/notice.ts';
 import { DeliveryError, normalizeTrackingNumber, type DeliveryTrackResult } from '@sirubot/utils/delivery';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 

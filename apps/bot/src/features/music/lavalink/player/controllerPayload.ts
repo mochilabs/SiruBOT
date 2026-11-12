@@ -8,7 +8,6 @@ import { getDisplayNowPlayingCard, type NowPlayingCardAttachment } from './nowPl
 import { controllerView } from '../../discord/views/controller.ts';
 import type { CustomPlayer } from './customPlayer.ts';
 import type { LavalinkDeps } from '../deps.ts';
-import { currentBpmCache } from './currentBpm.ts';
 import { nowPlayingTrack } from './nowPlaying.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 
@@ -55,7 +54,7 @@ export async function buildControllerCardPayload(
 		player,
 		volume: options.volume,
 		nowPlayingCardUrl: card?.url,
-		currentBpm: currentBpmCache.read(
+		currentBpm: deps.currentBpm.read(
 			player,
 			currentNode,
 			currentIdentifier,

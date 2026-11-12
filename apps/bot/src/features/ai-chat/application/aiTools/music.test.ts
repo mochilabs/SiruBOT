@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../../../lib/appError.ts';
 import type { AiToolContext } from './types.ts';
+import {
+	applyFilterPreset,
+	dropLoserFilters,
+	FILTER_PRESET_NAMES,
+	isFilterPreset,
+	resetAllFilters
+} from '../../../music/discord/utils/filterPresets.ts';
+import { parseTimeToMs } from '../../../music/discord/utils/timeParse.ts';
+import { nowPlayingTrack } from '../../../music/lavalink/player/nowPlaying.ts';
+import { isSameTrack } from '../../../music/lavalink/handlers/playbackWatchdog.ts';
 
 const { getPlayer, checkDJOrAlone, reapplyMixerFilter, enqueueTrack, skip, getOrCreatePlayer, connectPlayer, ensurePlayback, search, music, actor } =
 	vi.hoisted(() => ({
@@ -51,8 +61,26 @@ const musicPlay = createMusicPlay({
 	ensurePlayback: (player) => ensurePlayback(player)
 });
 
+// 음악 포트: 실제 헬퍼를 쓰고 인가·대기열 정리처럼 외부와 닿는 것만 모의로 바꿔요
+const musicPort = {
+	actorFromMember: () => actor,
+	checkDJOrAlone,
+	checkManageGuild: vi.fn(),
+	nowPlayingTrack,
+	isSameTrack,
+	getUserQueuedTracks: vi.fn(),
+	removeStaleRelatedTracks: vi.fn(),
+	queueRelatedUpfront: vi.fn(),
+	parseTimeToMs,
+	filterPresetNames: FILTER_PRESET_NAMES,
+	isFilterPreset,
+	applyFilterPreset,
+	dropLoserFilters,
+	resetAllFilters
+} as never;
+
 const deps = {
-	lavalink: {} as never,
+	musicPort,
 	db: {} as never,
 	guildService: {} as never,
 	audioService: { enqueueTrack, getOrCreatePlayer, connectPlayer, ensurePlayback, search } as never,
@@ -62,16 +90,6 @@ const deps = {
 	getMusicPlay: () => musicPlay as never,
 	getAudio: () => ({ getPlayer }) as never
 };
-vi.mock('../../../music/index.ts', async () => ({
-	actorFromMember: () => actor,
-	checkDJOrAlone,
-	...(await import('../../../music/discord/utils/filterPresets.ts')),
-	parseTimeToMs: (await import('../../../music/discord/utils/timeParse.ts')).parseTimeToMs,
-	getUserQueuedTracks: vi.fn(),
-	removeStaleRelatedTracks: vi.fn(),
-	nowPlayingTrack: (await import('../../../music/lavalink/player/nowPlaying.ts')).nowPlayingTrack,
-	isSameTrack: (await import('../../../music/lavalink/handlers/playbackWatchdog.ts')).isSameTrack
-}));
 vi.mock('../../../../services/dataApiClient.ts', () => ({ searchLyrics: vi.fn() }));
 
 import { createMusicTools } from './music.ts';

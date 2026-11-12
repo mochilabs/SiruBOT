@@ -1,6 +1,6 @@
 import { ChannelType, type Guild, type GuildBasedChannel, type Role } from 'discord.js';
 import type { AiMode, PinnedChannelMode } from '../../../../services/guildSettings/types.ts';
-import { checkManageGuild } from '../../../music/index.ts';
+import type { MusicToolPort } from '../../../music/index.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
@@ -13,12 +13,12 @@ function requireGuild(ctx: AiToolContext): string {
 	return ctx.guildId;
 }
 
-function requireManageGuildPermission(ctx: AiToolContext): void {
+function requireManageGuildPermission(ctx: AiToolContext, port: Pick<MusicToolPort, 'checkManageGuild'>): void {
 	requireGuild(ctx);
 	if (!ctx.member) throw new Error('사용자 권한을 확인할 수 없어요.');
 	let allowed = false;
 	try {
-		allowed = checkManageGuild(ctx.member);
+		allowed = port.checkManageGuild(ctx.member);
 	} catch {
 		allowed = false;
 	}
@@ -100,7 +100,7 @@ function resolveRole(guild: Guild, input: string): Role {
 }
 
 /** 봇 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
-export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | 'tempVoice' | 'getClient'>): AiTool[] {
+export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | 'tempVoice' | 'getClient' | 'musicPort'>): AiTool[] {
 	const botSettingsGetTool: AiTool = {
 		name: 'bot_settings_get',
 		description:
@@ -283,7 +283,7 @@ export function createBotSettingsTools(deps: Pick<AiToolDeps, 'guildService' | '
 		status: '시루가 봇 설정을 변경하는 중..',
 		execute: async (args, ctx) => {
 			const guildId = requireGuild(ctx);
-			requireManageGuildPermission(ctx);
+			requireManageGuildPermission(ctx, deps.musicPort);
 
 			const guild = deps.getClient()?.guilds?.cache?.get(guildId);
 			if (!guild) {

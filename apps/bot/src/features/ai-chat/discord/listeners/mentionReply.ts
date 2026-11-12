@@ -1,4 +1,4 @@
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message, MessageFlags } from 'discord.js';

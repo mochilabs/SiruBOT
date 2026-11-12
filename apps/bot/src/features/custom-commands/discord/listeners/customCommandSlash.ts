@@ -7,7 +7,7 @@
  *   이후 메시지는 채널로 전송해요. 보낼 메시지가 전혀 없으면 '처리했어요' 한 줄로 마무리해요.
  * - delete_trigger는 응답 삭제(deleteReply)로 동작해요.
  */
-import { notice as noticeView } from '../../../../modules/general/view/notice.ts';
+import { notice as noticeView } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener, container } from '@sapphire/framework';
 import { MessageFlags, type ChatInputCommandInteraction, type Interaction, type MessageCreateOptions } from 'discord.js';

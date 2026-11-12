@@ -37,10 +37,7 @@ const ALLOWED_CYCLES: string[] = [];
 const ALLOWED_SERVICES_TO_MODULES: string[] = [];
 
 /** `lib/` -> `modules/` edges that exist today. Only delete from this list. */
-const ALLOWED_LIB_TO_MODULES: string[] = [
-	'lib/confirmation.ts -> modules/general/view/confirmation.ts',
-	'lib/confirmation.ts -> modules/general/view/notice.ts'
-];
+const ALLOWED_LIB_TO_MODULES: string[] = [];
 
 /** `modules/` -> `core/` edges that exist today. Only delete from this list. */
 const ALLOWED_MODULES_TO_CORE: string[] = [];

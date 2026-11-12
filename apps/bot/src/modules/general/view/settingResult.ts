@@ -1,5 +1,5 @@
 import { WARN_COLOR, emoji, type AppEmojiFallbackKey } from '@sirubot/utils';
-import { notice } from './notice.ts';
+import { notice } from '../../../lib/notice.ts';
 
 type SettingResultProps = {
 	icon: AppEmojiFallbackKey;

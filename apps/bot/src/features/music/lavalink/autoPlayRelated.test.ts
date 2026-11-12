@@ -19,6 +19,7 @@ import { CustomPlayer } from './player/customPlayer.ts';
 const { container } = vi.hoisted(() => ({
 	container: {
 		logger: { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		relatedFetchInFlight: new Map(),
 		mixerService: {
 			isPreloaded: vi.fn(() => false),
 			preloadUpcoming: vi.fn(async () => undefined),

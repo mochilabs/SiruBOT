@@ -1,5 +1,5 @@
 import { emoji } from '@sirubot/utils';
-import { notice } from '../view/notice.ts';
+import { notice } from '../../../lib/notice.ts';
 import { evalResultView } from '../view/eval.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';

@@ -1,4 +1,4 @@
-import { notice } from '../../view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 /**
  * 카운팅 채널 리스너 — 지정 채널에서 숫자를 순서대로 세요.

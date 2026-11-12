@@ -42,7 +42,7 @@ export async function run(interaction: ChatInputCommandInteraction<'cached'>): P
 		});
 	}
 
-	if (getInFlightRelatedFetch(interaction.guildId)) {
+	if (getInFlightRelatedFetch(container.lavalink, interaction.guildId)) {
 		throw new UserError({
 			identifier: 'RecommendCommandBusy',
 			message: `${emoji('error')} 추천 곡을 이미 준비 중이에요. 잠시 후 다시 시도해 주세요.`,

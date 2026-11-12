@@ -51,5 +51,3 @@ export class CurrentBpmCache {
 		return entry.bpm;
 	}
 }
-
-export const currentBpmCache = new CurrentBpmCache();

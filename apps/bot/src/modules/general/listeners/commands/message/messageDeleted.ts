@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { Message } from 'discord.js';
-import { notice } from '../../../view/notice.ts';
+import { notice } from '../../../../../lib/notice.ts';
 import { emoji, MemoryCache } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 

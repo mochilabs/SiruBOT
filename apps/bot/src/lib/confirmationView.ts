@@ -1,5 +1,5 @@
 import { ButtonBuilder, ButtonStyle } from 'discord.js';
-import { confirmId } from '../../../lib/confirmationId.ts';
+import { confirmId } from './confirmationId.ts';
 import { notice } from './notice.ts';
 
 export function confirmationView(sessionId: string, title: string, description: string) {

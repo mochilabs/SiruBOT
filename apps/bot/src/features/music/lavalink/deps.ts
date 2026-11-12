@@ -6,7 +6,7 @@
  * getter로 호출 시점에 읽어요. 서로 얽힌 application 서비스(mixer, sponsorBlock)도 같은 방식이에요.
  */
 import type { Client } from 'discord.js';
-import type { LavalinkManager } from 'lavalink-client';
+import type { LavalinkManager, Track } from 'lavalink-client';
 import type { ILogObj, Logger } from 'tslog';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
@@ -16,6 +16,7 @@ import type { TrackService } from '../application/trackService.ts';
 import type { MixerService } from '../application/mixerService.ts';
 import type { SponsorBlockService } from '../application/sponsorBlockService.ts';
 import type { PlaybackReporter } from '../application/playbackReporter.ts';
+import type { CurrentBpmCache } from './player/currentBpm.ts';
 import type { CustomPlayer } from './player/customPlayer.ts';
 import type { PlayerNotifier } from './player/playerNotifier.ts';
 import type { NowPlayingCardStore } from './player/nowPlayingCard.ts';
@@ -52,4 +53,8 @@ export interface LavalinkDeps {
 	/** now-playing 카드 캐시 소유자 — 버튼과 알림이 같은 상태를 써요. */
 	readonly nowPlayingCards: NowPlayingCardStore;
 	readonly playerStatePublishTracker: PlayerStatePublishTracker;
+	/** 길드별 진행 중인 추천곡 프리페치 — 자동 선예열·자동재생 fallback·/추천이 같은 가드를 공유해요 (이중 추가 방지). */
+	readonly relatedFetchInFlight: Map<string, Promise<Track | null>>;
+	/** 현재 곡 BPM 캐시 소유자 — 컨트롤러 렌더링이 읽어요. */
+	readonly currentBpm: CurrentBpmCache;
 }

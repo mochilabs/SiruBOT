@@ -1,4 +1,4 @@
-import { notice as noticeView } from '../../../../modules/general/view/notice.ts';
+import { notice as noticeView } from '../../../../lib/notice.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
 /**
  * 커스텀 명령어 접두사 리스너 — "접두사 + 이름" 메시지로 길드 커스텀 명령어를 실행해요.

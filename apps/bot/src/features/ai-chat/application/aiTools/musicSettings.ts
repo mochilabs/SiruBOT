@@ -1,5 +1,5 @@
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
-import { checkManageGuild, queueRelatedUpfront } from '../../../music/index.ts';
+import type { MusicToolPort } from '../../../music/index.ts';
 import type { TtsAnnounceMode } from '../../../../services/guildSettings/playback.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
@@ -12,10 +12,10 @@ function requireGuild(ctx: AiToolContext): string {
 	return ctx.guildId;
 }
 
-function checkMemberManageGuild(ctx: AiToolContext): boolean {
+function checkMemberManageGuild(ctx: AiToolContext, port: Pick<MusicToolPort, 'checkManageGuild'>): boolean {
 	if (!ctx.member) return false;
 	try {
-		return checkManageGuild(ctx.member);
+		return port.checkManageGuild(ctx.member);
 	} catch {
 		return false;
 	}
@@ -23,7 +23,7 @@ function checkMemberManageGuild(ctx: AiToolContext): boolean {
 
 /** 음악 설정 도구를 만들어요 — 의존성은 deps로 받아요 */
 export function createMusicSettingsTools(
-	deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'sponsorBlock' | 'lavalink' | 'getMusic' | 'getAudio'>
+	deps: Pick<AiToolDeps, 'guildService' | 'mixerService' | 'sponsorBlock' | 'musicPort' | 'getMusic' | 'getAudio'>
 ): AiTool[] {
 	async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
 		if (!ctx.member) return false;
@@ -38,7 +38,7 @@ export function createMusicSettingsTools(
 	async function requireMusicSettingsPermission(ctx: AiToolContext): Promise<void> {
 		const guildId = requireGuild(ctx);
 		if (!ctx.member) throw new Error('사용자 권한을 확인할 수 없어요.');
-		const isManager = checkMemberManageGuild(ctx);
+		const isManager = checkMemberManageGuild(ctx, deps.musicPort);
 		const isDj = await checkMemberDJRole(guildId, ctx);
 		if (!isManager && !isDj) {
 			throw new Error('음악 설정을 변경할 권한이 없어요. DJ 역할을 가지고 있거나 서버 관리 권한이 필요해요.');
@@ -153,7 +153,7 @@ export function createMusicSettingsTools(
 			if (args.volume !== undefined && args.volume !== null) {
 				const volume = Math.round(Number(args.volume));
 				if (hasPlayer) {
-					updated.volume = (await withAppError(() => deps.getMusic().setVolume(musicActor(ctx), volume))).volume;
+					updated.volume = (await withAppError(() => deps.getMusic().setVolume(musicActor(ctx, deps.musicPort), volume))).volume;
 				} else {
 					if (!Number.isInteger(volume) || volume < MUSIC_VOLUME_MIN || volume > MUSIC_VOLUME_MAX) {
 						throw new Error(`노래 볼륨은 ${MUSIC_VOLUME_MIN}부터 ${MUSIC_VOLUME_MAX}까지 설정할 수 있어요.`);
@@ -165,7 +165,7 @@ export function createMusicSettingsTools(
 			if (args.repeat !== undefined && args.repeat !== null) {
 				const repeat = String(args.repeat);
 				if (hasPlayer) {
-					updated.repeat = (await withAppError(() => deps.getMusic().setRepeat(musicActor(ctx), repeat))).mode;
+					updated.repeat = (await withAppError(() => deps.getMusic().setRepeat(musicActor(ctx, deps.musicPort), repeat))).mode;
 				} else {
 					if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('잘못된 반복 모드 값이에요.');
 					updated.repeat = await guildPlayback.setRepeat(deps.guildService, guildId, repeat);
@@ -179,7 +179,7 @@ export function createMusicSettingsTools(
 					const player = deps.getAudio()?.getPlayer?.(guildId);
 					const currentTrack = player?.queue?.current;
 					if (player?.playing && currentTrack && player.queue.tracks.length === 0) {
-						void queueRelatedUpfront(deps.lavalink, player, currentTrack).catch(() => null);
+						void deps.musicPort.queueRelatedUpfront(player, currentTrack).catch(() => null);
 					}
 				}
 				updated.autoplay = updatedAutoplay;

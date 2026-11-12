@@ -4,10 +4,10 @@ import type { LavalinkManager } from 'lavalink-client';
 import type {
 	AudioService,
 	CustomPlayer,
-	LavalinkDeps,
 	MixerService,
 	MusicControl,
 	MusicPlayService,
+	MusicToolPort,
 	PlaylistService,
 	SponsorBlockService
 } from '../../../music/index.ts';
@@ -41,8 +41,8 @@ export interface AiToolDeps {
 	audioService: AudioService;
 	mixerService: MixerService;
 	sponsorBlock: Pick<SponsorBlockService, 'refreshSettings'>;
-	/** 대기열 추천곡 정리·선예열 헬퍼가 쓰는 lavalink 의존성 (setupServices가 만든 container.lavalink) */
-	lavalink: LavalinkDeps;
+	/** 음악 헬퍼 포트 (features/music/discord/musicToolPort.ts) — 도구는 개별 헬퍼 대신 이것만 써요 */
+	musicPort: MusicToolPort;
 	playlistService: PlaylistService;
 	tempVoice: Pick<TempVoiceService, 'setupMarkerChannel'>;
 	getMusic: () => MusicControl;

@@ -2,7 +2,7 @@ import { container, Events, Listener } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import { MessageFlags, type MessageReaction, type PartialMessageReaction, type PartialUser, type User } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { rolePanelEmojiKey } from '@sirubot/utils/rolePanel';
 
 /** 같은 유저의 연속 반응(추가→제거)이 뒤섞이지 않게 (길드, 유저) 단위로 순서를 보장하는 큐. */

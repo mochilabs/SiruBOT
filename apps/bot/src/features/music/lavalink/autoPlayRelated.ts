@@ -20,13 +20,9 @@ const lowSimilarity = (): number => getConfig().autoplay.lowSimilarity;
 const TITLE_WEIGHT = 0.6;
 const DURATION_WEIGHT = 0.4;
 
-// trackStart 선예열(queueRelatedUpfront)과 queueEnd fallback(autoPlayRelated)의
-// 이중 추가를 막는 길드별 in-flight 가드
-const relatedFetchInFlight = new Map<string, Promise<Track | null>>();
-
-/** 진행 중인 추천곡 프리페치를 반환한다 (handleQueueEnd가 완료를 기다릴 때 사용) */
-export function getInFlightRelatedFetch(guildId: string): Promise<Track | null> | undefined {
-	return relatedFetchInFlight.get(String(guildId));
+/** 진행 중인 추천곡 프리페치를 반환한다 (handleQueueEnd가 완료를 기다릴 때 사용). 가드는 deps.relatedFetchInFlight에 있어요. */
+export function getInFlightRelatedFetch(deps: LavalinkDeps, guildId: string): Promise<Track | null> | undefined {
+	return deps.relatedFetchInFlight.get(String(guildId));
 }
 
 /** 봇이 자동으로 넣은 추천곡인지 판별한다 (requester.id === 'related_track'). null/undefined는 추천곡이 아니다. */
@@ -268,7 +264,7 @@ export async function fetchRelatedCandidate(
  */
 export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlayer, currentTrack: Track): Promise<Track | null> => {
 	const gid = String(player.guildId);
-	if (relatedFetchInFlight.has(gid)) return null;
+	if (deps.relatedFetchInFlight.has(gid)) return null;
 	const currentEncoded = (currentTrack as { encoded?: unknown }).encoded;
 	const operation = (async (): Promise<Track | null> => {
 		const relatedOn = await guildPlayback.getRelated(deps.guildService, player.guildId);
@@ -299,11 +295,11 @@ export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlay
 		}
 		return selectedTrack;
 	})();
-	relatedFetchInFlight.set(gid, operation);
+	deps.relatedFetchInFlight.set(gid, operation);
 	try {
 		return await operation;
 	} finally {
-		if (relatedFetchInFlight.get(gid) === operation) relatedFetchInFlight.delete(gid);
+		if (deps.relatedFetchInFlight.get(gid) === operation) deps.relatedFetchInFlight.delete(gid);
 	}
 };
 
@@ -314,7 +310,7 @@ export const queueRelatedUpfront = async (deps: LavalinkDeps, player: CustomPlay
  */
 export const addManualRecommendation = async (deps: LavalinkDeps, player: CustomPlayer, reference: Track, count: number): Promise<Track[]> => {
 	const gid = String(player.guildId);
-	if (relatedFetchInFlight.has(gid)) return [];
+	if (deps.relatedFetchInFlight.has(gid)) return [];
 
 	const referenceEncoded = (reference as { encoded?: unknown }).encoded;
 	const operation = async (): Promise<Track[]> => {
@@ -346,11 +342,11 @@ export const addManualRecommendation = async (deps: LavalinkDeps, player: Custom
 	// (handleQueueEnd가 이 값을 await해 첫 추가곡을 확인한다).
 	const runs = operation();
 	const tracked: Promise<Track | null> = runs.then((tracks) => tracks[0] ?? null);
-	relatedFetchInFlight.set(gid, tracked);
+	deps.relatedFetchInFlight.set(gid, tracked);
 	try {
 		return await runs;
 	} finally {
-		if (relatedFetchInFlight.get(gid) === tracked) relatedFetchInFlight.delete(gid);
+		if (deps.relatedFetchInFlight.get(gid) === tracked) deps.relatedFetchInFlight.delete(gid);
 	}
 };
 
@@ -377,7 +373,7 @@ export const autoPlayRelated = async (deps: LavalinkDeps, player: CustomPlayer, 
 	if (player.repeatMode == 'off' && relatedOn) {
 		if (referenceTrack.info.identifier && isYouTubeSource(referenceTrack.info.sourceName)) {
 			// trackStart 선예열이 진행 중이면 이중 추가 방지 (선예열쪽이 재생을 이어준다)
-			if (relatedFetchInFlight.has(String(player.guildId))) {
+			if (deps.relatedFetchInFlight.has(String(player.guildId))) {
 				deps.logger.debug('[autoPlayRelated] Pre-add in flight, skipping fallback');
 				return;
 			}

@@ -27,14 +27,13 @@ const mocks = vi.hoisted(() => ({
 	updateVolume: vi.fn()
 }));
 const actor = vi.hoisted(() => ({ guildId: 'test-guild', userId: 'user-1' }));
-vi.mock('../../../music/index.ts', () => ({
-	actorFromMember: () => actor,
-	queueRelatedUpfront: mocks.queueRelatedUpfront,
-	checkManageGuild: mocks.checkManageGuild
-}));
 
 const deps = {
-	lavalink: {} as never,
+	musicPort: {
+		actorFromMember: () => actor,
+		queueRelatedUpfront: mocks.queueRelatedUpfront,
+		checkManageGuild: mocks.checkManageGuild
+	} as never,
 	guildService: { getGuild: mocks.getGuild } as never,
 	getMusic: () => ({ setVolume: mocks.setVolume, setRepeat: mocks.setRepeatUseCase }) as never,
 	getAudio: () => ({ getPlayer: mocks.getPlayer }) as never,

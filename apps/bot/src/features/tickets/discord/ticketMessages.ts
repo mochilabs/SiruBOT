@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import { notice } from '../../../modules/general/view/notice.ts';
+import { notice } from '../../../lib/notice.ts';
 import type { TicketMessagePort } from '../application/ticketService.ts';
 import { ticketWelcomeView } from './views/ticket.ts';
 

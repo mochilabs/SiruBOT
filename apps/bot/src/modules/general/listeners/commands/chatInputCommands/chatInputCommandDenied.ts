@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { ChatInputCommandDeniedPayload, Events } from '@sapphire/framework';
 import { Listener, UserError, container } from '@sapphire/framework';
-import { notice } from '../../../view/notice.ts';
+import { notice } from '../../../../../lib/notice.ts';
 import { ChatInputCommandInteraction, ContainerBuilder, MessageFlags, RESTJSONErrorCodes } from 'discord.js';
 import { ignoreDiscord } from '../../../../../lib/ignoreDiscord.ts';
 

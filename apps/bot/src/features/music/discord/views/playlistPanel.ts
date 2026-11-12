@@ -13,7 +13,7 @@ import {
 } from 'discord.js';
 import { libraryId } from '../customIds.ts';
 import { playlistLibraryView, PLAYLIST_PAGE_SIZE, type LibraryState } from './playlist.ts';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { createComponentSession } from '../../../../lib/componentSession.ts';
 
 export async function addPlaylistQuery(userId: string, name: string, query: string): Promise<string> {

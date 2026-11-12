@@ -1,4 +1,4 @@
-import { notice } from '../../view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, RegisterBehavior } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';

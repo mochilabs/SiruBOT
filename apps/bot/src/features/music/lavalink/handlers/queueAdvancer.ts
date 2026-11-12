@@ -1,6 +1,6 @@
 import type { LavalinkDeps } from '../deps.ts';
 import { MessageFlags } from 'discord.js';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { LavalinkManager, Track, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent, UnresolvedTrack } from 'lavalink-client';
 import { ILogObj, Logger } from 'tslog';
 import { emoji } from '@sirubot/utils';
@@ -232,7 +232,7 @@ export class QueueAdvancer {
 			return;
 		}
 
-		const inFlightRelated = getInFlightRelatedFetch(player.guildId);
+		const inFlightRelated = getInFlightRelatedFetch(this.deps, player.guildId);
 		if (inFlightRelated) {
 			const addedTrack = await inFlightRelated.catch(() => null);
 			if (addedTrack && !player.playing && (player.queue.current || player.queue.tracks.length > 0)) {

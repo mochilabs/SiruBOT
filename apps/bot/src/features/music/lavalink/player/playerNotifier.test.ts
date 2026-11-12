@@ -4,6 +4,7 @@ import { makeTestConfig } from '../../../../lib/config.testing.ts';
 import { AttachmentBuilder, Collection, MessagePayload, type ChatInputCommandInteraction, type Message } from 'discord.js';
 import type { CustomPlayer } from './customPlayer.ts';
 import { PlayerNotifier } from './playerNotifier.ts';
+import { CurrentBpmCache } from './currentBpm.ts';
 vi.mock('../../../../services/guildSettings/channels.ts', async (orig) => ({
 	...(await orig<Record<string, unknown>>()),
 	...{ getPinnedChannel: mocks.pinned }
@@ -32,7 +33,8 @@ vi.mock('@sapphire/framework', () => ({
 const deps = {
 	logger: { getSubLogger: () => mocks.logger },
 	guildService: { getGuild: mocks.guild },
-	client: { channels: { cache: new Map([['channel', { isSendable: () => true, send: mocks.send }]]) } }
+	client: { channels: { cache: new Map([['channel', { isSendable: () => true, send: mocks.send }]]) } },
+	currentBpm: new CurrentBpmCache()
 } as never;
 vi.mock('./nowPlayingCard.ts', () => ({
 	getCachedNowPlayingCard: mocks.cached,

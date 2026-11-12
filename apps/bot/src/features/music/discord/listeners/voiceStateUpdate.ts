@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { MessageFlags, VoiceState } from 'discord.js';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { container } from '@sapphire/pieces';
 import { SapphireInterfaceLogger } from '../../../../core/logger.ts';
 import { Logger, ILogObj } from 'tslog';

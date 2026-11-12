@@ -1,10 +1,10 @@
 import { emoji } from '@sirubot/utils';
 import { randomUUID } from 'node:crypto';
 import { ComponentType, MessageFlags, type ChatInputCommandInteraction } from 'discord.js';
-import { confirmationView } from '../modules/general/view/confirmation.ts';
+import { confirmationView } from './confirmationView.ts';
 import { confirmId } from './confirmationId.ts';
 import { ownerOnly } from './ownerOnlyFilter.ts';
-import { notice } from '../modules/general/view/notice.ts';
+import { notice } from './notice.ts';
 
 export async function confirmAction(interaction: ChatInputCommandInteraction, title: string, description: string): Promise<boolean> {
 	const sessionId = randomUUID();

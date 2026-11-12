@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { emoji } from '@sirubot/utils';
-import { notice } from '../view/notice.ts';
+import { notice } from '../../../lib/notice.ts';
 import { weatherImageView } from '../view/weather.ts';
 import { ApplicationIntegrationType, AttachmentBuilder, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { fetchWeather, GatewayDomainError, type DataApiClient, type WeatherCardRequest } from '../../../services/dataApiClient.ts';

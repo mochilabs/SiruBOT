@@ -3,7 +3,7 @@ import { emoji } from '@sirubot/utils';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { openPlaylistPanel } from '../views/playlistPanel.ts';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 
 @ApplyOptions<Command.Options>({ name: 'favorites', description: 'Manage your favorite tracks.', fullCategory: ['음악'] })
 export class FavoritesCommand extends Command {

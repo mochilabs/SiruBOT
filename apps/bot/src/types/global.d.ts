@@ -90,8 +90,6 @@ declare module '@sapphire/framework' {
 		ManageGuild: never;
 		OwnerOnly: never;
 
-		ClientVoiceConnectable: never;
-		ClientVoiceSpeakable: never;
 		DJOrAlone: never;
 		MemberListenable: never;
 		NodeAvailable: never;

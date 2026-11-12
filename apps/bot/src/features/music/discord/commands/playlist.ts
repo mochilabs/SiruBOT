@@ -4,7 +4,7 @@ import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { respondPlaylistNames, respondPlaylistTrackPositions } from '../utils/autocomplete.ts';
 import { openPlaylistPanel, addPlaylistQuery } from '../views/playlistPanel.ts';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 
 @ApplyOptions<Command.Options>({ name: 'playlist', description: 'Manage your playlists.', fullCategory: ['음악'] })
 export class PlaylistCommand extends Command {

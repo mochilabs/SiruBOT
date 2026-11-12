@@ -1,19 +1,6 @@
 import type { SearchPlatform } from 'lavalink-client';
 import { VOICE_CHANNEL_REQUIRED_MESSAGE } from '@sirubot/utils';
-import {
-	applyFilterPreset,
-	checkDJOrAlone,
-	dropLoserFilters,
-	FILTER_PRESET_NAMES,
-	getUserQueuedTracks,
-	isFilterPreset,
-	isSameTrack,
-	nowPlayingTrack,
-	parseTimeToMs,
-	removeStaleRelatedTracks,
-	resetAllFilters,
-	type CustomPlayer
-} from '../../../music/index.ts';
+import type { CustomPlayer, MusicToolPort } from '../../../music/index.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';
@@ -38,10 +25,10 @@ function requireVoice(ctx: AiToolContext): { guildId: string; voiceChannelId: st
 }
 
 /** 슬래시 커맨드의 DJOrAlone precondition과 동일한 검사 — 서버 컨텍스트 + member 필요 */
-async function requireDjOrAlone(ctx: AiToolContext): Promise<void> {
+async function requireDjOrAlone(ctx: AiToolContext, port: Pick<MusicToolPort, 'checkDJOrAlone'>): Promise<void> {
 	const guildId = requireGuild(ctx);
 	if (!ctx.member) throw new Error('DM에서는 음악을 제어할 수 없어요.');
-	const allowed = await checkDJOrAlone(guildId, ctx.member);
+	const allowed = await port.checkDJOrAlone(guildId, ctx.member);
 	if (!allowed) throw new Error('이 작업은 DJ 역할을 가지고 있거나, 채널에 혼자 있을 때만 사용 가능해요.');
 }
 
@@ -49,9 +36,10 @@ async function requireDjOrAlone(ctx: AiToolContext): Promise<void> {
 export function createMusicTools(
 	deps: Pick<
 		AiToolDeps,
-		'db' | 'guildService' | 'audioService' | 'mixerService' | 'playlistService' | 'lavalink' | 'getMusic' | 'getMusicPlay' | 'getAudio'
+		'db' | 'guildService' | 'audioService' | 'mixerService' | 'playlistService' | 'musicPort' | 'getMusic' | 'getMusicPlay' | 'getAudio'
 	>
 ): AiTool[] {
+	const port = deps.musicPort;
 	function requirePlayer(guildId: string) {
 		const player = deps.getAudio()!.getPlayer(guildId);
 		if (!player) throw new Error('현재 재생 중인 곡이 없어요.');
@@ -87,7 +75,7 @@ export function createMusicTools(
 		status: '시루가 음악을 찾는 중..',
 		execute: async (args, ctx) => {
 			// 음성 채널 정책(어느 채널에 넣을지, 누가 넣을 수 있는지)은 공용 유스케이스가 맡아요.
-			const actor = musicActor(ctx);
+			const actor = musicActor(ctx, port);
 			const query = String(args.query ?? '').trim();
 			if (!query) throw new Error('검색어가 필요해요.');
 			const sourceKey = String(args.source ?? 'youtube');
@@ -107,8 +95,8 @@ export function createMusicTools(
 			// wasIdle:false를 돌려주면서도 곡을 맨 앞으로 잘라 즉시 재생(PLAY_NOW)하므로, 확정된
 			// nowPlaying과 신청 곡을 직접 비교해 "지금 재생"인지 판별한다.
 			const played = result.queued[0]!;
-			const nowPlaying = nowPlayingTrack(result.player as CustomPlayer);
-			const isPlayingNow = nowPlaying !== null && isSameTrack(nowPlaying, played);
+			const nowPlaying = port.nowPlayingTrack(result.player as CustomPlayer);
+			const isPlayingNow = nowPlaying !== null && port.isSameTrack(nowPlaying, played);
 			const queueSize = result.player.queue.tracks.length;
 			return JSON.stringify({
 				status: 'ok',
@@ -127,7 +115,7 @@ export function createMusicTools(
 		required: [],
 		status: '시루가 재생 상태를 바꾸는 중..',
 		execute: async (_args, ctx) => {
-			const actor = musicActor(ctx);
+			const actor = musicActor(ctx, port);
 			// 토글 — 일시정지 중이면 재개, 아니면 일시정지. 인가·현재 곡 확인은 각 유스케이스가 맡아요.
 			if (deps.getAudio()!.getPlayer(actor.guildId)?.paused) {
 				await withAppError(() => deps.getMusic().resume(actor));
@@ -145,11 +133,11 @@ export function createMusicTools(
 		required: [],
 		status: '시루가 다음 곡으로 넘기는 중..',
 		execute: async (_args, ctx) => {
-			const actor = musicActor(ctx);
+			const actor = musicActor(ctx, port);
 			// 인가·현재 곡 확인과 mixer 예열 슬롯 정리를 포함한 건너뛰기는 공용 유스케이스가 맡아요.
 			await withAppError(() => deps.getMusic().skipNow(actor));
 			const player = deps.getAudio()!.getPlayer(actor.guildId);
-			const next = player ? nowPlayingTrack(player) : null;
+			const next = player ? port.nowPlayingTrack(player) : null;
 			return JSON.stringify({ status: 'ok', now_playing: next ? trackInfo(next) : null });
 		}
 	};
@@ -162,7 +150,7 @@ export function createMusicTools(
 		status: '시루가 재생을 멈추고 퇴장하는 중..',
 		execute: async (_args, ctx) => {
 			// 인가·플레이어 확인·컨트롤러 삭제·정지는 공용 유스케이스가 맡아요.
-			await withAppError(() => deps.getMusic().stop(musicActor(ctx)));
+			await withAppError(() => deps.getMusic().stop(musicActor(ctx, port)));
 			return JSON.stringify({ status: 'stopped' });
 		}
 	};
@@ -177,7 +165,7 @@ export function createMusicTools(
 			const guildId = requireGuild(ctx);
 			const player = deps.getAudio()!.getPlayer(guildId);
 			if (!player) throw new Error('현재 재생 중인 곡이 없어요.');
-			const current = nowPlayingTrack(player);
+			const current = port.nowPlayingTrack(player);
 			const upcoming = player.queue.tracks.slice(0, 15);
 			return JSON.stringify({
 				playing: current ? trackInfo(current) : null,
@@ -213,7 +201,7 @@ export function createMusicTools(
 			}
 			// 인가·범위 검증·저장·플레이어 반영은 공용 유스케이스가 맡아요.
 			const { volume: updated, playing } = await withAppError(() =>
-				deps.getMusic().setVolume(musicActor(ctx), Math.round(Number(args.volume)))
+				deps.getMusic().setVolume(musicActor(ctx, port), Math.round(Number(args.volume)))
 			);
 			return JSON.stringify({ status: 'ok', volume: updated, is_playing: playing });
 		}
@@ -229,8 +217,8 @@ export function createMusicTools(
 		status: '시루가 곡을 이동하는 중..',
 		execute: async (args, ctx) => {
 			// 파싱 실패는 NaN으로 넘겨요 — 인가·스트림·형식·범위 검증은 공용 유스케이스가 맡아요.
-			const ms = parseTimeToMs(String(args.time ?? '')) ?? Number.NaN;
-			const { positionMs, track } = await withAppError(() => deps.getMusic().seek(musicActor(ctx), ms));
+			const ms = port.parseTimeToMs(String(args.time ?? '')) ?? Number.NaN;
+			const { positionMs, track } = await withAppError(() => deps.getMusic().seek(musicActor(ctx, port), ms));
 			return JSON.stringify({ status: 'ok', seeked_to_ms: positionMs, track: trackInfo(track) });
 		}
 	};
@@ -242,12 +230,12 @@ export function createMusicTools(
 		required: [],
 		status: '시루가 대기열을 섞는 중..',
 		execute: async (_args, ctx) => {
-			await requireDjOrAlone(ctx);
+			await requireDjOrAlone(ctx, port);
 			const guildId = requireGuild(ctx);
 			const player = requirePlayer(guildId);
-			const queueLength = getUserQueuedTracks(player).length;
+			const queueLength = port.getUserQueuedTracks(player).length;
 			if (queueLength === 0) throw new Error('섞을 대기열 곡이 없어요.');
-			await removeStaleRelatedTracks(deps.lavalink, player);
+			await port.removeStaleRelatedTracks(player);
 			await player.queue.shuffle();
 			void deps.mixerService.preloadUpcoming(player).catch(() => null);
 			return JSON.stringify({ status: 'ok', queue_size: queueLength });
@@ -270,7 +258,7 @@ export function createMusicTools(
 				return JSON.stringify({ status: 'ok', mode: current });
 			}
 			// 인가·값 검증·저장·플레이어 반영은 공용 유스케이스가 맡아요.
-			const { mode: updated } = await withAppError(() => deps.getMusic().setRepeat(musicActor(ctx), mode));
+			const { mode: updated } = await withAppError(() => deps.getMusic().setRepeat(musicActor(ctx, port), mode));
 			return JSON.stringify({ status: 'ok', mode: updated });
 		}
 	};
@@ -283,7 +271,7 @@ export function createMusicTools(
 		status: '시루가 이전 곡으로 돌아가는 중..',
 		execute: async (_args, ctx) => {
 			// 인가·플레이어 확인·재생 기록 확인·이전곡 재생은 공용 유스케이스가 맡아요.
-			const { track } = await withAppError(() => deps.getMusic().previous(musicActor(ctx)));
+			const { track } = await withAppError(() => deps.getMusic().previous(musicActor(ctx, port)));
 			return JSON.stringify({ status: 'ok', playing: trackInfo(track) });
 		}
 	};
@@ -297,11 +285,11 @@ export function createMusicTools(
 		required: ['position'],
 		status: '시루가 대기열에서 곡을 삭제하는 중..',
 		execute: async (args, ctx) => {
-			await requireDjOrAlone(ctx);
+			await requireDjOrAlone(ctx, port);
 			const guildId = requireGuild(ctx);
 			const player = requirePlayer(guildId);
 			const position = Math.round(Number(args.position));
-			const queueLength = getUserQueuedTracks(player).length;
+			const queueLength = port.getUserQueuedTracks(player).length;
 			if (!Number.isFinite(position) || position < 1 || position > queueLength)
 				throw new Error(`대기열 범위를 벗어났어요. 현재 대기열: ${queueLength}곡`);
 			const removed = await player.queue.splice(position - 1, 1);
@@ -322,12 +310,12 @@ export function createMusicTools(
 		required: ['from', 'to'],
 		status: '시루가 대기열 순서를 바꾸는 중..',
 		execute: async (args, ctx) => {
-			await requireDjOrAlone(ctx);
+			await requireDjOrAlone(ctx, port);
 			const guildId = requireGuild(ctx);
 			const player = requirePlayer(guildId);
 			const from = Math.round(Number(args.from));
 			const to = Math.round(Number(args.to));
-			const queueLength = getUserQueuedTracks(player).length;
+			const queueLength = port.getUserQueuedTracks(player).length;
 			if (from < 1 || from > queueLength || to < 1 || to > queueLength)
 				throw new Error(`대기열 범위를 벗어났어요. 현재 대기열: ${queueLength}곡`);
 			if (from === to) throw new Error('같은 위치로는 이동할 수 없어요.');
@@ -347,18 +335,18 @@ export function createMusicTools(
 				type: 'string',
 				description: '필터 프리셋',
 				// 선택지 목록은 프리셋 카탈로그에서 뽑는다 — 스키마 enum과 검증기가 갈라지지 않게
-				enum: [...FILTER_PRESET_NAMES, 'reset']
+				enum: [...port.filterPresetNames, 'reset']
 			}
 		},
 		required: ['preset'],
 		status: '시루가 음질 필터를 적용하는 중..',
 		execute: async (args, ctx) => {
-			await requireDjOrAlone(ctx);
+			await requireDjOrAlone(ctx, port);
 			const player = requireCustomPlayer(requireGuild(ctx));
 			const preset = String(args.preset ?? '');
-			if (!isFilterPreset(preset) && preset !== 'reset') throw new Error('알 수 없는 필터 프리셋이에요.');
+			if (!port.isFilterPreset(preset) && preset !== 'reset') throw new Error('알 수 없는 필터 프리셋이에요.');
 
-			await resetAllFilters(player);
+			await port.resetAllFilters(player);
 
 			if (preset === 'reset') {
 				player.activeFilters = [];
@@ -368,8 +356,8 @@ export function createMusicTools(
 			const active = player.activeFilters ?? [];
 			const willEnable = !active.includes(preset);
 			const newFilters = willEnable ? [...active, preset] : active.filter((f) => f !== preset);
-			for (const f of newFilters) await applyFilterPreset(player, f);
-			player.activeFilters = dropLoserFilters(newFilters);
+			for (const f of newFilters) await port.applyFilterPreset(player, f);
+			player.activeFilters = port.dropLoserFilters(newFilters);
 			return JSON.stringify({ status: 'ok', preset, enabled: willEnable, active_filters: player.activeFilters });
 		}
 	};

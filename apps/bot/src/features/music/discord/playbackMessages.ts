@@ -1,6 +1,6 @@
 import { emoji } from '@sirubot/utils';
 import { MessageFlags } from 'discord.js';
-import { notice } from '../../../modules/general/view/notice.ts';
+import { notice } from '../../../lib/notice.ts';
 import type { SponsorBlockMessagePort } from '../application/sponsorBlockService.ts';
 
 /** SponsorBlock 카테고리 → 안내에 보여줄 이름 */

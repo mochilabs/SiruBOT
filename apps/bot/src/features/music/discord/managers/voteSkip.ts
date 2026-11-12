@@ -3,7 +3,7 @@ import { Track } from 'lavalink-client';
 import { container } from '@sapphire/framework';
 import * as view from '../views/skip.ts';
 import { voteSkipId } from '../customIds.ts';
-import { notice } from '../../../../modules/general/view/notice.ts';
+import { notice } from '../../../../lib/notice.ts';
 import { createComponentSession, type ComponentSession } from '../../../../lib/componentSession.ts';
 
 /** 투표 메시지의 수명 — 이 시간이 지나면 투표가 닫혀요. */

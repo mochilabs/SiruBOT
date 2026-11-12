@@ -1,5 +1,5 @@
 import { emoji, createContainer } from '@sirubot/utils';
-import { notice } from './notice.ts';
+import { notice } from '../../../lib/notice.ts';
 
 export function birthdaySavedView(month: number, day: number, zodiacText: string) {
 	return notice(
