@@ -1,7 +1,7 @@
 import type { GuildMember } from 'discord.js';
 import type { Player, Track } from 'lavalink-client';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
-import type { Actor } from './actor.ts';
+import type { Actor, ActorMemberSource } from './actor.ts';
 
 /** 세 가지 음악 헬퍼의 최소 트랙 모양 — isSameTrack이 받는 구조와 같아요. */
 export interface MusicTrackLike {
@@ -16,7 +16,7 @@ export interface MusicTrackLike {
  */
 export interface MusicToolPort {
 	/** 서버 멤버에서 음악 제어 주체(Actor)를 만들어요. */
-	actorFromMember(member: GuildMember): Actor;
+	actorFromMember(member: ActorMemberSource): Actor;
 	/** DJ 역할 보유·관리 권한·단독 여부 검사 (슬래시 DJOrAlone precondition과 같은 판정). */
 	checkDJOrAlone(guildId: string, member: GuildMember): Promise<boolean>;
 	/** 멤버가 서버 관리(ManageGuild) 권한을 가졌는지. */

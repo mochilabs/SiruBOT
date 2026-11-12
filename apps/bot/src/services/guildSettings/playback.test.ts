@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Guild } from '@sirubot/prisma';
-import type { GuildMember } from 'discord.js';
 import type { RepeatMode } from 'lavalink-client';
+import type { MemberPermissionPort } from '../../lib/discordPorts.ts';
 
 const { upsert } = vi.hoisted(() => ({ upsert: vi.fn() }));
 
@@ -20,11 +20,8 @@ function guild(id = 'guild', overrides: Partial<Guild> = {}): Guild {
 	return { id, volume: 10, repeat: 'off', djRoleId: null, ...overrides } as Guild;
 }
 
-function member({ admin = false, roles = [] as string[] } = {}): GuildMember {
-	return {
-		permissions: { has: vi.fn().mockReturnValue(admin) },
-		roles: { cache: new Map(roles.map((role) => [role, true])) }
-	} as unknown as GuildMember;
+function member({ admin = false, roles = [] as string[] } = {}): MemberPermissionPort {
+	return { isAdministrator: () => admin, hasRole: (roleId) => roles.includes(roleId) };
 }
 
 describe('playback 도메인 CRUD', () => {

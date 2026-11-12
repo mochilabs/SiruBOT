@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@sirubot/prisma';
-import type { Client } from 'discord.js';
+import type { ApplicationCommand, Client } from 'discord.js';
 import type { LavalinkManager } from 'lavalink-client';
 import type {
 	AudioService,
@@ -53,6 +53,8 @@ export interface AiToolDeps {
 	getClient: () => Client;
 	/** 등록된 슬래시 명령어 피스 목록 (bot_help가 읽어요) */
 	getCommands: () => Iterable<[string, AiToolCommandInfo]>;
+	/** 이름 → 등록된 애플리케이션 명령어 조회 (bot_help의 멘션·인자 요약용). 구현은 discord/utils/commandMentions.ts의 fetchCommandIndex */
+	fetchCommandIndex: (guildId: string | null) => Promise<ReadonlyMap<string, ApplicationCommand>>;
 	/** 웹 검색 설정 — 호출할 때마다 읽어요 */
 	getSearchConfig: () => AiToolSearchConfig;
 }

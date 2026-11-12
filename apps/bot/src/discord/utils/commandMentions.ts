@@ -36,9 +36,3 @@ export async function fetchCommandIndex(guildId?: string | null): Promise<Map<st
 		return cached?.commands ?? new Map();
 	}
 }
-
-/** 클릭해서 바로 실행되는 명령어 멘션 — ID를 못 찾으면 인라인 코드로 대체해요 */
-export function commandMention(name: string, index: ReadonlyMap<string, ApplicationCommand>): string {
-	const command = index.get(name);
-	return command ? `</${name}:${command.id}>` : `\`/${name}\``;
-}

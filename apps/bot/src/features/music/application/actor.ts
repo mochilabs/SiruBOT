@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, type GuildMember } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 
 /**
  * 음악 제어를 요청한 사람 — 인가 정책이 필요로 하는 값만 담은 평범한 데이터예요.
@@ -19,8 +19,20 @@ export interface Actor {
 	humansInVoiceChannel: number;
 }
 
-/** discord.js 멤버에서 Actor를 만들어요. 호출 시점의 캐시 상태를 스냅샷으로 담아요. */
-export function actorFromMember(member: GuildMember): Actor {
+/** actorFromMember가 읽는 멤버 부분 — discord.js GuildMember가 만족해요. */
+export interface ActorMemberSource {
+	id: string;
+	guild: { id: string };
+	voice: {
+		channelId: string | null;
+		channel: { members: { filter(predicate: (member: { user: { bot: boolean } }) => boolean): { size: number } } } | null;
+	};
+	permissions: { has(permission: bigint): boolean };
+	roles: { cache: { keys(): Iterable<string> } };
+}
+
+/** 멤버에서 Actor를 만들어요. 호출 시점의 캐시 상태를 스냅샷으로 담아요. */
+export function actorFromMember(member: ActorMemberSource): Actor {
 	const voiceChannel = member.voice.channel;
 	return {
 		guildId: member.guild.id,

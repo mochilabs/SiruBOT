@@ -1,4 +1,3 @@
-import type { GuildMember, User } from 'discord.js';
 import type { LavalinkManager, Track } from 'lavalink-client';
 import { AppError, type ErrorKind } from '../../../lib/appError.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
@@ -8,7 +7,16 @@ import type { AudioService } from './audioService.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 
 type SavedTrack = { track: { title: string; url: string; source: string } };
-export type PlaylistPlaybackContext = { guildId: string; channelId: string; member: GuildMember; user: User };
+/** 목록 재생을 요청한 사람 — 음성 상태(입장 여부·헤드셋)와 검색 요청자 식별만 필요해요 (GuildMember·User가 만족해요). */
+export interface PlaylistRequesterMember {
+	voice: { channelId: string | null; deaf: boolean | null };
+}
+export type PlaylistPlaybackContext = {
+	guildId: string;
+	channelId: string;
+	member: PlaylistRequesterMember;
+	user: { id: string; username: string };
+};
 
 export interface PlaylistPlaybackDeps {
 	guildService: GuildService;

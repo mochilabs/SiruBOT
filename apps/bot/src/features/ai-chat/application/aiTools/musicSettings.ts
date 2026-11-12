@@ -1,6 +1,7 @@
 import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from '@sirubot/utils/playerLimits';
 import type { MusicToolPort } from '../../../music/index.ts';
 import type { TtsAnnounceMode } from '../../../../services/guildSettings/playback.ts';
+import { memberPermissionPort } from '../../../../lib/discordPorts.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool, AiToolContext } from './types.ts';
 import { musicActor, withAppError } from './musicControlBridge.ts';
@@ -28,7 +29,7 @@ export function createMusicSettingsTools(
 	async function checkMemberDJRole(guildId: string, ctx: AiToolContext): Promise<boolean> {
 		if (!ctx.member) return false;
 		try {
-			return await guildPlayback.hasDJRole(deps.guildService, guildId, ctx.member);
+			return await guildPlayback.hasDJRole(deps.guildService, guildId, memberPermissionPort(ctx.member));
 		} catch {
 			return false;
 		}

@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType, type ApplicationCommand } from 'discord.js';
-import { commandMention, fetchCommandIndex } from '../../../../discord/utils/commandMentions.ts';
+import { commandMention } from '../../../../lib/commandMention.ts';
 import type { AiToolDeps } from './deps.ts';
 import type { AiTool } from './types.ts';
 
@@ -33,7 +33,7 @@ function describeOptions(command: ApplicationCommand): string[] {
 }
 
 /** 봇 도움말 도구를 만들어요 — 의존성은 deps로 받아요 */
-export function createBotHelpTool(deps: Pick<AiToolDeps, 'getCommands'>): AiTool {
+export function createBotHelpTool(deps: Pick<AiToolDeps, 'getCommands' | 'fetchCommandIndex'>): AiTool {
 	return {
 		name: 'bot_help',
 		description:
@@ -52,7 +52,7 @@ export function createBotHelpTool(deps: Pick<AiToolDeps, 'getCommands'>): AiTool
 			const query = String(args.query ?? '')
 				.trim()
 				.toLowerCase();
-			const index = await fetchCommandIndex(ctx.guildId);
+			const index = await deps.fetchCommandIndex(ctx.guildId);
 			const commands = deps.getCommands();
 
 			const entries: CommandEntry[] = [];

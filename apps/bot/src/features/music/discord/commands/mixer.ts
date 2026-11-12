@@ -15,6 +15,7 @@ import * as view from '../views/mixer.ts';
 import { normalizeAnnounceMode, type TtsAnnounceMode } from '../../../../services/guildSettings/playback.ts';
 import * as guildMixer from '../../../../services/guildSettings/mixer.ts';
 import * as guildPlayback from '../../../../services/guildSettings/playback.ts';
+import { memberPermissionPort } from '../../../../lib/discordPorts.ts';
 
 /** 안내 방식 문구 — 커맨드 응답과 뷰가 같은 말을 써요 */
 const ANNOUNCE_MODE_LABELS: Record<TtsAnnounceMode, string> = {
@@ -279,7 +280,7 @@ export class MixerCommand extends Command {
 	}
 
 	async checkDJ(interaction: ChatInputCommandInteraction<'cached'>) {
-		const allowed = await guildPlayback.hasDJRole(this.container.guildService, interaction.guildId, interaction.member);
+		const allowed = await guildPlayback.hasDJRole(this.container.guildService, interaction.guildId, memberPermissionPort(interaction.member));
 		if (!allowed) {
 			throw new UserError({
 				identifier: 'mixer_no_permission',

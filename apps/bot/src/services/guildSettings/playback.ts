@@ -1,6 +1,6 @@
 import type { Guild } from '@sirubot/prisma';
-import { GuildMember, PermissionFlagsBits } from 'discord.js';
 import type { RepeatMode } from 'lavalink-client';
+import type { MemberPermissionPort } from '../../lib/discordPorts.ts';
 import type { GuildSettingsStore } from './store.ts';
 
 /**
@@ -68,10 +68,10 @@ export async function setDJRole(store: GuildSettingsStore, guildId: string, djRo
 	return guild;
 }
 
-export async function hasDJRole(store: GuildSettingsStore, guildId: string, member: GuildMember) {
+export async function hasDJRole(store: GuildSettingsStore, guildId: string, member: MemberPermissionPort) {
 	const djRoleId = await getDJRole(store, guildId);
-	if (djRoleId === null || member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-	return member.roles.cache.has(djRoleId);
+	if (djRoleId === null || member.isAdministrator()) return true;
+	return member.hasRole(djRoleId);
 }
 
 export async function getRepeat(store: GuildSettingsStore, guildId: string): Promise<RepeatMode> {

@@ -13,6 +13,14 @@
  *
  * `features/<a>/` may import another feature `features/<b>/` only through `features/<b>/index.ts` (its public surface). No allowlist.
  *
+ * Each feature's `application` folder must not import `src/discord/` at all (`ALLOWED_APPLICATION_TO_DISCORD`, empty). Any other file under
+ * `features/` may import the bot-wide `src/discord/` shell only for the edges in `ALLOWED_FEATURE_TO_DISCORD`. Each feature's `application`
+ * folder may import `services/guildSettings/` only for the edges in `ALLOWED_APPLICATION_TO_GUILD_SETTINGS` (settings should reach the
+ * application layer through ports).
+ *
+ * Discord objects in services and application code are passed as narrow port types (`lib/discordPorts.ts`, or an interface next to the
+ * service) and converted by the adapter at the piece, responder or `botApplication.ts` wiring. Those rules are type-level, not checked here.
+ *
  * `services/` must not import `container` (see `SERVICES_CONTAINER_ALLOWED`); services receive deps from `BotApplication.setupServices`.
  *
  * `features/music/lavalink/` must not import `container` (see `LAVALINK_CONTAINER_ALLOWED`); its modules take `LavalinkDeps` (lavalink/deps.ts).
@@ -63,6 +71,43 @@ const SERVICES_CONTAINER_ALLOWED: Record<string, string> = {};
 
 /** Non-test files under `features/music/lavalink/` that still import `container`, each with the reason. Only delete from this list. */
 const LAVALINK_CONTAINER_ALLOWED: Record<string, string> = {};
+
+/** Feature `application` folders -> `src/discord/` edges. Must stay empty: the application layer never depends on the bot-wide Discord shell. */
+const ALLOWED_APPLICATION_TO_DISCORD: string[] = [];
+
+/**
+ * Non-application `features/` files -> `src/discord/` edges that exist today (the bot-wide shell: channel pickers and the setting-result view).
+ * Removal path: move the helper to `lib/` (or into the feature) so the feature no longer reaches into `src/discord/`.
+ */
+const ALLOWED_FEATURE_TO_DISCORD: string[] = [
+	'features/ai-chat/discord/commands/chatSettings.ts -> discord/utils/channels.ts', // shared channel picker for the chat settings command
+	'features/ai-chat/discord/commands/chatSettings.ts -> discord/views/settingResult.ts', // shared setting-result view
+	'features/ai-chat/discord/commands/chatTools.ts -> discord/utils/channels.ts', // shared channel picker for the chat tools command
+	'features/ai-chat/discord/commands/chatTools.ts -> discord/views/settingResult.ts', // shared setting-result view
+	'features/tts/discord/commands/tts.ts -> discord/utils/channels.ts', // shared channel picker for the TTS command
+	'features/tts/discord/commands/tts.ts -> discord/views/settingResult.ts' // shared setting-result view
+];
+
+/**
+ * Feature `application` folders -> `services/guildSettings/` edges that exist today. The settings store is still read directly; the goal is to pass
+ * these values through deps or a narrow port. Only delete from this list.
+ */
+const ALLOWED_APPLICATION_TO_GUILD_SETTINGS: string[] = [
+	'features/ai-chat/application/aiChat/config.ts -> services/guildSettings/chatPolicy.ts', // AI chat policy read in config
+	'features/ai-chat/application/aiChat/prompt.ts -> services/guildSettings/playback.ts', // DJ/playback values in the prompt
+	'features/ai-chat/application/aiTools/botSettings.ts -> services/guildSettings/channels.ts', // channel settings tool
+	'features/ai-chat/application/aiTools/botSettings.ts -> services/guildSettings/chatPolicy.ts', // chat policy settings tool
+	'features/ai-chat/application/aiTools/botSettings.ts -> services/guildSettings/jtc.ts', // temp voice (JTC) settings tool
+	'features/ai-chat/application/aiTools/botSettings.ts -> services/guildSettings/playback.ts', // playback settings tool
+	'features/ai-chat/application/aiTools/music.ts -> services/guildSettings/playback.ts', // DJ role check for music tools
+	'features/ai-chat/application/aiTools/musicSettings.ts -> services/guildSettings/mixer.ts', // mixer settings tool
+	'features/ai-chat/application/aiTools/musicSettings.ts -> services/guildSettings/playback.ts', // playback settings tool and DJ check
+	'features/music/application/mixerService.ts -> services/guildSettings/mixer.ts', // mixer settings read by the mixer service
+	'features/music/application/playlistPlayback.ts -> services/guildSettings/channels.ts', // default text channel check
+	'features/music/application/sponsorBlockService.ts -> services/guildSettings/mixer.ts', // mixer settings read by SponsorBlock
+	'features/tts/application/chatTts.ts -> services/guildSettings/chatPolicy.ts', // chat policy read by TTS
+	'features/tts/application/chatTts.ts -> services/guildSettings/playback.ts' // playback values read by TTS
+];
 
 function listSourceFiles(dir: string): string[] {
 	const result: string[] = [];
@@ -180,6 +225,18 @@ function edgesBetween(graph: Map<string, Set<string>>, fromDir: string, toDir: s
 	return edges.sort();
 }
 
+/** Every `from -> to` edge whose source file and target file both match the predicates, sorted. */
+function edgesWhere(graph: Map<string, Set<string>>, fromMatches: (file: string) => boolean, toMatches: (file: string) => boolean): string[] {
+	const edges: string[] = [];
+	for (const [from, targets] of graph) {
+		if (!fromMatches(from)) continue;
+		for (const to of targets) if (toMatches(to)) edges.push(`${from} -> ${to}`);
+	}
+	return edges.sort();
+}
+
+const isFeatureApplication = (file: string) => /^features\/[^/]+\/application\//.test(file);
+
 /** Fails on edges missing from the allowlist (new violations) and on allowlist entries that no longer exist (stale). */
 function expectRatchet(actual: string[], allowed: string[], advice: string): void {
 	const allowedSet = new Set(allowed);
@@ -265,6 +322,34 @@ describe('bot architecture guard rails', () => {
 			violations.sort(),
 			Object.keys(APPLICATION_LAYER_DEBT).sort(),
 			'The application layer must not depend on frameworks, views or Sapphire pieces; pass what it needs through deps instead.'
+		);
+	});
+
+	it('features/*/application/ does not import src/discord/', () => {
+		expectRatchet(
+			edgesWhere(graph, isFeatureApplication, (to) => to.startsWith('discord/')),
+			ALLOWED_APPLICATION_TO_DISCORD,
+			'The application layer must not import the Discord shell (src/discord/). Take a port through deps, and let the piece or responder adapt.'
+		);
+	});
+
+	it('features/ files import src/discord/ only for the allowlisted edges', () => {
+		expectRatchet(
+			edgesWhere(
+				graph,
+				(file) => file.startsWith('features/'),
+				(to) => to.startsWith('discord/')
+			),
+			ALLOWED_FEATURE_TO_DISCORD,
+			'Move the shared helper out of src/discord/ into lib/ (or into the feature) instead of importing the bot-wide shell from features/.'
+		);
+	});
+
+	it('features/*/application/ imports services/guildSettings/ only for the allowlisted edges', () => {
+		expectRatchet(
+			edgesWhere(graph, isFeatureApplication, (to) => to.startsWith('services/guildSettings/')),
+			ALLOWED_APPLICATION_TO_GUILD_SETTINGS,
+			'Pass the settings value through deps (or a narrow port) instead of importing the settings store from an application layer.'
 		);
 	});
 

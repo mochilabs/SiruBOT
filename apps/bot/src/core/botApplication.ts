@@ -14,6 +14,7 @@ import { ChatTtsService, TtsPronunciationService, TtsService, TtsUserSettingsSer
 import { CountingStateStore } from '../features/counting/index.ts';
 import { BotActivityService } from '../services/botActivity.ts';
 import { KeyedTimers } from '../lib/keyedTimers.ts';
+import { fetchCommandIndex } from '../discord/utils/commandMentions.ts';
 import { AiMemoryService, ChannelHistoryStore, MemoryPromotionJobs, createAiChat, createAiTools } from '../features/ai-chat/index.ts';
 import { createTicketService, ticketMessages } from '../features/tickets/index.ts';
 import { createDataApiClient } from '../services/dataApiClient.ts';
@@ -306,6 +307,7 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 			getAudio: () => container.audio,
 			getClient: () => container.client,
 			getCommands: () => container.stores.get('commands'),
+			fetchCommandIndex,
 			getSearchConfig: () => getConfig().search
 		});
 		container.aiChat = createAiChat({

@@ -4,7 +4,8 @@ import { emoji } from '@sirubot/utils';
 import { sleep } from '@sirubot/utils/time';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, type ApplicationCommand } from 'discord.js';
 import { MUSIC_PROMOTED_COMMANDS, MUSIC_SUBCOMMANDS } from '../../features/music/index.ts';
-import { commandMention, fetchCommandIndex } from '../utils/commandMentions.ts';
+import { fetchCommandIndex } from '../utils/commandMentions.ts';
+import { commandMention } from '../../lib/commandMention.ts';
 import { helpView } from '../views/help.ts';
 import { INFO_SUBCOMMANDS } from './info.ts';
 

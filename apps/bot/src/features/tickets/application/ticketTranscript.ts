@@ -1,6 +1,5 @@
 import { TICKET_TRANSCRIPT_BUCKET } from '@sirubot/utils';
 import { gzipSync } from 'node:zlib';
-import type { Guild, TextChannel } from 'discord.js';
 import type { Ticket } from '@sirubot/prisma';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 
@@ -62,8 +61,30 @@ export function ticketTranscriptKey(guildId: string, ticketId: string): string {
 	return `${guildId}/${ticketId}.json.gz`;
 }
 
+/** 저장에 필요한 메시지 모양 (discord.js Message가 만족해요) */
+export interface TranscriptSourceMessage {
+	id: string;
+	author: { id: string; tag: string; bot: boolean };
+	createdAt: Date;
+	content: string;
+	editedAt: Date | null;
+	attachments: { values(): Iterable<{ name: string; url: string; contentType?: string | null; size: number }> };
+}
+
+/** fetch 한 번의 결과 — 최신→과거 순 (discord.js Collection이 만족해요) */
+export interface TranscriptMessageBatch {
+	readonly size: number;
+	values(): Iterable<TranscriptSourceMessage>;
+	last(): TranscriptSourceMessage | undefined;
+}
+
+/** 대화 기록을 읽을 텍스트 채널 포트 (discord.js TextBasedChannel이 만족해요) */
+export interface TranscriptChannelPort {
+	messages: { fetch(options: { limit: number; before?: string }): Promise<TranscriptMessageBatch> };
+}
+
 /** 채널 메시지를 오래된 순으로 모아요 — API rate limit을 피하려고 100개씩 순차 조회해요 */
-async function collectMessages(channel: TextChannel): Promise<{ messages: TranscriptMessage[]; truncated: boolean }> {
+async function collectMessages(channel: TranscriptChannelPort): Promise<{ messages: TranscriptMessage[]; truncated: boolean }> {
 	const collected: TranscriptMessage[] = [];
 	let before: string | undefined;
 	let truncated = false;
@@ -105,21 +126,21 @@ async function collectMessages(channel: TextChannel): Promise<{ messages: Transc
  * 저장 시도 — 성공하면 저장 키를 돌려줘요. 실패하면 null(로그만).
  * 호출부(closeTicket)는 이 값을 `Ticket.transcriptKey`에 기록해요.
  */
+/** channel은 호출부가 티켓 채널을 찾아 텍스트 채널일 때만 넘겨요 (없으면 null). */
 export async function saveTicketTranscript(
 	deps: TicketTranscriptDeps,
-	guild: Guild,
+	channel: TranscriptChannelPort | null,
 	ticket: Ticket,
 	closedById: string | null,
 	closeReason: string | null
 ): Promise<string | null> {
-	const channel = guild.channels.cache.get(ticket.channelId);
-	if (!channel || !channel.isTextBased()) {
+	if (!channel) {
 		deps.logger.warn(`[ticket] transcript skipped: channel ${ticket.channelId} not available`);
 		return null;
 	}
 
 	try {
-		const { messages, truncated } = await collectMessages(channel as TextChannel);
+		const { messages, truncated } = await collectMessages(channel);
 		const file: TranscriptFile = {
 			version: 1,
 			guildId: ticket.guildId,

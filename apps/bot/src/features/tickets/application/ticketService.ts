@@ -235,9 +235,15 @@ export class TicketService implements Stoppable {
 		});
 
 		// 채널이 사라지기 전에 대화 기록을 비공개 버킷에 남겨요 — 실패해도 마감은 계속돼요
-		const transcriptKey = await saveTicketTranscript(this.deps, guild, updatedTicket, closedByMember.id, updatedTicket.closeReason).catch(
-			() => null
-		);
+		const ticketChannel = guild.channels.cache.get(updatedTicket.channelId);
+		const transcriptChannel = ticketChannel?.isTextBased() ? ticketChannel : null;
+		const transcriptKey = await saveTicketTranscript(
+			this.deps,
+			transcriptChannel,
+			updatedTicket,
+			closedByMember.id,
+			updatedTicket.closeReason
+		).catch(() => null);
 		const ticketWithTranscript = transcriptKey
 			? await this.db.ticket.update({ where: { id: ticket.id }, data: { transcriptKey, transcribedAt: new Date() } })
 			: updatedTicket;

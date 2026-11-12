@@ -1,12 +1,33 @@
-import { PermissionFlagsBits, type Guild, type GuildMember } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
 import type { CustomCommandGuildContext, CustomCommandMemberContext, CustomCommandRunResult } from './interpreter.ts';
+
+/** 실행자 멤버에서 역할 판정·부여에 필요한 부분 (discord.js GuildMember가 만족해요) */
+export interface CustomCommandMemberSource {
+	id: string;
+	roles: {
+		cache: { has(roleId: string): boolean };
+		add(roleId: string): Promise<unknown>;
+		remove(roleId: string): Promise<unknown>;
+	};
+}
+
+/** 봇 자신의 멤버에서 역할 위치·권한만 필요해요 (discord.js GuildMember가 만족해요) */
+export interface CustomCommandBotMemberSource {
+	roles: { highest: { position: number } };
+	permissions: { has(permission: bigint): boolean };
+}
+
+/** 서버에서 역할 조회에 필요한 부분 (discord.js Guild가 만족해요) */
+export interface CustomCommandGuildSource {
+	roles: { cache: { get(roleId: string): { id: string; position: number; managed: boolean } | undefined } };
+}
 
 /**
  * 커스텀 명령어 실행 컨텍스트 어댑터 — 접두사·슬래시 진입점이 같은 member/guild 조립 규칙과
  * 실패 안내문을 공유하게 해요. 권한 비트는 진입점이 가진 값(채널 기준/인터랙션 기준)을 그대로 넘겨요.
  */
-export function buildCustomCommandMemberContext(member: GuildMember, permissions: bigint): CustomCommandMemberContext {
+export function buildCustomCommandMemberContext(member: CustomCommandMemberSource, permissions: bigint): CustomCommandMemberContext {
 	return {
 		id: member.id,
 		permissions,
@@ -16,7 +37,7 @@ export function buildCustomCommandMemberContext(member: GuildMember, permissions
 	};
 }
 
-export function buildCustomCommandGuildContext(guild: Guild, me: GuildMember | null): CustomCommandGuildContext {
+export function buildCustomCommandGuildContext(guild: CustomCommandGuildSource, me: CustomCommandBotMemberSource | null): CustomCommandGuildContext {
 	return {
 		botTopRolePosition: me?.roles.highest.position ?? 0,
 		botCanManageRoles: me?.permissions.has(PermissionFlagsBits.ManageRoles) ?? false,
