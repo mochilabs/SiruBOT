@@ -42,7 +42,8 @@ import {
 	requesterIdOf,
 	RELATED_TRACK_REQUESTER_ID,
 	type MusicPlayServiceDeps,
-	createPlaylistPlayback
+	createPlaylistPlayback,
+	playbackMessages
 } from '../features/music/index.ts';
 import { createJtcSetupResponder, createTempVoiceService, tempVoiceMessages } from '../features/temp-voice/index.ts';
 import { BotProfileService } from '../services/botProfileService.ts';
@@ -156,12 +157,14 @@ export class BotApplication<T extends boolean> extends SapphireClient<T> {
 		container.mixerService = new MixerService({
 			logger: appLogger,
 			guildService: container.guildService,
+			callTimeoutMs: getConfig().mixer.callTimeoutMs,
 			// playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요
 			getPlayerNotifier: () => container.playerNotifier
 		});
 		container.sponsorBlockService = new SponsorBlockService({
 			logger: appLogger,
 			guildService: container.guildService,
+			messages: playbackMessages,
 			getClient: () => container.client,
 			getMixerService: () => container.mixerService
 		});

@@ -1,15 +1,22 @@
-import { getConfig } from '../../../lib/config.ts';
 import type { Player, Track } from 'lavalink-client';
 import { randomUUID } from 'node:crypto';
-import type { CustomPlayer, OverrideAction } from '../lavalink/player/customPlayer.ts';
+import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { commitLocal, sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
 import { cancelPendingInvalidate, getTargetNextTrack, notifyQueueMutated, type QueueMutationOptions } from '../lavalink/queue/queueWrapper.ts';
 import { removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
+import {
+	MixerRequestError,
+	type ArmRequestOptions,
+	type MixerAnnounceReceipt,
+	type MixerStateResponse,
+	type OverrideRequestOptions
+} from '../lavalink/mixerProtocol.ts';
 import type { MixerSettings } from '../../../services/guildSettings/types.ts';
 import * as guildMixer from '../../../services/guildSettings/mixer.ts';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
 import type { PlayerNotifier } from '../lavalink/player/playerNotifier.ts';
+
 const MIXER_FILTER_KEY = 'mixer';
 
 class AutomixUnsupportedError extends Error {
@@ -18,73 +25,11 @@ class AutomixUnsupportedError extends Error {
 	}
 }
 
-export interface MixerStateResponse {
-	guildId: string;
-	protocolVersion?: number;
-	state?: string;
-	lastKnownEpoch?: number;
-	crossfadeEnabled: boolean;
-	crossfadeMs: number;
-	fadeInMs: number;
-	duckLevel: number;
-	normalizationEnabled?: boolean;
-	bpmDetectionEnabled?: boolean;
-	beatmatchEnabled?: boolean;
-	maxTempoChange?: number;
-	beatmatchMinConfidence?: number;
-	adaptiveTransitionsSupported?: boolean;
-	currentTrackBpm?: number | null;
-	currentTrackBpmIdentifier?: string | null;
-	silenceEnabled?: boolean;
-	silenceThresholdDb?: number;
-	tailConfirmMs?: number;
-	nextTrimMs?: [number, number] | null;
-	announcementsQueued?: number;
-	hasNext?: boolean;
-	crossfadeActive?: boolean;
-}
-
-export interface MixerAnnounceReceipt {
-	guildId: string;
-	id: number;
-	position: number;
-	queueLength: number;
-}
-
-export interface ArmRequestOptions {
-	epoch: number;
-	encodedTrack: string | null;
-	isEmpty?: boolean;
-	preserveTransition?: boolean;
-	startPositionMs?: number;
-	outgoingEndPositionMs?: number;
-}
-
-export interface OverrideRequestOptions {
-	epoch: number;
-	action: OverrideAction;
-	encodedTrack?: string | null;
-}
-
-export class MixerRequestError extends Error {
-	public lastKnownEpoch?: number;
-	public v2WindowOpenAt?: number;
-
-	public constructor(
-		public readonly status: number,
-		message: string,
-		extra?: { lastKnownEpoch?: number; v2WindowOpenAt?: number }
-	) {
-		super(message);
-		this.name = 'MixerRequestError';
-		this.lastKnownEpoch = extra?.lastKnownEpoch;
-		this.v2WindowOpenAt = extra?.v2WindowOpenAt;
-	}
-}
-
 export interface MixerServiceDeps {
 	logger: AppLogger;
 	guildService: GuildService;
+	/** mixer REST 호출 한 번의 제한 시간(ms) — 설정(`MIXER_CALL_TIMEOUT_MS`)에서 조립 시 넘겨요 */
+	callTimeoutMs: number;
 	/** playerNotifier는 setupAudio에서 만들어져서 호출 시점에 읽어요 */
 	getPlayerNotifier: () => PlayerNotifier;
 }
@@ -133,7 +78,7 @@ export class MixerService {
 					'Content-Type': 'application/json',
 					...(init?.headers ?? {})
 				},
-				signal: init?.signal ?? AbortSignal.timeout(getConfig().mixer.callTimeoutMs)
+				signal: init?.signal ?? AbortSignal.timeout(this.deps.callTimeoutMs)
 			});
 		} catch (error: any) {
 			if (error?.name === 'AbortError') {
@@ -268,7 +213,7 @@ export class MixerService {
 						}
 					}
 					const retryEpoch = Math.max(item.epoch, player.currentEpoch ?? item.epoch);
-					await sendInvalidate(retryEpoch, AbortSignal.timeout(getConfig().mixer.callTimeoutMs));
+					await sendInvalidate(retryEpoch, AbortSignal.timeout(this.deps.callTimeoutMs));
 				}
 				item.resolve();
 			} catch (err: unknown) {

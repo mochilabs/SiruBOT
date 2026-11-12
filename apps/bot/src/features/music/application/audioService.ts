@@ -5,7 +5,7 @@ import { emoji } from '@sirubot/utils';
 import { AppError } from '../../../lib/appError.ts';
 import type { AppLogger } from '../../../lib/appLogger.ts';
 import type { GuildService } from '../../../services/guildService.ts';
-import { MUSIC_SEARCH_MESSAGES, type PlaySearchOutcome } from '../application/play.ts';
+import { MUSIC_SEARCH_MESSAGES, type PlaySearchOutcome } from './play.ts';
 import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
 import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';

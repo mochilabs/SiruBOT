@@ -9,13 +9,6 @@ const mocks = vi.hoisted(() => ({
 	audioService: { getOrCreatePlayer: vi.fn(), connectPlayer: vi.fn(), enqueueTrack: vi.fn(), ensurePlayback: vi.fn() },
 	search: vi.fn()
 }));
-vi.mock('@sapphire/framework', () => ({
-	UserError: class extends Error {
-		constructor(options: { message: string }) {
-			super(options.message);
-		}
-	}
-}));
 const playlistPlayback = createPlaylistPlayback({
 	guildService: mocks.guildService as never,
 	audioService: mocks.audioService as never,

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CurrentBpmCache } from './currentBpm.ts';
-import type { MixerStateResponse } from '../../playback/mixerService.ts';
+import type { MixerStateResponse } from '../mixerProtocol.ts';
 
 const state = (values: Partial<MixerStateResponse> = {}): MixerStateResponse => ({
 	guildId: 'g',

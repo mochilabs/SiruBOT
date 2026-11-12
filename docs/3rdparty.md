@@ -49,7 +49,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 - **Purpose:** A standalone plugin that provides gapless playback, crossfade, TTS ducking, and silence skipping without modifying Lavalink itself. It mixes PCM from a hidden secondary player for each guild at the beginning of the main filter chain.
 - **Source:** Sibling project `../lavalink_mixer` (Kotlin, `dev.lavalink.mixer`). The JAR deployed to the server is a release/CI artifact from that repository.
 - **SiruBOT integration:**
-  - `apps/bot/src/features/music/playback/mixerService.ts` (363 lines): complete REST wrapper for `/mixer/*`
+  - `apps/bot/src/features/music/application/mixerService.ts`: complete REST wrapper for `/mixer/*` (protocol types and `MixerRequestError` in `apps/bot/src/features/music/lavalink/mixerProtocol.ts`)
   - `apps/bot/src/features/music/discord/commands/mixer.ts`: `/music mixer` slash command
   - `apps/bot/src/features/music/lavalink/handlers/trackHandler.ts`: server-side auto-start and transition handling
   - `apps/bot/src/services/guildService.ts`, `getMixerSettings()`: `MixerSettings {gaplessEnabled, crossfadeEnabled, crossfadeMs}`
@@ -65,7 +65,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 | `POST /mixer/announce` | TTS overlay and music ducking — **queued**, replies `202 {id, position, queueLength}` | `mixerService.ts` |
 | `POST /mixer/announce/cancel`, `DELETE /mixer/announce/queue`, `POST /mixer/silence`, `POST /mixer/fade-in` | Stop the active overlay, drop queued announcements, tune silence, fade in | Not called by the bot; intended for agents/manual use. See the plugin's `api/openapi.yaml`. |
 
-**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `mixerService.ts`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts`) must run before `player.play()`. Current call sites include `apps/bot/src/features/music/playback/audioService.ts` and `apps/bot/src/features/ai-chat/application/aiTools/music.ts`.
+**Filter contract:** Register the filter using `player.filterManager.data.pluginFilters['mixer'] = { guildId }` (`enableMixerFilter`, `application/mixerService.ts`). lavaplayer constructs the filter chain **only when a track starts**, so `primeForPlay()` (`mixerService.ts`) must run before `player.play()`. Current call sites include `apps/bot/src/features/music/application/audioService.ts` and `apps/bot/src/features/ai-chat/application/aiTools/music.ts`.
 
 **Announce contract:** Announcements are **queued** — the old HTTP 409 "slot busy" response is gone, every request enqueues and the queue plays back to back in enqueue order through the hidden secondary player.
 
@@ -114,7 +114,7 @@ All plugin APIs target `dev.arbjerg.lavalink:plugin-api` and `dev.arbjerg:lavapl
 ### 3RD-04. SponsorBlock API
 
 - `apps/data-api/src/providers/sponsorblock.ts` requests only `actionType=skip`, validates the response, and converts seconds to integer milliseconds. `routes/cache-providers.ts` caches positive results for 24 hours, empty results for one hour, and serves a positive seven-day stale copy during upstream failure.
-- `apps/bot/src/features/music/playback/sponsorBlockService.ts` selects each guild's categories and seeks the current player. It suppresses seeks across an active crossfade boundary.
+- `apps/bot/src/features/music/application/sponsorBlockService.ts` selects each guild's categories and seeks the current player. It suppresses seeks across an active crossfade boundary.
 - For the next track, BOT passes the leading skip end as `startPositionMs` in `POST /mixer/queue/arm` when `/mixer/info` reports `incomingStartPositionSupported`. For an outgoing outro, BOT sends `outgoingEndPositionMs` when the node reports `outgoingEndPositionSupported`; the mixer ends its fade at that position. Deploy the updated mixer before BOT. Remove the old Lavalink SponsorBlock plugin after BOT and data-api are live.
 
 ---

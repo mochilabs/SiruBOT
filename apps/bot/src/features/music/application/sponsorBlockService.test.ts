@@ -14,7 +14,8 @@ const makeService = () =>
 		logger,
 		guildService: guildService as never,
 		getClient: () => ({ channels: { cache: new Map() } }) as never,
-		getMixerService: () => mixerService as never
+		getMixerService: () => mixerService as never,
+		messages: { skipNotice: vi.fn(() => ({ components: [] })) }
 	});
 
 vi.mock('../../../services/dataApiClient.ts', () => ({ fetchSponsorBlockSegments: vi.fn() }));
@@ -105,7 +106,8 @@ describe('BOT SponsorBlock ownership', () => {
 			logger,
 			guildService: guildService as never,
 			getClient: () => ({ channels: { cache: new Map() } }) as never,
-			getMixerService: () => lateMixer as never
+			getMixerService: () => lateMixer as never,
+			messages: { skipNotice: vi.fn(() => ({ components: [] })) }
 		});
 		lateMixer = mixerService;
 		vi.mocked(fetchSponsorBlockSegments).mockResolvedValue([{ category: 'sponsor', startMs: 0, endMs: 5000 }]);

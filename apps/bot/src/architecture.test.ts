@@ -29,7 +29,7 @@ import { describe, expect, it } from 'vitest';
 const SRC_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 /** Allowed import cycles; each entry is the sorted file list of one strongly connected component, joined by ' <-> '. */
-const ALLOWED_CYCLES: string[] = ['features/music/lavalink/handlers/mixerHandlers.ts <-> features/music/playback/mixerService.ts'];
+const ALLOWED_CYCLES: string[] = [];
 
 /** `services/` -> `modules/` edges that exist today. Only delete from this list. */
 const ALLOWED_SERVICES_TO_MODULES: string[] = [];

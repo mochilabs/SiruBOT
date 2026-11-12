@@ -41,7 +41,7 @@ declare module '@sapphire/pieces' {
 		mixerService: MixerService;
 		/** SponsorBlock 구간 조회·건너뛰기 소유자 (플레이어별 상태는 WeakMap) */
 		sponsorBlockService: SponsorBlockService;
-		/** 저장한 플레이리스트·즐겨찾기 재생 (features/music/playback/playlistPlayback.ts) */
+		/** 저장한 플레이리스트·즐겨찾기 재생 (features/music/application/playlistPlayback.ts) */
 		playlistPlayback: PlaylistPlayback;
 		/** 건너뛰기 허용 판정(강제·요청자·추천곡·단독·투표)과 진행 중인 투표 소유자 (features/music/application/voteSkip.ts) */
 		voteSkip: VoteSkipService;

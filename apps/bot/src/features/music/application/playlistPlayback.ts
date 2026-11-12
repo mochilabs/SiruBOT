@@ -1,6 +1,6 @@
-import { UserError } from '@sapphire/framework';
 import type { GuildMember, User } from 'discord.js';
 import type { LavalinkManager, Track } from 'lavalink-client';
+import { AppError, type ErrorKind } from '../../../lib/appError.ts';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { lookupSource } from '../discord/utils/source.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
@@ -25,23 +25,25 @@ export function createPlaylistPlayback(deps: PlaylistPlaybackDeps) {
 }
 
 async function playSavedTracks(deps: PlaylistPlaybackDeps, context: PlaylistPlaybackContext, tracks: SavedTrack[]): Promise<string> {
-	const deny = (message: string): never => {
-		throw new UserError({ identifier: 'playlist_play', message, context: { ephemeral: true } });
+	// 안내는 본인에게만 보여요 (이전 UserError의 ephemeral: true와 같아요)
+	const deny = (kind: ErrorKind, message: string): never => {
+		throw new AppError(kind, message, { ephemeral: true });
 	};
 	const checkVoice = () => {
 		const voice = context.member.voice;
-		if (!voice.channelId) return deny('먼저 음성 채널에 들어가 주세요. 목록 관리는 음성 입장 없이도 할 수 있어요.');
+		if (!voice.channelId) return deny('forbidden', '먼저 음성 채널에 들어가 주세요. 목록 관리는 음성 입장 없이도 할 수 있어요.');
 		const existing = deps.getAudio().getPlayer(context.guildId);
-		if (existing?.voiceChannelId && existing.voiceChannelId !== voice.channelId) return deny('봇과 같은 음성 채널에서 재생해 주세요.');
-		if (voice.deaf) return deny('헤드셋 음소거를 해제한 뒤 재생해 주세요.');
+		if (existing?.voiceChannelId && existing.voiceChannelId !== voice.channelId)
+			return deny('forbidden', '봇과 같은 음성 채널에서 재생해 주세요.');
+		if (voice.deaf) return deny('forbidden', '헤드셋 음소거를 해제한 뒤 재생해 주세요.');
 		return voice.channelId;
 	};
 	const voiceChannelId = checkVoice();
 	const textChannel = await guildChannels.getDefaultTextChannel(deps.guildService, context.guildId);
-	if (textChannel && textChannel !== context.channelId) return deny(`재생은 <#${textChannel}>에서 실행해 주세요.`);
-	if (!tracks.length) return deny('목록이 비어 있어요. 먼저 곡을 추가해 주세요.');
+	if (textChannel && textChannel !== context.channelId) return deny('forbidden', `재생은 <#${textChannel}>에서 실행해 주세요.`);
+	if (!tracks.length) return deny('invalid_input', '목록이 비어 있어요. 먼저 곡을 추가해 주세요.');
 	const node = deps.getAudio().nodeManager.leastUsedNodes('players')[0];
-	if (!node) return deny('지금 음악 서버에 연결할 수 없어요. 목록은 그대로 유지돼요.');
+	if (!node) return deny('unavailable', '지금 음악 서버에 연결할 수 없어요. 목록은 그대로 유지돼요.');
 	const resolved: Track[] = [];
 	const failed: string[] = [];
 	for (let start = 0; start < tracks.length; start += 5) {
@@ -56,11 +58,14 @@ async function playSavedTracks(deps: PlaylistPlaybackDeps, context: PlaylistPlay
 		}
 	}
 	if (!resolved.length)
-		return deny(`${tracks.length}곡을 모두 불러오지 못했어요. 대기열에는 아무 곡도 추가하지 않았어요. 잠시 후 다시 시도해 주세요.`);
-	if (checkVoice() !== voiceChannelId) return deny('음성 채널이 바뀌었어요. 현재 채널에서 다시 실행해 주세요.');
+		return deny(
+			'unavailable',
+			`${tracks.length}곡을 모두 불러오지 못했어요. 대기열에는 아무 곡도 추가하지 않았어요. 잠시 후 다시 시도해 주세요.`
+		);
+	if (checkVoice() !== voiceChannelId) return deny('conflict', '음성 채널이 바뀌었어요. 현재 채널에서 다시 실행해 주세요.');
 	const player = await deps.audioService.getOrCreatePlayer(context.guildId, voiceChannelId, context.channelId);
 	await deps.audioService.connectPlayer(player);
-	if (checkVoice() !== voiceChannelId) return deny('음성 채널이 바뀌었어요. 현재 채널에서 다시 실행해 주세요.');
+	if (checkVoice() !== voiceChannelId) return deny('conflict', '음성 채널이 바뀌었어요. 현재 채널에서 다시 실행해 주세요.');
 	await deps.audioService.enqueueTrack(player, resolved);
 	const summary = `**${tracks.length}곡 중 ${resolved.length}곡**을 대기열에 추가했어요.${
 		failed.length

@@ -28,6 +28,7 @@ const makeMixerService = () =>
 	new MixerService({
 		logger: container.logger as never,
 		guildService: container.guildService,
+		callTimeoutMs: makeTestConfig().mixer.callTimeoutMs,
 		getPlayerNotifier: () => container.playerNotifier
 	});
 
@@ -60,6 +61,7 @@ describe('MixerService v2 Protocol Tests', () => {
 		const service = new MixerService({
 			logger: container.logger as never,
 			guildService: container.guildService,
+			callTimeoutMs: makeTestConfig().mixer.callTimeoutMs,
 			getPlayerNotifier: () => notifier as never
 		});
 		notifier = { updateController: vi.fn() };

@@ -94,7 +94,7 @@ export const libraryId = defineCustomId({
 	}
 });
 
-/** 플레이리스트 재생 후 '나머지 곡 추가' 질문 버튼 — `features/music/playback/audioService.ts` 컬렉터가 받아요. */
+/** 플레이리스트 재생 후 '나머지 곡 추가' 질문 버튼 — `features/music/discord/utils/playFeedback.ts` 컬렉터가 받아요. */
 export const playlistAddId = defineCustomId({
 	namespace: 'playlist-add',
 	version: 1,

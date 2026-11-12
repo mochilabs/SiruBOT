@@ -1,6 +1,5 @@
-import { emoji, resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sirubot/utils';
-import { MessageFlags, type Client } from 'discord.js';
-import { notice } from '../../../modules/general/view/notice.ts';
+import { resolveYouTubeVideoId, type SponsorBlockSkipSegment } from '@sirubot/utils';
+import type { Client, MessageCreateOptions } from 'discord.js';
 import type { Track } from 'lavalink-client';
 import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import { getTargetNextTrack, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
@@ -26,9 +25,17 @@ interface PlaybackState {
 	lastOutroArmKey: string | null;
 }
 
+/** 건너뛰기 안내를 Discord 메시지로 만드는 포트 — 실제 구현은 features/music/discord/playbackMessages.ts예요. */
+export interface SponsorBlockMessagePort {
+	/** 건너뛴 구간 종류(SponsorBlock 카테고리) 하나에 대한 안내 메시지 */
+	skipNotice(category: string): MessageCreateOptions;
+}
+
 export interface SponsorBlockServiceDeps {
 	logger: AppLogger;
 	guildService: GuildService;
+	/** 건너뛰기 안내 메시지 렌더링 */
+	messages: SponsorBlockMessagePort;
 	/** client는 로그인 뒤에 준비돼서 호출 시점에 읽어요 */
 	getClient: () => Client;
 	/** mixerService와 서로 얽혀 있어서 호출 시점에 읽어요 */
@@ -46,21 +53,8 @@ export class SponsorBlockService {
 		if (!player.textChannelId) return;
 		const channel = this.deps.getClient().channels.cache.get(player.textChannelId);
 		if (!channel?.isSendable()) return;
-		const names: Record<string, string> = {
-			sponsor: '프로모션',
-			selfpromo: '자사 홍보',
-			interaction: '상호 작용 요청',
-			intro: '인트로',
-			outro: '아웃트로',
-			preview: '미리보기',
-			music_offtopic: '음악이 아닌',
-			filler: '빈'
-		};
 		void channel
-			.send({
-				components: [notice(`${emoji('arrow_forward')} [SponsorBlock] **${names[category] ?? category}** 구간을 건너뛰었어요.`)],
-				flags: [MessageFlags.IsComponentsV2, MessageFlags.SuppressNotifications]
-			})
+			.send(this.deps.messages.skipNotice(category))
 			.then((message) => setTimeout(() => void message.delete().catch(() => null), 3_000))
 			.catch(() => null);
 	}

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { container } from '@sapphire/framework';
 import { LavalinkManager, type LavalinkTrack, type TrackStuckEvent } from 'lavalink-client';
 import { CustomPlayer } from '../player/customPlayer.ts';
-import { MixerService } from '../../playback/mixerService.ts';
+import { MixerService } from '../../application/mixerService.ts';
 import { clearMixerRuntime } from './mixerHandlers.ts';
 
 vi.mock('@sapphire/framework', () => ({
@@ -40,6 +40,7 @@ describe.each([
 		const mixer = new MixerService({
 			logger: container.logger as never,
 			guildService: {} as never,
+			callTimeoutMs: 5_000,
 			getPlayerNotifier: () => container.playerNotifier
 		});
 		Object.assign(container, { mixerService: mixer });
