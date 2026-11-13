@@ -23,7 +23,7 @@ description: Conventions for packages/prisma schema and migrations, packages/uti
 
 ## CI/CD (`.github/workflows/`)
 - `lint.yml`: `yarn install --immutable` + lint + typecheck + test.
-- `docker-beta.yml` / `docker-publish.yml`: image matrix `bot, dashboard, shardmanager, data-api` — review fully on Dockerfile, secret injection, or tag-rule changes. Never commit plaintext secrets.
+- `docker-beta.yml` / `docker-publish.yml` / `docker-branch.yml` (PR test images via the `docker-build` label): image matrix `bot, dashboard, shardmanager, data-api` — review fully on Dockerfile, secret injection, or tag-rule changes. Never commit plaintext secrets.
 
 ## Sentry / Logging
 - Real init lives in `packages/utils/src/sentry.ts`; `apps/bot/src/core/sentry.ts` is a re-export shell + shard-tag helper. `apps/bot/src/core/environment.ts` loads `.env` and registers the process-level handlers; bot env values are parsed only in `apps/bot/src/lib/config.ts` (`getConfig()`).

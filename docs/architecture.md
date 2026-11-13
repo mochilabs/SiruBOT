@@ -514,7 +514,7 @@ During rolling updates the new process retries identify until a shard slot frees
 ## 9. Build, deploy, CI
 
 - **Turborepo** (`turbo.json`): `build` = `^typecheck ^generate ^build`, `typecheck` = `^build ^generate`, `test` = `^generate ^build`. Prisma client generation (`yarn generate`) is a prerequisite.
-- **CI** (`.github/workflows/lint.yml`): Node 22, `yarn install --immutable` → lint → typecheck → build → test. Images: `docker-publish.yml`, `docker-beta.yml`.
+- **CI** (`.github/workflows/lint.yml`): Node 22, `yarn install --immutable` → lint → typecheck → build → test. Images: `docker-publish.yml`, `docker-beta.yml`, `docker-branch.yml` (PR test images, `docker-build` label).
 - **Docker**: the root `Dockerfile` builds 6 targets: bot, dashboard, shardmanager, data-api, storage, notifier. Compose/stack files: `docker/docker-compose.yml`, `docker/docker-stack.yml`, `docker/docker-stack-infra.yml`.
 - **Tests**: shared root `vitest.config.ts` (the dashboard has its own config). prisma has no tests.
 
