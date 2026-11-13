@@ -67,28 +67,27 @@ Discord 서버를 위한 음악 봇입니다. Lavalink 기반으로 안정적인
 apps/bot/
 ├── src/
 │   ├── core/                  # 핵심 시스템
-│   │   ├── botApplication.ts  # 메인 봇 클래스
-│   │   ├── bootstrap.ts       # 부트스트랩 로직
+│   │   ├── botApplication.ts  # 메인 봇 클래스 (서비스 조립, Redis 구독 서비스 레지스트리)
+│   │   ├── bootstrap.ts       # 부트스트랩 단계 목록 (shardIdentity, botClient, healthServer, lavalinkSetup, shutdown 등을 조립)
+│   │   ├── config.ts          # 환경 변수 → 타입드 Config (getConfig)
+│   │   ├── pieceRoots.ts      # Sapphire 피스 루트 목록 (PIECE_ROOTS)
 │   │   └── logger.ts          # 로깅 시스템
 │   │
-│   ├── modules/               # 기능 모듈
-│   │   ├── audio/            # 음악 재생 모듈
-│   │   │   ├── commands/     # 음악 관련 명령어
-│   │   │   ├── lavalink/     # Lavalink 통합
-│   │   │   │   ├── handlers/ # 이벤트 핸들러
-│   │   │   │   ├── player/   # 플레이어 관리
-│   │   │   │   └── queue/    # 큐 관리
-│   │   │   ├── preconditions/ # 권한 체크
-│   │   │   ├── view/         # UI 컴포넌트
-│   │   │   └── managers/     # 비즈니스 로직
-│   │   │
-│   │   └── general/          # 일반 기능 모듈
-│   │       ├── commands/     # 일반 명령어
-│   │       └── listeners/    # 이벤트 리스너
+│   ├── discord/               # 전역 Discord 셸 (공용 명령·리스너·프리컨디션)
+│   │   ├── commands/         # 공용 명령어 (development/ 포함)
+│   │   ├── subcommands/      # 공용 명령의 서브커맨드
+│   │   ├── views/            # 공용 뷰 (Components V2 빌더)
+│   │   ├── interaction-handlers/ # 공용 인터랙션 핸들러 (eval 모달 등)
+│   │   ├── listeners/        # 전역 이벤트 리스너 (명령 오류, 셸 이벤트 등)
+│   │   ├── preconditions/    # ManageGuild·OwnerOnly 등 공용 프리컨디션
+│   │   └── utils/            # 공용 유틸
+│   │
+│   ├── features/              # 기능 폴더 (music, tickets, role-panels, temp-voice, games, custom-commands, greeting, dashboard-bridge, ai-chat, tts)
+│   │   ├── <name>/           # index.ts · application/ (유스케이스, deps로 의존성을 받아요 — Sapphire·뷰·config 금지) · discord/{commands,listeners,interaction-handlers,views} · inbound/ (Redis 응답기·이벤트 리스너)
+│   │   └── music/            # 위 구성에 더해 playback/ (뷰·Lavalink 핸들러와 얽힌 재생 서비스) · lavalink/ (핸들러·플레이어·큐·Redis 저장소)
 │   │
 │   ├── services/             # 서비스 레이어
-│   │   ├── guildService.ts   # 길드 설정 관리
-│   │   └── trackService.ts   # 트랙 통계 관리
+│   │   └── guildService.ts   # 길드 설정 관리
 │   │
 │   └── types/                # 타입 정의
 │       └── global.d.ts       # 글로벌 타입 확장
@@ -96,6 +95,10 @@ apps/bot/
 ├── tests/                    # 테스트 (TODO)
 └── package.json
 ```
+
+### 컴포넌트 customId
+
+버튼·셀렉트 메뉴·모달의 customId는 `src/lib/customId.ts`의 `defineCustomId`로 소유 모듈 옆(`features/music/discord/customIds.ts`, `discord/customIds.ts`, `features/<name>/discord/customIds.ts`, `lib/confirmationId.ts`)에 한 번만 선언해요. 형식은 `{namespace}:v{version}:{action}[:{field}...]`이고, 뷰는 `encode`, 인터랙션 핸들러는 `decode`로 같은 선언을 써요. 길이가 Discord 한도(100자)를 넘을 수 있는 선언은 만들 때 바로 오류가 나고, 형식을 알아보지 못하는 ID(예전 형식 포함)는 `decode`가 `null`을 돌려줘서 핸들러가 `none()`으로 넘겨요.
 
 ---
 
@@ -178,7 +181,7 @@ yarn start
 
 ### 새로운 명령어 추가
 
-1. `src/modules/audio/commands/` 또는 `src/modules/general/commands/`에 파일 생성
+1. `src/discord/commands/`에 파일 생성 (기능 폴더의 명령어는 `src/features/<name>/discord/commands/`)
 2. Sapphire의 `Command` 클래스 확장
 3. `@ApplyOptions` 데코레이터로 설정 정의
 
@@ -209,7 +212,7 @@ export class ExampleCommand extends Command {
 
 ### Precondition 추가
 
-1. `src/modules/audio/preconditions/`에 파일 생성
+1. `src/features/music/discord/preconditions/`에 파일 생성
 2. `AllFlowsPrecondition` 확장
 3. `global.d.ts`에 타입 추가
 

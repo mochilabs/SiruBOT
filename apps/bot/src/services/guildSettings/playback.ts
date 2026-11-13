@@ -1,6 +1,7 @@
 import type { Guild } from '@sirubot/prisma';
-import { GuildMember, PermissionFlagsBits } from 'discord.js';
+import { isRepeatMode, normalizeRepeatMode, normalizeTtsAnnounceMode, type TtsAnnounceModeSetting } from '@sirubot/utils/guildSettingsContract';
 import type { RepeatMode } from 'lavalink-client';
+import type { MemberPermissionPort } from '../../lib/discordPorts.ts';
 import type { GuildSettingsStore } from './store.ts';
 
 /**
@@ -38,14 +39,11 @@ export async function getTtsDuck(store: GuildSettingsStore, guildId: string) {
 	return guild.ttsDuckLevel;
 }
 
-/** TTS 안내 방식 — mixer announce mode와 1:1. 알 수 없는 값은 sequential로 폴백해요. */
-export type TtsAnnounceMode = 'sequential' | 'parallel' | 'interrupt';
+/** TTS 안내 방식 — mixer announce mode와 1:1. 계약(guildSettingsContract)의 열거값을 그대로 써요. */
+export type TtsAnnounceMode = TtsAnnounceModeSetting;
 
-const ANNOUNCE_MODES: readonly TtsAnnounceMode[] = ['sequential', 'parallel', 'interrupt'];
-
-export function normalizeAnnounceMode(value: string | null | undefined): TtsAnnounceMode {
-	return ANNOUNCE_MODES.find((mode) => mode === value) ?? 'sequential';
-}
+/** 알 수 없는 값은 sequential로 폴백해요 (계약의 정규화 규칙) */
+export const normalizeAnnounceMode = normalizeTtsAnnounceMode;
 
 export async function getTtsAnnounceMode(store: GuildSettingsStore, guildId: string): Promise<TtsAnnounceMode> {
 	const guild = await store.getGuild(guildId);
@@ -68,19 +66,19 @@ export async function setDJRole(store: GuildSettingsStore, guildId: string, djRo
 	return guild;
 }
 
-export async function hasDJRole(store: GuildSettingsStore, guildId: string, member: GuildMember) {
+export async function hasDJRole(store: GuildSettingsStore, guildId: string, member: MemberPermissionPort) {
 	const djRoleId = await getDJRole(store, guildId);
-	if (djRoleId === null || member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-	return member.roles.cache.has(djRoleId);
+	if (djRoleId === null || member.isAdministrator()) return true;
+	return member.hasRole(djRoleId);
 }
 
 export async function getRepeat(store: GuildSettingsStore, guildId: string): Promise<RepeatMode> {
 	const guild = await store.getGuild(guildId);
-	return guild.repeat as RepeatMode;
+	return normalizeRepeatMode(guild.repeat) as RepeatMode;
 }
 
 export async function setRepeat(store: GuildSettingsStore, guildId: string, repeat: RepeatMode): Promise<RepeatMode> {
-	if (repeat !== 'off' && repeat !== 'track' && repeat !== 'queue') throw new Error('Invalid repeat value');
+	if (!isRepeatMode(repeat)) throw new Error('Invalid repeat value');
 	const guild = await store.upsertField(guildId, 'repeat', repeat);
 	return guild.repeat as RepeatMode;
 }

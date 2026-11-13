@@ -5,7 +5,7 @@ import { correlatePlayerWebResponse, type PlayerWebFailureReason, type PlayerWeb
 const REQUEST_ID = 'c8e2f5a9-4b1d-4e7f-9c3a-6d8b0e2f4a51';
 const OTHER_REQUEST_ID = 'a1d4e7b2-5c8f-4a1d-8e3b-7f0c2d5a8e41';
 
-const VOICE_CONTEXT = { inVoice: true, voiceChannelName: '음악 채널', canControl: true };
+const VOICE_CONTEXT = { inVoice: true, voiceChannelName: '음악 채널', canControl: true, canPlay: true };
 const TRACK = {
 	title: 'Never Gonna Give You Up',
 	author: 'Rick Astley',

@@ -17,7 +17,9 @@ node_modules/
 # Ignore the config file (contains sensitive information such as tokens)
 config.ts
 # 단, 봇 AI 채팅 설정 모듈은 소스 코드 — 위 규칙의 함정을 우회해 트랙에 포함해요 (#125)
-!apps/bot/src/services/aiChat/config.ts
+!apps/bot/src/features/ai-chat/application/aiChat/config.ts
+# 봇 타입드 Config 모듈도 소스 코드예요 (같은 함정)
+!apps/bot/src/lib/config.ts
 
 # Ignore heapsnapshot and log files
 *.heapsnapshot
@@ -50,6 +52,9 @@ packages/prisma/src/client/
 
 # Playwright MCP 스냅샷 산출물
 .playwright-mcp/
+
+# 작업 문서 (계획·감사·변경 기록, 로컬 전용)
+Localdocs/
 
 # local-only skill
 .pi/skills/impeccable/

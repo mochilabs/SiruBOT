@@ -31,6 +31,7 @@ export {
 	PANEL_POST_REQUEST_CHANNEL,
 	PANEL_POST_RESPONSE_CHANNEL,
 	PLAYER_STATE_CHANNEL_PATTERN,
+	PLAYER_STATE_CHANNEL_PREFIX,
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
 	playerStateChannel,
@@ -44,7 +45,37 @@ export { type PlayerStatePayload, type PlayerStateResponse, playerStateSchema, t
 export { parseLavalinkHosts } from './lavalinkHosts.js';
 export { isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.js';
 export { SPONSORBLOCK_SKIP_CATEGORIES, type SponsorBlockSkipCategory, type SponsorBlockSkipSegment } from './sponsorblock.js';
-export { ManagedRedisSubscriber } from './redisSubscriber.js';
+export { ManagedRedisSubscriber, type ManagedRedisSubscriberOptions } from './redisSubscriber.js';
+export {
+	botAdminRpc,
+	botProfileRefreshEvent,
+	botProfileSetEvent,
+	botProfileStateEvent,
+	type BotProfileStatePayload,
+	botProfileStateSchema,
+	defineRedisEvent,
+	defineRedisGuildEvent,
+	defineRedisRpc,
+	type GreetingTestResult,
+	guildDataRpc,
+	guildSettingsInvalidateEvent,
+	jtcSetupRpc,
+	memberGreetingSendEvent,
+	memberGreetingStateEvent,
+	memberGreetingTestStateSchema,
+	panelPostRpc,
+	pickRpcCorrelation,
+	playerStateEvent,
+	playerWebRpc,
+	type RedisEventContract,
+	type RedisGuildEventContract,
+	type RedisRpcContract,
+	type RedisRpcRequest,
+	type RedisRpcRequestInput,
+	type RedisRpcResponse,
+	roleValidationRpc,
+	socialWebhookCreateRpc
+} from './redisContract.js';
 export { getLoggerSettings } from './logger.js';
 export { type AppEmojiFallbackKey, emoji, ensureAppEmojisLoaded, setAppEmojiIdMap } from './appEmoji.js';
 export {
@@ -77,10 +108,7 @@ export {
 } from './guildData.js';
 export { jtcSetupRequestSchema, type JtcSetupResponse, jtcSetupResponseSchema } from './jtcSetup.js';
 export {
-	buildRolePanelCustomId,
-	parseRolePanelCustomId,
 	ROLE_PANEL_BUTTON_LABEL_MAX,
-	ROLE_PANEL_CUSTOM_ID_PREFIX,
 	ROLE_PANEL_DEFAULTS,
 	ROLE_PANEL_DESCRIPTION_MAX,
 	ROLE_PANEL_MAX_BUTTONS,

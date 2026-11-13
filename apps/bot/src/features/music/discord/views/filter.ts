@@ -1,0 +1,100 @@
+import { filterId } from '../customIds.ts';
+import { emoji, createContainer, type AppEmojiFallbackKey } from '@sirubot/utils';
+import {
+	ActionRowBuilder,
+	ButtonBuilder,
+	ButtonStyle,
+	SeparatorBuilder,
+	SeparatorSpacingSize,
+	StringSelectMenuBuilder,
+	TextDisplayBuilder
+} from 'discord.js';
+
+type FilterPreset = {
+	name: string;
+	label: string;
+	appEmojiName: AppEmojiFallbackKey;
+	description: string;
+};
+
+// 앱 이모지 매핑은 봇 부팅(clientReady) 이후 로드되므로, 이모지 필드는 사용 시점에 emoji()로 평가한다.
+export const FILTER_PRESETS: FilterPreset[] = [
+	{ name: 'bassboost', label: '베이스부스트', appEmojiName: 'volume_up', description: '저음을 강하게 부스트해요.' },
+	{ name: 'nightcore', label: '나이트코어', appEmojiName: 'sleep', description: '고속 + 고음으로 재생해요.' },
+	{ name: 'vaporwave', label: '베이퍼웨이브', appEmojiName: 'wave', description: '저속 + 저음으로 재생해요.' },
+	{ name: '8d', label: '8D', appEmojiName: 'headphone', description: '입체감 있는 사운드로 재생해요.' },
+	{ name: 'karaoke', label: '노래방', appEmojiName: 'mic', description: '보컬을 제거하고 재생해요.' }
+];
+
+export const filterPresetEmoji = (preset: FilterPreset) => emoji(preset.appEmojiName);
+
+// 프리셋 이름→표시 라벨 매핑: 카탈로그에 없는 이름은 원문을 유지한다.
+const presetLabel = (name: string): string => {
+	const preset = FILTER_PRESETS.find((p) => p.name === name);
+	return preset ? `${filterPresetEmoji(preset)} ${preset.label}` : name;
+};
+
+type FilterViewProps = {
+	activeFilters: string[];
+};
+
+export function filterView({ activeFilters }: FilterViewProps) {
+	const containerComponent = createContainer();
+
+	// 현재 적용 필터 상태
+	const statusLines = [];
+	statusLines.push(`### ${emoji('spectrum')} 오디오 필터`);
+
+	if (activeFilters.length > 0) {
+		const activeLabels = activeFilters.map(presetLabel).join(', ');
+		statusLines.push(`현재 적용 중: **${activeLabels}**`);
+	} else {
+		statusLines.push(`현재 적용 중인 필터가 없어요.`);
+	}
+
+	containerComponent.addTextDisplayComponents(new TextDisplayBuilder().setContent(statusLines.join('\n')));
+
+	// 프리셋 선택 메뉴
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId(filterId.encode('select'))
+		.setPlaceholder('적용할 프리셋을 선택하세요')
+		.setMinValues(0)
+		.setMaxValues(FILTER_PRESETS.length)
+		.addOptions(
+			FILTER_PRESETS.map((preset) => ({
+				label: preset.label,
+				value: preset.name,
+				emoji: filterPresetEmoji(preset),
+				description: preset.description,
+				default: activeFilters.includes(preset.name)
+			}))
+		);
+
+	const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
+	containerComponent.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+	containerComponent.addActionRowComponents(selectRow);
+
+	// 초기화 버튼
+	const resetButton = new ButtonBuilder()
+		.setCustomId(filterId.encode('reset'))
+		.setLabel('필터 초기화')
+		.setEmoji(emoji('repeat'))
+		.setStyle(ButtonStyle.Danger)
+		.setDisabled(activeFilters.length === 0);
+
+	const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(resetButton);
+	containerComponent.addActionRowComponents(buttonRow);
+
+	return containerComponent;
+}
+
+export function filterApplied({ filters }: { filters: string[] }) {
+	if (filters.length === 0) {
+		return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('repeat')} 모든 필터를 해제했어요.`));
+	}
+
+	const labels = filters.map(presetLabel).join(', ');
+
+	return createContainer().addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('spectrum')} 필터 적용: **${labels}**`));
+}

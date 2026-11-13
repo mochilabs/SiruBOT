@@ -1,0 +1,57 @@
+import { emoji } from '@sirubot/utils';
+import { notice } from '../../lib/notice.ts';
+import { evalResultView } from '../views/eval.ts';
+import { ApplyOptions } from '@sapphire/decorators';
+import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
+import { MessageFlags, ModalSubmitInteraction } from 'discord.js';
+import { inspect } from 'node:util';
+import { evalId } from '../customIds.ts';
+import { isOwner } from '../../lib/owners.ts';
+
+@ApplyOptions<InteractionHandler.Options>({
+	interactionHandlerType: InteractionHandlerTypes.ModalSubmit
+})
+export class EvalModalHandler extends InteractionHandler {
+	public override parse(interaction: ModalSubmitInteraction) {
+		if (evalId.decode(interaction.customId)?.action !== 'modal') return this.none();
+		return this.some();
+	}
+
+	public override async run(interaction: ModalSubmitInteraction) {
+		if (!isOwner(interaction.user.id)) {
+			await interaction.reply({
+				flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+				components: [notice(`${emoji('error')} 봇 소유자만 사용할 수 있어요.`)]
+			});
+			return;
+		}
+
+		const code = interaction.fields.getTextInputValue(evalId.encode('code'));
+		// eval 결과(환경값·토큰 등 컨테이너 값)가 채널 전체에 보이지 않도록 임시 메시지로만 게시해요
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
+		let result: string;
+		let success = true;
+
+		try {
+			// eslint-disable-next-line no-eval
+			let evaled = await eval(code);
+			if (typeof evaled !== 'string') {
+				evaled = inspect(evaled, { depth: 2 });
+			}
+			result = evaled;
+		} catch (error) {
+			success = false;
+			result = error instanceof Error ? (error.stack ?? error.message) : String(error);
+		}
+
+		if (result.length > 3800) {
+			result = result.substring(0, 3800) + '\n... (truncated)';
+		}
+
+		await interaction.editReply({
+			components: [evalResultView(code, result, success)],
+			flags: [MessageFlags.IsComponentsV2]
+		});
+	}
+}

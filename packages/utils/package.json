@@ -122,6 +122,21 @@
             "import": "./dist/botAdmin.js",
             "require": "./dist/botAdmin.cjs"
         },
+        "./playerLimits": {
+            "types": "./dist/playerLimits.d.ts",
+            "import": "./dist/playerLimits.js",
+            "require": "./dist/playerLimits.cjs"
+        },
+        "./guildSettingsContract": {
+            "types": "./dist/guildSettingsContract.d.ts",
+            "import": "./dist/guildSettingsContract.js",
+            "require": "./dist/guildSettingsContract.cjs"
+        },
+        "./redisContract": {
+            "types": "./dist/redisContract.d.ts",
+            "import": "./dist/redisContract.js",
+            "require": "./dist/redisContract.cjs"
+        },
         "./memoryFile": {
             "types": "./dist/memoryFile.d.ts",
             "import": "./dist/memoryFile.js",

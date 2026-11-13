@@ -7,8 +7,13 @@
  * - 화면 조회/재시도 때 요청을 받아 봇이 Discord에서 최신 상태를 읽어 응답해요.
  * - 주기 퍼블리시는 하지 않아요 — 변경 빈도가 낮은 프로필은 필요할 때만 확인해요.
  */
-import { z } from 'zod';
-import { BOT_PROFILE_REFRESH_CHANNEL, BOT_PROFILE_STATE_CHANNEL_PREFIX } from '@sirubot/utils';
+import {
+	BOT_PROFILE_REFRESH_CHANNEL,
+	BOT_PROFILE_STATE_CHANNEL_PREFIX,
+	botProfileStateEvent,
+	botProfileStateSchema,
+	type BotProfileStatePayload
+} from '@sirubot/utils';
 import { resolveRedisSigningKey, unwrapRedisMessage, wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 
 import { sharedCache } from '../utils/cache.ts';
@@ -22,31 +27,10 @@ const REFRESH_TIMEOUT_MS = 5_000;
 /** 길드 상태 엔트리 최대 보관 수 (장기 비활성 길드 누수 방지) */
 const MAX_ENTRIES = 5_000;
 /** 구독 채널 패턴 — 봇 퍼블리시어(botProfileService)와 계약이에요 */
-const CHANNEL_PATTERN = `${BOT_PROFILE_STATE_CHANNEL_PREFIX}*`;
+const CHANNEL_PATTERN = botProfileStateEvent.pattern;
 
-/**
- * 봇이 state 채널로 퍼블리시하는 길드별 봇 프로필 상태 — 봇의 BotProfileState와 같은 계약이에요.
- * 형태 검증은 이 zod 스키마가 단일 소스예요 (필드 추가 시 무시되지 않게).
- */
-export const botProfileStateSchema = z.object({
-	guildId: z.string().min(1).max(32),
-	/** 현재 길드 닉네임 — null이면 사용자명으로 표시 중이에요 */
-	nickname: z.string().nullable(),
-	/** 봇 사용자명 — 닉네임 초기화 시 표시할 기본값이에요 */
-	username: z.string(),
-	/** 길드 전용 아바타 URL — 설정 안 됐으면 null (패널은 전역 아바타를 보여줘요) */
-	guildAvatarUrl: z.string().nullable(),
-	/** 길드 전용 배너 URL — 설정 안 됐으면 null */
-	guildBannerUrl: z.string().nullable(),
-	/** 전역(앱) 아바타 URL */
-	globalAvatarUrl: z.string().nullable(),
-	/** 닉네임 변경 가능 여부 — CHANGE_NICKNAME 또는 MANAGE_NICKNAMES */
-	canChangeNickname: z.boolean(),
-	/** 마지막 적용 시도 결과 — 시도가 없으면 null */
-	lastApply: z.object({ ok: z.boolean(), error: z.string().nullable(), at: z.number() }).nullable().default(null),
-	updatedAt: z.number()
-});
-export type BotProfileStatePayload = z.infer<typeof botProfileStateSchema>;
+/** 봇이 state 채널로 퍼블리시하는 길드별 봇 프로필 상태 — 스키마는 @sirubot/utils 이벤트 계약(botProfileStateEvent)이 단일 소스예요. */
+export { botProfileStateSchema, type BotProfileStatePayload };
 
 interface Entry {
 	state: BotProfileStatePayload;

@@ -3,7 +3,7 @@ import type { Guild } from '@sirubot/prisma';
 
 const { upsert, update } = vi.hoisted(() => ({ upsert: vi.fn(), update: vi.fn() }));
 
-vi.mock('@sapphire/framework', () => ({ container: { db: { guild: { upsert, update } } } }));
+const db = { guild: { upsert, update } } as never;
 vi.mock('@sirubot/utils', async () => {
 	const { MemoryCache } = await import('../../../../../packages/utils/src/memoryCache.ts');
 	const { normalizeCustomCommandPrefix } = await import('../../../../../packages/utils/src/customCommand.ts');
@@ -35,7 +35,7 @@ describe('mixer 도메인 CRUD', () => {
 	});
 
 	it.each(['off', 'crossfade', 'automix'] as const)('전환 방식 %s는 두 플래그만 원자적으로 저장해요', async (mode) => {
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		upsert.mockResolvedValueOnce(guild('guild'));
 		update.mockResolvedValueOnce(guild('guild'));
 		await setTransitionMode(store, 'guild', mode);
@@ -44,7 +44,7 @@ describe('mixer 도메인 CRUD', () => {
 
 	it('갭리스·크로스페이드 설정을 한 번에 읽어요', async () => {
 		upsert.mockResolvedValueOnce(guild('guild', { gaplessEnabled: true, crossfadeEnabled: true, crossfadeMs: 2500, normalizationEnabled: true }));
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		await expect(getMixerSettings(store, 'guild')).resolves.toEqual({
 			gaplessEnabled: true,
 			crossfadeEnabled: true,
@@ -58,19 +58,19 @@ describe('mixer 도메인 CRUD', () => {
 
 	it('setGapless는 단일 필드로 저장해요', async () => {
 		upsert.mockResolvedValueOnce(guild('guild', { gaplessEnabled: true }));
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		await expect(setGapless(store, 'guild', true)).resolves.toBe(true);
 		expect(upsert.mock.calls[0][0].update).toEqual({ gaplessEnabled: true });
 	});
 
 	it('setCrossfade는 상한 15초·하한 500ms로 클램프해요', async () => {
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		upsert.mockResolvedValueOnce(guild('guild'));
 		update.mockResolvedValueOnce(guild('guild', { crossfadeEnabled: true, crossfadeMs: 15000 }));
 		await expect(setCrossfade(store, 'guild', true, 30_000)).resolves.toEqual({ crossfadeEnabled: true, crossfadeMs: 15000 });
 		expect(update.mock.calls[0][0].data).toEqual({ crossfadeEnabled: true, crossfadeMs: 15000 });
 
-		const other = new GuildSettingsStore();
+		const other = new GuildSettingsStore({ db });
 		upsert.mockResolvedValueOnce(guild('guild'));
 		update.mockResolvedValueOnce(guild('guild', { crossfadeEnabled: true, crossfadeMs: 500 }));
 		await expect(setCrossfade(other, 'guild', true, 100)).resolves.toEqual({ crossfadeEnabled: true, crossfadeMs: 500 });
@@ -78,7 +78,7 @@ describe('mixer 도메인 CRUD', () => {
 	});
 
 	it('setCrossfade는 기간을 넘기지 않으면 crossfadeMs를 건드리지 않고 캐시를 갱신해요', async () => {
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		upsert.mockResolvedValueOnce(guild('guild'));
 		update.mockResolvedValueOnce(guild('guild', { crossfadeEnabled: false, crossfadeMs: 2500 }));
 		await expect(setCrossfade(store, 'guild', false)).resolves.toEqual({ crossfadeEnabled: false, crossfadeMs: 2500 });
@@ -99,13 +99,13 @@ describe('mixer 도메인 CRUD', () => {
 
 	it('setNormalization는 단일 필드로 저장해요', async () => {
 		upsert.mockResolvedValueOnce(guild('guild', { normalizationEnabled: true }));
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		await expect(setNormalization(store, 'guild', true)).resolves.toBe(true);
 		expect(upsert.mock.calls[0][0].update).toEqual({ normalizationEnabled: true });
 	});
 
 	it('오토믹스를 켜면 크로스페이드와 옵션을 함께 저장하고 캐시를 갱신해요', async () => {
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		upsert.mockResolvedValueOnce(guild());
 		update.mockResolvedValueOnce(
 			guild('guild', {
@@ -131,7 +131,7 @@ describe('mixer 도메인 CRUD', () => {
 	});
 
 	it('오토믹스를 꺼도 크로스페이드와 저장한 옵션은 유지해요', async () => {
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		upsert.mockResolvedValueOnce(guild('guild', { automixEnabled: true, crossfadeEnabled: true }));
 		update.mockResolvedValueOnce(guild('guild', { crossfadeEnabled: true, automixMaxTempoChange: 0.1, automixMinConfidence: 0.5 }));
 		expect(await setAutomix(store, 'guild', false)).toMatchObject({
@@ -148,7 +148,7 @@ describe('mixer 도메인 CRUD', () => {
 		update.mockResolvedValueOnce(
 			guild('guild', { automixEnabled: true, crossfadeEnabled: true, automixMaxTempoChange: 0, automixMinConfidence: 0 })
 		);
-		await setAutomix(new GuildSettingsStore(), 'guild', true, 0, 0);
+		await setAutomix(new GuildSettingsStore({ db }), 'guild', true, 0, 0);
 		expect(update.mock.calls[0][0].data).toEqual({
 			automixEnabled: true,
 			crossfadeEnabled: true,
@@ -158,13 +158,13 @@ describe('mixer 도메인 CRUD', () => {
 	});
 
 	it.each([-0.01, 0.121, Number.NaN, Number.POSITIVE_INFINITY])('유효하지 않은 템포 비율 %s는 DB에 쓰지 않아요', async (value) => {
-		await expect(setAutomix(new GuildSettingsStore(), 'guild', true, value)).rejects.toThrow(RangeError);
+		await expect(setAutomix(new GuildSettingsStore({ db }), 'guild', true, value)).rejects.toThrow(RangeError);
 		expect(upsert).not.toHaveBeenCalled();
 		expect(update).not.toHaveBeenCalled();
 	});
 
 	it.each([-0.01, 1.01, Number.NaN, Number.NEGATIVE_INFINITY])('유효하지 않은 신뢰도 %s는 DB에 쓰지 않아요', async (value) => {
-		await expect(setAutomix(new GuildSettingsStore(), 'guild', true, undefined, value)).rejects.toThrow(RangeError);
+		await expect(setAutomix(new GuildSettingsStore({ db }), 'guild', true, undefined, value)).rejects.toThrow(RangeError);
 		expect(upsert).not.toHaveBeenCalled();
 		expect(update).not.toHaveBeenCalled();
 	});

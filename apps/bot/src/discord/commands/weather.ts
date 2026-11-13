@@ -1,0 +1,265 @@
+import { ApplyOptions } from '@sapphire/decorators';
+import { Command, UserError } from '@sapphire/framework';
+import { emoji } from '@sirubot/utils';
+import { notice } from '../../lib/notice.ts';
+import { weatherImageView } from '../views/weather.ts';
+import { ApplicationIntegrationType, AttachmentBuilder, AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { fetchWeather, GatewayDomainError, type DataApiClient, type WeatherCardRequest } from '../../services/dataApiClient.ts';
+import type { WeatherResult, WeatherScope } from '@sirubot/utils/weather';
+
+/** 채널별 최근 조회 위치 — 자동완성 후보 상한 (길드 공용 기록이에요) */
+const RECENT_LOCATION_LIMIT = 20;
+const recentLocations = new Map<string, string[]>();
+
+/** 최근 성공 위치를 채널 단위로 남겨 자동완성 후보로 써요 (프로세스 메모리, 재시작 시 초기화) */
+function rememberLocation(channelId: string, location: string): void {
+	const key = location.trim();
+	if (!key) return;
+	const previous = recentLocations.get(channelId) ?? [];
+	const next = [key, ...previous.filter((entry) => entry !== key)].slice(0, RECENT_LOCATION_LIMIT);
+	recentLocations.set(channelId, next);
+}
+
+/** 자동완성 후보 — 최근 조회 위치 + 현재 입력 접두 필터 */
+function suggestLocations(channelId: string, typed: string): string[] {
+	const needle = typed.trim().toLowerCase();
+	const recent = recentLocations.get(channelId) ?? [];
+	return recent.filter((entry) => entry.toLowerCase().includes(needle)).slice(0, 25);
+}
+
+const SCOPE_LABELS: Record<WeatherScope, string> = {
+	now: '지금 날씨',
+	today: '오늘 예보',
+	tomorrow: '내일 예보',
+	week: '이번 주 예보'
+};
+
+function formatTempRange(day: WeatherResult['daily'][number]): string {
+	if (day.tempMin != null && day.tempMax != null) return `${day.tempMin}~${day.tempMax}°C`;
+	if (day.tempMax != null) return `최고 ${day.tempMax}°C`;
+	if (day.tempMin != null) return `최저 ${day.tempMin}°C`;
+	return '온도 정보 없음';
+}
+
+function buildNowLines(result: WeatherResult): string[] {
+	const lines: string[] = [`**${result.weatherTextKo}**`];
+	if (result.temperatureC != null) {
+		const feels =
+			result.feelsLikeC != null && Math.abs(result.feelsLikeC - result.temperatureC) >= 0.05 ? ` (체감 ${result.feelsLikeC.toFixed(1)}°C)` : '';
+		lines.push(`${emoji('thermo')} 기온 **${result.temperatureC.toFixed(1)}°C**${feels}`);
+	}
+	const extra: string[] = [];
+	if (result.humidityPercent != null) extra.push(`${emoji('drop')} 습도 ${Math.round(result.humidityPercent)}%`);
+	if (result.windSpeedKmh != null) extra.push(`${emoji('windy')} 풍속 ${result.windSpeedKmh.toFixed(1)} km/h`);
+	if (result.cloudCoverPercent != null) extra.push(`${emoji('cloudy')} 구름 ${Math.round(result.cloudCoverPercent)}%`);
+	if (result.precipitationMm != null && result.precipitationMm > 0) extra.push(`${emoji('rain')} 강수 ${result.precipitationMm} mm`);
+	if (extra.length > 0) lines.push(extra.join(' · '));
+
+	if (result.airQuality) {
+		const { pm25, pm25GradeKo, pm10GradeKo } = result.airQuality;
+		const pm25Part = pm25 != null ? `PM2.5 ${pm25.toFixed(1)}µg/m³ (${pm25GradeKo})` : 'PM2.5 정보 없음';
+		const pm10Part = result.airQuality.pm10 != null ? `PM10 ${result.airQuality.pm10.toFixed(1)}µg/m³ (${pm10GradeKo})` : null;
+		lines.push(`${emoji('warning')} 미세먼지 ${pm25Part}${pm10Part ? ` · ${pm10Part}` : ''}`);
+	}
+	return lines;
+}
+
+function buildForecastLines(result: WeatherResult): string[] {
+	const day = result.daily[0];
+	if (!day) return ['예보 정보를 가져올 수 없어요.'];
+	const lines: string[] = [`**${day.weatherTextKo}** · ${formatTempRange(day)}`];
+	const extra: string[] = [];
+	if (day.precipitationProbabilityMaxPct != null) extra.push(`${emoji('rain')} 강수확률 ${Math.round(day.precipitationProbabilityMaxPct)}%`);
+	if (day.precipitationSumMm != null && day.precipitationSumMm > 0) extra.push(`강수량 ${day.precipitationSumMm} mm`);
+	if (day.windSpeedMaxKmh != null) extra.push(`최대풍속 ${day.windSpeedMaxKmh.toFixed(1)} km/h`);
+	if (extra.length > 0) lines.push(extra.join(' · '));
+	return lines;
+}
+
+function buildWeekLines(result: WeatherResult): string[] {
+	if (result.daily.length === 0) return ['예보 정보를 가져올 수 없어요.'];
+	return result.daily.map(
+		(day) =>
+			`${day.date.slice(5)} (${day.date.slice(0, 4)}): ${day.weatherTextKo} · ${formatTempRange(day)}${day.precipitationProbabilityMaxPct != null ? ` · 강수 ${Math.round(day.precipitationProbabilityMaxPct)}%` : ''}`
+	);
+}
+
+function buildContainer(result: WeatherResult) {
+	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
+	const lines = [`### ${emoji('sun_cloud')} ${locationLine} · ${SCOPE_LABELS[result.scope]}`, ''];
+	lines.push(...(result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result)));
+	lines.push('');
+	lines.push(`-# Open-Meteo 기준 · 관측 시각 ${result.observedAt || '알 수 없음'}${result.timezone ? ` (${result.timezone})` : ''}`);
+
+	return notice(lines.join('\n'));
+}
+
+/** 이미지 카드에 그릴 필드만 추려요 — data-api weatherCardSchema 입력 모양이에요. */
+function toCardRequest(result: WeatherResult): WeatherCardRequest {
+	return {
+		scope: result.scope,
+		locationLabel: [result.localityName, result.country].filter(Boolean).join(', ') || result.query,
+		observedAt: result.observedAt,
+		weatherCode: result.weatherCode,
+		weatherText: result.weatherTextKo,
+		isDay: result.isDay,
+		temperatureC: result.temperatureC,
+		feelsLikeC: result.feelsLikeC,
+		humidityPercent: result.humidityPercent,
+		windSpeedKmh: result.windSpeedKmh,
+		cloudCoverPercent: result.cloudCoverPercent,
+		precipitationMm: result.precipitationMm,
+		airQuality: result.airQuality,
+		daily: result.daily.map((day) => ({
+			date: day.date,
+			weatherCode: day.weatherCode,
+			weatherText: day.weatherTextKo,
+			tempMin: day.tempMin,
+			tempMax: day.tempMax,
+			precipitationProbabilityMaxPct: day.precipitationProbabilityMaxPct,
+			precipitationSumMm: day.precipitationSumMm,
+			windSpeedMaxKmh: day.windSpeedMaxKmh
+		}))
+	};
+}
+
+/** 이미지 대체 텍스트(스크린 리더용) — 텍스트 카드의 핵심 줄을 그대로 써요. */
+function buildAltText(result: WeatherResult): string {
+	const lines = result.scope === 'now' ? buildNowLines(result) : result.scope === 'week' ? buildWeekLines(result) : buildForecastLines(result);
+	return lines.join('\n').slice(0, 1000);
+}
+
+/** 이미지 카드 — 제목 한 줄은 텍스트로 두고(검색·복사용), 본문은 이미지로 보여요. 렌더 실패 시 null. */
+async function buildImageReply(dataApi: DataApiClient, result: WeatherResult) {
+	const png = await dataApi.renderWeatherCard(toCardRequest(result)).catch(() => null);
+	if (!png) return null;
+	const filename = `weather-${result.scope}.png`;
+	const locationLine = [result.localityName, result.country].filter(Boolean).join(', ');
+	const container = weatherImageView(filename, buildAltText(result), `-# ${locationLine} · ${SCOPE_LABELS[result.scope]} · Open-Meteo 기준`);
+	return { files: [new AttachmentBuilder(png, { name: filename })], container };
+}
+
+@ApplyOptions<Command.Options>({
+	enabled: true,
+	name: 'weather',
+	description: 'Check current weather and forecasts.',
+	fullCategory: ['일반']
+})
+export class WeatherCommand extends Command {
+	public override registerApplicationCommands(registry: Command.Registry) {
+		registry.registerChatInputCommand((builder) => {
+			builder
+				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+				.setName(this.name)
+				.setNameLocalizations({ ko: '날씨' })
+				.setDescription(this.description)
+				.setDescriptionLocalizations({ ko: '현재 날씨와 예보를 확인해요.' })
+				.addSubcommand((sub) =>
+					sub
+						.setName('now')
+						.setNameLocalizations({ ko: '지금' })
+						.setDescription('Get current weather')
+						.setDescriptionLocalizations({ ko: '현재 날씨를 확인해요.' })
+						.addStringOption((option) =>
+							option
+								.setName('location')
+								.setNameLocalizations({ ko: '위치' })
+								.setDescription('Location name')
+								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
+								.setRequired(true)
+								.setAutocomplete(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('today')
+						.setNameLocalizations({ ko: '오늘' })
+						.setDescription("Get today's forecast")
+						.setDescriptionLocalizations({ ko: '오늘 예보를 확인해요.' })
+						.addStringOption((option) =>
+							option
+								.setName('location')
+								.setNameLocalizations({ ko: '위치' })
+								.setDescription('Location name')
+								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
+								.setRequired(true)
+								.setAutocomplete(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('tomorrow')
+						.setNameLocalizations({ ko: '내일' })
+						.setDescription("Get tomorrow's forecast")
+						.setDescriptionLocalizations({ ko: '내일 예보를 확인해요.' })
+						.addStringOption((option) =>
+							option
+								.setName('location')
+								.setNameLocalizations({ ko: '위치' })
+								.setDescription('Location name')
+								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
+								.setRequired(true)
+								.setAutocomplete(true)
+						)
+				)
+				.addSubcommand((sub) =>
+					sub
+						.setName('week')
+						.setNameLocalizations({ ko: '이번주' })
+						.setDescription('Get this week forecast')
+						.setDescriptionLocalizations({ ko: '이번 주 예보를 확인해요.' })
+						.addStringOption((option) =>
+							option
+								.setName('location')
+								.setNameLocalizations({ ko: '위치' })
+								.setDescription('Location name')
+								.setDescriptionLocalizations({ ko: '날씨를 확인할 위치' })
+								.setRequired(true)
+								.setAutocomplete(true)
+						)
+				);
+		});
+	}
+
+	public override async autocompleteRun(interaction: AutocompleteInteraction) {
+		const typed = interaction.options.getFocused();
+		await interaction.respond(suggestLocations(interaction.channelId, typed).map((location) => ({ name: location, value: location })));
+	}
+
+	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
+		const sub = interaction.options.getSubcommand();
+		const location = interaction.options.getString('location', true);
+		const scope: WeatherScope = sub === 'today' ? 'today' : sub === 'tomorrow' ? 'tomorrow' : sub === 'week' ? 'week' : 'now';
+
+		await interaction.deferReply();
+
+		let result: WeatherResult;
+		try {
+			result = await fetchWeather(location, scope);
+		} catch (error) {
+			// 게이트웨이(data-api) 경유라 도메인 오류는 GatewayDomainError로 변환돼 도착해요
+			if (error instanceof GatewayDomainError) {
+				throw new UserError({
+					identifier: error.identifier,
+					message: `${emoji('error')} ${error.message}`,
+					context: { ephemeral: true }
+				});
+			}
+			throw error;
+		}
+
+		// 성공한 조회만 자동완성 후보로 남겨요 — 오타·없는 지명이 후보에 섞이지 않게
+		rememberLocation(interaction.channelId, location);
+
+		// 이미지 카드가 기본이고, data-api가 렌더에 실패하면 기존 텍스트 카드로 폴백해요
+		const image = await buildImageReply(this.container.dataApi, result);
+		if (image) {
+			await interaction.editReply({ files: image.files, components: [image.container], flags: [MessageFlags.IsComponentsV2] });
+			return;
+		}
+		await interaction.editReply({
+			components: [buildContainer(result)],
+			flags: [MessageFlags.IsComponentsV2]
+		});
+	}
+}
