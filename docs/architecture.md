@@ -1,6 +1,6 @@
 # SiruBOT Architecture
 
-> **As of**: 2026-11-11 · Verified by reading the source files cited in each section.
+> **As of**: 2026-11-13 · Verified by reading the source files cited in each section.
 > Code wins. Citations give file paths only, never line numbers (they drift as soon as code changes).
 > Each app is an independent process; they talk only through the "shared contracts" below (Redis channels, HTTP auth, WS protocol).
 
@@ -233,15 +233,17 @@ graph TB
 | `GET /v1/weather` | Geocoding + forecast + air quality (Open-Meteo) | 15 min |
 | `GET /v1/delivery/track` · `/carriers` | Parcel tracking (tracker.delivery) | 5 min |
 | `GET /v1/chapters` | YouTube.js chapter markers | 12 h, empty result 1 h |
-| `GET /v1/youtube/suggestions` · `/search` | YouTube.js autocomplete and search | 10 min |
+| `GET /v1/youtube/suggestions` | YouTube.js autocomplete | 10 min |
+| `GET /v1/youtube/search` | YouTube search through Lavalink REST | not cached |
+| `GET /v1/tts/voices` | siru_tts voice catalog proxy | 5 min, in memory |
 | `GET /v1/sponsorblock/segments` | SponsorBlock skip segments | 24 h, empty result 1 h, positive stale copy 7 days |
 | `POST /v1/embed-fix/metadata` | Social link embed-fix metadata (+ auto translation) | constants in `routes/embed-fix.ts` |
-| `POST /v1/image/{profile,member-card,ohaasa,nowplaying}` | canvas PNG rendering | — |
+| `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather}` · `POST /v1/image/member-card/{background,layer-image}` | canvas PNG rendering · greeting upload normalization | — |
 | `POST /v1/ai/custom-command-{draft,refine}` | Custom command draft/refine (503 without a key) | — |
 | `POST /v1/playback/events` · `GET /v1/playback/recent` | Collect/query shard playback events (`services/playbackStore.ts`) | — |
 | `GET /v1/player/:guildId` (+ `/stream` SSE, `/voice-context`) · `POST /v1/internal/player/{search,play,control}` | Web player | — |
 | `GET /v1/guilds/:guildId/{channels,roles,members}` | Guild data from the bot's cache | — |
-| `POST /v1/internal/{guild-settings/invalidate,jtc/setup,bot-profile/set,greeting/send,bot-admin}` · `GET /v1/bot-profile/:guildId` · `GET /v1/greeting/state/:guildId` | Dashboard → bot relays and broadcasts | — |
+| `POST /v1/internal/{guild-settings/invalidate,jtc/setup,bot-profile/set,greeting/send,bot-admin,panel/post,role-panel/validate-roles}` · `GET /v1/bot-profile/:guildId` · `GET /v1/greeting/state/:guildId` | Dashboard → bot relays and broadcasts | — |
 | `/v1/guilds/:guildId/social/subscriptions` (CRUD) · `/v1/social/{youtube,twitch}/resolve` · `/v1/social/chzzk/{search,profile}` | notifier proxy | — |
 | `PUT`/`GET /v1/storage/transcripts/*` | storage private-bucket proxy (ticket transcripts) | — |
 
@@ -261,9 +263,9 @@ graph LR
     route --> oauth["Discord<br/>OAuth · users/@me/guilds"]
 ```
 
-- **API routes** (`src/app/api/**/route.ts`, 57):
-  - General: `auth/[...nextauth]` · `playlists` (+ `[id]`, `reorder`, `tracks`, `search`) · `favorites` · `tracks` · `servers` · `shards` (**public**; anonymous requests share one rate-limit bucket) · `voice-servers` (+ `history`) · `data-api` (operator-only generic proxy)
-  - Guild (`servers/[id]/`): `settings` `channels` `roles` `stats` `player` (+ `play`/`command`/`search`/`voice-context`) `live` (+ `stream` SSE) `greeting` (+ `preview`/`test`/`status`/`background`/`layer-image`) `jtc/setup` `bot-profile` `ai` (+ `history`) `assets` (+ `[assetId]`) `custom-commands` (+ `[cmdId]`, `draft`, `refine`) `social/*` `ticket` (+ `tickets`, `[ticketId]/transcript`)
+- **API routes** (`src/app/api/**/route.ts`, 65; grouped with roles in `./api-dashboard.md`):
+  - General: `auth/[...nextauth]` · `playlists` (+ `[id]`, `reorder`, `tracks`, `search`) · `favorites` · `tracks` · `servers` · `shards` (**public**; anonymous requests share one rate-limit bucket) · `voice-servers` (+ `history`) · `profile/{birthday,tts,tts-voices}` · `data-api` (operator-only generic proxy)
+  - Guild (`servers/[id]/`): `settings` `channels` `roles` `stats` `player` (+ `play`/`command`/`search`/`voice-context`) `live` (+ `stream` SSE) `greeting` (+ `preview`/`test`/`status`/`background`/`layer-image`) `jtc/setup` `bot-profile` `ai` (+ `history`) `assets` (+ `[assetId]`) `custom-commands` (+ `[cmdId]`, `draft`, `refine`) `social/*` `ticket` (+ `post`, `tickets`, `[ticketId]/transcript`) `role-panels` (+ `[panelId]`, `[panelId]/post`) `tts`
   - Operator (`admin/*`, `DASHBOARD_ADMIN_IDS`, fail-closed): `overview` `guilds` `users` `social` `bot-control`
 - **Pages**: home, `servers` (+ `[id]`), `player/[id]`, `playlists`, `profile`, `shards` (public), `admin`, `track`, `invite`, `contributors`, `licenses`, `privacy`, `terms`, `design`, `login`, `error`.
 - **Client contracts**: data-api (`src/lib/data-api/` — `client.ts`, `player-web.ts`, `jtc.ts`, `guild-members.ts`), shardmanager (`src/lib/shard-api.ts`, `SHARD_MANAGER_AUTH_KEY` with no fallback), storage (`src/lib/storage.ts`, `STORAGE_AUTH_KEY ?? AUTH_KEY`, 15 s timeout). All three send the raw key in `Authorization` (no Bearer). `openDataApiStream` sets no `AbortSignal.timeout` because it's a long-lived SSE connection.

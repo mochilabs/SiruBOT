@@ -1,220 +1,223 @@
-<h1 align="center">
-SiruBOT
+<h1 align="center">SiruBOT</h1>
 
-[![Latest Version](https://img.shields.io/github/v/release/mochiLabs/SiruBOT?label=latest%20version)](https://github.com/mochiLabs/SiruBOT/releases)
-![Node version](https://img.shields.io/badge/node-%3E%3D22.0-brightgreen)
-![GitHub](https://img.shields.io/github/license/mochiLabs/SiruBOT)
-[![Run lint](https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml/badge.svg)](https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml)
-[![Publish Docker Image](https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml)
+<p align="center">
+  디스코드 음악 봇 플랫폼입니다. Lavalink 재생, 웹 대시보드, 그 뒤의 서비스들이 하나의 모노레포에 들어 있습니다.
+</p>
 
-</h1>
+<p align="center">
+  <a href="https://github.com/mochilabs/SiruBOT/releases"><img alt="Latest version" src="https://img.shields.io/github/v/release/mochilabs/SiruBOT?label=release"></a>
+  <img alt="Node version" src="https://img.shields.io/badge/node-%3E%3D22-brightgreen">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/mochilabs/SiruBOT"></a>
+  <a href="https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml"><img alt="CI" src="https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml/badge.svg"></a>
+  <a href="https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml"><img alt="Docker publish" src="https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml/badge.svg"></a>
+</p>
 
 <p align="center">
   <a href="README.md">English</a> | <b>한국어</b>
 </p>
 
-Discord.js와 Lavalink를 사용하는 음악 봇입니다. 저장소에는 Next.js 대시보드, 데이터 API, 샤드 매니저, 스토리지, 알림 서비스(notifier)도 Yarn workspaces 모노레포로 함께 구성돼 있습니다.
+## 목차
 
----
+- [기능](#기능)
+- [아키텍처](#아키텍처)
+- [빠른 시작](#빠른-시작)
+- [환경 설정](#환경-설정)
+- [스크립트](#스크립트)
+- [배포](#배포)
+- [문서](#문서)
+- [기여](#기여)
+- [보안](#보안)
+- [라이선스](#라이선스)
 
-## 🏗️ 프로젝트 구조
+## 기능
 
-```
-sirubot/
-├── apps/
-│   ├── bot/           # 디스코드 봇 애플리케이션
-│   ├── dashboard/     # Next.js 웹 대시보드
-│   ├── data-api/      # 외부 데이터 게이트웨이 (캐시 + LLM 배치 작업)
-│   ├── notifier/      # 소셜 알림 서비스 (웹훅 + 라이브 스트림 스케줄러)
-│   ├── shardmanager/  # 샤드 관리 서버 (Shard Management)
-│   └── storage/       # 오브젝트 스토리지 (생성 이미지·에셋 보관)
-└── packages/
-    ├── app-kit/       # 공용 Fastify 유틸 (인증·env 검증·로거)
-    ├── prisma/        # 데이터베이스 스키마 및 클라이언트
-    ├── shardclient/   # 샤드 클라이언트 라이브러리
-    └── utils/         # 공통 유틸리티 기능 패키지
-```
+- **음악 재생**: Lavalink 기반으로 대기열, 반복, 셔플, 탐색, 특정 곡으로 이동, 슬래시 명령어 검색 자동 완성, SponsorBlock 건너뛰기, 챕터, 싱크 가사를 지원합니다.
+- **웹 대시보드** (Next.js): 실시간 플레이어 제어, 서버 설정, 플레이리스트, 통계, 커스텀 명령어, 티켓, 소셜 알림, 샤드 상태를 다룹니다.
+- **플레이리스트와 프로필**: 디스코드나 대시보드에서 관리하는 개인 플레이리스트와, 청취 통계를 담은 프로필 카드 이미지를 제공합니다.
+- **소셜 알림**: YouTube, Twitch, 치지직 방송 알림을 디스코드 웹훅으로 보냅니다.
+- **부가 기능**: AI 채팅, TTS, 임시 음성 채널, 날씨, 운세, 택배 조회.
+- **확장 구조**: 샤드 매니저가 봇 프로세스에 샤드를 배정하므로, 중단 없이 봇을 늘리거나 교체할 수 있습니다.
 
----
+## 아키텍처
 
-## 🎵 핵심 기능
+독립 프로세스 6개와 공용 패키지 4개로 이루어져 있습니다. 앱끼리는 서로 import하지 않고, Redis pub/sub, 인증된 HTTP, 샤드 매니저의 WebSocket 프로토콜로만 통신합니다.
 
-- **음악 재생**: Lavalink 서버를 통한 오디오 스트리밍
-- **웹 대시보드**: 음악 제어, 서버 설정, 샤드 상태 모니터링
-- **데이터 API 게이트웨이**: 외부 API(날씨·가사·운세·택배·유튜브 챕터) 캐싱 및 예약된 LLM 작업
-- **프로필 카드**: 별자리 배경, 배너, 아바타, 음악 통계를 담은 유저 프로필 이미지 카드
-- **커스텀 플레이리스트**: 나만의 재생 목록을 생성하고 관리 및 불러오기 기능 지원
-- **스마트 검색 자동 완성**: 디스코드 내에서 트랙 검색 시 자동 완성(Auto-complete) 제공
-- **재생 큐 관리**: 재생 목록 셔플, 루프, 스킵, 특정 곡으로 이동 등의 조작 지원
+```mermaid
+graph LR
+    users["Discord users"] <--> discord["Discord"]
+    users -->|browser| dashboard
 
----
+    subgraph SiruBOT
+        bot["bot"]
+        dashboard["dashboard :3000"]
+        shardmanager["shardmanager :3001"]
+        dataapi["data-api :3002"]
+        storage["storage :3003"]
+        notifier["notifier :3004"]
+    end
 
-## 🚀 시작하기
-
-### 사전 준비 사항
-
-- **Node.js**: v22 이상
-- **Yarn**: v4.12.0 (Corepack으로 관리)
-- **Database**: PostgreSQL (Prisma ORM 사용)
-- 디스코드 봇 토큰 및 Lavalink 서버
-
-### 환경 변수 설정 (`.env`)
-
-각 앱 디렉토리의 `.env.example`을 복사해 `.env`를 만드세요. 아래는 로컬 실행에 필요한 주요 항목입니다. 비밀 값은 저장소에 커밋하지 마세요.
-
-#### 1. 디스코드 봇 (`apps/bot/.env`)
-```env
-DISCORD_TOKEN=your_discord_bot_token_here
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot
-REDIS_URL=redis://localhost:6379
-LAVALINK_HOSTS=main_localhost_2333_youshallnotpass
-# 선택: data-api 기능을 봇에서 사용
-DATA_API_URL=http://localhost:3002
-DATA_API_AUTH_KEY=replace_with_data_api_key
-# 프로덕션 샤드 매니저 연결에 필요합니다. 단독 로컬 개발에서는 생략할 수 있습니다.
-# SHARD_MANAGER_URL=ws://localhost:3001/ws
-# AUTH_KEY=replace_with_a_shared_secret
+    discord <--> bot
+    bot <--> lavalink["Lavalink"]
+    bot <-->|WebSocket| shardmanager
+    bot -->|HTTP| dataapi
+    dashboard -->|HTTP| dataapi
+    dashboard -->|HTTP| shardmanager
+    dashboard -->|HTTP| storage
+    dataapi <-->|pub/sub| redis[("Redis")]
+    bot <-->|pub/sub| redis
+    dataapi -->|HTTP| notifier
+    dataapi -->|HTTP| storage
+    notifier -->|webhooks| discord
+    bot --> postgres[("PostgreSQL")]
+    dashboard --> postgres
+    dataapi --> postgres
+    notifier --> postgres
 ```
 
-#### 2. 웹 대시보드 (`apps/dashboard/.env`)
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
-DISCORD_CLIENT_ID=your_discord_application_client_id
-DISCORD_CLIENT_SECRET=your_discord_application_client_secret
-AUTH_SECRET=generate_a_random_secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-# 아래 값은 각 서비스의 주소와 키에 맞춰 설정하세요.
-SHARD_MANAGER_URL=http://localhost:3001
-SHARD_MANAGER_AUTH_KEY=replace_with_shard_manager_key
-DATA_API_URL=http://localhost:3002
-DATA_API_AUTH_KEY=replace_with_data_api_key
-```
+| 워크스페이스 | 역할 | 스택 |
+|---|---|---|
+| `apps/bot` | 디스코드 게이트웨이, 슬래시 명령어, 오디오, AI 채팅, TTS, 티켓 | Sapphire (discord.js), lavalink-client |
+| `apps/dashboard` | 서버 관리 웹 앱 | Next.js App Router, React 19 |
+| `apps/data-api` | 게이트웨이: 외부 API 캐시, Redis 허브, 이미지 렌더링, 예약 LLM 작업 | Fastify 5 |
+| `apps/shardmanager` | 샤드 배정과 상태 집계 | Fastify 5, WebSocket |
+| `apps/storage` | 생성 이미지와 티켓 기록을 보관하는 오브젝트 스토리지 | Fastify 5 |
+| `apps/notifier` | 방송 알림을 디스코드 웹훅으로 전달 | Fastify 5 |
+| `packages/prisma` | PostgreSQL 스키마와 클라이언트 | Prisma 7 |
+| `packages/utils` | Redis 채널 계약, zod 스키마, 공용 헬퍼 | zod |
+| `packages/app-kit` | 공용 Fastify 인증, env 검증, 로거 | Fastify |
+| `packages/shardclient` | 샤드 매니저용 WebSocket 클라이언트 | ws |
 
-#### 3. 데이터 API (`apps/data-api/.env`)
-```env
-# 필수: 두 인증 키가 모두 없으면 data-api가 시작되지 않습니다.
-DATA_API_AUTH_KEY=replace_with_data_api_key
-# 또는 AUTH_KEY를 사용할 수 있습니다. 봇과 대시보드에도 같은 키를 설정하세요.
-# AUTH_KEY=replace_with_data_api_key
-# 선택: 공유 캐시와 요청 허브 (미설정 시 메모리로 폴백)
-REDIS_URL=redis://localhost:6379
-# 선택: 운세 번역 및 기억 정리 작업용 번역 프로바이더
-OPENAI_COMPATIBLE_API_URL=http://127.0.0.1:8080/v1
-OPENAI_API_KEY=your_api_key_here
-TRANSLATION_MODEL=your_model_name
-# 선택: 기억 정리는 DATABASE_URL과 번역 프로바이더가 모두 있어야 실행됩니다.
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
-```
+대시보드는 봇과 직접 통신하지 않습니다. 요청은 대시보드 → data-api → Redis → 해당 서버를 맡은 봇 순서로 전달됩니다. Redis 채널 맵과 부팅/종료 순서를 포함한 전체 구조는 [docs/architecture.md](docs/architecture.md)에 있습니다.
 
-봇이 게이트웨이 기능을 쓰려면 `apps/bot/.env`의 `DATA_API_URL` 설정이 필요합니다(미설정 시 해당 기능 호출이 오류로 실패합니다). 대시보드의 기본 주소는 `http://localhost:3002`입니다. data-api, 봇, 대시보드에 `DATA_API_AUTH_KEY` 또는 `AUTH_KEY`를 같은 값으로 설정하세요. 요청의 `Authorization` 헤더에는 `Bearer` 접두사 없이 키 원문을 전달합니다. 인증 없이 접근할 수 있는 경로는 `/api/health`뿐입니다.
+## 빠른 시작
 
----
+### 준비물
 
-### 데이터 API 게이트웨이
+- Node.js 22 이상, 그리고 Yarn 4.12를 위한 Corepack 활성화 (`corepack enable`)
+- PostgreSQL과 Redis
+- [Lavalink](https://lavalink.dev) v4 노드
+- 봇 토큰이 있는 디스코드 애플리케이션
 
-게이트웨이는 기본 포트 `3002`에서 실행됩니다. 외부 프로바이더 호출은 게이트웨이가 전담하며, 봇과 대시보드는 게이트웨이를 통해서만 접근합니다.
-
-| 엔드포인트 | 메서드 | 설명 | 캐시 TTL |
-|---|---|---|---|
-| `/v1/ohaasa` | GET | 오늘의 운세 (오하아사/TV아사히), LLM 한국어 번역 | 7일 |
-| `/v1/lyrics?q=` | GET | 가사 검색 (lrclib.net) | 30일 |
-| `/v1/weather?location=&scope=` | GET | 지오코딩 + 예보 + 대기질 (Open-Meteo) | 15분 |
-| `/v1/chapters?videoId=&durationMs=` | GET | YouTube.js 챕터 마커 | 12시간, 빈 결과 1시간 |
-| `/v1/youtube/suggestions?q=` | GET | YouTube.js 검색 자동완성 | 10분 |
-| `/v1/sponsorblock/segments?videoId=` | GET | SponsorBlock 건너뛸 구간 (`startMs`, `endMs`) | 24시간, 빈 결과 1시간, 양성 stale 7일 |
-| `/v1/delivery/track?carrier=&number=` | GET | 택배 조회 (tracker.delivery), 별칭 해석은 서버가 처리 | 5분 |
-| `/v1/playback/events` | POST | 봇 샤드의 재생 이벤트 수집 (시작/종료/끊김/오류/중단) | 해당 없음 |
-| `/v1/playback/recent?limit=` | GET | 최근 재생 이벤트 및 오류 조회 | 해당 없음 |
-| `/v1/image/profile` | POST | 프로필 카드 PNG 렌더링 (별자리 배경·배너·아바타·통계) | 해당 없음 |
-| `/v1/ohaasa/refresh` | POST | 오늘의 운세 즉시 갱신 | 해당 없음 |
-| `/v1/status` | GET | 운영 지표 (캐시 적중률, upstream 호출/오류, 서킷 브레이커) | 해당 없음 |
-| `/dashboard` | GET | 내장 모니터링 대시보드 | 해당 없음 |
-
-백그라운드 작업 (단일 인스턴스, 지터 포함 스케줄):
-- **운세 번역**: 매일 KST 06:50에 실행하며 Redis 캐시를 미리 채웁니다.
-- **기억 정리 (nightly pass)**: 매일 자정에 유저별 장기 기억을 LLM으로 정리합니다. `DATABASE_URL`과 번역 프로바이더가 모두 설정돼야 실행됩니다.
-
-봇과 대시보드는 `DATA_API_URL`로 게이트웨이(기본 포트 `3002`)에 연결하며, 외부 프로바이더 호출은 게이트웨이가 전담합니다.
+### 로컬 실행
 
 ```bash
-# 개발 실행
-yarn generate
-yarn workspace @sirubot/data-api build
-yarn workspace @sirubot/data-api start
-```
-
----
-
-## 🛠️ 개발 및 빌드 스크립트
-
-루트 디렉토리에서 아래 명령어로 모노레포 전체를 통합 제어할 수 있습니다.
-
-```bash
-# 의존성 패키지 설치
+git clone https://github.com/mochilabs/SiruBOT.git
+cd SiruBOT
 yarn install
 
-# Prisma 클라이언트 코드 생성
+# Prisma 클라이언트를 생성합니다. 타입 검사나 빌드 전에 반드시 필요합니다.
 yarn generate
 
-# 대시보드 개발 서버 실행 (dev 스크립트가 있는 유일한 워크스페이스)
+# 앱마다 env 파일을 만든 뒤 값을 채웁니다 (환경 설정 참고).
+for app in bot dashboard data-api shardmanager storage notifier; do
+  cp -n "apps/$app/.env.example" "apps/$app/.env"
+done
+
+# 데이터베이스 마이그레이션을 적용합니다.
+yarn workspace @sirubot/prisma migrate:dev
+```
+
+그다음 필요한 것만 실행합니다.
+
+```bash
+# 대시보드 개발 서버 (http://localhost:3000)
 yarn dev
 
-# 백엔드 앱·공용 패키지를 변경 시 자동 재빌드 (watch 모드)
+# 백엔드 앱과 패키지를 변경 시 다시 빌드 (실행하지는 않음)
 yarn watch
 
-# 데이터베이스 마이그레이션 적용
-yarn workspace @sirubot/prisma migrate:dev
-
-# 린트, 테스트, 전체 빌드
-yarn lint
-yarn test
-yarn build
+# 다른 터미널에서 백엔드 앱 실행
+yarn workspace @sirubot/bot start
 ```
 
-로컬 개발은 각 앱의 `.env`를 설정한 뒤 시작합니다. 대시보드는 `yarn dev`로 실행하고, 백엔드 앱(bot·data-api·notifier·storage·shardmanager)은 `yarn watch`로 변경 시 자동 재빌드한 뒤 별도 터미널에서 `yarn workspace @sirubot/<앱 이름> start`로 실행합니다. 타입 검사나 빌드 전에 `yarn generate`를 실행해 Prisma 클라이언트를 생성하세요.
+음악 재생은 봇만 있어도 됩니다. 대시보드의 실시간 기능과 날씨, 가사 같은 명령어에는 `data-api`가 필요하고, `shardmanager`, `storage`, `notifier`는 각자 담당하는 기능을 쓸 때만 필요합니다. 단계별 온보딩은 [docs/setup-dev.md](docs/setup-dev.md)에 있습니다.
 
-### 개별 애플리케이션 및 패키지 실행 (Turbo 필터)
+## 환경 설정
 
-전체 실행 대신 특정 프로젝트만 빌드하거나 개발 모드로 실행하고 싶다면 Turbo 필터를 이용하세요:
+각 앱은 자신의 `apps/<앱>/.env`를 읽습니다. 같은 폴더의 `.env.example`에 모든 변수가 있고, 아래 표는 로컬 개발에 필요한 최소 구성입니다.
+
+| 앱 | 최소 변수 |
+|---|---|
+| `bot` | `DISCORD_TOKEN`, `DATABASE_URL`, `REDIS_URL`, `LAVALINK_HOSTS` |
+| `dashboard` | `DATABASE_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` |
+| `data-api` | `DATA_API_AUTH_KEY` (또는 `AUTH_KEY`) |
+| `shardmanager` | `DISCORD_TOKEN`, `AUTH_KEY` |
+| `storage` | `STORAGE_AUTH_KEY` (또는 `AUTH_KEY`), `STORAGE_PUBLIC_URL` |
+| `notifier` | `NOTIFIER_AUTH_KEY` (또는 `AUTH_KEY`), `DATABASE_URL` |
+
+자주 틀리는 부분:
+
+- **공유 키.** `bot`, `dashboard`, `data-api`는 같은 `DATA_API_AUTH_KEY`(또는 `AUTH_KEY`)를 써야 하고, 봇과 대시보드에는 `DATA_API_URL`(기본 포트 3002)이 필요합니다. 키가 없으면 대시보드가 data-api 호출을 건너뛰어 플레이어, 채널, 역할 기능이 실패합니다.
+- **헤더 형식.** 서비스 간 요청은 `Authorization`에 키 원문을 그대로 보냅니다. `Bearer` 접두사는 붙이지 않습니다.
+- **`LAVALINK_HOSTS`** 는 `id_host_port[_password]`를 쉼표로 이은 목록입니다. 예: `main_localhost_2333_youshallnotpass`.
+- **슬래시 명령어**는 `REGISTER_COMMANDS=true`일 때만 시작 시 등록됩니다. 수동 동기화: `yarn dlx tsx scripts/register-commands.ts --dry-run`.
+- **단독 실행.** 개발 환경에서는 `SHARD_MANAGER_URL`을 비워 두면 샤드 매니저 없이 봇 프로세스 하나만 실행합니다. 프로덕션에서는 필수입니다.
+
+전체 환경 변수 표는 [docs/architecture.md](docs/architecture.md#10-environment-variables)에 있습니다.
+
+## 스크립트
+
+저장소 루트에서 실행하면 Turborepo가 각 워크스페이스로 나눠 실행합니다.
+
+| 명령어 | 하는 일 |
+|---|---|
+| `yarn generate` | Prisma 클라이언트 생성 |
+| `yarn dev` | 대시보드 개발 서버 실행 |
+| `yarn watch` | 백엔드 앱과 패키지를 변경 시 다시 빌드 |
+| `yarn build` | 전체 프로덕션 빌드 |
+| `yarn typecheck` | 의존성을 먼저 빌드한 뒤 타입 검사 |
+| `yarn lint` / `yarn lint:fix` | Prettier 검사 (대시보드는 ESLint) |
+| `yarn test` | Vitest 테스트 실행 |
+
+워크스페이스 하나만 대상으로 할 때는 필터나 워크스페이스 명령을 씁니다.
 
 ```bash
-# 봇 변경 시 자동 재빌드 (봇에는 dev 스크립트가 없음)
-turbo run watch --filter=@sirubot/bot
-
-# 대시보드 개발 서버 실행
-turbo dev --filter=@sirubot/dashboard
-
-# 공통 유틸리티 빌드
-turbo build --filter=@sirubot/utils
+yarn turbo build --filter=@sirubot/utils
+yarn workspace @sirubot/bot test src/path/file.test.ts
 ```
 
----
+## 배포
 
-## 🐳 Docker 배포 가이드
-
-루트 Dockerfile은 봇, 대시보드, 샤드 매니저, 데이터 API, 스토리지, 알림 서비스 이미지를 각각 빌드합니다. `--target`으로 서비스를 선택하고 실행 시 해당 환경 변수를 전달하세요. 저장소의 Compose 파일은 일부 예시이며, 앱과 Redis/PostgreSQL 서비스 설정은 주석 처리돼 있습니다.
+루트 `Dockerfile`에는 앱마다 빌드 타깃이 하나씩 있습니다.
 
 ```bash
-# 봇 이미지 빌드
-docker build --target bot -t sirubot-bot:latest .
-
-# 다른 target: dashboard, shardmanager, data-api, storage, notifier
+docker build --target bot -t sirubot-bot .
+# 다른 타깃: dashboard, shardmanager, data-api, storage, notifier
 ```
 
-컨테이너 실행 전에 PostgreSQL, Redis, Lavalink와 각 서비스 인증 정보를 준비하세요. 봇 이미지는 시작할 때 Prisma 마이그레이션을 실행합니다.
+미리 빌드된 이미지는 GitHub Container Registry에 `ghcr.io/mochilabs/sirubot-<앱>`으로 올라갑니다.
 
----
+| 태그 | 빌드 기준 | 워크플로 |
+|---|---|---|
+| 릴리스 버전 (`5.2.12`, `5.2`) | GitHub 릴리스 | `docker-publish.yml` |
+| `beta`, `beta-<sha>` | `beta` 브랜치 푸시 | `docker-beta.yml` |
+| `<브랜치>`, `<브랜치>-<sha>` | `docker-build` 라벨이 붙은 PR | `docker-branch.yml` |
 
-## 🤝 기여 방법
+`docker/`에는 로컬용 Compose 예시(Lavalink만 켜져 있고 나머지 서비스는 주석 처리)와, 앱과 인프라용 Swarm 스택 파일이 있습니다. 앱을 시작하기 전에 PostgreSQL, Redis, Lavalink에 연결할 수 있어야 하며, 봇 이미지는 시작할 때 Prisma 마이그레이션을 적용합니다. 롤링 업데이트, 헬스체크, 장애 대응은 [docs/runbook-production.md](docs/runbook-production.md)에서 다룹니다.
 
-1. 저장소를 포크(Fork)합니다.
-2. 새로운 기능 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`).
-3. 변경 사항을 커밋합니다 (`git commit -m 'feat: add amazing feature'`).
-4. 브랜치에 푸시합니다 (`git push origin feature/amazing-feature`).
-5. 풀 리퀘스트(Pull Request)를 생성합니다.
+## 문서
 
----
+| 문서 | 내용 |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | 시스템 컨텍스트, 앱별 상세, 공유 계약, 런타임 흐름 |
+| [docs/setup-dev.md](docs/setup-dev.md) | 로컬 설정, 포트, 검증 명령 |
+| [docs/runbook-production.md](docs/runbook-production.md) | 빌드, 배포, 샤드 장애 대응, 종료 순서 |
+| [docs/api-data-api.md](docs/api-data-api.md) | data-api 엔드포인트, 인증, 캐시 TTL, 스케줄러 |
+| [docs/api-dashboard.md](docs/api-dashboard.md) | 대시보드 API 라우트, 권한, rate limit |
+| [docs/3rdparty.md](docs/3rdparty.md) | Lavalink 플러그인과 외부 서비스 |
+| [docs/README.md](docs/README.md) | 문서 목록과 작성 규칙 |
+| [AGENTS.md](AGENTS.md) | 코딩 에이전트와 기여자를 위한 규칙 |
 
-## 📝 라이선스
+## 기여
 
-본 프로젝트는 MIT 라이선스에 따라 라이선스가 부과됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참고하십시오.
+1. `beta`에서 브랜치를 만듭니다. `main`은 배포 스냅샷이라 직접 작업하지 않습니다.
+2. 변경한 뒤 `yarn lint`, `yarn typecheck`, `yarn test`를 실행합니다.
+3. `beta`를 대상으로 PR을 엽니다. [docs/pr-message-rule.md](docs/pr-message-rule.md)에 따라 검증한 것과 검증하지 못한 것을 적고, UI 변경에는 스크린샷을 첨부합니다.
+
+## 보안
+
+취약점은 공개 이슈가 아니라 [SECURITY.md](SECURITY.md)에 안내된 방법으로 비공개 제보해 주세요.
+
+## 라이선스
+
+[MIT](LICENSE) © SiruBOT Contributors

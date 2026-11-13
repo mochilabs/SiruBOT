@@ -1,224 +1,223 @@
-<h1 align="center">
-SiruBOT
+<h1 align="center">SiruBOT</h1>
 
-[![Latest Version](https://img.shields.io/github/v/release/mochiLabs/SiruBOT?label=latest%20version)](https://github.com/mochiLabs/SiruBOT/releases)
-![Node version](https://img.shields.io/badge/node-%3E%3D22.0-brightgreen)
-![GitHub](https://img.shields.io/github/license/mochiLabs/SiruBOT)
-[![Run lint](https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml/badge.svg)](https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml)
-[![Publish Docker Image](https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml)
+<p align="center">
+  A Discord music bot platform: Lavalink playback, a web dashboard, and the services behind them, in one monorepo.
+</p>
 
-</h1>
+<p align="center">
+  <a href="https://github.com/mochilabs/SiruBOT/releases"><img alt="Latest version" src="https://img.shields.io/github/v/release/mochilabs/SiruBOT?label=release"></a>
+  <img alt="Node version" src="https://img.shields.io/badge/node-%3E%3D22-brightgreen">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/mochilabs/SiruBOT"></a>
+  <a href="https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml"><img alt="CI" src="https://github.com/mochilabs/SiruBOT/actions/workflows/lint.yml/badge.svg"></a>
+  <a href="https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml"><img alt="Docker publish" src="https://github.com/mochilabs/SiruBOT/actions/workflows/docker-publish.yml/badge.svg"></a>
+</p>
 
 <p align="center">
   <b>English</b> | <a href="README.ko.md">한국어</a>
 </p>
 
-A Discord music bot built with Discord.js and Lavalink. The repository also contains a Next.js dashboard, a data API, a shard manager, a storage service, and a notifier service, organized as a Yarn workspaces monorepo.
+## Contents
 
----
+- [Features](#features)
+- [Architecture](#architecture)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Scripts](#scripts)
+- [Deployment](#deployment)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
 
-## 🏗️ Project Structure
+## Features
 
+- **Music playback** through Lavalink: queue, loop, shuffle, seek, jump to track, search autocomplete in slash commands, SponsorBlock skipping, chapters and synced lyrics.
+- **Web dashboard** (Next.js): live player control, guild settings, playlists, statistics, custom commands, tickets, social alerts and shard status.
+- **Playlists and profiles**: personal playlists managed from Discord or the dashboard, and a rendered profile card with listening stats.
+- **Social alerts**: YouTube, Twitch and Chzzk live notifications delivered through Discord webhooks.
+- **Extras**: AI chat, TTS, temporary voice channels, weather, horoscope and parcel tracking.
+- **Built to scale**: a shard manager assigns shards to bot processes, so bots can be added or rolled without downtime.
+
+## Architecture
+
+Six independent processes and four shared packages. Apps never import each other; they communicate over Redis pub/sub, authenticated HTTP and the shard manager's WebSocket protocol.
+
+```mermaid
+graph LR
+    users["Discord users"] <--> discord["Discord"]
+    users -->|browser| dashboard
+
+    subgraph SiruBOT
+        bot["bot"]
+        dashboard["dashboard :3000"]
+        shardmanager["shardmanager :3001"]
+        dataapi["data-api :3002"]
+        storage["storage :3003"]
+        notifier["notifier :3004"]
+    end
+
+    discord <--> bot
+    bot <--> lavalink["Lavalink"]
+    bot <-->|WebSocket| shardmanager
+    bot -->|HTTP| dataapi
+    dashboard -->|HTTP| dataapi
+    dashboard -->|HTTP| shardmanager
+    dashboard -->|HTTP| storage
+    dataapi <-->|pub/sub| redis[("Redis")]
+    bot <-->|pub/sub| redis
+    dataapi -->|HTTP| notifier
+    dataapi -->|HTTP| storage
+    notifier -->|webhooks| discord
+    bot --> postgres[("PostgreSQL")]
+    dashboard --> postgres
+    dataapi --> postgres
+    notifier --> postgres
 ```
-sirubot/
-├── apps/
-│   ├── bot/           # Discord bot application
-│   ├── dashboard/     # Next.js web dashboard
-│   ├── data-api/      # External data gateway (cache + LLM batch jobs)
-│   ├── notifier/      # Social alert service (webhooks + live-stream schedulers)
-│   ├── shardmanager/  # Shard management server
-│   └── storage/       # Object storage service (generated images and assets)
-└── packages/
-    ├── app-kit/       # Shared Fastify helpers (auth, env validation, logger)
-    ├── prisma/        # Database schema and client
-    ├── shardclient/   # Shard client library
-    └── utils/         # Shared utility functions and modules
-```
 
----
+| Workspace | Role | Stack |
+|---|---|---|
+| `apps/bot` | Discord gateway, slash commands, audio, AI chat, TTS, tickets | Sapphire (discord.js), lavalink-client |
+| `apps/dashboard` | Guild management web app | Next.js App Router, React 19 |
+| `apps/data-api` | Gateway: external API cache, Redis hubs, image rendering, scheduled LLM jobs | Fastify 5 |
+| `apps/shardmanager` | Shard assignment and health aggregation | Fastify 5, WebSocket |
+| `apps/storage` | Object storage for generated images and ticket transcripts | Fastify 5 |
+| `apps/notifier` | Live-stream alerts to Discord webhooks | Fastify 5 |
+| `packages/prisma` | PostgreSQL schema and client | Prisma 7 |
+| `packages/utils` | Redis channel contracts, zod schemas, shared helpers | zod |
+| `packages/app-kit` | Shared Fastify auth, env validation, logger | Fastify |
+| `packages/shardclient` | WebSocket client for the shard manager | ws |
 
-## 🎵 Core Features
+The dashboard never talks to the bot directly: requests go dashboard → data-api → Redis → the bot that owns the guild. The full picture, including the Redis channel map and boot/shutdown order, is in [docs/architecture.md](docs/architecture.md).
 
-- **Music playback**: Audio playback through Lavalink.
-- **Web Dashboard**: Music controls, server settings, and shard status monitoring.
-- **Data API Gateway**: Caches external API calls (weather, lyrics, horoscopes, delivery tracking, SponsorBlock segments, YouTube.js chapters and suggestions) and runs scheduled LLM jobs for the bot services.
-- **Profile Card**: A rendered image card for user profiles with a zodiac constellation background, banner, avatar, and music stats.
-- **Custom Playlists**: Create, manage, and load personalized music playlists directly from the bot or dashboard.
-- **Smart Auto-complete**: Real-time track search suggestions inside Discord slash commands.
-- **Queue Controls**: Music queue controls including looping, shuffling, skipping, and navigating directly to specific tracks.
-
----
-
-## 🚀 Getting Started
+## Quick start
 
 ### Prerequisites
 
-- **Node.js**: v22 or higher
-- **Yarn**: v4.12.0 (managed with Corepack)
-- **Database**: PostgreSQL (connected via Prisma ORM)
-- A Discord Bot Token and an active Lavalink server instance
+- Node.js 22 or newer, with Corepack enabled (`corepack enable`) for Yarn 4.12
+- PostgreSQL and Redis
+- A [Lavalink](https://lavalink.dev) v4 node
+- A Discord application with a bot token
 
-### Environment Setup (`.env`)
-
-Create an `.env` file in each app directory from its `.env.example`. The examples below show the minimum local setup. Keep secrets out of version control.
-
-#### 1. Discord Bot (`apps/bot/.env`)
-```env
-DISCORD_TOKEN=your_discord_bot_token_here
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot
-REDIS_URL=redis://localhost:6379
-LAVALINK_HOSTS=main_localhost_2333_youshallnotpass
-# Optional: enable bot features served by the data API
-DATA_API_URL=http://localhost:3002
-DATA_API_AUTH_KEY=replace_with_data_api_key
-# Required for production shard-manager connection. Omit for standalone local development.
-# SHARD_MANAGER_URL=ws://localhost:3001/ws
-# AUTH_KEY=replace_with_a_shared_secret
-```
-
-#### 2. Web Dashboard (`apps/dashboard/.env`)
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
-DISCORD_CLIENT_ID=your_discord_application_client_id
-DISCORD_CLIENT_SECRET=your_discord_application_client_secret
-AUTH_SECRET=generate_a_random_secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-# Keep these keys and URLs aligned with the corresponding services.
-SHARD_MANAGER_URL=http://localhost:3001
-SHARD_MANAGER_AUTH_KEY=replace_with_shard_manager_key
-DATA_API_URL=http://localhost:3002
-DATA_API_AUTH_KEY=replace_with_data_api_key
-```
-
-#### 3. Data API (`apps/data-api/.env`)
-```env
-# Required: data-api refuses to start without one of these shared authentication keys.
-DATA_API_AUTH_KEY=replace_with_data_api_key
-# Or use AUTH_KEY instead. The bot and dashboard must send the same key.
-# AUTH_KEY=replace_with_data_api_key
-# Optional shared cache and request hub (in-memory fallback when unset)
-REDIS_URL=redis://localhost:6379
-# Optional translation provider for horoscope translation and memory tidy jobs
-OPENAI_COMPATIBLE_API_URL=http://127.0.0.1:8080/v1
-OPENAI_API_KEY=your_api_key_here
-TRANSLATION_MODEL=your_model_name
-# Optional: memory tidy requires DATABASE_URL and a configured translation provider
-DATABASE_URL=postgresql://user:password@localhost:5432/sirubot?schema=public
-```
-
-The bot requires `DATA_API_URL` in `apps/bot/.env` for gateway-backed features; without it those calls fail with an error. The dashboard defaults to `http://localhost:3002`. Set `DATA_API_AUTH_KEY` or `AUTH_KEY` to the same value in the data API, bot, and dashboard environments. Requests send the key as the raw `Authorization` header value, without a `Bearer` prefix. Only `/api/health` is unauthenticated.
-
----
-
-### Data API Gateway
-
-The gateway centralizes external API access so bot shards never call third-party services directly. All read endpoints are authenticated (except `/api/health`), share one Redis-backed cache with per-route TTLs, coalesce concurrent identical requests into a single upstream call, and are protected by per-provider circuit breakers.
-
-| Endpoint | Method | Description | Cache TTL |
-|---|---|---|---|
-| `/v1/ohaasa` | GET | Daily horoscope (Asahi Ohaasa / TV Asahi), LLM-translated to Korean | 7 days |
-| `/v1/lyrics?q=` | GET | Lyrics search (lrclib.net) | 30 days |
-| `/v1/weather?location=&scope=` | GET | Geocoding + forecast + air quality (Open-Meteo) | 15 min |
-| `/v1/chapters?videoId=&durationMs=` | GET | YouTube.js chapter markers | 12 h; empty 1 h |
-| `/v1/youtube/suggestions?q=` | GET | YouTube.js search suggestions | 10 min |
-| `/v1/sponsorblock/segments?videoId=` | GET | SponsorBlock skip segments (`startMs`, `endMs`) | 24 h; empty 1 h; positive stale 7 d |
-| `/v1/delivery/track?carrier=&number=` | GET | Parcel tracking (tracker.delivery), carrier alias resolution server-side | 5 min |
-| `/v1/playback/events` | POST | Playback event ingestion from bot shards (start/end/stuck/error/abort) | N/A |
-| `/v1/playback/recent?limit=` | GET | Recent playback events, including errors | N/A |
-| `/v1/image/profile` | POST | Renders a profile card PNG (zodiac background, banner, avatar, stats) | N/A |
-| `/v1/ohaasa/refresh` | POST | Force-refresh the daily horoscope | N/A |
-| `/v1/status` | GET | Operational metrics (cache hit rate, upstream calls/errors, breakers) | N/A |
-| `/dashboard` | GET | Built-in monitoring dashboard (no third-party dependencies) | N/A |
-
-Background jobs (single instance, jittered schedule):
-- **Horoscope translation**: daily at KST 06:50. It keeps Redis warm so shard requests do not need to call the LLM.
-- **Memory tidy (nightly pass)**: daily at midnight, compacts per-user long-term memory via LLM. It runs only when both `DATABASE_URL` and the translation provider are configured.
-
-The gateway listens on port `3002` by default. The bot and the dashboard reach external providers only through the gateway; the gateway owns all provider integrations.
+### Run locally
 
 ```bash
-# Build dependencies, then run the data API
-yarn generate
-yarn workspace @sirubot/data-api build
-yarn workspace @sirubot/data-api start
-```
-
----
-
-## 🛠️ Development & Building
-
-Manage the entire monorepo from the root directory using the scripts below:
-
-```bash
-# Install dependencies
+git clone https://github.com/mochilabs/SiruBOT.git
+cd SiruBOT
 yarn install
 
-# Generate Prisma client files
+# Generate the Prisma client. Required before typecheck or build.
 yarn generate
 
-# Start the dashboard dev server (the only workspace with a dev script)
+# Create an env file per app, then fill in the values (see Configuration).
+for app in bot dashboard data-api shardmanager storage notifier; do
+  cp -n "apps/$app/.env.example" "apps/$app/.env"
+done
+
+# Apply database migrations.
+yarn workspace @sirubot/prisma migrate:dev
+```
+
+Then start what you need:
+
+```bash
+# Dashboard dev server on http://localhost:3000
 yarn dev
 
-# Rebuild the backend apps and shared packages on change (watch mode)
+# Rebuild backend apps and packages on change (does not start them)
 yarn watch
 
-# Apply database migrations in development
-yarn workspace @sirubot/prisma migrate:dev
-
-# Lint the repository
-yarn lint
-
-# Run tests
-yarn test
-
-# Build all packages and applications for production
-yarn build
+# In another terminal, start a backend app
+yarn workspace @sirubot/bot start
 ```
 
-For local development, create the per-app environment files described above. Then run `yarn dev` for the dashboard, and run `yarn watch` for the backend apps (bot, data-api, notifier, storage, shardmanager) — it rebuilds them on change but does not start them. Start a backend app in a second terminal with `yarn workspace @sirubot/<name> start`. Generate the Prisma client with `yarn generate` before typechecking or building.
+The bot alone is enough to play music. Add `data-api` for the dashboard's live features and for weather, lyrics and similar commands; `shardmanager`, `storage` and `notifier` are only needed for the features they serve. Step-by-step onboarding is in [docs/setup-dev.md](docs/setup-dev.md).
 
-### Filtering Specific Projects (Turbo Filter)
+## Configuration
 
-To build or run dev servers for single projects rather than the entire monorepo, utilize Turbo's filtering syntax:
+Each app reads its own `apps/<app>/.env`. The `.env.example` next to it lists every variable; the table shows the minimum for local development.
+
+| App | Minimum variables |
+|---|---|
+| `bot` | `DISCORD_TOKEN`, `DATABASE_URL`, `REDIS_URL`, `LAVALINK_HOSTS` |
+| `dashboard` | `DATABASE_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` |
+| `data-api` | `DATA_API_AUTH_KEY` (or `AUTH_KEY`) |
+| `shardmanager` | `DISCORD_TOKEN`, `AUTH_KEY` |
+| `storage` | `STORAGE_AUTH_KEY` (or `AUTH_KEY`), `STORAGE_PUBLIC_URL` |
+| `notifier` | `NOTIFIER_AUTH_KEY` (or `AUTH_KEY`), `DATABASE_URL` |
+
+Things that commonly go wrong:
+
+- **Shared key.** `bot`, `dashboard` and `data-api` must use the same `DATA_API_AUTH_KEY` (or `AUTH_KEY`), and the bot and dashboard need `DATA_API_URL` (default port 3002). Without the key the dashboard skips data-api calls, and player, channel and role features fail.
+- **Header format.** Service-to-service requests send the raw key in `Authorization`, with no `Bearer` prefix.
+- **`LAVALINK_HOSTS`** is a comma-separated list of `id_host_port[_password]`, for example `main_localhost_2333_youshallnotpass`.
+- **Slash commands** are registered on startup only when `REGISTER_COMMANDS=true`. To sync manually: `yarn dlx tsx scripts/register-commands.ts --dry-run`.
+- **Standalone bot.** In development, leave `SHARD_MANAGER_URL` unset to run a single bot process without the shard manager. Production requires it.
+
+The complete environment matrix is in [docs/architecture.md](docs/architecture.md#10-environment-variables).
+
+## Scripts
+
+Run from the repository root; Turborepo fans them out to each workspace.
+
+| Command | What it does |
+|---|---|
+| `yarn generate` | Generate the Prisma client |
+| `yarn dev` | Start the dashboard dev server |
+| `yarn watch` | Rebuild backend apps and packages on change |
+| `yarn build` | Production build of everything |
+| `yarn typecheck` | Typecheck, building dependencies first |
+| `yarn lint` / `yarn lint:fix` | Prettier check (ESLint for the dashboard) |
+| `yarn test` | Run the Vitest suites |
+
+Target a single workspace with a filter or a workspace command:
 
 ```bash
-# Start the dashboard dev server
-turbo dev --filter=@sirubot/dashboard
-
-# Rebuild the bot on change (backend apps have no dev script, they use watch)
-turbo run watch --filter=@sirubot/bot
-
-# Build the shared utils package
-turbo build --filter=@sirubot/utils
+yarn turbo build --filter=@sirubot/utils
+yarn workspace @sirubot/bot test src/path/file.test.ts
 ```
 
----
+## Deployment
 
-## 🐳 Docker Deployment Guide
-
-The root Dockerfile builds separate images for the bot, dashboard, shard manager, data API, storage, and notifier. Select a target with `--target` and provide that service's environment variables at runtime. The checked-in Compose file is a partial example: the application services and Redis/PostgreSQL services are commented out.
+The root `Dockerfile` has one build target per app:
 
 ```bash
-# Build the bot image
-docker build --target bot -t sirubot-bot:latest .
-
-# Other targets: dashboard, shardmanager, data-api, storage, notifier
+docker build --target bot -t sirubot-bot .
+# other targets: dashboard, shardmanager, data-api, storage, notifier
 ```
 
-Configure PostgreSQL, Redis, Lavalink, and the required service credentials before starting the containers. The bot image runs Prisma migrations on startup.
+Prebuilt images are published to GitHub Container Registry as `ghcr.io/mochilabs/sirubot-<app>`:
 
----
+| Tag | Built from | Workflow |
+|---|---|---|
+| release version (`5.2.12`, `5.2`) | GitHub releases | `docker-publish.yml` |
+| `beta`, `beta-<sha>` | pushes to `beta` | `docker-beta.yml` |
+| `<branch>`, `<branch>-<sha>` | pull requests labeled `docker-build` | `docker-branch.yml` |
 
-## 🤝 Contributing
+`docker/` holds a Compose example for local use (Lavalink, with the other services commented out) and Swarm stack files for the apps and their infrastructure. PostgreSQL, Redis and Lavalink must be reachable before the apps start, and the bot image applies Prisma migrations on startup. Rolling updates, health checks and incident handling are covered in [docs/runbook-production.md](docs/runbook-production.md).
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Documentation
 
----
+| Document | Covers |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | System context, per-app details, shared contracts, runtime flows |
+| [docs/setup-dev.md](docs/setup-dev.md) | Local setup, ports, verification commands |
+| [docs/runbook-production.md](docs/runbook-production.md) | Builds, deploys, shard incidents, shutdown order |
+| [docs/api-data-api.md](docs/api-data-api.md) | data-api endpoints, auth, cache TTLs, schedulers |
+| [docs/api-dashboard.md](docs/api-dashboard.md) | Dashboard API routes, permissions, rate limits |
+| [docs/3rdparty.md](docs/3rdparty.md) | Lavalink plugins and external services |
+| [docs/README.md](docs/README.md) | Documentation index and writing rules |
+| [AGENTS.md](AGENTS.md) | Conventions for coding agents and contributors |
 
-## 📝 License
+## Contributing
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+1. Branch from `beta`. `main` is the deploy snapshot and takes no direct work.
+2. Make your change, then run `yarn lint`, `yarn typecheck` and `yarn test`.
+3. Open a pull request against `beta`, following [docs/pr-message-rule.md](docs/pr-message-rule.md): say what you verified and what you could not, and attach screenshots for UI changes.
+
+## Security
+
+Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in public issues.
+
+## License
+
+[MIT](LICENSE) © SiruBOT Contributors

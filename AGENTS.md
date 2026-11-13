@@ -3,7 +3,7 @@
 Discord music bot monorepo (Turborepo + Yarn 4, Node 22+, ESM). Apps: `bot` (Sapphire + lavalink-client), `dashboard` (Next.js, :3000), `shardmanager` (:3001), `data-api` (gateway, Redis hub, LLM jobs, :3002), `storage` (public asset URLs, :3003), `notifier` (stream alerts → webhooks, :3004). Packages: `prisma`, `utils`, `app-kit` (shared Fastify auth/env/logger), `shardclient`.
 
 - Bot work: read `apps/bot/AGENTS.md` first.
-- Docs under `docs/` are English; cite file paths, never line numbers. References: `docs/architecture.md`, `docs/api-{dashboard,data-api}.md`, `docs/setup-dev.md`, `docs/runbook-production.md`.
+- Docs under `docs/` are English; cite file paths, never line numbers. `docs/` holds only documents linked from the root `README.md`; working notes (plans, audits, changelogs) go in `Localdocs/` (gitignored). References: `docs/architecture.md`, `docs/api-{dashboard,data-api}.md`, `docs/setup-dev.md`, `docs/runbook-production.md`.
 - Skills: read `.pi/skills/<id>/SKILL.md` before working in its area; don't copy a skill's rules elsewhere. Bot: `sapphire-command`, `component-view`, `discord-components-v2`, `bot-features` (AI chat, TTS, mixer, lyrics, temp voice, games), `bot-ops` (playback, Lavalink, sessions, shards, shutdown). Dashboard: `dashboard-conventions`, `dashboard-ui` (load `antislop-ui` first). General: `repo-infra`, `security-audit`, `ai-slop-cleaner`.
 
 ## Branches and PRs

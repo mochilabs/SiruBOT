@@ -1,47 +1,85 @@
-# dashboard API Route 계약
+# Dashboard API route contract
 
-> **기준일**: 2026-11-07 (라우트 수·그룹은 2026-11-07 기준으로 갱신, 본문의 `파일:라인` 인용은 최초 작성 시점 기준)
+> **As of**: 2026-11-13 · Verified against `apps/dashboard/src/app/api/**/route.ts` (65 route files).
 
-상위 흐름은 `./architecture.md` (`4.3 apps/dashboard`, `6.2 Redis request/reply`) 참조. 본 문서는 `apps/dashboard/src/app/api/**/route.ts` 실측 **61개** 기준이다 (이전 조사 32개는 stale).
+Higher-level flows are in `./architecture.md` (4.3 apps/dashboard, 6.2 Redis request/reply). Paths below are relative to `apps/dashboard/src/` unless they start with `apps/` or `packages/`.
 
-## 3계층 구조
+## Layers
 
-브라우저 → **API Route** (인증·권한·rate-limit·zod) → **DB 직결 / data-api / shardmanager**. 비밀 키는 서버 전용 — 클라이언트 번들에 절대 노출하지 않는다 (`apps/dashboard/src/lib/data-api/client.ts`).
+Browser → **API route** (session, role, rate limit, zod) → **database, data-api, shardmanager or storage**.
 
-인증은 next-auth Discord OAuth (`apps/dashboard/src/lib/auth.ts`): `identify guilds` 스코프, JWT 세션 24시간, `issuer: https://discord.com` 고정.
+Service keys are server-only and must never reach the client bundle (`lib/data-api/client.ts`). The dashboard never talks to the bot: bot-bound work goes through data-api.
 
-## 라우트 그룹별 표
+Sign-in is next-auth with Discord OAuth (`lib/auth.ts`): scope `identify guilds`, JWT sessions lasting 24 hours, issuer pinned to `https://discord.com`.
 
-| 그룹 | 라우트 | 비고 |
+## Roles
+
+Routes are built with `createGuildApiHandler` (`lib/api-handler.ts`), which runs the role check, the rate limit and the zod schema before the handler. The checks themselves live in `lib/api-guards.ts`.
+
+| Role | Requirement | Failure |
 |---|---|---|
-| 인증 | `auth/[...nextauth]` | next-auth 핸들러 |
-| 즐겨찾기 | `favorites` | DB 직결 |
-| 플레이리스트 (5) | `playlists`, `playlists/search`, `playlists/[id]`, `[id]/tracks`, `[id]/reorder` | DB 직결 |
-| 서버 목록·설정 (6) | `servers`, `servers/[id]/settings`, `channels`, `roles`, `stats`, `bot-profile` | channels/roles는 data-api 봇 캐시 프록시 |
-| AI (2) | `servers/[id]/ai`, `ai/history` | DB 직결 |
-| 커스텀 명령어 (4) | `custom-commands`, `custom-commands/draft`, `custom-commands/refine`, `custom-commands/[cmdId]` | draft·refine는 data-api LLM, 실행 방식(method)은 생성 후 불변 |
-| 그리팅 (6) | `greeting`, `greeting/background`, `greeting/layer-image`, `greeting/preview`, `greeting/status`, `greeting/test` | 이미지·테스트는 data-api 경유 |
-| JTC (1) | `jtc/setup` | data-api→봇 수행 (마커 채널은 봇 토큰 필수) |
-| 플레이어·라이브 (7) | `live`, `live/stream`, `player`, `player/command`, `player/play`, `player/search`, `player/voice-context` | data-api request/reply 프록시 |
-| 에셋 (2) | `servers/[id]/assets`, `assets/[assetId]` | 길드 이미지 에셋 — 대시보드가 storage 공개 버킷에 직접 업로드·삭제 |
-| 소셜 알림 (6) | `servers/[id]/social/subscriptions`, `subscriptions/[subId]`, `social/{youtube,twitch}/resolve`, `social/chzzk/{profile,search}` | data-api가 notifier에 프록시 |
-| 티켓 (4) | `servers/[id]/ticket`, `ticket/post`, `ticket/tickets`, `ticket/[ticketId]/transcript` | 설정은 DB 직결, 게시는 data-api→봇(`ticket/post`), 대화 기록은 data-api storage 프록시 |
-| 역할 패널 (3) | `servers/[id]/role-panels`, `role-panels/[panelId]`, `role-panels/[panelId]/post` | 목록·생성·수정·삭제는 DB 직결(생성·수정 시 봇에 역할 검증 위임, 수정 시 게시 메시지 `refresh`), 게시는 data-api→봇. 모든 조회·수정·게시가 `panel.guildId == [id]`를 확인해요 |
-| 관리자 (8) | `admin/{overview,guilds,guilds/[id],users,users/[id],social,social/[subId],bot-control}` | 운영자 allowlist(`DASHBOARD_ADMIN_IDS`) 전용. `bot-control`은 data-api `bot-admin`으로 위임 |
-| 음성 서버 (2) | `voice-servers`, `voice-servers/history` | Lavalink 스트리밍 개수 공개 API(비로그인 허용, 인프라 텔레메트리는 제거) |
-| 기타 (3) | `tracks`, `data-api` (상태 프록시), `shards` (관리자 전용) | — |
+| `manage` | Signed in and can manage the guild in the path | 401, 403, or 502 when Discord cannot be reached |
+| `member` | Signed in and a member of the guild in the path | 401, 403, or 502 |
+| `user` | Signed in | 401 |
+| `admin` | Signed in and listed in `DASHBOARD_ADMIN_IDS`. Unset blocks everyone (fail-closed, `lib/admin-ids.ts`) | 401 or 403 |
+| public | No session needed. Four routes call `publicReadLimit` directly instead of using the handler | |
 
-## 권한·rate-limit·zod
+A Discord outage (429, 5xx, network) is reported as `unavailable` and answered with 502, so it is never mistaken for "no permission".
 
-- 권한 (`apps/dashboard/src/lib/api-guards.ts`): `authorizeGuildManage` (관리 권한, 실패 401/403/502) · `authorizeGuildMember` (멤버) · `authorizeDashboardAdmin` (shards 전용). Discord 장애(429/5xx)는 `unavailable`→502로 분류해 404 오판 방지.
-- rate-limit (`apps/dashboard/src/lib/rate-limit.ts`): 쓰기 12/분·읽기 30/분·무거운 쓰기(채널 생성) 5/분·이미지 렌더 60/분. Redis 슬라이딩 윈도우, 서버 시각은 Lua `TIME`.
-- zod (`apps/dashboard/src/lib/schemas.ts`): snowflake 정규식 `^\d{17,20}$`, 설정 enum·수치 범위·기본값은 봇과 함께 쓰는 `packages/utils/src/guildSettingsContract.ts`(서브패스 `@sirubot/utils/guildSettingsContract`)에서 가져와요. 볼륨 상한은 `@sirubot/utils/playerLimits`를 따라요. 대표 예시 `settings/route.ts` (`ALLOWED_KEYS` 화이트리스트).
-- `player/voice-context` 응답의 `canPlay`는 필수예요. 봇이 항상 보내며, `canPlay`가 빠진 이전 버전 봇 응답은 data-api 스키마 검증에서 거절돼요(롤링 배포 중 감수).
+## Route groups
 
-## SSE 프록시 특성
+All paths are under `/api`. `[id]` is the guild id.
 
-`live/stream`은 인가 뒤 data-api SSE를 그대로 relay — **rate-limit 미적용**(장기 연결), 미설정/장애는 502로 통일해 클라이언트가 폴링 폴백 (`apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts`). data-api 클라이언트도 SSE에 `AbortSignal.timeout`을 걸지 않는다 — 타임아웃이 연결 전체를 잘라버리기 때문 (`apps/dashboard/src/lib/data-api/client.ts`).
+| Group | Routes | Role | Backend |
+|---|---|---|---|
+| Auth (1) | `auth/[...nextauth]` | | next-auth handler |
+| Servers (1) | `servers` | user | The caller's guilds from the Discord API, matched against guilds where the bot is installed |
+| Favorites (1) | `favorites` | user | Database |
+| Playlists (5) | `playlists`, `playlists/search`, `playlists/[id]`, `playlists/[id]/tracks`, `playlists/[id]/reorder` | user | Database |
+| Profile (3) | `profile/birthday`, `profile/tts`, `profile/tts-voices` | user | Database; `tts-voices` reads the voice catalog through data-api |
+| Guild settings (5) | `servers/[id]/settings`, `channels`, `roles`, `stats`, `bot-profile` | manage | Database; `channels` and `roles` come from the bot's cache through data-api |
+| AI (2) | `servers/[id]/ai`, `ai/history` | manage | Database |
+| Custom commands (4) | `servers/[id]/custom-commands`, `custom-commands/draft`, `custom-commands/refine`, `custom-commands/[cmdId]` | manage | Database; `draft` and `refine` call the data-api LLM routes. A command's execution method cannot change after creation |
+| Greeting (6) | `servers/[id]/greeting`, `greeting/background`, `greeting/layer-image`, `greeting/preview`, `greeting/status`, `greeting/test` | manage | Images and the test send go through data-api |
+| Join-to-create (1) | `servers/[id]/jtc/setup` | manage | data-api → bot (creating the marker channel needs the bot token) |
+| Live state (2) | `servers/[id]/live`, `live/stream` | manage | data-api; `live/stream` relays SSE |
+| Player (5) | `servers/[id]/player`, `player/command`, `player/play`, `player/search`, `player/voice-context` | member | data-api request/reply |
+| TTS (1) | `servers/[id]/tts` | member | Database: the caller's own voice for that guild |
+| Assets (2) | `servers/[id]/assets`, `assets/[assetId]` | manage | The dashboard uploads to and deletes from the storage public bucket directly |
+| Social alerts (6) | `servers/[id]/social/subscriptions`, `subscriptions/[subId]`, `social/youtube/resolve`, `social/twitch/resolve`, `social/chzzk/profile`, `social/chzzk/search` | manage | data-api, which proxies to notifier |
+| Tickets (4) | `servers/[id]/ticket`, `ticket/post`, `ticket/tickets`, `ticket/[ticketId]/transcript` | manage | Settings in the database; posting goes data-api → bot; transcripts through the data-api storage proxy |
+| Role panels (3) | `servers/[id]/role-panels`, `role-panels/[panelId]`, `role-panels/[panelId]/post` | manage | Database for list, create, update and delete (create and update ask the bot to validate the roles; update refreshes the posted message); posting goes data-api → bot. Every read, write and post checks that the panel belongs to guild `[id]` |
+| Operator (9) | `admin/overview`, `admin/guilds`, `admin/guilds/[id]`, `admin/users`, `admin/users/[id]`, `admin/social`, `admin/social/[subId]`, `admin/bot-control`, `data-api` | admin | `bot-control` delegates to data-api `bot-admin`; `data-api` proxies data-api status |
+| Public (4) | `shards`, `tracks`, `voice-servers`, `voice-servers/history` | public | Shard status from shardmanager, the track chart from the database, Lavalink stream counts |
 
-## SHARD_MANAGER_AUTH_KEY 규칙
+## Rate limits
 
-폴백 없음 — 미설정 시 throw 후 `fetchShards()` null 반환 (`apps/dashboard/src/lib/shard-api.ts`). data-api 키의 `AUTH_KEY` 폴백과 혼동 금지.
+Rules are defined in `lib/rate-limit.ts`. All windows are one minute.
+
+| Rule | Limit | Used for |
+|---|---|---|
+| `READ_RATE` | 30 | Most reads |
+| `WRITE_RATE` | 12 | Most writes |
+| `HEAVY_WRITE_RATE` | 5 | Channel creation (`jtc/setup`), LLM calls (`custom-commands/draft`, `refine`), greeting image uploads |
+| `RENDER_RATE` | 60 | Image render preview (`greeting/preview`) |
+| `UPLOAD_RATE` | 10 | Asset uploads |
+| `PUBLIC_RATE` | 120 | Anonymous requests to public routes, in one shared bucket. Signed-in callers get `READ_RATE` per user |
+
+- The limiter is a Redis sliding window. Server time is read inside the Lua script with `TIME`, which removes clock skew between instances.
+- If the Redis script fails, the limiter fails open and logs a warning.
+- Public routes never use request headers as the rate-limit subject, because a client can forge them.
+- `live/stream` has no rate limit on purpose: it is one long-lived connection.
+
+## Validation
+
+- Schemas are in `lib/schemas.ts`. Snowflakes match `^\d{17,20}$`.
+- Guild settings enums, numeric ranges and defaults come from `packages/utils/src/guildSettingsContract.ts` (subpath `@sirubot/utils/guildSettingsContract`), the same contract the bot uses. The volume ceiling follows `@sirubot/utils/playerLimits` (`lib/player-constants.ts`).
+- `canPlay` in the `player/voice-context` response is required. The bot always sends it; a response from an older bot without it is rejected by data-api's schema validation, which is accepted during a rolling deploy.
+
+## SSE proxy
+
+`live/stream` authorizes the caller and then relays data-api's SSE stream unchanged (`app/api/servers/[id]/live/stream/route.ts`). Both "not configured" and "upstream failed" return 502, so the client falls back to polling. The data-api client sets no `AbortSignal.timeout` on the stream, because a timeout would cut the whole connection (`lib/data-api/client.ts`).
+
+## `SHARD_MANAGER_AUTH_KEY`
+
+There is no fallback. When it is unset the client throws and `fetchShards()` returns null (`lib/shard-api.ts`). Do not confuse this with the data-api key, which falls back to `AUTH_KEY`.

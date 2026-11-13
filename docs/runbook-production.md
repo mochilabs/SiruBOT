@@ -1,51 +1,54 @@
-# 프로덕션 운영 런북
+# Production runbook
 
-> **기준일**: 2026-10-22 (storage·notifier 타겟 반영)
+> **As of**: 2026-11-13
 
-아키텍처·계약 상위는 `./architecture.md`, env 전체 매트릭스는 `./architecture.md#10-환경변수-매트릭스` 참조. 본 문서는 운영 동작만 다룬다.
+Architecture and contracts are in `./architecture.md`; the cross-app environment table is `./architecture.md#10-environment-variables`. This page covers operational behavior only.
 
-## Docker 빌드·실행
+## Docker build and run
 
-- 최종 타겟 6개 (`Dockerfile`): `bot`·`dashboard`·`shardmanager`·`data-api`·`storage`·`notifier`. 빌드 스테이지(`builder-bot` 등 6개, `Dockerfile`)는 중간 산출물이다.
-- 컴포즈 파일 3개 (`docker/`): `docker-compose.yml`·`docker-stack.yml`·`docker-stack-infra.yml`.
+- The root `Dockerfile` has six final targets: `bot`, `dashboard`, `shardmanager`, `data-api`, `storage`, `notifier`. The `builder-*` stages are intermediate.
+- `docker/` holds `docker-compose.yml` (local example), `docker-stack.yml` (apps) and `docker-stack-infra.yml` (infrastructure).
 - Dashboard `NEXT_PUBLIC_*` values (`NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_DISCORD_CLIENT_ID`, `NEXT_PUBLIC_SUPPORT_SERVER`, `NEXT_PUBLIC_TOS_URL`, `NEXT_PUBLIC_PRIVACY_POLICY_URL`) are inlined at build time, so runtime env cannot change them. The docker workflows pass them as build args from GitHub variables with the same names. `docker-beta.yml` runs in the `beta` environment and `docker-publish.yml` (releases) in the `production` environment, so set per-environment values under Settings > Environments > (environment) > Environment variables; a repository-level variable (Settings > Secrets and variables > Actions > Variables) is the fallback when an environment does not define one. Unset variables fall back to code defaults, so the Open Graph base URL and image resolve to localhost until `NEXT_PUBLIC_APP_URL` is set. Changing a value requires rebuilding the dashboard image.
 - Docker build cache lives in GHCR, not the GitHub Actions cache: each app image has a `:buildcache` tag (written by `docker-beta.yml`) and release builds write `:buildcache-release` while reading the beta cache as a fallback. The tags are build artifacts, never deploy targets. If a build behaves oddly after a Dockerfile change, delete the app's `buildcache` tag from the package page to force a cold build.
 - Branch test images: add the `docker-build` label to a same-repo PR and `docker-branch.yml` builds all six apps from the PR head, tagged `<branch-slug>` and `<branch-slug>-<short-sha>` (for example `ghcr.io/mochilabs/sirubot-bot:refactor-bot-architecture`), rebuilding on every push while the label stays. It runs in the `beta` environment, reads the beta build cache and writes `:buildcache-branch`. Manual dispatch only works once the workflow exists on `main`. These images set `GIT_BRANCH` to the branch name, so the bot runs `prisma migrate deploy` only (the beta-only `db push` does not run). Remove the label to stop rebuilds and delete old branch tags from the package page.
-- 봇 기동 시 `prisma migrate deploy` 자동 실행, `GIT_BRANCH=beta`인 경우 추가로 `prisma db push --accept-data-loss`를 실행해 마이그레이션 파일이 누락된 스키마 변경도 동기화 (`Dockerfile`).
+- The bot image runs `prisma migrate deploy` on startup. When `GIT_BRANCH=beta` it also runs `prisma db push --accept-data-loss`, which syncs schema changes that have no migration file (`Dockerfile`). Release and branch images never run `db push`.
 
-## 필수 env (프로덕션)
+## Required environment (production)
 
-- `SHARD_MANAGER_URL` 없으면 봇은 즉시 종료 (`apps/bot/src/core/shardIdentity.ts`). 개발 모드는 단독 실행 (`shards: [0]`).
+- Without `SHARD_MANAGER_URL` the bot exits immediately, and with it set, `AUTH_KEY` is also required (`apps/bot/src/core/shardIdentity.ts`). Development mode runs standalone on shard 0 and skips both checks.
+- data-api, storage and notifier refuse to start without their auth key (`<APP>_AUTH_KEY ?? AUTH_KEY`).
 
-## 롤링 업데이트·샤드 장애 대응
+## Rolling updates and shard incidents
 
-- 봇 identify는 `NoShardsAvailableError` 시 `SHARD_IDENTIFY_RETRY_MS`(기본 5초, 최소 1초)로 무한 재시도 — 구 프로세스가 슬롯을 놓을 때까지 기다린다 (`apps/bot/src/core/shardIdentity.ts`).
-- `ShardClient.identify()` 자체도 연결 실패 시 5초 재시도, `IDENTIFY_ACK` 10초 타임아웃 (`packages/shardclient/src/client.ts`).
-- 연결 끊김 후 재접속은 지수 백오프 1s→2s→…→상한 30s (`packages/shardclient/src/client.ts`).
-- shardmanager는 `ShardRegistry` + `DiscordNotifier`(웹훅)로 할당·장애를 추적한다 (`apps/shardmanager/src/server.ts`).
+- On `NoShardsAvailableError` the bot retries identify forever, every `SHARD_IDENTIFY_RETRY_MS` (default 5 s, minimum 1 s), waiting for the old process to release its slot (`apps/bot/src/core/shardIdentity.ts`, `apps/bot/src/lib/config.ts`). An empty assignment during a rolling update is normal.
+- `ShardClient.identify()` itself retries a failed connection every 5 s and times out waiting for `IDENTIFY_ACK` after 10 s (`packages/shardclient/src/client.ts`).
+- After a dropped connection the client reconnects with exponential backoff: 1 s, 2 s, 4 s, up to a 30 s cap (`packages/shardclient/src/client.ts`).
+- shardmanager tracks assignments and failures with `ShardRegistry` and reports them through `DiscordNotifier` to `DISCORD_WEBHOOK_URL` (`apps/shardmanager/src/server.ts`).
 
-## 종료 순서
+## Shutdown order
 
-- 봇 (`apps/bot/src/core/shutdown.ts`): 헬스 서버 close → Lavalink 세션 저장 → 오디오 리스너·공유 Redis 구독 1개(`container.redisSubscribers`) 정지 → 상태 소유자 `container.stoppables` stop(대기 중 저장 flush·타이머 해제, 5초 상한) → pending 저널 flush → Redis 해제 → DB 해제 → 게이트웨이 destroy → shardClient destroy.
-- data-api (`apps/data-api/src/server.ts`): 스케줄러 2종 정지 → player/bot-profile/greeting/guild-data/player-web/jtc/bot-admin/panel 8개 허브 정지 → Redis 해제 → DB 해제 → Fastify close.
-- shardmanager (`apps/shardmanager/src/server.ts`): registry destroy → Fastify close.
-- storage (`apps/storage/src/index.ts`): Fastify close만 — 로컬 볼륨(무DB)·외부 연결 없음.
-- notifier (`apps/notifier/src/index.ts`): 폴러·스케줄러·트위치 스케줄러·허브 정지 → DB 해제 → Redis 해제 → Fastify close.
+- **bot** (`apps/bot/src/core/shutdown.ts`): close the health server → save Lavalink node sessions to Redis → clean up the Lavalink handler and audio listeners → stop the shared Redis subscription (`container.redisSubscribers`) → stop state owners in `container.stoppables` (flush pending writes, clear timers; capped at 5 s by `apps/bot/src/lib/lifecycle.ts`) → flush the pending-write journal → disconnect Redis → disconnect the database → destroy the gateway client → destroy the shard client → flush Sentry.
+- **data-api** (`apps/data-api/src/server.ts`): stop both schedulers → stop the eight hubs (player, bot-profile, greeting, guild-data, player-web, jtc, bot-admin, panel) → disconnect Redis → disconnect the database → close Fastify.
+- **shardmanager** (`apps/shardmanager/src/server.ts`): destroy the registry → close Fastify.
+- **storage** (`apps/storage/src/index.ts`): close Fastify. It has a local volume only, with no database or other connection.
+- **notifier** (`apps/notifier/src/index.ts`): stop the poller, the scheduler, the Twitch scheduler and the hub → disconnect the database → disconnect Redis → close Fastify.
 
-## Redis 미연결 시 메모리 폴백의 의미
+Session save happens before Redis disconnects on purpose: changing the bot's order loses player sessions across a restart.
 
-- data-api `sharedCache`는 Redis 없으면 프로세스 내 `Map` 폴백 (`apps/data-api/src/utils/cache.ts`) — **큐·세션·캐시가 휘발**된다. 다중 레플리카면 인스턴스마다 따로 논다.
-- 봇 Redis 공유 구독(모든 응답자·이벤트 리스너가 연결 하나를 공유)은 실패해도 부팅 계속 — 해당 대시보드 연동만 타임아웃 폴백 (`apps/bot/src/core/redisSubscribers.ts`). 장애 대응 시 "봇은 살아 있으나 연동이 끊긴 상태"임을 인지할 것.
+## What the in-memory fallback means
 
-## 헬스체크
+- data-api's `sharedCache` falls back to a process-local `Map` when Redis is unavailable (`apps/data-api/src/utils/cache.ts`). Cached entries are lost on restart, and with several replicas each instance keeps its own copy.
+- If the bot's shared Redis subscription fails, the bot keeps booting; only the dashboard integrations time out (`apps/bot/src/core/redisSubscribers.ts`). During an incident this looks like "the bot is alive but the dashboard cannot reach it".
 
-| 대상 | 엔드포인트 | 근거 |
-|---|---|---|
-| 봇 | `HEALTH_PORT`(기본 8080) `/` — 200/503 상태 코드 판정 | `apps/bot/src/core/healthServer.ts`, `Dockerfile` |
-| data-api | `/api/health` (인증 면제 유일 경로) | `apps/data-api/src/routes/index.ts`, `Dockerfile` |
-| shardmanager | `/api/health` → `{ ok: true }` | `apps/shardmanager/src/routes/api/health/health.ts` |
-| dashboard | TCP 3000 | `Dockerfile` |
-| storage | `/health` → `{ ok: true }` (인증 면제는 `/health`+공개 오브젝트 GET뿐) | `apps/storage/src/routes/health.ts`, `Dockerfile` |
-| notifier | `/health` → `{ ok: true }` (인증 면제 유일 경로) | `apps/notifier/src/routes/health.ts`, `Dockerfile` |
+## Health checks
 
-봇 헬스는 READY 이후 2분 재연결 유예 내에는 200을 유지해 재시작 증폭을 막는다 (`apps/bot/src/core/healthServer.ts`).
+| App | Endpoint | Container check (`Dockerfile`) | Source |
+|---|---|---|---|
+| bot | `GET /` on `HEALTH_PORT` (default 8080), 200 or 503 | HTTP 200 | `apps/bot/src/core/healthServer.ts` |
+| data-api | `GET /api/health`, the only unauthenticated path | HTTP ok | `apps/data-api/src/routes/index.ts`, `apps/data-api/src/plugins/auth.ts` |
+| shardmanager | `GET /api/health` returns `{ ok: true }`, unauthenticated | TCP connect to 3001 | `apps/shardmanager/src/routes/api/health/health.ts` |
+| dashboard | none | TCP connect to 3000 | `Dockerfile` |
+| storage | `GET /health` returns `{ ok: true }`. Unauthenticated paths are `/health` and public object GET | HTTP ok | `apps/storage/src/routes/health.ts`, `apps/storage/src/routes/objects.ts` |
+| notifier | `GET /health` returns `{ ok: true }`. Unauthenticated paths are `/health` and the platform callback routes | HTTP ok | `apps/notifier/src/routes/health.ts`, `apps/notifier/src/routes/pubsub.ts`, `apps/notifier/src/routes/eventsub.ts` |
+
+The bot answers 503 until it is first ready. After that it keeps answering 200 through a gateway reconnect for up to 2 minutes, so a brief reconnect does not trigger a restart loop (`apps/bot/src/core/healthServer.ts`).

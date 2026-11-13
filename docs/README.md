@@ -1,30 +1,35 @@
-# SiruBOT 문서 인덱스
+# SiruBOT documentation
 
-> **기준일**: 2026-11-07 (파일 목록 검증)
+> **As of**: 2026-11-13
 
-## 파일 목록
+## Documents
 
-| 문서 | 한 줄 설명 |
+| Document | Covers |
 |---|---|
-| `README.md` (이 파일) | 문서 인덱스·역할 분담·작성 규칙 |
-| `architecture.md` | 시스템 컨텍스트·앱 상세·공유 계약·부팅/종료·환경변수 매트릭스의 기준 문서 |
-| `pr-message-rule.md` | PR 제목·본문 작성 규칙: 유형별 본문 골격과 검증 기록 규칙 |
-| `setup-dev.md` | 신규 온보딩: 설치→env→dev→마이그레이션 순서와 포트·스크립트 |
-| `runbook-production.md` | 운영 런북: Docker 빌드·샤드 장애 대응·종료 순서·헬스체크 |
-| `api-data-api.md` | data-api HTTP 계약: 인증·엔드포인트·TTL·에러 매핑·스케줄러 |
-| `api-dashboard.md` | dashboard API Route 계약: 3계층·라우트 그룹·권한/rate-limit/zod |
-| `3rdparty.md` | 서드파티 컴포넌트 계약: Lavalink 플러그인·클라이언트 라이브러리·외부 HTTP 서비스의 계약면과 업데이트 플레이북 |
+| `README.md` (this file) | Index, who owns what, writing rules |
+| `architecture.md` | The reference: system context, per-app details, shared contracts, boot and shutdown, environment variables |
+| `setup-dev.md` | Local setup: install, env files, running apps, ports, verification commands |
+| `runbook-production.md` | Operations: Docker builds, shard incidents, shutdown order, health checks |
+| `api-data-api.md` | data-api HTTP contract: auth, endpoints, cache TTLs, error mapping, schedulers |
+| `api-dashboard.md` | Dashboard API routes: layers, route groups, roles, rate limits, validation |
+| `3rdparty.md` | Third-party contracts: Lavalink plugins, client libraries, external HTTP services, update playbook |
+| `pr-message-rule.md` | Pull request title and body rules, including how to record verification |
 
-## 역할 분담
+## Who owns what
 
-| 주체 | 역할 | 예시 |
-|---|---|---|
-| `AGENTS.md` (리포 루트) | 에이전트 코딩 규약 — 브랜치 규칙·명령어·봇 컨벤션·env 주의점 | 직접 수정은 규약 변경일 때만 |
-| `.pi/skills/*` (10종, `SKILL.md` 실존 확인) | 작업 템플릿(영문) — `sapphire-command`·`component-view`·`bot-features`·`bot-ops`·`dashboard-conventions`·`repo-infra`·`dashboard-ui`·`antislop-ui`·`security-audit`·`ai-slop-cleaner` | 봇/대시보드 작업 전 해당 skill 로드 |
-| `docs/*` | 인간용 구조·계약·운영 문서 — "무엇이 어디에 있고 어떻게 호출되는가" | 계약 변경 시 코드와 함께 갱신 |
+| Place | Role |
+|---|---|
+| `AGENTS.md` (repo root) and `apps/bot/AGENTS.md` | Coding rules for agents and contributors: branches, commands, cross-app rules, bot conventions |
+| `.pi/skills/<id>/SKILL.md` | Task playbooks, loaded before working in that area. `AGENTS.md` lists the ids |
+| `docs/*` | Structure, contracts and operations: what lives where and how it is called. Only documents linked from the root `README.md` live here |
+| `Localdocs/` (gitignored) | Working notes: plans, audits, rollout notes, branch changelogs. Never committed |
 
-## "코드가 진실" 규칙
+A rule belongs in exactly one of these. Link to it from the others instead of copying it.
 
-1. 계약 변경 시 코드와 문서를 함께 갱신한다 — 한쪽만 고치지 않는다.
-2. docs의 동작 서술에는 코드 파일 경로를 인용한다. 줄 번호는 쓰지 않는다 (`apps/data-api/src/routes/index.ts` 형식).
-3. 중복 서술 금지 — `architecture.md`에 있는 내용은 복붙하지 말고 `./architecture.md#섹션` 링크로 참조한다.
+## Writing rules
+
+1. **Code wins.** When a contract changes, update the code and the document in the same change.
+2. **Cite file paths, never line numbers.** Line numbers drift as soon as the code changes (`apps/data-api/src/routes/index.ts`, not a line anchor).
+3. **No duplication.** If `architecture.md` already says it, link to the section.
+4. **English only**, with identifiers, paths, commands and error codes kept verbatim.
+5. **Never write secret values.** Name the variable and point to the app's `.env.example`.

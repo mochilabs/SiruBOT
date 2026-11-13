@@ -53,5 +53,8 @@ packages/prisma/src/client/
 # Playwright MCP 스냅샷 산출물
 .playwright-mcp/
 
+# 작업 문서 (계획·감사·변경 기록, 로컬 전용)
+Localdocs/
+
 # local-only skill
 .pi/skills/impeccable/
