@@ -114,13 +114,21 @@ describe('controllerView action rows', () => {
 		expect(rows[0]).toHaveLength(5);
 	});
 
-	it('대기열이 있으면 대기열 보기 행을 추가한다', () => {
-		mocks.queued.mockReturnValue([TRACK]);
+	it('대기열이 미리보기(5곡)를 넘으면 대기열 보기 행을 추가한다', () => {
+		mocks.queued.mockReturnValue(Array.from({ length: 6 }, () => TRACK));
 		const rows = actionRows(controllerJson());
 
 		expectValidActionRows(rows);
 		expect(rows).toHaveLength(2);
 		expect(rows[1]!.map((button) => button.custom_id)).toEqual(['controller:v1:queueView']);
+	});
+
+	it('대기열이 5곡 이하이면 대기열 보기 버튼을 만들지 않는다', () => {
+		mocks.queued.mockReturnValue(Array.from({ length: 5 }, () => TRACK));
+		const rows = actionRows(controllerJson());
+
+		expectValidActionRows(rows);
+		expect(rows).toHaveLength(1);
 	});
 
 	it('챕터가 있으면 챕터 행을 추가한다', () => {
@@ -134,7 +142,7 @@ describe('controllerView action rows', () => {
 	});
 
 	it('챕터와 대기열이 있으면 챕터 행과 대기열 보기 행을 만든다', () => {
-		mocks.queued.mockReturnValue([TRACK]);
+		mocks.queued.mockReturnValue(Array.from({ length: 6 }, () => TRACK));
 		mocks.chapterIndex.mockReturnValue(0);
 		const rows = actionRows(controllerJson({ player: player({ chapters: CHAPTERS }) }));
 
@@ -333,7 +341,7 @@ describe('controllerView customId round trip', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
 		mocks.nowPlaying.mockReturnValue(TRACK);
-		mocks.queued.mockReturnValue([TRACK]);
+		mocks.queued.mockReturnValue(Array.from({ length: 6 }, () => TRACK));
 		mocks.remaining.mockReturnValue(0);
 		mocks.chapter.mockReturnValue(null);
 		mocks.chapterIndex.mockReturnValue(0);

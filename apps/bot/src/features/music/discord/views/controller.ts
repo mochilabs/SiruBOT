@@ -150,13 +150,15 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 			containerComponent.addTextDisplayComponents(...preview);
 			containerComponent.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
-			// 대기열 전체 보기 진입 버튼 — 누르면 새 메시지로 queueList(10곡/쪽)를 연다.
-			const viewQueueButton = new ButtonBuilder()
-				.setCustomId(queueViewCustomId)
-				.setLabel('대기열 보기')
-				.setEmoji(emoji('scroll'))
-				.setStyle(ButtonStyle.Secondary);
-			containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(viewQueueButton));
+			// 대기열 전체 보기 진입 버튼 — 미리보기(5곡)를 넘는 대기열이 있을 때만 노출한다. 누르면 새 메시지로 queueList(10곡/쪽)를 연다.
+			if (queueCount > QUEUE_PREVIEW_COUNT) {
+				const viewQueueButton = new ButtonBuilder()
+					.setCustomId(queueViewCustomId)
+					.setLabel('대기열 보기')
+					.setEmoji(emoji('scroll'))
+					.setStyle(ButtonStyle.Secondary);
+				containerComponent.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(viewQueueButton));
+			}
 		}
 		const footerSegments = buildFooterSegments(player, volume);
 		if (currentBpm && currentBpm.identifier === current?.info.identifier && Number.isFinite(currentBpm.bpm) && currentBpm.bpm > 0) {
