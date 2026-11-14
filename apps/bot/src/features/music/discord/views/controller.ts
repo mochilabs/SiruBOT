@@ -48,7 +48,10 @@ export function controllerView({ player, volume, nowPlayingCardUrl, currentBpm }
 
 	// 재생 상태 라벨(음성 채널 멘션·재생 중/일시정지/실시간) — 트랙 정보 위 한 줄로 보여준다.
 	const statusLabel = current ? (current.info.isStream ? '실시간으로 재생 중' : player.paused ? '일시정지됨' : '재생 중') : null;
-	const playbackLabel = current && player.voiceChannelId && statusLabel ? `-# <#${player.voiceChannelId}> 에서 ${statusLabel}` : null;
+	// lavalink-client는 음성 상태 null 이벤트에서 voiceChannelId만 비우고 options.voiceChannelId는 남겨 둔다.
+	// 라벨이 그 순간 사라지지 않도록 options 값을 fallback으로 쓴다.
+	const voiceChannelId = player.voiceChannelId ?? player.options?.voiceChannelId;
+	const playbackLabel = current && voiceChannelId && statusLabel ? `-# <#${voiceChannelId}> 에서 ${statusLabel}` : null;
 
 	const trackLines = buildTrackDisplay(player, current, { progressEmoji: !nowPlayingCardUrl });
 	const nowplayingTextDisplay = new TextDisplayBuilder().setContent([...(playbackLabel ? [playbackLabel] : []), ...trackLines].join('\n'));
