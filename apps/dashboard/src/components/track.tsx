@@ -11,6 +11,7 @@ import useSWR from "swr";
 import { MockThumbnail } from "@/components/primitives/mock-thumbnail";
 import { TrackListenLink } from "@/components/track-listen-link";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton, SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import type { ChartEntry } from "@/lib/track-chart";
 
@@ -57,6 +58,34 @@ export const TrackList = memo(function TrackList({ entries, playsLabel }: TrackL
 		</div>
 	);
 });
+
+/** 차트 로딩 자리 — TrackItem과 같은 크기의 행을 보여줘서 데이터가 들어와도 레이아웃이 튀지 않아요. */
+export function TrackListSkeleton({ rows = 8 }: { rows?: number }) {
+	return (
+		<div role="status" aria-label="차트를 불러오는 중" className="w-full space-y-2">
+			{Array.from({ length: rows }, (_, i) => (
+				<div key={i} className="bg-surface-2 rounded-card flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4">
+					<div className="hidden sm:flex w-10 justify-center shrink-0">
+						<SkeletonLine width="1.25rem" height="h-5" className="bg-border" />
+					</div>
+					<Skeleton className="h-12 w-12 sm:h-16 sm:w-16 shrink-0 rounded-card bg-border" />
+					<div className="min-w-0 flex-1 space-y-2">
+						<SkeletonLine width="45%" height="h-4 sm:h-5" className="bg-border" />
+						<SkeletonLine width="30%" height="h-3 sm:h-4" className="bg-border" />
+						<SkeletonLine width="25%" height="h-3" className="bg-border sm:hidden" />
+					</div>
+					<div className="flex items-center gap-1.5 sm:gap-4 pr-0.5 sm:pr-2 shrink-0">
+						<SkeletonLine width="4rem" height="h-4" className="hidden bg-border sm:block" />
+						<SkeletonLine width="2.5rem" height="h-6" className="hidden bg-border sm:block" />
+						<Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-control bg-border" />
+						<Skeleton className="h-8 w-8 sm:w-14 rounded-control bg-border" />
+					</div>
+				</div>
+			))}
+			<span className="sr-only">차트를 불러오는 중이에요.</span>
+		</div>
+	);
+}
 
 const AnimatedTrackItem = memo(function AnimatedTrackItem({
 	entry,

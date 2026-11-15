@@ -8,11 +8,10 @@ import useSWR from "swr";
 import Container from "@/components/container";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
-import Loader from "@/components/loader";
 import { Pagination } from "@/components/pagination";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { SearchInput } from "@/components/search-input";
-import { TrackList } from "@/components/track";
+import { TrackList, TrackListSkeleton } from "@/components/track";
 import { Button } from "@/components/ui/button";
 import type { ChartPage, ChartPeriod } from "@/lib/track-chart";
 
@@ -140,7 +139,7 @@ function TrackContent() {
 
       <section className="space-y-6 min-h-[500px] relative">
         {loading ? (
-          <Loader text="차트 정보를 불러오는 중..." />
+          <TrackListSkeleton />
         ) : entries.length === 0 ? (
           <EmptyState
             icon={Search}
@@ -164,7 +163,13 @@ function TrackContent() {
 
 export default function TrackPage() {
   return (
-    <Suspense fallback={<Container><Loader fullPage /></Container>}>
+    <Suspense
+      fallback={
+        <Container>
+          <TrackListSkeleton />
+        </Container>
+      }
+    >
       <TrackContent />
     </Suspense>
   );
