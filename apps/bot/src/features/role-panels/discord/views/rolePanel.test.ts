@@ -24,7 +24,15 @@ const panel = (overrides: Partial<RolePanel> = {}): RolePanel => ({
 });
 
 const buttons: RolePanelButton[] = [
-	{ id: '00000000-0000-4000-8000-000000000001', panelId: 'panel-1', roleId: '300000000000000001', label: '게이머', emoji: null, style: 'primary', position: 0 }
+	{
+		id: '00000000-0000-4000-8000-000000000001',
+		panelId: 'panel-1',
+		roleId: '300000000000000001',
+		label: '게이머',
+		emoji: null,
+		style: 'primary',
+		position: 0
+	}
 ];
 
 const types = (overrides?: Partial<RolePanel>) => {
@@ -38,11 +46,27 @@ describe('rolePanelView 이미지 레이아웃', () => {
 	});
 
 	it('갤러리를 맨 위에 둘 수 있어요', () => {
-		expect(types({ imagePosition: 'top' })).toEqual([TYPE.gallery, TYPE.separator, TYPE.text, TYPE.separator, TYPE.text, TYPE.separator, TYPE.actionRow]);
+		expect(types({ imagePosition: 'top' })).toEqual([
+			TYPE.gallery,
+			TYPE.separator,
+			TYPE.text,
+			TYPE.separator,
+			TYPE.text,
+			TYPE.separator,
+			TYPE.actionRow
+		]);
 	});
 
 	it('갤러리를 버튼 아래에 둘 수 있어요', () => {
-		expect(types({ imagePosition: 'bottom' })).toEqual([TYPE.text, TYPE.separator, TYPE.text, TYPE.separator, TYPE.actionRow, TYPE.separator, TYPE.gallery]);
+		expect(types({ imagePosition: 'bottom' })).toEqual([
+			TYPE.text,
+			TYPE.separator,
+			TYPE.text,
+			TYPE.separator,
+			TYPE.actionRow,
+			TYPE.separator,
+			TYPE.gallery
+		]);
 	});
 
 	it('섬네일은 제목·안내문과 한 Section으로 묶여요', () => {

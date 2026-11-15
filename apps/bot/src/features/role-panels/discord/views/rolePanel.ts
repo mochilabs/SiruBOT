@@ -40,7 +40,8 @@ export function rolePanelView(panel: RolePanel, buttons: RolePanelButton[]): { f
 	const separator = () => new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
 	const imageUrl = panel.imageUrl;
 	const useThumbnail = Boolean(imageUrl) && panel.imageLayout === 'thumbnail';
-	const galleryPosition = imageUrl && !useThumbnail ? (panel.imagePosition === 'top' || panel.imagePosition === 'bottom' ? panel.imagePosition : 'middle') : null;
+	const galleryPosition =
+		imageUrl && !useThumbnail ? (panel.imagePosition === 'top' || panel.imagePosition === 'bottom' ? panel.imagePosition : 'middle') : null;
 	const addGallery = () => {
 		container.addSeparatorComponents(separator());
 		container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(imageUrl!)));
