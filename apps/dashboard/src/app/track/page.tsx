@@ -103,39 +103,23 @@ function TrackContent() {
           )
         }
       >
-        <div className="w-full flex flex-col sm:flex-row gap-3 sm:gap-6 lg:items-center">
-          <div className="w-full flex-1">
+        {/* 검색 · 기간 · 요약을 한 줄로 — 좁은 화면에선 검색 아래로 접혀요 */}
+        <div className="w-full flex flex-col lg:flex-row gap-3 lg:items-center">
+          <div className="w-full flex-1 min-w-0">
             <SearchInput />
           </div>
-          <div className="flex w-full sm:w-auto gap-2 sm:gap-3 h-14 sm:h-14">
-            <div className="bg-surface-1 rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center transition-colors flex-1 sm:flex-none sm:min-w-[140px]">
-              <div className="flex items-center gap-1.5 text-primary-text">
-                <span className="text-xs font-black">
-                  {query ? "검색 결과 수" : "곡 수"}
-                </span>
-              </div>
-              <span className="text-base sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
-                {loading ? "---" : totalCount.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="bg-surface-1 rounded-card h-full px-3 sm:px-6 flex flex-col justify-center items-center transition-colors flex-1 sm:flex-none sm:min-w-[140px]">
-              <div className="flex items-center gap-1.5 text-primary-text">
-                <span className="text-xs font-black">
-                  {periodInfo.plays}
-                </span>
-              </div>
-              <span className="text-base sm:text-xl font-black text-foreground leading-[1.1] tabular-nums">
-                {loading ? "---" : totalPlaybacks.toLocaleString()}
-              </span>
-            </div>
+          <div className="flex items-center justify-between gap-3">
+            <PeriodSelector value={period} />
+            <p className="shrink-0 text-sm font-medium text-muted-foreground tabular-nums" aria-live="polite">
+              {query ? "결과" : "곡"}{" "}
+              <span className="font-black text-primary-text">{loading ? "–" : totalCount.toLocaleString()}</span>
+              <span className="mx-1.5" aria-hidden>·</span>
+              {periodInfo.plays}{" "}
+              <span className="font-black text-primary-text">{loading ? "–" : totalPlaybacks.toLocaleString()}</span>
+            </p>
           </div>
         </div>
       </PageHeader>
-
-      <div className="mb-4">
-        <PeriodSelector value={period} />
-      </div>
 
       <section className="space-y-6 min-h-[500px] relative">
         {loading ? (
