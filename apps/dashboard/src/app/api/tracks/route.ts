@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { guardRateLimit, publicReadLimit, rateKey } from "@/lib/rate-limit";
-import { fixedTrackFilter, PAGE_SIZE } from "@/lib/track-constants";
-
-import { escapeLikeWildcard } from "./search-query";
+import { CHART_PERIODS, fetchChart } from "@/lib/track-chart";
 
 const tracksQuerySchema = z.object({
   query: z.string().max(200).default(""),
   page: z.coerce.number().int().min(1).max(1000).default(1),
+  period: z.enum(CHART_PERIODS).default("week"),
 });
 
 export async function GET(request: Request) {
@@ -28,52 +26,16 @@ export async function GET(request: Request) {
   const parsed = tracksQuerySchema.safeParse({
     query: searchParams.get("query") || "",
     page: searchParams.get("page") || "1",
+    period: searchParams.get("period") || "week",
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "요청 형식이 올바르지 않아요." }, { status: 400 });
   }
 
-  const { query, page: currentPage } = parsed.data;
-
-  const containsQuery = query ? escapeLikeWildcard(query) : "";
-
-  const where = query
-    ? {
-        ...fixedTrackFilter,
-        OR: [
-          { title: { contains: containsQuery, mode: "insensitive" as const } },
-          { artist: { contains: containsQuery, mode: "insensitive" as const } },
-        ],
-      }
-    : fixedTrackFilter;
-
   try {
-    const [tracks, totalCount, totalPlaybacks] = await Promise.all([
-      db.track.findMany({
-        orderBy: [{ totalPlays: "desc" }, { updatedAt: "desc" }],
-        where,
-        take: PAGE_SIZE,
-        skip: (currentPage - 1) * PAGE_SIZE,
-      }),
-      db.track.count({
-        where,
-      }),
-      db.track.aggregate({
-        _sum: {
-          totalPlays: true,
-        },
-        where,
-      }),
-    ]);
-
-    return NextResponse.json({
-      tracks,
-      totalCount,
-      totalPlaybacks,
-      totalPages: Math.ceil(totalCount / PAGE_SIZE),
-      currentPage,
-    });
+    // 곡 묶음(Recording) 단위 기간 차트 — 같은 노래의 여러 업로드·소스는 한 줄로 합쳐져요 (lib/track-chart.ts).
+    return NextResponse.json(await fetchChart(parsed.data));
   } catch (error) {
     console.error("Failed to fetch tracks:", error);
     return NextResponse.json(

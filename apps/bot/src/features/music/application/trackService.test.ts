@@ -8,7 +8,14 @@ const mocks = vi.hoisted(() => ({
 	trackUpsert: vi.fn(),
 	guildUpsert: vi.fn(),
 	userUpsert: vi.fn(),
-	historyCreate: vi.fn()
+	historyCreate: vi.fn(),
+	trackUpdate: vi.fn(),
+	queryRaw: vi.fn(),
+	recordingFindUnique: vi.fn(),
+	recordingFindMany: vi.fn(),
+	recordingCreate: vi.fn(),
+	recordingUpdate: vi.fn(),
+	dailyUpsert: vi.fn()
 }));
 
 const db = {
@@ -21,7 +28,15 @@ const db = {
 
 // $transaction 콜백의 tx는 db와 동일한 모델 계층을 노출한다.
 const txShape = {
-	track: { upsert: mocks.trackUpsert },
+	$queryRaw: mocks.queryRaw,
+	track: { upsert: mocks.trackUpsert, update: mocks.trackUpdate },
+	recording: {
+		findUnique: mocks.recordingFindUnique,
+		findMany: mocks.recordingFindMany,
+		create: mocks.recordingCreate,
+		update: mocks.recordingUpdate
+	},
+	recordingDailyPlay: { upsert: mocks.dailyUpsert },
 	guild: { upsert: mocks.guildUpsert },
 	user: { upsert: mocks.userUpsert },
 	guildTrackHistory: { create: mocks.historyCreate }
@@ -55,6 +70,11 @@ describe('TrackService.recordPlay', () => {
 		vi.clearAllMocks();
 		// $transaction은 콜백을 받아 즉시 실행하고, tx는 db 모델 계층을 그대로 노출한다.
 		mocks.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txShape));
+		mocks.trackUpsert.mockResolvedValue({ recordingId: null });
+		mocks.recordingFindUnique.mockResolvedValue(null);
+		mocks.recordingFindMany.mockResolvedValue([]);
+		mocks.recordingCreate.mockResolvedValue({ id: 'rec-new', isrc: null });
+		mocks.recordingUpdate.mockResolvedValue({ source: 'youtube' });
 		svc = new TrackService({ db });
 	});
 
@@ -99,6 +119,97 @@ describe('TrackService.recordPlay', () => {
 
 		expect(mocks.userUpsert).not.toHaveBeenCalled();
 		expect(mocks.historyCreate).toHaveBeenCalledWith({ data: { guildId: 'g-1', trackId: 'id-1', userId: null } });
+	});
+});
+
+describe('TrackService.recordPlay — 곡 묶음과 차트 롤업', () => {
+	let svc: TrackService;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txShape));
+		mocks.trackUpsert.mockResolvedValue({ recordingId: null });
+		mocks.recordingFindUnique.mockResolvedValue(null);
+		mocks.recordingFindMany.mockResolvedValue([]);
+		mocks.recordingCreate.mockResolvedValue({ id: 'rec-new', isrc: null });
+		mocks.recordingUpdate.mockResolvedValue({ source: 'youtube' });
+		svc = new TrackService({ db });
+	});
+
+	it('첫 재생이면 새 묶음을 만들고 연결한 뒤 일별 롤업을 올린다', async () => {
+		await svc.recordPlay('g-1', makeTrack({ info: { ...makeTrack().info, title: 'Lemon (Official MV)', author: 'Kenshi Yonezu - Topic' } }));
+
+		expect(mocks.recordingCreate).toHaveBeenCalledWith(
+			expect.objectContaining({ data: expect.objectContaining({ key: 'rec:kenshi yonezu|lemon', title: 'Lemon', artist: 'Kenshi Yonezu' }) })
+		);
+		expect(mocks.trackUpdate).toHaveBeenCalledWith({ where: { id: 'id-1' }, data: { recordingId: 'rec-new' } });
+		expect(mocks.dailyUpsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				create: expect.objectContaining({ recordingId: 'rec-new', guildId: 'g-1', plays: 1 }),
+				update: { plays: { increment: 1 } }
+			})
+		);
+	});
+
+	it('이미 묶인 곡은 다시 묶지 않고 증가만 한다', async () => {
+		mocks.trackUpsert.mockResolvedValue({ recordingId: 'rec-1' });
+
+		await svc.recordPlay('g-1', makeTrack());
+
+		expect(mocks.queryRaw).not.toHaveBeenCalled();
+		expect(mocks.recordingCreate).not.toHaveBeenCalled();
+		expect(mocks.recordingUpdate).toHaveBeenCalledWith(
+			expect.objectContaining({ where: { id: 'rec-1' }, data: { totalPlays: { increment: 1 } } })
+		);
+	});
+
+	it('같은 키의 묶음 중 길이 ±3초 이내에 붙고, 묶음의 ISRC를 물려받는다', async () => {
+		mocks.recordingFindMany.mockResolvedValue([
+			{ id: 'rec-mv', isrc: null, duration: 140_000 },
+			{ id: 'rec-song', isrc: 'JPU901800227', duration: 121_500 }
+		]);
+
+		await svc.recordPlay('g-1', makeTrack());
+
+		expect(mocks.recordingCreate).not.toHaveBeenCalled();
+		expect(mocks.trackUpdate).toHaveBeenCalledWith({
+			where: { id: 'id-1' },
+			data: expect.objectContaining({ recordingId: 'rec-song', isrc: 'JPU901800227', isrcSource: 'recording' })
+		});
+	});
+
+	it('ISRC가 있으면 ISRC 묶음을 먼저 찾는다', async () => {
+		mocks.recordingFindUnique.mockResolvedValue({ id: 'rec-isrc', isrc: 'JPU901800227' });
+
+		await svc.recordPlay('g-1', makeTrack({ info: { ...makeTrack().info, isrc: 'JP-U90-18-00227', sourceName: 'spotify' } }));
+
+		expect(mocks.recordingFindUnique).toHaveBeenCalledWith({ where: { isrc: 'JPU901800227' }, select: { id: true, isrc: true } });
+		expect(mocks.trackUpdate).toHaveBeenCalledWith({ where: { id: 'id-1' }, data: { recordingId: 'rec-isrc' } });
+		const upsertArgs = mocks.trackUpsert.mock.calls[0]![0] as { create: Record<string, unknown> };
+		expect(upsertArgs.create).toMatchObject({ isrc: 'JPU901800227', isrcSource: 'lavalink' });
+	});
+
+	it('더 정식인 소스가 들어오면 대표 표시값을 바꾼다', async () => {
+		mocks.trackUpsert.mockResolvedValue({ recordingId: 'rec-1' });
+
+		await svc.recordPlay(
+			'g-1',
+			makeTrack({ info: { ...makeTrack().info, title: 'Lemon', author: 'Kenshi Yonezu', sourceName: 'spotify', artworkUrl: 'art' } })
+		);
+
+		expect(mocks.recordingUpdate).toHaveBeenLastCalledWith({
+			where: { id: 'rec-1' },
+			data: { title: 'Lemon', artist: 'Kenshi Yonezu', source: 'spotify', thumbnail: 'art' }
+		});
+	});
+
+	it('자동재생 추천곡은 누적에는 넣고 일별 롤업에는 넣지 않는다', async () => {
+		mocks.trackUpsert.mockResolvedValue({ recordingId: 'rec-1' });
+
+		await svc.recordPlay('g-1', makeTrack({ requester: { id: '__related__' } as unknown as Track['requester'] }));
+
+		expect(mocks.recordingUpdate).toHaveBeenCalled();
+		expect(mocks.dailyUpsert).not.toHaveBeenCalled();
 	});
 });
 

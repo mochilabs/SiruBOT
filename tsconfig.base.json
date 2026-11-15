@@ -11,6 +11,7 @@
 		"paths": {
 			"@sirubot/utils": ["./packages/utils/src/index.ts"],
 			"@sirubot/app-kit": ["./packages/app-kit/src/index.ts"],
+			"@sirubot/isrc": ["./packages/isrc/src/index.ts"],
 			"@sirubot/shardclient": ["./packages/shardclient/src/index.ts"],
 			"@sirubot/shardclient/ws-types": ["./packages/shardclient/src/ws-types/index.ts"],
 			"@sirubot/prisma": ["./packages/prisma/dist/index.d.ts"]

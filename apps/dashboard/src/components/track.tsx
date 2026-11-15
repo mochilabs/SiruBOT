@@ -10,58 +10,92 @@ import useSWR from "swr";
 
 import { MockThumbnail } from "@/components/primitives/mock-thumbnail";
 import { TrackListenLink } from "@/components/track-listen-link";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton, SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import type { ChartEntry } from "@/lib/track-chart";
 
 interface TrackListProps {
-	tracks: TrackType[];
-	rankOffset?: number;
+	entries: ChartEntry[];
+	/** 재생 수 아래 붙는 기간 라벨 (예: "주간 재생") */
+	playsLabel: string;
 }
 
 const BATCH_SIZE = 10;
 
-export const TrackList = memo(function TrackList({ tracks, rankOffset = 0 }: TrackListProps) {
+export const TrackList = memo(function TrackList({ entries, playsLabel }: TrackListProps) {
 	const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
-	const { favoriteIds, toggle } = useFavoriteIds(tracks.slice(0, visibleCount).map((t) => t.id));
+	const { favoriteIds, toggle } = useFavoriteIds(
+		entries.slice(0, visibleCount).flatMap((e) => (e.trackId ? [e.trackId] : [])),
+	);
 
 	const { ref: sentinelRef } = useInView({
 		onChange: (inView) => {
-			if (inView && visibleCount < tracks.length) {
-				setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, tracks.length));
+			if (inView && visibleCount < entries.length) {
+				setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, entries.length));
 			}
 		},
 		rootMargin: "300px",
 	});
 
-	const visibleTracks = tracks.slice(0, visibleCount);
+	const visibleEntries = entries.slice(0, visibleCount);
 
 	return (
 		<div className="w-full space-y-2">
-			{visibleTracks.map((track, index) => (
+			{visibleEntries.map((entry, index) => (
 				<AnimatedTrackItem
-					key={track.id}
-					track={track}
-					rank={rankOffset + index + 1}
+					key={entry.id}
+					entry={entry}
+					playsLabel={playsLabel}
 					staggerIndex={index % BATCH_SIZE}
-					favorite={favoriteIds.has(track.id)}
+					favorite={entry.trackId ? favoriteIds.has(entry.trackId) : false}
 					onToggleFavorite={toggle}
 				/>
 			))}
-			{visibleCount < tracks.length && (
+			{visibleCount < entries.length && (
 				<div ref={sentinelRef} className="h-px" />
 			)}
 		</div>
 	);
 });
 
+/** 차트 로딩 자리 — TrackItem과 같은 크기의 행을 보여줘서 데이터가 들어와도 레이아웃이 튀지 않아요. */
+export function TrackListSkeleton({ rows = 8 }: { rows?: number }) {
+	return (
+		<div role="status" aria-label="차트를 불러오는 중" className="w-full space-y-2">
+			{Array.from({ length: rows }, (_, i) => (
+				<div key={i} className="bg-surface-2 rounded-card flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4">
+					<div className="hidden sm:flex w-10 justify-center shrink-0">
+						<SkeletonLine width="1.25rem" height="h-5" className="bg-border" />
+					</div>
+					<Skeleton className="h-12 w-12 sm:h-16 sm:w-16 shrink-0 rounded-card bg-border" />
+					<div className="min-w-0 flex-1 space-y-2">
+						<SkeletonLine width="45%" height="h-4 sm:h-5" className="bg-border" />
+						<SkeletonLine width="30%" height="h-3 sm:h-4" className="bg-border" />
+						<SkeletonLine width="25%" height="h-3" className="bg-border sm:hidden" />
+					</div>
+					<div className="flex items-center gap-1.5 sm:gap-4 pr-0.5 sm:pr-2 shrink-0">
+						<SkeletonLine width="4rem" height="h-4" className="hidden bg-border sm:block" />
+						<SkeletonLine width="2.5rem" height="h-6" className="hidden bg-border sm:block" />
+						<Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-control bg-border" />
+						<Skeleton className="h-8 w-8 sm:w-14 rounded-control bg-border" />
+					</div>
+				</div>
+			))}
+			<span className="sr-only">차트를 불러오는 중이에요.</span>
+		</div>
+	);
+}
+
 const AnimatedTrackItem = memo(function AnimatedTrackItem({
-	track,
-	rank,
+	entry,
+	playsLabel,
 	staggerIndex,
 	favorite,
 	onToggleFavorite,
 }: {
-	track: TrackType;
-	rank: number;
+	entry: ChartEntry;
+	playsLabel: string;
 	staggerIndex: number;
 	favorite: boolean;
 	onToggleFavorite: (trackId: string) => Promise<void>;
@@ -82,7 +116,7 @@ const AnimatedTrackItem = memo(function AnimatedTrackItem({
 				transition: `opacity var(--motion-base) var(--ease-out-expo) ${delay}ms, transform var(--motion-base) var(--ease-out-expo) ${delay}ms`,
 			}}
 		>
-			<TrackItem track={track} rank={rank} favorite={favorite} onToggleFavorite={onToggleFavorite} />
+			<TrackItem entry={entry} playsLabel={playsLabel} favorite={favorite} onToggleFavorite={onToggleFavorite} />
 		</div>
 	);
 });
@@ -170,29 +204,60 @@ function FavoriteButton({
 	);
 }
 
+/** 직전 같은 길이 기간 대비 순위 변화 — ▲상승 ▼하락 NEW 신규 –유지 */
+function RankChange({ change }: { change: ChartEntry["rankChange"] }) {
+	if (change === null) return null;
+	if (change === "new") {
+		return (
+			<Badge variant="primary" size="sm" title="이번 기간에 새로 들어온 곡">
+				NEW
+			</Badge>
+		);
+	}
+	if (change === 0) {
+		return (
+			<span className="text-2xs font-bold text-muted-foreground" title="순위 변동 없음">
+				–
+			</span>
+		);
+	}
+	const up = change > 0;
+	return (
+		<span
+			className={`text-2xs font-black tabular-nums ${up ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
+			title={`직전 기간보다 ${Math.abs(change)}계단 ${up ? "상승" : "하락"}`}
+		>
+			{up ? "▲" : "▼"}
+			{Math.abs(change)}
+		</span>
+	);
+}
+
 export const TrackItem = memo(function TrackItem({
-	track,
-	rank,
+	entry,
+	playsLabel,
 	favorite,
 	onToggleFavorite,
 }: {
-	track: TrackType;
-	rank: number;
+	entry: ChartEntry;
+	playsLabel: string;
 	favorite: boolean;
 	onToggleFavorite: (trackId: string) => Promise<void>;
 }) {
 	const [imgError, setImgError] = useState(false);
+	const { rank } = entry;
 	const isTopThree = rank <= 3;
 
 	return (
 		<div className="bg-surface-2 rounded-card group relative flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
 			{/* Desktop Rank Indicator */}
-			<div className="hidden sm:flex w-10 justify-center shrink-0">
+			<div className="hidden sm:flex w-10 flex-col items-center justify-center gap-0.5 shrink-0">
 				{isTopThree ? (
 					<Crown className={`h-6 w-6 ${rank === 1 ? "text-rank-1" : rank === 2 ? "text-rank-2" : "text-rank-3"}`} />
 				) : (
 					<span className="text-base font-bold text-muted-foreground">{rank}</span>
 				)}
+				<RankChange change={entry.rankChange} />
 			</div>
 
 			<div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-card bg-muted/20">
@@ -205,9 +270,9 @@ export const TrackItem = memo(function TrackItem({
 					)}
 				</div>
 
-				{track.thumbnail && !imgError ? (
+				{entry.thumbnail && !imgError ? (
 					<Image
-						src={track.thumbnail}
+						src={entry.thumbnail}
 						alt=""
 						aria-hidden
 						fill
@@ -222,40 +287,44 @@ export const TrackItem = memo(function TrackItem({
 			</div>
 
 			<div className="min-w-0 flex-1">
-				<h3 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={track.title}>
-					{/^https?:\/\//i.test(track.url ?? "") ? (
+				<h3 className="truncate text-base sm:text-lg font-black text-foreground leading-tight" title={entry.title}>
+					{/^https?:\/\//i.test(entry.url ?? "") ? (
 						<a
-							href={track.url!}
+							href={entry.url!}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
 						>
-							{track.title}
+							{entry.title}
 						</a>
 					) : (
-						track.title
+						entry.title
 					)}
 				</h3>
-				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={track.artist}>
-					{track.artist}
+				<p className="mt-0.5 truncate text-sm sm:text-base font-bold text-muted-foreground" title={entry.artist}>
+					{entry.artist}
 				</p>
-				<p className="mt-1 truncate text-xs sm:text-sm font-medium text-muted-foreground">
-					{formatTimeToKorean(track.duration / 1000)}
-					<span className="sm:hidden"> · <span className="font-bold text-primary-text tabular-nums">{track.totalPlays.toLocaleString()}</span>회</span>
+				{/* 모바일 전용 줄 — 데스크톱은 길이·재생 수를 오른쪽 열에 보여줘요 */}
+				<p className="mt-1 truncate text-xs font-medium text-muted-foreground sm:hidden">
+					<RankChange change={entry.rankChange} /> {formatTimeToKorean(entry.duration / 1000)} ·{" "}
+					<span className="font-bold text-primary-text tabular-nums">{entry.plays.toLocaleString()}</span>회
 				</p>
 			</div>
 
 			<div className="flex items-center gap-1.5 sm:gap-4 pr-0.5 sm:pr-2 shrink-0">
+				<p className="hidden sm:block w-20 text-right text-sm font-medium text-muted-foreground tabular-nums">
+					{formatTimeToKorean(entry.duration / 1000)}
+				</p>
 				<div className="hidden sm:block text-right">
-					<p className="text-base sm:text-lg font-black text-primary-text leading-none">{track.totalPlays.toLocaleString()}</p>
-					<p className="hidden sm:block mt-1 text-xs text-muted-foreground font-bold">총 재생</p>
+					<p className="text-base sm:text-lg font-black text-primary-text leading-none tabular-nums">{entry.plays.toLocaleString()}</p>
+					<p className="hidden sm:block mt-1 text-xs text-muted-foreground font-bold">{playsLabel}</p>
 				</div>
 
-				{onToggleFavorite && (
-					<FavoriteButton trackId={track.id} favorite={favorite} onToggle={onToggleFavorite} />
+				{entry.trackId && (
+					<FavoriteButton trackId={entry.trackId} favorite={favorite} onToggle={onToggleFavorite} />
 				)}
 
-				<TrackListenLink url={track.url} title={track.title} compact />
+				<TrackListenLink url={entry.url} title={entry.title} compact />
 			</div>
 		</div>
 	);

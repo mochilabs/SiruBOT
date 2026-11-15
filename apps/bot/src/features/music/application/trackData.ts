@@ -1,5 +1,6 @@
 import { Track } from 'lavalink-client';
 import { isYouTubeSource } from '@sirubot/utils';
+import { normalizeIsrc } from '@sirubot/utils/trackIdentity';
 
 export function extractTrackData(track: Track) {
 	const info = track.info;
@@ -13,6 +14,8 @@ export function extractTrackData(track: Track) {
 	const source: string = info.sourceName ?? 'unknown';
 	const thumbnail: string | null =
 		info.artworkUrl ?? (isYouTubeSource(info.sourceName) && id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null);
+	// LavaSrc(Spotify·Deezer·Apple Music) 트랙은 ISRC를 함께 줘요. YouTube는 대개 없어요 (data-api isrcEnricher가 나중에 찾아요).
+	const isrc: string | null = normalizeIsrc(info.isrc);
 
-	return { id, title, artist, duration, url, source, thumbnail };
+	return { id, title, artist, duration, url, source, thumbnail, isrc };
 }

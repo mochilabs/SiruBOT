@@ -3485,12 +3485,23 @@ __metadata:
     "@prisma/adapter-pg": "npm:^7.10.1"
     "@redis/client": "npm:^5.12.1"
     "@sirubot/app-kit": "workspace:^"
+    "@sirubot/isrc": "npm:*"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     fastify: "npm:^5.12.7"
     skia-canvas: "npm:^3.0.8"
     tslog: "npm:^4.11.0"
     youtubei.js: "npm:18.3.0"
+    zod: "npm:^4.6.7"
+  languageName: unknown
+  linkType: soft
+
+"@sirubot/isrc@npm:*, @sirubot/isrc@workspace:packages/isrc":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/isrc@workspace:packages/isrc"
+  dependencies:
+    "@sirubot/utils": "npm:*"
+    "@types/node": "npm:^22.20.5"
     zod: "npm:^4.6.7"
   languageName: unknown
   linkType: soft

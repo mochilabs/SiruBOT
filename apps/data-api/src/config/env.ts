@@ -20,6 +20,14 @@ const envSchema = z
 		MEMORY_TIDY_ENABLED: z.coerce.boolean().default(true),
 		MEMORY_TIDY_AT: z.string().default('00:00'),
 		MEMORY_TIDY_BATCH_SIZE: z.coerce.number().int().positive().max(200).default(40),
+		// ISRC 보강(YouTube 곡 → Deezer·MusicBrainz) — DATABASE_URL이 있을 때만 10분마다 돌아요. 키는 필요 없어요.
+		ISRC_ENRICH_ENABLED: z
+			.enum(['true', 'false'])
+			.default('true')
+			.transform((v) => v === 'true'),
+		ISRC_ENRICH_BATCH: z.coerce.number().int().positive().max(200).default(25),
+		// MusicBrainz 식별용 User-Agent (선택). 개인 연락처를 넣지 마세요.
+		MUSICBRAINZ_USER_AGENT: z.string().optional(),
 		// YouTube 검색에 사용할 Lavalink REST 주소와 비밀번호 — data-api 서버에서만 사용해요
 		LAVALINK_REST_URL: z.string().url().optional(),
 		LAVALINK_PASSWORD: z.string().optional(),

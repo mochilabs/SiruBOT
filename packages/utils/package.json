@@ -126,6 +126,11 @@
             "types": "./dist/memoryFile.d.ts",
             "import": "./dist/memoryFile.js",
             "require": "./dist/memoryFile.cjs"
+        },
+        "./trackIdentity": {
+            "types": "./dist/trackIdentity.d.ts",
+            "import": "./dist/trackIdentity.js",
+            "require": "./dist/trackIdentity.cjs"
         }
     },
     "scripts": {

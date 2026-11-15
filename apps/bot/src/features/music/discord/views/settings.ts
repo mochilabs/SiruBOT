@@ -113,11 +113,11 @@ function buildMainView(container: ContainerBuilder, guild: Guild): ContainerBuil
 				.setMinValues(1)
 				.setMaxValues(1)
 				.addOptions([
-					{ value: 'music', label: `${emoji('music_note')} 음악 설정`, description: '컨트롤러·추천 곡·반복 모드' },
-					{ value: 'sponsorblock', label: `${emoji('arrow_forward')} 스폰서블록`, description: sponsorBlockDescription },
-					{ value: 'dj', label: `${emoji('cd')} DJ 설정`, description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
-					{ value: 'channel', label: `${emoji('scroll')} 채널 설정`, description: channelDescription },
-					{ value: 'jtc', label: `${emoji('volume_up')} 임시 음성`, description: guild.jtcEnabled ? '켜짐' : '꺼짐' }
+					{ value: 'music', emoji: emoji('music_note'), label: '음악 설정', description: '컨트롤러·추천 곡·반복 모드' },
+					{ value: 'sponsorblock', emoji: emoji('arrow_forward'), label: '스폰서블록', description: sponsorBlockDescription },
+					{ value: 'dj', emoji: emoji('cd'), label: 'DJ 설정', description: guild.djRoleId ? `<@&${guild.djRoleId}>` : '미설정' },
+					{ value: 'channel', emoji: emoji('scroll'), label: '채널 설정', description: channelDescription },
+					{ value: 'jtc', emoji: emoji('volume_up'), label: '임시 음성', description: guild.jtcEnabled ? '켜짐' : '꺼짐' }
 				])
 		)
 	);
@@ -143,15 +143,18 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('toggleController'))
-				.setLabel(guild.enableController ? `${emoji('spectrum')} 컨트롤러 끄기` : `${emoji('spectrum')} 컨트롤러 켜기`)
+				.setEmoji(emoji('spectrum'))
+				.setLabel(guild.enableController ? '컨트롤러 끄기' : '컨트롤러 켜기')
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('toggleRelated'))
-				.setLabel(guild.related ? `${emoji('sparkle')} 추천 곡 끄기` : `${emoji('sparkle')} 추천 곡 켜기`)
+				.setEmoji(emoji('sparkle'))
+				.setLabel(guild.related ? '추천 곡 끄기' : '추천 곡 켜기')
 				.setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('toggleRepeat'))
-				.setLabel(`${emoji('repeat')} ${repeatNextLabel}`)
+				.setEmoji(emoji('repeat'))
+				.setLabel(`${repeatNextLabel}`)
 				.setStyle(ButtonStyle.Secondary)
 		)
 	);
@@ -160,7 +163,8 @@ function buildMusicView(container: ContainerBuilder, guild: Guild): ContainerBui
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('back'))
-				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setEmoji(emoji('arrow_back'))
+				.setLabel('뒤로가기')
 				.setStyle(ButtonStyle.Primary)
 		)
 	);
@@ -207,11 +211,13 @@ function buildSponsorBlockView(container: ContainerBuilder, guild: Guild): Conta
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('back'))
-				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setEmoji(emoji('arrow_back'))
+				.setLabel('뒤로가기')
 				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('resetSponsorblock'))
-				.setLabel(`${emoji('repeat')} 전체 해제`)
+				.setEmoji(emoji('repeat'))
+				.setLabel('전체 해제')
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(activeSegments.length === 0)
 		)
@@ -241,11 +247,13 @@ function buildDJView(container: ContainerBuilder, guild: Guild): ContainerBuilde
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('back'))
-				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setEmoji(emoji('arrow_back'))
+				.setLabel('뒤로가기')
 				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('removeDj'))
-				.setLabel(`${emoji('trash')} DJ 역할 제거`)
+				.setEmoji(emoji('trash'))
+				.setLabel('DJ 역할 제거')
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.djRoleId)
 		)
@@ -312,12 +320,14 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 				.setMaxValues(1)
 				.addOptions([
 					{
-						label: `${emoji('arrow_forward')} 즉시 재생 (첫 결과 바로 재생)`,
+						emoji: emoji('arrow_forward'),
+						label: '즉시 재생 (첫 결과 바로 재생)',
 						value: 'play',
 						default: guild.pinnedChannelMode !== 'select'
 					},
 					{
-						label: `${emoji('clipboard')} 선택 재생 (5개 중 선택)`,
+						emoji: emoji('clipboard'),
+						label: '선택 재생 (5개 중 선택)',
 						value: 'select',
 						default: guild.pinnedChannelMode === 'select'
 					}
@@ -329,7 +339,8 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('back'))
-				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setEmoji(emoji('arrow_back'))
+				.setLabel('뒤로가기')
 				.setStyle(ButtonStyle.Primary),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('togglePinDelete'))
@@ -338,17 +349,20 @@ function buildChannelView(container: ContainerBuilder, guild: Guild): ContainerB
 				.setDisabled(!guild.pinnedChannelId),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('removeText'))
-				.setLabel(`${emoji('trash')} 텍스트 채널 제거`)
+				.setEmoji(emoji('trash'))
+				.setLabel('텍스트 채널 제거')
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.textChannelId),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('removeVoice'))
-				.setLabel(`${emoji('trash')} 음성 채널 제거`)
+				.setEmoji(emoji('trash'))
+				.setLabel('음성 채널 제거')
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.voiceChannelId),
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('removePin'))
-				.setLabel(`${emoji('trash')} 고정 채널 제거`)
+				.setEmoji(emoji('trash'))
+				.setLabel('고정 채널 제거')
 				.setStyle(ButtonStyle.Danger)
 				.setDisabled(!guild.pinnedChannelId)
 		)
@@ -399,7 +413,8 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('jtcTemplate'))
-				.setLabel(`${emoji('bell')} 방 이름 수정`)
+				.setEmoji(emoji('bell'))
+				.setLabel('방 이름 수정')
 				.setStyle(ButtonStyle.Secondary)
 		)
 	);
@@ -425,7 +440,8 @@ function buildJtcView(container: ContainerBuilder, guild: Guild): ContainerBuild
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder()
 				.setCustomId(settingsId.encode('back'))
-				.setLabel(`${emoji('arrow_back')} 뒤로가기`)
+				.setEmoji(emoji('arrow_back'))
+				.setLabel('뒤로가기')
 				.setStyle(ButtonStyle.Primary)
 		)
 	);

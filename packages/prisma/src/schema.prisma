@@ -142,8 +142,57 @@ model Track {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  history       GuildTrackHistory[]
+  /// 정규화된 ISRC (영숫자 12자). Lavalink가 주거나 data-api isrcEnricher가 찾아 채워요.
+  isrc          String?
+  /// 'lavalink' | 'recording'(묶음에서 물려받음) | 'deezer' | 'musicbrainz'
+  isrcSource    String?
+  /// ISRC 조회를 마친 시각. null이면 아직 조회 전이에요 (isrcEnricher 대상).
+  isrcCheckedAt DateTime?
+  /// 같은 녹음 묶음 (차트 단위)
+  recordingId   String?
+
+  recording      Recording?          @relation(fields: [recordingId], references: [id], onDelete: SetNull)
+  history        GuildTrackHistory[]
   playlistTracks PlaylistTrack[]
+
+  @@index([recordingId])
+  @@index([isrcCheckedAt])
+}
+
+/// 같은 녹음(곡) 묶음 — 소스·업로드가 달라도 같은 노래면 하나예요. 규칙: @sirubot/utils/trackIdentity
+model Recording {
+  id         String   @id @default(uuid())
+  /// "rec:<artist>|<title>" — 길이는 넣지 않아 unique가 아니에요 (±3초 비교는 코드에서, 생성은 advisory lock으로 직렬화)
+  key        String
+  isrc       String?  @unique
+  title      String
+  artist     String
+  duration   Int      // ms
+  thumbnail  String?
+  /// 대표 표시값을 고른 소스 (trackIdentity.sourcePriority로 비교)
+  source     String
+  totalPlays Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tracks Track[]
+  daily  RecordingDailyPlay[]
+
+  @@index([key])
+  @@index([totalPlays(sort: Desc)])
+}
+
+/// 기간 차트용 일별 재생 수 (KST 날짜 × 서버). 조회 때 서버당 하루 상한(LEAST)을 걸어요. 자동재생은 쌓지 않아요.
+model RecordingDailyPlay {
+  recordingId String
+  day         DateTime @db.Date
+  guildId     String
+  plays       Int      @default(0)
+
+  recording Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+
+  @@id([recordingId, day, guildId])
+  @@index([day])
 }
 
 model User {
@@ -203,6 +252,7 @@ model GuildTrackHistory {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([guildId, createdAt(sort: Desc)])
+  @@index([createdAt])
 }
 
 model Playlist {

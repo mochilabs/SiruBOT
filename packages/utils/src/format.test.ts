@@ -88,6 +88,9 @@ describe('formatTrack', () => {
 
 	it('withMarkdownURL은 짧은 URL만 링크로 감싸요', () => {
 		expect(formatTrack(track({}), { withMarkdownURL: true })).toBe('[제목 [01:05]](https://example.com/t)');
+		expect(formatTrack(track({ title: '연금술사🐱🧪 (주제곡)' }), { withMarkdownURL: true })).toBe(
+			'[연금술사 (주제곡) [01:05]](https://example.com/t)'
+		);
 		const longUri = `https://example.com/${'a'.repeat(80)}`;
 		expect(formatTrack(track({ uri: longUri }), { withMarkdownURL: true })).toBe('제목 [01:05]');
 	});

@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { Track } from 'lavalink-client';
+import { countRecordingPlay, isrcFields, linkRecording } from './recordingLink.ts';
 import { extractTrackData } from './trackData.ts';
 import { isTtsClip, RELATED_TRACK_REQUESTER_ID } from '../lavalink/requester.ts';
 
@@ -91,11 +92,15 @@ export class TrackService {
 		if (!data.id) return;
 		const userId = resolveRequesterId(track);
 
+		const now = new Date();
+		const countInChart = !isRelatedTrack(track);
+
 		await this.deps.db.$transaction(async (tx) => {
-			await tx.track.upsert({
+			const row = await tx.track.upsert({
 				where: { id: data.id },
 				create: {
 					...data,
+					...isrcFields(data.isrc, 'lavalink', now),
 					totalPlays: 1
 				},
 				update: {
@@ -103,9 +108,14 @@ export class TrackService {
 					...(data.title && data.title !== '(제목 없음)' ? { title: data.title } : {}),
 					...(data.artist && data.artist !== '(아티스트 정보 없음)' ? { artist: data.artist } : {}),
 					...(data.duration > 0 ? { duration: data.duration } : {}),
-					...(data.thumbnail ? { thumbnail: data.thumbnail } : {})
-				}
+					...(data.thumbnail ? { thumbnail: data.thumbnail } : {}),
+					...isrcFields(data.isrc, 'lavalink', now)
+				},
+				select: { recordingId: true }
 			});
+			// 묶음 연결은 Track의 첫 재생에서만 해요. 이후 재생은 증가 쿼리뿐이에요.
+			const recordingId = row.recordingId ?? (await linkRecording(tx, data, now));
+			if (recordingId) await countRecordingPlay(tx, recordingId, data, { guildId, now, countInChart });
 			await tx.guild.upsert({
 				where: { id: guildId },
 				create: { id: guildId },
@@ -127,6 +137,11 @@ export class TrackService {
 			});
 		});
 	}
+}
+
+/** 자동재생 추천곡인지 — 차트(일별 롤업)에는 사람이 고른 곡만 쌓아요. */
+function isRelatedTrack(track: Track): boolean {
+	return (track.requester as { id?: unknown } | undefined)?.id === RELATED_TRACK_REQUESTER_ID;
 }
 
 function resolveRequesterId(track: Track): string | null {
