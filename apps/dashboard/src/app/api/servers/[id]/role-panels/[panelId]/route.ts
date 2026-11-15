@@ -136,6 +136,9 @@ export const PUT = createGuildApiHandler({
             ...(data.description !== undefined
               ? { description: data.description }
               : {}),
+            ...(data.imageUrl !== undefined
+              ? { imageUrl: data.imageUrl }
+              : {}),
             ...(data.mode !== undefined ? { mode: data.mode } : {}),
           },
           include: { buttons: { orderBy: { position: "asc" } } },

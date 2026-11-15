@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeChannelToggle, isChannelToggleEnabled, isTtsEnabled, normalizeAiMode, normalizeChatToolMode, normalizeTtsMode } from './types.ts';
+import { computeChannelToggle, isChannelToggleEnabled, normalizeAiMode, normalizeChatToolMode, normalizeTtsMode } from './types.ts';
 
 /** 모드 정규화 — DB에 깨린 값이 들어와도 각 정책의 기본값으로 되돌아가요 */
 describe('모드 정규화', () => {
@@ -15,13 +15,13 @@ describe('모드 정규화', () => {
 
 /** 채널 토글 판정 — off면 끄기, all이면 항상 켜기, channels는 목록에 있는 채널만 */
 describe('채널 토글 판정', () => {
-	it('isChannelToggleEnabled·isTtsEnabled는 같은 규칙을 써요', () => {
+	it('isChannelToggleEnabled는 채널 목록 규칙을 따라요', () => {
 		expect(isChannelToggleEnabled({ mode: 'off', channelIds: ['a'] }, 'a')).toBe(false);
 		expect(isChannelToggleEnabled({ mode: 'all', channelIds: [] }, 'a')).toBe(true);
 		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: ['a'] }, 'a')).toBe(true);
 		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: ['a'] }, 'b')).toBe(false);
-		expect(isTtsEnabled({ mode: 'channels', channelIds: ['b'] }, 'b')).toBe(true);
-		expect(isTtsEnabled({ mode: 'channels', channelIds: ['b'] }, 'a')).toBe(false);
+		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: ['b'] }, 'b')).toBe(true);
+		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: ['b'] }, 'a')).toBe(false);
 	});
 });
 

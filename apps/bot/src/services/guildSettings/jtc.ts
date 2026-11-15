@@ -1,3 +1,4 @@
+import { JTC_USER_LIMIT_RANGE } from '@sirubot/utils/guildSettingsContract';
 import type { GuildSettingsStore } from './store.ts';
 
 /**
@@ -31,7 +32,7 @@ export async function setJtcTemplate(store: GuildSettingsStore, guildId: string,
 }
 
 export async function setJtcUserLimit(store: GuildSettingsStore, guildId: string, userLimit: number) {
-	const clamped = Math.min(99, Math.max(0, Math.floor(userLimit)));
+	const clamped = Math.min(JTC_USER_LIMIT_RANGE.max, Math.max(JTC_USER_LIMIT_RANGE.min, Math.floor(userLimit)));
 	const guild = await store.upsertField(guildId, 'jtcUserLimit', clamped);
 	return guild.jtcUserLimit;
 }

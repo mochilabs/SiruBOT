@@ -21,13 +21,13 @@ describe("requestPlayerSearch", () => {
 			data: {
 				ok: true,
 				tracks: [{ title: "곡", author: "아티스트", durationMs: 1000, artworkUrl: null, uri: "yt:abc", sourceName: "youtube", isStream: false }],
-				voice: { inVoice: true, voiceChannelName: "일반", canControl: true },
+				voice: { inVoice: true, voiceChannelName: "일반", canControl: true, canPlay: true },
 			},
 		});
 		await expect(requestPlayerSearch("guild-1", "user-1", "시루")).resolves.toEqual({
 			ok: true,
 			tracks: [{ title: "곡", author: "아티스트", durationMs: 1000, artworkUrl: null, uri: "yt:abc", sourceName: "youtube", isStream: false }],
-			voice: { inVoice: true, voiceChannelName: "일반", canControl: true },
+			voice: { inVoice: true, voiceChannelName: "일반", canControl: true, canPlay: true },
 			error: null,
 			status: 200,
 		});
@@ -96,12 +96,12 @@ describe("fetchPlayerVoiceContext", () => {
 	it("userId를 인코딩해 조회하고 voice만 돌려줘요", async () => {
 		vi.mocked(forwardDataApiGet).mockResolvedValue({
 			ok: true,
-			data: { ok: true, voice: { inVoice: true, voiceChannelName: "일반", canControl: false } },
+			data: { ok: true, voice: { inVoice: true, voiceChannelName: "일반", canControl: false, canPlay: false } },
 		});
 		await expect(fetchPlayerVoiceContext("guild-1", "user 1")).resolves.toEqual({
 			ok: true,
 			tracks: null,
-			voice: { inVoice: true, voiceChannelName: "일반", canControl: false },
+			voice: { inVoice: true, voiceChannelName: "일반", canControl: false, canPlay: false },
 			error: null,
 			status: 200,
 		});

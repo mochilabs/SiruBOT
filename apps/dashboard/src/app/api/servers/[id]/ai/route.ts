@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { normalizeAiMode } from "@sirubot/utils/guildSettingsContract";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
 import { notifyGuildSettingsChanged } from "@/lib/data-api/client";
 import { db } from "@/lib/db";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-import { aiSettingsSchema, normalizeAiMode, parseSettingBody } from "@/lib/schemas";
+import { aiSettingsSchema, parseSettingBody } from "@/lib/schemas";
 
 const ALLOWED_KEYS = ["mode", "channelIds"] as const;
 

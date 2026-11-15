@@ -10,20 +10,6 @@
 				"dev"
 			],
 			"port": 3000
-		},
-		{
-			"name": "dashboard-dead-code",
-			"runtimeExecutable": "yarn",
-			"runtimeArgs": [
-				"--cwd",
-				"/home/seonu/projects/SiruBOT-dead-code",
-				"workspace",
-				"@sirubot/dashboard",
-				"dev",
-				"-p",
-				"3001"
-			],
-			"port": 3001
 		}
 	]
 }

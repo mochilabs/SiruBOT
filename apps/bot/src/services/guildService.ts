@@ -26,6 +26,6 @@ export type {
 	TtsMode,
 	TtsSettings
 } from './guildSettings/types.ts';
-export { isChannelToggleEnabled, isTtsEnabled, normalizeAiMode, normalizeChatToolMode } from './guildSettings/types.ts';
+export { isChannelToggleEnabled, normalizeAiMode, normalizeChatToolMode } from './guildSettings/types.ts';
 
 export { GuildSettingsStore as GuildService };

@@ -101,6 +101,7 @@ const EMOJI_LUCIDE_MAP = {
   arrow_up: "arrow-up",
   arrow_down: "arrow-down",
   artist: "disc-3",
+  artist_l: "disc-3",
   cd: "disc",
   headphone: "headphones",
   music_note: "music",
@@ -119,6 +120,7 @@ const EMOJI_LUCIDE_MAP = {
   mic: "mic",
   spectrum: "audio-lines",
   chapter: "clapperboard",
+  chapter_l: "clapperboard",
   film: "film",
   video: "video",
   camera: "camera",
@@ -274,8 +276,16 @@ function nodeToPath(tag, attrs) {
   }
 }
 
+// 이모지 이름으로 lucide 아이콘을 찾아요. `<이름>_l`(가로 좌측 정렬 변형)은 원본 `<이름>` 매핑도 함께 봐요.
+function resolveLucideIcon(name) {
+  return (
+    EMOJI_LUCIDE_MAP[name] ??
+    (name.endsWith("_l") ? EMOJI_LUCIDE_MAP[name.slice(0, -2)] : undefined)
+  );
+}
+
 // SVG 노드를 스트로크 또는 fill로 그리고, ink box를 params.ink에 맞춰 캔버스에 배치한 결과를 반환해요.
-// anchorLeft=true면 가로는 왼쪽 정렬(ink 좌측 = 캔버스 좌측, padLeft=0), 세로는 가운데 정렬 — artist 전용.
+// anchorLeft=true(`_l` 접미사)면 가로는 왼쪽 정렬(ink 좌측 = 캔버스 좌측, padLeft=0), 세로는 가운데 정렬.
 function renderIconCanvas(nodes, filled, params, anchorLeft = false) {
   const T = 1024; // ink 측정용 임시 캔버스
   const tc = new Canvas(T, T);
@@ -373,7 +383,8 @@ function renderProgressBarCell(kind, state, params) {
     const cap = new Canvas(W, H);
     const m = cap.getContext("2d");
     m.fillStyle = "#fff";
-    if (leftCap) roundRect(m, 0, 0, innerW, H, r, true, kind === "end" && rightCap);
+    if (leftCap)
+      roundRect(m, 0, 0, innerW, H, r, true, kind === "end" && rightCap);
     else roundRect(m, 0, 0, innerW, H, r, false, true);
     b.globalCompositeOperation = "destination-in";
     b.drawImage(cap, 0, 0);
@@ -474,12 +485,15 @@ async function main() {
   }
 
   // ── 정사각 이모지(lucide) 모드 ──────────────────────────────────────────────
-  // 정사각 이름 = 리소스 폴더의 pb_ 아닌 png 파일명 ∩ 매핑 테이블 키
+  // 정사각 이름 = 리소스 폴더의 pb_ 아닌 png 파일명 ∩ 매핑 테이블 키 (+ --only로 지정한 유효 이름)
   const pngNames = (await readdir(srcDir))
     .filter((f) => f.endsWith(".png") && !f.startsWith("pb_"))
     .map((f) => f.replace(".png", ""));
-  let names = pngNames.filter((n) => EMOJI_LUCIDE_MAP[n]);
-  const unmapped = pngNames.filter((n) => !EMOJI_LUCIDE_MAP[n]);
+  const candidateNames = only
+    ? Array.from(new Set([...pngNames, ...only]))
+    : pngNames;
+  let names = candidateNames.filter((n) => resolveLucideIcon(n));
+  const unmapped = pngNames.filter((n) => !resolveLucideIcon(n));
   if (unmapped.length)
     console.warn(
       `경고: 매핑 없는 이름 ${unmapped.length}개 건너뜀 — ${unmapped.join(", ")}`,
@@ -503,15 +517,17 @@ async function main() {
     filled = 0,
     fail = 0;
   for (const name of names) {
+    const iconName = resolveLucideIcon(name);
+    const baseName = name.endsWith("_l") ? name.slice(0, -2) : name;
     try {
-      const isFilled = FILLED.has(name);
+      const isFilled = FILLED.has(name) || FILLED.has(baseName);
       if (isFilled) filled++;
-      const nodes = await loadIconNodes(EMOJI_LUCIDE_MAP[name]);
+      const nodes = await loadIconNodes(iconName);
       const { canvas, skipped, empty } = renderIconCanvas(
         nodes,
         isFilled,
         params,
-        name === "artist",
+        name.endsWith("_l"),
       );
       if (empty)
         throw new Error(`빈 아이콘(ink 없음) — 미지원 태그만 있거나 노드 없음`);
@@ -523,7 +539,7 @@ async function main() {
         console.warn(`경고 ${name}: 미지원 태그 ${skipped.join(",")} 건너뜀`);
       ok++;
     } catch (e) {
-      console.error(`FAIL ${name}(${EMOJI_LUCIDE_MAP[name]}): ${e.message}`);
+      console.error(`FAIL ${name}(${iconName}): ${e.message}`);
       fail++;
     }
   }

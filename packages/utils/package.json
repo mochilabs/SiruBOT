@@ -97,11 +97,6 @@
             "import": "./dist/birthday.js",
             "require": "./dist/birthday.cjs"
         },
-        "./client": {
-            "types": "./dist/client.d.ts",
-            "import": "./dist/client.js",
-            "require": "./dist/client.cjs"
-        },
         "./ticket": {
             "types": "./dist/ticket.d.ts",
             "import": "./dist/ticket.js",
@@ -112,15 +107,20 @@
             "import": "./dist/rolePanel.js",
             "require": "./dist/rolePanel.cjs"
         },
-        "./panelPost": {
-            "types": "./dist/panelPost.d.ts",
-            "import": "./dist/panelPost.js",
-            "require": "./dist/panelPost.cjs"
-        },
         "./botAdmin": {
             "types": "./dist/botAdmin.d.ts",
             "import": "./dist/botAdmin.js",
             "require": "./dist/botAdmin.cjs"
+        },
+        "./playerLimits": {
+            "types": "./dist/playerLimits.d.ts",
+            "import": "./dist/playerLimits.js",
+            "require": "./dist/playerLimits.cjs"
+        },
+        "./guildSettingsContract": {
+            "types": "./dist/guildSettingsContract.d.ts",
+            "import": "./dist/guildSettingsContract.js",
+            "require": "./dist/guildSettingsContract.cjs"
         },
         "./memoryFile": {
             "types": "./dist/memoryFile.d.ts",
@@ -149,7 +149,6 @@
         "@sentry/profiling-node": "^9.47.2",
         "discord.js": "^14.27.0",
         "tslog": "^4.11.0",
-        "undici": "^7.30.1",
         "zod": "^4.6.7"
     }
 }

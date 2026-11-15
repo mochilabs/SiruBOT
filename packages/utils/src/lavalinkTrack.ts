@@ -1,5 +1,5 @@
 /**
- * Lavalink 트랙 소스 유틸 — 봇 services·modules 양쪽이 쓰는 순수 헬퍼 위치 (services→modules 역방향 import 해소용).
+ * Lavalink 트랙 소스 유틸 — 봇 services·src/discord 양쪽이 쓰는 순수 헬퍼 위치 (services→src/discord 역방향 import 해소용).
  * 챕터 fetch/파싱은 data-api 게이트웨이(apps/data-api/src/providers/chapters.ts)가 담당해요.
  */
 

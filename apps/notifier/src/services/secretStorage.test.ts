@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { encryptSecret, deriveKeyFromSecret } from '@sirubot/utils/secretBox';
-import { openWebhookToken, sealWebhookToken, webhookTokenNeedsSeal } from './secretStorage.ts';
+import { openWebhookToken, sealWebhookToken } from './secretStorage.ts';
 
 /**
  * 웹훅 토큰 at-rest 암호화 계약 — 저장 시 봉인, 사용 시 복호, 키 회전 호환.
@@ -51,15 +51,6 @@ describe('sealWebhookToken / openWebhookToken', () => {
 		vi.stubEnv('DATA_ENCRYPTION_KEY', '');
 		vi.stubEnv('NOTIFIER_AUTH_KEY', '');
 		expect(openWebhookToken(legacySealed)).toBe('');
-	});
-
-	it('현재 저장 키로 봉인된 값은 재봉인 대상이 아니고, 평문은 대상이에요', () => {
-		vi.stubEnv('AUTH_KEY', KEY);
-		vi.stubEnv('DATA_ENCRYPTION_KEY', '');
-		const sealed = sealWebhookToken('token');
-
-		expect(webhookTokenNeedsSeal(sealed)).toBe(false);
-		expect(webhookTokenNeedsSeal('legacy-plain')).toBe(true);
 	});
 
 	it('키가 없거나 복호 실패면 빈 문자열 — 전송 중단 신호로 써요', () => {

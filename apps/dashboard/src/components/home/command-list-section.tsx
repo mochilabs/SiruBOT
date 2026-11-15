@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * 입력창에 선택한 명령어가 타이핑돼요. 나머지는 "더 보기"로 펼쳐요(전체 목록은 문서처럼 읽히지 않게 접어 둬요).
  *
  * cmd/desc는 봇 커맨드 정의의 **ko 로캘 문구를 그대로** 옮겨 적어요 —
- * `apps/bot/src/modules/<모듈>/commands/*.ts`의 `setNameLocalizations({ ko })` / `setDescriptionLocalizations({ ko })`,
+ * `apps/bot/src/discord/commands/*.ts`, `apps/bot/src/features/<name>/discord/commands/*.ts`의 `setNameLocalizations({ ko })` / `setDescriptionLocalizations({ ko })`,
  * 서브커맨드는 `subcommands/*.ts`의 `name`/`ko`/`description`. 봇 문구를 바꾸면 이 목록도 함께 갱신하세요.
  *
  * 톤: 사용자에게 말을 거는 해요체 존댓말, 마침표 유지, 기능만 서술하고 광고문구는 넣지 않아요.

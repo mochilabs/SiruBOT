@@ -3,7 +3,7 @@ import type { Guild } from '@sirubot/prisma';
 
 const { upsert } = vi.hoisted(() => ({ upsert: vi.fn() }));
 
-vi.mock('@sapphire/framework', () => ({ container: { db: { guild: { upsert } } } }));
+const db = { guild: { upsert } } as never;
 vi.mock('@sirubot/utils', async () => {
 	const { MemoryCache } = await import('../../../../../packages/utils/src/memoryCache.ts');
 	const { normalizeCustomCommandPrefix } = await import('../../../../../packages/utils/src/customCommand.ts');
@@ -35,7 +35,7 @@ describe('jtc 도메인 CRUD', () => {
 		upsert.mockResolvedValueOnce(
 			guild('guild', { jtcEnabled: true, jtcCategoryId: 'cat-1', jtcMarkerChannelId: 'mark-1', jtcTemplate: '{user}의 방', jtcUserLimit: 3 })
 		);
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		await expect(getJtcSettings(store, 'guild')).resolves.toEqual({
 			enabled: true,
 			categoryId: 'cat-1',
@@ -47,7 +47,7 @@ describe('jtc 도메인 CRUD', () => {
 
 	it('setJtcEnabled·setJtcTemplate는 단일 필드로 저장해요', async () => {
 		upsert.mockResolvedValueOnce(guild('guild', { jtcEnabled: true }));
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		await expect(setJtcEnabled(store, 'guild', true)).resolves.toBe(true);
 		expect(upsert.mock.calls[0][0].update).toEqual({ jtcEnabled: true });
 
@@ -58,7 +58,7 @@ describe('jtc 도메인 CRUD', () => {
 
 	it('setJtcCategory는 카테고리·마커 채널을 한 번에 저장해요', async () => {
 		upsert.mockResolvedValueOnce(guild('guild', { jtcCategoryId: 'cat-1', jtcMarkerChannelId: 'mark-1' }));
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 		await expect(setJtcCategory(store, 'guild', 'cat-1', 'mark-1')).resolves.toMatchObject({
 			jtcCategoryId: 'cat-1',
 			jtcMarkerChannelId: 'mark-1'
@@ -68,7 +68,7 @@ describe('jtc 도메인 CRUD', () => {
 	});
 
 	it('setJtcUserLimit은 0~99 사이로 클램프해요', async () => {
-		const store = new GuildSettingsStore();
+		const store = new GuildSettingsStore({ db });
 
 		upsert.mockResolvedValueOnce(guild('guild', { jtcUserLimit: 99 }));
 		await expect(setJtcUserLimit(store, 'guild', 150)).resolves.toBe(99);

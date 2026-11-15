@@ -33,7 +33,7 @@ const utilities = [
 ];
 
 /**
- * 시루가 쓸 수 있는 도구 전체 — apps/bot/src/services/aiTools/index.ts의 도구 묶음이에요.
+ * 시루가 쓸 수 있는 도구 전체 — apps/bot/src/features/ai-chat/application/aiTools/index.ts의 도구 묶음이에요.
  * demo가 있는 칩은 눌러서 해당 도구의 대화 예시를 볼 수 있고, 나머지는 목록으로만 보여줘요.
  */
 const TOOL_CHIPS: { label: string; demo?: number }[] = [

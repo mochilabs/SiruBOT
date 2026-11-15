@@ -4,7 +4,7 @@ import { playerWebControlActionSchema, playerWebPlayUriSchema, redisIdSchema } f
 import { metrics } from '../utils/metrics.ts';
 import { sendError, guildIdParams, playerUserIdSchema, replyBotRelayFailure } from './common.ts';
 import { searchLavalinkYoutube } from '../providers/lavalinkSearch.ts';
-import { recordPlaybackEvent, recentPlaybackEvents, type PlaybackEventType } from '../services/playbackStore.ts';
+import { recordPlaybackEvent, type PlaybackEventType } from '../services/playbackStore.ts';
 import { getPlayerState, playerHubStatus, subscribeSse } from '../services/playerHub.ts';
 import { requestPlayerWeb, type PlayerWebResult } from '../services/playerWebHub.ts';
 
@@ -47,15 +47,6 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 			const body = playbackEventSchema.parse(request.body);
 			recordPlaybackEvent({ ...body, type: body.type as PlaybackEventType, at: Date.now() });
 			return reply.send({ ok: true });
-		} catch (error) {
-			return sendError(reply, error);
-		}
-	});
-
-	fastify.get('/v1/playback/recent', async (request, reply) => {
-		try {
-			const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) }).parse(request.query);
-			return reply.send({ events: recentPlaybackEvents(query.limit) });
 		} catch (error) {
 			return sendError(reply, error);
 		}

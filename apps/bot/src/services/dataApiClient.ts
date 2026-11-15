@@ -1,8 +1,8 @@
-import { container } from '@sapphire/framework';
 import type { GreetingConfig, GreetingKind, SponsorBlockSkipSegment } from '@sirubot/utils';
 import type { DeliveryTrackResult } from '@sirubot/utils/delivery';
 import type { DeliveryCarrier } from '@sirubot/utils/delivery';
 import type { AirQualityInfo, WeatherResult, WeatherScope } from '@sirubot/utils/weather';
+import type { AppLogger } from '../lib/appLogger.ts';
 import { dataApiAuthHeaders, gatewayBaseUrl } from '../lib/dataApi.ts';
 import type { DailyHoroscope } from './types.ts';
 
@@ -37,7 +37,7 @@ const GATEWAY_TIMEOUT_MS = 15_000;
 const IMAGE_RENDER_TIMEOUT_MS = 20_000;
 
 /** 이미지 렌더 POST 공용: URL 가드·타임아웃·content-type 검증·실패 시 로그 후 null 반환까지 한곳에서 처리해요 */
-async function renderImage(path: string, body: unknown): Promise<Buffer | null> {
+async function renderImage(logger: AppLogger, path: string, body: unknown): Promise<Buffer | null> {
 	const base = gatewayBaseUrl();
 	if (!base) return null;
 	try {
@@ -52,7 +52,7 @@ async function renderImage(path: string, body: unknown): Promise<Buffer | null> 
 		if (!type.startsWith('image/')) throw new Error(`unexpected content-type: ${type}`);
 		return Buffer.from(await res.arrayBuffer());
 	} catch (error) {
-		container.logger.warn(`[data-api] ${path} failed: ${error instanceof Error ? error.message : String(error)}`);
+		logger.warn(`[data-api] ${path} failed: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
 	}
 }
@@ -129,7 +129,8 @@ export async function trackDelivery(carrierHint: string, trackingNumber: string)
  * 오브젝트 업로드 — storage가 아니라 data-api 게이트웨이를 거쳐요(스토리지 주소·키는 게이트웨이만 알아요).
  * 실패·미설정이면 null을 돌려줘 호출부가 기능을 건너뛸 수 있게 해요.
  */
-export async function uploadObject(
+async function uploadObject(
+	logger: AppLogger,
 	bucket: string,
 	key: string,
 	bytes: Uint8Array,
@@ -147,7 +148,7 @@ export async function uploadObject(
 		if (!res.ok) throw new Error(`data-api storage ${res.status}`);
 		return (await res.json()) as { key: string; url: string | null };
 	} catch (error) {
-		container.logger.warn(`[data-api] storage upload failed for ${bucket}/${key}: ${error instanceof Error ? error.message : String(error)}`);
+		logger.warn(`[data-api] storage upload failed for ${bucket}/${key}: ${error instanceof Error ? error.message : String(error)}`);
 		return null;
 	}
 }
@@ -167,7 +168,7 @@ export async function fetchWeather(location: string, scope: WeatherScope = 'now'
  * 프로필 카드 이미지 데이터 — data-api POST 바디와 동일한 형식이에요.
  * preset: 'dark'(RINE 다크 퍼플) | 'ticket'(RINE 멤버패스 티켓)
  */
-interface ProfileCardRequest {
+export interface ProfileCardRequest {
 	preset?: 'dark' | 'ticket';
 	userId: string;
 	displayName: string;
@@ -211,7 +212,7 @@ interface ProfileCardRequest {
 /**
  * NowPlaying 카드 이미지 데이터 — data-api POST /v1/image/nowplaying 바디와 동일한 형식이에요.
  */
-interface NowPlayingCardRequest {
+export interface NowPlayingCardRequest {
 	trackId: string;
 	title: string;
 	artist: string;
@@ -248,8 +249,8 @@ interface NowPlayingCardRequest {
 /**
  * NowPlaying 카드 PNG 렌더. 실패/미설정 시 null (호출자가 기존 썸네일로 폴백해요).
  */
-export async function renderNowPlayingCard(data: NowPlayingCardRequest): Promise<Buffer | null> {
-	return renderImage('/v1/image/nowplaying', data);
+async function renderNowPlayingCard(logger: AppLogger, data: NowPlayingCardRequest): Promise<Buffer | null> {
+	return renderImage(logger, '/v1/image/nowplaying', data);
 }
 
 /** 날씨 카드 요청 — WeatherResult에서 표시용 필드만 골라 보내요 (data-api weatherCardSchema와 같은 모양). */
@@ -295,29 +296,29 @@ export interface OhaasaTopCardRequest {
 }
 
 /** 운세 카드 PNG — 실패하면 null이라 호출부가 텍스트만으로 폴백해요. */
-export async function renderOhaasaCard(data: OhaasaCardRequest): Promise<Buffer | null> {
-	return renderImage('/v1/image/ohaasa', data);
+async function renderOhaasaCard(logger: AppLogger, data: OhaasaCardRequest): Promise<Buffer | null> {
+	return renderImage(logger, '/v1/image/ohaasa', data);
 }
 
 /** 운세 TOP 3 카드 PNG — 실패하면 null. */
-export async function renderOhaasaTopCard(data: OhaasaTopCardRequest): Promise<Buffer | null> {
-	return renderImage('/v1/image/ohaasa/top', data);
+async function renderOhaasaTopCard(logger: AppLogger, data: OhaasaTopCardRequest): Promise<Buffer | null> {
+	return renderImage(logger, '/v1/image/ohaasa/top', data);
 }
 
 /** 날씨 카드 PNG — 실패하면 null이라 호출부가 텍스트 카드로 폴백해요. */
-export async function renderWeatherCard(data: WeatherCardRequest): Promise<Buffer | null> {
-	return renderImage('/v1/image/weather', data);
+async function renderWeatherCard(logger: AppLogger, data: WeatherCardRequest): Promise<Buffer | null> {
+	return renderImage(logger, '/v1/image/weather', data);
 }
 
 /**
  * 프로필 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 카드로 폴백해요).
  */
-export async function renderProfileCard(data: ProfileCardRequest): Promise<Buffer | null> {
-	return renderImage('/v1/image/profile', data);
+async function renderProfileCard(logger: AppLogger, data: ProfileCardRequest): Promise<Buffer | null> {
+	return renderImage(logger, '/v1/image/profile', data);
 }
 
 /** 멤버 인사 카드 렌더에 박을 멤버/서버 컨텍스트 — 렌더러가 템플릿({유저이름} {서버} {멤버수}) 치환에 써요 */
-interface MemberCardRenderContext {
+export interface MemberCardRenderContext {
 	userId: string;
 	username: string;
 	displayName: string;
@@ -329,11 +330,37 @@ interface MemberCardRenderContext {
 /**
  * 멤버 인사(환영/작별) 카드 PNG 렌더. 실패/미설정 시 null (호출자가 텍스트 메시지로 폴백해요).
  */
-export async function renderMemberCard(
+async function renderMemberCard(
+	logger: AppLogger,
 	guildId: string,
 	kind: GreetingKind,
 	config: GreetingConfig,
 	context: MemberCardRenderContext
 ): Promise<Buffer | null> {
-	return renderImage('/v1/image/member-card', { guildId, kind, config, context });
+	return renderImage(logger, '/v1/image/member-card', { guildId, kind, config, context });
 }
+
+/** 로거가 필요한 data-api 호출(이미지 렌더·오브젝트 업로드)이 쓰는 의존성 */
+export interface DataApiClientDeps {
+	logger: AppLogger;
+}
+
+/**
+ * 실패를 로그로 남기는 data-api 호출 묶음 (container.dataApi) — 이미지 렌더 6종과 오브젝트 업로드예요.
+ * 로거가 필요 없는 조회 함수(fetch*, search*, trackDelivery …)는 위의 모듈 함수 그대로 써요.
+ */
+export function createDataApiClient(deps: DataApiClientDeps) {
+	const { logger } = deps;
+	return {
+		renderNowPlayingCard: (data: NowPlayingCardRequest) => renderNowPlayingCard(logger, data),
+		renderOhaasaCard: (data: OhaasaCardRequest) => renderOhaasaCard(logger, data),
+		renderOhaasaTopCard: (data: OhaasaTopCardRequest) => renderOhaasaTopCard(logger, data),
+		renderWeatherCard: (data: WeatherCardRequest) => renderWeatherCard(logger, data),
+		renderProfileCard: (data: ProfileCardRequest) => renderProfileCard(logger, data),
+		renderMemberCard: (guildId: string, kind: GreetingKind, config: GreetingConfig, context: MemberCardRenderContext) =>
+			renderMemberCard(logger, guildId, kind, config, context),
+		uploadObject: (bucket: string, key: string, bytes: Uint8Array, contentType: string) => uploadObject(logger, bucket, key, bytes, contentType)
+	};
+}
+
+export type DataApiClient = ReturnType<typeof createDataApiClient>;

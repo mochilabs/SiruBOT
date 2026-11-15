@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	buildRolePanelCustomId,
-	parseRolePanelCustomId,
-	ROLE_PANEL_CUSTOM_ID_PREFIX,
 	ROLE_PANEL_MAX_BUTTONS,
 	rolePanelButtonsSchema,
 	rolePanelUpdateSchema,
@@ -16,31 +13,6 @@ import {
 
 const BUTTON_ID = '123e4567-e89b-12d3-a456-426614174000';
 const ROLE_ID = '123456789012345678';
-
-describe('buildRolePanelCustomId / parseRolePanelCustomId', () => {
-	it('빌드한 customId를 왕복 파싱한다', () => {
-		const customId = buildRolePanelCustomId(BUTTON_ID, ROLE_ID);
-		expect(customId).toBe(`${ROLE_PANEL_CUSTOM_ID_PREFIX}${BUTTON_ID}:${ROLE_ID}`);
-		expect(parseRolePanelCustomId(customId)).toEqual({ buttonId: BUTTON_ID, roleId: ROLE_ID });
-	});
-
-	it('customId 길이가 100자 상한 아래다', () => {
-		const customId = buildRolePanelCustomId(BUTTON_ID, ROLE_ID);
-		expect(customId.length).toBeLessThanOrEqual(100);
-	});
-
-	it('다른 prefix면 null을 돌려준다', () => {
-		expect(parseRolePanelCustomId('ticket:open')).toBeNull();
-		expect(parseRolePanelCustomId('settings:mixer')).toBeNull();
-	});
-
-	it('형식이 깨진 customId는 null을 돌려준다', () => {
-		expect(parseRolePanelCustomId(ROLE_PANEL_CUSTOM_ID_PREFIX)).toBeNull();
-		expect(parseRolePanelCustomId(`${ROLE_PANEL_CUSTOM_ID_PREFIX}buttonid`)).toBeNull();
-		expect(parseRolePanelCustomId(`${ROLE_PANEL_CUSTOM_ID_PREFIX}:roleid`)).toBeNull();
-		expect(parseRolePanelCustomId(`${ROLE_PANEL_CUSTOM_ID_PREFIX}buttonid:`)).toBeNull();
-	});
-});
 
 describe('rolePanelSchema', () => {
 	it('기본값으로 올바르게 파싱된다', () => {
@@ -65,7 +37,17 @@ describe('rolePanelSchema', () => {
 	it('생성 스키마는 이름만 있으면 버튼을 빈 배열로 채운다', () => {
 		const parsed = rolePanelCreateSchema.parse({ name: '게임' });
 		expect(parsed.buttons).toEqual([]);
+		expect(parsed.imageUrl).toBeNull();
 		expect(rolePanelCreateSchema.safeParse({ name: 'a'.repeat(101) }).success).toBe(false);
+	});
+
+	it('imageUrl은 http/https URL과 null을 허용하고 그 외는 거부한다', () => {
+		expect(rolePanelCreateSchema.parse({ name: '게임', imageUrl: 'https://cdn.example.com/banner.png' }).imageUrl).toBe(
+			'https://cdn.example.com/banner.png'
+		);
+		expect(rolePanelUpdateSchema.parse({ imageUrl: null }).imageUrl).toBeNull();
+		expect(rolePanelUpdateSchema.safeParse({ imageUrl: 'ftp://cdn.example.com/banner.png' }).success).toBe(false);
+		expect(rolePanelUpdateSchema.safeParse({ imageUrl: 'not-a-url' }).success).toBe(false);
 	});
 });
 

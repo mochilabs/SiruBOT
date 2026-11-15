@@ -1,0 +1,53 @@
+import { container } from '@sapphire/framework';
+import { emoji } from '@sirubot/utils';
+import { historyView } from '../views/history.ts';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandSubcommandBuilder } from 'discord.js';
+import { errorView } from '../../../../lib/errorView.ts';
+
+export const name = 'history';
+export const ko = '재생기록';
+export const description = '이 서버에서 재생된 최근 음악 기록을 보여줘요.';
+/** en-US 기본 설명 (기본 로케일이 영어예요) */
+export const descriptionEn = 'Show recently played tracks in this server.';
+export const preconditions = ['TextChannelAllowed'];
+
+export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {
+	return sub.setName(name).setNameLocalizations({ ko }).setDescription(descriptionEn).setDescriptionLocalizations({ ko: description });
+}
+
+export async function run(interaction: ChatInputCommandInteraction<'cached'>): Promise<void> {
+	await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
+	const history = await container.db.guildTrackHistory.findMany({
+		where: { guildId: interaction.guildId },
+		orderBy: { createdAt: 'desc' },
+		take: 15,
+		include: { track: true }
+	});
+
+	if (history.length === 0) {
+		await interaction.editReply({
+			components: [errorView(`${emoji('error')} 최근 재생된 음악 기록이 없어요.`)],
+			flags: [MessageFlags.IsComponentsV2]
+		});
+		return;
+	}
+
+	const lines = history.map((h, _i) => {
+		const timeStr = h.createdAt.toLocaleString('ko-KR', {
+			timeZone: 'Asia/Seoul',
+			month: '2-digit',
+			day: '2-digit',
+			hour12: false,
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+		const requesterStr = h.userId ? ` | <@${h.userId}>` : '';
+		return `\`${timeStr}\` **[${h.track.title}](${h.track.url})** - ${h.track.artist}${requesterStr}`;
+	});
+
+	await interaction.editReply({
+		components: [historyView(lines)],
+		flags: [MessageFlags.IsComponentsV2]
+	});
+}

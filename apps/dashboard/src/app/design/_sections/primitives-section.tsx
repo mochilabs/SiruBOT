@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard, SkeletonCircle, SkeletonLine } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
@@ -33,6 +34,8 @@ export function PrimitivesSection() {
 	const [cooldownVal, setCooldownVal] = useState(30);
 	const [dismissableDemo, setDismissableDemo] = useState(true);
 	const [accentColor, setAccentColor] = useState("#ffdaff");
+	const [selectedEmoji, setSelectedEmoji] = useState<string | null>("🎮");
+	const [requiredEmoji, setRequiredEmoji] = useState<string | null>("✅");
 
 	return (
 		<>
@@ -111,6 +114,20 @@ export function PrimitivesSection() {
 						</Field>
 						<Field label="비활성화">
 							<ColorPicker value="#a3416f" label="비활성 색" onChange={() => {}} disabled />
+						</Field>
+					</div>
+				</ShowcaseRow>
+
+				<ShowcaseRow label="EmojiPicker" block>
+					<div className="grid items-start gap-4 sm:grid-cols-3">
+						<Field label="선택 이모지" description="카테고리·검색·붙여넣기로 유니코드 이모지를 골라요.">
+							<EmojiPicker value={selectedEmoji} onChange={setSelectedEmoji} />
+						</Field>
+						<Field label="필수 이모지" description="반응형 역할 패널처럼 지우기를 숨길 때 써요.">
+							<EmojiPicker value={requiredEmoji} onChange={setRequiredEmoji} required />
+						</Field>
+						<Field label="비활성화">
+							<EmojiPicker value="🔔" onChange={() => {}} disabled />
 						</Field>
 					</div>
 				</ShowcaseRow>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MUSIC_VOLUME_MAX, MUSIC_VOLUME_MIN } from './playerLimits.js';
 import { redisIdSchema } from './redisChannels.js';
 
 /**
@@ -62,10 +63,10 @@ export const playerWebControlRequestSchema = playerWebRequestBase
 	.extend({
 		kind: z.literal('control'),
 		action: playerWebControlActionSchema,
-		value: z.number().int().min(0).max(150).optional()
+		value: z.number().int().min(MUSIC_VOLUME_MIN).max(MUSIC_VOLUME_MAX).optional()
 	})
 	.refine((body) => body.action !== 'volume' || typeof body.value === 'number', {
-		message: 'volume 제어에는 value(0~150)가 필요해요.'
+		message: `volume 제어에는 value(${MUSIC_VOLUME_MIN}~${MUSIC_VOLUME_MAX})가 필요해요.`
 	});
 export type PlayerWebControlRequest = z.infer<typeof playerWebControlRequestSchema>;
 
@@ -80,7 +81,10 @@ export type PlayerWebRequestBase = z.infer<typeof playerWebRequestBase>;
 export const playerVoiceContextSchema = z.object({
 	inVoice: z.boolean(),
 	voiceChannelName: z.string().nullable(),
-	canControl: z.boolean()
+	/** 재생 제어(일시정지·볼륨·건너뛰기 등) 가능 여부 — 봇이 실제 인가와 같은 정책으로 계산해요 */
+	canControl: z.boolean(),
+	/** 곡 추가 가능 여부 — 봇이 항상 보내요. 이 필드가 없는 이전 버전 봇 응답은 스키마 검증에서 거절돼요 */
+	canPlay: z.boolean()
 });
 export type PlayerVoiceContext = z.infer<typeof playerVoiceContextSchema>;
 

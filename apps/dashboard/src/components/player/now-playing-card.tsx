@@ -14,9 +14,17 @@ import { playerErrorMessage } from "@/lib/player-error";
 import { prettySourceName } from "@/utils";
 
 import { interpolatedPositionMs, ProgressBar } from "./live-progress-bar";
+import { useVoiceContext } from "./voice-context";
 
 /** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
 const VOLUME_SEND_DEBOUNCE_MS = 400;
+
+/** 제어 버튼이 비활성화된 이유 — 봇의 음악 제어 정책을 그대로 풀어 쓴 안내예요 */
+const CONTROL_BLOCKED_HINT =
+  "봇과 같은 음성 채널에 있고, DJ 역할이 있거나 혼자 듣고 있을 때 제어할 수 있어요. 서버 관리자와 DJ 역할은 채널 밖에서도 제어할 수 있어요.";
+
+/** 제어 가능 여부 재검증 주기 — 음성 채널 입·퇴장은 서버가 밀어주지 않아 주기적으로 다시 물어봐요 */
+const VOICE_CONTEXT_REFRESH_MS = 15_000;
 
 /** 봇 검증 실패 시 안내 문구도 전달해요 — "명령 실패" 대신 실제 이유를 토스트로 보여줘요 */
 async function sendPlayerCommand(
@@ -72,7 +80,17 @@ export function NowPlaying({
   const commandPendingRef = useRef(false);
   const volumePendingRef = useRef(false);
   const [volumePending, setVolumePending] = useState(false);
-  const controlsDisabled = unavailable || volumePending || volumeOverride !== null;
+  // 봇이 실제 인가와 같은 정책으로 계산한 제어 가능 여부예요. 값을 모르면(로딩·오류) 열어 두고 봇의 거절 안내에 맡겨요.
+  const { data: voiceData, mutate: refreshVoiceContext } = useVoiceContext(guildId, {
+    refreshInterval: VOICE_CONTEXT_REFRESH_MS,
+  });
+  const controlBlocked = voiceData?.voice ? !voiceData.voice.canControl : false;
+  const controlsDisabled = unavailable || volumePending || volumeOverride !== null || controlBlocked;
+
+  // 곡이 바뀌면 봇의 음성 채널도 바뀌었을 수 있어 바로 다시 확인해요
+  useEffect(() => {
+    void refreshVoiceContext();
+  }, [refreshVoiceContext, state.trackUri]);
 
   useEffect(() => {
     if (unavailable) {
@@ -144,7 +162,7 @@ export function NowPlaying({
 
   const handleVolumeChange = useCallback(
     (volume: number) => {
-      if (unavailable || volumePendingRef.current || commandPendingRef.current) return;
+      if (unavailable || controlBlocked || volumePendingRef.current || commandPendingRef.current) return;
       setVolumeOverride(volume);
       if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current);
       volumeTimerRef.current = setTimeout(async () => {
@@ -157,7 +175,7 @@ export function NowPlaying({
         setVolumePending(false);
       }, VOLUME_SEND_DEBOUNCE_MS);
     },
-    [failCommand, guildId, unavailable],
+    [controlBlocked, failCommand, guildId, unavailable],
   );
 
   return (
@@ -246,7 +264,10 @@ export function NowPlaying({
         </div>
 
         {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
-        <div className="flex flex-wrap items-center gap-2 pt-3">
+        <div
+          className="flex flex-wrap items-center gap-2 pt-3"
+          title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
+        >
           <Button
             variant="secondary"
             size="sm"
@@ -273,7 +294,6 @@ export function NowPlaying({
             loading={pendingAction === "skip"}
             disabled={
               controlsDisabled || !hasCurrentTrack ||
-              state.queueLength === 0 ||
               (pendingAction !== null && pendingAction !== "skip")
             }
             aria-label="다음 곡"
@@ -328,13 +348,18 @@ export function NowPlaying({
               max={PLAYER_VOLUME_MAX}
               step={1}
               onChange={handleVolumeChange}
-              disabled={unavailable || volumePending || pendingAction !== null || !hasCurrentTrack}
+              disabled={unavailable || controlBlocked || volumePending || pendingAction !== null || !hasCurrentTrack}
               showValue
               formatValue={(value) => `${value}%`}
               label="볼륨"
             />
           </div>
         </div>
+        {controlBlocked && (
+          <p role="status" className="text-xs text-muted-foreground">
+            {CONTROL_BLOCKED_HINT}
+          </p>
+        )}
       </div>
     </section>
   );

@@ -1,0 +1,373 @@
+import { WARN_COLOR, emoji } from '@sirubot/utils';
+import {
+	ChannelType,
+	GuildMember,
+	PermissionFlagsBits,
+	type Channel,
+	type Guild,
+	type MessageCreateOptions,
+	type VoiceBasedChannel,
+	type VoiceState
+} from 'discord.js';
+import type { AppLogger } from '../../../lib/appLogger.ts';
+import type { Stoppable } from '../../../lib/lifecycle.ts';
+
+interface RoomInfo {
+	guildId: string;
+	ownerId: string;
+}
+
+interface JtcSettings {
+	enabled: boolean;
+	categoryId: string | null;
+	markerChannelId: string | null;
+	template: string;
+	userLimit: number;
+}
+
+const MARKER_CHANNEL_NAME = '🔊 임시방 만들기';
+
+/** 재시작 후에도 방을 추적하도록 길드별 방 목록을 Redis 해시(채널 ID → 소유자 ID)로 남겨요. */
+const ROOMS_KEY_PREFIX = 'jtc:rooms:';
+const roomsKey = (guildId: string) => `${ROOMS_KEY_PREFIX}${guildId}`;
+
+/** 유예 시간(ms)을 한국어로 — '30초', '1분', '1분 30초' */
+export function jtcEmptyGraceText(emptyGraceMs: number): string {
+	const totalSeconds = Math.round(emptyGraceMs / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	if (minutes === 0) return `${seconds}초`;
+	if (seconds === 0) return `${minutes}분`;
+	return `${minutes}분 ${seconds}초`;
+}
+
+/** Redis 연결이 늦으면 복원을 재시도하는 간격과 최대 횟수 (5초 × 12회 = 약 1분) */
+const RESTORE_RETRY_MS = 5_000;
+const RESTORE_MAX_ATTEMPTS = 12;
+
+/** 임시방 설정(길드 설정 저장소)에서 쓰는 면 — 실제 구현은 services/guildSettings/jtc.ts를 container.guildService에 묶은 것이에요. */
+export interface TempVoiceSettingsPort {
+	getJtcSettings(guildId: string): Promise<JtcSettings>;
+	setJtcCategory(guildId: string, categoryId: string | null, markerChannelId: string | null): Promise<unknown>;
+}
+
+/** 재시작 후에도 방을 추적하기 위한 Redis 해시 저장 면 (채널 ID → 소유자 ID). 연결 전이면 읽기는 null을 돌려줘요. */
+export interface TempVoiceRoomStore {
+	getFields(key: string): Promise<Record<string, string> | null>;
+	setFields(key: string, fields: Record<string, string>): Promise<unknown>;
+	deleteField(key: string, field: string): Promise<unknown>;
+}
+
+/** 서비스가 쓰는 Discord 조회 면 — 실제 구현은 Sapphire 클라이언트예요. */
+export interface TempVoiceDiscordPort {
+	guildIds(): string[];
+	fetchGuild(guildId: string): Promise<Guild>;
+	fetchChannel(channelId: string): Promise<Channel | null>;
+}
+
+/** 마커 채널에 올리는 안내 메시지 렌더링 — 실제 구현은 features/temp-voice/discord/tempVoiceMessages.ts예요. */
+export interface TempVoiceMessagePort {
+	notice(message: string, accentColor?: number): MessageCreateOptions;
+}
+
+export interface TempVoiceServiceDeps {
+	logger: AppLogger;
+	settings: TempVoiceSettingsPort;
+	roomStore: TempVoiceRoomStore;
+	discord: TempVoiceDiscordPort;
+	messages: TempVoiceMessagePort;
+	/** 빈 임시방 자동 삭제 유예 시간(ms) — JTC_EMPTY_GRACE_MS, 기본 30초 (설정값을 읽어 넘겨요) */
+	emptyGraceMs: number;
+}
+
+export class TempVoiceService implements Stoppable {
+	public readonly name = '임시 음성 채널 빈방 타이머';
+	private stopped = false;
+	private restoreRetryTimer: ReturnType<typeof setTimeout> | null = null;
+	private readonly rooms = new Map<string, RoomInfo>();
+	private readonly emptyTimers = new Map<string, NodeJS.Timeout>();
+	private readonly creating = new Set<string>();
+
+	public constructor(private readonly deps: TempVoiceServiceDeps) {}
+
+	public async handleVoiceState(oldState: VoiceState, newState: VoiceState): Promise<void> {
+		try {
+			const guildId = newState.guild.id;
+			await this.handleRoomTransitions(oldState, newState);
+
+			const settings = await this.deps.settings.getJtcSettings(guildId);
+			if (!settings.enabled || !settings.markerChannelId) return;
+
+			const member = newState.member;
+			if (!member || member.user.bot) return;
+			if (newState.channelId === settings.markerChannelId && oldState.channelId !== settings.markerChannelId) {
+				await this.createRoom(member, settings);
+			}
+		} catch (error) {
+			this.deps.logger.error(`[tempVoice] voice state handling failed (guild ${newState.guild.id}): ${error}`);
+		}
+	}
+
+	public handleChannelDelete(channelId: string): void {
+		this.untrack(channelId);
+	}
+
+	/**
+	 * 시작 시 Redis에 남은 방 기록을 읽어 추적을 되살려요. 빈 방은 유예 확인을 다시 걸고,
+	 * 채널이 이미 없으면 기록만 지워요. Redis가 아직 연결 전이면 false를 돌려줘 호출부가 재시도해요.
+	 */
+	public async restoreRooms(): Promise<boolean> {
+		for (const guildId of this.deps.discord.guildIds()) {
+			const records = await this.deps.roomStore.getFields(roomsKey(guildId));
+			if (records === null) return false;
+
+			for (const [channelId, ownerId] of Object.entries(records)) {
+				const channel = await this.deps.discord.fetchChannel(channelId).catch(() => null);
+				if (!channel || !channel.isVoiceBased()) {
+					await this.deps.roomStore.deleteField(roomsKey(guildId), channelId);
+					continue;
+				}
+				if (this.rooms.has(channelId)) continue;
+				this.rooms.set(channelId, { guildId, ownerId });
+				await this.checkEmpty(channelId, channel);
+			}
+		}
+		return true;
+	}
+
+	public async setupMarkerChannel(guildId: string, categoryId: string): Promise<string> {
+		const guild = await this.deps.discord.fetchGuild(guildId);
+		const category = await guild.channels.fetch(categoryId);
+		if (!category || category.type !== ChannelType.GuildCategory) {
+			throw new Error('selected channel is not a category');
+		}
+
+		const settings = await this.deps.settings.getJtcSettings(guildId);
+		let marker = settings.markerChannelId ? await guild.channels.fetch(settings.markerChannelId).catch(() => null) : null;
+
+		if (marker && marker.isVoiceBased()) {
+			if (marker.parentId !== categoryId) await marker.setParent(categoryId);
+		} else {
+			marker = await guild.channels.create({ name: MARKER_CHANNEL_NAME, type: ChannelType.GuildVoice, parent: categoryId });
+		}
+
+		await this.deps.settings.setJtcCategory(guildId, categoryId, marker.id);
+		return marker.id;
+	}
+
+	private async handleRoomTransitions(oldState: VoiceState, newState: VoiceState): Promise<void> {
+		const leftId = oldState.channelId;
+		const rightId = newState.channelId;
+		if (leftId === rightId) return;
+
+		if (leftId) {
+			const room = this.rooms.get(leftId);
+			if (room) {
+				if (oldState.member && room.ownerId === oldState.member.id) {
+					await this.handleOwnerLeave(leftId, room, oldState.member);
+				}
+				await this.checkEmpty(leftId, oldState.channel);
+			}
+		}
+
+		if (rightId && this.rooms.has(rightId)) {
+			this.clearEmptyTimer(rightId);
+		}
+	}
+
+	private async handleOwnerLeave(channelId: string, room: RoomInfo, member: GuildMember): Promise<void> {
+		const channel = member.guild.channels.cache.get(channelId);
+		if (!channel || !channel.isVoiceBased()) {
+			this.untrack(channelId);
+			return;
+		}
+
+		const successors = channel.members.filter((m) => !m.user.bot && m.id !== member.id);
+		if (successors.size === 0) return;
+
+		const successor = successors.first();
+		if (!successor) return;
+
+		await channel.permissionOverwrites.delete(member.id).catch(() => null);
+		await channel.permissionOverwrites.edit(successor.id, { ManageChannels: true, MoveMembers: true }).catch(() => null);
+		room.ownerId = successor.id;
+		await this.persistRoom(room.guildId, channelId, successor.id);
+	}
+
+	private async checkEmpty(channelId: string, channel: VoiceState['channel']): Promise<void> {
+		if (!channel || !channel.isVoiceBased()) {
+			this.untrack(channelId);
+			return;
+		}
+
+		const humans = channel.members.filter((m) => !m.user.bot);
+		if (humans.size > 0) {
+			this.clearEmptyTimer(channelId);
+			return;
+		}
+
+		if (this.emptyTimers.has(channelId)) return;
+		this.scheduleEmptyCheck(channelId);
+	}
+
+	/** 유예 시간 후 빈방 확인(deleteIfEmpty)을 다시 건다 — 중복 타이머 없음. */
+	private scheduleEmptyCheck(channelId: string): void {
+		if (this.stopped) return;
+		const timer = setTimeout(() => void this.deleteIfEmpty(channelId), this.deps.emptyGraceMs);
+		this.emptyTimers.set(channelId, timer);
+	}
+
+	private async deleteIfEmpty(channelId: string): Promise<void> {
+		this.emptyTimers.delete(channelId);
+		if (!this.rooms.has(channelId)) return;
+
+		// 추적은 "채널이 실제로 사라졌거나, 확인 시점에 확실히 비어서 삭제된" 경우에만 끝낸다.
+		// 유예 시점에 사람이 있었는데 untrack해 버리면 그 방은 영구 고아가 된다(JTC 고아 채널 버그).
+		const channel = await this.deps.discord.fetchChannel(channelId).catch(() => null);
+		if (!channel || !channel.isVoiceBased()) {
+			this.untrack(channelId);
+			return;
+		}
+
+		const humans = channel.members.filter((m) => !m.user.bot);
+		if (humans.size > 0) {
+			// 사람이 다시 있음 — 추적을 유지하고 다음 유예 확인을 다시 건다 (입장 시 checkEmpty도 타이머를 지운다).
+			this.scheduleEmptyCheck(channelId);
+			return;
+		}
+
+		try {
+			await channel.delete(`임시 음성 채널: ${jtcEmptyGraceText(this.deps.emptyGraceMs)}간 비어 있음`);
+			this.untrack(channelId);
+		} catch (error) {
+			this.deps.logger.error(`[tempVoice] failed to delete empty room ${channelId}: ${error}`);
+			// 삭제 실패(권한 등) — 추적을 유지해 다음 유예마다 재시도한다.
+			this.scheduleEmptyCheck(channelId);
+		}
+	}
+
+	private async createRoom(member: GuildMember, settings: JtcSettings): Promise<VoiceBasedChannel | null> {
+		const guildId = member.guild.id;
+		// 같은 멤버의 중복 진입 이벤트만 막는다 — guild-wide 락이면 다른 멤버의 동시 생성이
+		// 응답 없음(null)으로 조용히 버려져 마커 채널에 발이 묶인다.
+		const createKey = `${guildId}:${member.id}`;
+		if (this.creating.has(createKey)) return null;
+
+		const owned = [...this.rooms.entries()].find(([, room]) => room.guildId === guildId && room.ownerId === member.id);
+		if (owned) {
+			const ownedChannel = member.guild.channels.cache.get(owned[0]);
+			if (ownedChannel?.isVoiceBased()) {
+				await member.voice.setChannel(ownedChannel).catch(() => null);
+				this.clearEmptyTimer(owned[0]);
+				return ownedChannel;
+			}
+			this.untrack(owned[0]);
+		}
+
+		this.creating.add(createKey);
+		try {
+			const channel = await member.guild.channels.create({
+				name: this.renderName(settings.template, member.displayName),
+				type: ChannelType.GuildVoice,
+				parent: settings.categoryId ?? undefined,
+				userLimit: settings.userLimit > 0 ? settings.userLimit : undefined,
+				permissionOverwrites: [{ id: member.id, allow: [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers] }]
+			});
+			this.rooms.set(channel.id, { guildId, ownerId: member.id });
+			await this.persistRoom(guildId, channel.id, member.id);
+			try {
+				await member.voice.setChannel(channel);
+			} catch (moveError) {
+				// 방 생성·추적은 성공했고 이동만 실패한 상태 — 추적을 버리면 빈 방이 채널에 남고,
+				// 실패로 보고하면 방이 있는데 "못 만들었다"가 된다. 유예 확인을 걸어 빈 방이면 정리한다.
+				this.deps.logger.warn(`[tempVoice] failed to move member into created room ${channel.id}: ${moveError}`);
+				this.scheduleEmptyCheck(channel.id);
+				return channel;
+			}
+			return channel;
+		} catch (error) {
+			this.deps.logger.error(`[tempVoice] failed to create room for guild ${guildId}: ${error}`);
+			// 마커 채널 진입자에게 실패 사실을 알려요 — 무응답 두면 "왜 안 만들어지지?" 상태가 돼요.
+			try {
+				const settings = await this.deps.settings.getJtcSettings(guildId);
+				const marker = settings.markerChannelId ? member.guild.channels.cache.get(settings.markerChannelId) : undefined;
+				if (marker?.isTextBased()) {
+					await marker.send(
+						this.deps.messages.notice(`${emoji('error')} 임시 음성 채널을 만들지 못했어요. 잠시 후 다시 시도해 주세요.`, WARN_COLOR)
+					);
+				}
+			} catch (notifyError) {
+				this.deps.logger.debug(`[tempVoice] failed to notify room create failure: ${notifyError}`);
+			}
+			return null;
+		} finally {
+			this.creating.delete(createKey);
+		}
+	}
+
+	private renderName(template: string, displayName: string): string {
+		const sanitized = displayName.replace(/["*`|\\]/g, '').trim() || '사용자';
+		const rendered = template.replaceAll('{user}', sanitized).trim() || `${sanitized}의 방`;
+		return rendered.slice(0, 100);
+	}
+
+	/** 추적을 끊고(메모리·타이머·Redis 기록) 정리해요. 방 삭제·채널 삭제·소유 불일치 모두 여기로 모아요. */
+	private untrack(channelId: string): void {
+		const room = this.rooms.get(channelId);
+		this.rooms.delete(channelId);
+		this.clearEmptyTimer(channelId);
+		if (room) void this.deps.roomStore.deleteField(roomsKey(room.guildId), channelId);
+	}
+
+	private async persistRoom(guildId: string, channelId: string, ownerId: string): Promise<void> {
+		await this.deps.roomStore.setFields(roomsKey(guildId), { [channelId]: ownerId });
+	}
+
+	/**
+	 * 부팅 직후 임시방 추적을 Redis 기록으로 복원해요. Redis가 아직 연결 전이면 5초 간격으로 최대 12회(약 1분) 재시도해요.
+	 * 재시도 타이머는 이 서비스가 소유해서 stop()이 해제해요.
+	 */
+	public async restoreWithRetry(attempt = 1): Promise<void> {
+		if (this.stopped) return;
+		const restored = await this.restoreRooms().catch((error: unknown) => {
+			this.deps.logger.error(`[tempVoice] room restore failed: ${error}`);
+			return false;
+		});
+		if (restored) {
+			this.deps.logger.debug('[tempVoice] 임시방 추적 복원 완료');
+			return;
+		}
+		if (attempt >= RESTORE_MAX_ATTEMPTS) {
+			this.deps.logger.warn('[tempVoice] Redis 미연결로 임시방 추적을 복원하지 못했어요 (메모리 전용 모드)');
+			return;
+		}
+		if (this.stopped) return;
+		this.restoreRetryTimer = setTimeout(() => void this.restoreWithRetry(attempt + 1), RESTORE_RETRY_MS);
+	}
+
+	/**
+	 * 종료: 빈방 확인 타이머를 모두 해제해요. 방 목록은 Redis에 이미 기록돼 있어서 flush할 데이터는 없고,
+	 * 남은 방은 다음 부팅의 고아 정리가 처리해요. 이후에는 새 타이머를 만들지 않아요.
+	 */
+	public async stop(): Promise<void> {
+		this.stopped = true;
+		if (this.restoreRetryTimer) clearTimeout(this.restoreRetryTimer);
+		this.restoreRetryTimer = null;
+		for (const timer of this.emptyTimers.values()) clearTimeout(timer);
+		this.emptyTimers.clear();
+	}
+
+	private clearEmptyTimer(channelId: string): void {
+		const timer = this.emptyTimers.get(channelId);
+		if (timer) {
+			clearTimeout(timer);
+			this.emptyTimers.delete(channelId);
+		}
+	}
+}
+
+export function createTempVoiceService(deps: TempVoiceServiceDeps): TempVoiceService {
+	return new TempVoiceService(deps);
+}
+
+export type { JtcSettings };

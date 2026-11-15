@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { normalizeChatToolMode, normalizeEmbedFixTranslateLang } from "@sirubot/utils/chatTools";
 import { validateCustomCommandPrefix } from "@sirubot/utils/customCommand";
+import { normalizeAiMode } from "@sirubot/utils/guildSettingsContract";
 import { z } from "zod";
 
 import { createGuildApiHandler } from "@/lib/api-handler";
@@ -9,7 +10,7 @@ import { db } from "@/lib/db";
 import { MIXER_SETTING_KEYS, normalizeMixerToggles } from "@/lib/mixer-settings";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
 import { READ_RATE, WRITE_RATE } from "@/lib/rate-limit";
-import { guildSettingsSchema, normalizeAiMode, parseSettingBody } from "@/lib/schemas";
+import { guildSettingsSchema, parseSettingBody } from "@/lib/schemas";
 
 const snowflakeSchema = z.string().regex(/^\d{17,20}$/, "올바른 Discord 서버 ID 형식이 아니에요.");
 const nullableSnowflake = snowflakeSchema.nullable();

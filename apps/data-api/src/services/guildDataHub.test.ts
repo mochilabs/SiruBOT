@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PendingRequestPool, type GuildDataKind } from '@sirubot/utils';
-import { correlateGuildDataResponse, type GuildDataFailureReason, type GuildDataPendingMeta, type GuildDataResult } from './guildDataHub.ts';
+import { hub, type GuildDataFailureReason, type GuildDataPendingMeta, type GuildDataResult } from './guildDataHub.ts';
 
 const REQUEST_ID = 'c9a1e0b2-4e6f-4a3d-8c2b-1f2e3d4c5b6a';
 const OTHER_REQUEST_ID = 'a1b2c3d4-e5f6-4748-a9b0-c1d2e3f4a5b6';
 
 /**
  * 허브의 requestGuildData()와 같은 조립을 테스트용으로 만들어요 —
- * 메타데이터를 register 전에 심고, 상관은 correlateGuildDataResponse가 담당해요.
+ * 메타데이터를 register 전에 심고, 상관은 hub.correlate가 담당해요.
  */
 function makeRegistry(capacity = 10) {
 	const pendingMeta = new Map<string, GuildDataPendingMeta>();
@@ -25,7 +25,7 @@ function makeRegistry(capacity = 10) {
 			return pending.register(requestId, timeoutMs);
 		},
 		handleRaw(raw: string) {
-			return correlateGuildDataResponse(raw, pending, pendingMeta);
+			return hub.correlate(raw, pending, pendingMeta);
 		},
 		fail(requestId: string, reason: GuildDataFailureReason) {
 			if (pending.fail(requestId, { ok: false, reason })) {

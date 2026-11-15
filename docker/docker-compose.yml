@@ -1,107 +1,116 @@
+# 로컬 개발용 compose.
+#
+# 기본(인프라만): redis, postgres, lavalink
+#   docker compose -f docker/docker-compose.yml up -d
+#
+# 앱까지 컨테이너로 올리기(bot, dashboard, shardmanager, data-api, storage, notifier):
+#   docker compose -f docker/docker-compose.yml --profile apps up -d --build
+#
+# 앱은 보통 호스트에서 `yarn dev` / `yarn watch`로 돌리고, 인프라만 compose를 쓰는 걸 권장해요.
+# 각 앱의 .env는 apps/<app>/.env 를 그대로 읽고, 컨테이너 네트워크에서 필요한 주소만 아래에서 덮어써요.
+# DB 마이그레이션은 호스트에서 실행하세요: yarn workspace @sirubot/prisma migrate:dev (localhost:5432)
+
+name: sirubot-dev
+
 services:
-  # Redis service
-  # redis:
-  #   image: redis:alpine
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis-data:/data
-  #   networks:
-  #     - sirubot-network
-  #   restart: always
-  #   command: redis-server --save 60 1 --loglevel warning
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 5s
-  #     timeout: 3s
-  #     retries: 5
-
-  # Postgres service
-  # postgres:
-  #   image: postgres:latest
-  #   ports:
-  #     - "5432:5432"
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_DB: sirubot
-  #     PGDATA: /var/lib/postgresql/data/pgdata
-  #   networks:
-  #     - sirubot-network
-  #   volumes:
-  #     - postgres-data:/var/lib/postgresql/data
-  #   restart: always
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 5s
-  #     timeout: 3s
-  #     retries: 5
-
-  # Lavalink service
-  lavalink:
-    build: ./lavalink/.
+  redis:
+    image: redis:8-alpine
     ports:
-      - "5000:2333"
-    networks:
-      - sirubot-network
+      - "6379:6379"
     volumes:
-      - ./lavalink/Lavalink.jar:/opt/Lavalink/Lavalink.jar
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml
-      - ./lavalink/plugins:/opt/Lavalink/plugins
-    restart: always
+      - redis-data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-  # Application services
-  # bot:
-  #   image: sirubot/bot:latest
-  #   build:
-  #     context: ..
-  #     dockerfile: Dockerfile
-  #     target: bot
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     - redis
-  #     - postgres
-  #   restart: unless-stopped
-  #   networks:
-  #     - sirubot-network
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sirubot
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-  # shardmanager:
-  #   image: sirubot/shardmanager:latest
-  #   build:
-  #     context: ..
-  #     dockerfile: Dockerfile
-  #     target: shardmanager
-  #   ports:
-  #     - "3001:3001"
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     - SHARD_COUNT=auto
-  #   restart: unless-stopped
-  #   networks:
-  #     - sirubot-network
+  # Lavalink v4. 비밀번호는 아래 LAVALINK_HOSTS의 값(youshallnotpass)과 맞춰요.
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    ports:
+      - "2333:2333"
+    environment:
+      - _JAVA_OPTIONS=-Xmx512m
+      - SERVER_PORT=2333
+      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+    restart: unless-stopped
 
-  # dashboard:
-  #   image: sirubot/dashboard:latest
-  #   build:
-  #     context: ..
-  #     dockerfile: Dockerfile
-  #     target: dashboard
-  #   ports:
-  #     - "3000:3000"
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   restart: unless-stopped
-  #   networks:
-  #     - sirubot-network
+  # ---- 앱 (profile: apps) ----
 
-  # 길드 에셋 스토리지 — 로컬 볼륨(무DB) 파일 저장소. 디스코드가 임베드로 fetch하는 공개 URL을 발급해요.
+  bot:
+    profiles: [apps]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: bot
+    env_file:
+      - path: ../apps/bot/.env
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sirubot
+      LAVALINK_HOSTS: main_lavalink_2333_youshallnotpass
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      lavalink:
+        condition: service_started
+    restart: unless-stopped
+
+  shardmanager:
+    profiles: [apps]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: shardmanager
+    ports:
+      - "3001:3001"
+    env_file:
+      - path: ../apps/shardmanager/.env
+        required: false
+    restart: unless-stopped
+
+  data-api:
+    profiles: [apps]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: data-api
+    ports:
+      - "3002:3002"
+    env_file:
+      - path: ../apps/data-api/.env
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   storage:
-    image: sirubot/storage:latest
+    profiles: [apps]
     build:
       context: ..
       dockerfile: Dockerfile
@@ -109,27 +118,49 @@ services:
     ports:
       - "3003:3003"
     env_file:
-      - .env
+      - path: ../apps/storage/.env
+        required: false
     environment:
-      - STORAGE_DATA_DIR=/data
-      # 필수: 디스코드가 임베드로 fetch하는 https 공개 주소 — 실제 공개 도메인으로 교체
-      # (발급 URL 스냅샷이라 도메인 변경 시 기존 에셋 URL 일괄 치환이 필요해요)
-      - STORAGE_PUBLIC_URL=https://cdn.example.com
+      STORAGE_DATA_DIR: /data
+      # 로컬에서는 localhost로 두세요. 디스코드 임베드용 공개 도메인이 필요하면 .env에서 바꿔요.
+      STORAGE_PUBLIC_URL: http://localhost:3003
     volumes:
       - storage-data:/data
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
     restart: unless-stopped
-    networks:
-      - sirubot-network
 
-networks:
-  sirubot-network:
-    driver: bridge
+  notifier:
+    profiles: [apps]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: notifier
+    ports:
+      - "3004:3004"
+    env_file:
+      - path: ../apps/notifier/.env
+        required: false
+    restart: unless-stopped
+
+  dashboard:
+    profiles: [apps]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: dashboard
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: ../apps/dashboard/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sirubot?schema=public
+      SHARD_MANAGER_URL: http://shardmanager:3001
+      STORAGE_URL: http://storage:3003
+      DATA_API_URL: http://data-api:3002
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   redis-data:

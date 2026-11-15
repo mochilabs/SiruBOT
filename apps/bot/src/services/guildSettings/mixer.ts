@@ -1,6 +1,6 @@
 import { transitionFlags, type TransitionMode } from '@sirubot/utils/mixerTransition';
-import { container } from '@sapphire/framework';
 import type { Prisma } from '@sirubot/prisma';
+import { AUTOMIX_MAX_TEMPO_CHANGE_RANGE, AUTOMIX_MIN_CONFIDENCE_RANGE, CROSSFADE_MS_RANGE } from '@sirubot/utils/guildSettingsContract';
 import type { GuildSettingsStore } from './store.ts';
 import type { MixerSettings } from './types.ts';
 
@@ -33,19 +33,21 @@ export async function setNormalization(store: GuildSettingsStore, guildId: strin
 }
 
 export async function setCrossfadeDuration(store: GuildSettingsStore, guildId: string, seconds: number): Promise<MixerSettings> {
-	if (!Number.isFinite(seconds) || seconds < 0.5 || seconds > 15) throw new RangeError('겹치는 시간은 0.5~15초로 입력해 주세요.');
+	if (!Number.isFinite(seconds) || seconds < CROSSFADE_MS_RANGE.min / 1000 || seconds > CROSSFADE_MS_RANGE.max / 1000) {
+		throw new RangeError('겹치는 시간은 0.5~15초로 입력해 주세요.');
+	}
 	await store.upsertField(guildId, 'crossfadeMs', Math.round(seconds * 1000));
 	return getMixerSettings(store, guildId);
 }
 
 export async function setCrossfade(store: GuildSettingsStore, guildId: string, enabled: boolean, durationMs?: number) {
-	// Lavalink mixer 플러그인의 겹치기 상한은 15초(15000ms)라 여기서 잘라요
-	const clamped = durationMs === undefined ? undefined : Math.round(Math.min(15000, Math.max(500, durationMs)));
+	// Lavalink mixer 플러그인의 겹치기 상한(계약 CROSSFADE_MS_RANGE.max)을 넘지 않게 여기서 잘라요
+	const clamped = durationMs === undefined ? undefined : Math.round(Math.min(CROSSFADE_MS_RANGE.max, Math.max(CROSSFADE_MS_RANGE.min, durationMs)));
 	const guild = await store.getGuild(guildId);
 	const data: Prisma.GuildUpdateInput = { crossfadeEnabled: enabled };
 	if (!enabled) data.automixEnabled = false;
 	if (clamped !== undefined) data.crossfadeMs = clamped;
-	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+	const updated = await store.updateRow(guild.id, data);
 	store.updateCache(updated);
 	return { crossfadeEnabled: updated.crossfadeEnabled, crossfadeMs: updated.crossfadeMs };
 }
@@ -57,10 +59,18 @@ export async function setAutomix(
 	maxTempoChange?: number,
 	minConfidence?: number
 ): Promise<MixerSettings> {
-	if (maxTempoChange !== undefined && (!Number.isFinite(maxTempoChange) || maxTempoChange < 0 || maxTempoChange > 0.12)) {
+	if (
+		maxTempoChange !== undefined &&
+		(!Number.isFinite(maxTempoChange) ||
+			maxTempoChange < AUTOMIX_MAX_TEMPO_CHANGE_RANGE.min ||
+			maxTempoChange > AUTOMIX_MAX_TEMPO_CHANGE_RANGE.max)
+	) {
 		throw new RangeError('오토믹스 최대 템포 변경 비율은 0~0.12여야 해요.');
 	}
-	if (minConfidence !== undefined && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
+	if (
+		minConfidence !== undefined &&
+		(!Number.isFinite(minConfidence) || minConfidence < AUTOMIX_MIN_CONFIDENCE_RANGE.min || minConfidence > AUTOMIX_MIN_CONFIDENCE_RANGE.max)
+	) {
 		throw new RangeError('오토믹스 최소 신뢰도는 0~1이어야 해요.');
 	}
 	const guild = await store.getGuild(guildId);
@@ -68,14 +78,14 @@ export async function setAutomix(
 	if (enabled) data.crossfadeEnabled = true;
 	if (maxTempoChange !== undefined) data.automixMaxTempoChange = maxTempoChange;
 	if (minConfidence !== undefined) data.automixMinConfidence = minConfidence;
-	const updated = await container.db.guild.update({ where: { id: guild.id }, data });
+	const updated = await store.updateRow(guild.id, data);
 	store.updateCache(updated);
 	return getMixerSettings(store, guildId);
 }
 
 export async function setTransitionMode(store: GuildSettingsStore, guildId: string, mode: TransitionMode): Promise<MixerSettings> {
 	const guild = await store.getGuild(guildId);
-	const updated = await container.db.guild.update({ where: { id: guild.id }, data: transitionFlags(mode) });
+	const updated = await store.updateRow(guild.id, transitionFlags(mode));
 	store.updateCache(updated);
 	return getMixerSettings(store, guildId);
 }

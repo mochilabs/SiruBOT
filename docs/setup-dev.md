@@ -1,54 +1,67 @@
-# 개발 환경 온보딩
+# Development setup
 
-> **기준일**: 2026-10-15
+> **As of**: 2026-11-13
 
-상세 구조·계약은 `./architecture.md`, 루트 빠른 시작은 `../README.ko.md:49-183` 참조. 아래는 검증된 최소 순서다.
+Structure and contracts are in `./architecture.md`. This page is the shortest path to a running local environment.
 
-## 전제
+## Prerequisites
 
-- Node.js 22 이상, Yarn 4.12.0 (Corepack 관리) — `README.ko.md:51-56`
-- PostgreSQL, 디스코드 봇 토큰, Lavalink 서버 — `README.ko.md:51-56`
+- Node.js 22 or newer and Yarn 4.12.0, managed by Corepack (`corepack enable`)
+- PostgreSQL and Redis
+- A Lavalink node
+- A Discord application with a bot token
 
-## 순서
+## Steps
 
-1. `yarn install` — 의존성 설치.
-2. `yarn generate` — **typecheck/build 전 필수** (Prisma 클라이언트 생성). `turbo.json:5-7`의 `build`는 `^generate`에 의존한다.
-3. per-app `.env` 작성 — 각 `apps/*/.env.example`을 복사 (4개 전부 실존 확인: `bot`·`dashboard`·`data-api`·`shardmanager`). 비밀값은 커밋 금지.
-4. 실행 — 대시보드는 `yarn dev` (dev 스크립트를 가진 유일한 워크스페이스), 백엔드 앱은 `yarn watch`로 변경 시 자동 재빌드 후 별도 터미널에서 `yarn workspace @sirubot/<앱 이름> start`. 단일 앱은 `turbo dev --filter=@sirubot/dashboard`, `turbo run watch --filter=@sirubot/bot` 형식 (`README.ko.md:168-181`).
-5. `yarn workspace @sirubot/prisma migrate:dev` — DB 마이그레이션 (`README.ko.md:158`).
+1. `yarn install`
+2. `yarn generate`: generates the Prisma client. **Required before typecheck or build** (`turbo.json` makes `build` depend on `^generate`).
+3. Create an env file per app by copying its example: `apps/<app>/.env.example` to `apps/<app>/.env`. All six apps have one (`bot`, `dashboard`, `data-api`, `shardmanager`, `storage`, `notifier`). Never commit the result.
+4. `yarn workspace @sirubot/prisma migrate:dev`: applies database migrations.
+5. Run what you need:
+   - Dashboard: `yarn dev`. It is the only workspace with a `dev` script.
+   - Backend apps: `yarn watch` rebuilds them on change but does not start them. Start one in another terminal with `yarn workspace @sirubot/<app> start`.
+   - One workspace only: `yarn turbo dev --filter=@sirubot/dashboard`, `yarn turbo run watch --filter=@sirubot/bot`.
 
-## 포트
+## Ports
 
-| 앱 | 포트 | 근거 |
+| App | Port | Source |
 |---|---|---|
-| dashboard | 3000 | `NEXT_PUBLIC_APP_URL=http://localhost:3000` (`README.ko.md:82`) |
-| shardmanager | 3001 | `SHARD_MANAGER_URL=http://localhost:3001`, `Dockerfile:219` (`EXPOSE 3001`) |
-| data-api | 3002 | `PORT=3002` 기본 (`apps/data-api/.env.example`), `README.ko.md:112` |
+| dashboard | 3000 | Next.js default |
+| shardmanager | 3001 | `PORT` default in `apps/shardmanager/src/config/env.ts` |
+| data-api | 3002 | `PORT` default in `apps/data-api/src/config/env.ts` |
+| storage | 3003 | `PORT` default in `apps/storage/src/config/env.ts` |
+| notifier | 3004 | `PORT` default in `apps/notifier/src/config/env.ts` |
+| bot (health only) | 8080 | `HEALTH_PORT` default in `apps/bot/src/lib/config.ts` |
 
-주의: `apps/shardmanager/.env.example`의 `PORT=3000`은 실제 운영 포트(3001)와 다르다 — 예시 스텁이므로 3001로 맞춰 쓸 것.
+## Environment essentials
 
-## env 핵심
+- `LAVALINK_HOSTS` is a comma-separated list of `id_host_port[_password]`, for example `main_localhost_2333_youshallnotpass`. The parser is `packages/utils/src/lavalinkHosts.ts`; a malformed value stops the bot before it boots.
+- The data-api key is `DATA_API_AUTH_KEY ?? AUTH_KEY`. The bot, the dashboard and data-api must share it. Callers send the raw key in `Authorization`, with no `Bearer` prefix.
+- Without that key the dashboard skips every data-api call (`apps/dashboard/src/lib/data-api/client.ts`), so player, channel and role features fail.
+- In development the bot runs standalone on shard 0 and needs neither `SHARD_MANAGER_URL` nor `AUTH_KEY`. In production both are required (`apps/bot/src/core/shardIdentity.ts`).
+- Values that must match across apps are listed in `./architecture.md#10-environment-variables`. Variable names and defaults live in each app's `.env.example` and zod schema.
 
-- `LAVALINK_HOSTS`: `id_host_port[_password]` 콤마 목록 (예 `main_localhost_2333_youshallnotpass`). 파서는 `packages/utils/src/lavalinkHosts.ts:4-34`, 형식 오류 시 기동 전 throw.
-- data-api 키: `DATA_API_AUTH_KEY ?? AUTH_KEY` — 3개 앱이 같은 키 공유, `Authorization` 헤더에 Bearer 없이 원문. 값 예시는 각 `.env.example` 참조 (본 문서에 비밀값 기재 금지).
-- 키 미설정 시 대시보드는 data-api 호출을 전면 스킵한다 (`apps/dashboard/src/lib/data-api/client.ts`).
+## Slash command registration
 
-## 수동 명령어 동기화
-
-`REGISTER_COMMANDS=true`면 기동 시 덮어쓰기, 아니면 콘솔 로그만 (`AGENTS.md` Commands). 수동 동기화:
+With `REGISTER_COMMANDS=true` the bot overwrites the registered commands on startup; otherwise it only logs the difference. To sync by hand:
 
 ```bash
 yarn dlx tsx scripts/register-commands.ts [--dry-run] [--global|--guild <id>]
 ```
 
-스크립트 원본 `scripts/register-commands.ts:1-30`, 길드 기본값은 `GUILD_ID`/`DEV_GUILD_IDS`.
+When no guild id is given, the script falls back to `GUILD_ID` or `DEV_GUILD_IDS` from the environment (`scripts/register-commands.ts`).
 
-## 검증 명령
+## Verification commands
 
-| 명령 | 비고 |
+| Command | Notes |
 |---|---|
-| `yarn lint` / `yarn lint:fix` | dashboard는 `eslint . --max-warnings=0`, 나머지는 prettier check |
-| `yarn typecheck` | turbo 의존성 포함 — bare `tsc` 먼저 돌리지 말 것 |
-| `yarn test` | per-workspace `vitest run --passWithNoTests` |
+| `yarn lint` / `yarn lint:fix` | The dashboard runs `eslint . --max-warnings=0`; everything else runs `prettier --check` |
+| `yarn typecheck` | Builds dependencies first through Turborepo. Do not run bare `tsc` |
+| `yarn test` | `vitest run --passWithNoTests` per workspace |
+| `yarn workspace @sirubot/bot test src/path/file.test.ts` | A single test file. If it prints `command not found: vitest`, use `yarn turbo test --filter=@sirubot/bot -- src/path/file.test.ts` |
 
-주의: dashboard `dev`는 `--webpack`, `build`는 `--turbopack` (`apps/dashboard/package.json:6-7`).
+Notes:
+
+- Tests use the root `vitest.config.ts`, which aliases `@sirubot/utils` and `@sirubot/app-kit` to source, so no dist build is needed. The dashboard has its own `apps/dashboard/vitest.config.ts`.
+- The pre-push hook (`.husky/pre-push`) runs `lint:fix` and `typecheck`.
+- The dashboard's `dev` script uses `--webpack` and its `build` script uses `--turbopack` (`apps/dashboard/package.json`).

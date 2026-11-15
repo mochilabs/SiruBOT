@@ -1,5 +1,6 @@
 "use client";
 
+import { SPONSORBLOCK_SEGMENTS, type SponsorBlockSegment } from "@sirubot/utils/guildSettingsContract";
 import {
   CircleDollarSign,
   Eye,
@@ -21,7 +22,6 @@ import {
   SearchableSelect,
 } from "@/components/servers/searchable-select";
 import { Switch } from "@/components/ui/switch";
-import { SPONSORBLOCK_SEGMENTS, type SponsorBlockSegment } from "@/lib/schemas";
 import type { GuildSettings } from "@/types/settings";
 
 import { SettingsPanel, useSettingsPanel } from "./settings-panel";

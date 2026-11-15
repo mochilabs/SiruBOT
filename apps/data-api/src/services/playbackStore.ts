@@ -59,10 +59,6 @@ export function recordPlaybackEvent(input: Omit<PlaybackEvent, 'count'> & { coun
 	if (event.guildId) lastByGuild.set(event.guildId, event);
 }
 
-export function recentPlaybackEvents(limit: number): PlaybackEvent[] {
-	return events.slice(-Math.max(1, Math.min(100, limit)));
-}
-
 export function playbackSnapshot(): {
 	counts: Record<PlaybackEventType, number>;
 	total: number;

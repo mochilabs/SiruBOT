@@ -13,18 +13,12 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 export type SecretBoxKey = Buffer;
 
 const IV_BYTES = 12;
-const KEY_BYTES = 32;
 
 /** 시크릿 문자열 → 32바이트 키 (SHA-256 다이제스트). 빈 문자열이면 null. */
 export function deriveKeyFromSecret(secret: string | null | undefined): SecretBoxKey | null {
 	const value = secret?.trim();
 	if (!value) return null;
 	return createHash('sha256').update(value).digest();
-}
-
-/** 랜덤 키 생성 — 운영 env에 넣을 값을 만들 때 써요 (`openssl rand -base64 32`와 동등) */
-export function generateSecretKeyHex(): string {
-	return randomBytes(KEY_BYTES).toString('hex');
 }
 
 /** 평문 → `iv:tag:ciphertext` (전부 base64url). 키가 없으면 빈 문자열. */

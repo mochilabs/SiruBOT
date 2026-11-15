@@ -1,12 +1,12 @@
 // 루트 배럴은 "실제로 쓰이는 public API"만 명시적으로 re-export해요 — export *는 내부 구현까지 공개 API로 누수시켜요.
 // node 전용 모듈(version·logger·redisSubscriber·youtube·appEmoji)이 여기 있는 한 루트는 노드 전용이에요 —
-// 클라이언트("use client") 번들은 '@sirubot/utils/client'(또는 /time·/storage·/playerWeb 등 순수 서브패스)만 임포트해요.
+// 클라이언트("use client") 번들은 /time·/storage·/playerWeb 등 순수 서브패스만 임포트해요.
 // 대시보드는 eslint no-restricted-imports로 루트 임포트가 금지돼요 (apps/dashboard/eslint.config.mjs).
 
 export { isDev } from './env.js';
 export { versionInfo } from './version.js';
 export { BOT_NAME, DEFAULT_COLOR, VOICE_CHANNEL_REQUIRED_MESSAGE, WARN_COLOR } from './constants.js';
-export { emojiProgressBar, formatTrack, getRequesterText, removeEmojis, volumeToEmoji } from './format.js';
+export { emojiProgressBar, formatTrack, removeEmojis, volumeToEmoji } from './format.js';
 export { formatTime, formatTimeToKorean } from './time.js';
 export { addSeparator, createContainer, createSeparator, createThumbnail } from './embed.js';
 export { MemoryCache } from './memoryCache.js';
@@ -31,6 +31,7 @@ export {
 	PANEL_POST_REQUEST_CHANNEL,
 	PANEL_POST_RESPONSE_CHANNEL,
 	PLAYER_STATE_CHANNEL_PATTERN,
+	PLAYER_STATE_CHANNEL_PREFIX,
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
 	playerStateChannel,
@@ -44,7 +45,36 @@ export { type PlayerStatePayload, type PlayerStateResponse, playerStateSchema, t
 export { parseLavalinkHosts } from './lavalinkHosts.js';
 export { isYouTubeSource, resolveYouTubeVideoId } from './lavalinkTrack.js';
 export { SPONSORBLOCK_SKIP_CATEGORIES, type SponsorBlockSkipCategory, type SponsorBlockSkipSegment } from './sponsorblock.js';
-export { ManagedRedisSubscriber } from './redisSubscriber.js';
+export { ManagedRedisSubscriber, type ManagedRedisSubscriberOptions } from './redisSubscriber.js';
+export {
+	botAdminRpc,
+	botProfileRefreshEvent,
+	botProfileSetEvent,
+	botProfileStateEvent,
+	type BotProfileStatePayload,
+	botProfileStateSchema,
+	defineRedisEvent,
+	defineRedisGuildEvent,
+	defineRedisRpc,
+	type GreetingTestResult,
+	guildDataRpc,
+	guildSettingsInvalidateEvent,
+	jtcSetupRpc,
+	memberGreetingSendEvent,
+	memberGreetingStateEvent,
+	memberGreetingTestStateSchema,
+	panelPostRpc,
+	pickRpcCorrelation,
+	playerWebRpc,
+	type RedisEventContract,
+	type RedisGuildEventContract,
+	type RedisRpcContract,
+	type RedisRpcRequest,
+	type RedisRpcRequestInput,
+	type RedisRpcResponse,
+	roleValidationRpc,
+	socialWebhookCreateRpc
+} from './redisContract.js';
 export { getLoggerSettings } from './logger.js';
 export { type AppEmojiFallbackKey, emoji, ensureAppEmojisLoaded, setAppEmojiIdMap } from './appEmoji.js';
 export {
@@ -77,11 +107,7 @@ export {
 } from './guildData.js';
 export { jtcSetupRequestSchema, type JtcSetupResponse, jtcSetupResponseSchema } from './jtcSetup.js';
 export {
-	buildRolePanelCustomId,
-	parseRolePanelCustomId,
 	ROLE_PANEL_BUTTON_LABEL_MAX,
-	ROLE_PANEL_CUSTOM_ID_PREFIX,
-	ROLE_PANEL_DEFAULTS,
 	ROLE_PANEL_DESCRIPTION_MAX,
 	ROLE_PANEL_MAX_BUTTONS,
 	ROLE_PANEL_NAME_MAX,

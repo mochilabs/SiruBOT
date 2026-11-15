@@ -63,6 +63,7 @@ export const POST = createGuildApiHandler({
           description:
             data.description ??
             "아래 버튼을 눌러 원하는 역할을 받거나 해제하세요.",
+          imageUrl: data.imageUrl ?? null,
           mode: data.mode,
           buttons: {
             create: data.buttons.map((button, index) => ({

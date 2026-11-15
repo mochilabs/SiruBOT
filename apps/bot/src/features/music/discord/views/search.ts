@@ -1,0 +1,75 @@
+import { addSeparator, emoji, createContainer, formatTime } from '@sirubot/utils';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, StringSelectMenuBuilder, TextDisplayBuilder } from 'discord.js';
+import { Track, UnresolvedTrack } from 'lavalink-client';
+import { truncateText } from '../../../../lib/text.ts';
+import { searchId } from '../customIds.ts';
+
+/** /검색 결과 셀렉트 메뉴의 customId — 메시지 컬렉터가 이 값으로 가려내요. */
+export const searchSelectCustomId = searchId.encode('select');
+/** 검색 결과 취소 버튼의 customId. */
+export const searchCancelCustomId = searchId.encode('cancel');
+
+/** 트랙 길이(ms)를 formatTime이 기대하는 초 단위로 넘겨 m:ss 포맷으로 만든다. */
+function trackDurationText(track: Track | UnresolvedTrack): string {
+	return formatTime((track.info.duration ?? 0) / 1000);
+}
+
+/** 검색 결과 — 곡 목록과 선택형 셀렉트 메뉴를 담은 컨테이너. */
+export function searchResults(query: string, tracks: (Track | UnresolvedTrack)[]): ContainerBuilder {
+	// createContainer()가 DEFAULT_COLOR로 accent color를 설정한다.
+	const container = createContainer();
+
+	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`${emoji('mag')} **${query}** 검색 결과예요. 재생할 곡을 선택해 주세요.`));
+	addSeparator(container);
+
+	// 곡 목록 — 제목 60자, 아티스트 40자에서 절단
+	const listText = tracks
+		.map(
+			(track, index) =>
+				`${index + 1}. **${truncateText(track.info.title ?? '(제목 없음)', 60)}** · ${truncateText(track.info.author ?? '알 수 없음', 40)} · ${trackDurationText(track)}`
+		)
+		.join('\n');
+	container.addTextDisplayComponents(new TextDisplayBuilder().setContent(listText));
+
+	addSeparator(container);
+
+	// 선택형 셀렉트 메뉴 — label/description은 디스코드 제한(100자) 이내, 옵션은 최대 25개까지 보장해야 한다.
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId(searchSelectCustomId)
+		.setPlaceholder('재생할 곡을 선택하세요')
+		.setMinValues(1)
+		.setMaxValues(1)
+		.addOptions(
+			tracks.map((track, index) => ({
+				label: truncateText(`${index + 1}. ${track.info.title ?? '(제목 없음)'}`, 100),
+				value: String(index),
+				description: truncateText(`${track.info.author ?? '알 수 없음'} · ${trackDurationText(track)}`, 100)
+			}))
+		);
+
+	container.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu));
+
+	// 취소 버튼 — 원하는 결과가 없을 때 검색을 취소한다.
+	const cancelButton = new ButtonBuilder()
+		.setCustomId(searchCancelCustomId)
+		.setLabel('취소')
+		.setEmoji(emoji('error'))
+		.setStyle(ButtonStyle.Secondary);
+	container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(cancelButton));
+
+	return container;
+}
+
+/** 검색 시간 초과 안내 — 재생 컨트롤 정보가 없는 단순 안내 컨테이너. */
+export function searchTimeout(): ContainerBuilder {
+	return createContainer().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`${emoji('hourglass')} 시간이 지나 검색을 취소했어요. 다시 /검색을 사용해 주세요.`)
+	);
+}
+
+/** 검색 취소 안내 — 사용자가 취소 버튼을 눌렀을 때. */
+export function searchCancelled(): ContainerBuilder {
+	return createContainer().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`${emoji('stop')} 검색을 취소했어요. 다시 /검색을 사용해 주세요.`)
+	);
+}

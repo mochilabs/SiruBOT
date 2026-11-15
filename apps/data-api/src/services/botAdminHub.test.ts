@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PendingRequestPool } from '@sirubot/utils';
-import { correlateBotAdminResponse, type BotAdminPendingMeta, type BotAdminResult } from './botAdminHub.ts';
+import { hub, type BotAdminPendingMeta, type BotAdminResult } from './botAdminHub.ts';
 
 const REQUEST_ID = 'c9d3a1b2-4e5f-4a6b-8c7d-2b1e3f4a5c61';
 
@@ -19,7 +19,7 @@ function makeRegistry(capacity = 10) {
 			return pending.register(requestId, timeoutMs);
 		},
 		correlate(raw: string) {
-			return correlateBotAdminResponse(raw, pending, pendingMeta);
+			return hub.correlate(raw, pending, pendingMeta);
 		}
 	};
 }

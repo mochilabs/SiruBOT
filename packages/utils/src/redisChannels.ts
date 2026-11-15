@@ -83,7 +83,7 @@ export function memberGreetingStateChannel(guildId: string): string {
  * 플레이어 실시간 상태 채널 접두사 — 봇이 `sirubot:player:{guildId}`로 스냅샷을 퍼블리시해요.
  * 구독자는 data-api playerHub가 유일해요. (schema: playerState.ts)
  */
-const PLAYER_STATE_CHANNEL_PREFIX = 'sirubot:player:';
+export const PLAYER_STATE_CHANNEL_PREFIX = 'sirubot:player:';
 
 /** 패턴 구독용 — `sirubot:player:*` */
 export const PLAYER_STATE_CHANNEL_PATTERN = `${PLAYER_STATE_CHANNEL_PREFIX}*`;

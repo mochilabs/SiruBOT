@@ -29,5 +29,4 @@ export const SERVER_TAB_GROUPS = {
   style: "꾸미기",
   server: "서버",
 } as const;
-export type ServerTabGroup = keyof typeof SERVER_TAB_GROUPS;
 export type ServerTabKey = (typeof SERVER_TABS)[number]["key"];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { JTC_TEMPLATE_MAX_LENGTH, JTC_USER_LIMIT_RANGE } from "@sirubot/utils/guildSettingsContract";
 import { Volume2 } from "lucide-react";
 
 import { ChannelSelect } from "@/components/discord/channel-select";
@@ -152,7 +153,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
                   id="jtc-template"
                   type="text"
                   value={form.jtcTemplate}
-                  maxLength={100}
+                  maxLength={JTC_TEMPLATE_MAX_LENGTH}
                   disabled={saving}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => patch({ jtcTemplate: e.target.value })}
                   placeholder="{user}의 방"
@@ -167,7 +168,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
                   value={form.jtcUserLimit}
                   onChange={(value: number) => patch({ jtcUserLimit: value })}
                   min={0}
-                  max={99}
+                  max={JTC_USER_LIMIT_RANGE.max}
                   label="임시방 인원 제한"
                   formatValue={(v) => (v === 0 ? "제한 없음" : `${v}명`)}
                   disabled={saving}

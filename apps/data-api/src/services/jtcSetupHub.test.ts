@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PendingRequestPool } from '@sirubot/utils';
-import { correlateJtcSetupResponse, type JtcSetupFailureReason, type JtcSetupPendingMeta, type JtcSetupResult } from './jtcSetupHub.ts';
+import { hub, type JtcSetupFailureReason, type JtcSetupPendingMeta, type JtcSetupResult } from './jtcSetupHub.ts';
 
 const REQUEST_ID = 'c9d3a1b2-4e5f-4a6b-8c7d-2b1e3f4a5c61';
 const OTHER_REQUEST_ID = 'a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c51';
@@ -8,7 +8,7 @@ const GUILD_ID = '123456789012345678';
 
 /**
  * 허브의 requestJtcSetup()과 같은 조립을 테스트용으로 만들어요 —
- * 메타데이터를 register 전에 심고, 상관은 correlateJtcSetupResponse가 담당해요.
+ * 메타데이터를 register 전에 심고, 상관은 hub.correlate가 담당해요.
  */
 function makeRegistry(capacity = 10) {
 	const pendingMeta = new Map<string, JtcSetupPendingMeta>();
@@ -26,7 +26,7 @@ function makeRegistry(capacity = 10) {
 			return pending.register(requestId, timeoutMs);
 		},
 		handleRaw(raw: string) {
-			return correlateJtcSetupResponse(raw, pending, pendingMeta);
+			return hub.correlate(raw, pending, pendingMeta);
 		},
 		fail(requestId: string, reason: JtcSetupFailureReason) {
 			if (pending.fail(requestId, { ok: false, reason, message: null })) {

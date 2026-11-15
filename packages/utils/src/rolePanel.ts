@@ -12,9 +12,6 @@ import { redisIdSchema } from './redisChannels.js';
  *   request/reply로 우회해요 — 채널·스키마는 redisChannels.ts / panelPost.ts 계약이에요.
  */
 
-/** 버튼·역할 customId 접두사 — 핸들러가 이 prefix로 파싱해요. */
-export const ROLE_PANEL_CUSTOM_ID_PREFIX = 'rolepanel:grant:';
-
 /** 패널당 최대 역할 버튼 수 — Discord 버튼 5개/행 × 5행 = 25개. */
 export const ROLE_PANEL_MAX_BUTTONS = 25;
 /** 버튼 라벨 최대 길이 (Discord 버튼 라벨 상한 80자). */
@@ -25,6 +22,8 @@ export const ROLE_PANEL_TITLE_MAX = 100;
 export const ROLE_PANEL_DESCRIPTION_MAX = 1000;
 /** 패널 식별 이름 최대 길이 (대시보드 목록·autocomplete에 표시). */
 export const ROLE_PANEL_NAME_MAX = 100;
+/** 패널 이미지 URL 최대 길이. */
+export const ROLE_PANEL_IMAGE_URL_MAX = 2048;
 
 /** 역할을 받는 방식 — 버튼 클릭 또는 이모지 반응. 한 패널은 둘 중 하나만 써요. */
 export const rolePanelModes = ['button', 'reaction'] as const;
@@ -38,23 +37,6 @@ export type RolePanelButtonStyle = (typeof rolePanelButtonStyles)[number];
 
 const snowflake = z.string().regex(/^\d{17,20}$/, '올바른 ID 형식이 아니에요.');
 const nullableSnowflake = snowflake.nullable();
-
-/**
- * customId 빌더 — `rolepanel:grant:<buttonId>:<roleId>`.
- * buttonId는 uuid(36자), roleId는 snowflake(최대 20자) → 전체 ≈ 15 + 36 + 1 + 20 = 72자 < 100자 상한.
- */
-export function buildRolePanelCustomId(buttonId: string, roleId: string): string {
-	return `${ROLE_PANEL_CUSTOM_ID_PREFIX}${buttonId}:${roleId}`;
-}
-
-/** customId 파서 — 이 prefix가 아니면 null, 맞으면 { buttonId, roleId }. */
-export function parseRolePanelCustomId(customId: string): { buttonId: string; roleId: string } | null {
-	if (!customId.startsWith(ROLE_PANEL_CUSTOM_ID_PREFIX)) return null;
-	const rest = customId.slice(ROLE_PANEL_CUSTOM_ID_PREFIX.length);
-	const sep = rest.indexOf(':');
-	if (sep === -1 || sep === 0 || sep === rest.length - 1) return null;
-	return { buttonId: rest.slice(0, sep), roleId: rest.slice(sep + 1) };
-}
 
 // 유니코드 이모지(RGI) — v 플래그 리터럴은 낮은 target에서 파싱이 깨져 생성자로 만들어요.
 const UNICODE_EMOJI = new RegExp('^\\p{RGI_Emoji}$', 'v');
@@ -132,12 +114,19 @@ const rolePanelDescriptionSchema = z
 	.string()
 	.min(1, '패널 안내문을 입력해 주세요.')
 	.max(ROLE_PANEL_DESCRIPTION_MAX, `안내문은 ${ROLE_PANEL_DESCRIPTION_MAX}자 이하여야 해요.`);
+export const rolePanelImageUrlSchema = z
+	.string()
+	.trim()
+	.url('올바른 이미지 주소 형식이 아니에요.')
+	.max(ROLE_PANEL_IMAGE_URL_MAX, `이미지 주소는 ${ROLE_PANEL_IMAGE_URL_MAX}자 이하여야 해요.`)
+	.refine((url) => /^https?:\/\//i.test(url), { message: '이미지 주소는 http 또는 https 주소여야 해요.' });
 
 /** 패널 전체 계약 (생성 시 기본값 포함). */
 export const rolePanelSchema = z.object({
 	name: rolePanelNameSchema,
 	title: rolePanelTitleSchema.default('역할 패널'),
 	description: rolePanelDescriptionSchema.default('아래 버튼을 눌러 원하는 역할을 받거나 해제하세요.'),
+	imageUrl: rolePanelImageUrlSchema.nullable().optional().default(null),
 	channelId: nullableSnowflake.optional().default(null),
 	messageId: nullableSnowflake.optional().default(null)
 });
@@ -158,6 +147,7 @@ export const rolePanelCreateSchema = z
 		name: rolePanelNameSchema,
 		title: rolePanelTitleSchema.optional(),
 		description: rolePanelDescriptionSchema.optional(),
+		imageUrl: rolePanelImageUrlSchema.nullable().optional().default(null),
 		mode: z.enum(rolePanelModes).optional().default('button'),
 		buttons: rolePanelButtonsSchema.optional().default([])
 	})
@@ -172,6 +162,7 @@ export const rolePanelUpdateSchema = z
 		name: rolePanelNameSchema.optional(),
 		title: rolePanelTitleSchema.optional(),
 		description: rolePanelDescriptionSchema.optional(),
+		imageUrl: rolePanelImageUrlSchema.nullable().optional(),
 		mode: z.enum(rolePanelModes).optional(),
 		buttons: rolePanelButtonsSchema.optional()
 	})
@@ -180,14 +171,6 @@ export const rolePanelUpdateSchema = z
 		const reason = value.mode === 'reaction' && value.buttons ? validateReactionButtons(value.buttons) : null;
 		if (reason) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buttons'], message: reason });
 	});
-
-export const ROLE_PANEL_DEFAULTS: RolePanel = {
-	name: '',
-	title: '역할 패널',
-	description: '아래 버튼을 눌러 원하는 역할을 받거나 해제하세요.',
-	channelId: null,
-	messageId: null
-};
 
 /**
  * 역할 유효성 검증 request — 대시보드가 저장 전에 roleIds를 봇에 보내 부여 가능 여부를 확인해요.

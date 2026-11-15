@@ -6,7 +6,7 @@ import { sendError } from './common.ts';
 import { fetchOhaasaRaw, getTodayDateString, ohaasaCacheKey } from '../providers/ohaasa.ts';
 import { translateDaily } from '../providers/translate.ts';
 import type { OpenAICompatTranslationProvider } from '../providers/translate.ts';
-import { lastGoodDaily, refreshOnce } from '../services/ohaasaScheduler.ts';
+import { lastGoodDaily } from '../services/ohaasaScheduler.ts';
 
 /** 오하아사(오늘의 운세) 캐시 서빙 + 수동 갱신 — 스크래핑·번역 스케줄러는 services/ohaasaScheduler.ts가 소유해요. */
 
@@ -45,15 +45,6 @@ export function registerOhaasaRoutes(fastify: FastifyInstance, deps: { translati
 				throw error;
 			});
 			return reply.send({ ...data, _cached: cached });
-		} catch (error) {
-			return sendError(reply, error);
-		}
-	});
-
-	fastify.post('/v1/ohaasa/refresh', async (_request, reply) => {
-		try {
-			const daily = await refreshOnce(deps.translationProvider.available ? deps.translationProvider : null);
-			return reply.send(daily);
 		} catch (error) {
 			return sendError(reply, error);
 		}

@@ -1,0 +1,55 @@
+import { ApplyOptions } from '@sapphire/decorators';
+import { Command, UserError } from '@sapphire/framework';
+import { emoji } from '@sirubot/utils';
+import { inviteView } from '../views/invite.ts';
+import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionsBitField } from 'discord.js';
+
+@ApplyOptions<Command.Options>({
+	enabled: true,
+	name: 'invite',
+	description: 'Show the bot invite link.',
+	fullCategory: ['일반']
+})
+export class InviteCommand extends Command {
+	public override registerApplicationCommands(registry: Command.Registry) {
+		registry.registerChatInputCommand((builder) => {
+			builder
+				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+				.setName(this.name)
+				.setNameLocalizations({ ko: '초대' })
+				.setDescription(this.description)
+				.setDescriptionLocalizations({ ko: '봇 초대 링크를 보여줘요.' });
+		});
+	}
+
+	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
+		const clientId = this.container.client.user?.id;
+		if (!clientId) {
+			throw new UserError({
+				identifier: 'invite_not_ready',
+				message: `${emoji('error')} 봇이 아직 초기화 중이에요. 잠시 후 다시 시도해 주세요.`,
+				context: { ephemeral: true }
+			});
+		}
+
+		const permissions = new PermissionsBitField([
+			PermissionsBitField.Flags.Connect,
+			PermissionsBitField.Flags.Speak,
+			PermissionsBitField.Flags.UseVAD,
+			PermissionsBitField.Flags.ViewChannel,
+			PermissionsBitField.Flags.SendMessages,
+			PermissionsBitField.Flags.EmbedLinks,
+			PermissionsBitField.Flags.AttachFiles,
+			PermissionsBitField.Flags.ReadMessageHistory,
+			PermissionsBitField.Flags.AddReactions,
+			PermissionsBitField.Flags.UseExternalEmojis
+		]);
+		const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=${permissions.bitfield}&scope=bot%20applications.commands`;
+		const avatarUrl = this.container.client.user?.displayAvatarURL({ size: 256 }) ?? '';
+
+		await interaction.reply({
+			components: [inviteView(avatarUrl, inviteUrl)],
+			flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2]
+		});
+	}
+}

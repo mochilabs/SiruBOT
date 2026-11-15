@@ -1,0 +1,152 @@
+name: Branch Docker Image
+
+# beta에 합치기 전 브랜치를 테스트 배포할 때 쓰는 이미지예요. 기본으로는 빌드하지 않아요.
+#   - PR에 `docker-build` 라벨을 달면 빌드하고, 라벨이 붙어 있는 동안 push마다 다시 빌드해요.
+#   - 수동 실행(workflow_dispatch)도 돼요. 단, GitHub는 기본 브랜치(main)에 있는 워크플로만 수동 실행을 허용해요.
+# 태그: <브랜치 slug>, <브랜치 slug>-<짧은 sha>  (예: refactor-bot-architecture, refactor-bot-architecture-1a2b3c4)
+# 테스트 배포는 앱 사이 계약이 어긋나지 않도록 6개 앱을 항상 같이 빌드해요 (수동 실행은 앱 하나만 고를 수 있어요).
+# 같은 저장소 브랜치의 PR만 빌드해요. 포크 PR은 패키지 쓰기 권한이 없어서 건너뛰어요.
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: '빌드할 앱 선택 (all 선택 시 전체 빌드)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - bot
+          - dashboard
+          - shardmanager
+          - data-api
+          - storage
+          - notifier
+
+env:
+  REGISTRY: ghcr.io
+
+concurrency:
+  group: docker-branch-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-branch:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.event.pull_request.labels.*.name, 'docker-build') &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       (github.event.action != 'labeled' || github.event.label.name == 'docker-build'))
+    runs-on: ubuntu-latest
+    # 대시보드 NEXT_PUBLIC_* 변수는 beta 환경 값을 써요 (테스트 배포는 beta 인프라 기준)
+    environment: beta
+    strategy:
+      matrix:
+        app: [bot, dashboard, shardmanager, data-api, storage, notifier]
+      fail-fast: false
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check app selection
+        id: select
+        env:
+          TARGET: ${{ inputs.app || 'all' }}
+          APP: ${{ matrix.app }}
+        run: |
+          if [[ "$TARGET" == "all" || "$TARGET" == "$APP" ]]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.select.outputs.build == 'true'
+        uses: actions/checkout@v4
+        with:
+          # PR 이벤트의 기본 체크아웃은 base와의 병합 커밋이라, 브랜치 그대로의 코드를 빌드하도록 head를 받아요
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Resolve image tag
+        if: steps.select.outputs.build == 'true'
+        id: tag
+        # 브랜치명은 run: 안에서 직접 치환하지 않아요 (셸 명령 주입 방지). env:로만 넘겨요.
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          APP: ${{ matrix.app }}
+        run: |
+          # Docker 태그 허용 문자([a-z0-9_.-])만 남기고, beta/latest 같은 운영 태그와 겹치지 않게 해요
+          SLUG="$(printf '%s' "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]+/-/g; s/^[-.]+//; s/-+$//' | cut -c1-100)"
+          case "$SLUG" in
+            ''|beta|main|latest) echo "::error::브랜치 '$BRANCH'는 이 워크플로로 빌드할 수 없어요 (docker-beta.yml/docker-publish.yml 사용)"; exit 1 ;;
+          esac
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          # 레지스트리 참조는 소문자여야 해요
+          BASE="${REGISTRY}/${GITHUB_REPOSITORY,,}-${APP}"
+          echo "image=$BASE" >> "$GITHUB_OUTPUT"
+          echo "cache_branch=${BASE}:buildcache-branch" >> "$GITHUB_OUTPUT"
+          echo "cache_beta=${BASE}:buildcache" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.select.outputs.build == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        if: steps.select.outputs.build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        if: steps.select.outputs.build == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.tag.outputs.image }}
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.slug }}
+            type=raw,value=${{ steps.tag.outputs.slug }}-${{ steps.tag.outputs.short_sha }}
+
+      - name: Build and push Docker image
+        if: steps.select.outputs.build == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: ${{ matrix.app }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_HASH=${{ steps.tag.outputs.sha }}
+            GIT_BRANCH=${{ steps.tag.outputs.branch }}
+            VERSION=${{ steps.tag.outputs.slug }}
+            SENTRY_RELEASE=${{ steps.tag.outputs.slug }}-${{ steps.tag.outputs.sha }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_DISCORD_CLIENT_ID=${{ vars.NEXT_PUBLIC_DISCORD_CLIENT_ID }}
+            NEXT_PUBLIC_SUPPORT_SERVER=${{ vars.NEXT_PUBLIC_SUPPORT_SERVER }}
+            NEXT_PUBLIC_TOS_URL=${{ vars.NEXT_PUBLIC_TOS_URL }}
+            NEXT_PUBLIC_PRIVACY_POLICY_URL=${{ vars.NEXT_PUBLIC_PRIVACY_POLICY_URL }}
+          # beta 캐시는 읽기만 하고, 브랜치 빌드끼리는 공용 buildcache-branch에 써요 (beta 캐시를 덮지 않게)
+          cache-from: |
+            type=registry,ref=${{ steps.tag.outputs.cache_branch }}
+            type=registry,ref=${{ steps.tag.outputs.cache_beta }}
+          cache-to: type=registry,ref=${{ steps.tag.outputs.cache_branch }},mode=max,image-manifest=true,oci-mediatypes=true
+
+      - name: Summary
+        if: steps.select.outputs.build == 'true'
+        env:
+          IMAGE: ${{ steps.tag.outputs.image }}
+          SLUG: ${{ steps.tag.outputs.slug }}
+          SHORT: ${{ steps.tag.outputs.short_sha }}
+        run: |
+          echo "- \`${IMAGE}:${SLUG}\` / \`${IMAGE}:${SLUG}-${SHORT}\`" >> "$GITHUB_STEP_SUMMARY"

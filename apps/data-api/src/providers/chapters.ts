@@ -64,7 +64,11 @@ export async function fetchYouTubeChaptersFresh(videoId: string, durationMs: num
 		try {
 			const info = await youtube.getInfo(videoId);
 			const markers = info.player_overlays?.decorated_player_bar?.player_bar?.markers_map;
-			const chapters = markers?.find((marker) => marker.marker_key === 'DESCRIPTION_CHAPTERS')?.value.chapters ?? [];
+			// Creator-written chapters win; YouTube's auto-generated chapters are the fallback.
+			const chapters =
+				markers?.find((marker) => marker.marker_key === 'DESCRIPTION_CHAPTERS')?.value.chapters ??
+				markers?.find((marker) => marker.marker_key === 'AUTO_CHAPTERS')?.value.chapters ??
+				[];
 			if (chapters.length > 0) {
 				return toChapters(
 					chapters.map((chapter) => ({ name: chapter.title.toString(), startMs: chapter.time_range_start_millis })),
