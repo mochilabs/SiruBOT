@@ -135,7 +135,6 @@ export function getDiscordEmbedInput(name: string, base: string): DiscordEmbedIn
 				imageAlt: OG_IMAGES.track.alt,
 				highlights: [
 					"🎚️ **크로스페이드·갭리스** 곡과 곡 사이를 매끄럽게",
-					"🎛️ **필터 프리셋** 베이스부스트·나이트코어·8D·노래방",
 					"📝 **가사** 듣고 있는 곡 가사 바로 보기"
 				],
 				buttons: [{ ...chart, label: "차트 보기" }, invite, dashboard]
