@@ -98,3 +98,18 @@ export class CustomPlayer extends Player {
 		};
 	}
 }
+
+/**
+ * 정지로 끝난 플레이어를 소멸시킨다 — disconnect만 하면 클라·서버 플레이어가 남아, 늦게 도착한
+ * 복구 경로가 current를 되살렸을 때 음성 없는 유령 플레이어가 영원히 재생 중으로 남는다.
+ * destroy는 서버 플레이어 삭제와 playerDestroy(타이머·큐·컨트롤러 정리)까지 한다.
+ * 소멸이 실패하면(노드 불통 등) 예전처럼 정지·퇴장만이라도 한다.
+ */
+export async function destroyStoppedPlayer(player: Player): Promise<void> {
+	try {
+		await player.destroy('StopCommand');
+	} catch {
+		await player.stopPlaying().catch(() => null);
+		await player.disconnect(true).catch(() => null);
+	}
+}

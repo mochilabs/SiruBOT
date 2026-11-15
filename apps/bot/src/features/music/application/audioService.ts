@@ -10,7 +10,7 @@ import { isRelatedTrack, removeStaleRelatedTracks } from '../lavalink/autoPlayRe
 import { cancelPendingInvalidate, notifyQueueMutated } from '../lavalink/queue/queueWrapper.ts';
 import { sendOverride } from '../lavalink/handlers/mixerHandlers.ts';
 import type { LavalinkDeps } from '../lavalink/deps.ts';
-import type { CustomPlayer } from '../lavalink/player/customPlayer.ts';
+import { destroyStoppedPlayer, type CustomPlayer } from '../lavalink/player/customPlayer.ts';
 import type { MixerService } from './mixerService.ts';
 
 export interface AudioServiceDeps {
@@ -156,6 +156,9 @@ export class AudioService {
 
 	public async ensurePlayback(player: Player): Promise<void> {
 		if (player.playing) return;
+		// 명시적인 재생 시작 — 이전 정지 명령은 더 이상 유효하지 않다. trackStart까지 남아 있으면
+		// 정지 가드(watchdog·클라 전이)가 이 새 재생의 복구까지 막는다.
+		(player as CustomPlayer).transitionState.stopByCommand = false;
 		// 클라 playing 플래그는 서버 주도 전이(크로스페이드) 뒤에 false로 굳을 수 있다. 이미 서버가 곡을
 		// 재생 중인데 인자 없는 play()를 보내면 현재 곡이 0초로 되감긴다 — 서버가 큐의 현재 곡을 재생 중일 때만 보정만 한다.
 		// 서버에 이전 곡이 남아 있으면 보정하지 않고 play()로 큐의 현재 곡을 시작해야 새 곡이 막히지 않는다.
@@ -220,8 +223,7 @@ export class AudioService {
 		notifyQueueMutated(this.deps.lavalink, player, { invalidate: false, bumpEpoch: true, force: true });
 		cancelPendingInvalidate(player);
 		await sendOverride(this.deps.lavalink, player, 'STOP', null).catch(() => null);
-		await player.stopPlaying().catch(() => null);
-		await player.disconnect().catch(() => null);
+		await destroyStoppedPlayer(player);
 	}
 
 	/**

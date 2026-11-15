@@ -244,6 +244,10 @@ export class PlaybackWatchdog {
 				this.watchdogs.delete(guildId);
 				void Promise.resolve()
 					.then(async () => {
+						// 정지 명령 뒤에는 어떤 복구도 하지 않는다 — 정지 직전에 걸린 타이머가 살아남아
+						// play로 곡을 되살리면, 음성 연결이 끊긴 서버 플레이어는 곡을 영원히 끝내지 못해
+						// 관망(GET)→복구(PATCH) 루프가 끝없이 도는 유령 플레이어가 된다.
+						if (player.transitionState.stopByCommand) return this.host.finishQueue(player);
 						// 아직 서버가 트랙을 재생 중이면(긴 크로스페이드/β 전이) 시스템은 살아 있으니 한 번 더 관망한다.
 						// 로컬 player.playing은 라이브러리가 일반 trackEnd에서 내리지 않는다(내리는 건 queueEnd와
 						// 노드 종료뿐) — 예열 소비 후 서버가 trackStart를 보내지 않는 실패에서는 플래그가 true로
