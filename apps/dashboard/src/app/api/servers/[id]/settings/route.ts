@@ -53,7 +53,6 @@ function toSettings(guild: PrismaGuild | null): GuildSettings {
     crossfadeMs: guild.crossfadeMs,
     normalizationEnabled: guild.normalizationEnabled,
     ttsAnnounceMode: normalizeTtsAnnounceMode(guild.ttsAnnounceMode),
-    ttsParallelEnabled: guild.ttsParallelEnabled,
     emojiEnlargeMode: normalizeChatToolMode(guild.emojiEnlargeMode),
     emojiEnlargeChannelIds: guild.emojiEnlargeChannelIds,
     quoteMode: normalizeChatToolMode(guild.quoteMode),
@@ -96,12 +95,6 @@ export const PUT = createGuildApiHandler({
       if (!body.ok) return body.response;
 
       const data = normalizeMixerToggles(body.data);
-      // 모드가 바뀌면 레거시 불리언도 함께 맞춰요 — 두 필드가 갈라지면 안내 방식이 엇갈려요
-      if (data.ttsAnnounceMode !== undefined) {
-        data.ttsParallelEnabled = data.ttsAnnounceMode === "parallel";
-      } else if (data.ttsParallelEnabled !== undefined) {
-        data.ttsAnnounceMode = data.ttsParallelEnabled ? "parallel" : "sequential";
-      }
       if (Object.keys(data).length > 0) {
         await db.guild.upsert({
           where: { id: guildId },

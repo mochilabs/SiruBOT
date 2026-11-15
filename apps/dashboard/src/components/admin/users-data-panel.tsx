@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { createApiFetcher } from "@/lib/swr";
 
 interface AdminUserSummary {
@@ -36,10 +37,11 @@ const usersFetcher = createApiFetcher<{ users: AdminUserSummary[] }>("유저 목
 
 export function UsersDataPanel() {
 	const [query, setQuery] = useState("");
+	const debouncedQuery = useDebounce(query.trim(), 350);
 	const [directId, setDirectId] = useState("");
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-	const swrKey = `/api/admin/users${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`;
+	const swrKey = `/api/admin/users${debouncedQuery ? `?q=${encodeURIComponent(debouncedQuery)}` : ""}`;
 	const { data, error, isLoading, mutate } = useSWR<{ users: AdminUserSummary[] }>(swrKey, usersFetcher);
 
 	const users = data?.users ?? [];

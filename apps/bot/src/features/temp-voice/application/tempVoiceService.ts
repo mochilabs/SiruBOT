@@ -135,20 +135,30 @@ export class TempVoiceService implements Stoppable {
 		return true;
 	}
 
-	public async setupMarkerChannel(guildId: string, categoryId: string): Promise<string> {
+	public async setupMarkerChannel(guildId: string, categoryId: string, markerChannelName?: string): Promise<string> {
 		const guild = await this.deps.discord.fetchGuild(guildId);
 		const category = await guild.channels.fetch(categoryId);
 		if (!category || category.type !== ChannelType.GuildCategory) {
 			throw new Error('selected channel is not a category');
 		}
 
+		const targetName =
+			markerChannelName
+				?.replace(/["*`|\\]/g, '')
+				.trim()
+				.slice(0, 100) || undefined;
 		const settings = await this.deps.settings.getJtcSettings(guildId);
 		let marker = settings.markerChannelId ? await guild.channels.fetch(settings.markerChannelId).catch(() => null) : null;
 
 		if (marker && marker.isVoiceBased()) {
 			if (marker.parentId !== categoryId) await marker.setParent(categoryId);
+			if (targetName && marker.name !== targetName) await marker.setName(targetName);
 		} else {
-			marker = await guild.channels.create({ name: MARKER_CHANNEL_NAME, type: ChannelType.GuildVoice, parent: categoryId });
+			marker = await guild.channels.create({
+				name: targetName ?? MARKER_CHANNEL_NAME,
+				type: ChannelType.GuildVoice,
+				parent: categoryId
+			});
 		}
 
 		await this.deps.settings.setJtcCategory(guildId, categoryId, marker.id);

@@ -67,15 +67,36 @@ describe('playerWeb request contracts', () => {
 		expect(playerWebPlayRequestSchema.safeParse({ ...VALID_BASE, kind: 'play', uri: 'http://example.com/track' }).success).toBe(true);
 	});
 
-	it('accepts every control action and requires value only for volume', () => {
-		for (const action of ['volume' as const, 'pause' as const, 'resume' as const, 'skip' as const, 'stop' as const, 'repeat' as const]) {
+	it('accepts every control action and validates required parameters', () => {
+		for (const action of [
+			'volume' as const,
+			'pause' as const,
+			'resume' as const,
+			'skip' as const,
+			'stop' as const,
+			'repeat' as const,
+			'queue-shuffle' as const,
+			'queue-clear' as const,
+			'queue-remove' as const,
+			'queue-move' as const,
+			'queue-jump' as const
+		]) {
 			expect(playerWebControlActionSchema.safeParse(action).success).toBe(true);
 		}
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume', value: 80 }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'pause' }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'repeat' }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-shuffle' }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-clear' }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-remove', index: 0 }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-jump', index: 2 }).success).toBe(true);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-move', from: 1, to: 0 }).success).toBe(true);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume' }).success).toBe(false);
 		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'volume', value: 151 }).success).toBe(false);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-remove' }).success).toBe(false);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-jump' }).success).toBe(false);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-move', from: 1 }).success).toBe(false);
+		expect(playerWebControlRequestSchema.safeParse({ ...VALID_BASE, kind: 'control', action: 'queue-move', from: 1, to: 1 }).success).toBe(false);
 	});
 
 	it('rejects a control request with an unknown action', () => {

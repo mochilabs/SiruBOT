@@ -95,7 +95,6 @@ export const guildSettingsSchema = z.object({
 	normalizationEnabled: z.boolean().optional(),
 	// TTS 안내 방식 3택 — 봇의 /믹서 안내방식·/설정 audio와 같은 값이에요
 	ttsAnnounceMode: z.enum(TTS_ANNOUNCE_MODES).optional().default(TTS_ANNOUNCE_MODE_DEFAULT),
-	ttsParallelEnabled: z.boolean().optional(),
 	// 채팅 유틸 — 봇 계약: packages/utils/src/chatTools.ts, 채널 토글: 봇 guildService의 ChatToolSettings
 	emojiEnlargeMode: z.enum(CHAT_TOOL_MODES, "이모지 확대 모드가 잘못됐어요.").optional(),
 	emojiEnlargeChannelIds: z.array(snowflake, "채널 ID 목록이 잘못됐어요.").max(500, "허용 채널은 최대 500개까지 등록할 수 있어요.").optional(),
@@ -154,7 +153,6 @@ export const GUILD_SETTINGS_DEFAULTS = {
 	crossfadeMs: 5000,
 	normalizationEnabled: false,
 	ttsAnnounceMode: TTS_ANNOUNCE_MODE_DEFAULT,
-	ttsParallelEnabled: false,
 	emojiEnlargeMode: "off",
 	emojiEnlargeChannelIds: [],
 	quoteMode: "off",
@@ -171,6 +169,12 @@ export const GUILD_SETTINGS_DEFAULTS = {
 /** POST /api/servers/[id]/jtc/setup */
 export const jtcSetupSchema = z.object({
 	categoryId: snowflake,
+	markerChannelName: z
+		.string()
+		.trim()
+		.min(1, "마커 채널 이름을 입력해 주세요.")
+		.max(100, "마커 채널 이름은 100자 이하로 입력해 주세요.")
+		.optional(),
 });
 
 /** 미등록 필드를 조용히 무시하지 말고 알려줘요 (기존 AI 라우트의 동작 유지) */

@@ -51,8 +51,7 @@ export async function getTtsAnnounceMode(store: GuildSettingsStore, guildId: str
 }
 
 export async function setTtsAnnounceMode(store: GuildSettingsStore, guildId: string, mode: TtsAnnounceMode): Promise<TtsAnnounceMode> {
-	// 기존 플러그인 계약(불리언)도 같은 트랜잭션 값으로 맞춰 둬요 — 두 필드가 갈라지면 안내 방식이 엇갈려요.
-	const guild = await store.upsertData(guildId, { ttsAnnounceMode: mode, ttsParallelEnabled: mode === 'parallel' });
+	const guild = await store.upsertField(guildId, 'ttsAnnounceMode', mode);
 	return normalizeAnnounceMode(guild.ttsAnnounceMode);
 }
 

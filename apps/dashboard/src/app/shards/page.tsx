@@ -19,6 +19,8 @@ import { VoiceServerHistory } from "@/components/voice-server-history";
 import { VoiceServerSection } from "@/components/voice-server-section";
 import type { ShardsResponse } from "@/lib/shard-api";
 
+import ShardsLoading from "./loading";
+
 export default function ShardsPage() {
     const { data: session } = useSession();
     const isAdmin = Boolean(session?.user?.isAdmin);
@@ -42,9 +44,7 @@ export default function ShardsPage() {
 
     const pollFailed = Boolean(error || (data && "error" in data)) && Boolean(data);
 
-    if (isLoading) return null; // 라우트 loading.tsx 스켈레톤이 자리를 채워요.
-
-    if (!data) return null;
+    if (isLoading || !data) return <ShardsLoading />;
     const { processes, stats } = data;
 
     return (

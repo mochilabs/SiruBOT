@@ -118,11 +118,12 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
     });
     source.onerror = () => {
       if (closed) return;
-      // data를 한 번도 못 받은 error → 스트림 미지원(프록시 404 등)으로 판단하고 폴링 폴백
-      if (!gotData) {
+      // data를 한 번도 못 받았거나 EventSource가 영구 종료(CLOSED=2)된 경우 폴링으로 폴백해요
+      const closedState = typeof EventSource.CLOSED === "number" ? EventSource.CLOSED : 2;
+      if (!gotData || source.readyState === closedState) {
         setMode("polling");
       } else {
-        setConnected(false); // EventSource 내장 재연결에 맡긴다
+        setConnected(false); // 일시 단절은 EventSource 내장 재연결에 맡긴다
       }
     };
 
@@ -171,7 +172,11 @@ function LivePlayerSession({ guildId }: { guildId: string }) {
         mode={mode}
         guildId={guildId}
       />
-      <QueueList state={data.player} />
+      <QueueList
+        state={data.player}
+        guildId={guildId}
+        unavailable={data.player.stale || (mode === "stream" && !connected)}
+      />
       <p className="text-xs text-muted-foreground">
         컨트롤러 명령은 봇이 음성 채널 접속 중일 때만 적용돼요. 검색·재생 ·
         기록은{" "}

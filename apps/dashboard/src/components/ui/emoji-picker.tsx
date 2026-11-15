@@ -5,7 +5,12 @@ import { Popover } from "@base-ui/react/popover";
 import { isValidRolePanelEmoji } from "@sirubot/utils/rolePanel";
 import { ChevronDown, Search, Smile, SmilePlus, X } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 
 interface UnicodeEmojiItem {
@@ -274,7 +279,7 @@ export function EmojiPicker({
 						onClick={() => onChange(null)}
 						aria-label="이모지 지우기"
 						title="이모지 지우기"
-						className="inline-flex size-8 shrink-0 items-center justify-center rounded-control text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+						className="inline-flex size-8 shrink-0 items-center justify-center rounded-control text-muted-foreground transition-colors duration-fast hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
 						<X className="size-3.5" />
 					</button>
@@ -285,37 +290,40 @@ export function EmojiPicker({
 				<Popover.Positioner sideOffset={6} align="start" className="isolate z-(--z-overlay)">
 					<Popover.Popup className="pop-in w-80 origin-(--transform-origin) rounded-menu border border-border-subtle bg-popover p-3 text-popover-foreground shadow-2xl outline-none">
 						<div className="space-y-2.5">
-							<div className="relative">
-								<Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-								<Input
+							<InputGroup className="h-8">
+								<InputGroupAddon align="inline-start">
+									<Search className="size-3.5" aria-hidden />
+								</InputGroupAddon>
+								<InputGroupInput
 									value={search}
 									onChange={(event) => setSearch(event.target.value)}
 									placeholder="이모지 검색 (예: 게임, 하트, 알림) 또는 붙여넣기"
-									className="h-8 pl-8 pr-7 text-xs"
+									className="text-xs"
 								/>
 								{search ? (
-									<button
-										type="button"
-										onClick={() => setSearch("")}
-										aria-label="검색어 지우기"
-										className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-									>
-										<X className="size-3.5" />
-									</button>
+									<InputGroupAddon align="inline-end">
+										<InputGroupButton
+											size="icon-xs"
+											onClick={() => setSearch("")}
+											aria-label="검색어 지우기"
+										>
+											<X className="size-3.5" />
+										</InputGroupButton>
+									</InputGroupAddon>
 								) : null}
-							</div>
+							</InputGroup>
 
 							{directInputCandidate ? (
 								<button
 									type="button"
 									onClick={() => handleSelect(directInputCandidate)}
-									className="flex w-full items-center justify-between rounded-control bg-surface-2 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-surface-3"
+									className="flex w-full items-center justify-between rounded-control bg-surface-2 px-2.5 py-1.5 text-xs text-foreground transition-colors duration-fast hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 								>
 									<span className="flex items-center gap-2">
 										<span className="text-base leading-none">{directInputCandidate}</span>
 										<span>입력한 이모지 바로 사용</span>
 									</span>
-									<span className="font-mono text-[11px] text-muted-foreground">{directInputCandidate}</span>
+									<span className="font-mono text-2xs text-muted-foreground">{directInputCandidate}</span>
 								</button>
 							) : null}
 
@@ -323,9 +331,10 @@ export function EmojiPicker({
 								<div className="flex flex-wrap gap-1 border-b border-border/50 pb-2">
 									<button
 										type="button"
+										aria-pressed={activeTab === "all"}
 										onClick={() => setActiveTab("all")}
 										className={cn(
-											"rounded-control px-2 py-1 text-[11px] font-medium transition-colors",
+											"rounded-control px-2 py-1 text-2xs font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 											activeTab === "all"
 												? "bg-primary-control/15 font-semibold text-primary-text"
 												: "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
@@ -337,9 +346,10 @@ export function EmojiPicker({
 										<button
 											key={category.id}
 											type="button"
+											aria-pressed={activeTab === category.id}
 											onClick={() => setActiveTab(category.id)}
 											className={cn(
-												"rounded-control px-2 py-1 text-[11px] font-medium transition-colors",
+												"rounded-control px-2 py-1 text-2xs font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 												activeTab === category.id
 													? "bg-primary-control/15 font-semibold text-primary-text"
 													: "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
@@ -356,7 +366,7 @@ export function EmojiPicker({
 									.filter((category) => Boolean(normalizedQuery) || activeTab === "all" || activeTab === category.id)
 									.map((category) => (
 										<div key={category.id} className="space-y-1.5">
-											<div className="px-1 text-[11px] font-medium text-muted-foreground">{category.label}</div>
+											<div className="px-1 text-2xs font-medium text-muted-foreground">{category.label}</div>
 											<div className="grid grid-cols-7 gap-1">
 												{category.items.map((item) => {
 													const selected = trimmedValue === item.emoji;
@@ -364,11 +374,12 @@ export function EmojiPicker({
 														<button
 															key={item.emoji}
 															type="button"
+															aria-pressed={selected}
 															onClick={() => handleSelect(item.emoji)}
 															title={item.label}
 															aria-label={item.label}
 															className={cn(
-																"flex size-9 items-center justify-center rounded-control text-lg transition-colors hover:bg-surface-2",
+																"flex size-9 items-center justify-center rounded-control text-lg transition-colors duration-fast hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 																selected && "bg-primary-control/15 ring-2 ring-inset ring-ring",
 															)}
 														>
@@ -384,7 +395,7 @@ export function EmojiPicker({
 									<div className="flex flex-col items-center justify-center gap-1.5 py-6 text-center text-xs text-muted-foreground">
 										<Smile className="size-5 opacity-60" />
 										<p>일치하는 이모지가 없어요.</p>
-										<p className="text-[11px]">원하는 유니코드 이모지를 검색창에 직접 붙여넣을 수 있어요.</p>
+										<p className="text-2xs">원하는 유니코드 이모지를 검색창에 직접 붙여넣을 수 있어요.</p>
 									</div>
 								) : null}
 							</div>
@@ -399,7 +410,7 @@ export function EmojiPicker({
 										<button
 											type="button"
 											onClick={() => handleSelect(null)}
-											className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-destructive"
+											className="shrink-0 rounded-control px-1.5 py-0.5 text-xs text-muted-foreground transition-colors duration-fast hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 										>
 											선택 해제
 										</button>

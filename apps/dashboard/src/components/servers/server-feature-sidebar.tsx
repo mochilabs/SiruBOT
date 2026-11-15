@@ -18,14 +18,15 @@ interface ServerFeatureSidebarProps {
 	items: readonly ServerFeatureItem[];
 	active: string;
 	onSelect: (key: string) => void;
+	groupLabels?: Readonly<Record<string, string>>;
 }
 
 /**
  * PC(lg+) 전용 기능 사이드바 — 플레이리스트 사이드바와 같은 "카드 + 목록" 언어를 써서
- * 대시보드 안에서 새 패턴을 만들지 않아요. 모든 메뉴를 평평하게 보여주고 그룹 경계만
- * 구분선으로 나눠요. 활성 항목은 spring 인디케이터로 표시해요.
+ * 대시보드 안에서 새 패턴을 만들지 않아요. 모든 메뉴를 평평하게 보여주고 그룹 경계에
+ * 라벨 구분선을 그려요. 활성 항목은 spring 인디케이터로 표시해요.
  */
-export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureSidebarProps) {
+export function ServerFeatureSidebar({ items, active, onSelect, groupLabels }: ServerFeatureSidebarProps) {
 	const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 	const activeIndex = items.findIndex((item) => item.key === active);
 	const getItemEl = useCallback((index: number) => itemRefs.current[index], []);
@@ -38,11 +39,18 @@ export function ServerFeatureSidebar({ items, active, onSelect }: ServerFeatureS
 					<SidebarIndicatorOverlay indicator={indicator} />
 
 					{items.map((item, idx) => {
-						const startsGroup = idx !== 0 && item.group !== items[idx - 1]?.group;
+						const startsGroup = item.group !== items[idx - 1]?.group;
+						const groupTitle = startsGroup && item.group ? groupLabels?.[item.group] : undefined;
 						const isActive = item.key === active;
 						return (
 							<Fragment key={item.key}>
-								{startsGroup && <div role="separator" className="mx-3 my-1 h-px bg-border" />}
+								{groupTitle ? (
+									<p className={cn("px-3.5 pb-1 text-2xs font-bold tracking-wide text-muted-foreground", idx === 0 ? "pt-1" : "pt-3")}>
+										{groupTitle}
+									</p>
+								) : (
+									startsGroup && idx !== 0 && <div role="separator" className="mx-3 my-1 h-px bg-border" />
+								)}
 								<button
 									type="button"
 									ref={(el) => {

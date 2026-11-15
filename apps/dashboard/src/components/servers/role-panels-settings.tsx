@@ -60,6 +60,7 @@ import {
   PanelError,
   PanelHeader,
   PanelLoading,
+  SaveBar,
 } from "./settings-shared";
 
 interface RolePanelWithButtons {
@@ -369,6 +370,29 @@ function RolePanelCard({
     reload: reloadChannels,
   } = useGuildChannels(guildId, true);
 
+  const dirty =
+    name !== panel.name ||
+    title !== panel.title ||
+    description !== panel.description ||
+    imageUrl !== (panel.imageUrl ?? null) ||
+    imageLayout !== (panel.imageLayout ?? "gallery") ||
+    imagePosition !== (panel.imagePosition ?? "middle") ||
+    accentColor !== (panel.accentColor ?? null) ||
+    mode !== (panel.mode ?? "button") ||
+    JSON.stringify(buttons) !== JSON.stringify(panel.buttons);
+
+  const handleDiscard = () => {
+    setName(panel.name);
+    setTitle(panel.title);
+    setDescription(panel.description);
+    setImageUrl(panel.imageUrl ?? null);
+    setImageLayout(panel.imageLayout ?? "gallery");
+    setImagePosition(panel.imagePosition ?? "middle");
+    setAccentColor(panel.accentColor ?? null);
+    setMode(panel.mode ?? "button");
+    setButtons(panel.buttons);
+  };
+
   const maxItems =
     mode === "reaction" ? ROLE_PANEL_MAX_REACTIONS : ROLE_PANEL_MAX_BUTTONS;
 
@@ -473,6 +497,10 @@ function RolePanelCard({
           "저장에 실패했어요.",
         );
         return;
+      }
+      const updated = (await res.json()) as { buttons?: RolePanelButton[] };
+      if (Array.isArray(updated.buttons)) {
+        setButtons(updated.buttons);
       }
       await onMutate();
       notifySaved("역할 패널을 저장했어요.");
@@ -1088,9 +1116,11 @@ function RolePanelCard({
           <Button
             variant="secondary"
             onClick={() => onPost(postChannelId || null)}
+            title={dirty ? "먼저 변경 사항을 저장한 뒤 게시해 주세요." : undefined}
             disabled={
               busy ||
               saving ||
+              dirty ||
               buttons.length === 0 ||
               !(postChannelId || panel.channelId)
             }
@@ -1103,6 +1133,8 @@ function RolePanelCard({
         </div>
       </div>
       </div>
+
+      <SaveBar dirty={dirty} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
 
       <ConfirmDeleteModal
         open={confirmDeleteOpen}

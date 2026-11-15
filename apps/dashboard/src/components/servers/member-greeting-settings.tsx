@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import {
   DEFAULT_GREETINGS,
   type GreetingConfig,
@@ -79,16 +79,6 @@ function MemberGreetingPanel({
   const dirtyGoodbye =
     JSON.stringify(drafts.goodbye) !== JSON.stringify(savedOr("goodbye"));
   const anyDirty = dirtyWelcome || dirtyGoodbye;
-
-  // 변경을 저장하지 않고 페이지를 벗어나면 브라우저 확인을 요청해요 (패널 안 표시는 InfoBox로도 안내해요)
-  useEffect(() => {
-    if (!anyDirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [anyDirty]);
 
   const handleSave = useCallback(async () => {
     try {

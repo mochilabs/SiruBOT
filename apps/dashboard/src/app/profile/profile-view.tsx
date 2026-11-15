@@ -33,15 +33,6 @@ export interface ProfileViewProps {
   attendance: ProfileAttendance;
 }
 
-function formatDay(playedAt: string): string {
-  const date = new Date(playedAt);
-  if (Number.isNaN(date.getTime())) return "";
-  const yy = String(date.getFullYear()).slice(2);
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yy}.${mm}.${dd}`;
-}
-
 /** 출석 연속 일수 — 뷰포트 진입 시 카운트업 (작고 조용한 스탯) */
 function StreakCount({ streak }: { streak: number }) {
   const { ref, value } = useCountUp({ end: streak });
@@ -249,9 +240,6 @@ export function ProfileView({ user, birthday, fortune, music, games, attendance 
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-black tabular-nums text-primary-text">{track.count.toLocaleString()}회</p>
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {music.recentTracks[i] ? formatDay(music.recentTracks[i].playedAt) : ""}
-                        </p>
                       </div>
                       <TrackListenLink url={track.url} title={track.title} compact />
                     </div>

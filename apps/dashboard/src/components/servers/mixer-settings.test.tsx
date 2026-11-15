@@ -15,11 +15,12 @@ vi.mock("@/hooks/use-guild-settings", () => ({
 }));
 vi.mock("./mixer-info", () => ({ MixerInfoTip: () => null }));
 vi.mock("./settings-shared", () => ({
+  InfoBox: () => null,
   PanelError: () => null, PanelLoading: () => null, SaveBar: () => null,
   PanelHeader: ({ title }: { title: string }) => <h2>{title}</h2>,
 }));
 
-import { MixerSettings } from "./mixer-settings";
+import { MusicSettings } from "./music-settings";
 
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
@@ -31,7 +32,7 @@ describe("AutoMix 설정 화면", () => {
     document.body.append(host);
     const root = createRoot(host);
     try {
-      await act(async () => { root.render(<MixerSettings guildId="fixture" />); });
+      await act(async () => { root.render(<MusicSettings guildId="fixture" />); });
       // 전환 방식이 꺼짐이면 길이·AutoMix 조절기는 아예 그리지 않아요
       expect(host.querySelector('[aria-label="겹치기 길이"]')).toBeNull();
       expect(host.querySelector('[aria-label="최대 템포 변경"]')).toBeNull();

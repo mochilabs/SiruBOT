@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { formatRelativeTime } from "@/lib/format";
 import { createApiFetcher } from "@/lib/swr";
 import { cn } from "@/lib/utils";
@@ -55,10 +56,11 @@ const guildsFetcher = createApiFetcher<{ guilds: AdminGuildSummary[] }>("서버 
 
 export function GuildsDataPanel() {
 	const [query, setQuery] = useState("");
+	const debouncedQuery = useDebounce(query.trim(), 350);
 	const [directId, setDirectId] = useState("");
 	const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
 
-	const swrKey = `/api/admin/guilds${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`;
+	const swrKey = `/api/admin/guilds${debouncedQuery ? `?q=${encodeURIComponent(debouncedQuery)}` : ""}`;
 	const { data, error, isLoading, mutate } = useSWR<{ guilds: AdminGuildSummary[] }>(swrKey, guildsFetcher);
 
 	const guilds = data?.guilds ?? [];

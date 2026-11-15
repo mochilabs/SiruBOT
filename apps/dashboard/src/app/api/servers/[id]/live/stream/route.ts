@@ -10,7 +10,7 @@ import { openDataApiStream } from "@/lib/data-api/client";
  * 의도된 면제예요 — 생략이 아니라 명시예요. 미설정/장애 모두 502로 통일 — 클라이언트가 폴링으로 폴백해요.
  */
 export const GET = createGuildApiHandler({
-  role: "manage",
+  role: "member",
   rate: null,
   handler: async ({ guildId }) => {
     const upstream = await openDataApiStream(`/v1/player/${guildId}/stream`);

@@ -44,7 +44,7 @@ export function GlobalCommandPalette() {
 	// ⌘K / Ctrl+K 토글 ( 열기와 닫기 모두 여기서 처리해요 )
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
-			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+			if (!e.isComposing && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
 				e.preventDefault();
 				setOpen(!open);
 			}

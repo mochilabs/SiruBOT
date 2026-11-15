@@ -14,7 +14,6 @@ import {
   Radio,
   ShieldAlert,
   ShieldCheck,
-  SlidersHorizontal,
   SquareSlash,
   Ticket,
   UserPlus,
@@ -68,7 +67,6 @@ const ServerStatsTab = dynamic(() => import("./server-stats-tab"), { loading: Ta
 const ChannelSettings = dynamic(() => import("./channel-settings").then((m) => m.ChannelSettings), { loading: TabLoadingFallback });
 const ChatToolsSettings = dynamic(() => import("./chat-tools-settings").then((m) => m.ChatToolsSettings), { loading: TabLoadingFallback });
 const JtcSettings = dynamic(() => import("./jtc-settings").then((m) => m.JtcSettings), { loading: TabLoadingFallback });
-const MixerSettings = dynamic(() => import("./mixer-settings").then((m) => m.MixerSettings), { loading: TabLoadingFallback });
 const SocialAlertsSettings = dynamic(() => import("./social-alerts-settings"), { loading: TabLoadingFallback });
 const MemberGreetingSettings = dynamic(() => import("./member-greeting-settings").then((m) => m.MemberGreetingSettings), { loading: TabLoadingFallback });
 const TicketSettings = dynamic(() => import("./ticket-settings").then((m) => m.TicketSettings), { loading: TabLoadingFallback });
@@ -84,7 +82,6 @@ const ICONS = {
   channels: <Hash size={14} />,
   "chat-tools": <MessageSquare size={14} />,
   jtc: <Volume2 size={14} />,
-  mixer: <SlidersHorizontal size={14} />,
   social: <Bell size={14} />,
   greeting: <UserPlus size={14} />,
   ticket: <Ticket size={14} />,
@@ -129,8 +126,10 @@ export function ServerDashboard({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const tabFromUrl = (value: string | null): ServerTabKey =>
-    TABS.some((item) => item.key === value) ? (value as ServerTabKey) : "ai";
+  const tabFromUrl = (value: string | null): ServerTabKey => {
+    const normalized = value === "mixer" ? "music" : value;
+    return TABS.some((item) => item.key === normalized) ? (normalized as ServerTabKey) : "ai";
+  };
   const initialTab = tabFromUrl(searchParams.get("tab"));
   const [tab, setTab] = useState<ServerTabKey>(initialTab);
   // 한 번이라도 방문한 탭만 마운트하여 초기 진입 번들/요청을 최소화하고, 방문한 탭은 상태를 보존해요
@@ -195,7 +194,7 @@ export function ServerDashboard({
   return (
     <div className="animate-page-in">
       <div className="flex flex-col items-start gap-4 lg:flex-row lg:gap-8">
-        <ServerFeatureSidebar items={TABS} active={tab} onSelect={selectTab} />
+        <ServerFeatureSidebar items={TABS} active={tab} onSelect={selectTab} groupLabels={SERVER_TAB_GROUPS} />
 
         <div className="w-full min-w-0 flex-1">
           <Tabs
@@ -239,7 +238,6 @@ export function ServerDashboard({
                       <ChatToolsSettings guildId={guildId} />
                     )}
                     {item.key === "jtc" && <JtcSettings guildId={guildId} />}
-                    {item.key === "mixer" && <MixerSettings guildId={guildId} />}
                     {item.key === "social" && (
                       <SocialAlertsSettings
                         guildId={guildId}

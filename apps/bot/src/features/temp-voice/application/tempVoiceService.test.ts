@@ -215,3 +215,39 @@ describe('TempVoiceService 방 생성 실패 안내', () => {
 		expect(send).toHaveBeenCalledWith(rendered);
 	});
 });
+
+describe('TempVoiceService setupMarkerChannel', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('creates or renames marker channel using custom markerChannelName when provided', async () => {
+		const setName = vi.fn(async () => undefined);
+		const setParent = vi.fn(async () => undefined);
+		const existingMarker = { id: 'marker-1', name: '🔊 임시방 만들기', parentId: 'cat-1', isVoiceBased: () => true, setName, setParent };
+		const create = vi.fn(async () => ({ id: 'marker-new' }));
+		const setJtcCategory = vi.fn(async () => undefined);
+		const getJtcSettings = vi.fn(async () => ({
+			enabled: true,
+			categoryId: 'cat-1',
+			markerChannelId: 'marker-1',
+			template: '{user}의 방',
+			userLimit: 0
+		}));
+		const fetchGuild = vi.fn(async () => ({
+			channels: {
+				fetch: vi.fn(async (id: string) => (id === 'cat-1' ? { id: 'cat-1', type: 4 } : existingMarker)),
+				create
+			}
+		}));
+
+		const service = makeService({
+			settings: { getJtcSettings, setJtcCategory },
+			discord: { guildIds: () => ['g1'], fetchGuild: fetchGuild as never, fetchChannel: mocks.fetchChannel }
+		});
+
+		await service.setupMarkerChannel('g1', 'cat-1', '  ➕ 방 만들기  ');
+		expect(setName).toHaveBeenCalledWith('➕ 방 만들기');
+		expect(setJtcCategory).toHaveBeenCalledWith('g1', 'cat-1', 'marker-1');
+	});
+});

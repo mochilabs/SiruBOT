@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, Home } from "lucide-react";
 
 import { NotFoundRoom } from "@/components/not-found-room";
@@ -9,6 +10,16 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function NotFound() {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      router.push("/");
+    }
+  };
+
   return (
     <StatusScreen
       title="앗, 없는 주소예요"
@@ -20,7 +31,7 @@ export default function NotFound() {
             <Home className="h-5 w-5" aria-hidden />
             홈으로 가기
           </Link>
-          <button type="button" onClick={() => window.history.back()} className={statusSecondaryActionClass}>
+          <button type="button" onClick={handleBack} className={statusSecondaryActionClass}>
             <ChevronLeft className="h-4 w-4 transition-transform duration-fast group-hover:-translate-x-0.5" aria-hidden />
             이전으로 가기
           </button>

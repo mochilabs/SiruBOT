@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
-import Loader from "@/components/loader";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { SkeletonLine } from "@/components/ui/skeleton";
 import { isYoutubeUrl } from "@/lib/youtube-url";
 import type { SearchedTrack } from "@/types/playlist";
 
@@ -109,9 +109,19 @@ export function AddTrackModal({
 								</p>
 							</div>
 						) : searchLoading ? (
-							<div className="flex h-full items-center justify-center gap-2">
-								<Loader iconOnly size="sm" />
-								<span className="text-sm text-muted-foreground">곡 검색 중...</span>
+							<div role="status" aria-label="곡 검색 중" className="space-y-1.5">
+								{[0, 1, 2, 3].map((i) => (
+									<div key={i} className="flex items-center justify-between gap-2.5 rounded-card bg-surface-2 p-2">
+										<div className="flex min-w-0 flex-1 items-center gap-2.5">
+											<SkeletonLine width="2rem" height="h-8" className="shrink-0 rounded-control" />
+											<div className="min-w-0 flex-1 space-y-1.5">
+												<SkeletonLine width="70%" height="h-3.5" />
+												<SkeletonLine width="40%" height="h-3" />
+											</div>
+										</div>
+										<SkeletonLine width="3rem" height="h-8" className="shrink-0 rounded-control" />
+									</div>
+								))}
 							</div>
 						) : searchError ? (
 							<div className="flex h-full items-center justify-center px-4 text-center">
@@ -162,6 +172,7 @@ export function AddTrackModal({
 										<Button
 											variant="secondary"
 											size="sm"
+											disabled={loading}
 											className="shrink-0 px-3 font-bold"
 											onClick={() => onAddTrack(track.youtubeUrl ? undefined : track.id, track.youtubeUrl)}
 										>

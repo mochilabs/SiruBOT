@@ -130,7 +130,10 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 		guildId: redisIdSchema,
 		userId: playerUserIdSchema,
 		action: playerWebControlActionSchema,
-		value: z.number().int().min(0).max(150).optional()
+		value: z.number().int().min(0).max(150).optional(),
+		index: z.number().int().min(0).max(999).optional(),
+		from: z.number().int().min(0).max(999).optional(),
+		to: z.number().int().min(0).max(999).optional()
 	});
 	const playerVoiceContextQuery = z.object({ userId: playerUserIdSchema });
 
@@ -183,14 +186,17 @@ export function registerPlayerRoutes(fastify: FastifyInstance, deps: { lavalinkR
 
 	fastify.post('/v1/internal/player/control', async (request, reply) => {
 		try {
-			const { guildId, userId, action, value } = playerWebControlSchema.parse(request.body);
+			const { guildId, userId, action, value, index, from, to } = playerWebControlSchema.parse(request.body);
 			const result = await requestPlayerWeb({
 				requestId: crypto.randomUUID(),
 				guildId,
 				userId,
 				kind: 'control',
 				action,
-				...(value !== undefined ? { value } : {})
+				...(value !== undefined ? { value } : {}),
+				...(index !== undefined ? { index } : {}),
+				...(from !== undefined ? { from } : {}),
+				...(to !== undefined ? { to } : {})
 			});
 			metrics.request('player-web-control');
 			return replyPlayerWebResult(reply, result);

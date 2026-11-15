@@ -7,6 +7,7 @@ import { Volume2 } from "lucide-react";
 import { ChannelSelect } from "@/components/discord/channel-select";
 import { CHANNEL_TYPE_GROUP } from "@/components/discord/discord-options";
 import { Field } from "@/components/primitives/field";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -36,26 +37,33 @@ const toJtcForm = (settings: GuildSettings): JtcForm => ({
   jtcUserLimit: settings.jtcUserLimit,
 });
 
+const DEFAULT_MARKER_NAME = "🔊 임시방 만들기";
+
 function JtcSettingsPanel({ guildId }: { guildId: string }) {
   const toast = useToast();
   const panel = useSettingsPanel(guildId, toJtcForm, "임시 음성 설정을 저장했어요.");
-  const { patch, saving } = panel;
+  const { patch, commitExternal, saving } = panel;
   const {
     channels,
     error: channelsError,
     reload: reloadChannels,
   } = useGuildChannels(guildId, true);
   const [setupLoading, setSetupLoading] = useState(false);
+  const [markerNameDraft, setMarkerNameDraft] = useState<string | null>(null);
 
-  /** 카테고리 선택 = 봇과 같은 마커 채널 준비 작업(디스코드 채널 생성/이동) */
-  const handleCategoryChange = useCallback(
-    async (categoryId: string) => {
+  /** 카테고리 선택·마커 이름 변경 = 봇 마커 채널 준비 작업(디스코드 채널 생성/이동/이름 변경) */
+  const runJtcSetup = useCallback(
+    async (categoryId: string, markerChannelName?: string) => {
+      const trimmedName = markerChannelName?.trim() || undefined;
       setSetupLoading(true);
       try {
         const res = await fetch(`/api/servers/${guildId}/jtc/setup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ categoryId }),
+          body: JSON.stringify({
+            categoryId,
+            ...(trimmedName ? { markerChannelName: trimmedName } : {}),
+          }),
         });
         if (!res.ok)
           throw await toApiError(res, "마커 채널을 준비하지 못했어요.");
@@ -63,13 +71,19 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
           categoryId: string;
           markerChannelId: string;
         };
-        patch({
+        // /jtc/setup은 서버가 즉시 DB에 저장하므로 baseline과 SWR 캐시도 함께 갱신해
+        // SaveBar가 불필요하게 dirty로 뜨지 않게 해요.
+        commitExternal({
           jtcCategoryId: data.categoryId,
           jtcMarkerChannelId: data.markerChannelId,
         });
+        setMarkerNameDraft(null);
+        void reloadChannels();
         toast.success(
           "마커 채널을 준비했어요.",
-          "해당 카테고리에 '🔊 임시방 만들기' 채널이 생기거나 옮겨졌어요.",
+          trimmedName
+            ? `해당 카테고리에 '${trimmedName}' 채널이 준비되었어요.`
+            : "해당 카테고리에 '🔊 임시방 만들기' 채널이 생기거나 옮겨졌어요.",
         );
       } catch (err) {
         notifyApiError(err, "마커 채널을 준비하지 못했어요.");
@@ -77,7 +91,7 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
         setSetupLoading(false);
       }
     },
-    [guildId, patch, toast],
+    [guildId, commitExternal, reloadChannels, toast],
   );
 
   return (
@@ -88,13 +102,14 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
       description="마커 채널에 들어가면 방장 이름으로 개인 음성방을 만들어 줘요."
       notice={
         <InfoBox>
-          {/* 서버 운영용 환경변수명(JTC_EMPTY_GRACE_MS)은 사용자에게 보이지 않게 감춰요 */}
-          <p>비어 있는 임시방은 30초 후 자동으로 삭제돼요. (서버 설정으로 조정할 수 있어요)</p>
+          <p>비어 있는 임시방은 30초 후 자동으로 삭제돼요.</p>
         </InfoBox>
       }
     >
       {(form) => {
-        const markerName = channels?.find((channel) => channel.id === form.jtcMarkerChannelId)?.name ?? form.jtcMarkerChannelId;
+        const currentMarkerName = channels?.find((channel) => channel.id === form.jtcMarkerChannelId)?.name;
+        const markerName = currentMarkerName ?? form.jtcMarkerChannelId;
+        const markerNameInput = markerNameDraft ?? currentMarkerName ?? DEFAULT_MARKER_NAME;
         const categoryName = channels?.find((channel) => channel.id === form.jtcCategoryId)?.name;
         const templatePreview = (form.jtcTemplate.trim() || "{user}의 방").replaceAll("{user}", "철수");
         return (
@@ -120,23 +135,44 @@ function JtcSettingsPanel({ guildId }: { guildId: string }) {
               />
               <Field
                 label="생성 위치 (카테고리)"
-                description={
-                  <>
-                    선택하면 바로 반영돼요:{" "}
-                    <code className="rounded-control bg-muted px-1.5 py-0.5 text-xs">🔊 임시방 만들기</code> 마커 채널이 해당 카테고리로 만들어지거나 옮겨져요. (채널 관리 권한이 필요해요)
-                  </>
-                }
+                description="선택하면 해당 카테고리에 마커 채널이 만들어지거나 옮겨져요. (채널 관리 권한이 필요해요)"
               >
                 <ChannelSelect
                   channels={channels}
                   types={CHANNEL_TYPE_GROUP.category}
                   groupByCategory={false}
                   value={form.jtcCategoryId ?? ""}
-                  onChange={(value: string) => void handleCategoryChange(value)}
+                  onChange={(value: string) => void runJtcSetup(value, markerNameInput)}
                   placeholder="카테고리 선택"
                   disabled={saving || setupLoading}
                 />
               </Field>
+              {form.jtcCategoryId && (
+                <Field
+                  label="마커 채널 이름"
+                  description="멤버가 들어와서 임시방을 만드는 기준 음성 채널의 이름이에요."
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      value={markerNameInput}
+                      onChange={(e) => setMarkerNameDraft(e.target.value)}
+                      maxLength={100}
+                      placeholder={DEFAULT_MARKER_NAME}
+                      disabled={saving || setupLoading}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="shrink-0"
+                      loading={setupLoading}
+                      disabled={saving || setupLoading || !markerNameInput.trim() || markerNameInput.trim() === currentMarkerName}
+                      onClick={() => void runJtcSetup(form.jtcCategoryId!, markerNameInput)}
+                    >
+                      이름 적용
+                    </Button>
+                  </div>
+                </Field>
+              )}
               {form.jtcMarkerChannelId && (
                 <InfoBox>
                   <p>

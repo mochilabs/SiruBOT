@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -11,9 +12,29 @@ interface LoginPageProps {
 	searchParams: Promise<{ callbackUrl?: string }>;
 }
 
+/**
+ * 오픈 리다이렉트를 막으면서 NextAuth가 넘긴 동일 오리진 절대 URL도 상대 경로로 정규화해요.
+ */
+function sanitizeCallbackUrl(raw: string | undefined, requestHost: string | null): string {
+	if (!raw) return "/servers";
+	if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+	if (requestHost) {
+		try {
+			const parsed = new URL(raw);
+			if (parsed.host === requestHost) {
+				return `${parsed.pathname}${parsed.search}${parsed.hash}` || "/servers";
+			}
+		} catch {
+			// 잘못된 URL이면 기본 경로로 폴백해요.
+		}
+	}
+	return "/servers";
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-	const { callbackUrl } = await searchParams;
-	const redirectTarget = callbackUrl || "/servers";
+	const [{ callbackUrl }, headerList] = await Promise.all([searchParams, headers()]);
+	const requestHost = headerList.get("x-forwarded-host") ?? headerList.get("host");
+	const redirectTarget = sanitizeCallbackUrl(callbackUrl, requestHost);
 
 	// 실제로 쓸 수 있는 세션(토큰 유효)일 때만 redirect해요 — 토큰 없는 좀비 세션을 redirect하면
 	// 서버 페이지 → 401 → /api/auth/signin → /login 무한 루프에 갇혀요.
@@ -23,13 +44,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 		!!token.accessToken &&
 		(token.expiresAt === null || token.expiresAt > Date.now() + 60 * 1000);
 
-	// redirectTarget은 상대 경로만 허용 — 쿼리 파라미터를 redirect()에 그대로 쓰면 오픈 리다이렉트가 돼요
-	if (
-		session?.user?.id &&
-		hasUsableToken &&
-		redirectTarget.startsWith("/") &&
-		!redirectTarget.startsWith("//")
-	) {
+	if (session?.user?.id && hasUsableToken) {
 		redirect(redirectTarget);
 	}
 
