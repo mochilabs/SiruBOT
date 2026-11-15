@@ -57,5 +57,5 @@ packages/prisma/src/client/
 Localdocs/
 
 # 서드파티 스킬 (로컬 전용)
-.claude/skills/ai-slop-cleaner/SKILL.md
-.claude/skills/antislop-ui/contrast-check.py
+.claude/skills/ai-slop-cleaner/
+.claude/skills/antislop-ui/
