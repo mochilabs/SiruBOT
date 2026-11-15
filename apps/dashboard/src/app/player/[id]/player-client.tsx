@@ -145,7 +145,6 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 
 	const top = data?.top ?? [];
 	const recent = data?.recent ?? [];
-	const totalPlays = data?.totalPlays ?? 0;
 
 	if (top.length === 0 && recent.length === 0) {
 		return (
@@ -170,18 +169,7 @@ export function PlayerClient({ guildId, onPlay }: { guildId: string; onPlay?: (t
 
 	return (
 		<div className="space-y-8">
-			<div className="grid gap-4 sm:grid-cols-2">
-				<Card padding="lg" className="gap-1">
-					<p className="text-xs font-medium text-muted-foreground">누적 재생</p>
-					<p className="text-2xl font-black tracking-tighter tabular-nums text-foreground">{totalPlays.toLocaleString()}회</p>
-				</Card>
-				<Card padding="lg" className="gap-1">
-					<p className="text-xs font-medium text-muted-foreground">재생한 곡</p>
-					<p className="text-2xl font-black tracking-tighter tabular-nums text-foreground">{top.length.toLocaleString()}종</p>
-				</Card>
-			</div>
-
-			<Card padding="lg" className="gap-5">
+			<Card padding="lg" className="gap-4 p-4 sm:gap-5 sm:p-6">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<Tabs value={tab} onValueChange={(key) => setTab(key as "top" | "recent")} aria-label="재생 기록 뷰">
 						<TabsList>
