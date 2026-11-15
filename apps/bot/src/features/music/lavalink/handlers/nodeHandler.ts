@@ -136,6 +136,8 @@ export class NodeHandler extends BaseLavalinkHandler {
 			// Simple cycling through available nodes
 			// changeNode 실패(레이스로 신노드에 플레이어 미존재 등)를 두면 unhandled rejection + 오펜 플레이어가 남는다.
 			const player = orphanPlayers[idx];
+			// changeNode 전에 판정한다 — 믹서를 쓰던 플레이어만 신노드에서 체인을 다시 만든다.
+			const hadMixer = this.deps.mixerService?.hasMixerFilter?.(player) ?? false;
 			this.deps.mixerService?.markFiltersStale?.(player.guildId);
 			player
 				.changeNode(leastUsedNode[idx % leastUsedNode.length])
@@ -143,7 +145,14 @@ export class NodeHandler extends BaseLavalinkHandler {
 					this.sessionRestore.clearOrphanPlayer(player);
 					// 마이그레이션한 신노드의 플러그인은 필터·설정·슬롯 상태를 모른다 —
 					// 필터와 DB 설정을 재전송하고 에폭을 맞추기 위해 리셋한다 (B-10).
-					await Promise.resolve(this.deps.mixerService?.ensureMixerFilter?.(player)).catch(() => null);
+					// changeNode는 트랙을 filters보다 먼저 보내 현재 트랙 체인에 mixer가 빠진다 —
+					// 믹서 플레이어는 필터 재전송 + seek으로 체인을 재구성한다.
+					const resync = hadMixer
+						? this.deps.mixerService?.rebuildMixerChain?.(player)
+						: this.deps.mixerService?.ensureMixerFilter?.(player);
+					await Promise.resolve(resync).catch((error) =>
+						this.logger.warn(`Mixer filter resync after node migration failed at guild ${player.guildId}: ${error}`)
+					);
 					const reset = this.deps.mixerService?.reset?.(player as CustomPlayer, (player as CustomPlayer).currentEpoch ?? 1);
 					return Promise.resolve(reset).catch(() => null);
 				})

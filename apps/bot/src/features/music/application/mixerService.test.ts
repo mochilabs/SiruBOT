@@ -732,3 +732,51 @@ it('sends silence config matching gapless setting', async () => {
 	expect(fetchMock.mock.calls[0][0]).toContain('/mixer/silence');
 	expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ guildId: '123456789012345678', enabled: true });
 });
+
+describe('rebuildMixerChain (노드 이전 뒤 체인 재구성)', () => {
+	function playerWithTrack(info: Record<string, unknown>, pluginFilters?: Record<string, unknown>) {
+		const applyPlayerFilters = vi.fn().mockResolvedValue(undefined);
+		const seek = vi.fn().mockResolvedValue(undefined);
+		const player = {
+			...fakePlayer(),
+			position: 42_000,
+			queue: { current: { info } },
+			filterManager: { data: pluginFilters ? { pluginFilters } : {}, applyPlayerFilters },
+			seek
+		} as unknown as Player;
+		return { player, applyPlayerFilters, seek };
+	}
+
+	beforeEach(() =>
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockImplementation(async () => new Response('{}'))
+		)
+	);
+
+	it('hasMixerFilter는 mixer 플러그인 필터가 실린 플레이어만 true', () => {
+		const service = makeMixerService();
+		expect(service.hasMixerFilter(playerWithTrack({}, { mixer: { guildId: '1' } }).player)).toBe(true);
+		expect(service.hasMixerFilter(playerWithTrack({}).player)).toBe(false);
+	});
+
+	it('이미 준비된 길드여도 필터를 다시 보낸 뒤 현재 위치로 seek한다', async () => {
+		const service = makeMixerService();
+		const { player, applyPlayerFilters, seek } = playerWithTrack({ isSeekable: true, isStream: false });
+		await service.ensureMixerFilter(player);
+		applyPlayerFilters.mockClear();
+
+		await service.rebuildMixerChain(player);
+
+		expect(applyPlayerFilters).toHaveBeenCalledTimes(1);
+		expect(seek).toHaveBeenCalledWith(42_000);
+		expect(applyPlayerFilters.mock.invocationCallOrder[0]).toBeLessThan(seek.mock.invocationCallOrder[0]);
+	});
+
+	it('스트림은 seek하지 않는다', async () => {
+		const service = makeMixerService();
+		const { player, seek } = playerWithTrack({ isSeekable: false, isStream: true });
+		await service.rebuildMixerChain(player);
+		expect(seek).not.toHaveBeenCalled();
+	});
+});

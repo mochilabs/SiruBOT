@@ -545,6 +545,25 @@ export class MixerService {
 		this.filterReady.add(gid);
 	}
 
+	/** 플레이어 필터 데이터에 mixer 플러그인 필터가 실려 있는지 — 믹서를 쓰던 플레이어만 true. */
+	public hasMixerFilter(player: Player): boolean {
+		const pluginFilters = player.filterManager?.data?.pluginFilters as Record<string, unknown> | undefined;
+		return Boolean(pluginFilters?.[MIXER_FILTER_KEY]);
+	}
+
+	/**
+	 * 이미 재생 중인 트랙의 필터 체인에 mixer를 다시 넣는다. Lavalink는 재생 중 트랙의 체인을
+	 * filters op만으로 다시 만들지 않으므로, 필터를 재전송한 뒤 현재 위치로 seek해 체인을 재구성한다.
+	 * (노드 이전처럼 트랙이 filters보다 먼저 서버에 간 경우에 쓴다.)
+	 */
+	public async rebuildMixerChain(player: Player): Promise<void> {
+		this.markFiltersStale(player.guildId);
+		await this.ensureMixerFilter(player);
+		const current = player.queue?.current;
+		if (!current || current.info?.isStream || !current.info?.isSeekable) return;
+		await player.seek(player.position);
+	}
+
 	public resetFilterReadiness(): void {
 		this.filterReady.clear();
 	}

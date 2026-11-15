@@ -95,6 +95,46 @@ describe('node event reporting (상태 페이지 최근 오류)', () => {
 	});
 });
 
+describe('node migration (노드 끊김 → 다른 노드로 이전)', () => {
+	function setup(hadMixer: boolean) {
+		const player = { guildId: 'g1', node: { id: 'dead' }, changeNode: vi.fn().mockResolvedValue('alive') };
+		const mixerService = {
+			hasMixerFilter: vi.fn().mockReturnValue(hadMixer),
+			markFiltersStale: vi.fn(),
+			ensureMixerFilter: vi.fn().mockResolvedValue(undefined),
+			rebuildMixerChain: vi.fn().mockResolvedValue(undefined),
+			reset: vi.fn().mockResolvedValue(undefined)
+		};
+		Object.assign(container, {
+			mixerService,
+			audio: {
+				players: { filter: () => ({ values: () => ({ toArray: () => [player] }) }) },
+				nodeManager: { leastUsedNodes: () => [{ id: 'alive' }] }
+			}
+		});
+		return { player, mixerService };
+	}
+
+	beforeEach(() => getSubLogger.mockReturnValue(stubLogger));
+
+	it('믹서를 쓰던 플레이어는 이전 뒤 체인을 재구성한다(필터 재전송 + seek)', async () => {
+		const { player, mixerService } = setup(true);
+		makeHandler().handleNodeDisconnect({ id: 'dead', options: { id: 'dead' } }, { code: 1006 });
+		await vi.waitFor(() => expect(mixerService.reset).toHaveBeenCalled());
+		expect(player.changeNode).toHaveBeenCalled();
+		expect(mixerService.rebuildMixerChain).toHaveBeenCalledWith(player);
+		expect(mixerService.ensureMixerFilter).not.toHaveBeenCalled();
+	});
+
+	it('믹서 필터가 없던 플레이어는 seek 없이 필터만 보장한다', async () => {
+		const { player, mixerService } = setup(false);
+		makeHandler().handleNodeDisconnect({ id: 'dead', options: { id: 'dead' } }, { code: 1006 });
+		await vi.waitFor(() => expect(mixerService.reset).toHaveBeenCalled());
+		expect(mixerService.ensureMixerFilter).toHaveBeenCalledWith(player);
+		expect(mixerService.rebuildMixerChain).not.toHaveBeenCalled();
+	});
+});
+
 describe('mixer op handling (raw + error)', () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
