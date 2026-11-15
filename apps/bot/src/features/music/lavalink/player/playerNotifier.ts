@@ -171,8 +171,21 @@ export class PlayerNotifier implements Stoppable {
 		this.pendingUpdates.clear();
 	}
 
+	/**
+	 * 매니저가 이 길드에 들고 있는 플레이어가 아닌 객체(복구·재생성으로 고아가 된 옛 인스턴스)인지 —
+	 * 옛 인스턴스는 곡 정보와 position이 멈춘 채 같은 컨트롤러 메시지를 덮어써서 새 곡 표시와 번갈아 나타난다.
+	 */
+	private isOrphanPlayer(player: CustomPlayer): boolean {
+		const live = this.deps.audio?.getPlayer?.(player.guildId);
+		return Boolean(live) && live !== player;
+	}
+
 	public updateController(player: CustomPlayer): void {
 		if (this.stopped) return;
+		if (this.isOrphanPlayer(player)) {
+			this.logger.warn(`Ignoring controller update from an orphaned player instance (guild ${player.guildId})`);
+			return;
+		}
 		this.clearDebounceTimer(player.guildId);
 		this.updateRevisions.set(player.guildId, (this.updateRevisions.get(player.guildId) ?? 0) + 1);
 		this.pendingUpdates.set(player.guildId, player);
@@ -315,7 +328,7 @@ export class PlayerNotifier implements Stoppable {
 		if (this.stopped || this.progressTicks.has(player.guildId)) return;
 		if (player.queue.current?.info.isStream === true) return;
 		const timer = setInterval(() => {
-			if (!player.queue.current || this.destroyedPlayers.has(player)) {
+			if (!player.queue.current || this.destroyedPlayers.has(player) || this.isOrphanPlayer(player)) {
 				this.stopProgressTick(player.guildId);
 				return;
 			}

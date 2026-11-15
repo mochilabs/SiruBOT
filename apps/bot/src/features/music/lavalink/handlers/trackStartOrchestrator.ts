@@ -29,6 +29,15 @@ export class TrackStartOrchestrator {
 		const startedTrack = this.resolveStartedTrack(player, track, payload, preloadedIdentifier);
 		if (startedTrack && !isTtsClip(startedTrack)) player.relatedTrackHistory.remember(startedTrack);
 		syncQueueToNowPlaying(player, startedTrack);
+		// 서버가 시작한 전이(갭리스/크로스페이드)는 클라이언트 play()를 거치지 않아 lavalink-client의
+		// position 기준점이 이전 곡에 남는다 — 다음 playerUpdate가 오기 전까지(오지 않으면 계속)
+		// 이전 곡 위치 + 경과 시간이 표시된다. 새 곡 시작점으로 기준을 다시 잡는다.
+		const previousStarted = player.transitionState.lastStartedEncoded;
+		const startedEncoded = typeof startedTrack?.encoded === 'string' ? normalizeTrackEncoded(startedTrack.encoded) : null;
+		if (startedEncoded && !isSameEncodedTrack(previousStarted, startedEncoded)) {
+			player.lastPosition = 0;
+			player.lastPositionChange = Date.now();
+		}
 		// 표시 확정 — 모든 NOWPLAYING 렌더러는 이 값을 그린다.
 		// (queue.current는 lavalink-client 전이 기계가 뒤늦게 덮어쓸 수 있다.)
 		player.transitionState.confirmedNowPlaying = startedTrack;
