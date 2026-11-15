@@ -55,3 +55,7 @@ packages/prisma/src/client/
 
 # 작업 문서 (계획·감사·변경 기록, 로컬 전용)
 Localdocs/
+
+# 서드파티 스킬 (로컬 전용)
+.claude/skills/ai-slop-cleaner/SKILL.md
+.claude/skills/antislop-ui/contrast-check.py
