@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { SkeletonLine } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -64,26 +64,30 @@ function VoiceStatusBadge({ guildId }: { guildId: string }) {
 }
 
 function SearchResultRow({
-	index,
 	track,
 	playing,
+	disabled,
 	onPlay,
 }: {
-	index: number;
 	track: TrackSummary;
+	/** 이 곡이 재생 요청 중이에요 — 이 행 버튼만 로딩으로 보여요 */
 	playing: boolean;
+	/** 다른 곡이 요청 중이라 잠시 눌러도 소용없어요 */
+	disabled: boolean;
 	onPlay: (uri: string) => void;
 }) {
+	const meta = [track.author, track.isStream ? "스트림" : formatDuration(track.durationMs), track.sourceName ? prettySourceName(track.sourceName) : null]
+		.filter(Boolean)
+		.join(" · ");
 	return (
-		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 px-3 py-2.5">
-			<span className="w-4 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
+		<div className="flex min-w-0 items-center gap-3 rounded-card bg-surface-2 p-2.5">
 			{track.artworkUrl ? (
-				<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
-					<Image src={track.artworkUrl} alt="" fill className="object-cover" sizes="40px" unoptimized />
+				<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-control">
+					<Image src={track.artworkUrl} alt="" fill className="object-cover" sizes="48px" unoptimized />
 				</div>
 			) : (
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-1 text-muted-foreground">
-					<ListMusic size={14} aria-hidden />
+				<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-surface-1 text-muted-foreground">
+					<ListMusic size={16} aria-hidden />
 				</div>
 			)}
 			<div className="min-w-0 flex-1">
@@ -99,25 +103,18 @@ function SearchResultRow({
 				) : (
 					<p className="line-clamp-1 text-sm font-semibold text-foreground">{track.title}</p>
 				)}
-				<p className="truncate text-xs text-muted-foreground">
-					{track.author}
-					{track.sourceName ? ` · ${prettySourceName(track.sourceName)}` : ""}
-				</p>
+				<p className="truncate text-xs tabular-nums text-muted-foreground">{meta}</p>
 			</div>
-			<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-				{track.isStream ? "스트림" : formatDuration(track.durationMs)}
-			</span>
 			<Button
 				variant="secondary"
-				size="sm"
-				icon={<Play size={13} />}
+				size="icon-lg"
+				className="min-h-11 min-w-11"
+				icon={<Play size={15} />}
 				onClick={() => onPlay(track.uri)}
 				loading={playing}
-				disabled={playing}
+				disabled={playing || disabled}
 				aria-label={`${track.title} 재생`}
-			>
-				재생
-			</Button>
+			/>
 		</div>
 	);
 }
@@ -280,57 +277,54 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 	const showLoading = searching || isTypingDebounce;
 
 	return (
-		<div className="space-y-8">
-			<Card padding="lg" className="gap-5">
+		// 데스크톱은 왼쪽에 라이브(지금 곡·대기열), 오른쪽에 검색·기록을 둬요. 모바일은 라이브 → 검색 → 기록 순으로 쌓여요.
+		<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-8">
+			<PlayerLiveTab guildId={guildId} />
+
+			<div className="min-w-0 space-y-6">
+			<Card padding="lg" className="gap-4 p-4 sm:gap-5 sm:p-6">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
 						<span className="text-primary-text">
 							<Search size={15} aria-hidden />
 						</span>
-						곡 검색 · 바로 재생
+						곡 검색
 					</h2>
 					<VoiceStatusBadge guildId={guildId} />
 				</div>
 
 				<form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-					<div className="relative min-w-0 flex-1">
-						<Search
-							size={15}
-							className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-							aria-hidden
-						/>
-						<Input
+					<InputGroup className="h-11 min-w-0 flex-1">
+						<InputGroupAddon>
+							<Search size={16} aria-hidden />
+						</InputGroupAddon>
+						<InputGroupInput
 							value={query}
 							onChange={(event) => setQuery(event.target.value)}
-							placeholder="곡 제목·아티스트를 입력하면 자동으로 검색돼요 (또는 유튜브 링크)"
+							placeholder="곡 제목·아티스트 또는 링크"
 							aria-label="재생할 곡 검색어"
 							maxLength={200}
-							className="pl-9 pr-9"
 						/>
-						{showLoading ? (
-							<Loader2
-								size={15}
-								className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
-								aria-label="검색 중"
-							/>
-						) : query ? (
-						<Button
-							variant="ghost"
-							type="button"
-							onClick={() => setQuery("")}
-							aria-label="검색어 지우기"
-							className="absolute right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full p-0 text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-						>
-							<X size={13} aria-hidden />
-						</Button>
-						) : null}
-					</div>
+						<InputGroupAddon align="inline-end">
+							{showLoading ? (
+								<Loader2 size={16} className="animate-spin text-muted-foreground" aria-label="검색 중" />
+							) : query ? (
+								<InputGroupButton size="icon-xs" onClick={() => setQuery("")} aria-label="검색어 지우기">
+									<X size={14} aria-hidden />
+								</InputGroupButton>
+							) : null}
+						</InputGroupAddon>
+					</InputGroup>
 					{isUrl && (
-						<Button type="submit" loading={playingUri !== null} disabled={playingUri !== null}>
+						<Button type="submit" className="min-h-11" loading={playingUri !== null} disabled={playingUri !== null}>
 							바로 재생
 						</Button>
 					)}
 				</form>
+
+				{!query && !results && canPlay && (
+					<p className="text-sm text-muted-foreground">곡 이름을 입력하면 자동으로 검색돼요. 유튜브 링크를 붙여넣으면 바로 재생해요.</p>
+				)}
 
 				{!canPlay && (
 					<p className="rounded-card bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
@@ -345,6 +339,9 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 
 				{results && (
 					<div className="space-y-2" aria-live="polite">
+							{results.length > 0 && (
+								<p className="text-xs font-medium text-muted-foreground">검색 결과 {results.length}곡</p>
+							)}
 						{results.length === 0 ? (
 							<EmptyState
 								icon={ListMusic}
@@ -353,22 +350,24 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 								description="다른 검색어로 다시 시도해 주세요."
 							/>
 						) : (
-							results.map((track, index) => (
+							<div className="max-h-[28rem] space-y-2 overflow-y-auto scrollbar-none">
+								{results.map((track, index) => (
 								<SearchResultRow
 									key={`${track.uri}-${index}`}
-									index={index}
 									track={track}
-									playing={playingUri !== null}
+									playing={playingUri === track.uri}
+									disabled={playingUri !== null}
 									onPlay={playTrack}
 								/>
-							))
+								))}
+								</div>
 						)}
 					</div>
 				)}
 			</Card>
 
-			<PlayerLiveTab guildId={guildId} />
 			<PlayerClient guildId={guildId} onPlay={handleHistoryPlay} />
+			</div>
 		</div>
 	);
 }

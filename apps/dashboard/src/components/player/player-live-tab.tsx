@@ -18,7 +18,7 @@ import { NowPlaying } from "./now-playing-card";
 /** 라이브 탭 공통 셸 — 다른 설정 탭과 같은 패널 카드 + 헤더 */
 function LivePanel({ children }: { children: ReactNode }) {
   return (
-    <Card padding="lg" className="gap-6 overflow-visible">
+    <Card padding="lg" className="gap-5 p-4 sm:gap-6 sm:p-6 overflow-visible">
       <PanelHeader icon={<Radio className="h-5 w-5" />} title="라이브" description="지금 재생 중인 곡과 대기열을 실시간으로 확인해요." />
       {children}
     </Card>
