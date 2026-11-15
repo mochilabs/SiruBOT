@@ -168,6 +168,23 @@ function trackSimilarity(trackA: Track, trackB: Track): number {
 	return titleSim * TITLE_WEIGHT + durationSim * DURATION_WEIGHT;
 }
 
+// 추천 추첨 후보 수 — 유사도 상위 몇 곡까지 추첨에 넣을지
+const PICK_POOL_SIZE = 8;
+// 가중치 하한 — 유사도가 낮은 곡(완화 밴드)도 뽑힐 여지를 남긴다
+const MIN_PICK_WEIGHT = 0.05;
+
+/** 유사도에 비례한 확률로 하나를 고른다 (유사할수록 잘 뽑히지만 1등이 고정되지는 않는다). */
+export function weightedPick<T extends { similarity: number }>(items: T[], random: () => number = Math.random): T {
+	const weights = items.map((item) => Math.max(item.similarity, MIN_PICK_WEIGHT));
+	const total = weights.reduce((acc, w) => acc + w, 0);
+	let roll = random() * total;
+	for (let i = 0; i < items.length; i++) {
+		roll -= weights[i];
+		if (roll < 0) return items[i];
+	}
+	return items[items.length - 1];
+}
+
 /**
  * Select the most suitable recommended track based on similarity
  * - Too similar tracks (translated versions, covers) → excluded
@@ -175,7 +192,7 @@ function trackSimilarity(trackA: Track, trackB: Track): number {
  * - Select the most appropriate track from the medium similarity range
  * 이미 재생했거나 대기 중인 곡은 fetchRelatedCandidate에서 하드 제외되므로 여기서 다루지 않는다.
  */
-export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], reference: Track): Track | null {
+export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], reference: Track, random: () => number = Math.random): Track | null {
 	if (candidates.length === 0) return null;
 
 	const scored = candidates.map((track) => ({
@@ -192,10 +209,10 @@ export function pickBySimilarity(deps: LavalinkDeps, candidates: Track[], refere
 	// 전부 너무 유사하면 그래도 재생을 이어가기 위해 전체를 후보로 쓴다
 	if (pool.length === 0) pool = scored;
 
-	// 유사도 순으로 정렬한 뒤 상위 3개 중 랜덤 선택 (다양성 확보)
+	// 유사도 상위 PICK_POOL_SIZE곡 중 유사도 가중 랜덤으로 고른다. RD 플레이리스트와 유사도 순위는
+	// 같은 곡이면 매번 같아서, 상위 3곡 균등 추첨만으로는 A 다음에 거의 항상 B가 나왔다.
 	pool.sort((a, b) => b.similarity - a.similarity);
-	const topN = pool.slice(0, Math.min(3, pool.length));
-	const pick = topN[Math.floor(Math.random() * topN.length)];
+	const pick = weightedPick(pool.slice(0, PICK_POOL_SIZE), random);
 
 	deps.logger.debug(`[autoPlayRelated] Picked track by similarity: "${pick.track.info.title}" (score: ${pick.similarity.toFixed(3)})`);
 	return pick.track;

@@ -6,6 +6,7 @@ import {
 	normalizeTitle,
 	titleSimilarity,
 	pickBySimilarity,
+	weightedPick,
 	fetchRelatedCandidate,
 	autoPlayRelated,
 	isRelatedTrack,
@@ -143,6 +144,40 @@ describe('pickBySimilarity bands', () => {
 		const reference = track('abcd', 'ref', 100_000);
 		const identical = track('abcd', 'dup', 100_000); // 1.0 → 밴드1·2 모두 제외 → 밴드3(전체)
 		expect(pickBySimilarity(container as never, [identical], reference)).toBe(identical);
+	});
+});
+
+describe('weightedPick', () => {
+	const items = [
+		{ id: 'a', similarity: 0.6 },
+		{ id: 'b', similarity: 0.3 },
+		{ id: 'c', similarity: 0.1 }
+	];
+
+	it('maps the roll onto similarity-proportional slices', () => {
+		expect(weightedPick(items, () => 0).id).toBe('a');
+		expect(weightedPick(items, () => 0.59).id).toBe('a');
+		expect(weightedPick(items, () => 0.61).id).toBe('b');
+		expect(weightedPick(items, () => 0.95).id).toBe('c');
+		expect(weightedPick(items, () => 0.999999).id).toBe('c');
+	});
+
+	it('still gives near-zero similarity a floor weight', () => {
+		const zero = [
+			{ id: 'x', similarity: 0 },
+			{ id: 'y', similarity: 0 }
+		];
+		expect(weightedPick(zero, () => 0.75).id).toBe('y');
+	});
+});
+
+describe('pickBySimilarity spread', () => {
+	it('can pick beyond the top three candidates', () => {
+		const reference = track('abcdefgh', 'ref', 100_000);
+		const candidates = ['abcdefxy', 'abcdexyz', 'abcdwxyz', 'abcvwxyz', 'abuvwxyz'].map((title, i) => track(title, `c${i}`, 100_000));
+		// 굴림이 끝자락이면 유사도 5위 곡이 뽑힌다 (예전엔 상위 3곡으로 고정)
+		const picked = pickBySimilarity(container as never, candidates, reference, () => 0.999999);
+		expect(picked?.info.identifier).toBe('c4');
 	});
 });
 
