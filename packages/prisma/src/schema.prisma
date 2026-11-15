@@ -389,6 +389,9 @@ model RolePanel {
   title       String   /// 패널 메시지 제목
   description String   @default("") /// 패널 안내문
   imageUrl    String?  /// 패널 이미지 URL (선택)
+  imageLayout   String @default("gallery") /// gallery | thumbnail — 이미지를 보여주는 방식
+  imagePosition String @default("middle") /// top | middle | bottom — 갤러리 이미지 위치 (섬네일은 무시)
+  accentColor   String? /// 컨테이너 강조색 #RRGGBB (null = 봇 기본색)
   mode        String   @default("button") /// button | reaction — 역할을 받는 방식 (버튼 클릭 / 이모지 반응)
   clickCount  Int      @default(0) /// 패널 단위 총 클릭 수 (성공한 토글마다 +1)
   channelId   String?  /// 게시된 채널 ID

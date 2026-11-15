@@ -17,7 +17,7 @@ vi.mock('@sapphire/framework', () => ({
 	},
 	InteractionHandlerTypes: { Button: 'Button' }
 }));
-vi.mock('@sirubot/utils', () => ({ emoji: (name: string) => `:${name}:`, DEFAULT_COLOR: 0 }));
+vi.mock('@sirubot/utils', async (importOriginal) => ({ ...(await importOriginal<typeof import('@sirubot/utils')>()), emoji: (name: string) => `:${name}:` }));
 vi.mock('../../../tickets/index.ts', () => ({ ticketMessageView: (text: string) => ({ text }) }));
 
 import RolePanelButtonHandler from './rolePanelButton.ts';

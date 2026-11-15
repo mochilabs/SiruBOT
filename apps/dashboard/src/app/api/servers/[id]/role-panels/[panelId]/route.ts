@@ -139,6 +139,15 @@ export const PUT = createGuildApiHandler({
             ...(data.imageUrl !== undefined
               ? { imageUrl: data.imageUrl }
               : {}),
+            ...(data.imageLayout !== undefined
+              ? { imageLayout: data.imageLayout }
+              : {}),
+            ...(data.imagePosition !== undefined
+              ? { imagePosition: data.imagePosition }
+              : {}),
+            ...(data.accentColor !== undefined
+              ? { accentColor: data.accentColor }
+              : {}),
             ...(data.mode !== undefined ? { mode: data.mode } : {}),
           },
           include: { buttons: { orderBy: { position: "asc" } } },
