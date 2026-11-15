@@ -3495,6 +3495,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@sirubot/isrc@workspace:packages/isrc":
+  version: 0.0.0-use.local
+  resolution: "@sirubot/isrc@workspace:packages/isrc"
+  dependencies:
+    "@sirubot/utils": "npm:*"
+    "@types/node": "npm:^22.20.5"
+    zod: "npm:^4.6.7"
+  languageName: unknown
+  linkType: soft
+
 "@sirubot/notifier@workspace:apps/notifier":
   version: 0.0.0-use.local
   resolution: "@sirubot/notifier@workspace:apps/notifier"
