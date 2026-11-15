@@ -7,6 +7,7 @@ import type { OpenAICompatTranslationProvider } from '../providers/translate.ts'
 import { ohaasaStatus } from '../services/ohaasaScheduler.ts';
 import { playbackSnapshot } from '../services/playbackStore.ts';
 import { memoryTidyStatus } from '../services/memoryTidy.ts';
+import { isrcEnrichStatus } from '../services/isrcEnricher.ts';
 import { playerHubStatus } from '../services/playerHub.ts';
 import { guildDataHubStatus } from '../services/guildDataHub.ts';
 import { registerDashboard } from './dashboard.ts';
@@ -70,7 +71,8 @@ export async function registerRoutes(fastify: FastifyInstance, deps: RouteDeps):
 		playback: playbackSnapshot(),
 		playerHub: playerHubStatus(),
 		guildDataHub: guildDataHubStatus(),
-		memoryTidy: memoryTidyStatus()
+		memoryTidy: memoryTidyStatus(),
+		isrcEnrich: isrcEnrichStatus()
 	}));
 
 	registerOhaasaRoutes(fastify, deps);

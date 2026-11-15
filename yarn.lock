@@ -3485,6 +3485,7 @@ __metadata:
     "@prisma/adapter-pg": "npm:^7.10.1"
     "@redis/client": "npm:^5.12.1"
     "@sirubot/app-kit": "workspace:^"
+    "@sirubot/isrc": "npm:*"
     "@sirubot/prisma": "npm:*"
     "@sirubot/utils": "npm:*"
     fastify: "npm:^5.12.7"
@@ -3495,7 +3496,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@sirubot/isrc@workspace:packages/isrc":
+"@sirubot/isrc@npm:*, @sirubot/isrc@workspace:packages/isrc":
   version: 0.0.0-use.local
   resolution: "@sirubot/isrc@workspace:packages/isrc"
   dependencies:

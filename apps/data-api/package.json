@@ -12,12 +12,14 @@
         "typecheck": "tsc --noEmit",
         "build": "tsup",
         "watch": "tsup --watch",
-        "start": "node --enable-source-maps ."
+        "start": "node --enable-source-maps .",
+        "backfill:recordings": "node --enable-source-maps dist/scripts/backfillRecordings.js"
     },
     "dependencies": {
         "@prisma/adapter-pg": "^7.10.1",
         "@redis/client": "^5.12.1",
         "@sirubot/app-kit": "workspace:^",
+        "@sirubot/isrc": "*",
         "@sirubot/prisma": "*",
         "@sirubot/utils": "*",
         "fastify": "^5.12.7",

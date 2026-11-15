@@ -11,6 +11,7 @@ import { ensureKoreanFont } from './renderers/canvasUtils.ts';
 import { startOhaasaScheduler } from './services/ohaasaScheduler.ts';
 import { connectDb, disconnectDb, getDb } from './services/db.ts';
 import { startMemoryTidyScheduler } from './services/memoryTidy.ts';
+import { createIsrcProviders, IsrcEnricher, startIsrcEnrichScheduler } from './services/isrcEnricher.ts';
 import { startPlayerHub, stopPlayerHub } from './services/playerHub.ts';
 import { startBotProfileHub, stopBotProfileHub } from './services/botProfileHub.ts';
 import { startMemberGreetingHub, stopMemberGreetingHub } from './services/memberGreetingHub.ts';
@@ -93,10 +94,17 @@ export async function buildServer(env: Env) {
 		at: env.MEMORY_TIDY_AT,
 		batchSize: env.MEMORY_TIDY_BATCH_SIZE
 	});
+	// ISRC 보강 — ISRC 없는 곡을 외부 카탈로그에서 찾아 차트 묶음을 합쳐요.
+	const db = getDb();
+	const stopIsrc = startIsrcEnrichScheduler(
+		db ? new IsrcEnricher(db, createIsrcProviders({ musicBrainzUserAgent: env.MUSICBRAINZ_USER_AGENT }), env.ISRC_ENRICH_BATCH) : null,
+		{ enabled: env.ISRC_ENRICH_ENABLED }
+	);
 
 	const close = async () => {
 		stopScheduler();
 		stopTidy();
+		stopIsrc();
 		for (const hub of HUBS) await hub.stop();
 		await sharedCache.disconnect();
 		await disconnectDb();
