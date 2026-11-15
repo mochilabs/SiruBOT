@@ -30,11 +30,41 @@ const CHANNELS = [
 const ROLES = [
 	{ id: "300", name: "운영진", color: "#ff7a90", position: 5, managed: false },
 	{ id: "301", name: "DJ", color: "#6ea8ff", position: 4, managed: false },
-	{ id: "302", name: "멤버", color: null, position: 1, managed: false }
+	{ id: "302", name: "멤버", color: null, position: 1, managed: false },
+	{ id: "303", name: "게이머", color: "#5fb3a1", position: 3, managed: false },
+	{ id: "304", name: "음악 감상", color: "#f0b232", position: 3, managed: false },
+	{ id: "305", name: "공지 알림", color: "#ee6f8b", position: 2, managed: false },
+	{ id: "306", name: "스터디", color: "#8a7bff", position: 2, managed: false }
 ];
 
 const stubIso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
 const STUB_IMAGE = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#8a7bff"/><circle cx="160" cy="90" r="40" fill="#fff" opacity=".6"/></svg>');
+
+const stubUuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const stubPanelButton = (n: number, roleId: string, label: string, emoji: string | null, style: "secondary" | "primary" | "success" | "danger", position: number) => ({ id: stubUuid(n), roleId, label, emoji, style, position });
+
+const STUB_ROLE_PANELS = [
+	{
+		id: "panel1", guildId: STUB_GUILD_ID, name: "관심사 역할", title: "관심사 역할을 골라요", description: "버튼을 누르면 역할을 받고, 한 번 더 누르면 해제돼요.", imageUrl: STUB_IMAGE, imageLayout: "gallery", imagePosition: "middle", accentColor: "#5fb3a1", mode: "button", clickCount: 342, channelId: "202", messageId: "900000000000000001", createdAt: stubIso(20), updatedAt: stubIso(2),
+		buttons: [
+			stubPanelButton(1, "303", "게이머", "🎮", "primary", 0),
+			stubPanelButton(2, "304", "음악 감상", "🎧", "success", 1),
+			stubPanelButton(3, "306", "스터디", "📚", "secondary", 2),
+			stubPanelButton(4, "305", "공지 알림", "🔔", "danger", 3)
+		]
+	},
+	{
+		id: "panel2", guildId: STUB_GUILD_ID, name: "이벤트 알림", title: "이벤트 알림 받기", description: "이모지로 반응하면 이벤트 알림 역할을 받아요.", imageUrl: STUB_IMAGE, imageLayout: "thumbnail", imagePosition: "middle", accentColor: null, mode: "reaction", clickCount: 58, channelId: null, messageId: null, createdAt: stubIso(6), updatedAt: stubIso(6),
+		buttons: [
+			stubPanelButton(5, "305", "공지 알림", "🔔", "secondary", 0),
+			stubPanelButton(6, "303", "게이머", "🎮", "secondary", 1)
+		]
+	},
+	{
+		id: "panel3", guildId: STUB_GUILD_ID, name: "새 패널", title: "역할 패널", description: "역할을 선택해 주세요.", imageUrl: null, imageLayout: "gallery", imagePosition: "middle", accentColor: null, mode: "button", clickCount: 0, channelId: null, messageId: null, createdAt: stubIso(0), updatedAt: stubIso(0),
+		buttons: []
+	}
+];
 
 const stubArt = (color: string) => "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="${color}"/><circle cx="80" cy="80" r="32" fill="#fff" opacity=".55"/></svg>`);
 
@@ -124,6 +154,8 @@ function stubGet(path: string): unknown | undefined {
 				hub: { guilds: 1, subscribed: true },
 				refreshFailed: false
 			};
+		case "/role-panels":
+			return STUB_ROLE_PANELS;
 		case "/live":
 			return { player: STUB_LIVE_PLAYER, hub: { guilds: 1, subscribed: true, staleMs: 0 } };
 		case "/player":

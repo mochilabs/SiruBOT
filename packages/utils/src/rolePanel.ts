@@ -22,12 +22,20 @@ export const ROLE_PANEL_TITLE_MAX = 100;
 export const ROLE_PANEL_DESCRIPTION_MAX = 1000;
 /** 패널 식별 이름 최대 길이 (대시보드 목록·autocomplete에 표시). */
 export const ROLE_PANEL_NAME_MAX = 100;
+/** 컨테이너 강조색 — `#RRGGBB`. null이면 봇 기본색을 써요. */
+export const ROLE_PANEL_ACCENT_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 /** 패널 이미지 URL 최대 길이. */
 export const ROLE_PANEL_IMAGE_URL_MAX = 2048;
 
 /** 역할을 받는 방식 — 버튼 클릭 또는 이모지 반응. 한 패널은 둘 중 하나만 써요. */
 export const rolePanelModes = ['button', 'reaction'] as const;
 export type RolePanelMode = (typeof rolePanelModes)[number];
+/** 이미지를 보여주는 방식 — 미디어 갤러리(큰 이미지) 또는 안내문 옆 섬네일. */
+export const rolePanelImageLayouts = ['gallery', 'thumbnail'] as const;
+export type RolePanelImageLayout = (typeof rolePanelImageLayouts)[number];
+/** 갤러리 이미지의 위치 — 제목 위, 안내문 아래(기본), 버튼·반응 목록 아래. 섬네일은 위치를 고를 수 없어요. */
+export const rolePanelImagePositions = ['top', 'middle', 'bottom'] as const;
+export type RolePanelImagePosition = (typeof rolePanelImagePositions)[number];
 /** 반응 모드의 최대 역할 수 — Discord는 메시지당 서로 다른 반응 이모지를 20개까지만 허용해요. */
 export const ROLE_PANEL_MAX_REACTIONS = 20;
 
@@ -121,12 +129,17 @@ export const rolePanelImageUrlSchema = z
 	.max(ROLE_PANEL_IMAGE_URL_MAX, `이미지 주소는 ${ROLE_PANEL_IMAGE_URL_MAX}자 이하여야 해요.`)
 	.refine((url) => /^https?:\/\//i.test(url), { message: '이미지 주소는 http 또는 https 주소여야 해요.' });
 
+const rolePanelAccentColorSchema = z.string().regex(ROLE_PANEL_ACCENT_COLOR_PATTERN, '강조색은 #RRGGBB 형식이어야 해요.');
+
 /** 패널 전체 계약 (생성 시 기본값 포함). */
 export const rolePanelSchema = z.object({
 	name: rolePanelNameSchema,
 	title: rolePanelTitleSchema.default('역할 패널'),
 	description: rolePanelDescriptionSchema.default('아래 버튼을 눌러 원하는 역할을 받거나 해제하세요.'),
 	imageUrl: rolePanelImageUrlSchema.nullable().optional().default(null),
+	imageLayout: z.enum(rolePanelImageLayouts).optional().default('gallery'),
+	imagePosition: z.enum(rolePanelImagePositions).optional().default('middle'),
+	accentColor: rolePanelAccentColorSchema.nullable().optional().default(null),
 	channelId: nullableSnowflake.optional().default(null),
 	messageId: nullableSnowflake.optional().default(null)
 });
@@ -148,6 +161,9 @@ export const rolePanelCreateSchema = z
 		title: rolePanelTitleSchema.optional(),
 		description: rolePanelDescriptionSchema.optional(),
 		imageUrl: rolePanelImageUrlSchema.nullable().optional().default(null),
+		imageLayout: z.enum(rolePanelImageLayouts).optional().default('gallery'),
+		imagePosition: z.enum(rolePanelImagePositions).optional().default('middle'),
+		accentColor: rolePanelAccentColorSchema.nullable().optional().default(null),
 		mode: z.enum(rolePanelModes).optional().default('button'),
 		buttons: rolePanelButtonsSchema.optional().default([])
 	})
@@ -163,6 +179,9 @@ export const rolePanelUpdateSchema = z
 		title: rolePanelTitleSchema.optional(),
 		description: rolePanelDescriptionSchema.optional(),
 		imageUrl: rolePanelImageUrlSchema.nullable().optional(),
+		imageLayout: z.enum(rolePanelImageLayouts).optional(),
+		imagePosition: z.enum(rolePanelImagePositions).optional(),
+		accentColor: rolePanelAccentColorSchema.nullable().optional(),
 		mode: z.enum(rolePanelModes).optional(),
 		buttons: rolePanelButtonsSchema.optional()
 	})

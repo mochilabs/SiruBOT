@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "RolePanel" ADD COLUMN IF NOT EXISTS "imageLayout" TEXT NOT NULL DEFAULT 'gallery';
+ALTER TABLE "RolePanel" ADD COLUMN IF NOT EXISTS "imagePosition" TEXT NOT NULL DEFAULT 'middle';
+ALTER TABLE "RolePanel" ADD COLUMN IF NOT EXISTS "accentColor" TEXT;
