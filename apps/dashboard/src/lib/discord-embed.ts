@@ -128,11 +128,16 @@ export function getDiscordEmbedInput(name: string, base: string): DiscordEmbedIn
 			return {
 				eyebrow: "음악 차트",
 				title: "지금 뜨는 음악, 바로 재생해요",
-				description: "Discord에서 많이 듣는 음악 차트를 확인하고 버튼 한 번으로 내 서버에서 틀어보세요.",
+				description: "차트에서 고른 곡을 버튼 한 번으로 틀고, 곡 사이는 끊김 없이 자연스럽게 이어 들어요.",
 				url: `${base}/track`,
 				thumbnailUrl,
 				imageUrl: `${base}${OG_IMAGES.track.url}`,
 				imageAlt: OG_IMAGES.track.alt,
+				highlights: [
+					"🎚️ **크로스페이드·갭리스** 곡과 곡 사이를 매끄럽게",
+					"🎛️ **필터 프리셋** 베이스부스트·나이트코어·8D·노래방",
+					"📝 **가사** 듣고 있는 곡 가사 바로 보기"
+				],
 				buttons: [{ ...chart, label: "차트 보기" }, invite, dashboard]
 			};
 		default:
