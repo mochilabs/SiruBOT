@@ -28,7 +28,7 @@ A filter, not a style guide. It bans no visual technique; it bans technique with
 
 ## Accessibility (hard rules)
 
-- WCAG AA contrast: 4.5:1 normal text, 3:1 large text (18px+) and non-text UI (component boundaries, focus indicators, icons, chart segments). Never eyeball a pairing; the eye overestimates grey-on-grey (#555555 on black is 2.8:1, FAIL). Compute: `python3 .pi/skills/antislop-ui/contrast-check.py "<fg>" "<bg>"`. Test the worst spot, not the best, and the whole area text passes over (text over photos/gradients needs a scrim).
+- WCAG AA contrast: 4.5:1 normal text, 3:1 large text (18px+) and non-text UI (component boundaries, focus indicators, icons, chart segments). Never eyeball a pairing; the eye overestimates grey-on-grey (#555555 on black is 2.8:1, FAIL). Compute: `python3 .claude/skills/antislop-ui/contrast-check.py "<fg>" "<bg>"`. Test the worst spot, not the best, and the whole area text passes over (text over photos/gradients needs a scrim).
 - Keyboard: everything reachable and operable (Tab order follows visual order, Enter/Space activates, Escape closes dialogs). Visible focus indicator (3:1) on every interactive element in every theme; never `outline: none` without a replacement. No hover-only interactions; pair every color-only status signal with text or an icon.
 - Text must survive 200% zoom without clipping; focused mobile inputs must scroll above the on-screen keyboard.
 

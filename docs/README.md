@@ -19,8 +19,8 @@
 
 | Place | Role |
 |---|---|
-| `AGENTS.md` (repo root) and `apps/bot/AGENTS.md` | Coding rules for agents and contributors: branches, commands, cross-app rules, bot conventions |
-| `.pi/skills/<id>/SKILL.md` | Task playbooks, loaded before working in that area. `AGENTS.md` lists the ids |
+| `AGENTS.md` (repo root) and `apps/*/AGENTS.md`, `packages/*/AGENTS.md` | Coding rules for agents and contributors: branches, commands, cross-app rules at the root; per-package conventions next to each package. Each `CLAUDE.md` only imports the `AGENTS.md` beside it |
+| `.claude/skills/<id>/SKILL.md` | Task playbooks, loaded before working in that area. `AGENTS.md` lists the ids |
 | `docs/*` | Structure, contracts and operations: what lives where and how it is called. Only documents linked from the root `README.md` live here |
 | `Localdocs/` (gitignored) | Working notes: plans, audits, rollout notes, branch changelogs. Never committed |
 

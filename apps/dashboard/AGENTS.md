@@ -11,3 +11,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Before writing code, always read
 
 1. **Context7 docs** — for any library, framework, SDK or API the task touches (including Next.js itself), fetch the current docs via the Context7 MCP tool first. Training data may be stale; the docs are the source of truth.
+2. **Skills** — `dashboard-conventions` for pages, API routes, hooks and stores; `dashboard-ui` for visual work (load `antislop-ui` first).
+
+## Dashboard-only rules
+
+- Import `@sirubot/utils` by subpath only (eslint enforces; see `packages/utils/AGENTS.md`).
+- Bot-bound work goes through data-api (root `AGENTS.md`, cross-app communication). Server-only env lives in `src/lib/env.ts` and never reaches the client bundle.
+- `SHARD_MANAGER_AUTH_KEY` has no fallback key. API reference: `docs/api-dashboard.md`.
