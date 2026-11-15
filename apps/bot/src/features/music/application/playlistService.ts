@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@sirubot/prisma';
 import { Track } from 'lavalink-client';
+import { isrcFields } from './recordingLink.ts';
 import { extractTrackData } from './trackData.ts';
 
 const FAVORITES_PLAYLIST_NAME = '즐겨찾기';
@@ -103,7 +104,7 @@ export class PlaylistService {
 
 		await this.deps.db.track.upsert({
 			where: { id: data.id },
-			create: { ...data },
+			create: { ...data, ...isrcFields(data.isrc, 'lavalink', new Date()) },
 			update: {}
 		});
 

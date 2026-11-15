@@ -53,6 +53,20 @@ export function splitArtistFromTitle(title: string, uploader: string): { artist:
 	return { artist: left, title: right };
 }
 
+/**
+ * 화면에 보일 제목·아티스트 — 업로드 표기와 업로더 접미사만 지우고 대소문자·기호는 그대로 둬요.
+ * YouTube 업로드는 `아티스트 - 제목`을 나눠요.
+ */
+export function displayMetadata(input: { title: string; author: string; sourceName?: string | null }): { title: string; artist: string } {
+	const split = input.sourceName?.startsWith('youtube') ? splitArtistFromTitle(input.title, input.author) : { artist: input.author, title: input.title };
+	const title = split.title.replace(UPLOAD_LABEL, ' ').replace(/\s+/g, ' ').trim();
+	const artist = split.artist
+		.replace(/\s*-\s*topic$/iu, '')
+		.replace(/vevo$/iu, '')
+		.trim();
+	return { title: title || input.title, artist: artist || input.author };
+}
+
 export interface TrackIdentityInput {
 	title?: string | null;
 	author?: string | null;
@@ -103,4 +117,15 @@ export function sourcePriority(source: string | null | undefined): number {
 	if (s.startsWith('youtubemusic') || s === 'ytmsearch') return 2;
 	if (s.startsWith('youtube')) return 1;
 	return 0;
+}
+
+/** 기간 차트에서 한 서버가 한 곡으로 하루에 올릴 수 있는 최대 재생 수 */
+export const CHART_GUILD_DAILY_PLAY_CAP = 5;
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** KST 기준 날짜를 UTC 자정 Date로 (Postgres DATE 컬럼 값). */
+export function kstDay(at: Date = new Date()): Date {
+	const shifted = new Date(at.getTime() + KST_OFFSET_MS);
+	return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
 }
