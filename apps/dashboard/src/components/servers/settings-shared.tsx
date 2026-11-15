@@ -315,13 +315,6 @@ export function registerSettingsDiscardHandler(handler: () => void): () => void 
   };
 }
 
-const nudgeListeners = new Set<() => void>();
-
-/** 저장하지 않은 채 떠나려 할 때 모달 없이 저장 바를 흔들어 주의를 끌어요 */
-export function nudgeSaveBar() {
-  nudgeListeners.forEach((notify) => notify());
-}
-
 export function SaveBar({
   dirty,
   saving,
@@ -401,30 +394,6 @@ export function SaveBar({
       notifySaveBarListeners();
     };
   }, [dirty, saving, submitting, active, id]);
-
-  // 탭 전환 시도 등에서 nudgeSaveBar()가 오면 섬을 흔들어 저장이 덜 된 걸 알려줘요
-  useEffect(() => {
-    const notify = () => {
-      const island = islandRef.current;
-      if (!visible || !island || typeof island.animate !== "function") return;
-      if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
-      island.animate(
-        [
-          { transform: "translateX(0px)" },
-          { transform: "translateX(-6px)", offset: 0.2 },
-          { transform: "translateX(5px)", offset: 0.4 },
-          { transform: "translateX(-4px)", offset: 0.6 },
-          { transform: "translateX(3px)", offset: 0.8 },
-          { transform: "translateX(0px)" },
-        ],
-        { duration: 480, easing: "ease-in-out" }
-      );
-    };
-    nudgeListeners.add(notify);
-    return () => {
-      nudgeListeners.delete(notify);
-    };
-  }, [visible]);
 
   return (
     <div ref={anchorRef} data-slot="settings-save-island-anchor" aria-hidden className="pointer-events-none absolute inset-x-6 bottom-0 h-0">

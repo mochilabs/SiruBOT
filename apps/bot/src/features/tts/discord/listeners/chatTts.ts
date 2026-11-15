@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { ChannelType, Message } from 'discord.js';
-import { isTtsEnabled } from '../../../../services/guildService.ts';
+import { isChannelToggleEnabled } from '../../../../services/guildService.ts';
 import { preprocessTtsMessage } from '../../application/chatTts.ts';
 import type { CustomPlayer } from '../../../music/index.ts';
 import * as guildChatPolicy from '../../../../services/guildSettings/chatPolicy.ts';
@@ -40,7 +40,7 @@ export class ChatTtsListener extends Listener {
 		if (!this.container.ttsService.isEnabled()) return;
 		const settings = await guildChatPolicy.getTtsSettings(this.container.guildService, message.guildId);
 		const isSessionChannel = settings.mode !== 'off' && player.textChannelId === message.channelId;
-		if (!isSessionChannel && !isTtsEnabled(settings, message.channelId)) return;
+		if (!isSessionChannel && !isChannelToggleEnabled(settings, message.channelId)) return;
 
 		// 사용자 opt-in: /tts on으로 낭독 대상에 포함된 사용자만 읽는다
 		const preset = await this.container.ttsUserSettings.get(message.guildId, message.author.id);

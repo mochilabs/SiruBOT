@@ -1,4 +1,4 @@
-const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+export const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SCAN = 1000;
 
 export async function findMessagesToPurge<T extends { id: string; createdTimestamp: number; author: { id: string } }>(

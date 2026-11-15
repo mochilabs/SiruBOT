@@ -27,10 +27,6 @@ export interface TtsSettings {
 }
 
 /** 이 채널의 메시지를 낭독 대상인지 — 리스너는 조용히 건너뛰므로 boolean만 돌려줘요 */
-export function isTtsEnabled(settings: TtsSettings, channelId: string): boolean {
-	return isChannelToggleEnabled(settings, channelId);
-}
-
 /** 채널 토글 공용 규칙 — off면 끄기, all이면 항상 켜기, channels면 허용 목록에 있는 채널만 켜기 */
 export function isChannelToggleEnabled(settings: { mode: 'all' | 'channels' | 'off'; channelIds: string[] }, channelId: string): boolean {
 	if (settings.mode === 'off') return false;

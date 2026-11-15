@@ -228,7 +228,7 @@ graph TB
 |---|---|---|
 | `GET /api/health` | Health check — **the only auth-exempt route** | — |
 | `GET /dashboard` · `GET /v1/status` | Built-in monitoring page (auth required, prompts for the key) · cache hit rate, inflight, breaker snapshot | — |
-| `GET /v1/ohaasa` · `POST /v1/ohaasa/refresh` | Ohaasa horoscope + LLM Korean translation | 7 days (prefilled by scheduler) |
+| `GET /v1/ohaasa` | Ohaasa horoscope + LLM Korean translation | 7 days (prefilled by scheduler) |
 | `GET /v1/lyrics` | Lyrics (lrclib.net) | 30 days |
 | `GET /v1/weather` | Geocoding + forecast + air quality (Open-Meteo) | 15 min |
 | `GET /v1/delivery/track` · `/carriers` | Parcel tracking (tracker.delivery) | 5 min |
@@ -240,7 +240,7 @@ graph TB
 | `POST /v1/embed-fix/metadata` | Social link embed-fix metadata (+ auto translation) | constants in `routes/embed-fix.ts` |
 | `POST /v1/image/{profile,member-card,nowplaying,ohaasa,ohaasa/top,weather}` · `POST /v1/image/member-card/{background,layer-image}` | canvas PNG rendering · greeting upload normalization | — |
 | `POST /v1/ai/custom-command-{draft,refine}` | Custom command draft/refine (503 without a key) | — |
-| `POST /v1/playback/events` · `GET /v1/playback/recent` | Collect/query shard playback events (`services/playbackStore.ts`) | — |
+| `POST /v1/playback/events` | Collect shard playback events (`services/playbackStore.ts`) | — |
 | `GET /v1/player/:guildId` (+ `/stream` SSE, `/voice-context`) · `POST /v1/internal/player/{search,play,control}` | Web player | — |
 | `GET /v1/guilds/:guildId/{channels,roles,members}` | Guild data from the bot's cache | — |
 | `POST /v1/internal/{guild-settings/invalidate,jtc/setup,bot-profile/set,greeting/send,bot-admin,panel/post,role-panel/validate-roles}` · `GET /v1/bot-profile/:guildId` · `GET /v1/greeting/state/:guildId` | Dashboard → bot relays and broadcasts | — |
@@ -275,7 +275,7 @@ graph LR
 
 - Fastify + `@fastify/websocket`, shared error handler, auth plugin, routes autoload (`src/server.ts`).
 - Core: `ShardRegistry(shardCount, shardsPerProcess)` — the shard ↔ process assignment ledger — and `DiscordNotifier` (webhook) for failure alerts.
-- Endpoints: REST `/api/health` · `/api/shards` · `/api/shards/:id` · `/api/shard/count`, WS `/ws` (`src/routes/`).
+- Endpoints: REST `/api/health` · `/api/shards` · `/api/shards/:id`, WS `/ws` (`src/routes/`).
 - The auth key is `AUTH_KEY`. The dashboard sends `SHARD_MANAGER_AUTH_KEY`, so the two values must match.
 - Startup grace: for `ALLOCATION_GRACE_MS` (default 40 s, `0` disables) after boot, brand-new shard allocation is deferred (`NoShardsAvailableError` on the client) while re-identify claims of existing shards are still accepted. This keeps a new process from taking shards that bots still in reconnect backoff are about to reclaim after a manager restart.
 - Client liveness: `ShardClient` terminates the socket and reconnects when a HEARTBEAT gets no `HEARTBEAT_ACK` within one interval, so a half-open connection can't leave a bot believing it still owns shards the manager already released.
@@ -392,7 +392,7 @@ sequenceDiagram
     DA-->>W: SSE relay - /api/servers/[id]/live/stream
 ```
 
-Source: `redisChannels.ts`, `apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts`, `apps/data-api/src/services/playerHub.ts`. Separately, the bot's `features/music/application/playbackReporter.ts` reports start/end/disconnect/error to data-api `/v1/playback/events`, queryable via `/v1/playback/recent` (`services/playbackStore.ts`).
+Source: `redisChannels.ts`, `apps/dashboard/src/app/api/servers/[id]/live/stream/route.ts`, `apps/data-api/src/services/playerHub.ts`. Separately, the bot's `features/music/application/playbackReporter.ts` reports start/end/disconnect/error to data-api `/v1/playback/events`, stored in `services/playbackStore.ts`.
 
 ### 6.2 Redis request/reply: the standard "ask the bot" pattern
 

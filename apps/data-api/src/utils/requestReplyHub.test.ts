@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { defineRedisRpc } from '@sirubot/utils/redisContract';
+import { defineRedisRpc } from '@sirubot/utils';
 import { wrapRedisMessage } from '@sirubot/utils/redisEnvelope';
 import { sharedCache } from './cache.ts';
 import { createRequestReplyHub } from './requestReplyHub.ts';

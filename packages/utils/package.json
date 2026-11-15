@@ -97,11 +97,6 @@
             "import": "./dist/birthday.js",
             "require": "./dist/birthday.cjs"
         },
-        "./client": {
-            "types": "./dist/client.d.ts",
-            "import": "./dist/client.js",
-            "require": "./dist/client.cjs"
-        },
         "./ticket": {
             "types": "./dist/ticket.d.ts",
             "import": "./dist/ticket.js",
@@ -111,11 +106,6 @@
             "types": "./dist/rolePanel.d.ts",
             "import": "./dist/rolePanel.js",
             "require": "./dist/rolePanel.cjs"
-        },
-        "./panelPost": {
-            "types": "./dist/panelPost.d.ts",
-            "import": "./dist/panelPost.js",
-            "require": "./dist/panelPost.cjs"
         },
         "./botAdmin": {
             "types": "./dist/botAdmin.d.ts",
@@ -131,11 +121,6 @@
             "types": "./dist/guildSettingsContract.d.ts",
             "import": "./dist/guildSettingsContract.js",
             "require": "./dist/guildSettingsContract.cjs"
-        },
-        "./redisContract": {
-            "types": "./dist/redisContract.d.ts",
-            "import": "./dist/redisContract.js",
-            "require": "./dist/redisContract.cjs"
         },
         "./memoryFile": {
             "types": "./dist/memoryFile.d.ts",

@@ -16,6 +16,7 @@ import { createComponentSession, type ComponentSession } from '../../../../lib/c
 import { errorView } from '../../../../lib/errorView.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { editTrackPlayReply } from '../utils/playFeedback.ts';
+import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
 
 export const name = 'search';
 export const ko = '검색';
@@ -25,8 +26,6 @@ export const descriptionEn = 'Search tracks and pick one of five results to play
 /** 음성 채널 조건(봇과 같은 채널, 원격 권한자 예외)은 음악 유스케이스가 판정해요. */
 export const preconditions = ['TextChannelAllowed', 'NodeAvailable', 'MemberListenable'];
 
-const RESULT_LIMIT = 5;
-const SELECT_TIMEOUT_MS = 30_000;
 const VALID_PLATFORMS = ['ytsearch', 'scsearch', 'spsearch'] as const;
 
 export function build(sub: SlashCommandSubcommandBuilder): SlashCommandSubcommandBuilder {

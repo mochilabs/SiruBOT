@@ -166,8 +166,3 @@ export function askPlaylistAdd({ playlist, selectedTrack, remainTracks, player }
 
 	return container;
 }
-
-/** 플레이리스트 '나머지 곡 추가' 질문 버튼의 customId인지 확인해요 — 메시지 컬렉터의 필터에서 써요. */
-export function decodePlaylistAddId(customId: string) {
-	return playlistAddId.decode(customId);
-}

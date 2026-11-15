@@ -10,15 +10,14 @@ import { AppError } from '../../../../lib/appError.ts';
 import * as guildChannels from '../../../../services/guildSettings/channels.ts';
 import { actorFromMember } from '../../application/actor.ts';
 import { trackPlayFeedback } from '../utils/playFeedback.ts';
+import { RESULT_LIMIT, SELECT_TIMEOUT_MS } from '../utils/searchSelect.ts';
 
 /** 검색어로 취급할 최대 길이 — 일반 대화로 보이는 긴 메시지는 거절 안내를 보낸다. */
 const MAX_QUERY_LENGTH = 100;
 /** 같은 유저의 연속 입력 쿨다운(ms) — 도배 방지, 초과분은 조용히 무시한다. */
 const COOLDOWN_MS = 2500;
 /** 곡 선택 대기 시간(ms). */
-const SELECT_TIMEOUT_MS = 30_000;
 /** 선택 모드에서 보여줄 최대 결과 수 */
-const RESULT_LIMIT = 5;
 
 /**
  * 고정 채널 리스너 — 설정된 채널의 텍스트 메시지를 검색어로 받아 재생한다.

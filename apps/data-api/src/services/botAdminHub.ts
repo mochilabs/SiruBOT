@@ -10,8 +10,7 @@ import {
 	type BotAdminKind,
 	type BotAdminNodeItem,
 	type BotAdminReloadStore,
-	type BotAdminRequest,
-	type PendingRequestPool
+	type BotAdminRequest
 } from '@sirubot/utils';
 
 const logger = getLogger('botAdminHub');
@@ -42,7 +41,7 @@ export interface BotAdminPendingMeta {
 	kind: BotAdminKind;
 }
 
-const hub = createRequestReplyHub<typeof botAdminRpc, BotAdminPendingMeta, BotAdminResult>({
+export const hub = createRequestReplyHub<typeof botAdminRpc, BotAdminPendingMeta, BotAdminResult>({
 	name: 'bot admin hub',
 	label: 'bot admin',
 	mismatch: 'kind mismatch',
@@ -66,14 +65,6 @@ const hub = createRequestReplyHub<typeof botAdminRpc, BotAdminPendingMeta, BotAd
 	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
 	unavailableResult: () => ({ ok: false, reason: 'redis_unavailable', message: null })
 });
-
-export function correlateBotAdminResponse(
-	raw: string,
-	pending: PendingRequestPool<BotAdminResult>,
-	pendingMeta: Map<string, BotAdminPendingMeta>
-): 'resolved' | 'unmatched' | 'malformed' {
-	return hub.correlate(raw, pending, pendingMeta);
-}
 
 export const startBotAdminHub = (redisUrl: string | undefined): Promise<void> => hub.start(redisUrl);
 

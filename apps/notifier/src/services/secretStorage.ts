@@ -1,4 +1,4 @@
-import { decryptSecret, decryptsWith, deriveKeyFromSecret, encryptSecret } from '@sirubot/utils/secretBox';
+import { decryptSecret, deriveKeyFromSecret, encryptSecret } from '@sirubot/utils/secretBox';
 
 /**
  * notifier의 저장 데이터 암호화 (at-rest).
@@ -41,12 +41,4 @@ export function sealWebhookToken(token: string): string {
 export function openWebhookToken(stored: string): string {
 	if (!stored.startsWith(PREFIX)) return stored;
 	return decryptSecret(stored.slice(PREFIX.length), encryptionSecrets().map(deriveKeyFromSecret)) ?? '';
-}
-
-/** 저장 값이 현재 저장 키가 아닌 옛 키(또는 평문)로 되어 있는지 — 맞으면 저장 시점에 다시 봉인해요. */
-export function webhookTokenNeedsSeal(stored: string): boolean {
-	const key = primaryStorageKey();
-	if (!key) return false;
-	if (!stored.startsWith(PREFIX)) return true;
-	return !decryptsWith(stored.slice(PREFIX.length), key);
 }

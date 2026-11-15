@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { ButtonInteraction, ChatInputCommandInteraction, ComponentType, ContainerBuilder, MessageFlags } from 'discord.js';
 import type { Player, SearchResult, Track, UnresolvedTrack } from 'lavalink-client';
 import * as view from '../views/play.ts';
+import { playlistAddId } from '../customIds.ts';
 import { createComponentSession, type ComponentSession } from '../../../../lib/componentSession.ts';
 import type { MusicPlayResult } from '../../application/play.ts';
 
@@ -114,7 +115,7 @@ async function promptRemainingPlaylist(
 		if (!player.connected) return;
 		session.settle();
 
-		const action = view.decodePlaylistAddId(collectorInteraction.customId)?.action;
+		const action = playlistAddId.decode(collectorInteraction.customId)?.action;
 
 		if (action === 'addRemaining') {
 			await addRemaining();
@@ -139,7 +140,7 @@ async function promptRemainingPlaylist(
 	};
 
 	createComponentSession<ButtonInteraction<'cached'>>(askReply, {
-		filter: (i) => i.user.id === interaction.user.id && view.decodePlaylistAddId(i.customId) !== null,
+		filter: (i) => i.user.id === interaction.user.id && playlistAddId.decode(i.customId) !== null,
 		time: 30000,
 		componentType: ComponentType.Button,
 		onCollect: handleButtonAction,

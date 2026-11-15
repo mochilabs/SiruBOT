@@ -293,7 +293,7 @@ describe('ChatTtsService — 병합 창·간격 (명세 4.4)', () => {
 		expect(mocks.logger.warn).toHaveBeenCalled();
 	});
 
-	it('truncates clips to 300 characters', async () => {
+	it('truncates clips to 200 characters', async () => {
 		const service = new ChatTtsService(deps);
 		const player = makePlayer();
 		mocks.audio.getPlayer.mockReturnValue(player);
@@ -401,13 +401,13 @@ describe('ChatTtsService — 스로틀·주문 (명세 4.4)', () => {
 		mocks.audio.getPlayer.mockReturnValue(player);
 
 		const long = '가'.repeat(TTS_CLIP_MAX_CHARS);
-		for (let i = 0; i < 5; i++) {
+		for (let i = 0; i < 7; i++) {
 			await service.handleMessage(makeMessage({ userId: `user-${i}` }), long);
 			await flushAsync();
 		}
 
-		// 300자 * 4 = 1200 > 1000 — 4번째부터 버려진다
-		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(3);
+		// 200자 * 6 = 1200 > 1000 — 6번째부터 버려진다
+		expect(mocks.ttsService.synthesize).toHaveBeenCalledTimes(5);
 		expect(mocks.logger.warn).toHaveBeenCalled();
 	});
 

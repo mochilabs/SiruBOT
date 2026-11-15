@@ -15,7 +15,7 @@
  */
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
 import { getLogger } from '../utils/logger.ts';
-import { jtcSetupRpc, type PendingRequestPool } from '@sirubot/utils';
+import { jtcSetupRpc } from '@sirubot/utils';
 
 const logger = getLogger('jtcSetupHub');
 
@@ -33,7 +33,7 @@ export interface JtcSetupPendingMeta {
 }
 
 /** 대기·상관·구독·퍼블리시 배선은 공용 팩토리가, 이 허브의 채널·기준·결과 매핑은 아래 설정이 정해요 */
-const hub = createRequestReplyHub<typeof jtcSetupRpc, JtcSetupPendingMeta, JtcSetupResult>({
+export const hub = createRequestReplyHub<typeof jtcSetupRpc, JtcSetupPendingMeta, JtcSetupResult>({
 	name: 'jtc setup hub',
 	label: 'jtc setup',
 	mismatch: 'guildId mismatch',
@@ -57,14 +57,6 @@ const hub = createRequestReplyHub<typeof jtcSetupRpc, JtcSetupPendingMeta, JtcSe
  * RESPONSE 채널 raw 메시지를 대기 중 요청과 상관해요. requestId의 메타데이터와 guildId가 일치하면
  * 풀을 완료하고, 그 외(잘못된 본문, 대기 중이 아닌 requestId, 불일치)는 무시해요.
  */
-export function correlateJtcSetupResponse(
-	raw: string,
-	pending: PendingRequestPool<JtcSetupResult>,
-	pendingMeta: Map<string, JtcSetupPendingMeta>
-): 'resolved' | 'unmatched' | 'malformed' {
-	return hub.correlate(raw, pending, pendingMeta);
-}
-
 /**
  * RESPONSE 채널 구독자 연결을 시작해요.
  * REDIS_URL이 없으면 구독 없이 시작해요 — 요청은 redis_unavailable로 즉시 실패해요 (guildDataHub 선례).

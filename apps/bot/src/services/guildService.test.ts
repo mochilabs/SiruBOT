@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Guild } from '@sirubot/prisma';
-import { GuildService, isChannelToggleEnabled, isTtsEnabled } from './guildService.ts';
+import { GuildService, isChannelToggleEnabled } from './guildService.ts';
 import * as guildPlayback from './guildSettings/playback.ts';
 import * as guildChatPolicy from './guildSettings/chatPolicy.ts';
 
@@ -146,11 +146,11 @@ describe('GuildService TTS settings', () => {
 	});
 
 	it('allows reading only for enabled policies', () => {
-		expect(isTtsEnabled({ mode: 'off', channelIds: ['chan'] }, 'chan')).toBe(false);
-		expect(isTtsEnabled({ mode: 'all', channelIds: [] }, 'chan')).toBe(true);
-		expect(isTtsEnabled({ mode: 'channels', channelIds: ['chan'] }, 'chan')).toBe(true);
-		expect(isTtsEnabled({ mode: 'channels', channelIds: ['chan'] }, 'other')).toBe(false);
-		expect(isTtsEnabled({ mode: 'channels', channelIds: [] }, 'chan')).toBe(false);
+		expect(isChannelToggleEnabled({ mode: 'off', channelIds: ['chan'] }, 'chan')).toBe(false);
+		expect(isChannelToggleEnabled({ mode: 'all', channelIds: [] }, 'chan')).toBe(true);
+		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: ['chan'] }, 'chan')).toBe(true);
+		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: ['chan'] }, 'other')).toBe(false);
+		expect(isChannelToggleEnabled({ mode: 'channels', channelIds: [] }, 'chan')).toBe(false);
 	});
 });
 

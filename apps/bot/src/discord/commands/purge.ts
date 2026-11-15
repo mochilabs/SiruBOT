@@ -3,11 +3,10 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command, UserError } from '@sapphire/framework';
 import { ApplicationIntegrationType, ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { emoji } from '@sirubot/utils';
-import { findMessagesToPurge } from '../utils/purgeMessages.ts';
+import { findMessagesToPurge, MAX_AGE_MS } from '../utils/purgeMessages.ts';
 import { confirmAction } from '../../lib/confirmation.ts';
 
 /** Discord bulk-delete API는 14일이 지난 메시지를 삭제할 수 없어요 */
-const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 @ApplyOptions<Command.Options>({
 	enabled: true,

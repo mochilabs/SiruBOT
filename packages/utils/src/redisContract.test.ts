@@ -8,17 +8,14 @@ import {
 	GUILD_DATA_REQUEST_CHANNEL,
 	GUILD_DATA_RESPONSE_CHANNEL,
 	GUILD_SETTINGS_INVALIDATE_CHANNEL,
-	guildIdFromPlayerStateChannel,
 	JTC_SETUP_REQUEST_CHANNEL,
 	JTC_SETUP_RESPONSE_CHANNEL,
 	MEMBER_GREETING_SEND_CHANNEL,
 	memberGreetingStateChannel,
 	PANEL_POST_REQUEST_CHANNEL,
 	PANEL_POST_RESPONSE_CHANNEL,
-	PLAYER_STATE_CHANNEL_PATTERN,
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
-	playerStateChannel,
 	ROLE_VALIDATION_REQUEST_CHANNEL,
 	ROLE_VALIDATION_RESPONSE_CHANNEL,
 	SOCIAL_WEBHOOK_CREATE_REQUEST_CHANNEL,
@@ -39,7 +36,6 @@ import {
 	memberGreetingStateEvent,
 	panelPostRpc,
 	pickRpcCorrelation,
-	playerStateEvent,
 	playerWebRpc,
 	roleValidationRpc,
 	socialWebhookCreateRpc
@@ -97,11 +93,6 @@ describe('Redis 계약의 채널 문자열', () => {
 		expect(botProfileStateEvent.channel('123')).toBe(botProfileStateChannel('123'));
 		expect(memberGreetingStateEvent.channel('123')).toBe('sirubot:member-greeting:state:123');
 		expect(memberGreetingStateEvent.channel('123')).toBe(memberGreetingStateChannel('123'));
-		expect(playerStateEvent.channel('123')).toBe('sirubot:player:123');
-		expect(playerStateEvent.channel('123')).toBe(playerStateChannel('123'));
-		expect(playerStateEvent.pattern).toBe(PLAYER_STATE_CHANNEL_PATTERN);
-		expect(playerStateEvent.guildIdFromChannel('sirubot:player:123')).toBe(guildIdFromPlayerStateChannel('sirubot:player:123'));
-		expect(playerStateEvent.guildIdFromChannel('sirubot:bot-profile:state:1')).toBeNull();
 	});
 
 	it('설정 무효화만 서명 없이 흐르고 나머지는 서명해요', () => {

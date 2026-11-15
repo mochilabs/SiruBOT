@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emojiProgressBar, formatTrack, getRequesterText, removeEmojis, volumeToEmoji } from './format.ts';
+import { emojiProgressBar, formatTrack, removeEmojis, volumeToEmoji } from './format.ts';
 import type { Track } from 'lavalink-client';
 
 // appEmoji 맵이 비어 있어요 — 진행바 셀·아이콘은 전부 유니코드 폴백으로 검증해요.
@@ -62,22 +62,6 @@ describe('volumeToEmoji', () => {
 		expect(volumeToEmoji(0)).toBe('🔇');
 		expect(volumeToEmoji(10)).toBe('🔉');
 		expect(volumeToEmoji(33)).toBe('🔊');
-	});
-});
-
-describe('getRequesterText', () => {
-	it('추천 곡 표시는 sparkle 이모지를 써요', () => {
-		expect(getRequesterText({ requester: { id: 'related_track' } } as unknown as Track)).toBe('추천 곡 ✨');
-	});
-
-	it('신청자는 멘션으로 표시해요', () => {
-		expect(getRequesterText({ requester: { id: '123456789' } } as unknown as Track)).toBe('신청자: <@123456789>');
-		expect(getRequesterText({ requester: '123456789' } as unknown as Track)).toBe('신청자: <@123456789>');
-	});
-
-	it('신청자가 없으면 빈 문자열이에요', () => {
-		expect(getRequesterText({} as unknown as Track)).toBe('');
-		expect(getRequesterText({ requester: null } as unknown as Track)).toBe('');
 	});
 });
 

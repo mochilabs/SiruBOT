@@ -29,7 +29,6 @@ Routes are registered from `routes/index.ts`, one file per domain.
 | Route | Description | Cache TTL | File |
 |---|---|---|---|
 | GET `/v1/ohaasa` | Daily horoscope, translated | 7 days | `routes/ohaasa.ts` |
-| POST `/v1/ohaasa/refresh` | Refresh the horoscope now | | `routes/ohaasa.ts` |
 | GET `/v1/lyrics?q=` | Lyrics search (lrclib) | 30 days | `routes/cache-providers.ts` |
 | GET `/v1/weather?location=&scope=` | Geocoding, forecast and air quality (Open-Meteo). `scope` is `now`, `today`, `tomorrow` or `week` | 15 minutes | `routes/cache-providers.ts` |
 | GET `/v1/delivery/track?carrier=&number=` | Parcel tracking | 5 minutes | `routes/cache-providers.ts` |
@@ -46,7 +45,6 @@ Routes are registered from `routes/index.ts`, one file per domain.
 |---|---|---|---|
 | GET `/v1/youtube/search?query=` | YouTube search through Lavalink REST | Not cached. 503 when Lavalink REST is not configured | `routes/player.ts` |
 | POST `/v1/playback/events` | Playback event ingestion from the bot | | `routes/player.ts` |
-| GET `/v1/playback/recent?limit=` | Recent playback events | `limit` 1 to 100, default 20 | `routes/player.ts` |
 | GET `/v1/player/:guildId` | Live player state | Unknown guilds return `player: null` plus hub status, not 404 | `routes/player.ts` |
 | GET `/v1/player/:guildId/stream` | Live player state as SSE | Keepalive comment every 15 s | `routes/player.ts` |
 | GET `/v1/player/:guildId/voice-context?userId=` | The requester's voice and permission state | Request/reply | `routes/player.ts` |

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PendingRequestPool, type PlayerWebKind } from '@sirubot/utils';
-import { correlatePlayerWebResponse, type PlayerWebFailureReason, type PlayerWebPendingMeta, type PlayerWebResult } from './playerWebHub.ts';
+import { hub, type PlayerWebFailureReason, type PlayerWebPendingMeta, type PlayerWebResult } from './playerWebHub.ts';
 
 const REQUEST_ID = 'c8e2f5a9-4b1d-4e7f-9c3a-6d8b0e2f4a51';
 const OTHER_REQUEST_ID = 'a1d4e7b2-5c8f-4a1d-8e3b-7f0c2d5a8e41';
@@ -18,7 +18,7 @@ const TRACK = {
 
 /**
  * 허브의 requestPlayerWeb()과 같은 조립을 테스트용으로 만들어요 —
- * 메타데이터를 register 전에 심고, 상관은 correlatePlayerWebResponse가 담당해요.
+ * 메타데이터를 register 전에 심고, 상관은 hub.correlate가 담당해요.
  */
 function makeRegistry(capacity = 10) {
 	const pendingMeta = new Map<string, PlayerWebPendingMeta>();
@@ -36,7 +36,7 @@ function makeRegistry(capacity = 10) {
 			return pending.register(requestId, timeoutMs);
 		},
 		handleRaw(raw: string) {
-			return correlatePlayerWebResponse(raw, pending, pendingMeta);
+			return hub.correlate(raw, pending, pendingMeta);
 		},
 		fail(requestId: string, reason: PlayerWebFailureReason) {
 			if (pending.fail(requestId, { ok: false, reason, message: null })) {

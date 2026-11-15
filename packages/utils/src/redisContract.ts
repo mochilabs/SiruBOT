@@ -12,7 +12,6 @@ import { botAdminRequestSchema, botAdminResponseSchema } from './botAdmin.js';
 import { guildDataRequestSchema, guildDataResponseSchema } from './guildData.js';
 import { jtcSetupRequestSchema, jtcSetupResponseSchema } from './jtcSetup.js';
 import { panelPostRequestSchema, panelPostResponseSchema } from './panelPost.js';
-import { playerStateSchema } from './playerState.js';
 import { playerWebRequestBaseSchema, playerWebResponseSchema } from './playerWeb.js';
 import {
 	BOT_ADMIN_REQUEST_CHANNEL,
@@ -29,7 +28,6 @@ import {
 	MEMBER_GREETING_STATE_CHANNEL_PREFIX,
 	PANEL_POST_REQUEST_CHANNEL,
 	PANEL_POST_RESPONSE_CHANNEL,
-	PLAYER_STATE_CHANNEL_PREFIX,
 	PLAYER_WEB_REQUEST_CHANNEL,
 	PLAYER_WEB_RESPONSE_CHANNEL,
 	ROLE_VALIDATION_REQUEST_CHANNEL,
@@ -282,9 +280,4 @@ export const memberGreetingStateEvent = defineRedisGuildEvent({
 	name: '멤버 인사 결과',
 	channelPrefix: MEMBER_GREETING_STATE_CHANNEL_PREFIX,
 	schema: memberGreetingTestStateSchema
-});
-export const playerStateEvent = defineRedisGuildEvent({
-	name: '플레이어 상태',
-	channelPrefix: PLAYER_STATE_CHANNEL_PREFIX,
-	schema: playerStateSchema
 });
