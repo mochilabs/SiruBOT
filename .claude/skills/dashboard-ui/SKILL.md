@@ -2,13 +2,12 @@
 name: dashboard-ui
 description: >
   Implementation reference for SiruBOT dashboard visual work (tokens, primitives,
-  Discord-style UI, scroll/motion). For any dashboard visual work, load antislop-ui
-  first as the filter, then this skill.
+  Discord-style UI, scroll/motion).
 ---
 
 # Dashboard UI
 
-Routing: any dashboard visual work → load `antislop-ui` first (filter), then this skill. Related: `dashboard-conventions` skill; `apps/dashboard/DESIGN.md` (token tables).
+Related: `dashboard-conventions` skill; `apps/dashboard/DESIGN.md` (token tables).
 
 ## Design tokens
 
