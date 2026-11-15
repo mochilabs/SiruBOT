@@ -179,14 +179,15 @@ export class AudioService {
 
 	/**
 	 * 이전곡 재생 공용 흐름 — 현재곡을 큐 선두로 되돌리고 mixer 슬롯을 재준비한 뒤
-	 * 마지막 previous 항목을 시작한다. (/이전곡 커맨드와 컨트롤러 prev 버튼이 공유)
+	 * 가장 최근 previous 항목을 시작한다. (/이전곡 커맨드와 컨트롤러 prev 버튼이 공유)
+	 * previous는 lavalink-client가 unshift로 쌓는 스택이라 최신 곡이 [0]에 있다.
 	 */
 	public async playPrevious(player: CustomPlayer): Promise<Track | UnresolvedTrack> {
-		const previousTrack = player.queue.previous[player.queue.previous.length - 1];
+		const previousTrack = player.queue.previous[0];
 		if (player.queue.current) {
 			player.queue.tracks.unshift(player.queue.current);
 		}
-		player.queue.previous.pop();
+		player.queue.previous.shift();
 		player.queue.current = previousTrack as Track;
 		if (player.transitionState) {
 			player.transitionState.confirmedNowPlaying = previousTrack as Track;
