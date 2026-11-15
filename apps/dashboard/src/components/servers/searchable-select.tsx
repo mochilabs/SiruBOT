@@ -2,9 +2,8 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { Check, ChevronDown, X } from "lucide-react";
+import { Check, ChevronDown, Search, X } from "lucide-react";
 
-import { EmptyState } from "@/components/primitives/empty-state";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +56,7 @@ function useFilteredOptions(options: SearchableOption[], search: string) {
 	}, [options, search]);
 }
 
-/** 채널 선택에 쓰이는 검색 가능 셀렉트 — 단일/다중과 그룹을 지원해요. */
+/** 채널·역할 선택 등에 쓰이는 검색 가능 셀렉트 — 단일/다중과 그룹을 지원해요. */
 export function SearchableSelect(props: SearchableSelectProps) {
 	const {
 		options,
@@ -141,12 +140,13 @@ export function SearchableSelect(props: SearchableSelectProps) {
 			open={open}
 			onOpenChange={setOpen}
 			disabled={disabled}
+			modal={false}
 		>
 			<SelectPrimitive.Trigger
 				aria-controls={listboxId}
 				className={cn(
-					"flex min-h-9 h-auto w-full items-center justify-between gap-2 rounded-control border-0 bg-input shadow-control-boundary px-3 py-1.5 text-left text-sm font-medium outline-none transition-colors",
-					"focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+					"flex h-auto min-h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-input py-1.5 pl-3 pr-2.5 text-left text-sm font-medium text-foreground shadow-control-boundary transition-colors duration-fast outline-none select-none hover:bg-surface-3",
+					"focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
 					className,
 				)}
 			>
@@ -187,42 +187,57 @@ export function SearchableSelect(props: SearchableSelectProps) {
 							))}
 						</span>
 					) : (
-						<span className="text-muted-foreground">{placeholder}</span>
+						<span className="font-normal text-muted-foreground">{placeholder}</span>
 					)
 				) : (
-					<span className={cn("min-w-0 flex-1 truncate", displayLabel ? "text-foreground" : "text-muted-foreground")}>
+					<span className={cn("min-w-0 flex-1 truncate", displayLabel ? "text-foreground" : "font-normal text-muted-foreground")}>
 						{displayLabel ?? placeholder}
 					</span>
 				)}
-				<SelectPrimitive.Icon render={<ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-fast", open && "rotate-180")} />} />
+				<SelectPrimitive.Icon render={<ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform duration-fast", open && "rotate-180")} />} />
 			</SelectPrimitive.Trigger>
 
 			<SelectPrimitive.Portal>
-				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={4} className="z-(--z-overlay)">
+				<SelectPrimitive.Positioner align="start" side="bottom" sideOffset={6} alignItemWithTrigger={false} className="isolate z-(--z-overlay) outline-none">
 					<SelectPrimitive.Popup
 						id={listboxId}
-						className="pop-in max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-hidden rounded-menu border-0 bg-popover text-popover-foreground shadow-2xl data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+						className="pop-in max-h-(--available-height) w-(--anchor-width) min-w-44 origin-(--transform-origin) overflow-hidden rounded-menu border border-border-subtle bg-popover text-popover-foreground shadow-2xl outline-none"
 					>
 						{searchable && (
-							<div className="border-b border-border p-2">
-								<Input
-									ref={searchRef}
-									value={search}
-									onChange={(event) => setSearch(event.target.value)}
-									placeholder={searchPlaceholder}
-									className="h-8 bg-input/50"
-									aria-label="검색"
-								/>
+							<div className="border-b border-border/50 p-2.5">
+								<div className="relative">
+									<Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+									<Input
+										ref={searchRef}
+										value={search}
+										onChange={(event) => setSearch(event.target.value)}
+										placeholder={searchPlaceholder}
+										className="h-8 pl-8 pr-7 text-xs"
+										aria-label="검색"
+									/>
+									{search ? (
+										<button
+											type="button"
+											onClick={() => setSearch("")}
+											aria-label="검색어 지우기"
+											className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+										>
+											<X className="size-3.5" />
+										</button>
+									) : null}
+								</div>
 							</div>
 						)}
-						<SelectPrimitive.List className="max-h-60 overflow-y-auto p-1">
+						<SelectPrimitive.List className="max-h-60 space-y-0.5 overflow-y-auto p-1.5">
 							{grouped.length === 0 && (
-								<EmptyState size="sm" title="검색 결과가 없어요." className="py-6" />
+								<div className="flex flex-col items-center justify-center gap-1 py-6 text-center text-xs text-muted-foreground">
+									<p>검색 결과가 없어요.</p>
+								</div>
 							)}
 							{grouped.map(([groupName, items]) => (
-								<SelectPrimitive.Group key={groupName}>
+								<SelectPrimitive.Group key={groupName} className="space-y-0.5 py-0.5">
 									{groupName && (
-										<SelectPrimitive.GroupLabel className="px-2 py-1 text-xs font-medium text-muted-foreground">
+										<SelectPrimitive.GroupLabel className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
 											{groupName}
 										</SelectPrimitive.GroupLabel>
 									)}
@@ -234,14 +249,15 @@ export function SearchableSelect(props: SearchableSelectProps) {
 												value={option.value}
 												disabled={option.disabled}
 												className={cn(
-													"relative flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground",
+													"relative flex cursor-pointer items-center gap-2 rounded-control py-1.5 pr-8 pl-2.5 text-sm outline-hidden select-none transition-colors hover:bg-surface-2 focus:bg-surface-2 data-highlighted:bg-surface-2",
+													selected && "bg-primary-control/15 font-semibold text-primary-text",
 													option.disabled && "pointer-events-none opacity-50",
 												)}
 											>
 												{option.icon}
 												<span className="flex-1 truncate">{option.label}</span>
-												<span className="flex size-4 items-center justify-center">
-													{selected && <Check className="h-4 w-4" />}
+												<span className="pointer-events-none absolute right-2.5 flex size-4 items-center justify-center text-primary-text">
+													{selected && <Check className="size-4" />}
 												</span>
 											</SelectPrimitive.Item>
 										);

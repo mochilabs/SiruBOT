@@ -98,8 +98,8 @@ export function ColorPicker({ value, onChange, onCommit, label, presets = COLOR_
 					style={swatchStyle}
 				/>
 				<Popover.Portal>
-					<Popover.Positioner sideOffset={8} align="start" className="z-(--z-overlay)">
-						<Popover.Popup className="w-72 max-w-[calc(100vw-2rem)] origin-(--transform-origin) rounded-menu bg-popover p-3 shadow-2xl outline-none">
+					<Popover.Positioner sideOffset={6} align="start" className="isolate z-(--z-overlay) outline-none">
+						<Popover.Popup className="pop-in w-72 max-w-[calc(100vw-2rem)] origin-(--transform-origin) rounded-menu border border-border-subtle bg-popover p-3 text-popover-foreground shadow-2xl outline-none">
 							<Popover.Title className="sr-only">{label} 색 선택</Popover.Title>
 							<div className="flex items-stretch gap-2">
 							{/* 채도·명도 표면 — 가로는 채도, 세로는 명도 */}

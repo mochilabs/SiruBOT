@@ -22,6 +22,8 @@ export const ROLE_PANEL_TITLE_MAX = 100;
 export const ROLE_PANEL_DESCRIPTION_MAX = 1000;
 /** 패널 식별 이름 최대 길이 (대시보드 목록·autocomplete에 표시). */
 export const ROLE_PANEL_NAME_MAX = 100;
+/** 패널 이미지 URL 최대 길이. */
+export const ROLE_PANEL_IMAGE_URL_MAX = 2048;
 
 /** 역할을 받는 방식 — 버튼 클릭 또는 이모지 반응. 한 패널은 둘 중 하나만 써요. */
 export const rolePanelModes = ['button', 'reaction'] as const;
@@ -112,12 +114,19 @@ const rolePanelDescriptionSchema = z
 	.string()
 	.min(1, '패널 안내문을 입력해 주세요.')
 	.max(ROLE_PANEL_DESCRIPTION_MAX, `안내문은 ${ROLE_PANEL_DESCRIPTION_MAX}자 이하여야 해요.`);
+export const rolePanelImageUrlSchema = z
+	.string()
+	.trim()
+	.url('올바른 이미지 주소 형식이 아니에요.')
+	.max(ROLE_PANEL_IMAGE_URL_MAX, `이미지 주소는 ${ROLE_PANEL_IMAGE_URL_MAX}자 이하여야 해요.`)
+	.refine((url) => /^https?:\/\//i.test(url), { message: '이미지 주소는 http 또는 https 주소여야 해요.' });
 
 /** 패널 전체 계약 (생성 시 기본값 포함). */
 export const rolePanelSchema = z.object({
 	name: rolePanelNameSchema,
 	title: rolePanelTitleSchema.default('역할 패널'),
 	description: rolePanelDescriptionSchema.default('아래 버튼을 눌러 원하는 역할을 받거나 해제하세요.'),
+	imageUrl: rolePanelImageUrlSchema.nullable().optional().default(null),
 	channelId: nullableSnowflake.optional().default(null),
 	messageId: nullableSnowflake.optional().default(null)
 });
@@ -138,6 +147,7 @@ export const rolePanelCreateSchema = z
 		name: rolePanelNameSchema,
 		title: rolePanelTitleSchema.optional(),
 		description: rolePanelDescriptionSchema.optional(),
+		imageUrl: rolePanelImageUrlSchema.nullable().optional().default(null),
 		mode: z.enum(rolePanelModes).optional().default('button'),
 		buttons: rolePanelButtonsSchema.optional().default([])
 	})
@@ -152,6 +162,7 @@ export const rolePanelUpdateSchema = z
 		name: rolePanelNameSchema.optional(),
 		title: rolePanelTitleSchema.optional(),
 		description: rolePanelDescriptionSchema.optional(),
+		imageUrl: rolePanelImageUrlSchema.nullable().optional(),
 		mode: z.enum(rolePanelModes).optional(),
 		buttons: rolePanelButtonsSchema.optional()
 	})

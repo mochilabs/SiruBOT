@@ -388,6 +388,7 @@ model RolePanel {
   name        String   /// 관리자 식별용 패널 이름 (대시보드 목록·autocomplete에 표시)
   title       String   /// 패널 메시지 제목
   description String   @default("") /// 패널 안내문
+  imageUrl    String?  /// 패널 이미지 URL (선택)
   mode        String   @default("button") /// button | reaction — 역할을 받는 방식 (버튼 클릭 / 이모지 반응)
   clickCount  Int      @default(0) /// 패널 단위 총 클릭 수 (성공한 토글마다 +1)
   channelId   String?  /// 게시된 채널 ID

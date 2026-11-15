@@ -3,6 +3,8 @@ import {
 	ButtonBuilder,
 	ButtonStyle,
 	ContainerBuilder,
+	MediaGalleryBuilder,
+	MediaGalleryItemBuilder,
 	MessageFlags,
 	SeparatorBuilder,
 	SeparatorSpacingSize,
@@ -31,10 +33,7 @@ const BUTTONS_PER_ROW = 5;
  * - customId: `role-panel:v1:grant:<buttonId>:<roleId>` — roleId 스냅샷 (게시 당시 역할 고정).
  * - 버튼은 최대 25개(5행) → 제목·안내문·구분선을 더해도 40 컴포넌트 상한 아래.
  */
-export function rolePanelView(
-	panel: RolePanel,
-	buttons: RolePanelButton[]
-): { flags: number; components: (ContainerBuilder | ActionRowBuilder<ButtonBuilder>)[] } {
+export function rolePanelView(panel: RolePanel, buttons: RolePanelButton[]): { flags: number; components: [ContainerBuilder] } {
 	const container = new ContainerBuilder()
 		.setAccentColor(DEFAULT_COLOR)
 		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${emoji('ticket')} ${panel.title}`));
@@ -42,6 +41,11 @@ export function rolePanelView(
 	if (panel.description) {
 		container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(panel.description));
+	}
+
+	if (panel.imageUrl) {
+		container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+		container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(panel.imageUrl)));
 	}
 
 	// 반응 모드 — 버튼 대신 "이모지 라벨" 목록을 보여주고, 봇이 같은 이모지로 반응을 달아 둬요.
@@ -69,8 +73,13 @@ export function rolePanelView(
 		rows.push(row);
 	}
 
+	if (rows.length > 0) {
+		container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+		container.addActionRowComponents(...rows);
+	}
+
 	return {
 		flags: MessageFlags.IsComponentsV2,
-		components: [container, ...rows]
+		components: [container]
 	};
 }

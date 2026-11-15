@@ -37,7 +37,17 @@ describe('rolePanelSchema', () => {
 	it('생성 스키마는 이름만 있으면 버튼을 빈 배열로 채운다', () => {
 		const parsed = rolePanelCreateSchema.parse({ name: '게임' });
 		expect(parsed.buttons).toEqual([]);
+		expect(parsed.imageUrl).toBeNull();
 		expect(rolePanelCreateSchema.safeParse({ name: 'a'.repeat(101) }).success).toBe(false);
+	});
+
+	it('imageUrl은 http/https URL과 null을 허용하고 그 외는 거부한다', () => {
+		expect(rolePanelCreateSchema.parse({ name: '게임', imageUrl: 'https://cdn.example.com/banner.png' }).imageUrl).toBe(
+			'https://cdn.example.com/banner.png'
+		);
+		expect(rolePanelUpdateSchema.parse({ imageUrl: null }).imageUrl).toBeNull();
+		expect(rolePanelUpdateSchema.safeParse({ imageUrl: 'ftp://cdn.example.com/banner.png' }).success).toBe(false);
+		expect(rolePanelUpdateSchema.safeParse({ imageUrl: 'not-a-url' }).success).toBe(false);
 	});
 });
 

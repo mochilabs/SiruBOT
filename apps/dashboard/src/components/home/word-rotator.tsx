@@ -29,7 +29,7 @@ export function WordRotator() {
 			<AnimatePresence initial={false}>
 				<m.span
 					key={ROTATING_WORDS[index]}
-					className="absolute inset-0 flex justify-center lg:justify-start"
+					className="absolute inset-0 flex justify-start"
 					initial={{ y: "110%", opacity: 0 }}
 					animate={{ y: "0%", opacity: 1 }}
 					exit={{ y: "-110%", opacity: 0 }}
