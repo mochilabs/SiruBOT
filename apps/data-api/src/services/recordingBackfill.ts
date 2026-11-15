@@ -43,9 +43,17 @@ export function planRecordingGroups(tracks: BackfillTrack[], existing: ExistingR
 	const skipped: BackfillTrack[] = [];
 
 	// 정식 소스·많이 재생된 곡부터 넣어야 묶음 대표 길이가 안정돼요.
-	const ordered = [...tracks].sort((a, b) => sourcePriority(b.source) - sourcePriority(a.source) || b.totalPlays - a.totalPlays || a.id.localeCompare(b.id));
+	const ordered = [...tracks].sort(
+		(a, b) => sourcePriority(b.source) - sourcePriority(a.source) || b.totalPlays - a.totalPlays || a.id.localeCompare(b.id)
+	);
 	for (const track of ordered) {
-		const identity = trackIdentity({ title: track.title, author: track.artist, durationMs: track.duration, isrc: track.isrc, sourceName: track.source });
+		const identity = trackIdentity({
+			title: track.title,
+			author: track.artist,
+			durationMs: track.duration,
+			isrc: track.isrc,
+			sourceName: track.source
+		});
 		const { isrc, recordingKey: key } = identity;
 		if (!isrc && !key) {
 			skipped.push(track);

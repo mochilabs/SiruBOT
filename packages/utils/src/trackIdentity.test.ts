@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { displayMetadata, durationMatches, kstDay, normalizeArtist, normalizeIsrc, normalizeTitle, sourcePriority, trackIdentity } from './trackIdentity.js';
+import {
+	displayMetadata,
+	durationMatches,
+	kstDay,
+	normalizeArtist,
+	normalizeIsrc,
+	normalizeTitle,
+	sourcePriority,
+	trackIdentity
+} from './trackIdentity.js';
 
 describe('normalizeIsrc', () => {
 	it('accepts dashed and lowercase ISRCs', () => {
@@ -78,7 +87,13 @@ describe('kstDay', () => {
 
 describe('displayMetadata', () => {
 	it('keeps case but strips upload labels and uploader suffixes', () => {
-		expect(displayMetadata({ title: 'Lemon (Official MV)', author: 'Kenshi Yonezu - Topic', sourceName: 'youtube' })).toEqual({ title: 'Lemon', artist: 'Kenshi Yonezu' });
-		expect(displayMetadata({ title: 'IU - Love wins all [MV]', author: '1theK', sourceName: 'youtube' })).toEqual({ title: 'Love wins all', artist: 'IU' });
+		expect(displayMetadata({ title: 'Lemon (Official MV)', author: 'Kenshi Yonezu - Topic', sourceName: 'youtube' })).toEqual({
+			title: 'Lemon',
+			artist: 'Kenshi Yonezu'
+		});
+		expect(displayMetadata({ title: 'IU - Love wins all [MV]', author: '1theK', sourceName: 'youtube' })).toEqual({
+			title: 'Love wins all',
+			artist: 'IU'
+		});
 	});
 });

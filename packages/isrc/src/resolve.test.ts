@@ -69,7 +69,9 @@ describe('pickMatch', () => {
 
 describe('searchTermsFor', () => {
 	it('splits YouTube titles and strips upload labels', () => {
-		expect(searchTermsFor({ artist: 'Uploader', title: 'Kenshi Yonezu - Lemon (Official MV)', durationMs: 255_000, sourceName: 'youtube' })).toEqual({
+		expect(
+			searchTermsFor({ artist: 'Uploader', title: 'Kenshi Yonezu - Lemon (Official MV)', durationMs: 255_000, sourceName: 'youtube' })
+		).toEqual({
 			artist: 'kenshi yonezu',
 			title: 'lemon',
 			durationMs: 255_000

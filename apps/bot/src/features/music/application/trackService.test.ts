@@ -30,7 +30,12 @@ const db = {
 const txShape = {
 	$queryRaw: mocks.queryRaw,
 	track: { upsert: mocks.trackUpsert, update: mocks.trackUpdate },
-	recording: { findUnique: mocks.recordingFindUnique, findMany: mocks.recordingFindMany, create: mocks.recordingCreate, update: mocks.recordingUpdate },
+	recording: {
+		findUnique: mocks.recordingFindUnique,
+		findMany: mocks.recordingFindMany,
+		create: mocks.recordingCreate,
+		update: mocks.recordingUpdate
+	},
 	recordingDailyPlay: { upsert: mocks.dailyUpsert },
 	guild: { upsert: mocks.guildUpsert },
 	user: { upsert: mocks.userUpsert },
@@ -139,7 +144,10 @@ describe('TrackService.recordPlay — 곡 묶음과 차트 롤업', () => {
 		);
 		expect(mocks.trackUpdate).toHaveBeenCalledWith({ where: { id: 'id-1' }, data: { recordingId: 'rec-new' } });
 		expect(mocks.dailyUpsert).toHaveBeenCalledWith(
-			expect.objectContaining({ create: expect.objectContaining({ recordingId: 'rec-new', guildId: 'g-1', plays: 1 }), update: { plays: { increment: 1 } } })
+			expect.objectContaining({
+				create: expect.objectContaining({ recordingId: 'rec-new', guildId: 'g-1', plays: 1 }),
+				update: { plays: { increment: 1 } }
+			})
 		);
 	});
 
@@ -150,7 +158,9 @@ describe('TrackService.recordPlay — 곡 묶음과 차트 롤업', () => {
 
 		expect(mocks.queryRaw).not.toHaveBeenCalled();
 		expect(mocks.recordingCreate).not.toHaveBeenCalled();
-		expect(mocks.recordingUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'rec-1' }, data: { totalPlays: { increment: 1 } } }));
+		expect(mocks.recordingUpdate).toHaveBeenCalledWith(
+			expect.objectContaining({ where: { id: 'rec-1' }, data: { totalPlays: { increment: 1 } } })
+		);
 	});
 
 	it('같은 키의 묶음 중 길이 ±3초 이내에 붙고, 묶음의 ISRC를 물려받는다', async () => {
@@ -182,7 +192,10 @@ describe('TrackService.recordPlay — 곡 묶음과 차트 롤업', () => {
 	it('더 정식인 소스가 들어오면 대표 표시값을 바꾼다', async () => {
 		mocks.trackUpsert.mockResolvedValue({ recordingId: 'rec-1' });
 
-		await svc.recordPlay('g-1', makeTrack({ info: { ...makeTrack().info, title: 'Lemon', author: 'Kenshi Yonezu', sourceName: 'spotify', artworkUrl: 'art' } }));
+		await svc.recordPlay(
+			'g-1',
+			makeTrack({ info: { ...makeTrack().info, title: 'Lemon', author: 'Kenshi Yonezu', sourceName: 'spotify', artworkUrl: 'art' } })
+		);
 
 		expect(mocks.recordingUpdate).toHaveBeenLastCalledWith({
 			where: { id: 'rec-1' },

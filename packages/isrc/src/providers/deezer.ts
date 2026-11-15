@@ -45,7 +45,8 @@ export function createDeezerProvider(options: DeezerProviderOptions = {}): IsrcP
 			url.searchParams.set('q', `${terms.artist} ${terms.title}`);
 			url.searchParams.set('limit', '10');
 			const body = await limiter.schedule(() => getJson(NAME, url, searchSchema, ctx));
-			if (body.error) throw new IsrcProviderError(NAME, `API error ${body.error.code ?? '?'}: ${body.error.message ?? body.error.type ?? 'unknown'}`);
+			if (body.error)
+				throw new IsrcProviderError(NAME, `API error ${body.error.code ?? '?'}: ${body.error.message ?? body.error.type ?? 'unknown'}`);
 			return (body.data ?? []).flatMap((hit) =>
 				hit.isrc
 					? [

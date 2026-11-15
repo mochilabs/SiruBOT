@@ -58,7 +58,9 @@ export function splitArtistFromTitle(title: string, uploader: string): { artist:
  * YouTube 업로드는 `아티스트 - 제목`을 나눠요.
  */
 export function displayMetadata(input: { title: string; author: string; sourceName?: string | null }): { title: string; artist: string } {
-	const split = input.sourceName?.startsWith('youtube') ? splitArtistFromTitle(input.title, input.author) : { artist: input.author, title: input.title };
+	const split = input.sourceName?.startsWith('youtube')
+		? splitArtistFromTitle(input.title, input.author)
+		: { artist: input.author, title: input.title };
 	const title = split.title.replace(UPLOAD_LABEL, ' ').replace(/\s+/g, ' ').trim();
 	const artist = split.artist
 		.replace(/\s*-\s*topic$/iu, '')

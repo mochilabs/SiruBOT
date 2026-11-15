@@ -63,13 +63,18 @@ async function main() {
 	const merged = groups.filter((g) => g.tracks.length > 1 || g.recordingId);
 
 	console.log(`mode: ${apply ? 'APPLY' : 'dry-run'} · rollup cutoff ${cutoff.toISOString()}`);
-	console.log(`unlinked tracks ${tracks.length} → ${groups.length} groups (${newGroups.length} new, ${groups.length - newGroups.length} existing) · skipped ${skipped.length}`);
+	console.log(
+		`unlinked tracks ${tracks.length} → ${groups.length} groups (${newGroups.length} new, ${groups.length - newGroups.length} existing) · skipped ${skipped.length}`
+	);
 	console.log(`groups with more than one track or joining an existing recording: ${merged.length}`);
 	console.log('\ntop 50 merged groups by plays:');
-	for (const g of merged.sort((a, b) => b.tracks.reduce((s, t) => s + t.totalPlays, 0) - a.tracks.reduce((s, t) => s + t.totalPlays, 0)).slice(0, 50)) {
+	for (const g of merged
+		.sort((a, b) => b.tracks.reduce((s, t) => s + t.totalPlays, 0) - a.tracks.reduce((s, t) => s + t.totalPlays, 0))
+		.slice(0, 50)) {
 		const plays = g.tracks.reduce((s, t) => s + t.totalPlays, 0);
 		console.log(`  ${plays.toString().padStart(6)}  ${g.key}${g.isrc ? ` [${g.isrc}]` : ''}${g.recordingId ? ' (existing)' : ''}`);
-		for (const t of g.tracks.slice(0, 6)) console.log(`          · ${t.source.padEnd(12)} ${t.artist} — ${t.title} (${Math.round(t.duration / 1000)}s, ${t.totalPlays})`);
+		for (const t of g.tracks.slice(0, 6))
+			console.log(`          · ${t.source.padEnd(12)} ${t.artist} — ${t.title} (${Math.round(t.duration / 1000)}s, ${t.totalPlays})`);
 		if (g.tracks.length > 6) console.log(`          · … ${g.tracks.length - 6} more`);
 	}
 

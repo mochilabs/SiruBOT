@@ -30,14 +30,21 @@ describe('planRecordingGroups', () => {
 
 	it('keeps a long MV cut and a remix apart', () => {
 		const { groups } = planRecordingGroups(
-			[track({ id: 'song' }), track({ id: 'long-mv', title: 'Lemon (Official MV)', duration: 275_000 }), track({ id: 'remix', title: 'Lemon (Remix)' })],
+			[
+				track({ id: 'song' }),
+				track({ id: 'long-mv', title: 'Lemon (Official MV)', duration: 275_000 }),
+				track({ id: 'remix', title: 'Lemon (Remix)' })
+			],
 			[]
 		);
 		expect(groups).toHaveLength(3);
 	});
 
 	it('joins an existing recording created by the bot', () => {
-		const { groups } = planRecordingGroups([track({ id: 'old' })], [{ id: 'rec-1', key: 'rec:kenshi yonezu|lemon', isrc: null, duration: 254_000 }]);
+		const { groups } = planRecordingGroups(
+			[track({ id: 'old' })],
+			[{ id: 'rec-1', key: 'rec:kenshi yonezu|lemon', isrc: null, duration: 254_000 }]
+		);
 		expect(groups).toEqual([expect.objectContaining({ recordingId: 'rec-1', tracks: [expect.objectContaining({ id: 'old' })] })]);
 	});
 

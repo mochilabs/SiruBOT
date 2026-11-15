@@ -17,7 +17,10 @@ const searchSchema = z.object({
 				title: z.string(),
 				length: z.number().nullable().optional(),
 				isrcs: z.array(z.string()).max(50).optional(),
-				'artist-credit': z.array(z.object({ name: z.string(), artist: z.object({ name: z.string() }).optional() })).max(50).optional()
+				'artist-credit': z
+					.array(z.object({ name: z.string(), artist: z.object({ name: z.string() }).optional() }))
+					.max(50)
+					.optional()
 			})
 		)
 		.max(100)
@@ -51,7 +54,9 @@ export function createMusicBrainzProvider(options: MusicBrainzProviderOptions = 
 				const isrc = recording.isrcs?.[0];
 				const credits = recording['artist-credit'] ?? [];
 				if (!isrc || !recording.length || credits.length === 0) return [];
-				const names = credits.flatMap((credit) => (credit.artist && credit.artist.name !== credit.name ? [credit.name, credit.artist.name] : [credit.name]));
+				const names = credits.flatMap((credit) =>
+					credit.artist && credit.artist.name !== credit.name ? [credit.name, credit.artist.name] : [credit.name]
+				);
 				return [
 					{
 						isrc,
