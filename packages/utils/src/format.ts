@@ -108,7 +108,8 @@ export function formatTrack(track: Track, options?: FormatTrackOptions): string 
 		...options
 	};
 
-	let formattedTitle = cleanTitle ? removeEmojis(title.trim()) : title.trim();
+	// Discord는 마스크 링크 텍스트에 이모지가 있으면 링크로 렌더링하지 않으므로 링크일 땐 항상 이모지를 지운다.
+	let formattedTitle = cleanTitle || withMarkdownURL ? removeEmojis(title.trim()) : title.trim();
 
 	if (titleLength && formattedTitle.length > titleLength.maxLength) {
 		const mask = titleLength.mask ?? '...';
