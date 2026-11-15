@@ -178,143 +178,109 @@ export function NowPlaying({
     [controlBlocked, failCommand, guildId, unavailable],
   );
 
-  return (
-    <section className="flex flex-col gap-4 rounded-card bg-surface-2 p-4 sm:p-5">
-      <div className="flex min-w-0 items-center gap-2 text-sm">
-        <StatusDot
-          status={
-            state.stale || (mode === "stream" && !connected)
-              ? "disconnected"
-              : state.paused
-                ? "idle"
-                : state.playing
-                  ? "ready"
-                  : "disconnected"
-          }
-          label={
-            state.stale || (mode === "stream" && !connected)
-              ? "연결 확인 중"
-              : state.paused
-                ? "일시정지"
-                : state.playing
-                  ? "재생 중"
-                  : "대기 중"
-          }
-        />
-      </div>
+  const statusLabel =
+    unavailable ? "연결 확인 중" : state.paused ? "일시정지" : state.playing ? "재생 중" : "대기 중";
+  const repeatLabel =
+    displayedRepeat === "off" ? "반복 안 함" : displayedRepeat === "track" ? "한 곡 반복" : "대기열 반복";
+  const busy = (own: NonNullable<typeof pendingAction>[]) =>
+    pendingAction !== null && !own.includes(pendingAction);
+  const commandsOff = controlsDisabled || !hasCurrentTrack;
 
-      <div className="flex items-start gap-4">
+  return (
+    <section className="flex flex-col gap-3 rounded-card bg-surface-2 p-3 sm:p-4">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {/* 아트워크 — 다음/이미지 도메인 없이 일반 img로 렌더 (외부 CDN 다양성) */}
         {state.artworkUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={state.artworkUrl}
             alt=""
-            className="h-20 w-20 shrink-0 rounded-card object-cover"
+            className="h-16 w-16 shrink-0 rounded-card object-cover sm:h-20 sm:w-20"
           />
         ) : (
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-card bg-surface-2 text-muted-foreground">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card bg-surface-1 text-muted-foreground sm:h-20 sm:w-20">
             <ListMusic size={24} />
           </div>
         )}
         <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-w-0 items-center justify-between gap-2 text-sm">
+            <StatusDot
+              size="sm"
+              status={unavailable ? "disconnected" : state.paused ? "idle" : state.playing ? "ready" : "disconnected"}
+              label={statusLabel}
+            />
+            {state.sourceName && (
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                {state.isStream ? "실시간 스트림 · " : ""}
+                {prettySourceName(state.sourceName)}
+              </span>
+            )}
+          </div>
           {state.trackTitle && /^https?:\/\//i.test(state.trackUri ?? "") ? (
             <a
               href={state.trackUri!}
               target="_blank"
               rel="noopener noreferrer"
-              className="break-words text-lg font-bold text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
+              className="line-clamp-1 break-words text-lg font-black tracking-tight text-foreground hover:text-primary-text hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm transition-colors duration-fast"
             >
               {state.trackTitle}
             </a>
           ) : (
-            <p className="break-words text-lg font-bold text-foreground">
+            <p className="line-clamp-1 break-words text-lg font-black tracking-tight text-foreground">
               {state.trackTitle ?? "재생 중인 곡이 없어요"}
             </p>
           )}
-          <p className="break-words text-sm text-muted-foreground">
+          <p className="truncate text-sm text-muted-foreground">
             {state.trackAuthor ?? "아티스트 정보 없음"}
             {state.requesterName ? ` · 신청: ${state.requesterName}` : ""}
           </p>
-          <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-            {state.isStream && <span>실시간 스트림</span>}
-            {state.sourceName && (
-              <span>
-                {state.isStream ? "· " : ""}
-                {prettySourceName(state.sourceName)}
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="space-y-1">
-            <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
-          <div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
-            <span>
-              {state.isStream
-                ? "스트리밍"
-                : hasCurrentTrack
-                  ? formatDuration(positionMs)
-                  : "0:00"}
-            </span>
-            <span>{state.isStream ? "" : formatDuration(state.durationMs)}</span>
-          </div>
+      <div className="space-y-1">
+        <ProgressBar state={unavailable ? { ...state, stale: true } : state} receivedAt={receivedAt} />
+        <div className="flex items-center justify-between text-xs font-medium tabular-nums text-muted-foreground">
+          <span>{state.isStream ? "스트리밍" : hasCurrentTrack ? formatDuration(positionMs) : "0:00"}</span>
+          <span>{state.isStream ? "" : formatDuration(state.durationMs)}</span>
         </div>
+      </div>
 
-        {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
-        <div
-          className="flex flex-wrap items-center gap-2 pt-3"
-          title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
-        >
+      {/* 실시간 컨트롤러 — 명령은 data-api Redis 브로드캐스트로 봇에 즉시 적용돼요 */}
+      <div
+        className="flex flex-wrap items-center gap-x-4 gap-y-2"
+        title={controlBlocked ? CONTROL_BLOCKED_HINT : undefined}
+      >
+        <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
-            size="sm"
-            className="min-h-11"
-            icon={displayedPaused ? <Play size={14} /> : <Pause size={14} />}
+            variant="primary"
+            size="icon-lg"
+            className="min-h-11 min-w-11"
+            icon={displayedPaused ? <Play size={18} /> : <Pause size={18} />}
             onClick={handleTogglePause}
             loading={pendingAction === "pause" || pendingAction === "resume"}
-            disabled={
-              controlsDisabled || !hasCurrentTrack ||
-              (pendingAction !== null &&
-                pendingAction !== "pause" &&
-                pendingAction !== "resume")
-            }
+            disabled={commandsOff || busy(["pause", "resume"])}
             aria-label={displayedPaused ? "재생" : "일시정지"}
-          >
-            {displayedPaused ? "재생" : "일시정지"}
-          </Button>
+          />
           <Button
             variant="secondary"
-            size="sm"
-            className="min-h-11"
-            icon={<SkipForward size={14} />}
+            size="icon-lg"
+            className="min-h-11 min-w-11"
+            icon={<SkipForward size={16} />}
             onClick={handleSkip}
             loading={pendingAction === "skip"}
-            disabled={
-              controlsDisabled || !hasCurrentTrack ||
-              (pendingAction !== null && pendingAction !== "skip")
-            }
+            disabled={commandsOff || busy(["skip"])}
             aria-label="다음 곡"
-          >
-            스킵
-          </Button>
+          />
           <Button
             variant="secondary"
-            size="sm"
-            className="min-h-11"
-            icon={<Square size={14} />}
+            size="icon-lg"
+            className="min-h-11 min-w-11"
+            icon={<Square size={16} />}
             onClick={handleStop}
             loading={pendingAction === "stop"}
-            disabled={
-              controlsDisabled || !hasCurrentTrack ||
-              (pendingAction !== null && pendingAction !== "stop")
-            }
+            disabled={commandsOff || busy(["stop"])}
             aria-label="정지"
-          >
-            정지
-          </Button>
+          />
           <Button
             variant="state-toggle"
             size="sm"
@@ -323,44 +289,36 @@ export function NowPlaying({
             icon={<Repeat size={14} />}
             onClick={handleRepeat}
             loading={pendingAction === "repeat"}
-            disabled={
-              controlsDisabled || !hasCurrentTrack ||
-              (pendingAction !== null && pendingAction !== "repeat")
-            }
+            disabled={commandsOff || busy(["repeat"])}
             aria-label={`반복 설정: ${displayedRepeat === "off" ? "없음" : displayedRepeat === "track" ? "한 곡" : "대기열"}`}
           >
-            {displayedRepeat === "off"
-              ? "반복 안 함"
-              : displayedRepeat === "track"
-                ? "한 곡 반복"
-                : "대기열 반복"}
+            {repeatLabel}
           </Button>
-          <div className="flex w-full min-w-0 items-center gap-2 pt-2 md:ml-auto md:w-56 md:pt-0">
-            <Volume2
-              size={16}
-              className="shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <Slider
-              className="min-w-0 flex-1"
-              value={displayedVolume}
-              min={0}
-              max={PLAYER_VOLUME_MAX}
-              step={1}
-              onChange={handleVolumeChange}
-              disabled={unavailable || controlBlocked || volumePending || pendingAction !== null || !hasCurrentTrack}
-              showValue
-              formatValue={(value) => `${value}%`}
-              label="볼륨"
-            />
-          </div>
         </div>
-        {controlBlocked && (
-          <p role="status" className="text-xs text-muted-foreground">
-            {CONTROL_BLOCKED_HINT}
-          </p>
-        )}
+        <div className="flex min-w-0 flex-1 basis-48 items-center gap-2 sm:max-w-60 sm:ml-auto">
+          <Volume2 size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+          <Slider
+            className="min-w-0 flex-1"
+            value={displayedVolume}
+            min={0}
+            max={PLAYER_VOLUME_MAX}
+            step={1}
+            onChange={handleVolumeChange}
+            disabled={unavailable || controlBlocked || volumePending || pendingAction !== null || !hasCurrentTrack}
+            showValue={false}
+            label="볼륨"
+            hideLabel
+          />
+          <span className="w-9 shrink-0 text-right text-xs font-bold tabular-nums text-muted-foreground">
+            {displayedVolume}%
+          </span>
+        </div>
       </div>
+      {controlBlocked && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {CONTROL_BLOCKED_HINT}
+        </p>
+      )}
     </section>
   );
 }

@@ -66,6 +66,48 @@ const STUB_ROLE_PANELS = [
 	}
 ];
 
+const stubArt = (color: string) => "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="${color}"/><circle cx="80" cy="80" r="32" fill="#fff" opacity=".55"/></svg>`);
+
+const STUB_TRACKS = [
+	["밤편지", "아이유", "#8a7bff", 253_000],
+	["Love wins all", "아이유", "#ee6f8b", 271_000],
+	["Spring Day", "BTS", "#5fb3a1", 274_000],
+	["Hype Boy", "NewJeans", "#f0b232", 179_000],
+	["Ditto", "NewJeans", "#6ea8ff", 185_000],
+	["Super Shy", "NewJeans", "#cd7f32", 155_000]
+].map(([title, artist, color, duration], i) => ({
+	id: `t${i}`,
+	title: title as string,
+	artist: artist as string,
+	duration: duration as number,
+	thumbnail: stubArt(color as string),
+	url: `https://www.youtube.com/watch?v=stub${i}`,
+	source: "youtube",
+	totalPlays: 30 - i * 4
+}));
+
+const STUB_LIVE_PLAYER = {
+	guildId: STUB_GUILD_ID,
+	playing: true,
+	paused: false,
+	positionMs: 72_000,
+	durationMs: STUB_TRACKS[0]!.duration,
+	trackTitle: STUB_TRACKS[0]!.title,
+	trackAuthor: STUB_TRACKS[0]!.artist,
+	artworkUrl: STUB_TRACKS[0]!.thumbnail,
+	trackUri: STUB_TRACKS[0]!.url,
+	isStream: false,
+	queue: STUB_TRACKS.slice(1).map((track) => ({ title: track.title, author: track.artist, durationMs: track.duration, artworkUrl: track.thumbnail, uri: track.url, isStream: false, requesterName: "데모 관리자" })),
+	queueLength: STUB_TRACKS.length - 1,
+	repeatMode: "off" as const,
+	volume: 60,
+	requesterName: "데모 관리자",
+	sourceName: "youtube",
+	updatedAt: Date.now(),
+	ageMs: 0,
+	stale: false
+};
+
 const day = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
 function stubGet(path: string): unknown | undefined {
@@ -115,7 +157,13 @@ function stubGet(path: string): unknown | undefined {
 		case "/role-panels":
 			return STUB_ROLE_PANELS;
 		case "/live":
-			return { player: null, hub: { guilds: 1, subscribed: true, staleMs: 0 } };
+			return { player: STUB_LIVE_PLAYER, hub: { guilds: 1, subscribed: true, staleMs: 0 } };
+		case "/player":
+			return { totalPlays: 128, recent: STUB_TRACKS.map((track, i) => ({ ...track, playedAt: stubIso(i / 4), requestedById: "1" })), top: STUB_TRACKS.map((track, i) => ({ ...track, playCount: 24 - i * 3 })) };
+		case "/player/voice-context":
+			return { voice: { inVoice: true, voiceChannelName: "라운지", canControl: true, canPlay: true } };
+		case "/player/search":
+			return { tracks: STUB_TRACKS.map((track) => ({ title: track.title, author: track.artist, durationMs: track.duration, artworkUrl: track.thumbnail, uri: track.url, sourceName: "youtube", isStream: false })) };
 		case "/greeting":
 			return { welcome: null, goodbye: null };
 		case "/social/subscriptions":
