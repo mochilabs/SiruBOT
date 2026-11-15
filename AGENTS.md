@@ -4,7 +4,7 @@ Discord music bot monorepo (Turborepo + Yarn 4, Node 22+, ESM). Apps: `bot` (Sap
 
 - Per-package rules: read the package's `AGENTS.md` before working in it (index below). This file holds only what applies across packages.
 - Docs under `docs/` are English; cite file paths, never line numbers. `docs/` holds only documents linked from the root `README.md`; working notes (plans, audits, changelogs) go in `Localdocs/` (gitignored). References: `docs/architecture.md`, `docs/api-{dashboard,data-api}.md`, `docs/setup-dev.md`, `docs/runbook-production.md`.
-- Skills: read `.claude/skills/<id>/SKILL.md` before working in its area; don't copy a skill's rules elsewhere. Bot: `sapphire-command`, `component-view`, `discord-components-v2`, `bot-features` (AI chat, TTS, mixer, lyrics, temp voice, games), `bot-ops` (playback, Lavalink, sessions, shards, shutdown). Dashboard: `dashboard-conventions`, `dashboard-ui` (load `antislop-ui` first). General: `repo-infra`, `security-audit`, `ai-slop-cleaner`.
+- Skills: read `.claude/skills/<id>/SKILL.md` before working in its area; don't copy a skill's rules elsewhere. Bot: `sapphire-command`, `component-view`, `discord-components-v2`, `bot-features` (AI chat, TTS, mixer, lyrics, temp voice, games), `bot-ops` (playback, Lavalink, sessions, shards, shutdown). Dashboard: `dashboard-conventions`, `dashboard-ui`. General: `repo-infra`, `security-audit`.
 
 ## Package index
 
