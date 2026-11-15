@@ -28,6 +28,12 @@ export interface AdminSocialSubscription {
 	updatedAt: string;
 }
 
+const STATUS_ITEMS = [
+	{ value: "active", label: "정상 (active)" },
+	{ value: "failed", label: "배달 실패 (failed)" },
+	{ value: "disabled", label: "일시정지 (disabled)" },
+];
+
 export function SocialEditDialog({
 	sub,
 	open,
@@ -92,6 +98,7 @@ export function SocialEditDialog({
 
 					<Field label="배달 상태">
 						<Select
+							items={STATUS_ITEMS}
 							value={status}
 							onValueChange={(v) => v && setStatus(v as "active" | "failed" | "disabled")}
 						>
@@ -99,9 +106,9 @@ export function SocialEditDialog({
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="active">정상 (active)</SelectItem>
-								<SelectItem value="failed">배달 실패 (failed)</SelectItem>
-								<SelectItem value="disabled">일시정지 (disabled)</SelectItem>
+								{STATUS_ITEMS.map((item) => (
+									<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</Field>

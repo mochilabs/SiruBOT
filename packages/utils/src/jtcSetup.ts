@@ -13,7 +13,8 @@ export const jtcSetupRequestSchema = z.object({
 	requestId: z.string().uuid(),
 	guildId: redisIdSchema,
 	userId: redisIdSchema,
-	categoryId: redisIdSchema
+	categoryId: redisIdSchema,
+	markerChannelName: z.string().trim().min(1).max(100).optional()
 });
 
 /**

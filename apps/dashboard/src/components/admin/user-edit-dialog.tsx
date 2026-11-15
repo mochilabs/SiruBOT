@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import useSWR from "swr";
 
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { Field } from "@/components/primitives/field";
 import { WarningBox } from "@/components/servers/settings-shared";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,36 @@ export function UserEditDialog({
 	const [intro, setIntro] = useState<string | null>(null);
 	const [longTermMemory, setLongTermMemory] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [clearingAction, setClearingAction] = useState<"shortTerm" | "gameRecords" | null>(null);
+	const [confirmPurgeOpen, setConfirmPurgeOpen] = useState(false);
 	const [purging, setPurging] = useState(false);
+
+	async function handleClearAction(kind: "shortTerm" | "gameRecords") {
+		setClearingAction(kind);
+		try {
+			const payload = kind === "shortTerm" ? { clearShortTermMemory: true } : { clearGameRecords: true };
+			const res = await fetch(`/api/admin/users/${userId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				toast.error(body?.error ?? "세부 데이터 비우기에 실패했어요.");
+				return;
+			}
+			await mutate(body, { revalidate: false });
+			onSaved();
+			notifySaved(
+				kind === "shortTerm" ? "단기 대화 기억을 비웠어요." : "미니게임 전적을 초기화했어요.",
+				null,
+			);
+		} catch (err) {
+			notifyApiError(err, "세부 데이터 비우기에 실패했어요.");
+		} finally {
+			setClearingAction(null);
+		}
+	}
 
 	const currentMonth = birthMonth !== null ? birthMonth : user?.birthMonth != null ? String(user.birthMonth) : "";
 	const currentDay = birthDay !== null ? birthDay : user?.birthDay != null ? String(user.birthDay) : "";
@@ -124,6 +154,7 @@ export function UserEditDialog({
 	}
 
 	return (
+		<>
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-2xl">
 				<DialogHeader>
@@ -216,16 +247,18 @@ export function UserEditDialog({
 								<Button
 									variant="secondary"
 									size="sm"
-									disabled={saving}
-									onClick={() => void handleSave({ clearShortTermMemory: true })}
+									loading={clearingAction === "shortTerm"}
+									disabled={saving || purging || clearingAction !== null}
+									onClick={() => void handleClearAction("shortTerm")}
 								>
 									단기 기억 비우기 ({user.shortTermTurns.length})
 								</Button>
 								<Button
 									variant="secondary"
 									size="sm"
-									disabled={saving}
-									onClick={() => void handleSave({ clearGameRecords: true })}
+									loading={clearingAction === "gameRecords"}
+									disabled={saving || purging || clearingAction !== null}
+									onClick={() => void handleClearAction("gameRecords")}
 								>
 									게임 전적 초기화 ({user.counts.gameRecords})
 								</Button>
@@ -233,8 +266,9 @@ export function UserEditDialog({
 									variant="danger"
 									size="sm"
 									loading={purging}
+									disabled={saving || clearingAction !== null}
 									icon={<Trash2 size={14} />}
-									onClick={() => void handlePurgeUser()}
+									onClick={() => setConfirmPurgeOpen(true)}
 								>
 									개인 데이터 전체 초기화
 								</Button>
@@ -256,5 +290,19 @@ export function UserEditDialog({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+
+		<ConfirmDialog
+			open={confirmPurgeOpen}
+			title="개인 데이터 전체 초기화"
+			confirmLabel="전체 초기화"
+			loading={purging}
+			onClose={() => setConfirmPurgeOpen(false)}
+			onConfirm={() => {
+				void handlePurgeUser().finally(() => setConfirmPurgeOpen(false));
+			}}
+		>
+			유저 <strong className="font-mono">{userId}</strong>의 프로필·기억·전적 등 개인 데이터를 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.
+		</ConfirmDialog>
+		</>
 	);
 }

@@ -5,6 +5,7 @@ import { Bell, Search, Settings2, Trash2 } from "lucide-react";
 import useSWR from "swr";
 
 import { type AdminSocialSubscription,SocialEditDialog } from "@/components/admin/social-edit-dialog";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { PanelHeader, RetryLink, WarningBox } from "@/components/servers/settings-shared";
 import { Badge } from "@/components/ui/badge";
@@ -14,19 +15,29 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { notifyApiError } from "@/lib/notify";
 import { createApiFetcher } from "@/lib/swr";
 
 const socialFetcher = createApiFetcher<{ subscriptions: AdminSocialSubscription[] }>("소셜 구독 목록을 불러오지 못했어요.");
 
+const STATUS_FILTER_ITEMS = [
+	{ value: "all", label: "전체 상태 (all)" },
+	{ value: "active", label: "정상 (active)" },
+	{ value: "failed", label: "배달 실패 (failed)" },
+	{ value: "disabled", label: "일시정지 (disabled)" },
+];
+
 export function SocialSubscriptionsPanel() {
 	const [query, setQuery] = useState("");
+	const debouncedQuery = useDebounce(query.trim(), 350);
 	const [statusFilter, setStatusFilter] = useState<string>("all");
 	const [editingSub, setEditingSub] = useState<AdminSocialSubscription | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<AdminSocialSubscription | null>(null);
 	const [busyId, setBusyId] = useState<string | null>(null);
 
 	const params = new URLSearchParams();
-	if (query.trim()) params.set("q", query.trim());
+	if (debouncedQuery) params.set("q", debouncedQuery);
 	if (statusFilter !== "all") params.set("status", statusFilter);
 	const swrKey = `/api/admin/social${params.toString() ? `?${params.toString()}` : ""}`;
 
@@ -99,15 +110,14 @@ export function SocialSubscriptionsPanel() {
 						/>
 					</InputGroup>
 
-					<Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+					<Select items={STATUS_FILTER_ITEMS} value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
 						<SelectTrigger className="w-44">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">전체 상태 (all)</SelectItem>
-							<SelectItem value="active">정상 (active)</SelectItem>
-							<SelectItem value="failed">배달 실패 (failed)</SelectItem>
-							<SelectItem value="disabled">일시정지 (disabled)</SelectItem>
+							{STATUS_FILTER_ITEMS.map((item) => (
+								<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				</div>
@@ -193,7 +203,7 @@ export function SocialSubscriptionsPanel() {
 										size="sm"
 										loading={busyId === sub.id}
 										icon={<Trash2 size={14} />}
-										onClick={() => void deleteSubscription(sub.id)}
+										onClick={() => setDeleteTarget(sub)}
 									>
 										삭제
 									</Button>
@@ -214,6 +224,25 @@ export function SocialSubscriptionsPanel() {
 					onSaved={() => void mutate()}
 				/>
 			)}
+
+			<ConfirmDialog
+				open={deleteTarget !== null}
+				title="소셜 알림 구독 삭제"
+				confirmLabel="삭제하기"
+				loading={deleteTarget !== null && busyId === deleteTarget.id}
+				onClose={() => setDeleteTarget(null)}
+				onConfirm={() => {
+					const target = deleteTarget;
+					if (!target) return;
+					void deleteSubscription(target.id).finally(() => setDeleteTarget(null));
+				}}
+			>
+				{deleteTarget ? (
+					<>
+						<strong>{deleteTarget.sourceName || deleteTarget.sourcePlatformId}</strong> 소셜 알림 구독을 삭제할까요? 삭제 후에는 되돌릴 수 없어요.
+					</>
+				) : null}
+			</ConfirmDialog>
 		</div>
 	);
 }

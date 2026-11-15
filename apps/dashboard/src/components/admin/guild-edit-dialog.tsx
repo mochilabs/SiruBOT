@@ -5,6 +5,7 @@ import { isTransitionMode, TRANSITION_LABELS, TRANSITION_MODES, transitionFlags,
 import { Trash2 } from "lucide-react";
 import useSWR from "swr";
 
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { Field } from "@/components/primitives/field";
 import { WarningBox } from "@/components/servers/settings-shared";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,30 @@ interface AdminGuildDetail {
 
 const guildDetailFetcher = createApiFetcher<{ guild: AdminGuildDetail }>("서버 상세 정보를 불러오지 못했어요.");
 
+const REPEAT_ITEMS = [
+	{ value: "off", label: "끄기 (off)" },
+	{ value: "track", label: "한 곡 반복 (track)" },
+	{ value: "queue", label: "대기열 반복 (queue)" },
+];
+
+const AI_MODE_ITEMS = [
+	{ value: "all", label: "모든 채널 (all)" },
+	{ value: "channels", label: "지정 채널만 (channels)" },
+	{ value: "off", label: "끄기 (off)" },
+];
+
+const CHANNEL_MODE_ITEMS = [
+	{ value: "off", label: "끄기 (off)" },
+	{ value: "channels", label: "지정 채널만 (channels)" },
+	{ value: "all", label: "모든 채널 (all)" },
+];
+
+const TTS_ANNOUNCE_ITEMS = [
+	{ value: "sequential", label: "순차 재생 (sequential)" },
+	{ value: "parallel", label: "동시 재생 (parallel)" },
+	{ value: "interrupt", label: "최신 우선 (interrupt)" },
+];
+
 export function GuildEditDialog({
 	guildId,
 	open,
@@ -90,6 +115,7 @@ export function GuildEditDialog({
 	const [saving, setSaving] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const [clearingChat, setClearingChat] = useState(false);
+	const [confirmAction, setConfirmAction] = useState<"clearChat" | "deleteGuild" | null>(null);
 
 	const current = guild ? { ...guild, ...draft } : null;
 
@@ -196,6 +222,7 @@ export function GuildEditDialog({
 	}
 
 	return (
+		<>
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-2xl">
 				<DialogHeader>
@@ -269,6 +296,7 @@ export function GuildEditDialog({
 						<div className="grid gap-4 sm:grid-cols-3">
 							<Field label="반복 모드">
 								<Select
+									items={REPEAT_ITEMS}
 									value={current.repeat}
 									onValueChange={(val) =>
 										val && setDraft((prev) => ({ ...prev, repeat: val as AdminGuildDetail["repeat"] }))
@@ -278,15 +306,16 @@ export function GuildEditDialog({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="off">끄기 (off)</SelectItem>
-										<SelectItem value="track">한 곡 반복 (track)</SelectItem>
-										<SelectItem value="queue">대기열 반복 (queue)</SelectItem>
+										{REPEAT_ITEMS.map((item) => (
+											<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</Field>
 
 							<Field label="AI 채팅 모드">
 								<Select
+									items={AI_MODE_ITEMS}
 									value={current.aiMode}
 									onValueChange={(val) =>
 										val && setDraft((prev) => ({ ...prev, aiMode: val as AdminGuildDetail["aiMode"] }))
@@ -296,15 +325,16 @@ export function GuildEditDialog({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="all">모든 채널 (all)</SelectItem>
-										<SelectItem value="channels">지정 채널만 (channels)</SelectItem>
-										<SelectItem value="off">끄기 (off)</SelectItem>
+										{AI_MODE_ITEMS.map((item) => (
+											<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</Field>
 
 							<Field label="채팅 TTS 모드">
 								<Select
+									items={CHANNEL_MODE_ITEMS}
 									value={current.ttsMode}
 									onValueChange={(val) =>
 										val && setDraft((prev) => ({ ...prev, ttsMode: val as AdminGuildDetail["ttsMode"] }))
@@ -314,9 +344,9 @@ export function GuildEditDialog({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="off">끄기 (off)</SelectItem>
-										<SelectItem value="channels">지정 채널만 (channels)</SelectItem>
-										<SelectItem value="all">모든 채널 (all)</SelectItem>
+										{CHANNEL_MODE_ITEMS.map((item) => (
+											<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</Field>
@@ -334,6 +364,7 @@ export function GuildEditDialog({
 
 							<Field label="임베드 복구 모드">
 								<Select
+									items={CHANNEL_MODE_ITEMS}
 									value={current.embedFixMode}
 									onValueChange={(val) =>
 										val &&
@@ -344,15 +375,16 @@ export function GuildEditDialog({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="off">끄기 (off)</SelectItem>
-										<SelectItem value="channels">지정 채널만 (channels)</SelectItem>
-										<SelectItem value="all">모든 채널 (all)</SelectItem>
+										{CHANNEL_MODE_ITEMS.map((item) => (
+											<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</Field>
 
 							<Field label="TTS 안내 방식">
 								<Select
+									items={TTS_ANNOUNCE_ITEMS}
 									value={current.ttsAnnounceMode}
 									onValueChange={(val) =>
 										val &&
@@ -366,9 +398,9 @@ export function GuildEditDialog({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="sequential">순차 재생 (sequential)</SelectItem>
-										<SelectItem value="parallel">동시 재생 (parallel)</SelectItem>
-										<SelectItem value="interrupt">최신 우선 (interrupt)</SelectItem>
+										{TTS_ANNOUNCE_ITEMS.map((item) => (
+											<SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</Field>
@@ -470,12 +502,13 @@ export function GuildEditDialog({
 									AI 대화 기록을 비우거나 이 서버의 DB 행 전체를 삭제할 수 있어요.
 								</p>
 							</div>
-							<div className="flex items-center gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								<Button
 									variant="secondary"
 									size="sm"
 									loading={clearingChat}
-									onClick={() => void handleClearChatHistory()}
+									disabled={saving || deleting}
+									onClick={() => setConfirmAction("clearChat")}
 								>
 									AI 대화 기록 비우기 ({current.counts.chatHistoryChannels})
 								</Button>
@@ -483,8 +516,9 @@ export function GuildEditDialog({
 									variant="danger"
 									size="sm"
 									loading={deleting}
+									disabled={saving || clearingChat}
 									icon={<Trash2 size={14} />}
-									onClick={() => void handleDeleteGuild()}
+									onClick={() => setConfirmAction("deleteGuild")}
 								>
 									서버 데이터 삭제
 								</Button>
@@ -506,5 +540,32 @@ export function GuildEditDialog({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+
+		<ConfirmDialog
+			open={confirmAction !== null}
+			title={confirmAction === "clearChat" ? "AI 대화 기록 비우기" : "서버 데이터 삭제"}
+			confirmLabel={confirmAction === "clearChat" ? "비우기" : "삭제하기"}
+			loading={clearingChat || deleting}
+			onClose={() => setConfirmAction(null)}
+			onConfirm={() => {
+				const action = confirmAction;
+				if (action === "clearChat") {
+					void handleClearChatHistory().finally(() => setConfirmAction(null));
+				} else if (action === "deleteGuild") {
+					void handleDeleteGuild().finally(() => setConfirmAction(null));
+				}
+			}}
+		>
+			{confirmAction === "clearChat" ? (
+				<>
+					서버 <strong className="font-mono">{guildId}</strong>의 AI 채널 대화 기록을 모두 비울까요?
+				</>
+			) : confirmAction === "deleteGuild" ? (
+				<>
+					서버 <strong className="font-mono">{guildId}</strong>의 DB 설정 및 관련 데이터를 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.
+				</>
+			) : null}
+		</ConfirmDialog>
+		</>
 	);
 }

@@ -6,6 +6,7 @@ import { formatUptime } from "@sirubot/utils/time";
 import { PlugZap, PowerOff, RadioTower, RefreshCw, RotateCcw, Smile } from "lucide-react";
 import useSWR from "swr";
 
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { StatusDot } from "@/components/primitives/status-dot";
 import { InfoBox, PanelHeader, RetryLink, WarningBox } from "@/components/servers/settings-shared";
@@ -27,6 +28,7 @@ export function NodesAndControlPanel() {
 		{ refreshInterval: 10_000 },
 	);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
+	const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
 	const [emojis, setEmojis] = useState<BotAdminEmojiItem[] | null>(null);
 	const [reloadStores, setReloadStores] = useState<BotAdminReloadStore[] | null>(null);
 
@@ -151,13 +153,7 @@ export function NodesAndControlPanel() {
 													loading={busyKey === disconnectKey}
 													disabled={busyKey !== null}
 													icon={<PowerOff size={14} />}
-													onClick={() =>
-														void runBotAction(
-															disconnectKey,
-															{ kind: "node-disconnect", nodeId: node.id },
-															"노드 연결 해제에 실패했어요.",
-														)
-													}
+													onClick={() => setDisconnectTarget(node.id)}
 												>
 													해제
 												</Button>
@@ -299,6 +295,29 @@ export function NodesAndControlPanel() {
 					)}
 				</Card>
 			</div>
+
+			<ConfirmDialog
+				open={disconnectTarget !== null}
+				title="Lavalink 노드 연결 해제"
+				confirmLabel="연결 해제"
+				loading={disconnectTarget !== null && busyKey === `disconnect:${disconnectTarget}`}
+				onClose={() => setDisconnectTarget(null)}
+				onConfirm={() => {
+					const target = disconnectTarget;
+					if (!target) return;
+					void runBotAction(
+						`disconnect:${target}`,
+						{ kind: "node-disconnect", nodeId: target },
+						"노드 연결 해제에 실패했어요.",
+					).finally(() => setDisconnectTarget(null));
+				}}
+			>
+				{disconnectTarget ? (
+					<>
+						노드 <strong>{disconnectTarget}</strong>의 연결을 해제할까요? 이 노드를 사용 중인 서버의 음악 재생이 즉시 중단돼요.
+					</>
+				) : null}
+			</ConfirmDialog>
 		</div>
 	);
 }

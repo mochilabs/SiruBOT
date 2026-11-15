@@ -1,8 +1,10 @@
 "use client";
 
+import { useMemo, useRef, useState } from "react";
 import { ArrowRight, ArrowUp, ChevronDown } from "lucide-react";
 
 import { RoleSelect } from "@/components/discord/role-select";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { Field } from "@/components/primitives/field";
 import { Button } from "@/components/ui/button";
 import {
@@ -114,11 +116,35 @@ export function CustomCommandEditor({
 	const totalDelay = totalDelaySeconds(steps);
 	const roleAction = hasRoleAction(steps);
 
+	const initialSnapshotRef = useRef<string | null>(null);
+	const currentSnapshot = useMemo(
+		() => JSON.stringify({ name, description, method, steps, access }),
+		[name, description, method, steps, access],
+	);
+	if (initialSnapshotRef.current === null) {
+		initialSnapshotRef.current = currentSnapshot;
+	}
+	const isDirty =
+		currentSnapshot !== initialSnapshotRef.current ||
+		chat.length > 0 ||
+		prompt.trim().length > 0;
+	const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+
+	const requestClose = () => {
+		if (saving || busy) return;
+		if (isDirty) {
+			setConfirmDiscardOpen(true);
+			return;
+		}
+		onClose();
+	};
+
 	return (
+		<>
 		<Dialog
 			open
 			onOpenChange={(isOpen: boolean) => {
-				if (!isOpen) onClose();
+				if (!isOpen) requestClose();
 			}}
 		>
 			{/* 기본 폭(sm:max-w-sm)과 높이 제한을 벗어나려면 sm:도 같이 덮어야 해요 */}
@@ -406,7 +432,7 @@ export function CustomCommandEditor({
 				</div>
 
 				<DialogFooter>
-					<Button variant="ghost" onClick={onClose} disabled={saving}>
+					<Button variant="ghost" onClick={requestClose} disabled={saving || busy}>
 						취소
 					</Button>
 					<Button variant="primary" loading={saving} onClick={handleSave}>
@@ -415,5 +441,19 @@ export function CustomCommandEditor({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+
+		<ConfirmDialog
+			open={confirmDiscardOpen}
+			title="변경 사항을 버릴까요?"
+			confirmLabel="닫기"
+			onClose={() => setConfirmDiscardOpen(false)}
+			onConfirm={() => {
+				setConfirmDiscardOpen(false);
+				onClose();
+			}}
+		>
+			저장하지 않은 명령어 설정이나 AI 도우미 대화가 사라져요.
+		</ConfirmDialog>
+		</>
 	);
 }

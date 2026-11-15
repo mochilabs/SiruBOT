@@ -48,12 +48,20 @@ export function useGuildSettings(guildId: string) {
 		void mutate();
 	}, [mutate]);
 
+	const syncCache = useCallback(
+		(fields: Partial<GuildSettings>) => {
+			void mutate((prev) => (prev ? { ...prev, ...fields } : prev), { revalidate: false });
+		},
+		[mutate],
+	);
+
 	return {
 		settings: data ?? null,
 		isLoading,
 		error: error ? toError(error, "설정을 불러오지 못했어요.") : null,
 		saving,
 		save,
+		syncCache,
 		reload,
 	};
 }
@@ -67,7 +75,7 @@ export function useSettingsForm<T extends Partial<GuildSettings>>(
 	guildId: string,
 	mapSettings: (settings: GuildSettings) => T,
 ) {
-	const { settings, isLoading, error, saving, save, reload } = useGuildSettings(guildId);
+	const { settings, isLoading, error, saving, save, syncCache, reload } = useGuildSettings(guildId);
 	const [form, setForm] = useState<T | null>(null);
 	const dirtyRef = useRef(false);
 	const baselineRef = useRef<T | null>(null);
@@ -115,6 +123,26 @@ export function useSettingsForm<T extends Partial<GuildSettings>>(
 		return request;
 	}, [save, mapSettings]);
 
+	const commitExternal = useCallback(
+		(fields: Partial<T>) => {
+			if (!formRef.current || !baselineRef.current) return;
+			const nextBaseline = { ...baselineRef.current, ...fields };
+			const updated = { ...formRef.current, ...fields };
+			baselineRef.current = nextBaseline;
+			formRef.current = updated;
+			dirtyRef.current = (Object.keys(updated) as (keyof T)[]).some((key) => {
+				const value = updated[key];
+				const saved = nextBaseline[key];
+				return Array.isArray(value) && Array.isArray(saved)
+					? value.length !== saved.length || value.some((item, index) => item !== saved[index])
+					: value !== saved;
+			});
+			setForm(updated);
+			syncCache(fields);
+		},
+		[syncCache],
+	);
+
 	return {
 		form,
 		isLoading,
@@ -122,6 +150,7 @@ export function useSettingsForm<T extends Partial<GuildSettings>>(
 		saving,
 		dirty: dirtyRef.current,
 		patch,
+		commitExternal,
 		submit,
 		reload,
 	};

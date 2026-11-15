@@ -29,7 +29,7 @@ export function usePlaylists() {
 	const toast = useToast();
 
 	// 세션 만료 리다이렉트·인증 게이트는 useAuthedSWR가 담당해요 — 로그인 후 이 화면으로 돌아와요
-	const { data: listData, mutate: mutateList, isLoading: listLoading } = useAuthedSWR<{ playlists: Playlist[] }>("/api/playlists", "/playlists");
+	const { data: listData, error: listError, mutate: mutateList, isLoading: listLoading } = useAuthedSWR<{ playlists: Playlist[] }>("/api/playlists", "/playlists");
 
 	const playlists = useMemo(() => {
 		const list = listData?.playlists ?? [];
@@ -49,8 +49,9 @@ export function usePlaylists() {
 		}
 	}, [playlists, activePlaylistId]);
 
-	const { data: detailData, mutate: mutateDetail, isLoading: detailLoading } = useSWR<PlaylistDetailResponse>(
-		activePlaylistId ? `/api/playlists/${activePlaylistId}` : null
+	const { data: detailData, error: detailError, mutate: mutateDetail, isLoading: detailLoading } = useAuthedSWR<PlaylistDetailResponse>(
+		activePlaylistId ? `/api/playlists/${activePlaylistId}` : null,
+		"/playlists"
 	);
 
 	const activePlaylist = detailData?.playlist ?? null;
@@ -207,7 +208,7 @@ export function usePlaylists() {
 	};
 
 	const handleAddTrack = async (targetTrackId?: string, targetYoutubeUrl?: string) => {
-		if (!activePlaylistId) return;
+		if (!activePlaylistId || loadingAddTrack) return;
 		const trimmedInput = trackInput.trim();
 		const youtubeUrl = targetYoutubeUrl ?? (!targetTrackId && isYoutubeUrl(trimmedInput) ? trimmedInput : undefined);
 		if (!targetTrackId && !youtubeUrl) {
@@ -294,9 +295,12 @@ export function usePlaylists() {
 		activePlaylistId,
 		setActivePlaylistId,
 		mutateList,
+		listError,
 		listLoading,
 		activePlaylist,
 		tracks,
+		detailError,
+		mutateDetail,
 		detailLoading,
 		stats,
 		formatTotalDuration,

@@ -3,8 +3,8 @@
 import { Suspense } from "react";
 
 import Container from "@/components/container";
+import { ErrorPanel } from "@/components/error-panel";
 import { PageHeader } from "@/components/layout/page-header";
-import Loader from "@/components/loader";
 import { AddTrackModal } from "@/components/playlists/add-track-modal";
 import { ConfirmDeleteModal } from "@/components/playlists/confirm-delete-modal";
 import { PlaylistDetail } from "@/components/playlists/playlist-detail";
@@ -13,15 +13,21 @@ import { PlaylistSelectMobile } from "@/components/playlists/playlist-select-mob
 import { PlaylistSidebar } from "@/components/playlists/playlist-sidebar";
 import { usePlaylists } from "@/hooks/use-playlists";
 
+import PlaylistsLoading from "./loading";
+
 function PlaylistsContent() {
 	const {
 		status,
 		playlists,
 		activePlaylistId,
 		setActivePlaylistId,
+		mutateList,
+		listError,
 		listLoading,
 		activePlaylist,
 		tracks,
+		detailError,
+		mutateDetail,
 		detailLoading,
 		stats,
 		formatTotalDuration,
@@ -63,15 +69,26 @@ function PlaylistsContent() {
 	} = usePlaylists();
 
 	if (status === "loading" || listLoading) {
-		return (
-			<Container>
-				<Loader fullPage />
-			</Container>
-		);
+		return <PlaylistsLoading />;
 	}
 
 	if (status === "unauthenticated") {
 		return null;
+	}
+
+	if (listError) {
+		return (
+			<Container>
+				<PageHeader
+					title="플레이리스트"
+					description="내 플레이리스트를 만들고 트랙 순서를 편집해 관리해보세요."
+				/>
+				<ErrorPanel
+					message="플레이리스트 목록을 불러오지 못했어요."
+					onRetry={() => { void mutateList(); }}
+				/>
+			</Container>
+		);
 	}
 
 	return (
@@ -100,6 +117,8 @@ function PlaylistsContent() {
 						activePlaylist={activePlaylist}
 						tracks={tracks}
 						detailLoading={detailLoading}
+						detailError={detailError}
+						onRetryDetail={() => { void mutateDetail(); }}
 						stats={stats}
 						formatTotalDuration={formatTotalDuration}
 						onOpenEdit={openEditModal}
@@ -180,7 +199,7 @@ function PlaylistsContent() {
 
 export default function PlaylistsPage() {
 	return (
-		<Suspense fallback={<Container><Loader fullPage /></Container>}>
+		<Suspense fallback={<PlaylistsLoading />}>
 			<PlaylistsContent />
 		</Suspense>
 	);

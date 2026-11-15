@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 
 const W = 368;
 const H = 168;
@@ -196,7 +197,7 @@ export function NotFoundGame({ onExit }: { onExit: () => void }) {
 	}, [onExit]);
 
 	return (
-		<div className="absolute inset-0 overflow-hidden rounded-[7px]">
+		<div className="absolute inset-0 overflow-hidden rounded-control-inner">
 			<canvas
 				ref={canvasRef}
 				width={W}
@@ -210,9 +211,9 @@ export function NotFoundGame({ onExit }: { onExit: () => void }) {
 				type="button"
 				onClick={onExit}
 				aria-label="미니게임 닫기"
-				className="absolute top-1 left-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-surface-3 text-[10px] font-bold text-muted-foreground transition-colors duration-fast hover:text-foreground"
+				className="absolute top-1 left-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-surface-3 text-2xs font-bold text-muted-foreground transition-colors duration-fast after:absolute after:-inset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				✕
+				<X className="size-3" aria-hidden />
 			</button>
 			<span className="sr-only" aria-live="polite">
 				{phase === "over" ? `게임 오버. 점수 ${score}` : ""}

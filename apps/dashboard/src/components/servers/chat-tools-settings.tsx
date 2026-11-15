@@ -103,7 +103,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 			description="메시지에 자동으로 반응하는 편의 기능을 채널 단위로 관리해요."
 			notice={
 			<InfoBox>
-					<p>채팅 유틸은 봇이 메시지를 보낸 뒤 잠시 뒤(최대 1분) 반영돼요. 디스코드에서 /채팅유틸 커맨드로도 채널을 켜고 끌 수 있어요.</p>
+					<p>디스코드에서 /채팅유틸 커맨드로도 채널을 켜고 끌 수 있어요.</p>
 				</InfoBox>
 			}
 		>
@@ -183,7 +183,7 @@ function ChatToolsSettingsPanel({ guildId }: { guildId: string }) {
 						/>
 						<Field
 							label="임베드 자동 번역"
-							description="외국어 게시글을 선택한 언어로 번역해 함께 보여줘요. 이미 해당 언어인 게시글은 번역하지 않고, 번역 결과는 캐싱돼요."
+							description="외국어 게시글을 선택한 언어로 번역해 함께 보여줘요."
 						>
 							<div className="max-w-xs">
 								<Select

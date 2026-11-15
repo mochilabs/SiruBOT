@@ -264,7 +264,27 @@ const dirtySaveBars = new Map<string, { dirty: boolean; active: boolean; save: (
 
 const saveBarListeners = new Set<() => void>();
 
+let beforeUnloadBound = false;
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (hasUnsavedSettings()) {
+    event.preventDefault();
+  }
+}
+
+function syncBeforeUnloadListener() {
+  if (typeof window === "undefined") return;
+  const shouldBind = hasUnsavedSettings();
+  if (shouldBind && !beforeUnloadBound) {
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    beforeUnloadBound = true;
+  } else if (!shouldBind && beforeUnloadBound) {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+    beforeUnloadBound = false;
+  }
+}
+
 function notifySaveBarListeners() {
+  syncBeforeUnloadListener();
   saveBarListeners.forEach((fn) => fn());
 }
 

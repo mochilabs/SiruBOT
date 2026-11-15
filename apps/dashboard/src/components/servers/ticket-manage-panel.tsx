@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 /**
  * 티켓 관리 — 열린/마감된 티켓 목록과 대화 기록(transcript) 조회.
@@ -61,6 +63,8 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 	const [transcript, setTranscript] = useState<TranscriptFile | null>(null);
 	const [transcriptError, setTranscriptError] = useState<string | null>(null);
 	const [transcriptLoading, setTranscriptLoading] = useState(false);
+	const [closeTarget, setCloseTarget] = useState<TicketRow | null>(null);
+	const [closing, setClosing] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -88,17 +92,23 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 
 	const closeTicket = useCallback(
 		async (ticket: TicketRow) => {
-			const res = await fetch(`/api/servers/${guildId}/ticket/tickets`, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ ticketId: ticket.id, reason: "대시보드에서 마감" })
-			});
-			if (!res.ok) {
-				const body = (await res.json().catch(() => null)) as { error?: string } | null;
-				setError(body?.error ?? "티켓을 마감하지 못했어요.");
-				return;
+			setClosing(true);
+			try {
+				const res = await fetch(`/api/servers/${guildId}/ticket/tickets`, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ ticketId: ticket.id, reason: "대시보드에서 마감" })
+				});
+				if (!res.ok) {
+					const body = (await res.json().catch(() => null)) as { error?: string } | null;
+					setError(body?.error ?? "티켓을 마감하지 못했어요.");
+					return;
+				}
+				setCloseTarget(null);
+				await load();
+			} finally {
+				setClosing(false);
 			}
-			await load();
 		},
 		[guildId, load]
 	);
@@ -177,13 +187,14 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 							</div>
 							<div className="flex gap-2">
 								{ticket.status === "open" ? (
-									<button
-										type="button"
-										onClick={() => void closeTicket(ticket)}
-										className="rounded-control bg-surface-3 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors duration-fast hover:bg-accent/30"
+									<Button
+										variant="secondary"
+										size="sm"
+										disabled={closing}
+										onClick={() => setCloseTarget(ticket)}
 									>
 										마감
-									</button>
+									</Button>
 								) : null}
 								<button
 									type="button"
@@ -241,6 +252,23 @@ export function TicketManagePanel({ guildId }: { guildId: string }) {
 					</ol>
 				</div>
 			) : null}
+			<ConfirmDialog
+				open={closeTarget !== null}
+				title="티켓 마감"
+				confirmLabel="마감하기"
+				loading={closing}
+				onClose={() => setCloseTarget(null)}
+				onConfirm={() => {
+					if (closeTarget) void closeTicket(closeTarget);
+				}}
+			>
+				{closeTarget ? (
+					<>
+						티켓 <strong>#{String(closeTarget.ticketNumber).padStart(4, "0")}</strong>을(를) 마감할까요?
+						5초 후 Discord 티켓 채널이 삭제되며, 대화 기록만 대시보드에 남아요.
+					</>
+				) : null}
+			</ConfirmDialog>
 		</section>
 	);
 }

@@ -19,7 +19,7 @@ interface DataApiLiveResponse {
  * 인가 게이트 뒤에서 대신 호출해요. 읽기 전용 — 제어는 bot RPC로 별도 구현 예정이에요.
  */
 export const GET = createGuildApiHandler({
-  role: "manage",
+  role: "member",
   rate: READ_RATE,
   key: "live-get",
   handler: async ({ guildId }) => {

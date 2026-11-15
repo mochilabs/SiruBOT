@@ -83,7 +83,7 @@ export function NotFoundRoom({ className }: { className?: string }) {
 			{playing ? (
 				<NotFoundGame onExit={() => setPlaying(false)} />
 			) : (
-				<button type="button" onClick={() => setPlaying(true)} aria-label="모니터 화면 켜기" className="h-full w-full cursor-pointer rounded-[7px]" />
+				<button type="button" onClick={() => setPlaying(true)} aria-label="모니터 화면 켜기" className="h-full w-full cursor-pointer rounded-control-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 			)}
 		</div>
 		</div>

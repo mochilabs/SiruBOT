@@ -17,7 +17,7 @@ interface SkeletonCardProps {
 	className?: string;
 }
 
-const pulseBase = "animate-pulse rounded-md bg-muted";
+const pulseBase = "animate-pulse rounded-control-inner bg-muted";
 
 function SkeletonLine({ width = "100%", height = "h-4", className }: SkeletonLineProps) {
 	return <div className={cn(pulseBase, height, className)} style={{ width }} aria-hidden />;

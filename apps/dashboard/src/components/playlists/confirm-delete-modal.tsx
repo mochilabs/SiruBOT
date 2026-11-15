@@ -2,14 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/primitives/confirm-dialog";
 
 interface ConfirmDeleteModalProps {
 	open: boolean;
@@ -21,26 +14,19 @@ interface ConfirmDeleteModalProps {
 	loading: boolean;
 }
 
-/** 플레이리스트·트랙 삭제 확인 공용 모달 — 제목·본문 문구만 넘기면 돼요 */
+/** 플레이리스트·트랙 삭제 확인 공용 모달 — ConfirmDialog의 삭제 프리셋 */
 export function ConfirmDeleteModal({ open, title, children, onClose, onConfirm, loading }: ConfirmDeleteModalProps) {
 	return (
-		<Dialog open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
-				</DialogHeader>
-				<p className="text-sm text-muted-foreground font-medium leading-relaxed py-2">
-					{children}
-				</p>
-				<DialogFooter>
-					<Button variant="secondary" size="sm" onClick={onClose}>
-						취소
-					</Button>
-					<Button variant="danger" size="sm" loading={loading} onClick={onConfirm}>
-						삭제하기
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+		<ConfirmDialog
+			open={open}
+			title={title}
+			onClose={onClose}
+			onConfirm={onConfirm}
+			loading={loading}
+			confirmLabel="삭제하기"
+			variant="danger"
+		>
+			{children}
+		</ConfirmDialog>
 	);
 }

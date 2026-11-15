@@ -323,7 +323,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 				</form>
 
 				{!query && !results && canPlay && (
-					<p className="text-sm text-muted-foreground">곡 이름을 입력하면 자동으로 검색돼요. 유튜브 링크를 붙여넣으면 바로 재생해요.</p>
+					<p className="text-sm text-muted-foreground">곡 이름을 입력하면 자동으로 검색돼요.</p>
 				)}
 
 				{!canPlay && (

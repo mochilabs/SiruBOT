@@ -160,7 +160,7 @@ export function TemplateEditor({ guildId, value, onChange, sample, disabled = fa
 			) : (
 				<div className="rounded-control border border-border-subtle bg-surface-2 px-3 py-2">
 					<p className="text-xs text-muted-foreground">미리보기</p>
-					<p className="mt-0.5 text-sm text-foreground">{preview}</p>
+					<p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground">{preview}</p>
 				</div>
 			)}
 		</div>

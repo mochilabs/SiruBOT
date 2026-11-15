@@ -98,7 +98,8 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 	const jtcSetupRequestBody = z.object({
 		guildId: redisIdSchema,
 		userId: playerUserIdSchema,
-		categoryId: redisIdSchema
+		categoryId: redisIdSchema,
+		markerChannelName: z.string().trim().min(1).max(100).optional()
 	});
 
 	/** JtcSetupResult를 HTTP로 매핑 — 성공은 markerChannelId, 실패는 공통부(replyBotRelayFailure)로 내려줘요 */
@@ -116,12 +117,13 @@ export function registerGuildDataRoutes(fastify: FastifyInstance): void {
 
 	fastify.post('/v1/internal/jtc/setup', async (request, reply) => {
 		try {
-			const { guildId, userId, categoryId } = jtcSetupRequestBody.parse(request.body);
+			const { guildId, userId, categoryId, markerChannelName } = jtcSetupRequestBody.parse(request.body);
 			const result = await requestJtcSetup({
 				requestId: crypto.randomUUID(),
 				guildId,
 				userId,
-				categoryId
+				categoryId,
+				...(markerChannelName ? { markerChannelName } : {})
 			});
 			metrics.request('jtc-setup');
 			return replyJtcSetupResult(reply, result);

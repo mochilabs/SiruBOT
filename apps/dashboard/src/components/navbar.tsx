@@ -20,7 +20,8 @@ import { MobileTabBar } from "./navbar/mobile-tab-bar";
 export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const currentTheme = resolvedTheme ?? theme;
   const [mounted, setMounted] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -63,33 +64,49 @@ export function Navbar() {
   }, [profileOpen]);
 
   const toggleTheme = () => {
-    if (!document.startViewTransition) {
-      setTheme(theme === "dark" ? "light" : "dark");
+    const nextTheme = currentTheme === "dark" ? "light" : "dark";
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!document.startViewTransition || reduceMotion) {
+      setTheme(nextTheme);
       return;
     }
 
     document.startViewTransition(() => {
-      setTheme(theme === "dark" ? "light" : "dark");
+      setTheme(nextTheme);
     });
   };
 
 
 
+  const navContainerRef = useRef<HTMLDivElement>(null);
   const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
+  const isActiveLink = useCallback(
+    (href: string) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)),
+    [pathname],
+  );
+
   const updateIndicator = useCallback(() => {
-    const activeIndex = navLinks.findIndex((l) => l.href === pathname);
+    const activeIndex = navLinks.findIndex((l) => isActiveLink(l.href));
     const el = activeIndex >= 0 ? navRefs.current[activeIndex] : null;
     if (el) {
       setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
     } else {
       setIndicator(null);
     }
-  }, [pathname]);
+  }, [isActiveLink]);
 
   useEffect(() => {
     updateIndicator();
+    const container = navContainerRef.current;
+    const observer = container ? new ResizeObserver(updateIndicator) : null;
+    if (container && observer) observer.observe(container);
+    window.addEventListener("resize", updateIndicator);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateIndicator);
+    };
   }, [updateIndicator]);
 
   return (
@@ -120,7 +137,7 @@ export function Navbar() {
 
           <div className="flex flex-1 items-center gap-2 lg:gap-4">
             {/* Desktop Menu — 브랜드 옆에 붙여 왼쪽에 모아요 (가운데는 여백, 액션은 우측 밀착) */}
-            <div className="relative ml-6 hidden md:flex items-center gap-1 lg:ml-8 lg:gap-2">
+            <div ref={navContainerRef} className="relative ml-6 hidden md:flex items-center gap-1 lg:ml-8 lg:gap-2">
               {indicator && (
                 // transform x로만 이동해요 — left/width를 애니메이션하면 레이어가
                 // 매 프레임 재계산되며 텍스트가 세로로 겹쳐 보이는 잔상이 생겨요
@@ -135,19 +152,23 @@ export function Navbar() {
                   }}
                 />
               )}
-              {navLinks.map((link, i) => (
+              {navLinks.map((link, i) => {
+                const active = isActiveLink(link.href);
+                return (
                 <Link
                   key={link.label}
                   ref={(el) => { navRefs.current[i] = el; }}
                   href={getNavHref(link, status)}
-                  className={`relative px-3.5 py-2 rounded-menu text-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${pathname === link.href
+                  aria-current={active ? "page" : undefined}
+                  className={`relative px-3.5 py-2 rounded-menu text-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active
                       ? "text-primary-text"
                       : "text-muted-foreground hover:bg-primary-control/5 hover:text-primary-text"
                     }`}
                 >
                   <span className="relative z-10">{link.label}</span>
                 </Link>
-              ))}
+                );
+              })}
             </div>
 
             {/* Action Buttons — 우측 끝에 밀착. 모바일에서는 하단 탭바가 내비를 대신하므로 액션만 남겨요 */}
@@ -165,7 +186,7 @@ export function Navbar() {
                   >
                     <Search size={16} />
                     <span className="hidden lg:inline text-sm">검색</span>
-                    <kbd className="hidden lg:inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-2xs font-medium text-muted-foreground">
+                    <kbd className="hidden lg:inline-flex h-5 items-center rounded-control-inner bg-muted px-1.5 text-2xs font-medium text-muted-foreground">
                       ⌘K
                     </kbd>
                   </Button>
@@ -176,20 +197,20 @@ export function Navbar() {
                     variant="ghost"
                     onClick={toggleTheme}
                     disabled={!mounted}
-                    aria-label={mounted ? (theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환") : "테마 전환"}
+                    aria-label={mounted ? (currentTheme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환") : "테마 전환"}
                     className="relative h-full w-11 overflow-hidden rounded-none rounded-r-control px-0 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   >
                     {mounted && (
                       <AnimatePresence mode="popLayout" initial={false}>
                         <m.span
-                          key={theme}
+                          key={currentTheme}
                           initial={{ y: 20, rotate: -90, opacity: 0 }}
                           animate={{ y: 0, rotate: 0, opacity: 1 }}
                           exit={{ y: -20, rotate: 90, opacity: 0 }}
                           transition={{ type: "spring", stiffness: 300, damping: 25 }}
                           className="pointer-events-none absolute inset-0 flex items-center justify-center"
                         >
-                          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                          {currentTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                         </m.span>
                       </AnimatePresence>
                     )}
@@ -222,6 +243,7 @@ export function Navbar() {
                     <AnimatePresence>
                       {profileOpen && (
                         <m.div
+                          role="menu"
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -229,18 +251,20 @@ export function Navbar() {
                           className="absolute right-0 mt-2 w-48 overflow-hidden rounded-menu bg-popover py-1 shadow-2xl z-(--z-overlay)"
                         >
                           <Link
+                            role="menuitem"
                             href="/profile"
                             onClick={() => setProfileOpen(false)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-accent-foreground transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-fast"
                           >
                             <span>내 프로필</span>
                             <User size={16} />
                           </Link>
                           {session.user?.isAdmin && (
                             <Link
+                              role="menuitem"
                               href="/admin"
                               onClick={() => setProfileOpen(false)}
-                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-accent-foreground transition-colors"
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-fast"
                             >
                               <span>관리자 패널</span>
                               <ShieldCheck size={16} />
@@ -248,8 +272,10 @@ export function Navbar() {
                           )}
                           <div className="h-px bg-border my-1 mx-2" />
                           <button
+                            type="button"
+                            role="menuitem"
                             onClick={() => signOut()}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-fast"
                           >
                             <span>로그아웃</span>
                             <LogOut size={16} />
