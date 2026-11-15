@@ -1,16 +1,9 @@
 import type { Track, UnresolvedTrack } from 'lavalink-client';
 import { isYouTubeSource } from '@sirubot/utils';
+import { normalizeArtist, normalizeIsrc, normalizeTitle } from '@sirubot/utils/trackIdentity';
 import { z } from 'zod';
 
 const savedHistorySchema = z.array(z.string());
-
-function normalizeMetadata(value: string): string {
-	return value
-		.normalize('NFKC')
-		.toLowerCase()
-		.replace(/[^\p{L}\p{N}]+/gu, ' ')
-		.trim();
-}
 
 function trackKeys(track: Track | UnresolvedTrack): string[] {
 	const info = track.info;
@@ -19,16 +12,12 @@ function trackKeys(track: Track | UnresolvedTrack): string[] {
 		const source = isYouTubeSource(info.sourceName) ? 'youtube' : (info.sourceName ?? '');
 		keys.push(JSON.stringify(['id', source, info.identifier]));
 	}
-	const isrc = info.isrc?.toUpperCase().replace(/[^A-Z0-9]/g, '');
+	const isrc = normalizeIsrc(info.isrc);
 	if (isrc) keys.push(JSON.stringify(['isrc', isrc]));
 	if (info.title && info.author && info.duration && info.duration > 0) {
-		// Keep artist/title separators and version labels; strip only upload presentation labels.
-		const title = normalizeMetadata(
-			info.title
-				.toLowerCase()
-				.replace(/[\[(](?:official(?:\s+music)?\s+(?:video|audio)|official\s+mv|lyrics?|가사|m\/?v|audio|hd|4k)[\])]/gu, ' ')
-		);
-		const author = normalizeMetadata(info.author.toLowerCase().replace(/\s*-\s*topic$/u, ''));
+		// Session wire format stays ['recording', author, title, sec] so saved sessions still restore.
+		const title = normalizeTitle(info.title);
+		const author = normalizeArtist(info.author);
 		if (title && author) keys.push(JSON.stringify(['recording', author, title, Math.round(info.duration / 1000)]));
 	}
 	return keys;
