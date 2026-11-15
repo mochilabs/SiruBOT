@@ -201,7 +201,7 @@ describe('controllerView 라벨·타이틀', () => {
 
 	it('아티스트 줄은 이모지와 괄호 없이 아티스트 이름만 표시한다', () => {
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('artist 아티스트'))).toBe(true);
+		expect(texts.some((text) => text.includes('artist_l 아티스트'))).toBe(true);
 		expect(texts.some((text) => text.includes('(아티스트)'))).toBe(false);
 	});
 
@@ -220,7 +220,7 @@ describe('controllerView 라벨·타이틀', () => {
 		const texts = collectTexts(controllerJson({ player: player({ queue: { current: relatedTrack, previous: [], tracks: [] } }) }));
 
 		// 아티스트 줄에는 라벨이 없다
-		const artistLine = texts.find((text) => text.includes('artist 아티스트'));
+		const artistLine = texts.find((text) => text.includes('artist_l 아티스트'));
 		expect(artistLine).toBeDefined();
 		expect(artistLine).not.toContain('추천곡');
 		expect(artistLine).not.toContain('추천 곡');
@@ -296,14 +296,14 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('chapter 1화 (00:00~03:54)'))).toBe(true);
+		expect(texts.some((text) => text.includes('chapter_l 1화 (00:00~03:54)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(03:54)'))).toBe(false);
 	});
 
 	it('챕터 구간을 이모지와 괄호로 표시한다', () => {
 		mocks.chapter.mockReturnValue({ name: '1화', start: 0, end: 60_000, duration: 60_000 });
 		const texts = collectTexts(controllerJson());
-		expect(texts.some((text) => text.includes('chapter 1화 (00:00~01:00)'))).toBe(true);
+		expect(texts.some((text) => text.includes('chapter_l 1화 (00:00~01:00)'))).toBe(true);
 	});
 
 	it('영상 중간부터 시작하는 챕터도 길이 표기 없이 시각 범위만 보여준다', () => {
@@ -311,7 +311,7 @@ describe('controllerView 챕터(에피소드) 줄', () => {
 
 		const texts = collectTexts(controllerJson());
 
-		expect(texts.some((text) => text.includes('chapter 2화 (01:00~02:00)'))).toBe(true);
+		expect(texts.some((text) => text.includes('chapter_l 2화 (01:00~02:00)'))).toBe(true);
 		expect(texts.some((text) => text.includes('(01:00)'))).toBe(false);
 	});
 });

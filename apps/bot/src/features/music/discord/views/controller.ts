@@ -187,7 +187,7 @@ function buildEpisodeLine(player: Player): string | null {
 
 	const start = formatTime(chapter.start / 1000);
 	const end = formatTime(chapter.end / 1000);
-	return `-# ${emoji('chapter')} ${chapter.name} (${start}~${end})`;
+	return `-# ${emoji('chapter_l')} ${chapter.name} (${start}~${end})`;
 }
 
 export function buildTrackDisplay(player: Player, track: Track | null, options: { progressEmoji?: boolean } = {}): string[] {
@@ -204,7 +204,7 @@ export function buildTrackDisplay(player: Player, track: Track | null, options: 
 	// 신청자 멘션·추천곡 인디케이터는 footer로 옮겼고, 여기서는 채팅 TTS 라벨만 남긴다.
 	const requesterId = track.requester && typeof track.requester === 'object' ? (track.requester as Record<string, unknown>).id : undefined;
 	const requesterLabel = requesterId === TTS_CLIP_REQUESTER_ID ? '채팅 TTS' : null;
-	contents.push(requesterLabel ? `-# ${emoji('artist')} ${track.info.author} ${requesterLabel}` : `-# ${emoji('artist')} ${track.info.author}`);
+	contents.push(requesterLabel ? `-# ${emoji('artist_l')} ${track.info.author} ${requesterLabel}` : `-# ${emoji('artist_l')} ${track.info.author}`);
 
 	// 챕터(에피소드) 표시
 	const episode = buildEpisodeLine(player);
