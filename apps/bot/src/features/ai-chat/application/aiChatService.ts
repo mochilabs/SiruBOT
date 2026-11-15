@@ -43,7 +43,6 @@ export {
 export { extractThinkTokens } from './aiChat/completion.ts';
 export { collectImageUrls } from './aiChat/agentLoop.ts';
 export type { AiChatDeps, AiChatPlayerView, AiToolRegistry } from './aiChat/deps.ts';
-export { appendCitedSources, extractWebSearchSources, normalizeCommaCitations } from './aiChat/traceCitation.ts';
 
 import { getAiChatPolicy } from './aiChat/config.ts';
 import { acquireChatTurn, tryConsumeUserTurn } from './aiChat/turnControl.ts';

@@ -161,14 +161,6 @@ export const rolePanelUpdateSchema = z
 		if (reason) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buttons'], message: reason });
 	});
 
-export const ROLE_PANEL_DEFAULTS: RolePanel = {
-	name: '',
-	title: '역할 패널',
-	description: '아래 버튼을 눌러 원하는 역할을 받거나 해제하세요.',
-	channelId: null,
-	messageId: null
-};
-
 /**
  * 역할 유효성 검증 request — 대시보드가 저장 전에 roleIds를 봇에 보내 부여 가능 여부를 확인해요.
  * 채널: ROLE_VALIDATION_REQUEST_CHANNEL / ROLE_VALIDATION_RESPONSE_CHANNEL (redisChannels.ts)

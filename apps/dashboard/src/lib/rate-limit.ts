@@ -13,8 +13,6 @@ export const WRITE_RATE: RateRule = { limit: 12, windowMs: 60_000 };
 export const READ_RATE: RateRule = { limit: 30, windowMs: 60_000 };
 /** 무거운 쓰기(Discord 채널 생성): 분당 5회 */
 export const HEAVY_WRITE_RATE: RateRule = { limit: 5, windowMs: 60_000 };
-/** 이미지 미리보기 렌더: 분당 60회 — 드래그 편집이 400ms 디바운스로 잦은 재요청을 만들어요 */
-export const RENDER_RATE: RateRule = { limit: 60, windowMs: 60_000 };
 /** 이미지 에셋 업로드: 분당 10회 — 파일 업로드는 저장소·DB 부하가 커서 좁게 잡아요 */
 export const UPLOAD_RATE: RateRule = { limit: 10, windowMs: 60_000 };
 /** 공개(무인증) 읽기: 분당 120회 — 전역 공용 버킷 하나로 묶어 한도 우회를 막아요 */

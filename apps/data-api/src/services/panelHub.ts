@@ -12,7 +12,7 @@
  */
 import { getLogger } from '../utils/logger.ts';
 import { createRequestReplyHub } from '../utils/requestReplyHub.ts';
-import { panelPostRpc, roleValidationRpc, type PendingRequestPool } from '@sirubot/utils';
+import { panelPostRpc, roleValidationRpc } from '@sirubot/utils';
 
 const logger = getLogger('panelHub');
 
@@ -66,24 +66,6 @@ const roleValidationHub = createRequestReplyHub<typeof roleValidationRpc, PanelP
 	timeoutResult: () => ({ ok: false, reason: 'timeout', message: null }),
 	unavailableResult: () => ({ ok: false, reason: 'redis_unavailable', message: null })
 });
-
-/** 패널 게시 응답 상관 — guildId 일치 시 messageId를 결과로 매핑해요. */
-export function correlatePanelPostResponse(
-	raw: string,
-	pending: PendingRequestPool<PanelPostResult>,
-	pendingMeta: Map<string, PanelPendingMeta>
-): 'resolved' | 'unmatched' | 'malformed' {
-	return panelPostHub.correlate(raw, pending, pendingMeta);
-}
-
-/** 역할 검증 응답 상관 — guildId 일치 시 invalidRoleIds를 결과로 매핑해요. */
-export function correlateRoleValidationResponse(
-	raw: string,
-	pending: PendingRequestPool<RoleValidationResult>,
-	pendingMeta: Map<string, PanelPendingMeta>
-): 'resolved' | 'unmatched' | 'malformed' {
-	return roleValidationHub.correlate(raw, pending, pendingMeta);
-}
 
 export async function startPanelHub(redisUrl: string | undefined): Promise<void> {
 	if (!redisUrl) {

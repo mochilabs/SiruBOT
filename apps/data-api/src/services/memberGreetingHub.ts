@@ -110,8 +110,3 @@ export function getGreetingTestResult(guildId: string): { found: false } | ({ fo
 	if (!entry) return { found: false };
 	return { found: true, ...entry.result };
 }
-
-/** 관제용 — 현재 보관 중인 길드 수와 실제 구독 상태 */
-export function memberGreetingHubStatus(): { guilds: number; subscribed: boolean } {
-	return { guilds: results.size, subscribed: subscriber.isSubscribed };
-}

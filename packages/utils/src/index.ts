@@ -109,7 +109,6 @@ export {
 export { jtcSetupRequestSchema, type JtcSetupResponse, jtcSetupResponseSchema } from './jtcSetup.js';
 export {
 	ROLE_PANEL_BUTTON_LABEL_MAX,
-	ROLE_PANEL_DEFAULTS,
 	ROLE_PANEL_DESCRIPTION_MAX,
 	ROLE_PANEL_MAX_BUTTONS,
 	ROLE_PANEL_NAME_MAX,

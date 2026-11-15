@@ -106,6 +106,3 @@ export function requestPlayerWeb(payload: PlayerWebAnyRequest): Promise<PlayerWe
 		logContext: `${payload.guildId}, kind ${payload.kind}`
 	});
 }
-
-/** 관제용 — 대기 중 요청 수와 실제 구독 상태 (소켓이 아니라 subscribe/재구독 완료 기준) */
-export const playerWebHubStatus = (): { pending: number; subscribed: boolean } => hub.status();

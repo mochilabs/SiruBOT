@@ -40,7 +40,7 @@ export const GET = createGuildApiHandler({
 				db.socialSubscription.count({ where: { status: "disabled" } }),
 				db.userMemory.count(),
 				fetchShards().catch(() => null),
-				fetchDataApi<DataApiStatus>("/v1/status").catch(() => null),
+				fetchDataApi<DataApiStatus>("/v1/status"),
 			]);
 
 			return NextResponse.json({
