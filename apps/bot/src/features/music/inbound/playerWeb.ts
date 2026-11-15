@@ -30,13 +30,16 @@ import type {
 import { MessageFlags, type Channel, type ContainerBuilder, type Guild, type GuildMember } from 'discord.js';
 import type { Track, UnresolvedTrack } from 'lavalink-client';
 import { trackPlayFeedback } from '../discord/utils/playFeedback.ts';
+import { AppError } from '../../../lib/appError.ts';
 import { DEFAULT_RESPONDER_ERROR_MESSAGE, createRedisResponder, type RedisBinding, type RedisRpcPayload } from '../../../lib/redisResponder.ts';
 import type { RedisLogger } from '../../../lib/redisPublisher.ts';
 import * as guildChannels from '../../../services/guildSettings/channels.ts';
 import * as guildPlayback from '../../../services/guildSettings/playback.ts';
 import { actorFromMember, type Actor } from '../application/actor.ts';
-import { canAddTracks, canControlMusic } from '../application/access.ts';
+import { canAddTracks, canControlMusic, createMusicAccess, MUSIC_ACCESS_MESSAGES } from '../application/access.ts';
 import type { MusicRequester } from '../application/play.ts';
+import { getUserQueuedTracks, removeStaleRelatedTracks } from '../lavalink/autoPlayRelated.ts';
+import { publishPlayerState } from '../lavalink/playerStatePublisher.ts';
 
 type Payload = RedisRpcPayload<typeof playerWebRpc>;
 
@@ -221,7 +224,74 @@ async function applyMusicControl(request: PlayerWebControlRequest, member: Guild
 		case 'skip':
 			await container.music.skipNow(actor);
 			return;
+		case 'queue-jump':
+			if (typeof request.index !== 'number') throw new Error(`control queue-jump: index 누락 (guild ${request.guildId})`);
+			await container.music.skipNow(actor, { to: request.index + 1 });
+			return;
+		case 'queue-shuffle':
+		case 'queue-clear':
+		case 'queue-remove':
+		case 'queue-move':
+			await applyQueueControl(request, member.guild, actor);
+			return;
 	}
+}
+
+/** 대기열 조작 — 음악 제어와 동일한 인가 정책(같은 음성 채널 + DJ/관리자)을 검사한 뒤 큐를 변경하고 상태를 즉시 발행해요. */
+async function applyQueueControl(request: PlayerWebControlRequest, guild: Guild, actor: Actor): Promise<void> {
+	const access = createMusicAccess({
+		getBotVoiceChannelId: () => botVoiceChannelId(guild),
+		getDjRoleId: (guildId) => guildPlayback.getDJRole(container.guildService, guildId)
+	});
+	await access.authorize(actor);
+
+	const player = container.audio.getPlayer(request.guildId);
+	if (!player) throw new AppError('not_found', MUSIC_ACCESS_MESSAGES.noSong(), { ephemeral: true });
+
+	const userTracks = getUserQueuedTracks(player);
+
+	switch (request.action) {
+		case 'queue-shuffle': {
+			if (userTracks.length < 2) {
+				throw new AppError('invalid_input', '셔플할 곡이 2곡 이상 필요해요.', { ephemeral: true });
+			}
+			await removeStaleRelatedTracks(container.lavalink, player);
+			await player.queue.shuffle();
+			break;
+		}
+		case 'queue-clear': {
+			if (userTracks.length === 0) {
+				throw new AppError('not_found', '대기열이 비어 있어요.', { ephemeral: true });
+			}
+			await player.queue.splice(0, userTracks.length);
+			break;
+		}
+		case 'queue-remove': {
+			const { index } = request;
+			if (typeof index !== 'number' || index < 0 || index >= userTracks.length) {
+				throw new AppError('not_found', '해당 번호의 곡이 대기열에 없어요.', { ephemeral: true });
+			}
+			await player.queue.splice(index, 1);
+			break;
+		}
+		case 'queue-move': {
+			const { from, to } = request;
+			if (typeof from !== 'number' || typeof to !== 'number' || from < 0 || to < 0 || from >= userTracks.length || to >= userTracks.length) {
+				throw new AppError('not_found', '해당 번호의 곡이 대기열에 없어요.', { ephemeral: true });
+			}
+			if (from === to) {
+				throw new AppError('invalid_input', '같은 위치로는 이동할 수 없어요.', { ephemeral: true });
+			}
+			const removed = await player.queue.splice(from, 1);
+			const track = Array.isArray(removed) ? removed[0] : removed;
+			if (!track) throw new AppError('not_found', '해당 곡을 찾을 수 없어요.', { ephemeral: true });
+			await player.queue.splice(to, 0, track);
+			break;
+		}
+	}
+
+	void container.mixerService.preloadUpcoming(player).catch(() => null);
+	publishPlayerState(container.lavalink, player);
 }
 
 /**

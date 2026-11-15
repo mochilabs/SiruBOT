@@ -1,6 +1,8 @@
 /**
  * 웹 플레이어 request/reply — 검색·재생·라이브 제어·음성 컨텍스트를 봇에 위임해요.
  */
+import type { PlayerWebControlAction } from "@sirubot/utils/playerWeb";
+
 import { forwardDataApiGet, forwardDataApiPost } from "./client";
 import type { PlayerVoiceContextData, PlayerWebApiResult, PlayerWebTrackSummary } from "./types";
 
@@ -57,18 +59,30 @@ export function requestPlayerPlay(
   return requestPlayerWeb("/v1/internal/player/play", { guildId, userId, uri });
 }
 
-/** 라이브 제어 — volume·pause·resume·skip·stop (볼륨은 value 필수) */
+export interface PlayerControlParams {
+  value?: number;
+  index?: number;
+  from?: number;
+  to?: number;
+}
+
+/** 라이브 제어 — 재생 제어(volume·pause·resume·skip·stop·repeat) 및 대기열 조작 */
 export function requestPlayerControl(
   guildId: string,
   userId: string,
-  action: "volume" | "pause" | "resume" | "skip" | "stop" | "repeat",
-  value?: number,
+  action: PlayerWebControlAction,
+  params?: number | PlayerControlParams,
 ): Promise<PlayerWebApiResult> {
+  const extra: PlayerControlParams =
+    typeof params === "number" ? { value: params } : (params ?? {});
   return requestPlayerWeb("/v1/internal/player/control", {
     guildId,
     userId,
     action,
-    ...(value !== undefined ? { value } : {}),
+    ...(extra.value !== undefined ? { value: extra.value } : {}),
+    ...(extra.index !== undefined ? { index: extra.index } : {}),
+    ...(extra.from !== undefined ? { from: extra.from } : {}),
+    ...(extra.to !== undefined ? { to: extra.to } : {}),
   });
 }
 

@@ -10,49 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/toast";
 import { PLAYER_VOLUME_MAX } from "@/lib/player-constants";
-import { playerErrorMessage } from "@/lib/player-error";
 import { prettySourceName } from "@/utils";
 
 import { interpolatedPositionMs, ProgressBar } from "./live-progress-bar";
+import { CONTROL_BLOCKED_HINT, sendPlayerCommand, VOICE_CONTEXT_REFRESH_MS } from "./player-command";
 import { useVoiceContext } from "./voice-context";
 
 /** 볼륨 슬라이더 값을 서버로 보내기 전 모으는 디바운스 — 드래그 중 연타를 막아요 */
 const VOLUME_SEND_DEBOUNCE_MS = 400;
-
-/** 제어 버튼이 비활성화된 이유 — 봇의 음악 제어 정책을 그대로 풀어 쓴 안내예요 */
-const CONTROL_BLOCKED_HINT =
-  "봇과 같은 음성 채널에 있고, DJ 역할이 있거나 혼자 듣고 있을 때 제어할 수 있어요. 서버 관리자와 DJ 역할은 채널 밖에서도 제어할 수 있어요.";
-
-/** 제어 가능 여부 재검증 주기 — 음성 채널 입·퇴장은 서버가 밀어주지 않아 주기적으로 다시 물어봐요 */
-const VOICE_CONTEXT_REFRESH_MS = 15_000;
-
-/** 봇 검증 실패 시 안내 문구도 전달해요 — "명령 실패" 대신 실제 이유를 토스트로 보여줘요 */
-async function sendPlayerCommand(
-  guildId: string,
-  action: "volume" | "pause" | "resume" | "skip" | "stop" | "repeat",
-  value?: number,
-): Promise<{ ok: boolean; message?: string }> {
-  try {
-    const res = await fetch(`/api/servers/${guildId}/player/command`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action,
-        ...(value !== undefined ? { value } : {}),
-      }),
-    });
-    if (res.ok) return { ok: true };
-    const body = (await res.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    return { ok: false, message: playerErrorMessage(body?.error, "명령을 전달하지 못했어요.") };
-  } catch {
-    return {
-      ok: false,
-      message: "봇에 명령을 전달하지 못했어요. 연결 상태를 확인해 주세요.",
-    };
-  }
-}
 
 interface NowPlayingProps {
   state: LivePlayerState;
