@@ -55,6 +55,3 @@ packages/prisma/src/client/
 
 # 작업 문서 (계획·감사·변경 기록, 로컬 전용)
 Localdocs/
-
-# local-only skill
-.claude/skills/impeccable/
