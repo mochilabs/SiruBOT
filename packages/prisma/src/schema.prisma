@@ -41,9 +41,7 @@ model Guild {
   automixMinConfidence Float @default(0.30)
   // TTS 안내 방식 — mixer announce mode와 1:1이에요.
   // "sequential"(순서대로) | "parallel"(겹쳐서) | "interrupt"(새 안내가 오면 대기 중인 안내를 버리고 최신만).
-  // 기존 ttsParallelEnabled는 이 값에서 파생돼요(parallel만 true) — 구 플러그인 계약 호환용으로 남겨둡니다.
   ttsAnnounceMode      String   @default("sequential")
-  ttsParallelEnabled   Boolean  @default(false)
   // AI 채팅 설정: all(모든 채널) | channels(특정 채널만) | off(끄기). 시스템 프롬프트는 서버별 커스터마이징을 지원하지 않아요 (프롬프트 인젝션 위험).
   aiMode               String   @default("all")
   aiChannelIds         String[] @default([])
@@ -252,6 +250,8 @@ model GuildTrackHistory {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([guildId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([trackId])
   @@index([createdAt])
 }
 
@@ -281,7 +281,7 @@ model PlaylistTrack {
   track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
   @@unique([playlistId, position])
-  @@index([playlistId])
+  @@index([trackId])
 }
 
 // AI 채팅 대화 기록 (채널별 영속화) — guildId는 대시보드 서버 단위 삭제용
@@ -370,6 +370,8 @@ model SocialSubscription {
 
   @@unique([guildId, platform, sourcePlatformId, targetChannelId])
   @@index([platform, sourcePlatformId])
+  @@index([platform, status])
+  @@index([status])
 }
 
 // 소셜 이벤트 배달 이력 — (platform, contentId)로 중복 알림을 막는 진실 원천이에요.
@@ -385,6 +387,7 @@ model SocialEventLog {
   deliveredAt DateTime @default(now())
 
   @@unique([platform, contentId])
+  @@index([deliveredAt])
 }
 
 // 티켓 시스템 설정 — 길드당 1:1 관계. 패널 생성 위치, 티켓 채널 카테고리, 담당자 역할 등을 지정해요.
@@ -425,6 +428,7 @@ model Ticket {
   createdAt    DateTime  @default(now())
   closedAt     DateTime?
 
+  @@unique([guildId, ticketNumber])
   @@index([guildId, ownerId, status])
   @@index([guildId, status])
 }

@@ -176,9 +176,6 @@ export const PATCH = createGuildApiHandler({
 		const { clearChatHistory, ...fields } = parsed.data;
 		const updateData: Record<string, unknown> = { ...normalizeMixerToggles(fields) };
 
-		if (fields.ttsAnnounceMode !== undefined) {
-			updateData.ttsParallelEnabled = fields.ttsAnnounceMode === "parallel";
-		}
 		if (fields.customCommandPrefix !== undefined) {
 			updateData.customCommandPrefix = fields.customCommandPrefix.trim();
 		}
