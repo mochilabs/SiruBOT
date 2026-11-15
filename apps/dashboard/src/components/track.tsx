@@ -175,15 +175,6 @@ function FavoriteButton({
 	);
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-	spotify: "Spotify",
-	applemusic: "Apple Music",
-	deezer: "Deezer",
-	youtubemusic: "YouTube Music",
-	youtube: "YouTube",
-	soundcloud: "SoundCloud",
-};
-
 /** 직전 같은 길이 기간 대비 순위 변화 — ▲상승 ▼하락 NEW 신규 –유지 */
 function RankChange({ change }: { change: ChartEntry["rankChange"] }) {
 	if (change === null) return null;
@@ -227,7 +218,6 @@ export const TrackItem = memo(function TrackItem({
 	const [imgError, setImgError] = useState(false);
 	const { rank } = entry;
 	const isTopThree = rank <= 3;
-	const sources = entry.sources.map((s) => SOURCE_LABELS[s] ?? s);
 
 	return (
 		<div className="bg-surface-2 rounded-card group relative flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 transition-colors duration-fast">
@@ -290,7 +280,6 @@ export const TrackItem = memo(function TrackItem({
 						<RankChange change={entry.rankChange} />{" "}
 					</span>
 					{formatTimeToKorean(entry.duration / 1000)}
-					{sources.length > 0 && <span title="재생된 소스"> · {sources.join(" · ")}</span>}
 					<span className="sm:hidden"> · <span className="font-bold text-primary-text tabular-nums">{entry.plays.toLocaleString()}</span>회</span>
 				</p>
 			</div>

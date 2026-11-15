@@ -100,9 +100,7 @@ function TrackContent() {
           query ? (
             <>시루봇이 재생한 적 있는 노래 중 {periodInfo.label} 차트의 검색 결과예요.</>
           ) : (
-            <>
-              {periodInfo.description} 같은 노래의 여러 영상·소스는 한 줄로 합쳐요.
-            </>
+            <>{periodInfo.description}</>
           )
         }
       >

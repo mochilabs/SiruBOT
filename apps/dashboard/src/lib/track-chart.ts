@@ -1,5 +1,5 @@
 import { Prisma } from "@sirubot/prisma";
-import { CHART_GUILD_DAILY_PLAY_CAP, kstDay, sourcePriority } from "@sirubot/utils/trackIdentity";
+import { CHART_GUILD_DAILY_PLAY_CAP, kstDay } from "@sirubot/utils/trackIdentity";
 
 import { escapeLikeWildcard } from "@/app/api/tracks/search-query";
 import { db } from "@/lib/db";
@@ -21,7 +21,6 @@ export interface ChartEntry {
   rank: number;
   /** 직전 같은 길이 기간 대비 순위 변화 (+는 상승). 직전 기간에 없었으면 "new", 비교하지 않으면 null */
   rankChange: number | "new" | null;
-  sources: string[];
 }
 
 export interface ChartPage {
@@ -123,7 +122,7 @@ export async function fetchChart({ period, query, page }: { period: ChartPeriod;
     ids.length > 0
       ? db.track.findMany({
           where: { recordingId: { in: ids } },
-          select: { id: true, recordingId: true, url: true, source: true, totalPlays: true },
+          select: { id: true, recordingId: true, url: true, totalPlays: true },
         })
       : Promise.resolve([]),
   ]);
@@ -151,7 +150,6 @@ export async function fetchChart({ period, query, page }: { period: ChartPeriod;
       plays: row.plays,
       rank,
       rankChange: previousRanks === null ? null : before === undefined ? "new" : before - rank,
-      sources: [...new Set(members.map((m) => sourceFamily(m.source)))].sort((a, b) => sourcePriority(b) - sourcePriority(a)),
     };
   });
 
@@ -176,15 +174,4 @@ async function previousRankMap(window: Window, ids: string[]): Promise<Map<strin
     ) ranked
     WHERE ranked.id IN (${Prisma.join(ids)})`;
   return new Map(rows.map((r) => [r.id, r.rank]));
-}
-
-/** 소스 아이콘용 — LavaSrc 접미사(youtubemusic 등)를 묶어요 */
-function sourceFamily(source: string): string {
-  const s = source.toLowerCase();
-  if (s.startsWith("youtube")) return s.startsWith("youtubemusic") ? "youtubemusic" : "youtube";
-  if (s.startsWith("spotify")) return "spotify";
-  if (s.startsWith("applemusic")) return "applemusic";
-  if (s.startsWith("deezer")) return "deezer";
-  if (s.startsWith("soundcloud")) return "soundcloud";
-  return s;
 }
