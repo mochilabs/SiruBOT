@@ -28,6 +28,22 @@ describe("discord component embed", () => {
 		expect(JSON.parse(json).component.components[0].content).toContain("<재생> &");
 	});
 
+	it("썸네일이 있으면 제목을 Section에 담고 버튼 이모지는 name만 넘겨요", () => {
+		const { component } = buildDiscordEmbed({
+			...input,
+			eyebrow: "음악 봇",
+			thumbnailUrl: "https://example.com/avatar.png",
+			highlights: ["🎵 음악"],
+			buttons: [{ label: "초대", url: "https://example.com/invite", emoji: "➕" }]
+		});
+		type Node = { type: number; content?: string; components?: Node[] };
+		const [section, , highlights, , row] = component.components as Node[];
+		expect(section).toMatchObject({ type: 9, accessory: { type: 11, media: { url: "https://example.com/avatar.png" } } });
+		expect(section.components?.[0].content).toMatch(/^-# 음악 봇\n## \[시루봇\]/);
+		expect(highlights).toEqual({ type: 10, content: "🎵 음악" });
+		expect(row.components?.[0]).toEqual({ type: 2, style: 5, label: "초대", url: "https://example.com/invite", emoji: { name: "➕" } });
+	});
+
 	it("3,000바이트를 넘으면 에러를 던져요", () => {
 		expect(() => serializeDiscordEmbed(buildDiscordEmbed({ ...input, description: "가".repeat(DISCORD_EMBED_MAX_BYTES) }))).toThrow();
 	});

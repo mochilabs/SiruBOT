@@ -6,6 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { GlobalCommandPalette } from "@/components/overlay/global-command-palette";
 import { Providers } from "@/components/Providers";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { OG_IMAGES, socialMetadata } from "@/lib/site-metadata";
 
 import "./globals.css";
 
@@ -24,31 +25,15 @@ export const metadata: Metadata = {
   description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
   applicationName: "시루봇",
   keywords: ["시루봇", "디스코드 음악봇", "Discord 음악 봇", "디스코드 봇", "AI 채팅", "서버 관리"],
-  openGraph: {
+  ...socialMetadata({
     title: "시루봇 | Discord 음악·AI·서버 관리 봇",
     description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
-    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    siteName: "시루봇",
-    images: [
-      {
-        url: "/images/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "시루봇",
-      },
-    ],
-    locale: "ko_KR",
-    type: "website",
-  },
+    path: "/",
+    image: OG_IMAGES.home,
+  }),
   robots: {
     index: true,
     follow: true,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "시루봇",
-    description: "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.",
-    images: ["/images/og-image.png"],
   },
   icons: {
     icon: "/images/siru-profile-hand.png",

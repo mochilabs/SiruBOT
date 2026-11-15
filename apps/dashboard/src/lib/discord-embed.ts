@@ -6,23 +6,34 @@
  * - 실패하면 Discord가 Open Graph 메타로 대체하므로 metadata(openGraph)는 그대로 둬요.
  */
 
+import { OG_IMAGES } from "@/lib/site-metadata";
+
 export const DISCORD_EMBED_MAX_BYTES = 3000;
-const ACCENT_COLOR = 0xf08a8a;
+/** 다크 테마 --brand(#f98aa0)와 같은 색이에요 */
+const ACCENT_COLOR = 0xf98aa0;
 const LINK_BUTTON_STYLE = 5;
 
 export interface DiscordEmbedButton {
 	label: string;
 	url: string;
+	/** 유니코드 이모지 하나 — 버튼 라벨 앞에 붙어요 */
+	emoji?: string;
 }
 
 export interface DiscordEmbedInput {
 	title: string;
 	description: string;
-	/** 절대 URL — 제목 링크와 우측 버튼에 쓰여요 */
+	/** 절대 URL — 제목 링크에 쓰여요 */
 	url: string;
+	/** 제목 위 작은 줄(-# 서브텍스트) */
+	eyebrow?: string;
+	/** 절대 URL 이미지 — 제목 오른쪽 썸네일로 보여줘요 */
+	thumbnailUrl?: string;
 	/** 절대 URL 이미지 — 본문 아래 큰 이미지로 보여줘요 */
 	imageUrl?: string;
 	imageAlt?: string;
+	/** 이미지 아래 짧은 특징 줄 — 한 줄에 하나씩 보여줘요 */
+	highlights?: string[];
 	buttons: DiscordEmbedButton[];
 }
 
@@ -42,20 +53,31 @@ function getAppBaseUrl() {
 	return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
 }
 
-export function buildDiscordEmbed({ title, description, url, imageUrl, imageAlt, buttons }: DiscordEmbedInput) {
+export function buildDiscordEmbed({ title, description, url, eyebrow, thumbnailUrl, imageUrl, imageAlt, highlights, buttons }: DiscordEmbedInput) {
+	const heading = { type: 10, content: `${eyebrow ? `-# ${eyebrow}\n` : ""}## [${title}](${url})\n${description}` };
 	const components: unknown[] = [
-		{ type: 10, content: `# [${title}](${url})\n${description}` }
+		thumbnailUrl ? { type: 9, components: [heading], accessory: { type: 11, media: { url: thumbnailUrl } } } : heading
 	];
 
 	if (imageUrl) {
 		components.push({ type: 12, items: [{ media: { url: imageUrl }, ...(imageAlt ? { description: imageAlt } : {}) }] });
 	}
 
+	if (highlights?.length) {
+		components.push({ type: 10, content: highlights.join("\n") });
+	}
+
 	if (buttons.length > 0) {
 		components.push({ type: 14, spacing: 1 });
 		components.push({
 			type: 1,
-			components: buttons.slice(0, 5).map(({ label, url: href }) => ({ type: 2, style: LINK_BUTTON_STYLE, label, url: href }))
+			components: buttons.slice(0, 5).map(({ label, url: href, emoji }) => ({
+				type: 2,
+				style: LINK_BUTTON_STYLE,
+				label,
+				url: href,
+				...(emoji ? { emoji: { name: emoji } } : {})
+			}))
 		});
 	}
 
@@ -71,41 +93,47 @@ export function serializeDiscordEmbed(payload: ReturnType<typeof buildDiscordEmb
 	return json;
 }
 
-const DESCRIPTION = "음악 재생부터 AI 채팅, 서버 관리까지. 시루봇 하나로 Discord를 더 편리하게 즐겨보세요.";
-
 /** 페이지별 임베드 정의 — 키는 /embeds/<key>.json 경로와 DiscordEmbedLink의 name이에요 */
 export function getDiscordEmbedInput(name: string, base: string): DiscordEmbedInput | null {
-	const imageUrl = `${base}/images/og-image.png`;
-	const invite = { label: "봇 초대하기", url: `${base}/invite` };
-	const dashboard = { label: "대시보드 가기", url: `${base}/servers` };
+	const thumbnailUrl = `${base}/images/siru-profile.png`;
+	const invite = { label: "봇 초대하기", url: `${base}/invite`, emoji: "➕" };
+	const dashboard = { label: "대시보드", url: `${base}/servers`, emoji: "🛠️" };
+	const chart = { label: "음악 차트", url: `${base}/track`, emoji: "📈" };
 
 	switch (name) {
 		case "home":
 			return {
-				title: "시루봇",
-				description: DESCRIPTION,
+				eyebrow: "Discord 음악·AI 봇",
+				title: "음악부터 AI까지, 시루봇 하나면 돼요",
+				description: "명령어는 Discord에서, 설정은 웹 대시보드에서. 서버에 맞게 골라 쓰는 음악·AI 봇이에요.",
 				url: base,
-				imageUrl,
-				imageAlt: "시루봇",
-				buttons: [invite, dashboard, { label: "음악 차트", url: `${base}/track` }]
+				thumbnailUrl,
+				imageUrl: `${base}${OG_IMAGES.home.url}`,
+				imageAlt: OG_IMAGES.home.alt,
+				highlights: ["🎵 **음악** 고음질 재생, 대기열, 웹 플레이어", "💬 **AI** 채팅과 TTS로 대화하기", "🛠️ **관리** 웹 대시보드에서 서버 설정"],
+				buttons: [invite, dashboard, chart]
 			};
 		case "invite":
 			return {
-				title: "시루봇 초대하기",
-				description: "시루봇을 내 Discord 서버에 초대해요. 음악 신청과 대기열 관리, 웹 플레이어까지 한 번에 쓸 수 있어요.",
+				eyebrow: "봇 초대",
+				title: "내 서버에 시루봇을 초대해요",
+				description: "음악 신청과 대기열 관리, 웹 플레이어까지 초대 한 번으로 바로 쓸 수 있어요.",
 				url: `${base}/invite`,
-				imageUrl,
-				imageAlt: "시루봇",
+				thumbnailUrl,
+				imageUrl: `${base}${OG_IMAGES.invite.url}`,
+				imageAlt: OG_IMAGES.invite.alt,
 				buttons: [invite, dashboard]
 			};
 		case "track":
 			return {
-				title: "음악 차트",
-				description: "Discord에서 인기 있는 음악 차트를 확인하고 바로 재생해요.",
+				eyebrow: "음악 차트",
+				title: "지금 뜨는 음악, 바로 재생해요",
+				description: "Discord에서 많이 듣는 음악 차트를 확인하고 버튼 한 번으로 내 서버에서 틀어보세요.",
 				url: `${base}/track`,
-				imageUrl,
-				imageAlt: "시루봇",
-				buttons: [{ label: "차트 보기", url: `${base}/track` }, invite, dashboard]
+				thumbnailUrl,
+				imageUrl: `${base}${OG_IMAGES.track.url}`,
+				imageAlt: OG_IMAGES.track.alt,
+				buttons: [{ ...chart, label: "차트 보기" }, invite, dashboard]
 			};
 		default:
 			return null;
