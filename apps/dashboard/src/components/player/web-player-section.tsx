@@ -278,7 +278,7 @@ export default function WebPlayerSection({ guildId }: { guildId: string }) {
 
 	return (
 		// 데스크톱은 왼쪽에 라이브(지금 곡·대기열), 오른쪽에 검색·기록을 둬요. 모바일은 라이브 → 검색 → 기록 순으로 쌓여요.
-		<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-8">
+		<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-8">
 			<PlayerLiveTab guildId={guildId} />
 
 			<div className="min-w-0 space-y-6">
